@@ -4,6 +4,7 @@
 	"private": true,
 	"cmsPlugin": true,
 	"description": "@monti-cms/core의 바른(Bareun) 맞춤법·문장 검사기",
+	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",

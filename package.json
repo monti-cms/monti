@@ -1,6 +1,7 @@
 {
 	"name": "monti",
 	"private": true,
+	"license": "MIT",
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run",

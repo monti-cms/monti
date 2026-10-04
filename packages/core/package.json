@@ -3,6 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"description": "DB 기반 블로그 CMS 본체: 설정·스키마·저장소·MDX 변환·플러그인",
+	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",

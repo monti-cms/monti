@@ -9,7 +9,16 @@
  *   "@monti-cms/core": "github:monti-cms/monti#release/v0.1.0&path:/core"
  */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+	copyFileSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,11 +59,15 @@ try {
 		execFileSync("tar", ["-xzf", path.join(work, tarball), "-C", unpacked]);
 		// 묶음은 `package/` 아래에 풀린다.
 		renameSync(path.join(unpacked, "package"), path.join(out, folder));
+		// 라이선스는 저장소 루트에 하나만 둔다. 묶음마다 넣는다.
+		copyFileSync(path.join(root, "LICENSE"), path.join(out, folder, "LICENSE"));
 		console.log(`${pkg.name}@${version} → ${folder}/`);
 	}
 } finally {
 	rmSync(work, { recursive: true, force: true });
 }
+
+copyFileSync(path.join(root, "LICENSE"), path.join(out, "LICENSE"));
 
 const rows = packages.map(
 	({ folder, pkg }) =>

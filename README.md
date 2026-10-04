@@ -57,3 +57,7 @@ git tag v0.1.0 && git push origin main v0.1.0
 ```
 
 `v*` 태그가 올라가면 배포 워크플로(`.github/workflows/release.yml`)가 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/v0.1.0` 태그를 붙인다.
+
+## 라이선스
+
+[MIT](LICENSE)

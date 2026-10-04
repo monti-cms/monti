@@ -4,6 +4,7 @@
 	"private": true,
 	"cmsPlugin": true,
 	"description": "@monti-cms/core의 AI 플러그인: 이름으로 부르는 AI 기능·판단 모델(System One)·관리자 AI 화면",
+	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",

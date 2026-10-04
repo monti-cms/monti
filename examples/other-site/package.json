@@ -3,6 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"description": "@monti-cms/core 예시 앱: 블로그와 다른 컬렉션(article·topic)·언어(영어)로 도는 최소 Next 앱",
+	"license": "MIT",
 	"type": "module",
 	"scripts": {
 		"dev": "next dev",
