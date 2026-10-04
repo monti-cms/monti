@@ -1,0 +1,8 @@
+node_modules
+.next
+vendor
+next-env.d.ts
+.env*.local
+!.env.example
+pnpm-lock.yaml
+*.tsbuildinfo
