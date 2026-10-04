@@ -1,0 +1,1 @@
+When working with code, prefer LSP for symbol navigation, references, type information, rename, and diagnostics when applicable.

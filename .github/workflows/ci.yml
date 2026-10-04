@@ -1,0 +1,73 @@
+# 자동 검사(M12). push마다 lint·타입 검사·패키지 빌드, 테스트(Postgres 서비스), 예시 앱 묶음 검사를 돈다.
+name: CI
+
+# push 때만 돈다(PR 화면에는 그 커밋의 결과가 보인다). PR까지 걸면 같은 검사가 두 번 돈다.
+on:
+  push:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: lint · typecheck · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # 고치지 않고 검사만 한다.
+      - run: pnpm lint
+      # 패키지 실행 코드의 한국어 문구는 문구 사전(messages.ts)에만(M15-7).
+      - run: pnpm check:korean
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # 테스트는 이 DB에 격리 스키마를 만들고 끝나면 지운다(운영 DB는 쓰지 않는다).
+      CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:run
+
+  example:
+    name: example app (packed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm example:check

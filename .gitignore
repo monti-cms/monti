@@ -1,0 +1,25 @@
+# dependencies
+node_modules
+
+# 빌드 결과
+dist
+.build-stubs
+.next
+next-env.d.ts
+*.tsbuildinfo
+
+# 환경 파일(예시 `.env.example`은 커밋한다)
+.env*.local
+
+# 테스트
+coverage
+
+# 예시 앱이 설치하는 묶음 파일(`pnpm example:pack`)
+examples/other-site/vendor
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+pnpm-debug.log*
+.vercel
