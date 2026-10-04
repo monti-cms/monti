@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/seo",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"private": true,
 	"cmsPlugin": true,
 	"description": "@monti-cms/core의 SEO 확장: 검색·공유 필드 묶음, 검색 미리보기, 검색 제목·설명 AI 추천, 공개 화면 도우미",

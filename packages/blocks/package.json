@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/blocks",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"private": true,
 	"cmsPlugin": true,
 	"description": "@monti-cms/core의 블록 확장: 콜아웃·접기·탭·단 나누기·Mermaid·차트, 글자 꾸밈(툴팁·코드 연결·글자색)",

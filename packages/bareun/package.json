@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/bareun",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"private": true,
 	"cmsPlugin": true,
 	"description": "@monti-cms/core의 바른(Bareun) 맞춤법·문장 검사기",
