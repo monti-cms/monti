@@ -1,0 +1,41 @@
+import { defineMessages } from "@monti-cms/core";
+
+/** Error messages for AI connection settings and shared texts. */
+export const settingsMessages = defineMessages("cms-ai.settings", {
+	en: {
+		legacyGenerate: "Generate",
+		legacyDecide: "Decide",
+		unknownConnection: "This connection doesn't exist.",
+		urlAndModel: "Enter an address and a model.",
+		keyAgain: "Enter the key again.",
+		key: "Enter the key.",
+		"shared.textTooLong": "The text can be up to {max} characters.",
+		"shared.labelRequired": "Enter a name.",
+		"shared.labelTooLong": "The name can be up to {max} characters.",
+		"shared.keyFormat": "The key must start with a letter and use only letters, digits and _.",
+		"shared.unknown": "This shared text doesn't exist: {key}",
+		"shared.invalid": "The shared text is not in the right format.",
+		"shared.keyTaken": "This key is already used: {key}",
+		"shared.tooMany": "You can add up to {max} shared texts.",
+		"shared.configCannotDelete": "A shared text written in the config can't be deleted.",
+		"shared.inUse": "Actions use this text, so it can't be deleted: {users}",
+	},
+	ko: {
+		legacyGenerate: "생성",
+		legacyDecide: "판단",
+		unknownConnection: "없는 연결입니다.",
+		urlAndModel: "주소와 모델을 넣으세요.",
+		keyAgain: "키를 다시 넣으세요.",
+		key: "키를 넣으세요.",
+		"shared.textTooLong": "내용은 {max}자까지 쓸 수 있습니다.",
+		"shared.labelRequired": "이름을 넣으세요.",
+		"shared.labelTooLong": "이름은 {max}자까지 쓸 수 있습니다.",
+		"shared.keyFormat": "키는 영문자로 시작하고 영문자·숫자·_만 쓸 수 있습니다.",
+		"shared.unknown": "없는 공통 문구입니다: {key}",
+		"shared.invalid": "공통 문구 형식이 맞지 않습니다.",
+		"shared.keyTaken": "이미 있는 키입니다: {key}",
+		"shared.tooMany": "공통 문구는 {max}개까지 더할 수 있습니다.",
+		"shared.configCannotDelete": "설정에 적은 공통 문구는 삭제할 수 없습니다.",
+		"shared.inUse": "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: {users}",
+	},
+});

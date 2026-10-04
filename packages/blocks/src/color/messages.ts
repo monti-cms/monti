@@ -1,0 +1,41 @@
+import { defineMessages } from "@monti-cms/core";
+
+/** Label, default color names, and editing view text of the text color mark. */
+export const colorMessages = defineMessages("cms-blocks.color", {
+	en: {
+		label: "Text color",
+		"fg.label": "Text color",
+		"fgDark.label": "Dark theme text color",
+		"bg.label": "Background color",
+		"bgDark.label": "Dark theme background color",
+		"palette.gray": "Gray",
+		"palette.red": "Red",
+		"palette.orange": "Orange",
+		"palette.yellow": "Yellow",
+		"palette.green": "Green",
+		"palette.blue": "Blue",
+		"palette.purple": "Purple",
+		"palette.pink": "Pink",
+		default: "Default",
+		sample: "A",
+		pick: "{kind} {name}",
+	},
+	ko: {
+		label: "글자색",
+		"fg.label": "글자색",
+		"fgDark.label": "어두운 테마 글자색",
+		"bg.label": "배경색",
+		"bgDark.label": "어두운 테마 배경색",
+		"palette.gray": "회색",
+		"palette.red": "빨강",
+		"palette.orange": "주황",
+		"palette.yellow": "노랑",
+		"palette.green": "초록",
+		"palette.blue": "파랑",
+		"palette.purple": "보라",
+		"palette.pink": "분홍",
+		default: "기본",
+		sample: "가",
+		pick: "{kind} {name}",
+	},
+});

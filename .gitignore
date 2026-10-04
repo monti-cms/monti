@@ -1,0 +1,25 @@
+# dependencies
+node_modules
+
+# Build output
+dist
+.build-stubs
+.next
+next-env.d.ts
+*.tsbuildinfo
+
+# Env files (the example `.env.example` is committed)
+.env*.local
+
+# Tests
+coverage
+
+# Bundle files installed by the example app (`pnpm example:pack`)
+examples/other-site/vendor
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+pnpm-debug.log*
+.vercel

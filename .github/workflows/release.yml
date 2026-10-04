@@ -1,0 +1,59 @@
+# Release bundle. Pushing a `v*` tag builds and packs the packages, commits them to the `release` branch and adds a `release/<tag>` tag.
+# Until the public release, install this tag from its GitHub address instead of npm (`scripts/pack-release.mjs`).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: build · pack · push release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Stop if the tag and the package version differ (align them with `scripts/version.mjs`).
+      - name: Check version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for file in packages/*/package.json; do
+            actual=$(node -p "require('./$file').version")
+            if [ "$actual" != "$version" ]; then
+              echo "$file: version $actual does not match tag $GITHUB_REF_NAME"
+              exit 1
+            fi
+          done
+      - run: pnpm build
+      - run: node scripts/pack-release.mjs "$RUNNER_TEMP/release"
+      - name: Commit to release branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          source_sha=$(git rev-parse HEAD)
+          # Start on top of the release branch if it exists, otherwise as a fresh branch with no history.
+          if git fetch --depth=1 origin release; then
+            git worktree add "$RUNNER_TEMP/branch" FETCH_HEAD
+            git -C "$RUNNER_TEMP/branch" switch -c release
+          else
+            git worktree add --orphan -b release "$RUNNER_TEMP/branch"
+          fi
+          cd "$RUNNER_TEMP/branch"
+          git rm -rq --ignore-unmatch .
+          cp -R "$RUNNER_TEMP/release/." .
+          git add -A
+          git commit -q -m "$GITHUB_REF_NAME release bundle" -m "Source: $source_sha"
+          git tag "release/$GITHUB_REF_NAME"
+          git push origin release "release/$GITHUB_REF_NAME"

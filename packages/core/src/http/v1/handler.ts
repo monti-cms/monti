@@ -1,0 +1,95 @@
+import type { NextRequest } from "next/server";
+import type { z } from "zod";
+import { type AuthContext, authGateway } from "../../adapters/auth";
+import { HttpError, handleApiError } from "./error-handler";
+import { validateSameOrigin } from "./security";
+
+/**
+ * Shared frame for admin API routes. Every admin request is authenticated on the server,
+ * and state-changing requests go through the same-origin check first. Errors are converted to one shape in a single place.
+ */
+
+type Params = Record<string, string>;
+type HandlerContext<P extends Params> = { params: Promise<P> };
+
+export interface AdminRequest<P extends Params> {
+	request: NextRequest;
+	params: P;
+	auth: AuthContext;
+}
+
+export function adminRoute<P extends Params = Params>(
+	handler: (input: AdminRequest<P>) => Promise<Response>,
+): (request: NextRequest, context?: HandlerContext<P>) => Promise<Response> {
+	return async (request, context) => {
+		try {
+			validateSameOrigin(request);
+			const auth = await authGateway.verifyAdmin();
+			const params = (await context?.params) ?? ({} as P);
+			return await handler({ request, params, auth });
+		} catch (error) {
+			return handleApiError(error);
+		}
+	};
+}
+
+/** Reads the JSON body. 400 if malformed. A missing body is treated as `{}`. */
+export async function readJsonBody(request: NextRequest): Promise<unknown> {
+	const text = await request.text();
+	if (!text.trim()) return {};
+	try {
+		return JSON.parse(text);
+	} catch {
+		throw new HttpError(400, "invalid_input", "Request body is not valid JSON");
+	}
+}
+
+/**
+ * Change requests need the `version` from the read response. 428 if missing, and the store throws 409 if it differs from the server.
+ * A missing version is rejected before a malformed body (400).
+ */
+export function assertVersionPresent(value: unknown): void {
+	if (value === undefined || value === null || value === "") {
+		throw new HttpError(428, "version_required", "expectedVersion is required");
+	}
+}
+
+export function parseWith<S extends z.ZodType>(
+	schema: S,
+	value: unknown,
+	message = "Invalid request body",
+): z.output<S> {
+	const parsed = schema.safeParse(value);
+	if (!parsed.success) throw new HttpError(400, "invalid_input", message, parsed.error.issues);
+	return parsed.data;
+}
+
+/** Reads the body, checks that a version is present, then validates it against the schema. */
+export async function readVersionedBody<S extends z.ZodType>(request: NextRequest, schema: S): Promise<z.output<S>> {
+	const body = await readJsonBody(request);
+	assertVersionPresent((body as { expectedVersion?: unknown })?.expectedVersion);
+	return parseWith(schema, body);
+}
+
+/** The `expectedVersion` query param (DELETE requests). */
+export function readVersionQuery(request: NextRequest): number {
+	const raw = request.nextUrl.searchParams.get("expectedVersion");
+	assertVersionPresent(raw ?? undefined);
+	const version = Number(raw);
+	if (!Number.isInteger(version) || version <= 0) {
+		throw new HttpError(400, "invalid_input", "Invalid expectedVersion");
+	}
+	return version;
+}
+
+/** Converts the query to an object. Keys in `arrayKeys` may appear multiple times. */
+export function readQuery(request: NextRequest, arrayKeys: readonly string[] = []): Record<string, unknown> {
+	const query: Record<string, unknown> = {};
+	const params = request.nextUrl.searchParams;
+	for (const key of new Set(params.keys())) {
+		query[key] = arrayKeys.includes(key) ? params.getAll(key) : params.get(key);
+	}
+	return query;
+}
+
+export const json = (body: unknown, init?: ResponseInit) => Response.json(body, init);

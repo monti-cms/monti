@@ -1,0 +1,85 @@
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { Editor } from "@tiptap/core";
+import { EditorContent, useEditor } from "@tiptap/react";
+import { useEffect } from "react";
+import { afterEach, describe, expect, it } from "vitest";
+import { CmsAdminComponentsProvider } from "../../../../admin-components";
+import { chooseSelectOption } from "../../../../test/base-ui";
+import { buildEditorExtensions } from "../../../extensions";
+import { mdxToTiptap, tiptapToMdx } from "../../../tiptap-content";
+import type { CustomBlockEditorProps } from "../view";
+
+afterEach(cleanup);
+
+function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
+	const editor = useEditor({
+		extensions: buildEditorExtensions(),
+		content: mdxToTiptap(source),
+		immediatelyRender: true,
+	});
+	useEffect(() => {
+		if (editor) onReady(editor);
+	}, [editor, onReady]);
+	return <EditorContent editor={editor} />;
+}
+
+const mount = async (source: string, wrap: (node: React.ReactNode) => React.ReactNode = (node) => node) => {
+	let editor: Editor | null = null;
+	render(
+		wrap(
+			<Harness
+				source={source}
+				onReady={(ready) => {
+					editor = ready;
+				}}
+			/>,
+		),
+	);
+	await waitFor(() => expect(editor).not.toBeNull());
+	await waitFor(() => expect(document.querySelector("[data-cms-custom-block]")).not.toBeNull());
+	return editor as unknown as Editor;
+};
+
+const NOTICE = ':::notice{level="info"}\n본문\n:::';
+
+/** Edit component registered by the site (example): turns the level into a button. */
+function NoticeEditor({ values, setValue, content }: CustomBlockEditorProps) {
+	return (
+		<div>
+			<button type="button" contentEditable={false} onClick={() => setValue("level", "warn")}>
+				단계: {String(values.level)}
+			</button>
+			{content}
+		</div>
+	);
+}
+
+describe("custom block NodeView", () => {
+	it("without a registered edit component it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
+		const editor = await mount(NOTICE);
+		expect(screen.getByText("공지")).toBeTruthy();
+		expect(screen.queryByLabelText("단계")).toBeNull();
+		fireEvent.click(screen.getByRole("button", { name: "설정" }));
+		await chooseSelectOption("단계", "주의");
+		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain(':::notice{level="warn"}'));
+		fireEvent.change(screen.getByLabelText("제목"), { target: { value: "점검" } });
+		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('title="점검"'));
+	});
+
+	it("hides the settings tool when read-only", async () => {
+		const editor = await mount(NOTICE);
+		act(() => editor.setEditable(false));
+		await waitFor(() => expect(screen.queryByRole("button", { name: "설정" })).toBeNull());
+	});
+
+	it("renders with the edit component registered by the site", async () => {
+		const editor = await mount(NOTICE, (node) => (
+			<CmsAdminComponentsProvider components={{ blockEditors: { notice: NoticeEditor } }}>
+				{node}
+			</CmsAdminComponentsProvider>
+		));
+		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
+		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain(':::notice{level="warn"}'));
+		expect(tiptapToMdx(editor.getJSON())).toContain("본문");
+	});
+});

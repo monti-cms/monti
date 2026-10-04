@@ -1,0 +1,236 @@
+{
+	"name": "@monti-cms/blocks",
+	"version": "0.1.0",
+	"private": true,
+	"cmsPlugin": true,
+	"description": "Block extensions for @monti-cms/core: callout, collapsible, tabs, columns, Mermaid, chart, and inline marks (tooltip, code link, text color)",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./definitions": "./src/definitions.ts",
+		"./callout": "./src/callout/index.ts",
+		"./callout/admin": "./src/callout/admin.ts",
+		"./callout/render": "./src/callout/render.tsx",
+		"./collapsible": "./src/collapsible/index.ts",
+		"./collapsible/admin": "./src/collapsible/admin.ts",
+		"./collapsible/render": "./src/collapsible/render.tsx",
+		"./tabs": "./src/tabs/index.ts",
+		"./tabs/admin": "./src/tabs/admin.ts",
+		"./tabs/render": "./src/tabs/render.tsx",
+		"./columns": "./src/columns/index.ts",
+		"./columns/admin": "./src/columns/admin.ts",
+		"./columns/render": "./src/columns/render.tsx",
+		"./mermaid": "./src/mermaid/index.ts",
+		"./mermaid/admin": "./src/mermaid/admin.ts",
+		"./mermaid/render": "./src/mermaid/render.tsx",
+		"./mermaid/ai": "./src/mermaid/ai.ts",
+		"./chart": "./src/chart/index.ts",
+		"./chart/admin": "./src/chart/admin.ts",
+		"./chart/render": "./src/chart/render.tsx",
+		"./chart/ai": "./src/chart/ai.ts",
+		"./tooltip": "./src/tooltip/index.ts",
+		"./tooltip/admin": "./src/tooltip/admin.ts",
+		"./tooltip/render": "./src/tooltip/render.tsx",
+		"./code-ref": "./src/code-ref/index.ts",
+		"./code-ref/admin": "./src/code-ref/admin.ts",
+		"./code-ref/render": "./src/code-ref/render.tsx",
+		"./color": "./src/color/index.ts",
+		"./color/admin": "./src/color/admin.ts",
+		"./color/render": "./src/color/render.tsx",
+		"./styles.css": "./styles.css"
+	},
+	"scripts": {
+		"test": "vitest",
+		"test:run": "vitest run",
+		"typecheck": "tsc --noEmit -p .",
+		"build": "node ../../scripts/build-package.mjs"
+	},
+	"peerDependencies": {
+		"@monti-cms/core": "workspace:^",
+		"@monti-cms/admin": "workspace:^",
+		"@tiptap/core": "^3.31.3",
+		"@tiptap/pm": "^3.31.3",
+		"@tiptap/react": "^3.31.3",
+		"react": ">=19",
+		"@monti-cms/ai": "workspace:^",
+		"mermaid": ">=11",
+		"recharts": ">=3",
+		"lucide-react": ">=0.562.0"
+	},
+	"peerDependenciesMeta": {
+		"@monti-cms/ai": {
+			"optional": true
+		},
+		"mermaid": {
+			"optional": true
+		},
+		"recharts": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/ai": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@tanstack/react-query": "^5.104.0",
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.2",
+		"@tiptap/core": "^3.31.3",
+		"@tiptap/pm": "^3.31.3",
+		"@tiptap/react": "^3.31.3",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"jsdom": "^27.4.0",
+		"lucide-react": "^0.562.0",
+		"mermaid": "^11.12.2",
+		"next": "16.3.8",
+		"next-auth": "5.0.0-beta.32",
+		"next-mdx-remote": "^6.0.0",
+		"next-themes": "^0.4.6",
+		"react": "19.2.3",
+		"react-dom": "19.2.3",
+		"recharts": "^3.8.1",
+		"remark-directive": "^4.0.0",
+		"sonner": "^2.0.8",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.0",
+		"vitest": "^4.0.18"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"styles.css"
+	],
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./definitions": {
+				"types": "./dist/definitions.d.ts",
+				"default": "./dist/definitions.js"
+			},
+			"./callout": {
+				"types": "./dist/callout/index.d.ts",
+				"default": "./dist/callout/index.js"
+			},
+			"./callout/admin": {
+				"types": "./dist/callout/admin.d.ts",
+				"default": "./dist/callout/admin.js"
+			},
+			"./callout/render": {
+				"types": "./dist/callout/render.d.ts",
+				"default": "./dist/callout/render.js"
+			},
+			"./collapsible": {
+				"types": "./dist/collapsible/index.d.ts",
+				"default": "./dist/collapsible/index.js"
+			},
+			"./collapsible/admin": {
+				"types": "./dist/collapsible/admin.d.ts",
+				"default": "./dist/collapsible/admin.js"
+			},
+			"./collapsible/render": {
+				"types": "./dist/collapsible/render.d.ts",
+				"default": "./dist/collapsible/render.js"
+			},
+			"./tabs": {
+				"types": "./dist/tabs/index.d.ts",
+				"default": "./dist/tabs/index.js"
+			},
+			"./tabs/admin": {
+				"types": "./dist/tabs/admin.d.ts",
+				"default": "./dist/tabs/admin.js"
+			},
+			"./tabs/render": {
+				"types": "./dist/tabs/render.d.ts",
+				"default": "./dist/tabs/render.js"
+			},
+			"./columns": {
+				"types": "./dist/columns/index.d.ts",
+				"default": "./dist/columns/index.js"
+			},
+			"./columns/admin": {
+				"types": "./dist/columns/admin.d.ts",
+				"default": "./dist/columns/admin.js"
+			},
+			"./columns/render": {
+				"types": "./dist/columns/render.d.ts",
+				"default": "./dist/columns/render.js"
+			},
+			"./mermaid": {
+				"types": "./dist/mermaid/index.d.ts",
+				"default": "./dist/mermaid/index.js"
+			},
+			"./mermaid/admin": {
+				"types": "./dist/mermaid/admin.d.ts",
+				"default": "./dist/mermaid/admin.js"
+			},
+			"./mermaid/render": {
+				"types": "./dist/mermaid/render.d.ts",
+				"default": "./dist/mermaid/render.js"
+			},
+			"./mermaid/ai": {
+				"types": "./dist/mermaid/ai.d.ts",
+				"default": "./dist/mermaid/ai.js"
+			},
+			"./chart": {
+				"types": "./dist/chart/index.d.ts",
+				"default": "./dist/chart/index.js"
+			},
+			"./chart/admin": {
+				"types": "./dist/chart/admin.d.ts",
+				"default": "./dist/chart/admin.js"
+			},
+			"./chart/render": {
+				"types": "./dist/chart/render.d.ts",
+				"default": "./dist/chart/render.js"
+			},
+			"./chart/ai": {
+				"types": "./dist/chart/ai.d.ts",
+				"default": "./dist/chart/ai.js"
+			},
+			"./tooltip": {
+				"types": "./dist/tooltip/index.d.ts",
+				"default": "./dist/tooltip/index.js"
+			},
+			"./tooltip/admin": {
+				"types": "./dist/tooltip/admin.d.ts",
+				"default": "./dist/tooltip/admin.js"
+			},
+			"./tooltip/render": {
+				"types": "./dist/tooltip/render.d.ts",
+				"default": "./dist/tooltip/render.js"
+			},
+			"./code-ref": {
+				"types": "./dist/code-ref/index.d.ts",
+				"default": "./dist/code-ref/index.js"
+			},
+			"./code-ref/admin": {
+				"types": "./dist/code-ref/admin.d.ts",
+				"default": "./dist/code-ref/admin.js"
+			},
+			"./code-ref/render": {
+				"types": "./dist/code-ref/render.d.ts",
+				"default": "./dist/code-ref/render.js"
+			},
+			"./color": {
+				"types": "./dist/color/index.d.ts",
+				"default": "./dist/color/index.js"
+			},
+			"./color/admin": {
+				"types": "./dist/color/admin.d.ts",
+				"default": "./dist/color/admin.js"
+			},
+			"./color/render": {
+				"types": "./dist/color/render.d.ts",
+				"default": "./dist/color/render.js"
+			},
+			"./styles.css": "./styles.css"
+		}
+	}
+}

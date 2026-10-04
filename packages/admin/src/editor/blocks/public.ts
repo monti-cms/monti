@@ -1,0 +1,24 @@
+/**
+ * Tools for building block editing views (`@monti-cms/admin/blocks`). Used when a block extension draws the whole editing view (`blockViews`).
+ */
+
+export { blockNodeName } from "./added/shared";
+export type { CustomBlockEditorProps } from "./added/view";
+export { type FenceEditorMeta, FencePreviewNodeView, LazyFencePreview } from "./fence-preview";
+export {
+	AttributeInput,
+	BLOCK_TOOLBAR,
+	BlockSettings,
+	BlockSettingsField,
+	ContainerToolbar,
+	type ContainerValues,
+	childPos,
+	focusInside,
+	SELECTED_RING,
+	selectContainer,
+	ToolbarButton,
+	useContainerValues,
+	useSelectedChildIndex,
+	valuesOf,
+	withValue,
+} from "./shared";

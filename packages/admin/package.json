@@ -1,0 +1,132 @@
+{
+	"name": "@monti-cms/admin",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Admin UI (Next.js) for @monti-cms/core: editor, lists, media, templates, and plugin extension points",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./next": "./src/next/index.tsx",
+		"./editor": "./src/editor/public.ts",
+		"./blocks": "./src/editor/blocks/public.ts",
+		"./plugins": "./src/plugins.ts",
+		"./media": "./src/media.ts",
+		"./slots": "./src/slots/slots.tsx",
+		"./api": "./src/screens/admin-api.ts",
+		"./kit": "./src/kit.ts",
+		"./styles.css": "./styles.css"
+	},
+	"scripts": {
+		"test": "vitest",
+		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
+		"test:other-site": "vitest run -c vitest.othersite.config.ts",
+		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
+		"build": "node ../../scripts/build-package.mjs"
+	},
+	"dependencies": {
+		"@base-ui/react": "^1.8.0",
+		"@dnd-kit/core": "^6.3.1",
+		"@dnd-kit/sortable": "^10.0.0",
+		"@dnd-kit/utilities": "^3.2.2",
+		"@tanstack/react-table": "^9.2.4",
+		"@tiptap/extension-code-block": "^3.31.3",
+		"@tiptap/extension-list": "^3.31.3",
+		"@tiptap/extension-subscript": "^3.31.3",
+		"@tiptap/extension-superscript": "^3.31.3",
+		"@tiptap/extension-table": "^3.31.3",
+		"@tiptap/extension-text-align": "^3.31.3",
+		"@tiptap/starter-kit": "^3.31.3",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"cmdk": "^1.1.1",
+		"katex": "^0.16.45",
+		"react-day-picker": "^10.0.1",
+		"server-only": "^0.0.1",
+		"shiki": "^3.21.0",
+		"tailwind-merge": "^3.4.0"
+	},
+	"peerDependencies": {
+		"@monti-cms/core": "workspace:^",
+		"@tanstack/react-query": "^5.104.0",
+		"@tiptap/core": "^3.31.3",
+		"@tiptap/pm": "^3.31.3",
+		"@tiptap/react": "^3.31.3",
+		"lucide-react": ">=0.562.0",
+		"next": ">=16",
+		"next-themes": ">=0.4",
+		"react": ">=19",
+		"react-dom": ">=19",
+		"sonner": "^2.0.8"
+	},
+	"devDependencies": {
+		"@monti-cms/core": "workspace:*",
+		"@tanstack/react-query": "^5.104.0",
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.2",
+		"@tiptap/core": "^3.31.3",
+		"@tiptap/pm": "^3.31.3",
+		"@tiptap/react": "^3.31.3",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"jsdom": "^27.4.0",
+		"lucide-react": "^0.562.0",
+		"next": "16.3.8",
+		"next-auth": "5.0.0-beta.32",
+		"next-themes": "^0.4.6",
+		"react": "19.2.3",
+		"react-dom": "19.2.3",
+		"sonner": "^2.0.8",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.0",
+		"vitest": "^4.0.18"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"styles.css"
+	],
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./next": {
+				"types": "./dist/next/index.d.ts",
+				"default": "./dist/next/index.js"
+			},
+			"./editor": {
+				"types": "./dist/editor/public.d.ts",
+				"default": "./dist/editor/public.js"
+			},
+			"./blocks": {
+				"types": "./dist/editor/blocks/public.d.ts",
+				"default": "./dist/editor/blocks/public.js"
+			},
+			"./plugins": {
+				"types": "./dist/plugins.d.ts",
+				"default": "./dist/plugins.js"
+			},
+			"./media": {
+				"types": "./dist/media.d.ts",
+				"default": "./dist/media.js"
+			},
+			"./slots": {
+				"types": "./dist/slots/slots.d.ts",
+				"default": "./dist/slots/slots.js"
+			},
+			"./api": {
+				"types": "./dist/screens/admin-api.d.ts",
+				"default": "./dist/screens/admin-api.js"
+			},
+			"./kit": {
+				"types": "./dist/kit.d.ts",
+				"default": "./dist/kit.js"
+			},
+			"./styles.css": "./styles.css"
+		}
+	}
+}

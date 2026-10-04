@@ -1,0 +1,30 @@
+import path from "node:path";
+import { loadEnv } from "vite";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig(({ mode }) => ({
+	test: {
+		name: "blocks",
+		environment: "jsdom",
+		globals: true,
+		include: ["src/**/*.{test,spec}.{ts,tsx}"],
+		setupFiles: ["../admin/src/test/setup-dom.ts"],
+		// When run together from the repository root, it runs after the other bundles (`vitest.config.ts`).
+		sequence: { groupOrder: 3 },
+		testTimeout: 60000,
+		hookTimeout: 60000,
+		env: {
+			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
+			...loadEnv(mode, __dirname, ""),
+			TZ: "UTC",
+		},
+	},
+	resolve: {
+		alias: {
+			// Block extension tests run with the core package's example config (which uses all of this package's blocks).
+			"@cms-config": path.resolve(__dirname, "../core/test/cms.config.ts"),
+			"@cms-server": path.resolve(__dirname, "../core/test/cms.server.ts"),
+			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
+		},
+	},
+}));

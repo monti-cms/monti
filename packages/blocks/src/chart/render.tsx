@@ -1,0 +1,38 @@
+import { type BlockLabels, blockLabels } from "../shared/labels";
+import { normalizeChartDsl, parseChartDsl } from "./dsl";
+import { ChartClient } from "./render.client";
+import type { ChartRenderError } from "./types";
+
+function ChartError({ errors, labels }: { errors: readonly ChartRenderError[]; labels: BlockLabels }) {
+	return (
+		<div className="cms-block-chart-error" role="alert">
+			<strong>{labels.chartError}</strong>
+			<ul>
+				{errors.map((error) => (
+					<li key={`${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`}>
+						{labels.chartErrorLine(error)}
+					</li>
+				))}
+			</ul>
+		</div>
+	);
+}
+
+/**
+ * Rendering of the chart block (` ```chart `). The code is the `source` attribute (`remarkFenceBlocksToMdx`). If the syntax is wrong, the
+ * server renders each line's error; otherwise the browser draws the chart (the source is shown until then).
+ */
+export function Chart({ source, labels = blockLabels() }: { source?: string; labels?: BlockLabels }) {
+	const text = source ?? "";
+	const normalized = normalizeChartDsl(parseChartDsl(text));
+	if (!normalized.spec) return <ChartError errors={normalized.errors} labels={labels} />;
+	return <ChartClient source={text} />;
+}
+
+type ChartProps = Parameters<typeof Chart>[0];
+
+/** Public chart component (called by `@monti-cms/core/render`). The chart is drawn in the browser (optional dependency `recharts`). */
+export default ({ locale }: { locale?: string }) => {
+	const labels = blockLabels(locale);
+	return { Chart: (props: ChartProps) => <Chart {...props} labels={labels} /> };
+};

@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@monti-cms/admin/styles.css";
+/* Public page body (code highlighting, line effects, base components) */
+@import "@monti-cms/core/render.css";
+@import "@monti-cms/blocks/styles.css";
+@import "@monti-cms/seo/styles.css";
+@plugin "@tailwindcss/typography";

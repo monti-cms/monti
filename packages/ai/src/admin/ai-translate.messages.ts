@@ -1,0 +1,41 @@
+import { defineMessages } from "@monti-cms/core";
+
+/** Texts of AI translation in the translation editor (block translation, Translate all). */
+export const aiTranslateMessages = defineMessages("cms-ai.admin.translate", {
+	en: {
+		"toast.failedOne": "Couldn't translate, so the source placeholder was kept. {reason}",
+		"toast.blockChanged": "The block changed in the meantime, so nothing was inserted.",
+		"toast.invalidOne": "The translation doesn't fit this place, so the source placeholder was kept.",
+		"toast.stopped": "Translation stopped.",
+		"toast.noBlocks": "There are no blocks to translate.",
+		"toast.invalidMany": "The translation doesn't fit its place.",
+		"toast.stoppedKeep": "Translation stopped. Blocks already translated are kept.",
+		"toast.partial": "Translated {done} blocks. {kept} were kept as source placeholders.",
+		"toast.all": "Translated {count} blocks.",
+		runFailed: "Couldn't run.",
+		progress: "Translating {done}/{total}",
+		stop: "Stop",
+		all: "Translate all",
+		action: "Translation action",
+		request: "Extra request",
+		run: "Run",
+	},
+	ko: {
+		"toast.failedOne": "번역하지 못해 원문 틀로 두었습니다. {reason}",
+		"toast.blockChanged": "그사이 블록이 바뀌어 넣지 않았습니다.",
+		"toast.invalidOne": "번역 결과가 이 자리에 맞지 않아 원문 틀로 두었습니다.",
+		"toast.stopped": "번역을 멈췄습니다.",
+		"toast.noBlocks": "번역할 블록이 없습니다.",
+		"toast.invalidMany": "번역 결과가 그 자리에 맞지 않습니다.",
+		"toast.stoppedKeep": "번역을 멈췄습니다. 번역한 블록은 그대로 둡니다.",
+		"toast.partial": "{done}개 블록을 번역했습니다. {kept}개는 원문 틀로 남겼습니다.",
+		"toast.all": "{count}개 블록을 번역했습니다.",
+		runFailed: "실행하지 못했습니다.",
+		progress: "번역 중 {done}/{total}",
+		stop: "중지",
+		all: "모두 번역",
+		action: "번역 기능",
+		request: "추가 요청",
+		run: "실행",
+	},
+});

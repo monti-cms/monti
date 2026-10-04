@@ -1,0 +1,7 @@
+set -e
+
+# Check only (nothing is fixed). Fix issues with `pnpm lint:fix`, commit, then push.
+# Tests need a DB and take long, so CI (.github/workflows/ci.yml) runs them.
+pnpm lint
+pnpm check:korean
+pnpm typecheck
