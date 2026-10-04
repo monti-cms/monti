@@ -1,0 +1,41 @@
+import { defineMessages } from "@monti-cms/core";
+
+/** 본문에 글을 쓰는 AI 대화 상자(다듬기·초안·블록 고치기)의 문구. */
+export const aiWriteMessages = defineMessages("cms-ai.admin.write", {
+	en: {
+		blockMismatch: "The result is not a single block of the same kind.",
+		request: "Extra request",
+		askWrite: "What should be written?",
+		askChange: "What should be changed?",
+		running: "Running…",
+		run: "Run",
+		runAgain: "Run again",
+		preview: "Preview",
+		sourceInsert: "Source",
+		sourceChanges: "Changes",
+		cancel: "Cancel",
+		insert: "Insert",
+		replace: "Replace",
+		after: "After",
+		now: "Now",
+		insertDescription: "AI action",
+	},
+	ko: {
+		blockMismatch: "결과가 같은 블록 하나가 아닙니다.",
+		request: "추가 요청",
+		askWrite: "무엇을 쓸까요?",
+		askChange: "무엇을 바꿀까요?",
+		running: "실행 중…",
+		run: "실행",
+		runAgain: "다시 실행",
+		preview: "미리보기",
+		sourceInsert: "원문",
+		sourceChanges: "바뀐 곳",
+		cancel: "취소",
+		insert: "넣기",
+		replace: "바꾸기",
+		after: "바뀐 뒤",
+		now: "지금",
+		insertDescription: "AI 기능",
+	},
+});

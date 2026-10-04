@@ -1,0 +1,21 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"outDir": "dist",
+		"rootDir": "src",
+		"declaration": true,
+		"types": ["node"],
+		"paths": {
+			"@cms-config": ["./build/cms-config.d.ts"],
+			"@cms-server": ["./build/cms-server.d.ts"]
+		}
+	},
+	"include": ["src", "build"],
+	"exclude": [
+		"src/**/*.test.ts",
+		"src/**/*.test.tsx",
+		"src/**/__test__/**/*.test.*",
+		"src/services/__test__/export-fixture.ts"
+	]
+}

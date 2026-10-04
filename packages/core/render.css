@@ -1,0 +1,339 @@
+/*
+ * @monti-cms/core/render.css — 공개 화면 본문(`@monti-cms/core/render`)의 코드 강조·줄 효과·기본 컴포넌트 모양.
+ * 사이트의 Tailwind 4 입력 CSS에서 `@import "tailwindcss";` 다음에 import한다. 어두운 테마는 `.dark`·`[data-theme="dark"]`.
+ * 기본 컴포넌트(`cms-*` 클래스)를 덮어쓴 사이트는 그 부분을 쓰지 않아도 된다.
+ */
+
+/* 코드 줄 효과의 클래스(본체의 줄 효과 정의)를 Tailwind가 읽게 한다. 저장소 안에서는 소스, 설치한 묶음에서는 dist를 읽는다. */
+@source "./src/annotation";
+@source "./dist/annotation";
+
+/* 줄 앞 표시(+·− 등). 줄의 첫 요소 앞에 글자를 둔다. */
+@utility anno-mark-base {
+	& > *:first-child {
+		@apply relative;
+	}
+	& > *:first-child::after {
+		@apply absolute -left-3.25 top-1/2 -translate-y-1/2 select-none pointer-events-none;
+	}
+}
+
+@custom-variant anno-mark {
+	& > *:first-child::after {
+		@slot;
+	}
+}
+
+/* 어두운 테마 코드 색(shiki 두 테마). shiki가 밝은 색을 인라인 style로 넣어 !important로만 덮을 수 있다. */
+:where(.dark, [data-theme="dark"]) .shiki {
+	/* biome-ignore lint/complexity/noImportantStyles: 인라인 style을 덮는다 */
+	color: var(--shiki-dark) !important;
+	/* biome-ignore lint/complexity/noImportantStyles: 인라인 style을 덮는다 */
+	background-color: var(--shiki-dark-bg) !important;
+}
+:where(.dark, [data-theme="dark"]) .shiki span {
+	/* biome-ignore lint/complexity/noImportantStyles: 인라인 style을 덮는다 */
+	color: var(--shiki-dark) !important;
+}
+
+/* 들여쓰기 안내선 */
+.shiki .line .indent {
+	position: relative;
+	display: inline-block;
+	line-height: inherit;
+	min-height: 1lh;
+}
+.shiki .line .indent:empty {
+	width: 0;
+	vertical-align: top;
+}
+.shiki .line .indent::before {
+	content: "";
+	position: absolute;
+	left: var(--indent-offset, 0);
+	top: 0;
+	height: 1lh;
+	width: 0.5px;
+	background-color: color-mix(in srgb, currentColor 16%, transparent);
+	pointer-events: none;
+}
+
+/* 줄 번호(줄에 단 실제 번호, 접힌 줄이 있어도 밀리지 않는다) */
+pre[data-show-line-numbers] code .line::before {
+	@apply mr-3 inline-block border-transparent text-right! w-[2ch]! content-[attr(data-line)];
+}
+
+/* 본문이 코드 줄을 가리키면(`:code-ref`) 연결된 줄만 또렷하게 */
+pre[data-code-focus] code .line {
+	transition:
+		opacity 150ms ease,
+		background-color 150ms ease;
+}
+pre[data-code-focus] code .line:not([data-focused]) {
+	opacity: 0.35;
+}
+pre[data-code-focus] code .line[data-focused] {
+	display: inline-block;
+	width: 100%;
+	background-color: color-mix(in oklab, currentColor 10%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+	pre[data-code-focus] code .line {
+		transition: none;
+	}
+}
+
+/* 수식 블록은 넘치면 가로로 넘긴다 */
+.katex-display {
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 0.25rem 0;
+}
+.katex-display > .katex {
+	display: inline-block;
+	min-width: max-content;
+}
+
+/* 코드 블록 틀(제목 줄·복사 단추·코드 안 툴팁 목록) */
+.cms-code {
+	position: relative;
+	margin: 1.5rem 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	border-radius: 0.375rem;
+}
+.cms-code > pre {
+	margin: 0;
+	overflow-x: auto;
+	white-space: pre;
+	padding: 1rem 0;
+	border-radius: 0;
+}
+.cms-code > pre > code {
+	display: block;
+	min-width: fit-content;
+}
+.cms-code > pre .line {
+	padding: 0 1.25rem;
+}
+.cms-code > pre[data-show-line-numbers] .line {
+	padding: 0 0.5rem;
+}
+.cms-code-title {
+	border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	padding: 0.375rem 0.75rem;
+	font-size: 0.875rem;
+	opacity: 0.8;
+}
+.cms-code-title-file {
+	font-weight: 600;
+}
+.cms-code-copy {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	display: none;
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 0.25rem;
+	background: color-mix(in srgb, currentColor 8%, transparent);
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+.cms-code-title ~ .cms-code-copy {
+	top: 2.75rem;
+}
+.cms-code:hover .cms-code-copy,
+.cms-code-copy:focus-visible {
+	display: block;
+}
+/* 코드 안 툴팁 목록은 마우스를 올릴 수 없는 화면에서만(툴팁을 띄울 수 없다) */
+.cms-code-notes {
+	display: none;
+	margin: 0;
+	list-style: none;
+	border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	padding: 0.75rem 1rem;
+	font-size: 0.875rem;
+}
+.cms-code-notes > li {
+	display: flex;
+	gap: 0.5rem;
+	margin: 0;
+}
+.cms-code-note-number {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+@media (hover: none), (pointer: coarse) {
+	.cms-code-notes {
+		display: block;
+	}
+}
+
+/* 코드 줄 접기(collapse)·글자 접기(fold) */
+.cms-code-collapse > summary {
+	cursor: pointer;
+	list-style: none;
+}
+.cms-code-collapse > summary::-webkit-details-marker {
+	display: none;
+}
+.cms-code-fold {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.25rem;
+}
+.cms-code-fold > input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+.cms-code-fold-closed {
+	cursor: pointer;
+	opacity: 0.6;
+}
+.cms-code-fold-open {
+	display: none;
+	cursor: pointer;
+}
+.cms-code-fold > input:checked ~ .cms-code-fold-closed {
+	display: none;
+}
+.cms-code-fold > input:checked ~ .cms-code-fold-open {
+	display: inline;
+}
+
+/* 링크·정렬 */
+.cms-link-external::after {
+	content: "↗";
+	display: inline-block;
+	opacity: 0.4;
+}
+.cms-align-left {
+	text-align: left;
+}
+.cms-align-center {
+	text-align: center;
+}
+.cms-align-right {
+	text-align: right;
+}
+
+/* 이미지 */
+.cms-image {
+	margin: 1.5rem 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+.cms-image img {
+	margin: 0;
+}
+.cms-image-align-left {
+	align-items: flex-start;
+}
+.cms-image-align-center {
+	align-items: center;
+}
+.cms-image-align-right {
+	align-items: flex-end;
+}
+.cms-image-plain {
+	max-width: 100%;
+	height: auto;
+	border-radius: 0.375rem;
+}
+.cms-image-transform {
+	position: relative;
+	overflow: hidden;
+	border-radius: 0.375rem;
+}
+.cms-image-unavailable {
+	display: flex;
+	height: 12rem;
+	width: 100%;
+	align-items: center;
+	justify-content: center;
+	border: 1px dashed color-mix(in srgb, currentColor 25%, transparent);
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	opacity: 0.7;
+}
+.cms-image-caption {
+	text-align: center;
+	font-size: 0.875rem;
+	opacity: 0.7;
+}
+
+/* 첨부 파일 */
+.cms-file {
+	margin: 1.5rem 0;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	border-radius: 0.5rem;
+	padding: 0.75rem 1rem;
+}
+.cms-file-text {
+	min-width: 0;
+	flex: 1;
+}
+.cms-file-name {
+	margin: 0;
+	font-weight: 500;
+	font-size: 0.875rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.cms-file-details {
+	margin: 0;
+	font-size: 0.75rem;
+	opacity: 0.7;
+}
+.cms-file-download {
+	flex-shrink: 0;
+	border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	border-radius: 0.375rem;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+/* 표 */
+.cms-table-scroll {
+	position: relative;
+	margin: 1.5rem 0;
+	width: 100%;
+	overflow-x: auto;
+}
+.cms-table {
+	margin: 0;
+}
+.cms-table-full {
+	width: 100%;
+}
+.cms-table-cell {
+	padding: 0.5714286em;
+	vertical-align: middle;
+	text-align: start;
+}
+.cms-table-cell-head {
+	padding-top: 0;
+	vertical-align: bottom;
+}
+.cms-table-cell-first {
+	padding-left: 0;
+}
+.cms-table-cell-last {
+	padding-right: 0;
+}
+.cms-table-cell-header {
+	font-weight: 600;
+}

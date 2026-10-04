@@ -1,0 +1,7 @@
+/*
+ * @monti-cms/ai 스타일. 앱의 Tailwind 입력 CSS에서 `@monti-cms/admin/styles.css` 다음에 import한다.
+ * 색·토큰은 관리자 패키지 스타일이 준다.
+ */
+
+/* 배포 묶음의 컴포넌트에서 Tailwind 클래스를 찾는다(작업 공간 안에서는 앱이 소스를 바로 읽는다). */
+@source "./dist";

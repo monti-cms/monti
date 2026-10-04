@@ -1,0 +1,480 @@
+/*
+ * @monti-cms/blocks 스타일. 앱의 Tailwind 입력 CSS에서 `@monti-cms/admin/styles.css` 다음에 import한다.
+ * 편집기 모양은 관리자 테마 색(--cms-background·--cms-foreground·--cms-border·--cms-muted-foreground·--cms-destructive·--cms-warning)에서 만든다.
+ * 공개 화면에서는 관리자 색이 없으므로 콜아웃 강조색은 앱의 `--muted-foreground`·`--warning`·`--destructive`를 쓰고, 없으면 기본 색을 쓴다.
+ * 아래 기본값은 모두 `:where()`로 두어 앱이 같은 변수를 정하면 앱 값이 이긴다.
+ * 맨 아래 `cms-block-*` 구역은 공개 화면 기본 컴포넌트(`@monti-cms/blocks/<블록>/render`)의 모양이다. Tailwind 없이 쓰이고,
+ * 어두운 테마는 `.dark`·`[data-theme="dark"]`다. 컴포넌트를 덮어쓴 사이트는 그 부분을 쓰지 않아도 된다.
+ */
+
+/* 배포 묶음의 편집 화면에서 Tailwind 클래스를 찾는다(작업 공간 안에서는 앱이 소스를 바로 읽는다). */
+@source "./dist";
+
+/* 기본값: 콜아웃 종류별 강조색과 차트 계열 색(`chart-1`~`chart-5`). */
+:where(:root) {
+	--cms-callout-note: var(--cms-muted-foreground, var(--muted-foreground));
+	--cms-callout-tip: oklch(0.6 0.15 155);
+	--cms-callout-info: oklch(0.6 0.14 240);
+	--cms-callout-warning: var(--cms-warning, var(--warning, oklch(0.7 0.16 70)));
+	--cms-callout-danger: var(--cms-destructive, var(--destructive, oklch(0.58 0.22 27)));
+	--chart-1: oklch(0.65 0.17 265);
+	--chart-2: oklch(0.7 0.14 160);
+	--chart-3: oklch(0.75 0.15 70);
+	--chart-4: oklch(0.65 0.2 15);
+	--chart-5: oklch(0.6 0.15 310);
+}
+
+:where(.dark, [data-theme="dark"]) {
+	--chart-1: oklch(0.75 0.13 265);
+	--chart-2: oklch(0.78 0.12 160);
+	--chart-3: oklch(0.82 0.12 70);
+	--chart-4: oklch(0.72 0.16 15);
+	--chart-5: oklch(0.72 0.13 310);
+}
+
+/* 콜아웃 편집 화면(`callout/view.tsx`). 강조색을 테마 배경·테두리에 섞는다. 공개 화면 모양은 사이트가 정한다. */
+.cms-callout {
+	--cms-callout-accent: var(--cms-callout-note);
+	background-color: color-mix(in oklab, var(--cms-callout-accent) 10%, var(--cms-background));
+	border-color: color-mix(in oklab, var(--cms-callout-accent) 40%, var(--cms-border));
+	color: var(--cms-foreground);
+}
+.cms-callout[data-variant="tip"] {
+	--cms-callout-accent: var(--cms-callout-tip);
+}
+.cms-callout[data-variant="info"] {
+	--cms-callout-accent: var(--cms-callout-info);
+}
+.cms-callout[data-variant="warning"] {
+	--cms-callout-accent: var(--cms-callout-warning);
+}
+.cms-callout[data-variant="danger"] {
+	--cms-callout-accent: var(--cms-callout-danger);
+}
+.cms-callout [data-callout-icon] {
+	color: var(--cms-callout-accent);
+}
+.cms-callout :is(ul, ol) > li::marker {
+	color: var(--cms-muted-foreground);
+}
+
+/* 글자색·글자 배경색(`:color`, 글자색 확장). 값은 밝은·어두운 테마 짝이고, 어두운 값이 없으면 밝은 값을 쓴다. */
+.cms-color[data-fg] {
+	color: var(--cms-fg);
+}
+.cms-color[data-bg] {
+	background-color: var(--cms-bg);
+	border-radius: 0.25em;
+	padding: 0.05em 0.2em;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+:where(.dark, [data-theme="dark"]) .cms-color[data-fg] {
+	color: var(--cms-fg-dark, var(--cms-fg));
+}
+:where(.dark, [data-theme="dark"]) .cms-color[data-bg] {
+	background-color: var(--cms-bg-dark, var(--cms-bg));
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * 공개 화면 기본 컴포넌트(`cms-block-*`)
+ * ---------------------------------------------------------------------------------------------- */
+
+:where(:root) {
+	--cms-block-border: color-mix(in srgb, currentColor 18%, transparent);
+	--cms-block-muted: color-mix(in srgb, currentColor 6%, transparent);
+	--cms-block-accent: oklch(0.6 0.14 250);
+	--cms-block-tooltip-bg: oklch(0.21 0.03 265);
+	--cms-block-tooltip-fg: oklch(0.98 0.005 265);
+}
+:where(.dark, [data-theme="dark"]) {
+	--cms-block-tooltip-bg: oklch(0.96 0.005 265);
+	--cms-block-tooltip-fg: oklch(0.21 0.03 265);
+	--cms-block-accent: oklch(0.75 0.12 250);
+}
+
+/* 콜아웃 */
+.cms-block-callout {
+	--cms-block-callout-accent: var(--cms-callout-note, oklch(0.55 0.02 265));
+	margin: 1.5rem 0;
+	padding: 0.75rem 1rem;
+	border: 1px solid color-mix(in oklab, var(--cms-block-callout-accent) 40%, transparent);
+	border-left-width: 4px;
+	border-radius: 0.5rem;
+	background-color: color-mix(in oklab, var(--cms-block-callout-accent) 10%, transparent);
+	font-size: 0.875rem;
+}
+.cms-block-callout[data-variant="tip"] {
+	--cms-block-callout-accent: var(--cms-callout-tip, oklch(0.6 0.15 155));
+}
+.cms-block-callout[data-variant="info"] {
+	--cms-block-callout-accent: var(--cms-callout-info, oklch(0.6 0.14 240));
+}
+.cms-block-callout[data-variant="warning"] {
+	--cms-block-callout-accent: var(--cms-callout-warning, oklch(0.7 0.16 70));
+}
+.cms-block-callout[data-variant="danger"] {
+	--cms-block-callout-accent: var(--cms-callout-danger, oklch(0.58 0.22 27));
+}
+.cms-block-callout-title {
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--cms-block-callout-accent);
+}
+.cms-block-callout-body {
+	margin-top: 0.5rem;
+}
+.cms-block-callout-body > :first-child {
+	margin-top: 0;
+}
+.cms-block-callout-body > :last-child {
+	margin-bottom: 0;
+}
+
+/* 접기 */
+.cms-block-collapsible {
+	margin: 1.5rem 0;
+	border: 1px solid var(--cms-block-border);
+	border-radius: 0.375rem;
+}
+.cms-block-collapsible-summary {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	list-style: none;
+}
+.cms-block-collapsible-summary::-webkit-details-marker {
+	display: none;
+}
+.cms-block-collapsible-summary::before {
+	content: "";
+	flex-shrink: 0;
+	width: 0.45em;
+	height: 0.45em;
+	border-top: 2px solid currentColor;
+	border-right: 2px solid currentColor;
+	opacity: 0.6;
+	transform: rotate(45deg);
+	transition: transform 150ms ease;
+}
+.cms-block-collapsible[open] > .cms-block-collapsible-summary {
+	background-color: var(--cms-block-muted);
+}
+.cms-block-collapsible[open] > .cms-block-collapsible-summary::before {
+	transform: rotate(135deg);
+}
+.cms-block-collapsible-summary:hover {
+	background-color: var(--cms-block-muted);
+}
+.cms-block-collapsible-summary:focus-visible {
+	outline: 2px solid var(--cms-block-accent);
+	outline-offset: -2px;
+}
+.cms-block-collapsible-body {
+	padding: 0.5rem 0.75rem 0.75rem;
+}
+.cms-block-collapsible-body > :first-child {
+	margin-top: 0;
+}
+.cms-block-collapsible-body > :last-child {
+	margin-bottom: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.cms-block-collapsible-summary::before {
+		transition: none;
+	}
+}
+
+/* 탭 */
+.cms-block-tabs {
+	margin: 1.5rem 0;
+}
+.cms-block-tabs-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	border-bottom: 1px solid var(--cms-block-border);
+}
+.cms-block-tabs-tab {
+	margin-bottom: -1px;
+	padding: 0.5rem 0.875rem;
+	border: 1px solid transparent;
+	border-bottom: 0;
+	border-radius: 0.375rem 0.375rem 0 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	opacity: 0.65;
+	cursor: pointer;
+}
+.cms-block-tabs-tab:hover {
+	opacity: 1;
+}
+.cms-block-tabs-tab[aria-selected="true"] {
+	border-color: var(--cms-block-border);
+	background-color: var(--cms-block-muted);
+	opacity: 1;
+}
+.cms-block-tabs-tab:focus-visible,
+.cms-block-tabs-panel:focus-visible {
+	outline: 2px solid var(--cms-block-accent);
+	outline-offset: -2px;
+}
+.cms-block-tabs-panel {
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--cms-block-border);
+	border-top: 0;
+	border-radius: 0 0 0.5rem 0.5rem;
+	background-color: var(--cms-block-muted);
+}
+.cms-block-tabs-panel[hidden] {
+	display: none;
+}
+.cms-block-tabs-panel > :first-child {
+	margin-top: 0;
+}
+.cms-block-tabs-panel > :last-child {
+	margin-bottom: 0;
+}
+
+/* 단 나누기: 좁은 화면은 위아래로, 넓은 화면은 `--cms-columns`(단 너비)로 나란히 */
+.cms-block-columns {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin: 1.5rem 0;
+}
+.cms-block-columns > * {
+	min-width: 0;
+}
+@media (min-width: 48rem) {
+	.cms-block-columns {
+		display: grid;
+		grid-template-columns: var(--cms-columns);
+		align-items: start;
+		gap: 1.5rem;
+	}
+}
+.cms-block-column {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+.cms-block-column > * {
+	margin: 0;
+}
+.cms-block-column img {
+	max-width: 100%;
+}
+
+/* 툴팁 */
+.cms-block-tooltip {
+	position: relative;
+}
+.cms-block-tooltip-trigger {
+	text-decoration: underline dotted;
+	text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+	text-underline-offset: 0.2em;
+	cursor: help;
+	border-radius: 0.125rem;
+}
+.cms-block-tooltip-trigger:focus-visible {
+	outline: 2px solid var(--cms-block-accent);
+	outline-offset: 2px;
+}
+.cms-block-tooltip-content {
+	position: absolute;
+	bottom: calc(100% + 0.375rem);
+	left: 50%;
+	z-index: 50;
+	width: max-content;
+	max-width: min(20rem, calc(100vw - 2rem));
+	padding: 0.375rem 0.625rem;
+	border-radius: 0.375rem;
+	background-color: var(--cms-block-tooltip-bg);
+	color: var(--cms-block-tooltip-fg);
+	font-size: 0.875rem;
+	font-weight: 400;
+	line-height: 1.5;
+	text-align: start;
+	text-decoration: none;
+	transform: translateX(-50%);
+	visibility: hidden;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+.cms-block-tooltip[data-open] > .cms-block-tooltip-content {
+	visibility: visible;
+	opacity: 1;
+}
+.cms-block-tooltip-note {
+	display: none;
+	margin-left: 0.125rem;
+	font-size: 0.7em;
+	font-weight: 600;
+	color: var(--cms-block-accent);
+}
+@media (hover: none), (pointer: coarse) {
+	.cms-block-tooltip-note {
+		display: inline;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.cms-block-tooltip-content {
+		transition: none;
+	}
+}
+
+/* 코드 연결: 글자에 마우스를 올리면 연결된 코드 줄이 강조된다(줄 효과는 `@monti-cms/core/render.css`) */
+.cms-block-code-ref {
+	cursor: pointer;
+	border-radius: 0.125rem;
+	text-decoration: underline;
+	text-decoration-color: color-mix(in oklab, var(--cms-block-accent) 55%, transparent);
+	text-underline-offset: 0.25em;
+}
+.cms-block-code-ref:hover {
+	text-decoration-color: var(--cms-block-accent);
+}
+.cms-block-code-ref:focus-visible {
+	outline: 2px solid var(--cms-block-accent);
+	outline-offset: 2px;
+}
+
+/* Mermaid */
+.cms-block-mermaid {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin: 1.5rem 0;
+	padding: 1rem;
+	overflow-x: auto;
+}
+.cms-block-mermaid-diagram {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+}
+.cms-block-mermaid-diagram svg {
+	height: auto;
+	max-width: 100%;
+}
+.cms-block-mermaid-source,
+.cms-block-chart-source {
+	width: 100%;
+	margin: 0;
+	padding: 0.75rem 1rem;
+	overflow-x: auto;
+	border: 1px solid var(--cms-block-border);
+	border-radius: 0.375rem;
+	background-color: var(--cms-block-muted);
+	font-size: 0.8125rem;
+	line-height: 1.5;
+}
+.cms-block-mermaid-error {
+	margin-top: 0.5rem;
+	font-size: 0.875rem;
+	color: var(--cms-callout-danger, oklch(0.58 0.22 27));
+}
+
+/* 차트 */
+.cms-block-chart {
+	margin: 1.5rem 0;
+	width: 100%;
+	min-width: 0;
+}
+.cms-block-chart-frame {
+	display: flex;
+	justify-content: center;
+	aspect-ratio: 16 / 9;
+	font-size: 0.75rem;
+}
+.cms-block-chart-frame .recharts-cartesian-axis-tick text {
+	fill: color-mix(in srgb, currentColor 65%, transparent);
+}
+.cms-block-chart-frame .recharts-cartesian-grid line {
+	stroke: color-mix(in srgb, currentColor 14%, transparent);
+}
+.cms-block-chart-frame .recharts-layer,
+.cms-block-chart-frame .recharts-sector,
+.cms-block-chart-frame .recharts-surface {
+	outline: none;
+}
+.cms-block-chart-value {
+	fill: currentColor;
+	font-size: 11px;
+	font-weight: 500;
+}
+.cms-block-chart-tooltip {
+	display: grid;
+	gap: 0.375rem;
+	min-width: 8rem;
+	padding: 0.375rem 0.625rem;
+	border: 1px solid var(--cms-block-border);
+	border-radius: 0.5rem;
+	background-color: Canvas;
+	color: CanvasText;
+	font-size: 0.75rem;
+	box-shadow: 0 8px 24px color-mix(in srgb, black 18%, transparent);
+}
+.cms-block-chart-tooltip-label {
+	font-weight: 500;
+}
+.cms-block-chart-tooltip-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.cms-block-chart-tooltip-name {
+	flex: 1;
+	opacity: 0.7;
+}
+.cms-block-chart-tooltip-value {
+	font-family: ui-monospace, monospace;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+}
+.cms-block-chart-swatch {
+	flex-shrink: 0;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 2px;
+}
+.cms-block-chart-legend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 0.25rem 1rem;
+	padding-top: 0.75rem;
+	font-size: 0.75rem;
+}
+.cms-block-chart-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+.cms-block-chart-error {
+	margin: 1.5rem 0;
+	padding: 0.75rem 1rem;
+	border: 1px solid color-mix(in oklab, var(--cms-callout-danger, oklch(0.58 0.22 27)) 40%, transparent);
+	border-radius: 0.5rem;
+	background-color: color-mix(in oklab, var(--cms-callout-danger, oklch(0.58 0.22 27)) 10%, transparent);
+	font-size: 0.875rem;
+}
+.cms-block-chart-error ul {
+	margin: 0.5rem 0 0;
+	padding-left: 1.25rem;
+}
+:where(.dark, [data-theme="dark"]) .cms-block-chart-tooltip {
+	background-color: oklch(0.24 0.02 265);
+	color: oklch(0.96 0.005 265);
+}

@@ -1,0 +1,197 @@
+/*
+ * @monti-cms/admin 스타일. 앱의 Tailwind 4 입력 CSS에서 `@import "tailwindcss";` 다음에 import한다.
+ *
+ * 앱 쪽에 필요한 것: Tailwind 4(`tailwindcss`·`@tailwindcss/postcss`), `tw-animate-css`, `@tailwindcss/typography`.
+ * 미리 만든 CSS는 주지 않는다. 앱의 Tailwind가 관리자 화면 클래스를 직접 만든다.
+ *
+ * 이 파일이 정하는 이름은 모두 `cms` 이름표가 붙은 것이라 앱의 이름(shadcn의 `bg-background`·`dark:` 등)과 겹치지 않는다.
+ *   - 색 이름: `bg-cms-background`·`text-cms-muted-foreground`·`border-cms-border` … (값은 `--cms-*` 변수)
+ *   - 변형: `cms-dark:`(`html`·상위 요소의 `.dark` 또는 `[data-theme="dark"]`), `cms-horizontal:`·`cms-vertical:`(Base UI 방향)
+ * 색 변수(`--cms-*`)는 관리자 화면이 있는 문서에만 걸린다. 둥글기(`--radius*`)도 그 문서에서만 바뀐다.
+ */
+
+/* 배포 묶음의 컴포넌트에서 Tailwind 클래스를 찾는다(작업 공간 안에서는 앱이 소스를 바로 읽는다). */
+@source "./dist";
+
+/*
+ * 관리자 화면 전용 변형. 앱이 정한 `dark`·`data-horizontal` 등과 겹치지 않는다.
+ * 어두운 테마는 앱의 테마 공급자가 `html`에 붙이는 `.dark` 또는 `[data-theme="dark"]`를 모두 따른다.
+ */
+@custom-variant cms-dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+@custom-variant cms-horizontal (&[data-orientation="horizontal"]);
+@custom-variant cms-vertical (&[data-orientation="vertical"]);
+
+/* 관리자 화면이 쓰는 색 이름(`cms-*`). 값은 아래 관리자 토큰이 정한다. */
+@theme inline {
+	--color-cms-background: var(--cms-background);
+	--color-cms-foreground: var(--cms-foreground);
+	--color-cms-card: var(--cms-card);
+	--color-cms-card-foreground: var(--cms-card-foreground);
+	--color-cms-popover: var(--cms-popover);
+	--color-cms-popover-foreground: var(--cms-popover-foreground);
+	--color-cms-primary: var(--cms-primary);
+	--color-cms-primary-foreground: var(--cms-primary-foreground);
+	--color-cms-secondary: var(--cms-secondary);
+	--color-cms-secondary-foreground: var(--cms-secondary-foreground);
+	--color-cms-muted: var(--cms-muted);
+	--color-cms-muted-foreground: var(--cms-muted-foreground);
+	--color-cms-accent: var(--cms-accent);
+	--color-cms-accent-foreground: var(--cms-accent-foreground);
+	--color-cms-destructive: var(--cms-destructive);
+	--color-cms-warning: var(--cms-warning);
+	--color-cms-border: var(--cms-border);
+	--color-cms-input: var(--cms-input);
+	--color-cms-ring: var(--cms-ring);
+	--color-cms-sidebar: var(--cms-sidebar);
+	--color-cms-sidebar-foreground: var(--cms-sidebar-foreground);
+	--color-cms-sidebar-primary: var(--cms-sidebar-primary);
+	--color-cms-sidebar-primary-foreground: var(--cms-sidebar-primary-foreground);
+	--color-cms-sidebar-accent: var(--cms-sidebar-accent);
+	--color-cms-sidebar-accent-foreground: var(--cms-sidebar-accent-foreground);
+	--color-cms-sidebar-border: var(--cms-sidebar-border);
+	--color-cms-sidebar-ring: var(--cms-sidebar-ring);
+}
+
+/*
+ * CMS 관리자 화면 토큰(v2 A 개편, "조용한 작업 도구" 방향). 블로그 토큰은 건드리지 않는다.
+ * 팝업·메뉴는 body로 포털되므로 관리자 컨테이너가 있는 문서 전체(html)에 건다.
+ */
+html:has(.cms-admin) {
+	--cms-background: #ffffff;
+	--cms-foreground: #18181b;
+	--cms-card: #ffffff;
+	--cms-card-foreground: #18181b;
+	--cms-popover: #ffffff;
+	--cms-popover-foreground: #18181b;
+	--cms-primary: #4f46e5;
+	--cms-primary-foreground: #ffffff;
+	--cms-secondary: #f4f4f5;
+	--cms-secondary-foreground: #18181b;
+	--cms-muted: #f4f4f5;
+	--cms-muted-foreground: #71717a;
+	--cms-accent: #f0f0f2;
+	--cms-accent-foreground: #18181b;
+	--cms-destructive: #dc2626;
+	--cms-warning: #d97706;
+	--cms-border: #ececef;
+	--cms-input: #e4e4e7;
+	--cms-ring: #6366f1;
+	--cms-sidebar: #f7f7f8;
+	--cms-sidebar-foreground: #3f3f46;
+	--cms-sidebar-primary: #18181b;
+	--cms-sidebar-primary-foreground: #fafafa;
+	--cms-sidebar-accent: #ececee;
+	--cms-sidebar-accent-foreground: #18181b;
+	--cms-sidebar-border: #e7e7ea;
+	--cms-sidebar-ring: #6366f1;
+	/* 둥글기는 Tailwind 기본 이름(`rounded-md` 등)을 그대로 쓰므로 이 문서에서만 관리자 값으로 맞춘다. */
+	--radius: 0.5rem;
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+html:is(.dark, [data-theme="dark"]):has(.cms-admin) {
+	--cms-background: #0c0c0e;
+	--cms-foreground: #f4f4f5;
+	--cms-card: #111113;
+	--cms-card-foreground: #f4f4f5;
+	--cms-popover: #151518;
+	--cms-popover-foreground: #f4f4f5;
+	--cms-primary: #6366f1;
+	--cms-primary-foreground: #ffffff;
+	--cms-secondary: #1c1c20;
+	--cms-secondary-foreground: #f4f4f5;
+	--cms-muted: #1c1c20;
+	--cms-muted-foreground: #a1a1aa;
+	--cms-accent: #1f1f24;
+	--cms-accent-foreground: #f4f4f5;
+	--cms-destructive: #f87171;
+	--cms-warning: #fbbf24;
+	--cms-border: #232328;
+	--cms-input: #2a2a30;
+	--cms-ring: #818cf8;
+	--cms-sidebar: #0f0f12;
+	--cms-sidebar-foreground: #d4d4d8;
+	--cms-sidebar-primary: #f4f4f5;
+	--cms-sidebar-primary-foreground: #0c0c0e;
+	--cms-sidebar-accent: #1f1f24;
+	--cms-sidebar-accent-foreground: #f4f4f5;
+	--cms-sidebar-border: #1f1f24;
+	--cms-sidebar-ring: #818cf8;
+}
+
+/* 스크롤바·기본 입력 요소가 테마를 따르게 한다(다크에서 밝은 기본 스크롤바가 흰 선처럼 보이던 문제). */
+html:has(.cms-admin) {
+	color-scheme: light;
+}
+html:is(.dark, [data-theme="dark"]):has(.cms-admin) {
+	color-scheme: dark;
+}
+/* 앱 body 배경이 관리자 가장자리에 비치지 않게 한다. */
+html:has(.cms-admin) body {
+	background-color: var(--cms-background);
+}
+
+/*
+ * 테두리·포커스 윤곽 기본색. `border`만 쓴 곳이 앱의 전역 규칙(shadcn의 `* { @apply border-border }`)이나 `currentColor` 대신
+ * 관리자 색을 쓰게 한다. 팝업이 body로 포털되므로 문서 전체에 걸고, `@layer base`라 유틸리티 클래스가 이긴다.
+ */
+@layer base {
+	html:has(.cms-admin) * {
+		border-color: var(--cms-border);
+		outline-color: color-mix(in oklab, var(--cms-ring) 50%, transparent);
+	}
+}
+
+.cms-admin {
+	font-size: 14px;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* 얇고 눈에 띄지 않는 스크롤바. 막대는 가리킬 때만 진해진다. */
+.cms-admin,
+.cms-admin * {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+}
+.cms-admin *:hover {
+	scrollbar-color: color-mix(in oklab, var(--cms-muted-foreground) 45%, transparent) transparent;
+}
+.cms-admin ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+.cms-admin ::-webkit-scrollbar-track {
+	background: transparent;
+}
+.cms-admin ::-webkit-scrollbar-thumb {
+	background: transparent;
+	border-radius: 999px;
+}
+.cms-admin *:hover::-webkit-scrollbar-thumb {
+	background: color-mix(in oklab, var(--cms-muted-foreground) 45%, transparent);
+}
+
+/* 표의 숫자·날짜는 자릿수를 맞춘다. */
+.cms-admin .tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* 글 검사(맞춤법 등) 결과 밑줄(편집기 장식). 심각도마다 색이 다르다. */
+.cms-admin .cms-text-issue {
+	text-decoration-line: underline;
+	text-decoration-style: wavy;
+	text-decoration-thickness: 1px;
+	text-decoration-skip-ink: none;
+	text-underline-offset: 3px;
+	text-decoration-color: var(--cms-warning);
+	cursor: pointer;
+}
+.cms-admin .cms-text-issue[data-severity="error"] {
+	text-decoration-color: var(--cms-destructive);
+}
+.cms-admin .cms-text-issue[data-severity="info"] {
+	text-decoration-color: var(--cms-primary);
+}
