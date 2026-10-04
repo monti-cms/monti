@@ -10,11 +10,21 @@
 		"typecheck": "pnpm --filter \"./packages/*\" -r typecheck",
 		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/blocks build && pnpm --filter @monti-cms/bareun build && pnpm --filter @monti-cms/seo build",
 		"example:check": "node scripts/check-example.mjs",
-		"example:pack": "pnpm build && mkdir -p examples/other-site/vendor && for p in core admin blocks ai bareun seo; do pnpm --dir packages/$p pack --pack-destination ../../examples/other-site/vendor; done"
+		"example:pack": "pnpm build && mkdir -p examples/other-site/vendor && for p in core admin blocks ai bareun seo; do pnpm --dir packages/$p pack --pack-destination ../../examples/other-site/vendor; done",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"*.{js,jsx,ts,tsx,mjs}": [
+			"biome check --write --no-errors-on-unmatched"
+		]
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.10",
+		"@commitlint/cli": "^21.2.3",
+		"@commitlint/config-conventional": "^21.2.3",
 		"@types/node": "^20",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.6.0",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.0",
 		"vitest": "^4.0.18"

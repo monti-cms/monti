@@ -1,0 +1,7 @@
+set -e
+
+# 검사만 한다(고치지 않는다). 고칠 것은 pnpm lint:fix로 고쳐 커밋한 뒤 push한다.
+# 테스트는 DB가 필요하고 오래 걸려 CI(.github/workflows/ci.yml)가 돈다.
+pnpm lint
+pnpm check:korean
+pnpm typecheck
