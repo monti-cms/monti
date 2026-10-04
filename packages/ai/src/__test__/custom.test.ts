@@ -8,9 +8,9 @@ import {
 	surfaceProblem,
 } from "../custom";
 
-// 예시 설정(`ai/test/cms.config.ts`)은 블록 확장의 블록과 사용자 블록 `notice`·`embed`를 쓴다.
-describe("화면 기능의 블록 자리", () => {
-	it("고를 수 있는 블록은 편집기 노드로 편집하는 더한 블록이다(자식 전용·원문 상자 제외)", () => {
+// The example config (`ai/test/cms.config.ts`) uses the blocks of the block extension and the user blocks `notice` and `embed`.
+describe("block slot of screen actions", () => {
+	it("selectable blocks are added blocks edited as editor nodes (excluding child-only and raw-source boxes)", () => {
 		const names = CUSTOM_BLOCKS.map((block) => block.name);
 		expect(names).toEqual(expect.arrayContaining(["callout", "tabs", "mermaid", "chart", "notice"]));
 		expect(names).not.toContain("tab");
@@ -18,7 +18,7 @@ describe("화면 기능의 블록 자리", () => {
 		expect(names).not.toContain("image");
 	});
 
-	it("블록 자리는 MDX 결과만 고르고, 없는 블록은 알린다", () => {
+	it("the block slot accepts only MDX results and reports unknown blocks", () => {
 		const base = (result: string, block = "mermaid") =>
 			customBaseSchema.safeParse({ label: "고치기", surface: { slot: "block", block }, result });
 		expect(base("mdx").success).toBe(true);
@@ -27,7 +27,7 @@ describe("화면 기능의 블록 자리", () => {
 		expect(surfaceProblem({ slot: "block", block: "nope" })).toBe("없는 블록입니다: nope");
 	});
 
-	it("블록 자리 기능은 블록 원문을 받아 흘려받는다", () => {
+	it("a block slot action takes the block source and streams the result", () => {
 		const definition = customDefinition({ label: "고치기", surface: { slot: "block", block: "chart" }, result: "mdx" });
 		expect(Object.keys(definition.input)).toEqual(["block", "title"]);
 		expect(definition.input.block).toMatchObject({ kind: "mdx", required: true });
@@ -36,11 +36,11 @@ describe("화면 기능의 블록 자리", () => {
 	});
 });
 
-// 예시 설정의 글(post): 태그(`tagIds`, 여러 개), 카테고리(`categoryId`, 하나), 정책(`policy`, 선택 필드).
-describe("화면 기능의 관계·선택 필드", () => {
+// Post in the example config: tags (`tagIds`, many), category (`categoryId`, one), policy (`policy`, select field).
+describe("relation and select fields of screen actions", () => {
 	const field = (name: string) => ({ slot: "field" as const, field: name, collections: ["post"] });
 
-	it("관계·선택 필드는 후보만, 판단·생성 방식을 고른다. 글 필드는 생성 방식만이다", () => {
+	it("relation and select fields allow candidates only, with a choice of decide or generate mode; text fields allow generate mode only", () => {
 		expect(customResults(field("tagIds"))).toEqual(["candidates"]);
 		expect(customEngines(field("tagIds"))).toEqual(["decide", "generate"]);
 		expect(customEngines(field("policy"))).toEqual(["decide", "generate"]);
@@ -51,7 +51,7 @@ describe("화면 기능의 관계·선택 필드", () => {
 		expect(base({ surface: field("title"), engine: "decide" }).success).toBe(false);
 	});
 
-	it("관계 필드 기능은 가리키는 컬렉션에서 고르고, 여러 개 필드는 더한다", () => {
+	it("relation field actions pick from the target collection, and multi-value fields append", () => {
 		const tags = customDefinition({ label: "태그", surface: field("tagIds"), result: "candidates", engine: "decide" });
 		expect(tags).toMatchObject({
 			engine: "decide",

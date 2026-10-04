@@ -24,7 +24,7 @@ export interface ConfirmRequest {
 	onConfirm: () => void | Promise<void>;
 }
 
-/** 되돌리기 어려운 작업의 확인창. 취소하면 포커스는 여는 버튼으로 돌아간다. */
+/** Confirm dialog for hard-to-undo actions. On cancel, focus returns to the button that opened it. */
 export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | null; onClose: () => void }) {
 	return (
 		<AlertDialog open={request !== null} onOpenChange={(open) => !open && onClose()}>
@@ -54,7 +54,7 @@ export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | 
 	);
 }
 
-/** 저장하지 않은 내용을 버릴 때 묻는 말. 저장 단추가 있는 모든 편집 칸이 같은 말을 쓴다. */
+/** The question asked when discarding unsaved content. Every edit slot with a save button uses the same wording. */
 export const DISCARD_CONFIRM = {
 	title: t("discard.title"),
 	description: t("discard.description"),
@@ -63,8 +63,8 @@ export const DISCARD_CONFIRM = {
 } as const satisfies Omit<ConfirmRequest, "onConfirm">;
 
 /**
- * 확인창을 약속(Promise)으로 연다. `confirm(...)`은 누른 쪽에 따라 true·false로 풀린다.
- * `dialog`를 화면 어딘가에 한 번 렌더한다.
+ * Opens the confirm dialog as a Promise. `confirm(...)` resolves to true or false depending on which button was pressed.
+ * Render `dialog` once somewhere on the screen.
  */
 export function useConfirm() {
 	const [request, setRequest] = useState<ConfirmRequest | null>(null);
@@ -84,7 +84,7 @@ export function useConfirm() {
 			}),
 		[],
 	);
-	/** `dirty`일 때만 버릴지 묻는다. 깨끗하면 바로 true다. */
+	/** Asks whether to discard only when `dirty`. If clean, it is true immediately. */
 	const confirmDiscard = useCallback(
 		(dirty: boolean) => (dirty ? confirm(DISCARD_CONFIRM) : Promise.resolve(true)),
 		[confirm],
@@ -94,7 +94,7 @@ export function useConfirm() {
 			request={request}
 			onClose={() => {
 				setRequest(null);
-				// 확인을 누르면 onClose 다음에 onConfirm이 바로 이어 불린다. 그 뒤에도 남아 있으면 취소다.
+				// Pressing confirm calls onConfirm right after onClose. If the pending state is still there after that, it was a cancel.
 				queueMicrotask(() => {
 					resolveRef.current?.(false);
 					resolveRef.current = null;

@@ -17,17 +17,17 @@ import { OptionSelect } from "./custom-editor";
 const t = createTranslator(aiTranslateMessages);
 
 /**
- * 번역본 에디터의 AI 번역(v2 D2). 안내 글(`untranslated`)이 남은 블록이 "아직 번역 안 된 곳"이다.
- * 번역은 일반 AI 기능이다. 붙을 곳이 `translation`인 기능(입력 `block`·`from`·`to`, MDX 결과)을 블록마다 부른다.
- * 그런 기능이 여럿이면 블록 손잡이 옆에 기능마다 버튼이 붙고, `모두 번역`에서 기능을 고른다.
- * 블록의 원문 MDX(안내 글 표시를 걷어 낸 것)를 보내고, 서버가 번역·구조 검사를 통과한 MDX만 돌려주면 그 블록을 바꾼다.
- * 검사에 걸린 블록은 안내 글로 남는다. 번역 단위와 바꾸는 규칙은 `ai-translate-units.ts`다.
+ * AI translation in the translation editor. A block that still has a notice (`untranslated`) is a "not yet translated place".
+ * Translation is a regular AI action. It calls, per block, the actions whose attach target is `translation` (inputs `block`, `from`, `to`; MDX result).
+ * If there are several such actions, each gets a button next to the block handle, and Translate all lets you pick the action.
+ * It sends the block's source MDX (with notice markers stripped), and when the server returns only MDX that passed translation and structure checks, the block is replaced.
+ * A block that fails the checks stays as a notice. Translation units and replacement rules live in `ai-translate-units.ts`.
  */
 
-/** 한 요청에 보내는 블록 수와 글자 수(서버 상한보다 작게). */
+/** Number of blocks and characters sent per request (kept below the server limits). */
 const BATCH_BLOCKS = 4;
 const BATCH_CHARS = 12_000;
-/** 동시에 보내는 요청 수. */
+/** Number of concurrent requests. */
 const PARALLEL_REQUESTS = 2;
 
 type TranslateResult = { id: string; mdx: string } | { id: string; error: string };
@@ -50,7 +50,7 @@ async function requestTranslation(
 	});
 }
 
-/** 블록을 요청 단위로 묶는다. 한 블록이 커도 나누지 않고 혼자 보낸다. */
+/** Groups blocks into request units. A large block is not split; it is sent alone. */
 function batches<T extends { mdx: string }>(blocks: T[]): T[][] {
 	const groups: T[][] = [];
 	let current: T[] = [];
@@ -69,8 +69,8 @@ function batches<T extends { mdx: string }>(blocks: T[]): T[][] {
 }
 
 /**
- * 번역본 에디터의 AI 번역 동작. `blockActions`는 블록 손잡이 옆 번역 기능(기능마다 하나, 이름은 기능 이름),
- * `toolbar`는 툴바의 `모두 번역`이다. 쓸 수 있는 번역 기능이 없으면 둘 다 없다.
+ * AI translation behavior in the translation editor. `blockActions` are the translation actions next to the block handle (one per action, named by the action name),
+ * and `toolbar` is Translate all in the toolbar. If there is no usable translation action, both are absent.
  */
 export function useAiTranslate(locales: { sourceLocale: string; targetLocale: string } | null) {
 	const { data } = useAiActions(locales !== null);
@@ -87,7 +87,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 				: [],
 		[data, locales],
 	);
-	/** `모두 번역`에 쓸 기능. 고른 기능이 사라졌으면 첫 기능이다. */
+	/** Action to use for Translate all. If the chosen action is gone, it is the first action. */
 	const [chosenKey, setChosenKey] = useState<string | null>(null);
 	const feature = features.find((item) => item.key === chosenKey) ?? features[0];
 	const actionKey = feature?.key ?? "";
@@ -97,20 +97,20 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	const [request, setRequest] = useState("");
 	const [open, setOpen] = useState(false);
 	const abortRef = useRef<AbortController | null>(null);
-	/** 블록 하나씩 번역하는 요청. 툴바의 `중지`가 함께 멈춘다. */
+	/** Requests that translate one block at a time. Stop in the toolbar stops them too. */
 	const blockAbortRef = useRef(new Map<number, AbortController>());
 
 	const setEditor = useCallback((editor: Editor | null) => {
 		editorRef.current = editor;
 	}, []);
 
-	/** 진행 중인 번역(모두 번역·블록 번역)을 모두 멈춘다. */
+	/** Stops all translations in progress (Translate all and block translation). */
 	const stop = useCallback(() => {
 		abortRef.current?.abort();
 		for (const controller of blockAbortRef.current.values()) controller.abort();
 	}, []);
 
-	// 편집 화면을 떠나면 진행 중인 번역을 멈춘다.
+	// Leaving the edit screen stops translations in progress.
 	useEffect(() => stop, [stop]);
 
 	const translateOne = useCallback(
@@ -118,7 +118,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 			if (!locales) return;
 			const unit = unitAt(editor.state.doc, pos);
 			if (!unit) return;
-			// 블록 번역은 툴바의 추가 요청을 쓰지 않는다(그 요청은 `모두 번역`에만 붙는다).
+			// Block translation does not use the toolbar's extra request (that request applies only to Translate all).
 			blockAbortRef.current.get(pos)?.abort();
 			const controller = new AbortController();
 			blockAbortRef.current.set(pos, controller);
@@ -269,7 +269,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 								value={request}
 								onChange={(event) => setRequest(event.target.value)}
 								onKeyDown={(event) => {
-									// 줄바꿈은 Enter, 실행은 Cmd/Ctrl+Enter다.
+									// Enter inserts a newline; Cmd/Ctrl+Enter runs.
 									if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
 										event.preventDefault();
 										void translateAll();
@@ -291,7 +291,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	return { blockActions, toolbar, setEditor };
 }
 
-/** 편집 화면 확장으로 붙인 AI 번역. 번역본 편집기의 툴바에 `모두 번역`, 블록 손잡이 옆에 번역 기능을 둔다. */
+/** AI translation attached as an edit-screen extension. Adds Translate all to the translation editor's toolbar and translation actions next to block handles. */
 export const useAiTranslateExtension: EditorExtension = ({ translateLocales }) => {
 	const translate = useAiTranslate(translateLocales);
 	return {

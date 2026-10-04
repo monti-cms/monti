@@ -38,7 +38,7 @@ const readAll = (zip: Uint8Array) => {
 };
 
 describe("export archive builder", () => {
-	it("admin 아카이브는 초안과 공개본, 관계, 설정을 모두 담는다", () => {
+	it("the admin archive contains drafts, published copies, relations and settings", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
 		const archive = readAll(zip);
 
@@ -83,7 +83,7 @@ describe("export archive builder", () => {
 		expect(manifest.entries[0]?.files.length).toBeGreaterThan(0);
 	});
 
-	it("public 아카이브는 초안 본문과 관리자 전용 값을 포함하지 않는다", () => {
+	it("the public archive does not include draft bodies or admin-only values", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), { scope: "public", exportedAt: FIXED_TIME });
 		const archive = readAll(zip);
 
@@ -95,12 +95,12 @@ describe("export archive builder", () => {
 				"media.json",
 			].sort(),
 		);
-		// 초안 전용 문자열이 어떤 파일에도 남지 않는다.
+		// The draft-only string does not remain in any file.
 		for (const path of archive.paths) {
 			expect(archive.text(path)).not.toContain("draft secret body");
 			expect(archive.text(path)).not.toContain("working body");
 		}
-		// 공개 항목에는 working 계열 키가 존재하지 않는다.
+		// Public items have no working-family keys.
 		for (const path of archive.paths.filter((p) => p.endsWith(".json"))) {
 			expect(archive.text(path)).not.toContain('"working"');
 		}
@@ -116,14 +116,14 @@ describe("export archive builder", () => {
 			preferences: 0,
 			references: 0,
 		});
-		// 공개 미디어는 공개 상태에서 참조된 것만 남는다(작업본 전용·초안 전용 제외).
+		// Public media keeps only what is referenced in the public state (excluding working-only and draft-only).
 		const publicMedia = JSON.parse(archive.text("media.json")) as { id: string; filename: string }[];
 		expect(publicMedia.map((asset) => asset.id)).toEqual(["44444444-4444-4444-8444-444444444444"]);
 		expect(archive.text("media.json")).not.toContain("storageKey");
 		expect(archive.text("media.json")).not.toContain("working-only.png");
 	});
 
-	it("public 아카이브는 archived/trashed 항목의 잔여 공개본을 내보내지 않는다", () => {
+	it("the public archive does not export the leftover published copy of archived/trashed items", () => {
 		const snapshot = makeSnapshot();
 		const archived = snapshot.entries.find((entry) => entry.status === "archived");
 		expect(archived?.published).toBeDefined();
@@ -142,7 +142,7 @@ describe("export archive builder", () => {
 		}
 	});
 
-	it("참조만 바뀌어도 항목 digest가 달라진다", () => {
+	it("the item digest changes even when only the references change", () => {
 		const snapshot = makeSnapshot();
 		const base = buildExportArchive(snapshot, { scope: "admin", exportedAt: FIXED_TIME });
 		const changedReferences = {
@@ -158,7 +158,7 @@ describe("export archive builder", () => {
 		expect(changed.digest).not.toBe(base.digest);
 	});
 
-	it("같은 입력과 같은 exportedAt이면 바이트까지 동일하다", () => {
+	it("the same input and the same exportedAt give identical bytes", () => {
 		const first = buildExportArchive(makeSnapshot(), {
 			scope: "admin",
 			exportedAt: FIXED_TIME,
@@ -172,7 +172,7 @@ describe("export archive builder", () => {
 		expect(Array.from(first.zip)).toEqual(Array.from(second.zip));
 	});
 
-	it("digest는 exportedAt에 영향받지 않고 내용이 바뀌면 달라진다", () => {
+	it("the digest is not affected by exportedAt and changes when the content changes", () => {
 		const base = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
 		const later = buildExportArchive(makeSnapshot(), {
 			scope: "admin",
@@ -187,7 +187,7 @@ describe("export archive builder", () => {
 		expect(buildExportArchive(changed, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
 	});
 
-	it("공개 projection 스키마는 초안 필드가 섞이면 거부한다", () => {
+	it("the public projection schema rejects a mix of draft fields", () => {
 		const valid = publicExportEntrySchema.safeParse({
 			id: "11111111-1111-4111-8111-111111111111",
 			collection: CONTENT,
@@ -216,10 +216,10 @@ describe("export archive builder", () => {
 		expect(withWorking.success).toBe(false);
 	});
 
-	it("canonicalJson은 key 순서에 의존하지 않는다", () => {
+	it("canonicalJson does not depend on key order", () => {
 		expect(canonicalJson({ b: 1, a: [2, { d: 3, c: 4 }] })).toBe(canonicalJson({ a: [2, { c: 4, d: 3 }], b: 1 }));
 	});
-	it("public 아카이브는 중첩 metadata의 관리자 전용 키를 제거한다", () => {
+	it("the public archive removes admin-only keys from nested metadata", () => {
 		const snapshot = makeSnapshot();
 		const withInternals = {
 			...snapshot,
@@ -246,7 +246,7 @@ describe("export archive builder", () => {
 		expect(JSON.parse(publicJson).metadata.title).toBe("게시글");
 	});
 
-	it("설정만 바뀌어도 아카이브 digest가 달라진다", () => {
+	it("the archive digest changes even when only the settings change", () => {
 		const base = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
 		const changedPreferences = {
 			...makeSnapshot(),
@@ -262,11 +262,11 @@ describe("export archive builder", () => {
 		);
 		expect(buildExportArchive(changedFolders, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
 	});
-	it("allowlist가 없는 컬렉션은 공개 투영에서 실패한다", () => {
+	it("a collection without an allowlist fails in the public projection", () => {
 		expect(() => pickPublicMetadata("unknown-collection", { title: "x" })).toThrow(/allowlist/);
 	});
 
-	it("공개 metadata 키는 컬렉션 allowlist의 부분집합이다", () => {
+	it("public metadata keys are a subset of the collection allowlist", () => {
 		const archive = buildExportArchive(makeSnapshot(), { scope: "public", exportedAt: FIXED_TIME });
 		const { paths, text } = readAll(archive.zip);
 		const publishedPaths = paths.filter((path) => path.endsWith("published.json"));
@@ -282,7 +282,7 @@ describe("export archive builder", () => {
 		}
 	});
 
-	it.skipIf(Object.keys(FIXTURE_SEO_METADATA).length === 0)("public 아카이브는 SEO metadata를 그대로 내보낸다", () => {
+	it.skipIf(Object.keys(FIXTURE_SEO_METADATA).length === 0)("the public archive exports SEO metadata as is", () => {
 		const { zip } = buildExportArchive(makeSnapshot(), { scope: "public", exportedAt: FIXED_TIME });
 		const archive = readAll(zip);
 		const parsed = JSON.parse(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.json"))) as {
@@ -292,7 +292,7 @@ describe("export archive builder", () => {
 		for (const [name, value] of Object.entries(FIXTURE_SEO_METADATA)) {
 			expect(parsed.metadata[name]).toBe(value);
 		}
-		// SEO 키는 컬렉션 allowlist에 있어야 하고, 분류 같은 항목 컬렉션에는 열리지 않는다.
+		// SEO keys must be in the collection allowlist and are not opened for item collections such as categories.
 		const seoKeys = Object.keys(FIXTURE_SEO_METADATA);
 		expect(PUBLIC_METADATA_KEYS[CONTENT]).toEqual(expect.arrayContaining(seoKeys));
 		for (const key of seoKeys) expect(PUBLIC_METADATA_KEYS[recordCollection]).not.toContain(key);

@@ -4,19 +4,19 @@ import { canJoin, dropPoint } from "@tiptap/pm/transform";
 import { BODY_CONTAINER_NODE_NAMES } from "../blocks/added/shared";
 
 /**
- * 블록 드래그 앤 드롭 순수 명령 함수들(v2 C1).
- * DOM 의존 없이 ProseMirror 트랜잭션 및 스키마 검증을 jsdom/단위 테스트에서 수행할 수 있다.
+ * Pure block drag-and-drop command functions.
+ * ProseMirror transactions and schema validation can run in jsdom/unit tests without DOM dependencies.
  */
 
-/** 여러 블록을 옮긴 뒤 옮긴 블록들의 위치(number[])를 알리는 트랜잭션 메타(블록 선택이 이어진다). */
+/** Transaction meta announcing the positions (number[]) of moved blocks after moving several blocks (block selection continues). */
 export const MOVED_BLOCKS_META = "cmsMovedBlocks";
 
-/** 비면 안 되는 목록. 유일한 항목을 옮기면 빈 목록째 뺀다. */
+/** Lists that must not be empty. Moving the only item removes the whole empty list. */
 const LIST_NODES = new Set(["bulletList", "orderedList", "taskList"]);
-/** 본문 블록이 하나 이상이어야 하는 CMS 컨테이너(블록 정의에서 만든다). 유일한 블록을 옮기면 빈 문단을 남긴다. */
+/** CMS containers that must keep at least one body block (built from block definitions). Moving the only block leaves an empty paragraph. */
 const CONTAINER_BODY_NODES = BODY_CONTAINER_NODE_NAMES;
 
-/** 블록을 꺼낼 때 지울 범위. `fill`이 있으면 그 자리를 fill로 채운다. 꺼낼 수 없으면 null. */
+/** Range to delete when taking blocks out. If `fill` is set, that spot is filled with it. null if they cannot be taken out. */
 export interface SourceRange {
 	from: number;
 	to: number;
@@ -24,8 +24,8 @@ export interface SourceRange {
 }
 
 /**
- * 옮길 블록 묶음: 같은 부모 안의 이웃한 블록들(from 앞 ~ to 뒤). 블록 하나면 `to`를 생략한다.
- * 같은 부모의 블록 경계가 아니면 null이다.
+ * Group of blocks to move: adjacent blocks in the same parent (before `from` to after `to`). Omit `to` for a single block.
+ * null if they are not block boundaries of the same parent.
  */
 const blockRangeAt = (doc: PmNode, fromPos: number, toPos?: number) => {
 	if (fromPos < 0 || fromPos >= doc.content.size) return null;
@@ -40,11 +40,11 @@ const blockRangeAt = (doc: PmNode, fromPos: number, toPos?: number) => {
 };
 
 /**
- * 블록(들)을 꺼낸 자리가 스키마를 지키도록 지울 범위를 정한다.
- * - 부모가 그 블록 없이도 유효하면 블록만 지운다.
- * - 목록의 모든 항목(유일한 항목·들여쓴 항목 하나 등)이면 빈 목록을 남기지 않게 목록째 지운다.
- * - 컨테이너(콜아웃·접기·탭·단)의 모든 블록이면 빈 문단을 남긴다.
- * - 그 밖(목록 항목의 하나뿐인 문단 등)은 꺼내지 않는다. 빈 블록이 저절로 채워지는 것을 막는다.
+ * Decides the range to delete so the spot left by the removed block(s) still satisfies the schema.
+ * - If the parent stays valid without the block, delete only the block.
+ * - If it is every item of a list (the only item, one indented item, etc.), delete the whole list so no empty list remains.
+ * - If it is every block of a container (callout, fold, tab, column), leave an empty paragraph.
+ * - Otherwise (e.g. the only paragraph in a list item), do not take it out, to keep empty blocks from filling themselves.
  */
 export function sourceRangeOf(doc: PmNode, fromPos: number, toPos?: number): SourceRange | null {
 	const range = blockRangeAt(doc, fromPos, toPos);
@@ -70,18 +70,18 @@ export function sourceRangeOf(doc: PmNode, fromPos: number, toPos?: number): Sou
 }
 
 /**
- * 대상 위치(targetPos)가 스키마상 해당 블록(fromPos, 묶음이면 ~toPos)을 허용하는지 검증한다.
- * - 꺼낼 범위(sourceRangeOf) 안쪽이나 경계(no-op)로의 드롭은 거부한다.
- * - canReplace / contentMatch 검사를 통해 스키마가 허용하지 않는 위치는 거부한다.
+ * Verifies that the target position (targetPos) allows the block (fromPos, ~toPos for a group) per the schema.
+ * - Drops inside the range to take out (sourceRangeOf) or on its boundary (no-op) are rejected.
+ * - Positions the schema does not allow are rejected via canReplace / contentMatch checks.
  */
 export function canDropBlockNode(doc: PmNode, fromPos: number, targetPos: number, toPos?: number): boolean {
 	return placeableContentAt(doc, fromPos, targetPos, toPos) !== null;
 }
 
-/** 목록 항목. 목록 밖에 놓으면 원래 목록 종류로 감싼다. */
+/** List item. Placed outside a list, it is wrapped in its original list type. */
 const LIST_ITEM_NODES = new Set(["listItem", "taskItem"]);
 
-/** 항목(들)을 원래 목록 종류(글머리표·번호·체크)로 감싼 목록. 항목이 아니거나 감쌀 수 없으면 null. */
+/** List wrapping the item(s) in their original list type (bullet, ordered, task). null if not an item or it cannot be wrapped. */
 const wrapInSourceList = (doc: PmNode, fromPos: number, items: Fragment): PmNode | null => {
 	let allItems = items.childCount > 0;
 	items.forEach((item) => {
@@ -95,10 +95,10 @@ const wrapInSourceList = (doc: PmNode, fromPos: number, items: Fragment): PmNode
 };
 
 /**
- * fromPos의 블록(묶음이면 ~toPos)을 targetPos에 놓을 때 실제로 넣을 내용. 놓을 수 없으면 null이다.
- * - 꺼낼 범위(sourceRangeOf) 안쪽이나 경계(no-op)로의 드롭은 거부한다.
- * - 목록 항목을 목록 밖(문단 사이·컨테이너 안)에 놓으면 원래 목록 종류로 감싸 넣는다(노션처럼 항목을
- *   목록 밖으로 끌어낼 수 있다). 자식 항목이 있는 항목은 자식째 옮긴다.
+ * The content actually inserted when placing the block at fromPos (~toPos for a group) at targetPos. null if it cannot be placed.
+ * - Drops inside the range to take out (sourceRangeOf) or on its boundary (no-op) are rejected.
+ * - A list item placed outside a list (between paragraphs, inside a container) is wrapped in its original list type (items
+ *   can be dragged out of a list, like Notion). An item with child items moves along with its children.
  */
 export function placeableContentAt(
 	doc: PmNode,
@@ -124,9 +124,9 @@ export function placeableContentAt(
 }
 
 /**
- * 마우스 좌표/위치로부터 유효한 스키마 드롭 위치를 계산한다.
- * - 텍스트 블록 안으로 떨어진 경우 dropPoint를 통해 앞/뒤 부모 경계의 유효 위치를 탐색한다.
- * - 스키마가 허용하지 않는 경우 null을 반환하여 드롭을 무시한다.
+ * Computes a valid schema drop position from mouse coordinates/position.
+ * - When dropped inside a text block, uses dropPoint to find a valid position at the parent boundary before/after.
+ * - Returns null when the schema does not allow it, so the drop is ignored.
  */
 export function calculateDropPosition(
 	doc: PmNode,
@@ -140,14 +140,14 @@ export function calculateDropPosition(
 
 	const contentSlice = slice ?? new Slice(range.content, 0, 0);
 
-	// ProseMirror의 dropPoint를 통해 스키마에 맞는 유효 삽입 지점 계산 시도.
-	// 목록 항목은 목록 밖에서 놓을 자리가 없으므로, 목록으로 감싼 모양으로 한 번 더 찾는다.
+	// Try to compute a valid insertion point for the schema via ProseMirror's dropPoint.
+	// A list item has no place to go outside a list, so look once more with the shape wrapped in a list.
 	let point = dropPoint(doc, rawTargetPos, contentSlice);
 	const wrapped = point === null ? wrapInSourceList(doc, fromPos, range.content) : null;
 	if (wrapped) point = dropPoint(doc, rawTargetPos, new Slice(Fragment.from(wrapped), 0, 0));
 
 	if (point === null) {
-		// 블록 사이 정확한 위치로 떨어진 경우 직접 canDropBlockNode 확인
+		// If dropped at an exact position between blocks, check canDropBlockNode directly
 		if (canDropBlockNode(doc, fromPos, rawTargetPos, toPos)) {
 			point = rawTargetPos;
 		} else {
@@ -155,7 +155,7 @@ export function calculateDropPosition(
 		}
 	}
 
-	// 최종 계산된 위치가 canDropBlockNode 조건을 만족하는지 재검증
+	// Re-verify that the final computed position satisfies canDropBlockNode
 	if (!canDropBlockNode(doc, fromPos, point, toPos)) {
 		return null;
 	}
@@ -163,14 +163,14 @@ export function calculateDropPosition(
 	return point;
 }
 
-/** 이동된 노드에 적합한 선택 영역을 반환한다 (원자 노드는 NodeSelection, 일반 블록은 TextSelection/Selection). */
+/** Returns a selection suited to the moved node (NodeSelection for atom nodes, TextSelection/Selection for regular blocks). */
 export function selectionForMovedNode(doc: PmNode, pos: number, node: PmNode): Selection | null {
 	try {
 		if (NodeSelection.isSelectable(node)) {
 			return NodeSelection.create(doc, pos);
 		}
 	} catch {
-		// 노드 선택이 불가능하면 텍스트 커서 선택으로 이동
+		// If a node selection is not possible, fall back to a text cursor selection
 	}
 	try {
 		return TextSelection.near(doc.resolve(Math.min(pos + 1, doc.content.size)));
@@ -180,9 +180,9 @@ export function selectionForMovedNode(doc: PmNode, pos: number, node: PmNode): S
 }
 
 /**
- * 단일 트랜잭션으로 블록(묶음이면 fromPos~toPos의 이웃 블록들)을 targetPos로 이동한다 ("한 드래그 = 한 undo").
- * 스키마가 허용하지 않으면 null을 반환하고 아무 작업도 하지 않는다.
- * 블록 하나를 옮기면 그 블록을 선택하고, 여러 개를 옮기면 옮긴 자리를 MOVED_BLOCKS_META로 알린다(블록 선택이 이어진다).
+ * Moves a block (adjacent blocks fromPos~toPos for a group) to targetPos in a single transaction ("one drag = one undo").
+ * Returns null and does nothing if the schema does not allow it.
+ * Moving one block selects it; moving several announces the moved spots via MOVED_BLOCKS_META (block selection continues).
  */
 export function moveBlockNode(
 	state: EditorState,
@@ -200,17 +200,17 @@ export function moveBlockNode(
 
 	const tr = state.tr;
 
-	// 단일 트랜잭션 내에서 삭제 및 삽입을 함께 처리해 단 1회의 Undo 단계를 보장한다
+	// Handle deletion and insertion in a single transaction to guarantee a single Undo step
 	if (source.fill) tr.replaceWith(source.from, source.to, source.fill);
 	else tr.delete(source.from, source.to);
 	const insertedAt = tr.mapping.map(targetPos);
 	tr.insert(insertedAt, placed.content);
-	// 옮긴 블록들의 자리. 목록으로 감쌌으면 그 목록 안(항목들)이다.
+	// Spots of the moved blocks. If wrapped in a list, it is inside that list (the items).
 	let movedStart = placed.wrapped ? insertedAt + 1 : insertedAt;
 	let movedEnd = movedStart + range.content.size;
 
-	// 목록으로 감싸 넣었는데 바로 옆이 같은 종류 목록이면 합친다. 뒤를 먼저 합친다(앞을 합치면 위치가 2 당겨진다).
-	// 종류가 다른 목록(글머리표 ↔ 번호)은 합치지 않는다. canJoin은 항목이 같으면 종류가 달라도 허용한다.
+	// If wrapped in a list and the adjacent list is of the same type, merge them. Merge the later one first (merging the earlier one shifts positions by 2).
+	// Lists of different types (bullet <-> ordered) are not merged. canJoin allows it for the same items even if the types differ.
 	const { wrapped } = placed;
 	if (wrapped) {
 		const sameList = (pos: number, side: "before" | "after") => {
@@ -250,9 +250,9 @@ export function moveBlockNode(
 }
 
 /**
- * 블록 묶음(서로 다른 부모의 줄이 섞일 수 있다: 제목 + 목록 항목 일부 등)을 한 곳에 넣을 모양으로 만든다.
- * - 같은 목록에서 이어진 항목들은 그 목록 종류로 감싼다(목록 밖에 놓을 때).
- * - 모두 목록 항목이면 목록 사이에 놓을 때를 위해 항목 그대로의 모양도 함께 돌려준다.
+ * Turns a block group (lines from different parents can be mixed: a heading plus some list items, etc.) into a shape to insert in one place.
+ * - Items continuing in the same list are wrapped in that list type (when placed outside a list).
+ * - If all are list items, also returns the items as they are, for placing between lists.
  */
 function blockSetContent(doc: PmNode, positions: readonly number[]) {
 	const groups: Array<{ list: PmNode | null; nodes: PmNode[] }> = [];
@@ -277,7 +277,7 @@ function blockSetContent(doc: PmNode, positions: readonly number[]) {
 	return { blocks: Fragment.fromArray(blocks), items: itemsOnly ? Fragment.fromArray(items) : null };
 }
 
-/** 묶음을 targetPos에 놓을 때 넣을 내용. 묶음 안쪽이거나 스키마가 허용하지 않으면 null이다. */
+/** Content to insert when placing the group at targetPos. null if inside the group or the schema does not allow it. */
 export function placeableBlockSetAt(doc: PmNode, positions: readonly number[], targetPos: number): Fragment | null {
 	if (targetPos < 0 || targetPos > doc.content.size) return null;
 	for (const pos of positions) {
@@ -292,7 +292,7 @@ export function placeableBlockSetAt(doc: PmNode, positions: readonly number[], t
 	return $target.parent.canReplace(index, index, content.blocks) ? content.blocks : null;
 }
 
-/** 묶음을 놓을 유효한 위치(끌기 중 표시와 놓기에 쓴다). */
+/** Valid positions to place the group (used for the indicator while dragging and for the drop). */
 export function calculateBlockSetDropPosition(
 	doc: PmNode,
 	positions: readonly number[],
@@ -309,8 +309,8 @@ export function calculateBlockSetDropPosition(
 }
 
 /**
- * 묶음에서 줄들을 지운다(뒤에서부터). 목록의 항목이 모두 빠지면 목록째, 컨테이너가 비면 빈 문단을 남긴다.
- * 문서가 통째로 비면 빈 문단 하나를 남긴다.
+ * Deletes lines from the group (from the back). If all items of a list are removed, delete the whole list; if a container becomes empty, leave an empty paragraph.
+ * If the whole document becomes empty, leave one empty paragraph.
  */
 export function deleteBlockSet(tr: Transaction, positions: readonly number[]): Transaction {
 	for (const original of [...positions].reverse()) {
@@ -329,8 +329,8 @@ export function deleteBlockSet(tr: Transaction, positions: readonly number[]): T
 }
 
 /**
- * 블록 묶음을 targetPos로 옮긴다(한 번의 되돌리기). 옮긴 줄들의 새 위치를 MOVED_BLOCKS_META로 알린다.
- * 넣은 자리 양옆과 넣은 내용 사이의 같은 종류 목록은 합친다.
+ * Moves a block group to targetPos (one undo step). Announces the new positions of the moved lines via MOVED_BLOCKS_META.
+ * Same-type lists on both sides of the insertion and between the inserted content are merged.
  */
 export function moveBlockSet(state: EditorState, positions: readonly number[], targetPos: number): Transaction | null {
 	const content = placeableBlockSetAt(state.doc, positions, targetPos);
@@ -340,11 +340,11 @@ export function moveBlockSet(state: EditorState, positions: readonly number[], t
 	tr.insert(insertedAt, content);
 	const afterInsert = tr.steps.length;
 
-	// 옮긴 줄의 위치: 항목이면 감싼 목록 안, 아니면 블록 자신.
+	// Position of the moved line: inside the wrapping list for an item, otherwise the block itself.
 	const moved: number[] = [];
 	let offset = insertedAt;
 	content.forEach((node) => {
-		// 줄로 고를 수 있는 목록은 없다(항목이 줄이다). 넣은 목록은 항목을 감싼 것이고, 그 항목들이 옮긴 줄이다.
+		// A list cannot be picked as a line (the item is the line). The inserted list only wraps the items, and those items are the moved lines.
 		if (LIST_NODES.has(node.type.name)) {
 			let inner = offset + 1;
 			node.forEach((item) => {
@@ -355,7 +355,7 @@ export function moveBlockSet(state: EditorState, positions: readonly number[], t
 		offset += node.nodeSize;
 	});
 
-	// 같은 종류 목록끼리 맞닿은 경계를 뒤에서부터 합친다.
+	// Merge boundaries where same-type lists touch, from the back.
 	const boundaries: number[] = [insertedAt];
 	let boundary = insertedAt;
 	content.forEach((node) => {

@@ -8,11 +8,11 @@ import { codeEffectsKey, pickLines } from "../effects-plugin";
 import { commitLink, startLinkFromText } from "../link-commands";
 
 /**
- * 본문–코드 잇기의 본문 쪽은 코드 줄을 가리키는 글자 꾸밈(속성 `codeAnchor`, 예: 블록 확장의 코드 연결)이다. 본체는 그 이름을
- * 모르고 블록 정의에서 찾는다. 다른 사이트 설정처럼 그런 꾸밈이 없으면 잇기는 아무것도 바꾸지 않는다.
+ * The body side of body-to-code linking is a text decoration pointing at code lines (attribute `codeAnchor`, e.g. the code link of the blocks extension). The core does not
+ * know its name and finds it in the block definitions. As with other site configs, if no such decoration exists, linking changes nothing.
  */
-describe("본문–코드 잇기의 본문 꾸밈", () => {
-	it("코드 줄을 가리키는 꾸밈을 블록 정의(`codeAnchor`)에서 찾는다", () => {
+describe("body decoration for body-to-code linking", () => {
+	it("finds the decoration pointing at code lines in the block definitions (`codeAnchor`)", () => {
 		const anchorBlock = ADDED_MARK_BLOCKS.find((block) =>
 			Object.values(block.attributes).some((attribute) => attribute.codeAnchor),
 		);
@@ -21,7 +21,7 @@ describe("본문–코드 잇기의 본문 꾸밈", () => {
 		);
 	});
 
-	it.runIf(CODE_ANCHOR_REF === null)("그런 꾸밈이 없으면 잇기는 문서를 바꾸지 않는다", () => {
+	it.runIf(CODE_ANCHOR_REF === null)("if there is no such decoration, linking does not change the document", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(),
 			content: mdxToTiptap("이 함수가 값을 돌려준다.\n\n```ts\nconst a = 1;\n```\n"),

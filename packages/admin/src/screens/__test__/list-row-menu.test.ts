@@ -35,24 +35,24 @@ const select = (actions: MenuAction[], ...path: string[]) => {
 	}
 };
 
-describe("행 메뉴 대상", () => {
+describe("row menu target", () => {
 	const rows = [item("a"), item("b"), item("c")];
 
-	it("고른 줄 가운데 하나를 누르면 고른 줄 전체다", () => {
+	it("pressing one of the selected rows targets all selected rows", () => {
 		expect(actionTargets(rows[1] as ListEntriesItem, rows, new Set(["a", "b"])).map((row) => row.id)).toEqual([
 			"a",
 			"b",
 		]);
 	});
 
-	it("고르지 않은 줄이나 하나만 고른 줄은 그 줄 하나다", () => {
+	it("an unselected row, or the only selected row, targets just that row", () => {
 		expect(actionTargets(rows[2] as ListEntriesItem, rows, new Set(["a", "b"])).map((row) => row.id)).toEqual(["c"]);
 		expect(actionTargets(rows[0] as ListEntriesItem, rows, new Set(["a"])).map((row) => row.id)).toEqual(["a"]);
 	});
 });
 
-describe("행 메뉴 항목", () => {
-	it("글 한 줄은 열기·복제와 폴더·태그·보관·휴지통을 준다", () => {
+describe("row menu items", () => {
+	it("a single post row offers open and duplicate plus folder, tag, archive and trash", () => {
 		expect(labels(rowMenuActions([item("a")], context, handlers()))).toEqual([
 			"열기",
 			"새 탭에서 열기",
@@ -66,7 +66,7 @@ describe("행 메뉴 항목", () => {
 		]);
 	});
 
-	it("여러 줄은 항목 수를 먼저 보이고 열기·복제가 없다", () => {
+	it("multiple rows show the item count first and have no open or duplicate", () => {
 		expect(labels(rowMenuActions([item("a"), item("b")], context, handlers())).slice(0, 3)).toEqual([
 			"2개 항목",
 			"—",
@@ -74,20 +74,20 @@ describe("행 메뉴 항목", () => {
 		]);
 	});
 
-	it("모두 보관된 줄이면 보관 해제를 준다", () => {
+	it("rows that are all archived offer unarchive", () => {
 		const on = handlers();
 		select(rowMenuActions([item("a", "archived")], context, on), "보관 해제");
 		expect(on.bulk).toHaveBeenCalledWith("unarchive", "보관 해제", [{ id: "a", expectedVersion: 2, title: "a" }]);
 	});
 
-	it("보관은 바로 하지 않고 확인을 부른다", () => {
+	it("archive asks for confirmation instead of acting right away", () => {
 		const on = handlers();
 		select(rowMenuActions([item("a")], context, on), "보관");
 		expect(on.confirmArchive).toHaveBeenCalledWith([{ id: "a", expectedVersion: 2, title: "a" }]);
 		expect(on.bulk).not.toHaveBeenCalled();
 	});
 
-	it("모든 항목과 하위 메뉴 항목에 아이콘이 있다", () => {
+	it("every item and submenu item has an icon", () => {
 		const missing = (actions: MenuAction[]): string[] =>
 			actions.flatMap((action) => {
 				if (action.kind === "item") return action.icon ? [] : [action.label];
@@ -98,7 +98,7 @@ describe("행 메뉴 항목", () => {
 		expect(missing(rowMenuActions([item("a", "trashed")], { ...context, mode: "trash" }, handlers()))).toEqual([]);
 	});
 
-	it("분류 항목은 작은 폼으로 열고 태그·보관이 없다", () => {
+	it("a taxonomy item opens as a small form and has no tag or archive", () => {
 		const on = handlers();
 		const actions = rowMenuActions([item("a")], { ...context, isRecord: true, isContent: false }, on);
 		expect(labels(actions)).toEqual(["열기", "—", "폴더로 이동", "—", "휴지통으로 이동"]);
@@ -106,7 +106,7 @@ describe("행 메뉴 항목", () => {
 		expect(on.openRecord).toHaveBeenCalledWith(item("a"));
 	});
 
-	it("폴더·태그 하위 메뉴는 고른 대상과 값으로 일괄 작업을 부른다", () => {
+	it("folder and tag submenus call the bulk action with the chosen targets and value", () => {
 		const on = handlers();
 		const actions = rowMenuActions([item("a"), item("b")], context, on);
 		const targets = [
@@ -124,7 +124,7 @@ describe("행 메뉴 항목", () => {
 		});
 	});
 
-	it("휴지통은 복원·영구 삭제뿐이다", () => {
+	it("trash has only restore and permanent delete", () => {
 		const on = handlers();
 		const actions = rowMenuActions([item("a", "trashed")], { ...context, mode: "trash" }, on);
 		expect(labels(actions)).toEqual(["복원", "—", "영구 삭제"]);

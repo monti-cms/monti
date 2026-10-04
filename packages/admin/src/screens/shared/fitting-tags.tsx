@@ -10,8 +10,8 @@ const GAP = 4;
 const CHIP = "shrink-0 rounded bg-cms-muted px-1.5 py-0.5 text-cms-muted-foreground text-xs";
 
 /**
- * 칸 폭에 들어가는 만큼 태그를 보여 주고, 나머지는 `+N`으로 줄인다. 열 너비를 바꾸면 다시 잰다.
- * 보이지 않는 측정 줄에 모든 태그와 가장 긴 `+N`을 그려 두고 폭을 잰다. 하나도 안 들어가면 첫 태그를 말줄임한다.
+ * Shows as many tags as fit the cell width and shortens the rest to `+N`. Remeasures when the column width changes.
+ * Draws all tags and the longest `+N` in an invisible measuring row and measures the width. If none fit, the first tag is truncated with an ellipsis.
  */
 export function FittingTags({ tags }: { tags: readonly { id: string; title: string }[] }) {
 	const boxRef = useRef<HTMLSpanElement | null>(null);
@@ -19,7 +19,7 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 	const [shown, setShown] = useState(tags.length);
 	const key = tags.map((tag) => tag.id).join();
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `key`가 태그 목록의 내용을 대신한다
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `key` stands in for the contents of the tag list
 	useLayoutEffect(() => {
 		const box = boxRef.current;
 		const measure = measureRef.current;

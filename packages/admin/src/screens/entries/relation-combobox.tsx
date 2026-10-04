@@ -23,16 +23,16 @@ export interface RelationOption {
 	label: string;
 }
 
-/** 목록 끝의 `'검색어' 추가` 항목. 검색어가 곧 이름이라 거르기에 늘 걸린다. */
+/** The `Add 'query'` item at the end of the list. The query is the name itself, so it always passes the filter. */
 type Item = RelationOption & { create?: true };
 
 interface RelationComboboxProps {
 	options: readonly RelationOption[];
 	multiple: boolean;
-	/** 고른 ID들. 하나만 고르는 관계는 비었거나 하나다. */
+	/** Picked IDs. For a single-pick relation, empty or one. */
 	value: readonly string[];
 	onValueChange: (value: string[]) => void;
-	/** 있으면 검색어로 새 항목을 추가할 수 있다. 만든 항목의 ID를, 그만두면 null을 돌려준다. */
+	/** If present, a new item can be added from the search query. Returns the created item's ID, or null if cancelled. */
 	onCreate?: (label: string) => Promise<string | null>;
 	id?: string;
 	placeholder?: string;
@@ -40,13 +40,13 @@ interface RelationComboboxProps {
 	invalid?: boolean;
 	describedBy?: string;
 	disabled?: boolean;
-	/** 여러 개일 때 고른 항목을 입력칸 안에 칩으로 보일지. 고른 목록을 따로 그리는 곳(모음집 글 목록)은 끈다. */
+	/** For multiple, whether to show picked items as chips inside the input. Turn off where the picked list is drawn separately (collection post list). */
 	showChips?: boolean;
 }
 
 /**
- * 태그·카테고리 같은 관계 입력. 검색해 고르고, 없는 이름이면 목록 끝의 `'이름' 추가`로 추가 칸을 연다
- * (따로 떨어진 "새 항목" 입력 줄을 두지 않는다).
+ * Relation input such as tags and categories. Search and pick; for a name that does not exist, `Add 'name'` at the end of the list opens the add sheet
+ * (no separate "new item" input row).
  */
 export function RelationCombobox({
 	options,
@@ -68,8 +68,8 @@ export function RelationCombobox({
 	const [error, setError] = useState<string | null>(null);
 
 	const byValue = useMemo(() => new Map(options.map((option) => [option.value, option])), [options]);
-	// 목록에 아직 없는 선택값(방금 만든 항목 등)도 이름 대신 짧은 ID로 보인다. Base UI는 값 객체가 바뀌면
-	// 입력 글자를 고른 이름으로 되돌리므로, 같은 선택이면 같은 객체를 넘긴다.
+	// A selected value not yet in the list (e.g. just created) is shown by a short ID instead of a name. Base UI resets
+	// the input text to the picked name when the value object changes, so pass the same object for the same selection.
 	const valueKey = value.join("\u0000");
 	// biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the joined ids
 	const selected: Item[] = useMemo(
@@ -82,7 +82,7 @@ export function RelationCombobox({
 		Boolean(onCreate) &&
 		!isCreating &&
 		trimmed !== "" &&
-		// 고른 항목 이름이 입력에 보이는 경우(하나만 고르는 관계)나 이미 있는 이름이면 만들지 않는다.
+		// Do not create if the picked item's name is shown in the input (single-pick relation) or the name already exists.
 		![...options, ...selected].some((option) => option.label.toLocaleLowerCase() === trimmed.toLocaleLowerCase());
 	const items: Item[] = canCreate
 		? [...options, { value: `__create__:${trimmed}`, label: trimmed, create: true }]

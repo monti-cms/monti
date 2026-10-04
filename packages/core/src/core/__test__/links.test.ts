@@ -6,8 +6,8 @@ import { COLLECTIONS } from "../collections";
 import { contentPath, LINKABLE_COLLECTIONS, parseContentPath, parseInternalLink, previewHref } from "../links";
 
 /**
- * 설정과 상관없는 본문 내부 링크 규칙. 컬렉션과 공개 경로·사이트 주소는 지금 설정에서 찾는다(`test/any-site.ts`).
- * 블로그 예시 설정의 주소 그대로는 `links.blog.test.ts`가 확인한다.
+ * Internal body link rules that do not depend on the config. Collections, public paths and the site address are looked up in the current config (`test/any-site.ts`).
+ * `links.blog.test.ts` checks the addresses of the reference blog config as is.
  */
 const pathOf = (slug: string) => {
 	const path = schemaOf(contentCollection).path;
@@ -17,8 +17,8 @@ const pathOf = (slug: string) => {
 const siteHost = new URL(cmsConfig.site?.url ?? "https://example.invalid").hostname;
 const aliasHost = cmsConfig.site?.aliases?.[0] ?? siteHost;
 
-describe("본문 내부 링크 규칙", () => {
-	it("경로가 있는 컬렉션만 링크로 가리킬 수 있다", () => {
+describe("internal body link rules", () => {
+	it("only collections with a path can be linked to", () => {
 		expect(LINKABLE_COLLECTIONS).toEqual(COLLECTIONS.filter((name) => schemaOf(name).path));
 		expect(LINKABLE_COLLECTIONS).toContain(contentCollection);
 		expect(contentPath(contentCollection, "nextjs-guide")).toBe(pathOf("nextjs-guide"));
@@ -27,9 +27,9 @@ describe("본문 내부 링크 규칙", () => {
 		expect(contentPath(contentCollection, "")).toBeNull();
 	});
 
-	it("경로에서 컬렉션과 slug를 읽는다", () => {
+	it("reads the collection and slug from a path", () => {
 		expect(parseContentPath(pathOf("a"))).toEqual({ collection: contentCollection, slug: "a" });
-		// 끝 빗금은 있어도 없어도 같은 글이다.
+		// A trailing slash makes no difference; it is the same post.
 		const encoded = pathOf("%ED%95%9C%EA%B8%80").replace(/\/?$/, "/");
 		expect(parseContentPath(encoded)).toEqual({ collection: contentCollection, slug: "한글" });
 		expect(parseContentPath(pathOf("a/b"))).toBeNull();
@@ -37,7 +37,7 @@ describe("본문 내부 링크 규칙", () => {
 		expect(parseContentPath(pathOf("%E0%A4%A"))).toBeNull();
 	});
 
-	it("경로와 사이트 주소로 적은 링크만 내부 링크로 본다", () => {
+	it("only links written as a path or with the site address count as internal links", () => {
 		const relative = `${pathOf("a")}?x=1#h`;
 		expect(parseInternalLink(relative)).toEqual({ collection: contentCollection, slug: "a", url: relative });
 		expect(parseInternalLink(`https://${aliasHost}${pathOf("b")}`)?.slug).toBe("b");
@@ -48,10 +48,10 @@ describe("본문 내부 링크 규칙", () => {
 	});
 });
 
-describe("초안 미리보기 주소", () => {
+describe("draft preview addresses", () => {
 	const previewPath = cmsConfig.site?.previewPath;
 
-	it.skipIf(!previewPath)("미리보기 경로 아래에 공개 경로를 붙인다", () => {
+	it.skipIf(!previewPath)("appends the public path under the preview path", () => {
 		const href = previewHref(contentCollection, "nextjs-guide", defaultLocale);
 		expect(href?.startsWith(previewPath?.replace(/\/$/, "") ?? "")).toBe(true);
 		expect(href?.endsWith(pathOf("nextjs-guide"))).toBe(true);
@@ -59,8 +59,8 @@ describe("초안 미리보기 주소", () => {
 		expect(previewHref(contentCollection, null)).toBeNull();
 	});
 
-	// 기본 언어가 아니면 언어를 넘긴다(쿼리든 경로 접두사든). 언어가 하나뿐인 설정에는 없다.
-	it.skipIf(!previewPath || !secondLocale)("기본 언어가 아니면 언어를 넘긴다", () => {
+	// For a non-default locale the locale is passed (as a query or a path prefix). A config with only one locale has none.
+	it.skipIf(!previewPath || !secondLocale)("passes the locale when it is not the default", () => {
 		const href = previewHref(contentCollection, "한글 메모", secondLocale);
 		expect(href).toContain(secondLocale);
 		expect(href).toContain(encodeURIComponent("한글 메모"));

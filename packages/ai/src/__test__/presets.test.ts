@@ -21,8 +21,8 @@ import { AI_ACTIONS } from "../registry";
 import { resolveAiActions } from "../resolve";
 
 /**
- * 기본 기능(프리셋)이 붙는 곳과 켜고 끄기(M10-2). 앞 묶음은 지금 설정(블로그 예시·다른 사이트 둘 다)에서 필드를 찾아
- * 확인하고, 뒤 묶음은 테스트 안에서 만든 작은 설정으로 확인한다.
+ * Where default actions (presets) attach, and turning them on/off. The first group finds fields in the current config (both the reference blog example and the other site) and
+ * checks them; the second group checks with a small config built inside the test.
  */
 
 const presetText = lazyTranslator(presetMessages);
@@ -30,7 +30,7 @@ const presetText = lazyTranslator(presetMessages);
 type FieldAttach = Extract<AiAttach, { slot: "field" }>;
 const fieldAttaches = (definition: AiActionDefinition | undefined): FieldAttach[] =>
 	(definition?.attach ?? []).filter((attach): attach is FieldAttach => attach.slot === "field");
-/** 기능이 붙는 (컬렉션, 필드) 쌍. */
+/** (collection, field) pairs an action attaches to. */
 const pairs = (definition: AiActionDefinition | undefined) =>
 	fieldAttaches(definition)
 		.flatMap((attach) => (attach.collections ?? []).map((collection) => `${collection}.${attach.field}`))
@@ -40,8 +40,8 @@ const collections = cmsConfig.collections as CollectionsConfig;
 const bodyCollections = Object.entries(collections).filter(([, schema]) => schema.body);
 const isRecord = (name: string) => collections[name]?.kind === "item";
 
-describe("지금 설정: 기본 필드 기능은 필드 종류·역할·관계 대상으로 붙는다", () => {
-	it("주소 추천은 본문이 있는 컬렉션의 주소 필드(`fields.slug`)에 붙는다", () => {
+describe("current config: default field actions attach by field kind, role, and relation target", () => {
+	it("slug suggestion attaches to the slug field (`fields.slug`) of collections that have a body", () => {
 		const expected = bodyCollections.flatMap(([name, schema]) =>
 			Object.entries(schema.fields)
 				.filter(([, field]) => field.kind === "slug")
@@ -51,7 +51,7 @@ describe("지금 설정: 기본 필드 기능은 필드 종류·역할·관계 �
 		expect(pairs(AI_ACTIONS.slug)).toEqual(expected.sort());
 	});
 
-	it("요약 만들기는 요약 역할 필드에 붙고, 글자 수는 필드 `max`(없으면 160)다", () => {
+	it("summary generation attaches to the summary-role field, and the character count is the field's `max` (160 if absent)", () => {
 		const targets = bodyCollections.flatMap(([name, schema]) =>
 			valueFieldsOf(schema)
 				.filter(({ field }) => field.role === SUMMARY_ROLE)
@@ -59,14 +59,14 @@ describe("지금 설정: 기본 필드 기능은 필드 종류·역할·관계 �
 		);
 		expect(targets.length).toBeGreaterThan(0);
 		const summary = AI_ACTIONS.summary;
-		// 다른 사이트 설정은 요약 기능을 옵션으로 바꿨다(`maxLength: 200`).
+		// The other site's config changed the summary action into an option (`maxLength: 200`).
 		if (summary?.prompt.includes("at most 200 characters")) return;
 		expect(pairs(summary)).toEqual(targets.map(({ pair }) => pair).sort());
 		const max = targets[0]?.definition.kind === "text" ? (targets[0].definition.max ?? 160) : 160;
 		expect(summary?.checks).toContainEqual({ kind: "maxLength", max });
 	});
 
-	it("태그·카테고리 추천은 분류(record) 컬렉션을 가리키는 여러 개·하나 관계 필드에 붙고, 선택지는 그 대상이다", () => {
+	it("tag/category suggestion attaches to many/one relation fields pointing to a classification (record) collection, and the options are that target", () => {
 		for (const [key, many] of [
 			["tags", true],
 			["category", false],
@@ -95,7 +95,7 @@ describe("지금 설정: 기본 필드 기능은 필드 종류·역할·관계 �
 		}
 	});
 
-	it("블록·SEO 확장의 AI 기능은 설정에 적지 않아도 붙는다", () => {
+	it("block and SEO extension AI actions attach even when not listed in the config", () => {
 		const blocks = BLOCKS.map((block) => block.name);
 		if (blocks.includes("chart")) {
 			expect(AI_ACTIONS.chartDraft?.attach).toEqual([{ slot: "insert" }]);
@@ -110,14 +110,14 @@ describe("지금 설정: 기본 필드 기능은 필드 종류·역할·관계 �
 		expect(pairs(AI_ACTIONS.seoTitle)).toEqual(seoTitle.sort());
 	});
 
-	it("필드 옆 기능이 앞에 온다(관리자 AI 화면 순서)", () => {
+	it("field-side actions come first (admin AI screen order)", () => {
 		const keys = Object.keys(AI_ACTIONS);
 		const firstOther = keys.findIndex((key) => fieldAttaches(AI_ACTIONS[key]).length === 0);
 		expect(keys.slice(firstOther).every((key) => fieldAttaches(AI_ACTIONS[key]).length === 0)).toBe(true);
 	});
 });
 
-describe("기본 기능 켜기·끄기·바꾸기(`resolveAiActions`)", () => {
+describe("turning default actions on, off, and changing them (`resolveAiActions`)", () => {
 	const title = fields.text({ label: "제목", max: 100 });
 	const note = defineCollection({
 		label: "노트",
@@ -153,7 +153,7 @@ describe("기본 기능 켜기·끄기·바꾸기(`resolveAiActions`)", () => {
 		locales: [{ code: "ko" }, { code: "en" }],
 	};
 
-	it("기능을 적지 않으면 붙을 곳이 있는 기본 기능이 모두 켜진다", () => {
+	it("with no actions listed, all default actions that have somewhere to attach are on", () => {
 		const actions = resolveAiActions({}, site);
 		expect(Object.keys(actions)).toEqual(Object.keys(DEFAULT_AI_ACTIONS));
 		expect(pairs(actions.slug)).toEqual(["note.slug"]);
@@ -168,15 +168,15 @@ describe("기본 기능 켜기·끄기·바꾸기(`resolveAiActions`)", () => {
 		expect(pairs(actions.category)).toEqual(["note.shelfId"]);
 		expect(actions.category).toMatchObject({ pick: "one", choices: { from: "collection", collection: "shelf" } });
 		expect(actions.category?.prompt).toBe("Choose the one that this content belongs to.");
-		// 기본 지시문은 영어이고 사이트 종류나 고정 언어를 정하지 않는다(말투·표기는 공통 문구 `styleGuide`가 맡는다).
+		// Default instructions are in English and fix neither the site kind nor a language (tone and notation are handled by the shared text `styleGuide`).
 		for (const [key, definition] of Object.entries(actions)) {
 			expect(definition.prompt).not.toMatch(/blog|React Query|Korean/i);
-			// 번역의 번역할 속성 목록만 사이트의 블록 이름표가 들어간다.
+			// Only the translatable attribute list of translation gets the site's block labels.
 			if (key !== "translate") expect(definition.prompt).toMatch(/^[\x20-\x7E\n]*$/);
 		}
 	});
 
-	it("번역 지시문의 번역할 속성은 블록 정의에서 만든다. 언어가 하나면 번역 기능은 없다", () => {
+	it("the translation instruction's translatable attributes are built from the block definitions. With one language there is no translation action", () => {
 		const translate = resolveAiActions({}, site).translate;
 		expect(translate?.prompt).toContain("곁상자(heading)");
 		expect(translate?.prompt).toContain(`${BLOCKS.find((block) => block.name === "image")?.label}(alt·caption·title)`);
@@ -184,12 +184,12 @@ describe("기본 기능 켜기·끄기·바꾸기(`resolveAiActions`)", () => {
 		expect(resolveAiActions({}, { ...site, locales: [{ code: "ko" }] }).translate).toBeUndefined();
 	});
 
-	it("붙을 곳이 없는 기능은 켜지지 않는다(본문 없는 사이트)", () => {
+	it("an action with nowhere to attach is not turned on (a site without a body)", () => {
 		const records = resolveAiActions({}, { ...site, collections: { label, shelf } as CollectionsConfig });
 		expect(Object.keys(records)).toEqual(["imageAlt", "imageCaption", "mediaFilename", "translate", "codeFold"]);
 	});
 
-	it("`false`는 끄고, 정의·프리셋을 주면 그 자리에서 바꾸고, 새 이름은 더한다", () => {
+	it("`false` turns off, a definition/preset replaces in place, and a new name is added", () => {
 		const custom = { ...aiPresets.codeFold(), label: "내 기능" };
 		const actions = resolveAiActions(
 			{ actions: { draft: false, summary: aiPresets.summary({ maxLength: 50 }), mine: custom } },
@@ -202,18 +202,18 @@ describe("기본 기능 켜기·끄기·바꾸기(`resolveAiActions`)", () => {
 		expect(() => resolveAiActions({ actions: { nope: false } }, site)).toThrow(/does not exist/);
 	});
 
-	it("공통 문구 `styleGuide`가 있을 때만 글을 쓰는 기능의 지시문에 넣는다", () => {
+	it("the shared text `styleGuide` goes into the instructions of writing actions only when it exists", () => {
 		const writing = ["slug", "summary", "imageAlt", "imageCaption", "mediaFilename", "translate", "polish", "draft"];
 		const without = resolveAiActions({}, site);
 		for (const key of writing) expect(without[key]?.prompt).not.toContain("{{shared.");
 		const shared = { styleGuide: { label: "Style guide", text: "" } };
 		const withGuide = resolveAiActions({ shared }, site);
 		for (const key of writing) expect(withGuide[key]?.prompt).toContain("{{shared.styleGuide}}");
-		// 고르는 기능(태그·분류)과 정규식 기능에는 문체가 없다.
+		// Choosing actions (tags/categories) and regex actions have no writing style.
 		for (const key of ["tags", "category", "codeFold"]) expect(withGuide[key]?.prompt).not.toContain("{{shared.");
 	});
 
-	it("필드 이름을 주면 그 필드에, 선택지를 주면 그 컬렉션을 가리키는 필드에 붙는다", () => {
+	it("a field name attaches to that field, and options attach to fields pointing to that collection", () => {
 		const actions = resolveAiActions(
 			{
 				actions: { summary: aiPresets.summary({ field: "title" }), category: aiPresets.category({ field: "shelfId" }) },
@@ -226,7 +226,7 @@ describe("기본 기능 켜기·끄기·바꾸기(`resolveAiActions`)", () => {
 	});
 });
 
-describe("다른 플러그인이 더하는 AI 기능(`contributes.ai.actions`)", () => {
+describe("AI actions contributed by other plugins (`contributes.ai.actions`)", () => {
 	const blocksOf = (plugins: readonly { blocks?: readonly BlockDefinition[] }[]) => [
 		...BLOCKS.filter((block) => block.name === "image"),
 		...plugins.flatMap((plugin) => plugin.blocks ?? []),
@@ -237,7 +237,7 @@ describe("다른 플러그인이 더하는 AI 기능(`contributes.ai.actions`)",
 		locales: cmsConfig.locales,
 	});
 
-	it("블록 확장을 넣으면 그 블록의 AI 기능이 붙고, 빼면 없다", () => {
+	it("adding a block extension attaches its block AI actions, and removing it removes them", () => {
 		const plugins = [mermaid(), chart()];
 		const actions = resolveAiActions({}, blogSite(plugins), plugins);
 		expect(Object.keys(actions)).toEqual(
@@ -248,7 +248,7 @@ describe("다른 플러그인이 더하는 AI 기능(`contributes.ai.actions`)",
 		expect(none.chartEdit).toBeUndefined();
 	});
 
-	it("SEO 확장은 검색 제목·설명 추천을 더한다. `false`로 끄거나 `seo({ ai: false })`로 더하지 않는다", () => {
+	it("the SEO extension adds search title/description suggestions. Turn off with `false` or don't add with `seo({ ai: false })`", () => {
 		const withSeo = resolveAiActions({}, blogSite([]), [seo()]);
 		const titled = Object.values(collections).some((schema) =>
 			valueFieldsOf(schema).some(({ field }) => field.role === "seoTitle"),
@@ -258,7 +258,7 @@ describe("다른 플러그인이 더하는 AI 기능(`contributes.ai.actions`)",
 		expect(resolveAiActions({}, blogSite([]), [seo({ ai: false })]).seoTitle).toBeUndefined();
 	});
 
-	it("이미 있는 이름을 더하면 설정 오류다(플러그인 검사에서도)", () => {
+	it("adding an existing name is a config error (also in the plugin check)", () => {
 		const clash = definePlugin({
 			name: "clash",
 			options: {},

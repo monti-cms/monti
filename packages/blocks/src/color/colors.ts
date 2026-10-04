@@ -1,14 +1,14 @@
 /**
- * 글자색·글자 배경색(`:color[글]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}`).
- * 본문에는 색을 이름이 아니라 헥스 값으로 저장한다. 밝은·어두운 테마 값을 짝으로 두고, 어두운 값이 없으면
- * 밝은 값을 그대로 쓴다. 편집기의 고르기 목록은 확장 옵션 `color({ palette })`이고, 없으면 아래 기본 프리셋이다.
- * 직접 고른 색도 같은 모양으로 저장한다.
+ * Text color and text background color (`:color[text]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}`).
+ * The body stores colors as hex values, not names. Light and dark theme values are paired, and when there is no dark value
+ * the light value is used as is. The editor's picker list is the extension option `color({ palette })`, falling back to the default presets below.
+ * Custom-picked colors are stored in the same shape.
  */
 
 import { createActiveTranslator } from "@monti-cms/core";
 import { colorMessages } from "./messages";
 
-// 기본 색 이름은 글자를 읽는 때에 화면 언어로 고른다(설정 파일이 이 모듈을 불러오는 때에는 언어를 아직 모른다).
+// Default color names are resolved in the UI language when the text is read (the language is not yet known when the config file imports this module).
 const t = createActiveTranslator(colorMessages);
 
 export interface ColorPair {
@@ -19,13 +19,13 @@ export interface ColorPair {
 export interface PaletteColor {
 	readonly id: string;
 	readonly name: string;
-	/** 글자색. */
+	/** Text color. */
 	readonly fg: ColorPair;
-	/** 글자 배경색. */
+	/** Text background color. */
 	readonly bg: ColorPair;
 }
 
-/** 기본 고르기 목록. 확장 옵션 `color({ palette })`로 바꾼다. */
+/** Default picker list. Change it with the extension option `color({ palette })`. */
 export const DEFAULT_TEXT_PALETTE: readonly PaletteColor[] = [
 	{
 		id: "gray",
@@ -93,7 +93,7 @@ export const DEFAULT_TEXT_PALETTE: readonly PaletteColor[] = [
 	},
 ];
 
-/** 본문 `:color`의 속성. 빈 값은 그 색을 쓰지 않는다는 뜻이다. */
+/** Attributes of the body `:color`. An empty value means that color is not used. */
 export interface TextColorAttrs {
 	fg?: string | null;
 	fgDark?: string | null;
@@ -105,10 +105,10 @@ export const TEXT_COLOR_ATTRS = ["fg", "fgDark", "bg", "bgDark"] as const;
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
-/** `#rgb`·`#rgba`·`#rrggbb`·`#rrggbbaa`만 받는다. 스타일에 그대로 넣으므로 다른 값은 버린다. */
+/** Accepts only `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`. Other values are dropped because they go straight into styles. */
 export const isHexColor = (value: unknown): value is string => typeof value === "string" && HEX.test(value);
 
-/** 속성에서 쓸 수 있는 값만 남긴다(소문자). 남은 것이 없으면 빈 객체다. */
+/** Keeps only the usable values from the attributes (lowercase). Returns an empty object if nothing remains. */
 export function cleanTextColor(attrs: Readonly<Record<string, unknown>> | null | undefined): TextColorAttrs {
 	const out: TextColorAttrs = {};
 	for (const name of TEXT_COLOR_ATTRS) {
@@ -121,8 +121,8 @@ export function cleanTextColor(attrs: Readonly<Record<string, unknown>> | null |
 export const hasTextColor = (attrs: TextColorAttrs): boolean => Boolean(attrs.fg || attrs.bg);
 
 /**
- * 공개 화면·에디터가 함께 쓰는 표시 속성. CSS(`.cms-color`, 이 패키지의 `styles.css`)가 테마에 맞춰 변수를 고른다.
- * `data-fg`·`data-bg`가 있을 때만 색을 입힌다.
+ * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `styles.css`) picks the variable for the theme.
+ * Color is applied only when `data-fg` or `data-bg` is present.
  */
 export function textColorProps(attrs: TextColorAttrs): {
 	className: string;
@@ -143,7 +143,7 @@ export function textColorProps(attrs: TextColorAttrs): {
 	};
 }
 
-/** 프리셋과 같은 색이면 그 프리셋. 고르기 목록에서 지금 색을 표시할 때 쓴다. */
+/** The preset if the color matches one. Used to mark the current color in the picker list. */
 export function paletteOf(
 	kind: "fg" | "bg",
 	attrs: TextColorAttrs,
@@ -154,7 +154,7 @@ export function paletteOf(
 	return palette.find((color) => color[kind].light.toLowerCase() === light.toLowerCase());
 }
 
-/** 고르기 목록(`color({ palette })`)이 맞는지 확인한다(헥스 값, 겹치지 않는 `id`). */
+/** Checks that the picker list (`color({ palette })`) is valid (hex values, unique `id`s). */
 export function validateTextPalette(palette: readonly PaletteColor[] | undefined): void {
 	const ids = new Set<string>();
 	for (const color of palette ?? []) {

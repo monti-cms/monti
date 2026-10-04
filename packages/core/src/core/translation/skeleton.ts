@@ -6,20 +6,20 @@ import type { CmsJsonValue, CmsNode } from "../../mdx/types";
 import { translationMessages } from "./messages";
 
 /**
- * 번역 결과의 구조 검사(v2 D2). 원문과 번역의 "글자를 뺀 뼈대"가 같은지 본다.
+ * Structure check of translation results. Checks that the source and the translation have the same "skeleton without text".
  *
- * - 같아야 하는 것: 블록·인라인 요소의 종류와 순서, 링크 주소, 이미지 주소, 코드·수식 내용, 코드 언어,
- *   directive·JSX 이름과 사람이 읽지 않는 속성, 인라인 코드 글자.
- * - 달라도 되는 것: 글자, 사람이 읽는 속성 값, 문장 안에서 굵게·링크가 걸린 위치.
+ * - Must be the same: kinds and order of block and inline elements, link addresses, image addresses, code/math contents, code languages,
+ *   directive/JSX names and attributes humans do not read, inline code text.
+ * - May differ: text, values of human-readable attributes, where bold/links fall inside a sentence.
  *
- * 사람이 읽는 속성은 블록 정의에서 정한다. 번역할 속성(`translatable`)과, 그 속성 값을 가리키는 속성
- * (`childValue`, 예: 처음 열 탭 → 탭 이름)이다. 사이트가 더한 블록도 같은 규칙을 따른다.
+ * Human-readable attributes are decided by the block definition: translatable attributes (`translatable`) and attributes that point to such an attribute's value
+ * (`childValue`, e.g. initially open tab → tab name). Blocks added by the site follow the same rules.
  */
 
-/** Markdown 문법 요소의 사람이 읽는 속성. 블록 정의가 없는 요소만 둔다(링크 제목 `[글](주소 "제목")`). */
+/** Human-readable attributes of Markdown syntax elements. Only for elements without a block definition (link title `[text](address "title")`). */
 const MARKDOWN_READABLE: Readonly<Record<string, readonly string[]>> = { link: ["title"] };
 
-/** 블록 하나의 사람이 읽는 속성 이름. */
+/** Human-readable attribute names of one block. */
 export function readableAttributes(
 	block: BlockDefinition,
 	blockByName: ReadonlyMap<string, BlockDefinition>,
@@ -41,8 +41,8 @@ export function readableAttributes(
 }
 
 /**
- * 노드·마크 종류 → 사람이 읽는 속성. 지시자·JSX 블록은 렌더러 이름(`Callout`), 인라인 지시자 마크와
- * Markdown 이미지는 블록 이름(`tooltip`·`image`)이 종류다.
+ * Node/mark kind → human-readable attributes. For directive and JSX blocks the kind is the renderer name (`Callout`); for inline directive marks and
+ * Markdown images it is the block name (`tooltip`, `image`).
  */
 export function readableAttributesByType(blocks: readonly BlockDefinition[]): Map<string, ReadonlySet<string>> {
 	const byName = new Map(blocks.map((block) => [block.name, block]));
@@ -67,9 +67,9 @@ const readableOf = (type: string): ReadonlySet<string> => {
 type Skeleton = {
 	type: string;
 	attrs: Record<string, CmsJsonValue>;
-	/** 이 노드 바로 아래 글자에 걸린 서식(종류·주소). 겹치지 않게 모아 정렬한다. */
+	/** Formatting (kind, address) applied to text directly under this node. Collected without overlap and sorted. */
 	marks: string[];
-	/** 이 노드 바로 아래 인라인 코드 글자(번역하지 않는다). */
+	/** Inline code text directly under this node (not translated). */
 	codes: string[];
 	children: Skeleton[];
 };
@@ -82,7 +82,7 @@ const withoutReadable = (
 	const kept: Record<string, CmsJsonValue> = {};
 	for (const [key, value] of Object.entries(attrs ?? {})) {
 		if (readable.has(key)) continue;
-		// JSX 원래 속성 목록: 이름은 그대로, 사람이 읽는 속성의 값만 뺀다.
+		// Original JSX attribute list: names stay, only values of human-readable attributes are removed.
 		kept[key] =
 			key === "attributes" && Array.isArray(value)
 				? value.map((item) => {
@@ -119,12 +119,16 @@ function skeletonOf(node: CmsNode): Skeleton {
 	};
 }
 
-/** 구조 검사가 실패한 이유 코드. 이유 문구는 `reason`이다. */
+/** Failure reason codes of the structure check. The reason message is `reason`. */
 export type StructureFailCode = "mdx_error" | "source_unreadable" | "structure_changed";
 
 export type StructureCheck =
 	| { ok: true }
-	| { ok: false; code: StructureFailCode /** 사이트 화면 언어의 이유(`cms.translation` 사전). */; reason: string };
+	| {
+			ok: false;
+			code: StructureFailCode /** Reason in the site's display language (`cms.translation` dictionary). */;
+			reason: string;
+	  };
 
 const tTranslation = createTranslator(translationMessages);
 
@@ -134,7 +138,7 @@ const mdxFailure = (message: string | undefined): StructureCheck => ({
 	reason: tTranslation("mdx_error", { message: message ?? tTranslation("unreadable") }),
 });
 
-/** 번역한 MDX가 원문 MDX와 같은 뼈대인가. MDX로 읽을 수 없으면 실패다. */
+/** Whether the translated MDX has the same skeleton as the source MDX. Failure if it cannot be read as MDX. */
 export function compareStructure(sourceMdx: string, translatedMdx: string): StructureCheck {
 	const translated = analyze(translatedMdx);
 	if (translated.errors.length > 0) return mdxFailure(translated.errors[0]?.message);
@@ -149,7 +153,7 @@ export function compareStructure(sourceMdx: string, translatedMdx: string): Stru
 		: { ok: false, code: "structure_changed", reason: tTranslation("structure_changed") };
 }
 
-/** MDX로 읽을 수 있는가(구조 검사를 끈 때도 본문에 넣으려면 읽을 수 있어야 한다). */
+/** Whether it can be read as MDX (even with the structure check off, it must be readable to go into the body). */
 export function readableMdx(mdx: string): StructureCheck {
 	const analysis = analyze(mdx);
 	return analysis.errors.length > 0 ? mdxFailure(analysis.errors[0]?.message) : { ok: true };

@@ -50,7 +50,7 @@ const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
 		...(body === undefined ? {} : { body: JSON.stringify(body) }),
 	});
 
-describe("M5-BE-1 Duplicate API Route", () => {
+describe("Duplicate API Route", () => {
 	beforeEach(() => {
 		mockVerifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
 	});

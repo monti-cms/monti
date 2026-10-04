@@ -1,6 +1,6 @@
 import { defineMessages, josa } from "@monti-cms/core";
 
-/** 막혔을 때 안내에 넣는 하려던 일. 한국어는 "○○하세요", 영어는 "before ○○ing". */
+/** The action the user was attempting, used in the "blocked" notice. English: "before ○○ing"; Korean: "○○하세요". */
 const PURPOSE_KO: Record<string, string> = {
 	publish: "발행",
 	duplicate: "복제",
@@ -18,7 +18,7 @@ const PURPOSE_EN: Record<string, string> = {
 	restore: "restoring",
 };
 
-/** 편집 화면 본체(머리글·단추·알림)의 문구(M15). */
+/** Messages for the editor shell (header, buttons, notices). */
 export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell", {
 	en: {
 		saveFirst: ({ purpose }) => `Save your changes before ${PURPOSE_EN[String(purpose)]}.`,

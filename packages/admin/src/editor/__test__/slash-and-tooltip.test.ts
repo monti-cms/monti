@@ -6,20 +6,20 @@ import { buildEditorExtensions } from "../extensions";
 import { buildBlockSlashCommands, filterCommands, OPEN_FILE_PICKER_EVENT, SLASH_COMMANDS } from "../slash-command";
 import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
 
-describe("슬래시 메뉴 블록 정의 기반 삽입 (v2 C3a)", () => {
-	it("블록 정의(BLOCKS) 중 insertable=true, view='node'인 항목의 슬래시 커맨드를 생성한다", () => {
+describe("slash menu insertion driven by block definitions", () => {
+	it("builds slash commands for BLOCKS entries with insertable=true and view='node'", () => {
 		const commands = buildBlockSlashCommands();
 
-		// mermaid, chart, math가 포함되어야 한다.
+		// mermaid, chart and math must be included.
 		const titles = commands.map((c) => c.title);
 		expect(titles).toContain("다이어그램");
 		expect(titles).toContain("차트");
 		expect(titles).toContain("수식");
 
-		// 이미지는 기존 하드코딩 항목과 중복되지 않도록 제외되어야 한다.
+		// image must be excluded so it does not duplicate the existing hardcoded entry.
 		expect(titles).not.toContain("이미지");
 
-		// insertable이 false이거나 view가 node가 아닌 블록은 제외되어야 한다.
+		// Blocks with insertable=false or a view other than node must be excluded.
 		expect(titles).toContain("콜아웃");
 		expect(titles).toContain("탭");
 		expect(titles).toContain("단 나누기");
@@ -41,7 +41,7 @@ describe("슬래시 메뉴 블록 정의 기반 삽입 (v2 C3a)", () => {
 		expect(mathCmd?.description).toBeTruthy();
 	});
 
-	it("C3b 확장성: 새 블록 정의와 액션을 등록부에 추가하면 슬래시 커맨드가 자동 생성된다", () => {
+	it("extensibility: adding a new block definition and action to the registry auto-generates a slash command", () => {
 		const mockCallout = defineBlock({
 			name: "callout",
 			label: "콜아웃",
@@ -70,20 +70,20 @@ describe("슬래시 메뉴 블록 정의 기반 삽입 (v2 C3a)", () => {
 		expect(commands[0]?.keywords).toEqual(["콜아웃", "callout"]);
 	});
 
-	it("SLASH_COMMANDS에 기본 커맨드와 자동 생성 블록 커맨드가 모두 포함된다", () => {
+	it("SLASH_COMMANDS includes both the base commands and the auto-generated block commands", () => {
 		const titles = SLASH_COMMANDS.map((c) => c.title);
 		expect(titles).toContain("문단");
 		expect(titles).toContain("코드 블록");
 		expect(titles).toContain("표");
 		expect(titles).toContain("이미지");
-		// 툴팁은 블록 확장(`@monti-cms/blocks`)이 등록하는 항목이라 본체 목록에 없다.
+		// Tooltip is registered by the blocks extension (`@monti-cms/blocks`), so it is not in the core list.
 		expect(titles).not.toContain("툴팁");
 		expect(titles).toContain("다이어그램");
 		expect(titles).toContain("차트");
 		expect(titles).toContain("수식");
 	});
 
-	it("슬래시 메뉴와 서식 도구가 같은 블록 이름을 쓰고, 파일 항목은 파일 고르기를 연다", () => {
+	it("slash menu and formatting tools share block names, and the file entry opens the file picker", () => {
 		const titles = SLASH_COMMANDS.map((c) => c.title);
 		expect(titles).toEqual(expect.arrayContaining(["문단", "글머리 목록", "번호 목록", "코드 블록", "표", "파일"]));
 		const open = vi.fn();
@@ -96,14 +96,14 @@ describe("슬래시 메뉴 블록 정의 기반 삽입 (v2 C3a)", () => {
 		editor.destroy();
 	});
 
-	it("filterCommands가 한글/영문 키워드로 블록 커맨드를 검색한다", () => {
+	it("filterCommands searches block commands by Korean and English keywords", () => {
 		expect(filterCommands("mermaid").some((c) => c.title === "다이어그램")).toBe(true);
 		expect(filterCommands("다이어그램").some((c) => c.title === "다이어그램")).toBe(true);
 		expect(filterCommands("chart").some((c) => c.title === "차트")).toBe(true);
 		expect(filterCommands("그래프").some((c) => c.title === "차트")).toBe(true);
 		expect(filterCommands("math").some((c) => c.title === "수식")).toBe(true);
 		expect(filterCommands("katex").some((c) => c.title === "수식")).toBe(true);
-		// 툴팁은 블록 확장의 글자 꾸밈이라 본체 메뉴에 없고, 확장이 준 항목(`inline`)은 글 서식 항목 다음·블록 항목 앞에 온다.
+		// Tooltip is a text decoration from the blocks extension, so it is not in the core menu; extension-provided entries (`inline`) come after the text formatting entries and before the block entries.
 		expect(filterCommands("tooltip").some((c) => c.title === "툴팁")).toBe(false);
 		const inline = [{ title: "툴팁", description: "글자에 설명 달기", keywords: ["tooltip"], action: () => {} }];
 		expect(filterCommands("tooltip", [], inline).map((c) => c.title)).toEqual(["툴팁"]);
@@ -113,14 +113,14 @@ describe("슬래시 메뉴 블록 정의 기반 삽입 (v2 C3a)", () => {
 	});
 });
 
-describe("블록 삽입 액션 후 MDX 직렬화 (v2 C3a)", () => {
+describe("MDX serialization after block insert actions", () => {
 	const createEditor = () =>
 		new Editor({
 			extensions: buildEditorExtensions(),
 			content: "<p></p>",
 		});
 
-	it("mermaid 삽입 후 MDX로 올바르게 직렬화된다", () => {
+	it("serializes to MDX correctly after inserting mermaid", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
@@ -133,7 +133,7 @@ describe("블록 삽입 액션 후 MDX 직렬화 (v2 C3a)", () => {
 		editor.destroy();
 	});
 
-	it("chart 삽입 후 MDX로 올바르게 직렬화된다", () => {
+	it("serializes to MDX correctly after inserting chart", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
@@ -147,7 +147,7 @@ describe("블록 삽입 액션 후 MDX 직렬화 (v2 C3a)", () => {
 		editor.destroy();
 	});
 
-	it("math 삽입 후 MDX로 올바르게 직렬화된다", () => {
+	it("serializes to MDX correctly after inserting math", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
@@ -160,14 +160,14 @@ describe("블록 삽입 액션 후 MDX 직렬화 (v2 C3a)", () => {
 	});
 });
 
-describe("툴팁(Tooltip) 설정·수정·제거 및 MDX 왕복 (v2 C3a)", () => {
+describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 	const createEditor = (html = "<p>안녕하세요 세상입니다</p>") =>
 		new Editor({
 			extensions: buildEditorExtensions(),
 			content: html,
 		});
 
-	it("닫는 대괄호가 포함된 툴팁 라벨을 이스케이프해 왕복한다", () => {
+	it("round-trips a tooltip label containing a closing bracket by escaping it", () => {
 		const editor = createEditor("<p>a]b</p>");
 		editor.chain().focus().setTextSelection({ from: 1, to: 4 }).setMark("cmsTooltip", { content: "설명" }).run();
 		const mdx = tiptapToMdx(editor.getJSON());
@@ -176,12 +176,12 @@ describe("툴팁(Tooltip) 설정·수정·제거 및 MDX 왕복 (v2 C3a)", () =>
 		editor.destroy();
 	});
 
-	it("선택 영역에 cmsTooltip 마크를 설정하고 MDX로 직렬화한다", () => {
+	it("sets the cmsTooltip mark on the selection and serializes it to MDX", () => {
 		const editor = createEditor();
-		// "세상" 영역 선택 (pos 7 ~ 9)
+		// Select the "세상" range (pos 7 to 9)
 		editor.chain().focus().setTextSelection({ from: 7, to: 9 }).run();
 
-		// 툴팁 적용
+		// Apply the tooltip
 		editor.chain().focus().setMark("cmsTooltip", { content: "우리가 사는 지구" }).run();
 
 		expect(editor.isActive("cmsTooltip")).toBe(true);
@@ -192,17 +192,17 @@ describe("툴팁(Tooltip) 설정·수정·제거 및 MDX 왕복 (v2 C3a)", () =>
 		editor.destroy();
 	});
 
-	it("커서가 툴팁 마크 안일 때 extendMarkRange로 설명을 수정한다", () => {
+	it("edits the description with extendMarkRange when the cursor is inside a tooltip mark", () => {
 		const editor = createEditor();
-		// "세상" 영역에 툴팁 설정
+		// Set the tooltip on the "세상" range
 		editor.chain().focus().setTextSelection({ from: 7, to: 9 }).setMark("cmsTooltip", { content: "기존 설명" }).run();
 
-		// 커서를 툴팁 중간(pos 8)으로 이동
+		// Move the cursor into the middle of the tooltip (pos 8)
 		editor.chain().focus().setTextSelection(8).run();
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("기존 설명");
 
-		// 설명 수정
+		// Edit the description
 		editor.chain().focus().extendMarkRange("cmsTooltip").setMark("cmsTooltip", { content: "업데이트된 설명" }).run();
 
 		expect(editor.getAttributes("cmsTooltip").content).toBe("업데이트된 설명");
@@ -211,11 +211,11 @@ describe("툴팁(Tooltip) 설정·수정·제거 및 MDX 왕복 (v2 C3a)", () =>
 		editor.destroy();
 	});
 
-	it("커서가 툴팁 마크 안일 때 extendMarkRange로 툴팁을 제거한다", () => {
+	it("removes the tooltip with extendMarkRange when the cursor is inside a tooltip mark", () => {
 		const editor = createEditor();
 		editor.chain().focus().setTextSelection({ from: 7, to: 9 }).setMark("cmsTooltip", { content: "삭제될 설명" }).run();
 
-		// 커서를 툴팁 중간으로 이동 후 제거
+		// Move the cursor into the middle of the tooltip, then remove it
 		editor.chain().focus().setTextSelection(8).extendMarkRange("cmsTooltip").unsetMark("cmsTooltip").run();
 
 		expect(editor.isActive("cmsTooltip")).toBe(false);
@@ -225,7 +225,7 @@ describe("툴팁(Tooltip) 설정·수정·제거 및 MDX 왕복 (v2 C3a)", () =>
 		editor.destroy();
 	});
 
-	it("MDX의 :tooltip 문법을 에디터로 적재하고 재직렬화 시 손실 없이 왕복한다", () => {
+	it("loads :tooltip syntax from MDX into the editor and round-trips it losslessly on re-serialization", () => {
 		const initialMdx = '본문 속 :tooltip[단어]{content="상세 설명"} 확인하기\n';
 		const json = mdxToTiptap(initialMdx);
 
@@ -235,7 +235,7 @@ describe("툴팁(Tooltip) 설정·수정·제거 및 MDX 왕복 (v2 C3a)", () =>
 		});
 
 		expect(editor.isActive("cmsTooltip")).toBe(false);
-		// 단어 위치로 커서 이동
+		// Move the cursor onto the word
 		editor.chain().focus().setTextSelection(7).run();
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("상세 설명");

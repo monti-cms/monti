@@ -3,32 +3,32 @@ import type { BlockDefinition } from "./define";
 import { textAlign } from "./definitions";
 
 /**
- * 사이트가 쓰는 블록 정의에서 저장 문법 표·검증 규칙·상수를 만든다(v2 B3). 서버·에디터·공개 렌더러가 함께 쓴다.
+ * Builds the storage syntax table, validation rules, and constants from the block definitions the site uses. Shared by the server, editor, and public renderer.
  */
 
 export const BLOCK_BY_NAME: ReadonlyMap<string, BlockDefinition> = new Map(BLOCKS.map((block) => [block.name, block]));
 
-/** 공개 렌더러 이름(JSX 이름) → 블록 정의. */
+/** Public renderer name (JSX name) → block definition. */
 export const BLOCK_BY_COMPONENT: ReadonlyMap<string, BlockDefinition> = new Map(
 	BLOCKS.map((block) => [block.component, block]),
 );
 
-/** 지시자 문법 블록(`:::`·`::`·`:`). 코드 펜스·수식은 Markdown 문법이라 지시자 표에 없다. */
+/** Directive-syntax blocks (`:::`, `::`, `:`). Code fences and math use Markdown syntax, so they are not in the directive table. */
 export const directiveBlocks = (): BlockDefinition[] =>
 	BLOCKS.filter(
 		(block) => block.syntax.kind === "container" || block.syntax.kind === "leaf" || block.syntax.kind === "text",
 	);
 
-/** 더한 코드 펜스 블록. 펜스 언어 → 블록 정의. */
+/** Added code fence blocks. Fence language → block definition. */
 export const FENCE_BLOCKS: ReadonlyMap<string, BlockDefinition> = new Map(
 	ADDED_BLOCKS.flatMap((block) => (block.syntax.kind === "fence" ? [[block.syntax.lang, block] as const] : [])),
 );
 
-/** 코드 펜스 언어에 맞는 더한 블록. 대소문자를 가리지 않는다. */
+/** The added block for a code fence language. Case-insensitive. */
 export const fenceBlockOf = (lang: unknown): BlockDefinition | undefined =>
 	typeof lang === "string" ? FENCE_BLOCKS.get(lang.toLowerCase()) : undefined;
 
-/** 선택 값이 정해진 속성을 벗어나면 그 속성 이름. 발행 전 검사가 `invalid_block_attribute`로 알린다. */
+/** The attribute name when a value falls outside an attribute's allowed choices. The pre-publish check reports it as `invalid_block_attribute`. */
 export function invalidOptionAttributes(
 	block: BlockDefinition,
 	attributes: Readonly<Record<string, unknown>>,
@@ -42,7 +42,7 @@ export function invalidOptionAttributes(
 	return invalid;
 }
 
-/** 자식 블록 규칙(이름·개수)이 있는 블록과 그 자식의 렌더러 이름. 저장 검사가 개수를 센다. */
+/** Blocks with child block rules (name, count) and their children's renderer names. The storage check counts them. */
 export const childRules = (): { block: BlockDefinition; childComponents: string[] }[] =>
 	ADDED_BLOCKS.flatMap((block) => {
 		const names = block.children?.blocks ?? [];
@@ -54,5 +54,5 @@ export const childRules = (): { block: BlockDefinition; childComponents: string[
 const optionValues = (block: BlockDefinition, attribute: string): readonly string[] =>
 	Object.keys(block.attributes[attribute]?.options ?? {});
 
-/** §4.4가 허용하는 정렬 값. `justify`는 쓰지 않는다(A4). */
+/** Allowed alignment values. `justify` is not used. */
 export const TEXT_ALIGN_VALUES = optionValues(textAlign, "align") as readonly ("left" | "center" | "right")[];

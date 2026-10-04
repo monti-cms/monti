@@ -16,7 +16,7 @@ import type {
 	PublishedEntryRecord,
 } from "./types";
 
-/** 행 ↔ 도메인 객체 변환과 여러 모듈이 같이 쓰는 SQL 조각. */
+/** Row-to-domain-object conversion and SQL fragments shared by several modules. */
 
 function normalizeJsonValue(val: unknown): JsonValue {
 	if (val === null) return null;
@@ -54,7 +54,7 @@ export function normalizeMetadata(input: unknown): EntryMetadata {
 	return normalizeJsonValue(input) as EntryMetadata;
 }
 
-/** 본문 검색용 일반 텍스트. 주석·import/export·태그를 걷어내고 링크는 라벨만 남긴다. */
+/** Plain text for body search. Strips comments, import/export, and tags, and keeps only the label of links. */
 export function extractVisibleText(mdx: string): string {
 	if (!mdx) return "";
 	let t = mdx;
@@ -76,7 +76,7 @@ export interface BodyRow {
 }
 
 export interface ReferenceRow {
-	/** 예전 행은 `category`·`tag`일 수 있다. */
+	/** Legacy rows may be `category` or `tag`. */
 	kind: string;
 	target_id: string;
 	is_stale: boolean;
@@ -231,7 +231,7 @@ export function isReferencesEqual(a: readonly Reference[], b: readonly Reference
 	return true;
 }
 
-/** 참조 인덱스 행을 넣는다. 종류에 따라 FK 대상 컬럼을 고른다(CHECK 제약과 같은 규칙). */
+/** Inserts a reference index row. Picks the FK target column by kind (same rule as the CHECK constraint). */
 export async function insertReferences(
 	client: PoolClient,
 	qSchema: string,
@@ -288,7 +288,7 @@ export async function readBody(
 	return res.rows[0];
 }
 
-/** working/published 본문을 쓴다. 검색용 일반 텍스트도 같이 갱신한다. */
+/** Writes the working/published body. Also updates the plain text used for search. */
 export async function writeBody(
 	client: PoolClient,
 	qSchema: string,
@@ -300,7 +300,7 @@ export async function writeBody(
 		schemaVersion: number;
 		contentHash: string;
 		updatedAt: Date;
-		/** 번역본의 번역 상태(v3). 원문은 `null`. */
+		/** Translation status of a translation. `null` for the source. */
 		translation: TranslationState | null;
 	},
 ): Promise<void> {
@@ -405,14 +405,14 @@ export interface LockedEntryRow {
 	version: number;
 	collection: string;
 	locale: string;
-	/** 번역 묶음 ID. 원문이면 자기 ID다. */
+	/** Translation group ID. For the source, its own ID. */
 	translation_group_id: string;
 	status: Entry["status"];
 	updated_at: Date;
 	working_slug: string | null;
 }
 
-/** 버전 검사와 함께 항목 행을 잠근다. 없으면 404, 버전이 다르면 409다. */
+/** Locks the entry row with a version check. 404 if missing, 409 if the version differs. */
 export async function lockEntryForUpdate(
 	client: PoolClient,
 	qSchema: string,

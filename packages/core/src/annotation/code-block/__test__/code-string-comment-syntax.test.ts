@@ -73,7 +73,7 @@ const rowWrap = (name: string, range: Range, order: number, attributes: Annotati
 const line = (value: string, annotations: InlineAnnotation[] = []): Line => ({ value, annotations });
 
 describe("code-string converter comment syntax", () => {
-	it("postcss의 /* */ 주석 annotation 라인을 파싱한다", () => {
+	it("parses annotation lines in postcss /* */ comments", () => {
 		const input: Code = {
 			type: "code",
 			lang: "postcss",
@@ -99,7 +99,7 @@ describe("code-string converter comment syntax", () => {
 		});
 	});
 
-	it("postcss 직렬화 시 annotation 라인에 /* */ postfix를 유지한다", () => {
+	it("keeps the /* */ postfix on annotation lines when serializing postcss", () => {
 		const input: CodeBlockDocument = {
 			lang: "postcss",
 			meta: {},

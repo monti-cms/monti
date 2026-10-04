@@ -19,7 +19,7 @@ import { mediaMessages } from "./messages";
 
 const t = createTranslator(mediaMessages);
 
-/** 상세의 한 묶음. 제목은 작게, 내용은 그 아래에 둔다. */
+/** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
 		<section className="space-y-3 border-t px-4 py-4">
@@ -29,7 +29,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 	);
 }
 
-/** 항목 이름을 위에, 값을 아래에 둔다. 긴 값(ID·파일 이름)이 이름 칸을 밀어내지 않는다. */
+/** Item name on top, value below. Long values (ID, file name) do not push out the name column. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="space-y-0.5">
@@ -40,10 +40,10 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * 미디어 상세(§7.3). 바둑판·목록 어느 보기에서 골라도 오른쪽에 열린다.
- * 위에서부터 미리보기 → 바로 쓰는 작업(주소·ID 복사, 열기) → 정보 → 기본 설명(이미지) → 사용처 → 삭제 순이다.
- * 이름·기본 설명은 AI 자리(파일 이름·대체 텍스트·캡션 추천)를 둔다. 기본 설명은 `저장`을 눌러야 저장되고,
- * 저장하지 않은 변경이 있는지 `onDirtyChange`로 알린다(다른 파일을 열거나 닫기 전에 묻는 데 쓴다).
+ * Media detail. Opens on the right whichever view (grid or list) it was picked from.
+ * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> delete.
+ * Name and default description have AI slots (file name, alt text, caption suggestions). The default description is saved only by pressing `Save`,
+ * and unsaved changes are reported through `onDirtyChange` (used to ask before opening or closing another file).
  */
 export function MediaDetailPanel({
 	media,
@@ -57,7 +57,7 @@ export function MediaDetailPanel({
 	media: MediaItem;
 	className?: string;
 	onClose: () => void;
-	/** 기본 설명을 저장한다. 실패하면 거부(reject)한다. 오류는 칸 안에 보인다. */
+	/** Saves the default description. Rejects on failure. The error shows inside the field. */
 	onSaveDefaults: (defaults: { alt: string; caption: string }) => Promise<void>;
 	onRename: (filename: string) => void;
 	onRequestDelete: () => void;
@@ -65,7 +65,7 @@ export function MediaDetailPanel({
 }) {
 	const altId = useId();
 	const captionId = useId();
-	// 마지막으로 저장한(처음에는 불러온) 값. 고친 값과 다르면 저장하지 않은 변경이다.
+	// The last saved (initially loaded) value. If the edited value differs, there are unsaved changes.
 	const [saved, setSaved] = useState({ alt: media.defaultAlt, caption: media.defaultCaption });
 	const [draft, setDraft] = useState(saved);
 	const [isSaving, setIsSaving] = useState(false);
@@ -87,7 +87,7 @@ export function MediaDetailPanel({
 		}
 	};
 
-	/** 미디어 파일 자리. 이미지 내용을 보고 이름·기본 설명을 추천한다. */
+	/** Media file slot. Looks at the image content and suggests a name and default description. */
 	const slot = (target: "filename" | "defaultAlt" | "defaultCaption", apply: (value: string) => void): SlotRequest => ({
 		slot: "media",
 		target,

@@ -42,7 +42,7 @@ const mount = async (source: string, wrap: (node: React.ReactNode) => React.Reac
 
 const NOTICE = ':::notice{level="info"}\n본문\n:::';
 
-/** 사이트가 등록한 편집 컴포넌트(예시): 단계를 버튼으로 바꾼다. */
+/** Edit component registered by the site (example): turns the level into a button. */
 function NoticeEditor({ values, setValue, content }: CustomBlockEditorProps) {
 	return (
 		<div>
@@ -54,8 +54,8 @@ function NoticeEditor({ values, setValue, content }: CustomBlockEditorProps) {
 	);
 }
 
-describe("사용자 블록 NodeView", () => {
-	it("등록한 편집 컴포넌트가 없으면 이름을 보이고, 도구 줄 설정에서 속성을 고쳐 저장한다", async () => {
+describe("custom block NodeView", () => {
+	it("without a registered edit component it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
 		const editor = await mount(NOTICE);
 		expect(screen.getByText("공지")).toBeTruthy();
 		expect(screen.queryByLabelText("단계")).toBeNull();
@@ -66,13 +66,13 @@ describe("사용자 블록 NodeView", () => {
 		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('title="점검"'));
 	});
 
-	it("읽기 전용이면 설정 도구를 숨긴다", async () => {
+	it("hides the settings tool when read-only", async () => {
 		const editor = await mount(NOTICE);
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.queryByRole("button", { name: "설정" })).toBeNull());
 	});
 
-	it("사이트가 등록한 편집 컴포넌트로 그린다", async () => {
+	it("renders with the edit component registered by the site", async () => {
 		const editor = await mount(NOTICE, (node) => (
 			<CmsAdminComponentsProvider components={{ blockEditors: { notice: NoticeEditor } }}>
 				{node}

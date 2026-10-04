@@ -9,8 +9,8 @@ type AnnotationBase = {
 	scope: AnnotationScope;
 	name: string;
 	range: Range;
-	priority: number; // 교차 겹침 시 well nested 정책 우선 순위
-	order: number; // 작성 순서
+	priority: number; // priority of the well-nested policy on crossing overlaps
+	order: number; // authoring order
 	class?: string;
 	render?: string;
 	attributes?: AnnotationAttr[];
@@ -20,7 +20,7 @@ export type InlineAnnotationSource = "mdast" | "mdx-text";
 export type InlineAnnotation = AnnotationBase & {
 	scope: "char" | "document";
 	source: InlineAnnotationSource;
-	/** 정규식 규칙(`{re:/.../}`)으로 찾은 범위면 그 규칙의 `CodeBlockDocument.rules` 번호. */
+	/** If the range was found by a regex rule (`{re:/.../}`), the index of that rule in `CodeBlockDocument.rules`. */
 	rule?: number;
 };
 
@@ -72,9 +72,9 @@ export type Line = { value: string; annotations: InlineAnnotation[] };
 export type CodeBlockMetaValue = string | boolean;
 
 /**
- * 정규식으로 범위를 찾는 주석 규칙. 저장할 때 찾은 범위(고정 위치)가 아니라 규칙 그대로 쓴다.
- * - `char`: `line` 번째 줄에서만 찾는다(`// @char fold {re:/.../}`를 그 줄 바로 위에 둔다).
- * - `document`: 코드 전체에서 찾는다.
+ * An annotation rule that finds ranges by regex. On save, it is written as the rule itself, not as the found ranges (fixed positions).
+ * - `char`: finds only on line `line` (put `// @char fold {re:/.../}` directly above that line).
+ * - `document`: finds across the whole code.
  */
 export type CodeBlockRule = {
 	scope: "char" | "document";

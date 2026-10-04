@@ -9,15 +9,15 @@ import { tabs } from "./tabs";
 import { tooltip } from "./tooltip";
 
 /**
- * 블록 확장 만들기 함수(이름 → 함수). `blocks()`가 이 순서로 넣는다. 글자 꾸밈(툴팁·코드 연결·글자색)의 순서는 겹친 꾸밈을
- * 저장하는 순서(바깥부터)다.
+ * Block extension factory functions (name -> function). `blocks()` adds them in this order. The order of the inline marks (tooltip, code-ref, color) is the order in which overlapping marks
+ * are stored (outermost first).
  */
 const FACTORIES = { callout, collapsible, tabs, columns, mermaid, chart, tooltip, codeRef, color } as const;
 
-/** `blocks()`가 넣는 블록 확장 이름. */
+/** Names of the block extensions `blocks()` adds. */
 export type BlockExtensionName = keyof typeof FACTORIES;
 
-/** 블록 확장 이름 → 그 확장의 옵션. 옵션이 없는 확장은 `true`만 받는다. */
+/** Block extension name -> that extension's options. Extensions without options accept only `true`. */
 interface BlockExtensionOptions {
 	readonly callout: true;
 	readonly collapsible: true;
@@ -31,28 +31,28 @@ interface BlockExtensionOptions {
 }
 
 export type BlocksOptions = {
-	/** 넣을 확장(없으면 전부). */
+	/** Extensions to include (all when omitted). */
 	readonly only?: readonly BlockExtensionName[];
-	/** 뺄 확장. */
+	/** Extensions to leave out. */
 	readonly omit?: readonly BlockExtensionName[];
 } & {
-	/** 확장별 옵션(예: `color: { palette }`). `false`면 그 확장을 뺀다. */
+	/** Per-extension options (e.g. `color: { palette }`). `false` leaves that extension out. */
 	readonly [K in BlockExtensionName]?: BlockExtensionOptions[K] | false;
 };
 
 type BlockPlugin = ReturnType<(typeof FACTORIES)[BlockExtensionName]>;
 
 /**
- * 이 패키지의 블록 확장을 한 번에 넣는다. 사이트 설정의 `plugins`에 펼쳐 넣는다.
+ * Adds all of this package's block extensions at once. Spread it into the site config's `plugins`.
  *
  * ```ts
- * plugins: [...blocks()]                                  // 전부
- * plugins: [...blocks({ omit: ["chart"] })]               // 차트만 빼고
- * plugins: [...blocks({ only: ["callout", "tooltip"] })]  // 고른 것만
- * plugins: [...blocks({ color: { palette } })]            // 확장별 옵션
+ * plugins: [...blocks()]                                  // everything
+ * plugins: [...blocks({ omit: ["chart"] })]               // everything except chart
+ * plugins: [...blocks({ only: ["callout", "tooltip"] })]  // only the chosen ones
+ * plugins: [...blocks({ color: { palette } })]            // per-extension options
  * ```
  *
- * 하나씩 만드는 함수(`callout()`·`color({ palette })` …)도 그대로 쓸 수 있다. 같은 확장을 두 번 넣으면 설정 오류다.
+ * The individual factories (`callout()`, `color({ palette })`, ...) can also be used directly. Adding the same extension twice is a config error.
  */
 export function blocks(options: BlocksOptions = {}): BlockPlugin[] {
 	const names = Object.keys(FACTORIES) as BlockExtensionName[];

@@ -12,14 +12,14 @@ import { sharedMessages } from "./messages";
 const t = createTranslator(sharedMessages);
 
 interface AdminNavContextValue {
-	/** 모든 컬렉션의 휴지통 항목 수. 불러오기 전이면 null. */
+	/** Number of trash items across all collections. null before loading. */
 	trashCount: number | null;
 	refreshTrashCount: () => void;
 }
 
 const AdminNavContext = createContext<AdminNavContextValue | null>(null);
 
-/** 사이드바 휴지통 배지를 다시 계산한다(휴지통 이동·복원·영구 삭제 뒤에 부른다). */
+/** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
 export const useAdminNav = (): AdminNavContextValue =>
 	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {} };
 
@@ -34,7 +34,7 @@ async function countTrash(): Promise<number> {
 	return totals.reduce((sum, total) => sum + total, 0);
 }
 
-/** 휴지통 배지 상태. 화면의 목록 로직도 이 값을 갱신해야 해서 셸보다 바깥에 둔다. */
+/** Trash badge state. The screen's list logic must update this value too, so it lives outside the shell. */
 export function AdminNavProvider({ children }: { children: ReactNode }) {
 	const queryClient = useQueryClient();
 	const { data } = useQuery({ queryKey: TRASH_COUNT_KEY, queryFn: countTrash });
@@ -47,8 +47,8 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * 목록·미디어·템플릿·휴지통 화면이 함께 쓰는 틀(§3.1). 왼쪽은 shadcn Sidebar(좁은 화면에서는 시트),
- * 오른쪽 위에는 화면 제목을 둔다. 좁은 화면에서는 헤더의 버튼으로 사이드바 시트를 연다.
+ * Frame shared by the list, media, templates and trash screens. Left is the shadcn Sidebar (a sheet on narrow screens),
+ * with the screen title at the top right. On narrow screens, a header button opens the sidebar sheet.
  */
 export function AdminShell({
 	title,
@@ -58,7 +58,7 @@ export function AdminShell({
 	children,
 }: {
 	title: ReactNode;
-	/** 제목 옆에 흐리게 보이는 항목 수. */
+	/** Item count shown dimmed next to the title. */
 	count?: number;
 	sidebar: AdminSidebarProps;
 	headerActions?: ReactNode;

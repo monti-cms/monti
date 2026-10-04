@@ -4,8 +4,8 @@ import { createTranslator } from "../../i18n";
 import { coreMessages } from "../messages";
 import { prepareSnapshot } from "../snapshot";
 
-describe("C6 표 셀 병합 발행 전 검사 (span 및 격자 경고)", () => {
-	it("10억 열 병합은 빠르게 경고하고 격자를 만들지 않는다", async () => {
+describe("table cell merge pre-publish validation (span and grid warnings)", () => {
+	it("a billion-column merge warns quickly and builds no grid", async () => {
 		const mdx = "::::table\n:::row\n::cell[위험]{colspan=1000000000}\n:::\n::::";
 		const snap = await prepareSnapshot({
 			collection: contentCollection,
@@ -16,7 +16,7 @@ describe("C6 표 셀 병합 발행 전 검사 (span 및 격자 경고)", () => {
 		expect(snap.warnings?.some((warning) => warning.code === "invalid_table_span")).toBe(true);
 	});
 
-	it("올바른 병합 표는 경고를 발생시키지 않는다", async () => {
+	it("a valid merged table raises no warnings", async () => {
 		const mdx = [
 			'::::table{align="left,center"}',
 			":::row",
@@ -43,7 +43,7 @@ describe("C6 표 셀 병합 발행 전 검사 (span 및 격자 경고)", () => {
 		expect(tableWarnings).toEqual([]);
 	});
 
-	it("rowspan이 표의 전체 행 수를 초과하면 경고한다", async () => {
+	it("warns when rowspan exceeds the table's total row count", async () => {
 		const mdx = ["::::table", ":::row", "::cell[초과]{rowspan=5}", ":::", ":::row", "::cell[값]", ":::", "::::"].join(
 			"\n",
 		);
@@ -60,7 +60,7 @@ describe("C6 표 셀 병합 발행 전 검사 (span 및 격자 경고)", () => {
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "rowspan_overflow", rowspan: 5, rows: 2 });
 	});
 
-	it("병합 셀이 서로 겹치면 경고한다", async () => {
+	it("warns when merged cells overlap", async () => {
 		const mdx = [
 			"::::table",
 			":::row",
@@ -85,7 +85,7 @@ describe("C6 표 셀 병합 발행 전 검사 (span 및 격자 경고)", () => {
 		expect(tableWarnings.length).toBeGreaterThan(0);
 	});
 
-	it("행마다 열 수가 일치하지 않으면 경고한다", async () => {
+	it("warns when column counts differ between rows", async () => {
 		const mdx = [
 			"::::table",
 			":::row",
@@ -110,7 +110,7 @@ describe("C6 표 셀 병합 발행 전 검사 (span 및 격자 경고)", () => {
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "ragged_rows" });
 	});
 
-	it("잘못된 span 값(0 이하 또는 숫자가 아님)을 경고한다", async () => {
+	it("warns about an invalid span value (0 or less, or not a number)", async () => {
 		const mdx = ["::::table", ":::row", "::cell[셀1]{colspan=0}", ":::", "::::"].join("\n");
 
 		const snap = await prepareSnapshot({
@@ -123,7 +123,7 @@ describe("C6 표 셀 병합 발행 전 검사 (span 및 격자 경고)", () => {
 		const tableWarnings = (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span");
 		expect(tableWarnings.length).toBeGreaterThan(0);
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "invalid_colspan", value: "0" });
-		// 문구는 코드에서 사전으로 만든다(사이트 화면 언어).
+		// The text is built from the code with the dictionary (site display language).
 		expect(tableWarnings[0]?.message).toBe(createTranslator(coreMessages)("table.invalid_colspan", { value: "0" }));
 	});
 });

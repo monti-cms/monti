@@ -11,14 +11,14 @@ const KIND_LABELS: Record<SourceChange["kind"], string> = {
 	removed: t("sourceChange.removed"),
 };
 
-/** 머리 줄 조각(`{"title":..}`·`{"labels":[..]}`)의 글자. */
+/** Text of a header-row fragment (`{"title":..}`, `{"labels":[..]}`). */
 const headerText = (source: string) => {
 	try {
 		const value = JSON.parse(source) as { title?: unknown; labels?: unknown };
 		if (typeof value.title === "string") return value.title;
 		if (Array.isArray(value.labels)) return value.labels.join(" · ");
 	} catch {
-		// 깨진 조각은 그대로 보인다.
+		// A broken fragment is shown as is.
 	}
 	return source;
 };
@@ -55,7 +55,7 @@ function ChangeItem({ change }: { change: SourceChange }) {
 	);
 }
 
-/** 번역자가 마지막으로 확인한 원문과 지금 원문의 바뀐 블록 목록. */
+/** List of blocks that differ between the source the translator last confirmed and the current source. */
 export function SourceChangeDialog({
 	open,
 	onOpenChange,
@@ -82,7 +82,7 @@ export function SourceChangeDialog({
 				) : (
 					<ol className="flex flex-col gap-3">
 						{changes.map((change, index) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: 변경 목록은 문서 순서가 곧 정체성이다
+							// biome-ignore lint/suspicious/noArrayIndexKey: the change list's identity is document order
 							<ChangeItem key={index} change={change} />
 						))}
 					</ol>

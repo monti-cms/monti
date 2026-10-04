@@ -1,12 +1,12 @@
 /**
- * Next 밖(직접 만든 명령줄 스크립트)에서 CMS 코드가 읽는 `@cms-config`·`@cms-server`를 앱의 설정 파일로 잇는다.
- * 표 만들기는 명령줄 `monti migrate`가 스스로 잇는다.
+ * Outside Next (custom command-line scripts), links `@cms-config` and `@cms-server`, which CMS code reads, to the app's config files.
+ * Table creation is wired up by the `monti migrate` command itself.
  *
  * ```sh
  * tsx --env-file=.env.local --import @monti-cms/core/register my-script.ts
  * ```
  *
- * 설정 파일 경로는 `CMS_CONFIG_PATH`·`CMS_SERVER_PATH`(기본 `./cms.config.ts`·`./cms.server.ts`, 현재 폴더 기준)다.
+ * Config file paths are `CMS_CONFIG_PATH` and `CMS_SERVER_PATH` (default `./cms.config.ts` and `./cms.server.ts`, relative to the current directory).
  */
 import { register } from "node:module";
 

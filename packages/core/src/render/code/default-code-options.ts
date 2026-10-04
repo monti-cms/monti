@@ -32,7 +32,7 @@ import oneDarkPro from "@shikijs/themes/one-dark-pro";
 import oneLight from "@shikijs/themes/one-light";
 import type { LanguageInput, ThemeRegistrationAny } from "shiki/core";
 
-/** 코드 블록 기본 언어 목록. `createCodeHighlighter({ langs })`로 바꾼다. */
+/** Default language list for code blocks. Change it with `createCodeHighlighter({ langs })`. */
 export const DEFAULT_CODE_LANGS: LanguageInput[] = [
 	ts,
 	tsx,
@@ -66,7 +66,7 @@ export const DEFAULT_CODE_LANGS: LanguageInput[] = [
 	mermaid,
 ];
 
-/** 코드 블록 기본 언어 별칭. `createCodeHighlighter({ langAlias })`로 바꾼다. */
+/** Default language aliases for code blocks. Change them with `createCodeHighlighter({ langAlias })`. */
 export const DEFAULT_CODE_LANG_ALIAS: Record<string, string> = {
 	javascript: "ts",
 	js: "ts",
@@ -80,7 +80,7 @@ export const DEFAULT_CODE_LANG_ALIAS: Record<string, string> = {
 	plain: "text",
 };
 
-/** 코드 블록 기본 밝은·어두운 테마. `createCodeHighlighter({ themes })`로 바꾼다. */
+/** Default light and dark themes for code blocks. Change them with `createCodeHighlighter({ themes })`. */
 export const DEFAULT_CODE_THEMES: { light: ThemeRegistrationAny; dark: ThemeRegistrationAny } = {
 	light: oneLight,
 	dark: oneDarkPro,

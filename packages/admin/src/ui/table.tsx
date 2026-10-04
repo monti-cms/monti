@@ -8,7 +8,7 @@ function Table({
 	containerClassName,
 	...props
 }: React.ComponentProps<"table"> & {
-	/** 표를 감싸는 스크롤 영역. 바깥이 스크롤을 맡으면 `overflow-visible`로 둬야 sticky 머리글이 동작한다. */
+	/** Scroll area wrapping the table. If the outside handles scrolling, set `overflow-visible` so the sticky header works. */
 	containerClassName?: string;
 }) {
 	return (

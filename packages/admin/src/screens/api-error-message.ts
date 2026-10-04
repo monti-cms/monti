@@ -12,7 +12,7 @@ export type CmsIssue = {
 	position?: { line: number; column: number };
 };
 
-/** 사전에 있는 코드인가(모르는 코드는 서버 `message`를 그대로 보인다). */
+/** Whether the code is in the dictionary (unknown codes show the server `message` as is). */
 const hasMessage = (key: string): key is Parameters<typeof t>[0] => key in apiErrorMessages.messages.en;
 
 export function cmsApiIssues(payload: unknown): CmsIssue[] {
@@ -23,7 +23,7 @@ export function cmsApiIssues(payload: unknown): CmsIssue[] {
 		: [];
 }
 
-/** 이슈의 `message`가 대상(속성 이름·주소·파서 오류)을 알려 주는 코드. 안내 문구 뒤에 붙인다. */
+/** Codes where the issue's `message` names the target (property name, slug, parser error). Appended after the guidance text. */
 const DETAILED_CODES = new Set([
 	"untranslated_text",
 	"mdx_error",
@@ -42,7 +42,7 @@ function fieldIssueText(code: string | undefined, label: string): string | undef
 }
 
 export function cmsIssueMessage(issue: CmsIssue): string {
-	// 필드 문제(필수값·글자 수)는 오류 코드가 필드와 상관없이 같고 `message`에 필드 이름표가 온다.
+	// For field problems (required, length), the error code is the same regardless of field and the field label comes in `message`.
 	const field = issue.message ? fieldIssueText(issue.code, issue.message) : undefined;
 	const known =
 		field ?? (issue.code && hasMessage(`issue.${issue.code}`) ? t(`issue.${issue.code}` as never) : undefined);

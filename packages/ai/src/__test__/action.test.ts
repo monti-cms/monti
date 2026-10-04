@@ -25,10 +25,10 @@ import { AI_ACTIONS, attachedTo } from "../registry";
 
 const presetText = lazyTranslator(presetMessages);
 
-/** 두 타입이 같은가(타입 검사용). */
+/** Whether the two types are the same (for type checking). */
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 
-/** 프리셋(만드는 함수)을 예시 설정으로 만든다. 붙을 곳이 없으면 테스트 실패다. */
+/** Builds a preset (factory function) from the example config. The test fails if there is nowhere to attach it. */
 const site = { collections: cmsConfig.collections, blocks: BLOCKS, locales: cmsConfig.locales, sharedKeys: [] };
 type Def<F> = F extends (...args: never[]) => infer D ? NonNullable<D> : never;
 function build<F extends AiActionFactory>(factory: F): Def<F> {
@@ -49,8 +49,8 @@ const collections = {
 	tag: { fields: { title: { kind: "text" } } },
 } as const;
 
-describe("AI 기능 정의", () => {
-	it("정의에 고친 값을 얹는다. 검사는 정의의 종류·순서를 지키고 켜기·값만 바뀐다", () => {
+describe("AI action definition", () => {
+	it("layers edited values onto the definition. Checks keep the definition's kind and order; only enabled and value change", () => {
 		const slug = build(aiPresets.slug());
 		const action = resolveAction("slug", slug, {
 			prompt: "바꾼 지시문",
@@ -67,7 +67,7 @@ describe("AI 기능 정의", () => {
 			send: ["title"],
 			apply: "replace",
 		});
-		// 필수 입력은 끌 수 없다.
+		// Required inputs cannot be turned off.
 		expect(resolveAction("translate", build(aiPresets.translate()), { send: [] }).send).toEqual([
 			"block",
 			"from",
@@ -82,7 +82,7 @@ describe("AI 기능 정의", () => {
 		expect(action.definedChecks).toEqual(["pattern", "maxLength", "code:unique-slug"]);
 	});
 
-	it("예전에 정해진 검사였던 중복 없음·정규식 실행·구조 유지의 고친 값은 같은 코드 검사의 켜기로 읽는다", () => {
+	it("edited values for the formerly fixed checks (no duplicates, regex run, structure preserved) are read as enabling the same code check", () => {
 		const override = aiActionOverrideSchema.parse({
 			checks: [
 				{ kind: "unique", enabled: false },
@@ -100,7 +100,7 @@ describe("AI 기능 정의", () => {
 		});
 	});
 
-	it("코드 검사 이름은 소문자 하이픈이고 한 기능에 한 번만 쓴다", () => {
+	it("code check names are lowercase hyphenated and used once per action", () => {
 		const check = defineValidator({ name: "no-dup", label: "겹침 없음", run: () => true });
 		const action = (checks: AiActionDefinition["checks"]) =>
 			aiAction({ label: "x", input: { title: aiInput.text({ label: "제목" }) }, result: "text", prompt: "x", checks });
@@ -113,7 +113,7 @@ describe("AI 기능 정의", () => {
 		).toThrow("kebab-case");
 	});
 
-	it("관리자 화면에서 더한 검사(형식·길이·선택지 안)는 정의의 검사 뒤에 붙고, 정의의 검사는 빼지 못한다", () => {
+	it("checks added in the admin UI (format, length, one-of) are appended after the definition's checks, and the definition's checks cannot be removed", () => {
 		const definition = build(seoAi.title());
 		const action = resolveAction("seoTitle", definition, {
 			checks: [
@@ -128,12 +128,12 @@ describe("AI 기능 정의", () => {
 			{ kind: "oneOf", enabled: true, items: ["가", "나"] },
 		]);
 		expect(action.definedChecks).toEqual(["maxLength"]);
-		// 더한 검사는 고친 값으로 저장되고, 다시 읽어도 같다.
+		// Added checks are stored as edited values and read back the same.
 		const override = overrideFrom(definition, { checks: action.checks });
 		expect(resolveAction("seoTitle", definition, override).checks).toEqual(action.checks);
 	});
 
-	it("저장할 고친 값은 기본값과 다른 것만 남긴다", () => {
+	it("only edited values that differ from the defaults are kept for saving", () => {
 		const summary = build(aiPresets.summary());
 		const base = resolveAction("summary", summary);
 		expect(overrideFrom(summary, { ...base })).toEqual({});
@@ -143,7 +143,7 @@ describe("AI 기능 정의", () => {
 		});
 	});
 
-	it("지시문에는 언어 입력만 {{이름}}으로 넣고, 쓰지 않은 언어 입력은 줄로 붙인다", () => {
+	it("only language inputs go into instructions as {{name}}, and unused language inputs are appended as lines", () => {
 		const input = {
 			block: aiInput.mdx({ label: "원문" }),
 			to: aiInput.locale({ label: "대상 언어" }),
@@ -164,7 +164,7 @@ describe("AI 기능 정의", () => {
 		expect(renderPrompt({ prompt: "p", input, askInstruction: false }, {}, names, "무시")).toBe("p");
 	});
 
-	it("설정 확인: 선택지·붙을 곳·검사가 정의와 맞지 않으면 알린다", () => {
+	it("config validation: reports options, attach points, and checks that do not match the definition", () => {
 		const ok = (actions: Record<string, unknown>) => () =>
 			validateAiConfig({ actions } as Parameters<typeof validateAiConfig>[0], cmsConfig.collections);
 		const tags = build(aiPresets.tags());
@@ -197,7 +197,7 @@ describe("AI 기능 정의", () => {
 		).not.toThrow();
 	});
 
-	it("예시 설정의 모든 기능이 정의 규칙에 맞는다", () => {
+	it("every action in the example config follows the definition rules", () => {
 		expect(Object.keys(AI_ACTIONS)).toEqual([
 			"slug",
 			"summary",
@@ -219,7 +219,7 @@ describe("AI 기능 정의", () => {
 		]);
 	});
 
-	it("블록 자리: 사이트가 쓰는 블록에만 붙고, 결과는 MDX다", () => {
+	it("block slot: attaches only to blocks the site uses, and the result is MDX", () => {
 		const edit = (patch: object = {}) => ({
 			label: "고치기",
 			input: { block: { kind: "mdx" as const, label: "블록", required: true } },
@@ -235,7 +235,7 @@ describe("AI 기능 정의", () => {
 		expect(check(edit())).not.toThrow();
 		expect(check(edit(), ["image"])).toThrow(/unknown block "mermaid"/);
 		expect(check(edit({ result: "text" }))).toThrow(/block slot needs an mdx result/);
-		// 블록 자리는 블록 원문과 제목만 준다.
+		// The block slot only gives the block source and the title.
 		expect(check(edit({ input: { code: { kind: "code" as const, label: "코드", required: true } } }))).toThrow(
 			/cannot fill/,
 		);
@@ -243,7 +243,7 @@ describe("AI 기능 정의", () => {
 		expect(attachedTo({ slot: "block", block: "mermaid" }, { slot: "block", target: "chart" })).toBe(false);
 	});
 
-	it("공통 문구 이름만 지시문에 넣을 수 있고, 흘려받기는 생성 방식의 글·MDX 결과만이다", () => {
+	it("only shared text names can go into instructions, and streaming is only for generate mode's text/MDX results", () => {
 		const base = { actions: {} };
 		const action = (patch: object) => ({
 			label: "x",
@@ -270,7 +270,7 @@ describe("AI 기능 정의", () => {
 		).toThrow(/stream needs/);
 	});
 
-	it("예전 기능 표의 저장 값을 고친 값으로 옮긴다(예전 검사 모양·없는 입력·없는 기능 포함)", () => {
+	it("moves stored values from the legacy action table into edited values (including legacy check shapes, missing inputs, and missing actions)", () => {
 		expect(
 			legacyFeatureOverride("summary", {
 				enabled: false,
@@ -291,7 +291,7 @@ describe("AI 기능 정의", () => {
 		expect(legacyFeatureOverride("slug", { checks: [{ kind: "pattern", pattern: "(" }] })).toEqual({});
 	});
 
-	it("타입: 지시문 자리 표시·붙을 곳·입력·결과를 정의에서 확인한다", () => {
+	it("types: instruction placeholders, attach points, inputs, and results are checked from the definition", () => {
 		type Translate = Def<ReturnType<typeof aiPresets.translate>>;
 		const input: Equal<AiActionInput<Translate>, { block: string; from: string; to: string }> = true;
 		const mdx: Equal<AiActionResult<Translate>, { kind: "mdx"; text: string }> = true;
@@ -312,7 +312,7 @@ describe("AI 기능 정의", () => {
 			label: "x",
 			input: { title: aiInput.text({ label: "제목" }) },
 			result: "text",
-			// @ts-expect-error 지시문에는 언어 입력만 넣을 수 있다
+			// @ts-expect-error only language inputs can go into instructions
 			prompt: "{{title}}을 쓴다",
 		});
 		aiAction({
@@ -320,7 +320,7 @@ describe("AI 기능 정의", () => {
 			input: { instruction: aiInput.text({ label: "요청", required: true }) },
 			result: "mdx",
 			prompt: "초안을 쓴다",
-			// @ts-expect-error 필드 옆 자리는 필수 입력 `instruction`을 채울 수 없다
+			// @ts-expect-error the slot beside a field cannot fill the required input `instruction`
 			attach: [{ slot: "field", field: "body" }],
 		});
 	});

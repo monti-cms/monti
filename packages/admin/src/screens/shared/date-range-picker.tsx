@@ -9,7 +9,7 @@ import { dateRangeMessages } from "./date-range.messages";
 
 const t = createTranslator(dateRangeMessages);
 
-/** `YYYY-MM-DD` ↔ 달력의 날짜. 관리자 필터는 설정 시간대의 날짜를 받아 서버에 하루 경계로 보낸다(§5.5). */
+/** `YYYY-MM-DD` ↔ calendar date. The admin filter takes dates in the configured time zone and sends them to the server as day boundaries. */
 export const dayToDate = (value: string) => {
 	if (!value) return undefined;
 	const [y, m, d] = value.split("-").map(Number);
@@ -21,7 +21,7 @@ export const dateToDay = (date: Date | undefined) =>
 		? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 		: "";
 
-/** 날짜 범위 달력. 시작일과 끝날을 차례로 누른다. 하루만 누르면 그날 하루다. */
+/** Date range calendar. Click the start date then the end date. Clicking one day selects just that day. */
 export function DateRangeCalendar({
 	from,
 	to,
@@ -42,7 +42,7 @@ export function DateRangeCalendar({
 	);
 }
 
-/** 버튼을 누르면 날짜 범위 달력을 여는 필터(shadcn Date Picker 패턴). */
+/** Filter that opens the date range calendar when the button is pressed (shadcn Date Picker pattern). */
 export function DateRangePicker({
 	label,
 	from,

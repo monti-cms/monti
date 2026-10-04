@@ -5,8 +5,8 @@ import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
- * 참조 종류 제약 좁히기(M10-3). 예전 저장소(종류에 `category`·`tag`가 있던 제약과 그 행)를 만들고 마이그레이션을 두 번 돌린다.
- * 컬렉션 이름에 기대지 않도록 행을 SQL로 직접 넣는다(다른 사이트 설정으로도 돈다).
+ * Narrowing the reference kind constraint. Builds a legacy store (the constraint that had `category` and `tag` kinds, plus its rows) and runs the migration twice.
+ * Rows are inserted directly with SQL so the test does not depend on collection names (it also runs against other site configs).
  */
 describe("entry_references kind migration", () => {
 	let pool: Pool;
@@ -56,7 +56,7 @@ describe("entry_references kind migration", () => {
 		);
 	};
 
-	/** 단계 기록을 지워 단계 기록이 생기기 전 저장소처럼 만든다. */
+	/** Clears the step records so the store looks like one from before step records existed. */
 	const forgetSteps = () => pool.query(`DELETE FROM "${schemaName}".cms_migrations`);
 
 	it("new stores only allow entry and media references", async () => {
@@ -68,7 +68,7 @@ describe("entry_references kind migration", () => {
 	});
 
 	it("moves legacy category/tag rows into entry rows, then narrows the constraint; running again changes nothing", async () => {
-		// 예전 저장소 모양으로 되돌린다: 이름 없는 예전 제약(자동 이름)과 category·tag 행.
+		// Revert to the legacy store shape: the old unnamed constraint (auto-generated name) and category/tag rows.
 		await pool.query(`
 			ALTER TABLE ${table()} DROP CONSTRAINT entry_references_kind_check;
 			ALTER TABLE ${table()} DROP CONSTRAINT entry_references_target_check;
@@ -86,21 +86,21 @@ describe("entry_references kind migration", () => {
 			...(ordinal === undefined ? {} : { ordinal }),
 		});
 		const mdx = { type: "mdx", line: 3, column: 1 };
-		// 1) 예전 행만 있는 대상.
+		// 1) A target that has only legacy rows.
 		await insertReference(source, "working", "tag", onlyLegacy, [metadata("tagIds", 0)]);
-		// 2) 같은 대상의 entry 행이 이미 있는 예전 행(위치가 다르고 오래된 참조).
+		// 2) A legacy row whose target already has an entry row (different position and a stale reference).
 		await insertReference(source, "working", "entry", both, [mdx]);
 		await insertReference(source, "working", "category", both, [metadata("categoryId"), mdx], true);
-		// 3) 같은 대상에 예전 행이 둘(category·tag).
+		// 3) Two legacy rows on the same target (category and tag).
 		await insertReference(source, "published", "category", twoLegacy, [metadata("categoryId")]);
 		await insertReference(source, "published", "tag", twoLegacy, [metadata("tagIds", 1)]);
 
-		// 마이그레이션 전에도 읽기는 entry로 다룬다(새 코드를 먼저 배포해도 된다).
+		// Even before the migration, reads treat them as entry (the new code may be deployed first).
 		const store = createContentStore(pool, { schema: schemaName });
 		const before = await store.getWorkingReferences({ entryId: source });
 		expect(before.every((reference) => reference.kind === "entry")).toBe(true);
 
-		// 예전 저장소에는 단계 기록이 없다(이 단계가 아직 돌지 않았다).
+		// A legacy store has no step record (this step has not run yet).
 		await forgetSteps();
 		await migrateContentStore(pool, { schema: schemaName });
 		const read = async () =>
@@ -119,7 +119,7 @@ describe("entry_references kind migration", () => {
 			is_stale: false,
 			occurrences: [metadata("tagIds", 0)],
 		});
-		// entry 행의 위치 뒤에 없던 위치만 붙고, 하나라도 오래된 참조면 오래된 참조다.
+		// Only positions missing from the entry row are appended after its positions, and if any is a stale reference the result is stale.
 		expect(byTarget.get(both)).toMatchObject({
 			state: "working",
 			is_stale: true,
@@ -140,7 +140,7 @@ describe("entry_references kind migration", () => {
 			/entry_references_kind_check/,
 		);
 
-		// 여러 번 돌려도 같다(단계 기록이 없어 다시 돌아도).
+		// Running it repeatedly gives the same result (even when it runs again because there is no step record).
 		await migrateContentStore(pool, { schema: schemaName });
 		await forgetSteps();
 		await migrateContentStore(pool, { schema: schemaName });

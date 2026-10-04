@@ -4,29 +4,29 @@ import type { Mark, Node as PmNode } from "@tiptap/pm/model";
 export { PLACEHOLDER };
 
 /**
- * 편집기 문서 → 검사 단위(문단) 뽑기. 글이 든 블록(문단·제목·목록 항목·표 칸·콜아웃 본문 등) 하나가 한 단위다.
+ * Editor document -> check segments (paragraphs) extraction. Each block that contains text (paragraph, heading, list item, table cell, callout body, etc.) is one segment.
  *
- * 보내지 않는 것:
- * - 코드 블록, 수식·코드 펜스·원문 보존 상자처럼 글이 아닌 블록(통째로 고르는 노드), 블록 속성
- * - 인라인 코드, 주소(링크 글자가 주소 자체인 것과 본문에 그대로 쓴 주소). 이 자리는 `PLACEHOLDER` 한 글자로 바꿔
- *   앞뒤 글자의 위치가 그대로 문서 위치로 돌아가게 한다.
- * - 이미지 같은 인라인 노드도 `PLACEHOLDER` 한 글자다. 줄바꿈은 `\n`이다.
- * 링크는 글자만 보내고 주소(속성)는 보내지 않는다.
+ * What is not sent:
+ * - Code blocks, non-text blocks such as math, code fence, and raw-preservation boxes (nodes selected as a whole), and block attributes
+ * - Inline code and URLs (links whose text is the URL itself, and URLs written as is in the body). These spots are replaced with a single `PLACEHOLDER` character
+ *   so the positions of surrounding text map back to document positions as is.
+ * - Inline nodes such as images are also a single `PLACEHOLDER` character. A line break is `\n`.
+ * For links, only the text is sent, not the URL (attribute).
  */
 
-/** 문서 위치를 아는 검사 단위. */
+/** A check segment that knows its document positions. */
 export interface DocSegment extends TextCheckSegment {
-	/** 블록 내용의 문서 범위. */
+	/** Document range of the block content. */
 	readonly from: number;
 	readonly to: number;
-	/** 글자 `i`가 차지하는 문서 범위(`starts[i]` ~ `ends[i]`). 자리 표시 글자는 감춘 범위 전체다. */
+	/** Document range occupied by character `i` (`starts[i]` ~ `ends[i]`). A placeholder character covers the whole hidden range. */
 	readonly starts: readonly number[];
 	readonly ends: readonly number[];
 }
 
 export interface ExtractOptions {
 	readonly locale: string;
-	/** 이 범위에 걸친 블록만 돌려준다(선택 영역 검사). 이름(`id`)은 문서 전체 기준으로 매긴다. */
+	/** Returns only blocks overlapping this range (selection check). Names (`id`) are assigned based on the whole document. */
 	readonly range?: { readonly from: number; readonly to: number } | null;
 }
 
@@ -36,7 +36,7 @@ const LETTER = /\p{L}/u;
 
 const looksLikeUrl = (text: string) => /^(?:[a-z][a-z0-9+.-]*:|www\.|\/)\S*$/i.test(text.trim());
 
-/** 보내지 않는 글자 노드: 인라인 코드, 글자가 주소 그대로인 링크. */
+/** Text nodes that are not sent: inline code and links whose text is the URL itself. */
 function isHiddenText(text: string, marks: readonly Mark[]): boolean {
 	for (const mark of marks) {
 		if (mark.type.spec.code || mark.type.name === "code") return true;
@@ -49,7 +49,7 @@ function isHiddenText(text: string, marks: readonly Mark[]): boolean {
 	return false;
 }
 
-/** 32비트 FNV-1a(UTF-16 단위). 같은 글자면 늘 같은 이름이 된다. */
+/** 32-bit FNV-1a (UTF-16 units). The same text always gets the same name. */
 function hashText(text: string): string {
 	let hash = 0x811c9dc5;
 	for (let index = 0; index < text.length; index++) {
@@ -67,7 +67,7 @@ interface Builder {
 
 function push(builder: Builder, char: string, from: number, to: number) {
 	const last = builder.chars.length - 1;
-	// 이어진 자리 표시(마크로 나뉜 인라인 코드 등)는 한 글자로 합친다.
+	// Consecutive placeholders (e.g. inline code split by marks) are merged into one character.
 	if (char === PLACEHOLDER && builder.chars[last] === PLACEHOLDER && builder.ends[last] === from) {
 		builder.ends[last] = to;
 		return;
@@ -77,7 +77,7 @@ function push(builder: Builder, char: string, from: number, to: number) {
 	builder.ends.push(to);
 }
 
-/** 본문에 그대로 쓴 주소를 자리 표시 한 글자로 접는다. */
+/** Folds a URL written as is in the body into a single placeholder character. */
 function collapseUrls(builder: Builder): Builder {
 	const text = builder.chars.join("");
 	const out: Builder = { chars: [], starts: [], ends: [] };
@@ -107,7 +107,7 @@ function buildTextblock(node: PmNode, pos: number): Builder {
 				push(builder, PLACEHOLDER, at, at + text.length);
 				return;
 			}
-			// ProseMirror 글자 위치도 UTF-16 단위라 한 글자씩 대응한다.
+			// ProseMirror text positions are also UTF-16 units, so they map one character at a time.
 			for (let index = 0; index < text.length; index++) push(builder, text[index] ?? "", at + index, at + index + 1);
 			return;
 		}
@@ -117,7 +117,7 @@ function buildTextblock(node: PmNode, pos: number): Builder {
 	return collapseUrls(builder);
 }
 
-/** 문서에서 검사 단위를 뽑는다. 글자(문자)가 없는 블록은 뺀다. */
+/** Extracts check segments from the document. Blocks without letters are skipped. */
 export function extractSegments(doc: PmNode, { locale, range }: ExtractOptions): DocSegment[] {
 	const segments: DocSegment[] = [];
 	const seen = new Map<string, number>();
@@ -140,8 +140,8 @@ export function extractSegments(doc: PmNode, { locale, range }: ExtractOptions):
 }
 
 /**
- * 문단 안 위치(UTF-16, `end` 미포함) → 문서 범위. 자리 표시 글자를 덮는 결과(코드·주소에 걸친 것)는 `null`이다.
- * 길이 0인 결과(빠진 띄어쓰기 등)는 옆 글자 하나로 넓힌다.
+ * Paragraph-relative position (UTF-16, `end` exclusive) -> document range. A result covering a placeholder character (spanning code or a URL) is `null`.
+ * A zero-length result (e.g. a missing space) is widened to one adjacent character.
  */
 export function segmentRangeToDoc(
 	segment: DocSegment,
@@ -163,7 +163,7 @@ export function segmentRangeToDoc(
 	return from === undefined || to === undefined ? null : { from, to };
 }
 
-/** 문서 범위가 걸친 문단 안 위치(`[start, end)`). 걸치지 않으면 `null`이다. */
+/** Paragraph-relative position (`[start, end)`) overlapped by a document range. `null` if it does not overlap. */
 export function docRangeToSegment(
 	segment: DocSegment,
 	from: number,

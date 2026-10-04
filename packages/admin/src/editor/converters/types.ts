@@ -1,7 +1,7 @@
 import type { CmsNode } from "@monti-cms/core/mdx";
 import type { JSONContent } from "@tiptap/core";
 
-/** 변환기가 재귀 변환·인라인 변환에 쓰는 함수. `tiptap-content.ts`가 넘긴다. */
+/** Functions the converter uses for recursive and inline conversion. Passed in by `tiptap-content.ts`. */
 export interface ConverterContext {
 	blockToTiptap(node: CmsNode): JSONContent;
 	tiptapBlockToCms(node: JSONContent): CmsNode[];
@@ -12,18 +12,18 @@ export interface ConverterContext {
 }
 
 /**
- * 블록 하나의 CmsNode ↔ Tiptap 변환(v2 C0).
+ * CmsNode to Tiptap conversion for a single block (and back).
  *
- * 새 블록의 편집 UI를 붙일 때 이 모양으로 모듈을 만들고 `converters/index.ts`의 `BLOCK_CONVERTERS`에 한 줄 더한다.
- * `isMappable`이 거짓이면 그 블록은 원문 보존 상자(`cmsOpaqueBlock`)로 간다.
+ * To attach an editing UI for a new block, build a module in this shape and add one line to `BLOCK_CONVERTERS` in `converters/index.ts`.
+ * If `isMappable` is false, the block goes to the raw-source-preserving box (`cmsOpaqueBlock`).
  */
 export interface BlockConverter {
 	readonly name: string;
-	/** 이 변환기가 받는 CmsNode `type`. */
+	/** The CmsNode `type` this converter accepts. */
 	readonly cmsTypes: readonly string[];
-	/** 이 변환기가 받는 Tiptap 노드 이름. */
+	/** The Tiptap node name this converter accepts. */
 	readonly tiptapTypes: readonly string[];
-	/** 같은 cmsType 후보 중 특정 노드(예: 언어가 mermaid·chart인 codeBlock)를 가려낼 때 쓴다. */
+	/** Used to pick out a specific node among candidates with the same cmsType (e.g. a codeBlock whose language is mermaid or chart). */
 	matches?(node: CmsNode): boolean;
 	isMappable(node: CmsNode, ctx: ConverterContext): boolean;
 	toTiptap(node: CmsNode, ctx: ConverterContext): JSONContent;

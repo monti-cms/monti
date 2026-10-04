@@ -5,14 +5,14 @@ import { runMessages } from "./run.messages";
 const t = createTranslator(runMessages);
 
 /**
- * 정해진 결과 검사(순수 함수). 기능에 적힌 검사 목록 중 켜 둔 것을 차례로 적용해, 통과하지 못한 후보는 버린다.
- * 후보를 고치거나 잘라 내지 않는다. 코드 검사(`defineValidator`)는 이 검사 다음에 실행기가 부른다.
+ * Fixed result checks (pure functions). Applies the enabled checks from the action's check list in order, and discards candidates that fail.
+ * Does not modify or truncate candidates. Code checks (`defineValidator`) are called by the runner after these checks.
  */
 
 export interface CheckEnv {
-	/** 현재 값. 이미 같은 값인 후보는 뺀다. */
+	/** Current value. Candidates equal to it are dropped. */
 	current?: string | readonly string[];
-	/** 고를 수 있는 값 → 보이는 이름(`있는 값만` 검사, 후보 이름 표시). */
+	/** Selectable values -> display names (`exists` check, shows candidate names). */
 	options?: ReadonlyMap<string, string>;
 }
 
@@ -24,7 +24,7 @@ const matchesPattern = (pattern: string, value: string) => {
 	}
 };
 
-/** 정해진 검사 하나를 통과하는가. 코드 검사는 여기서 보지 않는다(실행기가 따로 부른다). */
+/** Does it pass one fixed check? Code checks are not looked at here (the runner calls them separately). */
 function passes(check: AiCheck, value: string, env: CheckEnv): boolean {
 	switch (check.kind) {
 		case "pattern":
@@ -53,7 +53,7 @@ export function checkCandidates(checks: readonly AiCheck[], raw: readonly string
 	return items;
 }
 
-/** 긴 글 결과의 검사. 통과하지 못하면 이유를 돌려준다. */
+/** Check for long-text results. Returns the reason if it fails. */
 export function checkText(checks: readonly AiCheck[], text: string): string | null {
 	if (!text.trim()) return t("emptyResult");
 	for (const check of checks) {

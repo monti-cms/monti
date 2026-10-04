@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /**
- * Mermaid 블록의 이름표·설명과 AI 기능 문구(M15). AI 지시문은 모델에게 주는 글이라 영어 하나이고, 결과 언어는 본문을 따른다.
+ * Labels, descriptions, and AI feature text of the Mermaid block. AI instructions are text given to the model, so they exist in English only, and the result language follows the body.
  */
 export const mermaidMessages = defineMessages("cms-blocks.mermaid", {
 	en: {

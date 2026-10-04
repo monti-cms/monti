@@ -30,14 +30,14 @@ interface InspectorPanelProps {
 	onRegenerateSlug: () => void;
 	onChange: (patch: EntryFormPatch) => void;
 	onClose: () => void;
-	/** 이 필드로 초점을 옮긴다(발행 문제로 이동). 옮기면 `onFocused`를 부른다. */
+	/** Moves focus to this field (jump to a publish problem). Calls `onFocused` once moved. */
 	focusPath?: string | null;
 	onFocused?: () => void;
 }
 
 /**
- * 편집 화면 오른쪽 속성 칸. 묶음·필드의 `tab`으로 탭을 나누고, 안쪽 폭을 고정해 여닫거나 창 폭이 바뀌어도
- * 입력이 밀리거나 넘치지 않는다.
+ * Properties panel on the right of the edit screen. Splits tabs by group/field `tab` and fixes the inner width so inputs
+ * do not shift or overflow when it opens/closes or the window width changes.
  */
 export function InspectorPanel({
 	collection,
@@ -63,7 +63,7 @@ export function InspectorPanel({
 	useEffect(() => {
 		if (focusPath) setTab(tabFor(collection, focusPath));
 	}, [focusPath, collection]);
-	// 탭이 바뀌어 입력이 그려진 뒤에 초점을 옮긴다.
+	// Move focus after the tab changes and the input is rendered.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: tab change re-runs the lookup
 	useEffect(() => {
 		if (!focusPath) return;

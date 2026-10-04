@@ -68,7 +68,7 @@ const createTransformer = (
 };
 
 describe("transformers.root addLineWrappers", () => {
-	it("range에 해당하는 line들을 wrapper로 감싼다", () => {
+	it("wraps the lines in the range with a wrapper", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -92,7 +92,7 @@ describe("transformers.root addLineWrappers", () => {
 		expect(wrapper.children).toContain(lines[2]);
 	});
 
-	it("동일 range wrapper는 order가 낮은 항목이 바깥을 감싼다", () => {
+	it("for wrappers with the same range, the one with the lower order wraps on the outside", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -121,7 +121,7 @@ describe("transformers.root addLineWrappers", () => {
 		expect(inner.children[0]).toBe(lines[0]);
 	});
 
-	it("동일 render/동일 range wrapper 중복은 하나로 정규화한다", () => {
+	it("duplicate wrappers with the same render and range are normalized into one", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -149,7 +149,7 @@ describe("transformers.root addLineWrappers", () => {
 		expect(outer.children.filter((child) => child.type === "element")).toEqual([lines[0], lines[1]]);
 	});
 
-	it("wrapper attributes를 element properties로 전달한다", () => {
+	it("passes wrapper attributes to element properties", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -176,7 +176,7 @@ describe("transformers.root addLineWrappers", () => {
 		expect(wrapper.properties.href).toBeUndefined();
 	});
 
-	it("유효하지 않은 range(start >= end)는 무시한다", () => {
+	it("ignores an invalid range (start >= end)", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -194,7 +194,7 @@ describe("transformers.root addLineWrappers", () => {
 		expect(code.children[2]).toBe(lines[1]);
 	});
 
-	it("range end가 라인 수를 초과하면 EOF까지 clamp해서 wrapper를 적용한다", () => {
+	it("clamps to EOF and applies the wrapper when the range end exceeds the line count", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -216,7 +216,7 @@ describe("transformers.root addLineWrappers", () => {
 		expect(wrapper.children).toContain(lines[2]);
 	});
 
-	it("허용되지 않은 render tag는 wrapper를 만들지 않는다", () => {
+	it("does not create a wrapper for a render tag that is not allowed", () => {
 		const transformer = createTransformer(
 			[
 				{

@@ -28,10 +28,10 @@ const t = createTranslator(aiWriteMessages);
 const common = createTranslator(aiCommonMessages);
 
 /**
- * 본문에 글을 쓰는 AI 기능(M8-2·M8-3·M9-3). 붙을 곳이 `selection`(선택 영역 메뉴, 예: 문체 다듬기)이면 고른 글을 다듬어
- * 바뀐 곳을 보여 준 뒤 바꾸고, `insert`(슬래시 메뉴·빈 문서, 예: 초안 쓰기)면 커서 자리에 넣는다. `block`(블록 손잡이
- * 옆, 예: 다이어그램 고치기)이면 그 블록 원문을 고쳐 바뀐 곳을 보여 준 뒤 블록을 바꾼다.
- * 결과는 흘려받아 조금씩 보인다. 적용은 사용자가 누를 때만 한다.
+ * AI action that writes into the body. If the attach target is `selection` (selection menu, e.g. polish style), it polishes the chosen text,
+ * shows what changed and then replaces it; if `insert` (slash menu, empty document, e.g. write a draft), it inserts at the cursor. If `block` (next to the block
+ * handle, e.g. fix a diagram), it fixes that block's source, shows what changed and then replaces the block.
+ * The result is streamed and shown gradually. Applying happens only when the user clicks.
  */
 
 type Job =
@@ -44,7 +44,7 @@ type Job =
 			from: number;
 			to: number;
 			source: string;
-			/** 고치는 블록의 편집기 노드 이름. 결과도 이 블록 하나여야 바꾼다. */
+			/** Editor node name of the block being fixed. The result must also be this one block for it to replace. */
 			nodeType: string;
 	  };
 
@@ -54,16 +54,16 @@ type RunState =
 	| { status: "done"; text: string }
 	| { status: "error"; text: string; message: string };
 
-/** 선택한 부분의 MDX. 부분만 고른 문단도 그 부분만 담는다. */
+/** MDX of the selection. A paragraph with only part selected contains only that part. */
 function selectionMdx(editor: Editor, from: number, to: number): string {
 	const slice = editor.state.doc.slice(from, to);
 	const nodes = (slice.content.toJSON() ?? []) as JSONContent[];
-	// 한 문단 안을 고르면 글자 조각만 온다. 문단으로 감싸야 MDX가 된다.
+	// Selecting inside one paragraph yields only a text fragment. It has to be wrapped in a paragraph to be MDX.
 	const content = slice.content.firstChild?.isInline ? [{ type: "paragraph", content: nodes }] : nodes;
 	return tiptapToMdx({ type: "doc", content }).trim();
 }
 
-/** 결과 MDX를 편집기 내용으로. 한 문단 안을 고쳤고 결과도 한 문단이면 글자만 넣는다(문단을 쪼개지 않는다). */
+/** Result MDX as editor content. If the edit was inside one paragraph and the result is one paragraph, inserts only the text (the paragraph is not split). */
 function contentFor(editor: Editor, from: number, to: number, mdx: string): JSONContent[] {
 	const blocks = mdxToTiptap(mdx).content ?? [];
 	const $from = editor.state.doc.resolve(from);
@@ -118,17 +118,17 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 		}
 	};
 
-	// 초안(insert)은 고칠 글이 없으니 늘 요청을 받는다. 요청 받기를 켠 기능도 요청을 먼저 받는다.
+	// A draft (insert) has no text to fix, so it always asks for a request. An action with ask-for-request on also asks first.
 	const askRequest = job.mode === "insert" || action.askInstruction;
-	// 고칠 글이 정해진 다듬기·블록 고치기는 열자마자 실행한다. 요청 받기를 켠 블록 기능은 요청을 먼저 받는다.
+	// Polish and block fix, where the text to fix is set, run as soon as they open. A block action with ask-for-request on asks for a request first.
 	const fixed = job.mode === "selection" || (job.mode === "block" && !action.askInstruction);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: 열 때 한 번만 실행한다
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs only once when opened
 	useEffect(() => {
 		if (fixed) void run();
 		return () => controllerRef.current?.abort();
 	}, []);
 
-	// 블록 고치기는 결과가 같은 종류의 블록 하나일 때만 바꾼다.
+	// A block fix replaces only when the result is one block of the same kind.
 	const blockProblem = useMemo(() => {
 		if (job.mode !== "block" || state.status !== "done") return null;
 		const blocks = mdxToTiptap(state.text).content ?? [];
@@ -137,7 +137,7 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 
 	const apply = () => {
 		if (state.status !== "done" || !state.text || blockProblem) return;
-		// 블록은 결과 블록으로 통째로 바꾼다.
+		// A block is replaced entirely with the result block.
 		const content =
 			job.mode === "block" ? (mdxToTiptap(state.text).content ?? []) : contentFor(editor, job.from, job.to, state.text);
 		editor.chain().focus().insertContentAt({ from: job.from, to: job.to }, content).run();
@@ -150,9 +150,9 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 	);
 	const running = state.status === "running";
 	const result = "text" in state ? state.text : "";
-	// 실패해도 받은 글이 있으면 보인다.
+	// Even on failure, any text received is shown.
 	const showResult = running || state.status === "done" || (state.status === "error" && !!state.text);
-	// 고친 글(다듬기)은 바뀐 곳부터, 블록·초안은 그린 모양부터 본다.
+	// Fixed text (polish) is viewed from the changes; block and draft from the rendered shape.
 	const [view, setView] = useState<"preview" | "source">(job.mode === "selection" ? "source" : "preview");
 
 	return (
@@ -178,7 +178,7 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 							rows={3}
 							onChange={(event) => setRequest(event.target.value)}
 							onKeyDown={(event) => {
-								// 줄바꿈은 Enter, 실행은 Cmd/Ctrl+Enter다.
+								// Enter inserts a newline; Cmd/Ctrl+Enter runs.
 								if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
 									event.preventDefault();
 									if (!running) void run();
@@ -253,19 +253,19 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 	);
 }
 
-/** 바뀐 곳(지운 것·더한 것)을 표시한 글. */
+/** Text with the changes (removed and added) marked. */
 function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 	return parts.map((part, index) =>
 		part.type === "same" ? (
-			// biome-ignore lint/suspicious/noArrayIndexKey: 바뀐 곳 목록은 결과마다 새로 만든다
+			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
-			// biome-ignore lint/suspicious/noArrayIndexKey: 바뀐 곳 목록은 결과마다 새로 만든다
+			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
 			<del key={index} className="bg-cms-destructive/15 text-cms-destructive line-through">
 				{part.text}
 			</del>
 		) : (
-			// biome-ignore lint/suspicious/noArrayIndexKey: 바뀐 곳 목록은 결과마다 새로 만든다
+			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
 			<ins key={index} className="bg-emerald-500/15 cms-dark:text-emerald-400 text-emerald-700 no-underline">
 				{part.text}
 			</ins>
@@ -276,8 +276,8 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-cms-muted/40 p-3";
 
 /**
- * 결과를 글 모양 그대로 그린다(다이어그램·차트는 그림으로). 쓰는 중에는 반쯤 쓴 코드가 그려지지 않으므로 원문을 보인다.
- * 블록 고치기는 지금 블록과 바뀐 뒤를 나란히 보인다.
+ * Renders the result in its text shape (diagrams and charts as pictures). While writing, half-written code does not render, so the source is shown.
+ * Block fix shows the current block and the changed one side by side.
  */
 function ResultPreview({ job, text, done }: { job: Job; text: string; done: boolean }) {
 	const after = done ? (
@@ -304,7 +304,7 @@ function ResultPreview({ job, text, done }: { job: Job; text: string; done: bool
 
 type GetEntry = Parameters<EditorExtension>[0]["getEntry"];
 
-/** 편집기가 빈 문서인가. 바뀔 때마다 다시 본다. */
+/** Whether the editor is an empty document. Re-checked on every change. */
 function useIsEmpty(editor: Editor | null) {
 	const [empty, setEmpty] = useState(false);
 	useEffect(() => {
@@ -319,7 +319,7 @@ function useIsEmpty(editor: Editor | null) {
 	return empty;
 }
 
-/** 편집 화면 확장으로 붙인 AI 쓰기(문체 다듬기·초안 쓰기). */
+/** AI writing attached as an edit-screen extension (polish style, write a draft). */
 export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 	const { data } = useAiActions();
 	const [editor, setEditor] = useState<Editor | null>(null);
@@ -367,7 +367,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 	const blockActions = useMemo<BlockAction[]>(
 		() =>
 			usable.block.map((action) => {
-				// 이 기능이 붙은 블록의 편집기 노드 이름.
+				// Editor node name of the block this action is attached to.
 				const nodes = new Set(
 					action.attach.flatMap((attach) => (attach.slot === "block" ? [blockNodeName({ name: attach.block })] : [])),
 				);
@@ -399,7 +399,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 	return {
 		toolbar: (
 			<>
-				{/* 빈 문서에서는 툴바에서 바로 초안을 쓴다. */}
+				{/* In an empty document, the toolbar writes a draft directly. */}
 				{empty && editor && firstInsert && (
 					<Button
 						type="button"

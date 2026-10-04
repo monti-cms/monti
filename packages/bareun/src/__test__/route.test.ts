@@ -35,7 +35,7 @@ const post = (body: unknown, options = resolveBareunOptions({ apiKeyEnv: KEY_ENV
 		}),
 	);
 
-describe("바른 검사 경로", () => {
+describe("Bareun check route", () => {
 	beforeEach(() => {
 		mockVerifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
 		vi.spyOn(console, "error").mockImplementation(() => {});
@@ -46,11 +46,11 @@ describe("바른 검사 경로", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("서버 쪽 경로표에 사이트 설정의 값으로 경로를 단다", () => {
+	it("mounts the route on the server route table using the site config values", () => {
 		expect(bareunServer.routes?.map((route) => route.pattern)).toEqual(["v1/text-check/bareun"]);
 	});
 
-	it("문단을 이어 UTF16 위치로 바른에 보내고 문단별 결과를 돌려준다", async () => {
+	it("joins paragraphs, sends them to Bareun with UTF-16 positions, and returns per-paragraph results", async () => {
 		vi.stubEnv(KEY_ENV, FAKE_KEY);
 		const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => Response.json(sample.response));
 		vi.stubGlobal("fetch", fetchMock);
@@ -77,7 +77,7 @@ describe("바른 검사 경로", () => {
 		expect(headers.get("api-key")).toBe(FAKE_KEY);
 		expect(headers.get("connect-protocol-version")).toBe("1");
 		expect(JSON.parse(String(init?.body))).toEqual({
-			// 한국어가 아닌 문단은 보내지 않는다.
+			// Non-Korean paragraphs are not sent.
 			document: { content: sample.request, language: "ko_KR" },
 			encodingType: "UTF16",
 			customDictNames: ["blog"],
@@ -85,7 +85,7 @@ describe("바른 검사 경로", () => {
 		expect(init?.signal).toBeInstanceOf(AbortSignal);
 	});
 
-	it("키가 없으면 바른을 부르지 않고 503이다", async () => {
+	it("without a key it does not call Bareun and returns 503", async () => {
 		vi.stubEnv(KEY_ENV, "");
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);
@@ -98,7 +98,7 @@ describe("바른 검사 경로", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	it("관리자가 아니면 키가 없어도 먼저 막는다", async () => {
+	it("rejects non-admins first, even without a key", async () => {
 		vi.stubEnv(KEY_ENV, "");
 		mockVerifyAdmin.mockRejectedValue(Object.assign(new Error("no"), { code: "unauthorized" }));
 		const res = await post({ segments });
@@ -106,7 +106,7 @@ describe("바른 검사 경로", () => {
 		expect(res.status).not.toBe(503);
 	});
 
-	it("바른 오류는 키·응답 본문 없이 일반 오류로 돌려준다", async () => {
+	it("returns Bareun errors as a generic error without the key or response body", async () => {
 		vi.stubEnv(KEY_ENV, FAKE_KEY);
 		vi.stubGlobal("fetch", async () => new Response(`invalid api-key ${FAKE_KEY}`, { status: 401 }));
 		const res = await post({ segments });
@@ -116,7 +116,7 @@ describe("바른 검사 경로", () => {
 		expect(text).not.toContain(FAKE_KEY);
 	});
 
-	it("빈 글은 바른을 부르지 않는다", async () => {
+	it("does not call Bareun for empty text", async () => {
 		vi.stubEnv(KEY_ENV, FAKE_KEY);
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);

@@ -53,7 +53,7 @@ const isLinePosition = (value: DecorationItem["start"]): value is { line: number
 	typeof value === "object" && value !== null && "line" in value && "character" in value;
 
 describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
-	it("document를 shiki payload(decorations/lineDecorations/rowWrappers)로 변환해야 한다", () => {
+	it("converts a document into a shiki payload (decorations/lineDecorations/rowWrappers)", () => {
 		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
 			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
 		}
@@ -119,7 +119,7 @@ describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
 		);
 	});
 
-	it("document scope regex + 선행 빈 줄이 있어도 absolute range를 올바르게 line-local로 변환한다", () => {
+	it("converts absolute ranges into line-local ones correctly even with a document scope regex and leading blank lines", () => {
 		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
 			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
 		}
@@ -158,7 +158,7 @@ describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
 		expect(foldDecorationOnFirstConsoleLine).toBeDefined();
 	});
 
-	it("annotation에 class/render가 없어도 name+scope rule lookup으로 payload를 만든다", () => {
+	it("builds the payload through a name+scope rule lookup even when the annotation has no class/render", () => {
 		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
 			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
 		}

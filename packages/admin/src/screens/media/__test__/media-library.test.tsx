@@ -86,22 +86,22 @@ const openDetail = async (name: RegExp) => {
 	return screen.findByRole("complementary", { name: t("detail.label") });
 };
 
-describe("미디어 라이브러리", () => {
-	it("목록을 불러와 사용 여부와 함께 보인다", async () => {
+describe("media library", () => {
+	it("loads the list and shows it with usage state", async () => {
 		await renderLibrary();
 		expect(screen.getByRole("button", { name: /cat\.png$/ }).textContent).toContain(t("usage.count", { count: 1 }));
 		expect(screen.getByRole("button", { name: /dog\.png$/ }).textContent).toContain(t("usage.none"));
 		expect(screen.getByRole("button", { name: /guide\.pdf$/ }).textContent).toContain("PDF");
 	});
 
-	it("검색·형식·사용 여부 조건을 목록 요청에 싣는다", async () => {
+	it("puts search, type and usage conditions in the list request", async () => {
 		await renderLibrary();
 		fireEvent.change(screen.getByRole("searchbox", { name: t("library.search") }), { target: { value: "cat" } });
 		await waitFor(() => expect(mediaRequests().at(-1)?.searchParams.get("search")).toBe("cat"));
 		expect(mediaRequests().at(-1)?.searchParams.get("page")).toBe("1");
 	});
 
-	it("고르면 상세에 이름·형식·크기·올린 날짜·사용처를 보인다", async () => {
+	it("picking shows name, type, size, upload date and usages in the detail", async () => {
 		await renderLibrary();
 		const detail = await openDetail(/cat\.png$/);
 		expect(within(detail).getAllByText("cat.png").length).toBeGreaterThan(0);
@@ -112,11 +112,11 @@ describe("미디어 라이브러리", () => {
 				.getByRole("link", { name: /고양이 글/ })
 				.getAttribute("href"),
 		).toBe(adminEntryEditHref("e1"));
-		// 쓰이는 파일은 지울 수 없다.
+		// A file in use cannot be deleted.
 		expect((within(detail).getByRole("button", { name: t("common.delete") }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it("이미지의 기본 대체 텍스트·캡션을 저장한다", async () => {
+	it("saves the image's default alt text and caption", async () => {
 		await renderLibrary();
 		const detail = await openDetail(/cat\.png$/);
 		const alt = within(detail).getByRole("textbox", { name: t("detail.defaultAlt") }) as HTMLInputElement;
@@ -135,7 +135,7 @@ describe("미디어 라이브러리", () => {
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("library.saved")));
 	});
 
-	it("기본 설명을 고친 채 다른 파일을 열면 버릴지 묻는다", async () => {
+	it("opening another file with an edited default description asks whether to discard", async () => {
 		await renderLibrary();
 		const detail = await openDetail(/cat\.png$/);
 		fireEvent.change(within(detail).getByRole("textbox", { name: t("detail.defaultCaption") }), {
@@ -144,7 +144,7 @@ describe("미디어 라이브러리", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: /dog\.png$/ }));
 		const dialog = await screen.findByRole("alertdialog", { name: tShared("discard.title") });
-		// 확인 창이 떠 있는 동안 상세 칸은 가려지지만 고친 값은 남아 있다.
+		// While the confirm dialog is up, the detail panel is covered but the edited value remains.
 		expect(screen.getByDisplayValue("고친 캡션")).toBeTruthy();
 		fireEvent.click(within(dialog).getByRole("button", { name: tShared("discard.confirm") }));
 		await waitFor(() =>
@@ -156,7 +156,7 @@ describe("미디어 라이브러리", () => {
 		);
 	});
 
-	it("열린 파일을 표시한다", async () => {
+	it("marks the open file", async () => {
 		await renderLibrary();
 		await openDetail(/cat\.png$/);
 		await waitFor(() =>
@@ -165,7 +165,7 @@ describe("미디어 라이브러리", () => {
 		expect(screen.getByRole("button", { name: /dog\.png$/ }).getAttribute("aria-current")).toBeNull();
 	});
 
-	it("불러오지 못하면 그 자리에 알리고 다시 시도할 수 있다", async () => {
+	it("when loading fails, says so in place and allows retry", async () => {
 		let fail = true;
 		const ok = fetchMock.getMockImplementation() as (input: string, init?: RequestInit) => Promise<unknown>;
 		fetchMock.mockImplementation(async (input: string, init?: RequestInit) =>
@@ -178,7 +178,7 @@ describe("미디어 라이브러리", () => {
 				<MediaLibrary />
 			</AdminQueryProvider>,
 		);
-		// 목록 요청은 한 번 다시 시도한 뒤 실패로 본다.
+		// The list request is retried once before it is treated as a failure.
 		const alert = await screen.findByRole("alert", undefined, { timeout: 3000 });
 		expect(alert.textContent).toContain("서버 오류");
 		expect(toast.error).not.toHaveBeenCalled();
@@ -187,14 +187,14 @@ describe("미디어 라이브러리", () => {
 		expect(await screen.findByRole("button", { name: /cat\.png$/ })).toBeTruthy();
 	});
 
-	it("파일은 기본 설명 칸 없이 크기를 보인다", async () => {
+	it("a file shows its size without a default description field", async () => {
 		await renderLibrary();
 		const detail = await openDetail(/guide\.pdf$/);
 		expect(within(detail).queryByRole("textbox", { name: t("detail.defaultAlt") })).toBeNull();
 		expect(within(detail).getByText(/1\.4 ?MB|1\.5 ?MB/)).toBeTruthy();
 	});
 
-	it("쓰이지 않는 파일은 확인을 받고 지운다", async () => {
+	it("an unused file is deleted after confirmation", async () => {
 		await renderLibrary();
 		const detail = await openDetail(/dog\.png$/);
 		fireEvent.click(within(detail).getByRole("button", { name: t("common.delete") }));
@@ -205,7 +205,7 @@ describe("미디어 라이브러리", () => {
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("library.deleted", { name: "dog.png" })));
 	});
 
-	it("오른쪽 클릭 메뉴에 열기·사용처·삭제가 있다", async () => {
+	it("the right-click menu has open, usages and delete", async () => {
 		await renderLibrary();
 		await act(async () => {
 			fireEvent.contextMenu(screen.getByRole("button", { name: /cat\.png$/ }));
@@ -214,7 +214,7 @@ describe("미디어 라이브러리", () => {
 		expect(items).toEqual([t("common.open"), t("library.menu.usage"), `${t("common.delete")}Del`]);
 	});
 
-	it("목록 보기로 바꾸면 이름·형식·크기·치수·사용·올린 날짜를 표로 보이고, 줄을 누르면 상세가 열린다", async () => {
+	it("switching to list view shows name, type, size, dimensions, usage and upload date in a table, and clicking a row opens the detail", async () => {
 		await renderLibrary();
 		fireEvent.click(screen.getByRole("button", { name: t("library.viewList") }));
 
@@ -242,7 +242,7 @@ describe("미디어 라이브러리", () => {
 		expect(within(detail).getByRole("heading", { name: "dog.png" })).toBeTruthy();
 	});
 
-	it("고른 보기를 이 브라우저에 기억한다", async () => {
+	it("remembers the chosen view in this browser", async () => {
 		await renderLibrary();
 		fireEvent.click(screen.getByRole("button", { name: t("library.viewList") }));
 		await screen.findByRole("table", { name: t("views.table") });

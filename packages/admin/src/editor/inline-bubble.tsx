@@ -51,7 +51,7 @@ import { ToolbarButton } from "./toolbar-button";
 
 const t = createTranslator(editorMessages);
 
-/** 코드 안 글자 툴팁 폼 문구. */
+/** Text for the tooltip form on text inside code. */
 const CODE_TOOLTIP_LABELS: MarkTextLabels = {
 	name: t("inlineBubble.tooltipName"),
 	field: t("inlineBubble.tooltipField"),
@@ -64,8 +64,8 @@ type Panel =
 	| { kind: "extension"; panel: EditorBubblePanel };
 
 /**
- * 등록된 글자 꾸밈 확장과 그 편집기 마크 이름. `editor`를 주면 그 편집기 스키마에 있는 꾸밈만 돌려준다(사이트가 쓰지 않는
- * 블록의 등록은 무시한다).
+ * Registered text-style extensions and their editor mark names. Given an `editor`, returns only the styles in that editor's schema (registrations
+ * of blocks the site does not use are ignored).
  */
 export function useMarkExtensions(editor?: Editor | null): { name: string; extension: EditorMarkExtension }[] {
 	const { marks = {} } = useCmsAdminComponents();
@@ -78,7 +78,7 @@ export function useMarkExtensions(editor?: Editor | null): { name: string; exten
 const GAP = 8;
 const EDGE = 8;
 
-/** 버블의 버튼. 이름(aria-label)과 툴팁이 같다. `pressed`를 주면 켜고 끄는 버튼이다. 확장의 버블 버튼도 이것을 쓴다. */
+/** A bubble button. The name (aria-label) and tooltip are the same. With `pressed`, it is a toggle button. Extension bubble buttons use this too. */
 export function BubbleButton({
 	label,
 	onClick,
@@ -100,7 +100,7 @@ export function BubbleButton({
 			pressed={pressed}
 			destructive={destructive}
 			size="sm"
-			// 누를 때 편집기 선택·초점을 빼앗지 않는다.
+			// Do not steal the editor selection or focus on press.
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={onClick}
 			className={cn("h-8 min-w-8 px-1.5", className)}
@@ -110,7 +110,7 @@ export function BubbleButton({
 	);
 }
 
-/** 버블을 붙일 화면 영역. 설정이 있는 효과(링크·툴팁·확장 꾸밈)는 그 범위에, 나머지는 커서에 붙인다. */
+/** Screen area to attach the bubble to. Effects with settings (link, tooltip, extension styles) attach to their range, the rest to the cursor. */
 function anchorRange(target: InlineBubbleTarget, ranged: readonly string[]): { from: number; to: number } {
 	if (target.kind === "selection") return target;
 	const primary = target.marks[0];
@@ -121,18 +121,18 @@ function anchorRange(target: InlineBubbleTarget, ranged: readonly string[]): { f
 }
 
 /**
- * 본문 글자 위에 뜨는 인라인 효과 버블.
- * - 글자를 끌어 고르면: 굵게·기울임 등 효과와 툴팁·링크를 바로 적용하는 도구.
- * - 커서를 효과 안에 두면: 걸친 효과와 삭제 버튼, 링크 주소·툴팁 설명과 수정 버튼.
- * 링크·툴팁 수정은 버블 안에서 입력 폼으로 펼친다(상단 서식 도구까지 가지 않아도 된다).
- * 확장의 글자 꾸밈(`CmsAdminComponents.marks`)은 그 확장이 준 버튼·내용을 그린다.
+ * Inline effect bubble that floats above body text.
+ * - When text is selected by dragging: tools to apply effects like bold and italic, and tooltip and link, right away.
+ * - When the cursor is inside an effect: the spanning effects and a remove button, the link URL / tooltip text and an edit button.
+ * Link and tooltip editing expands into an input form inside the bubble (no need to go to the top formatting tools).
+ * For an extension's text styles (`CmsAdminComponents.marks`), it renders the buttons and content that extension provides.
  */
 export function InlineBubble({
 	editor,
 	actions = [],
 }: {
 	editor: Editor;
-	/** 선택 영역 메뉴 끝에 더할 동작(플러그인, 예: 문체 다듬기). */
+	/** Actions to add at the end of the selection menu (plugins, e.g. polishing writing style). */
 	actions?: readonly EditorSelectionAction[];
 }) {
 	const markExtensions = useMarkExtensions(editor);
@@ -143,7 +143,7 @@ export function InlineBubble({
 		selector: ({ editor: current }) => {
 			if (!current?.isEditable) return null;
 			const target = inlineBubbleTarget(current.state, detailed);
-			// 선택 도구의 눌림 표시가 효과를 적용한 뒤에도 맞도록 적용 상태를 함께 본다.
+			// Also watch the applied state so the pressed indicator of selection tools stays correct after an effect is applied.
 			const active =
 				target?.kind === "selection"
 					? [
@@ -154,13 +154,13 @@ export function InlineBubble({
 							...markExtensions.map(({ name }) => name),
 						].filter((mark) => current.isActive(mark))
 					: [];
-			// 글자 접기의 열림 상태(코드 블록)도 버블에 보인다.
+			// The open state of text folding (code block) is shown in the bubble too.
 			const folds = codeEffectsKey.getState(current.state)?.version ?? 0;
 			return { target, focused: current.isFocused, active, folds };
 		},
 	});
 	const [panel, setPanel] = useState<Panel | null>(null);
-	// 누른 채 끄는 동안(글자 선택 중)과 글자를 입력하는 동안에는 숨긴다.
+	// Hide while dragging with the button held (selecting text) and while typing.
 	const [pointerDown, setPointerDown] = useState(false);
 	const [typing, setTyping] = useState(false);
 	const bubbleRef = useRef<HTMLDivElement>(null);
@@ -192,7 +192,7 @@ export function InlineBubble({
 		};
 	}, [editor]);
 
-	// 입력 폼을 연 채 버블 바깥을 누르면 폼을 닫는다(팝오버와 같게).
+	// Pressing outside the bubble with the input form open closes the form (same as popovers).
 	useEffect(() => {
 		if (!panel) return;
 		const onDown = (event: MouseEvent) => {
@@ -207,7 +207,7 @@ export function InlineBubble({
 		if (!target && panel) setPanel(null);
 	}, [target, panel]);
 
-	// 스크롤·창 크기 변경에도 글자를 따라간다(버블은 화면 고정 위치로 띄운다).
+	// Follow the text on scroll and window resize (the bubble floats at a fixed screen position).
 	useEffect(() => {
 		if (!visible) return;
 		const update = () => setScrollTick((tick) => tick + 1);
@@ -235,7 +235,7 @@ export function InlineBubble({
 		const bubble = bubbleRef.current;
 		const height = bubble?.offsetHeight ?? 36;
 		const width = bubble?.offsetWidth ?? 0;
-		// 위쪽 서식 도구(sticky)에 가리지 않게 한다. 위에 자리가 없으면 글자 아래에 띄운다.
+		// Keep it from being covered by the top (sticky) formatting tools. If there is no room above, float it below the text.
 		const formatBar = editor.view.dom
 			.closest("[data-cms-editor-shell]")
 			?.querySelector(`[role="toolbar"][aria-label="${t("toolbar.format")}"]`);
@@ -253,7 +253,7 @@ export function InlineBubble({
 
 	if (!visible || !target || typeof window === "undefined") return null;
 
-	// 버블에서 효과를 지우면 문서가 바뀌지만 입력이 아니므로 버블을 계속 보인다.
+	// Removing an effect from the bubble changes the document but is not typing, so keep the bubble visible.
 	const act = (action: () => void) => () => {
 		action();
 		setTyping(false);
@@ -276,7 +276,7 @@ export function InlineBubble({
 						initial: String(editor.getAttributes(CODE_TOOLTIP_MARK_NAME).content ?? ""),
 					},
 		);
-	// 확장의 버튼·내용이 받는 값.
+	// Values received by the extension's buttons and content.
 	const inCode = !!editor.state.selection.$from.parent.type.spec.code;
 	const bubbleProps: EditorBubbleProps = {
 		editor,
@@ -297,7 +297,7 @@ export function InlineBubble({
 						target="_blank"
 						rel="noreferrer noopener"
 						title={href}
-						// 누를 때 편집기 초점을 빼앗으면 버블이 먼저 사라져 링크가 열리지 않는다.
+						// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 						onMouseDown={(event) => event.preventDefault()}
 						className="max-w-56 truncate px-1 text-cms-primary text-xs underline underline-offset-2"
 					>
@@ -401,7 +401,7 @@ export function InlineBubble({
 		);
 	};
 
-	/** 정규식 규칙이 찾은 곳. 규칙이라 이 곳만 지울 수 없다 — 규칙째 지우거나, 개별 효과로 풀어 하나씩 지운다. */
+	/** Spot found by a regex rule. Being a rule, only this spot cannot be cleared — clear the whole rule, or resolve it into individual effects and clear one by one. */
 	const renderRule = ({ rule, blockPos, from, to, count }: ActiveCodeRule) => {
 		const label = charEffectByName(rule.name)?.label ?? rule.name;
 		const region = { key: `m:${from}`, kind: "fold" as const, from, to, defaultOpen: true, hiddenLines: 0 };
@@ -457,7 +457,7 @@ export function InlineBubble({
 		));
 	};
 
-	// 코드 블록에서는 그 블록이 받는 효과(굵게·기울임·취소선·밑줄·툴팁)와 글자 접기만 보인다. 확장의 버튼은 스스로 가린다.
+	// In a code block, only the effects it accepts (bold, italic, strikethrough, underline, tooltip) and text folding are shown. Extension buttons hide themselves.
 	const bubbleTools = (group: "format" | "link") =>
 		markExtensions
 			.flatMap(({ name, extension }) => (extension.bubble?.group === group ? [{ name, bubble: extension.bubble }] : []))

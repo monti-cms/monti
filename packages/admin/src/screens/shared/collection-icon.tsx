@@ -36,9 +36,9 @@ import { useCallback } from "react";
 import { useCmsAdminComponents } from "../../admin-components";
 
 /**
- * 컬렉션 정의의 `icon`·플러그인 사이드바 항목의 `icon`·블록 정의의 `editor.icon`·코드 줄 효과의 `icon`(lucide 이름)으로
- * 고를 수 있는 본체 아이콘. 모든 아이콘을 싣지 않도록 자주 쓰는 것만 둔다. 다른 이름은 플러그인·사이트가
- * `CmsAdminComponentsProvider`의 `icons`로 등록한다. 컬렉션은 없는 이름이면 발행형은 문서, 분류용은 태그 아이콘을 쓴다.
+ * Built-in icons selectable by a collection definition's `icon`, a plugin sidebar item's `icon`, a block definition's `editor.icon`, or a code-line effect's `icon` (lucide name).
+ * Only frequently used ones are included so not every icon is bundled. For other names, plugins/the site
+ * register them through `icons` of `CmsAdminComponentsProvider`. For an unknown collection icon name, publishable collections use a document icon and taxonomy collections a tag icon.
  */
 const ICONS: Readonly<Record<string, LucideIcon>> = {
 	bookmark: Bookmark,
@@ -74,8 +74,8 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
 export const COLLECTION_ICON_NAMES = Object.keys(ICONS);
 
 /**
- * 이름으로 아이콘을 고르는 함수. 등록한 아이콘(`CmsAdminComponents.icons`)을 먼저 보고, 없으면 본체 아이콘이다.
- * 모르는 이름이면 `undefined`다.
+ * Function that picks an icon by name. Looks at registered icons (`CmsAdminComponents.icons`) first, then the built-in icons.
+ * `undefined` for an unknown name.
  */
 export function useIconByName(): (name: string | undefined) => LucideIcon | undefined {
 	const { icons } = useCmsAdminComponents();
@@ -89,7 +89,7 @@ export function CollectionIcon({ collection }: { collection: string }) {
 	return <Icon />;
 }
 
-/** 이름으로 고른 아이콘. 모르는 이름이면 플러그 아이콘이다. */
+/** Icon picked by name. For an unknown name, the plug icon. */
 export function NamedIcon({ name }: { name?: string }) {
 	const Icon = useIconByName()(name) ?? Plug;
 	return <Icon />;

@@ -1,5 +1,5 @@
 /**
- * Next 앱에 관리자 화면을 붙이는 진입점(서버 컴포넌트).
+ * Entry point that attaches the admin UI to a Next app (server component).
  *
  * ```tsx
  * // app/(admin)/admin/layout.tsx

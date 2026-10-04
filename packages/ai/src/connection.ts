@@ -1,19 +1,19 @@
 import { z } from "zod";
 
 /**
- * AI 서비스 연결(v2 D). 관리자 AI 화면 `연결` 탭에서 여러 개를 저장하고, 기능마다 어느 연결의 어느 모델을 쓸지 고른다.
+ * AI service connections. Several are saved in the admin AI screen's Connections tab, and each action picks which connection's which model to use.
  *
- * - 생성(`chat`): OpenAI와 같은 방식의 주소(`…/v1`). OpenRouter·OpenCode Go·Gemini·xAI 등.
- * - 판단(`decisions`): 선택지마다 확률을 매기는 System One 모델(예: Jev). TypeSafe `…/v1/systemone`,
- *   OpenRouter `…/api/alpha/decisions` 같은 주소다. 둘 다 `state`·`model`·`questions` → `answers` 모양이다.
+ * - Generation (`chat`): an OpenAI-compatible address (`…/v1`). OpenRouter, OpenCode Go, Gemini, xAI, etc.
+ * - Decisions (`decisions`): a System One model that assigns a probability to each choice (e.g. Jev). Addresses like TypeSafe `…/v1/systemone`,
+ *   OpenRouter `…/api/alpha/decisions`. Both use the `state`, `model`, `questions` -> `answers` shape.
  *
- * 키는 서버에서 암호화해 저장하고 화면에는 끝 네 글자만 보여 준다. 이 파일은 서버·브라우저가 함께 쓴다.
+ * Keys are encrypted and stored on the server, and only the last four characters are shown on screen. Both server and browser use this file.
  */
 
 export const AI_PROVIDER_KINDS = ["chat", "decisions"] as const;
 export type AiProviderKind = (typeof AI_PROVIDER_KINDS)[number];
 
-/** 종류별 주소·모델 예시(입력 칸의 흐린 글자). */
+/** Per-kind address and model examples (placeholder text of the input fields). */
 export const PROVIDER_EXAMPLES: Record<AiProviderKind, { url: string; model: string }> = {
 	chat: { url: "https://openrouter.ai/api/v1", model: "google/gemini-2.5-flash" },
 	decisions: { url: "https://api.typesafe.ai/v1/systemone", model: "jev-latest" },
@@ -25,21 +25,21 @@ export const aiProviderInputSchema = z.object({
 	name: z.string().trim().min(1).max(60),
 	kind: z.enum(AI_PROVIDER_KINDS),
 	url,
-	/** 빠지면 저장된 키를 그대로 두고, `null`이면 지운다. */
+	/** If omitted, the stored key is kept as is; `null` deletes it. */
 	apiKey: z.string().trim().min(1).max(1000).nullable().optional(),
-	/** 기능이 모델을 정하지 않았을 때 쓰는 모델. */
+	/** The model used when the action does not choose one. */
 	defaultModel: z.string().trim().max(200),
 });
 
 export type AiProviderInput = z.output<typeof aiProviderInputSchema>;
 
-/** 연결 추가·수정 요청. 설정 전체의 버전으로 충돌을 막는다(처음이면 0). */
+/** Request to add or edit a connection. Conflicts are prevented by the version of the whole config (0 for the first time). */
 export const aiProviderRequestSchema = z.object({
 	expectedVersion: z.number().int().min(0),
 	provider: aiProviderInputSchema,
 });
 
-/** 화면에 보내는 연결. 키 대신 끝 네 글자만 있다. */
+/** A connection sent to the screen. Has only the last four characters instead of the key. */
 export interface AiProviderView {
 	id: string;
 	name: string;
@@ -47,28 +47,28 @@ export interface AiProviderView {
 	url: string;
 	keyHint: string | null;
 	defaultModel: string;
-	/** 주소·키·기본 모델이 모두 있어 쓸 수 있는가. */
+	/** Is it usable, i.e. address, key and default model are all present? */
 	ready: boolean;
 }
 
 export interface AiSettingsView {
 	version: number;
 	providers: AiProviderView[];
-	/** 개발용 가짜 연결을 쓰는 중(`CMS_AI_FAKE=1`). 설정과 상관없이 모든 기능이 동작한다. */
+	/** Using the fake development connection (`CMS_AI_FAKE=1`). All actions work regardless of the config. */
 	fake: boolean;
 }
 
-/** 저장 전 연결 확인. `providerId`가 있으면 키를 새로 넣지 않았을 때 그 연결의 키를 쓴다. */
+/** Connection check before saving. If `providerId` is given, that connection's key is used when no new key is entered. */
 export const aiProviderCheckSchema = z.object({
 	providerId: z.string().max(60).optional(),
-	/** 이름은 확인에 쓰지 않으므로 비어도 된다. */
+	/** The name is not used for the check, so it may be empty. */
 	provider: aiProviderInputSchema.extend({ name: z.string().max(60) }),
 });
 
 export const aiModelsQuerySchema = z.object({
-	/** 저장한 연결의 목록. 주소·키는 서버가 채운다. */
+	/** List of saved connections. The server fills in the address and key. */
 	providerId: z.string().max(60).optional(),
-	/** 저장하기 전 주소로 목록을 받을 때. */
+	/** When fetching the list with an address that is not yet saved. */
 	url: url.optional(),
 	apiKey: z.string().trim().min(1).max(1000).optional(),
 });

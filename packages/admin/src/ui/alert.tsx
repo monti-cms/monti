@@ -4,8 +4,8 @@ import type * as React from "react";
 import { cn } from "../lib/utils";
 
 /**
- * 관리자 화면 알림 상자. `default`는 안내, `danger`는 불러오기 실패 같은 오류다.
- * 본문 블록(콜아웃 등)의 모양은 각 블록이 따로 정한다.
+ * Alert box for the admin UI. `default` is for notices, `danger` for errors such as a load failure.
+ * The look of body blocks (callouts, etc.) is decided by each block separately.
  */
 export const alertVariants = cva(
 	[

@@ -1,23 +1,23 @@
 import type { CSSProperties } from "react";
 
 /**
- * 이미지 자르기(crop) 및 회전(rotate) 순수 함수(c-editor.md §1.1).
+ * Pure functions for image crop and rotate.
  *
- * - 원본 파일은 그대로 두고 `::image`에 표시 속성 `crop="x,y,w,h"`과 `rotate="90|180|270"`을 쓴다.
- * - crop: 원본 기준 백분율(0~100, 소수 둘째 자리까지). 없거나 전체(0,0,100,100)는 회전 없음/전체.
- * - rotate: 시계 방향(90 | 180 | 270). 없거나 0은 회전 없음.
- * - 사이트의 공개 이미지 렌더러와 관리자 편집기의 이미지 블록이
- *   같은 함수를 사용해 CSS 스타일을 계산한다. 잘못된 값은 무시(너비 규칙과 동일).
+ * - The original file is left as is; the display attributes `crop="x,y,w,h"` and `rotate="90|180|270"` are written on `::image`.
+ * - crop: percentages of the original (0 to 100, up to 2 decimal places). Missing or full (0,0,100,100) means no crop/full image.
+ * - rotate: clockwise (90 | 180 | 270). Missing or 0 means no rotation.
+ * - The site's public image renderer and the admin editor's image block
+ *   use the same functions to compute CSS styles. Invalid values are ignored (same as the width rule).
  */
 
 export interface CropBox {
-	/** 좌측 시작 위치 (0~100 %) */
+	/** Left start position (0 to 100 %) */
 	x: number;
-	/** 상단 시작 위치 (0~100 %) */
+	/** Top start position (0 to 100 %) */
 	y: number;
-	/** 자르기 영역 너비 (0~100 %) */
+	/** Crop area width (0 to 100 %) */
 	width: number;
-	/** 자르기 영역 높이 (0~100 %) */
+	/** Crop area height (0 to 100 %) */
 	height: number;
 }
 
@@ -30,7 +30,7 @@ const CROP_REGEX =
 	/^\s*(\d+(?:\.\d{1,2})?)\s*,\s*(\d+(?:\.\d{1,2})?)\s*,\s*(\d+(?:\.\d{1,2})?)\s*,\s*(\d+(?:\.\d{1,2})?)\s*$/;
 const ROTATE_REGEX = /^(?:0|90|180|270)$/;
 
-/** 모서리를 기준으로 반올림해 `x + width`, `y + height`가 100%를 넘지 않게 한다. */
+/** Rounds by the edges so that `x + width` and `y + height` do not exceed 100%. */
 export function roundCropBox(box: CropBox): CropBox {
 	const x = round2(box.x);
 	const y = round2(box.y);
@@ -42,7 +42,7 @@ export function roundCropBox(box: CropBox): CropBox {
 	};
 }
 
-/** `crop="x,y,w,h"` 문자열을 파싱한다. 잘못된 형식이면 null을 반환한다. */
+/** Parses a `crop="x,y,w,h"` string. Returns null for an invalid format. */
 export function parseCrop(value: unknown): CropBox | null {
 	if (typeof value !== "string") return null;
 	const match = CROP_REGEX.exec(value);
@@ -61,7 +61,7 @@ export function parseCrop(value: unknown): CropBox | null {
 	const width = round2(rawWidth);
 	const height = round2(rawHeight);
 
-	// 범위 및 반올림 후 유효성 검증:
+	// Validate after range check and rounding:
 	// 0 <= x < 100, 0 <= y < 100, 0 < w <= 100, 0 < h <= 100, x + w <= 100, y + h <= 100
 	if (x < 0 || x >= 100 || y < 0 || y >= 100) return null;
 	if (width <= 0 || width > 100 || height <= 0 || height > 100) return null;
@@ -75,7 +75,7 @@ export function parseCrop(value: unknown): CropBox | null {
 	};
 }
 
-/** `rotate="90|180|270"` 문자열 또는 숫자를 파싱한다. 0이나 잘못된 값이면 null을 반환한다. */
+/** Parses a `rotate="90|180|270"` string or number. Returns null for 0 or invalid values. */
 export function parseRotate(value: unknown): RotateDegree | null {
 	if (value === null || value === undefined || value === "") return null;
 	const str = typeof value === "number" ? String(value) : typeof value === "string" ? value.trim() : "";
@@ -85,24 +85,24 @@ export function parseRotate(value: unknown): RotateDegree | null {
 	return null;
 }
 
-/** CropBox를 `crop="x,y,w,h"` 문자열로 직렬화한다 (소수 둘째 자리). */
+/** Serializes a CropBox into a `crop="x,y,w,h"` string (2 decimal places). */
 export function formatCrop(crop: CropBox): string {
 	return `${round2(crop.x)},${round2(crop.y)},${round2(crop.width)},${round2(crop.height)}`;
 }
 
-/** 전체 이미지(자르기 없음)인지 확인한다. */
+/** Checks whether it is the full image (no crop). */
 export function isFullCrop(crop: CropBox | null): boolean {
 	if (!crop) return true;
 	return crop.x === 0 && crop.y === 0 && crop.width === 100 && crop.height === 100;
 }
 
-/** 유효한 자르기 속성값인지 확인한다. */
+/** Checks whether it is a valid crop attribute value. */
 export function isValidCrop(value: unknown): boolean {
 	if (value === null || value === undefined || value === "") return true;
 	return parseCrop(value) !== null;
 }
 
-/** 유효한 회전 속성값인지 확인한다. 0·빈값·90·180·270만 유효하다. */
+/** Checks whether it is a valid rotate attribute value. Only 0, empty, 90, 180 and 270 are valid. */
 export function isValidRotate(value: unknown): boolean {
 	if (value === null || value === undefined || value === "" || value === "0" || value === 0) return true;
 	return parseRotate(value) !== null;
@@ -119,16 +119,16 @@ export interface ImageTransformStyles {
 export interface ImageTransformOptions {
 	crop?: string | null;
 	rotate?: string | number | null;
-	/** 원본 이미지의 가로세로 비율 (naturalWidth / naturalHeight). 알 수 없으면 1로 가정. */
+	/** Aspect ratio of the original image (naturalWidth / naturalHeight). Assumed to be 1 if unknown. */
 	aspectRatio?: number | null;
 }
 
 /**
- * 자르기·회전 CSS 스타일을 계산한다.
+ * Computes the crop and rotate CSS styles.
  *
- * - crop: wrapper `overflow: hidden` + `aspect-ratio` + img 확대·이동(CSS)
- * - rotate: `transform`으로 회전 (90도·270도는 가로세로 비율 교환)
- * - 잘못된 값은 무시(스타일 미적용).
+ * - crop: wrapper `overflow: hidden` + `aspect-ratio` + img scale and offset (CSS)
+ * - rotate: rotate with `transform` (for 90 and 270 degrees, width and height ratio are swapped)
+ * - Invalid values are ignored (no style applied).
  */
 export function computeImageTransform(options: ImageTransformOptions): ImageTransformStyles {
 	const rawCrop = parseCrop(options.crop);
@@ -150,14 +150,14 @@ export function computeImageTransform(options: ImageTransformOptions): ImageTran
 	const x = crop ? crop.x : 0;
 	const y = crop ? crop.y : 0;
 
-	// 원본 이미지 비율 (가로 / 세로). 주어지지 않으면 w / h를 비율로 쓴다.
+	// Original image ratio (width / height). If not given, w / h is used as the ratio.
 	const baseAspect = typeof options.aspectRatio === "number" && options.aspectRatio > 0 ? options.aspectRatio : 1;
 	const cropAspect = (w / h) * baseAspect;
 
 	const isRotated90or270 = rotate === 90 || rotate === 270;
 	const finalAspect = isRotated90or270 ? 1 / cropAspect : cropAspect;
 
-	// 자르기 영역 중심점의 원본 이미지 내 중심점(50%) 대비 편차
+	// Offset of the crop area's center from the original image's center (50%)
 	const dx = x + w / 2 - 50;
 	const dy = y + h / 2 - 50;
 
@@ -204,8 +204,8 @@ export function computeImageTransform(options: ImageTransformOptions): ImageTran
 }
 
 /**
- * 너비를 지정하지 않은 변환 이미지의 표시 너비(px). 변환이 없을 때처럼 **보이는 영역의 원본 크기**로 보인다.
- * 원본 크기를 아직 모르면 `null` — 호출자는 그동안 부모 폭을 쓴다(0으로 줄어드는 것을 막는다).
+ * Display width (px) of a transformed image with no width set. It looks the same as without the transform, using **the original size of the visible area**.
+ * If the original size is not known yet, `null` — the caller uses the parent width meanwhile (prevents shrinking to 0).
  */
 export function intrinsicDisplayWidth(
 	transform: Pick<ImageTransformStyles, "crop" | "rotate">,

@@ -1,9 +1,9 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 영어: 개수에 맞는 "1 line" / "3 lines". */
+/** English: count-aware "1 line" / "3 lines". */
 const lines = (count: unknown) => `${count} ${Number(count) === 1 ? "line" : "lines"}`;
 
-/** 코드 블록 편집 화면(머리 도구·줄 번호 칸·줄 메뉴·규칙 패널·잇기 줄·접기 단추)의 문구(M15). */
+/** UI messages for the code block editing view (header tools, line-number gutter, line menu, rules panel, link bar, fold button). */
 export const codeBlockMessages = defineMessages("cms-admin.editor-code-block", {
 	en: {
 		"view.language": "Code language",

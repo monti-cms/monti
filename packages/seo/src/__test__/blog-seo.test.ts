@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { AI_ACTIONS } from "../../../ai/src/registry";
 import { seoOf } from "..";
 
-/** 블로그 예시 설정(`seoFields({ keys })`): 저장된 필드 이름·값 모양이 SEO 확장 전과 같다. */
-describe("블로그 SEO 필드", () => {
-	it("필드 이름과 저장 형식이 예전과 같다(공유 이미지만 미디어 필드)", () => {
+/** Example blog config (`seoFields({ keys })`): stored field names and value shapes are the same as before the SEO extension. */
+describe("blog SEO fields", () => {
+	it("field names and storage format are the same as before (only the share image is a media field)", () => {
 		for (const collection of ["post", "memo"] as const) {
 			expect(COLLECTION_DEFINITIONS[collection].fields).toMatchObject({
 				seoTitle: "string",
@@ -22,7 +22,7 @@ describe("블로그 SEO 필드", () => {
 		}
 	});
 
-	it("검색 제목·설명 추천은 예전과 같은 이름·길이·컬렉션이다", () => {
+	it("search title and description suggestions have the same names, lengths and collections as before", () => {
 		expect(AI_ACTIONS.seoTitle).toMatchObject({
 			label: "검색 제목 추천",
 			checks: [{ kind: "maxLength", max: 60 }],
@@ -35,7 +35,7 @@ describe("블로그 SEO 필드", () => {
 		});
 	});
 
-	it("공개 화면 도우미가 블로그 필드를 역할로 읽는다", () => {
+	it("the public page helper reads the blog fields by role", () => {
 		expect(
 			seoOf(schemaOf("post"), { title: "글", summary: "요약", seoRobots: "noindex", canonicalUrl: "/posts/a" }),
 		).toEqual({ title: "글", description: "요약", canonical: "/posts/a", noindex: true });

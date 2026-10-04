@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createAllowedRenderTagsFromConfig, isSafeRenderTag } from "../render-policy";
 
 describe("render-policy", () => {
-	it("config에서 inline/line wrapper render tag를 수집한다", () => {
+	it("collects inline/line wrapper render tags from config", () => {
 		const tags = createAllowedRenderTagsFromConfig({
 			annotations: [
 				{ name: "Tooltip", kind: "render", source: "mdx-text", render: "Tooltip", scopes: ["char"] },
@@ -13,7 +13,7 @@ describe("render-policy", () => {
 		expect(tags).toEqual(["Tooltip", "Callout"]);
 	});
 
-	it("위험한 tag는 allowlist에서 제외한다", () => {
+	it("excludes dangerous tags from the allowlist", () => {
 		expect(isSafeRenderTag("script")).toBe(false);
 		expect(isSafeRenderTag("iframe")).toBe(false);
 		expect(isSafeRenderTag("Tooltip")).toBe(true);

@@ -12,7 +12,7 @@ const annotationConfig: AnnotationConfig = {
 };
 
 describe("inline absolute range", () => {
-	it("code fence 파싱 시 inline range를 코드 블록 절대 offset으로 저장한다", () => {
+	it("when parsing a code fence, stores the inline range as an absolute offset in the code block", () => {
 		const codeNode: Code = {
 			type: "code",
 			lang: "ts",
@@ -25,7 +25,7 @@ describe("inline absolute range", () => {
 		expect(annotation?.range).toEqual({ start: 7, end: 9 });
 	});
 
-	it("code fence 직렬화 시 inline 절대 offset을 line-local range 주석으로 변환한다", () => {
+	it("when serializing a code fence, converts the inline absolute offset to a line-local range comment", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},

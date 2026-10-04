@@ -5,10 +5,10 @@ import { cmsConfig } from "../../../config/resolved";
 import { type ContentStore, createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-/** 사이트 설정의 초기 본문 템플릿(`seed.templates`). 없는 설정이면 넣기 시험은 건너뛴다. */
+/** The site config's initial body templates (`seed.templates`). For a config without any, the seeding tests are skipped. */
 const SEEDED = cmsConfig.seed?.templates ?? [];
 
-describe("M5-BE-2 Body Templates Store Contract", () => {
+describe("Body Templates Store Contract", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
@@ -29,21 +29,21 @@ describe("M5-BE-2 Body Templates Store Contract", () => {
 		await closeGlobalPool();
 	});
 
-	// 하나를 지우고 남은 하나가 그대로인지 보려면 템플릿이 둘 이상 있어야 한다.
+	// To check that deleting one leaves the other intact, there must be at least two templates.
 	it.skipIf(SEEDED.length < 2)(
 		"1. seeds templates for both editor types without reviving deleted templates",
 		async () => {
 			const templates = await store.listTemplates();
 			expect(templates.length).toBeGreaterThanOrEqual(SEEDED.length);
 
-			// 설정의 템플릿이 이름·본문 그대로 들어간다.
+			// The config's templates are inserted with their name and body unchanged.
 			for (const seed of SEEDED) {
 				const found = templates.find((t) => t.name === seed.name);
-				if (!found) throw new Error(`${seed.name} 템플릿이 없습니다.`);
+				if (!found) throw new Error(`Template not found: ${seed.name}`);
 				expect(found.mdx).toBe(seed.mdx);
 			}
 			const [first, second] = SEEDED.map((seed) => templates.find((t) => t.name === seed.name));
-			if (!first || !second) throw new Error("시드 템플릿이 없습니다.");
+			if (!first || !second) throw new Error("Seed templates not found.");
 
 			// Delete one template
 			await store.deleteTemplate({ id: first.id, expectedVersion: first.version });
@@ -59,10 +59,10 @@ describe("M5-BE-2 Body Templates Store Contract", () => {
 	);
 
 	it.skipIf(SEEDED.length === 0)("seed preserves same-name user templates and never resurrects deletions", async () => {
-		// 1번 시험이 첫 템플릿을 지웠으므로 마지막 템플릿으로 본다.
+		// Test 1 deleted the first template, so use the last template.
 		const name = SEEDED[SEEDED.length - 1]?.name;
 		const seeded = (await store.listTemplates()).find((template) => template.name === name);
-		if (!seeded) throw new Error(`${name} 템플릿이 없습니다.`);
+		if (!seeded) throw new Error(`Template not found: ${name}`);
 
 		const userId = randomUUID();
 		await pool.query(`UPDATE "${schemaName}".body_templates SET id = $1, mdx = $2 WHERE id = $3`, [
@@ -70,7 +70,7 @@ describe("M5-BE-2 Body Templates Store Contract", () => {
 			"사용자가 수정한 본문",
 			seeded.id,
 		]);
-		// 시드 표시를 지워 다시 넣게 해도, 같은 이름의 사용자 템플릿을 덮어쓰지 않는다.
+		// Even if the seed marker is cleared so seeding runs again, a user template with the same name is not overwritten.
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = 'seed_initial_body_templates'`);
 		await migrateContentStore(pool, { schema: schemaName });
 

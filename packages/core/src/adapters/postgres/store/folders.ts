@@ -6,14 +6,14 @@ import { type FolderRow, mapFolderRow } from "./rows";
 import type { Folder } from "./types";
 
 const mapFolderError = (err: unknown) => {
-	// §3.3: 같은 부모 안의 중복 이름은 이름을 바꾸도록 안내한다.
+	// A duplicate name under the same parent asks the user to rename.
 	if (isUniqueViolation(err, "folders_sibling_name_idx")) {
 		return new CmsError("A folder with the same name already exists here", "folder_name_conflict");
 	}
 	return err;
 };
 
-/** §3.3 컬렉션별 가상 폴더. 글 주소·태그·카테고리와 무관한 관리자 전용 분류다. */
+/** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
 export function createFolderOps(ctx: StoreContext) {
 	const { pool, qSchema } = ctx;
 
@@ -54,7 +54,7 @@ export function createFolderOps(ctx: StoreContext) {
 				{ mapError: mapFolderError },
 			),
 
-		/** HTTP 계층은 항상 `expectedVersion`을 요구한다. 저장소는 주어졌을 때만 비교한다. */
+		/** The HTTP layer always requires `expectedVersion`. The store compares it only when given. */
 		updateFolder: async (params: {
 			id: string;
 			expectedVersion?: number;
@@ -85,7 +85,7 @@ export function createFolderOps(ctx: StoreContext) {
 
 					if (next.parent_id) {
 						await assertParent(client, next.parent_id, curr.collection);
-						// 순환 구조를 거부한다: 새 부모의 조상 중에 자기 자신이 있으면 안 된다.
+						// Reject cycles: the new parent's ancestors must not include the folder itself.
 						let ancestor: string | null = next.parent_id;
 						while (ancestor) {
 							if (ancestor === params.id) throw new CmsError("Cycle", "invalid_input");
@@ -110,8 +110,8 @@ export function createFolderOps(ctx: StoreContext) {
 			),
 
 		/**
-		 * 폴더 삭제(§3.3). 직접 속한 글과 자식 폴더를 부모로 옮긴다. 글은 삭제하지 않는다.
-		 * 옮긴 자식 폴더 이름이 부모에서 겹치면 먼저 이름을 바꾸도록 409로 거부한다.
+		 * Deletes a folder. Moves its direct entries and child folders up to the parent. Entries are not deleted.
+		 * If a moved child folder's name collides in the parent, rejects with 409 so the user renames first.
 		 */
 		deleteFolder: async (params: { id: string; expectedVersion?: number }): Promise<void> =>
 			withTransaction(
@@ -140,7 +140,7 @@ export function createFolderOps(ctx: StoreContext) {
 				{ mapError: mapFolderError },
 			),
 
-		/** 폴더 삭제 전 미리보기: 직접 속한 글 수와 자식 폴더(§3.3 "내용물을 미리 보여준 뒤"). */
+		/** Preview before folder deletion: the number of direct entries and child folders. */
 		getFolderContents: async (params: { id: string }): Promise<{ entryCount: number; childFolders: Folder[] }> => {
 			const [entries, children] = await Promise.all([
 				pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM "${qSchema}".entries WHERE folder_id = $1`, [

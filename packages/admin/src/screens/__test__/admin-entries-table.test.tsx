@@ -57,8 +57,8 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 	return props;
 }
 
-describe("admin entry list (v2 A1 Data Table)", () => {
-	it("uses the spec default columns per collection (§3.2)", () => {
+describe("admin entry list", () => {
+	it("uses the default columns per collection", () => {
 		expect(columnsFor("post").defaults).toEqual([
 			"title",
 			"status",
@@ -69,7 +69,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 			"publishedAt",
 		]);
 		expect(columnsFor("memo").defaults).toEqual(["title", "status", "locale", "tagIds", "updatedAt", "publishedAt"]);
-		// 분류 항목은 언어별 문서가 없지만 이름이 있는 언어를 보인다.
+		// Taxonomy items have no per-locale documents but show the locales that have a name.
 		expect(columnsFor("tag").defaults).toEqual(["title", "slug", "locale", "status", "updatedAt"]);
 		expect(columnsFor("memo").available).not.toContain("categoryId");
 		expect(columnsFor("tag").available).not.toContain("tagIds");
@@ -103,7 +103,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 			new URLSearchParams("collection=post&slug=react&relation=tagIds:t1&status=draft&changes=1"),
 		);
 		const labels = filterChips(state, options).map((chip) => chip.label);
-		// 주소(slug) 컬럼은 기본으로 숨겨져 있어도 칩으로 남는다.
+		// The slug column stays as a chip even when hidden by default.
 		expect(labels).toEqual(["상태: 초안, 수정 중", "태그: React", '주소: "react"']);
 	});
 
@@ -146,7 +146,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 				sizes: { tags: 240, tagIds: 230 },
 			},
 		});
-		// 예전 짧은 이름(`category`·`tags`)은 본체가 짐작해 바꾸지 않는다(블로그는 마이그레이션으로 옮긴다).
+		// Old short names (`category`, `tags`) are not guessed and renamed by the core (the reference blog setup moves them with a migration).
 		expect(screen.getByRole("columnheader", { name: /카테고리/ })).toBeTruthy();
 		const handle = screen.getByRole("separator", { name: "태그 열 너비 조절" });
 		expect(handle.getAttribute("aria-valuenow")).toBe("230");
@@ -220,7 +220,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 
-	it("분류 항목은 언어 열에 이름이 있는 언어를 보인다", () => {
+	it("a taxonomy item shows the locales that have a name in the locale column", () => {
 		const tag = item("tag-1", {
 			collection: "tag",
 			title: "리액트",
@@ -238,7 +238,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 		expect(within(row).getByText("일본어 없음")).toBeTruthy();
 	});
 
-	describe("행 끌기", () => {
+	describe("row drag", () => {
 		const dataTransfer = () => ({
 			setData: vi.fn(),
 			setDragImage: vi.fn(),
@@ -246,7 +246,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 			types: [] as string[],
 		});
 
-		it("한 줄을 끌면 그 줄의 제목만 담은 작은 끌기 이미지를 쓴다", () => {
+		it("dragging one row uses a small drag image holding only that row's title", () => {
 			renderTable();
 			const transfer = dataTransfer();
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });
@@ -257,7 +257,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 			expect(JSON.parse(transfer.setData.mock.calls[0]?.[1] as string)).toEqual([{ id: "draft", expectedVersion: 1 }]);
 		});
 
-		it("고른 줄을 끌면 항목 수를 보이고 고른 줄 전체를 옮긴다", () => {
+		it("dragging selected rows shows the item count and moves all selected rows", () => {
 			renderTable({ selectedIds: new Set(["published", "draft"]) });
 			const transfer = dataTransfer();
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });
@@ -267,7 +267,7 @@ describe("admin entry list (v2 A1 Data Table)", () => {
 			expect(JSON.parse(transfer.setData.mock.calls[0]?.[1] as string)).toHaveLength(2);
 		});
 
-		it("끌기 이미지는 끌기를 시작한 뒤 페이지에서 지운다", async () => {
+		it("the drag image is removed from the page after the drag starts", async () => {
 			renderTable();
 			const transfer = dataTransfer();
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });

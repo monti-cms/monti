@@ -7,11 +7,11 @@ import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-/** 마이그레이션 단계 기록·동시 실행 잠금·스키마 만들기·한 번만 하는 일(M13-3·4). */
-describe("마이그레이션", () => {
+/** Migration step records, the concurrent-run lock, schema creation, and run-once jobs. */
+describe("migrations", () => {
 	let pool: Pool;
 	let schemaName: string;
-	/** 테스트가 따로 만든 스키마(끝나고 지운다). */
+	/** Schemas created separately by the test (dropped afterward). */
 	const extraSchemas: string[] = [];
 
 	beforeAll(async () => {
@@ -31,18 +31,18 @@ describe("마이그레이션", () => {
 			(row) => row.name,
 		);
 
-	it("동시에 두 번 돌려도 하나씩 돌고, 모든 단계를 한 번씩 기록한다", async () => {
+	it("runs one at a time even when started twice concurrently, and records every step once", async () => {
 		await Promise.all([
 			migrateContentStore(pool, { schema: schemaName }),
 			migrateContentStore(pool, { schema: schemaName }),
 		]);
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
-		// 다시 돌려도 아무것도 하지 않는다.
+		// Running again does nothing.
 		await migrateContentStore(pool, { schema: schemaName });
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 	});
 
-	it("스키마가 없으면 만든다(`schema` 설정만 적고 monti migrate)", async () => {
+	it("creates the schema if missing (only set `schema` and run monti migrate)", async () => {
 		const schema = `cms_test_new_${randomBytes(3).toString("hex")}`;
 		extraSchemas.push(schema);
 		await migrateContentStore(pool, { schema });
@@ -53,7 +53,7 @@ describe("마이그레이션", () => {
 		expect(tables.rows).toHaveLength(1);
 	});
 
-	it("단계 기록이 없던 예전 저장소도 데이터를 그대로 두고 단계를 모두 기록한다", async () => {
+	it("leaves data intact and records every step even for a legacy store with no step record", async () => {
 		const store = createContentStore(pool, { schema: schemaName });
 		const entry = await seedEntry(store, {
 			collection: "x",
@@ -61,7 +61,7 @@ describe("마이그레이션", () => {
 			metadata: { title: "Kept" },
 			mdx: "본문",
 		});
-		// 단계 기록이 생기기 전 저장소: 일회성 기록(초기 템플릿)만 있다.
+		// A store from before step records existed: it has only the one-off record (initial templates).
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name <> 'seed_initial_body_templates'`);
 		await pool.query(`DELETE FROM "${schemaName}".body_templates`);
 
@@ -69,11 +69,11 @@ describe("마이그레이션", () => {
 
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 		expect((await store.getEntry(entry.id)).working.mdx).toBe("본문");
-		// 이미 넣었던 초기 템플릿은 지운 뒤에도 되살리지 않는다.
+		// Initial templates that were already inserted are not revived after being deleted.
 		expect((await pool.query(`SELECT 1 FROM "${schemaName}".body_templates`)).rows).toHaveLength(0);
 	});
 
-	it("플러그인의 한 번만 하는 일은 동시에 불러도 한 번만 돌고, 실패하면 기록하지 않는다", async () => {
+	it("runs a plugin's run-once job only once even when called concurrently, and records nothing on failure", async () => {
 		const db = pluginDatabaseFor(pool, schemaName);
 		let runs = 0;
 		const results = await Promise.all(

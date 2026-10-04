@@ -5,7 +5,7 @@ import { CmsFileNodeView } from "./file-node-view";
 export const FILE_NODE_NAME = "cmsFile";
 
 /**
- * 첨부 파일 카드(`::file{mediaId label}`, v3). 통째로 선택·이동·삭제하는 블록이고, 카드 안에서 보일 이름만 고친다.
+ * Attachment file card (`::file{mediaId label}`). A block that is selected, moved and deleted as a whole; only the name shown in the card is editable.
  */
 export const CmsFileNode = Node.create({
 	name: FILE_NODE_NAME,
@@ -21,7 +21,7 @@ export const CmsFileNode = Node.create({
 				parseHTML: (element) => element.getAttribute("data-media-id"),
 				renderHTML: (attributes) => (attributes.mediaId ? { "data-media-id": attributes.mediaId } : {}),
 			},
-			// 비우면 올린 파일 이름을 보인다.
+			// If empty, the uploaded file name is shown.
 			label: {
 				default: null,
 				parseHTML: (element) => element.getAttribute("data-label"),

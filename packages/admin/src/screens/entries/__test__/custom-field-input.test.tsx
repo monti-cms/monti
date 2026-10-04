@@ -7,7 +7,7 @@ import { SchemaFields } from "../schema-fields";
 
 afterEach(cleanup);
 
-/** 사이트가 등록하는 입력(예시). 받은 값을 버튼 하나로 바꾼다. */
+/** An input the site registers (example). Turns the received value into a single button. */
 function UpperInput({ id, value, onChange }: FieldInputProps) {
 	return (
 		<button type="button" id={id} onClick={() => onChange(String(value ?? "").toUpperCase())}>
@@ -16,8 +16,8 @@ function UpperInput({ id, value, onChange }: FieldInputProps) {
 	);
 }
 
-describe("사이트가 등록한 필드 입력", () => {
-	it("필드의 `input` 이름으로 등록한 입력이 내장 입력 대신 그려진다", () => {
+describe("site-registered field input", () => {
+	it("an input registered under the field's `input` name renders instead of the built-in input", () => {
 		const onChange = vi.fn();
 		render(
 			<CmsAdminComponentsProvider components={{ fieldInputs: { "seo-title": UpperInput } }}>
@@ -34,7 +34,7 @@ describe("사이트가 등록한 필드 입력", () => {
 		expect(onChange).toHaveBeenCalledWith({ seoTitle: "제목 ABC" });
 	});
 
-	it("여러 줄 텍스트 필드는 줄 수(`rows`)만큼의 여러 줄 입력이다", () => {
+	it("a multi-line text field is a multi-line input with `rows` rows", () => {
 		render(
 			<SchemaFields
 				collection="post"

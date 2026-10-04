@@ -8,8 +8,8 @@ afterEach(cleanup);
 
 const selected = (tab: HTMLElement | undefined) => tab?.getAttribute("aria-selected") === "true";
 
-describe("공개 화면 클라이언트 컴포넌트", () => {
-	it("탭은 클릭과 화살표·Home·End로 옮기고, 고른 탭의 본문만 보인다", () => {
+describe("public page client components", () => {
+	it("tabs switch with click and arrow/Home/End keys, and only the selected tab body is shown", () => {
 		render(
 			<TabsView
 				labels={["A", "B", "C"]}
@@ -28,19 +28,19 @@ describe("공개 화면 클라이언트 컴포넌트", () => {
 		fireEvent.keyDown(tabs[1] as HTMLElement, { key: "ArrowRight" });
 		expect(selected(tabs[2])).toBe(true);
 		expect(document.activeElement).toBe(tabs[2]);
-		// 끝에서 오른쪽은 처음으로 돈다.
+		// Right arrow at the end wraps to the start.
 		fireEvent.keyDown(tabs[2] as HTMLElement, { key: "ArrowRight" });
 		expect(selected(tabs[0])).toBe(true);
 		fireEvent.keyDown(tabs[0] as HTMLElement, { key: "End" });
 		expect(selected(tabs[2])).toBe(true);
 		fireEvent.keyDown(tabs[2] as HTMLElement, { key: "Home" });
 		expect(selected(tabs[0])).toBe(true);
-		// 탭 본문은 탭 이름이 이름이 된다.
+		// A tab panel is named after its tab label.
 		const panel = screen.getAllByRole("tabpanel", { hidden: true })[1];
 		expect(panel?.getAttribute("aria-labelledby")).toBe(tabs[1]?.id);
 	});
 
-	it("툴팁은 초점을 두면 열리고 Esc로 닫힌다", () => {
+	it("tooltip opens on focus and closes with Esc", () => {
 		render(<Tooltip content="뜻풀이">용어</Tooltip>);
 		const wrapper = screen.getByText("용어").closest(".cms-block-tooltip") as HTMLElement;
 		const trigger = screen.getByText("용어");
@@ -52,7 +52,7 @@ describe("공개 화면 클라이언트 컴포넌트", () => {
 		expect(document.getElementById(trigger.getAttribute("aria-describedby") ?? "")?.textContent).toBe("뜻풀이");
 	});
 
-	it("코드 연결은 글자에 초점을 두면 연결된 코드 줄을 강조하고 벗어나면 되돌린다", async () => {
+	it("code ref highlights the linked code line on focus and restores it on blur", async () => {
 		document.body.innerHTML = `<pre><code><span class="line" data-anchor="c1 c2">a</span><span class="line">b</span></code></pre><div id="root"></div>`;
 		const line = document.querySelector(".line") as HTMLElement;
 		const pre = document.querySelector("pre") as HTMLElement;
@@ -67,7 +67,7 @@ describe("공개 화면 클라이언트 컴포넌트", () => {
 		expect(pre.hasAttribute("data-code-focus")).toBe(false);
 	});
 
-	it("연결된 코드 줄이 없으면 연결 없는 글자로 보인다", async () => {
+	it("without a linked code line it appears as plain text", async () => {
 		document.body.innerHTML = '<div id="root"></div>';
 		render(<CodeRef to="없음">그냥 글자</CodeRef>, { container: document.getElementById("root") as HTMLElement });
 		await waitFor(() => expect(screen.queryByRole("button")).toBeNull());

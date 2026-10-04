@@ -31,11 +31,11 @@ export type AnnotationPayload = {
 };
 
 export type CodeHighlighterOptions = {
-	/** 불러올 언어. 기본은 `DEFAULT_CODE_LANGS`. */
+	/** Languages to load. Defaults to `DEFAULT_CODE_LANGS`. */
 	langs?: LanguageInput[];
-	/** 밝은·어두운 테마. 기본은 `DEFAULT_CODE_THEMES`(one-light·one-dark-pro). */
+	/** Light and dark themes. Defaults to `DEFAULT_CODE_THEMES` (one-light, one-dark-pro). */
 	themes?: { light: ThemeRegistrationAny; dark: ThemeRegistrationAny };
-	/** 언어 별칭. 기본은 `DEFAULT_CODE_LANG_ALIAS`. */
+	/** Language aliases. Defaults to `DEFAULT_CODE_LANG_ALIAS`. */
 	langAlias?: Record<string, string>;
 };
 
@@ -45,7 +45,7 @@ export type HighlightFn = CodeHighlighter["highlight"];
 
 const themeName = (theme: ThemeRegistrationAny) => (theme.name ?? "") as string;
 
-/** 옵션으로 언어·테마를 정해 코드 블록 강조기를 만든다. 옵션을 안 주면 블로그 기본값(one-light·one-dark-pro)이다. */
+/** Creates a code block highlighter with the languages and themes given by options. Without options, it uses the reference defaults (one-light, one-dark-pro). */
 export const createCodeHighlighter = async (options: CodeHighlighterOptions = {}) => {
 	const themes = options.themes ?? DEFAULT_CODE_THEMES;
 
@@ -86,5 +86,5 @@ export const langAlias = DEFAULT_CODE_LANG_ALIAS;
 
 const defaultHighlighter = await createCodeHighlighter();
 
-/** 기본 옵션 강조기. */
+/** Highlighter with default options. */
 export const highlight = defaultHighlighter.highlight;

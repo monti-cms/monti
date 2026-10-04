@@ -3,7 +3,7 @@ import { createTranslator } from "@monti-cms/core/client";
 import type { AiProviderKind } from "../connection";
 import type { AiCheckKind, AiEngine, AiResult, AiSlot } from "../definition";
 
-/** 관리자 AI 화면이 함께 쓰는 선택지 이름(자리·결과 모양·방식·검사·연결 종류). */
+/** Option names shared by the admin AI screen (slot, result shape, mode, check, connection kind). */
 export const labelMessages = defineMessages("cms-ai.admin.labels", {
 	en: {
 		"slot.field": "Field",
@@ -65,9 +65,9 @@ export const labelMessages = defineMessages("cms-ai.admin.labels", {
 
 const t = createTranslator(labelMessages);
 
-/** 자리 이름(`필드`, `본문 이미지`…). */
+/** Slot names (Field, Body image, ...). */
 export const slotLabel = (slot: AiSlot) => t(`slot.${slot}`);
-/** 필드 밖 자리의 대상 이름. 모르는 대상은 그대로 돌려준다. */
+/** Target name of a slot outside fields. An unknown target is returned as is. */
 export const slotTargetLabel = (slot: "image" | "codeRules" | "media", target: string) => {
 	const key = `target.${slot}.${target}`;
 	return key in labelMessages.messages.en ? t(key as Parameters<typeof t>[0]) : target;

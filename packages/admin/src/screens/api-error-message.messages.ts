@@ -1,6 +1,6 @@
 import { defineMessages, josa } from "@monti-cms/core";
 
-/** API 오류·발행 검사 문제의 안내 문구(M15). 키는 서버가 주는 코드다. */
+/** Guidance text for API errors and publish-check issues. Keys are the codes the server sends. */
 export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 	en: {
 		"issue.null_slug": "Enter an address (slug).",

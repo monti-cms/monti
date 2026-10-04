@@ -33,13 +33,13 @@ import * as r34 from "./v1/templates/[id]/route";
 import * as r33 from "./v1/templates/route";
 
 /**
- * 관리자 API(`/api/cms/v1/*`) 경로표. 앱은 catch-all 라우트 하나(`app/api/cms/[...path]/route.ts`)에서
- * `createCmsRouteHandler()`를 내보낸다. 경로 모양은 Next 라우트 폴더와 같다(`[id]`는 한 칸).
+ * Admin API (`/api/cms/v1/*`) route table. The app exports `createCmsRouteHandler()` from a single catch-all route
+ * (`app/api/cms/[...path]/route.ts`). Paths mirror the Next route folders (`[id]` is one segment).
  */
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 type RouteHandler = (request: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<Response>;
-/** 라우트 파일. 처리기의 매개변수 모양(`{ id }` 등)이 라우트마다 달라, 부를 때 `RouteHandler`로 본다. */
+/** Route file. Handler params (`{ id }` etc.) differ per route, so they are called as `RouteHandler`. */
 type RouteModule = Partial<Record<Method, unknown>>;
 
 const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule }> = [
@@ -64,7 +64,7 @@ const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule }> = [
 	{ pattern: "v1/media/[id]/complete", module: r28 },
 	{ pattern: "v1/meta", module: r29 },
 	{ pattern: "v1/preferences", module: r30 },
-	// 공개 JSON API(로그인 없이 공개본만). 서버 설정 `publicApi`가 없으면 404다.
+	// Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.
 	{ pattern: "v1/public/entries", module: rPublicEntries },
 	{ pattern: "v1/public/entries/[collection]/[slug]", module: rPublicEntry },
 	{ pattern: "v1/templates", module: r33 },
@@ -81,12 +81,12 @@ const compile = (
 		module: route.module,
 		guarded: guarded && !route.public,
 	}));
-// 본체 경로는 각 라우트가 `adminRoute`로 스스로 감싼다.
+// Core routes wrap themselves with `adminRoute`.
 const COMPILED = compile(ROUTES, false);
 let pluginCompiled: Promise<CompiledRoute[]> | undefined;
 const compiledPluginRoutes = () => {
-	// 플러그인 경로는 본체가 관리자 확인으로 감싼다(`public: true`만 뺀다). 빠뜨린 인증이 열린 경로가 되지 않게 한다.
-	// 본체·다른 플러그인과 주소가 겹치면 오류다(본체가 먼저 맞아 플러그인 경로가 조용히 가려지지 않게). 실패는 기억하지 않는다.
+	// The core wraps plugin routes with the admin check (only `public: true` is skipped), so a missing auth check never becomes an open route.
+	// A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
 	pluginCompiled ??= pluginRoutes()
 		.then((routes) => {
 			assertPluginRoutesFree(
@@ -102,7 +102,7 @@ const compiledPluginRoutes = () => {
 	return pluginCompiled;
 };
 
-/** 경로 조각과 맞는 라우트와 매개변수. 이름 있는 조각이 `[이름]` 조각보다 먼저 맞는다(표 순서). */
+/** The route and params matching the path segments. Named segments match before `[name]` segments (table order). */
 export function matchRoute(
 	path: readonly string[],
 	routes: readonly CompiledRoute[] = COMPILED,
@@ -123,15 +123,15 @@ export function matchRoute(
 	return null;
 }
 
-/** 등록된 관리자 API 경로(문서·테스트용). */
+/** Registered admin API paths (for docs and tests). */
 export const CMS_ROUTE_PATTERNS: readonly string[] = ROUTES.map((route) => route.pattern);
 
 const notFound = () => handleApiError(new HttpError(404, "not_found", "Unknown CMS API path"));
 
 /**
- * catch-all 라우트 처리기. `params.path`는 `/api/cms/` 뒤의 경로 조각이다(예: `["v1", "entries", "<id>"]`).
- * 없는 경로는 404, 경로는 있지만 그 메서드가 없으면 405다. `auth/*`는 로그인 연결의 경로가 기본(`/api/cms/auth`)일 때
- * 로그인 처리기로 넘긴다(로그인 라우트 파일이 따로 필요 없다).
+ * Catch-all route handler. `params.path` holds the path segments after `/api/cms/` (e.g. `["v1", "entries", "<id>"]`).
+ * Unknown paths return 404; a known path with an unsupported method returns 405. `auth/*` is forwarded to the auth handler
+ * when the auth base path is the default (`/api/cms/auth`), so no separate auth route file is needed.
  */
 export type CmsRouteHandler = (
 	request: NextRequest,
@@ -151,7 +151,7 @@ export function createCmsRouteHandler(): Record<Method, CmsRouteHandler> {
 				}
 				return auth.handlers[method](request);
 			}
-			// 본체 경로에 없으면 플러그인 경로표에서 찾는다.
+			// If not a core route, look in the plugin route table.
 			const matched = matchRoute(path) ?? matchRoute(path, await compiledPluginRoutes());
 			if (!matched) return notFound();
 			const handler = matched.module[method] as RouteHandler | undefined;

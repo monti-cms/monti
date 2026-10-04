@@ -6,7 +6,7 @@ export type CmsMdxPosition = {
 };
 
 /**
- * MDX 분석 오류 코드. 바뀌지 않는 값이라 화면이 코드로 문구를 고를 수 있다. `mdx_syntax`는 파서가 준 말을 `message`에 그대로 담는다.
+ * MDX analysis error code. The value never changes, so the screen can pick a message by code. For `mdx_syntax`, the parser's message is put into `message` as is.
  */
 export type CmsMdxErrorCode =
 	| "spread_attribute"
@@ -24,9 +24,9 @@ export type CmsMdxErrorCode =
 
 export type CmsMdxError = {
 	code: CmsMdxErrorCode;
-	/** 문구의 값 자리(`{name}` 등)를 채우는 값. */
+	/** Values that fill the placeholders (`{name}` etc.) of the message. */
 	params?: Record<string, string | number>;
-	/** 사이트 화면 언어(`admin.locale`)의 안내 문구. 코드와 값에서 `cms.mdx` 사전으로 만든다. */
+	/** Guidance message in the site's screen language (`admin.locale`). Built from the code and values with the `cms.mdx` dictionary. */
 	message: string;
 	position: CmsMdxPosition;
 };
@@ -64,13 +64,13 @@ export type CmsMdxAnalysis = {
 };
 
 /**
- * 본문에 쓰인 이미지 소스. **DB 의미가 없는 순수 사실이다** — `mediaId`가 실제 미디어 행을
- * 가리키는지, 그 행이 `ready`인지는 발행 전 검사가 판단한다.
+ * Image source used in the body. **Pure fact with no DB meaning** — whether `mediaId` actually points to
+ * a media row and whether that row is `ready` is decided by the pre-publish check.
  */
 export type CmsImageSource = {
-	/** 등록 미디어 참조. `src`와 배타적이다. */
+	/** Registered media reference. Mutually exclusive with `src`. */
 	readonly mediaId?: string;
-	/** 외부 주소. */
+	/** External address. */
 	readonly src?: string;
 	readonly position: CmsMdxPosition;
 };

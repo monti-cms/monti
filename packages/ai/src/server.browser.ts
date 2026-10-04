@@ -1,8 +1,8 @@
 import type { CmsServerPlugin } from "@monti-cms/core";
 
 /**
- * 브라우저 묶음의 `@monti-cms/ai/server`. 사이트 설정은 브라우저에서도 읽혀 서버 쪽을 불러오는 코드가 함께 묶이는데,
- * 서버 코드(AI SDK·DB)를 브라우저로 보내지 않도록 이 빈 진입점으로 바꾼다(package.json `exports`의 `browser` 조건).
+ * `@monti-cms/ai/server` for the browser bundle. The site config is also read in the browser, which would bundle the code that loads the server side;
+ * this empty entry point replaces it so server code (AI SDK, DB) is not sent to the browser (the `browser` condition of package.json `exports`).
  */
 const empty: CmsServerPlugin = {};
 

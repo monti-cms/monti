@@ -2,7 +2,7 @@ import type { PreparedSnapshot, Reference, WorkingCopy } from "../core/types";
 
 export * from "../core/types";
 
-/** 업무 서비스가 저장소에 요구하는 최소 계약. PostgreSQL 구현은 `ContentStore`다. */
+/** Minimum contract a business service requires from the store. The PostgreSQL implementation is `ContentStore`. */
 export interface StorePort<T = unknown> {
 	getWorkingReferences(params: { entryId: string }): Promise<Reference[]>;
 	getWorking(params: { entryId: string }): Promise<WorkingCopy>;

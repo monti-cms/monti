@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 입력 자리 동작(AI 등) 결과 칸의 문구(M15). */
+/** Messages for the result panel of input-slot actions (AI, etc.). */
 export const slotsMessages = defineMessages("cms-admin.slots", {
 	en: {
 		failed: "Couldn't run it.",

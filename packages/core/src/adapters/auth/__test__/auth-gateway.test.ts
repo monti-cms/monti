@@ -5,7 +5,7 @@ import { githubAuth } from "../github";
 
 const ADMIN_ID = "12345678";
 
-/** 세션만 바꿔 끼우는 로그인 연결. 관리자 판정은 실제 `isAllowedAdminId`를 쓴다. */
+/** Login connection that only swaps in the session. The admin check uses the real `isAllowedAdminId`. */
 function fakeAuth(session: Awaited<ReturnType<CmsAuth["session"]>>, overrides: Partial<CmsAuth> = {}): CmsAuth {
 	return {
 		handlers: { GET: vi.fn(), POST: vi.fn() },
@@ -27,7 +27,7 @@ async function expectAuthError(promise: Promise<unknown>, code: AuthError["code"
 	await promise.catch((err) => expect((err as AuthError).code).toBe(code));
 }
 
-describe("M2-BE-1 AuthGateway Contract", () => {
+describe("AuthGateway Contract", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 	});
@@ -67,7 +67,7 @@ describe("M2-BE-1 AuthGateway Contract", () => {
 		expect(isDevAuthBypassEnabled(false)).toBe(false);
 		expect(isDevAuthBypassEnabled(undefined)).toBe(false);
 
-		// production 에서는 켜져 있어도 무시 (fail-closed)
+		// Ignored in production even if switched on (fail-closed)
 		vi.stubEnv("NODE_ENV", "production");
 		expect(isDevAuthBypassEnabled(true)).toBe(false);
 	});

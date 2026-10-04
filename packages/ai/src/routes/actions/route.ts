@@ -3,7 +3,7 @@ import { createCustomAction, listActions } from "../../actions";
 import { usableActionKeys } from "../../settings";
 import { getAiStore } from "../../store";
 
-/** AI 기능 목록(정의 + 고친 값)과 지금 쓸 수 있는(연결이 준비된) 기능 이름. 자리는 켜진 기능 중 쓸 수 있는 것만 붙인다. */
+/** The AI action list (definition + edited values) and the names of actions usable now (connection ready). Slots only attach enabled actions that are usable. */
 export const GET = adminRoute(async () => {
 	const store = getAiStore();
 	const items = await listActions(store);
@@ -11,8 +11,8 @@ export const GET = adminRoute(async () => {
 });
 
 /**
- * 화면 기능을 만든다(D12·M8-5). 본문은 `{ base: { label, surface, result, engine? }, value?: 고친 값 }`이다.
- * 고친 값(연결·모델·지시문·검사 등)을 함께 주면 한 번에 저장한다.
+ * Creates a screen action. The body is `{ base: { label, surface, result, engine? }, value?: edited value }`.
+ * If edited values (connection, model, instructions, checks, etc.) are given too, they are saved at once.
  */
 export const POST = adminRoute(async ({ request }) => {
 	const body = (await readJsonBody(request)) as { base?: unknown; value?: unknown };

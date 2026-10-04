@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** AI 화면 `공통 문구` 탭의 문구(M15). */
+/** Texts of the AI screen's Shared texts tab. */
 export const sharedMessages = defineMessages("cms-ai.admin.shared", {
 	en: {
 		"error.load": "Couldn't load the shared texts.",

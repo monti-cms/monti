@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * 모든 패키지(`packages/*`)의 버전을 한 번에 바꾼다. 패키지는 늘 같은 버전으로 나간다.
+ * Changes the version of all packages (`packages/*`) at once. Packages are always released with the same version.
  *
  *   node scripts/version.mjs 0.1.0
  *
- * 바꾼 뒤 커밋하고 `v0.1.0` 태그를 올리면 배포 워크플로(`.github/workflows/release.yml`)가 배포 묶음을 만든다.
+ * After that, commit and push a `v0.1.0` tag; the release workflow (`.github/workflows/release.yml`) builds the release bundle.
  */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";

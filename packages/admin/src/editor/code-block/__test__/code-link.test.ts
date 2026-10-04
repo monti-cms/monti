@@ -21,7 +21,7 @@ const mount = (source = SOURCE) => {
 	return editor;
 };
 
-/** "함수가"의 문서 위치. */
+/** Document range of "함수가". */
 const wordRange = (instance: Editor, word = "함수가") => {
 	const from = 1 + instance.state.doc.child(0).textContent.indexOf(word);
 	return { from, to: from + word.length };
@@ -29,8 +29,8 @@ const wordRange = (instance: Editor, word = "함수가") => {
 const codePos = (instance: Editor) => instance.state.doc.child(0).nodeSize;
 const save = (instance: Editor) => tiptapToMdx(instance.getJSON()).trimEnd();
 
-describe("본문–코드 잇기(에디터)", () => {
-	it("본문을 먼저 고르고 줄 번호로 줄을 고른 뒤 연결하면, 본문 연결과 줄 이름표가 함께 생긴다", () => {
+describe("linking body text to code (editor)", () => {
+	it("pick body text first, then a line by its number, then link: the body link and line label are created together", () => {
 		const instance = mount();
 		const { from, to } = wordRange(instance);
 		startLinkFromText(instance.view, from, to);
@@ -54,7 +54,7 @@ describe("본문–코드 잇기(에디터)", () => {
 		);
 	});
 
-	it("코드 줄을 먼저 고르고 본문 글자를 고른 뒤 연결한다. 같은 줄이면 이름표를 다시 쓴다", () => {
+	it("pick a code line first, then body text, then link. For the same line, the label is reused", () => {
 		const instance = mount();
 		startLinkFromLines(instance.view, codePos(instance), 1, 2);
 		const first = wordRange(instance, "함수가");
@@ -71,7 +71,7 @@ describe("본문–코드 잇기(에디터)", () => {
 		expect(output.match(/@line anchor/g)).toHaveLength(1);
 	});
 
-	it("본문 글자가 없거나 줄을 고르지 않았으면 연결하지 않고, Esc·취소로 그만둔다", () => {
+	it("does not link if there is no body text or no line is picked, and Esc or cancel backs out", () => {
 		const instance = mount();
 		startLinkFromText(instance.view, ...(Object.values(wordRange(instance)) as [number, number]));
 		expect(commitLink(instance.view)).toBe(false);
@@ -85,7 +85,7 @@ describe("본문–코드 잇기(에디터)", () => {
 		expect(codeEffectsKey.getState(instance.state)?.linking).toBeNull();
 	});
 
-	it("연결을 끊으면 더는 가리키는 곳이 없는 줄 이름표도 지운다", () => {
+	it("unlinking also removes a line label that nothing points to anymore", () => {
 		const instance = mount();
 		const range = wordRange(instance);
 		startLinkFromText(instance.view, range.from, range.to);
@@ -98,7 +98,7 @@ describe("본문–코드 잇기(에디터)", () => {
 		expect(save(instance)).toBe(SOURCE);
 	});
 
-	it("연결된 줄이 없는 본문 연결은 빨간 물결 밑줄로 알린다", () => {
+	it("a body link with no linked line is flagged with a red wavy underline", () => {
 		const instance = mount('이 :code-ref[함수가]{to="c9"} 값을 돌려준다.');
 		const plugin = codeEffectsKey.get(instance.state);
 		const set = plugin?.props.decorations?.call(plugin, instance.state) as DecorationSet;

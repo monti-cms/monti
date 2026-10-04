@@ -21,7 +21,7 @@ type VisitNode =
 	| RootContent
 	| { type: string; position?: { start?: { line?: number; column?: number } }; [key: string]: unknown };
 
-/** 더한 블록의 자식 개수 규칙(예: 탭 2~8개). 렌더러 이름 → 규칙. */
+/** Child count rules for added blocks (e.g. 2 to 8 tabs). Renderer name → rule. */
 const CHILD_RULES = new Map(
 	childRules().map(({ block, childComponents }) => [
 		block.component,
@@ -55,7 +55,7 @@ type ErrorTarget = VisitNode | { position?: { start?: { line?: number; column?: 
 
 const t = createTranslator(mdxMessages);
 
-/** 문구가 있는 오류 코드(`mdx_syntax`는 파서가 준 말을 그대로 쓴다). */
+/** Error codes that have a message (`mdx_syntax` uses the message from the parser as is). */
 type MessageCode = Exclude<CmsMdxErrorCode, "mdx_syntax">;
 
 const pushError = (
@@ -88,10 +88,10 @@ const validateExpression = (errors: CmsMdxError[], estree: unknown, node: ErrorT
 	estreeToJson(expression);
 };
 
-/** JSX 이름 대조. 등록되지 않은 이름은 거부한다(무음 손실 방지, M8-TW-1). */
+/** JSX name check. Unregistered names are rejected (prevents silent loss). */
 const validateName = (errors: CmsMdxError[], node: VisitNode) => {
 	const name = "name" in node && typeof node.name === "string" ? node.name : "";
-	// fragment(`<>`)는 이름이 없어 대조할 수 없다 — 속성·표현식 검사는 그대로 적용한다.
+	// A fragment (`<>`) has no name, so it cannot be checked — attribute and expression checks still apply.
 	if (!name) return;
 	if (RETIRED_JSX_NAMES.has(name)) {
 		pushError(errors, "retired_jsx_element", node, { name });

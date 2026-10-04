@@ -19,7 +19,7 @@ import { colorMessages } from "./messages";
 
 const t = createTranslator(colorMessages);
 
-/** 편집기의 글자색 표시. 공개 화면과 같은 `.cms-color` 규칙(`styles.css`)이 테마에 맞는 색을 고른다. */
+/** Text color display in the editor. The same `.cms-color` rule (`styles.css`) as the public page picks the color for the theme. */
 export function colorMarkAttributes(attrs: MarkAttrs): Record<string, string> {
 	const { className, style, ...data } = textColorProps(cleanTextColor(attrs));
 	return {
@@ -58,7 +58,7 @@ function ColorMenuItems({ editor }: { editor: Editor }) {
 	);
 }
 
-/** 글자색 꾸밈의 편집기 등록. 색 뒤에 이어 친 글자는 색을 이어받지 않는다. */
+/** Editor registration of the text color mark. Text typed right after a colored run does not inherit the color. */
 export const colorMarkExtension: EditorMarkExtension = {
 	render: colorMarkAttributes,
 	toolbar: { group: "format", priority: 3, Button: TextColorMenu, MenuItems: ColorMenuItems },
@@ -67,7 +67,7 @@ export const colorMarkExtension: EditorMarkExtension = {
 
 const components: CmsAdminComponents = { marks: { [colorBlock.name]: colorMarkExtension } };
 
-/** 글자색 꾸밈의 편집기 표시·서식 도구·버블을 관리자 화면에 넣는다. */
+/** Registers the text color mark's editor display, format tool, and bubble in the admin UI. */
 export function ColorProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

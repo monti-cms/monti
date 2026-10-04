@@ -34,16 +34,16 @@ const MAX_COLUMNS = columnsDefinition.children.max;
 type Boundary = { index: number; left: number };
 
 /**
- * 공개 화면처럼 단을 나란히 놓고 각 단을 그 자리에서 고친다(넓은 화면은 grid, 좁은 화면은 위아래).
- * 자식 단은 contentDOM(`data-node-view-content-react`)의 직계 자식이라 거기에 grid를 건다.
- * 단 사이 경계를 끌어 너비 비율을 바꾸고, 도구 줄에서 똑같이 나누기로 되돌린다.
+ * Places columns side by side like the public page and edits each column in place (grid on wide screens, stacked on narrow ones).
+ * Child columns are direct children of the contentDOM (`data-node-view-content-react`), so the grid is applied there.
+ * Dragging the boundary between columns changes the width ratios, and the toolbar resets them to an equal split.
  */
 export function ColumnsNodeView(props: NodeViewProps) {
 	const { node, selected, editor, getPos } = props;
 	const values = valuesOf(node);
 	const count = node.childCount;
 	const saved = parseColumnWidths(values.widths, count);
-	// 끄는 동안만 쓰는 비율. 놓을 때 한 번에 저장한다(되돌리기 한 번).
+	// Ratios used only while dragging. Saved in one step on release (a single undo step).
 	const [draft, setDraft] = useState<number[] | null>(null);
 	const widths = draft ?? (saved ? toPercentWidths(saved, count) : null);
 	const [boundaries, setBoundaries] = useState<Boundary[]>([]);
@@ -56,7 +56,7 @@ export function ColumnsNodeView(props: NodeViewProps) {
 			":scope > [data-node-view-content] > [data-node-view-content-react]",
 		);
 
-	// 단 경계 위치를 잰다. 좁은 화면(위아래로 쌓임)에서는 경계 손잡이를 두지 않는다.
+	// Measures the column boundary positions. On narrow screens (stacked vertically) no boundary handles are placed.
 	useLayoutEffect(() => {
 		const wrapper = wrapperRef.current;
 		const content = holder();
@@ -97,7 +97,7 @@ export function ColumnsNodeView(props: NodeViewProps) {
 		);
 	};
 
-	/** 경계를 비율(%)만큼 옮긴다(키보드). 양옆 단은 최소 비율 아래로 줄지 않는다. */
+	/** Moves a boundary by a ratio (%) (keyboard). The columns on both sides never shrink below the minimum ratio. */
 	const nudge = (index: number, delta: number) => {
 		const start = widths ?? toPercentWidths(null, count);
 		const pair = (start[index] ?? 0) + (start[index + 1] ?? 0);
@@ -144,7 +144,7 @@ export function ColumnsNodeView(props: NodeViewProps) {
 		editor
 			.chain()
 			.insertContentAt(pos + node.nodeSize - 1, { type: blockNodeName(columnBlock), content: [{ type: "paragraph" }] })
-			// 단 수가 바뀌면 이전 비율은 맞지 않는다. 똑같이 나누기로 돌린다.
+			// When the column count changes, the previous ratios no longer fit. Reset to an equal split.
 			.command(({ tr }) => {
 				const current = tr.doc.nodeAt(pos);
 				if (current)
@@ -158,7 +158,7 @@ export function ColumnsNodeView(props: NodeViewProps) {
 	const removeColumn = () => {
 		const pos = getPos();
 		if (typeof pos !== "number" || count <= MIN_COLUMNS) return;
-		// 커서가 있는 단을 지운다. 단 밖이면 마지막 단을 지운다.
+		// Deletes the column with the cursor. If the cursor is outside the columns, deletes the last column.
 		const index = selectedIndex === -1 ? count - 1 : selectedIndex;
 		const from = childPos(node, pos, index);
 		const tr = editor.state.tr.delete(from, from + node.child(index).nodeSize);
@@ -176,8 +176,8 @@ export function ColumnsNodeView(props: NodeViewProps) {
 		>
 			<NodeViewContent
 				style={{ "--cms-columns": columnsGridTemplate(widths, count) } as CSSProperties}
-				// 위쪽 여백은 조작 도구 줄(-top-3.5)이 첫 줄 글자를 가리지 않게 둔다.
-				// Tailwind가 찾을 수 있게 클래스를 조립하지 않고 그대로 적는다.
+				// The top padding keeps the toolbar (-top-3.5) from covering the first line of text.
+				// Write the classes out literally instead of assembling them so Tailwind can find them.
 				className={cn(
 					"pt-3 [&>[data-node-view-content-react]]:flex [&>[data-node-view-content-react]]:flex-col [&>[data-node-view-content-react]]:gap-4",
 					"md:[&>[data-node-view-content-react]]:grid md:[&>[data-node-view-content-react]]:items-start md:[&>[data-node-view-content-react]]:gap-6 md:[&>[data-node-view-content-react]]:[grid-template-columns:var(--cms-columns)]",
@@ -186,8 +186,8 @@ export function ColumnsNodeView(props: NodeViewProps) {
 			/>
 			{editable
 				? boundaries.map((boundary) => (
-						// 경계선은 보여 주기만 한다. 끄는 손잡이는 단 위쪽 여백(pt-3)에 둔다 — 단 사이 틈에는
-						// 둘째 단부터 블록 핸들(⋮⋮)이 떠서, 경계 전체를 손잡이로 두면 블록 핸들과 겹친다.
+						// The boundary line is display only. The drag handle sits in the column's top padding (pt-3) — in the gap between columns,
+						// the block handle (⋮⋮) appears from the second column on, so using the whole boundary as a handle would overlap the block handle.
 						<div
 							key={boundary.index}
 							contentEditable={false}
@@ -246,7 +246,7 @@ export function ColumnsNodeView(props: NodeViewProps) {
 	);
 }
 
-/** 단 하나. 경계는 마우스를 올리거나 커서가 있을 때만 점선으로 보인다. */
+/** One column. The boundary shows as a dotted line only on hover or when the cursor is inside. */
 export function ColumnNodeView() {
 	return (
 		<NodeViewWrapper

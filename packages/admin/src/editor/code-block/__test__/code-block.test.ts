@@ -43,12 +43,12 @@ const createTestEditor = (code = "const a = 1;", attrs = {}) => {
 	return editor;
 };
 
-/** 저장 값(주석 포함) → 에디터 → 저장 값. */
+/** Stored value (with comments) -> editor -> stored value. */
 const load = (value: string, language = "ts") =>
 	codeBlockConverter.toTiptap({ type: "codeBlock", attrs: { language, value } }, dummyCtx);
 const save = (node: JSONContent) => String(codeBlockConverter.toCms(node, dummyCtx)[0]?.attrs?.value);
 
-/** 저장 값을 실제 에디터에 올린다(스키마·getJSON을 지난다). */
+/** Loads a stored value into a real editor (goes through the schema and getJSON). */
 const mountValue = (value: string, language = "ts") => {
 	editor = new Editor({
 		extensions: buildEditorExtensions(),
@@ -58,8 +58,8 @@ const mountValue = (value: string, language = "ts") => {
 };
 const blockJson = (instance: Editor) => instance.getJSON().content?.[0] ?? {};
 
-describe("C5 코드 블록: 키보드 처리 및 IME 제외", () => {
-	it("IME 조합 중에는 키 이벤트를 가로채지 않고 브라우저에 넘긴다", () => {
+describe("code block: keyboard handling and IME exclusion", () => {
+	it("does not intercept key events during IME composition and passes them to the browser", () => {
 		const instance = createTestEditor();
 		const view = instance.view;
 
@@ -69,17 +69,17 @@ describe("C5 코드 블록: 키보드 처리 및 IME 제외", () => {
 		const fakeNonComposingEvent = { isComposing: false, keyCode: 13 } as unknown as KeyboardEvent;
 		expect(isComposing(view, fakeNonComposingEvent)).toBe(false);
 
-		// IME 조합 중 실행 시 false 반환
+		// Returns false when run during IME composition
 		expect(handleEnterKey(view, fakeComposingEvent)).toBe(false);
 		expect(handleTabKey(view, fakeComposingEvent, false)).toBe(false);
 		expect(handleModAKey(view, fakeComposingEvent)).toBe(false);
 	});
 
-	it("Tab: 단일 커서 위치에서 탭 문자를 삽입한다", () => {
+	it("Tab: inserts a tab character at a single cursor position", () => {
 		const instance = createTestEditor("hello");
 		const view = instance.view;
 
-		// 'hello' 뒤(pos: 6)에 커서 위치
+		// Cursor placed after 'hello' (pos: 6)
 		instance.commands.setTextSelection(6);
 
 		const tabEvent = new KeyboardEvent("keydown", { key: "Tab" });
@@ -89,31 +89,31 @@ describe("C5 코드 블록: 키보드 처리 및 IME 제외", () => {
 		expect(instance.state.doc.child(0).textContent).toBe("hello\t");
 	});
 
-	it("Tab/Shift-Tab: 여러 줄 선택 시 들여쓰기와 내어쓰기를 수행한다", () => {
+	it("Tab/Shift-Tab: indents and outdents when multiple lines are selected", () => {
 		const multiline = "line1\nline2\nline3";
 		const instance = createTestEditor(multiline);
 		const view = instance.view;
 
-		// line1부터 line2까지 선택 (pos 1부터 pos 12까지)
+		// Select from line1 to line2 (pos 1 to pos 12)
 		instance.commands.setTextSelection({ from: 1, to: 12 });
 
-		// Tab 들여쓰기
+		// Tab indent
 		const tabEvent = new KeyboardEvent("keydown", { key: "Tab" });
 		expect(handleTabKey(view, tabEvent, false)).toBe(true);
 		expect(instance.state.doc.child(0).textContent).toBe("\tline1\n\tline2\nline3");
 
-		// Shift-Tab 내어쓰기
+		// Shift-Tab outdent
 		const shiftTabEvent = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true });
 		expect(handleTabKey(view, shiftTabEvent, true)).toBe(true);
 		expect(instance.state.doc.child(0).textContent).toBe("line1\nline2\nline3");
 	});
 
-	it("Enter: 현재 줄의 들여쓰기를 다음 줄에도 유지한다", () => {
+	it("Enter: keeps the current line's indentation on the next line", () => {
 		const indented = "\t\tconst x = 10;";
 		const instance = createTestEditor(indented);
 		const view = instance.view;
 
-		// 줄 끝으로 커서 이동
+		// Move the cursor to the end of the line
 		instance.commands.setTextSelection(indented.length + 1);
 
 		const enterEvent = new KeyboardEvent("keydown", { key: "Enter" });
@@ -122,7 +122,7 @@ describe("C5 코드 블록: 키보드 처리 및 IME 제외", () => {
 		expect(instance.state.doc.child(0).textContent).toBe("\t\tconst x = 10;\n\t\t");
 	});
 
-	it("Mod-a: 코드 블록 밖의 문서를 포함하지 않고 코드 블록 안만 전체 선택한다", () => {
+	it("Mod-a: selects everything inside the code block without including the document outside it", () => {
 		editor = new Editor({
 			extensions: buildEditorExtensions(),
 			content: {
@@ -136,9 +136,9 @@ describe("C5 코드 블록: 키보드 처리 및 IME 제외", () => {
 		});
 		const view = editor.view;
 
-		// 코드 블록 내부로 커서 이동
-		// 상단 문단 크기: 1(open) + 4("상단 문단") + 1(close) = 6
-		// 코드 블록 시작 pos: 7, 텍스트 시작: 8, 텍스트 끝: 15
+		// Move the cursor into the code block
+		// Size of the top paragraph: 1(open) + 4("상단 문단") + 1(close) = 6
+		// Code block start pos: 7, text start: 8, text end: 15
 		editor.commands.setTextSelection(9);
 
 		const modAEvent = new KeyboardEvent("keydown", { key: "a", metaKey: true });
@@ -150,7 +150,7 @@ describe("C5 코드 블록: 키보드 처리 및 IME 제외", () => {
 		expect(editor.state.doc.textBetween(from, to, "\n")).toBe("코드1\n코드2");
 	});
 
-	it("Paste: \\r\\n을 \\n으로 정규화하고 서식 없는 텍스트로만 붙여넣는다", () => {
+	it("Paste: normalizes \\r\\n to \\n and pastes as plain text only", () => {
 		const instance = createTestEditor("");
 		const view = instance.view;
 
@@ -172,8 +172,8 @@ describe("C5 코드 블록: 키보드 처리 및 IME 제외", () => {
 	});
 });
 
-describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
-	it("주석 없는 일반 코드는 왕복해도 바이트가 그대로다", () => {
+describe("code block storage format (comment syntax) <-> editor", () => {
+	it("plain code without comments round-trips byte for byte", () => {
 		const raw = "const greeting = 'hello world';\nconsole.log(greeting);\n";
 		const node = codeBlockConverter.toTiptap(
 			{ type: "codeBlock", attrs: { language: "ts", meta: 'title="hello.ts"', value: raw } },
@@ -185,7 +185,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 		expect(saved?.attrs).toEqual({ language: "ts", meta: 'title="hello.ts"', value: raw });
 	});
 
-	it("줄 효과(접기·추가·강조)를 줄 범위로 읽고, 고치지 않으면 원문 그대로 저장한다", () => {
+	it("reads line effects (collapse, add, highlight) as line ranges and saves the original text as is when unchanged", () => {
 		const raw = [
 			"// @line collapse",
 			"function secret() {",
@@ -207,7 +207,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 		expect(save(blockJson(instance))).toBe(raw);
 	});
 
-	it("글자 효과를 코드 텍스트의 마크로 읽는다(툴팁 설명·글자 접기 펼침 포함)", () => {
+	it("reads char effects as marks on the code text (including tooltip content and expanded char collapse)", () => {
 		const raw = [
 			"// @char u {0-4}",
 			'// @char Tooltip {6-9} content="안내 문구"',
@@ -226,7 +226,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 		expect(save(blockJson(instance))).toBe(raw);
 	});
 
-	it("새로 준 글자 효과는 줄 기준 범위의 주석으로 저장한다", () => {
+	it("saves newly added char effects as line-based range comments", () => {
 		const instance = createTestEditor("abc\nconst item = 1;");
 		instance.chain().setTextSelection({ from: 5, to: 10 }).toggleBold().run();
 		instance.chain().setTextSelection({ from: 11, to: 15 }).setMark("codeTooltip", { content: "변수명" }).run();
@@ -235,7 +235,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 		);
 	});
 
-	it("줄 효과는 줄 범위 주석으로, 줄 접기의 처음부터 펼침은 open으로 저장한다", () => {
+	it("saves line effects as line-range comments, and a line collapse that starts expanded as open", () => {
 		const instance = createTestEditor("a\nb\nc");
 		const lineEffects: CodeLineEffect[] = [
 			{ id: "1", name: "collapse", start: 0, end: 3, attrs: { open: true } },
@@ -250,7 +250,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 		);
 	});
 
-	it("정규식 규칙은 찾은 위치가 아니라 규칙 그대로 읽고 저장한다(코드를 고친 뒤에도)", () => {
+	it("reads and saves regex rules as the rule itself, not the matched positions (even after the code is edited)", () => {
 		const raw = [
 			"// @document fold {re:/import .*/}",
 			"import a from 'a';",
@@ -263,7 +263,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 			["document", "fold", "import .*", "", undefined],
 			["char", "Tooltip", "b{2}", "g", 1],
 		]);
-		// 규칙이 찾은 곳은 마크로 바꾸지 않는다.
+		// Places found by a rule are not turned into marks.
 		expect(instance.getHTML()).not.toContain("data-code-fold");
 
 		instance.commands.insertContentAt(instance.state.doc.child(0).nodeSize - 1, "\nimport c from 'c';");
@@ -278,13 +278,13 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 		);
 	});
 
-	it("언어를 바꾸면 새 언어의 주석 문법으로 저장한다", () => {
+	it("saves with the new language's comment syntax when the language changes", () => {
 		const node = load("// @char u {0-2}\nabc");
 		const saved = save({ ...node, attrs: { ...node.attrs, language: "python" } });
 		expect(saved).toBe("# @char u {0-2}\nabc");
 	});
 
-	it("같은 효과가 설명만 달리 겹치면 나타낼 수 없어 원문 편집으로 열고 원문을 지킨다", () => {
+	it("opens in raw editing and preserves the original when the same effect overlaps with a different description, since it cannot be represented", () => {
 		const raw = ['// @char Tooltip {0-3} content="하나"', '// @char Tooltip {2-5} content="둘"', "abcdef"].join("\n");
 		const node = load(raw);
 		expect(node.attrs?.rawMode).toBe(true);
@@ -292,7 +292,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 		expect(save(node)).toBe(raw);
 	});
 
-	it("meta의 명시적 false와 알 수 없는 속성을 제목 수정 후에도 보존한다", async () => {
+	it("preserves explicit false and unknown properties in meta even after the title is edited", async () => {
 		const { parseMeta, formatMeta } = await import("../meta");
 		const parsed = parseMeta('title="a.ts" focus=false lnum=false');
 		expect(parsed.showLineNumbers).toBe(false);
@@ -302,7 +302,7 @@ describe("코드 블록 저장 형식(주석 문법) ↔ 에디터", () => {
 	});
 });
 
-describe("코드를 고치면 줄 효과·줄 규칙이 글자를 따라간다", () => {
+describe("line effects and line rules follow the text when the code is edited", () => {
 	const withEffects = (code: string, lineEffects: CodeLineEffect[], rules: CodeRule[] = []) =>
 		createTestEditor(code, { lineEffects, rules });
 	const effectsOf = (instance: Editor) =>
@@ -312,26 +312,26 @@ describe("코드를 고치면 줄 효과·줄 규칙이 글자를 따라간다",
 			end,
 		]);
 
-	it("효과 줄 앞에 줄을 넣으면 아래로 밀린다", () => {
+	it("inserting a line before an effect line pushes it down", () => {
 		const instance = withEffects("a\nb\nc", [{ id: "1", name: "highlight", start: 1, end: 3, attrs: {} }]);
 		instance.commands.insertContentAt(1, "x\n");
 		expect(effectsOf(instance)).toEqual([["highlight", 2, 4]]);
 	});
 
-	it("범위 안에서 줄을 나누면 범위가 늘어난다", () => {
+	it("splitting a line inside a range extends the range", () => {
 		const instance = withEffects("a\nbc\nd", [{ id: "1", name: "collapse", start: 0, end: 2, attrs: {} }]);
 		instance.commands.insertContentAt(4, "\n");
 		expect(effectsOf(instance)).toEqual([["collapse", 0, 3]]);
 	});
 
-	it("효과 줄을 모두 지우면 효과도 사라진다", () => {
+	it("deleting all effect lines removes the effect", () => {
 		const instance = withEffects("a\nbb\nc", [{ id: "1", name: "plus", start: 1, end: 2, attrs: {} }]);
 		instance.commands.deleteRange({ from: 3, to: 6 });
 		expect(instance.state.doc.child(0).textContent).toBe("a\nc");
 		expect(effectsOf(instance)).toEqual([]);
 	});
 
-	it("한 줄 규칙의 줄 번호도 따라간다", () => {
+	it("single-line rule's line number follows too", () => {
 		const rule: CodeRule = { id: "r", scope: "char", name: "fold", pattern: "b", flags: "", line: 1, attrs: {} };
 		const instance = withEffects("a\nb", [], [rule]);
 		instance.commands.insertContentAt(1, "x\n");
@@ -339,7 +339,7 @@ describe("코드를 고치면 줄 효과·줄 규칙이 글자를 따라간다",
 	});
 });
 
-describe("접기: 에디터에서도 접어 보이고 커서가 들어가면 펼친다", () => {
+describe("collapse: shown collapsed in the editor too, and expands when the cursor enters", () => {
 	const collapse = (open = false): CodeLineEffect => ({
 		id: "c",
 		name: "collapse",
@@ -360,7 +360,7 @@ describe("접기: 에디터에서도 접어 보이고 커서가 들어가면 펼
 			);
 	};
 
-	it("줄 접기는 첫 줄만 남기고 나머지 줄을 숨긴다. open이면 펼쳐 둔다", () => {
+	it("line collapse keeps only the first line and hides the rest; stays expanded if open", () => {
 		const closed = createTestEditor("head\nb\nc\nd", { lineEffects: [collapse()] });
 		expect(hiddenDecorations(closed).map((decoration) => [decoration.from, decoration.to])).toEqual([[5, 9]]);
 		closed.destroy();
@@ -368,7 +368,7 @@ describe("접기: 에디터에서도 접어 보이고 커서가 들어가면 펼
 		expect(hiddenDecorations(open)).toHaveLength(0);
 	});
 
-	it("커서가 접힌 줄로 들어가면 펼치고, 접으면 커서를 첫 줄 끝으로 옮긴다", () => {
+	it("expands when the cursor enters a collapsed line, and moves the cursor to the end of the first line when collapsed", () => {
 		const instance = createTestEditor("head\nb\nc\nd", { lineEffects: [collapse()] });
 		instance.view.dispatch(instance.state.tr.setSelection(TextSelection.create(instance.state.doc, 7)));
 		expect(regionsOf(instance)[0]?.open).toBe(true);
@@ -380,7 +380,7 @@ describe("접기: 에디터에서도 접어 보이고 커서가 들어가면 펼
 		expect(instance.state.selection.head).toBe(5);
 	});
 
-	it("글자 접기(마크·정규식 규칙)는 에디터에서 펼쳐 두고, 접으면 숨긴다", () => {
+	it("char collapse (marks and regex rules) stays expanded in the editor and is hidden when collapsed", () => {
 		const rule: CodeRule = { id: "r", scope: "document", name: "fold", pattern: "\\(.*\\)", flags: "", attrs: {} };
 		const instance = createTestEditor("f(a, b)", { rules: [rule] });
 		instance.chain().setTextSelection({ from: 1, to: 2 }).setMark("codeFold", { open: false }).run();
@@ -394,8 +394,8 @@ describe("접기: 에디터에서도 접어 보이고 커서가 들어가면 펼
 	});
 });
 
-describe("코드 블록 구문 하이라이팅", () => {
-	it("shiki 지연 로드 및 구문 하이라이팅이 텍스트 변경 없이 dual theme 데코레이션을 생성한다", async () => {
+describe("code block syntax highlighting", () => {
+	it("lazy-loaded shiki syntax highlighting produces dual theme decorations without changing the text", async () => {
 		const highlighter = await getShikiHighlighter();
 		expect(highlighter).toBeDefined();
 
@@ -414,12 +414,12 @@ describe("코드 블록 구문 하이라이팅", () => {
 		expect(firstToken?.variants?.light?.color).toBeDefined();
 		expect(firstToken?.variants?.dark?.color).toBeDefined();
 
-		// 하이라이팅 데코레이션이 텍스트 본문(순수 텍스트)을 오염시키지 않는다
+		// Highlighting decorations do not pollute the text body (plain text)
 		const instance = createTestEditor(code, { language: "ts" });
 		expect(instance.state.doc.child(0).textContent).toBe(code);
 	});
 
-	it("여러 줄 코드의 Shiki 토큰 오프셋을 한 번만 더해 둘째 줄에 데코레이션한다", async () => {
+	it("adds the Shiki token offset of multi-line code only once to decorate the second line", async () => {
 		const code = "const a = 1;\nconst b = 2;";
 		const instance = createTestEditor(code, { language: "ts" });
 		await vi.waitFor(() => {
@@ -433,8 +433,8 @@ describe("코드 블록 구문 하이라이팅", () => {
 	});
 });
 
-describe("저장 지문", () => {
-	it("줄 효과 순서만 바뀌면 원문 그대로 저장한다", () => {
+describe("storage fingerprint", () => {
+	it("saves the original text as is when only the line effect order changes", () => {
 		const raw = ["// @line highlight {0-0}", "a", "// @line plus {1-1}", "b"].join("\n");
 		const node = load(raw);
 		const effects = node.attrs?.lineEffects as CodeLineEffect[];

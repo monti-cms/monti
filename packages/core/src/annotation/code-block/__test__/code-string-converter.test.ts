@@ -99,7 +99,7 @@ const rowClass = (name: string, range: Range, order: number, attributes: Annotat
 const line = (value: string, annotations: InlineAnnotation[] = []): Line => ({ value, annotations });
 
 describe("code-string converter", () => {
-	it("code fence를 document로 변환할 때 lang/meta와 tag 기반 annotation을 파싱한다", () => {
+	it("when converting a code fence to a document, parses lang/meta and tag-based annotations", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -131,7 +131,7 @@ describe("code-string converter", () => {
 		});
 	});
 
-	it("document를 code fence로 변환할 때 tag와 order 순서를 보존한다", () => {
+	it("when converting a document to a code fence, preserves tag and order sequence", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: { title: "hello.ts", showLineNumbers: true },
@@ -160,7 +160,7 @@ describe("code-string converter", () => {
 		);
 	});
 
-	it("동일 range wrapper의 order는 code string 라인 순서로 왕복 보존된다", () => {
+	it("the order of same-range wrappers survives a round trip via code string line order", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -182,7 +182,7 @@ describe("code-string converter", () => {
 		expect(output.value).toBe(input.value);
 	});
 
-	it("document -> code -> document 라운드트립에서 lang/meta/annotations를 보존한다", () => {
+	it("document -> code -> document round trip preserves lang/meta/annotations", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: { title: "roundtrip.ts", showLineNumbers: true },
@@ -205,7 +205,7 @@ describe("code-string converter", () => {
 		expect(output).toEqual(input);
 	});
 
-	it("code -> document -> code 라운드트립에서 canonical code fence를 보존한다", () => {
+	it("code -> document -> code round trip preserves the canonical code fence", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -225,7 +225,7 @@ describe("code-string converter", () => {
 		expect(output).toEqual(input);
 	});
 
-	it("meta boolean이 false인 값은 직렬화 시 제외한다", () => {
+	it("when converting a meta boolean that is false, excludes it on serialization", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: { title: "meta.ts", showLineNumbers: false, collapsed: true },
@@ -241,7 +241,7 @@ describe("code-string converter", () => {
 		expect(parsed.meta).not.toHaveProperty("showLineNumbers");
 	});
 
-	it("document -> code에서 annotation attribute를 JSON 표현으로 직렬화한다", () => {
+	it("document -> code serializes annotation attributes as JSON", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},
@@ -268,7 +268,7 @@ describe("code-string converter", () => {
 		expect(first).toContain("collapsed=null");
 	});
 
-	it("document -> code에서 boolean attribute는 true면 key만, false면 생략한다", () => {
+	it("document -> code writes only the key for a true boolean attribute and omits a false one", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},
@@ -304,7 +304,7 @@ describe("code-string converter", () => {
 		expect(inlineComment).not.toContain("collapsed");
 	});
 
-	it("document -> code에서 annotation comment는 대상 코드 라인의 들여쓰기를 보존한다", () => {
+	it("document -> code preserves the indentation of the target code line in the annotation comment", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},
@@ -334,7 +334,7 @@ describe("code-string converter", () => {
 		);
 	});
 
-	it("code -> document에서 annotation attribute의 JSON 타입을 복원한다", () => {
+	it("code -> document restores the JSON type of annotation attributes", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -366,7 +366,7 @@ describe("code-string converter", () => {
 		]);
 	});
 
-	it("code -> document에서 boolean shorthand attribute를 true로 파싱한다", () => {
+	it("code -> document parses a boolean shorthand attribute as true", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -382,7 +382,7 @@ describe("code-string converter", () => {
 		expect(inlineAttrs).toEqual([{ name: "showLineNumbers", value: true }]);
 	});
 
-	it("line marker 문법(@line name ... @line name end)으로 rowWrap range를 파싱한다", () => {
+	it("parses a rowWrap range with line marker syntax (@line name ... @line name end)", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -411,7 +411,7 @@ describe("code-string converter", () => {
 		);
 	});
 
-	it("line marker 문법은 미종료 rowWrap도 EOF까지 범위로 닫는다", () => {
+	it("line marker syntax closes an unterminated rowWrap as a range up to EOF too", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -430,7 +430,7 @@ describe("code-string converter", () => {
 		]);
 	});
 
-	it("document scope inline annotation은 @document와 absolute range로 직렬화한다", () => {
+	it("a document scope inline annotation serializes as @document with an absolute range", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},

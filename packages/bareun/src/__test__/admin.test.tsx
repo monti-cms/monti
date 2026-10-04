@@ -14,8 +14,8 @@ function Checkers() {
 	return <p>{textCheckers.map((checker) => checker.id).join(",")}</p>;
 }
 
-describe("바른 검사기 관리자 쪽", () => {
-	it("공급자가 관리자 글 검사기로 바른을 넣고, 검사기는 사이트 설정의 값을 쓴다", () => {
+describe("Bareun checker admin side", () => {
+	it("the provider registers Bareun as the admin text checker, using the site config values", () => {
 		const Provider = bareunAdmin.Provider;
 		expect(Provider).toBeDefined();
 		if (!Provider) return;
@@ -25,7 +25,7 @@ describe("바른 검사기 관리자 쪽", () => {
 			</Provider>,
 		);
 		expect(screen.getByText("bareun")).toBeTruthy();
-		// 테스트 설정(`test/cms.config.ts`)의 이름이다. 자동 검사는 기본으로 끈다.
+		// The name from the test config (`test/cms.config.ts`). Auto check is off by default.
 		expect([bareunChecker.id, bareunChecker.label, bareunChecker.locales?.join(","), bareunChecker.auto]).toEqual([
 			"bareun",
 			"바른 검사",
@@ -34,7 +34,7 @@ describe("바른 검사기 관리자 쪽", () => {
 		]);
 	});
 
-	it("플러그인 정의는 기본값을 채우고 잘못된 값을 막는다", () => {
+	it("the plugin definition fills in defaults and rejects invalid values", () => {
 		const plugin = bareun();
 		expect(plugin.name).toBe("text-check-bareun");
 		expect(plugin.options).toEqual({

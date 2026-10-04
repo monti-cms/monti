@@ -5,8 +5,8 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 /**
- * 관리자 화면 공통 인증(§10.2). 세션이 없거나 다른 계정이면 오류 화면 대신 로그인으로 보낸다.
- * API는 같은 게이트웨이가 401/403으로 응답한다.
+ * Shared admin screen auth. With no session or a different account, redirects to login instead of an error screen.
+ * The API answers the same gateway with 401/403.
  */
 export async function requireAdminPage(): Promise<AuthContext> {
 	try {

@@ -45,7 +45,7 @@ const createTransformer = (lineDecorations: LineDecorationPayload[]) => {
 };
 
 describe("transformers.line addLineDecorations", () => {
-	it("range에 포함된 line(1-based 입력)에 class를 추가한다", () => {
+	it("adds the class to lines included in the range (1-based input)", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -68,7 +68,7 @@ describe("transformers.line addLineDecorations", () => {
 		expect(line3.properties.className).toEqual(["line"]);
 	});
 
-	it("여러 line decoration이 겹치면 class를 병합한다", () => {
+	it("merges classes when several line decorations overlap", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -90,7 +90,7 @@ describe("transformers.line addLineDecorations", () => {
 		expect(line2.properties.className).toEqual(expect.arrayContaining(["line", "diff", "focus"]));
 	});
 
-	it("유효하지 않은 range(start >= end)는 무시한다", () => {
+	it("ignores an invalid range (start >= end)", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -106,7 +106,7 @@ describe("transformers.line addLineDecorations", () => {
 		expect(line2.properties.className).toEqual(["line"]);
 	});
 
-	it("기존 class 속성으로 들어온 기준 class도 유지한다", () => {
+	it("also keeps the base class that came in through the existing class attribute", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",

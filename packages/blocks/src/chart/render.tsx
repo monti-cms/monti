@@ -19,8 +19,8 @@ function ChartError({ errors, labels }: { errors: readonly ChartRenderError[]; l
 }
 
 /**
- * 차트 블록(` ```chart `)의 그리기. 코드는 `source` 속성이다(`remarkFenceBlocksToMdx`). 문법이 틀리면 줄마다 오류를 서버에서
- * 그리고, 맞으면 브라우저가 차트로 그린다(그 전에는 원문).
+ * Rendering of the chart block (` ```chart `). The code is the `source` attribute (`remarkFenceBlocksToMdx`). If the syntax is wrong, the
+ * server renders each line's error; otherwise the browser draws the chart (the source is shown until then).
  */
 export function Chart({ source, labels = blockLabels() }: { source?: string; labels?: BlockLabels }) {
 	const text = source ?? "";
@@ -31,7 +31,7 @@ export function Chart({ source, labels = blockLabels() }: { source?: string; lab
 
 type ChartProps = Parameters<typeof Chart>[0];
 
-/** 차트의 공개 컴포넌트(`@monti-cms/core/render`가 부른다). 차트는 브라우저에서 그린다(선택 의존성 `recharts`). */
+/** Public chart component (called by `@monti-cms/core/render`). The chart is drawn in the browser (optional dependency `recharts`). */
 export default ({ locale }: { locale?: string }) => {
 	const labels = blockLabels(locale);
 	return { Chart: (props: ChartProps) => <Chart {...props} labels={labels} /> };

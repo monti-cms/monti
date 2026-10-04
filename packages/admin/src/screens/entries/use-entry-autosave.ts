@@ -15,16 +15,16 @@ import {
 import { backupKey, deleteLocalBackup, saveLocalBackup } from "./local-backup";
 import { t } from "./translate";
 
-/** 브라우저 임시 저장은 입력이 멈추고 이만큼 지나면 마지막 상태 하나를 남긴다(입력마다 쓰지 않는다). */
+/** Browser temporary save keeps the last state once input has paused this long (not written on every input). */
 export const BACKUP_IDLE_MS = 5000;
-/** 저장 전에 한글 조합이 끝나기를 기다리는 최대 시간. 지나면 조합 표시가 남은 것으로 보고 그냥 저장한다. */
+/** Maximum time to wait for Korean IME composition to end before saving. After that, the composition marker is assumed stale and it saves anyway. */
 export const COMPOSITION_WAIT_MS = 1000;
-/** 저장 전에 브라우저 임시 저장을 기다리는 최대 시간. 브라우저 저장소가 멈춰도 서버 저장은 간다. */
+/** Maximum time to wait for the browser temporary save before saving. The server save goes through even if browser storage stalls. */
 const BACKUP_WAIT_MS = 1500;
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-/** §5.1 저장 상태. */
+/** Save status. */
 export type SaveStatus =
 	| "new"
 	| "saved"
@@ -49,25 +49,25 @@ export const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
 interface Options {
 	adminId: string;
 	collection: string;
-	/** 불러온 항목. 새 글이면 `null`이고 명시적으로 저장하거나 발행할 때 만든다. */
+	/** The loaded item. `null` for a new post, created on explicit save or publish. */
 	entry: EntryData | null;
 	initialForm: EntryForm;
-	/** 휴지통처럼 저장하면 안 되는 상태면 false다. */
+	/** False for states that must not be saved, like trash. */
 	enabled: boolean;
-	/** 새 글을 처음 저장할 때 넣을 폴더(목록에서 연 위치). */
+	/** Folder to put a new post in on its first save (location opened from the list). */
 	newEntryFolderId?: string | null;
 	onSaved: (entry: EntryData) => void;
 	onConflict: (server: EntryData, local: EntryForm) => void;
 }
 
 /**
- * 편집 중에는 브라우저 복구본만 남기고, 명시적 저장·발행 시 서버 초안을 저장한다.
+ * While editing, only a browser recovery copy is kept; an explicit save or publish saves the server draft.
  *
- * - 복구본은 입력이 멈추고 `BACKUP_IDLE_MS`가 지나면 마지막 상태로 남긴다(브라우저에만, 서버에는 보내지 않는다).
- *   화면을 떠나거나 탭을 숨기거나 저장 버튼을 누르면 기다리지 않고 바로 남긴다.
- * - 요청은 한 번에 하나다. 전송 중 새 입력은 다음 명시적 저장 때 보낸다.
- * - 네트워크·서버 오류가 나도 복구본을 남긴다. 재시도는 사용자가 누를 때만 보낸다.
- * - 세션이 만료되면 복구본을 유지하고 다시 로그인하게 안내한다.
+ * - The recovery copy is kept as the last state once input pauses and `BACKUP_IDLE_MS` passes (browser only, never sent to the server).
+ *   It is kept right away, without waiting, when leaving the screen, hiding the tab or pressing save.
+ * - One request at a time. Input during a send goes out on the next explicit save.
+ * - The recovery copy is kept even on a network or server error. Retries are sent only when the user presses retry.
+ * - If the session expires, the recovery copy is kept and the user is guided to sign in again.
  */
 export function useEntryAutosave({
 	adminId,
@@ -82,7 +82,7 @@ export function useEntryAutosave({
 	const [form, setFormState] = useState<EntryForm>(initialForm);
 	const [status, setStatus] = useState<SaveStatus>(entry ? "saved" : "new");
 	const [lastError, setLastErrorState] = useState<string | null>(null);
-	/** 저장 직후 같은 함수 안에서 이유를 읽을 수 있게 ref에도 둔다(렌더 값은 한 박자 늦다). */
+	/** Also held in a ref so the reason can be read in the same function right after saving (the render value lags one tick). */
 	const lastErrorRef = useRef<string | null>(null);
 	const setLastError = useCallback((message: string | null) => {
 		lastErrorRef.current = message;
@@ -94,7 +94,7 @@ export function useEntryAutosave({
 	const entryIdRef = useRef<string | null>(entry?.id ?? null);
 	const versionRef = useRef(entry?.version ?? 0);
 	const baseMetadataRef = useRef<Record<string, unknown>>(entry?.working.metadata ?? {});
-	/** 번역본은 언어별 값만 저장한다(v2 B4). */
+	/** A translation saves only per-language values. */
 	const translationRef = useRef(isTranslationEntry(entry));
 	const serverFingerprintRef = useRef(formFingerprint(initialForm));
 	const changeSeqRef = useRef(0);
@@ -119,7 +119,7 @@ export function useEntryAutosave({
 		return backupWriteRef.current;
 	}, []);
 
-	/** 불러오기·재적재 뒤 기준값을 서버 값으로 맞춘다. */
+	/** After load or reload, sets the baseline to the server value. */
 	const resetFromServer = useCallback(
 		(loaded: EntryData, loadedForm: EntryForm) => {
 			entryIdRef.current = loaded.id;
@@ -162,7 +162,7 @@ export function useEntryAutosave({
 		backupTimerRef.current = null;
 		pendingBackupRef.current = null;
 	}, []);
-	/** 기다리는 복구본을 지금 남긴다. */
+	/** Keeps the pending recovery copy now. */
 	const flushPendingBackup = useCallback(() => {
 		const pending = pendingBackupRef.current;
 		cancelPendingBackup();
@@ -172,7 +172,7 @@ export function useEntryAutosave({
 	const scheduleBackup = useCallback(
 		(snapshot: EntryForm, changeSeq: number) => {
 			pendingBackupRef.current = { snapshot, changeSeq };
-			// 입력이 이어지면 다시 센다. 멈추고 나서야 남긴다.
+			// If input continues, count again. It is kept only after it stops.
 			if (backupTimerRef.current) clearTimeout(backupTimerRef.current);
 			backupTimerRef.current = setTimeout(flushPendingBackup, BACKUP_IDLE_MS);
 		},
@@ -186,7 +186,7 @@ export function useEntryAutosave({
 		[cancelPendingBackup, queueBackup],
 	);
 
-	/** 한글 조합이 끝나기를 기다린다. 끝 신호가 오지 않으면(입력칸이 조합 중에 사라진 경우 등) 표시를 지우고 넘어간다. */
+	/** Waits for Korean IME composition to end. If no end signal comes (e.g. the input vanished mid-composition), clears the marker and moves on. */
 	const waitForComposition = useCallback(async () => {
 		if (!composingRef.current) return;
 		await Promise.race([
@@ -205,7 +205,7 @@ export function useEntryAutosave({
 			if (statusRef.current !== "session-expired") updateStatus("saved");
 			return Promise.resolve(true);
 		}
-		// 조합 중 저장은 글자 누락을 만든다. 저장 경로(`flush`·`retry`)는 조합이 끝나기를 먼저 기다린다.
+		// Saving during composition drops characters. The save paths (`flush`, `retry`) first wait for composition to end.
 		if (composingRef.current) {
 			setLastError(t("save.composing"));
 			return Promise.resolve(false);
@@ -245,7 +245,7 @@ export function useEntryAutosave({
 				);
 				if (isNew) {
 					entryIdRef.current = saved.id;
-					// 화면을 다시 마운트하지 않고 주소만 편집 주소로 바꾼다.
+					// Change only the URL to the edit URL without remounting the screen.
 					window.history.replaceState({ ...window.history.state }, "", withBasePath(adminEntryEditHref(saved.id)));
 				}
 				versionRef.current = saved.version;
@@ -280,7 +280,7 @@ export function useEntryAutosave({
 						return false;
 					}
 					if (error.status < 500) {
-						// 형식·검증 오류는 다시 보내도 같다. 입력을 고치면 다음 저장이 다시 시도한다.
+						// Format and validation errors are the same on resend. Fixing the input makes the next save try again.
 						setLastError(error.message);
 						updateStatus("failed");
 						return false;
@@ -306,7 +306,7 @@ export function useEntryAutosave({
 		updateStatus,
 	]);
 
-	/** 사용자가 재시도를 누르면 서버 버전을 먼저 확인하고 다시 저장한다. */
+	/** When the user presses retry, checks the server version first and saves again. */
 	const retry = useCallback(
 		async (verify = true): Promise<boolean> => {
 			if (verify && entryIdRef.current) {
@@ -333,7 +333,7 @@ export function useEntryAutosave({
 		[backupAvailable, performSave, updateStatus, waitForComposition],
 	);
 
-	/** 폼 일부를 바꾼다. 변경사항은 브라우저에만 남긴다. */
+	/** Changes part of the form. Changes are kept in the browser only. */
 	const setForm = useCallback(
 		(patch: EntryFormPatch) => {
 			const next = { ...formRef.current, ...patch };
@@ -356,7 +356,7 @@ export function useEntryAutosave({
 		[adminId, collection, discardBackup, scheduleBackup, updateStatus],
 	);
 
-	/** 명시적으로 저장하거나 발행할 때만 서버에 보낸다. */
+	/** Sent to the server only on explicit save or publish. */
 	const flush = useCallback(async (): Promise<boolean> => {
 		await Promise.race([flushPendingBackup(), wait(BACKUP_WAIT_MS)]);
 		await waitForComposition();
@@ -368,7 +368,7 @@ export function useEntryAutosave({
 		return Boolean(entryIdRef.current && changeSeqRef.current <= ackSeqRef.current);
 	}, [flushPendingBackup, performSave, waitForComposition]);
 
-	// 화면을 떠나거나 탭을 숨기면 기다리던 복구본을 바로 남긴다.
+	// When leaving the screen or hiding the tab, keep the pending recovery copy right away.
 	useEffect(() => {
 		const onHide = () => {
 			if (document.visibilityState === "hidden") void flushPendingBackup();
@@ -390,7 +390,7 @@ export function useEntryAutosave({
 		}
 	}, []);
 
-	// 서버에 저장되지 않은 변경이 있으면 페이지 이탈을 경고한다.
+	// Warn on page leave if there are changes not saved to the server.
 	useEffect(() => {
 		if (status === "saved" || status === "new") return;
 		const warn = (event: BeforeUnloadEvent) => {
@@ -411,7 +411,7 @@ export function useEntryAutosave({
 		retry,
 		setComposing,
 		resetFromServer,
-		/** 충돌 해결에서 “내 내용으로 덮어쓰기”를 고른 경우 서버 버전을 기준으로 다시 저장한다. */
+		/** If "overwrite with mine" is chosen in conflict resolution, saves again based on the server version. */
 		overwriteWithLocal: (serverVersion: number) => {
 			versionRef.current = serverVersion;
 			updateStatus("dirty");
@@ -419,7 +419,7 @@ export function useEntryAutosave({
 			return performSave();
 		},
 		getEntryId: () => entryIdRef.current,
-		/** 마지막 저장 실패 이유와 저장 상태(렌더를 기다리지 않은 최신 값). */
+		/** Reason for the last save failure and the save status (latest values, without waiting for a render). */
 		getLastError: () => lastErrorRef.current,
 		getStatus: () => statusRef.current,
 		getVersion: () => versionRef.current,

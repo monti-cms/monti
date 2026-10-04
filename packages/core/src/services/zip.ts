@@ -1,15 +1,15 @@
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 
 /**
- * 결정적(deterministic) ZIP writer.
+ * Deterministic ZIP writer.
  *
- * 내보내기 아카이브는 스냅샷 테스트가 가능해야 하므로 같은 입력이면 항상 같은 바이트를 만든다.
- * - 압축은 deflate 고정 레벨 9를 사용한다(같은 zlib에서 결정적).
- * - 파일 시각은 호출자가 고정값을 넘긴다(기본 1980-01-01, ZIP epoch).
- * - 파일 순서는 호출자가 정렬해 넘긴다.
+ * Export archives must support snapshot tests, so the same input always produces the same bytes.
+ * - Compression uses deflate at fixed level 9 (deterministic with the same zlib).
+ * - The caller passes a fixed file time (default 1980-01-01, the ZIP epoch).
+ * - The caller sorts and passes the file order.
  */
 export interface ZipEntry {
-	/** ZIP 내부 경로. `/` 구분자, 앞 슬래시 없음. */
+	/** Path inside the ZIP. `/` separator, no leading slash. */
 	path: string;
 	data: Uint8Array;
 }
@@ -65,7 +65,7 @@ export function createZipArchive(entries: readonly ZipEntry[], options?: { modif
 		const localView = new DataView(localHeader.buffer);
 		writeUint32(localView, 0, 0x04034b50);
 		writeUint16(localView, 4, 20);
-		writeUint16(localView, 6, 0x0800); // UTF-8 파일명
+		writeUint16(localView, 6, 0x0800); // UTF-8 file name
 		writeUint16(localView, 8, 8); // deflate
 		writeUint16(localView, 10, time);
 		writeUint16(localView, 12, date);
@@ -132,8 +132,8 @@ export interface ZipReadEntry {
 }
 
 /**
- * 테스트·검증용 최소 ZIP 리더. 중앙 디렉터리만 읽고 deflate 항목을 푼다.
- * 내보내기 아카이브 검증 외 용도로는 쓰지 않는다.
+ * Minimal ZIP reader for tests and verification. Reads only the central directory and inflates deflate entries.
+ * Not used for anything other than verifying export archives.
  */
 export function readZipArchive(buffer: Uint8Array): ZipReadEntry[] {
 	const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);

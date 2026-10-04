@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 편집기 블록(커스텀 블록·코드 펜스 미리보기·수식)의 화면 문구(M15). */
+/** UI messages for editor blocks (custom blocks, code fence preview, math). */
 export const blocksMessages = defineMessages("cms-admin.editor-blocks", {
 	en: {
 		"settings.label": "Settings",

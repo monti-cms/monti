@@ -1,47 +1,49 @@
-# 예시 앱: other-site
+# Example app: other-site
 
-`@monti-cms/core`를 블로그와 다른 컬렉션(Article·Topic·Author)·필드·언어(영어)로 붙인 최소 Next 앱이다. 블록 확장(`@monti-cms/blocks`)에서
-차트만 설치하고 사이트 블록(`quote-card`·코드 펜스 `map`)을 더했다. SEO 필드는 SEO 확장(`@monti-cms/seo`)의 `seoFields`를
-다른 이름·`Search` 탭으로 넣었다. 패키지는 저장소의 소스가 아니라 **빌드한 묶음**(`vendor/*.tgz`)으로 설치한다.
+English | [한국어](README.ko.md)
+
+A minimal Next app that attaches `@monti-cms/core` with collections (Article, Topic, Author), fields and a language (English) that differ from the main blog's. From the blocks extension (`@monti-cms/blocks`) it
+installs only the chart and adds site blocks (`quote-card` and the `map` code fence). The SEO fields come from `seoFields` in the SEO extension (`@monti-cms/seo`),
+added with different names and a `Search` tab. Packages are installed from **built bundles** (`vendor/*.tgz`), not from the repository sources.
 
 ```sh
-# 저장소 루트에서: 패키지를 빌드해 vendor/에 묶는다
+# From the repo root: build the packages and pack them into vendor/
 pnpm example:pack
 
-# 이 폴더에서
+# In this folder
 pnpm install --ignore-workspace
-cp .env.example .env.local   # CMS_DATABASE_URL 등을 채운다
+cp .env.example .env.local   # fill in CMS_DATABASE_URL and the rest
 pnpm db:migrate               # = monti migrate
 pnpm dev                     # http://localhost:3000/studio
 ```
 
-pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈춘다. 이 폴더를 저장소 밖으로 복사해 `pnpm-workspace.yaml`에 `allowBuilds: { esbuild: true }`를 적고 `pnpm install`로 설치한다(`--ignore-workspace`를 붙이면 그 설정을 읽지 않는다). 저장소가 쓰는 pnpm 10은 경고만 한다.
+pnpm 12 stops the install unless the esbuild install script is allowed. Copy this folder out of the repo, put `allowBuilds: { esbuild: true }` in `pnpm-workspace.yaml`, and install with `pnpm install` (with `--ignore-workspace` that setting is not read). pnpm 10, which the repo uses, only warns.
 
-`CMS_DEV_AUTH_BYPASS=1`이면 `next dev`에서 로그인 없이 관리자 화면을 연다.
+With `CMS_DEV_AUTH_BYPASS=1`, `next dev` opens the admin screen without logging in.
 
-## 파일
+## Files
 
-`monti init --admin-path /studio`가 만드는 모양에 이 사이트의 컬렉션·확장을 더했다.
+The shape is what `monti init --admin-path /studio` generates, plus this site's collections and extensions.
 
-| 파일 | 내용 |
+| File | Contents |
 | --- | --- |
-| `cms.config.ts` | 컬렉션·블록·확장. 블로그와 다르게 관리자 경로 `admin.path: "/studio"`, 주소 규칙 `site.localePrefix: "always"`(모든 언어에 `/en`), 미리보기 언어는 경로(`previewLocaleParam: false`) |
-| `cms.server.ts` | DB·GitHub 로그인(`monti init` 그대로) |
-| `app/(admin)/studio/` | 관리자 화면(`[[...path]]/page.tsx`·`layout.tsx`)과 맞춤법 검사 확장 예시(`admin-components.tsx`) |
-| `app/api/cms/[...path]/route.ts` | 관리자 API와 로그인(`/api/cms/auth/*`). 로그인 라우트 파일이 따로 없다 |
-| `app/globals.css` | Tailwind와 패키지 스타일 import만. 관리자 화면 색·변형(`cms-*`, `cms-dark` 등)은 관리자 패키지 스타일이 정하고 앱의 이름과 겹치지 않는다 |
+| `cms.config.ts` | Collections, blocks and extensions. Unlike the blog: admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/en` for every language), and the preview language comes from the path (`previewLocaleParam: false`) |
+| `cms.server.ts` | DB and GitHub login (as `monti init` generates) |
+| `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`) and an example spell-check extension (`admin-components.tsx`) |
+| `app/api/cms/[...path]/route.ts` | Admin API and login (`/api/cms/auth/*`). There is no separate login route file |
+| `app/globals.css` | Only the Tailwind and package style imports. Admin colors and variants (`cms-*`, `cms-dark`, and so on) are defined by the admin package styles and do not collide with the app's names |
 
-GitHub 로그인을 쓰려면 OAuth 앱의 콜백 주소를 `http://localhost:3000/api/cms/auth/callback/github`로 둔다.
+To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/cms/auth/callback/github`.
 
-## 저장소 안에서 확인하기
+## Trying it inside the repo
 
-운영 DB를 쓰지 않는다. 테스트 DB(`CMS_TEST_DATABASE_URL`)에 `cms_preview_*` 스키마를 만들어 쓰고 끝나면 지운다.
+This does not use the production DB. It creates a `cms_preview_*` schema in the test DB (`CMS_TEST_DATABASE_URL`) and drops it when finished.
 
 ```sh
 export CMS_DATABASE_URL="$CMS_TEST_DATABASE_URL" CMS_SCHEMA=cms_preview_example CMS_DEV_AUTH_BYPASS=1 AUTH_SECRET=local-only
-# (스키마 cms_preview_example을 만든 뒤)
+# (after creating the schema cms_preview_example)
 pnpm exec monti migrate --no-env-file
 pnpm exec next dev -p 3997   # http://localhost:3997/studio
 ```
 
-`next dev`가 이 폴더에 만드는 `AGENTS.md`·`CLAUDE.md`는 저장소에 넣지 않는다.
+Do not commit the `AGENTS.md` and `CLAUDE.md` that `next dev` creates in this folder.

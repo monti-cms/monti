@@ -96,7 +96,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	);
 }
 
-/** 언어 체크 목록(v2 B4). 여러 개를 고르면 하나라도 맞는 항목을 보여 준다. */
+/** Locale checklist. Choosing several shows items matching any of them. */
 function LocaleFilter({ state, onChange }: { state: ListState; onChange: (patch: Partial<ListState>) => void }) {
 	return (
 		<fieldset className="space-y-0.5">
@@ -183,7 +183,7 @@ function DateFilter({
 	);
 }
 
-/** 분류 필터 하나를 바꾼 `relations`. 빈 목록은 지운다. */
+/** `relations` with one taxonomy filter changed. An empty list is removed. */
 export function setRelation(state: ListState, field: string, ids: readonly string[]): Partial<ListState> {
 	const { [field]: _removed, ...rest } = state.relations;
 	return { relations: ids.length > 0 ? { ...rest, [field]: ids } : rest };
@@ -191,7 +191,7 @@ export function setRelation(state: ListState, field: string, ids: readonly strin
 
 const clearRelation = (state: ListState, field: string) => setRelation(state, field, []);
 
-/** 이 필터를 지우는 변경. 칩의 `✕`와 팝업의 `필터 해제`가 쓴다. */
+/** Change that clears this filter. Used by the chip's `✕` and the popup's `필터 해제`. */
 export function clearPatchFor(filter: ColumnFilter, state: ListState): Partial<ListState> {
 	switch (filter.kind) {
 		case "text":
@@ -210,8 +210,8 @@ export function clearPatchFor(filter: ColumnFilter, state: ListState): Partial<L
 }
 
 /**
- * 엑셀처럼 컬럼 헤더에서 여는 정렬·필터 팝업(v2 A1). 필터가 걸린 헤더는 아이콘 모양이 바뀌어
- * 색만으로 상태를 전달하지 않는다. 정렬 가능한 컬럼은 `aria-sort`를 헤더 셀에 둔다(호출하는 쪽).
+ * Sort/filter popup opened from the column header, like Excel. A header with a filter changes its icon shape
+ * so state is not conveyed by color alone. Sortable columns put `aria-sort` on the header cell (done by the caller).
  */
 export function ColumnHeader({
 	column,

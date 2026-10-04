@@ -12,11 +12,11 @@ import { type CustomBase, type CustomValue, customDefinition } from "./custom";
 import type { AiApply, AiCheck, AiEngine, AiPick, AiResult } from "./definition";
 
 /**
- * 관리자 화면에 보내는 기능의 모양(서버·브라우저 공용). 서버는 저장한 값으로, 관리자 화면은 아직 저장하지 않은 새
- * 화면 기능의 미리보기로 만든다.
+ * The shape of an action sent to the admin screen (shared by server and browser). The server builds it from saved values; the admin screen builds it as a preview of a new
+ * screen action that is not yet saved.
  */
 
-/** 관리자 화면에 보내는 기능 하나. 정의의 고정 부분과 지금 값(고친 값을 얹은 것). */
+/** One action sent to the admin screen. The fixed part of the definition and the current value (the edited value applied on top). */
 export interface AiActionView extends AiActionEditable {
 	key: string;
 	label: string;
@@ -28,22 +28,22 @@ export interface AiActionView extends AiActionEditable {
 	choices?: AiChoices;
 	attach: readonly AiAttach[];
 	checks: AiCheck[];
-	/** 기능 정의가 정한 검사(`checkKey`, 끌 수만 있다). 나머지는 관리자 화면에서 더한 검사다. */
+	/** Checks set by the action definition (`checkKey`, can only be turned off). The rest are checks added in the admin screen. */
 	definedChecks: string[];
-	/** 코드 검사 이름 → 보이는 이름. 코드 검사는 켜고 끄기만 한다. */
+	/** Code check name -> display name. Code checks can only be turned on or off. */
 	validatorLabels: Record<string, string>;
-	/** 결과를 흘려받는 기능인가. */
+	/** Does the action stream its result? */
 	stream: boolean;
-	/** 관리자 화면에서 만든 기능(화면 기능)이면 그 기본 정보(이름·붙을 곳·결과 모양). 코드 기능은 없다. */
+	/** For an action created in the admin screen (screen action), its basic info (name, where it attaches, result shape). Code actions have none. */
 	custom?: CustomBase;
-	/** 고친 값의 버전. 고친 적 없으면 0. */
+	/** Version of the edited value. 0 if never edited. */
 	version: number;
 	updatedAt: string | null;
-	/** 기본값과 다른 값 이름. */
+	/** Names of values that differ from the defaults. */
 	overridden: string[];
 }
 
-/** 저장된 고친 값을 읽는다. 모양이 맞지 않는 값은 버린다(정의가 바뀌어 맞지 않게 된 경우). */
+/** Reads the saved edited value. Drops values whose shape does not match (the definition changed and no longer fits). */
 export const readOverride = (value: unknown): AiActionOverride => {
 	const parsed = aiActionOverrideSchema.safeParse(value);
 	return parsed.success ? parsed.data : {};
@@ -87,9 +87,9 @@ export const viewOf = (
 	overridden: Object.keys(custom ? custom.override : readOverride(row?.value)),
 });
 
-/** 아직 저장하지 않은 새 화면 기능의 이름(key). 저장할 때 서버가 새 이름을 붙인다. */
+/** Name (key) of a new, unsaved screen action. The server assigns a new name when saving. */
 export const NEW_CUSTOM_KEY = "custom_new";
 
-/** 저장하지 않은 새 화면 기능의 모양. 관리자 화면이 기본 정보를 고를 때마다 다시 만든다. */
+/** The shape of a new, unsaved screen action. The admin screen rebuilds it each time the basic info is chosen. */
 export const draftCustomView = (base: CustomBase): AiActionView =>
 	viewOf(resolveAction(NEW_CUSTOM_KEY, customDefinition(base), {}), undefined, { base, override: {} });

@@ -5,13 +5,13 @@ import type { AnnotationConfig } from "../types";
 const { normalizeConfigItems, createAnnotationRegistry, supportsAnnotationScope } = __testable__;
 
 describe("normalizeConfigItems / createAnnotationRegistry", () => {
-	it("annotationConfig가 없으면 에러를 던진다", () => {
+	it("throws an error when annotationConfig is missing", () => {
 		expect(() => createAnnotationRegistry(undefined)).toThrowError(
 			"[createAnnotationRegistry] ERROR : annotationConfig is required",
 		);
 	});
 
-	it("기본값(source/scopes)과 priority를 type 그룹별로 부여한다", () => {
+	it("assigns defaults (source/scopes) and priority per type group", () => {
 		const config: AnnotationConfig = {
 			annotations: [
 				{ name: "strong", kind: "class", class: "font-bold", source: "mdast", scopes: ["char", "document"] },
@@ -53,7 +53,7 @@ describe("normalizeConfigItems / createAnnotationRegistry", () => {
 		expect(registry.get("Tooltip")?.kind).toBe("render");
 	});
 
-	it("중복/잘못된 name은 에러를 던진다", () => {
+	it("throws an error for a duplicate or invalid name", () => {
 		expect(() =>
 			normalizeConfigItems({
 				annotations: [

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 코드 연결 글자 꾸밈의 이름표와 편집 화면 문구(M15). */
+/** Label and editing view text of the code link inline mark. */
 export const codeRefMessages = defineMessages("cms-blocks.code-ref", {
 	en: {
 		label: "Code link",

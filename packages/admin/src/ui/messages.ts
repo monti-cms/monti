@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 공통 UI 부품(`ui/*`)의 보조 문구: 화면 낭독용 이름과 기본 라벨(M15). */
+/** Auxiliary messages for shared UI parts (`ui/*`): screen reader names and default labels. */
 export const uiMessages = defineMessages("cms-admin.ui", {
 	en: {
 		close: "Close",

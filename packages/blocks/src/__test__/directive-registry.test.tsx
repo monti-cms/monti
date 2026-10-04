@@ -1,7 +1,7 @@
 import { BLOCK_JSX_NAMES, DIRECTIVES, REGISTERED_JSX_NAMES, RETIRED_JSX_NAMES } from "@monti-cms/core/mdx";
 import { describe, expect, it, vi } from "vitest";
 
-// 블록은 플러그인(`blocks()`)으로 넣은 설정으로 돌려, 공개 컴포넌트가 플러그인 `render`에서 오게 한다.
+// Run with a config that adds blocks through the plugin (`blocks()`), so the public components come from the plugin `render`.
 vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
@@ -9,11 +9,11 @@ vi.mock("../../../core/src/config/resolved", async () => ({
 const { mdxComponents } = await import("@monti-cms/core/render");
 
 /**
- * 이름 정합성. 등록된 이름에 공개 컴포넌트·레지스트리가 빠지면 공개 글이 조용히 비어 보인다
- * ("If directives are not handled, they do not emit anything"). 공개 컴포넌트는 본체 기본 + 블록 확장이 합친 표(`mdxComponents()`)다.
+ * Name consistency. If a registered name is missing from the public components or the registry, the public page silently renders empty
+ * ("If directives are not handled, they do not emit anything"). The public components are the core defaults merged with the block extensions (`mdxComponents()`).
  */
-describe("레지스트리·공개 컴포넌트 대조", () => {
-	it("등록 directive의 컴포넌트가 합친 컴포넌트 표에 있다", async () => {
+describe("registry vs. public components", () => {
+	it("registered directive components are in the merged component map", async () => {
 		const components = await mdxComponents();
 		const missing = DIRECTIVES.filter(
 			(definition) => /^[A-Z]/.test(definition.component) && !(definition.component in components),
@@ -22,7 +22,7 @@ describe("레지스트리·공개 컴포넌트 대조", () => {
 		expect(missing).toEqual([]);
 	});
 
-	it("등록 directive의 컴포넌트 이름이 레지스트리에도 있다", () => {
+	it("registered directive component names are also in the registry", () => {
 		const missing = DIRECTIVES.filter((definition) => !REGISTERED_JSX_NAMES.has(definition.component)).map(
 			(definition) => definition.name,
 		);
@@ -30,7 +30,7 @@ describe("레지스트리·공개 컴포넌트 대조", () => {
 		expect(missing).toEqual([]);
 	});
 
-	it("폐기 이름은 레지스트리·공개 컴포넌트 어디에도 없다", async () => {
+	it("retired names are in neither the registry nor the public components", async () => {
 		const components = await mdxComponents();
 		expect([...RETIRED_JSX_NAMES].sort()).toEqual(["ContentLink", "IdeographicSpace"]);
 		for (const name of RETIRED_JSX_NAMES) {

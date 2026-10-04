@@ -19,13 +19,13 @@ import { codeBlockMessages } from "./messages";
 const t = createTranslator(codeBlockMessages);
 
 interface LineMenuProps {
-	/** 고른 줄 [start, end). */
+	/** The picked lines [start, end). */
 	start: number;
 	end: number;
 	lineEffects: CodeLineEffect[];
 	onChange: (next: CodeLineEffect[]) => void;
 	onClose: () => void;
-	/** 이 줄을 본문 글자와 연결하기 시작한다(본문을 드래그해 고르게 한다). */
+	/** Starts linking this line to body text (lets the user drag-select the body). */
 	onLinkText?: () => void;
 	style?: CSSProperties;
 }
@@ -72,11 +72,11 @@ function CheckItem({ checked, onSelect, children }: ItemProps & { checked: boole
 	);
 }
 
-/** 줄 번호 칸에서 고른 줄에 줄 효과(정의 목록의 효과와 접기)를 켜고 끄는 메뉴. 이름·아이콘은 효과 정의에서 온다. */
+/** Menu that turns line effects (the effects and folds from the definition list) on and off for the lines picked in the line number gutter. Names and icons come from the effect definitions. */
 export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkText, style }: LineMenuProps) {
 	const ref = useRef<HTMLDivElement>(null);
 	const iconByName = useIconByName();
-	// 고른 범위와 같은 접기, 또는 한 줄만 골랐을 때 그 줄(› 표시가 있는 첫 줄)에서 시작하는 접기(바깥쪽부터).
+	// A fold equal to the picked range, or, when only one line is picked, a fold starting at that line (the first line with the › marker) (outermost first).
 	const startingHere = lineEffects
 		.filter((effect) => effect.name === COLLAPSE && effect.start === start)
 		.sort((a, b) => b.end - a.end);

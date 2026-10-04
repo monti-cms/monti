@@ -1,6 +1,6 @@
-// 커밋 메시지 검사(commitlint). Conventional Commits(`type(scope): subject`)를 따르고,
-// 범위(scope)는 아래 목록만 쓸 수 있다(생략 가능). 메시지는 영어로 쓴다(한글이 있으면 실패).
-// 훅은 `.husky/commit-msg`가 돌린다.
+// Commit message check (commitlint). Follows Conventional Commits (`type(scope): subject`), and
+// the scope can only be one of the values below (optional). Messages are written in English (fails if Hangul is present).
+// The hook is run by `.husky/commit-msg`.
 
 const HANGUL = /[ᄀ-ᇿ㄰-㆏가-힯]/;
 

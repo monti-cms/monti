@@ -30,25 +30,25 @@ import { useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
 import { t } from "./translate";
 
-/** 입력이 필드 밖에서 알아야 하는 값. 편집 화면이 채운다. */
+/** Values an input needs from outside the field. The edit screen fills them. */
 export interface FieldContext {
-	/** 편집 중인 콘텐츠 ID. 자기 자신을 관계 대상으로 고르지 않게 한다. */
+	/** ID of the content being edited. Keeps it from picking itself as a relation target. */
 	entryId?: string;
 	disabled: boolean;
-	/** 편집 중인 콘텐츠의 언어. 필드 옆 AI 동작이 주소 충돌을 이 언어에서 본다. */
+	/** Language of the content being edited. The AI action next to a field checks slug conflicts in this language. */
 	locale?: string;
-	/** 번역 묶음 ID(원문 ID). 반대 방향 관계는 원문을 가리킨다(v2 B2·B4). */
+	/** Translation group ID (original ID). An inverse relation points to the original. */
 	groupId?: string;
-	/** 속성 패널이 이미 불러온 이 글의 사용처. 반대 방향 관계가 같은 글이면 다시 부르지 않는다. */
+	/** Usages of this post already loaded by the properties panel. An inverse relation for the same post does not fetch again. */
 	incomingReferences?: readonly IncomingReference[];
 	incomingReferencesLoading?: boolean;
 	refreshIncomingReferences?: () => void;
-	/** 저장된 이 글(보기 필드가 원문 값·언어를 읽는다). */
+	/** The saved post (view fields read the original value and language). */
 	entry?: import("./entry-form").EntryData | null;
 }
 
 export interface FieldInputProps {
-	/** 편집 중인 콘텐츠의 컬렉션. */
+	/** Collection of the content being edited. */
 	collection: string;
 	name: string;
 	field: ValueField;
@@ -57,14 +57,14 @@ export interface FieldInputProps {
 	invalid: boolean;
 	describedBy?: string;
 	context: FieldContext;
-	/** 지금 입력 중인 값 전체(제목·요약 등 다른 필드 값을 안내 문구에 쓸 때). 번역본의 공통 필드는 원문 값이다. */
+	/** All values currently being entered (when other fields such as title or summary are used in hint text). Shared fields of a translation hold the original's values. */
 	form: EntryForm;
 	onChange: (value: FormValue) => void;
 }
 
 export const inputClass = "h-8 text-xs md:text-xs";
 
-/** 여러 줄 텍스트 입력의 줄 수(`rows`, 없으면 2)와 그 줄 수가 보이는 최소 높이(글자 줄 + 위아래 여백). */
+/** Row count of a multi-line text input (`rows`, 2 if absent) and the minimum height that shows that many rows (text lines + vertical padding). */
 export function multilineProps(field: { readonly rows?: number }): { rows: number; style: { minHeight: string } } {
 	const rows = field.rows !== undefined && field.rows >= 1 ? Math.floor(field.rows) : 2;
 	return { rows, style: { minHeight: `${rows + 1}rem` } };
@@ -72,12 +72,12 @@ export function multilineProps(field: { readonly rows?: number }): { rows: numbe
 
 type EntryOption = { id: string; title: string; status: string };
 
-/** 목록 API 한 번에 받는 최대 수. 글이 이보다 많으면 여러 번 나눠 받는다. */
+/** Maximum count received per list API call. If there are more posts, they are fetched in several batches. */
 const ENTRY_OPTIONS_PAGE_SIZE = 100;
 
 /**
- * 관계 대상(게시글·메모)의 전체 목록. 고를 때 검색 없이 바로 펼쳐 보이려고 처음에 한 번 다 받는다.
- * 휴지통 글은 목록 API가 빼고, `publishedOnly`면 공개 글만 받는다.
+ * Full list of relation targets (posts, memos). Fetched all at once up front so it can be shown right away without search when picking.
+ * The list API excludes trashed posts, and with `publishedOnly` only published posts are received.
  */
 function useEntryOptions(field: RelationField) {
 	const [options, setOptions] = useState<EntryOption[] | null>(null);
@@ -112,15 +112,15 @@ function useEntryOptions(field: RelationField) {
 	return options;
 }
 
-/** 관계 대상 컬렉션의 이름표(예: `게시글`). 입력 안내 문구에 쓴다. */
+/** Label of the relation target collection (e.g. `Posts`). Used in input hint text. */
 const targetLabel = (relation: RelationField) =>
 	isCollection(relation.to) ? schemaOf(relation.to).label : relation.to;
 
-/** 공개되지 않은 글은 이름 뒤에 표시한다. 모음집·대체 글의 공개 목록에서 빠지기 때문이다. */
+/** Posts that are not published get a marker after the name, because they are missing from the public list of collections and replacement posts. */
 const entryLabel = (option: EntryOption) =>
 	option.status === "published" ? option.title : `${option.title}${t("entry.unpublished")}`;
 
-/** 한 개 관계(게시글·메모 대상). 누르면 전체 글 목록이 열리고 고른다. 대체 글(§6.4)이 쓴다. */
+/** Single relation (post or memo target). Pressing it opens the full post list to pick from. Used by the replacement post. */
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const relation = field as RelationField;
 	const options = useEntryOptions(relation);
@@ -145,7 +145,7 @@ export function EntryPicker({ field, id, value, invalid, describedBy, context, o
 	);
 }
 
-/** 순서 있는 목록의 한 줄. 손잡이를 끌거나 위로·아래로 버튼으로 옮긴다. */
+/** One row of an ordered list. Move it by dragging the handle or with the up/down buttons. */
 function SortableEntryRow({
 	sortableId,
 	index,
@@ -190,7 +190,7 @@ function SortableEntryRow({
 			</IconButton>
 			<span className="min-w-0 flex-1 truncate">
 				{index + 1}. {title}
-				{/* 공개되지 않은 글은 모음집의 공개 목록에서 빠진다. */}
+				{/* Unpublished posts are missing from the collection's public list. */}
 				{option && option.status !== "published" && option.status !== "missing" && (
 					<span className="ml-1 cms-dark:text-amber-400 text-amber-700">{t("entry.unpublished")}</span>
 				)}
@@ -219,8 +219,8 @@ function SortableEntryRow({
 }
 
 /**
- * 순서 있는 여러 개 관계(게시글 대상). 모음집 항목(§6.4)이 쓴다.
- * 위의 `글 추가·빼기` 목록에서 체크해 넣고 빼며(넣으면 끝에 붙는다), 아래 목록에서 끌어서 순서를 바꾼다.
+ * Ordered multi relation (post targets). Used by collection items.
+ * Check posts in the `Add/remove posts` list above to add or remove them (added ones go to the end), and drag in the list below to reorder.
  */
 export function OrderedEntryList({ field, id, value, context, onChange }: FieldInputProps) {
 	const relation = field as RelationField;
@@ -231,7 +231,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
 		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
 	);
-	// 같은 글이 두 번 담길 수 있어(이전 데이터) 순번까지 끌기 ID로 쓴다.
+	// The same post can be added twice (legacy data), so the index is also used as the drag ID.
 	const sortableIds = ids.map((itemId, index) => `${index}:${itemId}`);
 
 	const move = (index: number, direction: -1 | 1) => {
@@ -243,7 +243,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 		if (!over || active.id === over.id) return;
 		onChange(arrayMove([...ids], sortableIds.indexOf(String(active.id)), sortableIds.indexOf(String(over.id))));
 	};
-	/** 체크 목록이 돌려준 선택. 남은 글은 지금 순서를 지키고 새 글은 끝에 붙인다. */
+	/** Selection returned by the checklist. Remaining posts keep the current order and new posts are appended. */
 	const applySelection = (selected: string[]) => {
 		const chosen = new Set(selected);
 		const kept = ids.filter((itemId) => chosen.has(itemId));
@@ -309,9 +309,9 @@ export type IncomingReference = {
 };
 
 /**
- * 반대 방향 관계가 상대 레코드의 조건부 목록이면(예: 모음집의 `담는 글`이 메모일 때만 있는 `memoIds`)
- * 그 조건에 맞는 레코드만 고를 수 있게 한다. 레코드마다 지금 고른 종류를 읽어 거른다.
- * 조건이 없는 관계는 거르지 않는다.
+ * If an inverse relation is a conditional list on the other record (e.g. `memoIds`, present only when a collection's `contained posts` are memos),
+ * only records matching that condition can be picked. The currently chosen kind is read per record to filter.
+ * Relations without a condition are not filtered.
  */
 function useRecordKind(field: BacklinkField, options: readonly { id: string }[]) {
 	const requirement = storedField(field.from as SchemaCollection, field.via)?.when;
@@ -346,15 +346,15 @@ function useRecordKind(field: BacklinkField, options: readonly { id: string }[])
 	return {
 		ready: !requirement || options.every((option) => kinds.has(option.id)),
 		accepts: (id: string) => !requirement || kinds.get(id) === requirement.value,
-		/** 새로 만들 레코드가 이 관계를 받도록 종류를 정한다. 기본 종류면 따로 적지 않는다. */
+		/** Sets the kind so a newly created record accepts this relation. Not written separately for the default kind. */
 		createMetadata: requirement && requirement.value !== defaultValue ? { [requirement.field]: requirement.value } : {},
 	};
 }
 
 /**
- * 반대 방향 관계 입력(v2 B2). 예: 게시글의 `모음집`. 상대 레코드(모음집)의 여러 개 관계 필드(`itemIds`)를
- * 누르는 즉시 저장한다 — 이 글의 초안·발행과 별개다. 추가하면 끝에 들어가고, 빼면 이 글이 든 자리를 모두 뺀다.
- * 버전이 어긋나면(다른 곳에서 먼저 바뀜) 최신 값을 다시 읽어 한 번 더 시도한다.
+ * Inverse relation input. E.g. a post's `collection`. Saves the other record's (collection's) multi relation field (`itemIds`)
+ * immediately on click, independent of this post's draft and publish. Adding appends to the end; removing removes every slot holding this post.
+ * If versions diverge (changed elsewhere first), it re-reads the latest value and tries once more.
  */
 export function BacklinkInput({
 	field,
@@ -363,17 +363,17 @@ export function BacklinkInput({
 	shared,
 }: {
 	field: BacklinkField;
-	/** 이 글의 ID. 번역본이면 원문 ID다(관계는 원문을 가리킨다). 새 글이면 없다. */
+	/** ID of this post. For a translation, the original's ID (relations point to the original). Absent for a new post. */
 	targetId: string | undefined;
 	disabled: boolean;
-	/** 속성 패널이 불러온 같은 글의 사용처. 있으면 그것을 쓰고, 저장 뒤에는 `refresh`로 다시 부른다. */
+	/** Usages of the same post loaded by the properties panel. If present, use them; after saving, reload with `refresh`. */
 	shared?: { references: readonly IncomingReference[]; loading: boolean; refresh: () => void };
 }) {
 	const records = useTaxonomy(field.from as RecordCollection, Boolean(targetId));
 	const creator = useRecordCreator();
 	const kind = useRecordKind(field, records.options);
 	const [fetched, setFetched] = useState<{ id: string; title: string }[] | null>(null);
-	/** 불러오기·저장 실패. 다른 관계 입력처럼 입력 바로 아래에 보인다. */
+	/** Load/save failure. Shown right below the input like other relation inputs. */
 	const [error, setError] = useState<string | null>(null);
 
 	const membersOf = useCallback(
@@ -407,7 +407,7 @@ export function BacklinkInput({
 		}
 	}, [targetId, refreshShared, membersOf]);
 
-	// 속성 패널이 같은 글의 사용처를 이미 불러오면 따로 부르지 않는다.
+	// If the properties panel already loaded this post's usages, do not fetch separately.
 	const usesShared = Boolean(shared);
 	useEffect(() => {
 		if (!usesShared) void load();
@@ -419,7 +419,7 @@ export function BacklinkInput({
 			: membersOf(shared.references)
 		: fetched;
 
-	/** 상대 레코드의 관계 목록을 바꿔 바로 저장한다. record 컬렉션은 저장이 곧 공개 반영이다. */
+	/** Changes the other record's relation list and saves immediately. For a record collection, saving is publishing. */
 	const update = async (recordId: string, change: (ids: string[]) => string[]) => {
 		for (let attempt = 0; attempt < 2; attempt++) {
 			const record = await cmsFetch<RecordEntry>(cmsApiUrl(`/v1/entries/${recordId}`));
@@ -442,19 +442,19 @@ export function BacklinkInput({
 		}
 	};
 
-	// 고르거나 빼면 먼저 화면에 반영하고(낙관적), 저장은 뒤에서 차례로 한다. 실패하면 알리고 그 변경만 되돌린다.
+	// On pick or remove, reflect on screen first (optimistic) and save in turn in the background. On failure, notify and revert only that change.
 	const [optimistic, setOptimistic] = useState<string[] | null>(null);
 	const pendingRef = useRef(0);
 	const queueRef = useRef<Promise<void>>(Promise.resolve());
 	const awaitingServerRef = useRef(false);
-	/** 방금 만들면서 이 글을 넣은 모음집. 다시 저장하지 않는다. */
+	/** Collection just created with this post in it. Not saved again. */
 	const createdRef = useRef(new Set<string>());
 	const serverIds = useMemo(() => members?.map((member) => member.id) ?? [], [members]);
 	const serverKey = serverIds.join(",");
 	const serverIdsRef = useRef(serverIds);
 	serverIdsRef.current = serverIds;
 
-	// 저장이 모두 끝난 뒤 서버 값이 도착하면 낙관적 값을 내려놓는다.
+	// When saved server values arrive after all saves finish, drop the optimistic value.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the server ids
 	useEffect(() => {
 		if (awaitingServerRef.current && pendingRef.current === 0) {
@@ -490,7 +490,7 @@ export function BacklinkInput({
 		...records.options
 			.filter((option) => kind.accepts(option.id))
 			.map((option) => ({ value: option.id, label: option.title })),
-		// 공개 목록에 아직 없는 모음집(방금 만든 것 등)도 이름으로 보인다.
+		// A collection not yet in the public list (e.g. just created) is also shown by name.
 		...(members ?? [])
 			.filter((member) => !records.options.some((option) => option.id === member.id))
 			.map((member) => ({ value: member.id, label: member.title })),
@@ -530,7 +530,7 @@ export function BacklinkInput({
 				onCreate={
 					field.createInline
 						? async (title) => {
-								// 추가 칸에 이 글을 담은 채로 연다. 저장하면 목록에 바로 보이게 선택지도 다시 읽는다.
+								// Open with this post already in the add field. After saving, reload the options so it shows up in the list right away.
 								const saved = await creator.create(field.from as Collection, {
 									title,
 									...kind.createMetadata,

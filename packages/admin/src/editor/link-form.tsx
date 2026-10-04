@@ -27,7 +27,7 @@ export function normalizeLinkHref(value: string): string | null {
 	return null;
 }
 
-/** 링크를 넣거나 고칠 범위. 폼을 여는 순간의 선택을 붙잡아 둔다(입력칸으로 초점이 옮겨 가도 유지). */
+/** Range where a link is inserted or edited. Captures the selection at the moment the form opens (kept even when focus moves to the input). */
 export interface LinkDraft {
 	from: number;
 	to: number;
@@ -41,20 +41,20 @@ export function linkDraftFromSelection(editor: Editor): LinkDraft {
 	return { from, to, existing, href: existing ? String(editor.getAttributes("link").href ?? "") : "" };
 }
 
-/** 효과를 적용한 뒤 커서를 그 끝으로 모은다. 커서가 효과 끝에 있으면 인라인 버블이 적용 결과를 보여 준다. */
+/** Collapses the cursor to the end of the effect after applying it. With the cursor at the end of the effect, the inline bubble shows the applied result. */
 export const collapseToEnd = (chain: ChainedCommands) =>
 	chain.command(({ tr }) => {
 		tr.setSelection(TextSelection.near(tr.doc.resolve(tr.selection.to), -1));
 		return true;
 	});
 
-/** 한글 조합을 끝내는 Enter인가. 이때는 폼을 보내지 않는다. */
+/** Whether this Enter finishes Korean composition. The form is not submitted then. */
 export const isComposingKey = (event: KeyboardEvent) =>
 	event.nativeEvent.isComposing || event.key === "Process" || event.keyCode === 229;
 
 /**
- * 팝오버 입력 폼(링크·툴팁)의 Enter 처리. 한글 조합 중 Enter는 무시하고, 여러 줄 칸에서도 Enter로 보낸다(Shift+Enter는 줄바꿈).
- * `<form onKeyDown={submitOnEnter}>`로 단다.
+ * Enter handling for popover input forms (link, tooltip). Enter during Korean composition is ignored, and Enter submits even in multi-line fields (Shift+Enter inserts a line break).
+ * Attach it as `<form onKeyDown={submitOnEnter}>`.
  */
 export function submitOnEnter(event: KeyboardEvent<HTMLFormElement>) {
 	if (event.key !== "Enter") return;
@@ -68,7 +68,7 @@ export function submitOnEnter(event: KeyboardEvent<HTMLFormElement>) {
 	}
 }
 
-/** 팝오버 입력 폼 아래 버튼 줄: 왼쪽에 해제, 오른쪽에 취소·적용. 링크·툴팁 폼이 같이 쓴다. */
+/** Button row below a popover input form: remove on the left, cancel and apply on the right. Shared by the link and tooltip forms. */
 export function PopoverFormFooter({
 	removeLabel,
 	removeIcon,
@@ -77,7 +77,7 @@ export function PopoverFormFooter({
 }: {
 	removeLabel: string;
 	removeIcon: ReactNode;
-	/** 이미 걸린 효과를 고칠 때만 준다. */
+	/** Passed only when editing an effect that is already applied. */
 	onRemove?: () => void;
 	onCancel: () => void;
 }) {
@@ -107,7 +107,7 @@ export function PopoverFormFooter({
 	);
 }
 
-/** 팝오버 입력 폼의 빨간 한 줄 오류. */
+/** One-line red error of a popover input form. */
 export function PopoverFormError({ id, children }: { id: string; children: ReactNode }) {
 	return (
 		<p id={id} role="alert" className="text-cms-destructive text-xs">
@@ -122,7 +122,7 @@ interface LinkFormProps {
 	onDone: () => void;
 }
 
-/** 링크 주소 입력 폼. 상단 서식 도구의 팝오버와 인라인 버블이 함께 쓴다. */
+/** Link address input form. Shared by the top formatting toolbar's popover and the inline bubble. */
 export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 	const id = useId();
 	const [href, setHref] = useState(draft.href);

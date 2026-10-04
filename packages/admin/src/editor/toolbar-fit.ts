@@ -1,17 +1,17 @@
-/** 툴바에 놓을 항목 하나의 크기 정보. `divider`는 그룹 사이 구분선이다. */
+/** Size info for one item placed on the toolbar. `divider` is the separator between groups. */
 export interface FitItem {
 	key: string;
-	/** 클수록 먼저 숨긴다. */
+	/** Larger values are hidden first. */
 	priority: number;
-	/** 참이면 좁아도 숨기지 않는다. */
+	/** If true, never hidden even when narrow. */
 	fixed?: boolean;
 	width: number;
 	divider?: boolean;
 }
 
 /**
- * 보이는 도구 키로 실제 그릴 항목을 정한다.
- * 구분선은 양쪽에 보이는 도구가 있을 때만 그리고, 연달아 나오면 하나만 그린다.
+ * Decides which items to actually draw from the visible tool keys.
+ * A divider is drawn only when there are visible tools on both sides, and only one is drawn when several come in a row.
  */
 export function layoutKeys(items: FitItem[], visible: ReadonlySet<string>): string[] {
 	const out: string[] = [];
@@ -32,9 +32,9 @@ export function layoutKeys(items: FitItem[], visible: ReadonlySet<string>): stri
 }
 
 /**
- * 가용 폭에 들어가도록 우선순위가 낮은(숫자가 큰) 도구부터 숨기고, 남는 도구의 키를 돌려준다.
- * 숨긴 도구가 있으면 "더보기" 버튼(`overflowWidth`)도 한 칸 차지한다. `gap`은 항목 사이 간격이다.
- * 우선순위가 같으면 뒤쪽 도구를 먼저 숨긴다. 고정 도구만 남아도 넘치면 그대로 둔다.
+ * Hides tools starting from the lowest priority (largest number) until the rest fit the available width, and returns the keys of the remaining tools.
+ * If any tool is hidden, the "More" button (`overflowWidth`) also takes one slot. `gap` is the spacing between items.
+ * On equal priority, later tools are hidden first. If it still overflows with only pinned tools left, it is left as is.
  */
 export function fitSlots(items: FitItem[], available: number, overflowWidth: number, gap = 0): Set<string> {
 	const widths = new Map(items.map((item) => [item.key, item.width]));

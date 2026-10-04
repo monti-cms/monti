@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { cleanTextColor, textColorProps } from "./colors";
 
-/** 글자색·글자 배경색(`:color[글]{fg bg …}`). 헥스가 아닌 값은 버리고, 색이 없으면 글만 그린다. */
+/** Text color and text background color (`:color[text]{fg bg …}`). Non-hex values are dropped, and with no color only the text is rendered. */
 export function Color({ children, ...attrs }: PropsWithChildren<Record<string, unknown>>) {
 	const { className, style, ...data } = textColorProps(cleanTextColor(attrs));
 	return (
@@ -11,5 +11,5 @@ export function Color({ children, ...attrs }: PropsWithChildren<Record<string, u
 	);
 }
 
-/** 글자색의 공개 컴포넌트(`@monti-cms/core/render`가 부른다). 색은 `styles.css`의 `.cms-color`가 테마에 맞춰 고른다. */
+/** Public component for text color (called by `@monti-cms/core/render`). The color is picked for the theme by `.cms-color` in `styles.css`. */
 export default () => ({ Color });

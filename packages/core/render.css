@@ -1,14 +1,14 @@
 /*
- * @monti-cms/core/render.css — 공개 화면 본문(`@monti-cms/core/render`)의 코드 강조·줄 효과·기본 컴포넌트 모양.
- * 사이트의 Tailwind 4 입력 CSS에서 `@import "tailwindcss";` 다음에 import한다. 어두운 테마는 `.dark`·`[data-theme="dark"]`.
- * 기본 컴포넌트(`cms-*` 클래스)를 덮어쓴 사이트는 그 부분을 쓰지 않아도 된다.
+ * @monti-cms/core/render.css — styles for code highlighting, line effects and default components in public-page content (`@monti-cms/core/render`).
+ * Import it in the site's Tailwind 4 input CSS after `@import "tailwindcss";`. Dark theme uses `.dark` and `[data-theme="dark"]`.
+ * Sites that override the default components (`cms-*` classes) can skip those parts.
  */
 
-/* 코드 줄 효과의 클래스(본체의 줄 효과 정의)를 Tailwind가 읽게 한다. 저장소 안에서는 소스, 설치한 묶음에서는 dist를 읽는다. */
+/* Let Tailwind scan the classes of code line effects (the core's line effect definitions). Reads the source inside the repo and dist in an installed package. */
 @source "./src/annotation";
 @source "./dist/annotation";
 
-/* 줄 앞 표시(+·− 등). 줄의 첫 요소 앞에 글자를 둔다. */
+/* Line prefix marker (+, − etc.). Puts a character before the line's first element. */
 @utility anno-mark-base {
 	& > *:first-child {
 		@apply relative;
@@ -24,19 +24,19 @@
 	}
 }
 
-/* 어두운 테마 코드 색(shiki 두 테마). shiki가 밝은 색을 인라인 style로 넣어 !important로만 덮을 수 있다. */
+/* Dark theme code colors (shiki's two themes). shiki inlines the light colors as style, so only !important can override them. */
 :where(.dark, [data-theme="dark"]) .shiki {
-	/* biome-ignore lint/complexity/noImportantStyles: 인라인 style을 덮는다 */
+	/* biome-ignore lint/complexity/noImportantStyles: overrides inline style */
 	color: var(--shiki-dark) !important;
-	/* biome-ignore lint/complexity/noImportantStyles: 인라인 style을 덮는다 */
+	/* biome-ignore lint/complexity/noImportantStyles: overrides inline style */
 	background-color: var(--shiki-dark-bg) !important;
 }
 :where(.dark, [data-theme="dark"]) .shiki span {
-	/* biome-ignore lint/complexity/noImportantStyles: 인라인 style을 덮는다 */
+	/* biome-ignore lint/complexity/noImportantStyles: overrides inline style */
 	color: var(--shiki-dark) !important;
 }
 
-/* 들여쓰기 안내선 */
+/* Indent guides */
 .shiki .line .indent {
 	position: relative;
 	display: inline-block;
@@ -58,12 +58,12 @@
 	pointer-events: none;
 }
 
-/* 줄 번호(줄에 단 실제 번호, 접힌 줄이 있어도 밀리지 않는다) */
+/* Line numbers (actual numbers attached to lines; they do not shift when lines are collapsed) */
 pre[data-show-line-numbers] code .line::before {
 	@apply mr-3 inline-block border-transparent text-right! w-[2ch]! content-[attr(data-line)];
 }
 
-/* 본문이 코드 줄을 가리키면(`:code-ref`) 연결된 줄만 또렷하게 */
+/* When the body points at code lines (`:code-ref`), keep only the linked lines sharp */
 pre[data-code-focus] code .line {
 	transition:
 		opacity 150ms ease,
@@ -83,7 +83,7 @@ pre[data-code-focus] code .line[data-focused] {
 	}
 }
 
-/* 수식 블록은 넘치면 가로로 넘긴다 */
+/* Math blocks scroll horizontally on overflow */
 .katex-display {
 	overflow-x: auto;
 	overflow-y: hidden;
@@ -94,7 +94,7 @@ pre[data-code-focus] code .line[data-focused] {
 	min-width: max-content;
 }
 
-/* 코드 블록 틀(제목 줄·복사 단추·코드 안 툴팁 목록) */
+/* Code block frame (title bar, copy button, in-code tooltip list) */
 .cms-code {
 	position: relative;
 	margin: 1.5rem 0;
@@ -149,7 +149,7 @@ pre[data-code-focus] code .line[data-focused] {
 .cms-code-copy:focus-visible {
 	display: block;
 }
-/* 코드 안 툴팁 목록은 마우스를 올릴 수 없는 화면에서만(툴팁을 띄울 수 없다) */
+/* The in-code tooltip list shows only on screens without hover (tooltips cannot be shown) */
 .cms-code-notes {
 	display: none;
 	margin: 0;
@@ -173,7 +173,7 @@ pre[data-code-focus] code .line[data-focused] {
 	}
 }
 
-/* 코드 줄 접기(collapse)·글자 접기(fold) */
+/* Code line collapse and text fold */
 .cms-code-collapse > summary {
 	cursor: pointer;
 	list-style: none;
@@ -208,7 +208,7 @@ pre[data-code-focus] code .line[data-focused] {
 	display: inline;
 }
 
-/* 링크·정렬 */
+/* Links and alignment */
 .cms-link-external::after {
 	content: "↗";
 	display: inline-block;
@@ -224,7 +224,7 @@ pre[data-code-focus] code .line[data-focused] {
 	text-align: right;
 }
 
-/* 이미지 */
+/* Images */
 .cms-image {
 	margin: 1.5rem 0;
 	display: flex;
@@ -270,7 +270,7 @@ pre[data-code-focus] code .line[data-focused] {
 	opacity: 0.7;
 }
 
-/* 첨부 파일 */
+/* Attachments */
 .cms-file {
 	margin: 1.5rem 0;
 	display: flex;
@@ -306,7 +306,7 @@ pre[data-code-focus] code .line[data-focused] {
 	font-weight: 500;
 }
 
-/* 표 */
+/* Tables */
 .cms-table-scroll {
 	position: relative;
 	margin: 1.5rem 0;

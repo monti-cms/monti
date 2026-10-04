@@ -6,19 +6,19 @@ export * from "./colors";
 export { colorBlock } from "./definition";
 
 export interface ColorOptions {
-	/** 편집기 글자색·배경색 고르기 목록. 없으면 기본 8색(`DEFAULT_TEXT_PALETTE`). 본문에는 헥스 값이 저장된다. */
+	/** Editor text/background color picker list. Defaults to the 8 default colors (`DEFAULT_TEXT_PALETTE`). The body stores hex values. */
 	readonly palette?: readonly PaletteColor[];
 }
 
 /**
- * 글자색·글자 배경색(`:color[글]{fg bg …}`). 사이트 설정의 `plugins`에 넣는다.
+ * Text color and text background color (`:color[text]{fg bg …}`). Add it to the site config's `plugins`.
  *
  * ```ts
  * plugins: [color({ palette: [...] })]
  * ```
  *
- * 편집기에는 서식 도구·글자 버블의 `글자색`이 생긴다. 공개 화면은 이 확장의 기본 `Color` 컴포넌트가 그리고(`textColorProps`),
- * 색은 이 패키지의 `styles.css`(`.cms-color`)가 테마에 맞춰 고른다.
+ * The editor gets a `Text color` item in the format toolbar and text bubble. The public page is drawn by this extension's default `Color` component (`textColorProps`),
+ * and the color is picked for the theme by this package's `styles.css` (`.cms-color`).
  */
 export const color = (options: ColorOptions = {}) =>
 	definePlugin({

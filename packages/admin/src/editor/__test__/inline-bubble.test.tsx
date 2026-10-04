@@ -15,8 +15,8 @@ import { editorMessages } from "../messages";
 const t = createTranslator(editorMessages);
 
 /**
- * 사이트 설정과 상관없이 시험하는 글자 꾸밈(확장이 더하는 `:note[글]{text="…"}`). 편집기에 마크를 직접 더하고
- * `CmsAdminComponentsProvider`의 `marks`로 버블 버튼·내용을 등록한다.
+ * Text decoration used for testing regardless of site config (the `:note[text]{text="…"}` an extension adds). Adds the mark to the editor directly and
+ * registers the bubble button and content via `marks` of `CmsAdminComponentsProvider`.
  */
 const noteBlock = defineBlock({
 	name: "note",
@@ -63,37 +63,37 @@ const createEditor = (html: string) => {
 	return editor;
 };
 
-/** Tiptap의 focus 명령은 다음 프레임에 초점을 준다. 테스트에서는 바로 준다. */
+/** Tiptap's focus command focuses on the next frame. In tests, focus immediately. */
 const focusAt = (editor: Editor, position: number | { from: number; to: number }) => {
 	editor.commands.setTextSelection(position);
 	editor.view.focus();
 };
 
-// 위치: 가나(1–3) 굵게 다라(4–6) 링크 마바(7–9) 메모 꾸밈 사아(10–12)
+// Positions: "가나" (1–3), bold "다라" (4–6), link "마바" (7–9), note decoration "사아" (10–12)
 const HTML =
 	'<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-cms-mark="note" data-mark-text="설명">사아</span> 자</p><pre><code>code</code></pre>';
 
 describe("inlineBubbleTarget", () => {
-	it("글자를 고르면 선택 도구를 띄운다", () => {
+	it("shows the selection tool when text is selected", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection({ from: 1, to: 3 });
 		expect(inlineBubbleTarget(editor.state)).toEqual({ kind: "selection", from: 1, to: 3 });
 	});
 
-	it("커서가 효과 안이나 끝에 있으면 그 효과와 범위를 돌려준다", () => {
+	it("returns the effect and its range when the cursor is inside or at the end of an effect", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection(5);
 		expect(inlineBubbleTarget(editor.state)).toMatchObject({
 			kind: "marks",
 			marks: [{ name: "bold", from: 4, to: 6 }],
 		});
-		// 링크 끝(경계)에 둔 커서도 링크로 본다.
+		// A cursor at the link end (boundary) also counts as in the link.
 		editor.commands.setTextSelection(9);
 		expect(inlineBubbleTarget(editor.state)).toMatchObject({
 			kind: "marks",
 			marks: [{ name: "link", from: 7, to: 9, attrs: { href: "https://example.com" } }],
 		});
-		// 확장 꾸밈 시작(경계)에 둔 커서도 그 꾸밈으로 본다(확장이 내용을 그리는 꾸밈만).
+		// A cursor at the start (boundary) of an extension decoration also counts as in it (only decorations whose content the extension renders).
 		editor.commands.setTextSelection(10);
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
 		expect(inlineBubbleTarget(editor.state, [NOTE_MARK])).toMatchObject({
@@ -102,7 +102,7 @@ describe("inlineBubbleTarget", () => {
 		});
 	});
 
-	it("효과 없는 곳의 커서, 원문 편집 중인 코드 블록, 코드 블록을 넘나드는 선택에는 띄우지 않는다", () => {
+	it("does not show for a cursor outside any effect, a code block being edited as source, or a selection spanning code blocks", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection(2);
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
@@ -125,7 +125,7 @@ describe("inlineBubbleTarget", () => {
 describe("InlineBubble", () => {
 	const renderBubble = (editor: Editor) => render(<InlineBubble editor={editor} />);
 
-	it("글자를 고르면 효과 도구가 뜨고 바로 적용된다", () => {
+	it("shows the effect tool when text is selected and applies immediately", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, { from: 1, to: 3 });
 		renderBubble(editor);
@@ -137,14 +137,14 @@ describe("InlineBubble", () => {
 		expect(screen.getByRole("button", { name: t("inlineMarks.italic") }).getAttribute("aria-pressed")).toBe("true");
 	});
 
-	it("편집기에 초점이 없으면 띄우지 않는다", () => {
+	it("does not show when the editor has no focus", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection({ from: 1, to: 3 });
 		renderBubble(editor);
 		expect(screen.queryByRole("toolbar")).toBeNull();
 	});
 
-	it("커서를 효과 안에 두면 해제 버튼으로 그 효과 전체를 지운다", () => {
+	it("removes the whole effect with the remove button when the cursor is inside it", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 5);
 		renderBubble(editor);
@@ -156,7 +156,7 @@ describe("InlineBubble", () => {
 		expect(editor.state.selection.from).toBe(5);
 	});
 
-	it("링크 안에서 주소를 보이고, 버블 안 폼으로 주소를 고친다", () => {
+	it("shows the address inside a link and edits it with the form in the bubble", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 8);
 		renderBubble(editor);
@@ -173,7 +173,7 @@ describe("InlineBubble", () => {
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
-	it("링크 해제 버튼은 링크만 지우고 글자는 남긴다", () => {
+	it("the unlink button removes only the link and keeps the text", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 8);
 		renderBubble(editor);
@@ -183,7 +183,7 @@ describe("InlineBubble", () => {
 		expect(editor.getText()).toContain("마바");
 	});
 
-	it("확장의 글자 꾸밈은 등록한 버블 버튼·내용·입력 칸을 그린다", () => {
+	it("an extension text decoration renders its registered bubble button, content and input", () => {
 		const extension: EditorMarkExtension = {
 			bubble: {
 				group: "link",
@@ -232,7 +232,7 @@ describe("InlineBubble", () => {
 				</CmsAdminComponentsProvider>,
 			);
 
-		// 글자를 고르면 등록한 버튼이 링크 앞(`order: -1`)에 온다.
+		// When text is selected, the registered button comes before the link button (`order: -1`).
 		focusAt(editor, { from: 1, to: 3 });
 		const { unmount } = renderWith();
 		const labels = [
@@ -245,7 +245,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).toMatch(/<span data-cms-mark="note" data-mark-text="새 메모">가나<\/span>/);
 		unmount();
 
-		// 커서가 꾸밈 경계에 있으면 등록한 내용을 그리고, 해제는 버블을 닫지 않는다.
+		// With the cursor at the decoration boundary, the registered content renders, and removing does not close the bubble.
 		focusAt(editor, 10);
 		renderWith();
 		expect(screen.getByText("설명")).toBeTruthy();
@@ -253,7 +253,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
 	});
 
-	it("선택한 글자에 버블에서 링크를 넣는다", () => {
+	it("adds a link to the selected text from the bubble", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, { from: 1, to: 3 });
 		renderBubble(editor);
@@ -264,7 +264,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).toMatch(/<a [^>]*href="\/posts\/hello"[^>]*>가나<\/a>/);
 	});
 
-	it("글자를 입력하는 동안에는 효과 버블을 숨기고, 커서를 옮기면 다시 보인다", () => {
+	it("hides the effect bubble while typing and shows it again when the cursor moves", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 5);
 		renderBubble(editor);
@@ -281,7 +281,7 @@ describe("InlineBubble", () => {
 		expect(screen.getByRole("toolbar", { name: t("inlineBubble.effectLabel") })).toBeTruthy();
 	});
 
-	it("코드 블록에서는 코드가 받는 효과와 글자 접기만 보인다", () => {
+	it("in a code block, shows only the effects code accepts and text folding", () => {
 		const editor = createEditor("<pre><code>call(a, b)</code></pre>");
 		focusAt(editor, { from: 6, to: 10 });
 		renderBubble(editor);
@@ -301,7 +301,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).toMatch(/call\(<span data-code-fold=""[^>]*>a, b<\/span>\)/);
 	});
 
-	it("코드의 글자 접기 옆 커서에서 해제·열림 설정을 한다", () => {
+	it("sets unfold and open options at the cursor next to a code fold", () => {
 		const editor = createEditor("<pre><code>call(a, b)</code></pre>");
 		editor.chain().setTextSelection({ from: 6, to: 10 }).setMark("codeFold").run();
 		focusAt(editor, 6);
@@ -319,7 +319,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).not.toContain("data-code-fold");
 	});
 
-	it("정규식 규칙으로 접은 곳에서는 규칙째 지우거나 개별 효과로 풀 수 있다", () => {
+	it("for a fold made by a regex rule, the whole rule can be removed or individual effects unfolded", () => {
 		const rule = { id: "r", scope: "document", name: "fold", pattern: "b", flags: "g", attrs: {} };
 		const editor = createEditor("<pre><code>abab</code></pre>");
 		editor.commands.command(({ tr }) => {

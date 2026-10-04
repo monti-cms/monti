@@ -21,7 +21,7 @@ const createInlineElement = (properties: Element["properties"]): Element => ({
 });
 
 describe("convertInlineAnnoToRenderTag", () => {
-	it("data-anno-render를 tagName으로 바꾸고 data-anno-* 속성을 일반 prop으로 변환한다", () => {
+	it("changes data-anno-render to tagName and converts data-anno-* attributes into plain props", () => {
 		const node = createInlineElement({
 			"data-anno-render": "Tooltip",
 			"data-anno-variant": '"tip"',
@@ -39,7 +39,7 @@ describe("convertInlineAnnoToRenderTag", () => {
 		expect(node.properties["data-anno-open"]).toBeUndefined();
 	});
 
-	it("유효하지 않은 render tag면 변환하지 않는다", () => {
+	it("does not convert an invalid render tag", () => {
 		const node = createInlineElement({
 			"data-anno-render": "Callout<script>",
 			"data-anno-variant": '"tip"',
@@ -54,7 +54,7 @@ describe("convertInlineAnnoToRenderTag", () => {
 		expect(node.properties["data-anno-variant"]).toBe('"tip"');
 	});
 
-	it("deny 대상 prop은 변환하지 않는다", () => {
+	it("does not convert deny-listed props", () => {
 		const node = createInlineElement({
 			"data-anno-render": "Tooltip",
 			"data-anno-variant": '"tip"',
@@ -79,7 +79,7 @@ describe("convertInlineAnnoToRenderTag", () => {
 		expect("polluted" in props).toBe(false);
 	});
 
-	it("허용되지 않은 render tag면 변환하지 않는다", () => {
+	it("does not convert a render tag that is not allowed", () => {
 		const node = createInlineElement({
 			"data-anno-render": "Callout",
 			"data-anno-variant": '"tip"',

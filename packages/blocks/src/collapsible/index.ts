@@ -4,13 +4,13 @@ import { collapsibleBlock } from "./definition";
 export { collapsibleBlock } from "./definition";
 
 /**
- * 접기 블록(`:::collapsible`). 제목을 눌러 펼치는 영역이다. 사이트 설정의 `plugins`에 넣는다.
+ * Collapsible block (`:::collapsible`). An area that expands when its title is clicked. Add it to the site config's `plugins`.
  *
  * ```ts
  * plugins: [collapsible()]
  * ```
  *
- * 공개 화면은 이 확장이 기본 공개 컴포넌트를 준다(`render`, `@monti-cms/core/render`가 쓴다). 사이트는 같은 이름의 컴포넌트로 덮어쓸 수 있다.
+ * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
 export const collapsible = () =>
 	definePlugin({

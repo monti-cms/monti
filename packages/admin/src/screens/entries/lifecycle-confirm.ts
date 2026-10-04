@@ -3,13 +3,13 @@ import type { ConfirmRequest } from "../shared/confirm-dialog";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { t } from "./translate";
 
-/** 편집 화면의 상태 전환(§5.3). */
+/** Status transitions of the edit screen. */
 export type LifecycleAction = "archive" | "unarchive" | "trash" | "restore";
 
-/** 묻고 나서 하는 전환. 공개 글을 내리는 보관과 휴지통 이동만 묻는다. 보관 해제·복원은 바로 한다. */
+/** Transitions that ask first. Only archiving and moving to trash, which take a published post down, ask. Unarchive and restore happen right away. */
 export type ConfirmedLifecycleAction = Extract<LifecycleAction, "archive" | "trash">;
 
-/** 전환의 이름. 버튼·"먼저 저장하세요" 안내가 같은 말을 쓴다. */
+/** Name of the transition. Buttons and the "save first" hint use the same words. */
 export const LIFECYCLE_LABEL: Record<LifecycleAction, string> = {
 	archive: t("lifecycle.archive"),
 	unarchive: t("lifecycle.unarchive"),
@@ -17,7 +17,7 @@ export const LIFECYCLE_LABEL: Record<LifecycleAction, string> = {
 	restore: t("lifecycle.restore"),
 };
 
-/** 전환이 끝난 뒤 알릴 문구. */
+/** Text to announce after the transition finishes. */
 export const LIFECYCLE_SUCCESS: Record<LifecycleAction, string> = {
 	archive: t("lifecycle.success.archive"),
 	unarchive: t("lifecycle.success.unarchive"),
@@ -25,7 +25,7 @@ export const LIFECYCLE_SUCCESS: Record<LifecycleAction, string> = {
 	restore: t("lifecycle.success.restore"),
 };
 
-/** 전환에 실패했을 때 알릴 문구. */
+/** Text to announce when the transition fails. */
 export const LIFECYCLE_FAILED: Record<LifecycleAction, string> = {
 	archive: t("lifecycle.failed.archive"),
 	unarchive: t("lifecycle.failed.unarchive"),
@@ -34,8 +34,8 @@ export const LIFECYCLE_FAILED: Record<LifecycleAction, string> = {
 };
 
 /**
- * 공개 글을 내리는 전환의 확인 문구. 공개본에서 이 글을 쓰는 곳이 있으면 함께 알리고(§6.1),
- * 원문을 옮기면 같은 묶음의 번역본도 함께 옮겨진다고 알린다(v2 B4).
+ * Confirmation text for transitions that take a published post down. Also tells if the published version is used elsewhere,
+ * and that moving the original also moves translations in the same group.
  */
 export function lifecycleConfirm(
 	action: ConfirmedLifecycleAction,

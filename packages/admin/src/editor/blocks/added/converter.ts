@@ -14,17 +14,17 @@ const hasDynamicAttribute = (node: CmsNode) =>
 const isEmptyParagraph = (node: { type?: string; content?: unknown[] }) =>
 	node.type === "paragraph" && !node.content?.length;
 
-/** 부모 블록 안에서만 쓰는 블록의 렌더러 이름(예: `Tab`). 부모 밖에서는 원문 보존 상자로 둔다. */
+/** Renderer name of a block used only inside a parent block (e.g. `Tab`). Outside the parent it is kept as a raw-source preserving box. */
 export const PARENT_ONLY_TYPES: ReadonlySet<string> = new Set(
 	ADDED_NODE_BLOCKS.filter((block) => block.parent).map((block) => block.component),
 );
 
 /**
- * 지시자 블록 하나의 변환기. 지시자 속성은 노드의 `values`로, 본문은 노드 내용으로 옮긴다. 원래 속성 순서는
- * `originalAttributes`에 두고 저장할 때 되살린다.
+ * Converter for one directive block. Directive attributes go to the node's `values`, and the body to the node content. The original attribute order is
+ * kept in `originalAttributes` and restored on save.
  *
- * 자식 블록 규칙이 있으면(예: 탭) 자식 개수와 종류를 확인하고 자식 변환기로 직접 바꾼다. 본문 최소 개수가 0이면
- * (예: 콜아웃) 본문 없는 블록을 빈 문단 하나로 열고, 빈 문단만 남으면 본문 없이 저장한다.
+ * With child block rules (e.g. tabs), it checks the number and kinds of children and converts directly with the child converters. If the minimum body count is 0
+ * (e.g. callout), a block with no body is opened with one empty paragraph, and when only an empty paragraph remains it is saved with no body.
  */
 function directiveConverter(
 	block: BlockDefinition,
@@ -42,7 +42,7 @@ function directiveConverter(
 		cmsTypes: [block.component],
 		tiptapTypes: [nodeName],
 		isMappable(node, ctx) {
-			// JSX spread/표현식은 블록 전체를 원문 보존 상자로 남긴다.
+			// JSX spread/expressions leave the whole block as a raw-source preserving box.
 			if (hasDynamicAttribute(node)) return false;
 			if (!isContainer(block)) return !node.content?.length;
 			const content = node.content ?? [];
@@ -66,7 +66,7 @@ function directiveConverter(
 			const base = { type: nodeName, attrs: { values, originalAttributes: attrs.attributes ?? [] } };
 			if (!isContainer(block)) return base;
 			const content = node.content ?? [];
-			// 편집기 스키마는 본문 블록이 하나 이상이어야 한다(block+). 본문 없는 블록은 빈 문단 하나로 연다.
+			// The editor schema requires at least one body block (block+). A block with no body is opened with one empty paragraph.
 			if (childComponents.size === 0 && content.length === 0) return { ...base, content: [{ type: "paragraph" }] };
 			return {
 				...base,
@@ -88,7 +88,7 @@ function directiveConverter(
 					attributes.push({ name, value });
 			}
 			const content = node.content ?? [];
-			// 빈 문단만 남은 본문은 본문 없이 저장한다(위 toTiptap의 반대). 본문이 꼭 있어야 하는 블록은 그대로 둔다.
+			// A body with only an empty paragraph is saved with no body (the opposite of toTiptap above). A block that must have a body is left as is.
 			const emptyBody = min === 0 && childComponents.size === 0 && content.every(isEmptyParagraph);
 			return [
 				{
@@ -101,7 +101,7 @@ function directiveConverter(
 	};
 }
 
-/** 더한 블록 변환기 전부. 코드 펜스 블록은 그 언어의 코드 블록을, 지시자 블록은 그 렌더러 이름의 노드를 받는다. */
+/** All added block converters. A code fence block gets that language's code block, a directive block gets the node of its renderer name. */
 export function addedBlockConverters(all: readonly BlockDefinition[]): BlockConverter[] {
 	const byComponent = new Map<string, BlockConverter>();
 	const converters = all.map((block) => {

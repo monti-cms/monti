@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** AI 화면 `연결` 탭의 문구(M15). 공통 조각(`LoadError` 등)의 문구도 여기 둔다. */
+/** Texts of the AI screen's Connections tab. Texts of the shared pieces (`LoadError`, etc.) are also kept here. */
 export const connectionMessages = defineMessages("cms-ai.admin.connection", {
 	en: {
 		"error.loadList": "Couldn't load the connections.",

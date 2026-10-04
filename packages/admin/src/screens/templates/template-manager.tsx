@@ -25,12 +25,12 @@ const t = createTranslator(templatesMessages);
 
 const TEMPLATES_KEY = ["cms", "templates"] as const;
 
-/** 새 템플릿의 처음 본문. */
+/** Initial body of a new template. */
 const NEW_TEMPLATE_MDX = t("newMdx");
 
 export function TemplateManager() {
 	const queryClient = useQueryClient();
-	// 캐시가 있으면 바로 그리고 뒤에서 다시 받는다. 자리 표시는 캐시가 없을 때만 보인다.
+	// If there is a cache, render it right away and refetch in the background. Placeholders show only when there is no cache.
 	const templatesQuery = useQuery({
 		queryKey: TEMPLATES_KEY,
 		queryFn: async ({ signal }) =>
@@ -45,7 +45,7 @@ export function TemplateManager() {
 	const error =
 		templatesQuery.error && !templatesQuery.data ? errorText(templatesQuery.error, t("list.loadFailed")) : null;
 
-	// 편집 칸에 연 템플릿(새 템플릿은 id가 없다)과 고치는 값.
+	// The template open in the edit panel (a new template has no id) and the values being edited.
 	const [activeTemplate, setActiveTemplate] = useState<Partial<BodyTemplate> | null>(null);
 	const [editName, setEditName] = useState("");
 	const [editMdx, setEditMdx] = useState("");
@@ -53,11 +53,11 @@ export function TemplateManager() {
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
 
-	/** 연 템플릿에서 이름이나 본문을 바꿨는가. */
+	/** Whether the name or body of the open template was changed. */
 	const isDirty =
 		activeTemplate !== null && (editName !== (activeTemplate.name ?? "") || editMdx !== (activeTemplate.mdx ?? ""));
 
-	/** 목록을 뒤에서 다시 받는다. 지금 보이는 줄은 그대로 둔다. */
+	/** Refetches the list in the background. Rows currently visible stay as they are. */
 	const invalidateTemplates = () => queryClient.invalidateQueries({ queryKey: TEMPLATES_KEY });
 
 	const show = (template: Partial<BodyTemplate> | null) => {
@@ -67,7 +67,7 @@ export function TemplateManager() {
 		setSaveError(null);
 	};
 
-	/** 다른 템플릿을 연다. 저장하지 않은 변경이 있으면 버릴지 먼저 묻는다. */
+	/** Opens another template. If there are unsaved changes, asks first whether to discard them. */
 	const openTemplate = async (template: BodyTemplate) => {
 		if (template.id === activeTemplate?.id) return;
 		if (await confirmDiscard(isDirty)) show(template);
@@ -108,7 +108,7 @@ export function TemplateManager() {
 					json: { name: editName.trim(), mdx: editMdx },
 					fallback: t("common.saveFailed"),
 				});
-				// 만든 템플릿을 그대로 열어 둔다.
+				// Keep the created template open.
 				show(created);
 				queryClient.setQueryData<BodyTemplate[]>(TEMPLATES_KEY, (current) =>
 					current && !current.some((item) => item.id === created.id) ? [created, ...current] : current,
@@ -123,7 +123,7 @@ export function TemplateManager() {
 		}
 	};
 
-	// ⌘S·Ctrl+S로 저장한다(편집 칸이 열려 있을 때만). 최신 값으로 저장하도록 함수를 ref에 둔다.
+	// Save with ⌘S or Ctrl+S (only while the edit panel is open). The function is kept in a ref so it saves the latest values.
 	const saveRef = useRef(handleSave);
 	saveRef.current = handleSave;
 	const isEditing = activeTemplate !== null;
@@ -140,7 +140,7 @@ export function TemplateManager() {
 	}, [isEditing]);
 
 	const deleteTemplate = async (template: BodyTemplate) => {
-		// 목록에서 먼저 빼고 요청한다. 실패하면 되돌리고, 끝나면 서버 값으로 맞춘다.
+		// Remove from the list first, then send the request. On failure, revert; when done, sync to the server value.
 		await queryClient.cancelQueries({ queryKey: TEMPLATES_KEY });
 		const previous = queryClient.getQueryData<BodyTemplate[]>(TEMPLATES_KEY);
 		queryClient.setQueryData<BodyTemplate[]>(TEMPLATES_KEY, (current) =>
@@ -171,7 +171,7 @@ export function TemplateManager() {
 		if (ok) await deleteTemplate(template);
 	};
 
-	/** 템플릿 목록 줄의 오른쪽 클릭·`⋯` 메뉴(v2 A2). */
+	/** Right-click and `⋯` menu of a template list row. */
 	const templateMenu = (template: BodyTemplate): MenuAction[] => [
 		{ kind: "item", label: t("common.open"), icon: SquarePen, onSelect: () => void openTemplate(template) },
 		{ kind: "separator" },
@@ -210,7 +210,7 @@ export function TemplateManager() {
 					<ul className="flex-1 divide-y overflow-y-auto" aria-label={t("list.label")}>
 						{templatesQuery.isPending
 							? Array.from({ length: 3 }, (_, index) => (
-									// biome-ignore lint/suspicious/noArrayIndexKey: 자리표시
+									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 									<li key={index} className="p-4" aria-hidden>
 										<Skeleton className="h-10 w-full" />
 									</li>
@@ -260,7 +260,7 @@ export function TemplateManager() {
 
 				<div className="flex flex-1 flex-col overflow-hidden">
 					{activeTemplate ? (
-						// 본문 편집기 안에도 버튼·입력이 있어 <form>으로 감싸지 않는다. 이름 칸 Enter와 ⌘S가 저장한다.
+						// The body editor also contains buttons and inputs, so it is not wrapped in a <form>. Enter in the name field and ⌘S save.
 						<section
 							aria-label={activeTemplate.id ? t("edit.label") : t("edit.addLabel")}
 							className="flex h-full flex-1 flex-col overflow-hidden"
@@ -272,7 +272,7 @@ export function TemplateManager() {
 									value={editName}
 									onChange={(e) => setEditName(e.target.value)}
 									onKeyDown={(event) => {
-										// 한글 조합 중 Enter는 글자를 끝내는 키다. 저장하지 않는다.
+										// Enter during Korean IME composition ends the character. Do not save.
 										if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
 										event.preventDefault();
 										void handleSave();

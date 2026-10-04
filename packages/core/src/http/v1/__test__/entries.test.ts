@@ -80,7 +80,7 @@ vi.mock("../../../container", () => {
 	};
 });
 
-describe("M2-BE-3 HTTP API Contract (Updated with Security & Atomic Folders)", () => {
+describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 	beforeEach(() => {
 		mockVerifyAdmin.mockReset();
 		mockVerifyAdmin.mockResolvedValue({ userId: "123", accountId: "123", isAdmin: true });

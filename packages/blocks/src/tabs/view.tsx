@@ -27,8 +27,8 @@ const MIN_TABS = tabsDefinition.children.min;
 const MAX_TABS = tabsDefinition.children.max;
 
 /**
- * 고른 탭만 남기고 나머지 탭 본문을 숨긴다. 자식 탭은 contentDOM(`data-node-view-content-react`)의 직계 자식이다.
- * Tailwind가 클래스를 찾을 수 있게 문자열을 그대로 적는다(최대 8개, 정의의 `children.max`).
+ * Keeps only the selected tab and hides the other tab bodies. Child tabs are direct children of the contentDOM (`data-node-view-content-react`).
+ * Write the strings out literally so Tailwind can find the classes (up to 8, the definition's `children.max`).
  */
 const SHOW_ONLY_TAB = [
 	"[&>[data-node-view-content-react]>:not(:nth-child(1))]:hidden",
@@ -41,7 +41,7 @@ const SHOW_ONLY_TAB = [
 	"[&>[data-node-view-content-react]>:not(:nth-child(8))]:hidden",
 ] as const;
 
-// 편집기 탭 바 모양(테마 색). 공개 화면의 탭 모양은 사이트가 정한다.
+// Look of the editor tab bar (theme colors). The public page tab look is decided by the site.
 const TAB_TRIGGER =
 	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-1 font-medium text-cms-foreground/60 text-sm transition-all hover:text-cms-foreground cms-dark:text-cms-muted-foreground cms-dark:hover:text-cms-foreground";
 const TAB_TRIGGER_ACTIVE =
@@ -50,9 +50,9 @@ const TAB_TRIGGER_ACTIVE =
 const labelOf = (values: Record<string, unknown>) => (typeof values.label === "string" ? values.label : "");
 
 /**
- * 공개 화면처럼 탭 바와 고른 탭의 본문만 보여 준다. 본문은 그 자리에서 고친다.
- * 탭을 누르면 그 탭 본문으로 커서가 가고, 방향키로 다른 탭 본문에 들어가면 그 탭이 열린다.
- * 탭 이름·처음 열 탭·추가·삭제는 블록 도구 줄에서 한다.
+ * Shows only the tab bar and the selected tab's body, like the public page. The body is edited in place.
+ * Clicking a tab moves the cursor to that tab's body, and entering another tab's body with the arrow keys opens that tab.
+ * Tab names, the initially open tab, adding, and deleting are done from the block toolbar.
  */
 export function TabsNodeView(props: NodeViewProps) {
 	const { node, selected, editor, getPos } = props;
@@ -89,7 +89,7 @@ export function TabsNodeView(props: NodeViewProps) {
 					...child.attrs,
 					values: withValue(valuesOf(child), "label", label),
 				});
-				// 처음 열 탭은 이름으로 가리킨다. 이름을 바꾸면 함께 바꾼다(렌더 시점이 아닌 지금 문서 기준).
+				// The initially open tab is referenced by name. Renaming a tab updates it too (based on the current document, not render time).
 				const parentValues = valuesOf(parent);
 				if (parentValues.defaultValue && parentValues.defaultValue === previous)
 					tr.setNodeMarkup(pos, undefined, {
@@ -133,7 +133,7 @@ export function TabsNodeView(props: NodeViewProps) {
 	const toggleDefault = (index: number) => {
 		const pos = getPos();
 		if (typeof pos !== "number") return;
-		// 첫 탭은 따로 적지 않아도 처음 열린다. 이미 지정된 탭을 다시 누르면 지정을 푼다.
+		// The first tab opens first even without being specified. Clicking an already specified tab again clears the specification.
 		const next = index === 0 || index === defaultIndex ? "" : (labels[index] ?? "");
 		editor.view.dispatch(
 			editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, values: withValue(values, "defaultValue", next) }),
@@ -154,7 +154,7 @@ export function TabsNodeView(props: NodeViewProps) {
 				>
 					{labels.map((label, index) =>
 						renaming === index ? (
-							// biome-ignore lint/suspicious/noArrayIndexKey: 탭 위치가 곧 식별자다(이름은 겹칠 수 있다).
+							// biome-ignore lint/suspicious/noArrayIndexKey: the tab position is the identifier (names can overlap).
 							<div key={index} className={cn(TAB_TRIGGER, TAB_TRIGGER_ACTIVE)}>
 								<AttributeInput
 									aria-label={t("rename.aria")}
@@ -174,7 +174,7 @@ export function TabsNodeView(props: NodeViewProps) {
 							</div>
 						) : (
 							<button
-								// biome-ignore lint/suspicious/noArrayIndexKey: 탭 위치가 곧 식별자다(이름은 겹칠 수 있다).
+								// biome-ignore lint/suspicious/noArrayIndexKey: the tab position is the identifier (names can overlap).
 								key={index}
 								type="button"
 								role="tab"
@@ -217,7 +217,7 @@ export function TabsNodeView(props: NodeViewProps) {
 	);
 }
 
-/** 탭 하나. 모양은 부모(탭 바·본문 상자)가 맡고, 이 뷰는 본문 자리만 둔다. */
+/** One tab. The parent (tab bar and body box) handles the look, and this view only provides the body slot. */
 export function TabNodeView() {
 	return (
 		<NodeViewWrapper data-cms-container-node="cmsTab">

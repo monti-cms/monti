@@ -1,4 +1,4 @@
-/** 블록 정의(데이터)만. 플러그인 없이 사이트 설정의 `blocks`에 바로 넣을 때 쓴다. */
+/** Block definitions (data) only. For putting directly into the site config's `blocks` without plugins. */
 export { calloutBlock } from "./callout/definition";
 export { chartBlock } from "./chart/definition";
 export { codeRefBlock } from "./code-ref/definition";
@@ -20,8 +20,8 @@ import { tabBlock, tabsBlock } from "./tabs/definition";
 import { tooltipBlock } from "./tooltip/definition";
 
 /**
- * 이 패키지의 블록 정의 전부(콜아웃·접기·탭·단·Mermaid·차트, 글자 꾸밈 툴팁·코드 연결·글자색 순서).
- * 글자 꾸밈의 순서는 겹친 꾸밈을 저장하는 순서다.
+ * All block definitions of this package (callout, collapsible, tabs, columns, Mermaid, chart, then the inline marks tooltip, code-ref, color, in that order).
+ * The order of the inline marks is the order in which overlapping marks are stored.
  */
 export const ALL_BLOCKS = [
 	calloutBlock,

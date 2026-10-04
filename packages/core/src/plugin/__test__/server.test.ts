@@ -14,7 +14,7 @@ vi.mock("../../config/resolved", () => ({
 }));
 vi.mock("../../server/resolved", () => ({ cmsServerConfig: {} }));
 
-// `PLUGINS`는 모듈을 읽을 때 정해지므로, 시험마다 모듈을 새로 읽는다.
+// `PLUGINS` is fixed when the module is loaded, so each test loads the module anew.
 const load = async () => {
 	vi.resetModules();
 	return import("../server");
@@ -54,7 +54,7 @@ describe("loadServerPlugins", () => {
 		await expect(loadServerPlugins()).rejects.toThrow("import failed");
 		expect(await pluginRoutes()).toEqual([{ pattern: "v1/flaky", module: {}, plugin: "flaky" }]);
 		expect(state.attempts).toBe(2);
-		// 성공하면 다시 읽지 않는다.
+		// Once it succeeds, it is not read again.
 		await loadServerPlugins();
 		expect(state.attempts).toBe(2);
 	});

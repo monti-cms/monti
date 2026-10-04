@@ -9,11 +9,11 @@ import { useAiWriteExtension } from "./ai-write";
 
 const components: CmsAdminComponents = {
 	editorExtensions: [useAiTranslateExtension, useAiWriteExtension],
-	// 사이드바 항목(`nav`)과 슬래시 메뉴 항목이 이름으로 고르는 아이콘.
+	// Icons picked by name by sidebar items (`nav`) and slash menu items.
 	icons: { sparkles: Sparkles },
 };
 
-/** AI 플러그인이 관리자 화면 전체에 더하는 것: 자리(필드 옆 등)의 AI 버튼, 번역본 편집기의 AI 번역, 본문의 다듬기·초안 쓰기. */
+/** What the AI plugin adds to the whole admin screen: AI buttons at slots (next to fields, etc.), AI translation in the translation editor, polish and draft writing in the body. */
 export function AiAdminProvider({ children }: { children: ReactNode }) {
 	return (
 		<AiSlotProvider>

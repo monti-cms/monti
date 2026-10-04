@@ -51,7 +51,7 @@ export class PreviewErrorBoundary extends Component<ErrorBoundaryProps, ErrorBou
 }
 
 /**
- * 사이트가 넣은 펜스 미리보기(`CmsAdminComponents.fencePreviews`)를 불러와 그린다. 넣지 않았으면 원문을 그대로 보인다.
+ * Loads and renders the fence preview the site provided (`CmsAdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
  */
 export function LazyFencePreview({
 	lang,

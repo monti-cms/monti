@@ -10,7 +10,7 @@ const components: CmsAdminComponents = {
 	icons: { "message-square-warning": MessageSquareWarning },
 };
 
-/** 콜아웃 블록의 편집 화면과 메뉴 아이콘을 관리자 화면에 넣는다. */
+/** Registers the callout block's editing view and menu icon in the admin UI. */
 export function CalloutProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

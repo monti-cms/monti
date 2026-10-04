@@ -6,9 +6,9 @@ import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /**
- * 아이콘만 있는 버튼. `label`이 스크린 리더 이름이자 마우스를 올리면 뜨는 설명이다(둘이 늘 같다).
- * `pressed`를 주면 켜고 끄는 버튼이 되어 켜진 동안 배경이 깔린다.
- * 메뉴·팝오버를 여는 버튼이면 `trigger`로 감싼다: `trigger={(button) => <PopoverTrigger render={button} />}`.
+ * An icon-only button. `label` is both the screen reader name and the tooltip shown on hover (the two are always the same).
+ * With `pressed` it becomes a toggle button and has a background while on.
+ * For a button that opens a menu or popover, wrap it with `trigger`: `trigger={(button) => <PopoverTrigger render={button} />}`.
  */
 export function IconButton({
 	label,

@@ -40,7 +40,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized.trim()).toBe("![Simple alt](https://example.com/pic.png)");
 	});
 
-	it("::image directive의 crop과 rotate 속성을 왕복한다", () => {
+	it("round-trips the crop and rotate attributes of a ::image directive", () => {
 		const mdx = '::image{crop="10,20,50,40" rotate="90" src="https://example.com/pic.png"}\n';
 		const parsed = analyze(mdx);
 		const doc = toDocument(parsed);
@@ -55,7 +55,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized).toContain('rotate="90"');
 	});
 
-	it("기본값(rotate=0, 전체 자르기)은 저장하지 않는다", () => {
+	it("does not store default values (rotate=0, full crop)", () => {
 		const mdx = '::image{crop="0,0,100,100" rotate="0" src="https://example.com/pic.png"}\n';
 		const parsed = analyze(mdx);
 		const doc = toDocument(parsed);
@@ -63,11 +63,11 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		const serialized = serialize(doc);
 		expect(serialized).not.toContain("rotate=");
 		expect(serialized).not.toContain("crop=");
-		// 추가 속성이 없으므로 표준 Markdown 이미지로 돌아간다
+		// No extra attributes, so it goes back to a standard Markdown image
 		expect(serialized.trim()).toBe("![](https://example.com/pic.png)");
 	});
 
-	it("제목(title) 있는 이미지에 crop/rotate 적용 시 directive에서 title을 보존하고 왕복한다 (P1-3)", () => {
+	it("keeps the title in the directive and round-trips it when crop/rotate is applied to an image with a title", () => {
 		const mdx = '![설명](https://example.com/pic.png "내 제목")\n';
 		const parsed = analyze(mdx);
 		const doc = toDocument(parsed);
@@ -75,7 +75,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		const imageNode = doc.content?.find((n) => n.type === "image");
 		expect(imageNode?.attrs?.title).toBe("내 제목");
 
-		// 사용자가 에디터에서 crop 추가 시뮬레이션
+		// Simulate the user adding a crop in the editor
 		if (imageNode?.attrs) {
 			imageNode.attrs.crop = "10,10,80,80";
 		}
@@ -84,7 +84,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized).toContain('title="내 제목"');
 		expect(serialized).toContain('crop="10,10,80,80"');
 
-		// 다시 파싱해도 title과 crop이 보존됨
+		// title and crop are preserved after parsing again
 		const reparsed = analyze(serialized);
 		const redoc = toDocument(reparsed);
 		const reImageNode = redoc.content?.find((n) => n.type === "image");

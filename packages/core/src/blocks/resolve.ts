@@ -2,16 +2,16 @@ import type { BlockDefinition } from "./define";
 import { BUILTIN_BLOCKS } from "./definitions";
 
 /**
- * 사이트가 쓰는 본문 블록을 정한다. 본체 블록 다음에 플러그인(블록 확장)이 더한 블록, 그다음에 사이트 설정의 `blocks`다.
+ * Decides the body blocks the site uses: core blocks, then blocks added by plugins (block extensions), then the site config's `blocks`.
  *
- * 더하는 블록은 지시자 블록(`container`·`leaf`), 글자 꾸밈(`text` + `editor.view: "mark"`), 코드 펜스 블록(`fence`)이다.
- * 코드 펜스 블록은 그 언어의 코드 펜스를 모두 가져가므로 일반 코드 언어 이름(`ts` 등)을 쓰지 않는다. 글자 꾸밈은 더한 순서가
- * 겹친 꾸밈을 저장하는 순서(바깥부터)다.
+ * Added blocks are directive blocks (`container`, `leaf`), text marks (`text` + `editor.view: "mark"`), and code fence blocks (`fence`).
+ * A code fence block takes all code fences of its language, so ordinary code language names (`ts` etc.) are not used. For text marks, add order is the order
+ * overlapping marks are stored (outermost first).
  *
- * 쓰던 블록의 확장을 빼면 그 블록은 저장 문법에서 빠져, 이미 쓴 본문을 다시 저장할 때 일반 글로 바뀐다.
+ * If the extension for a block in use is removed, that block drops out of the storage syntax, and already-written body content turns into plain text when saved again.
  */
 
-/** 블록을 더하는 쪽. 사이트 설정과 그 플러그인이다. */
+/** Who adds blocks: the site config and its plugins. */
 export interface BlockSources {
 	readonly blocks?: readonly BlockDefinition[];
 	readonly plugins?: readonly { readonly name: string; readonly blocks?: readonly BlockDefinition[] }[];
@@ -20,7 +20,7 @@ export interface BlockSources {
 const NAME = /^[a-z][a-z0-9-]*$/;
 const COMPONENT = /^[A-Z][A-Za-z0-9]*$/;
 
-/** 더한 블록(플러그인 순서대로, 그다음 사이트 설정). */
+/** Added blocks (in plugin order, then the site config). */
 export function addedBlocks(
 	sources: BlockSources | undefined,
 ): { readonly where: string; readonly block: BlockDefinition }[] {
@@ -32,7 +32,7 @@ export function addedBlocks(
 	];
 }
 
-/** 설정에 맞는 블록 목록. 틀린 설정이면 오류를 던진다. */
+/** The block list for the config. Throws an error for an invalid config. */
 export function resolveBlocks(sources: BlockSources | undefined): readonly BlockDefinition[] {
 	const added = addedBlocks(sources);
 	const taken = new Set<string>([
@@ -90,7 +90,7 @@ export function resolveBlocks(sources: BlockSources | undefined): readonly Block
 			throw new Error(`cms.config: ${where}: parent "${block.parent}" is not an added block`);
 		}
 		for (const child of block.children?.blocks ?? []) {
-			// 더한 블록의 자식은 같이 더한 블록이다(편집기 노드를 같은 방식으로 만든다).
+			// A child of an added block is an added block too (the editor nodes are built the same way).
 			if (!extra.some((candidate) => candidate.name === child && candidate.parent === block.name)) {
 				throw new Error(`cms.config: ${where}: child "${child}" must be an added block with this parent`);
 			}

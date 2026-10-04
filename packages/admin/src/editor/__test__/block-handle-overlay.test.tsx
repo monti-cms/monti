@@ -6,8 +6,8 @@ import { editorMessages } from "../messages";
 
 const t = createTranslator(editorMessages);
 
-describe("BlockHandleOverlay DropdownMenu 및 드래그 동작(v2 C1)", () => {
-	it("핸들 버튼이 draggable이고 dragstart/dragend 이벤트를 전달한다", () => {
+describe("BlockHandleOverlay DropdownMenu and drag behavior", () => {
+	it("the handle button is draggable and forwards dragstart/dragend events", () => {
 		const onDragStart = vi.fn();
 		const onDragEnd = vi.fn();
 
@@ -38,7 +38,7 @@ describe("BlockHandleOverlay DropdownMenu 및 드래그 동작(v2 C1)", () => {
 		expect(onDragEnd).toHaveBeenCalledOnce();
 	});
 
-	it("핸들 클릭 시 Base UI DropdownMenu가 열려 각 동작(이동/복제/삭제)을 수행한다", async () => {
+	it("clicking the handle opens the Base UI DropdownMenu and each action (move/duplicate/delete) works", async () => {
 		const onMoveUp = vi.fn();
 		const onMoveDown = vi.fn();
 		const onDuplicate = vi.fn();
@@ -62,7 +62,7 @@ describe("BlockHandleOverlay DropdownMenu 및 드래그 동작(v2 C1)", () => {
 		fireEvent.click(upItem);
 		expect(onMoveUp).toHaveBeenCalledOnce();
 
-		// 다음 메뉴 아이템 테스트를 위해 다시 클릭
+		// click again for the next menu item test
 		fireEvent.click(trigger);
 		const downItem = await screen.findByRole("menuitem", { name: new RegExp(t("blockHandle.moveDown")) });
 		fireEvent.click(downItem);

@@ -26,7 +26,7 @@ const posOf = (instance: Editor, index: number) => {
 	return pos;
 };
 
-describe("최상위 블록 조작(§4.2)", () => {
+describe("top-level block operations", () => {
 	it("finds the top-level block for a position inside it", () => {
 		const instance = make();
 		expect(topLevelBlockAt(instance.state.doc, posOf(instance, 1))?.node.type.name).toBe("heading");
@@ -46,7 +46,7 @@ describe("최상위 블록 조작(§4.2)", () => {
 	});
 });
 
-describe("중첩 블록 조작(v2 C1)", () => {
+describe("nested block operations", () => {
 	it("moves nested list items within parent list", () => {
 		const listEditor = new Editor({
 			extensions: [StarterKit],
@@ -67,7 +67,7 @@ describe("중첩 블록 조작(v2 C1)", () => {
 	});
 });
 
-describe("이미지 너비(§4.3)와 업로드 최적화(§7.1)", () => {
+describe("image width and upload optimization", () => {
 	it("accepts 1–100% or 1–4096px only", () => {
 		for (const ok of ["", "1%", "100%", "600", "600px", "4096px"]) expect(isValidImageWidth(ok), ok).toBe(true);
 		for (const bad of ["0%", "101%", "0px", "4097px", "50vw", "-1px"]) expect(isValidImageWidth(bad), bad).toBe(false);

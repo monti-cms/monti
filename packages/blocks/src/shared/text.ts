@@ -1,4 +1,4 @@
-/** 사전에 쉼표로 이어 적은 슬래시 메뉴 검색어를 낱말 목록으로 나눈다. */
+/** Splits the slash menu search terms, written comma-separated in the dictionary, into a word list. */
 export const keywordList = (text: string): string[] =>
 	text
 		.split(",")

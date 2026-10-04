@@ -39,7 +39,7 @@ type PendingScopeInlineDirective = {
 	attributes: { name: string; value: unknown }[];
 	config: AnnotationRegistryItem;
 	selector?: ScopeSelector;
-	/** 정규식 선택자면 `rules`에 등록한 규칙 번호. */
+	/** For a regex selector, the index of the rule registered in `rules`. */
 	ruleIndex?: number;
 };
 
@@ -248,7 +248,7 @@ const parseScopeSelector = (raw: string): ScopeSelector | undefined => {
 	return { kind: "regex", regex };
 };
 
-/** `{...}` 선택자의 닫는 `}` 위치. 정규식(`{re:/a{2}/}`) 안의 `}`·`/`는 건너뛴다. */
+/** Position of the closing `}` of a `{...}` selector. Skips `}` and `/` inside a regex (`{re:/a{2}/}`). */
 const findSelectorEnd = (tail: string): number => {
 	if (!tail.startsWith("{re:/")) return tail.indexOf("}");
 	let index = 5;
@@ -777,7 +777,7 @@ export const fromCodeFenceToCodeBlockDocument = (
 		directives: parsed.pendingScopeDocumentDirectives,
 	});
 
-	// 적용할 줄이 없는(코드 끝의) `@char` 규칙은 버린다. 공개 화면에도 효과가 없다. 남은 규칙 번호로 다시 잇는다.
+	// Drops `@char` rules with no line to apply to (at the end of the code). They have no effect in the public view either. Re-links the remaining rule indexes.
 	const renumbered = new Map<number, number>();
 	const rules = parsed.rules.filter((rule, index) => {
 		if (rule.scope === "char" && rule.line === undefined) return false;

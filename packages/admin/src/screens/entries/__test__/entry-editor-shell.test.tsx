@@ -59,7 +59,7 @@ vi.mock("../../../editor/tiptap-editor", () => ({
 	),
 }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast: { success, warning, message, error } }));
-// AI 번역은 따로 테스트한다(ai-translate.test.ts). 편집 화면 테스트에는 AI 기능 목록 요청이 없게 한다.
+// AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
 vi.mock("../ai-translate", () => ({
 	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
 }));
@@ -81,7 +81,7 @@ const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json:
 type Handler = (input: string, init?: RequestInit) => unknown;
 let fetchMock: ReturnType<typeof vi.fn>;
 
-/** 공통 응답(목록·사용처)에 테스트별 처리를 덧붙인다. */
+/** Adds per-test handling to the common responses (lists, usages). */
 function serve(handler: Handler, current: unknown = entry) {
 	fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
 		const handled = await handler(input, init);
@@ -124,7 +124,7 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "로컬에서 수정" } });
-		// 복구본은 입력이 멈춘 뒤에 남긴다(간격은 use-entry-autosave 테스트). 여기서는 화면을 떠나 바로 남기게 한다.
+		// The recovery copy is kept after input pauses (interval is in the use-entry-autosave test). Here, leaving the screen writes it right away.
 		expect(saveLocalBackup).not.toHaveBeenCalled();
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() =>
@@ -163,7 +163,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		const title = await editorTitle();
 		fireEvent.change(title, { target: { value: "조합 중 수정" } });
-		// 조합을 시작한 입력칸이 끝 신호 없이 사라진 경우.
+		// The input that started composition vanished without an end signal.
 		fireEvent.compositionStart(title);
 		fireEvent.click(screen.getByRole("button", { name: "저장" }));
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1), { timeout: 3000 });
@@ -215,7 +215,7 @@ describe("entry editor shell", () => {
 		});
 		render(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
 		fireEvent.change(await editorTitle(), { target: { value: "새 글" } });
-		// 복구본은 입력이 멈춘 뒤에 남긴다(간격은 use-entry-autosave 테스트). 여기서는 화면을 떠나 바로 남기게 한다.
+		// The recovery copy is kept after input pauses (interval is in the use-entry-autosave test). Here, leaving the screen writes it right away.
 		expect(saveLocalBackup).not.toHaveBeenCalled();
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() =>
@@ -265,7 +265,7 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		await editorTitle();
-		// 발행일은 처음 발행할 때 서버가 정한다. 속성 칸에서 고치지 않는다.
+		// The server sets the publish date on first publish. It is not edited in the properties panel.
 		expect(screen.queryByLabelText(/^발행일/)).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
 
@@ -429,7 +429,7 @@ describe("entry editor shell", () => {
 			}
 		});
 		renderEdit();
-		// 없는 이름을 검색하면 목록 끝에 `'이름' 추가`가 나오고, 누르면 이름이 채워진 추가 칸이 열린다.
+		// Searching for a name that does not exist shows `Add 'name'` at the end of the list; pressing it opens the add sheet with the name filled in.
 		const saveIn = async (label: string) => {
 			const panel = await screen.findByRole("complementary", { name: label }, { timeout: 10_000 });
 			fireEvent.click(within(panel).getByRole("button", { name: "저장" }));
@@ -438,8 +438,8 @@ describe("entry editor shell", () => {
 			});
 		};
 		/**
-		 * 검색어를 넣고 `'이름' 추가` 항목을 누른다. Base UI는 실제 입력(`inputType`이 있는 input 이벤트)일 때만 목록을 연다.
-		 * 여러 테스트 파일을 함께 돌리면 입력 칸이 준비되기 전에 넣은 입력이 사라질 때가 있어, 항목이 보일 때까지 다시 넣는다.
+		 * Enters a query and presses the `Add 'name'` item. Base UI opens the list only for real input (an input event with `inputType`).
+		 * When several test files run together, input entered before the field is ready can vanish, so it is entered again until the item shows.
 		 */
 		const typeAndPickAdd = async (field: string, text: string) => {
 			const input = (await screen.findByRole("combobox", { name: field })) as HTMLInputElement;
@@ -668,13 +668,13 @@ describe("entry editor shell", () => {
 	it("sends record collections to their explicit-save form", async () => {
 		serve(() => undefined, { ...entry, collection: "tag" });
 		renderEdit();
-		// 항목 컬렉션은 목록의 작은 폼으로 그 항목을 연다.
+		// An item collection opens that item in the small form on the list.
 		await waitFor(() => expect(routerReplace).toHaveBeenCalledWith(`/admin?collection=tag&open=${entry.id}`));
 		expect(EMPTY_FORM.title).toBe("");
 	});
 });
 
-describe("템플릿", () => {
+describe("templates", () => {
 	const templates = { items: [{ id: "t1", name: "회고", mdx: "## 회고" }] };
 	const sourceText = () => {
 		fireEvent.click(
@@ -683,7 +683,7 @@ describe("템플릿", () => {
 		return (screen.getByRole("textbox", { name: "MDX 본문" }) as HTMLTextAreaElement).value;
 	};
 
-	it("빈 본문에는 고른 템플릿을 바로 넣는다", async () => {
+	it("inserts the chosen template right away into an empty body", async () => {
 		serve((input) => (input === "/api/cms/v1/templates" ? json(templates) : undefined), {
 			...entry,
 			working: { ...entry.working, mdx: "" },
@@ -697,7 +697,7 @@ describe("템플릿", () => {
 		expect(sourceText()).toBe("## 회고");
 	});
 
-	it("쓴 본문이 있으면 바꿀지 묻고, 적용해야 바꾼다", async () => {
+	it("asks before replacing existing body text, and replaces only when applied", async () => {
 		serve((input) => (input === "/api/cms/v1/templates" ? json(templates) : undefined));
 		renderEdit();
 		await editorTitle();
@@ -712,7 +712,7 @@ describe("템플릿", () => {
 		expect(sourceText()).toBe("## 회고");
 	});
 
-	it("템플릿이 없으면 없다고 알린다", async () => {
+	it("says so when there are no templates", async () => {
 		serve((input) => (input === "/api/cms/v1/templates" ? json({ items: [] }) : undefined));
 		renderEdit();
 		await editorTitle();
@@ -722,7 +722,7 @@ describe("템플릿", () => {
 	});
 });
 
-describe("언어 탭", () => {
+describe("language tabs", () => {
 	const member = (id: string, locale: string, status: string, isSource: boolean) => ({
 		id,
 		locale,
@@ -816,7 +816,7 @@ describe("언어 탭", () => {
 	});
 });
 
-describe("번역본 원문 창", () => {
+describe("translation source pane", () => {
 	const SOURCE_MDX = "첫 문단\n\n둘째 문단\n";
 	const source = {
 		...entry,
@@ -842,21 +842,21 @@ describe("번역본 원문 창", () => {
 		try {
 			window.localStorage.clear();
 		} catch {
-			// 저장소가 없으면 지울 것도 없다.
+			// With no storage there is nothing to clear.
 		}
 	};
 	beforeEach(clearStorage);
 	afterEach(clearStorage);
 
-	it("번역본에만 원문 전체를 옆에 보인다", async () => {
+	it("shows the full source beside only a translation", async () => {
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
 		await waitFor(() => expect(sourcePane()?.textContent).toContain("둘째 문단"));
 		expect(within(sourcePane() as HTMLElement).getByText("KO 원문")).toBeTruthy();
-		// 제목 자리 안내는 원문 제목이다.
+		// The title slot hint is the source title.
 		expect((await editorTitle()).getAttribute("placeholder")).toBe("원문 제목");
-		// 번역본도 같은 편집기(서식 도구, MDX 전환)를 쓴다.
+		// A translation uses the same editor too (formatting tools, MDX switch).
 		expect(screen.getByRole("toolbar", { name: "서식 도구" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: "MDX 원문" })).toBeTruthy();
 
@@ -867,7 +867,7 @@ describe("번역본 원문 창", () => {
 		expect(sourcePane()).toBeNull();
 	});
 
-	it("원문 닫기와 원문 토글로 창을 접고 펼치며 기억한다", async () => {
+	it("collapses and expands the pane with the close-source button and the source toggle, and remembers it", async () => {
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
@@ -882,7 +882,7 @@ describe("번역본 원문 창", () => {
 		expect(window.localStorage.getItem("cms:translation-source-pane")).toBe("open");
 	});
 
-	it("이전에 접어 둔 창은 접힌 채로 연다", async () => {
+	it("opens a previously collapsed pane collapsed", async () => {
 		window.localStorage.setItem("cms:translation-source-pane", "closed");
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
@@ -890,14 +890,14 @@ describe("번역본 원문 창", () => {
 		expect(sourcePane()).toBeNull();
 	});
 
-	it("확인한 원문과 같으면 알림이 없다", async () => {
+	it("shows no notice when it matches the confirmed source", async () => {
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
 		expect(screen.queryByText("원문이 바뀌었습니다")).toBeNull();
 	});
 
-	it("원문이 바뀌면 알리고 확인이 확인한 원문을 저장에 싣는다", async () => {
+	it("when the source changes, notifies, and confirm saves the confirmed source in the request", async () => {
 		serve((_input, init) => {
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
@@ -916,13 +916,13 @@ describe("번역본 원문 창", () => {
 		});
 	});
 
-	it("번역 상태가 없거나 모양이 다르면 아무것도 확인하지 않은 것으로 본다", async () => {
+	it("with no translation state or a malformed one, nothing is treated as confirmed", async () => {
 		serve(() => undefined, translationWith(null));
 		renderEdit();
 		expect(await screen.findByText("원문이 바뀌었습니다")).toBeTruthy();
 	});
 
-	it("비교는 바뀐 블록을 이전·지금으로 나열한다", async () => {
+	it("the comparison lists changed blocks as before and now", async () => {
 		serve(() => undefined, translationWith("첫 문단 옛\n\n둘째 문단\n\n지운 문단\n"));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
@@ -934,7 +934,7 @@ describe("번역본 원문 창", () => {
 		await waitFor(() => expect(dialog.textContent).toContain("첫 문단 옛"));
 	});
 
-	it("해석할 수 없는 원문은 비교할 수 없다고 알린다", async () => {
+	it("an unparseable source is reported as not comparable", async () => {
 		serve(() => undefined, translationWith("<Callout>닫히지 않음"));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
@@ -942,7 +942,7 @@ describe("번역본 원문 창", () => {
 		expect(within(dialog).getByText("비교할 수 없습니다.")).toBeTruthy();
 	});
 
-	it("원문 창 맨 위에 원문 제목을 보인다", async () => {
+	it("shows the source title at the top of the source pane", async () => {
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
@@ -950,7 +950,7 @@ describe("번역본 원문 창", () => {
 		expect(heading.textContent).toBe("원문 제목");
 	});
 
-	it("편집기 커서가 있는 블록에 대응하는 원문 블록을 표시한다", async () => {
+	it("marks the source block matching the block under the editor cursor", async () => {
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();

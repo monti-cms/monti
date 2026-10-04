@@ -18,7 +18,7 @@ export interface ToolbarItem {
 	run: (editor: Editor) => void;
 }
 
-/** 서식 도구·표 도구의 아이콘 버튼. 누를 때 편집기 선택을 빼앗지 않는다. */
+/** Icon button for formatting tools and table tools. Does not steal the editor selection when pressed. */
 export function ToolbarButton({
 	editor,
 	item,
@@ -35,7 +35,7 @@ export function ToolbarButton({
 	const common = {
 		"aria-label": label,
 		disabled,
-		// 버튼 클릭이 편집기 선택을 빼앗지 않게 한다.
+		// Keep the button click from stealing the editor selection.
 		onMouseDown: (event: React.MouseEvent) => event.preventDefault(),
 		className: cn("size-8 p-0 text-xs", item.className),
 	};

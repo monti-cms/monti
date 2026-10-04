@@ -17,7 +17,7 @@ const t = createTranslator(aiCommonMessages);
 export const AI_ACTIONS_KEY = ["cms", "ai", "actions"] as const;
 
 export interface AiActionsResponse {
-	/** 연결이 준비되어 지금 쓸 수 있는 기능 이름. */
+	/** Names of actions that are ready to use now because their connection is ready. */
 	usable: string[];
 	items: AiActionView[];
 }
@@ -35,7 +35,7 @@ export function useAiActions(enabled = true) {
 	});
 }
 
-/** 실행 요청의 공통 정보(입력 밖). */
+/** Common information of a run request (outside the input). */
 export interface AiRunEnv {
 	collection?: string;
 	locale?: string;
@@ -45,11 +45,11 @@ export interface AiRunEnv {
 
 export interface AiRunOptions {
 	env?: AiRunEnv;
-	/** 실행할 때 적은 추가 요청. */
+	/** Extra request entered at run time. */
 	request?: string;
-	/** 저장하지 않은 고친 값(AI 화면의 `시험`). */
+	/** Unsaved edited values (Test in the AI screen). */
 	draft?: unknown;
-	/** 화면 기능의 저장하지 않은 기본 정보(새 기능 시험). */
+	/** Unsaved basic info of a screen action (testing a new action). */
 	draftBase?: unknown;
 	signal?: AbortSignal;
 }
@@ -62,7 +62,7 @@ const requestBody = (action: string, options: AiRunOptions) => ({
 	...(options.draftBase !== undefined ? { draftBase: options.draftBase } : {}),
 });
 
-/** 기능을 이름으로 실행한다. */
+/** Runs an action by name. */
 export async function runAiAction(
 	action: string,
 	input: Readonly<Record<string, unknown>>,
@@ -78,8 +78,8 @@ export async function runAiAction(
 }
 
 /**
- * 기능을 흘려받기로 실행한다(M8-1). 받은 글이 늘 때마다 지금까지 받은 글 전체로 `onText`를 부르고,
- * 다 받으면 검사를 통과한 결과를 돌려준다.
+ * Runs an action as a stream. Each time more text arrives, calls `onText` with all text received so far,
+ * and when done returns the result that passed the checks.
  */
 export async function streamAiAction(
 	action: string,
@@ -123,7 +123,7 @@ export async function streamAiAction(
 	throw new CmsApiError(502, "ai_failed", t("streamCut"), [], {});
 }
 
-/** 같은 기능을 여러 입력에 돌린다(한 요청 최대 8개). 입력마다 결과나 실패 이유가 순서대로 온다. */
+/** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */
 export async function runAiActionMany(
 	action: string,
 	inputs: ReadonlyArray<Readonly<Record<string, unknown>>>,
@@ -141,7 +141,7 @@ export async function runAiActionMany(
 	return response.results;
 }
 
-/** 자리의 지금 상황을 기능 입력과 공통 정보로 옮긴다. 기능 정의에 있는 입력만 보낸다. */
+/** Converts the current state of a slot into action inputs and common information. Sends only the inputs present in the action definition. */
 export function inputFromContext(
 	action: Pick<AiActionView, "input">,
 	context: AiRunContext,
@@ -176,13 +176,13 @@ export function inputFromContext(
 	return { input, env };
 }
 
-/** 관리자 로그인 화면인가(관리자 경로 `admin.path` 아래 `login`). 로그인 전에는 기능 목록을 묻지 않는다. */
+/** Whether this is the admin login screen (`login` under the admin path `admin.path`). Before login, the action list is not requested. */
 const isLoginScreen = (pathname: string | null) =>
 	pathname !== null && pathname.replace(/\/$/, "") === adminHref("/login");
 
 /**
- * AI 기능을 화면 자리에 연결한다. 켠 기능 중 붙을 곳(`attach`)이 이 자리인 것이 버튼으로 붙는다.
- * 그 기능이 쓸 연결이 준비되지 않았으면 붙이지 않는다.
+ * Attaches AI actions to screen slots. Among enabled actions, those whose attach target (`attach`) is this slot are attached as buttons.
+ * An action is not attached if the connection it uses is not ready.
  */
 export function AiSlotProvider({ children }: { children: ReactNode }) {
 	const pathname = usePathname();

@@ -21,7 +21,7 @@ const ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileA
 
 type MediaInfo = { filename: string; byteSize: number | null; mimeType: string | null; status?: string };
 
-/** 에디터의 첨부 파일 카드. 공개 화면 카드와 같은 모양이고, 이름을 바로 고칠 수 있다. */
+/** Attached file card in the editor. Same look as the public view card, and the name can be edited directly. */
 export function CmsFileNodeView({ node, updateAttributes, selected, editor }: NodeViewProps) {
 	const mediaId = typeof node.attrs.mediaId === "string" ? node.attrs.mediaId : "";
 	const label = typeof node.attrs.label === "string" ? node.attrs.label : "";
@@ -70,7 +70,7 @@ export function CmsFileNodeView({ node, updateAttributes, selected, editor }: No
 					value={label}
 					placeholder={filename || t("fileNode.fallbackName")}
 					disabled={!editable}
-					// 입력 글자가 에디터 문서로 새지 않게 한다.
+					// Keep typed characters from leaking into the editor document.
 					onKeyDown={(event) => event.stopPropagation()}
 					onChange={(event) => updateAttributes({ label: event.target.value || null })}
 					className="w-full truncate bg-transparent font-medium text-sm outline-none placeholder:text-cms-foreground"

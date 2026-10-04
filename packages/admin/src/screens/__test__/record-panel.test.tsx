@@ -42,8 +42,8 @@ const renderPanel = (target: { collection: "tag" | "category" | "collection"; id
 };
 const panel = () => screen.getByRole("complementary", { name: /태그/ });
 
-describe("분류 편집 패널", () => {
-	it("목록 옆 패널로 열리고 언어 탭마다 번역이 있는지 보인다", async () => {
+describe("taxonomy edit panel", () => {
+	it("opens as a panel beside the list and shows per locale tab whether a translation exists", async () => {
 		renderPanel({ collection: "tag", id: "tag-1" });
 		const name = (await screen.findByRole("textbox", { name: /이름/ })) as HTMLInputElement;
 		await waitFor(() => expect(name.value).toBe("리액트"));
@@ -54,7 +54,7 @@ describe("분류 편집 패널", () => {
 		expect(tabs).toEqual(["한국어", "영어 · 번역 있음", "일본어 · 번역 없음"]);
 	});
 
-	it("다른 언어 탭에서는 그 언어 이름만 고치고, 주소는 모든 언어가 같다고 알린다", async () => {
+	it("on other locale tabs only that locale's name is edited, and it says the slug is the same in all locales", async () => {
 		const { onSaved } = renderPanel({ collection: "tag", id: "tag-1" });
 		await screen.findByDisplayValue("리액트");
 
@@ -74,7 +74,7 @@ describe("분류 편집 패널", () => {
 		await waitFor(() => expect(onSaved).toHaveBeenCalled());
 	});
 
-	it("새 항목은 이름만으로 저장하고, 만든 항목을 넘기며 칸을 닫지 않는다", async () => {
+	it("a new item is saved with just a name, passes the created item on, and does not close the slot", async () => {
 		const { onSaved, onClose } = renderPanel({ collection: "tag", id: null });
 		expect(screen.getByRole("heading", { name: "태그 추가" })).toBeTruthy();
 		fireEvent.change(screen.getByRole("textbox", { name: /이름/ }), { target: { value: "Vue" } });
@@ -86,7 +86,7 @@ describe("분류 편집 패널", () => {
 		expect(onClose).not.toHaveBeenCalled();
 	});
 
-	it("저장한 뒤에는 받은 판을 기준으로 다시 저장한다", async () => {
+	it("after saving, saves again based on the received revision", async () => {
 		renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
 		fireEvent.click(screen.getByRole("button", { name: "저장" }));
@@ -101,7 +101,7 @@ describe("분류 편집 패널", () => {
 		expect(bodyOf(calls("PATCH")[1]).expectedVersion).toBe(4);
 	});
 
-	it("저장하지 않은 변경이 있으면 닫기 전에 버릴지 묻는다", async () => {
+	it("with unsaved changes, asks whether to discard before closing", async () => {
 		const { onClose } = renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
 
@@ -113,7 +113,7 @@ describe("분류 편집 패널", () => {
 		await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 	});
 
-	it("고치지 않았으면 묻지 않고 닫는다", async () => {
+	it("closes without asking if nothing was changed", async () => {
 		const { onClose } = renderPanel({ collection: "tag", id: "tag-1" });
 		await screen.findByDisplayValue("리액트");
 		fireEvent.click(within(panel()).getByRole("button", { name: "취소" }));
@@ -121,7 +121,7 @@ describe("분류 편집 패널", () => {
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
-	it("모음집은 글 목록을 기본 언어 탭에서 고친다", async () => {
+	it("a series edits its post list on the default locale tab", async () => {
 		renderPanel({ collection: "collection", id: null });
 		expect(await screen.findByRole("combobox", { name: "게시글 추가·빼기" })).toBeTruthy();
 	});

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { mediaUsages } from "../media-item";
 
-describe("미디어 사용처 묶기", () => {
-	it("초안과 공개본에서 함께 쓰는 글은 한 번만, 한쪽에서만 쓰면 안내를 붙인다", () => {
+describe("grouping media usages", () => {
+	it("a post used by both draft and published version counts once; one used on a single side gets a note", () => {
 		const usages = mediaUsages({
 			references: [
 				{ entryId: "a", title: "발행한 글", collection: "post", state: "working" },

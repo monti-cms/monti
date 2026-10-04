@@ -21,8 +21,8 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 /**
- * 제목 위 언어 탭. 같은 번역 묶음의 언어 사이를 오가고, 없는 언어는 번역본을 만든다.
- * 번역본은 서버에 저장된 원문의 언어별 값과 본문을 복사한 초안이다.
+ * Language tabs above the title. Switch between languages of the same translation group; for a missing language, create a translation.
+ * A translation is a draft copied from the original's per-language values and body saved on the server.
  */
 export function LanguageTabs({
 	entry,
@@ -32,7 +32,7 @@ export function LanguageTabs({
 }: {
 	entry: EntryData;
 	disabled: boolean;
-	/** 저장되지 않은 변경이 있으면 번역본 생성을 막는다. */
+	/** Blocks translation creation when there are unsaved changes. */
 	onBeforeCreate: () => Promise<boolean>;
 	onTrashTranslation: () => void;
 }) {

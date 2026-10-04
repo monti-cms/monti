@@ -34,9 +34,9 @@ import {
 } from "./ui";
 
 /**
- * 차트 블록의 기본 편집기 미리보기. 차트 문법(`./dsl`)을 recharts로 그린다(선택 의존성 `recharts`). 차트 블록 확장의 관리자
- * 공급자가 `fencePreviews.chart`로 미리보기를 열 때만 불러온다. 사이트는 같은 이름으로 자기 렌더러를 넣어 바꿀 수 있다.
- * 색은 계열의 테마 변수(`--chart-1`~`--chart-5`)다.
+ * Default editor preview for the chart block. Draws the chart syntax (`./dsl`) with recharts (optional dependency `recharts`). Loaded only
+ * when the chart block extension's admin provider opens a preview via `fencePreviews.chart`. A site can replace it by registering its own
+ * renderer under the same name. Colors are the series' theme variables (`--chart-1` to `--chart-5`).
  */
 
 const t = createTranslator(chartMessages);
@@ -65,7 +65,7 @@ const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart } as const;
 
 const VALUE_LABEL_CLASS = "fill-cms-foreground font-medium text-[11px]";
 
-/** 값 글자(`show values`). */
+/** Value labels (`show values`). */
 const valueLabel = (spec: CartesianChartSpec) =>
 	spec.options.showValues ? (
 		<LabelList
@@ -177,7 +177,7 @@ function PiePreview({ spec, className }: { spec: PieChartSpec; className?: strin
 	);
 }
 
-/** 차트 원문(`source`)을 그린다. 문법 오류면 줄마다 알린다. */
+/** Draws the chart source (`source`). On a syntax error, reports each line. */
 export function ChartPreview({ source, className }: { readonly source: string; readonly className?: string }) {
 	const normalized = useMemo(() => normalizeChartDsl(parseChartDsl(source)), [source]);
 	if (!normalized.spec) return <ChartErrorCard errors={normalized.errors} />;

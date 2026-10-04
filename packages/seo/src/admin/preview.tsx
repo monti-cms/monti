@@ -23,7 +23,7 @@ const t = createTranslator(seoMessages);
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 /**
- * 역할 필드의 지금 값. 번역본에서 언어별 값이 아닌 필드는 원문 값을 읽는다(속성 칸이 원문 값을 보여 주는 것과 같다).
+ * Current value of a role field. In a translation, fields that are not per-language read the source value (the same as the properties panel showing the source value).
  */
 export function seoRoleValue(
 	collection: SchemaCollection,
@@ -37,7 +37,7 @@ export function seoRoleValue(
 	return text(common ? entry?.source?.metadata[stored.name] : form[stored.name]);
 }
 
-/** 검색 결과·공유 미리보기에 쓸 제목·설명. 비우면 제목·요약을 쓴다. */
+/** Title and description for the search result and share preview. Falls back to the title and summary when empty. */
 export function seoPreviewText(collection: SchemaCollection, form: EntryForm, entry: Pick<EntryData, "source"> | null) {
 	const value = (role: string) => seoRoleValue(collection, role, form, entry).trim();
 	return {
@@ -46,7 +46,7 @@ export function seoPreviewText(collection: SchemaCollection, form: EntryForm, en
 	};
 }
 
-/** 검색 결과와 공유 카드 모양 미리보기. 값은 필드 역할에서 온다. */
+/** Preview shaped like a search result and a share card. Values come from the field roles. */
 export function SeoPreview({
 	collection,
 	form,
@@ -100,7 +100,7 @@ export function SeoPreview({
 	);
 }
 
-/** 보기 필드 `search`의 화면. */
+/** The view of the `search` view field. */
 export function SeoPreviewView({ collection, form, entry }: FieldViewProps) {
 	return isCollection(collection) ? <SeoPreview collection={collection} form={form} entry={entry} /> : null;
 }

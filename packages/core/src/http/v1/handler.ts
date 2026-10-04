@@ -5,8 +5,8 @@ import { HttpError, handleApiError } from "./error-handler";
 import { validateSameOrigin } from "./security";
 
 /**
- * 관리자 API 라우트의 공통 틀. 모든 관리자 요청은 서버에서 인증하고(§10.2),
- * 상태를 바꾸는 요청은 동일 출처 검사를 먼저 한다. 오류는 한 곳에서 같은 모양으로 바꾼다.
+ * Shared frame for admin API routes. Every admin request is authenticated on the server,
+ * and state-changing requests go through the same-origin check first. Errors are converted to one shape in a single place.
  */
 
 type Params = Record<string, string>;
@@ -33,7 +33,7 @@ export function adminRoute<P extends Params = Params>(
 	};
 }
 
-/** JSON 본문을 읽는다. 형식이 깨졌으면 400이다. 본문이 없으면 `{}`로 본다. */
+/** Reads the JSON body. 400 if malformed. A missing body is treated as `{}`. */
 export async function readJsonBody(request: NextRequest): Promise<unknown> {
 	const text = await request.text();
 	if (!text.trim()) return {};
@@ -45,8 +45,8 @@ export async function readJsonBody(request: NextRequest): Promise<unknown> {
 }
 
 /**
- * 변경 요청은 조회 응답의 `version`이 필요하다. 없으면 428, 서버와 다르면 저장소가 409를 던진다(§10.1).
- * 버전 누락을 형식 오류(400)보다 먼저 판정한다.
+ * Change requests need the `version` from the read response. 428 if missing, and the store throws 409 if it differs from the server.
+ * A missing version is rejected before a malformed body (400).
  */
 export function assertVersionPresent(value: unknown): void {
 	if (value === undefined || value === null || value === "") {
@@ -64,14 +64,14 @@ export function parseWith<S extends z.ZodType>(
 	return parsed.data;
 }
 
-/** 본문을 읽고 버전 존재를 확인한 뒤 스키마로 검증한다. */
+/** Reads the body, checks that a version is present, then validates it against the schema. */
 export async function readVersionedBody<S extends z.ZodType>(request: NextRequest, schema: S): Promise<z.output<S>> {
 	const body = await readJsonBody(request);
 	assertVersionPresent((body as { expectedVersion?: unknown })?.expectedVersion);
 	return parseWith(schema, body);
 }
 
-/** 쿼리의 `expectedVersion`(DELETE 요청). */
+/** The `expectedVersion` query param (DELETE requests). */
 export function readVersionQuery(request: NextRequest): number {
 	const raw = request.nextUrl.searchParams.get("expectedVersion");
 	assertVersionPresent(raw ?? undefined);
@@ -82,7 +82,7 @@ export function readVersionQuery(request: NextRequest): number {
 	return version;
 }
 
-/** 쿼리를 객체로 바꾼다. `arrayKeys`에 있는 키는 여러 번 쓸 수 있다. */
+/** Converts the query to an object. Keys in `arrayKeys` may appear multiple times. */
 export function readQuery(request: NextRequest, arrayKeys: readonly string[] = []): Record<string, unknown> {
 	const query: Record<string, unknown> = {};
 	const params = request.nextUrl.searchParams;

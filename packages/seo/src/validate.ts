@@ -2,8 +2,8 @@ import { type PluginConfigView, valueFieldsOf } from "@monti-cms/core";
 import { SEO_ROLES } from "./fields";
 
 /**
- * SEO 역할이 맞는 종류의 필드에 붙었는지 확인한다(`seo()`의 `validate`). 제목·설명·원본 주소는 텍스트, 공유 이미지는 미디어,
- * 숨기기는 `noindex` 선택지가 있는 선택 필드다.
+ * Checks that SEO roles are attached to fields of the right kind (`validate` of `seo()`). Title, description and canonical URL must be text, the share image media,
+ * and hiding a select field that has a `noindex` option.
  */
 export function validateSeoFields({ collections }: Pick<PluginConfigView, "collections">): void {
 	for (const [collection, schema] of Object.entries(collections)) {

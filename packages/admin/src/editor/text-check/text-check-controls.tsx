@@ -29,7 +29,7 @@ function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
 	return <Icon aria-hidden className={cn("size-4 shrink-0", className)} />;
 }
 
-/** 검사기 버튼 하나. 이름·아이콘은 검사기 정의(`label`·`icon`)에서 온다. */
+/** One checker button. Its name and icon come from the checker definition (`label`, `icon`). */
 function CheckerButton({ checker, controller }: { checker: TextChecker; controller: TextCheckController }) {
 	const iconByName = useIconByName();
 	const Icon = (typeof checker.icon === "string" ? iconByName(checker.icon) : checker.icon) ?? SpellCheck;
@@ -39,7 +39,7 @@ function CheckerButton({ checker, controller }: { checker: TextChecker; controll
 			label={running ? t("running") : checker.label}
 			side="bottom"
 			disabled={controller.running !== null || !controller.editor.isEditable}
-			// 고른 글자를 잃지 않게 편집기 초점을 지킨다.
+			// Keep editor focus so the picked text is not lost.
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={() => void controller.run(checker.id)}
 		>
@@ -48,7 +48,7 @@ function CheckerButton({ checker, controller }: { checker: TextChecker; controll
 	);
 }
 
-/** 도구 모음의 검사기 버튼(검사기마다 하나)과 결과 수(누르면 결과 목록). */
+/** Checker buttons of the toolbar (one per checker) and the result count (click for the result list). */
 export function TextCheckToolbar({ controller }: { controller: TextCheckController }) {
 	const { issues } = controller;
 	const count = issues.length;
@@ -88,15 +88,15 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 	);
 }
 
-/** 밑줄을 누르거나 목록에서 고르면 그 자리에 뜨는 결과 창: 설명, 바꿀 글 후보, 무시. */
+/** Result popup that appears at the spot when an underline is clicked or picked from the list: explanation, replacement candidates, ignore. */
 export function TextIssuePopover({ controller }: { controller: TextCheckController }) {
 	const { editor, open, issues, pluginKey } = controller;
 	const issue = open ? issues.find((item) => item.key === open.key) : undefined;
 	const key = issue?.key;
-	// 목록(키보드)에서 연 창은 닫을 때 초점을 본문으로 돌려준다. 밑줄을 눌러 연 창은 초점을 옮기지 않았다.
+	// A popup opened from the list (keyboard) returns focus to the body on close. A popup opened by clicking an underline did not move focus.
 	const returnFocusRef = useRef(false);
 	if (open) returnFocusRef.current = open.focus;
-	// 밑줄은 다시 그려질 수 있어 DOM 요소 대신 지금 문서 위치로 자리를 잰다.
+	// Underlines can be redrawn, so measure the position from the current document position instead of a DOM element.
 	const anchor = useMemo(
 		() =>
 			key

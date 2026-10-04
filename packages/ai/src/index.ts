@@ -1,6 +1,6 @@
 /**
- * AI 플러그인 저작 API. 사이트 설정 파일(`cms.config.ts`)이 import하는 진입점이다. 서버·브라우저가 함께 읽으므로
- * 비밀 값이나 AI SDK를 넣지 않는다.
+ * AI plugin authoring API. The entry point imported by the site config file (`cms.config.ts`). Both server and browser read it, so
+ * it must not contain secrets or the AI SDK.
  */
 
 export {

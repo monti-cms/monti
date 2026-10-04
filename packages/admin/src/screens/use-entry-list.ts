@@ -50,8 +50,8 @@ const t = createTranslator(screensMessages);
 export type ListMode = "list" | "trash";
 
 /**
- * 주소창의 목록 상태. 주소에 페이지 크기·정렬이 없으면 컬렉션별 저장 설정을 쓰고(§3.2),
- * 정렬·페이지 크기·열 설정을 바꾸면 저장한다.
+ * List state in the address bar. When the address has no page size or sort, uses the saved per-collection settings,
+ * and saves when sort, page size or column settings change.
  */
 function useListState(mode: ListMode) {
 	const router = useRouter();
@@ -78,7 +78,7 @@ function useListState(mode: ListMode) {
 			router.replace(`${basePath}?${listStateToSearchParams(next).toString()}` as Route, { scroll: false }),
 		[router, basePath],
 	);
-	/** 상태를 바꿔 주소에 쓴다. 기본은 첫 페이지로 돌아간다. */
+	/** Updates the state and writes it to the address. Resets to the first page by default. */
 	const update = useCallback(
 		(patch: Partial<ListState>, options: { resetPage?: boolean } = { resetPage: true }) =>
 			navigate({ ...state, ...(options.resetPage ? { page: 1 } : {}), ...patch }),
@@ -107,8 +107,8 @@ function useListState(mode: ListMode) {
 }
 
 /**
- * 목록 한 페이지와 폴더. 캐시에서 바로 그리고 뒤에서 새로 받는다. 조건을 바꾸는 동안에도 이전 줄을 남겨
- * (`keepPreviousData`) 자리 표시로 깜빡이지 않는다. 자리 표시는 캐시가 아예 없을 때만 보인다.
+ * One page of the list plus folders. Draws from cache right away and refetches in the background. Keeps the previous rows while conditions change
+ * (`keepPreviousData`) so a placeholder does not flicker. A placeholder shows only when there is no cache at all.
  */
 function useEntriesData(state: ListState, mode: ListMode) {
 	const isTrash = mode === "trash";
@@ -127,7 +127,7 @@ function useEntriesData(state: ListState, mode: ListMode) {
 		queryKey: listKey,
 		queryFn: ({ signal }) =>
 			cmsFetch<EntriesPage>(cmsApiUrl(`/v1/entries?${apiQuery}`), { signal, fallback: t("list.loadFailed") }),
-		// 다른 컬렉션의 줄은 열 구성이 달라 남기지 않는다.
+		// Rows from another collection have a different column layout, so they are not kept.
 		placeholderData: (previous, previousQuery) =>
 			previousQuery && new URLSearchParams(String(previousQuery.queryKey.at(-1))).get("collection") === collection
 				? keepPreviousData(previous)
@@ -147,7 +147,7 @@ function useEntriesData(state: ListState, mode: ListMode) {
 	};
 }
 
-/** 일괄 결과를 알림으로 알린다. 실패는 항목 이름과 사유를 적는다. */
+/** Reports bulk results as notifications. Failures list the item name and reason. */
 function announce(label: string, results: BulkItemResult[], items: BulkSelection[]) {
 	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
 	const ok = results.length - failures.length;
@@ -165,8 +165,8 @@ function announce(label: string, results: BulkItemResult[], items: BulkSelection
 }
 
 /**
- * 목록을 바꾸는 작업. 작업을 목록에 먼저 반영하고 요청한다. 요청 자체가 실패하면 되돌리고,
- * 끝나면 서버 값으로 맞춘다. 항목별 결과는 `onResults`로 넘긴다(실패한 항목을 고른 채로 남기는 데 쓴다).
+ * An action that changes the list. Applies the change to the list first, then sends the request. If the request itself fails it is rolled back,
+ * and when it ends the list is synced to server values. Per-item results go to `onResults` (used to keep failed items selected).
  */
 function useEntryMutations({
 	listKey,
@@ -181,7 +181,7 @@ function useEntryMutations({
 }) {
 	const queryClient = useQueryClient();
 
-	/** 목록·휴지통 배지를 모두 다시 받는다(지금 보이는 줄은 그대로 둔 채). */
+	/** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
 	const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: ENTRIES_KEY });
 
 	const mutateEntries = async (
@@ -214,7 +214,7 @@ function useEntryMutations({
 		}
 	};
 
-	/** 일괄 API로 처리하고 결과를 알린다. */
+	/** Handles the action through the bulk API and reports the result. */
 	const bulk = async (
 		op: Parameters<typeof runBulk>[0],
 		label: string,
@@ -229,7 +229,7 @@ function useEntryMutations({
 		}
 	};
 
-	/** 휴지통 복원. 일괄 API에 없어 항목마다 요청한다. */
+	/** Trash restore. Not in the bulk API, so it requests per item. */
 	const restore = async (targets: BulkSelection[]) => {
 		const results = await mutateEntries("restore", targets, async () => {
 			const out: BulkItemResult[] = [];
@@ -253,7 +253,7 @@ function useEntryMutations({
 	return { mutateEntries, bulk, restore, invalidateEntries };
 }
 
-/** 지금 폴더에 바로 든 하위 폴더와 한 단계 위. 검색·필터 중이거나 휴지통이면 없다. */
+/** Subfolders directly inside the current folder, and one level up. None while searching or filtering, or in trash. */
 function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode) {
 	if (mode === "trash" || !isExplorerMode(state)) return null;
 	const current = state.folder === "all" ? null : state.folder;
@@ -265,8 +265,8 @@ function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode
 }
 
 /**
- * 목록·휴지통 화면의 상태·데이터·작업. 화면 조각은 그리지 않는다.
- * 사이드바 폴더 탐색(목록 화면)과 본문이 함께 쓴다.
+ * State, data and actions of the list and trash screens. Draws no UI pieces.
+ * Shared by the sidebar folder navigation (list screen) and the body.
  */
 export function useEntryList(mode: ListMode) {
 	const router = useRouter();
@@ -282,19 +282,19 @@ export function useEntryList(mode: ListMode) {
 	const { items, folders } = data;
 
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-	// 전체 선택은 현재 페이지만 대상이다(§3.4). 목록이 바뀌면 선택을 비운다.
+	// Select all targets the current page only. Changing the list clears the selection.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset whenever the visible query changes
 	useEffect(() => setSelectedIds(new Set()), [data.apiQuery]);
 	const [recordTarget, setRecordTarget] = useState<RecordTarget | null>(null);
 	const { confirm, confirmDiscard, dialog: confirmDialog } = useConfirm();
-	/** 분류 편집 패널에 저장하지 않은 변경이 있는가. 패널이 알려 준다. */
+	/** Whether the taxonomy edit panel has unsaved changes. The panel reports it. */
 	const recordDirtyRef = useRef(false);
-	/** 분류 편집 패널에 바로 연다(묻지 않는다). 저장한 항목을 그대로 열어 둘 때 쓴다. */
+	/** Opens the taxonomy edit panel directly (without asking). Used to keep a saved item open as is. */
 	const showRecord = (target: RecordTarget) => {
 		recordDirtyRef.current = false;
 		setRecordTarget(target);
 	};
-	/** 분류 편집 패널을 연다. 저장하지 않은 변경이 있으면 버릴지 먼저 묻는다. */
+	/** Opens the taxonomy edit panel. If there are unsaved changes, asks first whether to discard them. */
 	const openRecord = async (target: RecordTarget) => {
 		if (await confirmDiscard(recordDirtyRef.current)) showRecord(target);
 	};
@@ -302,10 +302,10 @@ export function useEntryList(mode: ListMode) {
 		recordDirtyRef.current = false;
 		setRecordTarget(null);
 	};
-	// 주소의 `open`(미디어 사용처 등에서 연 항목)은 항목 칸으로 한 번 열고 주소에서 뺀다.
+	// The address's `open` (an item opened from, e.g., media usages) opens once into the item slot and is then removed from the address.
 	const searchParams = useSearchParams();
 	const openParam = searchParams.get(OPEN_ITEM_PARAM);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: 주소의 값이 바뀔 때만 연다
+	// biome-ignore lint/correctness/useExhaustiveDependencies: open only when the address value changes
 	useEffect(() => {
 		if (!openParam || !isItemCollection(state.collection) || mode === "trash") return;
 		showRecord({ collection: state.collection, id: openParam });
@@ -327,7 +327,7 @@ export function useEntryList(mode: ListMode) {
 		folders,
 		onChanged: async (deletedId) => {
 			await queryClient.invalidateQueries({ queryKey: foldersKey(collection) });
-			// 보고 있던 폴더를 지웠으면 전체 보기로 돌아간다.
+			// If the folder being viewed was deleted, go back to the all view.
 			if (deletedId && state.folder === deletedId) update({ folder: "all" });
 			else await invalidateEntries();
 		},
@@ -395,7 +395,7 @@ export function useEntryList(mode: ListMode) {
 		}
 	};
 
-	/** 새 항목. 글·메모는 지금 폴더에 편집 화면으로, 분류 항목은 작은 폼으로 만든다. */
+	/** New item. Posts and memos are created in the edit screen in the current folder; taxonomy items through a small form. */
 	const createNew = () =>
 		isRecord
 			? void openRecord({ collection, id: null })
@@ -423,7 +423,7 @@ export function useEntryList(mode: ListMode) {
 			},
 		);
 
-	/** 행에서 Delete 키. 목록은 휴지통 이동, 휴지통은 영구 삭제를 묻는다. */
+	/** Delete key on a row. On the list it moves to trash; in trash it asks about permanent delete. */
 	const onDeleteKey = (item: ListEntriesItem) => {
 		const targets = actionTargets(item, items, selectedIds).map(toSelection);
 		if (isTrash) void confirmPermanentDelete(targets);
@@ -451,7 +451,7 @@ export function useEntryList(mode: ListMode) {
 		setRecordDirty: (dirty: boolean) => {
 			recordDirtyRef.current = dirty;
 		},
-		/** 이 목록의 확인창(휴지통 이동·보관·영구 삭제·변경 버리기). 화면에 한 번 렌더한다. */
+		/** Confirm dialogs of this list (move to trash, archive, permanent delete, discard changes). Render once per screen. */
 		confirmDialog,
 		reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: [...ENTRIES_KEY, "taxonomy"] }),
 		invalidateEntries,

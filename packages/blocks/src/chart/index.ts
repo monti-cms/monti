@@ -6,15 +6,15 @@ export { chartBlock } from "./definition";
 export { chartMessages } from "./messages";
 
 /**
- * 차트 블록(` ```chart `). 사이트 설정의 `plugins`에 넣는다.
+ * Chart block (` ```chart `). Add it to `plugins` in the site config.
  *
  * ```ts
  * plugins: [chart()]
  * ```
  *
- * 편집기는 코드 입력 칸과 미리보기로 편집한다. 미리보기는 이 확장이 recharts로 그린다(선택 의존성 `recharts`를 설치한다).
- * 사이트가 `fencePreviews.chart`로 바꿀 수 있다. 공개 화면은 이 확장의 기본 `Chart` 컴포넌트가 그리고 사이트가 덮어쓸 수 있다(코드는 `source` 속성,
- * `remarkFenceBlocksToMdx`). 차트 색은 CSS 변수 `--chart-1`~`--chart-5`(없으면 이 패키지 `styles.css`의 기본값)다.
+ * The editor edits with a code input and a preview. The preview is drawn by this extension with recharts (install the optional dependency `recharts`).
+ * A site can replace it via `fencePreviews.chart`. The public page is drawn by this extension's default `Chart` component, which a site can override (the code is the `source` attribute,
+ * `remarkFenceBlocksToMdx`). Chart colors are the CSS variables `--chart-1` to `--chart-5` (defaults from this package's `styles.css` if unset).
  */
 export const chart = () =>
 	definePlugin({
@@ -23,7 +23,7 @@ export const chart = () =>
 		blocks: [chartBlock],
 		admin: () => import("@monti-cms/blocks/chart/admin"),
 		render: () => import("@monti-cms/blocks/chart/render"),
-		// AI 플러그인이 있으면 만들기·고치기 기능이 저절로 붙는다(`./ai`).
+		// If the AI plugin is present, the create and edit features attach automatically (`./ai`).
 		contributes: { ai: chartAiContribution },
 	});
 

@@ -6,17 +6,17 @@ import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry
 import { type AiRunOptions, runAiAction, runAiActionMany, streamAiAction, useAiActions } from "./ai-slot-provider";
 
 export interface UseAiAction<K extends AiActionKey> {
-	/** 켜져 있고 연결이 준비되어 지금 부를 수 있는가. */
+	/** Whether it is on and its connection is ready, so it can be called now. */
 	available: boolean;
-	/** 기능 정의와 지금 값(이름·추가 요청 받기 등). 목록을 받기 전에는 없다. */
+	/** Action definition and current values (name, ask-for-extra-request, etc.). Absent before the list is fetched. */
 	action: AiActionView | undefined;
 	run: (input: AiActionInputOf<K>, options?: AiRunOptions) => Promise<AiActionResultOf<K>>;
-	/** 흘려받기로 실행한다(M8-1). 받은 글이 늘 때마다 지금까지 받은 글 전체로 `onText`를 부른다. */
+	/** Runs as a stream. Each time more text arrives, calls `onText` with all text received so far. */
 	stream: (
 		input: AiActionInputOf<K>,
 		options: AiRunOptions & { onText: (text: string) => void },
 	) => Promise<AiActionResultOf<K>>;
-	/** 같은 기능을 여러 입력에 돌린다(한 요청 최대 8개). 입력마다 결과나 실패 이유가 순서대로 온다. */
+	/** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */
 	runMany: (
 		inputs: readonly AiActionInputOf<K>[],
 		options?: AiRunOptions,
@@ -24,7 +24,7 @@ export interface UseAiAction<K extends AiActionKey> {
 }
 
 /**
- * 사이트 설정(`aiPlugin({ actions })`)의 기능을 이름으로 부른다. 이름·입력·결과 타입은 설정에서 나온다.
+ * Calls an action of the site config (`aiPlugin({ actions })`) by name. Name, input and result types come from the config.
  *
  * ```ts
  * const summary = useAiAction("summary");

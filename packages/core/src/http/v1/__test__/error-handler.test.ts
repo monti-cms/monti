@@ -5,8 +5,8 @@ vi.mock("../../../adapters/auth", () => ({ AuthError: class AuthError extends Er
 
 afterEach(() => vi.restoreAllMocks());
 
-describe("API 오류 응답", () => {
-	it("브라우저가 끊은 요청은 오류로 남기지 않는다", () => {
+describe("API error responses", () => {
+	it("does not log a request the browser dropped as an error", () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
 		const aborted = Object.assign(new Error("aborted"), { code: "ECONNRESET" });
 		expect(handleApiError(aborted).status).toBe(499);
@@ -14,7 +14,7 @@ describe("API 오류 응답", () => {
 		expect(log).not.toHaveBeenCalled();
 	});
 
-	it("모르는 오류는 그대로 500으로 남긴다", () => {
+	it("keeps an unknown error as a 500", () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
 		expect(handleApiError(new Error("boom")).status).toBe(500);
 		expect(log).toHaveBeenCalled();

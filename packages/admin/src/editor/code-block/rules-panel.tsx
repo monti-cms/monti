@@ -28,11 +28,11 @@ interface RulesPanelProps {
 	rules: CodeRule[];
 	text: string;
 	lineCount: number;
-	/** 지금 이 코드 블록에서 고른 글자와 그 줄(새 규칙의 초깃값). */
+	/** The text picked in this code block now and its line (initial value of a new rule). */
 	selection: { text: string } | null;
-	/** 코드 언어(자리 동작에 넘긴다). */
+	/** Code language (passed to the placeholder behavior). */
 	language?: string | null;
-	/** 이 코드 블록을 가리키는 값. 패널을 닫아도 AI 결과가 이 블록에 남는다. */
+	/** Value pointing to this code block. Even if the panel is closed, the AI result stays on this block. */
 	slotScope?: string;
 	onChange: (next: CodeRule[]) => void;
 }
@@ -168,11 +168,11 @@ function RuleRow({
 }
 
 /**
- * 정규식 규칙(`// @document fold {re:/.../}` 등) 목록. 코드를 고쳐도 규칙이 다시 찾아 효과를 준다.
- * 고른 글자가 있으면 "규칙 추가"가 그 글자를 찾는 규칙으로 시작한다.
+ * List of regex rules (`// @document fold {re:/.../}`, etc.). Even if the code is edited, rules find and apply the effect again.
+ * If text is picked, "Add rule" starts as a rule that finds that text.
  */
 export function RulesPanel({ rules, text, lineCount, selection, language, slotScope, onChange }: RulesPanelProps) {
-	// 코드 블록 규칙 자리. 후보 정규식을 누르면 글자 접기 규칙으로 더한다.
+	// Code block rules spot. Clicking a candidate regex adds it as a char collapse rule.
 	const foldSlot = useSlot({
 		slot: "codeRules",
 		target: "fold",

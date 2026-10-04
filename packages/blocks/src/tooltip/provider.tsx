@@ -23,9 +23,9 @@ import { tooltipMessages } from "./messages";
 
 const t = createTranslator(tooltipMessages);
 
-/** 편집기 마크 이름(`cmsTooltip`). */
+/** Editor mark name (`cmsTooltip`). */
 export const TOOLTIP_MARK = addedMarkName(tooltipBlock.name);
-/** 슬래시 메뉴가 서식 도구의 툴팁 입력을 여는 창 이벤트. */
+/** Window event the slash menu uses to open the format tool's tooltip input. */
 export const OPEN_TOOLTIP_EVENT = "cms:open-tooltip";
 
 const LABELS: MarkTextLabels = { name: t("label"), field: t("content.label"), empty: t("field.empty") };
@@ -44,7 +44,7 @@ function TooltipToolbarButton({ editor }: { editor: Editor }) {
 	);
 }
 
-/** 고친 범위(`range`)가 있으면 그 툴팁을, 없으면 지금 선택을 고치는 입력 칸을 버블에 펼친다. */
+/** Expands in the bubble an input that edits the tooltip at the edited `range` if there is one, or the current selection otherwise. */
 const openForm = (
 	{ editor, openPanel, closePanel }: EditorBubbleProps,
 	form: { active: boolean; initial: string; range?: { from: number; to: number } },
@@ -67,7 +67,7 @@ const openForm = (
 
 function TooltipBubbleButton(props: EditorBubbleProps) {
 	const { editor } = props;
-	// 코드 블록 안 글자 툴팁은 본체 코드 블록이 따로 준다.
+	// Tooltips on text inside a code block are provided separately by the core code block.
 	if (!allowsMark(editor.state, TOOLTIP_MARK)) return null;
 	const active = editor.isActive(TOOLTIP_MARK);
 	return (
@@ -99,7 +99,7 @@ function TooltipDetail(props: EditorMarkDetailProps) {
 	);
 }
 
-/** 툴팁 꾸밈의 편집기 등록. 점선 밑줄로 보이고, 툴팁 끝에 이어 친 글자도 툴팁에 든다. */
+/** Editor registration of the tooltip mark. Shown with a dotted underline, and text typed right after the end of a tooltip becomes part of it. */
 export const tooltipMarkExtension: EditorMarkExtension = {
 	inclusive: true,
 	render: () => ({ class: "underline decoration-dotted underline-offset-4" }),
@@ -114,7 +114,7 @@ export const tooltipMarkExtension: EditorMarkExtension = {
 			icon: MessageSquareMore,
 			keywords: ["tooltip", ...keywordList(t("insert.keywords"))],
 			run: (editor, range) => {
-				// 슬래시는 빈 문단에서 입력하므로 선택 영역이 없다. 라벨 예시를 선택해 편집·설명 입력을 시작한다.
+				// The slash command is typed in an empty paragraph, so there is no selection. Select the sample label to start editing and entering the description.
 				const sample = t("insert.text");
 				editor.chain().focus().deleteRange(range).insertContent(sample).run();
 				const to = editor.state.selection.from;
@@ -127,7 +127,7 @@ export const tooltipMarkExtension: EditorMarkExtension = {
 
 const components: CmsAdminComponents = { marks: { [tooltipBlock.name]: tooltipMarkExtension } };
 
-/** 툴팁 꾸밈의 편집기 표시·서식 도구·버블·슬래시 메뉴를 관리자 화면에 넣는다. */
+/** Registers the tooltip mark's editor display, format tool, bubble, and slash menu in the admin UI. */
 export function TooltipProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

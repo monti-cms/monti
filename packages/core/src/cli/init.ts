@@ -17,28 +17,28 @@ import {
 } from "./templates";
 
 export interface InitOptions {
-	/** Next 앱 폴더(`package.json`이 있는 곳). */
+	/** Next app folder (where `package.json` is). */
 	readonly cwd: string;
-	/** 관리자 화면 경로(기본 `/admin`). 다르면 사이트 설정에 `admin.path`를 적고 라우트 폴더도 그 경로로 만든다. */
+	/** Admin UI path (default `/admin`). If different, set `admin.path` in the site config and create the route folder at that path too. */
 	readonly adminPath?: string;
-	/** 사이트 기본 언어 코드(기본 `en`). 관리자 화면 언어·날짜 표기도 이 언어를 따른다. */
+	/** Site default locale code (default `en`). The admin UI locale and date formatting follow it. */
 	readonly locale?: string;
-	/** 날짜·시각 시간대(IANA, 기본 `UTC`). */
+	/** Date/time zone (IANA, default `UTC`). */
 	readonly timeZone?: string;
 }
 
 export interface InitReport {
-	/** 새로 만든 파일(`cwd` 기준). */
+	/** Newly created files (relative to `cwd`). */
 	readonly created: string[];
-	/** 이미 있어 그대로 둔 파일. 덮어쓰지 않는다. */
+	/** Files that already existed and were left as they are. Never overwritten. */
 	readonly skipped: string[];
-	/** 고친 파일(tsconfig `paths`·전역 CSS·next 설정). */
+	/** Modified files (tsconfig `paths`, global CSS, next config). */
 	readonly updated: string[];
-	/** 직접 할 일(자동으로 못 고친 것·설치·환경 변수·다음 단계). */
+	/** Manual steps (what could not be fixed automatically, installation, environment variables, next steps). */
 	readonly todo: string[];
 }
 
-/** IANA 시간대 이름인가. */
+/** Whether this is an IANA time zone name. */
 function isTimeZone(timeZone: string): boolean {
 	try {
 		new Intl.DateTimeFormat("en-US", { timeZone });
@@ -48,7 +48,7 @@ function isTimeZone(timeZone: string): boolean {
 	}
 }
 
-/** 경로를 `/`로 잇는다(보고와 설정 값은 운영체제와 상관없이 같다). */
+/** Joins paths with `/` (reports and config values are the same regardless of the operating system). */
 const posix = (file: string) => file.split(path.sep).join("/");
 const dotted = (file: string) => (file.startsWith(".") ? file : `./${file}`);
 
@@ -56,9 +56,9 @@ const CSS_CANDIDATES = ["app/globals.css", "src/app/globals.css", "styles/global
 const NEXT_CONFIGS = ["next.config.ts", "next.config.mjs", "next.config.js"];
 
 /**
- * `monti init`: Next 앱에 CMS를 붙이는 파일을 만든다. **있는 파일은 덮어쓰지 않고** 건너뛴 것으로 알린다.
- * 만드는 것: 사이트·서버 설정, 관리자 라우트(페이지·레이아웃), 관리자 API 라우트(로그인 포함).
- * 고치는 것(안전할 때만): tsconfig `paths`, 전역 CSS의 스타일 줄, 기본 모양의 next 설정. 못 고치면 할 일로 알린다.
+ * `monti init`: creates the files that attach the CMS to a Next app. **Existing files are not overwritten**; they are reported as skipped.
+ * Creates: site and server config, admin routes (page and layout), admin API route (including login).
+ * Modifies (only when safe): tsconfig `paths`, the style line in global CSS, a next config of the default shape. If it cannot, it reports a manual step.
  */
 export function initProject(options: InitOptions): InitReport {
 	const { cwd } = options;
@@ -93,7 +93,7 @@ export function initProject(options: InitOptions): InitReport {
 		}
 	};
 
-	// `src/app`을 쓰는 앱은 설정 파일도 `src/`에 둔다.
+	// Apps that use `src/app` keep the config files in `src/` too.
 	const useSrc = exists("src/app");
 	const appDir = useSrc ? "src/app" : "app";
 	const configFile = useSrc ? "src/cms.config.ts" : "cms.config.ts";
@@ -130,7 +130,7 @@ export function initProject(options: InitOptions): InitReport {
 	return report;
 }
 
-/** tsconfig `paths`에 설정 별칭을 더한다. 주석 없는 JSON일 때만 고치고, 이미 있는 별칭은 그대로 둔다. */
+/** Adds the config aliases to tsconfig `paths`. Only edits JSON without comments, and leaves existing aliases as they are. */
 function addTsconfigPaths(cwd: string, aliases: Readonly<Record<string, string>>, report: InitReport): void {
 	const file = path.join(cwd, "tsconfig.json");
 	const manual = () =>
@@ -146,7 +146,7 @@ function addTsconfigPaths(cwd: string, aliases: Readonly<Record<string, string>>
 	try {
 		json = JSON.parse(text);
 	} catch {
-		// 주석·끝 쉼표가 있으면 다시 쓰면서 지우게 되므로 고치지 않는다.
+		// With comments or trailing commas, rewriting would drop them, so leave the file alone.
 		const parsed = parseJsonc(text) as typeof json | undefined;
 		const paths = parsed?.compilerOptions?.paths ?? {};
 		if (Object.keys(aliases).every((alias) => paths[alias])) report.skipped.push("tsconfig.json");
@@ -167,13 +167,13 @@ function addTsconfigPaths(cwd: string, aliases: Readonly<Record<string, string>>
 		return;
 	}
 	const indent = /^\{\r?\n(\s+)/.exec(text)?.[1] ?? "\t";
-	// 한 값짜리 배열(`["./x"]`)은 한 줄로 둔다(Next가 만든 tsconfig 모양).
+	// Keep single-value arrays (`["./x"]`) on one line (the shape of a tsconfig created by Next).
 	const out = JSON.stringify(json, null, indent).replace(/\[\s*("(?:[^"\\]|\\.)*")\s*\]/g, "[$1]");
 	writeFileSync(file, `${out}\n`);
 	report.updated.push("tsconfig.json");
 }
 
-/** 전역 CSS(Tailwind 입력)에 관리자 스타일 줄을 더한다. 마지막 `@import` 다음에 넣고, 이미 있는 줄은 넣지 않는다. */
+/** Adds the admin style line to global CSS (the Tailwind entry). Inserts it after the last `@import` and skips lines that already exist. */
 function addCssLines(cwd: string, report: InitReport): void {
 	const file = CSS_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
 	const manual = `Add these lines to the global CSS (the Tailwind input) after @import "tailwindcss";: ${CSS_LINES.join(" ")}`;
@@ -201,7 +201,7 @@ function addCssLines(cwd: string, report: InitReport): void {
 	report.updated.push(file);
 }
 
-/** next 설정을 `withCms`로 감싼다. 기본 모양(`export default nextConfig;` 한 줄)일 때만 고치고, 없으면 만든다. */
+/** Wraps the next config with `withCms`. Only edits the default shape (a single `export default nextConfig;` line), and creates one if missing. */
 function addWithCms(cwd: string, config: string, server: string, report: InitReport): void {
 	const file = NEXT_CONFIGS.find((candidate) => existsSync(path.join(cwd, candidate)));
 	if (!file) {
@@ -231,7 +231,7 @@ function addWithCms(cwd: string, config: string, server: string, report: InitRep
 	report.updated.push(file);
 }
 
-/** 보고를 사람이 읽는 글로. */
+/** Turns the report into human-readable text. */
 export function formatInitReport(report: InitReport): string {
 	const section = (title: string, items: readonly string[]) =>
 		items.length === 0 ? [] : [title, ...items.map((item) => `  - ${item.replaceAll("\n", "\n    ")}`), ""];

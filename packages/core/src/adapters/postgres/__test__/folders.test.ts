@@ -89,8 +89,8 @@ describe("Folders contract", () => {
 			} catch (_e) {
 				// Tables might not exist yet
 			}
-			// 발행 필수값(블로그의 카테고리 같은 것)은 설정에서 찾아 채운다. 위에서 글을 다 지웠으므로 관계 대상도
-			// 새로 만들게 저장소를 다시 만든다.
+			// Required-for-publish values (such as the reference blog's category) are looked up in the config and filled in. Since all entries were deleted above, the store is recreated so
+			// the relation targets are created anew.
 			store = createContentStore(pool, { schema: schemaName }) as unknown as typeof store;
 			fillRequiredMetadata(store);
 		}

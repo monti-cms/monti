@@ -41,34 +41,34 @@ beforeEach(() => {
 	mocks.verifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
 });
 
-describe("플러그인 API 경로 기본 인증(M13-1)", () => {
-	it("로그인하지 않았으면 플러그인 경로를 부르지 않고 401이다", async () => {
+describe("plugin API route default authentication", () => {
+	it("when not logged in, does not call the plugin route and returns 401", async () => {
 		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
 		expect((await call("GET", "v1/example/private")).status).toBe(401);
 		expect(mocks.privateGet).not.toHaveBeenCalled();
 	});
 
-	it("다른 출처의 변경 요청은 로그인 확인 전에 거부한다", async () => {
+	it("rejects a cross-origin change request before the login check", async () => {
 		const response = await call("POST", "v1/example/private", { origin: "https://evil.example.com" });
 		expect(response.status).toBe(403);
 		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
 		expect(mocks.privateGet).not.toHaveBeenCalled();
 	});
 
-	it("관리자면 플러그인 경로가 받는다", async () => {
+	it("an admin reaches the plugin route", async () => {
 		expect(await (await call("POST", "v1/example/private", { origin: ORIGIN })).text()).toBe("private");
 		expect(mocks.verifyAdmin).toHaveBeenCalledTimes(1);
 	});
 
-	it("`public: true` 경로는 감싸지 않는다(경로가 스스로 확인한다)", async () => {
+	it("a `public: true` route is not wrapped (the route checks for itself)", async () => {
 		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
 		expect(await (await call("POST", "v1/example/hook")).text()).toBe("public");
 		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
 	});
 });
 
-describe("플러그인 경로 충돌(M16-7)", () => {
-	// 경로표는 처음 한 번 만들어 기억하므로 시험마다 라우터를 새로 읽는다.
+describe("plugin route collisions", () => {
+	// The route table is built once and cached, so re-read the router for each test.
 	const callFresh = async (path: string) => {
 		vi.resetModules();
 		const { createCmsRouteHandler: fresh } = await import("../router");
@@ -77,7 +77,7 @@ describe("플러그인 경로 충돌(M16-7)", () => {
 		});
 	};
 
-	it("본체 경로와 같은 플러그인 경로는 두 쪽 이름을 밝힌 오류다", async () => {
+	it("a plugin route identical to a core route is an error naming both sides", async () => {
 		mocks.extra = [{ plugin: "evil", pattern: "v1/meta", module: { GET: mocks.privateGet } }];
 		await expect(callFresh("v1/example/private")).rejects.toThrow(
 			/route "v1\/meta" of plugin "evil" collides with the core route "v1\/meta"/,
@@ -85,14 +85,14 @@ describe("플러그인 경로 충돌(M16-7)", () => {
 		expect(mocks.privateGet).not.toHaveBeenCalled();
 	});
 
-	it("다른 플러그인과 같은 경로도 오류다", async () => {
+	it("a route identical to another plugin's is also an error", async () => {
 		mocks.extra = [{ plugin: "other", pattern: "v1/example/private", module: { GET: mocks.privateGet } }];
 		await expect(callFresh("v1/example/private")).rejects.toThrow(
 			/of plugin "other" collides with the route "v1\/example\/private" of plugin "example"/,
 		);
 	});
 
-	it("충돌이 없으면 동작한다", async () => {
+	it("works when there is no collision", async () => {
 		expect((await callFresh("v1/example/private")).status).toBe(200);
 	});
 });

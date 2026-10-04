@@ -1,15 +1,15 @@
-// AI 플러그인은 고를 수 있는 의존성이라 타입만 읽는다(이 파일은 AI 플러그인 코드를 불러오지 않는다).
+// The AI plugin is an optional dependency, so only its types are read (this file does not load AI plugin code).
 import type { AiActionDefinition, AiContribution } from "@monti-cms/ai";
 import { type CollectionsConfig, createActiveTranslator, valueFieldsOf } from "@monti-cms/core";
 import { SEO_DEFAULT_LIMITS, SEO_ROLES } from "./fields";
 import { seoMessages } from "./messages";
 
 /**
- * SEO 확장이 AI 플러그인에 더하는 기능(검색 제목·설명 추천). `seo()` 플러그인이 `contributes.ai`로 더하므로 AI 플러그인을
- * 쓰는 사이트에만 붙는다. 바꾸려면 `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`, 끄려면 `seoTitle: false`.
+ * Features the SEO extension adds to the AI plugin (search title and description suggestions). The `seo()` plugin adds them through `contributes.ai`, so they attach only to sites
+ * that use the AI plugin. To change one: `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false`.
  */
 
-// 이 기능들은 사이트 설정을 본 뒤에 만들어진다(`(site) => …`). 언어는 그때 고른다.
+// These features are built after the site config is seen (`(site) => …`). The language is chosen then.
 const t = createActiveTranslator(seoMessages);
 
 const fieldInput = () =>
@@ -21,8 +21,8 @@ const fieldInput = () =>
 	}) as const;
 
 /**
- * AI 플러그인이 넘기는 사이트 보기(`AiSiteView`) 중 이 파일이 읽는 것과 붙을 곳(`AiAttach`)의 모양. 여기 적어 배포 타입 선언이
- * AI 플러그인을 가리키지 않게 한다(AI 플러그인이 없는 사이트도 타입 검사를 통과한다). 맞는 모양인지는 `satisfies`가 확인한다.
+ * The part of the site view (`AiSiteView`) passed by the AI plugin that this file reads, and the shape of the attach target (`AiAttach`). Written here so the published type declarations
+ * do not reference the AI plugin (sites without the AI plugin still pass type checking). `satisfies` checks that the shape matches.
  */
 export interface SeoSiteView {
 	readonly collections: CollectionsConfig;
@@ -33,7 +33,7 @@ export interface FieldAttach {
 	readonly collections: readonly string[];
 }
 
-/** 그 역할 필드가 있는 컬렉션과 필드. 필드 이름마다 붙을 곳 하나, 길이는 필드 `max` → 권장 글자 수 → 기본값. */
+/** Collections and fields that have that role field. One attach target per field name; length is field `max` → recommended length → default. */
 function roleTargets(site: SeoSiteView, role: string, fallback: number) {
 	const byName = new Map<string, string[]>();
 	const limits: number[] = [];
@@ -51,7 +51,7 @@ function roleTargets(site: SeoSiteView, role: string, fallback: number) {
 }
 
 export const seoAi = {
-	/** 검색 결과에 보일 제목 후보. 검색 제목 역할(`seoTitle`) 필드에 붙는다. */
+	/** Title candidates shown in search results. Attaches to the search title role (`seoTitle`) field. */
 	title:
 		(options: { readonly prompt?: string; readonly maxLength?: number } = {}) =>
 		(site: SeoSiteView) => {
@@ -70,7 +70,7 @@ export const seoAi = {
 			} satisfies AiActionDefinition;
 		},
 
-	/** 검색 결과에 보일 설명. 검색 설명 역할(`seoDescription`) 필드에 붙는다. */
+	/** Description shown in search results. Attaches to the search description role (`seoDescription`) field. */
 	description:
 		(options: { readonly prompt?: string; readonly maxLength?: number } = {}) =>
 		(site: SeoSiteView) => {
@@ -90,7 +90,7 @@ export const seoAi = {
 		},
 };
 
-/** `seo()`가 AI 플러그인에 더하는 것. 기능 이름(`seoTitle`·`seoDescription`)은 관리자 AI 화면에서 고친 값의 키다. */
+/** What `seo()` adds to the AI plugin. The feature names (`seoTitle`, `seoDescription`) are the keys of values edited in the admin AI screen. */
 export const seoAiContribution = {
 	actions: { seoTitle: seoAi.title(), seoDescription: seoAi.description() },
 } satisfies AiContribution;

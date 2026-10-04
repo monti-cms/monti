@@ -12,14 +12,14 @@ import { t } from "./translate";
 
 const PROSE =
 	"prose cms-dark:prose-invert max-w-none text-base text-cms-foreground leading-relaxed focus:outline-none " +
-	// 읽기 전용: 코드 블록 도구 줄은 숨기고, 접기 상자는 늘 펼쳐 보인다.
+	// Read-only: hide the code block tool row and keep collapsible boxes always open.
 	"[&_[data-code-ui]]:hidden [&_[data-cms-collapsed]]:block " +
-	// 번역 편집기에서 커서가 있는 블록에 대응하는 원문 블록(source-sync).
-	// 막대 없이 옅은 배경만 블록 둘레로 번지게 한다(그림자 퍼짐이라 자리를 밀지 않고 목록 점도 감싼다).
+	// The source block matching the block under the cursor in the translation editor (source-sync).
+	// Let only a faint background spread around the block, with no bar (a shadow spread, so it does not shift layout and also wraps list bullets).
 	"[&_.cms-source-active]:rounded-sm [&_.cms-source-active]:bg-cms-primary/8 [&_.cms-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-cms-primary)_8%,transparent)] [&_.cms-source-active]:transition-[background-color,box-shadow]";
 
 function PreviewEditor({ mdx, label }: { mdx: string; label: string }) {
-	// 글자 꾸밈 확장(글자색 등)의 모양도 편집기와 같게 그린다.
+	// Render text-decoration extensions (text color etc.) the same as in the editor.
 	const { marks } = useCmsAdminComponents();
 	const [extensions] = useState(() => buildEditorExtensions(marks));
 	const editor = useEditor({
@@ -32,12 +32,12 @@ function PreviewEditor({ mdx, label }: { mdx: string; label: string }) {
 	return <EditorContent editor={editor} />;
 }
 
-/** 읽기 전용 MDX 미리보기. 글 모양 그대로 그린다. 내용이 바뀌면 편집기를 새로 만든다. */
+/** Read-only MDX preview. Rendered the same as the post. Recreates the editor when the content changes. */
 export function MdxPreview({ mdx, label = t("sourcePane.preview") }: { mdx: string; label?: string }) {
 	return <PreviewEditor key={mdx} mdx={mdx} label={label} />;
 }
 
-/** 번역본 옆에 놓는 원문 전체(v3). 번역 편집기와 따로 스크롤한다. */
+/** The full source placed beside the translation. Scrolls separately from the translation editor. */
 export function SourcePane({
 	mdx,
 	locale,
@@ -48,11 +48,11 @@ export function SourcePane({
 }: {
 	mdx: string;
 	locale: string;
-	/** 원문 제목. 번역 편집기의 제목 자리와 같게 본문 위에 크게 보인다. */
+	/** Source title. Shown large above the body, matching the title slot of the translation editor. */
 	title: string;
 	onClose: () => void;
 	className?: string;
-	/** 스크롤하는 요소. 편집기와 스크롤을 잇는 데 쓴다. */
+	/** The scrolling element. Used to link scrolling with the editor. */
 	ref?: Ref<HTMLElement>;
 }) {
 	return (

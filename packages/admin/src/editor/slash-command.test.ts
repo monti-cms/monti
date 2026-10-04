@@ -4,7 +4,7 @@ import { editorMessages } from "./messages";
 import { filterCommands, SLASH_COMMANDS } from "./slash-command";
 
 const t = createTranslator(editorMessages);
-/** 사전의 첫 검색어(언어마다 그 언어의 말이다). */
+/** First search term of a dictionary (in each language's own words). */
 const firstKeyword = (key: Parameters<typeof t>[0]) => t(key).split(",")[0] ?? "";
 
 describe("Slash Menu Commands & Filter Contract", () => {
@@ -15,7 +15,7 @@ describe("Slash Menu Commands & Filter Contract", () => {
 	it("filters accurately with English queries", () => {
 		const h2Results = filterCommands("h2");
 		expect(h2Results.map((c) => c.title)).toEqual([t("slash.h2.title")]);
-		// 글 제목이 H1이므로 본문 제목 삽입은 H2부터다(§4.1).
+		// The post title is H1, so heading insertion in the body starts at H2.
 		expect(filterCommands("h1")).toHaveLength(0);
 
 		expect(filterCommands("table").some((c) => c.title.includes(t("slash.table.title")))).toBe(true);

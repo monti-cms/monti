@@ -21,7 +21,7 @@ import { formatBytes, type PreparedUpload, prepareUpload, uploadImageFile } from
 
 const t = createTranslator(editorMessages);
 
-/** 설명이 필요한 이미지에 대체 텍스트가 없을 때의 안내. 넣기 대화 상자와 이미지 설정이 같이 쓴다. */
+/** Notice for when an image that needs a description has no alt text. Shared by the insert dialog and image settings. */
 export const ALT_REQUIRED_MESSAGE = t("imageDialog.altRequired");
 
 export interface ImageInsertion {
@@ -29,7 +29,7 @@ export interface ImageInsertion {
 	alt: string;
 	decorative: boolean;
 	caption: string;
-	/** 미리보기용 공개 주소. 아직 없으면 `null`. */
+	/** Public URL for the preview. `null` if not yet available. */
 	publicUrl: string | null;
 }
 
@@ -45,18 +45,18 @@ interface LibraryItem {
 
 interface ImageInsertDialogProps {
 	open: boolean;
-	/** 붙여넣기·끌어놓기로 들어온 파일. 있으면 업로드 탭으로 연다. */
+	/** File that came in by paste or drag and drop. If present, opens the upload tab. */
 	initialFile: File | null;
 	onClose: () => void;
 	onInsert: (image: ImageInsertion) => void;
-	/** `pick`은 본문에 넣지 않고 이미지 하나만 고른다(미디어 필드). 대체 텍스트·캡션을 묻지 않는다. */
+	/** `pick` picks a single image without inserting it into the body (media field). Does not ask for alt text or caption. */
 	mode?: "insert" | "pick";
 	title?: string;
 }
 
 /**
- * 이미지 삽입(§7.1). 새 파일 업로드(원본 유지 기본, 웹용 최적화 선택) 또는 라이브러리 재사용.
- * 라이브러리의 기본 alt·caption은 삽입할 때 복사한다(§7.3). 설명이 필요한 이미지는 alt가 있어야 한다.
+ * Image insertion. Upload a new file (original kept by default, web optimization optional) or reuse from the library.
+ * The library's default alt and caption are copied on insertion. An image that needs a description must have alt.
  */
 export function ImageInsertDialog({
 	open,
@@ -82,7 +82,7 @@ export function ImageInsertDialog({
 	const [alt, setAlt] = useState("");
 	const [caption, setCaption] = useState("");
 	const [decorative, setDecorative] = useState(false);
-	/** 대체 텍스트 칸을 건드렸거나 넣기를 눌렀으면 빈 대체 텍스트를 오류로 보인다. */
+	/** Show an empty alt text as an error once the alt field was touched or insert was pressed. */
 	const [altTouched, setAltTouched] = useState(false);
 	const [progress, setProgress] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -121,7 +121,7 @@ export function ImageInsertDialog({
 		};
 	}, [file, optimize]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: libraryAttempt는 다시 시도할 때 다시 읽게 한다
+	// biome-ignore lint/correctness/useExhaustiveDependencies: libraryAttempt is re-read on retry
 	useEffect(() => {
 		if (!open || tab !== "library") return;
 		let cancelled = false;
@@ -222,7 +222,7 @@ export function ImageInsertDialog({
 			<DialogContent className="max-w-lg" showCloseButton={!isUploading}>
 				<form
 					onSubmit={(event) => void confirm(event)}
-					// 한글 조합을 끝내는 Enter로 넣지 않는다. 여러 줄 칸에서도 Enter로 넣는다(Shift+Enter는 줄바꿈).
+					// Do not insert with the Enter that ends Korean composition. Enter also inserts in multi-line fields (Shift+Enter is a line break).
 					onKeyDown={submitOnEnter}
 					className="contents"
 				>

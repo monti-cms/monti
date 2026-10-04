@@ -7,8 +7,8 @@ import { providerMessages } from "./provider.messages";
 const t = createTranslator(providerMessages);
 
 /**
- * AI 서비스 키 암호화. 서버 설정의 `secret`에서 만든 키로 AES-256-GCM 암호화해 DB에 둔다.
- * `secret`을 바꾸면 저장된 키를 풀 수 없으니 AI 화면에서 다시 넣어야 한다.
+ * Encryption of AI service keys. Keys are encrypted with AES-256-GCM using a key derived from the server config's `secret` and stored in the DB.
+ * Changing `secret` makes stored keys undecryptable, so they must be entered again on the AI screen.
  */
 
 const PREFIX = "v1";
@@ -26,7 +26,7 @@ export function encryptSecret(plain: string): string {
 	return [PREFIX, iv.toString("base64"), cipher.getAuthTag().toString("base64"), body.toString("base64")].join(":");
 }
 
-/** 풀 수 없으면(`secret`이 바뀌었거나 값이 깨졌으면) `null`. */
+/** `null` if it cannot be decrypted (`secret` changed or the value is corrupted). */
 export function decryptSecret(stored: string): string | null {
 	const [prefix, iv, tag, body] = stored.split(":");
 	if (prefix !== PREFIX || !iv || !tag || !body) return null;
@@ -39,5 +39,5 @@ export function decryptSecret(stored: string): string | null {
 	}
 }
 
-/** 화면에 보여 줄 키 끝 네 글자. */
+/** The last four characters of the key, shown on screen. */
 export const keyHint = (plain: string | null): string | null => (plain ? `…${plain.slice(-4)}` : null);

@@ -18,22 +18,22 @@ import { type StoredField, valueFieldsOf } from "./walk";
 export type { StoredField } from "./walk";
 
 /**
- * 컬렉션 정의에서 저장·검증·참조 규칙을 만든다(v2 B1). 순수 함수이며 DB·HTTP·React를 모른다.
- * 서버(스냅샷 검증)와 브라우저(속성 패널·폼 변환)가 같은 규칙을 쓴다.
+ * Builds storage, validation and reference rules from a collection definition. Pure functions that know nothing about the DB, HTTP or React.
+ * The server (snapshot validation) and the browser (properties panel and form conversion) use the same rules.
  */
 
-// 타입을 적어 배포 타입 선언에 빌드 때의 설정 타입이 굳지 않게 한다(`config/resolved.ts`).
+// Types are written explicitly so the config type from build time does not get baked into the published type declarations (`config/resolved.ts`).
 const SCHEMAS: ResolvedConfig["collections"] = cmsConfig.collections;
 
 export type SchemaCollection = keyof typeof SCHEMAS & string;
-/** 관계 대상 컬렉션. 정의의 `to`·`from`은 문자열이고, `defineConfig`가 실제 컬렉션인지 확인했다. */
+/** Target collection of a relation. `to` and `from` in the definition are strings, and `defineConfig` has checked they are real collections. */
 export type RelationTarget = SchemaCollection;
 
 export const schemaOf = (collection: SchemaCollection): CollectionSchema => SCHEMAS[collection];
 
 const storedCache = new Map<SchemaCollection, readonly StoredField[]>();
 
-/** 저장 필드 목록. 선언 순서를 따르고 조건부 필드에 딸린 필드는 그 필드 바로 뒤에 온다. */
+/** Stored field list. Follows declaration order, and fields dependent on a conditional field come right after that field. */
 export function storedFields(collection: SchemaCollection): readonly StoredField[] {
 	const cached = storedCache.get(collection);
 	if (cached) return cached;
@@ -51,14 +51,14 @@ export function slugFieldOf(collection: SchemaCollection): SlugField | undefined
 }
 
 /**
- * 그 역할(`role`)을 가진 저장 필드. 없으면 `undefined`. 라이브러리와 확장 코드는 요약 같은 값을 필드 이름이 아니라
- * 이 함수로 찾는다.
+ * The stored field with that role (`role`). `undefined` if none. Library and extension code looks up values such as the summary not by field name but
+ * with this function.
  */
 export function roleField(collection: SchemaCollection, role: FieldRole): StoredField | undefined {
 	return storedFields(collection).find((stored) => stored.field.role === role);
 }
 
-/** 그 역할 필드의 값(문자열). 필드가 없거나 값이 문자열이 아니면 `""`. */
+/** The value (string) of that role's field. `""` if the field is missing or the value is not a string. */
 export function roleValue(
 	collection: SchemaCollection,
 	role: FieldRole,
@@ -69,7 +69,7 @@ export function roleValue(
 	return typeof value === "string" ? value : "";
 }
 
-/** 비어 있으면 발행할 때 본문 앞부분으로 채우는 필드(`fillFromBody`). */
+/** A field filled from the start of the body when publishing if empty (`fillFromBody`). */
 export function fillFromBodyFields(collection: SchemaCollection): (StoredField & { readonly field: TextField })[] {
 	return storedFields(collection).filter(
 		(stored): stored is StoredField & { readonly field: TextField } =>
@@ -78,7 +78,7 @@ export function fillFromBodyFields(collection: SchemaCollection): (StoredField &
 }
 
 /**
- * 주소 필드의 `from`이 가리키는 값으로 만든 주소. `from`이 없거나 값이 비면 `""`(자동으로 만들지 않는다).
+ * Address built from the value that the address field's `from` points to. `""` if `from` is absent or the value is empty (not generated automatically).
  */
 export function slugFromValues(collection: SchemaCollection, values: { readonly [key: string]: unknown }): string {
 	const from = slugFieldOf(collection)?.from;
@@ -86,12 +86,12 @@ export function slugFromValues(collection: SchemaCollection, values: { readonly 
 	return typeof source === "string" ? slugify(source) : "";
 }
 
-/** 필드 이름 → 저장 형식. v1 `COLLECTION_DEFINITIONS.fields`와 같은 모양이다. */
+/** Field name → storage format. Same shape as the legacy `COLLECTION_DEFINITIONS.fields`. */
 export function storageTypes(collection: SchemaCollection): Record<string, StorageType> {
 	return Object.fromEntries(storedFields(collection).map(({ name, field }) => [name, storageTypeOf(field)]));
 }
 
-/** 관계 필드 목록. v1 `COLLECTION_DEFINITIONS.relations`와 같은 모양이다. */
+/** List of relation fields. Same shape as the legacy `COLLECTION_DEFINITIONS.relations`. */
 export function relationsOf(collection: SchemaCollection): { field: string; kind: "entry"; to: RelationTarget }[] {
 	return storedFields(collection).flatMap(({ name, field }) =>
 		field.kind === "relation" ? [{ field: name, kind: "entry" as const, to: field.to as RelationTarget }] : [],
@@ -99,7 +99,7 @@ export function relationsOf(collection: SchemaCollection): { field: string; kind
 }
 
 /**
- * 저장 형식 검사를 통과한 값의 의미를 검사한다. 문제가 있으면 v1 API의 오류 코드를 돌려준다.
+ * Validates the meaning of values that passed the storage format check. If there is a problem, returns the legacy API's error code.
  */
 export function fieldValueError(field: ValueField, value: string | readonly string[]): string | null {
 	const values = typeof value === "string" ? [value] : value;
@@ -114,15 +114,15 @@ export function fieldValueError(field: ValueField, value: string | readonly stri
 		case "relation":
 			return values.every((item) => isUuid(item)) ? null : "invalid_metadata_value";
 		case "media":
-			// 비운 값(`""`)은 고르지 않은 것이다.
+			// An emptied value (`""`) means nothing was chosen.
 			return values.every((item) => item === "" || isUuid(item)) ? null : "invalid_metadata_value";
 	}
 }
 
 export type MetadataReference = {
 	/**
-	 * 관계 필드는 콘텐츠(`entry`)를, 미디어 필드는 미디어(`media`)를 가리킨다. 콘텐츠의 대상 컬렉션은 필드 정의
-	 * (`relationRule`)가 정한다.
+	 * Relation fields point to content (`entry`) and media fields point to media (`media`). The target collection of the content is decided by the field definition
+	 * (`relationRule`).
 	 */
 	kind: "entry" | "media";
 	targetId: string;
@@ -131,9 +131,9 @@ export type MetadataReference = {
 };
 
 /**
- * 메타데이터 관계·미디어 필드의 참조를 선언 순서대로 모은다. 여러 개인 필드는 순서와 중복을 보존한다.
- * 조건이 맞지 않는 딸린 필드도 값이 있으면 모은다(저장된 값은 모두 추적한다). 미디어 참조는 미디어 사용처·
- * "사용하지 않음" 거르기·쓰고 있는 파일 삭제 막기에 쓰인다.
+ * Collects references of metadata relation and media fields in declaration order. For multi-value fields, order and duplicates are preserved.
+ * Dependent fields whose condition does not match are also collected if they have a value (every stored value is tracked). Media references are used for media usages,
+ * filtering "unused", and blocking deletion of files in use.
  */
 export function metadataReferences(
 	collection: SchemaCollection,
@@ -155,7 +155,7 @@ export function metadataReferences(
 	return references;
 }
 
-/** 관계 필드가 기대하는 대상 컬렉션과 미공개 대상 허용 여부. */
+/** Target collection a relation field expects, and whether unpublished targets are allowed. */
 export function relationRule(
 	collection: SchemaCollection,
 	path: string,
@@ -166,8 +166,8 @@ export function relationRule(
 }
 
 /**
- * 필수값 문제 코드. 주소 필드는 `null_slug`, 나머지(제목 포함)는 `missing_field`이고 `path`에 필드 이름,
- * `message`에 필드 라벨을 담는다.
+ * Required-value problem code. The address field is `null_slug` and the rest (including title) are `missing_field`, with the field name in `path`
+ * and the field label in `message`.
  */
 const NULL_SLUG = "null_slug";
 
@@ -177,14 +177,14 @@ const isEmptyValue = (value: unknown) =>
 	(typeof value === "string" && value === "") ||
 	(Array.isArray(value) && value.length === 0);
 
-/** 발행(항목 컬렉션은 저장) 때 비어 있으면 안 되는 필드(`required`)의 문제. */
+/** Problems of fields (`required`) that must not be empty when publishing (when saving for item collections). */
 export function missingRequiredIssues(
 	collection: SchemaCollection,
 	snapshot: { slug: string | null; metadata: { readonly [key: string]: unknown } },
 	options: { localizedOnly?: boolean } = {},
 ): { code: string; path: string; message?: string }[] {
 	const issues: { code: string; path: string; message?: string }[] = [];
-	// 번역본은 언어별 값만 가지므로 공통 필수값(카테고리 등)은 원문에서 검사한다(v2 B4).
+	// A translation has only per-language values, so common required values (category etc.) are checked on the source (translation group).
 	const required = (field: Field) =>
 		"required" in field && isRequiredField(field) && (!options.localizedOnly || Boolean(field.localized));
 	for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
@@ -201,7 +201,7 @@ export function missingRequiredIssues(
 	return issues;
 }
 
-/** 언어별 값인 필드 이름(v2 B4). 표시가 없는 필드는 번역 묶음이 공통으로 쓴다. */
+/** Names of per-language fields. Unmarked fields are shared by the translation group. */
 export function localizedFieldNames(collection: SchemaCollection): { own: string[]; inherit: string[] } {
 	const own: string[] = [];
 	const inherit: string[] = [];
@@ -213,14 +213,14 @@ export function localizedFieldNames(collection: SchemaCollection): { own: string
 	return { own, inherit };
 }
 
-/** 번역본이 가지면 안 되는 공통 필드 키(v2 B4). 정의에서 `localized`가 없는 저장 필드다. */
+/** Common field keys a translation must not have. Stored fields whose definition has no `localized`. */
 export function commonFieldKeys(collection: SchemaCollection, metadata: { readonly [key: string]: unknown }): string[] {
 	const { own, inherit } = localizedFieldNames(collection);
 	const localized = new Set([...own, ...inherit]);
 	return Object.keys(metadata).filter((key) => !localized.has(key));
 }
 
-/** 원문 메타데이터에서 번역본으로 옮길 언어별 값만 고른다. */
+/** Picks only the per-language values to carry from the source metadata to the translation. */
 export function pickLocalizedMetadata<T>(
 	collection: SchemaCollection,
 	metadata: { readonly [key: string]: T },
@@ -230,7 +230,7 @@ export function pickLocalizedMetadata<T>(
 	return Object.fromEntries(Object.entries(metadata).filter(([key]) => localized.has(key)));
 }
 
-/** 번역본 공개 메타데이터 = 원문의 공통 값 + 번역본의 언어별 값. */
+/** Public metadata of a translation = common values of the source + per-language values of the translation. */
 export function mergeTranslationMetadata<T>(
 	collection: SchemaCollection,
 	source: { readonly [key: string]: T },
@@ -243,14 +243,14 @@ export function mergeTranslationMetadata<T>(
 }
 
 /**
- * 항목 컬렉션(카테고리·태그·모음집)의 언어별 값을 담는 메타데이터 키(v2 B4). 필드 이름으로 쓸 수 없다(`defineConfig`).
- * `{ en: { title: "..." }, ja: { ... } }`. 주소와 연결 관계는 공통이라 레코드는 언어마다 나누지 않는다.
+ * Metadata key that holds the per-language values of item collections (categories, tags, collections). It cannot be used as a field name (`defineConfig`).
+ * `{ en: { title: "..." }, ja: { ... } }`. The address and links are shared, so records are not split per language.
  */
 export const RECORD_TRANSLATIONS_KEY = RESERVED_METADATA_KEYS[0] as "translations";
 
 export type RecordTranslations = { readonly [locale: string]: { readonly [field: string]: string } };
 
-/** 언어별 값을 가질 수 있는 항목 컬렉션의 텍스트 필드. */
+/** Text fields of an item collection that can have per-language values. */
 export function recordLocalizedFields(collection: SchemaCollection): string[] {
 	const schema = schemaOf(collection);
 	if (schema.kind !== "item") return [];
@@ -260,8 +260,8 @@ export function recordLocalizedFields(collection: SchemaCollection): string[] {
 }
 
 /**
- * record 언어별 값을 검사하고 정리한다. 기본 언어가 아닌 언어와 정의의 언어별 텍스트 필드만 받는다.
- * 빈 값과 빈 언어는 지운다. 잘못된 모양이면 v1 오류 코드를 던질 수 있게 `error`를 돌려준다.
+ * Validates and normalizes the per-language values of a record. Accepts only languages other than the default language and the per-language text fields of the definition.
+ * Empty values and empty languages are removed. For a bad shape, it returns `error` so the v1 error code can be thrown.
  */
 export function normalizeRecordTranslations(
 	collection: SchemaCollection,

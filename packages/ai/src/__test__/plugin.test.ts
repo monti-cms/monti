@@ -8,7 +8,7 @@ vi.mock("@monti-cms/core/adapters/auth", () => ({
 	AuthError: class AuthError extends Error {},
 }));
 
-/** 화면 기능 줄을 들고 있는 저장소(버전 확인 포함). */
+/** A store holding the screen action rows (including version check). */
 const custom = vi.hoisted(() => ({ rows: new Map<string, { value: unknown; version: number }>() }));
 
 vi.mock("../store", () => ({
@@ -36,14 +36,14 @@ vi.mock("../store", () => ({
 	}),
 }));
 
-describe("AI 플러그인 등록", () => {
-	it("서버 쪽이 AI API 경로·표 만들기·메타 표시를 준다", async () => {
+describe("AI plugin registration", () => {
+	it("the server side provides the AI API routes, table creation and meta flag", async () => {
 		expect(aiServer.routes?.map((route) => route.pattern)).toContain("v1/ai/run");
 		expect(aiServer.migrate).toBeTypeOf("function");
 		expect(await aiServer.features?.()).toEqual({ ready: false });
 	});
 
-	it("본체 API 처리기가 본체 경로에 없는 주소를 플러그인 경로표에서 찾는다", async () => {
+	it("the core API handler looks up paths missing from core routes in the plugin route table", async () => {
 		const handler = createCmsRouteHandler();
 		const call = (path: string) =>
 			handler.GET(new NextRequest(`http://localhost/api/cms/${path}`, { headers: { origin: "http://localhost" } }), {
@@ -55,7 +55,7 @@ describe("AI 플러그인 등록", () => {
 		expect((await call("v1/ai/nope")).status).toBe(404);
 	});
 
-	it("화면 기능을 API로 만들고(`POST /v1/ai/actions`) 지운다(`DELETE …?expectedVersion=`)", async () => {
+	it("creates (`POST /v1/ai/actions`) and deletes (`DELETE …?expectedVersion=`) screen actions through the API", async () => {
 		const handler = createCmsRouteHandler();
 		const request = (method: "POST" | "DELETE", path: string, body?: unknown) =>
 			handler[method](

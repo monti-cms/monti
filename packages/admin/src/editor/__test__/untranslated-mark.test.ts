@@ -21,14 +21,14 @@ const typeAt = (current: Editor, pos: number, text: string) => {
 	if (!handled) current.commands.insertContent(text);
 };
 
-describe("번역 안내 글 편집(v3)", () => {
-	it("안내 글이 있는 블록에 입력하면 안내 글을 지우고 입력한다", () => {
+describe("editing untranslated notice text", () => {
+	it("typing in a block with notice text clears the notice text and enters the input", () => {
 		const current = open(":untranslated[첫 문단]\n\n:untranslated[둘째 문단]\n");
 		typeAt(current, 3, "F");
 		expect(tiptapToMdx(current.getJSON())).toBe("F\n\n:untranslated[둘째 문단]\n");
 	});
 
-	it("지우기를 누르면 그 블록의 안내 글을 한 번에 지운다", () => {
+	it("pressing clear removes the block's notice text at once", () => {
 		const current = open(":untranslated[첫 문단]\n");
 		current.commands.setTextSelection(4);
 		const { view } = current;
@@ -36,7 +36,7 @@ describe("번역 안내 글 편집(v3)", () => {
 		expect(tiptapToMdx(current.getJSON())).toBe("");
 	});
 
-	it("안내 글이 없는 블록은 평소대로 입력한다", () => {
+	it("a block without notice text accepts input as usual", () => {
 		const current = open("번역 끝\n");
 		typeAt(current, 2, "X");
 		expect(tiptapToMdx(current.getJSON())).toContain("X");

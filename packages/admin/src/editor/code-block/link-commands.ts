@@ -6,12 +6,12 @@ import { CODE_ANCHOR_REF } from "../added-marks";
 import { codeEffectsKey, effectsMeta, type LinkDraft, lineEffectsOf } from "./effects-plugin";
 
 /**
- * 본문–코드 잇기(v2). 본문 글자에 코드 줄을 가리키는 꾸밈(`CODE_ANCHOR_REF`, 예: 블록 확장의 `:code-ref[글자]{to}`)을,
- * 코드 블록 줄에 이름표(`anchor` 줄 효과, `attrs.id`)를 단다. 한쪽을 먼저 고르면 잇기 중이 되고(`linking`),
- * 다른 쪽을 고른 뒤 확인하면 둘을 잇는다. 그 꾸밈이 없는 사이트에서는 아무것도 하지 않는다.
+ * Linking body to code. Attaches a label (`anchor` line effect, `attrs.id`) to a code block line for a decoration on body text that points to a code line (`CODE_ANCHOR_REF`, e.g. `:code-ref[text]{to}` of a block extension).
+ * Picking one side first starts linking (`linking`),
+ * and picking the other side then confirming links the two. Sites without that decoration do nothing.
  */
 
-/** 본문 연결 마크와 이름표 속성. */
+/** Body link mark and label attribute. */
 const anchorMark = (state: { schema: { marks: Record<string, MarkType> } }) =>
 	CODE_ANCHOR_REF ? state.schema.marks[CODE_ANCHOR_REF.mark] : undefined;
 
@@ -23,7 +23,7 @@ export interface AnchorInfo {
 	title: string;
 }
 
-/** 이름표 `id`가 있는 코드 줄. */
+/** Code lines that have a label `id`. */
 export function findAnchor(doc: PmNode, id: string): AnchorInfo | null {
 	let found: AnchorInfo | null = null;
 	doc.descendants((node, pos) => {
@@ -31,7 +31,7 @@ export function findAnchor(doc: PmNode, id: string): AnchorInfo | null {
 		if (node.type.name !== "codeBlock") return true;
 		const effect = lineEffectsOf(node).find((item) => item.name === ANCHOR && item.attrs.id === id);
 		if (effect) {
-			// 큰따옴표는 \x22로 쓴다(글자 검사기가 정규식 속 홀수 개 따옴표를 문자열 시작으로 읽는다).
+			// Write a double quote as \x22 (the text checker reads an odd number of quotes inside a regex as the start of a string).
 			const title = /title=(?:\x22([^\x22]*)\x22|(\S+))/.exec(String(node.attrs.meta ?? ""));
 			found = { id, blockPos: pos, start: effect.start, end: effect.end, title: title?.[1] ?? title?.[2] ?? "" };
 		}
@@ -40,7 +40,7 @@ export function findAnchor(doc: PmNode, id: string): AnchorInfo | null {
 	return found;
 }
 
-/** 본문 연결이 가리키는 이름표들. */
+/** Labels that body links point to. */
 function referencedIds(doc: PmNode): Set<string> {
 	const ids = new Set<string>();
 	doc.descendants((node) => {
@@ -53,7 +53,7 @@ function referencedIds(doc: PmNode): Set<string> {
 	return ids;
 }
 
-/** 아직 쓰지 않은 이름(`c1`, `c2`, …). 이름표와 본문 연결 양쪽에서 쓰는 이름을 모두 피한다. */
+/** A name not yet used (`c1`, `c2`, ...). Avoids names used by both labels and body links. */
 function nextAnchorId(doc: PmNode): string {
 	const used = referencedIds(doc);
 	doc.descendants((node) => {
@@ -66,7 +66,7 @@ function nextAnchorId(doc: PmNode): string {
 	return `c${index}`;
 }
 
-/** 어떤 본문 연결도 가리키지 않는 이름표를 지운다(연결을 끊거나 다시 이었을 때). */
+/** Deletes labels that no body link points to (when a link is removed or re-linked). */
 function pruneOrphanAnchors(tr: Transaction) {
 	const referenced = referencedIds(tr.doc);
 	const updates: Array<{ pos: number; node: PmNode; lineEffects: CodeLineEffect[] }> = [];
@@ -84,17 +84,17 @@ function pruneOrphanAnchors(tr: Transaction) {
 const setLinking = (view: EditorView, linking: LinkDraft | null) =>
 	view.dispatch(view.state.tr.setMeta(codeEffectsKey, effectsMeta({ linking })));
 
-/** 본문 글자(from~to)를 먼저 골라 잇기를 시작한다. 다음으로 코드 줄을 줄 번호 칸에서 고른다. */
+/** Starts linking by picking body text (from~to) first. Then pick a code line in the line number column. */
 export const startLinkFromText = (view: EditorView, from: number, to: number) =>
 	setLinking(view, { kind: "text", from, to });
 
-/** 코드 줄을 먼저 골라 잇기를 시작한다. 다음으로 본문 글자를 드래그해 고른다. */
+/** Starts linking by picking a code line first. Then drag to pick body text. */
 export const startLinkFromLines = (view: EditorView, blockPos: number, start: number, end: number) =>
 	setLinking(view, { kind: "lines", blockPos, start, end });
 
 export const cancelLink = (view: EditorView) => setLinking(view, null);
 
-/** 본문 쪽 범위. 먼저 고른 글자, 아니면 지금 고른 글자(코드 블록 밖, 비어 있지 않은 선택). */
+/** Body-side range. The text picked first, otherwise the currently picked text (outside code blocks, a non-empty selection). */
 export function linkTextRange(view: EditorView): { from: number; to: number } | null {
 	const linking = codeEffectsKey.getState(view.state)?.linking;
 	if (linking?.kind === "text") return linking;
@@ -105,14 +105,14 @@ export function linkTextRange(view: EditorView): { from: number; to: number } | 
 	return { from: selection.from, to: selection.to };
 }
 
-/** 코드 쪽 줄. 먼저 고른 줄, 아니면 줄 번호 칸에서 지금 고른 줄. */
+/** Code-side line. The line picked first, otherwise the line currently picked in the line number column. */
 export function linkLines(view: EditorView): { blockPos: number; start: number; end: number } | null {
 	const state = codeEffectsKey.getState(view.state);
 	if (state?.linking?.kind === "lines") return state.linking;
 	return state?.picked ?? null;
 }
 
-/** 고른 본문 글자와 코드 줄을 잇는다. 같은 줄 이름표가 있으면 다시 쓴다. */
+/** Links the picked body text to the code line. Reuses the label if the same line already has one. */
 export function commitLink(view: EditorView): boolean {
 	const text = linkTextRange(view);
 	const lines = linkLines(view);
@@ -143,7 +143,7 @@ export function commitLink(view: EditorView): boolean {
 	return true;
 }
 
-/** 본문 연결(from~to)을 끊는다. 더는 가리키는 연결이 없는 줄 이름표도 지운다. */
+/** Removes a body link (from~to). Also removes line labels no link points to anymore. */
 export function unlinkRef(view: EditorView, from: number, to: number) {
 	const markType = anchorMark(view.state);
 	if (!markType) return;

@@ -1,18 +1,18 @@
 /**
- * 플러그인이 본체나 다른 플러그인과 같은 주소·이름을 쓰는 설정을 시작할 때 막는다. 조용히 한쪽이 가려지는 일이 없게 한다.
- * 이 모듈은 사이트 설정을 읽지 않는다(저작 API가 import한다).
+ * Blocks, at startup, a config where a plugin uses the same path or name as the core or another plugin. Ensures one side is never silently shadowed.
+ * This module does not read the site config (the authoring API imports it).
  */
 
-/** 본체 관리자 화면의 한 칸 주소(`/admin/<경로>`). 빈 글자는 목록 화면이다. 관리자 화면의 경로 고르기와 같게 둔다. */
+/** A single-segment path of the core admin UI (`/admin/<path>`). An empty string is the list view. Keep it identical to the admin UI's path picking. */
 export const CORE_ADMIN_PAGES: readonly string[] = ["", "entries", "login", "media", "templates", "trash"];
 
-/** 본체가 관리자 메타 API `features`에 쓰는 이름. 플러그인 이름으로 쓸 수 없다. */
+/** Names the core uses in the admin meta API `features`. Cannot be used as plugin names. */
 export const CORE_FEATURE_KEYS: readonly string[] = ["folders", "references", "search", "templates", "media"];
 
 const trimSlashes = (path: string) => path.replace(/^\/+|\/+$/g, "");
 const showPage = (path: string) => `/${path}`;
 
-/** 플러그인 이름이 본체 `features` 이름과 겹치면 오류. */
+/** Error if a plugin name collides with a core `features` name. */
 export function assertPluginNamesFree(names: readonly string[]): void {
 	for (const name of names) {
 		if (CORE_FEATURE_KEYS.includes(name)) {
@@ -22,8 +22,8 @@ export function assertPluginNamesFree(names: readonly string[]): void {
 }
 
 /**
- * 플러그인 관리자 화면 주소(`nav`의 `path`·관리자 플러그인의 `pages` 키)가 본체 화면이나 다른 플러그인과 같으면 오류.
- * 같은 플러그인 안의 같은 주소는 한 화면이라 본다.
+ * Error if a plugin admin UI path (`path` in `nav`, or a key of an admin plugin's `pages`) equals a core page or another plugin's.
+ * The same path within one plugin counts as one page.
  */
 export function assertPluginPagesFree(pages: readonly { readonly plugin: string; readonly path: string }[]): void {
 	const owners = new Map<string, string>();
@@ -44,7 +44,7 @@ export function assertPluginPagesFree(pages: readonly { readonly plugin: string;
 	}
 }
 
-/** `[이름]` 조각의 이름은 달라도 같은 모양이면 같은 경로로 본다. */
+/** `[name]` segments with different names but the same shape count as the same route. */
 const shape = (pattern: string) =>
 	pattern
 		.split("/")
@@ -52,8 +52,8 @@ const shape = (pattern: string) =>
 		.join("/");
 
 /**
- * 플러그인 API 경로가 본체 경로(`corePatterns`)·`auth/…`·다른 플러그인 경로와 같은 모양이면 오류.
- * 본체 경로가 먼저 맞아 플러그인 경로는 쓰이지 못하므로 알려 준다.
+ * Error if a plugin API route has the same shape as a core route (`corePatterns`), `auth/...`, or another plugin's route.
+ * The core route matches first so the plugin route could never be used; this reports it.
  */
 export function assertPluginRoutesFree(
 	corePatterns: readonly string[],

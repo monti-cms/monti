@@ -1,8 +1,8 @@
 import { defineMessages } from "../../i18n/define";
 
 /**
- * 코드 블록 효과의 이름표와 입력 검사 안내(M15). 줄 효과 이름표 키는 `lineEffect.<이름>`, 글자 효과는 `charEffect.<이름>`이다.
- * 사이트는 설정의 `admin.messages["cms.code-block"]`로 덮어쓴다.
+ * Code block effect labels and input validation messages. Line effect label keys are `lineEffect.<name>`, and text effects are `charEffect.<name>`.
+ * Sites override them with `admin.messages["cms.code-block"]` in the config.
  */
 export const codeBlockMessages = defineMessages("cms.code-block", {
 	en: {

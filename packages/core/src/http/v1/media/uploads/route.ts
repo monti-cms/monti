@@ -14,12 +14,12 @@ import { adminRoute, json, parseWith, readJsonBody } from "../../handler";
 import { extensionFor, UPLOAD_URL_TTL_SECONDS } from "../media-files";
 
 /**
- * 업로드 준비(§7.2). 서버가 허용 형식·크기와 파일 키를 정하고 제한된 시간의 직접 업로드 URL을 준다.
- * 자격 증명은 브라우저에 가지 않고 파일 본문은 앱 서버를 거치지 않는다.
+ * Upload preparation. The server decides the allowed type, size, and file key, and issues a time-limited direct upload URL.
+ * Credentials never reach the browser, and the file body does not pass through the app server.
  */
 export const POST = adminRoute(async ({ request }) => {
 	const raw = (await readJsonBody(request)) as { mimeType?: unknown; original?: { mimeType?: unknown } };
-	// §10.1: 허용하지 않는 파일 형식은 415다(형식 오류 400과 구분한다).
+	// §10.1: a disallowed file type is 415 (distinct from the 400 format error).
 	const allowed = [...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_FILE_MIME_TYPES] as readonly unknown[];
 	if (raw?.mimeType !== undefined && !allowed.includes(raw.mimeType)) {
 		throw new HttpError(415, "unsupported_media_type", `Allowed types: ${allowed.join(", ")}`);
@@ -30,7 +30,7 @@ export const POST = adminRoute(async ({ request }) => {
 	}
 	const body = parseWith(mediaUploadBodySchema, raw);
 	const isFile = !isImageMime(body.mimeType);
-	// 첨부 파일의 형식은 이름의 확장자와 맞아야 한다. 코드 파일을 글자로 보내는 식의 형식 바꿔치기를 막는다.
+	// An attachment's type must match its filename extension. This stops type swaps such as sending a code file as text.
 	if (isFile && fileTypeFor(body.filename) !== body.mimeType) {
 		throw new HttpError(415, "unsupported_media_type", `File extension does not match ${body.mimeType}`);
 	}

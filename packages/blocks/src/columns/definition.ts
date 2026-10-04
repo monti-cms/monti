@@ -4,7 +4,7 @@ import { columnsMessages } from "./messages";
 
 const t = createActiveTranslator(columnsMessages);
 
-/** 단 나누기(`::::columns{widths="60,40"}` 안에 `:::column` 2~4개). */
+/** Columns (2 to 4 `:::column` inside `::::columns{widths="60,40"}`). */
 export const columnsBlock = defineBlock({
 	name: "columns",
 	get label() {

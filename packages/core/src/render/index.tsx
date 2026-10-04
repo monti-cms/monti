@@ -1,7 +1,7 @@
 /**
- * 본문 그리기(`@monti-cms/core/render`, M14-2). 공개본 MDX를 React로 그린다. remark·rehype 순서는 본체가 정하고(편집기와 같은 문법),
- * 컴포넌트는 본체 기본(링크·이미지·파일·표·정렬·코드 줄) → 블록 확장의 공개 컴포넌트(플러그인 `render`) → 사이트가 넘긴 것 순으로
- * 덮어쓴다. 서버 컴포넌트에서 부른다.
+ * Body rendering (`@monti-cms/core/render`). Renders published MDX with React. The core decides the remark and rehype order (same syntax as the editor), and
+ * components are overridden in this order: core defaults (link, image, file, table, alignment, code lines) → public components of block extensions (plugin `render`) → the ones the site passes.
+ * Call it from a server component.
  */
 import type { Root, Text } from "mdast";
 import { compileMDX } from "next-mdx-remote/rsc";
@@ -32,10 +32,10 @@ import { CmsPre } from "./components/pre";
 import { CmsTable, CmsTableCell, CmsTableRow } from "./components/table";
 import { CmsTextAlign } from "./components/text-align";
 
-// biome-ignore lint/suspicious/noExplicitAny: MDX 컴포넌트 표는 요소마다 속성이 다르다
+// biome-ignore lint/suspicious/noExplicitAny: the MDX component table has different props per element
 export type MdxComponents = Record<string, ComponentType<any>>;
 
-/** 본체 기본 컴포넌트의 고정 문구. 사이트 언어로 넘긴다. */
+/** Fixed texts of the core default components. Passed in the site language. */
 export interface RenderLabels {
 	readonly imageUnavailable: string;
 	readonly fileUnavailable: string;
@@ -57,29 +57,29 @@ const DEFAULT_LABELS: RenderLabels = {
 };
 
 export interface RenderMdxOptions {
-	/** 본문 이미지·파일 주소 해석기(`createPublicImageResolver(mdx)`). 없으면 바깥 `src`만. */
+	/** Resolver for body image and file addresses (`createPublicImageResolver(mdx)`). Only the outer `src` if absent. */
 	readonly imageResolver?: ImageResolver;
-	/** 공개 화면의 언어. 블록 공개 컴포넌트가 받는다. */
+	/** Language of the public page. Block public components receive it. */
 	readonly locale?: string;
-	/** 본문의 사이트 안 링크를 바꾼다(예: 같은 언어 번역본 주소로). */
+	/** Rewrites in-site links in the body (e.g. to the same-language translation address). */
 	readonly resolveHref?: (href: string) => string;
-	/** 덮어쓸 컴포넌트(이름 → 컴포넌트). 블록 이름은 블록 정의의 `component`다. */
+	/** Components to override (name → component). The block name is the block definition's `component`. */
 	readonly components?: MdxComponents;
 	readonly labels?: Partial<RenderLabels>;
-	/** 코드 강조(언어·테마). */
+	/** Code highlighting (languages and themes). */
 	readonly code?: CodeHighlightOptions;
-	/** 본체 플러그인 뒤에 더할 remark·rehype 플러그인. */
+	/** remark and rehype plugins to add after the core plugins. */
 	readonly remarkPlugins?: PluggableList;
 	readonly rehypePlugins?: PluggableList;
 }
 
-/** 블록 확장이 주는 공개 컴포넌트(플러그인 `render`). 사이트 언어·해석기를 받는다. */
+/** Public components given by block extensions (plugin `render`). They receive the site language and the resolver. */
 export interface PluginRenderContext {
 	readonly locale?: string;
 	readonly imageResolver?: ImageResolver;
 }
 
-/** 본문의 단일 `$`를 수식으로 보지 않는다(편집기 파서와 같게). `$…$`는 글자로 되돌린다. */
+/** A single `$` in the body is not treated as math (same as the editor parser). `$…$` is turned back into text. */
 const remarkDisableInlineMath = () => (tree: Root) => {
 	visit(tree, "inlineMath", (node, index, parent) => {
 		if (index == null || !parent) return;
@@ -87,23 +87,23 @@ const remarkDisableInlineMath = () => (tree: Root) => {
 	});
 };
 
-/** 본체 remark 순서. 편집기·검수 러너가 같은 구성을 쓴다. */
+/** Core remark order. The editor and the review runner use the same setup. */
 export const mdxRemarkPlugins = (tocRef: TocItem[] = []): PluggableList => [
 	[remarkAnnotationToShikiDecoration, annotationConfig],
 	[remarkMath, { singleDollarTextMath: false }],
 	remarkDisableInlineMath,
-	// 미등록 지시자를 본문 글자로 되돌린 뒤 등록된 이름만 MDX 요소로 바꾼다(순서를 바꾸면 미등록 이름이 사라진다).
+	// Turn unregistered directives back into body text, then turn only registered names into MDX elements (changing the order makes unregistered names disappear).
 	remarkDirective,
 	remarkDemoteUnknownDirectives,
 	remarkDirectivesToMdx,
-	// 코드 펜스 블록(차트·다이어그램 등)은 `<블록 source="…"/>`로 바꾼다.
+	// Code fence blocks (charts, diagrams etc.) are turned into `<block source="…"/>`.
 	remarkFenceBlocksToMdx,
 	remarkBreaks,
 	remarkGfm,
 	[remarkFlexibleToc, { tocRef, maxDepth: 3 }],
 ];
 
-/** 본체 rehype 순서. */
+/** Core rehype order. */
 export const mdxRehypePlugins = (code?: CodeHighlightOptions): PluggableList => [
 	rehypeSlug,
 	rehypeAutolinkHeadings,
@@ -111,7 +111,7 @@ export const mdxRehypePlugins = (code?: CodeHighlightOptions): PluggableList => 
 	[rehypeShikiDecorationRender, code ?? {}],
 ];
 
-/** 본체 기본 컴포넌트. */
+/** Core default components. */
 export function defaultMdxComponents(options: RenderMdxOptions = {}): MdxComponents {
 	const labels = { ...DEFAULT_LABELS, ...options.labels };
 	const resolveHref = options.resolveHref;
@@ -124,7 +124,7 @@ export function defaultMdxComponents(options: RenderMdxOptions = {}): MdxCompone
 		),
 		collapse: CmsCodeCollapse,
 		fold: (props: ComponentProps<typeof CmsCodeFold>) => <CmsCodeFold {...props} label={labels.showFoldedCode} />,
-		// 번역 안내 글은 공개 화면에 보이지 않는다(남은 채로 발행하지 않게 발행 전 검사가 막는다).
+		// Translation note text is not shown on the public page (the pre-publish check blocks publishing while it remains).
 		Untranslated: () => null,
 		TextAlign: CmsTextAlign,
 		Image: (props: ComponentProps<typeof CmsImage>) => (
@@ -141,7 +141,7 @@ export function defaultMdxComponents(options: RenderMdxOptions = {}): MdxCompone
 		Table: CmsTable,
 		TableRow: CmsTableRow,
 		TableCell: CmsTableCell,
-		// GFM 표의 첫 행 머리글은 열 머리글이다. 지시자 표는 TableCell이 행·열을 가린다.
+		// The first row header of a GFM table is a column header. For directive tables, TableCell tells row from column.
 		th: ({ scope, ...props }: ComponentProps<"th">) => <th {...props} scope={scope ?? "col"} />,
 	};
 }
@@ -150,7 +150,7 @@ type RenderPluginModule = {
 	readonly default: (context: PluginRenderContext) => MdxComponents | Promise<MdxComponents>;
 };
 
-/** 플러그인의 공개 컴포넌트를 불러오는 함수(`definePlugin`의 `render`). */
+/** Function that loads a plugin's public components (`render` of `definePlugin`). */
 const renderModules = (): Promise<RenderPluginModule[]> => {
 	const plugins: readonly CmsPlugin[] = cmsConfig.plugins ?? [];
 	loaded ??= Promise.all(
@@ -160,7 +160,7 @@ const renderModules = (): Promise<RenderPluginModule[]> => {
 };
 let loaded: Promise<RenderPluginModule[]> | undefined;
 
-/** 본체 기본 → 블록 확장 → 사이트 순으로 합친 컴포넌트 표. */
+/** Component table merged in the order core defaults → block extensions → site. */
 export async function mdxComponents(options: RenderMdxOptions = {}): Promise<MdxComponents> {
 	const context: PluginRenderContext = { locale: options.locale, imageResolver: options.imageResolver };
 	const fromPlugins = await Promise.all((await renderModules()).map((module) => module.default(context)));
@@ -169,13 +169,13 @@ export async function mdxComponents(options: RenderMdxOptions = {}): Promise<Mdx
 
 export interface RenderedMdx {
 	readonly content: ReactNode;
-	/** 제목 목차(h2부터 깊이 1). */
+	/** Heading table of contents (depth 1 from h2). */
 	readonly toc: readonly TocItem[];
 }
 
 /**
- * 공개본 MDX를 그린다. 검사(`analyze`)에 걸리는 본문은 실행 컴파일러에 넣지 않고 오류를 던진다(M7-SEC-1, 발행 경계를 지난
- * 본문도 다시 막는다).
+ * Renders published MDX. Bodies that fail the check (`analyze`) are not put into the executing compiler and an error is thrown (a body that
+ * has passed the publish boundary is blocked again).
  */
 export async function renderMdx(source: string, options: RenderMdxOptions = {}): Promise<RenderedMdx> {
 	const errors = analyze(source).errors;
@@ -196,5 +196,5 @@ export async function renderMdx(source: string, options: RenderMdxOptions = {}):
 
 export type { TocItem } from "remark-flexible-toc";
 
-/** 공개 MDX가 등록 미디어를 공개 주소로 해석하는 해석기(서버 전용). */
+/** Resolver that resolves registered media into public addresses for public MDX (server only). */
 export { createPublicImageResolver } from "../mdx/public-image-resolver";

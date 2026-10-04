@@ -27,7 +27,7 @@ function collectMediaIds(source: string): string[] {
 	const tree = analyze(source).tree;
 	const visit = (node: unknown) => {
 		if (!isNode(node)) return;
-		// 첨부 파일 카드(v3)도 같은 미디어 표를 쓴다.
+		// The attachment file card uses the same media table.
 		if (
 			(node.type === "mdxJsxFlowElement" || node.type === "mdxJsxTextElement") &&
 			(node.name === "Image" || node.name === "File")
@@ -41,7 +41,7 @@ function collectMediaIds(source: string): string[] {
 	return [...ids];
 }
 
-/** 공개 MDX가 등록 미디어를 실제 공개 URL로 해석하도록 연결한다. */
+/** Connects public MDX so that it resolves registered media into actual public URLs. */
 export async function createPublicImageResolver(source: string) {
 	const urls = new Map<string, ImageResolveResult>();
 	const mediaIds = collectMediaIds(source);

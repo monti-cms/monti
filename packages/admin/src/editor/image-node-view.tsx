@@ -27,7 +27,7 @@ import { editorMessages } from "./messages";
 
 const t = createTranslator(editorMessages);
 
-/** §4.3 너비 입력: 1~100% 또는 4096 이하의 양의 정수 px. 빈 값은 본문에 맞춤이다. */
+/** Width input: 1 to 100%, or a positive integer px of at most 4096. Empty means fit to the body. */
 export const isValidImageWidth = (value: string) => {
 	const trimmed = value.trim();
 	if (!trimmed) return true;
@@ -42,7 +42,7 @@ const normalizeWidth = (value: string) => {
 	return /^\d+$/.test(trimmed) ? `${trimmed}px` : trimmed;
 };
 
-/** 이미지 앞뒤의 본문 글자(자리 동작이 이미지를 글 흐름 안에서 설명할 때 쓴다). */
+/** Body text before and after the image (used when the slot action describes the image within the text flow). */
 const AROUND_CHARS = 1500;
 function surroundingText(editor: NodeViewProps["editor"], getPos: NodeViewProps["getPos"], nodeSize: number): string {
 	const pos = typeof getPos === "function" ? getPos() : undefined;
@@ -65,7 +65,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 	const widthErrorId = useId();
 	const altErrorId = useId();
 	const decorativeId = useId();
-	/** AI 자리 구분값. 노드 뷰가 살아 있는 동안 같다(같은 이미지를 두 번 넣어도 따로다). */
+	/** AI slot discriminator. Stays the same while the node view is alive (the same image inserted twice is separate). */
 	const slotScope = useId();
 	const { src, alt, width, align, caption, mediaId, decorative, crop, rotate } = node.attrs;
 	const [isEditing, setIsEditing] = useState(false);
@@ -81,9 +81,9 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 			activeResizeCleanupRef.current?.();
 		};
 	}, []);
-	// 노드 뷰는 항상 편집기 안에서 그려지지만, 편집기 없이 그리는 경우(미리보기·테스트)도 막지 않는다.
+	// A node view is always rendered inside the editor, but rendering without an editor (preview, tests) is not blocked either.
 	const isEditable = useEditorEditable(editor);
-	/** 본문 이미지 자리(alt·캡션). 서버는 미디어 라이브러리 이미지와 이 사이트 주소(`/images/...`)의 이미지를 읽는다. */
+	/** Body image slot (alt, caption). The server reads media library images and images at this site's addresses (`/images/...`). */
 	const siteSrc = typeof src === "string" && src.startsWith("/") && !src.startsWith("//") ? src : undefined;
 	const imageSlot = (target: "alt" | "caption"): SlotRequest => ({
 		slot: "image",
@@ -152,7 +152,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 									? t("imageNode.lookupFailed")
 									: t("imageNode.unresolvable");
 
-	// 설명이 필요한 이미지는 대체 텍스트가 있어야 한다(넣기 대화 상자와 같은 규칙).
+	// An image that needs a description must have alt text (same rule as the insert dialog).
 	const altMissing = decorative !== true && !String(alt ?? "").trim();
 
 	const alignClasses =
@@ -161,7 +161,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 			center: "mx-auto",
 			right: "ml-auto",
 		}[align as "left" | "center" | "right"] || "mx-auto";
-	// 공개 화면(CmsImage)과 같게 캡션을 이미지 정렬 쪽에 맞춘다.
+	// Align the caption to the image alignment, same as the public page (CmsImage).
 	const captionAlignClass =
 		{
 			left: "text-left",
@@ -169,7 +169,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 			right: "text-right",
 		}[align as "left" | "center" | "right"] || "text-center";
 
-	// 모서리(좌·우 아래) 핸들 드래그로 너비 조절 (c-editor.md §1.1)
+	// Resize width by dragging a corner (bottom left/right) handle
 	const handleResizeStart = (e: React.PointerEvent, handle: "left" | "right") => {
 		if (!isEditable) return;
 		e.preventDefault();
@@ -216,7 +216,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 		const onPointerUp = () => {
 			cleanup();
 			setPreviewWidth(null);
-			// 이동 없이 클릭만 한 경우 커밋하지 않는다(P1-4: 너비 미지정 이미지 보존).
+			// If clicked without moving, do not commit (preserve images with no width set).
 			if (hasMoved && currentPreview && currentPreview !== (width || null) && isValidImageWidth(currentPreview)) {
 				updateAttributes({ width: normalizeWidth(currentPreview) });
 			}
@@ -234,22 +234,22 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 		activeResizeCleanupRef.current = cleanup;
 	};
 
-	// TipTap v3는 노드 뷰의 첫 자식이 `data-node-view-wrapper`를 가져야 한다.
-	// 그 속성을 넣는 것이 `NodeViewWrapper`이고, 빠지면 "Please use the NodeViewWrapper
-	// component for your node view"로 런타임에 터진다(이미지 있는 글에서 발생).
+	// TipTap v3 requires the first child of a node view to have `data-node-view-wrapper`.
+	// `NodeViewWrapper` adds that attribute, and omitting it crashes at runtime with "Please use the NodeViewWrapper
+	// component for your node view" (seen in posts that contain images).
 	return (
 		<NodeViewWrapper
 			as="figure"
 			data-image-block
 			className={cn(
-				// 편집기 본문(prose)의 img 위아래 2em 여백이 회색 상자 안에 빈 띠로 보이지 않게 한다.
+				// Keep the 2em top/bottom margin of img in the editor body (prose) from showing as an empty strip inside the gray box.
 				"group group/container relative my-6 flex flex-col rounded-lg transition-all [&_img]:m-0",
 				alignClasses,
 				selected && SELECTED_RING,
 			)}
 			style={{ width: previewWidth || width || "100%", maxWidth: "100%" }}
 		>
-			{/* 블록 도구 줄: 정렬·설정·자르기. 삭제는 블록 손잡이 메뉴에 있다. */}
+			{/* Block toolbar row: alignment, settings, crop. Deleting is in the block handle menu. */}
 			{isEditable && (
 				<ContainerToolbar label={t("imageNode.toolbar")}>
 					{ALIGN_TOOLS.map((tool) => (
@@ -396,7 +396,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 			</figcaption>
 			{captionSlot.panel && <div className="mt-1 text-left">{captionSlot.panel}</div>}
 
-			{/* 모서리(좌·우 아래) 너비 조절 핸들 */}
+			{/* Corner (bottom left/right) width resize handles */}
 			{isEditable && (
 				<>
 					<button
@@ -416,7 +416,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 				</>
 			)}
 
-			{/* 자르기 및 회전 대화상자 */}
+			{/* Crop and rotate dialog */}
 			{canRender && (
 				<ImageCropDialog
 					open={isCropDialogOpen}

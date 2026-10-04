@@ -1,11 +1,11 @@
 import { Mark, mergeAttributes } from "@tiptap/core";
 
-/** 코드 안 글자 툴팁의 편집기 마크 이름(코드 펜스 주석 `// @char Tooltip {content="…"}`). */
+/** Editor mark name of the tooltip on text inside code (code fence comment `// @char Tooltip {content="..."}`). */
 export const CODE_TOOLTIP_MARK_NAME = "codeTooltip";
 
 /**
- * 코드 블록 안 글자 툴팁. 코드 펜스 주석 문법(본체 코드 블록 기능)이라 본문 툴팁(블록 확장 `:tooltip`)과 따로다.
- * 코드 블록 안에만 둔다(`CODE_BLOCK_MARKS`). 점선 밑줄로 보인다.
+ * Tooltip on text inside a code block. It is the code fence comment syntax (a core code block feature), so it is separate from the body tooltip (block extension `:tooltip`).
+ * Placed only inside code blocks (`CODE_BLOCK_MARKS`). Shown with a dotted underline.
  */
 export const CodeTooltipMark = Mark.create({
 	name: CODE_TOOLTIP_MARK_NAME,

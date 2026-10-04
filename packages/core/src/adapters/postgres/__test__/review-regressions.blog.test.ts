@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { prepareSnapshot, validateForPublish } from "../../../core/snapshot";
 
 /**
- * 코드 리뷰(2026-09-26) 회귀 테스트 중 블로그 예시 설정의 블록(탭·툴팁·정렬)을 쓰는 것.
- * 설정과 상관없는 나머지는 `review-regressions.test.ts`에 있다.
+ * Code review (2026-09-26) regression tests that use the reference blog config's blocks (tabs, tooltip, alignment).
+ * The rest, which are config-independent, live in `review-regressions.test.ts`.
  */
 describe("review regressions (blog blocks)", () => {
-	it("blocks publishing blocks without required attributes (§5.6)", async () => {
+	it("blocks publishing blocks without required attributes", async () => {
 		const cases: [string, string][] = [
 			["::::tabs\n:::tab\n첫\n:::\n:::tab\n둘\n:::\n::::", "missing_block_attribute"],
 			["문장 :tooltip[표시] 끝", "missing_block_attribute"],

@@ -3,21 +3,21 @@ import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { validateSchemaName, withTransaction } from "./context";
 
-/** 마이그레이션 단계 하나. 이름이 `cms_migrations`에 남으면 다시 돌지 않는다. */
+/** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
 interface MigrationStep {
 	readonly name: string;
 	readonly run: (client: PoolClient, qSchema: string) => Promise<unknown>;
 }
 
 /**
- * 본체 마이그레이션 단계(번호 순서대로). 이미 있는 저장소는 처음 한 번 모든 단계가 돈다: 단계는 모두 다시 돌아도 같은 결과라
- * (IF NOT EXISTS, 예전 행 옮기기는 옮길 행이 없으면 아무것도 안 한다) 단계 기록이 없던 저장소에서도 안전하다.
- * 새 변경은 맨 뒤에 새 이름으로 더한다. 이미 있는 단계를 고치지 않는다(이미 돈 저장소에서는 다시 돌지 않는다).
+ * Core migration steps (in numbered order). A store that already exists runs every step once: all steps give the same result when re-run
+ * (IF NOT EXISTS; moving legacy rows does nothing when there are no rows to move), so it is safe even for stores with no step record.
+ * Add new changes at the end under a new name. Do not edit existing steps (they do not run again on stores that already ran them).
  */
 const STEPS: readonly MigrationStep[] = [
 	{
 		name: "0001_tables",
-		/** 관계 참조·미디어·주소의 기본 표 */
+		/** Base tables for relation references, media, and slugs */
 		run: (client, qSchema) =>
 			client.query(`
 			CREATE TABLE IF NOT EXISTS "${qSchema}".entries (
@@ -97,7 +97,7 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0002_reference_kinds",
-		/** 관계 참조 종류를 entry·media로 줄인다(예전 category·tag 행 옮기기) */
+		/** Narrow relation reference kinds to entry and media (moves legacy category and tag rows) */
 		run: (client, qSchema) =>
 			client.query(`
 			-- Reference kinds were reduced to entry and media. Move leftover category/tag rows from older stores into entry rows.
@@ -151,7 +151,7 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0003_folders_status",
-		/** 폴더와 글 상태 */
+		/** Folders and entry status */
 		run: (client, qSchema) =>
 			client.query(`
 			CREATE TABLE IF NOT EXISTS "${qSchema}".folders (
@@ -178,7 +178,7 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0004_address_entry_link",
-		/** 주소 기록이 지운 글을 가리키지 않게(삭제 기록) */
+		/** Keep slug records from pointing at deleted entries (deletion records) */
 		run: (client, qSchema) =>
 			client.query(`
 			ALTER TABLE "${qSchema}".content_addresses ALTER COLUMN entry_id DROP NOT NULL;
@@ -188,17 +188,17 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0005_body_search_translation",
-		/** 본문 검색 글자와 번역 단위 */
+		/** Body search text and translation units */
 		run: (client, qSchema) =>
 			client.query(`
 			ALTER TABLE "${qSchema}".entry_bodies ADD COLUMN IF NOT EXISTS search_text TEXT NOT NULL DEFAULT '';
-			-- v3 translation screen: translation units of a translated entry (source fragment, translation). NULL for the source.
+			-- Translation screen: translation units of a translated entry (source fragment, translation). NULL for the source.
 			ALTER TABLE "${qSchema}".entry_bodies ADD COLUMN IF NOT EXISTS translation JSONB;
 		`),
 	},
 	{
 		name: "0006_preferences_templates",
-		/** 관리자 설정과 본문 템플릿(예전 컬렉션별 템플릿 합치기) */
+		/** Admin settings and body templates (merges legacy per-collection templates) */
 		run: (client, qSchema) =>
 			client.query(`
 			CREATE TABLE IF NOT EXISTS "${qSchema}".user_preferences (
@@ -232,7 +232,7 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0007_trashed_at",
-		/** 휴지통에 넣은 시각 */
+		/** Time moved to trash */
 		run: (client, qSchema) =>
 			client.query(`
 			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS trashed_at TIMESTAMPTZ;
@@ -241,7 +241,7 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0008_media_details",
-		/** 미디어 기본 대체 글·원본 파일 */
+		/** Media default alt text and original file */
 		run: (client, qSchema) =>
 			client.query(`
 			ALTER TABLE "${qSchema}".media_assets ADD COLUMN IF NOT EXISTS default_alt TEXT NOT NULL DEFAULT '';
@@ -257,10 +257,10 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0009_locales",
-		/** 다국어: 언어별 문서·번역 묶음·언어별 주소 */
+		/** Multilingual: per-language documents, translation groups, per-language slugs */
 		run: (client, qSchema) =>
 			client.query(`
-			-- v2 B4 multilingual: one document per language + translation group. The group ID is the source's ID; the source itself is NULL.
+			-- Multilingual: one document per language + translation group. The group ID is the source's ID; the source itself is NULL.
 			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${DEFAULT_LOCALE}';
 			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS translation_group_id UUID REFERENCES "${qSchema}".entries(id) ON DELETE NO ACTION;
 			CREATE UNIQUE INDEX IF NOT EXISTS entries_translation_locale_key
@@ -280,9 +280,9 @@ const STEPS: readonly MigrationStep[] = [
 		`),
 	},
 	{
-		// 이름이 예전 일회성 기록과 같다. 이미 넣은 저장소는 다시 넣지 않고, 지운 템플릿을 되살리지 않는다.
+		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
-		/** 사이트 설정의 초기 본문 템플릿을 새 저장소에 한 번만 넣는다. */
+		/** Seeds the site config's initial body templates into a new store, once. */
 		run: async (client, qSchema) => {
 			for (const t of cmsConfig.seed?.templates ?? []) {
 				await client.query(
@@ -296,14 +296,14 @@ const STEPS: readonly MigrationStep[] = [
 	},
 ];
 
-/** 단계 이름 목록(테스트·문서용). */
+/** List of step names (for tests and docs). */
 export const CONTENT_STORE_MIGRATIONS: readonly string[] = STEPS.map((step) => step.name);
 
-/** 같은 스키마의 마이그레이션이 동시에 돌지 않게 트랜잭션 잠금을 건다. */
+/** Takes a transaction lock so migrations on the same schema do not run concurrently. */
 const lockMigrations = (client: PoolClient, qSchema: string) =>
 	client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`cms_migrate:${qSchema}`]);
 
-/** 스키마와 단계 기록 표를 만든다(잠금을 건 뒤). */
+/** Creates the schema and the step record table (after taking the lock). */
 async function prepare(client: PoolClient, qSchema: string): Promise<void> {
 	await lockMigrations(client, qSchema);
 	await client.query(`CREATE SCHEMA IF NOT EXISTS "${qSchema}"`);
@@ -316,8 +316,8 @@ async function prepare(client: PoolClient, qSchema: string): Promise<void> {
 }
 
 /**
- * 스키마를 만들거나 최신 모양으로 맞춘다. 스키마가 없으면 만들고(`schema` 설정), 아직 돌지 않은 단계만 번호 순서로 돈다.
- * 한 트랜잭션이라 중간에 실패하면 아무것도 바뀌지 않고, 같은 스키마에 동시에 돌려도 하나씩 돈다.
+ * Creates the schema or brings it up to date. Creates the schema if missing (the `schema` option), then runs only the steps that have not run yet, in numbered order.
+ * It is one transaction, so a mid-way failure changes nothing, and concurrent runs on the same schema go one at a time.
  */
 export async function migrateContentStore(pool: Pool, options?: { schema?: string }): Promise<void> {
 	const qSchema = validateSchemaName(options?.schema);
@@ -337,10 +337,10 @@ export async function migrateContentStore(pool: Pool, options?: { schema?: strin
 }
 
 /**
- * 한 번만 하는 일(플러그인의 예전 데이터 옮기기 등). 이름이 `cms_migrations`에 없을 때만 `run`을 부르고 이름을 남긴다.
- * 본체 마이그레이션과 같은 잠금을 건 트랜잭션 안이라 동시에 불러도 한 번만 돈다. 실패하면 이름을 남기지 않는다.
- * 이름은 저장소 전체에서 겹치지 않게 플러그인 이름을 앞에 붙인다(예: `ai:move-old-settings`).
- * @returns 이번에 돌았는가
+ * Run-once job (for example, a plugin moving legacy data). Calls `run` and records the name only when the name is not in `cms_migrations`.
+ * It runs inside a transaction holding the same lock as the core migrations, so concurrent calls still run it once. A failure does not record the name.
+ * Prefix the name with the plugin name so it never collides across the store (for example `ai:move-old-settings`).
+ * @returns whether it ran this time
  */
 export async function runOnce(
 	pool: Pool,

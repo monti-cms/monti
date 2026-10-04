@@ -19,7 +19,7 @@ interface SlashMenuPopupProps {
 	onClose: () => void;
 }
 
-/** 항목 아이콘. 이름(블록 정의의 `editor.icon`)이나 컴포넌트이고, 없으면 퍼즐 아이콘이다. */
+/** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent. */
 function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
 	const iconByName = useIconByName();
 	const Icon = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
@@ -27,8 +27,8 @@ function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
 }
 
 /**
- * `/` 블록 삽입 메뉴(§4.2). 포커스와 방향키는 에디터가 맡고(한글 IME 조합 중 포커스를 뺏지 않는다),
- * 여기서는 강조할 항목(`selectedIndex`)만 그리고 보이게 스크롤한다.
+ * `/` block insert menu. The editor handles focus and arrow keys (it does not steal focus during Korean IME composition);
+ * this only draws the highlighted item (`selectedIndex`) and scrolls it into view.
  */
 export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose }: SlashMenuPopupProps) {
 	const [mounted, setMounted] = useState(false);

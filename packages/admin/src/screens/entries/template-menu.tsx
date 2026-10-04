@@ -18,8 +18,8 @@ import { t } from "./translate";
 type Template = { id: string; name: string; mdx: string };
 
 /**
- * 편집기 툴바 끝의 템플릿 메뉴. 처음 열 때 목록을 받는다.
- * 본문이 비었으면 고른 템플릿을 바로 넣고, 쓴 본문이 있으면 바꿀지 먼저 묻는다.
+ * Template menu at the end of the editor toolbar. Fetches the list on first open.
+ * If the body is empty, inserts the chosen template right away; if there is body text, asks first whether to replace it.
  */
 export function TemplateMenu({
 	currentMdx,

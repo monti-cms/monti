@@ -9,12 +9,12 @@ import { type EntryData, type EntryForm, formFromEntry } from "./entry-form";
 import type { LocalBackupRecord } from "./local-backup";
 import { t } from "./translate";
 
-/** 편집 화면을 열 때 찾은 브라우저 복구본. 그 뒤 서버도 바뀌었으면 `conflict`다(§5.1). */
+/** Browser recovery copy found when the edit screen opened. It is a `conflict` if the server has changed since then. */
 export type Recovery =
 	| { kind: "restore"; backup: LocalBackupRecord<EntryForm> }
 	| { kind: "conflict"; backup: LocalBackupRecord<EntryForm>; server: EntryData };
 
-/** 서버에 없는 브라우저 임시 저장본을 불러올지 묻는다. */
+/** Asks whether to load a browser temporary copy that is not on the server. */
 export function RecoveryDialog({
 	recovery,
 	onClose,
@@ -49,7 +49,7 @@ export function RecoveryDialog({
 	);
 }
 
-/** 자동 저장·발행 중 다른 곳에서 먼저 저장했을 때. 양쪽을 비교해 복사하거나 하나를 고른다. */
+/** When someone saved elsewhere first during autosave or publish. Compare both sides, then copy or pick one. */
 export function ConflictDialog({
 	conflict,
 	onClose,
@@ -59,11 +59,11 @@ export function ConflictDialog({
 	conflict: { server: EntryData; local: EntryForm } | null;
 	onClose: () => void;
 	onReload: () => void;
-	/** 서버 최신 버전 위에 내 입력을 덮어쓴다. */
+	/** Overwrites the latest server version with my input. */
 	onOverwrite: (serverVersion: number) => void;
 }) {
 	const { confirm, dialog } = useConfirm();
-	// 서버 최신본을 통째로 바꾸므로 한 번 더 묻는다(§5).
+	// This replaces the latest server copy wholesale, so ask once more.
 	const overwrite = async () => {
 		if (!conflict) return;
 		const serverVersion = conflict.server.version;
@@ -109,7 +109,7 @@ export function ConflictDialog({
 	);
 }
 
-/** 충돌 화면의 양쪽 비교(§5.1 "양쪽 내용을 확인·복사"). */
+/** Side-by-side comparison on the conflict screen ("check and copy both contents"). */
 function ComparePanes({
 	local,
 	server,

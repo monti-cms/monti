@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 본문 템플릿 화면의 문구(M15). */
+/** Messages for the body templates screen. */
 export const templatesMessages = defineMessages("cms-admin.templates", {
 	en: {
 		title: "Body templates",

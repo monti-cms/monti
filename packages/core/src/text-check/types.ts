@@ -1,66 +1,66 @@
 /**
- * 맞춤법·문장 검사 확장의 공통 모양. 본체는 검사기를 하나도 넣지 않는다. 사이트·확장이 필요한 검사기를 만들어
- * 관리자 확장점 `textCheckers`(`CmsAdminComponentsProvider`)에 넣으면 편집기가 버튼·밑줄·결과 창을 그린다.
+ * Common shape of spelling and sentence check extensions. The core ships no checker at all. A site or extension builds the checkers it needs
+ * and puts them in the admin extension point `textCheckers` (`CmsAdminComponentsProvider`), and the editor draws the buttons, underlines and result window.
  *
- * 위치는 늘 문단(검사 단위) 안의 UTF-16 위치(JS 문자열 인덱스)다. 바이트·코드 포인트·문장 기준 위치를 주는
- * 검사기는 검사기 쪽에서 바꿔 돌려준다.
+ * Positions are always UTF-16 positions within a paragraph (the check unit) (JS string indexes). A checker that gives byte, code point or sentence based positions
+ * converts them on the checker side before returning.
  */
 
-/** 검사 단위 하나. 편집기 문단(제목·목록 항목·표 칸 등 글이 든 블록) 하나의 글자다. */
+/** One check unit. The text of one editor paragraph (a block that holds text, such as a heading, list item or table cell). */
 export interface TextCheckSegment {
-	/** 글자가 같은 동안 바뀌지 않는 이름. 결과(`TextIssue.segmentId`)가 이 이름으로 문단을 가리킨다. */
+	/** A name that does not change while the text is the same. Results (`TextIssue.segmentId`) point to the paragraph by this name. */
 	readonly id: string;
 	readonly text: string;
-	/** 글의 언어(`ko`·`en` 등 사이트 설정의 언어 코드). */
+	/** Language of the text (a language code of the site config, such as `ko` or `en`). */
 	readonly locale: string;
 }
 
 export type TextIssueSeverity = "error" | "warning" | "info";
 
-/** 흔한 분류. 검사기가 다른 이름을 써도 된다. */
+/** Common categories. A checker may use other names. */
 export type TextIssueCategory = "spelling" | "spacing" | "grammar" | "style" | "term" | (string & {});
 
-/** 검사 결과 하나. `start`·`end`는 그 문단 안의 UTF-16 위치이고 `end`는 포함하지 않는다. */
+/** One check result. `start` and `end` are UTF-16 positions within that paragraph, and `end` is exclusive. */
 export interface TextIssue {
 	readonly segmentId: string;
 	readonly start: number;
 	readonly end: number;
 	readonly message: string;
-	/** 바꿀 글 후보. 없으면 빈 배열. */
+	/** Replacement candidates. An empty array if none. */
 	readonly suggestions: readonly string[];
 	readonly severity: TextIssueSeverity;
 	readonly ruleId?: string;
 	readonly category?: TextIssueCategory;
-	/** 결과를 낸 검사기 이름. 비우면 편집기가 검사기 `id`로 채운다. */
+	/** Name of the checker that produced the result. If empty, the editor fills it with the checker `id`. */
 	readonly source?: string;
-	/** 규칙 설명 주소. */
+	/** Rule description address. */
 	readonly url?: string;
 }
 
 export interface TextCheckerLimits {
-	/** 한 번에 보낼 글자 수(UTF-16) 상한. 넘으면 여러 번 나눠 보낸다. 한 문단이 이보다 길면 그 문단만 따로 보낸다. */
+	/** Upper limit of characters (UTF-16) to send at once. If exceeded, it is split into several sends. A paragraph longer than this is sent on its own. */
 	readonly maxChars?: number;
-	/** 한 번에 보낼 문단 수 상한. */
+	/** Upper limit of paragraphs to send at once. */
 	readonly maxSegments?: number;
 }
 
 export interface TextCheckContext {
-	/** 다시 검사하거나 편집 화면을 닫으면 끊는다. `fetch`에 그대로 넘긴다. */
+	/** Cancels on a re-check or when the edit screen closes. Passed to `fetch` as is. */
 	readonly signal: AbortSignal;
 }
 
 export interface TextChecker {
 	readonly id: string;
-	/** 도구 모음 버튼 이름이자 결과 창의 출처. 예: "바른 맞춤법 검사". */
+	/** Toolbar button name and the source in the result window. Example: "Spell checker". */
 	readonly label: string;
 	/**
-	 * 도구 모음 버튼 아이콘. lucide 컴포넌트나 아이콘 이름(관리자 확장 `icons`에 등록한 이름 포함). 없으면 맞춤법 아이콘.
-	 * 검사기마다 버튼이 하나씩 생긴다.
+	 * Toolbar button icon. A lucide component or an icon name (including names registered in the admin extension `icons`). If absent, the spelling icon.
+	 * One button is created per checker.
 	 */
 	readonly icon?: string | import("react").ComponentType<{ className?: string }>;
-	/** 검사할 수 있는 언어. 없으면 모든 언어다. `ko`는 `ko-KR`과도 맞는다. */
+	/** Languages it can check. If absent, all languages. `ko` also matches `ko-KR`. */
 	readonly locales?: readonly string[];
-	/** 편집을 멈추면 바뀐 문단만 저절로 검사한다. 기본은 끔(유료·호출 제한 API를 생각해 버튼으로만 검사). */
+	/** When editing stops, only changed paragraphs are checked automatically. Off by default (considering paid or rate-limited APIs, checking is by button only). */
 	readonly auto: boolean;
 	readonly limits?: TextCheckerLimits;
 	readonly check: (segments: readonly TextCheckSegment[], context: TextCheckContext) => Promise<readonly TextIssue[]>;
@@ -70,7 +70,7 @@ export interface TextCheckerOptions extends Omit<TextChecker, "auto"> {
 	readonly auto?: boolean;
 }
 
-/** 검사기를 만든다. 브라우저에서 돈다. API 키가 필요한 검사기는 `remoteTextChecker`로 사이트 서버 경로를 거친다. */
+/** Creates a checker. Runs in the browser. A checker that needs an API key goes through the site server route with `remoteTextChecker`. */
 export function defineTextChecker(options: TextCheckerOptions): TextChecker {
 	if (!/^[a-z0-9][a-z0-9_-]*$/i.test(options.id)) throw new Error(`text checker: invalid id "${options.id}"`);
 	for (const [key, value] of Object.entries(options.limits ?? {})) {
@@ -80,10 +80,10 @@ export function defineTextChecker(options: TextCheckerOptions): TextChecker {
 	return Object.freeze({ ...options, auto: options.auto ?? false });
 }
 
-/** 언어 코드의 첫 부분(`ko-KR` → `ko`). */
+/** First part of a language code (`ko-KR` → `ko`). */
 const baseLanguage = (locale: string) => locale.toLowerCase().split(/[-_]/)[0] ?? "";
 
-/** 그 글의 언어를 검사할 수 있는가. */
+/** Whether the text's language can be checked. */
 export function supportsLocale(checker: TextChecker, locale: string): boolean {
 	if (!checker.locales || checker.locales.length === 0) return true;
 	const target = locale.toLowerCase();

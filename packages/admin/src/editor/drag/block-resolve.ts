@@ -3,13 +3,13 @@ import type { EditorView } from "@tiptap/pm/view";
 import { CONTAINER_NODE_NAMES, PARENT_ONLY_NODE_NAMES } from "../blocks/added/shared";
 
 /**
- * 블록 요소 해석 규약 및 DOM 탐색(v2 C1).
- * 최상위 블록, 중첩 블록(목록 항목, 인용구 내부), NodeView 컨테이너(content hole)를 공통 규약으로 다룬다.
+ * Block element resolution rules and DOM traversal.
+ * Handles top-level blocks, nested blocks (list items, inside blockquotes), and NodeView containers (content hole) under common rules.
  */
 
 /**
- * 자식 블록을 하나씩 옮길 수 있는 컨테이너 노드 이름. 인용과 더한 컨테이너 블록(콜아웃·접기·탭·단 등)이다.
- * 이 목록에 없는 부모(표 셀 등)의 자식은 따로 옮기지 않고 부모 블록 단위로 옮긴다.
+ * Names of container nodes whose child blocks can be moved one at a time: blockquote plus added container blocks (callout, fold, tabs, columns, etc.).
+ * Children of parents not in this list (table cells, etc.) are not moved separately; the parent block moves as a unit.
  */
 export const DRAG_CONTAINER_NODES = new Set<string>(["blockquote", ...CONTAINER_NODE_NAMES]);
 
@@ -26,29 +26,29 @@ const isListItemElement = (element: HTMLElement) =>
 	element.tagName === "LI" || element.getAttribute("data-type") === "taskItem";
 
 /**
- * 안으로 내려가지 않는 NodeView(코드 블록). contentDOM 안이 블록이 아니라 글자 조각이라, 내려가면 코드 줄마다
- * 핸들이 뜬다. 블록 전체를 한 대상으로 본다.
+ * NodeViews not descended into (code block). Inside the contentDOM are text fragments, not blocks, so descending would show
+ * a handle for every code line. The whole block is treated as one target.
  */
 const LEAF_VIEW_SELECTOR = ".node-codeBlock";
 
-/** 자식 블록을 따로 옮길 수 없는 틀(단 하나·탭 하나). 핸들 대상이 되지 않는다. */
+/** Frames whose child blocks cannot be moved separately (a single column, a single tab). Never a handle target. */
 const STRUCTURAL_VIEWS = [...PARENT_ONLY_NODE_NAMES].map((name) => `node-${name}`);
 const isStructural = (element: HTMLElement) => STRUCTURAL_VIEWS.some((name) => element.classList.contains(name));
 
-/** NodeView(컨테이너)의 contentDOM. 안쪽 컨테이너의 것은 건너뛴다. */
+/** The contentDOM of a NodeView (container). Skips those of inner containers. */
 const contentHoleOf = (view: HTMLElement): HTMLElement | null =>
 	Array.from(view.querySelectorAll<HTMLElement>("[data-node-view-content-react]")).find(
 		(hole) => hole.closest(".react-renderer") === view,
 	) ?? null;
 
-/** 줄을 더 잘게 나눌 수 있는 블록의 자식 블록들. 더 나눌 수 없으면 null이다. */
+/** Child blocks of a block that can be split into finer lines. null if it cannot be split further. */
 const childBlocksOf = (element: HTMLElement): HTMLElement[] | null => {
 	const children = (parent: Element) =>
 		Array.from(parent.children).filter(
 			(child): child is HTMLElement => child instanceof HTMLElement && child.getBoundingClientRect().height > 0,
 		);
 	if (isListElement(element)) return children(element).filter(isListItemElement);
-	// 목록 항목은 들여쓴 목록만 따로 나눈다(항목의 문단은 항목과 같은 대상이다).
+	// For a list item, only the indented list is split out separately (the item's paragraph is the same target as the item).
 	if (isListItemElement(element)) return children(element).filter(isListElement);
 	if (element.matches(LEAF_VIEW_SELECTOR)) return null;
 	if (element.classList.contains("react-renderer")) {
@@ -64,8 +64,8 @@ const verticalGap = (child: HTMLElement, clientY: number) => {
 };
 
 /**
- * 그 줄(clientY)에 걸친 자식. 나란히 놓인 자식(단)은 clientX로 고르고, 틈이면 가까운 쪽이다.
- * `nearestRow`면 어느 자식에도 걸치지 않는 줄(목록 항목 사이 여백)도 가장 가까운 자식을 고른다.
+ * The child spanning that line (clientY). Side-by-side children (columns) are picked by clientX; in a gap, the nearer one.
+ * With `nearestRow`, a line that spans no child (the gap between list items) also picks the nearest child.
  */
 const childAt = (children: HTMLElement[], clientX: number, clientY: number, nearestRow = false): HTMLElement | null => {
 	const rows = children.filter((child) => verticalGap(child, clientY) === 0);
@@ -82,18 +82,18 @@ const childAt = (children: HTMLElement[], clientX: number, clientY: number, near
 };
 
 /**
- * 한 줄에 핸들을 하나만 두도록, 가리킨 블록을 그 줄의 가장 안쪽 블록으로 좁힌다.
- * - 목록(들여쓰기·글머리표 자리)은 그 높이의 항목으로, 들여쓴 목록이면 그 안쪽 항목까지 내려간다.
- * - 컨테이너(콜아웃·접기·탭·단)의 틀·여백은 그 높이의 안쪽 블록으로 내려간다. 안쪽 블록이 없는 줄
- *   (제목 줄·위아래 여백)일 때만 컨테이너 자신이 대상이다.
- * - 단 하나·탭 하나는 대상이 아니다. 안쪽 블록이 없는 줄이면 바깥 컨테이너(단 나누기·탭)를 잡는다.
- * 그러지 않으면 마우스가 틀과 글자를 오갈 때 같은 줄의 핸들이 두 위치로 번갈아 뜬다.
+ * To keep one handle per line, narrow the pointed block down to the innermost block on that line.
+ * - A list (indentation, bullet area) goes to the item at that height, and for an indented list down to the inner item.
+ * - The frame and margin of a container (callout, fold, tabs, columns) go down to the inner block at that height. Only for a line
+ *   with no inner block (title row, top/bottom margin) is the container itself the target.
+ * - A single column or tab is not a target. For a line with no inner block, grab the outer container (column split, tabs).
+ * Otherwise, when the mouse moves between the frame and the text, the handle of the same line alternates between two positions.
  */
 export function refineBlock(block: HTMLElement, clientX: number, clientY: number): HTMLElement {
 	let current = block;
 	for (let depth = 0; depth < 32; depth += 1) {
 		const children = childBlocksOf(current);
-		// 목록에는 제목 줄이 없다. 항목 사이 여백도 가까운 항목을 잡는다(목록 전체 핸들이 첫 항목 줄에 뜨지 않게).
+		// A list has no title row. The gap between items also picks the nearest item (so the whole-list handle does not show on the first item's line).
 		const hit = children ? childAt(children, clientX, clientY, isListElement(current)) : null;
 		if (hit) {
 			current = hit;
@@ -118,17 +118,17 @@ export interface TargetBlock {
 }
 
 /**
- * 주어진 DOM 엘리먼트로부터 핸들이 부착될 블록 수준 DOM 엘리먼트를 찾는다.
- * - 최상위 블록: 에디터 root의 직계 자식
- * - 목록 항목: <li> 및 [data-type="taskItem"]
- * - 인용문: 안쪽을 가리켜도 인용문 전체
- * - 컨테이너 NodeView 내부: [data-node-view-content] (content hole)의 직계 자식 블록
- * - 컨테이너 NodeView 자체: contentDOM 외부의 헤더/패딩 등에 호버할 때
+ * Finds the block-level DOM element the handle attaches to, starting from the given DOM element.
+ * - Top-level block: a direct child of the editor root
+ * - List item: <li> and [data-type="taskItem"]
+ * - Blockquote: the whole blockquote even when pointing inside
+ * - Inside a container NodeView: a direct child block of [data-node-view-content] (content hole)
+ * - The container NodeView itself: when hovering the header/padding outside the contentDOM
  */
 export function findBlockDOM(root: HTMLElement, target: HTMLElement | null): HTMLElement | null {
 	if (!target || !root.contains(target) || target === root) return null;
 
-	// 인용문은 한 덩어리로 옮긴다. 안쪽 문단에 핸들을 두면 인용문 왼쪽 줄과 겹치고, 같은 줄에 핸들이 둘이 된다.
+	// A blockquote moves as one unit. A handle on the inner paragraph would overlap the blockquote's left line and give two handles on one line.
 	const quote = target.closest("blockquote");
 	const leaf = target.closest<HTMLElement>(LEAF_VIEW_SELECTOR);
 	let current: HTMLElement | null = quote && root.contains(quote) ? quote : leaf && root.contains(leaf) ? leaf : target;
@@ -137,23 +137,23 @@ export function findBlockDOM(root: HTMLElement, target: HTMLElement | null): HTM
 		const parent: HTMLElement | null = current.parentElement;
 		if (!parent) break;
 
-		// 1. 에디터 root의 직계 자식이면 최상위 블록
+		// 1. A direct child of the editor root is a top-level block
 		if (parent === root) {
 			return current;
 		}
 
-		// 2. 목록 항목 (ul/ol 아래의 li)
+		// 2. List item (li under ul/ol)
 		if (current.tagName === "LI" || current.getAttribute("data-type") === "taskItem") {
 			return current;
 		}
 
-		// 4. 컨테이너 NodeView의 content hole 직계 자식 블록. Tiptap React는 `data-node-view-content` 안에
-		// 실제 contentDOM(`data-node-view-content-react`)을 한 겹 더 두므로 둘 다 content hole로 본다.
+		// 4. Direct child block of the content hole of a container NodeView. Tiptap React puts an actual contentDOM
+		// (`data-node-view-content-react`) one level inside `data-node-view-content`, so both are treated as the content hole.
 		if (isContentHole(parent)) {
 			return current;
 		}
 
-		// 5. 컨테이너 NodeView의 래퍼(data-node-view-wrapper) 직계 영역 (헤더/배경 등)
+		// 5. Direct area of the container NodeView wrapper (data-node-view-wrapper) (header/background, etc.)
 		if (parent.hasAttribute("data-node-view-wrapper")) {
 			if (!current.hasAttribute("data-node-view-content")) {
 				let wrapper: HTMLElement | null = parent;
@@ -171,18 +171,18 @@ export function findBlockDOM(root: HTMLElement, target: HTMLElement | null): HTM
 }
 
 /**
- * 문서 위치가 가리키는 이동 대상 블록을 찾는다.
- * - 목록 항목(listItem / taskItem): depth를 listItem 레벨로 맞춰 항목 전체를 이동 단위로 삼는다.
- * - 인용구 / 컨테이너 내부 블록: 자식 블록 단위로 이동한다.
- * - 최상위 블록: depth 1 블록 단위로 이동한다.
+ * Finds the move-target block that a document position points to.
+ * - List item (listItem / taskItem): align depth to the listItem level and move the whole item as a unit.
+ * - Block inside a blockquote / container: move by child block.
+ * - Top-level block: move by depth 1 block.
  */
 export function targetBlockAt(doc: PmNode, pos: number): TargetBlock | null {
 	if (doc.childCount === 0) return null;
 	const safePos = Math.max(0, Math.min(pos, doc.content.size));
 	const $pos = doc.resolve(safePos);
 
-	// 블록 바로 앞 위치(원자 블록의 posAtDOM, 블록 전체 선택, 핸들 메뉴가 넘기는 블록 시작)면 그 블록이 대상이다.
-	// 목록 항목 안의 블록은 항목이 이동 단위다(아래 1번).
+	// A position right before a block (posAtDOM of an atom block, whole-block selection, block start passed by the handle menu) targets that block.
+	// A block inside a list item moves as the item (see 1 below).
 	const after = $pos.nodeAfter;
 	const inListItem = $pos.parent.type.name === "listItem" || $pos.parent.type.name === "taskItem";
 	if (after?.isBlock && !inListItem) {
@@ -197,7 +197,7 @@ export function targetBlockAt(doc: PmNode, pos: number): TargetBlock | null {
 	}
 
 	if ($pos.depth === 0) {
-		// 문서 끝 등 블록 사이: 가장 가까운 최상위 블록.
+		// Between blocks, such as at the document end: the nearest top-level block.
 		const index = Math.min($pos.index(0), doc.childCount - 1);
 		let start = 0;
 		for (let i = 0; i < index; i++) start += doc.child(i).nodeSize;
@@ -205,7 +205,7 @@ export function targetBlockAt(doc: PmNode, pos: number): TargetBlock | null {
 		return { node, start, end: start + node.nodeSize, depth: 1, index, parent: doc };
 	}
 
-	// 1. 목록 항목 확인 (listItem, taskItem)
+	// 1. Check list item (listItem, taskItem)
 	for (let d = $pos.depth; d >= 1; d--) {
 		const n = $pos.node(d);
 		if (n.type.name === "listItem" || n.type.name === "taskItem") {
@@ -221,7 +221,7 @@ export function targetBlockAt(doc: PmNode, pos: number): TargetBlock | null {
 		}
 	}
 
-	// 2. 인용문 또는 컨테이너 내부 블록 확인
+	// 2. Check blockquote or block inside a container
 	for (let d = $pos.depth; d >= 1; d--) {
 		const n = $pos.node(d);
 		const parent = $pos.node(d - 1);
@@ -238,7 +238,7 @@ export function targetBlockAt(doc: PmNode, pos: number): TargetBlock | null {
 		}
 	}
 
-	// 3. 최상위 블록 (depth 1)
+	// 3. Top-level block (depth 1)
 	const d = 1;
 	const node = $pos.node(d);
 	if (node) {
@@ -257,7 +257,7 @@ export function targetBlockAt(doc: PmNode, pos: number): TargetBlock | null {
 }
 
 /**
- * 찾은 블록 DOM 엘리먼트로부터 ProseMirror 위치 및 블록 정보를 계산한다.
+ * Computes the ProseMirror position and block info from the found block DOM element.
  */
 export function resolveTargetBlock(
 	view: EditorView,
@@ -267,8 +267,8 @@ export function resolveTargetBlock(
 		const pos = view.posAtDOM(blockEl, 0);
 		const rect = blockEl.getBoundingClientRect();
 
-		// 이 DOM이 바로 그리는 노드를 찾는다. NodeView(컨테이너·단 하나)는 posAtDOM이 안쪽 첫 자식을 가리켜
-		// 핸들은 컨테이너 옆인데 첫 블록만 옮겨지는 어긋남이 생긴다.
+		// Find the node this DOM directly renders. For a NodeView (container, single column), posAtDOM points to the inner first child,
+		// so the handle sits beside the container but only the first block moves, a mismatch.
 		const $pos = view.state.doc.resolve(pos);
 		for (let depth = $pos.depth; depth >= 1; depth -= 1) {
 			const start = $pos.before(depth);

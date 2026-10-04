@@ -2,7 +2,7 @@
 	"name": "cms-example-other-site",
 	"version": "0.0.0",
 	"private": true,
-	"description": "@monti-cms/core 예시 앱: 블로그와 다른 컬렉션(article·topic)·언어(영어)로 도는 최소 Next 앱",
+	"description": "@monti-cms/core example app: a minimal Next app with its own collections (article, topic) and language (English)",
 	"license": "MIT",
 	"type": "module",
 	"scripts": {

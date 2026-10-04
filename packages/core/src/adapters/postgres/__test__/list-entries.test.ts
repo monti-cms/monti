@@ -89,42 +89,42 @@ interface ExtendedContentStore {
 }
 
 // ---------------------------------------------------------------------------
-// 설정에서 찾는 컬렉션·필드(블로그 예시 설정과 다른 사이트 설정 둘 다로 돈다, `test/any-site.ts`)
+// Collections and fields are looked up in the config (runs against both the reference blog config and other site configs, `test/any-site.ts`)
 // ---------------------------------------------------------------------------
 
-/** 목록을 시험하는 문서 컬렉션(블로그의 게시글). */
+/** Document collection under test for lists (the reference blog's posts). */
 const content = contentCollection;
 
 type RelationInfo = { name: string; to: Collection; many: boolean };
-/** 조건부가 아닌, 항목 컬렉션을 가리키는 관계 필드. */
+/** A non-conditional relation field that points at an item collection. */
 const itemRelations: RelationInfo[] = storedFields(content).flatMap(({ name, field, when }) =>
 	!when && field.kind === "relation" && isItemCollection(field.to)
 		? [{ name, to: field.to as Collection, many: Boolean(field.many) }]
 		: [],
 );
-/** 하나를 고르는 관계(블로그의 카테고리)와 여러 개를 고르는 관계(블로그의 태그). */
+/** A single-select relation (the reference blog's category) and a multi-select relation (the reference blog's tags). */
 const singleRelation = itemRelations.find((relation) => !relation.many);
 const manyRelation = itemRelations.find((relation) => relation.many);
-/** 발행 필수라 픽스처가 늘 채우는 관계(블로그의 카테고리). */
+/** A relation required for publish, so the fixture always fills it (the reference blog's category). */
 const filledRelation = requiredFields(content).flatMap(({ name, field }) =>
 	field.kind === "relation" ? [{ name, to: field.to as Collection, many: Boolean(field.many) }] : [],
 )[0];
-/** 필수 관계 대상 컬렉션(픽스처가 항목을 만든다). */
+/** Collection of the required relation's targets (the fixture creates items). */
 const fixtureTargets = new Set(
 	requiredFields(content).flatMap(({ field }) => (field.kind === "relation" ? [field.to as string] : [])),
 );
-/** 컬렉션 분리 확인용: 픽스처가 항목을 만들지 않는 다른 컬렉션(블로그의 메모). */
+/** For checking collection isolation: another collection for which the fixture creates no items (the reference blog's memos). */
 const isolatedCollection =
 	otherContentCollection ?? COLLECTIONS.find((name) => name !== content && !fixtureTargets.has(name));
-/** 필수 관계 필드가 없는 다른 컬렉션(블로그의 메모에는 카테고리가 없다). */
+/** Another collection without the required relation field (the reference blog's memos have no category). */
 const collectionWithoutFilledRelation = filledRelation
 	? COLLECTIONS.find((name) => name !== content && !storedField(name, filledRelation.name))
 	: undefined;
-/** 이름(`title`)이 언어별 값인 항목 컬렉션(블로그의 태그). */
+/** Item collection whose name (`title`) is a per-language value (the reference blog's tags). */
 const localizedRecordCollection = COLLECTIONS.find(
 	(name) => isItemCollection(name) && recordLocalizedFields(name).includes("title"),
 );
-/** 기본·두 번째 언어가 아닌 언어(있으면). 빈 이름은 언어 목록에 들지 않는다. */
+/** A language that is neither the default nor the second one (if any). An empty name is not included in the language list. */
 const thirdLocale = LOCALES.find((code) => code !== defaultLocale && code !== secondLocale);
 const relationTargetTitle = (to: Collection) => `List test ${to}`;
 
@@ -148,7 +148,7 @@ describe("listEntries contract", () => {
 	let store: ReturnType<typeof createContentStore> & ExtendedContentStore;
 	let relationTargets = new Map<Collection, Promise<string>>();
 
-	/** 관계 대상 컬렉션의 공개 항목 하나(테스트마다 새로 만든다). */
+	/** One published item of the relation target collection (created fresh for each test). */
 	const relationTarget = (to: Collection): Promise<string> => {
 		const known = relationTargets.get(to);
 		if (known) return known;
@@ -167,7 +167,7 @@ describe("listEntries contract", () => {
 		return created;
 	};
 
-	/** 발행 필수값(블로그의 카테고리 등)을 채운 메타데이터. 제목은 주는 그대로(`null` 포함) 둔다. */
+	/** Metadata with the required-for-publish values filled in (such as the reference blog's category). The title is kept as given (including `null`). */
 	const metadataFor = async (collection: string, title: string | null) => ({
 		...(await requiredMetadata(collection as Collection, title ?? "", relationTarget)),
 		title,
@@ -270,7 +270,7 @@ describe("listEntries contract", () => {
 		if (isolatedCollection) await seed(isolatedCollection, "le1b-slug", "Le1b Title");
 
 		const res = await store.listEntries({ collection: content });
-		// 관계 필드마다 값이 있고, 픽스처가 채운 필수 관계만 대상 제목과 함께 나온다.
+		// Every relation field has a value, and only the required relation filled by the fixture comes with its target title.
 		const expectedRelations: Record<string, { id: string; title: string }[]> = {};
 		for (const { name, field } of storedFields(content)) {
 			if (field.kind !== "relation") continue;
@@ -305,7 +305,7 @@ describe("listEntries contract", () => {
 		expect("body" in item).toBe(false);
 		expect("mdx" in item).toBe(false);
 
-		// collection isolation — 다른 컬렉션의 항목은 섞이지 않는다
+		// collection isolation: items of other collections are not mixed in
 		if (!isolatedCollection) return;
 		const res2 = await store.listEntries({ collection: isolatedCollection });
 		expect(res2.total).toBe(1);
@@ -335,7 +335,7 @@ describe("listEntries contract", () => {
 				expectCmsError(err, "invalid_input");
 			}
 		}
-		// 그 관계 필드가 없는 컬렉션에는 그 필터를 쓸 수 없다(블로그의 메모에는 카테고리 필드가 없다).
+		// That filter cannot be used on a collection without that relation field (the reference blog's memos have no category field).
 		if (!collectionWithoutFilledRelation) return;
 		await expect(
 			store.listEntries({ collection: collectionWithoutFilledRelation, relations: { [relation.name]: [targetId] } }),
@@ -468,7 +468,7 @@ console.log("FencedCode000");
 		const bySlug = await store.listEntries({ collection: content, slugContains: "beta" });
 		expect(bySlug.items.map((item) => item.slug)).toEqual(["beta-slug"]);
 
-		// 제목 필터는 slug를, 주소 필터는 제목을 보지 않는다.
+		// The title filter does not look at the slug, and the slug filter does not look at the title.
 		expect((await store.listEntries({ collection: content, titleContains: "slug" })).items).toHaveLength(0);
 		expect((await store.listEntries({ collection: content, slugContains: "제목" })).items).toHaveLength(0);
 
@@ -826,7 +826,7 @@ console.log("FencedCode000");
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
-			// 이관한 글처럼 발행일을 미리 넣어 두면 발행해도 그대로다.
+			// If the publish date is set beforehand, like a migrated entry, it stays as is after publishing.
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [histE.id, histDate]);
 			await store.publishEntry({ id: histE.id, expectedVersion: histE.version });
 
@@ -915,7 +915,7 @@ console.log("FencedCode000");
 		30_000,
 	);
 
-	/** 글자·선택 필드(제목 말고). 목록 칸의 값이 되는 필드다. */
+	/** Text and select fields (other than the title). These supply the values of list cells. */
 	const plainField = storedFields(content).find(
 		({ name, field, when }) => !when && name !== "title" && (field.kind === "select" || field.kind === "text"),
 	);
@@ -967,7 +967,7 @@ console.log("FencedCode000");
 			}
 			return created;
 		};
-		// 이관한 초안처럼 발행일을 미리 넣어 둔 초안도 그 날짜로 정렬된다.
+		// A draft with a preset publish date, like a migrated draft, also sorts by that date.
 		await entry("d-2023", "2023-07-17T00:00:00.000+09:00");
 		await entry("d-2025", "2025-06-07T00:00:00.000+09:00");
 		await entry("d-2024", "2024-03-15T00:00:00.000+09:00");
@@ -989,7 +989,7 @@ console.log("FencedCode000");
 		expect(inRange.items.map((item) => item.slug).sort()).toEqual(["d-2024", "d-2025"]);
 	}, 30_000);
 
-	// 언어별 이름이 있는 항목 컬렉션과 두 번째 언어가 있어야 한다.
+	// Requires an item collection with per-language names and a second language.
 	it.skipIf(!secondLocale || !localizedRecordCollection)(
 		"9. record collections list the locales that have a name (the default locale is the record's own title)",
 		async () => {

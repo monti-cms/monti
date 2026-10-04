@@ -45,7 +45,7 @@ vi.mock("../../../../../../container", () => {
 	};
 });
 
-describe("M2-BE-4 Relations API Contract", () => {
+describe("Relations API Contract", () => {
 	it("GET /entries/:id/relations returns incoming references for existing entry", async () => {
 		const req = new NextRequest("http://localhost/api/cms/v1/entries/tag-1/relations");
 		const res = await getRelations(req, { params: Promise.resolve({ id: "tag-1" }) });

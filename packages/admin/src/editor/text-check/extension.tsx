@@ -8,9 +8,9 @@ import { TextCheckToolbar, TextIssuePopover } from "./text-check-controls";
 import { useTextCheck } from "./use-text-check";
 
 /**
- * 글 검사(맞춤법 등) 화면. 확장이 관리자 확장점 `textCheckers`에 검사기를 넣으면 검사기마다 도구 모음 버튼이 생기고,
- * 결과는 물결 밑줄·결과 창·목록으로 보인다. 본체는 검사기를 하나도 갖지 않고, 그 글의 언어를 검사하는 검사기가 없으면
- * 아무것도 그리지 않는다.
+ * Text check (spelling, etc.) UI. When an extension adds a checker to the admin extension point `textCheckers`, each checker gets a toolbar button,
+ * and results are shown as wavy underlines, a results panel, and a list. The core has no checkers of its own, and if no checker
+ * covers the text's language, it renders nothing.
  */
 export function useTextCheckEditor(
 	checkers: readonly TextChecker[],

@@ -4,12 +4,12 @@ import type { BlockDefinition } from "../../../blocks/define";
 import { diffSources, type SourceChange } from "../source-diff";
 
 /**
- * 블록 이름은 지금 설정에서 찾는다(블로그 예시 설정과 다른 사이트 설정 둘 다로 돈다). 설정에 그런 블록이 없으면
- * 그 경우는 건너뛴다(예: 다른 사이트 설정에는 펼치는 제목 상자와 탭 묶음이 없다).
+ * Block names are looked up in the current config (runs with both the reference blog config and other site configs). If the config has no such block,
+ * that case is skipped (e.g. other site configs have no expandable titled box or tab group).
  */
 const translatableOf = (block: BlockDefinition | undefined) =>
 	block && Object.entries(block.attributes).find(([, attribute]) => attribute.translatable)?.[0];
-/** 펼쳐서 비교하는 제목 있는 상자(예: 콜아웃). 정렬은 본체 블록이라 어느 설정에나 있다. */
+/** A titled box compared by expanding it (e.g. callout). Alignment is a core block, so any config has it. */
 const titledBox = BLOCKS.find(
 	(block) =>
 		block.syntax.kind === "container" &&
@@ -19,13 +19,13 @@ const titledBox = BLOCKS.find(
 		translatableOf(block),
 );
 const titleAttribute = translatableOf(titledBox);
-/** 그 상자의 번역하지 않는 글 속성(있으면, 예: 콜아웃 종류)과 넣을 값. */
+/** That box's non-translated text attribute (if any, e.g. callout kind) and the value to put in. */
 const otherAttribute = titledBox
 	? Object.entries(titledBox.attributes)
 			.filter(([name, attribute]) => attribute.type === "string" && name !== titleAttribute)
 			.map(([name, attribute]) => `${name}="${attribute.options ? Object.keys(attribute.options)[0] : "x"}"`)[0]
 	: undefined;
-/** 자식의 번역할 속성(예: 탭 이름)을 머리 줄 하나로 모으는 펼치는 묶음(예: 탭 묶음). */
+/** An expandable group that gathers children's translatable attributes (e.g. tab names) into one header line (e.g. tab group). */
 const labeledGroup = BLOCKS.flatMap((block) => {
 	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	const label = translatableOf(child);
@@ -41,12 +41,12 @@ const summary = (changes: SourceChange[] | null) =>
 				: ["removed", change.before.source],
 	);
 
-describe("원문 두 버전 비교(v3)", () => {
-	it("같으면 바뀐 것이 없다", () => {
+describe("comparing two source versions", () => {
+	it("nothing changed when equal", () => {
 		expect(diffSources("하나\n\n둘\n", "하나\n\n둘\n")).toEqual([]);
 	});
 
-	it("바뀐·더해진·빠진 블록을 문서 순서로 찾는다", () => {
+	it("finds changed, added and removed blocks in document order", () => {
 		expect(
 			summary(diffSources("하나\n\n둘\n\n셋\n\n넷\n", "하나 고침\n\n둘\n\n새 문단\n\n넷\n\n## 새 제목\n")),
 		).toEqual([
@@ -57,13 +57,13 @@ describe("원문 두 버전 비교(v3)", () => {
 		expect(summary(diffSources("하나\n\n둘\n\n셋\n", "하나\n\n셋\n"))).toEqual([["removed", "둘"]]);
 	});
 
-	it("상자 안 블록은 따로 비교한다", () => {
+	it("blocks inside a box are compared separately", () => {
 		const before = ':::text-align{align="center"}\n안쪽\n\n그대로\n:::\n';
 		const after = ':::text-align{align="center"}\n안쪽 고침\n\n그대로\n:::\n';
 		expect(summary(diffSources(before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
 	});
 
-	it.skipIf(!titledBox || !titleAttribute)("상자 안 블록과 제목도 따로 비교한다", () => {
+	it.skipIf(!titledBox || !titleAttribute)("blocks and the title inside a box are compared separately", () => {
 		if (!titledBox || !titleAttribute) return;
 		const box = (title: string, body: string) =>
 			`:::${titledBox.name}{${[otherAttribute, `${titleAttribute}="${title}"`].filter(Boolean).join(" ")}}\n${body}\n:::\n`;
@@ -73,7 +73,7 @@ describe("원문 두 버전 비교(v3)", () => {
 		]);
 	});
 
-	it.skipIf(!labeledGroup)("탭 이름은 탭 묶음 머리 줄 하나로 모아 비교한다", () => {
+	it.skipIf(!labeledGroup)("tab names are gathered into one tab group header line for comparison", () => {
 		if (!labeledGroup) return;
 		const { block, child, label } = labeledGroup;
 		const tabs = (second: string) =>
@@ -83,7 +83,7 @@ describe("원문 두 버전 비교(v3)", () => {
 		]);
 	});
 
-	it("해석할 수 없는 원문이면 null", () => {
+	it("null when the source cannot be parsed", () => {
 		expect(diffSources("본문 <TextAlign>닫히지 않음", "하나\n")).toBeNull();
 	});
 });

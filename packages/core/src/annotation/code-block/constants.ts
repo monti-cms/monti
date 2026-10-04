@@ -1,14 +1,14 @@
 import { type CodeLineEffectDefinition, DEFAULT_CODE_LINE_EFFECTS } from "./line-effects";
 import type { AnnotationConfig, AnnotationConfigItem } from "./types";
 
-/** 글자 효과(`// @char 이름`). 공개 화면이 렌더러 이름(`render`)으로 그린다. */
+/** Text effects (`// @char name`). The public view draws them by the renderer name (`render`). */
 const CHAR_ANNOTATIONS: readonly AnnotationConfigItem[] = ["Tooltip", "strong", "em", "del", "u", "fold"].map(
 	(name) => ({ name, kind: "render", source: "mdx-text", render: name, scopes: ["char", "document"] }),
 );
 
 /**
- * 코드 펜스 주석 설정. 글자 효과, 줄 효과(정의 목록), 줄 접기, 본문 연결 이름표 순서다.
- * 사이트가 쓰는 설정은 `active.ts`의 `annotationConfig`다.
+ * Code fence comment config. Order: text effects, line effects (definition list), line folding, body-link label.
+ * The config the site uses is `annotationConfig` in `active.ts`.
  */
 export function createAnnotationConfig(
 	lineEffects: readonly CodeLineEffectDefinition[] = DEFAULT_CODE_LINE_EFFECTS,
@@ -25,7 +25,7 @@ export function createAnnotationConfig(
 				}),
 			),
 			{ name: "collapse", kind: "render", render: "collapse", scopes: ["line"] },
-			// 본문 `:code-ref`가 가리키는 줄 이름표(`id`). 줄에 `data-anchor`를 달 뿐 모양은 없다.
+			// The line label (`id`) that the body's `:code-ref` points to. Only adds `data-anchor` to the line; has no appearance.
 			{ name: "anchor", kind: "class", class: "code-anchor", scopes: ["line"] },
 		],
 	};

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** AI 기능 목록·저장·화면 기능(관리자 AI 화면이 만든 기능) 오류 문구. */
+/** Error messages for the AI action list, saving and custom actions (actions created in the admin AI screen). */
 export const actionsMessages = defineMessages("cms-ai.actions", {
 	en: {
 		unknownAction: "This AI action doesn't exist.",

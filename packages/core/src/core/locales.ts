@@ -1,48 +1,48 @@
 import type { LocalePrefixMode } from "../config/define";
 import { cmsConfig } from "../config/resolved";
 
-/** 콘텐츠 언어(`cms.config.ts`의 `locales`). 관리자 화면 자체의 언어와는 별개다. */
+/** Content locales (`locales` in `cms.config.ts`). Separate from the language of the admin screen itself. */
 export const LOCALES = cmsConfig.locales.map((locale) => locale.code);
 export type Locale = (typeof cmsConfig.locales)[number]["code"];
 
-/** 기본 언어. 번역본의 원본 언어이고, 기본 주소 방식(`except-default`)에서는 주소에 언어 접두사를 붙이지 않는다. */
+/** Default locale. The source locale of translations; with the default URL style (`except-default`) its URLs get no locale prefix. */
 export const DEFAULT_LOCALE: Locale = cmsConfig.defaultLocale;
 
 export const isLocale = (value: unknown): value is Locale =>
 	typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 
-/** 기본 언어가 아닌 언어(번역 언어). 이름은 예전 그대로다. 주소 접두사 여부는 `localePrefix`가 정한다. */
+/** Locales other than the default (translation locales). The name is kept from before. Whether URLs get a prefix is decided by `localePrefix`. */
 export const PREFIXED_LOCALES = LOCALES.filter((locale) => locale !== DEFAULT_LOCALE);
 
-/** 그 언어로 쓴 언어 이름. 모르는 코드는 그대로 돌려준다. */
+/** The language name written in that language. Unknown codes are returned as is. */
 export const localeName = (code: string): string =>
 	cmsConfig.locales.find((locale) => locale.code === code)?.name ?? code;
 
-/** 관리자 화면의 언어 이름. 모르는 코드는 그대로 돌려준다. */
+/** The language name shown in the admin screen. Unknown codes are returned as is. */
 export const localeLabel = (code: string): string => {
 	const locale = cmsConfig.locales.find((entry) => entry.code === code);
 	return locale ? (locale.label ?? locale.name) : code;
 };
 
-/** 공개 주소에 언어를 붙이는 방식(`site.localePrefix`, 기본 `except-default`). */
+/** How the locale is added to public URLs (`site.localePrefix`, default `except-default`). */
 export const LOCALE_PREFIX_MODE: LocalePrefixMode = cmsConfig.site?.localePrefix ?? "except-default";
 
-/** 설정을 읽지 않는 언어 접두사 규칙. `code`는 아는 언어여야 한다. */
+/** Locale prefix rule that does not read the config. `code` must be a known locale. */
 export function localePrefixFor(code: string, mode: LocalePrefixMode, defaultLocale: string): string {
 	if (mode === "never") return "";
 	if (mode === "except-default" && code === defaultLocale) return "";
 	return `/${code}`;
 }
 
-/** 설정을 읽지 않는 경로 바꾸기. 기본 언어 기준 경로(`/posts/a`)에 접두사를 붙인다(`/`는 `/{code}`). */
+/** Path rewriting that does not read the config. Adds the prefix to a default-locale path (`/posts/a`) (`/` becomes `/{code}`). */
 export function localizePathWith(prefix: string, path: string): string {
 	if (!prefix) return path;
 	return path === "/" ? prefix : `${prefix}${path}`;
 }
 
-/** 공개 주소의 언어 접두사(`site.localePrefix`를 따른다). 접두사가 없거나 모르는 언어면 빈 글자다. */
+/** Locale prefix of public URLs (follows `site.localePrefix`). Empty string if there is no prefix or the locale is unknown. */
 export const localePrefix = (code: string): string =>
 	isLocale(code) ? localePrefixFor(code, LOCALE_PREFIX_MODE, DEFAULT_LOCALE) : "";
 
-/** 기본 언어 기준 경로(`/posts/a`)를 그 언어의 경로로 바꾼다(`site.localePrefix`를 따른다). */
+/** Converts a default-locale path (`/posts/a`) to that locale's path (follows `site.localePrefix`). */
 export const localizePath = (code: string, path: string): string => localizePathWith(localePrefix(code), path);

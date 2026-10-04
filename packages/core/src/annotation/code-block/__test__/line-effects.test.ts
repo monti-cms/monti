@@ -8,7 +8,7 @@ import { DEFAULT_CODE_LINE_EFFECTS, resolveCodeLineEffects, validateCodeBlockCon
 import { codeBlockMessages } from "../messages";
 import type { AnnotationConfigItem } from "../types";
 
-/** 정의 목록으로 바꾸기 전의 주석 설정(공개 화면 클래스가 그대로인지 본다). */
+/** The annotation config before switching to a definition list (checks the public view classes stay the same). */
 const BEFORE: AnnotationConfigItem[] = [
 	{ name: "Tooltip", kind: "render", source: "mdx-text", render: "Tooltip", scopes: ["char", "document"] },
 	{ name: "strong", kind: "render", source: "mdx-text", render: "strong", scopes: ["char", "document"] },
@@ -40,13 +40,13 @@ const BEFORE: AnnotationConfigItem[] = [
 const byName = (items: readonly AnnotationConfigItem[] | undefined) =>
 	Object.fromEntries((items ?? []).map((item) => [item.name, item]));
 
-describe("코드 줄 효과 정의", () => {
-	it("기본 정의는 예전 주석 설정과 같은 이름·클래스를 만든다", () => {
+describe("code line effect definitions", () => {
+	it("the default definitions produce the same names and classes as the old annotation config", () => {
 		expect(byName(createAnnotationConfig().annotations)).toEqual(byName(BEFORE));
-		// 줄 효과가 없는 설정(예시 사이트)은 기본 그대로다.
+		// A config without line effects (the example site) stays at the defaults.
 		expect(CODE_LINE_EFFECTS).toEqual(DEFAULT_CODE_LINE_EFFECTS);
 		expect(byName(annotationConfig.annotations)).toEqual(byName(BEFORE));
-		// 메뉴 이름은 괄호 없이 짧게 쓴다.
+		// Menu labels are short, without parentheses.
 		const t = createTranslator(codeBlockMessages);
 		expect(DEFAULT_CODE_LINE_EFFECTS.map((effect) => effect.label)).toEqual([
 			t("lineEffect.highlight"),
@@ -57,7 +57,7 @@ describe("코드 줄 효과 정의", () => {
 		]);
 	});
 
-	it("사이트 정의는 같은 이름을 그 자리에서 바꾸고 새 이름을 뒤에 붙인다", () => {
+	it("a site definition replaces the same name in place and appends a new name", () => {
 		const effects = resolveCodeLineEffects([
 			{ name: "highlight", label: "강조", class: "my-highlight" },
 			{ name: "focus", label: "초점", icon: "eye", class: "my-focus", editor: { background: "bg-primary/10" } },
@@ -72,14 +72,14 @@ describe("코드 줄 효과 정의", () => {
 		expect(fromCodeBlockDocumentToCodeFence(document, config).value).toBe(value);
 	});
 
-	it("편집기는 정의된 줄 효과와 접기·이름표만 알아본다", () => {
+	it("the editor recognizes only defined line effects plus folding and the label", () => {
 		expect(isLineEffectName("plus")).toBe(true);
 		expect(isLineEffectName("collapse")).toBe(true);
 		expect(isLineEffectName("anchor")).toBe(true);
 		expect(isLineEffectName("focus")).toBe(false);
 	});
 
-	it("틀린 설정은 바로 알린다", () => {
+	it("an invalid config is reported immediately", () => {
 		expect(() => validateCodeBlockConfig({ lineEffects: [{ name: "Focus", label: "초점", class: "" }] })).toThrow(
 			/lower-case kebab/,
 		);

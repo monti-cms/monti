@@ -19,11 +19,11 @@ import { engineLabel, resultLabel, slotLabel, slotTargetLabel } from "./labels.m
 
 const t = createTranslator(customMessages);
 
-/** 화면 기능(D12·M8-5)의 기본 정보 고르기: 이름·붙을 곳·결과 모양. */
+/** Picking the basic info of a screen action: name, attach target, result shape. */
 
 type Option = { value: string; label: string };
 
-/** AI 화면의 고르기 칸. 닫힌 칸에는 값이 아니라 이름이 보인다. */
+/** Select field of the AI screen. The closed field shows the name, not the value. */
 export function OptionSelect({
 	id,
 	value,
@@ -62,7 +62,7 @@ export function OptionSelect({
 	);
 }
 
-/** 필드 옆에 붙일 수 있는 필드(글·주소·관계·선택 필드). 조건부 필드의 선택 값도 고른다. 값은 `컬렉션:필드`다. */
+/** Fields that can have a button next to them (text, URL, relation, select fields). Also picks the option values of conditional fields. The value is `collection:field`. */
 const FIELD_OPTIONS = COLLECTIONS.flatMap((collection) =>
 	Object.entries(schemaOf(collection).fields).flatMap(([name, field]) => {
 		const target = field.kind === "conditional" ? field.discriminant : field;
@@ -72,7 +72,7 @@ const FIELD_OPTIONS = COLLECTIONS.flatMap((collection) =>
 	}),
 );
 
-/** 붙을 곳 고르기. 이름은 그리는 때의 언어로 만든다. */
+/** Attach target picker. Names are built in the language at render time. */
 const placeOptionsOf = (): ReadonlyArray<{ value: string; label: string; surface: CustomSurface | null }> => [
 	{ value: "field", label: t("place.field"), surface: null },
 	{ value: "selection", label: slotLabel("selection"), surface: { slot: "selection" } },
@@ -118,13 +118,13 @@ const placeValue = (surface: CustomSurface) =>
 				? `${surface.slot}:${surface.target}`
 				: surface.slot;
 
-/** 첫 필드 자리. 글·주소 필드가 없으면 선택 영역 메뉴다. */
+/** First field slot. If there is no text or URL field, it is the selection menu. */
 const firstField = (): CustomSurface => {
 	const [collection, field] = (FIELD_OPTIONS[0]?.value ?? "").split(":");
 	return collection && field ? { slot: "field", field, collections: [collection] } : { slot: "selection" };
 };
 
-/** 자리에 맞춘 결과 모양·방식. 쓸 수 없는 값은 첫 값으로 바꾼다(관계·선택 필드는 판단 방식이 먼저다). */
+/** Result shape and mode matched to the slot. Values that cannot be used become the first value (for relation and select fields, the judge mode comes first). */
 const fitted = (base: CustomBase, surface: CustomSurface): CustomBase => {
 	const results = customResults(surface);
 	const engines = customEngines(surface);
@@ -140,7 +140,7 @@ const fitted = (base: CustomBase, surface: CustomSurface): CustomBase => {
 export const NEW_CUSTOM_BASE = (): CustomBase =>
 	fitted({ label: "", surface: firstField(), result: "text" }, firstField());
 
-/** 기본 정보 입력. 붙을 곳을 바꾸면 그 자리에서 쓸 수 없는 결과 모양·방식은 첫 값으로 바꾼다. */
+/** Basic info inputs. Changing the attach target turns result shapes and modes that cannot be used there into the first value. */
 export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChange: (base: CustomBase) => void }) {
 	const ids = { label: useId(), place: useId(), field: useId(), result: useId(), engine: useId() };
 	const setSurface = (surface: CustomSurface) => onChange(fitted(base, surface));

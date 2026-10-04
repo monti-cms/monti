@@ -1,8 +1,8 @@
 /**
- * 저작 API. 사이트 설정 파일(`cms.config.ts`)이 import하는 진입점이다.
+ * Authoring API. Entry point imported by the site config file (`cms.config.ts`).
  *
- * 여기서 내보내는 모듈은 사이트 설정(`config/resolved.ts`)을 import하면 안 된다. 설정 파일이 이 진입점을 import하므로
- * 순환이 생겨 설정이 반쯤 만들어진 채로 읽힌다.
+ * Modules exported here must not import the site config (`config/resolved.ts`). The config file imports this entry point,
+ * so that would create a cycle and the config would be read half-built.
  */
 
 export {
@@ -85,7 +85,7 @@ export {
 	type ViewField,
 } from "./schema/fields";
 export { fieldWithRole, type StoredField, valueFieldsOf, valueWithRole } from "./schema/walk";
-// 글 검사기 약속(설정 파일이 읽는 확장도 쓰므로 사이트 설정을 읽지 않는다).
+// Entry validator contract (also used by extensions the config file reads, so it must not read the site config).
 export * from "./text-check/normalize";
 export * from "./text-check/remote";
 export * from "./text-check/types";

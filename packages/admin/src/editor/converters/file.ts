@@ -1,7 +1,7 @@
 import type { CmsJsonValue } from "@monti-cms/core/mdx";
 import type { BlockConverter } from "./types";
 
-/** 첨부 파일 카드(`::file{mediaId label}`, v3). 빈 `label`은 저장하지 않는다. */
+/** Attachment file card (`::file{mediaId label}`). An empty `label` is not saved. */
 export const fileConverter: BlockConverter = {
 	name: "file",
 	cmsTypes: ["File"],

@@ -33,14 +33,14 @@ vi.mock("../../adapters/auth", () => ({
 
 import { getEntry, getPreview, getTranslations, listEntries } from "../index";
 
-/** 공개 화면 읽기(M14-1). 컬렉션·필드 이름은 설정에서 찾는다(두 설정으로 돈다). */
-describe("공개 화면 읽기 @monti-cms/core/read", () => {
+/** Public site reading. Collection and field names are looked up from the config (it runs against two configs). */
+describe("public site reading @monti-cms/core/read", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
 	const relation = recordRelationField(contentCollection);
 	let relationTarget: (to: string) => Promise<string>;
-	/** 필수값을 채우지 않는 저장(번역본은 공통 값을 갖지 않는다). */
+	/** Saving without filling required values (a translation does not hold the common values). */
 	let rawCreate: ContentStore["createEntryWithReferences"];
 
 	beforeAll(async () => {
@@ -85,7 +85,7 @@ describe("공개 화면 읽기 @monti-cms/core/read", () => {
 		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
 	};
 
-	it("목록을 DB에서 쪽 나누고 정렬하며 초안은 빼고, 관계 조건으로 거른다", async () => {
+	it("paginates and sorts the list in the DB, leaves out drafts, and filters by relation", async () => {
 		const first = await publish("read-list-1");
 		const second = await publish("read-list-2");
 		await seedEntry(store, {
@@ -117,13 +117,13 @@ describe("공개 화면 읽기 @monti-cms/core/read", () => {
 		}
 	});
 
-	/** 이름을 언어별로 두는 항목 컬렉션(주제·분류 등). */
+	/** Item collection with per-locale names (topics, categories, etc.). */
 	const localizedItemCollection = COLLECTIONS.find(
 		(name) => isItemCollection(name) && recordLocalizedFields(name).includes("title"),
 	);
 
 	it.skipIf(!localizedItemCollection || !secondLocale)(
-		"항목 컬렉션을 제목순으로 보면 그 언어의 이름으로 정렬한다",
+		"sorting an item collection by title sorts by that locale's name",
 		async () => {
 			const collection = localizedItemCollection as Collection;
 			const language = secondLocale as string;
@@ -156,7 +156,7 @@ describe("공개 화면 읽기 @monti-cms/core/read", () => {
 		},
 	);
 
-	it("글 하나: 관계를 공개 대상의 제목·주소로 풀고, 주소가 바뀌면 옛 주소는 이동을 알린다", async () => {
+	it("one entry: resolves relations to the published targets' titles and URLs, and an old URL reports a redirect", async () => {
 		const target = relation ? await relationTarget(relation.to) : undefined;
 		const published = await publish(
 			"read-detail",
@@ -190,31 +190,34 @@ describe("공개 화면 읽기 @monti-cms/core/read", () => {
 		expect(await getEntry({ collection: contentCollection, slug: "no-such-entry" })).toEqual({ status: "not_found" });
 	});
 
-	it.skipIf(!secondLocale)("번역: 공개된 언어와 주소, 번역이 없으면 원문으로 대체할 수 있다", async () => {
-		const locale = secondLocale as string;
-		const source = await publish("read-translated");
-		const translated = await publish("read-translated", {}, locale, source.id);
-		const members = await getTranslations({ translationGroupId: source.id });
-		expect(members.map((member) => member.locale)).toEqual([defaultLocale, locale]);
-		expect(members[1]?.path).toBe(localizePath(locale, contentPath(contentCollection, "read-translated") ?? ""));
+	it.skipIf(!secondLocale)(
+		"translations: published locales and URLs, and falls back to the source text if there is no translation",
+		async () => {
+			const locale = secondLocale as string;
+			const source = await publish("read-translated");
+			const translated = await publish("read-translated", {}, locale, source.id);
+			const members = await getTranslations({ translationGroupId: source.id });
+			expect(members.map((member) => member.locale)).toEqual([defaultLocale, locale]);
+			expect(members[1]?.path).toBe(localizePath(locale, contentPath(contentCollection, "read-translated") ?? ""));
 
-		const inLocale = await getEntry({ collection: contentCollection, slug: "read-translated", locale });
-		expect(inLocale).toMatchObject({ status: "found", entry: { id: translated.id, locale, fallback: false } });
+			const inLocale = await getEntry({ collection: contentCollection, slug: "read-translated", locale });
+			expect(inLocale).toMatchObject({ status: "found", entry: { id: translated.id, locale, fallback: false } });
 
-		await publish("read-source-only");
-		expect(await getEntry({ collection: contentCollection, slug: "read-source-only", locale })).toEqual({
-			status: "not_found",
-		});
-		const fallback = await getEntry({
-			collection: contentCollection,
-			slug: "read-source-only",
-			locale,
-			fallback: true,
-		});
-		expect(fallback).toMatchObject({ status: "found", entry: { locale: defaultLocale, fallback: true } });
-	});
+			await publish("read-source-only");
+			expect(await getEntry({ collection: contentCollection, slug: "read-source-only", locale })).toEqual({
+				status: "not_found",
+			});
+			const fallback = await getEntry({
+				collection: contentCollection,
+				slug: "read-source-only",
+				locale,
+				fallback: true,
+			});
+			expect(fallback).toMatchObject({ status: "found", entry: { locale: defaultLocale, fallback: true } });
+		},
+	);
 
-	it("미리보기는 관리자에게만 최신 초안을 보인다", async () => {
+	it("preview shows the latest draft to admins only", async () => {
 		const published = await publish("read-preview");
 		await seedSave(store, published.id, {
 			expectedVersion: published.version,

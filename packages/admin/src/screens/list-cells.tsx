@@ -8,8 +8,8 @@ import { FittingTags } from "./shared/fitting-tags";
 const EMPTY = <span className="text-cms-muted-foreground">—</span>;
 
 /**
- * 컬럼의 칸 컴포넌트를 관리자 확장(`listCells`)에서 찾는다. 컬럼 이름이 먼저고, 없으면 필드의 `input` 이름이다.
- * 없으면 `undefined`(기본 칸을 그린다).
+ * Finds a column's cell component in the admin extension (`listCells`). The column name comes first, otherwise the field's `input` name.
+ * `undefined` if none (the default cell is drawn).
  */
 export function customListCell(
 	listCells: CmsAdminComponents["listCells"],
@@ -23,8 +23,8 @@ export function customListCell(
 }
 
 /**
- * 필드 컬럼의 기본 칸. 관계는 이름(여러 개면 칩), 선택은 선택지 이름표, 글자·미디어는 저장된 글이다.
- * 값이 없으면 `—`이다. 날짜는 시스템 컬럼(수정일·만든 날·발행일)이 따로 그린다.
+ * Default cell of a field column. Relations show names (chips if several), select shows the option label, text and media show the stored text.
+ * `—` when there is no value. Dates are drawn separately by the system columns (updated, created, published).
  */
 export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
 	const stored = fieldColumnOf(collection, column);

@@ -27,30 +27,30 @@ const EXTENSIONS: Record<AllowedMediaMime, string> = {
 	"application/json": "json",
 };
 
-/** 파일 키의 확장자는 사용자가 준 파일명 대신 형식에서 정한다. */
+/** The file key's extension comes from the type, not from the user-supplied filename. */
 export const extensionFor = (mimeType: AllowedMediaMime) => EXTENSIONS[mimeType];
 
-/** 글자 파일은 앞부분만 읽어 확인한다. */
+/** Text files are checked by reading only the beginning. */
 const TEXT_SNIFF_BYTES = 64 * 1024;
 
 const startsWith = (bytes: Uint8Array, signature: readonly number[]) =>
 	signature.every((byte, index) => bytes[index] === byte);
 
 /**
- * 첨부 파일의 실제 바이트가 선언한 형식과 맞는지 본다. PDF·zip은 파일 서명으로, 글자 파일은
- * UTF-8로 읽히고 NUL 바이트가 없는지로 확인한다(바이너리를 글자 파일로 올리는 것을 막는다).
+ * Checks that an attachment's actual bytes match the declared type. PDF and zip use file signatures; text files are checked
+ * by being readable as UTF-8 with no NUL bytes (this stops binaries from being uploaded as text files).
  */
 function detectFileType(bytes: Uint8Array, declared: AllowedFileMime): boolean {
 	switch (declared) {
 		case "application/pdf":
 			return startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]); // %PDF-
 		case "application/zip":
-			// 일반 zip과 빈 zip.
+			// Regular zip and empty zip.
 			return startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]) || startsWith(bytes, [0x50, 0x4b, 0x05, 0x06]);
 		default: {
 			if (bytes.includes(0)) return false;
 			try {
-				// 앞부분만 읽어 마지막 글자가 잘렸을 수 있다. 끝의 3바이트는 검사에서 뺀다.
+				// Only the start was read, so the last character may be cut off. Exclude the final 3 bytes from the check.
 				const end = bytes.length >= TEXT_SNIFF_BYTES ? Math.max(0, bytes.length - 3) : bytes.length;
 				new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, end));
 				return true;
@@ -67,8 +67,8 @@ export interface InspectedFile {
 }
 
 /**
- * 업로드된 staging 파일을 실제 바이트로 검사한다(§7.1): 크기, 형식(클라이언트 MIME을 믿지 않는다), 픽셀 수.
- * 첨부 파일(v3)은 `declared` 형식과 실제 내용이 맞는지 본다. 실패하면 `HttpError`를 던진다.
+ * Inspects an uploaded staging file by its actual bytes: size, type (the client MIME is not trusted), and pixel count.
+ * For attachments, checks that the `declared` type matches the actual content. Throws `HttpError` on failure.
  */
 export async function inspectUploadedFile(
 	mediaStore: MediaStore,
@@ -87,7 +87,7 @@ export async function inspectUploadedFile(
 		}
 		const mimeType = declared as AllowedFileMime;
 		const sniff = mimeType === "application/pdf" || mimeType === "application/zip" ? 8 : TEXT_SNIFF_BYTES;
-		// 빈 파일은 읽지 않는다(빈 글자 파일만 통과한다).
+		// Empty files are not read (only an empty text file passes).
 		const bytes =
 			head.contentLength > 0
 				? mediaStore.readPrefix
@@ -114,7 +114,7 @@ export async function inspectUploadedFile(
 	return { head, detected };
 }
 
-/** 첨부 파일을 원래 이름으로 내려받게 하는 헤더 값(RFC 6266·5987). */
+/** Header value that makes an attachment download under its original name (RFC 6266, 5987). */
 export function attachmentDisposition(filename: string): string {
 	const ascii = filename.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");
 	return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-/** 문서가 어두운 테마인지(`html`의 `dark` 클래스·`data-theme="dark"`, 없으면 시스템 설정). */
+/** Whether the document is in the dark theme (the `dark` class or `data-theme="dark"` on `html`, else the system setting). */
 const isDarkDocument = () => {
 	const root = document.documentElement;
 	if (root.classList.contains("dark") || root.dataset.theme === "dark") return true;
@@ -10,7 +10,7 @@ const isDarkDocument = () => {
 	return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
 };
 
-/** 문서의 어두운 테마 여부. 테마가 바뀌면 다시 읽는다. */
+/** Whether the document uses the dark theme. Re-read when the theme changes. */
 function useDarkTheme() {
 	const [dark, setDark] = useState(false);
 	useEffect(() => {
@@ -26,8 +26,8 @@ function useDarkTheme() {
 type State = { readonly svg: string } | { readonly error: string } | null;
 
 /**
- * Mermaid 다이어그램(` ```mermaid `). 서버와 불러오기 전에는 원문을 보이고, 브라우저에서 `mermaid`(선택 의존성)를 불러와
- * 다이어그램으로 바꾼다. 불러오지 못하거나 문법이 틀리면 원문과 오류 글을 그대로 둔다. 테마가 바뀌면 다시 그린다.
+ * Mermaid diagram (` ```mermaid `). On the server and before loading it shows the source, then loads `mermaid` (optional dependency) in the browser and
+ * turns it into a diagram. If loading fails or the syntax is wrong, the source and the error text stay as they are. Redrawn when the theme changes.
  */
 export function MermaidView({ source }: { source: string }) {
 	const baseId = useId().replace(/[^\w-]/g, "");
@@ -59,7 +59,7 @@ export function MermaidView({ source }: { source: string }) {
 	return (
 		<figure className="cms-block-mermaid" data-state={svg ? "ready" : error ? "error" : "loading"}>
 			{svg ? (
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: mermaid가 `securityLevel: "strict"`로 걸러 낸 SVG다
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG sanitized by mermaid with `securityLevel: "strict"`
 				<div className="cms-block-mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />
 			) : (
 				<pre className="cms-block-mermaid-source">

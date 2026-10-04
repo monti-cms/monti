@@ -6,8 +6,8 @@ import { adminRoute, json } from "../../../handler";
 import { attachmentDisposition, extensionFor, inspectUploadedFile } from "../../media-files";
 
 /**
- * 업로드 완료 확인(§7.2). 저장된 파일을 서버가 검사한 뒤에만 `ready`로 확정한다.
- * 확인에 실패하면 미디어는 사용 가능 상태가 되지 않고 `failed`로 남아 정리 대상이 된다.
+ * Upload completion check. Marks the media `ready` only after the server inspects the stored file.
+ * If the check fails, the media does not become usable and stays `failed`, to be cleaned up.
  */
 export const POST = adminRoute<{ id: string }>(async ({ params }) => {
 	const store = getCmsContentStore();
@@ -38,7 +38,7 @@ export const POST = adminRoute<{ id: string }>(async ({ params }) => {
 		file = await inspectUploadedFile(mediaStore, media.stagingKey, media.mimeType);
 		if (media.original?.stagingKey) original = await inspectUploadedFile(mediaStore, media.original.stagingKey);
 	} catch (error) {
-		// 파일이 아직 없으면 재시도할 수 있게 그대로 둔다. 검사에 실패한 파일은 사용할 수 없다.
+		// If the file is not there yet, leave it as is so it can be retried. A file that fails inspection cannot be used.
 		if (!(error instanceof HttpError) || error.code !== "upload_incomplete") await store.failMediaAsset(params.id);
 		throw error;
 	}
@@ -49,7 +49,7 @@ export const POST = adminRoute<{ id: string }>(async ({ params }) => {
 		finalKey,
 		expectedEtag: file.head.etag,
 		contentType: file.detected.mimeType,
-		// 첨부 파일은 원래 이름으로 내려받는다. 이미지는 브라우저에서 바로 보인다.
+		// Attachments download under their original name. Images display directly in the browser.
 		...(isImageMime(file.detected.mimeType) ? {} : { contentDisposition: attachmentDisposition(media.filename) }),
 	});
 	let originalKey: string | null = null;
@@ -76,7 +76,7 @@ export const POST = adminRoute<{ id: string }>(async ({ params }) => {
 						storageKey: originalKey,
 						mimeType: original.detected.mimeType,
 						byteSize: original.head.contentLength,
-						// 원본은 늘 이미지라 크기가 있다.
+						// The original is always an image, so it has dimensions.
 						width: original.detected.width ?? 0,
 						height: original.detected.height ?? 0,
 					},

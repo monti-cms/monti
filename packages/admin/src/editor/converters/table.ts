@@ -24,7 +24,7 @@ export const tableConverter: BlockConverter = {
 	name: "table",
 	cmsTypes: ["table"],
 	tiptapTypes: ["table"],
-	// GFM 표는 셀마다 인라인만 담는다.
+	// A GFM table holds only inline content per cell.
 	isMappable: (node, ctx) =>
 		(node.content ?? []).every(
 			(row) =>
@@ -51,7 +51,7 @@ export const tableConverter: BlockConverter = {
 					const attrs: Record<string, unknown> = {};
 					if (colspan > 1) attrs.colspan = colspan;
 					if (rowspan > 1) attrs.rowspan = rowspan;
-					// 표의 열 너비를 셀이 덮는 열마다 prosemirror-tables의 colwidth로 나눠 준다(0은 자동).
+					// Split the table's column widths into prosemirror-tables colwidth per column each cell covers (0 is auto).
 					const start = columns[rowIndex]?.[cellIndex] ?? 0;
 					const colwidth = Array.from({ length: colspan }, (_, index) => widths[start + index] ?? 0);
 					if (colwidth.some((width) => width > 0)) attrs.colwidth = colwidth;
@@ -66,9 +66,9 @@ export const tableConverter: BlockConverter = {
 	},
 	toCms: (node, ctx) => {
 		const rows = node.content ?? [];
-		// 병합 셀이 있는지 확인한다. 병합 셀이 있으면 header 속성을 유지하고, 없으면 GFM 규칙을 따른다.
+		// Check whether there are merged cells. If so, keep the header attribute; if not, follow GFM rules.
 		const hasMerges = tableHasMergedCells(node);
-		// 셀의 colwidth를 격자 열 기준 표 너비 목록으로 모은다.
+		// Gather each cell's colwidth into a list of table widths per grid column.
 		const columns = tableCellColumns(rows.map((row) => row.content ?? []));
 		const collected: Array<number | null> = [];
 		rows.forEach((row, rowIndex) => {
@@ -94,7 +94,7 @@ export const tableConverter: BlockConverter = {
 				content: rows.map((row) => ({
 					type: "tableRow",
 					content: (row.content ?? []).map((cell) => {
-						// 셀 안의 여러 문단은 GFM 표에 담을 수 없어 줄바꿈으로 잇는다.
+						// Multiple paragraphs in a cell cannot go into a GFM table, so they are joined with line breaks.
 						const paragraphs = (cell.content ?? []).map((block) => ctx.inlineToCms(block.content));
 						const inline = paragraphs.flatMap((content, index) =>
 							index === 0 ? content : [brDirectiveNode(), ...content],
@@ -105,8 +105,8 @@ export const tableConverter: BlockConverter = {
 						const attrs: Record<string, CmsJsonValue> = {};
 						if (colspan > 1) attrs.colspan = colspan;
 						if (rowspan > 1) attrs.rowspan = rowspan;
-						// 병합·열 너비 표는 머리글만, 비GFM 머리글 배치는 모든 셀의 머리글 여부를 명시한다.
-						// GFM 첫 행 머리글 표는 속성을 비워 기존 바이트를 보존한다.
+						// For merged or column-width tables, only the header is stated; for non-GFM header layouts, whether each cell is a header is stated explicitly.
+						// A GFM first-row-header table leaves the attribute empty to preserve the existing bytes.
 						if (directive && isHeader) attrs.header = true;
 						else if (explicitHeaders && !directive) attrs.header = isHeader;
 

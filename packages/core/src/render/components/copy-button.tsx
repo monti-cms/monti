@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-/** 코드 복사 단추. 복사하면 잠깐 `copiedLabel`을 보인다. */
+/** Code copy button. After copying, it briefly shows `copiedLabel`. */
 export function CmsCopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
 	const [copied, setCopied] = useState(false);
 	return (
@@ -17,7 +17,7 @@ export function CmsCopyButton({ text, label, copiedLabel }: { text: string; labe
 					setCopied(true);
 					setTimeout(() => setCopied(false), 1200);
 				} catch {
-					// 클립보드를 쓸 수 없는 곳(권한·http)에서는 아무것도 하지 않는다.
+					// Do nothing where the clipboard is unavailable (permissions, http).
 				}
 			}}
 		>

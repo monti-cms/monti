@@ -20,8 +20,8 @@ export const MAX_SLUG_LENGTH = 200;
 export type SlugInputError = "invalid_slug_format" | "slug_too_long";
 
 /**
- * §6.2 저장용 slug 정규화. NFC·앞뒤 공백 제거 후 빈 값은 `null`(slug 없는 초안)이다.
- * `/`, `?`, `#`, 제어문자는 거부하고 길이는 코드 포인트로 센다.
+ * Slug normalization for storage. Applies NFC and trims surrounding whitespace; an empty result is `null` (a draft without a slug).
+ * Rejects `/`, `?`, `#` and control characters; length is counted in code points.
  */
 export function normalizeSlugInput(
 	raw: string | null | undefined,

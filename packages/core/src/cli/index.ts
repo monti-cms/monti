@@ -3,10 +3,10 @@ import { formatInitReport, initProject } from "./init";
 import { migrate } from "./migrate";
 
 /**
- * 명령줄 `monti`(패키지 `bin`). `bin/monti.mjs`가 tsx를 건 뒤 부른다.
+ * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
- * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: Next 앱에 설정·라우트 파일을 만들고 tsconfig·CSS·next 설정을 잇는다.
- * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <파일>] [--server <파일>]`: DB 표를 만든다.
+ * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: creates config and route files in a Next app and wires up tsconfig, CSS and the next config.
+ * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--server <file>]`: creates the DB tables.
  */
 
 export { type ConfigPaths, parseJsonc, resolveConfigPaths } from "./config-paths";
@@ -34,7 +34,7 @@ export interface CliIo {
 	readonly error: (message: string) => void;
 }
 
-/** 명령을 돌리고 종료 코드를 돌려준다. */
+/** Runs the command and returns the exit code. */
 export async function runCli(
 	argv: readonly string[],
 	io: CliIo = { cwd: process.cwd(), log: console.log, error: console.error },

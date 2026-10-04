@@ -7,7 +7,7 @@ vi.mock("@monti-cms/core/adapters/auth", () => ({
 	AuthError: class AuthError extends Error {},
 }));
 
-/** 공통 문구 줄과 기능 고친 값을 들고 있는 저장소. 버전이 다르면 409다. */
+/** A store holding the shared text rows and action overrides. A version mismatch gives 409. */
 const state = vi.hoisted(() => ({
 	shared: null as { value: unknown; version: number } | null,
 	overrides: [] as Array<{ key: string; value: unknown; version: number }>,
@@ -39,13 +39,13 @@ const call = (handler: (request: NextRequest) => Promise<Response>, method: stri
 		}),
 	);
 
-describe("공통 문구 API", () => {
+describe("shared texts API", () => {
 	beforeEach(() => {
 		state.shared = null;
 		state.overrides = [];
 	});
 
-	it("목록은 설정 문구와 더한 문구를 `source`로 나눠 보인다", async () => {
+	it("the list separates config texts and added texts by `source`", async () => {
 		const added = await call(POST, "POST", { expectedVersion: 0, key: "tone", label: "말투", text: "정중하게" });
 		expect(added.status).toBe(201);
 		const res = await call(GET, "GET");
@@ -58,7 +58,7 @@ describe("공통 문구 API", () => {
 		});
 	});
 
-	it("하나·여럿 고치기와 삭제는 버전을 확인한다", async () => {
+	it("single and bulk edits and deletion check the version", async () => {
 		await call(POST, "POST", { expectedVersion: 0, key: "tone", label: "말투", text: "" });
 		const patched = await call(PATCH, "PATCH", { expectedVersion: 1, key: "tone", label: "어조", text: "짧게" });
 		expect(await patched.json()).toMatchObject({ version: 2, items: [{}, { label: "어조", text: "짧게" }] });
@@ -74,7 +74,7 @@ describe("공통 문구 API", () => {
 		expect(((await deleted.json()) as { items: unknown[] }).items).toHaveLength(1);
 	});
 
-	it("고친 지시문이 쓰는 문구는 삭제하지 못한다", async () => {
+	it("cannot delete a text used by an edited prompt", async () => {
 		await call(POST, "POST", { expectedVersion: 0, key: "tone", label: "말투", text: "" });
 		state.overrides = [{ key: "summary", value: { prompt: "요약한다.\n{{shared.tone}}" }, version: 1 }];
 		const res = await call(DELETE, "DELETE", undefined, "?key=tone&expectedVersion=1");

@@ -8,7 +8,7 @@ import { BAREUN_CHECKER_ID, BAREUN_ROUTE } from "./options";
 
 const options = readBareunOptions();
 
-/** 바른 검사기. 브라우저는 사이트 서버 경로로 문단만 보낸다(키는 서버가 가진다). */
+/** The Bareun checker. The browser sends only paragraphs to the site's server route (the server holds the key). */
 export const bareunChecker = remoteTextChecker({
 	id: BAREUN_CHECKER_ID,
 	label: options.label,
@@ -20,7 +20,7 @@ export const bareunChecker = remoteTextChecker({
 
 const components: CmsAdminComponents = { textCheckers: [bareunChecker] };
 
-/** 편집기 도구 모음에 바른 검사 버튼을 넣는다(결과는 물결 밑줄·결과 창). */
+/** Adds the Bareun check button to the editor toolbar (results appear as wavy underlines and a results panel). */
 export function BareunProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

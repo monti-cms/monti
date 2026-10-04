@@ -12,16 +12,16 @@ import { uiMessages } from "./messages";
 const t = createTranslator(uiMessages);
 
 /**
- * 밝은·어두운 테마 전환 버튼. 서버 렌더에서는 현재 테마를 알 수 없고, 서버에서 그린 버튼이
- * 뒤따르는 요소의 자동 ID(useId)를 브라우저와 다르게 만들었다(hydration 불일치). 그래서 hydration이
- * 끝날 때까지는 같은 크기의 자리표시를 두고, 그 뒤에 실제 버튼을 그린다.
+ * Toggle button for light and dark themes. On server render the current theme is unknown, and the button rendered on the server
+ * gave the elements after it automatic IDs (useId) different from the browser's (hydration mismatch). So until hydration
+ * finishes it renders a same-size placeholder, and afterwards the real button.
  */
 export function ThemeToggle({
 	className,
 	labels = { toLight: t("theme.toLight"), toDark: t("theme.toDark") },
 	...props
 }: Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
-	/** 버튼 이름. 공개 블로그는 화면 언어의 문구를 넘긴다(v2 B4). */
+	/** Button name. The public blog passes a message in its display language. */
 	labels?: { toLight: string; toDark: string };
 }) {
 	const { resolvedTheme, setTheme } = useTheme();

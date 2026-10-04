@@ -1,6 +1,6 @@
 /**
- * 서버 설정 저작 API. 서버 설정 파일(`cms.server.ts`)이 import하는 진입점이다.
- * 여기서 내보내는 모듈은 서버 설정(`server/resolved.ts`)·`container.ts`를 import하면 안 된다(순환).
+ * Server config authoring API. The entry point imported by the server config file (`cms.server.ts`).
+ * Modules exported here must not import the server config (`server/resolved.ts`) or `container.ts` (cycle).
  */
 
 export { type GithubAuthOptions, githubAuth } from "../adapters/auth/github";

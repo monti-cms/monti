@@ -20,8 +20,8 @@ vi.mock("../../container", () => ({
 	getCmsAuth: () => auth,
 }));
 
-describe("관리자 API 경로표", () => {
-	it("이름 있는 조각이 [이름] 조각보다 먼저 맞고, 매개변수를 꺼낸다", () => {
+describe("admin API route table", () => {
+	it("named segments match before [name] segments, and params are extracted", () => {
 		expect(matchRoute(["v1", "entries"])?.params).toEqual({});
 		expect(matchRoute(["v1", "entries", "abc"])?.params).toEqual({ id: "abc" });
 		expect(matchRoute(["v1", "entries", "abc", "publish"])?.params).toEqual({ id: "abc" });
@@ -32,7 +32,7 @@ describe("관리자 API 경로표", () => {
 		expect(matchRoute(["v2", "entries"])).toBeNull();
 	});
 
-	it("공개 API는 본체 선택 기능이고(서버 설정 publicApi), AI·예약 경로는 플러그인이 더한다", () => {
+	it("the public API is an optional core feature (server config publicApi), and AI and schedule routes are added by plugins", () => {
 		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries");
 		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries/[collection]/[slug]");
 		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.startsWith("v1/ai"))).toBe(false);
@@ -40,7 +40,7 @@ describe("관리자 API 경로표", () => {
 		expect(CMS_ROUTE_PATTERNS).toHaveLength(25);
 	});
 
-	it("없는 경로는 404, 없는 메서드는 405, 맞는 경로는 그 라우트가 받는다", async () => {
+	it("an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
 		const handler = createCmsRouteHandler();
 		const call = (method: "GET" | "DELETE", path: string) =>
 			handler[method](
@@ -52,7 +52,7 @@ describe("관리자 API 경로표", () => {
 		expect((await call("GET", "v1/preferences")).status).toBe(200);
 	});
 
-	it("로그인 경로가 기본(`/api/cms/auth`)이면 `auth/*`를 로그인 처리기로 넘긴다", async () => {
+	it("when the auth path is the default (`/api/cms/auth`), forwards `auth/*` to the auth handler", async () => {
 		const handler = createCmsRouteHandler();
 		const call = (method: "GET" | "POST" | "DELETE", path: string) =>
 			handler[method](new NextRequest(`http://localhost/api/cms/${path}`, { method }), {
@@ -63,7 +63,7 @@ describe("관리자 API 경로표", () => {
 		expect(auth.handlers.GET).toHaveBeenCalledTimes(1);
 		expect((await call("DELETE", "auth/session")).status).toBe(405);
 
-		// 앱이 로그인 경로를 따로 두면(`basePath: "/api/auth"`) CMS API 아래로는 받지 않는다.
+		// If the app sets a separate auth path (`basePath: "/api/auth"`), it is not accepted under the CMS API.
 		auth.basePath = "/api/auth";
 		expect((await call("GET", "auth/session")).status).toBe(404);
 		expect(auth.handlers.GET).toHaveBeenCalledTimes(1);

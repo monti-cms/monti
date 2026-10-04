@@ -1,7 +1,7 @@
 import { normalizeIssue } from "./normalize";
 import type { TextCheckContext, TextCheckerLimits, TextCheckSegment, TextIssue } from "./types";
 
-/** 서버 검사 경로가 부르는 함수. 사이트가 API 키로 실제 검사기를 부른다. */
+/** Function the server check route calls. The site calls the real checker with an API key. */
 export type ServerTextCheck = (
 	segments: readonly TextCheckSegment[],
 	context: TextCheckContext,
@@ -9,7 +9,7 @@ export type ServerTextCheck = (
 
 export interface TextCheckRouteOptions {
 	readonly check: ServerTextCheck;
-	/** 한 요청이 보낼 수 있는 문단 수·글자 수. 기본 100문단·20,000자. 넘으면 413이다. */
+	/** Number of paragraphs and characters one request may send. Default 100 paragraphs and 20,000 characters. Beyond that it is 413. */
 	readonly limits?: TextCheckerLimits;
 }
 
@@ -25,7 +25,7 @@ const fail = (status: number, code: string, message: string): TextCheckResponse 
 	body: { code, message },
 });
 
-/** 요청 본문 `{ segments: [{ id, text, locale }] }`를 확인한다. 잘못됐으면 오류 응답을 돌려준다. */
+/** Validates the request body `{ segments: [{ id, text, locale }] }`. Returns an error response if it is invalid. */
 export function parseTextCheckBody(
 	body: unknown,
 	limits: TextCheckerLimits = DEFAULT_LIMITS,
@@ -49,8 +49,8 @@ export function parseTextCheckBody(
 }
 
 /**
- * 검사 요청 하나를 처리한다(인증은 감싸는 경로가 한다). 검사기 결과 중 요청에 없는 문단이나 문단을 벗어난 위치는 뺀다.
- * 검사기 오류는 자세한 내용(키가 섞일 수 있다)을 서버 기록에만 남기고 502로 돌려준다.
+ * Handles one check request (authentication is done by the wrapping route). Drops results from the checker that name paragraphs not in the request or positions outside the paragraph.
+ * Checker errors keep the details (which may include keys) only in the server log and return 502.
  */
 export async function handleTextCheck(
 	body: unknown,
@@ -73,7 +73,7 @@ export async function handleTextCheck(
 		const segmentId = (item as { segmentId?: unknown })?.segmentId;
 		const length = typeof segmentId === "string" ? lengths.get(segmentId) : undefined;
 		if (typeof segmentId !== "string" || length === undefined) continue;
-		// 출처가 없으면 비워 둔다. 브라우저 쪽이 검사기 `id`로 채운다.
+		// If there is no source, leave it empty. The browser side fills it with the checker `id`.
 		const issue = normalizeIssue(item, length, "");
 		if (!issue) continue;
 		const { source, ...rest } = issue;

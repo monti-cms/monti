@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
 		globals: true,
 		include: ["src/**/*.{test,spec}.{ts,tsx}"],
 		setupFiles: ["../admin/src/test/setup-dom.ts"],
-		// 저장소 루트에서 함께 돌 때는 다른 묶음 뒤에 돈다(`vitest.config.ts`).
+		// When run together from the repository root, it runs after the other bundles (`vitest.config.ts`).
 		sequence: { groupOrder: 3 },
 		testTimeout: 60000,
 		hookTimeout: 60000,
@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => ({
 	},
 	resolve: {
 		alias: {
-			// 블록 확장 테스트는 본체 패키지의 예시 설정(이 패키지의 블록을 모두 쓴다)으로 돈다.
+			// Block extension tests run with the core package's example config (which uses all of this package's blocks).
 			"@cms-config": path.resolve(__dirname, "../core/test/cms.config.ts"),
 			"@cms-server": path.resolve(__dirname, "../core/test/cms.server.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),

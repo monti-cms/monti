@@ -1,4 +1,4 @@
-/** 사이트 주소(`/images/a.png`)를 이 사이트의 절대 주소로. 다른 사이트 주소는 `null`(서버가 남의 주소를 부르지 않는다). */
+/** Turns a site path (`/images/a.png`) into this site's absolute URL. Other sites' URLs become `null` (the server does not call other people's URLs). */
 export function siteImageUrl(src: string, origin: string): URL | null {
 	const trimmed = src.trim();
 	if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\")) return null;

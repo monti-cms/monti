@@ -4,7 +4,7 @@ import { screensMessages } from "./messages";
 
 const t = createTranslator(screensMessages);
 
-/** 관리자 API 오류. 화면은 `message`를 그대로 보여 주고, 분기는 `status`·`code`로 한다. */
+/** Admin API error. The screen shows `message` as is and branches on `status` and `code`. */
 export class CmsApiError extends Error {
 	constructor(
 		readonly status: number,
@@ -19,8 +19,8 @@ export class CmsApiError extends Error {
 }
 
 /**
- * 관리자 API 호출(주소는 `cmsApiUrl()`로 만든다). `json`을 주면 JSON 본문으로 보낸다. 실패 응답은 {@link CmsApiError}로 던진다.
- * 네트워크 오류는 원래 `TypeError`를 그대로 던져 호출자가 오프라인과 구분할 수 있게 한다.
+ * Calls the admin API (the URL is built with `cmsApiUrl()`). Passing `json` sends a JSON body. A failed response is thrown as {@link CmsApiError}.
+ * A network error rethrows the original `TypeError` so callers can tell it apart from being offline.
  */
 export async function cmsFetch<T = unknown>(
 	url: string,

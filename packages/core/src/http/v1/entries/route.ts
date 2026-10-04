@@ -3,7 +3,7 @@ import { createEntryBodySchema, LIST_ARRAY_QUERY_KEYS, listEntriesQuerySchema } 
 import type { ServiceInput } from "../../../services/types";
 import { adminRoute, json, parseWith, readJsonBody, readQuery } from "../handler";
 
-/** 컬렉션별 목록·검색·필터·정렬·페이지(§3.2). */
+/** Per-collection list, search, filter, sort, and paging. */
 export const GET = adminRoute(async ({ request }) => {
 	const query = parseWith(
 		listEntriesQuerySchema,
@@ -34,7 +34,7 @@ export const GET = adminRoute(async ({ request }) => {
 	return json(result);
 });
 
-/** 생성. record 컬렉션(태그·카테고리·모음집)은 서비스가 생성과 함께 공개 값에 반영한다(§5.2). */
+/** Create. For record collections (tags, categories, series) the service applies the public values together with creation. */
 export const POST = adminRoute(async ({ request }) => {
 	const body = parseWith(createEntryBodySchema, await readJsonBody(request));
 	const input = {

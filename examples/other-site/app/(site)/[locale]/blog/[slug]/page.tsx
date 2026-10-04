@@ -5,7 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-/** 글 하나. 옛 주소면 새 주소로 옮기고, 본문은 본체 렌더(블록 확장의 공개 컴포넌트 포함)로 그린다. */
+/** A single article. An old URL redirects to the new one, and the body is drawn by the core renderer (including the blocks extension's public components). */
 export default async function ArticlePage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
 	const { locale, slug } = await params;
 	if (!isLocale(locale)) notFound();

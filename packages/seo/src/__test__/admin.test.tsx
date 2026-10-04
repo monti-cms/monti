@@ -3,18 +3,18 @@ import { type SlotAction, SlotRegistryProvider } from "@monti-cms/admin/slots";
 import { COLLECTIONS, type Collection, createTranslator, roleField, SITE_NAME, schemaOf } from "@monti-cms/core/client";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-// 속성 칸은 공개 진입점이 아니라 관리자 패키지 소스에서 읽는다(테스트 전용).
+// The properties panel is read from the admin package source, not the public entry point (tests only).
 import { InspectorPanel } from "../../../admin/src/screens/entries/inspector-panel";
 import { SEO_ROLES } from "..";
 import { SeoAdminProvider } from "../admin/provider";
 import { seoMessages } from "../messages";
 
-// 화면 문구는 설정의 관리자 언어를 따르므로 사전에서 같은 말을 고른다.
+// UI text follows the admin language from the config, so the same wording is picked from the dictionary.
 const t = createTranslator(seoMessages);
 
 /**
- * SEO 확장의 관리자 화면(설정과 상관없이, M10-1 재발 방지). 컬렉션·필드·탭은 지금 설정에서 역할로 찾는다
- * (블로그 예시 설정은 `SEO` 탭의 `seoTitle`…, 다른 사이트 설정은 `Search` 탭의 `metaTitle`…).
+ * Admin UI of the SEO extension (works regardless of config; regression guard). Collections, fields and tabs are found by role in the current config
+ * (the example blog config uses `seoTitle`… in the `SEO` tab, the other-site config uses `metaTitle`… in the `Search` tab).
  */
 
 beforeEach(() => {
@@ -63,17 +63,17 @@ function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] 
 	return onChange;
 }
 
-describe("SEO 확장 관리자 화면", () => {
-	it("SEO 필드는 배치를 적지 않아도 제 탭에 모인다", async () => {
+describe("SEO extension admin UI", () => {
+	it("SEO fields gather in their tab even without a layout", async () => {
 		const title = field(SEO_ROLES.title);
 		renderPanel({ ...EMPTY_FORM, title: "Entry title", [title.name]: "Search value" });
 		expect(((await screen.findByLabelText(title.field.label)) as HTMLInputElement).value).toBe("Search value");
 		expect(screen.getByLabelText(field(SEO_ROLES.description).field.label).tagName).toBe("TEXTAREA");
-		// 공유 이미지는 미디어 필드라 미디어 고르기로 입력한다.
+		// The share image is a media field, so it is entered through the media picker.
 		expect(screen.getByLabelText(field(SEO_ROLES.image).field.label).textContent).toBeTruthy();
 	});
 
-	it("검색 미리보기는 역할 필드 값을 쓰고, 비면 제목·요약을 쓴다", async () => {
+	it("the search preview uses role field values and falls back to the title and summary when empty", async () => {
 		renderPanel({
 			...EMPTY_FORM,
 			title: "Entry title",
@@ -87,7 +87,7 @@ describe("SEO 확장 관리자 화면", () => {
 		expect(screen.getByRole("region", { name: t("preview.share") })).toBeTruthy();
 	});
 
-	it("비운 검색 제목·설명은 대신 쓸 값을 안내 문구와 글자 수로 보인다", async () => {
+	it("an empty search title or description shows the fallback value as a hint and character count", async () => {
 		const title = field(SEO_ROLES.title);
 		renderPanel({ ...EMPTY_FORM, title: "Entry title", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) });
 		expect(((await screen.findByLabelText(title.field.label)) as HTMLInputElement).placeholder).toBe("Entry title");
@@ -99,14 +99,14 @@ describe("SEO 확장 관리자 화면", () => {
 		}
 	});
 
-	it("숨기기는 이름표 줄의 스위치이고, 켜면 `noindex`다", async () => {
+	it("hide is a switch in the label row, and on means `noindex`", async () => {
 		const noindex = field(SEO_ROLES.noindex);
 		const onChange = renderPanel({ ...EMPTY_FORM, title: "Entry" });
 		fireEvent.click(await screen.findByRole("switch", { name: noindex.field.label }));
 		expect(onChange).toHaveBeenCalledWith({ [noindex.name]: "noindex" });
 	});
 
-	it("검색 제목 옆 동작(AI 등)은 그대로 붙고 요약 역할 값을 `summary`로 받는다", async () => {
+	it("actions next to the search title (AI and others) stay attached and receive the summary role value as `summary`", async () => {
 		const run = vi.fn<SlotAction["run"]>(async () => ({ kind: "text", text: "New" }));
 		renderPanel({ ...EMPTY_FORM, title: "Entry", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) }, vi.fn(), [
 			{ id: "t", label: "Suggest", apply: "replace", run },
@@ -116,7 +116,7 @@ describe("SEO 확장 관리자 화면", () => {
 		expect(run.mock.calls[0]?.[0]).toMatchObject({ title: "Entry", ...(summaryField ? { summary: "Lead" } : {}) });
 	});
 
-	it("SEO 탭이 없는 컬렉션은 기본 탭 하나다", () => {
+	it("a collection without an SEO tab has a single default tab", () => {
 		const plain = COLLECTIONS.find((name) => Object.values(schemaOf(name).fields).every((item) => !item.tab));
 		if (!plain) return;
 		render(

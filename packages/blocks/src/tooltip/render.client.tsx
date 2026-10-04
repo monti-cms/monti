@@ -3,14 +3,14 @@
 import { type PropsWithChildren, useId, useRef, useState } from "react";
 
 /**
- * 툴팁(`:tooltip[글자]{content="설명"}`). 마우스를 올리거나 키보드로 초점을 두면 설명을 보이고, 터치는 눌러서 열고 닫는다.
- * Esc로 닫는다. 설명은 숨겨 두어도 `aria-describedby`로 스크린 리더가 읽는다. `note`는 코드 안 툴팁의 주석 번호로,
- * 터치 기기에서만 글자 옆에 번호를 보인다(CSS).
+ * Tooltip (`:tooltip[text]{content="description"}`). Hovering or keyboard focus shows the description, and on touch it opens and closes with a tap.
+ * Esc closes it. Even when hidden, the description is read by screen readers through `aria-describedby`. `note` is the annotation number of a tooltip inside code,
+ * and the number is shown next to the text only on touch devices (CSS).
  */
 export function Tooltip({ content, note, children }: PropsWithChildren<{ content?: string; note?: string | number }>) {
 	const id = useId();
 	const [open, setOpen] = useState(false);
-	// 터치로 누르는 중인지. 터치는 누르면 초점도 가서 열렸다 바로 닫히지 않게 누름 하나로 한 번만 바꾼다.
+	// Whether a touch press is in progress. A touch also moves focus, so toggle only once per press to avoid opening and immediately closing.
 	const touching = useRef(false);
 
 	return (
@@ -20,10 +20,10 @@ export function Tooltip({ content, note, children }: PropsWithChildren<{ content
 			onPointerEnter={(event) => event.pointerType === "mouse" && setOpen(true)}
 			onPointerLeave={(event) => event.pointerType === "mouse" && setOpen(false)}
 		>
-			{/* biome-ignore lint/a11y/noStaticElementInteractions: 문장 안의 글자라 button 대신 span이 마우스·터치·초점을 받는다 */}
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: inline text within a sentence, so a span receives mouse, touch, and focus instead of a button */}
 			<span
 				className="cms-block-tooltip-trigger"
-				// biome-ignore lint/a11y/noNoninteractiveTabindex: 키보드로도 설명을 열 수 있게 초점을 받는다
+				// biome-ignore lint/a11y/noNoninteractiveTabindex: takes focus so the description can also be opened with the keyboard
 				tabIndex={0}
 				aria-describedby={id}
 				onPointerDown={(event) => {

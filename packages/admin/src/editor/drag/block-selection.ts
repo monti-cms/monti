@@ -4,17 +4,17 @@ import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { deleteBlockSet, MOVED_BLOCKS_META } from "./drag-commands";
 
 /**
- * 블록 선택(노션의 블록 선택). 글자 선택과 따로 둔다 — 글자를 끌어 고르면 글자만, 본문 바깥 여백에서
- * 끌어 네모 영역(마키)으로 고르면 줄(블록)이 통째로 선택된다. 보이는 것과 지워지는 것이 같아야 한다.
+ * Block selection (like Notion block selection). Kept separate from text selection: dragging over text selects only text, while
+ * dragging a box (marquee) from the margin outside the body selects whole lines (blocks). What is visible and what gets deleted must match.
  *
- * 상태는 선택된 줄들의 시작 위치(문서 순서)다. 줄은 최상위 블록이고, 목록은 항목 하나하나가 줄이다
- * (들여쓴 항목도 따로 고를 수 있다). 부모 항목을 고르면 자식 항목은 함께 딸려 간다.
- * 선택된 줄은 통째로 칠하고, 그 줄 중 하나의 핸들을 끌면 전부 함께 옮긴다(startBlockDrag).
- * 복사가 되도록 ProseMirror 선택도 첫 줄~마지막 줄의 글자 선택으로 맞춰 두되, 글자 선택 표시는 숨긴다.
+ * State is the start positions of the selected lines (document order). A line is a top-level block, and in lists every item is its own line
+ * (indented items can also be picked separately). Selecting a parent item brings its child items along.
+ * Selected lines are painted whole, and dragging the handle of any one of them moves them all together (startBlockDrag).
+ * So that copy works, the ProseMirror selection is also set to a text selection from the first to the last line, but the text selection highlight is hidden.
  */
 export const cmsBlockSelectionKey = new PluginKey<number[] | null>("cmsBlockSelection");
 
-/** 블록 선택 중인 편집기와 선택된 줄에 붙는 클래스(스타일은 편집기 클래스에 둔다). */
+/** Classes put on the editor while a block selection is active and on the selected lines (styles live in the editor class). */
 export const BLOCK_RANGE_CLASS = "cms-block-range";
 export const BLOCK_SELECTED_CLASS = "cms-block-selected";
 
@@ -22,7 +22,7 @@ const LIST_NODES = new Set(["bulletList", "orderedList", "taskList"]);
 
 export const selectedBlocks = (state: EditorState): number[] | null => cmsBlockSelectionKey.getState(state) ?? null;
 
-/** 줄 목록을 정리한다: 문서 순서, 중복 제거, 이미 고른 줄(부모 항목) 안의 줄은 뺀다. */
+/** Normalizes a list of lines: document order, deduplicated, and lines inside an already selected line (parent item) are dropped. */
 function normalize(doc: PmNode, positions: readonly number[]): number[] {
 	const sorted = [...new Set(positions)].sort((a, b) => a - b);
 	const result: number[] = [];
@@ -36,7 +36,7 @@ function normalize(doc: PmNode, positions: readonly number[]): number[] {
 	return result;
 }
 
-/** 줄들을 선택한다. 복사가 되도록 ProseMirror 선택도 첫 줄~마지막 줄의 글자로 맞춘다. */
+/** Selects lines. So that copy works, the ProseMirror selection is also set to the text from the first to the last line. */
 export function setBlockSelection(tr: Transaction, positions: readonly number[] | null): Transaction {
 	const rows = positions ? normalize(tr.doc, positions) : [];
 	tr.setMeta(cmsBlockSelectionKey, rows.length ? rows : null);
@@ -57,7 +57,7 @@ const clearBlockSelection = (view: EditorView) => {
 	if (selectedBlocks(view.state)) view.dispatch(view.state.tr.setMeta(cmsBlockSelectionKey, null));
 };
 
-/** 선택된 줄들을 통째로 지운다. 목록 항목이 모두 빠지면 목록째, 비면 안 되는 자리는 빈 문단을 남긴다. */
+/** Deletes the selected lines whole. If all list items go, the list goes too; where the slot cannot be empty, an empty paragraph is left. */
 export function deleteSelectedBlocks(state: EditorState): Transaction | null {
 	const rows = selectedBlocks(state);
 	if (!rows) return null;
@@ -78,7 +78,7 @@ const decorationsFor = (state: EditorState) => {
 	return DecorationSet.create(state.doc, decorations);
 };
 
-/** 블록 선택 중 누른 키. 줄째 지우기·잘라내기, 나머지 입력은 부분 덮어쓰기를 막고 선택만 푼다. */
+/** Key pressed during a block selection. Delete and cut remove whole lines; any other input is blocked from partially overwriting and just clears the selection. */
 function handleBlockSelectionKey(view: EditorView, event: KeyboardEvent): boolean {
 	if (!selectedBlocks(view.state)) return false;
 	const mod = event.metaKey || event.ctrlKey;
@@ -88,14 +88,14 @@ function handleBlockSelectionKey(view: EditorView, event: KeyboardEvent): boolea
 		return true;
 	}
 	if (mod && event.key.toLowerCase() === "x") {
-		// 복사는 ProseMirror가 같은 범위의 글자 선택으로 처리한다. 지우기만 줄째 한다.
+		// Copy is handled by ProseMirror as a text selection over the same range. Only deletion is done per line.
 		document.execCommand("copy");
 		const tr = deleteSelectedBlocks(view.state);
 		if (tr) view.dispatch(tr);
 		return true;
 	}
 	if (mod || event.key === "Shift" || event.key === "Alt" || event.key === "Meta" || event.key === "Control")
-		return false; // 복사·실행 취소·전체 선택 등은 그대로 둔다
+		return false; // copy, undo, select all, etc. are left as is
 	if (event.key === "Escape") {
 		clearBlockSelection(view);
 		return true;
@@ -104,14 +104,14 @@ function handleBlockSelectionKey(view: EditorView, event: KeyboardEvent): boolea
 		clearBlockSelection(view);
 		return false;
 	}
-	// 글자·Enter 등: 여러 줄의 글자를 부분적으로 덮어쓰지 않게 막고 선택만 푼다.
+	// Text, Enter, etc.: block partially overwriting text across several lines and just clear the selection.
 	clearBlockSelection(view);
 	return true;
 }
 
 const MARQUEE_THRESHOLD = 4;
 
-/** 본문 칸(편집기 안쪽 여백을 뺀 영역)의 좌우 바깥인지. 마키 선택은 여기서만 시작한다. */
+/** Whether x is outside the left or right of the body column (the editor minus its inner padding). Marquee selection starts only here. */
 export function isOutsideContentColumn(view: EditorView, clientX: number): boolean {
 	const rect = view.dom.getBoundingClientRect();
 	const style = getComputedStyle(view.dom);
@@ -131,9 +131,9 @@ export function createBlockSelectionPlugin() {
 				const moved = tr.getMeta(MOVED_BLOCKS_META) as number[] | undefined;
 				if (moved?.length) return normalize(tr.doc, moved);
 				if (!value) return null;
-				// 다른 선택이 일어나면 블록 선택을 푼다(블록 선택은 마키·핸들 이동으로만 이어진다).
+				// Any other selection change clears the block selection (a block selection continues only via marquee and handle moves).
 				if (tr.selectionSet) return null;
-				// 선택과 무관한 문서 변경(끝 빈 문단 추가 등)은 위치만 따라간다.
+				// Document changes unrelated to selection (e.g. adding a trailing empty paragraph) just have the positions follow.
 				if (!tr.docChanged) return value;
 				const mapped = normalize(
 					tr.doc,
@@ -148,13 +148,13 @@ export function createBlockSelectionPlugin() {
 			handleKeyDown: handleBlockSelectionKey,
 			handleDOMEvents: {
 				mousedown(view, event) {
-					// 편집기 자체의 좌우 여백(본문 칸 바깥)을 누르면 마키 선택을 시작한다. 여기서 처리해야
-					// ProseMirror가 같은 누름으로 글자 커서를 함께 옮기지 않는다.
+					// Pressing the editor's own left/right margin (outside the body column) starts a marquee selection. It must be handled here so that
+					// ProseMirror does not also move the text cursor on the same press.
 					if (event.target === view.dom && isOutsideContentColumn(view, event.clientX)) {
 						startMarquee(view, event);
 						return true;
 					}
-					// 본문을 누르면(글자 선택을 시작하면) 블록 선택을 푼다.
+					// Pressing the body (starting a text selection) clears the block selection.
 					clearBlockSelection(view);
 					return false;
 				},
@@ -166,8 +166,8 @@ export function createBlockSelectionPlugin() {
 type Row = { pos: number; top: number; bottom: number };
 
 /**
- * 마키가 고를 수 있는 줄과 그 세로 위치(문서 순서). 최상위 블록이 줄이고, 목록은 항목마다 줄이다.
- * 항목 줄의 높이는 항목의 첫 블록(글자 줄)만 본다 — 들여쓴 자식을 포함하면 자식만 덮어도 부모가 골라진다.
+ * The lines a marquee can select and their vertical positions (document order). A top-level block is a line, and in lists each item is a line.
+ * An item line's height considers only the item's first block (the text line) — including indented children would select the parent when only a child is covered.
  */
 function rowsOf(view: EditorView): Row[] {
 	const rows: Row[] = [];
@@ -196,7 +196,7 @@ function rowsOf(view: EditorView): Row[] {
 	return rows;
 }
 
-/** 스크롤되는 가장 가까운 조상(없으면 문서). 마키가 화면 끝에 닿으면 이것을 굴린다. */
+/** The nearest scrollable ancestor (the document if none). The marquee scrolls it when it reaches the screen edge. */
 function scrollParentOf(element: HTMLElement): HTMLElement {
 	let current = element.parentElement;
 	while (current) {
@@ -211,16 +211,16 @@ const AUTO_SCROLL_EDGE = 48;
 const AUTO_SCROLL_MAX_SPEED = 18;
 
 /**
- * 마키(네모 영역) 선택을 시작한다. 본문 바깥 여백에서 누른 채 끌면 네모를 그리고, 네모의 세로 범위에
- * 걸친 줄들을 선택한다(사이 줄을 건너뛰지 않고 첫~마지막 줄까지 이어서). 화면 위아래 끝에 닿으면 스크롤한다.
- * 조금만 움직이고 놓으면(클릭) 아무것도 하지 않는다.
+ * Starts a marquee (box) selection. Pressing and dragging in the margin outside the body draws a box and selects the lines
+ * that overlap the box's vertical range (continuously from the first to the last line, without skipping lines between). Scrolls when it reaches the top or bottom of the screen.
+ * A small movement then release (a click) does nothing.
  */
 export function startMarquee(view: EditorView, event: MouseEvent): void {
 	if (event.button !== 0) return;
 	event.preventDefault();
 	const scroller = scrollParentOf(view.dom);
 	const isDocumentScroller = scroller === document.scrollingElement || scroller === document.documentElement;
-	// 시작점은 스크롤과 무관한 내용 좌표로 기억한다(자동 스크롤 중에도 네모가 시작점에 붙어 있게).
+	// The start point is remembered in content coordinates independent of scrolling (so the box stays attached to the start point during auto-scroll).
 	const startScroll = scroller.scrollTop;
 	const startX = event.clientX;
 	const startY = event.clientY;
@@ -232,7 +232,7 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 
 	const render = () => {
 		const scrolled = scroller.scrollTop - startScroll;
-		const anchorY = startY - scrolled; // 시작점의 현재 화면 위치
+		const anchorY = startY - scrolled; // current on-screen position of the start point
 		const left = Math.min(startX, pointerX);
 		const top = Math.min(anchorY, pointerY);
 		const bottom = Math.max(anchorY, pointerY);
@@ -258,7 +258,7 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 			view.dispatch(setBlockSelection(view.state.tr, normalized).setMeta("addToHistory", false));
 	};
 
-	// 화면(스크롤 영역) 위아래 끝 가까이에 있으면 가까운 만큼 빠르게 굴린다.
+	// Near the top or bottom edge of the screen (scroll area), scroll faster the closer it is.
 	const autoScroll = () => {
 		const area = isDocumentScroller ? { top: 0, bottom: window.innerHeight } : scroller.getBoundingClientRect();
 		const speed =
@@ -292,13 +292,13 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 		cancelAnimationFrame(frame);
 		box?.remove();
 		if (!moved) return;
-		// 끌기가 끝나며 생기는 click이 편집기 바깥 클릭(끝으로 이동)으로 처리되어 선택을 풀지 않게 한 번 삼킨다.
+		// Swallow once the click that fires when the drag ends, so it is not treated as a click outside the editor (move to end) that clears the selection.
 		const swallow = (clickEvent: MouseEvent) => {
 			clickEvent.stopPropagation();
 			clickEvent.preventDefault();
 		};
 		window.addEventListener("click", swallow, { capture: true, once: true });
-		// click은 mouseup 바로 뒤에 온다. 오지 않았으면(영역 밖에서 놓음) 다음 클릭을 삼키지 않게 치운다.
+		// The click comes right after mouseup. If it did not come (released outside the area), clear the swallow so it does not eat the next click.
 		setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
 		if (selectedBlocks(view.state)) view.focus();
 	};

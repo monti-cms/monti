@@ -10,7 +10,7 @@ import { MermaidProvider } from "../mermaid/provider";
 const names = (plugins: readonly { name: string }[]) => plugins.map((plugin) => plugin.name);
 
 describe("blocks()", () => {
-	it("한 번에 모든 블록 확장을 넣는다(글자 꾸밈은 툴팁 → 코드 연결 → 글자색 순서)", () => {
+	it("adds every block extension at once (inline marks in tooltip → code ref → text color order)", () => {
 		expect(names(blocks())).toEqual([
 			"callout",
 			"collapsible",
@@ -22,11 +22,11 @@ describe("blocks()", () => {
 			"code-ref",
 			"color",
 		]);
-		// 하나씩 만든 확장과 같다.
+		// Same as the extensions created one by one.
 		expect(blocks({ only: ["callout"] })[0]?.blocks).toEqual(callout().blocks);
 	});
 
-	it("고르거나(`only`) 빼고(`omit`·`false`) 확장별 옵션을 넘긴다", () => {
+	it("picks (`only`), omits (`omit`·`false`) and passes per-extension options", () => {
 		expect(names(blocks({ only: ["tooltip", "color"] }))).toEqual(["tooltip", "color"]);
 		expect(names(blocks({ omit: ["chart", "mermaid"], codeRef: false }))).toEqual([
 			"callout",
@@ -43,7 +43,7 @@ describe("blocks()", () => {
 		expect(() => blocks({ only: ["nope" as never] })).toThrow(/unknown block extension "nope"/);
 	});
 
-	it("사이트 설정에 펼쳐 넣으면 블록이 더해지고, 틀린 옵션은 설정 오류다", () => {
+	it("spreading into the site config adds the blocks, and invalid options are config errors", () => {
 		const post = defineCollection({ label: "Post", kind: "document", fields: { title: fields.text({ label: "T" }) } });
 		const base = { collections: { post }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
 		expect(() => defineConfig({ ...base, plugins: [...blocks()] })).not.toThrow();
@@ -61,12 +61,12 @@ describe("blocks()", () => {
 				],
 			}),
 		).toThrow(/hex/);
-		// 같은 확장을 두 번 넣으면 설정 오류다.
+		// Adding the same extension twice is a config error.
 		expect(() => defineConfig({ ...base, plugins: [...blocks(), callout()] })).toThrow();
 	});
 });
 
-/** 등록된 펜스 미리보기를 불러와 이름(컴포넌트 이름)을 보인다. */
+/** Loads the registered fence preview and shows its name (component name). */
 function LoadedPreview({ lang }: { lang: string }) {
 	const load = useCmsAdminComponents().fencePreviews?.[lang];
 	const [component, setComponent] = useState<ComponentType<{ source: string }> | null>(null);
@@ -76,10 +76,10 @@ function LoadedPreview({ lang }: { lang: string }) {
 	return <p>{load ? (component ? `${lang}: ${component.name}` : `${lang}: loading`) : `${lang}: none`}</p>;
 }
 
-describe("편집기 미리보기", () => {
+describe("editor preview", () => {
 	const SitePreview = () => null;
 
-	it("Mermaid·차트 확장이 기본 미리보기를 등록하고, 미리보기를 열 때 렌더러를 불러온다", async () => {
+	it("the Mermaid and chart extensions register default previews and load the renderer when a preview opens", async () => {
 		render(
 			<MermaidProvider>
 				<ChartProvider>
@@ -88,12 +88,12 @@ describe("편집기 미리보기", () => {
 				</ChartProvider>
 			</MermaidProvider>,
 		);
-		// 렌더러 모듈을 처음 불러오는 시간이 길어 기다리는 시간을 늘린다.
+		// The first load of the renderer module is slow, so extend the wait.
 		await waitFor(() => expect(screen.getByText("mermaid: MermaidPreview")).toBeTruthy(), { timeout: 15_000 });
 		await waitFor(() => expect(screen.getByText("chart: ChartPreview")).toBeTruthy(), { timeout: 15_000 });
 	}, 30_000);
 
-	it("사이트가 같은 이름으로 넣은 미리보기(안쪽 공급자)가 이긴다", async () => {
+	it("a preview the site registers under the same name (inner provider) wins", async () => {
 		const Site = ({ children }: { children: ReactNode }) => (
 			<CmsAdminComponentsProvider components={{ fencePreviews: { chart: async () => SitePreview } }}>
 				{children}

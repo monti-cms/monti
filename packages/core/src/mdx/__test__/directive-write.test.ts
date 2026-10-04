@@ -4,21 +4,21 @@ import type { BlockAttribute, BlockDefinition } from "../../blocks/define";
 import { analyze, serialize, toDocument } from "..";
 
 /**
- * 블록 이름은 지금 설정에서 찾는다(블로그 예시 설정과 다른 사이트 설정 둘 다로 돈다). 설정에 그런 블록이 없으면 그 경우는
- * 건너뛴다. 본체 블록(밑줄·위첨자·이미지·가운데 정렬 등)은 어느 설정에나 있다.
+ * Block names are looked up from the current config (runs with both the reference blog setup and another site's config). If the config has no such block, that case is
+ * skipped. Core blocks (underline, superscript, image, center alignment etc.) exist in every config.
  */
 const stringAttribute = (block: BlockDefinition | undefined): [string, BlockAttribute] | undefined =>
 	block && Object.entries(block.attributes).find(([, attribute]) => attribute.type === "string");
-/** 그 속성에 넣을 수 있는 값(선택 값이 있으면 첫 값). */
+/** A value that can go in that attribute (the first value if it has options). */
 const optionValue = (attribute: BlockAttribute, fallback: string) =>
 	attribute.options ? (Object.keys(attribute.options)[0] ?? fallback) : fallback;
 
-/** 본문을 담는 사이트 블록(자식 규칙·부모가 없는 컨테이너, 예: 콜아웃)과 그 글 속성. */
+/** A site block that holds body content (a container with no child rules or parent, e.g. a callout) and its text attribute. */
 const bodyBlock = ADDED_BLOCKS.find(
 	(block) => block.syntax.kind === "container" && !block.children?.blocks && !block.parent && stringAttribute(block),
 );
 const bodyAttribute = stringAttribute(bodyBlock);
-/** 불리언 속성이 있는 컨테이너 블록(예: 접기). */
+/** A container block with a boolean attribute (e.g. a collapsible). */
 const booleanBlock = ADDED_BLOCKS.find(
 	(block) =>
 		block.syntax.kind === "container" &&
@@ -27,15 +27,15 @@ const booleanBlock = ADDED_BLOCKS.find(
 const booleanAttribute = booleanBlock
 	? Object.entries(booleanBlock.attributes).find(([, attribute]) => attribute.type === "boolean")?.[0]
 	: undefined;
-/** 글 속성이 있는 글자 꾸밈 블록(예: 툴팁). */
+/** A text decoration block with a text attribute (e.g. a tooltip). */
 const markBlock = ADDED_MARK_BLOCKS.find((block) => stringAttribute(block));
 const markAttribute = stringAttribute(markBlock);
-/** 정해진 자식 블록만 담는 묶음 블록과 그 자식(예: 탭 묶음·탭, 단 나누기·단). */
+/** A group block that holds only specified child blocks, and its child (e.g. a tabs group and a tab, a column layout and a column). */
 const groups = ADDED_BLOCKS.flatMap((block) => {
 	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	return block.syntax.kind === "container" && child?.syntax.kind === "container" ? [{ block, child }] : [];
 });
-/** 자식 블록 JSX 속성(필수 글 속성만 채운다, 예: 탭 이름). */
+/** JSX attributes of the child block (fill in only the required text attributes, e.g. the tab name). */
 const childProps = (child: BlockDefinition, value: string) =>
 	Object.entries(child.attributes)
 		.filter(([, attribute]) => attribute.type === "string" && attribute.required)
@@ -43,14 +43,14 @@ const childProps = (child: BlockDefinition, value: string) =>
 		.join("");
 const directiveName = (block: BlockDefinition) => ("directive" in block.syntax ? block.syntax.directive : block.name);
 
-/** 쓰기 경로: `MDX → analyze → toDocument → serialize`. */
+/** Write path: `MDX → analyze → toDocument → serialize`. */
 const write = (source: string): string => serialize(toDocument(analyze(source)));
 
-/** 한 번 더 왕복해도 같은 문자열이어야 한다(멱등). */
+/** Writing once more must give the same string (idempotent). */
 const writeTwice = (source: string): string => write(write(source));
 
-describe("M8-ED-2 저장 형식 directive 전환", () => {
-	it("읽기 호환 JSX와 HTML 인라인을 directive로 정규화한다", () => {
+describe("storage format directive conversion", () => {
+	it("normalizes read-compatible JSX and inline HTML to directives", () => {
 		expect(write("<u>밑줄</u>").trimEnd()).toBe(":u[밑줄]");
 		expect(write("<sup>위</sup>").trimEnd()).toBe(":sup[위]");
 		expect(write("<sub>아래</sub>").trimEnd()).toBe(":sub[아래]");
@@ -60,7 +60,7 @@ describe("M8-ED-2 저장 형식 directive 전환", () => {
 		);
 	});
 
-	it.skipIf(!bodyBlock || !bodyAttribute)("사이트 컨테이너 블록의 JSX도 directive로 정규화한다", () => {
+	it.skipIf(!bodyBlock || !bodyAttribute)("also normalizes JSX of a site container block to a directive", () => {
 		if (!bodyBlock || !bodyAttribute) return;
 		const { component } = bodyBlock;
 		const [name, attribute] = bodyAttribute;
@@ -70,7 +70,7 @@ describe("M8-ED-2 저장 형식 directive 전환", () => {
 		);
 	});
 
-	it.skipIf(!markBlock || !markAttribute)("사이트 글자 꾸밈 블록의 JSX도 directive로 정규화한다", () => {
+	it.skipIf(!markBlock || !markAttribute)("also normalizes JSX of a site text decoration block to a directive", () => {
 		if (!markBlock || !markAttribute) return;
 		const [name] = markAttribute;
 		expect(write(`<${markBlock.component} ${name}="설명">라벨</${markBlock.component}>`).trimEnd()).toBe(
@@ -78,7 +78,7 @@ describe("M8-ED-2 저장 형식 directive 전환", () => {
 		);
 	});
 
-	it.skipIf(groups.length < 2)("중첩 컨테이너는 바깥일수록 콜론이 많다(3 + 단계)", () => {
+	it.skipIf(groups.length < 2)("nested containers have more colons the further out they are (3 + level)", () => {
 		const [outer, inner] = groups;
 		if (!outer || !inner) return;
 		const { block: tabs, child: tab } = outer;
@@ -106,7 +106,7 @@ describe("M8-ED-2 저장 형식 directive 전환", () => {
 		expect(nested).toContain(`:::${directiveName(column)}`);
 	});
 
-	it.skipIf(!bodyBlock)("사이트 컨테이너 안의 본체 컨테이너도 바깥이 콜론이 많다", () => {
+	it.skipIf(!bodyBlock)("a core container inside a site container: the outer one has more colons", () => {
 		if (!bodyBlock) return;
 		const { component } = bodyBlock;
 		const nested = write(`<${component}>\n<TextAlign align="center">\n깊은 본문\n</TextAlign>\n</${component}>`);
@@ -115,41 +115,44 @@ describe("M8-ED-2 저장 형식 directive 전환", () => {
 		expect(nested).toContain(':::text-align{align="center"}');
 	});
 
-	it.skipIf(!booleanBlock || !booleanAttribute)("불리언 속성은 참일 때만 이름을 쓰고 거짓·없음은 생략한다", () => {
-		if (!booleanBlock || !booleanAttribute) return;
-		const { component } = booleanBlock;
-		const name = directiveName(booleanBlock);
-		expect(write(`<${component} ${booleanAttribute}>본문</${component}>`).trimEnd()).toBe(
-			`:::${name}{${booleanAttribute}}\n본문\n:::`,
-		);
-		expect(write(`<${component} ${booleanAttribute}="false">본문</${component}>`).trimEnd()).toBe(
-			`:::${name}\n본문\n:::`,
-		);
-		expect(write(`<${component}>본문</${component}>`).trimEnd()).toBe(`:::${name}\n본문\n:::`);
-	});
+	it.skipIf(!booleanBlock || !booleanAttribute)(
+		"a boolean attribute writes its name only when true and omits false or missing",
+		() => {
+			if (!booleanBlock || !booleanAttribute) return;
+			const { component } = booleanBlock;
+			const name = directiveName(booleanBlock);
+			expect(write(`<${component} ${booleanAttribute}>본문</${component}>`).trimEnd()).toBe(
+				`:::${name}{${booleanAttribute}}\n본문\n:::`,
+			);
+			expect(write(`<${component} ${booleanAttribute}="false">본문</${component}>`).trimEnd()).toBe(
+				`:::${name}\n본문\n:::`,
+			);
+			expect(write(`<${component}>본문</${component}>`).trimEnd()).toBe(`:::${name}\n본문\n:::`);
+		},
+	);
 
-	it("Markdown 강조가 성립하지 않는 자리에서는 JSX로 쓴다", () => {
-		// 안쪽 끝이 문장부호면 CommonMark 강조가 닫히지 않아 별표가 글자로 남는다.
+	it("writes JSX where Markdown emphasis does not hold", () => {
+		// If the inner end is punctuation, CommonMark emphasis does not close and the asterisks stay as text.
 		expect(write("<strong>정적(Static)</strong>과 동적").trimEnd()).toBe("<strong>정적(Static)</strong>과 동적");
 		expect(write('<strong>"인용"</strong>').trimEnd()).toBe('<strong>"인용"</strong>');
-		// 성립하는 자리는 Markdown 그대로 둔다.
+		// Where it holds, Markdown is kept as is.
 		expect(write("<strong>정적</strong>과 동적").trimEnd()).toBe("**정적**과 동적");
 		expect(write("<em>기울임</em>").trimEnd()).toBe("*기울임*");
 		expect(write("<del>취소</del>").trimEnd()).toBe("~~취소~~");
-		// 강조가 성립하지 않는 입력은 별표를 글자로 남기지 않는다(이스케이프한다).
+		// Input where emphasis does not hold does not leave asterisks as text (they are escaped).
 		expect(write("**정적(Static)**과 동적").trimEnd()).toBe("\\*\\*정적(Static)\\*\\*과 동적");
 	});
 
-	it("문단은 한 줄로 저장하고 줄바꿈은 :br[]로만 표현한다", () => {
+	it("stores a paragraph on one line and expresses line breaks only as :br[]", () => {
 		expect(write("첫 줄\\\n둘째 줄").trimEnd()).toBe("첫 줄:br[]둘째 줄");
 		expect(write("첫 줄<br/>둘째 줄").trimEnd()).toBe("첫 줄:br[]둘째 줄");
-		// 하드브레이크는 문단을 쪼개지 않는다 — raw 줄바꿈을 만들지 않는다.
+		// A hard break does not split the paragraph — no raw newline is created.
 		const written = write("가\\\n나\\\n다");
 		expect(written).toBe("가:br[]나:br[]다\n");
 		expect(written.trimEnd().includes("\n")).toBe(false);
 	});
 
-	it("이미지는 미디어 참조·크기·정렬·캡션·장식이 있으면 리프로, 없으면 Markdown으로 쓴다", () => {
+	it("writes an image as a leaf if it has a media reference, size, alignment, caption or decorative flag, otherwise as Markdown", () => {
 		expect(write('<Image mediaId="uuid-1" alt="설명" />').trimEnd()).toBe('::image{mediaId="uuid-1" alt="설명"}');
 		expect(write('<Image src="/images/a.png" alt="설명" width="60%" align="center" caption="캡션" />').trimEnd()).toBe(
 			'::image{src="/images/a.png" alt="설명" width="60%" align="center" caption="캡션"}',
@@ -160,19 +163,19 @@ describe("M8-ED-2 저장 형식 directive 전환", () => {
 		expect(write("![설명](/images/a.png)").trimEnd()).toBe("![설명](/images/a.png)");
 	});
 
-	it("이스케이프된 `:이름`은 글자로 유지된다", () => {
-		// 등록된 이름 뒤에 구분자가 오면 지시자로 읽히므로 `\:`로 끊는다(§4.4).
+	it("keeps an escaped `:name` as text", () => {
+		// If a delimiter follows a registered name it is read as a directive, so it is cut with `\:`.
 		expect(write("글자로 쓰는 \\:u[괄호] 예문").trimEnd()).toBe("글자로 쓰는 \\:u\\[괄호] 예문");
 		expect(write("줄바꿈 글자 \\:br 입니다").trimEnd()).toBe("줄바꿈 글자 \\:br 입니다");
 		expect(write("자물쇠 \\:\\:image{alt=x} 글자").trimEnd()).toBe("자물쇠 :\\:image{alt=x} 글자");
-		// 미등록 이름·시각·URL의 콜론은 손대지 않는다.
+		// Colons in unregistered names, times and URLs are left alone.
 		expect(write("벡터 rag openai/gpt-oss-120b:free를 쓴다").trimEnd()).toBe(
 			"벡터 rag openai/gpt-oss-120b:free를 쓴다",
 		);
 		expect(write("낮 12:30에 만나요").trimEnd()).toBe("낮 12:30에 만나요");
 	});
 
-	it("쓴 문자열을 다시 써도 같은 문자열이다(멱등)", () => {
+	it("writing the written string again gives the same string (idempotent)", () => {
 		const [group] = groups;
 		const samples = [
 			':::text-align{align="center"}\n\n본문 :u[밑줄] 과 :br[] 줄바꿈\n\n:::',

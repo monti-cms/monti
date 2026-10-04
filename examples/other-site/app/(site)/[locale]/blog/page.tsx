@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-/** 글 목록(발행일 최신순). 주소·관계 이름은 읽기 API가 붙여 준다. */
+/** Article list (newest published first). The read API supplies the URLs and relation names. */
 export default async function BlogPage({
 	params,
 	searchParams,

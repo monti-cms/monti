@@ -30,8 +30,8 @@ export type BulkSelection = { id: string; expectedVersion: number; title?: strin
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
 
 /**
- * 화면의 작업. 분류 작업은 `relation.add:tagIds`처럼 관계 필드 일괄 작업과 필드 이름을 함께 적는다.
- * 서버에는 관계 필드 일괄 작업(`relation.*`)으로 보낸다.
+ * Actions on screen. A category action pairs a relation-field bulk action with a field name, like `relation.add:tagIds`.
+ * It is sent to the server as a relation-field bulk action (`relation.*`).
  */
 type ListAction = Exclude<BulkOp, RelationOp> | `${RelationOp}:${string}`;
 
@@ -39,19 +39,19 @@ type ActionDef = {
 	value: ListAction;
 	label: string;
 	/**
-	 * 확인창의 질문. 여러 개를 한 번에 바꾸는 작업은 모두 묻는다(§5).
-	 * `count`는 고른 수, `target`은 고른 대상 이름(폴더·분류). 대상을 비우는 작업이면 `null`.
+	 * Question for the confirm dialog. Actions that change many items at once always ask.
+	 * `count` is the number picked, `target` is the name of the picked target (folder, category). `null` for an action that clears the target.
 	 */
 	ask: (count: number, target: string | null) => string;
 	content?: boolean;
 	destructive?: boolean;
-	/** 분류 작업이면 관계 필드. */
+	/** The relation field, for a category action. */
 	relation?: { op: RelationOp; field: string; label: string; many: boolean };
 };
 
 /**
- * 컬렉션의 분류 필드(태그·카테고리 등)별 작업. 여러 개 필드는 추가·빼기, 하나뿐인 필드는 바꾸기다.
- * 여러 개 필드 작업을 먼저 둔다.
+ * Actions per category field (tags, categories, etc.) of the collection. Fields that hold many get add/remove; a field that holds only one gets replace.
+ * Multi-value field actions come first.
  */
 export function taxonomyActions(collection: string): ActionDef[] {
 	const fields = taxonomyFieldsOf(collection).flatMap((stored) =>
@@ -110,7 +110,7 @@ const TRASH_ACTIONS: ActionDef[] = [
 	},
 ];
 
-/** 작업별 실패 사유(§3.4 "성공·실패를 구분하고 실패한 항목만 다시 실행"). 사전에 있는 코드만 문구가 있다. */
+/** Failure reason per action ("distinguish success from failure and rerun only failed items"). Only codes in the dictionary have text. */
 const FAILURE_CODES = new Set([
 	"conflict",
 	"not_found",
@@ -122,7 +122,7 @@ const FAILURE_CODES = new Set([
 	"invalid_reference",
 ]);
 
-/** 실패 한 건의 사유. 영구 삭제를 막은 사용처가 있으면 `사용 중: ○○`으로 이름을 댄다(v2 A3). */
+/** Reason for a single failure. If a usage blocked permanent deletion, names it as `In use: <name>`. */
 export function describeBulkFailure(failure: Extract<BulkItemResult, { ok: false }>): string {
 	if (failure.error === "in_use" && failure.usages?.length) {
 		const names = [...new Set(failure.usages.map((usage) => usage.title || t("untitled")))];
@@ -149,8 +149,8 @@ export async function runBulk(
 }
 
 /**
- * 일괄 작업 줄의 여러 개 분류(태그 등) 선택. 폴더·카테고리 선택처럼 작은 버튼 하나로 두고, 누르면 검색과 체크 목록이 열린다.
- * 버튼에는 고른 항목을 `React 외 2개`처럼 줄여 보여 줘서 줄이 넘치지 않는다.
+ * Multi-category (tags, etc.) picker in the bulk action row. A single small button like the folder and category pickers; pressing it opens search and a checklist.
+ * The button shows picked items shortened like `React +2`, so the row does not overflow.
  */
 function ManyPicker({
 	label,
@@ -217,8 +217,8 @@ function ManyPicker({
 }
 
 /**
- * 일괄 작업(§3.4). 현재 페이지에서 고른 항목에만 적용하고, 항목마다 결과를 보여 준다.
- * 실패한 항목만 다시 실행할 수 있다. 휴지통 화면(`mode="trash"`)에서는 일괄 영구 삭제만 제공한다.
+ * Bulk actions. Apply only to items picked on the current page and show a result per item.
+ * Only failed items can be rerun. The trash screen (`mode="trash"`) offers only bulk permanent delete.
  */
 export function BulkBar({
 	collection,
@@ -234,7 +234,7 @@ export function BulkBar({
 	folders: Folder[];
 	mode?: "list" | "trash";
 	onClearSelection: () => void;
-	/** 작업 요청. 목록 화면은 목록에 먼저 반영(낙관적 갱신)하는 요청을 넘긴다. */
+	/** Action request. The list screen passes a request that updates the list first (optimistic update). */
 	onRun?: typeof runBulk;
 	onDone?: (failedIds: string[]) => void;
 }) {
@@ -260,7 +260,7 @@ export function BulkBar({
 		if (!actions.some((candidate) => candidate.value === action)) setAction(actions[0]?.value ?? "trash");
 	}, [actions, action]);
 
-	// 작업을 바꾸면 그 작업의 입력값을 비운다.
+	// Changing the action clears that action's input value.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset keyed by action
 	useEffect(() => {
 		setChecked([]);
@@ -298,7 +298,7 @@ export function BulkBar({
 		}
 	};
 
-	/** 고른 대상의 이름. 분류는 고른 이름들, 폴더는 폴더 이름이다. 비우는 선택이면 `null`. */
+	/** Name of the picked target. For categories, the picked names; for a folder, the folder name. `null` for a clearing selection. */
 	const targetName = (): string | null => {
 		const titleOf = (id: string) => relationOptions.find((option) => option.id === id)?.title ?? id;
 		if (needsMany) return checked.map(titleOf).join(", ");
@@ -308,7 +308,7 @@ export function BulkBar({
 		return null;
 	};
 
-	// 여러 개를 한 번에 바꾸는 작업은 모두 묻는다(§5).
+	// Actions that change many items at once always ask.
 	const start = () => {
 		if (!activeAction) return;
 		setConfirm({

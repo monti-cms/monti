@@ -9,9 +9,9 @@ import { createCodeBlockKeysPlugin } from "./keys";
 const hidden = (value: unknown) => ({ default: value, rendered: false });
 
 /**
- * CMS 코드 블록. 코드 텍스트에 글자 효과 마크를 허용하고(`CODE_BLOCK_MARKS`), 줄 효과·정규식 규칙은 속성에 둔다(model.ts).
- * `source`/`sourceKey`는 불러온 원문과 그때의 모델 지문이다. 바뀌지 않았으면 원문을 그대로 저장한다.
- * `rawMode`면 에디터가 나타낼 수 없는 주석이 있어 주석 줄까지 원문으로 편집한다.
+ * CMS code block. Allows text effect marks on the code text (`CODE_BLOCK_MARKS`); line effects and regex rules live in attributes (model.ts).
+ * `source`/`sourceKey` are the loaded source and the model fingerprint at that time. If unchanged, the source is saved as is.
+ * With `rawMode`, the code has annotations the editor cannot display, so even annotation lines are edited as source.
  */
 export const CmsCodeBlock = CodeBlock.extend({
 	name: "codeBlock",
@@ -31,7 +31,7 @@ export const CmsCodeBlock = CodeBlock.extend({
 
 	addNodeView() {
 		return ReactNodeViewRenderer(CodeBlockView, {
-			// 머리 도구·줄 번호 칸·줄 메뉴의 누름·끌기는 편집기(선택·블록 선택)가 처리하지 않는다.
+			// Presses and drags on the header tools, line number column, and line menu are not handled by the editor (selection, block selection).
 			stopEvent: ({ event }) => event.target instanceof Element && event.target.closest("[data-code-ui]") !== null,
 		});
 	},

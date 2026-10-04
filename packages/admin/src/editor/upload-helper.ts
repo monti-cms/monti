@@ -5,24 +5,24 @@ import { editorMessages } from "./messages";
 const t = createTranslator(editorMessages);
 
 /**
- * 브라우저 이미지 업로드(§7.1·§7.2). 편집기와 미디어 라이브러리가 같이 쓴다.
+ * Browser image upload. Shared by the editor and the media library.
  *
- * 1. (선택) 웹용 최적화: 정적 JPEG·PNG·WebP를 긴 변 2560px 이하 WebP로 바꾼다. 원본도 같은 미디어로 보관한다.
- * 2. 서버에 업로드 준비를 요청하고 받은 URL로 저장소에 직접 올린다(파일이 앱 서버를 거치지 않는다).
- * 3. 완료 확인을 요청한다. 서버가 실제 바이트를 검사한 뒤에만 `ready`가 된다.
+ * 1. (Optional) Web optimization: converts static JPEG, PNG, and WebP to WebP with the long edge at most 2560px. The original is kept as part of the same media.
+ * 2. Asks the server to prepare the upload and uploads directly to storage with the returned URL (the file does not pass through the app server).
+ * 3. Requests completion confirmation. The server marks it `ready` only after inspecting the actual bytes.
  */
 
 export interface OptimizePolicy {
-	/** 변환 대상 형식. 애니메이션 GIF·WebP와 지원이 불확실한 형식은 원본을 유지한다. */
+	/** Formats to convert. Animated GIF and WebP, and formats with uncertain support, keep the original. */
 	readonly formats: readonly string[];
 	readonly maxEdge: number;
 	readonly quality: number;
 	readonly outputType: "image/webp";
-	/** 변환한 파일의 이름. */
+	/** Name of the converted file. */
 	readonly rename: (name: string) => string;
 }
 
-/** 기본 최적화 정책. 코드에서 바꿀 수 있다(§7.1 "기본 정책은 코드로 바꿀 수 있다"). */
+/** Default optimization policy. Can be changed in code. */
 export const DEFAULT_OPTIMIZE_POLICY: OptimizePolicy = {
 	formats: ["image/jpeg", "image/png", "image/webp"],
 	maxEdge: 2560,
@@ -32,12 +32,12 @@ export const DEFAULT_OPTIMIZE_POLICY: OptimizePolicy = {
 };
 
 export interface PreparedUpload {
-	/** 공개용으로 올릴 파일. 최적화하지 않으면 원본 그대로다. */
+	/** File to upload for public use. The original as is if not optimized. */
 	file: File;
-	/** 최적화한 경우의 원본 파일. */
+	/** The original file, when optimized. */
 	original?: File;
 	optimized: boolean;
-	/** 최적화를 건너뛴 이유(사용자 안내용). */
+	/** Why optimization was skipped (for user-facing messages). */
 	skippedReason?: string;
 	width?: number;
 	height?: number;
@@ -53,7 +53,7 @@ const readBytes = (blob: Blob): Promise<ArrayBuffer> =>
 				reader.readAsArrayBuffer(blob);
 			});
 
-/** WebP의 애니메이션 청크(`ANIM`)가 있는가. */
+/** Whether the WebP has an animation chunk (`ANIM`). */
 async function isAnimatedWebp(file: File): Promise<boolean> {
 	const head = new Uint8Array(await readBytes(file.slice(0, 64 * 1024)));
 	for (let i = 12; i < head.length - 4; i++) {
@@ -63,8 +63,8 @@ async function isAnimatedWebp(file: File): Promise<boolean> {
 }
 
 /**
- * 웹용 최적화. 변환할 수 없거나 변환이 이득이 아니면 원본을 그대로 돌려주고 이유를 남긴다.
- * 애니메이션을 조용히 정지 이미지로 바꾸지 않는다(§7.1).
+ * Web optimization. If it cannot convert or conversion is not a gain, returns the original as is and records the reason.
+ * Never silently turns an animation into a still image.
  */
 export async function prepareUpload(
 	file: File,
@@ -98,7 +98,7 @@ export async function prepareUpload(
 	bitmap.close();
 
 	const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, policy.outputType, policy.quality));
-	// WebP 인코딩을 지원하지 않는 브라우저는 PNG를 돌려준다.
+	// Browsers that do not support WebP encoding return PNG.
 	if (!blob || blob.type !== policy.outputType) {
 		return { file, optimized: false, skippedReason: t("upload.noWebp") };
 	}
@@ -207,8 +207,8 @@ export const formatBytes = (bytes: number) =>
 	bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
 
 /**
- * 첨부 파일(v3)을 올린다. 형식은 파일 이름의 확장자로 정한다(브라우저가 코드 파일의 형식을 제각각 준다).
- * 받지 않는 형식이거나 사이트 설정 한도(`media.maxFileBytes`)를 넘으면 올리기 전에 거절한다.
+ * Uploads an attachment file. The format is decided by the file name extension (browsers give inconsistent types for code files).
+ * Rejects before uploading if the format is not accepted or the site setting limit (`media.maxFileBytes`) is exceeded.
  */
 export async function uploadAttachment(
 	file: File,

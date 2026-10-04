@@ -22,10 +22,10 @@ import { codeRefMessages } from "./messages";
 
 const t = createTranslator(codeRefMessages);
 
-/** 편집기 마크 이름(`cmsCodeRef`). */
+/** Editor mark name (`cmsCodeRef`). */
 export const CODE_REF_MARK = addedMarkName(codeRefBlock.name);
 
-/** 문서에 코드 블록이 있는가. 없으면 이을 줄이 없어 `코드 연결`을 숨긴다. */
+/** Whether the document has a code block. If not, there is no line to link to, so `Code link` is hidden. */
 const hasCodeBlock = (editor: Editor) => {
 	let found = false;
 	editor.state.doc.descendants((node) => {
@@ -81,7 +81,7 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 	);
 }
 
-/** 코드 연결 꾸밈의 편집기 등록. 테마 강조색 밑줄로 보인다. */
+/** Editor registration of the code-ref mark. Shown with an underline in the theme accent color. */
 export const codeRefMarkExtension: EditorMarkExtension = {
 	render: () => ({ class: "underline decoration-cms-primary/60 decoration-solid underline-offset-4" }),
 	bubble: { group: "link", order: 1, Button: CodeRefBubbleButton },
@@ -90,7 +90,7 @@ export const codeRefMarkExtension: EditorMarkExtension = {
 
 const components: CmsAdminComponents = { marks: { [codeRefBlock.name]: codeRefMarkExtension } };
 
-/** 코드 연결 꾸밈의 편집기 표시·버블을 관리자 화면에 넣는다. */
+/** Registers the code-ref mark's editor display and bubble in the admin UI. */
 export function CodeRefProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

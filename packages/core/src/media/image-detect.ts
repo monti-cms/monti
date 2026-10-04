@@ -1,7 +1,7 @@
 import type { AllowedImageMime } from "../adapters/r2/types";
 
 /**
- * 이미지 파일 앞부분으로 형식과 크기를 읽는다(PNG·GIF·JPEG·WebP·AVIF). 저장소 종류와 상관없이 올린 파일을 확인할 때 쓴다.
+ * Reads the format and size from the start of an image file (PNG, GIF, JPEG, WebP, AVIF). Used to check uploaded files regardless of store type.
  */
 export interface ImageDimensionsAndType {
 	mimeType: AllowedImageMime;

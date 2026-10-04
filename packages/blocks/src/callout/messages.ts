@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 콜아웃 블록의 이름표·설명과 편집 화면 문구(M15). */
+/** Labels, descriptions, and editing view text of the callout block. */
 export const calloutMessages = defineMessages("cms-blocks.callout", {
 	en: {
 		label: "Callout",

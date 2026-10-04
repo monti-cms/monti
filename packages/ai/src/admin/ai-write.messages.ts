@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 본문에 글을 쓰는 AI 대화 상자(다듬기·초안·블록 고치기)의 문구. */
+/** Texts of the AI dialog that writes into the body (polish, draft, block fix). */
 export const aiWriteMessages = defineMessages("cms-ai.admin.write", {
 	en: {
 		blockMismatch: "The result is not a single block of the same kind.",

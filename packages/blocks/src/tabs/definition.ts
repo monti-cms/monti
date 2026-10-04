@@ -4,7 +4,7 @@ import { tabsMessages } from "./messages";
 
 const t = createActiveTranslator(tabsMessages);
 
-/** 탭 묶음(`::::tabs` 안에 `:::tab{label="…"}` 2~8개). */
+/** Tab group (2 to 8 `:::tab{label="…"}` inside `::::tabs`). */
 export const tabsBlock = defineBlock({
 	name: "tabs",
 	get label() {

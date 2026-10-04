@@ -47,18 +47,18 @@ export function useAiSettings() {
 		queryKey: AI_SETTINGS_KEY,
 		queryFn: ({ signal }) =>
 			cmsFetch<AiSettingsView>(cmsApiUrl("/v1/ai/settings"), { signal, fallback: t("error.loadList") }),
-		// 기능을 열 때마다 다시 받지 않는다. 연결을 저장하면 응답으로 캐시를 바꾼다.
+		// Not re-fetched every time an action is opened. Saving a connection updates the cache from the response.
 		staleTime: 60_000,
 	});
 }
 
-/** AI 화면 세 탭이 같이 쓰는 조각. 목록의 열린 항목 모양은 관리자 화면의 `OPEN_ITEM`과 같다. */
+/** Pieces shared by the three tabs of the AI screen. The open-item shape of the list is the same as the admin screen's `OPEN_ITEM`. */
 export const OPEN_ITEM = "bg-cms-accent text-cms-accent-foreground";
 
-/** 상세 칸의 틀(기능·연결·공통 문구가 같이 쓴다). */
+/** Frame of the detail pane (shared by actions, connections and shared texts). */
 export const DETAIL_PANE = "mx-auto flex w-full max-w-3xl flex-col gap-5 p-6 text-sm";
 
-/** 불러오기 실패. 그 자리에 알리고 다시 받을 수 있게 한다. */
+/** Load failure. Reports it in place and allows fetching again. */
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
 	return (
 		<Alert variant="danger" className="m-3 flex w-auto items-center justify-between gap-3">
@@ -70,7 +70,7 @@ export function LoadError({ message, onRetry }: { message: string; onRetry: () =
 	);
 }
 
-/** 목록 한 줄. 이름 오른쪽에 상태 글자, 아래에 흐린 설명을 둔다. */
+/** One list row. Status text to the right of the name, and a dim description below. */
 export function ListRow({
 	title,
 	status,
@@ -105,17 +105,17 @@ export function ListRow({
 	);
 }
 
-/** 목록을 불러오는 동안의 자리표시. */
+/** Placeholder while the list loads. */
 export function ListSkeleton({ rows }: { rows: number }) {
 	return Array.from({ length: rows }, (_, index) => (
-		// biome-ignore lint/suspicious/noArrayIndexKey: 자리표시
+		// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 		<li key={index} className="p-3" aria-hidden>
 			<Skeleton className="h-9 w-full" />
 		</li>
 	));
 }
 
-/** 오류 한 줄(편집 칸 안). */
+/** One error line (inside the edit pane). */
 export function InlineError({ children }: { children: ReactNode }) {
 	return (
 		<p role="alert" className="text-cms-destructive text-xs">
@@ -124,10 +124,10 @@ export function InlineError({ children }: { children: ReactNode }) {
 	);
 }
 
-/** 모델 목록을 받기 전에 주소·키 입력이 멈추길 기다리는 시간. */
+/** Time to wait for URL/key input to pause before fetching the model list. */
 const LIST_INPUT_DEBOUNCE_MS = 400;
 
-/** 키 입력 상태. `undefined`는 저장된 키 그대로, `null`은 비우기. */
+/** Key input state. `undefined` keeps the saved key, `null` clears it. */
 type KeyDraft = string | null | undefined;
 
 interface Draft {
@@ -151,9 +151,9 @@ const draftOf = (provider: AiProviderView): Draft => ({
 const sameDraft = (a: Draft, b: Draft) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
- * AI 화면 `연결` 탭. 연결을 여러 개 두고(이름·방식·주소·키·기본 모델), 기능마다 어느 연결을 쓸지 고른다.
- * 키는 서버가 암호화해 저장하고 여기에는 끝 네 글자만 보인다.
- * 연 연결(`selected`)은 AI 화면이 든다. 머리의 `연결 추가`와 탭 바꾸기에서 저장하지 않은 내용을 묻기 때문이다.
+ * AI screen Connections tab. Keeps several connections (name, mode, URL, key, default model) and lets each action pick which connection to use.
+ * The key is stored encrypted by the server, and only the last four characters are shown here.
+ * The AI screen holds the open connection (`selected`), because the header's Add connection and tab switching ask about unsaved content.
  */
 export function ConnectionManager({
 	selected,
@@ -162,9 +162,9 @@ export function ConnectionManager({
 	onDirtyChange,
 }: {
 	selected: string | "new" | null;
-	/** 목록에서 연다. 저장하지 않은 내용이 있으면 AI 화면이 먼저 묻는다. */
+	/** Opens from the list. If there is unsaved content, the AI screen asks first. */
 	onOpen: (id: string | "new") => void;
-	/** 저장·삭제·취소 뒤 묻지 않고 바꾼다. */
+	/** Switches without asking after save, delete or cancel. */
 	onSelectedChange: (id: string | null) => void;
 	onDirtyChange: (dirty: boolean) => void;
 }) {
@@ -283,13 +283,13 @@ function ProviderEditor({
 		setCheck(null);
 	};
 	const dirty = provider === null || !sameDraft(draft, initial);
-	// 새 연결은 아무것도 적지 않았으면 버릴 것이 없다.
+	// A new connection with nothing entered has nothing to discard.
 	const unsaved = provider === null ? !sameDraft(draft, NEW_DRAFT) : dirty;
 	useEffect(() => onDirtyChange(unsaved), [unsaved, onDirtyChange]);
 	useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
 	const example = PROVIDER_EXAMPLES[draft.kind];
-	// 주소·키를 치는 동안에는 목록을 받지 않고, 멈추면 받는다. 저장한 키를 그대로 쓰면 연결 id로 받는다.
+	// While typing the URL or key the list is not fetched; it is fetched once typing pauses. If the saved key is used as is, it is fetched by connection id.
 	const listUrl = useDebounced(draft.url, LIST_INPUT_DEBOUNCE_MS);
 	const listKey = useDebounced(typeof draft.apiKey === "string" ? draft.apiKey : undefined, LIST_INPUT_DEBOUNCE_MS);
 	const modelSource: ModelSource | null =
@@ -318,7 +318,7 @@ function ProviderEditor({
 						json,
 						fallback: t("error.save"),
 					});
-			// 새 연결은 목록 끝에 붙는다.
+			// A new connection is appended to the end of the list.
 			const id = provider?.id ?? saved.providers.at(-1)?.id ?? "";
 			onSaved(saved, id);
 			toast.success(t("toast.saved"));
@@ -357,7 +357,7 @@ function ProviderEditor({
 		}
 	};
 
-	/** 저장하기 전 지금 입력값으로 확인한다. 키를 새로 넣지 않았으면 저장된 키를 쓴다. */
+	/** Checks with the current input before saving. If no new key was entered, uses the saved key. */
 	const runCheck = async () => {
 		setChecking(true);
 		try {

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 글 검사(맞춤법 등) 버튼·결과·알림의 문구(M15). */
+/** UI messages for the text check (spelling etc.) buttons, results, and notices. */
 export const textCheckMessages = defineMessages("cms-admin.text-check", {
 	en: {
 		running: "Checking…",

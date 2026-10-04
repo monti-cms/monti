@@ -1,8 +1,8 @@
 import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "../blocks/active";
 
-/** 더한 블록(블록 확장·사이트 설정)의 공개 렌더러 이름. */
+/** Public renderer names of added blocks (block extensions and site config). */
 const ADDED_COMPONENTS = ADDED_BLOCKS.map((block) => block.component);
-/** 더한 블록 중 글자 꾸밈이 아닌 블록의 렌더러 이름. */
+/** Renderer names of added blocks that are not text decorations. */
 const ADDED_BLOCK_COMPONENTS = ADDED_BLOCKS.filter((block) => block.syntax.kind !== "text").map(
 	(block) => block.component,
 );
@@ -39,7 +39,7 @@ export const BLOCK_JSX_NAMES = new Set([
 	...ADDED_BLOCK_COMPONENTS,
 ]);
 
-/** 글자 꾸밈 렌더러 이름 → 문서 mark 이름. 더한 글자 꾸밈(블록 확장)은 블록 이름이 mark 이름이다. */
+/** Text decoration renderer name → document mark name. For added text decorations (block extensions), the block name is the mark name. */
 export const INLINE_JSX_MARKS: Record<string, string> = {
 	u: "underline",
 	strong: "bold",
@@ -52,8 +52,8 @@ export const INLINE_JSX_MARKS: Record<string, string> = {
 };
 
 /**
- * mark 정렬 순서. 파서(`to-document`)·직렬화(`serialize`)·에디터 변환(`tiptap-content`)이 같은 순서를 써야
- * 왕복 문서 비교가 순서 때문에 깨지지 않는다. 더한 글자 꾸밈은 더한 순서대로 번역 안내 다음(바깥)에 온다.
+ * Mark sort order. The parser (`to-document`), serialization (`serialize`) and editor conversion (`tiptap-content`) must use the same order so that
+ * round-trip document comparison does not break because of ordering. Added text decorations come after the translation note (outermost), in the order they were added.
  */
 export const MARK_ORDER = [
 	"untranslated",
@@ -71,8 +71,8 @@ export const MARK_ORDER = [
 export const sortMarks = <T extends { type: string }>(marks: readonly T[]): T[] =>
 	[...marks].sort((left, right) => MARK_ORDER.indexOf(left.type) - MARK_ORDER.indexOf(right.type));
 
-/** 배치 4에서 제거한 이름. 본문에 남아 있으면 `analyze`가 거부한다(읽기 호환도 끝). */
+/** Names removed in batch 4. If one remains in the body, `analyze` rejects it (read compatibility is also over). */
 export const RETIRED_JSX_NAMES = new Set(["ContentLink", "IdeographicSpace"]);
 
-/** 이벤트 핸들러 속성 이름. React는 대소문자를 보존하지 않으므로 `onerror`도 막는다(M7-SEC-1 P2). */
+/** Event handler attribute names. React does not preserve case, so `onerror` is blocked as well. */
 export const EVENT_HANDLER_NAME = /^on[a-z]/i;

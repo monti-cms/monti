@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 번역본 편집기의 AI 번역(블록 번역·모두 번역)의 문구. */
+/** Texts of AI translation in the translation editor (block translation, Translate all). */
 export const aiTranslateMessages = defineMessages("cms-ai.admin.translate", {
 	en: {
 		"toast.failedOne": "Couldn't translate, so the source placeholder was kept. {reason}",

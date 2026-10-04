@@ -13,13 +13,13 @@ import type { ToolbarItem } from "./toolbar-button";
 const t = createTranslator(editorMessages);
 
 export interface InlineMarkTool extends ToolbarItem {
-	/** 이 도구가 켜고 끄는 마크 이름. */
+	/** Name of the mark this tool toggles. */
 	mark: string;
 }
 
 const chain = (editor: Editor) => editor.chain().focus();
 
-/** 켜고 끄기만 하는 인라인 효과. 상단 서식 도구와 인라인 버블이 함께 쓴다. */
+/** Inline effects that only toggle on and off. Shared by the top formatting tools and the inline bubble. */
 const MARK_TOOLS: Omit<InlineMarkTool, "isActive">[] = [
 	{ mark: "bold", label: "B", title: t("inlineMarks.bold"), icon: Bold, run: (e) => chain(e).toggleBold().run() },
 	{
@@ -63,11 +63,11 @@ const MARK_TOOLS: Omit<InlineMarkTool, "isActive">[] = [
 export const INLINE_MARK_TOOLS: InlineMarkTool[] = MARK_TOOLS.map((item) => ({
 	...item,
 	isActive: (e: Editor) => e.isActive(item.mark),
-	// 코드 블록처럼 그 마크를 둘 수 없는 곳에서는 끈다.
+	// Turned off where the mark cannot be placed, such as in a code block.
 	isDisabled: (e: Editor) => !e.can().toggleMark(item.mark),
 }));
 
-/** 선택이 들어 있는 글 블록에 둘 수 있는 인라인 도구. 코드 블록은 굵게·기울임·취소선·밑줄만 된다. */
+/** Inline tools available on the text block containing the selection. A code block only gets bold, italic, strikethrough and underline. */
 export const allowedMarkTools = (state: EditorState) => {
 	const parent = state.selection.$from.parent;
 	return INLINE_MARK_TOOLS.filter((tool) => {
@@ -82,8 +82,8 @@ export const allowsMark = (state: EditorState, mark: string) => {
 };
 
 /**
- * 커서를 두면 버블에 보여 줄 마크 순서. 설정이 있는 마크(링크, 확장의 글자 꾸밈, 코드 안 툴팁·글자 접기)를 먼저 보인다.
- * `detailed`는 글자 꾸밈 확장이 내용을 그리는 마크(`EditorMarkExtension.detail`)다.
+ * Order of marks shown in the bubble when the cursor is placed. Marks with settings (links, extension text styles, in-code tooltips and text folds) come first.
+ * `detailed` is a mark whose content a text-style extension draws (`EditorMarkExtension.detail`).
  */
 export const bubbleMarkOrder = (detailed: readonly string[] = []) => [
 	"link",
@@ -93,10 +93,10 @@ export const bubbleMarkOrder = (detailed: readonly string[] = []) => [
 	...INLINE_MARK_TOOLS.map((tool) => tool.mark),
 ];
 
-/** 설정이 있어 범위에 버블을 붙이는 마크(링크·코드 안 툴팁). 확장의 글자 꾸밈 내용도 같다. */
+/** Marks with settings that attach the bubble to a range (links, in-code tooltips). Content of extension text styles is the same. */
 export const RANGED_MARKS: readonly string[] = ["link", CODE_TOOLTIP_MARK_NAME];
 
-/** 커서가 걸친 마크 하나와 그 마크가 이어지는 범위. */
+/** One mark the cursor touches and the range it spans. */
 export interface ActiveInlineMark {
 	name: string;
 	from: number;
@@ -104,7 +104,7 @@ export interface ActiveInlineMark {
 	attrs: Record<string, unknown>;
 }
 
-/** 커서가 걸친 정규식 규칙의 찾은 곳 하나(코드 블록). 규칙이라 이 곳만 따로 지울 수는 없다. */
+/** One match of a regex rule the cursor touches (code block). Being a rule, this single match cannot be removed on its own. */
 export interface ActiveCodeRule {
 	rule: CodeRule;
 	blockPos: number;
@@ -117,7 +117,7 @@ export type InlineBubbleTarget =
 	| { kind: "selection"; from: number; to: number }
 	| { kind: "marks"; pos: number; marks: ActiveInlineMark[]; rules: ActiveCodeRule[] };
 
-/** `$pos` 바로 앞(before) 또는 뒤(after) 글자에서 시작해 같은 마크가 이어지는 범위. */
+/** Range where the same mark continues, starting from the character just before (before) or after (after) `$pos`. */
 function markRange($pos: ResolvedPos, mark: Mark, side: "before" | "after"): { from: number; to: number } {
 	const parent = $pos.parent;
 	const index = side === "after" || $pos.textOffset > 0 ? $pos.index() : $pos.index() - 1;
@@ -133,16 +133,16 @@ function markRange($pos: ResolvedPos, mark: Mark, side: "before" | "after"): { f
 }
 
 /**
- * 인라인 버블을 띄울 대상.
- * - 글자를 고르면(`selection`) 효과를 적용하는 도구를 띄운다.
- * - 커서가 효과 안이나 끝에 있으면(`marks`) 걸친 효과와 그 범위를 돌려준다(삭제·설정 수정용).
- * 블록(마키) 선택, 셀 선택, 노드 선택, 코드 블록을 넘나드는 선택, 원문 편집 중인 코드 블록에는 띄우지 않는다.
+ * Target for showing the inline bubble.
+ * - When text is selected (`selection`), shows the tools that apply effects.
+ * - When the cursor is inside or at the end of an effect (`marks`), returns the touched effects and their ranges (for removing and editing settings).
+ * Not shown for block (marquee) selection, cell selection, node selection, selection spanning code blocks, or a code block in raw-source editing.
  */
 export function inlineBubbleTarget(state: EditorState, detailed: readonly string[] = []): InlineBubbleTarget | null {
 	const order = bubbleMarkOrder(detailed);
 	const { selection } = state;
 	if (!(selection instanceof TextSelection) || selectedBlocks(state)) return null;
-	// 코드 블록 줄 번호 칸에서 줄을 골랐거나 본문–코드 잇기 중이면 버블을 띄우지 않는다(메뉴·안내 줄을 쓴다).
+	// The bubble is not shown when lines are picked in the code block line number gutter or while linking body text to code (the menu and guide line are used).
 	const effects = codeEffectsKey.getState(state);
 	if (effects?.picked || effects?.linking) return null;
 	const { $from, $to, from, to } = selection;
@@ -164,7 +164,7 @@ export function inlineBubbleTarget(state: EditorState, detailed: readonly string
 	return { kind: "marks", pos: from, marks, rules };
 }
 
-/** 코드 블록 안 커서(`$pos`)에 걸친 정규식 규칙의 찾은 곳. */
+/** Match of a regex rule that the cursor inside a code block (`$pos`) touches. */
 function rulesAt($pos: ResolvedPos): ActiveCodeRule[] {
 	const block = $pos.parent;
 	const text = block.textContent;
@@ -179,7 +179,7 @@ function rulesAt($pos: ResolvedPos): ActiveCodeRule[] {
 	});
 }
 
-/** 효과 하나를 그 범위 전체에서 지운다. 커서는 그 자리에 둔다. */
+/** Removes one effect over its whole range. The cursor stays in place. */
 export function removeInlineMark(editor: Editor, mark: ActiveInlineMark): boolean {
 	const type = editor.schema.marks[mark.name];
 	if (!type) return false;

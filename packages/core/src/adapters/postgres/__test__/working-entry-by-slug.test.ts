@@ -13,17 +13,17 @@ import { seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
- * M9-FE-1: 관리자 미리보기 전용 working slug 조회.
+ * Working slug lookup for the admin preview only.
  *
- * 공개 조회(`getPublishedEntryBySlug`)는 초안을 절대 반환하지 않는다. 그 계약을 건드리지 않고
- * 관리자 경로만 초안을 찾을 수 있는지 고정한다.
+ * The public read (`getPublishedEntryBySlug`) never returns a draft. This pins down that only the admin path can find drafts,
+ * without touching that contract.
  */
-describe("M9-FE-1 getWorkingEntryBySlug", () => {
+describe("getWorkingEntryBySlug", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
 	let relationTarget: (to: Collection) => Promise<string>;
-	/** 같은 slug를 넣어 볼 다른 컬렉션(블로그는 메모). 문서 컬렉션이 하나뿐인 설정은 항목 컬렉션을 쓴다. */
+	/** Another collection to try the same slug in (memos in the reference blog). A config with a single document collection uses an item collection. */
 	const elsewhere = otherContentCollection ?? recordCollection;
 
 	beforeAll(async () => {
@@ -33,7 +33,7 @@ describe("M9-FE-1 getWorkingEntryBySlug", () => {
 
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		// 발행 필수값(블로그의 카테고리 같은 것)은 설정에서 찾아 채운다.
+		// Required-for-publish values (such as the reference blog's category) are looked up in the config and filled in.
 		relationTarget = fillRequiredMetadata(store).relationTarget;
 	});
 
@@ -64,7 +64,7 @@ describe("M9-FE-1 getWorkingEntryBySlug", () => {
 		});
 	}
 
-	it("초안을 working 본문과 함께 돌려준다 — 공개 조회는 같은 slug를 못 본다", async () => {
+	it("returns the draft with its working body; the public read cannot see the same slug", async () => {
 		await seedDraft("draft-only-post", "초안 본문");
 
 		const found = await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "draft-only-post" });
@@ -76,13 +76,13 @@ describe("M9-FE-1 getWorkingEntryBySlug", () => {
 			await requiredMetadata(contentCollection, "draft-only-post", relationTarget),
 		);
 
-		// 공개 경로는 여전히 초안을 반환하지 않는다(이 변경으로 공개 계약이 넓어지지 않았다).
+		// The public path still does not return the draft (this change did not widen the public contract).
 		expect(await store.getPublishedEntryBySlug({ collection: contentCollection, slug: "draft-only-post" })).toEqual({
 			status: "not_found",
 		});
 	});
 
-	it("발행 뒤 working 본문을 수정하면 미리보기는 최신 working을 본다", async () => {
+	it("shows the latest working copy in the preview after the working body is edited post-publish", async () => {
 		const draft = await seedDraft("edited-after-publish", "발행 전 본문");
 
 		await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
@@ -104,11 +104,11 @@ describe("M9-FE-1 getWorkingEntryBySlug", () => {
 		expect(found?.published?.mdx).toBe("발행 전 본문");
 	});
 
-	it("없는 slug는 null이다", async () => {
+	it("returns null for a missing slug", async () => {
 		expect(await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "does-not-exist" })).toBeNull();
 	});
 
-	it("다른 컬렉션의 같은 slug는 찾지 않는다", async () => {
+	it("does not find the same slug in another collection", async () => {
 		const other = await seedEntry(store, {
 			collection: elsewhere,
 			slug: "shared-slug",
@@ -123,7 +123,7 @@ describe("M9-FE-1 getWorkingEntryBySlug", () => {
 		expect(await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "shared-slug" })).toBeNull();
 	});
 
-	it("잘못된 입력은 조용히 null이 아니라 invalid_input으로 거부한다", async () => {
+	it("rejects invalid input with invalid_input instead of silently returning null", async () => {
 		await expect(store.getWorkingEntryBySlug({ collection: contentCollection, slug: "" })).rejects.toBeInstanceOf(
 			CmsError,
 		);

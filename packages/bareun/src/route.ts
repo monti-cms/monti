@@ -7,11 +7,11 @@ import type { ResolvedBareunOptions } from "./options";
 const t = createActiveTranslator(bareunMessages);
 
 /**
- * 바른 검사 경로(`POST /api/cms/v1/text-check/bareun`). 관리자만 부를 수 있다. `{ segments }`를 받아 `{ issues }`를 돌려준다.
- * 키가 없으면 바른을 부르지 않고 503이다. 바른 오류는 검사 경로 도우미(`textCheckRoute`)가 일반 오류(502)로 바꾼다.
+ * Bareun check route (`POST /api/cms/v1/text-check/bareun`). Admin only. Takes `{ segments }` and returns `{ issues }`.
+ * Without a key it does not call Bareun and returns 503. Bareun errors are turned into a generic error (502) by the check route helper (`textCheckRoute`).
  */
 export function bareunRoute(options: ResolvedBareunOptions) {
-	// 키는 부를 때마다 서버 환경 변수에서 읽는다. 브라우저에는 보내지 않는다.
+	// The key is read from the server environment variable on every call. It is never sent to the browser.
 	const readKey = () => process.env[options.apiKeyEnv]?.trim() || undefined;
 	const unavailable = adminRoute(async () =>
 		json({ code: "text_check_unavailable", message: t("error.keyMissing") }, { status: 503 }),

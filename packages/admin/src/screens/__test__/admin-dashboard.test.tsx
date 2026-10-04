@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminClientDashboard, AdminTrashDashboard } from "../admin-dashboard";
 import { AdminQueryProvider } from "../shared/query-provider";
 
-/** 주소창. `router.replace`가 바꾸면 `useSearchParams`를 쓰는 화면이 다시 그려진다. */
+/** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = vi.hoisted(() => {
 	const listeners = new Set<() => void>();
 	const state = {
@@ -64,7 +64,7 @@ const folder: Folder = { id: "f1", collection: "post", parentId: null, name: "�
 const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => data });
 type Handler = (url: URL, init: RequestInit | undefined) => unknown;
 
-/** 가짜 서버. 목록 요청은 `posts`·`trashed`에서 읽고, 테스트는 `handle`로 요청을 더 받는다. */
+/** Fake server. List requests read from `posts` and `trashed`, and tests accept more requests through `handle`. */
 const server = {
 	posts: [] as ListEntriesItem[],
 	trashed: [] as ListEntriesItem[],
@@ -135,8 +135,8 @@ const openRowMenu = async (title: string) => {
 };
 const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.textContent);
 
-describe("목록 화면 — 목록 설정", () => {
-	it("주소에 페이지 크기·정렬이 없으면 저장된 설정으로 부른다", async () => {
+describe("list screen — list settings", () => {
+	it("with no page size or sort in the address, requests with the saved settings", async () => {
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
@@ -149,7 +149,7 @@ describe("목록 화면 — 목록 설정", () => {
 		});
 	});
 
-	it("주소에 적힌 값이 저장된 설정보다 앞선다", async () => {
+	it("values written in the address take precedence over saved settings", async () => {
 		nav.set("collection=post&pageSize=100&sort=createdAt&dir=asc");
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "desc" } } } };
 		renderList();
@@ -158,7 +158,7 @@ describe("목록 화면 — 목록 설정", () => {
 		await waitFor(() => expect(entryRequests().at(-1)?.searchParams.get("pageSize")).toBe("100"));
 	});
 
-	it("정렬을 바꾸면 주소를 바꾸고 컬렉션 설정으로 저장한다", async () => {
+	it("changing the sort changes the address and saves to the collection settings", async () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
@@ -173,8 +173,8 @@ describe("목록 화면 — 목록 설정", () => {
 	});
 });
 
-describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
-	it("고르지 않은 줄의 메뉴는 그 줄 하나를 대상으로 한다", async () => {
+describe("list screen — row menu and bulk actions", () => {
+	it("the menu of an unselected row targets just that row", async () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
@@ -189,7 +189,7 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 		]);
 	});
 
-	it("여러 줄을 고른 채 고른 줄의 메뉴를 열면 고른 줄 전체가 대상이다", async () => {
+	it("opening the menu of a selected row with several rows selected targets all selected rows", async () => {
 		server.handle = (url, init) =>
 			url.pathname === "/api/cms/v1/bulk" && init?.method === "POST"
 				? json({ results: bodyOf([url, init]).items.map(({ id }: { id: string }) => ({ id, ok: true, version: 4 })) })
@@ -218,7 +218,7 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("2개 항목을 보관했습니다."));
 	});
 
-	it("Delete 키는 고른 줄 전체를 휴지통으로 보낼지 묻는다", async () => {
+	it("the Delete key asks whether to move all selected rows to trash", async () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
@@ -229,7 +229,7 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 		expect(await screen.findByRole("alertdialog", { name: "휴지통으로 이동" })).toBeTruthy();
 	});
 
-	it("작업은 목록에 먼저 반영하고, 실패한 줄은 고른 채로 남긴다", async () => {
+	it("actions are applied to the list first, and failed rows stay selected", async () => {
 		let respond: (value: unknown) => void = () => {};
 		server.handle = (url, init) =>
 			url.pathname === "/api/cms/v1/bulk" && init?.method === "POST"
@@ -245,11 +245,11 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동Del" }));
 		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로 이동" }));
 
-		// 응답 전에 두 줄이 빠진다.
+		// Two rows drop out before the response.
 		await waitFor(() => expect(screen.queryByRole("row", { name: /가/ })).toBeNull());
 		expect(screen.queryByRole("row", { name: /나/ })).toBeNull();
 
-		// 서버는 `나`만 옮기지 못했다. 다시 받은 목록에는 `나`가 남아 있고 고른 채다.
+		// The server could only not move `나`. The refetched list still has `나`, and it is still selected.
 		server.posts = [item("나"), item("다")];
 		await act(async () =>
 			respond(
@@ -268,7 +268,7 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 		expect(toast.error).toHaveBeenCalledWith("1개는 휴지통으로 이동했고 1개는 하지 못했습니다.", expect.anything());
 	});
 
-	it("끝나면 성공한 줄은 선택에서 빼고 실패한 줄만 남긴다", async () => {
+	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
 		server.handle = (url, init) =>
 			url.pathname === "/api/cms/v1/bulk" && init?.method === "POST"
 				? json({
@@ -293,14 +293,14 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 		expect(checked("나")).toBe("true");
 	});
 
-	it("요청 자체가 실패하면 다시 받기 전에 목록을 되돌린다", async () => {
+	it("if the request itself fails, the list is rolled back before refetching", async () => {
 		let bulkFailed = false;
 		server.handle = (url, init) => {
 			if (url.pathname === "/api/cms/v1/bulk" && init?.method === "POST") {
 				bulkFailed = true;
 				return json({ code: "internal", message: "서버 오류" }, 500);
 			}
-			// 실패 뒤 다시 받기는 끝나지 않는다. 줄이 돌아온다면 되돌리기 덕분이다.
+			// The refetch after the failure never finishes. If the rows come back, it is thanks to the rollback.
 			if (bulkFailed && url.pathname === "/api/cms/v1/entries") return new Promise(() => {});
 			return undefined;
 		};
@@ -314,7 +314,7 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 		expect(screen.getByRole("row", { name: /가/ })).toBeTruthy();
 	});
 
-	it("글 추가는 지금 폴더에 만든다", async () => {
+	it("adding a post creates it in the current folder", async () => {
 		nav.set("collection=post&folder=f1");
 		server.folders = [folder];
 		renderList();
@@ -326,8 +326,8 @@ describe("목록 화면 — 행 메뉴와 일괄 작업", () => {
 	});
 });
 
-describe("목록 화면 — 폴더", () => {
-	it("보고 있는 폴더를 지우면 전체 보기로 돌아간다", async () => {
+describe("list screen — folders", () => {
+	it("deleting the folder being viewed returns to the all view", async () => {
 		nav.set("collection=post&folder=f1");
 		server.folders = [folder];
 		server.handle = (url, init) => {
@@ -349,8 +349,8 @@ describe("목록 화면 — 폴더", () => {
 	});
 });
 
-describe("휴지통 화면", () => {
-	it("휴지통 항목만 부르고 메뉴는 복원·영구 삭제뿐이다", async () => {
+describe("trash screen", () => {
+	it("requests only trash items and the menu has only restore and permanent delete", async () => {
 		server.trashed = [item("버린 글", { status: "trashed" })];
 		renderTrash();
 		await screen.findByRole("row", { name: /버린 글/ });
@@ -359,7 +359,7 @@ describe("휴지통 화면", () => {
 		expect(menuLabels(await openRowMenu("버린 글"))).toEqual(["복원", "영구 삭제Del"]);
 	});
 
-	it("복원은 항목마다 요청하고 결과를 알린다", async () => {
+	it("restore requests per item and reports the result", async () => {
 		server.trashed = [item("trashed-1", { title: "버린 글", status: "trashed" })];
 		server.handle = (url, init) =>
 			url.pathname === "/api/cms/v1/entries/trashed-1/restore" && init?.method === "POST" ? json({}) : undefined;
@@ -373,7 +373,7 @@ describe("휴지통 화면", () => {
 	});
 });
 
-describe("분류 편집 패널 — 저장하지 않은 변경", () => {
+describe("taxonomy edit panel — unsaved changes", () => {
 	const record = (id: string, title: string) => ({
 		id,
 		collection: "tag",
@@ -400,7 +400,7 @@ describe("분류 편집 패널 — 저장하지 않은 변경", () => {
 	});
 	const panelName = () => screen.findByRole("textbox", { name: /이름/ }) as Promise<HTMLInputElement>;
 
-	it("고치지 않았으면 다른 항목을 바로 열고, 연 줄을 표시한다", async () => {
+	it("if nothing was changed, opens another item right away and marks the open row", async () => {
 		renderList();
 		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
 		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
@@ -412,7 +412,7 @@ describe("분류 편집 패널 — 저장하지 않은 변경", () => {
 		expect(row("리액트").getAttribute("aria-current")).toBeNull();
 	});
 
-	it("고친 채로 다른 항목을 누르면 확인을 받고, 버리면 그 항목을 연다", async () => {
+	it("pressing another item after changes asks for confirmation, and discarding opens that item", async () => {
 		renderList();
 		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
 		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
@@ -420,14 +420,14 @@ describe("분류 편집 패널 — 저장하지 않은 변경", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "뷰" }));
 		const dialog = await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" });
-		// 확인 창이 떠 있는 동안 패널은 가려지지만 고친 값은 남아 있다.
+		// While the confirm dialog is up the panel is hidden but the changed values remain.
 		expect(screen.getByDisplayValue("React!")).toBeTruthy();
 
 		fireEvent.click(within(dialog).getByRole("button", { name: "버리기" }));
 		await waitFor(async () => expect((await panelName()).value).toBe("뷰"));
 	});
 
-	it("고친 채로 새 항목을 만들려 해도 확인을 받는다", async () => {
+	it("trying to create a new item after changes also asks for confirmation", async () => {
 		renderList();
 		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
 		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));

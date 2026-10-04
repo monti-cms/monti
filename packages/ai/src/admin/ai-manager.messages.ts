@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 관리자 AI 화면(기능 탭)의 문구. */
+/** Texts of the admin AI screen (Actions tab). */
 export const aiManagerMessages = defineMessages("cms-ai.admin.manager", {
 	en: {
 		"place.direct": "Direct call",

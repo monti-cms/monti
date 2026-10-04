@@ -17,8 +17,8 @@ const lineLabel = (lines: { start: number; end: number }) =>
 		: t("linkBar.lineRange", { start: lines.start + 1, end: lines.end });
 
 /**
- * 본문–코드 잇기 중에 서식 도구 아래에 뜨는 안내 줄. 먼저 고른 쪽을 보여 주고, 다른 쪽을 고르면 "연결"을 켠다.
- * Esc나 "취소"로 그만둔다.
+ * Guide line shown below the formatting tools while linking body text to code. Shows the side picked first, and turns on "Link" once the other side is picked.
+ * Ends with Esc or "Cancel".
  */
 export function CodeLinkBar({ editor }: { editor: Editor }) {
 	const status = useEditorState({
@@ -41,7 +41,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 	const quoted = status.text ? `“${status.text.length > 24 ? `${status.text.slice(0, 24)}…` : status.text}”` : "";
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: 편집기 위 안내 줄(상태 알림)이다
+		// biome-ignore lint/a11y/useSemanticElements: a guide line above the editor (status notice)
 		<div
 			role="status"
 			aria-label={t("linkBar.label")}

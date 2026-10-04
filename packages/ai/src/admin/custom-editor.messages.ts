@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 화면 기능의 기본 정보 입력(이름·붙을 곳·결과·방식)의 문구(M15). */
+/** Texts of the basic-info inputs of a screen action (name, attach target, result, mode). */
 export const customMessages = defineMessages("cms-ai.admin.custom", {
 	en: {
 		"field.name": "Name",

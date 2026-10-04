@@ -5,8 +5,8 @@ import { type ContentChange, createContentStore, migrateContentStore } from "../
 import { seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-/** 저장 뒤 알림(M14-7): 커밋된 변경만, 실패한 알림이 저장을 되돌리지 않는다. */
-describe("저장 뒤 알림 afterCommit", () => {
+/** Post-save notification: only committed changes are reported, and a failed notification does not roll back the save. */
+describe("post-save notification afterCommit", () => {
 	let pool: Pool;
 	let schemaName: string;
 	const changes: ContentChange[] = [];
@@ -43,9 +43,9 @@ describe("저장 뒤 알림 afterCommit", () => {
 	const create = (slug: string) =>
 		seedEntry(store, { collection: contentCollection, slug, metadata: { title: slug }, mdx: "본문" });
 
-	it("만들기·발행·보관·휴지통·복원·영구 삭제를 커밋 뒤에 알린다", async () => {
+	it("reports create, publish, archive, trash, restore, and permanent delete after commit", async () => {
 		const entry = await create("after-commit-flow");
-		// 필수 관계 대상을 처음 만들 때 그 항목도 "created"로 온다. 이 글의 알림만 본다.
+		// When a required relation target is first created, that item also arrives as "created". Look only at this entry's notifications.
 		expect(changes.at(-1)).toMatchObject({ kind: "created", entryId: entry.id, status: "draft" });
 		changes.length = 0;
 		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
@@ -73,7 +73,7 @@ describe("저장 뒤 알림 afterCommit", () => {
 		});
 	});
 
-	it("되돌린 변경(판 충돌)은 알리지 않는다", async () => {
+	it("does not report rolled-back changes (version conflict)", async () => {
 		const entry = await create("after-commit-conflict");
 		changes.length = 0;
 		await expect(store.publishEntry({ id: entry.id, expectedVersion: entry.version + 5 })).rejects.toMatchObject({
@@ -82,7 +82,7 @@ describe("저장 뒤 알림 afterCommit", () => {
 		expect(changes).toEqual([]);
 	});
 
-	it("알림이 실패해도 저장은 커밋된 그대로다", async () => {
+	it("keeps the save committed even if the notification fails", async () => {
 		const entry = await create("after-commit-failing-hook");
 		failNext = true;
 		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });

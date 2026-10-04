@@ -41,21 +41,21 @@ type PublishedRow = {
 };
 
 /**
- * 번역본은 원문 공개본과 함께 읽는다(v2 B4). 원문이 공개돼 있지 않으면 번역본도 공개 계층에 없다.
- * 원문은 `src`가 자기 자신이다.
+ * A translation is read together with its source's published version. If the source is not published, the translation is not in the public layer either.
+ * For a source, `src` is itself.
  */
 const sourceJoin = (qSchema: string) => `JOIN "${qSchema}".entries src
 	   ON src.id = COALESCE(e.translation_group_id, e.id) AND src.status = 'published'
 	 JOIN "${qSchema}".entry_bodies sb
 	   ON sb.entry_id = src.id AND sb.state = 'published'`;
 
-/** 발행일은 원문의 것을 쓴다(번역본도 원문 날짜). 수정일은 이 언어 본문의 것이다. */
+/** The publish date is the source's (a translation uses the source date too). The modified date is that of this language's body. */
 const PUBLISHED_COLUMNS = (mdxExpr: string, address = "a") =>
 	`e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
 	 ${address}.slug AS slug, b.metadata, sb.metadata AS source_metadata, ${mdxExpr} AS mdx,
 	 src.published_at, b.updated_at AS body_updated_at`;
 
-/** 번역본 메타데이터 = 원문의 공통 값 + 번역본의 언어별 값. */
+/** Translation metadata = the source's shared values + the translation's per-language values. */
 function mapPublishedRow(row: PublishedRow): PublishedEntryRecord {
 	const isTranslation = row.translation_group_id !== row.id;
 	const metadata =
@@ -65,25 +65,25 @@ function mapPublishedRow(row: PublishedRow): PublishedEntryRecord {
 	return mapPublishedEntryRow({ ...row, metadata });
 }
 
-/** 공개 목록 정렬. 발행일은 원문의 것, 수정일은 이 언어 본문의 것, 제목은 이 언어의 제목이다. */
+/** Public list sort. Publish date is the source's, modified date is this language body's, title is this language's title. */
 export type PublishedSort = "publishedAt" | "updatedAt" | "title";
 
 export interface PublishedPageParams {
 	readonly collection: string;
-	/** 이 언어의 콘텐츠만. 없으면 기본 언어다. */
+	/** Only this language's content. Defaults to the default language. */
 	readonly locale?: string;
-	/** 관계 필드 이름 → 고른 항목 ID. 같은 필드의 여러 값은 OR, 다른 필드끼리는 AND다. */
+	/** Relation field name to selected item IDs. Multiple values of the same field are OR; different fields are AND. */
 	readonly where?: Readonly<Record<string, string | readonly string[]>>;
 	readonly sort?: PublishedSort;
 	/**
-	 * 제목 정렬에 쓸 화면 언어. 항목 컬렉션은 기본 언어 레코드 하나에 언어별 이름(`translations`)을 두므로 그 언어의 이름으로
-	 * 정렬한다(없으면 기본 이름). 없으면 `locale`이다.
+	 * Display language used for title sorting. An item collection keeps one default-language record with per-language names (`translations`), so it sorts
+	 * by that language's name (falling back to the default name). If unset, `locale`.
 	 */
 	readonly titleLocale?: string;
 	readonly order?: "asc" | "desc";
-	/** 1부터. */
+	/** 1-based. */
 	readonly page?: number;
-	/** 1~500. 기본 25. */
+	/** 1 to 500. Default 25. */
 	readonly pageSize?: number;
 	readonly includeBody?: boolean;
 }
@@ -95,8 +95,8 @@ const SORT_COLUMNS: Record<PublishedSort, string> = {
 };
 
 /**
- * 공개 조회 전용(M7-BE-1). 공개 페이지·RSS·sitemap·OG가 요청마다 호출한다.
- * published 본문과 published 상태를 모두 요구하므로 초안·보관·휴지통은 어떤 경로로도 반환되지 않는다.
+ * Public reads only. Public pages, RSS, sitemap, and OG call it on every request.
+ * It requires both a published body and published status, so drafts, archived, and trashed entries are never returned by any path.
  */
 export function createPublicReadOps(ctx: StoreContext) {
 	const { pool, qSchema } = ctx;
@@ -104,7 +104,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 		listPublishedEntries: async (params: {
 			collections: readonly string[];
 			includeBody?: boolean;
-			/** 이 언어의 콘텐츠만. 없으면 모든 언어다(v2 B4). record 컬렉션은 기본 언어뿐이다. */
+			/** Only this language's content. All languages if unset. Record collections have only the default language. */
 			locale?: string;
 		}): Promise<PublishedEntryRecord[]> => {
 			if (typeof params !== "object" || params === null || Array.isArray(params)) {
@@ -136,14 +136,14 @@ export function createPublicReadOps(ctx: StoreContext) {
 			return res.rows.map(mapPublishedRow);
 		},
 
-		// 요청 slug가 과거 주소(alias)면 정규 current slug를 가진 항목을 반환한다.
-		// 같은 문자열이 alias와 current에 동시에 존재하면 current를 우선한다.
-		// current 주소가 없는 항목은 반환하지 않는다(A3: 예약·삭제 주소는 공개 계층에 없다).
+		// If the requested slug is a former address (alias), return the entry that owns the canonical current slug.
+		// If the same string exists as both alias and current, current wins.
+		// Entries with no current slug are not returned (reserved and deleted slugs are not in the public layer).
 		getPublishedEntryBySlug: async (params: {
 			collection: string;
 			slug: string;
 			includeBody?: boolean;
-			/** 주소의 언어. 없으면 기본 언어다(v2 B4). */
+			/** Language of the slug. Defaults to the default language. */
 			locale?: string;
 		}): Promise<PublishedEntryLookup> => {
 			if (typeof params !== "object" || params === null || Array.isArray(params)) {
@@ -187,8 +187,8 @@ export function createPublicReadOps(ctx: StoreContext) {
 		},
 
 		/**
-		 * 한 컬렉션·언어의 공개본 한 쪽(관계 조건·정렬·쪽 나누기를 DB에서). 관계 조건은 관계 필드만 받는다.
-		 * 번역본의 공통 관계 값은 원문 공개본에서 읽는다(언어별 필드면 이 언어 본문에서).
+		 * One page of published entries for a collection and language (relation filters, sorting, and pagination done in the DB). Relation filters accept relation fields only.
+		 * A translation's shared relation values are read from the source's published version (from this language's body for per-language fields).
 		 */
 		listPublishedPage: async (
 			params: PublishedPageParams,
@@ -236,7 +236,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 				(await pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count ${from}`, values)).rows[0]?.count ?? 0,
 			);
 			const mdxExpr = params.includeBody === true ? "b.mdx" : "''::text";
-			// 개수 질의에 쓰지 않는 값은 따로 붙인다(쓰지 않는 자리표시는 Postgres가 형식을 몰라 오류다).
+			// Values not used by the count query are appended separately (Postgres errors on unused placeholders because it cannot infer their type).
 			const rowValues = [...values];
 			let orderBy = SORT_COLUMNS[sort];
 			if (
@@ -256,7 +256,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 			return { items: rows.rows.map(mapPublishedRow), total, page, pageSize };
 		},
 
-		/** 번역 묶음의 공개된 언어들(원문 포함). 원문이 공개돼 있지 않으면 비어 있다. */
+		/** Published languages of a translation group (including the source). Empty if the source is not published. */
 		listPublishedTranslations: async (params: {
 			translationGroupId: string;
 		}): Promise<{ id: string; collection: string; locale: string; slug: string }[]> => {
@@ -274,8 +274,8 @@ export function createPublicReadOps(ctx: StoreContext) {
 		},
 
 		/**
-		 * 번역 묶음 ID들의 공개본(모든 언어). 관계를 풀 때 쓴다: 부르는 쪽이 언어를 고르고 없으면 원문을 쓴다.
-		 * 공개되지 않은 대상은 빠진다.
+		 * Published versions (all languages) for translation group IDs. Used when resolving relations: the caller picks the language and falls back to the source.
+		 * Targets that are not published are omitted.
 		 */
 		listPublishedByGroups: async (params: {
 			translationGroupIds: readonly string[];

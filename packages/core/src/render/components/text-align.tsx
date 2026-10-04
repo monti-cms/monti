@@ -6,8 +6,8 @@ type Align = (typeof TEXT_ALIGN_VALUES)[number];
 const isAlign = (value: string | undefined): value is Align => TEXT_ALIGN_VALUES.some((allowed) => allowed === value);
 
 /**
- * `:::text-align{align}` 컨테이너. 검증된 값만 고정 클래스로 바꾼다(값을 className·style에 그대로 넣지 않는다, A4).
- * 허용하지 않는 값은 기본 정렬이다.
+ * `:::text-align{align}` container. Only validated values are turned into fixed classes (values are not put into className or style as they are).
+ * Disallowed values fall back to the default alignment.
  */
 export function CmsTextAlign({ align, children }: { align?: string; children?: ReactNode }) {
 	return <div className={isAlign(align) ? `cms-align-${align}` : undefined}>{children}</div>;

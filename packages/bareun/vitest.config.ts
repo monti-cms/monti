@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
 		globals: true,
 		include: ["src/**/*.{test,spec}.{ts,tsx}"],
 		setupFiles: ["../admin/src/test/setup-dom.ts"],
-		// 저장소 루트에서 함께 돌 때는 다른 묶음 뒤에 돈다(`vitest.config.ts`).
+		// When run together from the repository root, it runs after the other projects (`vitest.config.ts`).
 		sequence: { groupOrder: 3 },
 		testTimeout: 60000,
 		hookTimeout: 60000,
@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => ({
 	},
 	resolve: {
 		alias: {
-			// 본체 패키지의 예시 블로그 설정에 바른 검사기를 더한 설정으로 돈다.
+			// Runs with the core package's example blog config plus the Bareun checker.
 			"@cms-config": path.resolve(__dirname, "./test/cms.config.ts"),
 			"@cms-server": path.resolve(__dirname, "../core/test/cms.server.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),

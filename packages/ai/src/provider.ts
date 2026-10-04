@@ -11,24 +11,24 @@ import { providerMessages } from "./provider.messages";
 const t = createTranslator(providerMessages);
 
 /**
- * AI 서비스 포트. 연결(주소·키)과 모델 하나로 만든다. 연결은 AI 화면 설정(`settings.ts`)에서 받는다.
+ * AI service port. Built from a connection (URL, key) and one model. The connection comes from the AI screen settings (`settings.ts`).
  *
- * - 생성: OpenAI와 같은 방식의 주소를 Vercel AI SDK로 부른다. 정해 둔 JSON 모양으로 답을 받는다.
- * - 판단: System One 주소(TypeSafe `/v1/systemone`, OpenRouter Decisions API)로 선택지마다 확률을 받는다.
- * - 가짜: `CMS_AI_FAKE=1`(개발 전용)이면 키 없이 정해진 답을 준다.
+ * - Generate: calls an OpenAI-style URL through the Vercel AI SDK. Receives the answer in a fixed JSON shape.
+ * - Decide: receives a probability per option from a System One URL (TypeSafe `/v1/systemone`, OpenRouter Decisions API).
+ * - Fake: with `CMS_AI_FAKE=1` (dev only), gives a fixed answer without a key.
  */
 
 export type AiContent =
 	| { type: "text"; text: string }
 	| { type: "image"; mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp"; data: string };
 
-/** 가짜 연결(개발 전용)이 답을 만들 재료. 실제 연결은 읽지 않는다. */
+/** Material from which the fake connection (dev only) builds its answer. Real connections do not read it. */
 export interface AiFakeHint {
-	/** 보낸 자료(입력 이름 → 종류·글). */
+	/** Material sent (input name -> kind, text). */
 	readonly inputs: Readonly<Record<string, { readonly kind: AiInputKind; readonly value: string }>>;
-	/** 고를 수 있는 값(선택지가 있는 후보). */
+	/** Selectable values (candidates with options). */
 	readonly choices?: readonly string[];
-	/** 기능이 정한 가짜 답(`AiActionDefinition.fake`). */
+	/** Fake answer defined by the action (`AiActionDefinition.fake`). */
 	readonly answer?: () => string;
 }
 
@@ -37,20 +37,20 @@ export interface AiRequest<T> {
 	content: AiContent[];
 	schema: z.ZodType<T>;
 	maxTokens: number;
-	/** 결과 모양. 가짜 연결이 답 모양을 정할 때 쓴다. */
+	/** Result shape. The fake connection uses it to decide the answer shape. */
 	result: AiResult;
 	fake: AiFakeHint;
 	signal?: AbortSignal;
 }
 
-/** 흘려받기 요청(M8-1). 글(MDX·긴 글) 결과만 흘려받는다. 답은 JSON이 아닌 일반 글이다. */
+/** Streaming request. Only text (MDX, long text) results are streamed. The answer is plain text, not JSON. */
 export type AiStreamRequest = Omit<AiRequest<unknown>, "schema">;
 
 export interface AiProvider {
 	readonly name: "openai-compatible" | "fake";
 	readonly model: string;
 	generate<T>(request: AiRequest<T>): Promise<T>;
-	/** 답을 조각으로 흘려준다. 다 받으면 끝난다. */
+	/** Streams the answer piece by piece. Ends once everything is received. */
 	stream(request: AiStreamRequest): AsyncIterable<string>;
 }
 
@@ -76,7 +76,7 @@ export interface AiDecider {
 
 export const isFakeAi = () => process.env.CMS_AI_FAKE === "1" && process.env.NODE_ENV !== "production";
 
-/** 서비스가 오류 본문에 담아 보낸 설명(`{"error": {"message": …}}` 등). 없으면 빈 글자. */
+/** Explanation the service put in the error body (`{"error": {"message": …}}` etc.). Empty string if none. */
 function serviceMessage(detail: string): string {
 	let message = detail;
 	try {
@@ -84,12 +84,12 @@ function serviceMessage(detail: string): string {
 		const candidate = typeof body.error === "string" ? body.error : (body.error?.message ?? body.message);
 		if (typeof candidate === "string") message = candidate;
 	} catch {
-		// JSON이 아니면 본문 그대로 쓴다.
+		// If it is not JSON, use the body as is.
 	}
 	return message.replace(/\s+/g, " ").trim().slice(0, 200);
 }
 
-/** 서비스 오류를 화면에 보여 줄 AI 오류로 바꾼다. 서비스가 보낸 설명을 뒤에 붙이고 로그에도 남긴다. */
+/** Turns a service error into an AI error to show on screen. Appends the service's explanation and also logs it. */
 function providerError(status: number | undefined, detail: string): AiError {
 	const message = serviceMessage(detail);
 	console.error("AI provider error:", status, message);
@@ -104,33 +104,33 @@ function providerError(status: number | undefined, detail: string): AiError {
 const isAbort = (error: unknown) => error instanceof Error && error.name === "AbortError";
 
 /**
- * 답을 받는 방식. 모델·서비스마다 지원이 달라 앞에서부터 차례로 시도한다.
- * - `schema`: 정해진 JSON 모양(json_schema)
- * - `json`: JSON 모드(json_object). 모양은 지시문의 예시로 알려 준다
- * - `text`: 일반 글로 받아 JSON 부분만 뽑는다
+ * How the answer is received. Support differs per model and service, so each is tried in order from the first.
+ * - `schema`: a fixed JSON shape (json_schema)
+ * - `json`: JSON mode (json_object). The shape is given by an example in the instructions
+ * - `text`: receive plain text and extract only the JSON part
  */
 const OUTPUT_MODES = ["schema", "json", "text"] as const;
 type OutputMode = (typeof OUTPUT_MODES)[number];
 
 /**
- * 다음 방식으로 다시 시도할 오류인가. 요청 형식을 거절했거나(400·422), 그 형식을 지원하는 곳이 없거나(404, OpenRouter),
- * 답이 모양을 어긴 경우다. 키·크레딧·요청 수 오류는 다시 시도해도 같으므로 바로 알린다.
+ * Whether the error warrants retrying with the next mode. Either the request format was rejected (400, 422), nowhere supports that format (404, OpenRouter),
+ * or the answer broke the shape. Key, credit and rate-limit errors are the same on retry, so they are reported right away.
  */
 const shouldTryNext = (error: unknown) =>
 	APICallError.isInstance(error)
 		? [400, 404, 422].includes(error.statusCode ?? 0)
 		: !isAbort(error) && !isTruncated(error);
 
-/** SDK가 다시 시도한 끝에 감싼 오류는 마지막 오류로 푼다(서비스 오류를 형식 오류로 잘못 보지 않게). */
+/** An error the SDK wrapped after retrying is unwrapped to the last error (so a service error is not mistaken for a format error). */
 const unwrap = (error: unknown): unknown => (RetryError.isInstance(error) ? unwrap(error.lastError) : error);
 
-/** 출력 한도에 닿아 답이 끊겼다. 다른 방식으로 다시 받아도 같으므로 바로 알린다. */
+/** The answer was cut off by hitting the output limit. Retrying in another mode gives the same result, so it is reported right away. */
 class TruncatedAnswerError extends Error {}
 const isTruncated = (error: unknown) =>
 	error instanceof TruncatedAnswerError ||
 	(NoObjectGeneratedError.isInstance(error) && error.finishReason === "length");
 
-/** 로그에 남길 짧은 실패 이유. 모델 답·보낸 글은 남기지 않는다. */
+/** Short failure reason to log. The model's answer and the text sent are not logged. */
 function failureNote(error: unknown): string {
 	if (APICallError.isInstance(error))
 		return `${error.statusCode} ${serviceMessage(error.responseBody ?? error.message)}`;
@@ -140,7 +140,7 @@ function failureNote(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-/** 글에서 JSON 객체를 뽑는다(코드 펜스·앞뒤 말 무시). */
+/** Extracts a JSON object from text (ignoring code fences and surrounding words). */
 function extractJson(text: string): unknown {
 	const start = text.indexOf("{");
 	const end = text.lastIndexOf("}");
@@ -288,7 +288,7 @@ export function createDecider(config: { url: string; apiKey: string; model: stri
 	};
 }
 
-/** OpenAI 방식 주소의 모델 목록(`GET {baseUrl}/models`). 목록을 주지 않는 서비스면 빈 배열. */
+/** Model list of an OpenAI-style URL (`GET {baseUrl}/models`). Empty array for services that do not provide a list. */
 export async function listModels(baseUrl: string, apiKey: string | null, signal?: AbortSignal): Promise<AiModelInfo[]> {
 	let response: Response;
 	try {
@@ -314,28 +314,28 @@ export async function listModels(baseUrl: string, apiKey: string | null, signal?
 		.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** 자료에서 영어 낱말을 뽑는다(가짜 연결 전용). */
+/** Extracts English words from the material (fake connection only). */
 const words = (text: string) => (text.match(/[A-Za-z][A-Za-z0-9]+/g) ?? []).map((word) => word.toLowerCase());
 
-/** 종류가 맞는 첫 자료. */
+/** First material of the matching kind. */
 const firstOf = (hint: AiFakeHint, kinds: readonly AiInputKind[]) =>
 	Object.values(hint.inputs).find((input) => kinds.includes(input.kind) && input.value.trim())?.value;
 
-/** 글 자료(글·MDX·현재 값)를 모두 이은 것. */
+/** All text material (text, MDX, current value) joined together. */
 const allText = (hint: AiFakeHint) =>
 	Object.values(hint.inputs)
 		.filter((input) => input.kind === "text" || input.kind === "mdx" || input.kind === "value")
 		.map((input) => input.value)
 		.join(" ");
 
-/** 글자로 시작하는 MDX(문단). 앞에 표시를 붙여도 블록 모양이 바뀌지 않는다. */
+/** MDX that starts with letters (a paragraph). Prefixing a marker does not change the block shape. */
 const startsWithWords = (mdx: string) => /^[\p{L}\p{N}]/u.test(mdx.trim());
 
 /**
- * 가짜 글·MDX 답. 기능이 정한 답(`fake`)이 있으면 그것을, 없으면 결과 모양과 자료 종류로 만든다.
- * - MDX 자료가 있으면 그 MDX(번역처럼 뼈대를 지켜야 하는 기능도 검사를 통과한다). 흘려받기는 바뀐 곳이 보이게
- *   문단 앞에 표시를 붙인다.
- * - 없으면 첫 글 자료로 만든 초안.
+ * Fake text/MDX answer. Uses the action's own answer (`fake`) if it has one, otherwise builds it from the result shape and material kinds.
+ * - If there is MDX material, that MDX (so even actions that must preserve the skeleton, like translation, pass validation). Streaming prefixes a marker to
+ *   paragraphs so the changed parts are visible.
+ * - Otherwise, a draft built from the first text material.
  */
 function fakeText(result: AiResult, hint: AiFakeHint, streaming: boolean): string {
 	if (hint.answer) return hint.answer();
@@ -348,7 +348,7 @@ function fakeText(result: AiResult, hint: AiFakeHint, streaming: boolean): strin
 	return `## ${heading}\n\n(fake) First paragraph about ${heading}. It fills in little by little while streaming.\n\n(fake) Second paragraph.`;
 }
 
-/** 가짜 후보. 기능이 정한 답(줄마다 하나), 선택지, 코드에서 찾을 정규식, 글로 만든 낱말 묶음 순으로 고른다. */
+/** Fake candidates. Chosen in this order: the action's own answer (one per line), options, a regex found in the code, a word bundle made from text. */
 function fakeCandidates(hint: AiFakeHint): string[] {
 	if (hint.answer) {
 		return hint
@@ -368,13 +368,13 @@ function fakeCandidates(hint: AiFakeHint): string[] {
 	return [base, `${base}-guide`, slugify(`fake ${base}`)];
 }
 
-/** 키 없이 정해진 답을 주는 생성 모델. 같은 입력이면 늘 같은 답이다. */
+/** Generation model that gives a fixed answer without a key. The same input always gives the same answer. */
 export function createFakeGenerator(): AiProvider {
 	return {
 		name: "fake",
 		model: "fake-generator",
 		async *stream(request: AiStreamRequest): AsyncIterable<string> {
-			// 조금씩 보이는지 확인할 수 있게 낱말마다 조금 쉰다.
+			// Pause briefly per word so the gradual display can be checked.
 			for (const piece of fakeText(request.result, request.fake, true).split(/(?<=\s)/)) {
 				if (request.signal?.aborted) throw new DOMException("Aborted", "AbortError");
 				await new Promise((resolve) => setTimeout(resolve, 40));
@@ -389,7 +389,7 @@ export function createFakeGenerator(): AiProvider {
 	};
 }
 
-/** 키 없이 정해진 확률을 주는 판단 모델. 앞의 선택지일수록 확률이 높다. */
+/** Decision model that gives fixed probabilities without a key. The earlier the option, the higher the probability. */
 export function createFakeDecider(): AiDecider {
 	return {
 		name: "fake",

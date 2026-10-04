@@ -1,7 +1,7 @@
 import { getCmsContentStore, getCmsMediaStore } from "../container";
 
 /**
- * 미디어 하나의 공개 주소(공유 이미지 등). 준비되지 않았거나 DB·저장소가 없는 배포면 `null`이다.
+ * Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage.
  */
 export async function resolvePublicMediaUrl(
 	mediaId: string,

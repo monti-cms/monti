@@ -24,7 +24,7 @@ const findIndentNodes = (node: Element): Element[] => {
 };
 
 describe("highlight indent guides integration", () => {
-	it("들여쓰기 토큰을 indent class span으로 렌더링한다", () => {
+	it("renders indent tokens as indent class spans", () => {
 		const hast = highlight("function f() {\n  console.log(1)\n    console.log(2)\n}", "ts", {}, {});
 		const pre = hast.children.find((node): node is Element => node.type === "element" && node.tagName === "pre");
 		expect(pre).toBeDefined();

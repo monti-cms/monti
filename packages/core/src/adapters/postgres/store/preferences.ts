@@ -2,7 +2,7 @@ import type { StoreContext } from "./context";
 import { normalizeMetadata } from "./rows";
 import type { JsonObject } from "./types";
 
-/** 관리자별 목록·편집 설정(§3.2). */
+/** Per-admin list and editor preferences. */
 export function createPreferenceOps(ctx: StoreContext) {
 	const { pool, qSchema } = ctx;
 	return {

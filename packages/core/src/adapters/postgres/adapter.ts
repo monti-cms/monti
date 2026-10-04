@@ -5,22 +5,22 @@ import type { ContentStore } from "./content-store";
 import { validateSchemaName } from "./store/context";
 
 export interface PostgresOptions {
-	/** 연결 주소. 처음 쓸 때 없으면 오류를 낸다(빌드 중에는 비어 있어도 된다). */
+	/** Connection string. Throws on first use if missing (it may be empty during builds). */
 	readonly connectionString: string | undefined;
-	/** 표를 둘 스키마. 같은 DB를 미리보기·스테이징과 나눠 쓸 때 바꾼다. 기본값은 `public`. */
+	/** Schema that holds the tables. Change it when the same DB is shared with previews or staging. Defaults to `public`. */
 	readonly schema?: string;
 }
 
 /**
- * 저장소 모듈(SQL·MDX 해석·사이트 설정을 읽는 업무 규칙)은 처음 부를 때 불러온다(M17-3). 그래서 `cms.server.ts`가
- * `postgres()`만 불러도 저장소 코드·사이트 설정을 끌어오지 않는다.
+ * The store module (SQL, MDX parsing, and the business rules that read the site config) is loaded on first use, so
+ * importing only `postgres()` from `cms.server.ts` does not pull in store code or the site config.
  */
 const loadStoreModule = () => import("./content-store");
 const loadSchemaModule = () => import("./store/schema");
 
 /**
- * 처음 부를 때 진짜 저장소를 만드는 대리 저장소. 저장소의 함수는 모두 비동기라 부르는 쪽은 차이를 모른다
- * (함수 목록을 펼치거나 묶는 일은 하지 않는다).
+ * A proxy store that creates the real store on first call. Every store function is async, so callers cannot tell the
+ * difference (it does not spread or enumerate the function list).
  */
 function lazyStore(create: () => Promise<ContentStore>): ContentStore {
 	let store: Promise<ContentStore> | undefined;
@@ -44,7 +44,7 @@ function lazyStore(create: () => Promise<ContentStore>): ContentStore {
 	});
 }
 
-/** Postgres 콘텐츠 저장소. */
+/** Postgres content store. */
 export function postgres(options: PostgresOptions): DatabaseAdapter {
 	let pool: Pool | undefined;
 	const getPool = () => {
@@ -66,7 +66,7 @@ export function postgres(options: PostgresOptions): DatabaseAdapter {
 	};
 }
 
-/** 플러그인이 쓰는 DB(연결·스키마·한 번만 하는 일). 테스트에서도 같은 모양을 만든다. */
+/** DB used by plugins (connection, schema, run-once jobs). Tests build the same shape. */
 export function pluginDatabaseFor(pool: Pool, schema?: string): PluginDatabase {
 	const qSchema = validateSchemaName(schema);
 	return {

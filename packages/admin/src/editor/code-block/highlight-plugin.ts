@@ -44,7 +44,7 @@ export async function getShikiHighlighter(): Promise<Highlighter> {
 	return highlighterPromise;
 }
 
-// 언어 이름 정규화
+// Normalize language names
 const LANG_MAP: Record<string, string> = {
 	ts: "typescript",
 	js: "javascript",
@@ -61,7 +61,7 @@ function normalizeLang(lang: string | null | undefined): string {
 	return LANG_MAP[lower] ?? lower;
 }
 
-// 하이라이팅 토큰 캐시 (lang:::code -> 상대 오프셋 기준 데코레이션 팩토리)
+// Highlight token cache (lang:::code -> decoration factory based on relative offsets)
 interface CachedToken {
 	from: number;
 	to: number;
@@ -92,7 +92,7 @@ async function requestHighlight(view: EditorView, lang: string, code: string, ca
 			try {
 				await highlighter.loadLanguage(normalized as never);
 			} catch {
-				// 지원하지 않는 언어면 text로 fallback
+				// Fall back to text for unsupported languages
 			}
 		}
 
@@ -139,7 +139,7 @@ async function requestHighlight(view: EditorView, lang: string, code: string, ca
 		cacheHighlight(cacheKey, []);
 	} finally {
 		pendingRequests.delete(cacheKey);
-		// 뷰가 아직 살아있다면 트랜잭션 메타로 갱신 트리거
+		// If the view is still alive, trigger an update via transaction meta
 		try {
 			if (!view.isDestroyed) {
 				view.dispatch(view.state.tr.setMeta(codeBlockHighlightPluginKey, { cacheKey }));
@@ -177,7 +177,7 @@ export function createCodeBlockHighlightPlugin(): Plugin {
 					const blockStart = pos + 1;
 					const lang = (node.attrs.language as string) || "text";
 
-					// Shiki 구문 하이라이팅 데코레이션
+					// Shiki syntax highlighting decorations
 					if (text.length > 0 && lang !== "text") {
 						const cacheKey = `${lang}:::${text}`;
 						const cached = highlightCache.get(cacheKey);
@@ -200,7 +200,7 @@ export function createCodeBlockHighlightPlugin(): Plugin {
 			},
 		},
 		view(editorView) {
-			// 초기 로드 시 뷰에 보이는 코드블록 하이라이팅 요청
+			// On initial load, request highlighting for code blocks visible in the view
 			const requestVisibleBlocks = () => {
 				const state = editorView.state;
 				state.doc.descendants((node, _pos) => {

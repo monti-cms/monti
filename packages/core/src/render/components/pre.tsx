@@ -14,14 +14,14 @@ const parseNotes = (notes: string | undefined): string[] => {
 
 export interface CmsPreProps {
 	readonly children?: ReactNode;
-	/** 코드 원문(복사 단추). 코드 강조가 넣는다. */
+	/** Original code (copy button). Added by code highlighting. */
 	readonly code?: string;
-	/** 파일 이름(`title="src/a.ts"`). 있으면 제목 줄을 보인다. */
+	/** File name (`title="src/a.ts"`). If present, the title row is shown. */
 	readonly title?: string;
-	/** 줄 번호(코드 펜스 meta `lnum`·`showLineNumbers`). */
+	/** Line numbers (code fence meta `lnum` and `showLineNumbers`). */
 	readonly lnum?: boolean | string;
 	readonly showLineNumbers?: boolean;
-	/** 코드 안 툴팁 설명(번호 순서, JSON 배열). 마우스를 올릴 수 없는 화면에서 코드 아래 목록으로 보인다. */
+	/** Tooltip descriptions inside code (in number order, JSON array). On screens without hover, they appear as a list below the code. */
 	readonly notes?: string;
 	readonly className?: string;
 	readonly style?: CSSProperties;
@@ -31,8 +31,8 @@ export interface CmsPreProps {
 }
 
 /**
- * 코드 블록 틀(코드 강조가 만든 `<pre>`). 제목 줄·복사 단추·줄 번호·코드 안 툴팁 목록을 붙이고, 강조가 남긴 속성
- * (`code`·`title`·`lnum`·`notes`)을 `<pre>`에 그대로 흘리지 않는다.
+ * Code block frame (the `<pre>` made by code highlighting). Attaches the title row, copy button, line numbers and the in-code tooltip list, and does not let the attributes
+ * the highlighter leaves (`code`, `title`, `lnum`, `notes`) flow into `<pre>` as they are.
  */
 export function CmsPre({
 	children,
@@ -62,7 +62,7 @@ export function CmsPre({
 					))}
 				</div>
 			) : null}
-			{/* CSS가 속성이 있기만 해도 줄 번호를 그린다. 꺼져 있으면 속성을 두지 않는다. */}
+			{/* CSS draws line numbers whenever the attribute exists. If off, the attribute is not set. */}
 			<pre className={className} style={style} data-show-line-numbers={numbered || undefined}>
 				{children}
 			</pre>
@@ -70,7 +70,7 @@ export function CmsPre({
 			{noteList.length > 0 ? (
 				<ol className="cms-code-notes" aria-label={notesLabel}>
 					{noteList.map((note, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: 주석 번호가 곧 순서다
+						// biome-ignore lint/suspicious/noArrayIndexKey: the annotation number is the order
 						<li key={index}>
 							<span className="cms-code-note-number">{index + 1}</span>
 							<span>{note}</span>

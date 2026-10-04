@@ -20,7 +20,7 @@ const parse = (value: string) => {
 };
 
 describe("regex annotation comment syntax", () => {
-	it("@char fold regex는 바로 아래 코드 한 줄에만 적용한다", () => {
+	it("@char fold regex applies only to the single code line right below", () => {
 		const line = 'const value = "foo foo"';
 		const nextLine = 'const tail = "foo"';
 		const first = line.indexOf("foo");
@@ -47,7 +47,7 @@ describe("regex annotation comment syntax", () => {
 		expect(document.lines[1]?.annotations).toEqual([]);
 	});
 
-	it("@document fold regex는 코드블록 전체에서 찾고 absolute range로 저장한다", () => {
+	it("@document fold regex finds across the whole code block and stores it as an absolute range", () => {
 		const firstLine = 'const a = <div className="alpha beta" />';
 		const secondLine = 'const b = <span className="gamma" />';
 		const firstCapture = "alpha beta";
@@ -83,7 +83,7 @@ describe("regex annotation comment syntax", () => {
 		]);
 	});
 
-	it("regex가 매치되지 않으면 annotation을 만들지 않는다", () => {
+	it("does not create an annotation when the regex does not match", () => {
 		const line = 'const value = "bar"';
 		const document = parse(["// @char fold {re:/foo/g}", line].join("\n"));
 
@@ -91,7 +91,7 @@ describe("regex annotation comment syntax", () => {
 		expect(document.lines[0]?.annotations).toEqual([]);
 	});
 
-	it("g 플래그가 없어도 document regex는 모든 매치를 range로 만든다", () => {
+	it("a document regex makes a range for every match even without the g flag", () => {
 		const line = "foo bar foo";
 		const document = parse(["// @document fold {re:/foo/}", line].join("\n"));
 
@@ -110,7 +110,7 @@ describe("regex annotation comment syntax", () => {
 		]);
 	});
 
-	it("줄바꿈을 가로지르는 document regex 매치는 라인별 absolute range로 분할된다", () => {
+	it("a document regex match spanning a line break is split into per-line absolute ranges", () => {
 		const firstLine = "hello";
 		const secondLine = "world";
 		const document = parse([String.raw`// @document fold {re:/o\nw/g}`, firstLine, secondLine].join("\n"));
@@ -133,8 +133,8 @@ describe("regex annotation comment syntax", () => {
 	});
 });
 
-describe("정규식 규칙 보존", () => {
-	it("정규식 선택자를 규칙으로 돌려주고, 찾은 범위에 규칙 번호를 단다", () => {
+describe("regex rule preservation", () => {
+	it("returns a regex selector as a rule, and attaches the rule index to the found ranges", () => {
 		const document = parse(["// @document fold {re:/b+/}", "// @char fold {re:/a/g} open", "aab", "bb"].join("\n"));
 		expect(document.rules).toEqual([
 			{ scope: "document", name: "fold", pattern: "b+", flags: "", attributes: [] },
@@ -143,19 +143,19 @@ describe("정규식 규칙 보존", () => {
 		expect(document.lines[0]?.annotations.map((annotation) => annotation.rule)).toEqual([1, 1, 0]);
 	});
 
-	it("정규식 안의 `}`도 선택자로 읽는다", () => {
+	it("also reads a `}` inside a regex as part of the selector", () => {
 		const document = parse(["// @char fold {re:/a{2}[}]/}", "xaa}x"].join("\n"));
 		expect(document.rules?.[0]).toMatchObject({ pattern: "a{2}[}]", line: 0 });
 		expect(document.lines[0]?.annotations[0]?.range).toEqual({ start: 1, end: 4 });
 	});
 
-	it("적용할 줄이 없는 @char 규칙은 버리고 나머지 규칙 번호를 다시 잇는다", () => {
+	it("drops @char rules with no line to apply to and re-links the remaining rule indexes", () => {
 		const document = parse(["// @document fold {re:/x/}", "x", "// @char fold {re:/y/}"].join("\n"));
 		expect(document.rules?.map((rule) => rule.scope)).toEqual(["document"]);
 		expect(document.lines[0]?.annotations[0]?.rule).toBe(0);
 	});
 
-	it("정규식의 `/`는 주석이 깨지지 않게 `\\/`로 쓴다", async () => {
+	it("writes a `/` in a regex as `\\/` so the comment does not break", async () => {
 		const { __testable__ } = await import("../document-to-code-fence");
 		const line = __testable__.fromRuleToCommentLine(
 			{ prefix: "//", postfix: "" },
@@ -165,7 +165,7 @@ describe("정규식 규칙 보존", () => {
 		expect(parse([line, "a/b/c"].join("\n")).lines[0]?.annotations[0]?.range).toEqual({ start: 0, end: 5 });
 	});
 
-	it("다시 저장하면 규칙 그대로 쓴다", async () => {
+	it("writes the rule as is when saved again", async () => {
 		const { fromCodeBlockDocumentToCodeFence } = await import("../document-to-code-fence");
 		const source = ["// @document fold {re:/b+/}", "// @char fold {re:/a/g} open", "aab", "bb"].join("\n");
 		expect(fromCodeBlockDocumentToCodeFence(parse(source), annotationConfig).value).toBe(source);

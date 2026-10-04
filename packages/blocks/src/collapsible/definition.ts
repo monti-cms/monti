@@ -4,7 +4,7 @@ import { collapsibleMessages } from "./messages";
 
 const t = createActiveTranslator(collapsibleMessages);
 
-/** 접기(`:::collapsible{title="…"}`). 제목을 눌러 펼치는 영역이다. */
+/** Collapsible (`:::collapsible{title="…"}`). An area that expands when its title is clicked. */
 export const collapsibleBlock = defineBlock({
 	name: "collapsible",
 	get label() {

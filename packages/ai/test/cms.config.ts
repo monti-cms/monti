@@ -6,12 +6,12 @@ import { seo } from "../../seo/src";
 import { aiPlugin } from "../src";
 
 /**
- * 본체 패키지의 예시 블로그 설정에 이 블로그와 같은 플러그인(블록 확장·SEO 확장·AI)을 더한 설정. AI 플러그인 테스트가 쓴다.
- * AI 기능은 블로그처럼 적지 않는다: 기본 기능과 블록·SEO 확장이 더한 기능이 저절로 켜진다.
+ * The core package's example blog config plus the same plugins as the reference blog (block extension, SEO extension, AI). Used by the AI plugin tests.
+ * AI actions are not listed as in the blog: the default actions and those added by the block and SEO extensions turn on automatically.
  */
 export default defineConfig({
 	...base,
-	// 블록 확장의 블록은 플러그인이 더한다(블록 AI 기능이 함께 붙는다). 남는 것은 예시 사용자 블록이다.
+	// The block extension's blocks are added by the plugin (block AI actions come with it). What remains is the example user block.
 	blocks: (base.blocks ?? []).filter((block) => !(ALL_BLOCKS as readonly unknown[]).includes(block)),
 	plugins: [
 		callout(),

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { prepareSnapshot } from "../index";
 
 /**
- * 블로그 예시 설정(`cms.config.ts`)의 값을 그대로 확인하는 `content-service.test.ts`의 일부.
- * 사이트 주소(`example.dev`)·컬렉션 경로(`/posts`·`/memos`)와 `tagIds`로 고정한 해시 값은 다른 사이트 설정에 없다.
+ * The part of `content-service.test.ts` that checks values of the reference blog setup (`cms.config.ts`) as they are.
+ * The site address (`example.dev`), the collection paths (`/posts`, `/memos`) and the hash value fixed with `tagIds` do not exist in other site configs.
  */
-describe("ContentService M2-TW-1 Contract (blog config)", () => {
+describe("ContentService Contract (blog config)", () => {
 	it("computes exact known SHA-256 vector", async () => {
 		const snap = await prepareSnapshot(
 			{

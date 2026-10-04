@@ -14,10 +14,10 @@ import { sharedMessages } from "./messages";
 
 const t = createTranslator(sharedMessages);
 
-/** record 컬렉션(§5.2) 이름. 관계 필드의 선택지와 추가(v2 B2)에 쓴다. */
+/** Name of the record collection. Used for relation field options and adding. */
 export type RecordCollection = string;
 
-/** 분류 필드 이름 → 그 필드가 가리키는 컬렉션의 선택지. */
+/** Taxonomy field name -> options of the collection the field points to. */
 export type TaxonomyOptions = Readonly<Record<string, readonly TaxonomyOption[]>>;
 
 const labelOf = (collection: string) =>
@@ -31,7 +31,7 @@ export interface TaxonomyOption {
 
 type ListResponse = { items: { id: string; title: string | null; slug: string | null }[]; total: number };
 
-/** 활성(공개) record 전체. 100개를 넘으면 다음 페이지도 읽는다. */
+/** All active (public) records. If over 100, reads the next page too. */
 async function loadAll(collection: RecordCollection): Promise<TaxonomyOption[]> {
 	const options: TaxonomyOption[] = [];
 	for (let page = 1; page < 50; page++) {
@@ -57,13 +57,13 @@ async function loadAll(collection: RecordCollection): Promise<TaxonomyOption[]> 
 }
 
 /**
- * 편집 화면·일괄 작업·목록 필터가 함께 쓰는 태그·카테고리 등 record 선택지.
- * 새 항목은 분류 추가 칸(`useRecordCreator`)에서 만들고, 만든 항목을 `remember`로 바로 보인다.
+ * Record options like tags and categories shared by the edit screen, bulk actions and list filters.
+ * New items are created in the taxonomy add slot (`useRecordCreator`), and the created item is shown right away with `remember`.
  */
 export function useTaxonomy(collection: RecordCollection, enabled = true) {
 	const [options, setOptions] = useState<TaxonomyOption[]>([]);
 	const [error, setError] = useState<string | null>(null);
-	// 이 화면에서 추가한 항목. 다시 읽은 목록에 아직 없어도(목록 캐시·검색 반영 전) 이름으로 보인다.
+	// Items added on this screen. Shown by name even if not yet in the refetched list (before list cache/search reflects them).
 	const rememberedRef = useRef<TaxonomyOption[]>([]);
 
 	const reload = useCallback(async () => {
@@ -83,7 +83,7 @@ export function useTaxonomy(collection: RecordCollection, enabled = true) {
 		if (enabled) void reload();
 	}, [enabled, reload]);
 
-	/** 방금 추가한 항목을 다시 읽기 전에도 이름으로 보이게 선택지에 넣는다. */
+	/** Puts the just-added item into the options so it shows by name even before a refetch. */
 	const remember = useCallback((option: TaxonomyOption) => {
 		rememberedRef.current = [...rememberedRef.current, option];
 		setOptions((current) => (current.some((item) => item.id === option.id) ? current : [...current, option]));
@@ -93,8 +93,8 @@ export function useTaxonomy(collection: RecordCollection, enabled = true) {
 }
 
 /**
- * 컬렉션의 분류 필드(태그·카테고리 등) 선택지를 필드 이름별로 읽는다. 목록 필터·일괄 작업·행 메뉴가 쓴다.
- * 같은 컬렉션을 가리키는 필드는 한 번만 읽는다.
+ * Reads options of a collection's taxonomy fields (tags, categories, etc.) per field name. Used by list filters, bulk actions and row menus.
+ * Fields pointing to the same collection are read only once.
  */
 export function useTaxonomyOptions(collection: string, enabled = true): TaxonomyOptions {
 	const fields = useMemo(() => taxonomyFieldsOf(collection), [collection]);
@@ -106,7 +106,7 @@ export function useTaxonomyOptions(collection: string, enabled = true): Taxonomy
 	);
 	return useQueries({
 		queries: targets.map((target) => ({
-			// 목록 캐시 아래에 두어 목록을 다시 받을 때 함께 새로 받는다.
+			// Place it under the list cache so it is refetched together when the list is refetched.
 			queryKey: ["cms", "entries", "taxonomy", target],
 			queryFn: () => loadAll(target),
 			enabled,

@@ -8,8 +8,8 @@ import { editorMessages } from "./messages";
 const t = createTranslator(editorMessages);
 
 /**
- * 블록 조작(§4.2): 위·아래 이동, 복제, 삭제. 블록 핸들 메뉴와 키보드 단축키가 같은 명령을 쓴다.
- * 문단과 커스텀 블록(원문 상자·이미지·표), 그리고 중첩 블록(목록 항목, 인용구 안)을 지원한다.
+ * Block operations: move up/down, duplicate, delete. The block handle menu and keyboard shortcuts use the same commands.
+ * Supports paragraphs, custom blocks (raw-source box, image, table), and nested blocks (list items, inside blockquotes).
  */
 
 interface TopLevelBlock {
@@ -21,7 +21,7 @@ interface TopLevelBlock {
 
 const isTargetBlock = (block: TargetBlock | TopLevelBlock): block is TargetBlock => "parent" in block;
 
-/** 문서 위치가 속한 최상위 블록(기존 호환 유지). */
+/** Top-level block containing the document position (kept for backward compatibility). */
 export function topLevelBlockAt(doc: PmNode, pos: number): TopLevelBlock | null {
 	if (doc.childCount === 0) return null;
 	const $pos = doc.resolve(Math.max(0, Math.min(pos, doc.content.size)));
@@ -79,11 +79,11 @@ export function deleteBlock(editor: Editor, pos: number): boolean {
 	return true;
 }
 
-/** 마우스 없이 블록을 조작하는 단축키(§4.2 "마우스 없이도 실행"). */
+/** Shortcuts to operate blocks without a mouse. */
 export const CmsBlockKeymap = Extension.create({
 	name: "cmsBlockKeymap",
 	addKeyboardShortcuts() {
-		// 키보드는 v1처럼 최상위 블록 단위로 조작한다(§4.2). 중첩 블록은 핸들 드래그·메뉴로 옮긴다.
+		// The keyboard operates on top-level blocks, as in v1. Nested blocks are moved by handle drag or the menu.
 		const at = () => {
 			const { doc, selection } = this.editor.state;
 			return topLevelBlockAt(doc, selection.from)?.start ?? selection.from;

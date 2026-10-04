@@ -39,7 +39,7 @@ function request(body: unknown = { expectedVersion: 4 }, origin = "http://localh
 
 const context = { params: Promise.resolve({ id: "entry-1" }) };
 
-describe("M10 publish HTTP contract", () => {
+describe("publish HTTP contract", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		verifyAdmin.mockResolvedValue({ isAdmin: true });
@@ -57,7 +57,7 @@ describe("M10 publish HTTP contract", () => {
 		expect(publishEntry).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 });
 	});
 
-	it("ignores a request publishedAt; the display date comes from the saved draft metadata (§5.5)", async () => {
+	it("ignores a request publishedAt; the display date comes from the saved draft metadata", async () => {
 		const response = await POST(request({ expectedVersion: 4, publishedAt: "2020-03-04T12:00:00.000Z" }), context);
 		expect(response.status).toBe(200);
 		expect(publishEntry).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 });

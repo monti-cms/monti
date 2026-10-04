@@ -17,12 +17,12 @@ import { CmsError, createContentStore, migrateContentStore } from "../content-st
 import { seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-/** 발행 필수값 중 제목이 아닌 첫 필드(블로그는 카테고리). 빠지면 발행을 막는지 본다. */
+/** First required-for-publish field that is not the title (category in the reference blog). Checks that publish is blocked when it is missing. */
 const missingRequired = requiredFields(contentCollection).find(({ name }) => name !== "title");
 
 /**
- * 아직 공개되지 않은 글도 담을 수 있는 관계 필드(`allowUnpublished`, 블로그는 모음집의 `itemIds`)와 그 컬렉션.
- * 조건부 필드에 딸렸으면 그 조건 값도 함께 넣어야 저장된다.
+ * A relation field that can hold entries not yet published (`allowUnpublished`; `itemIds` of the reference blog's collection) and its collection.
+ * If it hangs off a conditional field, the condition value must be set too for the save to succeed.
  */
 const unpublishedRelation = (() => {
 	for (const collection of COLLECTIONS) {
@@ -36,15 +36,15 @@ const unpublishedRelation = (() => {
 	return undefined;
 })();
 
-describe("ContentStore (M1-DA-1 test-first)", () => {
+describe("ContentStore", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
 	let relationTarget: (to: Collection) => Promise<string>;
-	/** 발행 필수값을 채우지 않고 저장하는 저장소(필수값 검사를 시험할 때). */
+	/** A store that saves without filling the required-for-publish values (for testing the required-value check). */
 	let rawStore: ContentStore;
 
-	/** 원시 스냅샷에 채워지는 메타데이터(제목 + 설정의 발행 필수값). */
+	/** Metadata filled into a raw snapshot (title + the config's required-for-publish values). */
 	const filled = (title: string, collection: Collection = contentCollection) =>
 		requiredMetadata(collection, title, relationTarget);
 
@@ -55,7 +55,7 @@ describe("ContentStore (M1-DA-1 test-first)", () => {
 
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		// 발행 필수값(블로그의 카테고리 같은 것)은 설정에서 찾아 채운다.
+		// Required-for-publish values (such as the reference blog's category) are looked up in the config and filled in.
 		const fill = fillRequiredMetadata(store);
 		relationTarget = fill.relationTarget;
 		rawStore = { ...store, createEntryWithReferences: fill.raw.createEntryWithReferences };
@@ -495,7 +495,7 @@ describe("ContentStore (M1-DA-1 test-first)", () => {
 		expect(reloaded.workingSlug ?? null).toBeNull();
 		expect(reloaded.publishedSlug).toBe("clear-slug-test");
 
-		// slug 없는 초안은 발행할 수 없다(§5.6). 공개 주소는 그대로 유지된다.
+		// A draft without a slug cannot be published. The public URL stays as it is.
 		await expect(store.publishEntry({ id: entry.id, expectedVersion: saved.version })).rejects.toMatchObject({
 			code: "publish_validation_failed",
 			issues: expect.arrayContaining([expect.objectContaining({ code: "null_slug" })]),
@@ -600,7 +600,7 @@ describe("ContentStore (M1-DA-1 test-first)", () => {
 			collection: contentCollection,
 			slug: "validation-link-source",
 			metadata: { title: "Source" },
-			// 공개 주소 모양은 설정의 `path`를 따른다(블로그 `/posts/:slug`).
+			// The public URL shape follows the config's `path` (the reference blog uses `/posts/:slug`).
 			mdx: `[Target](${contentPath(contentCollection, "validation-link-target")})`,
 			schemaVersion: 1,
 			contentHash: "validation-link-source-hash",
@@ -649,7 +649,7 @@ describe("ContentStore (M1-DA-1 test-first)", () => {
 	it("metadata accepts valid own JSON keys named constructor and __proto__", async () => {
 		const metadata = JSON.parse('{"constructor":"val1","__proto__":"val2"}');
 
-		// 원시 값 그대로 넣는다(발행 필수값을 채우지 않는다).
+		// Insert raw values as they are (required-for-publish values are not filled).
 		const entry = await seedEntry(rawStore, {
 			collection: contentCollection,
 			slug: "proto-test",

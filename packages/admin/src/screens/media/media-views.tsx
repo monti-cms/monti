@@ -24,7 +24,7 @@ const t = createTranslator(mediaMessages);
 
 const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
 
-/** 이미지는 썸네일, 그 밖의 파일은 형식 아이콘. */
+/** Thumbnail for images, a type icon for other files. */
 export function MediaThumb({ media, iconClassName }: { media: MediaItem; iconClassName?: string }) {
 	if (!isImageMime(media.mimeType)) {
 		const Icon = FILE_ICONS[fileKindOf(media.mimeType)];
@@ -37,13 +37,13 @@ export function MediaThumb({ media, iconClassName }: { media: MediaItem; iconCla
 
 export interface MediaViewProps {
 	items: readonly MediaItem[];
-	/** 오른쪽 상세 칸에 열린 파일. `OPEN_ITEM`으로 강조한다. */
+	/** The file open in the right detail panel. Highlighted with `OPEN_ITEM`. */
 	selectedId: string | null;
-	/** 조건을 바꾸는 동안 이전 줄을 흐리게 보인다. */
+	/** Dims the previous rows while conditions change. */
 	dimmed: boolean;
 	onSelect: (media: MediaItem) => void;
 	menuFor: (media: MediaItem) => MenuAction[];
-	/** Delete 키. 쓰이지 않는 파일만 삭제할 수 있다. */
+	/** Delete key. Only unused files can be deleted. */
 	onDeleteKey: (media: MediaItem) => void;
 }
 
@@ -54,7 +54,7 @@ const deleteKey = (media: MediaItem, onDeleteKey: (media: MediaItem) => void) =>
 	}
 };
 
-/** 바둑판 보기. 썸네일과 사용 여부를 크게 보인다. */
+/** Grid view. Shows the thumbnail and usage state large. */
 export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDeleteKey }: MediaViewProps) {
 	return (
 		<ul
@@ -104,7 +104,7 @@ export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDele
 	);
 }
 
-/** 목록 보기. 이름·형식·크기·치수·사용 여부·올린 날짜를 한 줄씩 보인다. */
+/** List view. Shows name, type, size, dimensions, usage state and upload date, one per row. */
 export function MediaTable({ items, selectedId, dimmed, onSelect, menuFor, onDeleteKey }: MediaViewProps) {
 	return (
 		<Table aria-label={t("views.table")} className={cn("text-xs transition-opacity", dimmed && "opacity-60")}>

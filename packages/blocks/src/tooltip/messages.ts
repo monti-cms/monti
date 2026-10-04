@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 툴팁 글자 꾸밈의 이름표와 편집 화면 문구(M15). */
+/** Label and editing view text of the tooltip inline mark. */
 export const tooltipMessages = defineMessages("cms-blocks.tooltip", {
 	en: {
 		label: "Tooltip",

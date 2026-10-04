@@ -2,7 +2,7 @@ import { getCmsContentStore } from "../../../container";
 import { collectionSchema, createFolderBodySchema } from "../../../core/api";
 import { adminRoute, json, parseWith, readJsonBody } from "../handler";
 
-/** 컬렉션별 폴더 트리(§3.3). */
+/** Folder tree per collection. */
 export const GET = adminRoute(async ({ request }) => {
 	const collection = parseWith(
 		collectionSchema,

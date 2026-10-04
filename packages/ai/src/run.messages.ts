@@ -1,6 +1,6 @@
 import { defineMessages, josa } from "@monti-cms/core";
 
-/** AI 실행(실행기·결과 검사·실행 API·이미지 읽기) 오류와 안내 문구. */
+/** Error and notice messages for AI runs (runner, result checks, run API, image reading). */
 export const runMessages = defineMessages("cms-ai.run", {
 	en: {
 		inputTooLarge: "{label} is over {max} characters and can't be sent.",

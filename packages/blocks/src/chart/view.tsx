@@ -1,7 +1,7 @@
 /*
- * 공개 화면 차트(recharts 위에서 그린다, 선택 의존성 `recharts`). `render.client.tsx`가 브라우저에서 불러올 때만 읽힌다.
- * 편집기 미리보기(`./preview`)와 같은 차트 문법·색(`--chart-1`~`--chart-5`)이고, 관리자 화면 코드·Tailwind 없이 `cms-block-chart-*`
- * 클래스(이 패키지 `styles.css`)로 꾸민다.
+ * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
+ * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with
+ * `cms-block-chart-*` classes (this package's `styles.css`) without admin UI code or Tailwind.
  */
 
 import { createContext, type ReactElement, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -44,7 +44,7 @@ interface PayloadItem {
 	readonly payload?: Record<string, unknown> & { fill?: string };
 }
 
-/** 차트 바깥 틀. 크기에 맞춰 늘고, 계열 색을 `--color-<키>` 변수로 내려 준다. */
+/** Outer chart frame. Stretches to fit its size and passes series colors down as `--color-<key>` variables. */
 function ChartFrame({ config, children }: { config: ChartConfig; children: ReactElement }) {
 	const [dimensions, setDimensions] = useState<ChartDimensions>(DEFAULT_CHART_DIMENSIONS);
 	const style = Object.fromEntries(
@@ -110,7 +110,7 @@ function TooltipContent({
 	);
 }
 
-/** 범례. 줄이 바뀌어 높이가 달라지면 알려 준다(원형 차트가 범례 위쪽에 맞춰 그려진다). */
+/** Legend. Reports when its height changes because lines wrap (the pie chart is drawn to fit above the legend). */
 function LegendContent({
 	payload,
 	nameKey,
@@ -155,7 +155,7 @@ function LegendContent({
 
 const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart } as const;
 
-/** 값 글자(`show values`). */
+/** Value labels (`show values`). */
 const valueLabel = (spec: CartesianChartSpec) =>
 	spec.options.showValues ? (
 		<LabelList
@@ -268,7 +268,7 @@ function PieView({ spec }: { spec: PieChartSpec }) {
 	);
 }
 
-/** 차트 원문(`source`)을 그린다. 문법이 틀리면 아무것도 그리지 않는다(서버가 이미 오류 상자를 그린다). */
+/** Draws the chart source (`source`). If the syntax is wrong, draws nothing (the server already renders the error box). */
 export function ChartView({ source }: { readonly source: string }) {
 	const normalized = useMemo(() => normalizeChartDsl(parseChartDsl(source)), [source]);
 	const spec = normalized.spec;

@@ -1,14 +1,14 @@
 import { HttpError } from "@monti-cms/core/plugin/server";
 
-/** AI 실행 오류. 본체 API 오류(`HttpError`)를 이어 응답 코드를 함께 정한다. */
+/** AI run error. Extends the core API error (`HttpError`) and sets the response status too. */
 export type AiErrorCode =
 	| "ai_unavailable"
 	| "ai_failed"
 	| "ai_input_too_large"
 	| "ai_rate_limited"
-	/** 설정에 없는 기능 이름. */
+	/** An action name that is not in the config. */
 	| "ai_unknown_action"
-	/** 고친 값·입력이 기능 정의에 맞지 않는다. */
+	/** The edited value or input does not match the action definition. */
 	| "ai_invalid_input";
 
 const STATUS: Record<AiErrorCode, number> = {

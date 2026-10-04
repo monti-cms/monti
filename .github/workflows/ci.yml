@@ -1,7 +1,7 @@
-# 자동 검사(M12). push마다 lint·타입 검사·패키지 빌드, 테스트(Postgres 서비스), 예시 앱 묶음 검사를 돈다.
+# Automated checks. On every push: lint, type check and package build; tests (Postgres service); and the example app bundle check.
 name: CI
 
-# push 때만 돈다(PR 화면에는 그 커밋의 결과가 보인다). PR까지 걸면 같은 검사가 두 번 돈다.
+# Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
 on:
   push:
 
@@ -24,9 +24,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # 고치지 않고 검사만 한다.
+      # Check only; nothing is fixed.
       - run: pnpm lint
-      # 패키지 실행 코드의 한국어 문구는 문구 사전(messages.ts)에만(M15-7).
+      # Korean strings in package runtime code live only in the message dictionaries (messages.ts).
       - run: pnpm check:korean
       - run: pnpm typecheck
       - run: pnpm build
@@ -47,7 +47,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      # 테스트는 이 DB에 격리 스키마를 만들고 끝나면 지운다(운영 DB는 쓰지 않는다).
+      # Tests create an isolated schema in this DB and drop it when finished (the production DB is not used).
       CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v5

@@ -12,11 +12,11 @@ import type { LineDecorationPayload, LineWrapperPayload, Meta } from "./transfor
 
 export type RehypeShikiDecorationRenderOptions = CodeHighlighterOptions & {
 	ignoreLang?: (lang: string) => boolean;
-	/** 코드를 강조하는 함수. 주면 `langs`·`themes`·`langAlias`는 쓰지 않는다. */
+	/** Function that highlights code. If given, `langs`, `themes` and `langAlias` are not used. */
 	highlight?: HighlightFn;
 };
 
-/** 코드 강조 설정(언어·테마·별칭). 안 주면 블로그 기본값이다. */
+/** Code highlighting settings (languages, themes, aliases). Reference defaults if not given. */
 export type CodeHighlightOptions = RehypeShikiDecorationRenderOptions;
 
 const hasHighlighterOptions = (options: CodeHighlighterOptions) =>
@@ -38,7 +38,7 @@ function getLangFromCodeEl(codeEl: Element): string {
 }
 
 export function rehypeShikiDecorationRender(options: RehypeShikiDecorationRenderOptions = {}) {
-	// 언어·테마를 바꾼 경우에만 강조기를 새로 만든다(한 번만). 아니면 기본 강조기를 그대로 쓴다.
+	// Create a new highlighter only when languages or themes were changed (once). Otherwise use the default highlighter as is.
 	const customHighlight =
 		options.highlight || !hasHighlighterOptions(options)
 			? null
@@ -90,10 +90,10 @@ export function rehypeShikiDecorationRender(options: RehypeShikiDecorationRender
 				allowedRenderTags,
 			});
 
-			// codeToHast 결과는 Root(fragment). 보통 첫 element가 <pre>
+			// The codeToHast result is a Root (fragment). Usually the first element is the <pre>
 			const newPre = hast.children.find((n) => n.type === "element") as Element;
 
-			// 기존 <pre>를 새 <pre>로 교체
+			// Replace the existing <pre> with the new <pre>
 			parent.children[index] = newPre;
 		});
 	};

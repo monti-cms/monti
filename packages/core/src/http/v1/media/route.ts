@@ -2,7 +2,7 @@ import { getCmsContentStore, getCmsMediaStore } from "../../../container";
 import { mediaListQuerySchema } from "../../../core/api";
 import { adminRoute, json, parseWith, readQuery } from "../handler";
 
-/** 미디어 라이브러리(§7.3): 파일명 검색, 형식·업로드일·사용 여부 필터, 최신 업로드순. */
+/** Media library: filename search, filters by type, upload date, and usage, newest upload first. */
 export const GET = adminRoute(async ({ request }) => {
 	const query = parseWith(mediaListQuerySchema, readQuery(request), "Invalid query parameters");
 	const result = await getCmsContentStore().listMediaAssets(query);

@@ -16,25 +16,25 @@ import { seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
- * M7-BE-1 공개 published 읽기 계약 (실DB).
+ * Public published-read contract (real DB).
  *
- * 확인 대상(O1 A3/A4/A8): 초안·보관·휴지통·예약 주소는 어떤 경로로도 공개되지 않고,
- * 발행본만 정규 current slug로 조회되며, 과거 주소는 alias로 판정된다.
- * 컬렉션·필드 이름은 지금 설정에서 찾는다(`test/any-site.ts`). 블로그 예시 설정과 다른 사이트 설정 둘 다로 돈다.
+ * Verifies: drafts, archived, trashed, and reserved slugs are never public by any path,
+ * only published versions are read by the canonical current slug, and former slugs are resolved as aliases.
+ * Collection and field names are looked up in the current config (`test/any-site.ts`). It runs against both the reference blog config and other site configs.
  */
 
 const content = contentCollection;
-/** 휴지통 시험용 문서 컬렉션(두 번째가 없으면 같은 컬렉션). */
+/** Document collection for trash tests (the same collection if there is no second one). */
 const trashContent = otherContentCollection ?? contentCollection;
-/** 분류 레코드 두 종류(항목 컬렉션이 하나뿐이면 같은 컬렉션의 두 항목). */
+/** Two kinds of classification records (two items of the same collection if there is only one item collection). */
 const itemCollections = COLLECTIONS.filter((name) => isItemCollection(name));
 const otherRecordCollection = itemCollections.find((name) => name !== recordCollection) ?? recordCollection;
-/** 요약 역할의 텍스트 필드 이름(있으면). */
+/** Name of the text field serving as the summary (if any). */
 const summaryField = storedFields(content).find(
 	({ field }) => field.kind === "text" && field.role === SUMMARY_ROLE,
 )?.name;
 const summaryOf = (value: string): Record<string, string> => (summaryField ? { [summaryField]: value } : {});
-/** 항목을 가리키는 관계 필드. 여러 개를 고르는 필드를 먼저 쓴다(블로그의 태그). */
+/** Relation field that points at items. A multi-select field is preferred (the reference blog's tags). */
 const tagLikeRelation = (() => {
 	for (const { name, field, when } of storedFields(content)) {
 		if (!when && field.kind === "relation" && field.many && isItemCollection(field.to)) {
@@ -44,12 +44,12 @@ const tagLikeRelation = (() => {
 	return recordRelationField(content);
 })();
 const relationValue = (id: string) => (tagLikeRelation?.many ? [id] : id);
-describe("M7-BE-1 공개 published 읽기 계약", () => {
+describe("public published-read contract", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
 	let relationTarget: (to: Collection) => Promise<string>;
-	/** 발행 필수값을 채운 메타데이터(저장소가 채우는 값과 같다). */
+	/** Metadata with the required-for-publish values filled in (same as the values the store fills). */
 	const filled = async (title: string, extra: Record<string, unknown> = {}) => ({
 		...(await requiredMetadata(content, title, relationTarget)),
 		...extra,
@@ -62,7 +62,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		// 발행 필수값(블로그의 카테고리 등)은 이 파일의 시나리오와 무관하므로 저장소가 채운다.
+		// Required-for-publish values (such as the reference blog's category) are irrelevant to this file's scenarios, so the store fills them in.
 		relationTarget = fillRequiredMetadata(store).relationTarget;
 	});
 
@@ -116,7 +116,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		return res.rows[0]?.type;
 	}
 
-	it("초안은 공개 목록과 단건 조회에 나오지 않는다", async () => {
+	it("does not show drafts in public lists or single reads", async () => {
 		const draft = await createEntry({ collection: content, slug: "draft-only", metadata: { title: "초안" } });
 
 		expect(draft.status).toBe("draft");
@@ -127,7 +127,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		});
 	});
 
-	it("발행하면 정규 slug와 본문·metadata가 공개 조회에 나타난다", async () => {
+	it("shows the canonical slug, body, and metadata in public reads once published", async () => {
 		await createPublishedEntry({
 			collection: content,
 			slug: "live-post",
@@ -149,7 +149,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		}
 	});
 
-	it("목록 조회는 기본적으로 본문을 싣지 않고 요청할 때만 싣는다", async () => {
+	it("omits the body in list reads by default and includes it only on request", async () => {
 		const withoutBody = await store.listPublishedEntries({ collections: [content] });
 		const withBody = await store.listPublishedEntries({ collections: [content], includeBody: true });
 
@@ -158,7 +158,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		expect(withBody.some((row) => row.mdx.length > 0)).toBe(true);
 	});
 
-	it("단건 조회는 기본적으로 본문을 싣는다", async () => {
+	it("includes the body in single reads by default", async () => {
 		const lookup = await store.getPublishedEntryBySlug({ collection: content, slug: "live-post" });
 
 		expect(lookup.status).toBe("current");
@@ -167,7 +167,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		}
 	});
 
-	it("보관하면 공개 조회에서 사라진다", async () => {
+	it("disappears from public reads once archived", async () => {
 		const published = await createPublishedEntry({ collection: content, slug: "to-archive" });
 
 		expect(await publishedSlugs([content])).toContain("to-archive");
@@ -180,7 +180,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		});
 	});
 
-	it("휴지통으로 보내면 공개 조회에서 사라진다", async () => {
+	it("disappears from public reads once trashed", async () => {
 		const published = await createPublishedEntry({ collection: trashContent, slug: "to-trash" });
 
 		expect(await publishedSlugs([trashContent])).toContain("to-trash");
@@ -193,7 +193,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		});
 	});
 
-	it("slug를 바꾸면 이전 주소는 alias로 판정되고 정규 slug를 반환한다", async () => {
+	it("resolves the old slug as an alias and returns the canonical slug after a slug change", async () => {
 		const published = await createPublishedEntry({ collection: content, slug: "before-rename" });
 		const saved = await seedSave(store, published.id, {
 			expectedVersion: published.version,
@@ -218,78 +218,83 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		}
 	});
 
-	it.skipIf(!tagLikeRelation)("공개 글의 working 수정은 재발행 전까지 기존 published snapshot을 보존한다", async () => {
-		const tagCollection = tagLikeRelation?.to ?? recordCollection;
-		const tagField = tagLikeRelation?.name ?? "";
-		const publishedTag = await createPublishedEntry({
-			collection: tagCollection,
-			slug: "f10-published-tag",
-			metadata: { title: "Published tag" },
-		});
-		const workingTag = await createPublishedEntry({
-			collection: tagCollection,
-			slug: "f10-working-tag",
-			metadata: { title: "Working tag" },
-		});
-		const published = await createPublishedEntry({
-			collection: content,
-			slug: "f10-published-snapshot",
-			metadata: {
-				title: "Published title",
-				...summaryOf("Published summary"),
-				[tagField]: relationValue(publishedTag.id),
-			},
-			mdx: "# Published body",
-		});
-		const working = await seedSave(store, published.id, {
-			expectedVersion: published.version,
-			slug: "f10-working-snapshot",
-			metadata: {
-				title: "Working title",
-				...summaryOf("Working summary"),
-				[tagField]: relationValue(workingTag.id),
-			},
-			mdx: "# Working body",
-			schemaVersion: 1,
-			contentHash: "f10-working-content",
-		});
-
-		expect(working.status).toBe("published");
-		expect(await publishedSlugs([content])).toContain("f10-published-snapshot");
-		expect(await publishedSlugs([content])).not.toContain("f10-working-snapshot");
-		const beforeRepublish = await store.getPublishedEntryBySlug({
-			collection: content,
-			slug: "f10-published-snapshot",
-		});
-		expect(beforeRepublish.status).toBe("current");
-		if (beforeRepublish.status === "current") {
-			expect(beforeRepublish.entry.slug).toBe("f10-published-snapshot");
-			expect(beforeRepublish.entry.mdx).toBe("# Published body");
-			expect(beforeRepublish.entry.metadata).toEqual(
-				await filled("Published title", {
+	it.skipIf(!tagLikeRelation)(
+		"keeps the existing published snapshot until re-publish when a published entry's working copy is edited",
+		async () => {
+			const tagCollection = tagLikeRelation?.to ?? recordCollection;
+			const tagField = tagLikeRelation?.name ?? "";
+			const publishedTag = await createPublishedEntry({
+				collection: tagCollection,
+				slug: "f10-published-tag",
+				metadata: { title: "Published tag" },
+			});
+			const workingTag = await createPublishedEntry({
+				collection: tagCollection,
+				slug: "f10-working-tag",
+				metadata: { title: "Working tag" },
+			});
+			const published = await createPublishedEntry({
+				collection: content,
+				slug: "f10-published-snapshot",
+				metadata: {
+					title: "Published title",
 					...summaryOf("Published summary"),
 					[tagField]: relationValue(publishedTag.id),
-				}),
-			);
-		}
-		await expect(store.getPublishedEntryBySlug({ collection: content, slug: "f10-working-snapshot" })).resolves.toEqual(
-			{
-				status: "not_found",
-			},
-		);
+				},
+				mdx: "# Published body",
+			});
+			const working = await seedSave(store, published.id, {
+				expectedVersion: published.version,
+				slug: "f10-working-snapshot",
+				metadata: {
+					title: "Working title",
+					...summaryOf("Working summary"),
+					[tagField]: relationValue(workingTag.id),
+				},
+				mdx: "# Working body",
+				schemaVersion: 1,
+				contentHash: "f10-working-content",
+			});
 
-		const republished = await store.publishEntry({ id: working.id, expectedVersion: working.version });
-		expect(await store.getPublishedEntryBySlug({ collection: content, slug: "f10-published-snapshot" })).toMatchObject({
-			status: "alias",
-			entry: { slug: "f10-working-snapshot", mdx: "# Working body" },
-		});
-		expect(await store.getPublishedEntryBySlug({ collection: content, slug: "f10-working-snapshot" })).toMatchObject({
-			status: "current",
-			entry: { slug: "f10-working-snapshot", mdx: "# Working body", metadata: { title: "Working title" } },
-		});
-		expect(republished.status).toBe("published");
-	});
-	it("비공개로 돌아간 주소는 alias로도 남지 않는다", async () => {
+			expect(working.status).toBe("published");
+			expect(await publishedSlugs([content])).toContain("f10-published-snapshot");
+			expect(await publishedSlugs([content])).not.toContain("f10-working-snapshot");
+			const beforeRepublish = await store.getPublishedEntryBySlug({
+				collection: content,
+				slug: "f10-published-snapshot",
+			});
+			expect(beforeRepublish.status).toBe("current");
+			if (beforeRepublish.status === "current") {
+				expect(beforeRepublish.entry.slug).toBe("f10-published-snapshot");
+				expect(beforeRepublish.entry.mdx).toBe("# Published body");
+				expect(beforeRepublish.entry.metadata).toEqual(
+					await filled("Published title", {
+						...summaryOf("Published summary"),
+						[tagField]: relationValue(publishedTag.id),
+					}),
+				);
+			}
+			await expect(
+				store.getPublishedEntryBySlug({ collection: content, slug: "f10-working-snapshot" }),
+			).resolves.toEqual({
+				status: "not_found",
+			});
+
+			const republished = await store.publishEntry({ id: working.id, expectedVersion: working.version });
+			expect(
+				await store.getPublishedEntryBySlug({ collection: content, slug: "f10-published-snapshot" }),
+			).toMatchObject({
+				status: "alias",
+				entry: { slug: "f10-working-snapshot", mdx: "# Working body" },
+			});
+			expect(await store.getPublishedEntryBySlug({ collection: content, slug: "f10-working-snapshot" })).toMatchObject({
+				status: "current",
+				entry: { slug: "f10-working-snapshot", mdx: "# Working body", metadata: { title: "Working title" } },
+			});
+			expect(republished.status).toBe("published");
+		},
+	);
+	it("does not leave a slug that went back to private as an alias either", async () => {
 		const published = await createPublishedEntry({ collection: content, slug: "alias-then-archive" });
 		const saved = await seedSave(store, published.id, {
 			expectedVersion: published.version,
@@ -314,7 +319,7 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		);
 	});
 
-	it("분류 레코드(항목 컬렉션)도 공개 조회되고 휴지통으로 옮기면 제외된다", async () => {
+	it("makes classification records (item collections) public too, and excludes them once trashed", async () => {
 		const tag = await createPublishedEntry({
 			collection: recordCollection,
 			slug: "public-tag",
@@ -330,14 +335,14 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 			expect.arrayContaining(["public-tag", "public-category"]),
 		);
 
-		// record 컬렉션은 보관이 없고 활성/휴지통만 쓴다(§5.3).
+		// A record collection has no archive and uses only active/trashed.
 		await store.trashEntry({ id: tag.id, expectedVersion: tag.version });
 
 		expect(await publishedSlugs([recordCollection])).not.toContain("public-tag");
 		expect(await publishedSlugs([otherRecordCollection])).toContain("public-category");
 	});
 
-	it("여러 컬렉션을 한 번에 읽을 수 있고 발행되지 않은 항목은 섞이지 않는다", async () => {
+	it("reads several collections at once without mixing in unpublished items", async () => {
 		await createEntry({ collection: recordCollection, slug: "draft-tag", metadata: { title: "초안 태그" } });
 
 		const rows = await store.listPublishedEntries({ collections: COLLECTIONS });
@@ -346,13 +351,13 @@ describe("M7-BE-1 공개 published 읽기 계약", () => {
 		expect(rows.map((row) => row.slug)).not.toContain("draft-tag");
 	});
 
-	it("허용되지 않은 컬렉션은 거부한다", async () => {
+	it("rejects a collection that is not allowed", async () => {
 		await expect(store.listPublishedEntries({ collections: ["secret"] })).rejects.toThrow(/컬렉션|collection/);
 		await expect(store.listPublishedEntries({ collections: [] })).rejects.toThrow();
 		await expect(store.getPublishedEntryBySlug({ collection: "secret", slug: "x" })).rejects.toThrow();
 	});
 
-	it("빈 slug는 거부한다", async () => {
+	it("rejects an empty slug", async () => {
 		await expect(store.getPublishedEntryBySlug({ collection: content, slug: "" })).rejects.toThrow();
 	});
 });

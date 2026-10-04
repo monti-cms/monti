@@ -5,7 +5,7 @@ import { analyze } from "@monti-cms/core/mdx";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-// 블록은 플러그인(`blocks()`)으로 넣은 설정으로 돌려, 공개 컴포넌트가 플러그인 `render`에서 오게 한다.
+// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
 vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
@@ -14,16 +14,16 @@ const { renderMdx } = await import("@monti-cms/core/render");
 
 const source = readFileSync(path.join(__dirname, "fixtures/component-showcase.mdx"), "utf8");
 
-/** 편집기와 공개 화면을 같은 글로 맞추는 검사. 공개 화면은 본체·블록 확장이 주는 기본 컴포넌트로 그린다. */
-describe("CMS 컴포넌트 샘플 글", () => {
-	it("검사를 통과하고, 편집기를 거쳐도 글자 그대로다", () => {
+/** Checks that the editor and the public page agree on the same content. The public page renders with the default components provided by the core and the block extensions. */
+describe("CMS component showcase", () => {
+	it("passes validation and stays identical after a round trip through the editor", () => {
 		expect(analyze(source).errors).toEqual([]);
 		const editorDocument = mdxToTiptap(source);
 		expect(editorDocument.content?.length).toBeGreaterThan(30);
 		expect(tiptapToMdx(editorDocument).trim()).toBe(source.trim());
 	});
 
-	it("공개 화면이 모든 섹션을 라이브러리 기본 모양으로 그린다", async () => {
+	it("the public page renders every section with the library default look", async () => {
 		const html = renderToStaticMarkup((await renderMdx(source)).content);
 
 		for (const text of [
@@ -38,22 +38,22 @@ describe("CMS 컴포넌트 샘플 글", () => {
 			expect(html, text).toContain(text);
 		}
 
-		// 블록 확장의 기본 컴포넌트
+		// Default components of the block extensions
 		expect(html.match(/class="cms-block-callout"/g)).toHaveLength(5);
 		expect(html.match(/<details class="cms-block-collapsible"/g)).toHaveLength(2);
-		// 코드 줄 접기(`@line collapse`)는 본체 기본 컴포넌트다.
+		// Code line collapse (`@line collapse`) is a core default component.
 		expect(html).toContain("cms-code-collapse");
 		expect(html).toContain('role="tablist"');
 		expect(html.match(/role="tabpanel"/g)).toHaveLength(3);
 		expect(html).toContain('class="cms-block-columns"');
 		expect(html.match(/class="cms-block-column"/g)).toHaveLength(3);
 		expect(html).toContain('class="cms-block-tooltip"');
-		// 펜스 블록은 서버에서 원문을 보인다(그리기는 브라우저). 차트 4개, 다이어그램 1개이고 문법 오류가 없다.
+		// Fence blocks show the source on the server (drawing happens in the browser). 4 charts, 1 diagram, no syntax errors.
 		expect(html.match(/class="cms-block-chart"/g)).toHaveLength(4);
 		expect(html.match(/class="cms-block-mermaid"/g)).toHaveLength(1);
 		expect(html).not.toContain("cms-block-chart-error");
 
-		// 본체 기본 컴포넌트
+		// Core default components
 		expect(html).toContain("cms-align-center");
 		expect(html.match(/<figure class="cms-image/g)).toHaveLength(3);
 		expect(html).toContain("<u>밑줄</u>");
@@ -62,12 +62,12 @@ describe("CMS 컴포넌트 샘플 글", () => {
 		expect(html).toContain("<br/>둘째 줄");
 		expect(html).toContain("katex-display");
 		expect(html).toContain("<table");
-		// 지시자 표: 머리글 칸과 가로·세로 병합이 살아 있다.
+		// Directive table: header cells and horizontal/vertical merges are preserved.
 		expect(html).toMatch(/<th[^>]*colSpan="2"/);
 		expect(html).toMatch(/<td[^>]*rowSpan="2"/);
-		// 코드 블록: 강조된 코드와 접기
+		// Code block: highlighted code and collapsing
 		expect(html.match(/<pre[^>]*class="shiki/g)?.length).toBeGreaterThanOrEqual(3);
-		// 목록·인용·링크 같은 기본 마크다운
+		// Basic Markdown such as lists, quotes, and links
 		expect(html).toContain("<blockquote>");
 		expect(html).toContain('href="/posts"');
 	});

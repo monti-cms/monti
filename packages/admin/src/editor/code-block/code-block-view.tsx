@@ -39,39 +39,39 @@ import { RulesPanel } from "./rules-panel";
 
 const t = createTranslator(codeBlockMessages);
 
-/** 한 줄 높이(px). 코드(`leading-6`)와 줄 번호 칸·줄 배경이 같은 높이를 쓴다. */
+/** Height of one line (px). The code (`leading-6`), the line number gutter and the line background share this height. */
 const LINE_HEIGHT = 24;
-/** 코드 위아래 여백(`py-3`). */
+/** Vertical padding of the code (`py-3`). */
 const PAD_TOP = 12;
 
 const effectsOnLine = (effects: readonly CodeLineEffect[], line: number) =>
 	effects.filter((effect) => effect.start <= line && line < effect.end);
 
-/** 줄 효과의 편집기 표시(줄 배경·물결 밑줄·줄 번호 칸 표시). 효과 정의의 `editor`다. */
+/** Editor display of line effects (line background, wavy underline, line number gutter marker). The `editor` of the effect definition. */
 const editorLookOf = (effect: CodeLineEffect) => lineEffectDefinition(effect.name)?.editor;
 
-/** 줄 번호 칸 표시. 한 줄에 여럿이면 정의 순서가 앞선 효과다. */
+/** Line number gutter marker. When several apply to one line, the effect defined first wins. */
 const markerOf = (effects: readonly CodeLineEffect[]) =>
 	CODE_LINE_EFFECTS.find((definition) => definition.editor?.marker && effects.some((e) => e.name === definition.name))
 		?.editor?.marker;
 
 /**
- * 코드 블록 편집 화면(v2 C5 재개발).
- * - 위: 언어·파일명·정규식 규칙·줄 번호(공개 화면 표시)·복사
- * - 왼쪽 줄 번호 칸: 누르거나 끌어 줄을 고르면 줄 효과 메뉴가 뜬다. 줄 접기 화살표로 편집 중에도 여닫는다.
- * - 코드: 그 자리에서 고친다. 글자 효과는 글자를 골라 인라인 버블·상단 도구로 준다.
+ * Code block editing view.
+ * - Top: language, file name, regex rules, line numbers (shown on the public page), copy
+ * - Left line number gutter: pressing or dragging to pick lines opens the line effect menu. The fold arrows open and close folds even while editing.
+ * - Code: edited in place. Text effects are applied by selecting text and using the inline bubble or the top toolbar.
  */
 export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps) {
-	/** AI 자리 구분값. 노드 뷰가 살아 있는 동안 같다. */
+	/** AI slot discriminator. Stays the same while the node view is alive. */
 	const slotScope = useId();
 	const [copied, setCopied] = useState(false);
-	/** 줄 효과 메뉴. `at`이 있으면 그 자리(오른쪽 클릭한 곳), 없으면 고른 첫 줄 오른쪽에 뜬다. */
+	/** Line effect menu. If `at` is set it opens there (where right-clicked), otherwise to the right of the first selected line. */
 	const [menu, setMenu] = useState<{ start: number; end: number; at?: { top: number; left: number } } | null>(null);
 	const dragRef = useRef<{ anchor: number; start: number; end: number } | null>(null);
 	const anchorRef = useRef<number | null>(null);
 	const bodyRef = useRef<HTMLDivElement>(null);
 
-	// NodeView는 선택·플러그인 상태만 바뀌면 다시 그려지지 않는다. 접기 상태와 선택을 구독한다.
+	// The NodeView does not re-render when only selection or plugin state changes. Subscribe to the fold state and the selection.
 	useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -81,7 +81,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 		},
 	});
 
-	// 읽기 전용(휴지통·원문 모드)이면 언어·경로·효과 도구를 숨기고 줄을 고르지 않는다.
+	// When read-only (trash, source mode), hide the language, path and effect tools and do not select lines.
 	const editable = useEditorEditable(editor);
 	const pos = typeof getPos === "function" ? getPos() : undefined;
 	const base = typeof pos === "number" ? pos + 1 : null;
@@ -96,7 +96,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 	const regions = typeof pos === "number" ? foldRegions(node, pos, overrides) : [];
 	const collapses = regions.filter((region) => region.kind === "collapse");
 
-	// 닫힌 줄 접기가 숨기는 줄(첫 줄은 보인다).
+	// Lines hidden by a closed line fold (the first line stays visible).
 	const hiddenLines = new Set<number>();
 	for (const region of collapses) {
 		if (region.open || region.startLine === undefined || region.endLine === undefined) continue;
@@ -104,7 +104,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 	}
 	const rows = starts.map((_, line) => line).filter((line) => !hiddenLines.has(line));
 
-	// 이 블록 안의 선택이 걸친 줄.
+	// Lines spanned by the selection inside this block.
 	const { from: selFrom, to: selTo } = editor.state.selection;
 	const selectionInside = base !== null && selFrom >= base && selTo <= base + text.length;
 	const selectedLines = selectionInside
@@ -126,11 +126,11 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
 		} catch {
-			// 클립보드 접근 불가 시 무시
+			// Ignore when clipboard access is unavailable
 		}
 	};
 
-	// 줄 번호 칸에서 고른 줄. 누르거나 끌어 고르고 Shift로 늘린다. 메뉴는 고른 줄 옆 "줄 효과" 버튼으로 연다.
+	// Lines picked in the line number gutter. Press or drag to pick, extend with Shift. The menu opens via the "Line effects" button next to the picked lines.
 	const pickState = codeEffectsKey.getState(editor.state)?.picked ?? null;
 	const picked = pickState && pickState.blockPos === pos ? pickState : null;
 	const effectsState = codeEffectsKey.getState(editor.state);
@@ -138,7 +138,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 	const linkingLines =
 		effectsState?.linking?.kind === "lines" && effectsState.linking.blockPos === pos ? effectsState.linking : null;
 
-	/** `start`~`end` 줄을 고른다(복사·효과 적용도 그 줄에 걸린다). */
+	/** Picks lines `start` to `end` (copy and effect application also apply to those lines). */
 	const selectLines = useCallback(
 		(start: number, end: number) => {
 			const blockPos = typeof getPos === "function" ? getPos() : undefined;
@@ -178,7 +178,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 	const rowTop = (line: number) => PAD_TOP + Math.max(0, rows.indexOf(line)) * LINE_HEIGHT;
 	const closeMenu = useCallback(() => setMenu(null), []);
 
-	/** 줄 번호를 오른쪽 클릭하면 그 자리에 줄 효과 메뉴를 연다. 고른 줄 안이면 고른 줄 전체, 밖이면 그 줄이다. */
+	/** Right-clicking a line number opens the line effect menu there. Inside the picked lines it targets all picked lines; outside, just that line. */
 	const openLineMenuAt = (line: number, event: React.MouseEvent) => {
 		if (rawMode || !editable) return;
 		event.preventDefault();
@@ -192,7 +192,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 		setMenu({ ...range, at: { top: event.clientY - (body?.top ?? 0), left: event.clientX - (body?.left ?? 0) + 2 } });
 	};
 
-	// 닫힌 글자 접기는 숨기고 `…`로 보인다. 경고·오류 물결 밑줄 길이를 보이는 글자에 맞춘다.
+	// Closed text folds are hidden and shown as `…`. Fit the warning/error wavy underline length to the visible text.
 	const closedFolds = regions
 		.filter((region) => region.kind === "fold" && !region.open && base !== null)
 		.map((region) => ({ from: region.from - (base ?? 0), to: region.to - (base ?? 0) }))
@@ -229,7 +229,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 					<div className="flex flex-wrap items-center gap-1.5">
 						<Select
 							value={language}
-							// 이름 목록을 넘겨야 닫힌 칸에 값(`ts`)이 아니라 이름(`TypeScript`)이 보인다.
+							// The name list must be passed so a closed slot shows the name (`TypeScript`) rather than the value (`ts`).
 							items={languageOptions}
 							onValueChange={(value) => value && updateAttributes({ language: value })}
 						>
@@ -348,7 +348,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						const anchored = effects.some((effect) => effect.name === "anchor");
 						const marker = markerOf(effects);
 						return (
-							// biome-ignore lint/a11y/noStaticElementInteractions: 줄 번호를 눌러(끌어) 줄을 고르고 오른쪽 클릭으로 메뉴를 연다(키보드는 상단 "줄 효과" 버튼)
+							// biome-ignore lint/a11y/noStaticElementInteractions: pressing (dragging) a line number picks lines and right-click opens the menu (keyboard users use the top "Line effects" button)
 							<div
 								key={line}
 								data-line={line}
@@ -361,7 +361,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 									"flex h-6 cursor-pointer items-center gap-0.5 pr-1.5 pl-0.5 hover:bg-cms-accent/60",
 									selected && "bg-cms-primary/10 text-cms-foreground",
 									whole && "bg-cms-primary/20",
-									// 본문과 연결된 줄은 줄 번호 칸 왼쪽에 선을 긋는다.
+									// A line linked to the body gets a line drawn on the left of the line number gutter.
 									anchored && "shadow-[inset_2px_0_0_0_var(--cms-primary)]",
 								)}
 							>
@@ -408,7 +408,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 								const effects = effectsOnLine(lineEffects, line);
 								const wavy = effects.map((effect) => editorLookOf(effect)?.wavy).find(Boolean);
 								const whole = !!picked && picked.start <= line && line < picked.end;
-								// 잇기 중에 먼저 고른 줄, 마우스를 올린 본문 연결이 가리키는 줄.
+								// The line picked first during linking, and the line the hovered body link points to.
 								const pending = !!linkingLines && linkingLines.start <= line && line < linkingLines.end;
 								const hovered = effects.some((effect) => effect.name === "anchor" && effect.attrs.id === hoverRef);
 								return (
@@ -420,7 +420,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 											(whole || pending || hovered) && "bg-cms-primary/15",
 										)}
 									>
-										{/* 물결 밑줄은 글자 조각(구문 색)마다 끊기지 않게 줄 전체에 한 번 긋는다. 같은 글자를 투명하게 겹쳐 길이를 맞춘다. */}
+										{/* Draw the wavy underline once across the whole line so it is not broken per text fragment (syntax color). Overlay the same text transparently to match the length. */}
 										{wavy && (
 											<span
 												className={cn(
@@ -438,9 +438,9 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						<pre
 							className={cn(
 								"relative m-0 whitespace-pre bg-transparent px-4 py-3 font-mono text-cms-foreground text-sm leading-6",
-								// 구문 색은 밝은 테마 색을 인라인으로 넣는다. 어두운 테마에서는 --shiki-dark로 바꾼다.
+								// Syntax colors are inlined as light theme colors. In the dark theme they switch to --shiki-dark.
 								"cms-dark:[&_.shiki-token]:text-(--shiki-dark)!",
-								// 줄 번호로 고른 동안에는 커서를 숨긴다(고른 줄은 줄 배경으로 보인다).
+								// Hide the cursor while lines are picked by line number (picked lines are shown by the line background).
 								picked && "caret-transparent",
 							)}
 						>
@@ -456,7 +456,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						lineEffects={lineEffects}
 						onChange={(next) => updateAttributes({ lineEffects: next })}
 						onClose={closeMenu}
-						// 본문–코드 잇기는 코드 줄을 가리키는 글자 꾸밈(블록 확장 `codeRef` 등)이 있을 때만 쓴다.
+						// Body-to-code linking is used only when there is a text decoration pointing at code lines (such as `codeRef` of the blocks extension).
 						onLinkText={
 							CODE_ANCHOR_REF
 								? () => {

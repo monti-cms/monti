@@ -1,9 +1,9 @@
 import { defineMessages, josa } from "@monti-cms/core";
 
-/** 영어: 개수에 맞는 명사("1 item" / "3 items"). */
+/** English: noun matching the count ("1 item" / "3 items"). */
 const items = (count: unknown) => `${count} ${Number(count) === 1 ? "item" : "items"}`;
 
-/** 목록·휴지통·분류 패널·사이드바·컬럼 머리 등 화면 최상위 조각의 문구(M15). */
+/** Text of top-level screen pieces: list, trash, taxonomy panel, sidebar, column headers, etc. */
 export const screensMessages = defineMessages("cms-admin.screens", {
 	en: {
 		"common.cancel": "Cancel",

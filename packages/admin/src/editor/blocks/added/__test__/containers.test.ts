@@ -15,23 +15,23 @@ const sources = [
 	'::::columns{widths="60,40"}\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::',
 ];
 
-describe("C3 컨테이너 본문 편집", () => {
+describe("container body editing", () => {
 	it.each(
 		sources.map(
 			(source, index) =>
 				[source, ["cmsCallout", "cmsCollapsible", "cmsTabs", "cmsColumns", "cmsColumns"][index]] as const,
 		),
-	)("MDX → Tiptap 스키마 → MDX 왕복: %s", (source, expected) => {
+	)("MDX → Tiptap schema → MDX round trip: %s", (source, expected) => {
 		const content = mdxToTiptap(source);
 		expect(content.content?.[0]?.type).toBe(expected);
 		const editor = new Editor({ extensions: buildEditorExtensions(), content });
 		const saved = tiptapToMdx(editor.getJSON()).trim();
-		// 직렬화기는 컨테이너 내부 여백을 정규화한다. 편집기를 거친 결과가 같은 정본이어야 한다.
+		// The serializer normalizes whitespace inside containers. The result that went through the editor must be the same canonical form.
 		expect(saved).toBe(serialize(toDocument(analyze(source))).trim());
 		editor.destroy();
 	});
 
-	it.each(["callout", "collapsible", "tabs", "columns"])("슬래시로 %s 기본 구조를 넣는다", (name) => {
+	it.each(["callout", "collapsible", "tabs", "columns"])("inserts the default %s structure via slash", (name) => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p>/</p>" });
 		BLOCK_INSERT_ACTIONS[name]?.(editor, { from: 1, to: 2 });
 		expect(editor.getJSON().content?.[0]?.type).toBe(`cms${name[0]?.toUpperCase()}${name.slice(1)}`);
@@ -39,7 +39,7 @@ describe("C3 컨테이너 본문 편집", () => {
 		editor.destroy();
 	});
 
-	it("HTML 복사·붙여넣기도 컨테이너 속성을 잃지 않는다", () => {
+	it("HTML copy and paste also keep container attributes", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(sources[0] ?? "") });
 		const html = editor.getHTML();
 		const element = document.createElement("div");
@@ -50,7 +50,7 @@ describe("C3 컨테이너 본문 편집", () => {
 		editor.destroy();
 	});
 
-	it("긴 제목도 HTML 복사·붙여넣기에서 보존한다", () => {
+	it("long titles are also preserved through HTML copy and paste", () => {
 		const title = "긴 제목".repeat(5000);
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(sources[0] ?? "") });
 		editor.commands.updateAttributes("cmsCallout", { values: { title } });
@@ -61,7 +61,7 @@ describe("C3 컨테이너 본문 편집", () => {
 		editor.destroy();
 	});
 
-	it("본문 없는 콜아웃은 빈 문단으로 열고, 비운 채 저장하면 본문 없이 되돌린다", () => {
+	it("a callout without body opens with an empty paragraph, and saving it left empty restores it without body", () => {
 		const source = ':::callout{variant="info" title="제목만"}\n:::';
 		const content = mdxToTiptap(source);
 		expect(content.content?.[0]?.type).toBe("cmsCallout");
@@ -73,7 +73,7 @@ describe("C3 컨테이너 본문 편집", () => {
 		editor.destroy();
 	});
 
-	it("빈 컨테이너(콜아웃 제외)와 부모 바깥의 Tab은 원문 보존 상자로 간다", () => {
+	it("empty containers (except callouts) and a Tab outside its parent go to the raw-source box", () => {
 		const empty = mdxToTiptap(':::collapsible{title="a"}\n:::');
 		expect(empty.content?.[0]?.type).not.toBe("cmsCollapsible");
 		const orphan = mdxToTiptap(':::tab{label="a"}\n본문\n:::');
@@ -84,7 +84,7 @@ describe("C3 컨테이너 본문 편집", () => {
 		expect(invalid.content?.[0]?.type).not.toBe("cmsCallout");
 	});
 
-	it("핸들 명령으로 Tab 최소·최대 수 제한을 우회하지 못한다", () => {
+	it("handle commands cannot bypass the minimum and maximum Tab count", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(sources[2] ?? "") });
 		expect(deleteBlock(editor, 1)).toBe(false);
 		let pos = 0;
@@ -104,13 +104,13 @@ describe("C3 컨테이너 본문 편집", () => {
 		editor.destroy();
 	});
 
-	it("탭 두 개·단 두 개 미만은 스키마가 거부한다", () => {
+	it("the schema rejects fewer than two tabs or two columns", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p>시작</p>" });
 		const tab = editor.schema.nodes.cmsTab;
 		const column = editor.schema.nodes.cmsColumn;
 		expect(tab).toBeDefined();
 		expect(column).toBeDefined();
-		if (!tab || !column) throw new Error("컨테이너 자식 노드 누락");
+		if (!tab || !column) throw new Error("Container child node missing");
 		expect(editor.schema.nodes.cmsTabs?.contentMatch.matchType(tab)?.validEnd).toBe(false);
 		expect(editor.schema.nodes.cmsColumns?.contentMatch.matchType(column)?.validEnd).toBe(false);
 		editor.destroy();

@@ -27,12 +27,12 @@ import { migrateAi } from "../migrate";
 import { AI_ACTIONS } from "../registry";
 import { type AiStore, createAiStore } from "../store";
 
-describe("AI 기능 고친 값 저장소", () => {
+describe("AI action edited-value store", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let content: ContentStore;
 	let store: AiStore;
-	/** 본체 표를 만들고 AI 플러그인 표를 만든다(`monti migrate`와 같은 순서). */
+	/** Creates the core tables, then the AI plugin tables (same order as `monti migrate`). */
 	const migrate = async () => {
 		await migrateContentStore(pool, { schema: schemaName });
 		await migrateAi(pluginDatabaseFor(pool, schemaName));
@@ -52,13 +52,13 @@ describe("AI 기능 고친 값 저장소", () => {
 		await closeGlobalPool();
 	});
 
-	it("기능 목록은 설정 순서대로이고, 고친 적 없으면 기본값·버전 0이다", async () => {
+	it("lists actions in config order, and defaults with version 0 if never edited", async () => {
 		const actions = await listActions(store);
 		expect(actions.map((action) => action.key)).toEqual(Object.keys(AI_ACTIONS));
 		expect(actions[0]).toMatchObject({ key: "slug", version: 0, updatedAt: null, overridden: [] });
 	});
 
-	it("고칠 수 있는 값만 저장하고, 기본값과 같은 값은 남기지 않으며, 버전이 다르면 막는다", async () => {
+	it("stores only editable values, drops values equal to the defaults, and rejects on version mismatch", async () => {
 		const updated = await updateAction(store, "summary", 0, {
 			enabled: false,
 			prompt: "바꾼 지시문",
@@ -83,7 +83,7 @@ describe("AI 기능 고친 값 저장소", () => {
 		await expect(updateAction(store, "nope", 0, {})).rejects.toMatchObject({ code: "ai_unknown_action" });
 	});
 
-	it("기본값으로 되돌리면 지시문은 정의대로, 켜짐 여부는 그대로 둔다", async () => {
+	it("resetting to defaults restores the prompt to the definition and leaves the enabled flag as is", async () => {
 		const edited = await updateAction(store, "slug", 0, { prompt: "바꾼 지시문", enabled: false });
 		const reset = await resetAction(store, "slug", edited.version);
 		expect(reset.prompt).toBe(AI_ACTIONS.slug?.prompt);
@@ -91,7 +91,7 @@ describe("AI 기능 고친 값 저장소", () => {
 		expect((await getAction(store, "slug")).prompt).toBe(AI_ACTIONS.slug?.prompt);
 	});
 
-	it("예전 기능 표의 고친 값을 한 번만 옮기고, 예전 표는 지우지 않는다", async () => {
+	it("moves edited values of the legacy action table once, and does not delete the legacy table", async () => {
 		await pool.query(`
 			CREATE TABLE "${schemaName}".ai_features (
 				id UUID PRIMARY KEY, builtin TEXT UNIQUE, spec JSONB NOT NULL,
@@ -117,7 +117,7 @@ describe("AI 기능 고친 값 저장소", () => {
 		const keys = await pool.query(`SELECT key FROM "${schemaName}".ai_action_overrides ORDER BY key`);
 		expect(keys.rows.map((row) => row.key)).not.toContain("mediaAlt");
 
-		// 한 번 옮긴 뒤에는 예전 표가 바뀌어도 다시 옮기지 않는다.
+		// After moving once, later changes to the legacy table are not moved again.
 		await pool.query(`UPDATE "${schemaName}".ai_features SET spec = '{"prompt": "다시"}' WHERE builtin = 'codeFold'`);
 		await migrate();
 		expect((await getAction(store, "codeFold")).prompt).toBe("운영자 지시문");
@@ -125,7 +125,7 @@ describe("AI 기능 고친 값 저장소", () => {
 		expect(legacy.rows[0]?.n).toBe(3);
 	});
 
-	it("코드 검사가 쓰는 본체 콘텐츠 조회는 같은 컬렉션·언어에서 다른 글이 쓰는 주소를 찾는다", async () => {
+	it("the core content lookup used by code checks finds slugs used by other posts in the same collection and language", async () => {
 		const entry = await createContentService<Entry>(content).createDraft({
 			collection: "category",
 			slug: "used-address",
@@ -141,7 +141,7 @@ describe("AI 기능 고친 값 저장소", () => {
 		);
 	});
 
-	it("새 화면 기능은 기본 정보와 고친 값(지시문·연결·검사 등)을 한 번에 만들고, 저장 전에도 그 값으로 시험한다", async () => {
+	it("a new UI action is created in one step with basic info and edited values (prompt, connection, checks, etc.), and is tested with those values even before saving", async () => {
 		const base = {
 			label: "태그 고르기",
 			surface: { slot: "field", field: "tagIds", collections: ["post"] },
@@ -174,7 +174,7 @@ describe("AI 기능 고친 값 저장소", () => {
 		await deleteCustomAction(store, created.key, created.version);
 	});
 
-	it("화면 기능(M8-5)을 만들고 고치고 실행할 모양으로 읽고 지운다", async () => {
+	it("creates, edits, reads as a runnable shape, and deletes UI actions", async () => {
 		const created = await createCustomAction(store, {
 			label: "한 줄 요약",
 			surface: { slot: "field", field: "summary", collections: ["post"] },
@@ -187,7 +187,7 @@ describe("AI 기능 고친 값 저장소", () => {
 			attach: [{ slot: "field", field: "summary", collections: ["post"] }],
 			version: 1,
 		});
-		// 목록 끝에 붙는다.
+		// Appended to the end of the list.
 		expect((await listActions(store)).at(-1)?.key).toBe(created.key);
 
 		const updated = await updateAction(
@@ -200,7 +200,7 @@ describe("AI 기능 고친 값 저장소", () => {
 		expect(updated).toMatchObject({ label: "한 문장 요약", result: "mdx", stream: true, version: 2 });
 		const action = await getAction(store, created.key);
 		expect(action).toMatchObject({ prompt: "한 문장으로 줄인다.", attach: [{ slot: "selection" }] });
-		// 고른 자리의 재료만 보낸다(선택 영역 자리의 필수 입력은 언제나 보낸다).
+		// Only materials of the chosen slots are sent (required inputs of the selection slot are always sent).
 		expect(action.send).toEqual(["selection", "title"]);
 
 		await expect(resetAction(store, created.key, 2)).rejects.toMatchObject({ code: "ai_invalid_input" });

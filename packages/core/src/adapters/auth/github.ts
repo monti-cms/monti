@@ -5,25 +5,25 @@ import type { createGithubNextAuth } from "./auth-config";
 import { isAllowedAdminId, isDevAuthBypassEnabled } from "./auth-gateway";
 import { authMessages } from "./messages";
 
-/** 화면 언어는 글자를 읽을 때 고른다. 사이트 설정을 읽는 `i18n` 대신 써서 `cms.server.ts`가 설정을 끌어오지 않게 한다(M17-3). */
+/** The UI locale is picked when text is read. Used instead of `i18n`, which reads the site config, so that `cms.server.ts` does not pull in the config. */
 const t = createActiveTranslator(authMessages);
 
 export interface GithubAuthOptions {
 	readonly clientId: string | undefined;
 	readonly clientSecret: string | undefined;
-	/** 관리자 GitHub 숫자 ID. 비어 있으면 아무도 관리자가 아니다. */
+	/** Admin GitHub numeric IDs. If empty, nobody is an admin. */
 	readonly adminIds: readonly (string | undefined)[];
-	/** 로컬 개발에서 로그인 없이 관리자로 본다. `NODE_ENV=development`일 때만 효과가 있다. */
+	/** Treats the user as admin without login in local development. Only takes effect when `NODE_ENV=development`. */
 	readonly devBypass?: boolean;
 	/**
-	 * 로그인 API 경로. 기본 `/api/cms/auth`로, 관리자 API 라우트가 함께 받아 로그인 라우트 파일이 필요 없다.
-	 * GitHub OAuth 앱의 콜백 주소는 `<사이트>/<basePath>/callback/github`다. 예전처럼 `/api/auth`를 쓰려면
-	 * `basePath: "/api/auth"`로 두고 `app/api/auth/[...nextauth]/route.ts`에서 `@monti-cms/core/runtime`의 `handlers`를 내보낸다.
+	 * Login API path. Default `/api/cms/auth`, which the admin API route handles too, so no login route file is needed.
+	 * The callback URL of the GitHub OAuth app is `<site>/<basePath>/callback/github`. To keep using `/api/auth` as before,
+	 * set `basePath: "/api/auth"` and export `handlers` from `@monti-cms/core/runtime` in `app/api/auth/[...nextauth]/route.ts`.
 	 */
 	readonly basePath?: string;
 	/**
-	 * 로그인 세션 서명 값(NextAuth `secret`). 저장 값 암호화 키(서버 설정 `secret`)와 따로 둔다: 이 값을 바꾸면 로그인만 풀리고,
-	 * 암호화 키를 바꾸면 저장한 AI 서비스 키를 다시 넣어야 한다. 없으면 NextAuth가 `AUTH_SECRET` 환경 변수를 읽는다.
+	 * Login session signing value (NextAuth `secret`). Kept separate from the stored-value encryption key (server config `secret`): changing this only signs users out,
+	 * while changing the encryption key means re-entering the stored AI service keys. If unset, NextAuth reads the `AUTH_SECRET` environment variable.
 	 */
 	readonly secret?: string;
 }
@@ -31,8 +31,8 @@ export interface GithubAuthOptions {
 type NextAuthResult = ReturnType<typeof createGithubNextAuth>;
 
 /**
- * GitHub OAuth(NextAuth) 관리자 로그인. NextAuth는 로그인 기능을 처음 쓸 때 불러온다
- * (저장소만 쓰는 코드·명령줄 도구가 next-auth를 읽지 않게).
+ * GitHub OAuth (NextAuth) admin login. NextAuth is loaded the first time login is used
+ * (so code that only uses the store, and command-line tools, do not read next-auth).
  */
 export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 	return {
@@ -44,7 +44,7 @@ export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 				nextAuth ??= import("./auth-config").then((module) =>
 					module.createGithubNextAuth({
 						...options,
-						// NextAuth는 브라우저가 보는 요청 주소로 경로를 가리므로 Next `basePath`까지 포함한다(`CmsAuth.basePath`는 앱 안 경로).
+						// NextAuth matches paths against the request URL the browser sees, so it includes the Next `basePath` (`CmsAuth.basePath` is the in-app path).
 						basePath: withBasePath(basePath),
 						signInPage: loginPath,
 					}),

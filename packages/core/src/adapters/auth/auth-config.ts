@@ -17,15 +17,15 @@ declare module "next-auth" {
 export interface GithubCredentials {
 	readonly clientId: string | undefined;
 	readonly clientSecret: string | undefined;
-	/** 로그인 API 경로(NextAuth `basePath`, 예: `/api/cms/auth`). */
+	/** Login API path (NextAuth `basePath`, e.g. `/api/cms/auth`). */
 	readonly basePath: string;
-	/** 관리자 로그인 화면 주소(예: `/admin/login`). */
+	/** Admin login page URL (e.g. `/admin/login`). */
 	readonly signInPage: string;
-	/** 로그인 세션 서명 값. 없으면 NextAuth가 `AUTH_SECRET`을 읽는다. */
+	/** Login session signing value. If unset, NextAuth reads `AUTH_SECRET`. */
 	readonly secret?: string;
 }
 
-/** GitHub OAuth로 로그인하는 NextAuth 설정. 세션에는 GitHub 숫자 ID(`githubId`)를 담는다. */
+/** NextAuth config for logging in with GitHub OAuth. The session carries the GitHub numeric ID (`githubId`). */
 export const githubAuthConfig = ({
 	clientId,
 	clientSecret,

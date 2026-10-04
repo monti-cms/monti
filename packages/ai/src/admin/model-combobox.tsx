@@ -18,12 +18,12 @@ import { aiCommonMessages } from "./ai-common.messages";
 
 const t = createTranslator(aiCommonMessages);
 
-/** 모델 목록을 받을 곳. 저장한 연결은 id로, 저장 전에는 주소·키로 받는다. */
+/** Where to fetch the model list from. A saved connection by id; before saving, by URL and key. */
 export type ModelSource = { providerId: string } | { url: string; apiKey?: string };
 
 /**
- * 생성 연결의 모델 목록. 한 번 받은 목록은 10분 동안 다시 받지 않고, 저장·다시 열기에도 그대로 쓴다.
- * `source`가 없으면 받지 않는다.
+ * Model list of a generation connection. A list fetched once is not fetched again for 10 minutes, and is reused after saving or reopening.
+ * If there is no `source`, it is not fetched.
  */
 export function useModelList(source: ModelSource | null) {
 	const query = useQuery({
@@ -51,8 +51,8 @@ export function useModelList(source: ModelSource | null) {
 type Item = { value: string; label: string; custom?: true };
 
 /**
- * 모델 고르기. 목록에서 검색해 고르고, 목록에 없는 이름은 입력한 글자 그대로 쓸 수 있다.
- * 목록이 없어도(판단 모델·목록을 주지 않는 주소) 이름을 적어 고른다.
+ * Model picker. Search the list and pick, or use a name that is not in the list exactly as typed.
+ * Even without a list (judge model, or a URL that gives no list), you can type a name and pick it.
  */
 export function ModelCombobox({
 	id,
@@ -78,7 +78,7 @@ export function ModelCombobox({
 		() => (models ?? []).map((model) => ({ value: model.id, label: model.id })),
 		[models],
 	);
-	// 고른 값이 목록에 없어도(직접 적은 이름) 같은 값이면 같은 객체를 넘겨 입력 글자가 되돌아가지 않게 한다.
+	// Even if the chosen value is not in the list (a typed name), pass the same object for the same value so the typed text does not revert.
 	const selected = useMemo<Item | null>(
 		() => (value ? (options.find((option) => option.value === value) ?? { value, label: value }) : null),
 		[value, options],

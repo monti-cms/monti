@@ -4,7 +4,7 @@ export const CHART_THEME_TOKENS = ["chart-1", "chart-2", "chart-3", "chart-4", "
 export type ChartType = (typeof CHART_TYPES)[number];
 export type ChartThemeToken = (typeof CHART_THEME_TOKENS)[number];
 
-/** 차트 문법 오류의 종류. 글은 문구 사전의 `error.<코드>`다(`./messages`). */
+/** Kinds of chart syntax errors. The text is `error.<code>` in the message dictionary (`./messages`). */
 export type ChartDslErrorCode =
 	| "y_range_format"
 	| "y_range_number"
@@ -27,7 +27,7 @@ export type ChartDslErrorCode =
 	| "series_required"
 	| "series_header_keys";
 
-/** 차트 문법 오류 하나. 줄 번호와 코드, 글에 채울 값(`values`)만 담는다(문구는 언어마다 사전에서 고른다). */
+/** One chart syntax error. Holds only the line number, the code, and the values to fill into the text (`values`); the message is picked per language from the dictionary. */
 export type ChartDslParseError = {
 	line: number;
 	code: ChartDslErrorCode;

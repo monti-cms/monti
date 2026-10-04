@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** AI 버튼·모델 목록·AI 실행 요청·시험 입력 칸이 함께 쓰는 문구. */
+/** Texts shared by the AI button, model list, AI run requests and the test input fields. */
 export const aiCommonMessages = defineMessages("cms-ai.admin.common", {
 	en: {
 		runFailed: "Couldn't run.",

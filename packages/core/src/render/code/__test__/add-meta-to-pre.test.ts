@@ -10,7 +10,7 @@ const runPreHook = (node: Element, code: string, meta: Record<string, unknown>) 
 };
 
 describe("addMetaToPre", () => {
-	it("code와 meta를 pre properties에 주입한다", () => {
+	it("injects code and meta into the pre properties", () => {
 		const pre: Element = {
 			type: "element",
 			tagName: "pre",
@@ -25,7 +25,7 @@ describe("addMetaToPre", () => {
 		expect(pre.properties.showLineNumbers).toBe(true);
 	});
 
-	it("기존 properties가 없어도 안전하게 동작한다", () => {
+	it("works safely even without existing properties", () => {
 		const pre: Element = {
 			type: "element",
 			tagName: "pre",
@@ -41,7 +41,7 @@ describe("addMetaToPre", () => {
 		expect(pre.properties?.language).toBe("python");
 	});
 
-	it("기존 properties를 보존하면서 같은 키는 최신 값으로 갱신한다", () => {
+	it("keeps existing properties and updates the same key with the latest value", () => {
 		const pre: Element = {
 			type: "element",
 			tagName: "pre",

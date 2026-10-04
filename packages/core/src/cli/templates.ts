@@ -1,19 +1,19 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define";
 
-/** `monti init`이 만드는 파일 내용(개발자가 읽는 글이라 영어다). 앱이 바로 고쳐 쓰는 시작점이다. */
+/** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
 
-/** `monti init`이 새 설정에 적는 기본값. 로그인·화면 글은 사이트 기본 언어를 따른다(M15). */
+/** Defaults `monti init` writes into a new config. Sign-in and UI text follow the site default locale. */
 export const DEFAULT_INIT_LOCALE = "en";
 export const DEFAULT_INIT_TIME_ZONE = "UTC";
 
 export interface ConfigTemplateOptions {
-	/** 사이트 기본 언어 코드(예: `en`, `ko`). */
+	/** Site default locale code (e.g. `en`, `ko`). */
 	readonly locale?: string;
-	/** 날짜·시각 시간대(IANA, 예: `UTC`, `Asia/Seoul`). */
+	/** Date/time zone (IANA, e.g. `UTC`, `Asia/Seoul`). */
 	readonly timeZone?: string;
 }
 
-/** 언어 코드의 그 언어 이름(예: `ko` → `한국어`). 모르면 코드를 그대로 쓴다. */
+/** The language's name in that language for a locale code (e.g. `ko` -> `한국어`). Falls back to the code itself. */
 function languageName(code: string): string {
 	try {
 		return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;

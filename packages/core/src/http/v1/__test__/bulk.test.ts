@@ -29,13 +29,13 @@ const E1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const STALE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const MISSING = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
-/** 항목 컬렉션을 가리키는 여러 개짜리 관계(블로그 예시 설정은 태그 `tagIds`). 컬렉션·필드 이름은 설정에서 찾는다. */
+/** A multi-valued relation pointing at an entry collection (`tagIds` tags in the reference blog setup). Collection and field names are looked up from the config. */
 const MANY_FIELD = storedFields(contentCollection).find(
 	({ field }) => field.kind === "relation" && field.many && isItemCollection(field.to),
 )?.name;
 if (!MANY_FIELD) throw new Error("bulk test: the content collection has no many relation to an item collection");
 
-/** 발행 필수값을 채운 작업본 메타데이터(관계는 `CAT_1`, 블로그 예시 설정은 카테고리). */
+/** Working-copy metadata with the publish-required values filled in (the relation is `CAT_1`, categories in the reference blog setup). */
 let workingMetadata: Record<string, unknown> = {};
 
 const working = (version: number) => ({
@@ -81,7 +81,7 @@ const postReq = (body: unknown) =>
 		body: JSON.stringify(body),
 	});
 
-describe("M4-BE-1a Bulk route contract", () => {
+describe("Bulk route contract", () => {
 	beforeAll(async () => {
 		workingMetadata = await requiredMetadata(contentCollection, "Hello", async () => CAT_1);
 	});

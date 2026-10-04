@@ -4,14 +4,14 @@ import { isItemCollection } from "../../core/collections";
 import { roleField, storedFields } from "../../schema/derive";
 
 /**
- * 픽스처가 쓰는 컬렉션·언어·필드 이름은 지금 설정에서 찾는다(M10-1). 블로그 예시 설정에서는 공개 글이 게시글(`post`),
- * 초안이 메모(`memo`)다. 본문이 있는 문서 컬렉션이 하나뿐인 설정은 둘 다 그 컬렉션이다.
+ * The collection, language and field names the fixture uses are looked up from the current config. In the reference blog setup, the public post is a post (`post`),
+ * and the draft is a memo (`memo`). In a config with only one document collection with a body, both are that collection.
  */
 export const FIXTURE_CONTENT_COLLECTION = contentCollection;
 export const FIXTURE_DRAFT_COLLECTION = otherContentCollection ?? contentCollection;
 export const FIXTURE_LOCALE = defaultLocale;
 
-/** 공개 글 작업본이 가리키는 분류 관계(항목 컬렉션을 가리키는 여러 개짜리 관계 먼저). 참조 `kind`는 대상 컬렉션이다. */
+/** Category relation the public post's working copy points to (multi-value relations pointing to item collections first). The reference `kind` is the target collection. */
 const fixtureRelation = (() => {
 	for (const { name, field } of storedFields(contentCollection)) {
 		if (field.kind === "relation" && field.many && isItemCollection(field.to)) return { name, to: field.to };
@@ -22,8 +22,8 @@ const fixtureRelation = (() => {
 export const FIXTURE_RELATION_KIND = fixtureRelation.to;
 
 /**
- * 공개본에 담는 SEO 값(역할로 찾은 필드 이름 → 값). 설정에 없는 역할은 뺀다.
- * M7-FE-2 SEO 메타가 공개 아카이브에 살아남는지 확인한다.
+ * SEO values put in the published copy (field name found by role → value). Roles not in the config are dropped.
+ * Checks that SEO metadata survives in the public archive.
  */
 export const FIXTURE_SEO_METADATA: Readonly<Record<string, string>> = Object.fromEntries(
 	(
@@ -39,7 +39,7 @@ export const FIXTURE_SEO_METADATA: Readonly<Record<string, string>> = Object.fro
 	}),
 );
 
-/** 아카이브 안 항목 파일 경로. */
+/** Item file path inside the archive. */
 export const fixtureEntryPath = (collection: string, id: string, file: string) => `entries/${collection}/${id}/${file}`;
 
 export const FIXTURE_TIME = new Date("2026-09-22T00:00:00.000Z");
@@ -57,7 +57,7 @@ export const fixtureBody = (
 	updatedAt: FIXTURE_TIME,
 });
 
-/** 내보내기 테스트 공용 스냅샷: 공개 글 1건 + 초안 1건. */
+/** Shared snapshot for export tests: 1 public post + 1 draft. */
 export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 	entries: [
 		{
@@ -92,7 +92,7 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 			working: fixtureBody("draft secret body", "메모", "hash-working-2"),
 		},
 		{
-			// 보관된 글. published 본문이 남아 있어도 공개 아카이브에는 나가면 안 된다.
+			// An archived post. Even if the published body remains, it must not go out in the public archive.
 			id: "88888888-8888-4888-8888-888888888888",
 			collection: FIXTURE_CONTENT_COLLECTION,
 			locale: FIXTURE_LOCALE,
@@ -127,7 +127,7 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 			occurrences: [{ type: "mdx", line: 3, column: 1 }],
 		},
 		{
-			// 공개 글의 작업본에서만 참조하는 이미지. 공개 목록에 나가면 안 된다.
+			// An image referenced only by the public post's working copy. It must not go out in the public list.
 			entryId: "11111111-1111-4111-8111-111111111111",
 			state: "working",
 			kind: "media",
@@ -136,7 +136,7 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 			occurrences: [{ type: "mdx", line: 7, column: 1 }],
 		},
 		{
-			// 공개 상태에서 참조하는 이미지. 공개 목록에 포함되어야 한다.
+			// An image referenced by the public state. It must be included in the public list.
 			entryId: "11111111-1111-4111-8111-111111111111",
 			state: "published",
 			kind: "media",

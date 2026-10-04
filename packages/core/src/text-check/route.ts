@@ -10,8 +10,8 @@ export {
 } from "./server-handler";
 
 /**
- * 맞춤법·문장 검사 서버 경로(`@monti-cms/core/plugin/server`). 관리자만 부를 수 있고(본체 관리자 인증·동일 출처 검사),
- * `{ segments }`를 받아 `{ issues }`를 돌려준다. 브라우저 쪽은 `remoteTextChecker({ url })`로 이 경로를 부른다.
+ * Server route for spelling and sentence checks (`@monti-cms/core/plugin/server`). Only admins can call it (core admin auth and same-origin check),
+ * it takes `{ segments }` and returns `{ issues }`. The browser side calls this route with `remoteTextChecker({ url })`.
  *
  * ```ts
  * // app/api/text-check/route.ts

@@ -58,19 +58,19 @@ interface SchemaFieldsProps {
 	onChange: (patch: EntryFormPatch) => void;
 	onSlugChange?: (slug: string) => void;
 	onRegenerateSlug?: () => void;
-	/** 주소 입력의 안내 문구. 비우면 만들 값을 보여 주는 식으로 바꿀 때 쓴다. */
+	/** Hint text of the slug input. Used when switching to show the value to be generated when empty. */
 	slugPlaceholder?: string;
-	/** 이 필드는 그리지 않는다(편집 화면 본문 위의 제목처럼 다른 곳에 입력이 있을 때). */
+	/** Do not render this field (when the input lives elsewhere, like the title above the body on the edit screen). */
 	omit?: readonly string[];
-	/** 필드 아래의 상시 설명을 보여 줄지 여부. */
+	/** Whether to show the always-visible description under the field. */
 	showDescriptions?: boolean;
 	/**
-	 * 번역본 편집(v2 B4). 언어별 값이 아닌 필드(공통 값)는 `values`(원문 값)로 읽기 전용으로 그리고 `note`를 붙인다.
+	 * Translation editing. Fields that are not per-language (shared values) are rendered read-only from `values` (the original's values), with `note` attached.
 	 */
 	locked?: { values: EntryForm; note: ReactNode };
-	/** 이 묶음만 그린다(편집 화면 속성 칸의 탭별 나누기). 없으면 모두. */
+	/** Render only this group (splitting per tab in the edit screen's properties panel). All if absent. */
 	include?: (group: LayoutGroup) => boolean;
-	/** 묶음 제목 모양. `plain`은 접지 않는 작은 제목이다(편집 화면 속성 칸). */
+	/** Group title style. `plain` is a small title that does not collapse (the edit screen's properties panel). */
 	sections?: "collapsible" | "plain";
 }
 
@@ -81,14 +81,14 @@ interface FieldRowProps {
 	issue?: CmsIssue;
 	help?: ReactNode;
 	slot?: SlotRequest;
-	/** 라벨 줄 오른쪽에 둘 것(글자 수 등). 자리 버튼보다 앞에 온다. */
+	/** What goes on the right of the label row (character count, etc.). Comes before the slot button. */
 	aside?: ReactNode;
 	children: ReactNode;
 }
 
 /**
- * 필드 하나의 라벨·필수 표시·오류·도움말. `slot`이 있으면 라벨 옆에 자리 버튼, 입력 아래에 결과를 둔다.
- * 속성 칸의 모든 입력이 이 줄을 쓴다.
+ * Label, required mark, error and help of one field. If `slot` exists, a slot button goes next to the label and the result below the input.
+ * All inputs in the properties panel use this row.
  */
 export function FieldRow({ id, label, required, issue, help, slot, aside, children }: FieldRowProps) {
 	if (slot) {
@@ -152,7 +152,7 @@ function SlotFieldRow({
 	);
 }
 
-/** record 대상 관계(카테고리·태그·모음집). 검색해 고르고, `createInline`이면 없는 이름을 목록에서 바로 만든다. */
+/** Relation to a record target (category, tag, collection). Search and pick; with `createInline`, a missing name can be created right from the list. */
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const relation = field as RelationField;
 	const records = useTaxonomy(relation.to as RecordCollection);
@@ -197,7 +197,7 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 	);
 }
 
-/** 필드 종류별 기본 입력. `input`이 컴포넌트를 가리키면 그것을, 아니면 종류에 맞는 입력을 그린다. */
+/** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
 function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
 	const { fieldInputs } = useCmsAdminComponents();
@@ -267,8 +267,8 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 }
 
 /**
- * 컬렉션 정의를 읽어 속성 입력을 그린다(v2 B1). 배치(`layout`)의 묶음 순서를 따르고,
- * 배치에 없는 필드는 마지막 묶음 뒤에 선언 순서대로 그린다. 조건부 필드는 조건이 맞을 때 딸린 입력을 보여 준다.
+ * Reads the collection definition and renders property inputs. Follows the group order of the layout (`layout`),
+ * and renders fields not in the layout after the last group in declaration order. For a conditional field, shows its dependent input when the condition holds.
  */
 export function SchemaFields({
 	collection,
@@ -291,7 +291,7 @@ export function SchemaFields({
 	const describedBy = (path: string) => (issueFor(path) ? `${fieldId(path)}-error` : undefined);
 	const setValue = (name: string, value: FormValue) => onChange({ [name]: value });
 
-	/** 필드 옆 자리. 읽기 전용 필드에는 두지 않는다. 적용은 입력을 바꾼 것과 같다. */
+	/** Slot next to a field. Not placed on read-only fields. Applying is the same as changing the input. */
 	const fieldSlot = (name: string, value: FormValue, apply: (value: FormValue) => void): SlotRequest => ({
 		slot: "field",
 		target: name,
@@ -315,7 +315,7 @@ export function SchemaFields({
 		},
 	});
 
-	/** 번역본에서 원문 값을 보여 주는 공통 필드인가. */
+	/** Whether this is a shared field showing the original's value on a translation. */
 	const isLocked = (field: Field) =>
 		Boolean(locked) && field.kind !== "backlink" && field.kind !== "view" && !field.localized;
 
@@ -336,7 +336,7 @@ export function SchemaFields({
 			onChange: readOnly ? () => {} : (value) => setValue(name, value),
 		};
 		const help = readOnly && locked ? locked.note : showDescriptions ? field.description : undefined;
-		// 확장이 등록한 입력 조각(이름표 줄 오른쪽·안내 문구·입력 바꾸기).
+		// Input pieces registered by extensions (right of the label row, hint text, input override).
 		const registered = field.input ? fieldInputs?.[field.input] : undefined;
 		const parts = registered && isFieldInputParts(registered) ? registered : undefined;
 		const Aside = parts?.Aside;
@@ -446,7 +446,7 @@ export function SchemaFields({
 			);
 		}
 		if (field.kind === "backlink") {
-			// 번역본에서는 원문 값을 보여 주기만 한다(관계는 원문을 가리킨다).
+			// On a translation, the original's value is only shown (relations point to the original).
 			const readOnly = Boolean(locked);
 			const targetId = context.groupId ?? context.entryId;
 			return (
@@ -495,7 +495,7 @@ export function SchemaFields({
 					);
 				}
 				if (sections === "plain") {
-					// 묶음이 하나뿐이면(탭 하나에 한 묶음) 제목을 달지 않는다.
+					// If there is only one group (one group in one tab), no title is added.
 					if (groups.length === 1) {
 						return (
 							<div key={key} className="space-y-4">
@@ -516,7 +516,7 @@ export function SchemaFields({
 					<LayoutSection
 						key={key}
 						title={group.group}
-						// 값이나 발행 문제가 있는 묶음은 접어 두지 않는다.
+						// A group with values or publish problems is not collapsed.
 						defaultOpen={
 							!group.collapsed ||
 							visible.some((name) => {
@@ -560,11 +560,11 @@ function LayoutSection({ title, defaultOpen, children }: { title: string; defaul
 }
 
 /**
- * record 컬렉션(카테고리·태그·모음집)의 다른 언어 이름·설명(v2 B4). 비우면 공개 화면이 기본 언어 값을 쓴다.
+ * Other-language name and description of a record collection (category, tag, collection). If empty, the public page uses the default language value.
  */
 /**
- * record 컬렉션(카테고리·태그·모음집)의 한 언어 값. 분류 편집 패널의 언어 탭이 쓴다(v2 B4).
- * 비워 두면 그 언어 화면에서도 기본 언어 값을 쓴다.
+ * One language's values of a record collection (category, tag, collection). Used by the language tab of the category edit panel.
+ * If left empty, that language's page also uses the default language value.
  */
 export function RecordLocaleFields({
 	collection,
@@ -585,7 +585,7 @@ export function RecordLocaleFields({
 			{recordLocalizedFields(collection).map((field) => {
 				const key = recordTranslationKey(field, locale);
 				const definition = schema.fields[field];
-				// 언어는 분류 칸의 언어 탭이 이미 보인다.
+				// The language tab of the category sheet is already visible.
 				const label = definition?.label ?? field;
 				const multiline = definition?.kind === "text" && definition.multiline;
 				const value = typeof form[key] === "string" ? (form[key] as string) : "";

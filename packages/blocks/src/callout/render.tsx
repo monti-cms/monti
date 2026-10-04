@@ -13,7 +13,7 @@ const titleOf = (variant: CalloutVariant, labels: BlockLabels) =>
 		danger: labels.calloutDanger,
 	})[variant];
 
-/** 콜아웃. 종류(`variant`)별 강조색으로 제목과 본문을 상자에 담는다. 모르는 종류는 노트, 제목이 없으면 종류 이름이다. */
+/** Callout. Wraps the title and body in a box with an accent color per `variant`. An unknown variant falls back to note; a missing title falls back to the variant name. */
 export function Callout({
 	variant,
 	title,
@@ -24,7 +24,7 @@ export function Callout({
 	return (
 		<div className="cms-block-callout" data-variant={kind} role="note">
 			<div className="cms-block-callout-title">{title?.trim() || titleOf(kind, labels)}</div>
-			{/* 본문 없이 제목만 둔 콜아웃은 빈 본문 칸을 그리지 않는다. */}
+			{/* A callout with only a title does not render an empty body slot. */}
 			{children ? <div className="cms-block-callout-body">{children}</div> : null}
 		</div>
 	);
@@ -32,7 +32,7 @@ export function Callout({
 
 type CalloutProps = Parameters<typeof Callout>[0];
 
-/** 콜아웃의 공개 컴포넌트(`@monti-cms/core/render`가 부른다). */
+/** Public component for the callout (called by `@monti-cms/core/render`). */
 export default ({ locale }: { locale?: string }) => {
 	const labels = blockLabels(locale);
 	return { Callout: (props: CalloutProps) => <Callout {...props} labels={labels} /> };

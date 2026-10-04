@@ -9,9 +9,9 @@ export const exportScopeSchema = z.enum(["admin", "public"]);
 export type ExportScope = z.infer<typeof exportScopeSchema>;
 
 /**
- * 공개 projection 스키마. `working` 필드가 아예 없고 `.strict()`이므로 항목 최상위에 초안 본문이나
- * 관리자 전용 키가 섞이면 파싱 단계에서 실패한다(fail-closed).
- * `metadata` 내부는 컬렉션 필드 자유도가 높아 재귀 allowlist까지는 하지 않는다(비차단 후속 항목).
+ * Public projection schema. It has no `working` field at all and is `.strict()`, so if a draft body or an
+ * admin-only key is mixed into the top level of an item, parsing fails (fail-closed).
+ * Inside `metadata`, collection fields are too free-form for a recursive allowlist (a non-blocking follow-up).
  */
 export const publicExportEntrySchema = z
 	.object({
@@ -30,9 +30,9 @@ export const publicExportEntrySchema = z
 export type PublicExportEntry = z.infer<typeof publicExportEntrySchema>;
 
 /**
- * 공개 metadata allowlist. 컬렉션 정의의 저장 필드만 골라 내보내므로
- * 관리자 전용 키(storageKey 등)나 정의에 없는 값이 metadata에 섞여도 공개 아카이브에 나가지 않는다.
- * record 컬렉션의 언어별 이름(`translations`)은 필드가 아니라 나가지 않는다.
+ * Public metadata allowlist. Only stored fields of the collection definition are exported, so
+ * admin-only keys (storageKey etc.) or values not in the definition mixed into metadata do not go out in the public archive.
+ * Per-language names of record collections (`translations`) are not fields and do not go out.
  */
 export const PUBLIC_METADATA_KEYS: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
 	COLLECTIONS.map((collection) => [collection, storedFields(collection).map((stored) => stored.name)]),
@@ -51,7 +51,7 @@ export function pickPublicMetadata(collection: string, metadata: Record<string, 
 export interface ExportManifestEntry {
 	id: string;
 	collection: string;
-	/** 콘텐츠 언어와 번역 묶음 ID(v2 B4). 원문이면 묶음 ID가 자기 ID다. */
+	/** Content language and translation group ID. For a source, the group ID is its own ID. */
 	locale: string;
 	translationGroupId: string;
 	status: string;
@@ -64,10 +64,10 @@ export interface ExportManifestEntry {
 	publishedAt: string | null;
 	hasWorking: boolean;
 	hasPublished: boolean;
-	/** 상태 1건의 canonical digest. */
+	/** Canonical digest of one state. */
 	workingDigest: string | null;
 	publishedDigest: string | null;
-	/** 항목 전체(작업본+공개본) digest. 아카이브 간 동일성 비교·감사용이다. */
+	/** Digest of the whole item (working copy + published copy). For comparing sameness between archives and for auditing. */
 	itemDigest: string;
 	files: string[];
 }
@@ -102,7 +102,7 @@ export interface ExportArchive {
 const iso = (value: Date | null | undefined): string | null =>
 	value instanceof Date ? value.toISOString() : value === undefined ? null : value;
 
-/** key 순서에 의존하지 않는 canonical JSON. digest와 스냅샷 비교에 쓴다. */
+/** Canonical JSON that does not depend on key order. Used for digests and snapshot comparison. */
 export const canonicalJson = (value: unknown): string => {
 	if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
 	if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
@@ -116,7 +116,7 @@ const sha256 = (value: string): string => createHash("sha256").update(value, "ut
 
 const sha256Bytes = (value: Uint8Array): string => createHash("sha256").update(value).digest("hex");
 
-/** 상태 1건의 canonical digest. 내용·슬러그·상태·폴더·참조까지 포함해 skip/충돌 판정이 흔들리지 않게 한다. */
+/** Canonical digest of one state. Includes content, slug, status, folder and references so skip/conflict decisions stay stable. */
 const stateDigest = (
 	entry: ExportSnapshotEntry,
 	state: "working" | "published",
@@ -141,7 +141,7 @@ const stateDigest = (
 		}),
 	);
 
-/** 항목 전체(작업본+공개본) digest. 한쪽만 바뀌어도 달라져야 한다. */
+/** Digest of the whole item (working copy + published copy). It must differ if only one side changes. */
 const entryDigest = (
 	entry: ExportSnapshotEntry,
 	scope: ExportScope,
@@ -170,7 +170,7 @@ const bodyFile = (entry: ExportSnapshotEntry, state: "working" | "published"): {
 			metadata: body.metadata,
 			schemaVersion: body.schemaVersion,
 			contentHash: body.contentHash,
-			// Only translated entries have this (v3); the source file shape is unchanged.
+			// Only translated entries have this; the source file shape is unchanged.
 			...(body.translation ? { translation: body.translation } : {}),
 			updatedAt: iso(body.updatedAt),
 			createdAt: iso(entry.createdAt),
@@ -182,7 +182,7 @@ const bodyFile = (entry: ExportSnapshotEntry, state: "working" | "published"): {
 	};
 };
 
-/** 공개 아카이브에는 현재 공개 상태인 항목의 공개본만 넣는다. 초안·보관·휴지통은 공개본이 남아 있어도 제외한다. */
+/** The public archive includes only the published copy of items that are currently public. Drafts, archived and trashed items are excluded even if a published copy remains. */
 const publicEntry = (entry: ExportSnapshotEntry): PublicExportEntry | null => {
 	if (entry.status !== "published") return null;
 	if (!entry.published) return null;
@@ -215,7 +215,7 @@ const sortEntries = (entries: readonly ExportSnapshotEntry[]): ExportSnapshotEnt
 export interface BuildExportOptions {
 	scope: ExportScope;
 	exportedAt: Date;
-	/** 아카이브 내부 파일 시각. 스냅샷 테스트를 위해 고정값을 쓸 수 있다. */
+	/** File timestamp inside the archive. A fixed value can be used for snapshot tests. */
 	archiveModifiedAt?: Date;
 }
 
@@ -375,8 +375,8 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 	files.push({ path: "media.json", data: jsonFile(media) });
 	files.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
 
-	// digest는 아카이브에 실제로 들어가는 모든 페이로드 파일을 덮는다(manifest.json과 exportedAt은 제외).
-	// 그래서 설정·미디어 목록·주소 같은 항목 외 데이터가 바뀌어도 digest가 달라진다.
+	// The digest covers every payload file that actually goes into the archive (manifest.json and exportedAt are excluded).
+	// So the digest changes even when non-item data such as settings, the media list or addresses changes.
 	const digest = sha256(files.map((file) => `${file.path}\u0000${sha256Bytes(file.data)}`).join("\n"));
 
 	const manifest: ExportManifest = {

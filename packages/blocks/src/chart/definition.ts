@@ -4,7 +4,7 @@ import { chartMessages } from "./messages";
 
 const t = createActiveTranslator(chartMessages);
 
-/** 차트(` ```chart `). 차트 문법은 `parseChartDsl`이 읽는다. 편집기 미리보기는 확장이(사이트가 바꿀 수 있다), 공개 화면은 사이트가 그린다. */
+/** Chart (` ```chart `). The chart syntax is read by `parseChartDsl`. The editor preview comes from the extension (a site can replace it); the public page is rendered by the site. */
 export const chartBlock = defineBlock({
 	name: "chart",
 	get label() {

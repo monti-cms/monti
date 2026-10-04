@@ -1,4 +1,4 @@
-/** 첨부 파일 카드(에디터·공개 화면)가 함께 쓰는 표시 규칙(v3). */
+/** Display rules shared by the attached file card (editor and public screen). */
 
 export type FileKind = "pdf" | "archive" | "text";
 
@@ -8,7 +8,7 @@ export function fileKindOf(mimeType: string | null | undefined): FileKind {
 	return "text";
 }
 
-/** 카드에 보일 형식 이름. 글자·코드 파일은 확장자를 쓴다(`TS`, `MD` 등). */
+/** Format name shown on the card. Text and code files use the extension (`TS`, `MD`, etc.). */
 export function fileTypeLabel(filename: string, mimeType: string | null | undefined): string {
 	if (mimeType === "application/pdf") return "PDF";
 	if (mimeType === "application/zip") return "ZIP";

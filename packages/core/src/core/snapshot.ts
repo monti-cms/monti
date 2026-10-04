@@ -39,8 +39,8 @@ import {
 } from "./types";
 
 /**
- * 스냅샷 준비와 발행 검증. 순수 규칙이며 DB·HTTP를 모른다.
- * 서비스(초안 저장)와 저장소 구현(발행 트랜잭션 안의 재검증)이 같은 규칙을 쓴다.
+ * Snapshot preparation and publish validation. Pure rules; knows nothing about the DB or HTTP.
+ * The service (draft save) and the repository implementation (re-validation inside the publish transaction) use the same rules.
  */
 
 export const MAX_MDX_BYTES = 2 * 1024 * 1024;
@@ -60,7 +60,7 @@ function sortKeys(obj: JsonValue): JsonValue {
 		}, {});
 }
 
-/** 스냅샷의 내용 해시. 같은 메타데이터·본문이면 키 순서와 무관하게 같은 값이다. */
+/** Content hash of a snapshot. The same metadata and body give the same value regardless of key order. */
 export function computeContentHash(metadata: JsonValue, mdx: string, schemaVersion = 1): string {
 	const tuple = ["cms-snapshot-v1", schemaVersion, sortKeys(metadata), mdx];
 	return createHash("sha256").update(JSON.stringify(tuple)).digest("hex");
@@ -81,7 +81,7 @@ class ReferenceCollector {
 	}
 }
 
-/** 메타데이터 관계 필드를 컬렉션 정의 순서대로 참조로 모은다. 순서·중복을 보존한다. */
+/** Collects metadata relation fields as references, in collection-definition order. Preserves order and duplicates. */
 function addMetadataReferences(
 	collector: ReferenceCollector,
 	collection: Collection,
@@ -96,7 +96,7 @@ function addMetadataReferences(
 	}
 }
 
-/** 정확히 허용된 키만 가진 평범한 객체인가. getter·상속 속성은 거부한다. */
+/** Is this a plain object with exactly the allowed keys? Getters and inherited properties are rejected. */
 export function validateExactRecord(
 	value: unknown,
 	expectedKeys: readonly string[],
@@ -129,8 +129,8 @@ export function validateExactRecord(
 export const SERVICE_INPUT_KEYS: readonly string[] = ["collection", "slug", "metadata", "mdx"];
 
 /**
- * 필드 값 오류. 오류 코드는 필드 이름과 상관없이 같다. 글자 수 초과(`field_too_long`)는 어느 필드인지 문제(`issues`)의
- * `path`(필드 이름)와 `message`(필드 이름표)로 알린다(관리자 화면이 "<이름표>이/가 너무 깁니다."로 보인다).
+ * Field value error. The error code is the same regardless of field name. Exceeding the length limit (`field_too_long`) is reported through the issue (`issues`)'s
+ * `path` (field name) and `message` (field label) (the admin screen shows it as "<label> is too long.").
  */
 function fieldValueServiceError(code: string, path: string, label: string | undefined): ServiceError {
 	if (code !== "field_too_long") return new ServiceError(code);
@@ -153,12 +153,12 @@ function validateMetadata(collection: Collection, raw: unknown): Record<string, 
 	}
 	const input = raw as Record<string, unknown>;
 
-	// 허용 키·저장 형식·값 규칙은 컬렉션 정의(v2 B1)에서 온다.
+	// Allowed keys, storage format and value rules come from the collection definition.
 	const rules = COLLECTION_DEFINITIONS[collection].fields;
 	const metadata: Record<string, MetadataValue> = {};
 	for (const [k, v] of Object.entries(input)) {
 		if (k === RECORD_TRANSLATIONS_KEY) {
-			// record 컬렉션의 언어별 이름(v2 B4). 기본 언어 값은 필드 자체에 둔다.
+			// Per-locale names of a record collection. The default-locale value lives in the field itself.
 			const normalized = normalizeRecordTranslations(collection, v, PREFIXED_LOCALES);
 			if ("error" in normalized) {
 				const { error, path, label } = normalized;
@@ -215,7 +215,7 @@ const readAttr = (node: MdxNode, key: string): MdxAttribute | undefined =>
 		(a: unknown): a is MdxAttribute => isMdxNode(a) && (a as MdxAttribute).name === key,
 	);
 
-/** 속성이 있으면 그 문자열 값, `{decorative}`처럼 값 없는 속성은 `true`. */
+/** The attribute's string value if present; `true` for value-less attributes like `{decorative}`. */
 const readAttrValue = (node: MdxNode, key: string): string | true | undefined => {
 	const attr = readAttr(node, key);
 	if (!attr) return undefined;
@@ -241,10 +241,10 @@ function findNamedJsxChildren(node: MdxNode, name: string): MdxNode[] {
 
 const tCore = createTranslator(coreMessages);
 
-/** 병합 한 칸이 걸칠 수 있는 최대 행·열 수. 편집기·공개 렌더의 표 열 한도와 같다. */
+/** Maximum rows/columns one merged cell can span. Same as the column limit of tables in the editor and the public render. */
 const MAX_TABLE_SPAN = MAX_TABLE_COLUMNS;
 
-/** 셀의 `colspan`·`rowspan`. 없거나 글자가 아니면 1이고, 양의 정수가 아니면 잘못된 값으로 돌려준다. */
+/** A cell's `colspan`/`rowspan`. 1 if absent or not a string; a value that is not a positive integer is returned as invalid. */
 function readSpan(cell: MdxNode, key: "colspan" | "rowspan"): { span: number } | { invalid: string } {
 	const raw = readAttrValue(cell, key);
 	if (typeof raw !== "string") return { span: 1 };
@@ -261,7 +261,7 @@ type TableSpanReason =
 	| "ragged_rows";
 
 /**
- * 표의 셀 병합(colspan·rowspan) 및 격자 구조를 검사하여 잘못된 span에 대해 경고한다(v2 C6).
+ * Checks table cell merges (colspan/rowspan) and grid structure, and warns about invalid spans.
  */
 function checkTableSpans(tableNode: MdxNode, position: { line: number; column: number }, warnings: Issue[]) {
 	const rows = findNamedJsxChildren(tableNode, "TableRow");
@@ -302,7 +302,7 @@ function checkTableSpans(tableNode: MdxNode, position: { line: number; column: n
 			if ("invalid" in rowspan) warn("invalid_rowspan", { value: rowspan.invalid });
 			else rs = rowspan.span;
 
-			// 외부 MDX의 거대한 span이 격자 계산을 폭증시키지 않도록 제한한다.
+			// Limit so that a huge span from external MDX cannot blow up the grid computation.
 			const overflowsRows = r + rs > totalRows;
 			if (cs > MAX_TABLE_SPAN || rs > MAX_TABLE_SPAN || c + cs > MAX_TABLE_SPAN || overflowsRows) {
 				if (overflowsRows) warn("rowspan_overflow", { rowspan: rs, rows: totalRows });
@@ -341,8 +341,8 @@ function checkTableSpans(tableNode: MdxNode, position: { line: number; column: n
 }
 
 /**
- * 블록 속성 규칙(§4.4, §5.6 "블록별 필수 속성"). 발행만 막고 초안 저장·시각 편집은 막지 않는다.
- * 저장 문법(directive)과 읽기 호환 JSX가 같은 컴포넌트 이름으로 파싱되므로 한 번만 검사한다.
+ * Block attribute rules. Blocks only publishing; draft saves and visual editing are not blocked.
+ * The storage syntax (directive) and the read-compatible JSX are parsed with the same component names, so they are checked only once.
  */
 function checkBlockAttributes(
 	node: MdxNode,
@@ -372,7 +372,7 @@ function checkBlockAttributes(
 		}
 	}
 
-	// 선택 값이 정해진 속성(정렬·콜아웃 종류 등)은 블록 정의(v2 B3)의 값만 받는다.
+	// Attributes with a fixed set of choices (alignment, callout kind, etc.) accept only the values from the block definition.
 	const block = BLOCK_BY_NAME.get(definition.name);
 	if (block) {
 		const values = Object.fromEntries(Object.keys(block.attributes).map((key) => [key, readAttrValue(node, key)]));
@@ -386,7 +386,7 @@ function checkBlockAttributes(
 		}
 	}
 
-	// 자식 블록의 값 중 하나여야 하는 속성(예: 처음 열 탭 → 탭 이름).
+	// Attributes that must be one of a child block's values (e.g. the initially open tab → tab name).
 	for (const [key, attribute] of Object.entries(block?.attributes ?? {})) {
 		const childKey = attribute.childValue;
 		if (!block || !childKey) continue;
@@ -420,8 +420,8 @@ function checkBlockAttributes(
 	if (name === "Image") {
 		const decorative = readAttrValue(node, "decorative") === true;
 		const alt = readAttrValue(node, "alt");
-		// §5.6: 설명이 필요한 새 이미지(등록 미디어)의 alt 누락은 발행 전 보완한다.
-		// 이전 콘텐츠의 외부·상대 경로 이미지(`src`)는 이전 보고서에서 처리하므로 막지 않는다.
+		// A missing alt on a new image that needs a description (registered media) must be fixed before publishing.
+		// External or relative-path images (`src`) from migrated content are handled in the migration report, so they are not blocked.
 		if (!decorative && readAttr(node, "mediaId") && (typeof alt !== "string" || !alt.trim())) {
 			issues.push({ code: "missing_image_alt", path: "mdx", position });
 		}
@@ -506,7 +506,7 @@ export async function prepareSnapshot(
 		mdxHasError = true;
 	};
 
-	/** 참조 ID 속성의 글자. 없거나 비면 `missing_media_id`, 식(`{...}`)이면 `dynamic_reference_id` 문제다. */
+	/** Text of a reference ID attribute. Missing or empty is `missing_media_id`; an expression (`{...}`) is a `dynamic_reference_id` issue. */
 	const staticReferenceId = (attr: MdxAttribute | undefined): { id: string } | { problem: string } =>
 		!attr || attr.value === null || attr.value === undefined || attr.value === ""
 			? { problem: "missing_media_id" }
@@ -514,15 +514,15 @@ export async function prepareSnapshot(
 				? { problem: "dynamic_reference_id" }
 				: { id: attr.value };
 
-	/** 등록 미디어 참조로 모은다. UUID가 아니면 본문 오류다. 참조로 남겨 사용 중인 파일을 지우지 않게 한다. */
+	/** Collected as registered-media references. A non-UUID is a body error. Kept as a reference so a file in use is not deleted. */
 	const addMediaReference = (mediaId: string, position: ReturnType<typeof positionOf>) => {
 		if (!isUuid(mediaId)) addMdxError("invalid_reference_id", position);
 		else mdxRefsToAdd.push({ kind: "media", targetId: mediaId, occ: { type: "mdx", ...position } });
 	};
 
 	const collectImage = (node: MdxNode) => {
-		// 이미지는 `mediaId`(등록 미디어) 또는 `src`(외부 주소) 중 하나를 쓴다(§4.4).
-		// `mediaId`만 참조 테이블 대상이다. `src`는 외부 주소라 참조가 아니다.
+		// An image uses either `mediaId` (registered media) or `src` (external address).
+		// Only `mediaId` goes to the reference table. `src` is an external address, not a reference.
 		const mediaIdAttr = readAttr(node, "mediaId");
 		const srcAttr = readAttr(node, "src");
 		const attr = mediaIdAttr ?? srcAttr;
@@ -537,7 +537,7 @@ export async function prepareSnapshot(
 		if (mediaId || src) imageSources.push({ ...(mediaId ? { mediaId } : { src }), position });
 	};
 
-	/** 첨부 파일 카드(v3). `mediaId`가 꼭 있어야 한다. */
+	/** Attached file card. `mediaId` is required. */
 	const collectFile = (node: MdxNode) => {
 		const attr = readAttr(node, "mediaId");
 		const position = positionOf(node);
@@ -546,7 +546,7 @@ export async function prepareSnapshot(
 		else addMediaReference(reference.id, position);
 	};
 
-	/** 번역본에 남은 번역 안내 글(v3). 공개 화면에는 보이지 않으므로 남은 채로 발행하지 않는다. */
+	/** Translation hint text left in a translation. It is not visible on the public screen, so it must not be published as is. */
 	const untranslated: ReturnType<typeof positionOf>[] = [];
 	const traverse = (node: unknown) => {
 		if (!isMdxNode(node)) return;
@@ -556,7 +556,7 @@ export async function prepareSnapshot(
 			addInternalLink(definitions.get(node.identifier), node);
 		}
 		if (isJsxElement(node)) {
-			// `ContentLink`는 배치 4에서 폐기했다 — 본문에 남아 있으면 `analyze`가 거부한다.
+			// `ContentLink` has been retired — `analyze` rejects it if it remains in the body.
 			if (node.name === "Image") collectImage(node);
 			if (node.name === "File") collectFile(node);
 			if (node.name === "Untranslated") untranslated.push(positionOf(node));
@@ -567,7 +567,7 @@ export async function prepareSnapshot(
 	traverse(analysis.tree);
 
 	if (mdxHasError) {
-		// 분석하지 못한 본문은 과거 본문 참조를 stale로 유지한다(§6.1). 과거 참조는 저장소에서만 온다.
+		// For a body that could not be analyzed, past body references stay stale. Past references come only from the repository.
 		for (const ref of options?.previousReferences ?? []) {
 			for (const occ of ref.occurrences) {
 				if (occ.type !== "metadata") collector.add(ref.kind, ref.targetId, { ...occ }, true);
@@ -624,12 +624,12 @@ export async function prepareSnapshot(
 }
 
 /**
- * §4.4 이미지 경고. **비차단**이며 발행을 막지 않는다.
+ * Image warnings. **Non-blocking**; they do not stop publishing.
  *
- * 정상 데이터에서 실제로 발생하는 3가지만 본다: ① 미디어 행은 있으나 `ready` 아님
- * ② `ready`인데 저장소 키가 없어 해석 불가 ③ 외부 `src`가 허용 규칙에 걸림.
- * **미디어 행이 아예 없는 경우는 경고 대상이 아니다** — `entry_references`의 FK·CHECK와
- * `validateForPublish`의 `unresolved_media`가 먼저 막는다(M7 무결성 계약, A3).
+ * Only the 3 cases that actually occur with normal data are checked: (1) a media row exists but is not `ready`,
+ * (2) `ready` but no storage key, so it cannot be resolved, (3) an external `src` hits an allow rule.
+ * **A missing media row is not a warning case** — the FK/CHECK on `entry_references` and
+ * `unresolved_media` in `validateForPublish` block it first (media integrity contract).
  */
 const imageWarnings = (sources: readonly CmsImageSource[], media: ResolvedTargets["media"]): Issue[] => {
 	const warnings: Issue[] = [];
@@ -652,10 +652,10 @@ const imageWarnings = (sources: readonly CmsImageSource[], media: ResolvedTarget
 };
 
 /**
- * 발행 응답에 실어 보낼 이미지 경고만 모은다. **비차단**이며, 계산에 실패하면 빈 배열을 돌려준다.
+ * Collects only the image warnings to include in the publish response. **Non-blocking**; if computation fails it returns an empty array.
  *
- * `ready` + `storageKey`가 있는 미디어는 `headStorageKey`가 있으면 저장소 실물을 한 번 더 확인한다.
- * 실물이 없으면 `image_media_missing_in_storage` 경고를 추가한다. 인프라 오류 시에는 DB 판정으로 폴백한다.
+ * For media that is `ready` with a `storageKey`, if `headStorageKey` is provided, the actual object in storage is checked once more.
+ * If it is missing, an `image_media_missing_in_storage` warning is added. On an infrastructure error it falls back to the DB decision.
  */
 export async function imageWarningsForPublish(input: {
 	collection: Collection;
@@ -717,15 +717,15 @@ export function validateForPublish(
 		...missingRequiredIssues(snapshot.collection, snapshot, { localizedOnly: Boolean(resolved.translation) }),
 	);
 	if (resolved.translation && !resolved.translation.sourcePublished) {
-		// 공개 화면의 카테고리·태그·발행일은 원문에서 온다.
+		// The public screen's category, tags and publish date come from the source.
 		issues.push({ code: "source_not_published", path: "translationGroupId" });
 	}
-	// 본문을 쓰는 컬렉션(`body`)만 빈 본문을 막는다.
+	// Only collections that use a body (`body`) reject an empty body.
 	if (schemaOf(snapshot.collection).body && snapshot.mdx.trim() === "") {
 		issues.push({ code: "empty_body", path: "mdx", position: { line: 1, column: 1 } });
 	}
 
-	// 메타데이터 관계는 스냅샷의 참조 목록과 무관하게 항상 검사한다(호출자가 참조를 비워 보내도 새지 않게).
+	// Metadata relations are always checked regardless of the snapshot's reference list (so nothing leaks even if the caller sends empty references).
 	const metadataRefs = new ReferenceCollector();
 	addMetadataReferences(metadataRefs, snapshot.collection, snapshot.metadata);
 	const occurrenceKey = (kind: string, target: string, o: ReferenceOccurrence) =>
@@ -755,7 +755,7 @@ export function validateForPublish(
 			addForAll("unresolved_reference");
 			continue;
 		}
-		// 기대 대상 컬렉션과 미공개 허용은 관계 필드 정의에서 온다. 필드에 딸리지 않은 참조는 컬렉션을 따지지 않는다.
+		// The expected target collection and whether unpublished targets are allowed come from the relation field definition. References not attached to a field are not checked against a collection.
 		const rule = ref.occurrences
 			.map((o) => (o.type === "metadata" ? relationRule(snapshot.collection, o.path) : undefined))
 			.find((found) => found !== undefined);
@@ -763,7 +763,7 @@ export function validateForPublish(
 			addForAll("invalid_reference_collection");
 			continue;
 		}
-		// 모음집은 아직 공개되지 않은 게시글도 담을 수 있다(§6.4). 공개 목록에서만 뺀다.
+		// A compilation may also contain posts that are not published yet. They are only excluded from the public list.
 		if (!target.isPublished && !rule?.allowUnpublished) addForAll("unpublished_reference");
 	}
 
@@ -776,7 +776,7 @@ export function validateForPublish(
 		}
 	}
 
-	// 이미지 해석 실패와 정의에 없는 속성은 경고일 뿐이다 — `ready`를 바꾸지 않는다.
+	// Image resolution failures and attributes not in the definition are only warnings — they do not change `ready`.
 	return {
 		ready: issues.length === 0,
 		issues,

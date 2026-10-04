@@ -13,26 +13,26 @@ import {
 } from "@monti-cms/core/client";
 import { t } from "./translate";
 
-/** 폼 입력 하나의 값. 텍스트·한 개 관계·선택·날짜는 문자열(관계는 비면 `null`), 여러 개 관계는 배열이다. */
+/** The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays. */
 export type FormValue = string | string[] | null;
 
 /**
- * 편집 화면이 다루는 초안 값(§5.2). 제목·주소·본문 외의 필드는 컬렉션 정의(v2 B1)에서 오며
- * 필드 이름을 키로 평평하게 둔다. 날짜 필드는 `datetime-local` 입력값(설정 시간대)이다.
+ * Draft values the edit screen handles. Fields other than title, slug and body come from the collection definition and
+ * are stored flat, keyed by field name. Date fields hold the `datetime-local` input value (in the configured time zone).
  */
 export type EntryForm = { title: string; slug: string; mdx: string } & { [field: string]: FormValue };
 
-/** 폼 일부 변경. 지정한 키만 바꾼다. */
+/** Partial form change. Only the given keys are changed. */
 export type EntryFormPatch = { readonly [field: string]: FormValue };
 
 export const EMPTY_FORM: EntryForm = { title: "", slug: "", mdx: "" };
 
 /**
- * 복제본 제목(라이브러리 약속상 제목 필드 이름은 `title`). 원본 제목 뒤에 " (복사)"를 붙이고, 제목 필드의 `max`를
- * 넘으면 원본 쪽을 줄인다.
+ * Title of a duplicate (by library convention the title field is named `title`). Appends a "copy" suffix to the source title and trims the source part
+ * if it would exceed the title field's `max`.
  */
 export function copyTitle(collection: string, title: string | null | undefined): string {
-	// 복제본 제목에 붙이는 말과 제목이 빈 원본의 이름은 화면 문구이므로 저장소가 아니라 관리자 화면이 정한다.
+	// The suffix added to a duplicate's title and the name for an untitled source are screen text, so the admin screen decides them, not the repository.
 	const copySuffix = t("copy.suffix");
 	const base = title?.trim() ? title : t("untitled");
 	const field = isCollection(collection) ? storedField(collection, "title")?.field : undefined;
@@ -43,7 +43,7 @@ export function copyTitle(collection: string, title: string | null | undefined):
 	return `${chars.length > room ? chars.slice(0, room).join("") : base}${copySuffix}`;
 }
 
-/** 같은 번역 묶음의 콘텐츠(v2 B4). */
+/** Content in the same translation group. */
 export interface TranslationMember {
 	id: string;
 	locale: string;
@@ -56,18 +56,18 @@ export interface TranslationMember {
 export interface EntryData {
 	id: string;
 	collection: string;
-	/** 콘텐츠 언어와 번역 묶음 ID(v2 B4). 원문이면 묶음 ID가 자기 ID다. */
+	/** Content language and translation group ID. For the original, the group ID is its own ID. */
 	locale?: string;
 	translationGroupId?: string;
 	translations?: TranslationMember[];
-	/** 번역본이면 원문의 최신 초안 메타데이터. 공통 값을 읽기 전용으로 보여 준다. */
+	/** For a translation, the latest draft metadata of the original. Shown read-only as the shared values. */
 	source?: {
 		id: string;
 		locale: string;
 		status: EntryData["status"];
 		workingSlug: string | null;
 		metadata: Record<string, unknown>;
-		/** 원문 최신 초안 본문(v3 번역 화면). */
+		/** Latest draft body of the original (translation screen). */
 		mdx?: string;
 	};
 	status: "draft" | "published" | "archived" | "trashed";
@@ -82,34 +82,34 @@ export interface EntryData {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
-/** 폼 값을 문자열로 읽는다. 없거나 배열이면 빈 문자열이다. */
+/** Reads a form value as a string. Empty string if missing or an array. */
 export const formText = (form: EntryForm, name: string): string => text(form[name]);
 
-/** 폼 값을 문자열 배열로 읽는다. */
+/** Reads a form value as a string array. */
 export const formList = (form: EntryForm, name: string): string[] => {
 	const value = form[name];
 	return Array.isArray(value) ? value : [];
 };
 
-/** 번역본인가(v2 B4). 번역본은 언어별 값만 폼으로 다룬다. */
+/** Whether this is a translation. A translation handles only per-language values as the form. */
 export const isTranslationEntry = (entry: Pick<EntryData, "id" | "translationGroupId"> | null | undefined) =>
 	Boolean(entry?.translationGroupId && entry.translationGroupId !== entry.id);
 
-/** 번역 화면이 보여 줄 원문. 원문 본문을 함께 받은 번역본일 때만 있다. */
+/** The original shown on the translation screen. Only present for a translation that received the original body. */
 export interface TranslationSource {
 	mdx: string;
 	locale: string;
 	title: string;
 }
 
-/** 번역본이면 원문 본문·언어·제목. 원문 창·제목 안내·AI 번역이 쓴다(v3). */
+/** For a translation, the original's body, language and title. Used by the source pane, the title hint and AI translation. */
 export function translationSourceOf(entry: EntryData | null): TranslationSource | null {
 	if (!entry || !isTranslationEntry(entry) || typeof entry.source?.mdx !== "string") return null;
 	const title = entry.source.metadata.title;
 	return { mdx: entry.source.mdx, locale: entry.source.locale, title: typeof title === "string" ? title : "" };
 }
 
-/** 폼이 다루는 저장 필드. 번역본이면 정의에서 `localized`인 필드만이다(공통 값은 원문이 가진다). */
+/** Stored fields the form handles. For a translation, only fields that are `localized` in the definition (shared values belong to the original). */
 const fieldsOf = (collection: string, translation = false): readonly StoredField[] => {
 	if (!isCollection(collection)) return [];
 	const fields = storedFields(collection as SchemaCollection);
@@ -118,34 +118,34 @@ const fieldsOf = (collection: string, translation = false): readonly StoredField
 	return fields.filter(({ name }) => own.includes(name) || inherit.includes(name));
 };
 
-/** 번역 상태를 담는 폼 키(v3). 저장 필드 이름과 겹치지 않게 `$`로 시작한다. 값은 JSON 문자열이다. */
+/** Form key holding the translation state. Starts with `$` so it never collides with a stored field name. The value is a JSON string. */
 export const TRANSLATION_FORM_KEY = "$translation";
 
-/** 번역 상태의 JSON 문자열. 키 순서를 고정해 서버(JSONB는 키 순서를 바꾼다)에서 온 값과 지문이 같게 한다. */
+/** JSON string of the translation state. Fixes the key order so the fingerprint matches values from the server (JSONB reorders keys). */
 export const stringifyTranslation = (state: TranslationState) =>
 	JSON.stringify({ version: 2, baseSource: state.baseSource });
 
-/** 폼 값 → 번역 상태. 없거나 모양이 다르면 아무것도 확인하지 않은 상태(`baseSource` 빈 값)다. */
+/** Form value -> translation state. If missing or malformed, nothing is treated as confirmed (empty `baseSource`). */
 export const translationStateFromForm = (value: FormValue | undefined): TranslationState => {
 	if (typeof value === "string") {
 		try {
 			const parsed = parseTranslationState(JSON.parse(value));
 			if (parsed) return parsed;
 		} catch {
-			// 깨진 값은 확인하지 않은 것으로 본다.
+			// A corrupted value is treated as unconfirmed.
 		}
 	}
 	return { version: 2, baseSource: "" };
 };
 
-/** 폼 값 → 저장 요청의 `translation`. 번역본이 아니면(키가 없으면) 보내지 않는다. */
+/** Form value -> `translation` of the save request. Not sent if it is not a translation (no key). */
 export const translationPayload = (form: EntryForm): TranslationState | undefined => {
 	const value = form[TRANSLATION_FORM_KEY];
 	if (typeof value !== "string") return undefined;
 	return translationStateFromForm(value);
 };
 
-/** 저장 값 → 입력 값. */
+/** Stored value -> input value. */
 function toFormValue({ field }: StoredField, value: unknown): FormValue {
 	switch (field.kind) {
 		case "text":
@@ -167,9 +167,9 @@ export function formFromEntry(entry: EntryData): EntryForm {
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
 	}
 	Object.assign(form, recordTranslationsToForm(entry.collection, metadata));
-	// 번역본은 번역 상태도 폼으로 다룬다(v3). 자동 저장·복구본·충돌 비교가 본문과 함께 본다.
+	// A translation also handles translation state as the form, so autosave, recovery and conflict comparison see it along with the body.
 	if (isTranslationEntry(entry)) {
-		// 유효한 v2 상태가 아니면 빈 `baseSource`로 둬 "원문이 바뀌었어요"가 보이게 한다.
+		// If it is not a valid state, use an empty `baseSource` so "source changed" is shown.
 		form[TRANSLATION_FORM_KEY] = stringifyTranslation(
 			parseTranslationState(entry.working.translation) ?? { version: 2, baseSource: "" },
 		);
@@ -177,7 +177,7 @@ export function formFromEntry(entry: EntryData): EntryForm {
 	return form;
 }
 
-/** record 컬렉션 언어별 값의 폼 키(v2 B4). 예: `title@en`. */
+/** Form key for per-language values of a record collection. E.g. `title@en`. */
 export const recordTranslationKey = (field: string, locale: string) => `${field}@${locale}`;
 
 function recordTranslationsToForm(collection: string, metadata: Record<string, unknown>): Record<string, string> {
@@ -191,7 +191,7 @@ function recordTranslationsToForm(collection: string, metadata: Record<string, u
 	return values;
 }
 
-/** 원문 메타데이터를 폼 값으로 바꾼다. 번역본 속성 패널이 공통 값을 읽기 전용으로 보여 줄 때 쓴다(v2 B4). */
+/** Converts original metadata to form values. Used when the translation's properties panel shows shared values read-only. */
 export function formFromSourceMetadata(collection: string, metadata: Record<string, unknown>): EntryForm {
 	const form: EntryForm = { title: text(metadata.title), slug: "", mdx: "" };
 	for (const stored of fieldsOf(collection)) {
@@ -201,16 +201,16 @@ export function formFromSourceMetadata(collection: string, metadata: Record<stri
 	return form;
 }
 
-/** 폼 값이 같은지 비교하는 지문. 복구본과 서버 저장본을 비교한다. */
+/** Fingerprint for comparing form values. Compares the recovery copy with the server-saved one. */
 export const formFingerprint = (form: EntryForm) => JSON.stringify(form);
 
 /**
- * 폼 → 저장 메타데이터. 규칙은 컬렉션 정의에서 온다(v2 B1).
+ * Form -> stored metadata. Rules come from the collection definition.
  *
- * - 필수 텍스트(제목)는 입력 그대로 저장한다. 선택 텍스트·관계는 비우면 키를 지워 공개 화면이 기본값으로 돌아가게 한다.
- * - 선택 필드는 기본값이면 새로 쓰지 않는다. 이미 저장된 값은 그대로 갱신한다.
- * - 조건부 필드에 딸린 값은 조건이 맞을 때만 남긴다.
- * - 입력을 그리지 않는 필드(`hidden`)는 저장된 값을 건드리지 않는다. 정의에 없는 키는 넣지 않는다.
+ * - Required text (title) is stored as typed. For optional text and relations, an empty value removes the key so the public page falls back to the default.
+ * - Optional fields are not newly written when they hold the default. Already stored values are updated as is.
+ * - Values attached to a conditional field are kept only when the condition holds.
+ * - Fields that render no input (`hidden`) do not touch the stored value. Keys not in the definition are not added.
  */
 export function metadataFromForm(
 	form: EntryForm,
@@ -258,7 +258,7 @@ export function metadataFromForm(
 		}
 	}
 
-	// record 컬렉션의 언어별 이름·설명(v2 B4). 빈 언어는 넣지 않는다.
+	// Per-language name and description of a record collection. Empty languages are not added.
 	const localizedRecordFields = isCollection(collection) ? recordLocalizedFields(collection as SchemaCollection) : [];
 	if (localizedRecordFields.length > 0) {
 		const translations: Record<string, Record<string, string>> = {};

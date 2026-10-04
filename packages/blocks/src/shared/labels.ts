@@ -4,24 +4,24 @@ import { chartMessages } from "../chart/messages";
 import type { ChartRenderError } from "../chart/types";
 import { publicLabelMessages } from "./labels.messages";
 
-/** 공개 화면 블록이 독자에게 보이는 고정 문구. 사이트 언어(`context.locale`)에 맞춰 고른다. */
+/** Fixed text that public page blocks show to readers. Chosen to match the site language (`context.locale`). */
 export interface BlockLabels {
 	readonly calloutNote: string;
 	readonly calloutTip: string;
 	readonly calloutInfo: string;
 	readonly calloutWarning: string;
 	readonly calloutDanger: string;
-	/** 제목이 없는 접기 블록의 제목. */
+	/** Title of a collapsible block with no title. */
 	readonly collapsibleFallback: string;
 	readonly chartError: string;
-	/** 차트 문법 오류 한 줄(`3줄: …`). 오류의 글은 코드와 값에서 이 언어로 만든다. */
+	/** One chart syntax error line (`line 3: …`). The error text is built in this language from the code and values. */
 	readonly chartErrorLine: (error: ChartRenderError) => string;
 }
 
-/** 언어 코드(`ko`·`ko-KR`·`en` …)의 앞 부분. 모르는 언어는 사전이 영어로 고른다. */
+/** The leading part of a language code (`ko`, `ko-KR`, `en`, …). For an unknown language, the dictionary falls back to English. */
 const languageOf = (locale?: string): string => (locale ?? "").toLowerCase().split(/[-_]/)[0] ?? "";
 
-/** 언어 코드(`ko`·`ko-KR`·`en` …)의 문구. 모르는 언어는 영어다. */
+/** Text for a language code (`ko`, `ko-KR`, `en`, …). An unknown language gets English. */
 export function blockLabels(locale?: string): BlockLabels {
 	const language = languageOf(locale);
 	const text = (key: keyof (typeof publicLabelMessages)["messages"]["en"]) =>

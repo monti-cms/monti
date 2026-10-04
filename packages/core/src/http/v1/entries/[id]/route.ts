@@ -7,8 +7,8 @@ import { adminRoute, json, readVersionedBody, readVersionQuery } from "../../han
 type IdParams = { id: string };
 
 /**
- * 항목과 편집 화면에 필요한 번역 묶음(v2 B4).
- * 번역본이면 원문의 최신 초안 메타데이터(`source`)를 함께 준다. 번역본 속성 패널이 공통 값을 읽기 전용으로 보여 준다.
+ * An entry and the translation group needed by the editor.
+ * For a translation, also returns the source's latest draft metadata (`source`). The translation properties panel shows the shared values read-only.
  */
 export const GET = adminRoute<IdParams>(async ({ params }) => {
 	const store = getCmsContentStore();
@@ -29,7 +29,7 @@ export const GET = adminRoute<IdParams>(async ({ params }) => {
 						status: source.status,
 						workingSlug: source.workingSlug,
 						metadata: source.working.metadata,
-						// 번역 화면(v3)이 원문 블록과 번역을 나란히 맞춘다.
+						// The translation view lines up source blocks with the translation side by side.
 						mdx: source.working.mdx,
 					},
 				}
@@ -37,7 +37,7 @@ export const GET = adminRoute<IdParams>(async ({ params }) => {
 	});
 });
 
-/** 최신 초안 저장. 보내지 않은 필드는 현재 초안 값을 유지한다. */
+/** Saves the latest draft. Fields not sent keep their current draft values. */
 export const PATCH = adminRoute<IdParams>(async ({ request, params }) => {
 	const body = await readVersionedBody(request, patchEntryBodySchema);
 	const current = await getCmsContentStore().getEntry(params.id);
@@ -53,7 +53,7 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params }) => {
 	return json(await getCmsContentService().saveDraft(params.id, input));
 });
 
-/** 휴지통 항목의 영구 삭제(§5.3). 휴지통 이동은 `POST /entries/:id/trash`다. */
+/** Permanently deletes a trashed entry. Moving to trash is `POST /entries/:id/trash`. */
 export const DELETE = adminRoute<IdParams>(async ({ request, params }) => {
 	const expectedVersion = readVersionQuery(request);
 	await getCmsContentStore().permanentDeleteEntry({ id: params.id, expectedVersion });

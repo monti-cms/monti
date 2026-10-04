@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
 	reactStrictMode: true,
-	// 이 예시는 블로그 저장소 안에 있어 Next가 저장소 루트를 앱 루트로 잡지 않게 한다.
+	// This example lives inside a larger repo, so keep Next from picking the repo root as the app root.
 	turbopack: { root: import.meta.dirname },
 };
 

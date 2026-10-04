@@ -1,6 +1,6 @@
 /**
- * 화면(관리자·직접 만든 화면·공개 화면)이 쓰는 진입점. 관리자 API의 요청·응답 모양과 사이트 설정에서 만든
- * 컬렉션·언어·주소·블록·스키마 도우미다. 서버 전용 코드(DB·비밀 값)는 없다.
+ * Entry point used by screens (admin, custom screens, public pages). Request/response shapes of the admin API plus helpers built from the site config:
+ * collections, locales, URLs, blocks and schemas. It contains no server-only code (DB, secrets).
  */
 
 export * from "./blocks/active";

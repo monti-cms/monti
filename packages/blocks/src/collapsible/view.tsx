@@ -20,8 +20,8 @@ import { collapsibleMessages } from "./messages";
 const t = createTranslator(collapsibleMessages);
 
 /**
- * 접기 편집 화면(테마 색). 처음 모습은 `defaultOpen`을 따르고, 제목 옆 화살표로 편집 중에도 여닫는다.
- * 커서가 안으로 들어오면(방향키·되돌리기·찾기) 저절로 펼친다.
+ * Collapsible editing view (theme colors). The initial state follows `defaultOpen`, and the arrow next to the title toggles it while editing.
+ * It expands automatically when the cursor enters it (arrow keys, undo, find).
  */
 export function CollapsibleNodeView(props: NodeViewProps) {
 	const { selected, editor, getPos } = props;
@@ -38,7 +38,7 @@ export function CollapsibleNodeView(props: NodeViewProps) {
 
 	const toggle = () => {
 		if (open) {
-			// 숨길 본문 안에 커서를 남기면 보이지 않는 곳에 글자가 들어간다. 접기 블록 전체를 선택해 둔다.
+			// Leaving the cursor inside the hidden body would put text where it cannot be seen. Select the whole collapsible block instead.
 			if (selectionInside) selectContainer(editor, getPos);
 			setOpen(false);
 		} else {
@@ -87,12 +87,12 @@ export function CollapsibleNodeView(props: NodeViewProps) {
 			<NodeViewContent
 				className={cn(
 					"px-3 pt-2 pb-3 text-cms-foreground",
-					// 안쪽 첫·끝 블록의 prose 여백이 상자 안쪽 여백에 더해지지 않게 0으로 둔다(중첩 커스텀 블록은 react-renderer 안 래퍼가 여백을 가진다).
+					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
 					"[&>[data-node-view-content-react]>:first-child]:mt-0 [&>[data-node-view-content-react]>:last-child]:mb-0",
 					"[&>[data-node-view-content-react]>:first-child>[data-node-view-wrapper]]:mt-0 [&>[data-node-view-content-react]>:last-child>[data-node-view-wrapper]]:mb-0",
 					!open && "hidden",
 				)}
-				// 읽기 전용 원문 보기는 접힌 본문도 펼쳐 보인다(`data-cms-collapsed`).
+				// The read-only source view shows the collapsed body expanded too (`data-cms-collapsed`).
 				data-cms-collapsed={open ? undefined : ""}
 			/>
 			{editable ? (

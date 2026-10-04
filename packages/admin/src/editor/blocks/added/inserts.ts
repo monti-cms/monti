@@ -18,8 +18,8 @@ const directiveContent = (
 });
 
 /**
- * 슬래시 메뉴로 넣을 노드. 정의의 `editor.insert`(처음 값)를 따르고, 없으면 속성 기본값과 빈 본문이다. 자식 블록 규칙이
- * 있으면 처음 값의 자식들, 없으면 최소 개수(없으면 하나)만큼 첫 자식 블록을 넣는다.
+ * The node to insert from the slash menu. Follows the definition's `editor.insert` (initial value); if absent, uses attribute defaults and an empty body. If child block rules
+ * exist, uses the children of the initial value; if absent, inserts as many first child blocks as the minimum count (one if there is no minimum).
  */
 export function insertContentOf(
 	block: BlockDefinition,
@@ -38,7 +38,7 @@ export function insertContentOf(
 	return directiveContent(block, insert, children);
 }
 
-/** 더한 블록 삽입 동작(슬래시 메뉴). 키는 블록 이름이다. */
+/** Insert actions of added blocks (slash menu). The key is the block name. */
 export const ADDED_BLOCK_INSERT_ACTIONS: Readonly<Record<string, (editor: Editor, range: Range) => void>> =
 	Object.fromEntries(
 		ADDED_NODE_BLOCKS.filter((block) => !block.parent).map((block) => [

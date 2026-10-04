@@ -9,7 +9,7 @@ import { createContentService } from "../../../services/content-service";
 import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-/** 본문 컬렉션에서 항목 컬렉션을 여러 개 고르는 첫 관계 필드(태그 같은 것). 없으면 일괄 추가 테스트를 건너뛴다. */
+/** First relation field in a body collection that multi-selects from an item collection (like tags). If none, the bulk-add test is skipped. */
 const manyRelation = (() => {
 	for (const { name, field, when } of storedFields(contentCollection)) {
 		if (!when && field.kind === "relation" && field.many && isItemCollection(field.to)) {
@@ -18,11 +18,11 @@ const manyRelation = (() => {
 	}
 	return undefined;
 })();
-/** 목록 거르기에 쓰는 관계 필드. 여러 개를 고르는 필드를 먼저 쓴다. */
+/** Relation field used for list filtering. A multi-select field is preferred. */
 const filterRelation = manyRelation ?? recordRelationField(contentCollection);
 /**
- * 문서 컬렉션을 가리키는 첫 관계 필드(어느 컬렉션에 있든). 참조된 문서의 영구 삭제를 시험한다.
- * 참조된 항목은 휴지통에도 못 넣으므로(§6.1) 문서여야 한다. 없는 설정이면 건너뛴다.
+ * First relation field that points at a document collection (in whichever collection it lives). Used to test permanent deletion of a referenced document.
+ * A referenced item cannot even be trashed, so it must be a document. Skipped for configs that have none.
  */
 const documentRelation = (() => {
 	for (const collection of COLLECTIONS) {
@@ -37,8 +37,8 @@ const documentRelation = (() => {
 const relationValue = (field: { many: boolean }, id: string) => (field.many ? [id] : id);
 
 /**
- * 코드 리뷰(2026-09-26)에서 재현한 결함의 회귀 테스트. 실제 PostgreSQL과 운영 쓰기 경로를 쓴다.
- * 컬렉션·필드 이름은 지금 설정에서 찾는다(`test/any-site.ts`).
+ * Regression tests for defects reproduced in a code review (2026-09-26). Uses real PostgreSQL and the production write paths.
+ * Collection and field names are looked up in the current config (`test/any-site.ts`).
  */
 describe("review regressions", () => {
 	let pool: Pool;
@@ -63,14 +63,14 @@ describe("review regressions", () => {
 		await closeGlobalPool();
 	});
 
-	/** 대상 컬렉션의 새 공개 항목(항목 컬렉션은 저장이 곧 공개다). */
+	/** A new published item of the target collection (for an item collection, saving is publishing). */
 	const createTarget = async (to: Collection, title = unique(`target ${to}`)): Promise<Entry> => {
 		const metadata = await requiredMetadata(to, title, relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		return draft.status === "published" ? draft : store.publishEntry({ id: draft.id, expectedVersion: draft.version });
 	};
 
-	/** 발행 필수 관계가 쓰는 대상(한 번 만들어 다시 쓴다). */
+	/** Target used by the required-for-publish relation (created once and reused). */
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const known = targets.get(to);
 		if (known) return known;
@@ -94,7 +94,7 @@ describe("review regressions", () => {
 		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
 	};
 
-	/** `documentRelation`으로 `targetId`를 가리키는 글. 조건부 필드면 조건 값도 채운다. */
+	/** An entry that points at `targetId` through `documentRelation`. For a conditional field, the condition value is filled too. */
 	const createReferrer = async (title: string, targetId: string) => {
 		if (!documentRelation) throw new Error("no relation into a document collection");
 		const { collection, name, many, when } = documentRelation;
@@ -208,7 +208,7 @@ describe("review regressions", () => {
 	});
 
 	it.skipIf(!documentRelation)(
-		"permanently deletes trashed items in bulk and names the entries that still reference a blocked one (v2 A3)",
+		"permanently deletes trashed items in bulk and names the entries that still reference a blocked one",
 		async () => {
 			if (!documentRelation) return;
 			const target = await service.createDraft({
@@ -245,8 +245,8 @@ describe("review regressions", () => {
 		},
 	);
 
-	it("blocks publishing an image without alt (§5.6)", async () => {
-		// 블로그 블록(탭·툴팁·정렬)의 필수 속성 검사는 `review-regressions.blog.test.ts`에 있다.
+	it("blocks publishing an image without alt", async () => {
+		// The required-attribute checks for blog-specific blocks (tabs, tooltip, alignment) live in `review-regressions.blog.test.ts`.
 		const mdx = '::image{mediaId="11111111-1111-4111-8111-111111111111"}';
 		const snapshot = await prepareSnapshot({ collection: contentCollection, slug: "m", metadata: { title: "m" }, mdx });
 		const result = validateForPublish(snapshot, {

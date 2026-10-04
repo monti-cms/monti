@@ -18,7 +18,7 @@ const findElementByTagName = (root: Element, tagName: string): Element | undefin
 };
 
 describe("highlight inline render integration", () => {
-	it("inline annotation decoration을 render tag로 변환한다", () => {
+	it("converts inline annotation decorations into render tags", () => {
 		const hast = highlight(
 			"console.log('hello')",
 			"ts",

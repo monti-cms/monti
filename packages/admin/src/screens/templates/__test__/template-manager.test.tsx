@@ -98,7 +98,7 @@ describe("TemplateManager", () => {
 	it("shows a retry button when the list fails to load", async () => {
 		listFails = true;
 		renderManager();
-		// 목록 요청은 한 번 다시 시도한 뒤 실패로 본다.
+		// The list request is retried once before it is treated as a failure.
 		const alert = await screen.findByRole("alert", undefined, { timeout: 3000 });
 		expect(alert.textContent).toContain("서버 오류");
 		listFails = false;

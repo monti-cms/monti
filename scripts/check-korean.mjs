@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * 실행 코드의 한글 문자열 검사(M15-7). 패키지 실행 코드(`packages/*\/src`)의 한국어 문구는 문구 사전 파일
- * (`messages.ts`·`*.messages.ts`)에만 둔다. 주석·테스트(`__test__`·`*.test.*`)·테스트 도우미(`src/test`)는 보지 않는다.
+ * Runtime code Hangul check. Korean strings in package runtime code (`packages/*\/src`) live only in the message dictionary files
+ * (`messages.ts`, `*.messages.ts`). Comments, tests (`__test__`, `*.test.*`) and test helpers (`src/test`) are not checked.
  *
- *   node scripts/check-korean.mjs            # 남은 곳을 보이고 있으면 실패
- *   node scripts/check-korean.mjs packages/admin/src/screens/media   # 일부만
+ *   node scripts/check-korean.mjs            # list what remains; fails if any
+ *   node scripts/check-korean.mjs packages/admin/src/screens/media   # only part of the tree
  *
- * 한국어 사용자를 위한 정규식·글자 판별처럼 문구가 아닌 한글은 그 줄 끝에 `// cms-allow-korean: 이유`를 단다.
+ * Hangul that is not message text, such as regexes or character checks for Korean users, gets `// cms-allow-korean: reason` at the end of its line.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -46,7 +46,7 @@ for (const dir of roots) {
 	else files.push(dir);
 }
 
-/** 주석을 지운다(글자 안의 `//`는 남긴다). 줄 번호를 지키려고 줄바꿈은 남긴다. */
+/** Strips comments (keeps `//` inside strings). Keeps newlines to preserve line numbers. */
 function stripComments(source) {
 	let out = "";
 	let i = 0;
@@ -71,7 +71,7 @@ function stripComments(source) {
 			i += 1;
 			continue;
 		}
-		// 정규식 리터럴 안의 따옴표·백틱·`//`가 글자·주석 판별을 어긋나게 하지 않도록 통째로 건너뛴다.
+		// Skip regex literals whole so quotes, backticks and `//` inside them do not confuse string/comment detection.
 		if (
 			char === "/" &&
 			next !== "/" &&
@@ -96,7 +96,7 @@ function stripComments(source) {
 		if (char === "/" && next === "/") {
 			const end = source.indexOf("\n", i);
 			const line = source.slice(i, end === -1 ? source.length : end);
-			// 허용 표시는 남겨 둔다(그 줄을 건너뛴다).
+			// Keep the allow marker (that line is skipped).
 			out += line.includes("cms-allow-korean") ? "/*allow*/" : "";
 			i = end === -1 ? source.length : end;
 			continue;
@@ -125,7 +125,9 @@ for (const file of files) {
 }
 
 if (found.length > 0) {
-	console.error(`실행 코드에 한국어가 ${found.length}줄 남았습니다. 문구 사전(messages.ts)으로 옮기세요.\n`);
+	console.error(
+		`${found.length} line(s) of runtime code still contain Korean. Move them to the message dictionary (messages.ts).\n`,
+	);
 	console.error(found.join("\n"));
 	process.exit(1);
 }

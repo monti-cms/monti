@@ -1,17 +1,17 @@
 /**
- * 번역본의 번역 상태(`entry_bodies.translation`, v3). 원문은 `null`이다.
- * 번역자가 마지막으로 확인한 원문 본문(`baseSource`)을 담는다. 원문 최신 초안이 이 값과 다르면
- * 번역 화면이 "원문이 바뀌었어요"를 보이고, 이전·지금 원문을 블록 단위로 비교해 준다.
+ * Translation state of a translation (`entry_bodies.translation`). `null` for a source.
+ * Holds the source body the translator last confirmed (`baseSource`). If the source's latest draft differs from this value,
+ * the translation screen shows "the source has changed" and compares the previous and current source block by block.
  */
 export interface TranslationState {
 	readonly version: 2;
 	readonly baseSource: string;
 }
 
-/** 번역 상태 크기 상한. 원문 본문 상한(2MiB)과 같다. */
+/** Upper limit on translation state size. Same as the source body limit (2MiB). */
 export const MAX_TRANSLATION_BYTES = 2 * 1024 * 1024;
 
-/** 들어온 값을 번역 상태로 검증한다. 모양이 다르면 오류로 본다(`undefined` 반환). */
+/** Validates an incoming value as a translation state. A wrong shape is treated as an error (returns `undefined`). */
 export function parseTranslationState(value: unknown): TranslationState | null | undefined {
 	if (value === null) return null;
 	if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;

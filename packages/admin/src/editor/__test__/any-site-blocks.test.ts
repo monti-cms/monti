@@ -7,11 +7,11 @@ import { buildBlockSlashCommands } from "../slash-command";
 import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
 
 /**
- * 설정에 더한 블록의 편집기 흐름(M10-1 재발 방지). 블록 이름을 적지 않고 지금 설정에서 읽는다.
- * 블로그 예시 설정과 다른 사이트 설정 둘 다로 돈다.
+ * Editor flow of blocks added to the config (regression guard). Block names are not hardcoded; they are read from the current config.
+ * Runs with both the reference blog setup and another site's config.
  */
 
-/** 블록 안의 빈 문단에 글을 채운다(사용자가 넣은 블록에 글을 쓴 상태). */
+/** Fills the empty paragraph inside a block with text (the state after a user types into an inserted block). */
 const fillEmptyParagraphs = (node: JSONContent, inside = false): JSONContent => {
 	if (inside && node.type === "paragraph" && !node.content?.length) {
 		return { ...node, content: [{ type: "text", text: "Typed text" }] };
@@ -41,7 +41,7 @@ describe("any site: added blocks in the editor", () => {
 	)("%s inserted from the slash menu saves as valid MDX and reopens as the same node", (_name, block) => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p></p>" });
 		ADDED_BLOCK_INSERT_ACTIONS[block.name]?.(editor, { from: 1, to: 1 });
-		// 본문을 담는 블록은 쓴 글이 있는 상태로 저장한다(본문이 꼭 있어야 하는 블록은 비면 원문 상자로 연다).
+		// A block that holds body text is saved with the typed text in place (a block that must have a body opens as a raw box when empty).
 		const mdx = tiptapToMdx(fillEmptyParagraphs(editor.getJSON()));
 		editor.destroy();
 		expect(analyze(mdx).errors).toEqual([]);

@@ -4,8 +4,8 @@ import { type CSSProperties, useState } from "react";
 import { computeImageTransform, intrinsicDisplayWidth } from "../../mdx/image-transform";
 
 /**
- * 본문 이미지(브라우저). 자르기·회전은 원본 비율을 알아야 해서 브라우저에서 맞춘다. 서버가 아는 원본 크기로 자리를 먼저 잡는다.
- * 읽지 못하면 빈 자리와 `unavailableLabel`을 보인다.
+ * Body image (browser). Crop and rotate need the original aspect ratio, so they are fitted in the browser. The slot is reserved first with the original size the server knows.
+ * If it cannot be read, an empty slot and `unavailableLabel` are shown.
  */
 export function CmsImageView({
 	src,
@@ -64,7 +64,7 @@ export function CmsImageView({
 					...transform.wrapperStyle,
 				}}
 			>
-				{/* biome-ignore lint/performance/noImgElement: 공개 주소는 사이트마다 달라 next/image를 쓰지 않는다 */}
+				{/* biome-ignore lint/performance/noImgElement: public addresses differ per site, so next/image is not used */}
 				<img
 					alt={decorative ? "" : alt}
 					loading="lazy"
@@ -81,7 +81,7 @@ export function CmsImageView({
 		);
 	}
 	return (
-		// biome-ignore lint/performance/noImgElement: 공개 주소는 사이트마다 달라 next/image를 쓰지 않는다
+		// biome-ignore lint/performance/noImgElement: public addresses differ per site, so next/image is not used
 		<img
 			alt={decorative ? "" : alt}
 			className="cms-image-plain"

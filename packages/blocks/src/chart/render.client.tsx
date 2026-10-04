@@ -3,8 +3,8 @@
 import { type ComponentType, useEffect, useState } from "react";
 
 /**
- * 차트 그리기 자리. 서버와 불러오기 전에는 차트 원문을 보이고, 브라우저에서 `recharts`(선택 의존성)를 불러온 뒤 차트로
- * 바꾼다. 불러오지 못하면 원문을 그대로 둔다.
+ * Chart rendering slot. On the server and before loading, shows the chart source; in the browser, loads `recharts` (optional dependency)
+ * and swaps it for the chart. If loading fails, the source is left as is.
  */
 export function ChartClient({ source }: { source: string }) {
 	const [View, setView] = useState<ComponentType<{ source: string }> | null>(null);

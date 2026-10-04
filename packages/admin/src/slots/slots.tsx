@@ -23,42 +23,42 @@ import { slotsMessages } from "./messages";
 const t = createTranslator(slotsMessages);
 
 /**
- * 화면 자리(slot). CMS 화면 곳곳에 이름 붙은 자리를 두고, 자리에 연결된 동작을 버튼으로 그린다.
+ * Screen slots. Named slots are placed throughout the CMS UI, and the actions attached to a slot are rendered as buttons.
  *
- * - 자리는 지금 상황(`getContext`)과 적용 함수(`apply`)만 넘긴다. 어떤 동작이 붙는지는 모른다.
- * - 동작은 `SlotRegistryProvider`의 공급원이 정한다. AI 기능(관리자 AI 화면의 정의)도 공급원 하나다.
- * - 동작은 값을 직접 바꾸지 않는다. 결과를 보여 주고, 사용자가 후보를 눌러야 `apply`로 적용한다.
- * - 실행 상태(만드는 중·결과)는 자리를 그린 요소가 아니라 `SlotRegistryProvider`가 들고 있다. 팝오버·패널을 닫아도
- *   요청은 계속되고, 다시 열면 결과가 그대로 있다. 같은 자리는 `scope`(항목·이미지 등)로 구분한다.
+ * - A slot only passes the current context (`getContext`) and the apply function (`apply`). It does not know which actions are attached.
+ * - Actions are decided by the sources in `SlotRegistryProvider`. AI features (the definitions on the admin AI screen) are one such source.
+ * - An action does not change values itself. It shows results, and `apply` runs only when the user clicks a candidate.
+ * - Run state (generating, results) is held by `SlotRegistryProvider`, not by the element that renders the slot. Closing a popover or panel
+ *   does not stop the request, and reopening shows the same result. The same slot is distinguished by `scope` (entry, image, etc.).
  */
 
 /**
- * 본체가 쓰는 자리 이름. `field`는 필드 옆, `image`는 본문 이미지, `codeRules`는 코드 블록 규칙, `media`는 미디어 상세다.
- * `translation`은 번역본 편집기(블록 번역)다.
+ * Slot names used by the core. `field` is next to a field, `image` is a body image, `codeRules` is code block rules, `media` is media detail.
+ * `translation` is the translation editor (block translation).
  */
 export const CORE_SLOT_NAMES = ["field", "image", "codeRules", "media", "translation"] as const;
 export type CoreSlotName = (typeof CORE_SLOT_NAMES)[number];
-/** 자리 이름. 어떤 문자열이든 되고, 본체는 `CORE_SLOT_NAMES`만 쓴다. 확장·사이트는 자기 이름의 자리를 둘 수 있다. */
+/** Slot name. Any string works, and the core uses only `CORE_SLOT_NAMES`. Extensions and sites can place slots with their own names. */
 export type SlotName = string;
 
-/** 결과로 보여 줄 후보 하나. `value`가 적용될 값이고 `label`은 보이는 글자다. */
+/** One candidate shown as a result. `value` is the value to apply and `label` is the visible text. */
 export interface SlotCandidate {
 	value: string;
 	label: string;
-	/** 덧붙일 짧은 설명(정규식이 찾은 곳 수 등). */
+	/** A short note to append (e.g. the number of places a regex matched). */
 	detail?: string;
 }
 
-/** 동작의 결과. 후보 여러 개·긴 글·본문 조각(MDX)·보여 주기만 하는 메모다. */
+/** An action's result. Multiple candidates, long text, a body fragment (MDX), or a display-only note. */
 export type SlotResult =
 	| { kind: "candidates"; items: SlotCandidate[] }
 	| { kind: "text"; text: string }
 	| { kind: "mdx"; text: string }
 	| { kind: "note"; text: string };
 
-/** 자리가 누를 때 넘기는 지금 상황. 자리마다 아는 값만 채운다. */
+/** The current context a slot passes on click. Each slot fills in only the values it knows. */
 export interface SlotContext {
-	/** 실행할 때 적은 추가 요청. 동작이 `askInstruction`일 때만 받는다. */
+	/** Extra request typed when running. Received only when the action is `askInstruction`. */
 	request?: string;
 	collection?: string;
 	locale?: string;
@@ -66,13 +66,13 @@ export interface SlotContext {
 	title?: string;
 	summary?: string;
 	body?: string;
-	/** 대상의 현재 값. 목록 값(태그 id 등)은 배열이다. */
+	/** The target's current value. List values (tag ids, etc.) are arrays. */
 	current?: string | readonly string[];
 	around?: string;
 	code?: string;
 	language?: string;
 	mediaId?: string;
-	/** 미디어 라이브러리 밖 이미지의 사이트 주소(`/images/...`). */
+	/** Site path of an image outside the media library (`/images/...`). */
 	imageSrc?: string;
 	filename?: string;
 }
@@ -80,38 +80,38 @@ export type SlotApplyMode = "replace" | "append";
 
 export interface SlotRequest {
 	slot: SlotName;
-	/** 자리 안의 대상(필드 이름, `alt`, `fold` 등). */
+	/** The target within the slot (field name, `alt`, `fold`, etc.). */
 	target: string;
-	/** 필드 자리의 컬렉션. */
+	/** The collection of a field slot. */
 	collection?: string;
-	/** 누를 때 읽는 지금 상황. */
+	/** The current context, read on click. */
 	getContext: () => SlotContext;
 	apply: (value: string, mode: SlotApplyMode) => void;
 	disabled?: boolean;
-	/** 같은 자리·대상이 여럿일 때 구분하는 값(항목 ID, 이미지 주소 등). 실행 상태는 이 값별로 따로 남는다. */
+	/** A value that distinguishes multiple slots with the same name and target (entry ID, image URL, etc.). Run state is kept separately per value. */
 	scope?: string;
 }
 
 export interface SlotAction {
 	id: string;
-	/** 버튼·메뉴 항목·결과 칸 머리에 보일 이름. */
+	/** Name shown on the button, menu item and result panel header. */
 	label: string;
-	/** 버튼·메뉴 항목·결과 칸 머리의 아이콘. 없으면 기본 아이콘을 쓴다. */
+	/** Icon for the button, menu item and result panel header. Falls back to the default icon when absent. */
 	icon?: ReactNode;
-	/** 동작이 여럿이라 한 메뉴로 묶일 때, 메뉴 버튼의 이름. 없으면 첫 동작의 `label`이다. */
+	/** Name of the menu button when multiple actions are grouped into one menu. Defaults to the first action's `label`. */
 	menuLabel?: string;
-	/** 동작이 여럿이라 한 메뉴로 묶일 때, 메뉴 버튼의 아이콘. 없으면 첫 동작의 `icon`이다. */
+	/** Icon of the menu button when multiple actions are grouped into one menu. Defaults to the first action's `icon`. */
 	menuIcon?: ReactNode;
-	/** 결과를 적용하는 방식. `none`이면 보여 주기만 한다. */
+	/** How the result is applied. `none` means display only. */
 	apply: SlotApplyMode | "none";
-	/** 실행할 때 추가 요청을 받는다. 누르면 바로 실행하지 않고 요청 입력을 먼저 연다. */
+	/** Takes an extra request when running. Clicking opens the request input first instead of running immediately. */
 	askInstruction?: boolean;
-	/** 결과를 보여 주지 않고 바로 넣는다(후보는 첫 후보). 넣을 것이 없으면 결과 칸에 알린다. */
+	/** Inserts the result immediately without showing it (the first candidate). Notifies in the result panel when there is nothing to insert. */
 	instant?: boolean;
 	run: (context: SlotContext, signal: AbortSignal) => Promise<SlotResult>;
 }
 
-/** 자리에 붙을 동작을 돌려주는 공급원. */
+/** A source that returns the actions to attach to a slot. */
 export type SlotSource = (request: Pick<SlotRequest, "slot" | "target" | "collection">) => readonly SlotAction[];
 
 type RunState =
@@ -123,19 +123,19 @@ type RunState =
 
 const IDLE: RunState = { status: "idle" };
 
-/** 동작이 아이콘을 주지 않았을 때의 아이콘. */
+/** Icon used when an action does not provide one. */
 const defaultIcon = <Zap aria-hidden />;
 
-/** 자리별 실행 상태. 화면 조각이 사라져도 남는다. */
+/** Per-slot run state. It persists even after the UI fragment disappears. */
 interface SlotRuns {
 	get: (key: string) => RunState;
 	set: (key: string, state: RunState) => void;
 	subscribe: (key: string, listener: () => void) => () => void;
-	/** 새 실행을 시작한다. 같은 자리의 이전 실행은 멈춘다. */
+	/** Starts a new run. Stops the previous run of the same slot. */
 	begin: (key: string) => AbortController;
-	/** 같은 자리의 실행을 멈춘다. */
+	/** Stops the run of the same slot. */
 	abort: (key: string) => void;
-	/** 이 실행이 아직 그 자리의 최신 실행인가. */
+	/** Whether this run is still the latest run of that slot. */
 	isCurrent: (key: string, controller: AbortController) => boolean;
 }
 
@@ -179,7 +179,7 @@ const SlotRunsContext = createContext<SlotRuns | null>(null);
 export function SlotRegistryProvider({ sources, children }: { sources: readonly SlotSource[]; children: ReactNode }) {
 	const parent = useContext(SlotRegistryContext);
 	const value = useMemo(() => [...parent, ...sources], [parent, sources]);
-	// 실행 상태는 가장 바깥 공급자 하나가 든다(관리자 화면 전체에서 하나).
+	// Run state is held by a single outermost provider (one for the whole admin UI).
 	const parentRuns = useContext(SlotRunsContext);
 	const [ownRuns] = useState(() => (parentRuns ? null : createSlotRuns()));
 	const runs = parentRuns ?? (ownRuns as SlotRuns);
@@ -190,14 +190,14 @@ export function SlotRegistryProvider({ sources, children }: { sources: readonly 
 	);
 }
 
-/** 결과 후보 하나의 모양. AI 화면의 시험 결과도 같은 모양을 쓴다. */
+/** Shape of one result candidate. The AI screen's test results use the same shape. */
 export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-full border bg-cms-background px-2 py-0.5";
 
 const errorMessage = (error: unknown) => (error instanceof Error && error.message ? error.message : t("failed"));
 
 /**
- * 자리 하나의 버튼(`trigger`)과 결과 칸(`panel`). 자리마다 버튼은 라벨 옆에, 결과는 입력 아래에 둔다.
- * 연결된 동작이 없으면 둘 다 `null`이다.
+ * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
+ * Both are `null` when no action is attached.
  */
 export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: ReactNode } {
 	const sources = useContext(SlotRegistryContext);
@@ -206,7 +206,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 		() => sources.flatMap((source) => source({ slot, target, collection })),
 		[sources, slot, target, collection],
 	);
-	// 공급자 밖(테스트·단독 화면)에서는 이 요소가 실행 상태를 든다.
+	// Outside a provider (tests, standalone screens), this element holds the run state.
 	const [localRuns] = useState(createSlotRuns);
 	const runs = useContext(SlotRunsContext) ?? localRuns;
 	const key = `${slot}|${target}|${collection ?? ""}|${request.scope ?? ""}`;
@@ -215,12 +215,12 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 		() => runs.get(key),
 		() => IDLE,
 	);
-	/** 추가 요청. 같은 자리에서 다시 실행할 때 그대로 남는다. */
+	/** Extra request. It stays when running again in the same slot. */
 	const [instruction, setInstruction] = useState("");
 	const requestRef = useRef(request);
 	requestRef.current = request;
 
-	// 화면에서 사라져도 멈추지 않는다. 결과는 `runs`에 남아 다시 열면 보인다.
+	// It does not stop even if it disappears from the screen. The result stays in `runs` and shows when reopened.
 	const run = useCallback(
 		async (action: SlotAction, extra: string) => {
 			const controller = runs.begin(key);
@@ -245,7 +245,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 		[runs, key],
 	);
 
-	/** 버튼을 누름. 요청을 받는 동작이면 입력을 먼저 열고, 아니면 바로 실행한다. */
+	/** Button click. For an action that takes a request, opens the input first; otherwise runs immediately. */
 	const start = (action: SlotAction) => {
 		if (action.askInstruction) {
 			runs.abort(key);
@@ -258,7 +258,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 		runs.set(key, IDLE);
 	}, [runs, key]);
 
-	/** 결과를 넣는다. 같은 후보를 몇 번이든 다시 넣을 수 있다(지웠다가 다시 넣기 등). */
+	/** Inserts the result. The same candidate can be inserted any number of times (clear, then insert again, etc.). */
 	const applyValue = (value: string) => {
 		if (state.status !== "done" || state.action.apply === "none") return;
 		requestRef.current.apply(value, state.action.apply);
@@ -311,7 +311,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 			</DropdownMenu>
 		);
 
-	// 만드는 동안은 버튼의 도는 아이콘으로 알린다. 결과 칸은 결과·오류가 나오거나 요청을 받을 때만 연다.
+	// While generating, it is shown by the button's spinning icon. The result panel opens only when a result or error appears or a request is taken.
 	const panel =
 		state.status === "idle" || (state.status === "running" && !state.action.askInstruction) ? null : (
 			<div className="flex flex-col gap-1.5 rounded-md border bg-cms-muted/30 p-2 text-xs" aria-live="polite">
@@ -347,7 +347,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 							disabled={state.status === "running"}
 							onChange={(event) => setInstruction(event.target.value)}
 							onKeyDown={(event) => {
-								// 편집기 안에서도 키가 본문으로 새지 않게 한다. 줄바꿈은 Enter, 실행은 Cmd/Ctrl+Enter다.
+								// Keeps keys from leaking into the body even inside the editor. Enter is a newline; Cmd/Ctrl+Enter runs.
 								event.stopPropagation();
 								if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
 									event.preventDefault();
@@ -420,7 +420,7 @@ function SlotResult({
 	);
 }
 
-/** 반복문·조건 안에서 자리를 쓸 때의 감싸개. 실행 상태는 `request.scope`별로 남는다. */
+/** Wrapper for using slots inside loops and conditions. Run state is kept per `request.scope`. */
 export function SlotScope({
 	request,
 	children,

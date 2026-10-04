@@ -2,7 +2,7 @@
 	"name": "@monti-cms/admin",
 	"version": "0.1.0",
 	"private": true,
-	"description": "@monti-cms/core의 관리자 화면(Next.js): 편집기·목록·미디어·템플릿, 플러그인 확장점",
+	"description": "Admin UI (Next.js) for @monti-cms/core: editor, lists, media, templates, and plugin extension points",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** AI 연결 설정·공통 문구 오류 문구. */
+/** Error messages for AI connection settings and shared texts. */
 export const settingsMessages = defineMessages("cms-ai.settings", {
 	en: {
 		legacyGenerate: "Generate",

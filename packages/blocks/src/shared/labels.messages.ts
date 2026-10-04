@@ -1,8 +1,8 @@
 import { defineMessages } from "@monti-cms/core";
 
 /**
- * 공개 화면 블록이 독자에게 보이는 고정 문구(M15). 관리자 언어가 아니라 글(콘텐츠) 언어로 고른다(`context.locale`).
- * 차트 문법 오류 문구는 `chart/messages`에 있다.
+ * Fixed text that public page blocks show to readers. Chosen by the content language, not the admin language (`context.locale`).
+ * Chart syntax error text lives in `chart/messages`.
  */
 export const publicLabelMessages = defineMessages("cms-blocks.public", {
 	en: {

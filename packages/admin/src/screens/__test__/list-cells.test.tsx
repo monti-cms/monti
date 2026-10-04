@@ -9,7 +9,7 @@ import {
 	useCmsAdminComponents,
 } from "../../admin-components";
 
-// 선택·글자·미디어·관계 필드가 목록 컬럼에 적힌 사이트(설정과 상관없이 돈다).
+// A site where select, text, media and relation fields are written in the list columns (runs regardless of config).
 vi.mock("@monti-cms/core/client", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@monti-cms/core/client")>();
 	const article = {
@@ -106,7 +106,7 @@ describe("list columns from fields", () => {
 		for (const column of ["format", "subtitle", "accent", "hero", "related", "lead"]) {
 			expect(available).toContain(column);
 		}
-		// 저장하지 않는 보기 필드와 목록에 적지 않은 필드는 컬럼이 아니다.
+		// Display-only fields that are not stored and fields not written in the list are not columns.
 		expect(available).not.toContain("preview");
 	});
 

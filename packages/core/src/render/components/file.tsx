@@ -2,8 +2,8 @@ import { fileTypeLabel, formatFileSize } from "../../core/file-display";
 import type { ImageResolver } from "../../mdx/image-src";
 
 /**
- * 첨부 파일 카드(`::file{mediaId label}`). 주소는 넘긴 해석기가 정한다(이미지와 같다). 해석하지 못하면 이름만 보이고
- * 내려받기는 없다.
+ * Attachment file card (`::file{mediaId label}`). The address is decided by the resolver passed in (same as images). If it cannot be resolved, only the name shows and
+ * there is no download.
  */
 export function CmsFile({
 	mediaId,

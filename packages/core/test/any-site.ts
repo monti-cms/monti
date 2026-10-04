@@ -6,19 +6,19 @@ import { type StoredField, schemaOf, storedField, storedFields } from "../src/sc
 import { isRequiredField } from "../src/schema/fields";
 
 /**
- * 설정과 상관없는 테스트(M10-1 재발 방지)가 쓰는 도우미. 컬렉션·필드 이름을 테스트에 적지 않고 지금 설정
- * (`@cms-config`)에서 찾는다. 같은 테스트가 블로그 예시 설정(`cms.config.ts`)과 다른 사이트 설정
- * (`other-site.config.ts`) 둘 다로 돈다. 라이브러리 약속인 제목 필드 `title`만 이름으로 쓴다.
+ * Helpers for config-agnostic tests (regression guard). Instead of writing collection and field names in tests, they are looked up from the current config
+ * (`@cms-config`). The same test runs with both the reference blog config (`cms.config.ts`) and the other site config
+ * (`other-site.config.ts`). Only the title field `title`, a library convention, is used by name.
  */
 
-/** 본문이 있는 첫 문서 컬렉션. */
+/** First document collection that has a body. */
 export const contentCollection: Collection = (() => {
 	const found = DOCUMENT_COLLECTIONS.find((name) => schemaOf(name).body);
 	if (!found) throw new Error("any-site: the config has no document collection with a body");
 	return found;
 })();
 
-/** 첫 항목 컬렉션(`kind: "item"`). */
+/** First item collection (`kind: "item"`). */
 export const recordCollection: Collection = (() => {
 	const found = COLLECTIONS.find((name) => isItemCollection(name));
 	if (!found) throw new Error("any-site: the config has no item collection");
@@ -28,29 +28,29 @@ export const recordCollection: Collection = (() => {
 export const defaultLocale = DEFAULT_LOCALE;
 
 /**
- * 기본 언어가 아닌 첫 언어(번역본 시험용). 언어가 하나뿐인 설정이면 없다.
- * 번역본이 필요한 테스트는 `describe.skipIf(!secondLocale)`로 감싼다.
+ * First locale other than the default (for testing translations). Absent if the config has only one locale.
+ * Tests that need a translation wrap themselves in `describe.skipIf(!secondLocale)`.
  */
 export const secondLocale: string | undefined = LOCALES.find((code) => code !== DEFAULT_LOCALE);
 
-/** 본문이 있는 두 번째 문서 컬렉션(있으면). 컬렉션 사이 규칙(다른 컬렉션 주소 겹침 등)을 시험할 때 쓴다. */
+/** Second document collection that has a body (if any). Used to test rules across collections (e.g. URL overlap with another collection). */
 export const otherContentCollection: Collection | undefined = DOCUMENT_COLLECTIONS.filter(
 	(name) => schemaOf(name).body,
 ).find((name) => name !== contentCollection);
 
-/** 제목 필드(라이브러리 약속상 이름은 `title`). */
+/** Title field (by library convention its name is `title`). */
 export function titleFieldOf(collection: Collection) {
 	const field = storedField(collection, "title")?.field;
 	if (field?.kind !== "text") throw new Error(`any-site: ${collection} has no title text field`);
 	return field;
 }
 
-/** 발행에 꼭 있어야 하는 저장 필드(조건부 필드 제외). */
+/** Stored fields required for publishing (excluding conditional fields). */
 export function requiredFields(collection: Collection): StoredField[] {
 	return storedFields(collection).filter(({ field, when }) => !when && isRequiredField(field));
 }
 
-/** 처음 나오는 관계 필드(있으면). */
+/** First relation field (if any). */
 export function firstRelationField(collection: Collection): (StoredField & { to: Collection }) | undefined {
 	for (const stored of storedFields(collection)) {
 		if (stored.field.kind === "relation") return { ...stored, to: stored.field.to as Collection };
@@ -58,20 +58,20 @@ export function firstRelationField(collection: Collection): (StoredField & { to:
 	return undefined;
 }
 
-/** 처음 나오는 미디어 필드(있으면, `fields.media`). */
+/** First media field (if any, `fields.media`). */
 export function firstMediaField(collection: Collection): StoredField | undefined {
 	return storedFields(collection).find((stored) => stored.field.kind === "media");
 }
 
-/** 미디어 필드가 있는 첫 컬렉션(본문이 있는 컬렉션 먼저). */
+/** First collection with a media field (collections with a body first). */
 export const mediaFieldCollection: Collection | undefined = [
 	...DOCUMENT_COLLECTIONS.filter((name) => schemaOf(name).body),
 	...COLLECTIONS,
 ].find((name) => firstMediaField(name));
 
 /**
- * 발행 필수값을 채운 메타데이터. 관계는 `relationTarget(대상 컬렉션)`이 돌려준 ID를 쓴다.
- * 텍스트는 `${이름표} value`, 선택은 첫 선택지다.
+ * Metadata with the publish-required values filled in. Relations use the ID returned by `relationTarget(target collection)`.
+ * Text is `${label} value`, and a choice is the first option.
  */
 export async function requiredMetadata(
 	collection: Collection,
@@ -91,7 +91,7 @@ export async function requiredMetadata(
 	return metadata;
 }
 
-/** 항목 컬렉션(`kind: "item"`)을 가리키는 첫 관계 필드(있으면). `many`면 여러 개를 고른다. */
+/** First relation field pointing to an item collection (`kind: "item"`), if any. If `many`, several can be chosen. */
 export function recordRelationField(
 	collection: Collection,
 ): (StoredField & { to: Collection; many: boolean }) | undefined {
@@ -105,10 +105,10 @@ export function recordRelationField(
 }
 
 /**
- * 저장소 테스트용: 원시 스냅샷(`seedEntry`)으로 만들거나 저장할 때 빠진 발행 필수 메타데이터를 채운다.
- * 블로그 테스트가 "게시글에는 카테고리가 필요하다"를 손으로 채우던 것을 설정과 상관없이 한다. 저장소를 바꿔 끼운다.
- * 관계 대상은 처음 필요할 때 대상 컬렉션에 공개 항목을 하나 만들어 다시 쓴다(`relationTarget`).
- * 필수값 검사를 시험하는 테스트는 돌려받은 `raw`(바꾸기 전 함수)로 저장한다.
+ * For store tests: fills in publish-required metadata missing when creating or saving from a raw snapshot (`seedEntry`).
+ * Does regardless of config what blog tests used to fill in by hand ("a post needs a category"). It swaps in the store.
+ * A relation target is created once, on first need, as a public item in the target collection and then reused (`relationTarget`).
+ * Tests of required-value validation save with the returned `raw` (the function before swapping).
  */
 export function fillRequiredMetadata(store: ContentStore) {
 	const raw = {

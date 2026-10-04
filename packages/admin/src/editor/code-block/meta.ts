@@ -2,7 +2,7 @@ import { parseCodeFenceMeta } from "@monti-cms/core/code-block";
 import type { ParsedCodeBlockMeta } from "./types";
 
 /**
- * 코드 펜스 meta 문자열(`title="file.ts" lnum`)을 파싱한다.
+ * Parses a code fence meta string (`title="file.ts" lnum`).
  */
 export function parseMeta(meta: string | null | undefined): ParsedCodeBlockMeta {
 	if (!meta || typeof meta !== "string") {
@@ -13,21 +13,21 @@ export function parseMeta(meta: string | null | undefined): ParsedCodeBlockMeta 
 	let title = "";
 	let showLineNumbers = false;
 
-	// title="value" 또는 title='value' 또는 title=value 매칭
+	// match title="value", title='value' or title=value
 	const titleMatch = meta.match(/title=(?:"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|([^\s]+))/);
 	if (titleMatch) {
 		title = titleMatch[1] ?? titleMatch[2] ?? titleMatch[3] ?? "";
 		raw.title = title;
 	}
 
-	// 명시적 `lnum=false`는 켜진 상태로 간주하지 않는다.
+	// An explicit `lnum=false` is not treated as on.
 	showLineNumbers = raw.lnum === true || raw.showLineNumbers === true;
 
 	return { title, showLineNumbers, raw };
 }
 
 /**
- * 파싱된 meta 속성을 코드 펜스 meta 문자열로 직렬화한다.
+ * Serializes parsed meta attributes into a code fence meta string.
  */
 export function formatMeta({
 	title,

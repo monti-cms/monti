@@ -1,9 +1,9 @@
 import { defineMessages } from "../i18n/define";
 
 /**
- * 본체 블록의 이름표·설명(M15). 키는 `<블록 이름>.label`·`<블록 이름>.description`, 속성은 `<블록 이름>.<속성>.label`·
- * `<블록 이름>.<속성>.description`, 고르는 값은 `option.<값>`이다. `keywords`는 슬래시 메뉴 검색어(쉼표로 구분)이고, 영어 이름은
- * 언어와 상관없이 늘 검색된다. 사이트는 설정의 `admin.messages["cms.blocks"]`로 덮어쓴다.
+ * Labels and descriptions of core blocks. Keys are `<block name>.label` and `<block name>.description`; attributes use `<block name>.<attribute>.label` and
+ * `<block name>.<attribute>.description`; selectable values use `option.<value>`. `keywords` are slash menu search terms (comma-separated), and the English name
+ * is always searchable regardless of language. Sites override them with `admin.messages["cms.blocks"]` in the config.
  */
 export const blockMessages = defineMessages("cms.blocks", {
 	en: {

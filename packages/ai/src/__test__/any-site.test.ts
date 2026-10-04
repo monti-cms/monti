@@ -6,8 +6,8 @@ import { AI_ACTIONS, attachedTo } from "../registry";
 import { type AiRunDeps, runAiAction } from "../run";
 
 /**
- * 설정과 상관없는 AI 필드 기능 확인(M10-1 재발 방지). 기능·컬렉션·필드 이름을 적지 않고 지금 설정의 AI 플러그인에서
- * 읽는다. 블로그 예시 설정(`test/cms.config.ts`)과 다른 사이트 설정(`test/other-site.config.ts`) 둘 다로 돈다.
+ * Config-independent check of AI field actions (regression guard). Names of actions, collections and fields are not hardcoded; they are read from the AI plugin of the current config.
+ * Runs with both the reference blog example config (`test/cms.config.ts`) and the other-site config (`test/other-site.config.ts`).
  */
 
 type FieldAttach = Extract<AiAttach, { slot: "field" }>;
@@ -18,13 +18,13 @@ const fieldActions = Object.entries(AI_ACTIONS).flatMap(([key, definition]) =>
 		.map((attach) => ({ key, definition, attach })),
 );
 
-/** 기능이 붙는 컬렉션. 없으면 그 필드가 있는 모든 컬렉션. */
+/** Collections an action attaches to. If none, all collections that have that field. */
 const collectionsOf = (attach: FieldAttach): Collection[] =>
 	(attach.collections ?? COLLECTIONS).filter(
 		(name): name is Collection => isCollection(name) && Object.hasOwn(schemaOf(name).fields, attach.field),
 	);
 
-/** 필드 정의(주소 필드는 저장 필드가 아니라서 스키마에서 직접 읽는다). */
+/** Field definition (the slug field is not a stored field, so it is read directly from the schema). */
 const fieldOf = (collection: Collection, name: string) =>
 	storedField(collection, name)?.field ?? schemaOf(collection).fields[name];
 
@@ -39,13 +39,13 @@ describe("any site: AI field actions", () => {
 		const collections = collectionsOf(attach);
 		expect(collections.length).toBeGreaterThan(0);
 		for (const collection of collections) {
-			// 화면 자리는 필드 이름과 컬렉션으로 기능을 찾는다.
+			// A screen slot finds actions by field name and collection.
 			expect(attachedTo(attach, { slot: "field", target: attach.field, collection })).toBe(true);
 			expect(attachedTo(attach, { slot: "field", target: `${attach.field}-other`, collection })).toBe(false);
 			const field = fieldOf(collection, attach.field);
 			const choices = definition.choices;
 			if (choices?.from === "collection") {
-				// 고르는 기능은 그 컬렉션을 가리키는 관계 필드에 붙고, 하나/여럿은 필드와 맞는다.
+				// A picking action attaches to relation fields pointing at that collection, and one/many matches the field.
 				expect(field?.kind).toBe("relation");
 				if (field?.kind !== "relation") continue;
 				expect(field.to).toBe(choices.collection);

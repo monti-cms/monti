@@ -1,7 +1,7 @@
 import { type ImageResolver, resolveImageUrl } from "../../mdx/image-src";
 import { CmsImageView } from "./image-view";
 
-/** `width`는 1~100% 또는 1~4096px만 받는다. 그 밖의 값은 무시한다. */
+/** `width` accepts only 1 to 100% or 1 to 4096px. Other values are ignored. */
 const widthStyle = (value?: string) => {
 	if (!value) return undefined;
 	const percent = /^(\d{1,3}(?:\.\d+)?)%$/.exec(value);
@@ -14,8 +14,8 @@ const widthStyle = (value?: string) => {
 const ALIGNS = new Set(["left", "center", "right"]);
 
 /**
- * `::image{...}`. 주소는 부르는 쪽이 넘긴 해석기(`resolve`)가 정하고(없으면 바깥 `src`만), 이 컴포넌트는 DB를 읽지 않는다.
- * 해석하지 못하면 빈 자리와 캡션만 남기고 `width`·`align`은 쓰지 않는다. 실패 이유는 보이지 않고, `alt`로 바꿔 쓰지 않는다(§4.4).
+ * `::image{...}`. The address is decided by the resolver (`resolve`) passed by the caller (only the outer `src` if there is none), and this component does not read the DB.
+ * If it cannot be resolved, only an empty slot and the caption remain, and `width` and `align` are not used. The failure reason is not shown and it is not replaced with `alt`.
  */
 export function CmsImage({
 	mediaId,

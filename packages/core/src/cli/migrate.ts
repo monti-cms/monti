@@ -5,7 +5,7 @@ import { loadEnvFiles } from "./env";
 
 export interface MigrateOptions {
 	readonly cwd: string;
-	/** 읽을 환경 파일. 없으면 `.env.local`·`.env`(있는 것만), 빈 배열이면 읽지 않는다. */
+	/** Env files to read. If unset, `.env.local` and `.env` (only those that exist); an empty array reads none. */
 	readonly envFiles?: readonly string[];
 	readonly config?: string;
 	readonly server?: string;
@@ -13,8 +13,8 @@ export interface MigrateOptions {
 }
 
 /**
- * `monti migrate`: 환경 파일을 읽고, 설정 별칭(`@cms-config`·`@cms-server`)을 앱의 파일로 이은 뒤 저장소에 표를 만든다.
- * TypeScript 설정 파일은 명령(`bin/monti.mjs`)이 먼저 건 tsx가 읽는다. 성공하면 `true`.
+ * `monti migrate`: reads env files, points the config aliases (`@cms-config`, `@cms-server`) at the app's files, then creates the tables in the store.
+ * TypeScript config files are read by tsx, which the command (`bin/monti.mjs`) registers first. Returns `true` on success.
  */
 export async function migrate(options: MigrateOptions): Promise<boolean> {
 	const log = options.log ?? console.log;

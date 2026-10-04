@@ -25,8 +25,8 @@ import { RecordPanel } from "../record-panel";
 import { AdminQueryProvider } from "../shared/query-provider";
 
 /**
- * 설정과 상관없는 관리자 화면 확인(M10-1 재발 방지). 컬렉션·필드 이름과 이름표를 적지 않고 지금 설정에서 읽는다.
- * 블로그 예시 설정과 다른 사이트 설정(`vitest.othersite.config.ts`) 둘 다로 돈다. 제목 필드 `title`만 이름으로 쓴다.
+ * Admin screen checks that do not depend on settings (regression guard). Collection/field names and labels are not hard-coded but read from the current settings.
+ * Runs against both the reference blog example config and another site's config (`vitest.othersite.config.ts`). Only the title field `title` is used by name.
  */
 
 const t = createTranslator(screensMessages);
@@ -77,7 +77,7 @@ vi.mock("../entries/local-backup", async (importOriginal) => ({
 	deleteLocalBackup: backup.remove,
 	saveLocalBackup: backup.save,
 }));
-// 본문 편집기는 따로 시험한다. 여기서는 제목 칸이 들어갈 자리만 그린다.
+// The body editor is tested separately. Here only the place for the title slot is drawn.
 vi.mock("../../editor/tiptap-editor", () => ({
 	CmsEditor: ({ titleField, toolbarEnd }: { titleField?: React.ReactNode; toolbarEnd?: React.ReactNode }) => (
 		<>
@@ -166,11 +166,11 @@ describe("any site: list screen", () => {
 			.map((header) => header.textContent ?? "")
 			.join(" | ");
 		for (const column of columnsFor(content).defaults) expect(headers).toContain(columnLabel(content, column));
-		// 새 항목 버튼은 컬렉션 이름표를 쓴다.
+		// The new item button uses the collection label.
 		expect(screen.getByRole("button", { name: t("list.add", { label: schemaOf(content).label }) })).toBeTruthy();
 	});
 
-	// 목록 컬럼에 적은 선택·글자 필드(다른 사이트 설정의 `format`). 없는 설정이면 건너뛴다.
+	// Select/text field written in the list columns (`format` in the other site config). Skipped if the config lacks it.
 	const listedSelect = columnsFor(content).defaults.flatMap((column) => {
 		const stored = fieldColumnOf(content, column);
 		return stored?.field.kind === "select" ? [{ column, field: stored.field }] : [];
@@ -187,7 +187,7 @@ describe("any site: list screen", () => {
 		);
 		const row = await screen.findByRole("row", { name: /Alpha/ });
 		expect(within(row).getByText(label)).toBeTruthy();
-		// 값이 없는 줄은 빈 칸 표시다.
+		// A row with no value shows an empty-cell marker.
 		expect(within(screen.getByRole("row", { name: /Beta/ })).queryByText(label)).toBeNull();
 		expect(
 			screen.getAllByRole("columnheader").some((header) => header.textContent?.includes(columnLabel(content, column))),
@@ -285,7 +285,7 @@ describe("any site: entry editor", () => {
 		render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" collection={content} />);
 		const title = (await screen.findByRole("textbox", { name: titleLabel(content) })) as HTMLInputElement;
 		await waitFor(() => expect(title.value).toBe("Any title"));
-		// 속성 칸의 첫 묶음 필드가 설정의 이름표로 보인다.
+		// The first group's fields in the properties slot show as the config's labels.
 		const first = schemaOf(content).layout?.[0]?.fields ?? [];
 		for (const name of first) {
 			const field = schemaOf(content).fields[name];

@@ -39,7 +39,7 @@ const t = createTranslator(screensMessages);
 
 export type RecordTarget = { collection: Collection; id: string | null };
 
-/** 그 언어 탭에 언어별 값(`localized: true` 텍스트 필드)이 하나라도 있는가. 기본 언어는 필드 자체의 값이다. */
+/** Whether that locale tab has any per-locale value (`localized: true` text field). The default locale is the field's own value. */
 function hasLocaleValues(collection: SchemaCollection, form: EntryForm, locale: Locale): boolean {
 	return recordLocalizedFields(collection).some((field) => {
 		const value = locale === DEFAULT_LOCALE ? form[field] : form[recordTranslationKey(field, locale)];
@@ -48,10 +48,10 @@ function hasLocaleValues(collection: SchemaCollection, form: EntryForm, locale: 
 }
 
 /**
- * 분류(카테고리·태그·모음집) 편집 패널. 목록 옆에 열린다(§5.2). `저장`이 검증 후 곧바로 공개 값에 반영되고
- * 자동 저장은 하지 않는다. 저장한 뒤에도 칸은 열린 채 남는다(새 항목이면 부모가 만든 항목으로 바꿔 연다).
- * 저장하지 않은 채 닫으면 버릴지 묻는다. 위의 언어 탭마다 번역이 있는지 보이고, 다른 언어 탭에서는 그 언어 이름·설명만 고친다.
- * 모음집 글 목록과 주소는 모든 언어가 같아 기본 언어 탭에서 고친다. 아직 공개되지 않은 글도 담을 수 있다(§6.4).
+ * Taxonomy (category, tag, series) edit panel. Opens beside the list. `저장` validates and then applies straight to the public values, and
+ * there is no autosave. The panel stays open after saving (for a new item, it switches to open the item the parent created).
+ * Closing with unsaved changes asks whether to discard. Each locale tab above shows whether a translation exists, and on other locale tabs only that locale's name and description are edited.
+ * A series' post list and slug are the same in all locales, so they are edited on the default locale tab. Unpublished posts can be included too.
  */
 export function RecordPanel({
 	target,
@@ -63,11 +63,11 @@ export function RecordPanel({
 }: {
 	target: RecordTarget;
 	onClose: () => void;
-	/** 저장(새 항목은 추가)한 뒤. 서버가 돌려준 항목을 넘긴다. */
+	/** After saving (a new item is added). Passes the item the server returned. */
 	onSaved: (saved: EntryData) => void;
-	/** 저장하지 않은 변경이 생기거나 없어질 때. 목록이 다른 항목을 열기 전에 묻는 데 쓴다. */
+	/** When unsaved changes appear or go away. Used to ask before the list opens another item. */
 	onDirtyChange?: (dirty: boolean) => void;
-	/** 새 항목의 처음 값(글 편집 화면에서 검색어로 추가할 때의 이름 등). */
+	/** Initial values of a new item (e.g. a name when added by search term in the post edit screen). */
 	initial?: EntryFormPatch;
 	className?: string;
 }) {
@@ -84,7 +84,7 @@ export function RecordPanel({
 	const label = COLLECTION_DEFINITIONS[collection].label;
 	const heading = id ? t("record.edit", { label }) : t("list.add", { label });
 	const title = form.title;
-	/** 주소를 비우면 만들 값의 안내. 주소 필드의 `from`이 없으면 필드의 안내 문구를 그대로 쓴다. */
+	/** Hint for the value that will be generated when the slug is empty. If the slug field has no `from`, uses the field's hint text as is. */
 	const slugFrom = slugFieldOf(collection)?.from;
 	const slugHint = slugFrom
 		? t("record.slugHint", { name: schemaOf(collection).fields[slugFrom]?.label ?? slugFrom })
@@ -149,7 +149,7 @@ export function RecordPanel({
 							json: { collection, slug: form.slug.trim() || null, metadata: built.metadata, mdx: "" },
 							fallback: t("record.saveFailed"),
 						});
-			// 칸은 열린 채 남는다. 다음 저장이 새 판을 기준으로 하도록 받은 항목으로 바꾼다.
+			// The panel stays open. Switch to the received item so the next save is based on the new revision.
 			if (id) setLoaded(saved);
 			setIsDirty(false);
 			onSaved(saved);

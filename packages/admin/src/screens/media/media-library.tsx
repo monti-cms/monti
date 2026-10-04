@@ -68,14 +68,14 @@ const USED_OPTIONS = [
 type MediaView = "grid" | "list";
 const VIEW_STORAGE_KEY = "cms:media-view";
 
-/** 바둑판·목록 보기 선택. 이 브라우저에 기억하고, 저장소를 못 쓰면 바둑판으로 시작한다. */
+/** Grid or list view choice. Remembered in this browser; if storage is unavailable, starts with the grid. */
 function useMediaView(): [MediaView, (view: MediaView) => void] {
 	const [view, setView] = useState<MediaView>("grid");
 	useEffect(() => {
 		try {
 			if (window.localStorage.getItem(VIEW_STORAGE_KEY) === "list") setView("list");
 		} catch {
-			// 저장소를 쓸 수 없으면 기본 보기를 쓴다.
+			// If storage is unavailable, use the default view.
 		}
 	}, []);
 	const change = (next: MediaView) => {
@@ -83,15 +83,15 @@ function useMediaView(): [MediaView, (view: MediaView) => void] {
 		try {
 			window.localStorage.setItem(VIEW_STORAGE_KEY, next);
 		} catch {
-			// 기억하지 못해도 보기는 바뀐다.
+			// The view still changes even if it cannot be remembered.
 		}
 	};
 	return [view, change];
 }
 
 /**
- * 미디어 라이브러리(§7.3). 바둑판·목록 보기, 파일명 검색, 형식·업로드일·사용 여부 필터, 최신 업로드순.
- * 고르면 오른쪽에 상세가 열린다.
+ * Media library. Grid and list views, file name search, filters for type, upload date and usage, newest upload first.
+ * Picking an item opens the detail on the right.
  */
 export function MediaLibrary() {
 	const queryClient = useQueryClient();
@@ -102,7 +102,7 @@ export function MediaLibrary() {
 	const [uploadedFrom, setUploadedFrom] = useState("");
 	const [uploadedTo, setUploadedTo] = useState("");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	/** 상세 칸의 기본 설명에 저장하지 않은 변경이 있는가. 상세 칸이 알려 준다. */
+	/** Whether the detail panel's default description has unsaved changes. The detail panel reports it. */
 	const detailDirtyRef = useRef(false);
 	const [optimize, setOptimize] = useState(false);
 	const [upload, setUpload] = useState<{ current: number; total: number; percent: number } | null>(null);
@@ -110,7 +110,7 @@ export function MediaLibrary() {
 	const [view, setView] = useMediaView();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	// 조건을 바꾸는 동안에도 이전 줄을 남겨(`keepPreviousData`) 자리 표시로 깜빡이지 않는다. 자리 표시는 캐시가 없을 때만 보인다.
+	// Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
 	const query = useMemo(() => {
 		const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE), used });
 		if (search.trim()) params.set("search", search.trim());
@@ -133,7 +133,7 @@ export function MediaLibrary() {
 
 	const loadError = mediaQuery.error ? errorText(mediaQuery.error, t("library.loadFailed")) : null;
 
-	/** 상세 칸에 연다(닫으려면 null). 저장하지 않은 기본 설명이 있으면 버릴지 먼저 묻는다. */
+	/** Opens in the detail panel (null to close). If there is an unsaved default description, asks first whether to discard it. */
 	const openDetail = async (id: string | null) => {
 		if (id === selectedId) return;
 		if (!(await confirmDiscard(detailDirtyRef.current))) return;
@@ -141,7 +141,7 @@ export function MediaLibrary() {
 		setSelectedId(id);
 	};
 
-	/** 목록을 뒤에서 다시 받는다. 지금 보이는 줄은 그대로 둔다. */
+	/** Refetches the list in the background. Rows currently visible stay as they are. */
 	const invalidateMedia = () => queryClient.invalidateQueries({ queryKey: MEDIA_KEY });
 
 	const handleFiles = async (files: FileList | null) => {
@@ -170,7 +170,7 @@ export function MediaLibrary() {
 			setPage(1);
 			await invalidateMedia();
 		} catch (error) {
-			// 실패한 업로드는 사용 가능 상태가 되지 않는다. 같은 파일로 다시 시도할 수 있다(§7.2).
+			// A failed upload does not become available. It can be retried with the same file.
 			toast.error(t("library.uploadFailed", { error: errorText(error, t("library.unknownError")) }));
 		} finally {
 			setUpload(null);
@@ -179,7 +179,7 @@ export function MediaLibrary() {
 	};
 
 	const deleteMedia = async (media: MediaItem) => {
-		// 목록에서 먼저 빼고 요청한다. 실패하면 되돌리고, 끝나면 서버 값으로 맞춘다.
+		// Remove from the list first, then send the request. On failure, revert; when done, sync to the server value.
 		await queryClient.cancelQueries({ queryKey: MEDIA_KEY });
 		const snapshots = queryClient.getQueriesData<MediaPage>({ queryKey: MEDIA_KEY });
 		queryClient.setQueriesData<MediaPage>({ queryKey: MEDIA_KEY }, (data) =>
@@ -187,7 +187,7 @@ export function MediaLibrary() {
 				? { items: data.items.filter((item) => item.id !== media.id), total: Math.max(0, data.total - 1) }
 				: data,
 		);
-		// 지우는 파일이 열려 있으면 닫는다. 그 파일의 고친 기본 설명은 함께 버린다.
+		// If the file being deleted is open, close it. Its edited default description is discarded with it.
 		setSelectedId((current) => {
 			if (current !== media.id) return current;
 			detailDirtyRef.current = false;
@@ -204,7 +204,7 @@ export function MediaLibrary() {
 		}
 	};
 
-	/** 기본 설명 저장. 실패는 상세 칸 안에 보이도록 그대로 던진다. */
+	/** Saves the default description. Failure is thrown as is so it shows inside the detail panel. */
 	const saveDefaults = async (media: MediaItem, defaults: { alt: string; caption: string }) => {
 		await cmsFetch(cmsApiUrl(`/v1/media/${media.id}`), {
 			method: "PATCH",
@@ -257,7 +257,7 @@ export function MediaLibrary() {
 		if (ok) await deleteMedia(media);
 	};
 
-	/** 미디어 타일의 오른쪽 클릭·`⋯` 메뉴(v2 A2). */
+	/** Right-click and `⋯` menu of a media tile. */
 	const mediaMenu = (media: MediaItem): MenuAction[] => [
 		{ kind: "item", label: t("common.open"), icon: PanelRightOpen, onSelect: () => void openDetail(media.id) },
 		{
@@ -419,7 +419,7 @@ export function MediaLibrary() {
 						loadError ? null : mediaQuery.isPending ? (
 							<ul aria-hidden className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
 								{Array.from({ length: 6 }, (_, index) => (
-									// biome-ignore lint/suspicious/noArrayIndexKey: 자리표시
+									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 									<li key={index}>
 										<Skeleton className="aspect-square w-full rounded-lg" />
 									</li>

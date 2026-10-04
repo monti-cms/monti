@@ -7,14 +7,14 @@ import { settingsMessages } from "./settings.messages";
 const t = createTranslator(settingsMessages);
 
 /**
- * 공통 문구(M8-4). 모든 기능의 지시문 `{{shared.키}}`에 들어간다. 두 가지가 있다.
+ * Shared texts. Fill `{{shared.key}}` in the instructions of every action. There are two kinds.
  *
- * - **설정 문구**: 플러그인 설정(`aiPlugin({ shared })`)에 적은 문구. 키·이름은 설정이 정하고, 관리자 화면에서는 내용만
- *   고친다(기본값과 다른 내용만 둔다). 삭제할 수 없다.
- * - **더한 문구**: 관리자 화면에서 키·이름·내용을 적어 더한 문구. 키는 만든 뒤 바꿀 수 없고, 쓰는 기능이 없으면 삭제한다.
+ * - **Config text**: text listed in the plugin config (`aiPlugin({ shared })`). The config decides keys and names; the admin screen edits only the
+ *   content (only content differing from the default is kept). Cannot be deleted.
+ * - **Added text**: text added in the admin screen by entering key, name and content. The key cannot be changed after creation; delete it if no action uses it.
  *
- * 둘 다 AI 설정 표의 `shared` 줄 하나에 `{ texts: { 키: 고친 내용 }, added: [{ key, label, text }] }`로 둔다.
- * 예전 모양(설정 문구 키 → 고친 내용)도 읽고, 저장하면 새 모양으로 바뀐다.
+ * Both are kept in one `shared` row of the AI settings table as `{ texts: { key: edited content }, added: [{ key, label, text }] }`.
+ * The old shape (config text key -> edited content) is also read, and saving changes it to the new shape.
  */
 
 export interface AiSharedStore {
@@ -22,7 +22,7 @@ export interface AiSharedStore {
 	saveAiSettings(params: { id: "shared"; expectedVersion: number; value: unknown }): Promise<number>;
 }
 
-/** 관리자 화면에 보이는 공통 문구 하나. */
+/** One shared text shown in the admin screen. */
 export type AiSharedItem =
 	| {
 			source: "config";
@@ -36,15 +36,15 @@ export type AiSharedItem =
 
 export interface AiSharedView {
 	version: number;
-	/** 설정 문구(설정 순서), 그다음 더한 문구(더한 순서). */
+	/** Config texts (in config order), then added texts (in added order). */
 	items: AiSharedItem[];
 }
 
 export const MAX_SHARED_TEXT = 4000;
 export const MAX_SHARED_LABEL = 40;
-/** 더할 수 있는 문구 수. */
+/** Number of texts that can be added. */
 export const MAX_ADDED_SHARED = 30;
-/** 공통 문구 키. 설정의 이름 규칙(`validateAiConfig`)과 같다. */
+/** Shared text key. Same as the config's naming rule (`validateAiConfig`). */
 export const SHARED_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
 
 type AddedText = { key: string; label: string; text: string };
@@ -72,8 +72,8 @@ const stringsOf = (value: unknown): Record<string, string> =>
 const isConfigKey = (key: string) => Object.hasOwn(AI_SHARED, key);
 
 /**
- * 저장한 값을 읽는다. 맞지 않는 항목은 하나씩 버린다(나머지는 남긴다). 설정 문구와 키가 겹치는 더한 문구는
- * 설정이 이긴다(나중에 설정에 같은 키를 적은 경우).
+ * Reads stored values. Entries that do not fit are dropped one by one (the rest are kept). For an added text whose key collides with a config text,
+ * the config wins (when the same key was later added to the config).
  */
 function readStored(value: unknown): Stored {
 	const current = storedSchema.safeParse(value);
@@ -124,30 +124,30 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.output<S> {
 	return parsed.data;
 }
 
-/** 설정 문구의 내용을 바꾼다. 기본값과 같으면 고친 값을 지운다(되돌리기). */
+/** Changes the content of a config text. If it equals the default, the edited value is removed (revert). */
 function setConfigText(stored: Stored, key: string, text: string): Stored {
 	const { [key]: _old, ...texts } = stored.texts;
 	return { ...stored, texts: text === AI_SHARED[key]?.text ? texts : { ...texts, [key]: text } };
 }
 
-/** 관리자 화면에 보일 공통 문구. */
+/** Shared texts to show in the admin screen. */
 export async function getSharedView(store: AiSharedStore): Promise<AiSharedView> {
 	const { version, stored } = await load(store);
 	return viewOf(version, stored);
 }
 
-/** 지시문에 넣을 공통 문구(키 → 내용). 설정 문구는 고친 값을 얹고, 더한 문구도 함께 준다. */
+/** Shared texts to put into the instructions (key -> content). Config texts have edited values applied, and added texts are included too. */
 export async function loadSharedTexts(store: Pick<AiSharedStore, "getAiSettings">): Promise<Record<string, string>> {
 	const { version, stored } = await load(store);
 	return Object.fromEntries(viewOf(version, stored).items.map((item) => [item.key, item.text]));
 }
 
-/** 지시문에 `{{shared.키}}`로 쓸 수 있는 키(설정 문구와 더한 문구). 관리자 화면에서 지시문을 저장할 때 확인한다. */
+/** Keys usable as `{{shared.key}}` in the instructions (config texts and added texts). Checked when saving instructions in the admin screen. */
 export async function loadSharedKeys(store: Pick<AiSharedStore, "getAiSettings">): Promise<string[]> {
 	return Object.keys(await loadSharedTexts(store));
 }
 
-/** 공통 문구를 더한다. 본문은 `{ key, label, text }`. 키는 설정 문구·더한 문구와 겹치지 않아야 한다. */
+/** Adds a shared text. The body is `{ key, label, text }`. The key must not collide with config texts or added texts. */
 export async function addShared(store: AiSharedStore, expectedVersion: number, input: unknown): Promise<AiSharedView> {
 	const item = parse(addedSchema, input);
 	const { stored } = await load(store);
@@ -161,8 +161,8 @@ export async function addShared(store: AiSharedStore, expectedVersion: number, i
 const itemUpdateSchema = z.object({ key: z.string(), label: labelSchema.optional(), text: textSchema });
 
 /**
- * 공통 문구 하나를 고친다. 본문은 `{ key, label?, text }`. 설정 문구는 내용만 고치고(이름은 설정이 정한다),
- * 더한 문구는 이름과 내용을 고친다. 키는 바꾸지 않는다.
+ * Edits one shared text. The body is `{ key, label?, text }`. A config text edits only content (the config decides the name),
+ * and an added text edits name and content. The key is not changed.
  */
 export async function updateSharedItem(
 	store: AiSharedStore,
@@ -182,8 +182,8 @@ export async function updateSharedItem(
 const textsUpdateSchema = z.object({ texts: z.record(z.string(), textSchema) });
 
 /**
- * 여러 공통 문구의 내용을 한 번에 고친다. 본문은 `{ texts: { 키: 내용 } }`이고, 적지 않은 문구는 그대로 둔다.
- * 설정 문구는 기본값과 같으면 고친 값을 지운다. 없는 키는 막는다.
+ * Edits the content of several shared texts at once. The body is `{ texts: { key: content } }`, and texts not listed are left alone.
+ * For config texts, an edited value equal to the default is removed. Unknown keys are rejected.
  */
 export async function updateShared(
 	store: AiSharedStore,
@@ -203,14 +203,14 @@ export async function updateShared(
 	return write(store, expectedVersion, stored);
 }
 
-/** 지시문이 `{{shared.키}}`로 이 문구를 쓰는가. */
+/** Whether the instructions use this text as `{{shared.key}}`. */
 export function usesShared(prompt: string, key: string): boolean {
 	return new RegExp(`\\{\\{\\s*shared\\.${key}\\s*\\}\\}`).test(prompt);
 }
 
 /**
- * 더한 문구를 삭제한다. 설정 문구는 삭제할 수 없다. 지시문에서 이 문구를 쓰는 기능(`features`: 코드 기능의 지시문과
- * 고친 지시문, 화면 기능)이 있으면 막고 그 기능 이름을 알린다.
+ * Deletes an added text. A config text cannot be deleted. If an action uses this text in its instructions (`features`: code action instructions and
+ * edited instructions, UI actions), it is blocked and the action names are reported.
  */
 export async function deleteShared(
 	store: AiSharedStore,

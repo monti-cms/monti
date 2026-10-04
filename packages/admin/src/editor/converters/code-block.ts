@@ -37,13 +37,13 @@ const attributesFrom = (attrs: Record<string, unknown>): AnnotationAttr[] =>
 		.filter(([, value]) => value !== undefined && value !== null && value !== false)
 		.map(([name, value]) => ({ name, value }));
 
-/** 글자 효과의 마크 속성만 남긴다(툴팁 설명, 접기의 처음부터 펼침). */
+/** Keeps only the mark attributes of a char effect (tooltip content, collapse starting expanded). */
 const spanAttrs = (name: string, attrs: Record<string, unknown>): Record<string, unknown> =>
 	name === "Tooltip" ? { content: String(attrs.content ?? "") } : name === "fold" ? { open: attrs.open === true } : {};
 
 const sameAttrs = (a: Record<string, unknown>, b: Record<string, unknown>) => JSON.stringify(a) === JSON.stringify(b);
 
-/** 같은 효과가 이어지면 하나로 합친다. 같은 효과가 속성만 달리 겹치면 마크로 나타낼 수 없어 null이다. */
+/** Merges the same effect when consecutive. If the same effect overlaps with different attributes it cannot be represented as a mark, so null. */
 function mergeSpans(spans: CodeSpan[]): CodeSpan[] | null {
 	const sorted = [...spans].sort((a, b) => a.name.localeCompare(b.name) || a.from - b.from);
 	const merged: CodeSpan[] = [];
@@ -63,7 +63,7 @@ function mergeSpans(spans: CodeSpan[]): CodeSpan[] | null {
 	return merged;
 }
 
-/** Tiptap 코드 블록 내용(마크 달린 텍스트)에서 글자 효과 범위를 읽는다. */
+/** Reads char effect ranges from Tiptap code block content (text with marks). */
 export function spansFromContent(content: JSONContent[] | undefined): CodeSpan[] {
 	const spans: CodeSpan[] = [];
 	let offset = 0;
@@ -82,7 +82,7 @@ export function spansFromContent(content: JSONContent[] | undefined): CodeSpan[]
 		}
 		offset += length;
 	}
-	// 마크가 붙은 텍스트는 이어져 있어도 마크 조합마다 나뉜다. 같은 효과를 다시 잇는다.
+	// Text with marks is split per mark combination even when contiguous. Rejoin the same effect.
 	const merged: CodeSpan[] = [];
 	for (const span of [...spans].sort((a, b) => a.name.localeCompare(b.name) || a.from - b.from)) {
 		const last = merged[merged.length - 1];
@@ -93,7 +93,7 @@ export function spansFromContent(content: JSONContent[] | undefined): CodeSpan[]
 	return merged;
 }
 
-/** 글자 효과 범위를 마크 달린 텍스트 조각으로 바꾼다. */
+/** Turns char effect ranges into text fragments with marks. */
 function contentFromSpans(text: string, spans: readonly CodeSpan[]): JSONContent[] {
 	const cuts = new Set([0, text.length]);
 	for (const span of spans) {
@@ -127,8 +127,8 @@ export interface ParsedCodeFence {
 }
 
 /**
- * 코드 펜스 값(주석 줄 포함)을 에디터 모델로 읽는다.
- * 에디터가 나타낼 수 없는 주석(알 수 없는 줄 효과, 같은 효과가 속성만 달리 겹침)이 있으면 null — 원문 편집으로 연다.
+ * Reads a code fence value (including comment lines) into the editor model.
+ * null if there are comments the editor cannot represent (unknown line effects, the same effect overlapping with different attributes) - opens in raw editing.
  */
 export function parseCodeFence(value: string, language: string | null, meta: string | null): ParsedCodeFence | null {
 	let document: CodeBlockDocument;
@@ -156,7 +156,7 @@ export function parseCodeFence(value: string, language: string | null, meta: str
 	const merged = mergeSpans(spans);
 	if (!merged) return null;
 
-	// 아이디는 순서로 정한다. 같은 원문은 늘 같은 에디터 문서가 된다(불러오기·다시 저장 비교가 흔들리지 않게).
+	// IDs are assigned by order. The same source always becomes the same editor document (so load and re-save comparisons stay stable).
 	const lineEffects: CodeLineEffect[] = [];
 	for (const annotation of document.annotations) {
 		if (!isLineEffectName(annotation.name)) return null;
@@ -192,13 +192,13 @@ export function parseCodeFence(value: string, language: string | null, meta: str
 	};
 }
 
-/** 에디터 모델을 코드 펜스 값(주석 줄 포함)으로 쓴다. */
+/** Writes the editor model as a code fence value (including comment lines). */
 export function serializeCodeFence(model: ParsedCodeFence, language: string | null): string {
 	const lines = model.text.split("\n");
 	const starts = lineStarts(model.text);
 	const inline: InlineAnnotation[][] = lines.map(() => []);
 	model.spans.forEach((span, order) => {
-		// 주석 범위는 줄 기준이다. 여러 줄에 걸친 효과는 줄마다 나눈다.
+		// Comment ranges are line-based. An effect spanning several lines is split per line.
 		for (let line = 0; line < lines.length; line += 1) {
 			const start = starts[line] ?? 0;
 			const from = Math.max(span.from, start) - start;
@@ -232,7 +232,7 @@ export function serializeCodeFence(model: ParsedCodeFence, language: string | nu
 		lines: lines.map((value, index) => ({ value, annotations: inline[index] ?? [] })),
 		rules: model.rules
 			.filter((rule) => rule.scope === "document" || (rule.line !== undefined && rule.line < lines.length))
-			// 아직 다 쓰지 않은(틀린) 정규식은 저장하지 않는다.
+			// A regex not yet fully written (invalid) is not saved.
 			.filter((rule) => !checkPattern(rule.pattern, rule.flags))
 			.map((rule) => ({
 				scope: rule.scope,
@@ -269,7 +269,7 @@ export const codeBlockConverter: BlockConverter = {
 		const parsed = parseCodeFence(source, language, meta);
 
 		if (!parsed) {
-			// 나타낼 수 없는 주석이 있으면 주석 줄까지 원문 그대로 편집한다(데이터를 잃지 않는다).
+			// If there are comments that cannot be represented, edit as raw text including the comment lines (no data is lost).
 			return {
 				type: "codeBlock",
 				attrs: { language, meta, rawMode: true, source },
@@ -304,7 +304,7 @@ export const codeBlockConverter: BlockConverter = {
 		const lineEffects = Array.isArray(node.attrs?.lineEffects) ? (node.attrs.lineEffects as CodeLineEffect[]) : [];
 		const rules = Array.isArray(node.attrs?.rules) ? (node.attrs.rules as CodeRule[]) : [];
 		const source = asString(node.attrs?.source);
-		// 불러온 뒤 바뀐 것이 없으면 원문 그대로 저장한다(주석 줄의 위치·쓰는 방식까지 바이트 불변).
+		// If nothing changed since loading, save the original text as is (byte-identical, including comment line positions and style).
 		if (source != null && fingerprintOf(language, content, lineEffects, rules) === node.attrs?.sourceKey)
 			return [{ type: "codeBlock", attrs: { ...attrs, value: source } }];
 

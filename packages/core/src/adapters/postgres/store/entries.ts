@@ -27,7 +27,7 @@ import {
 } from "./rows";
 import type { Entry, IncomingReferenceItem, TranslationGroup } from "./types";
 
-/** 제목 필드(라이브러리 약속상 `title`) 값 검사. 어긋나면 필드 경로를 담은 오류다. */
+/** Validates the title field value (`title` by library convention). A mismatch throws an error carrying the field path. */
 function assertTitleValue(collection: string, title: string): void {
 	const stored = isCollection(collection) ? storedField(collection, "title") : undefined;
 	const error = stored ? fieldValueError(stored.field, title) : null;
@@ -48,8 +48,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	};
 
 	/**
-	 * 초안의 slug를 예약한다(§6.2). 공개된 적 없는 이전 예약은 풀고, 자기 자신의 current·alias 주소로
-	 * 되돌아가는 경우는 새로 예약하지 않는다(발행 때 current로 올린다). 다른 항목의 주소면 409다.
+	 * Reserves the draft's slug. Releases a previous reservation that was never published, and does not
+	 * reserve anew when returning to the entry's own current or alias slug (promoted to current on publish). 409 if another entry owns the slug.
 	 */
 	const reserveSlug = async (
 		client: PoolClient,
@@ -62,7 +62,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			entryId,
 		]);
 		if (slug === null) return;
-		// 주소 고유성은 컬렉션 + 언어 + slug다(v2 B4). 번역본은 원문과 같은 slug를 쓸 수 있다.
+		// Slug uniqueness is collection + language + slug. A translation may use the same slug as its source.
 		const existing = await client.query<{ entry_id: string | null }>(
 			`SELECT entry_id FROM "${qSchema}".content_addresses WHERE collection = $1 AND locale = $2 AND slug = $3`,
 			[collection, locale, slug],
@@ -78,8 +78,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	};
 
 	/**
-	 * 번역본을 만들 원문을 확인하고 잠근다(v2 B4). 원문은 번역 묶음의 원문이어야 하고(번역본의 번역본은 없다),
-	 * 본문을 쓰는 컬렉션이어야 하며, 휴지통에 있으면 안 된다. 같은 언어 번역본은 고유 인덱스가 막는다.
+	 * Checks and locks the source to translate. It must be the source of its translation group (no translation of a translation),
+	 * belong to a collection that has a body, and not be in the trash. A unique index blocks a second translation in the same language.
 	 */
 	const assertTranslationSource = async (client: PoolClient, sourceId: string, collection: string, locale: string) => {
 		const res = await client.query<{ collection: string; status: string; locale: string; group_id: string | null }>(
@@ -99,7 +99,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		}
 	};
 
-	/** 번역본은 언어별 값만 저장한다(v2 B4). 공통 필드는 원문이 가진다. */
+	/** A translation stores only per-language values. Shared fields belong to the source. */
 	const assertTranslationMetadata = (collection: string, isTranslation: boolean, metadata: Record<string, unknown>) => {
 		if (!isTranslation || !isCollection(collection)) return;
 		const common = commonFieldKeys(collection, metadata);
@@ -114,9 +114,9 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			references: readonly Reference[];
 			folderId?: string | null;
 			publishImmediately?: boolean;
-			/** 콘텐츠 언어. 없으면 기본 언어다. */
+			/** Content language. Defaults to the default language. */
 			locale?: string;
-			/** 번역본이면 원문 ID(번역 묶음 ID). */
+			/** Source ID for a translation (the translation group ID). */
 			translationOf?: string;
 		}): Promise<Entry> =>
 			withTransaction(
@@ -148,7 +148,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						],
 					);
 					const translation = params.snapshot.translation ?? null;
-					// 번역 상태는 번역본만 가진다(v3).
+					// Only translations carry a translation status.
 					if (translation !== null && !params.translationOf) {
 						throw new CmsError("Only translations have a translation state", "invalid_input");
 					}
@@ -171,9 +171,9 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			),
 
 		/**
-		 * 최신 초안 저장(§5.1). 같은 값이면 버전·수정일을 바꾸지 않는다.
-		 * 폴더만 옮기면 버전은 올리되 콘텐츠 수정일은 유지한다(§3.3).
-		 * 예약된 항목은 폴더 이동만 허용한다(§5.4).
+		 * Saves the latest draft. An identical value leaves the version and modified date unchanged.
+		 * Moving only the folder bumps the version but keeps the content modified date.
+		 * A scheduled entry may only be moved between folders.
 		 */
 		saveWorkingWithReferences: async (params: {
 			entryId: string;
@@ -209,7 +209,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					const currentRefs = await readReferences(client, qSchema, params.entryId, "working");
 					const refsEqual = isReferencesEqual(currentRefs, params.references);
 					const nextSlug = params.snapshot.slug;
-					// 번역 상태를 보내지 않으면(일괄 작업 등) 저장된 값을 그대로 둔다.
+					// If no translation status is sent (bulk operations, etc.), keep the stored value.
 					const translation =
 						params.snapshot.translation === undefined ? (body?.translation ?? null) : params.snapshot.translation;
 					if (translation !== null && locked.translation_group_id === params.entryId) {
@@ -310,7 +310,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		},
 
 		/**
-		 * 번역 묶음(v2 B4). 원문과 번역본을 언어 순서로 준다. 편집 화면의 언어 이동과 `번역본 만들기`가 쓴다.
+		 * Translation group. Returns the source and translations in language order. Used by the editor's language switch and `번역본 만들기`.
 		 */
 		getTranslationGroup: async (params: { entryId: string }): Promise<TranslationGroup> => {
 			const res = await pool.query<{
@@ -350,8 +350,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		getEntry: async (id: string): Promise<Entry> => loadEntry(pool, id, qSchema),
 
 		/**
-		 * 관리자 미리보기 전용 조회. working slug로 항목과 working 본문을 찾는다.
-		 * 공개 조회와 달리 초안·보관·휴지통도 찾으므로 호출자가 관리자 인증을 먼저 통과해야 한다.
+		 * Admin preview lookup only. Finds an entry and its working body by working slug.
+		 * Unlike public reads it also finds drafts, archived, and trashed entries, so the caller must pass admin authentication first.
 		 */
 		getWorkingEntryBySlug: async (params: {
 			collection: string;
@@ -363,7 +363,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			}
 			if (params.slug.trim().length === 0) throw new CmsError("Invalid slug", "invalid_input");
 			const res = await pool.query<{ id: string }>(
-				// 번역본은 원문과 slug를 같이 쓸 수 있어 언어로 가린다(v2 B4).
+				// A translation may share the source's slug, so disambiguate by language.
 				`SELECT id FROM "${qSchema}".entries WHERE collection = $1 AND working_slug = $2 AND locale = $3 LIMIT 1`,
 				[params.collection, params.slug, params.locale ?? DEFAULT_LOCALE],
 			);
@@ -376,10 +376,10 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			}),
 
 		/**
-		 * §6.3 복제: 최신 초안의 본문·필드·관계를 새 ID의 초안으로 복사한다.
-		 * slug·발행 상태·예약·공개본·발행일·생성/수정 시각은 복사하지 않는다.
-		 * `title`을 주면 복제본의 제목(`title` 필드)을 그 값으로 바꾼다. 붙일 말("(복사)" 등)은 부르는 쪽이 정한다.
-		 * 저장소는 받은 값을 그대로 저장하고 제목 필드의 규칙(글자 수 등)만 확인한다.
+		 * Duplicate: copies the latest draft's body, fields, and relations into a new draft with a new ID.
+		 * Slug, publish status, reservation, published version, publish date, and created/modified times are not copied.
+		 * If `title` is given, it replaces the copy's title (`title` field). Any suffix (such as "(copy)") is up to the caller.
+		 * The store saves the given value as is and only checks the title field's rules (length, etc.).
 		 */
 		duplicateEntry: async (params: { id: string; title?: string }): Promise<Entry> =>
 			withTransaction(pool, async (client) => {
@@ -419,7 +419,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					schemaVersion: orig.schema_version,
 					contentHash: computeContentHash(metadata, orig.mdx, orig.schema_version),
 					updatedAt: now,
-					// 복제본은 독립된 원문이다.
+					// The copy is an independent source.
 					translation: null,
 				});
 				await client.query(
@@ -432,7 +432,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				return loadEntry(client, newId, qSchema);
 			}),
 
-		/** 상세 화면의 `사용처`. 필드 관계와 본문 참조를 초안/공개본으로 나눠 준다(§6.1). */
+		/** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
 		getIncomingReferences: async (params: { targetId: string }): Promise<IncomingReferenceItem[]> => {
 			const res = await pool.query<{
 				state: "working" | "published";

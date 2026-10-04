@@ -5,7 +5,7 @@ import { cn, Switch } from "@monti-cms/admin/kit";
 import { isCollection, roleValue, SUMMARY_ROLE } from "@monti-cms/core/client";
 import { SEO_DEFAULT_LIMITS } from "../fields";
 
-/** 권장 글자 수: 필드 `max` → `inputOptions.limit` → 기본값. */
+/** Recommended length: field `max` → `inputOptions.limit` → default. */
 const limitOf = (field: FieldInputProps["field"], fallback: number) => {
 	if ("max" in field && typeof field.max === "number") return field.max;
 	const limit = field.inputOptions?.limit;
@@ -14,7 +14,7 @@ const limitOf = (field: FieldInputProps["field"], fallback: number) => {
 
 const current = (props: FieldInputProps) => (typeof props.value === "string" ? props.value : "");
 
-/** 글자 수. 권장 글자 수를 넘으면 색을 바꾼다. 비었으면 대신 쓸 값의 글자 수다. */
+/** Character count. Changes color when it exceeds the recommended length. When empty, it is the length of the fallback value. */
 function Counter({ length, limit }: { length: number; limit: number }) {
 	return (
 		<span
@@ -28,7 +28,7 @@ function Counter({ length, limit }: { length: number; limit: number }) {
 	);
 }
 
-/** 비었을 때 공개 화면이 대신 쓰는 값으로 안내 문구와 글자 수를 보이는 입력 조각. */
+/** Input piece that shows a hint and character count using the value the public page falls back to when empty. */
 const withFallback = (fallback: (props: FieldInputProps) => string, defaultLimit: number): FieldInputParts => ({
 	placeholder: (props) => fallback(props) || undefined,
 	Aside: (props) => (
@@ -36,16 +36,16 @@ const withFallback = (fallback: (props: FieldInputProps) => string, defaultLimit
 	),
 });
 
-/** 검색 제목: 비우면 제목을 쓴다. */
+/** Search title: falls back to the title when empty. */
 export const seoTitleInput = withFallback((props) => props.form.title, SEO_DEFAULT_LIMITS.title);
 
-/** 검색 설명: 비우면 요약 역할 값을 쓴다. */
+/** Search description: falls back to the summary role value when empty. */
 export const seoDescriptionInput = withFallback(
 	(props) => (isCollection(props.collection) ? roleValue(props.collection, SUMMARY_ROLE, props.form) : ""),
 	SEO_DEFAULT_LIMITS.description,
 );
 
-/** 검색엔진에 숨기기: 이름표 줄의 스위치. 켜면 `noindex`, 끄면 기본값(또는 다른 선택지)이다. */
+/** Hide from search engines: a switch in the label row. On is `noindex`, off is the default (or another option). */
 function NoindexSwitch({ field, id, value, describedBy, context, onChange }: FieldInputProps) {
 	if (field.kind !== "select") return null;
 	const off =

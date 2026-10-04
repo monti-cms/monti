@@ -1,13 +1,13 @@
-/** 낱말 단위 바뀐 곳(문체 다듬기 미리보기). `same`은 그대로, `del`은 빠진 글, `add`는 더한 글이다. */
+/** Word-level changes (style polish preview). `same` is unchanged, `del` is removed text, and `add` is added text. */
 export type DiffPart = { readonly type: "same" | "del" | "add"; readonly text: string };
 
-/** 낱말·공백·문장 부호 단위로 나눈다. 한국어는 어절 단위다. */
+/** Splits into words, whitespace and punctuation. For Korean, the unit is the eojeol (space-separated word). */
 const tokens = (text: string) => text.match(/\s+|[^\s\p{P}]+|\p{P}/gu) ?? [];
 
-/** 비교할 최대 낱말 수. 넘으면 통째로 바뀐 것으로 본다(긴 글의 표 계산을 막는다). */
+/** Maximum number of words to compare. Beyond it, the text is treated as entirely changed (prevents the table computation on long text). */
 const MAX_TOKENS = 3000;
 
-/** 가장 긴 공통 부분열로 두 글의 바뀐 곳을 찾는다. 이웃한 같은 종류는 합친다. */
+/** Finds the changes between two texts using the longest common subsequence. Adjacent runs of the same kind are merged. */
 export function diffWords(before: string, after: string): DiffPart[] {
 	const a = tokens(before);
 	const b = tokens(after);

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 기능 정의·실행 요청 검사의 안내 문구(API 오류로 관리자 화면에 보인다). */
+/** Messages for action definition and run request validation (shown in the admin UI as API errors). */
 export const coreMessages = defineMessages("cms-ai.core", {
 	en: {
 		"image.missing": "There is no image.",

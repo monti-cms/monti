@@ -18,8 +18,8 @@ import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from ".
 type ExtendedStore = ReturnType<typeof createContentStore> & StorePort<Entry>;
 
 /**
- * 본문 컬렉션이 항목 컬렉션을 가리키는 관계 필드. 여러 개를 고르는 필드를 먼저 쓴다(순번 `ordinal`까지 시험한다).
- * 컬렉션·필드 이름은 지금 설정에서 찾는다(`test/any-site.ts`).
+ * A relation field where a body collection points at an item collection. A multi-select field is preferred (it also tests the order `ordinal`).
+ * Collection and field names are looked up in the current config (`test/any-site.ts`).
  */
 const relation = (() => {
 	for (const { name, field, when } of storedFields(contentCollection)) {
@@ -29,7 +29,7 @@ const relation = (() => {
 	}
 	return recordRelationField(contentCollection);
 })();
-/** 참조 대상을 만드는 항목 컬렉션과 참조 위치(메타데이터 경로). 저장소 계약만 보는 테스트는 이름만 쓴다. */
+/** The item collection that creates reference targets and the reference location (metadata path). Tests that only check the store contract use just the name. */
 const targetCollection = relation?.to ?? recordCollection;
 const relationPath = relation?.name ?? "relationId";
 
@@ -59,7 +59,7 @@ function buildReference(overrides: Partial<Reference> = {}): Reference {
 	};
 }
 
-describe("ContentStore References (M2-TW-3 RED tests)", () => {
+describe("ContentStore References", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ExtendedStore;
@@ -82,7 +82,7 @@ describe("ContentStore References (M2-TW-3 RED tests)", () => {
 
 	it.skipIf(!relation)("returns working and current published incoming references separately", async () => {
 		if (!relation) return;
-		// 공개하려면 발행 필수값이 있어야 한다. 이 테스트만 빠진 필수값을 채우는 저장소를 쓴다.
+		// Publishing requires the required-for-publish values. Only this test uses a store that fills in the missing required values.
 		const filled = createContentStore(pool, { schema: schemaName });
 		fillRequiredMetadata(filled);
 		const target = await seedEntry(store, {

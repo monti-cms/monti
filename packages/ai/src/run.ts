@@ -19,14 +19,14 @@ import { runMessages } from "./run.messages";
 const t = createTranslator(runMessages);
 
 /**
- * AI 기능 실행기. 기능 정의(입력·지시문·결과·검사)를 읽어 보낼 자료를 모으고, 방식에 맞게 답을 받아 검사한다.
- * 기능마다 다른 코드는 없다. 새 기능은 정의만 더하면 된다.
+ * AI action runner. Reads an action definition (inputs, instructions, result, validators), gathers the material to send, gets the answer the way the mode requires, and validates it.
+ * No code differs per action. A new action only needs a definition.
  *
- * - 생성: 대화 모델에 지시문과 자료를 보내고 결과 모양(후보·글·MDX·메모)대로 받는다.
- * - 판단: 선택지마다 맞을 확률을 받아 기준 확률 이상인 것만 높은 순으로 후보로 만든다.
+ * - Generate: sends the instructions and material to the chat model and receives the result in the result shape (candidates, text, MDX, note).
+ * - Decide: receives a probability per option and keeps only those at or above the threshold probability, highest first, as candidates.
  */
 
-/** 한 번에 보낼 수 있는 본문 길이(글자). 넘으면 잘라 보내지 않고 거절한다. */
+/** Max body length (characters) that can be sent at once. Longer input is rejected, not truncated. */
 export const MAX_AI_BODY_CHARS = 60_000;
 const MAX_CANDIDATES = 8;
 
@@ -36,39 +36,39 @@ export interface AiOption {
 }
 
 export interface AiRunDeps {
-	/** 생성 모델. 연결되지 않았으면 `null`. */
+	/** Generation model. `null` when not connected. */
 	generator: AiProvider | null;
-	/** 판단 모델. 연결되지 않았으면 `null`. */
+	/** Decision model. `null` when not connected. */
 	decider: AiDecider | null;
-	/** 컬렉션의 고를 수 있는 항목(공개된 것 전체). */
+	/** Selectable items of the collection (all published ones). */
 	loadRecords: (collection: string) => Promise<AiOption[]>;
-	/** 선택 필드의 선택지. 없으면 빈 배열. */
+	/** Options of a select field. Empty array if none. */
 	fieldOptions: (collection: string, field: string) => AiOption[];
-	/** 이미지(미디어 ID 또는 사이트 주소). 읽을 수 없거나 이미지가 아니면 `null`. */
+	/** Image (media ID or site URL). `null` if it cannot be read or is not an image. */
 	loadImage: (image: {
 		mediaId?: string;
 		src?: string;
 	}) => Promise<{ mediaType: Extract<AiContent, { type: "image" }>["mediaType"]; data: string } | null>;
-	/** 본체 콘텐츠 조회. 코드 검사가 받는다(`AiValidatorContext.content`). */
+	/** Main content lookup. Received by code validators (`AiValidatorContext.content`). */
 	content: AiContentLookup;
-	/** 언어 코드 → 그 언어로 쓴 이름(지시문의 언어 입력). */
+	/** Locale code -> name written in that language (language input of the instructions). */
 	languageName: (code: string) => string;
-	/** 공통 문구(고친 값을 얹은 것). 지시문의 `{{shared.이름}}`에 들어간다. */
+	/** Shared texts (with edited values applied). Fills `{{shared.name}}` in the instructions. */
 	shared?: Readonly<Record<string, string>>;
 	signal?: AbortSignal;
 }
 
-/** 한 번 실행할 입력과 공통 정보. */
+/** Input and shared information for one run. */
 export interface AiCall {
 	readonly input: Readonly<Record<string, unknown>>;
 	readonly env: AiRunEnv;
-	/** 실행할 때 적은 추가 요청. */
+	/** Extra request entered at run time. */
 	readonly request?: string;
 }
 
 /**
- * 모든 기능 맨 앞의 지시. 콘텐츠 언어(편집 중인 글의 언어, 없으면 사이트 기본 언어)를 함께 알려 지시문이 "콘텐츠 언어"라고
- * 쓴 자리(자료에서 언어를 알 수 없을 때)에 쓰게 한다.
+ * Instruction at the very start of every action. Also states the content language (language of the text being edited, else the site default language) so that it is used where the instructions say "콘텐츠 언어"
+ * (when the language cannot be determined from the material).
  */
 const systemFrame = (call: AiCall, deps: AiRunDeps) =>
 	[
@@ -79,7 +79,7 @@ const systemFrame = (call: AiCall, deps: AiRunDeps) =>
 		`Content language: ${deps.languageName(call.env.locale ?? DEFAULT_LOCALE)}`,
 	].join("\n");
 
-/** 결과 모양 안내. JSON 모양을 받지 않는 서비스(JSON 모드로 다시 받을 때)도 알아듣게 예시를 붙인다. */
+/** Result shape guide. Includes examples so services that do not accept a JSON schema (when re-requesting in JSON mode) understand it too. */
 const RESULT_RULES: Record<AiResult, string> = {
 	candidates:
 		'Answer with the JSON {"candidates": ["candidate 1", "candidate 2"]}. Do not add explanations or numbers to the candidates.',
@@ -100,15 +100,15 @@ const outputSchema = (result: AiResult) =>
 const escapeMaterial = (text: string) => text.replaceAll("</material>", "<\\/material>");
 
 interface Material {
-	/** 이름 붙은 자료(판단 모델의 state, 가짜 연결의 입력). */
+	/** Named material (state of the decision model, input of the fake connection). */
 	data: Record<string, string>;
-	/** 자료 이름 → 입력 종류. */
+	/** Material name -> input kind. */
 	kinds: Record<string, AiInputKind>;
-	/** 생성 모델에 보낼 태그로 감싼 자료. */
+	/** Material wrapped in tags to send to the generation model. */
 	sections: string[];
 }
 
-/** 선택지 목록. 한 번 실행에서 한 번만 읽는다. */
+/** Option list. Read only once per run. */
 function choiceLoader(action: ResolvedAiAction, deps: AiRunDeps): () => Promise<AiOption[]> {
 	let loaded: Promise<AiOption[]> | undefined;
 	return () => {
@@ -138,7 +138,7 @@ async function collectMaterial(
 		const spec = action.input[name];
 		const value = call.input[name];
 		if (!spec) continue;
-		// 자료 태그는 입력 이름 그대로다.
+		// Material tags use the input name as is.
 		const add = (text: string | undefined, attrs = "") => {
 			if (!text?.trim()) return;
 			material.data[name] = text;
@@ -170,7 +170,7 @@ async function collectMaterial(
 					add(asText(value));
 					break;
 				}
-				// 목록 값(태그 id 등)은 선택지 이름을 붙여 보낸다.
+				// List values (tag id, etc.) are sent with their option names attached.
 				const names = new Map((await choices()).map((option) => [option.value, option.label]));
 				add(
 					asList(value)
@@ -179,7 +179,7 @@ async function collectMaterial(
 				);
 				break;
 			}
-			// 이미지는 생성 방식에서 따로 붙이고, 언어는 지시문에 들어간다.
+			// Images are attached separately in generation mode, and the language goes into the instructions.
 			case "image":
 			case "locale":
 				break;
@@ -197,14 +197,14 @@ const checkContext = (call: AiCall, deps: AiRunDeps, choices?: ReadonlyMap<strin
 	content: deps.content,
 });
 
-/** 켜 둔 코드 검사(적힌 순서대로). */
+/** Enabled code validators (in the order listed). */
 const activeValidators = (action: ResolvedAiAction): AiValidator[] =>
 	action.checks.flatMap((check) => {
 		const code = check.kind === "code" && check.enabled ? action.validators[check.name] : undefined;
 		return code ? [code] : [];
 	});
 
-/** 코드 검사를 후보마다 돌린다. 통과하지 못한 후보는 버리고, 설명을 주면 후보 옆에 붙인다. */
+/** Runs the code validators on each candidate. Candidates that fail are dropped; if a validator gives an explanation, it is attached to the candidate. */
 async function runValidators(
 	action: ResolvedAiAction,
 	call: AiCall,
@@ -229,7 +229,7 @@ async function runValidators(
 	return results.filter((item): item is AiCandidate => item !== null);
 }
 
-/** 글·MDX 결과 전체에 코드 검사를 돌린다. 통과하지 못하면 이유와 함께 실패다. */
+/** Runs the code validators on the whole text/MDX result. If one fails, the run fails with the reason. */
 async function runValidatorsWhole(action: ResolvedAiAction, call: AiCall, deps: AiRunDeps, text: string) {
 	const context = checkContext(call, deps);
 	for (const check of activeValidators(action)) {
@@ -239,10 +239,10 @@ async function runValidatorsWhole(action: ResolvedAiAction, call: AiCall, deps: 
 	}
 }
 
-/** 켜 둔 검사만. */
+/** Only the enabled validators. */
 const activeChecks = (action: ResolvedAiAction) => action.checks.filter((check) => check.enabled);
 
-/** 이미 들어 있는 값(`value` 종류 입력의 값). 후보와 선택지에서 뺀다. */
+/** Values already present (the value of `value` inputs). Excluded from candidates and options. */
 const currentValues = (action: ResolvedAiAction, call: AiCall): string[] =>
 	Object.entries(action.input).flatMap(([name, spec]) => {
 		if (spec.kind !== "value") return [];
@@ -251,7 +251,7 @@ const currentValues = (action: ResolvedAiAction, call: AiCall): string[] =>
 	});
 
 /**
- * 정해진 검사의 재료. 선택지 목록은 검사가 없어도 후보 이름(태그 id → 태그 이름)을 보이려고 모은다.
+ * Material for the fixed validators. The option list is gathered even without validators, to show candidate names (tag id -> tag name).
  */
 async function checkEnv(action: ResolvedAiAction, call: AiCall, choices: () => Promise<AiOption[]>): Promise<CheckEnv> {
 	const env: CheckEnv = { current: currentValues(action, call) };
@@ -292,7 +292,7 @@ async function runGenerate(
 		sections.push("<image>attached image</image>");
 	}
 	if (sections.length === 0) throw new AiError("ai_failed", t("nothingToSend"));
-	// 선택지가 있는 후보(관계·선택 필드)는 선택지 안에서만 고르게 목록을 함께 보낸다. 이미 넣은 값은 뺀다.
+	// For candidates with options (relation/select fields), the list is also sent so the model picks only from the options. Values already entered are excluded.
 	const options =
 		action.choices && action.result === "candidates"
 			? (await choices()).filter((option) => !currentValues(action, call).includes(option.value))
@@ -312,7 +312,7 @@ async function runGenerate(
 		system,
 		content,
 		schema: outputSchema(action.result) as z.ZodType<Record<string, unknown>>,
-		// 생각(reasoning)을 먼저 하는 모델도 끝까지 답하도록 넉넉히 둔다. 짧은 답이면 실제로는 적게 쓴다.
+		// Leave generous room so reasoning models can still finish answering. For short answers it actually uses little.
 		maxTokens: action.result === "candidates" ? 8_000 : 16_000,
 		result: action.result,
 		fake: fakeHint(action, material, options),
@@ -344,15 +344,15 @@ async function runGenerate(
 	};
 }
 
-/** 흘려받기 결과의 답 규칙. JSON이 아닌 일반 글로 받는다. */
+/** Answer rules for streaming results. Received as plain text, not JSON. */
 const STREAM_RULES: Partial<Record<AiResult, string>> = {
 	text: "Answer with the resulting text only. Do not add JSON, explanations, introductions or code fences.",
 	mdx: "Answer with the resulting MDX only. Do not add JSON, explanations or introductions, and do not wrap the whole MDX in a ```mdx code fence (code blocks inside the body stay as they are).",
 };
 
 /**
- * 답 전체를 감싼 MDX 코드 펜스(```mdx … ```, 언어 없는 펜스도)를 벗긴다. 모델이 규칙을 어겨도 본문만 남긴다.
- * 다른 언어의 펜스(예: ```mermaid)는 본문의 코드 블록이라 그대로 둔다.
+ * Strips an MDX code fence (```mdx … ```, or a fence without a language) wrapped around the whole answer. Keeps only the body even if the model breaks the rule.
+ * Fences of other languages (e.g. ```mermaid) are code blocks in the body and are left as they are.
  */
 export const unfence = (text: string) => {
 	const match = text.trim().match(/^```(?:mdx|md|markdown)?\n([\s\S]*?)\n```$/i);
@@ -360,8 +360,8 @@ export const unfence = (text: string) => {
 };
 
 /**
- * 흘려받기 실행(M8-1). 글·MDX 결과를 조각마다 `onDelta`로 넘기고, 다 받으면 실행과 같은 검사를 한 결과를 돌려준다.
- * 검사에 걸리면 받은 글을 버리고 오류다.
+ * Streaming run. Passes text/MDX results to `onDelta` piece by piece and, once everything is received, returns the result after the same validation as a normal run.
+ * If validation fails, the received text is discarded and it is an error.
  */
 export async function streamAiAction(
 	action: ResolvedAiAction,
@@ -380,7 +380,7 @@ export async function streamAiAction(
 	}
 	const material = await collectMaterial(action, call, choiceLoader(action, deps));
 	const instructions = renderInstructions(action, call, deps);
-	// 초안처럼 자료 없이 지시만으로 쓰는 기능도 있다. 자료가 없으면 빈 자료 묶음을 보낸다.
+	// Some actions, like a draft, write from instructions alone without material. With no material, send an empty material bundle.
 	const content: AiContent[] = [{ type: "text", text: `<material>\n${material.sections.join("\n\n")}\n</material>` }];
 	const system = `${systemFrame(call, deps)}\n\n<instructions>\n${instructions}\n</instructions>\n\n${STREAM_RULES[action.result]}`;
 	let received = "";
@@ -409,7 +409,7 @@ export async function streamAiAction(
 	return { kind: "mdx", text };
 }
 
-/** 가짜 연결(개발 전용)이 답을 만들 재료. 기능이 정한 가짜 답(`fake`)은 가짜 연결이 부를 때만 만든다. */
+/** Material from which the fake connection (dev only) builds its answer. The action's fake answer (`fake`) is built only when the fake connection calls. */
 const fakeHint = (action: ResolvedAiAction, material: Material, choices: readonly AiOption[] = []): AiFakeHint => {
 	const fake = action.fake;
 	return {
@@ -421,7 +421,7 @@ const fakeHint = (action: ResolvedAiAction, material: Material, choices: readonl
 	};
 };
 
-/** 이번 실행의 지시문. 언어 입력을 언어 이름으로 넣고, 요청 받기가 켜졌으면 추가 요청을 붙인다. */
+/** Instructions for this run. Fills the language input with the language name and, if requests are enabled, appends the extra request. */
 const renderInstructions = (action: ResolvedAiAction, call: AiCall, deps: AiRunDeps) =>
 	renderPrompt(action, call.input, deps.languageName, call.request, deps.shared);
 
@@ -443,7 +443,7 @@ async function runDecide(
 	}
 
 	const instructions = renderInstructions(action, call, deps);
-	// 선택지 이름 대신 짧은 키로 묻는다(이름에 어떤 글자가 있어도 안전하게).
+	// Ask with short keys instead of option names (safe whatever characters the names contain).
 	const keyed = options.map((option, index) => ({ ...option, key: `o${index}` }));
 	const questions: Record<string, DecisionQuestion> =
 		action.pick === "many"
@@ -480,7 +480,7 @@ async function runDecide(
 		.sort((a, b) => b.probability - a.probability)
 		.slice(0, action.maxCount)
 		.map(({ option }) => option.value);
-	// 판단 결과에도 켜 둔 검사를 적용한다. 선택지 목록이 곧 후보 이름이다.
+	// Validators also apply to decision results. The option list is the candidate names.
 	const env = await checkEnv(action, call, choices);
 	const items = await runValidators(
 		action,

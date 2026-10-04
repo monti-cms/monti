@@ -21,8 +21,8 @@ import { type ContentStore, createContentStore, type Entry, migrateContentStore 
 import { createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
- * 번역 시험에 쓰는 언어·필드. 컬렉션·필드·언어 이름은 지금 설정에서 찾는다(`test/any-site.ts`).
- * 언어가 하나뿐인 설정이면 번역 시험을 건너뛰고, 세 번째 언어가 필요한 경우도 따로 건너뛴다.
+ * Languages and fields used by translation tests. Collection, field, and language names are looked up in the current config (`test/any-site.ts`).
+ * For a config with only one language the translation tests are skipped, and cases that need a third language are skipped separately.
  */
 const second = secondLocale ?? "";
 const thirdLocale = LOCALES.filter((code) => code !== defaultLocale)[1];
@@ -31,12 +31,12 @@ const localized = (() => {
 	const { own, inherit } = localizedFieldNames(contentCollection);
 	return new Set([...own, ...inherit]);
 })();
-/** 제목 말고 언어별 값인 텍스트 필드. 첫째는 번역본도 채우고, 둘째는 원문만 채워 번역본에 섞이지 않는지 본다. */
+/** Per-language text fields other than the title. The first is also filled on translations; the second is filled only on the source to check it does not leak into translations. */
 const [translatedText, sourceOnlyText] = localizedFieldNames(contentCollection).own.filter((name) => {
 	const stored = storedField(contentCollection, name);
 	return name !== "title" && !stored?.when && stored?.field.kind === "text";
 });
-/** 번역 묶음이 같이 쓰는 선택 필드. 원문에 기본값이 아닌 값을 넣어 번역본 공개 값에 따라오는지 본다. */
+/** Select field shared by a translation group. Sets a non-default value on the source to check it carries over to the translation's published values. */
 const commonSelect = (() => {
 	for (const { name, field, when } of storedFields(contentCollection)) {
 		if (when || localized.has(name) || field.kind !== "select") continue;
@@ -45,16 +45,16 @@ const commonSelect = (() => {
 	}
 	return undefined;
 })();
-/** 항목 컬렉션을 가리키는 공통 관계 필드(카테고리 같은 것). */
+/** Shared relation field that points at an item collection (like categories). */
 const relation = (() => {
 	const found = recordRelationField(contentCollection);
 	return found && !localized.has(found.name) ? found : undefined;
 })();
-/** 언어별 이름을 한 레코드 안에 두는 항목 컬렉션. */
+/** Item collection that keeps per-language names inside a single record. */
 const localizedRecord = COLLECTIONS.find((name) => recordLocalizedFields(name).length > 0);
 
-/** v2 B4 다국어: 언어별 문서 + 번역 묶음. */
-describe("번역 묶음(v2 B4)", () => {
+/** Multilingual: per-language documents + translation groups. */
+describe("translation groups", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
@@ -74,7 +74,7 @@ describe("번역 묶음(v2 B4)", () => {
 		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
 	});
 
-	/** 대상 컬렉션의 새 공개 항목. 글마다 새로 만들어 관계로 거를 때 그 글만 나오게 한다. */
+	/** A new published item of the target collection. Created fresh for each entry so that only that entry appears when filtering by relation. */
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const metadata = await requiredMetadata(to, "에세이", relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: `${to}-${++sequence}`, metadata, mdx: "" });
@@ -99,7 +99,7 @@ describe("번역 묶음(v2 B4)", () => {
 		});
 	};
 
-	/** 번역본이 저장하는 언어별 값(제목과 첫 언어별 텍스트). */
+	/** Per-language values a translation stores (title and the first per-language text). */
 	const translatedMetadata = (title: string, text: string) => ({
 		title,
 		...(translatedText ? { [translatedText]: text } : {}),
@@ -107,7 +107,7 @@ describe("번역 묶음(v2 B4)", () => {
 
 	const publish = (entry: Entry) => store.publishEntry({ id: entry.id, expectedVersion: entry.version });
 
-	it("다시 이전해도 결과가 같다(열·기본 키)", async () => {
+	it("gives the same result when migrated again (columns and primary key)", async () => {
 		await migrateContentStore(pool, { schema: schemaName });
 		const pk = await pool.query<{ column_name: string }>(
 			`SELECT column_name FROM information_schema.key_column_usage
@@ -117,8 +117,8 @@ describe("번역 묶음(v2 B4)", () => {
 		expect(pk.rows.map((row) => row.column_name)).toEqual(["collection", "locale", "slug"]);
 	});
 
-	describe.skipIf(!secondLocale)("번역본(언어가 둘 이상)", () => {
-		it("번역본은 원문 주소를 같이 쓰고, 본문은 원문 글을 번역 안내로 감싼 틀에서 시작한다(v3)", async () => {
+	describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
+		it("shares the source slug, and the body starts from a frame that wraps the source text in a translation notice", async () => {
 			const source = await createPost("copy-source");
 			expect(source.locale).toBe(defaultLocale);
 			expect(source.translationGroupId).toBe(source.id);
@@ -141,7 +141,7 @@ describe("번역 묶음(v2 B4)", () => {
 			]);
 		});
 
-		it("같은 언어 번역본은 하나뿐이고, 설정에 없는 언어는 거부한다", async () => {
+		it("allows only one translation per language and rejects a language not in the config", async () => {
 			const source = await createPost("unique-source");
 			await service.createTranslation({ sourceId: source.id, locale: second });
 			await expect(service.createTranslation({ sourceId: source.id, locale: second })).rejects.toMatchObject({
@@ -155,14 +155,14 @@ describe("번역 묶음(v2 B4)", () => {
 			});
 		});
 
-		it.skipIf(!thirdLocale)("번역본의 번역본은 원문에서 만든다", async () => {
+		it.skipIf(!thirdLocale)("creates a translation of a translation from the source", async () => {
 			const source = await createPost("nested-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 			const nested = await service.createTranslation({ sourceId: translation.id, locale: thirdLocale ?? "" });
 			expect(nested.translationGroupId).toBe(source.id);
 		});
 
-		it.skipIf(!relation && !commonSelect)("번역본에 공통 필드를 저장하면 거부한다", async () => {
+		it.skipIf(!relation && !commonSelect)("rejects saving a shared field on a translation", async () => {
 			const source = await createPost("common-source");
 			const [commonKey] = commonFieldKeys(contentCollection, source.working.metadata);
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
@@ -177,7 +177,7 @@ describe("번역 묶음(v2 B4)", () => {
 			).rejects.toMatchObject({ code: "invalid_input" });
 		});
 
-		it("번역본은 원문이 공개돼야 발행되고, 공개 조회는 원문의 공통 값과 합친다", async () => {
+		it("publishes a translation only when the source is published, and public reads merge it with the source's shared values", async () => {
 			const source = await createPost("merge-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 			const saved = await service.saveDraft(translation.id, {
@@ -217,7 +217,7 @@ describe("번역 묶음(v2 B4)", () => {
 			expect(lookup.status === "current" && lookup.entry.id).toBe(translation.id);
 			const original = await store.getPublishedEntryBySlug({ collection: contentCollection, slug: "merge-source" });
 			expect(original.status === "current" && original.entry.id).toBe(source.id);
-			// 번역본이 없는 언어는 찾지 못한다.
+			// A language with no translation is not found.
 			if (thirdLocale) {
 				const missing = await store.getPublishedEntryBySlug({
 					collection: contentCollection,
@@ -227,7 +227,7 @@ describe("번역 묶음(v2 B4)", () => {
 				expect(missing.status).toBe("not_found");
 			}
 
-			// 원문이 공개에서 빠지면 번역본도 공개 계층에서 빠진다.
+			// When the source leaves the public layer, its translations leave it too.
 			const archived = await store.archiveEntry({
 				id: source.id,
 				expectedVersion: (await store.getEntry(source.id)).version,
@@ -241,7 +241,7 @@ describe("번역 묶음(v2 B4)", () => {
 			expect(afterArchive.status).toBe("not_found");
 		});
 
-		it("번역 상태는 번역본만 저장하고, 보내지 않으면 저장된 값을 그대로 둔다(v3)", async () => {
+		it("stores the translation status only on translations, and keeps the stored value when it is not sent", async () => {
 			const source = await createPost("state-source");
 			const base = {
 				collection: contentCollection,
@@ -278,7 +278,7 @@ describe("번역 묶음(v2 B4)", () => {
 			});
 			expect(saved.working.translation).toEqual(translation.working.translation);
 
-			// 번역 상태만 바뀌어도(원문 변경 확인) 저장한다.
+			// Save even when only the translation status changes (acknowledging a source change).
 			const ignored = await service.saveDraft(translation.id, {
 				collection: contentCollection,
 				slug: "state-source",
@@ -291,7 +291,7 @@ describe("번역 묶음(v2 B4)", () => {
 			expect(ignored.working.translation?.baseSource).toBe("바뀐 기준");
 		});
 
-		it("주소는 언어마다 따로다", async () => {
+		it("keeps slugs separate per language", async () => {
 			const first = await createPost("shared-slug");
 			await service.createTranslation({ sourceId: first.id, locale: second });
 			await expect(createPost("shared-slug")).rejects.toMatchObject({ code: "slug_conflict" });
@@ -305,7 +305,7 @@ describe("번역 묶음(v2 B4)", () => {
 				?.version as number;
 
 		it.skipIf(!thirdLocale)(
-			"원문을 휴지통으로 보내면 번역본도 함께 가고, 복원하면 함께 버린 번역본만 돌아온다(v3)",
+			"trashing the source trashes its translations too, and restoring brings back only the translations trashed together",
 			async () => {
 				const source = await createPost("trash-group-source");
 				const together = await service.createTranslation({ sourceId: source.id, locale: second });
@@ -314,7 +314,7 @@ describe("번역 묶음(v2 B4)", () => {
 
 				const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
 				expect(await statusOf(together.id)).toBe("trashed");
-				// 열어 둔 번역본 편집 화면이 충돌로 알아차린다.
+				// A translation editor left open notices it as a conflict.
 				expect(await versionOf(together.id)).toBe(together.version + 1);
 
 				await expect(
@@ -326,13 +326,13 @@ describe("번역 묶음(v2 B4)", () => {
 				expect(await statusOf(together.id)).toBe("draft");
 				expect(await statusOf(apart.id)).toBe("trashed");
 
-				// 원문이 살아 있으면 따로 지운 번역본도 복원된다.
+				// While the source is alive, a translation trashed separately can also be restored.
 				await store.restoreEntry({ id: apart.id, expectedVersion: await versionOf(apart.id) });
 				expect(await statusOf(apart.id)).toBe("draft");
 			},
 		);
 
-		it("원문 보관·보관 해제는 번역본에도 적용된다(v3)", async () => {
+		it("applies archiving and unarchiving the source to its translations too", async () => {
 			const source = await createPost("archive-group-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 			const archived = await store.archiveEntry({ id: source.id, expectedVersion: source.version });
@@ -340,17 +340,17 @@ describe("번역 묶음(v2 B4)", () => {
 			await store.unarchiveEntry({ id: source.id, expectedVersion: archived.version });
 			expect(await statusOf(translation.id)).toBe("draft");
 
-			// 번역본만 보관하면 원문은 그대로다.
+			// Archiving only a translation leaves the source as it is.
 			await store.archiveEntry({ id: translation.id, expectedVersion: await versionOf(translation.id) });
 			expect(await statusOf(source.id)).toBe("draft");
 		});
 
-		it("원문을 영구 삭제하면 휴지통의 번역본도 함께 지우고, 휴지통 밖 번역본이 있으면 거부한다(v3)", async () => {
+		it("permanently deleting the source also deletes trashed translations, and is rejected if a translation outside the trash exists", async () => {
 			const source = await createPost("delete-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
 
-			// 원문만 휴지통에 있고 번역본이 살아 있는 예전 데이터.
+			// Legacy data where only the source is in the trash and the translation is alive.
 			await pool.query(`UPDATE "${schemaName}".entries SET status = 'draft', trashed_at = NULL WHERE id = $1`, [
 				translation.id,
 			]);
@@ -364,7 +364,7 @@ describe("번역 묶음(v2 B4)", () => {
 			expect(await statusOf(translation.id)).toBeUndefined();
 		});
 
-		it("묶음 보기 목록은 원문 한 줄에 언어별 콘텐츠를 딸려 보이고, 검색·언어 필터는 묶음 전체로 본다(v3)", async () => {
+		it("group-view lists attach per-language content to one source row, and search and language filters look at the whole group", async () => {
 			const source = await createPost("group-list-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 			await service.saveDraft(translation.id, {
@@ -374,7 +374,7 @@ describe("번역 묶음(v2 B4)", () => {
 				mdx: "Body",
 				expectedVersion: translation.version,
 			} as never);
-			// 휴지통의 번역본은 묶음 줄에도, "있는 언어"에도 치지 않는다.
+			// A trashed translation counts neither toward the group row nor toward the "existing languages".
 			if (thirdLocale) {
 				const trashedTranslation = await service.createTranslation({ sourceId: source.id, locale: thirdLocale });
 				await store.trashEntry({ id: trashedTranslation.id, expectedVersion: trashedTranslation.version });
@@ -422,25 +422,28 @@ describe("번역 묶음(v2 B4)", () => {
 			}
 		});
 
-		it.skipIf(!relation)("목록은 언어로 거르고 번역본의 태그·카테고리는 원문 값을 보여 준다", async () => {
-			if (!relation) return;
-			const source = await createPost("list-source");
-			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
-			const result = await store.listEntries({ collection: contentCollection, locales: [second], pageSize: 100 });
-			const row = result.items.find((item) => item.id === translation.id);
-			const relatedIds = [source.working.metadata[relation.name]].flat() as string[];
-			expect(result.items.every((item) => item.locale === second)).toBe(true);
-			expect(row?.translationGroupId).toBe(source.id);
-			expect(row?.relations[relation.name]?.map((value) => value.id)).toEqual(relatedIds);
-			const byRelation = await store.listEntries({
-				collection: contentCollection,
-				relations: { [relation.name]: relatedIds },
-				pageSize: 100,
-			});
-			expect(byRelation.items.map((item) => item.id).sort()).toEqual([source.id, translation.id].sort());
-		});
+		it.skipIf(!relation)(
+			"filters lists by language and shows the source's values for a translation's tags and categories",
+			async () => {
+				if (!relation) return;
+				const source = await createPost("list-source");
+				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+				const result = await store.listEntries({ collection: contentCollection, locales: [second], pageSize: 100 });
+				const row = result.items.find((item) => item.id === translation.id);
+				const relatedIds = [source.working.metadata[relation.name]].flat() as string[];
+				expect(result.items.every((item) => item.locale === second)).toBe(true);
+				expect(row?.translationGroupId).toBe(source.id);
+				expect(row?.relations[relation.name]?.map((value) => value.id)).toEqual(relatedIds);
+				const byRelation = await store.listEntries({
+					collection: contentCollection,
+					relations: { [relation.name]: relatedIds },
+					pageSize: 100,
+				});
+				expect(byRelation.items.map((item) => item.id).sort()).toEqual([source.id, translation.id].sort());
+			},
+		);
 
-		it.skipIf(!localizedRecord)("record 컬렉션은 한 레코드 안에 언어별 이름을 둔다", async () => {
+		it.skipIf(!localizedRecord)("keeps per-language names inside a single record for a record collection", async () => {
 			if (!localizedRecord) return;
 			const names = recordLocalizedFields(localizedRecord);
 			const field = names.includes("title") ? "title" : (names[0] as string);

@@ -1,4 +1,4 @@
-// AI 플러그인은 고를 수 있는 의존성이라 타입만 읽는다(블록 확장은 AI 플러그인 코드를 불러오지 않는다).
+// The AI plugin is an optional dependency, so only its types are read (the block extension never loads AI plugin code).
 
 import type { AiActionDefinition, AiContribution } from "@monti-cms/ai";
 import { createActiveTranslator } from "@monti-cms/core";
@@ -6,22 +6,22 @@ import { normalizeChartDsl, parseChartDsl } from "./dsl";
 import { chartMessages } from "./messages";
 
 /**
- * 차트 블록의 AI 기능(`@monti-cms/ai`를 쓰는 사이트만). `chart()` 플러그인이 `contributes.ai`로 더하므로 AI 플러그인을
- * 쓰는 사이트에는 저절로 붙는다(`chartDraft`·`chartEdit`). 지시문을 바꾸려면 같은 이름으로 적고, 끄려면 `false`를 준다.
+ * AI features of the chart block (only for sites using `@monti-cms/ai`). The `chart()` plugin adds them via `contributes.ai`, so they
+ * attach automatically on sites that use the AI plugin (`chartDraft`, `chartEdit`). To change the instructions, set the same name; to turn one off, give `false`.
  *
  * ```ts
  * aiPlugin({ actions: { chartDraft: chartAi.draft({ prompt: "…" }), chartEdit: false } })
  * ```
  */
 
-// 사이트 설정 파일이 읽는 모듈이라 화면 언어는 글자를 읽는 때에 고른다.
+// This module is read by the site config file, so the UI language is picked when the text is read.
 const t = createActiveTranslator(chartMessages);
 
 const lines = (...text: string[]) => text.join("\n");
 
 /**
- * 코드 검사(`@monti-cms/ai`의 `AiValidator`·`defineValidator`와 같은 모양). 모양을 여기 적어 배포 타입 선언이 AI 플러그인을
- * 가리키지 않게 한다(AI 플러그인이 없는 사이트도 타입 검사를 통과한다). 맞는 모양인지는 아래 `satisfies`가 확인한다.
+ * Code validator (same shape as `AiValidator` / `defineValidator` of `@monti-cms/ai`). The shape is written out here so the published type
+ * declarations do not point at the AI plugin (sites without the AI plugin still pass type checking). The `satisfies` below checks the shape matches.
  */
 export interface CodeCheck {
 	readonly kind: "code";
@@ -29,14 +29,14 @@ export interface CodeCheck {
 	readonly label: string;
 	readonly run: (value: string) => string | undefined;
 }
-/** `label`이 글자를 읽는 때에 고르는 getter라 복사하지 않고 속성 정의째 합친다. */
+/** `label` is a getter resolved when the text is read, so merge property definitions instead of copying values. */
 const codeCheck = (check: Omit<CodeCheck, "kind">): CodeCheck =>
 	Object.defineProperties({ kind: "code" as const }, Object.getOwnPropertyDescriptors(check)) as CodeCheck;
 
-/** 차트 문법(`parseChartDsl`) 설명. 지시문에 넣는다. */
+/** Description of the chart syntax (`parseChartDsl`). Goes into the instructions. */
 export const chartSyntaxGuide = (): string => t("ai.guide");
 
-/** 코드 검사: 답이 ```chart 코드 펜스 하나이고 차트 문법(`parseChartDsl`·`normalizeChartDsl`)에 맞는가. */
+/** Code validator: is the answer a single ```chart code fence that matches the chart syntax (`parseChartDsl`, `normalizeChartDsl`). */
 export function validateChart(value: string): string | undefined {
 	const match = value.trim().match(/^```chart[^\n]*\n([\s\S]*?)\n?```$/);
 	if (!match) return t("ai.error.notFence");
@@ -47,7 +47,7 @@ export function validateChart(value: string): string | undefined {
 		: undefined;
 }
 
-/** 결과 문법 검사(코드 검사). 다른 기능에도 `checks`로 넣을 수 있다. */
+/** Result syntax check (code validator). Can also be added to other features via `checks`. */
 export const chartSyntax = codeCheck({
 	name: "chart-syntax",
 	get label() {
@@ -56,7 +56,7 @@ export const chartSyntax = codeCheck({
 	run: validateChart,
 });
 
-/** 가짜 연결(개발 전용)의 답: 문법 검사를 통과하는 차트. 고칠 차트가 있으면 마지막 값 행을 한 번 더 넣는다. */
+/** Answer from the fake connection (dev only): a chart that passes the syntax check. If there is a chart to edit, repeats its last value row once. */
 function fakeChart(input: Readonly<Record<string, string>>): string {
 	const fence = input.block?.trim().match(/^(```chart[^\n]*\n[\s\S]*?)\n?(```)$/);
 	if (fence) {
@@ -78,7 +78,7 @@ function fakeChart(input: Readonly<Record<string, string>>): string {
 }
 
 export const chartAi = {
-	/** 차트 만들기. 슬래시 메뉴에서 요청을 받아 커서 자리에 차트 블록을 넣는다. */
+	/** Create chart. Takes a request from the slash menu and inserts a chart block at the cursor. */
 	draft: (options: { readonly prompt?: string } = {}) =>
 		({
 			get label() {
@@ -109,7 +109,7 @@ export const chartAi = {
 			attach: [{ slot: "insert" }],
 		}) as const satisfies AiActionDefinition,
 
-	/** 차트 고치기. 블록 손잡이 옆에서 요청대로 고치고, 바뀐 곳을 보인 뒤 블록을 바꾼다. */
+	/** Edit chart. Edits as requested from beside the block handle, shows what changed, then replaces the block. */
 	edit: (options: { readonly prompt?: string } = {}) =>
 		({
 			get label() {
@@ -142,7 +142,7 @@ export const chartAi = {
 		}) as const satisfies AiActionDefinition,
 };
 
-/** `chart()`이 AI 플러그인에 더하는 것. 기능 이름은 관리자 AI 화면에서 고친 값의 키다. */
+/** What `chart()` adds to the AI plugin. The feature name is the key of the value edited in the admin AI screen. */
 export const chartAiContribution = {
 	actions: { chartDraft: chartAi.draft(), chartEdit: chartAi.edit() },
 } satisfies AiContribution;

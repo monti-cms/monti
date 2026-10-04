@@ -16,8 +16,8 @@ import {
 import { previewHrefWith } from "../links";
 import { DEFAULT_LOCALE, LOCALES, localePrefix, localePrefixFor, localizePath, localizePathWith } from "../locales";
 
-describe("관리자 주소(admin.path)", () => {
-	it("설정한 관리자 경로 아래 주소를 만든다", () => {
+describe("admin addresses (admin.path)", () => {
+	it("builds addresses under the configured admin path", () => {
 		expect(adminHrefWith("/studio")).toBe("/studio");
 		expect(adminHrefWith("/studio", "/")).toBe("/studio");
 		expect(adminHrefWith("/studio", "/media")).toBe("/studio/media");
@@ -25,7 +25,7 @@ describe("관리자 주소(admin.path)", () => {
 		expect(() => adminHrefWith("/admin", "media")).toThrow(/must start with/);
 	});
 
-	it("사이트 설정을 따른다(없으면 /admin, 사이트 보기는 /)", () => {
+	it("follows the site config (/admin if absent, view site is /)", () => {
 		expect(ADMIN_PATH).toBe(cmsConfig.admin?.path ?? DEFAULT_ADMIN_PATH);
 		expect(adminHref()).toBe(ADMIN_PATH);
 		expect(adminHref("/login")).toBe(`${ADMIN_PATH}/login`);
@@ -34,10 +34,10 @@ describe("관리자 주소(admin.path)", () => {
 	});
 });
 
-describe("하위 경로(Next basePath)", () => {
+describe("sub-path (Next basePath)", () => {
 	afterEach(() => vi.unstubAllEnvs());
 
-	it("basePath가 없으면 주소가 그대로다", () => {
+	it("addresses are unchanged without basePath", () => {
 		vi.stubEnv("NEXT_PUBLIC_CMS_BASE_PATH", "");
 		expect(cmsBasePath()).toBe("");
 		expect(cmsApiUrl("/v1/entries?page=2")).toBe("/api/cms/v1/entries?page=2");
@@ -45,7 +45,7 @@ describe("하위 경로(Next basePath)", () => {
 		expect(adminUrl("/login")).toBe(adminHref("/login"));
 	});
 
-	it("basePath가 있으면 API 주소와 브라우저 주소 앞에 붙고, Link용 adminHref는 그대로다", () => {
+	it("basePath prefixes API and browser addresses, while adminHref for Link is unchanged", () => {
 		vi.stubEnv("NEXT_PUBLIC_CMS_BASE_PATH", "/blog");
 		expect(cmsApiUrl("/v1/entries/e1")).toBe("/blog/api/cms/v1/entries/e1");
 		expect(withBasePath("/preview/post/a")).toBe("/blog/preview/post/a");
@@ -54,7 +54,7 @@ describe("하위 경로(Next basePath)", () => {
 		expect(adminHref("/login")).toBe(`${ADMIN_PATH}/login`);
 	});
 
-	it("basePath 값의 앞뒤 빗금을 고른다", () => {
+	it("normalizes leading and trailing slashes of the basePath value", () => {
 		expect(normalizeBasePath(undefined)).toBe("");
 		expect(normalizeBasePath("")).toBe("");
 		expect(normalizeBasePath("/")).toBe("");
@@ -62,13 +62,13 @@ describe("하위 경로(Next basePath)", () => {
 		expect(normalizeBasePath("/a/b//")).toBe("/a/b");
 	});
 
-	it("API 경로는 /로 시작해야 한다", () => {
+	it("API paths must start with /", () => {
 		expect(() => cmsApiUrl("v1/entries")).toThrow(/must start with/);
 	});
 });
 
-describe("언어 주소(site.localePrefix)", () => {
-	it("방식마다 접두사가 다르다", () => {
+describe("locale addresses (site.localePrefix)", () => {
+	it("the prefix differs per style", () => {
 		expect(localePrefixFor("ko", "except-default", "ko")).toBe("");
 		expect(localePrefixFor("en", "except-default", "ko")).toBe("/en");
 		expect(localePrefixFor("ko", "always", "ko")).toBe("/ko");
@@ -78,7 +78,7 @@ describe("언어 주소(site.localePrefix)", () => {
 		expect(localizePathWith("", "/posts/a")).toBe("/posts/a");
 	});
 
-	it("사이트 설정을 따르고, 모르는 언어에는 붙이지 않는다", () => {
+	it("follows the site config and adds no prefix to unknown locales", () => {
 		const mode = cmsConfig.site?.localePrefix ?? "except-default";
 		for (const locale of LOCALES) {
 			expect(localePrefix(locale)).toBe(localePrefixFor(locale, mode, DEFAULT_LOCALE));
@@ -88,9 +88,9 @@ describe("언어 주소(site.localePrefix)", () => {
 	});
 });
 
-describe("미리보기 주소의 언어(site.previewLocaleParam)", () => {
+describe("locale of preview addresses (site.previewLocaleParam)", () => {
 	const base = { previewPath: "/preview/", path: "/posts/a", defaultLocale: "ko" };
-	it("기본은 기본 언어가 아닐 때 `?locale=`이다", () => {
+	it("by default `?locale=` is used when the locale is not the default", () => {
 		expect(previewHrefWith({ ...base, locale: "en", param: "locale", localePrefix: "/en" })).toBe(
 			"/preview/posts/a?locale=en",
 		);
@@ -100,7 +100,7 @@ describe("미리보기 주소의 언어(site.previewLocaleParam)", () => {
 		);
 	});
 
-	it("`false`면 언어 접두사를 경로에 넣는다", () => {
+	it("with `false` the locale prefix goes in the path", () => {
 		expect(previewHrefWith({ ...base, locale: "en", param: false, localePrefix: "/en" })).toBe("/preview/en/posts/a");
 		expect(previewHrefWith({ ...base, locale: "ko", param: false, localePrefix: "" })).toBe("/preview/posts/a");
 	});

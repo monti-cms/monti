@@ -1,6 +1,6 @@
 import { defineMessages, josa } from "@monti-cms/core";
 
-/** 편집 화면(입력칸·복구 창·언어 탭·속성 칸·원문 창·템플릿 메뉴)의 문구(M15). 머리글·본체는 `entry-editor-shell.messages.ts`. */
+/** Messages for the editor screen (fields, restore dialog, locale tabs, property panel, source dialog, template menu). The header and shell live in `entry-editor-shell.messages.ts`. */
 export const entriesMessages = defineMessages("cms-admin.entries", {
 	en: {
 		untitled: "Untitled",

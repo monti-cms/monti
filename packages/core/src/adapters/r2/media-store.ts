@@ -17,7 +17,7 @@ import {
 	type StoredFileHead,
 } from "./types";
 
-/** S3 API 미디어 저장소(R2·S3·MinIO 등). 미리 서명한 주소로 올리고 서버가 확인한 뒤 옮긴다. */
+/** S3 API media store (R2, S3, MinIO, etc.). Uploads via presigned URLs, then the server verifies and moves the file. */
 export function createS3MediaStore(config: MediaStoreConfig): MediaStore {
 	const s3 = new S3Client({
 		region: config.region ?? "auto",
@@ -139,7 +139,7 @@ export function createS3MediaStore(config: MediaStoreConfig): MediaStore {
 					Bucket: config.bucket,
 					CopySource: `${config.bucket}/${input.stagingKey}`,
 					Key: input.finalKey,
-					// 글자 파일은 한글이 깨지지 않게 문자 집합을 붙인다.
+					// Text files get a charset so Korean does not get garbled.
 					ContentType: input.contentType.startsWith("text/")
 						? `${input.contentType}; charset=utf-8`
 						: input.contentType,
@@ -189,8 +189,8 @@ export function createS3MediaStore(config: MediaStoreConfig): MediaStore {
 					{ abortSignal: input.signal },
 				);
 			} catch (error) {
-				// S3 DeleteObject는 없는 키에도 성공한다. 404만 이미 지워진 것으로 보고, 그 밖의 실패는 올려
-				// 호출자가 `deleting` 상태를 남겨 다시 시도하게 한다(§7.3).
+				// S3 DeleteObject succeeds even for missing keys. Only a 404 counts as already deleted; for any other failure, raise it so
+				// the caller leaves the `deleting` state and retries.
 				const status = (error as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
 				if (status === 404) return;
 				throw error;

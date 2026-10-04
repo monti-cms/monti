@@ -1,50 +1,50 @@
 /**
- * `::image`의 주소 해석 규칙.
+ * Address resolution rules for `::image`.
  *
- * 사이트의 공개 이미지 렌더러와 발행 전 검사가 **같은 함수**를 쓴다 —
- * 허용 규칙을 두 곳에 복사하면 한쪽만 고치는 실수가 난다.
+ * The site's public image renderer and the pre-publish check use **the same function** —
+ * copying the allow rules into two places leads to fixing only one of them.
  *
- * **해석 실패 계약(§4.4, A3 확정):** 공개 화면은 중립 플레이스홀더와 캡션을 남기고 `width`·`align`은 적용하지 않는다.
- * 내부 실패 사유는 공개 화면에 노출하지 않는다. `alt` 글자로 대체하지 않는다 — 문서 의미가 조용히 바뀌고 장식 이미지는 대체할 alt가 없다.
+ * **Resolution failure contract:** the public page keeps a neutral placeholder and the caption, and does not apply `width` or `align`.
+ * The internal failure reason is not shown on the public page. It is not replaced with the `alt` text — that would silently change the document's meaning, and decorative images have no alt to substitute.
  *
- * 비차단 경고 대상은 **정상 데이터에서 실제로 발생하는 3가지**뿐이다:
- * ① 미디어 행은 있으나 `ready` 아님 ② `ready`인데 저장소 객체를 해석할 수 없음 ③ 외부 `src`가 허용 규칙에 걸림.
- * 미디어 행이 아예 없는 경우는 `entry_references`의 FK·CHECK와 발행 검사가 먼저 막으므로 경고 대상이 아니다.
+ * Non-blocking warnings cover only **3 cases that actually occur with valid data**:
+ * (1) a media row exists but is not `ready`, (2) it is `ready` but the storage object cannot be resolved, (3) an external `src` violates the allow rules.
+ * A missing media row is already blocked by the FK/CHECK on `entry_references` and by the publish check, so it is not a warning case.
  */
 
 export type ImageResolveFailure =
-	/** 미디어 행은 있는데 업로드가 `ready`가 아니다. */
+	/** A media row exists but the upload is not `ready`. */
 	| "not-ready"
-	/** 미디어 행은 `ready`인데 객체(저장소 키)를 해석하지 못했다. */
+	/** The media row is `ready` but the object (storage key) could not be resolved. */
 	| "unresolved"
-	/** 허용되지 않는 주소다(`javascript:` 등). */
+	/** The address is not allowed (`javascript:` etc.). */
 	| "rejected";
 
-/** `width`·`height`는 등록 미디어의 원본 픽셀 크기다. 알면 공개 화면이 로드 전에 자리를 잡는다. */
+/** `width` and `height` are the original pixel size of the registered media. When known, the public page reserves space before loading. */
 export type ImageResolveResult =
 	| {
 			url: string;
 			width?: number;
 			height?: number;
-			/** 첨부 파일 카드(v3)가 쓰는 올린 파일 정보. */
+			/** Uploaded file info used by the attachment file card. */
 			file?: { filename: string; byteSize: number | null; mimeType: string | null };
 	  }
 	| { failure: ImageResolveFailure };
 
 export type ImageResolver = (input: { mediaId?: string; src?: string }) => ImageResolveResult;
 
-/** 절대 http(s) 또는 사이트 상대 경로만 통과시킨다. 실행 가능한 URL(`javascript:`, `data:`)은 거부한다. */
+/** Lets only absolute http(s) or site-relative paths through. Executable URLs (`javascript:`, `data:`) are rejected. */
 export const resolveImageUrl = (src: string | undefined): ImageResolveResult | null => {
 	const trimmed = src?.trim();
 	if (!trimmed) return null;
-	// `//host/path`는 프로토콜 상대 주소라 사이트 상대 경로로 취급하지 않는다.
+	// `//host/path` is a protocol-relative address, so it is not treated as a site-relative path.
 	if (trimmed.startsWith("//")) return { failure: "rejected" };
 	if (/^https?:\/\//i.test(trimmed)) return { url: trimmed };
 	if (trimmed.startsWith("/")) return { url: trimmed };
 	return { failure: "rejected" };
 };
 
-/** 외부 `src`가 허용 규칙을 통과하는가. 발행 전 검사가 경고를 만들 때 쓴다. */
+/** Whether an external `src` passes the allow rules. Used when the pre-publish check builds warnings. */
 export const isAllowedImageSrc = (src: string | undefined): boolean => {
 	const resolved = resolveImageUrl(src);
 	return resolved !== null && "url" in resolved;

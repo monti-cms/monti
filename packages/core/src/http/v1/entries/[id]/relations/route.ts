@@ -1,7 +1,7 @@
 import { getCmsContentStore } from "../../../../../container";
 import { adminRoute, json } from "../../../handler";
 
-/** 이 항목의 사용처(역참조). 초안과 공개본 사용처를 구분한다(§6.1). */
+/** Where this entry is used (back references). Distinguishes draft and published usages. */
 export const GET = adminRoute<{ id: string }>(async ({ params }) => {
 	const store = getCmsContentStore();
 	await store.getEntry(params.id);

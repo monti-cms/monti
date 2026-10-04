@@ -22,17 +22,17 @@ export type BulkItem = { readonly id: string; readonly expectedVersion: number }
 export type BulkRequest = {
 	readonly op: BulkOp;
 	readonly items: readonly BulkItem[];
-	/** `relation.*`이 바꾸는 관계 필드 이름. */
+	/** Name of the relation field that `relation.*` changes. */
 	readonly field?: string;
-	/** `relation.add`·`relation.remove`: 여러 개 관계 필드에 더하거나 뺄 ID. */
+	/** `relation.add` and `relation.remove`: IDs to add to or remove from a multi-value relation field. */
 	readonly ids?: readonly string[];
-	/** `relation.set`: 하나짜리 관계 필드의 새 값. `null`이면 비운다. */
+	/** `relation.set`: new value of a single-value relation field. Cleared if `null`. */
 	readonly id?: string | null;
 	readonly folderId?: string | null;
 };
 
 const RELATION_LIST_OPS: readonly BulkOp[] = ["relation.add", "relation.remove"];
-/** 영구 삭제를 막은 참조(사용처). 휴지통 화면이 사유(`사용 중: ○○`)로 보여 준다. */
+/** References (usages) that blocked permanent deletion. The trash screen shows them as a reason (e.g. "in use: X"). */
 export type BulkUsage = {
 	readonly entryId: string;
 	readonly title: string | null;
@@ -51,9 +51,9 @@ export type BulkItemResult =
 
 const MAX_ITEMS = 100;
 
-/** 일괄 작업이 저장소에 요구하는 계약. 영구 삭제는 일괄 작업에서만 쓰므로 공통 `StorePort`에 넣지 않는다. */
+/** Contract a bulk operation requires from the store. Permanent deletion is used only in bulk operations, so it is not put in the shared `StorePort`. */
 export interface BulkStorePort<T = unknown> extends StorePort<T> {
-	/** 휴지통 항목만 영구 삭제한다. 다른 콘텐츠가 참조하면 `in_use`(details.usages)로 거부한다. */
+	/** Permanently deletes only trash items. Rejects with `in_use` (details.usages) if other content references it. */
 	permanentDeleteEntry(params: { id: string; expectedVersion: number }): Promise<void>;
 }
 
@@ -89,14 +89,14 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>) => (
 			}
 			try {
 				if (request.op === "permanentDelete") {
-					// 휴지통 여부·참조는 저장소가 검사한다.
+					// The store checks whether it is in the trash and whether it is referenced.
 					try {
 						await storePort.permanentDeleteEntry({ id: item.id, expectedVersion: item.expectedVersion });
 					} catch (error) {
-						// 같은 요청에서 먼저 지운 원문이 번역본을 함께 지웠다(v3). 이미 없는 항목은 지운 것으로 본다.
+						// The source deleted earlier in the same request also deleted its translations. An item that is already gone counts as deleted.
 						if ((error as { code?: unknown })?.code !== "not_found") throw error;
 					}
-					// 삭제된 항목에는 새 버전이 없다. 요청한 버전을 그대로 돌려준다.
+					// A deleted item has no new version. Returns the requested version as is.
 					results.push({ id: item.id, ok: true, version: item.expectedVersion });
 					continue;
 				}
@@ -118,14 +118,14 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>) => (
 				let folderId: string | null | undefined;
 				if (request.op.startsWith("relation.")) {
 					const field = request.field ?? "";
-					// 이 컬렉션의 관계 필드만 바꾼다. 더하기·빼기는 여러 개, 지정은 하나짜리 관계다.
+					// Changes only this collection's relation fields. Add and remove are for multi-value relations, set is for single-value ones.
 					const relation = storedField(working.collection, field)?.field;
 					const many = request.op !== "relation.set";
 					if (relation?.kind !== "relation" || (relation.many === true) !== many) {
 						throw new ServiceError("invalid_input");
 					}
 					if (many) {
-						// 값이 하나도 없는 관계는 키 자체가 없다(편집기가 빈 배열을 지운다).
+						// A relation with no values has no key at all (the editor removes empty arrays).
 						const value = metadata[field];
 						const current = Array.isArray(value) ? value.filter((t): t is string => typeof t === "string") : [];
 						const ids = request.ids ?? [];

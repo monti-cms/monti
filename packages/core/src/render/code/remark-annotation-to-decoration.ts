@@ -193,7 +193,7 @@ export function remarkAnnotationToShikiDecoration(annotationConfig: AnnotationCo
 			const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, annotationConfig);
 
 			node.value = payload.code;
-			// `hProperties`는 mdast-util-to-hast가 읽는 값이라, 이 패키지는 그 타입을 끌어오지 않고 직접 좁힌다.
+			// `hProperties` is a value read by mdast-util-to-hast, so this package narrows it directly instead of pulling in that type.
 			node.data ??= {};
 			const data = node.data as HProperties;
 			data.hProperties = {

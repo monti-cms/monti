@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ADDED_BLOCKS, BLOCKS } from "../../blocks/active";
 import { analyze } from "../analyze";
 
-/** 본문을 담는 블록의 공개 컴포넌트 이름. 사이트가 더한 컨테이너 블록이 있으면 그것을, 없으면 본체 블록을 쓴다. */
+/** Public component name of a block that holds body content. Uses the site's added container block if there is one, otherwise the core block. */
 const container = [...ADDED_BLOCKS, ...BLOCKS].find((block) => block.syntax.kind === "container" && !block.parent);
 if (!container) throw new Error("analyze-security test: no container block");
 const Box = container.component;
@@ -13,18 +13,18 @@ const errorCodes = (source: string) =>
 		.join(" | ");
 
 /**
- * M7-SEC-1 P2: `EVENT_HANDLER_NAME`이 `/^on[A-Z]/`였을 때 `onerror`(소문자)가 통과했다.
- * React는 DOM 속성 이름을 대소문자와 무관하게 다루므로 소문자 핸들러도 거부해야 한다.
+ * When `EVENT_HANDLER_NAME` was `/^on[A-Z]/`, `onerror` (lowercase) passed through.
+ * React handles DOM attribute names case-insensitively, so lowercase handlers must be rejected too.
  */
-describe("JSX 이벤트 핸들러 속성 거부", () => {
-	it("대소문자와 무관하게 이벤트 핸들러 속성을 거부한다", () => {
+describe("rejects JSX event handler attributes", () => {
+	it("rejects event handler attributes regardless of case", () => {
 		expect(errorCodes(`<${Box} onClick="x">a</${Box}>`)).toBe("event_handler_attribute");
 		expect(errorCodes(`<${Box} onclick="x">a</${Box}>`)).toBe("event_handler_attribute");
 		expect(errorCodes(`<${Box} onerror="x">a</${Box}>`)).toBe("event_handler_attribute");
 		expect(errorCodes(`<${Box} ONERROR="x">a</${Box}>`)).toBe("event_handler_attribute");
 	});
 
-	it("이벤트 핸들러가 아닌 속성은 통과시킨다", () => {
+	it("lets attributes that are not event handlers through", () => {
 		expect(errorCodes(`<${Box} title="t">a</${Box}>`)).toBe("");
 	});
 });

@@ -32,7 +32,7 @@ interface DeleteDialog {
 	contents: { entryCount: number; childFolders: Folder[] } | null;
 }
 
-/** `folder`와 그 자손을 뺀, 옮겨 갈 수 있는 부모 후보. 순환 구조는 서버도 거부한다(§3.3). */
+/** Parent candidates to move to, excluding `folder` and its descendants. The server also rejects cycles. */
 export function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[] {
 	const blocked = new Set([folder.id]);
 	let grew = true;
@@ -49,8 +49,8 @@ export function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[] {
 }
 
 /**
- * 폴더의 오른쪽 클릭·`⋯` 메뉴. 사이드바 트리와 목록의 폴더 줄이 같은 메뉴를 쓴다.
- * 이동 대상은 자기 자신과 자손을 뺀 폴더다.
+ * Right-click / `⋯` menu of a folder. The sidebar tree and the list's folder rows use the same menu.
+ * Move targets are folders excluding itself and its descendants.
  */
 export function folderMenuActions(folder: Folder, folders: Folder[], actions: FolderActions): MenuAction[] {
 	const targets = moveTargetsFor(folder, folders);
@@ -100,8 +100,8 @@ export function folderMenuActions(folder: Folder, folders: Folder[], actions: Fo
 }
 
 /**
- * 가상 폴더 생성·이름 변경·이동·삭제(§3.3). 사이드바 트리와 목록의 폴더 행이 같은 상태와 대화상자를 쓴다.
- * 삭제는 내용물을 미리 보여 준 뒤 진행한다. 직접 속한 글과 자식 폴더는 부모로 옮기고 글은 삭제하지 않는다.
+ * Virtual folder create, rename, move and delete. The sidebar tree and the list's folder rows share the same state and dialogs.
+ * Delete proceeds after previewing the contents. Posts and child folders directly inside move to the parent, and posts are not deleted.
  */
 export function useFolderActions({
 	collection,
@@ -117,7 +117,7 @@ export function useFolderActions({
 	const [deleteDialog, setDeleteDialog] = useState<DeleteDialog | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [isBusy, setIsBusy] = useState(false);
-	// 대화상자를 닫으면 연 버튼으로 초점을 돌려준다. 그 버튼이 사라졌으면(삭제된 폴더) 브라우저 기본값을 따른다.
+	// Closing the dialog returns focus to the button that opened it. If that button is gone (deleted folder), follow the browser default.
 	const returnFocusRef = useRef<HTMLElement | null>(null);
 	const rememberFocus = () => {
 		returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -133,7 +133,7 @@ export function useFolderActions({
 		id
 			? `'${folders.find((f) => f.id === id)?.name ?? t("folder.parentFallback")}'`
 			: t("folder.rootName", { itemLabel });
-	/** 옮겨 갈 곳 + 조사(조사는 한국어 사전이 붙인다). */
+	/** Destination + particle (the Korean dictionary attaches the particle). */
 	const toFolder = (id: string | null) => t(id ? "folder.to.named" : "folder.to.root", { name: folderName(id) });
 
 	const requestCreate = (parentId: string | null) => {
@@ -162,7 +162,7 @@ export function useFolderActions({
 		}
 	};
 
-	/** 폴더를 다른 부모(또는 최상위)로 옮긴다. 같은 이름이 있으면 서버가 거부하고 안내한다. */
+	/** Moves a folder to another parent (or the top level). If the same name exists, the server rejects and explains. */
 	const moveFolder = async (folder: Folder, parentId: string | null) => {
 		try {
 			await cmsFetch(cmsApiUrl(`/v1/folders/${folder.id}`), {
@@ -231,7 +231,7 @@ export function useFolderActions({
 			setDeleteDialog(null);
 			await onChanged(deletedId);
 		} catch (err) {
-			// 자식 폴더 이름이 부모에서 겹치면 먼저 이름을 바꾸도록 안내한다(§3.3).
+			// If a child folder name collides in the parent, guide the user to rename first.
 			setError(errorText(err, t("folder.deleteFailed")));
 		} finally {
 			setIsBusy(false);
@@ -277,7 +277,7 @@ export function useFolderActions({
 								aria-invalid={Boolean(error) || undefined}
 								onChange={(e) => setName(e.target.value)}
 								onKeyDown={(event) => {
-									// 한글 조합 중 Enter는 글자를 끝내는 키다. 폼을 보내지 않는다.
+									// While composing Hangul, Enter is the key that finishes the character. Do not submit the form.
 									if (event.key === "Enter" && (event.nativeEvent.isComposing || event.keyCode === 229)) {
 										event.preventDefault();
 									}

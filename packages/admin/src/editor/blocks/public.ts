@@ -1,5 +1,5 @@
 /**
- * 블록 편집 화면을 만드는 도구(`@monti-cms/admin/blocks`). 블록 확장이 편집 화면 전체(`blockViews`)를 그릴 때 쓴다.
+ * Tools for building block editing views (`@monti-cms/admin/blocks`). Used when a block extension draws the whole editing view (`blockViews`).
  */
 
 export { blockNodeName } from "./added/shared";

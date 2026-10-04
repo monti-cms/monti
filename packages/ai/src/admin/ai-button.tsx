@@ -12,19 +12,19 @@ import { useAiAction } from "./use-ai-action";
 const t = createTranslator(aiCommonMessages);
 
 export interface AiButtonProps<K extends AiActionKey> {
-	/** 부를 기능 이름(사이트 설정의 `aiPlugin({ actions })`). */
+	/** Action name to call (`aiPlugin({ actions })` in the site config). */
 	action: K;
-	/** 누를 때 읽는 입력. 이름·타입은 기능 정의에서 나온다. */
+	/** Input read on click. Names and types come from the action definition. */
 	input: () => AiActionInputOf<K>;
-	/** 결과. 값을 바꿀지는 받는 쪽이 정한다. */
+	/** Result. The receiver decides whether to change any value. */
 	onResult: (result: AiActionResultOf<K>) => void;
-	/** 버튼 글자. 없으면 기능 이름(관리자 AI 화면의 이름)이다. */
+	/** Button label. Defaults to the action name (its name in the admin AI screen). */
 	children?: ReactNode;
 	className?: string;
 }
 
 /**
- * 직접 만든 화면(플러그인 화면·필드 입력 등)에 넣는 AI 버튼. 기능이 꺼져 있거나 연결이 없으면 그리지 않는다.
+ * AI button for custom screens (plugin screens, field inputs, etc.). Renders nothing if the action is off or has no connection.
  *
  * ```tsx
  * <AiButton action="summary" input={() => ({ title, body })} onResult={(result) => setSummary(result.text)} />

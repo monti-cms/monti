@@ -13,21 +13,21 @@ import { checkSegments, type DocTextIssue, ignoreKey, placeIssues, TextCheckCach
 
 const t = createTranslator(textCheckMessages);
 
-/** 저절로 검사(`auto: true`)는 입력을 이만큼 멈추면 돈다. */
+/** Auto check (`auto: true`) runs once input pauses for this long. */
 export const AUTO_CHECK_DELAY = 1500;
 
 export interface TextCheckController {
 	readonly editor: Editor;
-	/** 이 검사의 밑줄 플러그인 이름표(검사 확장마다 따로다). */
+	/** Name tag for this check's underline plugin (separate per check extension). */
 	readonly pluginKey: PluginKey<TextCheckPluginState>;
-	/** 이 글의 언어를 검사하는 검사기. */
+	/** Checkers that check the language of this text. */
 	readonly checkers: readonly TextChecker[];
-	/** 검사 중인 검사기 `id`(버튼으로 연 검사). 없으면 `null`. */
+	/** `id` of the checker currently running (a check opened with the button). `null` if none. */
 	readonly running: string | null;
 	readonly issues: readonly DocTextIssue[];
-	/** 열린 결과 창. `focus`면 창 안으로 초점을 옮긴다(목록에서 고른 때). */
+	/** The open result window. With `focus`, focus moves into the window (when picked from the list). */
 	readonly open: { readonly key: string; readonly focus: boolean } | null;
-	/** 검사기 하나(`id`)로 검사한다. */
+	/** Checks with one checker (`id`). */
 	readonly run: (checkerId: string) => Promise<void>;
 	readonly close: () => void;
 	readonly jump: (issue: DocTextIssue) => void;
@@ -42,11 +42,11 @@ const isAbort = (error: unknown) => error instanceof DOMException && error.name 
 const errorMessage = (error: unknown) => (error instanceof Error && error.message ? error.message : undefined);
 
 /**
- * 편집기의 맞춤법·문장 검사. 그 글의 언어를 검사하는 검사기가 없으면 `null`이고 아무것도 하지 않는다.
+ * Spelling and sentence check for the editor. If no checker handles the language of the text, this is `null` and does nothing.
  *
- * - 버튼(`run`)으로 검사한다. 고른 글자가 있으면 그 범위에 걸친 문단만, 없으면 문서 전체를 검사한다.
- * - `auto: true`인 검사기만 입력을 멈추면 바뀐 문단을 저절로 검사한다.
- * - 같은 글자의 문단은 다시 보내지 않는다(검사기·언어·글자별 캐시). 다시 검사하거나 닫으면 진행 중인 요청을 끊는다.
+ * - The button (`run`) runs a check. With selected text, only the paragraphs spanning that range are checked; otherwise the whole document.
+ * - Only checkers with `auto: true` automatically check changed paragraphs once input pauses.
+ * - A paragraph with the same text is not sent again (cache per checker, language and text). Re-checking or closing aborts in-flight requests.
  */
 export function useTextCheck(
 	editor: Editor | null,
@@ -59,7 +59,7 @@ export function useTextCheck(
 	const manualRef = useRef<AbortController | null>(null);
 	const autoRef = useRef<AbortController | null>(null);
 	const [running, setRunning] = useState<string | null>(null);
-	// 검사 확장을 여럿 넣어도 밑줄 플러그인이 겹치지 않게 확장마다 이름표를 따로 둔다.
+	// Give each extension its own name tag so underline plugins do not collide even with several check extensions.
 	const [pluginKey] = useState(() => new PluginKey<TextCheckPluginState>("cmsTextCheck"));
 	const [open, setOpen] = useState<TextCheckController["open"]>(null);
 
@@ -84,7 +84,7 @@ export function useTextCheck(
 		};
 	}, [editor, active, pluginKey]);
 
-	/** 검사한 문단(이름)의 결과를 지금 문서에 다시 놓는다. 검사 중 문단 글자가 바뀌었으면(이름이 달라져) 건너뛴다. */
+	/** Puts the result for a checked paragraph (name) back onto the current document. Skipped if the paragraph text changed during the check (so its name differs). */
 	const place = useCallback(
 		(
 			current: Editor,
@@ -112,7 +112,7 @@ export function useTextCheck(
 		[cache, ignored, locale, pluginKey],
 	);
 
-	/** 검사기마다 따로 돌린다. 끝난 검사기와 실패한 검사기(끊긴 것 제외)를 돌려준다. */
+	/** Runs per checker separately. Returns the checkers that finished and those that failed (excluding aborted ones). */
 	const checkAll = useCallback(
 		async (list: readonly TextChecker[], segments: readonly DocSegment[], signal: AbortSignal) => {
 			const results = await Promise.allSettled(
@@ -175,7 +175,7 @@ export function useTextCheck(
 		[editor, active, locale, checkers, checkAll, place],
 	);
 
-	// 저절로 검사: `auto: true`인 검사기만, 열었을 때와 다른 문단(바뀐 문단)만.
+	// Auto check: only checkers with `auto: true`, and only paragraphs that differ from when opened (changed paragraphs).
 	useEffect(() => {
 		if (!editor || !active) return;
 		const autoCheckers = checkers.filter((checker) => checker.auto);
@@ -189,7 +189,7 @@ export function useTextCheck(
 		let failedOnce = false;
 		const fire = async () => {
 			if (editor.isDestroyed) return;
-			// 조합 중이거나 버튼 검사가 도는 동안은 미룬다.
+			// Defer while composing or while a button check is running.
 			if (editor.view.composing || manualRef.current) {
 				timer = setTimeout(fire, AUTO_CHECK_DELAY);
 				return;
@@ -203,9 +203,9 @@ export function useTextCheck(
 			if (controller.signal.aborted || editor.isDestroyed) return;
 			if (autoRef.current === controller) autoRef.current = null;
 			if (done.length > 0) place(editor, done, new Set(segments.map((segment) => segment.id)));
-			// 다 끝난 문단은 다음 저절로 검사에서 다시 놓지 않는다(결과는 위치를 따라간다).
+			// Fully finished paragraphs are not placed again by the next auto check (results follow their positions).
 			if (failed.length === 0) for (const segment of segments) known.add(segment.text);
-			// 저절로 검사의 실패는 한 번만 알린다(입력할 때마다 알림이 쌓이지 않게).
+			// Report an auto check failure only once (so notifications do not pile up on every input).
 			const [first] = failed;
 			if (first && !failedOnce) {
 				failedOnce = true;
@@ -214,7 +214,7 @@ export function useTextCheck(
 		};
 		const onTransaction = ({ transaction }: { transaction: Transaction }) => {
 			if (!transaction.docChanged) return;
-			// 바깥에서 본문을 통째로 채운 것(글 불러오기 등)은 입력이 아니다. 그 문단은 바뀐 문단으로 보지 않는다.
+			// Filling the whole body from outside (such as loading a post) is not input. Those paragraphs are not treated as changed paragraphs.
 			if (transaction.getMeta("preventUpdate")) {
 				remember();
 				return;
@@ -236,7 +236,7 @@ export function useTextCheck(
 		(issue: DocTextIssue) => {
 			if (!editor) return;
 			editor.chain().setTextSelection({ from: issue.from, to: issue.to }).scrollIntoView().run();
-			// 목록 메뉴가 닫히며 초점을 돌려준 뒤에 연다.
+			// Open after the list menu closes and returns focus.
 			setTimeout(() => setOpen({ key: issue.key, focus: true }), 0);
 		},
 		[editor],

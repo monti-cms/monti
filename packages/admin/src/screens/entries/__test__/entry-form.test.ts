@@ -25,8 +25,8 @@ const entry = (fields: Partial<EntryData>): EntryData => ({
 	...fields,
 });
 
-describe("번역본 폼(v2 B4)", () => {
-	it("번역본은 언어별 값만 폼과 메타데이터로 다룬다", () => {
+describe("translation form", () => {
+	it("a translation handles only per-language values as the form and metadata", () => {
 		const translation = entry({
 			id: "33333333-3333-4333-8333-333333333333",
 			translationGroupId: SOURCE,
@@ -35,7 +35,7 @@ describe("번역본 폼(v2 B4)", () => {
 			working: { metadata: { title: "Hello", summary: "Sum" }, mdx: "Body" },
 		});
 		const form = formFromEntry(translation);
-		// 번역 상태(`$translation`, v3)도 폼이 다룬다. 저장 필드가 아니라 메타데이터에는 들어가지 않는다.
+		// The form also handles the translation state (`$translation`). It is not a stored field, so it does not go into metadata.
 		expect(Object.keys(form).sort()).toEqual([
 			"$translation",
 			"canonicalUrl",
@@ -57,15 +57,15 @@ describe("번역본 폼(v2 B4)", () => {
 		).toEqual({ metadata: { title: "Hello", summary: "Sum" } });
 	});
 
-	it("원문은 공통 값도 다룬다", () => {
+	it("the original also handles shared values", () => {
 		const form = formFromEntry(entry({ working: { metadata: { title: "안녕", categoryId: CATEGORY }, mdx: "" } }));
 		expect(form.categoryId).toBe(CATEGORY);
 		expect(metadataFromForm(form, "post")).toEqual({ metadata: { title: "안녕", categoryId: CATEGORY } });
 	});
 });
 
-describe("record 언어별 이름(v2 B4)", () => {
-	it("다른 언어 이름을 폼 키로 읽고 비운 언어는 저장하지 않는다", () => {
+describe("record per-language names", () => {
+	it("reads other-language names as form keys and does not save emptied languages", () => {
 		const form = formFromEntry(
 			entry({
 				collection: "category",
@@ -87,7 +87,7 @@ describe("record 언어별 이름(v2 B4)", () => {
 	});
 });
 
-describe("번역 상태 폼(v3)", () => {
+describe("translation state form", () => {
 	const translation = (state: unknown) =>
 		entry({
 			id: "33333333-3333-4333-8333-333333333333",
@@ -96,14 +96,14 @@ describe("번역 상태 폼(v3)", () => {
 			working: { metadata: { title: "Hello" }, mdx: "Body", translation: state as never },
 		});
 
-	it("번역본 폼은 확인한 원문을 고정된 키 순서의 JSON으로 담고 저장 요청에 싣는다", () => {
-		// 서버(JSONB)는 키 순서를 바꿔 돌려준다.
+	it("a translation form holds the confirmed source as JSON with fixed key order and sends it in the save request", () => {
+		// The server (JSONB) returns keys reordered.
 		const form = formFromEntry(translation({ baseSource: "원문\n", version: 2 }));
 		expect(form[TRANSLATION_FORM_KEY]).toBe(stringifyTranslation({ version: 2, baseSource: "원문\n" }));
 		expect(translationPayload(form)).toEqual({ version: 2, baseSource: "원문\n" });
 	});
 
-	it("유효한 상태가 없으면 아무것도 확인하지 않은 것으로 둔다", () => {
+	it("with no valid state, nothing is treated as confirmed", () => {
 		for (const state of [null, undefined, { version: 1, units: [] }, { version: 2 }]) {
 			expect(translationPayload(formFromEntry(translation(state)))).toEqual({ version: 2, baseSource: "" });
 		}
@@ -111,7 +111,7 @@ describe("번역 상태 폼(v3)", () => {
 		expect(translationStateFromForm(undefined)).toEqual({ version: 2, baseSource: "" });
 	});
 
-	it("원문은 번역 상태를 보내지 않는다", () => {
+	it("the original does not send translation state", () => {
 		expect(translationPayload(formFromEntry(entry({ translationGroupId: SOURCE })))).toBeUndefined();
 	});
 });

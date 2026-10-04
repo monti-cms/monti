@@ -322,7 +322,7 @@ describe("Media Upload API Endpoints", () => {
 		);
 	});
 
-	// --- M4-BE-MEDIA-1 Contract Tests ---
+	// --- Contract Tests ---
 
 	it("GET /media returns list of media items with references join", async () => {
 		mockListMediaAssets.mockResolvedValue({
@@ -441,7 +441,7 @@ describe("Media Upload API Endpoints", () => {
 	});
 });
 
-describe("첨부 파일 업로드(v3)", () => {
+describe("attachment upload", () => {
 	const post = (url: string, body?: unknown) =>
 		new NextRequest(url, {
 			method: "POST",
@@ -460,7 +460,7 @@ describe("첨부 파일 업로드(v3)", () => {
 		});
 	});
 
-	it("PDF·zip·글자 파일을 50MiB까지 받고, 확장자와 형식이 다르거나 크면 거절한다", async () => {
+	it("accepts PDF, zip, and text files up to 50MiB, and rejects a type that differs from the extension or an oversized file", async () => {
 		const upload = (body: unknown) => handleUploads(post("http://localhost/api/cms/v1/media/uploads", body));
 		expect((await upload({ filename: "보고서.pdf", mimeType: "application/pdf", byteSize: 30_000_000 })).status).toBe(
 			201,
@@ -478,7 +478,7 @@ describe("첨부 파일 업로드(v3)", () => {
 		);
 	});
 
-	it("완료할 때 실제 내용을 확인하고 원래 이름으로 내려받게 저장한다", async () => {
+	it("on completion, verifies the actual content and stores it to download under the original name", async () => {
 		mockGetMediaAsset.mockResolvedValue({
 			id: "file-1",
 			status: "pending",
@@ -514,7 +514,7 @@ describe("첨부 파일 업로드(v3)", () => {
 		expect(mockCompleteMediaAsset).toHaveBeenCalledWith(expect.objectContaining({ width: null, height: null }));
 	});
 
-	it("글자 파일이라고 올린 바이너리는 사용할 수 없게 한다", async () => {
+	it("makes a binary uploaded as a text file unusable", async () => {
 		mockGetMediaAsset.mockResolvedValue({
 			id: "file-2",
 			status: "pending",

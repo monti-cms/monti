@@ -17,7 +17,7 @@ const tags = [
 	{ id: "c", title: "SEO" },
 ];
 
-/** jsdom은 배치를 하지 않으므로 칸 폭과 태그 폭(각 40px, `+N` 16px)을 정해 준다. */
+/** jsdom does no layout, so the slot width and tag widths (40px each, `+N` 16px) are set explicitly. */
 function stubWidths(boxWidth: number) {
 	vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
 		return this.hasAttribute("title") ? boxWidth : 0;
@@ -35,7 +35,7 @@ describe("FittingTags", () => {
 	});
 
 	it("keeps what fits and folds the rest into +N", () => {
-		// 40 + 4 + 40 + 4 + 16 = 104 ≤ 110 → 두 개 + `+1`.
+		// 40 + 4 + 40 + 4 + 16 = 104 ≤ 110 → two tags + `+1`.
 		stubWidths(110);
 		render(<FittingTags tags={tags} />);
 		expect(screen.getByText(t("tags.more", { count: 1 }))).toBeTruthy();

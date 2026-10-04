@@ -27,7 +27,7 @@ vi.mock("../../../../server/resolved", () => ({
 
 import { createCmsRouteHandler } from "../../../router";
 
-/** 필수가 아닌, 항목 컬렉션을 가리키는 관계(필수값 채우기가 모든 글에 넣지 않는 필드). */
+/** An optional relation pointing at an entry collection (a field the required-value filler does not put on every entry). */
 const relation = (() => {
 	const required = new Set(requiredFields(contentCollection).map(({ name }) => name));
 	for (const { name, field } of storedFields(contentCollection)) {
@@ -38,8 +38,8 @@ const relation = (() => {
 	return undefined;
 })();
 
-/** 공개 JSON API(M14-6). 서버 설정 `publicApi`로 켜고, 로그인 없이 공개본만 돌려준다. */
-describe("공개 JSON API", () => {
+/** Public JSON API. Enabled by `publicApi` in the server config, and returns only published content without login. */
+describe("Public JSON API", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
@@ -94,12 +94,12 @@ describe("공개 JSON API", () => {
 		await closeGlobalPool();
 	});
 
-	it("설정하지 않으면 공개 API는 404다", async () => {
+	it("is 404 when not configured", async () => {
 		state.publicApi = undefined;
 		expect((await get("v1/public/entries")).status).toBe(404);
 	});
 
-	it("목록: 쪽 나누기·관계 필터(대상 주소)·캐시하지 않음, 잘못된 질의는 400", async () => {
+	it("list: paging, relation filter (target address), no caching; a bad query is 400", async () => {
 		state.publicApi = {
 			collections: [contentCollection],
 			filters: relation ? { related: relation.name } : {},
@@ -121,7 +121,7 @@ describe("공개 JSON API", () => {
 		expect((await get("v1/public/entries?collection=nope")).status).toBe(400);
 	});
 
-	it("단건: 본문을 싣고, 옛 주소면 정규 주소를 알리며, 없으면 404다", async () => {
+	it("single: includes the body, reports the canonical address for an old address, and is 404 if missing", async () => {
 		state.publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 		const one = await get(`v1/public/entries/${contentCollection}/public-1`);
 		expect(one.body).toMatchObject({ entry: { slug: "public-1", body: "Body public-1" }, address: { isAlias: false } });
@@ -140,7 +140,7 @@ describe("공개 JSON API", () => {
 		expect((await get(`v1/public/entries/${contentCollection}/missing`)).status).toBe(404);
 	});
 
-	it("toJson이 null이면 그 글을 숨긴다(목록에서 빠지고 단건은 404)", async () => {
+	it("hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
 		state.publicApi = {
 			collections: [contentCollection],
 			toJson: (entry) => (entry.slug === "public-2" ? null : { s: entry.slug }),
@@ -150,7 +150,7 @@ describe("공개 JSON API", () => {
 		expect((await get(`v1/public/entries/${contentCollection}/public-2`)).status).toBe(404);
 	});
 
-	it("사이트가 응답 모양을 정할 수 있다(toJson)", async () => {
+	it("the site can set the response shape (toJson)", async () => {
 		state.publicApi = {
 			collections: [contentCollection],
 			toJson: (entry, { body }) => ({ s: entry.slug, hasBody: body }),

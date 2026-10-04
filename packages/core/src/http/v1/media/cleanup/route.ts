@@ -4,8 +4,8 @@ import { adminRoute, json } from "../../handler";
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
 /**
- * 24시간이 지난 미완료·실패 업로드를 정리한다(§7.2 관리자 정리 작업). 외부 Cron은 필요 없다.
- * 파일 삭제가 실패한 항목은 남겨 다음 정리에서 다시 시도한다.
+ * Cleans up incomplete or failed uploads older than 24 hours. No external cron is needed.
+ * Items whose file deletion failed are kept and retried on the next cleanup.
  */
 export const POST = adminRoute(async () => {
 	const store = getCmsContentStore();

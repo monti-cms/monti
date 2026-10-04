@@ -25,7 +25,7 @@ const buildResponse = async (scope: ExportScope): Promise<Response> => {
 
 const scopeFrom = (value: unknown) => parseWith(exportScopeSchema, value, "Invalid export scope").scope;
 
-/** 관리자 내보내기(§11.4). 링크로 받을 수 있게 GET도 연다. */
+/** Admin export. GET is also open so it can be downloaded via a link. */
 export const GET = adminRoute(async ({ request }) => buildResponse(scopeFrom(readQuery(request as NextRequest))));
 
 export const POST = adminRoute(async ({ request }) => buildResponse(scopeFrom(await readJsonBody(request))));

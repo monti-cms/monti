@@ -1,20 +1,20 @@
 /**
- * 본문 `:code-ref`가 가리키는 코드 줄을 공개 화면 DOM에서 찾고 다루는 함수들.
- * 코드 줄은 본체 코드 블록이 `.line[data-anchor~="이름"]`로 표시한다(줄 이름표 `anchor` 줄 효과).
+ * Functions that find and handle, in the public page DOM, the code lines a body `:code-ref` points to.
+ * Code lines are marked by the core code block as `.line[data-anchor~="name"]` (the `anchor` line effect).
  */
 
 const ANCHOR_ID = /^[\w-]+$/;
 
-/** 이름표가 `id`인 코드 줄(문서 순서). 이름표로 쓸 수 없는 글자가 있으면 찾지 않는다. */
+/** Code lines whose anchor is `id` (document order). Nothing is found if `id` has characters that cannot be used as an anchor. */
 export function findAnchorLines(id: string, root: ParentNode = document): HTMLElement[] {
 	if (!ANCHOR_ID.test(id)) return [];
 	return Array.from(root.querySelectorAll<HTMLElement>(`.line[data-anchor~="${id}"]`));
 }
 
-/** 화면에 그려져 있는지(닫힌 접기 안이면 그려지지 않는다). */
+/** Whether it is rendered (it is not when inside a closed collapsible). */
 const isRendered = (element: HTMLElement) => element.getClientRects().length > 0;
 
-/** 줄 가운데 하나라도 지금 화면 안에 보이는지. 보이면 페이지를 움직이지 않고 그 자리에서 강조한다. */
+/** Whether any of the lines is currently visible in the viewport. If so, highlight in place without scrolling. */
 export function isOnScreen(lines: readonly HTMLElement[]): boolean {
 	const height = window.innerHeight || document.documentElement.clientHeight;
 	return lines.some((line) => {
@@ -24,7 +24,7 @@ export function isOnScreen(lines: readonly HTMLElement[]): boolean {
 	});
 }
 
-/** 줄을 강조(`data-focused`)하고 같은 코드 블록의 나머지 줄을 흐리게 한다(`pre[data-code-focus]`). 되돌리는 함수를 돌려준다. */
+/** Highlights the lines (`data-focused`) and dims the other lines of the same code block (`pre[data-code-focus]`). Returns a function that undoes it. */
 export function focusLines(lines: readonly HTMLElement[]): () => void {
 	const pres = new Set<HTMLElement>();
 	for (const line of lines) {
@@ -41,7 +41,7 @@ export function focusLines(lines: readonly HTMLElement[]): () => void {
 
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-/** 줄이 접힌 곳 안이면 펼치고, 화면 가운데로 옮긴다. 움직임 줄이기 설정이면 애니메이션 없이 옮긴다. */
+/** Expands the lines if they are inside a collapsed area and scrolls them to the center. With the reduced-motion setting, scrolls without animation. */
 export function revealLines(lines: readonly HTMLElement[]) {
 	const first = lines[0];
 	if (!first) return;

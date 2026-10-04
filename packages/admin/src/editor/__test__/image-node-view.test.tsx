@@ -27,7 +27,7 @@ vi.mock("@tiptap/react", async (importOriginal) => {
 
 afterEach(cleanup);
 
-describe("CmsImageNodeView (v2 C2)", () => {
+describe("CmsImageNodeView", () => {
 	const createProps = (attrs: Record<string, unknown> = {}, isEditable = true) => {
 		const updateAttributes = vi.fn();
 		const deleteNode = vi.fn();
@@ -53,7 +53,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		return { props, updateAttributes, deleteNode };
 	};
 
-	it("설정 팝오버에서 대체 텍스트를 비우면 그 자리에 오류를 보이고, 장식 이미지는 스위치로 켠다", async () => {
+	it("clearing alt text in the settings popover shows an error there, and decorative images are turned on with the switch", async () => {
 		const { props, updateAttributes } = createProps({ alt: "" });
 		render(<CmsImageNodeView {...props} />);
 		fireEvent.click(screen.getByRole("button", { name: tBlocks("settings.label") }));
@@ -62,7 +62,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ decorative: true, alt: "" });
 	});
 
-	it("읽기 전용이면 도구 줄을 숨기고 삭제 버튼은 두지 않는다", () => {
+	it("hides the tool row and has no delete button when read-only", () => {
 		const { props } = createProps({}, false);
 		render(<CmsImageNodeView {...props} />);
 		expect(screen.queryByRole("toolbar", { name: t("imageNode.toolbar") })).toBeNull();
@@ -72,7 +72,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(screen.queryByRole("button", { name: /삭제/ })).toBeNull();
 	});
 
-	it("너비 조절 모서리 핸들을 렌더링하고 드래그 시 한번의 트랜잭션으로 업데이트한다", () => {
+	it("renders the width resize corner handle and updates in a single transaction on drag", () => {
 		const { props, updateAttributes } = createProps({ width: "500px" });
 		render(<CmsImageNodeView {...props} />);
 
@@ -81,7 +81,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(leftHandle).toBeDefined();
 		expect(rightHandle).toBeDefined();
 
-		// pointerdown 후 window pointermove, pointerup 시뮬레이션
+		// Simulate pointerdown, then window pointermove and pointerup
 		fireEvent.pointerDown(rightHandle, { clientX: 100, pointerId: 1 });
 		act(() => {
 			window.dispatchEvent(new PointerEvent("pointermove", { clientX: 200 }));
@@ -92,7 +92,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(updateAttributes.mock.calls[0][0].width).toMatch(/^\d+px$/);
 	});
 
-	it("% 너비의 경우 드래그 시 % 값으로 계산하여 업데이트한다", () => {
+	it("for % widths, computes and updates a % value on drag", () => {
 		const { props, updateAttributes } = createProps({ width: "60%" });
 		render(<CmsImageNodeView {...props} />);
 
@@ -107,7 +107,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(updateAttributes.mock.calls[0][0].width).toMatch(/^\d+%$/);
 	});
 
-	it("crop 및 rotate 속성이 있으면 transform wrapper가 렌더된다", () => {
+	it("renders the transform wrapper when crop and rotate attributes are present", () => {
 		const { props } = createProps({
 			crop: "10,20,50,40",
 			rotate: "90",
@@ -117,22 +117,22 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(wrapper).toBeTruthy();
 	});
 
-	it("자르기 및 회전 대화상자를 열고 회전 및 적용을 수행할 수 있다", () => {
+	it("can open the crop and rotate dialog and perform rotate and apply", () => {
 		const { props, updateAttributes } = createProps();
 		render(<CmsImageNodeView {...props} />);
 
 		const cropBtn = screen.getByRole("button", { name: t("imageCrop.title") });
 		fireEvent.click(cropBtn);
 
-		// 다이얼로그 열림 확인
+		// Confirm the dialog is open
 		expect(screen.getByRole("dialog", { name: t("imageCrop.title") })).toBeDefined();
 
-		// 90도 회전 버튼 클릭
+		// Click the 90-degree rotate button
 		const rotateBtn = screen.getByRole("button", { name: t("imageCrop.rotate90") });
 		fireEvent.click(rotateBtn);
 		expect(screen.getByText("90°")).toBeDefined();
 
-		// 적용 버튼 클릭
+		// Click the apply button
 		const applyBtn = screen.getByRole("button", { name: t("imageCrop.apply") });
 		fireEvent.click(applyBtn);
 
@@ -142,12 +142,12 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		});
 	});
 
-	it("너비 핸들을 이동 없이 놓으면 updateAttributes를 호출하지 않는다 (P1-4: 너비 미지정 이미지 보존)", () => {
+	it("does not call updateAttributes when the width handle is released without moving (preserves images with no width set)", () => {
 		const { props, updateAttributes } = createProps({ width: null });
 		render(<CmsImageNodeView {...props} />);
 
 		const rightHandle = screen.getByLabelText(t("imageNode.resizeRight"));
-		// 이동 없이 단순 클릭 후 놓음
+		// Plain click and release without moving
 		fireEvent.pointerDown(rightHandle, { clientX: 100, pointerId: 1 });
 		act(() => {
 			window.dispatchEvent(new PointerEvent("pointerup"));
@@ -156,7 +156,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(updateAttributes).not.toHaveBeenCalled();
 	});
 
-	it("pointercancel 발생 시 updateAttributes를 호출하지 않고 정리된다 (P2)", () => {
+	it("cleans up without calling updateAttributes on pointercancel", () => {
 		const { props, updateAttributes } = createProps({ width: "400px" });
 		render(<CmsImageNodeView {...props} />);
 
@@ -170,14 +170,14 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		expect(updateAttributes).not.toHaveBeenCalled();
 	});
 
-	it("회전된 상태에서도 크롭 좌표계는 원본 기준(0~100)으로 저장된다 (P1-2)", () => {
+	it("stores the crop coordinates relative to the original (0-100) even when rotated", () => {
 		const { props, updateAttributes } = createProps({ rotate: "90" });
 		render(<CmsImageNodeView {...props} />);
 
 		const cropBtn = screen.getByRole("button", { name: t("imageCrop.title") });
 		fireEvent.click(cropBtn);
 
-		// X, Y, W, H 키보드 수치 입력 대안 (P2)
+		// Keyboard numeric input alternative for X, Y, W, H
 		const inputX = screen.getByLabelText(t("imageCrop.x"));
 		const inputY = screen.getByLabelText(t("imageCrop.y"));
 		const inputW = screen.getByLabelText(t("imageCrop.width"));
@@ -188,7 +188,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		fireEvent.change(inputW, { target: { value: "50" } });
 		fireEvent.change(inputH, { target: { value: "60" } });
 
-		// 적용 버튼 클릭
+		// Click the apply button
 		const applyBtn = screen.getByRole("button", { name: t("imageCrop.apply") });
 		fireEvent.click(applyBtn);
 
@@ -198,7 +198,7 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		});
 	});
 
-	it("대화상자에서 초기화가 자르기와 회전을 함께 되돌린다", () => {
+	it("reset in the dialog reverts both crop and rotation", () => {
 		const { props, updateAttributes } = createProps({
 			crop: "10,10,80,80",
 			rotate: "180",
@@ -208,11 +208,11 @@ describe("CmsImageNodeView (v2 C2)", () => {
 		const cropBtn = screen.getByRole("button", { name: t("imageCrop.title") });
 		fireEvent.click(cropBtn);
 
-		// 초기화 버튼 클릭
+		// Click the reset button
 		const resetAllBtn = screen.getByRole("button", { name: t("imageCrop.reset") });
 		fireEvent.click(resetAllBtn);
 
-		// 적용 버튼 클릭
+		// Click the apply button
 		const applyBtn = screen.getByRole("button", { name: t("imageCrop.apply") });
 		fireEvent.click(applyBtn);
 

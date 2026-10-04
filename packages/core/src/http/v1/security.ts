@@ -4,11 +4,11 @@ import { cmsConfig } from "../../config/resolved";
 import { HttpError } from "./error-handler";
 
 /**
- * 상태를 바꾸는 요청(POST·PATCH·PUT·DELETE)의 동일 출처 검사(§10.2 CSRF 방어).
- * Origin/Host 일치 또는 `Sec-Fetch-Site: same-origin`을 요구하고, 신호가 하나도 없으면 거부한다(fail-closed).
- * 본문을 받는 요청은 `Content-Type: application/json`이어야 한다(아니면 415).
- * 받는 호스트는 프록시가 넘긴 `X-Forwarded-Host`, `Host`, 그리고 사이트 주소(`site.url`)의 호스트다. `Host`를 바꾸는 프록시
- * 뒤에서도 브라우저가 보낸 출처와 맞는다.
+ * Same-origin check for state-changing requests (POST, PATCH, PUT, DELETE).
+ * Requires an Origin/Host match or `Sec-Fetch-Site: same-origin`, and rejects when there is no signal at all (fail-closed).
+ * Requests with a body must use `Content-Type: application/json` (otherwise 415).
+ * Accepted hosts are the proxy-supplied `X-Forwarded-Host`, `Host`, and the host of the site URL (`site.url`). Behind a proxy
+ * that rewrites `Host`, the origin sent by the browser still matches.
  */
 export function validateSameOrigin(request: NextRequest): void {
 	const method = request.method.toUpperCase();
@@ -32,7 +32,7 @@ export function validateSameOrigin(request: NextRequest): void {
 	if (origin) {
 		sameHost(origin, "origin");
 	} else if (secFetchSite) {
-		// same-origin 또는 none(직접 탐색·도구)만 허용한다.
+		// Only same-origin or none (direct navigation, tools) is allowed.
 		if (secFetchSite !== "same-origin" && secFetchSite !== "none") {
 			throw new AuthError("forbidden", "Cross-site request rejected");
 		}
@@ -50,7 +50,7 @@ export function validateSameOrigin(request: NextRequest): void {
 	}
 }
 
-/** 사이트 주소의 호스트(설정에 있으면). */
+/** Host of the site URL (if configured). */
 const SITE_HOST = (() => {
 	try {
 		return cmsConfig.site?.url ? new URL(cmsConfig.site.url).host.toLowerCase() : undefined;
@@ -59,7 +59,7 @@ const SITE_HOST = (() => {
 	}
 })();
 
-/** 이 요청이 받는 호스트들. `X-Forwarded-Host`는 쉼표로 여럿일 수 있어 첫 값(맨 앞 프록시가 받은 값)을 쓴다. */
+/** Hosts this request is received on. `X-Forwarded-Host` may be comma-separated, so use the first value (received by the outermost proxy). */
 function allowedHosts(request: NextRequest): Set<string> {
 	const hosts = new Set<string>();
 	const forwarded = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();

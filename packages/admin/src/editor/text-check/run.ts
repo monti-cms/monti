@@ -10,17 +10,17 @@ import { type DocSegment, segmentRangeToDoc } from "./extract";
 
 export type { CachedIssue };
 
-/** 편집기에 그리는 결과. `from`·`to`는 지금 문서 위치다. */
+/** Result drawn in the editor. `from` and `to` are current document positions. */
 export interface DocTextIssue extends CachedIssue {
 	readonly key: string;
 	readonly checkerId: string;
 	readonly from: number;
 	readonly to: number;
-	/** 표시한 글자. */
+	/** The marked text. */
 	readonly text: string;
 }
 
-/** 검사기·언어·문단 글자 → 결과. 같은 글자는 다시 보내지 않는다. */
+/** Checker, language, paragraph text → result. The same text is not sent again. */
 export class TextCheckCache {
 	private readonly entries = new Map<string, readonly CachedIssue[]>();
 	constructor(private readonly maxEntries = 2000) {}
@@ -45,7 +45,7 @@ export class TextCheckCache {
 	}
 }
 
-/** 한도(`limits`)에 맞게 문단을 나눈다. 한 문단이 `maxChars`보다 길면 그 문단만 한 묶음이다. */
+/** Splits paragraphs to fit the limits (`limits`). A paragraph longer than `maxChars` becomes a batch by itself. */
 export function chunkSegments<T extends TextCheckSegment>(
 	segments: readonly T[],
 	limits: TextCheckerLimits = {},
@@ -72,8 +72,8 @@ export function chunkSegments<T extends TextCheckSegment>(
 const abortError = () => new DOMException("Text check aborted", "AbortError");
 
 /**
- * 캐시에 없는 문단만 검사기에 보내고 결과를 캐시에 넣는다. 같은 글자의 문단은 한 번만 보낸다.
- * 묶음은 차례로 보낸다(호출 제한). 끊으면 `AbortError`를 던진다.
+ * Sends only paragraphs not in the cache to the checker and puts the results in the cache. A paragraph with the same text is sent only once.
+ * Batches are sent in order (rate limit). Throws `AbortError` if aborted.
  */
 export async function checkSegments({
 	checker,
@@ -91,7 +91,7 @@ export async function checkSegments({
 	const pending = new Map<string, TextCheckSegment>();
 	for (const segment of segments) {
 		if (cache.has(checker.id, locale, segment.text) || pending.has(segment.text)) continue;
-		// 검사기에는 이름·글자·언어만 넘긴다(문서 위치는 넘기지 않는다).
+		// Only the name, text, and language are passed to the checker (document positions are not passed).
 		pending.set(segment.text, { id: segment.id, text: segment.text, locale });
 	}
 	for (const chunk of chunkSegments([...pending.values()], checker.limits)) {
@@ -112,7 +112,7 @@ export async function checkSegments({
 	}
 }
 
-/** "무시"로 숨기는 기준: 같은 검사기·규칙(없으면 문구)·글자. */
+/** Basis for hiding with "ignore": same checker, rule (or message if none), and text. */
 export const ignoreKey = (issue: Pick<DocTextIssue, "checkerId" | "ruleId" | "message" | "text">) =>
 	`${issue.checkerId}\u0000${issue.ruleId ?? issue.message}\u0000${issue.text}`;
 
@@ -124,7 +124,7 @@ const inScope = (issue: CachedIssue, scope: { start: number; end: number }) =>
 		: issue.start < scope.end && issue.end > scope.start;
 
 /**
- * 캐시에 있는 결과를 지금 문서의 문단에 놓는다. `scope`가 있으면 그 문단 안 범위에 걸친 결과만 둔다(선택 영역 검사).
+ * Places the cached results onto the paragraphs of the current document. With `scope`, only results spanning ranges within that paragraph are placed (selection check).
  */
 export function placeIssues({
 	checkers,

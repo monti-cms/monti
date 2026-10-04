@@ -39,7 +39,7 @@ const shared = {
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
-/** 모음집 `c2`의 저장을 `release`로 풀기 전까지 붙잡아 둔다. */
+/** Holds the save of collection `c2` until it is released with `release`. */
 function stubApi(patchStatus: number) {
 	let release: () => void = () => {};
 	const held = new Promise<void>((resolve) => {
@@ -58,7 +58,7 @@ function stubApi(patchStatus: number) {
 					total: 2,
 				});
 			}
-			// 모음집마다 담는 종류를 읽는다(기본은 게시글).
+			// Reads the kind each collection holds (default is post).
 			if (url === "/api/cms/v1/entries/c1" && !init?.method) {
 				return json({
 					version: 1,
@@ -87,8 +87,8 @@ const addSeriesB = async () => {
 	fireEvent.click(await screen.findByRole("option", { name: "시리즈 B" }));
 };
 
-describe("모음집 넣기(반대 방향 관계)", () => {
-	it("고르면 저장을 기다리지 않고 바로 보인다", async () => {
+describe("adding to a collection (inverse relation)", () => {
+	it("picking shows it right away without waiting for the save", async () => {
 		const release = stubApi(200);
 		await addSeriesB();
 		expect(screen.getByText("시리즈 B")).toBeTruthy();
@@ -98,12 +98,12 @@ describe("모음집 넣기(반대 방향 관계)", () => {
 		expect(toast.error).not.toHaveBeenCalled();
 	});
 
-	it("저장이 실패하면 입력 아래에 알리고 되돌린다", async () => {
+	it("if the save fails, reports below the input and reverts", async () => {
 		const release = stubApi(500);
 		await addSeriesB();
 		expect(screen.getByText("시리즈 B")).toBeTruthy();
 		release();
-		// 다른 관계 입력처럼 입력 바로 아래에 알린다(토스트가 아니다).
+		// Reports right below the input like other relation inputs (not a toast).
 		expect((await screen.findByRole("alert")).textContent).toBe("실패");
 		expect(toast.error).not.toHaveBeenCalled();
 		await waitFor(() => expect(screen.queryByText("시리즈 B")).toBeNull());
@@ -111,7 +111,7 @@ describe("모음집 넣기(반대 방향 관계)", () => {
 	});
 });
 
-describe("메모의 모음집 넣기", () => {
+describe("adding a memo to a collection", () => {
 	const memoField: BacklinkField = {
 		kind: "backlink",
 		label: "모음집",
@@ -157,18 +157,18 @@ describe("메모의 모음집 넣기", () => {
 		return input;
 	};
 
-	it("메모를 담는 모음집만 고를 수 있다", async () => {
+	it("only collections that hold memos can be picked", async () => {
 		await openList();
 		await waitFor(async () =>
 			expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual(["Type Challenges"]),
 		);
 	});
 
-	it("추가하면 메모를 담은 모음집 추가 칸을 열고, 저장하면 그 모음집으로 만든다", async () => {
+	it("adding opens the add sheet for a memo-holding collection, and saving creates it as that collection", async () => {
 		const input = await openList();
 		fireEvent.input(input, { target: { value: "새 메모 시리즈" }, inputType: "insertText" });
 		fireEvent.click(await screen.findByRole("option", { name: "'새 메모 시리즈' 추가" }));
-		// 이름만으로 바로 만들지 않고, 이름이 채워진 추가 칸을 연다.
+		// Does not create from the name alone; opens the add sheet with the name filled in.
 		const panel = await screen.findByRole("complementary", { name: "모음집 추가" });
 		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeTruthy();
 		expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/cms/v1/entries" && init?.method === "POST")).toBe(

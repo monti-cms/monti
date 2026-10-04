@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 화면 공용 조각(확인창·상태 이름·폴더 작업·분류 선택지)의 문구(M15). */
+/** Text of shared screen pieces (confirm dialogs, status names, folder actions, taxonomy options). */
 export const sharedMessages = defineMessages("cms-admin.shared", {
 	en: {
 		"common.cancel": "Cancel",
@@ -83,7 +83,7 @@ export const sharedMessages = defineMessages("cms-admin.shared", {
 		"folder.defaultItemLabel": "글",
 		"folder.parentFallback": "상위 폴더",
 		"folder.rootName": "'{itemLabel}' 최상위",
-		// 폴더 이름은 받침을 알 수 없어 `(으)로`를 붙인다.
+		// Folder names don't reveal whether they end in a final consonant, so `(으)로` is appended.
 		"folder.to.named": "{name}(으)로",
 		"folder.to.root": "{name}로",
 		"folder.loadFailed": "폴더 내용을 확인하지 못했습니다.",

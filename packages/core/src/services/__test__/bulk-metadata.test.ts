@@ -6,7 +6,7 @@ import { createBulkService } from "../bulk-service";
 import type { PreparedSnapshot, Reference } from "../index";
 import { ServiceError } from "../index";
 
-/** 본문 컬렉션의 관계 필드 중 하나짜리(`many` 아님) 또는 여러 개짜리 첫 필드. 이름은 설정에서 찾는다. */
+/** The first single-value (not `many`) or multi-value relation field among the body collection's relation fields. The name is looked up from the config. */
 const relationFieldOf = (many: boolean): StoredField => {
 	const found = storedFields(contentCollection).find(
 		({ field, when }) => !when && field.kind === "relation" && Boolean(field.many) === many,
@@ -16,7 +16,7 @@ const relationFieldOf = (many: boolean): StoredField => {
 };
 const single = relationFieldOf(false).name;
 const many = relationFieldOf(true).name;
-/** 여러 개짜리 관계 필드가 없는 컬렉션(다른 컬렉션에 그 필드로 관계 작업을 하면 항목별 오류). */
+/** A collection with no multi-value relation field (a relation operation on another collection with that field gives a per-item error). */
 const collectionWithoutMany = COLLECTIONS.find((name) => !storedField(name, many)) as Collection;
 
 type Working = {
@@ -95,7 +95,7 @@ const post = (over: Partial<Working> = {}): Working => ({
 	...over,
 });
 
-describe("M4-TW-1a Bulk metadata ops contract", () => {
+describe("Bulk metadata ops contract", () => {
 	it("rejects unknown op for the whole request", async () => {
 		const bulk = createBulkService(newFakeStore({}));
 		await expect(bulk.run({ op: "nope", items: [] } as any)).rejects.toThrowError(

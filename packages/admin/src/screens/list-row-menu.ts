@@ -32,7 +32,7 @@ export const toSelection = (item: ListEntriesItem): BulkSelection => ({
 });
 
 /**
- * 오른쪽 클릭·Delete 키의 대상. 누른 줄이 고른 줄 가운데 하나이고 둘 이상 골랐으면 고른 줄 전체, 아니면 그 줄 하나다(v2 A2).
+ * Target of right-click / Delete key. If the pressed row is one of the selected rows and two or more are selected, all selected rows; otherwise just that row.
  */
 export function actionTargets(
 	item: ListEntriesItem,
@@ -44,17 +44,17 @@ export function actionTargets(
 
 export interface RowMenuContext {
 	mode: "list" | "trash";
-	/** 태그·카테고리·모음집처럼 작은 폼으로 여는 컬렉션. */
+	/** Collections opened as a small form, like tags, categories and series. */
 	isRecord: boolean;
-	/** 보관할 수 있는 컬렉션(글·메모). */
+	/** Collections that can be archived (posts, memos). */
 	isContent: boolean;
 	folders: readonly Folder[];
 	collection: string;
-	/** 분류 필드 이름 → 선택지. 여러 개 분류 필드(태그 등)마다 "○○ 추가" 하위 메뉴를 만든다. */
+	/** Taxonomy field name -> options. Makes an "Add ○○" submenu for each many-relation taxonomy field (tags etc.). */
 	options: TaxonomyOptions;
 }
 
-/** 메뉴 항목이 부르는 작업. 대상은 항상 `actionTargets`로 고른 줄이다. */
+/** Action a menu item calls. The target is always the rows chosen by `actionTargets`. */
 export interface RowMenuHandlers {
 	openEditor: (item: ListEntriesItem) => void;
 	openInNewTab: (item: ListEntriesItem) => void;
@@ -62,13 +62,13 @@ export interface RowMenuHandlers {
 	duplicate: (item: ListEntriesItem) => void;
 	restore: (targets: BulkSelection[]) => void;
 	confirmTrash: (targets: BulkSelection[]) => void;
-	/** 보관은 공개 글을 내리므로 묻고 한다(하나든 여럿이든). */
+	/** Archiving takes down a public post, so it asks first (for one or many). */
 	confirmArchive: (targets: BulkSelection[]) => void;
 	confirmPermanentDelete: (targets: BulkSelection[]) => void;
 	bulk: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => void;
 }
 
-/** 행 메뉴(v2 A2). 한 줄이면 열기·복제를, 여러 줄이면 맨 위에 항목 수를 둔다. 휴지통은 복원·영구 삭제뿐이다. */
+/** Row menu. One row gets open and duplicate; several rows get the item count at the top. Trash has only restore and permanent delete. */
 export function rowMenuActions(
 	group: readonly ListEntriesItem[],
 	context: RowMenuContext,

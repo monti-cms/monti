@@ -6,11 +6,11 @@ import { createContentStore, migrateContentStore } from "../content-store";
 import { seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-/** 컬렉션 이름은 지금 설정에서 찾는다(`test/any-site.ts`). 글은 본문이 있는 문서 컬렉션, 태그는 항목 컬렉션이다. */
+/** Collection names are looked up in the current config (`test/any-site.ts`). Posts are the document collection with a body; tags are the item collection. */
 const content = contentCollection;
 const record = recordCollection;
 
-describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () => {
+describe("Publishing, Lifecycle & Published-References Contracts", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: any;
@@ -22,7 +22,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		// 글 발행에 필요한 값(블로그의 카테고리 등)은 이 파일의 시나리오와 무관하므로 저장소가 채운다.
+		// Values needed to publish an entry (such as the reference blog's category) are irrelevant to this file's scenarios, so the store fills them in.
 		fillRequiredMetadata(store);
 	});
 
@@ -33,7 +33,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 		await closeGlobalPool();
 	});
 
-	describe("1. Lifecycle State Machine Transitions (§5.3)", () => {
+	describe("1. Lifecycle State Machine Transitions", () => {
 		it("draft -> published creates published body and sets status to published", async () => {
 			const entry = await seedEntry(store, {
 				collection: content,
@@ -47,7 +47,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 			expect(entry.status).toBe("draft");
 			expect(entry.publishedAt).toBeUndefined();
 
-			// 발행일은 처음 발행한 시각이다(§5.5).
+			// The publish date is the time of first publish.
 			const before = Date.now();
 			const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
 
@@ -190,7 +190,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 		});
 	});
 
-	describe("2. Transactional Target Recheck & Published References Rollback (§5.3)", () => {
+	describe("2. Transactional Target Recheck & Published References Rollback", () => {
 		it("publishes and copies working references to published references atomically", { timeout: 15000 }, async () => {
 			const tag = await seedEntry(store, {
 				collection: record,
@@ -291,7 +291,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 			await expect(store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version })).rejects.toMatchObject({
 				code: "in_use",
 			});
-			// 영구 삭제는 휴지통 항목만 대상이다(§5.3).
+			// Permanent delete targets only trashed entries.
 			await expect(
 				store.permanentDeleteEntry({ id: tag.id, expectedVersion: publishedTag.version }),
 			).rejects.toMatchObject({
@@ -442,7 +442,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 					schemaVersion: 1,
 					contentHash: "tag-hash-arch",
 				});
-				// 레코드 컬렉션은 보관할 수 없다. 공개되지 않은(초안) 태그를 대상으로 쓴다.
+				// A record collection cannot be archived. Use an unpublished (draft) tag as the target.
 				const post = await seedEntry(store, {
 					collection: content,
 					slug: "post-rollback-test",
@@ -495,7 +495,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 		);
 	});
 
-	describe("4. Timestamps (§5.5)", () => {
+	describe("4. Timestamps", () => {
 		it("keeps the first publish time on re-publish and after archive", async () => {
 			const post = await seedEntry(store, {
 				collection: content,
@@ -548,7 +548,7 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 			const pub1 = await store.publishEntry({ id: post.id, expectedVersion: post.version });
 			expect(pub1.publishedAt).toEqual(original);
 
-			// 바뀐 것이 없는 다시 발행이어도 발행일만 바꾸고 버전을 올린다.
+			// Even a re-publish with no changes updates only the publish date and bumps the version.
 			const before = Date.now();
 			const pub2 = await store.publishEntry({ id: post.id, expectedVersion: pub1.version, resetPublishedAt: true });
 			expect(pub2.version).toBe(pub1.version + 1);
@@ -591,8 +591,8 @@ describe("M3-TW-1 Publishing, Lifecycle & Published-References Contracts", () =>
 		});
 	});
 
-	describe("5. M7-SEC-1 발행 경계", () => {
-		it("analyze 오류가 있는 본문은 publishEntry가 거부하고 상태를 바꾸지 않는다", async () => {
+	describe("5. Publish boundary", () => {
+		it("rejects a body with analyze errors in publishEntry and leaves the status unchanged", async () => {
 			const post = await seedEntry(store, {
 				collection: content,
 				slug: "post-broken-mdx",

@@ -1,22 +1,22 @@
 import type { PluginDatabase } from "@monti-cms/core";
 import { CmsError, getCmsDatabase, withTransaction } from "@monti-cms/core/plugin/server";
 
-/** AI 설정 표(`ai_settings`)의 줄 이름. */
+/** Row name in the AI settings table (`ai_settings`). */
 export type AiSettingsId = "default" | "shared";
 
-/** 기능 이름별로 고친 값 한 줄. */
+/** One row of edited values per action name. */
 export interface AiActionOverrideRow {
 	key: string;
-	/** 정의와 다른 고친 값(`aiActionOverrideSchema` 모양). */
+	/** Edited values that differ from the definition (shape of `aiActionOverrideSchema`). */
 	value: unknown;
 	version: number;
 	updatedAt: Date;
 }
 
-/** v2 D AI 기능의 고친 값(`ai_action_overrides`)·연결 설정(`ai_settings`)·화면 기능(`ai_custom_actions`). */
+/** Edited AI action values (`ai_action_overrides`), connection settings (`ai_settings`) and UI actions (`ai_custom_actions`). */
 export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 	return {
-		/** 고친 값 전부. 고친 적 없는 기능은 없다. */
+		/** All edited values. Actions never edited have none. */
 		listAiActionOverrides: async (): Promise<AiActionOverrideRow[]> => {
 			const res = await pool.query<{ key: string; value: unknown; version: number; updated_at: Date }>(
 				`SELECT key, value, version, updated_at FROM "${qSchema}".ai_action_overrides ORDER BY key`,
@@ -30,8 +30,8 @@ export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 		},
 
 		/**
-		 * 고친 값을 바꾼다. 처음이면 `expectedVersion`이 0이고, 그 뒤로는 버전이 다르면 409다.
-		 * 고친 값이 비면(모두 기본값) 줄을 남겨 버전을 이어 간다.
+		 * Changes the edited values. The first time, `expectedVersion` is 0; after that, a different version gives 409.
+		 * If the edited values become empty (all defaults), the row is kept so the version carries on.
 		 */
 		saveAiActionOverride: async (params: {
 			key: string;
@@ -56,7 +56,7 @@ export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 			}),
 
 		/**
-		 * AI 설정 한 줄(저장한 모양 그대로). `default`는 서비스 연결, `shared`는 고친 공통 문구다. 없으면 `null`.
+		 * One AI settings row (as stored). `default` is the service connection and `shared` is the edited shared text. `null` if none.
 		 */
 		getAiSettings: async (id: AiSettingsId = "default"): Promise<{ value: unknown; version: number } | null> => {
 			const res = await pool.query<{ value: unknown; version: number }>(
@@ -66,7 +66,7 @@ export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 			return res.rows[0] ?? null;
 		},
 
-		/** 설정 한 줄을 저장한다. 처음이면 `expectedVersion`이 0이고, 그 뒤로는 버전이 다르면 409다. */
+		/** Saves one settings row. The first time, `expectedVersion` is 0; after that, a different version gives 409. */
 		saveAiSettings: async (params: { id?: AiSettingsId; expectedVersion: number; value: unknown }): Promise<number> =>
 			withTransaction(pool, async (client) => {
 				const id = params.id ?? "default";
@@ -84,7 +84,7 @@ export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 				return version + 1;
 			}),
 
-		/** 화면 기능(관리자 화면에서 만든 기능) 전부. 만든 순서다. */
+		/** All UI actions (actions created in the admin screen). In creation order. */
 		listAiCustomActions: async (): Promise<AiActionOverrideRow[]> => {
 			const res = await pool.query<{ key: string; value: unknown; version: number; updated_at: Date }>(
 				`SELECT key, value, version, updated_at FROM "${qSchema}".ai_custom_actions ORDER BY created_at, key`,
@@ -97,7 +97,7 @@ export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 			}));
 		},
 
-		/** 화면 기능을 만들거나(`expectedVersion` 0) 고친다. 버전이 다르면 409다. */
+		/** Creates (`expectedVersion` 0) or edits a UI action. A different version gives 409. */
 		saveAiCustomAction: async (params: {
 			key: string;
 			expectedVersion: number;
@@ -125,7 +125,7 @@ export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 				};
 			}),
 
-		/** 화면 기능을 지운다. 버전이 다르면 409, 없으면 404다. */
+		/** Deletes a UI action. A different version gives 409; if it does not exist, 404. */
 		deleteAiCustomAction: async (params: { key: string; expectedVersion: number }): Promise<void> =>
 			withTransaction(pool, async (client) => {
 				const cur = await client.query<{ version: number }>(
@@ -146,7 +146,7 @@ declare global {
 	var __cmsAiStore: AiStore | undefined;
 }
 
-/** 본체 DB 연결로 만든 AI 저장소. 개발 서버가 모듈을 다시 읽어도 하나만 둔다. */
+/** AI store built from the main DB connection. Only one is kept even if the dev server reloads the module. */
 export function getAiStore(): AiStore {
 	global.__cmsAiStore ??= createAiStore(getCmsDatabase());
 	return global.__cmsAiStore;

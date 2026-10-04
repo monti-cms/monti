@@ -2,14 +2,14 @@ import { BLOCK_BY_COMPONENT, BLOCK_BY_NAME, FENCE_BLOCKS } from "../../blocks/de
 import { analyze, type CmsNode, serialize, toDocument } from "../../mdx";
 
 /**
- * 원문 두 버전의 블록 비교(번역 화면).
+ * Block comparison of two source versions (translation screen).
  *
- * 번역자가 마지막으로 확인한 원문과 지금 원문을 블록 단위로 나눠 바뀐·더해진·빠진 블록을 찾는다.
- * 펼치는 상자(블록 정의의 `translateInside`, 예: 콜아웃·탭·정렬)는 펼쳐서 머리 줄(번역할 속성)과 안쪽 블록을 각각
- * 비교한다. 서버·브라우저가 같이 쓴다.
+ * Splits the source the translator last confirmed and the current source into blocks and finds changed, added and removed blocks.
+ * Expandable boxes (`translateInside` in the block definition, e.g. callout, tabs, alignment) are expanded and their header line (translatable attributes) and inner blocks are each
+ * compared. Used by both server and browser.
  */
 
-/** 펼치는 상자의 렌더러 이름: 상자 자체는 뼈대이고 안쪽 블록이 각각 단위다. */
+/** Renderer names of expandable boxes: the box itself is a skeleton and each inner block is a unit. */
 const EXPANDED = new Set(
 	[...BLOCK_BY_COMPONENT.values()].filter((block) => block.translateInside).map((b) => b.component),
 );
@@ -19,7 +19,7 @@ const translatableOf = (component: string): string | undefined => {
 	return Object.entries(block?.attributes ?? {}).find(([, attribute]) => attribute.translatable)?.[0];
 };
 
-/** 자식 블록의 번역할 속성(예: 탭 이름)을 머리 줄 하나에 모으는 상자. 렌더러 이름 → [자식 렌더러 이름, 속성]. */
+/** Boxes that gather the child blocks' translatable attributes (e.g. tab names) into one header line. Renderer name → [child renderer name, attribute]. */
 const CHILD_HEADERS = new Map(
 	[...BLOCK_BY_COMPONENT.values()].flatMap((block) => {
 		const child = BLOCK_BY_NAME.get(block.children?.blocks?.[0] ?? "");
@@ -28,10 +28,10 @@ const CHILD_HEADERS = new Map(
 	}),
 );
 
-/** 번역할 글자가 없어 원문을 그대로 쓰는 블록. */
+/** Blocks with no text to translate, so the source is used as is. */
 const STRUCTURAL = new Set(["horizontalRule", "html", "mdxEsm", "mdxExpression"]);
 
-/** 글자가 없어도 사람이 확인해야 하는 블록(주석·라벨이 들어갈 수 있다). 코드 펜스 블록도 그렇다. */
+/** Blocks a human must check even without text (comments and labels may be inside). Code fence blocks too. */
 const ALWAYS_MANUAL = new Set([
 	"codeBlock",
 	"math",
@@ -43,20 +43,20 @@ const ALWAYS_MANUAL = new Set([
 export type UnitKind = "block" | "header";
 
 export interface TranslationUnit {
-	/** 맞추기 열쇠: 조상 상자 종류 + 단위 종류 + 노드 종류. 같은 열쇠끼리만 짝이 된다. */
+	/** Matching key: ancestor box kind + unit kind + node kind. Only units with the same key are paired. */
 	readonly key: string;
 	readonly kind: UnitKind;
-	/** 노드 종류(`paragraph`, `codeBlock`, `Callout` …). */
+	/** Node kind (`paragraph`, `codeBlock`, `Callout` …). */
 	readonly type: string;
-	/** 블록은 그 노드, 머리 줄은 상자 노드. */
+	/** For a block, that node; for a header line, the box node. */
 	readonly node: CmsNode;
-	/** 원문 조각. 블록은 MDX, 머리 줄은 번역할 속성의 JSON이다. */
+	/** Source fragment. For a block it is MDX; for a header line it is the JSON of the translatable attributes. */
 	readonly source: string;
-	/** 번역할 것이 없어 원문을 그대로 쓴다(구분선, 빈 문단, 설명 없는 이미지 등). */
+	/** Nothing to translate, so the source is used as is (dividers, empty paragraphs, images without a description, etc.). */
 	readonly auto: boolean;
 }
 
-/** 머리 줄의 번역 값. 상자의 번역할 속성(예: 콜아웃 제목)이나, 자식에서 모은 값들(예: 탭 이름)이다. */
+/** Translated value of a header line. A box's translatable attributes (e.g. callout title) or values gathered from children (e.g. tab names). */
 export type HeaderValue = { title: string } | { labels: string[] };
 
 const textOf = (node: CmsNode): string =>
@@ -92,7 +92,7 @@ const headerValue = (node: CmsNode): HeaderValue | null => {
 			.map((child) => stringAttr(child, attribute));
 		return labels.some((label) => label.trim()) ? { labels } : null;
 	}
-	// 부모가 모아 번역하는 자식(탭 하나)은 머리 줄을 따로 두지 않는다.
+	// A child that the parent gathers and translates (one tab) gets no header line of its own.
 	if (BLOCK_BY_COMPONENT.get(node.type)?.parent) return null;
 	const attribute = translatableOf(node.type);
 	if (!attribute) return null;
@@ -100,7 +100,7 @@ const headerValue = (node: CmsNode): HeaderValue | null => {
 	return title.trim() ? { title } : null;
 };
 
-/** 원문 문서를 번역 단위로 나눈다(문서 순서). */
+/** Splits a source document into translation units (document order). */
 export function flattenUnits(doc: CmsNode): TranslationUnit[] {
 	const units: TranslationUnit[] = [];
 	const walk = (nodes: readonly CmsNode[], scope: string) => {
@@ -134,13 +134,13 @@ export function flattenUnits(doc: CmsNode): TranslationUnit[] {
 	return units;
 }
 
-/** 원문 한 버전에서 바뀐 블록. 문서 순서대로다. */
+/** Blocks changed in one source version, in document order. */
 export type SourceChange =
 	| { readonly kind: "changed"; readonly before: TranslationUnit; readonly after: TranslationUnit }
 	| { readonly kind: "added"; readonly after: TranslationUnit }
 	| { readonly kind: "removed"; readonly before: TranslationUnit };
 
-/** 두 목록의 최장 공통 부분열(열쇠와 원문 조각이 모두 같은 쌍). [before 위치, after 위치] 목록이다. */
+/** Longest common subsequence of two lists (pairs whose key and source fragment are both equal). A list of [before index, after index]. */
 const commonPairs = (before: readonly TranslationUnit[], after: readonly TranslationUnit[]): [number, number][] => {
 	const same = (i: number, j: number) => before[i]?.key === after[j]?.key && before[i]?.source === after[j]?.source;
 	const cols = after.length + 1;
@@ -172,8 +172,8 @@ const unitsOf = (mdx: string): TranslationUnit[] | null => {
 };
 
 /**
- * 원문 두 버전을 블록 단위로 비교한다. 같은 블록은 빼고, 같은 자리(열쇠가 같은 쌍)에서 내용만 바뀐 블록은
- * `changed`, 새 블록은 `added`, 없어진 블록은 `removed`다. 어느 쪽이든 해석할 수 없으면 `null`.
+ * Compares two source versions block by block. Equal blocks are omitted; a block whose content alone changed at the same position (a pair with the same key) is
+ * `changed`, a new block is `added`, and a removed block is `removed`. `null` if either cannot be parsed.
  */
 export function diffSources(beforeMdx: string, afterMdx: string): SourceChange[] | null {
 	const before = unitsOf(beforeMdx);
@@ -184,7 +184,7 @@ export function diffSources(beforeMdx: string, afterMdx: string): SourceChange[]
 	let prevBefore = 0;
 	let prevAfter = 0;
 	for (const [bi, ai] of anchors) {
-		// 앵커 사이 구간: 열쇠가 같은 것끼리 순서대로 짝지으면 바뀐 블록, 남으면 빠지거나 더해진 블록이다.
+		// Segment between anchors: pairing same-key items in order gives changed blocks; leftovers are removed or added blocks.
 		let b = prevBefore;
 		for (let a = prevAfter; a < ai; a += 1) {
 			const next = after[a];

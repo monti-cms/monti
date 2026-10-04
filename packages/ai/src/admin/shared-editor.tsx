@@ -30,7 +30,7 @@ const t = createTranslator(sharedMessages);
 
 export const AI_SHARED_KEY = ["cms", "ai", "shared"] as const;
 
-/** 지시문·공통 문구 입력 칸의 모양(둘 다 지시에 들어가는 글이다). */
+/** Shape of the instruction and shared text input fields (both are text that goes into instructions). */
 export const PROMPT_ROWS = 8;
 export const PROMPT_TEXTAREA = "min-h-40 text-xs md:text-xs";
 
@@ -43,17 +43,17 @@ export function useAiShared() {
 	});
 }
 
-/** 지시문에 넣는 모양. */
+/** Shape to put into instructions. */
 const placeholderOf = (key: string) => `{{shared.${key}}}`;
 
 const detailOf = (item: AiSharedItem) =>
 	`${placeholderOf(item.key)}${item.source === "added" ? ` · ${t("detail.added")}` : ""}`;
 
 /**
- * AI 화면 `공통 문구` 탭(M8-4). 여러 기능의 지시문에 `{{shared.키}}`로 들어가는 문구(예: 문체 가이드)의 목록과 편집 칸이다.
- * 설정에 적은 문구는 내용만 고치고, 관리자가 더한 문구는 이름·내용을 고치거나 삭제한다. 저장한 문구는 그 뒤 실행하는
- * 모든 기능에 바로 쓰인다. 연 문구(`selected`)는 AI 화면이 든다. 머리의 `문구 추가`와 탭 바꾸기에서 저장하지 않은
- * 내용을 묻기 때문이다.
+ * AI screen Shared texts tab. The list and edit pane of texts (e.g. a style guide) that go into the instructions of several actions as `{{shared.key}}`.
+ * For a text written in the config, only the content is edited; for a text added by the admin, the name and content are edited or it is deleted. A saved text is used right away by
+ * every action run afterwards. The AI screen holds the open text (`selected`), because the header's Add text and tab switching ask about
+ * unsaved content.
  */
 export function SharedManager({
 	selected,
@@ -62,9 +62,9 @@ export function SharedManager({
 	onDirtyChange,
 }: {
 	selected: string | "new" | null;
-	/** 목록에서 연다. 저장하지 않은 내용이 있으면 AI 화면이 먼저 묻는다. */
+	/** Opens from the list. If there is unsaved content, the AI screen asks first. */
 	onOpen: (key: string | "new") => void;
-	/** 저장·삭제·취소 뒤 묻지 않고 바꾼다. */
+	/** Switches without asking after save, delete or cancel. */
 	onSelectedChange: (key: string | null) => void;
 	onDirtyChange: (dirty: boolean) => void;
 }) {
@@ -152,7 +152,7 @@ const NEW_DRAFT: Draft = { key: "", label: "", text: "" };
 
 const sameDraft = (a: Draft, b: Draft) => a.key === b.key && a.label === b.label && a.text === b.text;
 
-/** 지시문에 넣는 모양을 보이고 복사한다. */
+/** Shows the shape to put into instructions and copies it. */
 function PlaceholderChip({ shareKey }: { shareKey: string }) {
 	const [copied, setCopied] = useState(false);
 	const text = placeholderOf(shareKey);
@@ -162,7 +162,7 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
 		} catch {
-			// 클립보드를 쓸 수 없으면 그대로 둔다.
+			// If the clipboard is unavailable, leave it as is.
 		}
 	};
 	return (
@@ -185,7 +185,7 @@ function SharedEditor({
 	onDirtyChange,
 }: {
 	version: number;
-	/** `null`이면 새 문구. */
+	/** If `null`, a new text. */
 	item: AiSharedItem | null;
 	onSaved: (saved: AiSharedView, key: string) => void;
 	onDeleted: (saved: AiSharedView) => void;
@@ -203,7 +203,7 @@ function SharedEditor({
 	const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
 	const fromConfig = item?.source === "config";
 	const dirty = item === null || !sameDraft(draft, initial);
-	// 새 문구는 아무것도 적지 않았으면 버릴 것이 없다.
+	// A new text with nothing entered has nothing to discard.
 	const unsaved = item === null ? !sameDraft(draft, NEW_DRAFT) : dirty;
 	useEffect(() => onDirtyChange(unsaved), [unsaved, onDirtyChange]);
 	useEffect(() => () => onDirtyChange(false), [onDirtyChange]);

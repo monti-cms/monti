@@ -2,13 +2,13 @@ import type { TextCheckSegment, TextIssue } from "@monti-cms/core";
 import { type BareunResponse, bareunIssues, joinSegments } from "./mapping";
 import type { ResolvedBareunOptions } from "./options";
 
-/** 바른 API를 부르는 데 필요한 값. 키는 서버에서만 다룬다. */
+/** Values needed to call the Bareun API. The key is handled on the server only. */
 export interface BareunRequestOptions extends Pick<ResolvedBareunOptions, "baseUrl" | "customDictNames"> {
 	readonly apiKey: string;
 	readonly signal?: AbortSignal;
 }
 
-/** 바른 맞춤법 검사(`CorrectError`)를 부른다. 실패하면 상태 코드만 담은 오류를 던진다(키·응답 본문은 넣지 않는다). */
+/** Calls Bareun spell check (`CorrectError`). On failure, throws an error carrying only the status code (no key or response body). */
 export async function requestBareun(content: string, options: BareunRequestOptions): Promise<BareunResponse> {
 	const response = await fetch(`${options.baseUrl}/bareun.RevisionService/CorrectError`, {
 		method: "POST",
@@ -19,14 +19,14 @@ export async function requestBareun(content: string, options: BareunRequestOptio
 		},
 		body: JSON.stringify({
 			document: { content, language: "ko_KR" },
-			// 위치를 JS 문자열 인덱스(UTF-16)로 받는다.
+			// Positions are returned as JS string indexes (UTF-16).
 			encodingType: "UTF16",
 			...(options.customDictNames.length > 0 ? { customDictNames: options.customDictNames } : {}),
 		}),
 		signal: options.signal,
 	});
 	if (!response.ok) {
-		// 본문을 읽어 연결을 닫는다. 오류 본문은 내보내지 않는다.
+		// Read the body to close the connection. The error body is not exposed.
 		await response.body?.cancel().catch(() => {});
 		throw new Error(`Bareun request failed: HTTP ${response.status}`);
 	}
@@ -37,7 +37,7 @@ export async function requestBareun(content: string, options: BareunRequestOptio
 
 const isKorean = (locale: string) => locale.toLowerCase().split(/[-_]/)[0] === "ko";
 
-/** 문단을 이어 한 번에 검사하고 문단별 결과로 나눈다. 한국어가 아닌 문단·빈 글은 보내지 않는다. */
+/** Joins paragraphs, checks them in one request, and splits the result per paragraph. Non-Korean paragraphs and empty text are not sent. */
 export async function checkWithBareun(
 	segments: readonly TextCheckSegment[],
 	options: BareunRequestOptions,

@@ -3,14 +3,14 @@ import { TabsView } from "./render.client";
 
 type TabElement = ReactElement<PropsWithChildren<{ label: string }>>;
 
-/** 탭 하나. `Tabs`가 이름과 본문을 읽어 가므로 따로 쓰일 때는 본문만 그린다. */
+/** One tab. `Tabs` reads its name and body, so when used on its own only the body is rendered. */
 export function Tab({ children }: PropsWithChildren<{ label?: string }>) {
 	return <div className="cms-block-tabs-panel">{children}</div>;
 }
 
 /**
- * 탭 묶음. 자식 `Tab`의 이름(`label`)으로 탭 줄을, 본문으로 탭마다의 칸을 만든다. 처음 열 탭(`defaultValue`)은 탭 이름이고
- * 없거나 맞는 탭이 없으면 첫 탭이다. 전환은 클라이언트 컴포넌트(`TabsView`)가 한다.
+ * Tab group. Builds the tab row from the child `Tab` names (`label`) and each tab's panel from its body. The initially open tab (`defaultValue`) is a tab name,
+ * or the first tab if it is absent or matches no tab. Switching is done by a client component (`TabsView`).
  */
 export function Tabs({ defaultValue, children }: PropsWithChildren<{ defaultValue?: string }>) {
 	const tabs = Children.toArray(children).filter(
@@ -28,5 +28,5 @@ export function Tabs({ defaultValue, children }: PropsWithChildren<{ defaultValu
 	);
 }
 
-/** 탭의 공개 컴포넌트(`@monti-cms/core/render`가 부른다). */
+/** Public component for tabs (called by `@monti-cms/core/render`). */
 export default () => ({ Tabs, Tab });

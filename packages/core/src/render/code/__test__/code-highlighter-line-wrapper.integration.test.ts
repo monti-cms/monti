@@ -25,7 +25,7 @@ describe("highlight line wrapper integration", () => {
 		expect(wrapper).toBeDefined();
 	});
 
-	it("decorations와 line wrapper를 함께 써도 line count mismatch 없이 렌더링한다", () => {
+	it("renders without a line count mismatch even when decorations and a line wrapper are used together", () => {
 		const hast = highlight(
 			"const a = 1\nconst b = 2",
 			"ts",
@@ -55,7 +55,7 @@ describe("highlight line wrapper integration", () => {
 		expect(wrapper).toBeDefined();
 	});
 
-	it("line wrapper range end가 라인 수를 넘어도 EOF까지 적용한다", () => {
+	it("applies up to EOF even when the line wrapper range end exceeds the line count", () => {
 		const hast = highlight(
 			"const a = 1\nconst b = 2",
 			"ts",

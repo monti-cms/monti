@@ -10,17 +10,17 @@ import { AI_PLUGIN_NAME } from "./plugin-name";
 import { DEFAULT_AI_ACTIONS } from "./presets";
 
 /**
- * AI 설정(`aiPlugin(config)`)을 실행할 기능 목록으로 푼다. 서버(실행)·브라우저(자리)·설정 검사(`validate`)가 같은 결과를 쓴다.
+ * Resolves the AI config (`aiPlugin(config)`) into the list of actions to run. Server (running), browser (slots) and config validation (`validate`) use the same result.
  *
- * 1. 기본 기능(`DEFAULT_AI_ACTIONS`)
- * 2. 다른 플러그인이 더한 기능(`contributes.ai.actions`, 플러그인 순서). 이미 있는 이름이면 설정 오류다.
- * 3. 설정의 `actions`: 같은 이름이면 바꾸고, `false`면 빼고, 새 이름이면 더한다.
+ * 1. Default actions (`DEFAULT_AI_ACTIONS`)
+ * 2. Actions added by other plugins (`contributes.ai.actions`, in plugin order). A name that already exists is a config error.
+ * 3. `actions` in the config: the same name overrides, `false` removes, a new name adds.
  *
- * 만드는 함수는 사이트 설정을 보고 붙을 곳을 찾는다. 붙을 곳이 없어 `undefined`면 그 기능은 켜지지 않는다.
- * 순서는 필드 옆 기능이 먼저이고, 그 안에서는 위 순서다(관리자 AI 화면의 순서).
+ * The factory function looks at the site config to find where to attach. If there is nowhere to attach and it returns `undefined`, the action is not turned on.
+ * Order: field actions first, then the order above within them (the order of the admin AI screen).
  */
 
-/** 플러그인의 AI 기능 기여. */
+/** An AI action contribution of a plugin. */
 interface PluginLike {
 	readonly name: string;
 	readonly contributes?: Readonly<Record<string, unknown>>;
@@ -31,7 +31,7 @@ const contributionOf = (plugin: PluginLike): AiContribution | undefined => {
 	return ai && typeof ai === "object" ? (ai as AiContribution) : undefined;
 };
 
-/** 설정 이름(`cms.config: …`)과 함께 기능을 만든다. */
+/** Builds the actions together with the config name (`cms.config: …`). */
 const build = (source: AiActionSource, site: AiSiteView): AiActionDefinition | undefined =>
 	typeof source === "function" ? source(site) : source;
 
@@ -69,7 +69,7 @@ export function resolveAiActions(
 	]);
 }
 
-/** AI 설정을 풀어 공통 문구와 함께 돌려준다. */
+/** Resolves the AI config and returns it together with the shared texts. */
 export const resolveAiConfig = (
 	config: AiConfig,
 	site: Omit<AiSiteView, "sharedKeys">,

@@ -6,7 +6,7 @@ import { SEO_INPUTS, SEO_PREVIEW_VIEW } from "../fields";
 import { seoDescriptionInput, seoNoindexInput, seoTitleInput } from "./inputs";
 import { SeoPreviewView } from "./preview";
 
-/** SEO 확장이 관리자 화면에 넣는 것: 검색 미리보기(보기 필드)와 검색 제목·설명·숨기기 입력. */
+/** What the SEO extension adds to the admin UI: the search preview (view field) and the search title, description and hide inputs. */
 export const SEO_ADMIN_COMPONENTS: CmsAdminComponents = {
 	fieldViews: { [SEO_PREVIEW_VIEW]: SeoPreviewView },
 	fieldInputs: {

@@ -1,14 +1,14 @@
 import type { TextIssue, TextIssueSeverity } from "./types";
 
-/** 검사기에 보내는 글에서 인라인 코드·주소·이미지 같은 자리를 바꾼 한 글자. 검사기는 이 글자가 든 결과를 버린다. */
+/** A single character that replaces spots such as inline code, addresses and images in the text sent to the checker. The checker discards results that contain this character. */
 export const PLACEHOLDER = "\uFFFC";
 
-/** 문단 글자 하나에 대한 검사 결과(문단 이름 없이). 캐시에 둔다. */
+/** Check result for one paragraph's text (without the paragraph name). Kept in the cache. */
 export type CachedIssue = Omit<TextIssue, "segmentId" | "source"> & { readonly source: string };
 
 const SEVERITIES: readonly TextIssueSeverity[] = ["error", "warning", "info"];
 
-/** 검사기가 돌려준 값 하나를 확인해 고친다. 위치가 문단을 벗어나는 등 쓸 수 없으면 `null`이다. */
+/** Verifies and fixes one value returned by the checker. `null` if it is unusable, e.g. the position leaves the paragraph. */
 export function normalizeIssue(raw: unknown, length: number, checkerId: string): CachedIssue | null {
 	if (!raw || typeof raw !== "object") return null;
 	const value = raw as Record<string, unknown>;

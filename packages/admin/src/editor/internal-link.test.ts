@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatContentLinkMdx, type InternalLinkItem, parseInternalLinkTrigger } from "./internal-link";
 
-describe("M3-ED-2 Internal Link ([[) Trigger & Format Contract", () => {
+describe("Internal Link ([[) Trigger & Format Contract", () => {
 	it("detects [[ trigger correctly", () => {
 		expect(parseInternalLinkTrigger("Hello world [[").active).toBe(true);
 		expect(parseInternalLinkTrigger("Hello world [[").query).toBe("");

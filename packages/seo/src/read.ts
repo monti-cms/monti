@@ -1,25 +1,25 @@
 import { type CollectionSchema, SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
 import { SEO_ROLES } from "./fields";
 
-/** 공개 화면이 쓸 SEO 값. 비운 값은 없다(`undefined`). */
+/** SEO values for the public page. Empty values are `undefined`. */
 export interface SeoValues {
-	/** 검색 제목. 비었으면 제목(`title`, 라이브러리 약속). */
+	/** Search title. Falls back to the title (`title`, a library convention) when empty. */
 	readonly title?: string;
-	/** 검색 설명. 비었으면 요약 역할(`summary`) 값. */
+	/** Search description. Falls back to the summary role (`summary`) value when empty. */
 	readonly description?: string;
-	/** 공유 이미지(미디어 ID). 공개 주소는 사이트가 미디어 저장소로 만든다. */
+	/** Share image (media ID). The site builds the public URL from the media storage. */
 	readonly imageId?: string;
-	/** 원본 주소(canonical). */
+	/** Canonical URL. */
 	readonly canonical?: string;
-	/** 검색엔진에 숨긴다. */
+	/** Hide from search engines. */
 	readonly noindex: boolean;
 }
 
 const filled = (value: string) => value.trim() || undefined;
 
 /**
- * 컬렉션 정의(`defineCollection`의 결과)와 저장된 메타데이터에서 SEO 값을 읽는다. 필드 이름이 아니라 역할로 찾으므로
- * `seoFields({ keys })`로 이름을 바꿔도 그대로다. 제목·설명은 비면 제목·요약으로 채운다.
+ * Reads SEO values from a collection definition (the result of `defineCollection`) and stored metadata. Fields are found by role, not by name, so
+ * renaming them with `seoFields({ keys })` changes nothing. An empty title or description is filled from the title or summary.
  *
  * ```ts
  * const seo = seoOf(post, entry.metadata);

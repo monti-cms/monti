@@ -14,7 +14,7 @@ import { readSample, readSamples } from "./fixtures/samples";
 
 const DIRECTIVE_TYPES = ["containerDirective", "leafDirective", "textDirective"];
 
-/** 사이트가 더한 컨테이너 블록(설정에서 찾는다, 예: 콜아웃)과 그 글 속성(번역할 글자를 먼저). */
+/** A container block added by the site (looked up from the config, e.g. a callout) and its text attribute (the text to translate first). */
 const siteContainer = ADDED_BLOCKS.find((block) => block.syntax.kind === "container" && !block.parent);
 const siteAttribute = siteContainer
 	? (Object.entries(siteContainer.attributes).find(([, attribute]) => attribute.translatable) ??
@@ -22,9 +22,9 @@ const siteAttribute = siteContainer
 	: undefined;
 
 /**
- * directive 두 플러그인의 **순서**를 공개 체인과 같게 둔 최소 재현 체인이다(demote → 변환).
- * 공개 체인 전체(수식·차트·mermaid·breaks·gfm·toc)는 여기 없다 — 렌더 결과는 실제
- * `MDX_REMARK_PLUGINS`를 쓰는 `directive-render.test.tsx`가 검사한다.
+ * A minimal reproduction chain that keeps the **order** of the two directive plugins the same as the public chain (demote → convert).
+ * The full public chain (math, chart, mermaid, breaks, gfm, toc) is not here — render results are checked by `directive-render.test.tsx`,
+ * which uses the real `MDX_REMARK_PLUGINS`.
  */
 const renderTree = (body: string): Root => {
 	const processor = unified()
@@ -89,19 +89,19 @@ const collectText = (tree: Root): string => {
 	return parts.join("");
 };
 
-describe("미등록 directive 되돌리기", () => {
-	// 실측된 레거시 오탐 2건. 되돌리지 않으면 이 글자들이 조용히 사라진다.
+describe("turning unregistered directives back", () => {
+	// 2 false positives measured on legacy posts. If not turned back, these characters silently disappear.
 	it.each([
 		["openai/gpt-oss-120b:free를 쓴다.", ":free를"],
 		["비율이 1:1로 맞는다.", ":1로"],
-	])("%s → %s 를 본문 글자로 보존한다", (body, expected) => {
+	])("%s → %s is kept as body text", (body, expected) => {
 		const tree = parseMdxAst(body);
 
 		expect(collectDirectiveNames(tree)).toEqual([]);
 		expect(collectText(tree)).toContain(expected);
 	});
 
-	it("미등록 컨테이너는 안쪽까지 원문 그대로 보존한다", () => {
+	it("an unregistered container is kept as the original source down to the inside", () => {
 		const body = ":::unknown\n안쪽 :free를 그대로\n:::";
 		const tree = parseMdxAst(body);
 
@@ -110,14 +110,14 @@ describe("미등록 directive 되돌리기", () => {
 	});
 });
 
-describe("등록 directive 처리", () => {
+describe("registered directive handling", () => {
 	it.skipIf(!siteContainer || !siteAttribute)(
-		"CMS 분석 트리도 등록 이름을 MDX 요소로 바꾼다(참조 수집·검증이 한 shape에서 돈다)",
+		"the CMS analysis tree also turns registered names into MDX elements (reference collection and validation run on one shape)",
 		() => {
 			if (!siteContainer || !siteAttribute) return;
 			const tree = parseMdxAst(`:::${siteContainer.name}{${siteAttribute}="제목"}\n본문\n:::`);
 
-			// 저장 문자열은 그대로이고, 분석기가 보는 트리만 공개 체인과 같은 모양이 된다.
+			// The stored string stays as is, and only the tree the analyzer sees takes the same shape as the public chain.
 			expect(collectDirectiveNames(tree)).toEqual([]);
 			expect(collectJsx(tree)).toEqual([
 				expect.objectContaining({
@@ -129,7 +129,7 @@ describe("등록 directive 처리", () => {
 		},
 	);
 
-	it("분석 트리와 공개 렌더 트리가 같은 요소를 낸다", () => {
+	it("the analysis tree and the public render tree produce the same elements", () => {
 		const body = [
 			':::text-align{align="center"}',
 			"가운데 문단",
@@ -143,7 +143,7 @@ describe("등록 directive 처리", () => {
 		expect(collectJsx(parseMdxAst(body))).toEqual(collectJsx(renderTree(body)));
 	});
 
-	it("공개 렌더는 등록 이름을 MDX 요소로 바꾼다", () => {
+	it("the public render turns registered names into MDX elements", () => {
 		const tree = renderTree(
 			[
 				':::text-align{align="center"}',
@@ -156,7 +156,7 @@ describe("등록 directive 처리", () => {
 			].join("\n"),
 		);
 
-		// demote가 먼저 돌았으므로 남은 directive 노드는 없다.
+		// demote ran first, so no directive nodes remain.
 		expect(collectDirectiveNames(tree)).toEqual([]);
 
 		const jsx = collectJsx(tree);
@@ -165,16 +165,16 @@ describe("등록 directive 처리", () => {
 		expect(jsx[5]).toMatchObject({ type: "mdxJsxFlowElement", attributes: { mediaId: "abc", width: "60%" } });
 	});
 
-	it("변환한 요소가 directive의 본문 위치를 보존한다(경고·참조 위치)", () => {
+	it("converted elements keep the directive's body position (warning and reference positions)", () => {
 		const body = ["첫 문단", "", "둘째 줄 :u[밑줄] 끝", "", '::image{mediaId="abc"}'].join("\n");
 		const jsx = collectJsx(parseMdxAst(body));
 
-		// 위치를 복사하지 않으면 이미지 경고·미디어 참조 위치가 늘 1:1로 보고된다.
+		// If the position is not copied, image warnings and media reference positions are always reported as 1:1.
 		expect(jsx.find((element) => element.name === "Image")).toMatchObject({ position: { start: { line: 5 } } });
 		expect(jsx.find((element) => element.name === "u")).toMatchObject({ position: { start: { line: 3 } } });
 	});
 
-	it("불리언 거짓은 속성을 만들지 않는다('false'가 truthy가 되는 함정 회피)", () => {
+	it("a false boolean creates no attribute (avoids the trap where 'false' is truthy)", () => {
 		const [withFalse] = collectJsx(renderTree('::image{mediaId="abc" decorative="false"}'));
 		const [withTrue] = collectJsx(renderTree('::image{mediaId="abc" decorative}'));
 		const [withLiteralTrue] = collectJsx(renderTree('::image{mediaId="abc" decorative="true"}'));
@@ -185,8 +185,8 @@ describe("등록 directive 처리", () => {
 	});
 });
 
-describe("실제 글 불변식", () => {
-	it("미등록 이름이 directive로 남지 않는다(0건)", () => {
+describe("invariants on real posts", () => {
+	it("no unregistered name remains as a directive (0 cases)", () => {
 		const offenders: string[] = [];
 		for (const { name, mdx } of readSamples()) {
 			const names = collectDirectiveNames(parseMdxAst(mdx));
@@ -196,7 +196,7 @@ describe("실제 글 불변식", () => {
 		expect(offenders).toEqual([]);
 	});
 
-	it("실측된 오탐 2건이 본문에 그대로 남아 있다", () => {
+	it("the 2 measured false positives remain in the body as they are", () => {
 		expect(collectText(parseMdxAst(readSample("vector-rag-search.mdx")))).toContain(":free를");
 		expect(collectText(parseMdxAst(readSample("tooltips-in-code-blocks.mdx")))).toContain(":1로");
 	});

@@ -1,11 +1,11 @@
 import type { ComponentPropsWithRef } from "react";
 
-/** 경로 형식 링크를 해석할 때만 쓰는 고정 origin. */
+/** Fixed origin used only when resolving path-form links. */
 const SITE_PATH_BASE = "https://anchor.invalid";
 
 /**
- * 사이트 상대 경로만 통과시킨다. WHATWG URL 파서는 `\`를 `/`로 보아 `/\evil.example`이 다른 origin이 되므로
- * 고정 origin으로 해석해 같은 origin일 때만 경로로 인정한다(M7-SEC-1 P2).
+ * Lets only site-relative paths through. The WHATWG URL parser treats `\` as `/`, so `/\evil.example` becomes a different origin;
+ * it is resolved against a fixed origin and accepted as a path only when the origin is the same.
  */
 export function resolveSitePath(value: string): string | null {
 	if (!value.startsWith("/")) return null;
@@ -14,8 +14,8 @@ export function resolveSitePath(value: string): string | null {
 }
 
 /**
- * 본문 링크. `#`·사이트 상대 경로·http(s)만 링크로 만들고(`javascript:`·`data:`·`//host`는 글자로 남는다),
- * 바깥 링크는 새 창으로 연다(`cms-link-external`).
+ * Body link. Only `#`, site-relative paths and http(s) become links (`javascript:`, `data:` and `//host` stay as text),
+ * and outside links open in a new window (`cms-link-external`).
  */
 export function CmsLink({ children, href, className, ...props }: ComponentPropsWithRef<"a">) {
 	const h = typeof href === "string" ? href : "";

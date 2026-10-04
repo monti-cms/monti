@@ -31,7 +31,7 @@ vi.mock("../../../container", () => ({
 }));
 
 const decoder = new TextDecoder();
-/** 픽스처 초안의 작업본 파일(블로그 예시 설정은 메모, 다른 설정은 그 설정의 컬렉션). */
+/** Working files of the fixture draft (a memo in the reference blog setup, otherwise that config's collection). */
 const DRAFT_WORKING = fixtureEntryPath(FIXTURE_DRAFT_COLLECTION, "22222222-2222-4222-8222-222222222222", "working.mdx");
 
 const request = (url: string, init?: ConstructorParameters<typeof NextRequest>[1]) => new NextRequest(url, init);
@@ -49,20 +49,20 @@ describe("GET/POST /api/cms/v1/export", () => {
 		mockReadExportSnapshot.mockResolvedValue(makeExportFixtureSnapshot());
 	});
 
-	it("인증되지 않은 요청은 401을 반환한다", async () => {
+	it("returns 401 for an unauthenticated request", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
 		const res = await GET(request("http://localhost/api/cms/v1/export"));
 		expect(res.status).toBe(401);
 		expect((await res.json()).code).toBe("unauthorized");
 	});
 
-	it("잘못된 scope는 400을 반환한다", async () => {
+	it("returns 400 for an invalid scope", async () => {
 		const res = await GET(request("http://localhost/api/cms/v1/export?scope=everything"));
 		expect(res.status).toBe(400);
 		expect((await res.json()).code).toBe("invalid_input");
 	});
 
-	it("기본(admin) 내보내기는 ZIP과 digest 헤더를 반환하고 초안 본문을 담는다", async () => {
+	it("default (admin) export returns a ZIP with a digest header and includes draft bodies", async () => {
 		const res = await GET(request("http://localhost/api/cms/v1/export"));
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("application/zip");
@@ -76,7 +76,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		expect(findFile(zip, DRAFT_WORKING)).toBe("draft secret body");
 	});
 
-	it("public 내보내기는 초안을 제외하고 working 계열 값을 담지 않는다", async () => {
+	it("public export excludes drafts and does not include working values", async () => {
 		const res = await GET(request("http://localhost/api/cms/v1/export?scope=public"));
 		expect(res.status).toBe(200);
 		expect(res.headers.get("x-cms-export-scope")).toBe("public");
@@ -92,7 +92,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		expect(decoder.decode(zip)).not.toContain("draft secret body");
 	});
 
-	it("POST는 교차 출처 요청을 403으로 막는다", async () => {
+	it("POST blocks cross-origin requests with 403", async () => {
 		const res = await POST(
 			request("http://localhost/api/cms/v1/export", {
 				method: "POST",
@@ -103,7 +103,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		expect(res.status).toBe(403);
 	});
 
-	it("POST는 같은 출처에서 scope를 받아 아카이브를 만든다", async () => {
+	it("POST accepts scope from the same origin and creates an archive", async () => {
 		const res = await POST(
 			request("http://localhost/api/cms/v1/export", {
 				method: "POST",
@@ -115,7 +115,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		expect(res.headers.get("x-cms-export-scope")).toBe("public");
 	});
 
-	it("스토어 오류는 500으로 매핑되고 digest 헤더를 노출하지 않는다", async () => {
+	it("maps a store error to 500 and does not expose the digest header", async () => {
 		mockReadExportSnapshot.mockRejectedValue(new Error("db down"));
 		const res = await GET(request("http://localhost/api/cms/v1/export"));
 		expect(res.status).toBe(500);

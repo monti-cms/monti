@@ -1,51 +1,51 @@
 /**
- * 컬렉션 필드 빌더(v2 B1). Keystatic의 `fields.*`처럼 코드 한 곳에서 필드를 정의한다.
+ * Collection field builders. Like Keystatic's `fields.*`, fields are defined in one place in code.
  *
- * 필드 정의는 서버와 브라우저가 함께 쓰므로 **JSON으로 직렬화할 수 있는 값만** 가진다.
- * 함수·React 컴포넌트·비밀 값을 넣지 않는다. 입력 교체(`input`)는 이름으로만 가리키고 실제 구현은 클라이언트
- * 입력 등록부에 둔다. 입력 옆 AI 버튼은 필드 정의가 아니라 화면 자리(`src/cms/slots`)가 필드 이름으로 붙인다(v2 D).
+ * Field definitions are used by both the server and the browser, so they hold **only JSON-serializable values**.
+ * No functions, React components or secret values. An input override (`input`) points only by name, and the actual implementation lives in the client
+ * input registry. The AI button next to an input is not part of the field definition; the screen slot (`src/cms/slots`) attaches it by field name.
  */
 
 /**
- * 언어별 값인가(v2 B4). `true`는 언어마다 따로 가지고, `"inherit"`는 원문 값을 기본으로 물려받되 바꿀 수 있다.
- * 표시가 없으면 번역 묶음이 공통으로 쓴다.
+ * Whether the value is per language. `true` means each language has its own; `"inherit"` inherits the source value by default but can be changed.
+ * If unmarked, the translation group shares it.
  */
 export type Localized = boolean | "inherit";
 
 /**
- * 필드의 뜻(역할). 확장·화면은 필드 이름이 아니라 역할로 값을 찾는다. 한 컬렉션에서 역할마다
- * 필드는 하나뿐이다(`defineConfig`가 확인한다). 역할 이름과 맞는 필드 종류는 그 역할을 쓰는 확장이 정하고 확인한다
- * (플러그인 `validate`).
+ * The meaning (role) of a field. Extensions and screens look up values by role, not by field name. In one collection, each role
+ * has only one field (`defineConfig` checks it). The field kinds that fit a role name are decided and checked by the extension that uses that role
+ * (plugin `validate`).
  *
- * 본체가 아는 역할은 `summary`(요약, 텍스트 필드) 하나다. 필드 옆 동작(AI 등)에 `summary`로 넘어가고 목록·검색 결과
- * 설명의 기본값이다.
+ * The only role the core knows is `summary` (summary, a text field). It is passed as `summary` to actions next to a field (AI etc.) and is the default for list and search result
+ * descriptions.
  */
 export type FieldRole = string;
 export const SUMMARY_ROLE = "summary";
 
 interface BaseField {
 	readonly label: string;
-	/** 입력 아래 도움말. */
+	/** Help text below the input. */
 	readonly description?: string;
 	/**
-	 * 비어 있으면 안 되는 필드. 문서(`document`) 컬렉션은 발행할 때, 항목(`item`) 컬렉션은 저장할 때 검사한다.
-	 * 초안 저장은 막지 않는다. 예전 값 `"publish"`도 같은 뜻으로 받는다.
+	 * A field that must not be empty. Document (`document`) collections check it when publishing, item (`item`) collections when saving.
+	 * Saving a draft is not blocked. The legacy value `"publish"` is accepted with the same meaning.
 	 */
 	readonly required?: true | "publish";
 	readonly localized?: Localized;
-	/** 기본 입력 대신 쓸 클라이언트 입력 등록부의 이름. */
+	/** Name in the client input registry to use instead of the default input. */
 	readonly input?: string;
 	/**
-	 * 기본 입력이나 `input`이 가리키는 입력에 넘길 설정(예: 권장 글자 수). 본체는 읽지 않는다. JSON 값만 둔다.
+	 * Settings passed to the default input or the input `input` points to (e.g. recommended character count). The core does not read it. Only JSON values.
 	 */
 	readonly inputOptions?: Readonly<Record<string, string | number | boolean>>;
-	/** 저장·검증만 하고 속성 패널에 입력을 그리지 않는다. 저장된 값은 그대로 둔다. */
+	/** Only stored and validated; no input is drawn in the properties panel. The stored value is left as is. */
 	readonly hidden?: boolean;
-	/** 필드의 뜻(`FieldRole`). 컬렉션 안에서 겹치지 않는다. */
+	/** The meaning of the field (`FieldRole`). Does not overlap within a collection. */
 	readonly role?: FieldRole;
 	/**
-	 * 편집 화면 속성 칸에서 이 필드를 그릴 탭 이름. 배치(`layout`) 묶음의 `tab`이 있으면 그것이 먼저다. 확장이 주는 필드 묶음
-	 * 이 사이트가 배치를 적지 않아도 제 탭에 모이게 한다. 없으면 기본 탭(`속성`)이다.
+	 * Tab name in which this field is drawn in the edit screen's properties area. A `tab` on a layout group (`layout`) takes precedence. Lets field groups provided by an extension
+	 * gather in their own tab even if the site does not write a layout. If absent, it is the default tab (`속성`).
 	 */
 	readonly tab?: string;
 }
@@ -53,24 +53,24 @@ interface BaseField {
 export interface TextField extends BaseField {
 	readonly kind: "text";
 	/**
-	 * 발행할 때 비어 있으면 본문 앞부분의 일반 글자로 채운다. `true`면 160자, `{ maxLength }`로 바꾼다.
-	 * 본문이 있는 컬렉션에서만 쓴다. 채울 글이 없으면 발행하지 않고 이 필드를 입력하라고 알린다.
+	 * If empty when publishing, it is filled with plain text from the start of the body. `true` means 160 characters; change it with `{ maxLength }`.
+	 * Use it only in collections that have a body. If there is no text to fill, it does not publish and tells you to enter this field.
 	 */
 	readonly fillFromBody?: boolean | { readonly maxLength?: number };
 	readonly multiline?: boolean;
-	/** 여러 줄 입력(`multiline`)의 처음 줄 수. 없으면 2줄. */
+	/** Initial number of rows of a multiline input (`multiline`). 2 rows if absent. */
 	readonly rows?: number;
-	/** 최대 글자 수(유니코드 코드 포인트). */
+	/** Maximum number of characters (Unicode code points). */
 	readonly max?: number;
 	readonly placeholder?: string;
 }
 
-/** 주소. 메타데이터가 아니라 콘텐츠의 slug 열에 저장한다. */
+/** Address. Stored in the content's slug column, not in the metadata. */
 export interface SlugField extends BaseField {
 	readonly kind: "slug";
 	/**
-	 * 주소를 만들 때 읽는 텍스트 필드 이름(보통 `title`). 다시 만들기 단추와 자동 생성(새 글 입력 중, record 저장 때
-	 * 비어 있으면)이 이 필드 값을 쓴다. 없으면 주소를 자동으로 만들지 않는다.
+	 * Name of the text field read when building the address (usually `title`). The regenerate button and auto generation (while typing a new post, or when a record is saved
+	 * and the address is empty) use this field's value. If absent, the address is not generated automatically.
 	 */
 	readonly from?: string;
 	readonly placeholder?: string;
@@ -78,41 +78,41 @@ export interface SlugField extends BaseField {
 
 export interface RelationField extends BaseField {
 	readonly kind: "relation";
-	/** 관계 대상 컬렉션 이름. 실제로 있는 컬렉션인지는 `defineConfig`가 확인한다. */
+	/** Name of the target collection of the relation. Whether it is a real collection is checked by `defineConfig`. */
 	readonly to: string;
 	readonly many?: boolean;
-	/** 없는 대상을 입력 옆에서 바로 만든다(v2 B2). */
+	/** Creates a missing target right next to the input. */
 	readonly createInline?: boolean;
-	/** 고를 때 공개된 대상만 보여 준다. */
+	/** Shows only published targets when picking. */
 	readonly publishedOnly?: boolean;
-	/** 공개되지 않은 대상도 발행을 막지 않는다(모음집 항목, v1 §6.4). */
+	/** Unpublished targets do not block publishing either (collection items). */
 	readonly allowUnpublished?: boolean;
-	/** 여러 개일 때 순서를 사용자가 정한다. */
+	/** When there are several, the user decides the order. */
 	readonly ordered?: boolean;
 	readonly placeholder?: string;
 }
 
 export interface SelectField<Option extends string = string> extends BaseField {
 	readonly kind: "select";
-	/** 값 → 라벨. 선언 순서가 보이는 순서다. */
+	/** Value → label. Declaration order is the display order. */
 	readonly options: Readonly<Record<Option, string>>;
 	readonly defaultValue: Option;
 }
 
 /**
- * 미디어 라이브러리의 파일 하나(미디어 ID를 글자로 저장한다). 관리자 화면은 미디어 고르기로 입력하고, 값은 미디어
- * 사용처(`entry_references`)에 잡혀 쓰고 있는 파일은 지울 수 없다.
+ * One file of the media library (the media ID is stored as text). The admin screen takes input through the media picker, and the value is recorded in media
+ * usages (`entry_references`), so a file in use cannot be deleted.
  */
 export interface MediaField extends BaseField {
 	readonly kind: "media";
-	/** 고를 수 있는 파일. `image`면 이미지만, `file`이면 아무 파일. 없으면 `image`. */
+	/** Files that can be picked. `image` means images only, `file` means any file. If absent, `image`. */
 	readonly accept?: "image" | "file";
 	readonly placeholder?: string;
 }
 
 /**
- * 선택 값에 따라 딸린 필드가 생기는 필드. 선택 값은 이 필드 이름으로, 딸린 필드는 각자 이름으로
- * 메타데이터 최상위에 저장한다(v1 저장 형식 유지). 딸린 값은 조건이 맞을 때만 남긴다.
+ * A field with dependent fields that appear depending on the choice value. The choice value is stored under this field's name and the dependent fields under their own names
+ * at the top level of the metadata (keeps the legacy storage format). Dependent values are kept only when the condition matches.
  */
 export interface ConditionalField<Option extends string = string> extends Omit<BaseField, "label" | "required"> {
 	readonly kind: "conditional";
@@ -122,16 +122,16 @@ export interface ConditionalField<Option extends string = string> extends Omit<B
 }
 
 /**
- * 반대 방향 관계(v2 B2). 이 콘텐츠에는 저장하지 않고, 다른 컬렉션(`from`)의 여러 개 관계 필드(`via`)가
- * 이 콘텐츠를 가리키는지를 보여 주고 바꾼다. 예: 게시글 속성 패널의 `모음집`은 모음집의 `itemIds`를 편집한다.
- * 입력은 누르는 즉시 상대 레코드에 저장한다(이 콘텐츠의 초안·발행과 별개).
+ * Reverse relation. Not stored on this content; it shows and changes which of another collection's (`from`) multiple relation fields (`via`)
+ * point to this content. Example: the `Collection` in a post's properties panel edits the collection's `itemIds`.
+ * The input saves to the other record immediately on click (separate from this content's draft and publish).
  */
 export interface BacklinkField extends Omit<BaseField, "required" | "localized"> {
 	readonly kind: "backlink";
-	/** 관계 필드를 가진 상대 컬렉션 이름. */
+	/** Name of the other collection that has the relation field. */
 	readonly from: string;
 	readonly via: string;
-	/** 없는 대상을 이 콘텐츠를 담은 채로 바로 만든다. */
+	/** Creates a missing target right away, already containing this content. */
 	readonly createInline?: boolean;
 	readonly placeholder?: string;
 	readonly localized?: undefined;
@@ -139,17 +139,17 @@ export interface BacklinkField extends Omit<BaseField, "required" | "localized">
 }
 
 /**
- * 보기 필드. 값을 저장하지 않고 편집 화면 속성 칸의 그 자리에 화면 하나를 그린다(예: 검색 결과·공유 미리보기).
- * `view`는 관리자 확장의 `fieldViews`에 등록한 이름이다. 등록한 화면이 없으면 아무것도 그리지 않는다.
+ * View field. Stores no value and draws one screen in that spot of the edit screen's properties area (e.g. search results, share preview).
+ * `view` is a name registered in the admin extension's `fieldViews`. If no screen is registered, nothing is drawn.
  */
 export interface ViewField {
 	readonly kind: "view";
 	readonly view: string;
-	/** 화면 위 이름. 없으면 이름 없이 그린다. */
+	/** Name above the screen. If absent, it is drawn without a name. */
 	readonly label?: string;
 	readonly description?: string;
 	readonly hidden?: boolean;
-	/** 그릴 탭(`BaseField.tab`과 같다). */
+	/** Tab to draw in (same as `BaseField.tab`). */
 	readonly tab?: string;
 	readonly localized?: undefined;
 	readonly required?: undefined;
@@ -157,20 +157,20 @@ export interface ViewField {
 }
 
 /**
- * 메타데이터에서 본체가 따로 쓰는 키. 필드 이름으로 쓸 수 없다(`defineConfig`가 막는다).
- * `translations`는 항목 컬렉션의 언어별 값이다.
+ * Keys the core uses separately in metadata. They cannot be used as field names (`defineConfig` blocks them).
+ * `translations` holds the per-language values of an item collection.
  */
 export const RESERVED_METADATA_KEYS: readonly string[] = ["translations"];
 
-/** 필드가 비어 있으면 안 되는가(`required: true`·예전 값 `"publish"`). */
+/** Whether the field must not be empty (`required: true` and the legacy value `"publish"`). */
 export const isRequiredField = (field: { readonly required?: true | "publish" }): boolean =>
 	field.required === true || field.required === "publish";
 
-/** 본문에서 채울 때의 기본 글자 수. */
+/** Default character count when filling from the body. */
 export const FILL_FROM_BODY_MAX_LENGTH = 160;
 
 /**
- * 본문에서 채우는 필드의 글자 수(`fillFromBody`). 필드 `max`보다 길지 않다. 채우지 않는 필드면 `undefined`.
+ * Character count of a field filled from the body (`fillFromBody`). No longer than the field's `max`. `undefined` for a field that is not filled.
  */
 export function fillFromBodyLength(field: TextField): number | undefined {
 	const fill = field.fillFromBody;
@@ -179,7 +179,7 @@ export function fillFromBodyLength(field: TextField): number | undefined {
 	return field.max === undefined ? length : Math.min(length, field.max);
 }
 
-/** 값 하나를 저장하는 필드. */
+/** A field that stores one value. */
 export type ValueField = TextField | RelationField | SelectField | MediaField;
 export type Field = ValueField | SlugField | ConditionalField | BacklinkField | ViewField;
 export type FieldKind = Field["kind"];
@@ -204,13 +204,13 @@ export const fields = {
 		}) as const,
 };
 
-/** 필드 값의 저장 형식. */
+/** Storage format of a field value. */
 export type StorageType = "string" | "string[]";
 
 export const storageTypeOf = (field: ValueField): StorageType =>
 	field.kind === "relation" && field.many ? "string[]" : "string";
 
-/** 저장 값의 TypeScript 타입. */
+/** TypeScript type of the stored value. */
 export type ValueOf<F> = F extends RelationField
 	? F["many"] extends true
 		? readonly string[]

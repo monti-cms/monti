@@ -18,8 +18,8 @@ vi.mock("../../config/resolved", async (importOriginal) => {
 	};
 });
 
-describe("M17-4 미디어 설정", () => {
-	it("한도·형식을 사이트 설정에서 읽는다", async () => {
+describe("media settings", () => {
+	it("reads limits and formats from the site config", async () => {
 		const api = await import("../api");
 		expect(api.MAX_MEDIA_BYTES).toBe(2048);
 		expect(api.MAX_MEDIA_PIXELS).toBe(100);
@@ -31,7 +31,7 @@ describe("M17-4 미디어 설정", () => {
 		expect(api.fileTypeFor("a.zip")).toBeNull();
 	});
 
-	it("설정에서 뺀 형식은 업로드 요청에서 거절한다", async () => {
+	it("rejects formats excluded in the config in upload requests", async () => {
 		const { mediaUploadBodySchema } = await import("../api");
 		const base = { filename: "a", byteSize: 10 };
 		expect(mediaUploadBodySchema.safeParse({ ...base, mimeType: "image/png" }).success).toBe(true);
@@ -44,7 +44,7 @@ describe("M17-4 미디어 설정", () => {
 		);
 	});
 
-	it("잘못된 설정은 오류다", () => {
+	it("an invalid config is an error", () => {
 		expect(() => validateMediaConfig(undefined)).not.toThrow();
 		expect(() => validateMediaConfig({ maxImageBytes: 0 })).toThrow(/maxImageBytes/);
 		expect(() => validateMediaConfig({ maxPixels: 1.5 })).toThrow(/maxPixels/);

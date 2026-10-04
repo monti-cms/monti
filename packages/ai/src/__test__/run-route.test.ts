@@ -44,7 +44,7 @@ const run = (body: unknown) =>
 		}),
 	);
 
-describe("AI 실행 API", () => {
+describe("AI run API", () => {
 	beforeEach(() => {
 		mockVerifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
 		vi.stubEnv("CMS_AI_FAKE", "1");
@@ -52,7 +52,7 @@ describe("AI 실행 API", () => {
 	});
 	afterEach(() => vi.unstubAllEnvs());
 
-	it("기능을 이름과 입력으로 실행한다", async () => {
+	it("runs an action by name and input", async () => {
 		const res = await run({
 			action: "summary",
 			input: { title: "React 훅", body: "본문" },
@@ -62,7 +62,7 @@ describe("AI 실행 API", () => {
 		expect(await res.json()).toEqual({ result: { kind: "text", text: "(fake) React 훅" } });
 	});
 
-	it("여러 입력은 입력마다 결과나 실패 이유를 순서대로 돌려준다", async () => {
+	it("multiple inputs return a result or failure reason per input, in order", async () => {
 		const res = await run({
 			action: "translate",
 			inputs: [
@@ -76,22 +76,22 @@ describe("AI 실행 API", () => {
 		});
 	});
 
-	it("없는 기능·정의에 맞지 않는 입력·꺼진 기능·잘못된 시험 값은 막는다", async () => {
+	it("rejects unknown actions, inputs that do not match the definition, disabled actions and invalid test values", async () => {
 		expect((await run({ action: "nope", input: {} })).status).toBe(404);
 		expect((await run({ action: "translate", input: { block: 1, from: "ko", to: "en" } })).status).toBe(400);
 		expect((await run({ action: "summary", input: {}, inputs: [{}] })).status).toBe(400);
 
 		overrides.rows = [{ key: "summary", value: { enabled: false }, version: 1 }];
 		expect((await run({ action: "summary", input: { title: "t" } })).status).toBe(503);
-		// 시험은 꺼진 기능도 저장하지 않은 값으로 돌린다. 지시문에 언어 입력이 아닌 자리 표시는 받지 않는다.
+		// A test runs even a disabled action with unsaved values. Placeholders in the prompt that are not language inputs are rejected.
 		expect((await run({ action: "summary", input: { title: "t" }, draft: { enabled: false } })).status).toBe(200);
 		const bad = await run({ action: "summary", input: { title: "t" }, draft: { prompt: "{{title}}" } });
 		expect(bad.status).toBe(400);
 		expect(await bad.json()).toMatchObject({ code: "ai_invalid_input" });
 	});
 
-	it("가짜 연결은 입력 종류로 답하고, 기능이 정한 가짜 답(fake)은 그 기능의 검사를 통과한다", async () => {
-		// 블록 기능: 고칠 다이어그램에 한 줄을 더한 답이 Mermaid 문법 검사를 통과한다.
+	it("the fake connection answers by input kind, and an action's own fake answer passes that action's checks", async () => {
+		// Block action: an answer that adds one line to the diagram passes the Mermaid syntax check.
 		const diagram = "```mermaid\ngraph TD\n  A --> B\n```";
 		const edit = await run({ action: "diagramEdit", input: { block: diagram } });
 		expect(edit.status).toBe(200);
@@ -100,11 +100,11 @@ describe("AI 실행 API", () => {
 		expect(edited.result.text).toContain("A --> B");
 		expect(edited.result.text).not.toBe(diagram);
 
-		// 선택 영역 기능: MDX 입력을 그대로 돌려준다(입력 이름을 보지 않는다).
+		// Selection action: returns the MDX input as is (ignores the input name).
 		const polish = await run({ action: "polish", input: { selection: "고칠 글" } });
 		expect(await polish.json()).toEqual({ result: { kind: "mdx", text: "고칠 글" } });
 
-		// 주소 후보: 본체 콘텐츠 조회가 쓰는 주소라고 답한 후보는 빠진다.
+		// Slug candidates: a candidate reported as used by the core content lookup is dropped.
 		const slug = await run({ action: "slug", input: { title: "Taken" }, env: { collection: "post" } });
 		const slugs = (await slug.json()) as { result: { items: Array<{ value: string }> } };
 		expect(slugs.result.items.map((item) => item.value)).toEqual(["taken-guide", "fake-taken"]);

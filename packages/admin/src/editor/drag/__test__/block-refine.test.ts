@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { findBlockDOM, refineBlock } from "../block-resolve";
 
-/** jsdom에는 배치가 없다. 테스트할 요소마다 사각형을 준다. */
+/** jsdom has no layout. Give each element under test a rect. */
 const box = (element: Element | null, left: number, top: number, right: number, bottom: number) => {
-	if (!element) throw new Error("요소 없음");
+	if (!element) throw new Error("No element");
 	(element as HTMLElement).getBoundingClientRect = () => new DOMRect(left, top, right - left, bottom - top);
 	return element as HTMLElement;
 };
@@ -16,8 +16,8 @@ const html = (markup: string) => {
 	return root;
 };
 
-describe("한 줄에 핸들 하나(refineBlock)", () => {
-	it("목록의 글머리표 자리는 그 높이의 항목, 들여쓴 목록이면 안쪽 항목이다", () => {
+describe("one handle per line (refineBlock)", () => {
+	it("a list's bullet area maps to the item at that height, or the inner item for an indented list", () => {
 		const root = html("<ul><li><p>첫째</p></li><li><p>둘째</p><ul><li><p>안쪽</p></li></ul></li></ul>");
 		const [outer, first, second, inner] = [
 			root.querySelector("ul"),
@@ -35,7 +35,7 @@ describe("한 줄에 핸들 하나(refineBlock)", () => {
 		expect(refineBlock(outer as HTMLElement, 5, 70)).toBe(inner);
 	});
 
-	it("목록 항목 사이 여백은 목록 전체가 아니라 가까운 항목이다", () => {
+	it("the gap between list items maps to the nearest item, not the whole list", () => {
 		const root = html("<ul><li><p>첫째</p></li><li><p>둘째</p></li></ul>");
 		const [first, second] = Array.from(root.querySelectorAll("li"));
 		const list = box(root.querySelector("ul"), 0, 0, 500, 100);
@@ -45,7 +45,7 @@ describe("한 줄에 핸들 하나(refineBlock)", () => {
 		expect(refineBlock(list, 5, 56)).toBe(second);
 	});
 
-	it("단 하나는 대상이 아니다: 단의 틈·여백은 그 높이의 문단, 문단이 없는 줄은 단 나누기 전체다", () => {
+	it("a single column is not a target: column gaps and margins map to the paragraph at that height, and a line with no paragraph maps to the whole column split", () => {
 		const root = html(
 			'<div class="react-renderer node-cmsColumns"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react>' +
 				'<div class="react-renderer node-cmsColumn"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react><p>왼쪽</p></div></div></div></div>' +
@@ -62,13 +62,13 @@ describe("한 줄에 핸들 하나(refineBlock)", () => {
 
 		expect(refineBlock(columns as HTMLElement, 255, 20)).toBe(rightText);
 		expect(refineBlock(columns as HTMLElement, 100, 20)).toBe(leftText);
-		// 단 안의 문단 아래 여백: 단 하나가 아니라 단 나누기 전체
+		// Margin below a paragraph in a column: the whole column split, not a single column
 		expect(refineBlock(left as HTMLElement, 100, 80)).toBe(columns);
-		// 위쪽 여백(문단이 없는 줄): 단 나누기 전체
+		// Top margin (a line with no paragraph): the whole column split
 		expect(refineBlock(columns as HTMLElement, 100, 5)).toBe(columns);
 	});
 
-	it("인용문 안쪽을 가리켜도 인용문 전체가 대상이다", () => {
+	it("pointing inside a blockquote still targets the whole blockquote", () => {
 		const root = html("<blockquote><p>인용</p><p>둘째</p></blockquote><p>뒤</p>");
 		const quote = root.querySelector("blockquote");
 		expect(findBlockDOM(root, root.querySelector("blockquote p"))).toBe(quote);

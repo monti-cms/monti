@@ -17,8 +17,8 @@ import type {
 } from "./types";
 
 /**
- * 항목에서 값이 있는 언어. 언어별 텍스트 필드(`localized: true`) 중 하나라도 값이 있으면 그 언어가 있다. 기본 언어는 필드 자체,
- * 다른 언어는 `translations[언어][필드]`다.
+ * Languages that have a value in the entry. A language exists if any per-language text field (`localized: true`) has a value. The default language is the field itself,
+ * other languages are `translations[locale][field]`.
  */
 function namedLocales(collection: Collection, metadata: Record<string, unknown>): string[] {
 	const fields = recordLocalizedFields(collection);
@@ -31,15 +31,15 @@ function namedLocales(collection: Collection, metadata: Record<string, unknown>)
 
 const isDate = (value: unknown): value is Date => value instanceof Date && Number.isFinite(value.getTime());
 
-/** 컬렉션의 관계 필드. 목록 필터와 줄의 `relations`가 쓴다. */
+/** Relation fields of a collection. Used by list filters and the row's `relations`. */
 const relationFieldsOf = (collection: string): StoredField[] =>
 	storedFields(collection as Collection).filter((stored) => stored.field.kind === "relation");
 
-/** 목록 칸에 글자로 보여 줄 필드(관계는 `relations`가 따로 담는다). */
+/** Fields shown as text in list cells (relations are carried separately in `relations`). */
 const valueColumnFieldsOf = (collection: string): StoredField[] =>
 	storedFields(collection as Collection).filter((stored) => ["text", "select", "media"].includes(stored.field.kind));
 
-/** 관계 값을 읽을 초안. 언어별 값이 아니면 번역 묶음 공통 값이라 원문 초안(`sw`)에서 읽는다(v2 B4). */
+/** Draft to read relation values from. A non-per-language value is shared across the translation group, so it is read from the source draft (`sw`). */
 const relationSource = (stored: StoredField): "w" | "sw" => (stored.field.localized ? "w" : "sw");
 
 const relationIds = (value: unknown): string[] =>
@@ -103,7 +103,7 @@ function assertParams(params: ListEntriesParams) {
 	}
 }
 
-/** §3.2 관리자 목록. 검색·필터·정렬·페이지를 서버에서 처리한다. */
+/** Admin list. Search, filtering, sorting, and paging are handled on the server. */
 export function createListOps(ctx: StoreContext) {
 	const { pool, qSchema } = ctx;
 
@@ -122,9 +122,9 @@ export function createListOps(ctx: StoreContext) {
 
 			conditions.push(`e.collection = ${bind(params.collection)}`);
 			const grouped = params.groupTranslations === true;
-			// 묶음 보기는 원문만 줄로 둔다. 번역본은 줄의 `translations`로 딸려 온다.
+			// Group view keeps only the source as a row. Translations come attached in the row's `translations`.
 			if (grouped) conditions.push("(e.translation_group_id IS NULL OR e.translation_group_id = e.id)");
-			/** 같은 묶음에서 휴지통 밖에 있는 콘텐츠(원문 포함)가 조건을 만족하는지. */
+			/** Whether content in the same group that is outside the trash (including the source) satisfies the condition. */
 			const anyMember = (predicate: string) =>
 				`EXISTS (
 					SELECT 1 FROM "${qSchema}".entries m
@@ -134,7 +134,7 @@ export function createListOps(ctx: StoreContext) {
 			if (params.statuses && params.statuses.length > 0) {
 				conditions.push(`e.status = ANY(${bind(params.statuses)}::text[])`);
 			} else {
-				// 기본 목록은 휴지통을 숨긴다(§5.3).
+				// The default list hides the trash.
 				conditions.push(`e.status <> 'trashed'`);
 			}
 
@@ -177,7 +177,7 @@ export function createListOps(ctx: StoreContext) {
 				const locales = `${bind(params.locales)}::text[]`;
 				conditions.push(grouped ? anyMember(`m.locale = ANY(${locales})`) : `e.locale = ANY(${locales})`);
 			}
-			// 공통 관계 값은 번역본도 원문 초안의 값으로 거른다(v2 B4). 원문은 `sw`가 자기 초안이다.
+			// Shared relation values are filtered by the source draft's values even for translations. For a source, `sw` is its own draft.
 			const relationFields = relationFieldsOf(params.collection);
 			for (const [field, ids] of Object.entries(params.relations ?? {})) {
 				const stored = relationFields.find((candidate) => candidate.name === field);
@@ -252,7 +252,7 @@ export function createListOps(ctx: StoreContext) {
 
 			const baseItems = dataRes.rows.map((row) => {
 				const meta = row.metadata ?? {};
-				// 공통 관계 값은 원문 초안에서 읽는다(v2 B4).
+				// Shared relation values are read from the source draft.
 				const common = row.source_metadata ?? meta;
 				const relationIdsByField = Object.fromEntries(
 					relationFields.map((stored) => [

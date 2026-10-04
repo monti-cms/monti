@@ -4,9 +4,9 @@ import { mdxToTiptap, OPAQUE_BLOCK_NAME, tiptapToMdx } from "../../../tiptap-con
 import { blockNodeName, insertContentOf } from "..";
 import { ADDED_NODE_BLOCKS } from "../shared";
 
-// 예시 설정(`packages/core/test/cms.config.ts`)의 사용자 블록: `notice`(편집기 노드 컨테이너), `embed`(원문 상자).
-describe("사용자 블록 편집", () => {
-	it("편집기 노드가 있는 사용자 블록은 속성·본문을 노드로 옮기고 그대로 되돌린다", () => {
+// Custom blocks of the example config (`packages/core/test/cms.config.ts`): `notice` (editor node container), `embed` (raw-source box).
+describe("custom block editing", () => {
+	it("a custom block with an editor node moves its attributes and body into the node and round-trips unchanged", () => {
 		const mdx = ':::notice{level="warn" title="점검"}\n오늘 밤 점검합니다.\n:::\n';
 		const json = mdxToTiptap(mdx);
 		const node = json.content?.[0];
@@ -17,29 +17,29 @@ describe("사용자 블록 편집", () => {
 		expect(tiptapToMdx(json)).toBe(mdx);
 	});
 
-	it("원문 상자로 정한 사용자 블록은 원문 그대로 보존한다", () => {
+	it("a custom block set as a raw-source box is preserved as is", () => {
 		const mdx = '::embed{url="https://example.com/video"}\n';
 		const node = mdxToTiptap(mdx).content?.[0];
 		expect(node?.type).toBe(OPAQUE_BLOCK_NAME);
 		expect(tiptapToMdx(mdxToTiptap(mdx))).toBe(mdx);
 	});
 
-	it("삽입할 수 있는 사용자 블록이 슬래시 메뉴에 나온다", () => {
+	it("insertable custom blocks appear in the slash menu", () => {
 		const items = buildBlockSlashCommands();
 		expect(items.find((item) => item.id === "notice")?.title).toBe("공지");
 		expect(items.some((item) => item.id === "embed")).toBe(false);
 	});
 });
 
-// 예시 설정은 블록 확장(`@monti-cms/blocks`)의 블록을 모두 쓴다.
-describe("더한 블록의 편집기 표현", () => {
+// The example config uses every block of the blocks extension (`@monti-cms/blocks`).
+describe("editor representation of added blocks", () => {
 	const block = (name: string) => {
 		const found = ADDED_NODE_BLOCKS.find((candidate) => candidate.name === name);
 		if (!found) throw new Error(name);
 		return found;
 	};
 
-	it("슬래시 메뉴는 더한 블록(설정 순서) 다음에 본체 블록이고, 아이콘은 정의에서 온다", () => {
+	it("the slash menu lists added blocks (in config order) after the core blocks, and icons come from the definition", () => {
 		const items = buildBlockSlashCommands();
 		expect(items.map((item) => item.id)).toEqual([
 			"callout",
@@ -58,7 +58,7 @@ describe("더한 블록의 편집기 표현", () => {
 		});
 	});
 
-	it("삽입 내용은 정의의 처음 값을 따르고, 없으면 기본값과 최소 개수의 자식이다", () => {
+	it("inserted content follows the definition's initial value, otherwise default values and the minimum number of children", () => {
 		expect(insertContentOf(block("callout"))).toEqual({
 			type: "cmsCallout",
 			attrs: { values: { variant: "info" }, originalAttributes: [] },
@@ -79,7 +79,7 @@ describe("더한 블록의 편집기 표현", () => {
 		});
 	});
 
-	it("코드 펜스 블록은 그 언어의 코드 블록을 노드로 옮기고 메타까지 되돌린다", () => {
+	it("a code fence block moves that language's code block into a node and round-trips the meta", () => {
 		const mdx = "```mermaid title=흐름\ngraph TD\n  A --> B\n```\n";
 		const node = mdxToTiptap(mdx).content?.[0];
 		expect(node).toMatchObject({ type: "cmsMermaid", attrs: { value: "graph TD\n  A --> B", meta: "title=흐름" } });

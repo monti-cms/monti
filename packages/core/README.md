@@ -1,13 +1,15 @@
 # @monti-cms/core
 
-DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키마, 콘텐츠 저장·발행, MDX 변환, 관리자 API, 플러그인 연결을 맡는다.
-관리자 화면은 `@monti-cms/admin`, AI 기능은 플러그인 `@monti-cms/ai`다. 다 붙인 예는 `examples/other-site`다.
+English | [한국어](README.ko.md)
 
-## 빈 Next 앱에 설치
+The core of a DB (Postgres)-backed blog CMS. It handles the site config, collection schemas, content saving and publishing, MDX conversion, the admin API and plugin wiring.
+The admin UI is `@monti-cms/admin` and the AI features are the plugin `@monti-cms/ai`. `examples/other-site` is an example with everything wired together.
 
-Next 16(App Router)·React 19·Tailwind CSS 4 앱 기준이다. 저장소는 Postgres만 지원한다. 순서는 `monti init` → 컬렉션 고치기 → `monti migrate`다.
+## Install in an empty Next app
 
-### 1. 패키지
+This assumes a Next 16 (App Router), React 19 and Tailwind CSS 4 app. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate`.
+
+### 1. Packages
 
 ```sh
 pnpm add @monti-cms/core @monti-cms/admin next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
@@ -15,68 +17,68 @@ pnpm add @monti-cms/core @monti-cms/admin next-auth@5.0.0-beta.32 next-themes @t
 pnpm add -D tw-animate-css @tailwindcss/typography
 ```
 
-관리자 패키지와 AI 플러그인은 React Query·sonner·Tiptap·lucide 아이콘을 앱과 같은 하나로 써야 해서 앱이 설치한다(peer).
-`next-auth`는 GitHub 로그인(`githubAuth`)을 쓸 때만 필요하다.
-명령줄 `monti`는 `@monti-cms/core`에 들어 있다(TypeScript 설정 파일은 함께 설치되는 tsx가 읽는다).
+The admin package and the AI plugin must share one copy of React Query, sonner, Tiptap and the lucide icons with the app, so the app installs them (peers).
+`next-auth` is only needed when you use GitHub login (`githubAuth`).
+The `monti` command line ships inside `@monti-cms/core` (TypeScript config files are read by tsx, which is installed with it).
 
-pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패로 끝낸다(10은 경고만 한다). tsx가 쓰는 esbuild의 설치 스크립트를 허락한다.
+pnpm 12 fails the install if there are install scripts that have not been allowed (10 only warns). Allow the install script of esbuild, which tsx uses.
 
 ```yaml
-# pnpm-workspace.yaml (앱 폴더)
+# pnpm-workspace.yaml (app folder)
 allowBuilds:
   esbuild: true
 ```
 
 ### 2. `monti init`
 
-앱 폴더(`package.json`이 있는 곳)에서 돌린다. **있는 파일은 덮어쓰지 않고** "건너뛴 파일"로 알린다. 다시 돌려도 안전하다.
+Run it in the app folder (where `package.json` is). **It never overwrites existing files**; it reports them as "skipped files". It is safe to run again.
 
 ```sh
-pnpm exec monti init                       # 관리자 화면 /admin, 영어(en), 시간대 UTC
-pnpm exec monti init --admin-path /studio  # 관리자 화면 경로를 바꿀 때
-pnpm exec monti init --locale ko --time-zone Asia/Seoul  # 사이트 기본 언어와 시간대를 정할 때
+pnpm exec monti init                       # admin at /admin, English (en), time zone UTC
+pnpm exec monti init --admin-path /studio  # to change the admin path
+pnpm exec monti init --locale ko --time-zone Asia/Seoul  # to set the site's default language and time zone
 ```
 
-| 하는 일 | 파일 |
+| What it does | File |
 | --- | --- |
-| 사이트 설정(컬렉션 하나짜리 시작점, 영어 이름표) | `cms.config.ts` |
-| 서버 설정(DB·GitHub 로그인, 비밀 값은 환경 변수) | `cms.server.ts` |
-| 관리자 화면 | `app/(admin)/admin/[[...path]]/page.tsx`·`layout.tsx` |
-| 관리자 API와 로그인(`/api/cms/v1/*`·`/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| 설정 별칭 `@cms-config`·`@cms-server` | `tsconfig.json` `paths`에 더한다 |
-| 관리자 스타일 줄 | 전역 CSS(`app/globals.css` 등)의 마지막 `@import` 다음에 더한다 |
-| 설정 잇기(`withCms`) | `next.config.ts`(`export default nextConfig;` 한 줄인 기본 모양일 때), 없으면 만든다 |
+| Site config (a one-collection starting point, English labels) | `cms.config.ts` |
+| Server config (DB, GitHub login; secrets come from environment variables) | `cms.server.ts` |
+| Admin UI | `app/(admin)/admin/[[...path]]/page.tsx`, `layout.tsx` |
+| Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
+| Config aliases `@cms-config`, `@cms-server` | added to `paths` in `tsconfig.json` |
+| Admin style line | added after the last `@import` in the global CSS (`app/globals.css`, etc.) |
+| Config wiring (`withCms`) | `next.config.ts` (when it has the default shape with a single `export default nextConfig;` line); created if missing |
 
-`src/app`을 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. 안전하게 고칠 수 없는 파일(주석이 있는
-`tsconfig.json`, 기본 모양이 아닌 next 설정, Tailwind 4가 없는 CSS)은 그대로 두고 넣을 내용을 "할 일"로 보인다.
-끝에 설치할 패키지·환경 변수·GitHub 콜백 주소를 알려 준다.
+For apps that use `src/app`, the config files go in `src/` and the routes under `src/app/`. Files that cannot be edited safely (a `tsconfig.json`
+with comments, a next config that does not have the default shape, CSS without Tailwind 4) are left as they are, and what to add is shown as a "to do".
+At the end it lists the packages to install, the environment variables and the GitHub callback URL.
 
-`--admin-path`를 주면 라우트 폴더가 그 경로(`app/(admin)/studio/…`)가 되고 사이트 설정에 `admin: { path: "/studio" }`가
-들어간다. **관리자 경로는 사이트 설정 `admin.path`와 라우트 폴더가 같아야 한다.** 나중에 바꿀 때도 둘을 함께 바꾼다.
-관리자 API 경로(`/api/cms/v1`)는 바뀌지 않는다.
+With `--admin-path`, the route folder becomes that path (`app/(admin)/studio/…`) and `admin: { path: "/studio" }` is added to the site config.
+**The admin path must be the same in the site config `admin.path` and in the route folder.** When you change it later, change both together.
+The admin API path (`/api/cms/v1`) does not change.
 
-`--locale <코드>`는 사이트 기본 언어(`defaultLocale`)이고 기본값은 `en`이다(`ko`처럼 소문자 언어 코드). 관리자 화면의 언어와
-날짜·숫자 표기가 이 언어를 따르고, 설정의 `admin.locale`로 따로 고를 수 있다. `--time-zone <시간대>`는 날짜·시각을 입력하고
-보이는 시간대(IANA 이름, 기본 `UTC`)다. 만든 설정 파일과 명령줄 도움말·결과는 개발자가 읽으므로 영어다.
+`--locale <code>` is the site's default language (`defaultLocale`) and defaults to `en` (a lowercase language code such as `ko`). The admin UI's language and
+date and number formatting follow it, and can be chosen separately with `admin.locale` in the config. `--time-zone <zone>` is the time zone in which dates and times are entered and
+shown (an IANA name, default `UTC`). The generated config files and the command-line help and output are read by developers, so they are in English.
 
-### 3. 컬렉션 고치기
+### 3. Edit the collections
 
-`cms.config.ts`는 서버와 관리자 화면이 함께 읽는다. 비밀 값은 넣지 않는다. 만들어진 시작점은 이렇다.
+`cms.config.ts` is read by both the server and the admin UI. Do not put secrets in it. The generated starting point looks like this.
 
 ```ts
 import { defineCollection, defineConfig, fields } from "@monti-cms/core";
 
 const post = defineCollection({
 	label: "Post",
-	kind: "document", // 본문·초안·발행. 태그 같은 작은 항목은 "item"
-	path: "/posts/:slug", // 공개 주소. 본문 내부 링크·미리보기 주소에 쓴다
-	icon: "file-text", // 관리자 사이드바 아이콘(lucide 이름)
+	kind: "document", // body, draft and publishing. Use "item" for small entries such as tags
+	path: "/posts/:slug", // public URL. Used for internal links in the body and for preview URLs
+	icon: "file-text", // admin sidebar icon (lucide name)
 	fields: {
-		title: fields.text({ label: "Title", required: true, max: 200 }), // 제목 필드 이름은 `title`
+		title: fields.text({ label: "Title", required: true, max: 200 }), // the title field is named `title`
 		slug: fields.slug({ label: "Slug", from: "title", required: true }),
 		summary: fields.text({ label: "Summary", role: "summary", multiline: true, fillFromBody: true }),
 	},
-	// layout·list를 적지 않으면 필드 순서대로 그리고 기본 목록 컬럼을 쓴다("컬렉션").
+	// Without layout and list, fields are drawn in field order with the default list columns ("Collections").
 });
 
 export default defineConfig({
@@ -88,11 +90,11 @@ export default defineConfig({
 });
 ```
 
-컬렉션 이름(`post`)은 DB에 저장되므로 운영 중에 바꾸지 않는다. 필드 규칙은 아래 "설정"을 본다.
+The collection name (`post`) is stored in the DB, so do not change it in production. See "Config" below for the field rules.
 
-서버 설정 `cms.server.ts`는 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다. 연결은 처음 쓸 때 만들어 빌드 중에는
-환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/core/s3`의 저장소를 `media`에 더하고 AWS SDK를 설치한다
-(`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, 미디어를 쓰는 사이트만):
+The server config `cms.server.ts` holds the store, media and login connections and the secrets, and is only read on the server. Connections are created on first use, so
+the environment variables may be empty during the build. To use image uploads, add a store from `@monti-cms/core/s3` to `media` and install the AWS SDK
+(`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, only for sites that use media):
 
 ```ts
 import { r2Storage, s3Storage } from "@monti-cms/core/s3";
@@ -101,48 +103,48 @@ import { r2Storage, s3Storage } from "@monti-cms/core/s3";
 media: r2Storage({ endpoint, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
 // AWS S3
 media: s3Storage({ endpoint: "https://s3.ap-northeast-2.amazonaws.com", region: "ap-northeast-2", bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
-// MinIO 등 경로 방식
+// Path-style, e.g. MinIO
 media: s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
 ```
 
-다른 저장소는 `@monti-cms/core/server`의 `MediaStore` 계약을 구현한 `MediaAdapter`(`{ name, createStore() }`)를 넣는다.
+For another store, pass a `MediaAdapter` (`{ name, createStore() }`) that implements the `MediaStore` contract from `@monti-cms/core/server`.
 
-### 4. 환경 변수와 `monti migrate`
+### 4. Environment variables and `monti migrate`
 
-`.env.local`에 둔다.
+Put them in `.env.local`.
 
-| 이름 | 뜻 |
+| Name | Meaning |
 | --- | --- |
-| `CMS_DATABASE_URL` | Postgres 연결 주소 |
-| `CMS_SCHEMA` | 선택. 스키마 이름(없으면 `public`). 이미 앱 표가 있는 DB에 붙일 때는 따로 두는 편이 안전하다. `monti migrate`가 없으면 만든다 |
-| `AUTH_SECRET` | 임의의 긴 값. 로그인 세션 서명(`githubAuth({ secret })`) |
-| `CMS_SECRET` | 임의의 긴 값(`AUTH_SECRET`과 다르게). 저장 값(AI 서비스 키) 암호화(서버 설정 `secret`). 바꾸면 저장한 키를 다시 넣는다 |
-| `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | GitHub OAuth 앱. 콜백 주소는 `<사이트 주소>/api/cms/auth/callback/github` |
-| `CMS_ADMIN_GITHUB_ID` | 관리자 GitHub 숫자 ID |
-| `CMS_DEV_AUTH_BYPASS` | 선택. `1`이면 `next dev`에서 로그인 없이 관리자 |
+| `CMS_DATABASE_URL` | Postgres connection URL |
+| `CMS_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing |
+| `AUTH_SECRET` | A random long value. Signs login sessions (`githubAuth({ secret })`) |
+| `CMS_SECRET` | A random long value (different from `AUTH_SECRET`). Encrypts stored values (AI service keys) (server config `secret`). If you change it, re-enter the stored keys |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app. The callback URL is `<site URL>/api/cms/auth/callback/github` |
+| `CMS_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID |
+| `CMS_DEV_AUTH_BYPASS` | Optional. If `1`, the admin opens without login under `next dev` |
 
 ```sh
 pnpm exec monti migrate
 ```
 
-표를 만들거나 최신 모양으로 맞춘다(플러그인 표 포함). 여러 번 돌려도 결과가 같고, 패키지를 올린 뒤에도 다시 돌린다.
-본체 변경은 번호 붙은 단계로 `cms_migrations`에 남아 아직 돌지 않은 단계만 돌고(한 트랜잭션), 같은 스키마에 동시에 돌려도
-하나씩 돈다. 플러그인은 한 번만 할 일을 `db.once(이름, 함수)`로 맡긴다.
+It creates the tables or brings them to the latest shape (including plugin tables). Running it several times gives the same result, and you run it again after upgrading the packages.
+Core changes are recorded in `cms_migrations` as numbered steps, and only steps that have not run yet are run (in one transaction); even when run concurrently
+against the same schema, they run one at a time. A plugin hands over once-only work with `db.once(name, fn)`.
 
-- 환경 파일: 기본으로 `.env.local`·`.env`(있는 것만)를 읽는다. 셸에서 준 값이 이기고 앞 파일이 뒤 파일을 이긴다.
-  `--env-file <파일>`(여러 번)로 고르고 `--no-env-file`이면 읽지 않는다.
-- 설정 파일: `--config`·`--server` → `CMS_CONFIG_PATH`·`CMS_SERVER_PATH` → `tsconfig.json` `paths`의 별칭 →
-  `./cms.config.ts`·`./src/cms.config.ts` 순서로 찾는다.
-- 예전 방식(`migrate.ts`에 `import "@monti-cms/core/migrate";`를 두고 `tsx --import @monti-cms/core/register migrate.ts`)도 그대로 돈다.
+- Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
+  Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
+- Config files: looked up in this order: `--config`/`--server` → `CMS_CONFIG_PATH`/`CMS_SERVER_PATH` → aliases in `tsconfig.json` `paths` →
+  `./cms.config.ts`/`./src/cms.config.ts`.
+- The old way (put `import "@monti-cms/core/migrate";` in `migrate.ts` and run `tsx --import @monti-cms/core/register migrate.ts`) still works.
 
-### 5. 실행
+### 5. Run
 
-`next dev`로 띄우고 관리자 경로(기본 `/admin`)를 연다.
+Start it with `next dev` and open the admin path (default `/admin`).
 
-### 로그인 경로
+### Login path
 
-GitHub 로그인 API는 기본으로 관리자 API 라우트가 함께 받는다(`/api/cms/auth/*`). 그래서 로그인 라우트 파일이 따로 없다.
-예전처럼 `/api/auth/*`를 쓰는 앱(이미 등록한 OAuth 콜백 주소를 바꾸지 않으려는 앱)은 경로를 고르고 라우트 파일을 둔다.
+By default the GitHub login API is served by the admin API route as well (`/api/cms/auth/*`), so there is no separate login route file.
+Apps that still use `/api/auth/*` as before (apps that do not want to change an already registered OAuth callback URL) pick the path and add a route file.
 
 ```ts
 // cms.server.ts
@@ -153,29 +155,29 @@ import { handlers } from "@monti-cms/core/runtime";
 export const { GET, POST } = handlers;
 ```
 
-`basePath`가 기본값이 아니면 관리자 API 라우트는 `/api/cms/auth/*`를 받지 않는다(404).
+If `basePath` is not the default, the admin API route does not serve `/api/cms/auth/*` (404).
 
-### 선택 의존성
+### Optional dependencies
 
-CMS 패키지의 선택 의존성(예: 블록 확장의 `mermaid`·`recharts`)은 그 기능을 쓸 때만 설치한다. 설치하지 않은 것은 `withCms`가
-빈 모듈(`@monti-cms/core/stubs/missing-optional`)로 이어 빌드가 멈추지 않게 하고, 그 기능을 쓰면 설치하라는 오류가 난다.
-설치한 뒤에는 개발 서버를 다시 띄운다.
+Optional dependencies of the CMS packages (e.g. `mermaid` and `recharts` of the blocks extension) are installed only when you use that feature. For anything not installed, `withCms`
+links an empty module (`@monti-cms/core/stubs/missing-optional`) so the build does not stop, and using that feature raises an error telling you to install it.
+After installing, restart the dev server.
 
-### 직접 잇기 (`monti init` 없이)
+### Manual wiring (without `monti init`)
 
-`monti init`이 하는 일을 손으로 하려면: 두 설정 파일을 만들고, `next.config.ts`를
-`withCms(nextConfig, { config: "./cms.config.ts", server: "./cms.server.ts" })`로 감싸고, `tsconfig.json` `paths`에
-`"@cms-config": ["./cms.config.ts"]`·`"@cms-server": ["./cms.server.ts"]`를 더하고(테스트(Vitest)를 쓰면 `resolve.alias`에도),
-위 표의 라우트 파일 셋을 두고, 전역 CSS에 아래 줄을 넣는다.
+To do by hand what `monti init` does: create the two config files, wrap `next.config.ts` in
+`withCms(nextConfig, { config: "./cms.config.ts", server: "./cms.server.ts" })`, add
+`"@cms-config": ["./cms.config.ts"]` and `"@cms-server": ["./cms.server.ts"]` to `tsconfig.json` `paths` (and to `resolve.alias` if you use tests (Vitest)),
+add the set of route files from the table above, and put the following lines in the global CSS.
 
 ```css
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@monti-cms/admin/styles.css"; /* `cms-*` 색과 `cms-dark`·`cms-horizontal`·`cms-vertical` 변형을 정한다(앱의 이름과 겹치지 않는다). Tailwind 4가 필요하다 */
+@import "@monti-cms/admin/styles.css"; /* defines the `cms-*` colors and the `cms-dark`, `cms-horizontal` and `cms-vertical` variants (names do not collide with the app's). Requires Tailwind 4 */
 @plugin "@tailwindcss/typography";
 ```
 
-### 블록 확장 (선택)
+### Blocks extension (optional)
 
 ```sh
 pnpm add @monti-cms/blocks
@@ -187,17 +189,17 @@ import { blocks } from "@monti-cms/blocks";
 
 export default defineConfig({
 	// …
-	plugins: [...blocks()], // 전부. 고르려면 blocks({ only: ["callout", "tooltip"] }), 하나씩은 callout()·tabs()…
+	plugins: [...blocks()], // all of them. To pick: blocks({ only: ["callout", "tooltip"] }); one at a time: callout(), tabs()…
 });
 ```
 
 ```css
-@import "@monti-cms/blocks/styles.css"; /* 관리자 패키지 스타일 다음 */
+@import "@monti-cms/blocks/styles.css"; /* after the admin package styles */
 ```
 
-자세한 것은 `@monti-cms/blocks`의 README.
+See the README of `@monti-cms/blocks` for details.
 
-### AI 플러그인 (선택)
+### AI plugin (optional)
 
 ```sh
 pnpm add @monti-cms/ai
@@ -209,18 +211,18 @@ import { aiPlugin } from "@monti-cms/ai";
 
 export default defineConfig({
 	// …
-	// 기본 기능(주소·요약·태그 추천 등)이 필드 종류·역할·관계 대상으로 저절로 붙는다. 바꾸거나 끌 것만 `actions`에 적는다.
-	plugins: [aiPlugin({ siteDescription: "기술 블로그" })],
+	// The default features (URL, summary and tag suggestions, etc.) attach automatically based on field kind, role and relation target. List only what you change or turn off in `actions`.
+	plugins: [aiPlugin({ siteDescription: "a developer blog" })],
 });
 ```
 
 ```css
-@import "@monti-cms/ai/styles.css"; /* 관리자 패키지 스타일 다음 */
+@import "@monti-cms/ai/styles.css"; /* after the admin package styles */
 ```
 
-자세한 것은 `@monti-cms/ai`의 README.
+See the README of `@monti-cms/ai` for details.
 
-### SEO 확장 (선택)
+### SEO extension (optional)
 
 ```sh
 pnpm add @monti-cms/seo
@@ -232,7 +234,7 @@ import { seo, seoFields } from "@monti-cms/seo";
 
 const article = defineCollection({
 	// …
-	fields: { title, slug, ...seoFields() }, // 검색 제목·설명·공유 이미지·숨기기·원본 주소 + 미리보기, 모두 SEO 탭
+	fields: { title, slug, ...seoFields() }, // search title, description, share image, hide, canonical URL + preview, all in the SEO tab
 });
 
 export default defineConfig({
@@ -241,38 +243,38 @@ export default defineConfig({
 });
 ```
 
-자세한 것은 `@monti-cms/seo`의 README.
+See the README of `@monti-cms/seo` for details.
 
-## 진입점
+## Entry points
 
-| 진입점 | 쓰는 곳 | 내용 |
+| Entry point | Used in | Contents |
 | --- | --- | --- |
 | `@monti-cms/core` | `cms.config.ts` | `defineConfig`·`defineCollection`·`fields`·`defineBlock`·`definePlugin` |
-| `@monti-cms/core/server` | `cms.server.ts` | `defineServerConfig`·`postgres`·`githubAuth`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
-| `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
+| `@monti-cms/core/server` | `cms.server.ts` | `defineServerConfig`, `postgres`, `githubAuth`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
+| `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
 | `@monti-cms/core/next` | `next.config.ts` | `withCms` |
-| `@monti-cms/core/next/route-handler` | 관리자 API 라우트 | `createCmsRouteHandler` |
-| `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `renderMdx(mdx, options)` → `{ content, toc }`. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
-| `@monti-cms/core/read` | 공개 화면(서버 컴포넌트·sitemap·RSS) | `getEntry`·`listEntries`·`getTranslations`·`getPreview`: 공개본 읽기(관계·주소·옛 주소 이동·원문 대체) |
-| `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스·로그인 확인·미디어 공개 주소(`resolvePublicMediaUrl`). `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
-| `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
-| `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
-| `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀·DB 연결·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`(명령 `monti`의 코드) |
-| `@monti-cms/core/migrate`·`/register` | 명령줄(예전 방식) | 표 만들기, 직접 만든 스크립트에서 설정 별칭 잇기 |
-| `@monti-cms/core/testing` | 테스트 | 격리 스키마 DB·예시 데이터 |
+| `@monti-cms/core/next/route-handler` | admin API route | `createCmsRouteHandler` |
+| `@monti-cms/core/render` | public pages (server components) | `renderMdx(mdx, options)` → `{ content, toc }`. In the site CSS: `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/read` | public pages (server components, sitemap, RSS) | `getEntry`, `listEntries`, `getTranslations`, `getPreview`: read published content (relations, URLs, old-URL redirects, source fallback) |
+| `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | stores, services, login checks, public media URLs (`resolvePublicMediaUrl`). It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
+| `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
+| `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
+| `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding, DB connection, errors |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate` (the code behind the `monti` command) |
+| `@monti-cms/core/migrate`, `/register` | command line (old way) | create tables; wire the config aliases in custom scripts |
+| `@monti-cms/core/testing` | tests | isolated-schema DB, sample data |
 
-## 패키지 빌드
+## Building the packages
 
-저장소 안에서는 소스(`src`)를 바로 쓴다. 배포 묶음은 `pnpm build:packages`로 `dist`를 만들고 `pnpm pack`이
-`publishConfig.exports`(dist)로 묶는다. `pnpm example:pack`은 묶음을 `examples/other-site/vendor`에 넣는다.
+Inside the repository the sources (`src`) are used directly. For the distributable bundle, `pnpm build:packages` produces `dist` and `pnpm pack` packages it using
+`publishConfig.exports` (dist). `pnpm example:pack` puts the bundle into `examples/other-site/vendor`.
 
-## 본문 블록
+## Body blocks
 
-본체에는 다른 기능이 기대거나 Markdown 문법인 블록(이미지·파일·표·수식·정렬, 밑줄·위아래 첨자·줄바꿈·번역 안내)만 있다.
-콜아웃·접기·탭·단·Mermaid·차트와 글자 꾸밈(툴팁·코드 연결·글자색)은 블록 확장 `@monti-cms/blocks`에서 필요한 것만
-플러그인으로 설치한다.
+The core only has the blocks that other features rely on or that are Markdown syntax (image, file, table, math, alignment, underline, superscript/subscript, line break, translation notice).
+Callout, fold, tabs, columns, Mermaid, charts and text decorations (tooltip, code link, text color) come from the blocks extension `@monti-cms/blocks`, where you install
+only what you need as plugins.
 
 ```ts
 import { blocks } from "@monti-cms/blocks";
@@ -280,85 +282,85 @@ import { blocks } from "@monti-cms/blocks";
 plugins: [...blocks({ only: ["callout", "mermaid", "tooltip"] })],
 ```
 
-사이트가 직접 만든 블록은 설정의 `blocks`에 넣는다. 블록 확장도 같은 정의(`definePlugin({ blocks })`)로 블록을 더한다.
+Blocks the site creates itself go into `blocks` in the config. The blocks extension adds blocks with the same definition (`definePlugin({ blocks })`).
 
 ```ts
 import { defineBlock } from "@monti-cms/core";
 
 blocks: [
 	defineBlock({
-		name: "notice", // 저장 문법 :::notice{level="warn"} … :::
-		label: "공지",
+		name: "notice", // stored syntax :::notice{level="warn"} … :::
+		label: "Notice",
 		syntax: { kind: "container", directive: "notice" },
-		component: "Notice", // 공개 화면은 사이트의 MDX 컴포넌트 표에서 이 이름으로 그린다
+		component: "Notice", // the public page renders it under this name from the site's MDX component table
 		attributes: {
-			level: { type: "string", label: "단계", options: { info: "안내", warn: "주의" }, defaultValue: "info" },
-			title: { type: "string", label: "제목", translatable: true }, // 번역 화면이 머리 줄로 따로 번역한다
+			level: { type: "string", label: "Level", options: { info: "Info", warn: "Warning" }, defaultValue: "info" },
+			title: { type: "string", label: "Title", translatable: true }, // the translation screen translates it separately as a heading line
 		},
-		translateInside: true, // 번역 화면이 상자를 펼쳐 안쪽 블록을 하나씩 번역한다
+		translateInside: true, // the translation screen expands the box and translates the inner blocks one by one
 		editor: {
-			view: "node", // "opaque"면 편집기에서 원문 상자로 보인다
+			view: "node", // "opaque" shows it as a raw-text box in the editor
 			insertable: true,
-			icon: "message-square", // 슬래시·컴포넌트 메뉴 아이콘(lucide 이름)
-			insert: { values: { level: "warn" }, text: "내용" }, // 넣을 때 처음 값
+			icon: "message-square", // slash and component menu icon (lucide name)
+			insert: { values: { level: "warn" }, text: "Content" }, // initial values on insert
 		},
 	}),
 	defineBlock({
-		name: "graphviz", // 저장 문법 ```graphviz … ```
+		name: "graphviz", // stored syntax ```graphviz … ```
 		label: "Graphviz",
 		syntax: { kind: "fence", lang: "graphviz" },
-		component: "Graphviz", // 공개 화면은 remarkFenceBlocksToMdx가 <Graphviz source="…" />로 바꾼다
+		component: "Graphviz", // on the public page, remarkFenceBlocksToMdx turns it into <Graphviz source="…" />
 		attributes: {},
-		editor: { view: "node", insertable: true, insert: { code: "digraph { a -> b }" }, placeholder: "Graphviz 코드를 입력하세요" },
+		editor: { view: "node", insertable: true, insert: { code: "digraph { a -> b }" }, placeholder: "Enter Graphviz code" },
 	}),
 ],
 ```
 
-- 더할 수 있는 블록은 지시자 블록(`container`·`leaf`), 글자 꾸밈(`text` + `editor.view: "mark"`), 코드 펜스 블록(`fence`)이다.
-  코드 펜스 블록은 그 언어의 코드 펜스를 모두 가져가므로 일반 코드 언어 이름(`ts` 등)을 쓰지 않는다.
-- 글자 꾸밈은 `:이름[글자]{속성}`으로 저장한다. 속성은 정의 순서대로 쓰고, 꼭 있어야 하는 속성(`required`)은 비어도, 나머지는
-  값이 있을 때만 쓴다. 겹친 꾸밈은 더한 순서(바깥부터)로 저장한다. 편집기 표시는 관리자 패키지가 정의에서 만들고, 모양·서식
-  도구·버블·슬래시 메뉴는 확장이 관리자 화면에 등록한다(`@monti-cms/admin` README의 "글자 꾸밈"). 속성에 `codeAnchor: true`를
-  달면 그 값이 코드 블록 줄 이름표(`anchor` 줄 효과)이고, 편집기의 본문–코드 잇기가 이 꾸밈을 쓴다(사이트에 하나만).
-- 속성의 선택 값·필수 값·자식 값(`childValue`, 예: 처음 열 탭은 탭 이름 중 하나)과 자식 개수(`children.min`·`max`)는
-  발행 전에 검사한다.
-- 쓰던 블록을 빼면 저장 문법에서 빠진다. 이미 그 블록을 쓴 본문은 다시 저장할 때 일반 글로 바뀌므로 쓰던 블록은 빼지 않는다.
-- 편집기 노드는 관리자 패키지가 정의에서 만든다. 편집 모양은 관리자 패키지의 `blockEditors`(속성·본문 상자)나
-  `blockViews`(화면 전체)로 바꾸고, 코드 펜스 블록의 미리보기는 `fencePreviews`로 넣는다.
-- 공개 화면의 코드 펜스 블록은 `@monti-cms/core/mdx`의 `remarkFenceBlocksToMdx`를 렌더 체인(`remarkDirectivesToMdx` 뒤)에 넣어
-  `component`로 그린다.
-- 번역 구조 검사(`compareStructure`)는 `translatable` 속성과, 그 값을 가리키는 `childValue` 속성(예: 처음 열 탭)만 번역에서
-  바뀌어도 된다고 본다. 사람이 읽는 속성(제목·설명 등)에는 `translatable: true`를 단다.
-- `editor.icon`이 관리자 패키지의 기본 아이콘에 없는 이름이면 관리자 화면에 아이콘을 등록한다(`@monti-cms/admin` README).
+- The blocks you can add are directive blocks (`container`, `leaf`), text decorations (`text` + `editor.view: "mark"`) and code fence blocks (`fence`).
+  A code fence block takes over every code fence of that language, so do not use a common code language name (such as `ts`).
+- A text decoration is stored as `:name[text]{attributes}`. Attributes are written in definition order; required attributes (`required`) are written even when empty, and the rest
+  only when they have a value. Nested decorations are stored in the order they were added (outermost first). The admin package builds the editor display from the definition, and the look, formatting
+  toolbar, bubble and slash menu are registered in the admin UI by the extension ("Text marks" in the `@monti-cms/admin` README). An attribute with `codeAnchor: true`
+  makes its value the code block line label (the `anchor` line effect), and the editor's body–code linking uses this decoration (only one per site).
+- Choice values, required values and child values (`childValue`, e.g. the tab to open first is one of the tab names) of attributes, and the number of children (`children.min`, `max`) are
+  validated before publishing.
+- Removing a block that was in use drops it from the stored syntax. Bodies that already used that block turn into plain text when saved again, so do not remove blocks that are in use.
+- The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockEditors` (attribute and body boxes) or
+  `blockViews` (the whole view), and supply previews of code fence blocks with `fencePreviews`.
+- For code fence blocks on public pages, put `remarkFenceBlocksToMdx` from `@monti-cms/core/mdx` into the render chain (after `remarkDirectivesToMdx`) so they are rendered
+  with `component`.
+- The translation structure check (`compareStructure`) only accepts changes in translation for `translatable` attributes and for `childValue` attributes that point at their values (e.g. the tab to open first).
+  Put `translatable: true` on human-readable attributes (title, description, etc.).
+- If `editor.icon` is a name that is not among the admin package's default icons, register the icon in the admin UI (`@monti-cms/admin` README).
 
-### 코드 블록 줄 효과
+### Code block line effects
 
-코드 블록 줄 효과(`// @line 이름 {0-2}`)의 기본은 강조·추가·삭제·경고·오류다. 설정의 `codeBlock.lineEffects`로 더하고,
-같은 이름을 적으면 기본을 바꾼다.
+The defaults for code block line effects (`// @line name {0-2}`) are highlight, add, remove, warning and error. Add more with `codeBlock.lineEffects` in the config;
+using the same name overrides the default.
 
 ```ts
 codeBlock: {
 	lineEffects: [
 		{
-			name: "focus", // 주석 이름(소문자 케밥). collapse·anchor와 글자 효과 이름은 쓸 수 없다
-			label: "초점", // 줄 효과 메뉴 이름
-			icon: "eye", // 메뉴 아이콘(lucide 이름, 관리자 화면에 등록된 이름)
-			class: "bg-primary/10", // 공개 화면이 그 줄에 붙이는 클래스(사이트 Tailwind가 읽는 곳에 둔다)
-			editor: { background: "bg-cms-primary/10" }, // 편집기 표시(관리자 색은 `cms-*`, 어두운 테마는 `cms-dark:`): background·wavy(물결 밑줄 색)·marker({ text, className })
+			name: "focus", // annotation name (lowercase kebab-case). collapse, anchor and the text effect names cannot be used
+			label: "Focus", // line effect menu name
+			icon: "eye", // menu icon (lucide name, a name registered in the admin UI)
+			class: "bg-primary/10", // class the public page adds to that line (put it where the site's Tailwind reads)
+			editor: { background: "bg-cms-primary/10" }, // editor display (admin colors are `cms-*`, dark theme is `cms-dark:`): background, wavy (wavy underline color), marker({ text, className })
 		},
 	],
 },
 ```
 
-공개 화면은 `@monti-cms/core/code-block`의 `annotationConfig`(기본 + 설정)를 렌더 체인에 넘긴다.
+The public page passes `annotationConfig` (defaults + config) from `@monti-cms/core/code-block` to the render chain.
 
-### 글자색 목록
+### Text color list
 
-글자색은 블록 확장(`@monti-cms/blocks`의 `color({ palette })`)이 준다. 예전 설정 `textColors`는 없어졌다(옵션으로 옮긴다).
+Text colors come from the blocks extension (`color({ palette })` of `@monti-cms/blocks`). The old config `textColors` is gone (move it to the option).
 
-## 플러그인
+## Plugins
 
-사이트 설정의 `plugins`에 한 번 적는다(예: AI 플러그인 `@monti-cms/ai`의 `aiPlugin()`).
+List it once in `plugins` of the site config (e.g. `aiPlugin()` of the AI plugin `@monti-cms/ai`).
 
 ```ts
 import { definePlugin } from "@monti-cms/core";
@@ -366,105 +368,105 @@ import { definePlugin } from "@monti-cms/core";
 export const myPlugin = () =>
 	definePlugin({
 		name: "my-plugin",
-		options: {}, // JSON 값. 서버·브라우저가 함께 읽는다
-		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 "관리" 묶음
-		validate: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
-		server: () => import("my-plugin/server"), // CmsServerPlugin: API 경로·표 만들기·메타 표시
-		admin: () => import("my-plugin/admin"), // CmsAdminPlugin(@monti-cms/admin): 화면·공급자
+		options: {}, // JSON value. Read by both the server and the browser
+		nav: [{ path: "my", label: "My screen", icon: "plug" }], // admin sidebar "Manage" group
+		validate: ({ collections }) => {}, // called when the site config is built
+		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display
+		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
 	});
 ```
 
-- 서버 쪽(`server`)은 브라우저 묶음에 들어가지 않게 패키지 `exports`의 `browser` 조건으로 빈 진입점을 준다.
-- `validate`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받는다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
-- `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
-  `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
-  확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천).
-- 서버 쪽 `routes`는 본체 경로(`/api/cms/v1/*`)에 없는 주소를 받는다. 본체가 관리자 로그인 확인과 같은 출처 검사로 감싸므로
-  인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로(외부 실행기·웹훅)만 `public: true`로 빼고 스스로 확인한다.
-  `migrate`는 `monti migrate`가 본체 표 다음에 부른다.
-- 같은 출처 검사는 `X-Forwarded-Host`(첫 값)·`Host`·`site.url`의 호스트를 받는다. `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적는다.
-- 플러그인 코드는 `@monti-cms/core/plugin/server`의 `getCmsDatabase()`(DB 연결)와 본체 라우트 틀(`adminRoute` 등)을 쓴다.
+- The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
+- `validate` receives the collection, locale and block definitions and all plugins (`plugins`). Extensions that use roles check field kinds here.
+- `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
+  `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
+  An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
+- The server-side `routes` receive addresses that are not in the core routes (`/api/cms/v1/*`). The core wraps them with the admin login check and the same-origin check, so
+  forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` and verify on their own.
+  `migrate` is called by `monti migrate` after the core tables.
+- The same-origin check accepts the host of `X-Forwarded-Host` (first value), `Host` and `site.url`. Behind a proxy that rewrites `Host`, set `site.url`.
+- Plugin code uses `getCmsDatabase()` (the DB connection) from `@monti-cms/core/plugin/server` and the core route scaffolding (`adminRoute`, etc.).
 
-## 서버 설정
+## Server config
 
-| 항목 | 뜻 |
+| Item | Meaning |
 |---|---|
-| `database` | 콘텐츠 저장소. `postgres({ connectionString, schema })` |
-| `media` | 이미지·첨부 파일 저장소. `@monti-cms/core/s3`의 `r2Storage`·`s3Storage`(`region`·`forcePathStyle`) 또는 `MediaStore` 계약을 구현한 연결. 없으면 미디어 기능을 못 쓴다. |
-| `auth` | 관리자 로그인. `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로"), `secret`은 로그인 세션 서명 값(없으면 NextAuth가 `AUTH_SECRET`을 읽는다) |
-| `secret` | 저장 값(AI 서비스 키)을 DB에 암호화해 둘 때 쓰는 키. 로그인 서명 값과 따로 둔다. 바꾸면 저장된 키를 다시 넣어야 한다. |
-| `publicApi` | 선택. 공개 JSON API(`/api/cms/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
-| `afterCommit` | 선택. 저장 뒤 알림 `(change) => …`: 글을 만들고·저장하고·발행·보관·휴지통·복원·지운 변경이 커밋된 뒤 `{ kind, entryId, collection, locale, translationGroupId, status, publishedSlug, workingSlug }`를 받는다. 캐시 갱신(`revalidatePath`)·웹훅·검색 색인 자리. 되돌린 변경은 오지 않고, 실패해도 저장은 그대로다. 플러그인도 `afterCommit`을 둘 수 있다 |
+| `database` | Content store. `postgres({ connectionString, schema })` |
+| `media` | Store for images and attachments. `r2Storage` or `s3Storage` from `@monti-cms/core/s3` (`region`, `forcePathStyle`), or a connection implementing the `MediaStore` contract. Without it, media features are unavailable. |
+| `auth` | Admin login. `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, NextAuth reads `AUTH_SECRET`) |
+| `secret` | Key used to keep stored values (AI service keys) encrypted in the DB. Keep it separate from the login signing value. If you change it, re-enter the stored keys. |
+| `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
+| `afterCommit` | Optional. Post-save notification `(change) => …`: after a change that creates, saves, publishes, archives, trashes, restores or deletes an entry is committed, it receives `{ kind, entryId, collection, locale, translationGroupId, status, publishedSlug, workingSlug }`. A place for cache revalidation (`revalidatePath`), webhooks and search indexing. Rolled-back changes are not delivered, and a failure does not undo the save. Plugins can also set `afterCommit` |
 
-다른 저장소·로그인을 쓰려면 `DatabaseAdapter`·`MediaAdapter`·`AuthAdapter`를 직접 만들어 넣는다.
+To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` or `AuthAdapter`.
 
-## 설정
+## Config
 
-| 항목 | 뜻 |
+| Item | Meaning |
 |---|---|
-| `collections` | 컬렉션 이름 → `defineCollection` 정의. 이름은 DB에 저장되므로 운영 중에 바꾸지 않는다. |
-| `locales` | 콘텐츠 언어 목록(`code`, `name`, 관리자 화면 이름 `label`). |
-| `defaultLocale` | 기본 언어(번역의 원본). 기본 주소 방식에서는 공개 주소에 언어 접두사가 붙지 않는다. |
-| `site.url` | 공개 사이트 주소. 본문에 전체 주소로 적은 링크도 내부 링크로 알아본다. 환경 변수에서 읽어도 된다. |
-| `site.aliases` | 같은 사이트로 볼 다른 호스트 이름(예: `www.example.com`). |
-| `site.name` | 관리자 화면에 보이는 사이트 이름. 없으면 `site.url`의 호스트 이름. |
-| `site.home` | 관리자 사이드바 `사이트 보기` 주소. 경로나 전체 주소. 기본 `/`. |
-| `site.localePrefix` | 공개 주소에 언어를 붙이는 방식. `except-default`(기본: 기본 언어는 그대로, 다른 언어는 `/{code}`)·`always`(모든 언어에 `/{code}`)·`never`(붙이지 않음). 검색 미리보기·초안 미리보기·`localizePath`가 따른다. |
-| `site.previewPath` | 초안 미리보기 주소 앞부분(예: `/preview`). 없으면 미리보기 단추가 없다. |
-| `site.previewLocaleParam` | 미리보기 주소에 언어를 넘기는 쿼리 이름(기본 `locale`, 기본 언어가 아닐 때만 `?locale=en`). `false`면 `localePrefix` 규칙대로 경로에 넣는다(`/preview/en/posts/a`). |
-| `admin.path` | 관리자 화면 경로(기본 `/admin`). 앱의 관리자 라우트 폴더와 같아야 한다. `/`나 `/api` 아래는 안 된다. 화면 안 링크·로그인 이동·플러그인 화면 주소가 따른다. |
-| `codeBlock.lineEffects` | 코드 블록 줄 효과 더하기·바꾸기("코드 블록 줄 효과"). |
-| `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |
-| `admin.locale` | 관리자 화면 언어와 날짜·숫자 표기(BCP 47, 예: `en`·`ko-KR`). 없으면 사이트 기본 언어(`defaultLocale`). 시각은 `timeZone`으로 보인다. |
-| `admin.messages` | 화면 문구 덮어쓰기: 이름공간 → 키 → 문구. 본체 블록 이름표는 `"cms.blocks"`(`image.label`처럼 `<블록>.label`), 코드 블록 효과는 `"cms.code-block"`, 검사 오류 문구는 `"cms.mdx"`·`"cms.core"`·`"cms.translation"`이다. |
-| `admin.legacyBackupNames` | 예전 브라우저 복구본 DB 이름. 관리자 화면이 읽고 지우되 새로 만들지 않는다(지금 이름 `cms_backup`). |
+| `collections` | Collection name → `defineCollection` definition. Names are stored in the DB, so do not change them in production. |
+| `locales` | List of content languages (`code`, `name`, admin UI name `label`). |
+| `defaultLocale` | Default language (the source of translations). With the default URL scheme, public URLs get no language prefix. |
+| `site.url` | Public site URL. Links written as full URLs in the body are also recognized as internal links. May be read from an environment variable. |
+| `site.aliases` | Other host names to treat as the same site (e.g. `www.example.com`). |
+| `site.name` | Site name shown in the admin UI. If unset, the host name of `site.url`. |
+| `site.home` | URL of the admin sidebar `View site` link. A path or full URL. Default `/`. |
+| `site.localePrefix` | How the language is added to public URLs. `except-default` (default: the default language as is, other languages as `/{code}`), `always` (`/{code}` for every language), `never` (no prefix). Search previews, draft previews and `localizePath` follow it. |
+| `site.previewPath` | Leading part of the draft preview URL (e.g. `/preview`). If unset, there is no preview button. |
+| `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
+| `admin.path` | Admin UI path (default `/admin`). Must match the app's admin route folder. `/` and anything under `/api` are not allowed. Links inside the UI, login redirects and plugin screen URLs follow it. |
+| `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
+| `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
+| `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
+| `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.mdx"`, `"cms.core"` and `"cms.translation"`. |
+| `admin.legacyBackupNames` | Old browser backup DB names. The admin UI reads and deletes them but never creates them (the current name is `cms_backup`). |
 
-### 컬렉션
+### Collections
 
-- **종류(`kind`).** `document`(문서)는 본문을 쓰고 초안과 공개본을 나눠 명시적으로 발행한다. `item`(항목)은 작은 폼에서 저장하면
-  곧바로 공개 값에 반영한다(발행·보관·번역본이 없고, 언어별 값은 `translations`에 둔다). 본문(`body`)은 없으면 문서만 쓴다.
-  예전 이름 `workflow: "publish" | "record"`도 받아 `document`·`item`으로 바꾼다(앞으로 없앨 이름이다). 본체 코드는 `kind`만 읽는다.
-- **배치(`layout`).** 없으면 필드 선언 순서대로 한 묶음이고, 제 `tab`을 가진 필드는 그 탭에 모인다.
-- **목록(`list.columns`).** 없으면 기본 컬럼이다. 문서는 제목·상태·언어(언어가 둘 이상일 때)·분류 필드(항목 컬렉션을 가리키는
-  관계)·수정일·발행일, 항목은 제목·주소(주소 필드가 있을 때)·언어·상태·수정일.
+- **Kind (`kind`).** A `document` has a body, separates draft from published content, and is published explicitly. An `item` is a small form whose saved values
+  are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents.
+  The old name `workflow: "publish" | "record"` is also accepted and converted to `document` and `item` (this name will be removed). The core code reads only `kind`.
+- **Layout (`layout`).** If absent, it is one group in field declaration order, and fields with their own `tab` gather in that tab.
+- **List (`list.columns`).** If absent, the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation
+  pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date.
 
-컬렉션의 `path`(예: `/posts/:slug`)는 공개 주소 모양이다. 본문의 내부 링크를 알아보고(가리키는 글이 있는지·공개됐는지
-발행 전에 검사) 편집기가 링크를 만들 때 쓴다. `path`가 없는 컬렉션은 본문 링크로 가리킬 수 없다.
+A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It is used to recognize internal links in the body (checking before publishing whether the target entry exists and is published)
+and by the editor when it creates links. A collection without `path` cannot be linked to from the body.
 
-### 필드 규칙
+### Field rules
 
-- **제목 필드 이름은 `title`, 이름표는 자유.** 라이브러리 약속이다. 모든 컬렉션은 `title` 텍스트 필드(`fields.text`)를 가진다.
-  목록·검색·관계 고르기·본문 링크·복제·편집 화면 제목 칸이 이 필드를 쓴다. 이름표(`label`)는 사이트가 정한다(예: `Headline`·
-  `이름`). 제목 글자 수 한도는 따로 없고 이 필드의 `max`를 따른다(없으면 한도 없음).
-- **주소 필드는 하나.** 주소(`fields.slug`)는 본체 개념이라 콘텐츠마다 하나다. 한 컬렉션에 주소 필드를 둘 이상 두면 설정 오류다.
-- **주소는 `from`에서 만든다.** `fields.slug({ from: "title" })`이면 주소를 직접 고치기 전까지 그 필드 값으로 주소를 만들고,
-  항목 컬렉션은 주소를 비우고 저장하면 그 값에서 만든다. `from`이 없으면 자동으로 만들지 않는다. `from`은 같은 컬렉션의
-  텍스트 필드여야 한다.
-- **필드 역할(`role`).** 확장과 화면은 값을 필드 이름이 아니라 역할로 찾는다(`roleField(collection, role)`, 설정을 읽지 않는
-  `fieldWithRole(schema, role)`). 역할 이름은 자유(영문자·숫자·하이픈)이고 한 컬렉션에 역할마다 한 필드만 둔다. 본체가 아는
-  역할은 `summary`(텍스트 필드, 요약) 하나다. 필드 옆 동작(AI 등)에 `summary`로 넘어간다. 다른 역할은 그 역할을 쓰는 확장이
-  정하고 필드 종류를 플러그인 `validate`에서 확인한다(예: SEO 확장의 `seoTitle`·`ogImage`·`noindex`).
-- **미디어 필드.** `fields.media({ label, accept?: "image" | "file" })`는 미디어 라이브러리의 파일 하나를 고르고 미디어 ID를
-  글자로 저장한다. 값은 미디어 사용처(`entry_references`, 종류 `media`)에 잡혀 미디어 화면의 "사용처"·"사용하지 않음" 거르기에
-  보이고, 쓰고 있는 파일은 지울 수 없다. 미디어 ID가 아닌 값은 `invalid_metadata_value`, 빈 값(`""`)은 고르지 않은 것이다.
+- **The title field is named `title`; its label is free.** This is a library convention. Every collection has a `title` text field (`fields.text`).
+  Lists, search, relation picking, body links, duplication and the title box of the edit screen use this field. The label (`label`) is up to the site (e.g. `Headline`,
+  `Name`). There is no separate limit on title length; it follows this field's `max` (no limit if absent).
+- **Exactly one URL field.** The URL (`fields.slug`) is a core concept, so there is one per entry. Having two or more URL fields in a collection is a config error.
+- **The URL is built from `from`.** With `fields.slug({ from: "title" })`, the URL is built from that field's value until you edit the URL yourself,
+  and for an item collection, saving with an empty URL builds it from that value. Without `from`, nothing is built automatically. `from` must be a text field of the same
+  collection.
+- **Field role (`role`).** Extensions and screens find values by role, not by field name (`roleField(collection, role)`, and `fieldWithRole(schema, role)`, which does not read
+  the config). Role names are free (letters, digits, hyphens), and a collection has only one field per role. The only role the core knows is
+  `summary` (a text field, the summary). It is passed to field-side actions (AI, etc.) as `summary`. Other roles are decided by the extension that uses them,
+  and it checks the field kind in the plugin `validate` (e.g. `seoTitle`, `ogImage`, `noindex` of the SEO extension).
+- **Media field.** `fields.media({ label, accept?: "image" | "file" })` picks one file from the media library and stores the media ID
+  as text. The value is recorded in media usage (`entry_references`, kind `media`), shows up in the media screen's "Used in" and "Unused" filters,
+  and a file in use cannot be deleted. A value that is not a media ID is `invalid_metadata_value`, and an empty value (`""`) means nothing is picked.
 
-- **필수 필드(`required: true`).** 문서 컬렉션은 발행할 때, 항목 컬렉션은 저장할 때 비어 있으면 막는다. 초안 저장은 막지 않는다.
-  예전 값 `required: "publish"`도 같은 뜻으로 받는다.
-- **필드 값 오류.** 오류 코드는 필드와 상관없이 같다. 필수값이 비면 `missing_field`(주소는 `null_slug`), 글자 수가 `max`를
-  넘으면 `field_too_long`이다. 문제(`issues`)의 `path`에 필드 이름, `message`에 필드 이름표가 담긴다(제목도 같다). 관계 대상
-  컬렉션이 다르면 `invalid_reference_collection`이다. 빈 본문(`empty_body`)은 본문을 쓰는 컬렉션(`body`)만 막는다.
-- **본문에서 채우기.** 텍스트 필드에 `fillFromBody: true`(160자) 또는 `fillFromBody: { maxLength }`를 두면 발행할 때 비어 있으면
-  본문 앞부분의 일반 글자로 채운다(본문이 있는 컬렉션만, 필드 `max`를 넘지 않는다). 본체 함수는 `bodyExcerpt(mdx, maxLength)`다.
-- **여러 줄 입력.** `multiline: true`인 텍스트 필드는 여러 줄 입력이고 `rows`(기본 2)로 처음 줄 수를 정한다.
-- **쓸 수 없는 필드 이름.** 메타데이터에서 본체가 따로 쓰는 키(`translations`)는 필드 이름으로 쓸 수 없다.
-- **탭.** 필드에 `tab: "이름"`을 두거나 `layout` 묶음에 `tab`을 두면 편집 화면 속성 칸에 그 이름의 탭이 생긴다(1~20자).
-  묶음의 `tab`이 먼저고, 묶음에 `tab`이 없으면 필드의 `tab`이다. 제 `tab`을 가진 필드는 배치를 적지 않아도 탭마다 한 묶음으로
-  모인다. 그래서 확장이 주는 필드 묶음(예: `seoFields()`)이 사이트가 `layout`을 적지 않아도 제 탭에 들어간다. 없으면 기본 탭
-  `속성`이다.
-- **보기 필드.** `fields.view({ view: "이름" })`은 값을 저장하지 않고 그 자리에 화면을 그리는 필드다. 화면은 관리자 확장이
-  `fieldViews`로 등록한다(예: SEO 확장의 `search`). 등록한 화면이 없으면 아무것도 그리지 않는다.
-- **입력 바꾸기.** `input: "이름"`은 관리자 확장이 `fieldInputs`로 등록한 입력을 가리킨다. 등록이 없으면 종류의 기본 입력이다.
-  `inputOptions`(JSON 값)는 그 입력에 넘길 설정이고 본체는 읽지 않는다(예: 권장 글자 수).
+- **Required field (`required: true`).** Blocks an empty value when a document collection is published, or when an item collection is saved. Saving a draft is not blocked.
+  The old value `required: "publish"` is accepted with the same meaning.
+- **Field value errors.** Error codes are the same regardless of the field. An empty required value is `missing_field` (`null_slug` for the URL), and a length over `max`
+  is `field_too_long`. In the issue (`issues`), `path` holds the field name and `message` the field label (the title too). A different relation target
+  collection is `invalid_reference_collection`. An empty body (`empty_body`) blocks only collections that use a body (`body`).
+- **Fill from the body.** With `fillFromBody: true` (160 characters) or `fillFromBody: { maxLength }` on a text field, an empty value is filled on publish
+  with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(mdx, maxLength)`.
+- **Multi-line input.** A text field with `multiline: true` is a multi-line input, and `rows` (default 2) sets the initial number of rows.
+- **Field names you cannot use.** The key the core uses separately in metadata (`translations`) cannot be a field name.
+- **Tabs.** Putting `tab: "name"` on a field or `tab` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters).
+  The group's `tab` comes first; if the group has no `tab`, the field's `tab` is used. Fields with their own `tab` gather into one group per tab even without a layout.
+  So field groups that extensions provide (e.g. `seoFields()`) land in their own tab even when the site writes no `layout`. If there is none, the default tab
+  is `Properties`.
+- **View field.** `fields.view({ view: "name" })` is a field that stores no value and draws a view in that spot. The admin extension registers the view
+  with `fieldViews` (e.g. `search` of the SEO extension). If no view is registered, nothing is drawn.
+- **Swapping the input.** `input: "name"` points at an input that an admin extension registered with `fieldInputs`. Without a registration, the kind's default input is used.
+  `inputOptions` (a JSON value) is the setting passed to that input, and the core does not read it (e.g. a recommended length).
 
 ```ts
 fields: {
@@ -474,41 +476,41 @@ fields: {
 	hero: fields.media({ label: "Hero image", tab: "Media" }),
 	credit: fields.text({ label: "Credit", tab: "Media" }),
 },
-layout: [{ fields: ["title", "slug", "excerpt"] }], // hero·credit은 Media 탭에 모인다
+layout: [{ fields: ["title", "slug", "excerpt"] }], // hero and credit gather in the Media tab
 ```
 
-`defineConfig`는 관계 필드가 없는 컬렉션을 가리키거나, 기본 언어가 목록에 없거나, `title`이 없거나, 주소 필드가 둘 이상이거나,
-역할이 겹치거나 `summary`가 텍스트 필드가 아니거나, 탭 이름이 1~20자가 아니거나, `from`·`fillFromBody`가 필드와 맞지 않거나,
-필드 이름이 `translations`이거나, 컬렉션 종류가 없거나, `admin.path`·`site.localePrefix`·`site.previewLocaleParam`·`site.home`
-모양이 틀리면 앱이 뜰 때 바로 오류를 낸다.
+`defineConfig` throws an error as soon as the app starts if: a relation field points at a collection that does not exist, the default language is not in the list, `title` is missing, there are two or more URL fields,
+roles collide or `summary` is not a text field, a tab name is not 1 to 20 characters, `from` or `fillFromBody` does not match the fields,
+a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix`, `site.previewLocaleParam` or `site.home`
+is wrong.
 
-복제(`POST /api/cms/v1/entries/:id/duplicate`)는 본문에 `{ title }`을 받으면 복제본 제목을 그 값으로 둔다(관리자 화면은 원본
-제목에 "(복사)"를 붙여 보낸다). 없으면 원본 제목 그대로다. 저장소는 붙일 말을 정하지 않는다.
+Duplicating (`POST /api/cms/v1/entries/:id/duplicate`) sets the copy's title to the `{ title }` in the body if given (the admin UI sends the original
+title with " (copy)" appended). Without it, the title is the original's as is. The store does not decide what to append.
 
-## 아직 남은 일
+## Remaining work
 
-이 패키지는 한 블로그에서 떼어 낸 것이라, 다른 블로그에서 쓰기 전에 아래를 정리해야 한다.
+This package was split out of a single blog, so the following needs to be sorted out before using it on another blog.
 
-- 저장소는 Postgres(`ContentStore`)만 있다. 다른 DB를 쓰려면 같은 계약을 구현해야 하는데 계약이 아직 크다.
+- The only store is Postgres (`ContentStore`). Using another DB means implementing the same contract, and the contract is still large.
 
-## 개발
+## Development
 
 ```bash
 pnpm --filter @monti-cms/core test:run
 pnpm --filter @monti-cms/core typecheck
 ```
 
-패키지 자체 테스트는 예시 설정 `test/cms.config.ts`·`test/cms.server.ts`로 돈다.
+The package's own tests run with the sample configs `test/cms.config.ts` and `test/cms.server.ts`.
 
-**다른 사이트 설정으로도 돈다(재발 방지).** `test/other-site.config.ts`는 블로그와 일부러 다른 설정이다(컬렉션 article·topic·author,
-`title`·`slug` 말고는 다른 필드 이름, 영어만, 차트 + 사이트 블록, 글자 꾸밈 없음). 본체·관리자·AI 패키지마다 `vitest.othersite.config.ts`가 같은
-테스트를 이 설정으로 다시 돌린다(묶음 이름 `core (other-site)`·`admin (other-site)`·`ai (other-site)`, 저장소 루트
-`pnpm test:run`이 함께 돈다. 패키지에서는 `pnpm test:other-site`). 새 테스트는 저절로 두 설정으로 돈다. 컬렉션·필드 이름은
-테스트에 적지 말고 설정에서 찾는다(`test/any-site.ts`: 컬렉션·관계 필드·두 번째 언어, 발행 필수값을 채우는 `fillRequiredMetadata`).
-설정에 없는 기능(두 번째 언어, 묶음 블록 등)이 필요한 경우는 `skipIf`로 감싼다. 본체 패키지에서 블로그 예시 데이터를 그대로 확인하는
-부분은 `*.blog.test.ts`에 두고 다른 사이트 실행·타입 검사에서 뺀다. 관리자·AI 패키지는 각 `vitest.othersite.config.ts`의
-`BLOG_FIXTURE_TESTS`에 적어 뺀다.
+**Tests also run with another site config (regression guard).** `test/other-site.config.ts` is a config deliberately different from the blog's (collections article, topic and author,
+field names other than `title` and `slug`, English only, chart + site blocks, no text decorations). In each of the core, admin and AI packages, `vitest.othersite.config.ts` reruns the same
+tests with this config (suite names `core (other-site)`, `admin (other-site)` and `ai (other-site)`; the repo-root
+`pnpm test:run` runs them together, and in a package use `pnpm test:other-site`). New tests run with both configs automatically. Do not write collection and field names in
+tests; look them up from the config (`test/any-site.ts`: collections, relation fields, the second language, and `fillRequiredMetadata`, which fills in publish-required values).
+Wrap tests that need something the config lacks (a second language, a bundled block, etc.) in `skipIf`. In the core package, the parts that assert the blog sample data as is
+live in `*.blog.test.ts` and are excluded from the other-site run and type check. In the admin and AI packages, list them in `BLOG_FIXTURE_TESTS` of each `vitest.othersite.config.ts`
+to exclude them.
 
-**자동 검사(CI).** push·PR마다 `.github/workflows/ci.yml`이 lint(검사만)·타입 검사·패키지 빌드, 테스트(Postgres 17 서비스),
-예시 앱 묶음 검사(`pnpm example:check`)를 돈다. `pnpm example:check`는 패키지를 빌드해 묶고, 예시 앱을 저장소 밖 임시 폴더에
-그 묶음으로 설치해 `tsc`(`skipLibCheck: false`)와 `next build`를 예시 설정·확장을 모두 넣은 설정으로 한 번씩 돈다.
+**Automated checks (CI).** On every push and PR, `.github/workflows/ci.yml` runs lint (check only), type checking, the package build, tests (Postgres 17 service) and
+the example app bundle check (`pnpm example:check`). `pnpm example:check` builds and packs the packages, installs them into the example app in a temporary folder outside the repo,
+and runs `tsc` (`skipLibCheck: false`) and `next build` once each with a config that includes all the example config and extensions.

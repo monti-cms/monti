@@ -69,7 +69,7 @@ import { PROMPT_ROWS, PROMPT_TEXTAREA, SharedManager, useAiShared } from "./shar
 
 const t = createTranslator(aiManagerMessages);
 
-/** 붙을 곳의 보이는 이름. 필드는 컬렉션 정의의 이름이다. */
+/** Visible name of the attach target. For a field, it is the name in the collection definition. */
 function placeLabel(action: Pick<AiActionView, "attach">): string {
 	const attach = action.attach[0];
 	if (!attach) return t("place.direct");
@@ -93,7 +93,7 @@ function placeLabel(action: Pick<AiActionView, "attach">): string {
 	}
 }
 
-/** 관리자 화면에서 고칠 수 있는 값. 저장·시험에 보낸다. */
+/** Values editable in the admin screen. Sent with save and test. */
 type Editable = Pick<
 	AiActionView,
 	| "enabled"
@@ -121,27 +121,27 @@ const editableOf = (action: AiActionView): Editable => ({
 	checks: action.checks,
 });
 
-/** 코드 기능의 기본값(고친 값 없이 정의만으로 만든 값). 화면 기능은 되돌릴 기본값이 없다. */
+/** Defaults of a code action (the values built from the definition alone, without edits). Screen actions have no defaults to revert to. */
 function defaultSpecOf(feature: AiActionView): Editable | null {
 	if (feature.custom) return null;
 	const definition = actionDefinition(feature.key);
 	return definition ? editableOf(viewOf(resolveAction(feature.key, definition), undefined)) : null;
 }
 
-/** 고치는 값의 비교 열쇠. 열 때 값과 다르면 저장하지 않은 내용이 있다. */
+/** Comparison key of the edited values. If it differs from the values at open time, there is unsaved content. */
 const snapshotOf = (spec: Editable, base: CustomBase | undefined) => JSON.stringify({ spec, base });
 
-/** 시험에 쓸 예시 입력(입력 이름 → 값)과 추가 요청. 칸은 기능의 입력 종류로 만든다(`ai-test-sample`). */
+/** Sample input for the test (input name -> value) and the extra request. Fields are built from the action's input types (`ai-test-sample`). */
 type Sample = { values: Record<string, string>; request: string };
 const EMPTY_SAMPLE: Sample = { values: {}, request: "" };
 
 type AiTab = "features" | "connections" | "shared";
 
 /**
- * 관리자 AI 화면(v2 D). `기능` 탭은 코드로 정해 둔 기능과 화면에서 만든 기능의 목록이고, 기능마다 켜기·요청 받기·연결·
- * 모델·보낼 내용·지시문·검사를 고친 뒤 저장 전에 시험한다. `연결` 탭에서 서비스 주소·키·기본 모델을 여러 개 저장한다.
- * `공통 문구` 탭에서 지시문의 `{{shared.키}}`에 들어갈 문구를 고치고 더한다. 세 탭 모두 목록 + 상세 칸이다.
- * 저장하지 않은 내용이 있는 채로 다른 항목·탭을 열면 버릴지 묻는다.
+ * Admin AI screen. The Actions tab lists actions defined in code and actions created in the screen; for each action you edit enabled, ask-for-request,
+ * connection, model, content to send, instructions and checks, then test before saving. The Connections tab stores several service URLs, keys and default models.
+ * The Shared texts tab edits and adds the text that goes into `{{shared.key}}` in instructions. All three tabs are a list + a detail pane.
+ * Opening another item or tab with unsaved content asks whether to discard it.
  */
 export function AiManager() {
 	const queryClient = useQueryClient();
@@ -151,7 +151,7 @@ export function AiManager() {
 	const features = featuresQuery.data?.items ?? [];
 	const usable = new Set(featuresQuery.data?.usable ?? []);
 	const [tab, setTab] = useState<AiTab>("features");
-	/** 고치는 기능. `isNew`면 아직 저장하지 않은 새 화면 기능이다(저장하면 만든다). `initial`은 열 때 값이다. */
+	/** The action being edited. If `isNew`, it is a new screen action not yet saved (saving creates it). `initial` is the value at open time. */
 	const [editing, setEditing] = useState<{
 		feature: AiActionView;
 		spec: Editable;
@@ -162,10 +162,10 @@ export function AiManager() {
 	const [saving, setSaving] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
-	/** 연 연결. 머리의 `연결 추가`가 여기서 바꾸므로 연결 탭 밖에 둔다. */
+	/** The open connection. The header's Add connection changes it, so it lives outside the Connections tab. */
 	const [connection, setConnection] = useState<string | "new" | null>(null);
 	const [connectionDirty, setConnectionDirty] = useState(false);
-	/** 연 공통 문구. 머리의 `문구 추가`가 여기서 바꾸므로 공통 문구 탭 밖에 둔다. */
+	/** The open shared text. The header's Add text changes it, so it lives outside the Shared texts tab. */
 	const [shared, setShared] = useState<string | "new" | null>(null);
 	const [sharedDirty, setSharedDirty] = useState(false);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
@@ -177,7 +177,7 @@ export function AiManager() {
 			data ? { ...data, items: data.items.map((item) => (item.key === feature.key ? feature : item)) } : data,
 		);
 
-	/** 묻지 않고 연다(저장한 뒤 등). */
+	/** Opens without asking (e.g. after saving). */
 	const open = (feature: AiActionView) => {
 		const spec = editableOf(feature);
 		setEditing({
@@ -189,13 +189,13 @@ export function AiManager() {
 		setFormError(null);
 	};
 
-	/** 목록에서 연다. 저장하지 않은 내용이 있으면 먼저 묻는다. */
+	/** Opens from the list. If there is unsaved content, asks first. */
 	const openFeature = async (feature: AiActionView) => {
 		if (editing && !editing.isNew && editing.feature.key === feature.key) return;
 		if (await confirmDiscard(featureDirty)) open(feature);
 	};
 
-	/** 새 화면 기능을 오른쪽에 연다. 기본 정보·연결·지시문 등을 다 고친 뒤 저장하면 만든다. */
+	/** Opens a new screen action on the right. Saving after editing basic info, connection, instructions, etc. creates it. */
 	const startNew = async () => {
 		if (!(await confirmDiscard(featureDirty))) return;
 		const base = NEW_CUSTOM_BASE();
@@ -215,15 +215,15 @@ export function AiManager() {
 		if (await confirmDiscard(sharedDirty)) setShared(key);
 	};
 
-	/** 탭을 바꾼다. 연결·공통 문구 탭은 닫으면 입력이 사라지므로 저장하지 않은 내용이 있으면 묻는다. */
+	/** Switches tabs. Closing the Connections or Shared texts tab discards the input, so it asks if there is unsaved content. */
 	const changeTab = async (next: AiTab) => {
 		const dirty = (tab === "connections" && connectionDirty) || (tab === "shared" && sharedDirty);
 		if (await confirmDiscard(dirty)) setTab(next);
 	};
 
 	/**
-	 * 화면 기능의 기본 정보를 바꾼다. 붙을 곳·결과 모양·방식이 바뀌면 입력·검사가 달라지므로 화면 모양을 다시 만들고,
-	 * 고친 켜기·요청 받기·바로 넣기·지시문은 남긴다(방식이 같으면 연결·모델도 남긴다).
+	 * Changes the basic info of a screen action. Changing the attach target, result shape or mode changes the inputs and checks, so the screen shape is rebuilt,
+	 * while the edited enabled, ask-for-request, insert-directly and instructions are kept (connection and model are also kept if the mode is unchanged).
 	 */
 	const changeBase = (base: CustomBase) => {
 		if (!editing) return;
@@ -395,7 +395,7 @@ export function AiManager() {
 															: t("status.needsConnection")
 												}
 												detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
-												// 저장하지 않은 새 기능을 여는 동안은 목록의 다른 줄을 열린 줄로 보이지 않는다.
+												// While a new unsaved action is open, no other row in the list is shown as open.
 												current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
 												onClick={() => void openFeature(feature)}
 											/>
@@ -481,7 +481,7 @@ export function AiManager() {
 	);
 }
 
-/** 선택지 안 검사의 목록 입력. 한 줄에 값 하나이고, 빈 줄은 뺀다. */
+/** List input for the one-of-values check. One value per line; blank lines are dropped. */
 function OneOfInput({
 	items,
 	disabled,
@@ -511,7 +511,7 @@ function OneOfInput({
 	);
 }
 
-/** 검사 한 줄. 켜고 끄며, 형식은 정규식, 길이는 글자 수, 선택지 안은 값 목록을 고친다. 더한 검사는 삭제할 수 있다. */
+/** One check row. Toggle it on/off; edit a regex for format, a character count for length, or a value list for one-of. Added checks can be deleted. */
 function CheckRow({
 	check,
 	label,
@@ -598,7 +598,7 @@ function FeatureEditor({
 	error: string | null;
 	onChange: (spec: Editable) => void;
 	onSave: () => void;
-	/** 화면 기능이면 기본 정보 고치기와 삭제. 새 기능(`isNew`)이면 삭제 대신 취소다. */
+	/** For a screen action: edit basic info and delete. For a new action (`isNew`), cancel instead of delete. */
 	custom?: {
 		base: CustomBase;
 		onBaseChange: (base: CustomBase) => void;
@@ -617,18 +617,18 @@ function FeatureEditor({
 		: providers.find((provider) => provider.ready);
 	const canRun =
 		Boolean(settings?.fake) || Boolean(chosen?.url && chosen.keyHint && (spec.modelName || chosen.defaultModel));
-	// 고른 생성 연결의 모델 목록. 한 번 받은 목록은 기억해 두고 다시 받지 않는다.
+	// Model list of the selected generation connection. A list that was fetched once is remembered and not fetched again.
 	const modelList = useModelList(!deciding && chosen?.keyHint ? { providerId: chosen.id } : null);
 	const [sample, setSample] = useState<Sample>(EMPTY_SAMPLE);
 	const [test, setTest] = useState<
 		{ status: "running" } | { status: "done"; result: AiRunResult } | { status: "error"; message: string } | null
 	>(null);
 	const set = (patch: Partial<Editable>) => onChange({ ...spec, ...patch });
-	// 코드 기능의 기본값. `기본값으로`는 입력 칸만 되돌리고(켜기는 그대로), 저장은 따로 누른다.
+	// Defaults of a code action. Reset to default only reverts the input fields (enabled stays as is); saving is a separate click.
 	const defaults = custom ? null : defaultSpecOf(feature);
 	const atDefaults =
 		defaults !== null && JSON.stringify({ ...defaults, enabled: spec.enabled }) === JSON.stringify(spec);
-	// 더할 수 있는 검사: 형식·길이·선택지 안 중 아직 없는 것. MDX 결과(본문 조각)는 글자 검사를 더하지 않는다.
+	// Checks that can be added: those among format, length and one-of that are not present yet. An MDX result (body fragment) gets no character checks.
 	const addableChecks = (Object.keys(ADDABLE_CHECKS) as AddableCheckKind[]).filter(
 		(kind) =>
 			feature.result !== "mdx" && feature.result !== "note" && !spec.checks.some((check) => check.kind === kind),
@@ -653,7 +653,7 @@ function FeatureEditor({
 		if (testDisabled) return;
 		setTest({ status: "running" });
 		try {
-			// 화면 기능은 고치는 중인 기본 정보로 시험한다(아직 저장하지 않은 새 기능 포함).
+			// A screen action is tested with the basic info being edited (including a new action not yet saved).
 			const options = {
 				draft: spec,
 				request: spec.askInstruction ? sample.request : undefined,
@@ -914,7 +914,7 @@ function FeatureEditor({
 						value={sample.request}
 						onChange={(event) => setSample({ ...sample, request: event.target.value })}
 						onKeyDown={(event) => {
-							// 줄바꿈은 Enter, 실행은 Cmd/Ctrl+Enter다.
+							// Enter inserts a newline; Cmd/Ctrl+Enter runs.
 							if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
 								event.preventDefault();
 								void runTest();

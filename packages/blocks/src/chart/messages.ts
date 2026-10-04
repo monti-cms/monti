@@ -1,8 +1,9 @@
 import { defineMessages } from "@monti-cms/core";
 
 /**
- * 차트 블록의 이름표·설명, 차트 문법 오류 문구, AI 기능 문구(M15). 문법 오류는 관리자 화면(관리자 언어)과 공개 화면(글 언어)이
- * 함께 쓴다. AI 지시문은 모델에게 주는 글이라 영어 하나이고, 결과 언어는 본문을 따른다.
+ * Chart block label and description, chart syntax error messages, and AI feature messages. Syntax errors are shared by the admin UI
+ * (admin language) and the public page (content language). AI instructions are text for the model, so there is only an English one;
+ * the output language follows the body text.
  */
 export const chartMessages = defineMessages("cms-blocks.chart", {
 	en: {

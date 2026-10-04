@@ -36,7 +36,7 @@ export function handleTabKey(view: EditorView, event: KeyboardEvent, isShift: bo
 	const selFrom = $from.pos - blockStart;
 	const selTo = $to.pos - blockStart;
 
-	// 각 라인의 [start, end] 오프셋 계산 (blockStart 기준)
+	// Compute the [start, end] offsets of each line (relative to blockStart)
 	const lines: Array<{ start: number; end: number; text: string }> = [];
 	let offset = 0;
 	for (const line of text.split("\n")) {
@@ -46,7 +46,7 @@ export function handleTabKey(view: EditorView, event: KeyboardEvent, isShift: bo
 		offset = end + 1; // '\n'
 	}
 
-	// 선택 영역에 걸치는 라인 인덱스 찾기
+	// Find the line indexes the selection spans
 	const selectedLineIndices: number[] = [];
 	lines.forEach((line, index) => {
 		const lineStart = line.start;
@@ -56,10 +56,10 @@ export function handleTabKey(view: EditorView, event: KeyboardEvent, isShift: bo
 				selectedLineIndices.push(index);
 			}
 		} else {
-			// 범위 선택일 때
+			// When it is a range selection
 			if (lineEnd >= selFrom && lineStart <= selTo) {
 				if (selTo === lineStart && selTo > selFrom) {
-					// 커서가 라인 시작점에 정확히 닿은 경우 제외
+					// Exclude when the cursor sits exactly at a line start
 					return;
 				}
 				selectedLineIndices.push(index);
@@ -70,14 +70,14 @@ export function handleTabKey(view: EditorView, event: KeyboardEvent, isShift: bo
 	if (selectedLineIndices.length === 0) return false;
 
 	if (!isShift) {
-		// Tab: 들여쓰기
+		// Tab: indent
 		if (selFrom === selTo && selectedLineIndices.length === 1) {
-			// 단순 커서 위치에서 탭 문자 삽입
+			// Insert a tab character at a plain cursor position
 			view.dispatch(state.tr.insertText("\t").scrollIntoView());
 			return true;
 		}
 
-		// 여러 줄 선택 들여쓰기
+		// Indent multiple selected lines
 		let tr = state.tr;
 		for (let i = selectedLineIndices.length - 1; i >= 0; i--) {
 			const lineIdx = selectedLineIndices[i];
@@ -87,7 +87,7 @@ export function handleTabKey(view: EditorView, event: KeyboardEvent, isShift: bo
 			tr = tr.insertText("\t", pos);
 		}
 
-		// 선택 영역 갱신: 첫 라인 들여쓰기 반영
+		// Update selection: reflect first-line indentation
 		const firstLine = lines[selectedLineIndices[0]];
 		const lastLine = lines[selectedLineIndices[selectedLineIndices.length - 1]];
 		if (firstLine && lastLine) {
@@ -101,7 +101,7 @@ export function handleTabKey(view: EditorView, event: KeyboardEvent, isShift: bo
 		return true;
 	}
 
-	// Shift-Tab: 내어쓰기
+	// Shift-Tab: outdent
 	let tr = state.tr;
 	let changed = false;
 
@@ -144,11 +144,11 @@ export function handleEnterKey(view: EditorView, event: KeyboardEvent): boolean 
 	const blockStart = $from.start(depth);
 	const textBeforeInBlock = state.doc.textBetween(blockStart, $from.pos, "\n", "\0");
 
-	// 현재 라인의 시작점 찾기
+	// Find the start of the current line
 	const lastNewline = textBeforeInBlock.lastIndexOf("\n");
 	const currentLineBeforeCursor = lastNewline === -1 ? textBeforeInBlock : textBeforeInBlock.slice(lastNewline + 1);
 
-	// 현재 라인의 앞 공백(들여쓰기) 추출
+	// Extract the leading whitespace (indentation) of the current line
 	const indentMatch = currentLineBeforeCursor.match(/^[\t ]*/);
 	const indent = indentMatch ? indentMatch[0] : "";
 
@@ -185,7 +185,7 @@ export function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
 
 	event.preventDefault();
 
-	// \r\n → \n 및 \r → \n 정규화
+	// Normalize \r\n → \n and \r → \n
 	const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
 	const tr = view.state.tr.replaceSelectionWith(view.state.schema.text(normalized)).scrollIntoView();

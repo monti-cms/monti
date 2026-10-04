@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-// 주소 필드 이름이 `slug`가 아닌 사이트.
+// A site whose slug field is not named `slug`.
 vi.mock("@monti-cms/core/client", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@monti-cms/core/client")>();
 	const article = {
@@ -14,7 +14,7 @@ vi.mock("@monti-cms/core/client", async (importOriginal) => {
 		list: { columns: ["title", "permalink", "status"] },
 	};
 	const note = { ...article, fields: { title: { kind: "text", label: "Title" } }, list: { columns: ["title"] } };
-	// 목록 설정(`list`)이 없는 컬렉션: 기본 컬럼을 쓴다.
+	// A collection with no list setting (`list`): uses the default columns.
 	const story = {
 		label: "Story",
 		kind: "document",
@@ -36,7 +36,7 @@ vi.mock("@monti-cms/core/client", async (importOriginal) => {
 	};
 	return {
 		...actual,
-		// 언어가 둘 이상인 사이트.
+		// A site with two or more locales.
 		LOCALES: ["en", "ko"],
 		isCollection: (name: string) => name in own || actual.isCollection(name),
 		schemaOf: (name: string) => own[name] ?? actual.schemaOf(name as never),
@@ -59,7 +59,7 @@ describe("list columns", () => {
 		expect(available).toContain("title");
 	});
 
-	it("목록 설정이 없으면 기본 컬럼이다: 문서는 제목·상태·언어·분류 필드·수정일·발행일, 항목은 제목·주소·언어·상태·수정일", () => {
+	it("without a list setting the default columns are used: documents get title, status, locale, taxonomy fields, updated and published dates; items get title, slug, locale, status, updated date", () => {
 		expect(defaultListColumns("story")).toEqual(["title", "status", "locale", "topicId", "updatedAt", "publishedAt"]);
 		expect(columnsFor("story").defaults).toEqual(["title", "status", "locale", "topicId", "updatedAt", "publishedAt"]);
 		expect(defaultListColumns("topic")).toEqual(["title", "slug", "locale", "status", "updatedAt"]);

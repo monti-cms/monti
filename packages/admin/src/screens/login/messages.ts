@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 로그인 화면의 문구(M15). `provider`는 로그인 방식이 하나일 때만 이름(예: GitHub)이 온다. */
+/** Login screen text. `provider` carries the name (e.g. GitHub) only when there is a single login method. */
 export const loginMessages = defineMessages("cms-admin.login", {
 	en: {
 		title: "CMS Admin",

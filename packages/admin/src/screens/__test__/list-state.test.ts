@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isExplorerMode, listStateToApiQuery, listStateToSearchParams, parseListState } from "../list-state";
 
-describe("관리자 목록 상태(§3.2)", () => {
+describe("admin list state", () => {
 	it("round-trips filters through the URL", () => {
 		const url = new URLSearchParams(
 			"collection=memo&folder=f1&descendants=1&search=리액트&title=훅&status=published&status=draft&changes=1&relation=tagIds:t1&relation=tagIds:t2&updatedFrom=2026-01-01&sortField=publishedAt&sortDirection=asc&page=2&pageSize=50",
@@ -37,7 +37,7 @@ describe("관리자 목록 상태(§3.2)", () => {
 	});
 
 	it("keeps only taxonomy fields of the collection in relation filters", () => {
-		// 메모에는 카테고리 필드가 없고, `title`은 분류 필드가 아니다. 모양이 틀린 값도 버린다.
+		// A memo has no category field, and `title` is not a taxonomy field. Malformed values are dropped too.
 		const state = parseListState(
 			new URLSearchParams(
 				"collection=memo&relation=tagIds:t1&relation=categoryId:c1&relation=title:x&relation=tagIds:&relation=t9",
@@ -53,7 +53,7 @@ describe("관리자 목록 상태(§3.2)", () => {
 			),
 		);
 		const query = listStateToApiQuery(state);
-		// 필터가 있으면 최상위에서도 모든 폴더를 가로질러 찾는다.
+		// With a filter, it searches across all folders even at the top level.
 		expect(query.get("folderId")).toBeNull();
 		expect(query.getAll("relation")).toEqual(["tagIds:t1", "tagIds:t2", "categoryId:c1"]);
 		expect(query.get("publishedFrom")).toBe("2026-02-28T15:00:00.000Z");
@@ -66,18 +66,18 @@ describe("관리자 목록 상태(§3.2)", () => {
 		expect(isExplorerMode(parseListState(new URLSearchParams("collection=post&descendants=1")))).toBe(false);
 	});
 
-	it("browses the root like a file explorer and flattens only when asked (v2 folders)", () => {
+	it("browses the root like a file explorer and flattens only when asked", () => {
 		const q = (search: string) => listStateToApiQuery(parseListState(new URLSearchParams(search)));
-		// 최상위 탐색: 폴더 밖 항목만.
+		// Top-level browse: only items outside folders.
 		expect(q("collection=memo").get("folderId")).toBe("null");
-		// 최상위에서 하위 폴더 포함: 전체.
+		// Top level with subfolders included: everything.
 		expect(q("collection=memo&descendants=1").get("folderId")).toBeNull();
-		// 폴더 탐색: 바로 든 항목만.
+		// Folder browse: only directly contained items.
 		expect(q("collection=memo&folder=f1").get("folderId")).toBe("f1");
 		expect(q("collection=memo&folder=f1").get("includeDescendants")).toBeNull();
-		// 폴더 안에서 검색: 그 폴더 아래 전체.
+		// Search inside a folder: everything under that folder.
 		expect(q("collection=memo&folder=f1&search=a").get("includeDescendants")).toBe("true");
-		// 예전 주소의 미분류는 최상위로 읽는다.
+		// An old address's unfiled is read as the top level.
 		expect(parseListState(new URLSearchParams("collection=memo&folder=unfiled")).folder).toBe("all");
 	});
 

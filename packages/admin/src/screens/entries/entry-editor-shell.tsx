@@ -108,9 +108,9 @@ interface EntryEditorShellProps {
 	mode: "new" | "edit";
 	initialEntryId?: string;
 	collection?: string;
-	/** 복구본 키에 쓰는 관리자 ID(§5.1). */
+	/** Admin ID used in the recovery copy key. */
 	adminId: string;
-	/** 새 글을 만들 폴더(목록에서 연 위치). */
+	/** Folder to create a new post in (location opened from the list). */
 	folderId?: string | null;
 }
 
@@ -138,7 +138,7 @@ function ToolbarAction({
 			</IconButton>
 		);
 	}
-	// 링크는 링크로 남긴다(새 탭 열기·주소 복사). 이름과 툴팁은 아이콘 버튼과 같다.
+	// A link stays a link (open in new tab, copy URL). Its name and tooltip match the icon buttons.
 	return (
 		<Tooltip>
 			<TooltipTrigger
@@ -159,7 +159,7 @@ function ToolbarAction({
 	);
 }
 
-/** 편집기 도구 모음 끝의 켜고 끄는 단추(원문 창·MDX 원문). 이름과 툴팁이 같다. */
+/** Toggle button at the end of the editor toolbar (source pane, MDX source). Name and tooltip are the same. */
 function ToolbarToggle({
 	label,
 	text,
@@ -169,7 +169,7 @@ function ToolbarToggle({
 	onPressedChange,
 }: {
 	label: string;
-	/** 아이콘 옆 글자. 없으면 아이콘만 보인다(이름은 툴팁). */
+	/** Text next to the icon. If absent, only the icon shows (the name is the tooltip). */
 	text?: string;
 	icon: LucideIcon;
 	pressed: boolean;
@@ -198,13 +198,13 @@ function ToolbarToggle({
 	);
 }
 
-/** "먼저 저장하세요" 안내. 편집 화면 어디서 막혀도 같은 말을 쓴다. */
+/** "Save first" hint. The same words are used wherever on the edit screen an action is blocked. */
 const saveFirstMessage = (purpose: Purpose) => t("saveFirst", { purpose });
 
-/** 막혔을 때 안내에 넣는 하려던 일. */
+/** The action that was attempted, put into the hint when blocked. */
 type Purpose = "publish" | "duplicate" | LifecycleAction;
 
-/** 저장 상태 점의 색. 상태를 더하면 여기서 색을 정해야 한다. */
+/** Color of the save status dot. When adding a status, its color must be chosen here. */
 const SAVE_STATUS_DOT: Record<SaveStatus, string> = {
 	new: "bg-cms-muted-foreground/50",
 	saved: "bg-emerald-500",
@@ -216,7 +216,7 @@ const SAVE_STATUS_DOT: Record<SaveStatus, string> = {
 	"session-expired": "bg-cms-destructive",
 };
 
-/** 머리글의 저장 상태. 좁은 화면에서는 점만 보이고 이름은 읽기 도구로 알린다. */
+/** Save status in the header. On narrow screens only the dot shows, and the name is announced to screen readers. */
 function SaveStatusIndicator({ status, backupAvailable }: { status: SaveStatus; backupAvailable: boolean }) {
 	const label = `${SAVE_STATUS_LABELS[status]}${backupAvailable ? "" : t("backupUnavailable")}`;
 	return (
@@ -232,7 +232,7 @@ function SaveStatusIndicator({ status, backupAvailable }: { status: SaveStatus; 
 }
 
 /**
- * 저장·발행 응답에는 번역 묶음 정보(v2 B4)가 없다. 불러올 때 받은 값을 유지하고 이 콘텐츠의 상태만 갱신한다.
+ * Save and publish responses carry no translation group info. Keep the values received on load and update only this content's status.
  */
 function keepTranslationGroup(current: EntryData | null, next: EntryData): Pick<EntryData, "translations" | "source"> {
 	const translations = (current?.translations ?? next.translations)?.map((member) =>
@@ -242,7 +242,7 @@ function keepTranslationGroup(current: EntryData | null, next: EntryData): Pick<
 }
 
 /**
- * 게시글·메모 편집 화면(§3.1, §5). 태그·카테고리·모음집(record 컬렉션)은 목록의 작은 폼에서 편집한다.
+ * Post and memo edit screen. Tags, categories and collections (record collections) are edited in the small form on the list.
  */
 export function EntryEditorShell({
 	mode,
@@ -265,7 +265,7 @@ export function EntryEditorShell({
 	const editorScrollRef = useRef<HTMLDivElement>(null);
 	const sourcePaneRef = useRef<HTMLElement>(null);
 	const [isSlugTouched, setIsSlugTouched] = useState(mode === "edit");
-	/** 머리 단추가 하는 일. 하는 동안 단추를 막고 글자를 바꾼다. */
+	/** What the header button does. While it runs, the button is disabled and its label changes. */
 	const [busy, setBusy] = useState<"publish" | "status" | null>(null);
 	const isSubmitting = busy !== null;
 	const [publishIssues, setPublishIssues] = useState<CmsIssue[]>([]);
@@ -290,14 +290,14 @@ export function EntryEditorShell({
 		initialForm: EMPTY_FORM,
 		enabled: !isReadOnly,
 		newEntryFolderId: folderId,
-		// 저장 응답에는 번역 묶음 정보가 없다. 불러올 때 받은 값을 유지한다.
+		// The save response carries no translation group info. Keep the values received on load.
 		onSaved: (saved) => setEntry((current) => ({ ...saved, ...keepTranslationGroup(current, saved) })),
 		onConflict: (server, local) => setConflict({ server, local }),
 	});
 	const { form, setForm } = autosave;
 
-	// §4.4: 해석할 수 없는 MDX나 frontmatter가 있는 본문은 시각 모드로 열지 않는다. 열면 빈 문서가 되어
-	// 입력 한 번에 원문이 덮어써진다. 원문 모드에서 고치거나 보존한 채 저장할 수 있다.
+	// MDX or frontmatter that cannot be parsed is not opened in visual mode. Opening it would produce an empty document, and
+	// a single keystroke would overwrite the source. It can be fixed in source mode or saved as is.
 	const deferredMdx = useDeferredValue(form.mdx);
 	const sourceProblems = useMemo<CmsIssue[]>(() => {
 		const analysis = analyze(deferredMdx);
@@ -319,7 +319,7 @@ export function EntryEditorShell({
 		if (!media) return;
 		const update = () => {
 			setIsNarrowScreen(media.matches);
-			// 1024px 이하에서는 본문을 우선한다(§3.1).
+			// At 1024px and below, the body takes priority.
 			if (media.matches) {
 				setIsInspectorOpen(false);
 				setIsSourcePaneOpen(false);
@@ -330,12 +330,12 @@ export function EntryEditorShell({
 		return () => media.removeEventListener?.("change", update);
 	}, []);
 
-	// 원문 창을 열어 뒀는지는 브라우저에 기억한다. 저장소를 못 쓰면 매번 열린 채 시작한다.
+	// Whether the source pane was left open is remembered in the browser. If storage is unavailable, it always starts open.
 	useEffect(() => {
 		try {
 			if (window.localStorage.getItem(SOURCE_PANE_STORAGE_KEY) === "closed") setIsSourcePaneOpen(false);
 		} catch {
-			// 저장소를 쓸 수 없으면 기본값을 쓴다.
+			// If storage is unavailable, use the default.
 		}
 	}, []);
 	const toggleSourcePane = (open: boolean) => {
@@ -343,13 +343,13 @@ export function EntryEditorShell({
 		try {
 			window.localStorage.setItem(SOURCE_PANE_STORAGE_KEY, open ? "open" : "closed");
 		} catch {
-			// 기억하지 못해도 화면은 바뀐다.
+			// The screen still changes even if it cannot be remembered.
 		}
 	};
 
 	const translationSource = translationSourceOf(entry);
 	const translationForm = form[TRANSLATION_FORM_KEY];
-	/** 번역자가 마지막으로 확인한 원문. 지금 원문과 다르면 "원문이 바뀌었습니다"를 보인다. */
+	/** The source the translator last confirmed. If it differs from the current source, "source changed" is shown. */
 	const confirmedSource = translationStateFromForm(translationForm).baseSource;
 	const sourceChanged =
 		translationSource !== null && typeof translationForm === "string" && translationSource.mdx !== confirmedSource;
@@ -361,7 +361,7 @@ export function EntryEditorShell({
 		paneRef: sourcePaneRef,
 	});
 
-	// 편집 화면 확장(플러그인의 툴바·블록 동작, 예: AI 번역). 언어가 같으면 같은 객체를 넘겨 동작이 다시 만들어지지 않게 한다.
+	// Edit screen extensions (plugin toolbar and block actions, e.g. AI translation). For the same language, pass the same object so the actions are not recreated.
 	const sourceLocale = translationSource?.locale;
 	const targetLocale = entry?.locale;
 	const translateLocales = useMemo(
@@ -398,7 +398,7 @@ export function EntryEditorShell({
 		async (id: string) => {
 			const loaded = await cmsFetch<EntryData>(cmsApiUrl(`/v1/entries/${id}`), { fallback: t("loadFailed") });
 			if (isItemCollection(loaded.collection)) {
-				// 항목 컬렉션(태그·카테고리 등)은 목록의 작은 폼에서 연다(§5.2).
+				// Item collections (tags, categories, etc.) open in the small form on the list.
 				router.replace(entryHref(loaded.collection, loaded.id) as Route);
 				return null;
 			}
@@ -412,7 +412,7 @@ export function EntryEditorShell({
 		[refreshIncoming, router],
 	);
 
-	// 편집 화면을 열 때 서버 값과 브라우저 복구본을 비교한다(§5.1).
+	// When the edit screen opens, compare the server value with the browser recovery copy.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once per opened entry
 	useEffect(() => {
 		let cancelled = false;
@@ -439,7 +439,7 @@ export function EntryEditorShell({
 				} else if (backup.baseVersion === result.loaded.version) {
 					setRecovery({ kind: "restore", backup });
 				} else {
-					// 복구본 이후 서버도 바뀌었다. 불러오면 덮어쓴다는 것을 알린다.
+					// The server also changed after the recovery copy. Tell the user that loading will overwrite it.
 					setRecovery({ kind: "conflict", backup, server: result.loaded });
 				}
 			} catch (error) {
@@ -460,7 +460,7 @@ export function EntryEditorShell({
 		setRecovery(null);
 	};
 
-	/** 주소를 직접 고치지 않았으면 주소 필드의 `from`이 가리키는 값이 바뀔 때 주소를 다시 만든다. */
+	/** If the slug was not edited by hand, regenerates it when the value that the slug field's `from` points to changes. */
 	const withAutoSlug = (patch: EntryFormPatch): EntryFormPatch => {
 		if (isSlugTouched || !isCollection(collection)) return patch;
 		const from = slugFieldOf(collection)?.from;
@@ -499,7 +499,7 @@ export function EntryEditorShell({
 		setPendingBodyPosition(undefined);
 	}, [pendingBodyPosition, editorMode, form.mdx]);
 
-	// 속성 필드는 속성 칸이 그 탭을 열고 초점을 옮긴다. 여기서는 본문 위 제목만 다룬다.
+	// For property fields, the properties panel opens that tab and moves focus. Here only the title above the body is handled.
 	useEffect(() => {
 		if (pendingFieldPath !== "title-canvas") return;
 		const control = document.getElementById("cms-title-canvas");
@@ -510,8 +510,8 @@ export function EntryEditorShell({
 	}, [pendingFieldPath]);
 
 	/**
-	 * 명시적 발행만 현재 입력을 저장한다. 다른 작업은 미저장 입력이 있으면 먼저 저장하도록 안내한다.
-	 * 안내는 누른 자리 가까이에 보인다. 머리 단추·메뉴는 토스트(기본), 창은 창 안이다.
+	 * Only an explicit publish saves the current input. Other actions ask to save first if there is unsaved input.
+	 * The hint shows near where it was pressed. For header buttons and menus it is a toast (default); for dialogs, inside the dialog.
 	 */
 	const ensureSaved = async (
 		purpose: Purpose,
@@ -536,13 +536,13 @@ export function EntryEditorShell({
 	const handleSaveNow = async () => {
 		if (isReadOnly) return;
 		if (await autosave.flush()) toast.success(t("saved"));
-		// 실패하면 반드시 이유를 보인다(충돌은 충돌 창이 따로 뜬다).
+		// On failure, always show the reason (a conflict opens its own conflict dialog).
 		else if (autosave.getStatus() !== "conflict") toast.error(autosave.getLastError() ?? tc("saveFailed"));
 	};
 
 	/**
-	 * 미리보기는 서버 초안을 그린다. 저장하지 않은 변경이 있으면 먼저 저장하고 연다.
-	 * 저장을 기다리는 동안 팝업 차단에 걸리지 않게 창은 누르자마자 열어 둔다.
+	 * Preview renders the server draft. If there are unsaved changes, save first, then open.
+	 * To avoid the popup blocker while waiting for the save, the window is opened as soon as the button is pressed.
 	 */
 	const handlePreview = async (href: string) => {
 		const opened = window.open("about:blank", "_blank");
@@ -559,7 +559,7 @@ export function EntryEditorShell({
 	const handlePublish = async ({ resetPublishedAt = false }: { resetPublishedAt?: boolean } = {}) => {
 		if (isSubmitting || isReadOnly) return;
 		setPublishIssues([]);
-		// §5.6: 본문에서 채우는 필드(`fillFromBody`)가 비었으면 본문에서 만들어 보여 준다. 만들 글이 없으면 직접 입력해야 한다.
+		// A field filled from the body (`fillFromBody`) that is empty is generated from the body and shown. If there is no body to generate from, it must be entered by hand.
 		for (const { name, field } of isCollection(collection) ? fillFromBodyFields(collection) : []) {
 			if (formText(form, name).trim()) continue;
 			const generated = bodyExcerpt(form.mdx, fillFromBodyLength(field));
@@ -571,7 +571,7 @@ export function EntryEditorShell({
 			setForm({ [name]: generated });
 			toast.message(t("fillDone", { label: field.label }));
 		}
-		// 막지는 않는다. 확인하지 않은 원문 변경이 있는 채로 나가는 것만 알린다.
+		// This does not block. It only warns when leaving with unconfirmed source changes.
 		if (sourceChanged) toast.warning(t("sourceUnreviewed"));
 		setBusy("publish");
 		try {
@@ -614,7 +614,7 @@ export function EntryEditorShell({
 		}
 	};
 
-	/** 보관·보관 해제·휴지통·복원(§5.3). */
+	/** Archive, unarchive, trash, restore. */
 	const runLifecycle = async (action: LifecycleAction) => {
 		if (!entry || isSubmitting) return;
 		if (action !== "restore" && autosave.hasPendingChanges()) {
@@ -627,7 +627,7 @@ export function EntryEditorShell({
 				method: "POST",
 				json: { expectedVersion: autosave.getVersion() },
 			});
-			// 번역본을 휴지통으로 보내면 원문 편집 화면으로 돌아간다.
+			// Sending a translation to the trash returns to the original's edit screen.
 			if (action === "trash" && isTranslationEntry(entry) && entry.translationGroupId) {
 				toast.success(LIFECYCLE_SUCCESS[action]);
 				router.push(adminEntryEditHref(entry.translationGroupId) as Route);
@@ -642,7 +642,7 @@ export function EntryEditorShell({
 		}
 	};
 
-	/** 공개 글을 내리는 전환(보관·휴지통 이동)만 묻는다. 보관 해제·복원은 바로 한다(§5). */
+	/** Only transitions that take a published post down (archive, move to trash) ask. Unarchive and restore happen right away. */
 	const confirmLifecycle = (action: ConfirmedLifecycleAction) => {
 		setConfirm({ ...lifecycleConfirm(action, entry, incoming.items), onConfirm: () => runLifecycle(action) });
 	};
@@ -682,12 +682,12 @@ export function EntryEditorShell({
 		}
 	};
 
-	// 번역본은 원문과 slug를 같이 쓸 수 있어 언어를 함께 넘긴다(v2 B4).
+	// A translation can share a slug with the original, so the language is passed along.
 	const previewPath = entry ? contentPreviewHref(collection, entry.workingSlug, entry.locale) : null;
-	// 새 탭으로 여는 주소라 Next가 `basePath`를 붙여 주지 않는다.
+	// This is a URL opened in a new tab, so Next does not prepend `basePath`.
 	const previewHref = previewPath === null ? null : withBasePath(previewPath);
 
-	// Cmd/Ctrl+S 즉시 저장. 매 렌더의 최신 상태를 쓰도록 다시 등록한다.
+	// Cmd/Ctrl+S saves immediately. Re-registered so it uses the latest state on every render.
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.isComposing) return;
@@ -739,7 +739,7 @@ export function EntryEditorShell({
 				onTrashTranslation={() => confirmLifecycle("trash")}
 			/>
 		) : null;
-	// 제목 칸은 라이브러리 약속인 `title` 필드다. 이름표는 사이트가 정한다.
+	// The title field is the library-convention `title` field. The label is decided by the site.
 	const titleLabel =
 		(isCollection(collection) ? storedField(collection, "title")?.field.label : undefined) ?? t("title");
 	const titleInput = (
@@ -778,7 +778,7 @@ export function EntryEditorShell({
 			label={t("mdxSource")}
 			icon={FileCode}
 			pressed={editorMode === "source"}
-			// 해석할 수 없는 본문은 시각 모드로 돌아가지 못한다.
+			// Content that cannot be parsed cannot return to visual mode.
 			disabled={editorMode === "source" && !canUseVisual}
 			onPressedChange={(pressed) => setEditorMode(pressed ? "source" : "visual")}
 		/>
@@ -870,7 +870,7 @@ export function EntryEditorShell({
 							onClick={() => void handlePreview(previewHref)}
 						/>
 					)}
-					{/* 하나만 바꾸는 전환(발행·보관 해제·복원)은 묻지 않고 바로 한다(§5). */}
+					{/* Single-step transitions (publish, unarchive, restore) happen right away without asking. */}
 					{isTrashed ? (
 						<Button
 							type="button"
@@ -903,8 +903,8 @@ export function EntryEditorShell({
 							{busy === "publish" ? t("publishing") : t("publish")}
 						</Button>
 					) : (
-						// 이미 발행한 글은 발행과 "오늘 날짜로 다시 발행"을 한 단추로 묶는다.
-						// 한 단추처럼 보이게 바탕은 감싸는 칸이 칠하고, 두 단추는 사이의 가는 선으로만 나눈다.
+						// For an already published post, publish and "republish with today's date" are combined into one button.
+						// To look like one button, the wrapper paints the background and the two buttons are separated only by a thin line.
 						<div className="ml-1 flex h-8 items-center overflow-hidden rounded-[min(var(--radius-md),10px)] bg-cms-primary text-cms-primary-foreground">
 							<Button
 								id="cms-publish"
@@ -929,7 +929,7 @@ export function EntryEditorShell({
 									<ChevronDown aria-hidden className="size-3.5" />
 								</IconButton>
 								<DropdownMenuContent align="end" className="w-48">
-									{/* 처음 발행한 날을 그대로 두는 것이 기본이다. 고친 글을 새 글처럼 올릴 때만 고른다. */}
+									{/* Keeping the original publish date is the default. Choose it only when re-posting an edited post as new. */}
 									{canResetPublishedAt && (
 										<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
 											<CalendarSync aria-hidden />
@@ -960,7 +960,7 @@ export function EntryEditorShell({
 							<MoreHorizontal aria-hidden className="size-4" />
 						</IconButton>
 						<DropdownMenuContent align="end" className="w-56">
-							{/* 저장은 머리의 저장 단추와 ⌘S로 한다. 메뉴에 다시 두지 않는다. */}
+							{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
 							{entry && !isTrashed && (
 								<>
 									<DropdownMenuItem onClick={() => void handleDuplicate()}>
@@ -1072,7 +1072,7 @@ export function EntryEditorShell({
 				)}
 				<div
 					ref={editorScrollRef}
-					// 원문 창과 아래 여백을 같게 둬 끝까지 스크롤해도 대응이 맞는다.
+					// Keep the source pane and bottom padding equal so correspondence holds even when scrolled to the end.
 					className="h-full min-w-0 flex-1 overflow-y-auto"
 					inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
 				>
@@ -1106,7 +1106,7 @@ export function EntryEditorShell({
 				</div>
 
 				{isInspectorOpen && (
-					// 좁은 화면은 본문 위에 덮고, 넓은 화면은 옆에 고정 폭으로 둔다.
+					// On narrow screens it overlays the body; on wide screens it sits beside it at a fixed width.
 					<div
 						className={cn(
 							"absolute inset-y-0 right-0 z-20 max-w-full shadow-lg lg:static lg:z-auto lg:shrink-0 lg:shadow-none",

@@ -12,12 +12,12 @@ import { mdxToTiptap, tiptapToMdx } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 
 const t = createTranslator(codeBlockMessages);
-/** 강조 효과 이름(효과 정의에서 온다). */
+/** Highlight effect names (taken from the effect definitions). */
 const HIGHLIGHT_LABEL = CODE_LINE_EFFECTS.find((effect) => effect.name === "highlight")?.label ?? "";
 
 afterEach(cleanup);
 
-// jsdom에는 글자 범위의 좌표가 없다. 커서를 옮긴 뒤 ProseMirror가 위치를 잴 때 쓴다.
+// jsdom has no coordinates for text ranges. ProseMirror uses them to measure position after the cursor moves.
 beforeAll(() => {
 	const empty = () =>
 		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
@@ -59,14 +59,14 @@ const gutterRow = (line: number) => document.querySelector(`[data-code-gutter] [
 const gutterLines = () =>
 	[...document.querySelectorAll("[data-code-gutter] [data-line]")].map((row) => Number(row.getAttribute("data-line")));
 
-/** 줄 번호를 눌러(끌어) 줄을 고른다. */
+/** Selects lines by clicking (dragging) line numbers. */
 const pickLines = (from: number, to = from) => {
 	fireEvent.mouseDown(gutterRow(from), { button: 0 });
 	if (to !== from) fireEvent.mouseEnter(gutterRow(to));
 	fireEvent.mouseUp(window);
 };
 
-/** 줄 번호를 오른쪽 클릭해 줄 효과 메뉴를 연다. */
+/** Right-clicks a line number to open the line effect menu. */
 const openLineMenu = async (line = 0) => {
 	await waitFor(() => expect(gutterRow(line)).toBeTruthy());
 	act(() => {
@@ -76,8 +76,8 @@ const openLineMenu = async (line = 0) => {
 
 const CODE = "```ts\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```";
 
-describe("코드 블록 편집 화면", () => {
-	it("머리 도구에 언어·파일 경로·줄 효과·정규식 규칙·줄 번호·복사가 있다", async () => {
+describe("code block edit view", () => {
+	it("has language, file path, line effects, regex rules, line numbers, and copy in the header tools", async () => {
 		await mount(CODE);
 		expect(screen.getByLabelText(t("view.language"))).toBeTruthy();
 		expect(screen.getByLabelText(t("view.filePath"))).toBeTruthy();
@@ -87,7 +87,7 @@ describe("코드 블록 편집 화면", () => {
 		expect(screen.getByRole("button", { name: t("view.copy") })).toBeTruthy();
 	});
 
-	it("읽기 전용이면 언어·파일 경로·효과 도구를 숨기고 줄을 고르지 않는다", async () => {
+	it("hides language, file path, and effect tools and does not select lines when read-only", async () => {
 		const editor = await mount('```ts title="src/a.ts"\nconst a = 1;\n```');
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.queryByLabelText(t("view.language"))).toBeNull());
@@ -101,7 +101,7 @@ describe("코드 블록 편집 화면", () => {
 		expect(screen.queryByRole("menu")).toBeNull();
 	});
 
-	it("파일 경로와 줄 번호 표시는 meta로 저장한다", async () => {
+	it("stores the file path and line number display in meta", async () => {
 		const editor = await mount(CODE);
 		fireEvent.change(screen.getByLabelText(t("view.filePath")), { target: { value: "src/a.ts" } });
 		await waitFor(() => expect((screen.getByLabelText(t("view.filePath")) as HTMLInputElement).value).toBe("src/a.ts"));
@@ -109,11 +109,11 @@ describe("코드 블록 편집 화면", () => {
 		await waitFor(() => expect(block(editor).attrs.meta).toBe('title="src/a.ts" lnum'));
 	});
 
-	it("줄 번호를 누르면 줄만 고르고, 오른쪽 클릭으로 연 메뉴에서 강조를 켜면 저장 형식에 반영된다", async () => {
+	it("selects only the line on a line number click, and turning on highlight from the right-click menu is reflected in the saved format", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(1));
 		expect(screen.queryByRole("menu")).toBeNull();
-		// 글자는 고르지 않고(커서만 그 줄 앞) 줄 배경으로 보인다.
+		// No text is selected (the cursor sits at the start of the line); the line shows as a background.
 		expect(editor.state.selection.empty).toBe(true);
 		expect(editor.state.selection.from).toBe(1 + "const a = 1;\n".length);
 		await waitFor(() =>
@@ -131,16 +131,16 @@ describe("코드 블록 편집 화면", () => {
 			),
 		);
 		expect(tiptapToMdx(editor.getJSON())).toContain("// @line highlight {1-1}\nconst b = 2;");
-		// 효과를 바꿔도 고른 줄은 그대로다(이어서 다른 효과를 켤 수 있다).
+		// Changing the effect keeps the selected lines (another effect can be turned on next).
 		await waitFor(() =>
 			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-cms-primary\\/15")).toHaveLength(1),
 		);
 	});
 
-	it("여러 줄을 끌어 고르고 접으면 첫 줄만 남고, 화살표로 편집 중에도 여닫는다", async () => {
+	it("dragging to select lines and folding leaves only the first line, and the arrow toggles it even while editing", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(0, 2));
-		// 고른 줄 안에서 오른쪽 클릭하면 고른 줄 전체가 대상이다.
+		// Right-clicking inside the selected lines targets all of them.
 		await openLineMenu(1);
 		const menu = await screen.findByRole("menu", { name: t("lineMenu.rangeEffects", { start: 1, end: 3 }) });
 		act(() => fireEvent.click(within(menu).getByRole("menuitem", { name: t("lineMenu.collapse") })));
@@ -151,7 +151,7 @@ describe("코드 블록 편집 화면", () => {
 			end: 3,
 		});
 		expect(tiptapToMdx(editor.getJSON())).toContain("// @line collapse {0-2}");
-		// 접기를 만든 뒤 커서가 접힌 줄에 있으면 펼쳐 둔다. 화살표로 접는다.
+		// After creating a fold, if the cursor is on a folded line it stays expanded. Fold with the arrow.
 		const toggle = await screen.findByRole("button", {
 			name: new RegExp(`^(${t("view.collapseFrom", { line: 1 })}|${t("view.expandFrom", { line: 1 })})$`),
 		});
@@ -162,7 +162,7 @@ describe("코드 블록 편집 화면", () => {
 		await waitFor(() => expect(gutterLines()).toEqual([0, 1, 2]));
 	});
 
-	it("정규식 규칙을 더하면 맞는 곳 수를 보이고 규칙 그대로 저장한다", async () => {
+	it("adding a regex rule shows the match count and saves the rule as is", async () => {
 		const editor = await mount(CODE);
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("rulesPanel.title") })));
 		const add = await screen.findByRole("button", { name: t("rulesPanel.add") });
@@ -175,13 +175,13 @@ describe("코드 블록 편집 화면", () => {
 		expect(tiptapToMdx(editor.getJSON())).toContain("// @document fold {re:/const/g}");
 	});
 
-	it("에디터가 나타낼 수 없는 주석이 있으면 원문 편집으로 알린다", async () => {
+	it("points to source editing when there are annotations the editor cannot display", async () => {
 		await mount('```ts\n// @char Tooltip {0-3} content="하나"\n// @char Tooltip {2-5} content="둘"\nabcdef\n```');
 		expect(screen.getByText(t("view.rawMode"))).toBeTruthy();
 		expect(screen.queryByRole("button", { name: t("rulesPanel.title") })).toBeNull();
 	});
 
-	it("복사 버튼은 주석 줄을 뺀 코드를 복사한다", async () => {
+	it("copy button copies the code without annotation lines", async () => {
 		const writeText = vi.fn().mockResolvedValue(undefined);
 		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
 		await mount("```ts\n// @line plus\nconst a = 1;\n```");
@@ -189,7 +189,7 @@ describe("코드 블록 편집 화면", () => {
 		expect(writeText).toHaveBeenCalledWith("const a = 1;");
 	});
 
-	it("Shift를 누르고 줄 번호를 누르면 고른 줄을 늘린다", async () => {
+	it("Shift-clicking a line number extends the selected lines", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(0));
 		act(() => {
@@ -201,9 +201,9 @@ describe("코드 블록 편집 화면", () => {
 		expect(editor.state.selection.from).toBe(1);
 	});
 
-	it("접기 첫 줄(› 줄)만 골라도 접기 해제와 처음부터 펼치기가 나온다", async () => {
+	it("selecting only the first line of a fold (the › line) still offers unfold and expand-from-start", async () => {
 		const editor = await mount("```ts\n// @line collapse {0-2}\na\nb\nc\nd\n```");
-		// 줄을 먼저 고르지 않아도 오른쪽 클릭한 줄이 대상이다.
+		// The right-clicked line is the target even if no line was selected first.
 		await openLineMenu(0);
 		const menu = await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 1 }) });
 		expect(within(menu).getByRole("menuitemcheckbox", { name: t("lineMenu.openFromStart") })).toBeTruthy();
@@ -211,7 +211,7 @@ describe("코드 블록 편집 화면", () => {
 		await waitFor(() => expect(block(editor).attrs.lineEffects).toEqual([]));
 	});
 
-	it("코드 줄을 가리켜도 드래그 핸들은 코드 블록 전체에 하나만 붙는다", async () => {
+	it("hovering a code line still attaches only one drag handle for the whole code block", async () => {
 		const editor = await mount(`문단\n\n${CODE}`);
 		const text = document.querySelector("[data-code-block-wrapper] pre code") as HTMLElement;
 		const inner = (text.querySelector("span") ?? text) as HTMLElement;
@@ -220,18 +220,18 @@ describe("코드 블록 편집 화면", () => {
 		expect(found && refineBlock(found, 0, 0)).toBe(found);
 	});
 
-	it("줄 번호로 줄을 고르는 동안에는 글자 효과 버블을 띄우지 않는다", async () => {
+	it("does not show the text effect bubble while selecting lines by line number", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(0, 1));
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
-		// 글자를 직접 고르면 다시 띄운다.
+		// It shows again when text is selected directly.
 		act(() => {
 			editor.commands.setTextSelection({ from: 2, to: 5 });
 		});
 		expect(inlineBubbleTarget(editor.state)).toMatchObject({ kind: "selection" });
 	});
 
-	it("경고 물결 밑줄은 줄 전체에 한 번 긋고, 줄 번호로 고른 줄은 줄 배경으로 보인다", async () => {
+	it("draws the warning wavy underline once across the whole line, and lines selected by line number show as a line background", async () => {
 		await mount("```ts\n// @line warning\nconst a = 1;\nconst b = 2;\n```");
 		const underline = document.querySelector("[data-code-block-wrapper] .decoration-wavy");
 		expect(underline?.textContent).toBe("const a = 1;");

@@ -47,8 +47,8 @@ function describe(filter: ColumnFilter, state: ListState, options: TaxonomyOptio
 }
 
 /**
- * 적용된 필터 칩(v2 A1). 컬럼을 숨겨도 그 컬럼에 걸린 필터는 칩으로 계속 보여
- * "왜 글이 안 보이지?"를 막는다.
+ * Applied filter chips. Even when a column is hidden, filters on it keep showing as chips
+ * to prevent "why can't I see my posts?".
  */
 export function filterChips(state: ListState, options: TaxonomyOptions): FilterChip[] {
 	const chips: FilterChip[] = [];
@@ -71,7 +71,7 @@ export function filterChips(state: ListState, options: TaxonomyOptions): FilterC
 	return chips;
 }
 
-/** 머리글의 검색칸(§3.2). 입력이 멈추면 서버 검색을 보낸다. 게시글·메모는 본문 검색을 켤 수 있다. */
+/** Search box in the header. Sends a server search when typing pauses. Posts and memos can turn on body search. */
 export function ListSearch({
 	state,
 	onChange,
@@ -118,7 +118,7 @@ export function ListSearch({
 	);
 }
 
-/** 적용된 필터 칩 줄. 필터가 하나도 없으면 그리지 않는다. */
+/** Row of applied filter chips. Not drawn when there are no filters. */
 export function FilterChipBar({
 	state,
 	options,

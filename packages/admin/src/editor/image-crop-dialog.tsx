@@ -48,7 +48,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 	}, []);
 
 	useEffect(() => {
-		// 드래그 중에 대화상자가 닫혀도 전역 포인터 리스너를 남기지 않는다.
+		// Do not leave global pointer listeners behind if the dialog closes mid-drag.
 		if (!open) {
 			activeDragCleanupRef.current?.();
 			return;
@@ -84,7 +84,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 		onOpenChange(false);
 	};
 
-	// 키보드 수치 직접 입력 대안 (P2)
+	// Alternative: typing values directly with the keyboard
 	const handleNumericCropChange = (field: keyof CropBox, rawValue: number) => {
 		if (!Number.isFinite(rawValue)) return;
 		const val = round2(rawValue);
@@ -105,7 +105,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 		});
 	};
 
-	// 드래그로 자르기 영역 선택 (비율 자유, P1-2: 실제 이미지 엘리먼트 기준 좌표계)
+	// Select the crop area by dragging (free aspect ratio, coordinates relative to the real image element)
 	const handlePointerDown = (e: React.PointerEvent, handle?: "move" | "nw" | "ne" | "sw" | "se") => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -131,7 +131,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 			const deltaY = currentYPercent - startYPercent;
 
 			if (!handle) {
-				// 영역 밖을 클릭해 새로 드래그로 사각형 생성
+				// Clicking outside the area starts a new rectangle by dragging
 				const x = Math.min(startXPercent, currentXPercent);
 				const y = Math.min(startYPercent, currentYPercent);
 				const width = Math.abs(currentXPercent - startXPercent);
@@ -207,7 +207,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 						<DialogTitle>{t("imageCrop.title")}</DialogTitle>
 					</DialogHeader>
 
-					{/* 이미지 영역 + 자르기 오버레이 (P1-2: 실제 이미지 크기에 맞춘 래퍼) */}
+					{/* Image area + crop overlay (wrapper sized to the real image) */}
 					<div className="flex flex-col items-center gap-2">
 						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-md border bg-cms-muted/30 p-1">
 							<div
@@ -225,10 +225,10 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 									draggable={false}
 								/>
 
-								{/* 선택된 자르기 영역 */}
+								{/* Selected crop area */}
 								{!isFull && (
 									<>
-										{/* 어두운 반투명 배경 마스크 (영역 밖, P2 디자인 토큰 적용) */}
+										{/* Dark translucent background mask (outside the area, design tokens applied) */}
 										<div
 											className="pointer-events-none absolute inset-0 bg-cms-foreground/40"
 											style={{
@@ -236,7 +236,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 											}}
 										/>
 
-										{/* 활성 자르기 사각형 */}
+										{/* Active crop rectangle */}
 										<div
 											data-slot="crop-box"
 											onPointerDown={(e) => handlePointerDown(e, "move")}
@@ -248,7 +248,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 												height: `${cropDraft.height}%`,
 											}}
 										>
-											{/* 모서리 핸들 4개 */}
+											{/* 4 corner handles */}
 											<button
 												type="button"
 												data-slot="crop-handle-nw"
@@ -296,7 +296,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 							</span>
 						</div>
 
-						{/* 키보드 수치 직접 입력 컨트롤 (P2) */}
+						{/* Keyboard numeric input controls */}
 						<div className="flex w-full items-center justify-between gap-2 rounded-lg border bg-cms-muted/10 p-2 text-xs">
 							<span className="font-medium text-cms-muted-foreground">{t("imageCrop.regionPercent")}</span>
 							<div className="flex items-center gap-2">
@@ -368,7 +368,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 						</div>
 					</div>
 
-					{/* 회전 컨트롤 */}
+					{/* Rotation controls */}
 					<div className="flex items-center justify-between rounded-lg border bg-cms-muted/20 p-2.5">
 						<div className="flex items-center gap-2 text-xs">
 							<span className="font-medium">{t("imageCrop.rotate")}</span>

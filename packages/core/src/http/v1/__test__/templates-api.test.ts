@@ -87,7 +87,7 @@ const req = (url: string, method = "GET", body?: unknown, origin = "http://local
 		body: body ? JSON.stringify(body) : undefined,
 	});
 
-describe("M5-BE-2 Templates API Route Contract", () => {
+describe("Templates API Route Contract", () => {
 	beforeEach(() => {
 		mockVerifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
 	});

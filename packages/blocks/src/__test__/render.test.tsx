@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-// 본체 예시 설정은 블록을 정의로만 넣는다. 공개 컴포넌트는 플러그인에서 오므로 이 테스트는 `blocks()`를 쓰는 설정으로 바꾼다.
+// The core example config adds blocks as definitions only. Public components come from the plugin, so this test swaps in a config that uses `blocks()`.
 vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
@@ -11,8 +11,8 @@ const { renderMdx } = await import("@monti-cms/core/render");
 const html = async (source: string, locale?: string) =>
 	renderToStaticMarkup((await renderMdx(source, { locale })).content);
 
-describe("블록 확장 공개 컴포넌트", () => {
-	it("콜아웃은 종류·제목·본문을 그리고, 제목이 없으면 종류 이름을 쓴다", async () => {
+describe("block extension public components", () => {
+	it("callout renders variant, title and body, and uses the variant name when there is no title", async () => {
 		const markup = await html(':::callout{variant="warning" title="주의"}\n본문 **굵게**\n:::');
 		expect(markup).toContain('class="cms-block-callout"');
 		expect(markup).toContain('data-variant="warning"');
@@ -22,13 +22,13 @@ describe("블록 확장 공개 컴포넌트", () => {
 		const fallback = await html(':::callout{variant="tip"}\n내용\n:::', "ko");
 		expect(fallback).toContain('<div class="cms-block-callout-title">팁</div>');
 		expect(await html(":::callout\n내용\n:::", "en")).toContain(">Note</div>");
-		// 모르는 종류는 노트, 본문 없는 콜아웃은 본문 칸이 없다.
+		// An unknown variant falls back to note, and a callout with no body has no body slot.
 		const unknown = await html(':::callout{variant="nope" title="제목만"}\n:::');
 		expect(unknown).toContain('data-variant="note"');
 		expect(unknown).not.toContain("cms-block-callout-body");
 	});
 
-	it("접기는 details로 그리고 제목·처음 열림·기본 제목을 따른다", async () => {
+	it("collapsible renders as details and follows title, initially open and default title", async () => {
 		const markup = await html(':::collapsible{title="더 보기" defaultOpen}\n숨은 내용\n:::');
 		expect(markup).toContain("<details");
 		expect(markup).toContain(" open");
@@ -41,7 +41,7 @@ describe("블록 확장 공개 컴포넌트", () => {
 		expect(await html(":::collapsible\n내용\n:::", "en")).toContain(">Show more</summary>");
 	});
 
-	it("탭은 탭 이름 줄과 탭마다의 본문을 역할과 함께 그린다", async () => {
+	it("tabs render the tab label row and each tab body with roles", async () => {
 		const markup = await html(
 			'::::tabs{defaultValue="둘째"}\n:::tab{label="첫째"}\n첫 내용\n:::\n:::tab{label="둘째"}\n둘째 내용\n:::\n::::',
 		);
@@ -50,34 +50,34 @@ describe("블록 확장 공개 컴포넌트", () => {
 		expect(markup.match(/role="tabpanel"/g)).toHaveLength(2);
 		expect(markup).toContain(">첫째</button>");
 		expect(markup).toContain(">둘째</button>");
-		// 처음 열 탭은 둘째라서 첫째 본문만 숨는다.
+		// The initially open tab is the second, so only the first body is hidden.
 		expect(markup).toMatch(/aria-selected="false"[^>]*>첫째/);
 		expect(markup).toMatch(/aria-selected="true"[^>]*>둘째/);
 		expect(markup).toMatch(/hidden=""[^>]*><p>첫 내용<\/p>/);
 		expect(markup).toMatch(/role="tabpanel"[^>]*><p>둘째 내용<\/p>/);
-		// 선택된 탭만 Tab 키로 닿는다.
+		// Only the selected tab is reachable with the Tab key.
 		expect(markup.match(/tabindex="0"/g)).toHaveLength(1);
 	});
 
-	it("탭의 처음 열 탭이 없거나 맞지 않으면 첫 탭이다", async () => {
+	it("the initially open tab falls back to the first tab when missing or invalid", async () => {
 		const markup = await html(
 			':::::tabs{defaultValue="없음"}\n::::tab{label="A"}\na\n::::\n::::tab{label="B"}\nb\n::::\n:::::',
 		);
 		expect(markup).toMatch(/aria-selected="true"[^>]*>A/);
 	});
 
-	it("단 나누기는 단 너비를 격자 열로 바꾼다", async () => {
+	it("columns convert column widths into grid columns", async () => {
 		const markup = await html('::::columns{widths="60,40"}\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::');
 		expect(markup).toContain('class="cms-block-columns"');
 		expect(markup).toContain("--cms-columns:minmax(0, 60fr) minmax(0, 40fr)");
 		expect(markup.match(/class="cms-block-column"/g)).toHaveLength(2);
 
-		// 단 수와 맞지 않는 너비는 똑같이 나눈다.
+		// Widths that do not match the column count are split evenly.
 		const equal = await html('::::columns{widths="70,20,10"}\n:::column\na\n:::\n:::column\nb\n:::\n::::');
 		expect(equal).toContain("--cms-columns:repeat(2, minmax(0, 1fr))");
 	});
 
-	it("글자색은 헥스 값만 받는다", async () => {
+	it("text color accepts only hex values", async () => {
 		const markup = await html(':color[빨강]{fg="#DC2626" fgDark="#f87171" bg="#fee2e2"}');
 		expect(markup).toContain('class="cms-color"');
 		expect(markup).toContain("data-fg");
@@ -93,7 +93,7 @@ describe("블록 확장 공개 컴포넌트", () => {
 		expect(bad).toContain("나쁨");
 	});
 
-	it("툴팁은 글자와 설명을 키보드로 닿는 요소로 그린다", async () => {
+	it("tooltip renders the text and description as keyboard-reachable elements", async () => {
 		const markup = await html(':tooltip[용어]{content="뜻풀이"}');
 		expect(markup).toContain('class="cms-block-tooltip"');
 		expect(markup).toMatch(
@@ -103,7 +103,7 @@ describe("블록 확장 공개 컴포넌트", () => {
 		expect(markup).toContain(`<span id="${id}" role="tooltip" class="cms-block-tooltip-content">뜻풀이</span>`);
 	});
 
-	it("코드 연결은 이름표를 단 눌러 볼 수 있는 글자로 그린다", async () => {
+	it("code ref renders as labeled, pressable text", async () => {
 		const markup = await html(':code-ref[이 줄]{to="c1"}');
 		expect(markup).toContain('data-code-ref="c1"');
 		expect(markup).toContain('role="button"');
@@ -111,14 +111,14 @@ describe("블록 확장 공개 컴포넌트", () => {
 		expect(markup).toContain("이 줄");
 	});
 
-	it("Mermaid는 서버에서 원문을 보인다(다이어그램은 브라우저에서 그린다)", async () => {
+	it("Mermaid shows the source on the server (the diagram is drawn in the browser)", async () => {
 		const markup = await html("```mermaid\ngraph TD\n  A --> B\n```");
 		expect(markup).toContain('class="cms-block-mermaid"');
 		expect(markup).toContain('data-state="loading"');
 		expect(markup).toContain('<pre class="cms-block-mermaid-source"><code>graph TD\n  A --&gt; B</code></pre>');
 	});
 
-	it("차트는 서버에서 원문을 보이고, 문법이 틀리면 줄마다 오류를 알린다", async () => {
+	it("chart shows the source on the server and reports an error per line when the syntax is wrong", async () => {
 		const source = [
 			"chart bar",
 			"x month",
@@ -139,7 +139,7 @@ describe("블록 확장 공개 컴포넌트", () => {
 		expect(broken).toContain('role="alert"');
 		expect(broken).toContain("Chart syntax error");
 		expect(broken).toMatch(/<li>Line \d+: /);
-		// 오류 글은 파서가 준 코드와 값에서 글 언어로 만든다(관리자 언어가 아니다).
+		// The error text is built in the content language from the parser's code and values (not the admin language).
 		expect(broken).toContain("Unsupported chart type: nope");
 		const korean = await html("```chart\nchart nope\n```", "ko");
 		expect(korean).toContain("차트 문법 오류");
@@ -147,7 +147,7 @@ describe("블록 확장 공개 컴포넌트", () => {
 		expect(await html("```chart\nchart nope\n```", "ja")).toContain("サポートされていないグラフの種類です: nope");
 	});
 
-	it("사이트가 같은 이름의 컴포넌트를 넘기면 그것이 이긴다", async () => {
+	it("a component the site passes under the same name wins", async () => {
 		const { content } = await renderMdx(":::callout\n내용\n:::", {
 			components: { Callout: ({ children }: { children?: React.ReactNode }) => <aside id="mine">{children}</aside> },
 		});

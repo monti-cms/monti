@@ -2,13 +2,13 @@ import type { BulkOp } from "@monti-cms/core/client";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import type { ListState } from "../list-state";
 
-/** 목록 API 응답 한 페이지. */
+/** One page of the list API response. */
 export interface EntriesPage {
 	items: ListEntriesItem[];
 	total: number;
 }
 
-/** 목록 캐시 키. 휴지통 배지 등 목록과 함께 다시 받아야 하는 것도 이 접두어 아래에 둔다. */
+/** List cache key. Things that must be refetched along with the list, like the trash badge, also go under this prefix. */
 export const ENTRIES_KEY = ["cms", "entries"] as const;
 export const entriesKey = (apiQuery: string) => [...ENTRIES_KEY, "list", apiQuery] as const;
 export const TRASH_COUNT_KEY = [...ENTRIES_KEY, "trash-count"] as const;
@@ -19,13 +19,13 @@ export type OptimisticOp = BulkOp | "restore";
 export interface OptimisticContext {
 	state: Pick<ListState, "statuses" | "folder" | "includeDescendants">;
 	params?: { field?: string; ids?: string[]; id?: string | null; folderId?: string | null };
-	/** 관계 필드 이름 → 고를 수 있는 항목. 새로 더한 항목의 이름을 미리 보여 줄 때 쓴다. */
+	/** Relation field name -> selectable items. Used to preview the name of a newly added item. */
 	options?: Readonly<Record<string, readonly { id: string; title: string }[]>>;
 }
 
 /**
- * 작업 결과를 서버 응답 전에 목록에 미리 반영한다(낙관적 갱신). 확실히 아는 변화만 적용하고,
- * 나머지(보관 해제 뒤 상태 등)는 곧 이어지는 다시 받기에 맡긴다. 지금 필터에서 빠질 줄은 바로 뺀다.
+ * Reflects the action result into the list before the server responds (optimistic update). Applies only changes known for certain,
+ * and leaves the rest (e.g. state after unarchiving) to the refetch that follows soon. Rows that drop out of the current filter are removed right away.
  */
 export function applyOptimistic(
 	page: EntriesPage,

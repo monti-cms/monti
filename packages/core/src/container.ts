@@ -8,8 +8,8 @@ import { cmsServerConfig } from "./server/resolved";
 import { createContentService } from "./services/content-service";
 
 /**
- * 서버 연결 모음. 서버 설정(`cms.server.ts`)의 연결을 처음 쓸 때 만들고, 개발 서버가 모듈을 다시 읽어도
- * 연결을 새로 만들지 않도록 `global`에 둔다.
+ * Server connection container. Connections from the server config (`cms.server.ts`) are created on first use and
+ * kept on `global` so a dev server reloading modules does not create new ones.
  */
 
 export type ContentService = ReturnType<typeof createContentService<Entry>>;
@@ -31,7 +31,7 @@ export function getCmsContentService(): ContentService {
 	return global.__cmsService;
 }
 
-/** 서버 설정에 미디어 저장소가 있는가. 없으면 관리자 화면이 미디어 메뉴와 업로드를 감춘다. */
+/** Whether the server config has a media store. Without one, the admin hides the media menu and uploads. */
 export const isCmsMediaConfigured = (): boolean => Boolean(cmsServerConfig.media);
 
 export function getCmsMediaStore(): MediaStore {
@@ -45,5 +45,5 @@ export function getCmsAuth(): CmsAuth {
 	return global.__cmsAuth;
 }
 
-/** 비밀 값 암호화 키(서버 설정의 `secret`). */
+/** Encryption key for secrets (`secret` in the server config). */
 export const getCmsSecret = (): string | undefined => cmsServerConfig.secret;

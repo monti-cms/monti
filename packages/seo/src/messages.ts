@@ -1,8 +1,8 @@
 import { defineMessages } from "@monti-cms/core";
 
 /**
- * SEO 확장의 필드 이름표, 검색 미리보기, AI 기능 문구(M15). AI 지시문은 모델에게 주는 글이라 영어 하나이고, 결과 언어는
- * 본문을 따른다.
+ * Field labels, search preview and AI feature messages of the SEO extension. AI instructions are text given to the model, so there is only an English one, and the result language
+ * follows the body.
  */
 export const seoMessages = defineMessages("cms-seo", {
 	en: {

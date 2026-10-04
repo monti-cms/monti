@@ -2,7 +2,7 @@ import { ADMIN_LANGUAGE } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { cmsApiErrorMessage, cmsApiIssues, cmsIssueMessage } from "../api-error-message";
 
-describe.runIf(ADMIN_LANGUAGE === "ko")("M10 publish feedback", () => {
+describe.runIf(ADMIN_LANGUAGE === "ko")("publish feedback", () => {
 	it("keeps field paths for inline validation", () => {
 		const payload = {
 			issues: [
@@ -17,7 +17,7 @@ describe.runIf(ADMIN_LANGUAGE === "ko")("M10 publish feedback", () => {
 			"요약을 입력하세요. (summary)",
 		);
 		expect(cmsIssueMessage({ code: "missing_field", path: "x" })).toBe("필수 항목을 입력하세요. (x)");
-		// 글자 수 초과도 필드와 상관없는 코드이고 필드 이름표로 말한다.
+		// Too-long text is also a field-independent code and is stated with the field label.
 		expect(cmsIssueMessage({ code: "field_too_long", path: "title", message: "제목" })).toBe(
 			"제목이 너무 깁니다. (title)",
 		);

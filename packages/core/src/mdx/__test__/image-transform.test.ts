@@ -11,9 +11,9 @@ import {
 	roundCropBox,
 } from "../image-transform";
 
-describe("image-transform pure functions (c-editor.md §1.1)", () => {
+describe("image-transform pure functions", () => {
 	describe("parseCrop & isValidCrop", () => {
-		it("올바른 x,y,w,h 퍼센트 문자열을 파싱한다", () => {
+		it("parses a valid x,y,w,h percent string", () => {
 			expect(parseCrop("10,20,50.5,40.25")).toEqual({
 				x: 10,
 				y: 20,
@@ -23,7 +23,7 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 			expect(isValidCrop("10,20,50,40")).toBe(true);
 		});
 
-		it("공백이 섞여도 파싱한다", () => {
+		it("parses even when whitespace is mixed in", () => {
 			expect(parseCrop("  0,  0 , 100 , 100 ")).toEqual({
 				x: 0,
 				y: 0,
@@ -32,21 +32,21 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 			});
 		});
 
-		it("범위를 벗어나거나 형식이 잘못된 crop은 null을 반환한다", () => {
+		it("returns null for a crop that is out of range or malformed", () => {
 			expect(parseCrop("invalid")).toBeNull();
 			expect(parseCrop("-1,0,50,50")).toBeNull();
 			expect(parseCrop("0,0,0,50")).toBeNull(); // width <= 0
 			expect(parseCrop("0,0,105,50")).toBeNull(); // width > 100
 			expect(parseCrop("60,0,50,50")).toBeNull(); // x + width > 100
 			expect(parseCrop("0,70,50,50")).toBeNull(); // y + height > 100
-			expect(parseCrop("0,0,0.001,100")).toBeNull(); // 소수 셋째 자리 이상 또는 반올림 후 0 방지
+			expect(parseCrop("0,0,0.001,100")).toBeNull(); // guards against a third decimal place or more, or 0 after rounding
 			expect(parseCrop(null)).toBeNull();
 			expect(parseCrop(undefined)).toBeNull();
 			expect(isValidCrop("invalid")).toBe(false);
 			expect(isValidCrop("")).toBe(true);
 		});
 
-		it("formatCrop 및 isFullCrop 동작을 확인한다", () => {
+		it("checks the behavior of formatCrop and isFullCrop", () => {
 			const crop = { x: 12.345, y: 0.1, width: 45.678, height: 80 };
 			expect(formatCrop(crop)).toBe("12.35,0.1,45.68,80");
 			expect(isFullCrop({ x: 0, y: 0, width: 100, height: 100 })).toBe(true);
@@ -56,13 +56,13 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 	});
 
 	describe("parseRotate & isValidRotate", () => {
-		it("90, 180, 270 회전값을 올바르게 파싱한다", () => {
+		it("parses rotate values 90, 180 and 270 correctly", () => {
 			expect(parseRotate("90")).toBe(90);
 			expect(parseRotate(180)).toBe(180);
 			expect(parseRotate("270")).toBe(270);
 		});
 
-		it("0이나 없으면 null(회전 없음)을 반환한다", () => {
+		it("returns null (no rotation) for 0 or missing", () => {
 			expect(parseRotate("0")).toBeNull();
 			expect(parseRotate(0)).toBeNull();
 			expect(parseRotate("")).toBeNull();
@@ -70,14 +70,14 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 			expect(parseRotate(undefined)).toBeNull();
 		});
 
-		it("잘못된 회전값은 null을 반환한다", () => {
+		it("returns null for an invalid rotate value", () => {
 			expect(parseRotate("45")).toBeNull();
 			expect(parseRotate("360")).toBeNull();
 			expect(parseRotate("foo")).toBeNull();
 			expect(parseRotate("90deg")).toBeNull();
 		});
 
-		it("isValidRotate 검증", () => {
+		it("isValidRotate validation", () => {
 			expect(isValidRotate("90")).toBe(true);
 			expect(isValidRotate(180)).toBe(true);
 			expect(isValidRotate("0")).toBe(true);
@@ -87,19 +87,19 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 	});
 
 	describe("computeImageTransform", () => {
-		it("crop과 rotate가 모두 없거나 전체면 변환되지 않는다", () => {
+		it("no transform when crop and rotate are both missing or full", () => {
 			const result = computeImageTransform({});
 			expect(result.isTransformed).toBe(false);
 			expect(result.wrapperStyle).toEqual({});
 			expect(result.imageStyle).toEqual({});
 		});
 
-		it("잘못된 crop과 rotate는 무시한다", () => {
+		it("ignores invalid crop and rotate", () => {
 			const result = computeImageTransform({ crop: "invalid", rotate: "invalid" });
 			expect(result.isTransformed).toBe(false);
 		});
 
-		it("crop만 적용했을 때 올바른 CSS 스타일을 계산한다", () => {
+		it("computes the correct CSS style when only crop is applied", () => {
 			const result = computeImageTransform({
 				crop: "20,10,50,40",
 				aspectRatio: 2, // 1000x500
@@ -116,14 +116,14 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 			expect(result.imageStyle.transform).toContain("translate(-50%, -50%)");
 		});
 
-		it("rotate 90/270 적용 시 가로세로 비율이 교환된다", () => {
+		it("the aspect ratio is swapped when rotate 90/270 is applied", () => {
 			const result90 = computeImageTransform({
 				crop: "0,0,100,100",
 				rotate: "90",
 				aspectRatio: 2, // 2:1
 			});
 			expect(result90.isTransformed).toBe(true);
-			// 2:1이 90도 회전하면 1:2 (0.5)
+			// A 2:1 image rotated 90 degrees becomes 1:2 (0.5)
 			expect(result90.wrapperStyle.aspectRatio).toBe(0.5);
 			expect(result90.imageStyle.transform).toContain("rotate(90deg)");
 
@@ -136,7 +136,7 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 			expect(result270.imageStyle.transform).toContain("rotate(270deg)");
 		});
 
-		it("rotate 180 적용 시 가로세로 비율이 유지되고 rotate(180deg)가 들어간다", () => {
+		it("the aspect ratio is kept with rotate 180 and rotate(180deg) is included", () => {
 			const result = computeImageTransform({
 				rotate: 180,
 				aspectRatio: 1.6,
@@ -149,7 +149,7 @@ describe("image-transform pure functions (c-editor.md §1.1)", () => {
 });
 
 describe("intrinsicDisplayWidth", () => {
-	it("너비 미지정 변환 이미지는 보이는 영역의 원본 너비로 보인다", () => {
+	it("a transformed image with no width set shows the original width of the visible area", () => {
 		const natural = { width: 400, height: 200 };
 		expect(intrinsicDisplayWidth({ crop: { x: 0, y: 0, width: 50, height: 100 }, rotate: null }, natural)).toBe(200);
 		expect(intrinsicDisplayWidth({ crop: { x: 0, y: 0, width: 100, height: 50 }, rotate: 90 }, natural)).toBe(100);
@@ -157,7 +157,7 @@ describe("intrinsicDisplayWidth", () => {
 		expect(intrinsicDisplayWidth({ crop: null, rotate: 90 }, null)).toBeNull();
 	});
 
-	it("반올림 동률에서도 자르기 영역이 오른쪽·아래 경계를 넘지 않는다", () => {
+	it("the crop area does not exceed the right and bottom edges even on a rounding tie", () => {
 		const crop = roundCropBox({ x: 12.125, y: 12.125, width: 87.875, height: 87.875 });
 		expect(crop).toEqual({ x: 12.13, y: 12.13, width: 87.87, height: 87.87 });
 		expect(parseCrop(`${crop.x},${crop.y},${crop.width},${crop.height}`)).toEqual(crop);

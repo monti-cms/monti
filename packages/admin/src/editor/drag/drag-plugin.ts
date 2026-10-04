@@ -11,15 +11,15 @@ export const BLOCK_DRAG_MIME_TYPE = "application/x-cms-block-drag";
 
 export const cmsBlockDragPluginKey = new PluginKey<{ dropPos: number | null }>("cmsBlockDrag");
 
-/** 블록 드래그 중 실제로 놓일 위치만 표시한다. 놓을 수 없는 곳이면 표시를 지운다. */
+/** During a block drag, shows only the position where it will actually drop. Clears the indicator where dropping is not possible. */
 function setDropIndicator(view: EditorView, dropPos: number | null) {
 	if (cmsBlockDragPluginKey.getState(view.state)?.dropPos === dropPos) return;
 	view.dispatch(view.state.tr.setMeta(cmsBlockDragPluginKey, { dropPos }).setMeta("addToHistory", false));
 }
 
 /**
- * 놓일 위치에 가로선을 그린다. 문서 흐름 밖(offsetParent 기준 absolute)에 두어
- * 블록 사이 여백·첫 블록 규칙을 바꾸지 않는다(드래그 중 레이아웃 이동 없음).
+ * Draws a horizontal line at the drop position. Placed outside the document flow (absolute relative to offsetParent) so
+ * it does not change the spacing between blocks or the first-block rules (no layout shift while dragging).
  */
 function createDropIndicatorView(editorView: EditorView) {
 	let element: HTMLElement | null = null;
@@ -61,8 +61,8 @@ function createDropIndicatorView(editorView: EditorView) {
 }
 
 /**
- * 블록 핸들 dragstart 시 호출되어 ProseMirror 드래그 상태와 dataTransfer를 초기화한다.
- * 잡은 블록이 블록 선택(마키로 고른 줄) 안에 있으면 선택된 줄 전체를 함께 끈다.
+ * Called on block handle dragstart to initialize the ProseMirror drag state and dataTransfer.
+ * If the grabbed block is inside a block selection (lines picked with the marquee), all selected lines are dragged together.
  */
 export function startBlockDrag(
 	view: EditorView,
@@ -73,7 +73,7 @@ export function startBlockDrag(
 	const node = state.doc.nodeAt(pos);
 	if (!node) return false;
 
-	// 잡은 블록이 블록 선택(마키로 고른 줄) 안에 있으면 선택된 줄 전체를 끈다.
+	// If the grabbed block is inside a block selection (lines picked with the marquee), drag all selected lines.
 	const rows = selectedBlocks(state);
 	const inSelection = rows?.some((row) => {
 		const selected = state.doc.nodeAt(row);
@@ -100,7 +100,7 @@ export function startBlockDrag(
 	}
 
 	let selection = state.selection;
-	// 노드 선택(NodeSelection)이 가능하면 선택 영역으로 지정한다
+	// If a NodeSelection is possible, set it as the selection
 	if (NodeSelection.isSelectable(node)) {
 		selection = NodeSelection.create(state.doc, pos);
 		view.dispatch(state.tr.setSelection(selection));
@@ -113,11 +113,11 @@ export function startBlockDrag(
 		try {
 			event.dataTransfer.setData(BLOCK_DRAG_MIME_TYPE, JSON.stringify({ pos, type: node.type.name }));
 		} catch {
-			// 일부 브라우저 제한 시 무시
+			// Ignore when some browsers restrict this
 		}
 	}
 
-	// ProseMirror 기본 드래그 객체(Dropcursor 및 drop 핸들러에서 참조) 설정
+	// Set the ProseMirror default drag object (referenced by Dropcursor and the drop handler)
 	(view as unknown as { dragging: unknown }).dragging = {
 		slice,
 		move: true,
@@ -129,14 +129,14 @@ export function startBlockDrag(
 }
 
 /**
- * 드래그 종료 시 상태를 정리한다.
+ * Cleans up state when the drag ends.
  */
 export function endBlockDrag(view: EditorView): void {
 	const viewAny = view as unknown as { dragging: { cmsBlockPos?: number } | null };
 	const dragging = viewAny.dragging;
-	// 핸들 드래그만 정리한다(에디터 자체 드래그는 ProseMirror가 정리한다).
-	// 일부 브라우저는 drop보다 dragend를 먼저 보내므로 ProseMirror처럼 잠시 기다렸다가 지운다.
-	// 이동 트랜잭션 뒤 ProseMirror가 dragging을 새 객체로 바꿔 cmsBlockPos가 사라질 수 있으므로 표시는 먼저 지운다.
+	// Only clean up handle drags (the editor's own drags are cleaned up by ProseMirror).
+	// Some browsers send dragend before drop, so wait briefly like ProseMirror and then clear.
+	// After a move transaction ProseMirror may replace dragging with a new object and `cmsBlockPos` can vanish, so clear the indicator first.
 	if (!view.isDestroyed) setDropIndicator(view, null);
 	if (!dragging || dragging.cmsBlockPos === undefined) return;
 	setTimeout(() => {
@@ -145,15 +145,15 @@ export function endBlockDrag(view: EditorView): void {
 }
 
 /**
- * Tiptap 블록 드래그 앤 드롭 확장(v2 C1).
- * 스키마 검증, 단일 undo 트랜잭션, 허용되지 않는 위치 거부를 제공한다.
+ * Tiptap block drag-and-drop extension.
+ * Provides schema validation, a single undo transaction, and rejection of disallowed positions.
  */
 export const CmsBlockDrag = Extension.create({
 	name: "cmsBlockDrag",
 
 	addProseMirrorPlugins() {
 		return [
-			// 블록 선택(마키로 고른 블록). 그 블록 중 하나의 핸들을 끌면 전부 함께 옮긴다(startBlockDrag).
+			// Block selection (blocks picked with the marquee). Dragging the handle of any one of them moves them all together (startBlockDrag).
 			createBlockSelectionPlugin(),
 			new Plugin({
 				key: cmsBlockDragPluginKey,
@@ -172,7 +172,7 @@ export const CmsBlockDrag = Extension.create({
 						dragover(view, event) {
 							const dragging = (view as unknown as { dragging?: CmsDragging }).dragging;
 							if (dragging && dragging.cmsBlockPos !== undefined && event.dataTransfer) {
-								// 기본 Dropcursor는 스키마 거부를 모르고 다른 위치를 가리킨다. 블록 드래그에서는 막고 직접 표시한다.
+								// The default Dropcursor does not know about schema rejection and points elsewhere. Block drags suppress it and show our own indicator.
 								event.stopImmediatePropagation();
 								const coords = { left: event.clientX, top: event.clientY };
 								const target = view.posAtCoords(coords);
@@ -197,7 +197,7 @@ export const CmsBlockDrag = Extension.create({
 							if (related instanceof Node) {
 								if (!view.dom.contains(related)) setDropIndicator(view, null);
 							} else {
-								// Safari는 자식 경계에서도 relatedTarget=null을 줄 수 있다. 실제로 편집기 밖일 때만 지운다.
+								// Safari can give relatedTarget=null even at child boundaries. Clear only when actually outside the editor.
 								const rect = view.dom.getBoundingClientRect();
 								if (
 									event.clientX < rect.left ||
@@ -219,7 +219,7 @@ export const CmsBlockDrag = Extension.create({
 						const cmsBlockPos = dragging?.cmsBlockPos;
 						const cmsBlockEnd = dragging?.cmsBlockEnd;
 
-						// 블록 핸들 드래그가 아닌 일반 파일/텍스트 드롭은 기본 동작에 맡김
+						// Leave ordinary file/text drops that are not block handle drags to the default behavior
 						if (cmsBlockPos === undefined) {
 							return false;
 						}
@@ -238,12 +238,12 @@ export const CmsBlockDrag = Extension.create({
 								? calculateBlockSetDropPosition(view.state.doc, blockSet, target.pos)
 								: calculateDropPosition(view.state.doc, cmsBlockPos, target.pos, slice || dragging?.slice, cmsBlockEnd);
 
-							// 스키마가 허용하지 않는 위치면 드롭을 무시한다 (원문/문서 불변)
+							// Ignore the drop if the schema does not allow the position (source/document unchanged)
 							if (validDropPos === null) {
 								return true;
 							}
 
-							// 단일 트랜잭션으로 이동을 수행하여 단 1회의 Undo를 보장한다
+							// Perform the move in a single transaction to guarantee exactly one undo
 							const tr = blockSet
 								? moveBlockSet(view.state, blockSet, validDropPos)
 								: moveBlockNode(view.state, cmsBlockPos, validDropPos, cmsBlockEnd);

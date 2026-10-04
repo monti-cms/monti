@@ -13,7 +13,7 @@ vi.mock("@monti-cms/core/client", () => ({
 	},
 }));
 
-// `PLUGINS`는 모듈을 읽을 때 정해지므로, 시험마다 모듈을 새로 읽는다.
+// `PLUGINS` is fixed when the module is read, so each test re-imports the module.
 const load = async () => {
 	vi.resetModules();
 	return (await import("../plugins")).loadAdminPlugins;
@@ -42,7 +42,7 @@ describe("loadAdminPlugins", () => {
 		const loadAdminPlugins = await load();
 		await expect(loadAdminPlugins()).rejects.toThrow("import failed");
 		expect((await loadAdminPlugins())[0]).toMatchObject({ name: "flaky", pages: { tools: Page } });
-		// 성공하면 다시 읽지 않는다.
+		// After a success it is not read again.
 		await loadAdminPlugins();
 		expect(attempts).toBe(2);
 	});

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 편집기(툴바·슬래시 메뉴·이미지·링크·표 등) 문구 사전. 코드 블록·블록 보기는 각자의 사전(`code-block/messages.ts`, `blocks/messages.ts`)이 있다. */
+/** Message dictionary for the editor (toolbar, slash menu, image, link, table, etc.). The code block and block views have their own dictionaries (`code-block/messages.ts`, `blocks/messages.ts`). */
 export const editorMessages = defineMessages("cms-admin.editor", {
 	en: {
 		"slash.paragraph.title": "Paragraph",

@@ -1,23 +1,23 @@
 import { type RefObject, useEffect } from "react";
 
-/** 화면 위 블록의 세로 자리(뷰포트 기준). */
+/** Vertical position of a block on screen (viewport-relative). */
 export interface BlockBox {
 	readonly top: number;
 	readonly bottom: number;
 }
 
-/** 원문 창에서 커서가 있는 블록에 붙이는 표시 이름. */
+/** Marker name attached to the block under the cursor in the source pane. */
 export const ACTIVE_BLOCK_CLASS = "cms-source-active";
 
 /**
- * 번역 편집기 블록 → 원문 블록 순서. 종류가 같은 블록을 위에서부터 가장 길게 짝짓는다(최장 공통 부분열).
- * 짝이 없는 블록(번역하다 목록이 둘로 나뉜 경우 등)은 바로 앞 짝의 원문 블록에 붙어, 뒤 블록이 밀리지 않는다.
+ * Translation editor block -> source block order. Pairs blocks of the same kind from the top using the longest common subsequence.
+ * An unpaired block (e.g. when translation splits a list in two) attaches to the previous pair's source block, so later blocks do not shift.
  */
 export function alignBlocks(editorKinds: readonly string[], paneKinds: readonly string[]): number[] {
 	const n = editorKinds.length;
 	const m = paneKinds.length;
 	if (m === 0) return [];
-	// rest[i][j]: editor[i..]와 pane[j..]의 최장 공통 부분열 길이.
+	// rest[i][j]: length of the longest common subsequence of editor[i..] and pane[j..].
 	const rest = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
 	for (let i = n - 1; i >= 0; i--) {
 		const row = rest[i] as Uint16Array;
@@ -50,9 +50,9 @@ export function alignBlocks(editorKinds: readonly string[], paneKinds: readonly 
 }
 
 /**
- * 번역 편집기의 기준선(도구줄 바로 아래)에 걸린 블록과 같은 블록이, 원문 창의 기준선에 오도록 하는 scrollTop.
- * 블록은 `map`(편집기 순서 → 원문 순서)으로 대응한다. 없으면 같은 순서다(원문이 더 짧으면 마지막 블록).
- * 기준선이 첫 블록보다 위(제목 영역)면 그 간격을 그대로 두고 첫 블록 위치를 맞춘다. 맞출 블록이 없으면 `null`.
+ * The scrollTop that puts the same block as the one at the translation editor's baseline (just below the toolbar) at the source pane's baseline.
+ * Blocks correspond through `map` (editor order -> source order). If absent, the same order (the last block if the source is shorter).
+ * If the baseline is above the first block (title area), keep that gap and align the first block position. `null` if there is no block to align.
  */
 export function syncOffset({
 	editorBlocks,
@@ -88,7 +88,7 @@ export function syncOffset({
 	return Math.max(0, paneScrollTop + paneY - paneLine);
 }
 
-/** ProseMirror가 덧붙이는 자리 표시(커서·구분 요소)를 뺀 최상위 블록. */
+/** Top-level blocks, excluding placeholders ProseMirror adds (cursor, separator elements). */
 const isBlock = (element: Element) =>
 	!element.matches(".ProseMirror-gapcursor, .ProseMirror-separator, .ProseMirror-trailingBreak, br");
 
@@ -100,7 +100,7 @@ const boxOf = (element: Element): BlockBox => {
 	return { top: rect.top, bottom: rect.bottom };
 };
 
-/** `node`가 든 최상위 블록의 순서. 편집기 밖이면 `null`. */
+/** Order of the top-level block containing `node`. `null` if outside the editor. */
 export const blockIndexOf = (root: Element, node: Node | null): number | null => {
 	if (!node || !root.contains(node) || node === root) return null;
 	const blocks = blocksOf(root);
@@ -108,7 +108,7 @@ export const blockIndexOf = (root: Element, node: Node | null): number | null =>
 	return index === -1 ? null : index;
 };
 
-/** 블록 종류. React 노드 뷰는 노드 이름(`node-cmsCallout`), 그 밖은 태그 이름이다. */
+/** Block kind. For React node views, the node name (`node-cmsCallout`); otherwise the tag name. */
 export const blockKind = (element: Element): string =>
 	element.classList.contains("react-renderer")
 		? (Array.from(element.classList).find((name) => name.startsWith("node-")) ?? "view")
@@ -117,7 +117,7 @@ export const blockKind = (element: Element): string =>
 const isList = (element: Element) => element.tagName === "UL" || element.tagName === "OL";
 const itemsOf = (list: Element) => Array.from(list.children).filter((child) => child.tagName === "LI");
 
-/** `node`가 든 목록 항목의 순서(바깥 목록부터). 목록 밖이면 빈 배열이다. */
+/** Order of the list item containing `node` (from the outermost list). Empty array if outside a list. */
 export function itemPathOf(block: Element, node: Node): number[] {
 	const path: number[] = [];
 	let current: Element | null = node instanceof Element ? node : node.parentElement;
@@ -129,7 +129,7 @@ export function itemPathOf(block: Element, node: Node): number[] {
 	return block.contains(node) ? path : [];
 }
 
-/** 원문 블록에서 같은 순서의 목록 항목. 없으면 찾은 데까지(블록 자신)다. */
+/** The list item at the same order in the source block. If none, as far as found (the block itself). */
 export function itemAt(block: Element, path: readonly number[]): Element {
 	let current = block;
 	for (const index of path) {
@@ -144,8 +144,8 @@ export function itemAt(block: Element, path: readonly number[]): Element {
 const PANE_RETRY_FRAMES = 30;
 
 /**
- * 번역 편집기와 원문 창을 잇는다(v3). 편집기를 스크롤하면 같은 블록이 같은 높이에 오도록 원문 창을 옮기고
- * (반대 방향은 잇지 않는다), 편집기 커서가 있는 블록에 대응하는 원문 블록을 표시한다. 목록은 항목 단위로 표시한다.
+ * Links the translation editor and the source pane. When the editor scrolls, moves the source pane so the same block is at the same height
+ * (the reverse direction is not linked), and marks the source block matching the block under the editor cursor. Lists are marked per item.
  */
 export function useSourceSync({
 	enabled,
@@ -166,7 +166,7 @@ export function useSourceSync({
 		const panePM = () => paneRef.current?.querySelector(".ProseMirror") ?? null;
 		const editorPM = () => editorRef.current?.querySelector(".ProseMirror") ?? null;
 
-		// 블록 종류가 바뀔 때만 다시 짝짓는다(스크롤마다 계산하지 않는다).
+		// Re-pair only when block kinds change (not computed on every scroll).
 		let alignedKey = "";
 		let aligned: number[] = [];
 		const alignmentOf = (editorBlocks: readonly Element[], paneBlocks: readonly Element[]) => {
@@ -204,7 +204,7 @@ export function useSourceSync({
 			if (!root) return;
 			const anchor = document.getSelection()?.anchorNode ?? null;
 			const index = blockIndexOf(root, anchor);
-			// 커서가 편집기 밖(제목 입력 등)이면 표시를 그대로 둔다.
+			// If the cursor is outside the editor (title input, etc.), leave the marker as is.
 			if (index === null || !anchor) return;
 			const editorBlocks = blocksOf(root);
 			const paneBlocks = blocksOf(panePM());
@@ -226,7 +226,7 @@ export function useSourceSync({
 			if (frame === 0) frame = requestAnimationFrame(run);
 		};
 
-		// 원문 창의 편집기는 늦게 만들어진다. 블록이 생길 때까지 잠시 기다렸다가 처음 한 번 맞춘다.
+		// The source pane's editor is created late. Wait briefly until blocks exist, then align once at first.
 		const waitForPane = () => {
 			frame = 0;
 			if (blocksOf(panePM()).length > 0 || retries >= PANE_RETRY_FRAMES) {

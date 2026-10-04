@@ -4,19 +4,19 @@ import { type BlockAttribute, type BlockDefinition, defineBlock } from "../../..
 import { compareStructure, readableAttributesByType, readableMdx } from "../skeleton";
 
 /**
- * 사이트 블록 이름은 지금 설정에서 찾는다(블로그 예시 설정과 다른 사이트 설정 둘 다로 돈다). 설정에 그런 블록이 없으면
- * 그 경우는 건너뛴다. 정렬(`TextAlign`)·파일은 본체 블록이라 어느 설정에나 있다.
+ * Site block names are looked up in the current config (runs with both the reference blog config and other site configs). If the config has no such block,
+ * that case is skipped. Alignment (`TextAlign`) and files are core blocks, so any config has them.
  */
 const stringAttributes = (block: BlockDefinition, translatable: boolean) =>
 	Object.entries(block.attributes).filter(
 		([, attribute]) =>
 			attribute.type === "string" && Boolean(attribute.translatable) === translatable && !attribute.childValue,
 	);
-/** 속성에 넣을 수 있는 값(선택 값이 있으면 `index`번째). */
+/** A value an attribute can take (the `index`-th if it has choices). */
 const optionOf = (attribute: BlockAttribute, index: number, fallback: string) =>
 	attribute.options ? (Object.keys(attribute.options)[index] ?? fallback) : fallback;
 
-/** 번역할 속성이 있는 사이트 컨테이너(예: 콜아웃·인용 카드). 선택 값 속성이 함께 있는 블록을 먼저 고른다. */
+/** A site container with translatable attributes (e.g. callout, quote card). Prefers blocks that also have a choice attribute. */
 const siteBoxes = ADDED_BLOCKS.filter(
 	(block) => block.syntax.kind === "container" && !block.parent && stringAttributes(block, true).length > 0,
 );
@@ -24,17 +24,17 @@ const siteBox =
 	siteBoxes.find((block) => stringAttributes(block, false).some(([, attribute]) => attribute.options)) ?? siteBoxes[0];
 if (!siteBox) throw new Error("skeleton test: the config has no container block with a translatable attribute");
 const [titleName] = stringAttributes(siteBox, true)[0] ?? [];
-/** 번역하지 않는 선택 값 속성(있으면, 예: 콜아웃 종류). */
+/** A non-translatable choice attribute (if any, e.g. callout kind). */
 const kind = stringAttributes(siteBox, false).find(([, attribute]) => attribute.options);
 const kindProp = kind ? ` ${kind[0]}="${optionOf(kind[1], 0, "")}"` : "";
-/** 번역할 속성이 있는 글자 꾸밈(예: 툴팁). */
+/** Text decoration with translatable attributes (e.g. tooltip). */
 const markBlock = ADDED_MARK_BLOCKS.find((block) => stringAttributes(block, true).length > 0);
-/** 번역하지 않는 글 속성이 있는 사이트 블록(한 줄 블록 먼저, 예: 임베드 주소). */
+/** A site block with non-translated text attributes (single-line blocks first, e.g. embed address). */
 const plainBlock = [
 	...ADDED_BLOCKS.filter((block) => block.syntax.kind === "leaf"),
 	...ADDED_BLOCKS.filter((block) => block.syntax.kind === "container" && !block.parent),
 ].find((block) => stringAttributes(block, false).some(([, attribute]) => !attribute.options));
-/** 자식의 번역할 속성(예: 탭 이름)을 가리키는 속성(예: 기본 탭)이 있는 묶음과 그 자식. */
+/** A group with an attribute (e.g. default tab) pointing to a child's translatable attribute (e.g. tab name), and that child. */
 const labeledGroup = BLOCKS.flatMap((block) => {
 	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	const label = child && stringAttributes(child, true)[0]?.[0];
@@ -49,18 +49,18 @@ const SOURCE = [
 	`</${Box}>`,
 ].join("\n");
 
-describe("번역 구조 검사", () => {
-	it("글자와 사람이 읽는 속성만 바뀌면 통과한다", () => {
+describe("translation structure check", () => {
+	it("passes when only text and human-readable attributes change", () => {
 		const translated = [
 			`<${Box}${kindProp} ${titleName}="Things to note">`,
 			"Use `useQuery` after reading the [official docs](/posts/react-query) of **React Query**.",
 			`</${Box}>`,
 		].join("\n");
-		// 굵게·링크의 위치가 문장 안에서 옮겨져도 된다.
+		// Bold and link positions may move within a sentence.
 		expect(compareStructure(SOURCE, translated)).toEqual({ ok: true });
 	});
 
-	it("링크 주소·인라인 코드·사람이 읽지 않는 속성이 바뀌면 실패한다", () => {
+	it("fails when link addresses, inline code or non-human-readable attributes change", () => {
 		expect(compareStructure(SOURCE, SOURCE.replace("/posts/react-query", "/posts/other")).ok).toBe(false);
 		expect(compareStructure(SOURCE, SOURCE.replace("`useQuery`", "`useQueries`")).ok).toBe(false);
 		const align = '<TextAlign align="center">\n가운데\n</TextAlign>';
@@ -71,12 +71,12 @@ describe("번역 구조 검사", () => {
 		}
 	});
 
-	it("서식을 빼거나 문단을 나누면 실패한다", () => {
+	it("fails when formatting is removed or a paragraph is split", () => {
 		expect(compareStructure(SOURCE, SOURCE.replace("**React Query**", "React Query")).ok).toBe(false);
 		expect(compareStructure("첫 문단입니다.", "First paragraph.\n\nSecond paragraph.").ok).toBe(false);
 	});
 
-	it("코드 블록·이미지 주소는 그대로여야 하고, alt·캡션은 바뀌어도 된다", () => {
+	it("code blocks and image addresses must stay the same, while alt and captions may change", () => {
 		const code = "```ts\nconst a = 1;\n```";
 		expect(compareStructure(code, code).ok).toBe(true);
 		expect(compareStructure(code, "```ts\nconst b = 1;\n```").ok).toBe(false);
@@ -84,14 +84,14 @@ describe("번역 구조 검사", () => {
 		expect(compareStructure("![설정 화면](/a.png)", "![Settings screen](/b.png)").ok).toBe(false);
 	});
 
-	it.skipIf(!markBlock)("툴팁 설명은 바뀌어도 된다", () => {
+	it.skipIf(!markBlock)("tooltip descriptions may change", () => {
 		if (!markBlock) return;
 		const [name] = stringAttributes(markBlock, true)[0] ?? [];
 		const mark = (text: string, note: string) => `:${markBlock.name}[${text}]{${name}="${note}"}`;
 		expect(compareStructure(mark("가", "설명"), mark("A", "Note")).ok).toBe(true);
 	});
 
-	it("파일 이름·링크 제목은 바뀌어도 된다", () => {
+	it("file names and link titles may change", () => {
 		expect(compareStructure('::file{mediaId="m1" label="보고서"}', '::file{mediaId="m1" label="Report"}').ok).toBe(
 			true,
 		);
@@ -101,7 +101,7 @@ describe("번역 구조 검사", () => {
 		expect(compareStructure('[글](/a "제목")', '[Text](/a "Title")').ok).toBe(true);
 	});
 
-	it.skipIf(!labeledGroup)("탭 이름과 기본 탭은 함께 번역해도 된다", () => {
+	it.skipIf(!labeledGroup)("tab names and the default tab may be translated together", () => {
 		if (!labeledGroup) return;
 		const { block, child, label, pointer } = labeledGroup;
 		const tabs = (first: string, second: string, a: string, b: string) =>
@@ -114,15 +114,15 @@ describe("번역 구조 검사", () => {
 		expect(compareStructure(tabs("하나", "둘", "가", "나"), tabs("One", "Two", "A", "B")).ok).toBe(true);
 	});
 
-	it("안내 글이 남거나 MDX가 깨지면 실패한다", () => {
+	it("fails when hint text remains or the MDX is broken", () => {
 		expect(compareStructure("가나다", ":untranslated[가나다]").ok).toBe(false);
 		expect(compareStructure("가나다", `<${Box}>열고 닫지 않음`).ok).toBe(false);
 		expect(readableMdx(`<${Box}>열고 닫지 않음`).ok).toBe(false);
 		expect(readableMdx("정상 문단").ok).toBe(true);
 	});
 
-	it("사이트 블록은 번역할 속성(translatable)만 바뀌어도 된다", () => {
-		// 예시 설정의 콜아웃은 `title`을, 다른 사이트 설정의 인용 카드는 `author`를 번역할 속성으로 둔다.
+	it("site blocks may change only their translatable attributes", () => {
+		// In the example config the callout has `title` as a translatable attribute; the quote card in another site config has `author`.
 		const box = (props: string, title: string, body: string) =>
 			`:::${siteBox.name}{${[props, `${titleName}="${title}"`].filter(Boolean).join(" ")}}\n${body}\n:::`;
 		const notice = box(kindProp.trim(), "공지 제목", "안내 글");
@@ -133,9 +133,9 @@ describe("번역 구조 검사", () => {
 		}
 	});
 
-	it.skipIf(!plainBlock)("번역할 속성이 아닌 사이트 블록 속성은 그대로여야 한다", () => {
+	it.skipIf(!plainBlock)("site block attributes that are not translatable must stay the same", () => {
 		if (!plainBlock) return;
-		// 예시 설정의 사용자 블록 `embed`의 `url`.
+		// `url` of the user block `embed` in the example config.
 		const [name] = stringAttributes(plainBlock, false).find(([, attribute]) => !attribute.options) ?? [];
 		const colons = plainBlock.syntax.kind === "leaf" ? "::" : ":::";
 		const body = plainBlock.syntax.kind === "leaf" ? "" : "\n본문\n:::";
@@ -143,7 +143,7 @@ describe("번역 구조 검사", () => {
 		expect(compareStructure(block("https://a.example"), block("https://b.example")).ok).toBe(false);
 	});
 
-	it("사람이 읽는 속성은 블록 정의에서 정한다", () => {
+	it("human-readable attributes are decided by the block definition", () => {
 		const card = defineBlock({
 			name: "card",
 			label: "카드",
@@ -176,14 +176,14 @@ describe("번역 구조 검사", () => {
 		const readable = readableAttributesByType([card, face, deck]);
 		expect([...(readable.get("Card") ?? [])]).toEqual(["heading"]);
 		expect([...(readable.get("card") ?? [])]).toEqual(["heading"]);
-		// 번역할 자식 속성을 가리키는 속성도 함께 바뀐다(탭 이름 ↔ 처음 열 탭).
+		// An attribute pointing to a translatable child attribute changes too (tab name ↔ initially open tab).
 		expect([...(readable.get("Deck") ?? [])]).toEqual(["first"]);
 		expect(readable.get("link")).toEqual(new Set(["title"]));
 	});
 });
 
-describe("구조 검사 실패 이유", () => {
-	it("이유 코드와 사전에서 만든 이유 문구를 함께 돌려준다", async () => {
+describe("structure check failure reasons", () => {
+	it("returns both the reason code and the reason text built from the dictionary", async () => {
 		const { createTranslator } = await import("../../../i18n");
 		const { translationMessages } = await import("../messages");
 		const t = createTranslator(translationMessages);

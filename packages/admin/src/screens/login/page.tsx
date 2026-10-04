@@ -24,14 +24,14 @@ export default async function AdminLoginPage() {
 	const session = await auth();
 	const accountId = session?.user?.accountId;
 
-	// 이미 관리자로 로그인했으면 바로 대시보드로 간다.
+	// If already signed in as admin, go straight to the dashboard.
 	if (accountId && isAllowedAdminId(accountId)) {
 		redirect(adminHref() as Route);
 	}
 
 	const isUnauthorizedUser = Boolean(accountId && !isAllowedAdminId(accountId));
 	const providers = authProviders();
-	// 로그인 방식이 하나면 안내 문구에 그 이름을 쓴다(예: "GitHub 관리자 계정").
+	// With a single login method, use its name in the guidance text (e.g. "GitHub admin account").
 	const provider = providers.length === 1 ? (providers[0]?.name ?? "") : "";
 
 	return (

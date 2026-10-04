@@ -8,14 +8,14 @@ const brand: PaletteColor = {
 	bg: { light: "#eef2ff", dark: "#1e1b4b" },
 };
 
-describe("글자색 목록", () => {
-	it("기본 목록이나 사이트 목록에서 지금 색의 프리셋을 찾는다", () => {
+describe("text color list", () => {
+	it("finds the preset for the current color in the default or site list", () => {
 		expect(paletteOf("fg", { fg: "#dc2626" })?.id).toBe("red");
 		expect(paletteOf("fg", { fg: "#4f46e5" }, [brand])?.id).toBe("brand");
 		expect(paletteOf("fg", { fg: "#4f46e5" })).toBeUndefined();
 	});
 
-	it("틀린 목록은 바로 알린다", () => {
+	it("reports an invalid list immediately", () => {
 		expect(() => validateTextPalette(DEFAULT_TEXT_PALETTE)).not.toThrow();
 		expect(() => validateTextPalette([brand, brand])).toThrow(/duplicated/);
 		expect(() => validateTextPalette([{ ...brand, fg: { light: "red", dark: "#fff" } }])).toThrow(/hex/);

@@ -17,17 +17,17 @@ const context = (
 	...extra,
 });
 
-describe("기본 코드 검사", () => {
-	it("중복 없음은 본체 콘텐츠 조회로 다른 항목이 쓰는 주소를 뺀다", async () => {
+describe("default code checks", () => {
+	it("no-duplicate removes slugs used by other entries via the core content lookup", async () => {
 		const post = { collection: "post" };
 		expect(await uniqueSlug.run("taken-slug", context({}, ["taken-slug"], post))).toBe(false);
 		expect(await uniqueSlug.run(" taken-slug ", context({}, ["taken-slug"], post))).toBe(false);
 		expect(await uniqueSlug.run("fresh-slug", context({}, ["taken-slug"], post))).toBe(true);
-		// 컬렉션을 모르면 묻지 않고 통과시킨다.
+		// Without a known collection it does not query and lets the value pass.
 		expect(await uniqueSlug.run("taken-slug", context({}, ["taken-slug"]))).toBe(true);
 	});
 
-	it("중복 없음은 컬렉션·언어·고치는 항목을 조회에 넘긴다", async () => {
+	it("no-duplicate passes the collection, language and edited entry to the lookup", async () => {
 		const slugsInUse = vi.fn(async () => new Set<string>());
 		await uniqueSlug.run("a", {
 			input: {},
@@ -39,7 +39,7 @@ describe("기본 코드 검사", () => {
 		expect(slugsInUse).toHaveBeenCalledWith({ collection: "post", locale: "en", slugs: ["a"], excludeEntryId: "e1" });
 	});
 
-	it("정규식 실행은 문법이 맞고 코드 입력에서 한 곳 이상 찾는 것만 남기고 찾은 곳 수를 붙인다", async () => {
+	it("regex run keeps only valid patterns that match at least once in the code input, and attaches the match count", async () => {
 		const code = "import { a, b, c } from 'x';\nconst value = 1;\nconst other = 2;";
 		const check = regexRuns("code");
 		expect(await check.run("const \\w+", context({ code }))).toEqual({
@@ -47,13 +47,13 @@ describe("기본 코드 검사", () => {
 		});
 		expect(await check.run("(", context({ code }))).toBe(false);
 		expect(await check.run("nothing-here", context({ code }))).toBe(false);
-		// 규칙 이름을 바꿔도 같은 입력에서 찾는다.
+		// Still matches on the same input even if the rule name changes.
 		expect(await regexRuns("code", { name: "strong" }).run("const \\w+", context({ code }))).toEqual({
 			detail: validatorText("regexRuns.detail", { count: 2 }),
 		});
 	});
 
-	it("구조 유지는 원문 입력과 뼈대가 다르면 이유를 돌려준다", async () => {
+	it("structure-preserving returns a reason when the skeleton differs from the source input", async () => {
 		const check = sameStructure("block");
 		expect(await check.run("Hello [link](/a)", context({ block: "안녕 [링크](/a)" }))).toBe(true);
 		expect(await check.run("Hello", context({ block: "안녕 [링크](/a)" }))).toEqual(expect.any(String));

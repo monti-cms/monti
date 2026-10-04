@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { normalizeChartDsl, parseChartDsl } from "../dsl";
 
 describe("parseChartDsl", () => {
-	it("bar chart DSL을 파싱하고 정규화한다", () => {
+	it("parses and normalizes bar chart DSL", () => {
 		const source = [
 			"chart bar",
 			"x month",
@@ -56,7 +56,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("single-series line chart는 범례를 숨긴다", () => {
+	it("hides the legend for a single-series line chart", () => {
 		const source = [
 			"chart line",
 			"x month",
@@ -88,7 +88,7 @@ describe("parseChartDsl", () => {
 		).toBe(false);
 	});
 
-	it("pie chart DSL을 파싱하고 색상을 자동 배정한다", () => {
+	it("parses pie chart DSL and assigns colors automatically", () => {
 		const source = [
 			"chart pie",
 			"label browser",
@@ -116,12 +116,12 @@ describe("parseChartDsl", () => {
 		]);
 	});
 
-	it("알 수 없는 차트 타입이면 오류를 반환한다", () => {
+	it("returns an error for an unknown chart type", () => {
 		const parsed = parseChartDsl(["chart radar", "data", "a", "b"].join("\n"));
 		expect(parsed.errors).toEqual([{ line: 1, code: "unsupported_type", values: { type: "radar" } }]);
 	});
 
-	it("series 색상 토큰이 허용 범위를 벗어나면 오류를 반환한다", () => {
+	it("returns an error when a series color token is out of the allowed range", () => {
 		const parsed = parseChartDsl(
 			["chart area", "x month", "series views | 조회수 | blue", "", "data", "month | views", "Jan | 1200"].join("\n"),
 		);
@@ -129,7 +129,7 @@ describe("parseChartDsl", () => {
 		expect(parsed.errors).toEqual([{ line: 3, code: "series_color" }]);
 	});
 
-	it("data 헤더와 series key가 일치하지 않으면 정규화 오류를 반환한다", () => {
+	it("returns a normalization error when the data header and series keys do not match", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart bar", "x month", "series views | 조회수 | chart-1", "", "data", "month | likes", "Jan | 1200"].join(
@@ -141,7 +141,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 6, code: "series_header_keys" }]);
 	});
 
-	it("y-range 를 정규화 결과에 포함한다", () => {
+	it("includes y-range in the normalized result", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[
@@ -165,7 +165,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("hide-grid 를 정규화 결과에 포함한다", () => {
+	it("includes hide-grid in the normalized result", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[
@@ -189,7 +189,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("hide-y-axis 를 정규화 결과에 포함한다", () => {
+	it("includes hide-y-axis in the normalized result", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[
@@ -213,7 +213,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("숫자 필드에 숫자가 아닌 값이 오면 오류를 반환한다", () => {
+	it("returns an error when a numeric field has a non-numeric value", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart pie", "label browser", "value visitors", "", "data", "browser | visitors", "Chrome | many"].join("\n"),
@@ -223,7 +223,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 7, code: "number_invalid", values: { field: "visitors" } }]);
 	});
 
-	it("cartesian chart의 빈 숫자 셀은 오류를 반환한다", () => {
+	it("returns an error for an empty numeric cell in a cartesian chart", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart bar", "x month", "series views | 조회수 | chart-1", "", "data", "month | views", "Jan | "].join("\n"),
@@ -233,7 +233,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 7, code: "number_empty", values: { field: "views" } }]);
 	});
 
-	it("pie chart의 빈 숫자 셀은 오류를 반환한다", () => {
+	it("returns an error for an empty numeric cell in a pie chart", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart pie", "label browser", "value visitors", "", "data", "browser | visitors", "Chrome | "].join("\n"),
@@ -243,7 +243,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 7, code: "number_empty", values: { field: "visitors" } }]);
 	});
 
-	it("잘못된 y-range 문법이면 오류를 반환한다", () => {
+	it("returns an error for invalid y-range syntax", () => {
 		const parsed = parseChartDsl(
 			["chart bar", "x month", "y-range low high", "series views | 조회수 | chart-1", "", "data", "month | views"].join(
 				"\n",
@@ -253,7 +253,7 @@ describe("parseChartDsl", () => {
 		expect(parsed.errors).toEqual([{ line: 3, code: "y_range_number" }]);
 	});
 
-	it("y-range 의 min/max 순서가 잘못되면 오류를 반환한다", () => {
+	it("returns an error when the y-range min/max order is wrong", () => {
 		const parsed = parseChartDsl(
 			["chart bar", "x month", "y-range 10 0", "series views | 조회수 | chart-1", "", "data", "month | views"].join(
 				"\n",
@@ -263,7 +263,7 @@ describe("parseChartDsl", () => {
 		expect(parsed.errors).toEqual([{ line: 3, code: "y_range_order" }]);
 	});
 
-	it("pie chart에서 cartesian 전용 옵션을 쓰면 오류를 반환한다", () => {
+	it("returns an error when a pie chart uses cartesian-only options", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[

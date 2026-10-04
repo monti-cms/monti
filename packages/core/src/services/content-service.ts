@@ -5,7 +5,7 @@ import { withTranslationHints } from "../core/translation/hints";
 import { slugFromValues } from "../schema/derive";
 import { type SaveDraftInput, ServiceError, type ServiceInput, type StorePort } from "./types";
 
-// 스냅샷 규칙은 도메인 계층(`core/snapshot`)에 있다. 기존 import 경로를 위해 다시 내보낸다.
+// Snapshot rules live in the domain layer (`core/snapshot`). Re-exported to keep the existing import path.
 export { imageWarningsForPublish, prepareSnapshot, validateForPublish } from "../core/snapshot";
 
 const assertInputKeys = (input: unknown, baseKeys: readonly string[]) => {
@@ -15,8 +15,8 @@ const assertInputKeys = (input: unknown, baseKeys: readonly string[]) => {
 };
 
 /**
- * record 컬렉션(§5.2)은 이름만 입력해도 만들 수 있어야 한다. slug가 비면 주소 필드의 `from`이 가리키는 값에서
- * 만든다(`from`이 없으면 만들지 않는다). 명시적 저장이 곧 공개 반영이라 slug 없는 레코드는 존재할 수 없다.
+ * A record collection must be creatable by entering only a name. If the slug is empty, it is built from the value the address field's `from`
+ * points to (not built if there is no `from`). An explicit save is itself a public update, so a record without a slug cannot exist.
  */
 const withRecordSlug = (input: ServiceInput): ServiceInput => {
 	if (!isItemCollection(input.collection) || input.slug?.trim()) return input;
@@ -26,7 +26,7 @@ const withRecordSlug = (input: ServiceInput): ServiceInput => {
 
 export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 	/**
-	 * 새 콘텐츠를 만든다. record 컬렉션은 기본으로 곧바로 공개한다(`publishImmediately` 생략 시).
+	 * Creates new content. A record collection is published right away by default (when `publishImmediately` is omitted).
 	 */
 	createDraft: async (input: ServiceInput, options?: { publishImmediately?: boolean }) => {
 		assertInputKeys(input, SERVICE_INPUT_KEYS);
@@ -41,13 +41,13 @@ export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 	},
 
 	/**
-	 * 최신 초안을 저장한다. record 컬렉션은 기본으로 저장과 함께 공개 값에 반영한다.
+	 * Saves the latest draft. A record collection by default applies to the public value together with the save.
 	 */
 	saveDraft: async (entryId: string, input: SaveDraftInput, options?: { publishImmediately?: boolean }) => {
 		assertInputKeys(input, [
 			...SERVICE_INPUT_KEYS,
 			"expectedVersion",
-			// 들어온 값이 객체가 아니면 `assertInputKeys`가 거부한다. 속성 읽기(접근자)는 그 뒤에만 한다.
+			// If the incoming value is not an object, `assertInputKeys` rejects it. Property reads (accessors) happen only after that.
 			...(input && typeof input === "object" && Object.hasOwn(input, "translation") ? ["translation"] : []),
 		]);
 		const { expectedVersion, folderId, ...rest } = input;
@@ -68,9 +68,9 @@ export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 	},
 
 	/**
-	 * 번역본을 만든다(v2 B4, v3). 원문(묶음의 원문)의 최신 초안 구조에 원문 글을 번역 안내로 둔 초안이다.
-	 * 주소는 원문 주소를 그대로 쓴다(언어가 달라 겹치지 않는다). 폴더는 원문과 같다.
-	 * 번역본을 가리켜 부르면 그 묶음의 원문에서 만든다.
+	 * Creates a translation. A draft whose structure follows the latest draft of the source (the source of the group), with the source text placed as translation notes.
+	 * The address reuses the source address (languages differ, so they do not collide). The folder is the same as the source.
+	 * If called on a translation, it is created from that group's source.
 	 */
 	createTranslation: async (params: { sourceId: string; locale: string }) => {
 		if (!isLocale(params.locale)) throw new ServiceError("invalid_input");
@@ -80,9 +80,9 @@ export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 		if (!isCollection(source.collection) || isItemCollection(source.collection)) {
 			throw new ServiceError("invalid_input");
 		}
-		// 번역본은 원문 틀에서 시작한다(v3). 구조(제목·문단·상자·목록·표)와 코드·이미지는 그대로 두고, 글자는
-		// 번역 안내(흐린 원문 글)로 둔다. 제목·요약 같은 언어별 값은 비운다(편집 화면이 원문 제목을 자리 표시로 보인다).
-		// 번역 상태에는 지금 원문을 "확인한 원문"으로 남긴다. 원문이 바뀌면 번역 화면이 알려 준다.
+		// A translation starts from the source skeleton. Structure (headings, paragraphs, boxes, lists, tables), code and images are kept, and text
+		// becomes translation notes (faded source text). Per-language values such as title and summary are emptied (the edit screen shows the source title as a placeholder).
+		// The translation state records the current source as the "confirmed source". If the source changes, the translation screen tells you.
 		const snapshot = await prepareSnapshot({
 			collection: source.collection,
 			slug: source.slug,

@@ -14,36 +14,36 @@ import { editorMessages } from "./messages";
 const t = createTranslator(editorMessages);
 
 /**
- * 글자에 붙는 꾸밈 중 글 속성 하나를 가진 것(본문 툴팁 `content`, 코드 안 툴팁 등)을 넣고·고치고·해제하는 입력 폼과 팝오버.
- * 꾸밈 이름과 문구를 받아 그린다. 본체 코드 블록의 글자 툴팁과 블록 확장의 본문 툴팁이 함께 쓴다.
+ * Input form and popover to add, edit and remove a text decoration that carries one text property (body tooltip `content`, in-code tooltip, etc.).
+ * Takes the decoration name and wording and renders them. Shared by the core code block's text tooltip and the blocks extension's body tooltip.
  */
 
-/** 폼 문구. */
+/** Form wording. */
 export interface MarkTextLabels {
-	/** 꾸밈 이름(예: `툴팁`). 버튼 이름·제목("툴팁 넣기"/"툴팁 수정")·해제 버튼("툴팁 해제")에 쓴다. */
+	/** Decoration name (e.g. `Tooltip`). Used for the button name, the title ("Add Tooltip"/"Edit Tooltip") and the remove button ("Remove Tooltip"). */
 	readonly name: string;
-	/** 입력 칸 이름(예: `설명`). */
+	/** Input field name (e.g. `Description`). */
 	readonly field: string;
-	/** 비워서 보낼 때의 안내(예: `설명을 입력하세요.`). */
+	/** Message when submitting empty (e.g. `Enter a description.`). */
 	readonly empty: string;
 }
 
 export interface MarkTextFormProps {
 	editor: Editor;
-	/** 편집기 마크 이름. */
+	/** Editor mark name. */
 	mark: string;
-	/** 글을 담는 마크 속성 이름. */
+	/** Name of the mark attribute that holds the text. */
 	attribute: string;
 	labels: MarkTextLabels;
-	/** 커서·선택이 이미 이 꾸밈 안이면 true. 글을 고치고 해제할 수 있다. */
+	/** True if the cursor or selection is already inside this decoration. The text can be edited and removed. */
 	active: boolean;
 	initial: string;
-	/** 고칠 꾸밈의 범위. 주면 현재 선택 대신 이 범위를 고친다(인라인 버블에서 커서가 꾸밈 경계에 있을 때). */
+	/** Range of the decoration to edit. If given, this range is edited instead of the current selection (when the cursor is at a decoration boundary in the inline bubble). */
 	range?: { from: number; to: number };
 	onDone: () => void;
 }
 
-/** 꾸밈 글 입력 폼. 서식 도구의 팝오버와 인라인 버블이 함께 쓴다. */
+/** Decoration text input form. Shared by the formatting tool popover and the inline bubble. */
 export function MarkTextForm({ editor, mark, attribute, labels, active, initial, range, onDone }: MarkTextFormProps) {
 	const id = useId();
 	const [value, setValue] = useState(initial);
@@ -112,13 +112,13 @@ export interface MarkTextPopoverProps {
 	attribute: string;
 	labels: MarkTextLabels;
 	icon: ReactNode;
-	/** 이 이름의 창 이벤트(`window.dispatchEvent(new CustomEvent(이름))`)를 받으면 연다(슬래시 메뉴 등). */
+	/** Opens when a window event with this name (`window.dispatchEvent(new CustomEvent(name))`) is received (slash menu, etc.). */
 	openEvent?: string;
 }
 
 /**
- * 서식 도구의 꾸밈 글 팝오버. 선택이 비어 있고 꾸밈 안이 아니면 끈다. 커서가 꾸밈 안이면 눌린 상태이고 글을 고치거나 해제한다.
- * Enter는 한글 조합 중 무시한다.
+ * Decoration text popover of the formatting tool. Disabled when the selection is empty and not inside a decoration. When the cursor is inside a decoration it is pressed, and the text can be edited or removed.
+ * Enter is ignored during Korean IME composition.
  */
 export function MarkTextPopover({ editor, mark, attribute, labels, icon, openEvent }: MarkTextPopoverProps) {
 	const [open, setOpen] = useState(false);

@@ -2,16 +2,16 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * Node 모듈 해석 훅(`register.ts`·`monti migrate`가 등록한다). 설정 별칭만 앱의 파일로 바꾸고 나머지는 그대로 넘긴다.
- * 파일 경로는 등록할 때 넘긴 값(`initialize`), 없으면 `CMS_CONFIG_PATH`·`CMS_SERVER_PATH`(기본 `./cms.config.ts`·
- * `./cms.server.ts`, 현재 폴더 기준)다.
+ * Node module resolution hook (registered by `register.ts` and `monti migrate`). Only the config aliases are redirected to the app's files; everything else passes through.
+ * File paths come from the value passed at registration (`initialize`); otherwise `CMS_CONFIG_PATH` and `CMS_SERVER_PATH` (default `./cms.config.ts` and
+ * `./cms.server.ts`, relative to the current directory).
  */
 let aliases: Readonly<Record<string, string>> = {
 	"@cms-config": process.env.CMS_CONFIG_PATH ?? "./cms.config.ts",
 	"@cms-server": process.env.CMS_SERVER_PATH ?? "./cms.server.ts",
 };
 
-/** 등록할 때 넘긴 별칭 파일(`register(url, { data: { aliases } })`). */
+/** Alias files passed at registration (`register(url, { data: { aliases } })`). */
 export const initialize = (data?: { aliases?: Readonly<Record<string, string>> }) => {
 	if (data?.aliases) aliases = { ...aliases, ...data.aliases };
 };

@@ -2,8 +2,8 @@ import type { PreparedSnapshot } from "../../../core/types";
 import type { ContentStore, Entry } from "../content-store";
 
 /**
- * 테스트 준비용 도우미. 운영 코드와 같은 쓰기 경로(`createEntryWithReferences`·`saveWorkingWithReferences`)를
- * 쓰되, 스냅샷 검증을 거치지 않은 원시 값을 넣을 수 있다(저장소 계약만 시험하는 테스트용).
+ * Test setup helpers. They use the same write paths as production code (`createEntryWithReferences`, `saveWorkingWithReferences`)
+ * but can insert raw values that skip snapshot validation (for tests that check only the store contract).
  */
 
 type SeedInput = {
@@ -29,13 +29,13 @@ const rawSnapshot = (input: Omit<SeedInput, "folderId">): PreparedSnapshot =>
 		imageSources: [],
 	}) as unknown as PreparedSnapshot;
 
-/** 참조 없이 초안을 만든다. */
+/** Creates a draft without references. */
 export function seedEntry(store: ContentStore, input: SeedInput): Promise<Entry> {
 	const { folderId, ...rest } = input;
 	return store.createEntryWithReferences({ snapshot: rawSnapshot(rest), references: [], folderId });
 }
 
-/** 참조 인덱스는 그대로 두고 초안 본문·slug만 바꾼다. */
+/** Changes only the draft body and slug, leaving the reference index as is. */
 export async function seedSave(
 	store: ContentStore,
 	entryId: string,
@@ -59,7 +59,7 @@ export async function seedSave(
 	});
 }
 
-/** 본문은 그대로 두고 폴더만 옮긴다(운영의 일괄 `folder.move`와 같은 경로). */
+/** Moves only the folder, leaving the body as is (same path as production's bulk `folder.move`). */
 export async function moveToFolder(
 	store: ContentStore,
 	params: { entryId: string; folderId: string | null; expectedVersion: number },

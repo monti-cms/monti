@@ -1,4 +1,4 @@
-/** 코드 블록 렌더링: 주석 → shiki 장식(remark) → 강조된 HTML(rehype). 블로그와 다른 사이트가 함께 쓴다. */
+/** Code block rendering: annotations → shiki decorations (remark) → highlighted HTML (rehype). Shared by the reference blog and other sites. */
 
 export {
 	type AnnotationPayload,

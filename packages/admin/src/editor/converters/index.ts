@@ -10,9 +10,9 @@ import type { BlockConverter } from "./types";
 export type { BlockConverter, ConverterContext } from "./types";
 
 /**
- * 블록 변환기 등록부(v2 C0). 편집 UI가 있는 블록은 여기에 변환기를 한 줄 더한다.
- * 같은 `cmsTypes`·`tiptapTypes`를 두 변환기가 가지면 등록부 테스트가 실패한다.
- * (단, `matches`가 있는 세부 분기 변환기는 같은 cmsType을 공유할 수 있다.)
+ * Block converter registry. A block with an edit UI adds one more converter line here.
+ * If two converters have the same `cmsTypes` or `tiptapTypes`, the registry test fails.
+ * (However, detailed branch converters with `matches` may share the same cmsType.)
  */
 export const BLOCK_CONVERTERS: readonly BlockConverter[] = [
 	imageConverter,
@@ -20,7 +20,7 @@ export const BLOCK_CONVERTERS: readonly BlockConverter[] = [
 	mathConverter,
 	codeBlockConverter,
 	tableConverter,
-	// 블록 확장·사이트 설정이 더한 블록(정의에서 만든다). 코드 펜스 블록은 언어(`matches`)로 골라진다.
+	// Blocks added by block extensions and site settings (built from definitions). Code fence blocks are picked by language (`matches`).
 	...ADDED_BLOCK_CONVERTERS,
 ];
 

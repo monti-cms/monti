@@ -3,7 +3,7 @@ import { createBulkService } from "../bulk-service";
 import type { Reference } from "../index";
 import { ServiceError } from "../index";
 
-/** TW-1b: 일괄 상태 변경. */
+/** Bulk status change. */
 
 type EntryState = {
 	version: number;
@@ -12,7 +12,7 @@ type EntryState = {
 	usedBy?: { entryId: string; title: string | null; collection: string; state: string }[];
 };
 
-/** 저장소의 `CmsError`처럼 `code`와 `details`를 가진 오류. */
+/** An error with `code` and `details`, like the store's `CmsError`. */
 class FakeStoreError extends Error {
 	constructor(
 		public readonly code: string,
@@ -70,7 +70,7 @@ const newFakeLifecycleStore = (seed: Record<string, EntryState>) => {
 	};
 };
 
-describe("M4-TW-1b Bulk lifecycle ops contract", () => {
+describe("Bulk lifecycle ops contract", () => {
 	it("archive bumps version per item", async () => {
 		const store = newFakeLifecycleStore({ e1: { version: 2, status: "draft" } });
 		const bulk = createBulkService(store);
@@ -137,7 +137,7 @@ describe("M4-TW-1b Bulk lifecycle ops contract", () => {
 	});
 });
 
-describe("v2 A3 bulk permanentDelete", () => {
+describe("bulk permanentDelete", () => {
 	it("deletes only trashed, unreferenced items and names the blocking usages per item", async () => {
 		const usage = { entryId: "p9", title: "참조하는 글", collection: "post", state: "working" };
 		const store = newFakeLifecycleStore({
@@ -174,7 +174,7 @@ describe("v2 A3 bulk permanentDelete", () => {
 		expect(store.entries.has("t1")).toBe(true);
 	});
 
-	it("treats an item already removed earlier in the same request as deleted (source took its translations, v3)", async () => {
+	it("treats an item already removed earlier in the same request as deleted (source took its translations)", async () => {
 		const store = newFakeLifecycleStore({ source: { version: 2, status: "trashed" } });
 		const out = await createBulkService(store).run({
 			op: "permanentDelete",

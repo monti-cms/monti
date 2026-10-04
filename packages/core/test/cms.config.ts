@@ -3,8 +3,8 @@ import { seoFields } from "../../seo/src/fields";
 import { defineBlock, defineCollection, defineConfig, fields } from "../src";
 
 /**
- * 패키지 자체 테스트가 쓰는 예시 사이트 설정. 한 블로그의 실제 설정과 같은 모양이다.
- * 패키지 코드는 아직 이 컬렉션 이름(post·memo·category·tag·collection)을 직접 아는 곳이 있어 모양을 맞춘다.
+ * Sample site config used by the package's own tests. It has the same shape as a real blog's config.
+ * Some package code still knows these collection names (post, memo, category, tag, collection) directly, so the shape is kept.
  */
 
 const title = fields.text({
@@ -34,8 +34,8 @@ const tagIds = fields.relation({
 });
 
 /**
- * 검색엔진·공유용 값(SEO 확장 `seoFields`). 블로그와 같은 필드 이름이고 모두 SEO 탭에 모인다(필드 `tab`).
- * 테스트는 플러그인(`seo()`) 없이 필드만 쓴다(관리자 화면 코드를 읽지 않는다).
+ * Values for search engines and sharing (SEO extension `seoFields`). Same field names as the blog; all gather in the SEO tab (field `tab`).
+ * Tests use only the fields, without the plugin (`seo()`) (admin screen code is not read).
  */
 const seo = seoFields({
 	keys: {
@@ -83,7 +83,7 @@ export const post = defineCollection({
 				defaultValue: "normal",
 			}),
 			{
-				/** 독자를 안내할 최신 글(v1 §6.4 "대체 글 관계"). */
+				/** Latest entry to point readers to. */
 				deprecated: {
 					replacementPostId: fields.relation({
 						label: "대체 글",
@@ -126,7 +126,7 @@ export const memo = defineCollection({
 	layout: [{ fields: ["title", "slug"] }, { group: "분류", fields: ["tagIds", "series"] }],
 });
 
-/** 이름만 언어별 값이고 주소와 연결 관계는 공통이다(v2 B4). */
+/** Only the name is per-locale; the URL and relations are shared. */
 const taxonomyFields = {
 	title: fields.text({ label: "이름", required: true, max: 200, localized: true }),
 	slug: fields.slug({ label: "주소", from: "title", required: true }),
@@ -154,8 +154,8 @@ export const series = defineCollection({
 		...taxonomyFields,
 		summary: fields.text({ label: "설명", role: "summary", multiline: true, localized: true }),
 		/**
-		 * 모음집은 게시글 또는 메모 한 종류를 순서대로 담는다. 게시글 목록은 예전 키(`itemIds`)를 그대로 쓴다.
-		 * 종류를 바꿔 저장하면 다른 종류 목록은 비워진다.
+		 * A collection holds posts or memos (one kind) in order. The post list keeps using the legacy key (`itemIds`).
+		 * Changing the kind and saving clears the other kind's list.
 		 */
 		itemKind: fields.conditional(
 			fields.select({
@@ -192,7 +192,7 @@ export const series = defineCollection({
 	},
 });
 
-/** 사용자 블록 예시(블로그에는 없다). 편집기 노드가 있는 컨테이너와 원문 상자로 보이는 한 줄 블록이다. */
+/** Sample user blocks (not in the blog): a container with an editor node, and a one-line block shown as a raw-text box. */
 const notice = defineBlock({
 	name: "notice",
 	label: "공지",
@@ -224,7 +224,7 @@ export default defineConfig({
 	defaultLocale: "ko",
 	site: { url: "https://example.dev", aliases: ["www.example.dev"], name: "example.dev", previewPath: "/preview" },
 	timeZone: "Asia/Seoul",
-	// 블록 확장(`@monti-cms/blocks`)의 블록 + 사용자 블록. 테스트는 플러그인 없이 정의만 쓴다(관리자 화면 코드를 읽지 않는다).
+	// Blocks from the blocks extension (`@monti-cms/blocks`) plus user blocks. Tests use only the definitions, without the plugin (admin screen code is not read).
 	blocks: [...ALL_BLOCKS, notice, embed],
 	seed: {
 		templates: [

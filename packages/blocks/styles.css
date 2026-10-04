@@ -1,16 +1,16 @@
 /*
- * @monti-cms/blocks 스타일. 앱의 Tailwind 입력 CSS에서 `@monti-cms/admin/styles.css` 다음에 import한다.
- * 편집기 모양은 관리자 테마 색(--cms-background·--cms-foreground·--cms-border·--cms-muted-foreground·--cms-destructive·--cms-warning)에서 만든다.
- * 공개 화면에서는 관리자 색이 없으므로 콜아웃 강조색은 앱의 `--muted-foreground`·`--warning`·`--destructive`를 쓰고, 없으면 기본 색을 쓴다.
- * 아래 기본값은 모두 `:where()`로 두어 앱이 같은 변수를 정하면 앱 값이 이긴다.
- * 맨 아래 `cms-block-*` 구역은 공개 화면 기본 컴포넌트(`@monti-cms/blocks/<블록>/render`)의 모양이다. Tailwind 없이 쓰이고,
- * 어두운 테마는 `.dark`·`[data-theme="dark"]`다. 컴포넌트를 덮어쓴 사이트는 그 부분을 쓰지 않아도 된다.
+ * @monti-cms/blocks styles. Import it after `@monti-cms/admin/styles.css` in the app's Tailwind input CSS.
+ * The editor look is built from the admin theme colors (--cms-background, --cms-foreground, --cms-border, --cms-muted-foreground, --cms-destructive, --cms-warning).
+ * Public pages have no admin colors, so the callout accent colors use the app's `--muted-foreground`, `--warning` and `--destructive`, falling back to default colors.
+ * All defaults below are wrapped in `:where()` so the app's value wins when it sets the same variable.
+ * The `cms-block-*` section at the bottom styles the default public components (`@monti-cms/blocks/<block>/render`). It is used without Tailwind,
+ * and the dark theme is `.dark` or `[data-theme="dark"]`. Sites that override the components do not need that part.
  */
 
-/* 배포 묶음의 편집 화면에서 Tailwind 클래스를 찾는다(작업 공간 안에서는 앱이 소스를 바로 읽는다). */
+/* Finds Tailwind classes in the edit screens of the published bundle (inside the workspace the app reads the source directly). */
 @source "./dist";
 
-/* 기본값: 콜아웃 종류별 강조색과 차트 계열 색(`chart-1`~`chart-5`). */
+/* Defaults: accent colors per callout variant and chart series colors (`chart-1` to `chart-5`). */
 :where(:root) {
 	--cms-callout-note: var(--cms-muted-foreground, var(--muted-foreground));
 	--cms-callout-tip: oklch(0.6 0.15 155);
@@ -32,7 +32,7 @@
 	--chart-5: oklch(0.72 0.13 310);
 }
 
-/* 콜아웃 편집 화면(`callout/view.tsx`). 강조색을 테마 배경·테두리에 섞는다. 공개 화면 모양은 사이트가 정한다. */
+/* Callout edit screen (`callout/view.tsx`). Mixes the accent color into the theme background and border. The public look is up to the site. */
 .cms-callout {
 	--cms-callout-accent: var(--cms-callout-note);
 	background-color: color-mix(in oklab, var(--cms-callout-accent) 10%, var(--cms-background));
@@ -58,7 +58,7 @@
 	color: var(--cms-muted-foreground);
 }
 
-/* 글자색·글자 배경색(`:color`, 글자색 확장). 값은 밝은·어두운 테마 짝이고, 어두운 값이 없으면 밝은 값을 쓴다. */
+/* Text and background colors (`:color`, the text color extension). Values come as a light/dark theme pair, and the light value is used when there is no dark value. */
 .cms-color[data-fg] {
 	color: var(--cms-fg);
 }
@@ -77,7 +77,7 @@
 }
 
 /* ------------------------------------------------------------------------------------------------
- * 공개 화면 기본 컴포넌트(`cms-block-*`)
+ * Default public components (`cms-block-*`)
  * ---------------------------------------------------------------------------------------------- */
 
 :where(:root) {
@@ -93,7 +93,7 @@
 	--cms-block-accent: oklch(0.75 0.12 250);
 }
 
-/* 콜아웃 */
+/* Callout */
 .cms-block-callout {
 	--cms-block-callout-accent: var(--cms-callout-note, oklch(0.55 0.02 265));
 	margin: 1.5rem 0;
@@ -131,7 +131,7 @@
 	margin-bottom: 0;
 }
 
-/* 접기 */
+/* Collapsible */
 .cms-block-collapsible {
 	margin: 1.5rem 0;
 	border: 1px solid var(--cms-block-border);
@@ -190,7 +190,7 @@
 	}
 }
 
-/* 탭 */
+/* Tabs */
 .cms-block-tabs {
 	margin: 1.5rem 0;
 }
@@ -244,7 +244,7 @@
 	margin-bottom: 0;
 }
 
-/* 단 나누기: 좁은 화면은 위아래로, 넓은 화면은 `--cms-columns`(단 너비)로 나란히 */
+/* Columns: stacked on narrow screens, side by side with `--cms-columns` (column widths) on wide screens */
 .cms-block-columns {
 	display: flex;
 	flex-direction: column;
@@ -274,7 +274,7 @@
 	max-width: 100%;
 }
 
-/* 툴팁 */
+/* Tooltip */
 .cms-block-tooltip {
 	position: relative;
 }
@@ -333,7 +333,7 @@
 	}
 }
 
-/* 코드 연결: 글자에 마우스를 올리면 연결된 코드 줄이 강조된다(줄 효과는 `@monti-cms/core/render.css`) */
+/* Code link: hovering the text highlights the linked code line (the line effect is in `@monti-cms/core/render.css`) */
 .cms-block-code-ref {
 	cursor: pointer;
 	border-radius: 0.125rem;
@@ -385,7 +385,7 @@
 	color: var(--cms-callout-danger, oklch(0.58 0.22 27));
 }
 
-/* 차트 */
+/* Chart */
 .cms-block-chart {
 	margin: 1.5rem 0;
 	width: 100%;

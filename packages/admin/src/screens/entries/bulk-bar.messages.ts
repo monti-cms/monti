@@ -1,16 +1,16 @@
 import { defineMessages, josa } from "@monti-cms/core";
 
-/** 영어: 개수에 맞는 명사("1 selected post" / "3 selected posts"). */
+/** English: the noun in the right number ("1 selected post" / "3 selected posts"). */
 const selected = (count: unknown, noun: string) => `${count} selected ${noun}${Number(count) === 1 ? "" : "s"}`;
 
-/** 한국어: 받침에 맞는 "으로/로"(ㄹ 받침은 "로"). */
+/** Korean: picks the "으로"/"로" particle by final consonant ("로" after no final or ㄹ). */
 const toward = (word: string) => {
 	const code = word.charCodeAt(word.length - 1) - 0xac00;
 	const final = code >= 0 && code <= 11171 ? code % 28 : 0;
 	return `${word}${final === 0 || final === 8 ? "로" : "으로"}`;
 };
 
-/** 일괄 작업 줄의 문구(M15). */
+/** Messages for the bulk action bar. */
 export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
 	en: {
 		"relation.add": "Add {label}",

@@ -20,7 +20,7 @@ const localeOf = (value: string | null) => {
 
 const toJson = (config: PublicApiOptions) => config.toJson ?? defaultPublicJson;
 
-/** 관계 필드가 가리키는 대상 항목의 주소 → 번역 묶음 ID. 없는 주소면 `null`(빈 목록). */
+/** Address of the entry a relation field points to → translation group ID. An unknown address yields `null` (empty list). */
 async function targetId(collection: string, field: string, slug: string): Promise<string | null> {
 	const stored = isCollection(collection) ? storedField(collection, field) : undefined;
 	if (stored?.field.kind !== "relation") throw new Error(`publicApi.filters: ${field} is not a relation field`);
@@ -34,7 +34,7 @@ async function targetId(collection: string, field: string, slug: string): Promis
 	return found.status === "not_found" ? null : found.entry.translationGroupId;
 }
 
-/** `GET /api/cms/v1/public/entries?collection&page&pageSize&locale&<filters>` — 공개본 목록(발행일 최신순). */
+/** `GET /api/cms/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
 export async function GET(request: NextRequest): Promise<Response> {
 	const config = options();
 	if (!config) return publicError("not_found", "Not found");
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 			const value = params.get(name);
 			if (value === null) continue;
 			if (!value.trim()) return publicError("invalid_input", "Invalid query parameters");
-			// 이 컬렉션에 없는 필드의 조건은 건너뛴다(예: 메모에는 카테고리가 없다).
+			// Skip conditions for fields this collection does not have (e.g. memos have no category).
 			if (!storedField(collection, field)) continue;
 			const id = await targetId(collection, field, value);
 			if (!id) return publicJson({ items: [], total: 0, page, pageSize });
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 	}
 }
 
-/** `GET /api/cms/v1/public/entries/:collection/:slug?locale` — 공개본 단건. 옛 주소면 정규 주소를 `address`로 알린다. */
+/** `GET /api/cms/v1/public/entries/:collection/:slug?locale` — a single published entry. For an old address, reports the canonical address as `address`. */
 export async function getOne(request: NextRequest, params: { collection: string; slug: string }): Promise<Response> {
 	const config = options();
 	if (!config) return publicError("not_found", "Not found");

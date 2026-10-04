@@ -260,7 +260,7 @@ const convertDirectiveTable = (node: MdastLike): CmsNode => {
 
 	const headerRows = content.map((row) => (row.content ?? []).map((cell) => cell.attrs?.header === true));
 	if (!tableHasMergedCells({ content }) && !hasGfmHeaderLayout(headerRows)) {
-		// 병합 없는 directive 표의 비GFM 머리글 배치를 명시해 저장 시 GFM 첫 행 머리글로 바뀌지 않게 한다.
+		// Make the non-GFM header layout of a directive table without merges explicit so that saving does not change it to a GFM first-row header.
 		for (const row of content) {
 			for (const cell of row.content ?? []) {
 				if (cell.attrs?.header !== true) cell.attrs = { ...cell.attrs, header: false };
@@ -296,7 +296,7 @@ const convertJsx = (node: MdastLike): CmsNode => {
 		if (rawAttrs.crop) attrs.crop = rawAttrs.crop;
 		if (rawAttrs.rotate) attrs.rotate = String(rawAttrs.rotate);
 		if (rawAttrs.title) attrs.title = rawAttrs.title;
-		// 장식 표시는 불리언으로 정규화한다(참만 의미가 있다 — §4.4).
+		// The decorative flag is normalized to a boolean (only true is meaningful).
 		if (rawAttrs.decorative === true || rawAttrs.decorative === "true") attrs.decorative = true;
 		return { type: "image", attrs };
 	}
@@ -373,7 +373,7 @@ const convertList = (node: MdastLike): CmsNode => {
 };
 
 const convertTable = (node: MdastLike): CmsNode => {
-	// GFM 열 정렬(`:-:` 등). 정렬이 하나도 없으면 속성을 두지 않는다.
+	// GFM column alignment (`:-:` etc.). If there is no alignment at all, no attribute is set.
 	const align = (node.align ?? []).map((value) => value ?? null);
 	return {
 		type: "table",
@@ -393,7 +393,7 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 	for (const node of nodes) {
 		switch (node.type) {
 			case "paragraph":
-				// 미등록 블록 지시자는 원문 블록으로 옮겨 그대로 쓴다(`remark-directives.ts`). 글로 두면 저장할 때 이스케이프가 쌓인다.
+				// An unregistered block directive is moved to a raw block and written as is (`remark-directives.ts`). If left as text, escapes pile up on save.
 				if (node.data?.[DEMOTED_DIRECTIVE_SOURCE]) {
 					output.push({ type: "html", attrs: { value: node.children?.[0]?.value ?? "" } });
 					break;

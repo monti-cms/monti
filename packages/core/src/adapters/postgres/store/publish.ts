@@ -11,17 +11,17 @@ import type { Entry, EntryStatus } from "./types";
 
 export interface PublishOptions {
 	expectedVersion: number;
-	/** 다시 발행할 때 발행일을 지금으로 바꾼다. 없으면 처음 발행한 시각을 둔다. */
+	/** On re-publish, reset the publish date to now. Otherwise keep the first publish time. */
 	resetPublishedAt?: boolean;
 }
 
 /**
- * 발행 트랜잭션의 공통 규칙. 발행·레코드 복원이 같은 검증을 쓴다.
+ * Shared rules for publish transactions. Publishing and record restore use the same validation.
  */
 export function createPublishing(ctx: StoreContext) {
 	const { qSchema, hooks } = ctx;
 
-	/** 저장된 최신 초안을 트랜잭션 안에서 다시 검증한다. 참조 대상·내부 링크 주소를 잠근다. */
+	/** Re-validates the latest saved draft inside the transaction. Locks reference targets and internal link slugs. */
 	const validateStoredWorkingForPublish = async (client: PoolClient, entryId: string) => {
 		const entryRes = await client.query<{
 			collection: Collection;
@@ -33,7 +33,7 @@ export function createPublishing(ctx: StoreContext) {
 		]);
 		const entry = entryRes.rows[0];
 		if (!entry) throw new CmsError("Entry not found", "not_found");
-		// 번역본은 원문을 잠그고 공개 상태를 본다(v2 B4). 발행 중에 원문이 공개에서 빠지지 않게 한다.
+		// A translation locks its source and checks its published status, so the source cannot leave the public layer during publish.
 		const translation = entry.translation_group_id
 			? {
 					sourcePublished:
@@ -53,7 +53,7 @@ export function createPublishing(ctx: StoreContext) {
 			{ collection: entry.collection, slug: entry.working_slug, metadata: body.metadata as never, mdx: body.mdx },
 			{ previousReferences },
 		);
-		// stale로 남은 과거 참조도 발행 전에 대상이 살아 있는지 확인한다.
+		// Even stale leftover references are checked before publish to confirm the target still exists.
 		const merged = new Map<string, Reference>(snapshot.references.map((ref) => [`${ref.kind}:${ref.targetId}`, ref]));
 		for (const ref of previousReferences) {
 			const key = `${ref.kind}:${ref.targetId}`;
@@ -72,7 +72,7 @@ export function createPublishing(ctx: StoreContext) {
 		const findAddresses = async (lock: boolean) => {
 			if (links.length === 0) return [] as AddressRow[];
 			const result = await client.query<AddressRow>(
-				// 본문 링크(`/posts/slug`)는 기본 언어 주소다. 다른 언어 번역본으로는 렌더할 때 바꾼다(v2 B4).
+				// A body link (`/posts/slug`) is the default-language URL. It is swapped to the translation's URL at render time.
 				`SELECT a.collection, a.slug, a.type, a.entry_id
 				 FROM "${qSchema}".content_addresses a
 				 WHERE a.locale = $3 AND (a.collection, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[]))
@@ -146,9 +146,9 @@ export function createPublishing(ctx: StoreContext) {
 	};
 
 	/**
-	 * 최신 초안을 현재 공개본으로 원자적으로 반영한다(§5.2, §9.2).
-	 * 발행일(`published_at`)은 처음 발행한 시각이다. 이미 값이 있으면(다시 발행, 이관한 글) 바꾸지 않는다.
-	 * `resetPublishedAt`이면 지금으로 바꾼다(바뀐 것이 없는 다시 발행이어도).
+	 * Atomically applies the latest draft as the current published version.
+	 * The publish date (`published_at`) is the time of first publish. It is left unchanged when already set (re-publish, migrated entries).
+	 * With `resetPublishedAt` it is set to now (even for a re-publish with no changes).
 	 */
 	const publishWithinTransaction = async (client: PoolClient, id: string, options: PublishOptions): Promise<Entry> => {
 		const locked = await lockEntryForUpdate(client, qSchema, id, options.expectedVersion);
@@ -205,7 +205,7 @@ export function createPublishing(ctx: StoreContext) {
 				);
 			}
 			if (targetSlug !== null && targetSlug !== currentSlug) {
-				// 과거 별칭으로 되돌아오는 경우 그 주소를 다시 current로 올린다.
+				// When returning to a former alias, promote that slug back to current.
 				await client.query(
 					`INSERT INTO "${qSchema}".content_addresses (collection, locale, slug, entry_id, type) VALUES ($1, $2, $3, $4, 'current')
 					 ON CONFLICT (collection, locale, slug) DO UPDATE SET type = 'current'
@@ -243,7 +243,7 @@ export function createPublishing(ctx: StoreContext) {
 		return entry;
 	};
 
-	/** 초안이 가리키는 대상을 잠근다. 휴지통 대상은 새로 참조할 수 없다(§6.1). */
+	/** Locks the targets the draft points at. A trashed target cannot be newly referenced. */
 	const lockDraftReferenceTargets = async (client: PoolClient, references: readonly Reference[]) => {
 		const ids = Array.from(
 			new Set(references.filter((ref) => ref.kind !== "media" && isUuid(ref.targetId)).map((ref) => ref.targetId)),
@@ -259,8 +259,8 @@ export function createPublishing(ctx: StoreContext) {
 	};
 
 	/**
-	 * 다른 콘텐츠가 이 항목을 참조하면(초안·공개본 모두) 거부한다.
-	 * `trashed` 원본의 참조는 영구 삭제에서만 무시할 수 있으므로 호출자가 고른다.
+	 * Rejects if other content references this entry (both draft and published).
+	 * References from a `trashed` source can be ignored only on permanent delete, so the caller chooses.
 	 */
 	const assertNotReferenced = async (
 		client: PoolClient,

@@ -24,8 +24,8 @@ import type { Collection } from "../../core/collections";
 import { createContentService } from "../content-service";
 
 /**
- * 설정과 상관없는 본체 흐름(M10-1 재발 방지). 컬렉션·필드 이름을 적지 않고 지금 설정에서 찾는다.
- * 블로그 예시 설정과 다른 사이트 설정(`vitest.othersite.config.ts`) 둘 다로 돈다.
+ * Core flows that do not depend on the config (a regression guard). Collection and field names are not hard-coded; they are looked up from the current config.
+ * Runs with both the reference blog setup and another site's config (`vitest.othersite.config.ts`).
  */
 describe("any site: core content flow", () => {
 	let pool: Pool;
@@ -36,7 +36,7 @@ describe("any site: core content flow", () => {
 	const unique = (prefix: string) => `${prefix}-${++sequence}`;
 	const targets = new Map<Collection, string>();
 
-	/** 대상 컬렉션의 공개 항목 하나(분류는 저장이 곧 공개다). */
+	/** One public item of the target collection (for categories, saving is publishing). */
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const known = targets.get(to);
 		if (known) return known;
@@ -195,7 +195,7 @@ describe("any site: core content flow", () => {
 				details: { references: 1 },
 			});
 			expect((await store.getMediaAsset(used.id))?.status).toBe("ready");
-			// 발행본도 같은 참조를 가진다.
+			// The published copy also has the same references.
 			const published = await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
 			expect(published.published?.metadata[media.name]).toBe(used.id);
 			const after = (await store.listMediaAssets({ pageSize: 100 })).items.find((item) => item.id === used.id);
@@ -213,7 +213,7 @@ describe("any site: core content flow", () => {
 			if (!collection || !media) return;
 			const legacy = await readyMedia(`${unique("legacy")}.png`);
 			const draft = await draftWith("Legacy share image", "");
-			// 미디어 필드를 두기 전에 저장한 값처럼 참조 인덱스 없이 메타데이터에만 둔다.
+			// Like a value saved before the media field existed, it is kept only in the metadata with no reference index.
 			await pool.query(
 				`UPDATE "${schemaName}".entry_bodies SET metadata = jsonb_set(metadata, $2, to_jsonb($3::text)) WHERE entry_id = $1`,
 				[draft.id, [media.name], legacy.id],

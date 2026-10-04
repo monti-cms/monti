@@ -9,8 +9,8 @@ import type { Entry, EntryStatus } from "./types";
 type LifecycleParams = { id: string; expectedVersion: number };
 
 /**
- * §5.3 상태 전환. 허용되지 않은 출발 상태는 `invalid_status`(409)로 거부한다 —
- * 예컨대 발행된 글에 `보관 해제`나 `복원`을 눌러 공개가 조용히 내려가는 일을 막는다.
+ * Status transitions. A disallowed source status is rejected with `invalid_status` (409),
+ * for example so that pressing `보관 해제` or `복원` on a published entry cannot silently take it offline.
  */
 export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 	const { pool, qSchema } = ctx;
@@ -37,8 +37,8 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		);
 
 	/**
-	 * 원문이면 같은 묶음의 번역본(자기 제외)을 잠그고 돌려준다. 번역본이면 빈 목록이다.
-	 * 원문의 상태 전환은 묶음 전체에 적용한다(v3 번역 화면 결정 3).
+	 * For a source, locks and returns the translations in the same group (excluding itself). For a translation, returns an empty list.
+	 * A source's status transition applies to the whole group.
 	 */
 	const lockTranslations = async (client: PoolClient, id: string) =>
 		(
@@ -49,7 +49,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 			)
 		).rows;
 
-	/** 번역본들의 상태를 바꾸고 판을 올린다. 열어 둔 편집 화면이 충돌로 알아차린다. */
+	/** Changes the translations' status and bumps their version. Editors left open notice it as a conflict. */
 	const setMembersStatus = async (client: PoolClient, ids: readonly string[], status: EntryStatus, extra = "") => {
 		if (ids.length === 0) return;
 		await client.query(
@@ -58,7 +58,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		);
 	};
 
-	/** 공개된 적 있는 주소는 재사용 방지 기록만 남기고, 예약 주소는 해제한 뒤 콘텐츠를 지운다. */
+	/** Slugs that were ever published keep only a reuse-prevention record; reserved slugs are released before the content is deleted. */
 	const deleteEntryRow = async (client: PoolClient, id: string) => {
 		await client.query(`DELETE FROM "${qSchema}".content_addresses WHERE entry_id = $1 AND type = 'reservation'`, [id]);
 		await client.query(
@@ -69,7 +69,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 	};
 
 	return {
-		/** 초안/발행 → 보관. 공개를 끝낸다. record 컬렉션은 보관이 없다. */
+		/** Draft/published to archived. Ends publication. Record collections have no archive. */
 		archiveEntry: (params: LifecycleParams) =>
 			transition(params, ["draft", "published"], async (client, locked) => {
 				if (isItemCollection(locked.collection)) {
@@ -86,7 +86,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 				await setMembersStatus(client, ids, "archived");
 			}),
 
-		/** 보관 → 초안. 자동으로 다시 공개하지 않는다. */
+		/** Archived to draft. Does not republish automatically. */
 		unarchiveEntry: (params: LifecycleParams) =>
 			transition(params, ["archived"], async (client, locked) => {
 				await client.query(`UPDATE "${qSchema}".entries SET status = 'draft', version = $1 WHERE id = $2`, [
@@ -102,8 +102,8 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 			}),
 
 		/**
-		 * → 휴지통. 공개를 끝낸다.
-		 * 사용 중인 분류 항목(record 컬렉션: 태그·카테고리 등)은 참조를 먼저 해제해야 한다(§6.1).
+		 * To trash. Ends publication.
+		 * A category item in use (record collections: tags, categories, etc.) must have its references released first.
 		 */
 		trashEntry: (params: LifecycleParams) =>
 			transition(params, ["draft", "published", "archived"], async (client, locked) => {
@@ -114,7 +114,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					`UPDATE "${qSchema}".entries SET status = 'trashed', trashed_at = NOW(), version = $1 WHERE id = $2`,
 					[locked.version + 1, params.id],
 				);
-				// 같은 트랜잭션의 NOW()는 같은 값이다. 복원할 때 이 시각으로 "함께 버린 번역본"을 찾는다.
+				// NOW() is the same value within one transaction. On restore, this timestamp finds the "translations trashed together".
 				const ids = (await lockTranslations(client, params.id))
 					.filter((member) => member.status !== "trashed")
 					.map((member) => member.id);
@@ -122,14 +122,14 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 			}),
 
 		/**
-		 * 휴지통 → 복원. publish 컬렉션은 초안으로, record 컬렉션은 현재 값과 관계를 검증한 뒤
-		 * 활성(공개) 레코드로 되돌린다(§5.3).
+		 * Trash to restore. Publish collections return to draft; record collections are validated for current values and relations
+		 * and then returned to active (published) records.
 		 */
 		restoreEntry: (params: LifecycleParams) =>
 			transition(params, ["trashed"], async (client, locked) => {
 				const isSource = locked.translation_group_id === params.id;
 				if (!isSource) {
-					// 원문 없이 번역본만 살리면 목록(원문 한 줄)에 보이지 않고 공통 값도 없다.
+					// Restoring a translation without its source leaves it absent from the list (one row per source) and without shared values.
 					const source = await client.query<{ status: EntryStatus }>(
 						`SELECT status FROM "${qSchema}".entries WHERE id = $1`,
 						[locked.translation_group_id],
@@ -154,7 +154,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 				if (isItemCollection(locked.collection)) {
 					await publishing.publishWithinTransaction(client, params.id, { expectedVersion: version });
 				}
-				// 원문과 함께 버린 번역본만 되살린다. 따로 지운 번역본은 휴지통에 남는다.
+				// Restore only translations trashed together with the source. Translations trashed separately stay in the trash.
 				if (isSource && trashedAt) {
 					const ids = (await lockTranslations(client, params.id))
 						.filter((member) => member.status === "trashed" && member.trashed_at?.getTime() === trashedAt.getTime())
@@ -164,8 +164,8 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 			}),
 
 		/**
-		 * 휴지통 항목의 영구 삭제(§5.3, §6.2). 다른 콘텐츠가 참조하면 거부한다.
-		 * 공개된 적 있는 주소는 재사용 방지 기록(`deleted`)만 남기고, 공개된 적 없는 예약 주소는 해제한다.
+		 * Permanently deletes a trashed entry. Rejected if other content references it.
+		 * Slugs that were ever published keep only a reuse-prevention record (`deleted`); reserved slugs that were never published are released.
 		 */
 		permanentDeleteEntry: async (params: LifecycleParams): Promise<void> =>
 			withTransaction(pool, async (client) => {
@@ -174,7 +174,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					throw new CmsError("Only trashed entries can be permanently deleted", "invalid_status", locked.version);
 				}
 				await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: false });
-				// 원문을 지우면 번역본도 함께 지운다(v3). 휴지통 밖 번역본이 남아 있으면 공통 값을 잃으므로 거부한다.
+				// Deleting a source deletes its translations too. Rejected if a translation outside the trash remains, since it would lose its shared values.
 				const members = await lockTranslations(client, params.id);
 				const alive = members.filter((member) => member.status !== "trashed");
 				if (alive.length > 0) {

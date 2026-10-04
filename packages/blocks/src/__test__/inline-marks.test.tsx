@@ -10,8 +10,8 @@ import { ColorProvider, colorMarkExtension } from "../color/provider";
 import { TooltipProvider, tooltipMarkExtension } from "../tooltip/provider";
 
 /**
- * 블록 확장의 글자 꾸밈(툴팁·코드 연결·글자색). 본체 편집기는 꾸밈 이름을 모르고, 확장이 등록한 모양·도구만 그린다.
- * 예전에 본체에 있던 때와 저장 글자·서식 도구 모습이 같은지 본다.
+ * Inline marks of the block extensions (tooltip, code ref, text color). The core editor does not know the mark names; it only renders the shapes and tools the extensions register.
+ * Checks that the saved text and the formatting toolbar look the same as when these lived in the core.
  */
 
 beforeAll(() => {
@@ -31,7 +31,7 @@ afterEach(() => {
 
 const MARKS = { tooltip: tooltipMarkExtension, "code-ref": codeRefMarkExtension, color: colorMarkExtension };
 
-/** 블로그 설정처럼 세 꾸밈 확장을 모두 넣은 관리자 화면. */
+/** Admin UI with all three mark extensions added, like the reference blog setup. */
 const WithMarks = ({ children }: { children: ReactNode }) => (
 	<TooltipProvider>
 		<CodeRefProvider>
@@ -42,28 +42,28 @@ const WithMarks = ({ children }: { children: ReactNode }) => (
 
 const roundTrip = (mdx: string) => tiptapToMdx(mdxToTiptap(mdx));
 
-describe("글자 꾸밈 저장 글자", () => {
+describe("inline mark saved text", () => {
 	it.each([
 		':tooltip[라벨]{content="설명"} 뒤',
 		'함수 :code-ref[호출부]{to="c1"}를 본다',
 		':color[빨강]{fg="#dc2626" fgDark="#f87171"} :color[바탕]{bg="#fee2e2" bgDark="#4a1f1f"}',
 		':color[둘 다]{fg="#2563eb" fgDark="#60a5fa" bg="#dbeafe" bgDark="#172f4d"}',
-		// 겹친 꾸밈은 툴팁 → 코드 연결 → 글자색 순서로 감싼다(예전 본체 순서와 같다).
+		// Nested marks wrap in tooltip → code ref → text color order (same as the former core order).
 		':tooltip[:code-ref[:color[겹침]{fg="#16a34a"}]{to="c2"}]{content="설명 &quot;따옴표&quot;"}',
 		':tooltip[**굵게** 와 :u[밑줄]]{content="a &amp; b"}',
 		':tooltip[a\\]b]{content="닫는 괄호"}',
-	])("본문 → 편집기 → 본문이 글자 그대로다: %s", (body) => {
+	])("body → editor → body is unchanged: %s", (body) => {
 		const mdx = `${body}\n`;
 		expect(serialize(toDocument(analyze(mdx)))).toBe(mdx);
 		expect(roundTrip(mdx)).toBe(mdx);
 	});
 
-	it("예시 글(블로그 글 묶음)이 편집기를 거쳐도 글자 그대로다", () => {
+	it("sample posts (the blog post set) are unchanged after passing through the editor", () => {
 		const samples = readSamples().filter(({ mdx }) => /:(tooltip|code-ref|color)\[/.test(mdx));
 		expect(samples.length).toBeGreaterThan(0);
 		for (const { name, mdx } of samples) {
 			const once = roundTrip(mdx);
-			// 편집기 정본으로 한 번 바뀐 뒤에는 더 바뀌지 않고, 꾸밈 글자는 원문 그대로 남는다.
+			// After one pass to the editor canonical form it stops changing, and mark directives stay verbatim.
 			expect(roundTrip(once), name).toBe(once);
 			for (const directive of mdx.match(/:(?:tooltip|code-ref|color)\[[^\]\n]*\]\{[^}\n]*\}/g) ?? []) {
 				expect(once, `${name}: ${directive}`).toContain(directive);
@@ -71,7 +71,7 @@ describe("글자 꾸밈 저장 글자", () => {
 		}
 	});
 
-	it("편집기 마크는 확장이 준 모양으로 그린다", () => {
+	it("editor marks render with the shape the extension provides", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(MARKS),
 			content: mdxToTiptap(
@@ -87,7 +87,7 @@ describe("글자 꾸밈 저장 글자", () => {
 	});
 });
 
-describe("서식 도구", () => {
+describe("formatting toolbar", () => {
 	const renderEditor = async () => {
 		render(
 			<WithMarks>
@@ -101,7 +101,7 @@ describe("서식 도구", () => {
 			.getAllByRole("button")
 			.map((button) => button.getAttribute("aria-label") || button.textContent);
 
-	it("글자색은 글자 꾸밈 뒤, 툴팁은 링크 뒤에 놓인다(예전 본체 도구 모음과 같다)", async () => {
+	it("text color sits after the inline marks and tooltip after link (same as the former core toolbar)", async () => {
 		const toolbar = await renderEditor();
 		expect(names(toolbar)).toEqual([
 			"문단",
@@ -132,7 +132,7 @@ describe("서식 도구", () => {
 			500,
 			["문단", "굵게", "기울임", "인라인 코드", "글자색", "링크", "툴팁", "목록", "코드 블록", "더보기", "본문 폭"],
 		],
-	])("폭 %ipx에서 남는 도구가 예전과 같다", async (width, visible) => {
+	])("tools left at width %ipx are the same as before", async (width, visible) => {
 		vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(width);
 		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
 			width: 32,
@@ -150,7 +150,7 @@ describe("서식 도구", () => {
 		expect(names(toolbar)).toEqual(visible);
 	});
 
-	it("슬래시 메뉴의 툴팁은 글 서식 항목 다음에 있고, 고르면 예시 글을 골라 설명 입력을 연다", async () => {
+	it("the slash menu tooltip comes after the text formatting items, and choosing it selects sample text and opens the description input", async () => {
 		render(
 			<WithMarks>
 				<CmsEditor content="" onChange={vi.fn()} />
@@ -170,7 +170,7 @@ describe("서식 도구", () => {
 	});
 });
 
-describe("인라인 버블", () => {
+describe("inline bubble", () => {
 	const editors: Editor[] = [];
 	afterEach(() => {
 		for (const editor of editors.splice(0)) editor.destroy();
@@ -198,7 +198,7 @@ describe("인라인 버블", () => {
 			editor.view.focus();
 		});
 
-	it("글자를 고르면 글자색(꾸밈 뒤)·툴팁(링크 앞)·코드 연결(링크 뒤, 코드 블록이 있을 때)을 보인다", async () => {
+	it("selecting text shows text color (after marks), tooltip (before link) and code ref (after link, when a code block exists)", async () => {
 		const editor = await mount("가나다\n\n```ts\nconst a = 1;\n```\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
@@ -214,7 +214,7 @@ describe("인라인 버블", () => {
 		]);
 	});
 
-	it("툴팁 경계의 커서에서도 설명을 고치고 해제한다", async () => {
+	it("edits and removes the description even with the cursor at the tooltip boundary", async () => {
 		const editor = await mount(':tooltip[사아]{content="설명"} 자\n');
 		focusAt(editor, 1);
 		act(() => fireEvent.click(screen.getByRole("button", { name: "툴팁 수정" })));
@@ -229,7 +229,7 @@ describe("인라인 버블", () => {
 		expect(tiptapToMdx(editor.getJSON())).toBe("사아 자\n");
 	});
 
-	it("글자색 버튼은 버블 안에 색 고르기를 펼치고, 고르면 색을 입힌다", async () => {
+	it("the text color button opens a color picker in the bubble and applies the chosen color", async () => {
 		const editor = await mount("가나다\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const bubble = await screen.findByRole("toolbar", { name: "인라인 서식" });
@@ -239,7 +239,7 @@ describe("인라인 버블", () => {
 		expect(tiptapToMdx(editor.getJSON())).toBe(':color[가나]{fg="#dc2626" fgDark="#f87171"}다\n');
 	});
 
-	it("연결된 줄이 없는 코드 연결은 버블에 알린다", async () => {
+	it("a code ref with no linked line is reported in the bubble", async () => {
 		const editor = await mount(':code-ref[호출]{to="c9"} 뒤\n');
 		focusAt(editor, 2);
 		expect(await screen.findByText("연결된 코드 줄이 없습니다")).toBeTruthy();

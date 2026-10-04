@@ -9,22 +9,22 @@ import { type CollectionSchema, normalizeCollection, validateListColumns } from 
 import { RESERVED_METADATA_KEYS, SUMMARY_ROLE } from "../schema/fields";
 import { valueFieldsOf } from "../schema/walk";
 
-/** 언어 코드 모양(BCP 47의 언어와 지역·문자 부분). */
+/** Shape of a locale code (the language and region/script parts of BCP 47). */
 const LOCALE_CODE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
 
 /**
- * 사이트 설정(`cms.config.ts`) 규격. 블로그마다 컬렉션·언어를 여기에 적고 `defineConfig`로 감싸 기본 내보내기로 둔다.
+ * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineConfig`, and exports the result as the default export.
  *
- * 설정은 서버와 관리자 화면(브라우저)이 함께 읽으므로 **JSON으로 직렬화할 수 있는 값만** 가진다.
- * 비밀 값(DB 주소·API 키)은 넣지 않고 환경 변수로 둔다.
+ * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values**.
+ * Secrets (DB URL, API keys) do not go here; keep them in environment variables.
  */
 
 export interface LocaleConfig<Code extends string = string> {
-	/** 언어 코드(BCP 47 앞부분, 예: `ko`). 저장 값과 공개 주소 접두사에 쓴다. */
+	/** Locale code (leading part of BCP 47, e.g. `ko`). Used for stored values and public URL prefixes. */
 	readonly code: Code;
-	/** 그 언어로 쓴 언어 이름(예: `English`). AI 번역 지시문에 들어간다. */
+	/** The language's name written in that language (e.g. `English`). Included in AI translation prompts. */
 	readonly name: string;
-	/** 관리자 화면에 보이는 이름. 없으면 `name`을 쓴다. */
+	/** Name shown in the admin UI. Falls back to `name`. */
 	readonly label?: string;
 }
 
@@ -32,67 +32,67 @@ export type CollectionsConfig = Readonly<Record<string, CollectionSchema>>;
 
 export interface SiteConfig {
 	/**
-	 * 공개 사이트 주소(예: `https://example.com`). 본문에 전체 주소로 적은 링크도 내부 링크로 알아본다.
-	 * 환경마다 다르면 환경 변수에서 읽는다. 없으면 `/posts/...`처럼 경로로 적은 링크만 알아본다.
+	 * Public site URL (e.g. `https://example.com`). Links in the body written as full URLs are also recognized as internal links.
+	 * If it differs per environment, read it from an environment variable. Without it, only links written as paths such as `/posts/...` are recognized.
 	 */
 	readonly url?: string;
-	/** 같은 사이트로 볼 다른 호스트 이름(예: `www.example.com`). */
+	/** Other host names to treat as the same site (e.g. `www.example.com`). */
 	readonly aliases?: readonly string[];
-	/** 관리자 화면에 보이는 사이트 이름(사이드바·검색 미리보기·창 제목). 없으면 `url`의 호스트 이름. */
+	/** Site name shown in the admin UI (sidebar, search preview, window title). Falls back to the host name of `url`. */
 	readonly name?: string;
 	/**
-	 * 초안 미리보기 주소 앞부분(예: `/preview`). 편집 화면의 `미리보기`가 이 뒤에 공개 경로(컬렉션 `path`)를 붙여 연다.
-	 * 기본 언어가 아니면 언어를 `previewLocaleParam` 쿼리로 넘긴다. 없으면 미리보기 단추가 없다.
+	 * Start of the draft preview URL (e.g. `/preview`). The `Preview` button in the editor appends the public path (collection `path`) to it.
+	 * For a non-default locale, the locale is passed in the `previewLocaleParam` query. Without it there is no preview button.
 	 */
 	readonly previewPath?: string;
 	/**
-	 * 미리보기 주소에 언어를 넘기는 쿼리 이름. 기본 `locale`(`/preview/posts/a?locale=en`).
-	 * `false`면 쿼리 대신 `localePrefix` 규칙대로 경로에 언어를 넣는다(`/preview/en/posts/a`).
+	 * Query name that carries the locale in the preview URL. Default `locale` (`/preview/posts/a?locale=en`).
+	 * If `false`, the locale goes into the path following the `localePrefix` rule instead of a query (`/preview/en/posts/a`).
 	 */
 	readonly previewLocaleParam?: string | false;
 	/**
-	 * 공개 주소에 언어를 붙이는 방식. 검색 미리보기·초안 미리보기·`localizePath`가 따른다.
-	 * - `except-default`(기본): 기본 언어는 접두사 없이(`/posts/a`), 다른 언어는 `/{code}`(`/en/posts/a`)
-	 * - `always`: 모든 언어에 `/{code}`
-	 * - `never`: 어느 언어도 접두사 없이(언어마다 도메인이 다르거나 언어가 하나일 때)
+	 * How the locale is added to public URLs. Search preview, draft preview and `localizePath` follow it.
+	 * - `except-default` (default): no prefix for the default locale (`/posts/a`), `/{code}` for the others (`/en/posts/a`)
+	 * - `always`: `/{code}` for every locale
+	 * - `never`: no prefix for any locale (when each locale has its own domain or there is only one locale)
 	 */
 	readonly localePrefix?: LocalePrefixMode;
 	/**
-	 * 관리자 사이드바 `사이트 보기`가 여는 주소. 경로(`/`)나 전체 주소(`https://example.com`). 기본 `/`
-	 * (관리자 화면이 사이트 앱 안에 있을 때 사이트 첫 화면).
+	 * URL opened by the admin sidebar's `View site`. A path (`/`) or a full URL (`https://example.com`). Default `/`
+	 * (the site's home page when the admin lives inside the site app).
 	 */
 	readonly home?: string;
 }
 
-/** 공개 주소의 언어 접두사 방식(`site.localePrefix`). */
+/** How public URLs get a locale prefix (`site.localePrefix`). */
 export type LocalePrefixMode = "except-default" | "always" | "never";
 export const LOCALE_PREFIX_MODES: readonly LocalePrefixMode[] = ["except-default", "always", "never"];
 
 export interface AdminConfig {
 	/**
-	 * 관리자 화면 경로. 기본 `/admin`. 앱의 관리자 라우트 폴더가 같은 경로여야 한다
-	 * (`/studio`이면 `app/(admin)/studio/[[...path]]/page.tsx`). 관리자 API(`/api/cms/v1`)는 바뀌지 않는다.
+	 * Admin UI path. Default `/admin`. The app's admin route folder must use the same path
+	 * (for `/studio`, `app/(admin)/studio/[[...path]]/page.tsx`). The admin API (`/api/cms/v1`) does not change.
 	 */
 	readonly path?: string;
 	/**
-	 * 관리자 화면 언어(BCP 47, 예: `en`, `ko-KR`). 화면 글과 날짜·숫자 표기가 따른다. 없으면 사이트 기본 언어(`defaultLocale`).
-	 * 사전이 없는 언어는 영어로 보인다. 시각은 `timeZone`으로 보인다.
+	 * Admin UI locale (BCP 47, e.g. `en`, `ko-KR`). UI text and date/number formatting follow it. Falls back to the site default locale (`defaultLocale`).
+	 * A locale without a dictionary shows English. Times are shown in `timeZone`.
 	 */
 	readonly locale?: string;
 	/**
-	 * 관리자 화면 문구 덮어쓰기: 이름공간 → 키 → 문구(`{이름}` 자리를 쓸 수 있다). 이름공간·키는 각 패키지의 사전
-	 * (`defineMessages`)에서 찾는다. 예: `{ "cms-admin.entries": { publish: "Ship it" } }`.
+	 * Admin UI text overrides: namespace -> key -> text (`{name}` placeholders are allowed). Find namespaces and keys in each package's dictionary
+	 * (`defineMessages`). Example: `{ "cms-admin.entries": { publish: "Ship it" } }`.
 	 */
 	readonly messages?: Readonly<Record<string, Readonly<Record<string, MessageValue>>>>;
 	/**
-	 * 예전 브라우저 복구본 DB 이름(IndexedDB). 관리자 화면이 이 이름으로 남은 복구본도 읽고 지우되 새로 만들지 않는다.
-	 * 지금 이름은 `cms_backup`이다. 예전 이름으로 쓰던 사이트만 적는다.
+	 * Name of the legacy browser recovery DB (IndexedDB). The admin UI still reads and deletes recovery copies left under this name but never creates new ones.
+	 * The current name is `cms_backup`. Only sites that used the old name need to set this.
 	 */
 	readonly legacyBackupNames?: readonly string[];
 }
 
 export interface SeedTemplate {
-	/** 고정 ID(UUID). 마이그레이션을 여러 번 돌려도 같은 템플릿이 하나만 생긴다. */
+	/** Fixed ID (UUID). Running the migration repeatedly still creates only one such template. */
 	readonly id: string;
 	readonly name: string;
 	readonly mdx: string;
@@ -100,8 +100,8 @@ export interface SeedTemplate {
 
 export interface SeedConfig {
 	/**
-	 * 새 저장소의 첫 마이그레이션 때 한 번만 넣는 본문 템플릿. 이미 넣은 저장소에는 나중에 더한 템플릿도 넣지 않고,
-	 * 지운 템플릿을 되살리지 않는다.
+	 * Body template inserted only once, at the first migration of a new store. Templates added later are not inserted into a store that already has them,
+	 * and deleted templates are not revived.
 	 */
 	readonly templates?: readonly SeedTemplate[];
 }
@@ -111,42 +111,42 @@ export interface CmsConfig<
 	Locale extends string = string,
 	Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[],
 > {
-	/** 컬렉션 이름 → 정의. 이름은 저장 값(`entries.collection`)이므로 운영 중에 바꾸지 않는다. */
+	/** Collection name -> definition. The name is a stored value (`entries.collection`), so do not change it in production. */
 	readonly collections: Collections;
-	/** 콘텐츠 언어. 선언 순서가 화면에 보이는 순서다. */
+	/** Content locales. The declaration order is the order shown in the UI. */
 	readonly locales: readonly LocaleConfig<Locale>[];
-	/** 기본 언어. 공개 주소에 언어 접두사를 붙이지 않는다. */
+	/** Default locale. Public URLs get no locale prefix for it. */
 	readonly defaultLocale: NoInfer<Locale>;
 	readonly site?: SiteConfig;
 	/**
-	 * 날짜·시각을 입력하고 보이는 시간대(IANA, 예: `Asia/Seoul`). 발행일 입력이 이 시간대의 벽시계다.
-	 * 없으면 `UTC`.
+	 * Time zone (IANA, e.g. `Asia/Seoul`) in which dates and times are entered and shown. The publish date input is wall-clock time in this zone.
+	 * `UTC` if unset.
 	 */
 	readonly timeZone?: string;
-	/** 새 저장소에 처음 넣을 데이터. */
+	/** Data to seed a new store with. */
 	readonly seed?: SeedConfig;
-	/** 관리자 화면 설정. */
+	/** Admin UI settings. */
 	readonly admin?: AdminConfig;
 	/**
-	 * 사이트가 더하는 본문 블록(`defineBlock`). 콜아웃·탭 같은 블록은 블록 확장(`@monti-cms/blocks`)을 `plugins`에
-	 * 넣어 더한다. 공개 화면은 사이트가 `component` 이름으로 그린다.
+	 * Body blocks the site adds (`defineBlock`). Blocks such as callouts and tabs are added by putting the block extension (`@monti-cms/blocks`) in `plugins`.
+	 * The public site renders them by the `component` name.
 	 */
 	readonly blocks?: readonly BlockDefinition[];
-	/** 플러그인(예: `aiPlugin()`). 이름은 겹치지 않아야 한다. */
+	/** Plugins (e.g. `aiPlugin()`). Names must not collide. */
 	readonly plugins?: Plugins;
-	/** 코드 블록 설정. 줄 효과(`lineEffects`)를 더하거나 본체 기본(강조·추가·삭제·경고·오류)을 바꾼다. */
+	/** Code block settings. Adds line effects (`lineEffects`) or changes the core defaults (highlight, add, delete, warning, error). */
 	readonly codeBlock?: CodeBlockConfig;
-	/** 올릴 수 있는 미디어 형식과 크기 한도. 없으면 지원 형식 전부, 이미지 10MB·4천만 픽셀, 첨부 파일 50MB. */
+	/** Uploadable media formats and size limits. If unset, all supported formats, images up to 10MB and 40 megapixels, attachments up to 50MB. */
 	readonly media?: MediaConfig;
 }
 
 const ROLE_NAME = /^[A-Za-z][A-Za-z0-9-]*$/;
 
 /**
- * 두 공개 주소 규칙(`/posts/:slug` 꼴)이 같은 주소를 만들 수 있는가. 같으면 본문 링크가 어느 컬렉션을 가리키는지 정할 수 없다.
- * slug는 `/` 없는 한 마디 안에 있으므로 마디 수가 같고 마디마다 맞을 수 있으면 겹친다:
- * 글자 마디끼리는 같아야 하고, slug 마디(`앞:slug뒤`)는 글자 마디가 그 앞뒤로 시작·끝나면(slug는 한 글자 이상),
- * slug 마디끼리는 앞부분 하나가 다른 하나로 시작하고 뒷부분 하나가 다른 하나로 끝나면 맞을 수 있다.
+ * Can two public URL rules (of the form `/posts/:slug`) produce the same URL? If so, a body link cannot tell which collection it points to.
+ * A slug lives within a single `/`-free segment, so the rules collide when the segment counts match and every segment can match:
+ * literal segments must be equal; a slug segment (`prefix:slugsuffix`) matches a literal segment if the literal starts and ends with that prefix and suffix (the slug needs at least one character);
+ * two slug segments can match if one prefix starts with the other and one suffix ends with the other.
  */
 export function pathsOverlap(a: string, b: string): boolean {
 	const segments = (path: string) => path.replace(/\/+$/, "").split("/");
@@ -173,8 +173,8 @@ const checkTab = (at: string, tab: string | undefined) => {
 };
 
 /**
- * 필드 역할(`role`)·탭(`tab`)·본문에서 채우기(`fillFromBody`)·주소 원본(`from`)이 맞는지 확인한다. 역할은 컬렉션마다 하나씩이고,
- * 본체가 아는 역할(`summary`)만 종류를 본다. 다른 역할의 종류는 그 역할을 쓰는 플러그인이 `validate`에서 본다.
+ * Checks that field roles (`role`), tabs (`tab`), fill-from-body (`fillFromBody`) and URL source (`from`) are consistent. A role is unique per collection,
+ * and only the roles the core knows (`summary`) get their type checked. The type of other roles is checked in `validate` by the plugin that uses the role.
  */
 function validateFieldMeanings(collection: string, schema: CollectionSchema): void {
 	const roles = new Map<string, string>();
@@ -225,10 +225,10 @@ function validateFieldMeanings(collection: string, schema: CollectionSchema): vo
 	}
 }
 
-/** 관리자 화면 기본 경로(`admin.path`가 없을 때). */
+/** Default admin UI path (when `admin.path` is unset). */
 export const DEFAULT_ADMIN_PATH = "/admin";
 
-/** 관리자 경로 모양: `/`로 시작하는 한 칸 이상의 경로(끝 `/` 없이), `/api` 아래는 안 된다. */
+/** Admin path shape: a path of one or more segments starting with `/` (no trailing `/`), and not under `/api`. */
 export const isAdminPath = (path: string): boolean =>
 	/^(\/[A-Za-z0-9._~-]+)+$/.test(path) && !/^\/api(\/|$)/.test(path);
 
@@ -242,7 +242,7 @@ const isHomeHref = (href: string): boolean => {
 	}
 };
 
-/** 설정이 서로 맞는지 확인한다. 틀리면 앱이 뜰 때 바로 알린다. */
+/** Checks that the config is consistent. Reports an error right away when the app starts if it is not. */
 function validate(config: CmsConfig<CollectionsConfig, string, readonly CmsPlugin[]>): void {
 	const names = Object.keys(config.collections);
 	if (names.length === 0) throw new Error("cms.config: `collections` is empty");
@@ -250,7 +250,7 @@ function validate(config: CmsConfig<CollectionsConfig, string, readonly CmsPlugi
 	const codes = config.locales.map((locale) => locale.code);
 	if (codes.length === 0) throw new Error("cms.config: `locales` is empty");
 	if (new Set(codes).size !== codes.length) throw new Error("cms.config: `locales` has duplicate codes");
-	// 언어 코드는 주소·DB 기본값(마이그레이션)에 그대로 들어간다. BCP 47 모양(`ko`, `en`, `pt-BR`, `zh-Hant`)만 받는다.
+	// Locale codes go straight into URLs and DB defaults (migrations). Only BCP 47 shapes (`ko`, `en`, `pt-BR`, `zh-Hant`) are accepted.
 	for (const code of codes) {
 		if (!LOCALE_CODE.test(code)) {
 			throw new Error(`cms.config: locale code "${code}" must look like "en", "pt-BR" or "zh-Hant"`);
@@ -315,11 +315,11 @@ function validate(config: CmsConfig<CollectionsConfig, string, readonly CmsPlugi
 
 	const paths = new Map<string, string>();
 	for (const [collection, schema] of Object.entries(config.collections)) {
-		// 라이브러리 약속: 제목 필드 이름은 `title`이다(이름표는 자유). 목록·검색·관계 고르기·본문 링크·편집 화면 제목 칸이 쓴다.
+		// Library contract: the title field is named `title` (its label is free). The list, search, relation picker, body links and the editor's title input use it.
 		if (schema.fields.title?.kind !== "text") {
 			throw new Error(`cms.config: ${collection} needs a "title" text field (fields.text)`);
 		}
-		// 주소는 콘텐츠마다 하나다(저장소의 주소 열이 하나). 둘째 주소 필드는 쓰이지 않으므로 설정 오류로 막는다.
+		// A content item has a single URL (the store has one URL column). A second URL field would go unused, so it is rejected as a config error.
 		const slugFields = Object.entries(schema.fields).filter(([, field]) => field.kind === "slug");
 		if (slugFields.length > 1) {
 			throw new Error(
@@ -387,13 +387,13 @@ function validate(config: CmsConfig<CollectionsConfig, string, readonly CmsPlugi
 	}
 }
 
-/** 사이트 설정을 정의한다. 컬렉션·언어 이름을 타입으로 보존하고, 서로 맞지 않는 설정은 바로 알린다. */
+/** Defines the site config. Preserves collection and locale names as types and reports inconsistent config right away. */
 export function defineConfig<
 	const Collections extends CollectionsConfig,
 	const Locale extends string,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
 >(config: CmsConfig<Collections, Locale, Plugins>): CmsConfig<Collections, Locale, Plugins> {
-	// `defineCollection` 없이 적은 정의와 예전 이름(`workflow`)도 받는다. 본체는 정리한 `kind`만 읽는다.
+	// Also accepts definitions written without `defineCollection` and the legacy name (`workflow`). The core only reads the normalized `kind`.
 	const collections = Object.fromEntries(
 		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema)]),
 	) as unknown as Collections;

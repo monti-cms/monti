@@ -5,8 +5,8 @@ export { type BareunIssueSegment, type BareunResponse, type BareunRevisedBlock, 
 export { BAREUN_PLUGIN_NAME, type BareunOptions, type ResolvedBareunOptions } from "./options";
 
 /**
- * 바른(Bareun) 맞춤법·문장 검사기. 사이트 설정의 `plugins`에 넣으면 편집기에 "맞춤법 검사" 버튼이 생기고,
- * 서버 경로(`/api/cms/v1/text-check/bareun`)가 API 키로 바른을 부른다. 키는 서버 환경 변수(기본 `BAREUN_API_KEY`)에 둔다.
+ * Bareun spell and sentence checker. Add it to the site config `plugins` and the editor gets a "Spell check" button,
+ * and the server route (`/api/cms/v1/text-check/bareun`) calls Bareun with the API key. The key lives in a server environment variable (default `BAREUN_API_KEY`).
  *
  * ```ts
  * plugins: [bareun()]
@@ -16,7 +16,7 @@ export const bareun = (options?: BareunOptions) =>
 	definePlugin({
 		name: BAREUN_PLUGIN_NAME,
 		options: resolveBareunOptions(options),
-		// 브라우저 묶음에서는 `./server`가 빈 진입점(`server.browser.ts`)으로 바뀐다(package.json `exports`).
+		// In the browser bundle, `./server` is swapped for an empty entry point (`server.browser.ts`) (package.json `exports`).
 		server: () => import("@monti-cms/bareun/server"),
 		admin: () => import("@monti-cms/bareun/admin"),
 	});

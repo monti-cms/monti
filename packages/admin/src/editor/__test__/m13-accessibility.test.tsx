@@ -28,7 +28,7 @@ vi.mock("@tiptap/react", async (importOriginal) => {
 
 afterEach(cleanup);
 
-describe("M13 editor accessibility", () => {
+describe("editor accessibility", () => {
 	it("names image and block controls and exposes alignment state", async () => {
 		const updateAttributes = vi.fn();
 		const deleteNode = vi.fn();
@@ -64,7 +64,7 @@ describe("M13 editor accessibility", () => {
 		expect(screen.getByRole("button", { name: "가운데 정렬" }).getAttribute("aria-pressed")).toBe("true");
 		fireEvent.click(screen.getByRole("button", { name: "왼쪽 정렬" }));
 		expect(updateAttributes).toHaveBeenCalledWith({ align: "left" });
-		// 삭제는 블록 손잡이 메뉴에만 있다(같은 일을 두 곳에 두지 않는다).
+		// Delete lives only in the block handle menu (the same action is not placed in two spots).
 		expect(screen.queryByRole("button", { name: "이미지 삭제" })).toBeNull();
 
 		const blockMenu = screen.getByRole("button", { name: "블록 조작" });
@@ -88,7 +88,7 @@ describe("M13 editor accessibility", () => {
 			</>,
 		);
 
-		// 설정 팝오버는 한 번에 하나만 열린다. 차례로 열어 각 입력의 ID를 모은다.
+		// Only one settings popover is open at a time. Open them in turn and collect each input's ID.
 		const widthIds: string[] = [];
 		const altIds: string[] = [];
 		for (const button of screen.getAllByRole("button", { name: "설정" })) {
@@ -121,7 +121,7 @@ describe("M13 editor accessibility", () => {
 		moveFolder: vi.fn(),
 	});
 
-	it("keeps folder tree controls named and keyboard-operable (v2 A2 file-explorer keys)", async () => {
+	it("keeps folder tree controls named and keyboard-operable", async () => {
 		const onSelectFolder = vi.fn();
 		const actions = fakeActions();
 		const folders: Folder[] = [
@@ -139,7 +139,7 @@ describe("M13 editor accessibility", () => {
 		expect(screen.getByRole("button", { name: "문서 하위 폴더 접기" }).getAttribute("aria-expanded")).toBe("true");
 		fireEvent.click(await screen.findByRole("button", { name: "하위" }));
 		expect(onSelectFolder).toHaveBeenCalledWith("folder-2");
-		// 미분류 대신 컬렉션 이름의 최상위가 트리의 뿌리다.
+		// The top level named after the collection, not an uncategorized bucket, is the tree root.
 		fireEvent.click(screen.getByRole("button", { name: "메모" }));
 		expect(onSelectFolder).toHaveBeenCalledWith("all");
 
@@ -149,7 +149,7 @@ describe("M13 editor accessibility", () => {
 		fireEvent.keyDown(folderButton, { key: "Delete" });
 		expect(actions.requestDelete).toHaveBeenCalledWith(folders[0]);
 
-		// 오른쪽 클릭 메뉴와 같은 항목을 항상 보이는 ⋯ 버튼으로도 연다.
+		// The same items as the right-click menu also open from an always-visible ⋯ button.
 		fireEvent.click(screen.getByRole("button", { name: "'문서' 폴더 작업" }));
 		expect(await screen.findByRole("menuitem", { name: "하위 폴더 추가" })).toBeTruthy();
 		expect(screen.getByRole("menuitem", { name: /이름 변경/ })).toBeTruthy();

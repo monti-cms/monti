@@ -23,33 +23,33 @@ import { lazyTranslator } from "./i18n";
 const t = lazyTranslator(coreMessages);
 
 /**
- * AI 기능 정의(v2 D, M2). 기능 하나는 이름(key)으로 사이트 설정의 `ai.actions`에 적는다.
+ * AI action definition. An action is registered under its name (key) in the site config's `ai.actions`.
  *
- * - **입력**: 부르는 쪽이 주는 재료(제목·본문·이미지·언어…). 재료는 지시문에 끼우지 않고 따로 보낸다
- *   (글 안의 지시 같은 문장을 모델이 따르지 않게). 지시문의 `{{이름}}`에는 언어 입력만 넣을 수 있다.
- * - **결과**: 후보 여러 개·글 하나·본문 조각(MDX)·메모 중 하나와 검사 목록.
- * - **붙을 곳(`attach`)**: 관리자 화면의 정해진 자리(필드 옆·이미지·미디어·코드 블록·번역). 자리가 주는 재료로
- *   입력을 채울 수 있을 때만 붙일 수 있다(타입과 `defineConfig`가 확인한다).
+ * - **Inputs**: the material the caller supplies (title, body, image, language...). Inputs are sent separately, not spliced into
+ *   the prompt (so the model does not follow instruction-like sentences inside the text). Only language inputs can go into `{{name}}` in the prompt.
+ * - **Result**: one of several candidates, a single text, an MDX fragment, or a note, plus a list of checks.
+ * - **Attach point (`attach`)**: a fixed place in the admin UI (beside a field, image, media, code block, translation). An action can attach
+ *   only when the material that place provides can fill its inputs (checked by the types and `defineConfig`).
  *
- * 관리자 AI 화면에서는 켜기·요청 받기·연결·모델·보낼 입력·지시문·기준값·검사 값만 고치고, 고친 값만 DB에 둔다.
- * 정의는 서버와 브라우저가 함께 읽는다. 코드 검사(`defineValidator`)의 함수는 서버에서만 부른다.
+ * The admin AI screen only edits enabled state, extra requests, connection, model, inputs to send, prompt, threshold and check values; only edited values are stored in the DB.
+ * The definition is read by both server and browser. The function of a code check (`defineValidator`) is only called on the server.
  */
 
 // ---------------------------------------------------------------------------
-// 입력
+// Inputs
 // ---------------------------------------------------------------------------
 
 /**
- * 입력 종류. `text`·`mdx`·`code`는 글, `value`는 필드의 현재 값(글 또는 목록), `image`는 서버가 읽을 이미지
- * (미디어 ID 또는 이 사이트 경로), `locale`은 언어 코드다(지시문에 언어 이름으로 들어간다).
+ * Input kinds. `text`, `mdx` and `code` are text, `value` is a field's current value (text or list), `image` is an image the server reads
+ * (a media ID or a path on this site), and `locale` is a language code (it goes into the prompt as a language name).
  */
 export type AiInputKind = "text" | "mdx" | "code" | "value" | "image" | "locale";
 
 export interface AiInputSpec<K extends AiInputKind = AiInputKind> {
 	readonly kind: K;
-	/** 관리자 화면의 `보낼 내용`과 지시문에 붙는 언어 줄에 쓰는 이름. */
+	/** Name used in the admin UI's `Send` list and in the language line attached to the prompt. */
 	readonly label: string;
-	/** 없으면 실행하지 않는다. 표시가 없으면 비어 있어도 된다(비면 보내지 않는다). */
+	/** If missing, the action does not run. Without this flag the input may be empty (when empty, it is not sent). */
 	readonly required?: boolean;
 }
 
@@ -71,14 +71,14 @@ export const aiInput = {
 	locale: inputOf("locale"),
 };
 
-/** 입력 값의 타입. 이미지는 서버가 읽을 위치만 준다. */
+/** Input value type. For images, only the location for the server to read is given. */
 export type AiInputValue<S> = S extends { readonly kind: "image" }
 	? { readonly mediaId?: string; readonly src?: string }
 	: S extends { readonly kind: "value" }
 		? string | readonly string[]
 		: string;
 
-/** 입력 하나의 최대 길이(글자). */
+/** Maximum length of one input (characters). */
 const INPUT_LIMITS: Record<Exclude<AiInputKind, "image" | "value" | "locale">, number> = {
 	text: 20_000,
 	mdx: 200_000,
@@ -86,12 +86,12 @@ const INPUT_LIMITS: Record<Exclude<AiInputKind, "image" | "value" | "locale">, n
 };
 
 // ---------------------------------------------------------------------------
-// 붙을 곳
+// Attach points
 // ---------------------------------------------------------------------------
 
 /**
- * 자리마다 주는 재료. 기능의 필수 입력이 모두 여기에 있어야 그 자리에 붙일 수 있다.
- * 필수가 아닌 입력은 자리에 없으면 비운 채로 보낸다(예: 미디어 화면의 대체 텍스트에는 앞뒤 문단이 없다).
+ * The material each slot provides. An action can attach to a slot only if all its required inputs are here.
+ * Non-required inputs are sent empty when the slot lacks them (e.g. the media screen's alt text has no surrounding paragraphs).
  */
 export const SLOT_INPUTS = {
 	field: { title: "text", summary: "text", body: "mdx", current: "value" },
@@ -107,35 +107,35 @@ export const SLOT_INPUTS = {
 type SlotInputNames = { [S in AiSlot]: keyof (typeof SLOT_INPUTS)[S] };
 
 export type AiAttach =
-	/** 필드 옆. `collections`가 없으면 그 필드가 있는 모든 컬렉션. */
+	/** Beside a field. Without `collections`, every collection that has the field. */
 	| { readonly slot: "field"; readonly field: string; readonly collections?: readonly string[] }
 	| { readonly slot: "image"; readonly target: "alt" | "caption" }
 	| { readonly slot: "media"; readonly target: "filename" | "defaultAlt" | "defaultCaption" }
 	| { readonly slot: "codeRules"; readonly target: "fold" }
-	/** 번역본 편집기의 블록 번역(블록 메뉴·`모두 번역`). */
+	/** Block translation in the translation editor (block menu, `Translate all`). */
 	| { readonly slot: "translation" }
-	/** 본문 선택 영역 메뉴. 결과(MDX)는 바뀐 곳을 보여 준 뒤 고른 글을 바꾼다. */
+	/** Menu on the body selection. The result (MDX) shows what changed, then replaces the selected text. */
 	| { readonly slot: "selection" }
-	/** 슬래시 메뉴·빈 문서. 결과(MDX)는 커서 자리에 넣는다. */
+	/** Slash menu / empty document. The result (MDX) is inserted at the cursor. */
 	| { readonly slot: "insert" }
-	/** 본문 블록 하나의 손잡이 옆(`block`은 블록 이름, 예: `mermaid`). 결과(MDX)는 바뀐 곳을 보여 준 뒤 그 블록을 바꾼다. */
+	/** Beside the handle of one body block (`block` is the block name, e.g. `mermaid`). The result (MDX) shows what changed, then replaces that block. */
 	| { readonly slot: "block"; readonly block: string };
 
 type RequiredInputNames<I> = { [K in keyof I]: I[K] extends { readonly required: true } ? K : never }[keyof I];
-/** 필수 입력을 모두 채울 수 있는 자리. */
+/** Slots where all required inputs can be filled. */
 type AttachableSlot<I> = {
 	[S in AiSlot]: [Exclude<RequiredInputNames<I>, SlotInputNames[S]>] extends [never] ? S : never;
 }[AiSlot];
 
 // ---------------------------------------------------------------------------
-// 선택지
+// Choices
 // ---------------------------------------------------------------------------
 
 /**
- * 판단 방식의 선택지와 `있는 값만` 검사·후보 이름에 쓰는 목록. 서버가 직접 읽는다.
- * - `collection`: 그 컬렉션의 공개된 항목(값은 항목 ID, 이름은 제목)
- * - `select`: 선택 필드의 선택지
- * - `list`: 직접 적은 목록
+ * The choices for the decide mode, also used for the `exists` check and candidate names. Read directly by the server.
+ * - `collection`: the published entries of that collection (value is the entry ID, name is the title)
+ * - `select`: the options of a select field
+ * - `list`: a hand-written list
  */
 export type AiChoices =
 	| { readonly from: "collection"; readonly collection: string }
@@ -143,15 +143,15 @@ export type AiChoices =
 	| { readonly from: "list"; readonly items: readonly string[] };
 
 // ---------------------------------------------------------------------------
-// 기능 정의
+// Action definition
 // ---------------------------------------------------------------------------
 
 /**
- * 코드 검사가 서버에서 읽는 본체 콘텐츠 조회. 실행 API가 본체의 공개 조회(`@monti-cms/core/plugin/server`의
- * `createContentLookup`)로 채운다. 플러그인은 본체 표를 직접 읽지 않는다.
+ * Lookup of core content that code checks read on the server. The run API fills it from the core's public lookup (`createContentLookup` in
+ * `@monti-cms/core/plugin/server`). Plugins do not read core tables directly.
  */
 export interface AiContentLookup {
-	/** 주소(slug) 중 같은 컬렉션·언어에서 이미 쓰는 것. `excludeEntryId` 항목이 쓰는 주소는 뺀다. */
+	/** Slugs already used in the same collection and locale. Slugs used by the `excludeEntryId` entry are excluded. */
 	slugsInUse(params: {
 		readonly collection: string;
 		readonly locale: string;
@@ -160,149 +160,149 @@ export interface AiContentLookup {
 	}): Promise<ReadonlySet<string>>;
 }
 
-/** 코드 검사가 받는 상황. */
+/** The situation a code check receives. */
 export interface AiValidatorContext {
-	/** 실행에 쓴 입력. */
+	/** The inputs used for the run. */
 	readonly input: Readonly<Record<string, unknown>>;
 	readonly collection?: string;
-	/** 콘텐츠 언어. 요청에 없으면 사이트 설정의 기본 언어다. */
+	/** Content locale. If not in the request, the site config's default locale. */
 	readonly locale: string;
 	readonly entryId?: string;
-	/** 선택지가 있는 기능이면 값 → 보이는 이름. */
+	/** For actions with choices: value -> display name. */
 	readonly choices?: ReadonlyMap<string, string>;
-	/** 본체 콘텐츠 조회(서버). */
+	/** Core content lookup (server). */
 	readonly content: AiContentLookup;
 }
 
 /**
- * 코드 검사의 결과. `true`·`null`·`undefined`면 통과, `false`면 버리고, 글자면 그 이유로 버린다.
- * 통과시키면서 후보 옆에 설명을 붙이려면 `{ detail }`.
+ * Result of a code check. `true`, `null` or `undefined` passes, `false` discards, and a string discards with that reason.
+ * To pass while attaching a note beside the candidate, return `{ detail }`.
  */
 export type AiValidatorResult = boolean | string | null | undefined | { readonly detail: string };
 
 /**
- * 코드 검사(`defineValidator`). 정해진 검사(형식·길이·선택지)로 안 되는 것을 함수로 본다. 기능의 `checks`에 넣으면
- * 관리자 화면에 이름이 보이고 켜고 끌 수 있다(값은 고칠 수 없다). 서버에서 값 하나(후보 하나, 또는 글·MDX 결과 전체)마다 부른다.
+ * Code check (`defineValidator`). Checks what the fixed checks (format, length, choices) cannot, using a function. Put in an action's `checks`, it
+ * shows by name in the admin UI and can be toggled (its value cannot be edited). Called on the server once per value (one candidate, or the whole text/MDX result).
  */
 export interface AiValidator {
 	readonly kind: "code";
-	/** 기능 안에서 겹치지 않는 이름(소문자·숫자·하이픈). 고친 값(켜기)이 이 이름으로 남는다. */
+	/** Name unique within the action (lowercase, digits, hyphen). The edited value (enabled state) is stored under this name. */
 	readonly name: string;
-	/** 관리자 화면에 보이는 이름. */
+	/** Name shown in the admin UI. */
 	readonly label: string;
-	/** 처음에 켜 둘까. 없으면 켠다. */
+	/** Enabled initially? Defaults to enabled. */
 	readonly enabled?: boolean;
 	readonly run: (value: string, context: AiValidatorContext) => AiValidatorResult | Promise<AiValidatorResult>;
 }
 
-/** 코드 검사를 만든다. 기능 정의의 `checks`에 정해진 검사와 함께 넣는다. */
-// `label`을 읽을 때마다 지금 화면 언어로 고르는 접근자(`get label()`)를 값으로 굳히지 않으려고 속성 설명자째 옮긴다.
+/** Creates a code check. Put it in an action definition's `checks` together with the fixed checks. */
+// Copies the property descriptors so the `label` accessor (`get label()`, which picks the current UI language on every read) is not frozen into a value.
 export const defineValidator = (check: Omit<AiValidator, "kind">): AiValidator =>
 	Object.defineProperties({ kind: "code" }, Object.getOwnPropertyDescriptors(check)) as AiValidator;
 
 const isValidator = (check: AiCheckInput | AiValidator): check is AiValidator => "run" in check;
 
 export interface AiActionDefinition<I extends AiInputs = AiInputs> {
-	/** 관리자 화면과 버튼에 보이는 이름. */
+	/** Name shown in the admin UI and on buttons. */
 	readonly label: string;
 	readonly input: I;
-	/** 처음에 보낼 입력. 없으면 전부. 관리자 화면에서 켜고 끈다. */
+	/** Inputs sent initially. Defaults to all. Toggled in the admin UI. */
 	readonly send?: readonly (keyof I & string)[];
-	/** 지시문. 판단 방식에서는 판단 기준이다. `{{언어 입력 이름}}`은 언어 이름으로 바뀐다. */
+	/** Prompt. In decide mode it is the decision criterion. `{{language input name}}` is replaced with the language name. */
 	readonly prompt: string;
 	readonly result: AiResult;
-	/** 적용 방식. 없으면 메모는 `none`, 나머지는 `replace`. */
+	/** How the result is applied. Defaults to `none` for notes and `replace` otherwise. */
 	readonly apply?: AiApply;
-	/** 없으면 `generate`. `decide`는 `choices`가 있어야 한다. */
+	/** Defaults to `generate`. `decide` requires `choices`. */
 	readonly engine?: AiEngine;
 	readonly choices?: AiChoices;
-	/** 판단 방식에서 하나만 고르나. 없으면 `many`. */
+	/** In decide mode, pick only one? Defaults to `many`. */
 	readonly pick?: AiPick;
-	/** 판단 방식의 기준 확률(0~1). 없으면 0.6. */
+	/** Threshold probability for decide mode (0-1). Defaults to 0.6. */
 	readonly threshold?: number;
-	/** 판단 방식 후보 최대 개수. 없으면 5. */
+	/** Maximum number of candidates in decide mode. Defaults to 5. */
 	readonly maxCount?: number;
 	/**
-	 * 결과 검사. 정해진 검사를 먼저, 코드 검사(`defineValidator`)를 그다음에 적힌 순서대로 적용한다.
-	 * 관리자 화면에서는 켜기·값을 고치고, 형식·길이·선택지 안 검사를 더한다.
+	 * Result checks. Fixed checks are applied first, then code checks (`defineValidator`), in the listed order.
+	 * The admin UI edits enabled state and values, and can add format, length and in-choices checks.
 	 */
 	readonly checks?: readonly (Exclude<AiCheckInput, { kind: "code" }> | AiValidator)[];
-	/** 실행할 때 추가 요청을 받는다. 없으면 받지 않는다. */
+	/** Accepts an extra request at run time. If missing, none is accepted. */
 	readonly askInstruction?: boolean;
-	/** 누르면 결과를 보여 주지 않고 바로 넣는다(후보는 맨 앞 후보). 없으면 결과를 보이고 눌러서 넣는다. */
+	/** On click, inserts the result directly without showing it (the candidate is the first one). If missing, the result is shown and applied by clicking. */
 	readonly instant?: boolean;
-	/** 결과를 흘려받는다(조금씩 보인다). 생성 방식의 글·MDX 결과만. */
+	/** Streams the result (shown incrementally). Only for text/MDX results in generate mode. */
 	readonly stream?: boolean;
-	/** 처음에 켜 둘까. 없으면 켠다. */
+	/** Enabled initially? Defaults to enabled. */
 	readonly enabled?: boolean;
 	readonly attach?: readonly AiAttach[];
 	/**
-	 * 개발 전용 가짜 연결(`CMS_AI_FAKE=1`)이 이 기능의 답으로 쓸 글. 받은 입력(이름 → 글)으로 만든다. 없으면 가짜 연결이
-	 * 결과 모양과 입력 종류로 답을 만든다. 코드 검사가 정해진 모양(예: 다이어그램 문법)을 바라는 기능만 둔다.
-	 * 후보 결과면 줄마다 후보 하나다.
+	 * Text the dev-only fake connection (`CMS_AI_FAKE=1`) uses as this action's answer, built from the received inputs (name -> text). If missing, the fake connection
+	 * builds an answer from the result shape and input kinds. Set only for actions whose code check expects a specific shape (e.g. diagram syntax).
+	 * For candidate results, one candidate per line.
 	 */
 	readonly fake?: (input: Readonly<Record<string, string>>) => string;
 }
 
-/** 공통 문구 하나(예: 문체 가이드). 지시문에 `{{shared.이름}}`으로 넣고, 관리자 AI 화면에서 고친다. */
+/** One shared snippet (e.g. a style guide). Inserted into prompts as `{{shared.name}}` and edited in the admin AI screen. */
 export interface AiSharedText {
 	readonly label: string;
-	/** 기본 문구. 관리자 화면에서 고친 값이 있으면 그것을 쓴다. */
+	/** Default text. If an edited value exists in the admin UI, that is used. */
 	readonly text: string;
 }
 
-/** 기능을 만드는 함수가 보는 사이트 설정. */
+/** Site config seen by the function that creates actions. */
 export interface AiSiteView {
 	readonly collections: CollectionsConfig;
-	/** 사이트가 쓰는 본문 블록 정의(본체 + 확장 + 사이트). */
+	/** Body block definitions used by the site (core + extensions + site). */
 	readonly blocks: readonly BlockDefinition[];
 	readonly locales: readonly { readonly code: string }[];
-	/** AI 설정의 공통 문구 이름(`aiPlugin({ shared })`). */
+	/** Names of the AI config's shared snippets (`aiPlugin({ shared })`). */
 	readonly sharedKeys: readonly string[];
 }
 
 /**
- * 사이트 설정을 보고 기능 하나를 만드는 함수. 기본 기능(`aiPresets`)과 확장이 더하는 기능이 이 모양이다(필드 종류·역할·관계
- * 대상으로 붙을 필드를 찾는다). 붙을 곳이 없으면 `undefined`이고 그 기능은 켜지지 않는다.
+ * A function that looks at the site config and creates one action. Default actions (`aiPresets`) and actions added by extensions have this shape (they find the field to attach to by
+ * field kind, role and relation target). If there is nothing to attach to it returns `undefined` and the action is not enabled.
  */
 export type AiActionFactory<D extends AiActionDefinition = AiActionDefinition> = (site: AiSiteView) => D | undefined;
 
-/** 기능 정의 또는 기능을 만드는 함수. */
+/** An action definition or a function that creates one. */
 export type AiActionSource = AiActionDefinition | AiActionFactory;
 
 /**
- * 다른 플러그인이 AI 기능을 더하는 모양. 플러그인 정의의 `contributes: { ai: { actions } }`에 둔다(AI 플러그인이 없으면
- * 쓰이지 않는다). 예: 블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천.
+ * The shape in which other plugins add AI actions. Placed in a plugin definition's `contributes: { ai: { actions } }` (unused if there is no AI plugin).
+ * Examples: the block extension's diagram generation, the SEO extension's search title suggestion.
  */
 export interface AiContribution {
 	readonly actions?: Readonly<Record<string, AiActionSource>>;
 }
 
 export interface AiConfig {
-	/** 사이트 소개. 모든 기능의 맨 앞 지시("너는 {이것} CMS의 편집 보조 도구다")에 들어간다. 없으면 "웹사이트". */
+	/** Site description. Goes into the leading instruction of every action ("You are the editing assistant of the CMS for this site: {this}"). Defaults to "website". */
 	readonly siteDescription?: string;
 	/**
-	 * 여러 기능이 함께 쓰는 공통 문구. 지시문에 `{{shared.이름}}`으로 넣는다. `styleGuide`가 있으면 기본 기능인 문체
-	 * 다듬기·초안 쓰기 지시문에 들어간다.
+	 * Shared snippets used by several actions. Insert into a prompt as `{{shared.name}}`. If `styleGuide` exists, it goes into the prompts of the
+	 * default style polish and draft actions.
 	 */
 	readonly shared?: Readonly<Record<string, AiSharedText>>;
 	/**
-	 * 바꾸거나 더할 기능. 기본 기능(`aiPresets`, 사이트에 붙을 곳이 있는 것)과 다른 플러그인이 더한 기능은 적지 않아도 켜진다.
-	 * 같은 이름에 정의(또는 `aiPresets.이름(옵션)`)를 주면 그것으로 바꾸고, `false`를 주면 뺀다. 새 이름이면 더한다.
+	 * Actions to replace or add. Default actions (`aiPresets`, those with an attach point on the site) and actions added by other plugins are enabled without being listed.
+	 * Giving a definition (or `aiPresets.name(options)`) under the same name replaces it, `false` removes it, and a new name adds it.
 	 */
 	readonly actions?: Readonly<Record<string, AiActionSource | false>>;
 }
 
-/** 설정을 풀어 낸 기능 목록(이름 → 정의). 실행기·화면·검사가 읽는다. */
+/** The resolved list of actions (name -> definition). Read by the runner, the UI and the checks. */
 export interface ResolvedAiConfig {
 	readonly shared?: Readonly<Record<string, AiSharedText>>;
 	readonly actions: Readonly<Record<string, AiActionDefinition>>;
 }
 
-/** 지시문의 `{{이름}}`. */
+/** `{{name}}` in the prompt. */
 type Placeholders<S extends string> = S extends `${string}{{${infer P}}}${infer Rest}` ? P | Placeholders<Rest> : never;
 type LocaleInputNames<I> = { [K in keyof I]: I[K] extends { readonly kind: "locale" } ? K : never }[keyof I];
-/** 지시문에 언어 입력·공통 문구(`shared.이름`)가 아닌 `{{이름}}`이 있으면 타입 오류를 낸다. 공통 문구 이름은 플러그인 설정이 확인한다. */
+/** Raises a type error if the prompt has a `{{name}}` that is neither a locale input nor a shared text (`shared.name`). Shared text names are checked by the plugin config. */
 type PromptCheck<P extends string, I> = string extends P
 	? unknown
 	: [Exclude<Placeholders<P>, LocaleInputNames<I> | `shared.${string}`>] extends [never]
@@ -315,7 +315,7 @@ type PromptCheck<P extends string, I> = string extends P
 			};
 
 /**
- * 기능을 정의한다. 지시문의 `{{이름}}`과 붙을 곳(자리가 입력을 모두 채울 수 있는지)을 타입으로 확인한다.
+ * Defines an action. Types check the prompt's `{{name}}` and the attach point (whether the slot can fill all inputs).
  */
 export function aiAction<
 	const I extends AiInputs,
@@ -327,7 +327,7 @@ export function aiAction<
 	return definition;
 }
 
-/** 기능의 결과 타입. */
+/** The result type of an action. */
 export type AiActionResult<D> = D extends { readonly result: "candidates" }
 	? { kind: "candidates"; items: AiCandidate[] }
 	: D extends { readonly result: "text" }
@@ -340,7 +340,7 @@ export type AiActionResult<D> = D extends { readonly result: "candidates" }
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
-/** 기능을 부를 때 줄 입력의 타입. `required` 입력만 꼭 줘야 한다. */
+/** The type of inputs passed when calling an action. Only `required` inputs must be given. */
 export type AiActionInput<D> = D extends { readonly input: infer I }
 	? Simplify<
 			{
@@ -352,18 +352,18 @@ export type AiActionInput<D> = D extends { readonly input: infer I }
 	: never;
 
 // ---------------------------------------------------------------------------
-// 고친 값과 실행할 정의
+// Edited values and the definition to run
 // ---------------------------------------------------------------------------
 
-/** 관리자 화면에서 고칠 수 있는 값. DB에는 정의와 다른 것만 둔다. */
+/** Values editable in the admin UI. Only values that differ from the definition are stored in the DB. */
 export const aiActionOverrideSchema = z
 	.object({
 		enabled: z.boolean(),
 		askInstruction: z.boolean(),
 		instant: z.boolean(),
-		/** 쓸 연결의 id. `null`이면 방식에 맞는 첫 연결. */
+		/** Id of the connection to use. If `null`, the first connection matching the mode. */
 		providerId: z.string().max(60).nullable(),
-		/** 쓸 모델 이름. 빈 글자면 연결의 기본 모델. */
+		/** Model name to use. If empty, the connection's default model. */
 		modelName: z.string().trim().max(200),
 		prompt: z.string().trim().min(1).max(MAX_PROMPT_LENGTH),
 		send: z.array(z.string().max(40)).max(20),
@@ -374,7 +374,7 @@ export const aiActionOverrideSchema = z
 	.partial();
 export type AiActionOverride = z.output<typeof aiActionOverrideSchema>;
 
-/** 정의에 고친 값을 얹은, 실행할 기능. */
+/** The action to run: the definition with edited values applied. */
 export interface ResolvedAiAction {
 	readonly key: string;
 	readonly label: string;
@@ -389,9 +389,9 @@ export interface ResolvedAiAction {
 	readonly threshold: number;
 	readonly maxCount: number;
 	readonly checks: readonly AiCheck[];
-	/** 기능 정의가 정한 검사(`checkKey`). 관리자 화면은 이것을 끌 수만 있고, 나머지(사용자가 더한 검사)는 뺄 수 있다. */
+	/** Checks set by the action definition (`checkKey`). The admin UI can only turn these off; the rest (checks the user added) can be removed. */
 	readonly definedChecks: readonly string[];
-	/** 코드 검사 이름 → 검사. `checks`의 `{ kind: "code" }` 항목이 가리킨다. */
+	/** Code check name -> check. Pointed to by the `{ kind: "code" }` entries of `checks`. */
 	readonly validators: Readonly<Record<string, AiValidator>>;
 	readonly askInstruction: boolean;
 	readonly instant: boolean;
@@ -400,11 +400,11 @@ export interface ResolvedAiAction {
 	readonly providerId: string | null;
 	readonly modelName: string;
 	readonly attach: readonly AiAttach[];
-	/** 가짜 연결이 쓸 답(`AiActionDefinition.fake`). */
+	/** Answer for the fake connection to use (`AiActionDefinition.fake`). */
 	readonly fake?: (input: Readonly<Record<string, string>>) => string;
 }
 
-/** 고칠 수 있는 값 이름. */
+/** Names of editable values. */
 export const EDITABLE_KEYS = [
 	"enabled",
 	"askInstruction",
@@ -428,9 +428,9 @@ const defaultChecks = (definition: AiActionDefinition): AiCheck[] =>
 	);
 
 /**
- * 정의에 고친 값을 얹는다. 검사는 정의에 있는 종류를 정의의 순서대로 두고 사용자가 고친 켜기·값을 얹은 뒤, 사용자가
- * 더한 검사(형식·길이·선택지 안, 종류마다 하나)를 뒤에 붙인다.
- * 보낼 입력은 정의에 있는 이름만 남기고, 필수 입력은 언제나 보낸다.
+ * Applies edited values onto the definition. Checks keep the definition's kinds in the definition's order with the user's edited enabled state and values applied, then
+ * the user-added checks (format, length, in-choices; one per kind) are appended.
+ * Inputs to send keep only names present in the definition, and required inputs are always sent.
  */
 export function resolveAction(
 	key: string,
@@ -480,7 +480,7 @@ export function resolveAction(
 	};
 }
 
-/** 고친 값 중 정의(기본값)와 다른 것만 남긴다. DB에 저장할 모양이다. */
+/** Keeps only the edited values that differ from the definition (defaults). This is the shape stored in the DB. */
 export function overrideFrom(definition: AiActionDefinition, edited: Partial<AiActionEditable>): AiActionOverride {
 	const base = resolveAction("", definition);
 	const override: Record<string, unknown> = {};
@@ -493,14 +493,14 @@ export function overrideFrom(definition: AiActionDefinition, edited: Partial<AiA
 }
 
 // ---------------------------------------------------------------------------
-// 지시문
+// Prompt
 // ---------------------------------------------------------------------------
 
 const PLACEHOLDER = /\{\{\s*((?:shared\.)?[A-Za-z][A-Za-z0-9_]*)\s*\}\}/g;
 const SHARED_PREFIX = "shared.";
 
 /**
- * 지시문의 `{{이름}}` 중 언어 입력도, 있는 공통 문구(`shared.이름`)도 아닌 것. 정의 확인과 저장 전 확인에 쓴다.
+ * Of the prompt's `{{name}}`, those that are neither a locale input nor an existing shared text (`shared.name`). Used for definition checks and pre-save checks.
  */
 export function unknownPlaceholders(prompt: string, input: AiInputs, sharedKeys: readonly string[] = []): string[] {
 	const names = [...prompt.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
@@ -516,8 +516,8 @@ export function unknownPlaceholders(prompt: string, input: AiInputs, sharedKeys:
 }
 
 /**
- * 실행할 지시문. `{{언어 입력}}`을 언어 이름으로, `{{shared.이름}}`을 공통 문구로 바꾸고, 지시문에 쓰지 않은 언어 입력은
- * `이름: 언어` 줄로 붙인다. 마지막에 실행할 때 적은 추가 요청을 붙인다(`요청 받기`가 켜진 기능만).
+ * The prompt to run. Replaces `{{locale input}}` with the language name and `{{shared.name}}` with the shared text, and appends locale inputs not used in the prompt
+ * as `name: language` lines. Finally appends the extra request given at run time (only for actions with `askInstruction` on).
  */
 export function renderPrompt(
 	action: Pick<ResolvedAiAction, "prompt" | "input" | "askInstruction">,
@@ -549,7 +549,7 @@ export function renderPrompt(
 }
 
 // ---------------------------------------------------------------------------
-// 요청 검사
+// Request validation
 // ---------------------------------------------------------------------------
 
 const imageValueSchema = z
@@ -569,7 +569,7 @@ function inputValueSchema(spec: AiInputSpec): z.ZodType {
 	}
 }
 
-/** 기능 입력의 검사. 정의에 없는 이름은 버린다. */
+/** Validation of action inputs. Names not in the definition are dropped. */
 export function inputSchemaFor(input: AiInputs) {
 	return z.object(
 		Object.fromEntries(
@@ -581,34 +581,34 @@ export function inputSchemaFor(input: AiInputs) {
 	);
 }
 
-/** 실행 요청의 공통 정보(입력 밖). */
+/** Common info of a run request (outside the inputs). */
 export const aiRunEnvSchema = z.object({
 	collection: z.string().max(40).optional(),
 	locale: z.string().max(10).optional(),
 	entryId: z.uuid().optional(),
-	/** `code` 입력의 언어(코드 블록). */
+	/** Language of a `code` input (code block). */
 	language: z.string().max(40).optional(),
 });
 export type AiRunEnv = z.output<typeof aiRunEnvSchema>;
 
-/** 한 요청에 묶어 보내는 입력 수(번역의 `모두 번역` 등). */
+/** Number of inputs sent together in one request (e.g. the translation's `Translate all`). */
 export const MAX_BATCH_INPUTS = 8;
 
 export const aiRunBodySchema = z
 	.object({
 		action: z.string().min(1).max(60),
-		/** 입력 하나. */
+		/** One input. */
 		input: z.record(z.string(), z.unknown()).optional(),
-		/** 같은 기능을 여러 입력에 돌린다. 결과는 입력 순서대로 하나씩(실패도 하나씩) 돌려준다. */
+		/** Runs the same action over several inputs. Results come back one per input in input order (failures too). */
 		inputs: z.array(z.record(z.string(), z.unknown())).min(1).max(MAX_BATCH_INPUTS).optional(),
 		env: aiRunEnvSchema.default({}),
-		/** 실행할 때 적은 추가 요청. 기능이 `askInstruction`일 때만 지시문에 붙는다. */
+		/** Extra request given at run time. Appended to the prompt only if the action has `askInstruction`. */
 		request: z.string().max(MAX_REQUEST_LENGTH).optional(),
-		/** 저장하지 않은 고친 값으로 시험한다(AI 화면의 `시험`). */
+		/** Tests with unsaved edited values (the AI screen's `Test`). */
 		draft: z.unknown().optional(),
-		/** 화면 기능의 저장하지 않은 기본 정보(새 기능을 저장 전에 시험할 때). `draft`와 함께 보낸다. */
+		/** Unsaved base info of a custom action (when testing a new action before saving). Sent together with `draft`. */
 		draftBase: z.unknown().optional(),
-		/** 결과를 흘려받는다(`application/x-ndjson`). 흘려받기 기능의 입력 하나만. */
+		/** Streams the result (`application/x-ndjson`). Only for a single input of a streamable action. */
 		stream: z.boolean().optional(),
 	})
 	.refine((body) => (body.input === undefined) !== (body.inputs === undefined), {
@@ -617,10 +617,10 @@ export const aiRunBodySchema = z
 export type AiRunBody = z.output<typeof aiRunBodySchema>;
 
 // ---------------------------------------------------------------------------
-// 설정 확인
+// Config validation
 // ---------------------------------------------------------------------------
 
-/** 설정의 컬렉션 정의 중 확인에 필요한 부분. */
+/** The parts of the config's collection definitions needed for validation. */
 interface CollectionsView {
 	readonly [name: string]: {
 		readonly fields: Readonly<
@@ -631,7 +631,7 @@ interface CollectionsView {
 
 const NAME = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
 
-/** 필드 이름으로 그 컬렉션의 필드 정의를 찾는다(조건부 필드에 딸린 필드도). */
+/** Finds a field definition of that collection by field name (including fields nested in conditional fields). */
 function findField(
 	collections: CollectionsView,
 	collection: string,
@@ -647,7 +647,7 @@ function findField(
 	return undefined;
 }
 
-/** AI 설정이 컬렉션 정의·자리·결과 모양과 맞는지 확인한다. 틀리면 앱이 뜰 때 바로 알린다. */
+/** Checks that the AI config matches the collection definitions, slots and result shapes. If wrong, reports right away when the app starts. */
 export function validateAiConfig(ai: ResolvedAiConfig, collections: CollectionsView, blocks?: readonly string[]): void {
 	const sharedKeys = Object.keys(ai.shared ?? {});
 	for (const key of sharedKeys) {

@@ -15,7 +15,7 @@ const MATH_META: FenceEditorMeta = {
 	preview: (value) => <MathPreview value={value} />,
 };
 
-/** 수식 블록(`$$`) 편집 화면. */
+/** Math block (`$$`) edit view. */
 export function MathNodeView(props: NodeViewProps) {
 	return <FencePreviewNodeView {...props} meta={MATH_META} />;
 }

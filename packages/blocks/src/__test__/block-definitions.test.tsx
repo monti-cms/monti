@@ -3,19 +3,19 @@ import { BLOCK_BY_NAME, BLOCKS, invalidOptionAttributes } from "@monti-cms/core/
 import { DIRECTIVES } from "@monti-cms/core/mdx";
 import { describe, expect, it, vi } from "vitest";
 
-// 블록은 플러그인(`blocks()`)으로 넣은 설정으로 돌려, 공개 컴포넌트가 플러그인 `render`에서 오게 한다.
+// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
 vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
 
 const { mdxComponents } = await import("@monti-cms/core/render");
 
-describe("블록 정의(v2 B3)", () => {
-	it("JSON 왕복해도 같다 — 함수·컴포넌트가 없다", () => {
+describe("block definitions", () => {
+	it("survives a JSON round trip unchanged — no functions or components", () => {
 		expect(JSON.parse(JSON.stringify(BLOCKS))).toEqual(BLOCKS);
 	});
 
-	it("이름이 겹치지 않고 자식·부모 블록이 실제로 있다", () => {
+	it("has no duplicate names and child/parent blocks actually exist", () => {
 		expect(new Set(BLOCKS.map((block) => block.name)).size).toBe(BLOCKS.length);
 		for (const block of BLOCKS) {
 			for (const child of ("children" in block ? block.children?.blocks : undefined) ?? []) {
@@ -25,21 +25,21 @@ describe("블록 정의(v2 B3)", () => {
 		}
 	});
 
-	it("공개 컴포넌트 표와 편집기 NodeView 등록부에 구현이 있다", async () => {
+	it("has implementations in the public component map and the editor NodeView registry", async () => {
 		const components = await mdxComponents();
 		for (const block of BLOCKS) {
 			const intrinsic = block.component === block.component.toLowerCase();
 			if (!intrinsic && !("renderedBy" in block && block.renderedBy)) {
 				expect(components[block.component], `${block.name}.component`).toBeDefined();
 			}
-			// 본체 블록은 등록부의 편집기 노드를, 더한 블록(블록 확장)은 정의에서 만든 노드를 쓴다.
+			// Core blocks use the editor node from the registry; added blocks (block extensions) use the node built from the definition.
 			if (block.editor.view === "node" && block.editor.nodeView) {
 				expect(BLOCK_NODE_VIEWS[block.editor.nodeView], `${block.name}.editor.nodeView`).toBeDefined();
 			}
 		}
 	});
 
-	it("선택 값과 기본값이 맞고, 선택 값 밖의 속성을 찾는다", () => {
+	it("keeps options and defaults consistent, and finds attributes outside the options", () => {
 		for (const block of BLOCKS) {
 			for (const [name, attribute] of Object.entries(block.attributes)) {
 				if (attribute.options && typeof attribute.defaultValue === "string") {
@@ -52,14 +52,14 @@ describe("블록 정의(v2 B3)", () => {
 		expect(callout && invalidOptionAttributes(callout, { variant: "tip", title: "x" })).toEqual([]);
 	});
 
-	it("v1 지시자 표(§4.4)를 그대로 만든다", () => {
+	it("builds the v1 directive table as is", () => {
 		expect(
 			DIRECTIVES.map((directive) => [directive.name, directive.kind, directive.component, directive.required]),
 		).toEqual([
 			["text-align", "container", "TextAlign", ["align"]],
 			["image", "leaf", "Image", []],
 			["file", "leaf", "File", ["mediaId"]],
-			// 번역 안내 글(v3). 새 번역본의 원문 글을 감싼다.
+			// Translation notice block. Wraps the source text of a new translation.
 			["untranslated", "text", "Untranslated", []],
 			["u", "text", "u", []],
 			["sup", "text", "sup", []],
@@ -68,14 +68,14 @@ describe("블록 정의(v2 B3)", () => {
 			["table", "container", "Table", []],
 			["row", "container", "TableRow", []],
 			["cell", "leaf", "TableCell", []],
-			// 블록 확장(`@monti-cms/blocks`). 사이트 설정의 `plugins` 순서다.
+			// Block extension (`@monti-cms/blocks`). Follows the `plugins` order in the site config.
 			["callout", "container", "Callout", []],
 			["collapsible", "container", "Collapsible", []],
 			["tabs", "container", "Tabs", []],
 			["tab", "container", "Tab", ["label"]],
 			["columns", "container", "Columns", []],
 			["column", "container", "Column", []],
-			// 글자 꾸밈 확장. 저장 문법·컴포넌트 이름은 그대로다.
+			// Inline mark extension. Stored syntax and component names are unchanged.
 			["tooltip", "text", "Tooltip", ["content"]],
 			["code-ref", "text", "CodeRef", ["to"]],
 			["color", "text", "Color", []],

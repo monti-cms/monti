@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SchemaCollection } from "../derive";
 
-// 블로그와 필드 이름이 다른 사이트. 라이브러리가 이름이 아니라 역할·`from`으로 필드를 찾는지 본다.
+// A site whose field names differ from the reference blog. Checks that the library finds fields by role and `from`, not by name.
 vi.mock("../../config/resolved", async () => {
 	const { defineCollection, defineConfig, fields } = await import("../..");
 	const article = defineCollection({
@@ -47,7 +47,7 @@ const {
 	roleValue,
 	slugFromValues,
 } = await import("../derive");
-// 이 파일의 컬렉션은 위에서 바꾼 설정에만 있다(타입은 패키지 테스트 설정을 본다).
+// The collections in this file exist only in the config changed above (types follow the package test config).
 const article = "article" as SchemaCollection;
 const topic = "topic" as SchemaCollection;
 
@@ -56,7 +56,7 @@ describe("field roles", () => {
 		expect(roleField(article, "summary")?.name).toBe("excerpt");
 		expect(roleField(article, "noindex")?.field.kind).toBe("select");
 		expect(roleField(article, "seoTitle")).toBeUndefined();
-		// 본체가 모르는 역할도 이름으로 찾는다(종류는 그 역할을 쓰는 확장이 정한다).
+		// Roles the core does not know are also found by name (the kind is decided by the extension that uses the role).
 		expect(roleField(article, "heroImage")?.name).toBe("hero");
 		expect(roleValue(article, "summary", { excerpt: "Short", summary: "Not this" })).toBe("Short");
 		expect(roleValue(topic, "summary", { summary: "x" })).toBe("");

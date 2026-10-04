@@ -13,11 +13,11 @@ import {
 } from "./rows";
 import type { EntryMetadata, ExportSnapshot, ExportSnapshotBody, ExportSnapshotEntry, JsonObject } from "./types";
 
-/** 관리자 내보내기(§11.4). */
+/** Admin export. */
 export function createTransferOps(ctx: StoreContext) {
 	const { pool, qSchema } = ctx;
 	return {
-		/** 내보내기용 읽기 전용 스냅샷. 항목 순서를 고정해 같은 데이터면 같은 결과를 만든다. */
+		/** Read-only snapshot for export. Entry order is fixed so the same data yields the same result. */
 		readExportSnapshot: async (): Promise<ExportSnapshot> =>
 			withTransaction(
 				pool,

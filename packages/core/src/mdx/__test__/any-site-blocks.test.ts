@@ -4,8 +4,8 @@ import type { BlockDefinition } from "../../blocks/define";
 import { analyze, serialize, toDocument } from "..";
 
 /**
- * 설정에 더한 블록(블록 확장·사이트 블록)의 본문 왕복(M10-1 재발 방지). 블록 이름을 적지 않고 지금 설정에서 읽는다.
- * 블로그 예시 설정과 다른 사이트 설정 둘 다로 돈다. 자식 규칙이 있거나 부모 안에서만 쓰는 블록(탭·단)은 뺀다.
+ * Body round trip of blocks added in config (block extensions and site blocks), as a regression guard. Block names are not hard-coded; they are read from the current config.
+ * Runs with both the reference blog setup and another site's config. Blocks with child rules or used only inside a parent (tabs, columns) are skipped.
  */
 
 const attributeText = (block: BlockDefinition) =>

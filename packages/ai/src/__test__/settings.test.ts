@@ -16,7 +16,7 @@ import {
 	usableActionKeys,
 } from "../settings";
 
-/** 메모리 설정 저장소. 버전 검사는 DB 저장소와 같다. */
+/** In-memory settings store. The version check matches the DB store. */
 function memoryStore(): AiSettingsStore & { value: unknown } {
 	const state = { value: undefined as unknown, version: 0 };
 	return {
@@ -53,11 +53,11 @@ const decisions = (patch: Partial<AiProviderInput> = {}): AiProviderInput => ({
 
 const spec = (key: string, patch: { providerId?: string; modelName?: string } = {}) => {
 	const definition = AI_ACTIONS[key];
-	if (!definition) throw new Error(`${key} 기능이 없습니다.`);
+	if (!definition) throw new Error(`Missing action: ${key}`);
 	return resolveAction(key, definition, patch);
 };
 
-describe("AI 연결 설정", () => {
+describe("AI connection settings", () => {
 	beforeEach(() => {
 		vi.stubEnv("AUTH_SECRET", "test-secret");
 		vi.stubEnv("CMS_AI_FAKE", "");
@@ -67,7 +67,7 @@ describe("AI 연결 설정", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("키는 암호화해 저장하고 화면에는 끝 네 글자만 준다", async () => {
+	it("encrypts the key for storage and gives the screen only its last four characters", async () => {
 		const store = memoryStore();
 		const view = await addAiProvider(store, 0, chat());
 		const stored = store.value as { providers: Array<{ apiKey: string; url: string }> };
@@ -78,7 +78,7 @@ describe("AI 연결 설정", () => {
 		expect(JSON.stringify(view)).not.toContain("sk-chat");
 	});
 
-	it("연결을 여러 개 두고, 키를 보내지 않으면 두고, null이면 지우고, 주소를 바꾸면 예전 키를 지운다", async () => {
+	it("keeps several connections, keeps the key when none is sent, clears it on null, and clears the old key when the URL changes", async () => {
 		const store = memoryStore();
 		await addAiProvider(store, 0, chat());
 		const added = await addAiProvider(store, 1, chat({ name: "OpenCode Go", url: "https://go.example.test/v1" }));
@@ -96,7 +96,7 @@ describe("AI 연결 설정", () => {
 		await expect(addAiProvider(store, 0, chat())).rejects.toMatchObject({ code: "conflict" });
 	});
 
-	it("기능은 고른 연결·모델을 쓰고, 비우면 방식에 맞는 첫 연결과 그 기본 모델을 쓴다", async () => {
+	it("an action uses its chosen connection and model, and falls back to the first connection of the matching kind and its default model when empty", async () => {
 		const fetchMock = vi.fn(async (_url: string) => Response.json({ answers: {} }));
 		vi.stubGlobal("fetch", fetchMock);
 		const store = memoryStore();
@@ -116,11 +116,11 @@ describe("AI 연결 설정", () => {
 		await decide.decider?.decide({ state: { t: "x" }, questions: {} });
 		expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.example.test/v1/systemone");
 
-		// 판단 기능에 생성 연결을 골라 두면 쓰지 않는다.
+		// A decide action with a generate connection chosen does not use it.
 		expect((await loadAiRuntime(store, spec("tags", { providerId: chatId }))).decider).toBeNull();
 	});
 
-	it("쓸 수 있는 기능만 알려 준다(연결이 없거나 키를 풀 수 없으면 빠진다)", async () => {
+	it("reports only usable actions (dropped when there is no connection or the key cannot be decrypted)", async () => {
 		const store = memoryStore();
 		await addAiProvider(store, 0, chat());
 		const features = [spec("slug"), spec("tags")];
@@ -130,7 +130,7 @@ describe("AI 연결 설정", () => {
 		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBeNull();
 	});
 
-	it("예전 모양(생성·판단 한 벌)으로 저장된 설정은 연결 두 개로 읽는다", async () => {
+	it("settings saved in the old shape (one generate and one decide pair) are read as two connections", async () => {
 		const store = memoryStore();
 		await store.saveAiSettings({
 			expectedVersion: 0,
@@ -146,7 +146,7 @@ describe("AI 연결 설정", () => {
 		]);
 	});
 
-	it("저장 전 연결 확인은 입력값을 쓰고, 키를 새로 넣지 않으면 같은 주소일 때만 저장된 키를 쓴다", async () => {
+	it("the pre-save connection check uses the input values, and uses the stored key only for the same URL when no new key is given", async () => {
 		const store = memoryStore();
 		const view = await addAiProvider(store, 0, chat());
 		const providerId = view.providers[0]?.id;
@@ -166,7 +166,7 @@ describe("AI 연결 설정", () => {
 		});
 	});
 
-	it("개발용 가짜 연결이면 연결 없이도 모든 기능을 쓸 수 있다", async () => {
+	it("with the development fake connection every action is usable without a connection", async () => {
 		vi.stubEnv("CMS_AI_FAKE", "1");
 		const store = memoryStore();
 		expect(await usableActionKeys(store, [spec("tags")])).toEqual(["tags"]);
@@ -175,10 +175,10 @@ describe("AI 연결 설정", () => {
 	});
 });
 
-describe("판단 모델 호출", () => {
+describe("decide model call", () => {
 	afterEach(() => vi.unstubAllGlobals());
 
-	it("판단 주소에 모델·state·questions를 보내고 answers를 읽는다", async () => {
+	it("sends model, state and questions to the decide URL and reads answers", async () => {
 		const fetchMock = vi.fn(async () =>
 			Response.json({ answers: { o0: { type: "noul", noul: 0.8 } }, usage: { input_tokens: 10 } }),
 		);
@@ -195,7 +195,7 @@ describe("판단 모델 호출", () => {
 		expect(JSON.parse(String(init.body))).toMatchObject({ model: "typesafe/jev-1.13", state: { title: "t" } });
 	});
 
-	it("키 오류·크레딧 부족·형식이 다른 답을 알아듣게 바꾼다", async () => {
+	it("turns key errors, insufficient credit and malformed answers into understandable errors", async () => {
 		const decider = createDecider({ url: "https://example.test/decisions", apiKey: "key", model: "m" });
 		const request = { state: { t: "x" }, questions: {} };
 		vi.stubGlobal(
@@ -216,7 +216,7 @@ describe("판단 모델 호출", () => {
 	});
 });
 
-describe("생성 모델 호출", () => {
+describe("generation model call", () => {
 	afterEach(() => vi.unstubAllGlobals());
 
 	const completion = (content: string) =>
@@ -238,7 +238,7 @@ describe("생성 모델 호출", () => {
 		fake: { inputs: {} },
 	};
 
-	it("정해진 JSON 모양을 요청하고 답을 읽는다", async () => {
+	it("requests a fixed JSON shape and reads the answer", async () => {
 		const fetchMock = vi.fn(async () => completion('{"candidates":["a","b"]}'));
 		vi.stubGlobal("fetch", fetchMock);
 		const generator = createGenerator({
@@ -254,7 +254,7 @@ describe("생성 모델 호출", () => {
 		expect(body.response_format?.type).toBe("json_schema");
 	});
 
-	it("json_schema를 받지 않는 서비스면 JSON 모드로 한 번 더 받는다", async () => {
+	it("retries in JSON mode when the service does not accept json_schema", async () => {
 		const fetchMock = vi
 			.fn()
 			.mockResolvedValueOnce(Response.json({ error: { message: "response_format not supported" } }, { status: 400 }))
@@ -270,7 +270,7 @@ describe("생성 모델 호출", () => {
 		expect(second.response_format?.type).not.toBe("json_schema");
 	});
 
-	it("모양 지정을 지원하는 곳이 없으면(404) JSON 모드, 그다음 일반 글로 받아 JSON만 뽑는다", async () => {
+	it("when no shape option is supported (404), falls back to JSON mode, then plain text, and extracts only the JSON", async () => {
 		const notFound = () =>
 			Response.json(
 				{ error: { message: "No endpoints found that support the requested parameters" } },
@@ -290,7 +290,7 @@ describe("생성 모델 호출", () => {
 		expect(bodies.map((body) => body.response_format?.type)).toEqual(["json_schema", "json_object", undefined]);
 	});
 
-	it("끝까지 실패하면 서비스가 보낸 설명을 붙여 알린다", async () => {
+	it("when everything fails, reports it with the explanation sent by the service", async () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () =>
@@ -303,7 +303,7 @@ describe("생성 모델 호출", () => {
 		});
 	});
 
-	it("서비스 오류(5xx)는 SDK가 다시 시도한 뒤에도 형식 오류가 아니라 서비스 문제로 알린다", async () => {
+	it("a service error (5xx) is reported as a service problem, not a format error, even after the SDK retries", async () => {
 		const fetchMock = vi.fn(async () =>
 			Response.json({ error: { message: "Provider returned error" } }, { status: 502 }),
 		);
@@ -314,7 +314,7 @@ describe("생성 모델 호출", () => {
 		});
 	});
 
-	it("답이 출력 한도에 닿아 끊기면 다른 방식으로 다시 받지 않고 끊겼다고 알린다", async () => {
+	it("when the answer is cut off at the output limit, reports the truncation instead of retrying another way", async () => {
 		const truncated = Response.json({
 			id: "c1",
 			object: "chat.completion",
@@ -332,7 +332,7 @@ describe("생성 모델 호출", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
-	it("키가 틀리면 다시 받지 않고 알린다", async () => {
+	it("when the key is wrong, reports it without retrying", async () => {
 		const fetchMock = vi.fn(async () => Response.json({ error: { message: "bad key" } }, { status: 401 }));
 		vi.stubGlobal("fetch", fetchMock);
 		const generator = createGenerator({

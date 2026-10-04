@@ -6,14 +6,14 @@ import { blockMessages } from "../messages";
 
 const t = createTranslator(blockMessages);
 
-describe("본체 블록 이름표 사전", () => {
-	it("한국어 키는 모두 영어에 있고, 영어는 모든 키를 가진다", () => {
+describe("core block label dictionary", () => {
+	it("every Korean key exists in English, and English has every key", () => {
 		const en = Object.keys(blockMessages.messages.en);
 		expect(Object.keys(blockMessages.messages.ko ?? {}).filter((key) => !en.includes(key))).toEqual([]);
 		expect(en.filter((key) => !(key in (blockMessages.messages.ko ?? {})))).toEqual([]);
 	});
 
-	it("블록·속성의 이름표와 설명은 사전에서 온다(키가 그대로 보이지 않는다)", () => {
+	it("block and attribute labels and descriptions come from the dictionary (the key is not shown as is)", () => {
 		for (const block of BUILTIN_BLOCKS as readonly BlockDefinition[]) {
 			expect(block.label).toBe(t(`${block.name}.label` as never));
 			expect(block.label).not.toBe(`${block.name}.label`);
@@ -30,7 +30,7 @@ describe("본체 블록 이름표 사전", () => {
 		}
 	});
 
-	it("정의는 JSON으로 직렬화해도 이름표를 값으로 담는다", () => {
+	it("a definition serializes to JSON with the label as a value", () => {
 		const image = JSON.parse(JSON.stringify(BUILTIN_BLOCKS.find((block) => block.name === "image")));
 		expect(image.label).toBe(t("image.label"));
 		expect(image.attributes.alt.label).toBe(t("image.alt.label"));
@@ -38,7 +38,7 @@ describe("본체 블록 이름표 사전", () => {
 		expect(image.editor.keywords).toContain("image");
 	});
 
-	it("사이트가 덮어쓴 문구를 먼저 쓴다", () => {
+	it("uses the phrases the site overrode first", () => {
 		expect(translate(blockMessages, "en", "image.label", undefined, { "cms.blocks": { "image.label": "Photo" } })).toBe(
 			"Photo",
 		);

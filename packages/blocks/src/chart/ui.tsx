@@ -1,8 +1,8 @@
 "use client";
 
 /*
- * 차트 미리보기의 그리기 틀(recharts 위의 얇은 층, shadcn/ui 차트와 같은 모양). 색은 `config`의 `color`(테마 변수)를 쓴다.
- * 편집기 미리보기(`./preview`)만 쓴다. 공개 화면은 사이트가 그린다.
+ * Drawing frame for the chart preview (a thin layer over recharts, shaped like the shadcn/ui chart). Colors use `color` (a theme variable) from `config`.
+ * Used only by the editor preview (`./preview`). The public page is rendered by the site.
  */
 
 import { cn } from "@monti-cms/admin/kit";

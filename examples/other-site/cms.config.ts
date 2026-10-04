@@ -3,10 +3,10 @@ import { defineBlock, defineCollection, defineConfig, fields } from "@monti-cms/
 import { seo, seoFields } from "@monti-cms/seo";
 
 /**
- * 블로그와 일부러 다르게 만든 예시 사이트. 컬렉션은 글(article)·주제(topic)·글쓴이(author), 언어는 영어 하나다.
- * 라이브러리 약속인 제목 필드 `title`과 주소 필드 `slug`만 블로그와 같고, 나머지 필드 이름·이름표는 사이트가 정한다.
- * 블록 확장에서는 차트만 설치하고 사이트 블록 둘(인용 카드·지도)을 더한다.
- * 패키지 테스트의 다른 사이트 설정(`packages/core/test/other-site.config.ts`)과 모양이 같다.
+ * An example site deliberately different from the main blog setup. Collections are article, topic and author; the only language is English.
+ * Only the title field `title` and the address field `slug`, which the library requires, match the blog; the site picks every other field name and label.
+ * From the blocks extension it installs only the chart and adds two site blocks (quote card and map).
+ * It has the same shape as the other-site config used in the package tests (`packages/core/test/other-site.config.ts`).
  */
 
 const article = defineCollection({
@@ -17,7 +17,7 @@ const article = defineCollection({
 	fields: {
 		title: fields.text({ label: "Headline", required: true, max: 120 }),
 		slug: fields.slug({ label: "Permalink", from: "title", required: true }),
-		// 요약·검색 값은 이름이 아니라 역할(`role`)로 찾는다. 블로그와 다른 이름을 쓴다.
+		// Summary and search values are found by role (`role`), not by name. This site uses names that differ from the blog's.
 		excerpt: fields.text({ label: "Excerpt", role: "summary", multiline: true, fillFromBody: true, max: 300 }),
 		authorId: fields.relation({ label: "Author", to: "author", required: true }),
 		topicIds: fields.relation({ label: "Topics", to: "topic", many: true, createInline: true }),
@@ -27,7 +27,7 @@ const article = defineCollection({
 			options: { news: "News", guide: "Guide", review: "Review" },
 			defaultValue: "news",
 		}),
-		// SEO 확장의 필드 묶음. 블로그와 다른 이름·이름표·탭(`Search`)이고 원본 주소는 뺀다. 묶음의 필드는 제 `tab`으로 그 탭에 모인다.
+		// Field group from the SEO extension. Uses names, labels and a tab (`Search`) that differ from the blog's, and leaves out the canonical URL. Each field in the group lands in that tab through its own `tab`.
 		...seoFields({
 			keys: {
 				preview: "searchPreview",
@@ -78,7 +78,7 @@ const author = defineCollection({
 	list: { columns: ["title", "slug"] },
 });
 
-/** 사이트 블록: 인용 카드(컨테이너). 공개 화면은 사이트의 `QuoteCard` 컴포넌트가 그린다. */
+/** Site block: quote card (container). The public page renders it with the site's `QuoteCard` component. */
 const quoteCard = defineBlock({
 	name: "quote-card",
 	label: "Quote card",
@@ -88,7 +88,7 @@ const quoteCard = defineBlock({
 	editor: { view: "node", insertable: true, keywords: ["quote", "card"] },
 });
 
-/** 사이트 블록: 지도(코드 펜스). 펜스 안 글을 그대로 저장한다. */
+/** Site block: map (code fence). The text inside the fence is stored as-is. */
 const mapBlock = defineBlock({
 	name: "map",
 	label: "Map",
@@ -102,13 +102,13 @@ export default defineConfig({
 	collections: { article, topic, author },
 	locales: [{ code: "en", name: "English" }],
 	defaultLocale: "en",
-	// 주소 규칙도 블로그와 다르게: 모든 언어에 접두사(`/en/blog/...`), 미리보기 언어는 경로로.
+	// URL rules also differ from the blog's: a prefix for every language (`/en/blog/...`), and the preview language comes from the path.
 	site: { name: "Example site", previewPath: "/preview", localePrefix: "always", previewLocaleParam: false },
-	// 관리자 화면 경로(`monti init --admin-path /studio`). 라우트 폴더 `app/(admin)/studio/`와 같다.
+	// Admin screen path (`monti init --admin-path /studio`). Matches the route folder `app/(admin)/studio/`.
 	admin: { path: "/studio" },
 	timeZone: "UTC",
-	// 블록 확장에서 차트만 설치하고(`blocks({ only })`), 사이트 블록 둘을 더한다. SEO 확장은 검색 미리보기·숨기기 스위치를 준다.
-	// 차트 편집기 미리보기는 선택 의존성 `recharts`로 그린다.
+	// Install only the chart from the blocks extension (`blocks({ only })`) and add two site blocks. The SEO extension provides the search preview and hide switch.
+	// The chart editor preview is drawn with the optional dependency `recharts`.
 	plugins: [...blocks({ only: ["chart"] }), seo()],
 	blocks: [quoteCard, mapBlock],
 });

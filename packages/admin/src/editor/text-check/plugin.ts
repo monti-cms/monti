@@ -3,8 +3,8 @@ import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import type { DocTextIssue } from "./run";
 
 /**
- * 검사 결과를 물결 밑줄(장식)로 그리는 ProseMirror 플러그인. 결과는 문서가 바뀌면 위치를 따라가고,
- * 결과 범위 안(맞닿은 자리 포함)을 고치면 그 결과는 사라진다.
+ * ProseMirror plugin that draws check results as wavy underlines (decorations). Results follow their positions as the document changes,
+ * and editing inside a result range (including touching edges) removes that result.
  */
 
 export interface TextCheckPluginState {
@@ -13,7 +13,7 @@ export interface TextCheckPluginState {
 }
 
 export type TextCheckMeta =
-	/** `checkerIds`의 결과 중 `ranges`에 걸친 것을 `issues`로 바꾼다. */
+	/** Replaces the results of `checkerIds` that span `ranges` with `issues`. */
 	| {
 			readonly type: "replace";
 			readonly checkerIds: readonly string[];
@@ -23,7 +23,7 @@ export type TextCheckMeta =
 	| { readonly type: "remove"; readonly keys: readonly string[] }
 	| { readonly type: "clear" };
 
-/** 기본 플러그인 이름표. 검사 확장마다 따로 만들어(`new PluginKey`) 서로 겹치지 않게 한다. */
+/** Default plugin name tag. Created separately per check extension (`new PluginKey`) so they do not collide. */
 export const textCheckPluginKey = new PluginKey<TextCheckPluginState>("cmsTextCheck");
 
 const EMPTY: TextCheckPluginState = { issues: [], decorations: DecorationSet.empty };
@@ -43,7 +43,7 @@ function decorate(doc: EditorState["doc"], issues: readonly DocTextIssue[]): Dec
 	);
 }
 
-/** 문서 변경을 따라 결과 위치를 옮긴다. 바뀐 범위에 걸치거나 맞닿은 결과는 뺀다. */
+/** Moves result positions along with document changes. Results that overlap or touch the changed range are dropped. */
 export function mapIssues(issues: readonly DocTextIssue[], tr: Transaction): readonly DocTextIssue[] {
 	let current = issues;
 	for (const map of tr.mapping.maps) {
@@ -77,7 +77,7 @@ function applyMeta(issues: readonly DocTextIssue[], meta: TextCheckMeta): readon
 	return [...kept, ...meta.issues].sort((a, b) => a.from - b.from || a.to - b.to);
 }
 
-/** 그 위치를 덮는 결과(가장 짧은 것). */
+/** The result covering that position (the shortest one). */
 export function issueAt(state: EditorState, pos: number, key = textCheckPluginKey): DocTextIssue | null {
 	const issues = key.getState(state)?.issues ?? [];
 	let found: DocTextIssue | null = null;
@@ -112,11 +112,11 @@ export function createTextCheckPlugin({
 			decorations: (state) => key.getState(state)?.decorations ?? DecorationSet.empty,
 			handleClick(view, pos, event) {
 				if (!onIssueClick || event.button !== 0) return false;
-				// 장식(밑줄) 위를 누른 때만 연다. 줄 끝 빈 자리를 눌러 커서가 결과 끝에 붙은 경우는 열지 않는다.
+				// Open only when pressing on a decoration (underline). Pressing the empty space at the end of a line, which puts the cursor right after a result, does not open it.
 				if (!(event.target instanceof Element) || !event.target.closest("[data-text-issue]")) return false;
 				const issue = issueAt(view.state, pos, key);
 				if (issue) onIssueClick(issue, view);
-				// 커서는 평소대로 옮긴다.
+				// Move the cursor as usual.
 				return false;
 			},
 		},

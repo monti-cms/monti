@@ -8,8 +8,8 @@ import { InspectorPanel } from "../inspector-panel";
 import { t } from "../translate";
 
 /**
- * 필드 `tab`과 보기 필드(설정과 상관없이, M10-1 재발 방지). 컬렉션·필드·탭 이름은 지금 설정에서 찾는다
- * (블로그 예시 설정은 SEO 확장 필드가 `SEO` 탭, 다른 사이트 설정은 `Search` 탭이다).
+ * Field `tab` and view fields (regression guard, independent of config). Collection, field and tab names are found in the current config
+ * (the reference blog config has the SEO extension field in the `SEO` tab; another site's config uses a `Search` tab).
  */
 
 beforeEach(() => {
@@ -23,7 +23,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-/** 필드 `tab`을 가진 텍스트 필드가 있는 첫 컬렉션과 그 필드(등록하지 않은 `input`은 기본 입력으로 그린다). */
+/** The first collection with a text field that has a field `tab`, and that field (an unregistered `input` renders as the default input). */
 const found = (() => {
 	for (const collection of COLLECTIONS) {
 		for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
@@ -55,12 +55,12 @@ function renderPanel(collection: Collection, form: EntryForm, children?: (panel:
 	render(<TooltipProvider>{children ? children(panel) : panel}</TooltipProvider>);
 }
 
-describe("속성 칸: 필드 `tab`", () => {
-	it("설정에 `tab`을 가진 필드가 있다", () => {
+describe("properties panel: field `tab`", () => {
+	it("the config has a field with `tab`", () => {
 		expect(found).toBeDefined();
 	});
 
-	it("필드 `tab`의 필드는 배치를 적지 않아도 그 탭에 그리고 기본 탭에는 그리지 않는다", async () => {
+	it("a field with a field `tab` renders in that tab, and not in the default tab, even without a layout entry", async () => {
 		if (!found || !isCollection(found.collection)) return;
 		renderPanel(found.collection, { ...EMPTY_FORM, title: "Title", [found.name]: "Tab value" });
 		expect(screen.queryByLabelText(found.field.label)).toBeNull();
@@ -68,7 +68,7 @@ describe("속성 칸: 필드 `tab`", () => {
 		expect(((await screen.findByLabelText(found.field.label)) as HTMLInputElement).value).toBe("Tab value");
 	});
 
-	it("보기 필드는 등록한 화면(`fieldViews`)을 그 탭에 그리고, 등록이 없으면 아무것도 그리지 않는다", async () => {
+	it("a view field renders the registered view (`fieldViews`) in that tab, and renders nothing when none is registered", async () => {
 		if (!found || !viewField || viewField[1].kind !== "view") return;
 		const [, view] = viewField;
 		const Custom = ({ form }: FieldViewProps) => <p>preview: {String(form.title)}</p>;
@@ -85,7 +85,7 @@ describe("속성 칸: 필드 `tab`", () => {
 		expect(screen.queryByText("preview: Title")).toBeNull();
 	});
 
-	it("`tab`이 없는 컬렉션은 기본 탭 하나만 있다", () => {
+	it("a collection without `tab` has only the default tab", () => {
 		const plain = COLLECTIONS.find((collection) =>
 			Object.values(schemaOf(collection).fields).every((field) => !field.tab),
 		);

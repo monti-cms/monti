@@ -25,17 +25,17 @@ const renderEditor = async () => {
 	render(<CmsEditor content="안녕하세요" onChange={() => {}} titleField={<input aria-label="제목" />} />);
 	await screen.findByRole("toolbar", { name: t("toolbar.format") });
 };
-/** 편집기 틀에 걸린 본문 폭. 제목·본문·원문이 모두 이 값을 쓴다. */
+/** Body width applied to the editor frame. The title, body and source all use this value. */
 const editorWidth = () =>
 	(document.querySelector("[data-cms-editor-shell]") as HTMLElement).style.getPropertyValue("--editor-width");
 
 describe(t("editorWidth.label"), () => {
-	it("처음에는 보통 폭이다", async () => {
+	it("starts at the normal width", async () => {
 		await renderEditor();
 		expect(editorWidth()).toBe(EDITOR_WIDTHS.normal);
 	});
 
-	it("폭 메뉴에서 고르면 바뀌고, 다시 열어도 기억한다", async () => {
+	it("changes when picked from the width menu and is remembered after reopening", async () => {
 		await renderEditor();
 		fireEvent.click(screen.getByRole("button", { name: t("editorWidth.label") }));
 		expect((await screen.findAllByRole("menuitemradio")).map((item) => item.textContent)).toEqual([
@@ -52,7 +52,7 @@ describe(t("editorWidth.label"), () => {
 		await waitFor(() => expect(editorWidth()).toBe(EDITOR_WIDTHS.wide));
 	});
 
-	it("좁게는 공개 블로그 본문과 같은 폭이다", () => {
+	it("narrow is the same width as the public post body", () => {
 		expect(EDITOR_WIDTHS.narrow).toBe("42rem");
 	});
 });

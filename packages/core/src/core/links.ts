@@ -4,8 +4,8 @@ import { COLLECTIONS, type Collection } from "./collections";
 import { localePrefix, localizePathWith } from "./locales";
 
 /**
- * 본문 내부 링크(§4.4·§6.2). 공개 주소 모양은 컬렉션 정의의 `path`(예: `/posts/:slug`)이고, 본문에는 일반 Markdown 링크
- * `[제목](/posts/글-slug)`로 저장한다. 발행 전 검사(링크 해석)와 편집기(링크 만들기)가 같은 규칙을 쓴다.
+ * Internal body links. The public URL shape is the collection definition's `path` (e.g. `/posts/:slug`), and the body stores plain Markdown links
+ * like `[title](/posts/post-slug)`. Pre-publish validation (link resolution) and the editor (link creation) use the same rules.
  */
 
 interface PathRule {
@@ -28,12 +28,12 @@ const PATH_PATTERNS = PATH_RULES.map((rule) => ({
 	pattern: new RegExp(`^${escapeRegExp(rule.prefix)}([^/]+)${escapeRegExp(rule.suffix.replace(/\/$/, ""))}\\/?$`),
 }));
 
-/** 본문 링크로 가리킬 수 있는 컬렉션(`path`가 있는 컬렉션). */
+/** Collections a body link can point to (collections with `path`). */
 export const LINKABLE_COLLECTIONS: readonly Collection[] = PATH_RULES.map((rule) => rule.collection);
 
 /**
- * 콘텐츠의 공개 경로(기본 언어). 경로가 없는 컬렉션이거나 slug가 없으면 `null`이다.
- * 한글은 읽을 수 있게 그대로 두고 Markdown 링크를 깨는 문자만 인코딩한다.
+ * Public path of a content item (default locale). `null` if the collection has no path or there is no slug.
+ * Hangul is left as is so it stays readable; only characters that break Markdown links are encoded.
  */
 export function contentPath(collection: string, slug: string | null | undefined): string | null {
 	const rule = PATH_RULES.find((candidate) => candidate.collection === collection);
@@ -41,7 +41,7 @@ export function contentPath(collection: string, slug: string | null | undefined)
 	return `${rule.prefix}${slug.replace(/[\s()<>]/g, (char) => encodeURIComponent(char))}${rule.suffix}`;
 }
 
-/** 경로(`URL.pathname`)가 가리키는 콘텐츠. 모르는 경로면 `null`이다. */
+/** The content a path (`URL.pathname`) points to. `null` for an unknown path. */
 export function parseContentPath(pathname: string): { collection: Collection; slug: string } | null {
 	for (const { collection, pattern } of PATH_PATTERNS) {
 		const match = pattern.exec(pathname);
@@ -64,7 +64,7 @@ const SITE_HOSTS = new Set(
 	),
 );
 
-/** 본문 링크 주소가 이 사이트의 콘텐츠를 가리키면 그 대상. 경로(`/...`)와 사이트 주소로 적은 링크만 알아본다. */
+/** The target if a body link address points to this site's content. Only links written as a path (`/...`) or with the site address are recognized. */
 export function parseInternalLink(url: string): { collection: Collection; slug: string; url: string } | null {
 	let parsed: URL;
 	try {
@@ -82,15 +82,15 @@ export function parseInternalLink(url: string): { collection: Collection; slug: 
 	return target ? { ...target, url } : null;
 }
 
-/** 관리자 화면에 보이는 사이트 이름(`site.name`, 없으면 `site.url`의 호스트 이름). 둘 다 없으면 빈 글자. */
+/** Site name shown in the admin screen (`site.name`, or the host name of `site.url` if absent). Empty string if neither exists. */
 export const SITE_NAME = cmsConfig.site?.name ?? (siteUrl ? new URL(siteUrl).hostname : "");
 
-/** 미리보기 주소에 언어를 넘기는 쿼리 이름(`site.previewLocaleParam`, 기본 `locale`). `false`면 경로에 넣는다. */
+/** Query name used to pass the locale in preview URLs (`site.previewLocaleParam`, default `locale`). If `false`, put it in the path. */
 export const PREVIEW_LOCALE_PARAM: string | false = cmsConfig.site?.previewLocaleParam ?? "locale";
 
 /**
- * 설정을 읽지 않는 미리보기 주소 규칙. 쿼리 방식(`param`이 이름)은 기본 언어가 아닐 때만 언어를 붙이고,
- * 경로 방식(`param: false`)은 `localePrefix`(그 언어의 공개 주소 접두사)를 공개 경로 앞에 넣는다.
+ * Preview URL rules that do not read the config. The query style (`param` is the name) adds the locale only for non-default locales,
+ * and the path style (`param: false`) puts `localePrefix` (that locale's public URL prefix) before the public path.
  */
 export function previewHrefWith(options: {
 	readonly previewPath: string;
@@ -107,7 +107,7 @@ export function previewHrefWith(options: {
 	return `${base}${options.path}${query}`;
 }
 
-/** 초안 미리보기 주소. 미리보기 경로(`site.previewPath`)나 컬렉션 공개 경로가 없으면 `null`. */
+/** Draft preview URL. `null` if there is no preview path (`site.previewPath`) or collection public path. */
 export function previewHref(collection: string, slug: string | null | undefined, locale?: string): string | null {
 	const previewPath = cmsConfig.site?.previewPath;
 	const path = slug ? contentPath(collection, encodeURIComponent(slug)) : null;

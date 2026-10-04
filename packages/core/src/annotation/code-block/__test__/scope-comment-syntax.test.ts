@@ -25,7 +25,7 @@ const parse = (value: string) => {
 };
 
 describe("scope comment syntax", () => {
-	it("@line plus는 바로 아래 코드 1줄에 line scope annotation을 만든다", () => {
+	it("@line plus creates a line scope annotation on the 1 code line right below", () => {
 		const document = parse(["// @line plus", "const added = 1", "const untouched = 0"].join("\n"));
 
 		expect(document.lines.map((line) => line.value)).toEqual(["const added = 1", "const untouched = 0"]);
@@ -39,7 +39,7 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@line plus {0-1}은 닫힌 구간 [0,1]로 해석되어 내부 range end가 +1 된다", () => {
+	it("@line plus {0-1} is read as the closed range [0,1], so the internal range end is +1", () => {
 		const document = parse(
 			["// @line plus {0-1}", "const first = 1", "const second = 2", "const third = 3"].join("\n"),
 		);
@@ -59,7 +59,7 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@line plus ... @line plus end는 연속 구간 line scope annotation으로 파싱한다", () => {
+	it("@line plus ... @line plus end is parsed as a continuous-range line scope annotation", () => {
 		const document = parse(
 			["// @line plus", "const first = 1", "const second = 2", "// @line plus end", "const third = 3"].join("\n"),
 		);
@@ -79,7 +79,7 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@line collapse ... @line collapse end는 line scope wrapper 구간으로 파싱한다", () => {
+	it("@line collapse ... @line collapse end is parsed as a line scope wrapper range", () => {
 		const document = parse(
 			["// @line collapse", "const first = 1", "const second = 2", "// @line collapse end", "const third = 3"].join(
 				"\n",
@@ -101,7 +101,7 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@document fold {0-4}는 닫힌 구간 [0,4]를 absolute inline range로 적용한다", () => {
+	it("@document fold {0-4} applies the closed range [0,4] as an absolute inline range", () => {
 		const line = "hello world";
 		const document = parse(["// @document fold {0-4}", line].join("\n"));
 
@@ -116,7 +116,7 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@document fold는 selector가 없으면 코드블록 전체에 적용한다", () => {
+	it("@document fold applies to the whole code block when there is no selector", () => {
 		const firstLine = "const a = 1";
 		const secondLine = "return a";
 		const firstEnd = firstLine.length;

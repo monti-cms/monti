@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { CmsError } from "../../../adapters/postgres/store/errors";
 
-/** 공개 응답은 캐시하지 않는다(오류도: CDN이 404를 보관하면 발행 직후에도 404가 남는다). */
+/** Public responses are not cached (errors too: if a CDN stores a 404, it stays 404 even right after publishing). */
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 export const publicJson = (body: unknown) => NextResponse.json(body, { headers: NO_STORE });
@@ -9,7 +9,7 @@ export const publicJson = (body: unknown) => NextResponse.json(body, { headers: 
 export const publicError = (code: "invalid_input" | "not_found", message: string) =>
 	NextResponse.json({ code, message }, { status: code === "not_found" ? 404 : 400, headers: NO_STORE });
 
-/** 400·404·503만 쓴다. 내부 메시지는 응답에 넣지 않고 DB·설정 오류는 404로 숨기지 않는다(503, 로그에만 원인). */
+/** Uses only 400, 404, and 503. Internal messages stay out of the response, and DB/config errors are not hidden as 404 (503, cause only in the log). */
 export function publicApiError(error: unknown): NextResponse {
 	if (error instanceof CmsError) {
 		if (error.code === "not_found") return publicError("not_found", "Not found");

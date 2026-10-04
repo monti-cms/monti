@@ -4,8 +4,8 @@ import { tooltipMessages } from "./messages";
 const t = createActiveTranslator(tooltipMessages);
 
 /**
- * 툴팁(`:tooltip[글자]{content="설명"}`). 글자에 마우스를 올리면 설명을 보인다. 공개 화면은 사이트가 `Tooltip`
- * 컴포넌트로 그린다(`content` 속성, 글자는 자식).
+ * Tooltip (`:tooltip[text]{content="description"}`). Hovering the text shows the description. On the public page the site draws it with a `Tooltip`
+ * component (`content` attribute, the text is the child).
  */
 export const tooltipBlock = defineBlock({
 	name: "tooltip",

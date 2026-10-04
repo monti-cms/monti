@@ -2,10 +2,10 @@ import { createActiveTranslator, defineBlock } from "@monti-cms/core";
 import { keywordList } from "../shared/text";
 import { calloutMessages } from "./messages";
 
-// 이름표는 글자를 읽는 때에 고른다(설정 파일이 이 모듈을 불러오는 때에는 화면 언어를 아직 모른다).
+// Labels are resolved when the text is read (the UI language is not yet known when the config file imports this module).
 const t = createActiveTranslator(calloutMessages);
 
-/** 콜아웃(`:::callout{variant="tip" title="…"}`). 참고·경고처럼 눈에 띄게 강조하는 상자다. */
+/** Callout (`:::callout{variant="tip" title="…"}`). A box that highlights content such as notes and warnings. */
 export const calloutBlock = defineBlock({
 	name: "callout",
 	get label() {
@@ -49,7 +49,7 @@ export const calloutBlock = defineBlock({
 			translatable: true,
 		},
 	},
-	// 제목만 있는 콜아웃도 된다.
+	// A callout with only a title is also allowed.
 	children: { min: 0 },
 	translateInside: true,
 	editor: {

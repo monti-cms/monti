@@ -1,7 +1,7 @@
 /*
- * @monti-cms/ai 스타일. 앱의 Tailwind 입력 CSS에서 `@monti-cms/admin/styles.css` 다음에 import한다.
- * 색·토큰은 관리자 패키지 스타일이 준다.
+ * @monti-cms/ai styles. Import after `@monti-cms/admin/styles.css` in the app's Tailwind input CSS.
+ * Colors and tokens come from the admin package styles.
  */
 
-/* 배포 묶음의 컴포넌트에서 Tailwind 클래스를 찾는다(작업 공간 안에서는 앱이 소스를 바로 읽는다). */
+/* Find Tailwind classes in the components of the built bundle (inside the workspace the app reads the source directly). */
 @source "./dist";

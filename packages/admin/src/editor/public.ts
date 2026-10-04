@@ -1,5 +1,5 @@
 /**
- * 편집기 진입점(`@monti-cms/admin/editor`). 본문 MDX ↔ 편집기 문서 변환과 편집기 확장을 플러그인·사이트 테스트가 쓴다.
+ * Editor entry point (`@monti-cms/admin/editor`). Plugins and site tests use the body MDX to editor document conversion and the editor extensions.
  */
 
 export type {

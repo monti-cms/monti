@@ -2,34 +2,34 @@ import type { BacklinkField, Field, SlugField, ValueField, ValueOf } from "./fie
 import { valueFieldsOf } from "./walk";
 
 /**
- * 컬렉션 종류(§5.2).
+ * Collection kind.
  *
- * - `document`(문서): 본문을 쓰고 초안과 공개본을 나눈다. 명시적 발행으로 공개한다(예: 게시글).
- * - `item`(항목): 작은 폼에서 저장하면 곧바로 현재 값(공개)에 반영한다. 발행·보관·번역본이 없다(예: 태그).
+ * - `document`: you write a body and it is split into a draft and a published version. It goes public with an explicit publish (e.g. posts).
+ * - `item`: saving in a small form applies straight to the current (public) value. There is no publish, archive or translation copy (e.g. tags).
  */
 export type CollectionKind = "document" | "item";
 
 /**
- * 예전 이름(`workflow`). `publish`는 `document`, `record`는 `item`이다.
- * @deprecated `kind`를 쓴다. `defineCollection`이 아직 받아 `kind`로 바꾼다.
+ * Legacy name (`workflow`). `publish` is `document` and `record` is `item`.
+ * @deprecated Use `kind`. `defineCollection` still accepts it and converts it to `kind`.
  */
 export type CollectionWorkflow = "publish" | "record";
 
-/** 예전 이름(`workflow`)의 종류. */
+/** Kind in the legacy name (`workflow`). */
 export type KindOfWorkflow<W extends CollectionWorkflow> = W extends "record" ? "item" : "document";
 
-/** 예전 이름(`workflow`)을 종류(`kind`)로 바꾼다. */
+/** Converts the legacy name (`workflow`) into the kind (`kind`). */
 export const kindOfWorkflow = (workflow: CollectionWorkflow): CollectionKind =>
 	workflow === "record" ? "item" : "document";
 
-/** 목록의 시스템 컬럼. 필드가 아니라 콘텐츠 자체의 값이다. */
+/** System columns of the list. They are values of the content itself, not fields. */
 export const SYSTEM_LIST_COLUMNS = ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"] as const;
 export type SystemListColumn = (typeof SYSTEM_LIST_COLUMNS)[number];
 
 /**
- * 목록 컬럼(`list.columns`)이 쓸 수 있는 이름인지 확인한다. 시스템 컬럼, 저장하는 필드 이름(조건부 필드에 딸린 필드 포함),
- * 주소 필드 이름, 주소 필드가 있을 때의 `slug`만 된다. 모르는 이름이거나 저장하지 않는 필드(보기·반대 방향 관계)거나
- * 같은 이름을 두 번 적으면 오류다. `defineConfig`가 부른다.
+ * Checks whether a name can be used by the list columns (`list.columns`). Only system columns, stored field names (including fields dependent on a conditional field),
+ * address field names, and `slug` when an address field exists are allowed. It is an error if the name is unknown, the field is not stored (view or reverse relation),
+ * or the same name is written twice. Called by `defineConfig`.
  */
 export function validateListColumns(
 	collection: string,
@@ -65,13 +65,13 @@ export function validateListColumns(
 }
 
 export interface LayoutGroup<Name extends string = string> {
-	/** 속성 패널의 묶음 제목. 없으면 제목 없이 이어 그린다. */
+	/** Group title in the properties panel. If absent, it is drawn continuously without a title. */
 	readonly group?: string;
 	readonly fields: readonly Name[];
-	/** 처음에 접어 둔다. */
+	/** Collapsed at first. */
 	readonly collapsed?: boolean;
 	/**
-	 * 편집 화면 속성 칸에서 이 묶음을 그릴 탭 이름. 같은 이름의 묶음은 한 탭에 모이고, 없으면 기본 탭(`속성`)에 그린다.
+	 * Tab name in which this group is drawn in the edit screen's properties area. Groups with the same name gather in one tab; if absent, it is drawn in the default tab (`속성`).
 	 */
 	readonly tab?: string;
 }
@@ -81,44 +81,44 @@ export interface CollectionSchema<
 	Kind extends CollectionKind = CollectionKind,
 > {
 	readonly label: string;
-	/** 컬렉션 종류(`document`·`item`). */
+	/** Collection kind (`document`, `item`). */
 	readonly kind: Kind;
-	/** 본문(MDX)을 가지는가. 없으면 `document` 컬렉션만 본문을 쓴다. */
+	/** Whether it has a body (MDX). If absent, only `document` collections have a body. */
 	readonly body: boolean;
 	/**
-	 * 필드 이름 → 정의. 꼭 `title` 텍스트 필드(`fields.text`)가 있어야 한다(`defineConfig`가 확인한다). 목록·검색·
-	 * 관계 고르기·본문 링크·편집 화면 제목 칸이 이 필드를 쓴다.
+	 * Field name → definition. A `title` text field (`fields.text`) is required (`defineConfig` checks it). The list, search,
+	 * relation picker, body links and the edit screen's title box use this field.
 	 */
 	readonly fields: Fields;
 	/**
-	 * 공개 주소 모양(예: `/posts/:slug`). `:slug`를 꼭 한 번 쓴다. 본문의 내부 링크를 알아보고(발행 전 검사),
-	 * 편집기가 링크를 만들 때 쓴다. 없으면 이 컬렉션은 본문 링크로 가리킬 수 없다.
+	 * Public address shape (e.g. `/posts/:slug`). `:slug` must appear exactly once. Used to recognize internal links in the body (pre-publish check) and
+	 * when the editor creates links. If absent, this collection cannot be pointed to by body links.
 	 */
 	readonly path?: string;
 	/**
-	 * 관리자 사이드바 아이콘 이름(lucide, 예: `file-text`·`notebook-pen`·`tag`·`shapes`·`layers`·`folder`·`image`).
-	 * 없거나 모르는 이름이면 종류에 맞는 기본 아이콘이다.
+	 * Admin sidebar icon name (lucide, e.g. `file-text`, `notebook-pen`, `tag`, `shapes`, `layers`, `folder`, `image`).
+	 * If absent or unknown, it is the default icon for the kind.
 	 */
 	readonly icon?: string;
 	/**
-	 * 속성 패널 배치. 적지 않은 필드는 마지막 묶음 뒤에 선언 순서대로 그린다. 없으면 필드 선언 순서대로 그리고,
-	 * 제 `tab`을 가진 필드는 그 탭에 모인다.
+	 * Properties panel layout. Fields not listed are drawn after the last group in declaration order. If absent, they are drawn in field declaration order,
+	 * and fields that have their own `tab` gather in that tab.
 	 */
 	readonly layout?: readonly LayoutGroup[];
 	/**
-	 * 목록. 없으면 기본 컬럼이다: 문서는 제목·상태·언어(언어가 둘 이상일 때)·분류 필드(항목 컬렉션을 가리키는 관계)·
-	 * 수정일·발행일, 항목은 제목·주소·언어·상태·수정일.
+	 * List. If absent, the default columns: for documents, title, status, language (when there are two or more languages), category field (a relation pointing to an item collection),
+	 * modified date and published date; for items, title, address, language, status and modified date.
 	 */
 	readonly list?: {
 		/**
-		 * 목록이 보여 줄 컬럼과 그 순서. 필드 이름 또는 시스템 컬럼이다. 모르는 이름은 `defineConfig`가 오류로 알린다.
-		 * 글자(`text`)·선택(`select`)·관계 필드는 기본 칸으로 그리고, 관리자 확장(`listCells`)이 칸 모양을 바꿀 수 있다.
+		 * Columns the list shows and their order. Field names or system columns. Unknown names are reported as errors by `defineConfig`.
+		 * Text (`text`), select (`select`) and relation fields are drawn as default cells, and an admin extension (`listCells`) can change the cell look.
 		 */
 		readonly columns: readonly string[];
 	};
 }
 
-/** `defineCollection`이 받는 값(종류 말고). 배치·목록 컬럼에 적은 이름이 실제 필드인지 타입으로 확인한다. */
+/** Value `defineCollection` accepts (without the kind). Types check that names in layout and list columns are real fields. */
 type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<
 	CollectionSchema<Fields>,
 	"kind" | "body" | "layout" | "list" | "path"
@@ -129,12 +129,12 @@ type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<
 	list?: { columns: readonly (Extract<keyof Fields, string> | SystemListColumn)[] };
 };
 
-/** 컬렉션을 정의한다. 배치·목록 컬럼에 적은 이름이 실제 필드인지 타입으로 확인한다. */
+/** Defines a collection. Types check that names in layout and list columns are real fields. */
 export function defineCollection<
 	const Fields extends Readonly<Record<string, Field>>,
 	const Kind extends CollectionKind,
 >(schema: CollectionInput<Fields> & { kind: Kind; workflow?: undefined }): CollectionSchema<Fields, Kind>;
-/** @deprecated `workflow` 대신 `kind`를 쓴다(`publish` → `document`, `record` → `item`). */
+/** @deprecated Use `kind` instead of `workflow` (`publish` → `document`, `record` → `item`). */
 export function defineCollection<
 	const Fields extends Readonly<Record<string, Field>>,
 	const Workflow extends CollectionWorkflow,
@@ -148,8 +148,8 @@ export function defineCollection(
 }
 
 /**
- * 컬렉션 정의를 정리한다: 예전 이름(`workflow`)을 종류(`kind`)로 바꾸고 본문 기본값(`document`만 본문)을 채운다.
- * `defineCollection`과 `defineConfig`가 부른다(이미 정리한 정의는 그대로다).
+ * Normalizes a collection definition: converts the legacy name (`workflow`) into the kind (`kind`) and fills the body default (only `document` has a body).
+ * Called by `defineCollection` and `defineConfig` (an already normalized definition stays as is).
  */
 export function normalizeCollection(
 	schema: Omit<CollectionSchema, "kind" | "body"> & {
@@ -173,7 +173,7 @@ type Stored<Fields> = {
 	[K in keyof Fields as Fields[K] extends SlugField | BacklinkField ? never : K]: Fields[K];
 };
 
-/** 조건부 필드에 딸린 필드를 최상위로 펼친다(저장 형식과 같다). */
+/** Flattens fields dependent on a conditional field to the top level (same as the storage format). */
 type Nested<Fields> = {
 	[K in keyof Fields]: Fields[K] extends { readonly kind: "conditional"; readonly values: infer V }
 		? V[keyof V] extends infer Group
@@ -193,7 +193,7 @@ type FieldValue<F> = F extends { readonly kind: "conditional"; readonly discrimi
 	: ValueOf<F>;
 
 /**
- * 컬렉션 정의에서 만든 메타데이터 타입. 초안은 비어 있을 수 있으므로 모든 키가 선택이다.
+ * Metadata type built from a collection definition. A draft may be empty, so every key is optional.
  */
 export type MetadataOf<S extends CollectionSchema> = {
 	-readonly [K in keyof Stored<S["fields"]>]?: FieldValue<S["fields"][K]>;

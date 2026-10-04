@@ -27,11 +27,11 @@ interface BlockHandleOverlayProps {
 	onDelete: () => void;
 	onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
 	onDragEnd?: (event: React.DragEvent<HTMLElement>) => void;
-	/** 손잡이 옆에 붙는 동작 버튼(번역 등). */
+	/** Action buttons attached beside the handle (translate, etc.). */
 	actions?: ReadonlyArray<{ id: string; label: string; icon: React.ReactNode; busy: boolean; onClick: () => void }>;
 }
 
-/** 블록 왼쪽의 ⋮⋮ 핸들과 블록 메뉴(§4.2). 메뉴는 shadcn DropdownMenu(Base UI 기반 render prop)라 키보드로도 조작하며, 핸들을 끌어 블록을 드래그 이동한다. */
+/** The ⋮⋮ handle on the left of a block and the block menu. The menu is a shadcn DropdownMenu (Base UI render prop) so it is keyboard operable too, and dragging the handle moves the block. */
 export function BlockHandleOverlay({
 	coords,
 	onMoveUp,
@@ -50,7 +50,7 @@ export function BlockHandleOverlay({
 			style={{
 				position: "fixed",
 				top: `${coords.top}px`,
-				// 동작 버튼이 있으면 그만큼 왼쪽으로 더 내어 손잡이 자리를 지킨다.
+				// If there are action buttons, shift left that much more to keep room for the handle.
 				left: `${Math.max(8, coords.left - 32 - actions.length * 24)}px`,
 				zIndex: 40,
 			}}
@@ -69,7 +69,7 @@ export function BlockHandleOverlay({
 					{action.busy ? <Spinner className="size-3" /> : action.icon}
 				</IconButton>
 			))}
-			{/* 모달이 아니어야 한다: 핸들을 누르면 메뉴가 열리는데, 모달 배경이 dragover·drop을 가로채면 드래그가 끝나지 않는다. */}
+			{/* Must not be modal: clicking the handle opens the menu, and a modal backdrop intercepting dragover/drop would keep the drag from ending. */}
 			<DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
 				<IconButton
 					label={t("blockHandle.label")}
@@ -77,7 +77,7 @@ export function BlockHandleOverlay({
 					size="icon-xs"
 					draggable
 					onDragStart={(event) => {
-						// 누를 때 열린 메뉴는 끌기 시작하면 닫는다.
+						// A menu opened on press closes when dragging starts.
 						setOpen(false);
 						onDragStart?.(event);
 					}}

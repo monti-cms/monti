@@ -29,8 +29,8 @@ import { type AiSharedStore, loadSharedKeys } from "./shared";
 const t = createTranslator(actionsMessages);
 
 /**
- * 기능 정의(설정)와 고친 값(DB)을 합쳐 다룬다. 관리자 AI 화면·실행 API가 쓴다.
- * 정의에 없는 이름의 고친 값은 무시한다(설정에서 기능을 지운 경우).
+ * Handles action definitions (config) and edited values (DB) together. Used by the admin AI screen and the run API.
+ * Edited values under names missing from the definition are ignored (when an action was removed from the config).
  */
 
 type Row = { key: string; value: unknown; version: number; updatedAt: Date };
@@ -40,13 +40,13 @@ export type { AiActionView } from "./action-view";
 export interface AiActionsStore extends Pick<AiSharedStore, "getAiSettings"> {
 	listAiActionOverrides(): Promise<Row[]>;
 	saveAiActionOverride(params: { key: string; expectedVersion: number; value: unknown }): Promise<Row>;
-	/** 화면 기능(M8-5). */
+	/** Custom actions (created in the admin UI). */
 	listAiCustomActions(): Promise<Row[]>;
 	saveAiCustomAction(params: { key: string; expectedVersion: number; value: unknown }): Promise<Row>;
 	deleteAiCustomAction(params: { key: string; expectedVersion: number }): Promise<void>;
 }
 
-/** 저장한 화면 기능 한 줄. 모양이 맞지 않으면 `null`(정의가 바뀌어 맞지 않게 된 경우). */
+/** One stored custom action row. `null` if its shape does not fit (when the definition changed and no longer matches). */
 const readCustom = (value: unknown): CustomValue | null => {
 	const parsed = customValueSchema.safeParse(value);
 	return parsed.success ? parsed.data : null;
@@ -65,7 +65,7 @@ const definitionOf = (key: string): AiActionDefinition => {
 	return definition;
 };
 
-/** 기능 하나(고친 값을 얹은 것). 화면 기능도 같은 모양이다. */
+/** One action (with edited values applied). Custom actions have the same shape. */
 export async function getAction(store: AiActionsStore, key: string): Promise<ResolvedAiAction> {
 	if (isCustomKey(key)) {
 		const { value } = await customRow(store, key);
@@ -76,7 +76,7 @@ export async function getAction(store: AiActionsStore, key: string): Promise<Res
 	return resolveAction(key, definition, readOverride(row?.value));
 }
 
-/** 설정 순서대로 모든 코드 기능, 그다음 만든 순서대로 화면 기능. */
+/** All coded actions in config order, then custom actions in creation order. */
 export async function listActions(store: AiActionsStore): Promise<AiActionView[]> {
 	const rows = new Map((await store.listAiActionOverrides()).map((row) => [row.key, row]));
 	const code = Object.entries(AI_ACTIONS).map(([key, definition]) => {
@@ -92,8 +92,8 @@ export async function listActions(store: AiActionsStore): Promise<AiActionView[]
 }
 
 /**
- * 고칠 수 있는 값으로 시험·저장할 기능을 만든다. 지시문의 `{{이름}}`은 언어 입력과 공통 문구(`sharedKeys`: 설정 문구와
- * 관리자 화면에서 더한 문구)만 받는다. 고칠 수 없는 값(이름·결과 모양 등)은 보내도 무시한다.
+ * Builds an action to test or save with editable values. `{{name}}` in the prompt only accepts locale inputs and shared texts (`sharedKeys`: the config's texts and
+ * those added in the admin UI). Values that cannot be edited (name, result shape, etc.) are ignored if sent.
  */
 export function actionWithEdits(
 	key: string,
@@ -124,8 +124,8 @@ export function actionWithEdits(
 }
 
 /**
- * 저장하지 않은 고친 값으로 시험할 기능(AI 화면의 `시험`). 화면 기능은 기본 정보(`base`)를 함께 주면 그것으로(아직
- * 저장하지 않은 새 기능 등), 아니면 저장한 기본 정보로 만든다.
+ * Action to test with unsaved edited values (the AI screen's `Test`). A custom action is built from the base info (`base`) if given (e.g. a new, still
+ * unsaved action), otherwise from the saved base info.
  */
 export async function actionWithDraft(
 	store: AiActionsStore,
@@ -142,7 +142,7 @@ export async function actionWithDraft(
 	return actionWithEdits(key, edited, customDefinition(value.base), sharedKeys);
 }
 
-/** 화면 기능의 기본 정보를 검사한다. */
+/** Validates the base info of a custom action. */
 function readBase(input: unknown): CustomBase {
 	const parsed = customBaseSchema.safeParse(input);
 	if (!parsed.success) {
@@ -153,7 +153,7 @@ function readBase(input: unknown): CustomBase {
 	return parsed.data;
 }
 
-/** 화면 기능을 만든다. 기본 정보와 고친 값(연결·모델·지시문·검사 등)을 한 번에 받는다. */
+/** Creates a custom action. Takes the base info and the edited values (connection, model, prompt, checks, etc.) at once. */
 export async function createCustomAction(
 	store: AiActionsStore,
 	baseInput: unknown,
@@ -168,15 +168,15 @@ export async function createCustomAction(
 	return viewOf(resolveAction(key, definition, value.override), row, value);
 }
 
-/** 화면 기능을 지운다. */
+/** Deletes a custom action. */
 export async function deleteCustomAction(store: AiActionsStore, key: string, expectedVersion: number): Promise<void> {
 	if (!isCustomKey(key)) throw new AiError("ai_invalid_input", t("cannotDeleteCoded"));
 	await store.deleteAiCustomAction({ key, expectedVersion });
 }
 
 /**
- * 고친 값을 저장한다. 기본값과 같은 값은 저장하지 않는다.
- * 화면 기능은 기본 정보(`base`: 이름·붙을 곳·결과 모양)도 함께 고칠 수 있다.
+ * Saves edited values. Values equal to the default are not stored.
+ * For a custom action, the base info (`base`: name, attach point, result shape) can be edited too.
  */
 export async function updateAction(
 	store: AiActionsStore,
@@ -201,7 +201,7 @@ export async function updateAction(
 	return viewOf(action, row);
 }
 
-/** 기본값으로 되돌린다. 켜짐 여부는 지금 값을 둔다. 화면 기능은 되돌릴 기본값이 없다. */
+/** Resets to defaults. The enabled state keeps its current value. A custom action has no default to reset to. */
 export async function resetAction(store: AiActionsStore, key: string, expectedVersion: number): Promise<AiActionView> {
 	if (isCustomKey(key)) throw new AiError("ai_invalid_input", t("noDefaultForCustom"));
 	const current = await getAction(store, key);
@@ -212,9 +212,9 @@ export async function resetAction(store: AiActionsStore, key: string, expectedVe
 }
 
 /**
- * 예전 AI 기능 표(`ai_features`)의 저장 값을 기능 이름별 고친 값으로 옮긴다. 정의와 다른 값만 남긴다.
- * 정의에 없는 이름(설정에서 뺀 기능, 예전에 지운 `mediaAlt` 등)은 `null`이다.
- * 예전 `보낼 내용`(inputs)은 `send`가 되고, 정의에 없는 입력(예: `tags`)은 빠진다.
+ * Moves the stored values of the legacy AI action table (`ai_features`) into per-action edited values, keeping only values that differ from the definition.
+ * Names missing from the definition (actions removed from the config, a previously deleted `mediaAlt`, etc.) give `null`.
+ * The legacy `send` content list (`inputs`) becomes `send`, and inputs missing from the definition (e.g. `tags`) are dropped.
  */
 export function legacyFeatureOverride(key: string, spec: unknown): AiActionOverride | null {
 	const definition = actionDefinition(key);
@@ -236,7 +236,7 @@ export function legacyFeatureOverride(key: string, spec: unknown): AiActionOverr
 	] as const) {
 		if (raw[name] !== undefined) take(name, raw[name]);
 	}
-	// 예전 번역처럼 보낼 내용을 고르지 않던 기능은 빈 목록이었다. 빈 목록은 옮기지 않는다.
+	// Actions that, like the legacy translation, did not choose what to send had an empty list. An empty list is not moved over.
 	if (Array.isArray(raw.inputs) && raw.inputs.length > 0) {
 		take(
 			"send",

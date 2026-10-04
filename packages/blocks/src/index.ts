@@ -1,5 +1,5 @@
 /**
- * 블록 확장(`@monti-cms/blocks`). 사이트 설정의 `plugins`에 넣는다. 한 번에 넣으려면 `blocks()`, 하나씩 넣으려면 각 함수를 쓴다.
+ * Block extensions (`@monti-cms/blocks`). Add them to the site config's `plugins`. Use `blocks()` to add them all at once, or each function to add them one by one.
  *
  * ```ts
  * import { blocks } from "@monti-cms/blocks";

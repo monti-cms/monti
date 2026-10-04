@@ -5,8 +5,8 @@ import { savedProvider } from "../../settings";
 import { getAiStore } from "../../store";
 
 /**
- * 생성 연결 주소의 모델 목록(`GET {주소}/models`). 저장한 연결은 `providerId`로, 저장 전에는 주소·키로 부른다.
- * 키는 브라우저로 돌려보내지 않는다. 목록을 주지 않는 주소면 빈 목록이고, 화면은 이름을 직접 적게 한다.
+ * Model list of a generation connection's address (`GET {address}/models`). A saved connection is called by `providerId`; before saving, by address and key.
+ * The key is never returned to the browser. If the address gives no list, the list is empty and the screen has the user type the name.
  */
 export const POST = adminRoute(async ({ request }) => {
 	const query = parseWith(aiModelsQuerySchema, await readJsonBody(request));
@@ -14,7 +14,7 @@ export const POST = adminRoute(async ({ request }) => {
 	if (saved && saved.kind !== "chat") return json({ items: [] });
 	const url = query.url || saved?.url;
 	if (!url) return json({ items: isFakeAi() ? [{ id: "fake-generator" }] : [] });
-	// 주소를 바꿨는데 키를 새로 넣지 않았으면 저장된 키를 다른 주소로 보내지 않는다.
+	// If the address changed but no new key was entered, the stored key is not sent to a different address.
 	const apiKey = query.apiKey ?? (saved && saved.url === url ? saved.apiKey : null);
 	return json({ items: await listModels(url, apiKey, request.signal) });
 });

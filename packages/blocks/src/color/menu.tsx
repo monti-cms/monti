@@ -31,10 +31,10 @@ import { colorMessages } from "./messages";
 
 const t = createTranslator(colorMessages);
 
-/** 편집기 마크 이름(`cmsColor`). */
+/** Editor mark name (`cmsColor`). */
 export const COLOR_MARK_NAME = addedMarkName(colorBlock.name);
 
-/** 고르기 목록. 확장 옵션 `color({ palette })`, 없으면 기본 8색이다. */
+/** Picker list. The extension option `color({ palette })`, or the default 8 colors if absent. */
 const PALETTE: readonly PaletteColor[] =
 	getPluginOptions<{ palette?: readonly PaletteColor[] }>("color")?.palette ?? DEFAULT_TEXT_PALETTE;
 
@@ -42,7 +42,7 @@ type ColorKind = "fg" | "bg";
 
 const currentColor = (editor: Editor): TextColorAttrs => cleanTextColor(editor.getAttributes(COLOR_MARK_NAME));
 
-/** 선택한 글의 글자색이나 배경색 하나만 바꾼다. 둘 다 빠지면 표시를 없앤다. */
+/** Changes only the text color or only the background color of the selected text. If both end up removed, the mark is removed. */
 export function applyTextColor(editor: Editor, kind: ColorKind, color: ColorPair | null) {
 	const current = currentColor(editor);
 	const next: TextColorAttrs =
@@ -64,7 +64,7 @@ export function applyTextColor(editor: Editor, kind: ColorKind, color: ColorPair
 	}
 }
 
-/** 글자 "가" 견본. 실제 본문과 같은 `.cms-color` 규칙이라 지금 테마의 색으로 보인다. */
+/** Sample of the letter "가". It uses the same `.cms-color` rule as the real body, so it shows in the current theme's color. */
 function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 	const props = color
 		? textColorProps(kind === "fg" ? { fg: color.light, fgDark: color.dark } : { bg: color.light, bgDark: color.dark })
@@ -76,7 +76,7 @@ function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 			className={cn(
 				"flex size-6 items-center justify-center rounded-md border font-medium text-xs",
 				props?.className,
-				// 배경 견본은 둥근 사각형을 꽉 채운다(본문 배경색의 여백·모서리 규칙을 덮는다).
+				// The background sample fills the rounded rectangle completely (overriding the body background color's padding and corner rules).
 				kind === "bg" && "![padding:0] !rounded-md",
 			)}
 		>
@@ -93,7 +93,7 @@ function SwatchRow({
 }: {
 	editor: Editor;
 	kind: ColorKind;
-	/** `menu`는 드롭다운 항목, `buttons`는 일반 버튼(서식 버블 안). */
+	/** `menu` is a dropdown item, `buttons` is a regular button (inside the format bubble). */
 	variant?: "menu" | "buttons";
 	onPicked?: () => void;
 }) {
@@ -150,7 +150,7 @@ function SwatchRow({
 	);
 }
 
-/** 글자색·배경색 고르기 목록. 툴바 메뉴와 "더보기" 메뉴가 함께 쓴다. */
+/** Text/background color picker list. Shared by the toolbar menu and the "More" menu. */
 export function TextColorMenuItems({ editor }: { editor: Editor }) {
 	return (
 		<>
@@ -166,7 +166,7 @@ export function TextColorMenuItems({ editor }: { editor: Editor }) {
 	);
 }
 
-/** 서식 버블 안에서 펼치는 글자색·배경색 고르기. 고르면 `onPicked`를 부른다. */
+/** Text/background color picker that expands inside the format bubble. Calls `onPicked` when a color is chosen. */
 export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?: () => void }) {
 	return (
 		<div className="flex flex-col gap-1">
@@ -178,7 +178,7 @@ export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?
 	);
 }
 
-/** 글자색 버튼 아이콘. 지금 고른 글의 글자색·배경색으로 칠해 보인다(툴바와 서식 버블이 같이 쓴다). */
+/** Text color button icon. Painted with the text and background colors of the current selection (shared by the toolbar and the format bubble). */
 export function TextColorIcon({ editor }: { editor: Editor }) {
 	const current = currentColor(editor);
 	const underline = textColorProps({ fg: current.fg, fgDark: current.fgDark, bg: current.bg, bgDark: current.bgDark });
@@ -189,7 +189,7 @@ export function TextColorIcon({ editor }: { editor: Editor }) {
 	);
 }
 
-/** 툴바의 글자색 버튼. 아이콘이 지금 글자색을 보여 준다. */
+/** Text color button in the toolbar. The icon shows the current text color. */
 export function TextColorMenu({ editor }: { editor: Editor }) {
 	return (
 		<DropdownMenu>

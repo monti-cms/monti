@@ -4,8 +4,8 @@ import { colorMessages } from "./messages";
 const t = createActiveTranslator(colorMessages);
 
 /**
- * 글자색·글자 배경색(`:color[글]{fg="#dc2626" fgDark="#f87171"}`). 헥스 값을 밝은·어두운 테마 짝으로 저장한다.
- * 고르기 목록과 값 검사는 `./colors`. 공개 화면은 사이트가 `Color` 컴포넌트로 그린다(`textColorProps`).
+ * Text color and text background color (`:color[text]{fg="#dc2626" fgDark="#f87171"}`). Stores hex values as light/dark theme pairs.
+ * The picker list and value checks live in `./colors`. On the public page the site draws it with a `Color` component (`textColorProps`).
  */
 export const colorBlock = defineBlock({
 	name: "color",

@@ -27,7 +27,7 @@ const t = createTranslator(calloutMessages);
 const VARIANT_OPTIONS = calloutBlock.attributes.variant.options as Record<CalloutVariant, string>;
 const isVariant = (value: unknown): value is CalloutVariant => typeof value === "string" && value in VARIANT_OPTIONS;
 
-/** 콜아웃 편집 화면. 제목은 그 자리에서, 종류는 블록 도구 줄의 메뉴에서 바꾼다. 색은 테마 색에서 만든다(`styles.css`). */
+/** Callout editing view. The title is edited in place, the variant from the block toolbar menu. Colors derive from the theme colors (`styles.css`). */
 export function CalloutNodeView(props: NodeViewProps) {
 	const { selected, editor, getPos } = props;
 	const [values, setValue] = useContainerValues(props);
@@ -55,7 +55,7 @@ export function CalloutNodeView(props: NodeViewProps) {
 						className="flex-1 font-medium tracking-tight"
 					/>
 				</div>
-				{/* 안쪽 블록(react-renderer로 감싸진 커스텀 블록)의 위아래 여백이 상자 안쪽 여백에 더해지지 않게 첫·끝 자식은 0으로 둔다. */}
+				{/* Set the first and last child margins to 0 so the vertical margins of inner blocks (custom blocks wrapped by react-renderer) do not add to the box padding. */}
 				<NodeViewContent className="mt-2 text-current text-sm [&>[data-node-view-content-react]>:first-child>[data-node-view-wrapper]]:mt-0 [&>[data-node-view-content-react]>:last-child>[data-node-view-wrapper]]:mb-0 [&_p]:m-0 [&_p]:leading-relaxed" />
 			</div>
 			{editable ? (

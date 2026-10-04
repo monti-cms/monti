@@ -9,20 +9,20 @@ import { sharedMessages } from "./messages";
 
 const t = createTranslator(sharedMessages);
 
-/** 오른쪽 칸(분류 편집·미디어 상세·글 속성) 너비. 모든 오른쪽 칸이 같은 너비다. */
+/** Width of the right slot (taxonomy edit, media detail, post properties). All right slots share the same width. */
 export const SIDE_PANEL_WIDTH = "w-[22rem]";
 
 /**
- * 목록 옆에 여는 오른쪽 칸의 자리(분류 편집·미디어 상세). 좁은 화면은 목록 위에 덮고,
- * 넓은 화면은 목록 옆에 `SIDE_PANEL_WIDTH`와 같은 폭으로 둔다(Tailwind가 읽도록 글자 그대로 적는다).
+ * Place of the right slot opened beside the list (taxonomy edit, media detail). On narrow screens it covers the list,
+ * on wide screens it sits beside the list at the same width as `SIDE_PANEL_WIDTH` (written literally so Tailwind can read it).
  */
 export const SIDE_PANEL_DOCK =
 	"absolute inset-y-0 right-0 z-20 w-full shadow-lg sm:w-[22rem] lg:static lg:shrink-0 lg:shadow-none";
 
-/** 목록에서 지금 연 항목(오른쪽 칸·편집 칸에 열린 것)의 배경. */
+/** Background of the item currently open in the list (open in the right slot or edit slot). */
 export const OPEN_ITEM = "bg-cms-accent text-cms-accent-foreground";
 
-/** 오른쪽 칸 머리. 제목과 닫기 버튼(이름은 늘 "닫기")이다. */
+/** Right slot header. A title and a close button (the name is always "Close"). */
 export function SidePanelHeader({
 	title,
 	onClose,
@@ -32,7 +32,7 @@ export function SidePanelHeader({
 	title?: ReactNode;
 	onClose: () => void;
 	className?: string;
-	/** 제목 대신(또는 옆에) 둘 내용(탭 등). */
+	/** Content to put instead of (or next to) the title (tabs etc.). */
 	children?: ReactNode;
 }) {
 	return (

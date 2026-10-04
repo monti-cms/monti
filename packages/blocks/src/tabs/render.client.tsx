@@ -3,8 +3,8 @@
 import { type KeyboardEvent, type ReactNode, useId, useRef, useState } from "react";
 
 /**
- * 탭 묶음의 전환 부분. 탭 이름 줄(`tablist`)과 탭마다의 본문(`tabpanel`)을 그린다. 본문은 서버가 그려 넘기므로 여기서는
- * 보이는 탭만 바꾼다(나머지는 `hidden`). 화살표·Home·End로 탭을 옮기고, 고른 탭만 Tab 키로 닿는다.
+ * The switching part of the tab group. Renders the tab name row (`tablist`) and each tab's body (`tabpanel`). The server renders and passes the bodies, so here
+ * only the visible tab is switched (the rest are `hidden`). Arrow keys, Home and End move between tabs, and only the selected tab is reachable with the Tab key.
  */
 export function TabsView({
 	labels,
@@ -44,7 +44,7 @@ export function TabsView({
 			<div className="cms-block-tabs-list" role="tablist" aria-orientation="horizontal">
 				{labels.map((label, index) => (
 					<button
-						// biome-ignore lint/suspicious/noArrayIndexKey: 같은 이름의 탭이 있을 수 있어 자리로 구분한다
+						// biome-ignore lint/suspicious/noArrayIndexKey: tabs can share a name, so they are told apart by position
 						key={index}
 						ref={(element) => {
 							buttons.current[index] = element;
@@ -65,7 +65,7 @@ export function TabsView({
 			</div>
 			{panels.map((panel, index) => (
 				<div
-					// biome-ignore lint/suspicious/noArrayIndexKey: 탭과 같은 자리 순서다
+					// biome-ignore lint/suspicious/noArrayIndexKey: same position order as the tabs
 					key={index}
 					role="tabpanel"
 					id={`${id}-panel-${index}`}

@@ -6,14 +6,14 @@ import { addShared, deleteShared, getSharedView, updateShared, updateSharedItem 
 import { getAiStore } from "../../store";
 
 /**
- * 공통 문구(M8-4). 모든 요청은 바뀐 목록 전체(`{ version, items }`)를 돌려준다. 고칠 때는 `expectedVersion`을 보내고,
- * 버전이 다르면 409다.
+ * Shared texts. Every request returns the whole changed list (`{ version, items }`). To edit, send `expectedVersion`;
+ * a different version gives 409.
  *
- * - `GET`: 설정 문구와 더한 문구(`source: "config" | "added"`).
- * - `POST { expectedVersion, key, label, text }`: 문구를 더한다.
- * - `PATCH { expectedVersion, key, label?, text }`: 문구 하나를 고친다(설정 문구는 내용만).
- * - `PUT { expectedVersion, texts: { 키: 내용 } }`: 여러 문구의 내용을 한 번에 고친다.
- * - `DELETE ?key=&expectedVersion=`: 더한 문구를 삭제한다. 지시문에서 쓰는 기능이 있으면 막는다.
+ * - `GET`: config texts and added texts (`source: "config" | "added"`).
+ * - `POST { expectedVersion, key, label, text }`: adds a text.
+ * - `PATCH { expectedVersion, key, label?, text }`: edits one text (config texts: content only).
+ * - `PUT { expectedVersion, texts: { key: content } }`: edits the content of several texts at once.
+ * - `DELETE ?key=&expectedVersion=`: deletes an added text. Blocked if an action uses it in its instructions.
  */
 
 const versioned = z.looseObject({ expectedVersion: z.number().int().min(0) });

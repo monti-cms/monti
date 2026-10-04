@@ -114,8 +114,8 @@ function InputGroupInput({ className, ...props }: React.ComponentProps<"input">)
 			data-slot="input-group-control"
 			className={cn(
 				"flex-1 rounded-none border-0 bg-transparent cms-dark:bg-transparent shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0",
-				// 브라우저 자동완성이 칠하는 배경이 칸 안 입력에만 깔려 묶음 테두리·버튼과 어긋나지 않게, 배경색 바뀜을 사실상 멈춘다
-				// (입력은 투명한 채로 묶음 배경을 그대로 보인다). 글자색도 테마 색을 쓴다.
+				// Effectively stops background color changes, so the autofill background does not paint only the inner input and clash with the group's border and buttons
+				// (the input stays transparent and shows the group background). Text color also uses the theme color.
 				"autofill:[-webkit-text-fill-color:var(--cms-foreground)] autofill:[transition:background-color_100000s_ease-in-out_0s]",
 				className,
 			)}

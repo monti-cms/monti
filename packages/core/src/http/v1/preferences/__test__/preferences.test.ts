@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, otherContentCollection, recordCollection } from "../../../../../test/any-site";
 import { GET as getPreferences, PUT as putPreferences } from "../route";
 
-/** 설정 두 개를 구분해 확인할 두 컬렉션(블로그 예시 설정은 게시글·메모). 이름은 설정에서 찾는다. */
+/** Two collections used to tell the two settings apart (the reference blog setup uses posts and memos). Names are looked up from the config. */
 const FIRST = contentCollection;
 const SECOND = otherContentCollection ?? recordCollection;
 
@@ -41,7 +41,7 @@ const putReq = (body: unknown) =>
 		body: JSON.stringify(body),
 	});
 
-describe("Preferences API — 컬렉션별 목록 설정(§3.2)", () => {
+describe("Preferences API — per-collection list preferences", () => {
 	beforeEach(() => {
 		state.stored = null;
 	});

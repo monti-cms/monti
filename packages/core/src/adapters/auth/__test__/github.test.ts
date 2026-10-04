@@ -3,21 +3,21 @@ import { CMS_AUTH_BASE_PATH } from "../../../server/define";
 import { githubAuthConfig } from "../auth-config";
 import { githubAuth } from "../github";
 
-// NextAuth 본체는 Next 서버 모듈을 읽으므로 설정 모양만 본다.
+// NextAuth itself reads Next server modules, so only the config shape is checked.
 vi.mock("next-auth", () => ({ default: vi.fn() }));
 vi.mock("next-auth/providers/github", () => ({ default: (options: object) => ({ id: "github", ...options }) }));
 
 const credentials = { clientId: "id", clientSecret: "secret", adminIds: ["1"] };
 
-describe("GitHub 로그인 경로", () => {
-	it("로그인 API는 기본으로 관리자 API 아래(`/api/cms/auth`)이고, 예전 경로를 고를 수 있다", () => {
+describe("GitHub login path", () => {
+	it("the login API is under the admin API by default (`/api/cms/auth`), and the old path can be chosen", () => {
 		expect(githubAuth(credentials).create({ loginPath: "/admin/login" }).basePath).toBe(CMS_AUTH_BASE_PATH);
 		expect(githubAuth({ ...credentials, basePath: "/api/auth/" }).create({ loginPath: "/admin/login" }).basePath).toBe(
 			"/api/auth",
 		);
 	});
 
-	it("NextAuth 설정에 로그인 API 경로와 관리자 로그인 화면 주소를 넣는다", () => {
+	it("puts the login API path and the admin login page URL into the NextAuth config", () => {
 		const config = githubAuthConfig({
 			clientId: "id",
 			clientSecret: "secret",
@@ -26,11 +26,11 @@ describe("GitHub 로그인 경로", () => {
 		});
 		expect(config.basePath).toBe("/api/cms/auth");
 		expect(config.pages?.signIn).toBe("/studio/login");
-		// 서명 값을 주지 않으면 NextAuth가 AUTH_SECRET을 읽게 비워 둔다.
+		// Without a signing value, leave it empty so NextAuth reads AUTH_SECRET.
 		expect(config.secret).toBeUndefined();
 	});
 
-	it("로그인 서명 값을 받으면 NextAuth에 넘긴다(저장 값 암호화 키와 따로)", () => {
+	it("passes a login signing value to NextAuth (separate from the stored-value encryption key)", () => {
 		const config = githubAuthConfig({
 			clientId: "id",
 			clientSecret: "secret",

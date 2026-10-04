@@ -8,13 +8,13 @@ import { analyze } from "../analyze";
 import { remarkFenceBlocksToMdx } from "../remark-fence-blocks";
 
 /**
- * 블록 이름은 지금 설정에서 찾는다(블로그 예시 설정은 `mermaid`·`chart`, 다른 사이트 설정은 `chart`·`map`).
- * 자식 개수가 정해진 묶음 블록(예: 탭 묶음)이 없는 설정이면 그 경우는 건너뛴다.
+ * Block names are looked up from the current config (the reference blog setup has `mermaid` and `chart`; another site's config has `chart` and `map`).
+ * If the config has no group block with a fixed child count (e.g. a tabs group), that case is skipped.
  */
 const fenceBlock = ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
 if (fenceBlock?.syntax.kind !== "fence") throw new Error("fence-blocks test: the config has no fence block");
 const fenceLang = fenceBlock.syntax.lang;
-/** 최소·최대 자식 개수가 있는 묶음 블록과 그 자식(예: 탭 묶음·탭). */
+/** A group block with minimum/maximum child counts and its child (e.g. a tabs group and a tab). */
 const group = ADDED_BLOCKS.flatMap((block) => {
 	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	const { min, max } = block.children ?? {};
@@ -25,9 +25,9 @@ const run = (body: string): Root => {
 	return processor.runSync(processor.parse(body)) as Root;
 };
 
-describe("코드 펜스 블록의 공개 렌더", () => {
-	it("더한 블록의 언어는 그 렌더러로 바꾸고 코드를 `source`로 넘긴다", () => {
-		// 언어 이름의 대소문자는 가리지 않는다.
+describe("public render of code fence blocks", () => {
+	it("converts the language of an added block to its renderer and passes the code as `source`", () => {
+		// Language names are case-insensitive.
 		const lang = `${fenceLang.charAt(0).toUpperCase()}${fenceLang.slice(1)}`;
 		const [node] = run(`\`\`\`${lang}\ngraph TD\n  A --> B\n\`\`\`\n`).children;
 		expect(node).toMatchObject({
@@ -38,12 +38,12 @@ describe("코드 펜스 블록의 공개 렌더", () => {
 		});
 	});
 
-	it("다른 언어의 코드 블록은 그대로 둔다", () => {
+	it("leaves code blocks of other languages as they are", () => {
 		const [node] = run("```ts\nconst a = 1;\n```\n").children;
 		expect(node).toMatchObject({ type: "code", lang: "ts" });
 	});
 
-	it("더한 블록의 렌더러 이름은 본문 JSX로도 받는다", () => {
+	it("also accepts the renderer name of an added block as body JSX", () => {
 		expect(analyze(`<${fenceBlock.component} source="chart bar" />\n`).errors).toEqual([]);
 		expect(analyze("<Unknown />\n").errors.map(({ code, params }) => ({ code, params }))).toEqual([
 			{ code: "disallowed_jsx_element", params: { name: "Unknown" } },
@@ -51,11 +51,11 @@ describe("코드 펜스 블록의 공개 렌더", () => {
 	});
 });
 
-describe("더한 블록의 자식 개수", () => {
-	it.skipIf(!group)("정의의 최소·최대 개수를 벗어나면 막는다", () => {
+describe("child count of added blocks", () => {
+	it.skipIf(!group)("blocks counts outside the definition's minimum and maximum", () => {
 		if (!group) return;
 		const { block, child, min, max } = group;
-		// 필수 글 속성(예: 탭 이름)만 채운다.
+		// Fill in only the required text attributes (e.g. the tab name).
 		const props = (index: number) =>
 			Object.entries(child.attributes)
 				.filter(([, attribute]) => attribute.type === "string" && attribute.required)

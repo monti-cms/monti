@@ -12,25 +12,25 @@ export type EntryMetadata = JsonObject;
 
 export type EntryStatus = "draft" | "published" | "archived" | "trashed";
 
-/** 공개 조회 전용 항목. 초안·보관·휴지통은 이 타입으로 표현되지 않는다. */
+/** Entry for public reads only. Drafts, archived, and trashed entries cannot be represented by this type. */
 export interface PublishedEntryRecord {
 	readonly id: string;
 	readonly collection: string;
-	/** 콘텐츠 언어(v2 B4). 번역본의 메타데이터는 원문의 공통 값과 합친 것이다. */
+	/** Content language. A translation's metadata is merged with the source's shared values. */
 	readonly locale: string;
 	readonly translationGroupId: string;
 	readonly slug: string;
 	readonly metadata: EntryMetadata;
-	/** `includeBody: false`인 목록 조회에서는 빈 문자열이다. */
+	/** An empty string in list reads with `includeBody: false`. */
 	readonly mdx: string;
 	readonly publishedAt: Date | null;
 	readonly updatedAt: Date;
 }
 
 /**
- * 공개 상세 조회 결과. `alias`는 과거 주소로 들어온 요청이며 `entry.slug`는 정규 current slug다.
- * 호출자는 `alias`를 308(영구 이동)으로 처리한다. `reservation`·`deleted` 주소와
- * current 주소가 없는 항목은 공개 계층에 존재하지 않으므로 `not_found`에 포함된다.
+ * Public detail read result. `alias` means the request came in on a former address, and `entry.slug` is the canonical current slug.
+ * The caller handles `alias` as a 308 (permanent redirect). `reservation` and `deleted` slugs and
+ * entries with no current slug do not exist in the public layer, so they fall under `not_found`.
  */
 export type PublishedEntryLookup =
 	| { readonly status: "current"; readonly entry: PublishedEntryRecord }
@@ -43,7 +43,7 @@ export interface EntryBody {
 	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;
-	/** 번역본의 번역 상태(v3 번역 화면). 원문과 예전 번역본은 `null`. */
+	/** Translation status of a translation. `null` for sources and legacy translations. */
 	translation?: TranslationState | null;
 }
 
@@ -59,9 +59,9 @@ export interface BodyTemplate {
 export interface Entry {
 	id: string;
 	collection: string;
-	/** 콘텐츠 언어(v2 B4). */
+	/** Content language. */
 	locale: string;
-	/** 번역 묶음 ID. 원문의 ID와 같고, 원문이면 자기 ID다. */
+	/** Translation group ID. Equals the source's ID; for a source, its own ID. */
 	translationGroupId: string;
 	status: EntryStatus;
 	version: number;
@@ -76,7 +76,7 @@ export interface Entry {
 	published?: EntryBody;
 }
 
-/** 번역 묶음(v2 B4). `members`의 첫 항목이 원문이다. */
+/** Translation group. The first item of `members` is the source. */
 export interface TranslationGroup {
 	groupId: string;
 	members: {
@@ -108,7 +108,7 @@ export interface MediaAssetRecord {
 	height: number | null;
 	stagingKey: string | null;
 	storageKey: string | null;
-	/** 웹용으로 변환해 올린 경우의 원본 파일. 원본 유지 업로드는 `null`이다(§7.1). */
+	/** Original file when the upload was converted for the web. `null` for keep-original uploads. */
 	original: MediaOriginalFile | null;
 	defaultAlt: string;
 	defaultCaption: string;
@@ -131,7 +131,7 @@ export interface CompleteMediaAssetInput {
 	storageKey: string;
 	mimeType: string;
 	byteSize: number;
-	/** 첨부 파일(v3)은 크기가 없어 `null`이다. */
+	/** `null` for attachments, which have no dimensions. */
 	width: number | null;
 	height: number | null;
 	original?: { storageKey: string; mimeType: string; byteSize: number; width: number; height: number };
@@ -152,7 +152,7 @@ export interface ListMediaItem extends MediaAssetRecord {
 export interface ListMediaParams {
 	search?: string;
 	mimeType?: string;
-	/** 이미지만(`image`) 또는 이미지가 아닌 첨부 파일만(`file`). */
+	/** Images only (`image`) or non-image attachments only (`file`). */
 	kind?: "all" | "image" | "file";
 	used?: "all" | "used" | "unused";
 	uploadedFrom?: Date;
@@ -180,7 +180,7 @@ export interface Folder {
 export interface ListEntriesItem {
 	id: string;
 	collection: string;
-	/** 콘텐츠 언어와 번역 묶음 ID(v2 B4). 공통 관계 값·표시 발행일은 원문 초안의 값이다. */
+	/** Content language and translation group ID. Shared relation values and the displayed publish date come from the source draft. */
 	locale: string;
 	translationGroupId: string;
 	title: string | null;
@@ -189,40 +189,40 @@ export interface ListEntriesItem {
 	version: number;
 	folderId: string | null;
 	/**
-	 * 관계 필드 이름 → 고른 항목과 이름. 컬렉션의 모든 관계 필드를 담고(값이 없으면 빈 배열), 선언·고른 순서를 따른다.
-	 * 이름을 찾지 못한 항목(지운 대상 등)은 `title: null`이다. 언어별이 아닌 관계는 원문 초안에서 읽는다(v2 B4).
+	 * Relation field name to selected items and their names. Contains every relation field of the collection (an empty array when no value), in declaration and selection order.
+	 * An item whose name cannot be found (a deleted target, etc.) has `title: null`. Non-per-language relations are read from the source draft.
 	 */
 	relations: Readonly<Record<string, readonly ListRelationValue[]>>;
 	/**
-	 * 필드 이름 → 글자로 저장된 값(글자·선택·미디어 필드). 목록의 필드 컬럼 기본 칸이 그린다. 값이 없는 필드는 빠진다.
-	 * 언어별이 아닌 필드는 원문 초안에서 읽는다(v2 B4).
+	 * Field name to the value stored as text (text, select, and media fields). The list's default field-column cell renders it. Fields without a value are omitted.
+	 * Non-per-language fields are read from the source draft.
 	 */
 	values: Readonly<Record<string, string>>;
-	/** 공개본이 있고 최신 초안이 공개본과 다르다(`발행됨 · 수정 중`). */
+	/** A published version exists and the latest draft differs from it (`발행됨 · 수정 중`). */
 	hasUnpublishedChanges: boolean;
 	publishedAt: Date | null;
 	createdAt: Date;
 	updatedAt: Date;
 	trashedAt: Date | null;
 	/**
-	 * 묶음 보기(`groupTranslations`)에서만 채운다(v3 번역 화면). 같은 번역 묶음에서 휴지통 밖에 있는
-	 * 콘텐츠(원문 포함)를 `LOCALES` 순서로 담는다.
+	 * Filled only in group view (`groupTranslations`). Holds the content in the same translation group that is not in
+	 * the trash (including the source), in `LOCALES` order.
 	 */
 	translations?: readonly ListTranslationMember[];
 	/**
-	 * record 컬렉션(카테고리·태그·모음집)에서만 채운다. 이름이 있는 언어를 `LOCALES` 순서로 담는다.
-	 * 기본 언어는 항목 자체의 이름이고, 다른 언어는 `metadata.translations[언어].title`이다(v2 B4).
+	 * Filled only for record collections (categories, tags, collections). Holds the languages that have a name, in `LOCALES` order.
+	 * The default language is the item's own name; other languages use `metadata.translations[locale].title`.
 	 */
 	recordLocales?: readonly string[];
 }
 
-/** 목록 줄의 관계 값 하나. */
+/** One relation value of a list row. */
 export interface ListRelationValue {
 	id: string;
 	title: string | null;
 }
 
-/** 목록 한 줄(원문)에 딸린 같은 묶음의 언어별 콘텐츠. */
+/** Per-language content of the same group attached to one list row (the source). */
 export interface ListTranslationMember {
 	id: string;
 	locale: string;
@@ -241,24 +241,24 @@ export interface ListEntriesParams {
 	collection: string;
 	search?: string;
 	includeBody?: boolean;
-	/** 컬럼 헤더 필터: 제목만(부분 일치). `search`와 AND로 함께 쓴다. */
+	/** Column header filter: title only (partial match). Combined with `search` using AND. */
 	titleContains?: string;
-	/** 컬럼 헤더 필터: 주소(slug)만(부분 일치). */
+	/** Column header filter: slug only (partial match). */
 	slugContains?: string;
 	statuses?: readonly EntryStatus[];
 	/**
-	 * 이 언어들만(v2 B4). 없으면 모든 언어다.
-	 * 묶음 보기에서는 "이 언어 콘텐츠가 (휴지통 밖에) 있는 묶음"으로 거른다.
+	 * Only these languages. All languages if unset.
+	 * In group view, filters to "groups that have content in this language (outside the trash)".
 	 */
 	locales?: readonly string[];
 	/**
-	 * 번역 묶음마다 원문 한 줄로 보인다(v3 번역 화면). 검색은 묶음 안 어느 언어 제목·주소에 걸려도 되고,
-	 * 그 밖의 필터·정렬은 원문 값이다. 줄마다 `translations`를 채운다.
+	 * Each translation group shows as one source row. Search may match the title or slug in any language of the group,
+	 * while other filters and sorting use the source's values. Every row fills `translations`.
 	 */
 	groupTranslations?: boolean;
 	folderId?: string | null;
 	includeDescendants?: boolean;
-	/** 관계 필드 이름 → 고른 항목 ID. 같은 필드의 여러 값은 OR, 다른 필드끼리는 AND다(§3.2). */
+	/** Relation field name to selected item IDs. Multiple values of the same field are OR; different fields are AND. */
 	relations?: Readonly<Record<string, readonly string[]>>;
 	hasUnpublishedChanges?: boolean;
 	createdAt?: DateRange;
@@ -293,14 +293,14 @@ export interface ExportSnapshotBody {
 	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;
-	/** 번역본의 번역 상태(v3). */
+	/** Translation status of a translation. */
 	translation?: TranslationState | null;
 }
 
 export interface ExportSnapshotEntry {
 	id: string;
 	collection: string;
-	/** 콘텐츠 언어와 번역 묶음 ID(v2 B4). 원문이면 묶음 ID가 자기 ID다. */
+	/** Content language and translation group ID. For a source, the group ID is its own ID. */
 	locale: string;
 	translationGroupId: string;
 	status: string;
@@ -332,7 +332,7 @@ export interface ExportSnapshotAddress {
 	type: string;
 }
 
-/** 관리자 백업·공개 projection의 공통 원본. 단일 REPEATABLE READ READ ONLY 스냅샷이다. */
+/** Common source for admin backup and public projection. A single REPEATABLE READ READ ONLY snapshot. */
 export interface ExportSnapshot {
 	entries: ExportSnapshotEntry[];
 	references: ExportSnapshotReference[];

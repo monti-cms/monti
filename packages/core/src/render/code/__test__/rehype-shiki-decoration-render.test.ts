@@ -47,7 +47,7 @@ describe("rehypeShikiDecorationRender", () => {
 		highlightMock.mockReset();
 	});
 
-	it("pre/code의 data-* payload를 파싱해서 highlight에 전달하고 pre를 교체한다", async () => {
+	it("parses the data-* payload of pre/code, passes it to highlight and replaces the pre", async () => {
 		const renderedPre: Element = {
 			type: "element",
 			tagName: "pre",
@@ -105,7 +105,7 @@ describe("rehypeShikiDecorationRender", () => {
 		expect(tree.children[0]).toBe(renderedPre);
 	});
 
-	it("pre에 data가 없으면 code의 data-*를 fallback으로 사용한다", async () => {
+	it("falls back to the data-* of code when pre has no data", async () => {
 		const renderedPre: Element = {
 			type: "element",
 			tagName: "pre",
@@ -145,7 +145,7 @@ describe("rehypeShikiDecorationRender", () => {
 		);
 	});
 
-	it("code child가 없으면 skip한다", async () => {
+	it("skips when there is no code child", async () => {
 		const tree: Root = {
 			type: "root",
 			children: [
@@ -163,7 +163,7 @@ describe("rehypeShikiDecorationRender", () => {
 		expect(highlightMock).not.toHaveBeenCalled();
 	});
 
-	it("기본값으로는 mermaid lang도 highlight한다", async () => {
+	it("highlights the mermaid lang by default too", async () => {
 		const renderedPre: Element = {
 			type: "element",
 			tagName: "pre",
@@ -197,7 +197,7 @@ describe("rehypeShikiDecorationRender", () => {
 		);
 	});
 
-	it("ignoreLang 옵션으로 skip 조건을 커스터마이즈할 수 있다", async () => {
+	it("the skip condition can be customized with the ignoreLang option", async () => {
 		const pre = createPreWithCode({
 			codeValue: "const a = 1;\n",
 			codeClassName: ["language-ts"],

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 기본 AI 기능의 이름과 입력 이름(관리자 AI 화면·버튼에 보인다). 모델에 보내는 지시문은 사전이 아니라 코드의 영어 문장이다. */
+/** Names of the default AI actions and their inputs (shown in the admin AI screen and on buttons). The prompts sent to the model are English sentences in code, not dictionary entries. */
 export const presetMessages = defineMessages("cms-ai.presets", {
 	en: {
 		"input.title": "Title",

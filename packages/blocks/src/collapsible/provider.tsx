@@ -10,7 +10,7 @@ const components: CmsAdminComponents = {
 	icons: { "chevrons-up-down": ChevronsUpDown },
 };
 
-/** 접기 블록의 편집 화면과 메뉴 아이콘을 관리자 화면에 넣는다. */
+/** Registers the collapsible block's editing view and menu icon in the admin UI. */
 export function CollapsibleProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

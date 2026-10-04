@@ -3,8 +3,8 @@ import { AiManager } from "./ai-manager";
 import { AiAdminProvider } from "./provider";
 
 /**
- * AI 플러그인의 관리자 화면 쪽. 관리자 화면이 사이트 설정의 `aiPlugin()`을 보고 불러온다.
- * 직접 만든 화면에서는 `useAiAction("이름")`이나 `<AiButton action="이름" />`으로 기능을 부른다.
+ * Admin-screen side of the AI plugin. The admin screen reads the site config's `aiPlugin()` and loads it.
+ * In custom screens, call an action with `useAiAction("name")` or `<AiButton action="name" />`.
  */
 export default defineAdminPlugin({ pages: { ai: AiManager }, Provider: AiAdminProvider });
 

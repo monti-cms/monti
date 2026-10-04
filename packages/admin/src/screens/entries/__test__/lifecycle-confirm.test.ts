@@ -13,8 +13,8 @@ const source = {
 } as never;
 const translation = { id: "en-1", translationGroupId: "src", translations: [] } as never;
 
-describe("상태 전환 확인 문구", () => {
-	it("공개본에서 쓰는 곳만 세어 알린다", () => {
+describe("status transition confirmation text", () => {
+	it("counts and reports only usages in the published version", () => {
 		const confirm = lifecycleConfirm("archive", null, [
 			{ state: "published" },
 			{ state: "published" },
@@ -25,7 +25,7 @@ describe("상태 전환 확인 문구", () => {
 		);
 	});
 
-	it("원문을 휴지통으로 보내면 휴지통에 없는 번역본 언어를 알린다", () => {
+	it("moving the original to trash reports translation languages not in trash", () => {
 		const confirm = lifecycleConfirm("trash", source, []);
 		expect(confirm).toEqual({
 			title: t("lifecycle.trash"),
@@ -35,17 +35,17 @@ describe("상태 전환 확인 문구", () => {
 		});
 	});
 
-	it("원문을 보관하면 번역본도 보관한다고 알린다", () => {
+	it("archiving the original reports that translations are archived too", () => {
 		expect(lifecycleConfirm("archive", source, []).description).toBe(
 			`${t("lifecycle.archive.ask", { translation: 0 })}${t("lifecycle.archive.group")}`,
 		);
 	});
 
-	it("번역본을 옮길 때는 묶음 안내가 없다", () => {
+	it("there is no group notice when moving a translation", () => {
 		expect(lifecycleConfirm("trash", translation, []).description).toBe(t("lifecycle.trash.ask", { translation: 1 }));
 	});
 
-	it("묻지 않는 전환도 끝나면 알릴 문구가 있다", () => {
+	it("transitions that do not ask also have text to announce when done", () => {
 		expect(LIFECYCLE_SUCCESS.unarchive).toBe(t("lifecycle.success.unarchive"));
 		expect(LIFECYCLE_SUCCESS.restore).toBe(t("lifecycle.success.restore"));
 	});

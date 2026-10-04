@@ -18,11 +18,11 @@ import { CmsUntranslatedMark } from "./untranslated-mark";
 const t = createTranslator(editorMessages);
 
 /**
- * Tiptap 스키마에 없는 CMS 블록(수식·차트·콜아웃·탭·머메이드·병합된 표 등)을 보존하는 읽기 전용 상자.
+ * A read-only box that preserves CMS blocks not in the Tiptap schema (math, chart, callout, tabs, mermaid, merged tables, etc.).
  *
- * `attrs.source`에 그 서브트리의 저장 문자열(MDX)을 담는다. 저장할 때는 상자를 다시
- * 파싱해 끼워 넣으므로 내용이 바뀌지 않는다(§4.4 "조용히 노드를 삭제하지 않는다").
- * `atom`이라 상자 안은 편집되지 않고, 상자째로 선택·삭제만 된다.
+ * `attrs.source` holds the stored string (MDX) of that subtree. On save, the box is parsed
+ * again and spliced back in, so the content never changes (nodes are never silently deleted).
+ * As an `atom`, the inside of the box is not editable; it can only be selected and deleted as a whole.
  */
 export const CmsOpaqueBlock = Node.create({
 	name: "cmsOpaqueBlock",
@@ -70,13 +70,13 @@ export const CmsOpaqueBlock = Node.create({
 });
 
 /**
- * 새 표현 계약(§4.4)의 인라인·정렬 확장.
+ * Inline and alignment extensions for the new representation contract.
  *
- * 배치 3(M8-ED-2)에서 쓰기 명령을 켰다 — 에디터가 `toDocument`/`serialize` 경로로
- * 저장하므로 읽기/쓰기 전환이 원자적이다(§9.1.1·§9.1.3).
+ * Write commands are enabled — the editor saves through the `toDocument`/`serialize` path,
+ * so the read/write switch is atomic.
  *
- * A4: `alignments`에 `justify`를 넣지 않는다. 공개 렌더가 `left`·`center`·`right`만 고정 클래스로 지원한다.
- * Tiptap 내부는 인라인 `style`을 쓰지만(확장 기본 동작) 저장 형식은 `:::text-align{align=...}`이다.
+ * `alignments` does not include `justify`. The public renderer supports only `left`, `center`, and `right` with fixed classes.
+ * Tiptap internally uses inline `style` (extension default) but the stored format is `:::text-align{align=...}`.
  */
 export const CmsTextAlign = TextAlign.configure({
 	types: ["heading", "paragraph"],
@@ -88,17 +88,17 @@ export const CmsSuperscript = Superscript;
 export const CmsSubscript = Subscript;
 
 /**
- * 코드 펜스 정보 문자열(` ```ts title="..." `)의 `meta`와 주석(밑줄·툴팁)을 들고 다닌다.
- * StarterKit의 코드블록에는 `language`만 있어 `meta`가 조용히 사라지므로,
- * StarterKit에서는 끄고(`codeBlock: false`) 이 확장을 쓴다.
+ * Carries the `meta` of the code fence info string (` ```ts title="..." `) and annotations (underline, tooltip).
+ * StarterKit's code block has only `language`, so `meta` would silently disappear,
+ * so this extension is used with StarterKit's turned off (`codeBlock: false`).
  */
 export { CmsCodeBlock };
 
 /**
- * 열 너비를 끄는 동안에는 저장된 너비로 되돌리지 않는 표 NodeView.
- * 기본 TableView는 다시 그릴 때마다(`update`) 저장된 열 너비를 다시 적용한다. 끄는 너비는 DOM에만 있어서,
- * 끄는 도중 편집기가 다시 그려지면(React 재렌더로 옵션이 다시 설정될 때 등) 저장값과 번갈아 깜빡인다.
- * 놓으면 prosemirror-tables가 너비를 문서에 넣고, 그 뒤의 다시 그리기는 평소대로 적용한다.
+ * A table NodeView that does not revert to the stored width while a column width is being dragged.
+ * The default TableView re-applies the stored column width on every re-render (`update`). The dragged width exists only in the DOM,
+ * so if the editor re-renders mid-drag (e.g. when React re-render resets options), it flickers back and forth with the stored value.
+ * On release, prosemirror-tables writes the width into the document, and later re-renders apply it as usual.
  */
 class CmsTableView extends TableView {
 	private readonly editorView?: EditorView;
@@ -120,9 +120,9 @@ class CmsTableView extends TableView {
 	}
 
 	/**
-	 * 너비가 없는 열의 `<col>`에 남은 옛 `width`를 지운다. Tiptap의 열 갱신은 너비가 없는 열에 `min-width`만
-	 * 넣고 `width`는 그대로 둔다. 그래서 "폭 채우기" 뒤에도 옛 너비로 보이다가, 끌기 시작하면
-	 * prosemirror-tables가 옛 너비를 한꺼번에 지워 표가 훅 바뀐다.
+	 * Clears the stale `width` left on the `<col>` of a column with no width. Tiptap's column update only puts `min-width`
+	 * on a column with no width and leaves `width` as is. So even after "fill width" it still looks like the old width, and once dragging starts,
+	 * prosemirror-tables clears the old widths all at once and the table jumps.
 	 */
 	private clearStaleColumnWidths(node: PmNode) {
 		const row = node.firstChild;
@@ -139,24 +139,24 @@ class CmsTableView extends TableView {
 }
 
 /**
- * 표(§4.1 "기본 표와 행·열 추가/삭제", v2 C6 셀 병합·열 너비).
- * 열 너비를 조절한 표는 `::::table{widths="..."}` directive로 저장한다(c-editor.md §1.2).
- * 열 경계 양옆 `handleWidth`(px) 안에서 끌면 너비를 조절한다. 기본 5px은 잡기 어려워 넓혔다.
+ * Table (basic table with row/column add/delete, cell merging, column widths).
+ * A table with adjusted column widths is stored as a `::::table{widths="..."}` directive.
+ * Dragging within `handleWidth` (px) on either side of a column boundary adjusts the width. The default 5px was hard to grab, so it is widened.
  */
 export const CmsTable = Table.extend({
 	addAttributes() {
 		return {
 			...this.parent?.(),
-			// GFM 열 정렬(`:-:` 등)을 들고 다닌다. 화면에는 쓰지 않고 저장할 때만 쓴다.
+			// Carries GFM column alignment (`:-:` etc.). Not used on screen, only on save.
 			align: { default: null, rendered: false },
 		};
 	},
 	addProseMirrorPlugins() {
 		return [
 			...(this.parent?.() ?? []),
-			// 열 너비를 끄는 동안에는 선택만 바꾸는 트랜잭션을 막는다. prosemirror-tables의 너비 조절 mousedown은
-			// 처리했다고 알리지 않아 셀 선택(tableEditing)도 함께 시작된다. 끄다가 다른 셀(특히 위아래 행)로
-			// 넘어가면 셀 선택이 바뀌고, 그때마다 표가 저장된 너비로 다시 그려져 끄는 너비와 번갈아 깜빡인다.
+			// While a column width is being dragged, block transactions that only change the selection. prosemirror-tables' width-resize mousedown does
+			// not report it as handled, so cell selection (tableEditing) also starts. If the drag moves to another cell (especially a row above or below),
+			// the cell selection changes, and each time the table re-renders with the stored width and flickers back and forth with the dragged width.
 			new Plugin({
 				key: new PluginKey("cmsTableResizeSelectionGuard"),
 				filterTransaction: (tr, state) =>
@@ -166,7 +166,7 @@ export const CmsTable = Table.extend({
 	},
 }).configure({ resizable: true, allowTableNodeSelection: true, handleWidth: 10, View: CmsTableView });
 
-/** `- [ ]`·`- [x]` 체크 목록(§4.1). */
+/** `- [ ]` and `- [x]` checklists. */
 export const CmsTaskItem = TaskItem.configure({ nested: true });
 
 export const CMS_SCHEMA_EXTENSIONS = [

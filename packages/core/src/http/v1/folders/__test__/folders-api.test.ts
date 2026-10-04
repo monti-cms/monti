@@ -39,7 +39,7 @@ vi.mock("../../../../container", () => {
 	return { getCmsContentStore: () => mockStore };
 });
 
-describe("M2-DA-2 Folders HTTP API Contract (H4 Optimistic Lock)", () => {
+describe("Folders HTTP API Contract", () => {
 	it("GET /folders returns list", async () => {
 		const req = new NextRequest(`http://localhost/api/cms/v1/folders?collection=${contentCollection}`);
 		const res = await getFolders(req);

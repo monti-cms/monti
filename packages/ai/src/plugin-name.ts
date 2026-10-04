@@ -1,2 +1,2 @@
-/** 사이트 설정의 `plugins`에서 AI 플러그인을 찾는 이름. */
+/** The name under which the AI plugin is found in the site config's `plugins`. */
 export const AI_PLUGIN_NAME = "ai";

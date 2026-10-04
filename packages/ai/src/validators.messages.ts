@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 코드 검사의 이름과 후보 옆 설명(관리자 AI 화면의 검사 목록·후보에 보인다). */
+/** Names of code checks and the notes beside candidates (shown in the admin AI screen's check list and candidates). */
 export const validatorMessages = defineMessages("cms-ai.validators", {
 	en: {
 		"uniqueSlug.label": "No duplicates",

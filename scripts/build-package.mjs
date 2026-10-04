@@ -1,12 +1,12 @@
-// 패키지 빌드: TypeScript 소스를 `dist`(ESM JS + 타입 선언)로 낸다. 패키지 폴더에서
-// `node ../../scripts/build-package.mjs [--write-exports] [복사할 src 아래 폴더…]`.
+// Package build: emits TypeScript sources as `dist` (ESM JS + type declarations). Run from a package folder:
+// `node ../../scripts/build-package.mjs [--write-exports] [src subfolders to copy…]`.
 //
-// - 저장소 안에서는 `exports`가 소스(`src/*.ts`)를 가리키고, 배포 묶음(`pnpm pack`)은 `publishConfig.exports`(dist)를 쓴다.
-//   `publishConfig.exports`는 `exports`에서 만든다. 다르면 빌드를 멈춘다(`--write-exports`로 고친다).
-// - `tsc`를 파일마다 따로 돌려 내므로 "use client" 지시문이 그대로 남는다.
-// - 다른 작업 공간 패키지(@monti-cms/*)는 그 패키지의 `dist` 타입 선언을 본다(먼저 빌드해 둔다).
-// - 소스는 확장자 없이 import하므로 낸 파일의 상대 경로에 `.js`·`/index.js`를 붙인다.
-// - `@cms-config`·`@cms-server`는 그대로 둔다. 앱이 `withCms`·tsconfig `paths`로 자기 설정 파일에 잇는다.
+// - Inside the repo, `exports` points at the source (`src/*.ts`); the release bundle (`pnpm pack`) uses `publishConfig.exports` (dist).
+//   `publishConfig.exports` is derived from `exports`. If they differ the build stops (fix with `--write-exports`).
+// - `tsc` runs per file, so "use client" directives are preserved.
+// - Other workspace packages (@monti-cms/*) resolve to that package's `dist` type declarations (build it first).
+// - Sources import without extensions, so `.js` and `/index.js` are appended to relative paths in the output.
+// - `@cms-config` and `@cms-server` are left as-is. The app links them to its own config files via `withCms` and tsconfig `paths`.
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -19,14 +19,14 @@ const copies = args.filter((arg) => !arg.startsWith("--"));
 const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
 const pkg = readJson(path.join(root, "package.json"));
 
-/** 소스 경로(`./src/x.ts`) → 배포 경로. */
+/** Source path (`./src/x.ts`) → release path. */
 const toDist = (target, ext) => target.replace(/^\.\/src\//, "./dist/").replace(/\.tsx?$/, ext);
 const publishTarget = (target) => {
 	if (typeof target === "string") {
 		if (!/\.tsx?$/.test(target)) return target;
 		return { types: toDist(target, ".d.ts"), default: toDist(target, ".js") };
 	}
-	// 조건부 진입점(예: 브라우저용 빈 진입점): 조건마다 JS를, 타입은 기본 조건에서.
+	// Conditional entry points (e.g. an empty entry for browsers): JS per condition, types under the default condition.
 	const out = { types: toDist(target.default, ".d.ts") };
 	for (const [condition, value] of Object.entries(target)) out[condition] = toDist(value, ".js");
 	return out;
@@ -44,12 +44,12 @@ if (current !== JSON.stringify(publishExports)) {
 	writeFileSync(path.join(root, "package.json"), `${JSON.stringify(pkg, null, "\t")}\n`);
 }
 
-// 작업 공간 의존 패키지의 dist 타입 선언을 `paths`로 잇는다.
+// Links the dist type declarations of workspace dependencies through `paths`.
 const rel = (file) => {
 	const relative = path.relative(root, file);
 	return relative.startsWith("./") || relative.startsWith("../") ? relative : `./${relative}`;
 };
-// 앱 설정 자리(`@cms-config`·`@cms-server`)의 타입. 본체는 자기 소스를, 다른 패키지는 본체의 배포 타입을 본다.
+// Types for the app config slots (`@cms-config`, `@cms-server`). The core sees its own source; other packages see the core's release types.
 const stubs = path.join(root, ".build-stubs");
 rmSync(stubs, { recursive: true, force: true });
 if (pkg.name !== "@monti-cms/core") {

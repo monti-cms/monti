@@ -1,4 +1,4 @@
-/** 코드 블록 주석(강조·접기 규칙) 모델. 편집기와 공개 렌더러가 함께 쓴다. */
+/** Model for code block annotations (highlight and fold rules). Shared by the editor and the public renderer. */
 
 export {
 	annotationConfig,

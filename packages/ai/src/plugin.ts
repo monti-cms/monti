@@ -4,14 +4,14 @@ import { AI_PLUGIN_NAME } from "./plugin-name";
 import { resolveAiConfig } from "./resolve";
 
 /**
- * AI 플러그인. 사이트 설정(`cms.config.ts`)의 `plugins`에 한 번 적으면 AI 기능(이름으로 부르기·필드 옆 버튼·
- * 번역)과 관리자 AI 화면, AI API(`/api/cms/v1/ai/*`), AI 표가 생긴다.
+ * AI plugin. List it once in `plugins` of the site config (`cms.config.ts`) to get AI actions (calling by name, buttons next to fields,
+ * translation), the admin AI screen, the AI API (`/api/cms/v1/ai/*`), and the AI tables.
  *
- * 기본 기능(`aiPresets`)은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이 더한 기능도 저절로 붙는다.
- * 바꾸거나 끌 것만 `actions`에 적는다.
+ * Default actions (`aiPresets`) turn on automatically wherever they can attach, and so do actions added by other plugins (block extension, SEO extension, etc.).
+ * List only what you want to change or turn off in `actions`.
  *
  * ```ts
- * plugins: [aiPlugin({ siteDescription: "개인 기술 블로그", actions: { draft: false } })]
+ * plugins: [aiPlugin({ siteDescription: "A personal tech blog", actions: { draft: false } })]
  * ```
  */
 export function aiPlugin<const Config extends AiConfig>(config: Config = {} as Config) {
@@ -25,7 +25,7 @@ export function aiPlugin<const Config extends AiConfig>(config: Config = {} as C
 				collections,
 				blocks,
 			),
-		// 브라우저 묶음에서는 `./server`가 빈 진입점(`server.browser.ts`)으로 바뀐다(package.json `exports`).
+		// In the browser bundle `./server` is replaced by an empty entry point (`server.browser.ts`) (package.json `exports`).
 		server: () => import("@monti-cms/ai/server"),
 		admin: () => import("@monti-cms/ai/admin"),
 	});

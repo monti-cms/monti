@@ -10,7 +10,7 @@ afterEach(() => {
 const segments = [{ id: "a-0", text: "틀린말 입니다", locale: "ko" }];
 
 describe("remoteTextChecker", () => {
-	it("문단을 JSON으로 보내고 `{ issues }`를 돌려준다", async () => {
+	it("sends paragraphs as JSON and returns `{ issues }`", async () => {
 		const issues = [
 			{ segmentId: "a-0", start: 0, end: 3, message: "틀림", suggestions: ["맞는말"], severity: "error" },
 		];
@@ -30,23 +30,23 @@ describe("remoteTextChecker", () => {
 		expect(JSON.parse(String(init.body))).toEqual({ segments });
 	});
 
-	it("실패 응답은 서버 문구로 오류를 던진다", async () => {
+	it("a failure response throws an error with the server's message", async () => {
 		vi.stubGlobal("fetch", async () => Response.json({ code: "too_large", message: "Too much text" }, { status: 413 }));
 		const checker = remoteTextChecker({ id: "remote", label: "원격", url: "/x" });
 		await expect(checker.check(segments, { signal: new AbortController().signal })).rejects.toThrow("Too much text");
 	});
 
-	it("`issues`가 없는 응답은 오류다", async () => {
+	it("a response without `issues` is an error", async () => {
 		vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
 		const checker = remoteTextChecker({ id: "remote", label: "원격", url: "/x" });
 		await expect(checker.check(segments, { signal: new AbortController().signal })).rejects.toThrow();
 	});
 });
 
-describe("서버 검사 경로", () => {
+describe("server check route", () => {
 	const signal = new AbortController().signal;
 
-	it("잘못된 본문은 400, 한도를 넘으면 413이다", () => {
+	it("an invalid body is 400, and exceeding the limit is 413", () => {
 		expect(parseTextCheckBody({})).toMatchObject({ status: 400 });
 		expect(parseTextCheckBody({ segments: [{ id: "a", text: 1, locale: "ko" }] })).toMatchObject({ status: 400 });
 		expect(
@@ -61,7 +61,7 @@ describe("서버 검사 경로", () => {
 		expect(parseTextCheckBody({ segments }, { maxSegments: 1 })).toEqual(segments);
 	});
 
-	it("검사기 결과 중 요청에 없는 문단·벗어난 위치는 뺀다", async () => {
+	it("drops results that name paragraphs not in the request or positions outside them", async () => {
 		const check = vi.fn(async () => [
 			{ segmentId: "a-0", start: 0, end: 3, message: "틀림", suggestions: ["맞는말"], severity: "error" as const },
 			{ segmentId: "other", start: 0, end: 1, message: "x", suggestions: [], severity: "info" as const },
@@ -77,7 +77,7 @@ describe("서버 검사 경로", () => {
 		});
 	});
 
-	it("검사기 오류는 자세한 내용 없이 502로 돌려준다", async () => {
+	it("a checker error is returned as 502 without details", async () => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const result = await handleTextCheck(
 			{ segments },

@@ -1,8 +1,8 @@
 import { defineMessages } from "../i18n/define";
 
 /**
- * MDX 분석 오류 문구(M15). 키는 오류 `code`(`CmsMdxError.code`)이고 값 자리(`{name}` 등)는 오류의 `params`다.
- * 사이트는 설정의 `admin.messages["cms.mdx"]`로 덮어쓴다.
+ * MDX analysis error messages. Keys are error `code`s (`CmsMdxError.code`) and placeholders (`{name}` etc.) are the error's `params`.
+ * A site overrides them with `admin.messages["cms.mdx"]`.
  */
 export const mdxMessages = defineMessages("cms.mdx", {
 	en: {
@@ -23,7 +23,7 @@ export const mdxMessages = defineMessages("cms.mdx", {
 		call_expression: "본문에서 함수 호출은 허용되지 않습니다.",
 		identifier_reference: "본문에서 변수 참조는 허용되지 않습니다.",
 		unsupported_expression: "지원하지 않는 표현식입니다: {source}",
-		retired_jsx_element: "폐기된 JSX 요소입니다: {name} — directive 저장 형식으로 바꾸세요(§4.4).",
+		retired_jsx_element: "폐기된 JSX 요소입니다: {name} — directive 저장 형식으로 바꾸세요.",
 		disallowed_jsx_element: "허용되지 않은 JSX 요소입니다: {name}",
 		event_handler_attribute: "이벤트 핸들러 속성은 허용되지 않습니다: {name}",
 		esm_not_allowed: "본문에서 import/export는 허용되지 않습니다.",

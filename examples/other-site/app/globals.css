@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@monti-cms/admin/styles.css";
-/* 공개 화면 본문(코드 강조·줄 효과·기본 컴포넌트) */
+/* Public page body (code highlighting, line effects, base components) */
 @import "@monti-cms/core/render.css";
 @import "@monti-cms/blocks/styles.css";
 @import "@monti-cms/seo/styles.css";

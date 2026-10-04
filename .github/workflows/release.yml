@@ -1,5 +1,5 @@
-# 배포 묶음. `v*` 태그를 올리면 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/<태그>` 태그를 붙인다.
-# 공개 전에는 npm 대신 이 태그를 GitHub 주소로 설치한다(`scripts/pack-release.mjs`).
+# Release bundle. Pushing a `v*` tag builds and packs the packages, commits them to the `release` branch and adds a `release/<tag>` tag.
+# Until the public release, install this tag from its GitHub address instead of npm (`scripts/pack-release.mjs`).
 name: Release
 
 on:
@@ -25,7 +25,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # 태그와 패키지 버전이 다르면 멈춘다(`scripts/version.mjs`로 맞춘다).
+      # Stop if the tag and the package version differ (align them with `scripts/version.mjs`).
       - name: Check version
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -43,7 +43,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           source_sha=$(git rev-parse HEAD)
-          # 배포 브랜치가 있으면 그 위에, 없으면 기록 없는 새 브랜치로 시작한다.
+          # Start on top of the release branch if it exists, otherwise as a fresh branch with no history.
           if git fetch --depth=1 origin release; then
             git worktree add "$RUNNER_TEMP/branch" FETCH_HEAD
             git -C "$RUNNER_TEMP/branch" switch -c release
@@ -54,6 +54,6 @@ jobs:
           git rm -rq --ignore-unmatch .
           cp -R "$RUNNER_TEMP/release/." .
           git add -A
-          git commit -q -m "$GITHUB_REF_NAME 배포 묶음" -m "소스: $source_sha"
+          git commit -q -m "$GITHUB_REF_NAME release bundle" -m "Source: $source_sha"
           git tag "release/$GITHUB_REF_NAME"
           git push origin release "release/$GITHUB_REF_NAME"

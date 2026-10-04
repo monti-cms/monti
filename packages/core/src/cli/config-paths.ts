@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-/** 설정 별칭 이름. CMS 코드는 두 설정 파일을 이 이름으로 읽는다. */
+/** Config alias names. CMS code reads the two config files through these names. */
 export const CONFIG_ALIAS = "@cms-config";
 export const SERVER_ALIAS = "@cms-server";
 
-/** 주석·끝 쉼표가 있는 JSON(tsconfig)을 읽는다. 문자열 안의 `//`·`/*`는 건드리지 않는다. 못 읽으면 `undefined`. */
+/** Reads JSON with comments and trailing commas (tsconfig). Leaves `//` and `/*` inside strings alone. `undefined` if it cannot be read. */
 export function parseJsonc(text: string): unknown {
 	let out = "";
 	let inString = false;
@@ -46,7 +46,7 @@ interface TsconfigLike {
 	};
 }
 
-/** tsconfig `paths`에 적힌 별칭 파일(`cwd` 기준 상대 경로). 없으면 `undefined`. */
+/** Alias file listed in tsconfig `paths` (relative to `cwd`). `undefined` if none. */
 export function tsconfigAliasPath(cwd: string, alias: string): string | undefined {
 	const file = path.join(cwd, "tsconfig.json");
 	if (!existsSync(file)) return undefined;
@@ -58,9 +58,9 @@ export function tsconfigAliasPath(cwd: string, alias: string): string | undefine
 }
 
 export interface ConfigPaths {
-	/** 사이트 설정 파일(`cwd` 기준). */
+	/** Site config file (relative to `cwd`). */
 	readonly config: string;
-	/** 서버 설정 파일(`cwd` 기준). */
+	/** Server config file (relative to `cwd`). */
 	readonly server: string;
 }
 
@@ -70,8 +70,8 @@ const CANDIDATES = {
 } as const;
 
 /**
- * 두 설정 파일 자리. 고른 값(`--config`·`--server`) → 환경 변수(`CMS_CONFIG_PATH`·`CMS_SERVER_PATH`) → tsconfig `paths`의
- * 별칭 → 흔한 자리(`./cms.config.ts`·`./src/cms.config.ts`) 순서로 찾는다. 파일이 없으면 오류다.
+ * Locations of the two config files. Looked up in this order: the chosen value (`--config`, `--server`) -> environment variable (`CMS_CONFIG_PATH`, `CMS_SERVER_PATH`) -> the tsconfig `paths`
+ * alias -> common locations (`./cms.config.ts`, `./src/cms.config.ts`). It is an error if the file is missing.
  */
 export function resolveConfigPaths(
 	cwd: string,

@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
 
 const t = createTranslator(aiCommonMessages);
 
-/** 화면 자리가 AI 동작을 어떻게 받는지만 본다. 목록 응답은 가짜다. */
+/** Checks only how a screen slot receives the AI action. The list response is fake. */
 const view = (key: string, label: string) => ({
 	key,
 	label,

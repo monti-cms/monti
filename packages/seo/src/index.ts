@@ -1,6 +1,6 @@
 /**
- * SEO 확장(`@monti-cms/seo`). 사이트 설정 파일(`cms.config.ts`)과 공개 화면이 import한다. 서버·브라우저가 함께 읽으므로
- * 관리자 화면 코드·비밀 값을 넣지 않는다(관리자 쪽은 `@monti-cms/seo/admin`).
+ * SEO extension (`@monti-cms/seo`). Imported by the site config file (`cms.config.ts`) and public pages. Read by both server and browser, so
+ * it must not contain admin UI code or secrets (the admin side is `@monti-cms/seo/admin`).
  */
 export { seoAi, seoAiContribution } from "./ai";
 export {

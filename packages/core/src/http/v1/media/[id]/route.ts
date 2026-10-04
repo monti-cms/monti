@@ -5,7 +5,7 @@ import { adminRoute, json, parseWith, readJsonBody } from "../../handler";
 
 type IdParams = { id: string };
 
-/** 미디어 상세. 편집기가 `mediaId`만으로 이미지를 보여줄 때도 쓴다(저장 실물 확인 포함). */
+/** Media detail. Also used when the editor shows an image from `mediaId` alone (including a check of the stored file). */
 export const GET = adminRoute<IdParams>(async ({ params }) => {
 	const media = await getCmsContentStore().getMediaAsset(params.id);
 	if (!media) throw new HttpError(404, "not_found", "Media asset not found");
@@ -23,15 +23,15 @@ export const GET = adminRoute<IdParams>(async ({ params }) => {
 	});
 });
 
-/** 기본 alt·caption 수정. 이미 작성한 본문은 바뀌지 않는다(§7.3). */
+/** Edits the default alt and caption. Bodies already written do not change. */
 export const PATCH = adminRoute<IdParams>(async ({ request, params }) => {
 	const body = parseWith(mediaPatchBodySchema, await readJsonBody(request));
 	return json(await getCmsContentStore().updateMediaMetadata({ id: params.id, ...body }));
 });
 
 /**
- * 사용하지 않는 파일만 삭제한다(§7.3). `deleting`으로 바꾼 뒤 파일을 지우고, 성공하면 행을 제거한다.
- * 저장소 삭제가 실패하면 `deleting` 행이 남아 다시 시도할 수 있다.
+ * Deletes only unused files. Marks the row `deleting`, deletes the file, and removes the row on success.
+ * If storage deletion fails, the `deleting` row stays and can be retried.
  */
 export const DELETE = adminRoute<IdParams>(async ({ params }) => {
 	const store = getCmsContentStore();

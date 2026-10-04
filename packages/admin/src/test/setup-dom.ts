@@ -1,6 +1,6 @@
 /**
- * jsdom에 없는 브라우저 API. shadcn Sidebar(`useIsMobile`)는 matchMedia를, cmdk·Base UI 팝업은 ResizeObserver를 쓴다.
- * 테스트가 직접 정의하면 그 값을 그대로 둔다.
+ * Browser APIs missing from jsdom. The shadcn Sidebar (`useIsMobile`) uses matchMedia; cmdk and Base UI popups use ResizeObserver.
+ * If a test defines them itself, that value is left as is.
  */
 if (typeof window !== "undefined") {
 	if (typeof window.matchMedia !== "function") {

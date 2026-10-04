@@ -81,36 +81,36 @@ const t = createTranslator(editorMessages);
 interface CmsEditorProps {
 	content: string;
 	onChange: (newContent: string) => void;
-	/** 편집 문서의 제목 입력. 서식 도구 아래, 본문 위에 놓는다. */
+	/** Title input for the document being edited. Placed below the formatting tools, above the body. */
 	titleField?: ReactNode;
-	/** 서식 도구 맨 끝에 놓을 문서 작업 메뉴. */
+	/** Document action menu placed at the end of the formatting tools. */
 	toolbarEnd?: ReactNode;
-	/** 서식 도구와 떨어진 툴바 오른쪽 끝(보기 전환 등). */
+	/** Right end of the toolbar, apart from the formatting tools (view switch, etc.). */
 	toolbarAside?: ReactNode;
-	/** 주어지면 본문 자리에 이것(원문 편집 등)을 보이고 시각 편집을 멈춘다. 툴바와 제목은 그대로 둔다. */
+	/** When given, shown in place of the body (source editing, etc.) and visual editing is paused. The toolbar and title stay as they are. */
 	sourceView?: ReactNode;
 	onCompositionStart?: () => void;
 	onCompositionEnd?: () => void;
-	/** 휴지통처럼 편집할 수 없는 상태면 false다. */
+	/** False when the state is not editable, such as the trash. */
 	editable?: boolean;
-	/** 블록 손잡이 옆에 더 붙일 동작(번역본의 `번역` 등). 그 블록에서 쓸 수 있을 때만 보인다. */
+	/** Extra actions beside the block handle (e.g. `번역` on a translation). Shown only when usable on that block. */
 	blockActions?: readonly BlockAction[];
-	/** 편집기가 만들어지거나 사라질 때 부른다(바깥에서 문서 전체 작업을 할 때). */
+	/** Called when the editor is created or destroyed (for document-wide actions from outside). */
 	onEditor?: (editor: Editor | null) => void;
-	/** 선택 영역 메뉴에 더할 동작(플러그인). */
+	/** Actions to add to the selection menu (plugins). */
 	selectionActions?: readonly EditorSelectionAction[];
-	/** 슬래시 메뉴에 더할 삽입 동작(플러그인). */
+	/** Insert actions to add to the slash menu (plugins). */
 	insertActions?: readonly EditorInsertAction[];
 }
 
-/** 블록 손잡이 옆 동작. `pos`는 손잡이가 가리키는 블록의 위치다. */
+/** Action beside the block handle. `pos` is the position of the block the handle points to. */
 export interface BlockAction {
 	id: string;
 	label: string;
 	icon: ReactNode;
 	isAvailable: (editor: Editor, pos: number) => boolean;
 	run: (editor: Editor, pos: number) => void;
-	/** 그 블록에서 동작이 진행 중인가. */
+	/** Whether the action is in progress on that block. */
 	isBusy?: (pos: number) => boolean;
 }
 
@@ -118,7 +118,7 @@ type Coords = { top: number; left: number };
 
 const chain = (editor: Editor) => editor.chain().focus();
 
-/** 블록 모양 드롭다운. 지금 블록의 모양 이름이 드롭다운 이름이 된다. */
+/** Block shape dropdown. The current block's shape name becomes the dropdown name. */
 const BLOCK_STYLES: ToolbarItem[] = [
 	{
 		label: t("toolbar.paragraph"),
@@ -135,11 +135,11 @@ const BLOCK_STYLES: ToolbarItem[] = [
 	})),
 ];
 
-/** 자주 쓰지 않아 한 드롭다운으로 묶는 첨자 마크. */
+/** Superscript/subscript marks, rarely used and grouped into one dropdown. */
 const SCRIPT_MARKS = ["superscript", "subscript"];
 const INLINE_TOOLS = INLINE_MARK_TOOLS.filter((tool) => !SCRIPT_MARKS.includes(tool.mark));
 const SCRIPT_TOOLS = INLINE_MARK_TOOLS.filter((tool) => SCRIPT_MARKS.includes(tool.mark));
-/** 글자 꾸밈 버튼을 숨기는 순서(큰 것부터). 없는 마크는 5. 굵게·기울임은 숨기지 않는다. */
+/** Order in which text-style buttons are hidden (largest first). Marks not listed get 5. Bold and italic are never hidden. */
 const INLINE_PRIORITY: Readonly<Record<string, number>> = { bold: 0, italic: 0, strike: 6, code: 4, underline: 5 };
 const PINNED_INLINE_MARKS = ["bold", "italic"];
 
@@ -173,7 +173,7 @@ const ALIGN_TOOLS: ToolbarItem[] = [
 	},
 ];
 
-/** 목록 드롭다운. 지금 블록의 목록 종류가 드롭다운 이름·아이콘이 된다. */
+/** List dropdown. The current block's list type becomes the dropdown name and icon. */
 const LIST_STYLES: ToolbarItem[] = [
 	{
 		label: t("toolbar.bulletLabel"),
@@ -198,7 +198,7 @@ const LIST_STYLES: ToolbarItem[] = [
 	},
 ];
 
-/** 블록 넣기 버튼과 숨기는 순서(큰 것부터). 목록은 2, 컴포넌트는 4. */
+/** Block insert buttons and the order they are hidden (largest first). Lists are 2, components are 4. */
 const INSERT_TOOLS: { tool: ToolbarItem; priority: number }[] = [
 	{
 		priority: 6,
@@ -235,13 +235,13 @@ const DIVIDER_TOOL: ToolbarItem = {
 	run: (e) => chain(e).setHorizontalRule().run(),
 };
 
-/** 글자 꾸밈 확장의 서식 도구 자리 이름(`mark:블록 이름`). */
+/** Toolbar slot name for a text-style extension (`mark:<block name>`). */
 const markToolKey = (group: "format" | "link", name: string) => `mark-${group}:${name}`;
 
 /**
- * 도구 모음 순서. 문단 모양 → 글자 꾸밈(확장의 꾸밈 포함) → 글자에 붙이기(링크·확장의 꾸밈) → 목록·정렬 → 블록 넣기.
- * 문서 단위 도구(템플릿·확장·원문·MDX·폭)는 편집 화면이 오른쪽(`toolbarAside`)에 둔다. 여기 없는 항목은 끝에 원래 순서대로 붙는다.
- * `mark-format:*`·`mark-link:*`는 확장이 더한 순서다.
+ * Toolbar order. Paragraph shape → text styles (including extension styles) → attached to text (links, extension styles) → lists and alignment → block insert.
+ * Document-level tools (templates, extensions, source, MDX, width) are placed on the right (`toolbarAside`) by the edit screen. Items not listed here are appended at the end in their original order.
+ * `mark-format:*` and `mark-link:*` are in the order the extensions added them.
  */
 const TOOLBAR_ORDER = [
 	"block-style",
@@ -268,7 +268,7 @@ const orderToolbar = (entries: readonly ToolbarEntry[]): ToolbarEntry[] => {
 		const index = TOOLBAR_ORDER.indexOf(group ? `${group}:*` : key);
 		return index < 0 ? TOOLBAR_ORDER.length : index;
 	};
-	// 같은 자리 안에서는 원래 순서를 지킨다(Array.prototype.sort는 안정 정렬이다).
+	// Keep the original order within the same slot (Array.prototype.sort is stable).
 	return [...entries].sort((a, b) => rank(a.key) - rank(b.key));
 };
 
@@ -283,7 +283,7 @@ function ToolbarDropdown({
 	label: string;
 	items: ToolbarItem[];
 	icon?: LucideIcon;
-	/** 글자 없이 아이콘만 보인다. 이름은 aria-label과 툴팁으로 알린다. */
+	/** Shows only the icon, no text. The name is conveyed via aria-label and tooltip. */
 	iconOnly?: boolean;
 }) {
 	const content = (
@@ -351,20 +351,20 @@ async function searchLinkTargets(query: string): Promise<InternalLinkItem[]> {
 			status: item.status,
 		}));
 	};
-	// 공개 경로가 있는 컬렉션(본문 링크로 가리킬 수 있는 것)만 찾는다.
+	// Find only collections that have a public path (ones a body link can point to).
 	const results = await Promise.all(LINKABLE_COLLECTIONS.map(search));
 	return results.flat().slice(0, 20);
 }
 
-/** 핸들 폭(px)과 블록과의 간격. BlockHandleOverlay가 `left - 32`에 24px 버튼을 둔다. */
+/** Handle width (px) and gap from the block. BlockHandleOverlay places a 24px button at `left - 32`. */
 const HANDLE_OFFSET = 32;
 const HANDLE_WIDTH = 24;
 
 /**
- * 핸들을 붙일 기준점.
- * - 목록 항목은 글머리표를 가리지 않게 목록의 왼쪽(글머리표 바깥)에 붙인다. 들여쓴 항목은 그 들여쓰기에 붙는다.
- * - 테두리가 있는 컨테이너(콜아웃·접기·탭·단 나누기) 안쪽 블록의 핸들이 그 왼쪽 테두리에 걸리면
- *   컨테이너 바깥 핸들 자리로 옮긴다(같은 세로줄에 맞춘다).
+ * Anchor point for attaching the handle.
+ * - List items attach to the left of the list (outside the bullet) so the bullet is not covered. Indented items attach to their indentation.
+ * - When the handle of a block inside a bordered container (callout, fold, tabs, columns) would sit on its left border,
+ *   move it to the container's outside handle position (align on the same vertical line).
  */
 const handleAnchor = (block: HTMLElement, rect: DOMRect): Coords => {
 	const isListItem = block.tagName === "LI" || block.getAttribute("data-type") === "taskItem";
@@ -379,7 +379,7 @@ const handleAnchor = (block: HTMLElement, rect: DOMRect): Coords => {
 	return { top: rect.top, left };
 };
 
-/** 화면에 띄운 핸들과 그 핸들이 옮기는 블록의 위치. */
+/** The handle shown on screen and the position of the block it moves. */
 type HandleSpot = Coords & { pos: number };
 
 const sameSpot = (a: HandleSpot | null, b: HandleSpot) =>
@@ -401,16 +401,16 @@ export function CmsEditor({
 	insertActions,
 }: CmsEditorProps) {
 	const isSourceMode = sourceView != null && sourceView !== false;
-	// 글자 꾸밈 확장(블록 확장의 `:tooltip` 등). 모양·서식 도구·슬래시 메뉴를 준다.
+	// Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formatting tools, and slash menu items.
 	const { marks: markSpecs = {} } = useCmsAdminComponents();
 	const allMarkExtensions = useMarkExtensions();
-	// 원문을 고치는 동안에는 시각 편집기를 멈춘다. 툴바 도구도 함께 잠긴다.
+	// While source is being edited, the visual editor is paused. Toolbar tools are locked too.
 	const canEdit = editable && !isSourceMode;
 	const { media } = useAdminFeatures();
-	// 원문 모드로 열린 본문은 해석할 수 없을 수 있다. 시각 편집기는 빈 문서로 만들고 돌아올 때 채운다.
+	// A body opened in source mode may be unparsable. The visual editor starts as an empty document and is filled when returning.
 	const [initialContent] = useState(() => mdxToTiptap(isSourceMode ? "" : content));
 	const isInternalUpdateRef = useRef(false);
-	// 툴바 오른쪽 끝 요소의 폭. 도구 묶음이 가운데에 오도록 양쪽을 이만큼 비운다.
+	// Width of the element at the right end of the toolbar. Leave this much space on both sides so the tool group stays centered.
 	const asideRef = useRef<HTMLDivElement>(null);
 	const [asideWidth, setAsideWidth] = useState(72);
 	useEffect(() => {
@@ -428,7 +428,7 @@ export function CmsEditor({
 
 	const [slash, setSlash] = useState<{ query: string; index: number; coords: Coords } | null>(null);
 	const slashRangeRef = useRef<Range | null>(null);
-	// 확장(플러그인)이 더한 슬래시 메뉴 항목. 키 처리기가 최신 값을 읽도록 ref에도 둔다.
+	// Slash menu items added by extensions (plugins). Also kept in a ref so the key handler reads the latest value.
 	const extraCommands = useMemo<SlashCommandItem[]>(
 		() =>
 			(insertActions ?? []).map((item) => ({
@@ -443,7 +443,7 @@ export function CmsEditor({
 	);
 	const extraCommandsRef = useRef(extraCommands);
 	extraCommandsRef.current = extraCommands;
-	// 글자 꾸밈 확장의 슬래시 메뉴 항목(기본 글 서식 항목 다음).
+	// Slash menu items of text-style extensions (after the default text format items).
 	const inlineCommands: SlashCommandItem[] = allMarkExtensions.flatMap(({ extension }) =>
 		(extension.insertActions ?? []).map((item) => ({
 			id: item.id,
@@ -489,7 +489,7 @@ export function CmsEditor({
 		}
 		setLink(null);
 
-		// `/` 메뉴는 빈 문단의 시작에서만 연다(§4.2). 문장 안의 경로(`a/b`)를 명령으로 오인하지 않는다.
+		// Open the `/` menu only at the start of an empty paragraph. A path inside a sentence (`a/b`) is not mistaken for a command.
 		const slashMatch = textBefore.match(/(?:^|\n)\/([^\s/]*)$/);
 		if (!slashMatch || current.isActive("codeBlock")) {
 			setSlash(null);
@@ -517,18 +517,18 @@ export function CmsEditor({
 				"aria-label": t("toolbar.editorLabel"),
 				class:
 					"prose cms-dark:prose-invert max-w-none min-h-full flex-1 p-6 focus:outline-none text-cms-foreground text-base leading-relaxed selection:bg-cms-primary/20 " +
-					// 표 열 너비 조절 손잡이(prosemirror-tables columnResizing)
+					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-cms-primary " +
-					// 단 나누기 경계와 같은 모양: 얇은 선 + 첫 행 위쪽의 작은 손잡이.
+					// Same look as the column-split boundary: a thin line + a small handle above the first row.
 					"[&_tr:first-child_.column-resize-handle]:after:absolute [&_tr:first-child_.column-resize-handle]:after:top-0.5 [&_tr:first-child_.column-resize-handle]:after:left-1/2 [&_tr:first-child_.column-resize-handle]:after:h-3 [&_tr:first-child_.column-resize-handle]:after:w-6 [&_tr:first-child_.column-resize-handle]:after:-translate-x-1/2 [&_tr:first-child_.column-resize-handle]:after:rounded-full [&_tr:first-child_.column-resize-handle]:after:border [&_tr:first-child_.column-resize-handle]:after:bg-cms-popover [&_tr:first-child_.column-resize-handle]:after:shadow-sm " +
-					// 블록 선택(마키): 줄 뒤에 여백(-inset-1)을 둔 상자를 깔고 글자 선택 표시는 숨긴다. 목록 항목은 글머리표까지 덮는다.
-					// 글자 선택(primary 보라)과 헷갈리지 않게 다른 색(하늘)과 테두리로 "블록을 골랐다"는 것을 보여 준다.
+					// Block selection (marquee): lay a box with margin (-inset-1) after the line and hide the text selection highlight. List items cover the bullet too.
+					// To avoid confusion with text selection (primary purple), show "a block is selected" with a different color (sky) and border.
 					"[&_.cms-block-selected]:relative [&_.cms-block-selected]:isolate [&_.cms-block-selected]:before:pointer-events-none [&_.cms-block-selected]:before:absolute [&_.cms-block-selected]:before:-inset-1 [&_.cms-block-selected]:before:-z-10 [&_.cms-block-selected]:before:rounded-md [&_.cms-block-selected]:before:bg-sky-500/10 [&_.cms-block-selected]:before:ring-1 [&_.cms-block-selected]:before:ring-sky-500/35 cms-dark:[&_.cms-block-selected]:before:bg-sky-400/15 cms-dark:[&_.cms-block-selected]:before:ring-sky-400/40 [&_li.cms-block-selected]:before:-left-7 [&.cms-block-range]:selection:bg-transparent " +
-					// 셀을 끌어 여러 칸을 고르면(CellSelection) 고른 칸을 칠한다. 병합할 범위를 눈으로 확인한다.
+					// Dragging across cells to select several (CellSelection) paints the selected cells. The range to merge is visible.
 					"[&_.selectedCell]:bg-cms-primary/15 [&_.selectedCell]:outline-1 [&_.selectedCell]:-outline-offset-1 [&_.selectedCell]:outline-cms-primary/60",
 			},
 			handleKeyDown: (view, event) => {
-				// 한글 IME 조합 중에는 메뉴 탐색·확정을 처리하지 않는다(§4.2).
+				// Do not handle menu navigation or confirmation during Korean IME composition.
 				if (view.composing || event.isComposing || event.keyCode === 229) return false;
 
 				const openLink = linkRef.current;
@@ -595,11 +595,11 @@ export function CmsEditor({
 		onSelectionUpdate: ({ editor: current }) => syncTriggerPopup(current),
 	});
 
-	// 이 편집기 스키마에 있는 글자 꾸밈 확장(사이트가 쓰는 블록)만 도구를 그린다.
+	// Only text-style extensions in this editor schema (blocks the site uses) render tools.
 	const markExtensions = allMarkExtensions.filter(({ name }) => !editor || editor.schema.marks[name]);
 	const markNames = markExtensions.map(({ name }) => name);
 
-	// 선택 위치와 적용된 서식이 바뀌면 드롭다운 이름·활성 표시를 갱신한다(표 조작 도구는 TableToolbar가 따로 구독한다).
+	// When the selection or applied formatting changes, update dropdown names and active indicators (table tools are subscribed separately by TableToolbar).
 	useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -622,11 +622,11 @@ export function CmsEditor({
 	useEffect(() => {
 		editorRef.current = editor;
 		if (!editor || isSourceMode) return;
-		// 노드 뷰를 React로 다시 그리므로 effect 안에서 바로 바꾸지 않는다(flushSync 경고). 원문 모드에서 돌아올 때 등.
+		// Node views are re-rendered by React, so do not change it directly inside the effect (flushSync warning). E.g. when returning from source mode.
 		let cancelled = false;
 		queueMicrotask(() => {
 			if (cancelled || editor.isDestroyed) return;
-			// 비교 기준은 저장 문자열(MDX)이다 — Tiptap JSON 객체 비교는 순서 때문에 깨진다.
+			// The comparison basis is the stored string (MDX) — comparing Tiptap JSON objects breaks due to key order.
 			if (tiptapToMdx(editor.getJSON()) === content) return;
 			isInternalUpdateRef.current = true;
 			editor.commands.setContent(mdxToTiptap(content), { emitUpdate: false });
@@ -637,14 +637,14 @@ export function CmsEditor({
 		};
 	}, [content, editor, isSourceMode]);
 
-	// 툴바 도구는 그릴 때 editor.isEditable을 읽는다. 잠금을 바꾼 뒤 한 번 더 그려 도구 상태를 맞춘다.
+	// Toolbar tools read editor.isEditable while rendering. After changing the lock, render once more to sync tool state.
 	const [, rerender] = useReducer((count: number) => count + 1, 0);
 	useEffect(() => {
 		if (!editor || editor.isEditable === canEdit) return;
-		// update 이벤트를 내지 않는다. 내면 원문 모드로 바뀔 때 멈춘 시각 문서가 본문을 덮어쓴다.
+		// Do not emit an update event. Otherwise, when switching to source mode, the paused visual document overwrites the body.
 		editor.setEditable(canEdit, false);
-		// 노드 뷰(코드 블록 머리 도구·블록 도구 줄)가 잠금을 따라 다시 그리도록 문서를 바꾸지 않는 트랜잭션을 낸다.
-		// effect 안에서 바로 내면 노드 뷰를 그리는 중 flushSync 경고가 나므로 미룬다.
+		// Emit a transaction that does not change the document so node views (code block header tools, block tool row) re-render following the lock.
+		// Emitting it directly inside the effect causes a flushSync warning while node views render, so defer it.
 		queueMicrotask(() => {
 			if (!editor.isDestroyed)
 				editor.view.dispatch(editor.state.tr.setMeta("cmsEditable", canEdit).setMeta("addToHistory", false));
@@ -688,7 +688,7 @@ export function CmsEditor({
 				.focus()
 				.insertContent({
 					type: "image",
-					// 등록 미디어는 `mediaId`만 저장한다. 공개 주소는 렌더러가 해석한다(§4.4, §7.1).
+					// A registered media item stores only `mediaId`. The renderer resolves the public URL.
 					attrs: {
 						mediaId: image.mediaId,
 						alt: image.alt,
@@ -716,7 +716,7 @@ export function CmsEditor({
 
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	// 슬래시 메뉴 "파일": 파일 고르기 창을 연다. 미디어 저장소가 없으면 올릴 수 없다고 알린다.
+	// Slash menu "파일": open the file picker. If there is no media storage, report that uploading is not possible.
 	useEffect(() => {
 		const open = () => {
 			if (!media) toast.error(MEDIA_NOT_CONFIGURED);
@@ -726,7 +726,7 @@ export function CmsEditor({
 		return () => window.removeEventListener(OPEN_FILE_PICKER_EVENT, open);
 	}, [media]);
 
-	/** 이미지가 아닌 파일들을 올려 파일 카드로 넣는다. `at`이 있으면 그 자리(끌어 놓은 곳)에 넣는다. */
+	/** Upload non-image files and insert them as file cards. If `at` is given, insert there (where it was dropped). */
 	const uploadAttachments = useCallback(
 		async (files: File[], at?: number) => {
 			if (!editor) return;
@@ -766,8 +766,8 @@ export function CmsEditor({
 		(event: React.MouseEvent<HTMLDivElement>) => {
 			if (!editor) return;
 			const root = editor.view.dom;
-			// 블록에서 왼쪽 핸들로 가는 길(블록 왼쪽 여백, 목록 들여쓰기)에서는 대상을 바꾸지 않는다.
-			// 그러지 않으면 목록 항목에서 핸들로 가는 동안 대상이 목록 전체로 바뀐다.
+			// Do not change the target on the way from a block to the left handle (left margin of the block, list indentation).
+			// Otherwise the target switches to the whole list while moving from a list item to the handle.
 			const active = activeBlockRectRef.current;
 			if (active && event.clientX < active.left && event.clientY >= active.top && event.clientY <= active.bottom)
 				return;
@@ -781,18 +781,18 @@ export function CmsEditor({
 				activeBlockRectRef.current = resolved.rect;
 				activeBlockElRef.current = block;
 				const spot = { ...handleAnchor(block, resolved.rect), pos: resolved.pos };
-				// 같은 자리면 상태를 바꾸지 않는다. 마우스를 움직일 때마다 편집기를 다시 그리면(useEditor가
-				// 옵션을 다시 설정한다) 노드 뷰가 갱신되어 표 열 너비 끌기 등이 흔들린다.
+				// Do not change state at the same position. If the editor re-renders on every mouse move (useEditor
+				// resets options), node views update and things like table column resize dragging get shaky.
 				setHandleSpot((previous) => (sameSpot(previous, spot) ? previous : spot));
 			} catch {
-				// DOM이 막 바뀌는 중이면 무시한다.
+				// Ignore if the DOM is just being replaced.
 			}
 		},
 		[editor],
 	);
 
-	// 핸들은 화면 고정 위치에 뜬다. 스크롤하면 블록을 따라가고, 블록이 사라졌으면 숨긴다.
-	// 그대로 두면 스크롤 뒤 엉뚱한 블록 옆에 옛 핸들이 남아 같은 항목에 핸들이 두 곳처럼 보인다.
+	// The handle floats at a fixed screen position. On scroll it follows the block, and hides if the block is gone.
+	// Otherwise a stale handle remains next to a wrong block after scrolling, so it looks like the same item has two handles.
 	const hasHandle = handleSpot !== null;
 	useEffect(() => {
 		if (!hasHandle || !editor) return;
@@ -876,8 +876,8 @@ export function CmsEditor({
 			</DropdownMenuItem>
 		</>
 	);
-	// 좁을 때 숨기는 순서: priority가 큰 것부터. fixed는 숨기지 않는다(팝오버 도구는 메뉴 안에서 앵커를 잃는다).
-	// 놓는 순서는 아래 `TOOLBAR_ORDER`가 정한다.
+	// Order to hide when narrow: larger priority first. fixed is never hidden (popover tools lose their anchor inside the menu).
+	// The placement order is decided by `TOOLBAR_ORDER` below.
 	const unordered: ToolbarEntry[] = [
 		{
 			key: "block-style",
@@ -890,7 +890,7 @@ export function CmsEditor({
 		...INLINE_TOOLS.map((tool) =>
 			buttonSlot(tool, tool.mark, INLINE_PRIORITY[tool.mark] ?? 5, PINNED_INLINE_MARKS.includes(tool.mark)),
 		),
-		// 글자 꾸밈 확장의 서식 도구(블록 확장의 글자색·툴팁 등).
+		// Formatting tools of text-style extensions (block extension text color, tooltip, etc.).
 		...markExtensions.flatMap(({ name, extension }): ToolbarEntry[] => {
 			const tool = extension.toolbar;
 			if (!tool) return [];
@@ -930,7 +930,7 @@ export function CmsEditor({
 		},
 		{
 			key: "upload",
-			// 밑줄(5)보다 늦게 숨긴다. 같은 우선순위면 오른쪽 도구가 먼저 숨는다.
+			// Hide later than underline (5). With the same priority, right-hand tools hide first.
 			priority: 4,
 			render: () => (
 				<DropdownMenu>
@@ -995,11 +995,11 @@ export function CmsEditor({
 		<div
 			className="relative flex min-h-full w-full flex-1 flex-col bg-cms-background"
 			data-cms-editor-shell
-			// 제목·본문·원문이 같은 폭(`--editor-width`)을 쓴다.
+			// Title, body, and source use the same width (`--editor-width`).
 			style={{ "--editor-width": EDITOR_WIDTHS[width] } as CSSProperties}
 			onCompositionStart={(event) => {
-				// 팝오버(포털) 안 입력칸의 조합은 React 트리를 타고 여기까지 오지만 본문 입력이 아니다.
-				// 그 입력칸이 조합 중에 사라지면 끝 신호가 오지 않아 저장이 막혔다.
+				// Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.
+				// If that input disappeared during composition, the end signal never came and saving was blocked.
 				if (!event.currentTarget.contains(event.target as Node)) return;
 				isComposingRef.current = true;
 				onCompositionStart?.();
@@ -1011,8 +1011,8 @@ export function CmsEditor({
 			}}
 			onMouseMove={handleMouseMove}
 			onMouseDown={(event) => {
-				// 본문 바깥 빈 여백에서 누른 채 끌면 마키(네모 영역)로 블록을 고른다. 편집기 안쪽 여백은
-				// 블록 선택 플러그인이 맡는다. 서식 도구·제목 입력·버튼 같은 조작 요소와 포털(팝오버)은 제외한다.
+				// Pressing and dragging in the empty margin outside the body selects blocks with a marquee. The editor's inner margin
+				// is handled by the block selection plugin. Interactive elements such as formatting tools, title input, buttons, and portals (popovers) are excluded.
 				const target = event.target as HTMLElement;
 				if (!canEdit || !event.currentTarget.contains(target) || editor.view.dom.contains(target)) return;
 				if (target.closest('input, textarea, button, select, a, [role="toolbar"], [contenteditable="true"]')) return;
@@ -1024,8 +1024,8 @@ export function CmsEditor({
 				aria-label={t("toolbar.format")}
 				className="sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-cms-background/95 backdrop-blur"
 			>
-				{/* 도구 묶음은 툴바 정중앙에 둔다. 오른쪽 끝 요소 폭만큼 양쪽을 똑같이 비우고,
-				    그래도 좁으면(번역 원문 칸을 연 때 등) 한 줄을 유지한 채 덜 쓰는 도구를 "더보기"로 접는다. */}
+				{/* The tool group is centered in the toolbar. Leave the same space on both sides as the width of the right-end element,
+				        and if still narrow (e.g. when the translation source column is open), keep one line and fold less-used tools into "More". */}
 				<div className="relative flex min-h-12 items-center py-2" style={{ paddingInline: asideWidth + 24 }}>
 					<ToolbarRow editor={editor} entries={toolbarEntries} end={toolbarEnd} />
 					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-1">
@@ -1070,15 +1070,15 @@ export function CmsEditor({
 				</div>
 			)}
 
-			{/* 원문 모드에서도 시각 편집기를 내리지 않고 숨긴다. 돌아오면 원문을 다시 읽어 채운다. */}
+			{/* Even in source mode the visual editor is hidden rather than torn down. On return, the source is re-read and filled in. */}
 			{/* biome-ignore lint/a11y: canvas click focuses the rich text editor */}
 			<div
 				hidden={isSourceMode}
-				// 마지막 줄이 화면 아래에 붙지 않게 아래 여백(화면 높이의 35%)을 둔다.
+				// Leave bottom margin (35% of screen height) so the last line does not stick to the bottom of the screen.
 				className="mx-auto flex min-h-full w-full max-w-(--editor-width) flex-1 cursor-text flex-col px-4 pt-6 pb-[35vh]"
 				onClick={(event) => {
-					// 본문 밖 빈 캔버스를 눌렀을 때만 끝으로 옮긴다. NodeView 버튼·팝오버(포털)의 클릭도
-					// React 트리를 따라 여기로 올라오므로, 본문 DOM 안이나 캔버스 밖(포털)은 건드리지 않는다.
+					// Move to the end only when the empty canvas outside the body is clicked. Clicks on NodeView buttons and popovers (portals)
+					// also bubble up here through the React tree, so leave the body DOM and anything outside the canvas (portals) alone.
 					const target = event.target as Node;
 					if (!event.currentTarget.contains(target) || editor.view.dom.contains(target)) return;
 					if (!editor.isFocused) editor.chain().focus("end").run();
@@ -1098,7 +1098,7 @@ export function CmsEditor({
 						setImageDialog({ file });
 						return;
 					}
-					// 이미지가 아닌 파일은 놓은 자리에 파일 카드로 넣는다.
+					// Non-image files are inserted as file cards where they are dropped.
 					const attachments = attachmentsFrom(event.dataTransfer.files);
 					if (attachments.length > 0) {
 						event.preventDefault();

@@ -1,17 +1,17 @@
 /**
- * remark directive 두 단계 플러그인.
+ * Two-stage remark directive plugins.
  *
- * 1. {@link remarkDemoteUnknownDirectives} — **등록되지 않은** 이름을 원문 그대로의 본문 텍스트로 되돌린다.
- *    directive를 처리하지 않는 파이프라인은 아무것도 출력하지 않으므로(무음 손실), 되돌리지 않으면
- *    `openai/gpt-oss-120b:free를` 같은 산문이 사라진다. 레거시 49편 실측 오탐은 2건이다(`:free를`, `:1로`).
- * 2. {@link remarkDirectivesToMdx} — **등록된** 이름을 MDX 요소로 바꾼다. 컴포넌트는 이름으로만 붙으므로
- *    (`MDX_COMPONENTS`) `mdxJsxFlowElement`·`mdxJsxTextElement`로 변환해야 한다.
- *    코드 펜스 블록을 MDX 요소로 바꾸는 `remark-fence-blocks.ts`와 같은 방식이다.
+ * 1. {@link remarkDemoteUnknownDirectives} — turns **unregistered** names back into body text, exactly as written.
+ *    A pipeline that does not handle directives outputs nothing (silent loss), so without turning them back,
+ *    prose like `openai/gpt-oss-120b:free를` disappears. Measured on the 49 legacy posts, there are 2 false positives (`:free를`, `:1로`).
+ * 2. {@link remarkDirectivesToMdx} — turns **registered** names into MDX elements. Components attach only by name
+ *    (`MDX_COMPONENTS`), so they must be converted to `mdxJsxFlowElement` and `mdxJsxTextElement`.
+ *    This works the same way as `remark-fence-blocks.ts`, which turns code fence blocks into MDX elements.
  *
- * 두 플러그인은 순서가 있다. demote를 먼저 돌려 미등록 이름을 걷어낸 뒤 변환한다.
- * **CMS 파서(`parseMdxAst`)와 공개 렌더 체인이 둘 다 쓴다.** 저장 문자열은 바뀌지 않고 분석기가 보는
- * 트리만 공개 체인과 같은 모양이 된다 — 참조 수집·속성 검증이 **이름으로 노드를 찾으므로**
- * 두 shape로 갈라지면 한쪽만 고치는 실수가 난다.
+ * The two plugins have an order. Run demote first to clear unregistered names, then convert.
+ * **Both the CMS parser (`parseMdxAst`) and the public render chain use them.** The stored string does not change and only the tree the analyzer sees
+ * takes the same shape as the public chain — reference collection and attribute validation **look up nodes by name**,
+ * so splitting into two shapes leads to fixing only one of them.
  */
 
 import type { Paragraph, Root, RootContent } from "mdast";
@@ -19,7 +19,7 @@ import { SKIP, visit } from "unist-util-visit";
 import type { VFile } from "vfile";
 import { DIRECTIVE_BY_NAME, type DirectiveDefinition } from "./directives";
 
-/** remark-directive가 만드는 세 가지 노드 타입. */
+/** The three node types that remark-directive creates. */
 const DIRECTIVE_TYPES = ["containerDirective", "leafDirective", "textDirective"] as const;
 
 type DirectiveNode = {
@@ -36,23 +36,23 @@ type DirectiveNode = {
 const asDirective = (node: unknown): DirectiveNode => node as DirectiveNode;
 
 /**
- * 노드가 차지한 **원문 문자열**을 그대로 잘라 온다.
+ * Cuts out the **original source string** that the node occupies, as is.
  *
- * AST에서 directive 문자열을 재조립하지 않는다 — 이스케이프·공백·따옴표가 틀어진다.
+ * Directive strings are not reassembled from the AST — escapes, whitespace and quotes would be altered.
  */
 const originalSource = (node: DirectiveNode, source: string): string => {
 	const start = node.position?.start?.offset;
 	const end = node.position?.end?.offset;
 	if (typeof start !== "number" || typeof end !== "number") {
-		// 원문을 보존할 수 없으면 조용히 잃는 것보다 멈추는 편이 낫다(analyze가 오류로 보고한다).
+		// If the source cannot be preserved, stopping is better than losing it silently (analyze reports it as an error).
 		throw new Error(`Can't preserve the body: the position of directive :${node.name} is unknown`);
 	}
 	return source.slice(start, end);
 };
 
 /**
- * 블록 지시자의 원문. 둘째 줄부터는 바깥 블록이 붙인 접두(인용 `> `·목록 들여쓰기)를 지시자가 시작한 칸까지 걷어 낸다.
- * 그대로 두면 바깥 블록을 다시 쓸 때 접두가 한 번 더 붙어 저장할 때마다 겹친다(`> > `).
+ * Source of a block directive. From the second line on, the prefix added by the outer block (quote `> ` and list indentation) is stripped up to the column where the directive started.
+ * If left as is, rewriting the outer block adds the prefix once more, and it piles up on every save (`> > `).
  */
 const blockSource = (node: DirectiveNode, source: string): string => {
 	const original = originalSource(node, source);
@@ -65,18 +65,18 @@ const blockSource = (node: DirectiveNode, source: string): string => {
 };
 
 /**
- * 되돌린 블록 지시자 문단에 붙이는 표시(`paragraph.data`). 공개 렌더에는 그냥 글 문단이지만, 쓰기 경로
- * (`toDocument`)는 이 문단을 원문 블록(`html`)으로 옮겨 이스케이프 없이 그대로 쓴다. 원문은 마크다운으로 읽힌 글이 아니라서
- * 글처럼 이스케이프하면 다시 읽을 때 풀리지 않고 저장할 때마다 백슬래시가 는다(`\{` → `\\\{`).
+ * Marker put on the paragraph of a turned-back block directive (`paragraph.data`). On the public render it is just a text paragraph, but the write path
+ * (`toDocument`) moves this paragraph into a raw block (`html`) and writes it as is without escaping. The source was not read as Markdown text,
+ * so escaping it like text would not be undone on re-read, and backslashes grow on every save (`\{` → `\\\{`).
  */
 export const DEMOTED_DIRECTIVE_SOURCE = "cmsDemotedDirectiveSource";
 
 /**
- * 미등록 directive를 본문 텍스트로 되돌린다.
+ * Turns unregistered directives back into body text.
  *
- * - 텍스트 directive → `text` (문장 안이므로 문맥이 같다)
- * - 리프·컨테이너 directive → `paragraph(text)` (블록 문맥). 쓰기 경로가 원문 그대로 쓰도록 {@link DEMOTED_DIRECTIVE_SOURCE}를 붙인다.
- * - 미등록 부모는 **subtree 전체를 원문으로 보존**하고 자식 순회를 멈춘다(내부를 변환하면 계약이 깨진다).
+ * - text directive → `text` (it is inside a sentence, so the context is the same)
+ * - leaf and container directives → `paragraph(text)` (block context). Attaches {@link DEMOTED_DIRECTIVE_SOURCE} so the write path writes the source as is.
+ * - An unregistered parent **keeps the whole subtree as source** and stops traversing children (converting the inside would break the contract).
  */
 export const remarkDemoteUnknownDirectives =
 	() =>
@@ -93,7 +93,7 @@ export const remarkDemoteUnknownDirectives =
 					? { type: "text", value: originalSource(directive, source) }
 					: {
 							type: "paragraph",
-							// mdast의 문단 data 타입에는 없는 이름이라 넓혀 둔다. 공개 렌더(mdast → hast)는 모르는 data를 무시한다.
+							// This is not a name in the mdast paragraph data type, so the type is widened. The public render (mdast → hast) ignores unknown data.
 							data: { [DEMOTED_DIRECTIVE_SOURCE]: true } as Paragraph["data"],
 							children: [{ type: "text", value: blockSource(directive, source) }],
 						};
@@ -104,10 +104,10 @@ export const remarkDemoteUnknownDirectives =
 	};
 
 /**
- * 지시자 속성을 MDX 속성으로 바꾼다.
+ * Turns directive attributes into MDX attributes.
  *
- * 불리언은 **거짓일 때 속성을 아예 쓰지 않는다.** `={false}` 표현식을 만들지 않으면서
- * `"false"`가 truthy가 되는 함정(A1)을 피한다 — `decorative="false"`와 생략이 같은 뜻이 된다.
+ * For booleans, **the attribute is not written at all when false.** This avoids creating a `={false}` expression
+ * and the trap where `"false"` is truthy — `decorative="false"` and omission mean the same.
  */
 const toMdxAttributes = (
 	definition: DirectiveDefinition,
@@ -122,7 +122,7 @@ const toMdxAttributes = (
 			attributes.push({ type: "mdxJsxAttribute", name, value: null });
 			continue;
 		}
-		// 정의에 없는 속성도 버리지 않는다(조용한 손실 금지). 허용 여부는 발행 전 검사가 다룬다.
+		// Attributes not in the definition are not dropped either (no silent loss). Whether they are allowed is handled by the pre-publish check.
 		attributes.push({ type: "mdxJsxAttribute", name, value: value ?? null });
 	}
 
@@ -130,9 +130,9 @@ const toMdxAttributes = (
 };
 
 /**
- * 등록된 directive를 MDX 요소로 바꾼다.
+ * Turns registered directives into MDX elements.
  *
- * `u`·`sup`·`sub`·`br`은 소문자 intrinsic 요소로, 나머지는 `MDX_COMPONENTS`에 등록된 컴포넌트 이름으로 매핑한다.
+ * `u`, `sup`, `sub` and `br` map to lowercase intrinsic elements, and the rest map to component names registered in `MDX_COMPONENTS`.
  */
 export const remarkDirectivesToMdx =
 	() =>
@@ -140,16 +140,16 @@ export const remarkDirectivesToMdx =
 		visit(tree, [...DIRECTIVE_TYPES], (node, index, parent) => {
 			const directive = asDirective(node);
 			const definition = DIRECTIVE_BY_NAME.get(directive.name);
-			// 등록되지 않은 이름은 demote가 이미 걷어갔다. 방어적으로 남긴다.
+			// Unregistered names were already cleared by demote. Kept defensively.
 			if (!definition) return;
 			if (!parent || index == null) return;
 
 			const attributes = toMdxAttributes(definition, directive.attributes);
-			// 라벨/본문 자식을 그대로 넘긴다. 컨테이너는 블록, 텍스트는 인라인 문맥이라 타입이 다르지만
-			// 여기서는 remark-directive가 만든 노드를 그대로 옮기는 것이라 좁히지 않고 넘긴다.
+			// Pass the label/body children as is. A container is block context and text is inline context, so the types differ, but
+			// here the nodes made by remark-directive are moved as they are, so they are passed without narrowing.
 			const children = directive.children ?? [];
 			const replacement = {
-				// 위치를 복사한다. 잃으면 이미지 경고·미디어 참조 위치가 늘 1:1로 보고된다(R1 P2).
+				// Copy the position. If lost, image warnings and media reference positions are always reported as 1:1.
 				...(directive.position ? { position: directive.position } : {}),
 				type: directive.type === "textDirective" ? "mdxJsxTextElement" : "mdxJsxFlowElement",
 				name: definition.component,
@@ -158,7 +158,7 @@ export const remarkDirectivesToMdx =
 			} as unknown as RootContent;
 
 			(parent.children as RootContent[]).splice(index, 1, replacement);
-			// 등록된 컨테이너의 자식도 순회한다(콜아웃 안 병합 표 등). 미등록 지시자는 demote 단계에서 SKIP한다.
+			// Children of a registered container are also traversed (merged tables inside callouts etc.). Unregistered directives are skipped (SKIP) at the demote stage.
 			return definition.kind === "container" ? index : [SKIP, index];
 		});
 	};

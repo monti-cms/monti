@@ -19,8 +19,8 @@ const createTableEditor = (content: ReturnType<typeof mdxToTiptap>) => {
 	return editor;
 };
 
-describe("C6 편집기 표 셀 병합 및 분할", () => {
-	it("병합 표 MDX를 로드하여 Tiptap 스키마에서 colspan/rowspan을 보존한다", () => {
+describe("editor table cell merge and split", () => {
+	it("loading merged-table MDX preserves colspan/rowspan in the Tiptap schema", () => {
 		const source = [
 			'::::table{align="left,center"}',
 			":::row",
@@ -52,17 +52,17 @@ describe("C6 편집기 표 셀 병합 및 분할", () => {
 		expect(tiptapToMdx(json).trim()).toBe(source);
 	});
 
-	it("GFM 표에서 셀을 병합(mergeCells)하면 지시자 표로 직렬화된다", () => {
+	it("merging cells (mergeCells) in a GFM table serializes it as a directive table", () => {
 		const gfm = ["| a | b |", "| :-- | :-: |", "| 1 | 2 |"].join("\n");
 
 		const instance = createTableEditor(mdxToTiptap(gfm));
 
-		// 셀 선택(CellSelection)을 설정한다
+		// set the cell selection (CellSelection)
 		const doc = instance.state.doc;
 		const tableNode = doc.firstChild;
 		expect(tableNode?.type.name).toBe("table");
 
-		// 첫 행의 두 셀(a와 b)을 CellSelection으로 선택
+		// select the two cells of the first row (a and b) with a CellSelection
 		let cell1Pos: number | null = null;
 		let cell2Pos: number | null = null;
 
@@ -77,19 +77,19 @@ describe("C6 편집기 표 셀 병합 및 분할", () => {
 		expect(cell2Pos).not.toBeNull();
 
 		if (cell1Pos === null || cell2Pos === null) {
-			throw new Error("셀 위치를 찾을 수 없습니다.");
+			throw new Error("Cell position not found.");
 		}
 		const c1 = cellAround(doc.resolve(cell1Pos + 1));
 		const c2 = cellAround(doc.resolve(cell2Pos + 1));
 		if (!c1 || !c2) {
-			throw new Error("셀 노드를 찾을 수 없습니다.");
+			throw new Error("Cell node not found.");
 		}
 		const cellSelection = new CellSelection(c1, c2);
 
 		instance.view.dispatch(instance.state.tr.setSelection(cellSelection));
 		expect(instance.state.selection instanceof CellSelection).toBe(true);
 
-		// 셀 병합 실행
+		// run cell merge
 		const merged = instance.commands.mergeCells();
 		expect(merged).toBe(true);
 
@@ -98,7 +98,7 @@ describe("C6 편집기 표 셀 병합 및 분할", () => {
 		expect(resultMdx).toContain("colspan=2");
 	});
 
-	it("병합된 셀을 나누면(splitCell) 다시 GFM 표로 복귀한다", () => {
+	it("splitting a merged cell (splitCell) returns the table to GFM", () => {
 		const source = [
 			'::::table{align="left,center"}',
 			":::row",
@@ -114,7 +114,7 @@ describe("C6 편집기 표 셀 병합 및 분할", () => {
 		const instance = createTableEditor(mdxToTiptap(source));
 		const doc = instance.state.doc;
 
-		// 병합된 첫 셀을 CellSelection으로 선택
+		// select the merged first cell with a CellSelection
 		let firstCellPos: number | null = null;
 		doc.descendants((node, pos) => {
 			if (firstCellPos === null && (node.type.name === "tableHeader" || node.type.name === "tableCell")) {
@@ -124,34 +124,34 @@ describe("C6 편집기 표 셀 병합 및 분할", () => {
 
 		expect(firstCellPos).not.toBeNull();
 		if (firstCellPos === null) {
-			throw new Error("첫 번째 셀 위치를 찾을 수 없습니다.");
+			throw new Error("First cell position not found.");
 		}
 		const c = cellAround(doc.resolve(firstCellPos + 1));
 		if (!c) {
-			throw new Error("셀 노드를 찾을 수 없습니다.");
+			throw new Error("Cell node not found.");
 		}
 		const cellSelection = new CellSelection(c);
 		instance.view.dispatch(instance.state.tr.setSelection(cellSelection));
 
-		// 셀 나누기 실행
+		// run cell split
 		const split = instance.commands.splitCell();
 		expect(split).toBe(true);
 
 		const resultMdx = tiptapToMdx(instance.getJSON()).trim();
-		// 병합이 모두 풀렸으므로 GFM 표로 복귀
+		// all merges are undone, so it returns to a GFM table
 		expect(resultMdx).not.toContain("::::table");
 		expect(resultMdx).toContain("| 제목 |");
 	});
 
-	it("선택이 CellSelection이 아닐 때는 mergeCells 및 splitCell이 불가 상태여야 한다", () => {
+	it("mergeCells and splitCell must be unavailable when the selection is not a CellSelection", () => {
 		const gfm = ["| a | b |", "| --- | --- |", "| 1 | 2 |"].join("\n");
 
 		const instance = createTableEditor(mdxToTiptap(gfm));
-		// 기본 커서 선택 상태 (TextSelection)
+		// default cursor selection (TextSelection)
 		expect(instance.state.selection instanceof CellSelection).toBe(false);
 	});
 
-	it("병합을 풀어도 첫 열 머리글 배치를 첫 행 머리글로 바꾸지 않는다", () => {
+	it("undoing a merge does not turn a first-column header layout into a first-row header", () => {
 		const source = [
 			"::::table",
 			":::row",
@@ -167,7 +167,7 @@ describe("C6 편집기 표 셀 병합 및 분할", () => {
 		expect(tiptapToMdx(mdxToTiptap(source)).trim()).toBe(source);
 	});
 
-	it("열 너비를 셀 colwidth로 불러오고 조절한 너비를 widths로 저장한다", () => {
+	it("loads column widths as cell colwidth and saves adjusted widths as widths", () => {
 		const source = [
 			'::::table{widths="80,160"}',
 			":::row",
@@ -186,7 +186,7 @@ describe("C6 편집기 표 셀 병합 및 분할", () => {
 		expect(secondRow?.content?.[1]?.attrs?.colwidth).toEqual([160]);
 		expect(tiptapToMdx(json).trim()).toBe(source);
 
-		// 병합 없는 GFM 표에서 열 너비를 조절하면 머리글을 명시한 directive 표로 저장한다.
+		// Adjusting column widths in a GFM table without merges saves it as a directive table with the header made explicit.
 		const gfm = ["| a | b |", "| --- | --- |", "| 1 | 2 |"].join("\n");
 		const instance = createTableEditor(mdxToTiptap(gfm));
 		instance.commands.setTextSelection(3);

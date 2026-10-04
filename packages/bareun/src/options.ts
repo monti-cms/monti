@@ -2,30 +2,30 @@ import type { TextCheckerLimits } from "@monti-cms/core";
 import { createActiveTranslator } from "@monti-cms/core";
 import { bareunMessages } from "./messages";
 
-// `bareun()`은 사이트 설정 파일에서 불리므로 기본 이름은 읽는 때에 화면 언어로 고른다.
+// `bareun()` is called from the site config file, so the default name is chosen by display language at read time.
 const t = createActiveTranslator(bareunMessages);
 
-/** 사이트 설정의 `plugins`에서 바른 검사기를 찾는 이름. */
+/** Name used to find the Bareun checker in the site config `plugins`. */
 export const BAREUN_PLUGIN_NAME = "text-check-bareun";
 
-/** 검사기 이름(결과의 출처). */
+/** Checker name (the source shown on results). */
 export const BAREUN_CHECKER_ID = "bareun";
 
-/** 서버 경로. 본체 API 주소(`/api/cms/`) 뒤에 붙는다. */
+/** Server route. Appended to the core API base (`/api/cms/`). */
 export const BAREUN_ROUTE = "v1/text-check/bareun";
 
 export interface BareunOptions {
-	/** API 키를 담은 환경 변수 이름. 기본 `BAREUN_API_KEY`. 키는 서버에서만 읽는다. */
+	/** Name of the environment variable holding the API key. Default `BAREUN_API_KEY`. The key is read on the server only. */
 	readonly apiKeyEnv?: string;
-	/** 바른 API 주소. 기본 `https://api.bareun.ai`. 직접 띄운 바른 서버를 쓸 때 바꾼다. */
+	/** Bareun API URL. Default `https://api.bareun.ai`. Change it to use a self-hosted Bareun server. */
 	readonly baseUrl?: string;
-	/** 도구 모음 버튼 이름이자 결과 창의 출처. 기본은 화면 언어의 "바른 맞춤법 검사". */
+	/** Toolbar button name and the source shown in the results panel. Defaults to "Bareun spell check" in the display language. */
 	readonly label?: string;
-	/** 입력을 멈추면 바뀐 문단만 저절로 검사한다. 바른 API는 쓴 만큼 요금이 들어 기본은 끈다. */
+	/** Automatically checks only changed paragraphs once typing stops. The Bareun API is billed by usage, so this is off by default. */
 	readonly auto?: boolean;
-	/** 바른에 미리 올려 둔 사용자 사전 이름. */
+	/** Names of custom dictionaries already uploaded to Bareun. */
 	readonly customDictNames?: readonly string[];
-	/** 한 번에 보낼 문단 수·글자 수. 기본 100문단·10,000자. 넘으면 나눠 보낸다. */
+	/** Paragraphs and characters per request. Default 100 paragraphs / 10,000 characters. Larger input is split. */
 	readonly limits?: TextCheckerLimits;
 }
 
@@ -40,7 +40,7 @@ export interface ResolvedBareunOptions {
 
 const DEFAULT_LIMITS: TextCheckerLimits = { maxSegments: 100, maxChars: 10_000 };
 
-/** 기본값을 채우고 잘못된 값을 막는다. */
+/** Fills in defaults and rejects invalid values. */
 export function resolveBareunOptions(options: BareunOptions = {}): ResolvedBareunOptions {
 	const apiKeyEnv = options.apiKeyEnv ?? "BAREUN_API_KEY";
 	if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(apiKeyEnv)) throw new Error(`bareun: invalid apiKeyEnv "${apiKeyEnv}"`);

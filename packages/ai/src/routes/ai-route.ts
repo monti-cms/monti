@@ -13,11 +13,11 @@ import { siteImageUrl } from "../site-image";
 
 const t = createTranslator(runMessages);
 
-/** 멀티모달 모델이 흔히 받는 이미지 형식과 크기. */
+/** Image formats and sizes that multimodal models commonly accept. */
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** 다른 컬렉션의 공개된 항목 전체(태그·카테고리·모음집·글). */
+/** All published items of other collections (tags, categories, collections, posts). */
 async function loadRecords(collection: string): Promise<AiOption[]> {
 	if (!isCollection(collection)) return [];
 	const store = getCmsContentStore();
@@ -36,11 +36,11 @@ async function loadRecords(collection: string): Promise<AiOption[]> {
 	return options;
 }
 
-/** 컬렉션 필드의 선택 목록(`select` 필드와 조건부 필드의 고르는 칸, 딸린 선택 필드). */
+/** Choice lists of a collection's fields (`select` fields, the picker of conditional fields, and dependent select fields). */
 function fieldOptions(collection: string, field: string): AiOption[] {
 	if (!isCollection(collection)) return [];
 	const definition = schemaOf(collection).fields[field] ?? storedField(collection, field)?.field;
-	// 조건부 필드(정책 등)는 고르는 칸(discriminant)의 목록을 쓴다.
+	// Conditional fields (policies etc.) use the list of the picker (discriminant).
 	const select = definition?.kind === "conditional" ? definition.discriminant : definition;
 	return select?.kind === "select"
 		? Object.entries(select.options).map(([value, label]) => ({ value, label: String(label) }))
@@ -66,8 +66,8 @@ async function fetchSiteImage(url: URL, signal?: AbortSignal): Promise<LoadedIma
 }
 
 /**
- * 실행기에 넘길 저장소 연결. 태그·카테고리·이미지와 코드 검사의 콘텐츠 조회는 서버가 직접 읽는다.
- * `origin`은 이 사이트 주소다. 미디어 라이브러리 밖 이미지(사이트 파일)를 여기서 읽는다.
+ * Store connection to pass to the runner. Tags, categories, images and the content lookup of code checks are read directly by the server.
+ * `origin` is this site's address. Images outside the media library (site files) are read from here.
  */
 export function aiRunDeps(runtime: AiRuntime, signal?: AbortSignal, origin?: string): AiRunDeps {
 	const store = getCmsContentStore();
@@ -97,7 +97,7 @@ export function aiRunDeps(runtime: AiRuntime, signal?: AbortSignal, origin?: str
 				data: Buffer.from(bytes).toString("base64"),
 			};
 		},
-		// 코드 검사가 읽는 본체 콘텐츠 조회(본체 공개 API).
+		// The core content lookup that code checks read (the core public API).
 		content: createContentLookup(getCmsDatabase()),
 	};
 }

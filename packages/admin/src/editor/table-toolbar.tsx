@@ -28,7 +28,7 @@ const t = createTranslator(editorMessages);
 const chain = (editor: Editor) => editor.chain().focus();
 const isCellSelection = (editor: Editor): boolean => editor.state.selection instanceof CellSelection;
 
-/** 선택이 들어 있는 표 노드와 그 위치. 표 밖이면 null. */
+/** The table node containing the selection and its position. null when outside a table. */
 const findTable = (editor: Editor): { node: PmNode; pos: number } | null => {
 	const { $from } = editor.state.selection;
 	for (let depth = $from.depth; depth > 0; depth -= 1) {
@@ -50,8 +50,8 @@ const hasFixedWidth = (table: PmNode) => {
 };
 
 /**
- * 열 너비를 모두 지운다. 너비가 없는 표는 본문 폭을 꽉 채운다(공개 화면도 같다).
- * 이후 한 열만 끌어 조절해도 나머지 열이 자동이라 표는 계속 꽉 찬다.
+ * Clears all column widths. A table without widths fills the full body width (same on the public page).
+ * Even if a single column is dragged to resize afterward, the rest are auto, so the table still fills the width.
  */
 const fillTableWidth = (editor: Editor) => {
 	const table = findTable(editor);
@@ -66,7 +66,7 @@ const fillTableWidth = (editor: Editor) => {
 	editor.commands.focus();
 };
 
-/** 표 안에 커서가 있을 때 표 위에 뜨는 조작 도구(§4.1, v2 C6). 표 삭제는 블록 손잡이 메뉴에 있다. */
+/** Controls floating above the table while the cursor is inside it. Deleting the table is in the block handle menu. */
 const TABLE_TOOL_GROUPS: ToolbarItem[][] = [
 	[
 		{
@@ -141,7 +141,7 @@ const TABLE_TOOL_GROUPS: ToolbarItem[][] = [
 const TOOLBAR_GAP = 6;
 
 export function TableToolbar({ editor }: { editor: Editor }) {
-	// 선택·문서가 바뀔 때마다(셀 이동, 병합 가능 여부, 열 너비) 다시 그린다. 표 밖이면 null.
+	// Re-render whenever the selection or document changes (cell movement, mergeability, column widths). null outside a table.
 	const tableKey = useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -155,7 +155,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 	const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 	const [, setScrollTick] = useState(0);
 
-	// 스크롤·창 크기 변경에도 표를 따라간다(도구 줄은 화면 고정 위치로 띄운다).
+	// Follow the table on scroll and window resize (the tool row floats at a fixed screen position).
 	useEffect(() => {
 		if (!tableKey) return;
 		const update = () => setScrollTick((tick) => tick + 1);
@@ -183,7 +183,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 		const rect = element.getBoundingClientRect();
 		const height = toolbar?.offsetHeight ?? 32;
 		const width = toolbar?.offsetWidth ?? 0;
-		// 위쪽 서식 도구(sticky)에 가리지 않게, 표가 위로 스크롤되면 서식 도구 바로 아래에 붙는다.
+		// So it is not hidden by the top formatting toolbar (sticky), when the table scrolls up it sticks right below the formatting toolbar.
 		const formatBar = editor.view.dom
 			.closest("[data-cms-editor-shell]")
 			?.querySelector(`[role="toolbar"][aria-label="${t("toolbar.format")}"]`);

@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { BLOCK_CONVERTERS, converterForCms, converterForTiptap } from "../converters";
 import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
 
-describe("블록 변환기 등록부(v2 C0)", () => {
-	it("같은 노드 타입을 두 기본 변환기가 맡지 않는다(matches 분기 허용)", () => {
+describe("block converter registry", () => {
+	it("no two default converters handle the same node type (matches branches allowed)", () => {
 		const defaultCms = BLOCK_CONVERTERS.filter((c) => !c.matches).flatMap((c) => c.cmsTypes);
 		const tiptap = BLOCK_CONVERTERS.flatMap((c) => c.tiptapTypes);
 		expect(new Set(defaultCms).size).toBe(defaultCms.length);
 		expect(new Set(tiptap).size).toBe(tiptap.length);
 	});
 
-	it("기본 분기가 맡는 타입을 등록부가 가리지 않는다", () => {
+	it("the registry does not shadow types handled by the default branch", () => {
 		const reserved = [
 			"doc",
 			"paragraph",
@@ -33,13 +33,13 @@ describe("블록 변환기 등록부(v2 C0)", () => {
 		expect(claimed.filter((type) => reserved.includes(type))).toEqual([]);
 	});
 
-	it("타입으로 변환기를 찾는다", () => {
+	it("finds a converter by type", () => {
 		expect(converterForCms("image")?.name).toBe("image");
 		expect(converterForTiptap("codeBlock")?.name).toBe("codeBlock");
 		expect(converterForCms("paragraph")).toBeUndefined();
 	});
 
-	it("matches가 있는 변환기를 우선하고 없으면 기본 변환기를 찾는다", () => {
+	it("prefers a converter with matches and falls back to the default converter", () => {
 		const mermaidNode = { type: "codeBlock", attrs: { language: "mermaid", value: "graph TD" } };
 		const chartNode = { type: "codeBlock", attrs: { language: "chart", value: "pie" } };
 		const tsNode = { type: "codeBlock", attrs: { language: "typescript", value: "const x = 1;" } };
@@ -55,20 +55,20 @@ describe("블록 변환기 등록부(v2 C0)", () => {
 	});
 
 	it.each([
-		["이미지", '::image{mediaId="m1" alt="고양이" width="50%" align="left"}'],
-		["코드 블록", '```ts title="a.ts"\nconst a = 1;\n```'],
-		["표", "| a | b |\n| :-- | --: |\n| 1 | 2 |"],
-		["Mermaid 다이어그램", "```mermaid\ngraph TD;\n    A-->B;\n```"],
-		["Mermaid 대소문자 보존", "```Mermaid\ngraph TD;\n    A-->B;\n```"],
-		["Mermaid meta 보존", '```mermaid title="diagram.mmd"\ngraph TD;\n    A-->B;\n```'],
-		["차트", '```chart\npie\n  "Apple": 40\n  "Banana": 60\n```'],
-		["차트 meta 및 대소문자 보존", '```Chart title="sales"\npie\n  "Apple": 40\n  "Banana": 60\n```'],
-		["수식", "$$\nx^2 + y^2 = z^2\n$$"],
-	])("%s를 왕복한다", (_, source) => {
+		["an image", '::image{mediaId="m1" alt="고양이" width="50%" align="left"}'],
+		["a code block", '```ts title="a.ts"\nconst a = 1;\n```'],
+		["a table", "| a | b |\n| :-- | --: |\n| 1 | 2 |"],
+		["a Mermaid diagram", "```mermaid\ngraph TD;\n    A-->B;\n```"],
+		["Mermaid with its case preserved", "```Mermaid\ngraph TD;\n    A-->B;\n```"],
+		["Mermaid with its meta preserved", '```mermaid title="diagram.mmd"\ngraph TD;\n    A-->B;\n```'],
+		["a chart", '```chart\npie\n  "Apple": 40\n  "Banana": 60\n```'],
+		["a chart with its meta and case preserved", '```Chart title="sales"\npie\n  "Apple": 40\n  "Banana": 60\n```'],
+		["math", "$$\nx^2 + y^2 = z^2\n$$"],
+	])("round-trips %s", (_, source) => {
 		expect(tiptapToMdx(mdxToTiptap(source)).trim()).toBe(source);
 	});
 
-	it("미리보기 블록 값 변경 후 직렬화된다", () => {
+	it("serializes after a preview block value changes", () => {
 		// Mermaid
 		const mermaidDoc = mdxToTiptap("```mermaid\ngraph TD;\n    A-->B;\n```");
 		const mermaidBlock = mermaidDoc.content?.find((b) => b.type === "cmsMermaid");

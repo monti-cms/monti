@@ -26,7 +26,7 @@ const getHProperties = (code: Code) =>
 	((code.data as { hProperties?: unknown } | undefined)?.hProperties ?? {}) as Record<string, unknown>;
 
 describe("remarkAnnotationToShikiDecoration", () => {
-	it("mark annotation을 decoration으로 변환하고 annotation 라인을 제거한다", () => {
+	it("converts a mark annotation into a decoration and removes the annotation line", () => {
 		const root: Root = {
 			type: "root",
 			children: [
@@ -59,7 +59,7 @@ describe("remarkAnnotationToShikiDecoration", () => {
 		});
 	});
 
-	it("python 같은 // 이외 주석 prefix에서도 annotation을 파싱해야 한다", () => {
+	it("must also parse annotations with a comment prefix other than //, such as python", () => {
 		const root: Root = {
 			type: "root",
 			children: [
@@ -82,7 +82,7 @@ describe("remarkAnnotationToShikiDecoration", () => {
 		expect(decorations).toHaveLength(1);
 	});
 
-	it("postcss의 /* */ postfix 주석 annotation도 파싱해야 한다", () => {
+	it("must also parse postcss /* */ postfix comment annotations", () => {
 		const root: Root = {
 			type: "root",
 			children: [
@@ -109,7 +109,7 @@ describe("remarkAnnotationToShikiDecoration", () => {
 		});
 	});
 
-	it("inline annotation은 inline class decoration으로 변환한다", () => {
+	it("converts an inline annotation into an inline class decoration", () => {
 		const root: Root = {
 			type: "root",
 			children: [
@@ -140,7 +140,7 @@ describe("remarkAnnotationToShikiDecoration", () => {
 		);
 	});
 
-	it("설정에 없는 annotation 라인은 코드 라인으로 보존한다", () => {
+	it("keeps annotation lines that are not in the config as code lines", () => {
 		const root: Root = {
 			type: "root",
 			children: [
@@ -163,7 +163,7 @@ describe("remarkAnnotationToShikiDecoration", () => {
 		expect(decorations).toEqual([]);
 	});
 
-	it("line/block annotation을 line-decorations / line-wrappers payload로 분리 보존해야 한다", () => {
+	it("must separate and keep line/block annotations as line-decorations / line-wrappers payloads", () => {
 		const root: Root = {
 			type: "root",
 			children: [
@@ -208,7 +208,7 @@ describe("remarkAnnotationToShikiDecoration", () => {
 		);
 	});
 
-	it("실제 markdown code fence를 파싱한 mdast에서도 동일하게 동작해야 한다", () => {
+	it("must behave the same on mdast parsed from a real markdown code fence", () => {
 		const markdown = ['```ts title="demo.ts"', '// @line Callout {0-0} variant="tip"', "const a = 1", "```"].join("\n");
 		const root = fromMarkdown(markdown) as Root;
 

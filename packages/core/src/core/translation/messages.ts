@@ -1,8 +1,8 @@
 import { defineMessages } from "../../i18n/define";
 
 /**
- * 번역 검사 이유 문구(M15). 키는 `StructureCheck`의 `code`다(`mdx_error`는 `{message}`에 MDX 분석 오류가 들어간다).
- * 사이트는 설정의 `admin.messages["cms.translation"]`로 덮어쓴다.
+ * Translation check reason messages. Keys are `StructureCheck`'s `code` (`mdx_error` puts the MDX parse error in `{message}`).
+ * Sites override them with `admin.messages["cms.translation"]` in the config.
  */
 export const translationMessages = defineMessages("cms.translation", {
 	en: {

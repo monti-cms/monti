@@ -12,7 +12,7 @@ import { nextMessages } from "./messages";
 
 const t = createTranslator(nextMessages);
 
-/** 관리자 화면 메타데이터. 앱의 관리자 레이아웃에서 `export const metadata = cmsAdminMetadata;`로 쓴다. */
+/** Admin UI metadata. Use it in the app's admin layout as `export const metadata = cmsAdminMetadata;`. */
 export const cmsAdminMetadata: Metadata = {
 	title: SITE_NAME ? t("titleWithSite", { site: SITE_NAME }) : t("title"),
 	robots: { index: false, follow: false },
@@ -21,25 +21,25 @@ export const cmsAdminMetadata: Metadata = {
 export type CmsAdminLayoutProps = {
 	children: ReactNode;
 	/**
-	 * 관리자 화면의 테마 공급자(`next-themes`)를 둘지. 기본 `true`. 사이트가 이미 테마 공급자를 두었으면 `false`로 끈다.
-	 * 이때 관리자 화면은 사이트가 `html`에 붙이는 `.dark` 또는 `[data-theme="dark"]`를 따른다.
+	 * Whether to render the admin UI's theme provider (`next-themes`). Default `true`. Set `false` if the site already has a theme provider.
+	 * In that case the admin UI follows the `.dark` or `[data-theme="dark"]` the site puts on `html`.
 	 */
 	themeProvider?: boolean;
 	/**
-	 * 관리자 화면의 알림 창(`sonner`의 `Toaster`)을 둘지. 기본 `true`. 사이트가 이미 `Toaster`를 두었으면 `false`로 끈다.
-	 * 관리자 화면의 알림은 사이트의 `Toaster`에도 뜬다(같은 `sonner` 패키지를 쓸 때).
+	 * Whether to render the admin UI's toast container (`sonner`'s `Toaster`). Default `true`. Set `false` if the site already has a `Toaster`.
+	 * Admin UI toasts also appear in the site's `Toaster` (when using the same `sonner` package).
 	 */
 	toaster?: boolean;
 };
 
 /**
- * 관리자 화면 레이아웃. 앱의 `app/(admin)/admin/layout.tsx`가 그린다. 스타일(Tailwind·`cms-*` 색)은 앱의 전역 CSS가 준다.
- * 밝은·어두운 테마를 모두 지원하고(v1 §3.1) 기본으로 `next-themes` 공급자와 알림 창을 둔다.
- * 사이트가 이미 둔 것이 있으면 `<CmsAdminLayout themeProvider={false} toaster={false}>`로 끈다.
+ * Admin UI layout. Rendered by the app's `app/(admin)/admin/layout.tsx`. Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
+ * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
+ * If the site already has them, turn them off with `<CmsAdminLayout themeProvider={false} toaster={false}>`.
  */
 export async function CmsAdminLayout({ children, themeProvider = true, toaster = true }: CmsAdminLayoutProps) {
 	const plugins = await loadAdminPlugins();
-	// 플러그인 공급자는 서버 데이터 캐시 안에서, 등록 순서대로 바깥부터 감싼다.
+	// Plugin providers wrap from the outside in registration order, inside the server data cache.
 	const content = plugins.reduceRight<ReactNode>(
 		(inner, { name, Provider }) => (Provider ? <Provider key={name}>{inner}</Provider> : inner),
 		<TooltipProvider>

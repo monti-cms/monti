@@ -8,7 +8,7 @@ export default function Home() {
 				<Link href="/en/blog">Blog</Link>
 			</p>
 			<p>
-				<Link href="/studio">관리자 화면</Link>
+				<Link href="/studio">Admin</Link>
 			</p>
 		</main>
 	);

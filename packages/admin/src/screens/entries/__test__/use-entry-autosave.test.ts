@@ -45,13 +45,13 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-describe("브라우저 임시 저장", () => {
-	it("입력이 멈추고 정해 둔 시간이 지나야 마지막 상태 하나만 남기고, 서버에는 보내지 않는다", async () => {
+describe("browser temporary save", () => {
+	it("after input pauses for the set time, keeps only the last state and does not send it to the server", async () => {
 		const { result } = setup();
 		act(() => result.current.setForm({ title: "가" }));
 		await act(async () => vi.advanceTimersByTimeAsync(BACKUP_IDLE_MS - 1000));
 		act(() => result.current.setForm({ title: "가나" }));
-		// 입력이 이어지면 다시 센다.
+		// If input continues, count again.
 		await act(async () => vi.advanceTimersByTimeAsync(BACKUP_IDLE_MS - 1000));
 		expect(saveLocalBackup).not.toHaveBeenCalled();
 

@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /**
- * 바른 검사기의 기본 이름, 결과 분류 이름, 서버 오류 문구(M15). 결과 설명(`comment`)은 바른이 주는 한국어 글 그대로다.
+ * Default name, result category names and server error messages of the Bareun checker. The result description (`comment`) is the Korean text Bareun returns, as is.
  */
 export const bareunMessages = defineMessages("cms-bareun", {
 	en: {

@@ -26,8 +26,8 @@ const page = (items: ListEntriesItem[], total = items.length): EntriesPage => ({
 const state: OptimisticContext["state"] = { statuses: [], folder: "all", includeDescendants: false };
 const ids = (...values: string[]) => new Set(values);
 
-describe("목록 낙관적 갱신", () => {
-	it("휴지통 이동·영구 삭제·복원은 줄을 바로 빼고 전체 수를 줄인다", () => {
+describe("optimistic list update", () => {
+	it("trash move, permanent delete and restore remove the row right away and reduce the total", () => {
 		for (const op of ["trash", "permanentDelete", "restore"] as const) {
 			const next = applyOptimistic(page([row("a"), row("b"), row("c")], 30), op, ids("a", "c"), { state });
 			expect(next.items.map((item) => item.id)).toEqual(["b"]);
@@ -35,14 +35,14 @@ describe("목록 낙관적 갱신", () => {
 		}
 	});
 
-	it("상태 필터에서 빠지는 줄은 빼고, 남는 줄은 상태만 바꾼다", () => {
+	it("rows leaving the status filter are removed, and remaining rows only change status", () => {
 		const items = [row("a"), row("b")];
 		expect(applyOptimistic(page(items), "archive", ids("a"), { state }).items[0]?.status).toBe("archived");
 		const filtered = applyOptimistic(page(items), "archive", ids("a"), { state: { ...state, statuses: ["draft"] } });
 		expect(filtered.items.map((item) => item.id)).toEqual(["b"]);
 	});
 
-	it("다른 폴더로 옮긴 줄은 지금 폴더 보기에서 빠진다", () => {
+	it("a row moved to another folder leaves the current folder view", () => {
 		const items = [row("a", { folderId: "f1" }), row("b", { folderId: "f1" })];
 		const inFolder = { ...state, folder: "f1" };
 		expect(
@@ -53,7 +53,7 @@ describe("목록 낙관적 갱신", () => {
 		).toBe("f2");
 	});
 
-	it("관계 필드는 이름까지 채워 더하고 빼고 바꾼다", () => {
+	it("relation fields add, remove and replace, filling in names too", () => {
 		const options = { tagIds: [{ id: "t1", title: "React" }], categoryId: [{ id: "c1", title: "개발" }] };
 		const added = applyOptimistic(page([row("a")]), "relation.add", ids("a"), {
 			state,

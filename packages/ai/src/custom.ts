@@ -9,15 +9,15 @@ const t = createTranslator(actionsMessages);
 const presetText = createTranslator(presetMessages);
 
 /**
- * 화면 기능(D12·M8-5). 관리자 AI 화면에서 만든 기능이다. 코드 기능과 같은 실행기를 쓰고, 범용 자리(필드 옆·선택 영역
- * 메뉴·넣기 메뉴·본문 블록·본문 이미지·미디어)에 붙는다. 입력은 고른 자리가 주는 재료다. DB(`ai_custom_actions`)에 둔다.
+ * UI actions. Actions created in the admin AI screen. They use the same runner as code actions and attach to generic slots (next to a field, selection
+ * menu, insert menu, body block, body image, media). Inputs are the material the chosen slot provides. Stored in the DB (`ai_custom_actions`).
  *
- * 저장 모양: `{ base: { label, surface, result }, override: 고친 값(지시문·보낼 입력·연결 등) }`.
+ * Stored shape: `{ base: { label, surface, result }, override: edited values (instructions, inputs to send, connection, etc.) }`.
  */
 
 export const CUSTOM_KEY_PREFIX = "custom_";
 
-/** 붙을 곳. 필드는 컬렉션 정의의 필드 이름이다. */
+/** Where it attaches. A field is a field name in the collection definition. */
 export const customSurfaceSchema = z.discriminatedUnion("slot", [
 	z.object({
 		slot: z.literal("field"),
@@ -38,14 +38,14 @@ export const customSurfaceSchema = z.discriminatedUnion("slot", [
 ]);
 export type CustomSurface = z.output<typeof customSurfaceSchema>;
 
-/** 필드 자리가 가리키는 필드(처음 찾은 컬렉션의 것). 관계·선택 필드는 저장 필드에서 찾는다. */
+/** The field a field slot points to (from the first collection found). Relation/select fields are looked up among stored fields. */
 export function surfaceField(surface: CustomSurface) {
 	if (surface.slot !== "field") return undefined;
 	const collections = surface.collections?.length ? surface.collections : COLLECTIONS;
 	for (const collection of collections) {
 		if (!(COLLECTIONS as readonly string[]).includes(collection)) continue;
 		const name = collection as (typeof COLLECTIONS)[number];
-		// 저장 필드(조건부 필드의 선택 값 포함)를 먼저 보고, 주소처럼 따로 저장하는 필드는 스키마에서 찾는다.
+		// Look at stored fields first (including the selected value of conditional fields), then find fields stored separately, like URLs, in the schema.
 		const field = storedField(name, surface.field)?.field ?? schemaOf(name).fields[surface.field];
 		if (field) return { collection, field };
 	}
@@ -53,8 +53,8 @@ export function surfaceField(surface: CustomSurface) {
 }
 
 /**
- * 고를 값이 정해진 필드의 선택지. 관계 필드(태그·카테고리·모음집)는 가리키는 컬렉션의 공개된 항목, 선택 필드는 그 선택지다.
- * 선택지가 있는 필드는 후보만 내고, 실제로 있는 값인지 검사한다.
+ * Options of a field whose values are fixed. For relation fields (tags, categories, collections), the published items of the target collection; for select fields, their options.
+ * A field with options only produces candidates, and it is checked that the value actually exists.
  */
 export function surfaceChoices(surface: CustomSurface): { choices: AiChoices; many: boolean } | undefined {
 	const found = surfaceField(surface);
@@ -65,7 +65,7 @@ export function surfaceChoices(surface: CustomSurface): { choices: AiChoices; ma
 	return undefined;
 }
 
-/** 자리마다 고를 수 있는 결과 모양. 선택 영역·삽입·블록은 본문 조각(MDX)을 바꾸거나 넣는다. */
+/** Result shapes selectable per slot. Selection, insertion and block change or insert body fragments (MDX). */
 export const CUSTOM_RESULTS: Readonly<Record<CustomSurface["slot"], readonly AiResult[]>> = {
 	field: ["candidates", "text", "note"],
 	selection: ["mdx"],
@@ -75,11 +75,11 @@ export const CUSTOM_RESULTS: Readonly<Record<CustomSurface["slot"], readonly AiR
 	media: ["candidates", "text"],
 };
 
-/** 자리에서 고를 수 있는 결과 모양. 선택지가 있는 필드는 후보만이다. */
+/** Result shapes selectable in a slot. A field with options gets candidates only. */
 export const customResults = (surface: CustomSurface): readonly AiResult[] =>
 	surfaceChoices(surface) ? ["candidates"] : CUSTOM_RESULTS[surface.slot];
 
-/** 자리에서 고를 수 있는 방식. 판단 방식(System One)은 선택지가 있는 필드에서만 쓴다. */
+/** Modes selectable in a slot. Decision mode (System One) is used only on fields with options. */
 export const customEngines = (surface: CustomSurface): readonly AiEngine[] =>
 	surfaceChoices(surface) ? ["decide", "generate"] : ["generate"];
 
@@ -88,7 +88,7 @@ export const customBaseSchema = z
 		label: z.string().trim().min(1).max(40),
 		surface: customSurfaceSchema,
 		result: z.enum(["candidates", "text", "mdx", "note"]),
-		/** 방식. 없으면 생성 방식이다(예전에 만든 기능). */
+		/** Mode. If absent, it is generation mode (actions created earlier). */
 		engine: z.enum(["generate", "decide"]).optional(),
 	})
 	.refine((base) => customResults(base.surface).includes(base.result), {
@@ -104,7 +104,7 @@ export type CustomBase = z.output<typeof customBaseSchema>;
 export const customValueSchema = z.object({ base: customBaseSchema, override: aiActionOverrideSchema });
 export type CustomValue = z.output<typeof customValueSchema>;
 
-/** 자리가 주는 재료(입력). 필수 입력은 그 자리에서 꼭 있는 것뿐이다. 이름은 화면 언어로 고른다. */
+/** Material (inputs) a slot provides. Required inputs are only those always present in that slot. Names are chosen in the UI language. */
 const surfaceInputs = (slot: CustomSurface["slot"]): AiInputs => {
 	const text = presetText;
 	const fieldInputs = {
@@ -146,23 +146,23 @@ const surfaceInputs = (slot: CustomSurface["slot"]): AiInputs => {
 	}
 };
 
-/** 처음 지시문. 관리자 화면에서 바로 고친다. */
+/** Initial instructions. Edited right away in the admin screen. */
 export const CUSTOM_DEFAULT_PROMPT = "Write what to do here.";
 
 /**
- * 관계·선택 필드에 붙인 화면 기능의 판단 기본값(기준 확률·최대 개수). 여러 개 받는 필드와 하나만 받는 필드로 나눈다.
- * 관리자 화면에서 고친다.
+ * Decision defaults (threshold probability, max count) of a UI action attached to a relation/select field. Split into fields accepting several values and fields accepting one.
+ * Edited in the admin screen.
  */
 export const CUSTOM_PICK_DEFAULTS = {
 	many: { threshold: 0.6, maxCount: 5 },
 	one: { threshold: 0.3, maxCount: 2 },
 } as const;
 
-/** 저장한 기본 정보로 만든 기능 정의. 지시문·보낼 입력 등은 고친 값(`override`)이 정한다. */
+/** Action definition built from the stored base info. Instructions, inputs to send, etc. are decided by the edited values (`override`). */
 export function customDefinition(base: CustomBase): AiActionDefinition {
 	const picked = surfaceChoices(base.surface);
 	if (picked) {
-		// 관계·선택 필드: 선택지 안에서 고른다. 여러 개 받는 필드(태그)는 더하고, 하나만 받는 필드는 바꾼다.
+		// Relation/select field: pick among the options. Fields accepting several values (tags) add; fields accepting one replace.
 		return {
 			label: base.label,
 			input: surfaceInputs("field"),
@@ -190,10 +190,10 @@ export function customDefinition(base: CustomBase): AiActionDefinition {
 	};
 }
 
-/** 화면 기능을 붙일 수 있는 블록: 블록 확장·사이트 설정이 더한 블록 중 편집기 노드로 편집하는 것(자식 전용 블록 제외). */
+/** Blocks a UI action can attach to: blocks added by block extensions or the site config that are edited as editor nodes (excluding child-only blocks). */
 export const CUSTOM_BLOCKS = ADDED_BLOCKS.filter((block) => block.editor.view === "node" && !block.parent);
 
-/** 자리가 가리키는 필드·블록이 사이트 설정에 있는가. 없으면 그 이유. */
+/** Whether the field/block a slot points to exists in the site config. If not, the reason. */
 export function surfaceProblem(surface: CustomSurface): string | null {
 	if (surface.slot === "block") {
 		return CUSTOM_BLOCKS.some((block) => block.name === surface.block)
@@ -212,6 +212,6 @@ export function surfaceProblem(surface: CustomSurface): string | null {
 	return collections.some(has) ? null : t("surface.noField", { field: surface.field });
 }
 
-/** 새 화면 기능의 이름(key). 코드 기능 이름과 겹치지 않게 앞에 `custom_`을 붙인다. */
+/** Name (key) of a new UI action. Prefixed with `custom_` so it does not collide with code action names. */
 export const newCustomKey = () => `${CUSTOM_KEY_PREFIX}${Math.random().toString(36).slice(2, 10)}`;
 export const isCustomKey = (key: string) => key.startsWith(CUSTOM_KEY_PREFIX);

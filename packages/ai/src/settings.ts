@@ -18,13 +18,13 @@ import { settingsMessages } from "./settings.messages";
 
 const t = createTranslator(settingsMessages);
 
-/** 설정 저장소(콘텐츠 저장소의 일부). 테스트는 메모리 구현을 넘긴다. */
+/** Settings store (part of the content store). Tests pass an in-memory implementation. */
 export interface AiSettingsStore {
 	getAiSettings(): Promise<{ value: unknown; version: number } | null>;
 	saveAiSettings(params: { expectedVersion: number; value: unknown }): Promise<number>;
 }
 
-/** DB에 둔 연결 하나. 키는 암호문이다. */
+/** One connection kept in the DB. The key is ciphertext. */
 const storedProviderSchema = z.object({
 	id: z.string(),
 	name: z.string(),
@@ -38,8 +38,8 @@ type StoredProvider = z.output<typeof storedProviderSchema>;
 const storedSchema = z.object({ providers: z.array(storedProviderSchema).default([]) });
 
 /**
- * 연결을 하나씩 두기 전(생성·판단 연결 한 벌) 모양. 읽을 때 연결 두 개로 옮긴다.
- * 저장하면 새 모양으로 바뀐다.
+ * Shape from before connections were kept one by one (one pair of generation/decision connections). Moved into two connections on read.
+ * Saving changes it to the new shape.
  */
 const legacySchema = z.object({
 	generate: z.object({ baseUrl: z.string(), apiKey: z.string().nullable(), smallModel: z.string() }),
@@ -73,7 +73,7 @@ function readStored(value: unknown): StoredProvider[] {
 }
 
 interface ResolvedProvider extends StoredProvider {
-	/** 풀어 낸 키. 서버 설정의 `secret`이 바뀌어 풀지 못하면 `null`. */
+	/** Decrypted key. `null` if it cannot be decrypted because the server config's `secret` changed. */
 	key: string | null;
 }
 
@@ -142,7 +142,7 @@ export async function addAiProvider(
 	return writeProviders(store, expectedVersion, [...providers, toStored(randomUUID(), input, null)]);
 }
 
-/** 연결을 고친다. 키가 빠지면 저장된 키를 두고, `null`이면 지우고, 글자가 있으면 암호화해 바꾼다. */
+/** Edits a connection. If the key is omitted, the stored key stays; `null` deletes it; a string is encrypted and replaces it. */
 export async function updateAiProvider(
 	store: AiSettingsStore,
 	expectedVersion: number,
@@ -152,7 +152,7 @@ export async function updateAiProvider(
 	const { providers } = await load(store);
 	const current = providers.find((provider) => provider.id === id);
 	if (!current) throw new AiError("ai_failed", t("unknownConnection"));
-	// 주소를 바꾸면서 키를 새로 넣지 않으면, 예전 키를 다른 주소로 보내지 않도록 지운다.
+	// If the URL changes without a new key, delete the old key so it is not sent to a different URL.
 	const keepKey = input.apiKey === undefined && input.url.replace(/\/+$/, "") !== current.url ? null : current.apiKey;
 	return writeProviders(
 		store,
@@ -174,7 +174,7 @@ export async function removeAiProvider(
 	);
 }
 
-/** 저장된 연결의 주소·키(모델 목록을 받을 때). */
+/** URL and key of a stored connection (when fetching the model list). */
 export async function savedProvider(
 	store: AiSettingsStore,
 	id: string,
@@ -189,8 +189,8 @@ const kindFor = (spec: Pick<ResolvedAiAction, "engine">): AiProviderKind =>
 	spec.engine === "decide" ? "decisions" : "chat";
 
 /**
- * 기능이 쓸 연결과 모델. 연결을 정하지 않았으면 방식에 맞는 첫 연결, 모델을 정하지 않았으면 연결의 기본 모델이다.
- * 쓸 수 없으면(연결이 없거나 키·주소가 비었으면) `null`.
+ * Connection and model an action uses. If no connection is chosen, the first connection that fits the mode; if no model is chosen, the connection's default model.
+ * `null` if unusable (no connection, or the key or URL is empty).
  */
 function pickConnection(
 	providers: ResolvedProvider[],
@@ -210,7 +210,7 @@ export interface AiRuntime {
 	decider: AiDecider | null;
 }
 
-/** 기능 하나를 실행할 생성·판단 모델. 기능의 방식에 맞는 쪽만 채운다. */
+/** Generation/decision models to run one action. Fills only the side matching the action's mode. */
 export async function loadAiRuntime(store: AiSettingsStore, spec: ActionConnection): Promise<AiRuntime> {
 	if (isFakeAi()) return { generator: createFakeGenerator(), decider: createFakeDecider() };
 	const picked = pickConnection((await load(store)).providers, spec);
@@ -222,7 +222,7 @@ export async function loadAiRuntime(store: AiSettingsStore, spec: ActionConnecti
 		: { generator: createGenerator({ baseUrl: provider.url, apiKey: key, model }), decider: null };
 }
 
-/** 기능마다 지금 쓸 수 있는가(자리에 버튼을 붙일지). 쓸 수 있는 기능 이름을 돌려준다. */
+/** Whether each action is usable now (whether to attach a button in the slot). Returns the names of usable actions. */
 export async function usableActionKeys(
 	store: AiSettingsStore,
 	actions: ReadonlyArray<ActionConnection & { key: string }>,
@@ -233,8 +233,8 @@ export async function usableActionKeys(
 }
 
 /**
- * 연결 확인에 쓸 호출 준비. 저장하기 전 입력값(주소·키·모델)으로 만든다.
- * 키를 새로 넣지 않았으면, 같은 주소로 저장된 연결의 키를 쓴다(다른 주소로 저장된 키를 보내지 않는다).
+ * Call setup used for connection checks. Built from the input values (URL, key, model) before saving.
+ * If no new key was entered, uses the key of a connection stored with the same URL (a key stored for a different URL is not sent).
  */
 export async function connectionForCheck(
 	store: AiSettingsStore,

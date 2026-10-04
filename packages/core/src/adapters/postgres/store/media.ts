@@ -13,7 +13,7 @@ import type {
 	MediaReferenceItem,
 } from "./types";
 
-/** §7 미디어 메타데이터. 파일 자체는 `MediaStore`(R2)가 다룬다. */
+/** Media metadata. The file itself is handled by `MediaStore` (R2). */
 export function createMediaOps(ctx: StoreContext) {
 	const { pool, qSchema } = ctx;
 
@@ -84,7 +84,7 @@ export function createMediaOps(ctx: StoreContext) {
 			]);
 		},
 
-		/** 라이브러리의 기본 alt·caption. 삽입할 때만 복사하므로 이미 쓴 본문은 바뀌지 않는다(§7.3). */
+		/** The library's default alt and caption. They are copied only on insert, so bodies already written do not change. */
 		updateMediaMetadata: async (params: {
 			id: string;
 			filename?: string;
@@ -108,7 +108,7 @@ export function createMediaOps(ctx: StoreContext) {
 			return mapMediaRow(res.rows[0]);
 		},
 
-		/** §7.3 라이브러리: 완료·삭제 중 파일만 보인다. 업로드 대기 파일은 정리 작업의 대상이다. */
+		/** Library: only completed and deleting files are shown. Files waiting for upload are targets of the cleanup job. */
 		listMediaAssets: async (params: ListMediaParams = {}): Promise<ListMediaResult> => {
 			const page = Math.max(1, params.page || 1);
 			const pageSize = Math.max(1, Math.min(params.pageSize || 25, 100));
@@ -120,7 +120,7 @@ export function createMediaOps(ctx: StoreContext) {
 
 			const conditions = ["m.status IN ('ready', 'deleting')"];
 			if (params.search?.trim()) conditions.push(`m.filename ILIKE ${bind(likeContainsPattern(params.search.trim()))}`);
-			// `image/`처럼 앞부분만 줘도 걸러지도록 접두어로 비교한다.
+			// Compare by prefix so that giving only the leading part, such as `image/`, still filters.
 			if (params.mimeType?.trim())
 				conditions.push(`m.mime_type LIKE ${bind(likePrefixPattern(params.mimeType.trim()))}`);
 			if (params.kind === "image") conditions.push("m.mime_type LIKE 'image/%'");
@@ -170,12 +170,12 @@ export function createMediaOps(ctx: StoreContext) {
 		},
 
 		/**
-		 * 삭제 1단계(§7.3): 사용 중이 아닌지 확인하고 `deleting`으로 바꾼다. 파일 삭제가 끝나면
-		 * {@link finalizeMediaDelete}로 행을 지운다. 저장소 삭제가 실패해도 `deleting` 행이 남아 다시 시도할 수 있다.
+		 * Delete step 1: checks the media is not in use and sets it to `deleting`. When the file deletion finishes,
+		 * {@link finalizeMediaDelete} removes the row. If storage deletion fails, the `deleting` row remains so it can be retried.
 		 *
-		 * 참조 인덱스 외에 본문 원문·메타데이터와 템플릿도 본다 — 해석하지 못한 초안이나 템플릿이 이 미디어를 쓰면
-		 * 사용 여부를 확정할 수 없으므로 삭제를 보류한다. 메타데이터는 미디어 필드(`fields.media`)를 두기 전에 저장해
-		 * 참조 인덱스에 아직 없는 값(텍스트 필드에 두던 미디어 ID)도 지우지 않게 한다.
+		 * Besides the reference index, it also checks raw bodies, metadata, and templates: if an unparsed draft or template uses this media,
+		 * usage cannot be confirmed, so deletion is held. Metadata saved before media fields (`fields.media`) existed is checked too,
+		 * so values not yet in the reference index (media IDs kept in text fields) are not deleted.
 		 */
 		beginMediaDelete: async (id: string): Promise<MediaAssetRecord> =>
 			withTransaction(pool, async (client) => {
@@ -215,7 +215,7 @@ export function createMediaOps(ctx: StoreContext) {
 				return mapMediaRow(updated.rows[0] as MediaRow);
 			}),
 
-		/** 삭제 2단계: 파일 삭제를 확인한 뒤 행을 지운다. */
+		/** Delete step 2: removes the row after confirming the file was deleted. */
 		finalizeMediaDelete: async (id: string): Promise<void> => {
 			await pool.query(
 				`DELETE FROM "${qSchema}".media_assets WHERE id = $1 AND status IN ('deleting', 'pending', 'failed')`,
@@ -223,7 +223,7 @@ export function createMediaOps(ctx: StoreContext) {
 			);
 		},
 
-		/** §7.2 정리 대상: 기준 시각보다 오래된 미완료(`pending`)·실패(`failed`) 업로드. */
+		/** Cleanup targets: incomplete (`pending`) and failed (`failed`) uploads older than the cutoff time. */
 		listStaleUploads: async (params: { before: Date }): Promise<MediaAssetRecord[]> => {
 			const res = await pool.query<MediaRow>(
 				`SELECT ${MEDIA_COLUMNS} FROM "${qSchema}".media_assets

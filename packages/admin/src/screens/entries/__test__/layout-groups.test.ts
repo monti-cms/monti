@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-// 필드 `tab`과 배치 묶음 `tab`이 섞인 사이트. 확장이 준 필드 묶음(`tab` 있음)이 배치 없이 제 탭에 모이는지 본다.
+// A site mixing field `tab` and layout group `tab`. Checks that field groups supplied by an extension (with `tab`) gather in their own tab without a layout.
 vi.mock("@cms-config", async () => {
 	const { defineCollection, defineConfig, fields } = await import("@monti-cms/core");
 	const page = defineCollection({
@@ -11,7 +11,7 @@ vi.mock("@cms-config", async () => {
 			slug: fields.slug({ label: "Slug", from: "title" }),
 			intro: fields.text({ label: "Intro" }),
 			hero: fields.media({ label: "Hero", tab: "Media" }),
-			// 배치 묶음의 `tab`이 필드 `tab`보다 먼저다.
+			// A layout group's `tab` takes priority over the field `tab`.
 			alt: fields.text({ label: "Alt", tab: "Media" }),
 			metaTitle: fields.text({ label: "Meta title", tab: "Search" }),
 			preview: fields.view({ view: "search", tab: "Search" }),
@@ -20,7 +20,7 @@ vi.mock("@cms-config", async () => {
 		layout: [{ fields: ["title", "slug", "intro", "hero"] }, { group: "Accessibility", tab: "Extra", fields: ["alt"] }],
 		list: { columns: ["title"] },
 	});
-	// 배치(`layout`)를 적지 않은 컬렉션. 필드 선언 순서대로 한 묶음이고, 제 `tab`을 가진 필드는 그 탭에 모인다.
+	// A collection with no layout (`layout`). One group in field declaration order, and fields with their own `tab` gather in that tab.
 	const plain = defineCollection({
 		label: "Plain",
 		kind: "item",
@@ -41,11 +41,11 @@ vi.mock("@cms-config", async () => {
 });
 
 const { DEFAULT_TAB, layoutGroupsOf, tabOf, tabsOf } = await import("../layout-groups");
-// 이 파일의 컬렉션은 위에서 바꾼 설정에만 있다.
+// The collections in this file exist only in the config changed above.
 const page = "page" as Parameters<typeof layoutGroupsOf>[0];
 
-describe("속성 칸 묶음과 탭(배치 `tab` 또는 필드 `tab`)", () => {
-	it("필드 `tab`이 있는 필드는 배치에 있든 없든 그 탭의 묶음으로 모은다. 배치 묶음의 `tab`이 먼저다", () => {
+describe("properties panel groups and tabs (layout `tab` or field `tab`)", () => {
+	it("fields with a field `tab` gather into that tab's group whether or not they are in the layout. The layout group's `tab` takes priority", () => {
 		expect(layoutGroupsOf(page)).toEqual([
 			{ fields: ["title", "slug", "intro"] },
 			{ group: "Accessibility", tab: "Extra", fields: ["alt"] },
@@ -55,7 +55,7 @@ describe("속성 칸 묶음과 탭(배치 `tab` 또는 필드 `tab`)", () => {
 		]);
 	});
 
-	it("배치가 없으면 필드 선언 순서대로 한 묶음이고, 필드 `tab`은 그 탭에 모인다", () => {
+	it("without a layout, there is one group in field declaration order, and fields with a field `tab` gather in that tab", () => {
 		const plain = "plain" as Parameters<typeof layoutGroupsOf>[0];
 		expect(layoutGroupsOf(plain)).toEqual([
 			{ fields: ["title", "slug", "note"] },
@@ -64,7 +64,7 @@ describe("속성 칸 묶음과 탭(배치 `tab` 또는 필드 `tab`)", () => {
 		expect(tabsOf(plain)).toEqual([DEFAULT_TAB, "Search"]);
 	});
 
-	it("탭은 기본 탭 먼저, 나머지는 처음 나온 순서다. 필드가 든 탭을 찾는다", () => {
+	it("tabs are the default tab first, then the rest in order of first appearance. Finds the tab that holds a field", () => {
 		expect(tabsOf(page)).toEqual([DEFAULT_TAB, "Extra", "Media", "Search"]);
 		expect(tabOf(page, "hero")).toBe("Media");
 		expect(tabOf(page, "alt")).toBe("Extra");

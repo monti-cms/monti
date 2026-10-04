@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CHART_LEGEND_HEIGHT, DEFAULT_CHART_DIMENSIONS, resolvePieGeometry } from "../layout";
 
 describe("resolvePieGeometry", () => {
-	it("작은 컨테이너에서는 파이 반지름을 함께 줄인다", () => {
+	it("shrinks the pie radius in small containers", () => {
 		const large = resolvePieGeometry(DEFAULT_CHART_DIMENSIONS, CHART_LEGEND_HEIGHT);
 		const small = resolvePieGeometry({ width: 240, height: 160 }, CHART_LEGEND_HEIGHT);
 
@@ -11,21 +11,21 @@ describe("resolvePieGeometry", () => {
 		expect(small.outerRadius * 2).toBeLessThan(160 - CHART_LEGEND_HEIGHT);
 	});
 
-	it("범례가 있으면 파이 중심을 위로 올린다", () => {
+	it("moves the pie center up when there is a legend", () => {
 		const withLegend = resolvePieGeometry(DEFAULT_CHART_DIMENSIONS, CHART_LEGEND_HEIGHT);
 		const withoutLegend = resolvePieGeometry(DEFAULT_CHART_DIMENSIONS, 0);
 
 		expect(withLegend.cy).toBeLessThan(withoutLegend.cy);
 	});
 
-	it("유효하지 않은 크기 값이면 기본 크기를 사용한다", () => {
+	it("uses the default size for invalid size values", () => {
 		const fallback = resolvePieGeometry(DEFAULT_CHART_DIMENSIONS, 0);
 		const invalid = resolvePieGeometry({ width: 0, height: Number.NaN }, 0);
 
 		expect(invalid).toEqual(fallback);
 	});
 
-	it("아주 낮은 높이에서도 파이 차트가 위아래 경계를 넘지 않는다", () => {
+	it("keeps the pie chart within the top and bottom bounds even at very low heights", () => {
 		const compact = resolvePieGeometry({ width: 180, height: 88 }, CHART_LEGEND_HEIGHT);
 		const chartBottom = 88 - CHART_LEGEND_HEIGHT;
 
@@ -34,7 +34,7 @@ describe("resolvePieGeometry", () => {
 		expect(compact.innerRadius).toBeLessThan(compact.outerRadius);
 	});
 
-	it("범례 높이가 커지면 파이 차트 중심도 그만큼 더 위로 올라간다", () => {
+	it("moves the pie chart center up by the same amount as the legend height grows", () => {
 		const oneRowLegend = resolvePieGeometry(DEFAULT_CHART_DIMENSIONS, CHART_LEGEND_HEIGHT);
 		const wrappedLegend = resolvePieGeometry(DEFAULT_CHART_DIMENSIONS, CHART_LEGEND_HEIGHT * 2);
 

@@ -1,8 +1,8 @@
 import type { Pool } from "pg";
 
 /**
- * 플러그인이 읽는 본체 콘텐츠 조회(읽기 전용). 플러그인은 본체 표를 직접 읽지 않고 이 함수로 묻는다.
- * `@monti-cms/core/plugin/server`로 내보낸다.
+ * Core content lookup for plugins (read-only). Plugins do not read core tables directly; they ask through this function.
+ * Exported from `@monti-cms/core/plugin/server`.
  *
  * ```ts
  * const lookup = createContentLookup(getCmsDatabase());
@@ -13,16 +13,16 @@ import type { Pool } from "pg";
 export interface SlugsInUseParams {
 	readonly collection: string;
 	readonly locale: string;
-	/** 알아볼 주소. 빈 배열이면 묻지 않는다. */
+	/** Slugs to check. An empty array skips the query. */
 	readonly slugs: readonly string[];
-	/** 이 항목이 쓰는 주소는 빼고 본다(고치는 글 자신). */
+	/** Ignore slugs used by this entry (the entry being edited). */
 	readonly excludeEntryId?: string;
 }
 
 export interface ContentLookup {
 	/**
-	 * 주소 중 같은 컬렉션·언어에서 이미 쓰는 것(지금 주소·예약·예전 주소·삭제된 글의 주소). 저장할 때 주소 충돌
-	 * (`slug_conflict`)이 나는 주소와 같다.
+	 * Slugs that are already used in the same collection and language (current, reserved, former, and deleted-entry slugs). These are the
+	 * same slugs that cause a slug conflict (`slug_conflict`) on save.
 	 */
 	slugsInUse(params: SlugsInUseParams): Promise<Set<string>>;
 }

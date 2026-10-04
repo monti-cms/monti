@@ -4,7 +4,7 @@ import { type EditorState, Plugin, PluginKey, type Transaction } from "@tiptap/p
 
 export const UNTRANSLATED_MARK_NAME = "untranslated";
 
-/** 커서가 있는 글 블록(문단·제목·목록 항목 글 등)에서 번역 안내 글의 자리들. */
+/** Positions of translation notice text in the text block containing the cursor (paragraph, heading, list item text, etc.). */
 const hintRangesAt = (state: EditorState, pos: number, type: MarkType): { from: number; to: number }[] => {
 	const $pos = state.doc.resolve(pos);
 	const block = $pos.parent;
@@ -19,7 +19,7 @@ const hintRangesAt = (state: EditorState, pos: number, type: MarkType): { from: 
 	return ranges;
 };
 
-/** 안내 글을 모두 지우는 트랜잭션. 지울 것이 없으면 `null`. */
+/** Transaction that removes all notice text. `null` if there is nothing to remove. */
 const clearHints = (state: EditorState, pos: number, type: MarkType): Transaction | null => {
 	const ranges = hintRangesAt(state, pos, type);
 	if (ranges.length === 0) return null;
@@ -29,9 +29,9 @@ const clearHints = (state: EditorState, pos: number, type: MarkType): Transactio
 };
 
 /**
- * 번역 안내 글(v3). 새 번역본은 원문 글을 이 표시로 감싸 둔다. 흐리게 보이고, 그 글 블록에 입력을 시작하면
- * (글자·붙여넣기·한글 조합·지우기) 안내 글을 한 번에 지운 뒤 입력한다. 안내 글 뒤에 이어 친 글자가 안내 글이
- * 되지 않게 `inclusive`를 끈다.
+ * Translation notice text. A new translation wraps the source text in this mark. It shows dimmed, and when typing starts in that text block
+ * (characters, paste, Korean composition, deletion), all notice text is removed at once before the input. `inclusive` is turned off
+ * so that characters typed after the notice text do not become notice text.
  */
 export const CmsUntranslatedMark = Mark.create({
 	name: UNTRANSLATED_MARK_NAME,
@@ -45,7 +45,7 @@ export const CmsUntranslatedMark = Mark.create({
 			"span",
 			mergeAttributes(HTMLAttributes, {
 				"data-untranslated": "",
-				// 원문 글이라 번역 언어 맞춤법 검사 밑줄을 띄우지 않는다.
+				// This is source text, so do not show the spellcheck underline for the translation language.
 				spellcheck: "false",
 				class: "text-cms-muted-foreground/70",
 			}),
@@ -73,13 +73,13 @@ export const CmsUntranslatedMark = Mark.create({
 						return true;
 					},
 					handlePaste(view) {
-						// 안내 글을 먼저 지우고, 붙여넣기는 에디터 기본 처리에 맡긴다.
+						// Remove the notice text first, and leave paste to the editor's default handling.
 						const tr = clearHints(view.state, view.state.selection.from, type);
 						if (tr) view.dispatch(tr);
 						return false;
 					},
 					handleDOMEvents: {
-						// 한글 등 조합 입력은 조합이 시작되기 전에 지워야 조합이 깨지지 않는다.
+						// Composition input such as Korean must be removed before composition starts, or the composition breaks.
 						compositionstart(view) {
 							const tr = clearHints(view.state, view.state.selection.from, type);
 							if (tr) view.dispatch(tr);

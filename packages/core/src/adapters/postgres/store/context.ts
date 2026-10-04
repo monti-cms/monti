@@ -5,7 +5,7 @@ export type ContentStoreHooks = {
 	beforePublishCommit?: (entry: Entry, txClient: PoolClient) => Promise<void>;
 };
 
-/** 저장소 모듈이 공유하는 연결·스키마. SQL의 스키마 이름은 검증된 식별자만 쓴다. */
+/** Connection and schema shared by the store modules. SQL schema names use only validated identifiers. */
 export interface StoreContext {
 	readonly pool: Pool;
 	readonly qSchema: string;
@@ -23,8 +23,8 @@ export function validateSchemaName(schema?: string): string {
 }
 
 /**
- * 트랜잭션 하나를 연다. 실패하면 되돌리고 `mapError`로 안정적인 오류로 바꿔 던진다.
- * 이미 끝난 트랜잭션의 ROLLBACK 오류는 원래 오류를 가리지 않게 무시한다.
+ * Opens a transaction. On failure it rolls back and rethrows the error mapped to a stable one by `mapError`.
+ * A ROLLBACK error on an already finished transaction is ignored so it does not hide the original error.
  */
 export async function withTransaction<T>(
 	pool: Pool,
@@ -41,7 +41,7 @@ export async function withTransaction<T>(
 		try {
 			await client.query("ROLLBACK");
 		} catch {
-			// 이미 종료된 트랜잭션은 무시한다.
+			// Ignore transactions that already ended.
 		}
 		throw options?.mapError ? options.mapError(err) : err;
 	} finally {

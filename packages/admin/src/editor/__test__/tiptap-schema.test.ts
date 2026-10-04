@@ -5,14 +5,14 @@ import { CMS_SCHEMA_EXTENSIONS, CmsTextAlign } from "../tiptap-schema";
 
 const schema = getSchema([StarterKit, ...CMS_SCHEMA_EXTENSIONS]);
 
-describe("문단·제목 정렬 설정(§4.3)", () => {
-	it("제목·문단에 textAlign 속성이 있고 기본값은 없다", () => {
-		// 기본값이 null이라 정렬하지 않은 본문은 `style` 없이 저장된다.
+describe("paragraph and heading alignment settings", () => {
+	it("headings and paragraphs have a textAlign attribute with no default", () => {
+		// The default is null, so body text without alignment is saved without `style`.
 		expect(schema.nodes.heading.spec.attrs?.textAlign?.default).toBeNull();
 		expect(schema.nodes.paragraph.spec.attrs?.textAlign?.default).toBeNull();
 	});
 
-	it("허용 정렬은 left·center·right 뿐이다(justify 금지, A4)", () => {
+	it("allowed alignments are only left, center, and right (justify is forbidden)", () => {
 		expect(CmsTextAlign.options.alignments).toEqual(["left", "center", "right"]);
 		expect(CmsTextAlign.options.types).toEqual(["heading", "paragraph"]);
 	});

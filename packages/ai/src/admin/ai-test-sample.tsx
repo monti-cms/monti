@@ -18,8 +18,8 @@ import { OptionSelect } from "./custom-editor";
 const t = createTranslator(aiCommonMessages);
 
 /**
- * AI 화면 `시험`의 예시 입력. 기능 정의의 입력마다 종류에 맞는 칸을 하나씩 보인다(입력 이름은 보지 않는다).
- * - 글·MDX·코드: 여러 줄 칸, 현재 값: 한 줄 칸, 이미지: 미디어 ID 또는 사이트 경로, 언어: 사이트 설정의 언어 고르기
+ * Sample input for the AI screen's Test. Shows one field of the matching kind for each input in the action definition (input names are not shown).
+ * - text, MDX, code: multi-line field; current value: single-line field; image: media ID or site path; language: language picker from the site config
  */
 
 export interface SampleField {
@@ -31,7 +31,7 @@ export interface SampleField {
 
 type SampleFeature = Pick<AiActionView, "input" | "engine" | "attach">;
 
-/** 시험에 보일 칸: 보낼 입력(필수 입력 포함)과 언어 입력(지시문에 들어간다). 판단 방식은 이미지를 읽지 않는다. */
+/** Fields shown in the test: inputs to send (including required ones) and language inputs (which go into the instructions). The judge mode does not read images. */
 export function sampleFields(feature: SampleFeature, send: readonly string[]): SampleField[] {
 	return Object.entries(feature.input).flatMap(([name, input]) => {
 		if (feature.engine === "decide" && input.kind === "image") return [];
@@ -40,7 +40,7 @@ export function sampleFields(feature: SampleFeature, send: readonly string[]): S
 	});
 }
 
-/** 칸의 처음 값. 첫 언어 입력은 기본 언어, 그다음 언어 입력은 기본 언어가 아닌 첫 언어다(원문 → 대상). */
+/** Initial value of a field. The first language input is the default language; the next language input is the first non-default language (source -> target). */
 export function sampleDefaults(feature: Pick<AiActionView, "input">): Record<string, string> {
 	const defaults: Record<string, string> = {};
 	let locales = 0;
@@ -51,14 +51,14 @@ export function sampleDefaults(feature: Pick<AiActionView, "input">): Record<str
 	return defaults;
 }
 
-/** 칸의 지금 값. 고친 적 없으면 처음 값이다. */
+/** Current value of a field. If never edited, it is the initial value. */
 export const sampleValue = (
 	values: Readonly<Record<string, string>>,
 	defaults: Readonly<Record<string, string>>,
 	name: string,
 ) => values[name] ?? defaults[name] ?? "";
 
-/** 비어 있는 필수 칸이 있는가(있으면 실행하지 않는다). */
+/** Whether any required field is empty (if so, it does not run). */
 export const missingRequired = (
 	fields: readonly SampleField[],
 	values: Readonly<Record<string, string>>,
@@ -66,8 +66,8 @@ export const missingRequired = (
 ) => fields.some((field) => field.required && !sampleValue(values, defaults, field.name).trim());
 
 /**
- * 시험 값으로 실행 입력과 공통 정보를 만든다. 빈 칸은 보내지 않는다. 필드 자리 기능은 첫 컬렉션으로, 번역 자리 기능은
- * 대상 언어(`to`, 번역 자리가 주는 입력)로 실행한다.
+ * Builds the run input and common information from the test values. Empty fields are not sent. A field-slot action runs with the first collection, and a translation-slot action with
+ * the target language (`to`, an input the translation slot provides).
  */
 export function sampleRun(
 	feature: SampleFeature,
@@ -97,7 +97,7 @@ export function sampleRun(
 
 const LOCALE_OPTIONS = LOCALES.map((locale) => ({ value: locale, label: localeLabel(locale) }));
 
-/** 시험 칸들. 칸 이름(aria-label·placeholder)은 입력 이름표다. */
+/** Test fields. A field's name (aria-label, placeholder) is the input's label. */
 export function SampleInputs({
 	fields,
 	values,

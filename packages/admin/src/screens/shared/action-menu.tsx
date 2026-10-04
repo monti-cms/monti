@@ -36,26 +36,26 @@ import { sharedMessages } from "./messages";
 const t = createTranslator(sharedMessages);
 
 /**
- * 오른쪽 클릭 메뉴와 `⋯` 버튼이 함께 쓰는 메뉴 정의(v2 A2). 같은 목록을 두 곳에서 렌더해
- * 오른쪽 클릭을 모르거나 쓸 수 없는(터치) 경우에도 같은 작업을 할 수 있게 한다.
+ * Menu definition shared by the right-click menu and the `⋯` button. Rendering the same list in two places
+ * lets users who don't know right-click or can't use it (touch) do the same actions.
  */
 export type MenuAction =
 	| {
 			kind: "item";
 			label: string;
-			/** 항목 앞 아이콘. 메뉴 항목은 모두 아이콘을 둔다. */
+			/** Icon before the item. Every menu item has an icon. */
 			icon?: LucideIcon;
 			onSelect: () => void;
 			destructive?: boolean;
 			disabled?: boolean;
-			/** 화면에 보이는 단축키 안내. 실제 키 처리는 호출하는 쪽이 한다. */
+			/** Shortcut hint shown on screen. The caller handles the actual key handling. */
 			shortcut?: string;
 	  }
 	| { kind: "sub"; label: string; icon?: LucideIcon; items: MenuAction[]; emptyLabel?: string; disabled?: boolean }
 	| { kind: "label"; label: string }
 	| { kind: "separator" };
 
-/** 앞뒤나 연달아 붙은 구분선을 없앤다(조건부 항목을 뺀 뒤). */
+/** Removes leading, trailing or consecutive separators (after dropping conditional items). */
 function tidy(actions: MenuAction[]): MenuAction[] {
 	const out: MenuAction[] = [];
 	for (const action of actions) {
@@ -161,8 +161,8 @@ function DropdownItems({ actions }: { actions: MenuAction[] }) {
 }
 
 /**
- * `trigger`를 오른쪽 클릭(또는 Shift+F10·메뉴 키)하면 메뉴를 연다. `trigger`는 실제로 렌더할 요소다
- * (예: `<TableRow />`). 메뉴가 비면 오른쪽 클릭을 가로채지 않는다.
+ * Right-clicking `trigger` (or Shift+F10 / the menu key) opens the menu. `trigger` is the element to actually render
+ * (e.g. `<TableRow />`). If the menu is empty, right-click is not intercepted.
  */
 export function ActionContextMenu({
 	actions,
@@ -177,8 +177,8 @@ export function ActionContextMenu({
 }) {
 	const items = tidy(actions);
 	const hydrated = useHydrated();
-	// 서버에서 Base UI ContextMenu를 렌더하면 뒤따르는 요소의 자동 ID(useId)가 서버와 브라우저에서 달라진다
-	// (hydration 불일치). 오른쪽 클릭은 hydration 뒤에만 쓸 수 있으므로 그때 메뉴를 붙인다.
+	// Rendering Base UI ContextMenu on the server makes the auto ID (useId) of following elements differ between server and browser
+	// (hydration mismatch). Right-click works only after hydration, so attach the menu then.
 	if (!hydrated) return cloneElement(trigger, undefined, children);
 	return (
 		<ContextMenu onOpenChange={onOpenChange} disabled={items.length === 0}>
@@ -192,14 +192,14 @@ export function ActionContextMenu({
 	);
 }
 
-/** 항상 보이는 `⋯` 버튼. 오른쪽 클릭 메뉴와 같은 항목을 연다. */
+/** Always-visible `⋯` button. Opens the same items as the right-click menu. */
 export function MoreActionsButton({
 	actions,
 	label,
 	className,
 }: {
 	actions: MenuAction[];
-	/** 버튼 이름이자 툴팁(예: `'알고리즘' 폴더 작업`). */
+	/** Button name and tooltip (e.g. `'알고리즘' 폴더 작업`). */
 	label: string;
 	className?: string;
 }) {

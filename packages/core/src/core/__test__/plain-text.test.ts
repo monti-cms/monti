@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bodyExcerpt, toPlainText } from "../plain-text";
 
-describe("본문 일반 텍스트와 자동 요약(§5.6)", () => {
+describe("body plain text and automatic summary", () => {
 	it("keeps readable text and drops code, math, images and directive syntax", () => {
 		const mdx = [
 			"## 개요",

@@ -9,12 +9,12 @@ import { SELECTED_RING, useEditorEditable } from "../shared";
 
 const t = createTranslator(blocksMessages);
 
-/** 코드로 쓰고 미리보기로 보는 블록(수식·코드 펜스 블록)의 이름과 입력 안내. */
+/** Name and input hint of blocks written as code and viewed as a preview (math and code fence blocks). */
 export interface FenceEditorMeta {
-	/** `data-fence-preview` 값(예: `math`, 펜스 언어). */
+	/** `data-fence-preview` value (e.g. `math`, the fence language). */
 	readonly kind: string;
 	readonly label: string;
-	/** 입력 칸이 비었을 때 보일 예시 코드. */
+	/** Example code shown when the input field is empty. */
 	readonly placeholder: string;
 	readonly preview: (value: string) => ReactNode;
 }
@@ -35,8 +35,8 @@ const PROSEMIRROR_CURSOR_KEYS = new Set([
 ]);
 
 /**
- * 코드 입력 칸과 미리보기를 함께 보이는 편집 화면. 고르거나 누르면 입력 칸이 열리고, 아니면 미리보기만 보인다.
- * 입력은 잠시 멈추거나 칸을 벗어날 때 문서에 넣는다(한글 조합 중에는 넣지 않는다).
+ * Edit view showing the code input field and the preview together. Selecting or clicking opens the input field; otherwise only the preview shows.
+ * Input is written to the document after a short pause or when leaving the field (not during Korean composition).
  */
 export function FencePreviewNodeView({
 	node,
@@ -77,7 +77,7 @@ export function FencePreviewNodeView({
 
 	useEffect(() => {
 		if (!isComposingRef.current && node.attrs.value !== lastCommittedRef.current) {
-			// 바깥 트랜잭션(되돌리기 등)이 값을 바꿨다. 대기 중인 입력 커밋이 새 값을 덮어쓰지 않게 취소한다.
+			// An outside transaction (e.g. undo) changed the value. Cancel the pending input commit so it does not overwrite the new value.
 			if (debounceTimerRef.current) {
 				clearTimeout(debounceTimerRef.current);
 				debounceTimerRef.current = null;
@@ -94,12 +94,12 @@ export function FencePreviewNodeView({
 			if (!debounceTimerRef.current && !isComposingRef.current) return;
 			if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 			debounceTimerRef.current = null;
-			// 사라지기 전에 아직 커밋하지 않은 입력을 문서에 넣는다. 노드가 이미 지워졌으면 넣을 곳이 없다.
+			// Write input not yet committed to the document before disappearing. If the node is already deleted, there is nowhere to write.
 			if (draftRef.current === lastCommittedRef.current) return;
 			try {
 				updateRef.current({ value: draftRef.current });
 			} catch {
-				// 노드가 문서에서 빠진 뒤의 언마운트
+				// Unmount after the node left the document
 			}
 		};
 	}, []);
@@ -109,7 +109,7 @@ export function FencePreviewNodeView({
 	const handleClick = () => {
 		if (!isEditable) return;
 		setIsEditing(true);
-		// 노드뷰 클릭 시 textarea로 포커스 이동
+		// Move focus to the textarea when the node view is clicked
 		requestAnimationFrame(() => {
 			textareaRef.current?.focus();
 		});
@@ -119,7 +119,7 @@ export function FencePreviewNodeView({
 		if (containerRef.current?.contains(e.relatedTarget as Node)) {
 			return;
 		}
-		// 블러 시 대기 중인 변경사항 즉시 커밋
+		// Commit pending changes immediately on blur
 		commitValue(draftRef.current);
 		setIsEditing(false);
 	};
@@ -131,9 +131,9 @@ export function FencePreviewNodeView({
 			clearTimeout(debounceTimerRef.current);
 			debounceTimerRef.current = null;
 		}
-		// 조합 중에는 compositionend가 최종값을 커밋한다.
+		// During composition, compositionend commits the final value.
 		if (isComposingRef.current || (e.nativeEvent as InputEvent).isComposing) return;
-		// 약 400ms 디바운스 후 커밋 및 미리보기 갱신
+		// Commit and refresh the preview after a debounce of about 400ms
 		debounceTimerRef.current = setTimeout(() => {
 			if (isComposingRef.current) return;
 			commitValue(val);
@@ -148,23 +148,23 @@ export function FencePreviewNodeView({
 		isComposingRef.current = false;
 		const val = e.currentTarget.value;
 		setDraft(val);
-		// IME 조합 종료 시 즉시 커밋
+		// Commit immediately when IME composition ends
 		commitValue(val);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.metaKey || e.ctrlKey) {
-			// 저장 단축키는 바깥(편집 화면)이 처리한다. 그 전에 대기 중인 입력을 문서에 넣는다.
+			// The save shortcut is handled outside (the edit view). Write pending input to the document before that.
 			if (e.key.toLowerCase() === "s") {
 				commitValue(draftRef.current);
 				return;
 			}
-			// 그 밖의 조합(전체 선택·되돌리기·Mac 커서 이동)은 입력 칸 안에서만 동작한다.
+			// Other combinations (select all, undo, Mac cursor movement) work only inside the input field.
 			e.stopPropagation();
 			return;
 		}
 		if (PROSEMIRROR_CURSOR_KEYS.has(e.key)) {
-			// ProseMirror 커서 조작 키만 전파 차단하여 textarea 고유 동작 유지
+			// Stop propagation only for ProseMirror cursor keys, to keep the textarea's own behavior
 			e.stopPropagation();
 		}
 	};
@@ -191,12 +191,12 @@ export function FencePreviewNodeView({
 						</span>
 					</div>
 
-					{/* 미리보기 (상단 동시 표시) */}
+					{/* Preview (shown at the top at the same time) */}
 					<div className="min-h-[40px] rounded-md border border-cms-border/40 bg-cms-background/50 p-2">
 						{renderPreview()}
 					</div>
 
-					{/* 원문 입력 칸 (모노, IME 안전) */}
+					{/* Raw input field (mono, IME safe) */}
 					<div className="space-y-1">
 						<label htmlFor={inputId} className="font-mono text-[11px] text-cms-muted-foreground">
 							{t("fence.sourceCode")}
@@ -219,7 +219,7 @@ export function FencePreviewNodeView({
 					</div>
 				</div>
 			) : (
-				// 선택 안 됐을 때는 미리보기만 표시
+				// When not selected, show only the preview
 				<button
 					type="button"
 					onClick={handleClick}

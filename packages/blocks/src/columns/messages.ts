@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 단 나누기 블록의 이름표·설명과 편집 화면 문구(M15). */
+/** Labels, descriptions, and editing view text of the columns block. */
 export const columnsMessages = defineMessages("cms-blocks.columns", {
 	en: {
 		label: "Columns",

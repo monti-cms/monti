@@ -20,8 +20,8 @@ const app = (files: Record<string, object>) => {
 	return dir;
 };
 
-describe("withCms: 설치하지 않은 선택 의존성", () => {
-	it("CMS 패키지의 선택 peer 중 찾을 수 없는 것만 고른다", () => {
+describe("withCms: optional dependencies that are not installed", () => {
+	it("picks only the optional peers of CMS packages that cannot be found", () => {
 		const dir = app({
 			"package.json": { dependencies: { "@monti-cms/blocks": "x", "other-lib": "x" } },
 			"node_modules/@monti-cms/blocks/package.json": {
@@ -29,13 +29,13 @@ describe("withCms: 설치하지 않은 선택 의존성", () => {
 				peerDependenciesMeta: { mermaid: { optional: true }, recharts: { optional: true }, react: {} },
 			},
 			"node_modules/recharts/package.json": {},
-			// CMS 패키지가 아닌 라이브러리의 선택 의존성은 건드리지 않는다.
+			// Optional dependencies of libraries that are not CMS packages are left alone.
 			"node_modules/other-lib/package.json": { peerDependenciesMeta: { nodemailer: { optional: true } } },
 		});
 		expect(missingOptionalPeers(dir)).toEqual(["mermaid"]);
 	});
 
-	it("플러그인 패키지는 이름이 아니라 `cmsPlugin` 표시로 찾는다", () => {
+	it("plugin packages are found by the `cmsPlugin` marker, not by name", () => {
 		const dir = app({
 			"package.json": {
 				dependencies: { "acme-cms-chart": "x", "@monti-cms/core-lookalike": "x", "@monti-cms/admin": "x" },
@@ -44,22 +44,22 @@ describe("withCms: 설치하지 않은 선택 의존성", () => {
 				cmsPlugin: true,
 				peerDependenciesMeta: { d3: { optional: true } },
 			},
-			// 이름이 비슷해도 표시가 없으면 플러그인이 아니다.
+			// A similar name without the marker is not a plugin.
 			"node_modules/@monti-cms/core-lookalike/package.json": {
 				peerDependenciesMeta: { nodemailer: { optional: true } },
 			},
-			// 본체·관리자 패키지는 표시 없이도 본다.
+			// Core and admin packages are checked even without the marker.
 			"node_modules/@monti-cms/admin/package.json": { peerDependenciesMeta: { sonner: { optional: true } } },
 		});
 		expect(missingOptionalPeers(dir)).toEqual(["d3", "sonner"]);
 	});
 
-	it("package.json이 없거나 CMS 패키지가 없으면 빈 목록", () => {
+	it("empty list if package.json is missing or there are no CMS packages", () => {
 		expect(missingOptionalPeers(app({}))).toEqual([]);
 		expect(missingOptionalPeers(app({ "package.json": { dependencies: { "@monti-cms/core": "x" } } }))).toEqual([]);
 	});
 
-	it("Turbopack root 밖에 설치된 것은 없는 것으로 본다", () => {
+	it("anything installed outside the Turbopack root counts as missing", () => {
 		const outer = app({ "node_modules/mermaid/package.json": {} });
 		const root = path.join(outer, "site");
 		mkdirSync(path.join(root, "node_modules/@monti-cms/blocks"), { recursive: true });
@@ -76,12 +76,12 @@ describe("withCms: 설치하지 않은 선택 의존성", () => {
 describe("withCms: basePath", () => {
 	const options = { config: "./cms.config.ts", server: "./cms.server.ts" };
 
-	it("Next basePath를 서버·브라우저 번들 환경 변수로 알린다", () => {
+	it("passes Next basePath to the server and browser bundles as an environment variable", () => {
 		expect(withCms({ basePath: "/blog" }, options).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
 		expect(withCms({ basePath: "/blog/" }, options).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
 	});
 
-	it("basePath가 없으면 빈 값이고 앱의 다른 env는 그대로 둔다", () => {
+	it("empty value without basePath, and the app's other env is left alone", () => {
 		const config = withCms({ env: { KEEP: "1" } }, options);
 		expect(config.env).toEqual({ KEEP: "1", NEXT_PUBLIC_CMS_BASE_PATH: "" });
 	});

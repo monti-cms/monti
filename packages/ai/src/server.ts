@@ -13,7 +13,7 @@ import * as shared from "./routes/shared/route";
 import { getAiSettingsView } from "./settings";
 import { getAiStore } from "./store";
 
-/** AI 플러그인의 서버 쪽. 본체 API 처리기·`monti migrate`가 불러 쓴다. 브라우저 묶음에는 들어가지 않는다. */
+/** Server side of the AI plugin. Loaded by the core API handler and `monti migrate`. Not included in the browser bundle. */
 const aiServer: CmsServerPlugin = {
 	routes: [
 		{ pattern: "v1/ai/actions", module: actions },
@@ -28,7 +28,7 @@ const aiServer: CmsServerPlugin = {
 		{ pattern: "v1/ai/shared", module: shared },
 	],
 	migrate: migrateAi,
-	// 관리자 메타 API의 `features.ai.ready`: 연결이 하나라도 준비됐는가.
+	// `features.ai.ready` of the admin meta API: is at least one connection ready?
 	features: async () => ({
 		ready: await getAiSettingsView(getAiStore()).then(
 			(view) => view.fake || view.providers.some((item) => item.ready),

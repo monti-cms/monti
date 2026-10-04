@@ -11,7 +11,7 @@ import {
 	updateSharedItem,
 } from "../shared";
 
-/** 공통 문구 한 줄을 들고 있는 저장소. 버전이 다르면 막는다. */
+/** A store holding the shared text row. A version mismatch is rejected. */
 function memoryStore(initial: { value: unknown; version: number } | null = null): AiSharedStore & { saved: unknown } {
 	let row = initial;
 	return {
@@ -29,7 +29,7 @@ function memoryStore(initial: { value: unknown; version: number } | null = null)
 
 type Row = { key: string; value: unknown; version: number; updatedAt: Date };
 
-/** 기능 고친 값·화면 기능까지 들고 있는 저장소. */
+/** A store that also holds action overrides and screen actions. */
 function actionsStore(shared = memoryStore()): AiActionsStore & AiSharedStore {
 	const overrides = new Map<string, Row>();
 	const custom = new Map<string, Row>();
@@ -54,9 +54,9 @@ function actionsStore(shared = memoryStore()): AiActionsStore & AiSharedStore {
 	};
 }
 
-// 예시 설정(`test/cms.config.ts`)의 공통 문구: `styleGuide`(기본값 빈 글).
-describe("공통 문구(M8-4)", () => {
-	it("설정 문구는 고친 내용만 저장하고, 기본값과 같으면 지운다(되돌리기)", async () => {
+// Shared text of the example config (`test/cms.config.ts`): `styleGuide` (default is empty text).
+describe("shared texts", () => {
+	it("a config text stores only the edited content and clears it when equal to the default (reset)", async () => {
 		const store = memoryStore();
 		expect((await getSharedView(store)).items).toEqual([
 			{ source: "config", key: "styleGuide", label: "문체 가이드", defaultText: "", text: "", overridden: false },
@@ -69,7 +69,7 @@ describe("공통 문구(M8-4)", () => {
 		expect(store.saved).toEqual({ texts: {}, added: [] });
 	});
 
-	it("예전 모양(키 → 고친 내용)을 읽고, 저장하면 새 모양으로 바꾼다", async () => {
+	it("reads the old shape (key to edited content) and converts to the new shape on save", async () => {
 		const store = memoryStore({ value: { styleGuide: "짧게 쓴다." }, version: 4 });
 		const view = await getSharedView(store);
 		expect(view).toMatchObject({ version: 4, items: [{ key: "styleGuide", text: "짧게 쓴다.", overridden: true }] });
@@ -81,7 +81,7 @@ describe("공통 문구(M8-4)", () => {
 		});
 	});
 
-	it("문구를 더하고 고치고 삭제한다. 실행에는 더한 문구도 들어간다", async () => {
+	it("adds, edits and deletes texts; added texts are included in runs", async () => {
 		const store = memoryStore();
 		const added = await addShared(store, 0, { key: "tone", label: " 말투 ", text: "친근하게" });
 		expect(added.items.at(-1)).toEqual({ source: "added", key: "tone", label: "말투", text: "친근하게" });
@@ -90,7 +90,7 @@ describe("공통 문구(M8-4)", () => {
 
 		const renamed = await updateSharedItem(store, 1, { key: "tone", label: "어조", text: "정중하게" });
 		expect(renamed.items.at(-1)).toEqual({ source: "added", key: "tone", label: "어조", text: "정중하게" });
-		// 설정 문구는 이름을 보내도 내용만 고친다.
+		// A config text only changes its content even if a name is sent.
 		const config = await updateSharedItem(store, 2, { key: "styleGuide", label: "바꾼 이름", text: "짧게" });
 		expect(config.items[0]).toMatchObject({ label: "문체 가이드", text: "짧게", overridden: true });
 
@@ -99,7 +99,7 @@ describe("공통 문구(M8-4)", () => {
 		expect(store.saved).toEqual({ texts: { styleGuide: "짧게" }, added: [] });
 	});
 
-	it("키 형식·겹치는 키·빈 이름·없는 문구·버전 차이를 막는다", async () => {
+	it("rejects bad key format, duplicate keys, empty names, unknown texts and version mismatches", async () => {
 		const store = memoryStore();
 		await addShared(store, 0, { key: "tone", label: "말투", text: "" });
 		const rejects = (promise: Promise<unknown>, message?: RegExp) =>
@@ -119,7 +119,7 @@ describe("공통 문구(M8-4)", () => {
 		await expect(updateSharedItem(store, 0, { key: "tone", text: "x" })).rejects.toThrow("conflict");
 	});
 
-	it("지시문에서 쓰는 문구는 삭제하지 못하고 그 기능 이름을 알린다", async () => {
+	it("cannot delete a text used in a prompt and reports the action names", async () => {
 		const store = memoryStore();
 		await addShared(store, 0, { key: "tone", label: "말투", text: "" });
 		const features = [
@@ -135,7 +135,7 @@ describe("공통 문구(M8-4)", () => {
 		expect((await getSharedView(store)).items).toHaveLength(2);
 	});
 
-	it("나중에 설정에 같은 키가 생기면 설정 문구가 이긴다. 맞지 않는 항목은 하나씩 버린다", async () => {
+	it("when the config later gains the same key, the config text wins; invalid entries are dropped one by one", async () => {
 		const store = memoryStore({
 			value: {
 				texts: { styleGuide: "고친 값", broken: 1 },
@@ -154,8 +154,8 @@ describe("공통 문구(M8-4)", () => {
 	});
 });
 
-describe("관리자 화면의 지시문과 더한 공통 문구", () => {
-	it("더한 문구 키는 지시문 저장·시험에서 받고, 없는 키는 막는다", async () => {
+describe("admin screen prompts and added shared texts", () => {
+	it("added text keys are accepted when saving or testing prompts, and unknown keys are rejected", async () => {
 		const shared = memoryStore();
 		const store = actionsStore(shared);
 		const prompt = "요약한다.\n\n{{shared.tone}}";
@@ -174,7 +174,7 @@ describe("관리자 화면의 지시문과 더한 공통 문구", () => {
 		);
 		expect(custom.prompt).toBe("{{shared.tone}}");
 
-		// 고친 지시문과 화면 기능이 쓰므로 삭제하지 못한다.
+		// Cannot be deleted because an edited prompt and a screen action use it.
 		await expect(deleteShared(shared, 1, "tone", await listActions(store))).rejects.toMatchObject({
 			message: "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기, 말투 맞추기",
 		});

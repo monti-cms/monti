@@ -8,13 +8,13 @@ import { createContentStore, migrateContentStore } from "../content-store";
 import { seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-describe("M5-BE-1 Duplicate Entry Contract", () => {
+describe("Duplicate Entry Contract", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: any;
 	let relationTarget: (to: Collection) => Promise<string>;
 
-	/** 항목 컬렉션을 가리키는 관계 필드마다 공개 항목 하나를 고른 값(블로그의 카테고리·태그 같은 것). */
+	/** For each relation field that points at an item collection, a value picking one published item (such as the reference blog's categories and tags). */
 	const itemRelationValues = async () => {
 		const values: Record<string, string | string[]> = {};
 		for (const { name, field, when } of storedFields(contentCollection)) {
@@ -85,7 +85,7 @@ describe("M5-BE-1 Duplicate Entry Contract", () => {
 		expect(publishedOrig.publishedSlug).toBe("orig-slug");
 
 		// Execute duplicate
-		// 붙일 말은 부르는 쪽(관리자 화면)이 정한다. 저장소는 받은 제목을 그대로 저장한다.
+		// Any suffix is up to the caller (the admin screen). The store saves the given title as is.
 		const duplicated = await store.duplicateEntry({ id: original.id, title: "Original Post (copy)" });
 
 		// 1. Different ID, version 1, draft status
@@ -113,7 +113,7 @@ describe("M5-BE-1 Duplicate Entry Contract", () => {
 		expect(refs[0].kind).toBe("media");
 		expect(refs[0].targetId).toBe(mediaId);
 
-		// 5. MDX and relation metadata(블로그의 카테고리·태그) preserved
+		// 5. MDX and relation metadata (such as categories and tags) preserved
 		expect(duplicated.working.mdx).toBe("Hello world ![img](mediaId)");
 		for (const [name, value] of Object.entries(relations)) {
 			expect(duplicated.working.metadata[name]).toEqual(value);
@@ -132,7 +132,7 @@ describe("M5-BE-1 Duplicate Entry Contract", () => {
 		});
 		const copy = await store.duplicateEntry({ id: original.id });
 		expect(copy.working.metadata.title).toBe("Same title");
-		// 제목 필드의 `max`(설정마다 다르다)를 넘으면 필드 이름표와 경로를 담은 일반 오류다.
+		// Exceeding the title field's `max` (it varies by config) gives a plain error carrying the field label and path.
 		const { max, label } = titleFieldOf(contentCollection);
 		if (max === undefined) return;
 		await expect(store.duplicateEntry({ id: original.id, title: "가".repeat(max + 1) })).rejects.toMatchObject({

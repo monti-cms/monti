@@ -4,8 +4,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * M16 CSS 가두기. 관리자 화면 CSS(`styles.css`)와 관리자·확장 화면 클래스는 `cms` 이름표가 붙은 이름만 쓴다.
- * 앱의 이름(shadcn의 `bg-background`·`dark:` 등)을 정하지도, 쓰지도 않는다.
+ * CSS confinement. The admin CSS (`styles.css`) and the admin/extension screen classes only use names carrying the `cms` prefix.
+ * They neither define nor use the app's own names (shadcn's `bg-background`, `dark:`, etc.).
  */
 const packagesDir = path.resolve(__dirname, "../../..");
 const adminCss = readFileSync(path.resolve(__dirname, "../../styles.css"), "utf8");
@@ -51,30 +51,30 @@ function sourceFiles(dir: string): string[] {
 	});
 }
 
-describe("관리자 CSS 가두기", () => {
-	it("styles.css는 앱의 색 이름·변형을 정하지 않는다", () => {
+describe("admin CSS confinement", () => {
+	it("styles.css does not define the app's color names or variants", () => {
 		const themeNames = [...adminCss.matchAll(/^\s*(--(?:color|radius|shadow|font|spacing)-[\w-]+)\s*:/gm)].map(
 			(m) => m[1],
 		);
 		const colors = themeNames.filter((name) => name.startsWith("--color-"));
 		expect(colors.length).toBeGreaterThan(0);
-		// `@theme`에는 `--color-cms-*`만 둔다(둥글기·그림자 이름은 theme에 정하지 않는다).
+		// `@theme` holds only `--color-cms-*` (radius and shadow names are not defined in the theme).
 		const theme = adminCss.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
 		for (const name of theme.matchAll(/(--[\w-]+)\s*:/g)) expect(name[1]).toMatch(/^--color-cms-/);
-		// 변형 이름도 `cms-`로 시작한다.
+		// Variant names also start with `cms-`.
 		for (const variant of adminCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^cms-/);
-		// 어두운 테마는 `.dark`와 `[data-theme="dark"]`를 모두 따른다.
+		// The dark theme follows both `.dark` and `[data-theme="dark"]`.
 		expect(adminCss).toMatch(/@custom-variant cms-dark[^;]*\.dark[^;]*\[data-theme="dark"\]/);
 		expect(adminCss).toMatch(/html:is\(\.dark, \[data-theme="dark"\]\):has\(\.cms-admin\)/);
 	});
 
-	it("색 변수는 --cms-* 이름만 정한다", () => {
+	it("color variables only define --cms-* names", () => {
 		const definitions = [...adminCss.matchAll(/^\t(--[\w-]+)\s*:/gm)].map((m) => m[1]);
 		const colorVars = definitions.filter((name) => new RegExp(`^--(${TOKENS})$`).test(name));
 		expect(colorVars).toEqual([]);
 	});
 
-	it("관리자·확장 화면 소스는 앱 이름의 색 클래스와 dark: 변형을 쓰지 않는다", () => {
+	it("admin and extension screen sources use no app-named color classes or dark: variants", () => {
 		const offenders: string[] = [];
 		const color = new RegExp(`(?<![\\w-])(?:${UTILITIES})-(?:${TOKENS})(?![\\w-])`, "g");
 		const variable = new RegExp(`\\(\\s*--(?:color-)?(?:${TOKENS})(?![\\w-])`, "g");

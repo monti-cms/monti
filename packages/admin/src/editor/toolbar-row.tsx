@@ -19,14 +19,14 @@ import { type FitItem, fitSlots, layoutKeys } from "./toolbar-fit";
 
 const t = createTranslator(editorMessages);
 
-/** 도구 하나. 좁으면 `priority`가 큰 것부터 "더보기" 메뉴(`menu`)로 들어간다. */
+/** One tool. When narrow, tools with the largest `priority` move into the "More" menu (`menu`) first. */
 export interface ToolbarSlot {
 	key: string;
 	priority: number;
-	/** 팝오버처럼 메뉴 안에 둘 수 없는 도구. 숨기지 않는다. */
+	/** A tool that cannot live inside a menu, like a popover. Never hidden. */
 	fixed?: boolean;
 	render: () => ReactNode;
-	/** "더보기" 메뉴 안에서의 모습. 고정 도구는 필요 없다. */
+	/** How it looks inside the "More" menu. Not needed for pinned tools. */
 	menu?: () => ReactNode;
 }
 
@@ -34,7 +34,7 @@ export type ToolbarEntry = ToolbarSlot | { key: string; divider: true };
 
 const isDivider = (entry: ToolbarEntry): entry is { key: string; divider: true } => "divider" in entry;
 
-/** 툴바 항목 사이 간격(gap-1)과 "더보기" 버튼 폭(size-8). */
+/** Gap between toolbar items (gap-1) and the width of the "More" button (size-8). */
 const GAP = 4;
 const OVERFLOW_WIDTH = 32;
 const END_KEY = "end";
@@ -43,7 +43,7 @@ export function ToolbarDivider() {
 	return <span aria-hidden className="mx-1 h-5 w-px shrink-0 self-center bg-cms-border" />;
 }
 
-/** 드롭다운·"더보기" 메뉴의 도구 한 줄. */
+/** One tool row in a dropdown or the "More" menu. */
 export function ToolbarMenuItem({ editor, item }: { editor: Editor; item: ToolbarItem }) {
 	const active = item.isActive?.(editor) ?? false;
 	return (
@@ -59,8 +59,8 @@ export function ToolbarMenuItem({ editor, item }: { editor: Editor; item: Toolba
 }
 
 /**
- * "더보기" 메뉴 안의 한 묶음. 메뉴 맨 앞이 아니면 위에 구분선을 둔다.
- * 머리글은 두지 않는다(항목 아이콘과 이름으로 알 수 있다). `label`은 묶음 이름(스크린 리더)이다.
+ * A group inside the "More" menu. A divider goes above it unless it is first in the menu.
+ * No heading is used (the item icon and name make it clear). `label` is the group name (for screen readers).
  */
 export function ToolbarMenuSection({ label, children }: { label: string; children: ReactNode }) {
 	return (
@@ -71,7 +71,7 @@ export function ToolbarMenuSection({ label, children }: { label: string; childre
 	);
 }
 
-/** "더보기" 메뉴 안에서 드롭다운 묶음을 펼친 모습. */
+/** A dropdown group expanded inside the "More" menu. */
 export function ToolbarMenuGroup({ editor, label, items }: { editor: Editor; label: string; items: ToolbarItem[] }) {
 	return (
 		<ToolbarMenuSection label={label}>
@@ -106,9 +106,9 @@ const sameKeys = (a: readonly string[], b: readonly string[]) =>
 	a.length === b.length && a.every((key, i) => key === b[i]);
 
 /**
- * 한 줄 도구 묶음. 폭이 모자라면 우선순위가 낮은 도구를 뒤쪽 "더보기" 메뉴로 옮긴다.
- * 모든 도구를 보이지 않는 줄에 한 번씩 그려 폭을 재고, 실제 줄의 가용 폭에 맞춰 보일 도구를 정한다.
- * 팝오버 같은 고정 도구는 두 벌 그리면 안 되므로 실제 줄에서 폭을 잰다.
+ * A one-row tool group. When width runs short, lower-priority tools move to the trailing "More" menu.
+ * Every tool is rendered once in an invisible row to measure widths, then the tools to show are chosen to fit the real row's available width.
+ * Pinned tools such as popovers must not be rendered twice, so their width is measured in the real row.
  */
 export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: ToolbarEntry[]; end?: ReactNode }) {
 	const areaRef = useRef<HTMLDivElement>(null);
@@ -120,7 +120,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 	const recompute = useCallback(() => {
 		const area = areaRef.current;
 		if (!area) return;
-		// 레이아웃이 없으면(첫 그림 전, jsdom) 전부 보인다.
+		// With no layout (before the first paint, jsdom) everything is shown.
 		const available = area.clientWidth;
 		if (!available) return;
 		const widths = new Map<string, number>();
@@ -145,7 +145,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 	const recomputeRef = useRef(recompute);
 	recomputeRef.current = recompute;
 
-	// 그릴 때마다 다시 잰다. 보일 도구가 그대로면 상태를 바꾸지 않으므로 다시 그리지 않는다.
+	// Re-measure on every render. If the visible tools stay the same, state is not changed, so there is no re-render.
 	useLayoutEffect(() => {
 		recompute();
 	});
@@ -171,7 +171,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 
 	return (
 		<div ref={areaRef} className="relative min-w-0 flex-1">
-			{/* 폭 재기용. 모든 도구를 한 번씩 그리고 보이지 않게 둔다(높이 0에 가둬 스크롤 폭을 늘리지 않는다). */}
+			{/* For measuring widths. Render every tool once and keep it invisible (confined to height 0 so it does not widen the scroll width). */}
 			<div aria-hidden inert className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden">
 				<div ref={measureRef} className="flex w-max items-center gap-1">
 					{entries.map((entry) =>

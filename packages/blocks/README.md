@@ -1,20 +1,22 @@
 # @monti-cms/blocks
 
-`@monti-cms/core`의 블록 확장. 본문 블록과 글자 꾸밈을 필요한 것만 플러그인으로 설치한다.
+English | [한국어](README.ko.md)
 
-| 블록 | 플러그인 | 저장 문법 | 공개 화면 컴포넌트 |
+Block extensions for `@monti-cms/core`. Install only the body blocks and inline marks you need, as plugins.
+
+| Block | Plugin | Stored syntax | Public page component |
 | --- | --- | --- | --- |
-| 콜아웃 | `callout()` | `:::callout{variant="tip" title="…"}` | `Callout` |
-| 접기 | `collapsible()` | `:::collapsible{title="…"}` | `Collapsible` |
-| 탭 | `tabs()` | `::::tabs` 안에 `:::tab{label="…"}` 2~8개 | `Tabs`·`Tab` |
-| 단 나누기 | `columns()` | `::::columns{widths="60,40"}` 안에 `:::column` 2~4개 | `Columns`·`Column` |
+| Callout | `callout()` | `:::callout{variant="tip" title="…"}` | `Callout` |
+| Collapsible | `collapsible()` | `:::collapsible{title="…"}` | `Collapsible` |
+| Tabs | `tabs()` | 2 to 8 `:::tab{label="…"}` inside `::::tabs` | `Tabs`, `Tab` |
+| Columns | `columns()` | 2 to 4 `:::column` inside `::::columns{widths="60,40"}` | `Columns`, `Column` |
 | Mermaid | `mermaid()` | ` ```mermaid ` | `Mermaid` |
-| 차트 | `chart()` | ` ```chart ` | `Chart` |
-| 툴팁 | `tooltip()` | `:tooltip[글자]{content="설명"}` | `Tooltip` |
-| 코드 연결 | `codeRef()` | `:code-ref[글자]{to="c1"}`(코드 줄 이름표 `// @line anchor {..} id="c1"`) | `CodeRef` |
-| 글자색 | `color({ palette? })` | `:color[글자]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}` | `Color` |
+| Chart | `chart()` | ` ```chart ` | `Chart` |
+| Tooltip | `tooltip()` | `:tooltip[text]{content="description"}` | `Tooltip` |
+| Code link | `codeRef()` | `:code-ref[text]{to="c1"}` (code line label `// @line anchor {..} id="c1"`) | `CodeRef` |
+| Text color | `color({ palette? })` | `:color[text]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}` | `Color` |
 
-## 설치
+## Installation
 
 ```ts
 // cms.config.ts
@@ -23,54 +25,54 @@ import { blocks } from "@monti-cms/blocks";
 export default defineConfig({
 	// …
 	plugins: [
-		...blocks(), // 전부(콜아웃·접기·탭·단·Mermaid·차트·툴팁·코드 연결·글자색)
-		// ...blocks({ only: ["callout", "tooltip"] })   고른 것만
-		// ...blocks({ omit: ["chart"], codeRef: false }) 빼고(`false`도 뺀다)
-		// ...blocks({ color: { palette: [...] } })       확장별 옵션
+		...blocks(), // all of them (callout, collapsible, tabs, columns, Mermaid, chart, tooltip, code link, text color)
+		// ...blocks({ only: ["callout", "tooltip"] })   only the chosen ones
+		// ...blocks({ omit: ["chart"], codeRef: false }) leave some out (`false` also leaves one out)
+		// ...blocks({ color: { palette: [...] } })       per-extension options
 	],
 });
 ```
 
-하나씩 넣어도 된다(`plugins: [callout(), columns(), color({ palette })]`). 같은 확장을 두 번 넣으면 설정 오류다.
+You can also add them one by one (`plugins: [callout(), columns(), color({ palette })]`). Adding the same extension twice is a config error.
 
 ```css
 @import "@monti-cms/admin/styles.css";
 @import "@monti-cms/blocks/styles.css";
 ```
 
-- 편집기: 콜아웃·접기·탭·단은 편집 화면이 함께 온다(관리자 테마 색, `styles.css`). Mermaid·차트는 코드 입력 칸과 미리보기로
-  편집한다. 미리보기는 이 확장이 그리고(선택 의존성 `mermaid`·`recharts`를 앱이 설치한다. 미리보기를 열 때만 불러온다),
-  사이트가 `fencePreviews`(`@monti-cms/admin`)로 같은 이름을 넣으면 그것이 이긴다. 차트 색은 CSS 변수 `--chart-1`~`--chart-5`이고
-  앱이 정하지 않으면 `styles.css`의 기본값이다.
-- 글자 꾸밈: 툴팁은 서식 도구(링크 뒤)·글자 버블·슬래시 메뉴, 글자색은 서식 도구(글자 꾸밈 뒤)·글자 버블, 코드 연결은 글자 버블
-  (문서에 코드 블록이 있을 때)과 커서를 둔 연결의 설명·다시 연결·해제를 준다(`@monti-cms/admin` README의 "글자 꾸밈").
-  코드 줄 이름표·코드 블록 줄 메뉴의 "본문 연결"·잇기 안내 줄·마우스를 올린 줄 강조는 본체 코드 블록 기능이고, 이 확장의
-  `to` 속성(`codeAnchor`)으로 이 꾸밈을 쓴다. 코드 블록 안 글자 툴팁(`// @char Tooltip`)은 본체 코드 블록 기능이다.
-- 글자색 고르기 목록은 `color({ palette })`(없으면 기본 8색 `DEFAULT_TEXT_PALETTE`). 본문에는 헥스 값이 저장되므로 목록을 바꿔도
-  이미 쓴 글은 그대로다. 공개 화면은 `@monti-cms/blocks/color`의 `cleanTextColor`·`textColorProps`로 그리고, 색은
-  `styles.css`의 `.cms-color`가 테마에 맞춰 고른다.
-- 공개 화면: 각 확장이 기본 공개 컴포넌트를 준다(플러그인 `render`, `@monti-cms/core/render`의 `renderMdx`가 자동으로 쓴다).
-  탭 전환·툴팁·코드 연결·Mermaid·차트는 브라우저에서 움직이는 부분만 `"use client"` 파일로 나뉜다. Mermaid·차트는 선택 의존성
-  `mermaid`·`recharts`를 앱이 설치해야 그려지고(서버·불러오기 전에는 원문), 사이트 언어(`locale`)에 맞춰 콜아웃 기본 제목·접기
-  기본 제목·차트 오류 문구가 나온다. 모양은 `styles.css`의 `cms-block-*` 클래스(Tailwind 없이)이고, `renderMdx({ components })`로 같은
-  이름의 컴포넌트(`Callout`·`Tabs` …)를 넘기면 그것이 이긴다. 코드 펜스 블록은 `remarkFenceBlocksToMdx`(`@monti-cms/core/mdx`)가
-  `<Mermaid source="…" />`로 바꾼다. 단 너비는 `@monti-cms/blocks/columns`의 `parseColumnWidths`·`columnsGridTemplate`로,
-  차트 문법·크기는 `@monti-cms/blocks/chart`의 `parseChartDsl`·`normalizeChartDsl`·`resolvePieGeometry`로 읽는다.
-- 편집기 모양 바꾸기: `styles.css`의 변수(`--cms-callout-note`·`-tip`·`-info`·`-warning`·`-danger`, `--chart-1`~`5`)를 앱에서 정한다.
-- 이미 쓴 블록의 플러그인을 빼면 그 블록은 저장 문법에서 빠져 다시 저장할 때 일반 글로 바뀐다.
+- Editor: callout, collapsible, tabs and columns come with their edit screens (admin theme colors, `styles.css`). Mermaid and chart are
+  edited with a code input and a preview. The preview is drawn by this extension (the app installs the optional dependencies `mermaid` and `recharts`, which are loaded only when a preview opens),
+  and if the site registers the same name through `fencePreviews` (`@monti-cms/admin`), that one wins. Chart colors are the CSS variables `--chart-1` to `--chart-5`,
+  and if the app does not set them, the defaults in `styles.css` apply.
+- Inline marks: the tooltip is offered in the formatting toolbar (after link), the text bubble and the slash menu; text color in the formatting toolbar (after inline marks) and the text bubble; and the code link in the text bubble
+  (when the document has a code block) plus description, relink and unlink for the link at the cursor (see "Text marks" in the `@monti-cms/admin` README).
+  Code line labels, the "Link to body" item in the code block line menu, the linking hint line and the highlight of the hovered line are core code block features, and they use this mark through this extension's
+  `to` attribute (`codeAnchor`). The in-code tooltip (`// @char Tooltip`) is a core code block feature.
+- The text color picker list is `color({ palette })` (the default 8 colors `DEFAULT_TEXT_PALETTE` if omitted). The body stores hex values, so changing the list leaves
+  already written text as it is. Public pages render with `cleanTextColor` and `textColorProps` from `@monti-cms/blocks/color`, and the color is
+  chosen to match the theme by `.cms-color` in `styles.css`.
+- Public pages: each extension provides default public components (the plugin `render`, used automatically by `renderMdx` from `@monti-cms/core/render`).
+  Only the parts that run in the browser (tab switching, tooltip, code link, Mermaid, chart) are split into `"use client"` files. Mermaid and chart render only when the app installs the optional dependencies
+  `mermaid` and `recharts` (on the server and before loading, the source text is shown), and the callout default title, collapsible
+  default title and chart error messages follow the site language (`locale`). The look is the `cms-block-*` classes in `styles.css` (no Tailwind needed), and passing components of the same
+  name (`Callout`, `Tabs` …) to `renderMdx({ components })` wins. Code fence blocks are turned into
+  `<Mermaid source="…" />` by `remarkFenceBlocksToMdx` (`@monti-cms/core/mdx`). Column widths are read with `parseColumnWidths` and `columnsGridTemplate` from `@monti-cms/blocks/columns`,
+  and chart syntax and size with `parseChartDsl`, `normalizeChartDsl` and `resolvePieGeometry` from `@monti-cms/blocks/chart`.
+- Changing the editor look: the app sets the variables in `styles.css` (`--cms-callout-note`, `-tip`, `-info`, `-warning`, `-danger`, `--chart-1` to `5`).
+- If you remove the plugin of a block that is already used, that block drops out of the stored syntax and turns into plain text the next time it is saved.
 
-플러그인 없이 정의만 쓰려면(예: 테스트) `@monti-cms/blocks/definitions`의 정의를 설정의 `blocks`에 넣는다.
+To use only the definitions without plugins (for example in tests), put the definitions from `@monti-cms/blocks/definitions` into the config's `blocks`.
 
-## AI 기능 (선택)
+## AI features (optional)
 
-`@monti-cms/ai`를 쓰는 사이트에는 `mermaid()`·`chart()`가 AI 기능을 저절로 더한다(플러그인 `contributes.ai`). 설정에 적지 않는다.
+On sites that use `@monti-cms/ai`, `mermaid()` and `chart()` add AI features automatically (the plugin's `contributes.ai`). Nothing goes in the config.
 
-| 블록 | 기능 이름 | 붙는 곳 |
+| Block | Feature names | Where they attach |
 | --- | --- | --- |
-| `mermaid()` | `diagramDraft` · `diagramEdit` | 다이어그램 만들기(슬래시 메뉴) · 고치기(블록 손잡이 옆) |
-| `chart()` | `chartDraft` · `chartEdit` | 차트 만들기 · 고치기 |
+| `mermaid()` | `diagramDraft` · `diagramEdit` | Create a diagram (slash menu) · edit (next to the block handle) |
+| `chart()` | `chartDraft` · `chartEdit` | Create a chart · edit |
 
-바꾸거나 끌 때만 같은 이름으로 적는다.
+Only to change or turn one off, list it under the same name.
 
 ```ts
 import { mermaidAi } from "@monti-cms/blocks/mermaid/ai";
@@ -78,36 +80,36 @@ import { mermaidAi } from "@monti-cms/blocks/mermaid/ai";
 aiPlugin({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), chartEdit: false } });
 ```
 
-블록 확장은 AI 플러그인 코드를 불러오지 않는다(타입만 읽는다). AI 플러그인이 없는 사이트에서는 기여가 쓰이지 않는다.
+The block extensions do not load AI plugin code (they read only its types). On sites without the AI plugin, the contribution is not used.
 
-두 기능은 결과 문법을 코드 검사(`mermaidSyntax`·`chartSyntax`)로 본다. 같은 검사를 다른 기능의 `checks`에 넣어 쓸 수 있다.
-개발 전용 가짜 연결(`CMS_AI_FAKE=1`)에는 기능 정의의 `fake`로 문법 검사를 통과하는 답을 준다(만들기는 예시 블록, 고치기는
-원래 블록에 한 줄을 더한 것).
-차트 지시문에는 차트 문법 설명(`chartSyntaxGuide()`)이 들어간다. 차트 문법은 `@monti-cms/blocks/chart`의
-`parseChartDsl`·`normalizeChartDsl`이 읽는다. 문법 오류는 줄 번호와 코드(`code`)·값(`values`)만 주고, 글은 쓰는 쪽이 `chartErrorLine`과
-문구 사전(`chartMessages`)으로 만든다(공개 화면은 글 언어, 편집기는 관리자 언어).
+Both features check the result syntax with code checks (`mermaidSyntax`, `chartSyntax`). The same checks can be used in the `checks` of other features.
+For the development-only fake connection (`CMS_AI_FAKE=1`), the feature definition's `fake` returns an answer that passes the syntax check (an example block for create, and the
+original block plus one line for edit).
+The chart instructions include a chart syntax guide (`chartSyntaxGuide()`). The chart syntax is read by `parseChartDsl` and
+`normalizeChartDsl` in `@monti-cms/blocks/chart`. Syntax errors give only the line number, a code (`code`) and values (`values`); the caller builds the text with `chartErrorLine` and the
+message dictionary (`chartMessages`) (the text language on public pages, the admin language in the editor).
 
-## 새 블록 만들기
+## Creating a new block
 
-이 패키지의 블록도 사이트가 만드는 블록과 같은 방법으로 만든다. 블록 정의(`defineBlock`) 하나와, 필요하면 편집 화면이다.
+Blocks in this package are made the same way as blocks a site makes: one block definition (`defineBlock`) and, if needed, an edit screen.
 
 ```ts
-// 정의: 저장 문법·속성·편집 방식
+// Definition: stored syntax, attributes, editing mode
 export const bannerBlock = defineBlock({ name: "banner", syntax: { kind: "container", directive: "banner" }, … });
 
-// 플러그인: 블록과 관리자 화면 쪽(선택)
+// Plugin: the block and the admin side (optional)
 export const banner = () =>
 	definePlugin({ name: "banner", options: {}, blocks: [bannerBlock], admin: () => import("./banner/admin") });
 
-// banner/admin.ts: 편집 화면 전체(blockViews)나 속성 상자(blockEditors)를 넣는 공급자
+// banner/admin.ts: a provider that supplies a full edit screen (blockViews) or an attribute box (blockEditors)
 export default defineAdminPlugin({ Provider: BannerProvider });
 ```
 
-편집 화면이 없으면 관리자 화면의 기본 상자로 편집한다. 메뉴 아이콘(`editor.icon`)이 관리자 패키지의 기본 아이콘에 없으면
-공급자에서 `icons`로 등록한다(이 패키지의 블록은 모두 그렇게 한다). 번역할 속성(제목·탭 이름)에는 `translatable: true`를 단다. 자세한 것은 `@monti-cms/core` README의 "본문 블록"과
-`@monti-cms/admin` README의 "블록 편집 화면".
+Without an edit screen, the block is edited with the admin's default box. If the menu icon (`editor.icon`) is not among the admin package's default icons,
+register it with `icons` in the provider (all blocks in this package do so). Mark translatable attributes (title, tab name) with `translatable: true`. See "Body blocks" in the `@monti-cms/core` README and
+"Block edit screens" in the `@monti-cms/admin` README for details.
 
-## 개발
+## Development
 
 ```bash
 pnpm --filter @monti-cms/blocks test:run

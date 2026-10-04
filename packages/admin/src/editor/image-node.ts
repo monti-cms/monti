@@ -33,8 +33,8 @@ export const CmsImageNode = Node.create({
 			alt: {
 				default: "",
 			},
-			// 기본값은 null이다 — 명시하지 않은 이미지와 `width="100%"`을 구분해야 한다.
-			// `100%`를 기본값으로 두면 저장할 때 명시와 기본값을 가릴 수 없어 의미가 바뀐다(O2).
+			// The default is null — an image with no explicit width must be told apart from `width="100%"`.
+			// With `100%` as the default, an explicit value and the default could not be distinguished on save, which changes the meaning.
 			width: {
 				default: null,
 			},
@@ -44,11 +44,11 @@ export const CmsImageNode = Node.create({
 			caption: {
 				default: "",
 			},
-			// 장식 표시(`decorative`). 참일 때만 저장한다.
+			// Decorative marker (`decorative`). Saved only when true.
 			decorative: {
 				default: null,
 			},
-			// Markdown 이미지의 타이틀(`![alt](src "title")`) 보존용. 화면에는 쓰지 않는다.
+			// For preserving a Markdown image title (`![alt](src "title")`). Not used on screen.
 			title: {
 				default: null,
 			},

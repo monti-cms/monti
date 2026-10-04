@@ -16,8 +16,8 @@ const extractCodeValue = (node: CmsNode): string => {
 };
 
 /**
- * 더한 코드 펜스 블록(예: ` ```mermaid `)의 변환기. 그 언어의 코드 블록을 블록 노드로 바꾸고, 저장할 때 언어·메타를
- * 그대로 되살린다. 블록을 설치하지 않은 사이트에서는 일반 코드 블록으로 남는다.
+ * Converter for an added code fence block (e.g. ` ```mermaid `). Turns a code block of that language into a block node and restores the language and meta
+ * as they were on save. On a site without the block installed, it stays a plain code block.
  */
 export function fenceBlockConverter(block: BlockDefinition, nodeName: string): BlockConverter {
 	const lang = block.syntax.kind === "fence" ? block.syntax.lang : block.name;

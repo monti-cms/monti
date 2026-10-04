@@ -5,7 +5,7 @@ import { COLLECTIONS } from "../../../core/collections";
 import { adminRoute, json, parseWith, readJsonBody } from "../handler";
 
 type StoredPreferences = PreferencesBody & {
-	// 이전 저장 모양(전역 페이지 크기·정렬, 컬렉션별 컬럼). 읽을 때 새 모양으로 옮긴다.
+	// Previous storage shape (global page size and sort, per-collection columns). Migrated to the new shape on read.
 	defaultPageSize?: unknown;
 	sort?: unknown;
 	columnSettings?: Record<string, unknown>;
@@ -14,7 +14,7 @@ type StoredPreferences = PreferencesBody & {
 const isObject = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** 저장된 설정을 컬렉션별 모양으로 맞춘다. 알 수 없거나 깨진 값은 버린다. */
+/** Normalizes stored preferences to the per-collection shape. Unknown or corrupt values are dropped. */
 function normalize(stored: StoredPreferences | null): PreferencesBody {
 	const collections: Record<string, unknown> = {};
 	for (const collection of COLLECTIONS) {
@@ -34,7 +34,7 @@ export const GET = adminRoute(async ({ auth }) => {
 	return json(normalize(stored as StoredPreferences | null));
 });
 
-/** 컬렉션 단위로 병합해 저장한다. 보내지 않은 컬렉션·키는 유지한다. */
+/** Merges and saves per collection. Collections and keys not sent are kept. */
 export const PUT = adminRoute(async ({ request, auth }) => {
 	const body = parseWith(preferencesBodySchema, await readJsonBody(request), "Invalid preferences body");
 	const store = getCmsContentStore();

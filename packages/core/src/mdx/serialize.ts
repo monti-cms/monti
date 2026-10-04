@@ -33,7 +33,7 @@ const escapeText = (value: string, inCode: boolean, inLabel = false) => {
 		.replace(/\{/g, "\\{")
 		.replace(/</g, "\\<");
 	const unbroken = escapeDirectiveColon(escaped);
-	// directive 라벨은 `]`로 닫히므로 라벨 안에서는 `]`를 이스케이프한다(짝이 맞지 않으면 라벨이 깨진다).
+	// A directive label closes with `]`, so `]` is escaped inside a label (if brackets are unbalanced, the label breaks).
 	return inLabel ? unbroken.replace(/\]/g, "\\]") : unbroken;
 };
 
@@ -41,9 +41,9 @@ const DIRECTIVE_COLON = /(?<!\\):(?=[A-Za-z0-9_\-가-힣:])/g; // cms-allow-kore
 const DIRECTIVE_RUN = /^[A-Za-z0-9_\-가-힣:]+/; // cms-allow-korean: Hangul in a name pattern, not UI text
 
 /**
- * 등록된 지시자 이름이 뒤따르는 `:`를 `\:`로 이스케이프한다(§4.4).
- * 그대로 두면 재파싱 때 지시자로 읽힌다(`:br `, `:u[` 등). 미등록 이름(`:free를`)과
- * 시각·URL의 콜론(`12:30`, `https://`)은 건드리지 않는다. 이미 이스케이프된 `\:`는 둔다.
+ * Escapes a `:` followed by a registered directive name as `\:`.
+ * Left as is, it would be read as a directive on re-parse (`:br `, `:u[` etc.). Unregistered names (`:free를`) and
+ * colons in times and URLs (`12:30`, `https://`) are left alone. An already escaped `\:` is kept.
  */
 const escapeDirectiveColon = (value: string): string =>
 	value.replace(DIRECTIVE_COLON, (_match: string, offset: number, whole: string) => {
@@ -130,17 +130,17 @@ const jsxName = (node: CmsNode): string => {
 	return node.type;
 };
 
-/** 더한 글자 꾸밈(블록 확장). mark 이름은 블록 이름이다. */
+/** Added text decoration (block extension). The mark name is the block name. */
 const ADDED_MARKS: ReadonlyMap<string, BlockDefinition> = new Map(
 	ADDED_MARK_BLOCKS.map((block) => [block.name, block]),
 );
 
-/** 속성이 붙는 지시자 라벨(`]{…}`) 안의 글. 라벨을 닫는 글자를 이스케이프한다. */
+/** Text inside a directive label (`]{…}`) that carries attributes. Escapes the character that closes the label. */
 const LABEL_MARKS = new Set(ADDED_MARKS.keys());
 
 /**
- * 더한 글자 꾸밈의 속성(`{이름="값" …}`). 정의의 속성을 정의 순서대로 쓴다. 꼭 있어야 하는 속성(`required`)은 비어도 쓰고,
- * 나머지는 값이 있을 때만 쓴다. 불리언은 참일 때 이름만 쓴다. 속성이 하나도 없으면 `]`만 쓴다.
+ * Attributes of an added text decoration (`{name="value" …}`). Writes the definition's attributes in definition order. Required attributes (`required`) are written even if empty,
+ * and the others only when they have a value. A boolean writes only the name when true. If there is no attribute at all, only `]` is written.
  */
 const markAttrs = (block: BlockDefinition, mark: CmsMark): string => {
 	const parts = Object.entries(block.attributes).flatMap(([name, attribute]) => {
@@ -213,17 +213,17 @@ const closeMark = (mark: CmsMark): string => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** JSX의 spread 속성은 directive로 표현할 수 없다 → JSX로 남긴다(조용한 손실 금지). */
+/** A JSX spread attribute cannot be expressed as a directive → it stays as JSX (no silent loss). */
 const hasSpread = (node: CmsNode): boolean =>
 	Array.isArray(node.attrs?.attributes) && node.attrs.attributes.some((item) => isRecord(item) && Boolean(item.spread));
 
-/** 노드가 directive로 저장되는지 판정한다. 이름은 컴포넌트 이름(`attrs.name` 또는 `type`)이다. */
+/** Decides whether a node is stored as a directive. The name is the component name (`attrs.name` or `type`). */
 const directiveFor = (node: CmsNode): DirectiveDefinition | undefined =>
 	hasSpread(node) ? undefined : DIRECTIVE_BY_COMPONENT.get(jsxName(node));
 
 /**
- * directive 속성 문자열(`{name="값"}`). 정의에 있는 속성을 표 순서대로 쓰고, 정의에 없는 속성도 뒤에 붙여 버리지 않는다.
- * 불리언은 참이면 이름만 쓰고 거짓이면 생략한다(§4.4).
+ * Directive attribute string (`{name="value"}`). Writes attributes in the definition in table order, and does not drop attributes missing from the definition by appending them.
+ * A boolean writes only the name when true and is omitted when false.
  */
 const serializeDirectiveAttrs = (node: CmsNode, definition: DirectiveDefinition): string => {
 	const attrs = node.attrs ?? {};
@@ -234,7 +234,7 @@ const serializeDirectiveAttrs = (node: CmsNode, definition: DirectiveDefinition)
 		if (done.has(name)) return;
 		done.add(name);
 		if (definition.attributes[name] === "boolean") {
-			// 없는 속성과 거짓은 쓰지 않는다(§4.4). 참일 때만 이름을 쓴다.
+			// Missing attributes and false are not written. The name is written only when true.
 			if (value === undefined || value === null || value === false || value === "false") return;
 			parts.push(name);
 			return;
@@ -261,11 +261,11 @@ const serializeDirectiveAttrs = (node: CmsNode, definition: DirectiveDefinition)
 	return parts.length > 0 ? `{${parts.join(" ")}}` : "";
 };
 
-/** 감싼 컨테이너 단계 수. 콜론 수는 `3 + 단계`(§4.4) — 변환기와 같은 식을 쓴다. */
+/** Number of container levels wrapped. The colon count is `3 + levels` — the same formula as the converter. */
 const containerDepth = (node: CmsNode): number => {
 	let max = 0;
 	for (const child of node.content ?? []) {
-		// 병합 표는 4콜론(table) 안에 3콜론(row)을 쓴다. 바깥 컨테이너는 최소 5콜론이어야 한다.
+		// A merged table uses 3 colons (row) inside 4 colons (table). The outer container needs at least 5 colons.
 		if (child.type === "table" && usesDirectiveTable(child)) max = Math.max(max, 2);
 		const definition = directiveFor(child);
 		if (definition?.kind === "container") max = Math.max(max, 1 + containerDepth(child));
@@ -281,7 +281,7 @@ const serializeDirective = (node: CmsNode, definition: DirectiveDefinition, inde
 
 	if (definition.kind === "text") {
 		const label = serializeInlines(node.content ?? [], false, true);
-		// `:br`은 빈 라벨이 정본이다(§4.4). 라벨에 내용이 있으면 버리지 않고 보존한다.
+		// `:br` with an empty label is canonical. If the label has content, it is preserved, not dropped.
 		return `${indent}:${definition.name}[${definition.name === "br" && label.length === 0 ? "" : label}]${attrs}`;
 	}
 
@@ -305,7 +305,7 @@ const serializeImage = (node: CmsNode): string => {
 
 	const decorative = node.attrs?.decorative === true || node.attrs?.decorative === "true";
 
-	// §4.4: 미디어 참조·크기·정렬·캡션·장식 표시가 있으면 `image` 리프로, 없으면 Markdown 이미지로 저장한다.
+	// If there is a media reference, size, alignment, caption or decorative flag, it is stored as an `image` leaf; otherwise as a Markdown image.
 	if (mediaId || width || align || caption || decorative || hasCrop || hasRotate) {
 		const definition = DIRECTIVE_BY_COMPONENT.get("Image");
 		if (definition) return `::image${serializeDirectiveAttrs(node, definition)}`;
@@ -325,8 +325,8 @@ const encodeLeadingSpaces = (value: string, inCode: boolean, inLabel = false): s
 const EMPHASIS_MARKS = new Set(["bold", "italic", "strike"]);
 
 /**
- * CommonMark 강조 구분자는 안쪽 첫/끝 글자가 공백·문장부호면 열리거나 닫히지 않는다
- * (`**정적(Static)**과`는 강조가 아니라 별표가 글자로 남는다). 그런 경우만 JSX로 쓴다.
+ * CommonMark emphasis delimiters do not open or close if the first/last inner character is whitespace or punctuation
+ * (`**정적(Static)**과` is not emphasis; the asterisks stay as text). Only in that case is JSX written.
  */
 const EMPHASIS_UNSAFE_EDGE = /^[\s\p{P}\p{S}]|[\s\p{P}\p{S}]$/u;
 
@@ -358,8 +358,8 @@ const jsxCloseMark = (mark: CmsMark): string => {
 
 const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false): string => {
 	const out: string[] = [];
-	// 열린 마크마다 여는 구분자의 조각 위치와 내용이 시작하는 조각 위치를 기억한다.
-	// 닫을 때 내용 앞뒤 글자를 보고 Markdown 강조가 성립하는지 판정한다.
+	// For each open mark, remember the position of the opening delimiter's piece and the position of the piece where the content starts.
+	// On closing, look at the characters around the content to decide whether Markdown emphasis holds.
 	const active: { mark: CmsMark; openIndex: number; contentIndex: number }[] = [];
 	let atLineStart = asParagraph;
 
@@ -384,8 +384,8 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 
 	for (const node of nodes) {
 		if (node.type === "hardBreak") {
-			// 강제 줄바꿈은 `:br[]`로만 쓴다. `\`+줄바꿈은 원문 줄바꿈을 만들어 `remark-breaks`가
-			// 의도하지 않은 `<br>`을 찍으므로 쓰지 않는다(§4.4).
+			// A hard line break is written only as `:br[]`. `\` + newline creates a raw newline, and `remark-breaks` would
+			// emit an unintended `<br>`, so it is not used.
 			closeTo(0);
 			out.push(":br[]");
 			atLineStart = false;
@@ -449,8 +449,8 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 
 	const result = out.join("");
 	if (!asParagraph) return result;
-	// 문단이 `1. `로 시작하면 재파싱 시 순서 목록으로 해석되므로 목록 기호를 이스케이프한다.
-	// 단, 백슬래시는 숫자가 아니라 마침표 앞에 붙여야 한다(`1\. `). `\1. `는 숫자를 이스케이프해 문자 그대로 남는다.
+	// If a paragraph starts with `1. `, it is read as an ordered list on re-parse, so the list marker is escaped.
+	// However, the backslash goes before the period, not the digit (`1\. `). `\1. ` escapes the digit and stays literal.
 	const withEscapedListMarker = result.replace(/^(\s*)(\d+)\.(\s)/, "$1$2\\.$3");
 	return withEscapedListMarker.replace(/^(\s*)([>#]|-{1,3}\s|\*{1,3}\s|```)/, "$1\\$2");
 };
@@ -516,8 +516,8 @@ const serializeListItem = (item: CmsNode, marker: string, indent: string): strin
 		if (block.type === "paragraph") return `${innerIndent}${serializeInlines(block.content ?? [], true)}`;
 		return serializeBlock(block, innerIndent);
 	});
-	// listItem 안의 블록이 여러 개면(loose list) 빈 줄로 분리해야 문단 경계가 유지된다.
-	// 한 줄로 이어 붙이면 재파싱 시 하나의 문단으로 합쳐져 문단 구조가 사라진다.
+	// If a listItem has several blocks (loose list), they must be separated by blank lines to keep paragraph boundaries.
+	// Joining them on one line would merge them into one paragraph on re-parse and lose the paragraph structure.
 	return [head, ...extra].join("\n\n");
 };
 
@@ -547,7 +547,7 @@ const tableCellAttrs = (cell: CmsNode): string[] => {
 	return attrs;
 };
 
-/** 표 속성(`align`, `widths`)을 저장 순서대로 모은다. */
+/** Collects table attributes (`align`, `widths`) in storage order. */
 const tableAttrs = (node: CmsNode): Array<[string, string]> => {
 	const attrs: Array<[string, string]> = [];
 	const align = tableAlign(node);
@@ -563,7 +563,7 @@ const tableAlign = (node: CmsNode): string => {
 	return value.replace(/,/g, "").length > 0 ? value : "";
 };
 
-// directive 라벨 대괄호가 맞지 않으면 파서가 셀을 잃으므로 같은 의미의 JSX 표로 저장한다.
+// If directive label brackets are unbalanced, the parser loses cells, so it is stored as a JSX table with the same meaning.
 const serializeJsxTable = (node: CmsNode, rows: string[][]): string => {
 	const attrs = tableAttrs(node).map(([name, value]) => ` ${name}="${escapeAttr(value)}"`);
 	const lines = [`<Table${attrs.join("")}>`];
@@ -645,7 +645,7 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 		case "image":
 			return indent + serializeImage(node);
 		case "html":
-			// 여러 줄 원문(되돌린 미등록 지시자 등)은 줄마다 들여 써야 목록 안에서도 같은 블록으로 다시 읽힌다.
+			// Multi-line source (turned-back unregistered directive etc.) must be indented on every line so it is read back as the same block inside a list.
 			return String(node.attrs?.value ?? "")
 				.split("\n")
 				.map((line) => (line ? indent + line : line))

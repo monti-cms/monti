@@ -8,10 +8,10 @@ import {
 import { bareunMessages } from "./messages";
 
 /**
- * 바른 응답(`CorrectError`)을 검사 결과(`TextIssue`)로 바꾼다. 문단은 `\n`으로 이어 한 번에 보내고(`joinSegments`),
- * 돌아온 위치(문서 전체의 UTF-16 위치)를 문단 안 위치로 다시 나눈다.
+ * Converts a Bareun response (`CorrectError`) into check results (`TextIssue`). Paragraphs are joined with `\n` and sent in one request (`joinSegments`),
+ * and the returned positions (UTF-16 offsets over the whole text) are split back into in-paragraph positions.
  *
- * 응답 JSON은 proto3 규칙이라 기본값(0·빈 배열)인 칸은 빠질 수 있다.
+ * The response JSON follows proto3 rules, so fields with default values (0, empty array) may be missing.
  */
 
 export interface BareunRevision {
@@ -25,7 +25,7 @@ export interface BareunRevisedBlock {
 	readonly origin?: { readonly content?: string; readonly beginOffset?: number; readonly length?: number };
 	readonly revised?: string;
 	readonly revisions?: readonly BareunRevision[];
-	/** 여러 고침을 하나로 합친 블록이면 낱낱의 고침. */
+	/** If the block merges several fixes, the individual fixes. */
 	readonly nested?: readonly BareunRevisedBlock[];
 }
 
@@ -44,22 +44,22 @@ export interface BareunResponse {
 	readonly helps?: Readonly<Record<string, BareunHelp>>;
 }
 
-/** 위치를 나누는 데 필요한 문단 모양(`TextCheckSegment`의 일부). */
+/** The paragraph shape needed to split positions (part of `TextCheckSegment`). */
 export interface BareunIssueSegment {
 	readonly id: string;
 	readonly text: string;
 }
 
-/** 문단 사이에 넣는 글자. 바른이 문장 경계로 본다. */
+/** Character inserted between paragraphs. Bareun treats it as a sentence boundary. */
 export const SEGMENT_SEPARATOR = "\n";
 
 export const joinSegments = (segments: readonly BareunIssueSegment[]) =>
 	segments.map((segment) => segment.text).join(SEGMENT_SEPARATOR);
 
-// 사이트 설정 파일이 읽는 모듈(`index.ts`)에 묶여 있어 화면 언어는 부를 때마다 고른다.
+// This is bundled into the module read by the site config file (`index.ts`), so the display language is chosen on every call.
 const t = createActiveTranslator(bareunMessages);
 
-/** 바른 분류 코드. 이름은 문구 사전의 `category.<코드>`다. */
+/** Bareun category code. The name is `category.<code>` in the message dictionary. */
 const KINDS = new Set([
 	"TYPO",
 	"SPACING",
@@ -91,7 +91,7 @@ const ERRORS = new Set(["TYPO", "SPACING", "STANDARD", "GRAMMER", "WORD"]);
 
 const MAX_COMMENT = 120;
 
-/** 설명의 첫 문장. 강조 표시(`<IN>…</IN>`) 같은 꺾쇠 표시는 뺀다. */
+/** The first sentence of the description. Angle-bracket markup such as emphasis (`<IN>…</IN>`) is removed. */
 function shortComment(comment: string | undefined): string {
 	const text = (comment ?? "")
 		.replace(/<\/?[A-Za-z][^>]*>/g, "")
@@ -102,7 +102,7 @@ function shortComment(comment: string | undefined): string {
 	return first.length > MAX_COMMENT ? `${first.slice(0, MAX_COMMENT - 1).trimEnd()}…` : first;
 }
 
-/** 가장 작은 고침 단위. 합친 블록은 낱낱의 고침(`nested`)으로 펼친다. */
+/** The smallest fix unit. Merged blocks are expanded into individual fixes (`nested`). */
 function leafBlocks(blocks: readonly BareunRevisedBlock[] | undefined): BareunRevisedBlock[] {
 	return (blocks ?? []).flatMap((block) =>
 		block.nested && block.nested.length > 0 ? leafBlocks(block.nested) : [block],
@@ -110,8 +110,8 @@ function leafBlocks(blocks: readonly BareunRevisedBlock[] | undefined): BareunRe
 }
 
 /**
- * 바른 응답을 문단별 검사 결과로 바꾼다. `segments`는 요청에 이어 붙인 순서 그대로여야 한다.
- * 문단 경계를 넘거나 숨긴 자리(`￼`)에 걸친 결과, 위치와 원문이 맞지 않는 결과는 뺀다.
+ * Converts a Bareun response into per-paragraph check results. `segments` must be in the same order they were joined in the request.
+ * Results that cross a paragraph boundary, touch the hidden placeholder (`￼`), or whose position does not match the original text are dropped.
  */
 export function bareunIssues(segments: readonly BareunIssueSegment[], response: BareunResponse): TextIssue[] {
 	const content = joinSegments(segments);
@@ -135,7 +135,7 @@ export function bareunIssues(segments: readonly BareunIssueSegment[], response: 
 		if (block.origin?.content !== undefined && block.origin.content !== origin) continue;
 		if (origin.includes(PLACEHOLDER)) continue;
 
-		// 시작 위치가 든 문단. 끝이 그 문단을 넘으면(문단 경계에 걸치면) 뺀다.
+		// The paragraph containing the start position. If the end goes past that paragraph (crosses a paragraph boundary), drop it.
 		let index = starts.length - 1;
 		while (index > 0 && (starts[index] ?? 0) > begin) index--;
 		const segment = segments[index];

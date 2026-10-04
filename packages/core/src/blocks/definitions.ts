@@ -3,19 +3,19 @@ import { defineBlock } from "./define";
 import { blockMessages } from "./messages";
 
 /**
- * 본체 블록 정의(v2 B3). 다른 기능이 기대거나 Markdown 문법인 블록만 둔다. 콜아웃·탭 같은 블록과 툴팁·코드 연결·글자색 같은
- * 글자 꾸밈은 블록 확장(`@monti-cms/blocks`)이 플러그인으로 더하고, 사이트는 설정의 `blocks`로 더한다(`blocks/resolve.ts`).
- * 블록을 더하거나 바꾸면 공개 렌더러·에디터 등록부를 함께 확인한다(정의 테스트가 누락을 잡는다).
+ * Core block definitions. Includes only blocks that other features rely on or that use Markdown syntax. Blocks like callouts and tabs, and text marks like tooltips, code links, and text color,
+ * are added as plugins by the block extension (`@monti-cms/blocks`), and sites add them through `blocks` in the config (`blocks/resolve.ts`).
+ * When adding or changing a block, also check the public renderer and editor registries (the definition test catches omissions).
  */
 
 /**
- * 이름표·설명은 글자를 읽는 때(getter) 사전(`messages.ts`)에서 고른다. 이 파일은 설정 파일이 읽는 모듈이라 사이트 설정을 읽을 수
- * 없어서(순환), 화면 언어는 `i18n/active.ts`가 알려 준다. 정의는 여전히 JSON으로 직렬화할 수 있다(getter도 값으로 담긴다).
+ * Labels and descriptions are picked from the dictionary (`messages.ts`) when read (getter). This file is a module the config file reads, so it cannot read the site config
+ * (circular); the UI language is supplied by `i18n/active.ts`. Definitions remain JSON-serializable (getters are stored as values).
  */
 const t = createActiveTranslator(blockMessages);
 type Key = Parameters<typeof t>[0];
 
-/** `base`에 사전에서 고르는 이름표(`label`)·설명(`description`)을 단다. 키는 `<prefix>.label`·`<prefix>.description`이다. */
+/** Attaches a label (`label`) and description (`description`) picked from the dictionary to `base`. Keys are `<prefix>.label` and `<prefix>.description`. */
 function withText<const A extends object, const P extends "label" | "description">(
 	base: A,
 	prefix: string,
@@ -28,7 +28,7 @@ function withText<const A extends object, const P extends "label" | "description
 	return result as A & { readonly [K in P]: string };
 }
 
-/** 슬래시 메뉴 검색어: 영어 이름(언어와 상관없이 검색된다) + 사전의 검색어(쉼표로 구분). */
+/** Slash menu search terms: the English name (searchable regardless of language) + dictionary terms (comma-separated). */
 const keywordsOf = (key: Key, ...base: string[]): string[] => [
 	...base,
 	...t(key)
@@ -56,7 +56,7 @@ export const textAlign = defineBlock(
 			name: "text-align",
 			syntax: { kind: "container", directive: "text-align" },
 			component: "TextAlign",
-			// §4.4 A4: `justify`는 쓰지 않는다. 공개 렌더가 세 값만 고정 클래스로 지원한다.
+			// `justify` is not used. The public renderer supports only three values with fixed classes.
 			attributes: {
 				align: withText({ type: "string", required: true, options: ALIGN_OPTIONS } as const, "text-align.align", [
 					"label",
@@ -106,8 +106,8 @@ export const image = defineBlock(
 );
 
 /**
- * 첨부 파일 카드(`::file{mediaId="…" label="보고서.pdf"}`, v3). 공개 화면은 이름·크기·형식과 내려받기를 보인다.
- * `label`을 비우면 올린 파일 이름을 쓴다.
+ * Attachment file card (`::file{mediaId="…" label="report.pdf"}`). The public view shows the name, size, type, and a download link.
+ * If `label` is empty, the uploaded file name is used.
  */
 export const file = defineBlock(
 	withText(
@@ -149,8 +149,8 @@ const textMark = (name: "u" | "sup" | "sub" | "br") =>
 	);
 
 /**
- * 번역 안내 글(`:untranslated[원문 글]`, v3). 새 번역본은 원문 글을 이 표시로 감싸 둔다. 에디터는 흐리게 보이고
- * 그 블록에 입력하면 지운다. 공개 화면에는 보이지 않고, 남아 있으면 발행 전 검사가 알린다.
+ * Untranslated notice text (`:untranslated[source text]`). A new translation wraps the source text with this marker. The editor shows it dimmed
+ * and removes it when something is typed in that block. It is not shown in the public view, and the pre-publish check reports it if it remains.
  */
 export const untranslated = defineBlock(
 	withText(
@@ -253,7 +253,7 @@ export const cell = defineBlock(
 	),
 );
 
-/** 본체 블록. 선언 순서가 `/meta`와 문서의 순서다. 사이트가 쓰는 블록은 `blocks/active.ts`의 `BLOCKS`다. */
+/** Core blocks. Declaration order is the order in `/meta` and the docs. The blocks the site uses are `BLOCKS` in `blocks/active.ts`. */
 export const BUILTIN_BLOCKS = [
 	textAlign,
 	image,

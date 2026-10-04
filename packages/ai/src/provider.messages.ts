@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** AI 서비스 연결·키 암호화 오류 문구. */
+/** Error messages for AI service connections and key encryption. */
 export const providerMessages = defineMessages("cms-ai.provider", {
 	en: {
 		"service.key": "Check the AI service key.",

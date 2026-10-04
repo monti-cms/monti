@@ -20,23 +20,23 @@ interface InternalLinkPopupProps {
 	onClose: () => void;
 }
 
-/** 글 아래 줄: 컬렉션 이름 · 주소 · 초안 여부. */
+/** Line under the entry: collection name · address · draft status. */
 function itemMeta(item: InternalLinkItem): string {
 	const collection = isCollection(item.collection) ? COLLECTION_DEFINITIONS[item.collection].label : item.collection;
-	// 초안 대상 링크는 편집 중 허용하되 표시한다. 발행하려면 대상이 공개되어야 한다(§6.2).
+	// Links to draft targets are allowed while editing but flagged. The target must be public to publish.
 	const status =
 		item.status && item.status !== "published"
 			? item.status === "draft"
 				? t("internalLink.draft")
 				: item.status
 			: null;
-	// 링크가 실제로 가리킬 공개 경로(컬렉션 `path`)를 보인다.
+	// Show the public path (collection `path`) the link will actually point to.
 	return [collection, internalLinkHref(item), status].filter(Boolean).join(" · ");
 }
 
 /**
- * `[[` 내부 글 링크 검색 결과(§6.2). 슬래시 메뉴와 같은 모양이다.
- * 포커스와 방향키는 에디터가 맡고 여기서는 강조할 항목(`selectedIndex`)만 그리고 보이게 스크롤한다.
+ * `[[` internal entry link search results. Same look as the slash menu.
+ * The editor handles focus and arrow keys; this only draws the highlighted item (`selectedIndex`) and scrolls it into view.
  */
 export function InternalLinkPopup({
 	items,

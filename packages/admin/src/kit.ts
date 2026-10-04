@@ -1,6 +1,6 @@
 /**
- * 확장용 묶음(M16-8). 확장(플러그인)이 관리자 화면과 같은 모양의 화면·버튼·대화상자를 만들 때 쓰는 부품과 도우미를
- * 한곳에서 내보낸다. 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
+ * Extension kit. Exports in one place the parts and helpers an extension (plugin) uses to build screens, buttons and dialogs
+ * that look like the admin UI. Internal admin file paths (`ui/*`, `screens/*`) are not public.
  */
 
 export { cn } from "./lib/utils/cn";

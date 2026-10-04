@@ -60,7 +60,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-/** AI 화면처럼 연 문구를 들고, 저장하지 않은 내용이 있으면 묻는다. */
+/** Holds the open text like the AI screen does, and asks when there are unsaved changes. */
 function Harness() {
 	const [selected, setSelected] = useState<string | "new" | null>(null);
 	const [dirty, setDirty] = useState(false);
@@ -92,8 +92,8 @@ const renderManager = () =>
 const list = () => screen.getByRole("list", { name: t("list.label") });
 const row = (name: string) => within(list()).getByRole("button", { name: new RegExp(name) });
 
-describe("AI 화면 공통 문구 탭", () => {
-	it("목록과 빈 상세를 보이고, 고른 문구를 열린 줄로 표시한다", async () => {
+describe("AI screen shared texts tab", () => {
+	it("shows the list and an empty detail, and marks the chosen text as the open row", async () => {
 		renderManager();
 		await screen.findByText(t("empty.title"));
 		expect(
@@ -106,7 +106,7 @@ describe("AI 화면 공통 문구 탭", () => {
 		fireEvent.click(row("Style guide"));
 		expect(await screen.findByRole("heading", { name: "Style guide" })).toBeTruthy();
 		expect(row("Style guide").getAttribute("aria-current")).toBe("true");
-		// 설정 문구: 이름은 설정이 정하고, 기본값으로 되돌릴 수 있으며 삭제는 없다.
+		// Config text: the name comes from the config, it can be reset to the default, and cannot be deleted.
 		expect((screen.getByRole("textbox", { name: t("field.name") }) as HTMLInputElement).disabled).toBe(true);
 		expect(screen.getByText("{{shared.styleGuide}}", { selector: "code" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: t("copy.label") })).toBeTruthy();
@@ -119,7 +119,7 @@ describe("AI 화면 공통 문구 탭", () => {
 		expect(bodyOf(calls("PATCH")[0])).toEqual({ expectedVersion: 2, key: "styleGuide", text: "default" });
 	});
 
-	it("저장하지 않은 내용이 있으면 다른 문구를 열기 전에 묻는다", async () => {
+	it("asks before opening another text when there are unsaved changes", async () => {
 		renderManager();
 		fireEvent.click(await screen.findByRole("button", { name: /Tone/ }));
 		fireEvent.change(await screen.findByRole("textbox", { name: t("field.content") }), {
@@ -132,7 +132,7 @@ describe("AI 화면 공통 문구 탭", () => {
 		expect(screen.getByRole("heading", { name: "Tone" })).toBeTruthy();
 	});
 
-	it("새 문구는 키·이름·내용을 적어 저장하고, 저장한 문구를 연 채 둔다", async () => {
+	it("a new text is saved with key, name and content, and stays open afterwards", async () => {
 		renderManager();
 		await screen.findByText(t("empty.title"));
 		fireEvent.click(screen.getByRole("button", { name: t("action.add") }));
@@ -148,7 +148,7 @@ describe("AI 화면 공통 문구 탭", () => {
 		expect(screen.getByText("{{shared.reader}}", { selector: "code" })).toBeTruthy();
 	});
 
-	it("더한 문구는 삭제를 묻고, 막히면 칸 안에 이유를 보인다", async () => {
+	it("an added text asks before deletion, and shows the reason in the field when blocked", async () => {
 		renderManager();
 		fireEvent.click(await screen.findByRole("button", { name: /Tone/ }));
 		expect(screen.queryByRole("button", { name: t("action.resetDefault") })).toBeNull();
@@ -161,7 +161,7 @@ describe("AI 화면 공통 문구 탭", () => {
 		expect(calls("DELETE")[0]?.[0]).toBe("/api/cms/v1/ai/shared?key=tone&expectedVersion=2");
 	});
 
-	it("문구가 없으면 목록 자리에 한 줄로 알린다", async () => {
+	it("shows a one-line notice in the list when there are no texts", async () => {
 		view = { version: 0, items: [] };
 		renderManager();
 		expect(await screen.findByText(t("list.empty"))).toBeTruthy();

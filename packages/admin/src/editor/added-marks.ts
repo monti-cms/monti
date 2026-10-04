@@ -3,22 +3,22 @@ import type { CmsJsonValue } from "@monti-cms/core/mdx";
 import { Mark, mergeAttributes } from "@tiptap/core";
 
 /**
- * 더한 글자 꾸밈(블록 확장·사이트 설정의 `syntax.kind: "text"` 블록)의 편집기 표시. 본체 편집기는 꾸밈 이름을 모르고, 블록 정의에서
- * Tiptap 마크를 만든다. 모양(클래스·스타일)과 도구(서식 도구·버블·슬래시 메뉴)는 확장이 `CmsAdminComponentsProvider`의
- * `marks`(블록 이름 → `EditorMarkExtension`)로 준다.
+ * Editor display of added text styles (blocks from extensions or a site config's `syntax.kind: "text"` blocks). The core editor does not know style names and builds
+ * Tiptap marks from block definitions. The look (classes, styles) and tools (formatting tools, bubble, slash menu) are provided by extensions through `CmsAdminComponentsProvider`'s
+ * `marks` (block name → `EditorMarkExtension`).
  *
- * - 마크 이름은 `cms` + 파스칼 블록 이름이다(`tooltip` → `cmsTooltip`, `code-ref` → `cmsCodeRef`).
- * - 속성은 정의의 속성이다. 저장 문서(CmsNode)의 mark 이름은 블록 이름이고 속성은 같다.
- * - HTML로는 `span[data-cms-mark="블록 이름"]`과 속성마다 `data-mark-<속성>`으로 그린다(붙여넣기도 이 모양을 읽는다).
+ * - A mark name is `cms` + the Pascal-case block name (`tooltip` → `cmsTooltip`, `code-ref` → `cmsCodeRef`).
+ * - Attributes are the definition's attributes. In the stored document (CmsNode), the mark name is the block name and the attributes are the same.
+ * - In HTML it is drawn as `span[data-cms-mark="block name"]` with `data-mark-<attribute>` for each attribute (paste reads this shape too).
  */
 
 export type MarkAttrs = Readonly<Record<string, unknown>>;
 
-/** 확장이 바꾸는 마크 모양. */
+/** Mark look that an extension changes. */
 export interface EditorMarkSpec {
-	/** 꾸밈 끝에 이어 친 글자도 꾸밈을 이어받는가. 없으면 이어받지 않는다. */
+	/** Whether text typed right after the style also inherits it. If absent, it does not. */
 	readonly inclusive?: boolean;
-	/** `span`에 더할 HTML 속성(`class`·`style`·`data-*`). 속성 값(`attrs`)을 받아 만든다. */
+	/** HTML attributes to add to the `span` (`class`, `style`, `data-*`). Built from the attribute values (`attrs`). */
 	readonly render?: (attrs: MarkAttrs) => Record<string, string>;
 }
 
@@ -26,25 +26,25 @@ const pascal = (name: string) =>
 	name.replace(/(^|-)([a-z0-9])/g, (_, _dash: string, char: string) => char.toUpperCase());
 const kebab = (name: string) => name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
 
-/** 더한 글자 꾸밈의 편집기 마크 이름(`cms` + 파스칼 블록 이름). */
+/** Editor mark name of an added text style (`cms` + Pascal-case block name). */
 export const addedMarkName = (blockName: string) => `cms${pascal(blockName)}`;
 
-/** 속성 하나의 HTML 속성 이름. */
+/** HTML attribute name for one attribute. */
 const dataAttribute = (name: string) => `data-mark-${kebab(name)}`;
 
-/** 더한 글자 꾸밈(블록 이름 → 정의). */
+/** Added text styles (block name → definition). */
 export const ADDED_MARKS: ReadonlyMap<string, BlockDefinition> = new Map(
 	ADDED_MARK_BLOCKS.map((block) => [block.name, block]),
 );
 
-/** 편집기 마크 이름 → 더한 글자 꾸밈 정의. */
+/** Editor mark name → added text style definition. */
 export const ADDED_MARK_BY_EDITOR_NAME: ReadonlyMap<string, BlockDefinition> = new Map(
 	ADDED_MARK_BLOCKS.map((block) => [addedMarkName(block.name), block]),
 );
 
 /**
- * 정의의 속성만 남긴 꾸밈 속성. 문자열은 값이 있을 때, 꼭 있어야 하는 속성(`required`)은 비어도(`""`) 남긴다. 불리언은 참일 때만.
- * 저장 문서(CmsNode) ↔ 편집기 마크 양쪽에 쓴다(직렬화가 같은 규칙으로 쓰므로 왕복해도 글자가 같다).
+ * Style attributes keeping only the definition's attributes. Strings are kept when they have a value, required attributes (`required`) are kept even when empty (`""`). Booleans only when true.
+ * Used in both directions, stored document (CmsNode) ↔ editor mark (serialization uses the same rule, so a round trip keeps the text the same).
  */
 export function markAttrsOf(block: BlockDefinition, attrs: MarkAttrs | null | undefined): Record<string, CmsJsonValue> {
 	const out: Record<string, CmsJsonValue> = {};
@@ -60,11 +60,11 @@ export function markAttrsOf(block: BlockDefinition, attrs: MarkAttrs | null | un
 	return out;
 }
 
-/** 줄 이름표를 가리키는 속성(`codeAnchor`). */
+/** Attribute pointing to a line label (`codeAnchor`). */
 const anchorAttribute = (block: BlockDefinition) =>
 	Object.entries(block.attributes).find(([, attribute]) => attribute.codeAnchor)?.[0];
 
-/** 더한 글자 꾸밈 하나의 Tiptap 마크. */
+/** Tiptap mark for one added text style. */
 export function createAddedMark(block: BlockDefinition, spec: EditorMarkSpec = {}) {
 	const attributes = Object.entries(block.attributes);
 	const anchor = anchorAttribute(block);
@@ -81,7 +81,7 @@ export function createAddedMark(block: BlockDefinition, spec: EditorMarkSpec = {
 							const value = element.getAttribute(dataAttribute(name));
 							return attribute.type === "boolean" ? value !== null || null : value;
 						},
-						// 속성마다 따로 그리지 않고 아래 `renderHTML`에서 한꺼번에 그린다.
+						// Not drawn per attribute; all are drawn at once in `renderHTML` below.
 						renderHTML: () => ({}),
 					},
 				]),
@@ -104,7 +104,7 @@ export function createAddedMark(block: BlockDefinition, spec: EditorMarkSpec = {
 				mergeAttributes(
 					HTMLAttributes,
 					{ "data-cms-mark": block.name, ...data },
-					// 코드 줄 이름표를 가리키면 편집기 코드 블록이 마우스를 올린 줄을 강조한다(`data-code-ref`).
+					// When pointing at a code line label, the editor code block highlights the line the mouse is over (`data-code-ref`).
 					typeof anchorValue === "string" && anchorValue ? { "data-code-ref": anchorValue } : {},
 					spec.render?.(attrs) ?? {},
 				),
@@ -114,7 +114,7 @@ export function createAddedMark(block: BlockDefinition, spec: EditorMarkSpec = {
 	});
 }
 
-/** 본문 글자와 코드 줄을 잇는 꾸밈(속성에 `codeAnchor`가 있는 블록). 없으면 코드 블록의 잇기 도구가 숨는다. */
+/** A style linking body text and a code line (blocks with `codeAnchor` in their attributes). If none, the code block's link tool is hidden. */
 export const CODE_ANCHOR_REF: { readonly mark: string; readonly attribute: string } | null = (() => {
 	for (const block of ADDED_MARK_BLOCKS) {
 		const attribute = anchorAttribute(block);

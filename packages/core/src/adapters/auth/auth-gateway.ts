@@ -16,7 +16,7 @@ export class AuthError extends Error {
 	}
 }
 
-/** GitHub 숫자 ID가 관리자 목록에 있는가. 앞의 0은 무시하고, 숫자가 아닌 값은 거부한다. */
+/** Whether a GitHub numeric ID is in the admin list. Ignores leading zeros and rejects non-numeric values. */
 export function isAllowedAdminId(
 	githubId: string | undefined | null,
 	adminIds: readonly (string | undefined)[],
@@ -31,8 +31,8 @@ export function isAllowedAdminId(
 }
 
 /**
- * 로컬 개발환경 한정 인증 우회 여부. 설정이 켜도 `NODE_ENV=development`일 때만 true다.
- * production 에서는 켜져 있어도 무시한다(fail-closed).
+ * Whether the auth bypass, local development only, is on. Even if enabled in config, it is true only when `NODE_ENV=development`.
+ * Ignored in production even if switched on (fail-closed).
  */
 export function isDevAuthBypassEnabled(enabled: boolean | undefined): boolean {
 	return enabled === true && process.env.NODE_ENV === "development";
@@ -40,7 +40,7 @@ export function isDevAuthBypassEnabled(enabled: boolean | undefined): boolean {
 
 let devBypassWarned = false;
 
-/** 관리자 API·화면의 인증(§10.2). 로그인 방식은 서버 설정의 `auth`가 정한다. */
+/** Authentication for the admin API and UI. The login method is set by `auth` in the server config. */
 export class CmsAuthGateway implements AuthGateway {
 	constructor(private readonly getAuth: () => CmsAuth) {}
 

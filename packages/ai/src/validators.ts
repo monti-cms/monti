@@ -6,16 +6,16 @@ import { validatorMessages } from "./validators.messages";
 const t = lazyTranslator(validatorMessages);
 
 /**
- * 기본 기능이 쓰는 코드 검사. 사이트 기능에도 그대로 넣을 수 있다.
+ * Code checks used by the default actions. They can also be put in site actions as they are.
  *
  * ```ts
  * aiAction({ ..., checks: [{ kind: "pattern", pattern: "^[a-z-]+$" }, uniqueSlug] })
  * ```
  *
- * 사이트 설정이 이 파일을 불러오므로, 사이트 설정을 읽는 본체 모듈(코드 블록·MDX 읽기)은 검사를 실행할 때 불러온다.
+ * The site config imports this file, so core modules that read the site config (code blocks, MDX reading) are loaded when a check runs.
  */
 
-/** 같은 컬렉션·언어의 다른 항목이 이미 쓰는 주소(slug)는 뺀다. 컬렉션을 모르는 실행이면 보지 않는다. */
+/** Drops addresses (slugs) already used by other items of the same collection and language. Not checked if the run does not know the collection. */
 export const uniqueSlug = defineValidator({
 	name: "unique-slug",
 	get label() {
@@ -34,15 +34,15 @@ export const uniqueSlug = defineValidator({
 	},
 });
 
-/** `regexRuns`가 정규식을 돌려 볼 코드 규칙의 모양. 없으면 문서 전체(`document`)의 접기(`fold`) 규칙이다. */
+/** The shape of the code rule that `regexRuns` runs the regex against. If absent, it is the fold rule of the whole document (`document`). */
 export interface RegexRunsRule {
 	readonly name?: CodeRule["name"];
 	readonly scope?: CodeRule["scope"];
 }
 
 /**
- * 올바른 정규식이고 코드 입력(`input`, 없으면 `code`)에서 한 곳 이상 찾는 것만. 찾은 곳 수를 후보 옆에 붙인다.
- * `rule`은 찾을 때 쓸 코드 규칙의 이름·범위다.
+ * Only keeps candidates that are a valid regex and match at least once in the code input (`input`, or `code` if absent). Attaches the number of matches next to the candidate.
+ * `rule` is the name and scope of the code rule used for matching.
  */
 export const regexRuns = (input = "code", rule: RegexRunsRule = {}) =>
 	defineValidator({
@@ -69,7 +69,7 @@ export const regexRuns = (input = "code", rule: RegexRunsRule = {}) =>
 		},
 	});
 
-/** MDX 결과가 원문 입력(`input`)과 같은 뼈대(요소·링크·코드·속성)인 것만. 번역에 쓴다. */
+/** Only keeps MDX results with the same skeleton (elements, links, code, attributes) as the source input (`input`). Used for translation. */
 export const sameStructure = (input: string) =>
 	defineValidator({
 		name: "same-structure",

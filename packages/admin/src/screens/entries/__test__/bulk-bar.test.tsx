@@ -37,7 +37,7 @@ function stubBulkApi(results: unknown[] = [{ id: "entry-1", ok: true, version: 4
 
 const choose = chooseSelectOption;
 
-/** 일괄 작업은 모두 묻는다. 확인창의 질문을 확인하고 확인을 누른다. */
+/** Bulk actions always ask. Checks the confirm dialog's question and presses confirm. */
 async function confirmIn(label: string, question: string) {
 	const dialog = await screen.findByRole("alertdialog", { name: label });
 	expect(within(dialog).getByText(question)).toBeTruthy();
@@ -45,13 +45,13 @@ async function confirmIn(label: string, question: string) {
 	await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 }
 
-describe("bulk actions (§3.4)", () => {
+describe("bulk actions", () => {
 	it("sends tag, category clear and root folder payloads", async () => {
 		const payloads = stubBulkApi();
 		render(
 			<BulkBar collection="post" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
 		);
-		// 태그 목록을 불러온 뒤 작은 태그 버튼을 열어 체크 목록에서 고른다.
+		// After loading the tag list, opens the small tag button and picks from the checklist.
 		await waitFor(() =>
 			expect(
 				(fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.some(([url]) =>
@@ -152,7 +152,7 @@ describe("bulk actions (§3.4)", () => {
 		expect(labels).toEqual(["폴더로 이동", "휴지통으로 이동"]);
 	});
 
-	it("permanently deletes in bulk on the trash screen and names what still uses a blocked item (v2 A3)", async () => {
+	it("permanently deletes in bulk on the trash screen and names what still uses a blocked item", async () => {
 		const payloads = stubBulkApi([
 			{
 				id: "entry-1",

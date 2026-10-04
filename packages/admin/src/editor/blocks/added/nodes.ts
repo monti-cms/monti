@@ -12,7 +12,7 @@ const parseJson = (value: string | null, fallback: unknown) => {
 	}
 };
 
-/** 자식 블록 규칙에서 만든 노드 내용 식(예: `cmsTab{2,8}`). */
+/** Node content expression built from the child block rules (e.g. `cmsTab{2,8}`). */
 const childContent = (block: BlockDefinition, all: readonly BlockDefinition[]) => {
 	const names = childBlocksOf(block, all).map(blockNodeName);
 	if (names.length === 0) return "block+";
@@ -22,7 +22,7 @@ const childContent = (block: BlockDefinition, all: readonly BlockDefinition[]) =
 	return `${choice}{${min},${max ?? ""}}`;
 };
 
-/** 코드 펜스 블록 노드. 코드는 `value`, 펜스 언어와 메타는 그대로 보존한다. */
+/** Code fence block node. The code is `value`; the fence language and meta are preserved as is. */
 function createFenceNode(block: BlockDefinition & { syntax: { kind: "fence"; lang: string } }): Node {
 	return Node.create({
 		name: blockNodeName(block),
@@ -46,19 +46,19 @@ function createFenceNode(block: BlockDefinition & { syntax: { kind: "fence"; lan
 }
 
 /**
- * 더한 블록 하나의 Tiptap 노드. 컨테이너는 본문(또는 정해진 자식 블록)을 담고, 한 줄 블록과 코드 펜스 블록은 통째로
- * 고르는 노드다. 편집 화면은 `AddedBlockNodeView`가 고른다.
+ * Tiptap node for a single added block. A container holds body content (or fixed child blocks); single-line blocks and code fence blocks are selected
+ * as a whole. The edit view is chosen by `AddedBlockNodeView`.
  */
 export function createAddedBlockNode(block: BlockDefinition, all: readonly BlockDefinition[]): Node {
 	if (isFence(block)) return createFenceNode(block as BlockDefinition & { syntax: { kind: "fence"; lang: string } });
 	const content = isContainer(block) ? childContent(block, all) : undefined;
 	return Node.create({
 		name: blockNodeName(block),
-		// 부모 전용 블록은 부모 안에만 둔다.
+		// Parent-only blocks are placed only inside their parent.
 		...(block.parent ? {} : { group: "block" }),
 		...(content ? { content, isolating: true } : { atom: true }),
 		selectable: true,
-		// 핸들 오버레이가 끈다. 본문 선택과 경쟁하지 않는다.
+		// Dragged via the handle overlay. It does not compete with body selection.
 		draggable: false,
 		addAttributes() {
 			return {
@@ -90,7 +90,7 @@ export function createAddedBlockNode(block: BlockDefinition, all: readonly Block
 	});
 }
 
-/** 더한 블록 노드 전부. */
+/** All added block nodes. */
 export const ADDED_BLOCK_NODES: readonly Node[] = ADDED_NODE_BLOCKS.map((block) =>
 	createAddedBlockNode(block, ADDED_NODE_BLOCKS),
 );

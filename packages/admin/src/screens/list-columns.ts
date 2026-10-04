@@ -15,8 +15,8 @@ import { screensMessages } from "./messages";
 const t = createTranslator(screensMessages);
 
 /**
- * 관리자 목록 컬럼. 콘텐츠 자체의 값(시스템 컬럼)과 분류 필드(분류용 컬렉션을 가리키는 관계 필드, 예: 태그·카테고리)다.
- * 사용자 컬럼 설정(순서·표시·너비)에 이 이름으로 저장한다. 분류 필드 컬럼의 이름은 필드 이름이다.
+ * Admin list columns: the content's own values (system columns) and taxonomy fields (relation fields pointing to a taxonomy collection, e.g. tags or categories).
+ * Saved under these names in the user's column settings (order, visibility, width). A taxonomy field column is named after the field.
  */
 export const SYSTEM_COLUMNS = [
 	"title",
@@ -34,7 +34,7 @@ export type AdminListColumn = string;
 type DateFromKey = "createdFrom" | "updatedFrom" | "publishedFrom";
 type DateToKey = "createdTo" | "updatedTo" | "publishedTo";
 
-/** 컬럼 헤더 팝업이 보여 줄 필터 종류(v2 A1). `relation`은 분류 필드(값은 분류 항목 ID)다. */
+/** Filter kinds the column header popup shows. `relation` is a taxonomy field (values are taxonomy item IDs). */
 export type ColumnFilter =
 	| { kind: "text"; key: "titleContains" | "slugContains"; placeholder: string }
 	| { kind: "status" }
@@ -47,11 +47,11 @@ export interface ColumnConfig {
 	label: string;
 	sortField?: ListSortField;
 	filter: ColumnFilter;
-	/** 여러 개 관계(태그 등)의 컬럼. 칩으로 그리고 폭이 모자라면 먼저 숨긴다. */
+	/** Column for a many-relation (tags etc.). Drawn as chips and hidden first when width runs short. */
 	many?: boolean;
 }
 
-/** 시스템 컬럼의 라벨·정렬·필터. */
+/** Label, sort and filter of a system column. */
 const SYSTEM_CONFIG: Record<SystemColumn, ColumnConfig> = {
 	title: {
 		label: t("column.title"),
@@ -80,15 +80,15 @@ const SYSTEM_CONFIG: Record<SystemColumn, ColumnConfig> = {
 		sortField: "slug",
 		filter: { kind: "text", key: "slugContains", placeholder: t("column.slugPlaceholder") },
 	},
-	// 폴더는 사이드바 탐색으로 거른다.
+	// Folders are filtered through sidebar navigation.
 	folder: { label: t("column.folder"), filter: { kind: "none" } },
 };
 
 const isSystemColumn = (column: string): column is SystemColumn => Object.hasOwn(SYSTEM_CONFIG, column);
 
 /**
- * 필드 컬럼의 필드: 시스템 컬럼이 아닌 이름의 저장 필드(글자·선택·미디어·관계). 분류 필드도 여기에 든다.
- * 없는 이름이거나 저장하지 않는 필드면 `undefined`.
+ * Field of a field column: a stored field whose name is not a system column (text, select, media, relation). Taxonomy fields are included.
+ * `undefined` if the name does not exist or the field is not stored.
  */
 export function fieldColumnOf(collection: string, column: AdminListColumn): StoredField | undefined {
 	if (isSystemColumn(column) || !isCollection(collection)) return undefined;
@@ -96,8 +96,8 @@ export function fieldColumnOf(collection: string, column: AdminListColumn): Stor
 }
 
 /**
- * 컬럼 하나의 라벨·정렬·필터. 분류 필드는 필드 이름표가 라벨이고 필드가 가리키는 컬렉션 항목으로 거른다.
- * 그 밖의 필드 컬럼도 이름표가 라벨이고 거르지 않는다.
+ * Label, sort and filter of one column. A taxonomy field's label is the field label, and it filters by the items of the collection the field points to.
+ * Other field columns also use the field label as the label and are not filterable.
  */
 export function columnConfig(collection: string, column: AdminListColumn): ColumnConfig {
 	if (isSystemColumn(column)) return SYSTEM_CONFIG[column];
@@ -121,8 +121,8 @@ export function columnConfig(collection: string, column: AdminListColumn): Colum
 export const columnLabel = (collection: string, column: AdminListColumn) => columnConfig(collection, column).label;
 
 /**
- * 목록 설정(`list.columns`)이 없을 때의 기본 컬럼. 문서 컬렉션은 제목·상태·언어·분류 필드·수정일·발행일, 항목 컬렉션은
- * 제목·주소·언어·상태·수정일이다. 언어 컬럼은 언어가 둘 이상일 때만, 주소 컬럼은 주소 필드가 있을 때만 둔다.
+ * Default columns when there is no list setting (`list.columns`). Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
+ * title, slug, locale, status, updated date. The locale column appears only with two or more locales, the slug column only when there is a slug field.
  */
 export function defaultListColumns(collection: string): AdminListColumn[] {
 	if (!isCollection(collection)) return ["title", "status"];
@@ -137,25 +137,25 @@ export function defaultListColumns(collection: string): AdminListColumn[] {
 }
 
 /**
- * 컬렉션에서 쓸 수 있는 컬럼과 기본 표시(§3.2). 컬렉션 정의(v2 B1)의 필드와 `list.columns`(없으면 기본 컬럼)에서 만든다.
- * 시스템 컬럼과 분류 필드 말고 `list.columns`에 적은 필드(글자·선택·관계 등)도 컬럼으로 쓸 수 있다.
+ * Columns available in a collection and their default visibility. Built from the fields of the collection definition and `list.columns` (default columns if absent).
+ * Besides system columns and taxonomy fields, fields listed in `list.columns` (text, select, relation, etc.) can also be columns.
  */
 export function columnsFor(collection: string): { available: AdminListColumn[]; defaults: AdminListColumn[] } {
 	if (!isCollection(collection)) return { available: [...SYSTEM_COLUMNS], defaults: ["title", "status"] };
 	const schema = schemaOf(collection);
-	// 주소 열은 이름과 상관없이 주소 필드(`fields.slug`)가 있으면 쓴다. 제목(`title`)은 모든 컬렉션에 있다.
+	// The slug column is used whenever there is a slug field (`fields.slug`), whatever its name. `title` exists in every collection.
 	const slugField = Object.entries(schema.fields).find(([, field]) => field.kind === "slug")?.[0];
 	const system = SYSTEM_COLUMNS.filter((column) => {
-		// 항목 컬렉션은 발행 없이 저장이 곧 공개다. 언어 열은 이름이 있는 언어를 보인다(v2 B4).
+		// Item collections have no publishing: saving is publishing. The locale column shows locales that have a name.
 		if (column === "publishedAt") return schema.kind === "document";
 		if (column === "slug") return slugField !== undefined;
 		return true;
 	});
 	const taxonomy = taxonomyFieldsOf(collection).map((stored) => stored.name);
-	// 목록 설정에 적은 그 밖의 필드(`defineConfig`가 저장 필드인지 확인했다).
+	// Other fields listed in the list setting (`defineConfig` verified they are stored fields).
 	const listed = [...new Set(schema.list?.columns ?? [])];
 	const fieldColumns = listed.filter((column) => !taxonomy.includes(column) && fieldColumnOf(collection, column));
-	// 분류 필드 컬럼은 언어 컬럼 뒤에 두고, 그 밖의 필드 컬럼이 그 뒤를 잇는다.
+	// Taxonomy field columns go after the locale column, and other field columns follow.
 	const at = system.indexOf("locale") + 1;
 	const available = [...system.slice(0, at), ...taxonomy, ...fieldColumns, ...system.slice(at)];
 	const defaults = (schema.list?.columns ?? defaultListColumns(collection))
@@ -164,7 +164,7 @@ export function columnsFor(collection: string): { available: AdminListColumn[]; 
 	return { available, defaults };
 }
 
-/** 키가 컬럼 이름인 저장 값(표시·너비)에서 지금 쓸 수 있는 컬럼만 남긴다. */
+/** From the stored values keyed by column name (visibility, width), keeps only the columns usable now. */
 export function knownColumnRecord<T>(
 	record: Readonly<Record<string, T>> | undefined,
 	available: readonly AdminListColumn[],
@@ -174,18 +174,18 @@ export function knownColumnRecord<T>(
 }
 
 /**
- * 이 컬렉션에서 실제로 쓸 수 있는 필터. 항목 컬렉션은 활성/휴지통뿐이고,
- * 휴지통 화면은 모든 항목이 휴지통 상태라 상태 필터가 없다.
+ * Filters actually usable in this collection. Item collections have only active/trash,
+ * and the trash screen has no status filter since every item is in trash.
  */
 export function filterFor(collection: string, column: AdminListColumn, mode: "list" | "trash" = "list"): ColumnFilter {
 	const filter = columnConfig(collection, column).filter;
 	if (filter.kind === "status" && (isItemCollection(collection) || mode === "trash")) return { kind: "none" };
-	// 분류 항목의 언어 열은 이름이 있는 언어를 보일 뿐이라 언어로 거르지 않는다.
+	// A taxonomy item's locale column only shows locales that have a name, so it does not filter by locale.
 	if (filter.kind === "locale" && isItemCollection(collection)) return { kind: "none" };
 	return filter;
 }
 
-/** 이 컬럼에 필터가 걸려 있는지. 숨긴 컬럼이어도 칩으로 계속 보인다. */
+/** Whether a filter is applied to this column. Shown as a chip even if the column is hidden. */
 export function isColumnFiltered(state: ListState, filter: ColumnFilter): boolean {
 	switch (filter.kind) {
 		case "text":

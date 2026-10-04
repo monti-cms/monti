@@ -1,12 +1,12 @@
 /**
- * 에디터 코드 블록의 효과 모델.
+ * Effect model of the editor code block.
  *
- * - 글자 효과(굵게·기울임·취소선·밑줄·툴팁·글자 접기)는 코드 텍스트의 ProseMirror 마크다. 편집하면 마크가 글자를 따라간다.
- * - 줄 효과(정의 목록의 효과와 줄 접기·본문 연결 이름표)는 노드 속성 `lineEffects`의 줄 범위다. 정의는 `line-effects.ts`.
- * - 정규식 규칙(`{re:/.../}`)은 노드 속성 `rules`다. 찾은 위치가 아니라 규칙 그대로 저장한다.
+ * - Text effects (bold, italic, strikethrough, underline, tooltip, text folding) are ProseMirror marks on the code text. When edited, marks follow the text.
+ * - Line effects (effects in the definition list plus line folding and the body-link label) are line ranges in the node attribute `lineEffects`. Definitions are in `line-effects.ts`.
+ * - Regex rules (`{re:/.../}`) are the node attribute `rules`. Stored as the rule itself, not as the found positions.
  *
- * 저장 형식은 코드 펜스 주석 문법(이 폴더)이고, 에디터 변환은 관리자 패키지의 `editor/converters/code-block.ts`다.
- * 이 파일은 사이트 설정을 읽지 않는다. 사이트의 줄 효과 목록은 `active.ts`다.
+ * The storage format is the code fence comment syntax (this folder), and the editor conversion is `editor/converters/code-block.ts` in the admin package.
+ * This file does not read the site config. The site's line effect list is in `active.ts`.
  */
 
 import { createActiveTranslator } from "../../i18n/active";
@@ -14,7 +14,7 @@ import { codeBlockMessages } from "./messages";
 
 const t = createActiveTranslator(codeBlockMessages);
 
-/** 글자 효과: 주석 이름 ↔ 에디터 마크. */
+/** Text effects: comment name ↔ editor mark. */
 export const CODE_CHAR_EFFECTS = [
 	{
 		name: "strong",
@@ -62,30 +62,30 @@ export const CODE_CHAR_EFFECTS = [
 
 export type CodeCharEffectName = (typeof CODE_CHAR_EFFECTS)[number]["name"];
 
-/** 코드 블록 안에 둘 수 있는 마크. */
+/** Marks allowed inside a code block. */
 export const CODE_BLOCK_MARKS = CODE_CHAR_EFFECTS.map((effect) => effect.mark).join(" ");
 
 export const charEffectByName = (name: string) => CODE_CHAR_EFFECTS.find((effect) => effect.name === name);
 export const charEffectByMark = (mark: string) => CODE_CHAR_EFFECTS.find((effect) => effect.mark === mark);
 
-/** 줄 효과 이름. 정의 목록(`CODE_LINE_EFFECTS`, 한 줄씩 켜고 끈다)의 이름과 `collapse`·`anchor`다. */
+/** Line effect names. The names in the definition list (`CODE_LINE_EFFECTS`, toggled one line at a time), plus `collapse` and `anchor`. */
 export type CodeLineEffectName = string;
 
 export const COLLAPSE = "collapse";
-/** 본문 `:code-ref`가 가리키는 줄 이름표(`attrs.id`). 줄 효과처럼 글자를 따라 옮겨진다. */
+/** Line label that the body's `:code-ref` points to (`attrs.id`). Moves along with the text, like line effects. */
 export const ANCHOR = "anchor";
 
-/** 줄 효과 하나. `start`~`end`는 줄 번호(0부터, `end`는 포함하지 않는다). */
+/** One line effect. `start`~`end` are line numbers (0-based, `end` exclusive). */
 export interface CodeLineEffect {
 	id: string;
 	name: CodeLineEffectName;
 	start: number;
 	end: number;
-	/** 알려진 속성(`open`)과 알 수 없는 속성을 그대로 들고 다닌다. */
+	/** Carries known attributes (`open`) and unknown attributes through unchanged. */
 	attrs: Record<string, unknown>;
 }
 
-/** 정규식 규칙 하나. `char`는 `line` 번째 줄에서만, `document`는 코드 전체에서 찾는다. */
+/** One regex rule. `char` finds only on line `line`; `document` finds across the whole code. */
 export interface CodeRule {
 	id: string;
 	scope: "char" | "document";
@@ -96,7 +96,7 @@ export interface CodeRule {
 	attrs: Record<string, unknown>;
 }
 
-/** 코드 텍스트 위의 글자 효과 범위(마크를 주석 이름으로 옮긴 것). */
+/** Range of a text effect over the code text (marks converted to comment names). */
 export interface CodeSpan {
 	name: CodeCharEffectName;
 	from: number;
@@ -107,14 +107,14 @@ export interface CodeSpan {
 let idSeed = 0;
 export const newEffectId = () => `e${Date.now().toString(36)}${(idSeed++).toString(36)}`;
 
-/** 줄마다 시작 위치. 마지막 원소 다음 줄은 없다. */
+/** Start offset of each line. There is no line after the last element. */
 export function lineStarts(text: string): number[] {
 	const starts = [0];
 	for (let index = text.indexOf("\n"); index !== -1; index = text.indexOf("\n", index + 1)) starts.push(index + 1);
 	return starts;
 }
 
-/** `offset`이 들어 있는 줄 번호. */
+/** Line number containing `offset`. */
 export function lineAt(starts: readonly number[], offset: number): number {
 	let low = 0;
 	let high = starts.length - 1;
@@ -126,7 +126,7 @@ export function lineAt(starts: readonly number[], offset: number): number {
 	return low;
 }
 
-/** `line` 번째 줄의 [시작, 끝) — 끝은 줄바꿈 앞이다. */
+/** [start, end) of line `line` — end is before the line break. */
 export function lineRange(text: string, starts: readonly number[], line: number): { from: number; to: number } {
 	const from = starts[line] ?? text.length;
 	const next = starts[line + 1];
@@ -135,7 +135,7 @@ export function lineRange(text: string, starts: readonly number[], line: number)
 
 const MAX_RULE_MATCHES = 500;
 
-/** 정규식이 올바른지. 틀리면 이유를 돌려준다. */
+/** Whether the regex is valid. Returns the reason if not. */
 export function checkPattern(pattern: string, flags: string): string | null {
 	if (!pattern) return t("pattern.empty");
 	if (/[\n\r]/.test(pattern)) return t("pattern.newline");
@@ -148,7 +148,7 @@ export function checkPattern(pattern: string, flags: string): string | null {
 	}
 }
 
-/** 규칙이 찾은 범위(코드 텍스트 기준 위치). 공개 화면과 같게 찾는다(빈 일치는 건너뛴다). */
+/** The range a rule found (positions in code text). Found the same way as the public view (empty matches are skipped). */
 export function ruleMatches(
 	rule: CodeRule,
 	text: string,
@@ -174,12 +174,12 @@ export function ruleMatches(
 	return matches;
 }
 
-/** 선택한 글자를 그대로 찾는 정규식. */
+/** A regex that matches the selected text literally. */
 export const escapePattern = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
 /**
- * 한 가지 줄 효과(`name`)를 `start`~`end` 줄에 켜거나 끈다. 같은 효과의 범위는 합치고, 끄면 잘라 낸다.
- * 줄 접기는 `addCollapse`로 다룬다.
+ * Turns one line effect (`name`) on or off for lines `start`~`end`. Ranges of the same effect merge, and turning off cuts them out.
+ * Line folding is handled by `addCollapse`.
  */
 export function setLineEffect(
 	effects: readonly CodeLineEffect[],
@@ -213,7 +213,7 @@ export function setLineEffect(
 	return [...others, ...ranges].sort((a, b) => a.start - b.start || a.end - b.end);
 }
 
-/** 모든 줄이 이 효과를 가졌는지. */
+/** Whether every line has this effect. */
 export function hasLineEffect(effects: readonly CodeLineEffect[], name: string, start: number, end: number): boolean {
 	for (let line = start; line < end; line += 1)
 		if (!effects.some((effect) => effect.name === name && effect.start <= line && line < effect.end)) return false;
@@ -221,8 +221,8 @@ export function hasLineEffect(effects: readonly CodeLineEffect[], name: string, 
 }
 
 /**
- * 줄 접기를 더할 수 있는지. 접기끼리는 겹치면 안 된다(완전히 안에 들어가거나 따로 떨어져야 한다).
- * 공개 화면이 접기를 `<details>`로 감싸기 때문이다.
+ * Whether a line fold can be added. Folds must not overlap each other (one must be fully inside the other, or they must be separate).
+ * This is because the public view wraps folds in `<details>`.
  */
 export function canAddCollapse(effects: readonly CodeLineEffect[], start: number, end: number): string | null {
 	if (end - start < 2) return t("fold.minLines");
@@ -237,14 +237,14 @@ export function canAddCollapse(effects: readonly CodeLineEffect[], start: number
 	return null;
 }
 
-/** 줄 수가 바뀐 뒤에도 범위가 코드 안에 있게 자른다. 빈 범위는 뺀다. */
+/** Clips ranges to stay within the code after the line count changes. Drops empty ranges. */
 export function clampLineEffects(effects: readonly CodeLineEffect[], lineCount: number): CodeLineEffect[] {
 	return effects
 		.map((effect) => ({ ...effect, start: Math.max(0, effect.start), end: Math.min(lineCount, effect.end) }))
 		.filter((effect) => effect.end > effect.start);
 }
 
-/** 저장 결과를 좌우하는 모델 내용(아이디 제외). 불러온 뒤 바뀌지 않았으면 원문을 그대로 저장하는 데 쓴다. */
+/** Model content that determines the saved result (excluding IDs). Used to save the source as is if nothing changed after loading. */
 export function modelFingerprint(model: {
 	language: string | null;
 	text: string;
@@ -258,7 +258,7 @@ export function modelFingerprint(model: {
 		[...model.spans]
 			.sort((a, b) => a.from - b.from || a.to - b.to || a.name.localeCompare(b.name))
 			.map((span) => [span.name, span.from, span.to, normalizeAttrs(span.attrs)]),
-		// 줄 효과는 순서와 상관없이 같은 효과면 같다(메뉴에서 켰다 끄면 순서만 바뀔 수 있다).
+		// Line effects are equal if they are the same effect regardless of order (toggling in the menu on and off may change only the order).
 		model.lineEffects
 			.map((effect) => [effect.name, effect.start, effect.end, normalizeAttrs(effect.attrs)] as const)
 			.sort((a, b) => a[1] - b[1] || a[2] - b[2] || a[0].localeCompare(b[0])),
@@ -273,7 +273,7 @@ export function modelFingerprint(model: {
 	]);
 }
 
-/** 거짓·빈 값 속성은 저장하지 않으므로(주석 문법) 비교에서도 뺀다. */
+/** Falsy and empty-valued attributes are not stored (comment syntax), so they are excluded from comparison too. */
 const normalizeAttrs = (attrs: Record<string, unknown>) =>
 	Object.entries(attrs)
 		.filter(([, value]) => value !== false && value !== null && value !== undefined)

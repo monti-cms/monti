@@ -4,15 +4,15 @@ import { cn } from "@monti-cms/admin/kit";
 import { type RefObject, useEffect, useRef, useState } from "react";
 
 /**
- * Mermaid 블록의 기본 편집기 미리보기(선택 의존성 `mermaid`). Mermaid 블록 확장의 관리자 공급자가 `fencePreviews.mermaid`로
- * 미리보기를 열 때만 불러온다. 사이트는 같은 이름으로 자기 렌더러를 넣어 바꿀 수 있다.
- * 테마는 문서(`html`)의 `dark` 클래스를 따르고, 바뀌면 다시 그린다.
+ * Default editor preview of the Mermaid block (optional dependency `mermaid`). The Mermaid block extension's admin provider registers it as `fencePreviews.mermaid`,
+ * and it is loaded only when a preview is opened. A site can replace it by registering its own renderer under the same name.
+ * The theme follows the `dark` class on the document (`html`) and is redrawn when it changes.
  */
 
 const isDark = (element: Element | null) =>
 	Boolean(element?.closest(".dark")) || document.documentElement.classList.contains("dark");
 
-/** 문서의 어두운 테마 여부. `html`의 클래스가 바뀌면 다시 읽는다. */
+/** Whether the document uses the dark theme. Re-read when the class on `html` changes. */
 function useDarkTheme(ref: RefObject<HTMLElement | null>) {
 	const [dark, setDark] = useState(false);
 	useEffect(() => {

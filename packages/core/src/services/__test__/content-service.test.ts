@@ -20,11 +20,11 @@ import {
 } from "../index";
 
 /*
- * 컬렉션·필드 이름은 지금 설정에서 찾는다(M10-1). 블로그 예시 설정에서는 본문 컬렉션이 게시글(`post`),
- * 하나짜리 관계가 `categoryId`(→ category), 여러 개짜리 관계가 `tagIds`(→ tag), 두 번째 컬렉션이 메모(`memo`)다.
+ * Collection and field names are looked up from the current config. In the reference blog setup, the body collection is posts (`post`),
+ * the single-value relation is `categoryId` (→ category), the multi-value relation is `tagIds` (→ tag), and the second collection is memos (`memo`).
  */
 const content = contentCollection;
-/** 조건부 필드에 딸리지 않은 저장 필드. */
+/** Stored fields that are not dependent on a conditional field. */
 const topLevel = (collection: Collection): StoredField[] => storedFields(collection).filter(({ when }) => !when);
 const relationOf = (many: boolean) => {
 	for (const { name, field } of topLevel(content)) {
@@ -36,19 +36,19 @@ const relationOf = (many: boolean) => {
 };
 const single = relationOf(false);
 const many = relationOf(true);
-/** 두 번째 컬렉션(블로그: 메모). 본문이 있는 문서 컬렉션이 하나뿐이면 첫 항목 컬렉션. */
+/** The second collection (blog: memo). If there is only one document collection with a body, the first item collection. */
 const second = otherContentCollection ?? recordCollection;
-/** 본문 컬렉션의 하나짜리 관계 필드가 없는 다른 컬렉션(블로그: 메모). */
+/** Another collection that has no single-value relation field of the body collection (blog: memo). */
 const withoutSingle = [second, ...COLLECTIONS].find(
 	(name) => name !== content && !storedField(name, single.name),
 ) as Collection;
-/** 본문 컬렉션의 첫 선택 필드(블로그: 정책 `policy`). */
+/** The first select field of the body collection (blog: policy `policy`). */
 const selectField = topLevel(content).find(({ field }) => field.kind === "select");
-/** 글자 수 한도가 없는 텍스트 필드(블로그: 요약 `summary`). 메타데이터 크기 한도를 시험한다. */
+/** A text field with no character limit (blog: summary `summary`). Tests the metadata size limit. */
 const unboundedText = topLevel(content).find(
 	({ name, field }) => name !== "title" && field.kind === "text" && field.max === undefined,
 );
-/** 아직 공개되지 않은 글도 순서대로 담는 목록 관계(블로그: 모음집 `collection`의 `itemIds`). */
+/** A list relation that also holds not-yet-published posts in order (blog: collection `itemIds` of `collection`). */
 const orderedList = (() => {
 	for (const collection of COLLECTIONS) {
 		for (const { name, field } of storedFields(collection)) {
@@ -59,10 +59,10 @@ const orderedList = (() => {
 	}
 	return undefined;
 })();
-/** 목록 관계가 담지 못하는 컬렉션(블로그: 메모). */
+/** A collection that a list relation cannot hold (blog: memo). */
 const notListable = [...DOCUMENT_COLLECTIONS, ...COLLECTIONS].find((name) => name !== orderedList?.to) as Collection;
 
-/** 타입이 컬렉션마다 다른 입력을 설정에서 찾은 이름으로 만든다. */
+/** Builds inputs whose type differs per collection, using names found in the config. */
 const input = (value: {
 	collection: Collection;
 	slug: string | null;
@@ -70,7 +70,7 @@ const input = (value: {
 	mdx: string;
 }): ServiceInput => value as unknown as ServiceInput;
 
-/** 컬렉션의 저장 필드를 모두 채운 메타데이터. 선택 필드는 첫 선택지이고 그 값에 딸린 조건부 필드도 채운다. */
+/** Metadata with every stored field of the collection filled. A select field uses the first option, and the conditional fields dependent on that value are filled too. */
 const canonicalMetadata = (collection: Collection): Record<string, unknown> => {
 	const metadata: Record<string, unknown> = {};
 	for (const { name, field, when } of storedFields(collection)) {
@@ -84,7 +84,7 @@ const canonicalMetadata = (collection: Collection): Record<string, unknown> => {
 	return metadata;
 };
 
-describe("ContentService M2-TW-1 Contract", () => {
+describe("ContentService Contract", () => {
 	describe("1. Metadata Allowlists & Collection Rules", () => {
 		it.each([
 			["unknown collection", { collection: "unknown", slug: "test", metadata: {}, mdx: "" }, "unknown_collection"],
@@ -228,7 +228,7 @@ describe("ContentService M2-TW-1 Contract", () => {
 			const snap1 = await snapshotOf({ title: "A", [many.name]: ids });
 			const snap2 = await snapshotOf({ [many.name]: ids, title: "A" });
 
-			// 메타데이터 키는 이름순으로 해시한다.
+			// Metadata keys are hashed in name order.
 			const sortedMetadata = Object.fromEntries(
 				Object.entries({ title: "A", [many.name]: ids }).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
 			);
@@ -529,7 +529,7 @@ describe("ContentService M2-TW-1 Contract", () => {
 			],
 			["null slug", { ...validSnap, slug: null }, validResolvedTargets, "null_slug"],
 			["empty body", { ...validSnap, mdx: "" }, validResolvedTargets, "empty_body"],
-			// 하나짜리 관계가 발행 필수일 때만(블로그: 카테고리).
+			// Only when the single-value relation is required for publishing (blog: category).
 			...(single.required
 				? [
 						[
@@ -636,7 +636,7 @@ describe("ContentService M2-TW-1 Contract", () => {
 		});
 	});
 
-	// 아직 공개되지 않은 글도 순서대로 담는 목록 관계가 있는 설정만(블로그: 모음집 `itemIds`).
+	// Only for configs that have a list relation that also holds not-yet-published posts in order (blog: collection `itemIds`).
 	describe.skipIf(!orderedList)("7. Ordered list relation (collection itemIds)", () => {
 		const list = orderedList ?? { collection: content, name: "", to: content };
 		it("preserves declared order and duplicates conservatively, validates target collection", async () => {
@@ -1021,7 +1021,7 @@ describe("ContentService M2-TW-1 Contract", () => {
 
 		it.skipIf(!unboundedText)("accepts exact boundary and rejects +1-byte for metadata_too_large", async () => {
 			const name = unboundedText?.name ?? "";
-			// 블로그 {"summary":""}는 14바이트다. 262144 - 14 = 262130
+			// The reference blog's {"summary":""} is 14 bytes. 262144 - 14 = 262130
 			const overhead = JSON.stringify({ [name]: "" }).length;
 			const boundaryString = "a".repeat(262144 - overhead);
 			await expect(
@@ -1303,10 +1303,10 @@ describe("ContentService M2-TW-1 Contract", () => {
 			expect(storePort.createEntryWithReferences).not.toHaveBeenCalled();
 		});
 	});
-	describe("11. 이미지 소스와 발행 경고 (M8-FE-2 · A3)", () => {
+	describe("11. image sources and publish warnings", () => {
 		const mediaId = "987e4567-e89b-12d3-a456-426614174000";
-		// 발행 필수 관계(블로그: 게시글의 `categoryId`)가 비면 발행 검사가 먼저 차단한다. 이미지 경고만 보려고
-		// 필수값을 채우고 그 관계 대상은 공개된 것으로 확인해 둔다.
+		// If the required relation for publishing (blog: a post's `categoryId`) is empty, the publish check blocks first. To look only at image warnings,
+		// fill in the required value and confirm that the relation target is public.
 		const relationTargets: ResolvedTargets["targets"] = [];
 		const relationTarget = async (to: Collection) => {
 			const known = relationTargets.find((target) => target.collection === to);
@@ -1322,11 +1322,11 @@ describe("ContentService M2-TW-1 Contract", () => {
 			mdx,
 		});
 		const draft = async (mdx: string) => input(await draftInput(mdx));
-		/** 필수 관계 참조를 뺀 이미지(미디어) 참조. */
+		/** Image (media) references excluding the required relation reference. */
 		const mediaReferences = (snap: PreparedSnapshot) =>
 			snap.references.filter((reference) => reference.kind === "media");
 
-		it("directive로 쓴 이미지도 미디어 참조를 수집한다", async () => {
+		it("collects media references for images written as directives too", async () => {
 			const snap = await prepareSnapshot(await draft(`::image{mediaId="${mediaId}" alt="설명"}`));
 
 			expect(snap.issues).toEqual([]);
@@ -1335,7 +1335,7 @@ describe("ContentService M2-TW-1 Contract", () => {
 			expect(snap.imageSources).toEqual([{ mediaId, position: { line: 1, column: 1 } }]);
 		});
 
-		it("외부 src는 참조가 아니고 발행을 막지 않는다", async () => {
+		it("an external src is not a reference and does not block publishing", async () => {
 			const snap = await prepareSnapshot(await draft('::image{src="/images/a.png"}'));
 
 			expect(snap.issues).toEqual([]);
@@ -1343,14 +1343,14 @@ describe("ContentService M2-TW-1 Contract", () => {
 			expect(snap.imageSources).toEqual([{ src: "/images/a.png", position: { line: 1, column: 1 } }]);
 		});
 
-		it("소스가 없는 이미지는 계속 차단한다(M7 무결성 유지)", async () => {
+		it("an image with no source stays blocked", async () => {
 			const snap = await prepareSnapshot(await draft("::image{}"));
 
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "missing_media_id" }));
 			expect(snap.imageSources).toEqual([]);
 		});
 
-		it("허용되지 않는 src는 비차단 경고다(ready 유지)", async () => {
+		it("a disallowed src is a non-blocking warning (stays ready)", async () => {
 			const snap = await prepareSnapshot(await draft('::image{src="javascript:alert(1)"}'));
 			const validation = validateForPublish(snap, { targets: relationTargets, media: [] });
 
@@ -1360,7 +1360,7 @@ describe("ContentService M2-TW-1 Contract", () => {
 			]);
 		});
 
-		it("미디어 상태·저장소 키로 경고를 만들고, 행이 없으면 경고하지 않는다", async () => {
+		it("builds warnings from media status and storage key, and does not warn when there is no row", async () => {
 			const snap = await prepareSnapshot(await draft(`::image{mediaId="${mediaId}"}`));
 			const targets = relationTargets;
 
@@ -1375,14 +1375,14 @@ describe("ContentService M2-TW-1 Contract", () => {
 					.warnings,
 			).toEqual([]);
 
-			// 미디어 행이 아예 없는 경우는 경고 대상이 아니다 — 참조 확인이 먼저 차단한다.
+			// A media row that does not exist at all is not a warning case — the reference check blocks first.
 			const missing = validateForPublish(snap, { targets, media: [] });
 			expect(missing.warnings).toEqual([]);
 			expect(missing.ready).toBe(false);
 			expect(missing.issues).toContainEqual(expect.objectContaining({ code: "unresolved_media" }));
 		});
 
-		it("발행 응답용 경고는 DB 상태와 저장소 실물을 함께 본다", async () => {
+		it("the warning for the publish response looks at both the DB state and the actual storage object", async () => {
 			const publishInput = {
 				...(await draftInput(`::image{mediaId="${mediaId}"}`)),
 				getMediaAsset: async () => ({ status: "pending", storageKey: null }),
@@ -1407,7 +1407,7 @@ describe("ContentService M2-TW-1 Contract", () => {
 			).toEqual([expect.objectContaining({ code: "image_media_missing_in_storage", message: "k/a.png" })]);
 		});
 
-		it("경고 계산은 발행을 막지 않는다(실패 시 빈 배열)", async () => {
+		it("warning computation does not block publishing (empty array on failure)", async () => {
 			const warnings = await imageWarningsForPublish({
 				...(await draftInput(`::image{mediaId="${mediaId}"}`)),
 				getMediaAsset: async () => {

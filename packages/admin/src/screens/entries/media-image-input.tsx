@@ -11,7 +11,7 @@ import { cmsFetch } from "../admin-api";
 import type { FieldInputProps } from "./field-inputs";
 import { t } from "./translate";
 
-/** 미디어 ID → 공개 주소. 입력과 확장의 미리보기가 함께 쓴다. 불러오지 못하면 `null`. */
+/** Media ID -> public URL. Shared by the input and the extension's preview. `null` if it cannot be loaded. */
 const urls = new Map<string, string | null>();
 const loading = new Set<string>();
 const listeners = new Set<() => void>();
@@ -21,13 +21,13 @@ const subscribe = (listener: () => void) => {
 	return () => listeners.delete(listener);
 };
 
-/** 고른 이미지의 주소를 기억한다. 다시 불러오지 않는다. */
+/** Remembers the URL of the picked image. It is not fetched again. */
 export function rememberMediaUrl(mediaId: string, url: string | null) {
 	urls.set(mediaId, url);
 	for (const listener of listeners) listener();
 }
 
-/** 미디어 ID의 공개 주소. 비었거나 아직 모르거나 불러오지 못하면 `null`. */
+/** Public URL of a media ID. `null` if empty, not yet known, or failed to load. */
 export function useMediaUrl(mediaId: string): string | null {
 	const url = useSyncExternalStore(
 		subscribe,
@@ -45,7 +45,7 @@ export function useMediaUrl(mediaId: string): string | null {
 	return mediaId ? (url ?? null) : null;
 }
 
-/** 이미지 미리보기. 주소를 모르면 아이콘을 보인다. */
+/** Image preview. Shows an icon if the URL is unknown. */
 export function MediaThumbnail({ mediaId, className }: { mediaId: string; className?: string }) {
 	const url = useMediaUrl(mediaId);
 	return url ? (
@@ -58,7 +58,7 @@ export function MediaThumbnail({ mediaId, className }: { mediaId: string; classN
 	);
 }
 
-/** 미디어 필드(`fields.media`)의 기본 입력. `accept`가 `file`이면 파일, 아니면 이미지를 고른다. */
+/** Default input of a media field (`fields.media`). Picks a file if `accept` is `file`, otherwise an image. */
 export function MediaInput(props: FieldInputProps) {
 	return props.field.kind === "media" && props.field.accept === "file" ? (
 		<MediaFileInput {...props} />
@@ -67,7 +67,7 @@ export function MediaInput(props: FieldInputProps) {
 	);
 }
 
-/** 미디어 라이브러리에서 이미지를 고르고, 고른 이미지를 작게 보여 준다. */
+/** Picks an image from the media library and shows the picked image small. */
 export function MediaImageInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const [picking, setPicking] = useState(false);
 	const mediaId = typeof value === "string" ? value : "";
@@ -117,7 +117,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 	);
 }
 
-/** 파일 하나를 올려 고른다. 고른 파일은 파일 이름으로 보인다. */
+/** Uploads and picks one file. The picked file is shown by its file name. */
 function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const mediaId = typeof value === "string" ? value : "";
 	const fileInput = useRef<HTMLInputElement>(null);

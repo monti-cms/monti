@@ -1,6 +1,6 @@
 import type { Entry, EntryStatus } from "./types";
 
-/** 저장소가 바꾼 것의 종류. */
+/** Kind of change the store made. */
 export type ContentChangeKind =
 	| "created"
 	| "saved"
@@ -12,8 +12,8 @@ export type ContentChangeKind =
 	| "deleted";
 
 /**
- * 저장 뒤 알림(M14-7). 트랜잭션이 커밋된 뒤에만 온다(실패·충돌로 되돌린 변경은 오지 않는다).
- * 캐시 갱신·웹훅·검색 색인이 쓴다. 원문의 보관·휴지통·복원은 번역본도 함께 바꾸므로 `translationGroupId`로 묶음 전체를 다룬다.
+ * Post-save notification. Delivered only after the transaction commits (changes rolled back by failure or conflict are not reported).
+ * Used by cache refresh, webhooks, and search indexing. Archiving, trashing, or restoring a source also changes its translations, so `translationGroupId` covers the whole group.
  */
 export interface ContentChange {
 	readonly kind: ContentChangeKind;
@@ -21,11 +21,11 @@ export interface ContentChange {
 	readonly collection: string;
 	readonly locale: string;
 	readonly translationGroupId: string;
-	/** 바뀐 뒤 상태. 지웠으면 마지막 상태다. */
+	/** State after the change. For a deletion, the last state. */
 	readonly status: EntryStatus;
-	/** 공개 주소(공개본이 있으면). */
+	/** Public URL (if a published version exists). */
 	readonly publishedSlug: string | null;
-	/** 초안 주소. */
+	/** Draft URL. */
 	readonly workingSlug: string | null;
 }
 
@@ -42,7 +42,7 @@ const changeOf = (kind: ContentChangeKind, entry: Entry): ContentChange => ({
 	workingSlug: entry.workingSlug,
 });
 
-/** 글을 돌려주는 변경과 그 알림 종류. */
+/** Changes that return an entry, and their notification kinds. */
 const ENTRY_CHANGES = {
 	createEntryWithReferences: "created",
 	duplicateEntry: "created",
@@ -60,8 +60,8 @@ interface ChangingStore {
 }
 
 /**
- * 저장소의 변경 함수가 커밋된 뒤 `afterCommit`을 부르게 감싼다. 알림이 실패해도 이미 커밋한 변경은 그대로이고 요청도 실패하지 않는다
- * (오류는 로그로만 남긴다).
+ * Wraps the store's mutation functions so `afterCommit` is called after the commit. If the notification fails, the committed change stays
+ * and the request does not fail (the error is only logged).
  */
 export function withAfterCommit<S extends ChangingStore>(store: S, afterCommit: AfterCommit): S {
 	const notify = async (change: ContentChange) => {

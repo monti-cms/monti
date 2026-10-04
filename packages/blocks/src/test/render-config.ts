@@ -3,8 +3,8 @@ import { category, memo, post, series, tag } from "../../../core/test/cms.config
 import { blocks } from "../index";
 
 /**
- * 공개 화면 그리기 테스트가 쓰는 설정. 본체 예시 설정과 같은 컬렉션에 블록을 정의가 아니라 플러그인(`blocks()`)으로 넣어,
- * `@monti-cms/core/render`가 각 플러그인의 공개 컴포넌트(`render`)를 불러오게 한다.
+ * Config used by the public page rendering tests. It uses the same collection as the core example config, but adds the blocks as a plugin (`blocks()`) rather than as definitions,
+ * so that `@monti-cms/core/render` loads each plugin's public component (`render`).
  */
 export default defineConfig({
 	collections: { post, memo, category, tag, collection: series },

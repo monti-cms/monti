@@ -1,4 +1,4 @@
-/** 테스트 도우미. 격리 스키마 DB·예시 데이터·예시 본문과 API 처리기다. 앱·플러그인 테스트에서만 쓴다. */
+/** Test helpers: isolated-schema DB, sample data, sample content and API handlers. Use only in app and plugin tests. */
 
 export * from "./adapters/postgres/__test__/seed";
 export * from "./adapters/postgres/__test__/test-database";

@@ -20,22 +20,22 @@ import { codeBlockMessages } from "./messages";
 const t = createTranslator(codeBlockMessages);
 
 /**
- * 코드 블록의 줄 효과·정규식 규칙·접기를 에디터에 보인다(v2 C5 코드 블록 재개발).
+ * Shows a code block's line effects, regex rules and folding in the editor.
  *
- * - 경고·오류 줄은 물결 밑줄, 규칙이 찾은 글자는 그 효과 모양(+옅은 배경)으로 칠한다.
- * - 줄 접기·글자 접기는 공개 화면처럼 실제로 접는다. 처음 모습은 `open` 속성을 따르고, 편집 중 여닫은 상태는
- *   이 플러그인 상태(`overrides`)에만 둔다(저장하지 않는다). 커서가 접힌 곳에 들어가면 저절로 펼친다.
- * - 글자를 고치면 줄 효과와 줄 규칙의 줄 번호를 글자를 따라 옮긴다(appendTransaction).
- * 줄 배경(강조·추가·삭제)과 줄 번호 칸은 NodeView(code-block-view.tsx)가 그린다.
+ * - Warning and error lines get a wavy underline; text matched by a rule is painted in that effect's style (plus a faint background).
+ * - Line folds and text folds actually collapse, as on the public page. The initial state follows the `open` attribute; the state toggled while editing
+ *   lives only in this plugin's state (`overrides`) and is not saved. A fold opens by itself when the cursor enters it.
+ * - When text is edited, line numbers of line effects and line rules move along with the text (appendTransaction).
+ * Line backgrounds (highlight, add, remove) and the line number gutter are drawn by the NodeView (code-block-view.tsx).
  */
 export interface CodeEffectsState {
-	/** 접기 열림 상태. `c:<줄 효과 id>`, `m:<문서 위치>`(글자 접기·규칙 접기). */
+	/** Fold open state. `c:<line effect id>`, `m:<document position>` (text folds and rule folds). */
 	overrides: Map<string, boolean>;
-	/** 줄 번호 칸에서 고른 줄(코드 블록 위치, [start, end) 줄). 다른 방법으로 선택을 바꾸면 풀린다. */
+	/** Lines picked in the line number gutter (code block position, [start, end) lines). Cleared when the selection changes by other means. */
 	picked: LinePick | null;
-	/** 본문–코드 잇기 중이면 먼저 고른 쪽(본문 글자 또는 코드 줄). 다른 쪽을 고르고 확인하면 잇는다. */
+	/** While linking text to code, the side picked first (body text or a code line). Picking and confirming the other side links them. */
 	linking: LinkDraft | null;
-	/** 마우스를 올린 본문 연결(`data-code-ref`, `CODE_ANCHOR_REF`)의 줄 이름. 그 줄을 강조하고 나머지를 흐린다. */
+	/** Line name of the body link (`data-code-ref`, `CODE_ANCHOR_REF`) under the mouse. That line is highlighted and the rest are dimmed. */
 	hoverRef: string | null;
 	version: number;
 }
@@ -56,7 +56,7 @@ type EffectsMeta =
 	| { linking: LinkDraft | null }
 	| { hoverRef: string | null };
 
-/** 플러그인 상태를 바꾸는 트랜잭션 메타(잇기 명령이 쓴다). */
+/** Transaction meta that changes the plugin state (used by the link commands). */
 export const effectsMeta = (meta: EffectsMeta) => meta;
 
 export const codeEffectsKey = new PluginKey<CodeEffectsState>("cmsCodeEffects");
@@ -64,12 +64,12 @@ export const codeEffectsKey = new PluginKey<CodeEffectsState>("cmsCodeEffects");
 export interface FoldRegion {
 	key: string;
 	kind: "collapse" | "fold";
-	/** 숨길 문서 범위 [from, to). 줄 접기는 첫 줄 끝부터 마지막 줄 끝까지다(첫 줄은 보인다). */
+	/** Document range [from, to) to hide. A line fold runs from the end of the first line to the end of the last line (the first line stays visible). */
 	from: number;
 	to: number;
 	open: boolean;
 	defaultOpen: boolean;
-	/** 줄 접기가 숨기는 줄 수. */
+	/** Number of lines hidden by a line fold. */
 	hiddenLines: number;
 	startLine?: number;
 	endLine?: number;
@@ -80,7 +80,7 @@ export const lineEffectsOf = (node: PmNode): CodeLineEffect[] =>
 export const rulesOf = (node: PmNode): CodeRule[] =>
 	Array.isArray(node.attrs.rules) ? (node.attrs.rules as CodeRule[]) : [];
 
-/** 글자 접기 마크가 이어지는 범위(코드 텍스트 기준). */
+/** Range that a text fold mark spans (in code text). */
 function foldMarkRanges(node: PmNode): Array<{ from: number; to: number; open: boolean }> {
 	const ranges: Array<{ from: number; to: number; open: boolean }> = [];
 	node.forEach((child, offset) => {
@@ -94,14 +94,14 @@ function foldMarkRanges(node: PmNode): Array<{ from: number; to: number; open: b
 	return ranges;
 }
 
-/** 코드 블록(문서 위치 `pos`)의 접기 범위들. */
+/** Fold ranges of the code block (document position `pos`). */
 export function foldRegions(node: PmNode, pos: number, overrides: ReadonlyMap<string, boolean>): FoldRegion[] {
 	if (node.attrs.rawMode) return [];
 	const base = pos + 1;
 	const text = node.textContent;
 	const starts = lineStarts(text);
 	const regions: FoldRegion[] = [];
-	// 글자 접기 마크와 규칙이 같은 자리를 접으면 하나로 본다(같은 key).
+	// A text fold mark and a rule that fold the same place count as one (same key).
 	const push = (region: Omit<FoldRegion, "open">) => {
 		if (regions.some((other) => other.key === region.key)) return;
 		regions.push({ ...region, open: overrides.get(region.key) ?? region.defaultOpen });
@@ -126,7 +126,7 @@ export function foldRegions(node: PmNode, pos: number, overrides: ReadonlyMap<st
 			kind: "fold",
 			from: base + range.from,
 			to: base + range.to,
-			// 에디터에서는 글자 접기를 펼쳐 둔다(글자를 고칠 수 있게). `open`은 공개 화면의 처음 모습이다.
+			// In the editor, text folds are kept open so the text can be edited. `open` is the initial state on the public page.
 			defaultOpen: true,
 			hiddenLines: 0,
 		});
@@ -145,7 +145,7 @@ export function foldRegions(node: PmNode, pos: number, overrides: ReadonlyMap<st
 	return regions;
 }
 
-/** 접힌 채 보이는(다른 접힌 범위 안에 들어 있지 않은) 범위들. */
+/** Ranges that are shown folded (not inside another folded range). */
 export function visibleClosedRegions(regions: readonly FoldRegion[]): FoldRegion[] {
 	const closed = regions.filter((region) => !region.open && region.to > region.from);
 	return closed.filter(
@@ -160,13 +160,13 @@ export function visibleClosedRegions(regions: readonly FoldRegion[]): FoldRegion
 	);
 }
 
-/** 커서가 접혀 숨은 글자 안에 있는지. 줄 접기는 숨은 마지막 줄의 끝도 안이다. */
+/** Whether the cursor is inside folded, hidden text. For a line fold, the end of the last hidden line also counts as inside. */
 const hidesPosition = (region: FoldRegion, head: number) =>
 	region.kind === "collapse" ? region.from < head && head <= region.to : region.from < head && head < region.to;
 
 /**
- * 코드 블록(`blockPos`)의 `start`~`end` 줄을 줄 번호 칸에서 고른 것으로 표시한다.
- * 글자는 고르지 않는다(끌어 고른 것처럼 칠하지 않는다). 커서만 첫 줄 앞에 두고, 고른 줄은 줄 배경으로 보인다.
+ * Marks lines `start` to `end` of the code block (`blockPos`) as picked in the line number gutter.
+ * Text is not selected (it is not painted like a drag selection). Only the cursor is placed before the first line; the picked lines are shown by the line background.
  */
 export function pickLines(view: EditorView, blockPos: number, start: number, end: number) {
 	const node = view.state.doc.nodeAt(blockPos);
@@ -181,7 +181,7 @@ export function pickLines(view: EditorView, blockPos: number, start: number, end
 	view.focus();
 }
 
-/** 규칙 하나를 지운다(찾은 곳 모두에서 효과가 사라진다). */
+/** Removes a rule (its effect disappears everywhere it matched). */
 export function removeRule(view: EditorView, blockPos: number, ruleId: string) {
 	const node = view.state.doc.nodeAt(blockPos);
 	if (!node || node.type.name !== "codeBlock") return;
@@ -189,7 +189,7 @@ export function removeRule(view: EditorView, blockPos: number, ruleId: string) {
 	view.dispatch(view.state.tr.setNodeMarkup(blockPos, undefined, { ...node.attrs, rules }));
 }
 
-/** 규칙을 지우고, 지금 찾은 곳마다 같은 효과를 글자 마크로 남긴다(하나씩 지울 수 있게). */
+/** Removes a rule and leaves the same effect as a text mark at every place it currently matches (so each can be removed one by one). */
 export function expandRule(view: EditorView, blockPos: number, ruleId: string) {
 	const node = view.state.doc.nodeAt(blockPos);
 	const rule = node ? rulesOf(node).find((item) => item.id === ruleId) : undefined;
@@ -209,7 +209,7 @@ export function expandRule(view: EditorView, blockPos: number, ruleId: string) {
 	view.dispatch(tr);
 }
 
-/** 접기를 여닫는다. 접을 때 커서가 숨을 곳에 있으면 접는 곳 앞으로 옮긴다. */
+/** Toggles a fold. When folding, if the cursor would be hidden, it moves to before the fold. */
 export function setFoldOpen(view: EditorView, region: FoldRegion, open: boolean) {
 	const tr = view.state.tr.setMeta(codeEffectsKey, { key: region.key, open } satisfies EffectsMeta);
 	if (!open && hidesPosition(region, view.state.selection.head))
@@ -217,7 +217,7 @@ export function setFoldOpen(view: EditorView, region: FoldRegion, open: boolean)
 	view.dispatch(tr);
 }
 
-/** 규칙이 찾은 글자의 모양. 규칙에서 온 것임을 옅은 배경으로 알린다(글자를 눌러 고칠 수 없다). */
+/** Style of text matched by a rule. A faint background shows it came from a rule (the text cannot be clicked to edit). */
 const RULE_CLASS: Record<string, string> = {
 	strong: "font-bold",
 	em: "italic",
@@ -284,7 +284,7 @@ function blockDecorations(node: PmNode, pos: number, overrides: ReadonlyMap<stri
 	return decorations;
 }
 
-/** 문서의 모든 코드 줄 이름표(`anchor` 줄 효과의 id). */
+/** Line labels of every code line in the document (ids of `anchor` line effects). */
 export function anchorIds(doc: PmNode): Set<string> {
 	const ids = new Set<string>();
 	doc.descendants((node) => {
@@ -296,7 +296,7 @@ export function anchorIds(doc: PmNode): Set<string> {
 	return ids;
 }
 
-/** 마우스를 올린 본문 연결의 줄이 이 코드 블록에 있으면, 나머지 줄을 흐린다. */
+/** If the line of the body link under the mouse is in this code block, dims the other lines. */
 function hoverDecorations(node: PmNode, pos: number, id: string): Decoration[] {
 	const anchor = lineEffectsOf(node).find((effect) => effect.name === ANCHOR && effect.attrs.id === id);
 	if (!anchor) return [];
@@ -312,7 +312,7 @@ function hoverDecorations(node: PmNode, pos: number, id: string): Decoration[] {
 	return decorations;
 }
 
-/** 옛 줄 번호를 글자 변경을 따라 새 줄 번호로 옮긴다. */
+/** Moves old line numbers to new ones following text changes. */
 function remapLineEffects(
 	oldNode: PmNode,
 	oldPos: number,
@@ -334,7 +334,7 @@ function remapLineEffects(
 			if (effect.start >= oldStarts.length) return null;
 			const first = lineRange(oldText, oldStarts, effect.start).from;
 			const last = lineRange(oldText, oldStarts, Math.min(effect.end, oldStarts.length) - 1).to;
-			// 효과 줄의 글자를 모두 지웠으면 효과도 지운다(다음 줄로 옮겨 붙이지 않는다).
+			// If all text of an effect line was deleted, the effect is deleted too (it is not moved onto the next line).
 			const head = mapping.mapResult(oldPos + 1 + first, 1);
 			const tail = mapping.mapResult(oldPos + 1 + last, -1);
 			if (last > first && head.deletedAfter && tail.deletedBefore && head.pos >= tail.pos) return null;
@@ -381,12 +381,12 @@ export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
 					overrides.set(meta.key, meta.open);
 					changed = true;
 				}
-				// 줄 고르기는 줄 번호 칸이 선택과 함께 알린다. 다른 방법으로 선택을 바꾸면 푼다.
+				// The line-number gutter reports picking lines together with the selection. Changing the selection by other means clears it.
 				let picked = value.picked;
 				if (meta && "pick" in meta) picked = meta.pick;
 				else if (picked && tr.selectionSet) picked = null;
 				else if (picked && tr.docChanged) {
-					// 블록 앞 위치를 앞쪽에 붙여 옮긴다. 효과를 바꾸면(setNodeMarkup) 블록이 통째로 바뀌어 뒤쪽은 "지워짐"이 된다.
+					// Map the position before the block with a forward bias. Changing the effect (setNodeMarkup) replaces the whole block, so the back side would become "deleted".
 					const mapped = tr.mapping.mapResult(picked.blockPos, -1);
 					picked = mapped.deleted ? null : { ...picked, blockPos: mapped.pos };
 				}
@@ -408,7 +408,7 @@ export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
 
 				const hoverRef = meta && "hoverRef" in meta ? meta.hoverRef : value.hoverRef;
 				if (hoverRef !== value.hoverRef) changed = true;
-				// 커서가 접혀 숨은 곳에 들어가면(방향키·되돌리기 등) 펼친다.
+				// Open the fold when the cursor enters a folded, hidden place (arrow keys, undo, etc.).
 				const { $head, head } = newState.selection;
 				for (let depth = $head.depth; depth > 0; depth -= 1) {
 					const node = $head.node(depth);
@@ -436,7 +436,7 @@ export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
 						if (plugin?.hoverRef) decorations.push(...hoverDecorations(node, pos, plugin.hoverRef));
 						return false;
 					}
-					// 연결된 줄이 없는 본문 연결은 빨간 물결 밑줄로 알린다.
+					// A body link with no linked line is flagged with a red wavy underline.
 					const ref =
 						node.isText && CODE_ANCHOR_REF
 							? node.marks.find((mark) => mark.type.name === CODE_ANCHOR_REF?.mark)
@@ -450,7 +450,7 @@ export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
 						);
 					return true;
 				});
-				// 잇기 중(본문을 먼저 고름)이면 고른 글자를 칠해 둔다.
+				// While linking (body text picked first), paint the picked text.
 				if (plugin?.linking?.kind === "text")
 					decorations.push(
 						Decoration.inline(plugin.linking.from, plugin.linking.to, { class: "rounded-sm bg-cms-primary/15" }),
@@ -463,7 +463,7 @@ export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
 				return true;
 			},
 			handleDOMEvents: {
-				// 본문 연결에 마우스를 올리면 연결된 코드 줄을 강조한다(공개 화면과 같다).
+				// Hovering a body link highlights the linked code line (same as the public page).
 				mouseover(view, event) {
 					const target = event.target instanceof Element ? event.target.closest("[data-code-ref]") : null;
 					const id = target?.getAttribute("data-code-ref") || null;
@@ -491,7 +491,7 @@ export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
 				if (mapped.deleted) return false;
 				const newNode = newState.doc.nodeAt(mapped.pos);
 				if (!newNode || newNode.type.name !== "codeBlock" || newNode.textContent === oldNode.textContent) return false;
-				// 같은 트랜잭션에서 속성을 새로 넣었으면(블록 교체·효과 편집) 그 속성이 정본이다.
+				// If attributes were newly set in the same transaction (block replacement, effect edit), those attributes are authoritative.
 				if (
 					!sameJson(newNode.attrs.lineEffects, oldNode.attrs.lineEffects) ||
 					!sameJson(newNode.attrs.rules, oldNode.attrs.rules)

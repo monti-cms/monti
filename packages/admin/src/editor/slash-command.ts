@@ -27,7 +27,7 @@ import {
 import { editorMessages } from "./messages";
 
 const t = createTranslator(editorMessages);
-/** 검색어 목록(쉼표로 이은 사전 값). */
+/** Search term list (dictionary values joined by commas). */
 const keywordList = (key: Parameters<typeof t>[0]): string[] =>
 	t(key)
 		.split(",")
@@ -36,9 +36,9 @@ const keywordList = (key: Parameters<typeof t>[0]): string[] =>
 export { OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT } from "./block-inserts";
 
 export interface SlashCommandItem {
-	/** 블록 삽입 항목의 이름(본체 블록은 nodeView, 더한 블록은 블록 이름). 기본 서식 항목에는 없다. */
+	/** Name of the block insertion item (nodeView for core blocks, block name for added blocks). Absent for basic formatting items. */
 	id?: string;
-	/** 아이콘. 블록 삽입 항목은 블록 정의의 `editor.icon`(lucide 이름)이다. 없으면 퍼즐 아이콘이다. */
+	/** Icon. For block insertion items it is the block definition's `editor.icon` (lucide name). A puzzle icon if absent. */
 	icon?: LucideIcon | string;
 	title: string;
 	description: string;
@@ -64,7 +64,7 @@ const heading = (level: 2 | 3 | 4): SlashCommandItem => ({
 });
 
 /**
- * 기본 서식 및 인라인 슬래시 커맨드.
+ * Basic formatting and inline slash commands.
  */
 export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 	{
@@ -173,15 +173,15 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 	},
 ];
 
-/** 슬래시 메뉴 블록 순서: 더한 블록(블록 확장·사이트 설정) 다음에 본체 블록(수식 등)이다. */
+/** Slash menu block order: added blocks (block extensions, site settings) first, then core blocks (math, etc.). */
 const MENU_BLOCKS: readonly BlockDefinition[] = [
 	...ADDED_BLOCKS,
 	...BLOCKS.filter((block) => !ADDED_BLOCKS.includes(block)),
 ];
 
 /**
- * 블록 정의(BLOCKS) 중 `editor.insertable === true`이고 `editor.view === 'node'`인 것 중
- * 삽입 액션이 등록된 블록에 대한 슬래시 커맨드 목록을 생성한다(v2 C3a).
+ * Among block definitions (BLOCKS) with `editor.insertable === true` and `editor.view === 'node'`,
+ * generates the slash command list for blocks with a registered insert action.
  */
 export function buildBlockSlashCommands(
 	definitions: readonly BlockDefinition[] = MENU_BLOCKS,
@@ -190,9 +190,9 @@ export function buildBlockSlashCommands(
 	const items: SlashCommandItem[] = [];
 	for (const block of definitions) {
 		if (block.editor.insertable !== true || block.editor.view !== "node") continue;
-		// 더한 블록은 편집기 이름이 없어 블록 이름으로 삽입 동작을 찾는다.
+		// Added blocks have no editor name, so find the insert action by block name.
 		const nodeView = block.editor.nodeView ?? block.name;
-		// 이미지는 기존 하드코딩 항목이 있으므로 중복 제외
+		// Images have an existing hardcoded item, so exclude duplicates
 		if (nodeView === "image" || block.name === "image") continue;
 		const action = actions[nodeView];
 		if (!action) continue;
@@ -209,18 +209,18 @@ export function buildBlockSlashCommands(
 	return items;
 }
 
-/** 블록 삽입 항목(더한 블록 다음 본체 블록). */
+/** Block insertion items (core blocks after added blocks). */
 const BLOCK_SLASH_COMMANDS = buildBlockSlashCommands();
 
 /**
- * `/` 블록 삽입 메뉴(§4.2). 한국어·영문 이름으로 검색한다.
- * 글 제목이 본문 위의 H1이므로 본문 제목은 H2부터 쓴다(§4.1).
+ * `/` block insertion menu. Searchable by Korean and English names.
+ * The post title is the H1 above the body, so body headings start at H2.
  */
 export const SLASH_COMMANDS: SlashCommandItem[] = [...BASE_SLASH_COMMANDS, ...BLOCK_SLASH_COMMANDS];
 
 /**
- * 슬래시 메뉴 항목. `extra`는 편집 화면 확장(플러그인)이 더한 항목이고(뒤에 붙는다), `inline`은 글자 꾸밈 확장이 더한 항목이다
- * (기본 글 서식 항목 다음, 블록 항목 앞).
+ * Slash menu items. `extra` are items added by edit view extensions (plugins) (appended after), and `inline` are items added by text decoration extensions
+ * (after the basic text formatting items, before block items).
  */
 export function filterCommands(
 	query: string,

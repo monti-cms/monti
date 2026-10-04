@@ -11,7 +11,7 @@ import { TabsProvider } from "../tabs/provider";
 
 afterEach(cleanup);
 
-// jsdom에는 글자 범위의 좌표가 없다. 커서를 옮긴 뒤 ProseMirror가 스크롤 위치를 잴 때 쓴다.
+// jsdom has no coordinates for text ranges. ProseMirror uses them to measure the scroll position after the cursor moves.
 beforeAll(() => {
 	const empty = () =>
 		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
@@ -34,7 +34,7 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 	return <EditorContent editor={editor} />;
 }
 
-/** 관리자 화면처럼 블록 확장 네 개의 편집 화면을 넣는다. */
+/** Registers the editing views of the four block extensions, like the admin UI does. */
 const BlockViews = ({ children }: { children: ReactNode }) => (
 	<CalloutProvider>
 		<CollapsibleProvider>
@@ -58,7 +58,7 @@ const mount = async (source: string) => {
 		</BlockViews>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	// NodeView(React 포털)가 그려질 때까지 기다린다.
+	// Wait until the NodeView (React portal) has rendered.
 	await waitFor(() => expect(document.querySelector("[data-cms-container-node]")).not.toBeNull());
 	return editor as unknown as Editor;
 };
@@ -70,8 +70,8 @@ const parentTypeOfSelection = (editor: Editor) => {
 
 const TABS = '::::tabs{defaultValue="둘"}\n:::tab{label="하나"}\n첫째\n:::\n:::tab{label="둘"}\n둘째\n:::\n::::';
 
-describe("컨테이너 NodeView(공개 모양 + 제자리 편집)", () => {
-	it("탭은 처음 열 탭만 보이고, 다른 탭을 누르면 그 탭 본문으로 커서가 간다", async () => {
+describe("container NodeView (public look + in-place editing)", () => {
+	it("shows only the initial tab, and clicking another tab moves the cursor into its body", async () => {
 		const editor = await mount(TABS);
 		const tabs = await screen.findAllByRole("tab");
 		expect(tabs.map((tab) => tab.textContent)).toEqual(["하나", "둘"]);
@@ -83,19 +83,19 @@ describe("컨테이너 NodeView(공개 모양 + 제자리 편집)", () => {
 		expect(editor.state.selection.$from.parent.textContent).toBe("첫째");
 	});
 
-	it("탭 이름은 입력하는 대로 바뀌고 Escape로 되돌린다", async () => {
+	it("updates the tab name as you type and reverts on Escape", async () => {
 		const editor = await mount(TABS);
 		fireEvent.click(screen.getByRole("button", { name: "이 탭 이름 바꾸기" }));
 		const input = await screen.findByRole("textbox", { name: "탭 이름" });
 		fireEvent.focus(input);
 		fireEvent.change(input, { target: { value: "둘째 탭" } });
-		// 처음 열 탭(defaultValue)도 이름을 따라간다.
+		// The initial tab (defaultValue) follows the rename too.
 		expect(tiptapToMdx(editor.getJSON())).toContain('defaultValue="둘째 탭"');
 		fireEvent.keyDown(input, { key: "Escape" });
 		expect(tiptapToMdx(editor.getJSON())).toBe(tiptapToMdx(mdxToTiptap(TABS)));
 	});
 
-	it("탭 이름을 비우면 넣지 않는다", async () => {
+	it("omits the tab name when it is cleared", async () => {
 		const editor = await mount(TABS);
 		fireEvent.click(screen.getByRole("button", { name: "이 탭 이름 바꾸기" }));
 		const input = await screen.findByRole("textbox", { name: "탭 이름" });
@@ -104,7 +104,7 @@ describe("컨테이너 NodeView(공개 모양 + 제자리 편집)", () => {
 		expect(tiptapToMdx(editor.getJSON())).toContain('label="둘"');
 	});
 
-	it("단을 더하고 커서가 있는 단을 지운다(최소 2단)", async () => {
+	it("adds a column and removes the one with the cursor (minimum 2 columns)", async () => {
 		const editor = await mount("::::columns\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::");
 		const remove = screen.getByRole("button", { name: "마지막 단 삭제" });
 		expect((remove as HTMLButtonElement).disabled).toBe(true);
@@ -116,7 +116,7 @@ describe("컨테이너 NodeView(공개 모양 + 제자리 편집)", () => {
 		expect(editor.state.doc.firstChild?.textContent).toBe("왼쪽오른쪽");
 	});
 
-	it("콜아웃 제목을 비우면 속성에서 뺀다", async () => {
+	it("removes the callout title attribute when it is cleared", async () => {
 		const source = ':::callout{variant="tip" title="제목"}\n본문\n:::';
 		const editor = await mount(source);
 		const input = screen.getByRole("textbox", { name: "콜아웃 제목" });
@@ -126,21 +126,21 @@ describe("컨테이너 NodeView(공개 모양 + 제자리 편집)", () => {
 		expect(tiptapToMdx(editor.getJSON())).not.toContain("title=");
 	});
 
-	it("콜아웃 종류는 도구 줄 메뉴에서 바꾼다", async () => {
+	it("changes the callout variant from the toolbar menu", async () => {
 		const editor = await mount(':::callout{variant="tip"}\n본문\n:::');
 		fireEvent.click(screen.getByRole("button", { name: /콜아웃 종류/ }));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "경고" }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs.values).toEqual({ variant: "warning" }));
 	});
 
-	it("접기의 처음부터 펼치기는 설정 팝오버의 스위치로 바꾼다", async () => {
+	it("toggles the collapsible's open-by-default with the switch in the settings popover", async () => {
 		const editor = await mount(':::collapsible{title="제목"}\n숨은 본문\n:::');
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		fireEvent.click(await screen.findByRole("switch", { name: "처음부터 펼치기" }));
 		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain("defaultOpen"));
 	});
 
-	it("접기는 defaultOpen을 따라 처음에 닫혀 있고, 화살표로 펼치면 본문으로 커서가 간다", async () => {
+	it("starts closed per defaultOpen, and expanding with the arrow moves the cursor into the body", async () => {
 		const editor = await mount(':::collapsible{title="제목"}\n숨은 본문\n:::');
 		const toggle = screen.getByRole("button", { name: "펼치기" });
 		expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -155,8 +155,8 @@ describe("컨테이너 NodeView(공개 모양 + 제자리 편집)", () => {
 	});
 });
 
-describe("단 너비", () => {
-	it("똑같이 나누기는 저장된 너비를 지우고, 단을 더하면 너비를 똑같이 되돌린다", async () => {
+describe("column widths", () => {
+	it("equal split clears the stored widths, and adding a column resets widths to equal", async () => {
 		const source = '::::columns{widths="70,30"}\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::';
 		const editor = await mount(source);
 		expect(screen.getByText("70 : 30")).toBeDefined();

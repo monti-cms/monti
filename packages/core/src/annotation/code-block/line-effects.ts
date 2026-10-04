@@ -2,46 +2,46 @@ import { createActiveTranslator } from "../../i18n/active";
 import { codeBlockMessages } from "./messages";
 
 /**
- * 코드 블록 줄 효과 정의(`// @line 이름 {2-4}`). 본체 기본(강조·추가·삭제·경고·오류)에 사이트 설정의
- * `codeBlock.lineEffects`를 더한다. 같은 이름이면 사이트 정의로 바꾼다.
+ * Code block line effect definitions (`// @line name {2-4}`). Adds the site config's `codeBlock.lineEffects` to the core defaults
+ * (highlight, plus, minus, warning, error). A site definition replaces one with the same name.
  *
- * 정의는 저장 문법(주석 이름)·공개 화면 클래스·편집기 표시를 한 곳에서 정한다. 설정에 들어가므로 JSON으로 직렬화할 수
- * 있는 값만 가진다. 줄 접기(`collapse`)와 본문 연결 이름표(`anchor`)는 동작이 따로 있는 본체 효과라 여기에 없다.
+ * A definition sets the storage syntax (comment name), public view class, and editor display in one place. It goes into the config, so it holds only
+ * JSON-serializable values. Line folding (`collapse`) and the body-link label (`anchor`) are core effects with their own behavior, so they are not here.
  *
- * 이 파일은 설정을 읽지 않는다(설정 파일이 저작 API를 거쳐 이 타입을 import한다). 사이트가 쓰는 목록은 `active.ts`다.
+ * This file does not read the config (the config file imports this type through the authoring API). The list the site uses is in `active.ts`.
  */
 
-/** 편집기 표시. 공개 화면 클래스와 따로 둔다(공개 화면은 줄 앞 표시를 CSS로 그린다). */
+/** Editor display. Kept separate from the public view class (the public view draws line-leading markers with CSS). */
 export interface CodeLineEffectEditor {
-	/** 줄 배경 클래스. */
+	/** Line background class. */
 	readonly background?: string;
-	/** 줄 전체에 긋는 물결 밑줄 색 클래스(예: `decoration-red-500`). */
+	/** Color class of the wavy underline across the whole line (e.g. `decoration-red-500`). */
 	readonly wavy?: string;
-	/** 줄 번호 칸 표시 글자와 그 클래스(예: `+`). 한 줄에 여럿이면 정의 순서가 앞선 것을 보인다. */
+	/** Marker text in the line number column and its class (e.g. `+`). If a line has several, the earliest in definition order is shown. */
 	readonly marker?: { readonly text: string; readonly className?: string };
 }
 
 export interface CodeLineEffectDefinition {
-	/** 주석 이름(`// @line 이름`). 소문자 케밥. */
+	/** Comment name (`// @line name`). Lowercase kebab-case. */
 	readonly name: string;
-	/** 줄 효과 메뉴 이름. 짧게 쓴다. */
+	/** Line effect menu label. Keep it short. */
 	readonly label: string;
-	/** 메뉴 아이콘(lucide 이름). 관리자 화면에 등록된 이름이어야 한다. */
+	/** Menu icon (lucide name). Must be a name registered in the admin UI. */
 	readonly icon?: string;
-	/** 공개 화면이 그 줄에 붙이는 클래스. */
+	/** Class the public view adds to that line. */
 	readonly class: string;
 	readonly editor?: CodeLineEffectEditor;
 }
 
-/** 사이트 설정의 코드 블록 설정. */
+/** The site config's code block settings. */
 export interface CodeBlockConfig {
-	/** 줄 효과. 본체 기본에 더하고, 같은 이름이면 바꾼다. 메뉴는 기본 다음에 더한 순서다. */
+	/** Line effects. Added to the core defaults; same name replaces. The menu is the defaults followed by added ones in order. */
 	readonly lineEffects?: readonly CodeLineEffectDefinition[];
 }
 
 const t = createActiveTranslator(codeBlockMessages);
 
-/** 본체 기본 줄 효과. 선언 순서가 줄 효과 메뉴의 순서다. */
+/** Core default line effects. Declaration order is the order in the line effect menu. */
 export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 	{
 		name: "highlight",
@@ -98,11 +98,11 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 	},
 ];
 
-/** 줄 효과로 쓸 수 없는 이름. 본체 줄 효과(접기·이름표)와 글자 효과 이름이다. */
+/** Names not usable as line effects: core line effects (folding, label) and text effect names. */
 const RESERVED = new Set(["collapse", "anchor", "fold", "strong", "em", "del", "u", "tooltip"]);
 const NAME = /^[a-z][a-z0-9-]*$/;
 
-/** 사이트 설정이 맞는지 확인한다. 틀리면 앱이 뜰 때 알린다. */
+/** Checks that the site config is valid. Reports at app startup if wrong. */
 export function validateCodeBlockConfig(config: CodeBlockConfig | undefined): void {
 	const seen = new Set<string>();
 	for (const effect of config?.lineEffects ?? []) {
@@ -116,7 +116,7 @@ export function validateCodeBlockConfig(config: CodeBlockConfig | undefined): vo
 	}
 }
 
-/** 기본 줄 효과에 사이트 정의를 합친다. 같은 이름은 그 자리에서 바꾸고, 새 이름은 뒤에 붙인다. */
+/** Merges site definitions into the default line effects. A same name is replaced in place; a new name is appended. */
 export function resolveCodeLineEffects(
 	added: readonly CodeLineEffectDefinition[] | undefined,
 ): readonly CodeLineEffectDefinition[] {

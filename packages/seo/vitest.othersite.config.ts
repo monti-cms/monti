@@ -3,8 +3,8 @@ import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
 /**
- * 재발 방지(M10-1): 블로그와 SEO 필드 이름·탭·언어가 다른 설정(`test/other-site.config.ts`)으로 SEO 확장 테스트를 다시 돈다.
- * 필드는 설정에서 역할로 찾는다. 블로그 예시 설정의 필드 이름을 그대로 쓰는 테스트만 아래에서 뺀다.
+ * Regression guard: reruns the SEO extension tests with a config (`test/other-site.config.ts`) whose SEO field names, tab and language differ from the example blog.
+ * Fields are found by role in the config. Only tests that use the example blog config's field names as they are are excluded below.
  */
 const BLOG_FIXTURE_TESTS = ["src/__test__/blog-seo.test.ts"];
 

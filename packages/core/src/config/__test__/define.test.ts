@@ -24,7 +24,7 @@ describe("defineConfig", () => {
 		expect("workflow" in oldDocument).toBe(false);
 		const kindDocument: "document" = oldDocument.kind;
 		expect(kindDocument).toBe("document");
-		// `defineCollection` 없이 적은 정의(예전 이름)도 `defineConfig`가 정리한다.
+		// Definitions written without `defineCollection` (legacy name) are also normalized by `defineConfig`.
 		const raw = { label: "Raw", workflow: "record", fields } as unknown as typeof topic;
 		expect(defineConfig({ collections: { raw }, locales, defaultLocale: "en" }).collections.raw).toMatchObject({
 			kind: "item",
@@ -158,7 +158,7 @@ describe("defineConfig", () => {
 			fields: { title, series: fields.backlink({ label: "Series", from: "series", via: "articleId" }) },
 			list: { columns: [] },
 		});
-		// `via`가 여러 개 관계가 아니면 반대 방향 관계를 만들 수 없다.
+		// Without a to-many `via`, the inverse relation cannot be created.
 		expect(() => defineConfig({ collections: { article: linked, series }, locales, defaultLocale: "en" })).toThrow(
 			/many relation/,
 		);
@@ -280,11 +280,11 @@ describe("defineConfig", () => {
 			define(["title", "permalink", "slug", "format", "related", "kind", "videoUrl", "status", "updatedAt", "folder"]),
 		).not.toThrow();
 		expect(() => define(["title", "nope"])).toThrow(/article\.list\.columns has unknown column "nope"/);
-		// 시스템 컬럼 이름을 잘못 적은 경우도 같다.
+		// The same applies when a system column name is misspelled.
 		expect(() => define(["updated"])).toThrow(/unknown column "updated".*updatedAt/);
 		expect(() => define(["title", "preview"])).toThrow(/"preview" is a view field that is not stored/);
 		expect(() => define(["title", "format", "format"])).toThrow(/lists "format" twice/);
-		// 주소 필드가 없으면 `slug`도 모르는 이름이다.
+		// Without a URL field, `slug` is an unknown name too.
 		const noSlug = defineCollection({
 			label: "Note",
 			kind: "document",
@@ -319,7 +319,7 @@ describe("defineConfig", () => {
 			/role "summary" on both excerpt and intro/,
 		);
 
-		// 본체는 요약 역할(`summary`)의 종류만 본다. 다른 역할(예: SEO 확장의 `noindex`)의 종류는 그 확장이 본다.
+		// The core only checks the type of the summary role (`summary`). The type of other roles (e.g. the SEO extension's `noindex`) is checked by that extension.
 		const wrongSummary = article({
 			excerpt: { ...fields.relation({ label: "E", to: "article" }), role: "summary" } as never,
 		});

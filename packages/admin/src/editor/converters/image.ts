@@ -15,7 +15,7 @@ const IMAGE_ATTRS = [
 	"title",
 ] as const;
 
-/** `decorative`는 참일 때만 싣는다 — 거짓·없음은 저장하지 않는다(§4.4). */
+/** `decorative` is carried only when true — false or absent is not saved. */
 const isDecorative = (value: unknown): boolean => value === true;
 
 export const imageConverter: BlockConverter = {
@@ -43,12 +43,12 @@ export const imageConverter: BlockConverter = {
 			const value = (source as Record<string, unknown>)[key];
 			if (value == null) continue;
 			if (key === "decorative" && !isDecorative(value)) continue;
-			// Tiptap 기본값은 저장하지 않는다 — 없으면 Markdown 이미지로 돌아가야 한다.
-			// `align="center"`는 공개 기본값과 같아 생략한다(R3). `width`는 생략하지 않는다 —
-			// 명시적 `100%`와 미지정은 공개 렌더가 다르다(인라인 width 유무, O2).
+			// Tiptap defaults are not saved — if absent, it must round-trip to a Markdown image.
+			// `align="center"` equals the public default, so it is omitted. `width` is not omitted —
+			// an explicit `100%` and unspecified render differently on the public side (inline width present or not).
 			if (key === "align" && value === "center") continue;
 			if ((key === "caption" || key === "title") && value === "") continue;
-			// 회전 0/없음·전체 자르기는 기본값이므로 저장하지 않는다(c-editor.md §1.1).
+			// Rotation 0/none and full crop are defaults, so they are not saved.
 			if (key === "rotate" && (value === "0" || value === 0 || value === "" || !isValidRotate(value))) continue;
 			if (key === "crop" && (value === "" || value === "0,0,100,100" || !isValidCrop(value))) continue;
 			if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {

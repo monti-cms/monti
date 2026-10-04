@@ -11,20 +11,20 @@ import { editorMessages } from "./messages";
 const t = createTranslator(editorMessages);
 
 /**
- * CmsNode ↔ Tiptap JSONContent 변환. 시각 에디터의 적재/저장 경로다.
+ * CmsNode <-> Tiptap JSONContent conversion. This is the visual editor's load/save path.
  *
- * - 적재: MDX → `analyze` → `toDocument` → 이 모듈 → Tiptap JSON.
- * - 저장: Tiptap `getJSON()` → 이 모듈 → CmsNode → `serialize` → MDX.
+ * - Load: MDX → `analyze` → `toDocument` → this module → Tiptap JSON.
+ * - Save: Tiptap `getJSON()` → this module → CmsNode → `serialize` → MDX.
  *
- * 두 방향 모두 **데이터를 버리지 않는다.** Tiptap 스키마에 없는 블록(표·수식·차트·콜아웃·탭·
- * 수식 외 JSX 등)은 `cmsOpaqueBlock`에 원문 MDX를 담아 읽기 전용 상자로 보존한다(§4.4
- * "조용히 노드를 삭제하거나 임의의 HTML로 바꾸지 않는다"). 블록 하나가 통째로 네이티브거나
- * 통째로 상자다 — 상자 안 일부만 날아가는 일은 없다.
+ * Neither direction **drops data.** Blocks missing from the Tiptap schema (tables, math, charts, callouts, tabs,
+ * JSX other than math, etc.) are kept as a read-only box holding the original MDX in `cmsOpaqueBlock`
+ * (nodes are never silently deleted or turned into arbitrary HTML). A block is either entirely native or
+ * entirely a box — part of a box is never lost.
  */
 
 export const OPAQUE_BLOCK_NAME = "cmsOpaqueBlock";
 
-/** Tiptap이 그대로 들고 다닐 수 있는 mark. 더한 글자 꾸밈(블록 확장)은 정의에서 만든 마크로 옮긴다(`added-marks.ts`). */
+/** Marks Tiptap can carry as-is. Added text styles (block extensions) are carried as marks built from the definition (`added-marks.ts`). */
 const NATIVE_MARKS = new Set([
 	"bold",
 	"italic",
@@ -34,7 +34,7 @@ const NATIVE_MARKS = new Set([
 	"underline",
 	"superscript",
 	"subscript",
-	// 번역 안내 글(v3). 속성이 없어 이름 그대로 오간다.
+	// Translation notice text. It has no attributes, so it passes through by name.
 	"untranslated",
 ]);
 const MAPPABLE_MARKS = new Set([...NATIVE_MARKS, ...ADDED_MARKS.keys()]);
@@ -42,8 +42,8 @@ const MAPPABLE_MARKS = new Set([...NATIVE_MARKS, ...ADDED_MARKS.keys()]);
 const TEXT_ALIGN_VALUES: ReadonlySet<string> = new Set(ALIGN_VALUES);
 
 /**
- * `to-document.ts`의 `jsxAttrs`와 같은 모양으로 JSX 노드를 만든다.
- * `{type: 이름, attrs: {펼친 속성, name, attributes}}` — 키 순서는 비교에 영향 없다.
+ * Builds a JSX node in the same shape as `jsxAttrs` in `to-document.ts`.
+ * `{type: name, attrs: {spread props, name, attributes}}` — key order does not affect comparison.
  */
 const jsxCmsNode = (name: string, record: Record<string, CmsJsonValue>): CmsNode => {
 	const attributes = Object.entries(record)
@@ -52,7 +52,7 @@ const jsxCmsNode = (name: string, record: Record<string, CmsJsonValue>): CmsNode
 	return { type: name, attrs: { ...record, name, attributes } };
 };
 
-/** 서브트리를 상자로 감싼다. `source`는 그 서브트리의 저장 문자열(되돌릴 때 다시 파싱한다). */
+/** Wraps a subtree in a box. `source` is the subtree's stored string (re-parsed when converting back). */
 const toOpaque = (node: CmsNode): JSONContent => {
 	const body = serialize({ type: "doc", content: [structuredClone(node)] } as CmsNode).trimEnd();
 	const label = typeof node.attrs?.name === "string" && node.attrs.name.length > 0 ? node.attrs.name : node.type;
@@ -62,13 +62,13 @@ const toOpaque = (node: CmsNode): JSONContent => {
 const isMappableInline = (node: CmsNode): boolean => {
 	if (node.type === "text") return (node.marks ?? []).every((mark) => MAPPABLE_MARKS.has(mark.type));
 	if (node.type === "hardBreak") return true;
-	// `:br[]`는 `mdxJsx`(name=br)로 온다 — 에디터의 진짜 줄바꿈으로 보여준다.
+	// `:br[]` arrives as `mdxJsx` (name=br) — shown as a real line break in the editor.
 	if (node.type === "mdxJsx" && node.attrs?.name === "br") return true;
-	// 이미지·수식·그 밖의 JSX는 인라인 자리에 둘 수 없으므로 블록째 상자로 보낸다.
+	// Images, math, and other JSX cannot sit inline, so the whole block goes into a box.
 	return false;
 };
 
-/** 모든 항목이 `- [ ]`/`- [x]`인 비순서 목록. */
+/** Unordered list where every item is `- [ ]`/`- [x]`. */
 const isTaskList = (node: CmsNode): boolean => {
 	const items = node.content ?? [];
 	return (
@@ -84,7 +84,7 @@ const isTaskList = (node: CmsNode): boolean => {
 };
 
 const isMappableBlock = (node: CmsNode): boolean => {
-	// 부모 전용 블록(탭 하나·단 하나)은 부모 밖에서 유효하지 않다. 부모 변환기가 자식을 직접 검증한다.
+	// Parent-only blocks (a single tab or column) are invalid outside their parent. The parent converter validates its children directly.
 	if (PARENT_ONLY_TYPES.has(node.type)) return false;
 	const converter = converterForCms(node.type, node);
 	if (converter) return converter.isMappable(node, context);
@@ -96,10 +96,10 @@ const isMappableBlock = (node: CmsNode): boolean => {
 		case "orderedList":
 			return (node.content ?? []).every(isMappableBlock);
 		case "bulletList":
-			// 모든 항목이 체크 항목이면 Tiptap 체크 목록으로 편집한다. 섞인 목록은 상자로 보존한다.
+			// If every item is a task item, edit it as a Tiptap task list. Mixed lists are kept as a box.
 			return isTaskList(node) || (node.content ?? []).every(isMappableBlock);
 		case "listItem":
-			// 체크 항목은 체크 목록(`isTaskList`) 안에서만 옮긴다. 번호 목록의 체크 항목은 상자로 보존한다.
+			// Task items are converted only inside a task list (`isTaskList`). Task items in an ordered list are kept as a box.
 			if (node.attrs?.checked != null) return false;
 			return (node.content ?? []).every(isMappableBlock);
 		case "horizontalRule":
@@ -130,7 +130,7 @@ const toTiptapMarks = (marks: CmsMark[] | undefined): JSONContent["marks"] => {
 			out.push({ type: addedMarkName(added.name), attrs: markAttrsOf(added, mark.attrs) });
 			continue;
 		}
-		// isMappableInline이 걸렀으므로 여기 오는 mark는 전부 네이티브다.
+		// isMappableInline has filtered these, so every mark here is native.
 		if (mark.type === "link") {
 			const href = asString(mark.attrs?.href) ?? "";
 			const title = asString(mark.attrs?.title);
@@ -155,8 +155,8 @@ const inlineChildren = (nodes: CmsNode[]): JSONContent[] => {
 			out.push({ type: "hardBreak" });
 			continue;
 		}
-		// isMappableInline이 걸렀으므로 도달 불가. 인라인 자리에는 상자를 둘 수 없어서
-		// 여기가 실행되면 상위 블록 판정이 잘못된 것이다 — 조용히 넘기지 않고 드러낸다.
+		// Unreachable because isMappableInline has filtered. A box cannot sit inline,
+		// so reaching this means the parent block decision was wrong — surface it instead of passing silently.
 		throw new Error(t("tiptapContent.unmappableInline", { type: node.type }));
 	}
 	return out;
@@ -222,7 +222,7 @@ const blockToTiptap = (node: CmsNode): JSONContent => {
 	}
 };
 
-/** MDX 본문 → Tiptap JSON. 파싱 오류가 있어도 있는 만큼은 옮긴다(상자는 원문을 품는다). */
+/** MDX body → Tiptap JSON. Converts what it can even with parse errors (boxes hold the original source). */
 export const cmsNodeToTiptap = (node: CmsNode): JSONContent => {
 	if (node.type === "doc") {
 		return {
@@ -231,7 +231,7 @@ export const cmsNodeToTiptap = (node: CmsNode): JSONContent => {
 				try {
 					return blockToTiptap(block);
 				} catch {
-					// 매핑 버그가 나도 본문을 버리지 않는다 — 상자로 보존하면 저장은 정확하다.
+					// Even on a mapping bug the body is not dropped — keeping it as a box makes saving exact.
 					return toOpaque(block);
 				}
 			}),
@@ -240,7 +240,7 @@ export const cmsNodeToTiptap = (node: CmsNode): JSONContent => {
 	return blockToTiptap(node);
 };
 
-/** MDX 본문 문자열 → Tiptap JSON. 에디터 적재용이다. */
+/** MDX body string → Tiptap JSON. For loading into the editor. */
 export const mdxToTiptap = (source: string): JSONContent => cmsNodeToTiptap(toDocument(analyze(source)));
 
 const tiptapMarksToCms = (marks: JSONContent["marks"]): CmsMark[] => {
@@ -259,7 +259,7 @@ const tiptapMarksToCms = (marks: JSONContent["marks"]): CmsMark[] => {
 			out.push(title != null ? { type: "link", attrs: { href, title } } : { type: "link", attrs: { href } });
 			continue;
 		}
-		// Tiptap 스키마 밖의 mark는 getJSON에 나타날 수 없다(방어: 버린다).
+		// Marks outside the Tiptap schema cannot appear in getJSON (defensive: dropped).
 		if (NATIVE_MARKS.has(mark.type)) out.push({ type: mark.type });
 	}
 	return sortMarks(out);
@@ -283,7 +283,7 @@ const tiptapInlineToCms = (nodes: JSONContent[] | undefined): CmsNode[] => {
 		if (node.type === "image") {
 			out.push(...tiptapBlockToCms(node));
 		}
-		// 스키마 밖의 인라인은 getJSON에 나타날 수 없다(방어: 버린다).
+		// Inlines outside the schema cannot appear in getJSON (defensive: dropped).
 	}
 	return out;
 };
@@ -355,12 +355,12 @@ const tiptapBlockToCms = (node: JSONContent): CmsNode[] => {
 			return [...(toDocument(analyze(source)).content ?? [])];
 		}
 		default:
-			// Tiptap 스키마 밖의 노드는 getJSON에 나타날 수 없다(방어: 버린다).
+			// Nodes outside the Tiptap schema cannot appear in getJSON (defensive: dropped).
 			return [];
 	}
 };
 
-/** 변환기 등록부(`./converters`)에 넘기는 재귀 변환 함수. 함수 선언 뒤에 두지만 호출은 실행 시점이라 안전하다. */
+/** Recursive conversion functions passed to the converter registry (`./converters`). Placed after the function declarations, but calls happen at run time so this is safe. */
 const context: ConverterContext = {
 	blockToTiptap: (node) => blockToTiptap(node),
 	tiptapBlockToCms: (node) => tiptapBlockToCms(node),
@@ -370,11 +370,11 @@ const context: ConverterContext = {
 	inlineToCms: (nodes) => tiptapInlineToCms(nodes),
 };
 
-/** Tiptap `getJSON()` → CmsNode. 저장용이다. */
+/** Tiptap `getJSON()` → CmsNode. For saving. */
 export const tiptapToCmsNode = (content: JSONContent): CmsNode => {
 	const children = Array.isArray(content?.content) ? content.content : [];
 	return { type: "doc", content: children.flatMap(tiptapBlockToCms) };
 };
 
-/** Tiptap `getJSON()` → MDX 본문. 에디터 저장용이다. */
+/** Tiptap `getJSON()` → MDX body. For saving from the editor. */
 export const tiptapToMdx = (content: JSONContent): string => serialize(tiptapToCmsNode(content));

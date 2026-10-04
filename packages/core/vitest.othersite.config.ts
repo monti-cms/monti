@@ -3,9 +3,9 @@ import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
 /**
- * 재발 방지(M10-1): 블로그와 컬렉션·필드·언어·블록이 다른 설정(`test/other-site.config.ts`)으로 본체 테스트를 다시 돈다.
- * 새 테스트는 저절로 이 묶음에도 들어간다. 컬렉션·필드·블록 이름은 설정에서 찾는다(`test/any-site.ts`).
- * 블로그 예시 설정의 값(컬렉션 목록·주소·글 해시 등)을 그대로 확인하는 테스트는 `*.blog.test.ts`에 두고 여기서 뺀다(M12-3).
+ * Regression guard: reruns the core tests with a config whose collections, fields, locales and blocks differ from the reference blog (`test/other-site.config.ts`).
+ * New tests join this set automatically. Collection, field and block names are looked up from the config (`test/any-site.ts`).
+ * Tests that assert the reference blog config's values as is (collection list, URLs, entry hashes, etc.) live in `*.blog.test.ts` and are excluded here.
  */
 const BLOG_FIXTURE_TESTS = ["src/**/*.blog.test.ts"];
 

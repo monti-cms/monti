@@ -10,7 +10,7 @@ const components: CmsAdminComponents = {
 	icons: { "columns-2": Columns2 },
 };
 
-/** 단 나누기 블록의 편집 화면과 메뉴 아이콘을 관리자 화면에 넣는다. */
+/** Registers the columns block's editing view and menu icon in the admin UI. */
 export function ColumnsProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

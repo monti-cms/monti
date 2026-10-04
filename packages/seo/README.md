@@ -1,9 +1,11 @@
 # @monti-cms/seo
 
-`@monti-cms/core`의 SEO 확장. 검색엔진·공유용 필드 묶음과 편집 화면의 검색 결과·공유 미리보기, 검색 제목·설명 글자 수,
-검색엔진 숨기기 스위치를 더한다. `@monti-cms/ai`가 있으면 검색 제목·설명 추천도 붙는다. 공개 화면은 `seoOf`로 값을 읽는다.
+English | [한국어](README.ko.md)
 
-## 등록
+SEO extension for `@monti-cms/core`. It adds a field set for search engines and sharing, the search result and share previews in the edit screen, character counts for the search title and description,
+and a switch to hide the page from search engines. With `@monti-cms/ai`, search title and description suggestions are attached too. Public pages read values with `seoOf`.
+
+## Registration
 
 ```ts
 // cms.config.ts
@@ -18,7 +20,7 @@ const article = defineCollection({
 		excerpt: fields.text({ label: "Excerpt", role: "summary" }),
 		...seoFields(),
 	},
-	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO 필드는 적지 않아도 SEO 탭에 모인다
+	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO fields gather in the SEO tab even if not listed
 	list: { columns: ["title", "status"] },
 });
 
@@ -29,47 +31,47 @@ export default defineConfig({
 ```
 
 ```css
-@import "@monti-cms/seo/styles.css"; /* 관리자 패키지 스타일 다음(배포 묶음에서 클래스를 찾는다) */
+@import "@monti-cms/seo/styles.css"; /* after the admin package styles (finds classes in the published bundle) */
 ```
 
-## 필드 묶음 `seoFields(options?)`
+## Field set `seoFields(options?)`
 
-| 자리 | 기본 이름 | 필드 | 역할(`role`) | 편집 화면 |
+| Slot | Default name | Field | Role (`role`) | Edit screen |
 | --- | --- | --- | --- | --- |
-| `preview` | `seoPreview` | 보기 필드 `search` | - | 검색 결과·공유 미리보기. 비운 제목·설명은 제목·요약 역할 값 |
-| `title` | `seoTitle` | 텍스트 | `seoTitle` | 비우면 제목을 안내 문구로, 글자 수(권장 60) |
-| `description` | `seoDescription` | 여러 줄 텍스트 | `seoDescription` | 비우면 요약을 안내 문구로, 글자 수(권장 155) |
-| `image` | `seoImage` | 미디어(`fields.media`, 이미지) | `ogImage` | 미디어 고르기. 쓰고 있는 이미지는 지울 수 없다 |
-| `noindex` | `seoNoindex` | 선택(`index`·`noindex`) | `noindex` | 이름표 줄의 스위치. 켜면 `noindex` |
-| `canonical` | `seoCanonical` | 텍스트 | `canonical` | 원본 주소 |
+| `preview` | `seoPreview` | view field `search` | - | Search result and share preview. An empty title or description falls back to the title or summary role value |
+| `title` | `seoTitle` | text | `seoTitle` | When empty, shows the title as a hint, and a character count (recommended 60) |
+| `description` | `seoDescription` | multi-line text | `seoDescription` | When empty, shows the summary as a hint, and a character count (recommended 155) |
+| `image` | `seoImage` | media (`fields.media`, image) | `ogImage` | Media picker. An image in use cannot be deleted |
+| `noindex` | `seoNoindex` | select (`index`, `noindex`) | `noindex` | A switch in the label row. On means `noindex` |
+| `canonical` | `seoCanonical` | text | `canonical` | Canonical URL |
 
-모든 필드는 `tab`(기본 `SEO`)을 가져 배치(`layout`)를 적지 않아도 편집 화면의 그 탭에 모인다. 값은 필드 이름이 아니라 역할로
-찾으므로 이름은 사이트가 정한다.
+Every field has a `tab` (default `SEO`), so they gather in that tab of the edit screen even without a `layout`. Values are found by role, not by field name,
+so names are up to the site.
 
 ```ts
 seoFields({
-	keys: { title: "metaTitle", image: "ogImageId" }, // 필드 이름(이미 저장한 값의 이름 그대로 쓰기)
-	labels: { title: "Search title" }, // 이름표
-	tab: "Search", // 탭 이름
-	localized: false, // 제목·설명·이미지·원본 주소를 언어마다 따로 둘까(기본 true, 숨기기는 언제나 공통)
-	limits: { title: 70, description: 160 }, // 권장 글자 수: 넘으면 글자 수 색이 바뀌고 AI 추천 길이가 된다(저장은 막지 않는다)
-	omit: ["canonical"], // 빼는 자리
+	keys: { title: "metaTitle", image: "ogImageId" }, // field names (reuse the names of values already stored)
+	labels: { title: "Search title" }, // labels
+	tab: "Search", // tab name
+	localized: false, // keep title, description, image and canonical URL separate per language? (default true; hiding is always shared)
+	limits: { title: 70, description: 160 }, // recommended lengths: the count changes color when exceeded and it becomes the AI suggestion length (saving is not blocked)
+	omit: ["canonical"], // slots to omit
 });
 ```
 
-권장 글자 수는 필드의 `inputOptions.limit`에 담긴다. 저장을 막는 한도가 필요하면 필드 `max`를 쓰는 별도 필드를 둔다.
+The recommended length is stored in the field's `inputOptions.limit`. If you need a limit that blocks saving, add a separate field that uses the field `max`.
 
-## 플러그인 `seo(options?)`
+## Plugin `seo(options?)`
 
-- **관리자 화면**(`@monti-cms/seo/admin`): 보기 필드 `search`, 입력 조각 `seo-title`·`seo-description`(안내 문구·글자 수),
-  `seo-noindex`(스위치)를 `CmsAdminComponentsProvider`로 등록한다. 등록이 없으면(확장을 빼면) 같은 필드가 기본 입력으로 보인다.
-- **설정 검사**: `seoTitle`·`seoDescription`·`canonical`은 텍스트, `ogImage`는 미디어, `noindex`는 `noindex` 선택지가 있는 선택
-  필드여야 한다(`validateSeoFields`).
-- **AI 기능**: `@monti-cms/ai`가 있으면 `seoTitle`(검색 제목 추천, 후보 3개)·`seoDescription`(검색 설명 추천)을 더한다
-  (`contributes.ai`). 역할 필드가 있는 모든 컬렉션에 붙고, 길이는 필드 `max` → 권장 글자 수 → 60·155다. 바꾸려면
-  `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`, 끄려면 `seoTitle: false` 또는 `seo({ ai: false })`.
+- **Admin UI** (`@monti-cms/seo/admin`): registers the view field `search`, the input pieces `seo-title` and `seo-description` (hint and character count),
+  and `seo-noindex` (switch) through `CmsAdminComponentsProvider`. Without the registration (if the extension is removed) the same fields appear as default inputs.
+- **Config validation**: `seoTitle`, `seoDescription` and `canonical` must be text, `ogImage` must be media, and `noindex` must be a select
+  field with a `noindex` option (`validateSeoFields`).
+- **AI features**: with `@monti-cms/ai`, it adds `seoTitle` (search title suggestions, 3 candidates) and `seoDescription` (search description suggestions)
+  (`contributes.ai`). They attach to every collection that has the role fields, and the length is field `max` → recommended length → 60 / 155. To change one:
+  `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
 
-## 공개 화면 `seoOf(collection, metadata)`
+## Public pages `seoOf(collection, metadata)`
 
 ```ts
 import { seoOf } from "@monti-cms/seo";
@@ -78,20 +80,20 @@ import { post } from "@/cms.config";
 const { title, description, imageId, canonical, noindex } = seoOf(post, entry.metadata);
 ```
 
-컬렉션 정의(`defineCollection`의 결과)와 저장된 메타데이터에서 역할로 값을 읽는다. 비운 제목·설명은 제목(`title`)·요약
-(`role: "summary"`)으로 채우고, 비운 값은 없다(`undefined`). 공유 이미지는 미디어 ID라 공개 주소는 사이트가 만든다
-(`@monti-cms/core/runtime`의 `resolvePublicMediaUrl`).
+It reads values by role from the collection definition (the result of `defineCollection`) and the stored metadata. An empty title or description is filled from the title (`title`) or summary
+(`role: "summary"`), and empty values are `undefined`. The share image is a media ID, so the site builds the public URL
+(`resolvePublicMediaUrl` from `@monti-cms/core/runtime`).
 
-## 진입점
+## Entry points
 
-| 진입점 | 내용 |
+| Entry point | Contents |
 | --- | --- |
-| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (사이트 설정·공개 화면, 서버·브라우저 공용) |
-| `@monti-cms/seo/admin` | 관리자 쪽 공급자(본체가 플러그인 정의의 `admin`으로 불러 쓴다) |
+| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (site config and public pages, shared by server and browser) |
+| `@monti-cms/seo/admin` | Admin-side provider (the core loads it through the plugin definition's `admin`) |
 
-## 개발
+## Development
 
 ```sh
-pnpm --filter @monti-cms/seo test:run     # 예시 블로그 설정 + 다른 사이트 설정
+pnpm --filter @monti-cms/seo test:run     # example blog config + other-site config
 pnpm --filter @monti-cms/seo typecheck
 ```

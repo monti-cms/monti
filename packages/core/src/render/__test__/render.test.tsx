@@ -6,12 +6,12 @@ import { renderMdx } from "../index";
 const html = async (source: string, options?: Parameters<typeof renderMdx>[1]) =>
 	renderToStaticMarkup((await renderMdx(source, options)).content);
 
-/** 설정에 있는 첫 코드 펜스 블록(차트·다이어그램 등). */
+/** The first code fence block in the config (chart, diagram etc.). */
 const fenceBlock = ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
 
-/** 본문 그리기(M14-2). 블로그 공개 렌더 검사를 본체 기본 컴포넌트로 옮겼다(두 설정으로 돈다). */
-describe("본문 그리기 @monti-cms/core/render", () => {
-	it("마크다운·표·줄바꿈·목차를 그린다", async () => {
+/** Body rendering. The reference blog's public render checks were moved to the core default components (runs with two configs). */
+describe("body rendering @monti-cms/core/render", () => {
+	it("renders Markdown, tables, line breaks and the table of contents", async () => {
 		const rendered = await renderMdx("## 제목\n\n첫 줄\n둘째 줄\n\n| a | b |\n| --- | --- |\n| 1 | 2 |");
 		const markup = renderToStaticMarkup(rendered.content);
 		expect(markup).toContain('<h2 id="제목">');
@@ -20,11 +20,11 @@ describe("본문 그리기 @monti-cms/core/render", () => {
 		expect(rendered.toc).toEqual([expect.objectContaining({ value: "제목", depth: 0 })]);
 	});
 
-	it("검사에 걸리는 본문은 그리지 않는다", async () => {
+	it("does not render a body that fails the check", async () => {
 		await expect(renderMdx("<Unclosed>")).rejects.toThrow(/MDX validation failed/);
 	});
 
-	it("인라인 지시자·줄바꿈 지시자를 요소로 그린다", async () => {
+	it("renders inline directives and line break directives as elements", async () => {
 		const markup = await html("밑줄은 :u[밑줄] 위는 :sup[위] 아래는 :sub[아래] 첫 줄:br[]둘째 줄");
 		expect(markup).toContain("<u>밑줄</u>");
 		expect(markup).toContain("<sup>위</sup>");
@@ -32,12 +32,12 @@ describe("본문 그리기 @monti-cms/core/render", () => {
 		expect(markup).toContain("<br/>");
 	});
 
-	it(":::text-align은 검증된 정렬만 클래스로 바꾼다", async () => {
+	it(":::text-align turns only validated alignments into classes", async () => {
 		expect(await html(':::text-align{align="center"}\n가운데\n:::')).toContain('class="cms-align-center"');
 		expect(await html(':::text-align{align="justify"}\n무시\n:::')).not.toContain("cms-align-justify");
 	});
 
-	it("::image는 주소·대체 글·캡션·너비를 그리고, 해석하지 못하면 빈 자리와 캡션만 남긴다", async () => {
+	it("::image renders the address, alt text, caption and width, and if unresolved only an empty slot and the caption remain", async () => {
 		const ok = await html('::image{src="/images/a.png" alt="설명" caption="캡션" width="60%"}');
 		expect(ok).toContain('src="/images/a.png"');
 		expect(ok).toContain('alt="설명"');
@@ -53,7 +53,7 @@ describe("본문 그리기 @monti-cms/core/render", () => {
 		expect(unresolved).toContain("캡션");
 	});
 
-	it("이미지 해석기·링크 바꾸기를 받는다", async () => {
+	it("accepts an image resolver and a link rewriter", async () => {
 		const markup = await html(
 			'::image{mediaId="m1" alt="a"}\n\n[안](/a) [밖](https://example.com) [나쁜](javascript:x)',
 			{
@@ -68,7 +68,7 @@ describe("본문 그리기 @monti-cms/core/render", () => {
 		expect(markup).not.toContain("javascript:");
 	});
 
-	it("::file은 이름·형식·크기와 내려받기 링크를 그리고, 해석하지 못하면 이름만 남긴다", async () => {
+	it("::file renders the name, type, size and a download link, and if unresolved only the name remains", async () => {
 		const source = '::file{mediaId="11111111-1111-4111-8111-111111111111" label="발표 자료"}';
 		const ok = await html(source, {
 			imageResolver: () => ({
@@ -86,14 +86,14 @@ describe("본문 그리기 @monti-cms/core/render", () => {
 		expect(unresolved).not.toContain("<a ");
 	});
 
-	it("코드 펜스는 강조하고, 미등록 지시자는 본문 글자로 남긴다", async () => {
+	it("highlights code fences and leaves unregistered directives as body text", async () => {
 		const code = await html("```ts\nconst a = 1;\n```");
 		expect(code).toContain('class="shiki');
 		expect(await html("openai/gpt-oss-120b:free를 쓴다.")).toContain("gpt-oss-120b:free를");
 	});
 
 	it.skipIf(!fenceBlock)(
-		"코드 펜스 블록은 블록 컴포넌트에 원문(source)으로 넘기고, 사이트가 컴포넌트를 덮어쓴다",
+		"passes a code fence block to the block component as the original source, and the site can override the component",
 		async () => {
 			const block = fenceBlock as NonNullable<typeof fenceBlock>;
 			const lang = block.syntax.kind === "fence" ? block.syntax.lang : "";

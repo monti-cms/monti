@@ -1,12 +1,12 @@
 /**
- * 공개 화면 읽기(`@monti-cms/core/read`, M14-1). 서버 컴포넌트·라우트·sitemap·RSS가 공개본을 읽는다. 쓰기 기능은 없다.
- * 브라우저 코드에서 import하지 않는다.
+ * Public site reading (`@monti-cms/core/read`). Server components, routes, sitemap and RSS read the published content. No write features.
+ * Do not import from browser code.
  *
- * - 글 하나(`getEntry`): 옛 주소면 이동할 주소를 돌려주고, 이 언어 번역이 없으면 원문으로 대체할 수 있다.
- * - 목록(`listEntries`): 관계 조건·정렬·쪽 나누기를 DB에서 한다.
- * - 번역(`getTranslations`): 같은 글의 공개된 언어들과 주소(hreflang).
- * - 미리보기(`getPreview`): 관리자만, 최신 초안.
- * - 관계는 대상의 공개본으로 풀어 제목·주소를 붙인다(이 언어 → 없으면 원문).
+ * - One entry (`getEntry`): returns the URL to redirect to for an old URL, and can fall back to the source text if this locale has no translation.
+ * - List (`listEntries`): relation filters, sorting and pagination are done in the DB.
+ * - Translations (`getTranslations`): the published locales of the same entry and their URLs (hreflang).
+ * - Preview (`getPreview`): admins only, the latest draft.
+ * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import { authGateway } from "../adapters/auth";
 import type { EntryMetadata, PublishedEntryRecord } from "../adapters/postgres/content-store";
@@ -24,49 +24,49 @@ import {
 	storedFields,
 } from "../schema/derive";
 
-/** 사이트 설정에서 뽑은 컬렉션의 메타데이터 타입. */
+/** Collection metadata type extracted from the site config. */
 export type MetadataFor<C extends Collection> = C extends keyof ResolvedConfig["collections"]
 	? MetadataOf<ResolvedConfig["collections"][C]>
 	: EntryMetadata;
 
-/** 관계 필드가 가리키는 공개 항목. */
+/** A published item a relation field points to. */
 export interface ReadRelation {
 	readonly id: string;
 	readonly collection: string;
 	readonly locale: string;
 	readonly slug: string;
-	/** 이 언어의 이름(항목 컬렉션의 언어별 이름 → 기본 이름). */
+	/** Name in this locale (the item collection's per-locale name -> default name). */
 	readonly title: string | null;
-	/** 공개 주소(컬렉션 `path`가 있으면, 언어 접두사 포함). */
+	/** Public URL (if the collection has `path`, including the locale prefix). */
 	readonly path: string | null;
 }
 
 export interface ReadEntry<C extends Collection = Collection> {
 	readonly id: string;
 	readonly collection: C;
-	/** 보여 주는 본문의 언어. 원문으로 대체했으면 원문 언어다. */
+	/** Locale of the body shown. If it fell back to the source text, the source locale. */
 	readonly locale: string;
 	readonly translationGroupId: string;
 	readonly slug: string;
-	/** 공개 주소(컬렉션 `path`가 있으면, 언어 접두사 포함). */
+	/** Public URL (if the collection has `path`, including the locale prefix). */
 	readonly path: string | null;
 	readonly title: string | null;
 	readonly metadata: MetadataFor<C>;
-	/** 관계 필드 이름 → 공개된 대상(선언·고른 순서). 공개되지 않은 대상은 빠진다. */
+	/** Relation field name -> published targets (in declared/picked order). Unpublished targets are omitted. */
 	readonly relations: Readonly<Record<string, readonly ReadRelation[]>>;
-	/** 발행일(원문의 것). */
+	/** Publish date (of the source text). */
 	readonly publishedAt: Date | null;
-	/** 이 언어 본문의 수정일. */
+	/** Modified date of this locale's body. */
 	readonly updatedAt: Date;
-	/** 본문 MDX. 목록에서는 `body: true`일 때만 채운다. */
+	/** Body MDX. In lists it is filled only when `body: true`. */
 	readonly mdx: string;
-	/** 요청 언어 번역이 없어 원문을 보여 준다. */
+	/** The source text is shown because there is no translation for the requested locale. */
 	readonly fallback: boolean;
 }
 
 export type ReadEntryResult<C extends Collection = Collection> =
 	| { readonly status: "found"; readonly entry: ReadEntry<C> }
-	/** 옛 주소로 들어왔다. `path`(없으면 `slug`)로 영구 이동(308)한다. */
+	/** Arrived through an old URL. Permanently redirect (308) to `path` (or `slug` if absent). */
 	| { readonly status: "redirect"; readonly slug: string; readonly path: string | null; readonly entry: ReadEntry<C> }
 	| { readonly status: "not_found" };
 
@@ -91,7 +91,7 @@ const pathOf = (collection: string, slug: string, locale: string): string | null
 	return path ? localizePath(locale, path) : null;
 };
 
-/** 관계 대상의 공개본을 모아(한 번에) 이 언어 → 원문 순서로 고른다. */
+/** Gathers the published versions of relation targets (in one query) and picks this locale -> source text. */
 async function resolveRelations(
 	records: readonly PublishedEntryRecord[],
 	locale: string,
@@ -167,13 +167,13 @@ const assertCollection = (collection: string): Collection => {
 	return collection;
 };
 
-/** 항목 컬렉션은 기본 언어 하나뿐이다(이름은 언어별 값으로 고른다). */
+/** An item collection has only the default locale (the name is picked from the per-locale values). */
 const storageLocale = (collection: Collection, locale: string | undefined) =>
 	isItemCollection(collection) ? DEFAULT_LOCALE : locale && isLocale(locale) ? locale : DEFAULT_LOCALE;
 
 /**
- * 글 하나. 주소(`slug`)는 그 언어의 주소다. 옛 주소면 `redirect`를 돌려준다.
- * `fallback: true`면 이 언어 번역이 없을 때 같은 주소의 원문(기본 언어)을 `fallback: true`로 돌려준다.
+ * One entry. The URL (`slug`) is that locale's URL. For an old URL it returns `redirect`.
+ * With `fallback: true`, if this locale has no translation, it returns the source text (default locale) at the same URL with `fallback: true`.
  */
 export async function getEntry<C extends Collection>(params: {
 	readonly collection: C;
@@ -199,11 +199,11 @@ export async function getEntry<C extends Collection>(params: {
 	return { status: "found", entry };
 }
 
-/** 목록 한 쪽. 관계 조건(`where`)·정렬·쪽 나누기는 DB에서 한다. 본문은 `body: true`일 때만 읽는다. */
+/** One page of a list. Relation filters (`where`), sorting and pagination are done in the DB. The body is read only when `body: true`. */
 export async function listEntries<C extends Collection>(params: {
 	readonly collection: C;
 	readonly locale?: string;
-	/** 관계 필드 이름 → 항목 ID(여러 개면 OR). 다른 필드끼리는 AND다. */
+	/** Relation field name -> item IDs (OR if several). Different fields are ANDed. */
 	readonly where?: Readonly<Record<string, string | readonly string[]>>;
 	readonly sort?: PublishedSort;
 	readonly order?: "asc" | "desc";
@@ -218,7 +218,7 @@ export async function listEntries<C extends Collection>(params: {
 		locale,
 		where: params.where,
 		sort: params.sort,
-		// 항목 컬렉션의 제목 정렬은 보이는 이름(이 언어의 번역 이름)으로 한다.
+		// For item collections, title sorting uses the displayed name (the translated name in this locale).
 		titleLocale: params.locale ?? locale,
 		order: params.order,
 		page: params.page,
@@ -228,7 +228,7 @@ export async function listEntries<C extends Collection>(params: {
 	return { ...result, items: await toReadEntries<C>(result.items, params.locale ?? locale) };
 }
 
-/** 같은 글의 공개된 언어들(원문 먼저)과 주소. hreflang·언어 바꾸기에 쓴다. */
+/** The published locales of the same entry (source first) and their URLs. Used for hreflang and the locale switcher. */
 export async function getTranslations(params: {
 	readonly translationGroupId: string;
 }): Promise<{ locale: string; slug: string; path: string | null }[]> {
@@ -241,8 +241,8 @@ export async function getTranslations(params: {
 }
 
 /**
- * 미리보기(관리자만). 최신 초안을 공개본과 같은 모양으로 돌려준다. 번역본은 원문 초안의 공통 값과 합친다.
- * 로그인하지 않았거나 관리자가 아니면 `null`이다. 관계는 공개된 대상만 풀린다.
+ * Preview (admins only). Returns the latest draft in the same shape as the published version. A translation is merged with the common values of the source draft.
+ * `null` if not logged in or not an admin. Only published relation targets are resolved.
  */
 export async function getPreview<C extends Collection>(params: {
 	readonly collection: C;

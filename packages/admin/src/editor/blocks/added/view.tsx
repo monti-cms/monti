@@ -23,19 +23,19 @@ import { addedBlockOfNode, isContainer } from "./shared";
 
 const t = createTranslator(blocksMessages);
 
-/** 사이트·블록 확장이 블록에 등록하는 편집 컴포넌트가 받는 값(`CmsAdminComponents.blockEditors`). */
+/** Values received by the edit component that a site or blocks extension registers for a block (`CmsAdminComponents.blockEditors`). */
 export interface CustomBlockEditorProps {
 	readonly definition: BlockDefinition;
-	/** 지시자 속성 값. 비운 값(빈 문자열·false)은 저장하지 않는다. */
+	/** Directive attribute values. Emptied values (empty string, false) are not saved. */
 	readonly values: Readonly<ContainerValues>;
 	readonly setValue: (name: string, value: string | boolean) => void;
-	/** 컨테이너 블록의 본문 자리. 본문을 둘 곳에 그린다. 한 줄 블록은 `null`. */
+	/** Slot for the container block body. Rendered where the body goes. `null` for single-line blocks. */
 	readonly content: ReactNode;
 	readonly editable: boolean;
 	readonly selected: boolean;
 }
 
-/** 속성 하나의 기본 입력(설정 팝오버 안). 선택 값이 있으면 고르는 칸, 참·거짓이면 스위치, 나머지는 글 입력이다. */
+/** Default input for one attribute (inside the settings popover). A select if it has choices, a switch for booleans, a text input otherwise. */
 function AttributeField({
 	name,
 	definition,
@@ -112,7 +112,7 @@ function AttributeField({
 	);
 }
 
-/** 등록한 편집 컴포넌트가 없을 때의 기본 모양: 블록 이름과 그 아래 본문. 속성은 도구 줄의 설정 팝오버에서 고친다. */
+/** Default look when no edit component is registered: the block name with the body below it. Attributes are edited in the toolbar's settings popover. */
 function DefaultCustomBlockEditor({ definition, values, setValue, content, editable }: CustomBlockEditorProps) {
 	const names = Object.keys(definition.attributes);
 	return (
@@ -144,7 +144,7 @@ function DefaultCustomBlockEditor({ definition, values, setValue, content, edita
 	);
 }
 
-/** 지시자 블록의 기본 NodeView. 등록한 편집 컴포넌트(`blockEditors[블록 이름]`)가 있으면 그것으로 그린다. */
+/** Default NodeView of a directive block. If an edit component (`blockEditors[block name]`) is registered, it is used to render. */
 export function CustomBlockNodeView(props: NodeViewProps) {
 	const { node, selected, editor } = props;
 	const definition = addedBlockOfNode(node.type.name);
@@ -171,7 +171,7 @@ export function CustomBlockNodeView(props: NodeViewProps) {
 	);
 }
 
-/** 코드 펜스 블록의 기본 NodeView: 코드 입력 칸과 사이트가 넣은 미리보기(`fencePreviews[언어]`). */
+/** Default NodeView of a code fence block: a code input and the preview supplied by the site (`fencePreviews[language]`). */
 function FenceBlockNodeView(props: NodeViewProps & { readonly definition: BlockDefinition }) {
 	const { definition } = props;
 	const lang = definition.syntax.kind === "fence" ? definition.syntax.lang : definition.name;
@@ -192,8 +192,8 @@ function FenceBlockNodeView(props: NodeViewProps & { readonly definition: BlockD
 }
 
 /**
- * 더한 블록의 NodeView. 블록 확장·사이트가 편집 화면 전체(`blockViews[블록 이름]`)를 주면 그것으로, 아니면 코드 펜스
- * 블록은 코드·미리보기 화면, 지시자 블록은 속성·본문 상자로 그린다.
+ * NodeView of an added block. If a blocks extension or site supplies the whole edit view (`blockViews[block name]`) it is used; otherwise a code fence
+ * block is drawn as a code and preview view, and a directive block as an attribute and body box.
  */
 export function AddedBlockNodeView(props: NodeViewProps) {
 	const definition = addedBlockOfNode(props.node.type.name);

@@ -7,7 +7,7 @@ const dropLeadingNewline = (lines: ReactNode[]) => {
 	return trimmed ? [trimmed, ...lines.slice(1)] : lines.slice(1);
 };
 
-/** 코드 줄 접기(`collapse` 줄 효과). 첫 줄이 제목이고 나머지는 펼치면 보인다. */
+/** Code line folding (the `collapse` line effect). The first line is the title and the rest show when expanded. */
 export function CmsCodeCollapse({ children, open }: { children: ReactNode; open?: boolean }) {
 	const nodes = Children.toArray(children);
 	let first = 0;
@@ -22,7 +22,7 @@ export function CmsCodeCollapse({ children, open }: { children: ReactNode; open?
 	);
 }
 
-/** 코드 안 글자 접기(`fold` 줄 효과). `...`을 누르면 펼친다(스크립트 없이). */
+/** Folding text inside code (the `fold` line effect). Clicking `...` expands it (no script needed). */
 export function CmsCodeFold({
 	children,
 	open,

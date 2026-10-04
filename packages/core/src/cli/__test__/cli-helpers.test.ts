@@ -21,8 +21,8 @@ const tempDir = (files: Record<string, string>) => {
 	return dir;
 };
 
-describe("monti 명령 도우미", () => {
-	it("환경 파일은 이미 있는 값을 바꾸지 않는다(셸 값과 먼저 읽은 파일이 이긴다)", () => {
+describe("monti command helpers", () => {
+	it("env files do not override existing values (shell values and earlier files win)", () => {
 		const dir = tempDir({ ".env.local": "A=local\nB=local\n", ".env": "B=env\nC=env\n" });
 		const env: Record<string, string | undefined> = { A: "shell" };
 		expect(loadEnvFiles(dir, undefined, env)).toEqual([".env.local", ".env"]);
@@ -31,7 +31,7 @@ describe("monti 명령 도우미", () => {
 		expect(() => loadEnvFiles(dir, [".env.missing"], {})).toThrow(/not found/);
 	});
 
-	it("tsconfig(주석·끝 쉼표 포함)의 paths에서 설정 파일을 찾고, 없으면 흔한 자리를 본다", () => {
+	it("finds config files from tsconfig `paths` (with comments and trailing commas), else checks common locations", () => {
 		expect(parseJsonc('{ // a\n "a": "x//y", /* b */ "c": [1,], }')).toEqual({ a: "x//y", c: [1] });
 		const withPaths = tempDir({
 			"tsconfig.json":
@@ -49,7 +49,7 @@ describe("monti 명령 도우미", () => {
 		expect(() => resolveConfigPaths(plain, { config: "nope.ts" }, {})).toThrow(/not found: nope.ts/);
 	});
 
-	it("도움말과 모르는 명령", async () => {
+	it("help and unknown commands", async () => {
 		const out: string[] = [];
 		const io = { cwd: tempDir({}), log: (m: string) => out.push(m), error: (m: string) => out.push(`E:${m}`) };
 		expect(await runCli([], io)).toBe(0);
@@ -58,7 +58,7 @@ describe("monti 명령 도우미", () => {
 		expect(out.at(-1)).toContain("--time-zone <tz>");
 		expect(await runCli(["deploy"], io)).toBe(1);
 		expect(out.at(-1)).toContain("E:Unknown command: deploy");
-		expect(await runCli(["init"], io)).toBe(1); // package.json 없음
+		expect(await runCli(["init"], io)).toBe(1); // no package.json
 		expect(out.at(-1)).toContain("E:package.json not found");
 	});
 });

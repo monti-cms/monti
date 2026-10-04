@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 글자색 꾸밈의 이름표, 기본 색 이름, 편집 화면 문구(M15). */
+/** Label, default color names, and editing view text of the text color mark. */
 export const colorMessages = defineMessages("cms-blocks.color", {
 	en: {
 		label: "Text color",

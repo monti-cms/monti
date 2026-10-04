@@ -17,11 +17,11 @@ import { pluginFeatures } from "../../../plugin/server";
 import { adminRoute, json } from "../handler";
 
 /**
- * 컬렉션 정의(v2 B1 `schemas`와 v1 모양의 요약 `definitions`), 본문 블록 정의(v2 B3 `blocks`)와 서버 제한(§5.6 "서버 설정과
- * API 메타데이터에 같은 제한을 표시한다"). 필드 글자 수 한도는 `schemas`의 필드 `max`다(제목도 같다).
+ * Collection definitions (`schemas` and the summarized v1-shaped `definitions`), body block definitions (`blocks`), and server limits (§5.6 "the server config and
+ * API metadata show the same limits"). The field character limit is the field's `max` in `schemas` (the title too).
  */
 export const GET = adminRoute(async () => {
-	// 플러그인 기능 표시는 플러그인 이름 아래에 둔다(`features.ai` 등). 본체 이름과 겹치는 플러그인 이름은 설정에서 막는다.
+	// Plugin feature flags live under the plugin name (`features.ai` etc.). The config rejects plugin names that collide with core names.
 	const plugins = await pluginFeatures();
 	return json({
 		version: "v1",

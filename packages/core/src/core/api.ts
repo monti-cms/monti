@@ -13,7 +13,7 @@ import {
 export * from "./media-types";
 
 /**
- * `/api/cms/v1` 요청 계약. 라우트와 관리자 UI가 같은 정의를 본다.
+ * Request contract of `/api/cms/v1`. The routes and the admin UI see the same definitions.
  */
 
 export const collectionSchema = z.enum(COLLECTIONS);
@@ -44,16 +44,16 @@ const dateQuery = z.iso
 	.optional()
 	.transform((val) => (val ? new Date(val) : undefined));
 
-/** 같은 키를 여러 번 쓸 수 있는 목록 질의 키. 라우트는 이 키만 `getAll`로 읽는다. */
+/** List query keys that may appear multiple times. The route reads only these keys with `getAll`. */
 export const LIST_ARRAY_QUERY_KEYS = ["status", "relation", "locale"] as const;
 
-/** 필드·컬럼 이름. 메타데이터 키와 같은 모양만 받는다. */
+/** Field/column names. Accepts only the same shape as metadata keys. */
 const FIELD_NAME = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
 export const fieldNameSchema = z.string().regex(FIELD_NAME);
 
 /**
- * 관계 필터(`relation=필드:ID`, 여러 번). 필드별 ID 목록으로 모은다.
- * 같은 필드의 여러 값은 OR, 다른 필드끼리는 AND다(§3.2).
+ * Relation filter (`relation=field:ID`, repeatable). Collected into per-field ID lists.
+ * Multiple values of the same field are OR, different fields are AND.
  */
 const relationFiltersSchema = z
 	.array(z.string().max(120))
@@ -79,9 +79,9 @@ export const listEntriesQuerySchema = z.object({
 	titleContains: z.string().optional(),
 	slugContains: z.string().optional(),
 	status: z.array(entryStatusSchema).optional(),
-	/** 콘텐츠 언어(v2 B4). 여러 번 쓸 수 있고 없으면 모든 언어다. */
+	/** Content locales. Can be repeated; if absent, all locales. */
 	locale: z.array(z.enum(LOCALES)).optional(),
-	/** `translation`이면 번역 묶음마다 원문 한 줄로 보인다(v3 번역 화면). */
+	/** With `translation`, each translation group appears as one row of its source. */
 	group: z.enum(["translation"]).optional(),
 	folderId: z
 		.string()
@@ -121,15 +121,15 @@ export const patchEntryBodySchema = z.object({
 	metadata: z.record(z.string(), z.unknown()).optional(),
 	mdx: z.string().optional(),
 	folderId: z.uuid().nullable().optional(),
-	/** 번역본의 번역 상태(v3). 모양은 서비스가 검증한다. 생략하면 저장된 값을 그대로 둔다. */
+	/** Translation state of a translation. The service validates the shape. If omitted, the stored value is kept. */
 	translation: z.unknown().optional(),
 });
 export type PatchEntryBody = z.infer<typeof patchEntryBodySchema>;
 
-/** 버전만 받는 상태 전환(보관·보관 해제·휴지통·복원). */
+/** State transitions that take only a version (archive, unarchive, trash, restore). */
 export const versionBodySchema = z.object({ expectedVersion: expectedVersionSchema });
 
-/** 발행. `resetPublishedAt`이면 이미 발행한 글의 발행일을 지금으로 바꾼다. */
+/** Publish. With `resetPublishedAt`, an already published post's publish date is reset to now. */
 export const publishBodySchema = versionBodySchema.extend({ resetPublishedAt: z.boolean().optional() });
 
 export const BULK_OPS = [
@@ -148,24 +148,24 @@ export type BulkOp = (typeof BULK_OPS)[number];
 export const bulkBodySchema = z.object({
 	op: z.enum(BULK_OPS),
 	items: z.array(z.object({ id: z.uuid(), expectedVersion: expectedVersionSchema })).max(100),
-	/** `relation.*`이 바꾸는 관계 필드. */
+	/** The relation field changed by `relation.*`. */
 	field: fieldNameSchema.optional(),
-	/** `relation.add`·`relation.remove`의 ID. */
+	/** IDs for `relation.add` and `relation.remove`. */
 	ids: z.array(z.uuid()).max(100).optional(),
-	/** `relation.set`의 새 값. `null`이면 비운다. */
+	/** New value for `relation.set`. `null` clears it. */
 	id: z.uuid().nullable().optional(),
 	folderId: z.uuid().nullable().optional(),
 });
 export type BulkBody = z.infer<typeof bulkBodySchema>;
 
-/** 목록 컬럼 수의 상한. 컬럼 이름은 관리자 화면이 정한다(시스템 컬럼·필드 이름). */
+/** Upper limit on the number of list columns. Column names are decided by the admin screen (system columns and field names). */
 const MAX_LIST_COLUMNS = 60;
 
 export const adminColumnSettingsSchema = z
 	.object({
 		order: z.array(fieldNameSchema).max(MAX_LIST_COLUMNS).optional(),
 		visibility: z.record(z.string(), z.boolean()).optional(),
-		/** 사용자가 끌어서 바꾼 열 너비(px). 없는 컬럼은 기본 너비를 쓴다. */
+		/** Column width (px) the user dragged to. Columns without one use the default width. */
 		sizes: z.record(z.string(), z.number().int().min(48).max(960)).optional(),
 	})
 	.superRefine((settings, ctx) => {
@@ -184,7 +184,7 @@ export const adminColumnSettingsSchema = z
 	});
 export type AdminColumnSettings = z.infer<typeof adminColumnSettingsSchema>;
 
-/** 컬렉션별 목록 설정(§3.2 "컬럼 설정·페이지 크기는 컬렉션별 사용자 설정에 저장"). */
+/** Per-collection list settings. */
 export const collectionPreferencesSchema = z.object({
 	columns: adminColumnSettingsSchema.optional(),
 	pageSize: pageSizeSchema.optional(),
@@ -194,7 +194,7 @@ export type CollectionPreferences = z.infer<typeof collectionPreferencesSchema>;
 
 export const preferencesBodySchema = z.object({
 	collections: z.partialRecord(collectionSchema, collectionPreferencesSchema).optional(),
-	/** 편집 화면의 패널 접힘 상태. */
+	/** Collapsed state of the edit screen's panels. */
 	editor: z.object({ inspectorOpen: z.boolean().optional() }).optional(),
 });
 export type PreferencesBody = z.infer<typeof preferencesBodySchema>;
@@ -235,13 +235,13 @@ export const updateFolderBodySchema = z.object({
 
 const MEDIA = cmsConfig.media;
 
-/** 올릴 수 있는 이미지 형식(사이트 설정 `media.imageTypes`, 기본 지원 형식 전부). */
+/** Uploadable image formats (site config `media.imageTypes`, default all supported formats). */
 export const ALLOWED_IMAGE_MIME_TYPES: readonly AllowedImageMimeType[] =
 	MEDIA?.imageTypes ?? SUPPORTED_IMAGE_MIME_TYPES;
 export const MAX_MEDIA_BYTES = MEDIA?.maxImageBytes ?? DEFAULT_MEDIA_LIMITS.maxImageBytes;
 export const MAX_MEDIA_PIXELS = MEDIA?.maxPixels ?? DEFAULT_MEDIA_LIMITS.maxPixels;
 
-/** 올릴 수 있는 첨부 파일 형식(사이트 설정 `media.fileTypes`, 기본 지원 형식 전부). 본문에는 `::file` 카드로 들어간다. */
+/** Uploadable attached file formats (site config `media.fileTypes`, default all supported formats). They enter the body as `::file` cards. */
 export const ALLOWED_FILE_MIME_TYPES: readonly AllowedFileMime[] = MEDIA?.fileTypes ?? SUPPORTED_FILE_MIME_TYPES;
 export type { AllowedFileMime } from "./media-types";
 export const MAX_FILE_BYTES = MEDIA?.maxFileBytes ?? DEFAULT_MEDIA_LIMITS.maxFileBytes;
@@ -287,7 +287,7 @@ const CODE_EXTENSIONS = [
 	"dockerfile",
 ] as const;
 
-/** 확장자 → 저장 형식. 소스 코드는 글자 파일로 저장한다(브라우저가 코드 파일 MIME을 제각각 준다). */
+/** Extension → storage format. Source code is stored as a text file (browsers report code file MIME types inconsistently). */
 const FILE_TYPE_BY_EXTENSION: Readonly<Record<string, AllowedFileMime>> = {
 	pdf: "application/pdf",
 	zip: "application/zip",
@@ -299,14 +299,14 @@ const FILE_TYPE_BY_EXTENSION: Readonly<Record<string, AllowedFileMime>> = {
 	...Object.fromEntries(CODE_EXTENSIONS.map((extension) => [extension, "text/plain" as const])),
 };
 
-/** 파일 이름으로 정한 첨부 파일 형식. 받지 않는 형식(설정 `media.fileTypes` 밖 포함)이면 `null`. */
+/** Attached file format decided by the file name. `null` for an unaccepted format (including those outside the config `media.fileTypes`). */
 export function fileTypeFor(filename: string): AllowedFileMime | null {
 	const extension = filename.toLowerCase().split(".").pop() ?? "";
 	const type = filename.includes(".") ? (FILE_TYPE_BY_EXTENSION[extension] ?? null) : null;
 	return type && ALLOWED_FILE_MIME_TYPES.includes(type) ? type : null;
 }
 
-/** 파일 선택 창의 `accept`. */
+/** `accept` of the file picker. */
 export const FILE_ACCEPT = Object.keys(FILE_TYPE_BY_EXTENSION)
 	.filter((extension) => ALLOWED_FILE_MIME_TYPES.includes(FILE_TYPE_BY_EXTENSION[extension] as AllowedFileMime))
 	.map((extension) => `.${extension}`)
@@ -323,15 +323,15 @@ const uploadFileSchema = z.object({
 });
 
 /**
- * 업로드 준비(§7.2). 웹용 최적화를 고르면 브라우저가 만든 공개용 파일(`mimeType`·`byteSize`)과
- * 원본 파일(`original`)을 같은 미디어 레코드로 함께 올린다.
+ * Upload preparation. If web optimization is chosen, the browser-made public file (`mimeType`, `byteSize`) and
+ * the original file (`original`) are uploaded together as the same media record.
  */
 export const mediaUploadBodySchema = z.union([
 	uploadFileSchema.extend({
 		filename: z.string().trim().min(1).max(255),
 		original: uploadFileSchema.optional(),
 	}),
-	// 첨부 파일. 형식은 파일 이름의 확장자와 맞아야 한다(라우트가 확인한다).
+	// Attached file. The format must match the file name's extension (the route checks).
 	z.object({
 		mimeType: z
 			.enum(SUPPORTED_FILE_MIME_TYPES)
@@ -343,7 +343,7 @@ export const mediaUploadBodySchema = z.union([
 export type MediaUploadBody = z.infer<typeof mediaUploadBodySchema>;
 
 export const mediaPatchBodySchema = z.object({
-	/** 보이는 이름·내려받을 때 이름. 저장 주소에는 들어가지 않는다. */
+	/** Display name and download name. Not included in the storage address. */
 	filename: z.string().trim().min(1).max(255).optional(),
 	defaultAlt: z.string().max(1000).optional(),
 	defaultCaption: z.string().max(1000).optional(),

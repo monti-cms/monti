@@ -1,8 +1,8 @@
 import { defineMessages } from "../i18n/define";
 
 /**
- * 스냅샷 검사(발행 전 검사)가 `message`로 싣는 문구(M15). 오류 `code`는 그대로이고, 같은 코드 안의 갈래는 `params.reason`이다.
- * 사이트는 설정의 `admin.messages["cms.core"]`로 덮어쓴다.
+ * Messages carried as `message` by snapshot validation (pre-publish checks). Error `code`s stay the same; the variant within a code is `params.reason`.
+ * Sites override them with `admin.messages["cms.core"]` in the config.
  */
 export const coreMessages = defineMessages("cms.core", {
 	en: {

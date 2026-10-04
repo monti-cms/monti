@@ -13,8 +13,8 @@ import { createTemplateOps } from "./store/templates";
 import { createTransferOps } from "./store/transfer";
 
 /**
- * PostgreSQL `ContentStore`(§9.3). 콘텐츠·폴더·관계·미디어 메타데이터·설정의 조회와 원자적 변경.
- * 드라이버와 SQL은 `store/` 아래 모듈에만 있다. 업무 규칙(스냅샷·발행 검증)은 `core/`에서 가져온다.
+ * PostgreSQL `ContentStore`. Reads and atomic changes for content, folders, relations, media metadata, and settings.
+ * The driver and SQL live only in the modules under `store/`. Business rules (snapshots, publish validation) come from `core/`.
  */
 
 export type { AfterCommit, ContentChange, ContentChangeKind } from "./store/after-commit";

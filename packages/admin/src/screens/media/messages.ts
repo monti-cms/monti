@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** 미디어 화면(목록·상세·사용처)의 문구(M15). */
+/** Messages for the media screen (list, detail, usages). */
 export const mediaMessages = defineMessages("cms-admin.media", {
 	en: {
 		title: "Media",
