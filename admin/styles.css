@@ -1,0 +1,197 @@
+/*
+ * @monti-cms/admin styles. Import it in the app's Tailwind 4 input CSS after `@import "tailwindcss";`.
+ *
+ * The app needs: Tailwind 4 (`tailwindcss`, `@tailwindcss/postcss`), `tw-animate-css`, `@tailwindcss/typography`.
+ * No prebuilt CSS is provided. The app's Tailwind generates the admin UI classes itself.
+ *
+ * Every name this file defines carries the `cms` prefix, so none collides with the app's names (shadcn's `bg-background`, `dark:`, etc.).
+ *   - Color names: `bg-cms-background`, `text-cms-muted-foreground`, `border-cms-border` ... (values come from `--cms-*` variables)
+ *   - Variants: `cms-dark:` (`.dark` or `[data-theme="dark"]` on `html` or an ancestor), `cms-horizontal:` and `cms-vertical:` (Base UI orientation)
+ * Color variables (`--cms-*`) apply only to documents that contain the admin UI. Radius (`--radius*`) also changes only in that document.
+ */
+
+/* Finds Tailwind classes in the components of the published bundle (inside the workspace the app reads the sources directly). */
+@source "./dist";
+
+/*
+ * Variants for the admin UI only. They do not collide with the app's `dark`, `data-horizontal`, etc.
+ * The dark theme follows both `.dark` and `[data-theme="dark"]` that the app's theme provider puts on `html`.
+ */
+@custom-variant cms-dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+@custom-variant cms-horizontal (&[data-orientation="horizontal"]);
+@custom-variant cms-vertical (&[data-orientation="vertical"]);
+
+/* Color names used by the admin UI (`cms-*`). Values are set by the admin tokens below. */
+@theme inline {
+	--color-cms-background: var(--cms-background);
+	--color-cms-foreground: var(--cms-foreground);
+	--color-cms-card: var(--cms-card);
+	--color-cms-card-foreground: var(--cms-card-foreground);
+	--color-cms-popover: var(--cms-popover);
+	--color-cms-popover-foreground: var(--cms-popover-foreground);
+	--color-cms-primary: var(--cms-primary);
+	--color-cms-primary-foreground: var(--cms-primary-foreground);
+	--color-cms-secondary: var(--cms-secondary);
+	--color-cms-secondary-foreground: var(--cms-secondary-foreground);
+	--color-cms-muted: var(--cms-muted);
+	--color-cms-muted-foreground: var(--cms-muted-foreground);
+	--color-cms-accent: var(--cms-accent);
+	--color-cms-accent-foreground: var(--cms-accent-foreground);
+	--color-cms-destructive: var(--cms-destructive);
+	--color-cms-warning: var(--cms-warning);
+	--color-cms-border: var(--cms-border);
+	--color-cms-input: var(--cms-input);
+	--color-cms-ring: var(--cms-ring);
+	--color-cms-sidebar: var(--cms-sidebar);
+	--color-cms-sidebar-foreground: var(--cms-sidebar-foreground);
+	--color-cms-sidebar-primary: var(--cms-sidebar-primary);
+	--color-cms-sidebar-primary-foreground: var(--cms-sidebar-primary-foreground);
+	--color-cms-sidebar-accent: var(--cms-sidebar-accent);
+	--color-cms-sidebar-accent-foreground: var(--cms-sidebar-accent-foreground);
+	--color-cms-sidebar-border: var(--cms-sidebar-border);
+	--color-cms-sidebar-ring: var(--cms-sidebar-ring);
+}
+
+/*
+ * CMS admin UI tokens. The reference blog's tokens are left untouched.
+ * Popups and menus are portaled to body, so these apply to the whole document (html) that contains the admin container.
+ */
+html:has(.cms-admin) {
+	--cms-background: #ffffff;
+	--cms-foreground: #18181b;
+	--cms-card: #ffffff;
+	--cms-card-foreground: #18181b;
+	--cms-popover: #ffffff;
+	--cms-popover-foreground: #18181b;
+	--cms-primary: #4f46e5;
+	--cms-primary-foreground: #ffffff;
+	--cms-secondary: #f4f4f5;
+	--cms-secondary-foreground: #18181b;
+	--cms-muted: #f4f4f5;
+	--cms-muted-foreground: #71717a;
+	--cms-accent: #f0f0f2;
+	--cms-accent-foreground: #18181b;
+	--cms-destructive: #dc2626;
+	--cms-warning: #d97706;
+	--cms-border: #ececef;
+	--cms-input: #e4e4e7;
+	--cms-ring: #6366f1;
+	--cms-sidebar: #f7f7f8;
+	--cms-sidebar-foreground: #3f3f46;
+	--cms-sidebar-primary: #18181b;
+	--cms-sidebar-primary-foreground: #fafafa;
+	--cms-sidebar-accent: #ececee;
+	--cms-sidebar-accent-foreground: #18181b;
+	--cms-sidebar-border: #e7e7ea;
+	--cms-sidebar-ring: #6366f1;
+	/* Radius uses Tailwind's default names (`rounded-md`, etc.), so only in this document they are set to the admin values. */
+	--radius: 0.5rem;
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+html:is(.dark, [data-theme="dark"]):has(.cms-admin) {
+	--cms-background: #0c0c0e;
+	--cms-foreground: #f4f4f5;
+	--cms-card: #111113;
+	--cms-card-foreground: #f4f4f5;
+	--cms-popover: #151518;
+	--cms-popover-foreground: #f4f4f5;
+	--cms-primary: #6366f1;
+	--cms-primary-foreground: #ffffff;
+	--cms-secondary: #1c1c20;
+	--cms-secondary-foreground: #f4f4f5;
+	--cms-muted: #1c1c20;
+	--cms-muted-foreground: #a1a1aa;
+	--cms-accent: #1f1f24;
+	--cms-accent-foreground: #f4f4f5;
+	--cms-destructive: #f87171;
+	--cms-warning: #fbbf24;
+	--cms-border: #232328;
+	--cms-input: #2a2a30;
+	--cms-ring: #818cf8;
+	--cms-sidebar: #0f0f12;
+	--cms-sidebar-foreground: #d4d4d8;
+	--cms-sidebar-primary: #f4f4f5;
+	--cms-sidebar-primary-foreground: #0c0c0e;
+	--cms-sidebar-accent: #1f1f24;
+	--cms-sidebar-accent-foreground: #f4f4f5;
+	--cms-sidebar-border: #1f1f24;
+	--cms-sidebar-ring: #818cf8;
+}
+
+/* Makes scrollbars and default form controls follow the theme (fixes the light default scrollbar looking like a white line in dark mode). */
+html:has(.cms-admin) {
+	color-scheme: light;
+}
+html:is(.dark, [data-theme="dark"]):has(.cms-admin) {
+	color-scheme: dark;
+}
+/* Keeps the app's body background from showing through at the admin edges. */
+html:has(.cms-admin) body {
+	background-color: var(--cms-background);
+}
+
+/*
+ * Default color for borders and focus outlines. Makes places that use only `border` use the admin color instead of the app's global rule (shadcn's `* { @apply border-border }`) or `currentColor`.
+ * Applied to the whole document because popups are portaled to body; it is in `@layer base`, so utility classes win.
+ */
+@layer base {
+	html:has(.cms-admin) * {
+		border-color: var(--cms-border);
+		outline-color: color-mix(in oklab, var(--cms-ring) 50%, transparent);
+	}
+}
+
+.cms-admin {
+	font-size: 14px;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Thin, unobtrusive scrollbar. The thumb darkens only on hover. */
+.cms-admin,
+.cms-admin * {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+}
+.cms-admin *:hover {
+	scrollbar-color: color-mix(in oklab, var(--cms-muted-foreground) 45%, transparent) transparent;
+}
+.cms-admin ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+.cms-admin ::-webkit-scrollbar-track {
+	background: transparent;
+}
+.cms-admin ::-webkit-scrollbar-thumb {
+	background: transparent;
+	border-radius: 999px;
+}
+.cms-admin *:hover::-webkit-scrollbar-thumb {
+	background: color-mix(in oklab, var(--cms-muted-foreground) 45%, transparent);
+}
+
+/* Numbers and dates in tables use tabular figures. */
+.cms-admin .tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* Underlines for text check results (spelling, etc.) (editor decoration). The color differs by severity. */
+.cms-admin .cms-text-issue {
+	text-decoration-line: underline;
+	text-decoration-style: wavy;
+	text-decoration-thickness: 1px;
+	text-decoration-skip-ink: none;
+	text-underline-offset: 3px;
+	text-decoration-color: var(--cms-warning);
+	cursor: pointer;
+}
+.cms-admin .cms-text-issue[data-severity="error"] {
+	text-decoration-color: var(--cms-destructive);
+}
+.cms-admin .cms-text-issue[data-severity="info"] {
+	text-decoration-color: var(--cms-primary);
+}

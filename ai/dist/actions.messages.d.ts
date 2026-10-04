@@ -1,0 +1,2 @@
+/** Error messages for the AI action list, saving and custom actions (actions created in the admin AI screen). */
+export declare const actionsMessages: import("@monti-cms/core").MessageBundle<"cannotDeleteCoded" | "input.blockSource" | "invalidBase" | "invalidValue" | "noDefaultForCustom" | "surface.decideChoicesOnly" | "surface.noBlock" | "surface.noCollection" | "surface.noField" | "surface.resultNotAllowed" | "unknownAction" | "unknownPlaceholder">;

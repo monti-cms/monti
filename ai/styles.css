@@ -1,0 +1,7 @@
+/*
+ * @monti-cms/ai styles. Import after `@monti-cms/admin/styles.css` in the app's Tailwind input CSS.
+ * Colors and tokens come from the admin package styles.
+ */
+
+/* Find Tailwind classes in the components of the built bundle (inside the workspace the app reads the source directly). */
+@source "./dist";

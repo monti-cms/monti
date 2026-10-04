@@ -1,0 +1,6 @@
+/**
+ * Chart block label and description, chart syntax error messages, and AI feature messages. Syntax errors are shared by the admin UI
+ * (admin language) and the public page (content language). AI instructions are text for the model, so there is only an English one;
+ * the output language follows the body text.
+ */
+export declare const chartMessages: import("@monti-cms/core").MessageBundle<"ai.check.label" | "ai.draft.label" | "ai.draft.prompt" | "ai.edit.label" | "ai.edit.prompt" | "ai.error.notFence" | "ai.error.syntax" | "ai.guide" | "ai.input.block" | "ai.input.body" | "ai.input.title" | "description" | "error.data_header_required" | "error.data_required" | "error.first_line" | "error.line" | "error.number_empty" | "error.number_invalid" | "error.pie_header_fields" | "error.pie_label_required" | "error.pie_option" | "error.pie_value_required" | "error.series_color" | "error.series_duplicate" | "error.series_format" | "error.series_header_keys" | "error.series_required" | "error.title" | "error.unknown_header" | "error.unsupported_type" | "error.x_required" | "error.y_range_format" | "error.y_range_number" | "error.y_range_order" | "insert.series" | "keywords" | "label" | "placeholder">;

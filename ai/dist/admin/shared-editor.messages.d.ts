@@ -1,0 +1,2 @@
+/** Texts of the AI screen's Shared texts tab. */
+export declare const sharedMessages: import("@monti-cms/core").MessageBundle<"action.add" | "action.cancel" | "action.delete" | "action.deleting" | "action.resetDefault" | "action.save" | "action.saving" | "confirm.description" | "confirm.title" | "copy.done" | "copy.label" | "detail.added" | "empty.title" | "error.delete" | "error.load" | "error.save" | "field.content" | "field.key" | "field.name" | "list.empty" | "list.label" | "new.title" | "toast.deleted" | "toast.saved">;

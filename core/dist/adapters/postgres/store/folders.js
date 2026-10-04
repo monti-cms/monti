@@ -1,0 +1,109 @@
+import { randomUUID } from "node:crypto";
+import { withTransaction } from "./context.js";
+import { CmsError, isTransactionConflict, isUniqueViolation } from "./errors.js";
+import { mapFolderRow } from "./rows.js";
+const mapFolderError = (err) => {
+    // A duplicate name under the same parent asks the user to rename.
+    if (isUniqueViolation(err, "folders_sibling_name_idx")) {
+        return new CmsError("A folder with the same name already exists here", "folder_name_conflict");
+    }
+    return err;
+};
+/** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
+export function createFolderOps(ctx) {
+    const { pool, qSchema } = ctx;
+    const assertParent = async (client, parentId, collection) => {
+        const res = await client.query(`SELECT collection FROM "${qSchema}".folders WHERE id = $1`, [parentId]);
+        if (res.rows[0]?.collection !== collection)
+            throw new CmsError("Invalid parent", "invalid_input");
+    };
+    return {
+        createFolder: async (params) => withTransaction(pool, async (client) => {
+            if (params.parentId)
+                await assertParent(client, params.parentId, params.collection);
+            const folder = {
+                id: randomUUID(),
+                collection: params.collection,
+                parentId: params.parentId,
+                name: params.name,
+                position: params.position ?? 0,
+                version: 1,
+            };
+            await client.query(`INSERT INTO "${qSchema}".folders (id, collection, parent_id, name, position, version)
+						 VALUES ($1, $2, $3, $4, $5, 1)`, [folder.id, folder.collection, folder.parentId, folder.name, folder.position]);
+            return folder;
+        }, { mapError: mapFolderError }),
+        /** The HTTP layer always requires `expectedVersion`. The store compares it only when given. */
+        updateFolder: async (params) => withTransaction(pool, async (client) => {
+            const currRes = await client.query(`SELECT id, collection, parent_id, name, position, version FROM "${qSchema}".folders WHERE id = $1 FOR UPDATE`, [params.id]);
+            const curr = currRes.rows[0];
+            if (!curr)
+                throw new CmsError("Not found", "not_found");
+            if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
+                throw new CmsError("Conflict", "conflict", curr.version);
+            }
+            const next = {
+                ...curr,
+                name: params.name ?? curr.name,
+                parent_id: params.parentId !== undefined ? params.parentId : curr.parent_id,
+                position: params.position ?? curr.position,
+                version: curr.version + 1,
+            };
+            if (next.parent_id) {
+                await assertParent(client, next.parent_id, curr.collection);
+                // Reject cycles: the new parent's ancestors must not include the folder itself.
+                let ancestor = next.parent_id;
+                while (ancestor) {
+                    if (ancestor === params.id)
+                        throw new CmsError("Cycle", "invalid_input");
+                    const ancestorRes = await client.query(`SELECT parent_id FROM "${qSchema}".folders WHERE id = $1`, [ancestor]);
+                    ancestor = ancestorRes.rows[0]?.parent_id ?? null;
+                }
+            }
+            await client.query(`UPDATE "${qSchema}".folders SET name = $1, parent_id = $2, position = $3, version = $4 WHERE id = $5`, [next.name, next.parent_id, next.position, next.version, params.id]);
+            return mapFolderRow(next);
+        }, {
+            mapError: (err) => isTransactionConflict(err) ? new CmsError("Cycle", "invalid_input") : mapFolderError(err),
+        }),
+        /**
+         * Deletes a folder. Moves its direct entries and child folders up to the parent. Entries are not deleted.
+         * If a moved child folder's name collides in the parent, rejects with 409 so the user renames first.
+         */
+        deleteFolder: async (params) => withTransaction(pool, async (client) => {
+            const currRes = await client.query(`SELECT parent_id, version FROM "${qSchema}".folders WHERE id = $1 FOR UPDATE`, [params.id]);
+            const curr = currRes.rows[0];
+            if (!curr)
+                throw new CmsError("Not found", "not_found");
+            if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
+                throw new CmsError("Conflict", "conflict", curr.version);
+            }
+            await client.query(`UPDATE "${qSchema}".folders SET parent_id = $1 WHERE parent_id = $2`, [
+                curr.parent_id,
+                params.id,
+            ]);
+            await client.query(`UPDATE "${qSchema}".entries SET folder_id = $1 WHERE folder_id = $2`, [
+                curr.parent_id,
+                params.id,
+            ]);
+            await client.query(`DELETE FROM "${qSchema}".folders WHERE id = $1`, [params.id]);
+        }, { mapError: mapFolderError }),
+        /** Preview before folder deletion: the number of direct entries and child folders. */
+        getFolderContents: async (params) => {
+            const [entries, children] = await Promise.all([
+                pool.query(`SELECT COUNT(*)::text AS count FROM "${qSchema}".entries WHERE folder_id = $1`, [
+                    params.id,
+                ]),
+                pool.query(`SELECT id, collection, parent_id, name, position, version FROM "${qSchema}".folders
+					 WHERE parent_id = $1 ORDER BY position ASC, id ASC`, [params.id]),
+            ]);
+            return { entryCount: Number(entries.rows[0]?.count ?? 0), childFolders: children.rows.map(mapFolderRow) };
+        },
+        listFolders: async (params) => {
+            const res = await pool.query(`SELECT id, collection, parent_id, name, position, version
+				 FROM "${qSchema}".folders
+				 WHERE collection = $1
+				 ORDER BY parent_id NULLS FIRST, position ASC, id ASC`, [params.collection]);
+            return res.rows.map(mapFolderRow);
+        },
+    };
+}

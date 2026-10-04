@@ -1,0 +1,2 @@
+/** Error and notice messages for AI runs (runner, result checks, run API, image reading). */
+export declare const runMessages: import("@monti-cms/core").MessageBundle<"check.format" | "check.maxLength" | "check.oneOf" | "disabled" | "emptyResult" | "failedCheck" | "failedChecks" | "imageTooLarge" | "imageType" | "imageUnreadable" | "inputMissing" | "inputTooLarge" | "noAnswer" | "noDecider" | "noGenerator" | "notStreamable" | "nothingToSend" | "siteImageOnly" | "streamOneInput" | "tooManyChoices">;

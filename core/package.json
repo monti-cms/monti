@@ -1,0 +1,166 @@
+{
+  "name": "@monti-cms/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DB-backed CMS core: config, schema, stores, MDX conversion and plugins",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./s3": {
+      "types": "./dist/storage/s3.d.ts",
+      "default": "./dist/storage/s3.js"
+    },
+    "./next": {
+      "types": "./dist/next/index.d.ts",
+      "default": "./dist/next/index.js"
+    },
+    "./next/route-handler": {
+      "types": "./dist/next/route-handler.d.ts",
+      "default": "./dist/next/route-handler.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
+    "./read": {
+      "types": "./dist/read/index.d.ts",
+      "default": "./dist/read/index.js"
+    },
+    "./mdx": {
+      "types": "./dist/mdx/index.d.ts",
+      "default": "./dist/mdx/index.js"
+    },
+    "./code-block": {
+      "types": "./dist/code-block.d.ts",
+      "default": "./dist/code-block.js"
+    },
+    "./render/code": {
+      "types": "./dist/render/code/index.d.ts",
+      "default": "./dist/render/code/index.js"
+    },
+    "./render": {
+      "types": "./dist/render/index.d.ts",
+      "default": "./dist/render/index.js"
+    },
+    "./plugin/server": {
+      "types": "./dist/plugin-server.d.ts",
+      "default": "./dist/plugin-server.js"
+    },
+    "./adapters/auth": {
+      "types": "./dist/adapters/auth/index.d.ts",
+      "default": "./dist/adapters/auth/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./migrate": {
+      "types": "./dist/adapters/postgres/migrate-cli.d.ts",
+      "default": "./dist/adapters/postgres/migrate-cli.js"
+    },
+    "./register": {
+      "types": "./dist/register.d.ts",
+      "default": "./dist/register.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "default": "./dist/cli/index.js"
+    },
+    "./stubs/missing-optional": "./stubs/missing-optional.cjs",
+    "./render.css": "./render.css"
+  },
+  "bin": {
+    "monti": "./bin/monti.mjs"
+  },
+  "dependencies": {
+    "@shikijs/langs": "^3.21.0",
+    "@shikijs/themes": "^3.21.0",
+    "@shikijs/transformers": "^3.22.0",
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4",
+    "@types/pg": "^8.23.1",
+    "@types/unist": "^3.0.3",
+    "hast-util-to-string": "^3.0.1",
+    "katex": "^0.16.45",
+    "next-mdx-remote": "^6.0.0",
+    "pg": "^8.23.0",
+    "rehype-autolink-headings": "^7.1.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-slug": "^6.0.0",
+    "remark-breaks": "^4.0.0",
+    "remark-directive": "^4.0.0",
+    "remark-flexible-toc": "^1.2.4",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "remark-mdx": "^3.1.1",
+    "remark-parse": "^11.0.0",
+    "server-only": "^0.0.1",
+    "shiki": "^3.21.0",
+    "tsx": "^4.21.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0",
+    "vfile": "^6.0.3",
+    "zod": "^4.2.1"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-s3": "^3.1136.0",
+    "@aws-sdk/s3-request-presigner": "^3.1136.0",
+    "next": ">=16",
+    "next-auth": "^5.0.0-beta.32",
+    "react": ">=19"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": {
+      "optional": true
+    },
+    "@aws-sdk/s3-request-presigner": {
+      "optional": true
+    },
+    "next-auth": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1136.0",
+    "@aws-sdk/s3-request-presigner": "^3.1136.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "mdast-util-from-markdown": "^2.0.2",
+    "next": "16.3.8",
+    "next-auth": "5.0.0-beta.32",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^4.0.18"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "stubs",
+    "README.md",
+    "render.css"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
+    "test:other-site": "vitest run -c vitest.othersite.config.ts",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
+    "typecheck:other-site": "tsc --noEmit -p tsconfig.other-site.json",
+    "build": "node ../../scripts/build-package.mjs mdx/__test__/fixtures/samples"
+  }
+}

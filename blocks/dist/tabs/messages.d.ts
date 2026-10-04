@@ -1,0 +1,2 @@
+/** Labels, descriptions, and editing view text of the tabs block. */
+export declare const tabsMessages: import("@monti-cms/core").MessageBundle<"add" | "default" | "defaultValue.description" | "defaultValue.label" | "delete" | "description" | "insert.first" | "insert.second" | "insert.text" | "keywords" | "label" | "list" | "rename" | "rename.aria" | "tab.label" | "tab.name.label" | "tab.newName" | "toolbar" | "untitled">;

@@ -1,0 +1,2 @@
+/** Texts of AI translation in the translation editor (block translation, Translate all). */
+export declare const aiTranslateMessages: import("@monti-cms/core").MessageBundle<"action" | "all" | "progress" | "request" | "run" | "runFailed" | "stop" | "toast.all" | "toast.blockChanged" | "toast.failedOne" | "toast.invalidMany" | "toast.invalidOne" | "toast.noBlocks" | "toast.partial" | "toast.stopped" | "toast.stoppedKeep">;

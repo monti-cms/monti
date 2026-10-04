@@ -1,0 +1,303 @@
+import { createHash } from "node:crypto";
+import { z } from "zod";
+import { COLLECTIONS } from "../core/collections.js";
+import { storedFields } from "../schema/derive.js";
+import { createZipArchive } from "./zip.js";
+export const exportScopeSchema = z.enum(["admin", "public"]);
+/**
+ * Public projection schema. It has no `working` field at all and is `.strict()`, so if a draft body or an
+ * admin-only key is mixed into the top level of an item, parsing fails (fail-closed).
+ * Inside `metadata`, collection fields are too free-form for a recursive allowlist (a non-blocking follow-up).
+ */
+export const publicExportEntrySchema = z
+    .object({
+    id: z.string().uuid(),
+    collection: z.string(),
+    slug: z.string().nullable(),
+    publishedAt: z.string().nullable(),
+    updatedAt: z.string(),
+    metadata: z.record(z.string(), z.unknown()),
+    mdx: z.string(),
+    schemaVersion: z.number().int(),
+    contentHash: z.string(),
+})
+    .strict();
+/**
+ * Public metadata allowlist. Only stored fields of the collection definition are exported, so
+ * admin-only keys (storageKey etc.) or values not in the definition mixed into metadata do not go out in the public archive.
+ * Per-language names of record collections (`translations`) are not fields and do not go out.
+ */
+export const PUBLIC_METADATA_KEYS = Object.fromEntries(COLLECTIONS.map((collection) => [collection, storedFields(collection).map((stored) => stored.name)]));
+export function pickPublicMetadata(collection, metadata) {
+    const allowed = PUBLIC_METADATA_KEYS[collection];
+    if (!allowed)
+        throw new Error(`No public metadata allowlist for collection: ${collection}`);
+    const picked = {};
+    for (const key of allowed) {
+        if (metadata[key] !== undefined)
+            picked[key] = metadata[key];
+    }
+    return picked;
+}
+const iso = (value) => value instanceof Date ? value.toISOString() : value === undefined ? null : value;
+/** Canonical JSON that does not depend on key order. Used for digests and snapshot comparison. */
+export const canonicalJson = (value) => {
+    if (value === null || typeof value !== "object")
+        return JSON.stringify(value) ?? "null";
+    if (Array.isArray(value))
+        return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
+    const entries = Object.entries(value)
+        .filter(([, item]) => item !== undefined)
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+    return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
+};
+const sha256 = (value) => createHash("sha256").update(value, "utf8").digest("hex");
+const sha256Bytes = (value) => createHash("sha256").update(value).digest("hex");
+/** Canonical digest of one state. Includes content, slug, status, folder and references so skip/conflict decisions stay stable. */
+const stateDigest = (entry, state, references) => sha256(canonicalJson({
+    collection: entry.collection,
+    id: entry.id,
+    state,
+    status: entry.status,
+    folderId: entry.folderId,
+    slug: state === "working" ? entry.workingSlug : entry.publishedSlug,
+    metadata: state === "working" ? entry.working.metadata : entry.published?.metadata,
+    mdx: state === "working" ? entry.working.mdx : entry.published?.mdx,
+    references: references
+        .filter((reference) => reference.entryId === entry.id && reference.state === state)
+        .map((reference) => ({ kind: reference.kind, targetId: reference.targetId, isStale: reference.isStale }))
+        .sort((left, right) => `${left.kind}\u0000${left.targetId}` < `${right.kind}\u0000${right.targetId}` ? -1 : 1),
+}));
+/** Digest of the whole item (working copy + published copy). It must differ if only one side changes. */
+const entryDigest = (entry, scope, references) => scope === "public"
+    ? sha256(canonicalJson({ published: stateDigest(entry, "published", references) }))
+    : sha256(canonicalJson({
+        working: stateDigest(entry, "working", references),
+        published: entry.published ? stateDigest(entry, "published", references) : null,
+    }));
+const bodyFile = (entry, state) => {
+    const body = state === "working" ? entry.working : entry.published;
+    if (!body)
+        throw new Error(`Entry ${entry.id} has no ${state} body`);
+    return {
+        json: `${canonicalJson({
+            formatVersion: 1,
+            collection: entry.collection,
+            id: entry.id,
+            state,
+            status: entry.status,
+            slug: state === "working" ? entry.workingSlug : entry.publishedSlug,
+            metadata: body.metadata,
+            schemaVersion: body.schemaVersion,
+            contentHash: body.contentHash,
+            // Only translated entries have this; the source file shape is unchanged.
+            ...(body.translation ? { translation: body.translation } : {}),
+            updatedAt: iso(body.updatedAt),
+            createdAt: iso(entry.createdAt),
+            updatedEntryAt: iso(entry.updatedAt),
+            publishedAt: iso(entry.publishedAt),
+            folderId: entry.folderId,
+        })}\n`,
+        mdx: body.mdx,
+    };
+};
+/** The public archive includes only the published copy of items that are currently public. Drafts, archived and trashed items are excluded even if a published copy remains. */
+const publicEntry = (entry) => {
+    if (entry.status !== "published")
+        return null;
+    if (!entry.published)
+        return null;
+    return publicExportEntrySchema.parse({
+        id: entry.id,
+        collection: entry.collection,
+        slug: entry.publishedSlug,
+        publishedAt: iso(entry.publishedAt),
+        updatedAt: iso(entry.published.updatedAt) ?? iso(entry.updatedAt) ?? "",
+        metadata: pickPublicMetadata(entry.collection, entry.published.metadata),
+        mdx: entry.published.mdx,
+        schemaVersion: entry.published.schemaVersion,
+        contentHash: entry.published.contentHash,
+    });
+};
+const sortEntries = (entries) => [...entries].sort((left, right) => left.collection === right.collection
+    ? left.id < right.id
+        ? -1
+        : left.id > right.id
+            ? 1
+            : 0
+    : left.collection < right.collection
+        ? -1
+        : 1);
+export function buildExportArchive(snapshot, options) {
+    const { scope, exportedAt } = options;
+    const entries = sortEntries(snapshot.entries);
+    const files = [];
+    const manifestEntries = [];
+    for (const entry of entries) {
+        const base = `entries/${entry.collection}/${entry.id}`;
+        const entryFiles = [];
+        if (scope === "admin") {
+            const working = bodyFile(entry, "working");
+            files.push({ path: `${base}/working.json`, data: new TextEncoder().encode(working.json) });
+            files.push({ path: `${base}/working.mdx`, data: new TextEncoder().encode(working.mdx) });
+            entryFiles.push(`${base}/working.json`, `${base}/working.mdx`);
+            if (entry.published) {
+                const published = bodyFile(entry, "published");
+                files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(published.json) });
+                files.push({ path: `${base}/published.mdx`, data: new TextEncoder().encode(published.mdx) });
+                entryFiles.push(`${base}/published.json`, `${base}/published.mdx`);
+            }
+            const references = snapshot.references
+                .filter((reference) => reference.entryId === entry.id)
+                .map((reference) => ({
+                state: reference.state,
+                kind: reference.kind,
+                targetId: reference.targetId,
+                isStale: reference.isStale,
+                occurrences: reference.occurrences,
+            }));
+            files.push({ path: `${base}/references.json`, data: new TextEncoder().encode(`${canonicalJson(references)}\n`) });
+            entryFiles.push(`${base}/references.json`);
+            manifestEntries.push({
+                id: entry.id,
+                collection: entry.collection,
+                locale: entry.locale,
+                translationGroupId: entry.translationGroupId,
+                status: entry.status,
+                version: entry.version,
+                workingSlug: entry.workingSlug,
+                publishedSlug: entry.publishedSlug,
+                folderId: entry.folderId,
+                createdAt: iso(entry.createdAt),
+                updatedAt: iso(entry.updatedAt),
+                publishedAt: iso(entry.publishedAt),
+                hasWorking: true,
+                hasPublished: entry.published !== undefined,
+                workingDigest: stateDigest(entry, "working", snapshot.references),
+                publishedDigest: entry.published ? stateDigest(entry, "published", snapshot.references) : null,
+                itemDigest: entryDigest(entry, "admin", snapshot.references),
+                files: entryFiles.sort(),
+            });
+            continue;
+        }
+        const projected = publicEntry(entry);
+        if (!projected)
+            continue;
+        files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(`${canonicalJson(projected)}\n`) });
+        files.push({ path: `${base}/published.mdx`, data: new TextEncoder().encode(projected.mdx) });
+        entryFiles.push(`${base}/published.json`, `${base}/published.mdx`);
+        manifestEntries.push({
+            id: entry.id,
+            collection: entry.collection,
+            locale: entry.locale,
+            translationGroupId: entry.translationGroupId,
+            status: "published",
+            version: 0,
+            workingSlug: null,
+            publishedSlug: entry.publishedSlug,
+            folderId: null,
+            createdAt: null,
+            updatedAt: iso(entry.published?.updatedAt),
+            publishedAt: iso(entry.publishedAt),
+            hasWorking: false,
+            hasPublished: true,
+            workingDigest: null,
+            publishedDigest: stateDigest(entry, "published", snapshot.references),
+            itemDigest: entryDigest(entry, "public", snapshot.references),
+            files: entryFiles.sort(),
+        });
+    }
+    const publishedIds = new Set(manifestEntries.map((entry) => entry.id));
+    const media = scope === "admin"
+        ? [...snapshot.media]
+            .sort((left, right) => (left.id < right.id ? -1 : 1))
+            .map((asset) => ({
+            id: asset.id,
+            status: asset.status,
+            filename: asset.filename,
+            mimeType: asset.mimeType,
+            byteSize: asset.byteSize,
+            width: asset.width,
+            height: asset.height,
+            storageKey: asset.storageKey,
+            stagingKey: asset.stagingKey,
+            createdAt: iso(asset.createdAt),
+            updatedAt: iso(asset.updatedAt),
+            readyAt: iso(asset.readyAt),
+        }))
+        : [...snapshot.media]
+            .filter((asset) => snapshot.references.some((reference) => reference.kind === "media" &&
+            reference.state === "published" &&
+            reference.targetId === asset.id &&
+            publishedIds.has(reference.entryId)))
+            .sort((left, right) => (left.id < right.id ? -1 : 1))
+            .map((asset) => ({
+            id: asset.id,
+            filename: asset.filename,
+            mimeType: asset.mimeType,
+            byteSize: asset.byteSize,
+            width: asset.width,
+            height: asset.height,
+        }));
+    if (scope === "admin") {
+        files.push({ path: "folders.json", data: jsonFile(snapshot.folders.map((folder) => ({ ...folder }))) });
+        files.push({ path: "addresses.json", data: jsonFile(snapshot.addresses.map((address) => ({ ...address }))) });
+        files.push({
+            path: "templates.json",
+            data: jsonFile(snapshot.templates.map((template) => ({
+                id: template.id,
+                name: template.name,
+                mdx: template.mdx,
+                version: template.version,
+                createdAt: iso(template.createdAt),
+                updatedAt: iso(template.updatedAt),
+            }))),
+        });
+        files.push({
+            path: "preferences.json",
+            data: jsonFile(snapshot.preferences.map((preference) => ({
+                userId: preference.userId,
+                preferences: preference.preferences,
+                updatedAt: iso(preference.updatedAt),
+            }))),
+        });
+    }
+    files.push({ path: "media.json", data: jsonFile(media) });
+    files.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+    // The digest covers every payload file that actually goes into the archive (manifest.json and exportedAt are excluded).
+    // So the digest changes even when non-item data such as settings, the media list or addresses changes.
+    const digest = sha256(files.map((file) => `${file.path}\u0000${sha256Bytes(file.data)}`).join("\n"));
+    const manifest = {
+        formatVersion: 1,
+        scope,
+        exportedAt: exportedAt.toISOString(),
+        digest,
+        counts: {
+            entries: manifestEntries.length,
+            workingBodies: manifestEntries.filter((entry) => entry.hasWorking).length,
+            publishedBodies: manifestEntries.filter((entry) => entry.hasPublished).length,
+            folders: scope === "admin" ? snapshot.folders.length : 0,
+            media: media.length,
+            templates: scope === "admin" ? snapshot.templates.length : 0,
+            addresses: scope === "admin" ? snapshot.addresses.length : 0,
+            preferences: scope === "admin" ? snapshot.preferences.length : 0,
+            references: scope === "admin" ? snapshot.references.length : 0,
+            files: files.length + 1,
+        },
+        entries: manifestEntries,
+        files: ["manifest.json", ...files.map((file) => file.path)],
+    };
+    const allFiles = [
+        { path: "manifest.json", data: new TextEncoder().encode(`${canonicalJson(manifest)}\n`) },
+        ...files,
+    ];
+    allFiles.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+    return {
+        zip: createZipArchive(allFiles, options.archiveModifiedAt ? { modifiedAt: options.archiveModifiedAt } : undefined),
+        manifest,
+        digest,
+    };
+}
+function jsonFile(value) {
+    return new TextEncoder().encode(`${canonicalJson(value)}\n`);
+}

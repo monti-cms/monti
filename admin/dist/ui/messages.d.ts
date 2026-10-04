@@ -1,0 +1,2 @@
+/** Auxiliary messages for shared UI parts (`ui/*`): screen reader names and default labels. */
+export declare const uiMessages: import("@monti-cms/core").MessageBundle<"clear" | "close" | "deselect" | "pagination.label" | "pagination.more" | "pagination.next" | "pagination.nextPage" | "pagination.previous" | "pagination.previousPage" | "sidebar.description" | "sidebar.title" | "sidebar.toggle" | "theme.toDark" | "theme.toLight">;

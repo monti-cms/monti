@@ -1,0 +1,10 @@
+import { type EditorState, Plugin } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
+export declare function isComposing(view: EditorView, event: KeyboardEvent | Event): boolean;
+export declare function findCodeBlockDepth(state: EditorState): number | null;
+export declare function isInCodeBlock(state: EditorState): boolean;
+export declare function handleTabKey(view: EditorView, event: KeyboardEvent, isShift: boolean): boolean;
+export declare function handleEnterKey(view: EditorView, event: KeyboardEvent): boolean;
+export declare function handleModAKey(view: EditorView, event: KeyboardEvent): boolean;
+export declare function handlePaste(view: EditorView, event: ClipboardEvent): boolean;
+export declare function createCodeBlockKeysPlugin(): Plugin;

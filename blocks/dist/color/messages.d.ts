@@ -1,0 +1,2 @@
+/** Label, default color names, and editing view text of the text color mark. */
+export declare const colorMessages: import("@monti-cms/core").MessageBundle<"bg.label" | "bgDark.label" | "default" | "fg.label" | "fgDark.label" | "label" | "palette.blue" | "palette.gray" | "palette.green" | "palette.orange" | "palette.pink" | "palette.purple" | "palette.red" | "palette.yellow" | "pick" | "sample">;

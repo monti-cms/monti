@@ -1,0 +1,2 @@
+/** Messages for the body templates screen. */
+export declare const templatesMessages: import("@monti-cms/core").MessageBundle<"common.add" | "common.cancel" | "common.delete" | "common.open" | "common.retry" | "common.save" | "common.saveFailed" | "common.saved" | "common.saving" | "delete.ask" | "delete.done" | "delete.failed" | "delete.title" | "edit.addLabel" | "edit.empty" | "edit.label" | "edit.nameLabel" | "edit.nameRequired" | "list.empty" | "list.itemActions" | "list.label" | "list.loadFailed" | "newMdx" | "title">;

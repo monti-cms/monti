@@ -1,0 +1,516 @@
+# @monti-cms/core
+
+English | [한국어](README.ko.md)
+
+The core of a DB (Postgres)-backed blog CMS. It handles the site config, collection schemas, content saving and publishing, MDX conversion, the admin API and plugin wiring.
+The admin UI is `@monti-cms/admin` and the AI features are the plugin `@monti-cms/ai`. `examples/other-site` is an example with everything wired together.
+
+## Install in an empty Next app
+
+This assumes a Next 16 (App Router), React 19 and Tailwind CSS 4 app. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate`.
+
+### 1. Packages
+
+```sh
+pnpm add @monti-cms/core @monti-cms/admin next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
+  @tiptap/core @tiptap/pm @tiptap/react lucide-react
+pnpm add -D tw-animate-css @tailwindcss/typography
+```
+
+The admin package and the AI plugin must share one copy of React Query, sonner, Tiptap and the lucide icons with the app, so the app installs them (peers).
+`next-auth` is only needed when you use GitHub login (`githubAuth`).
+The `monti` command line ships inside `@monti-cms/core` (TypeScript config files are read by tsx, which is installed with it).
+
+pnpm 12 fails the install if there are install scripts that have not been allowed (10 only warns). Allow the install script of esbuild, which tsx uses.
+
+```yaml
+# pnpm-workspace.yaml (app folder)
+allowBuilds:
+  esbuild: true
+```
+
+### 2. `monti init`
+
+Run it in the app folder (where `package.json` is). **It never overwrites existing files**; it reports them as "skipped files". It is safe to run again.
+
+```sh
+pnpm exec monti init                       # admin at /admin, English (en), time zone UTC
+pnpm exec monti init --admin-path /studio  # to change the admin path
+pnpm exec monti init --locale ko --time-zone Asia/Seoul  # to set the site's default language and time zone
+```
+
+| What it does | File |
+| --- | --- |
+| Site config (a one-collection starting point, English labels) | `cms.config.ts` |
+| Server config (DB, GitHub login; secrets come from environment variables) | `cms.server.ts` |
+| Admin UI | `app/(admin)/admin/[[...path]]/page.tsx`, `layout.tsx` |
+| Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
+| Config aliases `@cms-config`, `@cms-server` | added to `paths` in `tsconfig.json` |
+| Admin style line | added after the last `@import` in the global CSS (`app/globals.css`, etc.) |
+| Config wiring (`withCms`) | `next.config.ts` (when it has the default shape with a single `export default nextConfig;` line); created if missing |
+
+For apps that use `src/app`, the config files go in `src/` and the routes under `src/app/`. Files that cannot be edited safely (a `tsconfig.json`
+with comments, a next config that does not have the default shape, CSS without Tailwind 4) are left as they are, and what to add is shown as a "to do".
+At the end it lists the packages to install, the environment variables and the GitHub callback URL.
+
+With `--admin-path`, the route folder becomes that path (`app/(admin)/studio/…`) and `admin: { path: "/studio" }` is added to the site config.
+**The admin path must be the same in the site config `admin.path` and in the route folder.** When you change it later, change both together.
+The admin API path (`/api/cms/v1`) does not change.
+
+`--locale <code>` is the site's default language (`defaultLocale`) and defaults to `en` (a lowercase language code such as `ko`). The admin UI's language and
+date and number formatting follow it, and can be chosen separately with `admin.locale` in the config. `--time-zone <zone>` is the time zone in which dates and times are entered and
+shown (an IANA name, default `UTC`). The generated config files and the command-line help and output are read by developers, so they are in English.
+
+### 3. Edit the collections
+
+`cms.config.ts` is read by both the server and the admin UI. Do not put secrets in it. The generated starting point looks like this.
+
+```ts
+import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+
+const post = defineCollection({
+	label: "Post",
+	kind: "document", // body, draft and publishing. Use "item" for small entries such as tags
+	path: "/posts/:slug", // public URL. Used for internal links in the body and for preview URLs
+	icon: "file-text", // admin sidebar icon (lucide name)
+	fields: {
+		title: fields.text({ label: "Title", required: true, max: 200 }), // the title field is named `title`
+		slug: fields.slug({ label: "Slug", from: "title", required: true }),
+		summary: fields.text({ label: "Summary", role: "summary", multiline: true, fillFromBody: true }),
+	},
+	// Without layout and list, fields are drawn in field order with the default list columns ("Collections").
+});
+
+export default defineConfig({
+	collections: { post },
+	locales: [{ code: "en", name: "English" }],
+	defaultLocale: "en",
+	site: { name: "My site" },
+	timeZone: "UTC",
+});
+```
+
+The collection name (`post`) is stored in the DB, so do not change it in production. See "Config" below for the field rules.
+
+The server config `cms.server.ts` holds the store, media and login connections and the secrets, and is only read on the server. Connections are created on first use, so
+the environment variables may be empty during the build. To use image uploads, add a store from `@monti-cms/core/s3` to `media` and install the AWS SDK
+(`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, only for sites that use media):
+
+```ts
+import { r2Storage, s3Storage } from "@monti-cms/core/s3";
+
+// Cloudflare R2
+media: r2Storage({ endpoint, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
+// AWS S3
+media: s3Storage({ endpoint: "https://s3.ap-northeast-2.amazonaws.com", region: "ap-northeast-2", bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
+// Path-style, e.g. MinIO
+media: s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
+```
+
+For another store, pass a `MediaAdapter` (`{ name, createStore() }`) that implements the `MediaStore` contract from `@monti-cms/core/server`.
+
+### 4. Environment variables and `monti migrate`
+
+Put them in `.env.local`.
+
+| Name | Meaning |
+| --- | --- |
+| `CMS_DATABASE_URL` | Postgres connection URL |
+| `CMS_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing |
+| `AUTH_SECRET` | A random long value. Signs login sessions (`githubAuth({ secret })`) |
+| `CMS_SECRET` | A random long value (different from `AUTH_SECRET`). Encrypts stored values (AI service keys) (server config `secret`). If you change it, re-enter the stored keys |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app. The callback URL is `<site URL>/api/cms/auth/callback/github` |
+| `CMS_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID |
+| `CMS_DEV_AUTH_BYPASS` | Optional. If `1`, the admin opens without login under `next dev` |
+
+```sh
+pnpm exec monti migrate
+```
+
+It creates the tables or brings them to the latest shape (including plugin tables). Running it several times gives the same result, and you run it again after upgrading the packages.
+Core changes are recorded in `cms_migrations` as numbered steps, and only steps that have not run yet are run (in one transaction); even when run concurrently
+against the same schema, they run one at a time. A plugin hands over once-only work with `db.once(name, fn)`.
+
+- Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
+  Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
+- Config files: looked up in this order: `--config`/`--server` → `CMS_CONFIG_PATH`/`CMS_SERVER_PATH` → aliases in `tsconfig.json` `paths` →
+  `./cms.config.ts`/`./src/cms.config.ts`.
+- The old way (put `import "@monti-cms/core/migrate";` in `migrate.ts` and run `tsx --import @monti-cms/core/register migrate.ts`) still works.
+
+### 5. Run
+
+Start it with `next dev` and open the admin path (default `/admin`).
+
+### Login path
+
+By default the GitHub login API is served by the admin API route as well (`/api/cms/auth/*`), so there is no separate login route file.
+Apps that still use `/api/auth/*` as before (apps that do not want to change an already registered OAuth callback URL) pick the path and add a route file.
+
+```ts
+// cms.server.ts
+auth: githubAuth({ /* … */, basePath: "/api/auth" }),
+
+// app/api/auth/[...nextauth]/route.ts
+import { handlers } from "@monti-cms/core/runtime";
+export const { GET, POST } = handlers;
+```
+
+If `basePath` is not the default, the admin API route does not serve `/api/cms/auth/*` (404).
+
+### Optional dependencies
+
+Optional dependencies of the CMS packages (e.g. `mermaid` and `recharts` of the blocks extension) are installed only when you use that feature. For anything not installed, `withCms`
+links an empty module (`@monti-cms/core/stubs/missing-optional`) so the build does not stop, and using that feature raises an error telling you to install it.
+After installing, restart the dev server.
+
+### Manual wiring (without `monti init`)
+
+To do by hand what `monti init` does: create the two config files, wrap `next.config.ts` in
+`withCms(nextConfig, { config: "./cms.config.ts", server: "./cms.server.ts" })`, add
+`"@cms-config": ["./cms.config.ts"]` and `"@cms-server": ["./cms.server.ts"]` to `tsconfig.json` `paths` (and to `resolve.alias` if you use tests (Vitest)),
+add the set of route files from the table above, and put the following lines in the global CSS.
+
+```css
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@monti-cms/admin/styles.css"; /* defines the `cms-*` colors and the `cms-dark`, `cms-horizontal` and `cms-vertical` variants (names do not collide with the app's). Requires Tailwind 4 */
+@plugin "@tailwindcss/typography";
+```
+
+### Blocks extension (optional)
+
+```sh
+pnpm add @monti-cms/blocks
+```
+
+```ts
+// cms.config.ts
+import { blocks } from "@monti-cms/blocks";
+
+export default defineConfig({
+	// …
+	plugins: [...blocks()], // all of them. To pick: blocks({ only: ["callout", "tooltip"] }); one at a time: callout(), tabs()…
+});
+```
+
+```css
+@import "@monti-cms/blocks/styles.css"; /* after the admin package styles */
+```
+
+See the README of `@monti-cms/blocks` for details.
+
+### AI plugin (optional)
+
+```sh
+pnpm add @monti-cms/ai
+```
+
+```ts
+// cms.config.ts
+import { aiPlugin } from "@monti-cms/ai";
+
+export default defineConfig({
+	// …
+	// The default features (URL, summary and tag suggestions, etc.) attach automatically based on field kind, role and relation target. List only what you change or turn off in `actions`.
+	plugins: [aiPlugin({ siteDescription: "a developer blog" })],
+});
+```
+
+```css
+@import "@monti-cms/ai/styles.css"; /* after the admin package styles */
+```
+
+See the README of `@monti-cms/ai` for details.
+
+### SEO extension (optional)
+
+```sh
+pnpm add @monti-cms/seo
+```
+
+```ts
+// cms.config.ts
+import { seo, seoFields } from "@monti-cms/seo";
+
+const article = defineCollection({
+	// …
+	fields: { title, slug, ...seoFields() }, // search title, description, share image, hide, canonical URL + preview, all in the SEO tab
+});
+
+export default defineConfig({
+	// …
+	plugins: [seo()],
+});
+```
+
+See the README of `@monti-cms/seo` for details.
+
+## Entry points
+
+| Entry point | Used in | Contents |
+| --- | --- | --- |
+| `@monti-cms/core` | `cms.config.ts` | `defineConfig`·`defineCollection`·`fields`·`defineBlock`·`definePlugin` |
+| `@monti-cms/core/server` | `cms.server.ts` | `defineServerConfig`, `postgres`, `githubAuth`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
+| `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
+| `@monti-cms/core/next` | `next.config.ts` | `withCms` |
+| `@monti-cms/core/next/route-handler` | admin API route | `createCmsRouteHandler` |
+| `@monti-cms/core/render` | public pages (server components) | `renderMdx(mdx, options)` → `{ content, toc }`. In the site CSS: `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/read` | public pages (server components, sitemap, RSS) | `getEntry`, `listEntries`, `getTranslations`, `getPreview`: read published content (relations, URLs, old-URL redirects, source fallback) |
+| `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | stores, services, login checks, public media URLs (`resolvePublicMediaUrl`). It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
+| `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
+| `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
+| `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding, DB connection, errors |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate` (the code behind the `monti` command) |
+| `@monti-cms/core/migrate`, `/register` | command line (old way) | create tables; wire the config aliases in custom scripts |
+| `@monti-cms/core/testing` | tests | isolated-schema DB, sample data |
+
+## Building the packages
+
+Inside the repository the sources (`src`) are used directly. For the distributable bundle, `pnpm build:packages` produces `dist` and `pnpm pack` packages it using
+`publishConfig.exports` (dist). `pnpm example:pack` puts the bundle into `examples/other-site/vendor`.
+
+## Body blocks
+
+The core only has the blocks that other features rely on or that are Markdown syntax (image, file, table, math, alignment, underline, superscript/subscript, line break, translation notice).
+Callout, fold, tabs, columns, Mermaid, charts and text decorations (tooltip, code link, text color) come from the blocks extension `@monti-cms/blocks`, where you install
+only what you need as plugins.
+
+```ts
+import { blocks } from "@monti-cms/blocks";
+
+plugins: [...blocks({ only: ["callout", "mermaid", "tooltip"] })],
+```
+
+Blocks the site creates itself go into `blocks` in the config. The blocks extension adds blocks with the same definition (`definePlugin({ blocks })`).
+
+```ts
+import { defineBlock } from "@monti-cms/core";
+
+blocks: [
+	defineBlock({
+		name: "notice", // stored syntax :::notice{level="warn"} … :::
+		label: "Notice",
+		syntax: { kind: "container", directive: "notice" },
+		component: "Notice", // the public page renders it under this name from the site's MDX component table
+		attributes: {
+			level: { type: "string", label: "Level", options: { info: "Info", warn: "Warning" }, defaultValue: "info" },
+			title: { type: "string", label: "Title", translatable: true }, // the translation screen translates it separately as a heading line
+		},
+		translateInside: true, // the translation screen expands the box and translates the inner blocks one by one
+		editor: {
+			view: "node", // "opaque" shows it as a raw-text box in the editor
+			insertable: true,
+			icon: "message-square", // slash and component menu icon (lucide name)
+			insert: { values: { level: "warn" }, text: "Content" }, // initial values on insert
+		},
+	}),
+	defineBlock({
+		name: "graphviz", // stored syntax ```graphviz … ```
+		label: "Graphviz",
+		syntax: { kind: "fence", lang: "graphviz" },
+		component: "Graphviz", // on the public page, remarkFenceBlocksToMdx turns it into <Graphviz source="…" />
+		attributes: {},
+		editor: { view: "node", insertable: true, insert: { code: "digraph { a -> b }" }, placeholder: "Enter Graphviz code" },
+	}),
+],
+```
+
+- The blocks you can add are directive blocks (`container`, `leaf`), text decorations (`text` + `editor.view: "mark"`) and code fence blocks (`fence`).
+  A code fence block takes over every code fence of that language, so do not use a common code language name (such as `ts`).
+- A text decoration is stored as `:name[text]{attributes}`. Attributes are written in definition order; required attributes (`required`) are written even when empty, and the rest
+  only when they have a value. Nested decorations are stored in the order they were added (outermost first). The admin package builds the editor display from the definition, and the look, formatting
+  toolbar, bubble and slash menu are registered in the admin UI by the extension ("Text marks" in the `@monti-cms/admin` README). An attribute with `codeAnchor: true`
+  makes its value the code block line label (the `anchor` line effect), and the editor's body–code linking uses this decoration (only one per site).
+- Choice values, required values and child values (`childValue`, e.g. the tab to open first is one of the tab names) of attributes, and the number of children (`children.min`, `max`) are
+  validated before publishing.
+- Removing a block that was in use drops it from the stored syntax. Bodies that already used that block turn into plain text when saved again, so do not remove blocks that are in use.
+- The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockEditors` (attribute and body boxes) or
+  `blockViews` (the whole view), and supply previews of code fence blocks with `fencePreviews`.
+- For code fence blocks on public pages, put `remarkFenceBlocksToMdx` from `@monti-cms/core/mdx` into the render chain (after `remarkDirectivesToMdx`) so they are rendered
+  with `component`.
+- The translation structure check (`compareStructure`) only accepts changes in translation for `translatable` attributes and for `childValue` attributes that point at their values (e.g. the tab to open first).
+  Put `translatable: true` on human-readable attributes (title, description, etc.).
+- If `editor.icon` is a name that is not among the admin package's default icons, register the icon in the admin UI (`@monti-cms/admin` README).
+
+### Code block line effects
+
+The defaults for code block line effects (`// @line name {0-2}`) are highlight, add, remove, warning and error. Add more with `codeBlock.lineEffects` in the config;
+using the same name overrides the default.
+
+```ts
+codeBlock: {
+	lineEffects: [
+		{
+			name: "focus", // annotation name (lowercase kebab-case). collapse, anchor and the text effect names cannot be used
+			label: "Focus", // line effect menu name
+			icon: "eye", // menu icon (lucide name, a name registered in the admin UI)
+			class: "bg-primary/10", // class the public page adds to that line (put it where the site's Tailwind reads)
+			editor: { background: "bg-cms-primary/10" }, // editor display (admin colors are `cms-*`, dark theme is `cms-dark:`): background, wavy (wavy underline color), marker({ text, className })
+		},
+	],
+},
+```
+
+The public page passes `annotationConfig` (defaults + config) from `@monti-cms/core/code-block` to the render chain.
+
+### Text color list
+
+Text colors come from the blocks extension (`color({ palette })` of `@monti-cms/blocks`). The old config `textColors` is gone (move it to the option).
+
+## Plugins
+
+List it once in `plugins` of the site config (e.g. `aiPlugin()` of the AI plugin `@monti-cms/ai`).
+
+```ts
+import { definePlugin } from "@monti-cms/core";
+
+export const myPlugin = () =>
+	definePlugin({
+		name: "my-plugin",
+		options: {}, // JSON value. Read by both the server and the browser
+		nav: [{ path: "my", label: "My screen", icon: "plug" }], // admin sidebar "Manage" group
+		validate: ({ collections }) => {}, // called when the site config is built
+		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display
+		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
+	});
+```
+
+- The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
+- `validate` receives the collection, locale and block definitions and all plugins (`plugins`). Extensions that use roles check field kinds here.
+- `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
+  `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
+  An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
+- The server-side `routes` receive addresses that are not in the core routes (`/api/cms/v1/*`). The core wraps them with the admin login check and the same-origin check, so
+  forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` and verify on their own.
+  `migrate` is called by `monti migrate` after the core tables.
+- The same-origin check accepts the host of `X-Forwarded-Host` (first value), `Host` and `site.url`. Behind a proxy that rewrites `Host`, set `site.url`.
+- Plugin code uses `getCmsDatabase()` (the DB connection) from `@monti-cms/core/plugin/server` and the core route scaffolding (`adminRoute`, etc.).
+
+## Server config
+
+| Item | Meaning |
+|---|---|
+| `database` | Content store. `postgres({ connectionString, schema })` |
+| `media` | Store for images and attachments. `r2Storage` or `s3Storage` from `@monti-cms/core/s3` (`region`, `forcePathStyle`), or a connection implementing the `MediaStore` contract. Without it, media features are unavailable. |
+| `auth` | Admin login. `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, NextAuth reads `AUTH_SECRET`) |
+| `secret` | Key used to keep stored values (AI service keys) encrypted in the DB. Keep it separate from the login signing value. If you change it, re-enter the stored keys. |
+| `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
+| `afterCommit` | Optional. Post-save notification `(change) => …`: after a change that creates, saves, publishes, archives, trashes, restores or deletes an entry is committed, it receives `{ kind, entryId, collection, locale, translationGroupId, status, publishedSlug, workingSlug }`. A place for cache revalidation (`revalidatePath`), webhooks and search indexing. Rolled-back changes are not delivered, and a failure does not undo the save. Plugins can also set `afterCommit` |
+
+To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` or `AuthAdapter`.
+
+## Config
+
+| Item | Meaning |
+|---|---|
+| `collections` | Collection name → `defineCollection` definition. Names are stored in the DB, so do not change them in production. |
+| `locales` | List of content languages (`code`, `name`, admin UI name `label`). |
+| `defaultLocale` | Default language (the source of translations). With the default URL scheme, public URLs get no language prefix. |
+| `site.url` | Public site URL. Links written as full URLs in the body are also recognized as internal links. May be read from an environment variable. |
+| `site.aliases` | Other host names to treat as the same site (e.g. `www.example.com`). |
+| `site.name` | Site name shown in the admin UI. If unset, the host name of `site.url`. |
+| `site.home` | URL of the admin sidebar `View site` link. A path or full URL. Default `/`. |
+| `site.localePrefix` | How the language is added to public URLs. `except-default` (default: the default language as is, other languages as `/{code}`), `always` (`/{code}` for every language), `never` (no prefix). Search previews, draft previews and `localizePath` follow it. |
+| `site.previewPath` | Leading part of the draft preview URL (e.g. `/preview`). If unset, there is no preview button. |
+| `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
+| `admin.path` | Admin UI path (default `/admin`). Must match the app's admin route folder. `/` and anything under `/api` are not allowed. Links inside the UI, login redirects and plugin screen URLs follow it. |
+| `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
+| `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
+| `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
+| `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.mdx"`, `"cms.core"` and `"cms.translation"`. |
+| `admin.legacyBackupNames` | Old browser backup DB names. The admin UI reads and deletes them but never creates them (the current name is `cms_backup`). |
+
+### Collections
+
+- **Kind (`kind`).** A `document` has a body, separates draft from published content, and is published explicitly. An `item` is a small form whose saved values
+  are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents.
+  The old name `workflow: "publish" | "record"` is also accepted and converted to `document` and `item` (this name will be removed). The core code reads only `kind`.
+- **Layout (`layout`).** If absent, it is one group in field declaration order, and fields with their own `tab` gather in that tab.
+- **List (`list.columns`).** If absent, the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation
+  pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date.
+
+A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It is used to recognize internal links in the body (checking before publishing whether the target entry exists and is published)
+and by the editor when it creates links. A collection without `path` cannot be linked to from the body.
+
+### Field rules
+
+- **The title field is named `title`; its label is free.** This is a library convention. Every collection has a `title` text field (`fields.text`).
+  Lists, search, relation picking, body links, duplication and the title box of the edit screen use this field. The label (`label`) is up to the site (e.g. `Headline`,
+  `Name`). There is no separate limit on title length; it follows this field's `max` (no limit if absent).
+- **Exactly one URL field.** The URL (`fields.slug`) is a core concept, so there is one per entry. Having two or more URL fields in a collection is a config error.
+- **The URL is built from `from`.** With `fields.slug({ from: "title" })`, the URL is built from that field's value until you edit the URL yourself,
+  and for an item collection, saving with an empty URL builds it from that value. Without `from`, nothing is built automatically. `from` must be a text field of the same
+  collection.
+- **Field role (`role`).** Extensions and screens find values by role, not by field name (`roleField(collection, role)`, and `fieldWithRole(schema, role)`, which does not read
+  the config). Role names are free (letters, digits, hyphens), and a collection has only one field per role. The only role the core knows is
+  `summary` (a text field, the summary). It is passed to field-side actions (AI, etc.) as `summary`. Other roles are decided by the extension that uses them,
+  and it checks the field kind in the plugin `validate` (e.g. `seoTitle`, `ogImage`, `noindex` of the SEO extension).
+- **Media field.** `fields.media({ label, accept?: "image" | "file" })` picks one file from the media library and stores the media ID
+  as text. The value is recorded in media usage (`entry_references`, kind `media`), shows up in the media screen's "Used in" and "Unused" filters,
+  and a file in use cannot be deleted. A value that is not a media ID is `invalid_metadata_value`, and an empty value (`""`) means nothing is picked.
+
+- **Required field (`required: true`).** Blocks an empty value when a document collection is published, or when an item collection is saved. Saving a draft is not blocked.
+  The old value `required: "publish"` is accepted with the same meaning.
+- **Field value errors.** Error codes are the same regardless of the field. An empty required value is `missing_field` (`null_slug` for the URL), and a length over `max`
+  is `field_too_long`. In the issue (`issues`), `path` holds the field name and `message` the field label (the title too). A different relation target
+  collection is `invalid_reference_collection`. An empty body (`empty_body`) blocks only collections that use a body (`body`).
+- **Fill from the body.** With `fillFromBody: true` (160 characters) or `fillFromBody: { maxLength }` on a text field, an empty value is filled on publish
+  with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(mdx, maxLength)`.
+- **Multi-line input.** A text field with `multiline: true` is a multi-line input, and `rows` (default 2) sets the initial number of rows.
+- **Field names you cannot use.** The key the core uses separately in metadata (`translations`) cannot be a field name.
+- **Tabs.** Putting `tab: "name"` on a field or `tab` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters).
+  The group's `tab` comes first; if the group has no `tab`, the field's `tab` is used. Fields with their own `tab` gather into one group per tab even without a layout.
+  So field groups that extensions provide (e.g. `seoFields()`) land in their own tab even when the site writes no `layout`. If there is none, the default tab
+  is `Properties`.
+- **View field.** `fields.view({ view: "name" })` is a field that stores no value and draws a view in that spot. The admin extension registers the view
+  with `fieldViews` (e.g. `search` of the SEO extension). If no view is registered, nothing is drawn.
+- **Swapping the input.** `input: "name"` points at an input that an admin extension registered with `fieldInputs`. Without a registration, the kind's default input is used.
+  `inputOptions` (a JSON value) is the setting passed to that input, and the core does not read it (e.g. a recommended length).
+
+```ts
+fields: {
+	title: fields.text({ label: "Title", required: true }),
+	slug: fields.slug({ label: "Slug", from: "title" }),
+	excerpt: fields.text({ label: "Excerpt", role: "summary", multiline: true, rows: 3, fillFromBody: { maxLength: 200 } }),
+	hero: fields.media({ label: "Hero image", tab: "Media" }),
+	credit: fields.text({ label: "Credit", tab: "Media" }),
+},
+layout: [{ fields: ["title", "slug", "excerpt"] }], // hero and credit gather in the Media tab
+```
+
+`defineConfig` throws an error as soon as the app starts if: a relation field points at a collection that does not exist, the default language is not in the list, `title` is missing, there are two or more URL fields,
+roles collide or `summary` is not a text field, a tab name is not 1 to 20 characters, `from` or `fillFromBody` does not match the fields,
+a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix`, `site.previewLocaleParam` or `site.home`
+is wrong.
+
+Duplicating (`POST /api/cms/v1/entries/:id/duplicate`) sets the copy's title to the `{ title }` in the body if given (the admin UI sends the original
+title with " (copy)" appended). Without it, the title is the original's as is. The store does not decide what to append.
+
+## Remaining work
+
+This package was split out of a single blog, so the following needs to be sorted out before using it on another blog.
+
+- The only store is Postgres (`ContentStore`). Using another DB means implementing the same contract, and the contract is still large.
+
+## Development
+
+```bash
+pnpm --filter @monti-cms/core test:run
+pnpm --filter @monti-cms/core typecheck
+```
+
+The package's own tests run with the sample configs `test/cms.config.ts` and `test/cms.server.ts`.
+
+**Tests also run with another site config (regression guard).** `test/other-site.config.ts` is a config deliberately different from the blog's (collections article, topic and author,
+field names other than `title` and `slug`, English only, chart + site blocks, no text decorations). In each of the core, admin and AI packages, `vitest.othersite.config.ts` reruns the same
+tests with this config (suite names `core (other-site)`, `admin (other-site)` and `ai (other-site)`; the repo-root
+`pnpm test:run` runs them together, and in a package use `pnpm test:other-site`). New tests run with both configs automatically. Do not write collection and field names in
+tests; look them up from the config (`test/any-site.ts`: collections, relation fields, the second language, and `fillRequiredMetadata`, which fills in publish-required values).
+Wrap tests that need something the config lacks (a second language, a bundled block, etc.) in `skipIf`. In the core package, the parts that assert the blog sample data as is
+live in `*.blog.test.ts` and are excluded from the other-site run and type check. In the admin and AI packages, list them in `BLOG_FIXTURE_TESTS` of each `vitest.othersite.config.ts`
+to exclude them.
+
+**Automated checks (CI).** On every push and PR, `.github/workflows/ci.yml` runs lint (check only), type checking, the package build, tests (Postgres 17 service) and
+the example app bundle check (`pnpm example:check`). `pnpm example:check` builds and packs the packages, installs them into the example app in a temporary folder outside the repo,
+and runs `tsc` (`skipLibCheck: false`) and `next build` once each with a config that includes all the example config and extensions.

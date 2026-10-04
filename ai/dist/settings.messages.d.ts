@@ -1,0 +1,2 @@
+/** Error messages for AI connection settings and shared texts. */
+export declare const settingsMessages: import("@monti-cms/core").MessageBundle<"key" | "keyAgain" | "legacyDecide" | "legacyGenerate" | "shared.configCannotDelete" | "shared.inUse" | "shared.invalid" | "shared.keyFormat" | "shared.keyTaken" | "shared.labelRequired" | "shared.labelTooLong" | "shared.textTooLong" | "shared.tooMany" | "shared.unknown" | "unknownConnection" | "urlAndModel">;
