@@ -1,40 +1,21 @@
+import type { SyntaxExtension } from "../syntax/types";
+import { bodyText, EXCERPT_TEXT } from "./body-text";
+
 /**
  * Readable plain text of an MDX body. Used for filling fields from the body (`fillFromBody`).
- * Code, math, images and directive syntax are dropped; only the labels of links and directives remain.
+ * It is taken from the parsed body, so it works for any notation the site reads (`mdx.syntax`): the text of paragraphs, headings, list items, table cells and the bodies of
+ * blocks, and the text attributes of blocks (a callout title). Code, math, images and the text a reader does not see are left out.
  */
-export function toPlainText(mdx: string): string {
-	return (
-		mdx
-			// code fences, block math, comments
-			.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, " ")
-			.replace(/^\$\$[\s\S]*?^\$\$/gm, " ")
-			.replace(/\{\/\*[\s\S]*?\*\/\}|<!--[\s\S]*?-->/g, " ")
-			// container directive fences and leaf directives (`::image{...}`)
-			.replace(/^:{3,}[^\n]*$/gm, " ")
-			.replace(/^::[a-z][\w-]*(\[[^\]]*\])?(\{[^}]*\})?\s*$/gm, " ")
-			// text directive `:name[label]{...}` → label
-			.replace(/:[a-z][\w-]*\[([^\]]*)\](\{[^}]*\})?/g, "$1")
-			// drop images; keep only a link's label
-			.replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-			.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-			// JSX/HTML tags
-			.replace(/<\/?[A-Za-z][^>]*>/g, " ")
-			// heading, quote and list markers and emphasis symbols
-			.replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+(\[[ xX]\]\s+)?/gm, "")
-			.replace(/(\*\*|__|~~|\*|_|`)/g, "")
-			.replace(/^\|?[\s:|-]+\|?$/gm, " ")
-			.replace(/\|/g, " ")
-			.replace(/\s+/g, " ")
-			.trim()
-	);
+export function toPlainText(mdx: string, syntax?: readonly SyntaxExtension[]): string {
+	return bodyText(mdx, EXCERPT_TEXT, syntax);
 }
 
 /**
  * Leading plain text of the body (up to `maxLength` characters, with `…` appended if longer). Used when filling an empty field from the body (`fillFromBody`).
  * Empty string if there is no text to produce.
  */
-export function bodyExcerpt(mdx: string, maxLength = 160): string {
-	const text = toPlainText(mdx);
+export function bodyExcerpt(mdx: string, maxLength = 160, syntax?: readonly SyntaxExtension[]): string {
+	const text = toPlainText(mdx, syntax);
 	const chars = Array.from(text);
 	if (chars.length <= maxLength) return text;
 	return `${chars

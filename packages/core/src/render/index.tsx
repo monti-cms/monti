@@ -10,7 +10,6 @@ import type { ComponentProps, ComponentType, ReactNode } from "react";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeKatex from "rehype-katex";
 import rehypeSlug from "rehype-slug";
-import remarkBreaks from "remark-breaks";
 import remarkFlexibleToc, { type TocItem } from "remark-flexible-toc";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -103,9 +102,9 @@ export const mdxRemarkPlugins = (
 	...syntaxRemarkPlugins(syntax),
 	// Code fence blocks (charts, diagrams etc.) are turned into `<block source="…"/>`.
 	remarkFenceBlocksToMdx,
-	// The line ending the serializer writes after `<br />` is not content (before `remarkBreaks` turns line endings into breaks).
+	// A single newline inside a paragraph is a space, as in CommonMark and in the CMS tree; a break is written `<br />`. The line ending the serializer writes
+	// after `<br />` is not content, so it is dropped here as the parser drops it: the page then renders the same text the tree holds (no stray newline after `<br>`).
 	remarkBreakNewline,
-	remarkBreaks,
 	remarkGfm,
 	[remarkFlexibleToc, { tocRef, maxDepth: 3 }],
 ];

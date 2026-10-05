@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
+import { computeContentHash } from "../../core/content-hash";
 import { analyze, serialize, toDocument } from "..";
+import type { CmsNode } from "../types";
 
 /**
  * The standard notation: with no syntax extension, saved MDX is CommonMark + GFM + standard MDX JSX. Blocks are read from the current config
@@ -11,11 +13,8 @@ import { analyze, serialize, toDocument } from "..";
 /** Write path: `MDX → analyze → toDocument → serialize`. */
 const write = (source: string): string => serialize(toDocument(analyze(source)));
 
-/** The document a body means, ignoring how the line breaks were spelled (`hardBreak` and `<br />` are one meaning). */
-const meaning = (source: string) =>
-	JSON.stringify(toDocument(analyze(source)))
-		.replace(/\{"type":"hardBreak"\}/g, "BR")
-		.replace(/\{"type":"mdxJsx","attrs":\{"name":"br","attributes":\[\]\}\}/g, "BR");
+/** The document a body means. A line break is one node whichever way it was spelled, so no normalising is needed here. */
+const meaning = (source: string) => JSON.stringify(toDocument(analyze(source)));
 
 const DIRECTIVE_NOTATION = /^:{2,}[a-z]|[^\\]:[a-z-]+\[/m;
 
@@ -27,6 +26,21 @@ describe("standard MDX output", () => {
 			expect(write("첫 줄  \n둘째 줄")).toBe(written);
 			expect(write("첫 줄<br />둘째 줄")).toBe(written);
 			expect(write(written)).toBe(written);
+		});
+
+		it("are one node in the document whichever way they were spelled", () => {
+			const spellings = ["가<br />나", "가<br/>나", "가\\\n나", "가  \n나", "가<br />\n나"];
+			const documents = spellings.map((source) => toDocument(analyze(source)));
+			for (const document of documents) expect(document).toEqual(documents[0]);
+			expect(documents[0]?.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
+		});
+
+		it("have the same content hash whichever way they were spelled", () => {
+			const hash = (source: string) => computeContentHash({ title: "t" }, source);
+			expect(hash("가<br />나")).toBe(hash("가\\\n나"));
+			expect(hash("**가<br />나**")).toBe(hash("**가\\\n나**"));
+			// The serializer closes marks before a break, so a re-save must not change the hash either.
+			expect(hash("**가<br />나**")).toBe(hash(write("**가<br />나**")));
 		});
 
 		it("do not change what the body means", () => {
@@ -66,10 +80,111 @@ describe("standard MDX output", () => {
 			expect(write("앞 <br>안쪽</br> 뒤")).toContain("안쪽");
 		});
 
-		it("keep a paragraph of only a break as that paragraph", () => {
-			const doc = toDocument(analyze("앞\n\n<br />\n\n뒤"));
-			expect(doc.content?.map((node) => node.type)).toEqual(["paragraph", "paragraph", "paragraph"]);
-			expect(write("앞\n\n<br />\n\n뒤")).toBe("앞\n\n<br />\n\n뒤\n");
+		it("do not drop the attributes of a br element, which is not a plain break", () => {
+			const written = write('앞<br className="x" />뒤');
+			expect(written).toContain('className="x"');
+			expect(write(written)).toBe(written);
+			expect(toDocument(analyze('앞<br className="x" />뒤')).content?.[0]?.content?.map((node) => node.type)).toEqual([
+				"text",
+				"mdxJsx",
+				"text",
+			]);
+		});
+	});
+
+	describe("blank lines", () => {
+		/** The paragraphs of the first container of a document, as text (`""` for an empty paragraph). */
+		const lines = (source: string) =>
+			(toDocument(analyze(source)).content ?? []).map((node) =>
+				(node.content ?? []).map((child) => child.text ?? child.type).join(""),
+			);
+		const withBlankLines = (count: number) => `앞\n\n${"<br />\n\n".repeat(count)}뒤\n`;
+
+		it("are empty paragraphs in the document: a line of only <br /> is one", () => {
+			expect(toDocument(analyze("앞\n\n<br />\n\n뒤")).content).toEqual([
+				{ type: "paragraph", content: [{ type: "text", text: "앞" }] },
+				{ type: "paragraph", content: [] },
+				{ type: "paragraph", content: [{ type: "text", text: "뒤" }] },
+			]);
+		});
+
+		it.each([1, 2, 3, 5])("keep %i blank lines between blocks through every save", (count) => {
+			const written = withBlankLines(count);
+			expect(lines(written)).toEqual(["앞", ...Array.from({ length: count }, () => ""), "뒤"]);
+			expect(write(written)).toBe(written);
+			expect(write(write(written))).toBe(written);
+		});
+
+		it("are written as one <br /> line per empty paragraph, from a document the editor made", () => {
+			const paragraph = (text?: string): CmsNode => ({
+				type: "paragraph",
+				content: text ? [{ type: "text", text }] : [],
+			});
+			const doc: CmsNode = { type: "doc", content: [paragraph("앞"), paragraph(), paragraph(), paragraph("뒤")] };
+			expect(serialize(doc)).toBe(withBlankLines(2));
+			expect(toDocument(analyze(serialize(doc)))).toEqual(doc);
+		});
+
+		it("do not change the content hash when a body is re-saved", () => {
+			const hash = (source: string) => computeContentHash({ title: "t" }, source);
+			const written = withBlankLines(3);
+			expect(hash(write(written))).toBe(hash(written));
+			// A different number of blank lines is different content.
+			expect(hash(withBlankLines(2))).not.toBe(hash(withBlankLines(3)));
+		});
+
+		it("keep a paragraph of only line breaks as blank lines, one per break", () => {
+			const doc: CmsNode = {
+				type: "doc",
+				content: [
+					{ type: "paragraph", content: [{ type: "text", text: "앞" }] },
+					{ type: "paragraph", content: [{ type: "hardBreak" }] },
+					{ type: "paragraph", content: [{ type: "text", text: "뒤" }] },
+				],
+			};
+			expect(serialize(doc)).toBe(withBlankLines(1));
+		});
+
+		it("are not written at the end of a document, where the editor keeps one after a last block that is not a paragraph", () => {
+			const empty = { type: "paragraph", content: [] } satisfies CmsNode;
+			const text = { type: "paragraph", content: [{ type: "text", text: "끝" }] } satisfies CmsNode;
+			expect(serialize({ type: "doc", content: [text, empty, empty] })).toBe("끝\n");
+			expect(serialize({ type: "doc", content: [empty] })).toBe("");
+			expect(serialize({ type: "doc", content: [empty, text] })).toBe("<br />\n\n끝\n");
+			expect(write("끝\n\n<br />\n")).toBe("끝\n");
+		});
+
+		it("keep blank lines inside lists, quotes and containers", () => {
+			const container = ADDED_BLOCKS.find(
+				(block) => block.syntax.kind === "container" && !block.children && !block.parent,
+			);
+			const bodies = [
+				"- 하나\n\n  <br />\n\n  <br />\n\n  둘\n",
+				"> 앞\n>\n> <br />\n>\n> 뒤\n",
+				...(container
+					? [`<${container.component}>\n\n앞\n\n<br />\n\n<br />\n\n뒤\n\n</${container.component}>\n`]
+					: []),
+			];
+			for (const body of bodies) {
+				expect(write(body), body).toBe(body);
+				expect(JSON.stringify(toDocument(analyze(body))), body).toContain('{"type":"paragraph","content":[]}');
+			}
+		});
+
+		it("do not turn the empty placeholder of an empty container into a blank line", () => {
+			const container = ADDED_BLOCKS.find(
+				(block) => block.syntax.kind === "container" && !block.children && !block.parent,
+			);
+			if (!container) return;
+			const empty = { type: "paragraph", content: [] } satisfies CmsNode;
+			const written = serialize({ type: "doc", content: [{ type: container.name, content: [empty] }] });
+			expect(written).not.toContain("<br />");
+			expect(
+				serialize({
+					type: "doc",
+					content: [{ type: "bulletList", content: [{ type: "listItem", content: [empty] }] }],
+				}),
+			).toBe("-\n");
 		});
 	});
 

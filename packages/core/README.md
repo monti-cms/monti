@@ -137,6 +137,23 @@ against the same schema, they run one at a time. A plugin hands over once-only w
   `./cms.config.ts`/`./src/cms.config.ts`.
 - The old way (put `import "@monti-cms/core/migrate";` in `migrate.ts` and run `tsx --import @monti-cms/core/register migrate.ts`) still works.
 
+#### `monti content:rewrite`
+
+```sh
+pnpm exec monti content:rewrite           # a dry run: reports what would change, writes nothing
+pnpm exec monti content:rewrite --apply   # writes the changes
+```
+
+Re-serializes every stored body (the working and published bodies of entries, and body templates) with the site's configured syntax, so the stored text is one notation:
+after turning `directiveSyntax()` on or off, or after upgrading the serializer, this brings old bodies in line at once instead of one post at a time as each is saved. Run it after `monti migrate`.
+It takes the same `--env-file`, `--no-env-file`, `--config` and `--server` options as `migrate`.
+
+- It prints one line per body, `collection/slug (locale) state: changed|unchanged`, and a summary.
+- Only the text changes. The content hash covers the parsed body, so a re-spelled body has the same hash: `version`, `updated_at` and `content_hash` are not touched, and "unpublished changes" is unaffected.
+  The command checks this for every body: one whose hash would change is skipped and reported, never written.
+- A body that does not parse cleanly is skipped and reported. The search text of rewritten bodies is refreshed; the positions the reference index keeps (line and column of each link or image) are refreshed the next time the entry is saved.
+- Writes happen in one transaction, and a second run changes nothing.
+
 ### 5. Run
 
 Start it with `next dev` and open the admin path (default `/admin`).
@@ -261,8 +278,8 @@ See the README of `@monti-cms/seo` for details.
 | `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
 | `@monti-cms/core/syntax` (experimental) | `cms.config.ts`, syntax extension packages | The `SyntaxExtension` interface and the helpers extensions build on ("Body syntax"). The directive notation is `@monti-cms/syntax-directive` |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding, DB connection, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate` (the code behind the `monti` command) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables), `monti content:rewrite` (re-serialize stored bodies) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate`, `contentRewrite` (the code behind the `monti` command) |
 | `@monti-cms/core/migrate`, `/register` | command line (old way) | create tables; wire the config aliases in custom scripts |
 | `@monti-cms/core/testing` | tests | isolated-schema DB, sample data, the MDX parser and remark plugins of a given extension list (`parseMdxAst`, `syntaxRemarkPlugins`) |
 
@@ -280,7 +297,8 @@ What is written by default, with no extension:
 
 | Meaning | Stored as |
 | --- | --- |
-| line break | `<br />` (in a paragraph the next line follows it: `line<br />` + newline + `next`). `\` + newline, two trailing spaces and `<br />` are all read and written this way |
+| line break | `<br />` (in a paragraph the next line follows it: `line<br />` + newline + `next`). `\` + newline, two trailing spaces and `<br />` are all read and written this way. A single newline inside a paragraph is only a space, on the page and in the editor alike (CommonMark) |
+| blank line (Enter pressed between blocks in the editor) | a line of only `<br />`, one per empty paragraph, kept in order. The document node is an empty `paragraph`. Blank lines at the very end of a body are not stored |
 | underline, superscript, subscript, translation notice | `<u>`, `<sup>`, `<sub>`, `<Untranslated>` |
 | text alignment | `<TextAlign align="center">` |
 | table with merged cells, column widths or a non-GFM header | `<Table>`, `<TableRow>`, `<TableCell colspan="2">` (other tables stay GFM) |
@@ -288,6 +306,9 @@ What is written by default, with no extension:
 | file card | `<File mediaId="…" />` |
 | container and leaf blocks (callout, tabs, columns, site blocks) | `<Component attributes>` … `</Component>`; booleans are bare when true and omitted when false |
 | text decorations (tooltip, code link, text color, site text blocks) | `<Component attributes>text</Component>` |
+
+The migration `0012_soft_line_endings` (run by `monti migrate`) keeps bodies written while a single newline rendered as a break looking the same: it writes a `<br />` at each such line ending in paragraph text of
+working and published bodies, translation base sources and templates, editing the stored string at the parser's offsets only (code, math, tables, attributes and expressions are never touched, and a body that does not parse is left as it is and reported).
 
 To add a notation, list extensions in `mdx.syntax`. The order is the precedence for writing.
 
@@ -301,7 +322,7 @@ export default defineConfig({
 ```
 
 - [`@monti-cms/syntax-directive`](../syntax-directive) reads and writes directives (`:::callout{…}`, `::image{…}`, `:u[text]`, `::::table`), the notation Monti used before standard MDX. Without it, `:::callout` is ordinary text.
-  `directiveSyntax({ write: false })` only reads directives and saves standard MDX, which migrates content a post at a time as it is saved. Line breaks are never written as `:br[]`.
+  `directiveSyntax({ write: false })` only reads directives and saves standard MDX, which migrates content a post at a time as it is saved (or all at once with `monti content:rewrite --apply`). Line breaks are never written as `:br[]`.
 - The public renderer (`@monti-cms/core/render`) runs the same plugins as the editor's parser, so what the editor reads is what the site renders.
 
 **Upgrading a site that has directive content.** Install `@monti-cms/syntax-directive` and add `directiveSyntax({ write: false })` to `mdx.syntax` (or `directiveSyntax()` to keep writing directives) before deploying this version.
@@ -518,7 +539,7 @@ and by the editor when it creates links. A collection without `path` cannot be l
   is `field_too_long`. In the issue (`issues`), `path` holds the field name and `message` the field label (the title too). A different relation target
   collection is `invalid_reference_collection`. An empty body (`empty_body`) blocks only collections that use a body (`body`).
 - **Fill from the body.** With `fillFromBody: true` (160 characters) or `fillFromBody: { maxLength }` on a text field, an empty value is filled on publish
-  with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(mdx, maxLength)`.
+  with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(mdx, maxLength)`. The text is taken from the parsed body, so it follows whatever syntax the site reads: prose, headings, list items, table cells, block bodies and the text attributes of blocks (a callout title); code, math and images are left out. Body search text is built the same way, and also keeps code, image alt text and captions.
 - **Multi-line input.** A text field with `multiline: true` is a multi-line input, and `rows` (default 2) sets the initial number of rows.
 - **Field names you cannot use.** The key the core uses separately in metadata (`translations`) cannot be a field name.
 - **Tabs.** Putting `tab: "name"` on a field or `tab` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters).

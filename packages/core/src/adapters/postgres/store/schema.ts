@@ -3,6 +3,7 @@ import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
+import { migrateSoftBreaks } from "./soft-break-migration";
 
 /** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
 interface MigrationStep {
@@ -13,7 +14,8 @@ interface MigrationStep {
 /**
  * Core migration steps (in numbered order). A store that already exists runs every step once: all steps give the same result when re-run
  * (IF NOT EXISTS; moving legacy rows does nothing when there are no rows to move), so it is safe even for stores with no step record.
- * Add new changes at the end under a new name. Do not edit existing steps (they do not run again on stores that already ran them).
+ * Add new changes at the end under a new name (before `seed_initial_body_templates`, which must stay last: it seeds a new store once, after the steps
+ * above have shaped it, and stores that already seeded skip it whatever its position). Do not edit existing steps (they do not run again on stores that already ran them).
  */
 const STEPS: readonly MigrationStep[] = [
 	{
@@ -284,6 +286,23 @@ const STEPS: readonly MigrationStep[] = [
 		name: "0010_content_hash_v2",
 		/** Content hashes now cover the parsed body instead of the MDX string (`cms-snapshot-v2`). Recomputes every stored hash. */
 		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
+	},
+	{
+		name: "0011_line_break_hashes",
+		/**
+		 * A line break is one document node (`hardBreak`) whichever way it was written, and a line of only `<br />` is an empty paragraph, so the parsed
+		 * body of some stored bodies changed. Recomputes every stored hash so that "unpublished changes" keeps meaning what it meant.
+		 */
+		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
+	},
+	{
+		name: "0012_soft_line_endings",
+		/**
+		 * The public page no longer turns a single newline inside a paragraph into a line break (CommonMark: it is a space). Bodies written while it did keep their
+		 * look by getting a `<br />` at each such line ending (working and published bodies, translation base sources, templates). Also recomputes
+		 * `content_hash` and `search_text` of every body. A body that does not parse is left as it is and logged.
+		 */
+		run: (client, qSchema) => migrateSoftBreaks(client, qSchema),
 	},
 	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.

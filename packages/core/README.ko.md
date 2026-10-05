@@ -137,6 +137,23 @@ pnpm exec monti migrate
   `./cms.config.ts`·`./src/cms.config.ts` 순서로 찾는다.
 - 예전 방식(`migrate.ts`에 `import "@monti-cms/core/migrate";`를 두고 `tsx --import @monti-cms/core/register migrate.ts`)도 그대로 돈다.
 
+#### `monti content:rewrite`
+
+```sh
+pnpm exec monti content:rewrite           # 예행: 바뀔 것을 알려 주고 아무것도 쓰지 않는다
+pnpm exec monti content:rewrite --apply   # 바뀐 내용을 쓴다
+```
+
+저장된 모든 본문(항목의 작업본·발행본, 본문 템플릿)을 사이트에 설정된 문법으로 다시 직렬화해, 저장 글이 한 표기가 되게 한다.
+`directiveSyntax()`를 켜거나 끈 뒤, 또는 직렬화기를 올린 뒤에 글을 저장할 때마다 한 편씩 맞춰지길 기다리지 않고 한 번에 맞춘다. `monti migrate` 다음에 돌린다.
+`migrate`와 같은 `--env-file`·`--no-env-file`·`--config`·`--server` 옵션을 받는다.
+
+- 본문마다 한 줄씩 `collection/slug (locale) state: changed|unchanged`를 찍고 요약을 보인다.
+- 글자만 바뀐다. 내용 해시는 해석한 본문을 덮으므로 표기가 달라져도 같다. `version`·`updated_at`·`content_hash`는 건드리지 않고 "발행하지 않은 변경"도 그대로다.
+  명령이 본문마다 이를 확인해서, 해시가 바뀔 본문은 쓰지 않고 건너뛴 채 알린다.
+- 깨끗하게 해석되지 않는 본문은 건너뛰고 알린다. 다시 쓴 본문의 검색용 글자는 새로 만들고, 참조 색인이 가진 위치(링크·이미지의 줄·칸)는 그 항목을 다음에 저장할 때 새로 잡힌다.
+- 쓰기는 한 트랜잭션이고, 두 번째로 돌리면 바뀌는 것이 없다.
+
 ### 5. 실행
 
 `next dev`로 띄우고 관리자 경로(기본 `/admin`)를 연다.
@@ -261,8 +278,8 @@ export default defineConfig({
 | `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
 | `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `SyntaxExtension` 인터페이스와 확장이 쓰는 도우미("본문 문법"). 지시자 표기는 `@monti-cms/syntax-directive`다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀·DB 연결·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`(명령 `monti`의 코드) |
+| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기)·`monti content:rewrite`(저장된 본문 다시 직렬화) |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`·`contentRewrite`(명령 `monti`의 코드) |
 | `@monti-cms/core/migrate`·`/register` | 명령줄(예전 방식) | 표 만들기, 직접 만든 스크립트에서 설정 별칭 잇기 |
 | `@monti-cms/core/testing` | 테스트 | 격리 스키마 DB·예시 데이터, 주어진 확장 목록으로 MDX를 해석하는 함수와 remark 플러그인(`parseMdxAst`·`syntaxRemarkPlugins`) |
 
@@ -280,7 +297,8 @@ export default defineConfig({
 
 | 뜻 | 저장 표기 |
 | --- | --- |
-| 줄바꿈 | `<br />`(문단에서는 뒤에 줄을 바꿔 `줄<br />` + 줄바꿈 + `다음`). `\` + 줄바꿈, 줄 끝 공백 두 칸, `<br />`을 모두 읽고 이렇게 쓴다 |
+| 줄바꿈 | `<br />`(문단에서는 뒤에 줄을 바꿔 `줄<br />` + 줄바꿈 + `다음`). `\` + 줄바꿈, 줄 끝 공백 두 칸, `<br />`을 모두 읽고 이렇게 쓴다. 문단 안의 줄바꿈 한 번은 공개 화면과 편집기 모두에서 공백일 뿐이다(CommonMark) |
+| 빈 줄(편집기에서 블록 사이에 Enter를 눌러 만든 줄) | `<br />`만 있는 줄, 빈 문단 하나에 한 줄씩 순서대로. 문서 노드로는 빈 `paragraph`다. 본문 맨 끝의 빈 줄은 저장하지 않는다 |
 | 밑줄·위 첨자·아래 첨자·번역 안내 | `<u>`·`<sup>`·`<sub>`·`<Untranslated>` |
 | 글 정렬 | `<TextAlign align="center">` |
 | 셀 병합·열 너비·GFM이 아닌 머리글이 있는 표 | `<Table>`·`<TableRow>`·`<TableCell colspan="2">`(나머지 표는 GFM) |
@@ -288,6 +306,9 @@ export default defineConfig({
 | 파일 카드 | `<File mediaId="…" />` |
 | 컨테이너·리프 블록(콜아웃·탭·단·사이트 블록) | `<컴포넌트 속성>` … `</컴포넌트>`. 불리언은 참일 때 이름만 쓰고 거짓이면 생략한다 |
 | 글자 꾸밈(툴팁·코드 연결·글자색·사이트 글자 블록) | `<컴포넌트 속성>글자</컴포넌트>` |
+
+문단 안의 줄바꿈 한 번이 줄바꿈으로 보이던 때 쓴 글이 같은 모습을 유지하도록, 마이그레이션 `0012_soft_line_endings`(`monti migrate`가 실행)가 문단 글에서 그런 줄 끝마다 `<br />`을 써 넣는다.
+대상은 작업본·발행본 본문, 번역의 기준 원문, 템플릿이다. 저장된 문자열을 파서가 알려 주는 위치에서만 고치며(코드·수식·표·속성·표현식은 건드리지 않고, 파싱되지 않는 본문은 그대로 두고 알린다) 다른 글자는 바뀌지 않는다.
 
 표기를 더하려면 `mdx.syntax`에 확장을 나열한다. 순서가 쓰기 우선순위다.
 
@@ -301,7 +322,7 @@ export default defineConfig({
 ```
 
 - [`@monti-cms/syntax-directive`](../syntax-directive/README.ko.md)는 표준 MDX 이전에 Monti가 쓰던 지시자(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다. 없으면 `:::callout`은 그냥 글자다.
-  `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다. 줄바꿈은 `:br[]`로 쓰지 않는다.
+  `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다(`monti content:rewrite --apply`로 한 번에 옮길 수도 있다). 줄바꿈은 `:br[]`로 쓰지 않는다.
 - 공개 렌더러(`@monti-cms/core/render`)는 편집기 해석기와 같은 플러그인을 돌리므로 편집기가 읽은 대로 사이트에 그려진다.
 
 **지시자 본문이 있는 사이트의 업그레이드.** 이 버전을 배포하기 전에 `@monti-cms/syntax-directive`를 설치하고 `mdx.syntax`에 `directiveSyntax({ write: false })`(지시자로 계속 저장하려면 `directiveSyntax()`)를 넣는다.
@@ -518,7 +539,7 @@ export const myPlugin = () =>
   넘으면 `field_too_long`이다. 문제(`issues`)의 `path`에 필드 이름, `message`에 필드 이름표가 담긴다(제목도 같다). 관계 대상
   컬렉션이 다르면 `invalid_reference_collection`이다. 빈 본문(`empty_body`)은 본문을 쓰는 컬렉션(`body`)만 막는다.
 - **본문에서 채우기.** 텍스트 필드에 `fillFromBody: true`(160자) 또는 `fillFromBody: { maxLength }`를 두면 발행할 때 비어 있으면
-  본문 앞부분의 일반 글자로 채운다(본문이 있는 컬렉션만, 필드 `max`를 넘지 않는다). 본체 함수는 `bodyExcerpt(mdx, maxLength)`다.
+  본문 앞부분의 일반 글자로 채운다(본문이 있는 컬렉션만, 필드 `max`를 넘지 않는다). 본체 함수는 `bodyExcerpt(mdx, maxLength)`다. 글자는 해석한 본문에서 뽑으므로 사이트가 읽는 문법이 무엇이든 따라간다. 문단·제목·목록 항목·표 칸·블록 본문과 블록의 글자 속성(콜아웃 제목)이 대상이고, 코드·수식·이미지는 뺀다. 본문 검색용 글자도 같은 방식으로 만들며, 코드와 이미지 대체글·캡션은 남긴다.
 - **여러 줄 입력.** `multiline: true`인 텍스트 필드는 여러 줄 입력이고 `rows`(기본 2)로 처음 줄 수를 정한다.
 - **쓸 수 없는 필드 이름.** 메타데이터에서 본체가 따로 쓰는 키(`translations`)는 필드 이름으로 쓸 수 없다.
 - **탭.** 필드에 `tab: "이름"`을 두거나 `layout` 묶음에 `tab`을 두면 편집 화면 속성 칸에 그 이름의 탭이 생긴다(1~20자).

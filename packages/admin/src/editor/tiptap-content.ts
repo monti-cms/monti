@@ -63,8 +63,6 @@ const isMappableInline = (node: CmsNode): boolean => {
 	if (node.type === "text") return (node.marks ?? []).every((mark) => MAPPABLE_MARKS.has(mark.type));
 	if (node.type === "hardBreak") return true;
 	if (node.type === "footnoteReference") return true;
-	// `<br />` arrives as `mdxJsx` (name=br) — shown as a real line break in the editor.
-	if (node.type === "mdxJsx" && node.attrs?.name === "br") return true;
 	// Images, math, and other JSX cannot sit inline, so the whole block goes into a box.
 	return false;
 };
@@ -152,7 +150,7 @@ const inlineChildren = (nodes: CmsNode[]): JSONContent[] => {
 			out.push(marks ? { type: "text", text: node.text ?? "", marks } : { type: "text", text: node.text ?? "" });
 			continue;
 		}
-		if (node.type === "hardBreak" || (node.type === "mdxJsx" && node.attrs?.name === "br")) {
+		if (node.type === "hardBreak") {
 			out.push({ type: "hardBreak" });
 			continue;
 		}
@@ -357,7 +355,8 @@ const tiptapBlockToCms = (node: JSONContent): CmsNode[] => {
 		case "horizontalRule":
 			return [{ type: "horizontalRule" }];
 		case "hardBreak":
-			return [lineBreakNode()];
+			// Not reachable from `getJSON` (a break sits inside a paragraph); kept as a paragraph holding it rather than dropped.
+			return [{ type: "paragraph", content: [lineBreakNode()] }];
 		case OPAQUE_BLOCK_NAME: {
 			const source = asString(node.attrs?.source) ?? "";
 			if (!source) return [];
