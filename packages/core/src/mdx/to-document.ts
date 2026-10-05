@@ -113,6 +113,16 @@ const textNode = (text: string, marks: CmsMark[]): CmsNode => {
 	return node;
 };
 
+/** A line break. It carries no marks: marks never span a break (the serializer closes them before it), so a mark on it would only change the hash. */
+const HARD_BREAK = (): CmsNode => ({ type: "hardBreak" });
+
+/**
+ * An empty `<br />` (no attributes, no content): a line break, whichever notation wrote it (`<br />`, `\` + newline, trailing spaces, a directive).
+ * A `br` that holds attributes or content is not a break, so it stays an element and nothing it holds is lost.
+ */
+const isPlainBreak = (node: MdastLike) =>
+	node.name === "br" && (node.attributes ?? []).length === 0 && (node.children ?? []).length === 0;
+
 const isBlockJsx = (node: MdastLike) => {
 	if (node.type === "mdxJsxFlowElement") return true;
 	if (node.type !== "mdxJsxTextElement") return false;
@@ -204,7 +214,7 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 				output.push(textNode(node.value ?? "", [...marks, { type: "code" }]));
 				break;
 			case "break":
-				output.push({ type: "hardBreak", ...(marks.length > 0 ? { marks: sortMarks(marks) } : {}) });
+				output.push(HARD_BREAK());
 				break;
 			case "link": {
 				const attrs: Record<string, CmsJsonValue> = { href: node.url ?? "" };
@@ -249,6 +259,7 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 
 const convertJsxInline = (node: MdastLike, marks: CmsMark[]): CmsNode[] => {
 	const name = node.name ?? "";
+	if (isPlainBreak(node)) return [HARD_BREAK()];
 	const markType = INLINE_JSX_MARKS[name];
 	if (markType) {
 		const attrs = attributeRecord(readJsxAttributes(node.attributes));
@@ -532,7 +543,11 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 			case "mdxJsxFlowElement":
 			case "mdxJsxTextElement":
 				// A line of only `<br />` is read as a block element, but it means a paragraph that holds a line break (how a paragraph of only a break is written).
-				output.push(node.name === "br" ? { type: "paragraph", content: [convertJsx(node)] } : convertJsx(node));
+				output.push(
+					node.name === "br"
+						? { type: "paragraph", content: [isPlainBreak(node) ? HARD_BREAK() : convertJsx(node)] }
+						: convertJsx(node),
+				);
 				break;
 			case "mdxjsEsm":
 				output.push({ type: "mdxEsm", attrs: { value: node.value ?? "" } });

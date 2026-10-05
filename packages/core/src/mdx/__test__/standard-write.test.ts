@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
+import { computeContentHash } from "../../core/content-hash";
 import { analyze, serialize, toDocument } from "..";
 
 /**
@@ -11,11 +12,8 @@ import { analyze, serialize, toDocument } from "..";
 /** Write path: `MDX → analyze → toDocument → serialize`. */
 const write = (source: string): string => serialize(toDocument(analyze(source)));
 
-/** The document a body means, ignoring how the line breaks were spelled (`hardBreak` and `<br />` are one meaning). */
-const meaning = (source: string) =>
-	JSON.stringify(toDocument(analyze(source)))
-		.replace(/\{"type":"hardBreak"\}/g, "BR")
-		.replace(/\{"type":"mdxJsx","attrs":\{"name":"br","attributes":\[\]\}\}/g, "BR");
+/** The document a body means. A line break is one node whichever way it was spelled, so no normalising is needed here. */
+const meaning = (source: string) => JSON.stringify(toDocument(analyze(source)));
 
 const DIRECTIVE_NOTATION = /^:{2,}[a-z]|[^\\]:[a-z-]+\[/m;
 
@@ -27,6 +25,21 @@ describe("standard MDX output", () => {
 			expect(write("첫 줄  \n둘째 줄")).toBe(written);
 			expect(write("첫 줄<br />둘째 줄")).toBe(written);
 			expect(write(written)).toBe(written);
+		});
+
+		it("are one node in the document whichever way they were spelled", () => {
+			const spellings = ["가<br />나", "가<br/>나", "가\\\n나", "가  \n나", "가<br />\n나"];
+			const documents = spellings.map((source) => toDocument(analyze(source)));
+			for (const document of documents) expect(document).toEqual(documents[0]);
+			expect(documents[0]?.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
+		});
+
+		it("have the same content hash whichever way they were spelled", () => {
+			const hash = (source: string) => computeContentHash({ title: "t" }, source);
+			expect(hash("가<br />나")).toBe(hash("가\\\n나"));
+			expect(hash("**가<br />나**")).toBe(hash("**가\\\n나**"));
+			// The serializer closes marks before a break, so a re-save must not change the hash either.
+			expect(hash("**가<br />나**")).toBe(hash(write("**가<br />나**")));
 		});
 
 		it("do not change what the body means", () => {
@@ -64,6 +77,17 @@ describe("standard MDX output", () => {
 
 		it("do not drop the content of a br element that holds some", () => {
 			expect(write("앞 <br>안쪽</br> 뒤")).toContain("안쪽");
+		});
+
+		it("do not drop the attributes of a br element, which is not a plain break", () => {
+			const written = write('앞<br className="x" />뒤');
+			expect(written).toContain('className="x"');
+			expect(write(written)).toBe(written);
+			expect(toDocument(analyze('앞<br className="x" />뒤')).content?.[0]?.content?.map((node) => node.type)).toEqual([
+				"text",
+				"mdxJsx",
+				"text",
+			]);
 		});
 
 		it("keep a paragraph of only a break as that paragraph", () => {

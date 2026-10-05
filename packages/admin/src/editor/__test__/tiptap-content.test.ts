@@ -63,6 +63,24 @@ describe("CmsNode <-> Tiptap round trip", () => {
 		expect(second).toEqual(first);
 	});
 
+	it("maps a line break to the editor's hardBreak and back to the one document node", () => {
+		const spellings = ["가<br />나", "가\\\n나", "가  \n나"];
+		const editorDocs = spellings.map((source) => throughSchema(mdxToTiptap(source)));
+		for (const editorDoc of editorDocs) expect(editorDoc).toEqual(editorDocs[0]);
+		expect(editorDocs[0]?.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
+
+		const saved = tiptapToCmsNode(editorDocs[0] as JSONContent);
+		expect(saved.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
+		expect(serialize(saved)).toBe("가<br />\n나\n");
+	});
+
+	it("keeps a line break inside a table cell", () => {
+		const first = toDocument(analyze("| a | b |\n| - | - |\n| x<br />y | z |\n"));
+		const second = tiptapToCmsNode(throughSchema(cmsNodeToTiptap(first)));
+		expect(second).toEqual(first);
+		expect(JSON.stringify(first)).toContain('"hardBreak"');
+	});
+
 	it("expands and collapses an alignment container", () => {
 		const first = toDocument(analyze('<TextAlign align="center">\n\n## 가운데\n\n</TextAlign>'));
 		const json = cmsNodeToTiptap(first);

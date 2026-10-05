@@ -13,7 +13,8 @@ interface MigrationStep {
 /**
  * Core migration steps (in numbered order). A store that already exists runs every step once: all steps give the same result when re-run
  * (IF NOT EXISTS; moving legacy rows does nothing when there are no rows to move), so it is safe even for stores with no step record.
- * Add new changes at the end under a new name. Do not edit existing steps (they do not run again on stores that already ran them).
+ * Add new changes at the end under a new name (before `seed_initial_body_templates`, which must stay last: it seeds a new store once, after the steps
+ * above have shaped it, and stores that already seeded skip it whatever its position). Do not edit existing steps (they do not run again on stores that already ran them).
  */
 const STEPS: readonly MigrationStep[] = [
 	{
@@ -283,6 +284,14 @@ const STEPS: readonly MigrationStep[] = [
 	{
 		name: "0010_content_hash_v2",
 		/** Content hashes now cover the parsed body instead of the MDX string (`cms-snapshot-v2`). Recomputes every stored hash. */
+		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
+	},
+	{
+		name: "0011_line_break_hashes",
+		/**
+		 * A line break is one document node (`hardBreak`) whichever way it was written, and a line of only `<br />` is an empty paragraph, so the parsed
+		 * body of some stored bodies changed. Recomputes every stored hash so that "unpublished changes" keeps meaning what it meant.
+		 */
 		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
 	},
 	{
