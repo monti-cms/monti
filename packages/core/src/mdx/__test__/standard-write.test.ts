@@ -62,6 +62,10 @@ describe("standard MDX output", () => {
 			expect(meaning(written)).toBe(meaning("가<br /><br />나"));
 		});
 
+		it("do not drop the content of a br element that holds some", () => {
+			expect(write("앞 <br>안쪽</br> 뒤")).toContain("안쪽");
+		});
+
 		it("keep a paragraph of only a break as that paragraph", () => {
 			const doc = toDocument(analyze("앞\n\n<br />\n\n뒤"));
 			expect(doc.content?.map((node) => node.type)).toEqual(["paragraph", "paragraph", "paragraph"]);

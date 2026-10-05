@@ -411,9 +411,13 @@ const escapeLineStart = (line: string): string =>
 
 const BREAK = "<br />";
 
-/** A line break: `hardBreak` (read from `\` + newline or trailing spaces) or a `<br />` element. Both are written the same way. */
+/**
+ * A line break: `hardBreak` (read from `\` + newline or trailing spaces) or an empty `<br />` element. Both are written the same way.
+ * A `br` element that holds content is not a break, so it is written as it was read and nothing is lost.
+ */
 const isLineBreak = (node: CmsNode): boolean =>
-	node.type === "hardBreak" || (node.type === "mdxJsx" && node.attrs?.name === "br" && !hasSpread(node));
+	node.type === "hardBreak" ||
+	(node.type === "mdxJsx" && node.attrs?.name === "br" && !hasSpread(node) && (node.content?.length ?? 0) === 0);
 
 /**
  * Writes inline nodes. `asParagraph` is set for the text of a paragraph: block markers at the start of a line are escaped, and a line break is followed by a line ending
