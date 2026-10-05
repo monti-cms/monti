@@ -9,9 +9,9 @@
 		"lint:fix": "pnpm exec biome check . --write",
 		"check:korean": "node scripts/check-korean.mjs",
 		"typecheck": "pnpm --filter \"./packages/*\" -r typecheck",
-		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/blocks build && pnpm --filter @monti-cms/bareun build && pnpm --filter @monti-cms/seo build",
+		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/syntax-directive build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/blocks build && pnpm --filter @monti-cms/bareun build && pnpm --filter @monti-cms/seo build",
 		"example:check": "node scripts/check-example.mjs",
-		"example:pack": "pnpm build && mkdir -p examples/other-site/vendor && for p in core admin blocks ai bareun seo; do pnpm --dir packages/$p pack --pack-destination ../../examples/other-site/vendor; done",
+		"example:pack": "pnpm build && mkdir -p examples/other-site/vendor && for p in core syntax-directive admin blocks ai bareun seo; do pnpm --dir packages/$p pack --pack-destination ../../examples/other-site/vendor; done",
 		"prepare": "husky"
 	},
 	"lint-staged": {
