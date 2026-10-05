@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
 import { GET as getMeta } from "../meta/route";
 
 const serverConfig = vi.hoisted(() => ({ media: undefined as unknown }));
@@ -41,5 +42,14 @@ describe("GET /v1/meta features.media", () => {
 		expect(features.ai).toEqual({ ready: true });
 		expect(features.folders).toBe(true);
 		expect(features.ready).toBeUndefined();
+	});
+});
+
+describe("GET /v1/meta limits", () => {
+	it("reports the document limit next to the MDX limit", async () => {
+		const res = await getMeta(new NextRequest("http://localhost/api/cms/v1/meta"));
+		const { limits } = await res.json();
+		expect(limits.mdxBytes).toBe(MAX_MDX_BYTES);
+		expect(limits.docBytes).toBe(MAX_DOC_BYTES);
 	});
 });

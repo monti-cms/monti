@@ -41,7 +41,7 @@ export const POST = adminRoute(async ({ request }) => {
 		collection: body.collection,
 		slug: body.slug ?? null,
 		metadata: body.metadata,
-		mdx: body.mdx,
+		...(body.doc !== undefined ? { doc: body.doc } : { mdx: body.mdx ?? "" }),
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 	} as ServiceInput;
 	const entry = await getCmsContentService().createDraft(input);
