@@ -246,7 +246,12 @@ export const readStoredDocument = (value: unknown): StoredDocument | undefined =
 		return undefined;
 	}
 	if (!Array.isArray(value.content) || !value.content.every(isNode)) return undefined;
-	let doc: StoredDocument = { type: "doc", version, content: value.content };
+	// Keys are sorted again: a document read from `jsonb` comes back in Postgres' key order.
+	let doc: StoredDocument = {
+		content: value.content.map((item) => sortJson(item as unknown as CmsJsonValue) as unknown as CmsNode),
+		type: "doc",
+		version,
+	};
 	while (doc.version < STORED_DOCUMENT_VERSION) {
 		const step = STORED_DOCUMENT_MIGRATIONS[doc.version];
 		if (!step) return undefined;

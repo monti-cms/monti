@@ -1,6 +1,5 @@
 import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
 import { createTranslator } from "../i18n";
-import { analyze } from "../mdx/analyze";
 import { DIRECTIVE_BY_COMPONENT } from "../mdx/directives";
 import { splitFrontmatter } from "../mdx/frontmatter";
 import { isAllowedImageSrc } from "../mdx/image-src";

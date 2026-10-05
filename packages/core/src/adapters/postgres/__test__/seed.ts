@@ -12,15 +12,15 @@ type SeedInput = {
 	slug: string | null;
 	metadata: unknown;
 	mdx: string;
+	/** The stored document of the body. Raw bodies carry none unless one is given. */
+	doc?: StoredDocument | null;
 	schemaVersion?: number;
 	contentHash?: string;
 	folderId?: string | null;
 	locale?: string;
 };
 
-const rawSnapshot = (
-	input: Omit<SeedInput, "folderId" | "locale"> & { doc?: StoredDocument | null },
-): PreparedSnapshot =>
+const rawSnapshot = (input: Omit<SeedInput, "folderId" | "locale">): PreparedSnapshot =>
 	({
 		collection: input.collection,
 		slug: input.slug,
