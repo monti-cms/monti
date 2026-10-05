@@ -171,8 +171,9 @@ describe("code block edit view", () => {
 		expect(await screen.findByText(t("rulesPanel.matches", { count: 3 }))).toBeTruthy();
 
 		const rules = block(editor).attrs.rules as CodeRule[];
-		expect(rules[0]).toMatchObject({ scope: "document", name: "fold", pattern: "const", flags: "g" });
-		expect(tiptapToMdx(editor.getJSON())).toContain("// @document fold {re:/const/g}");
+		// A new rule starts with the first offered text effect (bold by default).
+		expect(rules[0]).toMatchObject({ scope: "document", name: "strong", pattern: "const", flags: "g" });
+		expect(tiptapToMdx(editor.getJSON())).toContain("// @document strong {re:/const/g}");
 	});
 
 	it("points to source editing when there are annotations the editor cannot display", async () => {

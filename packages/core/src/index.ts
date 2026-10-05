@@ -7,6 +7,8 @@
 
 export {
 	type CodeBlockConfig,
+	type CodeBlockFeatures,
+	type CodeBlockThemes,
 	type CodeLineEffectDefinition,
 	type CodeLineEffectEditor,
 	DEFAULT_CODE_LINE_EFFECTS,

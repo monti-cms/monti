@@ -2,6 +2,7 @@
 
 import { createTranslator } from "@monti-cms/core/client";
 import {
+	CODE_BLOCK_FEATURES,
 	CODE_LINE_EFFECTS,
 	type CodeLineEffect,
 	type CodeRule,
@@ -30,8 +31,8 @@ import {
 	rulesOf,
 	setFoldOpen,
 } from "./effects-plugin";
-import { CODE_LANGUAGE_OPTIONS } from "./languages";
-import { LineMenu } from "./line-menu";
+import { CODE_LANGUAGE_CHOICES } from "./languages";
+import { LineMenu, lineMenuAvailable } from "./line-menu";
 import { startLinkFromLines } from "./link-commands";
 import { codeBlockMessages } from "./messages";
 import { formatMeta, parseMeta } from "./meta";
@@ -180,7 +181,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 
 	/** Right-clicking a line number opens the line effect menu there. Inside the picked lines it targets all picked lines; outside, just that line. */
 	const openLineMenuAt = (line: number, event: React.MouseEvent) => {
-		if (rawMode || !editable) return;
+		if (rawMode || !editable || !lineMenuOffered) return;
 		event.preventDefault();
 		const inside = picked && picked.start <= line && line < picked.end;
 		const range = inside ? { start: picked.start, end: picked.end } : { start: line, end: line + 1 };
@@ -209,9 +210,12 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 		return out + text.slice(at, range.to);
 	};
 
-	const languageOptions = CODE_LANGUAGE_OPTIONS.some((option) => option.value === language)
-		? CODE_LANGUAGE_OPTIONS
-		: [...CODE_LANGUAGE_OPTIONS, { label: language, value: language }];
+	const languageOptions = CODE_LANGUAGE_CHOICES.some((option) => option.value === language)
+		? CODE_LANGUAGE_CHOICES
+		: [...CODE_LANGUAGE_CHOICES, { label: language, value: language }];
+	// Tools turned off in the site config are not offered, but what the block already has stays shown so it can be edited or removed.
+	const lineMenuOffered = lineMenuAvailable(lineEffects, 0, starts.length, !!CODE_ANCHOR_REF);
+	const rulesOffered = CODE_BLOCK_FEATURES.rules || rules.length > 0;
 
 	const collapseAt = (line: number): FoldRegion | undefined => collapses.find((region) => region.startLine === line);
 
@@ -237,7 +241,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 								<SelectValue placeholder={t("view.languagePlaceholder")} />
 							</SelectTrigger>
 							<SelectContent>
-								{CODE_LANGUAGE_OPTIONS.map((option) => (
+								{CODE_LANGUAGE_CHOICES.map((option) => (
 									<SelectItem key={option.value} value={option.value}>
 										{option.label}
 									</SelectItem>
@@ -269,34 +273,38 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						</Tooltip>
 					) : (
 						<>
-							<IconButton
-								label={t("view.lineEffects")}
-								size="icon-xs"
-								className="size-7"
-								disabled={!(picked ?? selectedLines)}
-								onMouseDown={(event) => event.preventDefault()}
-								onClick={() => {
-									const lines = picked ?? selectedLines;
-									if (lines) setMenu({ start: lines.start, end: lines.end });
-								}}
-							>
-								<Rows3 aria-hidden className="size-3.5" />
-							</IconButton>
-							<RulesPanel
-								rules={rules}
-								text={text}
-								language={node.attrs.language}
-								slotScope={slotScope}
-								lineCount={starts.length}
-								selection={
-									selectionInside &&
-									selFrom < selTo &&
-									!text.slice(selFrom - (base ?? 0), selTo - (base ?? 0)).includes("\n")
-										? { text: text.slice(selFrom - (base ?? 0), selTo - (base ?? 0)) }
-										: null
-								}
-								onChange={(next: CodeRule[]) => updateAttributes({ rules: next })}
-							/>
+							{lineMenuOffered && (
+								<IconButton
+									label={t("view.lineEffects")}
+									size="icon-xs"
+									className="size-7"
+									disabled={!(picked ?? selectedLines)}
+									onMouseDown={(event) => event.preventDefault()}
+									onClick={() => {
+										const lines = picked ?? selectedLines;
+										if (lines) setMenu({ start: lines.start, end: lines.end });
+									}}
+								>
+									<Rows3 aria-hidden className="size-3.5" />
+								</IconButton>
+							)}
+							{rulesOffered && (
+								<RulesPanel
+									rules={rules}
+									text={text}
+									language={node.attrs.language}
+									slotScope={slotScope}
+									lineCount={starts.length}
+									selection={
+										selectionInside &&
+										selFrom < selTo &&
+										!text.slice(selFrom - (base ?? 0), selTo - (base ?? 0)).includes("\n")
+											? { text: text.slice(selFrom - (base ?? 0), selTo - (base ?? 0)) }
+											: null
+									}
+									onChange={(next: CodeRule[]) => updateAttributes({ rules: next })}
+								/>
+							)}
 						</>
 					)}
 					{editable && (
@@ -449,7 +457,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 					</div>
 				</div>
 
-				{menu && !rawMode && editable && (
+				{menu && !rawMode && editable && lineMenuOffered && (
 					<LineMenu
 						start={menu.start}
 						end={Math.min(menu.end, starts.length)}

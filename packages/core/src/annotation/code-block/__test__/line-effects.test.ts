@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createTranslator } from "../../../i18n";
-import { annotationConfig, CODE_LINE_EFFECTS, isLineEffectName } from "../active";
+import {
+	annotationConfig,
+	CODE_BLOCK_FEATURES,
+	CODE_BLOCK_THEMES,
+	CODE_LINE_EFFECTS,
+	isLineEffectName,
+	OFFERED_LINE_EFFECTS,
+	offersCharEffect,
+} from "../active";
 import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
 import { createAnnotationConfig } from "../constants";
 import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
@@ -98,5 +106,38 @@ describe("code line effect definitions", () => {
 			/label/,
 		);
 		expect(() => validateCodeBlockConfig(undefined)).not.toThrow();
+	});
+});
+
+describe("code block options of the site config", () => {
+	it("are all on by default, with the default themes and every line effect offered", () => {
+		expect(CODE_BLOCK_FEATURES).toEqual({ rules: true, fold: true, tooltip: true, textStyles: true });
+		expect(OFFERED_LINE_EFFECTS).toEqual(CODE_LINE_EFFECTS);
+		expect(["strong", "em", "del", "u", "Tooltip", "fold"].every(offersCharEffect)).toBe(true);
+		expect(CODE_BLOCK_THEMES).toEqual({ light: "one-light", dark: "one-dark-pro" });
+	});
+
+	it("accept switches, omitted line effects, themes and languages", () => {
+		expect(() =>
+			validateCodeBlockConfig({
+				lineEffects: [{ name: "focus", label: "Focus", class: "a" }],
+				omitLineEffects: ["warning", "focus"],
+				features: { rules: false, fold: false, tooltip: true, textStyles: false },
+				themes: { light: "github-light", dark: "github-dark" },
+				languages: ["elixir", "c++", "f#"],
+			}),
+		).not.toThrow();
+	});
+
+	it("report a wrong value at startup", () => {
+		expect(() => validateCodeBlockConfig({ features: { comments: false } as never })).toThrow(
+			/features\.comments: unknown feature/,
+		);
+		expect(() => validateCodeBlockConfig({ features: { rules: "no" } as never })).toThrow(/true or false/);
+		expect(() => validateCodeBlockConfig({ omitLineEffects: ["focus"] })).toThrow(/no such line effect/);
+		expect(() => validateCodeBlockConfig({ themes: { light: "github-light", dark: " " } })).toThrow(
+			/themes\.dark: theme name is empty/,
+		);
+		expect(() => validateCodeBlockConfig({ languages: ["not a language"] })).toThrow(/not a language name/);
 	});
 });

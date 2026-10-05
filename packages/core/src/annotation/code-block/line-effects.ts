@@ -33,10 +33,42 @@ export interface CodeLineEffectDefinition {
 	readonly editor?: CodeLineEffectEditor;
 }
 
+/**
+ * Code block tools the editor offers. All are on unless set to `false`. Turning one off only removes it from the editor's menus, panels
+ * and toolbars: a body that already uses it (written before, imported, or typed in the source panel) still reads and renders the same.
+ */
+export interface CodeBlockFeatures {
+	/** Regex rules (`// @char strong {re:/x/g}`) and their panel. */
+	readonly rules?: boolean;
+	/** Folding: the line menu's "Collapse" (`// @line collapse`) and the fold text effect (`// @char fold`). */
+	readonly fold?: boolean;
+	/** The tooltip text effect (`// @char Tooltip`). */
+	readonly tooltip?: boolean;
+	/** Bold, italic, strikethrough and underline inside code (`strong`, `em`, `del`, `u`). */
+	readonly textStyles?: boolean;
+}
+
+/** Shiki themes for code (names of Shiki's bundled themes, e.g. `github-light`). The public page and the editor use the same pair. */
+export interface CodeBlockThemes {
+	readonly light: string;
+	readonly dark: string;
+}
+
 /** The site config's code block settings. */
 export interface CodeBlockConfig {
 	/** Line effects. Added to the core defaults; same name replaces. The menu is the defaults followed by added ones in order. */
 	readonly lineEffects?: readonly CodeLineEffectDefinition[];
+	/** Names of line effects the editor does not offer (defaults or added ones). Bodies that use them still render them. */
+	readonly omitLineEffects?: readonly string[];
+	/** Editor tools to turn off (`{ rules: false }`). */
+	readonly features?: CodeBlockFeatures;
+	/** Highlighting themes. Defaults to `one-light` and `one-dark-pro`. */
+	readonly themes?: CodeBlockThemes;
+	/**
+	 * More languages to highlight (names or aliases of Shiki's bundled languages, e.g. `elixir`, `zig`), added to the default list. They
+	 * are offered in the editor's language list too. Code in a language that is not loaded is shown as plain text.
+	 */
+	readonly languages?: readonly string[];
 }
 
 const t = createActiveTranslator(codeBlockMessages);
@@ -102,8 +134,39 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 const RESERVED = new Set(["collapse", "anchor", "fold", "strong", "em", "del", "u", "tooltip"]);
 const NAME = /^[a-z][a-z0-9-]*$/;
 
+/** Default highlighting themes. */
+export const DEFAULT_CODE_BLOCK_THEMES: CodeBlockThemes = { light: "one-light", dark: "one-dark-pro" };
+
+const FEATURES = new Set(["rules", "fold", "tooltip", "textStyles"]);
+const LANGUAGE = /^[a-z0-9][a-z0-9+#.-]*$/i;
+
 /** Checks that the site config is valid. Reports at app startup if wrong. */
 export function validateCodeBlockConfig(config: CodeBlockConfig | undefined): void {
+	for (const [key, value] of Object.entries(config?.features ?? {})) {
+		if (!FEATURES.has(key)) throw new Error(`cms.config: codeBlock.features.${key}: unknown feature`);
+		if (typeof value !== "boolean") throw new Error(`cms.config: codeBlock.features.${key}: must be true or false`);
+	}
+	for (const name of config?.omitLineEffects ?? []) {
+		if (typeof name !== "string" || !NAME.test(name)) {
+			throw new Error(`cms.config: codeBlock.omitLineEffects.${String(name)}: name must be lower-case kebab`);
+		}
+	}
+	if (config?.themes) {
+		for (const key of ["light", "dark"] as const) {
+			const name = config.themes[key];
+			if (typeof name !== "string" || !name.trim())
+				throw new Error(`cms.config: codeBlock.themes.${key}: theme name is empty`);
+		}
+	}
+	for (const name of config?.languages ?? []) {
+		if (typeof name !== "string" || !LANGUAGE.test(name)) {
+			throw new Error(`cms.config: codeBlock.languages.${String(name)}: not a language name`);
+		}
+	}
+	const known = new Set(resolveCodeLineEffects(config?.lineEffects).map((effect) => effect.name));
+	for (const name of config?.omitLineEffects ?? []) {
+		if (!known.has(name)) throw new Error(`cms.config: codeBlock.omitLineEffects.${name}: no such line effect`);
+	}
 	const seen = new Set<string>();
 	for (const effect of config?.lineEffects ?? []) {
 		const at = `cms.config: codeBlock.lineEffects.${effect.name}`;

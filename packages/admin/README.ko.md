@@ -125,6 +125,9 @@ const components = { marks: { note } };
   잇기 안내 줄·마우스를 올린 줄 강조(`data-code-ref`)·연결 끊김 표시가 이 꾸밈을 쓰고, 그런 꾸밈이 없으면 숨는다. 버블에서 쓰는
   잇기 명령(`findAnchor`·`startLinkFromText`·`unlinkRef`)도 같은 진입점에 있다.
 - 코드 블록 안 글자 툴팁(코드 펜스 주석 `// @char Tooltip`)은 본체 코드 블록 기능이라 본문 툴팁과 따로다(마크 `codeTooltip`).
+- 코드 블록 도구는 사이트 설정 `codeBlock`(`@monti-cms/core` README)을 따른다. `omitLineEffects`와 `features`(`rules`·`fold`·`tooltip`·`textStyles`)는 줄 효과·정규식 규칙·접기·툴팁·
+  코드 안 굵게·기울임·취소선·밑줄을 줄 메뉴·규칙 패널·버블·툴바·단축키에서 감추고, `themes`와 `languages`는 강조 테마와 언어 목록을 정한다.
+  꺼진 도구를 이미 쓰는 본문은 그대로 열리고 저장해도 바뀌지 않으며, 그 효과는 계속 보여 지울 수 있다.
 
 ## 글 검사(맞춤법 등)
 
