@@ -209,6 +209,97 @@ describe("ContentStore", () => {
 		expect(reloaded.working.schemaVersion).toBe(entry.working.schemaVersion);
 	});
 
+	describe("a syntax-only change (same content hash, different MDX string)", () => {
+		const searchTextOf = async (entryId: string, state: "working" | "published") =>
+			(
+				await pool.query<{ mdx: string; search_text: string }>(
+					`SELECT mdx, search_text FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
+					[entryId, state],
+				)
+			).rows[0];
+
+		it("stores the new MDX and search text without a version bump or a new updatedAt", async () => {
+			const entry = await seedEntry(store, {
+				collection: contentCollection,
+				slug: "syntax-only-save",
+				metadata: { title: "Syntax" },
+				mdx: "first words",
+				contentHash: "hash-syntax-only",
+			});
+
+			const saved = await seedSave(store, entry.id, {
+				expectedVersion: entry.version,
+				metadata: { title: "Syntax" },
+				mdx: "second words",
+				contentHash: "hash-syntax-only",
+			});
+
+			expect(saved.version).toBe(entry.version);
+			expect(saved.updatedAt.getTime()).toBe(entry.updatedAt.getTime());
+			expect(saved.working.updatedAt?.getTime()).toBe(entry.working.updatedAt?.getTime());
+			expect(saved.working.mdx).toBe("second words");
+			expect(await searchTextOf(entry.id, "working")).toMatchObject({
+				mdx: "second words",
+				search_text: "second words",
+			});
+		});
+
+		it("still counts as a change when the slug, metadata, schema version or translation differ", async () => {
+			const entry = await seedEntry(store, {
+				collection: contentCollection,
+				slug: "syntax-only-other-change",
+				metadata: { title: "Syntax" },
+				mdx: "words",
+				contentHash: "hash-syntax-other",
+			});
+
+			const slugChanged = await seedSave(store, entry.id, {
+				expectedVersion: entry.version,
+				slug: "syntax-only-other-change-2",
+				metadata: { title: "Syntax" },
+				mdx: "words again",
+				contentHash: "hash-syntax-other",
+			});
+			expect(slugChanged.version).toBe(entry.version + 1);
+
+			const schemaChanged = await seedSave(store, entry.id, {
+				expectedVersion: slugChanged.version,
+				metadata: { title: "Syntax" },
+				mdx: "words again",
+				schemaVersion: 2,
+				contentHash: "hash-syntax-other",
+			});
+			expect(schemaChanged.version).toBe(slugChanged.version + 1);
+		});
+
+		it("is a republish when published: the published snapshot is not replaced", async () => {
+			const entry = await seedEntry(store, {
+				collection: contentCollection,
+				slug: "syntax-only-republish",
+				metadata: { title: "Syntax" },
+				mdx: "first words",
+				contentHash: "hash-syntax-republish",
+			});
+			const firstPublish = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+
+			const saved = await seedSave(store, entry.id, {
+				expectedVersion: firstPublish.version,
+				metadata: { title: "Syntax" },
+				mdx: "second words",
+				contentHash: "hash-syntax-republish",
+			});
+			expect(saved.version).toBe(firstPublish.version);
+			expect(saved.working.mdx).toBe("second words");
+
+			const republished = await store.publishEntry({ id: entry.id, expectedVersion: saved.version });
+
+			expect(republished.version).toBe(firstPublish.version);
+			expect(republished.published).toEqual(firstPublish.published);
+			expect(republished.publishedAt?.getTime()).toBe(firstPublish.publishedAt?.getTime());
+			expect((await searchTextOf(entry.id, "published"))?.mdx).toBe("first words");
+		});
+	});
+
 	it("same-hash correctness: changed metadata/MDX/schemaVersion with reused hash is published", async () => {
 		const entry = await seedEntry(store, {
 			collection: contentCollection,
