@@ -179,6 +179,19 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 		expect(resolveAiActions({}, { ...site, locales: [{ code: "ko" }] }).translate).toBeUndefined();
 	});
 
+	it("the prompts that rewrite MDX say to keep all MDX syntax as written, without assuming one notation", () => {
+		const actions = resolveAiActions({}, site);
+		for (const key of ["translate", "polish"]) {
+			const prompt = actions[key]?.prompt ?? "";
+			expect(prompt, key).toMatch(/keep all MDX syntax as written/i);
+			for (const kept of ["JSX", "attribute names", "directives if present", "code fences", "<br />"]) {
+				expect(prompt, `${key}: ${kept}`).toContain(kept);
+			}
+			// No notation is taught: no directive fences or names are written into the instruction.
+			expect(prompt, key).not.toMatch(/:::|^::|:[a-z]+\[/m);
+		}
+	});
+
 	it("an action with nowhere to attach is not turned on (a site without a body)", () => {
 		const records = resolveAiActions({}, { ...site, collections: { label, shelf } as CollectionsConfig });
 		for (const key of ["slug", "summary", "tags", "category"]) expect(records[key]).toBeUndefined();

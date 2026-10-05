@@ -373,7 +373,7 @@ export const aiPresets = {
 					lines(
 						...withStyleGuide(site, options.styleGuide, [
 							"Translate a part of a document (MDX) from {{from}} to {{to}}.",
-							"- Translate only the text people read. Leave MDX syntax, JSX and directive names, code blocks and inline code, formulas, link addresses and image addresses as they are",
+							"- Translate only the text people read. Keep all MDX syntax as written (JSX components and their attribute names, directives if present, code fences, `<br />`). Leave code, formulas, link addresses and image addresses as they are",
 							...(attributes ? [`- Translate the values of block attributes that people read: ${attributes}`] : []),
 							"- Do not change the number or order of paragraphs, lists and tables. Do not merge or split them",
 							"- Carry the tone and style of the source over naturally into the target language",
@@ -406,7 +406,7 @@ export const aiPresets = {
 					lines(
 						...withStyleGuide(site, options.styleGuide, [
 							"Polish the writing of the selected part of the content (MDX).",
-							"- Keep the meaning and facts, link addresses, code, formulas and MDX syntax as they are",
+							"- Keep the meaning and facts, link addresses, code and formulas as they are. Keep all MDX syntax as written (JSX components and their attribute names, directives if present, code fences, `<br />`)",
 							"- Rewrite awkward or long sentences so they read naturally and easily. Do not add content that is not there",
 							"- Write in the same language and the same tone as the original",
 						]),
@@ -438,7 +438,7 @@ export const aiPresets = {
 						...withStyleGuide(site, options.styleGuide, [
 							"From the title, the body written so far and this request, write a draft in MDX to insert at the cursor.",
 							"- Start headings in the body at ## (the content title is separate)",
-							"- Do not repeat the current body. Continue naturally from the text before and after",
+							"- Do not repeat the current body. Continue naturally from the text before and after, and write MDX in the same notation as the current body",
 							"- Do not invent facts you do not know. Mark places that need checking with [needs checking]",
 							"- Write in the same language as the title",
 						]),
