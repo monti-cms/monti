@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
 import { createTranslator } from "../i18n";
 import { analyze } from "../mdx/analyze";
@@ -18,6 +17,7 @@ import {
 	storedField,
 } from "../schema/derive";
 import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
+import { computeContentHash, sortKeys } from "./content-hash";
 import { isUuid } from "./ids";
 import { parseInternalLink } from "./links";
 import { PREFIXED_LOCALES } from "./locales";
@@ -28,7 +28,6 @@ import {
 	type Collection,
 	type InternalLinkSource,
 	type Issue,
-	type JsonValue,
 	type MetadataValue,
 	type PreparedSnapshot,
 	type Reference,
@@ -46,26 +45,8 @@ import {
 
 export const MAX_MDX_BYTES = 2 * 1024 * 1024;
 export const MAX_METADATA_BYTES = 256 * 1024;
-const isJsonArray = (value: unknown): value is readonly JsonValue[] => Array.isArray(value);
 
-function sortKeys(obj: JsonValue): JsonValue {
-	if (obj === null || typeof obj !== "object") return obj;
-	if (isJsonArray(obj)) return obj.map(sortKeys);
-	const record = obj;
-	return Object.keys(record)
-		.sort()
-		.reduce<Record<string, JsonValue>>((acc, key) => {
-			const val = record[key];
-			if (val !== undefined) acc[key] = sortKeys(val);
-			return acc;
-		}, {});
-}
-
-/** Content hash of a snapshot. The same metadata and body give the same value regardless of key order. */
-export function computeContentHash(metadata: JsonValue, mdx: string, schemaVersion = 1): string {
-	const tuple = ["cms-snapshot-v1", schemaVersion, sortKeys(metadata), mdx];
-	return createHash("sha256").update(JSON.stringify(tuple)).digest("hex");
-}
+export { computeContentHash };
 
 class ReferenceCollector {
 	refs: { kind: ReferenceKind; targetId: string; isStale: boolean; occurrences: ReferenceOccurrence[] }[] = [];
@@ -672,7 +653,7 @@ export async function prepareSnapshot(
 		metadata: Object.freeze(metadata),
 		mdx: input.mdx,
 		schemaVersion,
-		contentHash: computeContentHash(metadata, input.mdx, schemaVersion),
+		contentHash: computeContentHash(metadata, input.mdx, schemaVersion, analysis),
 		references: Object.freeze(
 			collector.refs.map((ref) =>
 				Object.freeze({ ...ref, occurrences: Object.freeze(ref.occurrences.map((o) => Object.freeze({ ...o }))) }),

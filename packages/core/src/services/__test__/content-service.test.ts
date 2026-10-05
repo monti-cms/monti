@@ -232,7 +232,12 @@ describe("ContentService Contract", () => {
 			const sortedMetadata = Object.fromEntries(
 				Object.entries({ title: "A", [many.name]: ids }).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
 			);
-			const expectedTuple = ["cms-snapshot-v1", 1, sortedMetadata, "Hello"];
+			// The body is hashed as its parsed document (keys sorted), not as the MDX string.
+			const helloDocument = {
+				content: [{ content: [{ text: "Hello", type: "text" }], type: "paragraph" }],
+				type: "doc",
+			};
+			const expectedTuple = ["cms-snapshot-v2", 1, sortedMetadata, helloDocument];
 			const expectedHash = createHash("sha256").update(JSON.stringify(expectedTuple)).digest("hex");
 			expect(snap1.contentHash).toBe(expectedHash);
 			expect(snap1.contentHash).toEqual(snap2.contentHash);
