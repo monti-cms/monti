@@ -369,8 +369,18 @@ describe("entry editor shell", () => {
 
 	it("opens unparseable MDX in source mode and does not allow the visual editor (no silent overwrite)", async () => {
 		serve(() => undefined, { ...entry, working: { ...entry.working, mdx: "본문 <Callout>닫히지 않음" } });
+		// The visual editor must never mount on a body it cannot read, not even for a frame: watch every DOM change instead of
+		// checking the end state only.
+		let visualEditorMounted = false;
+		const watcher = new MutationObserver(() => {
+			if (document.querySelector('[aria-label="시각 본문"]')) visualEditorMounted = true;
+		});
+		watcher.observe(document.body, { childList: true, subtree: true });
 		renderEdit();
+		// The body opens after the deferred analysis of the loaded text.
 		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
+		watcher.disconnect();
+		expect(visualEditorMounted).toBe(false);
 		expect(source.value).toBe("본문 <Callout>닫히지 않음");
 		expect((await editorTitle()).getAttribute("value")).toBe("테스트");
 		expect(screen.queryByLabelText("시각 본문")).toBeNull();

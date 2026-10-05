@@ -313,6 +313,14 @@ export function EntryEditorShell({
 	useEffect(() => {
 		if (!canUseVisual && editorMode === "visual") setEditorMode("source");
 	}, [canUseVisual, editorMode]);
+	// The deferred value lags one render behind the loaded body. Until it has caught up once, the analysis above is about
+	// the previous (empty) body, and the visual editor would mount on a body it cannot read for a frame. Wait for it
+	// instead, then keep deferring while the user types (the visual editor wrote that text itself).
+	const [analysisSettled, setAnalysisSettled] = useState(false);
+	const isAnalysisReady = analysisSettled || deferredMdx === form.mdx;
+	useEffect(() => {
+		if (!isLoading && deferredMdx === form.mdx) setAnalysisSettled(true);
+	}, [isLoading, deferredMdx, form.mdx]);
 
 	useEffect(() => {
 		const media = window.matchMedia?.("(max-width: 1023px)");
@@ -703,7 +711,7 @@ export function EntryEditorShell({
 
 	const canResetPublishedAt = Boolean(entry?.publishedAt);
 
-	if (isLoading) {
+	if (isLoading || !isAnalysisReady) {
 		return (
 			<div className="space-y-4 p-8" aria-busy>
 				<span className="sr-only">{t("loadingDocument")}</span>
