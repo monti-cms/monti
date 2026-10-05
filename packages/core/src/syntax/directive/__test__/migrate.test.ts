@@ -4,7 +4,6 @@ import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "../../../blocks/active";
 import type { BlockAttribute, BlockDefinition } from "../../../blocks/define";
 import { computeContentHash } from "../../../core/content-hash";
 import { analyze } from "../../../mdx";
-import { readSamples } from "../../../mdx/__test__/fixtures/samples";
 import { directiveSyntax } from "..";
 
 /**
@@ -96,14 +95,5 @@ describe("migrating directive content to standard MDX", () => {
 	it("without the extension the same body is not read as directives", () => {
 		expect(DIRECTIVE_NOTATION.test(BODY)).toBe(true);
 		expect(hashAfter(BODY)).not.toBe(hashBefore(BODY));
-	});
-
-	it("real posts keep their content hash", () => {
-		for (const { name, mdx } of readSamples()) {
-			const written = write(mdx);
-			expect(analyze(written).errors, name).toEqual([]);
-			expect(hashAfter(written), name).toBe(hashBefore(mdx));
-			expect(write(written), name).toBe(written);
-		}
 	});
 });

@@ -2,20 +2,20 @@ import path from "node:path";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
+/**
+ * Reruns the tests that need the directive extension in the site config (`test/directive.config.ts`): the extension reaches the parser,
+ * the serializer and the public render chain through `mdx.syntax`, not through an explicit list. Only `*.directive.test.ts` runs here.
+ */
 export default defineConfig(({ mode }) => ({
 	test: {
-		name: "core",
+		name: "core (directive syntax)",
 		environment: "node",
 		globals: true,
-		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		// Tests that need the directive extension in the site config run in `vitest.directive.config.ts`.
-		exclude: ["src/**/*.directive.test.{ts,tsx}", "**/node_modules/**"],
-		// When run together from the repo root, this runs first (`vitest.config.ts`).
+		include: ["src/**/*.directive.test.{ts,tsx}"],
 		sequence: { groupOrder: 1 },
 		testTimeout: 60000,
 		hookTimeout: 60000,
 		env: {
-			// Reads the same `.env.local` whether run from the repo root or from this package.
 			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
 			...loadEnv(mode, __dirname, ""),
 			TZ: "UTC",
@@ -23,8 +23,7 @@ export default defineConfig(({ mode }) => ({
 	},
 	resolve: {
 		alias: {
-			// The package's own tests run against the reference blog config.
-			"@cms-config": path.resolve(__dirname, "./test/cms.config.ts"),
+			"@cms-config": path.resolve(__dirname, "./test/directive.config.ts"),
 			"@cms-server": path.resolve(__dirname, "./test/cms.server.ts"),
 			"server-only": path.resolve(__dirname, "./test/server-only.ts"),
 		},

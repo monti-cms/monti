@@ -7,7 +7,7 @@ import { defineConfig } from "vitest/config";
  * New tests join this set automatically. Collection, field and block names are looked up from the config (`test/any-site.ts`).
  * Tests that assert the reference blog config's values as is (collection list, URLs, entry hashes, etc.) live in `*.blog.test.ts` and are excluded here.
  */
-const BLOG_FIXTURE_TESTS = ["src/**/*.blog.test.ts"];
+const BLOG_FIXTURE_TESTS = ["src/**/*.blog.test.ts", "src/**/*.directive.test.{ts,tsx}"];
 
 export default defineConfig(({ mode }) => ({
 	test: {
