@@ -1,6 +1,6 @@
 import { isCollection, isItemCollection } from "../core/collections";
 import { isLocale } from "../core/locales";
-import { prepareSnapshot, SERVICE_INPUT_KEYS, validateExactRecord } from "../core/snapshot";
+import { prepareSnapshot, serviceInputKeys, validateExactRecord } from "../core/snapshot";
 import { withTranslationHints } from "../core/translation/hints";
 import { slugFromValues } from "../schema/derive";
 import { type SaveDraftInput, ServiceError, type ServiceInput, type StorePort } from "./types";
@@ -29,7 +29,7 @@ export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 	 * Creates new content. A record collection is published right away by default (when `publishImmediately` is omitted).
 	 */
 	createDraft: async (input: ServiceInput, options?: { publishImmediately?: boolean }) => {
-		assertInputKeys(input, SERVICE_INPUT_KEYS);
+		assertInputKeys(input, serviceInputKeys(input));
 		const { folderId, ...rest } = withRecordSlug(input);
 		const snapshot = await prepareSnapshot(rest as ServiceInput);
 		return storePort.createEntryWithReferences({
@@ -45,7 +45,7 @@ export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 	 */
 	saveDraft: async (entryId: string, input: SaveDraftInput, options?: { publishImmediately?: boolean }) => {
 		assertInputKeys(input, [
-			...SERVICE_INPUT_KEYS,
+			...serviceInputKeys(input),
 			"expectedVersion",
 			// If the incoming value is not an object, `assertInputKeys` rejects it. Property reads (accessors) happen only after that.
 			...(input && typeof input === "object" && Object.hasOwn(input, "translation") ? ["translation"] : []),

@@ -12,7 +12,7 @@ import {
 } from "../../../core/api";
 import { COLLECTION_DEFINITIONS, COLLECTIONS } from "../../../core/collections";
 import { MAX_SLUG_LENGTH } from "../../../core/slug";
-import { MAX_MDX_BYTES, MAX_METADATA_BYTES } from "../../../core/snapshot";
+import { MAX_DOC_BYTES, MAX_MDX_BYTES, MAX_METADATA_BYTES } from "../../../core/snapshot";
 import { pluginFeatures } from "../../../plugin/server";
 import { adminRoute, json } from "../handler";
 
@@ -39,6 +39,7 @@ export const GET = adminRoute(async () => {
 		},
 		limits: {
 			mdxBytes: MAX_MDX_BYTES,
+			docBytes: MAX_DOC_BYTES,
 			metadataBytes: MAX_METADATA_BYTES,
 			slugLength: MAX_SLUG_LENGTH,
 			mediaBytes: MAX_MEDIA_BYTES,

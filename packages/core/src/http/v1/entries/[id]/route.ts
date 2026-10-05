@@ -46,7 +46,7 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params }) => {
 		expectedVersion: body.expectedVersion,
 		slug: body.slug !== undefined ? body.slug : current.workingSlug,
 		metadata: body.metadata ?? current.working.metadata,
-		mdx: body.mdx ?? current.working.mdx,
+		...(body.doc !== undefined ? { doc: body.doc } : { mdx: body.mdx ?? current.working.mdx }),
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 		...(body.translation !== undefined ? { translation: body.translation } : {}),
 	} as SaveDraftInput;

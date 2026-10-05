@@ -1,3 +1,4 @@
+import { bodyFromMdx } from "@monti-cms/core/mdx";
 import { computeContentHash } from "@monti-cms/core/runtime";
 import {
 	closeGlobalPool,
@@ -59,11 +60,14 @@ describe("content rewrite with directive syntax in the site config", () => {
 		const store = createContentStore(pool, { schema: schemaName });
 		const metadata = { title: "T" };
 		const hash = computeContentHash(metadata, STANDARD, 1);
+		// Both rows already have their document (as every row has after `monti migrate`); only their notation differs.
+		const doc = bodyFromMdx(STANDARD).doc;
 		const standard = await seedEntry(store, {
 			collection: "x",
 			slug: "standard",
 			metadata,
 			mdx: STANDARD,
+			doc,
 			contentHash: hash,
 		});
 		const written = await seedEntry(store, {
@@ -71,6 +75,7 @@ describe("content rewrite with directive syntax in the site config", () => {
 			slug: "written",
 			metadata,
 			mdx: DIRECTIVES,
+			doc,
 			contentHash: hash,
 		});
 

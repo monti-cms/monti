@@ -1,6 +1,7 @@
 import type { ListSortField } from "../../../core/api";
 import type { TranslationState } from "../../../core/translation/state";
 import type { ReferenceKind, ReferenceOccurrence } from "../../../core/types";
+import type { StoredDocument } from "../../../mdx/stored-document";
 
 export type JsonPrimitive = string | number | boolean | null;
 export interface JsonArray extends Array<JsonValue> {}
@@ -40,6 +41,8 @@ export type PublishedEntryLookup =
 export interface EntryBody {
 	metadata: EntryMetadata;
 	mdx: string;
+	/** The stored document `mdx` is written from. `null` when the body does not parse (or has front matter), which only a draft can be. */
+	doc: StoredDocument | null;
 	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;
@@ -51,6 +54,8 @@ export interface BodyTemplate {
 	id: string;
 	name: string;
 	mdx: string;
+	/** The stored document `mdx` is written from. `null` when the template does not parse. */
+	doc: StoredDocument | null;
 	version: number;
 	createdAt: Date;
 	updatedAt: Date;
@@ -290,6 +295,7 @@ export interface IncomingReferenceItem {
 export interface ExportSnapshotBody {
 	metadata: EntryMetadata;
 	mdx: string;
+	doc: StoredDocument | null;
 	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;

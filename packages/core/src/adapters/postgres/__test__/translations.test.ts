@@ -131,7 +131,9 @@ describe("translation groups", () => {
 			expect(translation.workingSlug).toBe("copy-source");
 			expect(translation.working.mdx).toBe("<Untranslated>한국어 본문</Untranslated>\n");
 			expect(translation.working.metadata).toEqual({});
-			expect(translation.working.translation).toEqual({ version: 2, baseSource: "한국어 본문" });
+			// The confirmed source is the source's body as stored (written from its document), so the translation screen compares like with like.
+			expect(source.working.mdx).toBe("한국어 본문\n");
+			expect(translation.working.translation).toEqual({ version: 2, baseSource: source.working.mdx });
 			expect(source.working.translation ?? null).toBeNull();
 
 			const group = await store.getTranslationGroup({ entryId: translation.id });

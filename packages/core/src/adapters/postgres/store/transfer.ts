@@ -8,6 +8,7 @@ import {
 	mapFolderRow,
 	mapMediaRow,
 	mapTemplateRow,
+	readDoc,
 	TEMPLATE_COLUMNS,
 	type TemplateRow,
 } from "./rows";
@@ -49,12 +50,13 @@ export function createTransferOps(ctx: StoreContext) {
 						state: string;
 						metadata: EntryMetadata;
 						mdx: string;
+						doc: unknown;
 						schema_version: number;
 						content_hash: string;
 						updated_at: Date;
 						translation: TranslationState | null;
 					}>(
-						`SELECT entry_id, state, metadata, mdx, schema_version, content_hash, updated_at, translation
+						`SELECT entry_id, state, metadata, mdx, doc, schema_version, content_hash, updated_at, translation
 					 FROM "${qSchema}".entry_bodies ORDER BY entry_id ASC, state ASC`,
 					);
 
@@ -104,6 +106,7 @@ export function createTransferOps(ctx: StoreContext) {
 						const body: ExportSnapshotBody = {
 							metadata: row.metadata,
 							mdx: row.mdx,
+							doc: readDoc(row.doc),
 							schemaVersion: row.schema_version,
 							contentHash: row.content_hash,
 							updatedAt: row.updated_at,

@@ -24,6 +24,7 @@ type Working = {
 	slug: string | null;
 	metadata: Record<string, unknown>;
 	mdx: string;
+	doc: null;
 	version: number;
 	folderId: string | null;
 };
@@ -72,6 +73,7 @@ const newFakeStore = (seed: Record<string, Working>) => {
 				slug: params.snapshot.slug,
 				metadata: params.snapshot.metadata as Record<string, unknown>,
 				mdx: params.snapshot.mdx,
+				doc: null,
 				version: found.version + 1,
 				folderId: params.folderId === undefined ? found.folderId : params.folderId,
 			};
@@ -90,6 +92,7 @@ const post = (over: Partial<Working> = {}): Working => ({
 		[many]: ["33333333-3333-4333-8333-333333333333", "44444444-4444-4444-8444-444444444444"],
 	},
 	mdx: "body",
+	doc: null,
 	version: 3,
 	folderId: null,
 	...over,
@@ -229,6 +232,7 @@ describe("Bulk metadata ops contract", () => {
 				slug: "cat",
 				metadata: { title: "Cat" },
 				mdx: "",
+				doc: null,
 				version: 1,
 				folderId: null,
 			},

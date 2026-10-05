@@ -114,7 +114,7 @@ describe("content hash v2", () => {
 		it("is hashed from the raw string, tagged so it never collides with a parsed body", () => {
 			expect(analyze(broken).errors.length).toBeGreaterThan(0);
 			const expected = createHash("sha256")
-				.update(JSON.stringify(["cms-snapshot-v2-raw", 1, metadata, broken]))
+				.update(JSON.stringify(["cms-snapshot-v3-raw", 1, metadata, broken]))
 				.digest("hex");
 			expect(hashOf(broken)).toBe(expected);
 		});

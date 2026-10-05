@@ -40,6 +40,7 @@ function buildSnapshot(overrides: Partial<PreparedSnapshot> = {}): PreparedSnaps
 		slug: `test-slug-${Math.random().toString(36).slice(2, 8)}`,
 		metadata: { title: "Test" },
 		mdx: "Test content",
+		doc: null,
 		schemaVersion: 1,
 		contentHash: `hash-${Math.random().toString(36).slice(2, 8)}`,
 		issues: [],

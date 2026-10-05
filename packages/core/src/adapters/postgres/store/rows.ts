@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { bodyText, SEARCH_TEXT } from "../../../core/body-text";
 import type { TranslationState } from "../../../core/translation/state";
 import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
+import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
 import type { Queryable } from "./context";
 import { CmsError } from "./errors";
 import type {
@@ -63,9 +64,14 @@ export function extractVisibleText(mdx: string): string {
 	return bodyText(mdx, SEARCH_TEXT);
 }
 
+/** A stored document read from a `jsonb` column. A value that is not a stored document of a known version reads as `null`. */
+export const readDoc = (value: unknown): StoredDocument | null => readStoredDocument(value) ?? null;
+
 export interface BodyRow {
 	content_hash: string;
 	mdx: string;
+	/** The stored document `mdx` is written from. `null` when the body does not parse (or has front matter). */
+	doc: StoredDocument | null;
 	schema_version: number;
 	metadata: EntryMetadata;
 	updated_at: Date;
@@ -193,12 +199,13 @@ export const mapMediaRow = (row: MediaRow): MediaAssetRecord => ({
 	readyAt: row.ready_at,
 });
 
-export const TEMPLATE_COLUMNS = "id, name, mdx, version, created_at, updated_at";
+export const TEMPLATE_COLUMNS = "id, name, mdx, doc, version, created_at, updated_at";
 
 export interface TemplateRow {
 	id: string;
 	name: string;
 	mdx: string;
+	doc: unknown;
 	version: number;
 	created_at: Date;
 	updated_at: Date;
@@ -208,6 +215,7 @@ export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 	id: row.id,
 	name: row.name,
 	mdx: row.mdx,
+	doc: readDoc(row.doc),
 	version: row.version,
 	createdAt: row.created_at,
 	updatedAt: row.updated_at,
@@ -277,15 +285,16 @@ export async function readBody(
 	entryId: string,
 	state: "working" | "published",
 ): Promise<BodyRow | undefined> {
-	const res = await client.query<BodyRow>(
-		`SELECT metadata, mdx, schema_version, content_hash, updated_at, translation FROM "${qSchema}".entry_bodies
+	const res = await client.query<Omit<BodyRow, "doc"> & { doc: unknown }>(
+		`SELECT metadata, mdx, doc, schema_version, content_hash, updated_at, translation FROM "${qSchema}".entry_bodies
 		 WHERE entry_id = $1 AND state = $2`,
 		[entryId, state],
 	);
-	return res.rows[0];
+	const row = res.rows[0];
+	return row && { ...row, doc: readDoc(row.doc) };
 }
 
-/** Writes the working/published body. Also updates the plain text used for search. */
+/** Writes the working/published body. Also updates the plain text used for search. `doc` is the stored document `mdx` is written from (`null` when the body has none). */
 export async function writeBody(
 	client: PoolClient,
 	qSchema: string,
@@ -294,6 +303,7 @@ export async function writeBody(
 	body: {
 		metadata: EntryMetadata;
 		mdx: string;
+		doc: StoredDocument | null;
 		schemaVersion: number;
 		contentHash: string;
 		updatedAt: Date;
@@ -302,10 +312,10 @@ export async function writeBody(
 	},
 ): Promise<void> {
 	await client.query(
-		`INSERT INTO "${qSchema}".entry_bodies (entry_id, state, metadata, mdx, schema_version, content_hash, updated_at, search_text, translation)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`INSERT INTO "${qSchema}".entry_bodies (entry_id, state, metadata, mdx, doc, schema_version, content_hash, updated_at, search_text, translation)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		 ON CONFLICT (entry_id, state) DO UPDATE SET
-		   metadata = EXCLUDED.metadata, mdx = EXCLUDED.mdx, schema_version = EXCLUDED.schema_version,
+		   metadata = EXCLUDED.metadata, mdx = EXCLUDED.mdx, doc = EXCLUDED.doc, schema_version = EXCLUDED.schema_version,
 		   content_hash = EXCLUDED.content_hash, updated_at = EXCLUDED.updated_at, search_text = EXCLUDED.search_text,
 		   translation = EXCLUDED.translation`,
 		[
@@ -313,6 +323,7 @@ export async function writeBody(
 			state,
 			JSON.stringify(body.metadata),
 			body.mdx,
+			body.doc === null ? null : JSON.stringify(body.doc),
 			body.schemaVersion,
 			body.contentHash,
 			body.updatedAt,
@@ -339,6 +350,7 @@ interface EntryRow {
 	state: "working" | "published" | null;
 	metadata: EntryMetadata | null;
 	mdx: string | null;
+	doc: unknown;
 	schema_version: number | null;
 	content_hash: string | null;
 	body_updated_at: Date | null;
@@ -352,7 +364,7 @@ export async function loadEntry(client: Queryable, id: string, qSchema: string):
 			e.status, e.version, e.folder_id, e.created_at, e.updated_at as entry_updated_at,
 			e.published_at, e.trashed_at, e.working_slug,
 			(SELECT slug FROM "${qSchema}".content_addresses WHERE entry_id = e.id AND type = 'current') as current_slug,
-			b.state, b.metadata, b.mdx, b.schema_version, b.content_hash, b.updated_at as body_updated_at, b.translation
+			b.state, b.metadata, b.mdx, b.doc, b.schema_version, b.content_hash, b.updated_at as body_updated_at, b.translation
 		 FROM "${qSchema}".entries e
 		 LEFT JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id
 		 WHERE e.id = $1`,
@@ -369,6 +381,7 @@ export async function loadEntry(client: Queryable, id: string, qSchema: string):
 		const body: EntryBody = {
 			metadata: row.metadata,
 			mdx: row.mdx,
+			doc: readDoc(row.doc),
 			schemaVersion: row.schema_version,
 			contentHash: row.content_hash,
 			updatedAt: row.body_updated_at,

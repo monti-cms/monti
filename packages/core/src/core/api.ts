@@ -106,24 +106,36 @@ export type ListEntriesQuery = z.infer<typeof listEntriesQuerySchema>;
 
 const expectedVersionSchema = z.number().int().positive();
 
-export const createEntryBodySchema = z.object({
-	collection: collectionSchema,
-	slug: z.string().nullable().optional().default(null),
-	metadata: z.record(z.string(), z.unknown()).default({}),
-	mdx: z.string().default(""),
-	folderId: z.uuid().nullable().optional(),
-});
+/** A body is given as MDX or as a stored document (`doc`, validated by the service), never both. */
+const bodyIsMdxOrDoc = (body: { mdx?: string; doc?: unknown }) => body.mdx === undefined || body.doc === undefined;
+const BODY_IS_MDX_OR_DOC = { message: "Send either mdx or doc, not both", path: ["doc"] };
+
+/** With neither `mdx` nor `doc`, the new entry has an empty body. */
+export const createEntryBodySchema = z
+	.object({
+		collection: collectionSchema,
+		slug: z.string().nullable().optional().default(null),
+		metadata: z.record(z.string(), z.unknown()).default({}),
+		mdx: z.string().optional(),
+		doc: z.unknown().optional(),
+		folderId: z.uuid().nullable().optional(),
+	})
+	.refine(bodyIsMdxOrDoc, BODY_IS_MDX_OR_DOC);
 export type CreateEntryBody = z.infer<typeof createEntryBodySchema>;
 
-export const patchEntryBodySchema = z.object({
-	expectedVersion: expectedVersionSchema,
-	slug: z.string().nullable().optional(),
-	metadata: z.record(z.string(), z.unknown()).optional(),
-	mdx: z.string().optional(),
-	folderId: z.uuid().nullable().optional(),
-	/** Translation state of a translation. The service validates the shape. If omitted, the stored value is kept. */
-	translation: z.unknown().optional(),
-});
+/** With neither `mdx` nor `doc`, the body of the current draft is kept. */
+export const patchEntryBodySchema = z
+	.object({
+		expectedVersion: expectedVersionSchema,
+		slug: z.string().nullable().optional(),
+		metadata: z.record(z.string(), z.unknown()).optional(),
+		mdx: z.string().optional(),
+		doc: z.unknown().optional(),
+		folderId: z.uuid().nullable().optional(),
+		/** Translation state of a translation. The service validates the shape. If omitted, the stored value is kept. */
+		translation: z.unknown().optional(),
+	})
+	.refine(bodyIsMdxOrDoc, BODY_IS_MDX_OR_DOC);
 export type PatchEntryBody = z.infer<typeof patchEntryBodySchema>;
 
 /** State transitions that take only a version (archive, unarchive, trash, restore). */

@@ -3,14 +3,18 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
+import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { formatRewriteReport, rewriteContent } from "../store/rewrite";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
- * `monti content:rewrite`: re-serializes stored bodies with the site's syntax. The content hash is unchanged by design, so the rewrite is a change of
- * spelling only: no version bump, no new modified date, and a body whose hash would change is never written.
+ * `monti content:rewrite`: re-derives stored bodies from their documents with the site's syntax (a body with no document gets one when its MDX parses).
+ * The content hash is unchanged by design, so the rewrite is a change of spelling only: no version bump, no new modified date, and a body whose hash
+ * would change is never written.
+ *
+ * Saving already writes a body from its document, so a body in another spelling is imitated here by writing the text to the row directly.
  */
 
 /** The same content in a spelling the serializer does not write (underscore emphasis, a `*` list, a setext heading, a backslash break). */
@@ -64,10 +68,24 @@ describe("content rewrite", () => {
 		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
 	};
 
+	/** Puts the text in the rows as given, with the document the test names (none by default: a body from before documents were stored). */
+	const setRaw = (entryId: string, mdx: string, doc: unknown = null, state?: "working" | "published") =>
+		pool.query(
+			`UPDATE "${schemaName}".entry_bodies SET mdx = $1, doc = $2::jsonb WHERE entry_id = $3 AND ($4::text IS NULL OR state = $4)`,
+			[mdx, doc === null ? null : JSON.stringify(doc), entryId, state ?? null],
+		);
+
+	/** A published entry whose bodies are in another spelling than the one a save writes, and have no document. */
+	const untidyPublished = async (mdx: string) => {
+		const published = await publishedWith(mdx);
+		await setRaw(published.id, mdx);
+		return published;
+	};
+
 	const stored = async (entryId: string, state: "working" | "published") =>
 		(
-			await pool.query<{ mdx: string; content_hash: string; search_text: string; updated_at: Date }>(
-				`SELECT mdx, content_hash, search_text, updated_at FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
+			await pool.query<{ mdx: string; doc: unknown; content_hash: string; search_text: string; updated_at: Date }>(
+				`SELECT mdx, doc, content_hash, search_text, updated_at FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
 				[entryId, state],
 			)
 		).rows[0];
@@ -77,7 +95,7 @@ describe("content rewrite", () => {
 
 	describe("a dry run (the default)", () => {
 		it("reports each body as changed or unchanged and writes nothing", async () => {
-			const untidy = await publishedWith(UNTIDY);
+			const untidy = await untidyPublished(UNTIDY);
 			const tidy = await publishedWith(TIDY);
 			const before = await stored(untidy.id, "working");
 
@@ -93,7 +111,7 @@ describe("content rewrite", () => {
 		});
 
 		it("prints `collection/slug (locale) state: changed|unchanged` per body and a summary", async () => {
-			const untidy = await publishedWith(UNTIDY);
+			const untidy = await untidyPublished(UNTIDY);
 			const lines = formatRewriteReport(await rewriteContent(pool, { schema: schemaName }));
 			expect(lines).toContain(`${contentCollection}/${untidy.workingSlug} (${untidy.locale}) working: changed`);
 			expect(lines).toContain(`${contentCollection}/${untidy.workingSlug} (${untidy.locale}) published: changed`);
@@ -105,9 +123,11 @@ describe("content rewrite", () => {
 
 	describe("--apply", () => {
 		it("writes the site's notation and leaves the content hash, version and dates as they were", async () => {
-			const published = await publishedWith(UNTIDY);
+			const published = await untidyPublished(UNTIDY);
 			const workingBefore = await stored(published.id, "working");
 			const publishedBefore = await stored(published.id, "published");
+			expect(workingBefore?.mdx).toBe(UNTIDY);
+			expect(workingBefore?.doc).toBeNull();
 
 			const report = await rewriteContent(pool, { schema: schemaName, apply: true });
 
@@ -116,6 +136,9 @@ describe("content rewrite", () => {
 			const publishedAfter = await stored(published.id, "published");
 			expect(working?.mdx).toBe(TIDY);
 			expect(publishedAfter?.mdx).toBe(TIDY);
+			// The document is written with the text, and it is the one the TIDY text reads as.
+			expect(working?.doc).toEqual(bodyFromMdx(TIDY).doc);
+			expect(publishedAfter?.doc).toEqual(bodyFromMdx(TIDY).doc);
 			// The hash covers the parsed body, so it is the same for both spellings: asserted, not assumed.
 			expect(working?.content_hash).toBe(workingBefore?.content_hash);
 			expect(publishedAfter?.content_hash).toBe(publishedBefore?.content_hash);
@@ -131,12 +154,9 @@ describe("content rewrite", () => {
 		});
 
 		it("keeps what the list shows as unpublished changes", async () => {
-			const same = await publishedWith(UNTIDY);
-			const edited = await publishedWith(UNTIDY);
-			await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2 AND state = 'working'`, [
-				`${UNTIDY}\nMore words\n`,
-				edited.id,
-			]);
+			const same = await untidyPublished(UNTIDY);
+			const edited = await untidyPublished(UNTIDY);
+			await setRaw(edited.id, `${UNTIDY}\nMore words\n`, null, "working");
 			const flag = async (id: string) =>
 				(await store.listEntries({ collection: contentCollection })).items.find((item) => item.id === id)
 					?.hasUnpublishedChanges;
@@ -149,6 +169,7 @@ describe("content rewrite", () => {
 
 		it("refreshes the search text, and a second run changes nothing", async () => {
 			const draft = await createDraft(UNTIDY);
+			await setRaw(draft.id, UNTIDY);
 			await rewriteContent(pool, { schema: schemaName, apply: true });
 			const once = await stored(draft.id, "working");
 			expect(once?.search_text).toContain("emphasis");
@@ -161,11 +182,16 @@ describe("content rewrite", () => {
 
 		it("rewrites body templates and leaves their version and date alone", async () => {
 			const template = await store.createTemplate({ name: unique("untidy"), mdx: UNTIDY });
+			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
+				UNTIDY,
+				template.id,
+			]);
 
 			await rewriteContent(pool, { schema: schemaName, apply: true });
 
 			const after = await store.getTemplate(template.id);
 			expect(after.mdx).toBe(TIDY);
+			expect(after.doc).toEqual(bodyFromMdx(TIDY).doc);
 			expect(after.version).toBe(template.version);
 			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
 		});
@@ -173,11 +199,13 @@ describe("content rewrite", () => {
 		it("skips a body that does not parse, reports it, and still rewrites the others", async () => {
 			const broken = await createDraft("Words\n\n<Unclosed");
 			const untidy = await createDraft(UNTIDY);
+			await setRaw(untidy.id, UNTIDY);
 
 			const report = await rewriteContent(pool, { schema: schemaName, apply: true });
 
 			expect(lineOf(report, broken, "working")).toMatchObject({ outcome: "skipped", reason: "unparsed" });
 			expect((await stored(broken.id, "working"))?.mdx).toBe("Words\n\n<Unclosed");
+			expect((await stored(broken.id, "working"))?.doc).toBeNull();
 			expect((await stored(untidy.id, "working"))?.mdx).toBe(TIDY);
 			expect(formatRewriteReport(report).some((line) => line.endsWith("working: skipped (does not parse)"))).toBe(true);
 		});
@@ -200,12 +228,67 @@ describe("content rewrite", () => {
 		});
 
 		it("reaches every row whatever the batch size", async () => {
-			for (let index = 0; index < 5; index += 1) await createDraft(`Title ${index}\n=====\n`);
+			for (let index = 0; index < 5; index += 1) {
+				const draft = await createDraft(`Title ${index}\n=====\n`);
+				await setRaw(draft.id, `Title ${index}\n=====\n`);
+			}
 			await rewriteContent(pool, { schema: schemaName, apply: true, batchSize: 2 });
 			const left = await pool.query<{ mdx: string }>(
 				`SELECT mdx FROM "${schemaName}".entry_bodies WHERE mdx ~ '^Title [0-9]\n====='`,
 			);
 			expect(left.rows).toEqual([]);
+		});
+	});
+
+	describe("from the document", () => {
+		it("writes the MDX of a body that has a document from that document, and leaves the document as it is", async () => {
+			const published = await publishedWith(TIDY);
+			const before = await stored(published.id, "working");
+			// The stored text is spelled another way; the document is what the body is.
+			await setRaw(published.id, UNTIDY, before?.doc);
+
+			const report = await rewriteContent(pool, { schema: schemaName, apply: true });
+
+			expect(lineOf(report, published, "working")?.outcome).toBe("changed");
+			const after = await stored(published.id, "working");
+			expect(after?.mdx).toBe(TIDY);
+			expect(after?.doc).toEqual(before?.doc);
+			expect(after?.content_hash).toBe(before?.content_hash);
+			expect(after?.search_text).toBe(before?.search_text);
+		});
+
+		it("does not write a body whose text says something else than its document", async () => {
+			const published = await publishedWith(TIDY);
+			const before = await stored(published.id, "working");
+			// The text was edited behind the document's back: re-deriving it from the document would lose the edit.
+			await setRaw(published.id, `${TIDY}\nAn edit.\n`, before?.doc, "working");
+
+			const report = await rewriteContent(pool, { schema: schemaName, apply: true });
+
+			expect(lineOf(report, published, "working")).toMatchObject({ outcome: "skipped", reason: "hash" });
+			expect((await stored(published.id, "working"))?.mdx).toBe(`${TIDY}\nAn edit.\n`);
+		});
+
+		it("treats a stored document it cannot read as no document and writes one from the MDX", async () => {
+			const draft = await createDraft(TIDY);
+			await setRaw(draft.id, UNTIDY, { type: "doc", version: 99, content: [] });
+
+			await rewriteContent(pool, { schema: schemaName, apply: true });
+
+			const after = await stored(draft.id, "working");
+			expect(after?.mdx).toBe(TIDY);
+			expect(after?.doc).toEqual(bodyFromMdx(TIDY).doc);
+		});
+
+		it("fills in the document of a body that has none even when its text is already written the site's way", async () => {
+			const draft = await createDraft(TIDY);
+			await setRaw(draft.id, TIDY);
+
+			const report = await rewriteContent(pool, { schema: schemaName, apply: true });
+
+			expect(lineOf(report, draft, "working")?.outcome).toBe("changed");
+			expect((await stored(draft.id, "working"))?.doc).toEqual(bodyFromMdx(TIDY).doc);
+			expect((await rewriteContent(pool, { schema: schemaName, apply: true })).changed).toBe(0);
 		});
 	});
 });

@@ -232,12 +232,13 @@ describe("ContentService Contract", () => {
 			const sortedMetadata = Object.fromEntries(
 				Object.entries({ title: "A", [many.name]: ids }).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
 			);
-			// The body is hashed as its parsed document (keys sorted), not as the MDX string.
+			// The body is hashed as its stored document (keys sorted, with its format version), not as the MDX string.
 			const helloDocument = {
 				content: [{ content: [{ text: "Hello", type: "text" }], type: "paragraph" }],
 				type: "doc",
+				version: 1,
 			};
-			const expectedTuple = ["cms-snapshot-v2", 1, sortedMetadata, helloDocument];
+			const expectedTuple = ["cms-snapshot-v3", 1, sortedMetadata, helloDocument];
 			const expectedHash = createHash("sha256").update(JSON.stringify(expectedTuple)).digest("hex");
 			expect(snap1.contentHash).toBe(expectedHash);
 			expect(snap1.contentHash).toEqual(snap2.contentHash);
@@ -351,7 +352,8 @@ describe("ContentService Contract", () => {
 				isStale: false,
 			});
 			expect(snap.references[1].occurrences).toHaveLength(1);
-			expect(snap.references[1].occurrences[0]).toMatchObject({ line: 2, column: 1 });
+			// Positions point into the stored text, where blocks are separated by a blank line: the second image is on line 3.
+			expect(snap.references[1].occurrences[0]).toMatchObject({ line: 3, column: 1 });
 		});
 
 		it("rejects retired ContentLink with a migration message", async () => {

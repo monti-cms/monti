@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../adapters/auth";
 import {
+	FIXTURE_CONTENT_COLLECTION,
 	FIXTURE_DRAFT_COLLECTION,
 	fixtureEntryPath,
 	makeExportFixtureSnapshot,
@@ -33,6 +34,12 @@ vi.mock("../../../container", () => ({
 const decoder = new TextDecoder();
 /** Working files of the fixture draft (a memo in the reference blog setup, otherwise that config's collection). */
 const DRAFT_WORKING = fixtureEntryPath(FIXTURE_DRAFT_COLLECTION, "22222222-2222-4222-8222-222222222222", "working.mdx");
+
+const PUBLISHED_WORKING_DOC = fixtureEntryPath(
+	FIXTURE_CONTENT_COLLECTION,
+	"11111111-1111-4111-8111-111111111111",
+	"working.doc.json",
+);
 
 const request = (url: string, init?: ConstructorParameters<typeof NextRequest>[1]) => new NextRequest(url, init);
 
@@ -72,8 +79,10 @@ describe("GET/POST /api/cms/v1/export", () => {
 		const zip = new Uint8Array(await res.arrayBuffer());
 		const manifest = JSON.parse(findFile(zip, "manifest.json"));
 		expect(manifest.scope).toBe("admin");
+		expect(manifest.formatVersion).toBe(2);
 		expect(manifest.counts.entries).toBe(3);
 		expect(findFile(zip, DRAFT_WORKING)).toBe("draft secret body");
+		expect(JSON.parse(findFile(zip, PUBLISHED_WORKING_DOC))).toMatchObject({ type: "doc", version: 1 });
 	});
 
 	it("public export excludes drafts and does not include working values", async () => {
@@ -84,6 +93,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		const zip = new Uint8Array(await res.arrayBuffer());
 		const paths = readZipArchive(zip).map((entry) => entry.path);
 		expect(paths).not.toContain(DRAFT_WORKING);
+		expect(paths.some((path) => path.endsWith(".doc.json"))).toBe(false);
 		expect(paths.some((path) => path.includes("11111111-1111-4111-8111-111111111111"))).toBe(true);
 
 		for (const path of paths.filter((item) => item.endsWith(".json"))) {

@@ -1,9 +1,11 @@
 import type { Pool, PoolClient } from "pg";
 import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
+import { bodyFromMdx } from "../../../mdx/stored-document";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 import { migrateSoftBreaks } from "./soft-break-migration";
+import { migrateStoredDocuments } from "./stored-document-migration";
 
 /** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
 interface MigrationStep {
@@ -305,16 +307,33 @@ const STEPS: readonly MigrationStep[] = [
 		run: (client, qSchema) => migrateSoftBreaks(client, qSchema),
 	},
 	{
+		name: "0013_stored_documents",
+		/**
+		 * The parsed body is now the source of a body: `doc` holds it (the stored document, see `StoredDocument`) and `mdx` is written from it. Adds the column to
+		 * bodies and templates, then gives every body its document, rewrites its MDX from it and recomputes `content_hash` and `search_text`
+		 * (and the base source of a translation). A body that does not parse is left as it is, without a document, and logged.
+		 */
+		run: async (client, qSchema) => {
+			await client.query(`
+				ALTER TABLE "${qSchema}".entry_bodies ADD COLUMN IF NOT EXISTS doc JSONB;
+				ALTER TABLE "${qSchema}".body_templates ADD COLUMN IF NOT EXISTS doc JSONB;
+			`);
+			await migrateStoredDocuments(client, qSchema);
+		},
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */
 		run: async (client, qSchema) => {
 			for (const t of cmsConfig.seed?.templates ?? []) {
+				// Seeded as it is stored: written from the document when the template parses.
+				const body = bodyFromMdx(t.mdx);
 				await client.query(
-					`INSERT INTO "${qSchema}".body_templates (id, name, mdx, version, created_at, updated_at)
-					 VALUES ($1, $2, $3, 1, NOW(), NOW())
+					`INSERT INTO "${qSchema}".body_templates (id, name, mdx, doc, version, created_at, updated_at)
+					 VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
 					 ON CONFLICT DO NOTHING`,
-					[t.id, t.name, t.mdx],
+					[t.id, t.name, body.mdx, body.doc === null ? null : JSON.stringify(body.doc)],
 				);
 			}
 		},

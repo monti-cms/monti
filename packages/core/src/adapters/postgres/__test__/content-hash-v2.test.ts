@@ -108,8 +108,9 @@ describe("content hash v2", () => {
 			expect(resaved.version).toBe(published.version);
 			expect(resaved.updatedAt.getTime()).toBe(published.updatedAt.getTime());
 			expect(resaved.working.contentHash).toBe(published.working.contentHash);
-			// The new spelling is kept as written.
-			expect(resaved.working.mdx).toBe(UNDERSCORE);
+			// The body is stored written from its document, so both spellings are stored as the same text.
+			expect(resaved.working.mdx).toBe(published.working.mdx);
+			expect(resaved.working.mdx).toBe("An *a* word\n");
 			expect(await hasUnpublishedChanges(published.id)).toBe(false);
 		});
 
