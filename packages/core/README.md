@@ -337,6 +337,9 @@ The document is the source and the MDX is its text, so saving normalizes notatio
 Source mode in the editor is secondary: the text you type is parsed and written back in the site's notation when you save.
 A body that does not parse, or that has front matter, has no document and is stored exactly as given (only a draft can be like that).
 
+**Code blocks.** A code block is stored as its code (without annotation comments) and its annotations as data (line effects, text effects and regex rules), and written back to MDX as Monti annotation comments, so other tools that read the MDX still see them.
+`monti migrate` runs the step `0015_code_annotations`, which converts existing documents (including the document a translation was confirmed against) and rewrites the annotation comments of code fences in their canonical form (`// @line plus` becomes `// @line plus {0-0}`, rules for the whole code come first). It recomputes the content hash and search text, which no longer holds annotation comments; `version` and `updated_at` do not change.
+
 **Block ids.** Every block of the document has an `id` (8 characters of base36) that is unique within the body. It says which block is which across versions: it is not written to MDX and is not part of the content hash, so it never counts as a change.
 A body saved as MDX inherits ids from the version it replaces: a block that reads the same keeps its id, and so do edited, split and moved blocks (the first part of a split paragraph keeps it); blocks with no partner get new ids, and a document sent through the API keeps the ids it carries.
 `monti migrate` runs the step `0014_block_ids`, which gives the existing documents their ids (and gives a published body the ids of the working blocks it shares); it changes only `doc`, never the MDX, the hash, `version` or `updated_at`.
