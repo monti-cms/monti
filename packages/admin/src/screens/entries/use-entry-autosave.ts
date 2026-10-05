@@ -1,6 +1,7 @@
 "use client";
 
 import { adminEntryEditHref, cmsApiUrl, withBasePath } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/mdx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CmsApiError, cmsFetch } from "../admin-api";
 import {
@@ -58,7 +59,16 @@ interface Options {
 	newEntryFolderId?: string | null;
 	onSaved: (entry: EntryData) => void;
 	onConflict: (server: EntryData, local: EntryForm) => void;
+	/**
+	 * The stored document of a body, with the editor's block ids, when the editor made exactly that MDX. The save then sends the document
+	 * (`doc`) instead of the MDX, so every block keeps its id; otherwise the MDX is sent and the server pairs blocks with the stored body.
+	 */
+	documentOf?: (mdx: string) => StoredDocument | null | undefined;
 }
+
+/** The body of a save request: the editor's document when it made this MDX, otherwise the MDX. */
+const bodyPayload = (mdx: string, doc: StoredDocument | null | undefined): { mdx: string } | { doc: StoredDocument } =>
+	doc ? { doc } : { mdx };
 
 /**
  * While editing, only a browser recovery copy is kept; an explicit save or publish saves the server draft.
@@ -78,6 +88,7 @@ export function useEntryAutosave({
 	newEntryFolderId,
 	onSaved,
 	onConflict,
+	documentOf,
 }: Options) {
 	const [form, setFormState] = useState<EntryForm>(initialForm);
 	const [status, setStatus] = useState<SaveStatus>(entry ? "saved" : "new");
@@ -106,8 +117,8 @@ export function useEntryAutosave({
 	const statusRef = useRef<SaveStatus>(entry ? "saved" : "new");
 	const enabledRef = useRef(enabled);
 	enabledRef.current = enabled;
-	const callbacksRef = useRef({ onSaved, onConflict });
-	callbacksRef.current = { onSaved, onConflict };
+	const callbacksRef = useRef({ onSaved, onConflict, documentOf });
+	callbacksRef.current = { onSaved, onConflict, documentOf };
 
 	const updateStatus = useCallback((next: SaveStatus) => {
 		statusRef.current = next;
@@ -237,7 +248,7 @@ export function useEntryAutosave({
 								: { expectedVersion: versionRef.current }),
 							slug: snapshot.slug.trim() || null,
 							metadata: built.metadata,
-							mdx: snapshot.mdx,
+							...bodyPayload(snapshot.mdx, callbacksRef.current.documentOf?.(snapshot.mdx)),
 							...(translationPayload(snapshot) ? { translation: translationPayload(snapshot) } : {}),
 						},
 						fallback: t("saveFailed"),

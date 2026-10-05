@@ -11,6 +11,7 @@ import {
 	storedFields,
 	type TranslationState,
 } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/mdx";
 import { t } from "./translate";
 
 /** The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays. */
@@ -76,7 +77,13 @@ export interface EntryData {
 	publishedAt?: string;
 	workingSlug: string | null;
 	publishedSlug: string | null;
-	working: { metadata: Record<string, unknown>; mdx: string; translation?: TranslationState | null };
+	working: {
+		metadata: Record<string, unknown>;
+		mdx: string;
+		/** The body as a stored document with block ids (`null` when it has none). */
+		doc?: StoredDocument | null;
+		translation?: TranslationState | null;
+	};
 	published?: { metadata: Record<string, unknown>; mdx: string };
 }
 

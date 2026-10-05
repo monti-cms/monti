@@ -17,6 +17,7 @@ import {
 	storedField,
 	withBasePath,
 } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/mdx";
 import { analyze } from "@monti-cms/core/mdx";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import {
@@ -283,6 +284,8 @@ export function EntryEditorShell({
 	const isTrashed = entry?.status === "trashed";
 	const isReadOnly = isTrashed;
 
+	// The body the visual editor last made, as MDX and as a stored document with its block ids. Saved as the document while the form still holds that MDX.
+	const editorBodyRef = useRef<{ mdx: string; doc: StoredDocument | null } | null>(null);
 	const autosave = useEntryAutosave({
 		adminId,
 		collection,
@@ -293,6 +296,7 @@ export function EntryEditorShell({
 		// The save response carries no translation group info. Keep the values received on load.
 		onSaved: (saved) => setEntry((current) => ({ ...saved, ...keepTranslationGroup(current, saved) })),
 		onConflict: (server, local) => setConflict({ server, local }),
+		documentOf: (mdx) => (editorBodyRef.current?.mdx === mdx ? editorBodyRef.current.doc : undefined),
 	});
 	const { form, setForm } = autosave;
 
@@ -1105,7 +1109,11 @@ export function EntryEditorShell({
 						}
 						sourceView={editorMode === "source" ? sourceEditor : undefined}
 						editable={!isReadOnly}
-						onChange={(mdx) => setForm({ mdx })}
+						stored={entry ? { mdx: entry.working.mdx, doc: entry.working.doc ?? null } : undefined}
+						onChange={(mdx, doc) => {
+							editorBodyRef.current = { mdx, doc };
+							setForm({ mdx });
+						}}
 						blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
 						selectionActions={extensions.selectionActions}
 						insertActions={extensions.insertActions}

@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 
-import { buildEditorExtensions, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import {
+	BLOCK_ID_ATTRIBUTE,
+	buildEditorExtensions,
+	findBlock,
+	mdxToTiptap,
+	storedToTiptap,
+	tiptapToMdx,
+} from "@monti-cms/admin/editor";
 import { withTranslationHints } from "@monti-cms/core/client";
+import { bodyFromMdx } from "@monti-cms/core/mdx";
 import { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
@@ -121,5 +129,48 @@ describe("translation units and replacement", () => {
 			expect(applyTranslation(current, unit, mdx as string, null)).toBe("replaced");
 		}
 		expect(tiptapToMdx(current.getJSON()).trim()).toBe("## Title\n\n- one\n- two\n\nText");
+	});
+
+	describe("blocks with ids", () => {
+		/** The translation frame as a stored document, so every block has its id (as the entry screen loads it). */
+		const openStored = (source: string) => {
+			const { doc } = bodyFromMdx(withTranslationHints(source));
+			if (!doc) throw new Error("no document");
+			editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+			return editor;
+		};
+
+		it("the translated block keeps its id", () => {
+			const current = openStored("첫 문단\n\n둘째 문단");
+			const pos = posOf(current.state.doc, "paragraph", 1);
+			const id = current.state.doc.nodeAt(pos)?.attrs[BLOCK_ID_ATTRIBUTE];
+			const unit = unitAt(current.state.doc, pos);
+			if (!unit) throw new Error("No unit found.");
+			expect(applyTranslation(current, unit, "Second paragraph", pos)).toBe("replaced");
+			const at = findBlock(current.state.doc, id);
+			expect(at).toBeDefined();
+			expect(current.state.doc.nodeAt(at as number)?.textContent).toBe("Second paragraph");
+		});
+
+		it("finds the block by its id after it moved", () => {
+			const current = openStored("첫 문단\n\n둘째 문단");
+			const pos = posOf(current.state.doc, "paragraph", 1);
+			const unit = unitAt(current.state.doc, pos);
+			if (!unit) throw new Error("No unit found.");
+			// Move the second paragraph to the top.
+			const node = current.state.doc.nodeAt(pos);
+			if (!node) throw new Error("No node.");
+			current.view.dispatch(current.state.tr.delete(pos, pos + node.nodeSize).insert(0, node));
+			expect(applyTranslation(current, unit, "Second paragraph", pos)).toBe("replaced");
+			expect(current.state.doc.child(0).textContent).toBe("Second paragraph");
+		});
+
+		it("does not replace a block with the same id whose text changed", () => {
+			const current = openStored("문단");
+			const unit = unitAt(current.state.doc, 0);
+			if (!unit) throw new Error("No unit found.");
+			current.commands.insertContentAt(1, "직접 ");
+			expect(applyTranslation(current, unit, "Paragraph", 0)).toBe("changed");
+		});
 	});
 });
