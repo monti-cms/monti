@@ -463,6 +463,26 @@ codeBlock: {
 
 The public page passes `annotationConfig` (defaults + config) from `@monti-cms/core/code-block` to the render chain.
 
+#### Turning code block tools off, themes and languages
+
+```ts
+codeBlock: {
+	omitLineEffects: ["plus", "minus"], // line effects the editor does not offer (defaults or ones you added)
+	features: { rules: false, fold: false, tooltip: false, textStyles: false }, // editor tools to turn off; all are on unless set to false
+	themes: { light: "github-light", dark: "github-dark" }, // Shiki theme names (default one-light / one-dark-pro)
+	languages: ["elixir", "zig"], // more Shiki languages to highlight, also offered in the editor's language list
+},
+```
+
+- `omitLineEffects`: names of line effects to leave out of the editor's line menu.
+- `features`: `rules` (regex rules and their panel), `fold` (the line menu's "Collapse" and the fold text effect), `tooltip` (the tooltip text effect)
+  and `textStyles` (bold, italic, strikethrough and underline inside code).
+- Turning a tool off only removes it from the editor's menus, panels, toolbars and shortcuts. A body that already uses it still loads, renders on the public page,
+  edits and saves unchanged, and the effects already in a block stay visible so they can be removed. Parsing, conversion and rendering never read these settings.
+- `themes`: one pair of Shiki theme names that the public page and the editor both use. The editor falls back to the default themes if a name is not a Shiki theme.
+- `languages`: Shiki language names or aliases (e.g. `elixir`, `zig`) added to the default list. The editor offers them in the language dropdown, labeled by name.
+  A fence whose language is not loaded (not in the default list nor in `languages`) renders as plain text.
+
 ### Text color list
 
 Text colors come from the blocks extension (`color({ palette })` of `@monti-cms/blocks`). The old config `textColors` is gone (move it to the option).
@@ -526,6 +546,7 @@ To use another store or login, build and pass your own `DatabaseAdapter`, `Media
 | `admin.path` | Admin UI path (default `/admin`). Must match the app's admin route folder. `/` and anything under `/api` are not allowed. Links inside the UI, login redirects and plugin screen URLs follow it. |
 | `mdx.syntax` | Syntax extensions (experimental, `@monti-cms/core/syntax`) in writing-precedence order, e.g. `[directiveSyntax()]` from `@monti-cms/syntax-directive`. Stored MDX is standard (CommonMark + GFM + MDX JSX) without them ("Body syntax"). |
 | `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
+| `codeBlock.omitLineEffects` / `features` / `themes` / `languages` | Hide line effects and tools in the editor, set the highlighting themes, and add languages ("Turning code block tools off, themes and languages"). |
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
 | `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.mdx"`, `"cms.core"` and `"cms.translation"`. |

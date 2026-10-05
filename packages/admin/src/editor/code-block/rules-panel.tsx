@@ -2,12 +2,14 @@
 
 import { createTranslator } from "@monti-cms/core/client";
 import {
+	CODE_BLOCK_FEATURES,
 	CODE_CHAR_EFFECTS,
 	type CodeCharEffectName,
 	type CodeRule,
 	checkPattern,
 	escapePattern,
 	newEffectId,
+	offersCharEffect,
 	ruleMatches,
 } from "@monti-cms/core/code-block";
 import { Plus, Regex, Trash2 } from "lucide-react";
@@ -37,7 +39,22 @@ interface RulesPanelProps {
 	onChange: (next: CodeRule[]) => void;
 }
 
-const EFFECT_OPTIONS = CODE_CHAR_EFFECTS.map((effect) => ({ value: effect.name, label: effect.label }));
+/**
+ * Effects a rule can use in the dropdown: the ones the editor offers, plus the rule's current effect when it is not offered
+ * (a body written before the tool was turned off keeps showing it, and still saves it unchanged).
+ */
+function effectOptions(current?: string) {
+	return CODE_CHAR_EFFECTS.filter((effect) => offersCharEffect(effect.name) || effect.name === current).map(
+		(effect) => ({
+			value: effect.name,
+			label: effect.label,
+		}),
+	);
+}
+
+/** Effect a new rule starts with: the first offered one (`undefined` when none is offered, so adding a rule is not offered). */
+const defaultEffect = (): CodeCharEffectName | undefined =>
+	CODE_CHAR_EFFECTS.find((effect) => offersCharEffect(effect.name))?.name;
 const SCOPE_OPTIONS = [
 	{ value: "document", label: t("rulesPanel.scopeDocument") },
 	{ value: "line", label: t("rulesPanel.scopeLine") },
@@ -58,6 +75,7 @@ function RuleRow({
 }) {
 	const problem = checkPattern(rule.pattern, rule.flags);
 	const count = problem ? 0 : ruleMatches(rule, text).length;
+	const options = effectOptions(rule.name);
 	return (
 		<li
 			className="flex flex-col gap-1.5 rounded-md border p-2"
@@ -66,14 +84,14 @@ function RuleRow({
 			<div className="flex items-center gap-1.5">
 				<Select
 					value={rule.name}
-					items={EFFECT_OPTIONS}
+					items={options}
 					onValueChange={(value) => value && onChange({ ...rule, name: value as CodeCharEffectName, attrs: {} })}
 				>
 					<SelectTrigger size="sm" className="h-7 text-xs" aria-label={t("rulesPanel.effect")}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						{EFFECT_OPTIONS.map((option) => (
+						{options.map((option) => (
 							<SelectItem key={option.value} value={option.value}>
 								{option.label}
 							</SelectItem>
@@ -172,6 +190,9 @@ function RuleRow({
  * If text is picked, "Add rule" starts as a rule that finds that text.
  */
 export function RulesPanel({ rules, text, lineCount, selection, language, slotScope, onChange }: RulesPanelProps) {
+	const newEffect = defaultEffect();
+	// Adding is offered only while the tool is on and at least one text effect is offered. Existing rules stay editable and removable either way.
+	const canAdd = CODE_BLOCK_FEATURES.rules && newEffect !== undefined;
 	// Code block rules spot. Clicking a candidate regex adds it as a char collapse rule.
 	const foldSlot = useSlot({
 		slot: "codeRules",
@@ -182,12 +203,13 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 			onChange([...rules, { id: newEffectId(), scope: "document", name: "fold", pattern, flags: "g", attrs: {} }]),
 	});
 	const addRule = () =>
+		newEffect &&
 		onChange([
 			...rules,
 			{
 				id: newEffectId(),
 				scope: "document",
-				name: "fold",
+				name: newEffect,
 				pattern: selection?.text ? escapePattern(selection.text) : "",
 				flags: "g",
 				attrs: {},
@@ -208,9 +230,9 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 			<PopoverContent align="end" className="w-96 gap-2 p-3 text-xs" data-code-ui="">
 				<div className="flex items-center justify-between gap-2">
 					<p className="font-semibold">{t("rulesPanel.title")}</p>
-					{foldSlot.trigger}
+					{canAdd && offersCharEffect("fold") && foldSlot.trigger}
 				</div>
-				{foldSlot.panel}
+				{canAdd && offersCharEffect("fold") && foldSlot.panel}
 				{rules.length > 0 && (
 					<ul className="flex max-h-80 flex-col gap-2 overflow-y-auto">
 						{rules.map((rule) => (
@@ -225,10 +247,12 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 						))}
 					</ul>
 				)}
-				<Button type="button" variant="outline" size="sm" onClick={addRule} className="self-start">
-					<Plus aria-hidden />
-					{selection?.text ? t("rulesPanel.addFromSelection") : t("rulesPanel.add")}
-				</Button>
+				{canAdd && (
+					<Button type="button" variant="outline" size="sm" onClick={addRule} className="self-start">
+						<Plus aria-hidden />
+						{selection?.text ? t("rulesPanel.addFromSelection") : t("rulesPanel.add")}
+					</Button>
+				)}
 			</PopoverContent>
 		</Popover>
 	);

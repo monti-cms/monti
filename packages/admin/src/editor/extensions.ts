@@ -4,6 +4,7 @@ import { CmsBlockKeymap } from "./block-commands";
 import { CmsBlockIds } from "./block-ids";
 import { BLOCK_NODE_VIEWS } from "./block-views";
 import { ADDED_BLOCK_NODES } from "./blocks/added";
+import { CodeTextStyleKeys } from "./code-block/text-style-keys";
 import { CmsBlockDrag } from "./drag";
 import { CMS_SCHEMA_EXTENSIONS } from "./tiptap-schema";
 
@@ -28,6 +29,8 @@ export function buildEditorExtensions(marks: Readonly<Record<string, EditorMarkS
 		// Text styles added by block extensions or site config. The look is provided by the extension (`marks`, block name → look).
 		...[...ADDED_MARKS.values()].map((block) => createAddedMark(block, marks[block.name])),
 		CmsBlockKeymap,
+		// Before the text style extensions above, so it can swallow their shortcuts inside code.
+		CodeTextStyleKeys,
 		CmsBlockDrag,
 		// Last, so its global attribute reaches every block node above.
 		CmsBlockIds,

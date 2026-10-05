@@ -125,6 +125,9 @@ const components = { marks: { note } };
   the linking hint row, the hovered-line highlight (`data-code-ref`) and the broken-link indicator use this mark, and they are hidden when no such mark exists. The
   linking commands used in the bubble (`findAnchor`, `startLinkFromText`, `unlinkRef`) are in the same entry point.
 - The character tooltip inside a code block (code fence comment `// @char Tooltip`) is a core code block feature, separate from the body tooltip (mark `codeTooltip`).
+- The code block tools follow the site config `codeBlock` (`@monti-cms/core` README): `omitLineEffects` and `features` (`rules`, `fold`, `tooltip`, `textStyles`) hide line effects, regex rules, folding,
+  the tooltip and bold, italic, strikethrough and underline from the line menu, the rules panel, the bubble, the toolbar and the shortcuts inside code, and `themes` and `languages` set the highlighting themes and the language list.
+  A body that already uses a tool that is off still loads and saves unchanged, and its effects stay visible so they can be removed.
 
 ## Text checking (spelling, etc.)
 

@@ -41,6 +41,7 @@ import {
 	INLINE_MARK_TOOLS,
 	type InlineBubbleTarget,
 	inlineBubbleTarget,
+	offersMarkTool,
 	RANGED_MARKS,
 	removeInlineMark,
 } from "./inline-marks";
@@ -483,14 +484,18 @@ export function InlineBubble({
 			))}
 			{bubbleTools("format").map(renderTool)}
 			<Separator orientation="vertical" className="mx-0.5 h-4" />
-			{inCode && allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) && (
-				<BubbleButton
-					label={editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd")}
-					onClick={() => openCodeTooltip()}
-				>
-					<MessageSquareMore aria-hidden className="size-4" />
-				</BubbleButton>
-			)}
+			{inCode &&
+				allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
+				offersMarkTool(editor.state, CODE_TOOLTIP_MARK_NAME) && (
+					<BubbleButton
+						label={
+							editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd")
+						}
+						onClick={() => openCodeTooltip()}
+					>
+						<MessageSquareMore aria-hidden className="size-4" />
+					</BubbleButton>
+				)}
 			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool)}
 			{allowsMark(editor.state, "link") && !inCode && (
 				<BubbleButton
@@ -501,7 +506,7 @@ export function InlineBubble({
 				</BubbleButton>
 			)}
 			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool)}
-			{inCode && allowsMark(editor.state, "codeFold") && (
+			{inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(editor.state, "codeFold") && (
 				<BubbleButton
 					label={t("inlineBubble.fold")}
 					pressed={editor.isActive("codeFold")}

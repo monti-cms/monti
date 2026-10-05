@@ -1,47 +1,101 @@
+import {
+	CODE_BLOCK_THEMES,
+	type CodeBlockThemes,
+	DEFAULT_CODE_BLOCK_THEMES,
+	EXTRA_CODE_LANGUAGES,
+} from "@monti-cms/core/code-block";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
-import type { Highlighter } from "shiki";
+import type { BundledTheme, Highlighter } from "shiki";
 
 export const codeBlockHighlightPluginKey = new PluginKey<{ version: number }>("cmsCodeBlockHighlight");
 
 let highlighterPromise: Promise<Highlighter> | null = null;
 
+/** Languages loaded when the highlighter is created. Others load on demand when a block uses them. */
+const BASE_LANGUAGES = [
+	"typescript",
+	"javascript",
+	"tsx",
+	"jsx",
+	"json",
+	"python",
+	"rust",
+	"go",
+	"java",
+	"kotlin",
+	"cpp",
+	"csharp",
+	"swift",
+	"html",
+	"css",
+	"scss",
+	"postcss",
+	"sql",
+	"bash",
+	"yaml",
+	"toml",
+	"markdown",
+	"mdx",
+	"docker",
+	"graphql",
+];
+
+/** Options to create the highlighter with the site's themes (`codeBlock.themes`). */
+export const highlighterOptions = (themes: CodeBlockThemes = CODE_BLOCK_THEMES) => ({
+	themes: [...new Set([themes.light, themes.dark])],
+	langs: BASE_LANGUAGES,
+});
+
+/** Themes the highlighter was created with: the site's, or the defaults when the site's names are not Shiki themes. */
+let activeThemes: CodeBlockThemes = CODE_BLOCK_THEMES;
+
+/** Loads the site's extra languages (`codeBlock.languages`). A name Shiki does not know is skipped (that code shows as plain text), never an error. */
+export async function loadExtraLanguages(
+	highlighter: Pick<Highlighter, "loadLanguage">,
+	names: readonly string[] = EXTRA_CODE_LANGUAGES,
+): Promise<string[]> {
+	const loaded = await Promise.all(
+		names.map((name) =>
+			highlighter.loadLanguage(name as never).then(
+				() => name,
+				() => null,
+			),
+		),
+	);
+	return loaded.filter((name): name is string => name !== null);
+}
+
 export async function getShikiHighlighter(): Promise<Highlighter> {
 	if (!highlighterPromise) {
-		highlighterPromise = import("shiki").then(({ createHighlighter }) =>
-			createHighlighter({
-				themes: ["one-light", "one-dark-pro"],
-				langs: [
-					"typescript",
-					"javascript",
-					"tsx",
-					"jsx",
-					"json",
-					"python",
-					"rust",
-					"go",
-					"java",
-					"kotlin",
-					"cpp",
-					"csharp",
-					"swift",
-					"html",
-					"css",
-					"scss",
-					"postcss",
-					"sql",
-					"bash",
-					"yaml",
-					"toml",
-					"markdown",
-					"mdx",
-					"docker",
-					"graphql",
-				],
-			}),
-		);
+		highlighterPromise = import("shiki").then(async ({ createHighlighter }) => {
+			let highlighter: Highlighter;
+			try {
+				highlighter = await createHighlighter(highlighterOptions(CODE_BLOCK_THEMES));
+				activeThemes = CODE_BLOCK_THEMES;
+			} catch {
+				// A theme name Shiki does not bundle must not break the editor: use the default themes.
+				highlighter = await createHighlighter(highlighterOptions(DEFAULT_CODE_BLOCK_THEMES));
+				activeThemes = DEFAULT_CODE_BLOCK_THEMES;
+			}
+			await loadExtraLanguages(highlighter);
+			return highlighter;
+		});
 	}
 	return highlighterPromise;
+}
+
+/** Tokens of `code` with the light and dark theme colors (the same pair the public page uses). */
+export function tokensWithThemes(
+	highlighter: Pick<Highlighter, "codeToTokensWithThemes">,
+	lang: string,
+	code: string,
+	themes: CodeBlockThemes = activeThemes,
+) {
+	return highlighter.codeToTokensWithThemes(code, {
+		lang: lang as Parameters<Highlighter["codeToTokensWithThemes"]>[1]["lang"],
+		themes: { light: themes.light as BundledTheme, dark: themes.dark as BundledTheme },
+	});
 }
 
 // Normalize language names
@@ -104,13 +158,7 @@ async function requestHighlight(view: EditorView, lang: string, code: string, ca
 			return;
 		}
 
-		const tokensByLine = highlighter.codeToTokensWithThemes(code, {
-			lang: resolvedLang as Parameters<typeof highlighter.codeToTokensWithThemes>[1]["lang"],
-			themes: {
-				light: "one-light",
-				dark: "one-dark-pro",
-			},
-		});
+		const tokensByLine = tokensWithThemes(highlighter, resolvedLang, code);
 
 		const tokens: CachedToken[] = [];
 
