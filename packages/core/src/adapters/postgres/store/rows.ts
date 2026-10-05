@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
+import { bodyText, SEARCH_TEXT } from "../../../core/body-text";
 import type { TranslationState } from "../../../core/translation/state";
 import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
 import type { Queryable } from "./context";
@@ -54,16 +55,12 @@ export function normalizeMetadata(input: unknown): EntryMetadata {
 	return normalizeJsonValue(input) as EntryMetadata;
 }
 
-/** Plain text for body search. Strips comments, import/export, and tags, and keeps only the label of links. */
+/**
+ * Plain text for body search, taken from the parsed body (so it follows the site's syntax): the text of paragraphs, headings, lists, tables and block bodies,
+ * the text attributes of blocks (a callout title, an image's alt text and caption), code and math as written, and the text of translation notes. Links keep their label, not their address.
+ */
 export function extractVisibleText(mdx: string): string {
-	if (!mdx) return "";
-	let t = mdx;
-	t = t.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ");
-	t = t.replace(/<!--[\s\S]*?-->/g, " ");
-	t = t.replace(/^\s*(?:export|import)\b[\s\S]*?;(?:\r?\n|$)/gm, " ");
-	t = t.replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1");
-	t = t.replace(/<[a-zA-Z0-9_/][^>"\x27]*(?:"[^"]*"|\x27[^\x27]*\x27|[^>"\x27]*)*>/g, " ");
-	return t;
+	return bodyText(mdx, SEARCH_TEXT);
 }
 
 export interface BodyRow {

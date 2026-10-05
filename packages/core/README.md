@@ -522,7 +522,7 @@ and by the editor when it creates links. A collection without `path` cannot be l
   is `field_too_long`. In the issue (`issues`), `path` holds the field name and `message` the field label (the title too). A different relation target
   collection is `invalid_reference_collection`. An empty body (`empty_body`) blocks only collections that use a body (`body`).
 - **Fill from the body.** With `fillFromBody: true` (160 characters) or `fillFromBody: { maxLength }` on a text field, an empty value is filled on publish
-  with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(mdx, maxLength)`.
+  with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(mdx, maxLength)`. The text is taken from the parsed body, so it follows whatever syntax the site reads: prose, headings, list items, table cells, block bodies and the text attributes of blocks (a callout title); code, math and images are left out. Body search text is built the same way, and also keeps code, image alt text and captions.
 - **Multi-line input.** A text field with `multiline: true` is a multi-line input, and `rows` (default 2) sets the initial number of rows.
 - **Field names you cannot use.** The key the core uses separately in metadata (`translations`) cannot be a field name.
 - **Tabs.** Putting `tab: "name"` on a field or `tab` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters).
