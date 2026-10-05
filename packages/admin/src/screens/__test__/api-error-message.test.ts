@@ -34,7 +34,21 @@ describe.runIf(ADMIN_LANGUAGE === "ko")("publish feedback", () => {
 	});
 });
 
+describe.runIf(ADMIN_LANGUAGE === "ko")("footnote warnings", () => {
+	it("names the label after the guidance text", () => {
+		expect(
+			cmsIssueMessage({ code: "footnote_definition_missing", message: "gone", position: { line: 2, column: 5 } }),
+		).toBe("정의가 없는 각주 참조가 있습니다. — gone (2행 5열)");
+	});
+});
+
 describe.runIf(ADMIN_LANGUAGE === "en")("API error messages (English admin)", () => {
+	it("names the footnote label after the guidance text", () => {
+		expect(
+			cmsIssueMessage({ code: "footnote_definition_unused", message: "spare", position: { line: 5, column: 1 } }),
+		).toBe("A footnote definition is never referenced. — spare (line 5, column 1)");
+	});
+
 	it("fills field labels and positions in English", () => {
 		expect(cmsIssueMessage({ code: "missing_field", path: "title", message: "Headline" })).toBe(
 			"Fill in Headline. (title)",

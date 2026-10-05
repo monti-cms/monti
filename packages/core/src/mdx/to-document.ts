@@ -58,6 +58,8 @@ const collectDefinitions = (nodes: MdastLike[], into: Map<string, MdastDefinitio
 const resolveReference = (node: MdastLike): MdastDefinition | undefined =>
 	definitions.get(normalizeLabel(node.identifier ?? node.label ?? ""));
 
+const footnoteLabel = (node: MdastLike) => node.label ?? node.identifier ?? "";
+
 const jsonClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 const textNode = (text: string, marks: CmsMark[]): CmsNode => {
@@ -86,6 +88,7 @@ const isPhrasing = (node: MdastLike) => {
 		"inlineMath",
 		"image",
 		"imageReference",
+		"footnoteReference",
 		"mdxJsxTextElement",
 		"mdxTextExpression",
 		"html",
@@ -171,6 +174,10 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "link", attrs }]));
 				break;
 			}
+			case "footnoteReference":
+				// An atom: it carries no marks, and the label is kept as written.
+				output.push({ type: "footnoteReference", attrs: { label: footnoteLabel(node) } });
+				break;
 			case "inlineMath":
 				output.push(textNode(`$${node.value ?? ""}$`, marks));
 				break;
@@ -458,6 +465,14 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 				break;
 			case "blockquote":
 				output.push({ type: "blockquote", content: convertBlocks(node.children ?? []) });
+				break;
+			case "footnoteDefinition":
+				// Kept in place (they usually sit at the end of the source). The content is the definition's own blocks.
+				output.push({
+					type: "footnoteDefinition",
+					attrs: { label: footnoteLabel(node) },
+					content: convertBlocks(node.children ?? []),
+				});
 				break;
 			case "thematicBreak":
 				output.push({ type: "horizontalRule" });

@@ -83,6 +83,34 @@ describe("comparing two source versions", () => {
 		]);
 	});
 
+	it("treats a footnote definition as one unit and compares it like other blocks", () => {
+		const before = "본문[^a]\n\n[^a]: 첫 각주\n";
+		const after = "본문[^a]\n\n[^a]: 고친 각주\n";
+		expect(summary(diffSources(before, after))).toEqual([["changed", "[^a]: 첫 각주", "[^a]: 고친 각주"]]);
+		const [change] = diffSources(before, after) ?? [];
+		expect(change?.kind === "changed" && change.after.type).toBe("footnoteDefinition");
+		expect(change?.kind === "changed" && change.after.auto).toBe(false);
+	});
+
+	it("finds added and removed footnote definitions", () => {
+		const base = "본문[^a]\n\n[^a]: 하나\n";
+		const extended = "본문[^a][^b]\n\n[^a]: 하나\n\n[^b]: 둘\n";
+		expect(summary(diffSources(base, extended))).toEqual([
+			["changed", "본문[^a]", "본문[^a][^b]"],
+			["added", "[^b]: 둘"],
+		]);
+		expect(summary(diffSources(extended, base))).toEqual([
+			["changed", "본문[^a][^b]", "본문[^a]"],
+			["removed", "[^b]: 둘"],
+		]);
+	});
+
+	it("does not pair a footnote definition with a paragraph", () => {
+		expect(summary(diffSources("본문[^a]\n\n[^a]: 하나\n", "본문[^a]\n\n[^a]: 하나\n\n마지막 문단\n"))).toEqual([
+			["added", "마지막 문단"],
+		]);
+	});
+
 	it("null when the source cannot be parsed", () => {
 		expect(diffSources("본문 <TextAlign>닫히지 않음", "하나\n")).toBeNull();
 	});

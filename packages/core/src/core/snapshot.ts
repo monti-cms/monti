@@ -3,6 +3,7 @@ import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
 import { createTranslator } from "../i18n";
 import { analyze } from "../mdx/analyze";
 import { DIRECTIVE_BY_COMPONENT } from "../mdx/directives";
+import { splitFrontmatter } from "../mdx/frontmatter";
 import { isAllowedImageSrc } from "../mdx/image-src";
 import { MAX_TABLE_COLUMNS } from "../mdx/table-layout";
 import type { CmsImageSource } from "../mdx/types";
@@ -201,9 +202,13 @@ type MdxNode = {
 	name?: unknown;
 	url?: unknown;
 	identifier?: unknown;
+	label?: unknown;
 	attributes?: unknown;
 	children?: unknown;
-	position?: { start?: { line?: unknown; column?: unknown } };
+	position?: {
+		start?: { line?: unknown; column?: unknown; offset?: unknown };
+		end?: { offset?: unknown };
+	};
 };
 type MdxAttribute = { type?: unknown; name?: unknown; value?: unknown };
 
@@ -546,6 +551,13 @@ export async function prepareSnapshot(
 		else addMediaReference(reference.id, position);
 	};
 
+	// Footnotes: a definition is found by its normalized identifier (case-insensitive), the label is reported as written.
+	const footnoteReferences = new Set<string>();
+	const footnoteDefinitions: { identifier: string; label: string; node: MdxNode }[] = [];
+	const textNodes: MdxNode[] = [];
+	const { body: mdxBody } = splitFrontmatter(input.mdx);
+	const footnoteIdentifier = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
+
 	/** Translation hint text left in a translation. It is not visible on the public screen, so it must not be published as is. */
 	const untranslated: ReturnType<typeof positionOf>[] = [];
 	const traverse = (node: unknown) => {
@@ -554,6 +566,17 @@ export async function prepareSnapshot(
 			addInternalLink(node.url, node);
 		} else if (node.type === "linkReference" && typeof node.identifier === "string") {
 			addInternalLink(definitions.get(node.identifier), node);
+		}
+		if (node.type === "footnoteReference" && typeof node.identifier === "string") {
+			footnoteReferences.add(node.identifier);
+		} else if (node.type === "footnoteDefinition" && typeof node.identifier === "string") {
+			footnoteDefinitions.push({
+				identifier: node.identifier,
+				label: typeof node.label === "string" ? node.label : node.identifier,
+				node,
+			});
+		} else if (node.type === "text") {
+			textNodes.push(node);
 		}
 		if (isJsxElement(node)) {
 			// `ContentLink` has been retired — `analyze` rejects it if it remains in the body.
@@ -565,6 +588,48 @@ export async function prepareSnapshot(
 		if (Array.isArray(node.children)) node.children.forEach(traverse);
 	};
 	traverse(analysis.tree);
+
+	// Footnote problems never block publishing, but they leave a dangling marker or a stray note on the public page.
+	const seenDefinitions = new Set<string>();
+	for (const definition of footnoteDefinitions) {
+		const params = { label: definition.label };
+		if (seenDefinitions.has(definition.identifier)) {
+			warnings.push({
+				code: "footnote_definition_duplicate",
+				message: definition.label,
+				params,
+				path: "mdx",
+				position: positionOf(definition.node),
+			});
+		} else if (!footnoteReferences.has(definition.identifier)) {
+			warnings.push({
+				code: "footnote_definition_unused",
+				message: definition.label,
+				params,
+				path: "mdx",
+				position: positionOf(definition.node),
+			});
+		}
+		seenDefinitions.add(definition.identifier);
+	}
+	// A marker without a definition is not parsed as a reference (it stays as text), so it is found in the raw text of text nodes.
+	// The raw source is read so that an escaped marker (`\[^a]`) is not reported.
+	for (const node of textNodes) {
+		const start = node.position?.start?.offset;
+		const end = node.position?.end?.offset;
+		if (typeof start !== "number" || typeof end !== "number") continue;
+		for (const match of mdxBody.slice(start, end).matchAll(/(?<!\\)\[\^([^\]\s\\]+)\]/g)) {
+			const label = match[1] ?? "";
+			if (seenDefinitions.has(footnoteIdentifier(label))) continue;
+			warnings.push({
+				code: "footnote_definition_missing",
+				message: label,
+				params: { label },
+				path: "mdx",
+				position: positionOf(node),
+			});
+		}
+	}
 
 	if (mdxHasError) {
 		// For a body that could not be analyzed, past body references stay stale. Past references come only from the repository.

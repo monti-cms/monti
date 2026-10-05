@@ -84,6 +84,24 @@ describe("translation structure check", () => {
 		expect(compareStructure("![설정 화면](/a.png)", "![Settings screen](/b.png)").ok).toBe(false);
 	});
 
+	it("footnote labels must stay the same while the definition text may be translated", () => {
+		const source = "본문[^a] 그리고[^2]\n\n[^a]: 첫째 각주\n\n[^2]: 둘째 각주\n";
+		const translated = "Body[^a] and[^2]\n\n[^a]: First note\n\n[^2]: Second note\n";
+		expect(compareStructure(source, translated)).toEqual({ ok: true });
+		// A relabelled reference, a relabelled definition, a swapped order and a dropped definition all break the structure.
+		expect(compareStructure(source, translated.replace("and[^2]", "and[^3]")).ok).toBe(false);
+		expect(compareStructure(source, translated.replace("[^2]: Second", "[^3]: Second")).ok).toBe(false);
+		expect(compareStructure(source, "Body[^2] and[^a]\n\n[^a]: First note\n\n[^2]: Second note\n").ok).toBe(false);
+		expect(compareStructure(source, "Body[^a] and[^2]\n\n[^a]: First note\n").ok).toBe(false);
+	});
+
+	it("fails when a translation drops a footnote reference or changes the blocks inside a definition", () => {
+		const source = "본문[^a]\n\n[^a]: 하나\n\n    둘\n";
+		expect(compareStructure(source, "Body[^a]\n\n[^a]: One\n\n    Two\n")).toEqual({ ok: true });
+		expect(compareStructure(source, "Body\n\n[^a]: One\n\n    Two\n").ok).toBe(false);
+		expect(compareStructure(source, "Body[^a]\n\n[^a]: One Two\n").ok).toBe(false);
+	});
+
 	it.skipIf(!markBlock)("tooltip descriptions may change", () => {
 		if (!markBlock) return;
 		const [name] = stringAttributes(markBlock, true)[0] ?? [];

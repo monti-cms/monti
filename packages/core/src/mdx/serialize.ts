@@ -326,6 +326,18 @@ const serializeDirective = (node: CmsNode, definition: DirectiveDefinition, inde
 	return `${indent}${fence}${definition.name}${attrs}\n${inner}\n${indent}${fence}`;
 };
 
+/** A footnote label cannot hold whitespace, brackets, a backslash or a caret, so those are replaced when a document carries one. */
+const footnoteLabel = (node: CmsNode): string => String(node.attrs?.label ?? "").replace(/[\s[\]\\^]/g, "-");
+
+const serializeFootnoteDefinition = (node: CmsNode, indent: string): string => {
+	const lines = serializeBlocks(node.content ?? [], "").split("\n");
+	// Continuation lines are indented by four spaces (GFM); blank lines stay empty.
+	const body = lines.map((line, index) => (index === 0 || line.length === 0 ? line : `    ${line}`));
+	const head = `[^${footnoteLabel(node)}]:`;
+	if (lines.length === 1 && lines[0] === "") return `${indent}${head}`;
+	return [`${head} ${body[0]}`, ...body.slice(1)].map((line) => (line ? indent + line : line)).join("\n");
+};
+
 const serializeImage = (node: CmsNode): string => {
 	const mediaId = node.attrs?.mediaId;
 	const src = node.attrs?.src ? String(node.attrs.src) : "";
@@ -432,6 +444,12 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 		if (node.type === "image") {
 			closeTo(0);
 			out.push(serializeImage(node));
+			continue;
+		}
+		if (node.type === "footnoteReference") {
+			closeTo(0);
+			out.push(`[^${footnoteLabel(node)}]`);
+			atLineStart = false;
 			continue;
 		}
 		const directive = directiveFor(node);
@@ -680,6 +698,8 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 				.split("\n")
 				.map((line) => `${indent}>${line ? ` ${line}` : ""}`)
 				.join("\n");
+		case "footnoteDefinition":
+			return serializeFootnoteDefinition(node, indent);
 		case "horizontalRule":
 			return `${indent}---`;
 		case "image":
