@@ -30,7 +30,33 @@ type MdastLike = {
 	children?: MdastLike[];
 	attributes?: unknown[];
 	data?: Record<string, unknown>;
+	identifier?: string;
+	label?: string | null;
 };
+
+type MdastDefinition = { url: string; title?: string | null };
+
+/**
+ * Definitions of the document being converted, keyed by the normalized identifier of mdast (case-insensitive, collapsed whitespace).
+ * The reference forms (`[x][1]`, `[x][]`, `[x]`) are resolved against it so they become the same nodes as inline links and images.
+ */
+let definitions = new Map<string, MdastDefinition>();
+
+const normalizeLabel = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
+
+const collectDefinitions = (nodes: MdastLike[], into: Map<string, MdastDefinition>) => {
+	for (const node of nodes) {
+		if (node.type === "definition") {
+			const key = normalizeLabel(node.identifier ?? node.label ?? "");
+			// As in CommonMark, the first definition of a label wins.
+			if (!into.has(key)) into.set(key, { url: node.url ?? "", title: node.title });
+		}
+		if (node.children) collectDefinitions(node.children, into);
+	}
+};
+
+const resolveReference = (node: MdastLike): MdastDefinition | undefined =>
+	definitions.get(normalizeLabel(node.identifier ?? node.label ?? ""));
 
 const jsonClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -56,8 +82,10 @@ const isPhrasing = (node: MdastLike) => {
 		"inlineCode",
 		"break",
 		"link",
+		"linkReference",
 		"inlineMath",
 		"image",
+		"imageReference",
 		"mdxJsxTextElement",
 		"mdxTextExpression",
 		"html",
@@ -136,10 +164,18 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "link", attrs }]));
 				break;
 			}
+			case "linkReference": {
+				const definition = resolveReference(node);
+				const attrs: Record<string, CmsJsonValue> = { href: definition?.url ?? "" };
+				if (definition?.title) attrs.title = definition.title;
+				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "link", attrs }]));
+				break;
+			}
 			case "inlineMath":
 				output.push(textNode(`$${node.value ?? ""}$`, marks));
 				break;
 			case "image":
+			case "imageReference":
 				output.push(imageNode(node));
 				break;
 			case "mdxJsxTextElement":
@@ -175,11 +211,12 @@ const convertJsxInline = (node: MdastLike, marks: CmsMark[]): CmsNode[] => {
 };
 
 const imageNode = (node: MdastLike): CmsNode => {
+	const definition = node.type === "imageReference" ? resolveReference(node) : node;
 	const attrs: Record<string, CmsJsonValue> = {
-		src: node.url ?? "",
+		src: definition?.url ?? "",
 		alt: node.alt ?? "",
 	};
-	if (node.title) attrs.title = node.title;
+	if (definition?.title) attrs.title = definition.title;
 	return { type: "image", attrs };
 };
 
@@ -330,7 +367,7 @@ const convertParagraph = (node: MdastLike): CmsNode[] => {
 
 	const flush = () => {
 		if (inline.length === 0) return;
-		if (inline.length === 1 && inline[0]?.type === "image") {
+		if (inline.length === 1 && (inline[0]?.type === "image" || inline[0]?.type === "imageReference")) {
 			blocks.push(imageNode(inline[0]));
 			inline = [];
 			return;
@@ -426,6 +463,7 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 				output.push({ type: "math", attrs: { value: node.value ?? "" } });
 				break;
 			case "image":
+			case "imageReference":
 				output.push(imageNode(node));
 				break;
 			case "mdxJsxFlowElement":
@@ -452,6 +490,9 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 };
 
 export const toDocument = (analysis: CmsMdxAnalysis): CmsNode => {
+	definitions = new Map();
+	if (analysis.tree) collectDefinitions(analysis.tree.children as MdastLike[], definitions);
+	// A `definition` node has no children or value, so `convertBlocks` drops it (consumed definitions are written back as inline links).
 	const content = analysis.tree ? convertBlocks(analysis.tree.children as MdastLike[]) : [];
 	const doc: CmsNode = { type: "doc", content };
 	if (analysis.frontmatter) {
