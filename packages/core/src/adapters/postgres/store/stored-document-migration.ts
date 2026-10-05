@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
 import { bodyFromMdx } from "../../../mdx/stored-document";
-import { extractVisibleText } from "./rows";
+import { extractVisibleText, readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -17,6 +17,7 @@ interface BodyRow {
 	state: string;
 	metadata: JsonValue;
 	mdx: string;
+	doc: unknown;
 	schema_version: number;
 	translation: { version?: number; baseSource?: unknown } | null;
 }
@@ -47,7 +48,7 @@ export async function migrateStoredDocuments(
 	let last: { entry_id: string; state: string } | undefined;
 	for (;;) {
 		const res = await client.query<BodyRow>(
-			`SELECT entry_id, state, metadata, mdx, schema_version, translation FROM "${qSchema}".entry_bodies
+			`SELECT entry_id, state, metadata, mdx, doc, schema_version, translation FROM "${qSchema}".entry_bodies
 			 WHERE ($1::uuid IS NULL OR (entry_id, state) > ($1::uuid, $2::text))
 			 ORDER BY entry_id, state LIMIT $3`,
 			[last?.entry_id ?? null, last?.state ?? null, batchSize],
@@ -55,7 +56,8 @@ export async function migrateStoredDocuments(
 		if (res.rows.length === 0) break;
 
 		const next = res.rows.map((row) => {
-			const body = bodyFromMdx(row.mdx);
+			// A document already there (the step ran before) keeps its block ids.
+			const body = bodyFromMdx(row.mdx, undefined, { previous: readDoc(row.doc) });
 			if (body.doc === null) withoutDocument(`entry_bodies ${row.entry_id}/${row.state}`);
 			const base = row.translation?.baseSource;
 			const baseSource = typeof base === "string" ? bodyFromMdx(base).mdx : undefined;
@@ -91,14 +93,14 @@ export async function migrateStoredDocuments(
 
 	let lastTemplate: string | undefined;
 	for (;;) {
-		const res = await client.query<{ id: string; mdx: string }>(
-			`SELECT id, mdx FROM "${qSchema}".body_templates WHERE ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`,
+		const res = await client.query<{ id: string; mdx: string; doc: unknown }>(
+			`SELECT id, mdx, doc FROM "${qSchema}".body_templates WHERE ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`,
 			[lastTemplate ?? null, batchSize],
 		);
 		if (res.rows.length === 0) break;
 
 		const next = res.rows.map((row) => {
-			const body = bodyFromMdx(row.mdx);
+			const body = bodyFromMdx(row.mdx, undefined, { previous: readDoc(row.doc) });
 			if (body.doc === null) withoutDocument(`body_templates ${row.id}`);
 			return { mdx: body.mdx, doc: body.doc === null ? null : JSON.stringify(body.doc) };
 		});
