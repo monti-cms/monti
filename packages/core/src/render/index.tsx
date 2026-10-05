@@ -11,7 +11,6 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeKatex from "rehype-katex";
 import rehypeSlug from "rehype-slug";
 import remarkBreaks from "remark-breaks";
-import remarkDirective from "remark-directive";
 import remarkFlexibleToc, { type TocItem } from "remark-flexible-toc";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -21,9 +20,11 @@ import { annotationConfig } from "../annotation/code-block/active";
 import { cmsConfig } from "../config/resolved";
 import { analyze } from "../mdx/analyze";
 import type { ImageResolver } from "../mdx/image-src";
-import { remarkDemoteUnknownDirectives, remarkDirectivesToMdx } from "../mdx/remark-directives";
+import { remarkBreakNewline } from "../mdx/remark-break-newline";
 import { remarkFenceBlocksToMdx } from "../mdx/remark-fence-blocks";
+import { configuredSyntax, syntaxRemarkPlugins } from "../mdx/syntax";
 import type { CmsPlugin } from "../plugin/define";
+import type { SyntaxExtension } from "../syntax/types";
 import { type CodeHighlightOptions, rehypeShikiDecorationRender, remarkAnnotationToShikiDecoration } from "./code";
 import { CmsCodeCollapse, CmsCodeFold } from "./components/code-lines";
 import { CmsFile } from "./components/file";
@@ -72,6 +73,8 @@ export interface RenderMdxOptions {
 	/** remark and rehype plugins to add after the core plugins. */
 	readonly remarkPlugins?: PluggableList;
 	readonly rehypePlugins?: PluggableList;
+	/** Syntax extensions to read the body with. Default: the site's `mdx.syntax`. */
+	readonly syntax?: readonly SyntaxExtension[];
 }
 
 /** Public components given by block extensions (plugin `render`). They receive the site language and the resolver. */
@@ -89,16 +92,19 @@ const remarkDisableInlineMath = () => (tree: Root) => {
 };
 
 /** Core remark order. The editor and the review runner use the same setup. */
-export const mdxRemarkPlugins = (tocRef: TocItem[] = []): PluggableList => [
+export const mdxRemarkPlugins = (
+	tocRef: TocItem[] = [],
+	syntax: readonly SyntaxExtension[] = configuredSyntax(),
+): PluggableList => [
 	[remarkAnnotationToShikiDecoration, annotationConfig],
 	[remarkMath, { singleDollarTextMath: false }],
 	remarkDisableInlineMath,
-	// Turn unregistered directives back into body text, then turn only registered names into MDX elements (changing the order makes unregistered names disappear).
-	remarkDirective,
-	remarkDemoteUnknownDirectives,
-	remarkDirectivesToMdx,
+	// Notations of the site's syntax extensions (`mdx.syntax`, for example directives) become MDX elements, as in the editor's parser.
+	...syntaxRemarkPlugins(syntax),
 	// Code fence blocks (charts, diagrams etc.) are turned into `<block source="…"/>`.
 	remarkFenceBlocksToMdx,
+	// The line ending the serializer writes after `<br />` is not content (before `remarkBreaks` turns line endings into breaks).
+	remarkBreakNewline,
 	remarkBreaks,
 	remarkGfm,
 	[remarkFlexibleToc, { tocRef, maxDepth: 3 }],
@@ -180,14 +186,14 @@ export interface RenderedMdx {
  * has passed the publish boundary is blocked again).
  */
 export async function renderMdx(source: string, options: RenderMdxOptions = {}): Promise<RenderedMdx> {
-	const errors = analyze(source).errors;
+	const errors = analyze(source, undefined, options.syntax).errors;
 	if (errors.length > 0) throw new Error(`MDX validation failed: ${errors[0]?.message ?? "unknown"}`);
 	const tocRef: TocItem[] = [];
 	const { content } = await compileMDX({
 		source,
 		options: {
 			mdxOptions: {
-				remarkPlugins: [...mdxRemarkPlugins(tocRef), ...(options.remarkPlugins ?? [])],
+				remarkPlugins: [...mdxRemarkPlugins(tocRef, options.syntax), ...(options.remarkPlugins ?? [])],
 				rehypePlugins: [...mdxRehypePlugins(options.code), ...(options.rehypePlugins ?? [])],
 			},
 		},

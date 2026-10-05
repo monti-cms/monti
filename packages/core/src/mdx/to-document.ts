@@ -1,10 +1,10 @@
 import type { Code } from "mdast";
 import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
+import { RAW_SOURCE_PARAGRAPH } from "../syntax/raw-source";
 import { splitFrontmatter } from "./frontmatter";
 import { attributeRecord, readJsxAttributes } from "./jsx";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
-import { DEMOTED_DIRECTIVE_SOURCE } from "./remark-directives";
 import {
 	boundedTableSpan,
 	hasGfmHeaderLayout,
@@ -485,8 +485,8 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 	for (const node of nodes) {
 		switch (node.type) {
 			case "paragraph":
-				// An unregistered block directive is moved to a raw block and written as is (`remark-directives.ts`). If left as text, escapes pile up on save.
-				if (node.data?.[DEMOTED_DIRECTIVE_SOURCE]) {
+				// Source a syntax extension turned back into text (an unregistered block directive) is moved to a raw block and written as is. If left as text, escapes pile up on save.
+				if (node.data?.[RAW_SOURCE_PARAGRAPH]) {
 					output.push({ type: "html", attrs: { value: node.children?.[0]?.value ?? "" } });
 					break;
 				}
@@ -531,7 +531,8 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 				break;
 			case "mdxJsxFlowElement":
 			case "mdxJsxTextElement":
-				output.push(convertJsx(node));
+				// A line of only `<br />` is read as a block element, but it means a paragraph that holds a line break (how a paragraph of only a break is written).
+				output.push(node.name === "br" ? { type: "paragraph", content: [convertJsx(node)] } : convertJsx(node));
 				break;
 			case "mdxjsEsm":
 				output.push({ type: "mdxEsm", attrs: { value: node.value ?? "" } });

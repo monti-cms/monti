@@ -15,6 +15,7 @@
 		"./runtime": "./src/runtime.ts",
 		"./read": "./src/read/index.ts",
 		"./mdx": "./src/mdx/index.ts",
+		"./syntax": "./src/syntax/index.ts",
 		"./code-block": "./src/code-block.ts",
 		"./render/code": "./src/render/code/index.ts",
 		"./render": "./src/render/index.tsx",
@@ -145,6 +146,10 @@
 			"./mdx": {
 				"types": "./dist/mdx/index.d.ts",
 				"default": "./dist/mdx/index.js"
+			},
+			"./syntax": {
+				"types": "./dist/syntax/index.d.ts",
+				"default": "./dist/syntax/index.js"
 			},
 			"./code-block": {
 				"types": "./dist/code-block.d.ts",
