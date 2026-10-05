@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
 import { createTranslator } from "../../i18n";
+import { MAX_TABLE_COLUMNS } from "../../mdx/table-layout";
 import { coreMessages } from "../messages";
 import { prepareSnapshot } from "../snapshot";
 
@@ -9,16 +10,28 @@ const cell = (text: string, attrs = "") => `<TableCell${attrs ? ` ${attrs}` : ""
 const table = (rows: string[][]) =>
 	["<Table>", ...rows.flatMap((cells) => ["<TableRow>", ...cells, "</TableRow>"]), "</Table>"].join("\n");
 
+/**
+ * The body is checked as it is stored: written from its document, where a span is bounded (`boundedTableSpan`). So a span that is not a positive integer,
+ * or a rowspan past the last row, never reaches the check: it is stored as a valid value (or none), and only what that leaves behind can warn.
+ */
 describe("table cell merge pre-publish validation (span and grid warnings)", () => {
-	it("a billion-column merge warns quickly and builds no grid", async () => {
-		const mdx = table([[cell("위험", 'colspan="1000000000"')]]);
+	it("a billion-column merge is stored as the largest span and warns quickly without building a grid", async () => {
+		// The merge starts at the second column: stored as the largest span, it still runs past the table's allowed width.
+		const mdx = table([[cell("앞"), cell("위험", 'colspan="1000000000"')]]);
 		const snap = await prepareSnapshot({
 			collection: contentCollection,
 			slug: "huge-table",
 			metadata: { title: "표 테스트" },
 			mdx,
 		});
-		expect(snap.warnings?.some((warning) => warning.code === "invalid_table_span")).toBe(true);
+		expect(snap.mdx).not.toContain("1000000000");
+		expect(snap.mdx).toContain(`colspan="${MAX_TABLE_COLUMNS}"`);
+		const tableWarnings = (snap.warnings ?? []).filter((warning) => warning.code === "invalid_table_span");
+		expect(tableWarnings[0]?.params).toMatchObject({ reason: "span_too_large", max: MAX_TABLE_COLUMNS });
+		// The text is built from the code with the dictionary (site display language).
+		expect(tableWarnings[0]?.message).toBe(
+			createTranslator(coreMessages)("table.span_too_large", { max: MAX_TABLE_COLUMNS }),
+		);
 	});
 
 	it("a valid merged table raises no warnings", async () => {
@@ -48,7 +61,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		expect(tableWarnings).toEqual([]);
 	});
 
-	it("warns when rowspan exceeds the table's total row count", async () => {
+	it("stores a rowspan past the last row as the remaining rows, and warns about the layout that leaves", async () => {
 		const mdx = table([[cell("초과", 'rowspan="5"')], [cell("값")]]);
 
 		const snap = await prepareSnapshot({
@@ -58,9 +71,12 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			mdx,
 		});
 
+		// `rowspan_overflow` cannot be reached through a snapshot any more: the stored span never passes the last row.
+		expect(snap.mdx).not.toContain('rowspan="5"');
+		expect(snap.mdx).toContain('rowspan="2"');
 		const tableWarnings = (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span");
-		expect(tableWarnings.length).toBeGreaterThan(0);
-		expect(tableWarnings[0]?.params).toMatchObject({ reason: "rowspan_overflow", rowspan: 5, rows: 2 });
+		expect(tableWarnings.map((warning) => warning.params?.reason)).not.toContain("rowspan_overflow");
+		expect(tableWarnings[0]?.params).toMatchObject({ reason: "ragged_rows" });
 	});
 
 	it("warns when merged cells overlap", async () => {
@@ -95,20 +111,22 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "ragged_rows" });
 	});
 
-	it("warns about an invalid span value (0 or less, or not a number)", async () => {
-		const mdx = table([[cell("셀1", 'colspan="0"')]]);
+	it("stores an invalid span value (0 or less, or not a number) as no merge, so it raises no warning", async () => {
+		for (const [attribute, value] of [
+			["colspan", "0"],
+			["colspan", "-2"],
+			["rowspan", "abc"],
+		] as const) {
+			const snap = await prepareSnapshot({
+				collection: contentCollection,
+				slug: "invalid-span-value",
+				metadata: { title: "표 테스트" },
+				mdx: table([[cell("셀1", `${attribute}="${value}"`)]]),
+			});
 
-		const snap = await prepareSnapshot({
-			collection: contentCollection,
-			slug: "invalid-span-value",
-			metadata: { title: "표 테스트" },
-			mdx,
-		});
-
-		const tableWarnings = (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span");
-		expect(tableWarnings.length).toBeGreaterThan(0);
-		expect(tableWarnings[0]?.params).toMatchObject({ reason: "invalid_colspan", value: "0" });
-		// The text is built from the code with the dictionary (site display language).
-		expect(tableWarnings[0]?.message).toBe(createTranslator(coreMessages)("table.invalid_colspan", { value: "0" }));
+			// `invalid_colspan` and `invalid_rowspan` cannot be reached through a snapshot any more: the value is gone from the stored text.
+			expect(snap.mdx).not.toContain(`${attribute}=`);
+			expect((snap.warnings ?? []).filter((w) => w.code === "invalid_table_span")).toEqual([]);
+		}
 	});
 });

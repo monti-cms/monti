@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { bodyFromMdx } from "../../../mdx/stored-document";
 import { pluginDatabaseFor } from "../adapter";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
@@ -68,7 +69,10 @@ describe("migrations", () => {
 		await migrateContentStore(pool, { schema: schemaName });
 
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
-		expect((await store.getEntry(entry.id)).working.mdx).toBe("본문");
+		// The step that stores documents writes the body from its document (it adds the closing line break) and gives it one.
+		const migrated = (await store.getEntry(entry.id)).working;
+		expect(migrated.mdx).toBe("본문\n");
+		expect(migrated.doc).toEqual(bodyFromMdx("본문").doc);
 		// Initial templates that were already inserted are not revived after being deleted.
 		expect((await pool.query(`SELECT 1 FROM "${schemaName}".body_templates`)).rows).toHaveLength(0);
 	});

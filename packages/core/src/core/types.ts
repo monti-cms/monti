@@ -135,6 +135,8 @@ export type WorkingCopy = {
 	readonly slug: string | null;
 	readonly metadata: { readonly [key: string]: unknown };
 	readonly mdx: string;
+	/** The stored document `mdx` is written from. `null` when the body does not parse (or has front matter). */
+	readonly doc: StoredDocument | null;
 	readonly version: number;
 	readonly folderId: string | null;
 	/** Content locale and translation group ID. For a source, the group ID is its own ID. */

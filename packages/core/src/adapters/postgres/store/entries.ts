@@ -22,6 +22,7 @@ import {
 	lockEntryForUpdate,
 	normalizeMetadata,
 	readBody,
+	readDoc,
 	readReferences,
 	writeBody,
 } from "./rows";
@@ -155,6 +156,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					await writeBody(client, qSchema, id, "working", {
 						metadata,
 						mdx: params.snapshot.mdx,
+						doc: params.snapshot.doc,
 						schemaVersion: params.snapshot.schemaVersion,
 						contentHash: params.snapshot.contentHash,
 						updatedAt: now,
@@ -249,6 +251,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 							await writeBody(client, qSchema, params.entryId, "working", {
 								metadata,
 								mdx: params.snapshot.mdx,
+								doc: params.snapshot.doc,
 								schemaVersion: params.snapshot.schemaVersion,
 								contentHash: params.snapshot.contentHash,
 								updatedAt: now,
@@ -267,12 +270,17 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						}
 					}
 
-					// Same content written differently: keep the new string (and its search text), but it is not a content change,
+					// Same content written differently: keep the new string and document (and the search text), but it is not a content change,
 					// so the content modified date stays.
-					if (body && bodyIdentical && body.mdx !== params.snapshot.mdx) {
+					if (
+						body &&
+						bodyIdentical &&
+						(body.mdx !== params.snapshot.mdx || !isDeepStrictEqual(body.doc, params.snapshot.doc))
+					) {
 						await writeBody(client, qSchema, params.entryId, "working", {
 							metadata,
 							mdx: params.snapshot.mdx,
+							doc: params.snapshot.doc,
 							schemaVersion: body.schema_version,
 							contentHash: body.content_hash,
 							updatedAt: body.updated_at,
@@ -300,9 +308,10 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				translation_group_id: string;
 				metadata: Record<string, unknown>;
 				mdx: string;
+				doc: unknown;
 			}>(
 				`SELECT e.collection, e.version, e.working_slug, e.folder_id, e.locale,
-				        COALESCE(e.translation_group_id, e.id) AS translation_group_id, b.metadata, b.mdx
+				        COALESCE(e.translation_group_id, e.id) AS translation_group_id, b.metadata, b.mdx, b.doc
 				 FROM "${qSchema}".entries e
 				 JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id AND b.state = 'working'
 				 WHERE e.id = $1`,
@@ -315,6 +324,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				slug: row.working_slug,
 				metadata: row.metadata,
 				mdx: row.mdx,
+				doc: readDoc(row.doc),
 				version: row.version,
 				folderId: row.folder_id,
 				locale: row.locale,
@@ -404,9 +414,10 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					translation_group_id: string | null;
 					metadata: Record<string, unknown>;
 					mdx: string;
+					doc: unknown;
 					schema_version: number;
 				}>(
-					`SELECT e.collection, e.folder_id, e.locale, e.translation_group_id, b.metadata, b.mdx, b.schema_version
+					`SELECT e.collection, e.folder_id, e.locale, e.translation_group_id, b.metadata, b.mdx, b.doc, b.schema_version
 					 FROM "${qSchema}".entries e
 					 JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id AND b.state = 'working'
 					 WHERE e.id = $1`,
@@ -435,6 +446,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				await writeBody(client, qSchema, newId, "working", {
 					metadata,
 					mdx: orig.mdx,
+					doc: readDoc(orig.doc),
 					schemaVersion: orig.schema_version,
 					contentHash: computeContentHash(metadata, orig.mdx, orig.schema_version),
 					updatedAt: now,

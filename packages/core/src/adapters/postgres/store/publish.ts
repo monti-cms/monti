@@ -189,6 +189,7 @@ export function createPublishing(ctx: StoreContext) {
 			await writeBody(client, qSchema, id, "published", {
 				metadata: working.metadata,
 				mdx: working.mdx,
+				doc: working.doc,
 				schemaVersion: working.schema_version,
 				contentHash: working.content_hash,
 				updatedAt: working.updated_at,

@@ -52,6 +52,7 @@ export const fixtureBody = (
 ) => ({
 	metadata: { title, ...extraMetadata },
 	mdx,
+	doc: null,
 	schemaVersion: 1,
 	contentHash,
 	updatedAt: FIXTURE_TIME,
@@ -205,6 +206,7 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 			id: "66666666-6666-4666-8666-666666666666",
 			name: "기본",
 			mdx: "## 문제",
+			doc: null,
 			version: 1,
 			createdAt: FIXTURE_TIME,
 			updatedAt: FIXTURE_TIME,

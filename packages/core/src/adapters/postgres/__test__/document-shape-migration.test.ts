@@ -67,6 +67,10 @@ describe("document shape migrations", () => {
 			entryId,
 		]);
 
+	/** Writes want a body as it is stored now (written from its document), so a store from before is imitated by writing the legacy text to both bodies directly. */
+	const setLegacyBodies = (entryId: string, mdx: string) =>
+		pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2`, [mdx, entryId]);
+
 	const hasUnpublishedChanges = async (entryId: string) => {
 		const { items } = await store.listEntries({ collection: contentCollection });
 		const item = items.find((candidate) => candidate.id === entryId);
@@ -171,6 +175,8 @@ describe("document shape migrations", () => {
 		it("makes the soft line endings of working and published bodies explicit and keeps what the list shows", async () => {
 			const unchanged = await publishedWith(SOFT);
 			const edited = await publishedWith(SOFT);
+			await setLegacyBodies(unchanged.id, SOFT);
+			await setLegacyBodies(edited.id, SOFT);
 			await setWorkingBody(edited.id, "첫 줄\n다른 문단");
 
 			await run();
@@ -185,6 +191,7 @@ describe("document shape migrations", () => {
 
 		it("does not bump the version or the modified dates, and a second run changes nothing", async () => {
 			const published = await publishedWith(SOFT);
+			await setLegacyBodies(published.id, SOFT);
 			await run();
 
 			const after = await store.getEntry(published.id);
@@ -199,6 +206,7 @@ describe("document shape migrations", () => {
 
 		it("recomputes the search text of every body", async () => {
 			const published = await publishedWith(SOFT);
+			await setLegacyBodies(published.id, SOFT);
 			await pool.query(`UPDATE "${schemaName}".entry_bodies SET search_text = 'stale' WHERE entry_id = $1`, [
 				published.id,
 			]);
@@ -227,6 +235,7 @@ describe("document shape migrations", () => {
 
 		it("rewrites body templates and leaves their version alone", async () => {
 			const template = await store.createTemplate({ name: unique("soft"), mdx: SOFT });
+			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1 WHERE id = $2`, [SOFT, template.id]);
 
 			await run();
 
@@ -240,6 +249,7 @@ describe("document shape migrations", () => {
 			const broken = await createDraft("가\n<Unclosed");
 			await setWorkingBody(broken.id, "가\n<Unclosed");
 			const good = await createDraft(SOFT);
+			await setLegacyBodies(good.id, SOFT);
 			const messages: string[] = [];
 			const client = await pool.connect();
 			try {

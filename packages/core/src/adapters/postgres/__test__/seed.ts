@@ -1,4 +1,5 @@
 import type { PreparedSnapshot } from "../../../core/types";
+import type { StoredDocument } from "../../../mdx/stored-document";
 import type { ContentStore, Entry } from "../content-store";
 
 /**
@@ -17,12 +18,16 @@ type SeedInput = {
 	locale?: string;
 };
 
-const rawSnapshot = (input: Omit<SeedInput, "folderId" | "locale">): PreparedSnapshot =>
+const rawSnapshot = (
+	input: Omit<SeedInput, "folderId" | "locale"> & { doc?: StoredDocument | null },
+): PreparedSnapshot =>
 	({
 		collection: input.collection,
 		slug: input.slug,
 		metadata: input.metadata,
 		mdx: input.mdx,
+		// Raw bodies carry no document unless one is given: they are stored as given.
+		doc: input.doc ?? null,
 		schemaVersion: input.schemaVersion ?? 1,
 		contentHash: input.contentHash ?? `seed-${Math.random().toString(36).slice(2)}`,
 		references: [],
@@ -75,6 +80,7 @@ export async function moveToFolder(
 			slug: current.workingSlug,
 			metadata: current.working.metadata,
 			mdx: current.working.mdx,
+			doc: current.working.doc,
 			schemaVersion: current.working.schemaVersion,
 			contentHash: current.working.contentHash,
 		}),
