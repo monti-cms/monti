@@ -164,10 +164,55 @@ describe("GFM footnotes in the document model", () => {
 		expect(roundTrip(mdx)).toBe(mdx);
 	});
 
-	it("keeps a reference without a definition as text that round-trips stably", () => {
-		const once = roundTrip("a[^missing]\n");
-		expect(once).toBe("a\\[^missing]\n");
+	it("keeps an orphan reference (no definition) as a reference across any number of saves", () => {
+		const doc = parse("Text[^1] here.\n\n[^1]: Note.\n");
+		// As an editor delete does: drop the definition and keep the reference.
+		const orphan: CmsNode = { ...doc, content: doc.content?.filter((n) => n.type !== "footnoteDefinition") };
+		const once = serialize(orphan);
+		expect(once).toBe("Text[^1] here.\n");
+		const reparsed = parse(once);
+		expect(reparsed).toEqual(orphan);
+		expect(serialize(reparsed)).toBe(once);
+		expect(serialize(parse(serialize(reparsed)))).toBe(once);
+		expect(parse(serialize(parse(once)))).toEqual(orphan);
+	});
+
+	it("keeps an orphan reference inside formatting, headings and table cells", () => {
+		const mdx = "## Title[^a]\n\n**bold**[^b] and `code[^c]`\n\n| h |\n| --- |\n| cell[^d] |\n";
+		const doc = parse(mdx);
+		const references = JSON.stringify(doc).match(/"footnoteReference"/g) ?? [];
+		expect(references).toHaveLength(3);
+		expect(serialize(doc)).toBe("## Title[^a]\n\n**bold**[^b] and `code[^c]`\n\n| h |\n| --- |\n| cell[^d] |\n");
+		expect(serialize(parse(serialize(doc)))).toBe(serialize(doc));
+	});
+
+	it("keeps a literally escaped marker as text", () => {
+		const once = roundTrip("a \\[^1] b\n");
+		expect(once).toBe("a \\[^1] b\n");
+		expect(JSON.stringify(parse(once))).not.toContain("footnoteReference");
 		expect(roundTrip(once)).toBe(once);
+		// An escaped backslash followed by a real marker is still a reference.
+		expect(JSON.stringify(parse("a \\\\[^1] b\n"))).toContain("footnoteReference");
+	});
+
+	it("reconnects an orphan reference when its definition is added back", () => {
+		const orphan = serialize({
+			type: "doc",
+			content: [
+				{
+					type: "paragraph",
+					content: [
+						{ type: "text", text: "Text" },
+						{ type: "footnoteReference", attrs: { label: "1" } },
+						{ type: "text", text: " here." },
+					],
+				},
+			],
+		});
+		const restored = parse(`${orphan}\n[^1]: Note.\n`);
+		expect(restored.content?.map((n) => n.type)).toEqual(["paragraph", "footnoteDefinition"]);
+		expect(restored.content?.[0]?.content?.[1]).toEqual({ type: "footnoteReference", attrs: { label: "1" } });
+		expect(serialize(restored)).toBe("Text[^1] here.\n\n[^1]: Note.\n");
 	});
 
 	it("escapes unsafe characters in a label when writing", () => {

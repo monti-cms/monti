@@ -1,6 +1,7 @@
 import type { Code } from "mdast";
 import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
+import { splitFrontmatter } from "./frontmatter";
 import { attributeRecord, readJsxAttributes } from "./jsx";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
 import { DEMOTED_DIRECTIVE_SOURCE } from "./remark-directives";
@@ -32,6 +33,7 @@ type MdastLike = {
 	data?: Record<string, unknown>;
 	identifier?: string;
 	label?: string | null;
+	position?: { start?: { offset?: number }; end?: { offset?: number } };
 };
 
 type MdastDefinition = { url: string; title?: string | null };
@@ -59,6 +61,49 @@ const resolveReference = (node: MdastLike): MdastDefinition | undefined =>
 	definitions.get(normalizeLabel(node.identifier ?? node.label ?? ""));
 
 const footnoteLabel = (node: MdastLike) => node.label ?? node.identifier ?? "";
+
+/** Body of the document being converted. Offsets in the mdast positions point into it. */
+let sourceBody = "";
+
+const FOOTNOTE_MARKER = /\[\^([^\]\s\\]+)\]/g;
+
+/** Whether the `[` at `index` is escaped (preceded by an odd number of backslashes). */
+const isEscapedAt = (raw: string, index: number) => {
+	let slashes = 0;
+	while (raw[index - 1 - slashes] === "\\") slashes += 1;
+	return slashes % 2 === 1;
+};
+
+/**
+ * Text that holds an unescaped `[^label]`. The parser only reads a marker as a reference when a definition exists, so a reference
+ * whose definition was removed arrives as plain text. It is turned back into a reference (read from the source, where an escaped `\[^label]` is told apart) so it survives
+ * every save and reconnects when the definition is added again. Falls back to plain text if the markers in the text and the source cannot be paired.
+ */
+const textWithOrphanFootnotes = (node: MdastLike, marks: CmsMark[]): CmsNode[] => {
+	const value = node.value ?? "";
+	const plain = [textNode(value, marks)];
+	if (!value.includes("[^")) return plain;
+	const start = node.position?.start?.offset;
+	const end = node.position?.end?.offset;
+	if (typeof start !== "number" || typeof end !== "number") return plain;
+	const raw = sourceBody.slice(start, end);
+	const rawMarkers = [...raw.matchAll(FOOTNOTE_MARKER)];
+	const valueMarkers = [...value.matchAll(FOOTNOTE_MARKER)];
+	if (valueMarkers.length === 0 || rawMarkers.length !== valueMarkers.length) return plain;
+
+	const output: CmsNode[] = [];
+	let cursor = 0;
+	valueMarkers.forEach((marker, index) => {
+		const rawMarker = rawMarkers[index];
+		if (!rawMarker || rawMarker[1] !== marker[1] || isEscapedAt(raw, rawMarker.index)) return;
+		if (marker.index > cursor) output.push(textNode(value.slice(cursor, marker.index), marks));
+		output.push({ type: "footnoteReference", attrs: { label: marker[1] ?? "" } });
+		cursor = marker.index + marker[0].length;
+	});
+	if (cursor === 0) return plain;
+	if (cursor < value.length) output.push(textNode(value.slice(cursor), marks));
+	return output;
+};
 
 const jsonClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -144,7 +189,7 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 	for (const node of nodes) {
 		switch (node.type) {
 			case "text":
-				output.push(textNode(node.value ?? "", marks));
+				output.push(...textWithOrphanFootnotes(node, marks));
 				break;
 			case "strong":
 				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "bold" }]));
@@ -509,6 +554,7 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 
 export const toDocument = (analysis: CmsMdxAnalysis): CmsNode => {
 	definitions = new Map();
+	sourceBody = splitFrontmatter(analysis.source).body;
 	if (analysis.tree) collectDefinitions(analysis.tree.children as MdastLike[], definitions);
 	// A `definition` node has no children or value, so `convertBlocks` drops it (consumed definitions are written back as inline links).
 	const content = analysis.tree ? convertBlocks(analysis.tree.children as MdastLike[]) : [];

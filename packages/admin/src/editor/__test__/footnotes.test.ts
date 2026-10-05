@@ -119,6 +119,18 @@ describe("footnote numbering", () => {
 		editor.destroy();
 	});
 
+	it("shows a stored reference without a definition as a flagged chip and keeps it across saves", () => {
+		const mdx = "Text[^1] here.\n";
+		const editor = createEditor(mdx);
+		const chip = editor.view.dom.querySelector("[data-footnote-ref]");
+		expect(chip?.getAttribute("data-footnote-number")).toBe("1");
+		expect(chip?.hasAttribute("data-footnote-missing")).toBe(true);
+		const saved = tiptapToMdx(editor.getJSON());
+		expect(saved).toBe(mdx);
+		expect(tiptapToMdx(mdxToTiptap(saved))).toBe(mdx);
+		editor.destroy();
+	});
+
 	it("renumbers when a reference is added before another", () => {
 		const editor = createEditor("A[^a]\n\n[^a]: a\n");
 		editor.commands.insertContentAt(1, { type: "footnoteReference", attrs: { label: "z" } });
