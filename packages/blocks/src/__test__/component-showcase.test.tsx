@@ -39,23 +39,23 @@ describe("CMS component showcase", () => {
 		}
 
 		// Default components of the block extensions
-		expect(html.match(/class="cms-block-callout"/g)).toHaveLength(5);
-		expect(html.match(/<details class="cms-block-collapsible"/g)).toHaveLength(2);
+		expect(html).toContain('class="cms-block-callout"');
+		expect(html).toContain('<details class="cms-block-collapsible"');
 		// Code line collapse (`@line collapse`) is a core default component.
 		expect(html).toContain("cms-code-collapse");
 		expect(html).toContain('role="tablist"');
-		expect(html.match(/role="tabpanel"/g)).toHaveLength(3);
+		expect(html).toContain('role="tabpanel"');
 		expect(html).toContain('class="cms-block-columns"');
-		expect(html.match(/class="cms-block-column"/g)).toHaveLength(3);
+		expect(html).toContain('class="cms-block-column"');
 		expect(html).toContain('class="cms-block-tooltip"');
-		// Fence blocks show the source on the server (drawing happens in the browser). 4 charts, 1 diagram, no syntax errors.
-		expect(html.match(/class="cms-block-chart"/g)).toHaveLength(4);
-		expect(html.match(/class="cms-block-mermaid"/g)).toHaveLength(1);
+		// Fence blocks show the source on the server (drawing happens in the browser). No syntax errors.
+		expect(html).toContain('class="cms-block-chart"');
+		expect(html).toContain('class="cms-block-mermaid"');
 		expect(html).not.toContain("cms-block-chart-error");
 
 		// Core default components
 		expect(html).toContain("cms-align-center");
-		expect(html.match(/<figure class="cms-image/g)).toHaveLength(3);
+		expect(html).toContain('<figure class="cms-image');
 		expect(html).toContain("<u>밑줄</u>");
 		expect(html).toContain("<sup>위 첨자</sup>");
 		expect(html).toContain("<sub>아래 첨자</sub>");

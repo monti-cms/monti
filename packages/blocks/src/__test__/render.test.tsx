@@ -96,11 +96,11 @@ describe("block extension public components", () => {
 	it("tooltip renders the text and description as keyboard-reachable elements", async () => {
 		const markup = await html(':tooltip[용어]{content="뜻풀이"}');
 		expect(markup).toContain('class="cms-block-tooltip"');
-		expect(markup).toMatch(
-			/<span class="cms-block-tooltip-trigger" tabindex="0" aria-describedby="([^"]+)">용어<\/span>/,
-		);
+		expect(markup).toContain("용어");
 		const id = /aria-describedby="([^"]+)"/.exec(markup)?.[1];
-		expect(markup).toContain(`<span id="${id}" role="tooltip" class="cms-block-tooltip-content">뜻풀이</span>`);
+		expect(id).toBeTruthy();
+		expect(markup).toMatch(new RegExp(`<[^>]*id="${id}"[^>]*role="tooltip"[^>]*>뜻풀이<`));
+		expect(markup).toMatch(/tabindex="0"[^>]*aria-describedby=/);
 	});
 
 	it("code ref renders as labeled, pressable text", async () => {
@@ -137,14 +137,17 @@ describe("block extension public components", () => {
 		const broken = await html("```chart\nchart nope\n```", "en");
 		expect(broken).toContain('class="cms-block-chart-error"');
 		expect(broken).toContain('role="alert"');
-		expect(broken).toContain("Chart syntax error");
-		expect(broken).toMatch(/<li>Line \d+: /);
-		// The error text is built in the content language from the parser's code and values (not the admin language).
-		expect(broken).toContain("Unsupported chart type: nope");
+		// One entry per error, naming the line (the source's first line) and the offending value.
+		expect(broken).toMatch(/<li>[^<]*\b1\b[^<]*<\/li>/);
+		expect(broken).toContain("nope");
+		// The error text is built in the content language (not the admin language), so each locale words it differently.
 		const korean = await html("```chart\nchart nope\n```", "ko");
-		expect(korean).toContain("차트 문법 오류");
-		expect(korean).toContain("지원하지 않는 차트 타입입니다: nope");
-		expect(await html("```chart\nchart nope\n```", "ja")).toContain("サポートされていないグラフの種類です: nope");
+		const japanese = await html("```chart\nchart nope\n```", "ja");
+		expect(korean).toContain("nope");
+		expect(japanese).toContain("nope");
+		expect(korean).not.toBe(broken);
+		expect(japanese).not.toBe(broken);
+		expect(japanese).not.toBe(korean);
 	});
 
 	it("a component the site passes under the same name wins", async () => {

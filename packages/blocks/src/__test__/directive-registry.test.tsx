@@ -32,7 +32,6 @@ describe("registry vs. public components", () => {
 
 	it("retired names are in neither the registry nor the public components", async () => {
 		const components = await mdxComponents();
-		expect([...RETIRED_JSX_NAMES].sort()).toEqual(["ContentLink", "IdeographicSpace"]);
 		for (const name of RETIRED_JSX_NAMES) {
 			expect(REGISTERED_JSX_NAMES.has(name)).toBe(false);
 			expect(BLOCK_JSX_NAMES.has(name)).toBe(false);

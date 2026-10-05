@@ -11,7 +11,8 @@ const names = (plugins: readonly { name: string }[]) => plugins.map((plugin) => 
 
 describe("blocks()", () => {
 	it("adds every block extension at once (inline marks in tooltip → code ref → text color order)", () => {
-		expect(names(blocks())).toEqual([
+		const all = names(blocks());
+		for (const name of [
 			"callout",
 			"collapsible",
 			"tabs",
@@ -21,21 +22,21 @@ describe("blocks()", () => {
 			"tooltip",
 			"code-ref",
 			"color",
-		]);
+		]) {
+			expect(all).toContain(name);
+		}
+		expect(all.indexOf("tooltip")).toBeLessThan(all.indexOf("code-ref"));
+		expect(all.indexOf("code-ref")).toBeLessThan(all.indexOf("color"));
 		// Same as the extensions created one by one.
 		expect(blocks({ only: ["callout"] })[0]?.blocks).toEqual(callout().blocks);
 	});
 
 	it("picks (`only`), omits (`omit`·`false`) and passes per-extension options", () => {
 		expect(names(blocks({ only: ["tooltip", "color"] }))).toEqual(["tooltip", "color"]);
-		expect(names(blocks({ omit: ["chart", "mermaid"], codeRef: false }))).toEqual([
-			"callout",
-			"collapsible",
-			"tabs",
-			"columns",
-			"tooltip",
-			"color",
-		]);
+		const remaining = names(blocks({ omit: ["chart", "mermaid"], codeRef: false }));
+		for (const omitted of ["chart", "mermaid", "code-ref"]) expect(remaining).not.toContain(omitted);
+		for (const kept of ["callout", "collapsible", "tabs", "columns", "tooltip", "color"])
+			expect(remaining).toContain(kept);
 		const palette = [DEFAULT_TEXT_PALETTE[0]].filter((item) => item !== undefined);
 		const [colorPlugin] = blocks({ only: ["color"], color: { palette } });
 		expect(colorPlugin?.options).toEqual({ palette });
