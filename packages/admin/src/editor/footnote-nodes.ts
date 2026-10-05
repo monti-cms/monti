@@ -162,18 +162,23 @@ export const CmsFootnoteNumbers = Extension.create({
 
 export const FOOTNOTE_EXTENSIONS = [CmsFootnoteReference, CmsFootnoteDefinition, CmsFootnoteNumbers];
 
+/** Whether an inline footnote reference can go at `range.from` (default: the selection start). False in a code block, for example. */
+export const canInsertFootnote = (editor: Editor, range?: Range): boolean => {
+	const { schema } = editor.state;
+	const reference = schema.nodes[FOOTNOTE_REFERENCE_NAME];
+	if (!reference || !schema.nodes[FOOTNOTE_DEFINITION_NAME]) return false;
+	const $at = editor.state.doc.resolve(range?.from ?? editor.state.selection.from);
+	return $at.parent.canReplaceWith($at.index(), $at.index(), reference);
+};
+
 /**
  * Inserts a reference at the cursor (replacing `range`, the typed slash command) with the next numeric label, appends an empty definition at the end of
  * the document and moves the cursor into it. Does nothing where an inline reference cannot go (a code block, for example).
  */
 export const insertFootnote = (editor: Editor, range?: Range): boolean => {
-	const { schema } = editor.state;
-	const reference = schema.nodes[FOOTNOTE_REFERENCE_NAME];
-	const definition = schema.nodes[FOOTNOTE_DEFINITION_NAME];
-	if (!reference || !definition) return false;
-
-	const $at = editor.state.doc.resolve(range?.from ?? editor.state.selection.from);
-	if (!$at.parent.canReplaceWith($at.index(), $at.index(), reference)) return false;
+	if (!canInsertFootnote(editor, range)) return false;
+	const definition = editor.state.schema.nodes[FOOTNOTE_DEFINITION_NAME];
+	if (!definition) return false;
 
 	const label = nextFootnoteLabel(editor.state.doc);
 	const chain = editor.chain().focus();

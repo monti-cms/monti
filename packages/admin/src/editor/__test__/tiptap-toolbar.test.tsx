@@ -48,6 +48,45 @@ describe("formatting toolbar group", () => {
 		expect(within(toolbar).queryByRole("button", { name: t("toolbarRow.more") })).toBeNull();
 	});
 
+	it("the footnote button inserts a reference and a definition, and is disabled in a code block", async () => {
+		let editor: Editor | null = null;
+		render(
+			<CmsEditor
+				content={"안녕하세요\n\n```ts\nconst a = 1;\n```"}
+				onChange={vi.fn()}
+				onEditor={(ready) => {
+					editor = ready;
+				}}
+			/>,
+		);
+		const toolbar = await screen.findByRole("toolbar", { name: t("toolbar.format") });
+		await waitFor(() => expect(editor).not.toBeNull());
+		const ready = editor as unknown as Editor;
+		const button = () => within(toolbar).getByRole("button", { name: t("toolbar.footnote") });
+
+		act(() => {
+			ready.commands.setTextSelection(3);
+		});
+		await waitFor(() => expect((button() as HTMLButtonElement).disabled).toBe(false));
+		fireEvent.click(button());
+
+		const types: string[] = [];
+		ready.state.doc.descendants((node) => {
+			types.push(node.type.name);
+		});
+		expect(types).toContain("footnoteReference");
+		expect(types).toContain("footnoteDefinition");
+
+		let insideCode = 0;
+		ready.state.doc.descendants((node, pos) => {
+			if (node.type.name === "codeBlock") insideCode = pos + 1;
+		});
+		act(() => {
+			ready.commands.setTextSelection(insideCode + 2);
+		});
+		await waitFor(() => expect((button() as HTMLButtonElement).disabled).toBe(true));
+	});
+
 	it("the link button is pressed when the cursor is inside a link", async () => {
 		let editor: Editor | null = null;
 		render(
@@ -138,6 +177,7 @@ describe("formatting toolbar group", () => {
 			t("inlineMarks.code"),
 			t("toolbar.script"),
 			t("toolbar.link"),
+			t("toolbar.footnote"),
 			t("toolbar.list"),
 			t("toolbar.align"),
 			t("toolbar.quote"),
