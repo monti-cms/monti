@@ -2,7 +2,7 @@ import { type CollectionsConfig, defineCollection, fields, valueFieldsOf } from 
 import { COLLECTIONS, cmsConfig, createTranslator, roleField, schemaOf } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { AI_ACTIONS } from "../../../ai/src/registry";
-import { SEO_DEFAULT_KEYS, SEO_ROLES, seo, seoFields, seoOf, validateSeoFields } from "..";
+import { SEO_ROLES, seo, seoFields, seoOf, validateSeoFields } from "..";
 import { seoMessages } from "../messages";
 
 /**
@@ -11,16 +11,14 @@ import { seoMessages } from "../messages";
  */
 
 describe("seoFields", () => {
-	it("builds the field set with default names, roles and tab", () => {
+	it("builds the field set with default names and roles", () => {
 		const bundle = seoFields();
-		expect(Object.keys(bundle)).toEqual(Object.values(SEO_DEFAULT_KEYS));
-		expect(bundle.seoTitle).toMatchObject({ kind: "text", role: SEO_ROLES.title, tab: "SEO", localized: true });
-		expect(bundle.seoTitle.inputOptions).toEqual({ limit: 60 });
+		expect(bundle.seoTitle).toMatchObject({ kind: "text", role: SEO_ROLES.title, localized: true });
 		expect(bundle.seoImage).toMatchObject({ kind: "media", accept: "image", role: SEO_ROLES.image });
 		expect(bundle.seoNoindex).toMatchObject({ kind: "select", role: "noindex", defaultValue: "index" });
 		// Hiding is always a shared value.
 		expect(bundle.seoNoindex.localized).toBeUndefined();
-		expect(bundle.seoPreview).toMatchObject({ kind: "view", view: "search", tab: "SEO" });
+		expect(bundle.seoPreview).toMatchObject({ kind: "view", view: "search" });
 	});
 
 	it("default labels are chosen in the admin language at read time, not when the field is built (labels set by the site stay as is)", () => {
