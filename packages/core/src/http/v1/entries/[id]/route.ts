@@ -31,6 +31,8 @@ export const GET = adminRoute<IdParams>(async ({ params }) => {
 						metadata: source.working.metadata,
 						// The translation view lines up source blocks with the translation side by side.
 						mdx: source.working.mdx,
+						// The stored document carries the block ids that pair this version's blocks with the confirmed one's.
+						doc: source.working.doc,
 					},
 				}
 			: {}),

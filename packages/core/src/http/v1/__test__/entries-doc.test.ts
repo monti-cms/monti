@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import {
 	closeGlobalPool,
@@ -285,6 +285,52 @@ describe("entry API with a stored document", () => {
 		expect(saved.working.contentHash).toBe(loaded.working.contentHash);
 		expect(await storedRow(entry.id)).toEqual(before);
 	});
+
+	it.skipIf(!secondLocale)(
+		"returns the source's document with a translation, and keeps the confirmed document it is sent",
+		async () => {
+			const source = await created({ mdx: "First\n\nSecond\n" });
+			expect(source.working.doc).not.toBeNull();
+			const created_ = await (holder.service as ReturnType<typeof createContentService<Entry>>).createTranslation({
+				sourceId: source.id,
+				locale: secondLocale as string,
+			});
+
+			const loaded = (await read(created_.id)) as Entry & { source?: { mdx: string; doc: unknown } };
+			expect(loaded.source?.mdx).toBe(source.working.mdx);
+			expect(loaded.source?.doc).toEqual(source.working.doc);
+			expect(loaded.working.translation).toEqual({
+				version: 3,
+				baseSource: source.working.mdx,
+				baseDoc: source.working.doc,
+			});
+
+			// The source changes; the next read carries its new document, and its blocks keep their ids.
+			const changed = await patch(source.id, { expectedVersion: source.version, mdx: "Second\n\nFirst\n" });
+			expect(changed.status).toBe(200);
+			const reloaded = (await read(created_.id)) as Entry & { source?: { doc: { content: { id: string }[] } } };
+			const [first, second] = (source.working.doc as unknown as { content: { id: string }[] }).content;
+			expect(reloaded.source?.doc.content.map((block) => block.id)).toEqual([second?.id, first?.id]);
+
+			// Confirming sends the new source and its document back.
+			const confirmed = await patch(created_.id, {
+				expectedVersion: loaded.version,
+				translation: { version: 3, baseSource: "Second\n\nFirst\n", baseDoc: reloaded.source?.doc },
+			});
+			expect(confirmed.status).toBe(200);
+			expect(((await confirmed.json()) as Entry).working.translation).toEqual({
+				version: 3,
+				baseSource: "Second\n\nFirst\n",
+				baseDoc: reloaded.source?.doc,
+			});
+
+			const invalid = await patch(created_.id, {
+				expectedVersion: loaded.version + 1,
+				translation: { version: 3, baseSource: "", baseDoc: { type: "doc" } },
+			});
+			expect(invalid.status).toBe(400);
+		},
+	);
 
 	it("lists templates with their documents", async () => {
 		const template = await (holder.store as typeof store).createTemplate({ name: unique("doc template"), mdx: UNTIDY });
