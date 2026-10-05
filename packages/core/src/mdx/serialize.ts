@@ -476,10 +476,12 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 		}
 		const inCode = wanted.some((mark) => mark.type === "code");
 		const text = node.text ?? "";
+		// Link text closes with `]`, like a directive label, so a `]` inside it is escaped too.
+		const escapeClosingBracket = inLabel || wanted.some((mark) => LABEL_MARKS.has(mark.type) || mark.type === "link");
 		out.push(
 			atLineStart && !inCode
-				? encodeLeadingSpaces(text, inCode, inLabel || wanted.some((mark) => LABEL_MARKS.has(mark.type)))
-				: escapeText(text, inCode, inLabel || wanted.some((mark) => LABEL_MARKS.has(mark.type))),
+				? encodeLeadingSpaces(text, inCode, escapeClosingBracket)
+				: escapeText(text, inCode, escapeClosingBracket),
 		);
 		atLineStart = false;
 	}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { analyze, type CmsNode, serialize, toDocument } from "..";
 
-const linkDoc = (href: string, title?: string): CmsNode => ({
+const linkDoc = (href: string, title?: string, text = "label"): CmsNode => ({
 	type: "doc",
 	content: [
 		{
@@ -9,7 +9,7 @@ const linkDoc = (href: string, title?: string): CmsNode => ({
 			content: [
 				{
 					type: "text",
-					text: "label",
+					text,
 					marks: [{ type: "link", attrs: { href, ...(title === undefined ? {} : { title }) } }],
 				},
 			],
@@ -79,5 +79,26 @@ describe("link and image serialization escapes", () => {
 		["emphasis characters", "*a* _b_"],
 	])("round-trips image alt text with %s", (_name, alt) => {
 		expect(reparse(imageDoc("/p.png", alt)).content?.[0]?.attrs).toEqual({ src: "/p.png", alt });
+	});
+
+	it.each([
+		["a closing bracket", "a]b"],
+		["an opening bracket", "a[b"],
+		["balanced brackets", "a [b] c"],
+		["a trailing bracket", "see [1]"],
+		["a backslash", "a\\b"],
+		["emphasis characters", "*a* _b_"],
+	])("round-trips link text with %s", (_name, text) => {
+		const doc = reparse(linkDoc("https://example.com", undefined, text));
+		const paragraph = doc.content?.[0];
+		expect(doc.content).toHaveLength(1);
+		expect(paragraph?.content).toEqual([
+			{ type: "text", text, marks: [{ type: "link", attrs: { href: "https://example.com" } }] },
+		]);
+	});
+
+	it("keeps link text with a bracket idempotent", () => {
+		const once = serialize(linkDoc("/x", undefined, "a]b"));
+		expect(serialize(toDocument(analyze(once)))).toBe(once);
 	});
 });
