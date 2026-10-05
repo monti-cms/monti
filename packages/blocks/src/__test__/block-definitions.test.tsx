@@ -1,7 +1,7 @@
 import { BLOCK_NODE_VIEWS } from "@monti-cms/admin/editor";
 import { BLOCK_BY_NAME, BLOCKS, invalidOptionAttributes } from "@monti-cms/core/client";
 import { analyze, DIRECTIVES, serialize, toDocument } from "@monti-cms/core/mdx";
-import { directiveSyntax } from "@monti-cms/core/syntax";
+import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { describe, expect, it, vi } from "vitest";
 
 // Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.

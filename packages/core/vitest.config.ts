@@ -8,8 +8,7 @@ export default defineConfig(({ mode }) => ({
 		environment: "node",
 		globals: true,
 		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		// Tests that need the directive extension in the site config run in `vitest.directive.config.ts`.
-		exclude: ["src/**/*.directive.test.{ts,tsx}", "**/node_modules/**"],
+		exclude: ["**/node_modules/**"],
 		// When run together from the repo root, this runs first (`vitest.config.ts`).
 		sequence: { groupOrder: 1 },
 		testTimeout: 60000,

@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import type { Root } from "mdast";
+import { visit } from "unist-util-visit";
 import { describe, expect, it } from "vitest";
 import { ADDED_BLOCKS } from "../../blocks/active";
 import { analyze, toDocument } from "../../mdx";
-import { directiveSyntax } from "../../syntax";
+import type { SyntaxExtension } from "../../syntax";
 import { canonicalBodyForHash, computeContentHash } from "../content-hash";
 
 const metadata = { title: "A" };
@@ -10,7 +12,7 @@ const hashOf = (mdx: string, meta: Record<string, unknown> = metadata, schemaVer
 	computeContentHash(meta as never, mdx, schemaVersion);
 
 /**
- * A container block from the active config, written once with directive syntax and once as JSX.
+ * A container block from the active config, written as JSX.
  * The block and its attribute are read from the config, so the same test runs against every site setup.
  */
 const container = (() => {
@@ -23,9 +25,7 @@ const container = (() => {
 	if (!name || !attribute || attribute.type !== "string")
 		throw new Error(`content-hash: ${block.name} has no string attribute`);
 	const optionValue = (index: number) => Object.keys(attribute.options ?? {})[index] ?? `value-${index}`;
-	const { directive } = block.syntax;
 	return {
-		directive: (value: string, body = "Inside") => `:::${directive}{${name}="${value}"}\n${body}\n:::\n`,
 		jsx: (value: string, body = "Inside") =>
 			`<${block.component} ${name}="${value}">\n${body}\n</${block.component}>\n`,
 		first: optionValue(0),
@@ -35,12 +35,32 @@ const container = (() => {
 
 describe("content hash v2", () => {
 	describe("equivalent spellings hash equally", () => {
-		it("directive and JSX syntax of the same block (with the directive extension)", () => {
-			const syntax = [directiveSyntax()];
-			const hashWithDirectives = (mdx: string) => computeContentHash(metadata, mdx, 1, analyze(mdx, undefined, syntax));
-			expect(analyze(container.directive(container.first), undefined, syntax).errors).toEqual([]);
-			expect(analyze(container.jsx(container.first)).errors).toEqual([]);
-			expect(hashWithDirectives(container.directive(container.first))).toBe(hashOf(container.jsx(container.first)));
+		it("a notation an extension reads and the standard JSX of the same meaning", () => {
+			// A made-up notation: `@@word@@` is read as `<u>word</u>`.
+			const atNotation: SyntaxExtension = {
+				name: "at",
+				remarkPlugins: [
+					() => (tree: Root) => {
+						visit(tree, "text", (node, index, parent) => {
+							const match = /@@(\w+)@@/.exec(node.value);
+							if (!match || index == null || !parent) return;
+							parent.children.splice(index, 1, {
+								type: "mdxJsxTextElement",
+								name: "u",
+								attributes: [],
+								children: [{ type: "text", value: match[1] ?? "" }],
+							} as never);
+						});
+					},
+				],
+			};
+			const syntax = [atNotation];
+			const notation = "@@word@@\n";
+			const standard = "<u>word</u>\n";
+			expect(analyze(notation, undefined, syntax).errors).toEqual([]);
+			expect(computeContentHash(metadata, notation, 1, analyze(notation, undefined, syntax))).toBe(hashOf(standard));
+			// Without the extension the notation is plain text, which hashes differently.
+			expect(hashOf(notation)).not.toBe(hashOf(standard));
 		});
 
 		it("emphasis written with asterisks or underscores", () => {
@@ -75,7 +95,7 @@ describe("content hash v2", () => {
 		});
 
 		it("an attribute value change", () => {
-			expect(hashOf(container.directive(container.first))).not.toBe(hashOf(container.directive(container.second)));
+			expect(hashOf(container.jsx(container.first))).not.toBe(hashOf(container.jsx(container.second)));
 		});
 
 		it("the code of a code block", () => {

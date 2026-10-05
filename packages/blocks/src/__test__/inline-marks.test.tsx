@@ -1,7 +1,7 @@
 import { buildEditorExtensions, CmsEditor, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
 import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
-import { directiveSyntax } from "@monti-cms/core/syntax";
 import { readSamples } from "@monti-cms/core/testing";
+import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import type { ReactNode } from "react";
