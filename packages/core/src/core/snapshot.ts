@@ -3,7 +3,13 @@ import { createTranslator } from "../i18n";
 import { DIRECTIVE_BY_COMPONENT } from "../mdx/directives";
 import { splitFrontmatter } from "../mdx/frontmatter";
 import { isAllowedImageSrc } from "../mdx/image-src";
-import { type Body, bodyFromDocument, bodyFromMdx, readStoredDocument } from "../mdx/stored-document";
+import {
+	type Body,
+	bodyFromDocument,
+	bodyFromMdx,
+	readStoredDocument,
+	type StoredDocument,
+} from "../mdx/stored-document";
 import { MAX_TABLE_COLUMNS } from "../mdx/table-layout";
 import type { CmsImageSource } from "../mdx/types";
 import {
@@ -118,8 +124,8 @@ export const serviceInputKeys = (input: unknown): readonly string[] => [
 	input !== null && typeof input === "object" && Object.hasOwn(input, "doc") ? "doc" : "mdx",
 ];
 
-/** The body of a service input in both forms. */
-const inputBody = (input: ServiceInput): Body => {
+/** The body of a service input in both forms. Blocks inherit their ids from `previous`, the body being replaced, where the input has none. */
+const inputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): Body => {
 	if (input.doc !== undefined) {
 		let size: number;
 		try {
@@ -130,13 +136,13 @@ const inputBody = (input: ServiceInput): Body => {
 		if (size > MAX_DOC_BYTES) throw new ServiceError("mdx_too_large");
 		const doc = readStoredDocument(input.doc);
 		if (!doc) throw new ServiceError("invalid_input");
-		const body = bodyFromDocument(doc);
+		const body = bodyFromDocument(doc, undefined, { previous });
 		if (Buffer.byteLength(body.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
 		return body;
 	}
 	if (typeof input.mdx !== "string") throw new ServiceError("invalid_input");
 	if (Buffer.byteLength(input.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
-	return bodyFromMdx(input.mdx);
+	return bodyFromMdx(input.mdx, undefined, { previous });
 };
 
 /**
@@ -445,7 +451,12 @@ function checkBlockAttributes(
 
 export async function prepareSnapshot(
 	input: ServiceInput,
-	options?: { schemaVersion?: number; previousReferences?: readonly Reference[] },
+	options?: {
+		schemaVersion?: number;
+		previousReferences?: readonly Reference[];
+		/** The stored document this body replaces (the current draft). Its block ids carry over to the blocks that pair with them. */
+		previousDoc?: StoredDocument | null;
+	},
 ): Promise<PreparedSnapshot> {
 	if (!input || typeof input !== "object" || Array.isArray(input)) {
 		throw new ServiceError("invalid_input");
@@ -475,7 +486,7 @@ export async function prepareSnapshot(
 	addMetadataReferences(collector, rawCollection, metadata);
 
 	// The body is checked as it will be stored (written from its document), so issue positions point into the stored text.
-	const body = inputBody(input);
+	const body = inputBody(input, options?.previousDoc);
 	const { analysis } = body;
 	const mdxIssues: Issue[] = analysis.errors.map((e) => ({
 		code: "mdx_error",

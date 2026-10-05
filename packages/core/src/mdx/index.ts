@@ -1,4 +1,12 @@
 export { analyze } from "./analyze";
+export {
+	assignBlockIds,
+	BLOCK_ID_PATTERN,
+	forEachBlock,
+	isBlockId,
+	newBlockId,
+	withoutBlockIds,
+} from "./block-ids";
 export type { SourceConversionResult } from "./converter";
 export { SourceConverter } from "./converter";
 export * from "./directives";
@@ -7,7 +15,7 @@ export * from "./image-transform";
 export * from "./registry";
 export * from "./remark-fence-blocks";
 export { serialize } from "./serialize";
-export type { Body, StoredDocument } from "./stored-document";
+export type { Body, BodyOptions, StoredDocument } from "./stored-document";
 export {
 	bodyFromDocument,
 	bodyFromMdx,

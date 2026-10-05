@@ -2,6 +2,7 @@ import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
 import type { SyntaxExtension } from "../syntax/types";
 import { analyze } from "./analyze";
+import { assignBlockIds, copyBlockIds, withoutBlockIds } from "./block-ids";
 import { attributeRecord } from "./jsx";
 import { BLOCK_JSX_NAMES } from "./registry";
 import { serialize } from "./serialize";
@@ -78,17 +79,19 @@ const sortJson = (value: CmsJsonValue): CmsJsonValue => {
 const sortedAttrs = (attrs: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> | undefined =>
 	Object.keys(attrs).length > 0 ? (sortJson(attrs) as Record<string, CmsJsonValue>) : undefined;
 
-/** Builds a node with its keys in sorted order (`attrs`, `content`, `marks`, `text`, `type`). */
+/** Builds a node with its keys in sorted order (`attrs`, `content`, `id`, `marks`, `text`, `type`). */
 const node = (
 	type: string,
 	attrs: Record<string, CmsJsonValue> | undefined,
 	content: CmsNode[] | undefined,
 	marks: CmsMark[] | undefined,
 	text: string | undefined,
+	id?: string,
 ): CmsNode => {
 	const out: CmsNode = {} as CmsNode;
 	if (attrs && Object.keys(attrs).length > 0) out.attrs = sortJson(attrs) as Record<string, CmsJsonValue>;
 	if (content) out.content = content;
+	if (id !== undefined) out.id = id;
 	if (marks && marks.length > 0) out.marks = marks;
 	if (text !== undefined) out.text = text;
 	out.type = type;
@@ -129,19 +132,19 @@ const toStoredNode = (working: CmsNode): CmsNode => {
 	const marks = working.marks?.map(storedMark);
 	if (working.type === "codeBlock") {
 		const { codeDocument: _derived, ...attrs } = working.attrs ?? {};
-		return node("codeBlock", attrs, content, marks, working.text);
+		return node("codeBlock", attrs, content, marks, working.text, working.id);
 	}
 	if (working.type !== "mdxJsx" && BLOCK_JSX_NAMES.has(working.type)) {
 		const block = definitionOf(working);
-		if (block) return node(block.name, valuesOf(working.attrs), content, marks, working.text);
+		if (block) return node(block.name, valuesOf(working.attrs), content, marks, working.text, working.id);
 		// No plain definition (spread attributes, `Math`, a table row outside a table): keep it as raw JSX.
-		return node("mdxJsx", rawJsxAttrs(working.attrs, working.type), content, marks, working.text);
+		return node("mdxJsx", rawJsxAttrs(working.attrs, working.type), content, marks, working.text, working.id);
 	}
 	if (working.type === "mdxJsx") {
 		const name = typeof working.attrs?.name === "string" ? working.attrs.name : "";
-		return node("mdxJsx", rawJsxAttrs(working.attrs, name), content, marks, working.text);
+		return node("mdxJsx", rawJsxAttrs(working.attrs, name), content, marks, working.text, working.id);
 	}
-	return node(working.type, working.attrs, content, marks, working.text);
+	return node(working.type, working.attrs, content, marks, working.text, working.id);
 };
 
 const isBlankParagraph = (block: CmsNode) => block.type === "paragraph" && (block.content ?? []).length === 0;
@@ -196,6 +199,7 @@ const toWorkingNode = (stored: CmsNode): CmsNode => {
 	if (content) out.content = content;
 	if (stored.marks) out.marks = stored.marks.map((mark) => ({ ...mark }));
 	if (stored.text !== undefined) out.text = stored.text;
+	if (stored.id !== undefined) out.id = stored.id;
 	return out;
 };
 
@@ -208,7 +212,7 @@ export const fromStoredDocument = (stored: StoredDocument): CmsNode => ({
 /** Steps that lift a stored document from version `n` to `n + 1`, by `n`. Empty while there is one version. */
 const STORED_DOCUMENT_MIGRATIONS: Readonly<Record<number, (doc: StoredDocument) => StoredDocument>> = {};
 
-const NODE_KEYS = new Set(["type", "attrs", "content", "marks", "text"]);
+const NODE_KEYS = new Set(["type", "id", "attrs", "content", "marks", "text"]);
 
 const isJsonValue = (value: unknown): value is CmsJsonValue => {
 	if (value === null || typeof value === "string" || typeof value === "boolean") return true;
@@ -232,7 +236,8 @@ const isNode = (value: unknown): value is CmsNode =>
 	(value.attrs === undefined || (isRecord(value.attrs) && isJsonValue(value.attrs))) &&
 	(value.content === undefined || (Array.isArray(value.content) && value.content.every(isNode))) &&
 	(value.marks === undefined || (Array.isArray(value.marks) && value.marks.every(isMark))) &&
-	(value.text === undefined || typeof value.text === "string");
+	(value.text === undefined || typeof value.text === "string") &&
+	(value.id === undefined || typeof value.id === "string");
 
 /**
  * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and lifts an
@@ -267,7 +272,15 @@ export interface Body {
 	readonly analysis: CmsMdxAnalysis;
 }
 
-const sameDocument = (left: StoredDocument, right: StoredDocument) => JSON.stringify(left) === JSON.stringify(right);
+/** Two documents with the same content (block ids are not content). */
+const sameDocument = (left: StoredDocument, right: StoredDocument) =>
+	JSON.stringify(withoutBlockIds(left.content)) === JSON.stringify(withoutBlockIds(right.content));
+
+const withContent = (doc: StoredDocument, content: CmsNode[]): StoredDocument => ({
+	content,
+	type: "doc",
+	version: doc.version,
+});
 
 const storedFrom = (analysis: CmsMdxAnalysis): StoredDocument | null => {
 	if (analysis.errors.length > 0) return null;
@@ -278,15 +291,26 @@ const storedFrom = (analysis: CmsMdxAnalysis): StoredDocument | null => {
 	}
 };
 
+export interface BodyOptions {
+	/** The body this one replaces. Blocks that pair with its blocks inherit their ids (`assignBlockIds`). */
+	readonly previous?: StoredDocument | null;
+}
+
 /**
  * A body from MDX. When the MDX parses, the document is the source and the MDX is written from it with the site's syntax,
  * so the same content is always stored with the same text. The written text must read back to the same document; if it
  * does not (or the MDX does not parse, or has front matter), the MDX is kept exactly as given and there is no document.
+ * MDX carries no block ids, so the document's blocks inherit them from `options.previous` or get new ones.
  */
-export const bodyFromMdx = (mdx: string, syntax: readonly SyntaxExtension[] = configuredSyntax()): Body => {
+export const bodyFromMdx = (
+	mdx: string,
+	syntax: readonly SyntaxExtension[] = configuredSyntax(),
+	options: BodyOptions = {},
+): Body => {
 	const analysis = analyze(mdx, undefined, syntax);
-	const doc = storedFrom(analysis);
-	if (!doc) return { mdx, doc: null, analysis };
+	const parsed = storedFrom(analysis);
+	if (!parsed) return { mdx, doc: null, analysis };
+	const doc = withContent(parsed, assignBlockIds(parsed.content, [options.previous?.content]));
 	const written = serialize(fromStoredDocument(doc), syntax);
 	if (written === mdx) return { mdx, doc, analysis };
 	const rewritten = analyze(written, undefined, syntax);
@@ -295,6 +319,20 @@ export const bodyFromMdx = (mdx: string, syntax: readonly SyntaxExtension[] = co
 	return { mdx: written, doc, analysis: rewritten };
 };
 
-/** A body from a stored document: its MDX is written with the site's syntax and read back, so the result is the same as from that MDX. */
-export const bodyFromDocument = (doc: StoredDocument, syntax: readonly SyntaxExtension[] = configuredSyntax()): Body =>
-	bodyFromMdx(serialize(fromStoredDocument(doc), syntax), syntax);
+/**
+ * A body from a stored document: its MDX is written with the site's syntax and read back, so the result is the same as from that MDX.
+ * The block ids of `doc` are kept (a block without one, or with a copy of another's, gets one as `bodyFromMdx` would).
+ */
+export const bodyFromDocument = (
+	doc: StoredDocument,
+	syntax: readonly SyntaxExtension[] = configuredSyntax(),
+	options: BodyOptions = {},
+): Body => {
+	const body = bodyFromMdx(serialize(fromStoredDocument(doc), syntax), syntax);
+	if (!body.doc) return body;
+	// Read back as the same document: its blocks are the given ones, in the same order. Otherwise pair them up.
+	const same = sameDocument(doc, body.doc);
+	const given = same ? copyBlockIds(body.doc.content, doc.content) : withoutBlockIds(body.doc.content);
+	const content = assignBlockIds(given, same ? [options.previous?.content] : [doc.content, options.previous?.content]);
+	return { ...body, doc: withContent(body.doc, content) };
+};
