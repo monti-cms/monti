@@ -1,6 +1,7 @@
 import { contentCollection, defaultLocale, otherContentCollection, recordRelationField } from "../../../test/any-site";
 import type { ExportSnapshot } from "../../adapters/postgres/content-store";
 import { isItemCollection } from "../../core/collections";
+import { bodyFromMdx } from "../../mdx/stored-document";
 import { roleField, storedFields } from "../../schema/derive";
 
 /**
@@ -58,6 +59,9 @@ export const fixtureBody = (
 	updatedAt: FIXTURE_TIME,
 });
 
+/** The stored document of a fixture body. The draft and the archived post have none, as a body that does not parse has none. */
+export const fixtureDocument = (mdx: string) => bodyFromMdx(mdx).doc;
+
 /** Shared snapshot for export tests: 1 public post + 1 draft. */
 export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 	entries: [
@@ -74,8 +78,11 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 			createdAt: FIXTURE_TIME,
 			updatedAt: FIXTURE_TIME,
 			publishedAt: FIXTURE_TIME,
-			working: fixtureBody("working body", "게시글", "hash-working-1"),
-			published: fixtureBody("published body", "게시글", "hash-published-1", FIXTURE_SEO_METADATA),
+			working: { ...fixtureBody("working body", "게시글", "hash-working-1"), doc: fixtureDocument("working body") },
+			published: {
+				...fixtureBody("published body", "게시글", "hash-published-1", FIXTURE_SEO_METADATA),
+				doc: fixtureDocument("published body"),
+			},
 		},
 		{
 			id: "22222222-2222-4222-8222-222222222222",
@@ -206,7 +213,7 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 			id: "66666666-6666-4666-8666-666666666666",
 			name: "기본",
 			mdx: "## 문제",
-			doc: null,
+			doc: fixtureDocument("## 문제"),
 			version: 1,
 			createdAt: FIXTURE_TIME,
 			updatedAt: FIXTURE_TIME,

@@ -16,6 +16,7 @@ import {
 	FIXTURE_RELATION_KIND,
 	FIXTURE_SEO_METADATA,
 	fixtureBody,
+	fixtureDocument,
 	makeExportFixtureSnapshot as makeSnapshot,
 } from "./export-fixture";
 
@@ -48,9 +49,11 @@ describe("export archive builder", () => {
 				entryPath(DRAFT, DRAFT_ID, "references.json"),
 				entryPath(DRAFT, DRAFT_ID, "working.json"),
 				entryPath(DRAFT, DRAFT_ID, "working.mdx"),
+				entryPath(CONTENT, PUBLISHED_ID, "published.doc.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "published.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "published.mdx"),
 				entryPath(CONTENT, PUBLISHED_ID, "references.json"),
+				entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "working.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "working.mdx"),
 				entryPath(CONTENT, ARCHIVED_ID, "published.json"),
@@ -185,6 +188,100 @@ describe("export archive builder", () => {
 		if (!firstEntry?.published) throw new Error("fixture");
 		changed.entries[0] = { ...firstEntry, published: fixtureBody("published body v2", "게시글", "hash-published-2") };
 		expect(buildExportArchive(changed, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
+	});
+
+	it("the admin archive is format version 2 and writes the document next to the MDX it was written to", () => {
+		const { manifest, zip } = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
+		const archive = readAll(zip);
+
+		expect(manifest.formatVersion).toBe(2);
+		expect(JSON.parse(archive.text("manifest.json")).formatVersion).toBe(2);
+		for (const path of archive.paths.filter((item) => /\/(working|published)\.json$/.test(item))) {
+			expect(JSON.parse(archive.text(path)).formatVersion, path).toBe(2);
+		}
+		const workingDoc = archive.text(entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"));
+		expect(workingDoc).toBe(`${canonicalJson(fixtureDocument("working body"))}\n`);
+		expect(JSON.parse(workingDoc)).toMatchObject({ type: "doc", version: 1 });
+		expect(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.doc.json"))).toBe(
+			`${canonicalJson(fixtureDocument("published body"))}\n`,
+		);
+		// The document files are listed with the item.
+		const item = manifest.entries.find((entry) => entry.id === PUBLISHED_ID);
+		expect(item?.files).toEqual(
+			expect.arrayContaining([
+				entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"),
+				entryPath(CONTENT, PUBLISHED_ID, "published.doc.json"),
+			]),
+		);
+		expect(manifest.files).toContain(entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"));
+		expect(manifest.counts.files).toBe(manifest.files.length);
+	});
+
+	it("a body without a document has no document file", () => {
+		const { paths } = readAll(buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME }).zip);
+
+		expect(paths).not.toContain(entryPath(DRAFT, DRAFT_ID, "working.doc.json"));
+		expect(paths).not.toContain(entryPath(CONTENT, ARCHIVED_ID, "working.doc.json"));
+		expect(paths).not.toContain(entryPath(CONTENT, ARCHIVED_ID, "published.doc.json"));
+	});
+
+	it("templates.json carries the document of each template", () => {
+		const { zip } = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
+		const templates = JSON.parse(readAll(zip).text("templates.json")) as { mdx: string; doc: unknown }[];
+
+		expect(templates).toHaveLength(1);
+		expect(templates[0]?.mdx).toBe("## 문제");
+		expect(templates[0]?.doc).toEqual(fixtureDocument("## 문제"));
+	});
+
+	it("the admin digests change when only the document changes", () => {
+		const base = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
+		const changeDoc = (state: "working" | "published") => {
+			const snapshot = makeSnapshot();
+			const first = snapshot.entries[0];
+			const body = first?.[state];
+			if (!first || !body) throw new Error("fixture");
+			// The same MDX and hash, another document.
+			snapshot.entries[0] = { ...first, [state]: { ...body, doc: fixtureDocument("another body") } };
+			return buildExportArchive(snapshot, { scope: "admin", exportedAt: FIXED_TIME });
+		};
+
+		for (const state of ["working", "published"] as const) {
+			const changed = changeDoc(state);
+			expect(changed.digest).not.toBe(base.digest);
+			const before = base.manifest.entries.find((entry) => entry.id === PUBLISHED_ID);
+			const after = changed.manifest.entries.find((entry) => entry.id === PUBLISHED_ID);
+			expect(before).toBeDefined();
+			expect(after?.itemDigest).not.toBe(before?.itemDigest);
+			expect(after?.[`${state}Digest`]).not.toBe(before?.[`${state}Digest`]);
+		}
+
+		const noDoc = makeSnapshot();
+		const template = noDoc.templates[0];
+		if (!template) throw new Error("fixture");
+		noDoc.templates[0] = { ...template, doc: null };
+		expect(buildExportArchive(noDoc, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
+	});
+
+	it("the public archive has no document, and its digests do not depend on one", () => {
+		const options = { scope: "public", exportedAt: FIXED_TIME } as const;
+		const base = buildExportArchive(makeSnapshot(), options);
+		const archive = readAll(base.zip);
+
+		expect(base.manifest.formatVersion).toBe(2);
+		expect(archive.paths.some((path) => path.includes(".doc.json"))).toBe(false);
+		expect(JSON.parse(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.json")))).not.toHaveProperty("doc");
+		expect(decoder.decode(base.zip)).not.toContain('"version":1,"content"');
+
+		const stripped = makeSnapshot();
+		stripped.entries = stripped.entries.map((entry) => ({
+			...entry,
+			working: { ...entry.working, doc: null },
+			...(entry.published ? { published: { ...entry.published, doc: null } } : {}),
+		}));
+		const without = buildExportArchive(stripped, options);
+		expect(without.digest).toBe(base.digest);
+		expect(without.manifest.entries).toEqual(base.manifest.entries);
 	});
 
 	it("the public projection schema rejects a mix of draft fields", () => {
