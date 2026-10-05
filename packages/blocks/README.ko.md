@@ -16,7 +16,7 @@
 | 코드 연결 | `codeRef()` | `<CodeRef to="c1">글자</CodeRef>`(코드 줄 이름표 `// @line anchor {..} id="c1"`) | `CodeRef` |
 | 글자색 | `color({ palette? })` | `<Color fg="#…" fgDark="#…" bg="#…" bgDark="#…">글자</Color>` | `Color` |
 
-표준 MDX(JSX 요소)로 저장한다. 디렉티브 표기(`:::callout{…}`, `:tooltip[글자]{…}`)를 쓰는 사이트는 설정의 `mdx.syntax`에 `@monti-cms/core/syntax`의 `directiveSyntax()`를 추가해 읽고 쓴다.
+표준 MDX(JSX 요소)로 저장한다. 디렉티브 표기(`:::callout{…}`, `:tooltip[글자]{…}`)를 쓰는 사이트는 설정의 `mdx.syntax`에 `@monti-cms/syntax-directive`의 `directiveSyntax()`를 추가해 읽고 쓴다.
 
 ## 설치
 

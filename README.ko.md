@@ -16,6 +16,7 @@
 | [`@monti-cms/ai`](packages/ai/README.ko.md) | AI 확장. 글쓰기·번역 같은 AI 기능 |
 | [`@monti-cms/seo`](packages/seo/README.ko.md) | SEO 확장. 검색·공유 필드와 미리보기 |
 | [`@monti-cms/bareun`](packages/bareun/README.ko.md) | 바른(Bareun) 맞춤법 검사 |
+| [`@monti-cms/syntax-directive`](packages/syntax-directive/README.ko.md) | 지시자 문법 확장. `:::callout`·`::image{…}`·`:u[글자]`를 읽고 쓴다 |
 
 ## 설치
 
@@ -41,7 +42,7 @@ pnpm install          # 설치
 pnpm lint             # 코드 검사 (고치려면 pnpm lint:fix)
 pnpm check:korean     # 실행 코드의 한국어 문구가 문구 사전에만 있는지 검사
 pnpm typecheck        # 모든 패키지 타입 검사
-pnpm build            # 모든 패키지 빌드 (core → admin → ai → blocks → bareun → seo)
+pnpm build            # 모든 패키지 빌드 (core → syntax-directive → admin → ai → blocks → bareun → seo)
 pnpm test:run         # 테스트 (Postgres 필요)
 pnpm example:check    # 패키지를 묶어 예시 앱에 설치하고 빌드까지 확인
 ```

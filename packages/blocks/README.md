@@ -16,7 +16,7 @@ Block extensions for `@monti-cms/core`. Install only the body blocks and inline 
 | Code link | `codeRef()` | `<CodeRef to="c1">text</CodeRef>` (code line label `// @line anchor {..} id="c1"`) | `CodeRef` |
 | Text color | `color({ palette? })` | `<Color fg="#…" fgDark="#…" bg="#…" bgDark="#…">text</Color>` | `Color` |
 
-Stored as standard MDX (JSX elements). Sites that use the directive notation (`:::callout{…}`, `:tooltip[text]{…}`) read and write it by adding `directiveSyntax()` from `@monti-cms/core/syntax` to `mdx.syntax` in the config.
+Stored as standard MDX (JSX elements). Sites that use the directive notation (`:::callout{…}`, `:tooltip[text]{…}`) read and write it by adding `directiveSyntax()` from `@monti-cms/syntax-directive` to `mdx.syntax` in the config.
 
 ## Installation
 
