@@ -800,6 +800,17 @@ describe("language tabs", () => {
 		await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
 	});
 
+	it("does not offer duplicate on a translation", async () => {
+		serve((input, init) => {
+			if (input === "/api/cms/v1/entries/entry-en" && !init?.method) return json(translation);
+		}, translation);
+		render(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
+		await screen.findByRole("navigation", { name: "언어" });
+		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
+		expect(screen.getByRole("menuitem", { name: "휴지통으로 이동" })).toBeTruthy();
+		expect(screen.queryByRole("menuitem", { name: "복제" })).toBeNull();
+	});
+
 	it("tells that translations go along when trashing or archiving the source", async () => {
 		serve(() => undefined, source);
 		renderEdit();

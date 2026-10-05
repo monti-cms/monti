@@ -18,6 +18,7 @@ import {
 } from "../../../schema/derive";
 import { createContentService } from "../../../services/content-service";
 import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { seedEntry } from "./seed";
 import { createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -153,6 +154,29 @@ describe("translation groups", () => {
 			await expect(service.createTranslation({ sourceId: source.id, locale: unknownLocale })).rejects.toMatchObject({
 				code: "invalid_input",
 			});
+		});
+
+		it("keeps the locale when duplicating a source in a non-default locale", async () => {
+			const original = await seedEntry(store, {
+				collection: contentCollection,
+				slug: "locale-copy-source",
+				metadata: { title: "English" },
+				mdx: "Body",
+				locale: second,
+			});
+			expect(original.locale).toBe(second);
+
+			const copy = await store.duplicateEntry({ id: original.id });
+			expect(copy.locale).toBe(second);
+			expect(copy.translationGroupId).toBe(copy.id);
+			expect(copy.working.mdx).toBe("Body");
+			expect(copy.working.translation ?? null).toBeNull();
+		});
+
+		it("refuses to duplicate a translation", async () => {
+			const source = await createPost("duplicate-translation-source");
+			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+			await expect(store.duplicateEntry({ id: translation.id })).rejects.toMatchObject({ code: "invalid_input" });
 		});
 
 		it.skipIf(!thirdLocale)("creates a translation of a translation from the source", async () => {

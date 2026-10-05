@@ -377,6 +377,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 
 		/**
 		 * Duplicate: copies the latest draft's body, fields, and relations into a new draft with a new ID.
+		 * The copy is a new source in the original's locale. Translations cannot be duplicated (translate the source instead).
 		 * Slug, publish status, reservation, published version, publish date, and created/modified times are not copied.
 		 * If `title` is given, it replaces the copy's title (`title` field). Any suffix (such as "(copy)") is up to the caller.
 		 * The store saves the given value as is and only checks the title field's rules (length, etc.).
@@ -386,11 +387,13 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				const res = await client.query<{
 					collection: string;
 					folder_id: string | null;
+					locale: string;
+					translation_group_id: string | null;
 					metadata: Record<string, unknown>;
 					mdx: string;
 					schema_version: number;
 				}>(
-					`SELECT e.collection, e.folder_id, b.metadata, b.mdx, b.schema_version
+					`SELECT e.collection, e.folder_id, e.locale, e.translation_group_id, b.metadata, b.mdx, b.schema_version
 					 FROM "${qSchema}".entries e
 					 JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id AND b.state = 'working'
 					 WHERE e.id = $1`,
@@ -401,6 +404,9 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				if (isItemCollection(orig.collection)) {
 					throw new CmsError("Record collections cannot be duplicated", "invalid_input");
 				}
+				if (orig.translation_group_id !== null) {
+					throw new CmsError("Duplicate the source entry, not a translation", "invalid_input");
+				}
 
 				const rest = orig.metadata ?? {};
 				if (params.title !== undefined) assertTitleValue(orig.collection, params.title);
@@ -409,9 +415,9 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				const now = new Date();
 
 				await client.query(
-					`INSERT INTO "${qSchema}".entries (id, collection, version, created_at, updated_at, working_slug, folder_id, status)
-					 VALUES ($1, $2, 1, $3, $3, NULL, $4, 'draft')`,
-					[newId, orig.collection, now, orig.folder_id],
+					`INSERT INTO "${qSchema}".entries (id, collection, version, created_at, updated_at, working_slug, folder_id, status, locale, translation_group_id)
+					 VALUES ($1, $2, 1, $3, $3, NULL, $4, 'draft', $5, NULL)`,
+					[newId, orig.collection, now, orig.folder_id, orig.locale],
 				);
 				await writeBody(client, qSchema, newId, "working", {
 					metadata,
