@@ -41,11 +41,25 @@ describe("translation state", () => {
 	});
 
 	it("sorts the keys of the document as a stored document is", () => {
-		const reordered = { version: 1, type: "doc", content: [{ type: "paragraph", id: "aaaaaaaa" }] };
+		const reordered = { version: 2, type: "doc", content: [{ type: "paragraph", id: "aaaaaaaa" }] };
 		const state = parseTranslationState({ version: 3, baseSource: "", baseDoc: reordered });
 		expect(JSON.stringify(state?.baseDoc)).toBe(
-			'{"content":[{"id":"aaaaaaaa","type":"paragraph"}],"type":"doc","version":1}',
+			'{"content":[{"id":"aaaaaaaa","type":"paragraph"}],"type":"doc","version":2}',
 		);
+	});
+
+	it("lifts a version 1 document to the current version, a code block to its code and annotations", () => {
+		const fence = { language: "ts", meta: "", value: "// @line plus\nconst a = 1;" };
+		const old = { version: 1, type: "doc", content: [{ type: "codeBlock", attrs: fence, id: "aaaaaaaa" }] };
+		const state = parseTranslationState({ version: 3, baseSource: "", baseDoc: old });
+		expect(state?.baseDoc?.version).toBe(2);
+		expect(state?.baseDoc?.content[0]?.attrs).toEqual({
+			annotations: { lines: [{ end: 1, name: "plus", start: 0 }] },
+			code: "const a = 1;",
+			language: "ts",
+			meta: "",
+		});
+		expect(state?.baseDoc?.content[0]?.id).toBe("aaaaaaaa");
 	});
 
 	it("rejects a version 3 state with an invalid document", () => {

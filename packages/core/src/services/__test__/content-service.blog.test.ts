@@ -20,9 +20,10 @@ describe("ContentService Contract (blog config)", () => {
 			{ schemaVersion: 1 },
 		);
 		// Pins the hash format. The value changed from the v1 vector ("ce4f8728…", which hashed the MDX string) on purpose when the
-		// hash moved to the parsed body ("cms-snapshot-v2"), and again ("01812cb0…") when it moved to the stored document ("cms-snapshot-v3").
-		// Only change it again together with a new tag and a stored-hash migration.
-		expect(snap.contentHash).toBe("1c026d48a4315cf0542a108d52050147c96d183fd3d6c5ea995f7d5ed20949b0");
+		// hash moved to the parsed body ("cms-snapshot-v2"), and again when it moved to the stored document ("cms-snapshot-v3"). The hashed document
+		// carries its format version, so raising it (version 2: a code block as its code and annotations) changed the value once more, with a migration
+		// that recomputes stored hashes (`0015_code_annotations`). Only change it again together with a stored-hash migration.
+		expect(snap.contentHash).toBe("6e29aef176a7373f4c2bad69f73e5f77f2302a7285b94d0e6ee0a9ce6ebbe14d");
 	});
 
 	it("extracts only supported prose links and keeps source positions", async () => {

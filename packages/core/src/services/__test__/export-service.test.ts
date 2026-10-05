@@ -201,7 +201,7 @@ describe("export archive builder", () => {
 		}
 		const workingDoc = archive.text(entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"));
 		expect(workingDoc).toBe(`${canonicalJson(fixtureDocument("working body"))}\n`);
-		expect(JSON.parse(workingDoc)).toMatchObject({ type: "doc", version: 1 });
+		expect(JSON.parse(workingDoc)).toMatchObject({ type: "doc", version: 2 });
 		expect(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.doc.json"))).toBe(
 			`${canonicalJson(fixtureDocument("published body"))}\n`,
 		);
