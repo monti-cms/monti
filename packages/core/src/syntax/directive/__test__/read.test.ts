@@ -1,5 +1,4 @@
 import type { Root } from "mdast";
-import remarkDirective from "remark-directive";
 import remarkGfm from "remark-gfm";
 import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
@@ -7,10 +6,14 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { describe, expect, it } from "vitest";
-import { ADDED_BLOCKS } from "../../blocks/active";
-import { parseMdxAst } from "../parse";
-import { remarkDemoteUnknownDirectives, remarkDirectivesToMdx } from "../remark-directives";
-import { readSample, readSamples } from "./fixtures/samples";
+import { mdxWith } from "../../../../test/mdx-syntax";
+import { ADDED_BLOCKS } from "../../../blocks/active";
+import { readSample, readSamples } from "../../../mdx/__test__/fixtures/samples";
+import { syntaxRemarkPlugins } from "../../../mdx/syntax";
+import { directiveSyntax } from "..";
+
+const directives = [directiveSyntax()];
+const { parse: parseMdxAst } = mdxWith(directives);
 
 const DIRECTIVE_TYPES = ["containerDirective", "leafDirective", "textDirective"];
 
@@ -22,18 +25,12 @@ const siteAttribute = siteContainer
 	: undefined;
 
 /**
- * A minimal reproduction chain that keeps the **order** of the two directive plugins the same as the public chain (demote → convert).
- * The full public chain (math, chart, mermaid, breaks, gfm, toc) is not here — render results are checked by `directive-render.test.tsx`,
- * which uses the real `MDX_REMARK_PLUGINS`.
+ * A minimal reproduction chain with the extension's plugins, which are the ones the public chain uses (`mdxRemarkPlugins`).
+ * The full public chain (math, chart, mermaid, breaks, gfm, toc) is not here — render results are checked by the blocks package's
+ * `directive-render.test.tsx`.
  */
 const renderTree = (body: string): Root => {
-	const processor = unified()
-		.use(remarkParse)
-		.use(remarkMdx)
-		.use(remarkGfm)
-		.use(remarkDirective)
-		.use(remarkDemoteUnknownDirectives)
-		.use(remarkDirectivesToMdx);
+	const processor = unified().use(remarkParse).use(remarkMdx).use(remarkGfm).use(syntaxRemarkPlugins(directives));
 
 	const file = new VFile({ value: body });
 	const tree = processor.parse(file);
@@ -89,7 +86,7 @@ const collectText = (tree: Root): string => {
 	return parts.join("");
 };
 
-describe("turning unregistered directives back", () => {
+describe("directive syntax: turning unregistered directives back", () => {
 	// 2 false positives measured on legacy posts. If not turned back, these characters silently disappear.
 	it.each([
 		["openai/gpt-oss-120b:free를 쓴다.", ":free를"],
@@ -110,7 +107,7 @@ describe("turning unregistered directives back", () => {
 	});
 });
 
-describe("registered directive handling", () => {
+describe("directive syntax: registered directives", () => {
 	it.skipIf(!siteContainer || !siteAttribute)(
 		"the CMS analysis tree also turns registered names into MDX elements (reference collection and validation run on one shape)",
 		() => {

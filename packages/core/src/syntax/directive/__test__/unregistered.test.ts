@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { BLOCKS } from "../../blocks/active";
-import { analyze, serialize, toDocument } from "..";
-import { DIRECTIVE_NAMES } from "../directives";
+import { mdxWith } from "../../../../test/mdx-syntax";
+import { BLOCKS } from "../../../blocks/active";
+import { directiveSyntax } from "..";
+
+/** Directive names of the current config's blocks. */
+const DIRECTIVE_NAMES: ReadonlySet<string> = new Set(
+	BLOCKS.flatMap((block) => ("directive" in block.syntax ? [block.syntax.directive] : [])),
+);
 
 /**
  * Storage round trip of a directive (block name) that is not in the config. Runs with both the reference blog setup and another site's config.
@@ -14,8 +19,8 @@ const unregistered = (preferred: string, fallback: string) => (DIRECTIVE_NAMES.h
 const outer = unregistered("tabs", "unregistered-outer");
 const inner = unregistered("tab", "unregistered-inner");
 
-/** Write path: `MDX → analyze → toDocument → serialize`. */
-const write = (source: string): string => serialize(toDocument(analyze(source)));
+/** Write path with the directive extension: `MDX → analyze → toDocument → serialize`. */
+const { write } = mdxWith([directiveSyntax()]);
 
 /** Bodies that must stay as the original source (top-level block). */
 const verbatim: [string, string][] = [

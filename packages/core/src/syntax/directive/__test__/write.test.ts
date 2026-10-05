@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ADDED_BLOCKS, ADDED_MARK_BLOCKS, BLOCKS } from "../../blocks/active";
-import type { BlockAttribute, BlockDefinition } from "../../blocks/define";
-import { analyze, serialize, toDocument } from "..";
+import { mdxWith } from "../../../../test/mdx-syntax";
+import { ADDED_BLOCKS, ADDED_MARK_BLOCKS, BLOCKS } from "../../../blocks/active";
+import type { BlockAttribute, BlockDefinition } from "../../../blocks/define";
+import { directiveSyntax } from "..";
 
 /**
  * Block names are looked up from the current config (runs with both the reference blog setup and another site's config). If the config has no such block, that case is
@@ -43,18 +44,14 @@ const childProps = (child: BlockDefinition, value: string) =>
 		.join("");
 const directiveName = (block: BlockDefinition) => ("directive" in block.syntax ? block.syntax.directive : block.name);
 
-/** Write path: `MDX → analyze → toDocument → serialize`. */
-const write = (source: string): string => serialize(toDocument(analyze(source)));
+/** Write path with the directive extension: `MDX → analyze → toDocument → serialize`. */
+const { write, writeTwice } = mdxWith([directiveSyntax()]);
 
-/** Writing once more must give the same string (idempotent). */
-const writeTwice = (source: string): string => write(write(source));
-
-describe("storage format directive conversion", () => {
+describe("directive syntax: writing", () => {
 	it("normalizes read-compatible JSX and inline HTML to directives", () => {
 		expect(write("<u>밑줄</u>").trimEnd()).toBe(":u[밑줄]");
 		expect(write("<sup>위</sup>").trimEnd()).toBe(":sup[위]");
 		expect(write("<sub>아래</sub>").trimEnd()).toBe(":sub[아래]");
-		expect(write("<br/>").trimEnd()).toBe(":br[]");
 		expect(write('<TextAlign align="center">\n\n가운데\n\n</TextAlign>').trimEnd()).toBe(
 			':::text-align{align="center"}\n가운데\n:::',
 		);
@@ -143,13 +140,9 @@ describe("storage format directive conversion", () => {
 		expect(write("**정적(Static)**과 동적").trimEnd()).toBe("\\*\\*정적(Static)\\*\\*과 동적");
 	});
 
-	it("stores a paragraph on one line and expresses line breaks only as :br[]", () => {
-		expect(write("첫 줄\\\n둘째 줄").trimEnd()).toBe("첫 줄:br[]둘째 줄");
-		expect(write("첫 줄<br/>둘째 줄").trimEnd()).toBe("첫 줄:br[]둘째 줄");
-		// A hard break does not split the paragraph — no raw newline is created.
-		const written = write("가\\\n나\\\n다");
-		expect(written).toBe("가:br[]나:br[]다\n");
-		expect(written.trimEnd().includes("\n")).toBe(false);
+	it("does not write line breaks as directives (always <br />)", () => {
+		expect(write("첫 줄\\\n둘째 줄")).toBe("첫 줄<br />\n둘째 줄\n");
+		expect(write("앞:br[]뒤")).toBe("앞<br />\n뒤\n");
 	});
 
 	it("writes an image as a leaf if it has a media reference, size, alignment, caption or decorative flag, otherwise as Markdown", () => {
@@ -178,14 +171,14 @@ describe("storage format directive conversion", () => {
 	it("writing the written string again gives the same string (idempotent)", () => {
 		const [group] = groups;
 		const samples = [
-			':::text-align{align="center"}\n\n본문 :u[밑줄] 과 :br[] 줄바꿈\n\n:::',
+			':::text-align{align="center"}\n\n본문 :u[밑줄] 과 줄바꿈\n\n:::',
 			"**정적(Static)**과 **동적**",
 			'::image{src="/images/a.png" alt="설명" width="60%"}',
 		];
 		if (bodyBlock && bodyAttribute) {
 			const [name, attribute] = bodyAttribute;
 			samples.push(
-				`:::${directiveName(bodyBlock)}{${name}="${optionValue(attribute, "note")}"}\n\n본문 :u[밑줄] 과 :br[] 줄바꿈\n\n:::`,
+				`:::${directiveName(bodyBlock)}{${name}="${optionValue(attribute, "note")}"}\n\n본문 :u[밑줄] 과 줄바꿈\n\n:::`,
 			);
 		}
 		if (group) {

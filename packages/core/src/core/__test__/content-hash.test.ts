@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ADDED_BLOCKS } from "../../blocks/active";
 import { analyze, toDocument } from "../../mdx";
+import { directiveSyntax } from "../../syntax";
 import { canonicalBodyForHash, computeContentHash } from "../content-hash";
 
 const metadata = { title: "A" };
@@ -34,10 +35,12 @@ const container = (() => {
 
 describe("content hash v2", () => {
 	describe("equivalent spellings hash equally", () => {
-		it("directive and JSX syntax of the same block", () => {
-			expect(analyze(container.directive(container.first)).errors).toEqual([]);
+		it("directive and JSX syntax of the same block (with the directive extension)", () => {
+			const syntax = [directiveSyntax()];
+			const hashWithDirectives = (mdx: string) => computeContentHash(metadata, mdx, 1, analyze(mdx, undefined, syntax));
+			expect(analyze(container.directive(container.first), undefined, syntax).errors).toEqual([]);
 			expect(analyze(container.jsx(container.first)).errors).toEqual([]);
-			expect(hashOf(container.directive(container.first))).toBe(hashOf(container.jsx(container.first)));
+			expect(hashWithDirectives(container.directive(container.first))).toBe(hashOf(container.jsx(container.first)));
 		});
 
 		it("emphasis written with asterisks or underscores", () => {
