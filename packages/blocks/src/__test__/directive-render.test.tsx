@@ -1,4 +1,4 @@
-import { directiveSyntax } from "@monti-cms/core/syntax";
+import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { compileMDX } from "next-mdx-remote/rsc";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";

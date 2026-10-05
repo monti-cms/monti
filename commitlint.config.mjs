@@ -21,7 +21,21 @@ export default {
 		"scope-enum": [
 			2,
 			"always",
-			["core", "admin", "ai", "blocks", "seo", "bareun", "example", "scripts", "ci", "deps", "release", "repo"],
+			[
+				"core",
+				"admin",
+				"ai",
+				"blocks",
+				"seo",
+				"bareun",
+				"syntax",
+				"example",
+				"scripts",
+				"ci",
+				"deps",
+				"release",
+				"repo",
+			],
 		],
 	},
 };

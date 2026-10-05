@@ -1,8 +1,8 @@
+import { analyze } from "@monti-cms/core/mdx";
+import { computeContentHash } from "@monti-cms/core/runtime";
+import { readSamples } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../../../test/mdx-syntax";
-import { computeContentHash } from "../../../core/content-hash";
-import { analyze } from "../../../mdx";
-import { readSamples } from "../../../mdx/__test__/fixtures/samples";
+import { mdxWith } from "../../test/mdx-syntax";
 import { directiveSyntax } from "..";
 
 /** The sample posts are written with the reference blog's blocks (callouts, tabs, tooltips), so this runs only with the reference blog config. */

@@ -1,9 +1,9 @@
+import type { BlockAttribute, BlockDefinition } from "@monti-cms/core";
+import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "@monti-cms/core/client";
+import { analyze } from "@monti-cms/core/mdx";
+import { computeContentHash } from "@monti-cms/core/runtime";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../../../test/mdx-syntax";
-import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "../../../blocks/active";
-import type { BlockAttribute, BlockDefinition } from "../../../blocks/define";
-import { computeContentHash } from "../../../core/content-hash";
-import { analyze } from "../../../mdx";
+import { mdxWith } from "../../test/mdx-syntax";
 import { directiveSyntax } from "..";
 
 /**

@@ -14,11 +14,10 @@
  * so splitting into two shapes leads to fixing only one of them.
  */
 
+import { RAW_SOURCE_PARAGRAPH, type SyntaxBlocks } from "@monti-cms/core/syntax";
 import type { Paragraph, Root, RootContent } from "mdast";
 import { SKIP, visit } from "unist-util-visit";
 import type { VFile } from "vfile";
-import { RAW_SOURCE_PARAGRAPH } from "../raw-source";
-import type { SyntaxBlocks } from "../types";
 
 export type DirectiveKind = "container" | "leaf" | "text";
 

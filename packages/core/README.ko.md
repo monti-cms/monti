@@ -259,12 +259,12 @@ export default defineConfig({
 | `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스·로그인 확인·미디어 공개 주소(`resolvePublicMediaUrl`). `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
 | `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
-| `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `directiveSyntax()`와 `SyntaxExtension` 인터페이스("본문 문법") |
+| `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `SyntaxExtension` 인터페이스와 확장이 쓰는 도우미("본문 문법"). 지시자 표기는 `@monti-cms/syntax-directive`다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀·DB 연결·오류 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기) |
 | `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`(명령 `monti`의 코드) |
 | `@monti-cms/core/migrate`·`/register` | 명령줄(예전 방식) | 표 만들기, 직접 만든 스크립트에서 설정 별칭 잇기 |
-| `@monti-cms/core/testing` | 테스트 | 격리 스키마 DB·예시 데이터 |
+| `@monti-cms/core/testing` | 테스트 | 격리 스키마 DB·예시 데이터, 주어진 확장 목록으로 MDX를 해석하는 함수와 remark 플러그인(`parseMdxAst`·`syntaxRemarkPlugins`) |
 
 ## 패키지 빌드
 
@@ -292,7 +292,7 @@ export default defineConfig({
 표기를 더하려면 `mdx.syntax`에 확장을 나열한다. 순서가 쓰기 우선순위다.
 
 ```ts
-import { directiveSyntax } from "@monti-cms/core/syntax";
+import { directiveSyntax } from "@monti-cms/syntax-directive";
 
 export default defineConfig({
 	// …
@@ -300,12 +300,13 @@ export default defineConfig({
 });
 ```
 
-- `directiveSyntax()`는 표준 MDX 이전에 Monti가 쓰던 지시자(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다. 없으면 `:::callout`은 그냥 글자다.
+- [`@monti-cms/syntax-directive`](../syntax-directive/README.ko.md)는 표준 MDX 이전에 Monti가 쓰던 지시자(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다. 없으면 `:::callout`은 그냥 글자다.
   `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다. 줄바꿈은 `:br[]`로 쓰지 않는다.
 - 공개 렌더러(`@monti-cms/core/render`)는 편집기 해석기와 같은 플러그인을 돌리므로 편집기가 읽은 대로 사이트에 그려진다.
 
-**지시자 본문이 있는 사이트의 업그레이드.** 이 버전을 배포하기 전에 `mdx.syntax`에 `directiveSyntax({ write: false })`(지시자로 계속 저장하려면 `directiveSyntax()`)를 넣는다.
-넣지 않으면 기존 글이 지시자 문자 그대로 그려지고 검사에도 걸린다(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). `write: false`로 두면 글을 표준 표기로 저장해도 내용 해시(해석한 본문을 해시한다)는 바뀌지 않는다.
+**지시자 본문이 있는 사이트의 업그레이드.** 이 버전을 배포하기 전에 `@monti-cms/syntax-directive`를 설치하고 `mdx.syntax`에 `directiveSyntax({ write: false })`(지시자로 계속 저장하려면 `directiveSyntax()`)를 넣는다.
+`directiveSyntax`는 더 이상 `@monti-cms/core/syntax`에서 내보내지 않으니 import를 `@monti-cms/syntax-directive`로 바꾼다.
+확장이 없으면 기존 글이 지시자 문자 그대로 그려지고 검사에도 걸린다(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). `write: false`로 두면 글을 표준 표기로 저장해도 내용 해시(해석한 본문을 해시한다)는 바뀌지 않는다.
 저장된 본문 어디에도 지시자가 남지 않으면 확장을 뺀다.
 
 ### 문법 확장 만들기(실험적)
@@ -328,7 +329,7 @@ interface SyntaxExtension {
 
 `SyntaxContext`는 사이트 블록(`blocks.list`·`blocks.byName`·`blocks.byComponent`)을 준다. `SerializeContext`는 여기에 `indent`(노드가 시작하는 줄의 들여쓰기이며 쓰는 쪽이 직접 넣는다),
 자식을 쓰는 `serializeBlocks`·`serializeInlines`, `componentName`, `hasSpread`, 표준 표기가 쓰는 속성 목록을 만드는 `nodeAttributes`·`markAttributes`, `escapeAttribute`를 더한다.
-줄바꿈은 언제나 `<br />`라서 확장에 넘기지 않는다. `image` 노드는 Markdown으로 쓸 수 없을 때만 넘긴다. 지시자 확장(`packages/core/src/syntax/directive`)이 참고 구현이다.
+줄바꿈은 언제나 `<br />`라서 확장에 넘기지 않는다. `image` 노드는 Markdown으로 쓸 수 없을 때만 넘긴다. 지시자 확장(`packages/syntax-directive`)이 참고 구현이며 `@monti-cms/core/syntax`에서만 가져온다.
 
 ## 본문 블록
 
@@ -475,7 +476,7 @@ export const myPlugin = () =>
 | `site.previewPath` | 초안 미리보기 주소 앞부분(예: `/preview`). 없으면 미리보기 단추가 없다. |
 | `site.previewLocaleParam` | 미리보기 주소에 언어를 넘기는 쿼리 이름(기본 `locale`, 기본 언어가 아닐 때만 `?locale=en`). `false`면 `localePrefix` 규칙대로 경로에 넣는다(`/preview/en/posts/a`). |
 | `admin.path` | 관리자 화면 경로(기본 `/admin`). 앱의 관리자 라우트 폴더와 같아야 한다. `/`나 `/api` 아래는 안 된다. 화면 안 링크·로그인 이동·플러그인 화면 주소가 따른다. |
-| `mdx.syntax` | 문법 확장(실험적, `@monti-cms/core/syntax`)을 쓰기 우선순위 순으로 나열한다. 예: `[directiveSyntax()]`. 없으면 저장하는 MDX는 표준(CommonMark + GFM + MDX JSX)이다("본문 문법"). |
+| `mdx.syntax` | 문법 확장(실험적, `@monti-cms/core/syntax`)을 쓰기 우선순위 순으로 나열한다. 예: `@monti-cms/syntax-directive`의 `[directiveSyntax()]`. 없으면 저장하는 MDX는 표준(CommonMark + GFM + MDX JSX)이다("본문 문법"). |
 | `codeBlock.lineEffects` | 코드 블록 줄 효과 더하기·바꾸기("코드 블록 줄 효과"). |
 | `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |
 | `admin.locale` | 관리자 화면 언어와 날짜·숫자 표기(BCP 47, 예: `en`·`ko-KR`). 없으면 사이트 기본 언어(`defaultLocale`). 시각은 `timeZone`으로 보인다. |

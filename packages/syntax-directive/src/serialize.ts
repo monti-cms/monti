@@ -1,13 +1,16 @@
-import type { BlockDefinition } from "../../blocks/define";
-import type { CmsMark, CmsNode } from "../../mdx/types";
 import {
+	type BlockDefinition,
+	type CmsMark,
+	type CmsNode,
 	formatTableWidths,
 	hasBalancedLabelBrackets,
 	hasNonGfmHeaderLayout,
+	type SerializeContext,
+	type SyntaxMarkWriter,
+	type SyntaxNodeWriter,
 	tableHasMergedCells,
 	tableWidths,
-} from "../table";
-import type { SerializeContext, SyntaxMarkWriter, SyntaxNodeWriter } from "../types";
+} from "@monti-cms/core/syntax";
 
 /**
  * Writes the directive spelling (`:::name`, `::name`, `:name[label]{attrs}`). Each writer returns `undefined` when the node is not something

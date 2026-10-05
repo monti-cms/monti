@@ -1,10 +1,10 @@
+import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
+import { mdxRemarkPlugins, renderMdx } from "@monti-cms/core/render";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { analyze, serialize, toDocument } from "../../../mdx";
-import { mdxRemarkPlugins, renderMdx } from "../../../render";
 
 /**
- * Runs with the directive extension switched on in the site config (`mdx.syntax`, see `vitest.directive.config.ts`): the extension reaches
+ * Runs with the directive extension switched on in the site config (`mdx.syntax`, see `vitest.configured.config.ts`): the extension reaches
  * the parser, the serializer and the public render chain without any explicit list.
  */
 const DIRECTIVES = ':::text-align{align="center"}\n가운데 :u[밑줄]\n:::\n\n::image{mediaId="abc" alt="설명"}\n';

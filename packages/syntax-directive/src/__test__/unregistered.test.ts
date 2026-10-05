@@ -1,6 +1,6 @@
+import { BLOCKS } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../../../test/mdx-syntax";
-import { BLOCKS } from "../../../blocks/active";
+import { mdxWith } from "../../test/mdx-syntax";
 import { directiveSyntax } from "..";
 
 /** Directive names of the current config's blocks. */

@@ -8,7 +8,6 @@
 
 export type { BlockDefinition } from "../blocks/define";
 export type { CmsMark, CmsNode } from "../mdx/types";
-export { type DirectiveSyntaxOptions, directiveSyntax } from "./directive";
 export { RAW_SOURCE_PARAGRAPH } from "./raw-source";
 export {
 	formatTableWidths,

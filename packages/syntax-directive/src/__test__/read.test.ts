@@ -1,3 +1,5 @@
+import { ADDED_BLOCKS } from "@monti-cms/core/client";
+import { readSamples, syntaxRemarkPlugins } from "@monti-cms/core/testing";
 import type { Root } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkMdx from "remark-mdx";
@@ -6,14 +8,13 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../../../test/mdx-syntax";
-import { ADDED_BLOCKS } from "../../../blocks/active";
-import { readSample, readSamples } from "../../../mdx/__test__/fixtures/samples";
-import { syntaxRemarkPlugins } from "../../../mdx/syntax";
+import { mdxWith } from "../../test/mdx-syntax";
 import { directiveSyntax } from "..";
 
 const directives = [directiveSyntax()];
 const { parse: parseMdxAst } = mdxWith(directives);
+/** A sample post body by file name (front matter removed). */
+const readSample = (name: string): string => readSamples().find((sample) => sample.name === name)?.mdx ?? "";
 
 const DIRECTIVE_TYPES = ["containerDirective", "leafDirective", "textDirective"];
 

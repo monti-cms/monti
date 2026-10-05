@@ -4,14 +4,14 @@ import { defineConfig } from "vitest/config";
 
 /**
  * Reruns the tests that need the directive extension in the site config (`test/directive.config.ts`): the extension reaches the parser,
- * the serializer and the public render chain through `mdx.syntax`, not through an explicit list. Only `*.directive.test.ts` runs here.
+ * the serializer and the public render chain through `mdx.syntax`, not through an explicit list. Only `*.configured.test.ts` runs here.
  */
 export default defineConfig(({ mode }) => ({
 	test: {
-		name: "core (directive syntax)",
+		name: "syntax-directive (configured)",
 		environment: "node",
 		globals: true,
-		include: ["src/**/*.directive.test.{ts,tsx}"],
+		include: ["src/**/*.configured.test.{ts,tsx}"],
 		sequence: { groupOrder: 1 },
 		testTimeout: 60000,
 		hookTimeout: 60000,
@@ -24,8 +24,8 @@ export default defineConfig(({ mode }) => ({
 	resolve: {
 		alias: {
 			"@cms-config": path.resolve(__dirname, "./test/directive.config.ts"),
-			"@cms-server": path.resolve(__dirname, "./test/cms.server.ts"),
-			"server-only": path.resolve(__dirname, "./test/server-only.ts"),
+			"@cms-server": path.resolve(__dirname, "../core/test/cms.server.ts"),
+			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},
 }));

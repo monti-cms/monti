@@ -259,12 +259,12 @@ See the README of `@monti-cms/seo` for details.
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | stores, services, login checks, public media URLs (`resolvePublicMediaUrl`). It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
 | `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
-| `@monti-cms/core/syntax` (experimental) | `cms.config.ts`, syntax extension packages | `directiveSyntax()` and the `SyntaxExtension` interface ("Body syntax") |
+| `@monti-cms/core/syntax` (experimental) | `cms.config.ts`, syntax extension packages | The `SyntaxExtension` interface and the helpers extensions build on ("Body syntax"). The directive notation is `@monti-cms/syntax-directive` |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding, DB connection, errors |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate` (the code behind the `monti` command) |
 | `@monti-cms/core/migrate`, `/register` | command line (old way) | create tables; wire the config aliases in custom scripts |
-| `@monti-cms/core/testing` | tests | isolated-schema DB, sample data |
+| `@monti-cms/core/testing` | tests | isolated-schema DB, sample data, the MDX parser and remark plugins of a given extension list (`parseMdxAst`, `syntaxRemarkPlugins`) |
 
 ## Building the packages
 
@@ -292,7 +292,7 @@ What is written by default, with no extension:
 To add a notation, list extensions in `mdx.syntax`. The order is the precedence for writing.
 
 ```ts
-import { directiveSyntax } from "@monti-cms/core/syntax";
+import { directiveSyntax } from "@monti-cms/syntax-directive";
 
 export default defineConfig({
 	// …
@@ -300,12 +300,13 @@ export default defineConfig({
 });
 ```
 
-- `directiveSyntax()` reads and writes directives (`:::callout{…}`, `::image{…}`, `:u[text]`, `::::table`), the notation Monti used before standard MDX. Without it, `:::callout` is ordinary text.
+- [`@monti-cms/syntax-directive`](../syntax-directive) reads and writes directives (`:::callout{…}`, `::image{…}`, `:u[text]`, `::::table`), the notation Monti used before standard MDX. Without it, `:::callout` is ordinary text.
   `directiveSyntax({ write: false })` only reads directives and saves standard MDX, which migrates content a post at a time as it is saved. Line breaks are never written as `:br[]`.
 - The public renderer (`@monti-cms/core/render`) runs the same plugins as the editor's parser, so what the editor reads is what the site renders.
 
-**Upgrading a site that has directive content.** Before deploying this version, add `directiveSyntax({ write: false })` to `mdx.syntax` (or `directiveSyntax()` to keep writing directives).
-Without it, existing posts render directive text literally and fail validation (`{…}` in `:::callout{…}` is read as an expression). With `write: false`, the content hash (which hashes the parsed body) of a post does not change when it is saved in the standard notation.
+**Upgrading a site that has directive content.** Install `@monti-cms/syntax-directive` and add `directiveSyntax({ write: false })` to `mdx.syntax` (or `directiveSyntax()` to keep writing directives) before deploying this version.
+`directiveSyntax` is no longer exported by `@monti-cms/core/syntax`: change the import to `@monti-cms/syntax-directive`.
+Without the extension, existing posts render directive text literally and fail validation (`{…}` in `:::callout{…}` is read as an expression). With `write: false`, the content hash (which hashes the parsed body) of a post does not change when it is saved in the standard notation.
 Remove the extension once no stored body uses directives.
 
 ### Writing a syntax extension (experimental)
@@ -328,7 +329,7 @@ interface SyntaxExtension {
 
 `SyntaxContext` gives the site's blocks (`blocks.list`, `blocks.byName`, `blocks.byComponent`). `SerializeContext` adds `indent` (the indentation of the line the node starts on, which the writer must include),
 `serializeBlocks` and `serializeInlines` for children, `componentName`, `hasSpread`, `nodeAttributes` and `markAttributes` (the attribute list the standard notation uses), and `escapeAttribute`.
-Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. The directive extension (`packages/core/src/syntax/directive`) is the reference implementation.
+Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. The directive extension (`packages/syntax-directive`) is the reference implementation, and it imports only from `@monti-cms/core/syntax`.
 
 ## Body blocks
 
@@ -475,7 +476,7 @@ To use another store or login, build and pass your own `DatabaseAdapter`, `Media
 | `site.previewPath` | Leading part of the draft preview URL (e.g. `/preview`). If unset, there is no preview button. |
 | `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
 | `admin.path` | Admin UI path (default `/admin`). Must match the app's admin route folder. `/` and anything under `/api` are not allowed. Links inside the UI, login redirects and plugin screen URLs follow it. |
-| `mdx.syntax` | Syntax extensions (experimental, `@monti-cms/core/syntax`) in writing-precedence order, e.g. `[directiveSyntax()]`. Stored MDX is standard (CommonMark + GFM + MDX JSX) without them ("Body syntax"). |
+| `mdx.syntax` | Syntax extensions (experimental, `@monti-cms/core/syntax`) in writing-precedence order, e.g. `[directiveSyntax()]` from `@monti-cms/syntax-directive`. Stored MDX is standard (CommonMark + GFM + MDX JSX) without them ("Body syntax"). |
 | `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |

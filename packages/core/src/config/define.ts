@@ -95,7 +95,7 @@ export interface AdminConfig {
 export interface MdxConfig {
 	/**
 	 * Syntax extensions (`@monti-cms/core/syntax`), in precedence order for writing. Stored MDX is CommonMark + GFM + standard MDX JSX; an extension
-	 * adds a notation (for example `directiveSyntax()` for `:::callout`). Content written in an extension's notation is read only while the extension is listed.
+	 * adds a notation (for example `directiveSyntax()` from `@monti-cms/syntax-directive` for `:::callout`). Content written in an extension's notation is read only while the extension is listed.
 	 *
 	 * @experimental
 	 */
