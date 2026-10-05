@@ -332,7 +332,11 @@ describe("block ids in the store", () => {
 	describe("changes that leave the body alone", () => {
 		it("a bulk move to another folder keeps every id", async () => {
 			const entry = await createDraft({ mdx: BODY });
-			const folder = await store.createFolder({ collection: contentCollection, name: unique("Folder") });
+			const folder = await store.createFolder({
+				collection: contentCollection,
+				parentId: null,
+				name: unique("Folder"),
+			});
 
 			const { results } = await createBulkService(store).run({
 				op: "folder.move",
