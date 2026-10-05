@@ -3,6 +3,7 @@ import { ADDED_BLOCK_CONVERTERS } from "../blocks/added";
 import { codeBlockConverter } from "./code-block";
 import { mathConverter } from "./fence-preview";
 import { fileConverter } from "./file";
+import { footnoteDefinitionConverter } from "./footnote";
 import { imageConverter } from "./image";
 import { tableConverter } from "./table";
 import type { BlockConverter } from "./types";
@@ -17,6 +18,7 @@ export type { BlockConverter, ConverterContext } from "./types";
 export const BLOCK_CONVERTERS: readonly BlockConverter[] = [
 	imageConverter,
 	fileConverter,
+	footnoteDefinitionConverter,
 	mathConverter,
 	codeBlockConverter,
 	tableConverter,

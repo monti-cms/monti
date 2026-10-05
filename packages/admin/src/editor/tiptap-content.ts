@@ -62,6 +62,7 @@ const toOpaque = (node: CmsNode): JSONContent => {
 const isMappableInline = (node: CmsNode): boolean => {
 	if (node.type === "text") return (node.marks ?? []).every((mark) => MAPPABLE_MARKS.has(mark.type));
 	if (node.type === "hardBreak") return true;
+	if (node.type === "footnoteReference") return true;
 	// `:br[]` arrives as `mdxJsx` (name=br) — shown as a real line break in the editor.
 	if (node.type === "mdxJsx" && node.attrs?.name === "br") return true;
 	// Images, math, and other JSX cannot sit inline, so the whole block goes into a box.
@@ -153,6 +154,10 @@ const inlineChildren = (nodes: CmsNode[]): JSONContent[] => {
 		}
 		if (node.type === "hardBreak" || (node.type === "mdxJsx" && node.attrs?.name === "br")) {
 			out.push({ type: "hardBreak" });
+			continue;
+		}
+		if (node.type === "footnoteReference") {
+			out.push({ type: "footnoteReference", attrs: { label: asString(node.attrs?.label) ?? "" } });
 			continue;
 		}
 		// Unreachable because isMappableInline has filtered. A box cannot sit inline,
@@ -278,6 +283,10 @@ const tiptapInlineToCms = (nodes: JSONContent[] | undefined): CmsNode[] => {
 		}
 		if (node.type === "hardBreak") {
 			out.push(brDirectiveNode());
+			continue;
+		}
+		if (node.type === "footnoteReference") {
+			out.push({ type: "footnoteReference", attrs: { label: asString(node.attrs?.label) ?? "" } });
 			continue;
 		}
 		if (node.type === "image") {
