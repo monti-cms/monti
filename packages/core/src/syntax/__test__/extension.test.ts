@@ -163,6 +163,19 @@ describe("syntax extensions: reading", () => {
 		expect(names).toContain("image");
 	});
 
+	it("receives the names of the code block line effects the site uses", () => {
+		let effects: ReadonlySet<string> = new Set();
+		const spy: SyntaxExtension = {
+			name: "spy",
+			remarkPlugins: (context) => {
+				effects = context.codeLineEffects;
+				return [];
+			},
+		};
+		mdxWith([spy]).write("text");
+		expect([...effects]).toEqual(expect.arrayContaining(["highlight", "plus", "minus", "warning", "error"]));
+	});
+
 	it("without the extension the notation is ordinary text", () => {
 		expect(mdxWith([]).write("앞 @@word@@ 뒤").trimEnd()).toBe("앞 @@word@@ 뒤");
 	});

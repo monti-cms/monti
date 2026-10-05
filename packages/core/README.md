@@ -323,6 +323,7 @@ export default defineConfig({
 
 - [`@monti-cms/syntax-directive`](../syntax-directive) reads and writes directives (`:::callout{…}`, `::image{…}`, `:u[text]`, `::::table`), the notation Monti used before standard MDX. Without it, `:::callout` is ordinary text.
   `directiveSyntax({ write: false })` only reads directives and saves standard MDX, which migrates content a post at a time as it is saved (or all at once with `monti content:rewrite --apply`). Line breaks are never written as `:br[]`.
+- [`@monti-cms/syntax-shiki`](../syntax-shiki) reads Shiki code notation in code fences (`// [!code ++]`, `[!code highlight]`, `[!code focus]`, counts such as `[!code ++:3]`) and turns it into Monti's code annotations (`// @line plus`). It only reads: bodies are always written with Monti's annotations.
 - The public renderer (`@monti-cms/core/render`) runs the same plugins as the editor's parser, so what the editor reads is what the site renders.
 
 **Upgrading a site that has directive content.** Install `@monti-cms/syntax-directive` and add `directiveSyntax({ write: false })` to `mdx.syntax` (or `directiveSyntax()` to keep writing directives) before deploying this version.
@@ -373,9 +374,10 @@ interface SyntaxExtension {
 }
 ```
 
-`SyntaxContext` gives the site's blocks (`blocks.list`, `blocks.byName`, `blocks.byComponent`). `SerializeContext` adds `indent` (the indentation of the line the node starts on, which the writer must include),
+`SyntaxContext` gives the site's blocks (`blocks.list`, `blocks.byName`, `blocks.byComponent`) and the names of its code block line effects (`codeLineEffects`). `SerializeContext` adds `indent` (the indentation of the line the node starts on, which the writer must include),
 `serializeBlocks` and `serializeInlines` for children, `componentName`, `hasSpread`, `nodeAttributes` and `markAttributes` (the attribute list the standard notation uses), and `escapeAttribute`.
 Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. The directive extension (`packages/syntax-directive`) is the reference implementation, and it imports only from `@monti-cms/core/syntax`.
+The entry point also exports the code comment syntax helpers (`resolveCommentSyntax`, `formatAnnotationComment`) that Monti's code annotations use, for extensions that read or write code comments (`packages/syntax-shiki`).
 
 ## Body blocks
 
