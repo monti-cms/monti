@@ -17,6 +17,7 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 | [`@monti-cms/seo`](packages/seo) | SEO extension. Search and sharing fields with a preview |
 | [`@monti-cms/bareun`](packages/bareun) | Bareun spell checking |
 | [`@monti-cms/syntax-directive`](packages/syntax-directive) | Directive syntax extension. Reads and writes `:::callout`, `::image{…}` and `:u[text]` |
+| [`@monti-cms/syntax-shiki`](packages/syntax-shiki) | Shiki code notation extension. Reads `// [!code ++]` and friends in code fences as Monti code annotations |
 
 ## Install
 
@@ -42,7 +43,7 @@ pnpm install          # install
 pnpm lint             # lint (fix with pnpm lint:fix)
 pnpm check:korean     # check that Korean strings in runtime code live only in the message dictionaries
 pnpm typecheck        # type check all packages
-pnpm build            # build all packages (core → syntax-directive → admin → ai → blocks → bareun → seo)
+pnpm build            # build all packages (core → syntax-directive → syntax-shiki → admin → ai → blocks → bareun → seo)
 pnpm test:run         # tests (needs Postgres)
 pnpm example:check    # pack the packages, install them into the example app and build it
 ```
