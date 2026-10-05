@@ -105,6 +105,15 @@ describe("body search text", () => {
 		expect(text).not.toContain("/a.png");
 	});
 
+	it("indexes the code of a fence without its annotation comments", () => {
+		const text = search(
+			["```ts", "// @line plus", "const needle = 1;", "// @char strong {6-6}", "const other = 2;", "```"].join("\n"),
+		);
+		expect(text).toBe("const needle = 1; const other = 2;");
+		expect(text).not.toContain("@line");
+		expect(text).not.toContain("@char");
+	});
+
 	it("keeps the text attributes of blocks and the hover text of a text decoration", () => {
 		if (titled) {
 			const { component, attribute } = titled;
