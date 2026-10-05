@@ -63,13 +63,13 @@ const b = 2 // [!code --]
 const b = 3 // [!code ++]
 ```
 
-은 다음이 된다.
+은 다음이 된다(Monti는 줄 효과마다 줄 범위를 함께 쓴다).
 
 ```ts
 const a = 1
-// @line minus
+// @line minus {1-1}
 const b = 2
-// @line plus
+// @line plus {2-2}
 const b = 3
 ```
 

@@ -63,13 +63,13 @@ const b = 2 // [!code --]
 const b = 3 // [!code ++]
 ```
 
-becomes
+becomes (Monti writes every line effect with its line range)
 
 ```ts
 const a = 1
-// @line minus
+// @line minus {1-1}
 const b = 2
-// @line plus
+// @line plus {2-2}
 const b = 3
 ```
 

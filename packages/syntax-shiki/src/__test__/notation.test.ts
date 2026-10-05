@@ -169,18 +169,18 @@ describe("word", () => {
 });
 
 describe("comment syntax of the language", () => {
-	it("reads # comments in python and bash and writes Monti's # annotations", () => {
+	it("reads # comments in python and bash and writes Monti's annotations in the language's comments", () => {
 		expect(convert(lines("x = 1", "y = 2  # [!code ++]"), "python")).toBe(lines("x = 1", "# @line plus", "y = 2"));
 		expect(convert(lines("# [!code --]", "rm a"), "bash")).toBe(lines("# @line minus", "rm a"));
-		expect(convert("echo hi # [!code hl]", "sh")).toBe(lines("// @line highlight", "echo hi"));
+		expect(convert("echo hi # [!code hl]", "sh")).toBe(lines("# @line highlight", "echo hi"));
 	});
 
 	it("reads <!-- --> comments in html and writes Monti's annotation comment", () => {
 		expect(convert(lines("<div>", "  <p>a</p> <!-- [!code ++] -->", "</div>"), "html")).toBe(
-			lines("<div>", "  // @line plus", "  <p>a</p>", "</div>"),
+			lines("<div>", "  <!-- @line plus -->", "  <p>a</p>", "</div>"),
 		);
 		expect(convert(lines("<!-- [!code highlight:2] -->", "<a>", "<b>"), "html")).toBe(
-			lines("// @line highlight {0-1}", "<a>", "<b>"),
+			lines("<!-- @line highlight {0-1} -->", "<a>", "<b>"),
 		);
 	});
 

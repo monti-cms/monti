@@ -13,7 +13,9 @@ describe("Shiki notation configured in the site config", () => {
 	it("is read by the parser and stored as Monti annotations, focus as the site's focus effect", () => {
 		expect(analyze(SHIKI).errors).toEqual([]);
 		const body = bodyFromMdx(SHIKI);
-		expect(body.mdx).toBe("```ts\nconst a = 1\n// @line focus\nconst b = 2\n// @line plus\nconst c = 3\n```\n");
+		expect(body.mdx).toBe(
+			"```ts\nconst a = 1\n// @line focus {1-1}\nconst b = 2\n// @line plus {2-2}\nconst c = 3\n```\n",
+		);
 		expect(body.mdx).not.toContain("[!code");
 	});
 

@@ -32,11 +32,11 @@ describe("importing Shiki notation", () => {
 
 \`\`\`ts
 const a = 1
-// @line minus
+// @line minus {1-1}
 const b = 2
-// @line plus
+// @line plus {2-2}
 const b = 3
-// @line highlight
+// @line highlight {3-3}
 console.log(a, b)
 \`\`\`
 
@@ -48,11 +48,21 @@ y = 2
 `);
 	});
 
-	it("gives the document the annotations in the code value", () => {
+	it("gives the document the code and its annotations as data", () => {
 		const code = (body.doc?.content ?? []).filter((node) => node.type === "codeBlock");
-		expect(code.map((node) => node.attrs?.value)).toEqual([
-			"const a = 1\n// @line minus\nconst b = 2\n// @line plus\nconst b = 3\n// @line highlight\nconsole.log(a, b)",
-			"# @line error {0-1}\nx = 1\ny = 2",
+		expect(code.map((node) => node.attrs?.code)).toEqual([
+			"const a = 1\nconst b = 2\nconst b = 3\nconsole.log(a, b)",
+			"x = 1\ny = 2",
+		]);
+		expect(code.map((node) => node.attrs?.annotations)).toEqual([
+			{
+				lines: [
+					{ name: "minus", start: 1, end: 2 },
+					{ name: "plus", start: 2, end: 3 },
+					{ name: "highlight", start: 3, end: 4 },
+				],
+			},
+			{ lines: [{ name: "error", start: 0, end: 2 }] },
 		]);
 	});
 
