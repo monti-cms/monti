@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ADDED_BLOCKS } from "../../blocks/active";
+import { insertSoftBreaks } from "../../mdx/soft-breaks";
 import { renderMdx } from "../index";
 
 const html = async (source: string, options?: Parameters<typeof renderMdx>[1]) =>
@@ -12,12 +13,27 @@ const fenceBlock = ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
 /** Body rendering. The reference blog's public render checks were moved to the core default components (runs with two configs). */
 describe("body rendering @monti-cms/core/render", () => {
 	it("renders Markdown, tables, line breaks and the table of contents", async () => {
-		const rendered = await renderMdx("## 제목\n\n첫 줄\n둘째 줄\n\n| a | b |\n| --- | --- |\n| 1 | 2 |");
+		const rendered = await renderMdx("## 제목\n\n첫 줄<br />\n둘째 줄\n\n| a | b |\n| --- | --- |\n| 1 | 2 |");
 		const markup = renderToStaticMarkup(rendered.content);
 		expect(markup).toContain('<h2 id="제목">');
 		expect(markup).toContain("<br/>");
 		expect(markup).toContain("<table");
 		expect(rendered.toc).toEqual([expect.objectContaining({ value: "제목", depth: 0 })]);
+	});
+
+	it("renders a single newline inside a paragraph as a space, as CommonMark and the CMS tree read it", async () => {
+		const markup = await html("첫 줄\n둘째 줄");
+		expect(markup).not.toContain("<br");
+		expect(markup).toContain("첫 줄\n둘째 줄");
+	});
+
+	it("looks the same after the soft-break migration as the old chain did: a break where there was a newline", async () => {
+		const source = "첫 줄\n둘째 줄\n셋째 줄\n\n- 항목\n  이어서";
+		const result = insertSoftBreaks(source);
+		if (result.status !== "changed") throw new Error("expected a change");
+		const markup = await html(result.mdx);
+		// Two breaks in the paragraph and one in the list item; the line endings after the breaks add no more.
+		expect(markup.match(/<br\/>/g)).toHaveLength(3);
 	});
 
 	it("does not render a body that fails the check", async () => {

@@ -280,7 +280,7 @@ What is written by default, with no extension:
 
 | Meaning | Stored as |
 | --- | --- |
-| line break | `<br />` (in a paragraph the next line follows it: `line<br />` + newline + `next`). `\` + newline, two trailing spaces and `<br />` are all read and written this way |
+| line break | `<br />` (in a paragraph the next line follows it: `line<br />` + newline + `next`). `\` + newline, two trailing spaces and `<br />` are all read and written this way. A single newline inside a paragraph is only a space, on the page and in the editor alike (CommonMark) |
 | blank line (Enter pressed between blocks in the editor) | a line of only `<br />`, one per empty paragraph, kept in order. The document node is an empty `paragraph`. Blank lines at the very end of a body are not stored |
 | underline, superscript, subscript, translation notice | `<u>`, `<sup>`, `<sub>`, `<Untranslated>` |
 | text alignment | `<TextAlign align="center">` |
@@ -289,6 +289,9 @@ What is written by default, with no extension:
 | file card | `<File mediaId="…" />` |
 | container and leaf blocks (callout, tabs, columns, site blocks) | `<Component attributes>` … `</Component>`; booleans are bare when true and omitted when false |
 | text decorations (tooltip, code link, text color, site text blocks) | `<Component attributes>text</Component>` |
+
+The migration `0012_soft_line_endings` (run by `monti migrate`) keeps bodies written while a single newline rendered as a break looking the same: it writes a `<br />` at each such line ending in paragraph text of
+working and published bodies, translation base sources and templates, editing the stored string at the parser's offsets only (code, math, tables, attributes and expressions are never touched, and a body that does not parse is left as it is and reported).
 
 To add a notation, list extensions in `mdx.syntax`. The order is the precedence for writing.
 

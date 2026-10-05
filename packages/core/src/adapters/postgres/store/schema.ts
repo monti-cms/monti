@@ -3,6 +3,7 @@ import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
+import { migrateSoftBreaks } from "./soft-break-migration";
 
 /** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
 interface MigrationStep {
@@ -293,6 +294,15 @@ const STEPS: readonly MigrationStep[] = [
 		 * body of some stored bodies changed. Recomputes every stored hash so that "unpublished changes" keeps meaning what it meant.
 		 */
 		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
+	},
+	{
+		name: "0012_soft_line_endings",
+		/**
+		 * The public page no longer turns a single newline inside a paragraph into a line break (CommonMark: it is a space). Bodies written while it did keep their
+		 * look by getting a `<br />` at each such line ending (working and published bodies, translation base sources, templates). Also recomputes
+		 * `content_hash` and `search_text` of every body. A body that does not parse is left as it is and logged.
+		 */
+		run: (client, qSchema) => migrateSoftBreaks(client, qSchema),
 	},
 	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.

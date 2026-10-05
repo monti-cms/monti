@@ -7,6 +7,7 @@ import type { JsonValue } from "../../../core/types";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
+import { migrateSoftBreaks } from "../store/soft-break-migration";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -131,6 +132,141 @@ describe("document shape migrations", () => {
 			expect(after.working.updatedAt?.getTime()).toBe(published.working.updatedAt?.getTime());
 			expect(after.working.mdx).toBe(published.working.mdx);
 			expect(after.published).toEqual(published.published);
+		});
+	});
+
+	describe("0012_soft_line_endings", () => {
+		const STEP = "0012_soft_line_endings";
+		const SOFT = "첫 줄\n둘째 줄\n\n다음 문단\n끝";
+		const EXPLICIT = "첫 줄<br />\n둘째 줄\n\n다음 문단<br />\n끝";
+
+		const row = async (entryId: string, state: "working" | "published") =>
+			(
+				await pool.query<{
+					mdx: string;
+					content_hash: string;
+					search_text: string;
+					translation: { version: number; baseSource: string } | null;
+				}>(
+					`SELECT mdx, content_hash, search_text, translation FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
+					[entryId, state],
+				)
+			).rows[0];
+
+		const run = async () => {
+			await rewindTo(STEP);
+			await migrateContentStore(pool, { schema: schemaName });
+		};
+
+		it("is a recorded migration step that runs after the hash step and before the template seed", () => {
+			expect(CONTENT_STORE_MIGRATIONS).toContain(STEP);
+			expect(CONTENT_STORE_MIGRATIONS.indexOf(STEP)).toBeGreaterThan(
+				CONTENT_STORE_MIGRATIONS.indexOf("0011_line_break_hashes"),
+			);
+			expect(CONTENT_STORE_MIGRATIONS.indexOf(STEP)).toBeLessThan(
+				CONTENT_STORE_MIGRATIONS.indexOf("seed_initial_body_templates"),
+			);
+		});
+
+		it("makes the soft line endings of working and published bodies explicit and keeps what the list shows", async () => {
+			const unchanged = await publishedWith(SOFT);
+			const edited = await publishedWith(SOFT);
+			await setWorkingBody(edited.id, "첫 줄\n다른 문단");
+
+			await run();
+
+			expect((await row(unchanged.id, "working"))?.mdx).toBe(EXPLICIT);
+			expect((await row(unchanged.id, "published"))?.mdx).toBe(EXPLICIT);
+			expect((await row(edited.id, "working"))?.mdx).toBe("첫 줄<br />\n다른 문단");
+			expect(await staleHashes()).toEqual([]);
+			expect(await hasUnpublishedChanges(unchanged.id)).toBe(false);
+			expect(await hasUnpublishedChanges(edited.id)).toBe(true);
+		});
+
+		it("does not bump the version or the modified dates, and a second run changes nothing", async () => {
+			const published = await publishedWith(SOFT);
+			await run();
+
+			const after = await store.getEntry(published.id);
+			expect(after.version).toBe(published.version);
+			expect(after.updatedAt.getTime()).toBe(published.updatedAt.getTime());
+			expect(after.working.updatedAt?.getTime()).toBe(published.working.updatedAt?.getTime());
+
+			const before = await row(published.id, "working");
+			await run();
+			expect(await row(published.id, "working")).toEqual(before);
+		});
+
+		it("recomputes the search text of every body", async () => {
+			const published = await publishedWith(SOFT);
+			await pool.query(`UPDATE "${schemaName}".entry_bodies SET search_text = 'stale' WHERE entry_id = $1`, [
+				published.id,
+			]);
+
+			await run();
+
+			const stored = await row(published.id, "working");
+			expect(stored?.search_text).not.toBe("stale");
+			expect(stored?.search_text).toContain("다음 문단");
+		});
+
+		it("rewrites the source a translation was confirmed against, so the translation screen sees no change", async () => {
+			const published = await publishedWith("본문");
+			await pool.query(
+				`UPDATE "${schemaName}".entry_bodies SET translation = $1::jsonb WHERE entry_id = $2 AND state = 'working'`,
+				[JSON.stringify({ version: 2, baseSource: SOFT }), published.id],
+			);
+			await setWorkingBody(published.id, SOFT);
+
+			await run();
+
+			const stored = await row(published.id, "working");
+			expect(stored?.translation).toEqual({ version: 2, baseSource: EXPLICIT });
+			expect(stored?.mdx).toBe(stored?.translation?.baseSource);
+		});
+
+		it("rewrites body templates and leaves their version alone", async () => {
+			const template = await store.createTemplate({ name: unique("soft"), mdx: SOFT });
+
+			await run();
+
+			const after = await store.getTemplate(template.id);
+			expect(after.mdx).toBe(EXPLICIT);
+			expect(after.version).toBe(template.version);
+			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
+		});
+
+		it("leaves a body that does not parse untouched and logs it", async () => {
+			const broken = await createDraft("가\n<Unclosed");
+			await setWorkingBody(broken.id, "가\n<Unclosed");
+			const good = await createDraft(SOFT);
+			const messages: string[] = [];
+			const client = await pool.connect();
+			try {
+				await migrateSoftBreaks(client, schemaName, { log: (message) => messages.push(message) });
+			} finally {
+				client.release();
+			}
+
+			expect((await row(broken.id, "working"))?.mdx).toBe("가\n<Unclosed");
+			expect((await row(good.id, "working"))?.mdx).toBe(EXPLICIT);
+			expect(messages.some((message) => message.includes(broken.id) && message.includes("unparsed"))).toBe(true);
+			// A body that does not parse still has a valid hash (of its raw string).
+			expect(await staleHashes()).toEqual([]);
+		});
+
+		it("reaches every row whatever the batch size", async () => {
+			for (let index = 0; index < 5; index += 1) await createDraft(`줄 ${index}\n다음 줄`);
+			const client = await pool.connect();
+			try {
+				await migrateSoftBreaks(client, schemaName, { batchSize: 2 });
+			} finally {
+				client.release();
+			}
+			const left = await pool.query<{ mdx: string }>(
+				`SELECT mdx FROM "${schemaName}".entry_bodies WHERE mdx ~ '줄 [0-9]\n다음'`,
+			);
+			expect(left.rows).toEqual([]);
 		});
 	});
 });

@@ -7,4 +7,5 @@ export { createContentStore, migrateContentStore } from "./adapters/postgres/con
 export { createCmsRouteHandler, matchRoute } from "./http/router";
 export { readSamples } from "./mdx/__test__/fixtures/samples";
 export { parseMdxAst } from "./mdx/parse";
+export { insertSoftBreaks, type SoftBreakResult } from "./mdx/soft-breaks";
 export { syntaxRemarkPlugins } from "./mdx/syntax";
