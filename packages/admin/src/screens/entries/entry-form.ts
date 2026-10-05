@@ -6,6 +6,7 @@ import {
 	RECORD_TRANSLATIONS_KEY,
 	recordLocalizedFields,
 	type SchemaCollection,
+	type StoredDocument,
 	type StoredField,
 	storedField,
 	storedFields,
@@ -70,6 +71,8 @@ export interface EntryData {
 		metadata: Record<string, unknown>;
 		/** Latest draft body of the original (translation screen). */
 		mdx?: string;
+		/** The stored document of that body (`null` when it has none). Its block ids pair the blocks with the confirmed source's. */
+		doc?: StoredDocument | null;
 	};
 	status: "draft" | "published" | "archived" | "trashed";
 	version: number;
@@ -105,6 +108,7 @@ export const isTranslationEntry = (entry: Pick<EntryData, "id" | "translationGro
 /** The original shown on the translation screen. Only present for a translation that received the original body. */
 export interface TranslationSource {
 	mdx: string;
+	doc: StoredDocument | null;
 	locale: string;
 	title: string;
 }
@@ -113,7 +117,12 @@ export interface TranslationSource {
 export function translationSourceOf(entry: EntryData | null): TranslationSource | null {
 	if (!entry || !isTranslationEntry(entry) || typeof entry.source?.mdx !== "string") return null;
 	const title = entry.source.metadata.title;
-	return { mdx: entry.source.mdx, locale: entry.source.locale, title: typeof title === "string" ? title : "" };
+	return {
+		mdx: entry.source.mdx,
+		doc: entry.source.doc ?? null,
+		locale: entry.source.locale,
+		title: typeof title === "string" ? title : "",
+	};
 }
 
 /** Stored fields the form handles. For a translation, only fields that are `localized` in the definition (shared values belong to the original). */
@@ -128,11 +137,14 @@ const fieldsOf = (collection: string, translation = false): readonly StoredField
 /** Form key holding the translation state. Starts with `$` so it never collides with a stored field name. The value is a JSON string. */
 export const TRANSLATION_FORM_KEY = "$translation";
 
-/** JSON string of the translation state. Fixes the key order so the fingerprint matches values from the server (JSONB reorders keys). */
+/**
+ * JSON string of the translation state. Fixes the key order (also inside the document) so the fingerprint matches values from the server
+ * (JSONB reorders keys). A document that is not a valid stored document is left out.
+ */
 export const stringifyTranslation = (state: TranslationState) =>
-	JSON.stringify({ version: 2, baseSource: state.baseSource });
+	JSON.stringify(parseTranslationState(state) ?? { version: 3, baseSource: state.baseSource, baseDoc: null });
 
-/** Form value -> translation state. If missing or malformed, nothing is treated as confirmed (empty `baseSource`). */
+/** Form value -> translation state. If missing or malformed, nothing is treated as confirmed (empty `baseSource`, no document). */
 export const translationStateFromForm = (value: FormValue | undefined): TranslationState => {
 	if (typeof value === "string") {
 		try {
@@ -142,7 +154,7 @@ export const translationStateFromForm = (value: FormValue | undefined): Translat
 			// A corrupted value is treated as unconfirmed.
 		}
 	}
-	return { version: 2, baseSource: "" };
+	return { version: 3, baseSource: "", baseDoc: null };
 };
 
 /** Form value -> `translation` of the save request. Not sent if it is not a translation (no key). */
@@ -176,9 +188,9 @@ export function formFromEntry(entry: EntryData): EntryForm {
 	Object.assign(form, recordTranslationsToForm(entry.collection, metadata));
 	// A translation also handles translation state as the form, so autosave, recovery and conflict comparison see it along with the body.
 	if (isTranslationEntry(entry)) {
-		// If it is not a valid state, use an empty `baseSource` so "source changed" is shown.
+		// If it is not a valid state, use an empty `baseSource` so "source changed" is shown. A version 2 state is read as version 3.
 		form[TRANSLATION_FORM_KEY] = stringifyTranslation(
-			parseTranslationState(entry.working.translation) ?? { version: 2, baseSource: "" },
+			parseTranslationState(entry.working.translation) ?? { version: 3, baseSource: "", baseDoc: null },
 		);
 	}
 	return form;

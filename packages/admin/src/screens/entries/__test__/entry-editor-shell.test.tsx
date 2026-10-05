@@ -1,3 +1,4 @@
+import { bodyFromMdx, type StoredDocument } from "@monti-cms/core/mdx";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EntryEditorShell } from "../entry-editor-shell";
@@ -845,17 +846,32 @@ describe("translation source pane", () => {
 		translationGroupId: "entry-1",
 		translations: [],
 	};
-	const translationWith = (baseSource: string | null) => ({
+	/** `mdx` as a stored document (with block ids), for a source that carries one. */
+	const docOf = (mdx: string) => bodyFromMdx(mdx).doc;
+	const translationWith = (
+		baseSource: string | null,
+		documents: { base?: StoredDocument | null; current?: StoredDocument | null; currentMdx?: string } = {},
+	) => ({
 		...entry,
 		id: "entry-en",
 		locale: "en",
 		translationGroupId: "entry-1",
 		translations: [],
-		source: { locale: "ko", metadata: { title: "원문 제목" }, mdx: SOURCE_MDX },
+		source: {
+			locale: "ko",
+			metadata: { title: "원문 제목" },
+			mdx: documents.currentMdx ?? SOURCE_MDX,
+			...(documents.current ? { doc: documents.current } : {}),
+		},
 		working: {
 			metadata: { title: "Title" },
 			mdx: "First\n\nSecond\n",
-			translation: baseSource === null ? null : { version: 2, baseSource },
+			translation:
+				baseSource === null
+					? null
+					: documents.base
+						? { version: 3, baseSource, baseDoc: documents.base }
+						: { version: 2, baseSource },
 		},
 	});
 	const sourcePane = () => screen.queryByRole("complementary", { name: "원문 창" });
@@ -932,8 +948,32 @@ describe("translation source pane", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
 		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
-			version: 2,
+			version: 3,
 			baseSource: SOURCE_MDX,
+			baseDoc: null,
+		});
+	});
+
+	it("confirm also saves the source's document", async () => {
+		const current = docOf(SOURCE_MDX);
+		serve(
+			(_input, init) => {
+				if (init?.method === "PATCH") {
+					const body = JSON.parse(String(init.body));
+					return json({ ...translationWith(SOURCE_MDX), version: 5, working: { ...body, metadata: body.metadata } });
+				}
+			},
+			translationWith("첫 문단\n", { current }),
+		);
+		renderEdit();
+		expect(await screen.findByText("원문이 바뀌었습니다")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "확인" }));
+		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
+		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
+			version: 3,
+			baseSource: SOURCE_MDX,
+			baseDoc: current,
 		});
 	});
 
@@ -953,6 +993,49 @@ describe("translation source pane", () => {
 		expect(within(dialog).getAllByText("이전").length).toBeGreaterThan(0);
 		expect(within(dialog).getAllByText("지금").length).toBeGreaterThan(0);
 		await waitFor(() => expect(dialog.textContent).toContain("첫 문단 옛"));
+	});
+
+	it("the comparison shows a block that moved as moved when both versions have documents", async () => {
+		const before = docOf("가\n\n나\n\n다\n") as StoredDocument;
+		const [first, second, third] = before.content;
+		const current = { ...before, content: [third, first, second] } as StoredDocument;
+		serve(
+			() => undefined,
+			translationWith("가\n\n나\n\n다\n", { base: before, current, currentMdx: "다\n\n가\n\n나\n" }),
+		);
+		renderEdit();
+		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
+		const dialog = await screen.findByRole("dialog", { name: "원문 변경" });
+		expect(within(dialog).getAllByText("이동")).toHaveLength(1);
+		expect(within(dialog).queryByText("추가")).toBeNull();
+		expect(within(dialog).queryByText("삭제")).toBeNull();
+		await waitFor(() => expect(dialog.textContent).toContain("다"));
+	});
+
+	it("the comparison labels a block that moved and changed", async () => {
+		const before = docOf("가\n\n나\n\n다\n") as StoredDocument;
+		const [first, second, third] = before.content;
+		const edited = { ...third, content: [{ type: "text", text: "다 고침" }] };
+		const current = { ...before, content: [edited, first, second] } as StoredDocument;
+		serve(
+			() => undefined,
+			translationWith("가\n\n나\n\n다\n", { base: before, current, currentMdx: "다 고침\n\n가\n\n나\n" }),
+		);
+		renderEdit();
+		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
+		const dialog = await screen.findByRole("dialog", { name: "원문 변경" });
+		expect(within(dialog).getByText("이동 및 수정")).toBeTruthy();
+		await waitFor(() => expect(dialog.textContent).toContain("다 고침"));
+	});
+
+	it("without documents the same move is a removed and an added block", async () => {
+		serve(() => undefined, translationWith("가\n\n나\n\n다\n", { currentMdx: "다\n\n가\n\n나\n" }));
+		renderEdit();
+		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
+		const dialog = await screen.findByRole("dialog", { name: "원문 변경" });
+		expect(within(dialog).queryByText("이동")).toBeNull();
+		expect(within(dialog).getByText("추가")).toBeTruthy();
+		expect(within(dialog).getByText("삭제")).toBeTruthy();
 	});
 
 	it("an unparseable source is reported as not comparable", async () => {

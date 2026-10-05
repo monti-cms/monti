@@ -5,6 +5,7 @@ import {
 	adminHref,
 	bodyExcerpt,
 	cmsApiUrl,
+	confirmedSourceState,
 	previewHref as contentPreviewHref,
 	createTranslator,
 	DEFAULT_COLLECTION,
@@ -362,7 +363,8 @@ export function EntryEditorShell({
 	const translationSource = translationSourceOf(entry);
 	const translationForm = form[TRANSLATION_FORM_KEY];
 	/** The source the translator last confirmed. If it differs from the current source, "source changed" is shown. */
-	const confirmedSource = translationStateFromForm(translationForm).baseSource;
+	const confirmed = useMemo(() => translationStateFromForm(translationForm), [translationForm]);
+	const confirmedSource = confirmed.baseSource;
 	const sourceChanged =
 		translationSource !== null && typeof translationForm === "string" && translationSource.mdx !== confirmedSource;
 
@@ -1065,7 +1067,9 @@ export function EntryEditorShell({
 						disabled={isReadOnly}
 						onClick={() =>
 							setForm({
-								[TRANSLATION_FORM_KEY]: stringifyTranslation({ version: 2, baseSource: translationSource.mdx }),
+								[TRANSLATION_FORM_KEY]: stringifyTranslation(
+									confirmedSourceState(translationSource.mdx, translationSource.doc),
+								),
 							})
 						}
 					>
@@ -1186,6 +1190,8 @@ export function EntryEditorShell({
 					onOpenChange={setIsSourceCompareOpen}
 					before={confirmedSource}
 					after={translationSource.mdx}
+					beforeDoc={confirmed.baseDoc}
+					afterDoc={translationSource.doc}
 				/>
 			)}
 		</div>

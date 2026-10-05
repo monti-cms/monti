@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { BLOCKS } from "../../../blocks/active";
 import type { BlockDefinition } from "../../../blocks/define";
+import { bodyFromMdx, type StoredDocument, serialize, withoutBlockIds } from "../../../mdx";
+import { fromStoredDocument } from "../../../mdx/stored-document";
 import { diffSources, type SourceChange } from "../source-diff";
 
 /**
@@ -36,9 +38,11 @@ const summary = (changes: SourceChange[] | null) =>
 	changes?.map((change) =>
 		change.kind === "changed"
 			? ["changed", change.before.source, change.after.source]
-			: change.kind === "added"
-				? ["added", change.after.source]
-				: ["removed", change.before.source],
+			: change.kind === "moved"
+				? [change.edited ? "moved+edited" : "moved", change.before.source, change.after.source]
+				: change.kind === "added"
+					? ["added", change.after.source]
+					: ["removed", change.before.source],
 	);
 
 describe("comparing two source versions", () => {
@@ -113,5 +117,191 @@ describe("comparing two source versions", () => {
 
 	it("null when the source cannot be parsed", () => {
 		expect(diffSources("본문 <TextAlign>닫히지 않음", "하나\n")).toBeNull();
+	});
+});
+
+/** A version of a body as the translation screen sees it: its MDX and its document, whose block ids are inherited from `previous`. */
+const version = (mdx: string, previous?: StoredDocument | null) => {
+	const body = bodyFromMdx(mdx, undefined, { previous });
+	if (!body.doc) throw new Error("fixture does not parse");
+	return { mdx: body.mdx, doc: body.doc };
+};
+
+type Version = ReturnType<typeof version>;
+
+const compare = (before: Version, after: Version) =>
+	diffSources(before.mdx, after.mdx, { before: before.doc, after: after.doc });
+
+/** The same version with its blocks in another order (ids move with them) and optionally edited text. */
+const reorder = (from: Version, order: number[], edits: Record<number, string> = {}): Version => {
+	const content = order.map((index) => {
+		const block = from.doc.content[index];
+		if (!block) throw new Error("fixture");
+		const text = edits[index];
+		return text === undefined ? block : { ...block, content: [{ type: "text", text }] };
+	});
+	const doc = { ...from.doc, content };
+	return { mdx: serialize(fromStoredDocument(doc)), doc };
+};
+
+const withoutIds = (from: Version): Version => ({
+	mdx: from.mdx,
+	doc: { ...from.doc, content: withoutBlockIds(from.doc.content) } as StoredDocument,
+});
+
+describe("comparing two source versions by block id", () => {
+	const base = version("가\n\n나\n\n다\n\n라\n");
+
+	it("nothing changed when equal", () => {
+		expect(compare(base, version(base.mdx, base.doc))).toEqual([]);
+	});
+
+	it("an edited block stays the same block", () => {
+		const after = version("가\n\n나 고침\n\n다\n\n라\n", base.doc);
+		expect(summary(compare(base, after))).toEqual([["changed", "나", "나 고침"]]);
+	});
+
+	it("finds an added and a removed block", () => {
+		expect(summary(compare(base, version("가\n\n나\n\n새 문단\n\n다\n\n라\n", base.doc)))).toEqual([
+			["added", "새 문단"],
+		]);
+		expect(summary(compare(base, version("가\n\n다\n\n라\n", base.doc)))).toEqual([["removed", "나"]]);
+		// Apart from each other, so not taken for one edited block.
+		expect(summary(compare(base, version("가\n\n다\n\n라\n\n마\n", base.doc)))).toEqual([
+			["removed", "나"],
+			["added", "마"],
+		]);
+	});
+
+	it("lists a removed block after the block that preceded it", () => {
+		const after = reorder(base, [0, 2, 3], { 2: "다 고침" });
+		expect(summary(compare(base, after))).toEqual([
+			["removed", "나"],
+			["changed", "다", "다 고침"],
+		]);
+		expect(summary(compare(base, version("나\n\n다\n\n라\n", base.doc)))).toEqual([["removed", "가"]]);
+	});
+
+	it("a block that moved is moved, not removed and added", () => {
+		const after = reorder(base, [3, 0, 1, 2]);
+		expect(after.mdx).toBe("라\n\n가\n\n나\n\n다\n");
+		expect(summary(compare(base, after))).toEqual([["moved", "라", "라"]]);
+		expect(summary(compare(base, reorder(base, [1, 2, 3, 0])))).toEqual([["moved", "가", "가"]]);
+	});
+
+	it("reports as few moved blocks as the new order needs", () => {
+		// Reversed: only one block can stay.
+		expect(compare(base, reorder(base, [3, 2, 1, 0]))?.map((change) => change.kind)).toEqual([
+			"moved",
+			"moved",
+			"moved",
+		]);
+		// Two adjacent blocks swapped: one of them moved.
+		expect(compare(base, reorder(base, [0, 2, 1, 3]))?.map((change) => change.kind)).toEqual(["moved"]);
+	});
+
+	it("a block that moved and was edited is moved and edited", () => {
+		const after = reorder(base, [3, 0, 1, 2], { 3: "라 고침" });
+		expect(summary(compare(base, after))).toEqual([["moved+edited", "라", "라 고침"]]);
+	});
+
+	it("a move does not hide an edit or an added block elsewhere", () => {
+		const moved = reorder(base, [3, 0, 1, 2], { 1: "나 고침" });
+		const after = version(`${moved.mdx}\n마\n`, moved.doc);
+		expect(summary(compare(base, after))).toEqual([
+			["moved", "라", "라"],
+			["changed", "나", "나 고침"],
+			["added", "마"],
+		]);
+	});
+
+	it("blocks inside a box are paired by id and moved inside it", () => {
+		const box = version('<TextAlign align="center">\n\n안쪽 하나\n\n안쪽 둘\n\n</TextAlign>\n\n바깥\n');
+		const inside = box.doc.content[0];
+		if (!inside?.content) throw new Error("fixture");
+		const swapped = {
+			...box.doc,
+			content: [{ ...inside, content: [...inside.content].reverse() }, ...box.doc.content.slice(1)],
+		};
+		const after = { mdx: serialize(fromStoredDocument(swapped)), doc: swapped };
+		expect(compare(box, after)?.map((change) => change.kind)).toEqual(["moved"]);
+		const edited = version(
+			'<TextAlign align="center">\n\n안쪽 하나\n\n안쪽 둘 고침\n\n</TextAlign>\n\n바깥\n',
+			box.doc,
+		);
+		expect(summary(compare(box, edited))).toEqual([["changed", "안쪽 둘", "안쪽 둘 고침"]]);
+	});
+
+	it("a block moved into another box is moved though its position among the blocks is the same", () => {
+		const before = version(
+			'<TextAlign align="center">\n\n하나\n\n</TextAlign>\n\n<TextAlign align="right">\n\n둘\n\n</TextAlign>\n',
+		);
+		const [left, right] = before.doc.content;
+		const one = left?.content?.[0];
+		if (!left || !right || !one) throw new Error("fixture");
+		const doc = {
+			...before.doc,
+			content: [
+				{ ...left, content: [] },
+				{ ...right, content: [one, ...(right.content ?? [])] },
+			],
+		};
+		const after = { mdx: serialize(fromStoredDocument(doc)), doc } as Version;
+		expect(summary(compare(before, after))).toEqual([["moved", "하나", "하나"]]);
+	});
+
+	it.skipIf(!titledBox || !titleAttribute)("the title of a box is paired by the box's id", () => {
+		if (!titledBox || !titleAttribute) return;
+		const box = (title: string, body: string) =>
+			`<${titledBox.component} ${[otherAttribute, `${titleAttribute}="${title}"`].filter(Boolean).join(" ")}>\n\n${body}\n\n</${titledBox.component}>\n`;
+		const before = version(`앞\n\n${box("알림", "안쪽")}`);
+		const after = version(`앞\n\n${box("주의", "안쪽 고침")}`, before.doc);
+		expect(summary(compare(before, after))).toEqual([
+			["changed", JSON.stringify({ title: "알림" }), JSON.stringify({ title: "주의" })],
+			["changed", "안쪽", "안쪽 고침"],
+		]);
+	});
+
+	it("blocks without an id are paired by kind and content as before", () => {
+		const before = withoutIds(base);
+		const after = withoutIds(version("가\n\n나 고침\n\n다\n\n마\n"));
+		expect(summary(compare(before, after))).toEqual(summary(diffSources(before.mdx, after.mdx)));
+		expect(summary(compare(before, after))).toEqual([
+			["changed", "나", "나 고침"],
+			["changed", "라", "마"],
+		]);
+		// A move without ids is a removal and an addition.
+		expect(summary(compare(withoutIds(base), withoutIds(reorder(base, [3, 0, 1, 2]))))).toEqual([
+			["added", "라"],
+			["removed", "라"],
+		]);
+	});
+
+	it("a block with an id and one without are each paired their own way", () => {
+		const after = version("가\n\n나 고침\n\n다\n\n라\n", base.doc);
+		const [first, second, ...rest] = after.doc.content;
+		if (!first || !second) throw new Error("fixture");
+		const [bare] = withoutBlockIds([second]);
+		const mixed = { mdx: after.mdx, doc: { ...after.doc, content: [first, bare, ...rest] } as StoredDocument };
+		expect(summary(compare(base, mixed))).toEqual([["changed", "나", "나 고침"]]);
+		// A repeated id pairs only once; the copy is paired by kind and content like a block without an id.
+		const repeated = {
+			mdx: after.mdx,
+			doc: { ...after.doc, content: [first, { ...first }, ...rest] } as StoredDocument,
+		};
+		expect(summary(compare(base, repeated))).toEqual([["changed", "나", "가"]]);
+	});
+
+	it("uses the MDX when either document is missing", () => {
+		const after = reorder(base, [3, 0, 1, 2]);
+		expect(summary(diffSources(base.mdx, after.mdx, { before: base.doc, after: null }))).toEqual([
+			["added", "라"],
+			["removed", "라"],
+		]);
+		expect(summary(diffSources(base.mdx, after.mdx, { before: undefined, after: after.doc }))).toEqual([
+			["added", "라"],
+			["removed", "라"],
+		]);
+		expect(diffSources("본문 <TextAlign>닫히지 않음", "하나\n", { before: null, after: null })).toBeNull();
 	});
 });
