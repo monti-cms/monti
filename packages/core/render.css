@@ -77,8 +77,23 @@ pre[data-code-focus] code .line[data-focused] {
 	width: 100%;
 	background-color: color-mix(in oklab, currentColor 10%, transparent);
 }
+
+/* Focus lines (`// @line focus`): the other lines of the block are dimmed until the reader points at or into the code block
+   (hover, or keyboard focus on its copy button). A line the body points at (`:code-ref`) is always sharp. */
+pre:has(.line.code-focus) code .line {
+	transition: opacity 150ms ease;
+}
+pre:has(.line.code-focus) code .line:not(.code-focus) {
+	opacity: 0.4;
+}
+:is(pre, .cms-code):has(.line.code-focus):is(:hover, :focus-within) code .line:not(.code-focus),
+pre:has(.line.code-focus) code .line[data-focused] {
+	opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-	pre[data-code-focus] code .line {
+	pre[data-code-focus] code .line,
+	pre:has(.line.code-focus) code .line {
 		transition: none;
 	}
 }

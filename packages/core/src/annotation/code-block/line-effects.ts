@@ -3,7 +3,7 @@ import { codeBlockMessages } from "./messages";
 
 /**
  * Code block line effect definitions (`// @line name {2-4}`). Adds the site config's `codeBlock.lineEffects` to the core defaults
- * (highlight, plus, minus, warning, error). A site definition replaces one with the same name.
+ * (highlight, focus, plus, minus, warning, error). A site definition replaces one with the same name.
  *
  * A definition sets the storage syntax (comment name), public view class, and editor display in one place. It goes into the config, so it holds only
  * JSON-serializable values. Line folding (`collapse`) and the body-link label (`anchor`) are core effects with their own behavior, so they are not here.
@@ -83,6 +83,19 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		icon: "highlighter",
 		class: "inline-block w-full anno-mark-base bg-gray-400/20",
 		editor: { background: "bg-gray-400/20" },
+	},
+	{
+		// The other lines of the block are dimmed until the reader points at or into the code (`render.css`, `.code-focus`).
+		name: "focus",
+		get label() {
+			return t("lineEffect.focus");
+		},
+		icon: "focus",
+		class: "code-focus",
+		editor: {
+			background: "bg-sky-400/10",
+			marker: { text: "›", className: "text-sky-600 cms-dark:text-sky-400" },
+		},
 	},
 	{
 		name: "plus",

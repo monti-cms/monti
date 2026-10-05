@@ -444,16 +444,17 @@ blocks: [
 
 ### 코드 블록 줄 효과
 
-코드 블록 줄 효과(`// @line 이름 {0-2}`)의 기본은 강조·추가·삭제·경고·오류다. 설정의 `codeBlock.lineEffects`로 더하고,
-같은 이름을 적으면 기본을 바꾼다.
+코드 블록 줄 효과(`// @line 이름 {0-2}`)의 기본은 강조·포커스·추가·삭제·경고·오류다. 포커스(`// @line focus`)는 독자가 코드에 마우스를 올리거나
+키보드 포커스를 옮기기 전까지 블록의 나머지 줄을 흐리게 한다(`render.css`의 `.code-focus`). 본문이 `:code-ref`로 가리키는 줄은 늘 선명하다.
+설정의 `codeBlock.lineEffects`로 더하고, 같은 이름을 적으면 기본을 바꾼다.
 
 ```ts
 codeBlock: {
 	lineEffects: [
 		{
-			name: "focus", // 주석 이름(소문자 케밥). collapse·anchor와 글자 효과 이름은 쓸 수 없다
-			label: "초점", // 줄 효과 메뉴 이름
-			icon: "eye", // 메뉴 아이콘(lucide 이름, 관리자 화면에 등록된 이름)
+			name: "info", // 주석 이름(소문자 케밥). collapse·anchor와 글자 효과 이름은 쓸 수 없다
+			label: "정보", // 줄 효과 메뉴 이름
+			icon: "star", // 메뉴 아이콘(lucide 이름, 관리자 화면에 등록된 이름)
 			class: "bg-primary/10", // 공개 화면이 그 줄에 붙이는 클래스(사이트 Tailwind가 읽는 곳에 둔다)
 			editor: { background: "bg-cms-primary/10" }, // 편집기 표시(관리자 색은 `cms-*`, 어두운 테마는 `cms-dark:`): background·wavy(물결 밑줄 색)·marker({ text, className })
 		},

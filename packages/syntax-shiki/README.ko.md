@@ -52,7 +52,7 @@ export default defineConfig({
 | `// [!code --]` | `// @line minus` |
 | `// [!code highlight]`, `// [!code hl]` | `// @line highlight` |
 | `// [!code error]`, `// [!code warning]` | `// @line error`, `// @line warning` |
-| `// [!code focus]` | 사이트가 `codeBlock.lineEffects`에 `focus` 줄 효과를 정의했으면 `// @line focus`, 아니면 `// @line highlight` |
+| `// [!code focus]` | `// @line focus`(기본 줄 효과) |
 | `// [!code info]` | 사이트가 `info` 줄 효과를 정의했으면 `// @line info`, 아니면 그대로 둔다 |
 | `[!code ++:3]`(개수가 붙은 모든 줄 효과) | `// @line plus {2-4}`: 이 줄과 다음 두 줄. 코드 줄 번호(0부터)의 닫힌 범위다 |
 | `[!code word:foo]` | `// @char strong {re:/foo/g}`, 정규식 글자 규칙(아래 참고) |
@@ -83,7 +83,7 @@ const b = 3
 - **들여쓰기.** 주석은 적용되는 줄의 들여쓰기를 따른다.
 - **`word`.** Monti에는 단어 강조 효과가 없어 가장 가까운 글자 효과를 쓴다(기본은 굵게, `word` 옵션으로 바꾼다). 단어는 정규식 규칙이 된다. 개수 없는 `[!code word:foo]`는 그 줄부터 끝까지의 모든 줄을 덮고
   (첫 줄이면 코드 전체를 덮는 `@document` 규칙), `[!code word:foo:2]`는 그 줄 수만큼 덮는다.
-- **`focus`.** Monti에는 기본으로 집중 효과가 없다. `codeBlock.lineEffects`에 `focus`라는 줄 효과를 더하면 쓰이고, 없으면 집중 줄은 강조로 바뀐다.
+- **`focus`.** Monti의 `focus` 줄 효과가 된다. 독자가 코드를 가리키기 전까지 나머지 줄을 흐리게 한다. `codeBlock.lineEffects`에 `focus` 항목을 두면 모양을 바꿀 수 있다.
 - 표기가 없는 코드는 건드리지 않는다.
 
 ## 확장을 직접 쓰려면

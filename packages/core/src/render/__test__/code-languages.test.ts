@@ -1,3 +1,4 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { highlight } from "../code/code-highlighter";
 import { renderMdx } from "../index";
@@ -23,5 +24,14 @@ describe("code in a language that is not loaded", () => {
 
 	it("does not fail a page that has it", async () => {
 		await expect(renderMdx("```no-such-language\nlet x = 1\n```\n")).resolves.toBeTruthy();
+	});
+});
+
+describe("focus lines", () => {
+	it("carry the class the public styles dim the other lines by", async () => {
+		const { content } = await renderMdx("```ts\nconst a = 1;\n// @line focus\nconst b = 2;\nconst c = 3;\n```\n");
+		const markup = renderToStaticMarkup(content);
+		const lines = [...markup.matchAll(/<span class="([^"]*\bline\b[^"]*)"/g)].map((match) => match[1] ?? "");
+		expect(lines.map((names) => names.split(/\s+/).includes("code-focus"))).toEqual([false, true, false]);
 	});
 });
