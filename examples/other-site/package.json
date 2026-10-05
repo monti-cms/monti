@@ -13,11 +13,11 @@
 		"db:migrate": "monti migrate"
 	},
 	"dependencies": {
-		"@monti-cms/core": "file:vendor/monti-cms-core-0.0.0.tgz",
-		"@monti-cms/admin": "file:vendor/monti-cms-admin-0.0.0.tgz",
-		"@monti-cms/blocks": "file:vendor/monti-cms-blocks-0.0.0.tgz",
-		"@monti-cms/seo": "file:vendor/monti-cms-seo-0.0.0.tgz",
-		"@monti-cms/bareun": "file:vendor/monti-cms-bareun-0.0.0.tgz",
+		"@monti-cms/core": "file:vendor/monti-cms-core.tgz",
+		"@monti-cms/admin": "file:vendor/monti-cms-admin.tgz",
+		"@monti-cms/blocks": "file:vendor/monti-cms-blocks.tgz",
+		"@monti-cms/seo": "file:vendor/monti-cms-seo.tgz",
+		"@monti-cms/bareun": "file:vendor/monti-cms-bareun.tgz",
 		"@tanstack/react-query": "^5.104.0",
 		"@tiptap/core": "^3.31.3",
 		"@tiptap/pm": "^3.31.3",
