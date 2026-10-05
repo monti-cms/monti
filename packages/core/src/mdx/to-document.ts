@@ -220,6 +220,9 @@ const imageNode = (node: MdastLike): CmsNode => {
 	return { type: "image", attrs };
 };
 
+/** Fields the code block node owns. A fence meta key with the same name (`value="x"`) must not overwrite them. */
+const CODE_BLOCK_OWN_FIELDS = new Set(["language", "meta", "value", "codeDocument"]);
+
 const convertCode = (node: MdastLike): CmsNode => {
 	const code: Code = {
 		type: "code",
@@ -235,7 +238,7 @@ const convertCode = (node: MdastLike): CmsNode => {
 		codeDocument: jsonClone(codeDocument) as unknown as CmsJsonValue,
 	};
 	for (const [key, value] of Object.entries(codeDocument.meta)) {
-		attrs[key] = value;
+		if (!CODE_BLOCK_OWN_FIELDS.has(key)) attrs[key] = value;
 	}
 	return { type: "codeBlock", attrs };
 };
