@@ -9,7 +9,7 @@ import {
 } from "../../../adapters/postgres/__test__/test-database";
 import { createContentStore, type Entry, migrateContentStore } from "../../../adapters/postgres/content-store";
 import type { Collection } from "../../../core/collections";
-import { MAX_DOC_BYTES } from "../../../core/snapshot";
+import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
@@ -222,10 +222,11 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("accepts a document larger than the MDX limit", async () => {
-		// Well above the MDX limit as JSON but within the document limit; the MDX written from it is within its own limit.
-		const paragraph = { type: "paragraph", content: [{ type: "text", text: "word " }] };
-		const doc = { type: "doc", version: 1, content: Array.from({ length: 60_000 }, () => paragraph) };
-		expect(Buffer.byteLength(JSON.stringify(doc))).toBeGreaterThan(2 * 1024 * 1024);
+		// Above the MDX limit as JSON but within the document limit; the MDX written from it is within its own limit.
+		// Few long paragraphs keep the test fast: the JSON overhead per paragraph is what pushes it over the MDX limit.
+		const paragraph = { type: "paragraph", content: [{ type: "text", text: "word ".repeat(72).trim() }] };
+		const doc = { type: "doc", version: 1, content: Array.from({ length: 5_200 }, () => paragraph) };
+		expect(Buffer.byteLength(JSON.stringify(doc))).toBeGreaterThan(MAX_MDX_BYTES);
 		expect(Buffer.byteLength(JSON.stringify(doc))).toBeLessThan(MAX_DOC_BYTES);
 
 		const res = await post({ doc });
