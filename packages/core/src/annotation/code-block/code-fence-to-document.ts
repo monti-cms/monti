@@ -1,5 +1,5 @@
 import type { Code } from "mdast";
-import { resolveCommentSyntax } from "./comment-syntax";
+import { resolveParseCommentSyntaxes } from "./comment-syntax";
 import { createAnnotationRegistry, supportsAnnotationScope } from "./libs";
 import type {
 	AnnotationConfig,
@@ -269,7 +269,7 @@ const findSelectorEnd = (tail: string): number => {
 	return tail[index] === "}" ? index : -1;
 };
 
-const parseScopeComment = (
+const parseScopeCommentWith = (
 	line: string,
 	commentSyntax: { prefix: string; postfix: string },
 ): ParsedScopeComment | undefined => {
@@ -306,6 +306,20 @@ const parseScopeComment = (
 		selector,
 		attributes: parseAnnotationAttrs(tail),
 	};
+};
+
+/**
+ * Tries each syntax in order, so the language's own syntax wins over the `//` fallback.
+ * Only a whole line that is a `@line`/`@char`/`@document` comment counts, so a code line that merely contains `//` is not consumed.
+ */
+const parseScopeComment = (
+	line: string,
+	commentSyntaxes: { prefix: string; postfix: string }[],
+): ParsedScopeComment | undefined => {
+	for (const commentSyntax of commentSyntaxes) {
+		const parsed = parseScopeCommentWith(line, commentSyntax);
+		if (parsed) return parsed;
+	}
 };
 
 const toHalfOpenRangeFromClosed = (range: { start: number; end: number }) => ({
@@ -460,7 +474,7 @@ const pushInlineDirectiveMatchesForLine = ({
 
 const tryConsumeScopeComment = ({
 	lineText,
-	commentSyntax,
+	commentSyntaxes,
 	parseLineAnnotations,
 	registry,
 	linesLength,
@@ -472,7 +486,7 @@ const tryConsumeScopeComment = ({
 	nextOrder,
 }: {
 	lineText: string;
-	commentSyntax: { prefix: string; postfix: string };
+	commentSyntaxes: { prefix: string; postfix: string }[];
 	parseLineAnnotations: boolean;
 	registry: AnnotationRegistry;
 	linesLength: number;
@@ -483,7 +497,7 @@ const tryConsumeScopeComment = ({
 	rules: CodeBlockRule[];
 	nextOrder: number;
 }) => {
-	const parsed = parseScopeComment(lineText, commentSyntax);
+	const parsed = parseScopeComment(lineText, commentSyntaxes);
 	if (!parsed) return false;
 
 	const hasEndAttr = parsed.attributes.some((attr) => attr.name === "end" && attr.value === true);
@@ -618,12 +632,12 @@ const commitCodeLine = ({
 const parseCodeLines = ({
 	codeValue,
 	parseLineAnnotations,
-	commentSyntax,
+	commentSyntaxes,
 	registry,
 }: {
 	codeValue: string;
 	parseLineAnnotations: boolean;
-	commentSyntax: { prefix: string; postfix: string };
+	commentSyntaxes: { prefix: string; postfix: string }[];
 	registry: AnnotationRegistry;
 }) => {
 	const lines: CodeBlockDocument["lines"] = [];
@@ -638,7 +652,7 @@ const parseCodeLines = ({
 	for (const lineText of codeValue.split("\n")) {
 		const consumed = tryConsumeScopeComment({
 			lineText,
-			commentSyntax,
+			commentSyntaxes,
 			parseLineAnnotations,
 			registry,
 			linesLength: lines.length,
@@ -762,12 +776,12 @@ export const fromCodeFenceToCodeBlockDocument = (
 	const registry = createAnnotationRegistry(annotationConfig);
 	const lang = codeNode.lang?.trim() || DEFAULT_CODE_LANG;
 	const meta = parseCodeFenceMeta(codeNode.meta ?? "");
-	const commentSyntax = resolveCommentSyntax(lang);
+	const commentSyntaxes = resolveParseCommentSyntaxes(lang);
 	const parseLineAnnotations = options?.parseLineAnnotations ?? true;
 	const parsed = parseCodeLines({
 		codeValue: codeNode.value,
 		parseLineAnnotations,
-		commentSyntax,
+		commentSyntaxes,
 		registry,
 	});
 
