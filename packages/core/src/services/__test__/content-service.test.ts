@@ -8,6 +8,8 @@ import {
 	titleFieldOf,
 } from "../../../test/any-site";
 import { COLLECTIONS, type Collection, DOCUMENT_COLLECTIONS } from "../../core/collections";
+import { isBlockId } from "../../mdx/block-ids";
+import { bodyFromMdx, type StoredDocument } from "../../mdx/stored-document";
 import { type StoredField, storedField, storedFields } from "../../schema/derive";
 import { isRequiredField } from "../../schema/fields";
 import type { PreparedSnapshot, Reference, ResolvedTargets, SaveDraftInput, ServiceInput, StorePort } from "../index";
@@ -799,7 +801,7 @@ describe("ContentService Contract", () => {
 				unarchiveEntry: vi.fn(),
 				trashEntry: vi.fn(),
 				publishEntry: vi.fn(),
-				getWorking: vi.fn(),
+				getWorking: vi.fn().mockResolvedValue({ doc: null }),
 				createEntryWithReferences: vi.fn(),
 				saveWorkingWithReferences: vi.fn().mockRejectedValue(exactError),
 			};
@@ -940,7 +942,7 @@ describe("ContentService Contract", () => {
 				unarchiveEntry: vi.fn(),
 				trashEntry: vi.fn(),
 				publishEntry: vi.fn(),
-				getWorking: vi.fn(),
+				getWorking: vi.fn().mockResolvedValue({ doc: null }),
 				createEntryWithReferences: vi.fn(),
 				saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
 			};
@@ -974,7 +976,7 @@ describe("ContentService Contract", () => {
 				unarchiveEntry: vi.fn(),
 				trashEntry: vi.fn(),
 				publishEntry: vi.fn(),
-				getWorking: vi.fn(),
+				getWorking: vi.fn().mockResolvedValue({ doc: null }),
 				createEntryWithReferences: vi.fn(),
 				saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
 			};
@@ -999,6 +1001,80 @@ describe("ContentService Contract", () => {
 					references: expect.any(Array),
 				}),
 			);
+		});
+	});
+
+	describe("9. Block ids", () => {
+		const entryId = "123e4567-e89b-12d3-a456-426614174000";
+		const portWith = (doc: StoredDocument | null): StorePort => ({
+			getWorkingReferences: vi.fn().mockResolvedValue([]),
+			archiveEntry: vi.fn(),
+			unarchiveEntry: vi.fn(),
+			trashEntry: vi.fn(),
+			publishEntry: vi.fn(),
+			getWorking: vi.fn().mockResolvedValue({ doc }),
+			createEntryWithReferences: vi.fn(),
+			saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
+		});
+		const saveWith = (storePort: StorePort, body: { mdx: string } | { doc: StoredDocument }) =>
+			createContentService(storePort).saveDraft(entryId, {
+				collection: content,
+				slug: "a",
+				metadata: { title: "Title" },
+				expectedVersion: 2,
+				...body,
+			} as SaveDraftInput);
+		const savedDoc = (storePort: StorePort) =>
+			vi.mocked(storePort.saveWorkingWithReferences).mock.calls[0]?.[0].snapshot.doc as StoredDocument;
+		const idsOf = (doc: StoredDocument) => doc.content.map((block) => block.id);
+
+		it("saveDraft reads the current draft and pairs the new MDX with its document, so blocks keep their ids", async () => {
+			const current = bodyFromMdx("One\n\nTwo\n\nThree\n").doc as StoredDocument;
+			const storePort = portWith(current);
+
+			await saveWith(storePort, { mdx: "One\n\nTwo reworded\n\nThree\n" });
+
+			expect(storePort.getWorking).toHaveBeenCalledWith({ entryId });
+			expect(idsOf(savedDoc(storePort))).toEqual(idsOf(current));
+		});
+
+		it("saveDraft gives new ids when the current draft has no document", async () => {
+			const storePort = portWith(null);
+
+			await saveWith(storePort, { mdx: "One\n\nTwo\n" });
+
+			const ids = idsOf(savedDoc(storePort));
+			expect(ids).toHaveLength(2);
+			expect(ids.every(isBlockId)).toBe(true);
+			expect(new Set(ids).size).toBe(2);
+		});
+
+		it("saveDraft keeps the ids of a document it is sent, not those of the current draft", async () => {
+			const current = bodyFromMdx("One\n\nTwo\n").doc as StoredDocument;
+			const sent: StoredDocument = {
+				...current,
+				content: current.content.map((block, index) => ({ ...block, id: `sent000${index}` })),
+			};
+			const storePort = portWith(current);
+
+			await saveWith(storePort, { doc: sent });
+
+			expect(idsOf(savedDoc(storePort))).toEqual(["sent0000", "sent0001"]);
+		});
+
+		it("createDraft gives every block of the body an id of its own", async () => {
+			const storePort = portWith(null);
+
+			await createContentService(storePort).createDraft({
+				collection: content,
+				slug: "a",
+				metadata: { title: "Title" },
+				mdx: "One\n\nTwo\n",
+			} as ServiceInput);
+
+			const doc = vi.mocked(storePort.createEntryWithReferences).mock.calls[0]?.[0].snapshot.doc as StoredDocument;
+			expect(idsOf(doc).every(isBlockId)).toBe(true);
+			expect(new Set(idsOf(doc)).size).toBe(2);
 		});
 	});
 
