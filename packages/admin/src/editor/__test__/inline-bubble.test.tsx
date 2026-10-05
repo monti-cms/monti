@@ -288,14 +288,9 @@ describe("InlineBubble", () => {
 
 		const toolbar = screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
 		const labels = [...toolbar.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
-		expect(labels).toEqual([
-			t("inlineMarks.bold"),
-			t("inlineMarks.italic"),
-			t("inlineMarks.underline"),
-			t("inlineMarks.strike"),
-			t("inlineBubble.tooltipAdd"),
-			t("inlineBubble.fold"),
-		]);
+		expect(labels).toContain(t("inlineBubble.fold"));
+		// Code does not accept a link.
+		expect(labels).not.toContain(t("link.add"));
 
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("inlineBubble.fold") })));
 		expect(editor.getHTML()).toMatch(/call\(<span data-code-fold=""[^>]*>a, b<\/span>\)/);

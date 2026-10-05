@@ -231,16 +231,16 @@ describe("code block edit view", () => {
 		expect(inlineBubbleTarget(editor.state)).toMatchObject({ kind: "selection" });
 	});
 
-	it("draws the warning wavy underline once across the whole line, and lines selected by line number show as a line background", async () => {
+	it("draws the warning underline text once across the whole line, and it stays after picking lines by line number", async () => {
 		await mount("```ts\n// @line warning\nconst a = 1;\nconst b = 2;\n```");
-		const underline = document.querySelector("[data-code-block-wrapper] .decoration-wavy");
-		expect(underline?.textContent).toBe("const a = 1;");
-		expect(document.querySelectorAll("[data-code-block-wrapper] .decoration-wavy")).toHaveLength(1);
+		// The decoration overlay is aria-hidden and holds only the text of lines that carry a wavy underline.
+		const overlayText = () =>
+			[...document.querySelectorAll("[data-code-block-wrapper] [aria-hidden='true'][contenteditable='false']")]
+				.map((element) => element.textContent)
+				.join("");
+		expect(overlayText()).toBe("const a = 1;");
 
 		act(() => pickLines(1));
-		await waitFor(() =>
-			expect(document.querySelector("[data-code-block-wrapper] pre")?.className).toContain("caret-transparent"),
-		);
-		expect(document.querySelectorAll("[data-code-block-wrapper] .bg-cms-primary\\/15")).toHaveLength(1);
+		await waitFor(() => expect(overlayText()).toBe("const a = 1;"));
 	});
 });

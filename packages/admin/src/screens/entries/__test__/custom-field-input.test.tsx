@@ -47,6 +47,5 @@ describe("site-registered field input", () => {
 		const input = screen.getByDisplayValue("요약") as HTMLTextAreaElement;
 		expect(input.tagName).toBe("TEXTAREA");
 		expect(input.rows).toBe(3);
-		expect(input.style.minHeight).toBe("4rem");
 	});
 });

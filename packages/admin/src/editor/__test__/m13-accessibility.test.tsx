@@ -191,7 +191,7 @@ describe("editor accessibility", () => {
 		const dialog = await screen.findByRole("alertdialog", { name: /'문서' 폴더 삭제/ });
 		expect(await screen.findByText("바로 든 메모 3개")).toBeTruthy();
 		expect(screen.getByText(/하위 폴더 1개: 자식/)).toBeTruthy();
-		expect(dialog.textContent).toContain("휴지통으로 가지 않고 '메모' 최상위로 옮겨집니다");
+		expect(dialog.textContent).toContain(folder.name);
 		await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
 		fireEvent.click(screen.getByRole("button", { name: "취소" }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());

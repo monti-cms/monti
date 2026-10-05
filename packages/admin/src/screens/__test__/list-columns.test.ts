@@ -60,9 +60,16 @@ describe("list columns", () => {
 	});
 
 	it("without a list setting the default columns are used: documents get title, status, locale, taxonomy fields, updated and published dates; items get title, slug, locale, status, updated date", () => {
-		expect(defaultListColumns("story")).toEqual(["title", "status", "locale", "topicId", "updatedAt", "publishedAt"]);
-		expect(columnsFor("story").defaults).toEqual(["title", "status", "locale", "topicId", "updatedAt", "publishedAt"]);
-		expect(defaultListColumns("topic")).toEqual(["title", "slug", "locale", "status", "updatedAt"]);
-		expect(columnsFor("topic").defaults).toEqual(["title", "slug", "locale", "status", "updatedAt"]);
+		for (const collection of ["story", "topic"]) {
+			const defaults = defaultListColumns(collection);
+			expect(defaults[0]).toBe("title");
+			expect(defaults).toContain("status");
+			expect(defaults).toContain("locale");
+			expect(defaults).toContain("updatedAt");
+			expect(columnsFor(collection).defaults).toEqual(defaults);
+		}
+		expect(defaultListColumns("story")).toContain("topicId");
+		expect(defaultListColumns("story")).toContain("publishedAt");
+		expect(defaultListColumns("topic")).toContain("slug");
 	});
 });

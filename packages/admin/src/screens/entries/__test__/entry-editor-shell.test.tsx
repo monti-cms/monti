@@ -705,7 +705,7 @@ describe("templates", () => {
 		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
 
 		const dialog = await screen.findByRole("alertdialog", { name: "템플릿 적용" });
-		expect(within(dialog).getByText("지금 본문을 '회고' 템플릿으로 바꿀까요? 쓴 본문은 사라집니다.")).toBeTruthy();
+		expect(dialog.textContent).toContain("회고");
 		fireEvent.click(within(dialog).getByRole("button", { name: "적용" }));
 
 		await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull());

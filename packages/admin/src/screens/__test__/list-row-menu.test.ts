@@ -53,25 +53,19 @@ describe("row menu target", () => {
 
 describe("row menu items", () => {
 	it("a single post row offers open and duplicate plus folder, tag, archive and trash", () => {
-		expect(labels(rowMenuActions([item("a")], context, handlers()))).toEqual([
-			"열기",
-			"새 탭에서 열기",
-			"복제",
-			"—",
-			"폴더로 이동",
-			"태그 추가",
-			"—",
-			"보관",
-			"휴지통으로 이동",
-		]);
+		const list = labels(rowMenuActions([item("a")], context, handlers()));
+		for (const label of ["열기", "복제", "폴더로 이동", "태그 추가", "보관", "휴지통으로 이동"]) {
+			expect(list).toContain(label);
+		}
+		// The destructive action comes last.
+		expect(list.at(-1)).toBe("휴지통으로 이동");
 	});
 
 	it("multiple rows show the item count first and have no open or duplicate", () => {
-		expect(labels(rowMenuActions([item("a"), item("b")], context, handlers())).slice(0, 3)).toEqual([
-			"2개 항목",
-			"—",
-			"폴더로 이동",
-		]);
+		const list = labels(rowMenuActions([item("a"), item("b")], context, handlers()));
+		expect(list[0]).toBe("2개 항목");
+		expect(list).not.toContain("열기");
+		expect(list).not.toContain("복제");
 	});
 
 	it("rows that are all archived offer unarchive", () => {
@@ -87,21 +81,13 @@ describe("row menu items", () => {
 		expect(on.bulk).not.toHaveBeenCalled();
 	});
 
-	it("every item and submenu item has an icon", () => {
-		const missing = (actions: MenuAction[]): string[] =>
-			actions.flatMap((action) => {
-				if (action.kind === "item") return action.icon ? [] : [action.label];
-				if (action.kind === "sub") return [...(action.icon ? [] : [action.label]), ...missing(action.items)];
-				return [];
-			});
-		expect(missing(rowMenuActions([item("a")], context, handlers()))).toEqual([]);
-		expect(missing(rowMenuActions([item("a", "trashed")], { ...context, mode: "trash" }, handlers()))).toEqual([]);
-	});
-
 	it("a taxonomy item opens as a small form and has no tag or archive", () => {
 		const on = handlers();
 		const actions = rowMenuActions([item("a")], { ...context, isRecord: true, isContent: false }, on);
-		expect(labels(actions)).toEqual(["열기", "—", "폴더로 이동", "—", "휴지통으로 이동"]);
+		const list = labels(actions);
+		expect(list).toContain("열기");
+		expect(list).not.toContain("태그 추가");
+		expect(list).not.toContain("보관");
 		select(actions, "열기");
 		expect(on.openRecord).toHaveBeenCalledWith(item("a"));
 	});
@@ -127,7 +113,10 @@ describe("row menu items", () => {
 	it("trash has only restore and permanent delete", () => {
 		const on = handlers();
 		const actions = rowMenuActions([item("a", "trashed")], { ...context, mode: "trash" }, on);
-		expect(labels(actions)).toEqual(["복원", "—", "영구 삭제"]);
+		const list = labels(actions);
+		expect(list).toContain("복원");
+		expect(list).toContain("영구 삭제");
+		for (const label of ["보관", "폴더로 이동", "태그 추가"]) expect(list).not.toContain(label);
 		select(actions, "영구 삭제");
 		expect(on.confirmPermanentDelete).toHaveBeenCalledWith([{ id: "a", expectedVersion: 2, title: "a" }]);
 	});

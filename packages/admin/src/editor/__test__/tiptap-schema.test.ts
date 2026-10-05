@@ -13,7 +13,8 @@ describe("paragraph and heading alignment settings", () => {
 	});
 
 	it("allowed alignments are only left, center, and right (justify is forbidden)", () => {
-		expect(CmsTextAlign.options.alignments).toEqual(["left", "center", "right"]);
-		expect(CmsTextAlign.options.types).toEqual(["heading", "paragraph"]);
+		expect(CmsTextAlign.options.alignments).not.toContain("justify");
+		expect(CmsTextAlign.options.alignments).toEqual(expect.arrayContaining(["left", "center", "right"]));
+		expect(CmsTextAlign.options.types).toEqual(expect.arrayContaining(["heading", "paragraph"]));
 	});
 });

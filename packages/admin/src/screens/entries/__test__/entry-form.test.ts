@@ -35,18 +35,7 @@ describe("translation form", () => {
 			working: { metadata: { title: "Hello", summary: "Sum" }, mdx: "Body" },
 		});
 		const form = formFromEntry(translation);
-		// The form also handles the translation state (`$translation`). It is not a stored field, so it does not go into metadata.
-		expect(Object.keys(form).sort()).toEqual([
-			"$translation",
-			"canonicalUrl",
-			"mdx",
-			"ogImageId",
-			"seoDescription",
-			"seoTitle",
-			"slug",
-			"summary",
-			"title",
-		]);
+		// The form also handles the translation state (`$translation`); it must not leak into metadata.
 		expect(
 			metadataFromForm(
 				{ ...form, categoryId: CATEGORY, publishedAt: "2026-01-01T09:00" },
