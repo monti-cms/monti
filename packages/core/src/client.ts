@@ -24,6 +24,7 @@ export * from "./core/translation/source-diff";
 export * from "./core/translation/state";
 export * from "./core/types";
 export * from "./i18n";
+export type { StoredDocument } from "./mdx/stored-document";
 export { getPluginOptions } from "./plugin/options";
 export * from "./schema/collection";
 export * from "./schema/derive";

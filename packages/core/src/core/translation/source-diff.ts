@@ -1,5 +1,5 @@
 import { BLOCK_BY_COMPONENT, BLOCK_BY_NAME, FENCE_BLOCKS } from "../../blocks/derive";
-import { analyze, type CmsNode, serialize, toDocument } from "../../mdx";
+import { analyze, type CmsNode, fromStoredDocument, type StoredDocument, serialize, toDocument } from "../../mdx";
 
 /**
  * Block comparison of two source versions (translation screen).
@@ -7,6 +7,9 @@ import { analyze, type CmsNode, serialize, toDocument } from "../../mdx";
  * Splits the source the translator last confirmed and the current source into blocks and finds changed, added and removed blocks.
  * Expandable boxes (`translateInside` in the block definition, e.g. callout, tabs, alignment) are expanded and their header line (translatable attributes) and inner blocks are each
  * compared. Used by both server and browser.
+ *
+ * When both versions come with their stored documents, blocks are paired by block id (`TranslationUnit.node.id`) first, so an edited block stays
+ * the same block and a moved block shows as moved; blocks without an id are paired by kind and content as before.
  */
 
 /** Renderer names of expandable boxes: the box itself is a skeleton and each inner block is a unit. */
@@ -52,6 +55,8 @@ export interface TranslationUnit {
 	readonly node: CmsNode;
 	/** Source fragment. For a block it is MDX; for a header line it is the JSON of the translatable attributes. */
 	readonly source: string;
+	/** Block id of the enclosing box (`undefined` at the top level or when the box has no id). */
+	readonly parentId: string | undefined;
 	/** Nothing to translate, so the source is used as is (dividers, empty paragraphs, images without a description, etc.). */
 	readonly auto: boolean;
 }
@@ -103,7 +108,7 @@ const headerValue = (node: CmsNode): HeaderValue | null => {
 /** Splits a source document into translation units (document order). */
 export function flattenUnits(doc: CmsNode): TranslationUnit[] {
 	const units: TranslationUnit[] = [];
-	const walk = (nodes: readonly CmsNode[], scope: string) => {
+	const walk = (nodes: readonly CmsNode[], scope: string, parentId?: string) => {
 		for (const node of nodes) {
 			if (EXPANDED.has(node.type)) {
 				const header = headerValue(node);
@@ -114,10 +119,11 @@ export function flattenUnits(doc: CmsNode): TranslationUnit[] {
 						type: node.type,
 						node,
 						source: JSON.stringify(header),
+						parentId,
 						auto: false,
 					});
 				}
-				walk(node.content ?? [], `${scope}/${node.type}`);
+				walk(node.content ?? [], `${scope}/${node.type}`, node.id);
 				continue;
 			}
 			units.push({
@@ -126,6 +132,7 @@ export function flattenUnits(doc: CmsNode): TranslationUnit[] {
 				type: node.type,
 				node,
 				source: blockSource(node),
+				parentId,
 				auto: isAuto(node),
 			});
 		}
@@ -138,6 +145,14 @@ export function flattenUnits(doc: CmsNode): TranslationUnit[] {
 export type SourceChange =
 	| { readonly kind: "changed"; readonly before: TranslationUnit; readonly after: TranslationUnit }
 	| { readonly kind: "added"; readonly after: TranslationUnit }
+	/** Only from a comparison by block id: the block (edited or not, see `edited`) sits elsewhere than before. */
+	| {
+			readonly kind: "moved";
+			readonly before: TranslationUnit;
+			readonly after: TranslationUnit;
+			/** The block's own content changed as well. */
+			readonly edited: boolean;
+	  }
 	| { readonly kind: "removed"; readonly before: TranslationUnit };
 
 /** Longest common subsequence of two lists (pairs whose key and source fragment are both equal). A list of [before index, after index]. */
@@ -166,21 +181,19 @@ const commonPairs = (before: readonly TranslationUnit[], after: readonly Transla
 	return pairs;
 };
 
-const unitsOf = (mdx: string): TranslationUnit[] | null => {
-	const analysis = analyze(mdx);
-	return analysis.errors.length > 0 ? null : flattenUnits(toDocument(analysis));
-};
-
 /**
- * Compares two source versions block by block. Equal blocks are omitted; a block whose content alone changed at the same position (a pair with the same key) is
- * `changed`, a new block is `added`, and a removed block is `removed`. `null` if either cannot be parsed.
+ * Pairs units by kind and content only (no ids). Equal blocks are omitted; a block whose content alone changed at the same position (a pair with the same key) is
+ * `changed`, a new block is `added`, and a removed block is `removed`. `onEqual` is called with each pair of equal blocks.
  */
-export function diffSources(beforeMdx: string, afterMdx: string): SourceChange[] | null {
-	const before = unitsOf(beforeMdx);
-	const after = unitsOf(afterMdx);
-	if (!before || !after) return null;
+const diffUnits = (
+	before: readonly TranslationUnit[],
+	after: readonly TranslationUnit[],
+	onEqual?: (before: TranslationUnit, after: TranslationUnit) => void,
+): SourceChange[] => {
 	const changes: SourceChange[] = [];
-	const anchors = [...commonPairs(before, after), [before.length, after.length] as [number, number]];
+	const common = commonPairs(before, after);
+	for (const [bi, ai] of common) onEqual?.(before[bi] as TranslationUnit, after[ai] as TranslationUnit);
+	const anchors = [...common, [before.length, after.length] as [number, number]];
 	let prevBefore = 0;
 	let prevAfter = 0;
 	for (const [bi, ai] of anchors) {
@@ -216,4 +229,149 @@ export function diffSources(beforeMdx: string, afterMdx: string): SourceChange[]
 		prevAfter = ai + 1;
 	}
 	return changes;
+};
+
+const unitsOf = (mdx: string): TranslationUnit[] | null => {
+	const analysis = analyze(mdx);
+	return analysis.errors.length > 0 ? null : flattenUnits(toDocument(analysis));
+};
+
+/** Positions in `values` of one longest strictly increasing subsequence. */
+const longestIncreasing = (values: readonly number[]): Set<number> => {
+	/** For each length, the position of the smallest value that ends an increasing subsequence of that length. */
+	const tails: number[] = [];
+	const previous = new Array<number>(values.length).fill(-1);
+	values.forEach((value, position) => {
+		let low = 0;
+		let high = tails.length;
+		while (low < high) {
+			const mid = (low + high) >> 1;
+			if ((values[tails[mid] as number] as number) < value) low = mid + 1;
+			else high = mid;
+		}
+		previous[position] = low > 0 ? (tails[low - 1] as number) : -1;
+		tails[low] = position;
+	});
+	const kept = new Set<number>();
+	for (let position = tails.length > 0 ? (tails[tails.length - 1] as number) : -1; position >= 0; ) {
+		kept.add(position);
+		position = previous[position] as number;
+	}
+	return kept;
+};
+
+/**
+ * Pairs units by block id (`node.id`, the id of the box for a header unit), then pairs the units left without a partner by kind and content (`diffUnits`),
+ * each stretch between two blocks that kept their place on its own.
+ * A pair is unchanged (omitted) when its source is equal, otherwise `changed`. A pair is `moved` when it is not on the longest increasing subsequence of the
+ * pairs' positions (in document order of the units, boxes expanded), so only as many blocks are reported as moved as needed to explain the new order, or when the
+ * block now sits in another box. Pairs found by content only (no id) are never `moved`.
+ */
+const diffById = (before: readonly TranslationUnit[], after: readonly TranslationUnit[]): SourceChange[] => {
+	const beforeById = new Map<string, number>();
+	before.forEach((unit, index) => {
+		const id = unit.node.id;
+		if (id !== undefined && !beforeById.has(id)) beforeById.set(id, index);
+	});
+	// Position in `before` of the id partner of each unit of `after` (-1: none).
+	const partnerOf = new Array<number>(after.length).fill(-1);
+	const taken = new Set<number>();
+	after.forEach((unit, index) => {
+		const id = unit.node.id;
+		const found = id === undefined ? undefined : beforeById.get(id);
+		if (found === undefined || taken.has(found)) return;
+		taken.add(found);
+		partnerOf[index] = found;
+	});
+
+	const own = new Array<SourceChange | undefined>(after.length);
+	// Pairs in the order of `before`: [before position, after position].
+	const pairs = partnerOf
+		.flatMap((found, index) => (found === -1 ? [] : [[found, index] as const]))
+		.sort((left, right) => left[0] - right[0]);
+	const inOrder = longestIncreasing(pairs.map(([, index]) => index));
+	pairs.forEach(([found, index], rank) => {
+		const old = before[found] as TranslationUnit;
+		const next = after[index] as TranslationUnit;
+		const edited = old.source !== next.source;
+		if (!inOrder.has(rank) || old.parentId !== next.parentId) {
+			own[index] = { kind: "moved", before: old, after: next, edited };
+		} else if (edited) {
+			own[index] = { kind: "changed", before: old, after: next };
+		}
+	});
+
+	// Units without an id partner: by kind and content, within the stretches between blocks that kept their place.
+	const beforeIndex = new Map(before.map((unit, index) => [unit, index] as const));
+	const afterIndex = new Map(after.map((unit, index) => [unit, index] as const));
+	const stable: (readonly [number, number])[] = [
+		[-1, -1],
+		...pairs.filter((_, rank) => inOrder.has(rank)),
+		[before.length, after.length],
+	];
+	// Position in `after` of the partner of each unit of `before` (-1: none).
+	const partnerOfBefore = new Array<number>(before.length).fill(-1);
+	for (const [found, index] of pairs) partnerOfBefore[found] = index;
+	const removed = new Map<number, SourceChange>();
+	const equal = (old: TranslationUnit, next: TranslationUnit) => {
+		partnerOfBefore[beforeIndex.get(old) as number] = afterIndex.get(next) as number;
+	};
+	for (let at = 0; at + 1 < stable.length; at += 1) {
+		const [fromBefore, fromAfter] = stable[at] as readonly [number, number];
+		const [toBefore, toAfter] = stable[at + 1] as readonly [number, number];
+		const restBefore = before.filter((_, index) => index > fromBefore && index < toBefore && !taken.has(index));
+		const restAfter = after.filter((_, index) => index > fromAfter && index < toAfter && partnerOf[index] === -1);
+		for (const change of diffUnits(restBefore, restAfter, equal)) {
+			if (change.kind === "removed") {
+				removed.set(beforeIndex.get(change.before) as number, change);
+				continue;
+			}
+			const index = afterIndex.get(change.after) as number;
+			own[index] = change;
+			if (change.kind === "changed") partnerOfBefore[beforeIndex.get(change.before) as number] = index;
+		}
+	}
+
+	// A removed block is listed after the closest block before it that has a partner (at that partner's new position), or first.
+	const trailing = new Map<number, SourceChange[]>();
+	let anchor = -1;
+	for (let index = 0; index < before.length; index += 1) {
+		const partner = partnerOfBefore[index] as number;
+		if (partner !== -1) anchor = partner;
+		const gone = removed.get(index);
+		if (gone) trailing.set(anchor, [...(trailing.get(anchor) ?? []), gone]);
+	}
+	const changes: SourceChange[] = [...(trailing.get(-1) ?? [])];
+	for (let index = 0; index < after.length; index += 1) {
+		const change = own[index];
+		if (change) changes.push(change);
+		changes.push(...(trailing.get(index) ?? []));
+	}
+	return changes;
+};
+
+/** The stored documents of the two versions being compared (`null`/`undefined`: not known). */
+export interface SourceDocuments {
+	readonly before: StoredDocument | null | undefined;
+	readonly after: StoredDocument | null | undefined;
+}
+
+/**
+ * Compares two source versions block by block. Equal blocks are omitted; a block whose content alone changed is `changed`, a new block is `added`, and a removed
+ * block is `removed`. `null` if either cannot be parsed.
+ *
+ * With both stored documents (`documents`) the blocks are paired by block id, which also finds `moved` blocks (see `diffById`); the MDX is not read then.
+ * Without (a version confirmed before block ids were kept), the blocks are paired by kind and content in the MDX: a block that moved is a removed and an added block.
+ */
+export function diffSources(beforeMdx: string, afterMdx: string, documents?: SourceDocuments): SourceChange[] | null {
+	if (documents?.before && documents.after) {
+		return diffById(
+			flattenUnits(fromStoredDocument(documents.before)),
+			flattenUnits(fromStoredDocument(documents.after)),
+		);
+	}
+	const before = unitsOf(beforeMdx);
+	const after = unitsOf(afterMdx);
+	if (!before || !after) return null;
+	return diffUnits(before, after);
 }

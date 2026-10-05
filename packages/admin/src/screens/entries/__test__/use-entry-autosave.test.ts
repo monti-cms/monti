@@ -63,3 +63,45 @@ describe("browser temporary save", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });
+
+describe("the body a save sends", () => {
+	const doc = {
+		type: "doc",
+		version: 1,
+		content: [{ type: "paragraph", id: "abcd1234", content: [{ type: "text", text: "본문" }] }],
+	};
+	const saveWith = async (documentOf: (mdx: string) => unknown) => {
+		fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ ...(entry as object), version: 2 }) });
+		const { result } = renderHook(() =>
+			useEntryAutosave({
+				adminId: "u1",
+				collection: "post",
+				entry,
+				initialForm: { ...EMPTY_FORM, title: "제목" },
+				enabled: true,
+				onSaved: vi.fn(),
+				onConflict: vi.fn(),
+				documentOf: documentOf as never,
+			}),
+		);
+		act(() => result.current.setForm({ mdx: "본문\n" }));
+		await act(async () => {
+			const saving = result.current.flush();
+			await vi.runAllTimersAsync();
+			await saving;
+		});
+		return JSON.parse(String(fetchMock.mock.calls.at(-1)?.[1]?.body));
+	};
+
+	it("is the editor's document, with its block ids, when the editor made the MDX in the form", async () => {
+		const body = await saveWith((mdx) => (mdx === "본문\n" ? doc : undefined));
+		expect(body.doc).toEqual(doc);
+		expect(body).not.toHaveProperty("mdx");
+	});
+
+	it("is the MDX when the form holds text the editor did not make (source mode, a template)", async () => {
+		const body = await saveWith(() => undefined);
+		expect(body.mdx).toBe("본문\n");
+		expect(body).not.toHaveProperty("doc");
+	});
+});

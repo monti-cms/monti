@@ -5,6 +5,7 @@ import {
 	adminHref,
 	bodyExcerpt,
 	cmsApiUrl,
+	confirmedSourceState,
 	previewHref as contentPreviewHref,
 	createTranslator,
 	DEFAULT_COLLECTION,
@@ -17,8 +18,10 @@ import {
 	storedField,
 	withBasePath,
 } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/mdx";
 import { analyze } from "@monti-cms/core/mdx";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { Editor } from "@tiptap/core";
 import {
 	Archive,
 	CalendarSync,
@@ -43,6 +46,7 @@ import { useTheme } from "next-themes";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useEditorExtensions } from "../../admin-components";
+import { findBlock } from "../../editor/block-ids";
 import { MdxSourceEditor } from "../../editor/mdx-source-editor";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
@@ -283,6 +287,9 @@ export function EntryEditorShell({
 	const isTrashed = entry?.status === "trashed";
 	const isReadOnly = isTrashed;
 
+	// The body the visual editor last made, as MDX and as a stored document with its block ids. Saved as the document while the form still holds that MDX.
+	const editorBodyRef = useRef<{ mdx: string; doc: StoredDocument | null } | null>(null);
+	const visualEditorRef = useRef<Editor | null>(null);
 	const autosave = useEntryAutosave({
 		adminId,
 		collection,
@@ -293,6 +300,7 @@ export function EntryEditorShell({
 		// The save response carries no translation group info. Keep the values received on load.
 		onSaved: (saved) => setEntry((current) => ({ ...saved, ...keepTranslationGroup(current, saved) })),
 		onConflict: (server, local) => setConflict({ server, local }),
+		documentOf: (mdx) => (editorBodyRef.current?.mdx === mdx ? editorBodyRef.current.doc : undefined),
 	});
 	const { form, setForm } = autosave;
 
@@ -358,7 +366,8 @@ export function EntryEditorShell({
 	const translationSource = translationSourceOf(entry);
 	const translationForm = form[TRANSLATION_FORM_KEY];
 	/** The source the translator last confirmed. If it differs from the current source, "source changed" is shown. */
-	const confirmedSource = translationStateFromForm(translationForm).baseSource;
+	const confirmed = useMemo(() => translationStateFromForm(translationForm), [translationForm]);
+	const confirmedSource = confirmed.baseSource;
 	const sourceChanged =
 		translationSource !== null && typeof translationForm === "string" && translationSource.mdx !== confirmedSource;
 
@@ -477,6 +486,21 @@ export function EntryEditorShell({
 	};
 	const handleTitleChange = (title: string) => setForm(withAutoSlug({ title }));
 
+	/** Selects the start of a block in the visual editor and scrolls to it. False when the editor does not have that block. */
+	const revealBlock = (blockId: string): boolean => {
+		const editor = visualEditorRef.current;
+		if (!editor || editor.isDestroyed) return false;
+		const pos = findBlock(editor.state.doc, blockId);
+		if (pos === undefined) return false;
+		editor
+			.chain()
+			.focus()
+			.setTextSelection(Math.min(pos + 1, editor.state.doc.content.size))
+			.scrollIntoView()
+			.run();
+		return true;
+	};
+
 	const focusIssue = (issue: CmsIssue) => {
 		if (issue.path === "title") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
@@ -485,6 +509,8 @@ export function EntryEditorShell({
 		}
 		if (issue.position || issue.path === "mdx" || issue.path === "frontmatter") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
+			// In the visual editor, go to the block the issue is in (found by its id); otherwise to the line in source mode.
+			if (editorMode !== "source" && issue.position?.blockId && revealBlock(issue.position.blockId)) return;
 			setPendingBodyPosition(issue.position ?? { line: 1, column: 1 });
 			setEditorMode("source");
 			return;
@@ -1061,7 +1087,9 @@ export function EntryEditorShell({
 						disabled={isReadOnly}
 						onClick={() =>
 							setForm({
-								[TRANSLATION_FORM_KEY]: stringifyTranslation({ version: 2, baseSource: translationSource.mdx }),
+								[TRANSLATION_FORM_KEY]: stringifyTranslation(
+									confirmedSourceState(translationSource.mdx, translationSource.doc),
+								),
 							})
 						}
 					>
@@ -1105,11 +1133,18 @@ export function EntryEditorShell({
 						}
 						sourceView={editorMode === "source" ? sourceEditor : undefined}
 						editable={!isReadOnly}
-						onChange={(mdx) => setForm({ mdx })}
+						stored={entry ? { mdx: entry.working.mdx, doc: entry.working.doc ?? null } : undefined}
+						onChange={(mdx, doc) => {
+							editorBodyRef.current = { mdx, doc };
+							setForm({ mdx });
+						}}
 						blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
 						selectionActions={extensions.selectionActions}
 						insertActions={extensions.insertActions}
-						onEditor={extensions.onEditor}
+						onEditor={(editor) => {
+							visualEditorRef.current = editor;
+							extensions.onEditor?.(editor);
+						}}
 						onCompositionStart={() => autosave.setComposing(true)}
 						onCompositionEnd={() => autosave.setComposing(false)}
 					/>
@@ -1178,6 +1213,8 @@ export function EntryEditorShell({
 					onOpenChange={setIsSourceCompareOpen}
 					before={confirmedSource}
 					after={translationSource.mdx}
+					beforeDoc={confirmed.baseDoc}
+					afterDoc={translationSource.doc}
 				/>
 			)}
 		</div>

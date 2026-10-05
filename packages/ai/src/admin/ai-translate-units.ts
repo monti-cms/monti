@@ -1,4 +1,10 @@
-import { mdxToTiptap, tiptapToMdx, UNTRANSLATED_MARK_NAME } from "@monti-cms/admin/editor";
+import {
+	BLOCK_ID_ATTRIBUTE,
+	findBlock as findBlockById,
+	mdxToTiptap,
+	tiptapToMdx,
+	UNTRANSLATED_MARK_NAME,
+} from "@monti-cms/admin/editor";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Fragment, type Node as PmNode } from "@tiptap/pm/model";
 
@@ -76,8 +82,23 @@ export function collectUnits(doc: PmNode): TranslateUnit[] {
 	return units;
 }
 
-/** Position of the original block (the one with the same JSON). Checks the `hint` position first, then searches the document. */
+/** The block id the original block had (the editor's `blockId`), if any. */
+const blockIdOf = (original: string): string | undefined => {
+	const id = (JSON.parse(original) as JSONContent).attrs?.[BLOCK_ID_ATTRIBUTE];
+	return typeof id === "string" ? id : undefined;
+};
+
+/**
+ * Position of the original block. A block with an id is found by it, and only while it is unchanged (the same JSON). Otherwise the
+ * `hint` position is checked first, then the document is searched for a block with the same JSON.
+ */
 function findBlock(doc: PmNode, original: string, hint: number | null): { pos: number; size: number } | null {
+	const id = blockIdOf(original);
+	if (id !== undefined) {
+		const pos = findBlockById(doc, id);
+		const node = pos === undefined ? null : doc.nodeAt(pos);
+		return node && JSON.stringify(node.toJSON()) === original ? { pos: pos as number, size: node.nodeSize } : null;
+	}
 	const at = hint !== null && hint < doc.content.size ? doc.nodeAt(hint) : null;
 	if (at && JSON.stringify(at.toJSON()) === original) return { pos: hint as number, size: at.nodeSize };
 	let found: { pos: number; size: number } | null = null;
@@ -106,6 +127,11 @@ export function applyTranslation(editor: Editor, unit: TranslateUnit, mdx: strin
 		if (content.length !== 1 || list?.type !== unit.wrap || list.content?.length !== 1) return "invalid";
 		content = list.content;
 	}
+	// The translated block is the same block: it keeps the original's id (blocks it was split into get new ones).
+	const id = blockIdOf(unit.original);
+	const [first] = content;
+	if (id !== undefined && first)
+		content = [{ ...first, attrs: { ...(first.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: id } }, ...content.slice(1)];
 	let nodes: PmNode[];
 	try {
 		nodes = content.map((json) => state.schema.nodeFromJSON(json));

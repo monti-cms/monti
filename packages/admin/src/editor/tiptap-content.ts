@@ -1,8 +1,20 @@
 import { createTranslator } from "@monti-cms/core/client";
 import type { CmsJsonValue, CmsMark, CmsNode } from "@monti-cms/core/mdx";
-import { TEXT_ALIGN_VALUES as ALIGN_VALUES, analyze, serialize, sortMarks, toDocument } from "@monti-cms/core/mdx";
+import {
+	TEXT_ALIGN_VALUES as ALIGN_VALUES,
+	analyze,
+	assignBlockIds,
+	fromStoredDocument,
+	isBlockId,
+	type StoredDocument,
+	serialize,
+	sortMarks,
+	toDocument,
+	toStoredDocument,
+} from "@monti-cms/core/mdx";
 import type { JSONContent } from "@tiptap/core";
 import { ADDED_MARK_BY_EDITOR_NAME, ADDED_MARKS, addedMarkName, markAttrsOf } from "./added-marks";
+import { BLOCK_ID_ATTRIBUTE } from "./block-ids";
 import { PARENT_ONLY_TYPES } from "./blocks/added";
 import { type ConverterContext, converterForCms, converterForTiptap } from "./converters";
 import { asNumber, asString, lineBreakNode } from "./converters/shared";
@@ -173,7 +185,19 @@ const withTextAlign = (node: CmsNode, content: JSONContent): JSONContent => {
 	return content;
 };
 
+/**
+ * A block with its id (`CmsNode.id` → the editor's `blockId`). A block that already has one keeps it: an alignment box becomes its paragraph,
+ * and the paragraph's own id is the one the editor keeps (the box's id is paired up again by the server).
+ */
 const blockToTiptap = (node: CmsNode): JSONContent => {
+	const converted = convertBlockToTiptap(node);
+	if (node.id !== undefined && converted.attrs?.[BLOCK_ID_ATTRIBUTE] == null) {
+		converted.attrs = { ...(converted.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: node.id };
+	}
+	return converted;
+};
+
+const convertBlockToTiptap = (node: CmsNode): JSONContent => {
 	if (!isMappableBlock(node)) return toOpaque(node);
 	const converter = converterForCms(node.type, node);
 	if (converter) return converter.toTiptap(node, context);
@@ -243,8 +267,28 @@ export const cmsNodeToTiptap = (node: CmsNode): JSONContent => {
 	return blockToTiptap(node);
 };
 
-/** MDX body string → Tiptap JSON. For loading into the editor. */
-export const mdxToTiptap = (source: string): JSONContent => cmsNodeToTiptap(toDocument(analyze(source)));
+/** A stored document → Tiptap JSON, with its block ids. For loading a body whose document the server returned. */
+export const storedToTiptap = (doc: StoredDocument): JSONContent => cmsNodeToTiptap(fromStoredDocument(doc));
+
+/**
+ * MDX body string → Tiptap JSON. For loading into the editor. MDX carries no block ids: with `previous` (documents the body replaces, e.g.
+ * what the editor held before source mode, then the stored body), blocks that pair with theirs take their ids, the rest get new ones (`assignBlockIds`).
+ */
+export const mdxToTiptap = (
+	source: string,
+	previous: readonly (StoredDocument | null | undefined)[] = [],
+): JSONContent => {
+	const working = toDocument(analyze(source));
+	if (!previous.some(Boolean)) return cmsNodeToTiptap(working);
+	const stored = toStoredDocument(working);
+	if (!stored) return cmsNodeToTiptap(working);
+	const sources = previous.map((doc) => doc?.content);
+	return storedToTiptap({ ...stored, content: assignBlockIds(stored.content, sources) });
+};
+
+/** Tiptap `getJSON()` → the stored document with the editor's block ids, or `null` when the body cannot be one (see `toStoredDocument`). */
+export const tiptapToStored = (content: JSONContent): StoredDocument | null =>
+	toStoredDocument(tiptapToCmsNode(content));
 
 const tiptapMarksToCms = (marks: JSONContent["marks"]): CmsMark[] => {
 	const out: CmsMark[] = [];
@@ -288,14 +332,24 @@ const tiptapInlineToCms = (nodes: JSONContent[] | undefined): CmsNode[] => {
 			continue;
 		}
 		if (node.type === "image") {
-			out.push(...tiptapBlockToCms(node));
+			// An image inside text is inline: only blocks carry ids.
+			out.push(...tiptapBlockToCms(node).map(({ id: _id, ...inline }) => inline));
 		}
 		// Inlines outside the schema cannot appear in getJSON (defensive: dropped).
 	}
 	return out;
 };
 
+/** A block back with its id (the editor's `blockId` → `CmsNode.id`) on the first node it becomes. */
 const tiptapBlockToCms = (node: JSONContent): CmsNode[] => {
+	const converted = convertTiptapBlock(node);
+	const id = node?.attrs?.[BLOCK_ID_ATTRIBUTE];
+	const first = converted[0];
+	if (first && first.id === undefined && isBlockId(id)) converted[0] = { ...first, id };
+	return converted;
+};
+
+const convertTiptapBlock = (node: JSONContent): CmsNode[] => {
 	if (!node || typeof node.type !== "string") return [];
 	const converter = converterForTiptap(node.type);
 	if (converter) return converter.toCms(node, context);

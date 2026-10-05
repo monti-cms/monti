@@ -1,6 +1,7 @@
 "use client";
 
 import { cmsApiUrl, createTranslator, FILE_ACCEPT, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/mdx";
 import type { Editor, Range } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -73,7 +74,7 @@ import {
 } from "./slash-command";
 import { SlashMenuPopup } from "./slash-menu-popup";
 import { TableToolbar } from "./table-toolbar";
-import { mdxToTiptap, tiptapToMdx } from "./tiptap-content";
+import { mdxToTiptap, storedToTiptap, tiptapToMdx, tiptapToStored } from "./tiptap-content";
 import { ToolbarButton, type ToolbarItem } from "./toolbar-button";
 import { type ToolbarEntry, ToolbarMenuGroup, ToolbarMenuItem, ToolbarMenuSection, ToolbarRow } from "./toolbar-row";
 import { uploadAttachment } from "./upload-helper";
@@ -82,7 +83,13 @@ const t = createTranslator(editorMessages);
 
 interface CmsEditorProps {
 	content: string;
-	onChange: (newContent: string) => void;
+	/** `doc` is the body as a stored document with the editor's block ids (`null` when it cannot be one). */
+	onChange: (newContent: string, doc: StoredDocument | null) => void;
+	/**
+	 * The stored body as the server returned it: its MDX and its document with block ids. When `content` is that MDX the editor loads the
+	 * document, so blocks keep their ids exactly; otherwise blocks are paired with it (and with what the editor held).
+	 */
+	stored?: { readonly mdx: string; readonly doc: StoredDocument | null };
 	/** Title input for the document being edited. Placed below the formatting tools, above the body. */
 	titleField?: ReactNode;
 	/** Document action menu placed at the end of the formatting tools. */
@@ -401,6 +408,7 @@ const sameSpot = (a: HandleSpot | null, b: HandleSpot) =>
 export function CmsEditor({
 	content,
 	onChange,
+	stored,
 	titleField,
 	toolbarEnd,
 	toolbarAside,
@@ -421,7 +429,15 @@ export function CmsEditor({
 	const canEdit = editable && !isSourceMode;
 	const { media } = useAdminFeatures();
 	// A body opened in source mode may be unparsable. The visual editor starts as an empty document and is filled when returning.
-	const [initialContent] = useState(() => mdxToTiptap(isSourceMode ? "" : content));
+	const [initialContent] = useState(() =>
+		isSourceMode
+			? mdxToTiptap("")
+			: stored?.doc && stored.mdx === content
+				? storedToTiptap(stored.doc)
+				: mdxToTiptap(content),
+	);
+	const storedRef = useRef(stored);
+	storedRef.current = stored;
 	const isInternalUpdateRef = useRef(false);
 	// Width of the element at the right end of the toolbar. Leave this much space on both sides so the tool group stays centered.
 	const asideRef = useRef<HTMLDivElement>(null);
@@ -602,7 +618,8 @@ export function CmsEditor({
 		},
 		onUpdate: ({ editor: current }) => {
 			if (isInternalUpdateRef.current) return;
-			onChange(tiptapToMdx(current.getJSON()));
+			const json = current.getJSON();
+			onChange(tiptapToMdx(json), tiptapToStored(json));
 			syncTriggerPopup(current);
 		},
 		onSelectionUpdate: ({ editor: current }) => syncTriggerPopup(current),
@@ -641,8 +658,14 @@ export function CmsEditor({
 			if (cancelled || editor.isDestroyed) return;
 			// The comparison basis is the stored string (MDX) — comparing Tiptap JSON objects breaks due to key order.
 			if (tiptapToMdx(editor.getJSON()) === content) return;
+			// Blocks keep their ids: the stored document when this is its text, otherwise paired with what the editor held and the stored body.
+			const loaded = storedRef.current;
+			const next =
+				loaded?.doc && loaded.mdx === content
+					? storedToTiptap(loaded.doc)
+					: mdxToTiptap(content, [tiptapToStored(editor.getJSON()), loaded?.doc]);
 			isInternalUpdateRef.current = true;
-			editor.commands.setContent(mdxToTiptap(content), { emitUpdate: false });
+			editor.commands.setContent(next, { emitUpdate: false });
 			isInternalUpdateRef.current = false;
 		});
 		return () => {

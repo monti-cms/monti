@@ -133,7 +133,14 @@ describe("translation groups", () => {
 			expect(translation.working.metadata).toEqual({});
 			// The confirmed source is the source's body as stored (written from its document), so the translation screen compares like with like.
 			expect(source.working.mdx).toBe("한국어 본문\n");
-			expect(translation.working.translation).toEqual({ version: 2, baseSource: source.working.mdx });
+			// ... together with its document, whose block ids pair the source's blocks across versions.
+			expect(source.working.doc).not.toBeNull();
+			expect(translation.working.translation).toEqual({
+				version: 3,
+				baseSource: source.working.mdx,
+				baseDoc: source.working.doc,
+			});
+			expect((await store.getEntry(translation.id)).working.translation).toEqual(translation.working.translation);
 			expect(source.working.translation ?? null).toBeNull();
 
 			const group = await store.getTranslationGroup({ entryId: translation.id });
@@ -278,7 +285,7 @@ describe("translation groups", () => {
 			await expect(
 				service.saveDraft(source.id, {
 					...base,
-					translation: { version: 2, baseSource: "" },
+					translation: { version: 3, baseSource: "", baseDoc: null },
 					expectedVersion: source.version,
 				}),
 			).rejects.toMatchObject({ code: "invalid_input" });
@@ -310,11 +317,37 @@ describe("translation groups", () => {
 				slug: "state-source",
 				metadata: { title: "Only the title" },
 				mdx: "",
-				translation: { version: 2, baseSource: "바뀐 기준" },
+				translation: { version: 3, baseSource: "바뀐 기준", baseDoc: null },
 				expectedVersion: saved.version,
 			});
 			expect(ignored.version).toBe(saved.version + 1);
-			expect(ignored.working.translation?.baseSource).toBe("바뀐 기준");
+			expect(ignored.working.translation).toEqual({ version: 3, baseSource: "바뀐 기준", baseDoc: null });
+		});
+
+		it("reads a version 2 translation status as version 3 without a document, and writes version 3", async () => {
+			const source = await createPost("legacy-state-source");
+			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+			await pool.query(`UPDATE "${schemaName}".entry_bodies SET translation = $1::jsonb WHERE entry_id = $2`, [
+				JSON.stringify({ version: 2, baseSource: "예전 기준" }),
+				translation.id,
+			]);
+			const legacy = await store.getEntry(translation.id);
+			expect(legacy.working.translation).toEqual({ version: 3, baseSource: "예전 기준", baseDoc: null });
+
+			const resent = await service.saveDraft(translation.id, {
+				collection: contentCollection,
+				slug: "legacy-state-source",
+				metadata: { title: "Only the title" },
+				mdx: "",
+				translation: { version: 2, baseSource: "예전 기준" } as never,
+				expectedVersion: legacy.version,
+			});
+			expect(resent.working.translation).toEqual({ version: 3, baseSource: "예전 기준", baseDoc: null });
+			const stored = await pool.query<{ translation: unknown }>(
+				`SELECT translation FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
+				[translation.id],
+			);
+			expect(stored.rows[0]?.translation).toEqual({ version: 3, baseSource: "예전 기준", baseDoc: null });
 		});
 
 		it("keeps slugs separate per language", async () => {

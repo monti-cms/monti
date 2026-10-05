@@ -9,6 +9,7 @@ import {
 	mapMediaRow,
 	mapTemplateRow,
 	readDoc,
+	readTranslation,
 	TEMPLATE_COLUMNS,
 	type TemplateRow,
 } from "./rows";
@@ -110,7 +111,7 @@ export function createTransferOps(ctx: StoreContext) {
 							schemaVersion: row.schema_version,
 							contentHash: row.content_hash,
 							updatedAt: row.updated_at,
-							translation: row.translation ?? null,
+							translation: readTranslation(row.translation),
 						};
 						if (row.state === "working") bodiesByEntry.set(row.entry_id, body);
 						else if (row.state === "published") bodiesByEntryPublished.set(row.entry_id, body);

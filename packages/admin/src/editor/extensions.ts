@@ -1,6 +1,7 @@
 import StarterKit from "@tiptap/starter-kit";
 import { ADDED_MARKS, createAddedMark, type EditorMarkSpec } from "./added-marks";
 import { CmsBlockKeymap } from "./block-commands";
+import { CmsBlockIds } from "./block-ids";
 import { BLOCK_NODE_VIEWS } from "./block-views";
 import { ADDED_BLOCK_NODES } from "./blocks/added";
 import { CmsBlockDrag } from "./drag";
@@ -28,5 +29,7 @@ export function buildEditorExtensions(marks: Readonly<Record<string, EditorMarkS
 		...[...ADDED_MARKS.values()].map((block) => createAddedMark(block, marks[block.name])),
 		CmsBlockKeymap,
 		CmsBlockDrag,
+		// Last, so its global attribute reaches every block node above.
+		CmsBlockIds,
 	];
 }

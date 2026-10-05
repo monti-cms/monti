@@ -2,6 +2,7 @@ import { isCollection, isItemCollection } from "../core/collections";
 import { isLocale } from "../core/locales";
 import { prepareSnapshot, serviceInputKeys, validateExactRecord } from "../core/snapshot";
 import { withTranslationHints } from "../core/translation/hints";
+import { confirmedSourceState } from "../core/translation/state";
 import { slugFromValues } from "../schema/derive";
 import { type SaveDraftInput, ServiceError, type ServiceInput, type StorePort } from "./types";
 
@@ -84,13 +85,13 @@ export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 		}
 		// A translation starts from the source skeleton. Structure (headings, paragraphs, boxes, lists, tables), code and images are kept, and text
 		// becomes translation notes (faded source text). Per-language values such as title and summary are emptied (the edit screen shows the source title as a placeholder).
-		// The translation state records the current source as the "confirmed source". If the source changes, the translation screen tells you.
+		// The translation state records the current source (its MDX and document) as the "confirmed source". If the source changes, the translation screen tells you.
 		const snapshot = await prepareSnapshot({
 			collection: source.collection,
 			slug: source.slug,
 			metadata: {},
 			mdx: withTranslationHints(source.mdx),
-			translation: { version: 2, baseSource: source.mdx },
+			translation: confirmedSourceState(source.mdx, source.doc),
 		} as ServiceInput);
 		return storePort.createEntryWithReferences({
 			snapshot,

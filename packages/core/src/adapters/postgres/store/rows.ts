@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
 import { bodyText, SEARCH_TEXT } from "../../../core/body-text";
-import type { TranslationState } from "../../../core/translation/state";
+import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
 import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
 import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
 import type { Queryable } from "./context";
@@ -66,6 +66,10 @@ export function extractVisibleText(mdx: string): string {
 
 /** A stored document read from a `jsonb` column. A value that is not a stored document of a known version reads as `null`. */
 export const readDoc = (value: unknown): StoredDocument | null => readStoredDocument(value) ?? null;
+
+/** A translation state read from a `jsonb` column. A version 2 state (no document) is lifted to version 3. */
+export const readTranslation = (value: unknown): TranslationState | null =>
+	value === null || value === undefined ? null : (parseTranslationState(value) ?? (value as TranslationState));
 
 export interface BodyRow {
 	content_hash: string;
@@ -221,6 +225,7 @@ export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 	updatedAt: row.updated_at,
 });
 
+/** Whether two reference lists are the same, occurrences included (a body occurrence's `blockId` is part of it). */
 export function isReferencesEqual(a: readonly Reference[], b: readonly Reference[]): boolean {
 	if (a.length !== b.length) return false;
 	const key = (r: Reference) => `${r.kind}:${r.targetId.toLowerCase()}`;
@@ -291,7 +296,7 @@ export async function readBody(
 		[entryId, state],
 	);
 	const row = res.rows[0];
-	return row && { ...row, doc: readDoc(row.doc) };
+	return row && { ...row, doc: readDoc(row.doc), translation: readTranslation(row.translation) };
 }
 
 /** Writes the working/published body. Also updates the plain text used for search. `doc` is the stored document `mdx` is written from (`null` when the body has none). */
@@ -385,7 +390,7 @@ export async function loadEntry(client: Queryable, id: string, qSchema: string):
 			schemaVersion: row.schema_version,
 			contentHash: row.content_hash,
 			updatedAt: row.body_updated_at,
-			translation: row.translation ?? null,
+			translation: readTranslation(row.translation),
 		};
 		if (row.state === "working") working = body;
 		else published = body;

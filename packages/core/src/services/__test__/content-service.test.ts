@@ -397,9 +397,11 @@ describe("ContentService Contract", () => {
 					kind: "media",
 					targetId: "987e4567-e89b-12d3-a456-426614174000",
 					isStale: false,
-					occurrences: [{ type: "mdx", line: 1, column: 1 }],
+					// The body is one block, and the position names it.
+					occurrences: [{ type: "mdx", line: 1, column: 1, blockId: snap.doc?.content[0]?.id }],
 				},
 			]);
+			expect(snap.doc?.content).toHaveLength(1);
 		});
 
 		it("does not reference an external image src", async () => {
@@ -411,7 +413,9 @@ describe("ContentService Contract", () => {
 			});
 			expect(snap.issues).toEqual([]);
 			expect(snap.references).toEqual([]);
-			expect(snap.imageSources).toEqual([{ src: "https://example.com/a.png", position: { line: 1, column: 1 } }]);
+			expect(snap.imageSources).toEqual([
+				{ src: "https://example.com/a.png", position: { line: 1, column: 1, blockId: snap.doc?.content[0]?.id } },
+			]);
 		});
 
 		it("retains trusted previous refs marked stale on MDX syntax error and keeps exact MDX unchanged", async () => {
@@ -1408,7 +1412,9 @@ describe("ContentService Contract", () => {
 			expect(snap.issues).toEqual([]);
 			expect(mediaReferences(snap)).toHaveLength(1);
 			expect(mediaReferences(snap)[0]).toMatchObject({ kind: "media", targetId: mediaId });
-			expect(snap.imageSources).toEqual([{ mediaId, position: { line: 1, column: 1 } }]);
+			expect(snap.imageSources).toEqual([
+				{ mediaId, position: { line: 1, column: 1, blockId: snap.doc?.content[0]?.id } },
+			]);
 		});
 
 		it("an external src is not a reference and does not block publishing", async () => {
@@ -1416,7 +1422,9 @@ describe("ContentService Contract", () => {
 
 			expect(snap.issues).toEqual([]);
 			expect(mediaReferences(snap)).toEqual([]);
-			expect(snap.imageSources).toEqual([{ src: "/images/a.png", position: { line: 1, column: 1 } }]);
+			expect(snap.imageSources).toEqual([
+				{ src: "/images/a.png", position: { line: 1, column: 1, blockId: snap.doc?.content[0]?.id } },
+			]);
 		});
 
 		it("an image with no source stays blocked", async () => {

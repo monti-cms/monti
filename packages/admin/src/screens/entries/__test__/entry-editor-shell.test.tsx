@@ -1,4 +1,6 @@
+import { bodyFromMdx, type StoredDocument } from "@monti-cms/core/mdx";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
@@ -30,20 +32,70 @@ vi.mock("../local-backup", async (importOriginal) => ({
 	deleteLocalBackup,
 	saveLocalBackup,
 }));
-vi.mock("../../../editor/tiptap-editor", () => ({
-	CmsEditor: ({
-		editable,
-		titleField,
-		toolbarEnd,
-		toolbarAside,
-		sourceView,
-	}: {
-		editable?: boolean;
-		titleField?: React.ReactNode;
-		toolbarEnd?: React.ReactNode;
-		toolbarAside?: React.ReactNode;
-		sourceView?: React.ReactNode;
-	}) => (
+vi.mock("../../../editor/tiptap-editor", async () => {
+	const React = await import("react");
+	const { Editor } = await import("@tiptap/core");
+	const { buildEditorExtensions } =
+		await vi.importActual<typeof import("../../../editor/extensions")>("../../../editor/extensions");
+	const { storedToTiptap } = await vi.importActual<typeof import("../../../editor/tiptap-content")>(
+		"../../../editor/tiptap-content",
+	);
+	/** A real editor without a page behind it, holding the stored document, reported through `onEditor` (going to a block by its id). */
+	const useHeadlessEditor = (
+		stored: { doc: import("@monti-cms/core/mdx").StoredDocument | null } | undefined,
+		onEditor: ((editor: import("@tiptap/core").Editor | null) => void) | undefined,
+	) => {
+		const doc = stored?.doc;
+		React.useEffect(() => {
+			if (!doc || !onEditor) return;
+			const editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+			mockEditor.current = editor;
+			onEditor(editor);
+			return () => {
+				onEditor(null);
+				editor.destroy();
+			};
+		}, [doc, onEditor]);
+	};
+	return {
+		CmsEditor: (props: {
+			editable?: boolean;
+			titleField?: React.ReactNode;
+			toolbarEnd?: React.ReactNode;
+			toolbarAside?: React.ReactNode;
+			sourceView?: React.ReactNode;
+			stored?: { doc: import("@monti-cms/core/mdx").StoredDocument | null };
+			onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
+		}) => <MockEditor {...props} useHeadlessEditor={useHeadlessEditor} />,
+	};
+});
+const { mockEditor } = vi.hoisted(() => ({ mockEditor: { current: null as import("@tiptap/core").Editor | null } }));
+function MockEditor({
+	editable,
+	titleField,
+	toolbarEnd,
+	toolbarAside,
+	sourceView,
+	stored,
+	onEditor,
+	useHeadlessEditor,
+}: {
+	editable?: boolean;
+	titleField?: React.ReactNode;
+	toolbarEnd?: React.ReactNode;
+	toolbarAside?: React.ReactNode;
+	sourceView?: React.ReactNode;
+	stored?: { doc: import("@monti-cms/core/mdx").StoredDocument | null };
+	onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
+	useHeadlessEditor: (
+		stored: { doc: import("@monti-cms/core/mdx").StoredDocument | null } | undefined,
+		onEditor: ((editor: import("@tiptap/core").Editor | null) => void) | undefined,
+	) => void;
+}) {
+	// The shell passes a new `onEditor` on every render; keep the first so the headless editor is made once per document.
+	const [stableOnEditor] = useState(() => onEditor);
+	useHeadlessEditor(stored, stableOnEditor);
+	return (
 		<>
 			<div role="toolbar" aria-label="서식 도구">
 				{toolbarEnd}
@@ -56,8 +108,8 @@ vi.mock("../../../editor/tiptap-editor", () => ({
 				<p>번역 둘째 문단</p>
 			</div>
 		</>
-	),
-}));
+	);
+}
 vi.mock("sonner", () => ({ Toaster: () => null, toast: { success, warning, message, error } }));
 // AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
 vi.mock("../ai-translate", () => ({
@@ -365,6 +417,42 @@ describe("entry editor shell", () => {
 		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
 		await waitFor(() => expect(document.activeElement).toBe(source));
 		expect(source.selectionStart).toBe("첫째 줄\n".length + 1);
+	});
+
+	it("goes to the issue's block in the visual editor, and to the line in source mode when the editor does not have it", async () => {
+		const mdx = "첫째 문단\n\n둘째 문단\n";
+		const { doc } = bodyFromMdx(mdx);
+		const second = doc?.content[1]?.id;
+		let blockId = second;
+		serve(
+			(input) =>
+				input.endsWith("/publish")
+					? json(
+							{
+								code: "publish_validation_failed",
+								issues: [{ code: "mdx_error", path: "mdx", position: { line: 3, column: 1, blockId } }],
+							},
+							422,
+						)
+					: undefined,
+			{ ...entry, working: { ...entry.working, mdx, doc } },
+		);
+		renderEdit();
+		await screen.findByDisplayValue("요약");
+		await screen.findByLabelText("시각 본문");
+		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		await screen.findByRole("list", { name: "발행 검증 문제" });
+
+		await waitFor(() => expect(mockEditor.current).not.toBeNull());
+		fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+		await waitFor(() => expect(mockEditor.current?.state.selection.$from.parent.textContent).toBe("둘째 문단"));
+		expect(screen.queryByRole("textbox", { name: "MDX 본문" })).toBeNull();
+
+		blockId = "zzzzzzzz";
+		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		await waitFor(() => expect(methodCalls("POST").length).toBeGreaterThanOrEqual(2));
+		fireEvent.click(await screen.findByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+		expect(await screen.findByRole("textbox", { name: "MDX 본문" })).toBeTruthy();
 	});
 
 	it("opens unparseable MDX in source mode and does not allow the visual editor (no silent overwrite)", async () => {
@@ -845,17 +933,32 @@ describe("translation source pane", () => {
 		translationGroupId: "entry-1",
 		translations: [],
 	};
-	const translationWith = (baseSource: string | null) => ({
+	/** `mdx` as a stored document (with block ids), for a source that carries one. */
+	const docOf = (mdx: string) => bodyFromMdx(mdx).doc;
+	const translationWith = (
+		baseSource: string | null,
+		documents: { base?: StoredDocument | null; current?: StoredDocument | null; currentMdx?: string } = {},
+	) => ({
 		...entry,
 		id: "entry-en",
 		locale: "en",
 		translationGroupId: "entry-1",
 		translations: [],
-		source: { locale: "ko", metadata: { title: "원문 제목" }, mdx: SOURCE_MDX },
+		source: {
+			locale: "ko",
+			metadata: { title: "원문 제목" },
+			mdx: documents.currentMdx ?? SOURCE_MDX,
+			...(documents.current ? { doc: documents.current } : {}),
+		},
 		working: {
 			metadata: { title: "Title" },
 			mdx: "First\n\nSecond\n",
-			translation: baseSource === null ? null : { version: 2, baseSource },
+			translation:
+				baseSource === null
+					? null
+					: documents.base
+						? { version: 3, baseSource, baseDoc: documents.base }
+						: { version: 2, baseSource },
 		},
 	});
 	const sourcePane = () => screen.queryByRole("complementary", { name: "원문 창" });
@@ -932,8 +1035,32 @@ describe("translation source pane", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
 		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
-			version: 2,
+			version: 3,
 			baseSource: SOURCE_MDX,
+			baseDoc: null,
+		});
+	});
+
+	it("confirm also saves the source's document", async () => {
+		const current = docOf(SOURCE_MDX);
+		serve(
+			(_input, init) => {
+				if (init?.method === "PATCH") {
+					const body = JSON.parse(String(init.body));
+					return json({ ...translationWith(SOURCE_MDX), version: 5, working: { ...body, metadata: body.metadata } });
+				}
+			},
+			translationWith("첫 문단\n", { current }),
+		);
+		renderEdit();
+		expect(await screen.findByText("원문이 바뀌었습니다")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "확인" }));
+		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
+		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
+			version: 3,
+			baseSource: SOURCE_MDX,
+			baseDoc: current,
 		});
 	});
 
@@ -953,6 +1080,49 @@ describe("translation source pane", () => {
 		expect(within(dialog).getAllByText("이전").length).toBeGreaterThan(0);
 		expect(within(dialog).getAllByText("지금").length).toBeGreaterThan(0);
 		await waitFor(() => expect(dialog.textContent).toContain("첫 문단 옛"));
+	});
+
+	it("the comparison shows a block that moved as moved when both versions have documents", async () => {
+		const before = docOf("가\n\n나\n\n다\n") as StoredDocument;
+		const [first, second, third] = before.content;
+		const current = { ...before, content: [third, first, second] } as StoredDocument;
+		serve(
+			() => undefined,
+			translationWith("가\n\n나\n\n다\n", { base: before, current, currentMdx: "다\n\n가\n\n나\n" }),
+		);
+		renderEdit();
+		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
+		const dialog = await screen.findByRole("dialog", { name: "원문 변경" });
+		expect(within(dialog).getAllByText("이동")).toHaveLength(1);
+		expect(within(dialog).queryByText("추가")).toBeNull();
+		expect(within(dialog).queryByText("삭제")).toBeNull();
+		await waitFor(() => expect(dialog.textContent).toContain("다"));
+	});
+
+	it("the comparison labels a block that moved and changed", async () => {
+		const before = docOf("가\n\n나\n\n다\n") as StoredDocument;
+		const [first, second, third] = before.content;
+		const edited = { ...third, content: [{ type: "text", text: "다 고침" }] };
+		const current = { ...before, content: [edited, first, second] } as StoredDocument;
+		serve(
+			() => undefined,
+			translationWith("가\n\n나\n\n다\n", { base: before, current, currentMdx: "다 고침\n\n가\n\n나\n" }),
+		);
+		renderEdit();
+		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
+		const dialog = await screen.findByRole("dialog", { name: "원문 변경" });
+		expect(within(dialog).getByText("이동 및 수정")).toBeTruthy();
+		await waitFor(() => expect(dialog.textContent).toContain("다 고침"));
+	});
+
+	it("without documents the same move is a removed and an added block", async () => {
+		serve(() => undefined, translationWith("가\n\n나\n\n다\n", { currentMdx: "다\n\n가\n\n나\n" }));
+		renderEdit();
+		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
+		const dialog = await screen.findByRole("dialog", { name: "원문 변경" });
+		expect(within(dialog).queryByText("이동")).toBeNull();
+		expect(within(dialog).getByText("추가")).toBeTruthy();
+		expect(within(dialog).getByText("삭제")).toBeTruthy();
 	});
 
 	it("an unparseable source is reported as not comparable", async () => {
