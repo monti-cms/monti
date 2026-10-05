@@ -1,9 +1,11 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
-import { bodyFromMdx } from "../../../mdx/stored-document";
+import { forEachBlock, isBlockId } from "../../../mdx/block-ids";
+import { bodyFromMdx, readStoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { formatRewriteReport, rewriteContent } from "../store/rewrite";
@@ -137,8 +139,8 @@ describe("content rewrite", () => {
 			expect(working?.mdx).toBe(TIDY);
 			expect(publishedAfter?.mdx).toBe(TIDY);
 			// The document is written with the text, and it is the one the TIDY text reads as.
-			expect(working?.doc).toEqual(bodyFromMdx(TIDY).doc);
-			expect(publishedAfter?.doc).toEqual(bodyFromMdx(TIDY).doc);
+			expect(contentOf(working?.doc)).toEqual(contentOf(bodyFromMdx(TIDY).doc));
+			expect(contentOf(publishedAfter?.doc)).toEqual(contentOf(bodyFromMdx(TIDY).doc));
 			// The hash covers the parsed body, so it is the same for both spellings: asserted, not assumed.
 			expect(working?.content_hash).toBe(workingBefore?.content_hash);
 			expect(publishedAfter?.content_hash).toBe(publishedBefore?.content_hash);
@@ -191,7 +193,7 @@ describe("content rewrite", () => {
 
 			const after = await store.getTemplate(template.id);
 			expect(after.mdx).toBe(TIDY);
-			expect(after.doc).toEqual(bodyFromMdx(TIDY).doc);
+			expect(contentOf(after.doc)).toEqual(contentOf(bodyFromMdx(TIDY).doc));
 			expect(after.version).toBe(template.version);
 			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
 		});
@@ -257,6 +259,27 @@ describe("content rewrite", () => {
 			expect(after?.search_text).toBe(before?.search_text);
 		});
 
+		it("keeps every block id of the document, in the working and the published body", async () => {
+			const published = await publishedWith(TIDY);
+			const ids = async (state: "working" | "published") => {
+				const doc = readStoredDocument((await stored(published.id, state))?.doc);
+				const found: (string | undefined)[] = [];
+				forEachBlock(doc?.content ?? [], (node) => found.push(node.id));
+				return found;
+			};
+			const workingBefore = await ids("working");
+			const publishedBefore = await ids("published");
+			expect(workingBefore).toHaveLength(7);
+			expect(workingBefore.every(isBlockId)).toBe(true);
+			await setRaw(published.id, UNTIDY, (await stored(published.id, "working"))?.doc);
+
+			const report = await rewriteContent(pool, { schema: schemaName, apply: true });
+
+			expect(lineOf(report, published, "working")?.outcome).toBe("changed");
+			expect(await ids("working")).toEqual(workingBefore);
+			expect(await ids("published")).toEqual(publishedBefore);
+		});
+
 		it("does not write a body whose text says something else than its document", async () => {
 			const published = await publishedWith(TIDY);
 			const before = await stored(published.id, "working");
@@ -277,7 +300,7 @@ describe("content rewrite", () => {
 
 			const after = await stored(draft.id, "working");
 			expect(after?.mdx).toBe(TIDY);
-			expect(after?.doc).toEqual(bodyFromMdx(TIDY).doc);
+			expect(contentOf(after?.doc)).toEqual(contentOf(bodyFromMdx(TIDY).doc));
 		});
 
 		it("fills in the document of a body that has none even when its text is already written the site's way", async () => {
@@ -287,7 +310,7 @@ describe("content rewrite", () => {
 			const report = await rewriteContent(pool, { schema: schemaName, apply: true });
 
 			expect(lineOf(report, draft, "working")?.outcome).toBe("changed");
-			expect((await stored(draft.id, "working"))?.doc).toEqual(bodyFromMdx(TIDY).doc);
+			expect(contentOf((await stored(draft.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(TIDY).doc));
 			expect((await rewriteContent(pool, { schema: schemaName, apply: true })).changed).toBe(0);
 		});
 	});

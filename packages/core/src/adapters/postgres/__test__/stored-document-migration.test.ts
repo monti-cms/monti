@@ -1,6 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
@@ -169,7 +170,7 @@ describe("0013_stored_documents", () => {
 			{ table_name: "body_templates", data_type: "jsonb", is_nullable: "YES" },
 			{ table_name: "entry_bodies", data_type: "jsonb", is_nullable: "YES" },
 		]);
-		expect((await row(published.id, "working"))?.doc).toEqual(bodyFromMdx(LEGACY).doc);
+		expect(contentOf((await row(published.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
 	});
 
 	it("gives every body its document, writes its MDX from it, and recomputes the hash and search text", async () => {
@@ -188,7 +189,7 @@ describe("0013_stored_documents", () => {
 			const expected = bodyFromMdx(legacy);
 			expect(expected.doc).not.toBeNull();
 			expect(stored?.mdx).toBe(expected.mdx);
-			expect(stored?.doc).toEqual(expected.doc);
+			expect(contentOf(stored?.doc)).toEqual(contentOf(expected.doc));
 			expect(stored?.content_hash).toBe(
 				computeContentHash(stored?.metadata ?? {}, expected.mdx, stored?.schema_version ?? 1),
 			);
@@ -223,8 +224,8 @@ describe("0013_stored_documents", () => {
 		expect(after.updatedAt.getTime()).toBe(published.updatedAt.getTime());
 		expect((await row(published.id, "working"))?.updated_at.getTime()).toBe(workingBefore?.updated_at.getTime());
 		expect((await row(published.id, "published"))?.updated_at.getTime()).toBe(publishedBefore?.updated_at.getTime());
-		expect(after.working.doc).toEqual(bodyFromMdx(LEGACY).doc);
-		expect(after.published?.doc).toEqual(bodyFromMdx(LEGACY).doc);
+		expect(contentOf(after.working.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
+		expect(contentOf(after.published?.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
 	});
 
 	it("replaces a document that is already there with the one the MDX reads as", async () => {
@@ -236,7 +237,7 @@ describe("0013_stored_documents", () => {
 
 		await run();
 
-		expect((await row(draft.id, "working"))?.doc).toEqual(bodyFromMdx(WRITTEN).doc);
+		expect(contentOf((await row(draft.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(WRITTEN).doc));
 	});
 
 	it("writes the source a translation was confirmed against the same way, so the translation screen sees no change", async () => {
@@ -346,7 +347,7 @@ describe("0013_stored_documents", () => {
 
 			const after = await store.getTemplate(template.id);
 			expect(after.mdx).toBe(WRITTEN);
-			expect(after.doc).toEqual(bodyFromMdx(LEGACY).doc);
+			expect(contentOf(after.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
 			expect(after.version).toBe(template.version);
 			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
 		});
@@ -397,10 +398,12 @@ describe("0013_stored_documents", () => {
 				for (const [index, entry] of entries.entries()) {
 					const stored = await row(entry.id, "working");
 					expect(stored?.mdx).toBe(`# Title ${index}\n`);
-					expect(stored?.doc).toEqual(bodyFromMdx(`Title ${index}\n=====\n`).doc);
+					expect(contentOf(stored?.doc)).toEqual(contentOf(bodyFromMdx(`Title ${index}\n=====\n`).doc));
 				}
 				for (const [index, template] of templates.entries()) {
-					expect((await store.getTemplate(template.id)).doc).toEqual(bodyFromMdx(`Heading ${index}\n=====\n`).doc);
+					expect(contentOf((await store.getTemplate(template.id)).doc)).toEqual(
+						contentOf(bodyFromMdx(`Heading ${index}\n=====\n`).doc),
+					);
 				}
 				// Put the legacy text back for the next batch size.
 				for (const [index, entry] of entries.entries()) await setLegacy(entry.id, `Title ${index}\n=====\n`);

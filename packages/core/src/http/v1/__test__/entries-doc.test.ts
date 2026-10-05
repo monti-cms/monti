@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { contentOf } from "../../../../test/stored-content";
 import {
 	closeGlobalPool,
 	createIsolatedTestPool,
@@ -10,6 +11,7 @@ import {
 import { createContentStore, type Entry, migrateContentStore } from "../../../adapters/postgres/content-store";
 import type { Collection } from "../../../core/collections";
 import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
+import { isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
@@ -129,7 +131,7 @@ describe("entry API with a stored document", () => {
 	it("creates an entry from MDX as before, and with no body it is empty", async () => {
 		const fromMdx = await created({ mdx: UNTIDY });
 		expect(fromMdx.working.mdx).toBe(TIDY);
-		expect(fromMdx.working.doc).toEqual(bodyFromMdx(UNTIDY).doc);
+		expect(contentOf(fromMdx.working.doc)).toEqual(contentOf(bodyFromMdx(UNTIDY).doc));
 
 		const empty = await created({});
 		expect(empty.working.mdx).toBe("");
@@ -173,6 +175,41 @@ describe("entry API with a stored document", () => {
 		const row = await storedRow(entry.id);
 		expect(row.mdx).toBe(TIDY);
 		expect(row.doc).toEqual(doc);
+	});
+
+	it("keeps the block ids of a document sent with a patch, and gives a block sent without one its own", async () => {
+		const entry = await created({ mdx: "First\n" });
+		const parsed = bodyFromMdx(UNTIDY).doc;
+		if (!parsed) throw new Error("fixture");
+		const [heading, paragraph, list] = parsed.content;
+		if (!heading || !paragraph || !list) throw new Error("fixture");
+		const doc = {
+			...parsed,
+			content: [{ ...heading, id: "client01" }, { ...paragraph, id: "client02" }, withoutBlockIds([list])[0]],
+		};
+
+		const res = await patch(entry.id, { expectedVersion: entry.version, doc });
+
+		expect(res.status).toBe(200);
+		const saved = (await res.json()) as Entry;
+		const ids = saved.working.doc?.content.map((block) => block.id);
+		expect(ids?.slice(0, 2)).toEqual(["client01", "client02"]);
+		expect(isBlockId(ids?.[2])).toBe(true);
+		expect((await storedRow(entry.id)).doc).toEqual(saved.working.doc);
+		// MDX written from it carries no ids.
+		expect(saved.working.mdx).toBe(TIDY);
+	});
+
+	it("keeps the block ids of the draft when a patch sends edited MDX", async () => {
+		const entry = await created({ mdx: UNTIDY });
+
+		const res = await patch(entry.id, { expectedVersion: entry.version, mdx: TIDY.replace("emphasis", "stress") });
+
+		expect(res.status).toBe(200);
+		const saved = (await res.json()) as Entry;
+		expect(saved.working.doc?.content.map((block) => block.id)).toEqual(
+			entry.working.doc?.content.map((block) => block.id),
+		);
 	});
 
 	it("keeps the body when a patch sends neither mdx nor doc", async () => {
@@ -257,6 +294,6 @@ describe("entry API with a stored document", () => {
 		const { items } = await res.json();
 		const listed = items.find((item: { id: string }) => item.id === template.id);
 		expect(listed.mdx).toBe(TIDY);
-		expect(listed.doc).toEqual(bodyFromMdx(UNTIDY).doc);
+		expect(contentOf(listed.doc)).toEqual(contentOf(bodyFromMdx(UNTIDY).doc));
 	});
 });

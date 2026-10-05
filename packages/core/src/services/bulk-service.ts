@@ -144,7 +144,11 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>) => (
 					folderId = request.folderId ?? null;
 				}
 				const previousReferences = await storePort.getWorkingReferences({ entryId: item.id });
-				const snapshot = await prepareSnapshot(toServiceInput(working, metadata), { previousReferences });
+				// A metadata or folder change leaves the body as it is, block ids included.
+				const snapshot = await prepareSnapshot(toServiceInput(working, metadata), {
+					previousReferences,
+					previousDoc: working.doc,
+				});
 				const saved = (await storePort.saveWorkingWithReferences({
 					entryId: item.id,
 					expectedVersion: item.expectedVersion,

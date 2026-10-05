@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { contentOf } from "../../../../test/stored-content";
 import { cmsConfig } from "../../../config/resolved";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { type ContentStore, createContentStore, migrateContentStore } from "../content-store";
@@ -44,7 +45,7 @@ describe("Body Templates Store Contract", () => {
 				const stored = bodyFromMdx(seed.mdx);
 				expect(stored.doc).not.toBeNull();
 				expect(found.mdx).toBe(stored.mdx);
-				expect(found.doc).toEqual(stored.doc);
+				expect(contentOf(found.doc)).toEqual(contentOf(stored.doc));
 			}
 			const [first, second] = SEEDED.map((seed) => templates.find((t) => t.name === seed.name));
 			if (!first || !second) throw new Error("Seed templates not found.");
@@ -95,12 +96,12 @@ describe("Body Templates Store Contract", () => {
 		const expected = bodyFromMdx("Title\n=====\n\nSome _words_\n\n\n* one\n");
 		expect(expected.doc).not.toBeNull();
 		expect(created.mdx).toBe("# Title\n\nSome *words*\n\n- one\n");
-		expect(created.doc).toEqual(expected.doc);
-		// Read back through the store (and the database) it is the same document.
-		expect((await store.getTemplate(created.id)).doc).toEqual(expected.doc);
+		expect(contentOf(created.doc)).toEqual(contentOf(expected.doc));
+		// Read back through the store (and the database) it is the same document, ids included.
+		expect((await store.getTemplate(created.id)).doc).toEqual(created.doc);
 
 		const updated = await store.updateTemplate({ id: created.id, expectedVersion: created.version, mdx: "## Other\n" });
-		expect(updated.doc).toEqual(bodyFromMdx("## Other\n").doc);
+		expect(contentOf(updated.doc)).toEqual(contentOf(bodyFromMdx("## Other\n").doc));
 		expect(updated.mdx).toBe("## Other\n");
 
 		// A rename keeps the body and its document as they are.
@@ -118,7 +119,7 @@ describe("Body Templates Store Contract", () => {
 		expect(created.mdx).toBe("Words\n\n<Unclosed");
 		expect(created.doc).toBeNull();
 		const updated = await store.updateTemplate({ id: created.id, expectedVersion: created.version, mdx: "Fixed\n" });
-		expect(updated.doc).toEqual(bodyFromMdx("Fixed\n").doc);
+		expect(contentOf(updated.doc)).toEqual(contentOf(bodyFromMdx("Fixed\n").doc));
 		const broken = await store.updateTemplate({ id: created.id, expectedVersion: updated.version, mdx: "<Open" });
 		expect(broken.doc).toBeNull();
 		expect(broken.mdx).toBe("<Open");
@@ -211,17 +212,12 @@ describe("Body Templates Store Contract", () => {
 			const mergedStore = createContentStore(legacy.pool, { schema: legacy.schemaName });
 			const merged = await mergedStore.listTemplates();
 			// The bodies are stored written from their documents (with a closing line break), and keep their versions.
-			expect(merged.find((template) => template.id === memoId)).toMatchObject({
-				name: "공통 이름",
-				mdx: "메모 본문\n",
-				doc: bodyFromMdx("메모 본문").doc,
-				version: 3,
-			});
-			expect(merged.find((template) => template.id === postId)).toMatchObject({
-				mdx: "포스트 본문\n",
-				doc: bodyFromMdx("포스트 본문").doc,
-				version: 5,
-			});
+			const memo = merged.find((template) => template.id === memoId);
+			const post = merged.find((template) => template.id === postId);
+			expect(memo).toMatchObject({ name: "공통 이름", mdx: "메모 본문\n", version: 3 });
+			expect(post).toMatchObject({ mdx: "포스트 본문\n", version: 5 });
+			expect(contentOf(memo?.doc)).toEqual(contentOf(bodyFromMdx("메모 본문").doc));
+			expect(contentOf(post?.doc)).toEqual(contentOf(bodyFromMdx("포스트 본문").doc));
 			expect(merged.find((template) => template.id === postId)?.name).not.toBe("공통 이름");
 			expect(new Set(merged.map((template) => template.name.toLowerCase())).size).toBe(merged.length);
 

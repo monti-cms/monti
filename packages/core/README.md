@@ -337,6 +337,10 @@ The document is the source and the MDX is its text, so saving normalizes notatio
 Source mode in the editor is secondary: the text you type is parsed and written back in the site's notation when you save.
 A body that does not parse, or that has front matter, has no document and is stored exactly as given (only a draft can be like that).
 
+**Block ids.** Every block of the document has an `id` (8 characters of base36) that is unique within the body. It says which block is which across versions: it is not written to MDX and is not part of the content hash, so it never counts as a change.
+A body saved as MDX inherits ids from the version it replaces: a block that reads the same keeps its id, and so do edited, split and moved blocks (the first part of a split paragraph keeps it); blocks with no partner get new ids, and a document sent through the API keeps the ids it carries.
+`monti migrate` runs the step `0014_block_ids`, which gives the existing documents their ids (and gives a published body the ids of the working blocks it shares); it changes only `doc`, never the MDX, the hash, `version` or `updated_at`.
+
 **Upgrading.** Set `mdx.syntax` the way the site should write before running `monti migrate`, which runs the step `0013_stored_documents`. It adds the `doc` columns, gives every existing body its document and **rewrites its MDX in the site's notation** (so the stored text of many bodies changes at once; `version` and `updated_at` do not).
 Bodies that do not parse, have front matter or would not read back the same are left as they are, without a document, and each is logged (`[monti] no stored document for …`). Back up the database first and read the log after the run.
 `monti content:rewrite` now rewrites from the document and gives a body without one a document when it parses.

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { analyze, toDocument } from "../mdx";
+import { withoutBlockIds } from "../mdx/block-ids";
 import { toStoredDocument } from "../mdx/stored-document";
 import type { CmsMdxAnalysis, CmsNode } from "../mdx/types";
 import type { JsonValue } from "./types";
@@ -27,10 +28,13 @@ export function sortKeys(value: JsonValue): JsonValue {
  * The parsed document already ignores spelling: `*a*` and `_a_`, directive and JSX syntax, and whitespace between blocks
  * all produce the same nodes. The stored form also drops what only records how the text was written (the component name and
  * raw attribute list of a block, the annotation document of a code block, trailing blank lines) and sorts object keys at every
- * depth. Source positions are never part of it. Returns `null` when the body has no stored document (front matter).
+ * depth. Block ids and source positions are never part of it. Returns `null` when the body has no stored document (front matter).
  */
-export const canonicalBodyForHash = (document: CmsNode): JsonValue | null =>
-	toStoredDocument(document) as unknown as JsonValue | null;
+export const canonicalBodyForHash = (document: CmsNode): JsonValue | null => {
+	const stored = toStoredDocument(document);
+	// Block ids say which block is which, not what the body says.
+	return stored && ({ ...stored, content: withoutBlockIds(stored.content) } as unknown as JsonValue);
+};
 
 /**
  * Content hash of a snapshot: schema version, metadata (key order ignored) and the body in its canonical form.

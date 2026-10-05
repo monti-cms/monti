@@ -1,10 +1,11 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
+import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
-import { bodyFromMdx } from "../../../mdx/stored-document";
+import { bodyFromMdx, readStoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { extractVisibleText } from "../store/rows";
@@ -98,7 +99,8 @@ describe("stored documents", () => {
 	/** The rule every row follows. */
 	const expectConsistent = async (entryId: string, state: "working" | "published") => {
 		const row = await stored(entryId, state);
-		const body = bodyFromMdx(row.mdx);
+		// The text read again is the stored document: it keeps the ids of the document it was written from.
+		const body = bodyFromMdx(row.mdx, undefined, { previous: readStoredDocument(row.doc) });
 		expect(row.mdx).toBe(body.mdx);
 		expect(row.doc).toEqual(body.doc);
 		expect(row.content_hash).toBe(computeContentHash(row.metadata, row.mdx, row.schema_version));
@@ -154,7 +156,7 @@ describe("stored documents", () => {
 			expect(saved.version).toBe(draft.version + 1);
 			const row = await expectConsistent(draft.id, "working");
 			expect(row.mdx).toBe("Changed *words*\n");
-			expect(row.doc).toEqual(bodyFromMdx("Changed *words*\n").doc);
+			expect(contentOf(row.doc)).toEqual(contentOf(bodyFromMdx("Changed *words*\n").doc));
 			expect(saved.working.doc).toEqual(row.doc);
 		});
 
@@ -208,7 +210,7 @@ describe("stored documents", () => {
 
 			const fixed = await save(broken, "Words\n");
 			const row = await expectConsistent(draft.id, "working");
-			expect(row.doc).toEqual(bodyFromMdx("Words\n").doc);
+			expect(contentOf(row.doc)).toEqual(contentOf(bodyFromMdx("Words\n").doc));
 			expect(fixed.working.doc).toEqual(row.doc);
 		});
 	});

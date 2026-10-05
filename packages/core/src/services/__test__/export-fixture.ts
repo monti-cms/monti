@@ -59,8 +59,16 @@ export const fixtureBody = (
 	updatedAt: FIXTURE_TIME,
 });
 
-/** The stored document of a fixture body. The draft and the archived post have none, as a body that does not parse has none. */
-export const fixtureDocument = (mdx: string) => bodyFromMdx(mdx).doc;
+const documents = new Map<string, ReturnType<typeof bodyFromMdx>["doc"]>();
+
+/**
+ * The stored document of a fixture body. The draft and the archived post have none, as a body that does not parse has none.
+ * Parsing draws new block ids each time, so a text is parsed once: every snapshot (and every test) sees the same document for it.
+ */
+export const fixtureDocument = (mdx: string) => {
+	if (!documents.has(mdx)) documents.set(mdx, bodyFromMdx(mdx).doc);
+	return documents.get(mdx) ?? null;
+};
 
 /** Shared snapshot for export tests: 1 public post + 1 draft. */
 export const makeExportFixtureSnapshot = (): ExportSnapshot => ({

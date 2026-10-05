@@ -47,6 +47,8 @@ export type CmsMark = {
 
 export type CmsNode = {
 	type: string;
+	/** Block id, unique within the document (`block-ids.ts`). Only blocks of a stored document carry one; never written to MDX. */
+	id?: string;
 	attrs?: Record<string, CmsJsonValue>;
 	content?: CmsNode[];
 	marks?: CmsMark[];
