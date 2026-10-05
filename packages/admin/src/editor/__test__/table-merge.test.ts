@@ -22,18 +22,18 @@ const createTableEditor = (content: ReturnType<typeof mdxToTiptap>) => {
 describe("editor table cell merge and split", () => {
 	it("loading merged-table MDX preserves colspan/rowspan in the Tiptap schema", () => {
 		const source = [
-			'::::table{align="left,center"}',
-			":::row",
-			"::cell[머리글]{header colspan=2}",
-			":::",
-			":::row",
-			"::cell[내용1]{rowspan=2}",
-			"::cell[내용2]",
-			":::",
-			":::row",
-			"::cell[내용3]",
-			":::",
-			"::::",
+			'<Table align="left,center">',
+			"<TableRow>",
+			'<TableCell header colspan="2">머리글</TableCell>',
+			"</TableRow>",
+			"<TableRow>",
+			'<TableCell rowspan="2">내용1</TableCell>',
+			"<TableCell>내용2</TableCell>",
+			"</TableRow>",
+			"<TableRow>",
+			"<TableCell>내용3</TableCell>",
+			"</TableRow>",
+			"</Table>",
 		].join("\n");
 
 		const instance = createTableEditor(mdxToTiptap(source));
@@ -52,7 +52,7 @@ describe("editor table cell merge and split", () => {
 		expect(tiptapToMdx(json).trim()).toBe(source);
 	});
 
-	it("merging cells (mergeCells) in a GFM table serializes it as a directive table", () => {
+	it("merging cells (mergeCells) in a GFM table serializes it as an element table", () => {
 		const gfm = ["| a | b |", "| :-- | :-: |", "| 1 | 2 |"].join("\n");
 
 		const instance = createTableEditor(mdxToTiptap(gfm));
@@ -94,21 +94,21 @@ describe("editor table cell merge and split", () => {
 		expect(merged).toBe(true);
 
 		const resultMdx = tiptapToMdx(instance.getJSON()).trim();
-		expect(resultMdx).toContain("::::table");
-		expect(resultMdx).toContain("colspan=2");
+		expect(resultMdx).toContain("<Table");
+		expect(resultMdx).toContain('colspan="2"');
 	});
 
 	it("splitting a merged cell (splitCell) returns the table to GFM", () => {
 		const source = [
-			'::::table{align="left,center"}',
-			":::row",
-			"::cell[제목]{header colspan=2}",
-			":::",
-			":::row",
-			"::cell[1]",
-			"::cell[2]",
-			":::",
-			"::::",
+			'<Table align="left,center">',
+			"<TableRow>",
+			'<TableCell header colspan="2">제목</TableCell>',
+			"</TableRow>",
+			"<TableRow>",
+			"<TableCell>1</TableCell>",
+			"<TableCell>2</TableCell>",
+			"</TableRow>",
+			"</Table>",
 		].join("\n");
 
 		const instance = createTableEditor(mdxToTiptap(source));
@@ -139,7 +139,7 @@ describe("editor table cell merge and split", () => {
 
 		const resultMdx = tiptapToMdx(instance.getJSON()).trim();
 		// all merges are undone, so it returns to a GFM table
-		expect(resultMdx).not.toContain("::::table");
+		expect(resultMdx).not.toContain("<Table");
 		expect(resultMdx).toContain("| 제목 |");
 	});
 
@@ -153,31 +153,31 @@ describe("editor table cell merge and split", () => {
 
 	it("undoing a merge does not turn a first-column header layout into a first-row header", () => {
 		const source = [
-			"::::table",
-			":::row",
-			"::cell[이름]{header}",
-			"::cell[값]",
-			":::",
-			":::row",
-			"::cell[나이]{header}",
-			"::cell[3]",
-			":::",
-			"::::",
+			"<Table>",
+			"<TableRow>",
+			"<TableCell header>이름</TableCell>",
+			"<TableCell>값</TableCell>",
+			"</TableRow>",
+			"<TableRow>",
+			"<TableCell header>나이</TableCell>",
+			"<TableCell>3</TableCell>",
+			"</TableRow>",
+			"</Table>",
 		].join("\n");
 		expect(tiptapToMdx(mdxToTiptap(source)).trim()).toBe(source);
 	});
 
 	it("loads column widths as cell colwidth and saves adjusted widths as widths", () => {
 		const source = [
-			'::::table{widths="80,160"}',
-			":::row",
-			"::cell[합친 머리글]{header colspan=2}",
-			":::",
-			":::row",
-			"::cell[a]",
-			"::cell[b]",
-			":::",
-			"::::",
+			'<Table widths="80,160">',
+			"<TableRow>",
+			'<TableCell header colspan="2">합친 머리글</TableCell>',
+			"</TableRow>",
+			"<TableRow>",
+			"<TableCell>a</TableCell>",
+			"<TableCell>b</TableCell>",
+			"</TableRow>",
+			"</Table>",
 		].join("\n");
 		const json = mdxToTiptap(source);
 		const firstRow = json.content?.[0]?.content?.[0];
@@ -186,23 +186,23 @@ describe("editor table cell merge and split", () => {
 		expect(secondRow?.content?.[1]?.attrs?.colwidth).toEqual([160]);
 		expect(tiptapToMdx(json).trim()).toBe(source);
 
-		// Adjusting column widths in a GFM table without merges saves it as a directive table with the header made explicit.
+		// Adjusting column widths in a GFM table without merges saves it as an element table with the header made explicit.
 		const gfm = ["| a | b |", "| --- | --- |", "| 1 | 2 |"].join("\n");
 		const instance = createTableEditor(mdxToTiptap(gfm));
 		instance.commands.setTextSelection(3);
 		instance.commands.setCellAttribute("colwidth", [150]);
 		expect(tiptapToMdx(instance.getJSON()).trim()).toBe(
 			[
-				'::::table{widths="150"}',
-				":::row",
-				"::cell[a]{header}",
-				"::cell[b]{header}",
-				":::",
-				":::row",
-				"::cell[1]",
-				"::cell[2]",
-				":::",
-				"::::",
+				'<Table widths="150">',
+				"<TableRow>",
+				"<TableCell header>a</TableCell>",
+				"<TableCell header>b</TableCell>",
+				"</TableRow>",
+				"<TableRow>",
+				"<TableCell>1</TableCell>",
+				"<TableCell>2</TableCell>",
+				"</TableRow>",
+				"</Table>",
 			].join("\n"),
 		);
 	});

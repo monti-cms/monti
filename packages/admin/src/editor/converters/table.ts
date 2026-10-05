@@ -10,7 +10,7 @@ import {
 	tableHasMergedCells,
 	tableWidths,
 } from "@monti-cms/core/mdx";
-import { brDirectiveNode } from "./shared";
+import { lineBreakNode } from "./shared";
 import type { BlockConverter } from "./types";
 
 const tableAttrs = (align: unknown, widths: Array<number | null>) => {
@@ -82,7 +82,7 @@ export const tableConverter: BlockConverter = {
 			});
 		});
 		const widths = parseTableWidths(formatTableWidths(Array.from(collected)));
-		const directive = hasMerges || widths.length > 0;
+		const jsxTable = hasMerges || widths.length > 0;
 		const explicitHeaders =
 			hasMerges ||
 			!hasGfmHeaderLayout(rows.map((row) => (row.content ?? []).map((cell) => cell.type === "tableHeader")));
@@ -97,7 +97,7 @@ export const tableConverter: BlockConverter = {
 						// Multiple paragraphs in a cell cannot go into a GFM table, so they are joined with line breaks.
 						const paragraphs = (cell.content ?? []).map((block) => ctx.inlineToCms(block.content));
 						const inline = paragraphs.flatMap((content, index) =>
-							index === 0 ? content : [brDirectiveNode(), ...content],
+							index === 0 ? content : [lineBreakNode(), ...content],
 						);
 						const colspan = Number(cell.attrs?.colspan ?? 1);
 						const rowspan = Number(cell.attrs?.rowspan ?? 1);
@@ -107,8 +107,8 @@ export const tableConverter: BlockConverter = {
 						if (rowspan > 1) attrs.rowspan = rowspan;
 						// For merged or column-width tables, only the header is stated; for non-GFM header layouts, whether each cell is a header is stated explicitly.
 						// A GFM first-row-header table leaves the attribute empty to preserve the existing bytes.
-						if (directive && isHeader) attrs.header = true;
-						else if (explicitHeaders && !directive) attrs.header = isHeader;
+						if (jsxTable && isHeader) attrs.header = true;
+						else if (explicitHeaders && !jsxTable) attrs.header = isHeader;
 
 						return {
 							type: "tableCell",

@@ -8,7 +8,7 @@ import { ADDED_NODE_BLOCKS, defaultValues } from "../shared";
 // Custom blocks of the example config (`packages/core/test/cms.config.ts`): `notice` (editor node container), `embed` (raw-source box).
 describe("custom block editing", () => {
 	it("a custom block with an editor node moves its attributes and body into the node and round-trips unchanged", () => {
-		const mdx = ':::notice{level="warn" title="점검"}\n오늘 밤 점검합니다.\n:::\n';
+		const mdx = '<Notice level="warn" title="점검">\n\n오늘 밤 점검합니다.\n\n</Notice>\n';
 		const json = mdxToTiptap(mdx);
 		const node = json.content?.[0];
 		expect(node?.type).toBe(blockNodeName({ name: "notice" }));
@@ -19,7 +19,7 @@ describe("custom block editing", () => {
 	});
 
 	it("a custom block set as a raw-source box is preserved as is", () => {
-		const mdx = '::embed{url="https://example.com/video"}\n';
+		const mdx = '<Embed url="https://example.com/video" />\n';
 		const node = mdxToTiptap(mdx).content?.[0];
 		expect(node?.type).toBe(OPAQUE_BLOCK_NAME);
 		expect(tiptapToMdx(mdxToTiptap(mdx))).toBe(mdx);

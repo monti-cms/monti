@@ -53,7 +53,7 @@ describe("CmsNode <-> Tiptap round trip", () => {
 	it("does not lose inline marks, headings, and line breaks", () => {
 		const first = toDocument(
 			analyze(
-				'문장 **굵게** *기울임* ~~취소~~ `코드` :u[밑줄] :sup[위] :sub[아래] :tooltip[라벨]{content="설명"} [링크](https://example.com "제목")\n\n## 제목\n\n첫 줄:br[]둘째 줄',
+				'문장 **굵게** *기울임* ~~취소~~ `코드` <u>밑줄</u> <sup>위</sup> <sub>아래</sub> <Tooltip content="설명">라벨</Tooltip> [링크](https://example.com "제목")\n\n## 제목\n\n첫 줄<br />\n둘째 줄',
 			),
 		);
 
@@ -64,7 +64,7 @@ describe("CmsNode <-> Tiptap round trip", () => {
 	});
 
 	it("expands and collapses an alignment container", () => {
-		const first = toDocument(analyze(':::text-align{align="center"}\n\n## 가운데\n\n:::'));
+		const first = toDocument(analyze('<TextAlign align="center">\n\n## 가운데\n\n</TextAlign>'));
 		const json = cmsNodeToTiptap(first);
 
 		expect(json.content?.[0]).toMatchObject({
@@ -74,15 +74,15 @@ describe("CmsNode <-> Tiptap round trip", () => {
 
 		const second = tiptapToCmsNode(throughSchema(json));
 		expect(second).toEqual(first);
-		expect(serialize(second)).toContain(":::text-align");
+		expect(serialize(second)).toContain("<TextAlign");
 	});
 
 	it("preserves blocks not in the schema as boxes and restores them", () => {
 		const source = [
-			':::callout{variant="note"}\n\n보존\n\n:::',
-			'::::tabs\n:::tab{label="a"}\nA\n:::\n:::tab{label="b"}\nB\n:::\n::::',
+			'<Callout variant="note">\n\n보존\n\n</Callout>',
+			'<Tabs>\n\n<Tab label="a">\n\nA\n\n</Tab>\n\n<Tab label="b">\n\nB\n\n</Tab>\n\n</Tabs>',
 			"| a | b |\n| --- | --- |\n| 1 | 2 |",
-			"::::columns\n:::column\n단\n:::\n::::",
+			"<Columns>\n\n<Column>\n\n단\n\n</Column>\n\n</Columns>",
 		].join("\n\n");
 		const first = toDocument(analyze(source));
 		const json = cmsNodeToTiptap(first);
@@ -107,7 +107,7 @@ describe("CmsNode <-> Tiptap round trip", () => {
 	it("does not lose image attributes", () => {
 		const first = toDocument(
 			analyze(
-				'::image{mediaId="uuid-1" alt="설명" width="60%" align="left" caption="캡션"}\n\n![그냥](https://example.com/a.png)',
+				'<Image mediaId="uuid-1" alt="설명" width="60%" align="left" caption="캡션" />\n\n![그냥](https://example.com/a.png)',
 			),
 		);
 		const json = cmsNodeToTiptap(first);
@@ -120,14 +120,14 @@ describe("CmsNode <-> Tiptap round trip", () => {
 
 	it("an explicit value equal to the Tiptap default is normalized once on save and converges", () => {
 		// `align="center"` is the render default, so it is dropped on save. The meaning is the same, and reopening gives the same result.
-		const source = '::image{mediaId="uuid-1" alt="설명" align="center"}';
+		const source = '<Image mediaId="uuid-1" alt="설명" align="center" />';
 		const once = tiptapToMdx(throughSchema(mdxToTiptap(source)));
 		expect(once).not.toContain("align");
 		expect(tiptapToMdx(throughSchema(mdxToTiptap(once)))).toBe(once);
 	});
 
 	it("does not lose decorative images", () => {
-		const first = toDocument(analyze('::image{src="/images/a.png" alt="" decorative}'));
+		const first = toDocument(analyze('<Image src="/images/a.png" alt="" decorative />'));
 		const json = cmsNodeToTiptap(first);
 
 		expect(json.content?.[0]).toMatchObject({
@@ -141,7 +141,7 @@ describe("CmsNode <-> Tiptap round trip", () => {
 	});
 
 	it("preserves an explicit width of 100%", () => {
-		const first = toDocument(analyze('::image{src="/images/a.png" alt="설명" width="100%"}'));
+		const first = toDocument(analyze('<Image src="/images/a.png" alt="설명" width="100%" />'));
 		const json = cmsNodeToTiptap(first);
 		const second = tiptapToCmsNode(throughSchema(json));
 		expect(second).toEqual(first);
@@ -150,10 +150,10 @@ describe("CmsNode <-> Tiptap round trip", () => {
 
 	it("the upload insertion shape comes back as is", () => {
 		const first = toDocument(
-			analyze('::image{mediaId="uuid-1" src="https://r2.example/a.png" alt="a.png" width="100%" align="center"}'),
+			analyze('<Image mediaId="uuid-1" src="https://r2.example/a.png" alt="a.png" width="100%" align="center" />'),
 		);
 		const second = tiptapToCmsNode(throughSchema(cmsNodeToTiptap(first)));
-		// `::image` is a dedicated image node (no name/attributes wrapper). Only `align="center"` is dropped.
+		// `<Image />` is a dedicated image node (no name/attributes wrapper). Only `align="center"` is dropped.
 		expect(second).toEqual({
 			type: "doc",
 			content: [

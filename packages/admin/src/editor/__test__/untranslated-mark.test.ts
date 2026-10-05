@@ -23,13 +23,13 @@ const typeAt = (current: Editor, pos: number, text: string) => {
 
 describe("editing untranslated notice text", () => {
 	it("typing in a block with notice text clears the notice text and enters the input", () => {
-		const current = open(":untranslated[첫 문단]\n\n:untranslated[둘째 문단]\n");
+		const current = open("<Untranslated>첫 문단</Untranslated>\n\n<Untranslated>둘째 문단</Untranslated>\n");
 		typeAt(current, 3, "F");
-		expect(tiptapToMdx(current.getJSON())).toBe("F\n\n:untranslated[둘째 문단]\n");
+		expect(tiptapToMdx(current.getJSON())).toBe("F\n\n<Untranslated>둘째 문단</Untranslated>\n");
 	});
 
 	it("pressing clear removes the block's notice text at once", () => {
-		const current = open(":untranslated[첫 문단]\n");
+		const current = open("<Untranslated>첫 문단</Untranslated>\n");
 		current.commands.setTextSelection(4);
 		const { view } = current;
 		view.someProp("handleKeyDown", (handler) => handler(view, new KeyboardEvent("keydown", { key: "Backspace" })));
@@ -40,6 +40,6 @@ describe("editing untranslated notice text", () => {
 		const current = open("번역 끝\n");
 		typeAt(current, 2, "X");
 		expect(tiptapToMdx(current.getJSON())).toContain("X");
-		expect(tiptapToMdx(current.getJSON())).not.toContain("untranslated");
+		expect(tiptapToMdx(current.getJSON())).not.toContain("Untranslated");
 	});
 });

@@ -39,7 +39,7 @@ describe("Pure block drag-and-drop commands", () => {
 
 	it("atom nodes (images, raw-source boxes, etc.) can also be moved as blocks", () => {
 		const editor = createTestEditor(
-			'<p>앞 단락</p><div data-cms-opaque="true" data-raw-source=":::callout\n내용\n:::" data-line-start="1"></div><p>뒤 단락</p>',
+			'<p>앞 단락</p><div data-cms-opaque="true" data-raw-source="<Callout>\n내용\n</Callout>" data-line-start="1"></div><p>뒤 단락</p>',
 		);
 		const state = editor.state;
 
@@ -250,7 +250,9 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 
 	it("moving the only paragraph of a column into another column leaves an empty paragraph", () => {
 		const editor = createTestEditor(
-			mdxToTiptap("::::columns\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::") as unknown as string,
+			mdxToTiptap(
+				"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
+			) as unknown as string,
 		);
 		const from = nodePos(editor, (text, type) => type === "paragraph" && text === "왼쪽");
 		const right = nodePos(editor, (text, type) => type === "paragraph" && text === "오른쪽");
