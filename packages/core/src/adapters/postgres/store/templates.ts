@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { bodyFromMdx } from "../../../mdx/stored-document";
+import { bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
 import { type StoreContext, withTransaction } from "./context";
 import { CmsError, isUniqueViolation } from "./errors";
-import { mapTemplateRow, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";
+import { mapTemplateRow, readDoc, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";
 import type { BodyTemplate } from "./types";
 
 const mapTemplateError = (err: unknown) =>
@@ -10,9 +10,12 @@ const mapTemplateError = (err: unknown) =>
 		? new CmsError("Template name already exists", "conflict")
 		: err;
 
-/** A template body as it is stored: written from its document when it parses (normalized), as given otherwise. */
-const storedTemplateBody = (mdx: string) => {
-	const { mdx: written, doc } = bodyFromMdx(mdx);
+/**
+ * A template body as it is stored: written from its document when it parses (normalized), as given otherwise.
+ * Its blocks keep the ids of `previous`, the body it replaces, where they pair up.
+ */
+const storedTemplateBody = (mdx: string, previous?: StoredDocument | null) => {
+	const { mdx: written, doc } = bodyFromMdx(mdx, undefined, { previous });
 	return { mdx: written, doc: doc === null ? null : JSON.stringify(doc) };
 };
 
@@ -80,7 +83,7 @@ export function createTemplateOps(ctx: StoreContext) {
 					const body =
 						params.mdx === undefined
 							? { mdx: cur.mdx, doc: cur.doc === null ? null : JSON.stringify(cur.doc) }
-							: storedTemplateBody(params.mdx);
+							: storedTemplateBody(params.mdx, readDoc(cur.doc));
 					const res = await client.query<TemplateRow>(
 						`UPDATE "${qSchema}".body_templates
 						 SET name = $1, mdx = $2, doc = $3, version = $4, updated_at = $5

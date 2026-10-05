@@ -4,6 +4,7 @@ import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
 import { forEachBlock, isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
 import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
+import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -325,6 +326,33 @@ describe("block ids in the store", () => {
 
 			expect(idList(edited.working.doc)).toEqual(idList(original.working.doc));
 			expect((await stored(original.id, "working")).doc).toEqual(original.working.doc);
+		});
+	});
+
+	describe("changes that leave the body alone", () => {
+		it("a bulk move to another folder keeps every id", async () => {
+			const entry = await createDraft({ mdx: BODY });
+			const folder = await store.createFolder({ collection: contentCollection, name: unique("Folder") });
+
+			const { results } = await createBulkService(store).run({
+				op: "folder.move",
+				folderId: folder.id,
+				items: [{ id: entry.id, expectedVersion: entry.version }],
+			});
+
+			expect(results[0]).toMatchObject({ ok: true });
+			expect((await store.getEntry(entry.id)).working.doc).toEqual(entry.working.doc);
+		});
+
+		it("editing a template keeps the ids of the blocks that stay", async () => {
+			const template = await store.createTemplate({ name: unique("Template"), mdx: BODY });
+			const updated = await store.updateTemplate({
+				id: template.id,
+				expectedVersion: template.version,
+				mdx: BODY.replace("Second paragraph", "Second paragraph, reworded"),
+			});
+
+			expect(idList(updated.doc)).toEqual(idList(template.doc));
 		});
 	});
 });
