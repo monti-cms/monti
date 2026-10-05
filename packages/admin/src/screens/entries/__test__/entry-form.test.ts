@@ -87,17 +87,49 @@ describe("translation state form", () => {
 
 	it("a translation form holds the confirmed source as JSON with fixed key order and sends it in the save request", () => {
 		// The server (JSONB) returns keys reordered.
+		const form = formFromEntry(translation({ baseDoc: null, baseSource: "원문\n", version: 3 }));
+		expect(form[TRANSLATION_FORM_KEY]).toBe(stringifyTranslation({ version: 3, baseSource: "원문\n", baseDoc: null }));
+		expect(form[TRANSLATION_FORM_KEY]).toBe('{"version":3,"baseSource":"원문\\n","baseDoc":null}');
+		expect(translationPayload(form)).toEqual({ version: 3, baseSource: "원문\n", baseDoc: null });
+	});
+
+	it("the confirmed document keeps one key order however the server ordered it", () => {
+		const doc = {
+			version: 1,
+			type: "doc",
+			content: [{ type: "paragraph", id: "aaaaaaaa", content: [{ type: "text", text: "원문" }] }],
+		};
+		const reordered = {
+			type: "doc",
+			content: [{ content: [{ text: "원문", type: "text" }], id: "aaaaaaaa", type: "paragraph" }],
+			version: 1,
+		};
+		const first = formFromEntry(translation({ version: 3, baseSource: "원문\n", baseDoc: doc }));
+		const second = formFromEntry(translation({ baseDoc: reordered, baseSource: "원문\n", version: 3 }));
+		expect(first[TRANSLATION_FORM_KEY]).toBe(second[TRANSLATION_FORM_KEY]);
+		expect(translationPayload(first)).toEqual({ version: 3, baseSource: "원문\n", baseDoc: doc });
+	});
+
+	it("a version 2 state is read as version 3 without a document", () => {
 		const form = formFromEntry(translation({ baseSource: "원문\n", version: 2 }));
-		expect(form[TRANSLATION_FORM_KEY]).toBe(stringifyTranslation({ version: 2, baseSource: "원문\n" }));
-		expect(translationPayload(form)).toEqual({ version: 2, baseSource: "원문\n" });
+		expect(translationPayload(form)).toEqual({ version: 3, baseSource: "원문\n", baseDoc: null });
+	});
+
+	it("a state with an invalid document is treated as unconfirmed", () => {
+		const form = formFromEntry(translation({ version: 3, baseSource: "원문\n", baseDoc: { type: "doc" } }));
+		expect(translationPayload(form)).toEqual({ version: 3, baseSource: "", baseDoc: null });
 	});
 
 	it("with no valid state, nothing is treated as confirmed", () => {
 		for (const state of [null, undefined, { version: 1, units: [] }, { version: 2 }]) {
-			expect(translationPayload(formFromEntry(translation(state)))).toEqual({ version: 2, baseSource: "" });
+			expect(translationPayload(formFromEntry(translation(state)))).toEqual({
+				version: 3,
+				baseSource: "",
+				baseDoc: null,
+			});
 		}
-		expect(translationStateFromForm("깨진 값")).toEqual({ version: 2, baseSource: "" });
-		expect(translationStateFromForm(undefined)).toEqual({ version: 2, baseSource: "" });
+		expect(translationStateFromForm("깨진 값")).toEqual({ version: 3, baseSource: "", baseDoc: null });
+		expect(translationStateFromForm(undefined)).toEqual({ version: 3, baseSource: "", baseDoc: null });
 	});
 
 	it("the original does not send translation state", () => {
