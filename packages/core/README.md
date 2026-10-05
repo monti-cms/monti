@@ -144,14 +144,14 @@ pnpm exec monti content:rewrite           # a dry run: reports what would change
 pnpm exec monti content:rewrite --apply   # writes the changes
 ```
 
-Re-serializes every stored body (the working and published bodies of entries, and body templates) with the site's configured syntax, so the stored text is one notation:
+Rewrites every stored body (the working and published bodies of entries, and body templates) from its stored document with the site's configured syntax ("Stored bodies" under "Body syntax"), so the stored text is one notation:
 after turning `directiveSyntax()` on or off, or after upgrading the serializer, this brings old bodies in line at once instead of one post at a time as each is saved. Run it after `monti migrate`.
 It takes the same `--env-file`, `--no-env-file`, `--config` and `--server` options as `migrate`.
 
 - It prints one line per body, `collection/slug (locale) state: changed|unchanged`, and a summary.
-- Only the text changes. The content hash covers the parsed body, so a re-spelled body has the same hash: `version`, `updated_at` and `content_hash` are not touched, and "unpublished changes" is unaffected.
+- Only the text (and the document, for a body that had none) changes. The content hash covers the parsed body, so a re-spelled body has the same hash: `version`, `updated_at` and `content_hash` are not touched, and "unpublished changes" is unaffected.
   The command checks this for every body: one whose hash would change is skipped and reported, never written.
-- A body that does not parse cleanly is skipped and reported. The search text of rewritten bodies is refreshed; the positions the reference index keeps (line and column of each link or image) are refreshed the next time the entry is saved.
+- A body that has no document and does not parse cleanly (or has front matter) is skipped and reported. The search text of rewritten bodies is refreshed; the positions the reference index keeps (line and column of each link or image) are refreshed the next time the entry is saved.
 - Writes happen in one transaction, and a second run changes nothing.
 
 ### 5. Run
@@ -329,6 +329,22 @@ export default defineConfig({
 `directiveSyntax` is no longer exported by `@monti-cms/core/syntax`: change the import to `@monti-cms/syntax-directive`.
 Without the extension, existing posts render directive text literally and fail validation (`{…}` in `:::callout{…}` is read as an expression). With `write: false`, the content hash (which hashes the parsed body) of a post does not change when it is saved in the standard notation.
 Remove the extension once no stored body uses directives.
+
+#### Stored bodies
+
+Every body (the working and published bodies of entries, the source a translation was confirmed against, and body templates) is stored as a versioned **document** (`entry_bodies.doc`, `body_templates.doc`: the parsed body as JSON) together with the **MDX written from it**.
+The document is the source and the MDX is its text, so saving normalizes notation: the same content always gets the same text, whatever spelling it was typed in (`Title` + `=====` and `# Title` are stored as `# Title`), and saving a body in another spelling of the content it already has changes nothing (no new version).
+Source mode in the editor is secondary: the text you type is parsed and written back in the site's notation when you save.
+A body that does not parse, or that has front matter, has no document and is stored exactly as given (only a draft can be like that).
+
+**Upgrading.** Set `mdx.syntax` the way the site should write before running `monti migrate`, which runs the step `0013_stored_documents`. It adds the `doc` columns, gives every existing body its document and **rewrites its MDX in the site's notation** (so the stored text of many bodies changes at once; `version` and `updated_at` do not).
+Bodies that do not parse, have front matter or would not read back the same are left as they are, without a document, and each is logged (`[monti] no stored document for …`). Back up the database first and read the log after the run.
+`monti content:rewrite` now rewrites from the document and gives a body without one a document when it parses.
+
+- **Admin entry API.** `POST /api/cms/v1/entries` and `PATCH /api/cms/v1/entries/:id` accept `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) instead of `mdx`; sending both is `400 invalid_input`, and so is a document that is not a valid stored document. With neither, a new entry has an empty body and a patch keeps the current one.
+  Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/meta` reports the size limit as `limits.docBytes` next to `limits.mdxBytes`. The template API keeps accepting `mdx` only and returns `doc` with each template.
+- **Admin export** (`GET /api/cms/v1/export`) is format version 2: each body that has a document also has `working.doc.json` / `published.doc.json` next to `working.mdx` / `published.mdx`, `templates.json` items have `doc`, and the digests cover the document.
+- **Public read API and public export** are unchanged: MDX only, no `doc` (the public export only carries the new `formatVersion`).
 
 ### Writing a syntax extension (experimental)
 
