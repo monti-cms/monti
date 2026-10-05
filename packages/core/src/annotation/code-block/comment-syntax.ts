@@ -25,8 +25,10 @@ const COMMENT_SYNTAX_GROUPS: { syntax: CommentSyntax; langs: string[] }[] = [
 	{ syntax: { prefix: "--", postfix: "" }, langs: ["sql", "lua", "haskell", "hs", "elm", "ada"] },
 	{
 		syntax: { prefix: "<!--", postfix: "-->" },
-		langs: ["html", "xml", "svg", "vue", "svelte", "markdown", "md", "mdx", "handlebars"],
+		langs: ["html", "xml", "svg", "vue", "svelte", "markdown", "md", "handlebars"],
 	},
+	// MDX 2 does not read HTML comments; its comment is a JS comment in an expression.
+	{ syntax: { prefix: "{/*", postfix: "*/}" }, langs: ["mdx"] },
 	{ syntax: { prefix: "/*", postfix: "*/" }, langs: ["css", "postcss"] },
 	{ syntax: { prefix: ";", postfix: "" }, langs: ["lisp", "clojure", "clj", "scheme", "elisp", "asm", "nasm"] },
 	{ syntax: { prefix: "%", postfix: "" }, langs: ["latex", "tex", "erlang", "matlab"] },
