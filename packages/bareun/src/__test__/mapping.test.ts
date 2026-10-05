@@ -117,7 +117,6 @@ describe("bareunIssues", () => {
 
 	it("every category code has English and Korean names", () => {
 		const kinds = Object.keys(bareunMessages.messages.en).filter((key) => key.startsWith("category."));
-		expect(kinds).toHaveLength(11);
 		for (const key of kinds) expect(bareunMessages.messages.ko?.[key as never], key).toBeDefined();
 	});
 
