@@ -5,10 +5,22 @@
 
 const ANCHOR_ID = /^[\w-]+$/;
 
-/** Code lines whose anchor is `id` (document order). Nothing is found if `id` has characters that cannot be used as an anchor. */
+/**
+ * Code lines whose anchor is `id` (document order). A label is meant to be unique per document, and a link must resolve to exactly one code block,
+ * so only the lines of the first `<pre>` (in document order) that has a matching line are returned, never lines from two code blocks.
+ * Nothing is found if `id` has characters that cannot be used as an anchor.
+ */
 export function findAnchorLines(id: string, root: ParentNode = document): HTMLElement[] {
 	if (!ANCHOR_ID.test(id)) return [];
-	return Array.from(root.querySelectorAll<HTMLElement>(`.line[data-anchor~="${id}"]`));
+	const lines = Array.from(root.querySelectorAll<HTMLElement>(`.line[data-anchor~="${id}"]`));
+	const pre = lines[0]?.closest("pre") ?? null;
+	return lines.filter((line) => (line.closest("pre") ?? null) === pre);
+}
+
+/** The body text elements (`[data-code-ref]`) that point to `id` (document order). Nothing is found for an id that cannot be an anchor. */
+export function findRefTexts(id: string, root: ParentNode = document): HTMLElement[] {
+	if (!ANCHOR_ID.test(id)) return [];
+	return Array.from(root.querySelectorAll<HTMLElement>(`[data-code-ref="${id}"]`));
 }
 
 /** Whether it is rendered (it is not when inside a closed collapsible). */
@@ -50,4 +62,85 @@ export function revealLines(lines: readonly HTMLElement[]) {
 			details.open = true;
 	}
 	first.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+}
+
+/** Preview of linked code lines: the code block title (if any), the text of each line, and whether the list was cut short. */
+export interface CodePreview {
+	readonly title?: string;
+	readonly lines: readonly string[];
+	readonly truncated: boolean;
+}
+
+/** Elements inside a code line that are not code text (in-code tooltip contents and numbers, the back-link button). */
+const NON_CODE = '[role="tooltip"], .cms-block-tooltip-note, [data-code-ref-back]';
+
+/** Text of one code line without the elements that are not code (they are added to the line by tooltips and back links). */
+function lineText(line: HTMLElement): string {
+	const copy = line.cloneNode(true) as HTMLElement;
+	for (const extra of copy.querySelectorAll(NON_CODE)) extra.remove();
+	return (copy.textContent ?? "").replace(/\n+$/, "");
+}
+
+/** Removes the indentation shared by all non-blank lines so deeply nested code still fits a small box. */
+function dedent(lines: readonly string[]): string[] {
+	const indents = lines.filter((line) => line.trim()).map((line) => /^[ \t]*/.exec(line)?.[0].length ?? 0);
+	const shared = indents.length ? Math.min(...indents) : 0;
+	return lines.map((line) => line.slice(Math.min(shared, line.length)));
+}
+
+/** Text of the linked lines (at most `max`, the rest is reported by `truncated`) and the title of their code block (`.cms-code-title`). */
+export function previewLines(lines: readonly HTMLElement[], max: number): CodePreview {
+	const title = lines[0]?.closest(".cms-code")?.querySelector(".cms-code-title")?.getAttribute("data-title")?.trim();
+	return {
+		...(title ? { title } : {}),
+		lines: dedent(lines.slice(0, max).map(lineText)),
+		truncated: lines.length > max,
+	};
+}
+
+/**
+ * Adds a small back-link button at the end of the first line of the linked lines (code to text). Does nothing if the line already has one,
+ * so only one `CodeRef` per label adds it. Returns a function that removes the button.
+ */
+export function addBackLink(lines: readonly HTMLElement[], onClick: () => void, label: string): () => void {
+	const first = lines[0];
+	if (!first || Array.from(first.children).some((child) => child.hasAttribute("data-code-ref-back"))) return () => {};
+	const button = first.ownerDocument.createElement("button");
+	button.type = "button";
+	button.className = "cms-block-code-ref-back";
+	button.setAttribute("data-code-ref-back", "");
+	button.setAttribute("aria-label", label);
+	button.title = label;
+	button.textContent = "\u21a9";
+	button.addEventListener("click", onClick);
+	first.append(button);
+	return () => {
+		button.removeEventListener("click", onClick);
+		button.remove();
+	};
+}
+
+const flashTimers = new WeakMap<HTMLElement, number>();
+
+/** Highlights the element (`data-focused`) and removes the highlight after `ms`. Pressing again restarts the timer. */
+export function flashElement(element: HTMLElement, ms: number) {
+	window.clearTimeout(flashTimers.get(element));
+	element.setAttribute("data-focused", "");
+	flashTimers.set(
+		element,
+		window.setTimeout(() => {
+			element.removeAttribute("data-focused");
+			flashTimers.delete(element);
+		}, ms),
+	);
+}
+
+/** Scrolls the first body text that points to `id` to the center (expanding collapsed areas) and highlights it briefly. */
+export function revealRefText(id: string, ms: number, root: ParentNode = document) {
+	const text = findRefTexts(id, root)[0];
+	if (!text) return;
+	for (let details = text.closest("details"); details; details = details.parentElement?.closest("details") ?? null)
+		details.open = true;
+	text.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+	flashElement(text, ms);
 }

@@ -50,6 +50,9 @@ You can also add them one by one (`plugins: [callout(), columns(), color({ palet
   (when the document has a code block) plus description, relink and unlink for the link at the cursor (see "Text marks" in the `@monti-cms/admin` README).
   Code line labels, the "Link to body" item in the code block line menu, the linking hint line and the highlight of the hovered line are core code block features, and they use this mark through this extension's
   `to` attribute (`codeAnchor`). The in-code tooltip (`// @char Tooltip`) is a core code block feature.
+- Code link on public pages: a label is unique per document and a link resolves to exactly one code block (the first one with that label). Hovering or focusing the text highlights the linked lines;
+  while they are off screen it also shows a small preview of them (up to 8 lines and the code block title) next to the text (`role="tooltip"`, hidden on leave, blur or Esc), and pressing scrolls to them.
+  The first text that points to a label adds a back-link button (`↩`) at the end of the first linked line, which scrolls back to that text and highlights it briefly (`data-focused`).
 - The text color picker list is `color({ palette })` (the default 8 colors `DEFAULT_TEXT_PALETTE` if omitted). The body stores hex values, so changing the list leaves
   already written text as it is. Public pages render with `cleanTextColor` and `textColorProps` from `@monti-cms/blocks/color`, and the color is
   chosen to match the theme by `.cms-color` in `styles.css`.

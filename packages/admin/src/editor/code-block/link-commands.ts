@@ -54,7 +54,7 @@ function referencedIds(doc: PmNode): Set<string> {
 }
 
 /** A name not yet used (`c1`, `c2`, ...). Avoids names used by both labels and body links. */
-function nextAnchorId(doc: PmNode): string {
+export function nextAnchorId(doc: PmNode): string {
 	const used = referencedIds(doc);
 	doc.descendants((node) => {
 		if (node.type.name !== "codeBlock") return true;
