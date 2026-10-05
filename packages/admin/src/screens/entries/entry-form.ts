@@ -12,7 +12,6 @@ import {
 	storedFields,
 	type TranslationState,
 } from "@monti-cms/core/client";
-import type { StoredDocument } from "@monti-cms/core/mdx";
 import { t } from "./translate";
 
 /** The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays. */
