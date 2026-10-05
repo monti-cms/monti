@@ -244,6 +244,156 @@
 	margin-bottom: 0;
 }
 
+/* Code explorer: the file tree on the left and the code of the picked file on the right; when the block is narrow, the tree sits above the code behind a button showing the current path */
+.cms-block-code-explorer {
+	container-type: inline-size;
+	margin: 1.5rem 0;
+	border: 1px solid var(--cms-block-border);
+	border-radius: 0.5rem;
+	overflow: hidden;
+}
+.cms-block-code-explorer-layout {
+	display: grid;
+	grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+}
+.cms-block-code-explorer[data-tree-only] > .cms-block-code-explorer-layout {
+	grid-template-columns: minmax(0, 1fr);
+}
+.cms-block-code-explorer-nav {
+	min-width: 0;
+	padding: 0.5rem;
+	border-right: 1px solid var(--cms-block-border);
+	background-color: var(--cms-block-muted);
+	font-size: 0.875rem;
+}
+.cms-block-code-explorer[data-tree-only] .cms-block-code-explorer-nav {
+	border-right: 0;
+}
+.cms-block-code-explorer-toggle {
+	display: none;
+}
+.cms-block-code-explorer-tree,
+.cms-block-code-explorer-group {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.cms-block-code-explorer-group {
+	padding-left: 0.875rem;
+}
+.cms-block-code-explorer-item {
+	margin: 0;
+	padding: 0;
+	outline: none;
+}
+.cms-block-code-explorer-label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.2rem 0.5rem;
+	border-radius: 0.25rem;
+	overflow-wrap: anywhere;
+	cursor: pointer;
+}
+.cms-block-code-explorer-label::before {
+	content: "";
+	flex-shrink: 0;
+	width: 0.4em;
+	height: 0.4em;
+}
+.cms-block-code-explorer-item[data-kind="folder"] > .cms-block-code-explorer-label::before {
+	border-top: 2px solid currentColor;
+	border-right: 2px solid currentColor;
+	opacity: 0.6;
+	transform: rotate(45deg);
+	transition: transform 150ms ease;
+}
+.cms-block-code-explorer-item[aria-expanded="true"] > .cms-block-code-explorer-label::before {
+	transform: rotate(135deg);
+}
+.cms-block-code-explorer-item > .cms-block-code-explorer-label:hover {
+	background-color: var(--cms-block-border);
+}
+.cms-block-code-explorer-item[aria-selected="true"] > .cms-block-code-explorer-label {
+	background-color: color-mix(in srgb, var(--cms-block-accent) 20%, transparent);
+	font-weight: 600;
+}
+.cms-block-code-explorer-item[aria-disabled="true"] > .cms-block-code-explorer-label {
+	opacity: 0.55;
+	cursor: default;
+}
+.cms-block-code-explorer-item[aria-disabled="true"] > .cms-block-code-explorer-label:hover {
+	background: none;
+}
+.cms-block-code-explorer-item:focus-visible > .cms-block-code-explorer-label,
+.cms-block-code-explorer-toggle:focus-visible {
+	outline: 2px solid var(--cms-block-accent);
+	outline-offset: -2px;
+}
+.cms-block-code-explorer-code {
+	min-width: 0;
+}
+.cms-block-code-explorer-panel[hidden] {
+	display: none;
+}
+.cms-block-code-explorer-panel > .cms-code {
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+}
+@container (max-width: 40rem) {
+	.cms-block-code-explorer-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.cms-block-code-explorer-nav {
+		padding: 0;
+		border-right: 0;
+		border-bottom: 1px solid var(--cms-block-border);
+	}
+	.cms-block-code-explorer-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		font-weight: 500;
+		text-align: left;
+		overflow-wrap: anywhere;
+		cursor: pointer;
+	}
+	.cms-block-code-explorer-toggle::before {
+		content: "";
+		flex-shrink: 0;
+		width: 0.45em;
+		height: 0.45em;
+		border-top: 2px solid currentColor;
+		border-right: 2px solid currentColor;
+		opacity: 0.6;
+		transform: rotate(45deg);
+		transition: transform 150ms ease;
+	}
+	.cms-block-code-explorer[data-nav-open] .cms-block-code-explorer-toggle::before {
+		transform: rotate(135deg);
+	}
+	.cms-block-code-explorer:not([data-tree-only]) .cms-block-code-explorer-tree {
+		display: none;
+	}
+	.cms-block-code-explorer[data-nav-open] .cms-block-code-explorer-tree {
+		display: block;
+		padding: 0 0.5rem 0.5rem;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.cms-block-code-explorer-label::before,
+	.cms-block-code-explorer-toggle::before {
+		transition: none;
+	}
+}
+
 /* Columns: stacked on narrow screens, side by side with `--cms-columns` (column widths) on wide screens */
 .cms-block-columns {
 	display: flex;

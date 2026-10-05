@@ -1,5 +1,5 @@
 import { defineConfig } from "@monti-cms/core";
-import { callout, chart, collapsible, columns, mermaid, tabs } from "../../blocks/src";
+import { callout, chart, codeExplorer, collapsible, columns, mermaid, tabs } from "../../blocks/src";
 import { ALL_BLOCKS } from "../../blocks/src/definitions";
 import base from "../../core/test/cms.config";
 import { seo } from "../../seo/src";
@@ -18,6 +18,7 @@ export default defineConfig({
 		collapsible(),
 		tabs(),
 		columns(),
+		codeExplorer(),
 		mermaid(),
 		chart(),
 		seo(),

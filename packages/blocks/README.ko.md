@@ -10,6 +10,7 @@
 | 접기 | `collapsible()` | `<Collapsible title="…">…</Collapsible>` | `Collapsible` |
 | 탭 | `tabs()` | `<Tabs>` 안에 `<Tab label="…">` 2~8개 | `Tabs`·`Tab` |
 | 단 나누기 | `columns()` | `<Columns widths="60,40">` 안에 `<Column>` 2~4개 | `Columns`·`Column` |
+| 코드 탐색기 | `codeExplorer()` | `<CodeExplorer open="src/app/page.tsx">` 안에 ` ```ts title="src/app/page.tsx" ` 코드 펜스 | `CodeExplorer` |
 | Mermaid | `mermaid()` | ` ```mermaid ` | `Mermaid` |
 | 차트 | `chart()` | ` ```chart ` | `Chart` |
 | 툴팁 | `tooltip()` | `<Tooltip content="설명">글자</Tooltip>` | `Tooltip` |
@@ -27,7 +28,7 @@ import { blocks } from "@monti-cms/blocks";
 export default defineConfig({
 	// …
 	plugins: [
-		...blocks(), // 전부(콜아웃·접기·탭·단·Mermaid·차트·툴팁·코드 연결·글자색)
+		...blocks(), // 전부(콜아웃·접기·탭·단·코드 탐색기·Mermaid·차트·툴팁·코드 연결·글자색)
 		// ...blocks({ only: ["callout", "tooltip"] })   고른 것만
 		// ...blocks({ omit: ["chart"], codeRef: false }) 빼고(`false`도 뺀다)
 		// ...blocks({ color: { palette: [...] } })       확장별 옵션
@@ -42,7 +43,14 @@ export default defineConfig({
 @import "@monti-cms/blocks/styles.css";
 ```
 
-- 편집기: 콜아웃·접기·탭·단은 편집 화면이 함께 온다(관리자 테마 색, `styles.css`). Mermaid·차트는 코드 입력 칸과 미리보기로
+- 코드 탐색기: 파일 트리와 고른 파일의 코드를 보여 주는 블록으로, 프로젝트의 여러 파일을 보여 주는 글에 쓴다. 일반 코드 펜스를 담고 각 펜스의 `title`이 그 파일의 경로라서,
+  트리는 경로로 만들어지고 손으로 그리지 않는다. 제목만 있고 코드가 없는 펜스는 트리에만 보이는 파일이고, `/`로 끝나는 제목은 폴더이며, `open`은 처음 보여 줄 파일이다
+  (없으면 첫 파일). 모든 파일은 평범한 코드 블록으로 남아(줄 효과·접기·복사·코드 연결이 그대로 된다) 페이지 HTML에 전부 들어 있고(화면에서만 숨긴다),
+  그래서 자바스크립트가 없는 독자·피드·검색 엔진은 제목 붙은 코드 블록이 이어진 것으로 본다. 디렉티브 표기는 `:::code-explorer{open="src/app/page.tsx"}` 안에 펜스를 넣는다.
+  편집기: 블록 위쪽에 파일 목록이 보이고(경로를 누르면 그 파일로 커서가 가고, 커서가 있는 파일은 표시된다) 그 아래 코드 블록을 그 자리에서 편집한다
+  (경로는 코드 블록 자체의 제목 칸). 블록 도구줄은 파일(`src/new-file.ts`, 있으면 번호를 붙인다)·폴더 추가, 처음 보여 줄 파일 고르기, 블록 삭제를 준다.
+  슬래시 메뉴는 `src/index.ts` 코드 블록 하나가 든 블록을 넣는다.
+- 편집기: 콜아웃·접기·탭·단·코드 탐색기는 편집 화면이 함께 온다(관리자 테마 색, `styles.css`). Mermaid·차트는 코드 입력 칸과 미리보기로
   편집한다. 미리보기는 이 확장이 그리고(선택 의존성 `mermaid`·`recharts`를 앱이 설치한다. 미리보기를 열 때만 불러온다),
   사이트가 `fencePreviews`(`@monti-cms/admin`)로 같은 이름을 넣으면 그것이 이긴다. 차트 색은 CSS 변수 `--chart-1`~`--chart-5`이고
   앱이 정하지 않으면 `styles.css`의 기본값이다.

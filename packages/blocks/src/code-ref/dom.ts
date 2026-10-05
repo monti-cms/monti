@@ -53,13 +53,26 @@ export function focusLines(lines: readonly HTMLElement[]): () => void {
 
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-/** Expands the lines if they are inside a collapsed area and scrolls them to the center. With the reduced-motion setting, scrolls without animation. */
+/**
+ * Event a reveal dispatches on its target before scrolling (it bubbles). A block that hides content (a tab, a file of the code explorer)
+ * listens for it, shows the part that holds `event.target` synchronously, and so makes the target visible before the scroll.
+ */
+export const REVEAL_EVENT = "cms:reveal";
+
+const announceReveal = (element: HTMLElement) =>
+	element.dispatchEvent(new CustomEvent(REVEAL_EVENT, { bubbles: true }));
+
+/**
+ * Expands the lines if they are inside a collapsed area, asks the blocks that hide them to show them (`cms:reveal`), and scrolls them to the center.
+ * With the reduced-motion setting, scrolls without animation.
+ */
 export function revealLines(lines: readonly HTMLElement[]) {
 	const first = lines[0];
 	if (!first) return;
 	for (const line of lines) {
 		for (let details = line.closest("details"); details; details = details.parentElement?.closest("details") ?? null)
 			details.open = true;
+		announceReveal(line);
 	}
 	first.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
@@ -135,12 +148,13 @@ export function flashElement(element: HTMLElement, ms: number) {
 	);
 }
 
-/** Scrolls the first body text that points to `id` to the center (expanding collapsed areas) and highlights it briefly. */
+/** Scrolls the first body text that points to `id` to the center (expanding collapsed areas, `cms:reveal`) and highlights it briefly. */
 export function revealRefText(id: string, ms: number, root: ParentNode = document) {
 	const text = findRefTexts(id, root)[0];
 	if (!text) return;
 	for (let details = text.closest("details"); details; details = details.parentElement?.closest("details") ?? null)
 		details.open = true;
+	announceReveal(text);
 	text.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
 	flashElement(text, ms);
 }

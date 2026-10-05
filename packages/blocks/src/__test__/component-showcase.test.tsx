@@ -34,6 +34,7 @@ describe("CMS component showcase", () => {
 			"자르기와 90도 회전을 적용한 이미지",
 			"대체 텍스트가 없는 장식 이미지",
 			"글자 단위 접기",
+			"탐색기 예시",
 		]) {
 			expect(html, text).toContain(text);
 		}
@@ -48,6 +49,9 @@ describe("CMS component showcase", () => {
 		expect(html).toContain('class="cms-block-columns"');
 		expect(html).toContain('class="cms-block-column"');
 		expect(html).toContain('class="cms-block-tooltip"');
+		// Code explorer: every file is in the HTML (hidden only on screen), with its path.
+		expect(html).toContain("src/app/page.tsx");
+		expect(html).toContain("src/lib/db.ts");
 		// Fence blocks show the source on the server (drawing happens in the browser). No syntax errors.
 		expect(html).toContain('class="cms-block-chart"');
 		expect(html).toContain('class="cms-block-mermaid"');

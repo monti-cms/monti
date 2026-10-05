@@ -12,7 +12,7 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 | --- | --- |
 | [`@monti-cms/core`](packages/core) | The core. Config, entry storage and publishing, MDX conversion, admin API, command line (`monti`) |
 | [`@monti-cms/admin`](packages/admin) | The admin UI. Editor, entry list, media, templates |
-| [`@monti-cms/blocks`](packages/blocks) | Block extension. Callout, toggle, tabs, columns, Mermaid, chart |
+| [`@monti-cms/blocks`](packages/blocks) | Block extension. Callout, toggle, tabs, columns, code explorer, Mermaid, chart |
 | [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |
 | [`@monti-cms/seo`](packages/seo) | SEO extension. Search and sharing fields with a preview |
 | [`@monti-cms/bareun`](packages/bareun) | Bareun spell checking |

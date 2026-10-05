@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"cmsPlugin": true,
-	"description": "Block extensions for @monti-cms/core: callout, collapsible, tabs, columns, Mermaid, chart, and inline marks (tooltip, code link, text color)",
+	"description": "Block extensions for @monti-cms/core: callout, collapsible, tabs, columns, code explorer, Mermaid, chart, and inline marks (tooltip, code link, text color)",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -12,6 +12,9 @@
 		"./callout": "./src/callout/index.ts",
 		"./callout/admin": "./src/callout/admin.ts",
 		"./callout/render": "./src/callout/render.tsx",
+		"./code-explorer": "./src/code-explorer/index.ts",
+		"./code-explorer/admin": "./src/code-explorer/admin.ts",
+		"./code-explorer/render": "./src/code-explorer/render.tsx",
 		"./collapsible": "./src/collapsible/index.ts",
 		"./collapsible/admin": "./src/collapsible/admin.ts",
 		"./collapsible/render": "./src/collapsible/render.tsx",
@@ -125,6 +128,18 @@
 			"./callout/render": {
 				"types": "./dist/callout/render.d.ts",
 				"default": "./dist/callout/render.js"
+			},
+			"./code-explorer": {
+				"types": "./dist/code-explorer/index.d.ts",
+				"default": "./dist/code-explorer/index.js"
+			},
+			"./code-explorer/admin": {
+				"types": "./dist/code-explorer/admin.d.ts",
+				"default": "./dist/code-explorer/admin.js"
+			},
+			"./code-explorer/render": {
+				"types": "./dist/code-explorer/render.d.ts",
+				"default": "./dist/code-explorer/render.js"
 			},
 			"./collapsible": {
 				"types": "./dist/collapsible/index.d.ts",

@@ -62,6 +62,10 @@ describe("directive render equivalence — directive notation vs. standard notat
 				'::::tabs{defaultValue="B"}\n:::tab{label="A"}\na\n:::\n:::tab{label="B"}\nb\n:::\n::::',
 				'<Tabs defaultValue="B">\n\n<Tab label="A">\n\na\n\n</Tab>\n\n<Tab label="B">\n\nb\n\n</Tab>\n\n</Tabs>',
 			],
+			[
+				':::code-explorer{open="a.ts"}\n```ts title="a.ts"\nconst a = 1;\n```\n```text title="dir/"\n```\n:::',
+				'<CodeExplorer open="a.ts">\n\n```ts title="a.ts"\nconst a = 1;\n```\n\n```text title="dir/"\n```\n\n</CodeExplorer>',
+			],
 			[":u[밑줄]과 :sup[위]와 :sub[아래]", "<u>밑줄</u>과 <sup>위</sup>와 <sub>아래</sub>"],
 			["첫 줄:br[]둘째 줄", "첫 줄<br />\n둘째 줄"],
 			[':tooltip[용어]{content="뜻풀이"}를 본다', '<Tooltip content="뜻풀이">용어</Tooltip>를 본다'],

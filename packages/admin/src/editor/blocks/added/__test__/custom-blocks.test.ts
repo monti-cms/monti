@@ -1,4 +1,4 @@
-import { ADDED_BLOCKS } from "@monti-cms/core/client";
+import { ADDED_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { buildBlockSlashCommands } from "../../../slash-command";
 import { mdxToTiptap, OPAQUE_BLOCK_NAME, tiptapToMdx } from "../../../tiptap-content";
@@ -73,6 +73,46 @@ describe("editor representation of added blocks", () => {
 		expect(notice.type).toBe(blockNodeName(block("notice")));
 		expect(notice.attrs?.values).toEqual(defaultValues(block("notice")));
 		expect(notice.content).toHaveLength(1);
+	});
+
+	it("a body container with `insert.codeBlocks` starts with those code blocks instead of an empty paragraph", () => {
+		const files: BlockDefinition = {
+			name: "file-box",
+			label: "Files",
+			syntax: { kind: "container", directive: "file-box" },
+			component: "FileBox",
+			attributes: {},
+			editor: {
+				view: "node",
+				insert: {
+					codeBlocks: [
+						{ language: "ts", title: "src/index.ts", code: "export {};" },
+						{ language: "text", title: "docs/" },
+						{ language: "json" },
+					],
+				},
+			},
+		};
+		const content = insertContentOf(files, [files]);
+		expect(content.type).toBe("cmsFileBox");
+		expect(content.content).toEqual([
+			{
+				type: "codeBlock",
+				attrs: { language: "ts", meta: 'title="src/index.ts"' },
+				content: [{ type: "text", text: "export {};" }],
+			},
+			{ type: "codeBlock", attrs: { language: "text", meta: 'title="docs/"' } },
+			{ type: "codeBlock", attrs: { language: "json", meta: null } },
+		]);
+		// Without `codeBlocks` the body is still one paragraph (with the initial text, if any).
+		const plain = insertContentOf({ ...files, editor: { view: "node", insert: { text: "본문" } } }, [files]);
+		expect(plain.content).toEqual([{ type: "paragraph", content: [{ type: "text", text: "본문" }] }]);
+	});
+
+	it("the code explorer block starts with one `src/index.ts` code block", () => {
+		const content = insertContentOf(block("code-explorer"));
+		expect(content.type).toBe("cmsCodeExplorer");
+		expect(content.content).toEqual([{ type: "codeBlock", attrs: { language: "ts", meta: 'title="src/index.ts"' } }]);
 	});
 
 	it("a code fence block moves that language's code block into a node and round-trips the meta", () => {
