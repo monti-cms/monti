@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from "pg";
 import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { bodyFromMdx } from "../../../mdx/stored-document";
+import { migrateBlockIds } from "./block-id-migration";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 import { migrateSoftBreaks } from "./soft-break-migration";
@@ -320,6 +321,15 @@ const STEPS: readonly MigrationStep[] = [
 			`);
 			await migrateStoredDocuments(client, qSchema);
 		},
+	},
+	{
+		name: "0014_block_ids",
+		/**
+		 * Every block of a stored document now has an id (unique within the document, not written to MDX, not part of the content hash). Gives the blocks of every
+		 * working and published body and of every template theirs. A published body shares ids with the working body for the blocks they have in common. Only `doc`
+		 * changes: not `mdx`, `content_hash`, `search_text`, `version` or `updated_at`.
+		 */
+		run: (client, qSchema) => migrateBlockIds(client, qSchema),
 	},
 	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
