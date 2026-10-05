@@ -1,5 +1,6 @@
 import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
 import { createTranslator } from "../i18n";
+import { blockSpansOf } from "../mdx/block-spans";
 import { DIRECTIVE_BY_COMPONENT } from "../mdx/directives";
 import { splitFrontmatter } from "../mdx/frontmatter";
 import { isAllowedImageSrc } from "../mdx/image-src";
@@ -11,7 +12,7 @@ import {
 	type StoredDocument,
 } from "../mdx/stored-document";
 import { MAX_TABLE_COLUMNS } from "../mdx/table-layout";
-import type { CmsImageSource } from "../mdx/types";
+import type { CmsBodyPosition, CmsImageSource } from "../mdx/types";
 import {
 	fieldValueError,
 	metadataReferences,
@@ -284,7 +285,7 @@ type TableSpanReason =
 /**
  * Checks table cell merges (colspan/rowspan) and grid structure, and warns about invalid spans.
  */
-function checkTableSpans(tableNode: MdxNode, position: { line: number; column: number }, warnings: Issue[]) {
+function checkTableSpans(tableNode: MdxNode, position: CmsBodyPosition, warnings: Issue[]) {
 	const rows = findNamedJsxChildren(tableNode, "TableRow");
 	const totalRows = rows.length;
 	if (totalRows === 0) return;
@@ -365,12 +366,7 @@ function checkTableSpans(tableNode: MdxNode, position: { line: number; column: n
  * Block attribute rules. Blocks only publishing; draft saves and visual editing are not blocked.
  * The storage syntax (directive) and the read-compatible JSX are parsed with the same component names, so they are checked only once.
  */
-function checkBlockAttributes(
-	node: MdxNode,
-	position: { line: number; column: number },
-	issues: Issue[],
-	warnings: Issue[],
-) {
+function checkBlockAttributes(node: MdxNode, position: CmsBodyPosition, issues: Issue[], warnings: Issue[]) {
 	const name = typeof node.name === "string" ? node.name : "";
 	const definition = DIRECTIVE_BY_COMPONENT.get(name);
 	if (!definition) return;
@@ -502,11 +498,20 @@ export async function prepareSnapshot(
 	const imageSources: CmsImageSource[] = [];
 	const internalLinks: InternalLinkSource[] = [];
 
-	const positionOf = (node: MdxNode) => {
+	// Found when the first position needs it: a body with nothing to report never pays for it.
+	let blockSpans: ReturnType<typeof blockSpansOf> | undefined;
+	const blockIdAt = (offset: number) => {
+		blockSpans ??= blockSpansOf(analysis, body.doc);
+		return blockSpans.blockIdAt(offset);
+	};
+	/** Where a node starts in the stored MDX, and the block of the stored document it is in (none when the body has no document). */
+	const positionOf = (node: MdxNode): CmsBodyPosition => {
 		const pos = node.position?.start;
+		const blockId = typeof pos?.offset === "number" ? blockIdAt(pos.offset) : undefined;
 		return {
 			line: (typeof pos?.line === "number" ? pos.line : 1) + analysis.sourceLineOffset,
 			column: typeof pos?.column === "number" ? pos.column : 1,
+			...(blockId === undefined ? {} : { blockId }),
 		};
 	};
 
@@ -526,7 +531,7 @@ export async function prepareSnapshot(
 		if (parsed) internalLinks.push({ ...parsed, position: positionOf(node) });
 	};
 
-	const addMdxError = (code: string, position: ReturnType<typeof positionOf>) => {
+	const addMdxError = (code: string, position: CmsBodyPosition) => {
 		mdxIssues.push({ code, position });
 		mdxHasError = true;
 	};
@@ -540,7 +545,7 @@ export async function prepareSnapshot(
 				: { id: attr.value };
 
 	/** Collected as registered-media references. A non-UUID is a body error. Kept as a reference so a file in use is not deleted. */
-	const addMediaReference = (mediaId: string, position: ReturnType<typeof positionOf>) => {
+	const addMediaReference = (mediaId: string, position: CmsBodyPosition) => {
 		if (!isUuid(mediaId)) addMdxError("invalid_reference_id", position);
 		else mdxRefsToAdd.push({ kind: "media", targetId: mediaId, occ: { type: "mdx", ...position } });
 	};
@@ -579,7 +584,7 @@ export async function prepareSnapshot(
 	const footnoteIdentifier = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
 
 	/** Translation hint text left in a translation. It is not visible on the public screen, so it must not be published as is. */
-	const untranslated: ReturnType<typeof positionOf>[] = [];
+	const untranslated: CmsBodyPosition[] = [];
 	const traverse = (node: unknown) => {
 		if (!isMdxNode(node)) return;
 		if (node.type === "link") {
@@ -797,7 +802,13 @@ export function validateForPublish(
 		code,
 		...(message ? { message } : {}),
 		...(occurrence?.type === "mdx"
-			? { position: { line: occurrence.line, column: occurrence.column } }
+			? {
+					position: {
+						line: occurrence.line,
+						column: occurrence.column,
+						...(occurrence.blockId === undefined ? {} : { blockId: occurrence.blockId }),
+					},
+				}
 			: occurrence?.type === "metadata"
 				? { path: occurrence.path, ...(occurrence.ordinal === undefined ? {} : { ordinal: occurrence.ordinal }) }
 				: {}),

@@ -221,6 +221,7 @@ export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 	updatedAt: row.updated_at,
 });
 
+/** Whether two reference lists are the same, occurrences included (a body occurrence's `blockId` is part of it). */
 export function isReferencesEqual(a: readonly Reference[], b: readonly Reference[]): boolean {
 	if (a.length !== b.length) return false;
 	const key = (r: Reference) => `${r.kind}:${r.targetId.toLowerCase()}`;
