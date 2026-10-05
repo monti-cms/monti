@@ -58,8 +58,13 @@ export interface BlockInsert {
 	readonly text?: string;
 	/** Initial code of a code fence block. */
 	readonly code?: string;
+	/**
+	 * Initial code blocks of a container that holds body content (e.g. the files of a code explorer). A body container without child block rules starts
+	 * with these instead of an empty paragraph. `title` is the code fence's `title` meta.
+	 */
+	readonly codeBlocks?: readonly { readonly language: string; readonly title?: string; readonly code?: string }[];
 	/** Initial values per child block. If absent, fills with defaults up to the minimum count. */
-	readonly children?: readonly Omit<BlockInsert, "children" | "code">[];
+	readonly children?: readonly Omit<BlockInsert, "children" | "code" | "codeBlocks">[];
 }
 
 /**

@@ -17,6 +17,7 @@ describe("blocks()", () => {
 			"collapsible",
 			"tabs",
 			"columns",
+			"code-explorer",
 			"mermaid",
 			"chart",
 			"tooltip",
@@ -35,7 +36,7 @@ describe("blocks()", () => {
 		expect(names(blocks({ only: ["tooltip", "color"] }))).toEqual(["tooltip", "color"]);
 		const remaining = names(blocks({ omit: ["chart", "mermaid"], codeRef: false }));
 		for (const omitted of ["chart", "mermaid", "code-ref"]) expect(remaining).not.toContain(omitted);
-		for (const kept of ["callout", "collapsible", "tabs", "columns", "tooltip", "color"])
+		for (const kept of ["callout", "collapsible", "tabs", "columns", "code-explorer", "tooltip", "color"])
 			expect(remaining).toContain(kept);
 		const palette = [DEFAULT_TEXT_PALETTE[0]].filter((item) => item !== undefined);
 		const [colorPlugin] = blocks({ only: ["color"], color: { palette } });

@@ -13,13 +13,17 @@ const sources = [
 	'<Tabs>\n\n<Tab label="a">\n\n첫째\n\n</Tab>\n\n<Tab label="b">\n\n둘째\n\n</Tab>\n\n</Tabs>',
 	"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
 	'<Columns widths="60,40">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>',
+	'<CodeExplorer open="a.ts">\n\n```ts title="a.ts"\nconst a = 1;\n```\n\n```text title="dir/"\n\n```\n\n</CodeExplorer>',
 ];
 
 describe("container body editing", () => {
 	it.each(
 		sources.map(
 			(source, index) =>
-				[source, ["cmsCallout", "cmsCollapsible", "cmsTabs", "cmsColumns", "cmsColumns"][index]] as const,
+				[
+					source,
+					["cmsCallout", "cmsCollapsible", "cmsTabs", "cmsColumns", "cmsColumns", "cmsCodeExplorer"][index],
+				] as const,
 		),
 	)("MDX → Tiptap schema → MDX round trip: %s", (source, expected) => {
 		const content = mdxToTiptap(source);
@@ -36,6 +40,18 @@ describe("container body editing", () => {
 		BLOCK_INSERT_ACTIONS[name]?.(editor, { from: 1, to: 2 });
 		expect(editor.getJSON().content?.[0]?.type).toBe(`cms${name[0]?.toUpperCase()}${name.slice(1)}`);
 		expect(tiptapToMdx(editor.getJSON())).toContain(`<${name[0]?.toUpperCase()}${name.slice(1)}`);
+		editor.destroy();
+	});
+
+	it("inserts the code explorer via slash with one code block, not an empty paragraph", () => {
+		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p>/</p>" });
+		BLOCK_INSERT_ACTIONS["code-explorer"]?.(editor, { from: 1, to: 2 });
+		const block = editor.state.doc.firstChild;
+		expect(block?.type.name).toBe("cmsCodeExplorer");
+		expect(block?.childCount).toBe(1);
+		expect(block?.firstChild?.type.name).toBe("codeBlock");
+		expect(block?.firstChild?.attrs).toMatchObject({ language: "ts", meta: 'title="src/index.ts"' });
+		expect(tiptapToMdx(editor.getJSON())).toContain('<CodeExplorer>\n\n```ts title="src/index.ts"');
 		editor.destroy();
 	});
 

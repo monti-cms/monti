@@ -1,5 +1,6 @@
 import { callout } from "./callout";
 import { chart } from "./chart";
+import { codeExplorer } from "./code-explorer";
 import { codeRef } from "./code-ref";
 import { collapsible } from "./collapsible";
 import { type ColorOptions, color } from "./color";
@@ -12,7 +13,18 @@ import { tooltip } from "./tooltip";
  * Block extension factory functions (name -> function). `blocks()` adds them in this order. The order of the inline marks (tooltip, code-ref, color) is the order in which overlapping marks
  * are stored (outermost first).
  */
-const FACTORIES = { callout, collapsible, tabs, columns, mermaid, chart, tooltip, codeRef, color } as const;
+const FACTORIES = {
+	callout,
+	collapsible,
+	tabs,
+	columns,
+	codeExplorer,
+	mermaid,
+	chart,
+	tooltip,
+	codeRef,
+	color,
+} as const;
 
 /** Names of the block extensions `blocks()` adds. */
 export type BlockExtensionName = keyof typeof FACTORIES;
@@ -23,6 +35,7 @@ interface BlockExtensionOptions {
 	readonly collapsible: true;
 	readonly tabs: true;
 	readonly columns: true;
+	readonly codeExplorer: true;
 	readonly mermaid: true;
 	readonly chart: true;
 	readonly tooltip: true;

@@ -9,6 +9,7 @@
 export { type BlockExtensionName, type BlocksOptions, blocks } from "./blocks";
 export { callout, calloutBlock } from "./callout";
 export { chart, chartBlock } from "./chart";
+export { codeExplorer, codeExplorerBlock } from "./code-explorer";
 export { codeRef, codeRefBlock } from "./code-ref";
 export { collapsible, collapsibleBlock } from "./collapsible";
 export {

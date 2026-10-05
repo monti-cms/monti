@@ -10,6 +10,7 @@ Block extensions for `@monti-cms/core`. Install only the body blocks and inline 
 | Collapsible | `collapsible()` | `<Collapsible title="…">…</Collapsible>` | `Collapsible` |
 | Tabs | `tabs()` | 2 to 8 `<Tab label="…">` inside `<Tabs>` | `Tabs`, `Tab` |
 | Columns | `columns()` | 2 to 4 `<Column>` inside `<Columns widths="60,40">` | `Columns`, `Column` |
+| Code explorer | `codeExplorer()` | ` ```ts title="src/app/page.tsx" ` code fences inside `<CodeExplorer open="src/app/page.tsx">` | `CodeExplorer` |
 | Mermaid | `mermaid()` | ` ```mermaid ` | `Mermaid` |
 | Chart | `chart()` | ` ```chart ` | `Chart` |
 | Tooltip | `tooltip()` | `<Tooltip content="description">text</Tooltip>` | `Tooltip` |
@@ -27,7 +28,7 @@ import { blocks } from "@monti-cms/blocks";
 export default defineConfig({
 	// …
 	plugins: [
-		...blocks(), // all of them (callout, collapsible, tabs, columns, Mermaid, chart, tooltip, code link, text color)
+		...blocks(), // all of them (callout, collapsible, tabs, columns, code explorer, Mermaid, chart, tooltip, code link, text color)
 		// ...blocks({ only: ["callout", "tooltip"] })   only the chosen ones
 		// ...blocks({ omit: ["chart"], codeRef: false }) leave some out (`false` also leaves one out)
 		// ...blocks({ color: { palette: [...] } })       per-extension options
@@ -42,7 +43,14 @@ You can also add them one by one (`plugins: [callout(), columns(), color({ palet
 @import "@monti-cms/blocks/styles.css";
 ```
 
-- Editor: callout, collapsible, tabs and columns come with their edit screens (admin theme colors, `styles.css`). Mermaid and chart are
+- Code explorer: a file tree with the code of the picked file, for posts that show several files of a project. It holds plain code fences and each fence's `title` is its path,
+  so the tree is built from the paths and never drawn by hand. A fence with a title and no code is a file shown only in the tree, a title ending in `/` is a folder, and `open` names the file shown first
+  (the first file if omitted). Every file stays an ordinary code block (line effects, folding, copy and code links work), and every file is in the page's HTML (only hidden on screen), so readers without JavaScript,
+  feeds and search engines see titled code blocks one after another. Directive notation: `:::code-explorer{open="src/app/page.tsx"}` with the fences inside.
+  Editor: the block shows its files as a list (click a path to move the cursor into that file; the file with the cursor is marked) above the code blocks, which are edited in place
+  (the path is the code block's own title field). The block toolbar adds a file (`src/new-file.ts`, numbered if taken) or a folder, picks the file shown first, and deletes the block.
+  The slash menu inserts the block with one `src/index.ts` code block.
+- Editor: callout, collapsible, tabs, columns and the code explorer come with their edit screens (admin theme colors, `styles.css`). Mermaid and chart are
   edited with a code input and a preview. The preview is drawn by this extension (the app installs the optional dependencies `mermaid` and `recharts`, which are loaded only when a preview opens),
   and if the site registers the same name through `fencePreviews` (`@monti-cms/admin`), that one wins. Chart colors are the CSS variables `--chart-1` to `--chart-5`,
   and if the app does not set them, the defaults in `styles.css` apply.

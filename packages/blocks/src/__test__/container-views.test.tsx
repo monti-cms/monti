@@ -5,6 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { type ReactNode, useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { CalloutProvider } from "../callout/provider";
+import { CodeExplorerProvider } from "../code-explorer/provider";
 import { CollapsibleProvider } from "../collapsible/provider";
 import { ColumnsProvider } from "../columns/provider";
 import { TabsProvider } from "../tabs/provider";
@@ -34,12 +35,14 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 	return <EditorContent editor={editor} />;
 }
 
-/** Registers the editing views of the four block extensions, like the admin UI does. */
+/** Registers the editing views of the five block extensions, like the admin UI does. */
 const BlockViews = ({ children }: { children: ReactNode }) => (
 	<CalloutProvider>
 		<CollapsibleProvider>
 			<TabsProvider>
-				<ColumnsProvider>{children}</ColumnsProvider>
+				<ColumnsProvider>
+					<CodeExplorerProvider>{children}</CodeExplorerProvider>
+				</ColumnsProvider>
 			</TabsProvider>
 		</CollapsibleProvider>
 	</CalloutProvider>

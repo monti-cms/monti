@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addBackLink, findAnchorLines, previewLines } from "../dom";
+import { addBackLink, findAnchorLines, previewLines, revealLines, revealRefText } from "../dom";
 import { CodeRef } from "../render.client";
 
 const BACK = "Go to the text that links here";
@@ -54,6 +54,31 @@ describe("findAnchorLines", () => {
 		document.body.innerHTML = block(line("a", "c2")) + block(line("b", "c1"));
 		expect(findAnchorLines("c1").map((item) => item.textContent)).toEqual(["b"]);
 		expect(findAnchorLines('c1"]')).toEqual([]);
+	});
+});
+
+describe("reveal events", () => {
+	it("dispatches a bubbling `cms:reveal` on each line before scrolling, so a block that hides them can show them", () => {
+		document.body.innerHTML = block(line("a", "c1") + line("b", "c1"));
+		const order: string[] = [];
+		const lines = findAnchorLines("c1");
+		document.body.addEventListener("cms:reveal", (event) =>
+			order.push(`reveal ${(event.target as HTMLElement).textContent}`),
+		);
+		const scrollIntoView = vi.fn(() => order.push("scroll"));
+		for (const item of lines) item.scrollIntoView = scrollIntoView;
+		revealLines(lines);
+		expect(order).toEqual(["reveal a", "reveal b", "scroll"]);
+	});
+
+	it("dispatches it on the text before scrolling to a text that points to the label", () => {
+		document.body.innerHTML = '<p><span data-code-ref="c1">the text</span></p>';
+		const text = document.querySelector("span") as HTMLElement;
+		const order: string[] = [];
+		document.body.addEventListener("cms:reveal", () => order.push("reveal"));
+		text.scrollIntoView = vi.fn(() => order.push("scroll"));
+		revealRefText("c1", 10);
+		expect(order).toEqual(["reveal", "scroll"]);
 	});
 });
 
