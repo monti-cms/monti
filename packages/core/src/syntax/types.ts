@@ -28,6 +28,8 @@ export interface SyntaxBlocks {
  */
 export interface SyntaxContext {
 	readonly blocks: SyntaxBlocks;
+	/** Names of the code block line effects the site uses (the core defaults plus the site config's `codeBlock.lineEffects`). */
+	readonly codeLineEffects: ReadonlySet<string>;
 }
 
 /** Options of {@link SerializeContext.serializeInlines}. */

@@ -95,11 +95,12 @@ export const mdxRemarkPlugins = (
 	tocRef: TocItem[] = [],
 	syntax: readonly SyntaxExtension[] = configuredSyntax(),
 ): PluggableList => [
+	// Notations of the site's syntax extensions (`mdx.syntax`, for example directives) become MDX elements, as in the editor's parser.
+	// They run first: an extension may rewrite the notation inside code fences (Shiki notation), which the annotation plugin below reads.
+	...syntaxRemarkPlugins(syntax),
 	[remarkAnnotationToShikiDecoration, annotationConfig],
 	[remarkMath, { singleDollarTextMath: false }],
 	remarkDisableInlineMath,
-	// Notations of the site's syntax extensions (`mdx.syntax`, for example directives) become MDX elements, as in the editor's parser.
-	...syntaxRemarkPlugins(syntax),
 	// Code fence blocks (charts, diagrams etc.) are turned into `<block source="…"/>`.
 	remarkFenceBlocksToMdx,
 	// A single newline inside a paragraph is a space, as in CommonMark and in the CMS tree; a break is written `<br />`. The line ending the serializer writes
