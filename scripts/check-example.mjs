@@ -15,6 +15,7 @@ import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync }
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { examplePackages } from "./pack-example.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
@@ -50,7 +51,20 @@ const tarballs = Object.fromEntries(
 	}),
 );
 
-// 3. Copy the example app outside the repo and link every package through its bundle.
+// 3. The example's own `package.json` (what `pnpm example:pack` + `pnpm install` in its README use) must name the tarballs
+// `example:pack` writes; below it is rewritten to these bundles, so a wrong name would not fail anywhere else.
+const packedNames = new Map(examplePackages().map((pkg) => [pkg.name, `file:vendor/${pkg.tarball}`]));
+const exampleDeps = JSON.parse(readFileSync(path.join(root, "examples/other-site/package.json"), "utf8")).dependencies;
+for (const [name, spec] of Object.entries(exampleDeps)) {
+	if (!name.startsWith("@monti-cms/")) continue;
+	if (packedNames.get(name) !== spec) {
+		throw new Error(
+			`check-example: examples/other-site/package.json ${name} is "${spec}", expected "${packedNames.get(name)}"`,
+		);
+	}
+}
+
+// 4. Copy the example app outside the repo and link every package through its bundle.
 const app = path.join(work, "app");
 const source = path.join(root, "examples/other-site");
 const skip = new Set(["node_modules", ".next", "vendor", "pnpm-lock.yaml", "next-env.d.ts", "tsconfig.tsbuildinfo"]);
@@ -76,7 +90,7 @@ writeFileSync(
 
 run("pnpm", ["install", "--no-frozen-lockfile"], app);
 
-// 4. The example config as-is → the config with every extension.
+// 5. The example config as-is → the config with every extension.
 const configPath = path.join(app, "cms.config.ts");
 const exampleConfig = readFileSync(configPath, "utf8");
 const allExtensions = exampleConfig
