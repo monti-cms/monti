@@ -34,6 +34,8 @@ const DETAILED_CODES = new Set([
 	"footnote_definition_missing",
 	"footnote_definition_unused",
 	"footnote_definition_duplicate",
+	"code_ref_broken",
+	"code_anchor_duplicate",
 	"unresolved_internal_link",
 	"unpublished_internal_link",
 	"image_src_not_allowed",

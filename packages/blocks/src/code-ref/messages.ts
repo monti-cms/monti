@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** Label and editing view text of the code link inline mark. */
+/** Label and editing view text of the code link inline mark, and the public page back-link label (`back`). */
 export const codeRefMessages = defineMessages("cms-blocks.code-ref", {
 	en: {
 		label: "Code link",
@@ -13,6 +13,7 @@ export const codeRefMessages = defineMessages("cms-blocks.code-ref", {
 		relink: "Relink code",
 		"relink.text": "Relink",
 		unlink: "Unlink code",
+		back: "Go to the text that links here",
 	},
 	ko: {
 		label: "코드 연결",
@@ -25,5 +26,6 @@ export const codeRefMessages = defineMessages("cms-blocks.code-ref", {
 		relink: "코드 다시 연결",
 		"relink.text": "다시 연결",
 		unlink: "코드 연결 해제",
+		back: "이 코드를 가리키는 본문으로 이동",
 	},
 });

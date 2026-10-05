@@ -1,6 +1,7 @@
 import { CODE_BLOCK_MARKS } from "@monti-cms/core/code-block";
 import { CodeBlock } from "@tiptap/extension-code-block";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import { createAnchorDedupePlugin } from "./anchor-dedupe";
 import { CodeBlockView } from "./code-block-view";
 import { createCodeEffectsPlugin } from "./effects-plugin";
 import { createCodeBlockHighlightPlugin } from "./highlight-plugin";
@@ -42,6 +43,7 @@ export const CmsCodeBlock = CodeBlock.extend({
 			createCodeBlockKeysPlugin(),
 			createCodeBlockHighlightPlugin(),
 			createCodeEffectsPlugin(),
+			createAnchorDedupePlugin(),
 		];
 	},
 });

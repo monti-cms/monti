@@ -23,6 +23,7 @@ import {
 	schemaOf,
 	storedField,
 } from "../schema/derive";
+import { CodeRefCollector } from "./code-refs";
 import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
 import { computeContentHash, sortKeys } from "./content-hash";
 import { isUuid } from "./ids";
@@ -220,6 +221,9 @@ type MdxNode = {
 	url?: unknown;
 	identifier?: unknown;
 	label?: unknown;
+	lang?: unknown;
+	meta?: unknown;
+	value?: unknown;
 	attributes?: unknown;
 	children?: unknown;
 	position?: {
@@ -585,6 +589,7 @@ export async function prepareSnapshot(
 
 	/** Translation hint text left in a translation. It is not visible on the public screen, so it must not be published as is. */
 	const untranslated: CmsBodyPosition[] = [];
+	const codeRefs = new CodeRefCollector();
 	const traverse = (node: unknown) => {
 		if (!isMdxNode(node)) return;
 		if (node.type === "link") {
@@ -606,6 +611,8 @@ export async function prepareSnapshot(
 			});
 		} else if (node.type === "text") {
 			textNodes.push(node);
+		} else if (node.type === "code") {
+			codeRefs.addCode(node, positionOf(node));
 		}
 		if (isJsxElement(node)) {
 			// `ContentLink` has been retired — `analyze` rejects it if it remains in the body.
@@ -613,6 +620,9 @@ export async function prepareSnapshot(
 			if (node.name === "File") collectFile(node);
 			if (node.name === "Untranslated") untranslated.push(positionOf(node));
 			checkBlockAttributes(node, positionOf(node), blockIssues, warnings);
+			if (typeof node.name === "string") {
+				codeRefs.addElement(node.name, (key) => readAttrValue(node, key), positionOf(node));
+			}
 		}
 		if (Array.isArray(node.children)) node.children.forEach(traverse);
 	};
@@ -658,6 +668,13 @@ export async function prepareSnapshot(
 				position: positionOf(node),
 			});
 		}
+	}
+
+	// Links to code lines are checked only in a body that parsed: an error may have cut the code block a link points to.
+	if (!mdxHasError) {
+		const codeRefIssues = codeRefs.check();
+		blockIssues.push(...codeRefIssues.issues);
+		warnings.push(...codeRefIssues.warnings);
 	}
 
 	if (mdxHasError) {
