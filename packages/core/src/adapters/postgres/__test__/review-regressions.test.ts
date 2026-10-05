@@ -247,7 +247,7 @@ describe("review regressions", () => {
 
 	it("blocks publishing an image without alt", async () => {
 		// The required-attribute checks for blog-specific blocks (tabs, tooltip, alignment) live in `review-regressions.blog.test.ts`.
-		const mdx = '::image{mediaId="11111111-1111-4111-8111-111111111111"}';
+		const mdx = '<Image mediaId="11111111-1111-4111-8111-111111111111" />';
 		const snapshot = await prepareSnapshot({ collection: contentCollection, slug: "m", metadata: { title: "m" }, mdx });
 		const result = validateForPublish(snapshot, {
 			targets: [],
@@ -345,7 +345,7 @@ describe("review regressions", () => {
 		});
 		await store.createTemplate({
 			name: unique("tpl"),
-			mdx: `::image{mediaId="${media.id}" alt="a"}`,
+			mdx: `<Image mediaId="${media.id}" alt="a" />`,
 		});
 		await expect(store.beginMediaDelete(media.id)).rejects.toMatchObject({
 			code: "in_use",

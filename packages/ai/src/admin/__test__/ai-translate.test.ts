@@ -60,7 +60,7 @@ describe("translation units and replacement", () => {
 		expect(doc.childCount).toBe(3);
 		expect(doc.child(1).type.name).toBe("bulletList");
 		expect(doc.child(1).childCount).toBe(3);
-		expect(tiptapToMdx(current.getJSON())).toContain("- **First**: one\n- :untranslated[둘째]");
+		expect(tiptapToMdx(current.getJSON())).toContain("- **First**: one\n- <Untranslated>둘째</Untranslated>");
 	});
 
 	it("the middle item of a numbered list is also replaced in place only", () => {
@@ -96,7 +96,7 @@ describe("translation units and replacement", () => {
 		expect(current.state.doc.child(0).childCount).toBe(2);
 		const mdx = tiptapToMdx(current.getJSON());
 		expect(mdx).toContain("Second paragraph");
-		expect(mdx).toContain(":untranslated[첫 문단]");
+		expect(mdx).toContain("<Untranslated>첫 문단</Untranslated>");
 	});
 
 	it("does not replace if the block was edited in the meantime", () => {
@@ -110,7 +110,9 @@ describe("translation units and replacement", () => {
 
 	it("translate-all splits lists into single items and skips translated blocks", () => {
 		const current = openFrame("## 제목\n\n- 하나\n- 둘\n\n문단");
-		current.commands.setContent(mdxToTiptap(tiptapToMdx(current.getJSON()).replace(":untranslated[제목]", "Title")));
+		current.commands.setContent(
+			mdxToTiptap(tiptapToMdx(current.getJSON()).replace("<Untranslated>제목</Untranslated>", "Title")),
+		);
 		expect(collectUnits(current.state.doc).map((unit) => unit.mdx)).toEqual(["- 하나", "- 둘", "문단"]);
 
 		for (const [unit, mdx] of collectUnits(current.state.doc).map(

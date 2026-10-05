@@ -40,8 +40,8 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized.trim()).toBe("![Simple alt](https://example.com/pic.png)");
 	});
 
-	it("round-trips the crop and rotate attributes of a ::image directive", () => {
-		const mdx = '::image{crop="10,20,50,40" rotate="90" src="https://example.com/pic.png"}\n';
+	it("round-trips the crop and rotate attributes of an Image element", () => {
+		const mdx = '<Image crop="10,20,50,40" rotate="90" src="https://example.com/pic.png" />\n';
 		const parsed = analyze(mdx);
 		const doc = toDocument(parsed);
 
@@ -56,7 +56,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 	});
 
 	it("does not store default values (rotate=0, full crop)", () => {
-		const mdx = '::image{crop="0,0,100,100" rotate="0" src="https://example.com/pic.png"}\n';
+		const mdx = '<Image crop="0,0,100,100" rotate="0" src="https://example.com/pic.png" />\n';
 		const parsed = analyze(mdx);
 		const doc = toDocument(parsed);
 

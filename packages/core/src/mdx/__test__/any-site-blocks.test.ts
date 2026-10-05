@@ -20,12 +20,12 @@ const attributeText = (block: BlockDefinition) =>
 function sampleOf(block: BlockDefinition): string | undefined {
 	if (block.children || block.parent) return undefined;
 	const attrs = attributeText(block);
-	const braces = attrs ? `{${attrs}}` : "";
+	const open = `${block.component}${attrs ? ` ${attrs}` : ""}`;
 	switch (block.syntax.kind) {
 		case "container":
-			return `:::${block.syntax.directive}${braces}\nInside text\n:::\n`;
+			return `<${open}>\n\nInside text\n\n</${block.component}>\n`;
 		case "leaf":
-			return `::${block.syntax.directive}${braces}\n`;
+			return `<${open} />\n`;
 		case "fence":
 			return `\`\`\`${block.syntax.lang}\nline one\nline two\n\`\`\`\n`;
 		default:
@@ -43,10 +43,12 @@ describe("any site: added blocks round-trip", () => {
 		expect(samples.length).toBeGreaterThan(0);
 	});
 
-	it.each(samples)("%s keeps its syntax through analyze → document → serialize", (_name, mdx) => {
+	it.each(samples)("%s keeps its content through analyze → document → serialize", (_name, mdx) => {
 		const first = analyze(mdx);
 		expect(first.errors).toEqual([]);
 		const serialized = serialize(toDocument(first));
+		// The standard notation is JSX, so the written block is the block that was read.
+		expect(serialized).toBe(mdx);
 		const second = analyze(serialized);
 		expect(second.errors).toEqual([]);
 		expect(toDocument(second)).toEqual(toDocument(first));

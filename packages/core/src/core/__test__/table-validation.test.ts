@@ -4,9 +4,14 @@ import { createTranslator } from "../../i18n";
 import { coreMessages } from "../messages";
 import { prepareSnapshot } from "../snapshot";
 
+/** A merged table as standard MDX: `<Table>` of `<TableRow>` of `<TableCell>`. */
+const cell = (text: string, attrs = "") => `<TableCell${attrs ? ` ${attrs}` : ""}>${text}</TableCell>`;
+const table = (rows: string[][]) =>
+	["<Table>", ...rows.flatMap((cells) => ["<TableRow>", ...cells, "</TableRow>"]), "</Table>"].join("\n");
+
 describe("table cell merge pre-publish validation (span and grid warnings)", () => {
 	it("a billion-column merge warns quickly and builds no grid", async () => {
-		const mdx = "::::table\n:::row\n::cell[위험]{colspan=1000000000}\n:::\n::::";
+		const mdx = table([[cell("위험", 'colspan="1000000000"')]]);
 		const snap = await prepareSnapshot({
 			collection: contentCollection,
 			slug: "huge-table",
@@ -18,18 +23,18 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 
 	it("a valid merged table raises no warnings", async () => {
 		const mdx = [
-			'::::table{align="left,center"}',
-			":::row",
-			"::cell[제목]{header colspan=2}",
-			":::",
-			":::row",
-			"::cell[값1]{rowspan=2}",
-			"::cell[값2]",
-			":::",
-			":::row",
-			"::cell[값3]",
-			":::",
-			"::::",
+			'<Table align="left,center">',
+			"<TableRow>",
+			cell("제목", 'header colspan="2"'),
+			"</TableRow>",
+			"<TableRow>",
+			cell("값1", 'rowspan="2"'),
+			cell("값2"),
+			"</TableRow>",
+			"<TableRow>",
+			cell("값3"),
+			"</TableRow>",
+			"</Table>",
 		].join("\n");
 
 		const snap = await prepareSnapshot({
@@ -44,9 +49,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 	});
 
 	it("warns when rowspan exceeds the table's total row count", async () => {
-		const mdx = ["::::table", ":::row", "::cell[초과]{rowspan=5}", ":::", ":::row", "::cell[값]", ":::", "::::"].join(
-			"\n",
-		);
+		const mdx = table([[cell("초과", 'rowspan="5"')], [cell("값")]]);
 
 		const snap = await prepareSnapshot({
 			collection: contentCollection,
@@ -61,18 +64,10 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 	});
 
 	it("warns when merged cells overlap", async () => {
-		const mdx = [
-			"::::table",
-			":::row",
-			"::cell[셀1]{colspan=2}",
-			"::cell[셀2]{colspan=2}",
-			":::",
-			":::row",
-			"::cell[셀3]{rowspan=2}",
-			"::cell[셀4]",
-			":::",
-			"::::",
-		].join("\n");
+		const mdx = table([
+			[cell("셀1", 'colspan="2"'), cell("셀2", 'colspan="2"')],
+			[cell("셀3", 'rowspan="2"'), cell("셀4")],
+		]);
 
 		const snap = await prepareSnapshot({
 			collection: contentCollection,
@@ -86,17 +81,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 	});
 
 	it("warns when column counts differ between rows", async () => {
-		const mdx = [
-			"::::table",
-			":::row",
-			"::cell[셀1]",
-			"::cell[셀2]",
-			":::",
-			":::row",
-			"::cell[셀3]",
-			":::",
-			"::::",
-		].join("\n");
+		const mdx = table([[cell("셀1"), cell("셀2")], [cell("셀3")]]);
 
 		const snap = await prepareSnapshot({
 			collection: contentCollection,
@@ -111,7 +96,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 	});
 
 	it("warns about an invalid span value (0 or less, or not a number)", async () => {
-		const mdx = ["::::table", ":::row", "::cell[셀1]{colspan=0}", ":::", "::::"].join("\n");
+		const mdx = table([[cell("셀1", 'colspan="0"')]]);
 
 		const snap = await prepareSnapshot({
 			collection: contentCollection,
