@@ -1,4 +1,5 @@
 import type { ResolvedConfig } from "../config/resolved";
+import type { StoredDocument } from "../mdx/stored-document";
 import type { CmsImageSource } from "../mdx/types";
 import type { MetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
@@ -59,11 +60,16 @@ type WithRecordTranslations<S, M> = S extends { readonly kind: "item" } ? M & { 
 /** Collection metadata. Built from the definitions in the site config (`cms.config.ts`). */
 export type MetadataFor<C extends Collection> = WithRecordTranslations<SCHEMAS[C], MetadataOf<SCHEMAS[C]>>;
 
-type InputFor<C extends Collection, M> = {
+/**
+ * A body is given either as MDX or as a stored document (`StoredDocument` JSON), never both. Either way it is stored as both:
+ * the document is the source and the MDX is written from it (see `bodyFromMdx`).
+ */
+type BodyInput = { mdx: string; doc?: undefined } | { doc: unknown; mdx?: undefined };
+
+type InputFor<C extends Collection, M> = BodyInput & {
 	collection: C;
 	slug: string | null;
 	metadata: M;
-	mdx: string;
 	folderId?: string | null;
 	/** Translation state of a translation. If omitted, the stored value is kept. A source accepts only `null`. */
 	translation?: TranslationState | null;
@@ -92,7 +98,10 @@ export type PreparedSnapshot = {
 	readonly collection: Collection;
 	readonly slug: string | null;
 	readonly metadata: { readonly [key: string]: MetadataValue };
+	/** The body as stored: written from `doc` when there is one, otherwise exactly as given. */
 	readonly mdx: string;
+	/** The stored document, the source of `mdx`. `null` when the body does not parse (or has front matter), which only a draft can be. */
+	readonly doc: StoredDocument | null;
 	readonly schemaVersion: number;
 	readonly contentHash: string;
 	readonly references: readonly Reference[];

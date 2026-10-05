@@ -4,6 +4,7 @@ import { analyze } from "../mdx/analyze";
 import { DIRECTIVE_BY_COMPONENT } from "../mdx/directives";
 import { splitFrontmatter } from "../mdx/frontmatter";
 import { isAllowedImageSrc } from "../mdx/image-src";
+import { type Body, bodyFromDocument, bodyFromMdx, readStoredDocument } from "../mdx/stored-document";
 import { MAX_TABLE_COLUMNS } from "../mdx/table-layout";
 import type { CmsImageSource } from "../mdx/types";
 import {
@@ -44,6 +45,8 @@ import {
  */
 
 export const MAX_MDX_BYTES = 2 * 1024 * 1024;
+/** A stored document given instead of MDX (JSON spells the same body out at a few times the size). */
+export const MAX_DOC_BYTES = 8 * 1024 * 1024;
 export const MAX_METADATA_BYTES = 256 * 1024;
 
 export { computeContentHash };
@@ -108,7 +111,34 @@ export function validateExactRecord(
 	}
 }
 
-export const SERVICE_INPUT_KEYS: readonly string[] = ["collection", "slug", "metadata", "mdx"];
+/** Keys a service input must have: the body is `doc` when that key is present, otherwise `mdx`. */
+export const serviceInputKeys = (input: unknown): readonly string[] => [
+	"collection",
+	"slug",
+	"metadata",
+	input !== null && typeof input === "object" && Object.hasOwn(input, "doc") ? "doc" : "mdx",
+];
+
+/** The body of a service input in both forms. */
+const inputBody = (input: ServiceInput): Body => {
+	if (input.doc !== undefined) {
+		let size: number;
+		try {
+			size = Buffer.byteLength(JSON.stringify(input.doc) ?? "", "utf8");
+		} catch {
+			throw new ServiceError("invalid_input");
+		}
+		if (size > MAX_DOC_BYTES) throw new ServiceError("mdx_too_large");
+		const doc = readStoredDocument(input.doc);
+		if (!doc) throw new ServiceError("invalid_input");
+		const body = bodyFromDocument(doc);
+		if (Buffer.byteLength(body.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
+		return body;
+	}
+	if (typeof input.mdx !== "string") throw new ServiceError("invalid_input");
+	if (Buffer.byteLength(input.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
+	return bodyFromMdx(input.mdx);
+};
 
 /**
  * Field value error. The error code is the same regardless of field name. Exceeding the length limit (`field_too_long`) is reported through the issue (`issues`)'s
@@ -422,7 +452,7 @@ export async function prepareSnapshot(
 		throw new ServiceError("invalid_input");
 	}
 	validateExactRecord(input, [
-		...SERVICE_INPUT_KEYS,
+		...serviceInputKeys(input),
 		...(input.folderId === undefined ? [] : ["folderId"]),
 		...(input.translation === undefined ? [] : ["translation"]),
 	]);
@@ -436,9 +466,6 @@ export async function prepareSnapshot(
 	if (input.slug !== undefined && input.slug !== null && typeof input.slug !== "string") {
 		throw new ServiceError("invalid_input");
 	}
-	if (typeof input.mdx !== "string") throw new ServiceError("invalid_input");
-	if (Buffer.byteLength(input.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
-
 	const normalizedSlug = normalizeSlugInput(input.slug);
 	if ("error" in normalizedSlug) throw new ServiceError(normalizedSlug.error);
 	const slug = normalizedSlug.slug;
@@ -448,7 +475,9 @@ export async function prepareSnapshot(
 	const collector = new ReferenceCollector();
 	addMetadataReferences(collector, rawCollection, metadata);
 
-	const analysis = analyze(input.mdx);
+	// The body is checked as it will be stored (written from its document), so issue positions point into the stored text.
+	const body = inputBody(input);
+	const { analysis } = body;
 	const mdxIssues: Issue[] = analysis.errors.map((e) => ({
 		code: "mdx_error",
 		message: e.message,
@@ -536,7 +565,7 @@ export async function prepareSnapshot(
 	const footnoteReferences = new Set<string>();
 	const footnoteDefinitions: { identifier: string; label: string; node: MdxNode }[] = [];
 	const textNodes: MdxNode[] = [];
-	const { body: mdxBody } = splitFrontmatter(input.mdx);
+	const { body: mdxBody } = splitFrontmatter(body.mdx);
 	const footnoteIdentifier = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
 
 	/** Translation hint text left in a translation. It is not visible on the public screen, so it must not be published as is. */
@@ -547,6 +576,10 @@ export async function prepareSnapshot(
 			addInternalLink(node.url, node);
 		} else if (node.type === "linkReference" && typeof node.identifier === "string") {
 			addInternalLink(definitions.get(node.identifier), node);
+		}
+		if (node.type === "image" && typeof node.url === "string" && node.url) {
+			// A Markdown image is an external `src` like `<Image src>` (a plain one is stored as Markdown), so it gets the same source check.
+			imageSources.push({ src: node.url, position: positionOf(node) });
 		}
 		if (node.type === "footnoteReference" && typeof node.identifier === "string") {
 			footnoteReferences.add(node.identifier);
@@ -651,9 +684,10 @@ export async function prepareSnapshot(
 		collection: rawCollection,
 		slug,
 		metadata: Object.freeze(metadata),
-		mdx: input.mdx,
+		mdx: body.mdx,
+		doc: body.doc,
 		schemaVersion,
-		contentHash: computeContentHash(metadata, input.mdx, schemaVersion, analysis),
+		contentHash: computeContentHash(metadata, body.mdx, schemaVersion, analysis),
 		references: Object.freeze(
 			collector.refs.map((ref) =>
 				Object.freeze({ ...ref, occurrences: Object.freeze(ref.occurrences.map((o) => Object.freeze({ ...o }))) }),
