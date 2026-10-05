@@ -1,5 +1,6 @@
 import { bodyFromMdx, type StoredDocument } from "@monti-cms/core/mdx";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
@@ -31,20 +32,70 @@ vi.mock("../local-backup", async (importOriginal) => ({
 	deleteLocalBackup,
 	saveLocalBackup,
 }));
-vi.mock("../../../editor/tiptap-editor", () => ({
-	CmsEditor: ({
-		editable,
-		titleField,
-		toolbarEnd,
-		toolbarAside,
-		sourceView,
-	}: {
-		editable?: boolean;
-		titleField?: React.ReactNode;
-		toolbarEnd?: React.ReactNode;
-		toolbarAside?: React.ReactNode;
-		sourceView?: React.ReactNode;
-	}) => (
+vi.mock("../../../editor/tiptap-editor", async () => {
+	const React = await import("react");
+	const { Editor } = await import("@tiptap/core");
+	const { buildEditorExtensions } =
+		await vi.importActual<typeof import("../../../editor/extensions")>("../../../editor/extensions");
+	const { storedToTiptap } = await vi.importActual<typeof import("../../../editor/tiptap-content")>(
+		"../../../editor/tiptap-content",
+	);
+	/** A real editor without a page behind it, holding the stored document, reported through `onEditor` (going to a block by its id). */
+	const useHeadlessEditor = (
+		stored: { doc: import("@monti-cms/core/mdx").StoredDocument | null } | undefined,
+		onEditor: ((editor: import("@tiptap/core").Editor | null) => void) | undefined,
+	) => {
+		const doc = stored?.doc;
+		React.useEffect(() => {
+			if (!doc || !onEditor) return;
+			const editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+			mockEditor.current = editor;
+			onEditor(editor);
+			return () => {
+				onEditor(null);
+				editor.destroy();
+			};
+		}, [doc, onEditor]);
+	};
+	return {
+		CmsEditor: (props: {
+			editable?: boolean;
+			titleField?: React.ReactNode;
+			toolbarEnd?: React.ReactNode;
+			toolbarAside?: React.ReactNode;
+			sourceView?: React.ReactNode;
+			stored?: { doc: import("@monti-cms/core/mdx").StoredDocument | null };
+			onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
+		}) => <MockEditor {...props} useHeadlessEditor={useHeadlessEditor} />,
+	};
+});
+const { mockEditor } = vi.hoisted(() => ({ mockEditor: { current: null as import("@tiptap/core").Editor | null } }));
+function MockEditor({
+	editable,
+	titleField,
+	toolbarEnd,
+	toolbarAside,
+	sourceView,
+	stored,
+	onEditor,
+	useHeadlessEditor,
+}: {
+	editable?: boolean;
+	titleField?: React.ReactNode;
+	toolbarEnd?: React.ReactNode;
+	toolbarAside?: React.ReactNode;
+	sourceView?: React.ReactNode;
+	stored?: { doc: import("@monti-cms/core/mdx").StoredDocument | null };
+	onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
+	useHeadlessEditor: (
+		stored: { doc: import("@monti-cms/core/mdx").StoredDocument | null } | undefined,
+		onEditor: ((editor: import("@tiptap/core").Editor | null) => void) | undefined,
+	) => void;
+}) {
+	// The shell passes a new `onEditor` on every render; keep the first so the headless editor is made once per document.
+	const [stableOnEditor] = useState(() => onEditor);
+	useHeadlessEditor(stored, stableOnEditor);
+	return (
 		<>
 			<div role="toolbar" aria-label="서식 도구">
 				{toolbarEnd}
@@ -57,8 +108,8 @@ vi.mock("../../../editor/tiptap-editor", () => ({
 				<p>번역 둘째 문단</p>
 			</div>
 		</>
-	),
-}));
+	);
+}
 vi.mock("sonner", () => ({ Toaster: () => null, toast: { success, warning, message, error } }));
 // AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
 vi.mock("../ai-translate", () => ({
@@ -366,6 +417,42 @@ describe("entry editor shell", () => {
 		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
 		await waitFor(() => expect(document.activeElement).toBe(source));
 		expect(source.selectionStart).toBe("첫째 줄\n".length + 1);
+	});
+
+	it("goes to the issue's block in the visual editor, and to the line in source mode when the editor does not have it", async () => {
+		const mdx = "첫째 문단\n\n둘째 문단\n";
+		const { doc } = bodyFromMdx(mdx);
+		const second = doc?.content[1]?.id;
+		let blockId = second;
+		serve(
+			(input) =>
+				input.endsWith("/publish")
+					? json(
+							{
+								code: "publish_validation_failed",
+								issues: [{ code: "mdx_error", path: "mdx", position: { line: 3, column: 1, blockId } }],
+							},
+							422,
+						)
+					: undefined,
+			{ ...entry, working: { ...entry.working, mdx, doc } },
+		);
+		renderEdit();
+		await screen.findByDisplayValue("요약");
+		await screen.findByLabelText("시각 본문");
+		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		await screen.findByRole("list", { name: "발행 검증 문제" });
+
+		await waitFor(() => expect(mockEditor.current).not.toBeNull());
+		fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+		await waitFor(() => expect(mockEditor.current?.state.selection.$from.parent.textContent).toBe("둘째 문단"));
+		expect(screen.queryByRole("textbox", { name: "MDX 본문" })).toBeNull();
+
+		blockId = "zzzzzzzz";
+		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		await waitFor(() => expect(methodCalls("POST").length).toBeGreaterThanOrEqual(2));
+		fireEvent.click(await screen.findByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+		expect(await screen.findByRole("textbox", { name: "MDX 본문" })).toBeTruthy();
 	});
 
 	it("opens unparseable MDX in source mode and does not allow the visual editor (no silent overwrite)", async () => {

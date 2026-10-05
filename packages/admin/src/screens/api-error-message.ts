@@ -9,7 +9,8 @@ export type CmsIssue = {
 	code?: string;
 	message?: string;
 	path?: string;
-	position?: { line: number; column: number };
+	/** `blockId` names the block of the stored body the position is in, so the visual editor can go to it. */
+	position?: { line: number; column: number; blockId?: string };
 };
 
 /** Whether the code is in the dictionary (unknown codes show the server `message` as is). */

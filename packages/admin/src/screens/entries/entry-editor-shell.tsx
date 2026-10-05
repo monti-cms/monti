@@ -21,6 +21,7 @@ import {
 import type { StoredDocument } from "@monti-cms/core/mdx";
 import { analyze } from "@monti-cms/core/mdx";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { Editor } from "@tiptap/core";
 import {
 	Archive,
 	CalendarSync,
@@ -45,6 +46,7 @@ import { useTheme } from "next-themes";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useEditorExtensions } from "../../admin-components";
+import { findBlock } from "../../editor/block-ids";
 import { MdxSourceEditor } from "../../editor/mdx-source-editor";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
@@ -287,6 +289,7 @@ export function EntryEditorShell({
 
 	// The body the visual editor last made, as MDX and as a stored document with its block ids. Saved as the document while the form still holds that MDX.
 	const editorBodyRef = useRef<{ mdx: string; doc: StoredDocument | null } | null>(null);
+	const visualEditorRef = useRef<Editor | null>(null);
 	const autosave = useEntryAutosave({
 		adminId,
 		collection,
@@ -483,6 +486,21 @@ export function EntryEditorShell({
 	};
 	const handleTitleChange = (title: string) => setForm(withAutoSlug({ title }));
 
+	/** Selects the start of a block in the visual editor and scrolls to it. False when the editor does not have that block. */
+	const revealBlock = (blockId: string): boolean => {
+		const editor = visualEditorRef.current;
+		if (!editor || editor.isDestroyed) return false;
+		const pos = findBlock(editor.state.doc, blockId);
+		if (pos === undefined) return false;
+		editor
+			.chain()
+			.focus()
+			.setTextSelection(Math.min(pos + 1, editor.state.doc.content.size))
+			.scrollIntoView()
+			.run();
+		return true;
+	};
+
 	const focusIssue = (issue: CmsIssue) => {
 		if (issue.path === "title") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
@@ -491,6 +509,8 @@ export function EntryEditorShell({
 		}
 		if (issue.position || issue.path === "mdx" || issue.path === "frontmatter") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
+			// In the visual editor, go to the block the issue is in (found by its id); otherwise to the line in source mode.
+			if (editorMode !== "source" && issue.position?.blockId && revealBlock(issue.position.blockId)) return;
 			setPendingBodyPosition(issue.position ?? { line: 1, column: 1 });
 			setEditorMode("source");
 			return;
@@ -1121,7 +1141,10 @@ export function EntryEditorShell({
 						blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
 						selectionActions={extensions.selectionActions}
 						insertActions={extensions.insertActions}
-						onEditor={extensions.onEditor}
+						onEditor={(editor) => {
+							visualEditorRef.current = editor;
+							extensions.onEditor?.(editor);
+						}}
 						onCompositionStart={() => autosave.setComposing(true)}
 						onCompositionEnd={() => autosave.setComposing(false)}
 					/>
