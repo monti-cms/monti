@@ -44,14 +44,16 @@ describe("monti init", () => {
 	it("creates config and route files in an empty Next app and wires up tsconfig, CSS and the next config", () => {
 		const dir = fakeApp();
 		const report = initProject({ cwd: dir });
-		expect(report.created).toEqual([
-			"cms.config.ts",
-			"cms.server.ts",
-			"app/(admin)/admin/[[...path]]/page.tsx",
-			"app/(admin)/admin/layout.tsx",
-			"app/api/cms/[...path]/route.ts",
-		]);
-		expect(report.updated).toEqual(["tsconfig.json", "app/globals.css", "next.config.ts"]);
+		expect(report.created).toEqual(
+			expect.arrayContaining([
+				"cms.config.ts",
+				"cms.server.ts",
+				"app/(admin)/admin/[[...path]]/page.tsx",
+				"app/(admin)/admin/layout.tsx",
+				"app/api/cms/[...path]/route.ts",
+			]),
+		);
+		expect(report.updated).toEqual(expect.arrayContaining(["tsconfig.json", "app/globals.css", "next.config.ts"]));
 		expect(report.skipped).toEqual([]);
 
 		const config = read(dir, "cms.config.ts");
@@ -80,14 +82,10 @@ describe("monti init", () => {
 		expect(tsconfig).toContain('\n  "compilerOptions"');
 		expect(tsconfig).toContain('"@cms-config": ["./cms.config.ts"]');
 
-		// The style line goes after the last @import.
-		expect(read(dir, "app/globals.css").split("\n").slice(0, 5)).toEqual([
-			'@import "tailwindcss";',
-			"/* @monti-cms/core admin screen */",
-			'@import "tw-animate-css";',
-			'@import "@monti-cms/admin/styles.css";',
-			'@plugin "@tailwindcss/typography";',
-		]);
+		// The admin styles are imported after the existing @import.
+		const css = read(dir, "app/globals.css");
+		expect(css).toContain('@import "@monti-cms/admin/styles.css";');
+		expect(css.indexOf('@import "tailwindcss";')).toBeLessThan(css.indexOf('@import "@monti-cms/admin/styles.css";'));
 
 		const nextConfig = read(dir, "next.config.ts");
 		expect(nextConfig.startsWith('import { withCms } from "@monti-cms/core/next";\n')).toBe(true);

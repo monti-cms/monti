@@ -1,37 +1,67 @@
 import type { Pool } from "pg";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale } from "../../../../test/any-site";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { createContentLookup } from "../store/content-lookup";
-
-/** A connection that records the queries it receives and returns canned rows (no DB). */
-function fakePool(rows: Array<{ slug: string }>) {
-	const query = vi.fn(async (_sql: string, _params: unknown[]) => ({ rows }));
-	return { pool: { query } as unknown as Pool, query };
-}
+import { seedEntry, seedSave } from "./seed";
+import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 describe("core content lookup", () => {
-	it("asks for slugs used in the same collection and language, excluding the entry being edited", async () => {
-		const { pool, query } = fakePool([{ slug: "used" }]);
-		const lookup = createContentLookup({ pool, schema: "cms" });
-		const taken = await lookup.slugsInUse({
-			collection: "post",
-			locale: "en",
-			slugs: ["used", "free"],
-			excludeEntryId: "11111111-1111-4111-8111-111111111111",
-		});
-		expect(taken).toEqual(new Set(["used"]));
-		const [sql, params] = query.mock.calls[0] ?? [];
-		expect(sql).toContain('"cms".content_addresses');
-		// A row that lost its entry (no entry_id) still counts as a used slug.
-		expect(sql).toContain("entry_id IS DISTINCT FROM");
-		expect(params).toEqual(["post", "en", ["used", "free"], "11111111-1111-4111-8111-111111111111"]);
+	let pool: Pool;
+	let schemaName: string;
+	let store: ReturnType<typeof createContentStore>;
+	let lookup: ReturnType<typeof createContentLookup>;
+
+	beforeAll(async () => {
+		const isolated = await createIsolatedTestPool();
+		pool = isolated.pool;
+		schemaName = isolated.schemaName;
+		await migrateContentStore(pool, { schema: schemaName });
+		store = createContentStore(pool, { schema: schemaName });
+		lookup = createContentLookup({ pool, schema: schemaName });
 	});
 
-	it("skips the query when there are no slugs, and checks all when there is nothing to exclude", async () => {
-		const { pool, query } = fakePool([]);
-		const lookup = createContentLookup({ pool, schema: "cms" });
-		expect(await lookup.slugsInUse({ collection: "post", locale: "ko", slugs: [] })).toEqual(new Set());
+	afterAll(async () => {
+		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+		await closeGlobalPool();
+	});
+
+	const seed = async (slug: string) => {
+		const entry = await seedEntry(store, {
+			collection: contentCollection,
+			slug: null,
+			metadata: { title: slug },
+			mdx: "Body",
+			locale: defaultLocale,
+		});
+		return seedSave(store, entry.id, {
+			expectedVersion: entry.version,
+			slug,
+			metadata: { title: slug },
+			mdx: "Body",
+		});
+	};
+
+	it("returns slugs used in the same collection and language, excluding the entry being edited", async () => {
+		const used = await seed("lookup-used");
+		await seed("lookup-other");
+
+		const params = { collection: contentCollection, locale: defaultLocale };
+		expect(await lookup.slugsInUse({ ...params, slugs: ["lookup-used", "lookup-free"] })).toEqual(
+			new Set(["lookup-used"]),
+		);
+		expect(
+			await lookup.slugsInUse({ ...params, slugs: ["lookup-used", "lookup-other"], excludeEntryId: used.id }),
+		).toEqual(new Set(["lookup-other"]));
+		// A different language does not conflict.
+		expect(await lookup.slugsInUse({ ...params, locale: "xx-unused", slugs: ["lookup-used"] })).toEqual(new Set());
+	});
+
+	it("returns an empty set for no slugs without querying", async () => {
+		const query = vi.fn();
+		const counting = { query } as unknown as Pool;
+		const empty = createContentLookup({ pool: counting, schema: schemaName });
+		expect(await empty.slugsInUse({ collection: "post", locale: "ko", slugs: [] })).toEqual(new Set());
 		expect(query).not.toHaveBeenCalled();
-		await lookup.slugsInUse({ collection: "post", locale: "ko", slugs: ["a"] });
-		expect(query.mock.calls[0]?.[1]).toEqual(["post", "ko", ["a"], null]);
 	});
 });

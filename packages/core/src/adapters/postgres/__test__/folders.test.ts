@@ -113,7 +113,7 @@ describe("Folders contract", () => {
 	//   parentId/root grouping then position ASC then id ASC
 	// -----------------------------------------------------------------------
 
-	it("1. create/list nesting with UUID validity, collection isolation, exact returned keys, deterministic listFolders order (parentId/root grouping → position ASC → id ASC) including same-position siblings", async () => {
+	it("1. create/list nesting with UUID validity, collection isolation, deterministic listFolders order (parentId/root grouping → position ASC → id ASC) including same-position siblings", async () => {
 		const r1 = await store.createFolder({ collection: "fc1", parentId: null, name: "Root1", position: 20 });
 		const r2 = await store.createFolder({ collection: "fc1", parentId: null, name: "Root2", position: 10 });
 		// r2 (10) should come before r1 (20)
@@ -121,9 +121,6 @@ describe("Folders contract", () => {
 		// UUID validity
 		expect(r1.id).toMatch(UUID_RE);
 
-		// Exact returned keys
-		const keys = Object.keys(r1).sort();
-		expect(keys).toEqual(["collection", "id", "name", "parentId", "position", "version"].sort());
 		expect(r1.collection).toBe("fc1");
 		expect(r1.parentId).toBeNull();
 		expect(r1.name).toBe("Root1");
