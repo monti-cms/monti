@@ -41,9 +41,21 @@ describe("ContentService Contract (blog config)", () => {
 			].join("\n"),
 		});
 		expect((snapshot as any).internalLinks).toEqual([
-			expect.objectContaining({ collection: "post", slug: "draft-post", position: { line: 1, column: 1 } }),
-			expect.objectContaining({ collection: "memo", slug: "xxx-equal", position: { line: 2, column: 1 } }),
-			expect.objectContaining({ collection: "post", slug: "old slug", position: { line: 3, column: 1 } }),
+			expect.objectContaining({
+				collection: "post",
+				slug: "draft-post",
+				position: { line: 1, column: 1, blockId: expect.any(String) },
+			}),
+			expect.objectContaining({
+				collection: "memo",
+				slug: "xxx-equal",
+				position: { line: 2, column: 1, blockId: expect.any(String) },
+			}),
+			expect.objectContaining({
+				collection: "post",
+				slug: "old slug",
+				position: { line: 3, column: 1, blockId: expect.any(String) },
+			}),
 		]);
 	});
 });

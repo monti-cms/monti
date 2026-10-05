@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
@@ -7,6 +8,7 @@ import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-doc
 import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { isReferencesEqual } from "../store/rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** A heading, three paragraphs and a list: blocks at two depths. */
@@ -357,6 +359,86 @@ describe("block ids in the store", () => {
 			});
 
 			expect(idList(updated.doc)).toEqual(idList(template.doc));
+		});
+	});
+
+	describe("reference occurrences", () => {
+		const imageBody = (mediaId: string) =>
+			`# Title\n\nIntro paragraph\n\n<Image mediaId="${mediaId}" alt="Picture" />\n\nLast paragraph\n`;
+
+		const withMedia = async () => {
+			const mediaId = randomUUID();
+			await pool.query(`INSERT INTO "${schemaName}".media_assets (id) VALUES ($1)`, [mediaId]);
+			return mediaId;
+		};
+
+		const imageBlockId = (value: unknown) => {
+			let id: string | undefined;
+			forEachBlock(docOf(value).content, (node) => {
+				if (node.type === "image") id = node.id;
+			});
+			return id;
+		};
+
+		/** The media reference to `mediaId` (a required relation field of the entry makes references of its own). */
+		const mediaReference = async (entryId: string, mediaId: string) =>
+			(await store.getWorkingReferences({ entryId })).find(
+				(reference) => reference.kind === "media" && reference.targetId === mediaId,
+			);
+
+		it("stores the block id of the image an occurrence is in", async () => {
+			const mediaId = await withMedia();
+			const draft = await createDraft({ mdx: imageBody(mediaId) });
+
+			const reference = await mediaReference(draft.id, mediaId);
+			expect(reference?.occurrences).toEqual([
+				{ type: "mdx", line: 5, column: 1, blockId: imageBlockId(draft.working.doc) },
+			]);
+		});
+
+		it("saving the same body again, in the same or another spelling, keeps the occurrences and the version", async () => {
+			const mediaId = await withMedia();
+			const draft = await createDraft({ mdx: imageBody(mediaId) });
+			const before = await store.getWorkingReferences({ entryId: draft.id });
+
+			const same = await save(draft, { mdx: imageBody(mediaId) });
+			expect(same.version).toBe(draft.version);
+			const untidy = await save(same, { mdx: imageBody(mediaId).replace("# Title", "Title\n=====") });
+			expect(untidy.version).toBe(draft.version);
+			const fromDoc = await save(untidy, { doc: untidy.working.doc });
+			expect(fromDoc.version).toBe(draft.version);
+
+			expect(await store.getWorkingReferences({ entryId: draft.id })).toEqual(before);
+		});
+
+		it("counts the block id as part of an occurrence when comparing references", () => {
+			const reference = (blockId?: string) => ({
+				kind: "media" as const,
+				targetId: randomUUID(),
+				isStale: false,
+				occurrences: [{ type: "mdx" as const, line: 1, column: 1, ...(blockId ? { blockId } : {}) }],
+			});
+			const base = reference("aaaaaaaa");
+			expect(isReferencesEqual([base], [{ ...base, occurrences: [{ ...base.occurrences[0] }] }])).toBe(true);
+			expect(
+				isReferencesEqual([base], [{ ...base, occurrences: [{ ...base.occurrences[0], blockId: "bbbbbbbb" }] }]),
+			).toBe(false);
+			expect(isReferencesEqual([base], [{ ...base, occurrences: [{ type: "mdx", line: 1, column: 1 }] }])).toBe(false);
+		});
+
+		it("editing another block keeps the block id of the occurrence", async () => {
+			const mediaId = await withMedia();
+			const draft = await createDraft({ mdx: imageBody(mediaId) });
+
+			const saved = await save(draft, {
+				mdx: imageBody(mediaId).replace("Intro paragraph", "Intro paragraph, reworded"),
+			});
+
+			expect(saved.version).toBe(draft.version + 1);
+			const reference = await mediaReference(draft.id, mediaId);
+			expect(reference?.occurrences).toEqual([
+				{ type: "mdx", line: 5, column: 1, blockId: imageBlockId(draft.working.doc) },
+			]);
 		});
 	});
 });

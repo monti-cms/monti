@@ -7,6 +7,8 @@ export {
 	newBlockId,
 	withoutBlockIds,
 } from "./block-ids";
+export type { BlockSpans } from "./block-spans";
+export { blockSpansOf } from "./block-spans";
 export type { SourceConversionResult } from "./converter";
 export { SourceConverter } from "./converter";
 export * from "./directives";
@@ -25,8 +27,10 @@ export {
 	toStoredDocument,
 } from "./stored-document";
 export * from "./table-layout";
+export type { BlockSources, BlockSpan } from "./to-document";
 export { toDocument } from "./to-document";
 export type {
+	CmsBodyPosition,
 	CmsJsonValue,
 	CmsJsxAttribute,
 	CmsMark,

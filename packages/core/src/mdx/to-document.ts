@@ -2,6 +2,7 @@ import type { Code } from "mdast";
 import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
 import { RAW_SOURCE_PARAGRAPH } from "../syntax/raw-source";
+import { forEachBlock } from "./block-ids";
 import { splitFrontmatter } from "./frontmatter";
 import { attributeRecord, readJsxAttributes } from "./jsx";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
@@ -34,6 +35,29 @@ type MdastLike = {
 	identifier?: string;
 	label?: string | null;
 	position?: { start?: { offset?: number }; end?: { offset?: number } };
+};
+
+/** The part of the body (offsets into it) a block was read from. */
+export interface BlockSpan {
+	readonly start: number;
+	readonly end: number;
+}
+
+/**
+ * Where each block of the converted document came from: `toDocument` appends one entry per block, in `forEachBlock` order
+ * (`undefined` for a block with no source position). The document itself is not changed.
+ */
+export type BlockSources = (BlockSpan | undefined)[];
+
+/** Spans of the blocks being converted, kept by node because the document is cloned to JSON at the end. Only set while a sink is given. */
+let blockSpans: WeakMap<CmsNode, BlockSpan> | null = null;
+
+/** Notes that `node` was read from the mdast nodes `first` through `last`, and returns it. */
+const sourced = (node: CmsNode, first: MdastLike, last: MdastLike = first): CmsNode => {
+	const start = first.position?.start?.offset;
+	const end = last.position?.end?.offset;
+	if (blockSpans && typeof start === "number" && typeof end === "number") blockSpans.set(node, { start, end });
+	return node;
 };
 
 type MdastDefinition = { url: string; title?: string | null };
@@ -339,7 +363,7 @@ const convertDirectiveTable = (node: MdastLike): CmsNode => {
 			}
 		}
 
-		return {
+		const tableRow: CmsNode = {
 			type: "tableRow",
 			content: cells.map((cell) => {
 				const cellAttrs = attributeRecord(readJsxAttributes(cell.attributes));
@@ -352,13 +376,15 @@ const convertDirectiveTable = (node: MdastLike): CmsNode => {
 					attrs.header = true;
 				}
 				const cellContent = trimTrailingText(convertPhrasing(cell.children ?? []));
-				return {
+				const tableCell: CmsNode = {
 					type: "tableCell",
 					...(Object.keys(attrs).length > 0 ? { attrs } : {}),
 					content: cellContent,
 				};
+				return sourced(tableCell, cell);
 			}),
 		};
+		return sourced(tableRow, row);
 	});
 
 	const headerRows = content.map((row) => (row.content ?? []).map((cell) => cell.attrs?.header === true));
@@ -375,14 +401,19 @@ const convertDirectiveTable = (node: MdastLike): CmsNode => {
 	if (align?.some((v) => v !== null)) attrs.align = align;
 	const widths = parseTableWidths(rawAttrs.widths);
 	if (widths.length > 0) attrs.widths = widths;
-	return {
-		type: "table",
-		...(Object.keys(attrs).length > 0 ? { attrs } : {}),
-		content,
-	};
+	return sourced(
+		{
+			type: "table",
+			...(Object.keys(attrs).length > 0 ? { attrs } : {}),
+			content,
+		},
+		node,
+	);
 };
 
-const convertJsx = (node: MdastLike): CmsNode => {
+const convertJsx = (node: MdastLike): CmsNode => sourced(convertJsxElement(node), node);
+
+const convertJsxElement = (node: MdastLike): CmsNode => {
 	const name = node.name ?? "";
 	if (name === "Table") {
 		return convertDirectiveTable(node);
@@ -439,15 +470,18 @@ const convertParagraph = (node: MdastLike): CmsNode[] => {
 
 	const flush = () => {
 		if (inline.length === 0) return;
+		// A paragraph split around block JSX is several blocks: each reads from its own run of children, an unsplit one from the paragraph.
+		const from = inline.length === children.length ? node : (inline[0] as MdastLike);
+		const to = inline.length === children.length ? node : (inline[inline.length - 1] as MdastLike);
 		// A paragraph of only breaks (a directive `:br[]` on a line of its own) is blank lines, as a line of only `<br />` is.
 		const breaks = inline.filter(isPlainBreak).length;
 		if (breaks > 0 && inline.every((child) => isPlainBreak(child) || (child.type === "text" && !child.value?.trim()))) {
-			blocks.push(...Array.from({ length: breaks }, blankLine));
+			blocks.push(...inline.filter(isPlainBreak).map((lineBreak) => sourced(blankLine(), lineBreak)));
 			inline = [];
 			return;
 		}
 		if (inline.length === 1 && (inline[0]?.type === "image" || inline[0]?.type === "imageReference")) {
-			blocks.push(imageNode(inline[0]));
+			blocks.push(sourced(imageNode(inline[0]), inline[0]));
 			inline = [];
 			return;
 		}
@@ -455,7 +489,7 @@ const convertParagraph = (node: MdastLike): CmsNode[] => {
 		inline = [];
 		if (content.length === 0) return;
 		const paragraph: CmsNode = { type: "paragraph", content };
-		if (!isEmptyParagraph(paragraph)) blocks.push(paragraph);
+		if (!isEmptyParagraph(paragraph)) blocks.push(sourced(paragraph, from, to));
 	};
 
 	for (const child of children) {
@@ -479,7 +513,7 @@ const convertList = (node: MdastLike): CmsNode => {
 			if (typeof item.checked === "boolean") {
 				listItem.attrs = { checked: item.checked };
 			}
-			return listItem;
+			return sourced(listItem, item);
 		}),
 	};
 	if (ordered && typeof node.start === "number" && node.start !== 1) {
@@ -494,99 +528,116 @@ const convertTable = (node: MdastLike): CmsNode => {
 	return {
 		type: "table",
 		...(align.some((value) => value !== null) ? { attrs: { align } } : {}),
-		content: (node.children ?? []).map((row) => ({
-			type: "tableRow",
-			content: (row.children ?? []).map((cell) => ({
-				type: "tableCell",
-				content: trimTrailingText(convertPhrasing(cell.children ?? [])),
-			})),
-		})),
+		content: (node.children ?? []).map((row) =>
+			sourced(
+				{
+					type: "tableRow",
+					content: (row.children ?? []).map((cell) =>
+						sourced({ type: "tableCell", content: trimTrailingText(convertPhrasing(cell.children ?? [])) }, cell),
+					),
+				},
+				row,
+			),
+		),
 	};
 };
 
 const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 	const output: CmsNode[] = [];
 	for (const node of nodes) {
+		/** Adds the one block `node` is read as. */
+		const add = (block: CmsNode) => output.push(sourced(block, node));
 		switch (node.type) {
 			case "paragraph":
 				// Source a syntax extension turned back into text (an unregistered block directive) is moved to a raw block and written as is. If left as text, escapes pile up on save.
 				if (node.data?.[RAW_SOURCE_PARAGRAPH]) {
-					output.push({ type: "html", attrs: { value: node.children?.[0]?.value ?? "" } });
+					add({ type: "html", attrs: { value: node.children?.[0]?.value ?? "" } });
 					break;
 				}
 				output.push(...convertParagraph(node));
 				break;
 			case "heading":
-				output.push({
+				add({
 					type: "heading",
 					attrs: { level: node.depth ?? 2 },
 					content: trimTrailingText(convertPhrasing(node.children ?? [])),
 				});
 				break;
 			case "code":
-				output.push(convertCode(node));
+				add(convertCode(node));
 				break;
 			case "list":
-				output.push(convertList(node));
+				add(convertList(node));
 				break;
 			case "table":
-				output.push(convertTable(node));
+				add(convertTable(node));
 				break;
 			case "blockquote":
-				output.push({ type: "blockquote", content: convertBlocks(node.children ?? []) });
+				add({ type: "blockquote", content: convertBlocks(node.children ?? []) });
 				break;
 			case "footnoteDefinition":
 				// Kept in place (they usually sit at the end of the source). The content is the definition's own blocks.
-				output.push({
+				add({
 					type: "footnoteDefinition",
 					attrs: { label: footnoteLabel(node) },
 					content: convertBlocks(node.children ?? []),
 				});
 				break;
 			case "thematicBreak":
-				output.push({ type: "horizontalRule" });
+				add({ type: "horizontalRule" });
 				break;
 			case "math":
-				output.push({ type: "math", attrs: { value: node.value ?? "" } });
+				add({ type: "math", attrs: { value: node.value ?? "" } });
 				break;
 			case "image":
 			case "imageReference":
-				output.push(imageNode(node));
+				add(imageNode(node));
 				break;
 			case "mdxJsxFlowElement":
 			case "mdxJsxTextElement":
 				// A line of only `<br />` is read as a block element: it is a blank line. A `br` that holds attributes or content is not a break, so it is kept in a paragraph.
-				if (isPlainBreak(node)) output.push(blankLine());
-				else output.push(node.name === "br" ? { type: "paragraph", content: [convertJsx(node)] } : convertJsx(node));
+				if (isPlainBreak(node)) add(blankLine());
+				else add(node.name === "br" ? { type: "paragraph", content: [convertJsx(node)] } : convertJsx(node));
 				break;
 			case "mdxjsEsm":
-				output.push({ type: "mdxEsm", attrs: { value: node.value ?? "" } });
+				add({ type: "mdxEsm", attrs: { value: node.value ?? "" } });
 				break;
 			case "mdxFlowExpression":
-				output.push({ type: "mdxExpression", attrs: { value: node.value ?? "" } });
+				add({ type: "mdxExpression", attrs: { value: node.value ?? "" } });
 				break;
 			case "html":
-				output.push({ type: "html", attrs: { value: node.value ?? "" } });
+				add({ type: "html", attrs: { value: node.value ?? "" } });
 				break;
 			default:
 				if (node.children && node.children.length > 0) output.push(...convertBlocks(node.children));
 				else if (node.value) {
-					output.push({ type: "paragraph", content: [textNode(node.value, [])] });
+					add({ type: "paragraph", content: [textNode(node.value, [])] });
 				}
 		}
 	}
 	return output;
 };
 
-export const toDocument = (analysis: CmsMdxAnalysis): CmsNode => {
+/**
+ * The working document of an analysis. With `sources`, it is also told where each block was read from (see `BlockSources`);
+ * the returned document is the same either way.
+ */
+export const toDocument = (analysis: CmsMdxAnalysis, sources?: BlockSources): CmsNode => {
 	definitions = new Map();
 	sourceBody = splitFrontmatter(analysis.source).body;
-	if (analysis.tree) collectDefinitions(analysis.tree.children as MdastLike[], definitions);
-	// A `definition` node has no children or value, so `convertBlocks` drops it (consumed definitions are written back as inline links).
-	const content = analysis.tree ? convertBlocks(analysis.tree.children as MdastLike[]) : [];
-	const doc: CmsNode = { type: "doc", content };
-	if (analysis.frontmatter) {
-		doc.attrs = { frontmatter: analysis.frontmatter };
+	blockSpans = sources ? new WeakMap() : null;
+	try {
+		if (analysis.tree) collectDefinitions(analysis.tree.children as MdastLike[], definitions);
+		// A `definition` node has no children or value, so `convertBlocks` drops it (consumed definitions are written back as inline links).
+		const content = analysis.tree ? convertBlocks(analysis.tree.children as MdastLike[]) : [];
+		const doc: CmsNode = { type: "doc", content };
+		if (analysis.frontmatter) {
+			doc.attrs = { frontmatter: analysis.frontmatter };
+		}
+		// The spans are read off the blocks in document order here, before the clone below loses their identity.
+		if (sources) forEachBlock(content, (block) => sources.push(blockSpans?.get(block)));
+		return jsonClone(doc);
+	} finally {
+		blockSpans = null;
 	}
-	return jsonClone(doc);
 };

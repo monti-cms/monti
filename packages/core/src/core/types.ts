@@ -1,6 +1,6 @@
 import type { ResolvedConfig } from "../config/resolved";
 import type { StoredDocument } from "../mdx/stored-document";
-import type { CmsImageSource } from "../mdx/types";
+import type { CmsBodyPosition, CmsImageSource } from "../mdx/types";
 import type { MetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
 import type { Collection } from "./collections";
@@ -19,8 +19,8 @@ export type Issue = {
 	readonly message?: string;
 	/** Variant within the same code (`reason`) and the values that fill the message's placeholders. */
 	readonly params?: Readonly<Record<string, string | number>>;
-	/** Location of a body issue. */
-	readonly position?: { readonly line: number; readonly column: number };
+	/** Location of a body issue: the line and column in the stored MDX, and the block it is in when the body has a document. */
+	readonly position?: CmsBodyPosition;
 	/** Field path of a metadata issue. */
 	readonly path?: string;
 	readonly ordinal?: number;
@@ -36,7 +36,7 @@ export type ReferenceKind = "entry" | "media";
 export const normalizeReferenceKind = (kind: string): ReferenceKind => (kind === "media" ? "media" : "entry");
 
 export type ReferenceOccurrence =
-	| { readonly type: "mdx"; readonly line: number; readonly column: number }
+	| { readonly type: "mdx"; readonly line: number; readonly column: number; readonly blockId?: string }
 	| { readonly type: "metadata"; readonly path: string; readonly ordinal?: number };
 
 export type Reference = {
@@ -84,7 +84,7 @@ export type InternalLinkSource = {
 	readonly collection: Collection;
 	readonly slug: string;
 	readonly url: string;
-	readonly position: { readonly line: number; readonly column: number };
+	readonly position: CmsBodyPosition;
 };
 
 export type ResolvedInternalLink = {
