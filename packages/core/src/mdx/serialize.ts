@@ -417,6 +417,21 @@ const BREAK = "<br />";
  */
 const isLineBreak = (node: CmsNode): boolean => node.type === "hardBreak";
 
+/** A paragraph with nothing to show: no content, empty text, or only line breaks. It is a blank line (see `serializeParagraph`). */
+const isBlankParagraph = (node: CmsNode): boolean =>
+	node.type === "paragraph" &&
+	(node.content ?? []).every((child) => isLineBreak(child) || (child.type === "text" && !child.text));
+
+/**
+ * A paragraph. A blank paragraph (the editor makes one when Enter is pressed between blocks) is one line of only `<br />`, which reads back as one blank
+ * paragraph, so any number of them survive a save. A paragraph of only line breaks counts as one blank line per break (at least one).
+ */
+const serializeParagraph = (node: CmsNode, indent: string, lineIndent = indent): string => {
+	if (!isBlankParagraph(node)) return indent + serializeInlines(node.content ?? [], true, false, lineIndent);
+	const breaks = (node.content ?? []).filter(isLineBreak).length;
+	return Array.from({ length: Math.max(breaks, 1) }, () => `${indent}${BREAK}`).join("\n\n");
+};
+
 /**
  * Writes inline nodes. `asParagraph` is set for the text of a paragraph: block markers at the start of a line are escaped, and a line break is followed by a line ending
  * (`line<br />` + newline + `next`) so the source reads well; `lineIndent` is the indentation of those following lines. Everywhere else (headings, table cells, labels)
@@ -597,14 +612,14 @@ const serializeListItem = (item: CmsNode, marker: string, indent: string): strin
 	const [first, ...rest] = blocks;
 	let head = `${indent}${marker}`;
 	if (first?.type === "paragraph") {
-		head += serializeInlines(first.content ?? [], true, false, innerIndent);
+		// An empty first paragraph is an empty item (`- `), which is what the editor makes for a new bullet.
+		if (!isBlankParagraph(first)) head += serializeInlines(first.content ?? [], true, false, innerIndent);
 	} else if (first) {
 		head += `\n${serializeBlock(first, innerIndent)}`;
 	}
 
 	const extra = rest.map((block) => {
-		if (block.type === "paragraph")
-			return `${innerIndent}${serializeInlines(block.content ?? [], true, false, innerIndent)}`;
+		if (block.type === "paragraph") return serializeParagraph(block, innerIndent);
 		return serializeBlock(block, innerIndent);
 	});
 	// If a listItem has several blocks (loose list), they must be separated by blank lines to keep paragraph boundaries.
@@ -689,7 +704,7 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 
 	switch (node.type) {
 		case "paragraph":
-			return indent + serializeInlines(node.content ?? [], true, false, indent);
+			return serializeParagraph(node, indent);
 		case "heading": {
 			const level = typeof node.attrs?.level === "number" ? node.attrs.level : 2;
 			return `${indent}${"#".repeat(level)} ${serializeInlines(node.content ?? [])}`;
@@ -736,11 +751,25 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 	}
 };
 
-const serializeBlocks = (nodes: CmsNode[], indent = ""): string =>
-	nodes
+const serializeBlocks = (nodes: CmsNode[], indent = ""): string => {
+	// A lone blank paragraph is what the editor puts in an empty container (a callout, a footnote, a quote), not a blank line the author typed: nothing is written for it.
+	const only = nodes.length === 1 ? nodes[0] : undefined;
+	if (only && isBlankParagraph(only)) return "";
+	return nodes
 		.map((node) => serializeBlock(node, indent))
 		.filter((block) => block.length > 0)
 		.join("\n\n");
+};
+
+/**
+ * Blank lines at the very end of a document are not written. The editor keeps an empty paragraph after a last block that is not a paragraph (so there is
+ * somewhere to type), and an empty document is one empty paragraph: writing them would add a blank line to the end of every such page and make an empty body not empty.
+ */
+const withoutTrailingBlankLines = (nodes: CmsNode[]): CmsNode[] => {
+	let end = nodes.length;
+	while (end > 0 && isBlankParagraph(nodes[end - 1] as CmsNode)) end -= 1;
+	return end === nodes.length ? nodes : nodes.slice(0, end);
+};
 
 /**
  * Writes a document as MDX. The standard notation is CommonMark + GFM + standard MDX JSX; `extensions` (the site's `mdx.syntax` unless given)
@@ -751,7 +780,9 @@ export const serialize = (doc: unknown, extensions: readonly SyntaxExtension[] =
 	syntax = extensions;
 	try {
 		const node = doc as CmsNode;
-		const body = serializeBlocks(node.type === "doc" ? (node.content ?? []) : [node]).trimEnd();
+		const body = serializeBlocks(
+			node.type === "doc" ? withoutTrailingBlankLines(node.content ?? []) : [node],
+		).trimEnd();
 		const frontmatter = node.attrs?.frontmatter;
 		if (frontmatter && typeof frontmatter === "object" && !Array.isArray(frontmatter)) {
 			return `${serializeFrontmatter(frontmatter)}\n${body}\n`;

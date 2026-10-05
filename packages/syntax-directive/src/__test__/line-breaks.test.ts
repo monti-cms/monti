@@ -9,7 +9,7 @@ import { directiveSyntax } from "..";
  * node and the written body says `<br />`.
  */
 const syntax = [directiveSyntax()];
-const { analyze: read, toDocument, write } = mdxWith(syntax);
+const { analyze: read, toDocument, write, writeTwice } = mdxWith(syntax);
 
 const hash = (source: string) => computeContentHash({ title: "t" }, source, 1, analyze(source, undefined, syntax));
 
@@ -33,5 +33,39 @@ describe("directive syntax: line breaks", () => {
 		expect(written).toContain("<br />");
 		expect(written).not.toContain(":br");
 		expect(hash(written)).toBe(hash(source));
+	});
+
+	describe("blank lines", () => {
+		const blank = { type: "paragraph", content: [] };
+		const kinds = (source: string) => toDocument(read(source)).content?.map((node) => node.type);
+
+		it("reads a line of only :br[] like a line of only <br />: one blank line", () => {
+			expect(toDocument(read("앞\n\n:br[]\n\n뒤")).content?.[1]).toEqual(blank);
+			expect(toDocument(read("앞\n\n<br />\n\n뒤"))).toEqual(toDocument(read("앞\n\n:br[]\n\n뒤")));
+			expect(
+				toDocument(read("앞\n\n:br[]:br[]\n\n뒤")).content?.filter((node) => node.type === "paragraph"),
+			).toHaveLength(4);
+		});
+
+		it("keeps blank lines between directive blocks and inside a container, written as <br />", () => {
+			const body = [
+				"앞",
+				"<br />",
+				"<br />",
+				':::text-align{align="center"}\n가운데\n\n<br />\n\n<br />\n\n끝\n:::',
+				"<br />",
+				'::image{mediaId="abc" alt="그림"}',
+				"뒤",
+			].join("\n\n");
+			const written = `${body}\n`;
+			expect(write(body)).toBe(written);
+			expect(writeTwice(body)).toBe(written);
+			expect(kinds(body)?.filter((type) => type === "paragraph")).toHaveLength(5);
+			expect(hash(write(body))).toBe(hash(body));
+		});
+
+		it("does not write blank lines at the end of the body, in either notation", () => {
+			expect(write("끝\n\n<br />\n\n:br[]\n")).toBe("끝\n");
+		});
 	});
 });

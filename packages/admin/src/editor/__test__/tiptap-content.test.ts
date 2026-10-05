@@ -81,6 +81,61 @@ describe("CmsNode <-> Tiptap round trip", () => {
 		expect(JSON.stringify(first)).toContain('"hardBreak"');
 	});
 
+	describe("empty lines typed in the editor", () => {
+		const paragraph = (text?: string): JSONContent =>
+			text ? { type: "paragraph", content: [{ type: "text", text }] } : { type: "paragraph" };
+		const editorDoc = (...blocks: JSONContent[]): JSONContent => ({ type: "doc", content: blocks });
+		const emptyParagraphs = (json: JSONContent) =>
+			(json.content ?? []).filter((block) => block.type === "paragraph" && !block.content?.length).length;
+
+		it.each([1, 2, 3, 6])("keep %i empty paragraphs between blocks through save, reload and save", (count) => {
+			const typed = editorDoc(paragraph("앞"), ...Array.from({ length: count }, () => paragraph()), paragraph("뒤"));
+
+			const saved = tiptapToMdx(typed);
+			const reloaded = throughSchema(mdxToTiptap(saved));
+
+			expect(emptyParagraphs(reloaded)).toBe(count);
+			expect(reloaded.content?.map((block) => block.type)).toEqual(typed.content?.map((block) => block.type));
+			expect(tiptapToMdx(reloaded)).toBe(saved);
+			expect(tiptapToMdx(throughSchema(mdxToTiptap(tiptapToMdx(reloaded))))).toBe(saved);
+		});
+
+		it("keep empty paragraphs before a block and between other kinds of blocks", () => {
+			const typed = editorDoc(
+				paragraph(),
+				{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "제목" }] },
+				paragraph(),
+				paragraph(),
+				{ type: "horizontalRule" },
+				paragraph("끝"),
+			);
+			const saved = tiptapToMdx(typed);
+			const reloaded = throughSchema(mdxToTiptap(saved));
+			expect(reloaded.content?.map((block) => block.type)).toEqual(typed.content?.map((block) => block.type));
+			expect(tiptapToMdx(reloaded)).toBe(saved);
+		});
+
+		it("do not store the empty paragraph the editor keeps at the end, nor make an empty body not empty", () => {
+			expect(tiptapToMdx(editorDoc(paragraph()))).toBe("");
+			expect(tiptapToMdx(editorDoc(paragraph("끝"), paragraph(), paragraph()))).toBe("끝\n");
+			const fence = { type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text: "a();" }] };
+			expect(tiptapToMdx(editorDoc(fence, paragraph()))).toBe(tiptapToMdx(editorDoc(fence)));
+		});
+
+		it("keep a new, empty list item and an empty quote as they were", () => {
+			const typed = editorDoc({
+				type: "bulletList",
+				content: [
+					{ type: "listItem", content: [paragraph("하나")] },
+					{ type: "listItem", content: [paragraph()] },
+				],
+			});
+			const saved = tiptapToMdx(typed);
+			expect(saved).not.toContain("<br />");
+			expect(tiptapToMdx(throughSchema(mdxToTiptap(saved)))).toBe(saved);
+		});
+	});
+
 	it("expands and collapses an alignment container", () => {
 		const first = toDocument(analyze('<TextAlign align="center">\n\n## 가운데\n\n</TextAlign>'));
 		const json = cmsNodeToTiptap(first);

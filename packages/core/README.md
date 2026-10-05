@@ -281,6 +281,7 @@ What is written by default, with no extension:
 | Meaning | Stored as |
 | --- | --- |
 | line break | `<br />` (in a paragraph the next line follows it: `line<br />` + newline + `next`). `\` + newline, two trailing spaces and `<br />` are all read and written this way |
+| blank line (Enter pressed between blocks in the editor) | a line of only `<br />`, one per empty paragraph, kept in order. The document node is an empty `paragraph`. Blank lines at the very end of a body are not stored |
 | underline, superscript, subscript, translation notice | `<u>`, `<sup>`, `<sub>`, `<Untranslated>` |
 | text alignment | `<TextAlign align="center">` |
 | table with merged cells, column widths or a non-GFM header | `<Table>`, `<TableRow>`, `<TableCell colspan="2">` (other tables stay GFM) |

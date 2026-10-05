@@ -426,6 +426,12 @@ const isEmptyParagraph = (node: CmsNode) => {
 	return content.every((child) => child.type === "text" && !child.text);
 };
 
+/**
+ * A blank line the author kept (the editor makes one by pressing Enter between blocks). It is an empty paragraph, written as a line of only `<br />`
+ * and read back from one. Text that merely turns out empty after trimming is not a blank line and is dropped (`isEmptyParagraph` in `convertParagraph`).
+ */
+const blankLine = (): CmsNode => ({ type: "paragraph", content: [] });
+
 const convertParagraph = (node: MdastLike): CmsNode[] => {
 	const children = node.children ?? [];
 	const blocks: CmsNode[] = [];
@@ -433,6 +439,13 @@ const convertParagraph = (node: MdastLike): CmsNode[] => {
 
 	const flush = () => {
 		if (inline.length === 0) return;
+		// A paragraph of only breaks (a directive `:br[]` on a line of its own) is blank lines, as a line of only `<br />` is.
+		const breaks = inline.filter(isPlainBreak).length;
+		if (breaks > 0 && inline.every((child) => isPlainBreak(child) || (child.type === "text" && !child.value?.trim()))) {
+			blocks.push(...Array.from({ length: breaks }, blankLine));
+			inline = [];
+			return;
+		}
 		if (inline.length === 1 && (inline[0]?.type === "image" || inline[0]?.type === "imageReference")) {
 			blocks.push(imageNode(inline[0]));
 			inline = [];
@@ -542,12 +555,9 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 				break;
 			case "mdxJsxFlowElement":
 			case "mdxJsxTextElement":
-				// A line of only `<br />` is read as a block element, but it means a paragraph that holds a line break (how a paragraph of only a break is written).
-				output.push(
-					node.name === "br"
-						? { type: "paragraph", content: [isPlainBreak(node) ? HARD_BREAK() : convertJsx(node)] }
-						: convertJsx(node),
-				);
+				// A line of only `<br />` is read as a block element: it is a blank line. A `br` that holds attributes or content is not a break, so it is kept in a paragraph.
+				if (isPlainBreak(node)) output.push(blankLine());
+				else output.push(node.name === "br" ? { type: "paragraph", content: [convertJsx(node)] } : convertJsx(node));
 				break;
 			case "mdxjsEsm":
 				output.push({ type: "mdxEsm", attrs: { value: node.value ?? "" } });
@@ -565,7 +575,7 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 				}
 		}
 	}
-	return output.filter((node) => !isEmptyParagraph(node));
+	return output;
 };
 
 export const toDocument = (analysis: CmsMdxAnalysis): CmsNode => {

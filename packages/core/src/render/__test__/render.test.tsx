@@ -34,6 +34,11 @@ describe("body rendering @monti-cms/core/render", () => {
 		expect(markup.match(/<br\/>/g)).toHaveLength(1);
 	});
 
+	it.each([1, 2, 4])("renders %i blank lines between blocks as that many line breaks between them", async (count) => {
+		const markup = await html(`앞\n\n${"<br />\n\n".repeat(count)}뒤`);
+		expect(markup.replace(/\n/g, "")).toBe(`<p>앞</p>${"<br/>".repeat(count)}<p>뒤</p>`);
+	});
+
 	it("<TextAlign> turns only validated alignments into classes", async () => {
 		expect(await html('<TextAlign align="center">\n\n가운데\n\n</TextAlign>')).toContain('class="cms-align-center"');
 		expect(await html('<TextAlign align="justify">\n\n무시\n\n</TextAlign>')).not.toContain("cms-align-justify");

@@ -281,6 +281,7 @@ export default defineConfig({
 | 뜻 | 저장 표기 |
 | --- | --- |
 | 줄바꿈 | `<br />`(문단에서는 뒤에 줄을 바꿔 `줄<br />` + 줄바꿈 + `다음`). `\` + 줄바꿈, 줄 끝 공백 두 칸, `<br />`을 모두 읽고 이렇게 쓴다 |
+| 빈 줄(편집기에서 블록 사이에 Enter를 눌러 만든 줄) | `<br />`만 있는 줄, 빈 문단 하나에 한 줄씩 순서대로. 문서 노드로는 빈 `paragraph`다. 본문 맨 끝의 빈 줄은 저장하지 않는다 |
 | 밑줄·위 첨자·아래 첨자·번역 안내 | `<u>`·`<sup>`·`<sub>`·`<Untranslated>` |
 | 글 정렬 | `<TextAlign align="center">` |
 | 셀 병합·열 너비·GFM이 아닌 머리글이 있는 표 | `<Table>`·`<TableRow>`·`<TableCell colspan="2">`(나머지 표는 GFM) |
