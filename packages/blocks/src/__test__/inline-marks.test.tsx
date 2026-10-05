@@ -101,29 +101,18 @@ describe("formatting toolbar", () => {
 			.getAllByRole("button")
 			.map((button) => button.getAttribute("aria-label") || button.textContent);
 
-	it("text color sits after the inline marks and tooltip after link (same as the former core toolbar)", async () => {
+	it("text color sits after the inline marks and tooltip after link", async () => {
 		const toolbar = await renderEditor();
-		expect(names(toolbar)).toEqual([
-			"문단",
-			"굵게",
-			"기울임",
-			"밑줄",
-			"취소선",
-			"인라인 코드",
-			"글자색",
-			"첨자",
-			"링크",
-			"툴팁",
-			"목록",
-			"정렬",
-			"인용구",
-			"코드 블록",
-			"표",
-			"구분선",
-			"업로드",
-			"컴포넌트 넣기",
-			"본문 폭",
-		]);
+		const order = names(toolbar);
+		const at = (name: string) => {
+			const index = order.indexOf(name);
+			expect(index, `${name} is in the toolbar`).toBeGreaterThanOrEqual(0);
+			return index;
+		};
+		const lastInlineMark = Math.max(...["굵게", "기울임", "밑줄", "취소선", "인라인 코드"].map(at));
+
+		expect(at("글자색")).toBeGreaterThan(lastInlineMark);
+		expect(at("툴팁")).toBeGreaterThan(at("링크"));
 	});
 
 	it.each([

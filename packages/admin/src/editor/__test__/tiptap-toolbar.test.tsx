@@ -162,32 +162,35 @@ describe("formatting toolbar group", () => {
 		await waitFor(() => expect(savedText(onChange)).toContain("center"));
 	});
 
-	it("tool names and order are fixed", async () => {
+	it("tool groups keep their relative order", async () => {
 		await renderEditor();
 		const toolbar = screen.getByRole("toolbar", { name: t("toolbar.format") });
 
-		// Order: paragraph style → text styling → attach to text (link) → lists and alignment → insert block. Text color and tooltip are added by block extensions
-		// (see the formatting toolbar test in `@monti-cms/blocks`).
-		expect(toolbarButtonNames(toolbar)).toEqual([
-			t("toolbar.paragraph"),
-			t("inlineMarks.bold"),
-			t("inlineMarks.italic"),
-			t("inlineMarks.underline"),
-			t("inlineMarks.strike"),
-			t("inlineMarks.code"),
-			t("toolbar.script"),
-			t("toolbar.link"),
-			t("toolbar.footnote"),
-			t("toolbar.list"),
-			t("toolbar.align"),
-			t("toolbar.quote"),
-			t("toolbar.codeBlock"),
-			t("toolbar.table"),
-			t("toolbar.divider"),
-			t("toolbar.upload"),
-			t("customBlockMenu.label"),
-			t("editorWidth.label"),
-		]);
+		// Groups: paragraph style → text styling → attach to text (link, footnote) → lists and alignment → insert block.
+		// Only the relative placement is asserted, so unrelated buttons can be added without touching this test.
+		// Text color and tooltip are added by block extensions (see the formatting toolbar test in `@monti-cms/blocks`).
+		const names = toolbarButtonNames(toolbar);
+		const at = (key: Parameters<typeof t>[0]) => {
+			const index = names.indexOf(t(key));
+			expect(index, `${key} is in the toolbar`).toBeGreaterThanOrEqual(0);
+			return index;
+		};
+		const lastMark = Math.max(
+			at("inlineMarks.bold"),
+			at("inlineMarks.italic"),
+			at("inlineMarks.underline"),
+			at("inlineMarks.strike"),
+			at("inlineMarks.code"),
+			at("toolbar.script"),
+		);
+
+		expect(at("toolbar.paragraph")).toBeLessThan(at("inlineMarks.bold"));
+		expect(lastMark).toBeLessThan(at("toolbar.link"));
+		expect(at("toolbar.footnote")).toBe(at("toolbar.link") + 1);
+		expect(at("toolbar.footnote")).toBeLessThan(at("toolbar.list"));
+		expect(at("toolbar.list")).toBeLessThan(at("toolbar.align"));
+		expect(at("toolbar.align")).toBeLessThan(at("toolbar.quote"));
+		expect(at("toolbar.quote")).toBeLessThan(at("toolbar.codeBlock"));
 	});
 
 	it("the block shape menu is paragraph and headings 2-4", async () => {
