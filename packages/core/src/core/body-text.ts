@@ -39,6 +39,14 @@ const translatableValues = (
 		return attribute.translatable && typeof value === "string" ? [value] : [];
 	});
 
+/** The code of a code block without its Monti annotation comments (`@line plus` and the like are not text a reader looks for). */
+const codeOf = (node: CmsNode): string => {
+	const lines = (node.attrs?.codeDocument as { lines?: readonly { value?: unknown }[] } | undefined)?.lines;
+	return Array.isArray(lines)
+		? lines.map((line) => String(line.value ?? "")).join("\n")
+		: String(node.attrs?.value ?? "");
+};
+
 const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 	if (node.type === "text") {
 		const marks = node.marks ?? [];
@@ -51,7 +59,8 @@ const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 		return [own, ...hover].join(" ");
 	}
 	if (node.type === "hardBreak") return " ";
-	if (node.type === "codeBlock" || node.type === "math") return options.code ? String(node.attrs?.value ?? "") : "";
+	if (node.type === "codeBlock") return options.code ? codeOf(node) : "";
+	if (node.type === "math") return options.code ? String(node.attrs?.value ?? "") : "";
 	if (!options.media && MEDIA_TYPES.has(node.type)) return "";
 	if (
 		node.type === "footnoteReference" ||

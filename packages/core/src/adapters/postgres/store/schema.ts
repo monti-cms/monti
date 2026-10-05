@@ -3,6 +3,7 @@ import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { migrateBlockIds } from "./block-id-migration";
+import { migrateCodeAnnotations } from "./code-annotation-migration";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 import { migrateSoftBreaks } from "./soft-break-migration";
@@ -330,6 +331,16 @@ const STEPS: readonly MigrationStep[] = [
 		 * changes: not `mdx`, `content_hash`, `search_text`, `version` or `updated_at`.
 		 */
 		run: (client, qSchema) => migrateBlockIds(client, qSchema),
+	},
+	{
+		name: "0015_code_annotations",
+		/**
+		 * A code block of a stored document now holds its code and its annotations as data (document version 2) instead of the fence text with annotation comments.
+		 * Lifts every working and published body, the stored document of a translation's base source and every template, and writes their MDX from it, so the
+		 * annotation comments of a code fence are in the form Monti writes them. Also recomputes `content_hash` and `search_text`. Block ids, `version` and
+		 * `updated_at` are kept. A body whose document cannot be read is left as it is and logged.
+		 */
+		run: (client, qSchema) => migrateCodeAnnotations(client, qSchema),
 	},
 	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.

@@ -1,11 +1,10 @@
-import { annotationConfig } from "../annotation/code-block/active";
-import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
 import type { SyntaxExtension } from "../syntax/types";
 import { analyze } from "./analyze";
 import { assignBlockIds, copyBlockIds, withoutBlockIds } from "./block-ids";
 import { attributeRecord } from "./jsx";
 import { BLOCK_JSX_NAMES } from "./registry";
 import { serialize } from "./serialize";
+import { storedCodeBlockAttrs, workingCodeBlockAttrs } from "./stored-code-block";
 import { configuredSyntax, syntaxBlocks } from "./syntax";
 import { toDocument } from "./to-document";
 import type { CmsJsonValue, CmsJsxAttribute, CmsMark, CmsMdxAnalysis, CmsNode } from "./types";
@@ -14,7 +13,7 @@ import type { CmsJsonValue, CmsJsxAttribute, CmsMark, CmsMdxAnalysis, CmsNode } 
  * Format version of a stored document. Raise it when a node or attribute changes its name or meaning, and add the step
  * from the previous version to `STORED_DOCUMENT_MIGRATIONS`. A new kind of block does not raise it.
  */
-export const STORED_DOCUMENT_VERSION = 1;
+export const STORED_DOCUMENT_VERSION = 2;
 
 /**
  * A body as it is stored: the parsed document in a shape that does not depend on how the body was written.
@@ -24,7 +23,8 @@ export const STORED_DOCUMENT_VERSION = 1;
  *   with only its attribute values (no component name, no raw attribute list);
  * - JSX that no definition describes (a fragment, a `br` with attributes, spread attributes, a block written as JSX the
  *   editor cannot map) stays `mdxJsx` with its component `name` and raw `attributes` list, so it can be written back as it was;
- * - a code block keeps `language`, `meta`, `value` and its meta keys, not the annotation document derived from them;
+ * - a code block keeps `language`, `meta`, its `code` and its `annotations` as data (`stored-code-block.ts`), not the fence text with
+ *   annotation comments or the values derived from it;
  * - trailing blank lines are dropped (they are never written);
  * - object keys are sorted at every depth, so the same body is the same JSON wherever it was stored (Postgres `jsonb` reorders keys).
  *
@@ -131,8 +131,7 @@ const toStoredNode = (working: CmsNode): CmsNode => {
 	const content = working.content?.map(toStoredNode);
 	const marks = working.marks?.map(storedMark);
 	if (working.type === "codeBlock") {
-		const { codeDocument: _derived, ...attrs } = working.attrs ?? {};
-		return node("codeBlock", attrs, content, marks, working.text, working.id);
+		return node("codeBlock", storedCodeBlockAttrs(working.attrs ?? {}), content, marks, working.text, working.id);
 	}
 	if (working.type !== "mdxJsx" && BLOCK_JSX_NAMES.has(working.type)) {
 		const block = definitionOf(working);
@@ -158,17 +157,6 @@ export const toStoredDocument = (working: CmsNode): StoredDocument | null => {
 	return { content, type: "doc", version: STORED_DOCUMENT_VERSION } as StoredDocument;
 };
 
-const codeBlockAttrs = (attrs: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> => {
-	const language = typeof attrs.language === "string" ? attrs.language : "";
-	const meta = typeof attrs.meta === "string" ? attrs.meta : "";
-	const value = typeof attrs.value === "string" ? attrs.value : "";
-	const codeDocument = fromCodeFenceToCodeBlockDocument(
-		{ type: "code", lang: language || undefined, meta: meta || undefined, value },
-		annotationConfig,
-	);
-	return { ...attrs, codeDocument: JSON.parse(JSON.stringify(codeDocument)) as CmsJsonValue };
-};
-
 /** Working JSX node for a stored block: the component name and a raw attribute list rebuilt from the values. */
 const jsxNode = (component: string, values: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> => ({
 	...values,
@@ -181,7 +169,7 @@ const toWorkingNode = (stored: CmsNode): CmsNode => {
 	const content = stored.content?.map(toWorkingNode);
 	let attrs = stored.attrs ? { ...stored.attrs } : undefined;
 	if (stored.type === "codeBlock") {
-		attrs = codeBlockAttrs(attrs ?? {});
+		attrs = workingCodeBlockAttrs(attrs ?? {});
 	} else if (stored.type === "mdxJsx") {
 		const name = typeof attrs?.name === "string" ? attrs.name : "";
 		const attributes = Array.isArray(attrs?.attributes) ? attrs.attributes : [];
@@ -209,8 +197,23 @@ export const fromStoredDocument = (stored: StoredDocument): CmsNode => ({
 	content: stored.content.map(toWorkingNode),
 });
 
-/** Steps that lift a stored document from version `n` to `n + 1`, by `n`. Empty while there is one version. */
-const STORED_DOCUMENT_MIGRATIONS: Readonly<Record<number, (doc: StoredDocument) => StoredDocument>> = {};
+/** Applies `change` to every node of a stored document, children first. */
+const mapNodes = (nodes: readonly CmsNode[], change: (node: CmsNode) => CmsNode): CmsNode[] =>
+	nodes.map((item) => change(item.content ? { ...item, content: mapNodes(item.content, change) } : item));
+
+/** Steps that lift a stored document from version `n` to `n + 1`, by `n`. */
+const STORED_DOCUMENT_MIGRATIONS: Readonly<Record<number, (doc: StoredDocument) => StoredDocument>> = {
+	/** 1 → 2: a code block holds its code and annotations as data instead of the fence text with annotation comments. */
+	1: (doc) => ({
+		content: mapNodes(doc.content, (item) =>
+			item.type === "codeBlock"
+				? { ...item, attrs: sortJson(storedCodeBlockAttrs(item.attrs ?? {})) as Record<string, CmsJsonValue> }
+				: item,
+		),
+		type: "doc",
+		version: 2,
+	}),
+};
 
 const NODE_KEYS = new Set(["type", "id", "attrs", "content", "marks", "text"]);
 

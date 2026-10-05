@@ -5,7 +5,7 @@ import type { BlockDefinition } from "../blocks/define";
 import type { SerializeContext, SerializeInlinesOptions, SyntaxExtension } from "../syntax/types";
 import { serializeFrontmatter } from "./frontmatter";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
-import { configuredSyntax, syntaxBlocks } from "./syntax";
+import { configuredSyntax, syntaxBlocks, syntaxCodeLineEffects } from "./syntax";
 import { formatTableWidths, hasNonGfmHeaderLayout, tableHasMergedCells, tableWidths } from "./table-layout";
 import type { CmsJsonValue, CmsMark, CmsNode } from "./types";
 
@@ -220,6 +220,7 @@ const attrString = (parts: string[]) => (parts.length > 0 ? ` ${parts.join(" ")}
 
 const serializeContext = (indent = "", label = false, marks: readonly CmsMark[] = []): SerializeContext => ({
 	blocks: syntaxBlocks,
+	codeLineEffects: syntaxCodeLineEffects,
 	indent,
 	label,
 	marks,

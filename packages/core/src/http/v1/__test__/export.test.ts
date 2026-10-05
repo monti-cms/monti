@@ -82,7 +82,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		expect(manifest.formatVersion).toBe(2);
 		expect(manifest.counts.entries).toBe(3);
 		expect(findFile(zip, DRAFT_WORKING)).toBe("draft secret body");
-		expect(JSON.parse(findFile(zip, PUBLISHED_WORKING_DOC))).toMatchObject({ type: "doc", version: 1 });
+		expect(JSON.parse(findFile(zip, PUBLISHED_WORKING_DOC))).toMatchObject({ type: "doc", version: 2 });
 	});
 
 	it("public export excludes drafts and does not include working values", async () => {

@@ -323,6 +323,7 @@ export default defineConfig({
 
 - [`@monti-cms/syntax-directive`](../syntax-directive) reads and writes directives (`:::callout{…}`, `::image{…}`, `:u[text]`, `::::table`), the notation Monti used before standard MDX. Without it, `:::callout` is ordinary text.
   `directiveSyntax({ write: false })` only reads directives and saves standard MDX, which migrates content a post at a time as it is saved (or all at once with `monti content:rewrite --apply`). Line breaks are never written as `:br[]`.
+- [`@monti-cms/syntax-shiki`](../syntax-shiki) reads Shiki code notation in code fences (`// [!code ++]`, `[!code highlight]`, `[!code focus]`, counts such as `[!code ++:3]`) and turns it into Monti's code annotations (`// @line plus`). It only reads: bodies are always written with Monti's annotations.
 - The public renderer (`@monti-cms/core/render`) runs the same plugins as the editor's parser, so what the editor reads is what the site renders.
 
 **Upgrading a site that has directive content.** Install `@monti-cms/syntax-directive` and add `directiveSyntax({ write: false })` to `mdx.syntax` (or `directiveSyntax()` to keep writing directives) before deploying this version.
@@ -336,6 +337,9 @@ Every body (the working and published bodies of entries, the source a translatio
 The document is the source and the MDX is its text, so saving normalizes notation: the same content always gets the same text, whatever spelling it was typed in (`Title` + `=====` and `# Title` are stored as `# Title`), and saving a body in another spelling of the content it already has changes nothing (no new version).
 Source mode in the editor is secondary: the text you type is parsed and written back in the site's notation when you save.
 A body that does not parse, or that has front matter, has no document and is stored exactly as given (only a draft can be like that).
+
+**Code blocks.** A code block is stored as its code (without annotation comments) and its annotations as data (line effects, text effects and regex rules), and written back to MDX as Monti annotation comments, so other tools that read the MDX still see them.
+`monti migrate` runs the step `0015_code_annotations`, which converts existing documents (including the document a translation was confirmed against) and rewrites the annotation comments of code fences in their canonical form (`// @line plus` becomes `// @line plus {0-0}`, rules for the whole code come first). It recomputes the content hash and search text, which no longer holds annotation comments; `version` and `updated_at` do not change.
 
 **Block ids.** Every block of the document has an `id` (8 characters of base36) that is unique within the body. It says which block is which across versions: it is not written to MDX and is not part of the content hash, so it never counts as a change.
 A body saved as MDX inherits ids from the version it replaces: a block that reads the same keeps its id, and so do edited, split and moved blocks (the first part of a split paragraph keeps it); blocks with no partner get new ids, and a document sent through the API keeps the ids it carries.
@@ -370,9 +374,10 @@ interface SyntaxExtension {
 }
 ```
 
-`SyntaxContext` gives the site's blocks (`blocks.list`, `blocks.byName`, `blocks.byComponent`). `SerializeContext` adds `indent` (the indentation of the line the node starts on, which the writer must include),
+`SyntaxContext` gives the site's blocks (`blocks.list`, `blocks.byName`, `blocks.byComponent`) and the names of its code block line effects (`codeLineEffects`). `SerializeContext` adds `indent` (the indentation of the line the node starts on, which the writer must include),
 `serializeBlocks` and `serializeInlines` for children, `componentName`, `hasSpread`, `nodeAttributes` and `markAttributes` (the attribute list the standard notation uses), and `escapeAttribute`.
 Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. The directive extension (`packages/syntax-directive`) is the reference implementation, and it imports only from `@monti-cms/core/syntax`.
+The entry point also exports the code comment syntax helpers (`resolveCommentSyntax`, `formatAnnotationComment`) that Monti's code annotations use, for extensions that read or write code comments (`packages/syntax-shiki`).
 
 ## Body blocks
 

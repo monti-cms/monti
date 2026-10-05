@@ -238,7 +238,7 @@ describe("ContentService Contract", () => {
 			const helloDocument = {
 				content: [{ content: [{ text: "Hello", type: "text" }], type: "paragraph" }],
 				type: "doc",
-				version: 1,
+				version: 2,
 			};
 			const expectedTuple = ["cms-snapshot-v3", 1, sortedMetadata, helloDocument];
 			const expectedHash = createHash("sha256").update(JSON.stringify(expectedTuple)).digest("hex");

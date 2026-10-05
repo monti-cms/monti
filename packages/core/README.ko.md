@@ -323,6 +323,7 @@ export default defineConfig({
 
 - [`@monti-cms/syntax-directive`](../syntax-directive/README.ko.md)는 표준 MDX 이전에 Monti가 쓰던 지시자(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다. 없으면 `:::callout`은 그냥 글자다.
   `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다(`monti content:rewrite --apply`로 한 번에 옮길 수도 있다). 줄바꿈은 `:br[]`로 쓰지 않는다.
+- [`@monti-cms/syntax-shiki`](../syntax-shiki/README.ko.md)는 코드 펜스의 Shiki 코드 표기(`// [!code ++]`·`[!code highlight]`·`[!code focus]`, `[!code ++:3]` 같은 개수)를 읽어 Monti 코드 주석(`// @line plus`)으로 바꾼다. 읽기만 하며 본문은 언제나 Monti 주석으로 쓴다.
 - 공개 렌더러(`@monti-cms/core/render`)는 편집기 해석기와 같은 플러그인을 돌리므로 편집기가 읽은 대로 사이트에 그려진다.
 
 **지시자 본문이 있는 사이트의 업그레이드.** 이 버전을 배포하기 전에 `@monti-cms/syntax-directive`를 설치하고 `mdx.syntax`에 `directiveSyntax({ write: false })`(지시자로 계속 저장하려면 `directiveSyntax()`)를 넣는다.
@@ -336,6 +337,9 @@ export default defineConfig({
 문서가 원본이고 MDX는 그 글이므로, 저장하면 표기가 정규화된다. 같은 내용은 어떤 표기로 입력했든 늘 같은 글이 된다(`제목` + `=====`와 `# 제목`은 둘 다 `# 제목`으로 저장). 이미 가진 내용을 다른 표기로 저장하면 아무것도 바뀌지 않는다(새 버전도 생기지 않는다).
 편집기의 소스 모드는 보조 수단이다. 입력한 글은 저장할 때 해석되어 사이트의 표기로 다시 쓰인다.
 해석되지 않거나 머리말이 있는 본문은 문서가 없고 받은 그대로 저장된다(초안만 그럴 수 있다).
+
+**코드 블록.** 코드 블록은 주석을 뺀 코드와 데이터로 둔 주석(줄 효과, 글자 효과, 정규식 규칙)으로 저장하고, MDX로 쓸 때는 Monti 주석으로 되돌려 쓴다. MDX를 읽는 다른 도구에서도 주석이 그대로 보인다.
+`monti migrate`는 `0015_code_annotations` 단계를 실행해 기존 문서(번역이 확인한 기준 문서 포함)를 바꾸고, 코드 펜스의 주석을 정해진 한 모양으로 다시 쓴다(`// @line plus`는 `// @line plus {0-0}`이 되고, 코드 전체에 걸리는 규칙은 맨 위로 간다). 내용 해시와 검색용 글자(이제 주석을 담지 않는다)는 새로 만들며, `version`과 `updated_at`은 그대로다.
 
 **블록 ID.** 문서의 모든 블록은 본문 안에서 유일한 `id`(소문자 영숫자 8자)를 가진다. 블록 ID는 버전이 달라져도 어느 블록이 어느 블록인지 알려 주는 값이며, MDX에는 쓰이지 않고 콘텐츠 해시에도 들어가지 않으므로 변경으로 취급되지 않는다.
 MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑같이 읽히는 블록은 ID를 그대로 가지고, 수정한 블록, 둘로 나눈 블록, 옮긴 블록도 마찬가지다(나눈 문단은 앞부분이 ID를 가진다). 짝이 없는 블록은 새 ID를 받고, API로 보낸 문서는 담고 있는 ID를 그대로 유지한다.
@@ -370,9 +374,10 @@ interface SyntaxExtension {
 }
 ```
 
-`SyntaxContext`는 사이트 블록(`blocks.list`·`blocks.byName`·`blocks.byComponent`)을 준다. `SerializeContext`는 여기에 `indent`(노드가 시작하는 줄의 들여쓰기이며 쓰는 쪽이 직접 넣는다),
+`SyntaxContext`는 사이트 블록(`blocks.list`·`blocks.byName`·`blocks.byComponent`)과 코드 블록 줄 효과 이름(`codeLineEffects`)을 준다. `SerializeContext`는 여기에 `indent`(노드가 시작하는 줄의 들여쓰기이며 쓰는 쪽이 직접 넣는다),
 자식을 쓰는 `serializeBlocks`·`serializeInlines`, `componentName`, `hasSpread`, 표준 표기가 쓰는 속성 목록을 만드는 `nodeAttributes`·`markAttributes`, `escapeAttribute`를 더한다.
 줄바꿈은 언제나 `<br />`라서 확장에 넘기지 않는다. `image` 노드는 Markdown으로 쓸 수 없을 때만 넘긴다. 지시자 확장(`packages/syntax-directive`)이 참고 구현이며 `@monti-cms/core/syntax`에서만 가져온다.
+이 진입점은 Monti 코드 주석이 쓰는 코드 주석 문법 도우미(`resolveCommentSyntax`·`formatAnnotationComment`)도 내보내므로, 코드 주석을 읽거나 쓰는 확장(`packages/syntax-shiki`)이 쓴다.
 
 ## 본문 블록
 

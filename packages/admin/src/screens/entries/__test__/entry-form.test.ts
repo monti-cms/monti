@@ -95,14 +95,14 @@ describe("translation state form", () => {
 
 	it("the confirmed document keeps one key order however the server ordered it", () => {
 		const doc = {
-			version: 1,
+			version: 2,
 			type: "doc",
 			content: [{ type: "paragraph", id: "aaaaaaaa", content: [{ type: "text", text: "원문" }] }],
 		};
 		const reordered = {
 			type: "doc",
 			content: [{ content: [{ text: "원문", type: "text" }], id: "aaaaaaaa", type: "paragraph" }],
-			version: 1,
+			version: 2,
 		};
 		const first = formFromEntry(translation({ version: 3, baseSource: "원문\n", baseDoc: doc }));
 		const second = formFromEntry(translation({ baseDoc: reordered, baseSource: "원문\n", version: 3 }));
