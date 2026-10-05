@@ -1,6 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
+import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 
 /** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
@@ -278,6 +279,11 @@ const STEPS: readonly MigrationStep[] = [
 				END IF;
 			END $$;
 		`),
+	},
+	{
+		name: "0010_content_hash_v2",
+		/** Content hashes now cover the parsed body instead of the MDX string (`cms-snapshot-v2`). Recomputes every stored hash. */
+		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
 	},
 	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.

@@ -215,10 +215,10 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					if (translation !== null && locked.translation_group_id === params.entryId) {
 						throw new CmsError("Only translations have a translation state", "invalid_input");
 					}
+					// The content hash decides whether the body changed, not the MDX string: it is the same for a syntax-only change.
 					const bodyIdentical = Boolean(
 						body &&
 							body.content_hash === params.snapshot.contentHash &&
-							body.mdx === params.snapshot.mdx &&
 							body.schema_version === params.snapshot.schemaVersion &&
 							locked.working_slug === nextSlug &&
 							isDeepStrictEqual(body.metadata, metadata) &&
@@ -265,6 +265,19 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 							);
 							await insertReferences(client, qSchema, params.entryId, "working", params.references);
 						}
+					}
+
+					// Same content written differently: keep the new string (and its search text), but it is not a content change,
+					// so the content modified date stays.
+					if (body && bodyIdentical && body.mdx !== params.snapshot.mdx) {
+						await writeBody(client, qSchema, params.entryId, "working", {
+							metadata,
+							mdx: params.snapshot.mdx,
+							schemaVersion: body.schema_version,
+							contentHash: body.content_hash,
+							updatedAt: body.updated_at,
+							translation,
+						});
 					}
 
 					return params.publishImmediately

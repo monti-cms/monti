@@ -172,7 +172,6 @@ export function createPublishing(ctx: StoreContext) {
 		const isRepublish = Boolean(
 			published &&
 				published.content_hash === working.content_hash &&
-				published.mdx === working.mdx &&
 				published.schema_version === working.schema_version &&
 				published.updated_at.getTime() === working.updated_at.getTime() &&
 				currentSlug === targetSlug &&
