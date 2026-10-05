@@ -259,6 +259,7 @@ See the README of `@monti-cms/seo` for details.
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | stores, services, login checks, public media URLs (`resolvePublicMediaUrl`). It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
 | `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
+| `@monti-cms/core/syntax` (experimental) | `cms.config.ts`, syntax extension packages | `directiveSyntax()` and the `SyntaxExtension` interface ("Body syntax") |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding, DB connection, errors |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate` (the code behind the `monti` command) |
@@ -269,6 +270,65 @@ See the README of `@monti-cms/seo` for details.
 
 Inside the repository the sources (`src`) are used directly. For the distributable bundle, `pnpm build:packages` produces `dist` and `pnpm pack` packages it using
 `publishConfig.exports` (dist). `pnpm example:pack` puts the bundle into `examples/other-site/vendor`.
+
+## Body syntax
+
+Stored MDX is **CommonMark + GFM + standard MDX JSX**. Anything beyond that is an opt-in *syntax extension* that provides both halves of a notation: how it is read and how it is written.
+One meaning has one stored notation: other notations are still accepted when content is read and are converted when it is saved.
+
+What is written by default, with no extension:
+
+| Meaning | Stored as |
+| --- | --- |
+| line break | `<br />` (in a paragraph the next line follows it: `line<br />` + newline + `next`). `\` + newline, two trailing spaces and `<br />` are all read and written this way |
+| underline, superscript, subscript, translation notice | `<u>`, `<sup>`, `<sub>`, `<Untranslated>` |
+| text alignment | `<TextAlign align="center">` |
+| table with merged cells, column widths or a non-GFM header | `<Table>`, `<TableRow>`, `<TableCell colspan="2">` (other tables stay GFM) |
+| media image, or an image with size, alignment, caption, crop, rotation or decorative flag | `<Image mediaId="…" />` (a plain external image stays `![alt](src "title")`) |
+| file card | `<File mediaId="…" />` |
+| container and leaf blocks (callout, tabs, columns, site blocks) | `<Component attributes>` … `</Component>`; booleans are bare when true and omitted when false |
+| text decorations (tooltip, code link, text color, site text blocks) | `<Component attributes>text</Component>` |
+
+To add a notation, list extensions in `mdx.syntax`. The order is the precedence for writing.
+
+```ts
+import { directiveSyntax } from "@monti-cms/core/syntax";
+
+export default defineConfig({
+	// …
+	mdx: { syntax: [directiveSyntax()] },
+});
+```
+
+- `directiveSyntax()` reads and writes directives (`:::callout{…}`, `::image{…}`, `:u[text]`, `::::table`), the notation Monti used before standard MDX. Without it, `:::callout` is ordinary text.
+  `directiveSyntax({ write: false })` only reads directives and saves standard MDX, which migrates content a post at a time as it is saved. Line breaks are never written as `:br[]`.
+- The public renderer (`@monti-cms/core/render`) runs the same plugins as the editor's parser, so what the editor reads is what the site renders.
+
+**Upgrading a site that has directive content.** Before deploying this version, add `directiveSyntax({ write: false })` to `mdx.syntax` (or `directiveSyntax()` to keep writing directives).
+Without it, existing posts render directive text literally and fail validation (`{…}` in `:::callout{…}` is read as an expression). With `write: false`, the content hash (which hashes the parsed body) of a post does not change when it is saved in the standard notation.
+Remove the extension once no stored body uses directives.
+
+### Writing a syntax extension (experimental)
+
+`@monti-cms/core/syntax` is experimental and may change in a minor release.
+
+```ts
+interface SyntaxExtension {
+	name: string;
+	/** Parsing: remark plugins (or a function of the site's blocks that returns them). They also join the public render chain. */
+	remarkPlugins?: PluggableList | ((context: SyntaxContext) => PluggableList);
+	/** CmsNode → MDX. Keyed by node type (or the renderer name of a block); "*" matches the rest. Return undefined to defer to the next extension, then the standard serializer. */
+	fromDocument?: Record<string, (node: CmsNode, context: SerializeContext) => string | undefined>;
+	/** Marks this extension writes, keyed by mark type; the same defer rule. `inner` is the written content. */
+	fromMark?: Record<string, (mark: CmsMark, inner: string, context: SerializeContext) => string | undefined>;
+	/** Escapes body text so it is not read as this syntax (for example `\:name`). */
+	escapeText?: (text: string, context: SerializeContext) => string;
+}
+```
+
+`SyntaxContext` gives the site's blocks (`blocks.list`, `blocks.byName`, `blocks.byComponent`). `SerializeContext` adds `indent` (the indentation of the line the node starts on, which the writer must include),
+`serializeBlocks` and `serializeInlines` for children, `componentName`, `hasSpread`, `nodeAttributes` and `markAttributes` (the attribute list the standard notation uses), and `escapeAttribute`.
+Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. The directive extension (`packages/core/src/syntax/directive`) is the reference implementation.
 
 ## Body blocks
 
@@ -289,7 +349,7 @@ import { defineBlock } from "@monti-cms/core";
 
 blocks: [
 	defineBlock({
-		name: "notice", // stored syntax :::notice{level="warn"} … :::
+		name: "notice", // stored as <Notice level="warn"> … </Notice>
 		label: "Notice",
 		syntax: { kind: "container", directive: "notice" },
 		component: "Notice", // the public page renders it under this name from the site's MDX component table
@@ -316,9 +376,9 @@ blocks: [
 ],
 ```
 
-- The blocks you can add are directive blocks (`container`, `leaf`), text decorations (`text` + `editor.view: "mark"`) and code fence blocks (`fence`).
+- The blocks you can add are element blocks (`container`, `leaf`; stored as MDX JSX elements named by `component`, and also as directives with the directive extension, where `directive` is the directive name), text decorations (`text` + `editor.view: "mark"`) and code fence blocks (`fence`).
   A code fence block takes over every code fence of that language, so do not use a common code language name (such as `ts`).
-- A text decoration is stored as `:name[text]{attributes}`. Attributes are written in definition order; required attributes (`required`) are written even when empty, and the rest
+- A text decoration is stored as `<Component attributes>text</Component>` (`:name[text]{attributes}` with the directive extension). Attributes are written in definition order; required attributes (`required`) are written even when empty, and the rest
   only when they have a value. Nested decorations are stored in the order they were added (outermost first). The admin package builds the editor display from the definition, and the look, formatting
   toolbar, bubble and slash menu are registered in the admin UI by the extension ("Text marks" in the `@monti-cms/admin` README). An attribute with `codeAnchor: true`
   makes its value the code block line label (the `anchor` line effect), and the editor's body–code linking uses this decoration (only one per site).
@@ -327,7 +387,7 @@ blocks: [
 - Removing a block that was in use drops it from the stored syntax. Bodies that already used that block turn into plain text when saved again, so do not remove blocks that are in use.
 - The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockEditors` (attribute and body boxes) or
   `blockViews` (the whole view), and supply previews of code fence blocks with `fencePreviews`.
-- For code fence blocks on public pages, put `remarkFenceBlocksToMdx` from `@monti-cms/core/mdx` into the render chain (after `remarkDirectivesToMdx`) so they are rendered
+- For code fence blocks on public pages, put `remarkFenceBlocksToMdx` from `@monti-cms/core/mdx` into the render chain (after the syntax extensions' plugins) so they are rendered
   with `component`.
 - The translation structure check (`compareStructure`) only accepts changes in translation for `translatable` attributes and for `childValue` attributes that point at their values (e.g. the tab to open first).
   Put `translatable: true` on human-readable attributes (title, description, etc.).
@@ -415,6 +475,7 @@ To use another store or login, build and pass your own `DatabaseAdapter`, `Media
 | `site.previewPath` | Leading part of the draft preview URL (e.g. `/preview`). If unset, there is no preview button. |
 | `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
 | `admin.path` | Admin UI path (default `/admin`). Must match the app's admin route folder. `/` and anything under `/api` are not allowed. Links inside the UI, login redirects and plugin screen URLs follow it. |
+| `mdx.syntax` | Syntax extensions (experimental, `@monti-cms/core/syntax`) in writing-precedence order, e.g. `[directiveSyntax()]`. Stored MDX is standard (CommonMark + GFM + MDX JSX) without them ("Body syntax"). |
 | `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
