@@ -21,7 +21,7 @@ import type { AiCandidate } from "../definition";
 import { lazyTranslator } from "../i18n";
 import { aiPresets, KEBAB_PATTERN } from "../presets";
 import { presetMessages } from "../presets.messages";
-import { AI_ACTIONS, attachedTo } from "../registry";
+import { AI_ACTIONS, AI_SHARED, attachedTo } from "../registry";
 
 const presetText = lazyTranslator(presetMessages);
 
@@ -198,25 +198,12 @@ describe("AI action definition", () => {
 	});
 
 	it("every action in the example config follows the definition rules", () => {
-		expect(Object.keys(AI_ACTIONS)).toEqual([
-			"slug",
-			"summary",
-			"tags",
-			"category",
-			"seoTitle",
-			"seoDescription",
-			"imageAlt",
-			"imageCaption",
-			"mediaFilename",
-			"translate",
-			"codeFold",
-			"polish",
-			"draft",
-			"diagramDraft",
-			"diagramEdit",
-			"chartDraft",
-			"chartEdit",
-		]);
+		expect(() =>
+			validateAiConfig(
+				{ actions: AI_ACTIONS, shared: AI_SHARED } as Parameters<typeof validateAiConfig>[0],
+				cmsConfig.collections,
+			),
+		).not.toThrow();
 	});
 
 	it("block slot: attaches only to blocks the site uses, and the result is MDX", () => {
