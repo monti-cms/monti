@@ -1,28 +1,31 @@
 import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeBlockDocumentToCodeFence } from "../annotation/code-block/document-to-code-fence";
 import type { CodeBlockDocument } from "../annotation/code-block/types";
-import { ADDED_MARK_BLOCKS } from "../blocks/active";
 import type { BlockDefinition } from "../blocks/define";
-import { DIRECTIVE_BY_COMPONENT, DIRECTIVE_NAMES, type DirectiveDefinition } from "./directives";
+import type { SerializeContext, SerializeInlinesOptions, SyntaxExtension } from "../syntax/types";
 import { serializeFrontmatter } from "./frontmatter";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
-import {
-	formatTableWidths,
-	hasBalancedLabelBrackets,
-	hasNonGfmHeaderLayout,
-	tableHasMergedCells,
-	tableWidths,
-} from "./table-layout";
+import { configuredSyntax, syntaxBlocks } from "./syntax";
+import { formatTableWidths, hasNonGfmHeaderLayout, tableHasMergedCells, tableWidths } from "./table-layout";
 import type { CmsJsonValue, CmsMark, CmsNode } from "./types";
 
-const usesDirectiveTable = (node: CmsNode) =>
+/**
+ * The standard serializer: CommonMark + GFM + standard MDX JSX. Anything a syntax extension (`mdx.syntax`) writes differently is offered to the
+ * extensions first (`fromDocument`, `fromMark`, `escapeText`); what they defer on is written here.
+ */
+
+/** Extensions of the `serialize` call in progress (the serializer is synchronous, so a module-level value is safe). */
+let syntax: readonly SyntaxExtension[] = [];
+
+/** A table GFM cannot express (merged cells, column widths, a non-GFM header layout) is written as a JSX table. */
+const needsJsxTable = (node: CmsNode) =>
 	tableHasMergedCells(node) || hasNonGfmHeaderLayout(node) || formatTableWidths(tableWidths(node)) !== "";
 
 const isIdent = (value: string) => /^[A-Za-z_][\w]*$/.test(value);
 
 const escapeAttr = (value: string) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
-const escapeText = (value: string, inCode: boolean, inLabel = false) => {
+const escapeText = (value: string, inCode: boolean, inLabel = false, marks: readonly CmsMark[] = []) => {
 	if (inCode) return value;
 	const escaped = value
 		.replace(/\\/g, "\\\\")
@@ -32,9 +35,10 @@ const escapeText = (value: string, inCode: boolean, inLabel = false) => {
 		.replace(/\[/g, "\\[")
 		.replace(/\{/g, "\\{")
 		.replace(/</g, "\\<");
-	const unbroken = escapeDirectiveColon(escaped);
-	// A directive label closes with `]`, so `]` is escaped inside a label (if brackets are unbalanced, the label breaks).
-	return inLabel ? unbroken.replace(/\]/g, "\\]") : unbroken;
+	const context = serializeContext("", inLabel, marks);
+	const extended = syntax.reduce((text, extension) => extension.escapeText?.(text, context) ?? text, escaped);
+	// A label closes with `]` (link text, alt text, a label an extension writes), so `]` is escaped inside one (if brackets are unbalanced, the label breaks).
+	return inLabel ? extended.replace(/\]/g, "\\]") : extended;
 };
 
 /** Escapes `&` that would be read back as a character reference (`&amp;` in a URL or title is literal text, not `&`). */
@@ -69,19 +73,6 @@ const formatLinkTitle = (title: string): string =>
 			.replace(/\r?\n([ \t]*\r?\n)+/g, "\n"),
 	)}"`;
 
-const DIRECTIVE_COLON = /(?<!\\):(?=[A-Za-z0-9_\-가-힣:])/g; // cms-allow-korean: Hangul in a name pattern, not UI text
-const DIRECTIVE_RUN = /^[A-Za-z0-9_\-가-힣:]+/; // cms-allow-korean: Hangul in a name pattern, not UI text
-
-/**
- * Escapes a `:` followed by a registered directive name as `\:`.
- * Left as is, it would be read as a directive on re-parse (`:br `, `:u[` etc.). Unregistered names (`:free를`) and
- * colons in times and URLs (`12:30`, `https://`) are left alone. An already escaped `\:` is kept.
- */
-const escapeDirectiveColon = (value: string): string =>
-	value.replace(DIRECTIVE_COLON, (_match: string, offset: number, whole: string) => {
-		const run = DIRECTIVE_RUN.exec(whole.slice(offset + 1))?.[0] ?? "";
-		return DIRECTIVE_NAMES.has(run) ? "\\:" : ":";
-	});
 const fenceTicks = (value: string) => {
 	const runs = value.match(/`+/g)?.map((run) => run.length) ?? [];
 	return Math.max(3, ...runs.map((size) => size + 1), 3);
@@ -162,105 +153,34 @@ const jsxName = (node: CmsNode): string => {
 	return node.type;
 };
 
-/** Added text decoration (block extension). The mark name is the block name. */
-const ADDED_MARKS: ReadonlyMap<string, BlockDefinition> = new Map(
-	ADDED_MARK_BLOCKS.map((block) => [block.name, block]),
-);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Text inside a directive label (`]{…}`) that carries attributes. Escapes the character that closes the label. */
-const LABEL_MARKS = new Set(ADDED_MARKS.keys());
-
-/**
- * Attributes of an added text decoration (`{name="value" …}`). Writes the definition's attributes in definition order. Required attributes (`required`) are written even if empty,
- * and the others only when they have a value. A boolean writes only the name when true. If there is no attribute at all, only `]` is written.
- */
-const markAttrs = (block: BlockDefinition, mark: CmsMark): string => {
-	const parts = Object.entries(block.attributes).flatMap(([name, attribute]) => {
-		const value = mark.attrs?.[name];
-		if (attribute.type === "boolean") return value === true || value === "true" ? [name] : [];
-		if (typeof value === "string" && value !== "") return [`${name}="${escapeAttr(value)}"`];
-		return attribute.required ? [`${name}="${escapeAttr(value == null ? "" : String(value))}"`] : [];
-	});
-	return parts.length > 0 ? `{${parts.join(" ")}}` : "";
-};
+/** A JSX spread attribute cannot be expressed in another notation → it stays raw JSX (no silent loss). */
+const hasSpread = (node: CmsNode): boolean =>
+	Array.isArray(node.attrs?.attributes) && node.attrs.attributes.some((item) => isRecord(item) && Boolean(item.spread));
 
 const markKey = (mark: CmsMark) => `${mark.type}:${JSON.stringify(mark.attrs ?? null)}`;
 
 const sortedMarks = (marks: CmsMark[] | undefined): CmsMark[] => sortMarks(marks ?? []);
 
-const openMark = (mark: CmsMark): string => {
-	const added = ADDED_MARKS.get(mark.type);
-	if (added && added.syntax.kind === "text") return `:${added.syntax.directive}[`;
-	switch (mark.type) {
-		case "untranslated":
-			return ":untranslated[";
-		case "underline":
-			return ":u[";
-		case "superscript":
-			return ":sup[";
-		case "subscript":
-			return ":sub[";
-		case "bold":
-			return "**";
-		case "italic":
-			return "*";
-		case "strike":
-			return "~~";
-		case "code":
-			return "`";
-		case "link":
-			return "[";
-		default:
-			return "";
-	}
-};
-
-const closeMark = (mark: CmsMark): string => {
-	const added = ADDED_MARKS.get(mark.type);
-	if (added) return `]${markAttrs(added, mark)}`;
-	switch (mark.type) {
-		case "underline":
-		case "superscript":
-		case "subscript":
-		case "untranslated":
-			return "]";
-		case "bold":
-			return "**";
-		case "italic":
-			return "*";
-		case "strike":
-			return "~~";
-		case "code":
-			return "`";
-		case "link": {
-			const href = String(mark.attrs?.href ?? "");
-			const title = mark.attrs?.title;
-			const destination = formatLinkDestination(href);
-			return typeof title === "string" && title.length > 0
-				? `](${destination} ${formatLinkTitle(title)})`
-				: `](${destination})`;
-		}
-		default:
-			return "";
-	}
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-	typeof value === "object" && value !== null && !Array.isArray(value);
-
-/** A JSX spread attribute cannot be expressed as a directive → it stays as JSX (no silent loss). */
-const hasSpread = (node: CmsNode): boolean =>
-	Array.isArray(node.attrs?.attributes) && node.attrs.attributes.some((item) => isRecord(item) && Boolean(item.spread));
-
-/** Decides whether a node is stored as a directive. The name is the component name (`attrs.name` or `type`). */
-const directiveFor = (node: CmsNode): DirectiveDefinition | undefined =>
-	hasSpread(node) ? undefined : DIRECTIVE_BY_COMPONENT.get(jsxName(node));
+/**
+ * Attributes of an added text decoration (`name="value"`). Writes the definition's attributes in definition order. Required attributes (`required`) are written even if empty,
+ * and the others only when they have a value. A boolean writes only the name when true.
+ */
+const markAttributeList = (block: BlockDefinition, mark: CmsMark): string[] =>
+	Object.entries(block.attributes).flatMap(([name, attribute]) => {
+		const value = mark.attrs?.[name];
+		if (attribute.type === "boolean") return value === true || value === "true" ? [name] : [];
+		if (typeof value === "string" && value !== "") return [`${name}="${escapeAttr(value)}"`];
+		return attribute.required ? [`${name}="${escapeAttr(value == null ? "" : String(value))}"`] : [];
+	});
 
 /**
- * Directive attribute string (`{name="value"}`). Writes attributes in the definition in table order, and does not drop attributes missing from the definition by appending them.
+ * Attributes of a block node (`name="value"`). Writes attributes in the definition's order, and does not drop attributes missing from the definition by appending them.
  * A boolean writes only the name when true and is omitted when false.
  */
-const serializeDirectiveAttrs = (node: CmsNode, definition: DirectiveDefinition): string => {
+const nodeAttributeList = (node: CmsNode, block: BlockDefinition): string[] => {
 	const attrs = node.attrs ?? {};
 	const parts: string[] = [];
 	const done = new Set<string>();
@@ -268,7 +188,7 @@ const serializeDirectiveAttrs = (node: CmsNode, definition: DirectiveDefinition)
 	const print = (name: string, value: CmsJsonValue | undefined) => {
 		if (done.has(name)) return;
 		done.add(name);
-		if (definition.attributes[name] === "boolean") {
+		if (block.attributes[name]?.type === "boolean") {
 			// Missing attributes and false are not written. The name is written only when true.
 			if (value === undefined || value === null || value === false || value === "false") return;
 			parts.push(name);
@@ -287,43 +207,136 @@ const serializeDirectiveAttrs = (node: CmsNode, definition: DirectiveDefinition)
 		parts.push(`${name}="${escapeAttr(String(value))}"`);
 	};
 
-	for (const name of Object.keys(definition.attributes)) print(name, attrs[name]);
+	for (const name of Object.keys(block.attributes)) print(name, attrs[name]);
 	for (const [name, value] of Object.entries(attrs)) {
 		if (reservedAttrKeys.has(name)) continue;
 		print(name, value);
 	}
 
-	return parts.length > 0 ? `{${parts.join(" ")}}` : "";
+	return parts;
 };
 
-/** Number of container levels wrapped. The colon count is `3 + levels` — the same formula as the converter. */
-const containerDepth = (node: CmsNode): number => {
-	let max = 0;
-	for (const child of node.content ?? []) {
-		// A merged table uses 3 colons (row) inside 4 colons (table). The outer container needs at least 5 colons.
-		if (child.type === "table" && usesDirectiveTable(child)) max = Math.max(max, 2);
-		const definition = directiveFor(child);
-		if (definition?.kind === "container") max = Math.max(max, 1 + containerDepth(child));
-		max = Math.max(max, containerDepth(child));
+const attrString = (parts: string[]) => (parts.length > 0 ? ` ${parts.join(" ")}` : "");
+
+const serializeContext = (indent = "", label = false, marks: readonly CmsMark[] = []): SerializeContext => ({
+	blocks: syntaxBlocks,
+	indent,
+	label,
+	marks,
+	serializeBlocks: (nodes, at = "") => serializeBlocks([...nodes], at),
+	serializeInlines: (nodes: readonly CmsNode[], options: SerializeInlinesOptions = {}) =>
+		serializeInlines([...nodes], false, options.label ?? false),
+	componentName: jsxName,
+	hasSpread,
+	nodeAttributes: nodeAttributeList,
+	markAttributes: (mark, block) => markAttributeList(block, mark),
+	escapeAttribute: escapeAttr,
+});
+
+/** Offers a node to the extensions in precedence order. The first writer that does not defer wins. */
+const fromExtensions = (node: CmsNode, indent: string): string | undefined => {
+	if (syntax.length === 0) return undefined;
+	// A Markdown image is not offered: only an image that needs more than Markdown can say.
+	if (node.type === "image" && !isRichImage(node)) return undefined;
+	const context = serializeContext(indent);
+	for (const extension of syntax) {
+		const writers = extension.fromDocument;
+		if (!writers) continue;
+		const specific = Object.hasOwn(writers, node.type) ? writers[node.type] : undefined;
+		const written =
+			specific?.(node, context) ?? (Object.hasOwn(writers, "*") ? writers["*"]?.(node, context) : undefined);
+		if (written !== undefined) return written;
 	}
-	return max;
+	return undefined;
 };
 
-const serializeDirective = (node: CmsNode, definition: DirectiveDefinition, indent: string): string => {
-	const attrs = serializeDirectiveAttrs(node, definition);
+/** The block definition a node is written from as standard JSX (a container, leaf or text block). The line break is a plain `<br />`. */
+const standardBlock = (node: CmsNode): BlockDefinition | undefined => {
+	if (hasSpread(node)) return undefined;
+	const block = syntaxBlocks.byComponent(jsxName(node));
+	if (!block || block.component === "br") return undefined;
+	const kind = block.syntax.kind;
+	return kind === "container" || kind === "leaf" || kind === "text" ? block : undefined;
+};
 
-	if (definition.kind === "leaf") return `${indent}::${definition.name}${attrs}`;
-
-	if (definition.kind === "text") {
-		const label = serializeInlines(node.content ?? [], false, true);
-		// `:br` with an empty label is canonical. If the label has content, it is preserved, not dropped.
-		return `${indent}:${definition.name}[${definition.name === "br" && label.length === 0 ? "" : label}]${attrs}`;
+/** A block as standard JSX: `<Name attrs>…</Name>` (containers hold blocks, text blocks hold inlines) or `<Name attrs />`. */
+const serializeBlockJsx = (node: CmsNode, block: BlockDefinition, indent: string): string => {
+	const name = block.component;
+	const attrs = attrString(nodeAttributeList(node, block));
+	const content = node.content ?? [];
+	if (block.syntax.kind === "text") {
+		const inner = serializeInlines(content);
+		return inner ? `${indent}<${name}${attrs}>${inner}</${name}>` : `${indent}<${name}${attrs} />`;
 	}
+	const inner = block.syntax.kind === "container" ? serializeBlocks(content, "") : "";
+	if (!inner) return `${indent}<${name}${attrs} />`;
+	return `${indent}<${name}${attrs}>\n\n${inner}\n\n${indent}</${name}>`;
+};
 
-	const inner = serializeBlocks(node.content ?? [], "");
-	const fence = ":".repeat(3 + containerDepth(node));
-	if (inner.length === 0) return `${indent}${fence}${definition.name}${attrs}\n${indent}${fence}`;
-	return `${indent}${fence}${definition.name}${attrs}\n${inner}\n${indent}${fence}`;
+/**
+ * CommonMark emphasis delimiters do not open or close if the first/last inner character is whitespace or punctuation
+ * (`**정적(Static)**과` is not emphasis; the asterisks stay as text). Only in that case is JSX written.
+ */
+const EMPHASIS_UNSAFE_EDGE = /^[\s\p{P}\p{S}]|[\s\p{P}\p{S}]$/u;
+
+const EMPHASIS_DELIMITERS: Record<string, { markdown: string; tag: string }> = {
+	bold: { markdown: "**", tag: "strong" },
+	italic: { markdown: "*", tag: "em" },
+	strike: { markdown: "~~", tag: "del" },
+};
+
+const markTag = (tag: string, attrs: string[], inner: string) => `<${tag}${attrString(attrs)}>${inner}</${tag}>`;
+
+/** A mark in the standard notation: Markdown where it holds, otherwise JSX. */
+const standardMark = (mark: CmsMark, inner: string): string => {
+	const emphasis = EMPHASIS_DELIMITERS[mark.type];
+	if (emphasis) {
+		if (inner.length === 0 || EMPHASIS_UNSAFE_EDGE.test(inner)) return markTag(emphasis.tag, [], inner);
+		return `${emphasis.markdown}${inner}${emphasis.markdown}`;
+	}
+	switch (mark.type) {
+		case "underline":
+			return markTag("u", [], inner);
+		case "superscript":
+			return markTag("sup", [], inner);
+		case "subscript":
+			return markTag("sub", [], inner);
+		case "untranslated":
+			return markTag("Untranslated", [], inner);
+		case "code":
+			return `\`${inner}\``;
+		case "link": {
+			const href = String(mark.attrs?.href ?? "");
+			const title = mark.attrs?.title;
+			const destination = formatLinkDestination(href);
+			return typeof title === "string" && title.length > 0
+				? `[${inner}](${destination} ${formatLinkTitle(title)})`
+				: `[${inner}](${destination})`;
+		}
+		default: {
+			// An added text decoration (block extension). The mark name is the block name.
+			const block = syntaxBlocks.byName(mark.type);
+			if (block?.syntax.kind === "text") return markTag(block.component, markAttributeList(block, mark), inner);
+			return inner;
+		}
+	}
+};
+
+/** Writes a mark around its already written content: the extensions first, then the standard notation. */
+const writeMark = (mark: CmsMark, inner: string): string => {
+	if (syntax.length > 0) {
+		const context = serializeContext();
+		for (const extension of syntax) {
+			const writers = extension.fromMark;
+			if (!writers) continue;
+			const specific = Object.hasOwn(writers, mark.type) ? writers[mark.type] : undefined;
+			const written =
+				specific?.(mark, inner, context) ??
+				(Object.hasOwn(writers, "*") ? writers["*"]?.(mark, inner, context) : undefined);
+			if (written !== undefined) return written;
+		}
+	}
+	return standardMark(mark, inner);
 };
 
 /** A footnote label cannot hold whitespace, brackets, a backslash or a caret, so those are replaced when a document carries one. */
@@ -338,91 +351,93 @@ const serializeFootnoteDefinition = (node: CmsNode, indent: string): string => {
 	return [`${head} ${body[0]}`, ...body.slice(1)].map((line) => (line ? indent + line : line)).join("\n");
 };
 
-const serializeImage = (node: CmsNode): string => {
-	const mediaId = node.attrs?.mediaId;
-	const src = node.attrs?.src ? String(node.attrs.src) : "";
-	const alt = node.attrs?.alt ? String(node.attrs.alt) : "";
-	const width = node.attrs?.width ? String(node.attrs.width) : undefined;
-	const align = node.attrs?.align ? String(node.attrs.align) : undefined;
-	const caption = node.attrs?.caption ? String(node.attrs.caption) : undefined;
+/** An image with a media reference, size, alignment, caption, crop, rotation or decorative flag cannot be a Markdown image. */
+const isRichImage = (node: CmsNode): boolean => {
 	const crop = node.attrs?.crop ? String(node.attrs.crop) : undefined;
-	const hasCrop = crop && crop !== "0,0,100,100";
 	const rotate = node.attrs?.rotate ? String(node.attrs.rotate) : undefined;
-	const hasRotate = rotate && rotate !== "0";
+	return Boolean(
+		node.attrs?.mediaId ||
+			node.attrs?.width ||
+			node.attrs?.align ||
+			node.attrs?.caption ||
+			node.attrs?.decorative === true ||
+			node.attrs?.decorative === "true" ||
+			(crop && crop !== "0,0,100,100") ||
+			(rotate && rotate !== "0"),
+	);
+};
 
-	const decorative = node.attrs?.decorative === true || node.attrs?.decorative === "true";
-
-	// If there is a media reference, size, alignment, caption or decorative flag, it is stored as an `image` leaf; otherwise as a Markdown image.
-	if (mediaId || width || align || caption || decorative || hasCrop || hasRotate) {
-		const definition = DIRECTIVE_BY_COMPONENT.get("Image");
-		if (definition) return `::image${serializeDirectiveAttrs(node, definition)}`;
+const serializeImage = (node: CmsNode, indent = ""): string => {
+	// A rich image is stored as an `Image` element (or whatever an extension writes); otherwise as a Markdown image.
+	if (isRichImage(node)) {
+		const written = fromExtensions(node, indent);
+		if (written !== undefined) return written;
+		const block = syntaxBlocks.byComponent("Image");
+		if (block) return `${indent}<Image${attrString(nodeAttributeList(node, block))} />`;
 	}
 
+	const src = node.attrs?.src ? String(node.attrs.src) : "";
+	const alt = node.attrs?.alt ? String(node.attrs.alt) : "";
 	const title = node.attrs?.title;
 	// The alt text sits where link text does, so it is escaped as a label (`]` closes it, `*` and `[` would be read as markup).
 	const label = escapeReferences(escapeText(alt, false, true));
 	const destination = formatLinkDestination(src);
-	if (typeof title === "string" && title.length > 0) return `![${label}](${destination} ${formatLinkTitle(title)})`;
-	return `![${label}](${destination})`;
+	if (typeof title === "string" && title.length > 0)
+		return `${indent}![${label}](${destination} ${formatLinkTitle(title)})`;
+	return `${indent}![${label}](${destination})`;
 };
 
-const encodeLeadingSpaces = (value: string, inCode: boolean, inLabel = false): string => {
+const encodeLeadingSpaces = (
+	value: string,
+	inCode: boolean,
+	inLabel = false,
+	marks: readonly CmsMark[] = [],
+): string => {
 	const match = /^[ \t]+/.exec(value);
-	if (!match) return escapeText(value, inCode, inLabel);
-	return `${"&#x20;".repeat(match[0].replace(/\t/g, " ").length)}${escapeText(value.slice(match[0].length), inCode, inLabel)}`;
+	if (!match) return escapeText(value, inCode, inLabel, marks);
+	return `${"&#x20;".repeat(match[0].replace(/\t/g, " ").length)}${escapeText(value.slice(match[0].length), inCode, inLabel, marks)}`;
 };
-
-const EMPHASIS_MARKS = new Set(["bold", "italic", "strike"]);
 
 /**
- * CommonMark emphasis delimiters do not open or close if the first/last inner character is whitespace or punctuation
- * (`**정적(Static)**과` is not emphasis; the asterisks stay as text). Only in that case is JSX written.
+ * Escapes what would make the start of a paragraph line a different block. If a line starts with `1. `, it is read as an ordered list on re-parse, so the list marker is escaped.
+ * However, the backslash goes before the period, not the digit (`1\. `). `\1. ` escapes the digit and stays literal.
  */
-const EMPHASIS_UNSAFE_EDGE = /^[\s\p{P}\p{S}]|[\s\p{P}\p{S}]$/u;
+const escapeLineStart = (line: string): string =>
+	line
+		.replace(/^(\s*)(\d+)\.(\s)/, "$1$2\\.$3")
+		.replace(/^(\s*)([>#]|-{1,3}\s|\*{1,3}\s|```)/, "$1\\$2")
+		// A line of only `-` or `=` under text would turn the paragraph into a heading (or the line into a thematic break).
+		.replace(/^(\s*)([-=])(?=[-=]*\s*$)/, "$1\\$2");
 
-const jsxOpenMark = (mark: CmsMark): string => {
-	switch (mark.type) {
-		case "bold":
-			return "<strong>";
-		case "italic":
-			return "<em>";
-		case "strike":
-			return "<del>";
-		default:
-			return openMark(mark);
-	}
-};
+const BREAK = "<br />";
 
-const jsxCloseMark = (mark: CmsMark): string => {
-	switch (mark.type) {
-		case "bold":
-			return "</strong>";
-		case "italic":
-			return "</em>";
-		case "strike":
-			return "</del>";
-		default:
-			return closeMark(mark);
-	}
-};
+/**
+ * A line break: `hardBreak` (read from `\` + newline or trailing spaces) or an empty `<br />` element. Both are written the same way.
+ * A `br` element that holds content is not a break, so it is written as it was read and nothing is lost.
+ */
+const isLineBreak = (node: CmsNode): boolean =>
+	node.type === "hardBreak" ||
+	(node.type === "mdxJsx" && node.attrs?.name === "br" && !hasSpread(node) && (node.content?.length ?? 0) === 0);
 
-const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false): string => {
+/**
+ * Writes inline nodes. `asParagraph` is set for the text of a paragraph: block markers at the start of a line are escaped, and a line break is followed by a line ending
+ * (`line<br />` + newline + `next`) so the source reads well; `lineIndent` is the indentation of those following lines. Everywhere else (headings, table cells, labels)
+ * a line break stays inline.
+ */
+const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false, lineIndent = ""): string => {
 	const out: string[] = [];
-	// For each open mark, remember the position of the opening delimiter's piece and the position of the piece where the content starts.
-	// On closing, look at the characters around the content to decide whether Markdown emphasis holds.
-	const active: { mark: CmsMark; openIndex: number; contentIndex: number }[] = [];
+	// Lines finished by a line break (a paragraph only). Marks never span a line break (they are closed before it), so `out` can start over.
+	const lines: string[] = [];
+	// For each open mark, remember the position of the piece where its content starts. On closing, the content is cut out and written wrapped by the mark.
+	const active: { mark: CmsMark; contentIndex: number }[] = [];
 	let atLineStart = asParagraph;
+	// The current line has content before a line break, so a line ending after the break is safe (a line of only `<br />` would be read as a block).
+	let contentOnLine = false;
+	let newlinePending = false;
 
-	const closeEntry = (entry: { mark: CmsMark; openIndex: number; contentIndex: number }) => {
-		if (EMPHASIS_MARKS.has(entry.mark.type)) {
-			const content = out.slice(entry.contentIndex).join("");
-			if (content.length === 0 || EMPHASIS_UNSAFE_EDGE.test(content)) {
-				out[entry.openIndex] = jsxOpenMark(entry.mark);
-				out.push(jsxCloseMark(entry.mark));
-				return;
-			}
-		}
-		out.push(closeMark(entry.mark));
+	const closeEntry = (entry: { mark: CmsMark; contentIndex: number }) => {
+		const inner = out.splice(entry.contentIndex).join("");
+		out.push(writeMark(entry.mark, inner));
 	};
 
 	const closeTo = (index: number) => {
@@ -432,46 +447,70 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 		}
 	};
 
+	/** Starts a new line after a line break, if the node about to be written is plain text. */
+	const startLine = (node: CmsNode) => {
+		if (newlinePending && node.type === "text") {
+			lines.push(out.splice(0).join(""));
+			atLineStart = true;
+			contentOnLine = false;
+		}
+		newlinePending = false;
+	};
+
 	for (const node of nodes) {
-		if (node.type === "hardBreak") {
-			// A hard line break is written only as `:br[]`. `\` + newline creates a raw newline, and `remark-breaks` would
-			// emit an unintended `<br>`, so it is not used.
+		if (isLineBreak(node)) {
+			// A line break is always `<br />`: `\` + newline and two trailing spaces are read but not written.
 			closeTo(0);
-			out.push(":br[]");
+			out.push(BREAK);
+			newlinePending = asParagraph && (newlinePending || contentOnLine);
 			atLineStart = false;
 			continue;
 		}
+		startLine(node);
 		if (node.type === "image") {
 			closeTo(0);
 			out.push(serializeImage(node));
+			contentOnLine = true;
 			continue;
 		}
 		if (node.type === "footnoteReference") {
 			closeTo(0);
 			out.push(`[^${footnoteLabel(node)}]`);
 			atLineStart = false;
-			continue;
-		}
-		const directive = directiveFor(node);
-		if (directive) {
-			closeTo(0);
-			out.push(serializeDirective(node, directive, ""));
-			continue;
-		}
-		if (node.type === "mdxJsx" || BLOCK_JSX_NAMES.has(node.type) || INLINE_JSX_MARKS[node.type]) {
-			closeTo(0);
-			out.push(serializeJsx(node));
-			continue;
-		}
-		if (node.type === "mdxExpression") {
-			closeTo(0);
-			out.push(`{${String(node.attrs?.value ?? "")}}`);
+			contentOnLine = true;
 			continue;
 		}
 		if (node.type !== "text") {
+			const written = fromExtensions(node, "");
+			if (written !== undefined) {
+				closeTo(0);
+				out.push(written);
+				contentOnLine = true;
+				continue;
+			}
+			const block = standardBlock(node);
+			if (block) {
+				closeTo(0);
+				out.push(serializeBlockJsx(node, block, ""));
+				contentOnLine = true;
+				continue;
+			}
+			if (node.type === "mdxJsx" || BLOCK_JSX_NAMES.has(node.type) || INLINE_JSX_MARKS[node.type]) {
+				closeTo(0);
+				out.push(serializeJsx(node));
+				contentOnLine = true;
+				continue;
+			}
+			if (node.type === "mdxExpression") {
+				closeTo(0);
+				out.push(`{${String(node.attrs?.value ?? "")}}`);
+				contentOnLine = true;
+				continue;
+			}
 			closeTo(0);
 			if (node.content) out.push(serializeInlines(node.content, false, inLabel));
 			else if (node.text) out.push(escapeText(node.text, false, inLabel));
+			contentOnLine = true;
 			continue;
 		}
 
@@ -487,30 +526,25 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 		closeTo(same);
 		for (let index = same; index < wanted.length; index += 1) {
 			const mark = wanted[index];
-			if (!mark) continue;
-			const openIndex = out.length;
-			out.push(openMark(mark));
-			active.push({ mark, openIndex, contentIndex: openIndex + 1 });
+			if (mark) active.push({ mark, contentIndex: out.length });
 		}
 		const inCode = wanted.some((mark) => mark.type === "code");
 		const text = node.text ?? "";
-		// Link text closes with `]`, like a directive label, so a `]` inside it is escaped too.
-		const escapeClosingBracket = inLabel || wanted.some((mark) => LABEL_MARKS.has(mark.type) || mark.type === "link");
+		// Link text closes with `]`, like a label, so a `]` inside it is escaped too.
+		const escapeClosingBracket = inLabel || wanted.some((mark) => mark.type === "link");
 		out.push(
 			atLineStart && !inCode
-				? encodeLeadingSpaces(text, inCode, escapeClosingBracket)
-				: escapeText(text, inCode, escapeClosingBracket),
+				? encodeLeadingSpaces(text, inCode, escapeClosingBracket, wanted)
+				: escapeText(text, inCode, escapeClosingBracket, wanted),
 		);
 		atLineStart = false;
+		contentOnLine = true;
 	}
 	closeTo(0);
 
-	const result = out.join("");
-	if (!asParagraph) return result;
-	// If a paragraph starts with `1. `, it is read as an ordered list on re-parse, so the list marker is escaped.
-	// However, the backslash goes before the period, not the digit (`1\. `). `\1. ` escapes the digit and stays literal.
-	const withEscapedListMarker = result.replace(/^(\s*)(\d+)\.(\s)/, "$1$2\\.$3");
-	return withEscapedListMarker.replace(/^(\s*)([>#]|-{1,3}\s|\*{1,3}\s|```)/, "$1\\$2");
+	const last = out.join("");
+	if (!asParagraph) return last;
+	return [...lines, last].map((line, index) => (index === 0 ? "" : `\n${lineIndent}`) + escapeLineStart(line)).join("");
 };
 
 const serializeCodeBlock = (node: CmsNode, indent: string): string => {
@@ -565,13 +599,14 @@ const serializeListItem = (item: CmsNode, marker: string, indent: string): strin
 	const [first, ...rest] = blocks;
 	let head = `${indent}${marker}`;
 	if (first?.type === "paragraph") {
-		head += serializeInlines(first.content ?? [], true);
+		head += serializeInlines(first.content ?? [], true, false, innerIndent);
 	} else if (first) {
 		head += `\n${serializeBlock(first, innerIndent)}`;
 	}
 
 	const extra = rest.map((block) => {
-		if (block.type === "paragraph") return `${innerIndent}${serializeInlines(block.content ?? [], true)}`;
+		if (block.type === "paragraph")
+			return `${innerIndent}${serializeInlines(block.content ?? [], true, false, innerIndent)}`;
 		return serializeBlock(block, innerIndent);
 	});
 	// If a listItem has several blocks (loose list), they must be separated by blank lines to keep paragraph boundaries.
@@ -599,9 +634,9 @@ const tableCellAttrs = (cell: CmsNode): string[] => {
 	const attrs: string[] = [];
 	if (cell.attrs?.header === true || cell.attrs?.header === "true") attrs.push("header");
 	const colspan = Number(cell.attrs?.colspan ?? 1);
-	if (colspan > 1) attrs.push(`colspan=${colspan}`);
+	if (colspan > 1) attrs.push(`colspan="${colspan}"`);
 	const rowspan = Number(cell.attrs?.rowspan ?? 1);
-	if (rowspan > 1) attrs.push(`rowspan=${rowspan}`);
+	if (rowspan > 1) attrs.push(`rowspan="${rowspan}"`);
 	return attrs;
 };
 
@@ -621,61 +656,42 @@ const tableAlign = (node: CmsNode): string => {
 	return value.replace(/,/g, "").length > 0 ? value : "";
 };
 
-// If directive label brackets are unbalanced, the parser loses cells, so it is stored as a JSX table with the same meaning.
-const serializeJsxTable = (node: CmsNode, rows: string[][]): string => {
+/** A table GFM cannot express (merged cells, column widths, a non-GFM header layout) as JSX elements. */
+const serializeJsxTable = (node: CmsNode): string => {
 	const attrs = tableAttrs(node).map(([name, value]) => ` ${name}="${escapeAttr(value)}"`);
 	const lines = [`<Table${attrs.join("")}>`];
-	(node.content ?? []).forEach((row, rowIndex) => {
+	for (const row of node.content ?? []) {
 		lines.push("<TableRow>");
-		(row.content ?? []).forEach((cell, cellIndex) => {
-			const attrs = tableCellAttrs(cell).map((attr) => attr.replace(/=(\d+)$/, '="$1"'));
+		for (const cell of row.content ?? []) {
+			const cellAttrs = tableCellAttrs(cell);
 			lines.push(
-				`<TableCell${attrs.length ? ` ${attrs.join(" ")}` : ""}>${rows[rowIndex]?.[cellIndex] ?? ""}</TableCell>`,
+				`<TableCell${cellAttrs.length ? ` ${cellAttrs.join(" ")}` : ""}>${serializeInlines(cell.content ?? [])}</TableCell>`,
 			);
-		});
+		}
 		lines.push("</TableRow>");
-	});
+	}
 	lines.push("</Table>");
 	return lines.join("\n");
 };
 
-const serializeDirectiveTable = (node: CmsNode): string => {
-	const rows = node.content ?? [];
-	const labels = rows.map((row) =>
-		(row.content ?? []).map((cell) => serializeInlines(cell.content ?? [], false, true)),
-	);
-	if (labels.some((row) => row.some((label) => !hasBalancedLabelBrackets(label)))) {
-		return serializeJsxTable(node, labels);
-	}
-	const attrs = tableAttrs(node).map(([name, value]) => `${name}="${value}"`);
-	const lines: string[] = [`::::table${attrs.length ? `{${attrs.join(" ")}}` : ""}`];
-	rows.forEach((row, rowIndex) => {
-		lines.push(":::row");
-		(row.content ?? []).forEach((cell, cellIndex) => {
-			const cellAttrs = tableCellAttrs(cell);
-			const attrStr = cellAttrs.length > 0 ? `{${cellAttrs.join(" ")}}` : "";
-			lines.push(`::cell[${labels[rowIndex]?.[cellIndex] ?? ""}]${attrStr}`);
-		});
-		lines.push(":::");
-	});
-	lines.push("::::");
-	return lines.join("\n");
-};
+const serializeTable = (node: CmsNode): string =>
+	needsJsxTable(node) ? serializeJsxTable(node) : serializeGfmTable(node);
 
-const serializeTable = (node: CmsNode): string => {
-	if (usesDirectiveTable(node)) {
-		return serializeDirectiveTable(node);
-	}
-	return serializeGfmTable(node);
-};
+const indentLines = (text: string, indent: string): string =>
+	text
+		.split("\n")
+		.map((line) => indent + line)
+		.join("\n");
 
 const serializeBlock = (node: CmsNode, indent = ""): string => {
-	const definition = directiveFor(node);
-	if (definition) return serializeDirective(node, definition, indent);
+	const extended = fromExtensions(node, indent);
+	if (extended !== undefined) return extended;
+	const block = standardBlock(node);
+	if (block) return serializeBlockJsx(node, block, indent);
 
 	switch (node.type) {
 		case "paragraph":
-			return indent + serializeInlines(node.content ?? [], true);
+			return indent + serializeInlines(node.content ?? [], true, false, indent);
 		case "heading": {
 			const level = typeof node.attrs?.level === "number" ? node.attrs.level : 2;
 			return `${indent}${"#".repeat(level)} ${serializeInlines(node.content ?? [])}`;
@@ -689,10 +705,7 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 		case "orderedList":
 			return serializeList(node, indent, true);
 		case "table":
-			return serializeTable(node)
-				.split("\n")
-				.map((line) => indent + line)
-				.join("\n");
+			return indentLines(serializeTable(node), indent);
 		case "blockquote":
 			return serializeBlocks(node.content ?? [], "")
 				.split("\n")
@@ -703,7 +716,7 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 		case "horizontalRule":
 			return `${indent}---`;
 		case "image":
-			return indent + serializeImage(node);
+			return serializeImage(node, indent);
 		case "html":
 			// Multi-line source (turned-back unregistered directive etc.) must be indented on every line so it is read back as the same block inside a list.
 			return String(node.attrs?.value ?? "")
@@ -731,12 +744,22 @@ const serializeBlocks = (nodes: CmsNode[], indent = ""): string =>
 		.filter((block) => block.length > 0)
 		.join("\n\n");
 
-export const serialize = (doc: unknown): string => {
-	const node = doc as CmsNode;
-	const body = serializeBlocks(node.type === "doc" ? (node.content ?? []) : [node]).trimEnd();
-	const frontmatter = node.attrs?.frontmatter;
-	if (frontmatter && typeof frontmatter === "object" && !Array.isArray(frontmatter)) {
-		return `${serializeFrontmatter(frontmatter)}\n${body}\n`;
+/**
+ * Writes a document as MDX. The standard notation is CommonMark + GFM + standard MDX JSX; `extensions` (the site's `mdx.syntax` unless given)
+ * write their own notation first, in precedence order, wherever they do not defer.
+ */
+export const serialize = (doc: unknown, extensions: readonly SyntaxExtension[] = configuredSyntax()): string => {
+	const previous = syntax;
+	syntax = extensions;
+	try {
+		const node = doc as CmsNode;
+		const body = serializeBlocks(node.type === "doc" ? (node.content ?? []) : [node]).trimEnd();
+		const frontmatter = node.attrs?.frontmatter;
+		if (frontmatter && typeof frontmatter === "object" && !Array.isArray(frontmatter)) {
+			return `${serializeFrontmatter(frontmatter)}\n${body}\n`;
+		}
+		return body.length > 0 ? `${body}\n` : "";
+	} finally {
+		syntax = previous;
 	}
-	return body.length > 0 ? `${body}\n` : "";
 };

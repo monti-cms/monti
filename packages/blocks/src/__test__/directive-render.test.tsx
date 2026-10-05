@@ -1,7 +1,6 @@
-import { remarkDemoteUnknownDirectives, remarkDirectivesToMdx } from "@monti-cms/core/mdx";
+import { directiveSyntax } from "@monti-cms/core/syntax";
 import { compileMDX } from "next-mdx-remote/rsc";
 import { renderToStaticMarkup } from "react-dom/server";
-import remarkDirective from "remark-directive";
 import { describe, expect, it, vi } from "vitest";
 
 // Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
@@ -11,17 +10,17 @@ vi.mock("../../../core/src/config/resolved", async () => ({
 
 const { mdxComponents, mdxRehypePlugins, mdxRemarkPlugins, renderMdx } = await import("@monti-cms/core/render");
 
-const renderPublic = async (source: string): Promise<string> => renderToStaticMarkup((await renderMdx(source)).content);
+/** The directive notation is opt-in (`mdx.syntax`), so these tests pass the extension explicitly. */
+const syntax = [directiveSyntax()];
 
-/** The chain minus the three directive plugins. Renders with the same components and rehype as the real public chain (`mdxRemarkPlugins`). */
+const renderPublic = async (source: string): Promise<string> =>
+	renderToStaticMarkup((await renderMdx(source, { syntax })).content);
+
+/** The chain without the directive syntax extension. Renders with the same components and rehype as the real public chain (`mdxRemarkPlugins`). */
 const renderWithoutDirectives = async (source: string): Promise<string> => {
-	const plugins = mdxRemarkPlugins().filter((entry) => {
-		const plugin = Array.isArray(entry) ? entry[0] : entry;
-		return plugin !== remarkDirective && plugin !== remarkDemoteUnknownDirectives && plugin !== remarkDirectivesToMdx;
-	});
 	const { content } = await compileMDX({
 		source,
-		options: { mdxOptions: { remarkPlugins: plugins, rehypePlugins: mdxRehypePlugins() } },
+		options: { mdxOptions: { remarkPlugins: mdxRemarkPlugins([], []), rehypePlugins: mdxRehypePlugins() } },
 		components: await mdxComponents(),
 	});
 	return renderToStaticMarkup(content);
@@ -48,6 +47,36 @@ describe("directive render equivalence — content without directives", () => {
 		}
 
 		expect(mismatches).toEqual([]);
+	});
+});
+
+describe("directive render equivalence — directive notation vs. standard notation", () => {
+	it("directives render the same as the standard MDX notation of the same content", async () => {
+		const pairs: [string, string][] = [
+			[
+				':::callout{variant="tip" title="제목"}\n본문 **굵게**\n:::',
+				'<Callout variant="tip" title="제목">\n\n본문 **굵게**\n\n</Callout>',
+			],
+			[':::callout{variant="note" title="제목만"}\n:::', '<Callout variant="note" title="제목만" />'],
+			[
+				'::::tabs{defaultValue="B"}\n:::tab{label="A"}\na\n:::\n:::tab{label="B"}\nb\n:::\n::::',
+				'<Tabs defaultValue="B">\n\n<Tab label="A">\n\na\n\n</Tab>\n\n<Tab label="B">\n\nb\n\n</Tab>\n\n</Tabs>',
+			],
+			[":u[밑줄]과 :sup[위]와 :sub[아래]", "<u>밑줄</u>과 <sup>위</sup>와 <sub>아래</sub>"],
+			["첫 줄:br[]둘째 줄", "첫 줄<br />\n둘째 줄"],
+			[':tooltip[용어]{content="뜻풀이"}를 본다', '<Tooltip content="뜻풀이">용어</Tooltip>를 본다'],
+			['글자 :color[빨강]{fg="#dc2626" fgDark="#f87171"}', '글자 <Color fg="#dc2626" fgDark="#f87171">빨강</Color>'],
+			[
+				"::::table\n:::row\n::cell[a]{header colspan=2}\n:::\n:::row\n::cell[b]\n::cell[c]\n:::\n::::",
+				'<Table>\n<TableRow>\n<TableCell header colspan="2">a</TableCell>\n</TableRow>\n<TableRow>\n<TableCell>b</TableCell>\n<TableCell>c</TableCell>\n</TableRow>\n</Table>',
+			],
+		];
+
+		for (const [directive, standard] of pairs) {
+			const fromStandard = renderToStaticMarkup((await renderMdx(standard)).content);
+			expect(fromStandard, standard).not.toBe("");
+			expect(await renderPublic(directive), directive).toBe(fromStandard);
+		}
 	});
 });
 

@@ -68,7 +68,8 @@ const parentTypeOfSelection = (editor: Editor) => {
 	return $from.node($from.depth - 1).type.name;
 };
 
-const TABS = '::::tabs{defaultValue="둘"}\n:::tab{label="하나"}\n첫째\n:::\n:::tab{label="둘"}\n둘째\n:::\n::::';
+const TABS =
+	'<Tabs defaultValue="둘">\n\n<Tab label="하나">\n\n첫째\n\n</Tab>\n\n<Tab label="둘">\n\n둘째\n\n</Tab>\n\n</Tabs>';
 
 describe("container NodeView (public look + in-place editing)", () => {
 	it("shows only the initial tab, and clicking another tab moves the cursor into its body", async () => {
@@ -105,7 +106,9 @@ describe("container NodeView (public look + in-place editing)", () => {
 	});
 
 	it("adds a column and removes the one with the cursor (minimum 2 columns)", async () => {
-		const editor = await mount("::::columns\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::");
+		const editor = await mount(
+			"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
+		);
 		const remove = screen.getByRole("button", { name: "마지막 단 삭제" });
 		expect((remove as HTMLButtonElement).disabled).toBe(true);
 		fireEvent.click(screen.getByRole("button", { name: "단 추가" }));
@@ -117,7 +120,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 	});
 
 	it("removes the callout title attribute when it is cleared", async () => {
-		const source = ':::callout{variant="tip" title="제목"}\n본문\n:::';
+		const source = '<Callout variant="tip" title="제목">\n\n본문\n\n</Callout>';
 		const editor = await mount(source);
 		const input = screen.getByRole("textbox", { name: "콜아웃 제목" });
 		fireEvent.focus(input);
@@ -127,21 +130,21 @@ describe("container NodeView (public look + in-place editing)", () => {
 	});
 
 	it("changes the callout variant from the toolbar menu", async () => {
-		const editor = await mount(':::callout{variant="tip"}\n본문\n:::');
+		const editor = await mount('<Callout variant="tip">\n\n본문\n\n</Callout>');
 		fireEvent.click(screen.getByRole("button", { name: /콜아웃 종류/ }));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "경고" }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs.values).toEqual({ variant: "warning" }));
 	});
 
 	it("toggles the collapsible's open-by-default with the switch in the settings popover", async () => {
-		const editor = await mount(':::collapsible{title="제목"}\n숨은 본문\n:::');
+		const editor = await mount('<Collapsible title="제목">\n\n숨은 본문\n\n</Collapsible>');
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		fireEvent.click(await screen.findByRole("switch", { name: "처음부터 펼치기" }));
 		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain("defaultOpen"));
 	});
 
 	it("starts closed per defaultOpen, and expanding with the arrow moves the cursor into the body", async () => {
-		const editor = await mount(':::collapsible{title="제목"}\n숨은 본문\n:::');
+		const editor = await mount('<Collapsible title="제목">\n\n숨은 본문\n\n</Collapsible>');
 		const toggle = screen.getByRole("button", { name: "펼치기" });
 		expect(toggle.getAttribute("aria-expanded")).toBe("false");
 		expect(
@@ -159,7 +162,8 @@ describe("container NodeView (public look + in-place editing)", () => {
 
 describe("column widths", () => {
 	it("equal split clears the stored widths, and adding a column resets widths to equal", async () => {
-		const source = '::::columns{widths="70,30"}\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::';
+		const source =
+			'<Columns widths="70,30">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>';
 		const editor = await mount(source);
 		expect(screen.getByText("70 : 30")).toBeDefined();
 		fireEvent.click(screen.getByRole("button", { name: "단 너비 똑같이 나누기" }));

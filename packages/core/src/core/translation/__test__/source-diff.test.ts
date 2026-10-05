@@ -58,15 +58,15 @@ describe("comparing two source versions", () => {
 	});
 
 	it("blocks inside a box are compared separately", () => {
-		const before = ':::text-align{align="center"}\n안쪽\n\n그대로\n:::\n';
-		const after = ':::text-align{align="center"}\n안쪽 고침\n\n그대로\n:::\n';
+		const before = '<TextAlign align="center">\n\n안쪽\n\n그대로\n\n</TextAlign>\n';
+		const after = '<TextAlign align="center">\n\n안쪽 고침\n\n그대로\n\n</TextAlign>\n';
 		expect(summary(diffSources(before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
 	});
 
 	it.skipIf(!titledBox || !titleAttribute)("blocks and the title inside a box are compared separately", () => {
 		if (!titledBox || !titleAttribute) return;
 		const box = (title: string, body: string) =>
-			`:::${titledBox.name}{${[otherAttribute, `${titleAttribute}="${title}"`].filter(Boolean).join(" ")}}\n${body}\n:::\n`;
+			`<${titledBox.component} ${[otherAttribute, `${titleAttribute}="${title}"`].filter(Boolean).join(" ")}>\n\n${body}\n\n</${titledBox.component}>\n`;
 		expect(summary(diffSources(box("알림", "안쪽"), box("주의", "안쪽 고침")))).toEqual([
 			["changed", JSON.stringify({ title: "알림" }), JSON.stringify({ title: "주의" })],
 			["changed", "안쪽", "안쪽 고침"],
@@ -77,7 +77,7 @@ describe("comparing two source versions", () => {
 		if (!labeledGroup) return;
 		const { block, child, label } = labeledGroup;
 		const tabs = (second: string) =>
-			`::::${block.name}\n:::${child.name}{${label}="하나"}\n첫째\n:::\n:::${child.name}{${label}="${second}"}\n둘째\n:::\n::::\n`;
+			`<${block.component}>\n\n<${child.component} ${label}="하나">\n\n첫째\n\n</${child.component}>\n\n<${child.component} ${label}="${second}">\n\n둘째\n\n</${child.component}>\n\n</${block.component}>\n`;
 		expect(summary(diffSources(tabs("둘"), tabs("둘 고침")))).toEqual([
 			["changed", JSON.stringify({ labels: ["하나", "둘"] }), JSON.stringify({ labels: ["하나", "둘 고침"] })],
 		]);

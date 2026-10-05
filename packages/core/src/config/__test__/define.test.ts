@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, defineConfig, definePlugin, fields } from "../..";
+import { directiveSyntax } from "../../syntax";
 import { pathsOverlap } from "../define";
 
 const title = fields.text({ label: "Title" });
@@ -133,6 +134,15 @@ describe("defineConfig", () => {
 		expect(() =>
 			defineConfig({ collections: { topic }, locales: [...locales, ...locales], defaultLocale: "en" }),
 		).toThrow(/duplicate/);
+	});
+
+	it("accepts syntax extensions and rejects unnamed or duplicate ones", () => {
+		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
+		const extension = { name: "notation" };
+		expect(defineConfig({ ...base, mdx: { syntax: [extension] } }).mdx?.syntax).toEqual([extension]);
+		expect(defineConfig({ ...base, mdx: { syntax: [directiveSyntax()] } }).mdx?.syntax?.[0]?.name).toBe("directive");
+		expect(() => defineConfig({ ...base, mdx: { syntax: [extension, extension] } })).toThrow(/duplicate/);
+		expect(() => defineConfig({ ...base, mdx: { syntax: [{ name: "" }] } })).toThrow(/needs a name/);
 	});
 
 	it("rejects relations and backlinks to unknown or mismatched collections", () => {

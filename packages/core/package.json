@@ -15,6 +15,7 @@
 		"./runtime": "./src/runtime.ts",
 		"./read": "./src/read/index.ts",
 		"./mdx": "./src/mdx/index.ts",
+		"./syntax": "./src/syntax/index.ts",
 		"./code-block": "./src/code-block.ts",
 		"./render/code": "./src/render/code/index.ts",
 		"./render": "./src/render/index.tsx",
@@ -32,8 +33,9 @@
 	},
 	"scripts": {
 		"test": "vitest",
-		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
+		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts && vitest run -c vitest.directive.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
+		"test:directive": "vitest run -c vitest.directive.config.ts",
 		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
 		"typecheck:other-site": "tsc --noEmit -p tsconfig.other-site.json",
 		"build": "node ../../scripts/build-package.mjs mdx/__test__/fixtures/samples"
@@ -145,6 +147,10 @@
 			"./mdx": {
 				"types": "./dist/mdx/index.d.ts",
 				"default": "./dist/mdx/index.js"
+			},
+			"./syntax": {
+				"types": "./dist/syntax/index.d.ts",
+				"default": "./dist/syntax/index.js"
 			},
 			"./code-block": {
 				"types": "./dist/code-block.d.ts",

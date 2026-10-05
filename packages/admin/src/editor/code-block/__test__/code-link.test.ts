@@ -42,7 +42,7 @@ describe("linking body text to code (editor)", () => {
 		expect(codeEffectsKey.getState(instance.state)?.linking).toBeNull();
 		expect(save(instance)).toBe(
 			[
-				'이 :code-ref[함수가]{to="c1"} 값을 돌려준다.',
+				'이 <CodeRef to="c1">함수가</CodeRef> 값을 돌려준다.',
 				"",
 				"```ts",
 				'// @line anchor {0-1} id="c1"',
@@ -66,8 +66,8 @@ describe("linking body text to code (editor)", () => {
 		commitLink(instance.view);
 
 		const output = save(instance);
-		expect(output).toContain(':code-ref[함수가]{to="c1"}');
-		expect(output).toContain(':code-ref[값을]{to="c1"}');
+		expect(output).toContain('<CodeRef to="c1">함수가</CodeRef>');
+		expect(output).toContain('<CodeRef to="c1">값을</CodeRef>');
 		expect(output.match(/@line anchor/g)).toHaveLength(1);
 	});
 
@@ -99,7 +99,7 @@ describe("linking body text to code (editor)", () => {
 	});
 
 	it("a body link with no linked line is flagged with a red wavy underline", () => {
-		const instance = mount('이 :code-ref[함수가]{to="c9"} 값을 돌려준다.');
+		const instance = mount('이 <CodeRef to="c9">함수가</CodeRef> 값을 돌려준다.');
 		const plugin = codeEffectsKey.get(instance.state);
 		const set = plugin?.props.decorations?.call(plugin, instance.state) as DecorationSet;
 		const broken = set

@@ -141,7 +141,7 @@ class CmsTableView extends TableView {
 
 /**
  * Table (basic table with row/column add/delete, cell merging, column widths).
- * A table with adjusted column widths is stored as a `::::table{widths="..."}` directive.
+ * A table with adjusted column widths is stored as a `<Table widths="...">` element (or a table directive when the site uses the directive extension).
  * Dragging within `handleWidth` (px) on either side of a column boundary adjusts the width. The default 5px was hard to grab, so it is widened.
  */
 export const CmsTable = Table.extend({

@@ -62,7 +62,7 @@ describe("CMS component showcase", () => {
 		expect(html).toContain("<br/>둘째 줄");
 		expect(html).toContain("katex-display");
 		expect(html).toContain("<table");
-		// Directive table: header cells and horizontal/vertical merges are preserved.
+		// Merged table: header cells and horizontal/vertical merges are preserved.
 		expect(html).toMatch(/<th[^>]*colSpan="2"/);
 		expect(html).toMatch(/<td[^>]*rowSpan="2"/);
 		// Code block: highlighted code and collapsing

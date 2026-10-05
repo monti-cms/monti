@@ -1,6 +1,7 @@
 import type { Root, RootContent } from "mdast";
 import { childRules } from "../blocks/derive";
 import { createTranslator } from "../i18n";
+import type { SyntaxExtension } from "../syntax/types";
 import {
 	estreeToJson,
 	hasSpread,
@@ -161,7 +162,8 @@ const validateNode = (errors: CmsMdxError[], node: VisitNode) => {
 	}
 };
 
-export const analyze = (mdx: string, name?: string): CmsMdxAnalysis => {
+/** `syntax` is the site's extensions (`mdx.syntax`) unless given. */
+export const analyze = (mdx: string, name?: string, syntax?: readonly SyntaxExtension[]): CmsMdxAnalysis => {
 	const { raw, body } = splitFrontmatter(mdx);
 	const sourceLineOffset = raw === null ? 0 : mdx.slice(0, mdx.length - body.length).split(/\r?\n/).length - 1;
 	const errors: CmsMdxError[] = [];
@@ -173,7 +175,7 @@ export const analyze = (mdx: string, name?: string): CmsMdxAnalysis => {
 	}
 
 	try {
-		tree = parseMdxAst(body);
+		tree = parseMdxAst(body, syntax);
 		validateNode(errors, tree);
 	} catch (error) {
 		const position = { line: 1, column: 1 };

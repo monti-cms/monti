@@ -6,15 +6,17 @@
 
 | 블록 | 플러그인 | 저장 문법 | 공개 화면 컴포넌트 |
 | --- | --- | --- | --- |
-| 콜아웃 | `callout()` | `:::callout{variant="tip" title="…"}` | `Callout` |
-| 접기 | `collapsible()` | `:::collapsible{title="…"}` | `Collapsible` |
-| 탭 | `tabs()` | `::::tabs` 안에 `:::tab{label="…"}` 2~8개 | `Tabs`·`Tab` |
-| 단 나누기 | `columns()` | `::::columns{widths="60,40"}` 안에 `:::column` 2~4개 | `Columns`·`Column` |
+| 콜아웃 | `callout()` | `<Callout variant="tip" title="…">…</Callout>` | `Callout` |
+| 접기 | `collapsible()` | `<Collapsible title="…">…</Collapsible>` | `Collapsible` |
+| 탭 | `tabs()` | `<Tabs>` 안에 `<Tab label="…">` 2~8개 | `Tabs`·`Tab` |
+| 단 나누기 | `columns()` | `<Columns widths="60,40">` 안에 `<Column>` 2~4개 | `Columns`·`Column` |
 | Mermaid | `mermaid()` | ` ```mermaid ` | `Mermaid` |
 | 차트 | `chart()` | ` ```chart ` | `Chart` |
-| 툴팁 | `tooltip()` | `:tooltip[글자]{content="설명"}` | `Tooltip` |
-| 코드 연결 | `codeRef()` | `:code-ref[글자]{to="c1"}`(코드 줄 이름표 `// @line anchor {..} id="c1"`) | `CodeRef` |
-| 글자색 | `color({ palette? })` | `:color[글자]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}` | `Color` |
+| 툴팁 | `tooltip()` | `<Tooltip content="설명">글자</Tooltip>` | `Tooltip` |
+| 코드 연결 | `codeRef()` | `<CodeRef to="c1">글자</CodeRef>`(코드 줄 이름표 `// @line anchor {..} id="c1"`) | `CodeRef` |
+| 글자색 | `color({ palette? })` | `<Color fg="#…" fgDark="#…" bg="#…" bgDark="#…">글자</Color>` | `Color` |
+
+표준 MDX(JSX 요소)로 저장한다. 디렉티브 표기(`:::callout{…}`, `:tooltip[글자]{…}`)를 쓰는 사이트는 설정의 `mdx.syntax`에 `@monti-cms/core/syntax`의 `directiveSyntax()`를 추가해 읽고 쓴다.
 
 ## 설치
 

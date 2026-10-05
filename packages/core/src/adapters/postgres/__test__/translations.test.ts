@@ -129,7 +129,7 @@ describe("translation groups", () => {
 			expect(translation.translationGroupId).toBe(source.id);
 			expect(translation.status).toBe("draft");
 			expect(translation.workingSlug).toBe("copy-source");
-			expect(translation.working.mdx).toBe(":untranslated[한국어 본문]\n");
+			expect(translation.working.mdx).toBe("<Untranslated>한국어 본문</Untranslated>\n");
 			expect(translation.working.metadata).toEqual({});
 			expect(translation.working.translation).toEqual({ version: 2, baseSource: "한국어 본문" });
 			expect(source.working.translation ?? null).toBeNull();

@@ -8,12 +8,12 @@ import { prepareSnapshot, validateForPublish } from "../../../core/snapshot";
 describe("review regressions (blog blocks)", () => {
 	it("blocks publishing blocks without required attributes", async () => {
 		const cases: [string, string][] = [
-			["::::tabs\n:::tab\n첫\n:::\n:::tab\n둘\n:::\n::::", "missing_block_attribute"],
-			["문장 :tooltip[표시] 끝", "missing_block_attribute"],
-			[":::text-align\n가운데\n:::", "missing_block_attribute"],
-			[':::text-align{align="justify"}\n가운데\n:::', "invalid_block_attribute"],
+			["<Tabs>\n\n<Tab>\n\n첫\n\n</Tab>\n\n<Tab>\n\n둘\n\n</Tab>\n\n</Tabs>", "missing_block_attribute"],
+			["문장 <Tooltip>표시</Tooltip> 끝", "missing_block_attribute"],
+			["<TextAlign>\n\n가운데\n\n</TextAlign>", "missing_block_attribute"],
+			['<TextAlign align="justify">\n\n가운데\n\n</TextAlign>', "invalid_block_attribute"],
 			[
-				'::::tabs{defaultValue="없음"}\n:::tab{label="a"}\n1\n:::\n:::tab{label="b"}\n2\n:::\n::::',
+				'<Tabs defaultValue="없음">\n\n<Tab label="a">\n\n1\n\n</Tab>\n\n<Tab label="b">\n\n2\n\n</Tab>\n\n</Tabs>',
 				"invalid_block_attribute",
 			],
 		];

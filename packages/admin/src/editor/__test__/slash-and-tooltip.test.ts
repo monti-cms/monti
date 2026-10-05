@@ -183,11 +183,11 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 			content: html,
 		});
 
-	it("round-trips a tooltip label containing a closing bracket by escaping it", () => {
+	it("round-trips a tooltip label containing a closing bracket unescaped", () => {
 		const editor = createEditor("<p>a]b</p>");
 		editor.chain().focus().setTextSelection({ from: 1, to: 4 }).setMark("cmsTooltip", { content: "설명" }).run();
 		const mdx = tiptapToMdx(editor.getJSON());
-		expect(mdx).toContain(':tooltip[a\\]b]{content="설명"}');
+		expect(mdx).toContain('<Tooltip content="설명">a]b</Tooltip>');
 		expect(tiptapToMdx(mdxToTiptap(mdx))).toBe(mdx);
 		editor.destroy();
 	});
@@ -204,7 +204,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		expect(editor.getAttributes("cmsTooltip").content).toBe("우리가 사는 지구");
 
 		const mdx = tiptapToMdx(editor.getJSON());
-		expect(mdx).toContain(':tooltip[세상]{content="우리가 사는 지구"}');
+		expect(mdx).toContain('<Tooltip content="우리가 사는 지구">세상</Tooltip>');
 		editor.destroy();
 	});
 
@@ -223,7 +223,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 
 		expect(editor.getAttributes("cmsTooltip").content).toBe("업데이트된 설명");
 		const mdx = tiptapToMdx(editor.getJSON());
-		expect(mdx).toContain(':tooltip[세상]{content="업데이트된 설명"}');
+		expect(mdx).toContain('<Tooltip content="업데이트된 설명">세상</Tooltip>');
 		editor.destroy();
 	});
 
@@ -236,13 +236,13 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 
 		expect(editor.isActive("cmsTooltip")).toBe(false);
 		const mdx = tiptapToMdx(editor.getJSON());
-		expect(mdx).not.toContain(":tooltip");
+		expect(mdx).not.toContain("<Tooltip");
 		expect(mdx).toContain("세상");
 		editor.destroy();
 	});
 
-	it("loads :tooltip syntax from MDX into the editor and round-trips it losslessly on re-serialization", () => {
-		const initialMdx = '본문 속 :tooltip[단어]{content="상세 설명"} 확인하기\n';
+	it("loads the Tooltip element from MDX into the editor and round-trips it losslessly on re-serialization", () => {
+		const initialMdx = '본문 속 <Tooltip content="상세 설명">단어</Tooltip> 확인하기\n';
 		const json = mdxToTiptap(initialMdx);
 
 		const editor = new Editor({

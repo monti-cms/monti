@@ -1,13 +1,10 @@
 import { directiveBlocks } from "../blocks/derive";
 
 /**
- * Directive name definition table.
+ * Table of blocks written as elements (containers, leaves and text blocks), by renderer name. The pre-publish check reads attribute rules from it.
+ * It is built from the block definitions (`blocks/definitions.ts`). To add a block, edit the block definitions.
  *
- * A table shared by the storage format and the renderer. It is built from the block definitions (`blocks/definitions.ts`).
- * To add a block, edit the block definitions.
- *
- * Only registered names are recognized as directives. An unregistered `:name` is turned back into body text at parse time
- * (`remark-directive` has no name filter option — "It exports no additional options.").
+ * It does not depend on the stored notation: JSX and the directive extension (`@monti-cms/core/syntax`) both parse to the same component names.
  */
 
 export type DirectiveKind = "container" | "leaf" | "text";
@@ -15,7 +12,7 @@ export type DirectiveKind = "container" | "leaf" | "text";
 export type DirectiveAttributeType = "string" | "boolean";
 
 export type DirectiveDefinition = {
-	/** Name in the storage syntax (lowercase kebab-case). */
+	/** Block name (lowercase kebab-case). */
 	name: string;
 	/** Directive kind. Decides the context when an unregistered node is turned back (text → text, others → paragraph). */
 	kind: DirectiveKind;
@@ -41,16 +38,7 @@ export const DIRECTIVES: readonly DirectiveDefinition[] = directiveBlocks().map(
 	};
 });
 
-export const DIRECTIVE_BY_NAME: ReadonlyMap<string, DirectiveDefinition> = new Map(
-	DIRECTIVES.map((definition) => [definition.name, definition]),
-);
-
-export const isRegisteredDirective = (name: string): boolean => DIRECTIVE_BY_NAME.has(name);
-
-/** Set of registered directive names. Used when saving to tell them apart from body text (the `\:` rule). */
-export const DIRECTIVE_NAMES: ReadonlySet<string> = new Set(DIRECTIVES.map((definition) => definition.name));
-
-/** Component name → definition. Used by the write path (serializer) to find a directive by its JSX name. */
+/** Component name → definition. */
 export const DIRECTIVE_BY_COMPONENT: ReadonlyMap<string, DirectiveDefinition> = new Map(
 	DIRECTIVES.map((definition) => [definition.component, definition]),
 );

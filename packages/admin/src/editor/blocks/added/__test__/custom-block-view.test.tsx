@@ -40,7 +40,7 @@ const mount = async (source: string, wrap: (node: React.ReactNode) => React.Reac
 	return editor as unknown as Editor;
 };
 
-const NOTICE = ':::notice{level="info"}\n본문\n:::';
+const NOTICE = '<Notice level="info">\n\n본문\n\n</Notice>';
 
 /** Edit component registered by the site (example): turns the level into a button. */
 function NoticeEditor({ values, setValue, content }: CustomBlockEditorProps) {
@@ -61,7 +61,7 @@ describe("custom block NodeView", () => {
 		expect(screen.queryByLabelText("단계")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		await chooseSelectOption("단계", "주의");
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain(':::notice{level="warn"}'));
+		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('<Notice level="warn"'));
 		fireEvent.change(screen.getByLabelText("제목"), { target: { value: "점검" } });
 		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('title="점검"'));
 	});
@@ -79,7 +79,7 @@ describe("custom block NodeView", () => {
 			</CmsAdminComponentsProvider>
 		));
 		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain(':::notice{level="warn"}'));
+		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('<Notice level="warn"'));
 		expect(tiptapToMdx(editor.getJSON())).toContain("본문");
 	});
 });

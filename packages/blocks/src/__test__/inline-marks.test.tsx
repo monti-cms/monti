@@ -1,5 +1,6 @@
 import { buildEditorExtensions, CmsEditor, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
 import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
+import { directiveSyntax } from "@monti-cms/core/syntax";
 import { readSamples } from "@monti-cms/core/testing";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
@@ -44,14 +45,14 @@ const roundTrip = (mdx: string) => tiptapToMdx(mdxToTiptap(mdx));
 
 describe("inline mark saved text", () => {
 	it.each([
-		':tooltip[라벨]{content="설명"} 뒤',
-		'함수 :code-ref[호출부]{to="c1"}를 본다',
-		':color[빨강]{fg="#dc2626" fgDark="#f87171"} :color[바탕]{bg="#fee2e2" bgDark="#4a1f1f"}',
-		':color[둘 다]{fg="#2563eb" fgDark="#60a5fa" bg="#dbeafe" bgDark="#172f4d"}',
+		'<Tooltip content="설명">라벨</Tooltip> 뒤',
+		'함수 <CodeRef to="c1">호출부</CodeRef>를 본다',
+		'<Color fg="#dc2626" fgDark="#f87171">빨강</Color> <Color bg="#fee2e2" bgDark="#4a1f1f">바탕</Color>',
+		'<Color fg="#2563eb" fgDark="#60a5fa" bg="#dbeafe" bgDark="#172f4d">둘 다</Color>',
 		// Nested marks wrap in tooltip → code ref → text color order (same as the former core order).
-		':tooltip[:code-ref[:color[겹침]{fg="#16a34a"}]{to="c2"}]{content="설명 &quot;따옴표&quot;"}',
-		':tooltip[**굵게** 와 :u[밑줄]]{content="a &amp; b"}',
-		':tooltip[a\\]b]{content="닫는 괄호"}',
+		'<Tooltip content="설명 &quot;따옴표&quot;"><CodeRef to="c2"><Color fg="#16a34a">겹침</Color></CodeRef></Tooltip>',
+		'<Tooltip content="a &amp; b">**굵게** 와 <u>밑줄</u></Tooltip>',
+		'<Tooltip content="닫는 괄호">a]b</Tooltip>',
 	])("body → editor → body is unchanged: %s", (body) => {
 		const mdx = `${body}\n`;
 		expect(serialize(toDocument(analyze(mdx)))).toBe(mdx);
@@ -59,14 +60,17 @@ describe("inline mark saved text", () => {
 	});
 
 	it("sample posts (the blog post set) are unchanged after passing through the editor", () => {
+		// The samples are stored with directives, so they are read with the extension and written back as standard MDX first.
+		const syntax = [directiveSyntax()];
+		const standardOf = (mdx: string, name: string) => serialize(toDocument(analyze(mdx, name, syntax)));
 		const samples = readSamples().filter(({ mdx }) => /:(tooltip|code-ref|color)\[/.test(mdx));
 		expect(samples.length).toBeGreaterThan(0);
 		for (const { name, mdx } of samples) {
-			const once = roundTrip(mdx);
-			// After one pass to the editor canonical form it stops changing, and mark directives stay verbatim.
+			const once = roundTrip(standardOf(mdx, name));
+			// After one pass to the editor canonical form it stops changing, and each mark stays in its standard notation.
 			expect(roundTrip(once), name).toBe(once);
 			for (const directive of mdx.match(/:(?:tooltip|code-ref|color)\[[^\]\n]*\]\{[^}\n]*\}/g) ?? []) {
-				expect(once, `${name}: ${directive}`).toContain(directive);
+				expect(once, `${name}: ${directive}`).toContain(standardOf(`${directive}\n`, name).trim());
 			}
 		}
 	});
@@ -75,7 +79,7 @@ describe("inline mark saved text", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(MARKS),
 			content: mdxToTiptap(
-				':tooltip[가]{content="설명"} :code-ref[나]{to="c1"} :color[다]{fg="#dc2626" fgDark="#f87171"}\n',
+				'<Tooltip content="설명">가</Tooltip> <CodeRef to="c1">나</CodeRef> <Color fg="#dc2626" fgDark="#f87171">다</Color>\n',
 			),
 		});
 		const html = editor.getHTML();
@@ -204,14 +208,14 @@ describe("inline bubble", () => {
 	});
 
 	it("edits and removes the description even with the cursor at the tooltip boundary", async () => {
-		const editor = await mount(':tooltip[사아]{content="설명"} 자\n');
+		const editor = await mount('<Tooltip content="설명">사아</Tooltip> 자\n');
 		focusAt(editor, 1);
 		act(() => fireEvent.click(screen.getByRole("button", { name: "툴팁 수정" })));
 		const input = screen.getByLabelText("설명") as HTMLTextAreaElement;
 		expect(input.value).toBe("설명");
 		act(() => fireEvent.change(input, { target: { value: "새 설명" } }));
 		act(() => fireEvent.click(screen.getByRole("button", { name: "적용" })));
-		expect(tiptapToMdx(editor.getJSON())).toBe(':tooltip[사아]{content="새 설명"} 자\n');
+		expect(tiptapToMdx(editor.getJSON())).toBe('<Tooltip content="새 설명">사아</Tooltip> 자\n');
 
 		focusAt(editor, 1);
 		act(() => fireEvent.click(screen.getByRole("button", { name: "툴팁 해제" })));
@@ -225,11 +229,11 @@ describe("inline bubble", () => {
 		act(() => fireEvent.click(within(bubble).getByRole("button", { name: "글자색" })));
 		const dialog = screen.getByRole("dialog", { name: "글자색" });
 		act(() => fireEvent.click(within(dialog).getByRole("button", { name: "글자색 빨강" })));
-		expect(tiptapToMdx(editor.getJSON())).toBe(':color[가나]{fg="#dc2626" fgDark="#f87171"}다\n');
+		expect(tiptapToMdx(editor.getJSON())).toBe('<Color fg="#dc2626" fgDark="#f87171">가나</Color>다\n');
 	});
 
 	it("a code ref with no linked line is reported in the bubble", async () => {
-		const editor = await mount(':code-ref[호출]{to="c9"} 뒤\n');
+		const editor = await mount('<CodeRef to="c9">호출</CodeRef> 뒤\n');
 		focusAt(editor, 2);
 		expect(await screen.findByText("연결된 코드 줄이 없습니다")).toBeTruthy();
 		expect(screen.getByRole("button", { name: "코드 연결 해제" })).toBeTruthy();

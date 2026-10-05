@@ -105,15 +105,16 @@ describe("translation structure check", () => {
 	it.skipIf(!markBlock)("tooltip descriptions may change", () => {
 		if (!markBlock) return;
 		const [name] = stringAttributes(markBlock, true)[0] ?? [];
-		const mark = (text: string, note: string) => `:${markBlock.name}[${text}]{${name}="${note}"}`;
+		const mark = (text: string, note: string) =>
+			`<${markBlock.component} ${name}="${note}">${text}</${markBlock.component}>`;
 		expect(compareStructure(mark("가", "설명"), mark("A", "Note")).ok).toBe(true);
 	});
 
 	it("file names and link titles may change", () => {
-		expect(compareStructure('::file{mediaId="m1" label="보고서"}', '::file{mediaId="m1" label="Report"}').ok).toBe(
+		expect(compareStructure('<File mediaId="m1" label="보고서" />', '<File mediaId="m1" label="Report" />').ok).toBe(
 			true,
 		);
-		expect(compareStructure('::file{mediaId="m1" label="보고서"}', '::file{mediaId="m2" label="Report"}').ok).toBe(
+		expect(compareStructure('<File mediaId="m1" label="보고서" />', '<File mediaId="m2" label="Report" />').ok).toBe(
 			false,
 		);
 		expect(compareStructure('[글](/a "제목")', '[Text](/a "Title")').ok).toBe(true);
@@ -133,7 +134,7 @@ describe("translation structure check", () => {
 	});
 
 	it("fails when hint text remains or the MDX is broken", () => {
-		expect(compareStructure("가나다", ":untranslated[가나다]").ok).toBe(false);
+		expect(compareStructure("가나다", "<Untranslated>가나다</Untranslated>").ok).toBe(false);
 		expect(compareStructure("가나다", `<${Box}>열고 닫지 않음`).ok).toBe(false);
 		expect(readableMdx(`<${Box}>열고 닫지 않음`).ok).toBe(false);
 		expect(readableMdx("정상 문단").ok).toBe(true);
@@ -142,7 +143,7 @@ describe("translation structure check", () => {
 	it("site blocks may change only their translatable attributes", () => {
 		// In the example config the callout has `title` as a translatable attribute; the quote card in another site config has `author`.
 		const box = (props: string, title: string, body: string) =>
-			`:::${siteBox.name}{${[props, `${titleName}="${title}"`].filter(Boolean).join(" ")}}\n${body}\n:::`;
+			`<${Box} ${[props, `${titleName}="${title}"`].filter(Boolean).join(" ")}>\n\n${body}\n\n</${Box}>`;
 		const notice = box(kindProp.trim(), "공지 제목", "안내 글");
 		expect(compareStructure(notice, box(kindProp.trim(), "Notice title", "Notice text"))).toEqual({ ok: true });
 		if (kind) {
@@ -155,9 +156,11 @@ describe("translation structure check", () => {
 		if (!plainBlock) return;
 		// `url` of the user block `embed` in the example config.
 		const [name] = stringAttributes(plainBlock, false).find(([, attribute]) => !attribute.options) ?? [];
-		const colons = plainBlock.syntax.kind === "leaf" ? "::" : ":::";
-		const body = plainBlock.syntax.kind === "leaf" ? "" : "\n본문\n:::";
-		const block = (url: string) => `${colons}${plainBlock.name}{${name}="${url}"}${body}`;
+		const { component } = plainBlock;
+		const block = (url: string) =>
+			plainBlock.syntax.kind === "leaf"
+				? `<${component} ${name}="${url}" />`
+				: `<${component} ${name}="${url}">\n\n본문\n\n</${component}>`;
 		expect(compareStructure(block("https://a.example"), block("https://b.example")).ok).toBe(false);
 	});
 

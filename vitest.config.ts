@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => ({
 			"packages/*",
 			// Regression guard: re-runs the core, admin and AI tests with the other-site example config.
 			"packages/*/vitest.othersite.config.ts",
+			// Re-runs the tests that need the directive syntax extension in the site config.
+			"packages/*/vitest.directive.config.ts",
 		],
 		testTimeout: 60000,
 		hookTimeout: 60000,

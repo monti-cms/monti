@@ -128,9 +128,11 @@ describe("custom block publish check", () => {
 		.sort((a, b) => Number(b.syntax.kind === "leaf") - Number(a.syntax.kind === "leaf"))
 		.find((block) => attributeOf(block, (attribute) => Boolean(attribute.required) && !attribute.options));
 
-	/** Source of one directive block (takes an attribute string). */
-	const directive = (block: BlockDefinition, props: string) =>
-		block.syntax.kind === "leaf" ? `::${block.name}${props}\n` : `:::${block.name}${props}\n본문\n:::\n`;
+	/** Source of one block as standard JSX (takes an attribute string such as ` name="value"`). */
+	const jsxBlock = (block: BlockDefinition, props: string) =>
+		block.syntax.kind === "leaf"
+			? `<${block.component}${props} />\n`
+			: `<${block.component}${props}>\n\n본문\n\n</${block.component}>\n`;
 
 	const issuesOf = async (mdx: string) => {
 		const { prepareSnapshot } = await import("../../core/snapshot");
@@ -152,14 +154,14 @@ describe("custom block publish check", () => {
 		if (!choiceBlock) return;
 		const [name, attribute] = attributeOf(choiceBlock, (candidate) => Boolean(candidate.options)) ?? [];
 		const valid = Object.keys(attribute?.options ?? {})[0];
-		expect(await issuesOf(directive(choiceBlock, `{${name}="not-an-option"}`))).toContain("invalid_block_attribute");
-		expect(await issuesOf(directive(choiceBlock, `{${name}="${valid}"}`))).toEqual([]);
+		expect(await issuesOf(jsxBlock(choiceBlock, ` ${name}="not-an-option"`))).toContain("invalid_block_attribute");
+		expect(await issuesOf(jsxBlock(choiceBlock, ` ${name}="${valid}"`))).toEqual([]);
 	});
 
 	it.skipIf(!requiredBlock)("blocks a missing required attribute", async () => {
 		if (!requiredBlock) return;
 		const [name] = attributeOf(requiredBlock, (attribute) => Boolean(attribute.required) && !attribute.options) ?? [];
-		expect(await issuesOf(directive(requiredBlock, ""))).toContain("missing_block_attribute");
-		expect(await issuesOf(directive(requiredBlock, `{${name}="https://example.com"}`))).toEqual([]);
+		expect(await issuesOf(jsxBlock(requiredBlock, ""))).toContain("missing_block_attribute");
+		expect(await issuesOf(jsxBlock(requiredBlock, ` ${name}="https://example.com"`))).toEqual([]);
 	});
 });

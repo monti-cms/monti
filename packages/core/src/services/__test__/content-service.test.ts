@@ -1325,7 +1325,7 @@ describe("ContentService Contract", () => {
 			snap.references.filter((reference) => reference.kind === "media");
 
 		it("collects media references for images written as directives too", async () => {
-			const snap = await prepareSnapshot(await draft(`::image{mediaId="${mediaId}" alt="설명"}`));
+			const snap = await prepareSnapshot(await draft(`<Image mediaId="${mediaId}" alt="설명" />`));
 
 			expect(snap.issues).toEqual([]);
 			expect(mediaReferences(snap)).toHaveLength(1);
@@ -1334,7 +1334,7 @@ describe("ContentService Contract", () => {
 		});
 
 		it("an external src is not a reference and does not block publishing", async () => {
-			const snap = await prepareSnapshot(await draft('::image{src="/images/a.png"}'));
+			const snap = await prepareSnapshot(await draft('<Image src="/images/a.png" />'));
 
 			expect(snap.issues).toEqual([]);
 			expect(mediaReferences(snap)).toEqual([]);
@@ -1342,14 +1342,14 @@ describe("ContentService Contract", () => {
 		});
 
 		it("an image with no source stays blocked", async () => {
-			const snap = await prepareSnapshot(await draft("::image{}"));
+			const snap = await prepareSnapshot(await draft("<Image />"));
 
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "missing_media_id" }));
 			expect(snap.imageSources).toEqual([]);
 		});
 
 		it("a disallowed src is a non-blocking warning (stays ready)", async () => {
-			const snap = await prepareSnapshot(await draft('::image{src="javascript:alert(1)"}'));
+			const snap = await prepareSnapshot(await draft('<Image src="javascript:alert(1)" />'));
 			const validation = validateForPublish(snap, { targets: relationTargets, media: [] });
 
 			expect(validation.ready).toBe(true);
@@ -1359,7 +1359,7 @@ describe("ContentService Contract", () => {
 		});
 
 		it("builds warnings from media status and storage key, and does not warn when there is no row", async () => {
-			const snap = await prepareSnapshot(await draft(`::image{mediaId="${mediaId}"}`));
+			const snap = await prepareSnapshot(await draft(`<Image mediaId="${mediaId}" />`));
 			const targets = relationTargets;
 
 			expect(validateForPublish(snap, { targets, media: [{ id: mediaId, status: "pending" }] }).warnings).toEqual([
@@ -1382,7 +1382,7 @@ describe("ContentService Contract", () => {
 
 		it("the warning for the publish response looks at both the DB state and the actual storage object", async () => {
 			const publishInput = {
-				...(await draftInput(`::image{mediaId="${mediaId}"}`)),
+				...(await draftInput(`<Image mediaId="${mediaId}" />`)),
 				getMediaAsset: async () => ({ status: "pending", storageKey: null }),
 			};
 
@@ -1407,7 +1407,7 @@ describe("ContentService Contract", () => {
 
 		it("warning computation does not block publishing (empty array on failure)", async () => {
 			const warnings = await imageWarningsForPublish({
-				...(await draftInput(`::image{mediaId="${mediaId}"}`)),
+				...(await draftInput(`<Image mediaId="${mediaId}" />`)),
 				getMediaAsset: async () => {
 					throw new Error("db down");
 				},

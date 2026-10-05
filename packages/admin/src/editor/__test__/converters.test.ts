@@ -55,7 +55,7 @@ describe("block converter registry", () => {
 	});
 
 	it.each([
-		["an image", '::image{mediaId="m1" alt="고양이" width="50%" align="left"}'],
+		["an image", '<Image mediaId="m1" alt="고양이" width="50%" align="left" />'],
 		["a code block", '```ts title="a.ts"\nconst a = 1;\n```'],
 		["a table", "| a | b |\n| :-- | --: |\n| 1 | 2 |"],
 		["a Mermaid diagram", "```mermaid\ngraph TD;\n    A-->B;\n```"],

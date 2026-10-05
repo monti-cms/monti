@@ -5,7 +5,7 @@ import type { JSONContent } from "@tiptap/core";
 import { ADDED_MARK_BY_EDITOR_NAME, ADDED_MARKS, addedMarkName, markAttrsOf } from "./added-marks";
 import { PARENT_ONLY_TYPES } from "./blocks/added";
 import { type ConverterContext, converterForCms, converterForTiptap } from "./converters";
-import { asNumber, asString, brDirectiveNode } from "./converters/shared";
+import { asNumber, asString, lineBreakNode } from "./converters/shared";
 import { editorMessages } from "./messages";
 
 const t = createTranslator(editorMessages);
@@ -63,7 +63,7 @@ const isMappableInline = (node: CmsNode): boolean => {
 	if (node.type === "text") return (node.marks ?? []).every((mark) => MAPPABLE_MARKS.has(mark.type));
 	if (node.type === "hardBreak") return true;
 	if (node.type === "footnoteReference") return true;
-	// `:br[]` arrives as `mdxJsx` (name=br) — shown as a real line break in the editor.
+	// `<br />` arrives as `mdxJsx` (name=br) — shown as a real line break in the editor.
 	if (node.type === "mdxJsx" && node.attrs?.name === "br") return true;
 	// Images, math, and other JSX cannot sit inline, so the whole block goes into a box.
 	return false;
@@ -282,7 +282,7 @@ const tiptapInlineToCms = (nodes: JSONContent[] | undefined): CmsNode[] => {
 			continue;
 		}
 		if (node.type === "hardBreak") {
-			out.push(brDirectiveNode());
+			out.push(lineBreakNode());
 			continue;
 		}
 		if (node.type === "footnoteReference") {
@@ -357,7 +357,7 @@ const tiptapBlockToCms = (node: JSONContent): CmsNode[] => {
 		case "horizontalRule":
 			return [{ type: "horizontalRule" }];
 		case "hardBreak":
-			return [brDirectiveNode()];
+			return [lineBreakNode()];
 		case OPAQUE_BLOCK_NAME: {
 			const source = asString(node.attrs?.source) ?? "";
 			if (!source) return [];

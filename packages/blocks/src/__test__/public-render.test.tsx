@@ -11,12 +11,12 @@ const { renderMdx } = await import("@monti-cms/core/render");
 const html = async (source: string) => renderToStaticMarkup((await renderMdx(source)).content);
 
 describe("text color public page", () => {
-	// Stored format: `:color[text]{fg fgDark bg bgDark}` (hex values, light/dark theme pair).
+	// Stored format: `<Color fg fgDark bg bgDark>text</Color>` (hex values, light/dark theme pair).
 	const SOURCE =
-		'빨간 :color[경고]{fg="#dc2626" fgDark="#f87171"}와 :color[**강조**]{bg="#fef3c7" bgDark="#453a12"} 글.';
+		'빨간 <Color fg="#dc2626" fgDark="#f87171">경고</Color>와 <Color bg="#fef3c7" bgDark="#453a12">**강조**</Color> 글.';
 
 	it("attaches per-theme CSS variables and drops non-hex values", async () => {
-		const markup = await html(`${SOURCE}\n\n:color[위험]{fg="red; background:url(x)"}`);
+		const markup = await html(`${SOURCE}\n\n<Color fg="red; background:url(x)">위험</Color>`);
 		expect(markup).toContain('class="cms-color" style="--cms-fg:#dc2626;--cms-fg-dark:#f87171" data-fg=""');
 		expect(markup).toMatch(
 			/<span class="cms-color" style="--cms-bg:#fef3c7;--cms-bg-dark:#453a12" data-bg=""><strong>강조<\/strong><\/span>/,
@@ -27,9 +27,9 @@ describe("text color public page", () => {
 });
 
 describe("body-to-code link public page", () => {
-	// Stored format: body `:code-ref[text]{to}` <-> code line label `// @line anchor {..} id`.
+	// Stored format: body `<CodeRef to>text</CodeRef>` <-> code line label `// @line anchor {..} id`.
 	const SOURCE = [
-		'이 :code-ref[함수가]{to="c1"} 값을 돌려준다.',
+		'이 <CodeRef to="c1">함수가</CodeRef> 값을 돌려준다.',
 		"",
 		"```ts",
 		'// @line anchor {1-2} id="c1"',

@@ -259,6 +259,7 @@ export default defineConfig({
 | `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스·로그인 확인·미디어 공개 주소(`resolvePublicMediaUrl`). `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
 | `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
+| `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `directiveSyntax()`와 `SyntaxExtension` 인터페이스("본문 문법") |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀·DB 연결·오류 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기) |
 | `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`(명령 `monti`의 코드) |
@@ -269,6 +270,65 @@ export default defineConfig({
 
 저장소 안에서는 소스(`src`)를 바로 쓴다. 배포 묶음은 `pnpm build:packages`로 `dist`를 만들고 `pnpm pack`이
 `publishConfig.exports`(dist)로 묶는다. `pnpm example:pack`은 묶음을 `examples/other-site/vendor`에 넣는다.
+
+## 본문 문법
+
+저장하는 MDX는 **CommonMark + GFM + 표준 MDX JSX**다. 그 밖의 표기는 선택해서 켜는 *문법 확장*이 맡고, 확장은 한 표기의 읽기와 쓰기를 함께 제공한다.
+한 가지 뜻에는 저장 표기가 하나다. 다른 표기도 읽을 때는 받아들이고, 저장할 때 바꿔 쓴다.
+
+확장이 없을 때 기본으로 쓰는 표기:
+
+| 뜻 | 저장 표기 |
+| --- | --- |
+| 줄바꿈 | `<br />`(문단에서는 뒤에 줄을 바꿔 `줄<br />` + 줄바꿈 + `다음`). `\` + 줄바꿈, 줄 끝 공백 두 칸, `<br />`을 모두 읽고 이렇게 쓴다 |
+| 밑줄·위 첨자·아래 첨자·번역 안내 | `<u>`·`<sup>`·`<sub>`·`<Untranslated>` |
+| 글 정렬 | `<TextAlign align="center">` |
+| 셀 병합·열 너비·GFM이 아닌 머리글이 있는 표 | `<Table>`·`<TableRow>`·`<TableCell colspan="2">`(나머지 표는 GFM) |
+| 미디어 이미지, 또는 크기·정렬·캡션·자르기·회전·장식 표시가 있는 이미지 | `<Image mediaId="…" />`(바깥 주소의 보통 이미지는 `![대체글](주소 "제목")` 그대로) |
+| 파일 카드 | `<File mediaId="…" />` |
+| 컨테이너·리프 블록(콜아웃·탭·단·사이트 블록) | `<컴포넌트 속성>` … `</컴포넌트>`. 불리언은 참일 때 이름만 쓰고 거짓이면 생략한다 |
+| 글자 꾸밈(툴팁·코드 연결·글자색·사이트 글자 블록) | `<컴포넌트 속성>글자</컴포넌트>` |
+
+표기를 더하려면 `mdx.syntax`에 확장을 나열한다. 순서가 쓰기 우선순위다.
+
+```ts
+import { directiveSyntax } from "@monti-cms/core/syntax";
+
+export default defineConfig({
+	// …
+	mdx: { syntax: [directiveSyntax()] },
+});
+```
+
+- `directiveSyntax()`는 표준 MDX 이전에 Monti가 쓰던 지시자(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다. 없으면 `:::callout`은 그냥 글자다.
+  `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다. 줄바꿈은 `:br[]`로 쓰지 않는다.
+- 공개 렌더러(`@monti-cms/core/render`)는 편집기 해석기와 같은 플러그인을 돌리므로 편집기가 읽은 대로 사이트에 그려진다.
+
+**지시자 본문이 있는 사이트의 업그레이드.** 이 버전을 배포하기 전에 `mdx.syntax`에 `directiveSyntax({ write: false })`(지시자로 계속 저장하려면 `directiveSyntax()`)를 넣는다.
+넣지 않으면 기존 글이 지시자 문자 그대로 그려지고 검사에도 걸린다(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). `write: false`로 두면 글을 표준 표기로 저장해도 내용 해시(해석한 본문을 해시한다)는 바뀌지 않는다.
+저장된 본문 어디에도 지시자가 남지 않으면 확장을 뺀다.
+
+### 문법 확장 만들기(실험적)
+
+`@monti-cms/core/syntax`는 실험적이라 마이너 버전에서 바뀔 수 있다.
+
+```ts
+interface SyntaxExtension {
+	name: string;
+	/** 읽기: remark 플러그인(또는 사이트 블록을 받아 플러그인을 돌려주는 함수). 공개 렌더 체인에도 들어간다. */
+	remarkPlugins?: PluggableList | ((context: SyntaxContext) => PluggableList);
+	/** CmsNode → MDX. 키는 노드 타입(또는 블록의 렌더러 이름), "*"는 나머지. undefined를 돌려주면 다음 확장, 그다음 표준 직렬화기로 넘어간다. */
+	fromDocument?: Record<string, (node: CmsNode, context: SerializeContext) => string | undefined>;
+	/** 이 확장이 쓰는 마크. 키는 마크 타입이고 넘김 규칙은 같다. `inner`는 이미 쓴 안쪽 내용이다. */
+	fromMark?: Record<string, (mark: CmsMark, inner: string, context: SerializeContext) => string | undefined>;
+	/** 본문 글자가 이 문법으로 읽히지 않게 이스케이프한다(예: `\:name`). */
+	escapeText?: (text: string, context: SerializeContext) => string;
+}
+```
+
+`SyntaxContext`는 사이트 블록(`blocks.list`·`blocks.byName`·`blocks.byComponent`)을 준다. `SerializeContext`는 여기에 `indent`(노드가 시작하는 줄의 들여쓰기이며 쓰는 쪽이 직접 넣는다),
+자식을 쓰는 `serializeBlocks`·`serializeInlines`, `componentName`, `hasSpread`, 표준 표기가 쓰는 속성 목록을 만드는 `nodeAttributes`·`markAttributes`, `escapeAttribute`를 더한다.
+줄바꿈은 언제나 `<br />`라서 확장에 넘기지 않는다. `image` 노드는 Markdown으로 쓸 수 없을 때만 넘긴다. 지시자 확장(`packages/core/src/syntax/directive`)이 참고 구현이다.
 
 ## 본문 블록
 
@@ -289,7 +349,7 @@ import { defineBlock } from "@monti-cms/core";
 
 blocks: [
 	defineBlock({
-		name: "notice", // 저장 문법 :::notice{level="warn"} … :::
+		name: "notice", // <Notice level="warn"> … </Notice>로 저장
 		label: "공지",
 		syntax: { kind: "container", directive: "notice" },
 		component: "Notice", // 공개 화면은 사이트의 MDX 컴포넌트 표에서 이 이름으로 그린다
@@ -316,9 +376,9 @@ blocks: [
 ],
 ```
 
-- 더할 수 있는 블록은 지시자 블록(`container`·`leaf`), 글자 꾸밈(`text` + `editor.view: "mark"`), 코드 펜스 블록(`fence`)이다.
+- 더할 수 있는 블록은 요소 블록(`container`·`leaf`. `component` 이름의 MDX JSX 요소로 저장하며, 지시자 확장을 쓰면 지시자로도 저장한다. 이때 `directive`가 지시자 이름이다), 글자 꾸밈(`text` + `editor.view: "mark"`), 코드 펜스 블록(`fence`)이다.
   코드 펜스 블록은 그 언어의 코드 펜스를 모두 가져가므로 일반 코드 언어 이름(`ts` 등)을 쓰지 않는다.
-- 글자 꾸밈은 `:이름[글자]{속성}`으로 저장한다. 속성은 정의 순서대로 쓰고, 꼭 있어야 하는 속성(`required`)은 비어도, 나머지는
+- 글자 꾸밈은 `<컴포넌트 속성>글자</컴포넌트>`로 저장한다(지시자 확장을 쓰면 `:이름[글자]{속성}`). 속성은 정의 순서대로 쓰고, 꼭 있어야 하는 속성(`required`)은 비어도, 나머지는
   값이 있을 때만 쓴다. 겹친 꾸밈은 더한 순서(바깥부터)로 저장한다. 편집기 표시는 관리자 패키지가 정의에서 만들고, 모양·서식
   도구·버블·슬래시 메뉴는 확장이 관리자 화면에 등록한다(`@monti-cms/admin` README의 "글자 꾸밈"). 속성에 `codeAnchor: true`를
   달면 그 값이 코드 블록 줄 이름표(`anchor` 줄 효과)이고, 편집기의 본문–코드 잇기가 이 꾸밈을 쓴다(사이트에 하나만).
@@ -327,7 +387,7 @@ blocks: [
 - 쓰던 블록을 빼면 저장 문법에서 빠진다. 이미 그 블록을 쓴 본문은 다시 저장할 때 일반 글로 바뀌므로 쓰던 블록은 빼지 않는다.
 - 편집기 노드는 관리자 패키지가 정의에서 만든다. 편집 모양은 관리자 패키지의 `blockEditors`(속성·본문 상자)나
   `blockViews`(화면 전체)로 바꾸고, 코드 펜스 블록의 미리보기는 `fencePreviews`로 넣는다.
-- 공개 화면의 코드 펜스 블록은 `@monti-cms/core/mdx`의 `remarkFenceBlocksToMdx`를 렌더 체인(`remarkDirectivesToMdx` 뒤)에 넣어
+- 공개 화면의 코드 펜스 블록은 `@monti-cms/core/mdx`의 `remarkFenceBlocksToMdx`를 렌더 체인(문법 확장의 플러그인 뒤)에 넣어
   `component`로 그린다.
 - 번역 구조 검사(`compareStructure`)는 `translatable` 속성과, 그 값을 가리키는 `childValue` 속성(예: 처음 열 탭)만 번역에서
   바뀌어도 된다고 본다. 사람이 읽는 속성(제목·설명 등)에는 `translatable: true`를 단다.
@@ -415,6 +475,7 @@ export const myPlugin = () =>
 | `site.previewPath` | 초안 미리보기 주소 앞부분(예: `/preview`). 없으면 미리보기 단추가 없다. |
 | `site.previewLocaleParam` | 미리보기 주소에 언어를 넘기는 쿼리 이름(기본 `locale`, 기본 언어가 아닐 때만 `?locale=en`). `false`면 `localePrefix` 규칙대로 경로에 넣는다(`/preview/en/posts/a`). |
 | `admin.path` | 관리자 화면 경로(기본 `/admin`). 앱의 관리자 라우트 폴더와 같아야 한다. `/`나 `/api` 아래는 안 된다. 화면 안 링크·로그인 이동·플러그인 화면 주소가 따른다. |
+| `mdx.syntax` | 문법 확장(실험적, `@monti-cms/core/syntax`)을 쓰기 우선순위 순으로 나열한다. 예: `[directiveSyntax()]`. 없으면 저장하는 MDX는 표준(CommonMark + GFM + MDX JSX)이다("본문 문법"). |
 | `codeBlock.lineEffects` | 코드 블록 줄 효과 더하기·바꾸기("코드 블록 줄 효과"). |
 | `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |
 | `admin.locale` | 관리자 화면 언어와 날짜·숫자 표기(BCP 47, 예: `en`·`ko-KR`). 없으면 사이트 기본 언어(`defaultLocale`). 시각은 `timeZone`으로 보인다. |

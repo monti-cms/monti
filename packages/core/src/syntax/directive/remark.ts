@@ -9,7 +9,7 @@
  *    This works the same way as `remark-fence-blocks.ts`, which turns code fence blocks into MDX elements.
  *
  * The two plugins have an order. Run demote first to clear unregistered names, then convert.
- * **Both the CMS parser (`parseMdxAst`) and the public render chain use them.** The stored string does not change and only the tree the analyzer sees
+ * **Both the CMS parser (`parseMdxAst`) and the public render chain use them** (through the extension's `remarkPlugins`). The stored string does not change and only the tree the analyzer sees
  * takes the same shape as the public chain — reference collection and attribute validation **look up nodes by name**,
  * so splitting into two shapes leads to fixing only one of them.
  */
@@ -17,7 +17,40 @@
 import type { Paragraph, Root, RootContent } from "mdast";
 import { SKIP, visit } from "unist-util-visit";
 import type { VFile } from "vfile";
-import { DIRECTIVE_BY_NAME, type DirectiveDefinition } from "./directives";
+import { RAW_SOURCE_PARAGRAPH } from "../raw-source";
+import type { SyntaxBlocks } from "../types";
+
+export type DirectiveKind = "container" | "leaf" | "text";
+
+/** A block that has a directive spelling, reduced to what reading a directive needs. */
+export type DirectiveDefinition = {
+	/** Name in the directive syntax (lowercase kebab-case). */
+	name: string;
+	kind: DirectiveKind;
+	/** Element/component name used for rendering. Lowercase names are MDX intrinsic elements. */
+	component: string;
+	attributes: Record<string, "string" | "boolean">;
+};
+
+export type DirectiveDefinitions = ReadonlyMap<string, DirectiveDefinition>;
+
+/** Directive definitions of the blocks the site uses (container, leaf and text blocks; fences and math have their own Markdown syntax). */
+export const directiveDefinitions = (blocks: SyntaxBlocks): DirectiveDefinitions =>
+	new Map(
+		blocks.list.flatMap((block) => {
+			const { syntax } = block;
+			if (syntax.kind !== "container" && syntax.kind !== "leaf" && syntax.kind !== "text") return [];
+			const definition: DirectiveDefinition = {
+				name: syntax.directive,
+				kind: syntax.kind,
+				component: block.component,
+				attributes: Object.fromEntries(
+					Object.entries(block.attributes).map(([name, attribute]) => [name, attribute.type]),
+				),
+			};
+			return [[syntax.directive, definition] as const];
+		}),
+	);
 
 /** The three node types that remark-directive creates. */
 const DIRECTIVE_TYPES = ["containerDirective", "leafDirective", "textDirective"] as const;
@@ -65,27 +98,20 @@ const blockSource = (node: DirectiveNode, source: string): string => {
 };
 
 /**
- * Marker put on the paragraph of a turned-back block directive (`paragraph.data`). On the public render it is just a text paragraph, but the write path
- * (`toDocument`) moves this paragraph into a raw block (`html`) and writes it as is without escaping. The source was not read as Markdown text,
- * so escaping it like text would not be undone on re-read, and backslashes grow on every save (`\{` → `\\\{`).
- */
-export const DEMOTED_DIRECTIVE_SOURCE = "cmsDemotedDirectiveSource";
-
-/**
  * Turns unregistered directives back into body text.
  *
  * - text directive → `text` (it is inside a sentence, so the context is the same)
- * - leaf and container directives → `paragraph(text)` (block context). Attaches {@link DEMOTED_DIRECTIVE_SOURCE} so the write path writes the source as is.
+ * - leaf and container directives → `paragraph(text)` (block context). Attaches {@link RAW_SOURCE_PARAGRAPH} so the write path writes the source as is (the source was not read as Markdown text, so escaping it like text would not be undone on re-read).
  * - An unregistered parent **keeps the whole subtree as source** and stops traversing children (converting the inside would break the contract).
  */
 export const remarkDemoteUnknownDirectives =
-	() =>
+	(definitions: DirectiveDefinitions) =>
 	(tree: Root, file: VFile): undefined => {
 		const source = typeof file?.value === "string" ? file.value : "";
 
 		visit(tree, [...DIRECTIVE_TYPES], (node, index, parent) => {
 			const directive = asDirective(node);
-			if (DIRECTIVE_BY_NAME.has(directive.name)) return;
+			if (definitions.has(directive.name)) return;
 			if (!parent || index == null) return;
 
 			const replacement: RootContent =
@@ -94,7 +120,7 @@ export const remarkDemoteUnknownDirectives =
 					: {
 							type: "paragraph",
 							// This is not a name in the mdast paragraph data type, so the type is widened. The public render (mdast → hast) ignores unknown data.
-							data: { [DEMOTED_DIRECTIVE_SOURCE]: true } as Paragraph["data"],
+							data: { [RAW_SOURCE_PARAGRAPH]: true } as Paragraph["data"],
 							children: [{ type: "text", value: blockSource(directive, source) }],
 						};
 
@@ -135,11 +161,11 @@ const toMdxAttributes = (
  * `u`, `sup`, `sub` and `br` map to lowercase intrinsic elements, and the rest map to component names registered in `MDX_COMPONENTS`.
  */
 export const remarkDirectivesToMdx =
-	() =>
+	(definitions: DirectiveDefinitions) =>
 	(tree: Root): undefined => {
 		visit(tree, [...DIRECTIVE_TYPES], (node, index, parent) => {
 			const directive = asDirective(node);
-			const definition = DIRECTIVE_BY_NAME.get(directive.name);
+			const definition = definitions.get(directive.name);
 			// Unregistered names were already cleared by demote. Kept defensively.
 			if (!definition) return;
 			if (!parent || index == null) return;

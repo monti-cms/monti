@@ -8,11 +8,11 @@ import { buildEditorExtensions } from "../../../extensions";
 import { mdxToTiptap, tiptapToMdx } from "../../../tiptap-content";
 
 const sources = [
-	':::callout{variant="note"}\n\n강조 **문장**\n\n:::',
-	':::collapsible{title="제목"}\n\n본문\n\n:::',
-	'::::tabs\n:::tab{label="a"}\n첫째\n:::\n:::tab{label="b"}\n둘째\n:::\n::::',
-	"::::columns\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::",
-	'::::columns{widths="60,40"}\n:::column\n왼쪽\n:::\n:::column\n오른쪽\n:::\n::::',
+	'<Callout variant="note">\n\n강조 **문장**\n\n</Callout>',
+	'<Collapsible title="제목">\n\n본문\n\n</Collapsible>',
+	'<Tabs>\n\n<Tab label="a">\n\n첫째\n\n</Tab>\n\n<Tab label="b">\n\n둘째\n\n</Tab>\n\n</Tabs>',
+	"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
+	'<Columns widths="60,40">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>',
 ];
 
 describe("container body editing", () => {
@@ -35,7 +35,7 @@ describe("container body editing", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p>/</p>" });
 		BLOCK_INSERT_ACTIONS[name]?.(editor, { from: 1, to: 2 });
 		expect(editor.getJSON().content?.[0]?.type).toBe(`cms${name[0]?.toUpperCase()}${name.slice(1)}`);
-		expect(tiptapToMdx(editor.getJSON())).toContain(`:${name}`);
+		expect(tiptapToMdx(editor.getJSON())).toContain(`<${name[0]?.toUpperCase()}${name.slice(1)}`);
 		editor.destroy();
 	});
 
@@ -62,7 +62,7 @@ describe("container body editing", () => {
 	});
 
 	it("a callout without body opens with an empty paragraph, and saving it left empty restores it without body", () => {
-		const source = ':::callout{variant="info" title="제목만"}\n:::';
+		const source = '<Callout variant="info" title="제목만" />';
 		const content = mdxToTiptap(source);
 		expect(content.content?.[0]?.type).toBe("cmsCallout");
 		expect(content.content?.[0]?.content).toEqual([{ type: "paragraph" }]);
@@ -74,13 +74,13 @@ describe("container body editing", () => {
 	});
 
 	it("empty containers (except callouts) and a Tab outside its parent go to the raw-source box", () => {
-		const empty = mdxToTiptap(':::collapsible{title="a"}\n:::');
+		const empty = mdxToTiptap('<Collapsible title="a" />');
 		expect(empty.content?.[0]?.type).not.toBe("cmsCollapsible");
-		const orphan = mdxToTiptap(':::tab{label="a"}\n본문\n:::');
+		const orphan = mdxToTiptap('<Tab label="a">\n\n본문\n\n</Tab>');
 		expect(orphan.content?.[0]?.type).not.toBe("cmsTab");
-		const loneColumn = mdxToTiptap(":::column\n본문\n:::");
+		const loneColumn = mdxToTiptap("<Column>\n\n본문\n\n</Column>");
 		expect(loneColumn.content?.[0]?.type).not.toBe("cmsColumn");
-		const invalid = mdxToTiptap(':::callout\n:::tab{label="a"}\n본문\n:::\n:::');
+		const invalid = mdxToTiptap('<Callout>\n\n<Tab label="a">\n\n본문\n\n</Tab>\n\n</Callout>');
 		expect(invalid.content?.[0]?.type).not.toBe("cmsCallout");
 	});
 

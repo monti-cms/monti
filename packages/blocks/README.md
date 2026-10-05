@@ -6,15 +6,17 @@ Block extensions for `@monti-cms/core`. Install only the body blocks and inline 
 
 | Block | Plugin | Stored syntax | Public page component |
 | --- | --- | --- | --- |
-| Callout | `callout()` | `:::callout{variant="tip" title="…"}` | `Callout` |
-| Collapsible | `collapsible()` | `:::collapsible{title="…"}` | `Collapsible` |
-| Tabs | `tabs()` | 2 to 8 `:::tab{label="…"}` inside `::::tabs` | `Tabs`, `Tab` |
-| Columns | `columns()` | 2 to 4 `:::column` inside `::::columns{widths="60,40"}` | `Columns`, `Column` |
+| Callout | `callout()` | `<Callout variant="tip" title="…">…</Callout>` | `Callout` |
+| Collapsible | `collapsible()` | `<Collapsible title="…">…</Collapsible>` | `Collapsible` |
+| Tabs | `tabs()` | 2 to 8 `<Tab label="…">` inside `<Tabs>` | `Tabs`, `Tab` |
+| Columns | `columns()` | 2 to 4 `<Column>` inside `<Columns widths="60,40">` | `Columns`, `Column` |
 | Mermaid | `mermaid()` | ` ```mermaid ` | `Mermaid` |
 | Chart | `chart()` | ` ```chart ` | `Chart` |
-| Tooltip | `tooltip()` | `:tooltip[text]{content="description"}` | `Tooltip` |
-| Code link | `codeRef()` | `:code-ref[text]{to="c1"}` (code line label `// @line anchor {..} id="c1"`) | `CodeRef` |
-| Text color | `color({ palette? })` | `:color[text]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}` | `Color` |
+| Tooltip | `tooltip()` | `<Tooltip content="description">text</Tooltip>` | `Tooltip` |
+| Code link | `codeRef()` | `<CodeRef to="c1">text</CodeRef>` (code line label `// @line anchor {..} id="c1"`) | `CodeRef` |
+| Text color | `color({ palette? })` | `<Color fg="#…" fgDark="#…" bg="#…" bgDark="#…">text</Color>` | `Color` |
+
+Stored as standard MDX (JSX elements). Sites that use the directive notation (`:::callout{…}`, `:tooltip[text]{…}`) read and write it by adding `directiveSyntax()` from `@monti-cms/core/syntax` to `mdx.syntax` in the config.
 
 ## Installation
 
