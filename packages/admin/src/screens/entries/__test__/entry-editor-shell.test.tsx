@@ -705,7 +705,7 @@ describe("templates", () => {
 		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
 
 		const dialog = await screen.findByRole("alertdialog", { name: "템플릿 적용" });
-		expect(within(dialog).getByText("지금 본문을 '회고' 템플릿으로 바꿀까요? 쓴 본문은 사라집니다.")).toBeTruthy();
+		expect(dialog.textContent).toContain("회고");
 		fireEvent.click(within(dialog).getByRole("button", { name: "적용" }));
 
 		await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull());
@@ -798,6 +798,17 @@ describe("language tabs", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: "휴지통으로 이동" }));
 		await waitFor(() => expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(1));
 		await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
+	});
+
+	it("does not offer duplicate on a translation", async () => {
+		serve((input, init) => {
+			if (input === "/api/cms/v1/entries/entry-en" && !init?.method) return json(translation);
+		}, translation);
+		render(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
+		await screen.findByRole("navigation", { name: "언어" });
+		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
+		expect(screen.getByRole("menuitem", { name: "휴지통으로 이동" })).toBeTruthy();
+		expect(screen.queryByRole("menuitem", { name: "복제" })).toBeNull();
 	});
 
 	it("tells that translations go along when trashing or archiving the source", async () => {

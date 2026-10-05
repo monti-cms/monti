@@ -1,6 +1,7 @@
 import type { Code } from "mdast";
 import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
+import { splitFrontmatter } from "./frontmatter";
 import { attributeRecord, readJsxAttributes } from "./jsx";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
 import { DEMOTED_DIRECTIVE_SOURCE } from "./remark-directives";
@@ -30,6 +31,78 @@ type MdastLike = {
 	children?: MdastLike[];
 	attributes?: unknown[];
 	data?: Record<string, unknown>;
+	identifier?: string;
+	label?: string | null;
+	position?: { start?: { offset?: number }; end?: { offset?: number } };
+};
+
+type MdastDefinition = { url: string; title?: string | null };
+
+/**
+ * Definitions of the document being converted, keyed by the normalized identifier of mdast (case-insensitive, collapsed whitespace).
+ * The reference forms (`[x][1]`, `[x][]`, `[x]`) are resolved against it so they become the same nodes as inline links and images.
+ */
+let definitions = new Map<string, MdastDefinition>();
+
+const normalizeLabel = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
+
+const collectDefinitions = (nodes: MdastLike[], into: Map<string, MdastDefinition>) => {
+	for (const node of nodes) {
+		if (node.type === "definition") {
+			const key = normalizeLabel(node.identifier ?? node.label ?? "");
+			// As in CommonMark, the first definition of a label wins.
+			if (!into.has(key)) into.set(key, { url: node.url ?? "", title: node.title });
+		}
+		if (node.children) collectDefinitions(node.children, into);
+	}
+};
+
+const resolveReference = (node: MdastLike): MdastDefinition | undefined =>
+	definitions.get(normalizeLabel(node.identifier ?? node.label ?? ""));
+
+const footnoteLabel = (node: MdastLike) => node.label ?? node.identifier ?? "";
+
+/** Body of the document being converted. Offsets in the mdast positions point into it. */
+let sourceBody = "";
+
+const FOOTNOTE_MARKER = /\[\^([^\]\s\\]+)\]/g;
+
+/** Whether the `[` at `index` is escaped (preceded by an odd number of backslashes). */
+const isEscapedAt = (raw: string, index: number) => {
+	let slashes = 0;
+	while (raw[index - 1 - slashes] === "\\") slashes += 1;
+	return slashes % 2 === 1;
+};
+
+/**
+ * Text that holds an unescaped `[^label]`. The parser only reads a marker as a reference when a definition exists, so a reference
+ * whose definition was removed arrives as plain text. It is turned back into a reference (read from the source, where an escaped `\[^label]` is told apart) so it survives
+ * every save and reconnects when the definition is added again. Falls back to plain text if the markers in the text and the source cannot be paired.
+ */
+const textWithOrphanFootnotes = (node: MdastLike, marks: CmsMark[]): CmsNode[] => {
+	const value = node.value ?? "";
+	const plain = [textNode(value, marks)];
+	if (!value.includes("[^")) return plain;
+	const start = node.position?.start?.offset;
+	const end = node.position?.end?.offset;
+	if (typeof start !== "number" || typeof end !== "number") return plain;
+	const raw = sourceBody.slice(start, end);
+	const rawMarkers = [...raw.matchAll(FOOTNOTE_MARKER)];
+	const valueMarkers = [...value.matchAll(FOOTNOTE_MARKER)];
+	if (valueMarkers.length === 0 || rawMarkers.length !== valueMarkers.length) return plain;
+
+	const output: CmsNode[] = [];
+	let cursor = 0;
+	valueMarkers.forEach((marker, index) => {
+		const rawMarker = rawMarkers[index];
+		if (!rawMarker || rawMarker[1] !== marker[1] || isEscapedAt(raw, rawMarker.index)) return;
+		if (marker.index > cursor) output.push(textNode(value.slice(cursor, marker.index), marks));
+		output.push({ type: "footnoteReference", attrs: { label: marker[1] ?? "" } });
+		cursor = marker.index + marker[0].length;
+	});
+	if (cursor === 0) return plain;
+	if (cursor < value.length) output.push(textNode(value.slice(cursor), marks));
+	return output;
 };
 
 const jsonClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -56,8 +129,11 @@ const isPhrasing = (node: MdastLike) => {
 		"inlineCode",
 		"break",
 		"link",
+		"linkReference",
 		"inlineMath",
 		"image",
+		"imageReference",
+		"footnoteReference",
 		"mdxJsxTextElement",
 		"mdxTextExpression",
 		"html",
@@ -113,7 +189,7 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 	for (const node of nodes) {
 		switch (node.type) {
 			case "text":
-				output.push(textNode(node.value ?? "", marks));
+				output.push(...textWithOrphanFootnotes(node, marks));
 				break;
 			case "strong":
 				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "bold" }]));
@@ -136,10 +212,22 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "link", attrs }]));
 				break;
 			}
+			case "linkReference": {
+				const definition = resolveReference(node);
+				const attrs: Record<string, CmsJsonValue> = { href: definition?.url ?? "" };
+				if (definition?.title) attrs.title = definition.title;
+				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "link", attrs }]));
+				break;
+			}
+			case "footnoteReference":
+				// An atom: it carries no marks, and the label is kept as written.
+				output.push({ type: "footnoteReference", attrs: { label: footnoteLabel(node) } });
+				break;
 			case "inlineMath":
 				output.push(textNode(`$${node.value ?? ""}$`, marks));
 				break;
 			case "image":
+			case "imageReference":
 				output.push(imageNode(node));
 				break;
 			case "mdxJsxTextElement":
@@ -175,13 +263,17 @@ const convertJsxInline = (node: MdastLike, marks: CmsMark[]): CmsNode[] => {
 };
 
 const imageNode = (node: MdastLike): CmsNode => {
+	const definition = node.type === "imageReference" ? resolveReference(node) : node;
 	const attrs: Record<string, CmsJsonValue> = {
-		src: node.url ?? "",
+		src: definition?.url ?? "",
 		alt: node.alt ?? "",
 	};
-	if (node.title) attrs.title = node.title;
+	if (definition?.title) attrs.title = definition.title;
 	return { type: "image", attrs };
 };
+
+/** Fields the code block node owns. A fence meta key with the same name (`value="x"`) must not overwrite them. */
+const CODE_BLOCK_OWN_FIELDS = new Set(["language", "meta", "value", "codeDocument"]);
 
 const convertCode = (node: MdastLike): CmsNode => {
 	const code: Code = {
@@ -198,7 +290,7 @@ const convertCode = (node: MdastLike): CmsNode => {
 		codeDocument: jsonClone(codeDocument) as unknown as CmsJsonValue,
 	};
 	for (const [key, value] of Object.entries(codeDocument.meta)) {
-		attrs[key] = value;
+		if (!CODE_BLOCK_OWN_FIELDS.has(key)) attrs[key] = value;
 	}
 	return { type: "codeBlock", attrs };
 };
@@ -330,7 +422,7 @@ const convertParagraph = (node: MdastLike): CmsNode[] => {
 
 	const flush = () => {
 		if (inline.length === 0) return;
-		if (inline.length === 1 && inline[0]?.type === "image") {
+		if (inline.length === 1 && (inline[0]?.type === "image" || inline[0]?.type === "imageReference")) {
 			blocks.push(imageNode(inline[0]));
 			inline = [];
 			return;
@@ -419,6 +511,14 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 			case "blockquote":
 				output.push({ type: "blockquote", content: convertBlocks(node.children ?? []) });
 				break;
+			case "footnoteDefinition":
+				// Kept in place (they usually sit at the end of the source). The content is the definition's own blocks.
+				output.push({
+					type: "footnoteDefinition",
+					attrs: { label: footnoteLabel(node) },
+					content: convertBlocks(node.children ?? []),
+				});
+				break;
 			case "thematicBreak":
 				output.push({ type: "horizontalRule" });
 				break;
@@ -426,6 +526,7 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 				output.push({ type: "math", attrs: { value: node.value ?? "" } });
 				break;
 			case "image":
+			case "imageReference":
 				output.push(imageNode(node));
 				break;
 			case "mdxJsxFlowElement":
@@ -452,6 +553,10 @@ const convertBlocks = (nodes: MdastLike[]): CmsNode[] => {
 };
 
 export const toDocument = (analysis: CmsMdxAnalysis): CmsNode => {
+	definitions = new Map();
+	sourceBody = splitFrontmatter(analysis.source).body;
+	if (analysis.tree) collectDefinitions(analysis.tree.children as MdastLike[], definitions);
+	// A `definition` node has no children or value, so `convertBlocks` drops it (consumed definitions are written back as inline links).
 	const content = analysis.tree ? convertBlocks(analysis.tree.children as MdastLike[]) : [];
 	const doc: CmsNode = { type: "doc", content };
 	if (analysis.frontmatter) {

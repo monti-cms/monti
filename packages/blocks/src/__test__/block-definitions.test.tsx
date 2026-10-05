@@ -1,6 +1,6 @@
 import { BLOCK_NODE_VIEWS } from "@monti-cms/admin/editor";
 import { BLOCK_BY_NAME, BLOCKS, invalidOptionAttributes } from "@monti-cms/core/client";
-import { DIRECTIVES } from "@monti-cms/core/mdx";
+import { analyze, DIRECTIVES, serialize, toDocument } from "@monti-cms/core/mdx";
 import { describe, expect, it, vi } from "vitest";
 
 // Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
@@ -52,50 +52,55 @@ describe("block definitions", () => {
 		expect(callout && invalidOptionAttributes(callout, { variant: "tip", title: "x" })).toEqual([]);
 	});
 
-	it("builds the v1 directive table as is", () => {
-		expect(
-			DIRECTIVES.map((directive) => [directive.name, directive.kind, directive.component, directive.required]),
-		).toEqual([
-			["text-align", "container", "TextAlign", ["align"]],
-			["image", "leaf", "Image", []],
-			["file", "leaf", "File", ["mediaId"]],
-			// Translation notice block. Wraps the source text of a new translation.
-			["untranslated", "text", "Untranslated", []],
-			["u", "text", "u", []],
-			["sup", "text", "sup", []],
-			["sub", "text", "sub", []],
-			["br", "text", "br", []],
-			["table", "container", "Table", []],
-			["row", "container", "TableRow", []],
-			["cell", "leaf", "TableCell", []],
-			// Block extension (`@monti-cms/blocks`). Follows the `plugins` order in the site config.
-			["callout", "container", "Callout", []],
-			["collapsible", "container", "Collapsible", []],
-			["tabs", "container", "Tabs", []],
-			["tab", "container", "Tab", ["label"]],
-			["columns", "container", "Columns", []],
-			["column", "container", "Column", []],
-			// Inline mark extension. Stored syntax and component names are unchanged.
-			["tooltip", "text", "Tooltip", ["content"]],
-			["code-ref", "text", "CodeRef", ["to"]],
-			["color", "text", "Color", []],
-		]);
-		expect(DIRECTIVES.find((directive) => directive.name === "cell")?.attributes).toEqual({
-			colspan: "string",
-			rowspan: "string",
-			header: "boolean",
-		});
-		expect(DIRECTIVES.find((directive) => directive.name === "image")?.attributes).toEqual({
-			mediaId: "string",
-			src: "string",
-			alt: "string",
-			width: "string",
-			align: "string",
-			caption: "string",
-			decorative: "boolean",
-			crop: "string",
-			rotate: "string",
-			title: "string",
-		});
+	it("every registered directive round-trips parse -> document -> serialize", () => {
+		const blockOf = (name: string) => BLOCK_BY_NAME.get(name);
+		/** Required attributes plus `mediaId` (an image without media is stored as plain markdown), each with a valid value. */
+		const attributesOf = (name: string) =>
+			Object.entries(blockOf(name)?.attributes ?? {})
+				.filter(([key, attribute]) => attribute.required || key === "mediaId")
+				.map(([key, attribute]) => {
+					const option = attribute.options ? Object.keys(attribute.options)[0] : undefined;
+					return `${key}="${option ?? "x"}"`;
+				})
+				.join(" ");
+		const covered = new Set<string>();
+		const childOf = (name: string) => {
+			const childName = blockOf(name)?.children?.blocks?.[0];
+			return DIRECTIVES.find((candidate) => candidate.name === childName);
+		};
+		/** Container nesting below a directive. An outer fence needs more colons than the containers inside it. */
+		const heightOf = (name: string): number => {
+			const child = childOf(name);
+			return child?.kind === "container" ? 1 + heightOf(child.name) : 0;
+		};
+		/** The source of one directive; container blocks nest their minimum number of children (one at least). */
+		const sourceOf = (directive: (typeof DIRECTIVES)[number]): string => {
+			covered.add(directive.name);
+			const attributes = attributesOf(directive.name);
+			const braces = attributes ? `{${attributes}}` : "";
+			if (directive.kind === "text") return `before :${directive.name}[inside]${braces} after\n`;
+			if (directive.kind === "leaf") return `::${directive.name}${braces}\n`;
+			const child = childOf(directive.name);
+			const count = Math.max(blockOf(directive.name)?.children?.min ?? 0, child ? 1 : 0);
+			const body = child ? Array.from({ length: count }, () => sourceOf(child)).join("\n") : "inside\n";
+			const fence = ":".repeat(3 + heightOf(directive.name));
+			return `${fence}${directive.name}${braces}\n${body}${fence}\n`;
+		};
+
+		// Child blocks (tab, row, cell, column) are exercised through their parent.
+		for (const directive of DIRECTIVES.filter((candidate) => !blockOf(candidate.name)?.parent)) {
+			const source = sourceOf(directive);
+			const analysis = analyze(source);
+			expect(analysis.errors, directive.name).toEqual([]);
+			const document = toDocument(analysis);
+			const saved = serialize(document);
+			// The directive is still stored as a directive (it was not turned back into body text).
+			expect(saved, directive.name).toContain(directive.name);
+			// Saving is stable: parsing the saved text gives the same document and the same text again.
+			const reparsed = toDocument(analyze(saved));
+			expect(reparsed, directive.name).toEqual(document);
+			expect(serialize(reparsed), directive.name).toBe(saved);
+		}
+		expect([...covered].sort()).toEqual(DIRECTIVES.map((directive) => directive.name).sort());
 	});
 });

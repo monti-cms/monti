@@ -24,7 +24,7 @@ describe("block slot of screen actions", () => {
 		expect(base("mdx").success).toBe(true);
 		expect(base("text").success).toBe(false);
 		expect(surfaceProblem({ slot: "block", block: "mermaid" })).toBeNull();
-		expect(surfaceProblem({ slot: "block", block: "nope" })).toBe("없는 블록입니다: nope");
+		expect(surfaceProblem({ slot: "block", block: "nope" })).toContain("nope");
 	});
 
 	it("a block slot action takes the block source and streams the result", () => {

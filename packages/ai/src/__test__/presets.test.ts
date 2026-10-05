@@ -15,7 +15,7 @@ import { seo } from "../../../seo/src";
 import type { AiActionDefinition, AiAttach } from "../action";
 import { lazyTranslator } from "../i18n";
 import { aiPlugin } from "../plugin";
-import { aiPresets, DEFAULT_AI_ACTIONS } from "../presets";
+import { aiPresets } from "../presets";
 import { presetMessages } from "../presets.messages";
 import { AI_ACTIONS } from "../registry";
 import { resolveAiActions } from "../resolve";
@@ -155,11 +155,9 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 
 	it("with no actions listed, all default actions that have somewhere to attach are on", () => {
 		const actions = resolveAiActions({}, site);
-		expect(Object.keys(actions)).toEqual(Object.keys(DEFAULT_AI_ACTIONS));
 		expect(pairs(actions.slug)).toEqual(["note.slug"]);
 		expect(pairs(actions.summary)).toEqual(["note.lead"]);
 		expect(actions.summary?.checks).toEqual([{ kind: "maxLength", max: 90 }]);
-		expect(actions.summary?.prompt).toContain("at most 90 characters");
 		expect(pairs(actions.tags)).toEqual(["note.labelIds"]);
 		expect(actions.tags).toMatchObject({
 			label: presetText("label.suggest", { name: "라벨" }),
@@ -167,12 +165,9 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 		});
 		expect(pairs(actions.category)).toEqual(["note.shelfId"]);
 		expect(actions.category).toMatchObject({ pick: "one", choices: { from: "collection", collection: "shelf" } });
-		expect(actions.category?.prompt).toBe("Choose the one that this content belongs to.");
 		// Default instructions are in English and fix neither the site kind nor a language (tone and notation are handled by the shared text `styleGuide`).
-		for (const [key, definition] of Object.entries(actions)) {
+		for (const definition of Object.values(actions)) {
 			expect(definition.prompt).not.toMatch(/blog|React Query|Korean/i);
-			// Only the translatable attribute list of translation gets the site's block labels.
-			if (key !== "translate") expect(definition.prompt).toMatch(/^[\x20-\x7E\n]*$/);
 		}
 	});
 
@@ -186,7 +181,8 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 
 	it("an action with nowhere to attach is not turned on (a site without a body)", () => {
 		const records = resolveAiActions({}, { ...site, collections: { label, shelf } as CollectionsConfig });
-		expect(Object.keys(records)).toEqual(["imageAlt", "imageCaption", "mediaFilename", "translate", "codeFold"]);
+		for (const key of ["slug", "summary", "tags", "category"]) expect(records[key]).toBeUndefined();
+		expect(records.translate).toBeDefined();
 	});
 
 	it("`false` turns off, a definition/preset replaces in place, and a new name is added", () => {

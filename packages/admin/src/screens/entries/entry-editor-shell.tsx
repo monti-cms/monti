@@ -963,10 +963,13 @@ export function EntryEditorShell({
 							{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
 							{entry && !isTrashed && (
 								<>
-									<DropdownMenuItem onClick={() => void handleDuplicate()}>
-										<Copy aria-hidden />
-										{t("duplicate")}
-									</DropdownMenuItem>
+									{/* The store refuses to duplicate a translation, so only a source can be duplicated. */}
+									{!isTranslationEntry(entry) && (
+										<DropdownMenuItem onClick={() => void handleDuplicate()}>
+											<Copy aria-hidden />
+											{t("duplicate")}
+										</DropdownMenuItem>
+									)}
 									{(entry.status === "draft" || entry.status === "published") && (
 										<DropdownMenuItem onClick={() => confirmLifecycle("archive")}>
 											<Archive aria-hidden />

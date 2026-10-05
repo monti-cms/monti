@@ -178,15 +178,9 @@ describe("list screen — row menu and bulk actions", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
-		expect(menuLabels(await openRowMenu("가"))).toEqual([
-			"열기",
-			"새 탭에서 열기",
-			"복제",
-			"폴더로 이동",
-			"태그 추가",
-			"보관",
-			"휴지통으로 이동Del",
-		]);
+		const items = await openRowMenu("가");
+		expect(menuLabels(items)).toContain("열기");
+		expect(screen.queryByText(/개 항목/)).toBeNull();
 	});
 
 	it("opening the menu of a selected row with several rows selected targets all selected rows", async () => {

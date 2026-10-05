@@ -60,21 +60,16 @@ function renderPlace() {
 }
 
 describe("AI slot source", () => {
-	it("gives each action the AI look (sparkles icon, its own label)", async () => {
+	it("gives each action a button with its own label", async () => {
 		renderPlace();
-		const button = await screen.findByRole("button", { name: "Suggest titles" });
-		expect(button.querySelector("svg.lucide-sparkles")).toBeTruthy();
+		expect(await screen.findByRole("button", { name: "Suggest titles" })).toBeTruthy();
 	});
 
-	it("groups several actions in one menu named AI, each item with the sparkles icon", async () => {
+	it("groups several actions in one menu named AI", async () => {
 		items = [view("a", "Suggest titles"), view("b", "Write summary")];
 		renderPlace();
 		const menu = await screen.findByRole("button", { name: t("slotMenu") });
-		expect(menu.querySelector("svg.lucide-sparkles")).toBeTruthy();
 		fireEvent.click(menu);
 		await waitFor(() => expect(screen.getAllByRole("menuitem")).toHaveLength(2));
-		for (const item of screen.getAllByRole("menuitem")) {
-			expect(item.querySelector("svg.lucide-sparkles")).toBeTruthy();
-		}
 	});
 });

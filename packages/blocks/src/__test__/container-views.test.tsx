@@ -144,7 +144,9 @@ describe("container NodeView (public look + in-place editing)", () => {
 		const editor = await mount(':::collapsible{title="제목"}\n숨은 본문\n:::');
 		const toggle = screen.getByRole("button", { name: "펼치기" });
 		expect(toggle.getAttribute("aria-expanded")).toBe("false");
-		expect(document.querySelector(".node-cmsCollapsible [data-node-view-content]")?.classList).toContain("hidden");
+		expect(
+			document.querySelector(".node-cmsCollapsible [data-node-view-content]")?.hasAttribute("data-cms-collapsed"),
+		).toBe(true);
 		act(() => {
 			fireEvent.click(toggle);
 		});

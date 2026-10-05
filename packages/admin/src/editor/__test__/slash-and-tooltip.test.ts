@@ -1,10 +1,13 @@
-import { defineBlock } from "@monti-cms/core/client";
+import { createTranslator, defineBlock } from "@monti-cms/core/client";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it, vi } from "vitest";
 import { BLOCK_INSERT_ACTIONS, type BlockInsertAction } from "../block-inserts";
 import { buildEditorExtensions } from "../extensions";
+import { editorMessages } from "../messages";
 import { buildBlockSlashCommands, filterCommands, OPEN_FILE_PICKER_EVENT, SLASH_COMMANDS } from "../slash-command";
 import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
+
+const t = createTranslator(editorMessages);
 
 describe("slash menu insertion driven by block definitions", () => {
 	it("builds slash commands for BLOCKS entries with insertable=true and view='node'", () => {
@@ -65,31 +68,44 @@ describe("slash menu insertion driven by block definitions", () => {
 
 		const commands = buildBlockSlashCommands([mockCallout], actions);
 		expect(commands).toHaveLength(1);
-		expect(commands[0]?.title).toBe("콜아웃");
-		expect(commands[0]?.description).toBe("강조 상자");
-		expect(commands[0]?.keywords).toEqual(["콜아웃", "callout"]);
+		expect(commands[0]?.title).toBe(mockCallout.label);
+		expect(commands[0]?.description).toBe(mockCallout.description);
+		expect(commands[0]?.keywords).toEqual(mockCallout.editor.keywords);
 	});
 
 	it("SLASH_COMMANDS includes both the base commands and the auto-generated block commands", () => {
 		const titles = SLASH_COMMANDS.map((c) => c.title);
-		expect(titles).toContain("문단");
-		expect(titles).toContain("코드 블록");
-		expect(titles).toContain("표");
-		expect(titles).toContain("이미지");
+		expect(titles).toEqual(
+			expect.arrayContaining([
+				t("slash.paragraph.title"),
+				t("slash.code.title"),
+				t("slash.table.title"),
+				t("slash.image.title"),
+			]),
+		);
 		// Tooltip is registered by the blocks extension (`@monti-cms/blocks`), so it is not in the core list.
-		expect(titles).not.toContain("툴팁");
-		expect(titles).toContain("다이어그램");
-		expect(titles).toContain("차트");
-		expect(titles).toContain("수식");
+		expect(SLASH_COMMANDS.some((c) => c.keywords.includes("tooltip"))).toBe(false);
+		// Auto-generated block commands carry the block id.
+		const ids = SLASH_COMMANDS.map((c) => c.id);
+		expect(ids).toEqual(expect.arrayContaining(["mermaid", "chart", "math"]));
 	});
 
 	it("slash menu and formatting tools share block names, and the file entry opens the file picker", () => {
 		const titles = SLASH_COMMANDS.map((c) => c.title);
-		expect(titles).toEqual(expect.arrayContaining(["문단", "글머리 목록", "번호 목록", "코드 블록", "표", "파일"]));
+		expect(titles).toEqual(
+			expect.arrayContaining([
+				t("slash.paragraph.title"),
+				t("slash.bullet.title"),
+				t("slash.ordered.title"),
+				t("slash.code.title"),
+				t("slash.table.title"),
+				t("slash.file.title"),
+			]),
+		);
 		const open = vi.fn();
 		window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p>/파일</p>" });
-		SLASH_COMMANDS.find((c) => c.title === "파일")?.action(editor, { from: 1, to: 4 });
+		SLASH_COMMANDS.find((c) => c.title === t("slash.file.title"))?.action(editor, { from: 1, to: 4 });
 		window.removeEventListener(OPEN_FILE_PICKER_EVENT, open);
 		expect(open).toHaveBeenCalledOnce();
 		expect(editor.getText()).toBe("");

@@ -37,6 +37,38 @@ const escapeText = (value: string, inCode: boolean, inLabel = false) => {
 	return inLabel ? unbroken.replace(/\]/g, "\\]") : unbroken;
 };
 
+/** Escapes `&` that would be read back as a character reference (`&amp;` in a URL or title is literal text, not `&`). */
+const escapeReferences = (value: string) => value.replace(/&(?=#?\w+;)/g, "\\&");
+
+const hasBalancedParens = (value: string) => {
+	let depth = 0;
+	for (const char of value) {
+		if (char === "(") depth += 1;
+		else if (char === ")" && --depth < 0) return false;
+	}
+	return depth === 0;
+};
+
+/**
+ * Link destination. A bare destination cannot hold whitespace, control characters, a leading `<`, a backslash or unbalanced parentheses,
+ * so those are written in the angle-bracket form (`<...>`), where only `\`, `<`, `>` and line breaks need care.
+ */
+const formatLinkDestination = (href: string): string => {
+	const bare = !/[\s\p{Cc}<\\]/u.test(href) && hasBalancedParens(href);
+	if (bare) return escapeReferences(href);
+	const escaped = href.replace(/\\/g, "\\\\").replace(/[<>]/g, "\\$&").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+	return `<${escapeReferences(escaped)}>`;
+};
+
+/** Link title in double quotes. A blank line cannot appear in a title, so it is collapsed to a single line break. */
+const formatLinkTitle = (title: string): string =>
+	`"${escapeReferences(
+		title
+			.replace(/\\/g, "\\\\")
+			.replace(/"/g, '\\"')
+			.replace(/\r?\n([ \t]*\r?\n)+/g, "\n"),
+	)}"`;
+
 const DIRECTIVE_COLON = /(?<!\\):(?=[A-Za-z0-9_\-가-힣:])/g; // cms-allow-korean: Hangul in a name pattern, not UI text
 const DIRECTIVE_RUN = /^[A-Za-z0-9_\-가-힣:]+/; // cms-allow-korean: Hangul in a name pattern, not UI text
 
@@ -203,7 +235,10 @@ const closeMark = (mark: CmsMark): string => {
 		case "link": {
 			const href = String(mark.attrs?.href ?? "");
 			const title = mark.attrs?.title;
-			return typeof title === "string" && title.length > 0 ? `](${href} "${title}")` : `](${href})`;
+			const destination = formatLinkDestination(href);
+			return typeof title === "string" && title.length > 0
+				? `](${destination} ${formatLinkTitle(title)})`
+				: `](${destination})`;
 		}
 		default:
 			return "";
@@ -291,6 +326,18 @@ const serializeDirective = (node: CmsNode, definition: DirectiveDefinition, inde
 	return `${indent}${fence}${definition.name}${attrs}\n${inner}\n${indent}${fence}`;
 };
 
+/** A footnote label cannot hold whitespace, brackets, a backslash or a caret, so those are replaced when a document carries one. */
+const footnoteLabel = (node: CmsNode): string => String(node.attrs?.label ?? "").replace(/[\s[\]\\^]/g, "-");
+
+const serializeFootnoteDefinition = (node: CmsNode, indent: string): string => {
+	const lines = serializeBlocks(node.content ?? [], "").split("\n");
+	// Continuation lines are indented by four spaces (GFM); blank lines stay empty.
+	const body = lines.map((line, index) => (index === 0 || line.length === 0 ? line : `    ${line}`));
+	const head = `[^${footnoteLabel(node)}]:`;
+	if (lines.length === 1 && lines[0] === "") return `${indent}${head}`;
+	return [`${head} ${body[0]}`, ...body.slice(1)].map((line) => (line ? indent + line : line)).join("\n");
+};
+
 const serializeImage = (node: CmsNode): string => {
 	const mediaId = node.attrs?.mediaId;
 	const src = node.attrs?.src ? String(node.attrs.src) : "";
@@ -312,8 +359,11 @@ const serializeImage = (node: CmsNode): string => {
 	}
 
 	const title = node.attrs?.title;
-	if (typeof title === "string" && title.length > 0) return `![${alt}](${src} "${title}")`;
-	return `![${alt}](${src})`;
+	// The alt text sits where link text does, so it is escaped as a label (`]` closes it, `*` and `[` would be read as markup).
+	const label = escapeReferences(escapeText(alt, false, true));
+	const destination = formatLinkDestination(src);
+	if (typeof title === "string" && title.length > 0) return `![${label}](${destination} ${formatLinkTitle(title)})`;
+	return `![${label}](${destination})`;
 };
 
 const encodeLeadingSpaces = (value: string, inCode: boolean, inLabel = false): string => {
@@ -396,6 +446,12 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 			out.push(serializeImage(node));
 			continue;
 		}
+		if (node.type === "footnoteReference") {
+			closeTo(0);
+			out.push(`[^${footnoteLabel(node)}]`);
+			atLineStart = false;
+			continue;
+		}
 		const directive = directiveFor(node);
 		if (directive) {
 			closeTo(0);
@@ -438,10 +494,12 @@ const serializeInlines = (nodes: CmsNode[], asParagraph = false, inLabel = false
 		}
 		const inCode = wanted.some((mark) => mark.type === "code");
 		const text = node.text ?? "";
+		// Link text closes with `]`, like a directive label, so a `]` inside it is escaped too.
+		const escapeClosingBracket = inLabel || wanted.some((mark) => LABEL_MARKS.has(mark.type) || mark.type === "link");
 		out.push(
 			atLineStart && !inCode
-				? encodeLeadingSpaces(text, inCode, inLabel || wanted.some((mark) => LABEL_MARKS.has(mark.type)))
-				: escapeText(text, inCode, inLabel || wanted.some((mark) => LABEL_MARKS.has(mark.type))),
+				? encodeLeadingSpaces(text, inCode, escapeClosingBracket)
+				: escapeText(text, inCode, escapeClosingBracket),
 		);
 		atLineStart = false;
 	}
@@ -640,6 +698,8 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 				.split("\n")
 				.map((line) => `${indent}>${line ? ` ${line}` : ""}`)
 				.join("\n");
+		case "footnoteDefinition":
+			return serializeFootnoteDefinition(node, indent);
 		case "horizontalRule":
 			return `${indent}---`;
 		case "image":

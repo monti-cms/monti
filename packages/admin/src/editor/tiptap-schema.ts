@@ -12,6 +12,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import { CmsCodeBlock } from "./code-block";
 import { CodeFoldMark } from "./code-block/code-fold-mark";
 import { CodeTooltipMark } from "./code-block/code-tooltip-mark";
+import { FOOTNOTE_EXTENSIONS } from "./footnote-nodes";
 import { editorMessages } from "./messages";
 import { CmsUntranslatedMark } from "./untranslated-mark";
 
@@ -181,6 +182,7 @@ export const CMS_SCHEMA_EXTENSIONS = [
 	CmsSubscript,
 	CmsUntranslatedMark,
 	CmsOpaqueBlock,
+	...FOOTNOTE_EXTENSIONS,
 	CodeFoldMark,
 	CodeTooltipMark,
 	CmsCodeBlock,

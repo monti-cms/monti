@@ -16,6 +16,7 @@ import {
 	Pilcrow,
 	Quote,
 	SquareCode,
+	Superscript,
 	Table2,
 } from "lucide-react";
 import {
@@ -24,6 +25,7 @@ import {
 	OPEN_FILE_PICKER_EVENT,
 	OPEN_IMAGE_DIALOG_EVENT,
 } from "./block-inserts";
+import { insertFootnote } from "./footnote-nodes";
 import { editorMessages } from "./messages";
 
 const t = createTranslator(editorMessages);
@@ -169,6 +171,15 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		keywords: keywordList("slash.internalLink.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).insertContent("[[").run();
+		},
+	},
+	{
+		title: t("slash.footnote.title"),
+		description: t("slash.footnote.description"),
+		icon: Superscript,
+		keywords: keywordList("slash.footnote.keywords"),
+		action: (editor, range) => {
+			insertFootnote(editor, range);
 		},
 	},
 ];

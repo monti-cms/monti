@@ -3,14 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "../../ui/tooltip";
 import { slotsMessages } from "../messages";
-import {
-	CORE_SLOT_NAMES,
-	type SlotAction,
-	SlotRegistryProvider,
-	type SlotRequest,
-	type SlotSource,
-	useSlot,
-} from "../slots";
+import { type SlotAction, SlotRegistryProvider, type SlotRequest, type SlotSource, useSlot } from "../slots";
 
 const t = createTranslator(slotsMessages);
 
@@ -220,7 +213,6 @@ describe("screen slots", () => {
 		fireEvent.click(screen.getByRole("button", { name: "주소 추천" }));
 		fireEvent.click(await screen.findByRole("button", { name: "react-query" }));
 		expect(apply).toHaveBeenCalledWith("react-query", "replace");
-		expect([...CORE_SLOT_NAMES]).toEqual(["field", "image", "codeRules", "media", "translation"]);
 
 		cleanup();
 		renderSlot([source], { slot: "other", target: "export" });

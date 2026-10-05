@@ -8,6 +8,7 @@ import {
 	AlignCenter,
 	AlignLeft,
 	AlignRight,
+	Asterisk,
 	ChevronDown,
 	Heading2,
 	Heading3,
@@ -56,6 +57,7 @@ import { endBlockDrag, findBlockDOM, refineBlock, resolveTargetBlock, startBlock
 import { EDITOR_WIDTHS, EditorWidthMenu, useEditorWidth } from "./editor-width";
 import { buildEditorExtensions } from "./extensions";
 import { FILE_NODE_NAME } from "./file-node";
+import { canInsertFootnote, insertFootnote } from "./footnote-nodes";
 import { ImageInsertDialog, type ImageInsertion } from "./image-insert-dialog";
 import { InlineBubble, useMarkExtensions } from "./inline-bubble";
 import { INLINE_MARK_TOOLS } from "./inline-marks";
@@ -229,6 +231,16 @@ const INSERT_TOOLS: { tool: ToolbarItem; priority: number }[] = [
 	},
 ];
 
+/** Inline footnote reference (plus its definition at the end of the page), the same action as the slash command. */
+const FOOTNOTE_TOOL: ToolbarItem = {
+	label: t("toolbar.footnote"),
+	icon: Asterisk,
+	isDisabled: (e) => !canInsertFootnote(e),
+	run: (e) => {
+		insertFootnote(e);
+	},
+};
+
 const DIVIDER_TOOL: ToolbarItem = {
 	label: t("toolbar.divider"),
 	icon: Minus,
@@ -252,6 +264,7 @@ const TOOLBAR_ORDER = [
 	"divider-inline",
 	"link",
 	"mark-link:*",
+	FOOTNOTE_TOOL.label,
 	"divider-list",
 	"list",
 	"align",
@@ -986,6 +999,7 @@ export function CmsEditor({
 				</Popover>
 			),
 		},
+		buttonSlot(FOOTNOTE_TOOL, FOOTNOTE_TOOL.label, 5),
 		buttonSlot(DIVIDER_TOOL, "divider-tool", 8),
 	];
 	const toolbarEntries = orderToolbar(unordered);

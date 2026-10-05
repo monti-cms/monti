@@ -48,6 +48,45 @@ describe("formatting toolbar group", () => {
 		expect(within(toolbar).queryByRole("button", { name: t("toolbarRow.more") })).toBeNull();
 	});
 
+	it("the footnote button inserts a reference and a definition, and is disabled in a code block", async () => {
+		let editor: Editor | null = null;
+		render(
+			<CmsEditor
+				content={"안녕하세요\n\n```ts\nconst a = 1;\n```"}
+				onChange={vi.fn()}
+				onEditor={(ready) => {
+					editor = ready;
+				}}
+			/>,
+		);
+		const toolbar = await screen.findByRole("toolbar", { name: t("toolbar.format") });
+		await waitFor(() => expect(editor).not.toBeNull());
+		const ready = editor as unknown as Editor;
+		const button = () => within(toolbar).getByRole("button", { name: t("toolbar.footnote") });
+
+		act(() => {
+			ready.commands.setTextSelection(3);
+		});
+		await waitFor(() => expect((button() as HTMLButtonElement).disabled).toBe(false));
+		fireEvent.click(button());
+
+		const types: string[] = [];
+		ready.state.doc.descendants((node) => {
+			types.push(node.type.name);
+		});
+		expect(types).toContain("footnoteReference");
+		expect(types).toContain("footnoteDefinition");
+
+		let insideCode = 0;
+		ready.state.doc.descendants((node, pos) => {
+			if (node.type.name === "codeBlock") insideCode = pos + 1;
+		});
+		act(() => {
+			ready.commands.setTextSelection(insideCode + 2);
+		});
+		await waitFor(() => expect((button() as HTMLButtonElement).disabled).toBe(true));
+	});
+
 	it("the link button is pressed when the cursor is inside a link", async () => {
 		let editor: Editor | null = null;
 		render(
@@ -123,31 +162,35 @@ describe("formatting toolbar group", () => {
 		await waitFor(() => expect(savedText(onChange)).toContain("center"));
 	});
 
-	it("tool names and order are fixed", async () => {
+	it("tool groups keep their relative order", async () => {
 		await renderEditor();
 		const toolbar = screen.getByRole("toolbar", { name: t("toolbar.format") });
 
-		// Order: paragraph style → text styling → attach to text (link) → lists and alignment → insert block. Text color and tooltip are added by block extensions
-		// (see the formatting toolbar test in `@monti-cms/blocks`).
-		expect(toolbarButtonNames(toolbar)).toEqual([
-			t("toolbar.paragraph"),
-			t("inlineMarks.bold"),
-			t("inlineMarks.italic"),
-			t("inlineMarks.underline"),
-			t("inlineMarks.strike"),
-			t("inlineMarks.code"),
-			t("toolbar.script"),
-			t("toolbar.link"),
-			t("toolbar.list"),
-			t("toolbar.align"),
-			t("toolbar.quote"),
-			t("toolbar.codeBlock"),
-			t("toolbar.table"),
-			t("toolbar.divider"),
-			t("toolbar.upload"),
-			t("customBlockMenu.label"),
-			t("editorWidth.label"),
-		]);
+		// Groups: paragraph style → text styling → attach to text (link, footnote) → lists and alignment → insert block.
+		// Only the relative placement is asserted, so unrelated buttons can be added without touching this test.
+		// Text color and tooltip are added by block extensions (see the formatting toolbar test in `@monti-cms/blocks`).
+		const names = toolbarButtonNames(toolbar);
+		const at = (key: Parameters<typeof t>[0]) => {
+			const index = names.indexOf(t(key));
+			expect(index, `${key} is in the toolbar`).toBeGreaterThanOrEqual(0);
+			return index;
+		};
+		const lastMark = Math.max(
+			at("inlineMarks.bold"),
+			at("inlineMarks.italic"),
+			at("inlineMarks.underline"),
+			at("inlineMarks.strike"),
+			at("inlineMarks.code"),
+			at("toolbar.script"),
+		);
+
+		expect(at("toolbar.paragraph")).toBeLessThan(at("inlineMarks.bold"));
+		expect(lastMark).toBeLessThan(at("toolbar.link"));
+		expect(at("toolbar.footnote")).toBe(at("toolbar.link") + 1);
+		expect(at("toolbar.footnote")).toBeLessThan(at("toolbar.list"));
+		expect(at("toolbar.list")).toBeLessThan(at("toolbar.align"));
+		expect(at("toolbar.align")).toBeLessThan(at("toolbar.quote"));
+		expect(at("toolbar.quote")).toBeLessThan(at("toolbar.codeBlock"));
 	});
 
 	it("the block shape menu is paragraph and headings 2-4", async () => {

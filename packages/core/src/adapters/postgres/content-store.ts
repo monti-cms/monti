@@ -18,7 +18,6 @@ import { createTransferOps } from "./store/transfer";
  */
 
 export type { AfterCommit, ContentChange, ContentChangeKind } from "./store/after-commit";
-export { PUBLIC_COLLECTIONS } from "./store/constants";
 export type { ContentStoreHooks } from "./store/context";
 export { CmsError } from "./store/errors";
 export type { FolderRow } from "./store/rows";

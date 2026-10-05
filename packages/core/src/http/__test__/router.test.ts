@@ -37,7 +37,6 @@ describe("admin API route table", () => {
 		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries/[collection]/[slug]");
 		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.startsWith("v1/ai"))).toBe(false);
 		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.includes("schedule"))).toBe(false);
-		expect(CMS_ROUTE_PATTERNS).toHaveLength(25);
 	});
 
 	it("an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {

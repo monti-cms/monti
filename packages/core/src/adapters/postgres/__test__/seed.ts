@@ -14,9 +14,10 @@ type SeedInput = {
 	schemaVersion?: number;
 	contentHash?: string;
 	folderId?: string | null;
+	locale?: string;
 };
 
-const rawSnapshot = (input: Omit<SeedInput, "folderId">): PreparedSnapshot =>
+const rawSnapshot = (input: Omit<SeedInput, "folderId" | "locale">): PreparedSnapshot =>
 	({
 		collection: input.collection,
 		slug: input.slug,
@@ -31,8 +32,8 @@ const rawSnapshot = (input: Omit<SeedInput, "folderId">): PreparedSnapshot =>
 
 /** Creates a draft without references. */
 export function seedEntry(store: ContentStore, input: SeedInput): Promise<Entry> {
-	const { folderId, ...rest } = input;
-	return store.createEntryWithReferences({ snapshot: rawSnapshot(rest), references: [], folderId });
+	const { folderId, locale, ...rest } = input;
+	return store.createEntryWithReferences({ snapshot: rawSnapshot(rest), references: [], folderId, locale });
 }
 
 /** Changes only the draft body and slug, leaving the reference index as is. */

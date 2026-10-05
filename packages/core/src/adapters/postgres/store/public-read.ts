@@ -6,22 +6,17 @@ import {
 	recordLocalizedFields,
 	storedField,
 } from "../../../schema/derive";
-import { PUBLIC_COLLECTIONS } from "./constants";
 import type { StoreContext } from "./context";
 import { CmsError } from "./errors";
 import { mapPublishedEntryRow } from "./rows";
 import type { EntryMetadata, PublishedEntryLookup, PublishedEntryRecord } from "./types";
-
-function isPublicCollection(value: string): boolean {
-	return (PUBLIC_COLLECTIONS as readonly string[]).includes(value);
-}
 
 function assertPublicCollections(collections: readonly string[]): void {
 	if (!Array.isArray(collections) || collections.length === 0) {
 		throw new CmsError("Invalid collections", "invalid_input");
 	}
 	for (const collection of collections) {
-		if (typeof collection !== "string" || !isPublicCollection(collection)) {
+		if (typeof collection !== "string" || !isCollection(collection)) {
 			throw new CmsError("Invalid collection", "invalid_input");
 		}
 	}
@@ -149,7 +144,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 			if (typeof params !== "object" || params === null || Array.isArray(params)) {
 				throw new CmsError("Invalid parameters", "invalid_input");
 			}
-			if (typeof params.collection !== "string" || !isPublicCollection(params.collection)) {
+			if (typeof params.collection !== "string" || !isCollection(params.collection)) {
 				throw new CmsError("Invalid collection", "invalid_input");
 			}
 			if (typeof params.slug !== "string" || params.slug.length === 0) {
@@ -193,7 +188,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 		listPublishedPage: async (
 			params: PublishedPageParams,
 		): Promise<{ items: PublishedEntryRecord[]; total: number; page: number; pageSize: number }> => {
-			if (typeof params?.collection !== "string" || !isPublicCollection(params.collection)) {
+			if (typeof params?.collection !== "string" || !isCollection(params.collection)) {
 				throw new CmsError("Invalid collection", "invalid_input");
 			}
 			const page = params.page ?? 1;

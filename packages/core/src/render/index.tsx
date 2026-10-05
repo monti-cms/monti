@@ -3,6 +3,7 @@
  * components are overridden in this order: core defaults (link, image, file, table, alignment, code lines) → public components of block extensions (plugin `render`) → the ones the site passes.
  * Call it from a server component.
  */
+import type { Element } from "hast";
 import type { Root, Text } from "mdast";
 import { compileMDX } from "next-mdx-remote/rsc";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
@@ -106,7 +107,8 @@ export const mdxRemarkPlugins = (tocRef: TocItem[] = []): PluggableList => [
 /** Core rehype order. */
 export const mdxRehypePlugins = (code?: CodeHighlightOptions): PluggableList => [
 	rehypeSlug,
-	rehypeAutolinkHeadings,
+	// The hidden heading of the footnote section (`#footnote-label`) is referenced by the footnote links, so it gets no anchor of its own.
+	[rehypeAutolinkHeadings, { test: (node: Element) => node.properties?.id !== "footnote-label" }],
 	[rehypeKatex, { output: "htmlAndMathml", throwOnError: false }],
 	[rehypeShikiDecorationRender, code ?? {}],
 ];

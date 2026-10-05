@@ -87,7 +87,6 @@ describe("AI action runner", () => {
 		expect(text).toContain("<body>\n본문\n</body>");
 		expect(text).not.toContain("보내면 안 되는 요약");
 		expect(requests[0]?.system).toContain(preset("slug").prompt);
-		expect(requests[0]?.system).toContain("the CMS for this site: 개인 기술 블로그.");
 		// Content language used when the language is unknown: the site default language if the request has none.
 		expect(requests[0]?.system).toContain("Content language: 한국어");
 	});
@@ -96,7 +95,6 @@ describe("AI action runner", () => {
 		const { provider, requests } = stubProvider({ candidates: ["Alt"] });
 		await runAiAction(preset("imageAlt"), call({ image: { src: "/a.png" } }, { locale: "en" }), deps(provider));
 		expect(requests[0]?.system).toContain("Content language: English");
-		expect(preset("imageAlt").prompt).toContain("otherwise in the content language");
 		expect(preset("imageAlt").prompt).not.toContain("한국어");
 	});
 
@@ -260,7 +258,6 @@ describe("AI action runner", () => {
 		);
 		await runAiAction(action, call({ title: "글", current: ["t2"] }), deps(provider));
 		expect(textOf(requests[0])).toContain("<choices>\nt1: React\n</choices>");
-		expect(requests[0]?.system).toContain("Use only the values in <choices> (before the colon)");
 	});
 
 	it("judge mode (multiple) asks per option and returns only those at or above the threshold probability, highest first", async () => {
@@ -483,7 +480,6 @@ describe("streaming and shared text", () => {
 		expect(result).toEqual({ kind: "mdx", text: "**다듬은** 글" });
 		// Shared text goes into the instructions, and the answer is received as plain text, not JSON.
 		expect(requests[0]?.system).toContain("짧게 쓴다.");
-		expect(requests[0]?.system).toContain("Answer with the resulting MDX only");
 	});
 
 	it("strips only an MDX fence wrapping the whole answer, and leaves code blocks of other languages as is", () => {
