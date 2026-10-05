@@ -76,7 +76,7 @@ mdx: { syntax: [directiveSyntax({ write: false })] },
 core 옆에 이 패키지를 설치하고 import만 바꾼다. 동작과 옵션은 그대로다.
 
 **지시자 본문이 있는 사이트**는 `mdx.syntax`에 이 확장을 반드시 둔다. 없으면 기존 글이 지시자 문자 그대로 그려지고 검사에도 걸린다
-(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). 표준 MDX로 옮기려면 `directiveSyntax({ write: false })`를 쓰고, 저장된 본문 어디에도 지시자가 남지 않으면 확장을 뺀다.
+(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). 표준 MDX로 옮기려면 `directiveSyntax({ write: false })`를 쓰고(`monti content:rewrite --apply`로 저장된 본문 전부를 한 번에 다시 쓸 수 있다), 저장된 본문 어디에도 지시자가 남지 않으면 확장을 뺀다.
 
 ## 문법 확장 직접 만들기
 

@@ -76,7 +76,7 @@ Before this package existed, `directiveSyntax` was exported by `@monti-cms/core/
 Install the package next to the core package and change the import. Behavior and options are the same.
 
 **A site that has directive content** must keep the extension in `mdx.syntax`. Without it, existing posts render directive text literally
-and fail validation (`{…}` in `:::callout{…}` is read as an expression). Use `directiveSyntax({ write: false })` to migrate to standard MDX, and remove the extension once no stored body uses directives.
+and fail validation (`{…}` in `:::callout{…}` is read as an expression). Use `directiveSyntax({ write: false })` to migrate to standard MDX (`monti content:rewrite --apply` rewrites every stored body at once), and remove the extension once no stored body uses directives.
 
 ## Writing your own extension
 

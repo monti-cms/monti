@@ -137,6 +137,23 @@ pnpm exec monti migrate
   `./cms.config.ts`·`./src/cms.config.ts` 순서로 찾는다.
 - 예전 방식(`migrate.ts`에 `import "@monti-cms/core/migrate";`를 두고 `tsx --import @monti-cms/core/register migrate.ts`)도 그대로 돈다.
 
+#### `monti content:rewrite`
+
+```sh
+pnpm exec monti content:rewrite           # 예행: 바뀔 것을 알려 주고 아무것도 쓰지 않는다
+pnpm exec monti content:rewrite --apply   # 바뀐 내용을 쓴다
+```
+
+저장된 모든 본문(항목의 작업본·발행본, 본문 템플릿)을 사이트에 설정된 문법으로 다시 직렬화해, 저장 글이 한 표기가 되게 한다.
+`directiveSyntax()`를 켜거나 끈 뒤, 또는 직렬화기를 올린 뒤에 글을 저장할 때마다 한 편씩 맞춰지길 기다리지 않고 한 번에 맞춘다. `monti migrate` 다음에 돌린다.
+`migrate`와 같은 `--env-file`·`--no-env-file`·`--config`·`--server` 옵션을 받는다.
+
+- 본문마다 한 줄씩 `collection/slug (locale) state: changed|unchanged`를 찍고 요약을 보인다.
+- 글자만 바뀐다. 내용 해시는 해석한 본문을 덮으므로 표기가 달라져도 같다. `version`·`updated_at`·`content_hash`는 건드리지 않고 "발행하지 않은 변경"도 그대로다.
+  명령이 본문마다 이를 확인해서, 해시가 바뀔 본문은 쓰지 않고 건너뛴 채 알린다.
+- 깨끗하게 해석되지 않는 본문은 건너뛰고 알린다. 다시 쓴 본문의 검색용 글자는 새로 만들고, 참조 색인이 가진 위치(링크·이미지의 줄·칸)는 그 항목을 다음에 저장할 때 새로 잡힌다.
+- 쓰기는 한 트랜잭션이고, 두 번째로 돌리면 바뀌는 것이 없다.
+
 ### 5. 실행
 
 `next dev`로 띄우고 관리자 경로(기본 `/admin`)를 연다.
@@ -261,8 +278,8 @@ export default defineConfig({
 | `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
 | `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `SyntaxExtension` 인터페이스와 확장이 쓰는 도우미("본문 문법"). 지시자 표기는 `@monti-cms/syntax-directive`다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀·DB 연결·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`(명령 `monti`의 코드) |
+| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기)·`monti content:rewrite`(저장된 본문 다시 직렬화) |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`·`contentRewrite`(명령 `monti`의 코드) |
 | `@monti-cms/core/migrate`·`/register` | 명령줄(예전 방식) | 표 만들기, 직접 만든 스크립트에서 설정 별칭 잇기 |
 | `@monti-cms/core/testing` | 테스트 | 격리 스키마 DB·예시 데이터, 주어진 확장 목록으로 MDX를 해석하는 함수와 remark 플러그인(`parseMdxAst`·`syntaxRemarkPlugins`) |
 
@@ -305,7 +322,7 @@ export default defineConfig({
 ```
 
 - [`@monti-cms/syntax-directive`](../syntax-directive/README.ko.md)는 표준 MDX 이전에 Monti가 쓰던 지시자(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다. 없으면 `:::callout`은 그냥 글자다.
-  `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다. 줄바꿈은 `:br[]`로 쓰지 않는다.
+  `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다(`monti content:rewrite --apply`로 한 번에 옮길 수도 있다). 줄바꿈은 `:br[]`로 쓰지 않는다.
 - 공개 렌더러(`@monti-cms/core/render`)는 편집기 해석기와 같은 플러그인을 돌리므로 편집기가 읽은 대로 사이트에 그려진다.
 
 **지시자 본문이 있는 사이트의 업그레이드.** 이 버전을 배포하기 전에 `@monti-cms/syntax-directive`를 설치하고 `mdx.syntax`에 `directiveSyntax({ write: false })`(지시자로 계속 저장하려면 `directiveSyntax()`)를 넣는다.

@@ -4,6 +4,7 @@ export * from "./adapters/postgres/__test__/seed";
 export * from "./adapters/postgres/__test__/test-database";
 export { pluginDatabaseFor } from "./adapters/postgres/adapter";
 export { createContentStore, migrateContentStore } from "./adapters/postgres/content-store";
+export { formatRewriteReport, rewriteContent } from "./adapters/postgres/store/rewrite";
 export { bodyText, EXCERPT_TEXT, SEARCH_TEXT } from "./core/body-text";
 export { createCmsRouteHandler, matchRoute } from "./http/router";
 export { readSamples } from "./mdx/__test__/fixtures/samples";

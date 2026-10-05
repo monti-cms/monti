@@ -61,4 +61,19 @@ describe("monti command helpers", () => {
 		expect(await runCli(["init"], io)).toBe(1); // no package.json
 		expect(out.at(-1)).toContain("E:package.json not found");
 	});
+
+	it("lists content:rewrite, which is a dry run unless --apply is given, and needs the app's config files", async () => {
+		const out: string[] = [];
+		const io = { cwd: tempDir({}), log: (m: string) => out.push(m), error: (m: string) => out.push(`E:${m}`) };
+		await runCli(["help"], io);
+		expect(out.at(-1)).toContain("content:rewrite");
+		expect(out.at(-1)).toContain("--apply");
+		expect(out.at(-1)).toContain("dry run");
+		// Without the app's config files it stops before touching anything, as `migrate` does.
+		expect(await runCli(["content:rewrite"], io)).toBe(1);
+		expect(out.at(-1)).toContain("monti init");
+		// An unknown option is refused rather than ignored.
+		expect(await runCli(["content:rewrite", "--write"], io)).toBe(1);
+		expect(out.at(-1)).toMatch(/^E:.*--write/);
+	});
 });
