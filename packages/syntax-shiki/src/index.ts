@@ -15,7 +15,7 @@ export interface ShikiNotationOptions {
  * so a body is always written back with Monti's own annotation comments (`// @line plus`), which migrates content a post at a time as it is saved.
  *
  * `++` and `--` become `plus` and `minus`, `highlight` and `hl` become `highlight`, `error` and `warning` stay as they are, and `focus` becomes
- * the site's `focus` line effect if `codeBlock.lineEffects` defines one, otherwise `highlight`. `info` is converted only if the site defines an `info` line effect.
+ * the `focus` line effect (a default one; `highlight` only for a line effect list without it). `info` is converted only if the site defines an `info` line effect.
  *
  * @experimental
  */

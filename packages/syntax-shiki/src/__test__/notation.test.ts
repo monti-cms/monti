@@ -1,8 +1,10 @@
+import { DEFAULT_CODE_LINE_EFFECTS } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
 import { convertShikiNotation, type NotationSettings, readableCommentSyntaxes } from "../notation";
 
 /** Converting the value of a code fence: Shiki notation in, Monti annotation comments out. */
 
+/** Line effect names of a list without `focus` (a site list before `focus` became a default). */
 const DEFAULT_EFFECTS = ["highlight", "plus", "minus", "warning", "error"];
 const settings = (overrides: Partial<NotationSettings> & { effects?: string[] } = {}): NotationSettings => ({
 	word: "strong",
@@ -114,7 +116,12 @@ describe("counts", () => {
 });
 
 describe("focus and info", () => {
-	it("focus becomes highlight when the site has no focus effect", () => {
+	it("focus becomes the default focus effect", () => {
+		const effects = DEFAULT_CODE_LINE_EFFECTS.map((effect) => effect.name);
+		expect(convert("a // [!code focus]", "ts", { effects })).toBe(lines("// @line focus", "a"));
+	});
+
+	it("focus becomes highlight for a line effect list without focus", () => {
 		expect(convert("a // [!code focus]")).toBe(lines("// @line highlight", "a"));
 	});
 

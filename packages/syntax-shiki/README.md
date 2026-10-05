@@ -52,7 +52,7 @@ The public renderer (`@monti-cms/core/render`) runs the extension's remark plugi
 | `// [!code --]` | `// @line minus` |
 | `// [!code highlight]`, `// [!code hl]` | `// @line highlight` |
 | `// [!code error]`, `// [!code warning]` | `// @line error`, `// @line warning` |
-| `// [!code focus]` | `// @line focus` if the site defines a `focus` line effect in `codeBlock.lineEffects`, otherwise `// @line highlight` |
+| `// [!code focus]` | `// @line focus` (a default line effect) |
 | `// [!code info]` | `// @line info` if the site defines an `info` line effect, otherwise left as it is |
 | `[!code ++:3]` (any line effect with a count) | `// @line plus {2-4}`: this line and the next two, as a closed range of code line numbers (0-based) |
 | `[!code word:foo]` | `// @char strong {re:/foo/g}`, a regex text rule (see below) |
@@ -83,7 +83,7 @@ const b = 3
 - **Indentation.** The annotation comment takes the indentation of the line it applies to.
 - **`word`.** Monti has no highlighted-word effect, so the closest text effect is used (bold by default, set with the `word` option). The word becomes a regex rule: `[!code word:foo]` without a count covers every line from its line to the end
   (a whole-code `@document` rule when it is on the first line), and `[!code word:foo:2]` covers that many lines.
-- **`focus`.** Monti has no focus effect by default. Add one with `codeBlock.lineEffects` (a line effect named `focus`) to get it; without one, focus lines are highlighted.
+- **`focus`.** Becomes Monti's `focus` line effect, which dims the other lines until the reader points at the code. A site can restyle it with a `focus` entry in `codeBlock.lineEffects`.
 - Code without notation is not touched.
 
 ## Writing your own extension

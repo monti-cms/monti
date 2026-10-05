@@ -16,7 +16,7 @@ import { DEFAULT_CODE_LINE_EFFECTS, resolveCodeLineEffects, validateCodeBlockCon
 import { codeBlockMessages } from "../messages";
 import type { AnnotationConfigItem } from "../types";
 
-/** The annotation config before switching to a definition list (checks the public view classes stay the same). */
+/** The annotation config before switching to a definition list (checks the public view classes stay the same), plus `focus`, added later. */
 const BEFORE: AnnotationConfigItem[] = [
 	{ name: "Tooltip", kind: "render", source: "mdx-text", render: "Tooltip", scopes: ["char", "document"] },
 	{ name: "strong", kind: "render", source: "mdx-text", render: "strong", scopes: ["char", "document"] },
@@ -39,6 +39,7 @@ const BEFORE: AnnotationConfigItem[] = [
 		scopes: ["line"],
 	},
 	{ name: "highlight", kind: "class", class: "inline-block w-full anno-mark-base bg-gray-400/20", scopes: ["line"] },
+	{ name: "focus", kind: "class", class: "code-focus", scopes: ["line"] },
 	{ name: "warning", kind: "class", class: "underline decoration-wavy decoration-yellow-400/80", scopes: ["line"] },
 	{ name: "error", kind: "class", class: "underline decoration-wavy decoration-red-500", scopes: ["line"] },
 	{ name: "collapse", kind: "render", render: "collapse", scopes: ["line"] },
@@ -58,6 +59,7 @@ describe("code line effect definitions", () => {
 		const t = createTranslator(codeBlockMessages);
 		expect(DEFAULT_CODE_LINE_EFFECTS.map((effect) => effect.label)).toEqual([
 			t("lineEffect.highlight"),
+			t("lineEffect.focus"),
 			t("lineEffect.plus"),
 			t("lineEffect.minus"),
 			t("lineEffect.warning"),
@@ -68,15 +70,23 @@ describe("code line effect definitions", () => {
 	it("a site definition replaces the same name in place and appends a new name", () => {
 		const effects = resolveCodeLineEffects([
 			{ name: "highlight", label: "강조", class: "my-highlight" },
-			{ name: "focus", label: "초점", icon: "eye", class: "my-focus", editor: { background: "bg-primary/10" } },
+			{ name: "info", label: "정보", icon: "star", class: "my-info", editor: { background: "bg-primary/10" } },
 		]);
-		expect(effects.map((effect) => effect.name)).toEqual(["highlight", "plus", "minus", "warning", "error", "focus"]);
+		expect(effects.map((effect) => effect.name)).toEqual([
+			"highlight",
+			"focus",
+			"plus",
+			"minus",
+			"warning",
+			"error",
+			"info",
+		]);
 		expect(effects[0]?.class).toBe("my-highlight");
 
 		const config = createAnnotationConfig(effects);
-		const value = ["// @line focus {0-0}", "const a = 1;"].join("\n");
+		const value = ["// @line info {0-0}", "const a = 1;"].join("\n");
 		const document = fromCodeFenceToCodeBlockDocument({ type: "code", lang: "ts", value }, config);
-		expect(document.annotations).toEqual([expect.objectContaining({ name: "focus", class: "my-focus" })]);
+		expect(document.annotations).toEqual([expect.objectContaining({ name: "info", class: "my-info" })]);
 		expect(fromCodeBlockDocumentToCodeFence(document, config).value).toBe(value);
 	});
 
@@ -84,7 +94,8 @@ describe("code line effect definitions", () => {
 		expect(isLineEffectName("plus")).toBe(true);
 		expect(isLineEffectName("collapse")).toBe(true);
 		expect(isLineEffectName("anchor")).toBe(true);
-		expect(isLineEffectName("focus")).toBe(false);
+		expect(isLineEffectName("focus")).toBe(true);
+		expect(isLineEffectName("info")).toBe(false);
 	});
 
 	it("an invalid config is reported immediately", () => {
@@ -134,7 +145,7 @@ describe("code block options of the site config", () => {
 			/features\.comments: unknown feature/,
 		);
 		expect(() => validateCodeBlockConfig({ features: { rules: "no" } as never })).toThrow(/true or false/);
-		expect(() => validateCodeBlockConfig({ omitLineEffects: ["focus"] })).toThrow(/no such line effect/);
+		expect(() => validateCodeBlockConfig({ omitLineEffects: ["info"] })).toThrow(/no such line effect/);
 		expect(() => validateCodeBlockConfig({ themes: { light: "github-light", dark: " " } })).toThrow(
 			/themes\.dark: theme name is empty/,
 		);

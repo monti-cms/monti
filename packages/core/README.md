@@ -444,16 +444,17 @@ blocks: [
 
 ### Code block line effects
 
-The defaults for code block line effects (`// @line name {0-2}`) are highlight, add, remove, warning and error. Add more with `codeBlock.lineEffects` in the config;
-using the same name overrides the default.
+The defaults for code block line effects (`// @line name {0-2}`) are highlight, focus, add, remove, warning and error. Focus (`// @line focus`) dims the
+other lines of the block until the reader hovers the code or moves the keyboard focus into it (`.code-focus` in `render.css`); a line the body points at with
+`:code-ref` is always shown sharp. Add more with `codeBlock.lineEffects` in the config; using the same name overrides the default.
 
 ```ts
 codeBlock: {
 	lineEffects: [
 		{
-			name: "focus", // annotation name (lowercase kebab-case). collapse, anchor and the text effect names cannot be used
-			label: "Focus", // line effect menu name
-			icon: "eye", // menu icon (lucide name, a name registered in the admin UI)
+			name: "info", // annotation name (lowercase kebab-case). collapse, anchor and the text effect names cannot be used
+			label: "Info", // line effect menu name
+			icon: "star", // menu icon (lucide name, a name registered in the admin UI)
 			class: "bg-primary/10", // class the public page adds to that line (put it where the site's Tailwind reads)
 			editor: { background: "bg-cms-primary/10" }, // editor display (admin colors are `cms-*`, dark theme is `cms-dark:`): background, wavy (wavy underline color), marker({ text, className })
 		},
