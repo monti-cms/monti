@@ -654,6 +654,19 @@
 		"searchText": "const a = 1;",
 		"excerptText": ""
 	},
+	"code block with annotation": {
+		"parsed": true,
+		"hash": "358d5db1422dfa5fbb0996280cd3a22fb0562d9dd62fb6ca94891fbef94e39ff",
+		"issues": [],
+		"warnings": ["code_annotation_out_of_range"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["code_annotation_out_of_range"],
+		"references": [],
+		"internalLinks": [],
+		"imageSources": [],
+		"searchText": "const a = 1;",
+		"excerptText": ""
+	},
 	"code refs resolved": {
 		"parsed": true,
 		"hash": "a3e0a0100b68bba65c5c0fb6c704bd62a4ec66c1f751fba8ed5fe90e50bc1661",
