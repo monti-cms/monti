@@ -30,7 +30,6 @@ describe("block ids of body positions", () => {
 		);
 		const alt = snapshot.issues.find((issue) => issue.code === "missing_image_alt");
 		expect(describeBlock(snapshot.doc, alt?.position?.blockId)).toBe("image: ");
-		expect(alt?.position?.line).toBe(3);
 		const attribute = snapshot.issues.find((issue) => issue.code === "invalid_block_attribute");
 		expect(describeBlock(snapshot.doc, attribute?.position?.blockId)).toBe("text-align: Aligned.");
 	});
@@ -41,8 +40,8 @@ describe("block ids of body positions", () => {
 		);
 		const media = snapshot.references.find((reference) => reference.targetId === MEDIA_ID);
 		const [occurrence] = media?.occurrences ?? [];
-		expect(occurrence).toMatchObject({ type: "mdx", line: 3, column: 1 });
-		expect(describeBlock(snapshot.doc, occurrence?.type === "mdx" ? occurrence.blockId : undefined)).toBe("image: ");
+		expect(occurrence).toMatchObject({ type: "body" });
+		expect(describeBlock(snapshot.doc, occurrence?.type === "body" ? occurrence.blockId : undefined)).toBe("image: ");
 		expect(
 			snapshot.imageSources.map((source) => [
 				source.mediaId ?? source.src,
@@ -77,19 +76,21 @@ describe("block ids of body positions", () => {
 			"<Table>\n<TableRow>\n<TableCell>a</TableCell>\n<TableCell>b</TableCell>\n</TableRow>\n<TableRow>\n<TableCell>c</TableCell>\n</TableRow>\n</Table>\n",
 		);
 		const span = snapshot.warnings?.find((warning) => warning.code === "invalid_table_span");
-		expect(span?.position).toMatchObject({ line: 1, column: 1 });
 		expect(describeBlock(snapshot.doc, span?.position?.blockId)).toBe("table: abc");
 	});
 
-	it("gives no block id to a body without a document", async () => {
+	it("names the unparsed block for a body that could not become a document, and reads no references from it", async () => {
 		const snapshot = await prepare(`---\ntitle: x\n---\n\n<Image mediaId="${MEDIA_ID}" />\n`);
-		expect(snapshot.doc).toBeNull();
-		const alt = snapshot.issues.find((issue) => issue.code === "missing_image_alt");
-		expect(alt?.position).toBeDefined();
-		expect(alt?.position).not.toHaveProperty("blockId");
-		const occurrences = snapshot.references.flatMap((reference) => reference.occurrences);
-		expect(occurrences.length).toBeGreaterThan(0);
-		for (const occurrence of occurrences) expect(occurrence).not.toHaveProperty("blockId");
+		const unparsed = snapshot.issues.find((issue) => issue.code === "unparsed_body");
+		expect(snapshot.doc.content).toHaveLength(1);
+		expect(unparsed?.position?.blockId).toBe(snapshot.doc.content[0]?.id);
+		// The reason it was rejected keeps its place in the text it was given.
+		expect(snapshot.issues.find((issue) => issue.code === "frontmatter_present")?.position).toEqual({
+			line: 1,
+			column: 1,
+		});
+		expect(snapshot.issues.map((issue) => issue.code)).not.toContain("missing_image_alt");
+		expect(snapshot.references.flatMap((reference) => reference.occurrences)).toEqual([]);
 	});
 
 	it("gives the same occurrences when the same body is prepared again with the document it replaces", async () => {
@@ -109,20 +110,20 @@ describe("block ids of body positions", () => {
 		expect(fromDoc.references).toEqual(first.references);
 	});
 
-	it("keeps the block id of a previous reference carried over as stale when the body does not parse", async () => {
+	it("keeps the block id of a previous reference carried over as stale when the body is unparsed", async () => {
 		const previousReferences = [
 			{
 				kind: "media" as const,
 				targetId: MEDIA_ID,
 				isStale: false,
-				occurrences: [{ type: "mdx" as const, line: 3, column: 1, blockId: "abcd1234" }],
+				occurrences: [{ type: "body" as const, blockId: "abcd1234" }],
 			},
 		];
 		const snapshot = await prepareSnapshot(
 			{ collection: contentCollection, slug: "position", metadata: { title: "Position" }, mdx: "Words\n\n<Unclosed" },
 			{ previousReferences },
 		);
-		expect(snapshot.doc).toBeNull();
+		expect(snapshot.issues.map((issue) => issue.code)).toContain("unparsed_body");
 		const carried = snapshot.references.find((reference) => reference.targetId === MEDIA_ID);
 		expect(carried).toEqual({ ...previousReferences[0], isStale: true });
 	});
@@ -131,7 +132,6 @@ describe("block ids of body positions", () => {
 		const snapshot = await prepare(`Intro.\n\n<Image mediaId="${MEDIA_ID}" alt="a" />\n`);
 		const result = validateForPublish(snapshot, { targets: [], media: [] });
 		const unresolved = result.issues.find((issue) => issue.code === "unresolved_media");
-		expect(unresolved?.position).toMatchObject({ line: 3, column: 1 });
 		expect(describeBlock(snapshot.doc, unresolved?.position?.blockId)).toBe("image: ");
 	});
 });

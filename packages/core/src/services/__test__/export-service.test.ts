@@ -47,6 +47,7 @@ describe("export archive builder", () => {
 			[
 				"addresses.json",
 				entryPath(DRAFT, DRAFT_ID, "references.json"),
+				entryPath(DRAFT, DRAFT_ID, "working.doc.json"),
 				entryPath(DRAFT, DRAFT_ID, "working.json"),
 				entryPath(DRAFT, DRAFT_ID, "working.mdx"),
 				entryPath(CONTENT, PUBLISHED_ID, "published.doc.json"),
@@ -56,9 +57,11 @@ describe("export archive builder", () => {
 				entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "working.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "working.mdx"),
+				entryPath(CONTENT, ARCHIVED_ID, "published.doc.json"),
 				entryPath(CONTENT, ARCHIVED_ID, "published.json"),
 				entryPath(CONTENT, ARCHIVED_ID, "published.mdx"),
 				entryPath(CONTENT, ARCHIVED_ID, "references.json"),
+				entryPath(CONTENT, ARCHIVED_ID, "working.doc.json"),
 				entryPath(CONTENT, ARCHIVED_ID, "working.json"),
 				entryPath(CONTENT, ARCHIVED_ID, "working.mdx"),
 				"folders.json",
@@ -217,12 +220,24 @@ describe("export archive builder", () => {
 		expect(manifest.counts.files).toBe(manifest.files.length);
 	});
 
-	it("a body without a document has no document file", () => {
-		const { paths } = readAll(buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME }).zip);
+	it("every body has a document file, a body that could not become a document included (as an unparsed node)", () => {
+		const snapshot = makeSnapshot();
+		const draft = snapshot.entries.find((entry) => entry.id === DRAFT_ID);
+		if (!draft) throw new Error("fixture");
+		draft.working = { ...draft.working, mdx: "<Open", doc: fixtureDocument("<Open") };
+		const archive = readAll(buildExportArchive(snapshot, { scope: "admin", exportedAt: FIXED_TIME }).zip);
 
-		expect(paths).not.toContain(entryPath(DRAFT, DRAFT_ID, "working.doc.json"));
-		expect(paths).not.toContain(entryPath(CONTENT, ARCHIVED_ID, "working.doc.json"));
-		expect(paths).not.toContain(entryPath(CONTENT, ARCHIVED_ID, "published.doc.json"));
+		for (const [collection, id, file] of [
+			[DRAFT, DRAFT_ID, "working.doc.json"],
+			[CONTENT, ARCHIVED_ID, "working.doc.json"],
+			[CONTENT, ARCHIVED_ID, "published.doc.json"],
+		] as const) {
+			expect(archive.paths).toContain(entryPath(collection, id, file));
+		}
+		expect(JSON.parse(archive.text(entryPath(DRAFT, DRAFT_ID, "working.doc.json"))).content[0]).toMatchObject({
+			type: "unparsed",
+			attrs: { source: "<Open" },
+		});
 	});
 
 	it("templates.json carries the document of each template", () => {
@@ -259,7 +274,7 @@ describe("export archive builder", () => {
 		const noDoc = makeSnapshot();
 		const template = noDoc.templates[0];
 		if (!template) throw new Error("fixture");
-		noDoc.templates[0] = { ...template, doc: null };
+		noDoc.templates[0] = { ...template, doc: fixtureDocument("another template") };
 		expect(buildExportArchive(noDoc, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
 	});
 
@@ -282,10 +297,12 @@ describe("export archive builder", () => {
 		const stripped = makeSnapshot();
 		stripped.entries = stripped.entries.map((entry) => ({
 			...entry,
-			...(entry.published ? { published: { ...entry.published, doc: null } } : {}),
+			...(entry.published ? { published: { ...entry.published, doc: fixtureDocument("stripped") } } : {}),
 		}));
 		const without = buildExportArchive(stripped, options);
-		expect(JSON.parse(readAll(without.zip).text(entryPath(CONTENT, PUBLISHED_ID, "published.json"))).doc).toBeNull();
+		expect(JSON.parse(readAll(without.zip).text(entryPath(CONTENT, PUBLISHED_ID, "published.json"))).doc).toEqual(
+			fixtureDocument("stripped"),
+		);
 		expect(without.digest).not.toBe(base.digest);
 		const entryOf = (manifest: typeof base.manifest) => manifest.entries.find((entry) => entry.id === PUBLISHED_ID);
 		expect(entryOf(without.manifest)?.publishedDigest).not.toBe(entryOf(base.manifest)?.publishedDigest);

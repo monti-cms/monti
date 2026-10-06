@@ -1,13 +1,13 @@
-import { BLOCK_BY_COMPONENT, BLOCK_BY_NAME } from "../blocks/derive";
-import { analyze, type CmsNode, toDocument } from "../mdx";
-import type { SyntaxExtension } from "../syntax/types";
+import { BLOCK_BY_NAME } from "../blocks/derive";
+import type { StoredDocument } from "../mdx/stored-document";
+import type { CmsNode } from "../mdx/types";
 
 /**
- * Readable text of an MDX body, taken from the parsed document (`analyze` + `toDocument`) and not from the string. The body is read with the site's
- * syntax, so a notation an extension adds (directives, say) and the JSX blocks of standard MDX are understood the same way, without a pattern per notation.
+ * Readable text of a stored document. The document says what is text and what is a block, so a block is understood from its definition (its
+ * `translatable` attributes are the text a reader sees), without a pattern per notation.
  */
 export interface BodyTextOptions {
-	/** Code (fences and inline code) and math. */
+	/** Code (code blocks and inline code) and math. */
 	readonly code: boolean;
 	/** Images (alt text, caption, title) and file cards (label). */
 	readonly media: boolean;
@@ -24,10 +24,7 @@ export const SEARCH_TEXT: BodyTextOptions = { code: true, media: true, hidden: t
 /** Nodes that sit inside a line of text: neighbors of these run together, everything else is set apart by a space. */
 const INLINE_TYPES = new Set(["text", "hardBreak", "footnoteReference", "mdxExpression"]);
 
-const MEDIA_TYPES = new Set(["image", "File"]);
-
-/** The block definition of a node (a node's type is the block's renderer name; an image is `image`). */
-const blockOf = (node: CmsNode) => BLOCK_BY_COMPONENT.get(node.type === "image" ? "Image" : node.type);
+const MEDIA_TYPES = new Set(["image", "file"]);
 
 /** Values of the attributes a block definition marks `translatable` (a callout title, a tab label, an image alt…): text a reader sees. */
 const translatableValues = (
@@ -39,13 +36,17 @@ const translatableValues = (
 		return attribute.translatable && typeof value === "string" ? [value] : [];
 	});
 
-/** The code of a code block without its Monti annotation comments (`@line plus` and the like are not text a reader looks for). */
-const codeOf = (node: CmsNode): string => {
-	const lines = (node.attrs?.codeDocument as { lines?: readonly { value?: unknown }[] } | undefined)?.lines;
-	return Array.isArray(lines)
-		? lines.map((line) => String(line.value ?? "")).join("\n")
-		: String(node.attrs?.value ?? "");
-};
+/**
+ * For a body that could not become a document (an `unparsed` node): its text with comments, import/export lines, link addresses and tags removed.
+ * It is a fallback, so it only has to be better than nothing for search and summaries; a body that is a document never goes through it.
+ */
+const looseText = (source: string) =>
+	source
+		.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ")
+		.replace(/<!--[\s\S]*?-->/g, " ")
+		.replace(/^\s*(?:export|import)\b[\s\S]*?;(?:\r?\n|$)/gm, " ")
+		.replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1")
+		.replace(/<[a-zA-Z0-9_/][^>"\x27]*(?:"[^"]*"|\x27[^\x27]*\x27|[^>"\x27]*)*>/g, " ");
 
 const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 	if (node.type === "text") {
@@ -59,7 +60,8 @@ const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 		return [own, ...hover].join(" ");
 	}
 	if (node.type === "hardBreak") return " ";
-	if (node.type === "codeBlock") return options.code ? codeOf(node) : "";
+	if (node.type === "unparsed") return looseText(String(node.attrs?.source ?? ""));
+	if (node.type === "codeBlock") return options.code ? String(node.attrs?.code ?? node.attrs?.value ?? "") : "";
 	if (node.type === "math") return options.code ? String(node.attrs?.value ?? "") : "";
 	if (!options.media && MEDIA_TYPES.has(node.type)) return "";
 	if (
@@ -71,7 +73,7 @@ const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 		return "";
 	}
 
-	const own = translatableValues(blockOf(node)?.attributes, node.attrs);
+	const own = translatableValues(BLOCK_BY_NAME.get(node.type)?.attributes, node.attrs);
 	const parts: string[] = [];
 	let previous: CmsNode | undefined;
 	for (const child of node.content ?? []) {
@@ -86,30 +88,9 @@ const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 const collapse = (text: string) => text.replace(/\s+/g, " ").trim();
 
 /**
- * For a body that does not parse (there is no tree to read): the string with comments, import/export lines, link addresses and tags removed.
- * It is a fallback, so it only has to be better than nothing for search and summaries; a body that parses never goes through it.
+ * The text of a document, as one line (runs of whitespace are one space). Block elements are set apart by a space and inline
+ * runs stay together, so a word split by emphasis is still one word.
  */
-const looseText = (mdx: string) =>
-	collapse(
-		mdx
-			.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ")
-			.replace(/<!--[\s\S]*?-->/g, " ")
-			.replace(/^\s*(?:export|import)\b[\s\S]*?;(?:\r?\n|$)/gm, " ")
-			.replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1")
-			.replace(/<[a-zA-Z0-9_/][^>"\x27]*(?:"[^"]*"|\x27[^\x27]*\x27|[^>"\x27]*)*>/g, " "),
-	);
-
-/**
- * The text of a body, as one line (runs of whitespace are one space). `syntax` is the site's `mdx.syntax` unless given.
- * Block elements are set apart by a space and inline runs stay together, so a word split by emphasis is still one word.
- */
-export function bodyText(mdx: string, options: BodyTextOptions, syntax?: readonly SyntaxExtension[]): string {
-	if (!mdx) return "";
-	const analysis = analyze(mdx, undefined, syntax);
-	if (!analysis.tree) return looseText(mdx);
-	try {
-		return collapse(textOf(toDocument(analysis), options));
-	} catch {
-		return looseText(mdx);
-	}
+export function documentText(doc: StoredDocument, options: BodyTextOptions): string {
+	return collapse(doc.content.map((node) => textOf(node, options)).join(" "));
 }

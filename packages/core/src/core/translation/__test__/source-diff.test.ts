@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { docOf } from "../../../../test/stored-content";
 import { BLOCKS } from "../../../blocks/active";
 import type { BlockDefinition } from "../../../blocks/define";
 import { bodyFromMdx, type StoredDocument, serialize, withoutBlockIds } from "../../../mdx";
-import { fromStoredDocument } from "../../../mdx/stored-document";
-import { diffSources, type SourceChange } from "../source-diff";
+import { fromStoredDocument, unparsedDocument } from "../../../mdx/stored-document";
+import { diffSources, type SourceChange, type TranslationUnit } from "../source-diff";
 
 /**
  * Block names are looked up in the current config (runs with both the reference blog config and other site configs). If the config has no such block,
@@ -34,44 +35,51 @@ const labeledGroup = BLOCKS.flatMap((block) => {
 	return block.translateInside && child && label ? [{ block, child, label }] : [];
 })[0];
 
+/** A unit as text: a header line as its JSON, a block as the MDX it is written as. */
+const text = (unit: TranslationUnit) =>
+	unit.kind === "header"
+		? unit.source
+		: serialize(fromStoredDocument({ type: "doc", version: 2, content: [unit.node] })).trimEnd();
+
+/** The blocks of two bodies written as MDX compared (each read as a document of its own, so only kind and content pair the blocks). */
+const diffText = (before: string, after: string) => diffSources(docOf(before), docOf(after));
+
 const summary = (changes: SourceChange[] | null) =>
 	changes?.map((change) =>
 		change.kind === "changed"
-			? ["changed", change.before.source, change.after.source]
+			? ["changed", text(change.before), text(change.after)]
 			: change.kind === "moved"
-				? [change.edited ? "moved+edited" : "moved", change.before.source, change.after.source]
+				? [change.edited ? "moved+edited" : "moved", text(change.before), text(change.after)]
 				: change.kind === "added"
-					? ["added", change.after.source]
-					: ["removed", change.before.source],
+					? ["added", text(change.after)]
+					: ["removed", text(change.before)],
 	);
 
 describe("comparing two source versions", () => {
 	it("nothing changed when equal", () => {
-		expect(diffSources("하나\n\n둘\n", "하나\n\n둘\n")).toEqual([]);
+		expect(diffText("하나\n\n둘\n", "하나\n\n둘\n")).toEqual([]);
 	});
 
 	it("finds changed, added and removed blocks in document order", () => {
-		expect(
-			summary(diffSources("하나\n\n둘\n\n셋\n\n넷\n", "하나 고침\n\n둘\n\n새 문단\n\n넷\n\n## 새 제목\n")),
-		).toEqual([
+		expect(summary(diffText("하나\n\n둘\n\n셋\n\n넷\n", "하나 고침\n\n둘\n\n새 문단\n\n넷\n\n## 새 제목\n"))).toEqual([
 			["changed", "하나", "하나 고침"],
 			["changed", "셋", "새 문단"],
 			["added", "## 새 제목"],
 		]);
-		expect(summary(diffSources("하나\n\n둘\n\n셋\n", "하나\n\n셋\n"))).toEqual([["removed", "둘"]]);
+		expect(summary(diffText("하나\n\n둘\n\n셋\n", "하나\n\n셋\n"))).toEqual([["removed", "둘"]]);
 	});
 
 	it("blocks inside a box are compared separately", () => {
 		const before = '<TextAlign align="center">\n\n안쪽\n\n그대로\n\n</TextAlign>\n';
 		const after = '<TextAlign align="center">\n\n안쪽 고침\n\n그대로\n\n</TextAlign>\n';
-		expect(summary(diffSources(before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
+		expect(summary(diffText(before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
 	});
 
 	it.skipIf(!titledBox || !titleAttribute)("blocks and the title inside a box are compared separately", () => {
 		if (!titledBox || !titleAttribute) return;
 		const box = (title: string, body: string) =>
 			`<${titledBox.component} ${[otherAttribute, `${titleAttribute}="${title}"`].filter(Boolean).join(" ")}>\n\n${body}\n\n</${titledBox.component}>\n`;
-		expect(summary(diffSources(box("알림", "안쪽"), box("주의", "안쪽 고침")))).toEqual([
+		expect(summary(diffText(box("알림", "안쪽"), box("주의", "안쪽 고침")))).toEqual([
 			["changed", JSON.stringify({ title: "알림" }), JSON.stringify({ title: "주의" })],
 			["changed", "안쪽", "안쪽 고침"],
 		]);
@@ -82,7 +90,7 @@ describe("comparing two source versions", () => {
 		const { block, child, label } = labeledGroup;
 		const tabs = (second: string) =>
 			`<${block.component}>\n\n<${child.component} ${label}="하나">\n\n첫째\n\n</${child.component}>\n\n<${child.component} ${label}="${second}">\n\n둘째\n\n</${child.component}>\n\n</${block.component}>\n`;
-		expect(summary(diffSources(tabs("둘"), tabs("둘 고침")))).toEqual([
+		expect(summary(diffText(tabs("둘"), tabs("둘 고침")))).toEqual([
 			["changed", JSON.stringify({ labels: ["하나", "둘"] }), JSON.stringify({ labels: ["하나", "둘 고침"] })],
 		]);
 	});
@@ -90,8 +98,8 @@ describe("comparing two source versions", () => {
 	it("treats a footnote definition as one unit and compares it like other blocks", () => {
 		const before = "본문[^a]\n\n[^a]: 첫 각주\n";
 		const after = "본문[^a]\n\n[^a]: 고친 각주\n";
-		expect(summary(diffSources(before, after))).toEqual([["changed", "[^a]: 첫 각주", "[^a]: 고친 각주"]]);
-		const [change] = diffSources(before, after) ?? [];
+		expect(summary(diffText(before, after))).toEqual([["changed", "[^a]: 첫 각주", "[^a]: 고친 각주"]]);
+		const [change] = diffText(before, after) ?? [];
 		expect(change?.kind === "changed" && change.after.type).toBe("footnoteDefinition");
 		expect(change?.kind === "changed" && change.after.auto).toBe(false);
 	});
@@ -99,24 +107,24 @@ describe("comparing two source versions", () => {
 	it("finds added and removed footnote definitions", () => {
 		const base = "본문[^a]\n\n[^a]: 하나\n";
 		const extended = "본문[^a][^b]\n\n[^a]: 하나\n\n[^b]: 둘\n";
-		expect(summary(diffSources(base, extended))).toEqual([
+		expect(summary(diffText(base, extended))).toEqual([
 			["changed", "본문[^a]", "본문[^a][^b]"],
 			["added", "[^b]: 둘"],
 		]);
-		expect(summary(diffSources(extended, base))).toEqual([
+		expect(summary(diffText(extended, base))).toEqual([
 			["changed", "본문[^a][^b]", "본문[^a]"],
 			["removed", "[^b]: 둘"],
 		]);
 	});
 
 	it("does not pair a footnote definition with a paragraph", () => {
-		expect(summary(diffSources("본문[^a]\n\n[^a]: 하나\n", "본문[^a]\n\n[^a]: 하나\n\n마지막 문단\n"))).toEqual([
+		expect(summary(diffText("본문[^a]\n\n[^a]: 하나\n", "본문[^a]\n\n[^a]: 하나\n\n마지막 문단\n"))).toEqual([
 			["added", "마지막 문단"],
 		]);
 	});
 
-	it("null when the source cannot be parsed", () => {
-		expect(diffSources("본문 <TextAlign>닫히지 않음", "하나\n")).toBeNull();
+	it("null when either body is unparsed", () => {
+		expect(diffText("본문 <TextAlign>닫히지 않음", "하나\n")).toBeNull();
 	});
 });
 
@@ -129,8 +137,7 @@ const version = (mdx: string, previous?: StoredDocument | null) => {
 
 type Version = ReturnType<typeof version>;
 
-const compare = (before: Version, after: Version) =>
-	diffSources(before.mdx, after.mdx, { before: before.doc, after: after.doc });
+const compare = (before: Version, after: Version) => diffSources(before.doc, after.doc);
 
 /** The same version with its blocks in another order (ids move with them) and optionally edited text. */
 const reorder = (from: Version, order: number[], edits: Record<number, string> = {}): Version => {
@@ -265,7 +272,7 @@ describe("comparing two source versions by block id", () => {
 	it("blocks without an id are paired by kind and content as before", () => {
 		const before = withoutIds(base);
 		const after = withoutIds(version("가\n\n나 고침\n\n다\n\n마\n"));
-		expect(summary(compare(before, after))).toEqual(summary(diffSources(before.mdx, after.mdx)));
+		expect(summary(compare(before, after))).toEqual(summary(diffText(before.mdx, after.mdx)));
 		expect(summary(compare(before, after))).toEqual([
 			["changed", "나", "나 고침"],
 			["changed", "라", "마"],
@@ -292,16 +299,9 @@ describe("comparing two source versions by block id", () => {
 		expect(summary(compare(base, repeated))).toEqual([["changed", "나", "가"]]);
 	});
 
-	it("uses the MDX when either document is missing", () => {
-		const after = reorder(base, [3, 0, 1, 2]);
-		expect(summary(diffSources(base.mdx, after.mdx, { before: base.doc, after: null }))).toEqual([
-			["added", "라"],
-			["removed", "라"],
-		]);
-		expect(summary(diffSources(base.mdx, after.mdx, { before: undefined, after: after.doc }))).toEqual([
-			["added", "라"],
-			["removed", "라"],
-		]);
-		expect(diffSources("본문 <TextAlign>닫히지 않음", "하나\n", { before: null, after: null })).toBeNull();
+	it("compares nothing when either body is unparsed", () => {
+		const unparsed = { mdx: "<Box", doc: unparsedDocument("<Box") };
+		expect(compare(base, unparsed)).toBeNull();
+		expect(compare(unparsed, base)).toBeNull();
 	});
 });

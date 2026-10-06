@@ -4,9 +4,7 @@
 		"hash": "0ed2929de1b49fb928e918de70295b4a0bda1f41c5c6c8ddb86668aacb58aefd",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -19,9 +17,7 @@
 		"hash": "2e0a1cdb059b590e253c098e070a5326e6362f1fbb819806c5c78ef2e7e30da4",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -32,14 +28,9 @@
 	"sample js-async.mdx": {
 		"parsed": false,
 		"hash": "fadc2abf6a64b8a65a4806b6a886406b2631831ab4ae28cdd78fdee1fa86c4f7",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -52,9 +43,7 @@
 		"hash": "6223cf3b79316e75977cf46921be685f66276146205f9527511d5e9496caab43",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -65,14 +54,9 @@
 	"sample rag-performance.mdx": {
 		"parsed": false,
 		"hash": "9faf4972bc4fe85a3030daf969f85daab72cab505d2a4e8016d5adfeb1a7042d",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -85,9 +69,7 @@
 		"hash": "d8156f28a1be7ab3c460e77e9b73175f0d2d9d0510d058aafc3fed86041bc6e1",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -107,14 +89,9 @@
 	"sample seo-for-blogs.mdx": {
 		"parsed": false,
 		"hash": "be86bf17980566949aac51a117fb006a880afd2cd6e97f1dd4808232a99e1264",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -134,14 +111,9 @@
 	"sample tooltips-in-code-blocks.mdx": {
 		"parsed": false,
 		"hash": "9b11164e877eed8c68bde0feb449d023f87a8b554f1c28b060602ef4a5c720f6",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -157,9 +129,7 @@
 		"hash": "c78751d46087b1d77cebe4dd15c087b58af975989eb93ed157a11d249fd2b32e",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -173,14 +143,9 @@
 	"sample why-ssg.mdx": {
 		"parsed": false,
 		"hash": "ee7c10ed5bb013c457232e108996a2d7ce87602e6ee5011a8c567a4512d1ccff",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -196,10 +161,7 @@
 		"hash": "0d67333b3cd4ea796d86c25eff015392a7731d98c341a959d2fdeb5cfea8b07f",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"empty_body",
-			"missing_field"
-		],
+		"publishIssues": ["empty_body", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -212,10 +174,7 @@
 		"hash": "0d67333b3cd4ea796d86c25eff015392a7731d98c341a959d2fdeb5cfea8b07f",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"empty_body",
-			"missing_field"
-		],
+		"publishIssues": ["empty_body", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -228,9 +187,7 @@
 		"hash": "fca014407664f8c7083a6b4ba07cac1e1509b5dcc535ef5f8f6d406d7d7bd6b0",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -243,9 +200,7 @@
 		"hash": "d88fac91708d640a4d46a337b61fcfa56928687c9e1bfab9a42b3f1f6829b4d3",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -258,9 +213,7 @@
 		"hash": "7189690358e2f85dc5ed1c6ca16024ebd5fc656928b3660eaf6b391cbe6cbfc4",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -273,9 +226,7 @@
 		"hash": "4049bb4c973f9252b6ae864c0168abd4f7af62a082bd6dae331e83fbd7cd6715",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -288,9 +239,7 @@
 		"hash": "37baf1931210a779c9a16e8b43ff7b1e671dbc29155979b3ebdf6e7731e87bbf",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -303,16 +252,10 @@
 		"hash": "f5d6365f47b0e5548bc895b01e2b0e7e903b26dd55cf0d5f11098f82c6a24580",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_internal_link"
-		],
+		"publishIssues": ["missing_field", "unresolved_internal_link"],
 		"publishWarnings": [],
 		"references": [],
-		"internalLinks": [
-			"/posts/nextjs-guide",
-			"/memos/note"
-		],
+		"internalLinks": ["/posts/nextjs-guide", "/memos/note"],
 		"imageSources": [],
 		"searchText": "See a post and a memo.",
 		"excerptText": "See a post and a memo."
@@ -322,15 +265,10 @@
 		"hash": "bfe864fbe19686056ec85c736d0a3850ef2ae600c686abb824046ce10a1be23c",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_internal_link"
-		],
+		"publishIssues": ["missing_field", "unresolved_internal_link"],
 		"publishWarnings": [],
 		"references": [],
-		"internalLinks": [
-			"/posts/nextjs-guide"
-		],
+		"internalLinks": ["/posts/nextjs-guide"],
 		"imageSources": [],
 		"searchText": "See a bold link here.",
 		"excerptText": "See a bold link here."
@@ -340,9 +278,7 @@
 		"hash": "5a0db131fdee7896c45a084ef10a48993e889703950e003214d20a0cfe236fe2",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -355,15 +291,10 @@
 		"hash": "c0bcb2a5ee126455219bcb855327556969e75b1810593dc6d71543a1286c7138",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_internal_link"
-		],
+		"publishIssues": ["missing_field", "unresolved_internal_link"],
 		"publishWarnings": [],
 		"references": [],
-		"internalLinks": [
-			"/posts/nextjs-guide"
-		],
+		"internalLinks": ["/posts/nextjs-guide"],
 		"imageSources": [],
 		"searchText": "See a post.",
 		"excerptText": "See a post."
@@ -373,15 +304,10 @@
 		"hash": "15ad890f5e0987e37b68e4a406d14a6515d1ae7b80c3e4ff8960275d8156cff9",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_internal_link"
-		],
+		"publishIssues": ["missing_field", "unresolved_internal_link"],
 		"publishWarnings": [],
 		"references": [],
-		"internalLinks": [
-			"https://example.dev/posts/abc"
-		],
+		"internalLinks": ["https://example.dev/posts/abc"],
 		"imageSources": [],
 		"searchText": "See a post.",
 		"excerptText": "See a post."
@@ -391,41 +317,24 @@
 		"hash": "0140b24dd80248219a71c4e61dd3eca52f7ff29fdbddf4729797a417e39d7574",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_media"
-		],
+		"publishIssues": ["missing_field", "unresolved_media"],
 		"publishWarnings": [],
-		"references": [
-			"media:11111111-1111-4111-8111-111111111111"
-		],
+		"references": ["media:11111111-1111-4111-8111-111111111111"],
 		"internalLinks": [],
-		"imageSources": [
-			"11111111-1111-4111-8111-111111111111"
-		],
+		"imageSources": ["11111111-1111-4111-8111-111111111111"],
 		"searchText": "A picture",
 		"excerptText": ""
 	},
 	"media image without alt": {
 		"parsed": true,
 		"hash": "b31df99fbe4f7f881f8b17a18f7778801d43757cc3f8359618631461af3347e7",
-		"issues": [
-			"missing_image_alt"
-		],
+		"issues": ["missing_image_alt"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"missing_image_alt",
-			"unresolved_media"
-		],
+		"publishIssues": ["missing_field", "missing_image_alt", "unresolved_media"],
 		"publishWarnings": [],
-		"references": [
-			"media:11111111-1111-4111-8111-111111111111"
-		],
+		"references": ["media:11111111-1111-4111-8111-111111111111"],
 		"internalLinks": [],
-		"imageSources": [
-			"11111111-1111-4111-8111-111111111111"
-		],
+		"imageSources": ["11111111-1111-4111-8111-111111111111"],
 		"searchText": "",
 		"excerptText": ""
 	},
@@ -434,52 +343,33 @@
 		"hash": "d2e69816eef8b2ea0e34b5703441f06ab518a35dbda936928a38ccd63aa321c5",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_media"
-		],
+		"publishIssues": ["missing_field", "unresolved_media"],
 		"publishWarnings": [],
-		"references": [
-			"media:11111111-1111-4111-8111-111111111111"
-		],
+		"references": ["media:11111111-1111-4111-8111-111111111111"],
 		"internalLinks": [],
-		"imageSources": [
-			"11111111-1111-4111-8111-111111111111"
-		],
+		"imageSources": ["11111111-1111-4111-8111-111111111111"],
 		"searchText": "",
 		"excerptText": ""
 	},
 	"image with bad media id": {
 		"parsed": true,
 		"hash": "b1c50dc0aaa510d3c4ace1e63c679057aab6dd095941fd41acab9b6254166623",
-		"issues": [
-			"invalid_reference_id"
-		],
+		"issues": ["invalid_reference_id"],
 		"warnings": [],
-		"publishIssues": [
-			"invalid_reference_id",
-			"missing_field"
-		],
+		"publishIssues": ["invalid_reference_id", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
-		"imageSources": [
-			"not-a-uuid"
-		],
+		"imageSources": ["not-a-uuid"],
 		"searchText": "x",
 		"excerptText": ""
 	},
 	"image with no source": {
 		"parsed": false,
 		"hash": "0acc003a8b818059a67e0853c81feab08df3777452c1e195940a2aa7cce928f1",
-		"issues": [
-			"missing_media_id"
-		],
+		"issues": ["missing_media_id"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"missing_media_id"
-		],
+		"publishIssues": ["missing_field", "missing_media_id"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -492,15 +382,11 @@
 		"hash": "85c3d200a1d4e066ed7d5bffe9369bbf11eb001ccef784bf89b94226b0297220",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
-		"imageSources": [
-			"https://example.com/a.png"
-		],
+		"imageSources": ["https://example.com/a.png"],
 		"searchText": "x",
 		"excerptText": ""
 	},
@@ -509,39 +395,24 @@
 		"hash": "e5aae4196cb8f11ff671a46dfabea83e3cc876753092dd38ad8464b16fd5457b",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
-		"imageSources": [
-			"https://example.com/a.png",
-			"https://example.com/b.png"
-		],
+		"imageSources": ["https://example.com/a.png", "https://example.com/b.png"],
 		"searchText": "outside text inline text",
 		"excerptText": "text text"
 	},
 	"image with options": {
 		"parsed": true,
 		"hash": "17358818905226a66099ef2f524652794da443a1c3456a79134d4165cd6e4555",
-		"issues": [
-			"invalid_block_attribute"
-		],
+		"issues": ["invalid_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"invalid_block_attribute",
-			"missing_field",
-			"unresolved_media"
-		],
+		"publishIssues": ["invalid_block_attribute", "missing_field", "unresolved_media"],
 		"publishWarnings": [],
-		"references": [
-			"media:11111111-1111-4111-8111-111111111111"
-		],
+		"references": ["media:11111111-1111-4111-8111-111111111111"],
 		"internalLinks": [],
-		"imageSources": [
-			"11111111-1111-4111-8111-111111111111"
-		],
+		"imageSources": ["11111111-1111-4111-8111-111111111111"],
 		"searchText": "a",
 		"excerptText": ""
 	},
@@ -550,15 +421,9 @@
 		"hash": "8ac2871252a56659a8bda5ffd6d2f25211521fb3ba138f2f89ff890b34f494c2",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_media"
-		],
+		"publishIssues": ["missing_field", "unresolved_media"],
 		"publishWarnings": [],
-		"references": [
-			"media:11111111-1111-4111-8111-111111111111",
-			"media:22222222-2222-4222-8222-222222222222"
-		],
+		"references": ["media:11111111-1111-4111-8111-111111111111", "media:22222222-2222-4222-8222-222222222222"],
 		"internalLinks": [],
 		"imageSources": [
 			"11111111-1111-4111-8111-111111111111",
@@ -573,14 +438,9 @@
 		"hash": "e8e131f3918f8bda8c328f94cf42b8b912201328df2540372e48f7b89c9194c7",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_media"
-		],
+		"publishIssues": ["missing_field", "unresolved_media"],
 		"publishWarnings": [],
-		"references": [
-			"media:11111111-1111-4111-8111-111111111111"
-		],
+		"references": ["media:11111111-1111-4111-8111-111111111111"],
 		"internalLinks": [],
 		"imageSources": [],
 		"searchText": "report.pdf",
@@ -589,16 +449,9 @@
 	"file without media id": {
 		"parsed": true,
 		"hash": "b782ff908a82da7c97d3182f31d1917de61d9b8fa207c2a4c6f638746b397826",
-		"issues": [
-			"missing_block_attribute",
-			"missing_media_id"
-		],
+		"issues": ["missing_block_attribute", "missing_media_id"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_block_attribute",
-			"missing_field",
-			"missing_media_id"
-		],
+		"publishIssues": ["missing_block_attribute", "missing_field", "missing_media_id"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -611,9 +464,7 @@
 		"hash": "5bc977f909a3d99728c9102eef695e4ec93c68f6b680d537afa33f35550b31a4",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -624,14 +475,9 @@
 	"text align bad option": {
 		"parsed": true,
 		"hash": "3d13269f620089d3da324572b3fff5ff83cf5a690a3b9a648cf117571070f557",
-		"issues": [
-			"invalid_block_attribute"
-		],
+		"issues": ["invalid_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"invalid_block_attribute",
-			"missing_field"
-		],
+		"publishIssues": ["invalid_block_attribute", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -642,14 +488,9 @@
 	"text align missing": {
 		"parsed": true,
 		"hash": "1480a0cf345f6a45047c317fc8d382ffa4ddb93dfd0e698dd681d48b8c8925cb",
-		"issues": [
-			"missing_block_attribute"
-		],
+		"issues": ["missing_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_block_attribute",
-			"missing_field"
-		],
+		"publishIssues": ["missing_block_attribute", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -662,9 +503,7 @@
 		"hash": "d904a2bb819a05ebb90df03a1262bc9972f51a5131a34aabf19009d51a7bf434",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -676,15 +515,9 @@
 		"parsed": true,
 		"hash": "69e842b851651e5d8849f729a56922b4a0494a455cf470b84c9e73bf2cb21f9b",
 		"issues": [],
-		"warnings": [
-			"unknown_block_attribute"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"unknown_block_attribute"
-		],
+		"warnings": ["unknown_block_attribute"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["unknown_block_attribute"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -694,14 +527,9 @@
 	"callout bad option": {
 		"parsed": true,
 		"hash": "6ac3cf0ed0ec6e7d2f50bf0c23afd43a01a04e1e7aab7739eb29e51cd705b351",
-		"issues": [
-			"invalid_block_attribute"
-		],
+		"issues": ["invalid_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"invalid_block_attribute",
-			"missing_field"
-		],
+		"publishIssues": ["invalid_block_attribute", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -714,9 +542,7 @@
 		"hash": "d61095791e32e07dcf9c684c4dfbd06cb1522f12e2d2b34fce35f8e6ba38882b",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -727,14 +553,9 @@
 	"tabs with unknown active tab": {
 		"parsed": true,
 		"hash": "22b3c716376a216a1e9df592d06ac5d7b3237c7eee67645f2690eb4f094c8c79",
-		"issues": [
-			"invalid_block_attribute"
-		],
+		"issues": ["invalid_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"invalid_block_attribute",
-			"missing_field"
-		],
+		"publishIssues": ["invalid_block_attribute", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -745,14 +566,9 @@
 	"tab missing label": {
 		"parsed": true,
 		"hash": "33fd64b91fbd4c068dbd19698569443edac72f3f4b53f69a45dff82508ef5a66",
-		"issues": [
-			"missing_block_attribute"
-		],
+		"issues": ["missing_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_block_attribute",
-			"missing_field"
-		],
+		"publishIssues": ["missing_block_attribute", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -765,9 +581,7 @@
 		"hash": "d8d73859e09475624409fb7758b423383cbdc83eeeac0f170422c6c6b1472ba1",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -778,14 +592,9 @@
 	"tooltip without content": {
 		"parsed": false,
 		"hash": "53ffbbccf9721d2900adc3283266e3a30bb9d2960ab0567cb3562be8fd4b11ee",
-		"issues": [
-			"missing_block_attribute"
-		],
+		"issues": ["missing_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_block_attribute",
-			"missing_field"
-		],
+		"publishIssues": ["missing_block_attribute", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -798,9 +607,7 @@
 		"hash": "5d06825984c33d08ca3b1a3975b277cb576cc102859563e67b4335492fcd5ce8",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -811,14 +618,9 @@
 	"untranslated": {
 		"parsed": true,
 		"hash": "9819338cca116b6c4b6449476789f4985f2e421f900e8ef1dae6c8969b78ac3b",
-		"issues": [
-			"untranslated_text"
-		],
+		"issues": ["untranslated_text"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"untranslated_text"
-		],
+		"publishIssues": ["missing_field", "untranslated_text"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -829,14 +631,9 @@
 	"untranslated with break": {
 		"parsed": true,
 		"hash": "c8c2081981e2d145555bd51c1a0782eeb97d33ac469cf29916e4f83bb4ae7142",
-		"issues": [
-			"untranslated_text"
-		],
+		"issues": ["untranslated_text"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"untranslated_text"
-		],
+		"publishIssues": ["missing_field", "untranslated_text"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -849,9 +646,7 @@
 		"hash": "358d5db1422dfa5fbb0996280cd3a22fb0562d9dd62fb6ca94891fbef94e39ff",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -864,9 +659,7 @@
 		"hash": "ca186b87f1b7827537a9ee3ea4fe130bed7a0e3c7e12e16aa1954f5e9005a718",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -879,9 +672,7 @@
 		"hash": "a3e0a0100b68bba65c5c0fb6c704bd62a4ec66c1f751fba8ed5fe90e50bc1661",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -892,14 +683,9 @@
 	"code ref broken": {
 		"parsed": true,
 		"hash": "fae263d6debbd21622cf9bd75c9f928c72d2d7076719da3ed092285586890e35",
-		"issues": [
-			"code_ref_broken"
-		],
+		"issues": ["code_ref_broken"],
 		"warnings": [],
-		"publishIssues": [
-			"code_ref_broken",
-			"missing_field"
-		],
+		"publishIssues": ["code_ref_broken", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -911,15 +697,9 @@
 		"parsed": true,
 		"hash": "aa0a2a69e751ff4e593efbe847e85c4298177bbb28691e1c07062703a45f1a91",
 		"issues": [],
-		"warnings": [
-			"code_anchor_duplicate"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"code_anchor_duplicate"
-		],
+		"warnings": ["code_anchor_duplicate"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["code_anchor_duplicate"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -929,14 +709,9 @@
 	"code ref without target": {
 		"parsed": false,
 		"hash": "0786a84bc23484fa34ee0de2b8053c076ddeff6c06b89bee181f73c719ca0750",
-		"issues": [
-			"missing_block_attribute"
-		],
+		"issues": ["missing_block_attribute"],
 		"warnings": [],
-		"publishIssues": [
-			"missing_block_attribute",
-			"missing_field"
-		],
+		"publishIssues": ["missing_block_attribute", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -949,9 +724,7 @@
 		"hash": "ba8e3ec56d23637698fdc952d00c9fb694931052a85bd8fb8a33474fa54b85c7",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -964,9 +737,7 @@
 		"hash": "2987e4bea6f954d1574f74c63efb3d184cabc4a5c4c0d2e36b44ad1762ac1bb0",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -978,15 +749,9 @@
 		"parsed": true,
 		"hash": "3b44df5aa87204329e0a6e415fea06752acc92771fceea8a8ac776e69f54b3e7",
 		"issues": [],
-		"warnings": [
-			"footnote_definition_unused"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"footnote_definition_unused"
-		],
+		"warnings": ["footnote_definition_unused"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["footnote_definition_unused"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -997,15 +762,9 @@
 		"parsed": true,
 		"hash": "1251c4811f42b365fdc35bd764c9d0e0ffc6e767770cc094ed0bb6c5c9def27f",
 		"issues": [],
-		"warnings": [
-			"footnote_definition_missing"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"footnote_definition_missing"
-		],
+		"warnings": ["footnote_definition_missing"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["footnote_definition_missing"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -1016,15 +775,9 @@
 		"parsed": true,
 		"hash": "1b0435cb2bdc3752b556e2ccbe1a32e135a5f2c6ccca6cf935822d41d0e508b7",
 		"issues": [],
-		"warnings": [
-			"footnote_definition_duplicate"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"footnote_definition_duplicate"
-		],
+		"warnings": ["footnote_definition_duplicate"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["footnote_definition_duplicate"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -1036,9 +789,7 @@
 		"hash": "7b296adf9096e1f7b419684cf54ede85c62cb0a9b351eb55ed4dd5337b4d6f0f",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1051,9 +802,7 @@
 		"hash": "44f411a03505208734c515f8b69ee2775225075f9089e47acf058646643114f5",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1066,9 +815,7 @@
 		"hash": "6d89e995c719b5d164c4667b61399aae47d65888e66f900f4df31554a8a54823",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1081,9 +828,7 @@
 		"hash": "591933422742b3c284fb7a91f989056b6d4616d6274ba5e18141224c8da0419f",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1096,9 +841,7 @@
 		"hash": "2e13534fd7b548dde286d02561cbd1694a6719ed352728a24a1c70a25bdc27c6",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1111,9 +854,7 @@
 		"hash": "ec947505d0ce8b639a78f9df47b3bfb0239bd2d8cd5b6f87f4731b42a679bb6b",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1125,15 +866,9 @@
 		"parsed": true,
 		"hash": "1d9bfe272060fa0de9062c33523ddc3347dbd048fed3ec68780b58fff02d404f",
 		"issues": [],
-		"warnings": [
-			"invalid_table_span"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"invalid_table_span"
-		],
+		"warnings": ["invalid_table_span"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["invalid_table_span"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -1144,15 +879,9 @@
 		"parsed": true,
 		"hash": "20e5083fd91cdc321920b564595d1c4f707899cf17383e8b05ee85a2af568e27",
 		"issues": [],
-		"warnings": [
-			"invalid_table_span"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"invalid_table_span"
-		],
+		"warnings": ["invalid_table_span"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["invalid_table_span"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -1163,15 +892,9 @@
 		"parsed": true,
 		"hash": "ea76f0d69d23a856bbb7d9feb0f1cb589ba29b7b3d9d966ac17e0d560e6cbd3d",
 		"issues": [],
-		"warnings": [
-			"invalid_table_span"
-		],
-		"publishIssues": [
-			"missing_field"
-		],
-		"publishWarnings": [
-			"invalid_table_span"
-		],
+		"warnings": ["invalid_table_span"],
+		"publishIssues": ["missing_field"],
+		"publishWarnings": ["invalid_table_span"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -1183,9 +906,7 @@
 		"hash": "fc9744612ebc96b0b30cdf44d52540c991704a29e7ca2fc859719c7e244a99c7",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1198,9 +919,7 @@
 		"hash": "fc9744612ebc96b0b30cdf44d52540c991704a29e7ca2fc859719c7e244a99c7",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1211,14 +930,9 @@
 	"html comment": {
 		"parsed": false,
 		"hash": "4029941e51a46b98fbe6d7ec32590cbdac6e30e595acbbd24f40201e9f3a8b57",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1229,14 +943,9 @@
 	"expression block": {
 		"parsed": false,
 		"hash": "e8fe08f8974c0da9862f528fdfb60e28218a1e4f82c7dfb69b1af5cadf368053",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1249,9 +958,7 @@
 		"hash": "ab59156e82694d6da47c5d1c0b320eab12910d8d9ffc2ddbc1c6f462ffd590db",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field"
-		],
+		"publishIssues": ["missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1262,14 +969,9 @@
 	"frontmatter": {
 		"parsed": false,
 		"hash": "49557b5f7a0e5f34165fc119e4d0cca46a0a106b0d74ff399b57ad82095d68d5",
-		"issues": [
-			"frontmatter_present"
-		],
+		"issues": ["frontmatter_present"],
 		"warnings": [],
-		"publishIssues": [
-			"frontmatter_present",
-			"missing_field"
-		],
+		"publishIssues": ["frontmatter_present", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1280,14 +982,9 @@
 	"unclosed jsx": {
 		"parsed": false,
 		"hash": "c700d163568e57eefea1deab266652124c2c9abb1d1df16a7fce0197ea7fa4ab",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1298,14 +995,9 @@
 	"disallowed element": {
 		"parsed": false,
 		"hash": "9a3acda941aa84abbe2ea9747f46a5c70ec0815c1f81b622ba8b55977bd73fa8",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1316,14 +1008,9 @@
 	"esm": {
 		"parsed": false,
 		"hash": "646c2810e4311151579ff063a517a604a60efa9feb079e4b75752b614019e3c2",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1334,19 +1021,10 @@
 	"event handler": {
 		"parsed": false,
 		"hash": "75a0b539987d4ea8986bf4b32f7a8b15ed5a61fe29990a9f582ea35bc3d6a84d",
-		"issues": [
-			"mdx_error"
-		],
-		"warnings": [
-			"unknown_block_attribute"
-		],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
-		"publishWarnings": [
-			"unknown_block_attribute"
-		],
+		"issues": ["mdx_error"],
+		"warnings": ["unknown_block_attribute"],
+		"publishIssues": ["mdx_error", "missing_field"],
+		"publishWarnings": ["unknown_block_attribute"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
@@ -1356,14 +1034,9 @@
 	"spread attribute": {
 		"parsed": false,
 		"hash": "74dc8cf290d1f8a72d312ad73ad90218fb6252d1fb62e2f446c5e8512cdc9160",
-		"issues": [
-			"mdx_error"
-		],
+		"issues": ["mdx_error"],
 		"warnings": [],
-		"publishIssues": [
-			"mdx_error",
-			"missing_field"
-		],
+		"publishIssues": ["mdx_error", "missing_field"],
 		"publishWarnings": [],
 		"references": [],
 		"internalLinks": [],
@@ -1376,15 +1049,10 @@
 		"hash": "809bf45ecc8bd926d7c10d0bb833e86a71f195c04ddf143036cd775e10c83073",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_internal_link"
-		],
+		"publishIssues": ["missing_field", "unresolved_internal_link"],
 		"publishWarnings": [],
 		"references": [],
-		"internalLinks": [
-			"/posts/한글"
-		],
+		"internalLinks": ["/posts/한글"],
 		"imageSources": [],
 		"searchText": "한글 본문입니다. 굵게 그리고 링크.",
 		"excerptText": "한글 본문입니다. 굵게 그리고 링크."
@@ -1394,21 +1062,11 @@
 		"hash": "ef51f812496c393bb77633ab13ceea447471919bbe7e98792834f85759c307bd",
 		"issues": [],
 		"warnings": [],
-		"publishIssues": [
-			"missing_field",
-			"unresolved_internal_link",
-			"unresolved_media"
-		],
+		"publishIssues": ["missing_field", "unresolved_internal_link", "unresolved_media"],
 		"publishWarnings": [],
-		"references": [
-			"media:11111111-1111-4111-8111-111111111111"
-		],
-		"internalLinks": [
-			"/posts/a"
-		],
-		"imageSources": [
-			"11111111-1111-4111-8111-111111111111"
-		],
+		"references": ["media:11111111-1111-4111-8111-111111111111"],
+		"internalLinks": ["/posts/a"],
+		"imageSources": ["11111111-1111-4111-8111-111111111111"],
 		"searchText": "Title Intro with a post and a. x Inside tip t. Note.",
 		"excerptText": "Title Intro with a post and a. Inside tip. Note."
 	}

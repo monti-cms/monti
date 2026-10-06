@@ -3,13 +3,13 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
-import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { recomputeContentHashes } from "../store/content-hash-backfill";
+import { mdxContentHash } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
@@ -163,7 +163,7 @@ describe("content hash v2", () => {
 			}>(`SELECT entry_id, state, metadata, mdx, schema_version, content_hash FROM "${schemaName}".entry_bodies`);
 			expect(rows.rows.length).toBeGreaterThan(0);
 			return rows.rows
-				.filter((row) => row.content_hash !== computeContentHash(row.metadata, row.mdx, row.schema_version))
+				.filter((row) => row.content_hash !== mdxContentHash(row.metadata, row.mdx, row.schema_version))
 				.map((row) => `${row.entry_id}/${row.state}`);
 		};
 

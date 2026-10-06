@@ -57,9 +57,10 @@ describe("ContentStore (Postgres)", () => {
 			expect(saved.version).toBe(entry.version);
 			expect(saved.updatedAt.getTime()).toBe(entry.updatedAt.getTime());
 			expect(saved.working.updatedAt?.getTime()).toBe(entry.working.updatedAt?.getTime());
-			expect(saved.working.mdx).toBe("second words");
+			// The MDX column is written from the document (which ends its text with a newline).
+			expect(saved.working.mdx).toBe("second words\n");
 			expect(await searchTextOf(entry.id, "working")).toMatchObject({
-				mdx: "second words",
+				mdx: "second words\n",
 				search_text: "second words",
 			});
 		});

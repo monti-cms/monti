@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto";
-import { analyze, toDocument } from "../mdx";
 import { withoutBlockIds } from "../mdx/block-ids";
-import { toStoredDocument } from "../mdx/stored-document";
-import type { CmsMdxAnalysis, CmsNode } from "../mdx/types";
+import { type StoredDocument, UNPARSED_NODE } from "../mdx/stored-document";
 import type { JsonValue } from "./types";
 
 const isJsonArray = (value: unknown): value is readonly JsonValue[] => Array.isArray(value);
@@ -21,49 +19,34 @@ export function sortKeys(value: JsonValue): JsonValue {
 		}, {});
 }
 
-/**
- * The form of a parsed body that is hashed: its stored document (`toStoredDocument`). Two bodies get the same value exactly
- * when they read the same to a reader: the same text, marks, blocks and attribute values.
- *
- * The parsed document already ignores spelling: `*a*` and `_a_`, directive and JSX syntax, and whitespace between blocks
- * all produce the same nodes. The stored form also drops what only records how the text was written (the component name and
- * raw attribute list of a block, the annotation document of a code block, trailing blank lines) and sorts object keys at every
- * depth. Block ids and source positions are never part of it. Returns `null` when the body has no stored document (front matter).
- */
-export const canonicalBodyForHash = (document: CmsNode): JsonValue | null => {
-	const stored = toStoredDocument(document);
-	// Block ids say which block is which, not what the body says.
-	return stored && ({ ...stored, content: withoutBlockIds(stored.content) } as unknown as JsonValue);
+/** The text of a document that holds one `unparsed` node and nothing else (a body that could not become a document), otherwise `undefined`. */
+const unparsedSource = (doc: StoredDocument): string | undefined => {
+	const only = doc.content.length === 1 ? doc.content[0] : undefined;
+	return only?.type === UNPARSED_NODE && typeof only.attrs?.source === "string" ? only.attrs.source : undefined;
 };
 
 /**
- * Content hash of a snapshot: schema version, metadata (key order ignored) and the body in its canonical form.
- * A body that does not parse cleanly has no canonical form, so its raw string is hashed under a different tag.
- * Pass an `analysis` of `mdx` that was already made to avoid parsing it again.
+ * The form of a document that is hashed: the document itself without block ids (they say which block is which, not what the body says), with
+ * object keys sorted at every depth. Two bodies get the same value exactly when they read the same to a reader: the same text, marks,
+ * blocks and attribute values. The stored form already ignores how a body was written (see `StoredDocument`).
+ */
+export const canonicalBodyForHash = (doc: StoredDocument): JsonValue =>
+	sortKeys({ ...doc, content: withoutBlockIds(doc.content) } as unknown as JsonValue);
+
+/**
+ * Content hash of a snapshot: schema version, metadata (key order ignored) and the stored document of the body.
+ * A body that could not become a document has no content to hash, so its text is hashed under a different tag.
  *
  * Version tag history: `cms-snapshot-v1` hashed the MDX string itself. v2 hashes the parsed body so that a
  * syntax-only change (the serializer changing how the same content is written) is not a content change. v3 hashes the
- * stored document, the form a body is kept in once the document is the source.
+ * stored document, the form a body is kept in once the document is the source. Hashing the document directly gives the
+ * same value v3 gave for the MDX it was written as.
  */
-export function computeContentHash(
-	metadata: JsonValue,
-	mdx: string,
-	schemaVersion = 1,
-	analysis: CmsMdxAnalysis = analyze(mdx),
-): string {
-	const body = analysis.errors.length === 0 ? parsedBody(analysis) : undefined;
+export function computeContentHash(metadata: JsonValue, doc: StoredDocument, schemaVersion = 1): string {
+	const source = unparsedSource(doc);
 	const tuple =
-		body === undefined
-			? ["cms-snapshot-v3-raw", schemaVersion, sortKeys(metadata), mdx]
-			: ["cms-snapshot-v3", schemaVersion, sortKeys(metadata), body];
+		source === undefined
+			? ["cms-snapshot-v3", schemaVersion, sortKeys(metadata), canonicalBodyForHash(doc)]
+			: ["cms-snapshot-v3-raw", schemaVersion, sortKeys(metadata), source];
 	return createHash("sha256").update(JSON.stringify(tuple)).digest("hex");
 }
-
-/** The canonical body, or `undefined` when there is no stored document (the caller then hashes the raw string). */
-const parsedBody = (analysis: CmsMdxAnalysis): JsonValue | undefined => {
-	try {
-		return canonicalBodyForHash(toDocument(analysis)) ?? undefined;
-	} catch {
-		return undefined;
-	}
-};

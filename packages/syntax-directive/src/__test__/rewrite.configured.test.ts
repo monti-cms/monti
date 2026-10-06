@@ -1,11 +1,11 @@
-import { bodyFromMdx } from "@monti-cms/core/mdx";
-import { computeContentHash } from "@monti-cms/core/runtime";
 import {
 	closeGlobalPool,
 	createContentStore,
 	createIsolatedTestPool,
+	docOfMdx,
 	dropIsolatedTestPool,
 	formatRewriteReport,
+	mdxContentHash,
 	migrateContentStore,
 	rewriteContent,
 	seedEntry,
@@ -59,9 +59,9 @@ describe("content rewrite with directive syntax in the site config", () => {
 	it("writes directives (and <br />) for a standard body without changing its hash, and leaves directive bodies as they are", async () => {
 		const store = createContentStore(pool, { schema: schemaName });
 		const metadata = { title: "T" };
-		const hash = computeContentHash(metadata, STANDARD, 1);
+		const hash = mdxContentHash(metadata, STANDARD, 1);
 		// Both rows already have their document (as every row has after `monti migrate`); only their notation differs.
-		const doc = bodyFromMdx(STANDARD).doc;
+		const doc = docOfMdx(STANDARD);
 		const standard = await seedEntry(store, {
 			collection: "x",
 			slug: "standard",
@@ -79,6 +79,14 @@ describe("content rewrite with directive syntax in the site config", () => {
 			contentHash: hash,
 		});
 
+		// A store writes the MDX column from the document, in the site's notation; these rows hold the notation they were given.
+		for (const [id, mdx] of [
+			[standard.id, STANDARD],
+			[written.id, DIRECTIVES],
+		] as const) {
+			await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2`, [mdx, id]);
+		}
+
 		const dryRun = await rewriteContent(pool, { schema: schemaName });
 		expect(dryRun.applied).toBe(false);
 		expect((await store.getEntry(standard.id)).working.mdx).toBe(STANDARD);
@@ -91,7 +99,7 @@ describe("content rewrite with directive syntax in the site config", () => {
 		const after = await store.getEntry(standard.id);
 		expect(after.working.mdx).toBe(DIRECTIVES);
 		expect(after.working.contentHash).toBe(hash);
-		expect(computeContentHash(metadata, after.working.mdx, 1)).toBe(hash);
+		expect(mdxContentHash(metadata, after.working.mdx, 1)).toBe(hash);
 		expect(after.version).toBe(standard.version);
 		expect(after.updatedAt.getTime()).toBe(standard.updatedAt.getTime());
 		expect((await store.getEntry(written.id)).working.mdx).toBe(DIRECTIVES);

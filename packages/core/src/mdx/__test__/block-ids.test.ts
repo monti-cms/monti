@@ -82,7 +82,9 @@ describe("block ids", () => {
 		for (const { id } of blocks(body.doc as StoredDocument)) expect(body.mdx).not.toContain(id);
 		const again = bodyFromMdx(SAMPLE);
 		expect(again.doc).not.toEqual(body.doc);
-		expect(computeContentHash({}, again.mdx)).toBe(computeContentHash({}, body.mdx));
+		expect(computeContentHash({}, again.doc as StoredDocument)).toBe(
+			computeContentHash({}, body.doc as StoredDocument),
+		);
 	});
 
 	it("are inherited from the previous version when the same MDX is read again", () => {

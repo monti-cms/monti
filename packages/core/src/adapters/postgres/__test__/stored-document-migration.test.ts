@@ -3,14 +3,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
-import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
-import { extractVisibleText } from "../store/rows";
+import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateStoredDocuments } from "../store/stored-document-migration";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -195,9 +194,9 @@ describe("0013_stored_documents", () => {
 			expect(stored?.mdx).toBe(expected.mdx);
 			expect(contentOf(stored?.doc)).toEqual(contentOf(expected.doc));
 			expect(stored?.content_hash).toBe(
-				computeContentHash(stored?.metadata ?? {}, expected.mdx, stored?.schema_version ?? 1),
+				mdxContentHash(stored?.metadata ?? {}, expected.mdx, stored?.schema_version ?? 1),
 			);
-			expect(stored?.search_text).toBe(extractVisibleText(expected.mdx));
+			expect(stored?.search_text).toBe(mdxSearchText(expected.mdx));
 		}
 		expect((await row(published.id, "working"))?.mdx).toBe(WRITTEN);
 		expect((await row(published.id, "working"))?.search_text).toContain("emphasis");
@@ -291,8 +290,8 @@ describe("0013_stored_documents", () => {
 			expect(stored?.mdx).toBe(mdx);
 			expect(stored?.doc).toBeNull();
 			// It still has the current hash (of its raw text) and search text.
-			expect(stored?.content_hash).toBe(computeContentHash(stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1));
-			expect(stored?.search_text).toBe(extractVisibleText(mdx));
+			expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1));
+			expect(stored?.search_text).toBe(mdxSearchText(mdx));
 			expect(messages.filter((message) => message.includes(`${entry.id}/working`))).toHaveLength(1);
 		}
 		expect((await row(good.id, "working"))?.mdx).toBe(WRITTEN);
@@ -366,7 +365,9 @@ describe("0013_stored_documents", () => {
 
 			const after = await store.getTemplate(broken.id);
 			expect(after.mdx).toBe("Words\n\n<Unclosed");
-			expect(after.doc).toBeNull();
+			// The step leaves it without a document (the one after it, `0017_unparsed_bodies`, gives it its unparsed document).
+			const raw = await pool.query(`SELECT doc FROM "${schemaName}".body_templates WHERE id = $1`, [broken.id]);
+			expect(raw.rows[0]?.doc).toBeNull();
 			expect(messages.some((message) => message.includes(`body_templates ${broken.id}`))).toBe(true);
 		});
 	});

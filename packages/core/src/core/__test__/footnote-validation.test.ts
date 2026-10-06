@@ -31,7 +31,8 @@ describe("footnote pre-publish validation (warnings only)", () => {
 			code: "footnote_definition_missing",
 			message: "gone",
 			params: { label: "gone" },
-			position: { line: 1, column: expect.any(Number) },
+			// The paragraph that holds the reference.
+			position: { blockId: snapshot.doc.content[0]?.id },
 		});
 		// It is a warning, not a blocking issue.
 		expect(snapshot.issues).toEqual([]);
@@ -49,15 +50,20 @@ describe("footnote pre-publish validation (warnings only)", () => {
 			code: "footnote_definition_unused",
 			message: "spare",
 			params: { label: "spare" },
-			position: { line: 5, column: 1 },
+			// The definition that nobody cites: the third block.
+			position: { blockId: snapshot.doc.content[2]?.id },
 		});
 		expect(snapshot.issues).toEqual([]);
 	});
 
 	it("warns about duplicate definition labels once per extra definition", async () => {
-		const { warnings } = await footnoteWarnings("Text[^a]\n\n[^a]: one\n\n[^A]: two\n");
+		const { warnings, snapshot } = await footnoteWarnings("Text[^a]\n\n[^a]: one\n\n[^A]: two\n");
 		expect(warnings.map((warning) => warning.code)).toEqual(["footnote_definition_duplicate"]);
-		expect(warnings[0]).toMatchObject({ message: "A", params: { label: "A" }, position: { line: 5, column: 1 } });
+		expect(warnings[0]).toMatchObject({
+			message: "A",
+			params: { label: "A" },
+			position: { blockId: snapshot.doc.content[2]?.id },
+		});
 	});
 
 	it("matches labels case-insensitively", async () => {

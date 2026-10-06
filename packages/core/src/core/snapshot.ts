@@ -1,18 +1,13 @@
-import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
-import { createTranslator } from "../i18n";
-import { blockSpansOf } from "../mdx/block-spans";
-import { DIRECTIVE_BY_COMPONENT } from "../mdx/directives";
-import { splitFrontmatter } from "../mdx/frontmatter";
+import { assignBlockIds } from "../mdx/block-ids";
 import { isAllowedImageSrc } from "../mdx/image-src";
 import {
-	type Body,
-	bodyFromDocument,
+	bodyDocument,
 	bodyFromMdx,
+	canonicalDocument,
 	readStoredDocument,
 	type StoredDocument,
 } from "../mdx/stored-document";
-import { MAX_TABLE_COLUMNS } from "../mdx/table-layout";
-import type { CmsBodyPosition, CmsImageSource } from "../mdx/types";
+import type { CmsImageSource } from "../mdx/types";
 import {
 	fieldValueError,
 	metadataReferences,
@@ -25,18 +20,14 @@ import {
 	storedField,
 	unknownSelectValues,
 } from "../schema/derive";
-import { CodeRefCollector } from "./code-refs";
+import { checkDocument, isEmptyDocument } from "./body-check";
 import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
 import { computeContentHash, sortKeys } from "./content-hash";
-import { isUuid } from "./ids";
-import { parseInternalLink } from "./links";
 import { PREFIXED_LOCALES } from "./locales";
-import { coreMessages } from "./messages";
 import { normalizeSlugInput } from "./slug";
 import { parseTranslationState } from "./translation/state";
 import {
 	type Collection,
-	type InternalLinkSource,
 	type Issue,
 	type MetadataValue,
 	type PreparedSnapshot,
@@ -128,8 +119,19 @@ export const serviceInputKeys = (input: unknown): readonly string[] => [
 	input !== null && typeof input === "object" && Object.hasOwn(input, "doc") ? "doc" : "mdx",
 ];
 
-/** The body of a service input in both forms. Blocks inherit their ids from `previous`, the body being replaced, where the input has none. */
-export const inputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): Body => {
+/** What reading the body of a service input gives: the document, and the findings about a text that could not become one. */
+export interface InputBody {
+	readonly doc: StoredDocument;
+	/** For a body given as text that could not be read: why (`mdx_error`, `frontmatter_present`), with the line and column in that text. */
+	readonly importIssues: Issue[];
+}
+
+/**
+ * The body of a service input as a document. A document is taken as given (checked in shape, put in its canonical form); text is read into one.
+ * Text that cannot be read (it does not parse, has front matter, or would not read back the same) becomes a document of one `unparsed` node that
+ * keeps it, with the reasons as `importIssues`. Blocks inherit their ids from `previous`, the body being replaced, where the input has none.
+ */
+export const inputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): InputBody => {
 	if (input.doc !== undefined) {
 		let size: number;
 		try {
@@ -138,15 +140,28 @@ export const inputBody = (input: ServiceInput, previous: StoredDocument | null |
 			throw new ServiceError("invalid_input");
 		}
 		if (size > MAX_DOC_BYTES) throw new ServiceError("mdx_too_large");
-		const doc = readStoredDocument(input.doc);
-		if (!doc) throw new ServiceError("invalid_input");
-		const body = bodyFromDocument(doc, undefined, { previous });
-		if (Buffer.byteLength(body.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
-		return body;
+		const read = readStoredDocument(input.doc);
+		if (!read) throw new ServiceError("invalid_input");
+		const doc = canonicalDocument(read);
+		return {
+			doc: { ...doc, content: assignBlockIds(doc.content, [previous?.content]) },
+			importIssues: [],
+		};
 	}
 	if (typeof input.mdx !== "string") throw new ServiceError("invalid_input");
 	if (Buffer.byteLength(input.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
-	return bodyFromMdx(input.mdx, undefined, { previous });
+	const body = bodyFromMdx(input.mdx, undefined, { previous });
+	if (body.doc) return { doc: body.doc, importIssues: [] };
+	const importIssues: Issue[] = body.analysis.errors.map((error) => ({
+		code: "mdx_error",
+		message: error.message,
+		params: { reason: error.code, ...error.params },
+		position: error.position,
+	}));
+	if (body.analysis.frontmatter !== null) {
+		importIssues.push({ code: "frontmatter_present", path: "frontmatter", position: { line: 1, column: 1 } });
+	}
+	return { doc: bodyDocument(body, previous), importIssues };
 };
 
 /**
@@ -246,240 +261,6 @@ function validateMetadata(
 	return metadata;
 }
 
-type MdxNode = {
-	type?: unknown;
-	name?: unknown;
-	url?: unknown;
-	identifier?: unknown;
-	label?: unknown;
-	lang?: unknown;
-	meta?: unknown;
-	value?: unknown;
-	attributes?: unknown;
-	children?: unknown;
-	position?: {
-		start?: { line?: unknown; column?: unknown; offset?: unknown };
-		end?: { offset?: unknown };
-	};
-};
-type MdxAttribute = { type?: unknown; name?: unknown; value?: unknown };
-
-const isMdxNode = (node: unknown): node is MdxNode => typeof node === "object" && node !== null;
-const isJsxElement = (node: MdxNode) => node.type === "mdxJsxFlowElement" || node.type === "mdxJsxTextElement";
-
-const readAttr = (node: MdxNode, key: string): MdxAttribute | undefined =>
-	(Array.isArray(node.attributes) ? node.attributes : []).find(
-		(a: unknown): a is MdxAttribute => isMdxNode(a) && (a as MdxAttribute).name === key,
-	);
-
-/** The attribute's string value if present; `true` for value-less attributes like `{decorative}`. */
-const readAttrValue = (node: MdxNode, key: string): string | true | undefined => {
-	const attr = readAttr(node, key);
-	if (!attr) return undefined;
-	if (attr.value === null || attr.value === undefined) return true;
-	return typeof attr.value === "string" ? attr.value : undefined;
-};
-
-function findNamedJsxChildren(node: MdxNode, name: string): MdxNode[] {
-	const found: MdxNode[] = [];
-	const walk = (children: unknown) => {
-		for (const child of Array.isArray(children) ? children : []) {
-			if (!isMdxNode(child)) continue;
-			if (isJsxElement(child) && child.name === name) {
-				found.push(child);
-			} else if (child.type === "paragraph" && Array.isArray(child.children)) {
-				walk(child.children);
-			}
-		}
-	};
-	walk(node.children);
-	return found;
-}
-
-const tCore = createTranslator(coreMessages);
-
-/** Maximum rows/columns one merged cell can span. Same as the column limit of tables in the editor and the public render. */
-const MAX_TABLE_SPAN = MAX_TABLE_COLUMNS;
-
-/** A cell's `colspan`/`rowspan`. 1 if absent or not a string; a value that is not a positive integer is returned as invalid. */
-function readSpan(cell: MdxNode, key: "colspan" | "rowspan"): { span: number } | { invalid: string } {
-	const raw = readAttrValue(cell, key);
-	if (typeof raw !== "string") return { span: 1 };
-	const parsed = Number.parseInt(raw, 10);
-	return Number.isNaN(parsed) || parsed < 1 || String(parsed) !== raw.trim() ? { invalid: raw } : { span: parsed };
-}
-
-type TableSpanReason =
-	| "invalid_colspan"
-	| "invalid_rowspan"
-	| "rowspan_overflow"
-	| "span_too_large"
-	| "span_overlap"
-	| "ragged_rows";
-
-/**
- * Checks table cell merges (colspan/rowspan) and grid structure, and warns about invalid spans.
- */
-function checkTableSpans(tableNode: MdxNode, position: CmsBodyPosition, warnings: Issue[]) {
-	const rows = findNamedJsxChildren(tableNode, "TableRow");
-	const totalRows = rows.length;
-	if (totalRows === 0) return;
-
-	const grid: boolean[][] = Array.from({ length: totalRows }, () => []);
-	let hasSpanIssue = false;
-	const warn = (reason: TableSpanReason, params: Record<string, string | number> = {}) => {
-		warnings.push({
-			code: "invalid_table_span",
-			message: tCore(`table.${reason}`, params),
-			params: { reason, ...params },
-			path: "mdx",
-			position,
-		});
-		hasSpanIssue = true;
-	};
-
-	for (let r = 0; r < totalRows; r += 1) {
-		const row = rows[r];
-		if (!row) continue;
-		const cells = findNamedJsxChildren(row, "TableCell");
-		let c = 0;
-
-		for (const cell of cells) {
-			while (grid[r]?.[c]) {
-				c += 1;
-			}
-
-			let cs = 1;
-			const colspan = readSpan(cell, "colspan");
-			if ("invalid" in colspan) warn("invalid_colspan", { value: colspan.invalid });
-			else cs = colspan.span;
-
-			let rs = 1;
-			const rowspan = readSpan(cell, "rowspan");
-			if ("invalid" in rowspan) warn("invalid_rowspan", { value: rowspan.invalid });
-			else rs = rowspan.span;
-
-			// Limit so that a huge span from external MDX cannot blow up the grid computation.
-			const overflowsRows = r + rs > totalRows;
-			if (cs > MAX_TABLE_SPAN || rs > MAX_TABLE_SPAN || c + cs > MAX_TABLE_SPAN || overflowsRows) {
-				if (overflowsRows) warn("rowspan_overflow", { rowspan: rs, rows: totalRows });
-				else warn("span_too_large", { max: MAX_TABLE_SPAN });
-				continue;
-			}
-
-			let overlap = false;
-			for (let dr = 0; dr < rs; dr += 1) {
-				for (let dc = 0; dc < cs; dc += 1) {
-					const covered = grid[r + dr];
-					if (!covered) continue;
-					if (covered[c + dc]) overlap = true;
-					covered[c + dc] = true;
-				}
-			}
-			if (overlap) warn("span_overlap");
-
-			c += cs;
-		}
-	}
-
-	if (!hasSpanIssue) {
-		const maxWidth = Math.max(...grid.map((row) => row.length), 0);
-		const hasGapOrMismatch = grid.some((row) => {
-			if (row.length !== maxWidth) return true;
-			for (let i = 0; i < maxWidth; i += 1) {
-				if (!row[i]) return true;
-			}
-			return false;
-		});
-		if (hasGapOrMismatch) {
-			warn("ragged_rows");
-		}
-	}
-}
-
-/**
- * Block attribute rules. Blocks only publishing; draft saves and visual editing are not blocked.
- * The storage syntax (directive) and the read-compatible JSX are parsed with the same component names, so they are checked only once.
- */
-function checkBlockAttributes(node: MdxNode, position: CmsBodyPosition, issues: Issue[], warnings: Issue[]) {
-	const name = typeof node.name === "string" ? node.name : "";
-	const definition = DIRECTIVE_BY_COMPONENT.get(name);
-	if (!definition) return;
-
-	for (const key of definition.required) {
-		const value = readAttrValue(node, key);
-		if (typeof value !== "string" || value.trim() === "") {
-			issues.push({ code: "missing_block_attribute", message: `${definition.name}.${key}`, path: "mdx", position });
-		}
-	}
-	for (const attr of Array.isArray(node.attributes) ? node.attributes : []) {
-		const attrName = isMdxNode(attr) ? (attr as MdxAttribute).name : undefined;
-		if (typeof attrName === "string" && !Object.hasOwn(definition.attributes, attrName)) {
-			warnings.push({
-				code: "unknown_block_attribute",
-				message: `${definition.name}.${attrName}`,
-				path: "mdx",
-				position,
-			});
-		}
-	}
-
-	// Attributes with a fixed set of choices (alignment, callout kind, etc.) accept only the values from the block definition.
-	const block = BLOCK_BY_NAME.get(definition.name);
-	if (block) {
-		const values = Object.fromEntries(Object.keys(block.attributes).map((key) => [key, readAttrValue(node, key)]));
-		for (const key of invalidOptionAttributes(block, values)) {
-			issues.push({
-				code: "invalid_block_attribute",
-				message: `${definition.name}.${key}=${String(values[key])}`,
-				path: "mdx",
-				position,
-			});
-		}
-	}
-
-	// Attributes that must be one of a child block's values (e.g. the initially open tab → tab name).
-	for (const [key, attribute] of Object.entries(block?.attributes ?? {})) {
-		const childKey = attribute.childValue;
-		if (!block || !childKey) continue;
-		const value = readAttrValue(node, key);
-		if (typeof value !== "string" || !value) continue;
-		const childComponents = new Set(
-			(block.children?.blocks ?? []).flatMap((child) => BLOCK_BY_NAME.get(child)?.component ?? []),
-		);
-		const values: string[] = [];
-		const collect = (children: unknown) => {
-			for (const child of Array.isArray(children) ? children : []) {
-				if (!isMdxNode(child)) continue;
-				if (isJsxElement(child) && childComponents.has(String(child.name ?? ""))) {
-					const childValue = readAttrValue(child, childKey);
-					if (typeof childValue === "string") values.push(childValue);
-				} else if (child.type === "paragraph") {
-					collect(child.children);
-				}
-			}
-		};
-		collect(node.children);
-		if (!values.includes(value)) {
-			issues.push({ code: "invalid_block_attribute", message: `${block.name}.${key}=${value}`, path: "mdx", position });
-		}
-	}
-
-	if (name === "Table") {
-		checkTableSpans(node, position, warnings);
-	}
-
-	if (name === "Image") {
-		const decorative = readAttrValue(node, "decorative") === true;
-		const alt = readAttrValue(node, "alt");
-		// A missing alt on a new image that needs a description (registered media) must be fixed before publishing.
-		// External or relative-path images (`src`) from migrated content are handled in the migration report, so they are not blocked.
-		if (!decorative && readAttr(node, "mediaId") && (typeof alt !== "string" || !alt.trim())) {
-			issues.push({ code: "missing_image_alt", path: "mdx", position });
-		}
-	}
-}
-
 export async function prepareSnapshot(
 	input: ServiceInput,
 	options?: {
@@ -521,221 +302,28 @@ export async function prepareSnapshot(
 	const collector = new ReferenceCollector();
 	addMetadataReferences(collector, rawCollection, metadata);
 
-	// The body is checked as it will be stored (written from its document), so issue positions point into the stored text.
+	// The body is a document: given as one, or read from text (a text that could not be read is one `unparsed` node).
 	const body = inputBody(input, options?.previousDoc);
-	const { analysis } = body;
-	const mdxIssues: Issue[] = analysis.errors.map((e) => ({
-		code: "mdx_error",
-		message: e.message,
-		params: { reason: e.code, ...e.params },
-		position: e.position,
-	}));
-	let mdxHasError = analysis.errors.length > 0;
-	const blockIssues: Issue[] = [];
-	const warnings: Issue[] = metadataWarnings(rawCollection, metadata);
+	const { doc } = body;
+	const check = checkDocument(doc);
+	const warnings: Issue[] = [...metadataWarnings(rawCollection, metadata), ...check.warnings];
+	const issues: Issue[] = [...body.importIssues, ...check.issues];
 
-	const mdxRefsToAdd: { kind: ReferenceKind; targetId: string; occ: ReferenceOccurrence }[] = [];
-	const imageSources: CmsImageSource[] = [];
-	const internalLinks: InternalLinkSource[] = [];
-
-	// Found when the first position needs it: a body with nothing to report never pays for it.
-	let blockSpans: ReturnType<typeof blockSpansOf> | undefined;
-	const blockIdAt = (offset: number) => {
-		blockSpans ??= blockSpansOf(analysis, body.doc);
-		return blockSpans.blockIdAt(offset);
-	};
-	/** Where a node starts in the stored MDX, and the block of the stored document it is in (none when the body has no document). */
-	const positionOf = (node: MdxNode): CmsBodyPosition => {
-		const pos = node.position?.start;
-		const blockId = typeof pos?.offset === "number" ? blockIdAt(pos.offset) : undefined;
-		return {
-			line: (typeof pos?.line === "number" ? pos.line : 1) + analysis.sourceLineOffset,
-			column: typeof pos?.column === "number" ? pos.column : 1,
-			...(blockId === undefined ? {} : { blockId }),
-		};
-	};
-
-	const definitions = new Map<string, string>();
-	const collectDefinitions = (node: unknown) => {
-		if (!isMdxNode(node)) return;
-		if (node.type === "definition" && typeof node.identifier === "string" && typeof node.url === "string") {
-			definitions.set(node.identifier, node.url);
-		}
-		if (Array.isArray(node.children)) node.children.forEach(collectDefinitions);
-	};
-	collectDefinitions(analysis.tree);
-
-	const addInternalLink = (url: unknown, node: MdxNode) => {
-		if (typeof url !== "string") return;
-		const parsed = parseInternalLink(url);
-		if (parsed) internalLinks.push({ ...parsed, position: positionOf(node) });
-	};
-
-	const addMdxError = (code: string, position: CmsBodyPosition) => {
-		mdxIssues.push({ code, position });
-		mdxHasError = true;
-	};
-
-	/** Text of a reference ID attribute. Missing or empty is `missing_media_id`; an expression (`{...}`) is a `dynamic_reference_id` issue. */
-	const staticReferenceId = (attr: MdxAttribute | undefined): { id: string } | { problem: string } =>
-		!attr || attr.value === null || attr.value === undefined || attr.value === ""
-			? { problem: "missing_media_id" }
-			: typeof attr.value !== "string"
-				? { problem: "dynamic_reference_id" }
-				: { id: attr.value };
-
-	/** Collected as registered-media references. A non-UUID is a body error. Kept as a reference so a file in use is not deleted. */
-	const addMediaReference = (mediaId: string, position: CmsBodyPosition) => {
-		if (!isUuid(mediaId)) addMdxError("invalid_reference_id", position);
-		else mdxRefsToAdd.push({ kind: "media", targetId: mediaId, occ: { type: "mdx", ...position } });
-	};
-
-	const collectImage = (node: MdxNode) => {
-		// An image uses either `mediaId` (registered media) or `src` (external address).
-		// Only `mediaId` goes to the reference table. `src` is an external address, not a reference.
-		const mediaIdAttr = readAttr(node, "mediaId");
-		const srcAttr = readAttr(node, "src");
-		const attr = mediaIdAttr ?? srcAttr;
-		const position = positionOf(node);
-
-		const reference = staticReferenceId(attr);
-		if ("problem" in reference) addMdxError(reference.problem, position);
-		else if (attr === mediaIdAttr) addMediaReference(reference.id, position);
-
-		const mediaId = typeof mediaIdAttr?.value === "string" ? mediaIdAttr.value : undefined;
-		const src = typeof srcAttr?.value === "string" ? srcAttr.value : undefined;
-		if (mediaId || src) imageSources.push({ ...(mediaId ? { mediaId } : { src }), position });
-	};
-
-	/** Attached file card. `mediaId` is required. */
-	const collectFile = (node: MdxNode) => {
-		const attr = readAttr(node, "mediaId");
-		const position = positionOf(node);
-		const reference = staticReferenceId(attr);
-		if ("problem" in reference) addMdxError(reference.problem, position);
-		else addMediaReference(reference.id, position);
-	};
-
-	// Footnotes: a definition is found by its normalized identifier (case-insensitive), the label is reported as written.
-	const footnoteReferences = new Set<string>();
-	const footnoteDefinitions: { identifier: string; label: string; node: MdxNode }[] = [];
-	const textNodes: MdxNode[] = [];
-	const { body: mdxBody } = splitFrontmatter(body.mdx);
-	const footnoteIdentifier = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
-
-	/** Translation hint text left in a translation. It is not visible on the public screen, so it must not be published as is. */
-	const untranslated: CmsBodyPosition[] = [];
-	const codeRefs = new CodeRefCollector();
-	const traverse = (node: unknown) => {
-		if (!isMdxNode(node)) return;
-		if (node.type === "link") {
-			addInternalLink(node.url, node);
-		} else if (node.type === "linkReference" && typeof node.identifier === "string") {
-			addInternalLink(definitions.get(node.identifier), node);
-		}
-		if (node.type === "image" && typeof node.url === "string" && node.url) {
-			// A Markdown image is an external `src` like `<Image src>` (a plain one is stored as Markdown), so it gets the same source check.
-			imageSources.push({ src: node.url, position: positionOf(node) });
-		}
-		if (node.type === "footnoteReference" && typeof node.identifier === "string") {
-			footnoteReferences.add(node.identifier);
-		} else if (node.type === "footnoteDefinition" && typeof node.identifier === "string") {
-			footnoteDefinitions.push({
-				identifier: node.identifier,
-				label: typeof node.label === "string" ? node.label : node.identifier,
-				node,
-			});
-		} else if (node.type === "text") {
-			textNodes.push(node);
-		} else if (node.type === "code") {
-			codeRefs.addCode(node, positionOf(node));
-		}
-		if (isJsxElement(node)) {
-			// `ContentLink` has been retired — `analyze` rejects it if it remains in the body.
-			if (node.name === "Image") collectImage(node);
-			if (node.name === "File") collectFile(node);
-			if (node.name === "Untranslated") untranslated.push(positionOf(node));
-			checkBlockAttributes(node, positionOf(node), blockIssues, warnings);
-			if (typeof node.name === "string") {
-				codeRefs.addElement(node.name, (key) => readAttrValue(node, key), positionOf(node));
-			}
-		}
-		if (Array.isArray(node.children)) node.children.forEach(traverse);
-	};
-	traverse(analysis.tree);
-
-	// Footnote problems never block publishing, but they leave a dangling marker or a stray note on the public page.
-	const seenDefinitions = new Set<string>();
-	for (const definition of footnoteDefinitions) {
-		const params = { label: definition.label };
-		if (seenDefinitions.has(definition.identifier)) {
-			warnings.push({
-				code: "footnote_definition_duplicate",
-				message: definition.label,
-				params,
-				path: "mdx",
-				position: positionOf(definition.node),
-			});
-		} else if (!footnoteReferences.has(definition.identifier)) {
-			warnings.push({
-				code: "footnote_definition_unused",
-				message: definition.label,
-				params,
-				path: "mdx",
-				position: positionOf(definition.node),
-			});
-		}
-		seenDefinitions.add(definition.identifier);
-	}
-	// A marker without a definition is not parsed as a reference (it stays as text), so it is found in the raw text of text nodes.
-	// The raw source is read so that an escaped marker (`\[^a]`) is not reported.
-	for (const node of textNodes) {
-		const start = node.position?.start?.offset;
-		const end = node.position?.end?.offset;
-		if (typeof start !== "number" || typeof end !== "number") continue;
-		for (const match of mdxBody.slice(start, end).matchAll(/(?<!\\)\[\^([^\]\s\\]+)\]/g)) {
-			const label = match[1] ?? "";
-			if (seenDefinitions.has(footnoteIdentifier(label))) continue;
-			warnings.push({
-				code: "footnote_definition_missing",
-				message: label,
-				params: { label },
-				path: "mdx",
-				position: positionOf(node),
-			});
-		}
-	}
-
-	// Links to code lines are checked only in a body that parsed: an error may have cut the code block a link points to.
-	if (!mdxHasError) {
-		const codeRefIssues = codeRefs.check();
-		blockIssues.push(...codeRefIssues.issues);
-		warnings.push(...codeRefIssues.warnings);
-	}
-
-	if (mdxHasError) {
-		// For a body that could not be analyzed, past body references stay stale. Past references come only from the repository.
+	if (check.incomplete) {
+		// For a body whose references cannot be trusted (unparsed, or a reference in it is missing or malformed), past body references stay stale.
+		// Past references come only from the repository.
 		for (const ref of options?.previousReferences ?? []) {
 			for (const occ of ref.occurrences) {
 				if (occ.type !== "metadata") collector.add(ref.kind, ref.targetId, { ...occ }, true);
 			}
 		}
 	} else {
-		for (const item of mdxRefsToAdd) collector.add(item.kind, item.targetId, item.occ, false);
-	}
-
-	const issues: Issue[] = [...mdxIssues, ...blockIssues];
-	const firstUntranslated = untranslated[0];
-	if (firstUntranslated) {
-		issues.push({
-			code: "untranslated_text",
-			position: firstUntranslated,
-			message: tCore("untranslatedCount", { count: untranslated.length }),
-			params: { count: untranslated.length },
-		});
-	}
-	if (analysis.frontmatter !== null) {
-		issues.push({ code: "frontmatter_present", path: "frontmatter", position: { line: 1, column: 1 } });
+		for (const item of check.mediaReferences) {
+			collector.add("media", item.mediaId, {
+				type: "body",
+				...(item.position.blockId === undefined ? {} : { blockId: item.position.blockId }),
+			});
+		}
 	}
 
 	let schemaVersion = 1;
@@ -752,10 +340,9 @@ export async function prepareSnapshot(
 		collection: rawCollection,
 		slug,
 		metadata: Object.freeze(metadata),
-		mdx: body.mdx,
-		doc: body.doc,
+		doc,
 		schemaVersion,
-		contentHash: computeContentHash(metadata, body.mdx, schemaVersion, analysis),
+		contentHash: computeContentHash(metadata, doc, schemaVersion),
 		references: Object.freeze(
 			collector.refs.map((ref) =>
 				Object.freeze({ ...ref, occurrences: Object.freeze(ref.occurrences.map((o) => Object.freeze({ ...o }))) }),
@@ -764,9 +351,9 @@ export async function prepareSnapshot(
 		issues: freeze(issues),
 		warnings: freeze(warnings),
 		internalLinks: Object.freeze(
-			internalLinks.map((link) => Object.freeze({ ...link, position: Object.freeze({ ...link.position }) })),
+			check.internalLinks.map((link) => Object.freeze({ ...link, position: Object.freeze({ ...link.position }) })),
 		),
-		imageSources: freeze(imageSources),
+		imageSources: freeze(check.imageSources),
 		...(translation === undefined ? {} : { translation }),
 	});
 }
@@ -847,14 +434,8 @@ export function validateForPublish(
 	const occurrenceIssue = (code: string, occurrence: ReferenceOccurrence | undefined, message?: string): Issue => ({
 		code,
 		...(message ? { message } : {}),
-		...(occurrence?.type === "mdx"
-			? {
-					position: {
-						line: occurrence.line,
-						column: occurrence.column,
-						...(occurrence.blockId === undefined ? {} : { blockId: occurrence.blockId }),
-					},
-				}
+		...(occurrence?.type === "body"
+			? { position: occurrence.blockId === undefined ? {} : { blockId: occurrence.blockId } }
 			: occurrence?.type === "metadata"
 				? { path: occurrence.path, ...(occurrence.ordinal === undefined ? {} : { ordinal: occurrence.ordinal }) }
 				: {}),
@@ -868,8 +449,8 @@ export function validateForPublish(
 		issues.push({ code: "source_not_published", path: "translationGroupId" });
 	}
 	// Only collections that use a body (`body`) reject an empty body.
-	if (schemaOf(snapshot.collection).body && snapshot.mdx.trim() === "") {
-		issues.push({ code: "empty_body", path: "mdx", position: { line: 1, column: 1 } });
+	if (schemaOf(snapshot.collection).body && isEmptyDocument(snapshot.doc)) {
+		issues.push({ code: "empty_body", path: "body" });
 	}
 
 	// Metadata relations are always checked regardless of the snapshot's reference list (so nothing leaks even if the caller sends empty references).
@@ -917,9 +498,9 @@ export function validateForPublish(
 	for (const [index, source] of (snapshot.internalLinks ?? []).entries()) {
 		const target = resolved.internalLinks?.[index];
 		if (!target || target.addressType === "missing" || target.addressType === "deleted") {
-			issues.push({ code: "unresolved_internal_link", message: source.url, path: "mdx", position: source.position });
+			issues.push({ code: "unresolved_internal_link", message: source.url, path: "body", position: source.position });
 		} else if (target.addressType === "reservation" || !target.isPublished) {
-			issues.push({ code: "unpublished_internal_link", message: source.url, path: "mdx", position: source.position });
+			issues.push({ code: "unpublished_internal_link", message: source.url, path: "body", position: source.position });
 		}
 	}
 

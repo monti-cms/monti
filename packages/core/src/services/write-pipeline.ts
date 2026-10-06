@@ -139,9 +139,9 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 			if (!isRecord(result) || !isRecord(result.metadata)) throw hookFailed(source, "transform");
 			let doc = data.doc;
 			if (result.doc !== undefined) {
-				// A body that is not a document cannot be turned into one by a hook, and a document cannot be taken away.
-				const read = result.doc === null ? null : (readStoredDocument(result.doc) ?? undefined);
-				if (read === undefined || (read === null && data.doc !== null)) throw hookFailed(source, "transform");
+				// What a hook returns as the body must be a stored document.
+				const read = readStoredDocument(result.doc);
+				if (!read) throw hookFailed(source, "transform");
 				doc = read;
 			}
 			data = { metadata: result.metadata, doc };

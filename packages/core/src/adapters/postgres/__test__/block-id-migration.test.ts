@@ -333,6 +333,8 @@ describe("0014_block_ids", () => {
 		const draft = await createDraft("Only a draft\n");
 		await stripIds(draft.id);
 		const broken = await createDraft("Words\n\n<Unclosed");
+		// A store from before stored documents held such a body without one (a store now keeps it as an unparsed document).
+		await pool.query(`UPDATE "${schemaName}".entry_bodies SET doc = NULL WHERE entry_id = $1`, [broken.id]);
 		expect((await row(broken.id, "working"))?.doc).toBeNull();
 
 		await run();
@@ -439,11 +441,13 @@ describe("0014_block_ids", () => {
 		it("keeps the ids a template has, and leaves one without a document as it is", async () => {
 			const template = await store.createTemplate({ name: unique("template"), mdx: NESTED });
 			const broken = await store.createTemplate({ name: unique("broken"), mdx: "Words\n\n<Unclosed" });
+			await pool.query(`UPDATE "${schemaName}".body_templates SET doc = NULL WHERE id = $1`, [broken.id]);
 
 			await run();
 
 			expect((await store.getTemplate(template.id)).doc).toEqual(template.doc);
-			expect((await store.getTemplate(broken.id)).doc).toBeNull();
+			const stored = await pool.query(`SELECT doc FROM "${schemaName}".body_templates WHERE id = $1`, [broken.id]);
+			expect(stored.rows[0]?.doc).toBeNull();
 		});
 	});
 

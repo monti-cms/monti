@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { docOf } from "../../../../test/stored-content";
 import { ADDED_BLOCKS, ADDED_MARK_BLOCKS, BLOCKS } from "../../../blocks/active";
 import { type BlockAttribute, type BlockDefinition, defineBlock } from "../../../blocks/define";
-import { compareStructure, readableAttributesByType, readableMdx } from "../skeleton";
+import { unparsedDocument } from "../../../mdx/stored-document";
+import { compareMdxStructure as compareStructure, readableMdx } from "../mdx-check";
+import { compareStructure as compareDocumentStructure, readableAttributesByType } from "../skeleton";
 
 /**
  * Site block names are looked up in the current config (runs with both the reference blog config and other site configs). If the config has no such block,
@@ -195,10 +198,11 @@ describe("translation structure check", () => {
 			editor: { view: "opaque" },
 		});
 		const readable = readableAttributesByType([card, face, deck]);
-		expect([...(readable.get("Card") ?? [])]).toEqual(["heading"]);
 		expect([...(readable.get("card") ?? [])]).toEqual(["heading"]);
 		// An attribute pointing to a translatable child attribute changes too (tab name ↔ initially open tab).
-		expect([...(readable.get("Deck") ?? [])]).toEqual(["first"]);
+		expect([...(readable.get("deck") ?? [])]).toEqual(["first"]);
+		// Nodes are stored by block name, so the renderer name is not a kind.
+		expect(readable.has("Card")).toBe(false);
 		expect(readable.get("link")).toEqual(new Set(["title"]));
 	});
 });
@@ -220,5 +224,30 @@ describe("structure check failure reasons", () => {
 			reason: t("source_unreadable"),
 		});
 		expect(readableMdx("<Unknown />\n")).toMatchObject({ ok: false, code: "mdx_error" });
+	});
+});
+
+describe("structure check of documents", () => {
+	it("compares the stored documents of the source and the translation", () => {
+		expect(compareDocumentStructure(docOf("첫 문단\n\n## 제목"), docOf("First\n\n## Title"))).toEqual({ ok: true });
+		expect(compareDocumentStructure(docOf("첫 문단"), docOf("First\n\nSecond")).ok).toBe(false);
+	});
+
+	it("ignores block ids", () => {
+		const source = docOf("가\n\n나");
+		const translated = docOf("a\n\nb");
+		expect(source.content[0]?.id).not.toBe(translated.content[0]?.id);
+		expect(compareDocumentStructure(source, translated)).toEqual({ ok: true });
+	});
+
+	it("fails for a translation or a source that is an unparsed body", () => {
+		expect(compareDocumentStructure(docOf("a"), unparsedDocument("<Box"))).toMatchObject({
+			ok: false,
+			code: "mdx_error",
+		});
+		expect(compareDocumentStructure(unparsedDocument("<Box"), docOf("a"))).toMatchObject({
+			ok: false,
+			code: "source_unreadable",
+		});
 	});
 });

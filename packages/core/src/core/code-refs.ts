@@ -1,10 +1,7 @@
-import { annotationConfig } from "../annotation/code-block/active";
-import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
 import { ANCHOR } from "../annotation/code-block/model";
 import { BLOCK_BY_NAME } from "../blocks/derive";
-import { DIRECTIVE_BY_COMPONENT } from "../mdx/directives";
-import type { CmsBodyPosition } from "../mdx/types";
-import type { Issue } from "./types";
+import type { CmsJsonValue } from "../mdx/types";
+import type { BodyPosition, Issue } from "./types";
 
 /**
  * Links from body text to code lines (a text block whose attribute has `codeAnchor`, such as `:code-ref[text]{to="c1"}`) and the line
@@ -15,36 +12,28 @@ import type { Issue } from "./types";
  * - a label that a second code block uses again is a warning (`code_anchor_duplicate`): links resolve to the first, the copy links nothing.
  */
 export class CodeRefCollector {
-	private readonly anchors: { id: string; position: CmsBodyPosition }[] = [];
-	private readonly refs: { id: string; position: CmsBodyPosition }[] = [];
+	private readonly anchors: { id: string; position: BodyPosition }[] = [];
+	private readonly refs: { id: string; position: BodyPosition }[] = [];
 
-	/** Collects the labels of a code fence (an mdast `code` node). */
-	addCode(node: { lang?: unknown; meta?: unknown; value?: unknown }, position: CmsBodyPosition) {
-		if (typeof node.value !== "string" || !node.value.includes(ANCHOR)) return;
-		const document = fromCodeFenceToCodeBlockDocument(
-			{
-				type: "code",
-				lang: typeof node.lang === "string" ? node.lang : undefined,
-				meta: typeof node.meta === "string" ? node.meta : undefined,
-				value: node.value,
-			},
-			annotationConfig,
-		);
+	/** Collects the labels of a stored code block (its `annotations.lines` hold the line effects as data). */
+	addCode(attrs: Readonly<Record<string, CmsJsonValue>> | undefined, position: BodyPosition) {
+		const lines = (attrs?.annotations as { lines?: unknown } | undefined)?.lines;
+		if (!Array.isArray(lines)) return;
 		const ids = new Set<string>();
-		for (const annotation of document.annotations) {
-			if (annotation.name !== ANCHOR) continue;
-			const id = annotation.attributes?.find((attribute) => attribute.name === "id")?.value;
+		for (const annotation of lines as { name?: unknown; attrs?: { id?: unknown } }[]) {
+			if (annotation?.name !== ANCHOR) continue;
+			const id = annotation.attrs?.id;
 			if (typeof id === "string" && id) ids.add(id);
 		}
 		// One block may label several line ranges; a label it repeats is still one block's.
 		for (const id of ids) this.anchors.push({ id, position });
 	}
 
-	/** Collects the link of a JSX element (a directive is parsed to one) when its block links code lines. */
-	addElement(name: string, readValue: (key: string) => string | true | undefined, position: CmsBodyPosition) {
-		const attribute = CODE_ANCHOR_ATTRIBUTE_BY_COMPONENT.get(name);
+	/** Collects the link of a block or text mark (by its block name) when its definition says it links code lines. */
+	addBlock(name: string, attrs: Readonly<Record<string, CmsJsonValue>> | undefined, position: BodyPosition) {
+		const attribute = CODE_ANCHOR_ATTRIBUTE_BY_BLOCK.get(name);
 		if (!attribute) return;
-		const id = readValue(attribute);
+		const id = attrs?.[attribute];
 		// An empty or missing value is already a `missing_block_attribute` issue.
 		if (typeof id === "string" && id.trim()) this.refs.push({ id, position });
 	}
@@ -60,7 +49,7 @@ export class CodeRefCollector {
 					code: "code_anchor_duplicate",
 					message: anchor.id,
 					params: { id: anchor.id },
-					path: "mdx",
+					path: "body",
 					position: anchor.position,
 				});
 			}
@@ -72,7 +61,7 @@ export class CodeRefCollector {
 				code: "code_ref_broken",
 				message: ref.id,
 				params: { id: ref.id },
-				path: "mdx",
+				path: "body",
 				position: ref.position,
 			});
 		}
@@ -80,11 +69,10 @@ export class CodeRefCollector {
 	}
 }
 
-/** JSX component name → the attribute holding the line label, for the blocks that link code lines. */
-const CODE_ANCHOR_ATTRIBUTE_BY_COMPONENT: ReadonlyMap<string, string> = new Map(
-	[...DIRECTIVE_BY_COMPONENT].flatMap(([component, directive]) => {
-		const block = BLOCK_BY_NAME.get(directive.name);
-		const attribute = Object.entries(block?.attributes ?? {}).find(([, item]) => item.codeAnchor)?.[0];
-		return attribute ? [[component, attribute] as const] : [];
+/** Block name → the attribute holding the line label, for the blocks that link code lines. */
+const CODE_ANCHOR_ATTRIBUTE_BY_BLOCK: ReadonlyMap<string, string> = new Map(
+	[...BLOCK_BY_NAME].flatMap(([name, block]) => {
+		const attribute = Object.entries(block.attributes).find(([, item]) => item.codeAnchor)?.[0];
+		return attribute ? [[name, attribute] as const] : [];
 	}),
 );

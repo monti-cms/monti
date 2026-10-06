@@ -6,6 +6,7 @@ import {
 	recordCollection,
 	recordRelationField,
 } from "../../../../../test/any-site";
+import { docOf, mdxOf } from "../../../../../test/stored-content";
 import { storedFields } from "../../../../schema/derive";
 import { type Collection, isItemCollection } from "../../../collections";
 import type { PreparedSnapshot, Reference } from "../../../types";
@@ -32,19 +33,20 @@ const relation = (() => {
 const targetCollection = relation?.to ?? recordCollection;
 const relationPath = relation?.name ?? "relationId";
 
-function buildSnapshot(overrides: Partial<PreparedSnapshot> = {}): PreparedSnapshot {
+/** A prepared snapshot. The body is given as text (`mdx`) and stored as the document it reads as. */
+function buildSnapshot(overrides: Partial<PreparedSnapshot> & { mdx?: string } = {}): PreparedSnapshot {
+	const { mdx, ...rest } = overrides;
 	const refs = overrides.references || [];
 	return {
 		collection: contentCollection,
 		slug: `test-slug-${Math.random().toString(36).slice(2, 8)}`,
 		metadata: { title: "Test" },
-		mdx: "Test content",
-		doc: null,
+		doc: docOf(mdx ?? "Test content"),
 		schemaVersion: 1,
 		contentHash: `hash-${Math.random().toString(36).slice(2, 8)}`,
 		issues: [],
 		imageSources: [],
-		...overrides,
+		...rest,
 		references: refs,
 	};
 }
@@ -171,7 +173,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				isStale: true,
 				occurrences: [
 					{ type: "metadata", path: relationPath },
-					{ type: "mdx", line: 1, column: 5 },
+					{ type: "body", blockId: "abcd1234" },
 				],
 			});
 			const ref2 = buildReference({
@@ -206,7 +208,7 @@ export const referencesContract: ContractSuite = (factory) => {
 
 			const saved = await store.getEntry(entry.id);
 			expect(saved.working.metadata).toEqual(snapshot.metadata);
-			expect(saved.working.mdx).toEqual(snapshot.mdx);
+			expect(saved.working.mdx).toEqual(mdxOf(snapshot.doc));
 			expect(saved.working.schemaVersion).toEqual(snapshot.schemaVersion);
 			expect(saved.working.contentHash).toEqual(snapshot.contentHash);
 			expect(saved.workingSlug).toEqual(snapshot.slug);
@@ -254,7 +256,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			expect(entry2.version).toBe(entry1.version + 1);
 			expect(entry2.workingSlug).toBe("save-refs-2");
 			expect(entry2.working.metadata).toEqual(snapshot2.metadata);
-			expect(entry2.working.mdx).toEqual(snapshot2.mdx);
+			expect(entry2.working.mdx).toEqual(mdxOf(snapshot2.doc));
 			expect(entry2.working.contentHash).toEqual(snapshot2.contentHash);
 			expect(entry2.working.schemaVersion).toEqual(snapshot2.schemaVersion);
 
@@ -278,7 +280,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				isStale: true,
 				occurrences: [
 					{ type: "metadata", path: "test" },
-					{ type: "mdx", line: 5, column: 10 },
+					{ type: "body", blockId: "abcd1234" },
 				],
 			});
 			const snapshot = buildSnapshot({ references: [ref] });
@@ -577,7 +579,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			expect(entry2.version).toBe(entry1.version + 1);
 			expect(entry2.workingSlug).toBe("empty-save-2");
 			expect(entry2.working.metadata).toEqual(snapshot2.metadata);
-			expect(entry2.working.mdx).toEqual(snapshot2.mdx);
+			expect(entry2.working.mdx).toEqual(mdxOf(snapshot2.doc));
 			expect(entry2.working.schemaVersion).toEqual(snapshot2.schemaVersion);
 			expect(entry2.working.contentHash).toEqual(snapshot2.contentHash);
 
@@ -698,7 +700,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				isStale: true,
 				occurrences: [
 					{ type: "metadata", path: relationPath },
-					{ type: "mdx", line: 42, column: 12 },
+					{ type: "body", blockId: "abcd1234" },
 				],
 			});
 

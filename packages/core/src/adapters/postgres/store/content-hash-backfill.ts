@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
-import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
+import { mdxContentHash } from "./mdx-body";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -16,7 +16,7 @@ interface BodyHashInput extends BodyKey {
 }
 
 /**
- * Recomputes `content_hash` of every stored body (working and published) with the current hash rule (`computeContentHash`).
+ * Recomputes `content_hash` of every stored body (working and published) with the current hash rule (`computeContentHash`, over the document of the row's MDX).
  * Only the hash column changes: the body, its dates and the entry version stay as they are.
  * Rows are read in key order, `batchSize` at a time, so memory stays flat on a large store. Runs inside the caller's transaction.
  */
@@ -42,7 +42,7 @@ export async function recomputeContentHashes(
 			[
 				res.rows.map((row) => row.entry_id),
 				res.rows.map((row) => row.state),
-				res.rows.map((row) => computeContentHash(row.metadata, row.mdx, row.schema_version)),
+				res.rows.map((row) => mdxContentHash(row.metadata, row.mdx, row.schema_version)),
 			],
 		);
 		last = res.rows[res.rows.length - 1];

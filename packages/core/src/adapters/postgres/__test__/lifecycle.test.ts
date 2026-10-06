@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../test/any-site";
+import { docOf } from "../../../../test/stored-content";
 import { publishDraft, seedEntry } from "../../../core/store/__test__/seed";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -65,7 +66,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 						collection: content,
 						slug: post.workingSlug,
 						metadata: { title: "Concurrent draft" },
-						mdx: "Draft.",
+						doc: docOf("Draft."),
 						schemaVersion: 1,
 						contentHash: randomUUID(),
 						issues: [],
@@ -113,7 +114,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 					collection: content,
 					slug: "post-reset-date",
 					metadata: { title: "Reset V2" },
-					mdx: "V2",
+					doc: docOf("V2"),
 					schemaVersion: 1,
 					contentHash: "ts-hash-reset-2",
 					issues: [],

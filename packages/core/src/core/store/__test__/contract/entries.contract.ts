@@ -264,14 +264,14 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					contentHash: "hash-syntax-republish",
 				});
 				expect(saved.version).toBe(firstPublish.version);
-				expect(saved.working.mdx).toBe("second words");
+				expect(saved.working.mdx).toBe("second words\n");
 
 				const republished = await publishDraft(store, { id: entry.id, expectedVersion: saved.version });
 
 				expect(republished.version).toBe(firstPublish.version);
 				expect(republished.published).toEqual(firstPublish.published);
 				expect(republished.publishedAt?.getTime()).toBe(firstPublish.publishedAt?.getTime());
-				expect((await store.getEntry(entry.id)).published?.mdx).toBe("first words");
+				expect((await store.getEntry(entry.id)).published?.mdx).toBe("first words\n");
 			});
 		});
 
@@ -297,13 +297,13 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 
 			const secondPublish = await publishDraft(store, { id: entry.id, expectedVersion: secondSave.version });
 			expect(secondPublish.published?.metadata).toEqual(await filled("Hash Test Changed"));
-			expect(secondPublish.published?.mdx).toBe("hash test changed");
+			expect(secondPublish.published?.mdx).toBe("hash test changed\n");
 			expect(secondPublish.published?.schemaVersion).toBe(2);
 			expect(secondPublish.published?.contentHash).toBe("same-hash");
 
 			const reloaded = await store.getEntry(entry.id);
 			expect(reloaded.published?.metadata).toEqual(await filled("Hash Test Changed"));
-			expect(reloaded.published?.mdx).toBe("hash test changed");
+			expect(reloaded.published?.mdx).toBe("hash test changed\n");
 			expect(reloaded.published?.schemaVersion).toBe(2);
 			expect(reloaded.published?.contentHash).toBe("same-hash");
 		});
@@ -462,7 +462,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const reloaded = await store.getEntry(entry.id);
 
 			expect(reloaded.working.metadata).toEqual(await filled("Updated Draft"));
-			expect(reloaded.working.mdx).toBe("updated draft");
+			expect(reloaded.working.mdx).toBe("updated draft\n");
 			expect(reloaded.working.contentHash).toBe("hash-updated");
 			expect(reloaded.working.schemaVersion).toBe(2);
 
@@ -751,7 +751,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 
 			expect(found?.status).toBe("draft");
 			expect(found?.workingSlug).toBe("draft-only-post");
-			expect(found?.working.mdx).toBe("초안 본문");
+			expect(found?.working.mdx).toBe("초안 본문\n");
 			expect(found?.working.metadata).toEqual(
 				await requiredMetadata(contentCollection, "draft-only-post", relationTarget),
 			);
@@ -780,8 +780,8 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 			const found = await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "edited-after-publish" });
 
 			expect(found?.status).toBe("published");
-			expect(found?.working.mdx).toBe("발행 후 편집 본문");
-			expect(found?.published?.mdx).toBe("발행 전 본문");
+			expect(found?.working.mdx).toBe("발행 후 편집 본문\n");
+			expect(found?.published?.mdx).toBe("발행 전 본문\n");
 		});
 
 		it("returns null for a missing slug", async () => {
@@ -1709,10 +1709,10 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				}
 			});
 
-			it("a body that stops parsing and is fixed again gets ids from the draft it replaces, which has none", async () => {
+			it("a body that stops parsing and is fixed again gets new ids: the unparsed draft it replaces has no blocks to pair with", async () => {
 				const draft = await createDraft({ mdx: BODY });
 				const broken = await save(draft, { mdx: "Words\n\n<Unclosed" });
-				expect(broken.working.doc).toBeNull();
+				expect(broken.working.doc.content[0]?.type).toBe("unparsed");
 
 				const fixed = await save(broken, { mdx: BODY });
 
@@ -1883,9 +1883,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				const draft = await createDraft({ mdx: imageBody(mediaId) });
 
 				const reference = await mediaReference(draft.id, mediaId);
-				expect(reference?.occurrences).toEqual([
-					{ type: "mdx", line: 5, column: 1, blockId: imageBlockId(draft.working.doc) },
-				]);
+				expect(reference?.occurrences).toEqual([{ type: "body", blockId: imageBlockId(draft.working.doc) }]);
 			});
 
 			it("saving the same body again, in the same or another spelling, keeps the occurrences and the version", async () => {
@@ -1913,9 +1911,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 
 				expect(saved.version).toBe(draft.version + 1);
 				const reference = await mediaReference(draft.id, mediaId);
-				expect(reference?.occurrences).toEqual([
-					{ type: "mdx", line: 5, column: 1, blockId: imageBlockId(draft.working.doc) },
-				]);
+				expect(reference?.occurrences).toEqual([{ type: "body", blockId: imageBlockId(draft.working.doc) }]);
 			});
 		});
 	});

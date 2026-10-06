@@ -13,6 +13,7 @@ import {
 	storedFields,
 	type TranslationState,
 } from "@monti-cms/core/client";
+import { bodyDocument, bodyFromMdx, isUnparsedDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/mdx";
 import { t } from "./translate";
 
 /** The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays. */
@@ -105,10 +106,18 @@ export const formList = (form: EntryForm, name: string): string[] => {
 export const isTranslationEntry = (entry: Pick<EntryData, "id" | "translationGroupId"> | null | undefined) =>
 	Boolean(entry?.translationGroupId && entry.translationGroupId !== entry.id);
 
+/**
+ * The document the visual editor can show: `undefined` for a body that could not become a document (an `unparsed` node), which is edited as text.
+ * The editor goes by the MDX text then.
+ */
+export const editableDoc = (doc: StoredDocument | null | undefined): StoredDocument | undefined =>
+	doc && !isUnparsedDocument(doc) ? doc : undefined;
+
 /** The original shown on the translation screen. Only present for a translation that received the original body. */
 export interface TranslationSource {
 	mdx: string;
-	doc: StoredDocument | null;
+	/** The original's stored document (an `unparsed` body is one `unparsed` node). */
+	doc: StoredDocument;
 	locale: string;
 	title: string;
 }
@@ -119,7 +128,7 @@ export function translationSourceOf(entry: EntryData | null): TranslationSource 
 	const title = entry.source.metadata.title;
 	return {
 		mdx: entry.source.mdx,
-		doc: entry.source.doc ?? null,
+		doc: entry.source.doc ?? bodyDocument(bodyFromMdx(entry.source.mdx)),
 		locale: entry.source.locale,
 		title: typeof title === "string" ? title : "",
 	};
@@ -142,9 +151,15 @@ export const TRANSLATION_FORM_KEY = "$translation";
  * (JSONB reorders keys). A document that is not a valid stored document is left out.
  */
 export const stringifyTranslation = (state: TranslationState) =>
-	JSON.stringify(parseTranslationState(state) ?? { version: 3, baseSource: state.baseSource, baseDoc: null });
+	JSON.stringify(parseTranslationState(state) ?? UNCONFIRMED_TRANSLATION);
 
-/** Form value -> translation state. If missing or malformed, nothing is treated as confirmed (empty `baseSource`, no document). */
+/** The state of a translation that has confirmed nothing: an empty source. */
+const UNCONFIRMED_TRANSLATION: TranslationState = {
+	version: 4,
+	baseDoc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] },
+};
+
+/** Form value -> translation state. If missing or malformed, nothing is treated as confirmed (an empty source document). */
 export const translationStateFromForm = (value: FormValue | undefined): TranslationState => {
 	if (typeof value === "string") {
 		try {
@@ -154,7 +169,7 @@ export const translationStateFromForm = (value: FormValue | undefined): Translat
 			// A corrupted value is treated as unconfirmed.
 		}
 	}
-	return { version: 3, baseSource: "", baseDoc: null };
+	return UNCONFIRMED_TRANSLATION;
 };
 
 /** Form value -> `translation` of the save request. Not sent if it is not a translation (no key). */
@@ -189,9 +204,9 @@ export function formFromEntry(entry: EntryData): EntryForm {
 	Object.assign(form, recordTranslationsToForm(entry.collection, metadata));
 	// A translation also handles translation state as the form, so autosave, recovery and conflict comparison see it along with the body.
 	if (isTranslationEntry(entry)) {
-		// If it is not a valid state, use an empty `baseSource` so "source changed" is shown. A version 2 state is read as version 3.
+		// If it is not a valid state, use an empty source so "source changed" is shown. A state of an older version is read as version 4.
 		form[TRANSLATION_FORM_KEY] = stringifyTranslation(
-			parseTranslationState(entry.working.translation) ?? { version: 3, baseSource: "", baseDoc: null },
+			parseTranslationState(entry.working.translation) ?? UNCONFIRMED_TRANSLATION,
 		);
 	}
 	return form;

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { mdxOf } from "../../../test/stored-content";
 import { createTranslator } from "../../i18n";
 import { MAX_TABLE_COLUMNS } from "../../mdx/table-layout";
+import type { CmsNode } from "../../mdx/types";
 import { coreMessages } from "../messages";
 import { prepareSnapshot } from "../snapshot";
 
@@ -24,8 +26,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			metadata: { title: "표 테스트" },
 			mdx,
 		});
-		expect(snap.mdx).not.toContain("1000000000");
-		expect(snap.mdx).toContain(`colspan="${MAX_TABLE_COLUMNS}"`);
+		expect(mdxOf(snap.doc)).not.toContain("1000000000");
+		expect(mdxOf(snap.doc)).toContain(`colspan="${MAX_TABLE_COLUMNS}"`);
 		const tableWarnings = (snap.warnings ?? []).filter((warning) => warning.code === "invalid_table_span");
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "span_too_large", max: MAX_TABLE_COLUMNS });
 		// The text is built from the code with the dictionary (site display language).
@@ -72,8 +74,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		});
 
 		// `rowspan_overflow` cannot be reached through a snapshot any more: the stored span never passes the last row.
-		expect(snap.mdx).not.toContain('rowspan="5"');
-		expect(snap.mdx).toContain('rowspan="2"');
+		expect(mdxOf(snap.doc)).not.toContain('rowspan="5"');
+		expect(mdxOf(snap.doc)).toContain('rowspan="2"');
 		const tableWarnings = (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span");
 		expect(tableWarnings.map((warning) => warning.params?.reason)).not.toContain("rowspan_overflow");
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "ragged_rows" });
@@ -125,8 +127,59 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			});
 
 			// `invalid_colspan` and `invalid_rowspan` cannot be reached through a snapshot any more: the value is gone from the stored text.
-			expect(snap.mdx).not.toContain(`${attribute}=`);
+			expect(mdxOf(snap.doc)).not.toContain(`${attribute}=`);
 			expect((snap.warnings ?? []).filter((w) => w.code === "invalid_table_span")).toEqual([]);
 		}
+	});
+
+	describe("a document given directly (its spans are not bounded by reading MDX)", () => {
+		const docWith = (cells: Record<string, unknown>[][]) => ({
+			type: "doc",
+			version: 2,
+			content: [
+				{
+					type: "table",
+					content: cells.map((row) => ({
+						type: "tableRow",
+						content: row.map((attrs) => ({
+							type: "tableCell",
+							attrs,
+							content: [{ type: "text", text: "x" }],
+						})),
+					})) as CmsNode[],
+				},
+			],
+		});
+		const reasons = async (cells: Record<string, unknown>[][]) => {
+			const snap = await prepareSnapshot({
+				collection: contentCollection,
+				slug: "direct-table",
+				metadata: { title: "표 테스트" },
+				doc: docWith(cells),
+			});
+			return (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span").map((w) => w.params?.reason);
+		};
+
+		it("warns about a span that is not a positive integer", async () => {
+			expect(await reasons([[{ colspan: "abc" }]])).toContain("invalid_colspan");
+			expect(await reasons([[{ rowspan: 0 }]])).toContain("invalid_rowspan");
+			expect(await reasons([[{ colspan: 1.5 }]])).toContain("invalid_colspan");
+		});
+
+		it("warns about a rowspan past the last row and a span wider than the table may be", async () => {
+			expect(await reasons([[{ rowspan: 5 }], [{}]])).toContain("rowspan_overflow");
+			expect(await reasons([[{ colspan: MAX_TABLE_COLUMNS + 1 }]])).toContain("span_too_large");
+		});
+
+		it("names the table by its block id", async () => {
+			const snap = await prepareSnapshot({
+				collection: contentCollection,
+				slug: "direct-table",
+				metadata: { title: "표 테스트" },
+				doc: docWith([[{ colspan: "abc" }]]),
+			});
+			const warning = (snap.warnings ?? []).find((w) => w.code === "invalid_table_span");
+			expect(warning?.position?.blockId).toBe(snap.doc.content[0]?.id);
+		});
 	});
 });

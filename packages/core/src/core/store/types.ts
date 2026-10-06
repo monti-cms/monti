@@ -24,7 +24,7 @@ export interface PublishedEntryRecord {
 	readonly metadata: EntryMetadata;
 	/** An empty string in list reads with `includeBody: false`. */
 	readonly mdx: string;
-	/** The stored document of the body. `null` in list reads with `includeBody: false`, and for a draft that has no document (it does not parse). */
+	/** The stored document of the body. `null` in list reads with `includeBody: false`. */
 	readonly doc: StoredDocument | null;
 	readonly publishedAt: Date | null;
 	readonly updatedAt: Date;
@@ -42,9 +42,10 @@ export type PublishedEntryLookup =
 
 export interface EntryBody {
 	metadata: EntryMetadata;
+	/** The MDX column, written from `doc`. */
 	mdx: string;
-	/** The stored document `mdx` is written from. `null` when the body does not parse (or has front matter), which only a draft can be. */
-	doc: StoredDocument | null;
+	/** The stored document of the body (one `unparsed` node when the body could not become a document, which only a draft can be). */
+	doc: StoredDocument;
 	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;
@@ -55,9 +56,9 @@ export interface EntryBody {
 export interface BodyTemplate {
 	id: string;
 	name: string;
+	/** The MDX column, written from `doc`. */
 	mdx: string;
-	/** The stored document `mdx` is written from. `null` when the template does not parse. */
-	doc: StoredDocument | null;
+	doc: StoredDocument;
 	version: number;
 	createdAt: Date;
 	updatedAt: Date;
@@ -297,7 +298,7 @@ export interface IncomingReferenceItem {
 export interface ExportSnapshotBody {
 	metadata: EntryMetadata;
 	mdx: string;
-	doc: StoredDocument | null;
+	doc: StoredDocument;
 	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;

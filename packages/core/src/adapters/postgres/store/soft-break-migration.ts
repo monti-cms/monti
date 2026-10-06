@@ -1,8 +1,7 @@
 import type { PoolClient } from "pg";
-import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
 import { insertSoftBreaks } from "../../../mdx/soft-breaks";
-import { extractVisibleText } from "./rows";
+import { mdxContentHash, mdxSearchText } from "./mdx-body";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -68,8 +67,8 @@ export async function migrateSoftBreaks(
 				typeof base === "string" ? rewritten(base, `${where} (translation base source)`, log) : undefined;
 			return {
 				mdx,
-				contentHash: computeContentHash(row.metadata, mdx, row.schema_version),
-				searchText: extractVisibleText(mdx),
+				contentHash: mdxContentHash(row.metadata, mdx, row.schema_version),
+				searchText: mdxSearchText(mdx),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,
 			};

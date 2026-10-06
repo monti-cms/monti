@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata, secondLocale } from "../../../test/any-site";
+import { docOf } from "../../../test/stored-content";
 import type { Collection } from "../../core/collections";
 import type { ContentChange, ContentStore, Entry } from "../../core/store";
 import { seedEntry } from "../../core/store/__test__/seed";
-import { bodyFromMdx } from "../../mdx/stored-document";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -153,8 +153,7 @@ describe("write hook contract", () => {
 				byteSize: 1024,
 				stagingKey: `staging/${randomUUID()}.png`,
 			});
-			const doc = bodyFromMdx(`<Image mediaId="${mediaId}" alt="added by a hook" />\n`).doc;
-			expect(doc).not.toBeNull();
+			const doc = docOf(`<Image mediaId="${mediaId}" alt="added by a hook" />\n`);
 			sources = server({ transform: ({ metadata }) => ({ metadata, doc }) });
 			const created = await service.createDraft(await postInput("With image"));
 			const references = await store.getWorkingReferences({ entryId: created.id });
@@ -235,7 +234,7 @@ describe("write hook contract", () => {
 		});
 
 		it("does not stop the core checks of a publish: a draft that core rejects stays unpublished however the hooks answer", async () => {
-			// A body that does not parse can be saved as a draft, and core publish validation blocks it.
+			// A body that does not parse can be saved as a draft (as an unparsed body), and core publish validation blocks it.
 			const draft = await newPost("Broken", "<Unclosed");
 			sources = server({
 				validate: () => ({ issues: [], warnings: [{ code: "all_fine" }] }),
@@ -246,7 +245,7 @@ describe("write hook contract", () => {
 			});
 			await expect(service.publish({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
 				code: "publish_validation_failed",
-				issues: expect.arrayContaining([expect.objectContaining({ code: "mdx_error" })]),
+				issues: expect.arrayContaining([expect.objectContaining({ code: "unparsed_body" })]),
 			});
 			expect((await store.getEntry(draft.id)).status).toBe("draft");
 		});

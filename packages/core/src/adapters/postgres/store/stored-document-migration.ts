@@ -1,8 +1,8 @@
 import type { PoolClient } from "pg";
-import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
 import { bodyFromMdx } from "../../../mdx/stored-document";
-import { extractVisibleText, readDoc } from "./rows";
+import { mdxContentHash, mdxSearchText } from "./mdx-body";
+import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -64,8 +64,8 @@ export async function migrateStoredDocuments(
 			return {
 				mdx: body.mdx,
 				doc: body.doc === null ? null : JSON.stringify(body.doc),
-				contentHash: computeContentHash(row.metadata, body.mdx, row.schema_version),
-				searchText: extractVisibleText(body.mdx),
+				contentHash: mdxContentHash(row.metadata, body.mdx, row.schema_version),
+				searchText: mdxSearchText(body.mdx),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,
 			};

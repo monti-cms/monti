@@ -60,7 +60,7 @@ export interface BulkStorePort<T = unknown> extends StorePort<T> {
 }
 
 const toServiceInput = (working: WorkingCopy, metadata: { [key: string]: unknown }): ServiceInput =>
-	({ collection: working.collection, slug: working.slug, metadata, mdx: working.mdx }) as ServiceInput;
+	({ collection: working.collection, slug: working.slug, metadata, doc: working.doc }) as ServiceInput;
 
 /**
  * Bulk operations. Every item runs the same write pipeline as a single write (hooks included): a publish is the single publish, a relation or folder

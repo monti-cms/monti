@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, recordRelationField } from "../../../../test/any-site";
+import { docOf, mdxOf } from "../../../../test/stored-content";
 import { type Collection, isItemCollection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { seedEntry } from "../../../core/store/__test__/seed";
@@ -28,19 +29,20 @@ const relation = (() => {
 const targetCollection = relation?.to ?? recordCollection;
 const relationPath = relation?.name ?? "relationId";
 
-function buildSnapshot(overrides: Partial<PreparedSnapshot> = {}): PreparedSnapshot {
+/** A prepared snapshot. The body is given as text (`mdx`) and stored as the document it reads as. */
+function buildSnapshot(overrides: Partial<PreparedSnapshot> & { mdx?: string } = {}): PreparedSnapshot {
+	const { mdx, ...rest } = overrides;
 	const refs = overrides.references || [];
 	return {
 		collection: contentCollection,
 		slug: `test-slug-${Math.random().toString(36).slice(2, 8)}`,
 		metadata: { title: "Test" },
-		mdx: "Test content",
-		doc: null,
+		doc: docOf(mdx ?? "Test content"),
 		schemaVersion: 1,
 		contentHash: `hash-${Math.random().toString(36).slice(2, 8)}`,
 		issues: [],
 		imageSources: [],
-		...overrides,
+		...rest,
 		references: refs,
 	};
 }
@@ -333,7 +335,7 @@ describe("ContentStore References", () => {
 		expect(entryUpdated.version).toBe(entryValid.version + 1);
 		expect(entryUpdated.workingSlug).toBe(snapshotValid2.slug);
 		expect(entryUpdated.working.metadata).toEqual(snapshotValid2.metadata);
-		expect(entryUpdated.working.mdx).toEqual(snapshotValid2.mdx);
+		expect(entryUpdated.working.mdx).toEqual(mdxOf(snapshotValid2.doc));
 		expect(entryUpdated.working.schemaVersion).toEqual(snapshotValid2.schemaVersion);
 		expect(entryUpdated.working.contentHash).toEqual(snapshotValid2.contentHash);
 

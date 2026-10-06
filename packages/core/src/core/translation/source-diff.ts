@@ -1,5 +1,7 @@
-import { BLOCK_BY_COMPONENT, BLOCK_BY_NAME, FENCE_BLOCKS } from "../../blocks/derive";
-import { analyze, type CmsNode, fromStoredDocument, type StoredDocument, serialize, toDocument } from "../../mdx";
+import { BLOCK_BY_NAME, FENCE_BLOCKS } from "../../blocks/derive";
+import { withoutBlockIds } from "../../mdx/block-ids";
+import { type StoredDocument, UNPARSED_NODE } from "../../mdx/stored-document";
+import type { CmsNode } from "../../mdx/types";
 
 /**
  * Block comparison of two source versions (translation screen).
@@ -8,40 +10,32 @@ import { analyze, type CmsNode, fromStoredDocument, type StoredDocument, seriali
  * Expandable boxes (`translateInside` in the block definition, e.g. callout, tabs, alignment) are expanded and their header line (translatable attributes) and inner blocks are each
  * compared. Used by both server and browser.
  *
- * When both versions come with their stored documents, blocks are paired by block id (`TranslationUnit.node.id`) first, so an edited block stays
- * the same block and a moved block shows as moved; blocks without an id are paired by kind and content as before.
+ * Blocks are paired by block id (`TranslationUnit.node.id`) first, so an edited block stays the same block and a moved block shows as moved;
+ * blocks without an id are paired by kind and content.
  */
 
-/** Renderer names of expandable boxes: the box itself is a skeleton and each inner block is a unit. */
-const EXPANDED = new Set(
-	[...BLOCK_BY_COMPONENT.values()].filter((block) => block.translateInside).map((b) => b.component),
-);
+/** Names of expandable boxes: the box itself is a skeleton and each inner block is a unit. */
+const EXPANDED = new Set([...BLOCK_BY_NAME.values()].filter((block) => block.translateInside).map((b) => b.name));
 
-const translatableOf = (component: string): string | undefined => {
-	const block = BLOCK_BY_COMPONENT.get(component);
+const translatableOf = (name: string): string | undefined => {
+	const block = BLOCK_BY_NAME.get(name);
 	return Object.entries(block?.attributes ?? {}).find(([, attribute]) => attribute.translatable)?.[0];
 };
 
-/** Boxes that gather the child blocks' translatable attributes (e.g. tab names) into one header line. Renderer name → [child renderer name, attribute]. */
+/** Boxes that gather the child blocks' translatable attributes (e.g. tab names) into one header line. Block name → [child block name, attribute]. */
 const CHILD_HEADERS = new Map(
-	[...BLOCK_BY_COMPONENT.values()].flatMap((block) => {
+	[...BLOCK_BY_NAME.values()].flatMap((block) => {
 		const child = BLOCK_BY_NAME.get(block.children?.blocks?.[0] ?? "");
-		const attribute = child && translatableOf(child.component);
-		return child && attribute ? [[block.component, [child.component, attribute] as const] as const] : [];
+		const attribute = child && translatableOf(child.name);
+		return child && attribute ? [[block.name, [child.name, attribute] as const] as const] : [];
 	}),
 );
 
 /** Blocks with no text to translate, so the source is used as is. */
 const STRUCTURAL = new Set(["horizontalRule", "html", "mdxEsm", "mdxExpression"]);
 
-/** Blocks a human must check even without text (comments and labels may be inside). Code fence blocks too. */
-const ALWAYS_MANUAL = new Set([
-	"codeBlock",
-	"math",
-	"CodeBlock",
-	"Math",
-	...[...FENCE_BLOCKS.values()].map((block) => block.component),
-]);
+/** Blocks a human must check even without text (comments and labels may be inside). Code blocks (fence blocks such as a diagram are code blocks too). */
+const ALWAYS_MANUAL = new Set(["codeBlock", "math", ...[...FENCE_BLOCKS.values()].map((block) => block.name)]);
 
 export type UnitKind = "block" | "header";
 
@@ -49,11 +43,11 @@ export interface TranslationUnit {
 	/** Matching key: ancestor box kind + unit kind + node kind. Only units with the same key are paired. */
 	readonly key: string;
 	readonly kind: UnitKind;
-	/** Node kind (`paragraph`, `codeBlock`, `Callout` …). */
+	/** Node kind (`paragraph`, `codeBlock`, `callout` …). */
 	readonly type: string;
 	/** For a block, that node; for a header line, the box node. */
 	readonly node: CmsNode;
-	/** Source fragment. For a block it is MDX; for a header line it is the JSON of the translatable attributes. */
+	/** Content of the unit, equal exactly when two units read the same: the JSON of the block (without block ids), or for a header line the JSON of the translatable attributes. */
 	readonly source: string;
 	/** Block id of the enclosing box (`undefined` at the top level or when the box has no id). */
 	readonly parentId: string | undefined;
@@ -75,13 +69,13 @@ const attrText = (node: CmsNode): string => {
 const isAuto = (node: CmsNode): boolean => {
 	if (STRUCTURAL.has(node.type)) return true;
 	if (ALWAYS_MANUAL.has(node.type)) {
-		const value = node.attrs?.value;
+		const value = node.attrs?.code ?? node.attrs?.value;
 		return typeof value === "string" ? value.trim().length === 0 : false;
 	}
 	return textOf(node).trim().length === 0;
 };
 
-const blockSource = (node: CmsNode) => serialize({ type: "doc", content: [node] }).trimEnd();
+const blockSource = (node: CmsNode) => JSON.stringify(withoutBlockIds([node])[0]);
 
 const stringAttr = (node: CmsNode, name: string) => {
 	const value = node.attrs?.[name];
@@ -98,7 +92,7 @@ const headerValue = (node: CmsNode): HeaderValue | null => {
 		return labels.some((label) => label.trim()) ? { labels } : null;
 	}
 	// A child that the parent gathers and translates (one tab) gets no header line of its own.
-	if (BLOCK_BY_COMPONENT.get(node.type)?.parent) return null;
+	if (BLOCK_BY_NAME.get(node.type)?.parent) return null;
 	const attribute = translatableOf(node.type);
 	if (!attribute) return null;
 	const title = stringAttr(node, attribute);
@@ -106,7 +100,7 @@ const headerValue = (node: CmsNode): HeaderValue | null => {
 };
 
 /** Splits a source document into translation units (document order). */
-export function flattenUnits(doc: CmsNode): TranslationUnit[] {
+export function flattenUnits(doc: Pick<StoredDocument, "content">): TranslationUnit[] {
 	const units: TranslationUnit[] = [];
 	const walk = (nodes: readonly CmsNode[], scope: string, parentId?: string) => {
 		for (const node of nodes) {
@@ -231,11 +225,6 @@ const diffUnits = (
 	return changes;
 };
 
-const unitsOf = (mdx: string): TranslationUnit[] | null => {
-	const analysis = analyze(mdx);
-	return analysis.errors.length > 0 ? null : flattenUnits(toDocument(analysis));
-};
-
 /** Positions in `values` of one longest strictly increasing subsequence. */
 const longestIncreasing = (values: readonly number[]): Set<number> => {
 	/** For each length, the position of the smallest value that ends an increasing subsequence of that length. */
@@ -350,28 +339,12 @@ const diffById = (before: readonly TranslationUnit[], after: readonly Translatio
 	return changes;
 };
 
-/** The stored documents of the two versions being compared (`null`/`undefined`: not known). */
-export interface SourceDocuments {
-	readonly before: StoredDocument | null | undefined;
-	readonly after: StoredDocument | null | undefined;
-}
-
 /**
  * Compares two source versions block by block. Equal blocks are omitted; a block whose content alone changed is `changed`, a new block is `added`, and a removed
- * block is `removed`. `null` if either cannot be parsed.
- *
- * With both stored documents (`documents`) the blocks are paired by block id, which also finds `moved` blocks (see `diffById`); the MDX is not read then.
- * Without (a version confirmed before block ids were kept), the blocks are paired by kind and content in the MDX: a block that moved is a removed and an added block.
+ * block is `removed`. Blocks are paired by block id, which also finds `moved` blocks (see `diffById`). `null` if either is not a document (an `unparsed` body).
  */
-export function diffSources(beforeMdx: string, afterMdx: string, documents?: SourceDocuments): SourceChange[] | null {
-	if (documents?.before && documents.after) {
-		return diffById(
-			flattenUnits(fromStoredDocument(documents.before)),
-			flattenUnits(fromStoredDocument(documents.after)),
-		);
-	}
-	const before = unitsOf(beforeMdx);
-	const after = unitsOf(afterMdx);
-	if (!before || !after) return null;
-	return diffUnits(before, after);
+export function diffSources(before: StoredDocument, after: StoredDocument): SourceChange[] | null {
+	const unparsed = (doc: StoredDocument) => doc.content.some((node) => node.type === UNPARSED_NODE);
+	if (unparsed(before) || unparsed(after)) return null;
+	return diffById(flattenUnits(before), flattenUnits(after));
 }

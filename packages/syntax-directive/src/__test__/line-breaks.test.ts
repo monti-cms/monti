@@ -1,6 +1,4 @@
-import { analyze } from "@monti-cms/core/mdx";
-import { computeContentHash } from "@monti-cms/core/runtime";
-import { insertSoftBreaks } from "@monti-cms/core/testing";
+import { insertSoftBreaks, mdxContentHash } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import { mdxWith } from "../../test/mdx-syntax";
 import { directiveSyntax } from "..";
@@ -12,7 +10,7 @@ import { directiveSyntax } from "..";
 const syntax = [directiveSyntax()];
 const { analyze: read, toDocument, write, writeTwice } = mdxWith(syntax);
 
-const hash = (source: string) => computeContentHash({ title: "t" }, source, 1, analyze(source, undefined, syntax));
+const hash = (source: string) => mdxContentHash({ title: "t" }, source, 1, syntax);
 
 describe("directive syntax: line breaks", () => {
 	it("reads every spelling of a break into the same document", () => {

@@ -7,6 +7,7 @@ import {
 	recordRelationField,
 	secondLocale,
 } from "../../../test/any-site";
+import { docOf } from "../../../test/stored-content";
 import { type Cms, fakeCms } from "../../cms";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../core/collections";
 import { contentPath } from "../../core/links";
@@ -76,7 +77,7 @@ describe("public site reading (cms.read)", () => {
 				collection: contentCollection,
 				slug,
 				metadata: { title: `Title ${slug}`, ...metadata },
-				mdx: `Body ${slug}`,
+				doc: docOf(`Body ${slug}`),
 				schemaVersion: 1,
 				contentHash: `hash-${slug}-${locale ?? ""}`,
 				references: [],
@@ -107,7 +108,7 @@ describe("public site reading (cms.read)", () => {
 		expect(page1.items[0]?.mdx).toBe("");
 		const page2 = await listEntries({ collection: contentCollection, pageSize: 1, page: 2, body: true });
 		expect(page2.items[0]?.id).toBe(first.id);
-		expect(page2.items[0]?.mdx).toBe("Body read-list-1");
+		expect(page2.items[0]?.mdx).toBe("Body read-list-1\n");
 		const all = await listEntries({ collection: contentCollection, pageSize: 100 });
 		expect(all.items.map((item) => item.slug)).not.toContain("read-list-draft");
 
@@ -138,7 +139,7 @@ describe("public site reading (cms.read)", () => {
 						collection,
 						slug,
 						metadata: { title, translations: { [language]: { title: translated } } },
-						mdx: "",
+						doc: docOf(""),
 						schemaVersion: 1,
 						contentHash: `hash-${slug}`,
 						references: [],
@@ -173,7 +174,7 @@ describe("public site reading (cms.read)", () => {
 		expect(found.entry).toMatchObject({
 			id: published.id,
 			title: "Title read-detail",
-			mdx: "Body read-detail",
+			mdx: "Body read-detail\n",
 			fallback: false,
 			path: localizePath(defaultLocale, contentPath(contentCollection, "read-detail") ?? ""),
 		});
@@ -231,9 +232,9 @@ describe("public site reading (cms.read)", () => {
 			contentHash: "hash-edited",
 		});
 		state.admin = true;
-		expect((await getPreview({ collection: contentCollection, slug: "read-preview" }))?.mdx).toBe("Edited draft");
+		expect((await getPreview({ collection: contentCollection, slug: "read-preview" }))?.mdx).toBe("Edited draft\n");
 		const published2 = await getEntry({ collection: contentCollection, slug: "read-preview" });
-		expect(published2.status === "found" && published2.entry.mdx).toBe("Body read-preview");
+		expect(published2.status === "found" && published2.entry.mdx).toBe("Body read-preview\n");
 		state.admin = false;
 		expect(await getPreview({ collection: contentCollection, slug: "read-preview" })).toBeNull();
 		state.admin = true;

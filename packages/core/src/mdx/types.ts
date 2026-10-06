@@ -5,11 +5,6 @@ export type CmsMdxPosition = {
 	column: number;
 };
 
-/** A place in a body that also names the block of the stored document it is in (`blockId`). The block is unknown when the body has no document. */
-export type CmsBodyPosition = CmsMdxPosition & {
-	readonly blockId?: string;
-};
-
 /**
  * MDX analysis error code. The value never changes, so the screen can pick a message by code. For `mdx_syntax`, the parser's message is put into `message` as is.
  */
@@ -79,5 +74,5 @@ export type CmsImageSource = {
 	readonly mediaId?: string;
 	/** External address. */
 	readonly src?: string;
-	readonly position: CmsBodyPosition;
+	readonly position: { readonly blockId?: string };
 };

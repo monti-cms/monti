@@ -114,7 +114,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 				workingSlug: "export-draft",
 				publishedSlug: null,
 				publishedAt: null,
-				working: { mdx: "# Draft body", metadata: { title: "Export draft" } },
+				working: { mdx: "# Draft body\n", metadata: { title: "Export draft" } },
 			});
 			expect(exportedDraft?.published).toBeUndefined();
 
@@ -124,8 +124,8 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 				status: "published",
 				workingSlug: "export-live",
 				publishedSlug: "export-live",
-				working: { mdx: "# Edited body", metadata: { title: "Export live, edited" } },
-				published: { mdx: "# Live body" },
+				working: { mdx: "# Edited body\n", metadata: { title: "Export live, edited" } },
+				published: { mdx: "# Live body\n" },
 			});
 			expect(exportedLive?.publishedAt).toBeInstanceOf(Date);
 			expect(exportedLive?.working.contentHash).not.toBe(exportedLive?.published?.contentHash);

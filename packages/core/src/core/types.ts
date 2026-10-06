@@ -1,6 +1,6 @@
 import type { ResolvedConfig } from "../config/resolved";
 import type { StoredDocument } from "../mdx/stored-document";
-import type { CmsBodyPosition, CmsImageSource } from "../mdx/types";
+import type { CmsImageSource } from "../mdx/types";
 import type { MetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
 import type { Collection } from "./collections";
@@ -9,6 +9,13 @@ import type { TranslationState } from "./translation/state";
 /**
  * CMS domain types. Shared by the repository implementation, service and HTTP layers; depends on none of them.
  */
+
+/** A place in a body: the block of the stored document (`blockId`), or for text that did not become a document, a line and column of that text. */
+export type BodyPosition = {
+	readonly blockId?: string;
+	readonly line?: number;
+	readonly column?: number;
+};
 
 export type Issue = {
 	readonly code: string;
@@ -19,8 +26,11 @@ export type Issue = {
 	readonly message?: string;
 	/** Variant within the same code (`reason`) and the values that fill the message's placeholders. */
 	readonly params?: Readonly<Record<string, string | number>>;
-	/** Location of a body issue: the line and column in the stored MDX, and the block it is in when the body has a document. */
-	readonly position?: CmsBodyPosition;
+	/**
+	 * Location of a body issue: the block of the stored document it is in (`blockId`). A body given as text that could not be read
+	 * (`mdx_error`) has no block; it carries the line and column in that text instead.
+	 */
+	readonly position?: BodyPosition;
 	/** Field path of a metadata issue. */
 	readonly path?: string;
 	readonly ordinal?: number;
@@ -36,8 +46,35 @@ export type ReferenceKind = "entry" | "media";
 export const normalizeReferenceKind = (kind: string): ReferenceKind => (kind === "media" ? "media" : "entry");
 
 export type ReferenceOccurrence =
-	| { readonly type: "mdx"; readonly line: number; readonly column: number; readonly blockId?: string }
+	| { readonly type: "body"; readonly blockId?: string }
 	| { readonly type: "metadata"; readonly path: string; readonly ordinal?: number };
+
+/**
+ * An occurrence as stored. Rows written before bodies were checked as documents hold `{type:"mdx", line, column, blockId?}` for a body
+ * occurrence; it reads as `{type:"body", blockId?}` and is rewritten in the new form the next time the references are saved.
+ * Returns `undefined` for a value that is not an occurrence.
+ */
+export const readReferenceOccurrence = (value: unknown): ReferenceOccurrence | undefined => {
+	if (typeof value !== "object" || value === null) return undefined;
+	const record = value as Record<string, unknown>;
+	if (record.type === "body" || record.type === "mdx") {
+		return typeof record.blockId === "string" ? { type: "body", blockId: record.blockId } : { type: "body" };
+	}
+	if (record.type === "metadata" && typeof record.path === "string") {
+		return typeof record.ordinal === "number"
+			? { type: "metadata", path: record.path, ordinal: record.ordinal }
+			: { type: "metadata", path: record.path };
+	}
+	return undefined;
+};
+
+/** Whether a stored occurrence list still has an occurrence in the old shape. */
+export const hasLegacyOccurrence = (value: unknown): boolean =>
+	Array.isArray(value) && value.some((item) => (item as { type?: unknown } | null)?.type === "mdx");
+
+/** The occurrences of a stored reference row, in the current shape. */
+export const readReferenceOccurrences = (value: unknown): ReferenceOccurrence[] =>
+	(Array.isArray(value) ? value : []).flatMap((item) => readReferenceOccurrence(item) ?? []);
 
 export type Reference = {
 	readonly kind: ReferenceKind;
@@ -61,8 +98,8 @@ type WithRecordTranslations<S, M> = S extends { readonly kind: "item" } ? M & { 
 export type MetadataFor<C extends Collection> = WithRecordTranslations<SCHEMAS[C], MetadataOf<SCHEMAS[C]>>;
 
 /**
- * A body is given either as MDX or as a stored document (`StoredDocument` JSON), never both. Either way it is stored as both:
- * the document is the source and the MDX is written from it (see `bodyFromMdx`).
+ * A body is given either as MDX text or as a stored document (`StoredDocument` JSON), never both. The document is what is checked, hashed and
+ * stored; text is read into a document first (a text that cannot be read is kept as an `unparsed` node).
  */
 type BodyInput = { mdx: string; doc?: undefined } | { doc: unknown; mdx?: undefined };
 
@@ -84,7 +121,7 @@ export type InternalLinkSource = {
 	readonly collection: Collection;
 	readonly slug: string;
 	readonly url: string;
-	readonly position: CmsBodyPosition;
+	readonly position: BodyPosition;
 };
 
 export type ResolvedInternalLink = {
@@ -98,10 +135,11 @@ export type PreparedSnapshot = {
 	readonly collection: Collection;
 	readonly slug: string | null;
 	readonly metadata: { readonly [key: string]: MetadataValue };
-	/** The body as stored: written from `doc` when there is one, otherwise exactly as given. */
-	readonly mdx: string;
-	/** The stored document, the source of `mdx`. `null` when the body does not parse (or has front matter), which only a draft can be. */
-	readonly doc: StoredDocument | null;
+	/**
+	 * The stored document, the source of the body. A body that could not become a document is a document of one `unparsed` node,
+	 * which only a draft can be (`unparsed_body` blocks publishing).
+	 */
+	readonly doc: StoredDocument;
 	readonly schemaVersion: number;
 	readonly contentHash: string;
 	readonly references: readonly Reference[];
@@ -134,9 +172,9 @@ export type WorkingCopy = {
 	readonly collection: Collection;
 	readonly slug: string | null;
 	readonly metadata: { readonly [key: string]: unknown };
+	/** The MDX column, written from `doc` (it goes when the MDX package is split out). */
 	readonly mdx: string;
-	/** The stored document `mdx` is written from. `null` when the body does not parse (or has front matter). */
-	readonly doc: StoredDocument | null;
+	readonly doc: StoredDocument;
 	readonly version: number;
 	readonly folderId: string | null;
 	/** Content locale and translation group ID. For a source, the group ID is its own ID. */

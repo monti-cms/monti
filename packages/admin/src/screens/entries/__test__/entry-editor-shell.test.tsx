@@ -1,4 +1,4 @@
-import { bodyFromMdx, type StoredDocument } from "@monti-cms/core/mdx";
+import { bodyDocument, bodyFromMdx, type StoredDocument, withoutBlockIds } from "@monti-cms/core/mdx";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -999,7 +999,9 @@ describe("translation source pane", () => {
 		translations: [],
 	};
 	/** `mdx` as a stored document (with block ids), for a source that carries one. */
-	const docOf = (mdx: string) => bodyFromMdx(mdx).doc;
+	const docOf = (mdx: string) => bodyDocument(bodyFromMdx(mdx));
+	/** What a document says, without its block ids (reading text draws new ones). */
+	const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
 	const translationWith = (
 		baseSource: string | null,
 		documents: { base?: StoredDocument | null; current?: StoredDocument | null; currentMdx?: string } = {},
@@ -1099,11 +1101,10 @@ describe("translation source pane", () => {
 		expect(screen.queryByText("원문이 바뀌었습니다")).toBeNull();
 		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
-		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
-			version: 3,
-			baseSource: SOURCE_MDX,
-			baseDoc: null,
-		});
+		// The confirmed source is the document of the source (read from its text when the server sent none).
+		const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation;
+		expect(sent.version).toBe(4);
+		expect(contentKey(sent.baseDoc)).toBe(contentKey(docOf(SOURCE_MDX)));
 	});
 
 	it("confirm also saves the source's document", async () => {
@@ -1123,8 +1124,7 @@ describe("translation source pane", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
 		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
-			version: 3,
-			baseSource: SOURCE_MDX,
+			version: 4,
 			baseDoc: current,
 		});
 	});

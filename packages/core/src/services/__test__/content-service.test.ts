@@ -7,10 +7,11 @@ import {
 	requiredMetadata,
 	titleFieldOf,
 } from "../../../test/any-site";
+import { docOf } from "../../../test/stored-content";
 import { COLLECTIONS, type Collection, DOCUMENT_COLLECTIONS } from "../../core/collections";
 import { isBlockId } from "../../mdx/block-ids";
 import { bodyFromMdx, type StoredDocument } from "../../mdx/stored-document";
-import { type StoredField, storedField, storedFields } from "../../schema/derive";
+import { type StoredField, storedFields } from "../../schema/derive";
 import { isRequiredField } from "../../schema/fields";
 import type { PreparedSnapshot, Reference, ResolvedTargets, SaveDraftInput, ServiceInput, StorePort } from "../index";
 import {
@@ -321,7 +322,7 @@ describe("ContentService Contract", () => {
 				isStale: false,
 			});
 			expect(snap.references[0].occurrences).toHaveLength(2);
-			expect(snap.references[0].occurrences[0]).toMatchObject({ type: "mdx", line: 1, column: 1 });
+			expect(snap.references[0].occurrences[0]).toMatchObject({ type: "body" });
 
 			expect(snap.references[1]).toMatchObject({
 				kind: "media",
@@ -329,8 +330,13 @@ describe("ContentService Contract", () => {
 				isStale: false,
 			});
 			expect(snap.references[1].occurrences).toHaveLength(1);
-			// Positions point into the stored text, where blocks are separated by a blank line: the second image is on line 3.
-			expect(snap.references[1].occurrences[0]).toMatchObject({ line: 3, column: 1 });
+			// Each image is a block of its own, and the occurrence names it.
+			const ids = snap.doc.content.map((block) => block.id);
+			expect(snap.references[0].occurrences).toEqual([
+				{ type: "body", blockId: ids[0] },
+				{ type: "body", blockId: ids[2] },
+			]);
+			expect(snap.references[1].occurrences[0]).toEqual({ type: "body", blockId: ids[1] });
 		});
 
 		it("rejects retired ContentLink with a migration message", async () => {
@@ -349,15 +355,29 @@ describe("ContentService Contract", () => {
 		});
 
 		it.each([
-			["<Image mediaId={dynamicId} />", "dynamic_reference_id"],
+			// A reference that is an expression is not a value: the text is rejected before it can become a document.
+			["<Image mediaId={dynamicId} />", "mdx_error"],
 			['<Image mediaId="not-a-uuid" alt="a" />', "invalid_reference_id"],
-			['<Image mediaId="" alt="a" />', "missing_media_id"],
 			["<File />", "missing_media_id"],
-			["<File mediaId={dynamicId} />", "dynamic_reference_id"],
+			["<File mediaId={dynamicId} />", "mdx_error"],
 			['<File mediaId="not-a-uuid" />', "invalid_reference_id"],
 		])("creates structured issues for dynamic IDs: %s", async (mdx, expectedIssue) => {
 			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, mdx });
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: expectedIssue }));
+			expect(snap.references).toEqual([]);
+		});
+
+		it.each([
+			["an empty media id", { type: "image", attrs: { mediaId: "", alt: "a" } }, "missing_media_id"],
+			["no source at all", { type: "image", attrs: { alt: "a" } }, "missing_media_id"],
+			["a media id that is not text", { type: "image", attrs: { mediaId: 5, alt: "a" } }, "invalid_reference_id"],
+			["a file with no media id", { type: "file", attrs: { label: "x" } }, "missing_media_id"],
+		])("flags a document that holds %s", async (_name, block, expectedIssue) => {
+			const doc = { type: "doc", version: 2, content: [block] };
+			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, doc });
+			expect(snap.issues).toContainEqual(
+				expect.objectContaining({ code: expectedIssue, position: { blockId: snap.doc.content[0]?.id } }),
+			);
 			expect(snap.references).toEqual([]);
 		});
 
@@ -373,10 +393,10 @@ describe("ContentService Contract", () => {
 					targetId: "987e4567-e89b-12d3-a456-426614174000",
 					isStale: false,
 					// The body is one block, and the position names it.
-					occurrences: [{ type: "mdx", line: 1, column: 1, blockId: snap.doc?.content[0]?.id }],
+					occurrences: [{ type: "body", blockId: snap.doc.content[0]?.id }],
 				},
 			]);
-			expect(snap.doc?.content).toHaveLength(1);
+			expect(snap.doc.content).toHaveLength(1);
 		});
 
 		it("does not reference an external image src", async () => {
@@ -389,7 +409,7 @@ describe("ContentService Contract", () => {
 			expect(snap.issues).toEqual([]);
 			expect(snap.references).toEqual([]);
 			expect(snap.imageSources).toEqual([
-				{ src: "https://example.com/a.png", position: { line: 1, column: 1, blockId: snap.doc?.content[0]?.id } },
+				{ src: "https://example.com/a.png", position: { blockId: snap.doc.content[0]?.id } },
 			]);
 		});
 
@@ -400,13 +420,17 @@ describe("ContentService Contract", () => {
 					kind: "entry",
 					targetId: "123e4567-e89b-12d3-a456-426614174000",
 					isStale: false,
-					occurrences: [{ type: "mdx", line: 1, column: 1 }],
+					occurrences: [{ type: "body", blockId: "abcd1234" }],
 				},
 			];
 			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, mdx }, { previousReferences });
 
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "mdx_error" }));
-			expect(snap.mdx).toBe(mdx);
+			// The text is kept as it was given, in an unparsed body.
+			expect(snap.doc.content).toEqual([
+				expect.objectContaining({ type: "unparsed", attrs: { format: "mdx", source: mdx } }),
+			]);
+			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "unparsed_body" }));
 			expect(snap.references).toHaveLength(1);
 			expect(snap.references[0]).toMatchObject({
 				kind: "entry",
@@ -415,17 +439,17 @@ describe("ContentService Contract", () => {
 			});
 		});
 
-		it("retains trusted previous refs marked stale on semantic-analyze-error", async () => {
-			const mdx = "<Image />";
+		it("retains trusted previous refs marked stale when the body holds a reference problem", async () => {
+			const doc = { type: "doc", version: 2, content: [{ type: "image", attrs: { alt: "a" } }] };
 			const previousReferences: Reference[] = [
 				{
 					kind: "media",
 					targetId: "987e4567-e89b-12d3-a456-426614174000",
 					isStale: false,
-					occurrences: [{ type: "mdx", line: 1, column: 1 }],
+					occurrences: [{ type: "body", blockId: "abcd1234" }],
 				},
 			];
-			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, mdx }, { previousReferences });
+			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, doc }, { previousReferences });
 
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "missing_media_id" }));
 			expect(snap.references).toHaveLength(1);
@@ -460,7 +484,9 @@ describe("ContentService Contract", () => {
 			});
 
 			const callArg = vi.mocked(storePort.createEntryWithReferences).mock.calls[0][0];
-			expect(callArg.snapshot.mdx).toBe(mdx);
+			expect(callArg.snapshot.doc.content).toEqual([
+				expect.objectContaining({ type: "unparsed", attrs: { format: "mdx", source: mdx } }),
+			]);
 			expect(callArg.snapshot.issues).toContainEqual(expect.objectContaining({ code: "frontmatter_present" }));
 
 			const validation = validateForPublish(callArg.snapshot, { targets: [], media: [] });
@@ -478,7 +504,7 @@ describe("ContentService Contract", () => {
 				[single.name]: "123e4567-e89b-12d3-a456-426614174001",
 				[many.name]: ["123e4567-e89b-12d3-a456-426614174002"],
 			},
-			mdx: "Content",
+			doc: docOf("Content"),
 			schemaVersion: 1,
 			contentHash: "hash",
 			references: [
@@ -515,7 +541,7 @@ describe("ContentService Contract", () => {
 				"missing_field",
 			],
 			["null slug", { ...validSnap, slug: null }, validResolvedTargets, "null_slug"],
-			["empty body", { ...validSnap, mdx: "" }, validResolvedTargets, "empty_body"],
+			["empty body", { ...validSnap, doc: docOf("") }, validResolvedTargets, "empty_body"],
 			// Only when the single-value relation is required for publishing (blog: category).
 			...(single.required
 				? [
@@ -912,7 +938,7 @@ describe("ContentService Contract", () => {
 					kind: "entry",
 					targetId: "123e4567-e89b-12d3-a456-426614174000",
 					isStale: false,
-					occurrences: [{ type: "mdx", line: 1, column: 1 }],
+					occurrences: [{ type: "body", blockId: "abcd1234" }],
 				},
 			];
 			const storePort: StorePort = {
@@ -941,7 +967,7 @@ describe("ContentService Contract", () => {
 				kind: "entry",
 				targetId: "123e4567-e89b-12d3-a456-426614174000",
 				isStale: true,
-				occurrences: [{ type: "mdx", line: 1, column: 1 }],
+				occurrences: [{ type: "body", blockId: "abcd1234" }],
 			});
 		});
 
@@ -1387,35 +1413,35 @@ describe("ContentService Contract", () => {
 			expect(snap.issues).toEqual([]);
 			expect(mediaReferences(snap)).toHaveLength(1);
 			expect(mediaReferences(snap)[0]).toMatchObject({ kind: "media", targetId: mediaId });
-			expect(snap.imageSources).toEqual([
-				{ mediaId, position: { line: 1, column: 1, blockId: snap.doc?.content[0]?.id } },
-			]);
+			expect(snap.imageSources).toEqual([{ mediaId, position: { blockId: snap.doc.content[0]?.id } }]);
 		});
 
 		it("an external src is not a reference and does not block publishing", async () => {
-			const snap = await prepareSnapshot(await draft('<Image src="/images/a.png" />'));
+			const snap = await prepareSnapshot(await draft('<Image src="/images/a.png" alt="a" />'));
 
 			expect(snap.issues).toEqual([]);
 			expect(mediaReferences(snap)).toEqual([]);
-			expect(snap.imageSources).toEqual([
-				{ src: "/images/a.png", position: { line: 1, column: 1, blockId: snap.doc?.content[0]?.id } },
-			]);
+			expect(snap.imageSources).toEqual([{ src: "/images/a.png", position: { blockId: snap.doc.content[0]?.id } }]);
 		});
 
 		it("an image with no source stays blocked", async () => {
-			const snap = await prepareSnapshot(await draft("<Image />"));
+			const { mdx: _text, ...fields } = await draftInput("");
+			const snap = await prepareSnapshot({
+				...fields,
+				doc: { type: "doc", version: 2, content: [{ type: "image", attrs: { alt: "a" } }] },
+			} as never);
 
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "missing_media_id" }));
 			expect(snap.imageSources).toEqual([]);
 		});
 
 		it("a disallowed src is a non-blocking warning (stays ready)", async () => {
-			const snap = await prepareSnapshot(await draft('<Image src="javascript:alert(1)" />'));
+			const snap = await prepareSnapshot(await draft('<Image src="javascript:alert(1)" alt="a" />'));
 			const validation = validateForPublish(snap, { targets: relationTargets, media: [] });
 
 			expect(validation.ready).toBe(true);
 			expect(validation.warnings).toEqual([
-				expect.objectContaining({ code: "image_src_not_allowed", position: { line: 1, column: 1 } }),
+				expect.objectContaining({ code: "image_src_not_allowed", position: { blockId: snap.doc.content[0]?.id } }),
 			]);
 		});
 

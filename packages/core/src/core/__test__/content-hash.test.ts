@@ -2,14 +2,16 @@ import { createHash } from "node:crypto";
 import type { Root } from "mdast";
 import { visit } from "unist-util-visit";
 import { describe, expect, it } from "vitest";
+import { docOf } from "../../../test/stored-content";
 import { ADDED_BLOCKS } from "../../blocks/active";
-import { analyze, toDocument } from "../../mdx";
+import { analyze } from "../../mdx";
 import type { SyntaxExtension } from "../../syntax";
 import { canonicalBodyForHash, computeContentHash } from "../content-hash";
 
 const metadata = { title: "A" };
+/** The hash of a body written as MDX: of the document a write stores for it (an `unparsed` body when it cannot be read). */
 const hashOf = (mdx: string, meta: Record<string, unknown> = metadata, schemaVersion = 1) =>
-	computeContentHash(meta as never, mdx, schemaVersion);
+	computeContentHash(meta as never, docOf(mdx), schemaVersion);
 
 /**
  * A container block from the active config, written as JSX.
@@ -58,7 +60,7 @@ describe("content hash v2", () => {
 			const notation = "@@word@@\n";
 			const standard = "<u>word</u>\n";
 			expect(analyze(notation, undefined, syntax).errors).toEqual([]);
-			expect(computeContentHash(metadata, notation, 1, analyze(notation, undefined, syntax))).toBe(hashOf(standard));
+			expect(computeContentHash(metadata, docOf(notation, syntax))).toBe(hashOf(standard));
 			// Without the extension the notation is plain text, which hashes differently.
 			expect(hashOf(notation)).not.toBe(hashOf(standard));
 		});
@@ -126,7 +128,7 @@ describe("content hash v2", () => {
 	});
 
 	describe("canonicalBodyForHash", () => {
-		const canonical = (mdx: string) => canonicalBodyForHash(toDocument(analyze(mdx)));
+		const canonical = (mdx: string) => canonicalBodyForHash(docOf(mdx));
 
 		it("drops the raw JSX attribute list but keeps the attribute values", () => {
 			const json = JSON.stringify(canonical(container.jsx(container.first)));
@@ -142,7 +144,7 @@ describe("content hash v2", () => {
 		});
 
 		it("does not change the parsed document it receives", () => {
-			const document = toDocument(analyze(container.jsx(container.first)));
+			const document = docOf(container.jsx(container.first));
 			const before = JSON.stringify(document);
 			canonicalBodyForHash(document);
 			expect(JSON.stringify(document)).toBe(before);

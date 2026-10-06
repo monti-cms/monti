@@ -49,14 +49,16 @@ export const templatesContract: ContractSuite = (factory) => {
 			expect(renamed.doc).toEqual(updated.doc);
 		});
 
-		it("stores a template that does not parse as given, without a document", async () => {
+		it("stores a template that does not parse as an unparsed document of its text", async () => {
 			const created = await store.createTemplate({ name: "broken template", mdx: "Words\n\n<Unclosed" });
 			expect(created.mdx).toBe("Words\n\n<Unclosed");
-			expect(created.doc).toBeNull();
+			expect(created.doc.content).toEqual([
+				expect.objectContaining({ type: "unparsed", attrs: { format: "mdx", source: "Words\n\n<Unclosed" } }),
+			]);
 			const updated = await store.updateTemplate({ id: created.id, expectedVersion: created.version, mdx: "Fixed\n" });
 			expect(contentOf(updated.doc)).toEqual(contentOf(bodyFromMdx("Fixed\n").doc));
 			const broken = await store.updateTemplate({ id: created.id, expectedVersion: updated.version, mdx: "<Open" });
-			expect(broken.doc).toBeNull();
+			expect(broken.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: "<Open" } });
 			expect(broken.mdx).toBe("<Open");
 		});
 

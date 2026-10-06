@@ -739,6 +739,9 @@ const serializeBlock = (node: CmsNode, indent = ""): string => {
 				.join("\n");
 		case "mdxEsm":
 			return indent + String(node.attrs?.value ?? "");
+		case "unparsed":
+			// A body that could not be read keeps its text as it was given.
+			return String(node.attrs?.source ?? "");
 		case "mdxExpression":
 			return `${indent}{${String(node.attrs?.value ?? "")}}`;
 		case "doc":

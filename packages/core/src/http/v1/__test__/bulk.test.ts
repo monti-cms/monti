@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { docOf } from "../../../../test/stored-content";
 import { fakeCms } from "../../../cms";
 import { isItemCollection } from "../../../core/collections";
 import { CmsError } from "../../../core/store";
@@ -28,6 +29,7 @@ const working = (version: number) => ({
 	slug: "hello",
 	metadata: { ...workingMetadata, [MANY_FIELD]: [TAG_1] },
 	mdx: "body",
+	doc: docOf("body"),
 	version,
 	folderId: null,
 });

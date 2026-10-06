@@ -1,13 +1,14 @@
 import type { Pool, PoolClient } from "pg";
 import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
-import { bodyFromMdx } from "../../../mdx/stored-document";
+import { bodyDocument, bodyFromMdx } from "../../../mdx/stored-document";
 import { migrateBlockIds } from "./block-id-migration";
 import { migrateCodeAnnotations } from "./code-annotation-migration";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 import { migrateSoftBreaks } from "./soft-break-migration";
 import { migrateStoredDocuments } from "./stored-document-migration";
+import { migrateUnparsedBodies } from "./unparsed-migration";
 
 /** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
 interface MigrationStep {
@@ -360,18 +361,28 @@ const STEPS: readonly MigrationStep[] = [
 		`),
 	},
 	{
+		name: "0017_unparsed_bodies",
+		/**
+		 * Every stored body is a document. A body or template that had none (its MDX did not parse, had front matter, or would not read back the same) becomes
+		 * the document of one `unparsed` node holding its MDX as it was; `unparsed_body` blocks publishing it. Recomputes `content_hash` of those rows, lifts the
+		 * translation state to version 4 (a source document, no MDX text) and logs the published bodies and templates among them by id. Nothing here fails
+		 * because of such a body: the data of an existing store always migrates.
+		 */
+		run: (client, qSchema) => migrateUnparsedBodies(client, qSchema),
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */
 		run: async (client, qSchema) => {
 			for (const t of cmsConfig.seed?.templates ?? []) {
-				// Seeded as it is stored: written from the document when the template parses.
+				// Seeded as it is stored: its document, and the MDX written from it.
 				const body = bodyFromMdx(t.mdx);
 				await client.query(
 					`INSERT INTO "${qSchema}".body_templates (id, name, mdx, doc, version, created_at, updated_at)
 					 VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
 					 ON CONFLICT DO NOTHING`,
-					[t.id, t.name, body.mdx, body.doc === null ? null : JSON.stringify(body.doc)],
+					[t.id, t.name, body.mdx, JSON.stringify(bodyDocument(body))],
 				);
 			}
 		},

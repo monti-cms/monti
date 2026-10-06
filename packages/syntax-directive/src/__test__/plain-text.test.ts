@@ -1,5 +1,5 @@
 import { ADDED_BLOCKS, toPlainText } from "@monti-cms/core/client";
-import { bodyText, SEARCH_TEXT } from "@monti-cms/core/testing";
+import { docOfMdx, documentText, SEARCH_TEXT } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import { directiveSyntax } from "..";
 
@@ -64,8 +64,8 @@ const bodies = (): { directive: string; standard: string } => {
 describe("directive syntax: plain text from the parsed body", () => {
 	it("gives the same summary text as the body in standard MDX, with no directive syntax left in it", () => {
 		const { directive, standard } = bodies();
-		const text = toPlainText(directive, syntax);
-		expect(text).toBe(toPlainText(standard));
+		const text = toPlainText(docOfMdx(directive, syntax));
+		expect(text).toBe(toPlainText(docOfMdx(standard)));
 		expect(text).not.toMatch(/:{1,3}[a-z]|[{}[\]]/);
 		expect(text).toContain("개요 굵은 문장과 링크, 밑줄 표현");
 		expect(text).toContain("할 일");
@@ -75,14 +75,14 @@ describe("directive syntax: plain text from the parsed body", () => {
 
 	it("gives the same search text, with code and the alt text kept", () => {
 		const { directive, standard } = bodies();
-		const text = bodyText(directive, SEARCH_TEXT, syntax);
-		expect(text).toBe(bodyText(standard, SEARCH_TEXT));
+		const text = documentText(docOfMdx(directive, syntax), SEARCH_TEXT);
+		expect(text).toBe(documentText(docOfMdx(standard), SEARCH_TEXT));
 		expect(text).toContain("const hidden = 1;");
 		expect(text).toContain("설명");
 		expect(text).not.toContain("mediaId");
 	});
 
 	it("does not read a directive-looking text as markup when the extension is off", () => {
-		expect(toPlainText(":u[밑줄]")).toBe(":u[밑줄]");
+		expect(toPlainText(docOfMdx(":u[밑줄]"))).toBe(":u[밑줄]");
 	});
 });

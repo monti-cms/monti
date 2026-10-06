@@ -868,7 +868,7 @@ describe("translation source flow", () => {
 		working: {
 			metadata: { title: "Hello" },
 			mdx: "Body",
-			translation: { version: 3, baseSource: "Old source", baseDoc: null },
+			translation: { version: 3, baseSource: "Old source", baseDoc: null } as never,
 		},
 		source: {
 			id: "entry-1",
@@ -889,15 +889,19 @@ describe("translation source flow", () => {
 		const { editor, client } = await opened({ server: translation });
 		expect(editor().translation).toMatchObject({
 			source: { mdx: "New source", locale: "ko", title: "테스트" },
-			confirmed: { baseSource: "Old source" },
+			confirmed: { version: 4 },
 			sourceChanged: true,
 		});
 		editor().confirmTranslationSource();
 		expect(editor().translation?.sourceChanged).toBe(false);
 		expect(editor().hasUnsavedChanges).toBe(true);
 		await editor().save();
-		const sent = client.update.mock.calls[0]?.[1] as { translation?: { baseSource: string } };
-		expect(sent.translation?.baseSource).toBe("New source");
+		const sent = client.update.mock.calls[0]?.[1] as {
+			translation?: { version: number; baseDoc: { content: { content?: { text?: string }[] }[] } };
+		};
+		// The confirmed source is the document of the source.
+		expect(sent.translation?.version).toBe(4);
+		expect(sent.translation?.baseDoc.content[0]?.content?.[0]?.text).toBe("New source");
 	});
 });
 

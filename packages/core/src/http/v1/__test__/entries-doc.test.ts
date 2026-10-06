@@ -299,11 +299,7 @@ describe("entry API with a stored document", () => {
 			const loaded = (await read(created_.id)) as Entry & { source?: { mdx: string; doc: unknown } };
 			expect(loaded.source?.mdx).toBe(source.working.mdx);
 			expect(loaded.source?.doc).toEqual(source.working.doc);
-			expect(loaded.working.translation).toEqual({
-				version: 3,
-				baseSource: source.working.mdx,
-				baseDoc: source.working.doc,
-			});
+			expect(loaded.working.translation).toEqual({ version: 4, baseDoc: source.working.doc });
 
 			// The source changes; the next read carries its new document, and its blocks keep their ids.
 			const changed = await patch(source.id, { expectedVersion: source.version, mdx: "Second\n\nFirst\n" });
@@ -315,18 +311,17 @@ describe("entry API with a stored document", () => {
 			// Confirming sends the new source and its document back.
 			const confirmed = await patch(created_.id, {
 				expectedVersion: loaded.version,
-				translation: { version: 3, baseSource: "Second\n\nFirst\n", baseDoc: reloaded.source?.doc },
+				translation: { version: 4, baseDoc: reloaded.source?.doc },
 			});
 			expect(confirmed.status).toBe(200);
 			expect(((await confirmed.json()) as Entry).working.translation).toEqual({
-				version: 3,
-				baseSource: "Second\n\nFirst\n",
+				version: 4,
 				baseDoc: reloaded.source?.doc,
 			});
 
 			const invalid = await patch(created_.id, {
 				expectedVersion: loaded.version + 1,
-				translation: { version: 3, baseSource: "", baseDoc: { type: "doc" } },
+				translation: { version: 4, baseDoc: { type: "doc" } },
 			});
 			expect(invalid.status).toBe(400);
 		},

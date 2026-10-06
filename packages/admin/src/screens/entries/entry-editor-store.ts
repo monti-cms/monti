@@ -8,7 +8,7 @@ import {
 	slugFieldOf,
 	slugFromValues,
 } from "@monti-cms/core/client";
-import type { StoredDocument } from "@monti-cms/core/mdx";
+import { bodyDocument, bodyFromMdx, type StoredDocument, withoutBlockIds } from "@monti-cms/core/mdx";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore, type StateStore } from "../../hooks/store";
 import { CmsApiError, errorText } from "../admin-api";
@@ -160,7 +160,7 @@ export interface StatusOutcome {
 export interface TranslationView {
 	/** The original's body, language and title. */
 	readonly source: TranslationSource;
-	/** The source the translator last confirmed (empty `baseSource` when none). */
+	/** The source the translator last confirmed (an empty document when none). */
 	readonly confirmed: ReturnType<typeof translationStateFromForm>;
 	/** The source is not the one the translator confirmed. */
 	readonly sourceChanged: boolean;
@@ -318,6 +318,9 @@ function failureOf(error: unknown, fallback: string): EditorError {
 const failed = (error: EditorError): Failure => ({ ok: false, error });
 
 /** The body of a save request: the editor's document when it made this MDX, otherwise the MDX. */
+/** What a document says, without its block ids: two documents with the same key read the same. */
+const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
+
 const bodyPayload = (mdx: string, doc: StoredDocument | null | undefined): EntryBodyPayload =>
 	doc ? { doc } : { mdx };
 
@@ -706,7 +709,10 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		// A field filled from the body (`fillFromBody`) that is empty is generated from the body. If there is no body to generate from, it must be entered by hand.
 		for (const { name, field } of isCollection(collection) ? fillFromBodyFields(collection) : []) {
 			if (formText(state().form, name).trim()) continue;
-			const generated = bodyExcerpt(form.mdx, fillFromBodyLength(field));
+			const generated = bodyExcerpt(
+				documentFor(form.mdx) ?? bodyDocument(bodyFromMdx(form.mdx)),
+				fillFromBodyLength(field),
+			);
 			if (!generated) {
 				const issue: CmsIssue = { code: "missing_field", message: field.label, path: name };
 				const error: EditorError = {
@@ -861,7 +867,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		const { entry, readOnly } = state();
 		const source = translationSourceOf(entry);
 		if (!source || readOnly) return;
-		applyForm({ [TRANSLATION_FORM_KEY]: stringifyTranslation(confirmedSourceState(source.mdx, source.doc)) });
+		applyForm({ [TRANSLATION_FORM_KEY]: stringifyTranslation(confirmedSourceState(source.doc)) });
 	};
 
 	// ---- open
@@ -959,7 +965,11 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		let value: TranslationView | null = null;
 		if (source) {
 			const confirmed = translationStateFromForm(raw);
-			value = { source, confirmed, sourceChanged: typeof raw === "string" && source.mdx !== confirmed.baseSource };
+			value = {
+				source,
+				confirmed,
+				sourceChanged: typeof raw === "string" && contentKey(source.doc) !== contentKey(confirmed.baseDoc),
+			};
 		}
 		translationCache = { entry, raw, value };
 		return value;

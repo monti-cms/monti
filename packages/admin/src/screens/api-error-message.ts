@@ -9,8 +9,11 @@ export type CmsIssue = {
 	code?: string;
 	message?: string;
 	path?: string;
-	/** `blockId` names the block of the stored body the position is in, so the visual editor can go to it. */
-	position?: { line: number; column: number; blockId?: string };
+	/**
+	 * `blockId` names the block of the stored body the issue is in, so the visual editor can go to it. A text that could not be read
+	 * (`mdx_error`) has a `line` and `column` in that text instead.
+	 */
+	position?: { line?: number; column?: number; blockId?: string };
 };
 
 /** Whether the code is in the dictionary (unknown codes show the server `message` as is). */
@@ -55,7 +58,8 @@ export function cmsIssueMessage(issue: CmsIssue): string {
 		field ?? (issue.code && hasMessage(`issue.${issue.code}`) ? t(`issue.${issue.code}` as never) : undefined);
 	const detail = known && issue.code && DETAILED_CODES.has(issue.code) && issue.message ? ` — ${issue.message}` : "";
 	const label = known ? `${known}${detail}` : issue.message || issue.code || t("validationFailed");
-	const location = issue.position ? t("position", issue.position) : issue.path;
+	const { line, column } = issue.position ?? {};
+	const location = line !== undefined && column !== undefined ? t("position", { line, column }) : issue.path;
 	return location ? `${label} (${location})` : label;
 }
 

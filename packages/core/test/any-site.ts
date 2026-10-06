@@ -5,6 +5,7 @@ import { publishDraft } from "../src/core/store/__test__/seed";
 import type { PreparedSnapshot } from "../src/core/types";
 import { type StoredField, schemaOf, storedField, storedFields } from "../src/schema/derive";
 import { isRequiredField } from "../src/schema/fields";
+import { docOf } from "./stored-content";
 
 /**
  * Helpers for config-agnostic tests (regression guard). Instead of writing collection and field names in tests, they are looked up from the current config
@@ -129,7 +130,7 @@ export function fillRequiredMetadata(store: ContentStore) {
 				collection: to,
 				slug: `fixture-${to}-${sequence}`,
 				metadata,
-				mdx: "",
+				doc: docOf(""),
 				schemaVersion: 1,
 				contentHash: `fixture-${to}-${sequence}`,
 				references: [],

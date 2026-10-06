@@ -153,7 +153,7 @@ pnpm exec monti content:rewrite --apply   # 바뀐 내용을 쓴다
 - 본문마다 한 줄씩 `collection/slug (locale) state: changed|unchanged`를 찍고 요약을 보인다.
 - 글자(문서가 없던 본문은 문서도)만 바뀐다. 내용 해시는 해석한 본문을 덮으므로 표기가 달라져도 같다. `version`·`updated_at`·`content_hash`는 건드리지 않고 "발행하지 않은 변경"도 그대로다.
   명령이 본문마다 이를 확인해서, 해시가 바뀔 본문은 쓰지 않고 건너뛴 채 알린다.
-- 문서가 없고 깨끗하게 해석되지 않는(또는 머리말이 있는) 본문은 건너뛰고 알린다. 다시 쓴 본문의 검색용 글자는 새로 만들고, 참조 색인이 가진 위치(링크·이미지의 줄·칸)는 그 항목을 다음에 저장할 때 새로 잡힌다.
+- `unparsed` 본문("저장된 본문" 절)은 건너뛰고 알린다. 그 글이 이제 문서로 읽히면 예외다. 다시 쓴 본문의 검색용 글자는 새로 만든다.
 - 쓰기는 한 트랜잭션이고, 두 번째로 돌리면 바뀌는 것이 없다.
 
 ### 5. 실행
@@ -405,7 +405,10 @@ export default defineConfig({
 모든 본문(항목의 작업본·발행본, 번역이 확인한 기준 원문, 본문 템플릿)은 버전이 있는 **문서**(`entry_bodies.doc`·`body_templates.doc`, 해석한 본문을 JSON으로 담은 것)와 **그 문서에서 써 낸 MDX**를 함께 저장한다.
 문서가 원본이고 MDX는 그 글이므로, 저장하면 표기가 정규화된다. 같은 내용은 어떤 표기로 입력했든 늘 같은 글이 된다(`제목` + `=====`와 `# 제목`은 둘 다 `# 제목`으로 저장). 이미 가진 내용을 다른 표기로 저장하면 아무것도 바뀌지 않는다(새 버전도 생기지 않는다).
 편집기의 소스 모드는 보조 수단이다. 입력한 글은 저장할 때 해석되어 사이트의 표기로 다시 쓰인다.
-해석되지 않거나 머리말이 있는 본문은 문서가 없고 받은 그대로 저장된다(초안만 그럴 수 있다).
+문서가 될 수 없는 본문(글이 해석되지 않거나, 머리말이 있거나, 다시 읽었을 때 같지 않은 본문)은 **`unparsed`** 문서로 저장된다. 노드 하나 `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<받은 글 그대로>" } }`이고, MDX는 그 글 그대로다. 초안은 이 상태로 둘 수 있고 편집기는 소스로 보여 주며, 발행은 `unparsed_body` 문제로 막힌다. 거절된 이유(글의 줄·칸을 담은 `mdx_error`, `frontmatter_present`)는 함께 알려 준다.
+
+**무엇을 검사하나.** 코어는 MDX 글이 아니라 저장된 문서를 검사하고, 해시를 만들고, 검색한다. 그래서 본문은 어떻게 쓰였든 어떤 경로로 왔든 똑같이 다뤄진다. 대상은 `prepareSnapshot`과 `validateForPublish`(블록 속성의 필수·모르는·잘못된 값, 참조, 내부 링크, 이미지 출처, 각주, 코드 줄 링크, 표 병합, 글에 남은 번역 안내), 내용 해시(`computeContentHash(metadata, doc, schemaVersion)`. 값은 전과 같다. 블록 ID를 뺀 문서를 키 순서대로 정렬해 해시한다), 검색용 글자와 발췌(`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`), 번역 도구(`withTranslationHints`, `compareStructure`, `diffSources`는 문서를 받는다)다. MDX 글로 받은 본문은 먼저 문서로 읽고, 문서로 받은 본문은 그대로 쓴다(글 조각과 끝의 빈 문단만 정해진 모양으로 맞춘다).
+발견한 것의 위치는 그것이 든 블록이다. 문제의 `position`은 `{ blockId }`이고(읽히지 않은 글은 그 글의 `{ line, column }`을 대신 가진다), 본문 참조 위치는 `{ "type": "body", "blockId" }`다. `mdx` 열은 저장할 때 여전히 문서에서 써 낸다.
 
 **코드 블록.** 코드 블록은 주석을 뺀 코드와 데이터로 둔 주석(줄 효과, 글자 효과, 정규식 규칙)으로 저장하고, MDX로 쓸 때는 Monti 주석으로 되돌려 쓴다. MDX를 읽는 다른 도구에서도 주석이 그대로 보인다.
 `monti migrate`는 `0015_code_annotations` 단계를 실행해 기존 문서(번역이 확인한 기준 문서 포함)를 바꾸고, 코드 펜스의 주석을 정해진 한 모양으로 다시 쓴다(`// @line plus`는 `// @line plus {0-0}`이 되고, 코드 전체에 걸리는 규칙은 맨 위로 간다). 내용 해시와 검색용 글자(이제 주석을 담지 않는다)는 새로 만들며, `version`과 `updated_at`은 그대로다.
@@ -414,19 +417,23 @@ export default defineConfig({
 MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑같이 읽히는 블록은 ID를 그대로 가지고, 수정한 블록, 둘로 나눈 블록, 옮긴 블록도 마찬가지다(나눈 문단은 앞부분이 ID를 가진다). 짝이 없는 블록은 새 ID를 받고, API로 보낸 문서는 담고 있는 ID를 그대로 유지한다.
 `monti migrate`는 `0014_block_ids` 단계를 실행해 기존 문서에 ID를 달아 준다(발행본은 작업본과 공통인 블록의 ID를 함께 쓴다). 바뀌는 것은 `doc`뿐이며 MDX, 해시, `version`, `updated_at`은 그대로다.
 관리자 편집기는 편집하는 동안 블록마다 ID를 유지하고, 저장할 때 MDX 대신 문서를 보내므로 블록 ID가 정확히 유지된다. 편집기가 쓰지 않은 글(소스 모드, 템플릿)은 MDX로 저장되고 위와 같이 짝지어진다.
-관리자는 이 ID로 블록을 가리킨다. 발행 검증 문제와 참조 위치는 해당 블록을 알려 주고(`line`, `column` 옆의 `position.blockId`) 시각 편집기에서 그 블록으로 이동한다. 번역 화면은 번역할 때 확인한 원문과 지금 원문을 블록 단위로 비교하며, 자리만 옮긴 블록은 이동으로 보여 준다. AI 번역은 번역할 블록을 ID로 찾는다.
+관리자는 이 ID로 블록을 가리킨다. 발행 검증 문제와 참조 위치는 해당 블록을 알려 주고(`position.blockId`) 시각 편집기에서 그 블록으로 이동한다. 번역 화면은 번역할 때 확인한 원문과 지금 원문을 블록 단위로 비교하며, 자리만 옮긴 블록은 이동으로 보여 준다. AI 번역은 번역할 블록을 ID로 찾는다.
 
 **업그레이드.** `monti migrate`를 돌리기 전에 `mdx.syntax`를 사이트가 쓰려는 대로 맞춰 둔다. `monti migrate`는 `0013_stored_documents` 단계를 실행한다. `doc` 열을 더하고, 기존 본문마다 문서를 만들어 주고, **MDX를 사이트의 표기로 다시 쓴다**(많은 본문의 저장 글이 한꺼번에 바뀐다. `version`과 `updated_at`은 그대로다).
-해석되지 않거나, 머리말이 있거나, 다시 읽었을 때 같지 않은 본문은 문서 없이 그대로 두고 하나씩 로그에 남긴다(`[monti] no stored document for …`). 먼저 데이터베이스를 백업하고, 실행한 뒤 로그를 확인한다.
-`monti content:rewrite`는 이제 문서에서 다시 쓰고, 문서가 없던 본문은 해석되면 문서를 만들어 준다.
+해석되지 않거나, 머리말이 있거나, 다시 읽었을 때 같지 않은 본문은 문서 없이 그대로 두고 하나씩 로그에 남긴다(`[monti] no stored document for …`). 이어서 `0017_unparsed_bodies` 단계가 이런 본문에 `unparsed` 문서를 만들어 준다(아래). 먼저 데이터베이스를 백업하고, 실행한 뒤 로그를 확인한다.
+`monti content:rewrite`는 이제 문서에서 다시 쓰고, `unparsed` 본문은 그 글이 문서로 읽히면 문서를 만들어 준다.
+
+`monti migrate`는 `0017_unparsed_bodies`도 실행한다. 문서가 없는 본문과 템플릿마다 그 글의 `unparsed` 문서를 만들고, 내용 해시를 새로 계산하며(문서가 아닌 글은 늘 그랬듯 따로 붙인 태그로 해시한다), 모든 번역의 번역 상태를 버전 4(`{ version: 4, baseDoc }`, 번역이 확인한 원문의 문서)로 올린다. 원문 MDX를 담던 버전 2·3도 계속 읽힌다. `mdx`, `search_text`, `version`, `updated_at`은 그대로다.
+이런 본문 때문에 실패하는 일은 없다. 발행본과 템플릿도 마찬가지인데, 기존 저장소의 데이터는 언제나 옮겨져야 하기 때문이다. 그중 발행본과 템플릿은 id로 로그에 남는다(`[monti] N published bodies have no document …`). 편집기에서 고치기 전까지는 `unparsed`로 읽힌다(페이지는 아무것도 그리지 않는다).
+**참조 위치.** 저장된 참조의 본문 위치는 전에 `{ "type": "mdx", "line", "column", "blockId"? }`였다. 읽을 때는 두 모양을 모두 받고, 그 항목을 다음에 저장하면 새 모양(`{ "type": "body", "blockId" }`)으로 쓴다. SQL 마이그레이션은 없다.
 
 - **관리자 항목 API.** `POST /api/cms/v1/entries`와 `PATCH /api/cms/v1/entries/:id`는 `mdx` 대신 `doc`(항목의 `working.doc`·`published.doc`로 읽은 문서 JSON)을 받는다. 둘을 함께 보내거나 올바른 저장 문서가 아닌 값을 보내면 `400 invalid_input`이다. 둘 다 없으면 새 항목은 빈 본문이고, 패치는 지금 본문을 그대로 둔다.
   읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.mdxBytes` 옆에 `limits.docBytes`로 알려 준다. 템플릿 API는 계속 `mdx`만 받고, 템플릿마다 `doc`을 돌려준다.
-- **관리자 내보내기**(`GET /api/cms/v1/export`)는 형식 버전 3이다(공개 내보내기의 `published.json`도 `doc`을 담는다). 문서가 있는 본문에는 `working.mdx`·`published.mdx` 옆에 `working.doc.json`·`published.doc.json`이 있고, `templates.json` 항목에 `doc`이 있으며, 다이제스트가 문서를 포함한다.
+- **관리자 내보내기**(`GET /api/cms/v1/export`)는 형식 버전 3이다(공개 내보내기의 `published.json`도 `doc`을 담는다). 모든 본문에 `working.mdx`·`published.mdx` 옆으로 `working.doc.json`·`published.doc.json`이 있고, `templates.json` 항목에 `doc`이 있으며, 다이제스트가 문서를 포함한다.
 - **공개 읽기 API와 공개 내보내기**도 문서를 돌려준다. `cms.read.getEntry` / `listEntries` / `getPreview`는 `entry.doc`(저장된 문서. 목록에서는 `body: true`일 때만, 아니면 `null`)과 `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } } }`: 그 문서의 이미지와 파일을 그리는 데 필요한 값. 문서가 쓰는 미디어만 들어 있고, `collectRefs(doc)`가 id 목록을 준다)를 담는다.
   `entry.mdx`는 당분간 남아 있다. `GET /api/cms/v1/public/entries/:collection/:slug`는 `doc`과 `refs`를 돌려주고 MDX 텍스트는 주지 않는다(나중에 선택 형식으로 돌아온다). 목록에는 없다.
-  공개 내보내기는 각 `published.json`에 `mdx` 옆으로 `doc`을 담고(문서가 없는 본문은 `null`), 다이제스트도 이를 포함한다. 파싱되지 않는 초안의 미리보기는 `doc: null`이다.
+  공개 내보내기는 각 `published.json`에 `mdx` 옆으로 `doc`을 담고, 다이제스트도 이를 포함한다. 문서가 될 수 없는 초안은 `unparsed` 문서로 미리보기가 된다.
 
 ### 문법 확장 만들기(실험적)
 
@@ -739,7 +746,7 @@ export const cms = createCms({ server });
 | 7 | `afterCommit` 훅 |
 
 - `operation`은 `create`·`save`·`publish`·`duplicate`·`translate`·`restore`다. 메타데이터·폴더 일괄 변경은 항목마다 `save`, 일괄 발행은 항목마다 `publish`다.
-  글을 만드는 중에는 `entryId`가 없다. `metadata`와 `doc`(저장 문서 형태의 본문, 해석되지 않는 초안은 `null`)은 복사본이라, `transform`이 돌려주지 않으면 바꿔도 아무 일도 없다.
+  글을 만드는 중에는 `entryId`가 없다. `metadata`와 `doc`(저장 문서 형태의 본문, 문서가 될 수 없는 초안은 `unparsed` 노드 하나)은 복사본이라, `transform`이 돌려주지 않으면 바꿔도 아무 일도 없다.
   `validate`와 `validatePublish`는 준비된 `snapshot`(복사본)도 받는다.
 - 보관·보관 해제·휴지통·삭제는 내용을 바꾸지 않으므로 2~5단계를 건너뛰고 `afterCommit`만 부른다. 항목(record)을 복원하면 다시 발행되므로 `restore`로 3~5단계를 거친다(`validate`와 `validatePublish`가 돌아서 휴지통에 넣었다 복원하는 식으로 발행 제한을 피할 수 없다. 내용이 그대로이므로 `transform`은 돌지 않는다). 다른 글의 복원은 초안으로 돌려놓을 뿐이라 아무 훅도 돌지 않는다.
 - 훅은 DB 트랜잭션 밖에서 돌고 DB 클라이언트를 받지 않는다. 비동기여도 된다. 저장소 내부 옵션 `beforePublishCommit`(트랜잭션 클라이언트를 받는다)은 이 계약에 들지 않고 그대로다.
@@ -812,7 +819,7 @@ export const cms = createCms({ server });
   넘으면 `field_too_long`이다. 문제(`issues`)의 `path`에 필드 이름, `message`에 필드 이름표가 담긴다(제목도 같다). 관계 대상
   컬렉션이 다르면 `invalid_reference_collection`이다. 빈 본문(`empty_body`)은 본문을 쓰는 컬렉션(`body`)만 막는다.
 - **본문에서 채우기.** 텍스트 필드에 `fillFromBody: true`(160자) 또는 `fillFromBody: { maxLength }`를 두면 발행할 때 비어 있으면
-  본문 앞부분의 일반 글자로 채운다(본문이 있는 컬렉션만, 필드 `max`를 넘지 않는다). 본체 함수는 `bodyExcerpt(mdx, maxLength)`다. 글자는 해석한 본문에서 뽑으므로 사이트가 읽는 문법이 무엇이든 따라간다. 문단·제목·목록 항목·표 칸·블록 본문과 블록의 글자 속성(콜아웃 제목)이 대상이고, 코드·수식·이미지는 뺀다. 본문 검색용 글자도 같은 방식으로 만들며, 코드와 이미지 대체글·캡션은 남긴다.
+  본문 앞부분의 일반 글자로 채운다(본문이 있는 컬렉션만, 필드 `max`를 넘지 않는다). 본체 함수는 `bodyExcerpt(doc, maxLength)`다. 글자는 저장된 문서에서 뽑으므로 본문이 어떤 표기로 쓰였든 상관없다. 문단·제목·목록 항목·표 칸·블록 본문과 블록의 글자 속성(콜아웃 제목)이 대상이고, 코드·수식·이미지는 뺀다. 본문 검색용 글자도 같은 방식으로 만들며, 코드와 이미지 대체글·캡션은 남긴다.
 - **여러 줄 입력.** `multiline: true`인 텍스트 필드는 여러 줄 입력이고 `rows`(기본 2)로 처음 줄 수를 정한다.
 - **쓸 수 없는 필드 이름.** 메타데이터에서 본체가 따로 쓰는 키(`translations`)는 필드 이름으로 쓸 수 없다.
 - **탭.** 필드에 `tab: "이름"`을 두거나 `layout` 묶음에 `tab`을 두면 편집 화면 속성 칸에 그 이름의 탭이 생긴다(1~20자).
