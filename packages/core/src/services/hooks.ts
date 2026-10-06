@@ -10,7 +10,7 @@ import type { Collection, Issue, PreparedSnapshot } from "./types";
  * 2. `transform`: may change the data
  * 3. core preparation: normalization, reference collection, core validation. Always runs, on the transformed data.
  * 4. `validate`: may add failures and warnings
- * 5. publish only, `validatePublish`: may add failures and warnings
+ * 5. publish (and restoring a record), `validatePublish`: may add failures and warnings
  * 6. store commit, one transaction per entry
  * 7. `afterCommit`: a failure is logged and never undoes the committed write
  *
@@ -18,8 +18,11 @@ import type { Collection, Issue, PreparedSnapshot } from "./types";
  * A hook that throws fails the write with `hook_failed` (naming its owner) and nothing is stored.
  */
 
-/** What a write does. A bulk change to metadata or folder is a `save`, a bulk publish is a `publish`. */
-export type WriteOperation = "create" | "save" | "publish" | "duplicate" | "translate";
+/**
+ * What a write does. A bulk change to metadata or folder is a `save`, a bulk publish is a `publish`. `restore` is a trashed record coming back
+ * (it is published again, with its content unchanged): `validate` and `validatePublish` run for it, `transform` does not.
+ */
+export type WriteOperation = "create" | "save" | "publish" | "duplicate" | "translate" | "restore";
 
 /** Read-only context every hook gets. The data is a copy: changing it does not change the write unless a `transform` returns it. */
 export interface WriteHookContext {
@@ -64,7 +67,7 @@ export type ValidateHook = (
 	context: ValidationHookContext,
 ) => ValidationResult | undefined | Promise<ValidationResult | undefined>;
 
-/** Runs after core preparation, for a publish only (single and bulk). */
+/** Runs after core preparation, for a publish (single and bulk) and for restoring a record, which publishes it again. */
 export type ValidatePublishHook = ValidateHook;
 
 export interface WriteHooks {

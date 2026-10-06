@@ -586,16 +586,16 @@ export default defineServerConfig({
 | 2 | `transform` 훅. 등록 순서대로(서버 설정이 먼저, 그다음 플러그인을 설정 순서대로). 각 훅은 앞 훅의 결과를 받는다 |
 | 3 | 본체 준비: 정규화·참조 수집·본체 검증. **항상, 변환된 데이터에 대해 돈다** |
 | 4 | `validate` 훅: 실패와 경고를 더한다 |
-| 5 | 발행에서만 `validatePublish` 훅: 실패와 경고를 더한다 |
+| 5 | 발행(그리고 다시 발행되는 항목 복원)에서 `validatePublish` 훅: 실패와 경고를 더한다 |
 | 6 | 저장소 커밋. 글 하나에 트랜잭션 하나(일괄은 항목마다 커밋) |
 | 7 | `afterCommit` 훅 |
 
-- `operation`은 `create`·`save`·`publish`·`duplicate`·`translate`다. 메타데이터·폴더 일괄 변경은 항목마다 `save`, 일괄 발행은 항목마다 `publish`다.
+- `operation`은 `create`·`save`·`publish`·`duplicate`·`translate`·`restore`다. 메타데이터·폴더 일괄 변경은 항목마다 `save`, 일괄 발행은 항목마다 `publish`다.
   글을 만드는 중에는 `entryId`가 없다. `metadata`와 `doc`(저장 문서 형태의 본문, 해석되지 않는 초안은 `null`)은 복사본이라, `transform`이 돌려주지 않으면 바꿔도 아무 일도 없다.
   `validate`와 `validatePublish`는 준비된 `snapshot`(복사본)도 받는다.
-- 보관·휴지통·복원·삭제는 내용을 바꾸지 않으므로 2~5단계를 건너뛰고 `afterCommit`만 부른다. 항목(record)을 복원하면 다시 발행되므로 초안에 본체 준비는 거치지만 훅은 돌지 않는다.
+- 보관·보관 해제·휴지통·삭제는 내용을 바꾸지 않으므로 2~5단계를 건너뛰고 `afterCommit`만 부른다. 항목(record)을 복원하면 다시 발행되므로 `restore`로 3~5단계를 거친다(`validate`와 `validatePublish`가 돌아서 휴지통에 넣었다 복원하는 식으로 발행 제한을 피할 수 없다. 내용이 그대로이므로 `transform`은 돌지 않는다). 다른 글의 복원은 초안으로 돌려놓을 뿐이라 아무 훅도 돌지 않는다.
 - 훅은 DB 트랜잭션 밖에서 돌고 DB 클라이언트를 받지 않는다. 비동기여도 된다. 저장소 내부 옵션 `beforePublishCommit`(트랜잭션 클라이언트를 받는다)은 이 계약에 들지 않고 그대로다.
-- 발행하는 중에 `transform`이 초안을 바꾸면 그 변경은 발행과 함께 한 트랜잭션으로 저장된다(`afterCommit`에는 상태가 `published`인 `saved` 변경으로 온다).
+- 발행하는 중에 `transform`이 초안을 바꾸면 그 변경은 발행과 함께 한 트랜잭션으로 저장된다(`afterCommit`에는 그 글의 `saved` 변경 다음에 `published` 변경이 온다. 바뀐 것이 없는 발행은 `published`만 온다). 만들거나 저장하면서 바로 발행하는 경우(항목)도 같게 `created` 또는 `saved`, 그다음 `published`로 알린다.
 - 훅이 예외를 던지거나 계약에 맞지 않는 값을 돌려주면 쓰기는 `hook_failed`(HTTP 500)로 실패한다. 오류의 `issues[].params`에 훅 이름과 소유자(`server` 또는 `plugin:<이름>`)가 들어가고, 아무것도 저장되지 않는다. `validate` 실패는 `validation_failed`, `validatePublish` 실패는 `publish_validation_failed`(HTTP 422)이며, 더한 이슈가 초안 자체의 이슈 옆에 붙는다.
 - `afterCommit`은 id·상태·주소만 받고 본문은 받지 않는다. 커밋된 글은 `getCmsContentStore().getEntry(change.entryId)`로 읽는다. 전달은 프로세스 안에서 최대 한 번이며, 다시 시도하지 않고 아직 아웃박스도 없다.
 

@@ -180,6 +180,27 @@ describe("write hook contract", () => {
 			expect(entry.working.metadata.title).toBe("QUIET");
 		});
 
+		it("reports what happened to afterCommit: a saved change then a published one, and only a published one for a plain publish", async () => {
+			const changed = await newPost("quiet");
+			sources = server({
+				transform: ({ metadata, doc }) => ({
+					metadata: { ...metadata, title: String(metadata.title).toUpperCase() },
+					doc,
+				}),
+			});
+			await service.publish({ id: changed.id, expectedVersion: changed.version });
+			expect(changes.map((change) => [change.kind, change.entryId, change.status])).toEqual([
+				["saved", changed.id, "published"],
+				["published", changed.id, "published"],
+			]);
+
+			// The draft is already what the transform returns, so this publish changes nothing and is reported as a plain publish.
+			const plain = await newPost("LOUD");
+			changes = [];
+			await service.publish({ id: plain.id, expectedVersion: plain.version });
+			expect(changes.map((change) => [change.kind, change.entryId])).toEqual([["published", plain.id]]);
+		});
+
 		it("leaves the draft and the publish as they were when it fails at publish", async () => {
 			const draft = await newPost("quiet");
 			sources = server({
@@ -569,20 +590,72 @@ describe("write hook contract", () => {
 		});
 	});
 
-	describe("a restored record is not a write that hooks see", () => {
-		it("publishes a restored record after core preparation only", async () => {
-			const record = await service.createDraft({
-				collection: recordCollection,
-				slug: unique("record"),
-				metadata: await requiredMetadata(recordCollection, unique("record title"), relationTarget),
-				mdx: "",
+	describe("restoring a record publishes it again, so publish restrictions apply", () => {
+		const trashedRecord = async () => {
+			const registered = sources;
+			sources = [];
+			try {
+				const record = await service.createDraft({
+					collection: recordCollection,
+					slug: unique("record"),
+					metadata: await requiredMetadata(recordCollection, unique("record title"), relationTarget),
+					mdx: "",
+				});
+				const trashed = await store.trashEntry({ id: record.id, expectedVersion: record.version });
+				changes = [];
+				return { id: record.id, version: trashed.version };
+			} finally {
+				sources = registered;
+			}
+		};
+
+		it("runs validate and validatePublish with operation restore, and not transform", async () => {
+			const record = await trashedRecord();
+			const seen: string[] = [];
+			const transform = vi.fn();
+			sources = server({
+				transform,
+				validate: ({ operation }) => {
+					seen.push(`validate:${operation}`);
+				},
+				validatePublish: ({ operation }) => {
+					seen.push(`validatePublish:${operation}`);
+				},
 			});
-			const trashed = await store.trashEntry({ id: record.id, expectedVersion: record.version });
-			const hook = vi.fn();
-			sources = server({ transform: hook, validate: hook, validatePublish: hook });
-			const restored = await service.restore({ id: record.id, expectedVersion: trashed.version });
+			const restored = await service.restore({ id: record.id, expectedVersion: record.version });
 			expect(restored.status).toBe("published");
-			expect(hook).not.toHaveBeenCalled();
+			expect(seen).toEqual(["validate:restore", "validatePublish:restore"]);
+			expect(transform).not.toHaveBeenCalled();
+		});
+
+		it("is blocked by a publish restriction: the record stays in the trash and nothing is sent", async () => {
+			const record = await trashedRecord();
+			sources = server({ validatePublish: () => ({ issues: [{ code: "publishing_closed" }] }) });
+			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({
+				code: "publish_validation_failed",
+				issues: expect.arrayContaining([expect.objectContaining({ code: "publishing_closed" })]),
+			});
+			const after = await store.getEntry(record.id);
+			expect(after.status).toBe("trashed");
+			expect(after.version).toBe(record.version);
+			expect(changes).toEqual([]);
+		});
+
+		it("is blocked by a validate failure too, and by a hook that throws", async () => {
+			const record = await trashedRecord();
+			sources = server({ validate: () => ({ issues: [{ code: "no_restore" }] }) });
+			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({
+				code: "validation_failed",
+			});
+			sources = server({
+				validatePublish: () => {
+					throw new Error("down");
+				},
+			});
+			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({
+				code: "hook_failed",
+			});
+			expect((await store.getEntry(record.id)).status).toBe("trashed");
 		});
 	});
 

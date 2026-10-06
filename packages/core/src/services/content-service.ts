@@ -230,8 +230,9 @@ export const createContentService = <T = unknown>(
 		},
 
 		/**
-		 * Trash to restore. A record is published again, so its draft is prepared first (core preparation only: a restore is not a content
-		 * change, so hooks do not run). Other collections return to draft.
+		 * Trash to restore. A record is published again, so its draft goes through the write pipeline first as a `restore`: `validate` and
+		 * `validatePublish` hooks run (a restriction on publishing cannot be bypassed by trash and restore), `transform` hooks do not (the content
+		 * is unchanged). Other collections return to draft and are not published, so nothing runs for them.
 		 */
 		restore: async (params: { id: string; expectedVersion: number }): Promise<T> => {
 			if (!storePort.restoreEntry) throw new Error("content service: the store cannot restore entries");
@@ -241,7 +242,7 @@ export const createContentService = <T = unknown>(
 			}
 			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
 			const { snapshot } = await pipeline.run({
-				operation: "publish",
+				operation: "restore",
 				entryId: params.id,
 				locale: working.locale ?? DEFAULT_LOCALE,
 				input: {
@@ -251,7 +252,7 @@ export const createContentService = <T = unknown>(
 					mdx: working.mdx,
 				} as ServiceInput,
 				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
-				skipHooks: true,
+				skipTransform: true,
 			});
 			return storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion, snapshot });
 		},

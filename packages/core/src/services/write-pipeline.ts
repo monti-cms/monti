@@ -26,10 +26,10 @@ export interface WriteRequest {
 	/** What the write replaces: references, document (block ids carry over) and metadata (kept keys the schema no longer has) of the current draft. */
 	readonly prepare?: PrepareOptions;
 	/**
-	 * Run core preparation only. For a change that is not a content change but needs the draft prepared (restoring a record), so it
-	 * does not call hooks of a write that never happened.
+	 * Do not run `transform` hooks. For a change that publishes a draft without changing it (restoring a record): validation still runs,
+	 * so a restriction on publishing cannot be bypassed.
 	 */
-	readonly skipHooks?: boolean;
+	readonly skipTransform?: boolean;
 }
 
 export interface WriteResult {
@@ -198,8 +198,10 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 		 * hook's validation adds failures (`validation_failed`, `publish_validation_failed`). Nothing is stored here.
 		 */
 		run: async (request: WriteRequest): Promise<WriteResult> => {
-			const sources = request.skipHooks ? [] : await provider();
-			const { input, transformed } = await transform(sources, request);
+			const sources = await provider();
+			const { input, transformed } = request.skipTransform
+				? { input: request.input, transformed: false }
+				: await transform(sources, request);
 			const snapshot = await prepareSnapshot(input, request.prepare);
 			if (sources.length === 0) return { snapshot, warnings: [], transformed };
 
@@ -208,7 +210,7 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 			if (added.issues.length > 0) throw new ServiceError("validation_failed", added.issues);
 			warnings.push(...added.warnings);
 
-			if (request.operation === "publish") {
+			if (request.operation === "publish" || request.operation === "restore") {
 				const publish = await validate(sources, "validatePublish", request, snapshot);
 				// The issues core preparation found are blockers of a publish too, and are shown with the added ones.
 				if (publish.issues.length > 0) {

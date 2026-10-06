@@ -586,16 +586,16 @@ export default defineServerConfig({
 | 2 | `transform` hooks, in registration order (server config first, then the plugins in config order). Each gets the previous one's result |
 | 3 | Core preparation: normalization, reference collection, core validation. **Always runs, on the transformed data** |
 | 4 | `validate` hooks: extra failures and warnings |
-| 5 | Publish only: `validatePublish` hooks: extra failures and warnings |
+| 5 | Publish (and restoring a record, which publishes it again): `validatePublish` hooks: extra failures and warnings |
 | 6 | Store commit, one transaction per entry (a bulk change commits item by item) |
 | 7 | `afterCommit` hooks |
 
-- `operation` is `create`, `save`, `publish`, `duplicate` or `translate`. A bulk metadata or folder change is a `save` per item, and a bulk publish is a `publish` per item.
+- `operation` is `create`, `save`, `publish`, `duplicate`, `translate` or `restore`. A bulk metadata or folder change is a `save` per item, and a bulk publish is a `publish` per item.
   `entryId` is absent while the entry is being created. `metadata` and `doc` (the body as a stored document, `null` for a draft whose body does not parse) are copies: changing them does nothing unless a `transform` returns them.
   `validate` and `validatePublish` also get the prepared `snapshot` (a copy).
-- Archiving, trashing, restoring and deleting do not change content, so they skip stages 2 to 5 and still fire `afterCommit`. Restoring a record publishes it again, so its draft gets core preparation, but hooks do not run.
+- Archiving, trashing, unarchiving and deleting do not change content, so they skip stages 2 to 5 and still fire `afterCommit`. Restoring a record publishes it again, so it runs stages 3 to 5 as a `restore` (`validate` and `validatePublish` run, so a restriction on publishing cannot be bypassed by trash and restore; `transform` does not, the content is unchanged). Restoring any other entry returns it to draft and runs nothing.
 - Hooks run outside the database transaction and get no database client. They may be async. The internal store option `beforePublishCommit` (which does get the transaction's client) is not part of this contract and is unchanged.
-- A `transform` that changes the draft while publishing has the change saved together with the publish, in one transaction (`afterCommit` then reports a `saved` change whose status is `published`).
+- A `transform` that changes the draft while publishing has the change saved together with the publish, in one transaction (`afterCommit` then gets a `saved` change followed by a `published` one for the entry; a publish that changes nothing gets only `published`). A create or save that publishes at once (records) is reported the same way: `created` or `saved`, then `published`.
 - A hook that throws, or returns something that is not its contract, fails the write with `hook_failed` (HTTP 500). The error names the hook and its owner (`server` or `plugin:<name>`) in `issues[].params`; nothing is stored. `validate` failures give `validation_failed` and `validatePublish` failures give `publish_validation_failed` (HTTP 422), with the added issues next to the draft's own.
 - `afterCommit` gets ids, status and slugs only, never the body. Read the committed entry with `getCmsContentStore().getEntry(change.entryId)`. Delivery is in-process and at most once: it is not retried, and there is no outbox yet.
 

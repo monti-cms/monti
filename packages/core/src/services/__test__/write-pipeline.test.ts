@@ -233,14 +233,18 @@ describe("write pipeline", () => {
 		expect(error.code).toBe("hook_failed");
 	});
 
-	it("skips hooks when asked, and still prepares", async () => {
+	it("skips transform hooks when asked, still prepares, and still validates", async () => {
 		const transform = vi.fn();
-		const { snapshot, warnings } = await pipelineWith({ owner: "server", hooks: { transform } }).run(
-			request({ skipHooks: true }),
-		);
+		const validatePublish = vi.fn(() => ({ warnings: [{ code: "checked" }] }));
+		const { snapshot, warnings, transformed } = await pipelineWith({
+			owner: "server",
+			hooks: { transform, validatePublish },
+		}).run(request({ operation: "restore", skipTransform: true }));
 		expect(transform).not.toHaveBeenCalled();
+		expect(validatePublish).toHaveBeenCalledTimes(1);
 		expect(snapshot.collection).toBe(contentCollection);
-		expect(warnings).toEqual([]);
+		expect(warnings).toEqual([{ code: "checked" }]);
+		expect(transformed).toBe(false);
 	});
 
 	it("reads the hooks on every write, so a plugin that loads late is used", async () => {
