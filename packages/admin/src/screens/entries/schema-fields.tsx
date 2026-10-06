@@ -238,6 +238,10 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 			);
 		case "select": {
 			const items = Object.entries(field.options).map(([optionValue, label]) => ({ value: optionValue, label }));
+			// A value the site removed from the options is shown as the current value, marked, so it is not replaced silently.
+			if (text && !Object.hasOwn(field.options, text)) {
+				items.push({ value: text, label: t("select.removedOption", { value: text }) });
+			}
 			return (
 				<Select
 					value={text || field.defaultValue}

@@ -11,6 +11,7 @@ import type { CmsIssue } from "../api-error-message";
 import { SidePanelHeader } from "../shared/side-panel";
 import { type EntryData, type EntryForm, type EntryFormPatch, formFromSourceMetadata } from "./entry-form";
 import { DEFAULT_TAB, tabOf, tabOfGroup, tabsOf } from "./layout-groups";
+import { RemovedFieldsNotice } from "./removed-fields-notice";
 import { SchemaFields } from "./schema-fields";
 import { t } from "./translate";
 
@@ -139,6 +140,7 @@ export function InspectorPanel({
 			</SidePanelHeader>
 
 			<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
+				<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 				{tabs.map((name) => (
 					<TabsContent key={name} value={name}>
 						{fields((group) => tabOfGroup(group) === name)}

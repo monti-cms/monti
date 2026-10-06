@@ -1,5 +1,6 @@
 import {
 	isCollection,
+	isOrphanedMetadataKey,
 	localizedFieldNames,
 	PREFIXED_LOCALES,
 	parseTranslationState,
@@ -173,7 +174,8 @@ function toFormValue({ field }: StoredField, value: unknown): FormValue {
 			if (field.many) return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
 			return text(value) || null;
 		case "select":
-			return typeof value === "string" && Object.hasOwn(field.options, value) ? value : field.defaultValue;
+			// A value that is no longer an option is shown as it is stored: the input marks it, and saving keeps it.
+			return typeof value === "string" && value !== "" ? value : field.defaultValue;
 	}
 }
 
@@ -229,6 +231,7 @@ export const formFingerprint = (form: EntryForm) => JSON.stringify(form);
  * - Optional fields are not newly written when they hold the default. Already stored values are updated as is.
  * - Values attached to a conditional field are kept only when the condition holds.
  * - Fields that render no input (`hidden`) do not touch the stored value. Keys not in the definition are not added.
+ * - Values of removed fields (keys of `base` that are not in the definition) and a select value that is no longer an option stay as stored.
  */
 export function metadataFromForm(
 	form: EntryForm,
@@ -238,6 +241,12 @@ export function metadataFromForm(
 ): { metadata: Record<string, unknown> } | { error: string } {
 	const fields = fieldsOf(collection, options.translation);
 	const metadata: Record<string, unknown> = {};
+	// The form has no input for the value of a removed field, so it goes back as stored instead of being dropped.
+	if (isCollection(collection)) {
+		for (const key of Object.keys(base)) {
+			if (isOrphanedMetadataKey(collection as SchemaCollection, key)) metadata[key] = base[key];
+		}
+	}
 	for (const { name } of fields) {
 		if (Object.hasOwn(base, name)) metadata[name] = base[name];
 	}
@@ -268,7 +277,10 @@ export function metadataFromForm(
 				else delete metadata[name];
 				break;
 			case "select": {
-				const selected = typeof value === "string" && Object.hasOwn(field.options, value) ? value : field.defaultValue;
+				// An option the site removed stays while it is the stored value; it is never replaced by the default.
+				const stored = typeof value === "string" && value !== "" && Object.hasOwn(base, name) && base[name] === value;
+				const selected =
+					typeof value === "string" && (Object.hasOwn(field.options, value) || stored) ? value : field.defaultValue;
 				if (selected !== field.defaultValue || Object.hasOwn(base, name)) metadata[name] = selected;
 				else delete metadata[name];
 				break;
