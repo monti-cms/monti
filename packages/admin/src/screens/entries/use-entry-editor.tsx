@@ -1,4 +1,6 @@
-"use client";
+import { useCmsAdminComponents } from "../../admin-components";
+
+("use client");
 
 import { isCollection } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -58,6 +60,9 @@ export interface UseEntryEditorOptions {
  */
 export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 	const callbacksRef = useRef<EntryEditorCallbacks>({});
+	const { formats } = useCmsAdminComponents();
+	const formatsRef = useRef(formats);
+	formatsRef.current = formats;
 	callbacksRef.current = { onSaved: options.onSaved };
 	const [core] = useState(() =>
 		createEntryEditor({
@@ -66,6 +71,7 @@ export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 			client: options.client ?? cmsEntryClient,
 			recoveryStore: options.recoveryStore ?? localRecoveryStore,
 			callbacks: () => callbacksRef.current,
+			formats: () => formatsRef.current,
 		}),
 	);
 

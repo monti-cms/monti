@@ -1,5 +1,6 @@
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import type { BrowserFormat } from "../../../browser-format";
 import type { RecoveryRecord } from "../entry-editor-client";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { upgradeRecoveryRecord } from "../legacy-backup";
@@ -60,5 +61,38 @@ describe("upgradeRecoveryRecord", () => {
 		const upgraded = upgradeRecoveryRecord(record({ ...EMPTY_FORM, doc }));
 		expect((upgraded.snapshot as EntryForm).doc.content).toEqual(doc.content);
 		expect(upgraded.baseFingerprint).toBe("base");
+	});
+
+	describe("with a registered format of the copy's notation", () => {
+		const withId = (id: string, text: string) => ({ type: "paragraph", id, content: [{ type: "text", text }] });
+		const docWith = (...content: object[]) =>
+			({ type: "doc", version: STORED_DOCUMENT_VERSION, content }) as unknown as StoredDocument;
+		const server = docWith(withId("aaaaaaaa", "본문"));
+		const reads: BrowserFormat = {
+			name: "mdx",
+			label: "MDX",
+			export: () => "",
+			import: (text) =>
+				text.includes("<")
+					? { ok: false, issues: [{ code: "mdx_error" }] }
+					: {
+							ok: true,
+							doc: docWith({ type: "paragraph", content: [{ type: "text", text: text.trim() }] }),
+							warnings: [],
+						},
+		};
+
+		it("reads the text through it, with block ids paired with the server body, so a copy equal to the server body compares equal", () => {
+			const upgraded = upgradeRecoveryRecord(record(legacySnapshot("본문\n")), server, { mdx: reads });
+			const snapshot = upgraded.snapshot as EntryForm;
+			expect(snapshot.doc.content).toHaveLength(1);
+			expect(snapshot.doc.content[0]).toMatchObject({ type: "paragraph" });
+			expect(snapshot.doc.content[0]?.id).toBe(server.content[0]?.id);
+		});
+
+		it("keeps a text the format cannot read as an unparsed document", () => {
+			const upgraded = upgradeRecoveryRecord(record(legacySnapshot("<Broken")), server, { mdx: reads });
+			expect((upgraded.snapshot as EntryForm).doc.content[0]).toMatchObject({ type: "unparsed" });
+		});
 	});
 });

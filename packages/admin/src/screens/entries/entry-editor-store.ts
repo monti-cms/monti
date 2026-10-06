@@ -9,6 +9,7 @@ import {
 	slugFromValues,
 } from "@monti-cms/core/client";
 import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
+import type { BrowserFormat } from "../../browser-format";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore, type StateStore } from "../../hooks/store";
 import { CmsApiError, errorText } from "../admin-api";
@@ -280,6 +281,8 @@ export interface EntryEditorConfig {
 	target: EntryEditorTarget;
 	client: EntryEditorClient;
 	recoveryStore: RecoveryStore;
+	/** The formats the browser can read (`CmsAdminComponents.formats`), asked for when an old recovery copy is opened. */
+	formats?: () => Readonly<Record<string, BrowserFormat>> | undefined;
 	/** Read when a callback is needed, so the latest render's functions are used. */
 	callbacks: () => EntryEditorCallbacks;
 }
@@ -345,6 +348,7 @@ const STATUS_FAILED: Record<EntryStatusAction, string> = {
  */
 export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const { adminId, target, client, recoveryStore } = config;
+	const formats = () => config.formats?.();
 	const callbacks = () => config.callbacks();
 
 	const initialCollection = target.mode === "new" ? target.collection : "";
@@ -865,7 +869,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		if (target.mode === "new") {
 			if (isItemCollection(target.collection)) return;
 			const stored = await safely(() => recoveryStore.get(backupKey(adminId, null, target.collection)), null);
-			const backup = stored && upgradeRecoveryRecord(stored);
+			const backup = stored && upgradeRecoveryRecord(stored, undefined, formats());
 			if (alive() && backup && backup.localFingerprint !== backup.baseFingerprint) offerRecovery(backup);
 			return;
 		}
@@ -875,7 +879,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			if (!loaded || !alive()) return;
 			const key = backupKey(adminId, loaded.id, loaded.collection);
 			const stored = await safely(() => recoveryStore.get(key), null);
-			const backup = stored && upgradeRecoveryRecord(stored, loaded.working.doc);
+			const backup = stored && upgradeRecoveryRecord(stored, loaded.working.doc, formats());
 			if (backup && alive()) {
 				if (backup.localFingerprint === formFingerprint(state().form)) {
 					await discardBackup(key);
