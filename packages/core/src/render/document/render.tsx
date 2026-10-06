@@ -252,7 +252,7 @@ export const renderDocumentTree = (
 			);
 		}
 		const text = renderInline(node.content);
-		const children = lead === undefined ? text : [lead, ...(text.length > 0 ? [" "] : []), ...text];
+		const children = lead === undefined ? text : keyed([lead, ...(text.length > 0 ? [" "] : []), ...text]);
 		return createElement(components.paragraph, { ...common(node), children } as never);
 	};
 
