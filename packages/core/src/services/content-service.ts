@@ -58,8 +58,8 @@ export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
 
 		const previousReferences = await storePort.getWorkingReferences({ entryId });
 		// Blocks keep their ids across saves: a body sent as MDX carries none, so they are paired with the current draft's blocks.
-		const { doc: previousDoc } = await storePort.getWorking({ entryId });
-		const snapshot = await prepareSnapshot(rest as ServiceInput, { previousReferences, previousDoc });
+		const { doc: previousDoc, metadata: previousMetadata } = await storePort.getWorking({ entryId });
+		const snapshot = await prepareSnapshot(rest as ServiceInput, { previousReferences, previousDoc, previousMetadata });
 		return storePort.saveWorkingWithReferences({
 			entryId,
 			expectedVersion,

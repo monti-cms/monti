@@ -47,6 +47,10 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 
 		"inspector.source": "This is the source ({locale}) value.",
 		"inspector.sourceLink": "Change it in the source",
+		"inspector.removed.title": "Values of removed fields",
+		"inspector.removed.body":
+			"These fields are no longer in the site settings. Their values are kept with this entry but cannot be edited here: {keys}",
+		"select.removedOption": "{value} (no longer an option)",
 
 		"lang.saveFirst": "Save your changes before creating a translation.",
 		"lang.createFailed": "Couldn't create the translation.",
@@ -178,6 +182,10 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 
 		"inspector.source": "원문({locale}) 값입니다.",
 		"inspector.sourceLink": "원문에서 바꿉니다",
+		"inspector.removed.title": "삭제된 필드의 값",
+		"inspector.removed.body":
+			"사이트 설정에서 사라진 필드입니다. 값은 이 글에 그대로 남아 있지만 여기서는 고칠 수 없습니다: {keys}",
+		"select.removedOption": "{value} (더 이상 없는 선택지)",
 
 		"lang.saveFirst": "변경사항을 먼저 저장한 후 번역본을 만드세요.",
 		"lang.createFailed": "번역본을 만들지 못했습니다.",

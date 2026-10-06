@@ -51,7 +51,7 @@ export function createPublishing(ctx: StoreContext) {
 
 		const snapshot = await prepareSnapshot(
 			{ collection: entry.collection, slug: entry.working_slug, metadata: body.metadata as never, mdx: body.mdx },
-			{ previousReferences },
+			{ previousReferences, previousMetadata: body.metadata },
 		);
 		// Even stale leftover references are checked before publish to confirm the target still exists.
 		const merged = new Map<string, Reference>(snapshot.references.map((ref) => [`${ref.kind}:${ref.targetId}`, ref]));

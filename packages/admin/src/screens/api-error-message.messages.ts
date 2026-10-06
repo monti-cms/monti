@@ -24,6 +24,9 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		"issue.footnote_definition_missing": "A footnote reference has no definition.",
 		"issue.footnote_definition_unused": "A footnote definition is never referenced.",
 		"issue.footnote_definition_duplicate": "A footnote label is defined more than once.",
+		"issue.orphaned_metadata_key":
+			"This field is no longer in the site settings. Its value is kept but isn't shown on the site.",
+		"issue.unknown_select_value": "This choice is no longer an option. The value is kept as it is.",
 		"issue.code_ref_broken": "A code link points to a code line label that no code block has.",
 		"issue.code_anchor_duplicate": "Two code blocks use the same line label; links go to the first one.",
 		"issue.missing_image_alt": "Enter alt text for the image, or mark it as decorative.",
@@ -78,6 +81,8 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		"issue.footnote_definition_missing": "정의가 없는 각주 참조가 있습니다.",
 		"issue.footnote_definition_unused": "어디에서도 참조하지 않는 각주 정의가 있습니다.",
 		"issue.footnote_definition_duplicate": "같은 각주 레이블이 두 번 이상 정의되어 있습니다.",
+		"issue.orphaned_metadata_key": "사이트 설정에서 사라진 필드입니다. 값은 남아 있지만 사이트에는 나오지 않습니다.",
+		"issue.unknown_select_value": "더 이상 없는 선택지입니다. 값은 그대로 남아 있습니다.",
 		"issue.code_ref_broken": "코드 연결이 가리키는 코드 줄 이름이 어느 코드 블록에도 없습니다.",
 		"issue.code_anchor_duplicate": "두 코드 블록이 같은 줄 이름을 씁니다. 연결은 첫 번째 블록으로 갑니다.",
 		"issue.missing_image_alt": "이미지 대체 텍스트를 입력하거나 장식 이미지로 표시하세요.",

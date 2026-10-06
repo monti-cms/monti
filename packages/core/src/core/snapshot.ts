@@ -18,10 +18,12 @@ import {
 	metadataReferences,
 	missingRequiredIssues,
 	normalizeRecordTranslations,
+	orphanedMetadataKeys,
 	RECORD_TRANSLATIONS_KEY,
 	relationRule,
 	schemaOf,
 	storedField,
+	unknownSelectValues,
 } from "../schema/derive";
 import { CodeRefCollector } from "./code-refs";
 import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
@@ -156,7 +158,42 @@ function fieldValueServiceError(code: string, path: string, label: string | unde
 	return new ServiceError(code, [{ code, path, ...(label ? { message: label } : {}) }]);
 }
 
-function validateMetadata(collection: Collection, raw: unknown): Record<string, MetadataValue> {
+/** A metadata value in its storage shape: a string, or a plain array of strings (`type` fixes which one when the field is known). */
+function readStoredValue(v: unknown, type?: string): MetadataValue {
+	if (type === "string" || (type === undefined && typeof v === "string")) {
+		if (typeof v !== "string") throw new ServiceError("invalid_metadata_type");
+		return v;
+	}
+	if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype) {
+		throw new ServiceError("invalid_metadata_type");
+	}
+	if (Reflect.ownKeys(v).length !== v.length + 1) throw new ServiceError("invalid_metadata_type");
+	for (let i = 0; i < v.length; i++) {
+		const desc = Object.getOwnPropertyDescriptor(v, String(i));
+		if (!desc || desc.get || desc.set) throw new ServiceError("invalid_metadata_type");
+		if (typeof v[i] !== "string") throw new ServiceError("invalid_metadata_type");
+	}
+	return Object.freeze([...(v as string[])]);
+}
+
+/**
+ * Non-blocking warnings about values the schema no longer describes: the value of a removed field (`orphaned_metadata_key`) and a select value that is
+ * no longer an option (`unknown_select_value`, with the value in `message`). Both are kept in the stored metadata; the path is the field key.
+ */
+function metadataWarnings(collection: Collection, metadata: Record<string, MetadataValue>): Issue[] {
+	return [
+		...orphanedMetadataKeys(collection, metadata).map((key): Issue => ({ code: "orphaned_metadata_key", path: key })),
+		...unknownSelectValues(collection, metadata).flatMap(({ path, values }) =>
+			values.map((value): Issue => ({ code: "unknown_select_value", path, message: value, params: { value } })),
+		),
+	];
+}
+
+function validateMetadata(
+	collection: Collection,
+	raw: unknown,
+	previous: { readonly [key: string]: unknown } = {},
+): Record<string, MetadataValue> {
 	if (
 		!raw ||
 		typeof raw !== "object" ||
@@ -187,23 +224,17 @@ function validateMetadata(collection: Collection, raw: unknown): Record<string, 
 			continue;
 		}
 		const stored = storedField(collection, k);
-		if (!stored || !Object.hasOwn(rules, k)) throw new ServiceError("invalid_metadata_key");
-		if (rules[k] === "string") {
-			if (typeof v !== "string") throw new ServiceError("invalid_metadata_type");
-			metadata[k] = v;
-		} else {
-			if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype) {
-				throw new ServiceError("invalid_metadata_type");
-			}
-			if (Reflect.ownKeys(v).length !== v.length + 1) throw new ServiceError("invalid_metadata_type");
-			for (let i = 0; i < v.length; i++) {
-				const desc = Object.getOwnPropertyDescriptor(v, String(i));
-				if (!desc || desc.get || desc.set) throw new ServiceError("invalid_metadata_type");
-				if (typeof v[i] !== "string") throw new ServiceError("invalid_metadata_type");
-			}
-			metadata[k] = Object.freeze([...v]);
+		if (!stored || !Object.hasOwn(rules, k)) {
+			// The value of a field the site has removed: kept as stored, with only its storage shape checked.
+			// A key the entry does not already hold is new, so it is not a removed field but a mistake.
+			if (k === "__proto__" || !Object.hasOwn(previous, k)) throw new ServiceError("invalid_metadata_key");
+			metadata[k] = readStoredValue(v);
+			continue;
 		}
+		metadata[k] = readStoredValue(v, rules[k]);
 
+		// A select value that is no longer an option is kept too (a warning at publish, never an error).
+		if (stored.field.kind === "select") continue;
 		const value = metadata[k];
 		const error = typeof value === "string" || Array.isArray(value) ? fieldValueError(stored.field, value) : null;
 		if (error) throw fieldValueServiceError(error, k, stored.field.label);
@@ -456,6 +487,11 @@ export async function prepareSnapshot(
 		previousReferences?: readonly Reference[];
 		/** The stored document this body replaces (the current draft). Its block ids carry over to the blocks that pair with them. */
 		previousDoc?: StoredDocument | null;
+		/**
+		 * The metadata stored for this entry (the current draft). A key the schema no longer has is kept only if it is stored here
+		 * (a schema change orphaned it); a new unknown key is rejected. A new entry has none.
+		 */
+		previousMetadata?: { readonly [key: string]: unknown };
 	},
 ): Promise<PreparedSnapshot> {
 	if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -480,7 +516,7 @@ export async function prepareSnapshot(
 	if ("error" in normalizedSlug) throw new ServiceError(normalizedSlug.error);
 	const slug = normalizedSlug.slug;
 
-	const metadata = validateMetadata(rawCollection, input.metadata);
+	const metadata = validateMetadata(rawCollection, input.metadata, options?.previousMetadata);
 
 	const collector = new ReferenceCollector();
 	addMetadataReferences(collector, rawCollection, metadata);
@@ -496,7 +532,7 @@ export async function prepareSnapshot(
 	}));
 	let mdxHasError = analysis.errors.length > 0;
 	const blockIssues: Issue[] = [];
-	const warnings: Issue[] = [];
+	const warnings: Issue[] = metadataWarnings(rawCollection, metadata);
 
 	const mdxRefsToAdd: { kind: ReferenceKind; targetId: string; occ: ReferenceOccurrence }[] = [];
 	const imageSources: CmsImageSource[] = [];
@@ -778,12 +814,15 @@ export async function imageWarningsForPublish(input: {
 	headStorageKey?: (storageKey: string) => Promise<boolean>;
 }): Promise<Issue[]> {
 	try {
-		const snapshot = await prepareSnapshot({
-			collection: input.collection,
-			slug: input.slug,
-			metadata: input.metadata,
-			mdx: input.mdx,
-		} as ServiceInput);
+		const snapshot = await prepareSnapshot(
+			{
+				collection: input.collection,
+				slug: input.slug,
+				metadata: input.metadata,
+				mdx: input.mdx,
+			} as ServiceInput,
+			{ previousMetadata: input.metadata },
+		);
 		const mediaIds = [
 			...new Set(snapshot.imageSources.map((s) => s.mediaId).filter((v): v is string => typeof v === "string")),
 		];

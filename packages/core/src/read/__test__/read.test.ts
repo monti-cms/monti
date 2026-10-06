@@ -233,4 +233,26 @@ describe("public site reading @monti-cms/core/read", () => {
 		expect(await getPreview({ collection: contentCollection, slug: "read-preview" })).toBeNull();
 		state.admin = true;
 	});
+
+	it("leaves out the values of removed fields, in an entry, a list and a preview", async () => {
+		const published = await publish("read-removed", { removedField: "left behind", removedList: ["a"] });
+		const hidden = (metadata: Record<string, unknown>) => {
+			expect(metadata.title).toBe("Title read-removed");
+			expect(Object.keys(metadata)).not.toContain("removedField");
+			expect(Object.keys(metadata)).not.toContain("removedList");
+		};
+
+		const found = await getEntry({ collection: contentCollection, slug: "read-removed" });
+		if (found.status !== "found") throw new Error("not found");
+		hidden(found.entry.metadata as Record<string, unknown>);
+		const list = await listEntries({ collection: contentCollection, pageSize: 100 });
+		const item = list.items.find((entry) => entry.id === published.id);
+		hidden((item?.metadata ?? {}) as Record<string, unknown>);
+		state.admin = true;
+		const preview = await getPreview({ collection: contentCollection, slug: "read-removed" });
+		hidden((preview?.metadata ?? {}) as Record<string, unknown>);
+
+		// The stored version still has them.
+		expect((await store.getEntry(published.id)).published?.metadata.removedField).toBe("left behind");
+	});
 });

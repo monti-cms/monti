@@ -67,3 +67,17 @@ describe.runIf(ADMIN_LANGUAGE === "en")("API error messages (English admin)", ()
 		expect(conflict).not.toBe("fallback");
 	});
 });
+
+/** Both languages carry a message for the publish warnings about removed fields and options; the language does not matter to the check. */
+describe("warnings about removed fields and options", () => {
+	it("name the field key, and the removed option for a select", () => {
+		const orphan = cmsIssueMessage({ code: "orphaned_metadata_key", path: "oldField" });
+		expect(orphan).toContain("(oldField)");
+		expect(orphan).not.toBe("orphaned_metadata_key (oldField)");
+		const option = cmsIssueMessage({ code: "unknown_select_value", path: "policy", message: "old-option" });
+		expect(option).toContain("old-option");
+		expect(option).toContain("(policy)");
+		expect(option.indexOf("old-option")).toBeGreaterThan(0);
+		expect(option).not.toContain("unknown_select_value");
+	});
+});

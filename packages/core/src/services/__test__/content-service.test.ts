@@ -40,12 +40,6 @@ const single = relationOf(false);
 const many = relationOf(true);
 /** The second collection (blog: memo). If there is only one document collection with a body, the first item collection. */
 const second = otherContentCollection ?? recordCollection;
-/** Another collection that has no single-value relation field of the body collection (blog: memo). */
-const withoutSingle = [second, ...COLLECTIONS].find(
-	(name) => name !== content && !storedField(name, single.name),
-) as Collection;
-/** The first select field of the body collection (blog: policy `policy`). */
-const selectField = topLevel(content).find(({ field }) => field.kind === "select");
 /** A text field with no character limit (blog: summary `summary`). Tests the metadata size limit. */
 const unboundedText = topLevel(content).find(
 	({ name, field }) => name !== "title" && field.kind === "text" && field.max === undefined,
@@ -100,38 +94,19 @@ describe("ContentService Contract", () => {
 				{ collection: content, slug: "valid", metadata: { [many.name]: "tag-1" }, mdx: "" },
 				"invalid_metadata_type",
 			],
-			...(selectField
-				? [
-						[
-							"content with unsupported select value",
-							{ collection: content, slug: "valid", metadata: { [selectField.name]: "unsupported" }, mdx: "" },
-							"invalid_metadata_value",
-						] as [string, unknown, string],
-					]
-				: []),
 			[
 				"non-JSON value in title",
 				{ collection: content, slug: "valid", metadata: { title: () => {} }, mdx: "" },
 				"invalid_metadata_type",
 			],
 			[
-				"cross-collection canonical key (single relation on another collection)",
-				{ collection: withoutSingle, slug: "valid", metadata: { [single.name]: "cat-1" }, mdx: "" },
+				"a key that is not in the schema and that the entry does not already hold",
+				{ collection: recordCollection, slug: "valid", metadata: { index: "1" }, mdx: "" },
 				"invalid_metadata_key",
 			],
 			[
-				"unknown metadata key on a record",
-				{ collection: recordCollection, slug: "valid", metadata: { fakeKey: "fail" }, mdx: "" },
-				"invalid_metadata_key",
-			],
-			[
-				"content with system metadata createdAt",
-				{ collection: content, slug: "valid", metadata: { createdAt: "2023-01-01" }, mdx: "" },
-				"invalid_metadata_key",
-			],
-			[
-				"record with invented metadata index",
-				{ collection: recordCollection, slug: "valid", metadata: { index: 1 }, mdx: "" },
+				"a removed field named like an object prototype",
+				{ collection: content, slug: "valid", metadata: JSON.parse('{"__proto__":"x"}'), mdx: "" },
 				"invalid_metadata_key",
 			],
 		] satisfies Array<[string, unknown, string]>)("rejects %s", async (_, input, expectedCode) => {

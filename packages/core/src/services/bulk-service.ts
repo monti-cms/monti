@@ -148,6 +148,7 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>) => (
 				const snapshot = await prepareSnapshot(toServiceInput(working, metadata), {
 					previousReferences,
 					previousDoc: working.doc,
+					previousMetadata: working.metadata,
 				});
 				const saved = (await storePort.saveWorkingWithReferences({
 					entryId: item.id,
