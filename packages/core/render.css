@@ -1,6 +1,10 @@
 /*
  * @monti-cms/core/render.css — styles for code highlighting, line effects and default components in public-page content (`@monti-cms/core/render`).
- * Import it in the site's Tailwind 4 input CSS after `@import "tailwindcss";`. Dark theme uses `.dark` and `[data-theme="dark"]`.
+ * Import it in the site's Tailwind 4 input CSS after `@import "tailwindcss";`.
+ * Dark theme: the dark rules apply under `.dark` or `[data-theme="dark"]` on an ancestor, and also when the system is dark (`prefers-color-scheme: dark`)
+ * unless an ancestor opts out with `.light` or `[data-theme="light"]`. That matches Tailwind 4's default `dark:` variant, which follows the system setting,
+ * and still works for sites that switch themes with a class or attribute. Dark rules are written as `.dark` / `[data-theme="dark"]` rules plus the same rules in
+ * `@media (prefers-color-scheme: dark)` guarded with `:not(:where(.light, [data-theme="light"]) *)`.
  * Sites that override the default components (`cms-*` classes) can skip those parts.
  */
 
@@ -37,6 +41,19 @@
 :where(.dark, [data-theme="dark"]) .shiki span {
 	/* biome-ignore lint/complexity/noImportantStyles: overrides inline style */
 	color: var(--shiki-dark) !important;
+}
+/* The same when the system is dark, unless the page opted out with `.light` / `[data-theme="light"]` on an ancestor. */
+@media (prefers-color-scheme: dark) {
+	.shiki:not(:where(.light, [data-theme="light"]) *) {
+		/* biome-ignore lint/complexity/noImportantStyles: overrides inline style */
+		color: var(--shiki-dark) !important;
+		/* biome-ignore lint/complexity/noImportantStyles: overrides inline style */
+		background-color: var(--shiki-dark-bg) !important;
+	}
+	.shiki:not(:where(.light, [data-theme="light"]) *) span {
+		/* biome-ignore lint/complexity/noImportantStyles: overrides inline style */
+		color: var(--shiki-dark) !important;
+	}
 }
 
 /* Indent guides */
@@ -232,14 +249,53 @@ pre:has(.line.code-focus) code .line[data-focused] {
 	display: inline-block;
 	opacity: 0.4;
 }
-.cms-align-left {
+/* Alignment. The class is doubled on purpose (specificity 0,2,0): `@tailwindcss/typography`'s `prose` rules (`.prose :where(td)`, `th` and so on) and
+   `.cms-table-cell` below would otherwise win. This also holds when a site imports this file into a cascade layer. */
+.cms-align-left.cms-align-left {
 	text-align: left;
 }
-.cms-align-center {
+.cms-align-center.cms-align-center {
 	text-align: center;
 }
-.cms-align-right {
+.cms-align-right.cms-align-right {
 	text-align: right;
+}
+
+/* Task lists (GFM `- [ ]` / `- [x]`): no bullets, the checkbox sits where the bullet would, nested task lists keep their indent.
+   `ul.contains-task-list` (0,1,1) is above prose's `.prose :where(ul)` rules. */
+ul.contains-task-list {
+	list-style: none;
+	padding-inline-start: 0;
+}
+ul.contains-task-list ul.contains-task-list {
+	padding-inline-start: 1.5em;
+}
+li.task-list-item {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 0.5em;
+	padding-inline-start: 0;
+}
+li.task-list-item::marker {
+	content: none;
+}
+li.task-list-item > input[type="checkbox"] {
+	flex: none;
+	margin: 0;
+	/* Optical alignment with the first line of text */
+	transform: translateY(0.1em);
+}
+/* A paragraph (loose list) takes the rest of the row; a nested list drops to its own row below */
+li.task-list-item > p {
+	flex: 1 1 0;
+	min-width: 0;
+	margin: 0;
+}
+li.task-list-item > ul,
+li.task-list-item > ol {
+	flex-basis: 100%;
 }
 
 /* Images */
