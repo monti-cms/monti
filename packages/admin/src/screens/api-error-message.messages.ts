@@ -11,7 +11,8 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		"issue.unpublished_reference": "A referenced item isn't published.",
 		"issue.invalid_reference_collection": "A referenced item is the wrong kind.",
 		"issue.unresolved_internal_link": "There is an internal link that can't be resolved.",
-		"issue.unpublished_internal_link": "There is an internal link to an item that isn't published yet.",
+		"issue.unpublished_internal_link":
+			"There is an internal link to an item that isn't published yet. It shows as plain text until that item is published.",
 		"issue.mdx_error": "Check the MDX syntax of the body.",
 		"issue.frontmatter_present": "The body can't contain frontmatter.",
 		"issue.image_src_not_allowed": "This image address isn't allowed.",
@@ -69,7 +70,8 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		"issue.unpublished_reference": "참조 항목이 공개 상태가 아닙니다.",
 		"issue.invalid_reference_collection": "참조 항목의 종류가 올바르지 않습니다.",
 		"issue.unresolved_internal_link": "해결할 수 없는 내부 링크가 있습니다.",
-		"issue.unpublished_internal_link": "아직 공개되지 않은 항목을 가리키는 내부 링크가 있습니다.",
+		"issue.unpublished_internal_link":
+			"아직 공개되지 않은 항목을 가리키는 내부 링크가 있습니다. 그 항목이 공개될 때까지 일반 글자로 보입니다.",
 		"issue.mdx_error": "MDX 본문 구문을 확인하세요.",
 		"issue.frontmatter_present": "본문 안에 frontmatter를 넣을 수 없습니다.",
 		"issue.image_src_not_allowed": "허용되지 않는 이미지 주소입니다.",

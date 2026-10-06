@@ -20,6 +20,7 @@ import {
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { CmsError } from "../../../core/store/errors";
 import type { Entry, IncomingReferenceItem, TranslationGroup } from "../../../core/store/types";
+import type { Issue } from "../../../core/types";
 import {
 	hasLegacyOccurrence,
 	normalizeReferenceKind,
@@ -173,6 +174,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			publishImmediately?: boolean;
 			/** With `publishImmediately`: reset the publish date to now. */
 			resetPublishedAt?: boolean;
+			/** With `publishImmediately`: receives the notices of the publish checks. */
+			onWarnings?: (warnings: readonly Issue[]) => void;
 		}): Promise<Entry> =>
 			withTransaction(
 				pool,
@@ -284,6 +287,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 								expectedVersion: version,
 								snapshot: params.snapshot,
 								resetPublishedAt: params.resetPublishedAt,
+								onWarnings: params.onWarnings,
 							})
 						: loadEntry(client, params.entryId, qSchema);
 				},
@@ -394,6 +398,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			expectedVersion: number;
 			snapshot: PreparedSnapshot;
 			resetPublishedAt?: boolean;
+			onWarnings?: (warnings: readonly Issue[]) => void;
 		}): Promise<Entry> =>
 			withTransaction(pool, (client) => publishWithinTransaction(client, params.id, params), {
 				mapError: mapEntryWriteError,

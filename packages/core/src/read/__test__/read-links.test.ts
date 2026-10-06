@@ -186,10 +186,17 @@ describe("links by entry id", () => {
 		const source = await draft("links-to-draft", `[draft](${pathOf("links-unpublished")})`);
 		expect(entryLinkIds(source.working.doc.content)).toEqual([target.translationGroupId]);
 
-		const published = await publishDraft(store, { id: source.id, expectedVersion: source.version });
+		const { entry, warnings } = await service.publish({ id: source.id, expectedVersion: source.version });
 
-		expect(published.status).toBe("published");
+		expect(entry.status).toBe("published");
+		// The publish result says that link is not live yet, at its block, so the editor knows the text is plain until the target is published.
+		expect(warnings.filter((warning) => warning.code === "unpublished_internal_link")).toEqual([
+			expect.objectContaining({ position: { blockId: expect.stringMatching(/^[0-9a-z]{8}$/) } }),
+		]);
+		// Once the target is published, publishing again has nothing to warn about.
 		await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		const again = await service.publish({ id: source.id, expectedVersion: entry.version });
+		expect(again.warnings.filter((warning) => warning.code === "unpublished_internal_link")).toEqual([]);
 	});
 
 	it("a link to an id that is not an entry is an unresolved link at publish, and a draft with it still saves", async () => {

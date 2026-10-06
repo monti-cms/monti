@@ -11,7 +11,7 @@ import { DEFAULT_LOCALE } from "../../../core/locales";
 import { validateForPublish } from "../../../core/snapshot";
 import { CmsError } from "../../../core/store/errors";
 import type { Entry, EntryStatus } from "../../../core/store/types";
-import { type Collection, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
+import { type Collection, type Issue, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
 import type { StoreContext } from "./context";
 import { type AddressRow, loadEntry, lockEntryForUpdate, readBody, readReferences, writeBody } from "./rows";
 
@@ -24,6 +24,11 @@ export interface PublishOptions {
 	snapshot: PreparedSnapshot;
 	/** On re-publish, reset the publish date to now. Otherwise keep the first publish time. */
 	resetPublishedAt?: boolean;
+	/**
+	 * Called with the notices the checks against locked rows found (a link to an entry that is not published): they never block, and the caller
+	 * returns them with the publish result.
+	 */
+	onWarnings?: (warnings: readonly Issue[]) => void;
 }
 
 /**
@@ -151,7 +156,7 @@ export function createPublishing(ctx: StoreContext) {
 			...(translation ? { translation } : {}),
 		});
 		if (!validation.ready) throw new ServiceError("publish_validation_failed", validation.issues);
-		return snapshot;
+		return { snapshot, warnings: validation.warnings.filter((issue) => issue.code === "unpublished_internal_link") };
 	};
 
 	/**
@@ -163,7 +168,7 @@ export function createPublishing(ctx: StoreContext) {
 		const locked = await lockEntryForUpdate(client, qSchema, id, options.expectedVersion);
 		assertPublishableStatus(locked.status);
 
-		await validatePreparedForPublish(client, id, options.snapshot);
+		options.onWarnings?.((await validatePreparedForPublish(client, id, options.snapshot)).warnings);
 
 		const working = await readBody(client, qSchema, id, "working");
 		if (!working) throw new CmsError("Working draft not found", "not_found");
