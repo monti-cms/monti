@@ -1,9 +1,10 @@
 import { contentPath, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../test/mdx";
 import { buildEditorExtensions } from "./extensions";
 import { type InternalLinkItem, insertInternalLink, internalLinkHref, parseInternalLinkTrigger } from "./internal-link";
-import { mdxToTiptap, storedToTiptap, tiptapToMdx, tiptapToStored } from "./tiptap-content";
+import { storedToTiptap, tiptapToStored } from "./tiptap-content";
 
 const ID = "123e4567-e89b-42d3-a456-426614174000";
 const collection = LINKABLE_COLLECTIONS[0] as string;
@@ -70,16 +71,16 @@ describe("internal links in the editor", () => {
 		const current = typed("See [[next");
 		insertInternalLink(current, { from: 5, to: 11 }, item());
 
-		const mdx = tiptapToMdx(current.getJSON());
+		const mdx = mdxOfTiptap(current.getJSON());
 
 		expect(mdx).toContain(`(entry:${ID})`);
-		const reopened = mdxToTiptap(mdx);
+		const reopened = tiptapOf(mdx);
 		expect(linkMarks(reopened)[0]?.attrs).toMatchObject({ entryId: ID });
-		expect(tiptapToMdx(reopened)).toBe(mdx);
+		expect(mdxOfTiptap(reopened)).toBe(mdx);
 	});
 
 	it("opens a stored document with a link by id and saves it back unchanged", () => {
-		const stored = tiptapToStored(mdxToTiptap(`A [post](entry:${ID}) and [site](https://example.com "T").`));
+		const stored = tiptapToStored(tiptapOf(`A [post](entry:${ID}) and [site](https://example.com "T").`));
 		if (!stored) throw new Error("not a document");
 
 		const again = tiptapToStored(storedToTiptap(stored));

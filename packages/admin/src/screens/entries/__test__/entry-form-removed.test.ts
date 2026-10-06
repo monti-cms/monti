@@ -1,3 +1,4 @@
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { type EntryData, formFromEntry, metadataFromForm } from "../entry-form";
 
@@ -11,7 +12,7 @@ const entry = (fields: Partial<EntryData>): EntryData => ({
 	folderId: null,
 	workingSlug: "hello",
 	publishedSlug: null,
-	working: { metadata: {}, mdx: "" },
+	working: { metadata: {}, doc: emptyStoredDocument() },
 	...fields,
 });
 
@@ -23,7 +24,7 @@ describe("values of removed fields and options", () => {
 	const stored = { title: "안녕", removedField: "left behind", removedList: ["a", "b"] };
 
 	it("sends the value of a removed field back as stored; it is not a form field", () => {
-		const form = formFromEntry(entry({ working: { metadata: stored, mdx: "" } }));
+		const form = formFromEntry(entry({ working: { metadata: stored, doc: emptyStoredDocument() } }));
 		expect(Object.keys(form)).not.toContain("removedField");
 		expect(metadataFromForm(form, "post", stored)).toEqual({ metadata: stored });
 		// Editing another value does not touch it.
@@ -34,7 +35,9 @@ describe("values of removed fields and options", () => {
 
 	it("keeps it on an item collection with per-language names, and on a translation", () => {
 		const record = { title: "에세이", translations: { en: { title: "Essay" } }, removedField: "x" };
-		const recordForm = formFromEntry(entry({ collection: "category", working: { metadata: record, mdx: "" } }));
+		const recordForm = formFromEntry(
+			entry({ collection: "category", working: { metadata: record, doc: emptyStoredDocument() } }),
+		);
 		expect(metadataFromForm(recordForm, "category", record)).toEqual({ metadata: record });
 
 		const translated = { title: "Hello", removedField: "x" };
@@ -42,7 +45,7 @@ describe("values of removed fields and options", () => {
 			id: "33333333-3333-4333-8333-333333333333",
 			translationGroupId: SOURCE,
 			locale: "en",
-			working: { metadata: translated, mdx: "" },
+			working: { metadata: translated, doc: emptyStoredDocument() },
 		});
 		expect(metadataFromForm(formFromEntry(translation), "post", translated, { translation: true })).toEqual({
 			metadata: translated,
@@ -50,20 +53,20 @@ describe("values of removed fields and options", () => {
 	});
 
 	it("adds nothing for a key the entry never had", () => {
-		const form = formFromEntry(entry({ working: { metadata: { title: "T" }, mdx: "" } }));
+		const form = formFromEntry(entry({ working: { metadata: { title: "T" }, doc: emptyStoredDocument() } }));
 		expect(metadataFromForm(form, "post", { title: "T" })).toEqual({ metadata: { title: "T" } });
 	});
 
 	it("shows a select value that is no longer an option as it is stored, and keeps it on save", () => {
 		const metadata = { title: "T", policy: "removed-option" };
-		const form = formFromEntry(entry({ working: { metadata, mdx: "" } }));
+		const form = formFromEntry(entry({ working: { metadata, doc: emptyStoredDocument() } }));
 		expect(form.policy).toBe("removed-option");
 		expect(metadataFromForm(form, "post", metadata)).toEqual({ metadata });
 	});
 
 	it("replaces it once the author picks an option, and does not accept a value it never stored", () => {
 		const metadata = { title: "T", policy: "removed-option" };
-		const form = formFromEntry(entry({ working: { metadata, mdx: "" } }));
+		const form = formFromEntry(entry({ working: { metadata, doc: emptyStoredDocument() } }));
 		expect(metadataFromForm({ ...form, policy: "evergreen" }, "post", metadata)).toEqual({
 			metadata: { title: "T", policy: "evergreen" },
 		});

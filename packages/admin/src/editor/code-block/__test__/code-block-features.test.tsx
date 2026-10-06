@@ -5,8 +5,8 @@ import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
 import { buildEditorExtensions } from "../../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 import { RulesPanel } from "../rules-panel";
 
@@ -65,7 +65,7 @@ beforeAll(() => {
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
 		extensions: buildEditorExtensions(),
-		content: mdxToTiptap(source),
+		content: tiptapOf(source),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -208,7 +208,7 @@ describe("code block tools turned off in the site config", () => {
 			const row = await screen.findByRole("listitem", { name: t("rulesPanel.rule", { pattern: "const" }) });
 			expect(within(row).getByLabelText(t("rulesPanel.pattern"))).toBeTruthy();
 			expect((block(editor).attrs.rules as CodeRule[])[0]).toMatchObject({ name: "strong", pattern: "const" });
-			expect(tiptapToMdx(editor.getJSON())).toBe(tiptapToMdx(mdxToTiptap(RULE_CODE)));
+			expect(mdxOfTiptap(editor.getJSON())).toBe(mdxOfTiptap(tiptapOf(RULE_CODE)));
 		});
 	});
 
@@ -281,14 +281,14 @@ describe("code block tools turned off in the site config", () => {
 		].join("\n");
 
 		it("loads, edits and saves a body that uses turned-off tools exactly as before", async () => {
-			const before = tiptapToMdx(mdxToTiptap(SOURCE));
+			const before = mdxOfTiptap(tiptapOf(SOURCE));
 			configure({
 				omit: ["plus"],
 				features: { rules: false, fold: false, tooltip: false, textStyles: false },
 			});
 			const editor = await mount(SOURCE);
 			expect(block(editor).attrs.rawMode).toBe(false);
-			expect(tiptapToMdx(editor.getJSON())).toBe(before);
+			expect(mdxOfTiptap(editor.getJSON())).toBe(before);
 			expect((block(editor).attrs.lineEffects as CodeLineEffect[]).map((effect) => effect.name)).toEqual([
 				"plus",
 				"collapse",
@@ -299,8 +299,8 @@ describe("code block tools turned off in the site config", () => {
 			act(() => {
 				editor.commands.insertContentAt(block(editor).nodeSize - 1, "x");
 			});
-			expect(tiptapToMdx(editor.getJSON())).toContain("// @document strong {re:/const/g}");
-			expect(tiptapToMdx(editor.getJSON())).toContain("// @line plus");
+			expect(mdxOfTiptap(editor.getJSON())).toContain("// @document strong {re:/const/g}");
+			expect(mdxOfTiptap(editor.getJSON())).toContain("// @line plus");
 		});
 	});
 

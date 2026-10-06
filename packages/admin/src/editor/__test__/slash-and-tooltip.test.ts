@@ -1,11 +1,11 @@
 import { createTranslator, defineBlock } from "@monti-cms/core/client";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it, vi } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { BLOCK_INSERT_ACTIONS, type BlockInsertAction } from "../block-inserts";
 import { buildEditorExtensions } from "../extensions";
 import { editorMessages } from "../messages";
 import { buildBlockSlashCommands, filterCommands, OPEN_FILE_PICKER_EVENT, SLASH_COMMANDS } from "../slash-command";
-import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
 
 const t = createTranslator(editorMessages);
 
@@ -142,7 +142,7 @@ describe("MDX serialization after block insert actions", () => {
 
 		BLOCK_INSERT_ACTIONS.mermaid(editor, range);
 
-		const serialized = tiptapToMdx(editor.getJSON());
+		const serialized = mdxOfTiptap(editor.getJSON());
 		expect(serialized).toContain("```mermaid");
 		expect(serialized).toContain("graph TD");
 		expect(serialized).toContain("A --> B");
@@ -155,7 +155,7 @@ describe("MDX serialization after block insert actions", () => {
 
 		BLOCK_INSERT_ACTIONS.chart(editor, range);
 
-		const serialized = tiptapToMdx(editor.getJSON());
+		const serialized = mdxOfTiptap(editor.getJSON());
 		expect(serialized).toContain("```chart");
 		expect(serialized).toContain("chart bar");
 		expect(serialized).toContain("x month");
@@ -169,7 +169,7 @@ describe("MDX serialization after block insert actions", () => {
 
 		BLOCK_INSERT_ACTIONS.math(editor, range);
 
-		const serialized = tiptapToMdx(editor.getJSON());
+		const serialized = mdxOfTiptap(editor.getJSON());
 		expect(serialized).toContain("$$");
 		expect(serialized).toContain("E = mc^2");
 		editor.destroy();
@@ -186,9 +186,9 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 	it("round-trips a tooltip label containing a closing bracket unescaped", () => {
 		const editor = createEditor("<p>a]b</p>");
 		editor.chain().focus().setTextSelection({ from: 1, to: 4 }).setMark("cmsTooltip", { content: "설명" }).run();
-		const mdx = tiptapToMdx(editor.getJSON());
+		const mdx = mdxOfTiptap(editor.getJSON());
 		expect(mdx).toContain('<Tooltip content="설명">a]b</Tooltip>');
-		expect(tiptapToMdx(mdxToTiptap(mdx))).toBe(mdx);
+		expect(mdxOfTiptap(tiptapOf(mdx))).toBe(mdx);
 		editor.destroy();
 	});
 
@@ -203,7 +203,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("우리가 사는 지구");
 
-		const mdx = tiptapToMdx(editor.getJSON());
+		const mdx = mdxOfTiptap(editor.getJSON());
 		expect(mdx).toContain('<Tooltip content="우리가 사는 지구">세상</Tooltip>');
 		editor.destroy();
 	});
@@ -222,7 +222,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		editor.chain().focus().extendMarkRange("cmsTooltip").setMark("cmsTooltip", { content: "업데이트된 설명" }).run();
 
 		expect(editor.getAttributes("cmsTooltip").content).toBe("업데이트된 설명");
-		const mdx = tiptapToMdx(editor.getJSON());
+		const mdx = mdxOfTiptap(editor.getJSON());
 		expect(mdx).toContain('<Tooltip content="업데이트된 설명">세상</Tooltip>');
 		editor.destroy();
 	});
@@ -235,7 +235,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		editor.chain().focus().setTextSelection(8).extendMarkRange("cmsTooltip").unsetMark("cmsTooltip").run();
 
 		expect(editor.isActive("cmsTooltip")).toBe(false);
-		const mdx = tiptapToMdx(editor.getJSON());
+		const mdx = mdxOfTiptap(editor.getJSON());
 		expect(mdx).not.toContain("<Tooltip");
 		expect(mdx).toContain("세상");
 		editor.destroy();
@@ -243,7 +243,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 
 	it("loads the Tooltip element from MDX into the editor and round-trips it losslessly on re-serialization", () => {
 		const initialMdx = '본문 속 <Tooltip content="상세 설명">단어</Tooltip> 확인하기\n';
-		const json = mdxToTiptap(initialMdx);
+		const json = tiptapOf(initialMdx);
 
 		const editor = new Editor({
 			extensions: buildEditorExtensions(),
@@ -256,7 +256,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("상세 설명");
 
-		const roundtripMdx = tiptapToMdx(editor.getJSON());
+		const roundtripMdx = mdxOfTiptap(editor.getJSON());
 		expect(roundtripMdx).toBe(initialMdx);
 		editor.destroy();
 	});

@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import { withoutBlockIds } from "@monti-cms/core/document";
 import { analyze } from "@monti-cms/core/mdx";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { docOfMdx, mdxToTiptap, tiptapToMdx } from "../test/editor-text";
 
 // Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
 vi.mock("../../../core/src/config/resolved", async () => ({
@@ -16,11 +17,15 @@ const source = readFileSync(path.join(__dirname, "fixtures/component-showcase.md
 
 /** Checks that the editor and the public page agree on the same content. The public page renders with the default components provided by the core and the block extensions. */
 describe("CMS component showcase", () => {
-	it("passes validation and stays identical after a round trip through the editor", () => {
+	it("passes validation and keeps the same document through the editor", () => {
 		expect(analyze(source).errors).toEqual([]);
 		const editorDocument = mdxToTiptap(source);
 		expect(editorDocument.content?.length).toBeGreaterThan(30);
-		expect(tiptapToMdx(editorDocument).trim()).toBe(source.trim());
+		// The body is the same document after the editor. Its text is the one the format writes of it (annotation comments are written in the format's own style),
+		// and writing that again changes nothing.
+		const written = tiptapToMdx(editorDocument);
+		expect(withoutBlockIds(docOfMdx(written).content)).toEqual(withoutBlockIds(docOfMdx(source).content));
+		expect(tiptapToMdx(mdxToTiptap(written))).toBe(written);
 	});
 
 	it("the public page renders every section with the library default look", async () => {

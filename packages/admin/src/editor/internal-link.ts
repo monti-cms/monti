@@ -1,5 +1,6 @@
-import { contentPath } from "@monti-cms/core/client";
+import { contentPath, DEFAULT_LOCALE, localizePath } from "@monti-cms/core/client";
 import type { Editor, Range } from "@tiptap/core";
+import { rememberLinkTarget } from "./link-targets";
 
 export interface InternalLinkItem {
 	/** The id of the source entry (its translation group id). */
@@ -7,6 +8,8 @@ export interface InternalLinkItem {
 	collection: string;
 	title: string;
 	slug: string;
+	/** Language of the entry, which gives its address the locale prefix. */
+	locale?: string;
 	/** State of the target. Links to draft targets are allowed while editing but flagged. */
 	status?: string;
 }
@@ -16,7 +19,8 @@ export interface InternalLinkItem {
  * the entry, so a later rename of the slug changes nothing in the body. `null` for a collection without a path, which cannot be linked to.
  */
 export function internalLinkHref(item: InternalLinkItem): string | null {
-	return contentPath(item.collection, item.slug);
+	const path = contentPath(item.collection, item.slug);
+	return path ? localizePath(item.locale ?? DEFAULT_LOCALE, path) : null;
 }
 
 /**
@@ -32,6 +36,8 @@ export function insertInternalLink(editor: Editor, range: Range, item: InternalL
 		chain.insertContent(item.title).run();
 		return;
 	}
+	// The link bubble shows where the link goes; the entry is known now, so it does not have to be looked up.
+	rememberLinkTarget(item);
 	chain
 		.insertContent([
 			{ type: "text", text: item.title, marks: [{ type: "link", attrs: { entryId: item.id, href } }] },

@@ -1,5 +1,5 @@
 import { ADDED_MARK_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
-import type { CmsJsonValue } from "@monti-cms/core/mdx";
+import type { CmsJsonValue } from "@monti-cms/core/document";
 import { Mark, mergeAttributes } from "@tiptap/core";
 
 /**

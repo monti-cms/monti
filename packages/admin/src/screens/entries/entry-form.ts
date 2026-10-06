@@ -13,22 +13,26 @@ import {
 	storedFields,
 	type TranslationState,
 } from "@monti-cms/core/client";
-import { bodyDocument, bodyFromMdx, isUnparsedDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/mdx";
+import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
+import { documentKey } from "../../editor/document-key";
 import { t } from "./translate";
 
-/** The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays. */
-export type FormValue = string | string[] | null;
+/**
+ * The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays.
+ * The body is the one value that is a document (`form.doc`).
+ */
+export type FormValue = string | string[] | StoredDocument | null;
 
 /**
  * Draft values the edit screen handles. Fields other than title, slug and body come from the collection definition and
  * are stored flat, keyed by field name. Date fields hold the `datetime-local` input value (in the configured time zone).
  */
-export type EntryForm = { title: string; slug: string; mdx: string } & { [field: string]: FormValue };
+export type EntryForm = { title: string; slug: string; doc: StoredDocument } & { [field: string]: FormValue };
 
 /** Partial form change. Only the given keys are changed. */
 export type EntryFormPatch = { readonly [field: string]: FormValue };
 
-export const EMPTY_FORM: EntryForm = { title: "", slug: "", mdx: "" };
+export const EMPTY_FORM: EntryForm = { title: "", slug: "", doc: emptyStoredDocument() };
 
 /**
  * Title of a duplicate (by library convention the title field is named `title`). Appends a "copy" suffix to the source title and trims the source part
@@ -70,10 +74,8 @@ export interface EntryData {
 		status: EntryData["status"];
 		workingSlug: string | null;
 		metadata: Record<string, unknown>;
-		/** Latest draft body of the original (translation screen). */
-		mdx?: string;
-		/** The stored document of that body (`null` when it has none). Its block ids pair the blocks with the confirmed source's. */
-		doc?: StoredDocument | null;
+		/** Latest draft body of the original (translation screen), a stored document. Its block ids pair the blocks with the confirmed source's. */
+		doc?: StoredDocument;
 	};
 	status: "draft" | "published" | "archived" | "trashed";
 	version: number;
@@ -83,12 +85,11 @@ export interface EntryData {
 	publishedSlug: string | null;
 	working: {
 		metadata: Record<string, unknown>;
-		mdx: string;
-		/** The body as a stored document with block ids (`null` when it has none). */
-		doc?: StoredDocument | null;
+		/** The body as a stored document with block ids (one `unparsed` node when it could not be read as a document). */
+		doc: StoredDocument;
 		translation?: TranslationState | null;
 	};
-	published?: { metadata: Record<string, unknown>; mdx: string };
+	published?: { metadata: Record<string, unknown>; doc: StoredDocument };
 }
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
@@ -106,16 +107,8 @@ export const formList = (form: EntryForm, name: string): string[] => {
 export const isTranslationEntry = (entry: Pick<EntryData, "id" | "translationGroupId"> | null | undefined) =>
 	Boolean(entry?.translationGroupId && entry.translationGroupId !== entry.id);
 
-/**
- * The document the visual editor can show: `undefined` for a body that could not become a document (an `unparsed` node), which is edited as text.
- * The editor goes by the MDX text then.
- */
-export const editableDoc = (doc: StoredDocument | null | undefined): StoredDocument | undefined =>
-	doc && !isUnparsedDocument(doc) ? doc : undefined;
-
 /** The original shown on the translation screen. Only present for a translation that received the original body. */
 export interface TranslationSource {
-	mdx: string;
 	/** The original's stored document (an `unparsed` body is one `unparsed` node). */
 	doc: StoredDocument;
 	locale: string;
@@ -124,11 +117,10 @@ export interface TranslationSource {
 
 /** For a translation, the original's body, language and title. Used by the source pane, the title hint and AI translation. */
 export function translationSourceOf(entry: EntryData | null): TranslationSource | null {
-	if (!entry || !isTranslationEntry(entry) || typeof entry.source?.mdx !== "string") return null;
+	if (!entry || !isTranslationEntry(entry) || !entry.source?.doc) return null;
 	const title = entry.source.metadata.title;
 	return {
-		mdx: entry.source.mdx,
-		doc: entry.source.doc ?? bodyDocument(bodyFromMdx(entry.source.mdx)),
+		doc: entry.source.doc,
 		locale: entry.source.locale,
 		title: typeof title === "string" ? title : "",
 	};
@@ -196,7 +188,7 @@ function toFormValue({ field }: StoredField, value: unknown): FormValue {
 
 export function formFromEntry(entry: EntryData): EntryForm {
 	const metadata = entry.working.metadata ?? {};
-	const form: EntryForm = { title: text(metadata.title), slug: entry.workingSlug ?? "", mdx: entry.working.mdx ?? "" };
+	const form: EntryForm = { title: text(metadata.title), slug: entry.workingSlug ?? "", doc: entry.working.doc };
 	for (const stored of fieldsOf(entry.collection, isTranslationEntry(entry))) {
 		if (stored.name === "title" || stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
@@ -228,7 +220,7 @@ function recordTranslationsToForm(collection: string, metadata: Record<string, u
 
 /** Converts original metadata to form values. Used when the translation's properties panel shows shared values read-only. */
 export function formFromSourceMetadata(collection: string, metadata: Record<string, unknown>): EntryForm {
-	const form: EntryForm = { title: text(metadata.title), slug: "", mdx: "" };
+	const form: EntryForm = { title: text(metadata.title), slug: "", doc: emptyStoredDocument() };
 	for (const stored of fieldsOf(collection)) {
 		if (stored.name === "title" || stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
@@ -236,8 +228,19 @@ export function formFromSourceMetadata(collection: string, metadata: Record<stri
 	return form;
 }
 
-/** Fingerprint for comparing form values. Compares the recovery copy with the server-saved one. */
-export const formFingerprint = (form: EntryForm) => JSON.stringify(form);
+/**
+ * Fingerprint for comparing form values. Compares the recovery copy with the server-saved one. The body counts by what it says (`documentKey`): the same
+ * body made by the editor, the source panel or the server is the same, whatever the block ids and the order of keys (the form's own keys are sorted too, so a
+ * recovery copy that was upgraded from an older shape compares like any other).
+ */
+export const formFingerprint = (form: EntryForm) =>
+	JSON.stringify(
+		Object.fromEntries(
+			Object.keys(form)
+				.sort()
+				.map((key) => [key, key === "doc" ? documentKey(form.doc) : form[key]]),
+		),
+	);
 
 /**
  * Form -> stored metadata. Rules come from the collection definition.

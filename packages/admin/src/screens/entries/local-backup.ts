@@ -3,6 +3,8 @@
  *
  * - The key is `admin ID:content ID` (`admin ID:new:collection` for a new post), so it never mixes with another account's recovery copy.
  * - If saving fails (private browsing mode, storage quota denied, etc.), it returns `false` so the screen reports exactly that recovery is unavailable.
+ * - The snapshot is the entry form, which holds the body as `doc` (a stored document). Copies written before that hold it as MDX text in `mdx`; they are upgraded when they
+ *   are read (`legacy-backup.ts`), so what is stored here is never rewritten in place.
  */
 
 /** Recovery DB name. IndexedDB is separate per site address (origin), so the site name is not appended. */

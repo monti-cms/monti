@@ -1,7 +1,17 @@
-import type { CmsMdxError, CmsNode } from "@monti-cms/core/mdx";
-import { SourceConverter } from "@monti-cms/core/mdx";
+import { type CmsNode, STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
+import type { FormatIssue } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
-import { EditorToggle } from "../editor-toggle";
+import { EditorToggle } from "./editor-toggle";
+import { mdxBrowserFormat } from "./format";
+
+const headingDoc = (text: string): StoredDocument => ({
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+	content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text }] }],
+});
+
+/** The content of a document without block ids, which a text never carries. */
+const contentOf = (doc: StoredDocument | null) => (doc?.content ?? []).map(({ id: _id, ...rest }) => rest);
 
 describe("EditorToggle", () => {
 	it("opens valid MDX in visual mode", () => {
@@ -27,7 +37,7 @@ describe("EditorToggle", () => {
 		const toggle = new EditorToggle(disallowedSource);
 		expect(toggle.mode).toBe("source");
 		expect(toggle.errors.length).toBeGreaterThan(0);
-		expect(toggle.errors.some((error) => error.code === "event_handler_attribute")).toBe(true);
+		expect(toggle.errors.some((error) => error.params?.reason === "event_handler_attribute")).toBe(true);
 		expect(toggle.document).toBeNull();
 		expect(toggle.source).toBe(disallowedSource);
 	});
@@ -42,34 +52,25 @@ describe("EditorToggle", () => {
 		expect(toggle.source).toBe(source);
 	});
 
-	it("toggles to source after edits returns serialized document and roundtrips semantically", () => {
+	it("toggles to source after edits returns the written document and roundtrips semantically", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source);
 
-		const newDoc = {
-			type: "doc",
-			content: [
-				{
-					type: "heading",
-					attrs: { level: 1 },
-					content: [{ type: "text", text: "Hello Changed" }],
-				},
-			],
-		};
+		const newDoc = headingDoc("Hello Changed");
 		toggle.notifyVisualChange(newDoc);
 
 		toggle.toggleToSource();
 		expect(toggle.mode).toBe("source");
 		expect(toggle.source).toBe("# Hello Changed\n");
 
-		const roundtrip = SourceConverter.toVisual(toggle.source);
-		expect(roundtrip.type).toBe("visual");
-		if (roundtrip.type === "visual") {
-			expect(roundtrip.document).toEqual(newDoc);
+		const roundtrip = mdxBrowserFormat.import(toggle.source);
+		expect(roundtrip.ok).toBe(true);
+		if (roundtrip.ok) {
+			expect(contentOf(roundtrip.doc)).toEqual(contentOf(newDoc));
 		}
 	});
 
-	it("toggling from source back to visual re-analyzes", () => {
+	it("toggling from source back to visual re-reads the text", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source);
 
@@ -84,7 +85,7 @@ describe("EditorToggle", () => {
 		expect(toggle.document).not.toBeNull();
 	});
 
-	it("does not mutate internal document or falsely serialize when document getter return value is mutated", () => {
+	it("does not mutate internal document or falsely write it when the document getter's return value is mutated", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source);
 
@@ -92,13 +93,11 @@ describe("EditorToggle", () => {
 		expect(doc).not.toBeNull();
 		if (!doc) return;
 
-		if (doc.content?.[0]) {
-			doc.content[0] = {
-				type: "paragraph",
-				content: [{ type: "text", text: "Mutated externally" }],
-			};
+		const mutable = doc.content as CmsNode[];
+		if (mutable[0]) {
+			mutable[0] = { type: "paragraph", content: [{ type: "text", text: "Mutated externally" }] };
 		}
-		doc.type = "mutated";
+		(doc as { type: string }).type = "mutated";
 
 		const currentDoc = toggle.document;
 		expect(currentDoc).not.toEqual(doc);
@@ -111,31 +110,19 @@ describe("EditorToggle", () => {
 
 		toggle.toggleToVisual();
 		expect(toggle.mode).toBe("visual");
-		expect(toggle.document).toEqual(currentDoc);
+		expect(contentOf(toggle.document)).toEqual(contentOf(currentDoc));
 	});
 
 	it("does not mutate internal state when the object passed to notifyVisualChange is mutated after notification", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source);
 
-		const newDoc: CmsNode = {
-			type: "doc",
-			content: [
-				{
-					type: "heading",
-					attrs: { level: 1 },
-					content: [{ type: "text", text: "Original Update" }],
-				},
-			],
-		};
-
+		const newDoc = headingDoc("Original Update");
 		toggle.notifyVisualChange(newDoc);
 
-		if (newDoc.content?.[0]) {
-			newDoc.content[0] = {
-				type: "paragraph",
-				content: [{ type: "text", text: "Mutated After Notification" }],
-			};
+		const mutable = newDoc.content as CmsNode[];
+		if (mutable[0]) {
+			mutable[0] = { type: "paragraph", content: [{ type: "text", text: "Mutated After Notification" }] };
 		}
 
 		const currentDoc = toggle.document;
@@ -161,19 +148,20 @@ describe("EditorToggle", () => {
 		const initialCount = toggle.errors.length;
 		const initialMessage = toggle.errors[0]?.message;
 
-		const errorsCopy = toggle.errors as CmsMdxError[];
+		const errorsCopy = toggle.errors as FormatIssue[];
 		errorsCopy.length = 0;
 		expect(toggle.errors).toHaveLength(initialCount);
 
-		const errorsCopy2 = toggle.errors as CmsMdxError[];
-		if (errorsCopy2[0]) {
-			errorsCopy2[0].message = "mutated message";
-			errorsCopy2[0].position.line = 999;
+		const errorsCopy2 = toggle.errors as FormatIssue[];
+		const first = errorsCopy2[0];
+		if (first?.position) {
+			(first as { message?: string }).message = "mutated message";
+			(first.position as { line: number }).line = 999;
 		}
 
 		const subsequentErrors = toggle.errors;
 		expect(subsequentErrors).toHaveLength(initialCount);
 		expect(subsequentErrors[0]?.message).toBe(initialMessage);
-		expect(subsequentErrors[0]?.position.line).not.toBe(999);
+		expect(subsequentErrors[0]?.position?.line).not.toBe(999);
 	});
 });

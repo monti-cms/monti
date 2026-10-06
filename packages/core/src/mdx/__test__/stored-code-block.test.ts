@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { withoutBlockIds } from "../block-ids";
+import { storedCodeBlockFence } from "../stored-code-block";
 import {
 	bodyFromDocument,
 	bodyFromMdx,
@@ -76,6 +77,18 @@ describe("a stored code block", () => {
 		const block = codeBlockOf(bodyFromMdx("```ts\n// @nope plus\nx();\n```\n").doc);
 		expect(block.attrs?.code).toBe("// @nope plus\nx();");
 		expect(block.attrs).not.toHaveProperty("annotations");
+	});
+
+	it("writes a text range on a later line where it was, even when its offset into the code is small enough to fit that line", () => {
+		// The first line is short, so the offsets of the second line's range (4-9) also fit inside the second line.
+		const fence = ["```ts", "abc", "// @char strong {0-4}", "const item = 1;", "```", ""].join("\n");
+		const body = bodyFromMdx(fence);
+		const block = codeBlockOf(body.doc);
+		expect(block.attrs?.annotations).toEqual({ text: [{ line: 1, scope: "char", name: "strong", start: 4, end: 9 }] });
+		expect(body.mdx).toContain("// @char strong {0-4}\nconst item = 1;");
+		const again = bodyFromMdx(body.mdx, undefined, { previous: body.doc });
+		expect(again.doc).toEqual(body.doc);
+		expect(storedCodeBlockFence(block.attrs ?? {})).toBe("abc\n// @char strong {0-4}\nconst item = 1;");
 	});
 
 	it("lifts a version 1 document, whose code block held the fence text, to the current form", () => {

@@ -6,8 +6,8 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { CmsAdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
 import { BlockFrame, type BlockView, Content, type EditorResult, useBlockEditor } from "../../../hooks/public";
+import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
 import { buildEditorExtensions } from "../../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../../tiptap-content";
 
 afterEach(cleanup);
 
@@ -25,7 +25,7 @@ beforeAll(() => {
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
 		extensions: buildEditorExtensions(),
-		content: mdxToTiptap(source),
+		content: tiptapOf(source),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -219,24 +219,24 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 
 	it("transact writes a child and the parent in one document change and one undo step", async () => {
 		const editor = await mountTabs();
-		const before = tiptapToMdx(editor.getJSON());
+		const before = mdxOfTiptap(editor.getJSON());
 		const transactions = countTransactions(editor);
 		fireEvent.click(screen.getAllByRole("tab")[1] as HTMLElement);
 		click("rename");
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('defaultValue="바뀐 이름"'));
+		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('defaultValue="바뀐 이름"'));
 		expect(transactions.count).toBe(1);
 		expect(labelsOf(editor)).toEqual(["하나", "바뀐 이름"]);
 		act(() => {
 			editor.commands.undo();
 		});
-		expect(tiptapToMdx(editor.getJSON())).toBe(before);
+		expect(mdxOfTiptap(editor.getJSON())).toBe(before);
 	});
 
 	it("separate commands are separate document changes (what transact groups)", async () => {
 		const editor = await mountTabs();
 		const transactions = countTransactions(editor);
 		click("rename-separately");
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('defaultValue="첫 번째"'));
+		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('defaultValue="첫 번째"'));
 		expect(transactions.count).toBe(2);
 	});
 
@@ -267,10 +267,10 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 			),
 			tab: CustomTab,
 		});
-		const before = tiptapToMdx(editor.getJSON());
+		const before = mdxOfTiptap(editor.getJSON());
 		fireEvent.click(screen.getByRole("button", { name: "probe" }));
 		expect(result).toMatchObject({ ok: false, error: { code: "limit" } });
-		expect(tiptapToMdx(editor.getJSON())).toBe(before);
+		expect(mdxOfTiptap(editor.getJSON())).toBe(before);
 	});
 
 	it("fails with read_only while the editor is locked", async () => {
@@ -309,12 +309,13 @@ describe("useBlockEditor", () => {
 		let block = seen as unknown as ReturnType<typeof useBlockEditor>;
 		expect(block.name).toBe("tabs");
 		expect(block.definition.label).toBeTruthy();
-		// The editor gives a block its id on the first change of the document.
-		expect(block.id).toBeNull();
+		// A block has the id its document gave it, and keeps it through a change of the document.
+		const id = block.id;
+		expect(id).toMatch(/\S/);
 		act(() => {
 			editor.commands.insertContentAt(editor.state.doc.content.size, "<p>끝</p>");
 		});
-		await waitFor(() => expect((seen as unknown as ReturnType<typeof useBlockEditor>).id).toMatch(/\S/));
+		await waitFor(() => expect((seen as unknown as ReturnType<typeof useBlockEditor>).id).toBe(id));
 		block = seen as unknown as ReturnType<typeof useBlockEditor>;
 		expect(block.selected).toBe(false);
 		expect(block.focusedChild).toBeNull();
@@ -364,7 +365,7 @@ describe("useBlockEditor commands", () => {
 			result = block().remove();
 		});
 		expect(result).toMatchObject({ ok: true });
-		expect(tiptapToMdx(editor.getJSON()).trim()).toBe("앞 문단\n\n뒤 문단");
+		expect(mdxOfTiptap(editor.getJSON()).trim()).toBe("앞 문단\n\n뒤 문단");
 	});
 
 	it("moves a child together with the cursor inside it", async () => {

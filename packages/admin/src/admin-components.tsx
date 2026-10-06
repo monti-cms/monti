@@ -1,6 +1,8 @@
 "use client";
 
 import type { Field, TextChecker } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/document";
+import type { FormatIssue } from "@monti-cms/core/format";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import type { Editor } from "@tiptap/react";
 import type { LucideIcon } from "lucide-react";
@@ -14,6 +16,7 @@ import {
 	useMemo,
 	useRef,
 } from "react";
+import type { BrowserFormat } from "./browser-format";
 import type { EditorMarkSpec } from "./editor/added-marks";
 import type { BlockView } from "./editor/blocks/use-block-editor";
 import type { ActiveInlineMark } from "./editor/inline-marks";
@@ -133,6 +136,35 @@ export interface EditorMarkExtension extends EditorMarkSpec {
 	readonly insertActions?: readonly EditorInsertAction[];
 }
 
+export type { BrowserExportOptions, BrowserFormat, BrowserImportResult } from "./browser-format";
+
+/**
+ * What a source panel receives. The panel edits the body as text in the notation of its format and hands the result back as a stored document: the
+ * document is the only source, and the panel parses in the browser (`onChange` gets the findings at once). A text it cannot read is handed back as a
+ * document holding that text in one `unparsed` node, with the findings in `issues`, so a draft can keep it.
+ */
+export interface SourcePanelProps {
+	/** The body being edited. A change that did not come from this panel replaces the text the panel shows. */
+	readonly doc: StoredDocument;
+	/** The text changed: the document it reads as (its blocks keep the ids of `doc` where they pair up), and what was found about the text. */
+	readonly onChange: (doc: StoredDocument, issues: readonly FormatIssue[]) => void;
+	/** The block to bring the caret to: the id of a block of `doc`. */
+	readonly focusBlock?: string;
+	/** True when the body cannot be edited (the trash). */
+	readonly readOnly?: boolean;
+	/** The panel's input started or finished an IME composition. A save waits for the composition to end. */
+	readonly onComposing?: (composing: boolean) => void;
+}
+
+/** A source panel a plugin registers (`CmsAdminComponents.sourcePanels`). */
+export interface SourcePanelRegistration {
+	/** The format the panel edits (`mdx`). */
+	readonly format: string;
+	/** Name of the panel, for its toggle in the editor toolbar. */
+	readonly label: string;
+	readonly Panel: ComponentType<SourcePanelProps>;
+}
+
 /**
  * Components a site or plugin puts in the admin UI. Provided inside the admin layout with `CmsAdminComponentsProvider`.
  * A server layout cannot pass functions to the browser, so a client component renders this provider.
@@ -191,6 +223,13 @@ export interface CmsAdminComponents {
 	 * name (column name takes precedence). Unregistered columns use the default cell: select shows option labels, text a short excerpt, relation the name, date the date.
 	 */
 	readonly listCells?: Readonly<Record<string, ComponentType<ListCellProps>>>;
+	/**
+	 * Source panels: edit the body as text in a notation (MDX, Markdown…). The editor shows a toggle for the panel only when one is registered; with several, the
+	 * first registered is used. The stored document stays the only source: the panel reads and writes documents (`SourcePanelProps`).
+	 */
+	readonly sourcePanels?: readonly SourcePanelRegistration[];
+	/** Formats the browser can read and write (name → format). Ask for one with `useFormat`. */
+	readonly formats?: Readonly<Record<string, BrowserFormat>>;
 }
 
 /** Values received by a list cell component. */
@@ -253,6 +292,8 @@ export function CmsAdminComponentsProvider({
 			icons: { ...parent.icons, ...components.icons },
 			fieldViews: { ...parent.fieldViews, ...components.fieldViews },
 			listCells: { ...parent.listCells, ...components.listCells },
+			sourcePanels: [...(parent.sourcePanels ?? []), ...(components.sourcePanels ?? [])],
+			formats: { ...parent.formats, ...components.formats },
 		}),
 		[parent, components],
 	);
@@ -260,6 +301,19 @@ export function CmsAdminComponentsProvider({
 }
 
 export const useCmsAdminComponents = () => useContext(CmsAdminComponentsContext);
+
+/**
+ * The browser side of a format by name (`mdx`), or `undefined` when no plugin registered it. The format is a plugin's: code that needs a notation (AI, the
+ * source panel) asks for it here instead of importing a parser.
+ */
+export const useFormat = (name: string): BrowserFormat | undefined => useCmsAdminComponents().formats?.[name];
+
+/** The format of the registered source panel (the notation a body is shown as text in), or `undefined` when no panel is registered. */
+export function useSourceFormat(): BrowserFormat | undefined {
+	const { sourcePanels, formats } = useCmsAdminComponents();
+	const name = sourcePanels?.[0]?.format;
+	return name === undefined ? undefined : formats?.[name];
+}
 
 const NO_CHECKERS: readonly TextChecker[] = [];
 

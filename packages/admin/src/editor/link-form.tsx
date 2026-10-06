@@ -7,6 +7,7 @@ import { Unlink } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { LinkTargetSummary } from "./link-target-view";
 import { editorMessages } from "./messages";
 
 const t = createTranslator(editorMessages);
@@ -32,13 +33,19 @@ export interface LinkDraft {
 	from: number;
 	to: number;
 	existing: boolean;
+	/** The address typed in the form. An internal link has none: it points to an entry. */
 	href: string;
+	/** The id of the entry an existing internal link points to. */
+	entryId?: string | null;
 }
 
 export function linkDraftFromSelection(editor: Editor): LinkDraft {
 	const { from, to } = editor.state.selection;
 	const existing = editor.isActive("link");
-	return { from, to, existing, href: existing ? String(editor.getAttributes("link").href ?? "") : "" };
+	const attrs = existing ? editor.getAttributes("link") : {};
+	// An internal link is shown by the entry it points to; the address it carries is only what the editor displays.
+	const entryId = typeof attrs.entryId === "string" && attrs.entryId ? attrs.entryId : null;
+	return { from, to, existing, href: entryId ? "" : String(attrs.href ?? ""), entryId };
 }
 
 /** Collapses the cursor to the end of the effect after applying it. With the cursor at the end of the effect, the inline bubble shows the applied result. */
@@ -134,6 +141,11 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 
 	const submit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		// An internal link with nothing typed stays as it is.
+		if (draft.entryId && !href.trim()) {
+			onDone();
+			return;
+		}
 		const normalized = normalizeLinkHref(href);
 		if (!normalized) {
 			setError(t("link.invalid"));
@@ -170,6 +182,7 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 	return (
 		<form onSubmit={submit} onKeyDown={submitOnEnter} className="grid gap-3">
 			<p className="font-medium">{draft.existing ? t("link.edit") : t("link.add")}</p>
+			{draft.entryId && <LinkTargetSummary entryId={draft.entryId} />}
 			{needsText && (
 				<label htmlFor={`${id}-text`} className="grid gap-1.5 text-xs">
 					{t("link.text")}

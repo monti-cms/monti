@@ -1,4 +1,6 @@
+import { STORED_DOCUMENT_VERSION, type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { docOf } from "../../../test/mdx";
 import {
 	COMPOSITION_WAIT_MS,
 	createEntryEditor,
@@ -272,42 +274,37 @@ describe("save", () => {
 		expect(client.update).toHaveBeenCalledWith("created-1", expect.objectContaining({ expectedVersion: 1 }));
 	});
 
-	it("always sends a document: the editor's with its block ids while the form still holds the MDX it made, otherwise the one the MDX reads as", async () => {
-		const doc = {
+	it("sends the document the body editor made, with its block ids", async () => {
+		const doc: StoredDocument = {
 			type: "doc",
-			version: 1,
+			version: STORED_DOCUMENT_VERSION,
 			content: [{ type: "paragraph", id: "abcd1234", content: [{ type: "text", text: "본문" }] }],
 		};
 		const { editor, client } = await opened();
-		editor().setBody("본문\n", doc as never);
+		editor().setBody(doc);
+		expect(editor().form.doc).toEqual(doc);
+		expect(editor().hasUnsavedChanges).toBe(true);
 		await editor().save();
 		const first = client.update.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(first.doc).toEqual(doc);
 		expect(first).not.toHaveProperty("mdx");
-
-		// Text the editor did not make (source mode): the document it reads as is sent, without block ids so the server pairs the blocks with the body it replaces.
-		editor().setForm({ mdx: "다른 본문\n" });
-		await editor().save();
-		const second = client.update.mock.calls[1]?.[1] as unknown as { doc: { content: { type: string; id?: string }[] } };
-		expect(second).not.toHaveProperty("mdx");
-		expect(second.doc.content.map((block) => block.type)).toEqual(["paragraph"]);
-		expect(second.doc.content[0]).not.toHaveProperty("id");
-		expect(JSON.stringify(second.doc)).toContain("다른 본문");
 	});
 
-	it("the document can also come from the documentOf callback", async () => {
-		const doc = { type: "doc", version: 1, content: [{ type: "paragraph", id: "abcd1234", content: [] }] };
-		const { editor, client } = await opened({
-			callbacks: { documentOf: (mdx) => (mdx === "본문\n" ? (doc as never) : undefined) },
-		});
-		editor().setForm({ mdx: "본문\n" });
-		await editor().save();
-		expect((client.update.mock.calls[0]?.[1] as Record<string, unknown>).doc).toEqual(doc);
+	it("a body that reads the same as the server's is not a change, whatever its block ids and the order of its keys", async () => {
+		const { editor } = await opened();
+		const server = editor().form.doc;
+		const sameContent = {
+			...server,
+			content: server.content.map((block) => ({ ...block, id: "zzzzzzzz" })),
+		};
+		editor().setBody(sameContent);
+		expect(editor().hasUnsavedChanges).toBe(false);
+		expect(editor().saveStatus).toBe("saved");
 	});
 
 	it("sends a removed field's value back as stored (orphaned metadata round trip)", async () => {
 		const stored = { title: "테스트", removedField: "left behind", removedList: ["a", "b"] };
-		const { editor, client } = await opened({ server: { ...ENTRY, working: { metadata: stored, mdx: "" } } });
+		const { editor, client } = await opened({ server: { ...ENTRY, working: { metadata: stored, doc: docOf("") } } });
 		editor().setForm({ title: "Renamed" });
 		await editor().save();
 		expect((client.update.mock.calls[0]?.[1] as { metadata: unknown }).metadata).toEqual({
@@ -569,7 +566,7 @@ describe("publish", () => {
 	it("fills an empty body-filled field from the body, and says which", async () => {
 		const server: EntryData = {
 			...ENTRY,
-			working: { metadata: { title: "테스트", categoryId: "cat-1" }, mdx: "## 소개\n\n**본문** 첫 문장." },
+			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("## 소개\n\n**본문** 첫 문장.") },
 		};
 		const { editor, client } = await opened({ server });
 		const result = await editor().publish();
@@ -583,7 +580,7 @@ describe("publish", () => {
 	it("does not publish when a body-filled field has no body to come from: a validation error naming the field", async () => {
 		const server: EntryData = {
 			...ENTRY,
-			working: { metadata: { title: "테스트", categoryId: "cat-1" }, mdx: "```js\nonly();\n```" },
+			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("```js\nonly();\n```") },
 		};
 		const { editor, client } = await opened({ server });
 		const result = await editor().publish();
@@ -833,7 +830,7 @@ describe("recovery on open", () => {
 	});
 
 	it("a new entry offers the copy of its collection when it differs from its base", async () => {
-		const base = formFromEntry({ ...ENTRY, working: { metadata: {}, mdx: "" }, workingSlug: null });
+		const base = formFromEntry({ ...ENTRY, working: { metadata: {}, doc: docOf("") }, workingSlug: null });
 		const snapshot = { ...base, title: "쓰던 글" };
 		const record = {
 			key: `${ADMIN}:new:post`,
@@ -863,6 +860,100 @@ describe("recovery on open", () => {
 	});
 });
 
+describe("recovery copies saved before the form held the body as a document", () => {
+	/** What the browser stored then: the body as MDX text in `snapshot.mdx`, and the fingerprint of that form. */
+	const legacyCopy = (server: EntryData, changes: { title?: string; mdx: string }, baseVersion = server.version) => {
+		const { doc: _doc, ...current } = formFromEntry(server);
+		const base = { ...current, mdx: "첫째 줄\n둘째 줄" };
+		const snapshot = { ...base, ...changes };
+		return {
+			key: `${ADMIN}:${server.id}`,
+			entryId: server.id,
+			baseVersion,
+			baseFingerprint: JSON.stringify(base),
+			localFingerprint: JSON.stringify(snapshot),
+			snapshot,
+			changeSeq: 1,
+			savedAt: 1_700_000_000_000,
+		} as unknown as ReturnType<typeof recoveryCopy>;
+	};
+	const textOf = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
+
+	it("restores the body that was typed as MDX, read through the mdx format", async () => {
+		const copy = legacyCopy(ENTRY, { mdx: "## 제목\n\n**쓰던** 본문" });
+		const { editor, client } = await opened({ records: [copy] });
+		expect(editor().recovery).toEqual({ kind: "restore", savedAt: copy.savedAt });
+		editor().restoreRecovery();
+		expect(editor().form).not.toHaveProperty("mdx");
+		expect(textOf(editor().form.doc)).toBe(textOf(docOf("## 제목\n\n**쓰던** 본문")));
+		expect(editor().hasUnsavedChanges).toBe(true);
+		await editor().save();
+		const sent = client.update.mock.calls[0]?.[1] as unknown as { doc: StoredDocument };
+		expect(sent).not.toHaveProperty("mdx");
+		expect(textOf(sent.doc)).toBe(textOf(docOf("## 제목\n\n**쓰던** 본문")));
+	});
+
+	it("keeps the title typed with the old body, and restoring does not leave the old key behind", async () => {
+		const copy = legacyCopy(ENTRY, { title: "예전에 쓰던 제목", mdx: "본문" });
+		const { editor } = await opened({ records: [copy] });
+		editor().restoreRecovery();
+		expect(editor().form.title).toBe("예전에 쓰던 제목");
+		expect(Object.keys(editor().form)).not.toContain("mdx");
+	});
+
+	it("a copy whose body the mdx format cannot read is restored as it was typed, in a document that holds the text", async () => {
+		const broken = "# 제목\n\n<Component>";
+		const copy = legacyCopy(ENTRY, { mdx: broken });
+		const { editor, client } = await opened({ records: [copy] });
+		editor().restoreRecovery();
+		expect(editor().form.doc.content).toHaveLength(1);
+		expect(editor().form.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: broken } });
+		await editor().save();
+		const sent = client.update.mock.calls[0]?.[1] as unknown as { doc: StoredDocument };
+		expect(sent.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: broken } });
+	});
+
+	it("a copy that holds what the server has is dropped, as before", async () => {
+		const copy = legacyCopy(ENTRY, { mdx: "첫째 줄\n둘째 줄" });
+		const { editor, recovery } = await opened({ records: [copy] });
+		expect(editor().recovery).toBeNull();
+		expect(recovery.records.size).toBe(0);
+	});
+
+	it("offers `conflict` for an old copy when the server changed after it was made", async () => {
+		const copy = legacyCopy(ENTRY, { mdx: "예전 본문" }, 3);
+		const { editor } = await opened({ records: [copy] });
+		expect(editor().recovery).toMatchObject({ kind: "conflict", server: expect.objectContaining({ version: 4 }) });
+	});
+
+	it("a new entry offers an old copy that has something typed, and nothing for an empty one", async () => {
+		const empty = (mdx: string) => {
+			const base = { title: "", slug: "", mdx: "" };
+			const snapshot = { ...base, mdx };
+			return {
+				key: `${ADMIN}:new:post`,
+				entryId: "new",
+				baseVersion: 0,
+				baseFingerprint: JSON.stringify(base),
+				localFingerprint: JSON.stringify(snapshot),
+				snapshot,
+				changeSeq: 1,
+				savedAt: 5,
+			} as unknown as ReturnType<typeof recoveryCopy>;
+		};
+		const typed = setup({ target: { mode: "new", collection: "post" }, records: [empty("쓰던 글")] });
+		typed.core.start();
+		await vi.waitFor(() => expect(typed.editor().recovery).not.toBeNull());
+		typed.editor().restoreRecovery();
+		expect(textOf(typed.editor().form.doc)).toBe(textOf(docOf("쓰던 글")));
+
+		const untouched = setup({ target: { mode: "new", collection: "post" }, records: [empty("")] });
+		untouched.core.start();
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(untouched.editor().recovery).toBeNull();
+	});
+});
+
 describe("translation source flow", () => {
 	const translation: EntryData = {
 		...ENTRY,
@@ -871,7 +962,7 @@ describe("translation source flow", () => {
 		translationGroupId: "entry-1",
 		working: {
 			metadata: { title: "Hello" },
-			mdx: "Body",
+			doc: docOf("Body"),
 			translation: { version: 3, baseSource: "Old source", baseDoc: null } as never,
 		},
 		source: {
@@ -880,7 +971,7 @@ describe("translation source flow", () => {
 			status: "draft",
 			workingSlug: "test",
 			metadata: { title: "테스트" },
-			mdx: "New source",
+			doc: docOf("New source"),
 		},
 	};
 
@@ -892,7 +983,7 @@ describe("translation source flow", () => {
 	it("says the source changed when it differs from the confirmed one, and confirming it records the source in the next save", async () => {
 		const { editor, client } = await opened({ server: translation });
 		expect(editor().translation).toMatchObject({
-			source: { mdx: "New source", locale: "ko", title: "테스트" },
+			source: { locale: "ko", title: "테스트" },
 			confirmed: { version: 4 },
 			sourceChanged: true,
 		});

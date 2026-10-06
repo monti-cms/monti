@@ -1,7 +1,7 @@
 "use client";
 
-import type { EditorExtension, EditorInsertAction, EditorSelectionAction } from "@monti-cms/admin";
-import { type BlockAction, blockNodeName, MdxPreview, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import type { BrowserFormat, EditorExtension, EditorInsertAction, EditorSelectionAction } from "@monti-cms/admin";
+import { type BlockAction, blockNodeName, DocPreview } from "@monti-cms/admin/editor";
 import {
 	Button,
 	Dialog,
@@ -22,6 +22,7 @@ import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";
 import { streamAiAction, useAiActions } from "./ai-slot-provider";
 import { aiWriteMessages } from "./ai-write.messages";
+import { contentOfText, documentOfText, textOfContent, useMdxFormat } from "./mdx-format";
 import { diffWords } from "./word-diff";
 
 const t = createTranslator(aiWriteMessages);
@@ -55,17 +56,17 @@ type RunState =
 	| { status: "error"; text: string; message: string };
 
 /** MDX of the selection. A paragraph with only part selected contains only that part. */
-function selectionMdx(editor: Editor, from: number, to: number): string {
+function selectionMdx(format: BrowserFormat, editor: Editor, from: number, to: number): string {
 	const slice = editor.state.doc.slice(from, to);
 	const nodes = (slice.content.toJSON() ?? []) as JSONContent[];
 	// Selecting inside one paragraph yields only a text fragment. It has to be wrapped in a paragraph to be MDX.
 	const content = slice.content.firstChild?.isInline ? [{ type: "paragraph", content: nodes }] : nodes;
-	return tiptapToMdx({ type: "doc", content }).trim();
+	return textOfContent(format, content);
 }
 
 /** Result MDX as editor content. If the edit was inside one paragraph and the result is one paragraph, inserts only the text (the paragraph is not split). */
-function contentFor(editor: Editor, from: number, to: number, mdx: string): JSONContent[] {
-	const blocks = mdxToTiptap(mdx).content ?? [];
+function contentFor(format: BrowserFormat, editor: Editor, from: number, to: number, mdx: string): JSONContent[] {
+	const blocks = contentOfText(format, mdx);
 	const $from = editor.state.doc.resolve(from);
 	const $to = editor.state.doc.resolve(to);
 	const inline = $from.parent === $to.parent && $from.parent.isTextblock;
@@ -73,7 +74,17 @@ function contentFor(editor: Editor, from: number, to: number, mdx: string): JSON
 	return inline && only?.type === "paragraph" ? (only.content ?? []) : blocks;
 }
 
-function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry; onClose: () => void }) {
+function WriteDialog({
+	job,
+	format,
+	getEntry,
+	onClose,
+}: {
+	job: Job;
+	format: BrowserFormat;
+	getEntry: GetEntry;
+	onClose: () => void;
+}) {
 	const [request, setRequest] = useState("");
 	const [state, setState] = useState<RunState>({ status: "idle" });
 	const controllerRef = useRef<AbortController | null>(null);
@@ -90,7 +101,10 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 				? { selection: job.source, title: entry?.title || undefined }
 				: job.mode === "block"
 					? { block: job.source, title: entry?.title || undefined }
-					: { title: entry?.title || undefined, body: tiptapToMdx(editor.getJSON()).trim() || undefined };
+					: {
+							title: entry?.title || undefined,
+							body: textOfContent(format, editor.getJSON().content ?? []) || undefined,
+						};
 		try {
 			const result = await streamAiAction(
 				action.key,
@@ -131,15 +145,17 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 	// A block fix replaces only when the result is one block of the same kind.
 	const blockProblem = useMemo(() => {
 		if (job.mode !== "block" || state.status !== "done") return null;
-		const blocks = mdxToTiptap(state.text).content ?? [];
+		const blocks = contentOfText(format, state.text);
 		return blocks.length === 1 && blocks[0]?.type === job.nodeType ? null : t("blockMismatch");
-	}, [job, state]);
+	}, [job, state, format]);
 
 	const apply = () => {
 		if (state.status !== "done" || !state.text || blockProblem) return;
 		// A block is replaced entirely with the result block.
 		const content =
-			job.mode === "block" ? (mdxToTiptap(state.text).content ?? []) : contentFor(editor, job.from, job.to, state.text);
+			job.mode === "block"
+				? contentOfText(format, state.text)
+				: contentFor(format, editor, job.from, job.to, state.text);
 		editor.chain().focus().insertContentAt({ from: job.from, to: job.to }, content).run();
 		onClose();
 	};
@@ -208,7 +224,7 @@ function WriteDialog({ job, getEntry, onClose }: { job: Job; getEntry: GetEntry;
 						</TabsList>
 						<output aria-live="polite" className="block min-w-0">
 							{view === "preview" ? (
-								<ResultPreview job={job} text={result} done={state.status === "done"} />
+								<ResultPreview job={job} format={format} text={result} done={state.status === "done"} />
 							) : (
 								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-cms-muted/40 p-3 font-mono text-xs leading-relaxed">
 									{diff ? <DiffText parts={diff} /> : result || t("running")}
@@ -275,13 +291,23 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 
 const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-cms-muted/40 p-3";
 
+/** A text as the rendered post. A text the format cannot read is shown as it is. */
+function TextPreview({ format, text, label }: { format: BrowserFormat; text: string; label: string }) {
+	const doc = useMemo(() => documentOfText(format, text), [format, text]);
+	return doc ? (
+		<DocPreview doc={doc} label={label} />
+	) : (
+		<pre className="whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs">{text}</pre>
+	);
+}
+
 /**
  * Renders the result in its text shape (diagrams and charts as pictures). While writing, half-written code does not render, so the source is shown.
  * Block fix shows the current block and the changed one side by side.
  */
-function ResultPreview({ job, text, done }: { job: Job; text: string; done: boolean }) {
+function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserFormat; text: string; done: boolean }) {
 	const after = done ? (
-		<MdxPreview mdx={text} label={t("after")} />
+		<TextPreview format={format} text={text} label={t("after")} />
 	) : (
 		<pre className="whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs">{text || t("running")}</pre>
 	);
@@ -291,7 +317,7 @@ function ResultPreview({ job, text, done }: { job: Job; text: string; done: bool
 			<section className="min-w-0 space-y-1.5">
 				<h3 className="font-medium text-cms-muted-foreground text-xs">{t("now")}</h3>
 				<div className={PANEL}>
-					<MdxPreview mdx={job.source} label={t("now")} />
+					<TextPreview format={format} text={job.source} label={t("now")} />
 				</div>
 			</section>
 			<section className="min-w-0 space-y-1.5">
@@ -322,19 +348,21 @@ function useIsEmpty(editor: Editor | null) {
 /** AI writing attached as an edit-screen extension (polish style, write a draft). */
 export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 	const { data } = useAiActions();
+	// The model reads and writes MDX, so writing works through the `mdx` format. Without it there is nothing to write with.
+	const format = useMdxFormat();
 	const [editor, setEditor] = useState<Editor | null>(null);
 	const [job, setJob] = useState<Job | null>(null);
 	const empty = useIsEmpty(editor);
 
 	const usable = useMemo(() => {
 		const ready = new Set(data?.usable ?? []);
-		const actions = (data?.items ?? []).filter((action) => action.enabled && ready.has(action.key));
+		const actions = format ? (data?.items ?? []).filter((action) => action.enabled && ready.has(action.key)) : [];
 		return {
 			selection: actions.filter((action) => action.attach.some((attach) => attach.slot === "selection")),
 			insert: actions.filter((action) => action.attach.some((attach) => attach.slot === "insert")),
 			block: actions.filter((action) => action.attach.some((attach) => attach.slot === "block")),
 		};
-	}, [data]);
+	}, [data, format]);
 
 	const selectionActions = useMemo<EditorSelectionAction[]>(
 		() =>
@@ -344,11 +372,18 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				icon: <Sparkles aria-hidden className="size-4" />,
 				run: (current) => {
 					const { from, to } = current.state.selection;
-					if (from === to) return;
-					setJob({ mode: "selection", action, editor: current, from, to, source: selectionMdx(current, from, to) });
+					if (from === to || !format) return;
+					setJob({
+						mode: "selection",
+						action,
+						editor: current,
+						from,
+						to,
+						source: selectionMdx(format, current, from, to),
+					});
 				},
 			})),
-		[usable.selection],
+		[usable.selection, format],
 	);
 
 	const insertActions = useMemo<EditorInsertAction[]>(
@@ -378,8 +413,8 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 					isAvailable: (current, pos) => nodes.has(current.state.doc.nodeAt(pos)?.type.name ?? ""),
 					run: (current, pos) => {
 						const node = current.state.doc.nodeAt(pos);
-						if (!node) return;
-						const source = tiptapToMdx({ type: "doc", content: [node.toJSON() as JSONContent] }).trim();
+						if (!node || !format) return;
+						const source = textOfContent(format, [node.toJSON() as JSONContent]);
 						setJob({
 							mode: "block",
 							action,
@@ -392,7 +427,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 					},
 				};
 			}),
-		[usable.block],
+		[usable.block, format],
 	);
 
 	const firstInsert = usable.insert[0];
@@ -417,7 +452,9 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				)}
 			</>
 		),
-		overlay: job && <WriteDialog job={job} getEntry={getEntry} onClose={() => setJob(null)} />,
+		overlay: job && format && (
+			<WriteDialog job={job} format={format} getEntry={getEntry} onClose={() => setJob(null)} />
+		),
 		selectionActions,
 		insertActions,
 		blockActions,

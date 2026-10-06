@@ -2,18 +2,18 @@
 
 import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
 import {
-	bodyDocument,
-	bodyFromMdx,
-	documentToMdx,
+	assignBlockIds,
+	type CmsNode,
 	emptyStoredDocument,
+	STORED_DOCUMENT_VERSION,
 	type StoredDocument,
-	withoutBlockIds,
-} from "@monti-cms/core/mdx";
+} from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/runtime";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { documentKey } from "../../editor/document-key";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
 import { Alert, AlertDescription } from "../../ui/alert";
@@ -33,22 +33,24 @@ const t = createTranslator(templatesMessages);
 
 const TEMPLATES_KEY = ["cms", "templates"] as const;
 
-/** Initial body of a new template. */
-const NEW_TEMPLATE_DOC: StoredDocument = bodyDocument(bodyFromMdx(t("newMdx")));
+const textNode = (text: string): CmsNode => ({ type: "text", text });
+const heading = (text: string): CmsNode => ({ type: "heading", attrs: { level: 2 }, content: [textNode(text)] });
+const paragraph = (text: string): CmsNode => ({ type: "paragraph", content: [textNode(text)] });
+const item = (text: string): CmsNode => ({ type: "listItem", content: [paragraph(text)] });
 
-/** What a document says, without its block ids: two documents with the same key read the same. */
-const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
-
-/**
- * The template body as the editor holds it: the document being edited (a template is a document, saved as one) and the text the editor shows it as.
- * The editor still reads and writes text, so the two travel together; what is saved is the document.
- */
-interface EditBody {
-	readonly doc: StoredDocument;
-	readonly mdx: string;
-}
-
-const editBodyOf = (doc: StoredDocument): EditBody => ({ doc, mdx: documentToMdx(doc) });
+/** Initial body of a new template: an outline with three sections. */
+const newTemplateDoc = (): StoredDocument => ({
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+	content: assignBlockIds([
+		heading(t("newBody.introduction")),
+		paragraph(t("newBody.enterContent")),
+		heading(t("newBody.body")),
+		{ type: "bulletList", content: [item(t("newBody.item1")), item(t("newBody.item2"))] },
+		heading(t("newBody.conclusion")),
+		paragraph(t("newBody.summary")),
+	]),
+});
 
 export function TemplateManager() {
 	const queryClient = useQueryClient();
@@ -70,7 +72,7 @@ export function TemplateManager() {
 	// The template open in the edit panel (a new template has no id) and the values being edited.
 	const [activeTemplate, setActiveTemplate] = useState<Partial<BodyTemplate> | null>(null);
 	const [editName, setEditName] = useState("");
-	const [editBody, setEditBody] = useState<EditBody>(() => editBodyOf(emptyStoredDocument()));
+	const [editBody, setEditBody] = useState<StoredDocument>(() => emptyStoredDocument());
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
@@ -79,7 +81,7 @@ export function TemplateManager() {
 	const isDirty =
 		activeTemplate !== null &&
 		(editName !== (activeTemplate.name ?? "") ||
-			contentKey(editBody.doc) !== contentKey(activeTemplate.doc ?? emptyStoredDocument()));
+			documentKey(editBody) !== documentKey(activeTemplate.doc ?? emptyStoredDocument()));
 
 	/** Refetches the list in the background. Rows currently visible stay as they are. */
 	const invalidateTemplates = () => queryClient.invalidateQueries({ queryKey: TEMPLATES_KEY });
@@ -87,7 +89,7 @@ export function TemplateManager() {
 	const show = (template: Partial<BodyTemplate> | null) => {
 		setActiveTemplate(template);
 		setEditName(template?.name ?? "");
-		setEditBody(editBodyOf(template?.doc ?? emptyStoredDocument()));
+		setEditBody(template?.doc ?? emptyStoredDocument());
 		setSaveError(null);
 	};
 
@@ -98,7 +100,7 @@ export function TemplateManager() {
 	};
 
 	const openNew = async () => {
-		if (await confirmDiscard(isDirty)) show({ name: "", doc: NEW_TEMPLATE_DOC });
+		if (await confirmDiscard(isDirty)) show({ name: "", doc: newTemplateDoc() });
 	};
 
 	const closeEditor = async () => {
@@ -119,7 +121,7 @@ export function TemplateManager() {
 			if (activeTemplate.id) {
 				const updated = await cmsFetch<BodyTemplate>(cmsApiUrl(`/v1/templates/${activeTemplate.id}`), {
 					method: "PATCH",
-					json: { name: editName.trim(), doc: editBody.doc, expectedVersion: activeTemplate.version },
+					json: { name: editName.trim(), doc: editBody, expectedVersion: activeTemplate.version },
 					fallback: t("common.saveFailed"),
 				});
 				show(updated);
@@ -129,7 +131,7 @@ export function TemplateManager() {
 			} else {
 				const created = await cmsFetch<BodyTemplate>(cmsApiUrl("/v1/templates"), {
 					method: "POST",
-					json: { name: editName.trim(), doc: editBody.doc },
+					json: { name: editName.trim(), doc: editBody },
 					fallback: t("common.saveFailed"),
 				});
 				// Keep the created template open.
@@ -319,14 +321,7 @@ export function TemplateManager() {
 								</p>
 							)}
 							<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-								<CmsEditor
-									content={editBody.mdx}
-									stored={editBody}
-									onChange={(mdx, doc) =>
-										// The editor's document keeps its block ids. A text that is not a document (the editor cannot make one) is one `unparsed` node.
-										setEditBody({ mdx, doc: doc ?? bodyDocument(bodyFromMdx(mdx)) })
-									}
-								/>
+								<CmsEditor doc={editBody} onChange={setEditBody} />
 							</div>
 						</section>
 					) : (

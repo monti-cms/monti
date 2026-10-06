@@ -1,7 +1,6 @@
 "use client";
 
 import { isCollection } from "@monti-cms/core/client";
-import type { StoredDocument } from "@monti-cms/core/mdx";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useStoreSelector } from "../../hooks/store";
 import { cmsEntryClient, type EntryEditorClient, localRecoveryStore, type RecoveryStore } from "./entry-editor-client";
@@ -26,11 +25,6 @@ export interface UseEntryEditorOptions {
 	/** Scope of the browser recovery copy (the key is `adminId:entryId`), so accounts never mix on a shared browser. */
 	adminId: string;
 	target: EntryEditorTarget;
-	/**
-	 * The stored document of a body with the editor's block ids, when the editor made exactly that MDX. A save then sends the document instead of
-	 * the MDX, so every block keeps its id. Without it, the document given to `setBody` is used.
-	 */
-	documentOf?: (mdx: string) => StoredDocument | null | undefined;
 	/**
 	 * Called after every successful server write (save, publish, status change) with the entry as the server holds it. `created` is true for the first
 	 * save of a new entry: the UI may then move the address bar to the entry's edit URL.
@@ -64,7 +58,7 @@ export interface UseEntryEditorOptions {
  */
 export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 	const callbacksRef = useRef<EntryEditorCallbacks>({});
-	callbacksRef.current = { documentOf: options.documentOf, onSaved: options.onSaved };
+	callbacksRef.current = { onSaved: options.onSaved };
 	const [core] = useState(() =>
 		createEntryEditor({
 			adminId: options.adminId,

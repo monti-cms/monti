@@ -1,9 +1,9 @@
 "use client";
 
 import { diffSources, type SourceChange, type StoredDocument } from "@monti-cms/core/client";
-import { fromStoredDocument, STORED_DOCUMENT_VERSION, serialize } from "@monti-cms/core/mdx";
+import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { MdxPreview } from "./source-pane";
+import { DocPreview } from "./source-pane";
 import { t } from "./translate";
 
 const KIND_LABELS: Record<SourceChange["kind"], string> = {
@@ -25,15 +25,18 @@ const headerText = (source: string) => {
 	return source;
 };
 
-/** The block of a unit as MDX, for the preview. */
-const unitMdx = (node: StoredDocument["content"][number]) =>
-	serialize(fromStoredDocument({ type: "doc", version: STORED_DOCUMENT_VERSION, content: [node] })).trimEnd();
+/** The block of a unit as a document, for the preview. */
+const unitDoc = (node: StoredDocument["content"][number]): StoredDocument => ({
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+	content: [node],
+});
 
 function UnitView({ unit }: { unit: { kind: string; source: string; node: StoredDocument["content"][number] } }) {
 	return unit.kind === "header" ? (
 		<p className="text-sm">{headerText(unit.source)}</p>
 	) : (
-		<MdxPreview mdx={unitMdx(unit.node)} />
+		<DocPreview doc={unitDoc(unit.node)} />
 	);
 }
 

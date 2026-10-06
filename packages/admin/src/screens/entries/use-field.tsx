@@ -270,7 +270,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 					entryId,
 					title: form.title,
 					summary: summaryOf(collection, form),
-					body: form.mdx,
+					body: form.doc,
 					current: Array.isArray(current) ? current : typeof current === "string" ? current : undefined,
 				};
 			},

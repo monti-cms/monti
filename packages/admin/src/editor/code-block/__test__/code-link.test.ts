@@ -1,8 +1,8 @@
 import { Editor } from "@tiptap/core";
 import type { DecorationSet } from "@tiptap/pm/view";
 import { afterEach, describe, expect, it } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
 import { buildEditorExtensions } from "../../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../../tiptap-content";
 import { codeEffectsKey, pickLines } from "../effects-plugin";
 import { cancelLink, commitLink, findAnchor, startLinkFromLines, startLinkFromText, unlinkRef } from "../link-commands";
 
@@ -17,7 +17,7 @@ const SOURCE = ["이 함수가 값을 돌려준다.", "", "```ts", "function add
 );
 
 const mount = (source = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(source) });
+	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(source) });
 	return editor;
 };
 
@@ -27,7 +27,7 @@ const wordRange = (instance: Editor, word = "함수가") => {
 	return { from, to: from + word.length };
 };
 const codePos = (instance: Editor) => instance.state.doc.child(0).nodeSize;
-const save = (instance: Editor) => tiptapToMdx(instance.getJSON()).trimEnd();
+const save = (instance: Editor) => mdxOfTiptap(instance.getJSON()).trimEnd();
 
 describe("linking body text to code (editor)", () => {
 	it("pick body text first, then a line by its number, then link: the body link and line label are created together", () => {

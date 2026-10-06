@@ -1,6 +1,8 @@
 "use client";
 
+import type { StoredDocument } from "@monti-cms/core/document";
 import { toast } from "sonner";
+import { useSourceFormat } from "../../admin-components";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -120,26 +122,32 @@ function ComparePanes({
 	server: EntryForm;
 	serverVersion: number;
 }) {
-	const copy = async (mdx: string) => {
+	// The body is shown as text in the notation of the source panel; without one, as the document itself.
+	const format = useSourceFormat();
+	const bodyText = (doc: StoredDocument) => (format ? format.export(doc) : JSON.stringify(doc, null, 2));
+	const copy = async (body: string) => {
 		try {
-			await navigator.clipboard.writeText(mdx);
+			await navigator.clipboard.writeText(body);
 			toast.success(t("conflict.copied"));
 		} catch {
 			toast.error(t("conflict.copyFailed"));
 		}
 	};
-	const pane = (label: string, value: EntryForm) => (
-		<div className="space-y-2 rounded border p-3">
-			<p className="font-semibold text-sm">{label}</p>
-			<p className="text-xs">
-				{t("conflict.summary", { title: value.title || t("untitled"), slug: value.slug || t("conflict.noSlug") })}
-			</p>
-			<Button type="button" variant="link" size="xs" className="px-0" onClick={() => void copy(value.mdx)}>
-				{t("conflict.copyBody")}
-			</Button>
-			<pre className="max-h-60 overflow-auto whitespace-pre-wrap text-xs">{value.mdx}</pre>
-		</div>
-	);
+	const pane = (label: string, value: EntryForm) => {
+		const body = bodyText(value.doc);
+		return (
+			<div className="space-y-2 rounded border p-3">
+				<p className="font-semibold text-sm">{label}</p>
+				<p className="text-xs">
+					{t("conflict.summary", { title: value.title || t("untitled"), slug: value.slug || t("conflict.noSlug") })}
+				</p>
+				<Button type="button" variant="link" size="xs" className="px-0" onClick={() => void copy(body)}>
+					{t("conflict.copyBody")}
+				</Button>
+				<pre className="max-h-60 overflow-auto whitespace-pre-wrap text-xs">{body}</pre>
+			</div>
+		);
+	};
 	return (
 		<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 			{pane(t("conflict.mine"), local)}

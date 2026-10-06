@@ -1,4 +1,4 @@
-import { buildEditorExtensions, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -9,6 +9,7 @@ import { CodeExplorerProvider } from "../code-explorer/provider";
 import { CollapsibleProvider } from "../collapsible/provider";
 import { ColumnsProvider } from "../columns/provider";
 import { TabsProvider } from "../tabs/provider";
+import { mdxToTiptap, tiptapToMdx } from "../test/editor-text";
 
 afterEach(cleanup);
 

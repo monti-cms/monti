@@ -5,8 +5,8 @@ import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CmsAdminComponentsProvider } from "../../../../admin-components";
 import { chooseSelectOption } from "../../../../test/base-ui";
+import { mdxOfTiptap, tiptapOf } from "../../../../test/mdx";
 import { buildEditorExtensions } from "../../../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../../../tiptap-content";
 import { BlockFrame, Content, useBlockEditor } from "../../use-block-editor";
 
 afterEach(cleanup);
@@ -14,7 +14,7 @@ afterEach(cleanup);
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
 		extensions: buildEditorExtensions(),
-		content: mdxToTiptap(source),
+		content: tiptapOf(source),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -62,9 +62,9 @@ describe("custom block NodeView", () => {
 		expect(screen.queryByLabelText("단계")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		await chooseSelectOption("단계", "주의");
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('<Notice level="warn"'));
+		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('<Notice level="warn"'));
 		fireEvent.change(screen.getByLabelText("제목"), { target: { value: "점검" } });
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('title="점검"'));
+		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('title="점검"'));
 	});
 
 	it("hides the settings tool when read-only", async () => {
@@ -80,7 +80,7 @@ describe("custom block NodeView", () => {
 			</CmsAdminComponentsProvider>
 		));
 		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain('<Notice level="warn"'));
-		expect(tiptapToMdx(editor.getJSON())).toContain("본문");
+		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('<Notice level="warn"'));
+		expect(mdxOfTiptap(editor.getJSON())).toContain("본문");
 	});
 });

@@ -1,7 +1,8 @@
-import { buildEditorExtensions, mdxToTiptap } from "@monti-cms/admin/editor";
+import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { defineTextChecker, normalizeIssue, supportsLocale, type TextCheckSegment } from "@monti-cms/core/client";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { tiptapOf } from "../../../test/mdx";
 import { extractSegments } from "../extract";
 import { createTextCheckPlugin, type TextCheckMeta, textCheckIssues, textCheckPluginKey } from "../plugin";
 import { checkSegments, chunkSegments, placeIssues, TextCheckCache } from "../run";
@@ -13,7 +14,7 @@ afterEach(() => {
 });
 
 const open = (mdx: string) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(mdx) });
+	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(mdx) });
 	editor.registerPlugin(createTextCheckPlugin());
 	return editor;
 };

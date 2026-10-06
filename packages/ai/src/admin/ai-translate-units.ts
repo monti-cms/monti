@@ -1,12 +1,8 @@
-import {
-	BLOCK_ID_ATTRIBUTE,
-	findBlock as findBlockById,
-	mdxToTiptap,
-	tiptapToMdx,
-	UNTRANSLATED_MARK_NAME,
-} from "@monti-cms/admin/editor";
+import type { BrowserFormat } from "@monti-cms/admin";
+import { BLOCK_ID_ATTRIBUTE, findBlock as findBlockById, UNTRANSLATED_MARK_NAME } from "@monti-cms/admin/editor";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Fragment, type Node as PmNode } from "@tiptap/pm/model";
+import { contentOfText, textOfContent } from "./mdx-format";
 
 /**
  * Units of AI translation. A unit is the single block a block handle points to, or the blocks that Translate all collects.
@@ -49,35 +45,35 @@ const withoutHints = (json: JSONContent): JSONContent => ({
 	...(json.content ? { content: json.content.map(withoutHints) } : {}),
 });
 
-/** Source MDX of a block (JSON). */
-export const sourceMdxFromJson = (json: JSONContent) =>
-	tiptapToMdx({ type: "doc", content: [withoutHints(json)] }).trim();
+/** Source MDX of a block (JSON), written by the `mdx` format. */
+export const sourceMdxFromJson = (format: BrowserFormat, json: JSONContent) =>
+	textOfContent(format, [withoutHints(json)]);
 
 /** Translation unit of one block. `parent` is the node that contains the block. */
-export function unitOf(node: PmNode, parent: PmNode | null): TranslateUnit {
+export function unitOf(format: BrowserFormat, node: PmNode, parent: PmNode | null): TranslateUnit {
 	const json = node.toJSON() as JSONContent;
 	const wrap = LIST_ITEMS.has(node.type.name) && parent && LISTS.has(parent.type.name) ? parent : null;
 	const sent = wrap ? { type: wrap.type.name, attrs: wrap.attrs, content: [json] } : json;
-	return { mdx: sourceMdxFromJson(sent), original: JSON.stringify(json), wrap: wrap?.type.name ?? null };
+	return { mdx: sourceMdxFromJson(format, sent), original: JSON.stringify(json), wrap: wrap?.type.name ?? null };
 }
 
 /** Translation unit at a block handle position (`pos` is right before the block). `null` if there is no notice. */
-export function unitAt(doc: PmNode, pos: number): TranslateUnit | null {
+export function unitAt(format: BrowserFormat, doc: PmNode, pos: number): TranslateUnit | null {
 	const node = doc.nodeAt(pos);
 	if (!node || !node.isBlock || !hasHints(node)) return null;
-	return unitOf(node, doc.resolve(pos).parent);
+	return unitOf(format, node, doc.resolve(pos).parent);
 }
 
 /** Units of Translate all. One per top-level block, and one per item for lists. */
-export function collectUnits(doc: PmNode): TranslateUnit[] {
+export function collectUnits(format: BrowserFormat, doc: PmNode): TranslateUnit[] {
 	const units: TranslateUnit[] = [];
 	doc.forEach((node) => {
 		if (!hasHints(node)) return;
 		if (LISTS.has(node.type.name)) {
 			node.forEach((item) => {
-				if (hasHints(item)) units.push(unitOf(item, node));
+				if (hasHints(item)) units.push(unitOf(format, item, node));
 			});
-		} else units.push(unitOf(node, doc));
+		} else units.push(unitOf(format, node, doc));
 	});
 	return units;
 }
@@ -117,11 +113,17 @@ function findBlock(doc: PmNode, original: string, hint: number | null): { pos: n
  * Replaces the original block with the translation result. If the block changed in the meantime, `changed`; if the result does not fit that position,
  * `invalid`; in both cases the document is untouched.
  */
-export function applyTranslation(editor: Editor, unit: TranslateUnit, mdx: string, hint: number | null): ApplyResult {
+export function applyTranslation(
+	format: BrowserFormat,
+	editor: Editor,
+	unit: TranslateUnit,
+	mdx: string,
+	hint: number | null,
+): ApplyResult {
 	const { state } = editor;
 	const target = findBlock(state.doc, unit.original, hint);
 	if (!target) return "changed";
-	let content = mdxToTiptap(mdx).content ?? [];
+	let content = contentOfText(format, mdx);
 	if (unit.wrap) {
 		const [list] = content;
 		if (content.length !== 1 || list?.type !== unit.wrap || list.content?.length !== 1) return "invalid";

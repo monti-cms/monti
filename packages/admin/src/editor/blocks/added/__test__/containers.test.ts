@@ -1,11 +1,10 @@
-import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
 import { Editor } from "@tiptap/core";
 import { DOMParser as PmDOMParser } from "@tiptap/pm/model";
 import { describe, expect, it } from "vitest";
+import { docOf, mdxOfDoc, mdxOfTiptap, tiptapOf } from "../../../../test/mdx";
 import { deleteBlock, duplicateBlock } from "../../../block-commands";
 import { BLOCK_INSERT_ACTIONS } from "../../../block-inserts";
 import { buildEditorExtensions } from "../../../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../../../tiptap-content";
 
 const sources = [
 	'<Callout variant="note">\n\n강조 **문장**\n\n</Callout>',
@@ -26,12 +25,12 @@ describe("container body editing", () => {
 				] as const,
 		),
 	)("MDX → Tiptap schema → MDX round trip: %s", (source, expected) => {
-		const content = mdxToTiptap(source);
+		const content = tiptapOf(source);
 		expect(content.content?.[0]?.type).toBe(expected);
 		const editor = new Editor({ extensions: buildEditorExtensions(), content });
-		const saved = tiptapToMdx(editor.getJSON()).trim();
+		const saved = mdxOfTiptap(editor.getJSON()).trim();
 		// The serializer normalizes whitespace inside containers. The result that went through the editor must be the same canonical form.
-		expect(saved).toBe(serialize(toDocument(analyze(source))).trim());
+		expect(saved).toBe(mdxOfDoc(docOf(source)).trim());
 		editor.destroy();
 	});
 
@@ -39,7 +38,7 @@ describe("container body editing", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p>/</p>" });
 		BLOCK_INSERT_ACTIONS[name]?.(editor, { from: 1, to: 2 });
 		expect(editor.getJSON().content?.[0]?.type).toBe(`cms${name[0]?.toUpperCase()}${name.slice(1)}`);
-		expect(tiptapToMdx(editor.getJSON())).toContain(`<${name[0]?.toUpperCase()}${name.slice(1)}`);
+		expect(mdxOfTiptap(editor.getJSON())).toContain(`<${name[0]?.toUpperCase()}${name.slice(1)}`);
 		editor.destroy();
 	});
 
@@ -51,24 +50,23 @@ describe("container body editing", () => {
 		expect(block?.childCount).toBe(1);
 		expect(block?.firstChild?.type.name).toBe("codeBlock");
 		expect(block?.firstChild?.attrs).toMatchObject({ language: "ts", meta: 'title="src/index.ts"' });
-		expect(tiptapToMdx(editor.getJSON())).toContain('<CodeExplorer>\n\n```ts title="src/index.ts"');
+		expect(mdxOfTiptap(editor.getJSON())).toContain('<CodeExplorer>\n\n```ts title="src/index.ts"');
 		editor.destroy();
 	});
 
 	it("HTML copy and paste also keep container attributes", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(sources[0] ?? "") });
+		const editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(sources[0] ?? "") });
 		const html = editor.getHTML();
 		const element = document.createElement("div");
 		element.innerHTML = html;
 		const parsed = PmDOMParser.fromSchema(editor.schema).parse(element);
 		expect(parsed.firstChild?.attrs.values.variant).toBe("note");
-		expect(parsed.firstChild?.attrs.originalAttributes).toEqual(editor.state.doc.firstChild?.attrs.originalAttributes);
 		editor.destroy();
 	});
 
 	it("long titles are also preserved through HTML copy and paste", () => {
 		const title = "긴 제목".repeat(5000);
-		const editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(sources[0] ?? "") });
+		const editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(sources[0] ?? "") });
 		editor.commands.updateAttributes("cmsCallout", { values: { title } });
 		const element = document.createElement("div");
 		element.innerHTML = editor.getHTML();
@@ -79,29 +77,29 @@ describe("container body editing", () => {
 
 	it("a callout without body opens with an empty paragraph, and saving it left empty restores it without body", () => {
 		const source = '<Callout variant="info" title="제목만" />';
-		const content = mdxToTiptap(source);
+		const content = tiptapOf(source);
 		expect(content.content?.[0]?.type).toBe("cmsCallout");
 		expect(content.content?.[0]?.content).toEqual([{ type: "paragraph" }]);
 		const editor = new Editor({ extensions: buildEditorExtensions(), content });
-		expect(tiptapToMdx(editor.getJSON()).trim()).toBe(serialize(toDocument(analyze(source))).trim());
+		expect(mdxOfTiptap(editor.getJSON()).trim()).toBe(mdxOfDoc(docOf(source)).trim());
 		editor.commands.insertContentAt(2, "새 본문");
-		expect(tiptapToMdx(editor.getJSON())).toContain("새 본문");
+		expect(mdxOfTiptap(editor.getJSON())).toContain("새 본문");
 		editor.destroy();
 	});
 
 	it("empty containers (except callouts) and a Tab outside its parent go to the raw-source box", () => {
-		const empty = mdxToTiptap('<Collapsible title="a" />');
+		const empty = tiptapOf('<Collapsible title="a" />');
 		expect(empty.content?.[0]?.type).not.toBe("cmsCollapsible");
-		const orphan = mdxToTiptap('<Tab label="a">\n\n본문\n\n</Tab>');
+		const orphan = tiptapOf('<Tab label="a">\n\n본문\n\n</Tab>');
 		expect(orphan.content?.[0]?.type).not.toBe("cmsTab");
-		const loneColumn = mdxToTiptap("<Column>\n\n본문\n\n</Column>");
+		const loneColumn = tiptapOf("<Column>\n\n본문\n\n</Column>");
 		expect(loneColumn.content?.[0]?.type).not.toBe("cmsColumn");
-		const invalid = mdxToTiptap('<Callout>\n\n<Tab label="a">\n\n본문\n\n</Tab>\n\n</Callout>');
+		const invalid = tiptapOf('<Callout>\n\n<Tab label="a">\n\n본문\n\n</Tab>\n\n</Callout>');
 		expect(invalid.content?.[0]?.type).not.toBe("cmsCallout");
 	});
 
 	it("handle commands cannot bypass the minimum and maximum Tab count", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(sources[2] ?? "") });
+		const editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(sources[2] ?? "") });
 		expect(deleteBlock(editor, 1)).toBe(false);
 		let pos = 0;
 		for (let i = 0; i < 6; i++) {

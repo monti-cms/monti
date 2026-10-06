@@ -1,9 +1,9 @@
 import { Editor } from "@tiptap/core";
 import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
 import { duplicateBlock } from "../../block-commands";
 import { buildEditorExtensions } from "../../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../../tiptap-content";
 import { findAnchor } from "../link-commands";
 
 let editor: Editor | null = null;
@@ -23,11 +23,11 @@ const SOURCE = [
 ].join("\n");
 
 const mount = (source = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(source) });
+	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(source) });
 	return editor;
 };
 
-const save = (instance: Editor) => tiptapToMdx(instance.getJSON()).trimEnd();
+const save = (instance: Editor) => mdxOfTiptap(instance.getJSON()).trimEnd();
 
 /** Position of the n-th code block. */
 const codeBlockAt = (instance: Editor, nth = 0) => {
@@ -71,7 +71,9 @@ describe("line labels stay unique in the editor", () => {
 		const instance = mount();
 		const block = instance.state.doc.nodeAt(codeBlockAt(instance));
 		if (!block) throw new Error("no code block");
-		instance.view.dispatch(instance.state.tr.insert(0, block));
+		// A pasted block carries no block id: the HTML it comes from has none.
+		const pasted = block.type.create({ ...block.attrs, blockId: null }, block.content, block.marks);
+		instance.view.dispatch(instance.state.tr.insert(0, pasted));
 		const mdx = save(instance);
 		// The pasted copy is first in the document, but the block that held the label keeps it.
 		expect(labelsOf(mdx)).toEqual(["c1"]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { createTranslator, FILE_ACCEPT } from "@monti-cms/core/client";
-import type { StoredDocument } from "@monti-cms/core/mdx";
+import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
 import type { Editor, Range } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -41,7 +41,12 @@ import {
 	useState,
 } from "react";
 import { toast } from "sonner";
-import { type EditorInsertAction, type EditorSelectionAction, useCmsAdminComponents } from "../admin-components";
+import {
+	type EditorInsertAction,
+	type EditorSelectionAction,
+	useCmsAdminComponents,
+	useSourceFormat,
+} from "../admin-components";
 import { errorText } from "../screens/admin-api";
 import { MEDIA_NOT_CONFIGURED } from "../screens/api-error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
@@ -55,6 +60,7 @@ import { deleteBlock, duplicateBlock, moveBlock } from "./block-commands";
 import { BlockHandleOverlay } from "./block-handle-overlay";
 import { CodeLinkBar } from "./code-block/code-link-bar";
 import { CustomBlockMenu, CustomBlockMenuItems } from "./custom-block-menu";
+import { documentKey } from "./document-key";
 import { endBlockDrag, findBlockDOM, refineBlock, resolveTargetBlock, startBlockDrag, startMarquee } from "./drag";
 import { EDITOR_WIDTHS, EditorWidthMenu, useEditorWidth } from "./editor-width";
 import { buildEditorExtensions } from "./extensions";
@@ -76,7 +82,7 @@ import {
 } from "./slash-command";
 import { SlashMenuPopup } from "./slash-menu-popup";
 import { TableToolbar } from "./table-toolbar";
-import { mdxToTiptap, storedToTiptap, tiptapToMdx, tiptapToStored } from "./tiptap-content";
+import { boxPreviewOf, storedToTiptap, tiptapToStored } from "./tiptap-content";
 import { ToolbarButton, type ToolbarItem } from "./toolbar-button";
 import { type ToolbarEntry, ToolbarMenuGroup, ToolbarMenuItem, ToolbarMenuSection, ToolbarRow } from "./toolbar-row";
 import { uploadAttachment } from "./upload-helper";
@@ -84,14 +90,10 @@ import { uploadAttachment } from "./upload-helper";
 const t = createTranslator(editorMessages);
 
 interface CmsEditorProps {
-	content: string;
-	/** `doc` is the body as a stored document with the editor's block ids (`null` when it cannot be one). */
-	onChange: (newContent: string, doc: StoredDocument | null) => void;
-	/**
-	 * The stored body as the server returned it: its MDX and its document with block ids. When `content` is that MDX the editor loads the
-	 * document, so blocks keep their ids exactly; otherwise blocks are paired with it (and with what the editor held).
-	 */
-	stored?: { readonly mdx: string; readonly doc: StoredDocument | null };
+	/** The body. The editor shows it; a change that did not come from the editor itself replaces what it shows (the blocks keep the ids the document gives them). */
+	doc: StoredDocument;
+	/** The body as the editor holds it after every change, as a stored document with the editor's block ids. */
+	onChange: (doc: StoredDocument) => void;
 	/** Title input for the document being edited. Placed below the formatting tools, above the body. */
 	titleField?: ReactNode;
 	/** Document action menu placed at the end of the formatting tools. */
@@ -385,9 +387,8 @@ const sameSpot = (a: HandleSpot | null, b: HandleSpot) =>
 	!!a && a.top === b.top && a.left === b.left && a.pos === b.pos;
 
 export function CmsEditor({
-	content,
+	doc,
 	onChange,
-	stored,
 	titleField,
 	toolbarEnd,
 	toolbarAside,
@@ -408,15 +409,9 @@ export function CmsEditor({
 	const canEdit = editable && !isSourceMode;
 	const { media } = useAdminFeatures();
 	// A body opened in source mode may be unparsable. The visual editor starts as an empty document and is filled when returning.
-	const [initialContent] = useState(() =>
-		isSourceMode
-			? mdxToTiptap("")
-			: stored?.doc && stored.mdx === content
-				? storedToTiptap(stored.doc)
-				: mdxToTiptap(content),
-	);
-	const storedRef = useRef(stored);
-	storedRef.current = stored;
+	const sourceFormat = useSourceFormat();
+	const boxPreview = useMemo(() => boxPreviewOf(sourceFormat), [sourceFormat]);
+	const [initialContent] = useState(() => storedToTiptap(isSourceMode ? emptyStoredDocument() : doc, { boxPreview }));
 	const isInternalUpdateRef = useRef(false);
 	// Width of the element at the right end of the toolbar. Leave this much space on both sides so the tool group stays centered.
 	const asideRef = useRef<HTMLDivElement>(null);
@@ -599,7 +594,7 @@ export function CmsEditor({
 		onUpdate: ({ editor: current }) => {
 			if (isInternalUpdateRef.current) return;
 			const json = current.getJSON();
-			onChange(tiptapToMdx(json), tiptapToStored(json));
+			onChange(tiptapToStored(json));
 			syncTriggerPopup(current);
 		},
 		onSelectionUpdate: ({ editor: current }) => syncTriggerPopup(current),
@@ -636,14 +631,10 @@ export function CmsEditor({
 		let cancelled = false;
 		queueMicrotask(() => {
 			if (cancelled || editor.isDestroyed) return;
-			// The comparison basis is the stored string (MDX) — comparing Tiptap JSON objects breaks due to key order.
-			if (tiptapToMdx(editor.getJSON()) === content) return;
-			// Blocks keep their ids: the stored document when this is its text, otherwise paired with what the editor held and the stored body.
-			const loaded = storedRef.current;
-			const next =
-				loaded?.doc && loaded.mdx === content
-					? storedToTiptap(loaded.doc)
-					: mdxToTiptap(content, [tiptapToStored(editor.getJSON()), loaded?.doc]);
+			// Bodies are compared by what they say (`documentKey`): comparing Tiptap JSON objects breaks due to key order, and block ids are not content.
+			if (documentKey(tiptapToStored(editor.getJSON())) === documentKey(doc)) return;
+			// Blocks keep the ids the document gives them.
+			const next = storedToTiptap(doc, { boxPreview });
 			isInternalUpdateRef.current = true;
 			editor.commands.setContent(next, { emitUpdate: false });
 			isInternalUpdateRef.current = false;
@@ -651,7 +642,7 @@ export function CmsEditor({
 		return () => {
 			cancelled = true;
 		};
-	}, [content, editor, isSourceMode]);
+	}, [doc, editor, isSourceMode, boxPreview]);
 
 	// Toolbar tools read editor.isEditable while rendering. After changing the lock, render once more to sync tool state.
 	const [, rerender] = useReducer((count: number) => count + 1, 0);

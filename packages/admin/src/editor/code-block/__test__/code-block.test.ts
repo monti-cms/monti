@@ -1,4 +1,5 @@
 import type { CodeLineEffect, CodeRule } from "@monti-cms/core/code-block";
+import { storedCodeBlockAttrs, storedCodeBlockFence } from "@monti-cms/core/document";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import type { DecorationSet } from "@tiptap/pm/view";
@@ -43,10 +44,13 @@ const createTestEditor = (code = "const a = 1;", attrs = {}) => {
 	return editor;
 };
 
-/** Stored value (with comments) -> editor -> stored value. */
+/** Code text with annotation comments -> the stored code block -> editor -> stored code block -> code text with annotation comments. */
 const load = (value: string, language = "ts") =>
-	codeBlockConverter.toTiptap({ type: "codeBlock", attrs: { language, value } }, dummyCtx);
-const save = (node: JSONContent) => String(codeBlockConverter.toCms(node, dummyCtx)[0]?.attrs?.value);
+	codeBlockConverter.toTiptap(
+		{ type: "codeBlock", attrs: storedCodeBlockAttrs({ language, meta: "", value }) },
+		dummyCtx,
+	);
+const save = (node: JSONContent) => storedCodeBlockFence(codeBlockConverter.toCms(node, dummyCtx)[0]?.attrs ?? {});
 
 /** Loads a stored value into a real editor (goes through the schema and getJSON). */
 const mountValue = (value: string, language = "ts") => {
@@ -176,16 +180,16 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 	it("plain code without comments round-trips byte for byte", () => {
 		const raw = "const greeting = 'hello world';\nconsole.log(greeting);\n";
 		const node = codeBlockConverter.toTiptap(
-			{ type: "codeBlock", attrs: { language: "ts", meta: 'title="hello.ts"', value: raw } },
+			{ type: "codeBlock", attrs: { language: "ts", meta: 'title="hello.ts"', code: raw } },
 			dummyCtx,
 		);
 		expect(node.attrs?.lineEffects).toEqual([]);
 		expect(node.attrs?.rules).toEqual([]);
 		const [saved] = codeBlockConverter.toCms(node, dummyCtx);
-		expect(saved?.attrs).toEqual({ language: "ts", meta: 'title="hello.ts"', value: raw });
+		expect(saved?.attrs).toEqual({ language: "ts", meta: 'title="hello.ts"', code: raw });
 	});
 
-	it("reads line effects (collapse, add, highlight) as line ranges and saves the original text as is when unchanged", () => {
+	it("reads line effects (collapse, add, highlight) as line ranges and saves the stored code block as it was when unchanged", () => {
 		const raw = [
 			"// @line collapse",
 			"function secret() {",
@@ -201,10 +205,13 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		expect(block.textContent).toBe("function secret() {\n  return 42;\n}\nsecret();");
 		expect((block.attrs.lineEffects as CodeLineEffect[]).map(({ name, start, end }) => [name, start, end])).toEqual([
 			["collapse", 0, 3],
-			["highlight", 3, 4],
 			["plus", 1, 2],
+			["highlight", 3, 4],
 		]);
-		expect(save(blockJson(instance))).toBe(raw);
+		// Unchanged, the code block comes back as the stored code block it was loaded from, annotations and all.
+		expect(codeBlockConverter.toCms(blockJson(instance), dummyCtx)[0]?.attrs).toEqual(
+			storedCodeBlockAttrs({ language: "ts", meta: "", value: raw }),
+		);
 	});
 
 	it("reads char effects as marks on the code text (including tooltip content and expanded char collapse)", () => {

@@ -13,7 +13,9 @@
 		"./client": "./src/client.ts",
 		"./runtime": "./src/runtime.ts",
 		"./read": "./src/read/index.ts",
+		"./document": "./src/document.ts",
 		"./format": "./src/format/index.ts",
+		"./format/mdx": "./src/format/mdx.ts",
 		"./mdx": "./src/mdx/index.ts",
 		"./syntax": "./src/syntax/index.ts",
 		"./code-block": "./src/code-block.ts",
@@ -141,9 +143,17 @@
 				"types": "./dist/read/index.d.ts",
 				"default": "./dist/read/index.js"
 			},
+			"./document": {
+				"types": "./dist/document.d.ts",
+				"default": "./dist/document.js"
+			},
 			"./format": {
 				"types": "./dist/format/index.d.ts",
 				"default": "./dist/format/index.js"
+			},
+			"./format/mdx": {
+				"types": "./dist/format/mdx.d.ts",
+				"default": "./dist/format/mdx.js"
 			},
 			"./mdx": {
 				"types": "./dist/mdx/index.d.ts",

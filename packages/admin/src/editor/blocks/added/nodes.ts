@@ -67,13 +67,6 @@ export function createAddedBlockNode(block: BlockDefinition, all: readonly Block
 					parseHTML: (element) => parseJson(element.getAttribute("data-cms-values"), {}),
 					renderHTML: (attributes) => ({ "data-cms-values": JSON.stringify(attributes.values ?? {}) }),
 				},
-				originalAttributes: {
-					default: [],
-					parseHTML: (element) => parseJson(element.getAttribute("data-cms-original-attributes"), []),
-					renderHTML: (attributes) => ({
-						"data-cms-original-attributes": JSON.stringify(attributes.originalAttributes ?? []),
-					}),
-				},
 			};
 		},
 		parseHTML() {

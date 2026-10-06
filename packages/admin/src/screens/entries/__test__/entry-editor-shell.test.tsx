@@ -1,14 +1,14 @@
-import {
-	bodyDocument,
-	bodyFromMdx,
-	documentToMdx,
-	emptyStoredDocument,
-	type StoredDocument,
-	withoutBlockIds,
-} from "@monti-cms/core/mdx";
+import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	CmsAdminComponentsProvider,
+	type SourcePanelProps,
+	type SourcePanelRegistration,
+} from "../../../admin-components";
+import { MdxSourceProvider } from "../../../mdx-source";
+import { docOf } from "../../../test/mdx";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
@@ -49,10 +49,9 @@ vi.mock("../../../editor/tiptap-editor", async () => {
 	);
 	/** A real editor without a page behind it, holding the stored document, reported through `onEditor` (going to a block by its id). */
 	const useHeadlessEditor = (
-		stored: { doc: import("@monti-cms/core/mdx").StoredDocument | null } | undefined,
+		doc: StoredDocument | undefined,
 		onEditor: ((editor: import("@tiptap/core").Editor | null) => void) | undefined,
 	) => {
-		const doc = stored?.doc;
 		React.useEffect(() => {
 			if (!doc || !onEditor) return;
 			const editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
@@ -71,7 +70,7 @@ vi.mock("../../../editor/tiptap-editor", async () => {
 			toolbarEnd?: React.ReactNode;
 			toolbarAside?: React.ReactNode;
 			sourceView?: React.ReactNode;
-			stored?: { doc: import("@monti-cms/core/mdx").StoredDocument | null };
+			doc?: StoredDocument;
 			onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
 		}) => <MockEditor {...props} useHeadlessEditor={useHeadlessEditor} />,
 	};
@@ -83,7 +82,7 @@ function MockEditor({
 	toolbarEnd,
 	toolbarAside,
 	sourceView,
-	stored,
+	doc,
 	onEditor,
 	useHeadlessEditor,
 }: {
@@ -92,16 +91,16 @@ function MockEditor({
 	toolbarEnd?: React.ReactNode;
 	toolbarAside?: React.ReactNode;
 	sourceView?: React.ReactNode;
-	stored?: { doc: import("@monti-cms/core/mdx").StoredDocument | null };
+	doc?: StoredDocument;
 	onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
 	useHeadlessEditor: (
-		stored: { doc: import("@monti-cms/core/mdx").StoredDocument | null } | undefined,
+		doc: StoredDocument | undefined,
 		onEditor: ((editor: import("@tiptap/core").Editor | null) => void) | undefined,
 	) => void;
 }) {
 	// The shell passes a new `onEditor` on every render; keep the first so the headless editor is made once per document.
 	const [stableOnEditor] = useState(() => onEditor);
-	useHeadlessEditor(stored, stableOnEditor);
+	useHeadlessEditor(doc, stableOnEditor);
 	return (
 		<>
 			<div role="toolbar" aria-label="서식 도구">
@@ -133,7 +132,7 @@ const entry = {
 	folderId: null,
 	workingSlug: "test",
 	publishedSlug: null,
-	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "요약" }, mdx: "첫째 줄\n둘째 줄" },
+	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "요약" }, doc: docOf("첫째 줄\n둘째 줄") },
 };
 
 const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => data });
@@ -155,7 +154,16 @@ function serve(handler: Handler, current: unknown = entry) {
 const methodCalls = (method: string, suffix = "") =>
 	fetchMock.mock.calls.filter(([input, init]) => init?.method === method && String(input).endsWith(suffix));
 
-const renderEdit = () => render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
+/** The edit screen as the admin layout renders it: with the built-in MDX format and its source panel registered. */
+const renderShell = (ui: React.ReactElement, sourcePanels?: SourcePanelRegistration[]) =>
+	render(
+		sourcePanels ? (
+			<CmsAdminComponentsProvider components={{ sourcePanels }}>{ui}</CmsAdminComponentsProvider>
+		) : (
+			<MdxSourceProvider>{ui}</MdxSourceProvider>
+		),
+	);
+const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 const editorTitle = () => screen.findByRole("textbox", { name: "제목" });
 
 beforeEach(() => {
@@ -181,7 +189,7 @@ describe("entry editor shell", () => {
 				return json({
 					...entry,
 					version: 5,
-					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+					working: { metadata: body.metadata, doc: body.doc },
 				});
 			}
 		});
@@ -223,7 +231,7 @@ describe("entry editor shell", () => {
 				return json({
 					...entry,
 					version: 5,
-					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+					working: { metadata: body.metadata, doc: body.doc },
 				});
 			}
 		});
@@ -256,7 +264,7 @@ describe("entry editor shell", () => {
 				return json({
 					...entry,
 					version: 5,
-					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+					working: { metadata: body.metadata, doc: body.doc },
 				});
 			}
 		});
@@ -278,13 +286,13 @@ describe("entry editor shell", () => {
 						id: "created-entry",
 						version: 1,
 						workingSlug: body.slug,
-						working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+						working: { metadata: body.metadata, doc: body.doc },
 					},
 					201,
 				);
 			}
 		});
-		render(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
+		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
 		fireEvent.change(await editorTitle(), { target: { value: "새 글" } });
 		// The recovery copy is kept after input pauses (interval is in the entry editor store test). Here, leaving the screen writes it right away.
 		expect(saveLocalBackup).not.toHaveBeenCalled();
@@ -312,14 +320,14 @@ describe("entry editor shell", () => {
 					collection: "memo",
 					version: 1,
 					workingSlug: body.slug,
-					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+					working: { metadata: body.metadata, doc: body.doc },
 				});
 			}
 			if (input === "/api/cms/v1/entries/published-entry/publish" && init?.method === "POST") {
 				return json({ ...entry, id: "published-entry", collection: "memo", status: "published", version: 2 });
 			}
 		});
-		render(<EntryEditorShell mode="new" adminId={ADMIN} collection="memo" />);
+		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="memo" />);
 		fireEvent.change(await editorTitle(), { target: { value: "바로 발행" } });
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() => expect(saveLocalBackup).toHaveBeenCalled());
@@ -394,8 +402,8 @@ describe("entry editor shell", () => {
 			entryId: "entry-1",
 			baseVersion: 3,
 			baseFingerprint: "old",
-			localFingerprint: formFingerprint({ ...server, mdx: "브라우저 본문" }),
-			snapshot: { ...server, mdx: "브라우저 본문" },
+			localFingerprint: formFingerprint({ ...server, doc: docOf("브라우저 본문") }),
+			snapshot: { ...server, doc: docOf("브라우저 본문") },
 			changeSeq: 1,
 			savedAt: Date.now(),
 		});
@@ -407,20 +415,23 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
 
-	it("binds field issues and moves positioned issues to the MDX source", async () => {
-		serve((input) =>
-			input.endsWith("/publish")
-				? json(
-						{
-							code: "publish_validation_failed",
-							issues: [
-								{ code: "missing_field", path: "title", message: "제목" },
-								{ code: "mdx_error", path: "mdx", position: { line: 2, column: 2 } },
-							],
-						},
-						422,
-					)
-				: undefined,
+	it("binds field issues and moves issues in the body to the source text, at the block they are in", async () => {
+		const body = docOf("첫째 문단\n\n둘째 문단\n");
+		serve(
+			(input) =>
+				input.endsWith("/publish")
+					? json(
+							{
+								code: "publish_validation_failed",
+								issues: [
+									{ code: "missing_field", path: "title", message: "제목" },
+									{ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } },
+								],
+							},
+							422,
+						)
+					: undefined,
+			{ ...entry, working: { ...entry.working, doc: body } },
 		);
 		renderEdit();
 		await screen.findByDisplayValue("요약");
@@ -432,16 +443,17 @@ describe("entry editor shell", () => {
 		expect(screen.getAllByRole("textbox", { name: "제목" })).toHaveLength(1);
 		fireEvent.click(screen.getByRole("button", { name: /제목을 입력하세요/ }));
 		await waitFor(() => expect(document.activeElement).toBe(title));
+		// In source mode, the issue is shown in the text, at the start of its block.
+		fireEvent.click(screen.getByRole("button", { name: "MDX 원문" }));
 		fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
 		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
 		await waitFor(() => expect(document.activeElement).toBe(source));
-		expect(source.selectionStart).toBe("첫째 줄\n".length + 1);
+		expect(source.selectionStart).toBe("첫째 문단\n\n".length);
 	});
 
-	it("goes to the issue's block in the visual editor, and to the line in source mode when the editor does not have it", async () => {
-		const mdx = "첫째 문단\n\n둘째 문단\n";
-		const { doc } = bodyFromMdx(mdx);
-		const second = doc?.content[1]?.id;
+	it("goes to the issue's block in the visual editor, and to the block in source mode when the editor does not have it", async () => {
+		const doc = docOf("첫째 문단\n\n둘째 문단\n");
+		const second = doc.content[1]?.id;
 		let blockId = second;
 		serve(
 			(input) =>
@@ -449,12 +461,12 @@ describe("entry editor shell", () => {
 					? json(
 							{
 								code: "publish_validation_failed",
-								issues: [{ code: "mdx_error", path: "mdx", position: { line: 3, column: 1, blockId } }],
+								issues: [{ code: "mdx_error", path: "body", position: { blockId } }],
 							},
 							422,
 						)
 					: undefined,
-			{ ...entry, working: { ...entry.working, mdx, doc } },
+			{ ...entry, working: { ...entry.working, doc } },
 		);
 		renderEdit();
 		await screen.findByDisplayValue("요약");
@@ -475,7 +487,10 @@ describe("entry editor shell", () => {
 	});
 
 	it("opens unparseable MDX in source mode and does not allow the visual editor (no silent overwrite)", async () => {
-		serve(() => undefined, { ...entry, working: { ...entry.working, mdx: "본문 <Callout>닫히지 않음" } });
+		serve(() => undefined, {
+			...entry,
+			working: { ...entry.working, doc: unparsedDocument("본문 <Callout>닫히지 않음") },
+		});
 		// The visual editor must never mount on a body it cannot read, not even for a frame: watch every DOM change instead of
 		// checking the end state only.
 		let visualEditorMounted = false;
@@ -503,13 +518,125 @@ describe("entry editor shell", () => {
 		const toggle = screen.getByRole("button", { name: "MDX 원문" });
 		fireEvent.click(toggle);
 		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
-		expect(source.value).toBe(entry.working.mdx);
+		expect(source.value).toBe("첫째 줄\n둘째 줄\n");
 		expect(screen.queryByLabelText("시각 본문")).toBeNull();
 		expect((await editorTitle()).getAttribute("value")).toBe("테스트");
 		expect(screen.getByRole("button", { name: "템플릿" })).toBeTruthy();
 		fireEvent.click(toggle);
 		expect(await screen.findByLabelText("시각 본문")).toBeTruthy();
 		expect(screen.queryByRole("textbox", { name: "MDX 본문" })).toBeNull();
+	});
+
+	describe("the source toggle is the source panel slot", () => {
+		/** A panel that is not the MDX one: it shows how many blocks the body has and lets a test hand a body back. */
+		const focused: string[] = [];
+		const FakePanel = ({ doc, onChange, focusBlock, readOnly }: SourcePanelProps) => {
+			if (focusBlock) focused.push(focusBlock);
+			return (
+				<div>
+					<output aria-label="블록 수">{doc.content.length}</output>
+					<output aria-label="포커스">{focusBlock ?? "-"}</output>
+					<output aria-label="읽기 전용">{String(readOnly)}</output>
+					<button
+						type="button"
+						onClick={() => onChange(docOf("패널에서 쓴 본문\n\n둘째\n"), [{ code: "mdx_error", message: "문제" }])}
+					>
+						패널에서 고침
+					</button>
+				</div>
+			);
+		};
+		beforeEach(() => {
+			focused.length = 0;
+		});
+		const withPanels = (panels: SourcePanelRegistration[]) => {
+			renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, panels);
+		};
+
+		it("shows no toggle when no panel is registered, and the other toolbar tools stay", async () => {
+			render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
+			await screen.findByLabelText("시각 본문");
+			const toolbar = screen.getByRole("toolbar", { name: "서식 도구" });
+			expect(within(toolbar).queryByRole("button", { name: "MDX 원문" })).toBeNull();
+			expect(within(toolbar).getByRole("button", { name: "템플릿" })).toBeTruthy();
+		});
+
+		it("shows the toggle of the registered panel under its label, and opens that panel on the body", async () => {
+			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
+			await screen.findByLabelText("시각 본문");
+			expect(screen.queryByRole("button", { name: "MDX 원문" })).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
+			expect((await screen.findByLabelText("블록 수")).textContent).toBe("1");
+			expect(screen.queryByLabelText("시각 본문")).toBeNull();
+			expect(screen.getByLabelText("읽기 전용").textContent).toBe("false");
+		});
+
+		it("takes the body the panel hands back as the body, which the next save sends", async () => {
+			serve((_input, init) => {
+				if (init?.method === "PATCH") return json({ ...entry, version: 5 });
+			});
+			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
+			await screen.findByLabelText("시각 본문");
+			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
+			fireEvent.click(await screen.findByRole("button", { name: "패널에서 고침" }));
+			expect(screen.getByLabelText("저장 전 변경사항")).toBeTruthy();
+			fireEvent.click(screen.getByRole("button", { name: "저장" }));
+			await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+			const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)) as { doc: StoredDocument };
+			expect(sent.doc.content.map((block) => block.type)).toEqual(["paragraph", "paragraph"]);
+			expect(JSON.stringify(sent.doc)).toContain("패널에서 쓴 본문");
+		});
+
+		it("uses the first registered panel when there are several", async () => {
+			withPanels([
+				{ format: "a", label: "첫 패널", Panel: FakePanel },
+				{ format: "b", label: "둘째 패널", Panel: FakePanel },
+			]);
+			await screen.findByLabelText("시각 본문");
+			expect(screen.getByRole("button", { name: "첫 패널" })).toBeTruthy();
+			expect(screen.queryByRole("button", { name: "둘째 패널" })).toBeNull();
+		});
+
+		it("opens a body that could not be read in the panel, and shows the visual editor's box when there is none", async () => {
+			serve(() => undefined, { ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
+			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
+			expect(await screen.findByLabelText("블록 수")).toBeTruthy();
+			expect(screen.queryByLabelText("시각 본문")).toBeNull();
+			cleanup();
+
+			serve(() => undefined, { ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
+			render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
+			await screen.findByLabelText("시각 본문");
+			// There is no panel to edit it in, so no note that says to.
+			expect(screen.queryByText(/원문 모드로만 편집합니다/)).toBeNull();
+		});
+
+		it("tells the panel which block an issue is in", async () => {
+			const body = docOf("첫째 문단\n\n둘째 문단\n");
+			serve(
+				(input) =>
+					input.endsWith("/publish")
+						? json(
+								{
+									code: "publish_validation_failed",
+									issues: [{ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } }],
+								},
+								422,
+							)
+						: undefined,
+				{ ...entry, working: { ...entry.working, doc: body } },
+			);
+			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
+			await screen.findByDisplayValue("요약");
+			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
+			await screen.findByLabelText("블록 수");
+			fireEvent.click(screen.getByRole("button", { name: "발행" }));
+			await screen.findByRole("list", { name: "발행 검증 문제" });
+			fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+			// The panel is asked for that block, once; the screen does not keep asking.
+			await waitFor(() => expect(focused).toEqual([body.content[1]?.id]));
+			await waitFor(() => expect(screen.getByLabelText("포커스").textContent).toBe("-"));
+		});
 	});
 
 	it("keeps the editor usable at narrow widths and opens the inspector on field errors", async () => {
@@ -539,7 +666,7 @@ describe("entry editor shell", () => {
 						id: data.collection === "category" ? "cat-2" : "tag-2",
 						workingSlug: "slug",
 						publishedSlug: "slug",
-						working: { metadata: data.metadata, mdx: "" },
+						working: { metadata: data.metadata, doc: emptyStoredDocument() },
 					},
 					201,
 				);
@@ -618,7 +745,7 @@ describe("entry editor shell", () => {
 					server = {
 						...server,
 						version: server.version + 1,
-						working: { ...server.working, metadata: body.metadata, mdx: documentToMdx(body.doc) },
+						working: { ...server.working, metadata: body.metadata, doc: body.doc },
 					};
 					return json(server);
 				}
@@ -734,7 +861,7 @@ describe("entry editor shell", () => {
 			},
 			{
 				...entry,
-				working: { metadata: { title: "테스트", categoryId: "cat-1" }, mdx: "## 소개\n\n**본문** 첫 문장." },
+				working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("## 소개\n\n**본문** 첫 문장.") },
 			},
 		);
 		renderEdit();
@@ -748,7 +875,7 @@ describe("entry editor shell", () => {
 	it("does not publish when a body-filled field has nothing to fill from, naming the field", async () => {
 		serve(() => undefined, {
 			...entry,
-			working: { metadata: { title: "테스트", categoryId: "cat-1" }, mdx: "```js\nonly();\n```" },
+			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("```js\nonly();\n```") },
 		});
 		renderEdit();
 		await screen.findByRole("textbox", { name: "요약" });
@@ -858,7 +985,7 @@ describe("entry editor shell", () => {
 });
 
 describe("templates", () => {
-	const templates = { items: [{ id: "t1", name: "회고", doc: bodyFromMdx("## 회고").doc }] };
+	const templates = { items: [{ id: "t1", name: "회고", doc: docOf("## 회고") }] };
 	const sourceText = () => {
 		fireEvent.click(
 			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: "MDX 원문" }),
@@ -869,7 +996,7 @@ describe("templates", () => {
 	it("inserts the chosen template right away into an empty body", async () => {
 		serve((input) => (input === "/api/cms/v1/templates" ? json(templates) : undefined), {
 			...entry,
-			working: { ...entry.working, mdx: "" },
+			working: { ...entry.working, doc: emptyStoredDocument() },
 		});
 		renderEdit();
 		await editorTitle();
@@ -914,7 +1041,7 @@ describe("templates", () => {
 				if (input === "/api/cms/v1/templates") return json({ items: [template] });
 				if (init?.method === "PATCH") return json({ ...entry, version: 5 });
 			},
-			{ ...entry, working: { ...entry.working, mdx: "" } },
+			{ ...entry, working: { ...entry.working, doc: emptyStoredDocument() } },
 		);
 		renderEdit();
 		await editorTitle();
@@ -1014,7 +1141,7 @@ describe("language tabs", () => {
 				return json({ ...translation, status: "trashed" });
 			}
 		}, translation);
-		render(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
+		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		const nav = await screen.findByRole("navigation", { name: "언어" });
 		expect(within(nav).getByRole("button", { name: "영어 · 초안" }).getAttribute("aria-current")).toBe("page");
 		fireEvent.click(within(nav).getByRole("button", { name: "번역본 메뉴" }));
@@ -1030,7 +1157,7 @@ describe("language tabs", () => {
 		serve((input, init) => {
 			if (input === "/api/cms/v1/entries/entry-en" && !init?.method) return json(translation);
 		}, translation);
-		render(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
+		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		await screen.findByRole("navigation", { name: "언어" });
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
 		expect(screen.getByRole("menuitem", { name: "휴지통으로 이동" })).toBeTruthy();
@@ -1047,7 +1174,7 @@ describe("language tabs", () => {
 	});
 
 	it("hides the tabs for record collections and new entries", async () => {
-		render(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
+		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
 		await editorTitle();
 		expect(screen.queryByRole("navigation", { name: "언어" })).toBeNull();
 	});
@@ -1061,8 +1188,6 @@ describe("translation source pane", () => {
 		translationGroupId: "entry-1",
 		translations: [],
 	};
-	/** `mdx` as a stored document (with block ids), for a source that carries one. */
-	const docOf = (mdx: string) => bodyDocument(bodyFromMdx(mdx));
 	/** What a document says, without its block ids (reading text draws new ones). */
 	const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
 	const translationWith = (
@@ -1077,12 +1202,11 @@ describe("translation source pane", () => {
 		source: {
 			locale: "ko",
 			metadata: { title: "원문 제목" },
-			mdx: documents.currentMdx ?? SOURCE_MDX,
-			...(documents.current ? { doc: documents.current } : {}),
+			doc: documents.current ?? docOf(documents.currentMdx ?? SOURCE_MDX),
 		},
 		working: {
 			metadata: { title: "Title" },
-			mdx: "First\n\nSecond\n",
+			doc: docOf("First\n\nSecond\n"),
 			translation:
 				baseSource === null
 					? null

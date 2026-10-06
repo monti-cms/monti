@@ -55,6 +55,41 @@ const components = { icons: { eye: Eye } };
 플러그인은 관리자 쪽 `Provider` 안에서 등록한다(`@monti-cms/blocks`의 각 블록, `@monti-cms/ai`가 예시). 서버 레이아웃은
 컴포넌트를 브라우저로 넘길 수 없어 플러그인 정의가 아니라 클라이언트 공급자로 등록한다.
 
+## 본문은 저장 문서
+
+편집기는 글이 아니라 저장 문서(`StoredDocument`)로 일한다. JSON 문서가 본문의 유일한 원본이다. 편집기로 불러오고 저장하는 길에는 어떤 표기법(MDX든 다른 것이든)도
+끼지 않는다.
+
+- `CmsEditor`는 `doc`을 받고, 바뀔 때마다 `onChange(doc)`를 부른다. 문서가 블록에 준 id가 그대로 담긴다. 편집기 자신이 만든 것이 아닌 `doc`이 오면 편집기가 보이는 것을 바꾼다
+  (같은 내용에 id나 키 순서만 다른 문서는 그대로 둔다). `@monti-cms/admin/editor`의 `storedToTiptap(doc)`·`tiptapToStored(json)`이 바로 바꿔 준다. 편집 화면이 없는 노드나
+  문서로 읽지 못한 본문(`unparsed` 노드 하나)은 읽기 전용 상자(`cmsOpaqueBlock`)에 통째로 담아 아무것도 잃지 않는다.
+- 편집 화면의 폼은 본문을 `form.doc`으로 든다(초안, 브라우저 복구본, 충돌 비교가 모두 문서를 본다. 내용으로 비교하므로 블록 id와 키 순서는 따지지 않는다). 그 전에 본문을 MDX 글로 `form.mdx`에 담아
+  저장한 복구본도 그대로 되살린다. 열 때 내장 `mdx` 형식으로 읽는다(읽을 수 없는 글은 그대로 `unparsed` 문서에 담는다).
+- `DocPreview`(`@monti-cms/admin/editor`)는 번역 화면이 원문을 보이고 AI가 결과를 보이는 문서 읽기 전용 보기다.
+
+### 원문 패널
+
+도구 줄 끝의 원문 토글은 본문을 어떤 표기법의 글로 고친다. 표기법은 플러그인의 것이다. **원문 패널**이 등록되어 있을 때만 토글이 보이고, 등록은 다른 사이트 컴포넌트와 같은 공급자로 한다
+(`useCmsAdminComponents().sourcePanels`). 여러 개면 먼저 등록한 것을 쓴다.
+
+```tsx
+const components = {
+	sourcePanels: [{ format: "mdx", label: "MDX 원문", Panel: MdxPanel }],
+	formats: { mdx: mdxFormat }, // 브라우저가 읽고 쓸 수 있는 형식(`BrowserFormat`). `useFormat("mdx")`로 찾는다
+};
+```
+
+`Panel`은 `SourcePanelProps`를 받는다. `doc`(본문), `onChange(doc, issues)`(글이 바뀜: 그 글이 읽히는 문서와 글에서 찾은 것. 읽을 수 없는 글은 `unparsed` 노드 하나에 담은 문서로 돌려주고
+찾은 것은 `issues`에 담는다), `focusBlock`(캐럿을 둘 블록의 id. 발행 문제를 따라갈 때), 화면이 필요로 하는 덤으로 `readOnly`와 `onComposing(composing)`(IME 조합이 끝나야 저장한다)이다.
+패널은 브라우저에서 읽으므로 틀린 곳이 쓰는 동안 바로 보인다. `BrowserFormat`은 맥락(사이트 블록, 언어)을 묶어 둔 형식이다. `export(doc): string`과 `import(text)`(`{ ok: true, doc, warnings }` 또는
+`{ ok: false, issues }`)가 있고 둘 다 동기다. MDX가 따로 패키지가 되기 전까지 내장 `mdx` 형식과 그 패널은 이 패키지의 한 모듈(`mdx-source/`)이 주고, 관리자 레이아웃이 플러그인이 하듯 등록한다.
+`mdxBrowserFormat`은 테스트용으로 `@monti-cms/admin/editor`에서 내보낸다.
+
+### 글 링크
+
+글로 가는 링크는 그 글의 id만 들고 있으므로 편집기가 가는 곳을 찾아 보인다. 링크 버블과 링크 폼이 글의 제목과 주소를 보이고(글이 없어졌거나 찾지 못하면 그렇게 알린다), 링크를 열면 글이 발행됐을 때는 사이트의
+그 글 쪽으로, 아니면 관리자의 그 글 편집 화면으로 간다. 링크 폼에 주소를 직접 적으면 글 링크를 그 주소로 바꾼다.
+
 ## 속성 칸
 
 편집 화면 오른쪽 속성 칸은 컬렉션 정의대로 입력을 그린다. 입력은 필드 종류로 정한다: 텍스트·선택·관계, 미디어 필드
@@ -243,9 +278,9 @@ export default defineAdminPlugin({
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 사이트 컴포넌트 넣기(`CmsAdminComponentsProvider`)·속성 칸·목록 칸 타입 |
+| `@monti-cms/admin` | 사이트 컴포넌트 넣기(`CmsAdminComponentsProvider`: 원문 패널·형식·`useFormat`)·속성 칸·목록 칸 타입 |
 | `/next` | 관리자 레이아웃·페이지(앱 라우트에서 내보낸다) |
-| `/editor` | 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
+| `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
 | `/blocks` | 블록 편집 화면 부품(도구 줄·설정 팝오버·속성 입력 칸) |
 | `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`·`useBlockEditor`·`useEntryEditor`)·블록 화면 컴포넌트 `Content`·`BlockFrame`·`EditorResult`·`EditorError` |
 | `/plugins` | `defineAdminPlugin` |
@@ -284,7 +319,7 @@ Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않�
 **서버 자동 저장이 아니다.** 편집하는 동안에는 브라우저에만 복구본이 남고(IndexedDB, 입력이 멈춘 뒤 기록하며 서버로 보내지 않는다),
 서버 초안은 `save()`·`publish()`·상태 변경을 실행할 때만 바뀐다. 서버에 무엇이 있는지는 `saveStatus`(`saved`·`dirty`·`saving`·`local-only`·`conflict` …)가 말해 준다.
 상태는 `load`(`loading`·`ready`·`error`, 항목 컬렉션이면 화면이 따라가야 할 `redirect`. 훅은 화면을 옮기지 않는다), `entry`, `form`, `saveStatus`, `saveError`,
-`hasUnsavedChanges`, `publishIssues`, `recovery`(열 때 발견한 브라우저 복구본), `conflict`(다른 곳에서 먼저 저장함)다. 명령은 `setForm`, `setBody`, `save`, `retry`, `publish`,
+`hasUnsavedChanges`, `publishIssues`, `recovery`(열 때 발견한 브라우저 복구본), `conflict`(다른 곳에서 먼저 저장함)다. 명령은 `setForm`, `setBody`(본문, 저장 문서), `save`, `retry`, `publish`,
 `changeStatus`, `duplicate`, `deletePermanently`, `restoreRecovery`·`discardRecovery`, 충돌을 푸는 `overwriteWithMine`·`reload`이며,
 충돌은 페이지를 새로고침하지 않고 그 자리에서 해결한다. 화면을 `EntryEditorProvider`로 감싸면(`useField`가 읽는 `EntryFormProvider`를 함께 제공한다)
 그 아래에서 `useEntryEditorContext()`로 편집기를 읽고, 값 하나만 보고 다시 그리려면 `useEntryEditorContext((editor) => editor.saveStatus)`처럼 쓴다.

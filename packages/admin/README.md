@@ -55,6 +55,44 @@ const components = { icons: { eye: Eye } };
 A plugin registers these inside its admin-side `Provider` (see each block of `@monti-cms/blocks`, and `@monti-cms/ai`, for examples). A server layout
 cannot pass components to the browser, so they are registered through a client provider, not the plugin definition.
 
+## The body is a stored document
+
+The editor works on the stored document (`StoredDocument`), not on text. The JSON document is the only source of a body: no notation (MDX or any other) is
+involved in loading it into the editor or saving it from there.
+
+- `CmsEditor` takes `doc` and calls `onChange(doc)` after every change, with the block ids the document gave its blocks. A `doc` that did not come from the editor itself
+  replaces what it shows (the same words with other block ids or key order leave it alone). `storedToTiptap(doc)` and `tiptapToStored(json)` in `@monti-cms/admin/editor`
+  convert directly. A node the editor has no edit view for, and a body that could not be read as a document (one `unparsed` node), is kept whole in a read-only box
+  (`cmsOpaqueBlock`), so nothing is lost.
+- The edit screen's form holds the body as `form.doc` (the draft, the browser recovery copy and the conflict comparison all see the document, compared by what it says:
+  block ids and key order do not count). Recovery copies saved before that, with the body as MDX text in `form.mdx`, still restore: they are read through the built-in `mdx` format
+  when they are opened (text that does not read is kept as it is, in an `unparsed` document).
+- `DocPreview` (`@monti-cms/admin/editor`) is the read-only view of a document the translation screen shows the source in, and AI shows results in.
+
+### Source panels
+
+The source toggle at the end of the toolbar edits the body as text in some notation. The notation is a plugin's: the toggle is shown only when a **source panel** is registered, in the
+same provider as the other site components (`useCmsAdminComponents().sourcePanels`). With several registered, the first one is used.
+
+```tsx
+const components = {
+	sourcePanels: [{ format: "mdx", label: "MDX source", Panel: MdxPanel }],
+	formats: { mdx: mdxFormat }, // the formats the browser can read and write (`BrowserFormat`), found with `useFormat("mdx")`
+};
+```
+
+`Panel` receives `SourcePanelProps`: `doc` (the body), `onChange(doc, issues)` (the text changed: the document it reads as and what was found about the text; a text it cannot read goes back
+as a document holding it in one `unparsed` node, with the findings in `issues`), `focusBlock` (the id of the block to bring the caret to, for a publish issue) and, as extras the screen needs,
+`readOnly` and `onComposing(composing)` (a save waits for an IME composition to end). The panel parses in the browser, so a mistake shows as it is typed.
+A `BrowserFormat` is a format with its context bound: `export(doc): string` and `import(text)` (`{ ok: true, doc, warnings }` or `{ ok: false, issues }`), both synchronous.
+Until MDX is a package of its own, the built-in `mdx` format and its panel come from one module of this package (`mdx-source/`), which the admin layout registers like a plugin would;
+`mdxBrowserFormat` is exported from `@monti-cms/admin/editor` for tests.
+
+### Links to entries
+
+A link to an entry holds only the entry's id, so the editor looks up where it goes: the link bubble and the link form show the entry's title and address (an entry that is gone, or cannot be looked
+up, says so). Opening the link goes to the entry's page on the site when it is published, otherwise to the entry in the admin. An address typed in the link form replaces the entry.
+
 ## Properties panel
 
 The properties panel on the right of the edit screen renders inputs from the collection definition. The input is chosen by field type: text, select, relation; a media field
@@ -243,9 +281,9 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | Adding site components (`CmsAdminComponentsProvider`), properties panel and list cell types |
+| `@monti-cms/admin` | Adding site components (`CmsAdminComponentsProvider`: source panels, formats, `useFormat`), properties panel and list cell types |
 | `/next` | Admin layout and page (exported from the app route) |
-| `/editor` | Editor extension helpers (bubble, slash menu, code block linking) |
+| `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
 | `/blocks` | Block edit screen UI (tool row, settings popover, attribute input) |
 | `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`, `useBlockEditor`, `useEntryEditor`), the block view components `Content` and `BlockFrame`, and `EditorResult` / `EditorError` |
 | `/plugins` | `defineAdminPlugin` |
@@ -286,7 +324,7 @@ is the outer element with the selected ring and hover scope. The child blocks si
 (IndexedDB, written after input pauses, never sent to the server); the server draft changes only when `save()`, `publish()` or a status change runs, and
 `saveStatus` (`saved`, `dirty`, `saving`, `local-only`, `conflict`, ...) says what the server has. State: `load` (`loading`, `ready`, `error`, or `redirect` for an item
 collection, which the UI follows: the hook never navigates), `entry`, `form`, `saveStatus`, `saveError`, `hasUnsavedChanges`, `publishIssues`, `recovery` (a browser copy
-found on open) and `conflict` (someone saved first). Commands: `setForm`, `setBody`, `save`, `retry`, `publish`, `changeStatus`, `duplicate`, `deletePermanently`,
+found on open) and `conflict` (someone saved first). Commands: `setForm`, `setBody` (the body, a stored document), `save`, `retry`, `publish`, `changeStatus`, `duplicate`, `deletePermanently`,
 `restoreRecovery` / `discardRecovery`, and `overwriteWithMine` / `reload` for a conflict, which resolve it in place without reloading the page. Wrap the UI in
 `EntryEditorProvider` (it provides the `EntryFormProvider` that `useField` reads) and read the editor below it with `useEntryEditorContext()` or, to re-render for one
 value only, `useEntryEditorContext((editor) => editor.saveStatus)`. The server calls and the recovery store can be replaced (`client`, `recoveryStore` options) for tests.

@@ -1,8 +1,8 @@
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
+import { tiptapOf } from "../../../test/mdx";
 import { buildEditorExtensions } from "../../extensions";
-import { mdxToTiptap } from "../../tiptap-content";
 import { selectedBlocks, setBlockSelection } from "../block-selection";
 import { calculateDropPosition, canDropBlockNode, moveBlockNode, moveBlockSet, sourceRangeOf } from "../drag-commands";
 
@@ -250,7 +250,7 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 
 	it("moving the only paragraph of a column into another column leaves an empty paragraph", () => {
 		const editor = createTestEditor(
-			mdxToTiptap(
+			tiptapOf(
 				"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
 			) as unknown as string,
 		);

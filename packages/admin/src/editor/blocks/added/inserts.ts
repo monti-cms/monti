@@ -22,7 +22,7 @@ const directiveContent = (
 		children.length > 0 ? children : codeBlocks?.length ? codeBlocks.map(codeBlockContent) : [paragraph(initial?.text)];
 	return {
 		type: blockNodeName(block),
-		attrs: { values: initial?.values ?? defaultValues(block), originalAttributes: [] },
+		attrs: { values: initial?.values ?? defaultValues(block) },
 		...(isContainer(block) ? { content: body } : {}),
 	};
 };

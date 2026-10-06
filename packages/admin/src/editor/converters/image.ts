@@ -1,5 +1,5 @@
-import type { CmsJsonValue } from "@monti-cms/core/mdx";
-import { isValidCrop, isValidRotate } from "@monti-cms/core/mdx";
+import type { CmsJsonValue } from "@monti-cms/core/document";
+import { isValidCrop, isValidRotate } from "@monti-cms/core/document";
 import type { BlockConverter } from "./types";
 
 const IMAGE_ATTRS = [

@@ -1,9 +1,9 @@
 import { ADDED_MARK_BLOCKS } from "@monti-cms/core/client";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
+import { tiptapOf } from "../../../test/mdx";
 import { CODE_ANCHOR_REF } from "../../added-marks";
 import { buildEditorExtensions } from "../../extensions";
-import { mdxToTiptap } from "../../tiptap-content";
 import { codeEffectsKey, pickLines } from "../effects-plugin";
 import { commitLink, startLinkFromText } from "../link-commands";
 
@@ -24,7 +24,7 @@ describe("body decoration for body-to-code linking", () => {
 	it.runIf(CODE_ANCHOR_REF === null)("if there is no such decoration, linking does not change the document", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(),
-			content: mdxToTiptap("이 함수가 값을 돌려준다.\n\n```ts\nconst a = 1;\n```\n"),
+			content: tiptapOf("이 함수가 값을 돌려준다.\n\n```ts\nconst a = 1;\n```\n"),
 		});
 		startLinkFromText(editor.view, 3, 6);
 		pickLines(editor.view, editor.state.doc.child(0).nodeSize, 0, 1);

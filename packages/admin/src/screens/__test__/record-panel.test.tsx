@@ -1,4 +1,4 @@
-import { emptyStoredDocument } from "@monti-cms/core/mdx";
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordPanel } from "../record-panel";

@@ -15,7 +15,7 @@ import {
 	slugFieldOf,
 	slugFromValues,
 } from "@monti-cms/core/client";
-import { emptyStoredDocument } from "@monti-cms/core/mdx";
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";

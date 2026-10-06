@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { BLOCK_CONVERTERS, converterForCms, converterForTiptap } from "../converters";
-import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
 
 describe("block converter registry", () => {
 	it("no two default converters handle the same node type (matches branches allowed)", () => {
@@ -22,7 +22,7 @@ describe("block converter registry", () => {
 			"taskList",
 			"taskItem",
 			"horizontalRule",
-			"TextAlign",
+			"text-align",
 			"tableRow",
 			"tableCell",
 			"tableHeader",
@@ -65,29 +65,29 @@ describe("block converter registry", () => {
 		["a chart with its meta and case preserved", '```Chart title="sales"\npie\n  "Apple": 40\n  "Banana": 60\n```'],
 		["math", "$$\nx^2 + y^2 = z^2\n$$"],
 	])("round-trips %s", (_, source) => {
-		expect(tiptapToMdx(mdxToTiptap(source)).trim()).toBe(source);
+		expect(mdxOfTiptap(tiptapOf(source)).trim()).toBe(source);
 	});
 
 	it("serializes after a preview block value changes", () => {
 		// Mermaid
-		const mermaidDoc = mdxToTiptap("```mermaid\ngraph TD;\n    A-->B;\n```");
+		const mermaidDoc = tiptapOf("```mermaid\ngraph TD;\n    A-->B;\n```");
 		const mermaidBlock = mermaidDoc.content?.find((b) => b.type === "cmsMermaid");
 		expect(mermaidBlock?.attrs?.value).toBe("graph TD;\n    A-->B;");
 		if (mermaidBlock?.attrs) mermaidBlock.attrs.value = "graph LR;\n    C-->D;";
-		expect(tiptapToMdx(mermaidDoc).trim()).toBe("```mermaid\ngraph LR;\n    C-->D;\n```");
+		expect(mdxOfTiptap(mermaidDoc).trim()).toBe("```mermaid\ngraph LR;\n    C-->D;\n```");
 
 		// Chart
-		const chartDoc = mdxToTiptap('```chart\npie\n  "A": 10\n```');
+		const chartDoc = tiptapOf('```chart\npie\n  "A": 10\n```');
 		const chartBlock = chartDoc.content?.find((b) => b.type === "cmsChart");
 		expect(chartBlock?.attrs?.value).toBe('pie\n  "A": 10');
 		if (chartBlock?.attrs) chartBlock.attrs.value = 'pie\n  "B": 20';
-		expect(tiptapToMdx(chartDoc).trim()).toBe('```chart\npie\n  "B": 20\n```');
+		expect(mdxOfTiptap(chartDoc).trim()).toBe('```chart\npie\n  "B": 20\n```');
 
 		// Math
-		const mathDoc = mdxToTiptap("$$\nx^2\n$$");
+		const mathDoc = tiptapOf("$$\nx^2\n$$");
 		const mathBlock = mathDoc.content?.find((b) => b.type === "cmsMath");
 		expect(mathBlock?.attrs?.value).toBe("x^2");
 		if (mathBlock?.attrs) mathBlock.attrs.value = "y^2";
-		expect(tiptapToMdx(mathDoc).trim()).toBe("$$\ny^2\n$$");
+		expect(mdxOfTiptap(mathDoc).trim()).toBe("$$\ny^2\n$$");
 	});
 });

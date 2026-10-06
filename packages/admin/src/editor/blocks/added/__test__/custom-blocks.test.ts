@@ -1,7 +1,8 @@
 import { ADDED_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../../../test/mdx";
 import { buildBlockSlashCommands } from "../../../slash-command";
-import { mdxToTiptap, OPAQUE_BLOCK_NAME, tiptapToMdx } from "../../../tiptap-content";
+import { OPAQUE_BLOCK_NAME } from "../../../tiptap-content";
 import { blockNodeName, insertContentOf } from "..";
 import { ADDED_NODE_BLOCKS, defaultValues } from "../shared";
 
@@ -9,20 +10,20 @@ import { ADDED_NODE_BLOCKS, defaultValues } from "../shared";
 describe("custom block editing", () => {
 	it("a custom block with an editor node moves its attributes and body into the node and round-trips unchanged", () => {
 		const mdx = '<Notice level="warn" title="점검">\n\n오늘 밤 점검합니다.\n\n</Notice>\n';
-		const json = mdxToTiptap(mdx);
+		const json = tiptapOf(mdx);
 		const node = json.content?.[0];
 		expect(node?.type).toBe(blockNodeName({ name: "notice" }));
 		expect(node?.type).toBe("cmsNotice");
 		expect(node?.attrs?.values).toEqual({ level: "warn", title: "점검" });
 		expect(node?.content?.[0]?.type).toBe("paragraph");
-		expect(tiptapToMdx(json)).toBe(mdx);
+		expect(mdxOfTiptap(json)).toBe(mdx);
 	});
 
 	it("a custom block set as a raw-source box is preserved as is", () => {
 		const mdx = '<Embed url="https://example.com/video" />\n';
-		const node = mdxToTiptap(mdx).content?.[0];
+		const node = tiptapOf(mdx).content?.[0];
 		expect(node?.type).toBe(OPAQUE_BLOCK_NAME);
-		expect(tiptapToMdx(mdxToTiptap(mdx))).toBe(mdx);
+		expect(mdxOfTiptap(tiptapOf(mdx))).toBe(mdx);
 	});
 
 	it("insertable custom blocks appear in the slash menu", () => {
@@ -117,8 +118,8 @@ describe("editor representation of added blocks", () => {
 
 	it("a code fence block moves that language's code block into a node and round-trips the meta", () => {
 		const mdx = "```mermaid title=흐름\ngraph TD\n  A --> B\n```\n";
-		const node = mdxToTiptap(mdx).content?.[0];
+		const node = tiptapOf(mdx).content?.[0];
 		expect(node).toMatchObject({ type: "cmsMermaid", attrs: { value: "graph TD\n  A --> B", meta: "title=흐름" } });
-		expect(tiptapToMdx(mdxToTiptap(mdx))).toBe(mdx);
+		expect(mdxOfTiptap(tiptapOf(mdx))).toBe(mdx);
 	});
 });

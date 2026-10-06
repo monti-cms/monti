@@ -1,4 +1,4 @@
-import type { CmsJsonValue } from "@monti-cms/core/mdx";
+import type { CmsJsonValue } from "@monti-cms/core/document";
 import {
 	boundedTableSpan,
 	formatTableWidths,
@@ -9,7 +9,7 @@ import {
 	tableCellColumns,
 	tableHasMergedCells,
 	tableWidths,
-} from "@monti-cms/core/mdx";
+} from "@monti-cms/core/document";
 import { lineBreakNode } from "./shared";
 import type { BlockConverter } from "./types";
 

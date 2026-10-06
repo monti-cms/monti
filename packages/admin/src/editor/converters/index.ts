@@ -1,4 +1,4 @@
-import type { CmsNode } from "@monti-cms/core/mdx";
+import type { CmsNode } from "@monti-cms/core/document";
 import { ADDED_BLOCK_CONVERTERS } from "../blocks/added";
 import { codeBlockConverter } from "./code-block";
 import { mathConverter } from "./fence-preview";

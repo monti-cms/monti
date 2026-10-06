@@ -5,7 +5,14 @@ import { editorMessages } from "./messages";
 
 const t = createTranslator(editorMessages);
 
-type EntryListItem = { id: string; collection: string; title: string | null; slug: string | null; status: string };
+type EntryListItem = {
+	id: string;
+	collection: string;
+	title: string | null;
+	slug: string | null;
+	status: string;
+	locale?: string;
+};
 
 /**
  * Finds the entries a `[[` link can point to. Only collections that have a public path are searched. A translation is found through its source.
@@ -24,6 +31,7 @@ export async function searchLinkTargets(query: string): Promise<InternalLinkItem
 			collection: item.collection,
 			title: item.title || t("toolbar.untitled"),
 			slug: item.slug ?? "",
+			...(item.locale ? { locale: item.locale } : {}),
 			status: item.status,
 		}));
 	};

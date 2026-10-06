@@ -1,11 +1,14 @@
 import { CmsEditor } from "@monti-cms/admin/editor";
 import { createTranslator, defineTextChecker, type TextChecker, type TextCheckSegment } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import type { PluginKey } from "@tiptap/pm/state";
+import { useMemo } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CmsAdminComponentsProvider, useEditorExtensions } from "../../../admin-components";
 import { pressOption } from "../../../test/base-ui";
+import { docOf, mdxOfDoc } from "../../../test/mdx";
 import { editorMessages } from "../../messages";
 import { textCheckMessages } from "../messages";
 import { type TextCheckPluginState, textCheckIssues } from "../plugin";
@@ -68,20 +71,21 @@ function Harness({
 }: {
 	content: string;
 	locale: string;
-	onChange: (mdx: string) => void;
+	onChange: (doc: StoredDocument) => void;
 	onReady: (editor: Editor | null) => void;
 }) {
 	const extensions = useEditorExtensions({
 		translateLocales: null,
 		getEntry: () => ({ title: "", collection: "post", locale }),
 	});
+	const doc = useMemo(() => docOf(content), [content]);
 	return (
 		<>
 			<div role="toolbar" aria-label="확장 도구">
 				{extensions.toolbar}
 			</div>
 			<CmsEditor
-				content={content}
+				doc={doc}
 				onChange={onChange}
 				onEditor={(ready) => {
 					extensions.onEditor(ready);
@@ -212,7 +216,7 @@ describe("spellcheck button", () => {
 		expect(within(dialog).getByText("가짜 검사")).toBeTruthy();
 		fireEvent.click(within(dialog).getByRole("button", { name: "맞는 말" }));
 
-		await waitFor(() => expect(String(onChange.mock.lastCall?.[0])).toContain("이것은 맞는 말 입니다"));
+		await waitFor(() => expect(mdxOfDoc(onChange.mock.lastCall?.[0])).toContain("이것은 맞는 말 입니다"));
 		expect(issuesOf(editor)).toHaveLength(0);
 		await waitFor(() => expect(screen.queryByRole("dialog", { name: t("results") })).toBeNull());
 	});
