@@ -1,4 +1,5 @@
-import { defineMessages, josa } from "@monti-cms/core";
+import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/client";
 
 /** Guidance text for API errors and publish-check issues. Keys are the codes the server sends. */
 export const apiErrorMessages = defineMessages("cms-admin.api-errors", {

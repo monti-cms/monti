@@ -55,7 +55,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 			const value = params.get(name);
 			if (value === null) continue;
 			if (!value.trim()) return publicError("invalid_input", "Invalid query parameters");
-			// Skip conditions for fields this collection does not have (e.g. memos have no category).
+			// Skip conditions for fields this collection does not have (a filter names a relation only some collections have).
 			if (!storedField(collection, field)) continue;
 			const id = await targetId(collection, field, value);
 			if (!id) return publicJson({ items: [], total: 0, page, pageSize });

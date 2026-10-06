@@ -46,7 +46,7 @@ export interface RowMenuContext {
 	mode: "list" | "trash";
 	/** Collections opened as a small form, like tags, categories and series. */
 	isRecord: boolean;
-	/** Collections that can be archived (posts, memos). */
+	/** Collections that can be archived (documents). */
 	isContent: boolean;
 	folders: readonly Folder[];
 	collection: string;

@@ -41,7 +41,7 @@ export function configTemplate(adminPath: string, options: ConfigTemplateOptions
 const post = defineCollection({
 	label: "Post",
 	kind: "document", // body, draft and publish. Use "item" for small entries like tags
-	path: "/posts/:slug", // public URL shape. Used for internal links in the body and preview URLs
+	path: "/posts/:slug", // public URL shape (a sample; use your own). Used for internal links in the body and preview URLs
 	icon: "file-text",
 	fields: {
 		// The title field is named \`title\` (the label is up to you).

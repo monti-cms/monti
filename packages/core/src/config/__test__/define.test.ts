@@ -15,31 +15,47 @@ describe("defineConfig", () => {
 		expect(defined.collections.topic).toMatchObject({ kind: "item", body: false });
 	});
 
-	it("still accepts the old `workflow` (publish → document, record → item)", () => {
-		const fields = { title, slug };
-		const oldDocument = defineCollection({ label: "Old", workflow: "publish", fields });
-		const oldItem = defineCollection({ label: "OldItem", workflow: "record", fields });
-		expect(oldDocument).toMatchObject({ kind: "document", body: true });
-		expect(oldItem).toMatchObject({ kind: "item", body: false });
-		expect("workflow" in oldDocument).toBe(false);
-		const kindDocument: "document" = oldDocument.kind;
-		expect(kindDocument).toBe("document");
-		// Definitions written without `defineCollection` (legacy name) are also normalized by `defineConfig`.
-		const raw = { label: "Raw", workflow: "record", fields } as unknown as typeof topic;
-		expect(defineConfig({ collections: { raw }, locales, defaultLocale: "en" }).collections.raw).toMatchObject({
-			kind: "item",
-			body: false,
-		});
+	it("rejects a definition without a kind", () => {
 		expect(() =>
 			defineConfig({
-				collections: { bad: { label: "Bad", fields } as unknown as typeof topic },
+				collections: { bad: { label: "Bad", fields: { title, slug } } as unknown as typeof topic },
 				locales,
 				defaultLocale: "en",
 			}),
 		).toThrow(/needs kind/);
-		expect(() => defineCollection({ label: "Both", kind: "item", workflow: "publish", fields } as never)).toThrow(
-			/kind "item" and workflow "publish"/,
+	});
+
+	it("fails with the kind to use when a config still has the removed `workflow`", () => {
+		const fields = { title, slug };
+		const workflowOf = (workflow: string, extra: object = {}) =>
+			({ label: "Old", workflow, fields, ...extra }) as never;
+		expect(() => defineCollection(workflowOf("publish"))).toThrow(/workflow.*removed.*kind: "document"/);
+		expect(() => defineCollection(workflowOf("record"))).toThrow(/workflow.*removed.*kind: "item"/);
+		// Definitions written without `defineCollection` are checked by `defineConfig` as well.
+		expect(() => defineConfig({ collections: { raw: workflowOf("record") }, locales, defaultLocale: "en" })).toThrow(
+			/workflow.*removed/,
 		);
+		// Even next to a valid kind, the old option is not silently ignored.
+		expect(() => defineCollection(workflowOf("publish", { kind: "item" }))).toThrow(/workflow.*removed/);
+	});
+
+	it('fails with a clear message for the removed `required: "publish"` and `admin.legacyBackupNames`', () => {
+		const old = defineCollection({
+			label: "Old",
+			kind: "document",
+			fields: { title: { ...title, required: "publish" } as never, slug },
+		});
+		expect(() => defineConfig({ collections: { old }, locales, defaultLocale: "en" })).toThrow(
+			/old\.title has required: "publish".*required: true/,
+		);
+		expect(() =>
+			defineConfig({
+				collections: { topic },
+				locales,
+				defaultLocale: "en",
+				admin: { legacyBackupNames: ["old_backup"] } as never,
+			}),
+		).toThrow(/admin\.legacyBackupNames was removed/);
 	});
 
 	it("rejects collection paths that can make the same URL", () => {

@@ -18,7 +18,7 @@ export const adminHref = (path = ""): string => adminHrefWith(ADMIN_PATH, path);
 /** `adminHref()` plus `basePath`: a browser address (for `window.open`, `history`, login `redirectTo` and the session sign-in page). */
 export const adminUrl = (path = ""): string => withBasePath(adminHref(path));
 
-/** Address of the post edit screen inside the admin. */
+/** Address of the entry edit screen inside the admin. */
 export const adminEntryEditHref = (id: string): string => adminHref(`/entries/${id}/edit`);
 
 /** Address of the admin sidebar "View site" link (`site.home`, default `/`). */

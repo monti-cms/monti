@@ -571,13 +571,12 @@ A client can send `Host` and `X-Forwarded-Host` itself, so the server does not t
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
 | `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.mdx"`, `"cms.core"` and `"cms.translation"`. |
-| `admin.legacyBackupNames` | Old browser backup DB names. The admin UI reads and deletes them but never creates them (the current name is `cms_backup`). |
 
 ### Collections
 
 - **Kind (`kind`).** A `document` has a body, separates draft from published content, and is published explicitly. An `item` is a small form whose saved values
   are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents.
-  The old name `workflow: "publish" | "record"` is also accepted and converted to `document` and `item` (this name will be removed). The core code reads only `kind`.
+  The old name `workflow: "publish" | "record"` was removed; a config that still has it fails with the `kind` to use (`publish` → `document`, `record` → `item`).
 - **Layout (`layout`).** If absent, it is one group in field declaration order, and fields with their own `tab` gather in that tab.
 - **List (`list.columns`).** If absent, the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation
   pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date.
@@ -603,7 +602,7 @@ and by the editor when it creates links. A collection without `path` cannot be l
   and a file in use cannot be deleted. A value that is not a media ID is `invalid_metadata_value`, and an empty value (`""`) means nothing is picked.
 
 - **Required field (`required: true`).** Blocks an empty value when a document collection is published, or when an item collection is saved. Saving a draft is not blocked.
-  The old value `required: "publish"` is accepted with the same meaning.
+  The old value `required: "publish"` was removed (use `true`); a config that still has it fails with a message.
 - **Field value errors.** Error codes are the same regardless of the field. An empty required value is `missing_field` (`null_slug` for the URL), and a length over `max`
   is `field_too_long`. In the issue (`issues`), `path` holds the field name and `message` the field label (the title too). A different relation target
   collection is `invalid_reference_collection`. An empty body (`empty_body`) blocks only collections that use a body (`body`).

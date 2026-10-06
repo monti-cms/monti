@@ -21,7 +21,7 @@ export function ThemeToggle({
 	labels = { toLight: t("theme.toLight"), toDark: t("theme.toDark") },
 	...props
 }: Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
-	/** Button name. The public blog passes a message in its display language. */
+	/** Button name. A public site passes a message in its own display language. */
 	labels?: { toLight: string; toDark: string };
 }) {
 	const { resolvedTheme, setTheme } = useTheme();

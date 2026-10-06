@@ -395,7 +395,7 @@ export function useEntryList(mode: ListMode) {
 		}
 	};
 
-	/** New item. Posts and memos are created in the edit screen in the current folder; taxonomy items through a small form. */
+	/** New item. Document entries are created in the edit screen in the current folder; taxonomy items through a small form. */
 	const createNew = () =>
 		isRecord
 			? void openRecord({ collection, id: null })
