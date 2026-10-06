@@ -21,13 +21,15 @@ const author = await service.createDraft({
 	collection: "author",
 	slug: "showcase-author",
 	metadata: { title: "Showcase Author", bio: "Writes the sample articles that are checked on screen." },
-	mdx: "",
+	format: "mdx",
+	body: "",
 });
 const topic = await service.createDraft({
 	collection: "topic",
 	slug: "showcase",
 	metadata: { title: "Showcase" },
-	mdx: "",
+	format: "mdx",
+	body: "",
 });
 
 const common = { authorId: author.id, topicIds: [topic.id], format: "guide" };
@@ -63,7 +65,8 @@ const created = await Promise.all(
 			collection: "article",
 			slug: article.slug,
 			metadata: article.metadata,
-			mdx: "Placeholder body.",
+			format: "mdx",
+			body: "Placeholder body.",
 		}),
 	})),
 );
@@ -73,7 +76,8 @@ for (const { article, draft } of created) {
 		collection: "article",
 		slug: article.slug,
 		metadata: article.metadata,
-		mdx: article.mdx,
+		format: "mdx",
+		body: article.mdx,
 		expectedVersion: draft.version,
 	});
 	saved.push({ article, id: entry.id, version: entry.version });
