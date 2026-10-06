@@ -1,45 +1,14 @@
 "use client";
 
-import {
-	AttributeInput,
-	blockNodeName,
-	ContainerToolbar,
-	childPos,
-	focusInside,
-	SELECTED_RING,
-	ToolbarButton,
-	useContainerValues,
-	useSelectedChildIndex,
-	valuesOf,
-	withValue,
-} from "@monti-cms/admin/blocks";
+import { AttributeInput, ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn } from "@monti-cms/admin/kit";
 import { createTranslator } from "@monti-cms/core/client";
-import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { PencilLine, Plus, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { tabBlock, tabsBlock as tabsDefinition } from "./definition";
 import { tabsMessages } from "./messages";
 
 const t = createTranslator(tabsMessages);
-
-const MIN_TABS = tabsDefinition.children.min;
-const MAX_TABS = tabsDefinition.children.max;
-
-/**
- * Keeps only the selected tab and hides the other tab bodies. Child tabs are direct children of the contentDOM (`data-node-view-content-react`).
- * Write the strings out literally so Tailwind can find the classes (up to 8, the definition's `children.max`).
- */
-const SHOW_ONLY_TAB = [
-	"[&>[data-node-view-content-react]>:not(:nth-child(1))]:hidden",
-	"[&>[data-node-view-content-react]>:not(:nth-child(2))]:hidden",
-	"[&>[data-node-view-content-react]>:not(:nth-child(3))]:hidden",
-	"[&>[data-node-view-content-react]>:not(:nth-child(4))]:hidden",
-	"[&>[data-node-view-content-react]>:not(:nth-child(5))]:hidden",
-	"[&>[data-node-view-content-react]>:not(:nth-child(6))]:hidden",
-	"[&>[data-node-view-content-react]>:not(:nth-child(7))]:hidden",
-	"[&>[data-node-view-content-react]>:not(:nth-child(8))]:hidden",
-] as const;
 
 // Look of the editor tab bar (theme colors). The public page tab look is decided by the site.
 const TAB_TRIGGER =
@@ -47,105 +16,64 @@ const TAB_TRIGGER =
 const TAB_TRIGGER_ACTIVE =
 	"border-cms-border! bg-cms-background text-cms-foreground shadow-sm cms-dark:border-cms-input cms-dark:bg-cms-input/30 cms-dark:text-cms-foreground";
 
-const labelOf = (values: Record<string, unknown>) => (typeof values.label === "string" ? values.label : "");
+const labelOf = (values: Readonly<Record<string, unknown>>) => (typeof values.label === "string" ? values.label : "");
 
 /**
  * Shows only the tab bar and the selected tab's body, like the public page. The body is edited in place.
  * Clicking a tab moves the cursor to that tab's body, and entering another tab's body with the arrow keys opens that tab.
  * Tab names, the initially open tab, adding, and deleting are done from the block toolbar.
  */
-export function TabsNodeView(props: NodeViewProps) {
-	const { node, selected, editor, getPos } = props;
-	const [values] = useContainerValues(props);
-	const labels = Array.from({ length: node.childCount }, (_, index) => labelOf(valuesOf(node.child(index))));
-	const defaultLabel = typeof values.defaultValue === "string" ? values.defaultValue : "";
+export function TabsNodeView() {
+	const block = useBlockEditor<{ defaultValue: string }>();
+	const { children, editable, focusedChild } = block;
+	const labels = children.map((child) => labelOf(child.values));
+	const defaultLabel = typeof block.values.defaultValue === "string" ? block.values.defaultValue : "";
 	const defaultIndex = Math.max(0, labels.indexOf(defaultLabel));
 	const [active, setActive] = useState(defaultIndex);
 	const [renaming, setRenaming] = useState<number | null>(null);
-	const selectedIndex = useSelectedChildIndex(editor, getPos);
-	const current = Math.min(active, node.childCount - 1);
-	const editable = editor.isEditable;
+	const current = Math.min(active, children.length - 1);
 
 	useEffect(() => {
-		if (selectedIndex !== -1) setActive(selectedIndex);
-	}, [selectedIndex]);
+		if (focusedChild !== null) setActive(focusedChild);
+	}, [focusedChild]);
 
 	const openTab = (index: number) => {
 		setActive(index);
-		focusInside(editor, getPos, index);
+		block.focus({ child: index });
 	};
 
 	const renameTab = (index: number, label: string) => {
-		const pos = getPos();
-		if (typeof pos !== "number") return;
-		editor
-			.chain()
-			.command(({ tr }) => {
-				const parent = tr.doc.nodeAt(pos);
-				const child = parent?.maybeChild(index);
-				if (!parent || !child) return false;
-				const previous = labelOf(valuesOf(child));
-				tr.setNodeMarkup(childPos(parent, pos, index), undefined, {
-					...child.attrs,
-					values: withValue(valuesOf(child), "label", label),
-				});
-				// The initially open tab is referenced by name. Renaming a tab updates it too (based on the current document, not render time).
-				const parentValues = valuesOf(parent);
-				if (parentValues.defaultValue && parentValues.defaultValue === previous)
-					tr.setNodeMarkup(pos, undefined, {
-						...parent.attrs,
-						values: withValue(parentValues, "defaultValue", label),
-					});
-				return true;
-			})
-			.run();
+		block.transact((tx) => {
+			const tab = tx.child(index);
+			const previous = labelOf(tab.values);
+			tab.setValue("label", label);
+			// The initially open tab is referenced by name. Renaming a tab updates it too (based on the current document, not render time).
+			if (tx.values.defaultValue && tx.values.defaultValue === previous) tx.setValue("defaultValue", label);
+		});
 	};
 
 	const addTab = () => {
-		const pos = getPos();
-		if (typeof pos !== "number" || node.childCount >= MAX_TABS) return;
-		let number = node.childCount + 1;
+		let number = children.length + 1;
 		while (labels.includes(t("tab.newName", { number }))) number += 1;
-		editor.commands.insertContentAt(pos + node.nodeSize - 1, {
-			type: blockNodeName(tabBlock),
-			attrs: { values: { label: t("tab.newName", { number }) } },
-			content: [{ type: "paragraph" }],
-		});
-		openTab(node.childCount);
+		const added = block.addChild({ values: { label: t("tab.newName", { number }) }, focus: true });
+		if (added.ok) setActive(added.value.index);
 	};
 
 	const removeTab = (index: number) => {
-		const pos = getPos();
-		if (typeof pos !== "number" || node.childCount <= MIN_TABS) return;
-		const from = childPos(node, pos, index);
-		editor
-			.chain()
-			.command(({ tr }) => {
-				tr.delete(from, from + node.child(index).nodeSize);
-				if (defaultLabel && defaultLabel === labels[index])
-					tr.setNodeMarkup(pos, undefined, { ...node.attrs, values: withValue(values, "defaultValue", "") });
-				return true;
-			})
-			.run();
-		openTab(Math.max(0, index - 1));
+		const removed = block.transact((tx) => {
+			if (defaultLabel && defaultLabel === labelOf(tx.child(index).values)) tx.setValue("defaultValue", "");
+			tx.removeChild(index);
+		});
+		if (removed.ok) openTab(Math.max(0, index - 1));
 	};
 
 	const toggleDefault = (index: number) => {
-		const pos = getPos();
-		if (typeof pos !== "number") return;
 		// The first tab opens first even without being specified. Clicking an already specified tab again clears the specification.
-		const next = index === 0 || index === defaultIndex ? "" : (labels[index] ?? "");
-		editor.view.dispatch(
-			editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, values: withValue(values, "defaultValue", next) }),
-		);
+		block.setValue("defaultValue", index === 0 || index === defaultIndex ? "" : (labels[index] ?? ""));
 	};
 
 	return (
-		<NodeViewWrapper
-			data-cms-container-node="cmsTabs"
-			data-cms-framed
-			className={cn("group/container relative my-6 rounded-lg", selected && SELECTED_RING)}
-		>
+		<BlockFrame className="my-6 rounded-lg">
 			<div contentEditable={false} className="not-prose">
 				<div
 					role="tablist"
@@ -189,12 +117,10 @@ export function TabsNodeView(props: NodeViewProps) {
 					<span className="pointer-events-none absolute right-0 -bottom-1 left-0 inline-block h-1 bg-cms-muted" />
 				</div>
 			</div>
-			<NodeViewContent
-				className={cn("rounded-b-lg rounded-tr-lg border bg-cms-muted px-4 py-3 text-sm", SHOW_ONLY_TAB[current])}
-			/>
+			<Content visibleChild={current} className="rounded-b-lg rounded-tr-lg border bg-cms-muted px-4 py-3 text-sm" />
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
-					<ToolbarButton label={t("add")} disabled={node.childCount >= MAX_TABS} onClick={addTab}>
+					<ToolbarButton label={t("add")} disabled={!block.canAddChild} onClick={addTab}>
 						<Plus aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("rename")} onClick={() => setRenaming(current)}>
@@ -206,22 +132,22 @@ export function TabsNodeView(props: NodeViewProps) {
 					<ToolbarButton
 						label={t("delete")}
 						destructive
-						disabled={node.childCount <= MIN_TABS}
+						disabled={!block.canRemoveChild(current)}
 						onClick={() => removeTab(current)}
 					>
 						<Trash2 aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>
 			) : null}
-		</NodeViewWrapper>
+		</BlockFrame>
 	);
 }
 
 /** One tab. The parent (tab bar and body box) handles the look, and this view only provides the body slot. */
 export function TabNodeView() {
 	return (
-		<NodeViewWrapper data-cms-container-node="cmsTab">
-			<NodeViewContent className="[&>[data-node-view-content-react]>:first-child]:mt-0 [&>[data-node-view-content-react]>:last-child]:mb-0" />
-		</NodeViewWrapper>
+		<BlockFrame framed={false} selectedRing={false}>
+			<Content className="[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0" />
+		</BlockFrame>
 	);
 }
