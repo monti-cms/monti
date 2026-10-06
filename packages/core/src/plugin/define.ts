@@ -1,8 +1,8 @@
-import type { Pool, PoolClient } from "pg";
 import type { BlockDefinition } from "../blocks/define";
 import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
 import type { WriteHooks } from "../services/hooks";
+import type { PluginStorage } from "./storage";
 
 /**
  * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`).
@@ -74,26 +74,17 @@ export interface OwnedPluginRoute extends PluginRoute {
 	readonly plugin: string;
 }
 
-/** DB used by plugins (Postgres only for now). `schema` is a validated schema name, so it is safe to put into SQL as is. */
-export interface PluginDatabase {
-	readonly pool: Pool;
-	readonly schema: string;
-	/**
-	 * One-time work (e.g. moving legacy data). The name is recorded in the core migration log so it does not run again, and it runs only once even if called concurrently.
-	 * `run` uses the `client` it receives inside a transaction (on failure it rolls back and records nothing). Prefix the name with the plugin name.
-	 * @returns whether it ran this time
-	 */
-	readonly once: (name: string, run: (client: PoolClient) => Promise<void>) => Promise<boolean>;
-}
-
 export interface CmsServerPlugin {
 	/**
 	 * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context
-	 * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, the database and its secrets (`cms.secrets(name)`) from `cms` and keeps no global state for them.
+	 * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, its storage (`cms.storage(name)`) and its secrets (`cms.secrets(name)`) from `cms` and keeps no global state for them.
 	 */
 	readonly routes?: readonly PluginRoute[];
-	/** Called by `monti migrate` after the core tables. Must give the same result when called repeatedly. `cms` is the instance being migrated. */
-	readonly migrate?: (db: PluginDatabase, cms: Cms) => Promise<void>;
+	/**
+	 * Called by `monti migrate` after the core tables, with the plugin's own storage (`storage.once(name, step)` runs one-time work, e.g. moving data from an earlier layout).
+	 * Must give the same result when called repeatedly. `cms` is the instance being migrated.
+	 */
+	readonly migrate?: (storage: PluginStorage, cms: Cms) => Promise<void>;
 	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
 	readonly features?: (cms: Cms) => Promise<Readonly<Record<string, boolean>>>;
 	/**

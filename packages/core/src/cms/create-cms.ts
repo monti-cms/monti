@@ -5,8 +5,9 @@ import { cmsConfig } from "../config/resolved";
 import { adminUrl } from "../core/admin-paths";
 import { CmsError, type ContentChange, type ContentStore, type Entry, formatRewriteReport } from "../core/store";
 import { type CmsRouteHandler, nextRouteHandler } from "../next/route-handler";
-import type { CmsPlugin, OwnedPluginRoute, PluginDatabase } from "../plugin/define";
+import type { CmsPlugin, OwnedPluginRoute } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
+import type { PluginStorage } from "../plugin/storage";
 import { type CmsRead, createRead } from "../read";
 import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../server/define";
@@ -62,8 +63,11 @@ export interface Cms {
 	readonly isMediaConfigured: boolean;
 	/** The media store. Throws `media_not_configured` if the server config has none. */
 	mediaStore(): MediaStore;
-	/** DB connection for plugins to read and create their own tables. */
-	database(): PluginDatabase;
+	/**
+	 * The storage of one plugin: documents in named collections with optimistic versions, and a migration hook (see `PluginStorage`). A plugin asks for its own
+	 * name (`cms.storage("my-plugin")`) and never sees the database behind it.
+	 */
+	storage(plugin: string): PluginStorage;
 	/**
 	 * The secrets API of one plugin: encryption of stored values and key derivation, with a key derived from the server config's `secret` and the plugin's
 	 * name. The master secret itself is never handed out. A plugin asks for its own name (`cms.secrets("ai")`); another plugin's values do not decrypt
@@ -214,7 +218,7 @@ export function createCms(options: CreateCmsOptions): Cms {
 		},
 		isMediaConfigured: Boolean(server.media),
 		mediaStore: getMediaStore,
-		database: () => connections.database.pluginDatabase(),
+		storage: (plugin) => connections.database.pluginStorage(plugin),
 		secrets: (plugin, secretsOptions) => vault.forPlugin(plugin, secretsOptions),
 		auth: getAuth,
 		authHandlers: {
@@ -234,7 +238,7 @@ export function createCms(options: CreateCmsOptions): Cms {
 		migrate: async ({ log = console.log } = {}) => {
 			log(`Starting CMS database migration (${connections.database.name})...`);
 			await connections.database.migrate();
-			await plugins.migrate(connections.database.pluginDatabase(), log);
+			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
 			log("CMS database migration completed successfully!");
 		},
 		rewrite: async ({ apply, log = console.log } = {}) => {

@@ -133,7 +133,7 @@ describe("plugin secrets: legacy values", () => {
 
 describe("the CMS instance does not hand out the master secret", () => {
 	const server = {
-		database: { name: "x", createStore: () => ({}), migrate: async () => undefined, pluginDatabase: () => ({}) },
+		database: { name: "x", createStore: () => ({}), migrate: async () => undefined, pluginStorage: () => ({}) },
 		auth: { name: "x", create: () => ({}) },
 		secret: "master-secret",
 		previousSecrets: ["older-secret"],

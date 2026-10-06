@@ -16,6 +16,7 @@
 		"src/**/*.test.tsx",
 		"src/**/__test__/**/*.test.*",
 		"src/services/__test__/export-fixture.ts",
-		"src/core/store/__test__/contract/**"
+		"src/core/store/__test__/contract/**",
+		"src/plugin/__test__/storage-contract.ts"
 	]
 }

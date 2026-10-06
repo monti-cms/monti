@@ -1,7 +1,7 @@
 import type { MediaStore } from "../adapters/r2/types";
 import type { AfterCommit, ContentStore, RewriteReport } from "../core/store";
 import type { PublicApiOptions } from "../http/v1/public/options";
-import type { PluginDatabase } from "../plugin/define";
+import type { PluginStorage } from "../plugin/storage";
 import type { WriteHooks } from "../services/hooks";
 
 /**
@@ -18,8 +18,11 @@ export interface DatabaseAdapter {
 	createStore(options?: { readonly afterCommit?: AfterCommit }): ContentStore;
 	/** Creates the tables or brings them to the latest shape (`monti migrate`). Running it repeatedly gives the same result. */
 	migrate(): Promise<void>;
-	/** Connection for plugins to create and read their own tables (`CmsServerPlugin.migrate`, plugin API). */
-	pluginDatabase(): PluginDatabase;
+	/**
+	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
+	 * An adapter implements it over its own database; plugins never see the database.
+	 */
+	pluginStorage(plugin: string): PluginStorage;
 	/**
 	 * Re-serializes every stored body (working, published, templates) with the site's configured syntax (`monti content:rewrite`), and returns what
 	 * happened to each. Writes only with `apply`. An adapter without it cannot run that command.

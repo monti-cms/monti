@@ -1,8 +1,7 @@
 import { Pool } from "pg";
 import type { ContentStore } from "../../core/store";
-import type { PluginDatabase } from "../../plugin/define";
 import type { DatabaseAdapter } from "../../server/define";
-import { validateSchemaName } from "./store/context";
+import { createPluginStorage } from "./plugin-storage";
 
 export interface PostgresOptions {
 	/** Connection string. Throws on first use if missing (it may be empty during builds). */
@@ -16,7 +15,6 @@ export interface PostgresOptions {
  * calling `postgres()` (when `cms.server.ts` creates the instance) does not load the store code.
  */
 const loadStoreModule = () => import("./content-store");
-const loadSchemaModule = () => import("./store/schema");
 const loadRewriteModule = () => import("./store/rewrite");
 
 /**
@@ -59,22 +57,12 @@ export function postgres(options: PostgresOptions): DatabaseAdapter {
 		createStore: (storeOptions) =>
 			lazyStore(async () => (await loadStoreModule()).createContentStore(getPool(), { ...schema, ...storeOptions })),
 		migrate: async () => (await loadStoreModule()).migrateContentStore(getPool(), schema),
-		pluginDatabase: () => pluginDatabaseFor(getPool(), options.schema),
+		pluginStorage: (plugin) => createPluginStorage(getPool(), options.schema, plugin),
 		rewriteContent: async ({ apply }) =>
 			(await loadRewriteModule()).rewriteContent(getPool(), { apply, schema: options.schema }),
 		close: async () => {
 			await pool?.end();
 			pool = undefined;
 		},
-	};
-}
-
-/** DB used by plugins (connection, schema, run-once jobs). Tests build the same shape. */
-export function pluginDatabaseFor(pool: Pool, schema?: string): PluginDatabase {
-	const qSchema = validateSchemaName(schema);
-	return {
-		pool,
-		schema: qSchema,
-		once: async (name, run) => (await loadSchemaModule()).runOnce(pool, { schema: qSchema }, name, run),
 	};
 }

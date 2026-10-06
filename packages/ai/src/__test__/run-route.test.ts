@@ -23,7 +23,6 @@ const cms = fakeCms({
 		getMediaAsset: async () => null,
 	},
 	mediaStore: {},
-	database: { pool: {} as never, schema: "cms" },
 	verifyAdmin: () => mockVerifyAdmin(),
 });
 

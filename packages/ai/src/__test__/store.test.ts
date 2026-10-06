@@ -6,7 +6,7 @@ import {
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
 	migrateContentStore,
-	pluginDatabaseFor,
+	pluginStorageFor,
 } from "@monti-cms/core/testing";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -31,7 +31,7 @@ describe("AI action edited-value store", () => {
 	/** Creates the core tables, then the AI plugin tables (same order as `monti migrate`). */
 	const migrate = async () => {
 		await migrateContentStore(pool, { schema: schemaName });
-		await migrateAi(pluginDatabaseFor(pool, schemaName));
+		await migrateAi(pluginStorageFor(pool, schemaName, "ai"));
 	};
 
 	beforeAll(async () => {
@@ -40,7 +40,7 @@ describe("AI action edited-value store", () => {
 		schemaName = isolated.schemaName;
 		await migrate();
 		content = createContentStore(pool, { schema: schemaName });
-		store = createAiStore(pluginDatabaseFor(pool, schemaName));
+		store = createAiStore(pluginStorageFor(pool, schemaName, "ai"));
 	});
 
 	afterAll(async () => {
@@ -70,8 +70,8 @@ describe("AI action edited-value store", () => {
 			version: 1,
 			overridden: ["enabled", "prompt"],
 		});
-		const row = await pool.query(`SELECT value FROM "${schemaName}".ai_action_overrides WHERE key = 'summary'`);
-		expect(row.rows[0]?.value).toEqual({ enabled: false, prompt: "바꾼 지시문" });
+		const row = await pluginStorageFor(pool, schemaName, "ai").collection("action-overrides").get("summary");
+		expect(row?.value).toEqual({ enabled: false, prompt: "바꾼 지시문" });
 		await expect(updateAction(store, "summary", 0, { enabled: true })).rejects.toMatchObject({ code: "conflict" });
 		await expect(updateAction(store, "summary", 1, { prompt: "{{title}}" })).rejects.toMatchObject({
 			code: "ai_invalid_input",
@@ -102,7 +102,7 @@ describe("AI action edited-value store", () => {
 				JSON.stringify({ prompt: "지운 기능" }),
 			],
 		);
-		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = 'migrate_ai_features_to_actions'`);
+		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name LIKE 'plugin:ai:%'`);
 		await migrate();
 		expect(await getAction(store, "codeFold")).toMatchObject({
 			prompt: "운영자 지시문",
@@ -110,8 +110,8 @@ describe("AI action edited-value store", () => {
 			modelName: "m-1",
 			send: ["code"],
 		});
-		const keys = await pool.query(`SELECT key FROM "${schemaName}".ai_action_overrides ORDER BY key`);
-		expect(keys.rows.map((row) => row.key)).not.toContain("mediaAlt");
+		const keys = await pluginStorageFor(pool, schemaName, "ai").collection("action-overrides").list();
+		expect(keys.map((item) => item.key)).not.toContain("mediaAlt");
 
 		// After moving once, later changes to the legacy table are not moved again.
 		await pool.query(`UPDATE "${schemaName}".ai_features SET spec = '{"prompt": "다시"}' WHERE builtin = 'codeFold'`);

@@ -149,22 +149,23 @@ describe("notifyAfterCommit", () => {
 });
 
 describe("migrate", () => {
-	it("migrates each plugin that has migrations, in order, with the database and the instance", async () => {
+	it("migrates each plugin that has migrations, in order, with its own storage and the instance", async () => {
 		const order: string[] = [];
-		const database = { schema: "s" } as never;
+		const storageOf = (plugin: string) => ({ plugin }) as never;
 		const plugins = serverPlugins([
 			{
 				name: "one",
 				server: async () => ({
 					default: {
-						migrate: async (db: unknown, c: unknown) => void order.push(`one:${db === database}:${c === cms}`),
+						migrate: async (storage: { plugin: string }, c: unknown) =>
+							void order.push(`one:${storage.plugin}:${c === cms}`),
 					},
 				}),
 			},
 			{ name: "none", server: async () => ({ default: {} }) },
 			{ name: "two", server: async () => ({ default: { migrate: async () => void order.push("two") } }) },
 		]);
-		await plugins.migrate(database, () => undefined);
-		expect(order).toEqual(["one:true:true", "two"]);
+		await plugins.migrate(storageOf, () => undefined);
+		expect(order).toEqual(["one:one:true", "two"]);
 	});
 });

@@ -9,12 +9,7 @@ import { describe, expect, it } from "vitest";
  */
 const CORE_SRC = path.resolve(__dirname, "../../..");
 const ADAPTER = path.join(CORE_SRC, "adapters", "postgres");
-const ALLOWED = new Set([
-	path.join(CORE_SRC, "server", "index.ts"),
-	path.join(CORE_SRC, "testing.ts"),
-	// Temporary: hands plugins the raw transaction helper until they get the storage API.
-	path.join(CORE_SRC, "plugin-server.ts"),
-]);
+const ALLOWED = new Set([path.join(CORE_SRC, "server", "index.ts"), path.join(CORE_SRC, "testing.ts")]);
 
 const SPECIFIER = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 
@@ -48,6 +43,16 @@ function reachesIntoAdapter(root: string): string[] {
 		);
 }
 
+const isTestFile = (file: string) => /(__test__|\.test\.)/.test(file);
+
+/** Non-test source files outside the Postgres adapter that import the `pg` driver (its types included). */
+function importsDriver(root: string): string[] {
+	return sourceFiles(root)
+		.filter((file) => !file.startsWith(ADAPTER + path.sep) && !isTestFile(file))
+		.filter((file) => /from\s*["']pg["']|import\s*\(?\s*["']pg["']/.test(readFileSync(file, "utf8")))
+		.map((file) => path.relative(path.dirname(CORE_SRC), file));
+}
+
 describe("store import boundary", () => {
 	it("nothing in the core package outside adapters/postgres imports from the Postgres adapter", () => {
 		expect(reachesIntoAdapter(CORE_SRC)).toEqual([]);
@@ -55,6 +60,10 @@ describe("store import boundary", () => {
 
 	it("the core package's own test helpers do not import it either", () => {
 		expect(reachesIntoAdapter(path.resolve(CORE_SRC, "..", "test"))).toEqual([]);
+	});
+
+	it("the Postgres driver and its types stay in the adapter: the plugin API, the root entry and the services do not see `pg`", () => {
+		expect(importsDriver(CORE_SRC)).toEqual([]);
 	});
 
 	it("recognizes static, type-only, re-export and dynamic imports of the adapter, and ignores others", () => {
