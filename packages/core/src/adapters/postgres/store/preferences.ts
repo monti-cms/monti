@@ -1,6 +1,6 @@
+import { normalizeMetadata } from "../../../core/domain/metadata";
 import type { JsonObject } from "../../../core/store/types";
 import type { StoreContext } from "./context";
-import { normalizeMetadata } from "./rows";
 
 /** Per-admin list and editor preferences. */
 export function createPreferenceOps(ctx: StoreContext) {

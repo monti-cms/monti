@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
+import { assertNoFolderCycle, assertParentInCollection } from "../../../core/domain/folders";
 import { CmsError } from "../../../core/store/errors";
 import type { Folder } from "../../../core/store/types";
 import { type StoreContext, withTransaction } from "./context";
@@ -23,7 +24,7 @@ export function createFolderOps(ctx: StoreContext) {
 			`SELECT collection FROM "${qSchema}".folders WHERE id = $1`,
 			[parentId],
 		);
-		if (res.rows[0]?.collection !== collection) throw new CmsError("Invalid parent", "invalid_input");
+		assertParentInCollection(res.rows[0]?.collection, collection);
 	};
 
 	return {
@@ -86,16 +87,19 @@ export function createFolderOps(ctx: StoreContext) {
 
 					if (next.parent_id) {
 						await assertParent(client, next.parent_id, curr.collection);
-						// Reject cycles: the new parent's ancestors must not include the folder itself.
+						// The new parent and its ancestors, nearest first. The rule (no cycle) is `assertNoFolderCycle`.
+						const ancestors: string[] = [];
 						let ancestor: string | null = next.parent_id;
-						while (ancestor) {
-							if (ancestor === params.id) throw new CmsError("Cycle", "invalid_input");
+						while (ancestor && !ancestors.includes(ancestor)) {
+							ancestors.push(ancestor);
+							if (ancestor === params.id) break;
 							const ancestorRes: { rows: { parent_id: string | null }[] } = await client.query(
 								`SELECT parent_id FROM "${qSchema}".folders WHERE id = $1`,
 								[ancestor],
 							);
 							ancestor = ancestorRes.rows[0]?.parent_id ?? null;
 						}
+						assertNoFolderCycle(params.id, ancestors);
 					}
 
 					await client.query(
