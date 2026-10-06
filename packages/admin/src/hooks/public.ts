@@ -21,6 +21,7 @@ export {
 	type ContentProps,
 	useBlockEditor,
 } from "../editor/blocks/use-block-editor";
+export { useLinkPaths } from "../editor/link-targets";
 export type { CmsIssue } from "../screens/api-error-message";
 export {
 	cmsEntryClient,

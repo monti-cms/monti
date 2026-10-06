@@ -10,7 +10,8 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 
 | Package | What it does |
 | --- | --- |
-| [`@monti-cms/core`](packages/core) | The core. Config, entry storage and publishing, MDX conversion, admin API, command line (`monti`) |
+| [`@monti-cms/core`](packages/core) | The core. Config, entry storage and publishing, the document model, admin API, command line (`monti`) |
+| [`@monti-cms/mdx`](packages/mdx) | MDX extension. The `mdx` format, the admin source panel, `renderMdx` and the syntax extension API |
 | [`@monti-cms/admin`](packages/admin) | The admin UI. Editor, entry list, media, templates |
 | [`@monti-cms/blocks`](packages/blocks) | Block extension. Callout, toggle, tabs, columns, code explorer, Mermaid, chart |
 | [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |
@@ -34,7 +35,7 @@ Not on npm yet. Until the public release, install the release bundle from the `r
 
 For the other packages, change only `path:/<folder name>` and use the same tag.
 
-Installation and setup are described in each package's README. The example app with everything attached is [`examples/other-site`](examples/other-site).
+`@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/other-site`](examples/other-site).
 
 ## Development
 
@@ -43,12 +44,12 @@ pnpm install          # install
 pnpm lint             # lint (fix with pnpm lint:fix)
 pnpm check:korean     # check that Korean strings in runtime code live only in the message dictionaries
 pnpm typecheck        # type check all packages
-pnpm build            # build all packages (core → syntax-directive → syntax-shiki → admin → ai → blocks → bareun → seo)
+pnpm build            # build all packages (core → mdx → syntax-directive → syntax-shiki → admin → ai → blocks → bareun → seo)
 pnpm test:run         # tests (needs Postgres)
 pnpm example:check    # pack the packages, install them into the example app and build it
 ```
 
-On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `admin`, `ai`, `blocks`, `seo`, `bareun`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
+On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `admin`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
 
 All tests run only if `.env.local` has a test DB URL (`CMS_TEST_DATABASE_URL`). The tests create a temporary schema in this DB and drop it when finished.
 

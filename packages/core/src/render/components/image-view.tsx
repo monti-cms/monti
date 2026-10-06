@@ -1,7 +1,7 @@
 "use client";
 
 import { type CSSProperties, useState } from "react";
-import { computeImageTransform, intrinsicDisplayWidth } from "../../mdx/image-transform";
+import { computeImageTransform, intrinsicDisplayWidth } from "../../doc/image-transform";
 
 /**
  * Body image (browser). Crop and rotate need the original aspect ratio, so they are fitted in the browser. The slot is reserved first with the original size the server knows.

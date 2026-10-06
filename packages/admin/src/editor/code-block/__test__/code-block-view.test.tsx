@@ -5,10 +5,11 @@ import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
+import { tiptapOf } from "../../../test/mdx";
 import { findBlockDOM, refineBlock } from "../../drag";
 import { buildEditorExtensions } from "../../extensions";
 import { inlineBubbleTarget } from "../../inline-marks";
+import { tiptapToStored } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 
 const t = createTranslator(codeBlockMessages);
@@ -55,6 +56,12 @@ const mount = async (source: string) => {
 };
 
 const block = (editor: Editor) => editor.state.doc.child(0);
+/** The annotations the first code block is saved with. */
+const savedAnnotations = (editor: Editor) =>
+	(tiptapToStored(editor.getJSON()).content[0]?.attrs?.annotations ?? {}) as {
+		lines?: { name: string; start: number; end: number }[];
+		rules?: { scope: string; name: string; pattern: string; flags: string }[];
+	};
 const gutterRow = (line: number) => document.querySelector(`[data-code-gutter] [data-line="${line}"]`) as HTMLElement;
 const gutterLines = () =>
 	[...document.querySelectorAll("[data-code-gutter] [data-line]")].map((row) => Number(row.getAttribute("data-line")));
@@ -130,7 +137,7 @@ describe("code block edit view", () => {
 				"true",
 			),
 		);
-		expect(mdxOfTiptap(editor.getJSON())).toContain("// @line highlight {1-1}\nconst b = 2;");
+		expect(savedAnnotations(editor).lines).toMatchObject([{ name: "highlight", start: 1, end: 2 }]);
 		// Changing the effect keeps the selected lines (another effect can be turned on next).
 		await waitFor(() =>
 			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-cms-primary\\/15")).toHaveLength(1),
@@ -150,7 +157,7 @@ describe("code block edit view", () => {
 			start: 0,
 			end: 3,
 		});
-		expect(mdxOfTiptap(editor.getJSON())).toContain("// @line collapse {0-2}");
+		expect(savedAnnotations(editor).lines).toMatchObject([{ name: "collapse", start: 0, end: 3 }]);
 		// After creating a fold, if the cursor is on a folded line it stays expanded. Fold with the arrow.
 		const toggle = await screen.findByRole("button", {
 			name: new RegExp(`^(${t("view.collapseFrom", { line: 1 })}|${t("view.expandFrom", { line: 1 })})$`),
@@ -173,7 +180,9 @@ describe("code block edit view", () => {
 		const rules = block(editor).attrs.rules as CodeRule[];
 		// A new rule starts with the first offered text effect (bold by default).
 		expect(rules[0]).toMatchObject({ scope: "document", name: "strong", pattern: "const", flags: "g" });
-		expect(mdxOfTiptap(editor.getJSON())).toContain("// @document strong {re:/const/g}");
+		expect(savedAnnotations(editor).rules).toMatchObject([
+			{ scope: "document", name: "strong", pattern: "const", flags: "g" },
+		]);
 	});
 
 	it("points to source editing when there are annotations the editor cannot display", async () => {

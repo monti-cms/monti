@@ -1,26 +1,38 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { EMPTY_REFS, type ReadRefs } from "../../mdx/document-refs";
-import { entryLinkHref } from "../../mdx/entry-links";
-import { bodyFromMdx, type StoredDocument } from "../../mdx/stored-document";
+import { EMPTY_REFS, type ReadRefs } from "../../doc/document-refs";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
+import type { CmsMark, CmsNode } from "../../doc/types";
 import { CmsContent, type DocumentComponents, type LinkProps } from "../index";
 
 const ID = "123e4567-e89b-42d3-a456-426614174000";
 const GONE = "123e4567-e89b-42d3-a456-426614174001";
 
-const doc = (mdx: string): StoredDocument => {
-	const body = bodyFromMdx(mdx);
-	if (!body.doc) throw new Error("not a document");
-	return body.doc;
-};
+const link = (label: string, attrs: CmsMark["attrs"]): CmsNode => ({
+	type: "text",
+	text: label,
+	marks: [{ type: "link", attrs }],
+});
+const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
 const refs: ReadRefs = { ...EMPTY_REFS, links: { [ID]: { path: "/posts/renamed", title: "Renamed", locale: "ko" } } };
 const render = async (props: Parameters<typeof CmsContent>[0]) =>
 	renderToStaticMarkup((await CmsContent(props)) as ReactNode);
 
 describe("rendering links by entry id", () => {
-	const body = doc(`See [it](${entryLinkHref(ID)}), [gone](${entryLinkHref(GONE)}) and [out](https://example.com/a).`);
+	const body = doc({
+		type: "paragraph",
+		content: [
+			{ type: "text", text: "See " },
+			link("it", { entryId: ID }),
+			{ type: "text", text: ", " },
+			link("gone", { entryId: GONE }),
+			{ type: "text", text: " and " },
+			link("out", { href: "https://example.com/a" }),
+			{ type: "text", text: "." },
+		],
+	});
 
 	it("draws a link at the address its entry has now, and an unresolved one as plain text", async () => {
 		const markup = await render({ doc: body, refs });

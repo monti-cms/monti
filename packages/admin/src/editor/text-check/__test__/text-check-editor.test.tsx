@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CmsAdminComponentsProvider, useEditorExtensions } from "../../../admin-components";
 import { pressOption } from "../../../test/base-ui";
-import { docOf, mdxOfDoc } from "../../../test/mdx";
+import { docOf } from "../../../test/mdx";
 import { editorMessages } from "../../messages";
 import { textCheckMessages } from "../messages";
 import { type TextCheckPluginState, textCheckIssues } from "../plugin";
@@ -216,7 +216,7 @@ describe("spellcheck button", () => {
 		expect(within(dialog).getByText("가짜 검사")).toBeTruthy();
 		fireEvent.click(within(dialog).getByRole("button", { name: "맞는 말" }));
 
-		await waitFor(() => expect(mdxOfDoc(onChange.mock.lastCall?.[0])).toContain("이것은 맞는 말 입니다"));
+		await waitFor(() => expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("이것은 맞는 말 입니다"));
 		expect(issuesOf(editor)).toHaveLength(0);
 		await waitFor(() => expect(screen.queryByRole("dialog", { name: t("results") })).toBeNull());
 	});

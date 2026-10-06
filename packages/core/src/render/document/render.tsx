@@ -2,9 +2,9 @@ import { type ComponentType, createElement, Fragment, type ReactNode } from "rea
 import { ADDED_BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
 import { BLOCK_BY_NAME, fenceBlockOf, TEXT_ALIGN_VALUES } from "../../blocks/derive";
-import { entryIdOfMark } from "../../mdx/entry-links";
-import { type ImageResolveResult, resolveImageUrl } from "../../mdx/image-src";
-import { sortMarks } from "../../mdx/registry";
+import { entryIdOfMark } from "../../doc/entry-links";
+import { type ImageResolveResult, resolveImageUrl } from "../../doc/image-src";
+import { sortMarks } from "../../doc/marks";
 import {
 	boundedTableSpan,
 	formatTableWidths,
@@ -13,8 +13,8 @@ import {
 	parseTableWidths,
 	tableHasMergedCells,
 	tableWidths,
-} from "../../mdx/table-layout";
-import type { CmsMark, CmsNode } from "../../mdx/types";
+} from "../../doc/table-layout";
+import type { CmsMark, CmsNode } from "../../doc/types";
 import { validImageWidth } from "../components/image";
 import type { Analysis } from "./analyze";
 import { headingLevel } from "./analyze";
@@ -252,7 +252,7 @@ export const renderDocumentTree = (
 			);
 		}
 		const text = renderInline(node.content);
-		const children = lead === undefined ? text : [lead, ...(text.length > 0 ? [" "] : []), ...text];
+		const children = lead === undefined ? text : keyed([lead, ...(text.length > 0 ? [" "] : []), ...text]);
 		return createElement(components.paragraph, { ...common(node), children } as never);
 	};
 

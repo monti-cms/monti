@@ -4,7 +4,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { cmsConfig } from "../../../config/resolved";
 import type { ContentStore } from "../../../core/store";
-import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -45,9 +44,9 @@ describe("Body templates: seeding and migration in Postgres", () => {
 			for (const seed of SEEDED) {
 				const found = templates.find((t) => t.name === seed.name);
 				if (!found) throw new Error(`Template not found: ${seed.name}`);
-				const expected = seed.doc ?? bodyFromMdx(seed.body ?? "").doc;
-				expect(expected).not.toBeNull();
-				expect(contentOf(found.doc)).toEqual(contentOf(expected));
+				// The core test config writes its seeds as documents, so no format is needed to read them.
+				expect(seed.doc).toBeDefined();
+				expect(contentOf(found.doc)).toEqual(contentOf(seed.doc));
 				expect(await templateMdx(pool, schemaName, found.id)).toBeNull();
 			}
 			const [first, second] = SEEDED.map((seed) => templates.find((t) => t.name === seed.name));
@@ -90,60 +89,5 @@ describe("Body templates: seeding and migration in Postgres", () => {
 		await store.deleteTemplate({ id: userId, expectedVersion: preserved[0].version });
 		await migrateContentStore(pool, { schema: schemaName });
 		expect((await store.listTemplates()).some((template) => template.name === name)).toBe(false);
-	});
-
-	it("merges legacy collection templates and preserves same-name content", async () => {
-		const legacy = await createIsolatedTestPool();
-		try {
-			await legacy.pool.query(`
-				CREATE TABLE "${legacy.schemaName}".body_templates (
-					id UUID PRIMARY KEY,
-					name TEXT NOT NULL,
-					for_collection TEXT NOT NULL CHECK (for_collection IN ('post', 'memo')),
-					mdx TEXT NOT NULL,
-					version INTEGER NOT NULL DEFAULT 1,
-					created_at TIMESTAMPTZ NOT NULL,
-					updated_at TIMESTAMPTZ NOT NULL
-				);
-				CREATE UNIQUE INDEX body_templates_collection_name_idx
-				ON "${legacy.schemaName}".body_templates (for_collection, lower(name));
-			`);
-			const memoId = randomUUID();
-			const postId = randomUUID();
-			await legacy.pool.query(
-				`INSERT INTO "${legacy.schemaName}".body_templates
-				 (id, name, for_collection, mdx, version, created_at, updated_at)
-				 VALUES ($1, '공통 이름', 'memo', '메모 본문', 3, '2026-01-01', '2026-01-02'),
-				        ($2, '공통 이름', 'post', '포스트 본문', 5, '2026-02-01', '2026-02-02')`,
-				[memoId, postId],
-			);
-
-			await migrateContentStore(legacy.pool, { schema: legacy.schemaName });
-			const mergedStore = createContentStore(legacy.pool, { schema: legacy.schemaName });
-			const merged = await mergedStore.listTemplates();
-			// The bodies are stored written from their documents (with a closing line break), and keep their versions.
-			const memo = merged.find((template) => template.id === memoId);
-			const post = merged.find((template) => template.id === postId);
-			expect(memo).toMatchObject({ name: "공통 이름", version: 3 });
-			expect(post).toMatchObject({ version: 5 });
-			// Migration 0013 wrote their text from the documents it gave them; 0019 leaves the column as it is.
-			expect(await templateMdx(pool, legacy.schemaName, memoId)).toBe("메모 본문\n");
-			expect(await templateMdx(pool, legacy.schemaName, postId)).toBe("포스트 본문\n");
-			expect(contentOf(memo?.doc)).toEqual(contentOf(bodyFromMdx("메모 본문").doc));
-			expect(contentOf(post?.doc)).toEqual(contentOf(bodyFromMdx("포스트 본문").doc));
-			expect(merged.find((template) => template.id === postId)?.name).not.toBe("공통 이름");
-			expect(new Set(merged.map((template) => template.name.toLowerCase())).size).toBe(merged.length);
-
-			await migrateContentStore(legacy.pool, { schema: legacy.schemaName });
-			expect(await mergedStore.listTemplates()).toEqual(merged);
-			const column = await legacy.pool.query(
-				`SELECT 1 FROM information_schema.columns
-				 WHERE table_schema = $1 AND table_name = 'body_templates' AND column_name = 'for_collection'`,
-				[legacy.schemaName],
-			);
-			expect(column.rowCount).toBe(0);
-		} finally {
-			await dropIsolatedTestPool(legacy.pool, legacy.schemaName);
-		}
 	});
 });

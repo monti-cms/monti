@@ -1,4 +1,6 @@
-"use client";
+import type { BrowserFormat } from "../../browser-format";
+
+("use client");
 
 import { isCollection } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -36,6 +38,11 @@ export interface UseEntryEditorOptions {
 	client?: EntryEditorClient;
 	/** Where the recovery copy is kept. Default: the browser's IndexedDB. */
 	recoveryStore?: RecoveryStore;
+	/**
+	 * The formats the browser can read (`useCmsAdminComponents().formats`). An old recovery copy written as text is read through the one named like its notation (`mdx`),
+	 * so it compares with the server body like any other copy.
+	 */
+	formats?: Readonly<Record<string, BrowserFormat>>;
 }
 
 /**
@@ -58,6 +65,8 @@ export interface UseEntryEditorOptions {
  */
 export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 	const callbacksRef = useRef<EntryEditorCallbacks>({});
+	const formatsRef = useRef(options.formats);
+	formatsRef.current = options.formats;
 	callbacksRef.current = { onSaved: options.onSaved };
 	const [core] = useState(() =>
 		createEntryEditor({
@@ -66,6 +75,7 @@ export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 			client: options.client ?? cmsEntryClient,
 			recoveryStore: options.recoveryStore ?? localRecoveryStore,
 			callbacks: () => callbacksRef.current,
+			formats: () => formatsRef.current,
 		}),
 	);
 

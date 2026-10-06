@@ -35,7 +35,7 @@ export const afterCommitContract: ContractSuite = (factory) => {
 		});
 
 		const create = (slug: string) =>
-			seedEntry(store, { collection: contentCollection, slug, metadata: { title: slug }, mdx: "본문" });
+			seedEntry(store, { collection: contentCollection, slug, metadata: { title: slug }, text: "본문" });
 
 		it("reports create, publish, archive, trash, restore, and permanent delete after commit", async () => {
 			const entry = await create("after-commit-flow");

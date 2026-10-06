@@ -2,7 +2,7 @@
 	"name": "@monti-cms/syntax-shiki",
 	"version": "0.1.0",
 	"private": true,
-	"description": "Shiki code notation for @monti-cms/core: reads [!code ++], [!code highlight] and friends in code fences on import (read only)",
+	"description": "Shiki code notation for @monti-cms/mdx: reads [!code ++], [!code highlight] and friends in code fences on import (read only)",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -20,10 +20,11 @@
 		"unist-util-visit": "^5.0.0"
 	},
 	"peerDependencies": {
-		"@monti-cms/core": "workspace:^"
+		"@monti-cms/mdx": "workspace:^"
 	},
 	"devDependencies": {
 		"@monti-cms/core": "workspace:*",
+		"@monti-cms/mdx": "workspace:*",
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",

@@ -204,7 +204,7 @@ export function createMediaOps(ctx: StoreContext) {
 				const mentions = await client.query<{ count: string; templates: string }>(
 					`SELECT
 					   (SELECT COUNT(*) FROM "${qSchema}".entry_bodies
-					     WHERE position($1 in mdx) > 0 OR position($1 in metadata::text) > 0)::text AS count,
+					     WHERE position($1 in doc::text) > 0 OR position($1 in metadata::text) > 0)::text AS count,
 					   (SELECT COUNT(*) FROM "${qSchema}".body_templates WHERE position($1 in doc::text) > 0)::text AS templates`,
 					[id],
 				);

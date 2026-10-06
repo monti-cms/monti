@@ -8,6 +8,8 @@ import {
 	requiredMetadata,
 	secondLocale,
 } from "../../../../../test/any-site";
+import { docOf } from "../../../../../test/stored-content";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../../doc/stored-document";
 import { recordLocalizedFields, storedField, storedFields } from "../../../../schema/derive";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../../collections";
 import { LOCALES } from "../../../locales";
@@ -18,6 +20,13 @@ import type { ContractSuite, StoreSession } from "./harness";
 // ---------------------------------------------------------------------------
 // Collections and fields are looked up in the config (runs against both the reference blog config and other site configs, `test/any-site.ts`)
 // ---------------------------------------------------------------------------
+
+/** A body of the text (read by the test reader) followed by a block whose attributes carry text a reader never sees. */
+const withHidden = (text: string): StoredDocument => ({
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+	content: [...docOf(text).content, { type: "callout", attrs: { attr: "secret HiddenAttr789" }, content: [] }],
+});
 
 /** Document collection under test for lists (the reference blog's posts). */
 const content = contentCollection;
@@ -80,7 +89,7 @@ export const listContract: ContractSuite = (factory) => {
 					collection: to,
 					slug: `list-test-${to}`,
 					metadata: await requiredMetadata(to, relationTargetTitle(to), relationTarget),
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
@@ -123,14 +132,16 @@ export const listContract: ContractSuite = (factory) => {
 			opts: {
 				status?: "draft" | "published";
 				folderId?: string | null;
-				mdx?: string;
+				text?: string;
+				doc?: StoredDocument;
 			} = {},
 		): Promise<Entry & { folderId?: string | null }> {
 			const entry = await seedEntry(store, {
 				collection,
 				slug,
 				metadata: await metadataFor(collection, title),
-				mdx: opts.mdx ?? "default body",
+				text: opts.text ?? "default body",
+				doc: opts.doc,
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
@@ -240,11 +251,11 @@ export const listContract: ContractSuite = (factory) => {
 		// 2  Korean + Latin case-insensitive substring; body search gating
 		// -----------------------------------------------------------------------
 
-		it("2. Korean case-insensitive substring over title+slug; Latin case-insensitive; MDX body excluded by default, searched only with includeBody=true, but never adds body to output", async () => {
+		it("2. Korean case-insensitive substring over title+slug; Latin case-insensitive; body excluded by default, searched only with includeBody=true, but never adds body to output", async () => {
 			await seed(content, "slug-한국어", "제목 테스트", {
-				mdx: '본문 내용 <Hidden attr="secret" /> [Link](http://example.com/url)',
+				doc: withHidden("본문 내용 [Link](http://example.com/url)"),
 			});
-			await seed(content, "le2-other", "Unrelated Alpha title % _", { mdx: "body with % and _ chars" });
+			await seed(content, "le2-other", "Unrelated Alpha title % _", { text: "body with % and _ chars" });
 
 			// title search (Korean)
 			const byTitle = await store.listEntries({ collection: content, search: "제목" });
@@ -308,20 +319,12 @@ export const listContract: ContractSuite = (factory) => {
 			expect(afterMalicious.items.map((item) => item.slug).sort()).toEqual(["le2-other", "slug-한국어"]);
 		});
 
-		it("2b. Visible body search: syntax-only needles/URL must not match; nested visible text/link label/fenced code must match", async () => {
+		it("2b. Visible body search: link addresses and block attributes must not match; visible text, link labels and fenced code must match", async () => {
 			const slug = "d2-body-search";
 			await seed(content, slug, "Body Search Title", {
-				mdx: `
-{/* SecretComment123 */}
-export const meta = { val: "ExportedVar456" };
-<div data-attr="before>AttrTail789">
-  <span className="NestedClass">VisibleNestedText321</span>
-</div>
-[LinkLabel654](https://example.com/LinkUrl987)
-\`\`\`js
-console.log("FencedCode000");
-\`\`\`
-`,
+				doc: withHidden(
+					'VisibleNestedText321\n\n[LinkLabel654](https://example.com/LinkUrl987)\n\n```js\nconsole.log("FencedCode000");\n```',
+				),
 			});
 
 			const expectMatch = async (needle: string, shouldMatch: boolean, withBody: boolean) => {
@@ -339,10 +342,8 @@ console.log("FencedCode000");
 			await expectMatch("LinkLabel654", true, true);
 			await expectMatch("FencedCode000", true, true);
 
-			// Must NOT match
-			await expectMatch("SecretComment123", false, true);
-			await expectMatch("ExportedVar456", false, true);
-			await expectMatch("AttrTail789", false, true);
+			// Must NOT match: what a reader does not see (a link's address, the attributes of a block)
+			await expectMatch("HiddenAttr789", false, true);
 			await expectMatch("LinkUrl987", false, true);
 		}, 15_000);
 
@@ -445,7 +446,7 @@ console.log("FencedCode000");
 					collection: many.to,
 					slug: "first-tag",
 					metadata: { title: "First tag" },
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
@@ -453,7 +454,7 @@ console.log("FencedCode000");
 					collection: many.to,
 					slug: "second-tag",
 					metadata: { title: "Second tag" },
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
@@ -461,7 +462,7 @@ console.log("FencedCode000");
 					collection: content,
 					slug: "tagged-post",
 					metadata: { title: "Tagged", [many.name]: [secondTag.id, firstTag.id] },
-					mdx: "body",
+					text: "body",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
@@ -490,7 +491,7 @@ console.log("FencedCode000");
 					collection: content,
 					slug: "values-filled",
 					metadata: { title: "Has values", [stored.name]: value },
-					mdx: "body",
+					text: "body",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
@@ -498,7 +499,7 @@ console.log("FencedCode000");
 					collection: content,
 					slug: "values-empty",
 					metadata: { title: "No values", [stored.name]: "" },
-					mdx: "body",
+					text: "body",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
@@ -521,7 +522,7 @@ console.log("FencedCode000");
 					collection: records,
 					slug: "tag-react",
 					metadata: { title: "리액트", translations },
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
@@ -529,7 +530,7 @@ console.log("FencedCode000");
 					collection: records,
 					slug: "tag-plain",
 					metadata: { title: "그냥" },
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});

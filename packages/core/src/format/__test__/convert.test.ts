@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../test/any-site";
 import { linkAddressKey } from "../../core/link-ids";
 import { contentPath } from "../../core/links";
-import type { CmsNode } from "../../mdx/types";
+import type { CmsNode } from "../../doc/types";
 import { createWritePipeline } from "../../services/write-pipeline";
 import { exportText, importText } from "../convert";
 import { createFormatRegistry } from "../registry";

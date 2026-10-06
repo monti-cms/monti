@@ -1,9 +1,9 @@
 import type { SeedTemplate } from "../../../config/define";
 import { DEFAULT_LOCALE } from "../../../core/locales";
+import { assignBlockIds } from "../../../doc/block-ids";
+import { canonicalDocument, readStoredDocument, type StoredDocument } from "../../../doc/stored-document";
 import { importText } from "../../../format/convert";
 import type { FormatRegistry } from "../../../format/registry";
-import { assignBlockIds } from "../../../mdx/block-ids";
-import { canonicalDocument, readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
 
 /**
  * The document a seed template of the site config is stored as. A template given as a document is checked like any stored document; one given as text

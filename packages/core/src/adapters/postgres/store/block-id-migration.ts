@@ -1,8 +1,8 @@
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
-import { assignBlockIds, forEachBlock, withoutBlockIds } from "../../../mdx/block-ids";
-import type { StoredDocument } from "../../../mdx/stored-document";
-import type { CmsNode } from "../../../mdx/types";
+import { assignBlockIds, forEachBlock, withoutBlockIds } from "../../../doc/block-ids";
+import type { StoredDocument } from "../../../doc/stored-document";
+import type { CmsNode } from "../../../doc/types";
 import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;

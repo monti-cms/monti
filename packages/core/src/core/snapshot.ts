@@ -1,10 +1,9 @@
-import { BUILT_IN_FORMATS } from "../format/built-in";
+import { assignBlockIds } from "../doc/block-ids";
+import { isAllowedImageSrc } from "../doc/image-src";
+import { canonicalDocument, readStoredDocument, type StoredDocument } from "../doc/stored-document";
+import type { CmsImageSource } from "../doc/types";
 import { importText } from "../format/convert";
-import type { FormatRegistry } from "../format/registry";
-import { assignBlockIds } from "../mdx/block-ids";
-import { isAllowedImageSrc } from "../mdx/image-src";
-import { canonicalDocument, readStoredDocument, type StoredDocument } from "../mdx/stored-document";
-import type { CmsImageSource } from "../mdx/types";
+import { type FormatRegistry, NO_FORMATS } from "../format/registry";
 import {
 	fieldValueError,
 	metadataReferences,
@@ -163,7 +162,7 @@ export const readInputBody = async (
 ): Promise<InputBody> => {
 	if (input.doc !== undefined) return documentInputBody(input, previous);
 	if (typeof input.body !== "string" || typeof input.format !== "string") throw new ServiceError("invalid_input");
-	const imported = await importText(options.formats ?? BUILT_IN_FORMATS, input.format, input.body, {
+	const imported = await importText(options.formats ?? NO_FORMATS, input.format, input.body, {
 		locale: options.locale ?? DEFAULT_LOCALE,
 		entryId: options.entryId,
 		previous,

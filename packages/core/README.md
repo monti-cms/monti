@@ -2,8 +2,8 @@
 
 English | [한국어](README.ko.md)
 
-The core of a DB (Postgres)-backed blog CMS. It handles the site config, collection schemas, content saving and publishing, MDX conversion, the admin API and plugin wiring.
-The admin UI is `@monti-cms/admin` and the AI features are the plugin `@monti-cms/ai`. `examples/other-site` is an example with everything wired together.
+The core of a DB (Postgres)-backed blog CMS. It handles the site config, collection schemas, content saving and publishing, the document model, the admin API and plugin wiring.
+The admin UI is `@monti-cms/admin`, MDX (the `mdx` format, the source panel and the syntax extensions) is the plugin `@monti-cms/mdx`, and the AI features are the plugin `@monti-cms/ai`. `examples/other-site` is an example with everything wired together.
 
 ## Install in an empty Next app
 
@@ -131,6 +131,7 @@ pnpm exec monti migrate
 It creates the tables or brings them to the latest shape (including plugin tables). Running it several times gives the same result, and you run it again after upgrading the packages.
 Core changes are recorded in `cms_migrations` as numbered steps, and only steps that have not run yet are run (in one transaction); even when run concurrently
 against the same schema, they run one at a time. A plugin hands over once-only work with `storage.once(name, step)` (see "Plugin storage").
+`monti migrate` (and `cms.migrate()`) hand the instance's formats (the ones its plugins provide) to the migration. The old steps that read bodies kept as MDX text need the `mdx` format of `@monti-cms/mdx` only when a store has such a body ("Upgrading from MDX in core").
 
 - Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
   Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
@@ -138,23 +139,6 @@ against the same schema, they run one at a time. A plugin hands over once-only w
   The server file, the module that exports the instance as `cms`, is `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`/`./src/cms.server.ts`.
 - In a script of your own, import the instance and call it: `import { cms } from "./cms.server"; await cms.migrate(); await cms.close();`
   (run it with `tsx --env-file=.env.local --import @monti-cms/core/register script.ts`, which links the `@cms-config` alias).
-
-#### `monti content:rewrite`
-
-```sh
-pnpm exec monti content:rewrite           # a dry run: reports what would change, writes nothing
-pnpm exec monti content:rewrite --apply   # writes the changes
-```
-
-Rewrites every stored body (the working and published bodies of entries; a template is a document with no text to rewrite) from its stored document with the site's configured syntax ("Stored bodies" under "Body syntax"), so the stored text is one notation:
-after turning `directiveSyntax()` on or off, or after upgrading the serializer, this brings old bodies in line at once instead of one post at a time as each is saved. Run it after `monti migrate`.
-It takes the same `--env-file`, `--no-env-file`, `--config` and `--server` options as `migrate` (in a script: `cms.rewrite({ apply })`).
-
-- It prints one line per body, `collection/slug (locale) state: changed|unchanged`, and a summary.
-- Only the text (and the document, for a body that had none) changes. The content hash covers the parsed body, so a re-spelled body has the same hash: `version`, `updated_at` and `content_hash` are not touched, and "unpublished changes" is unaffected.
-  The command checks this for every body: one whose hash would change is skipped and reported, never written.
-- An `unparsed` body ("Stored bodies") is skipped and reported, unless its text now reads as a document. The search text of rewritten bodies is refreshed.
-- Writes happen in one transaction, and a second run changes nothing.
 
 ### 5. Run
 
@@ -195,6 +179,28 @@ add the set of route files from the table above (each imports `cms` from the ser
 @import "@monti-cms/admin/styles.css"; /* defines the `cms-*` colors and the `cms-dark`, `cms-horizontal` and `cms-vertical` variants (names do not collide with the app's). Requires Tailwind 4 */
 @plugin "@tailwindcss/typography";
 ```
+
+### MDX extension (optional)
+
+```sh
+pnpm add @monti-cms/mdx
+```
+
+```ts
+// cms.config.ts
+import { mdx } from "@monti-cms/mdx";
+
+export default defineConfig({
+	// …
+	plugins: [mdx()], // the `mdx` format and the admin source panel; syntax extensions go in mdx({ syntax: [...] })
+});
+```
+
+```css
+@import "@monti-cms/mdx/styles.css"; /* after the admin package styles */
+```
+
+Core stores documents and has no text format of its own: a site without a format plugin accepts documents (`doc`) only, and a text write fails with `unknown_format`. `format: "mdx"` and `?format=mdx` need this package. See the README of `@monti-cms/mdx` for details.
 
 ### Blocks extension (optional)
 
@@ -286,10 +292,10 @@ Everything else imports `cms` from this file.
 | Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` (the Next adapter of `cms.handle(request)`) |
 | Admin API in a host other than Next (experimental) | `cms.handle(request)`: a standard `Request` in, a `Response` out |
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
-| Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` (pass `format: "mdx"` to also get the body as text in `entry.body`, "Formats") |
-| Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` (`cms.read.imageResolver(mdx)` is for `renderMdx`) |
+| Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` (pass a `format`, for example `"mdx"` with `@monti-cms/mdx`, to also get the body as text in `entry.body`, "Formats") |
+| Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` |
 | Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
-| Scripts and the command line | `cms.migrate()`, `cms.rewrite({ apply })`, `cms.close()` |
+| Scripts and the command line | `cms.migrate()`, `cms.close()` |
 | Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
 | Tests | `fakeCms({ store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides |
 
@@ -314,12 +320,12 @@ Changing the database connection itself needs a restart. In production and in te
 - Plugin routes and custom admin routes get a standard `Request` instead of `NextRequest`: replace `request.nextUrl` with `new URL(request.url)` and `NextResponse.json` with `Response.json`. `CmsRouteHandler` now lives in `@monti-cms/core/next` and `createRouteHandler` is replaced by `cms.handle()`.
 - The admin API route is `cms.routeHandler()`. `createCmsRouteHandler` and the `@monti-cms/core/next/route-handler` entry point are gone.
 - Pass the instance to the admin: `<CmsAdminLayout cms={cms}>` and `<CmsAdminPage cms={cms} {...props} />` (the page file becomes a small component; `monti init` shows the shape).
-- Site pages read through `cms.read.*` instead of the free functions of `@monti-cms/core/read`; `cms.read.imageResolver(mdx)` replaces `createPublicImageResolver(mdx)` and `cms.read.mediaUrl(id)` replaces `resolvePublicMediaUrl(id)`.
+- Site pages read through `cms.read.*` instead of the free functions of `@monti-cms/core/read`; `entry.refs` replaces `createPublicImageResolver(mdx)` (`cms.read.imageResolver` is gone too, "Upgrading from MDX in core") and `cms.read.mediaUrl(id)` replaces `resolvePublicMediaUrl(id)`.
 - Gone: `getCmsContentStore`, `getCmsMediaStore`, `getCmsSecret`, `getCmsDatabase`, `loadServerPlugins` and the login free functions of `@monti-cms/core/runtime` (`authGateway`, `auth`, `signIn`, `signOut`, `handlers`, `isDevAuthBypassEnabled`, …). Use the instance:
   `cms.store()`, `cms.mediaStore()`, `cms.secrets(pluginName)`, `cms.storage(pluginName)`, `cms.plugins()`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`.
   Nothing hands out the raw master secret any more (`cms.secret` and `cms.server.secret` are gone too); see "Plugin secrets".
   A plugin's route gets `cms` in its handler input, `CmsServerPlugin.features(cms)` and `migrate(storage, cms)` get it as an argument, and hooks read it from a closure over your own `cms`.
-- `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` and `monti content:rewrite` now import the server file and need it to export `cms`.
+- `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` now imports the server file and need it to export `cms`.
   `@monti-cms/core/register` links only the `@cms-config` alias.
 - Signing in and out are plain form posts to `/api/cms/v1/session/*`, not server actions (a server action cannot carry the instance). Nothing to change in apps.
 
@@ -331,6 +337,29 @@ Changing the database connection itself needs a restart. In production and in te
 - `createContentLookup(cms.database())` is `createContentLookup(cms)`. `createContentStore` and `migrateContentStore` are no longer exported from `@monti-cms/core/runtime`; tests take them from `@monti-cms/core/testing`.
 - Types such as `Entry`, `ListEntriesParams` and `CmsError` come from `@monti-cms/core/runtime` as before; they are defined in `src/core/store`, not in the Postgres adapter.
 
+### Upgrading from MDX in core
+
+MDX moved out of core into the package `@monti-cms/mdx`. Core has no MDX dependency any more (`next-mdx-remote`, `remark-*`, `rehype-*`, `unified`, `vfile` and the mdast types are gone from its `package.json`). Do this **before** deploying this version:
+
+1. Install `@monti-cms/mdx`.
+2. Add `mdx()` to `plugins` and **move** `mdx.syntax` into it: `defineConfig({ mdx: { syntax: [directiveSyntax()] } })` becomes `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`. Keep the same options (for a site that wrote directives, `directiveSyntax()` with write mode on). The `mdx` config key is gone.
+3. Add `@import "@monti-cms/mdx/styles.css";` to the app CSS, after the admin styles.
+4. Replace `renderMdx` imports from `@monti-cms/core/render` with `@monti-cms/mdx/render` (or render documents with `CmsContent`), and `cms.read.imageResolver(...)` with `entry.refs` (`renderMdx(source, { refs: entry.refs })`). `renderMdx` returns `{ content, toc, unknown }` and compiles or executes no MDX.
+5. Replace imports of `@monti-cms/core/mdx`, `@monti-cms/core/syntax` and `@monti-cms/core/format/mdx`, which are removed: the syntax extension interface (`SyntaxExtension`, `SerializeContext`, `RAW_SOURCE_PARAGRAPH`, the table and comment syntax helpers) comes from `@monti-cms/mdx`, and the parser and writer (`analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `mdxFormat`, ...) from `@monti-cms/mdx/format`. Syntax extension packages peer on `@monti-cms/mdx` now.
+6. Block extensions you wrote: drop the default export of your `render` modules and keep `documentComponents` (`CmsPlugin.render` returns `{ documentComponents }`).
+7. Run `monti migrate`. With `mdx()` in the config, an old database upgrades with the right syntax extensions. Without it, a store that still has bodies to read through the old steps fails with a message that says to install `@monti-cms/mdx` and add `mdx()` to the plugins of the site config.
+8. Drop `monti content:rewrite` from your scripts: it is removed (`cms.rewrite` too), since there is no stored text to normalize.
+
+What else changed:
+
+- **No built-in format.** A site without a format plugin accepts documents (`doc`) only, and a text write fails with `unknown_format`. `format: "mdx"` and `?format=mdx` need `@monti-cms/mdx`.
+- **Database.** `entry_bodies.mdx` and `body_templates.mdx` are nullable (the step `0020_mdx_columns_optional`, which runs before `seed_initial_body_templates`) and are no longer written. The columns are not dropped, so old rows keep their text. The media in-use check looks in `doc`.
+- **Old steps.** `0010`, `0011`, `0012`, `0013` and `0015` keep their names in core but parse through the `mdx` format that `@monti-cms/mdx/server` supplies (`CmsFormat.legacyBodies`, "Formats"). They need the package only when a store actually has a body to read through them: a fresh store, and a store already past those steps, never need it at migrate time. `monti migrate` and `cms.migrate()` pass the instance's formats to the migration, so a site that lists `mdx()` migrates old data with its syntax extensions.
+- **Rendering.** `renderMdx` and `compileMDX` are not in `@monti-cms/core/render` any more: core renders documents (`CmsContent`, `renderDocument`). Block extensions export only `documentComponents` from their render modules, and `@monti-cms/blocks` has no MDX component tables.
+- **Admin.** The source panel is registered by the `mdx()` plugin (without it, there is no source toggle), and its message namespace is `cms-mdx.source` (it was `cms-admin.mdx-source`). The admin exports `SOURCE_ERROR_ID` and `useLinkPaths` (`@monti-cms/admin/hooks`); `mdxBrowserFormat` is no longer exported by `@monti-cms/admin/editor`. Recovery copies that browsers saved before documents existed are kept as an `unparsed` document, which the panel reads again.
+- **AI.** `@monti-cms/ai` peers on `@monti-cms/mdx`: its model reads and writes MDX through the `mdx` format.
+- `@monti-cms/core/notation` is a new light entry (comment syntax and table helpers for notations).
+
 ## Entry points
 
 | Entry point | Used in | Contents |
@@ -339,20 +368,19 @@ Changing the database connection itself needs a restart. In production and in te
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, `githubAuth`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
 | `@monti-cms/core/next` | `next.config.ts` | `withCms` |
-| `@monti-cms/core/render` | public pages (server components) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"); `renderMdx(mdx, options)` → `{ content, toc }`. In the site CSS: `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/render` | public pages (server components) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
-| `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
-| `@monti-cms/core/document` | screens and plugins that edit or inspect a body | The `StoredDocument` type and the helpers that work on a document without knowing its notation: block ids (`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, link, image and table helpers, the stored code block model. Nothing in it parses or writes MDX. The admin editor and AI import from here |
+| `@monti-cms/core/code-block` | public renderer, editor | The code block annotation model |
+| `@monti-cms/core/document` | screens and plugins that edit or inspect a body | The `StoredDocument` type and the helpers that work on a document without knowing its notation: block ids (`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, link, image and table helpers, the stored code block model. Nothing in it parses or writes a text notation. The admin editor and AI import from here |
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
-| `@monti-cms/core/format/mdx` | the admin, until MDX is a package of its own | The built-in `mdx` format (`mdxFormat`) and `builtInFormatContext(locale)`, the context the site's blocks give it. It reads the site config, which is why it is not in `@monti-cms/core/format` |
-| `@monti-cms/core/syntax` (experimental) | `cms.config.ts`, syntax extension packages | The `SyntaxExtension` interface and the helpers extensions build on ("Body syntax"). The directive notation is `@monti-cms/syntax-directive` |
+| `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables), `monti content:rewrite` (re-serialize stored bodies) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate`, `contentRewrite` (the code behind the `monti` command) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate` (the code behind the `monti` command) |
 | `@monti-cms/core/register` | custom scripts | links the `@cms-config` alias for a script run with `tsx --import` |
-| `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data, the MDX parser and remark plugins of a given extension list (`parseMdxAst`, `syntaxRemarkPlugins`) |
+| `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages
 
@@ -361,69 +389,29 @@ Inside the repository the sources (`src`) are used directly. For the distributab
 
 ## Body syntax
 
-Stored MDX is **CommonMark + GFM + standard MDX JSX**. Anything beyond that is an opt-in *syntax extension* that provides both halves of a notation: how it is read and how it is written.
-One meaning has one stored notation: other notations are still accepted when content is read and are converted when it is saved.
-
-What is written by default, with no extension:
-
-| Meaning | Stored as |
-| --- | --- |
-| line break | `<br />` (in a paragraph the next line follows it: `line<br />` + newline + `next`). `\` + newline, two trailing spaces and `<br />` are all read and written this way. A single newline inside a paragraph is only a space, on the page and in the editor alike (CommonMark) |
-| blank line (Enter pressed between blocks in the editor) | a line of only `<br />`, one per empty paragraph, kept in order. The document node is an empty `paragraph`. Blank lines at the very end of a body are not stored |
-| underline, superscript, subscript, translation notice | `<u>`, `<sup>`, `<sub>`, `<Untranslated>` |
-| text alignment | `<TextAlign align="center">` |
-| table with merged cells, column widths or a non-GFM header | `<Table>`, `<TableRow>`, `<TableCell colspan="2">` (other tables stay GFM) |
-| media image, or an image with size, alignment, caption, crop, rotation or decorative flag | `<Image mediaId="…" />` (a plain external image stays `![alt](src "title")`) |
-| file card | `<File mediaId="…" />` |
-| container and leaf blocks (callout, tabs, columns, site blocks) | `<Component attributes>` … `</Component>`; booleans are bare when true and omitted when false |
-| text decorations (tooltip, code link, text color, site text blocks) | `<Component attributes>text</Component>` |
-
-The migration `0012_soft_line_endings` (run by `monti migrate`) keeps bodies written while a single newline rendered as a break looking the same: it writes a `<br />` at each such line ending in paragraph text of
-working and published bodies, translation base sources and templates, editing the stored string at the parser's offsets only (code, math, tables, attributes and expressions are never touched, and a body that does not parse is left as it is and reported).
-
-To add a notation, list extensions in `mdx.syntax`. The order is the precedence for writing.
-
-```ts
-import { directiveSyntax } from "@monti-cms/syntax-directive";
-
-export default defineConfig({
-	// …
-	mdx: { syntax: [directiveSyntax()] },
-});
-```
-
-- [`@monti-cms/syntax-directive`](../syntax-directive) reads and writes directives (`:::callout{…}`, `::image{…}`, `:u[text]`, `::::table`), the notation Monti used before standard MDX. Without it, `:::callout` is ordinary text.
-  `directiveSyntax({ write: false })` only reads directives and saves standard MDX, which migrates content a post at a time as it is saved (or all at once with `monti content:rewrite --apply`). Line breaks are never written as `:br[]`.
-- [`@monti-cms/syntax-shiki`](../syntax-shiki) reads Shiki code notation in code fences (`// [!code ++]`, `[!code highlight]`, `[!code focus]`, counts such as `[!code ++:3]`) and turns it into Monti's code annotations (`// @line plus`). It only reads: bodies are always written with Monti's annotations.
-- The public renderer (`@monti-cms/core/render`) runs the same plugins as the editor's parser, so what the editor reads is what the site renders.
-
-**Upgrading a site that has directive content.** Install `@monti-cms/syntax-directive` and add `directiveSyntax({ write: false })` to `mdx.syntax` (or `directiveSyntax()` to keep writing directives) before deploying this version.
-`directiveSyntax` is no longer exported by `@monti-cms/core/syntax`: change the import to `@monti-cms/syntax-directive`.
-Without the extension, existing posts render directive text literally and fail validation (`{…}` in `:::callout{…}` is read as an expression). With `write: false`, the content hash (which hashes the parsed body) of a post does not change when it is saved in the standard notation.
-Remove the extension once no stored body uses directives.
+Core stores a body as a document and does not read or write any text notation. A notation is a **format** ("Formats"), and MDX is the format of the package [`@monti-cms/mdx`](../mdx): what is written by default (line breaks, tables, images, blocks as JSX), the *syntax extensions* that add a notation
+(`@monti-cms/syntax-directive` for `:::callout`, `@monti-cms/syntax-shiki` for Shiki code notation), and how to write one are described in its README. Syntax extensions are listed in `mdx({ syntax })` in `plugins`, not in a config key of core.
 
 #### Stored bodies
 
-Every body (the working and published bodies of entries, the source a translation was confirmed against, and body templates) is stored as a versioned **document** (`entry_bodies.doc`, `body_templates.doc`: the parsed body as JSON) together with the **MDX written from it**.
-The document is the source and the MDX is its text, so saving normalizes notation: the same content always gets the same text, whatever spelling it was typed in (`Title` + `=====` and `# Title` are stored as `# Title`), and saving a body in another spelling of the content it already has changes nothing (no new version).
-Source mode in the editor is secondary: the text you type is parsed and written back in the site's notation when you save.
-A body that cannot become a document (its text does not parse, has front matter, or would not read back the same) is stored as an **`unparsed`** document: one node `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<the text as given>" } }`, and its MDX is that text exactly. A draft can hold it, the editor shows it as source, and publishing it is blocked by the issue `unparsed_body`. The reasons it was rejected (`mdx_error` with the line and column in the text, `frontmatter_present`) are reported next to it.
+Every body (the working and published bodies of entries, the source a translation was confirmed against, and body templates) is stored as a versioned **document** (`entry_bodies.doc`, `body_templates.doc`: the parsed body as JSON). The document is the only source: nothing writes text next to it. The `mdx` columns of `entry_bodies` and `body_templates` are optional (`0020_mdx_columns_optional`) and are never written; they are not dropped, so old rows keep their text.
+Saving a body in another spelling of the content it already has changes nothing (no new version). A text typed in a source panel (the `mdx()` plugin provides one) is read in the browser into a document, and the document is what is saved.
+A body that cannot become a document (its text does not parse, has front matter, or would not read back the same) is stored as an **`unparsed`** document: one node `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<the text as given>" } }`, which keeps the text exactly. A draft can hold it, the editor shows it as source, and publishing it is blocked by the issue `unparsed_body`. The reasons it was rejected (`mdx_error` with the line and column in the text, `frontmatter_present`) are reported next to it.
 
-**What is checked.** Core checks, hashes and searches the stored document, never the MDX text, so a body is treated the same however it was written or sent. Those are `prepareSnapshot` and `validateForPublish` (required, unknown and invalid block attributes, references, internal links, image sources, footnotes, code-line links, table merges, translation notes left in the text), the content hash (`computeContentHash(metadata, doc, schemaVersion)`, the same value as before: the document without block ids, keys sorted), the search text and excerpts (`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`) and the translation helpers (`withTranslationHints`, `compareStructure`, `diffSources` take documents). A body given as MDX text is read into a document first, and a document is taken as given (its text runs and trailing blank paragraphs are put in their canonical form).
-Where a finding is, is the block it is in: an issue's `position` is `{ blockId }` (a text that could not be read has `{ line, column }` in that text instead), and a body reference occurrence is `{ "type": "body", "blockId" }`. The `mdx` column is still written from the document when it is stored.
+**What is checked.** Core checks, hashes and searches the stored document, never a text, so a body is treated the same however it was written or sent. Those are `prepareSnapshot` and `validateForPublish` (required, unknown and invalid block attributes, references, internal links, image sources, footnotes, code-line links, table merges, translation notes left in the text), the content hash (`computeContentHash(metadata, doc, schemaVersion)`, the same value as before: the document without block ids, keys sorted), the search text and excerpts (`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`) and the translation helpers (`withTranslationHints`, `compareStructure`, `diffSources` take documents). A body given as text is read into a document by its format first, and a document is taken as given (its text runs and trailing blank paragraphs are put in their canonical form).
+Where a finding is, is the block it is in: an issue's `position` is `{ blockId }` (a text that could not be read has `{ line, column }` in that text instead), and a body reference occurrence is `{ "type": "body", "blockId" }`.
 
-**Code blocks.** A code block is stored as its code (without annotation comments) and its annotations as data (line effects, text effects and regex rules), and written back to MDX as Monti annotation comments, so other tools that read the MDX still see them.
-`monti migrate` runs the step `0015_code_annotations`, which converts existing documents (including the document a translation was confirmed against) and rewrites the annotation comments of code fences in their canonical form (`// @line plus` becomes `// @line plus {0-0}`, rules for the whole code come first). It recomputes the content hash and search text, which no longer holds annotation comments; `version` and `updated_at` do not change.
+**Code blocks.** A code block is stored as its code (without annotation comments) and its annotations as data (line effects, text effects and regex rules), and a text format writes it back as Monti annotation comments, so other tools that read the text still see them.
+`monti migrate` runs the step `0015_code_annotations`, which converts existing documents (including the document a translation was confirmed against) and rewrites the annotation comments of code fences in their canonical form (`// @line plus` becomes `// @line plus {0-0}`, rules for the whole code come first). It recomputes the content hash and search text, which no longer holds annotation comments; `version` and `updated_at` do not change. It reads old text through the `mdx` format only when a store has such a body ("Upgrading from MDX in core").
 
-**Block ids.** Every block of the document has an `id` (8 characters of base36) that is unique within the body. It says which block is which across versions: it is not written to MDX and is not part of the content hash, so it never counts as a change.
-A body saved as MDX inherits ids from the version it replaces: a block that reads the same keeps its id, and so do edited, split and moved blocks (the first part of a split paragraph keeps it); blocks with no partner get new ids, and a document sent through the API keeps the ids it carries.
-`monti migrate` runs the step `0014_block_ids`, which gives the existing documents their ids (and gives a published body the ids of the working blocks it shares); it changes only `doc`, never the MDX, the hash, `version` or `updated_at`.
+**Block ids.** Every block of the document has an `id` (8 characters of base36) that is unique within the body. It says which block is which across versions: it is not written to a text format and is not part of the content hash, so it never counts as a change.
+A body saved as text inherits ids from the version it replaces: a block that reads the same keeps its id, and so do edited, split and moved blocks (the first part of a split paragraph keeps it); blocks with no partner get new ids, and a document sent through the API keeps the ids it carries.
+`monti migrate` runs the step `0014_block_ids`, which gives the existing documents their ids (and gives a published body the ids of the working blocks it shares); it changes only `doc`, never the text, the hash, `version` or `updated_at`.
 The admin editor works on the document itself (no notation in between): it keeps every block's id while you edit and always saves a document, so blocks keep their ids exactly; text typed in a source panel is read in the browser into the document it reads as, whose blocks are paired with the body it replaces as above. Applying a template to an entry copies the template's document with new block ids (ids are unique within one body, and the translation and diff views pair blocks by them).
 The ids are what the admin uses to point at a block: a publish issue or reference position names its block (`position.blockId`) and opens it in the visual editor, the translation screen compares the source a translation was confirmed against with the current source block by block (a block that only moved shows as moved), and AI translation finds the block it translates by its id.
 
-**Upgrading.** Set `mdx.syntax` the way the site should write before running `monti migrate`, which runs the step `0013_stored_documents`. It adds the `doc` columns, gives every existing body its document and **rewrites its MDX in the site's notation** (so the stored text of many bodies changes at once; `version` and `updated_at` do not).
+**Upgrading.** The step `0013_stored_documents` adds the `doc` columns and gives every existing body its document, reading its old text through the `mdx` format of `@monti-cms/mdx` with the syntax extensions of `mdx({ syntax })` ("Upgrading from MDX in core"). It rewrote the old text in the site's notation at the time, so the stored text of many bodies changed at once; `version` and `updated_at` did not.
 Bodies that do not parse, have front matter or would not read back the same are left as they are, without a document, and each is logged (`[monti] no stored document for …`); the step `0017_unparsed_bodies` then gives them their `unparsed` document (below). Back up the database first and read the log after the run.
-`monti content:rewrite` now rewrites from the document and gives an `unparsed` body a document when its text reads as one.
 
 `monti migrate` also runs `0017_unparsed_bodies`: every body and template that has no document gets the `unparsed` document of its text, its content hash is recomputed (text that is not a document is hashed as it always was, under its own tag), and the translation state of every translation is lifted to version 4 (`{ version: 4, baseDoc }`, the document of the source it was confirmed against; versions 2 and 3, which held the source's MDX, are still read). `mdx`, `search_text`, `version` and `updated_at` do not change.
 Nothing fails because of such a body, published ones and templates included, since the data of an existing store always migrates. The published bodies and templates among them are logged by id (`[monti] N published bodies have no document …`): they read as unparsed (a page renders it as nothing) until you fix them in the editor.
@@ -433,7 +421,7 @@ Nothing fails because of such a body, published ones and templates included, sin
   Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/entries/:id?format=<name>` adds `body` (a string) to `working` and `published` (and to the source of a translation): the document as text in that format, written to be imported again. `GET /api/cms/v1/meta` reports the size limits as `limits.textBytes` (a text, in any format) and `limits.docBytes`, and the formats of the instance as `formats` (`{ name, label, mimeType, extension, canImport }`). The admin editor always sends `doc`.
 - **Template API and templates.** A body template is a document like an entry body: `body_templates.doc` is its only source and nothing writes `body_templates.mdx` any more (the column stays, optional). `POST /api/cms/v1/templates` and `PATCH /api/cms/v1/templates/:id` take `{ name, doc }` or `{ name, body, format }` (with neither, a template is empty; a patch keeps the body), and answer with `doc` and no `mdx`; `?format=<name>` on a `GET` adds `body` to each template. A text the format rejects is `422 format_import_failed` with the format's findings, because a template, unlike an entry draft, has no place to keep text that is not a document.
   The admin template manager and the template menu of the editor work on documents. Applying a template copies its document into the entry with new block ids. Seed templates (`seed.templates` in the site config) are `{ id, name, doc }` or `{ id, name, body, format }`; a text is read by its format when the migration seeds a new store, and a seed that no installed plugin can read stops the migration with a message that names the format (for `mdx`: install `@monti-cms/mdx`). Nothing like that stops a store that already has its data.
-  `monti migrate` runs `0019_templates_documents`: a template that has no readable document gets the `unparsed` document of its text, and `body_templates.mdx` stops being required. `version`, `updated_at` and the text already in the column do not change; nothing fails because of a template, and the ones that had no document are logged by id. Running it again changes nothing. `monti content:rewrite` no longer touches templates (they have no text).
+  `monti migrate` runs `0019_templates_documents`: a template that has no readable document gets the `unparsed` document of its text, and `body_templates.mdx` stops being required. `version`, `updated_at` and the text already in the column do not change; nothing fails because of a template, and the ones that had no document are logged by id. Running it again changes nothing.
 - **Admin export** (`GET` or `POST /api/cms/v1/export`) is format version 4. The archive holds the documents: `working.doc.json` / `published.doc.json` for each body, `templates.json` items with `doc`, the public archive's `published.json` with `doc`, and the digests cover them. It has no MDX of its own; `format=<name>` (in the query, or `format` in the body of a `POST`) also writes each body as `working.<extension>` / `published.<extension>` and each template as `body` in that format, and `manifest.format` names it. The admin archive's texts are written to be imported again (a link to an entry that cannot be resolved keeps its id); the public archive's are for readers (it has published entries only, and an unpublished target is not a link). An unknown format is `400 unknown_format`.
 - **Public read API and public export** return the document. `cms.read.getEntry` / `listEntries` / `getPreview` give `entry.doc` (the stored document; in a list only with `body: true`, otherwise `null`) and `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: what a renderer needs for the images, files and internal links of that document, only for what the document uses; `collectRefs(doc)` lists the ids).
@@ -445,30 +433,11 @@ Nothing fails because of such a body, published ones and templates included, sin
 
 ### Writing a syntax extension (experimental)
 
-`@monti-cms/core/syntax` is experimental and may change in a minor release.
-
-```ts
-interface SyntaxExtension {
-	name: string;
-	/** Parsing: remark plugins (or a function of the site's blocks that returns them). They also join the public render chain. */
-	remarkPlugins?: PluggableList | ((context: SyntaxContext) => PluggableList);
-	/** CmsNode → MDX. Keyed by node type (or the renderer name of a block); "*" matches the rest. Return undefined to defer to the next extension, then the standard serializer. */
-	fromDocument?: Record<string, (node: CmsNode, context: SerializeContext) => string | undefined>;
-	/** Marks this extension writes, keyed by mark type; the same defer rule. `inner` is the written content. */
-	fromMark?: Record<string, (mark: CmsMark, inner: string, context: SerializeContext) => string | undefined>;
-	/** Escapes body text so it is not read as this syntax (for example `\:name`). */
-	escapeText?: (text: string, context: SerializeContext) => string;
-}
-```
-
-`SyntaxContext` gives the site's blocks (`blocks.list`, `blocks.byName`, `blocks.byComponent`) and the names of its code block line effects (`codeLineEffects`). `SerializeContext` adds `indent` (the indentation of the line the node starts on, which the writer must include),
-`serializeBlocks` and `serializeInlines` for children, `componentName`, `hasSpread`, `nodeAttributes` and `markAttributes` (the attribute list the standard notation uses), and `escapeAttribute`.
-Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. The directive extension (`packages/syntax-directive`) is the reference implementation, and it imports only from `@monti-cms/core/syntax`.
-The entry point also exports the code comment syntax helpers (`resolveCommentSyntax`, `formatAnnotationComment`) that Monti's code annotations use, for extensions that read or write code comments (`packages/syntax-shiki`).
+The `SyntaxExtension` interface (`remarkPlugins`, `fromDocument`, `fromMark`, `escapeText`), `SerializeContext`, `RAW_SOURCE_PARAGRAPH`, the table helpers and the code comment syntax helpers are exported by `@monti-cms/mdx`, and described in its README ("Writing a syntax extension"). Core only provides the light entry `@monti-cms/core/notation` that they build on.
 
 ## Formats
 
-The stored document is the only source of a body. A **format** is a notation it can be written as and, when the format can, read from: MDX, Markdown with Hugo front matter, plain text. Formats are plugins reached through the `format` option of the read and write APIs: the plugin converts, and core validates and stores. Anyone can write one. The `mdx` format is built in for now (the same MDX code core always had, behind this seam); it moves to the `@monti-cms/mdx` package later.
+The stored document is the only source of a body. A **format** is a notation it can be written as and, when the format can, read from: MDX, Markdown with Hugo front matter, plain text. Formats are plugins reached through the `format` option of the read and write APIs: the plugin converts, and core validates and stores. Anyone can write one. Core has no built-in format: the `mdx` format is provided by `@monti-cms/mdx`. A site without a format plugin accepts documents (`doc`) only, and a text write fails with `unknown_format`.
 
 ```ts
 import { defineFormat } from "@monti-cms/core/format";
@@ -489,7 +458,9 @@ export default defineFormat({
 });
 ```
 
-A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice (a built-in one included) fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/cms/v1/meta` lists it as `formats`.
+A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/cms/v1/meta` lists it as `formats`.
+
+**Legacy bodies.** A format may also give `legacyBodies` (the `LegacyBodies` type of `@monti-cms/core/format`): how to read and write the text that old stores kept bodies in (`read`, `write`, `insertSoftBreaks`, `documentOf`). Only the `mdx` format has it (`@monti-cms/mdx/server` supplies it). The migration steps `0010`, `0011`, `0012`, `0013` and `0015` keep their names in core but parse through it, and ask for it only when a store has a body to read ("Upgrading from MDX in core").
 
 **What a format gets.** Both directions get `ctx.locale`, `ctx.blocks` (the body blocks of the site) and `ctx.codeLineEffects`. `export` also gets `ctx.purpose` (`"read"`: a consumer reads the text, so it needs addresses that work outside the database; `"sync"`: it will be imported again, so a two-way format keeps what it needs to round-trip), `ctx.link(entryId)` (`{ url, title, locale }`, the current address of the entry a link points to, or `null`), `ctx.media(mediaId)` (`{ url, width?, height?, filename, mimeType, byteSize }` or `null`) and `ctx.report(issue)` for what it could not write as the document says. Core resolves every link and media item of the document before it calls `export`, so these are plain synchronous lookups.
 `import` returns the document the text says without caring about block ids or the document version: core gives every block an id (pairing it with the body the text replaces, so unchanged blocks keep theirs) and puts the document in its canonical form. A warning may name a block of the returned document by `blockIndex`; core turns it into the block's id.
@@ -518,7 +489,7 @@ A plugin provides formats with a lazy loader, like `server` and `render`: `defin
 | `format_export_failed` | 500 (public API: 503 `unavailable`) | the format threw |
 | `body_too_large` | 413 | a text over `limits.textBytes` (2 MiB) or a document over `limits.docBytes` (8 MiB) |
 
-**Upgrading from the `mdx` property.** There are no aliases. Send `{ doc }` or `{ body, format: "mdx" }` instead of `{ mdx }` to the write APIs and `createDraft` / `saveDraft`; read `entry.body.text` (with `format: "mdx"`) instead of `entry.mdx`; the template API and `seed.templates` take `doc` or `{ body, format: "mdx" }`; `limits.mdxBytes` is `limits.textBytes` and the error `mdx_too_large` is `body_too_large`. The text that exports write for an internal link is the target's path, where the `mdx` column still holds `entry:<id>` until MDX leaves core.
+**Upgrading from the `mdx` property.** There are no aliases. Send `{ doc }` or `{ body, format: "mdx" }` instead of `{ mdx }` to the write APIs and `createDraft` / `saveDraft`; read `entry.body.text` (with `format: "mdx"`) instead of `entry.mdx`; the template API and `seed.templates` take `doc` or `{ body, format: "mdx" }`; `limits.mdxBytes` is `limits.textBytes` and the error `mdx_too_large` is `body_too_large`. The text that exports write for an internal link is the target's path, where the old `mdx` column, which nothing writes any more, held `entry:<id>`. The built-in `mdx` format is gone: it comes from `@monti-cms/mdx` ("Upgrading from MDX in core").
 
 ## Body blocks
 
@@ -542,7 +513,7 @@ blocks: [
 		name: "notice", // stored as <Notice level="warn"> … </Notice>
 		label: "Notice",
 		syntax: { kind: "container", directive: "notice" },
-		component: "Notice", // the public page renders it under this name from the site's MDX component table
+		component: "Notice", // the name of the block in a text notation (the JSX name in MDX); the public page draws it with the component registered for the block name
 		attributes: {
 			level: { type: "string", label: "Level", options: { info: "Info", warn: "Warning" }, defaultValue: "info" },
 			title: { type: "string", label: "Title", translatable: true }, // the translation screen translates it separately as a heading line
@@ -559,14 +530,14 @@ blocks: [
 		name: "graphviz", // stored syntax ```graphviz … ```
 		label: "Graphviz",
 		syntax: { kind: "fence", lang: "graphviz" },
-		component: "Graphviz", // on the public page, remarkFenceBlocksToMdx turns it into <Graphviz source="…" />
+		component: "Graphviz", // the public page draws it with the component registered for the block (it gets the code as `source`)
 		attributes: {},
 		editor: { view: "node", insertable: true, insert: { code: "digraph { a -> b }" }, placeholder: "Enter Graphviz code" },
 	}),
 ],
 ```
 
-- The blocks you can add are element blocks (`container`, `leaf`; stored as MDX JSX elements named by `component`, and also as directives with the directive extension, where `directive` is the directive name), text decorations (`text` + `editor.view: "mark"`) and code fence blocks (`fence`).
+- The blocks you can add are element blocks (`container`, `leaf`; stored as MDX JSX elements named by `component`, and also as directives with the directive extension, where `directive` is the directive name; see `@monti-cms/mdx`), text decorations (`text` + `editor.view: "mark"`) and code fence blocks (`fence`).
   A code fence block takes over every code fence of that language, so do not use a common code language name (such as `ts`).
 - A text decoration is stored as `<Component attributes>text</Component>` (`:name[text]{attributes}` with the directive extension). Attributes are written in definition order; required attributes (`required`) are written even when empty, and the rest
   only when they have a value. Nested decorations are stored in the order they were added (outermost first). The admin package builds the editor display from the definition, and the look, formatting
@@ -578,8 +549,7 @@ blocks: [
 - A container that holds body content starts with an empty paragraph when inserted from the slash menu. `editor.insert.codeBlocks` (`[{ language, title?, code? }]`) starts it with those code blocks instead, `title` being the code fence's `title` meta (the code explorer uses it to start with one `src/index.ts` file).
 - The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockViews` (the whole view of any block,
   built on `useBlockEditor` and `Content`), and supply previews of code fence blocks with `fencePreviews`.
-- For code fence blocks on public pages, put `remarkFenceBlocksToMdx` from `@monti-cms/core/mdx` into the render chain (after the syntax extensions' plugins) so they are rendered
-  with `component`.
+- Code fence blocks on public pages are drawn from the document by `renderDocument`/`CmsContent` with the component registered for the block (`documentComponents` of a plugin's `render` module, or the site's `components`). Nothing has to be added to a render chain.
 - The translation structure check (`compareStructure`) only accepts changes in translation for `translatable` attributes and for `childValue` attributes that point at their values (e.g. the tab to open first).
   Put `translatable: true` on human-readable attributes (title, description, etc.).
 - If `editor.icon` is a name that is not among the admin package's default icons, register the icon in the admin UI (`@monti-cms/admin` README).
@@ -633,7 +603,7 @@ Text colors come from the blocks extension (`color({ palette })` of `@monti-cms/
 ## Rendering a stored document
 
 `renderDocument` (and the server component `CmsContent`) of `@monti-cms/core/render` draws the stored document (`StoredDocument`) with React: no MDX compile and no code execution
-on the public path. `renderMdx` keeps working next to it (it moves to `@monti-cms/mdx` later) and the two draw the same page.
+on the public path. Core renders documents only; text is drawn by reading it into a document first (`renderMdx` of `@monti-cms/mdx/render` does that for MDX).
 
 ```tsx
 import { CmsContent, renderDocument, tableOfContents, type DocumentComponents } from "@monti-cms/core/render";
@@ -645,7 +615,6 @@ tableOfContents(entry.doc); // the headings of levels 2 and 3, the same anchors,
 // a document on its own:
 const { content, toc, unknown } = await renderDocument(doc, { locale, refs, components });
 <CmsContent doc={doc} refs={refs} locale={locale} components={components} />;
-// `imageResolver` still works and wins over `refs`, for a site that resolves addresses itself
 ```
 
 - **Two phases.** An async pre-pass reads the whole document once (heading anchors and the table of contents, footnote numbers, Shiki highlighting of every code block, KaTeX output
@@ -653,7 +622,7 @@ const { content, toc, unknown } = await renderDocument(doc, { locale, refs, comp
 - **Never throws on content.** An unknown node, mark or block, a block without a component and a node with malformed attributes go through the `fallback` component and are
   listed in `unknown` (and passed to `onUnknown`). An unknown container shows its content, an unknown leaf nothing; in development the default fallback leaves a hidden
   `<span data-cms-unknown>`. `strict: true` throws instead (tests, the preview page). A value that is not a stored document renders an empty body and is logged.
-- **Components** are layered: core defaults, then the block extensions' components (`documentComponents` of a plugin's `render` module), then the site's `components`. One props type per node
+- **Components** are layered: core defaults, then the block extensions' components (`documentComponents` of a plugin's `render` module: `CmsPlugin.render` returns `{ documentComponents }`, and the old MDX-shaped default export is gone), then the site's `components`. One props type per node
   (`ParagraphProps`, `HeadingProps` with its `id`, `ListProps`, `CodeBlockProps`, `ImageProps` with the resolved `src`, `FileProps`, `TableProps`/`TableRowProps`/`TableCellProps`, `MathProps`,
   `FootnoteRefProps`/`FootnotesProps`, `HardBreakProps`), one per core mark (`link`, `bold`, `italic`, ...), plus `codeTags` for the elements inside code blocks (`fold`, `collapse`, `Tooltip`).
   Every component also gets `ctx` (`locale` and the fixed `labels`; plain JSON, so it can cross to a client component), and a block component gets `blockId`, `node` and `items`.
@@ -661,9 +630,8 @@ const { content, toc, unknown } = await renderDocument(doc, { locale, refs, comp
   `marks: { tooltip: ({ content, children }) => … }`. The type of `components` (`DocumentComponents`) is built from the `blocks` of `cms.config.ts` and of its plugins
   (`defineBlock` keeps the attributes as literals, so `variant` is `"note" | "tip" | …`). A boolean attribute is always a boolean, a value with a default or a required string is always there,
   and a choice that is not one of the options is replaced by the default. A code fence block (`mermaid`, `chart`) gets the code as `source`.
-- **Same page as `renderMdx`.** Heading anchors follow `github-slugger` (as `rehype-slug` did), footnotes number by first reference, the same Shiki pipeline draws code (line effects, text effects, line labels),
-  and block formulas are KaTeX `htmlAndMathml`. Differences, all intended: a GFM table is drawn by the table component (a scroll wrapper and `cms-table-*` classes, as a JSX table already was),
-  block KaTeX output sits in `<div class="cms-math">`, a paragraph of only `<strong>`/`<em>`/`<del>` keeps its `<p>`, and a plain Markdown image goes through the image resolver.
+- **One renderer.** Heading anchors follow `github-slugger`, footnotes number by first reference, the same Shiki pipeline draws code (line effects, text effects, line labels),
+  and block formulas are KaTeX `htmlAndMathml`. A table is drawn by the table component (a scroll wrapper and `cms-table-*` classes), block KaTeX output sits in `<div class="cms-math">`, and an image goes through `refs`.
 
 ## Plugins
 
@@ -841,13 +809,12 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 | `site.previewPath` | Leading part of the draft preview URL (e.g. `/preview`). If unset, there is no preview button. |
 | `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
 | `admin.path` | Admin UI path (default `/admin`). Must match the app's admin route folder. `/` and anything under `/api` are not allowed. Links inside the UI, login redirects and plugin screen URLs follow it. |
-| `mdx.syntax` | Syntax extensions (experimental, `@monti-cms/core/syntax`) in writing-precedence order, e.g. `[directiveSyntax()]` from `@monti-cms/syntax-directive`. Stored MDX is standard (CommonMark + GFM + MDX JSX) without them ("Body syntax"). |
 | `seed.templates` | Body templates inserted once, when the first migration creates a store: `{ id, name, doc }` (a stored document) or `{ id, name, body, format }` (a text and the format that reads it, "Formats"). |
 | `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
 | `codeBlock.omitLineEffects` / `features` / `themes` / `languages` | Hide line effects and tools in the editor, set the highlighting themes, and add languages ("Turning code block tools off, themes and languages"). |
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
-| `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.mdx"`, `"cms.core"` and `"cms.translation"`. |
+| `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.core"` and `"cms.translation"` (the texts of reading MDX are in `"cms.mdx"`, from `@monti-cms/mdx`). |
 
 ### Collections
 

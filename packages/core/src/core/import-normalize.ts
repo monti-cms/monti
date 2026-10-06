@@ -1,5 +1,5 @@
-import type { StoredDocument } from "../mdx/stored-document";
-import type { CmsNode } from "../mdx/types";
+import type { StoredDocument } from "../doc/stored-document";
+import type { CmsNode } from "../doc/types";
 import { internalLinkAddresses, type LinkResolver, withEntryLinks } from "./link-ids";
 
 /**

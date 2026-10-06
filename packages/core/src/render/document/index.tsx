@@ -1,9 +1,9 @@
 import katex from "katex";
 import type { ReactNode } from "react";
 import { fenceBlockOf } from "../../blocks/derive";
-import { imageResolverFromRefs, type ReadRefs } from "../../mdx/document-refs";
-import { readStoredDocument, type StoredDocument } from "../../mdx/stored-document";
-import type { CmsNode } from "../../mdx/types";
+import { imageResolverFromRefs, type ReadRefs } from "../../doc/document-refs";
+import { readStoredDocument, type StoredDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
 import { DEFAULT_LABELS } from "../labels";
 import { renderModules } from "../plugin-render";
 import { analyzeDocument, DEFAULT_TOC_RANGE, tocOf } from "./analyze";
@@ -99,7 +99,7 @@ const collect = (nodes: readonly CmsNode[], into: { code: CmsNode[]; math: CmsNo
 const EMPTY: RenderedDocument = { content: null, toc: [], unknown: [] };
 
 /**
- * Renders a stored document. The same result shape as `renderMdx`: `content` (a React tree) and `toc`, plus `unknown`: the nodes that reached the fallback.
+ * Renders a stored document. The result is `content` (a React tree) and `toc`, plus `unknown`: the nodes that reached the fallback (`renderMdx` of `@monti-cms/mdx/render` returns the same).
  * A value that is not a stored document of a known version renders as an empty body (and is logged), never as an error.
  */
 export async function renderDocument(
@@ -196,7 +196,7 @@ export function tableOfContents(
 	return stored ? tocOf(analyzeDocument(stored), range) : [];
 }
 
-export { collectRefs, type DocumentRefIds, imageResolverFromRefs, type ReadRefs } from "../../mdx/document-refs";
+export { collectRefs, type DocumentRefIds, imageResolverFromRefs, type ReadRefs } from "../../doc/document-refs";
 export { readCodeBlock } from "./code";
 export type {
 	BlockItem,

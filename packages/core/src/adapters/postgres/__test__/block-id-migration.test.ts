@@ -5,8 +5,8 @@ import { contentOf, docOf as docFromMdx } from "../../../../test/stored-content"
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
-import { forEachBlock, isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
-import { bodyFromMdx, readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
+import { forEachBlock, isBlockId, withoutBlockIds } from "../../../doc/block-ids";
+import { readStoredDocument, type StoredDocument } from "../../../doc/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateBlockIds } from "../store/block-id-migration";
@@ -54,8 +54,7 @@ describe("0014_block_ids", () => {
 			collection: to,
 			slug: unique(to),
 			metadata,
-			format: "mdx",
-			body: "Body",
+			doc: docFromMdx("Body"),
 		});
 		const published =
 			draft.status === "published"
@@ -70,8 +69,7 @@ describe("0014_block_ids", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			format: "mdx",
-			body: mdx,
+			doc: docFromMdx(mdx),
 		});
 
 	const edit = (entry: Entry, mdx: string) =>
@@ -79,8 +77,7 @@ describe("0014_block_ids", () => {
 			collection: contentCollection,
 			slug: entry.workingSlug,
 			metadata: entry.working.metadata as never,
-			format: "mdx",
-			body: mdx,
+			doc: docFromMdx(mdx),
 			expectedVersion: entry.version,
 		});
 
@@ -471,9 +468,7 @@ describe("0014_block_ids", () => {
 			for (let index = 0; index < 3; index += 1) drafts.push(await createDraft(`Solo ${index}\n`));
 			const templates = [];
 			for (let index = 0; index < 5; index += 1) {
-				templates.push(
-					await store.createTemplate({ name: unique("batch"), doc: docFromMdx(`Heading ${index}\n=====\n`) }),
-				);
+				templates.push(await store.createTemplate({ name: unique("batch"), doc: docFromMdx(`# Heading ${index}\n`) }));
 			}
 
 			for (const batchSize of [1, 2, 1000]) {
@@ -496,12 +491,12 @@ describe("0014_block_ids", () => {
 		});
 	});
 
-	it("reads the same document a parse of the text gives, apart from ids", async () => {
+	it("reads the same document the text reads as, apart from ids", async () => {
 		const draft = await createDraft(NESTED);
 		await stripIds(draft.id);
 
 		await run();
 
-		expect(contentOf((await row(draft.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(NESTED).doc));
+		expect(contentOf((await row(draft.id, "working"))?.doc)).toEqual(contentOf(docFromMdx(NESTED)));
 	});
 });

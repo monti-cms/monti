@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
-import { bodyFromMdx, STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../mdx/stored-document";
+import { STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../doc/stored-document";
 import { confirmedSourceState, MAX_TRANSLATION_BYTES, parseTranslationState } from "../state";
 
 const doc = docOf("하나\n\n둘\n");
-const mdx = bodyFromMdx("하나\n\n둘\n").mdx;
+const source = "하나\n\n둘\n";
 
 describe("translation state", () => {
 	it("null is a source", () => {
@@ -15,27 +15,21 @@ describe("translation state", () => {
 		expect(parseTranslationState({ version: 4, baseDoc: doc })).toEqual({ version: 4, baseDoc: doc });
 	});
 
-	it("lifts version 2 (the source's MDX only) to version 4 by reading the MDX", () => {
-		const state = parseTranslationState({ version: 2, baseSource: mdx });
+	it("lifts version 2 (the source's text only) to version 4 as an unparsed document that holds the text", () => {
+		const state = parseTranslationState({ version: 2, baseSource: source });
 		expect(state?.version).toBe(4);
-		// The blocks read the same as the document of that text (block ids are drawn again for text).
-		expect(state?.baseDoc.content.map((node) => node.type)).toEqual(doc.content.map((node) => node.type));
-		expect(JSON.stringify(state?.baseDoc.content.map(({ id: _id, ...rest }) => rest))).toBe(
-			JSON.stringify(doc.content.map(({ id: _id, ...rest }) => rest)),
-		);
+		expect(state?.baseDoc.content).toHaveLength(1);
+		expect(state?.baseDoc.content[0]).toMatchObject({ type: "unparsed", attrs: { source } });
 	});
 
 	it("lifts version 3 to version 4, keeping its document (and its block ids) when it has one", () => {
-		expect(parseTranslationState({ version: 3, baseSource: mdx, baseDoc: doc })).toEqual({ version: 4, baseDoc: doc });
+		expect(parseTranslationState({ version: 3, baseSource: source, baseDoc: doc })).toEqual({
+			version: 4,
+			baseDoc: doc,
+		});
 		const without = parseTranslationState({ version: 3, baseSource: "원문\n", baseDoc: null });
 		expect(without?.version).toBe(4);
-		expect(without?.baseDoc.content[0]?.type).toBe("paragraph");
-	});
-
-	it("lifts a source that cannot be read to an unparsed document that holds its text", () => {
-		const state = parseTranslationState({ version: 2, baseSource: "열리지 않은 <Box" });
-		expect(state?.baseDoc.content).toHaveLength(1);
-		expect(state?.baseDoc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: "열리지 않은 <Box" } });
+		expect(without?.baseDoc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: "원문\n" } });
 	});
 
 	it("sorts the keys of the document as a stored document is", () => {

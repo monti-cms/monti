@@ -1,5 +1,6 @@
-import { bodyFromDocument, bodyFromMdx, readStoredDocument, type StoredDocument } from "@monti-cms/core/mdx";
-import { readSamples } from "@monti-cms/core/testing";
+import { readStoredDocument, type StoredDocument } from "@monti-cms/core/document";
+import { bodyFromDocument, bodyFromMdx } from "@monti-cms/mdx/format";
+import { readSamples } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";
 import { directiveSyntax } from "..";
 

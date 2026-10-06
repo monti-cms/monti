@@ -1,3 +1,14 @@
+/**
+ * A fenced code block as a Markdown parser reads it: its language, its meta string and its code. It has the shape of an mdast `code` node, which is what
+ * the MDX package gives; core itself parses no Markdown.
+ */
+export type CodeFence = {
+	type: "code";
+	lang?: string | null;
+	meta?: string | null;
+	value: string;
+};
+
 export type Range = {
 	start: number;
 	end: number;

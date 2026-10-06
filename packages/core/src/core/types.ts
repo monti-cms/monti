@@ -1,6 +1,6 @@
 import type { ResolvedConfig } from "../config/resolved";
-import type { StoredDocument } from "../mdx/stored-document";
-import type { CmsImageSource } from "../mdx/types";
+import type { StoredDocument } from "../doc/stored-document";
+import type { CmsImageSource } from "../doc/types";
 import type { MetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
 import type { Collection } from "./collections";
@@ -183,8 +183,6 @@ export type WorkingCopy = {
 	readonly collection: Collection;
 	readonly slug: string | null;
 	readonly metadata: { readonly [key: string]: unknown };
-	/** The MDX column, written from `doc` (it goes when the MDX package is split out). */
-	readonly mdx: string;
 	readonly doc: StoredDocument;
 	readonly version: number;
 	readonly folderId: string | null;

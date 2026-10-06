@@ -2,7 +2,7 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 Shiki 코드 표기 확장. Shiki용으로 쓴 글은 `const a = 1 // [!code ++]`처럼 주석으로 코드 줄에 표시를 한다
+`@monti-cms/mdx`의 Shiki 코드 표기 확장. Shiki용으로 쓴 글은 `const a = 1 // [!code ++]`처럼 주석으로 코드 줄에 표시를 한다
 ([Shiki transformers](https://shiki.style/packages/transformers) 참고). 이 패키지는 본문을 해석할 때 그 표기를 읽어 Monti 자체 코드 주석(`// @line plus`,
 core README의 "코드 블록 줄 효과")으로 바꾼다.
 
@@ -21,20 +21,21 @@ core README의 "코드 블록 줄 효과")으로 바꾼다.
 }
 ```
 
-피어 의존성으로 `@monti-cms/core`가 필요하다.
+피어 의존성으로 `@monti-cms/mdx`(와 그 안의 `@monti-cms/core`)가 필요하다.
 
 ## 등록
 
-`mdx.syntax`에 확장을 나열한다.
+사이트 설정 `plugins`의 `@monti-cms/mdx`가 주는 `mdx({ syntax })`에 확장을 나열한다.
 
 ```ts
 // cms.config.ts
 import { defineConfig } from "@monti-cms/core";
+import { mdx } from "@monti-cms/mdx";
 import { shikiNotation } from "@monti-cms/syntax-shiki";
 
 export default defineConfig({
 	// …
-	mdx: { syntax: [shikiNotation()] },
+	plugins: [mdx({ syntax: [shikiNotation()] })],
 });
 ```
 
@@ -88,4 +89,4 @@ const b = 3
 
 ## 확장을 직접 쓰려면
 
-이 패키지는 `remarkPlugins`만 있는(쓰는 쪽이 없는) 작은 `SyntaxExtension`이다. `@monti-cms/core/syntax`에서만 가져온다. core README의 "문법 확장 만들기"을 본다.
+이 패키지는 `remarkPlugins`만 있는(쓰는 쪽이 없는) 작은 `SyntaxExtension`이다. `@monti-cms/mdx`에서만 가져온다. `@monti-cms/mdx` README의 "문법 확장 만들기"를 본다.

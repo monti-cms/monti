@@ -1,8 +1,8 @@
 import { MAX_TEXT_BYTES } from "../core/limits";
 import { type Issue, ServiceError } from "../core/types";
-import { assignBlockIds, withoutBlockIds } from "../mdx/block-ids";
-import { canonicalDocument, readStoredDocument, type StoredDocument, unparsedDocument } from "../mdx/stored-document";
-import { builtInFormatContext } from "./mdx";
+import { assignBlockIds, withoutBlockIds } from "../doc/block-ids";
+import { canonicalDocument, readStoredDocument, type StoredDocument, unparsedDocument } from "../doc/stored-document";
+import { siteFormatContext } from "./context";
 import type { FormatRegistry } from "./registry";
 import type {
 	FormatExportContext,
@@ -69,7 +69,7 @@ export async function importText(
 	}
 	if (Buffer.byteLength(text, "utf8") > MAX_TEXT_BYTES) throw new ServiceError("body_too_large");
 	const context: FormatImportContext = {
-		...builtInFormatContext(options.locale),
+		...siteFormatContext(options.locale),
 		...(options.entryId ? { entryId: options.entryId } : {}),
 	};
 	let result: Awaited<ReturnType<NonNullable<typeof format.import>>>;
@@ -134,7 +134,7 @@ export async function exportText(
 		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: name, params: { format: name } }]);
 	const warnings: Issue[] = [];
 	const context: FormatExportContext = {
-		...builtInFormatContext(options.locale),
+		...siteFormatContext(options.locale),
 		purpose: options.purpose,
 		link: (entryId) => lookup(options.refs.links, entryId),
 		media: (mediaId) => lookup(options.refs.media, mediaId),

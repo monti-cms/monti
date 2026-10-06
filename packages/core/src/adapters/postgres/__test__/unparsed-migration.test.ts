@@ -6,7 +6,7 @@ import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
-import { unparsedDocument } from "../../../mdx/stored-document";
+import { unparsedDocument } from "../../../doc/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
@@ -52,8 +52,7 @@ describe("0017_unparsed_bodies", () => {
 			collection: to,
 			slug: unique(to),
 			metadata,
-			format: "mdx",
-			body: "Body",
+			doc: docOf("Body"),
 		});
 		const published =
 			draft.status === "published"
@@ -68,8 +67,7 @@ describe("0017_unparsed_bodies", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			format: "mdx",
-			body: mdx,
+			doc: docOf(mdx),
 		});
 
 	/** The body as a store from before stored documents held it: the text as it was, no document, a stale hash. */

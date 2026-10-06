@@ -6,7 +6,7 @@ vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
 
-const { renderMdx } = await import("@monti-cms/core/render");
+const { renderMdx } = await import("@monti-cms/mdx/render");
 
 const html = async (source: string, locale?: string) =>
 	renderToStaticMarkup((await renderMdx(source, { locale })).content);
@@ -156,7 +156,9 @@ describe("block extension public components", () => {
 
 	it("a component the site passes under the same name wins", async () => {
 		const { content } = await renderMdx("<Callout>\n\n내용\n\n</Callout>", {
-			components: { Callout: ({ children }: { children?: React.ReactNode }) => <aside id="mine">{children}</aside> },
+			components: {
+				blocks: { callout: ({ children }: { children?: React.ReactNode }) => <aside id="mine">{children}</aside> },
+			},
 		});
 		const markup = renderToStaticMarkup(content);
 		expect(markup).toContain('<aside id="mine">');

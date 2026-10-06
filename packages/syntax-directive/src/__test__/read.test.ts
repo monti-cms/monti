@@ -1,5 +1,5 @@
 import { ADDED_BLOCKS } from "@monti-cms/core/client";
-import { readSamples, syntaxRemarkPlugins } from "@monti-cms/core/testing";
+import { readSamples, syntaxRemarkPlugins } from "@monti-cms/mdx/testing";
 import type { Root } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkMdx from "remark-mdx";
@@ -26,7 +26,7 @@ const siteAttribute = siteContainer
 	: undefined;
 
 /**
- * A minimal reproduction chain with the extension's plugins, which are the ones the public chain uses (`mdxRemarkPlugins`).
+ * A minimal reproduction chain with the extension's plugins, which are the ones the public chain uses (`syntaxRemarkPlugins`).
  * The full public chain (math, chart, mermaid, breaks, gfm, toc) is not here — render results are checked by the blocks package's
  * `directive-render.test.tsx`.
  */

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
 import { docOf } from "../../../test/stored-content";
 import { COLLECTIONS, type Collection } from "../../core/collections";
-import { documentToMdx, type StoredDocument } from "../../mdx/stored-document";
+import type { StoredDocument } from "../../doc/stored-document";
 import { type StoredField, storedField, storedFields } from "../../schema/derive";
 import { createBulkService } from "../bulk-service";
 import type { PreparedSnapshot, Reference } from "../index";
@@ -25,7 +25,6 @@ type Working = {
 	collection: Collection;
 	slug: string | null;
 	metadata: Record<string, unknown>;
-	mdx: string;
 	doc: StoredDocument;
 	version: number;
 	folderId: string | null;
@@ -74,7 +73,6 @@ const newFakeStore = (seed: Record<string, Working>) => {
 				collection: params.snapshot.collection as Working["collection"],
 				slug: params.snapshot.slug,
 				metadata: params.snapshot.metadata as Record<string, unknown>,
-				mdx: documentToMdx(params.snapshot.doc),
 				doc: params.snapshot.doc,
 				version: found.version + 1,
 				folderId: params.folderId === undefined ? found.folderId : params.folderId,
@@ -93,7 +91,6 @@ const post = (over: Partial<Working> = {}): Working => ({
 		[single]: "11111111-1111-4111-8111-111111111111",
 		[many]: ["33333333-3333-4333-8333-333333333333", "44444444-4444-4444-8444-444444444444"],
 	},
-	mdx: "body",
 	doc: docOf("body"),
 	version: 3,
 	folderId: null,
@@ -233,7 +230,6 @@ describe("Bulk metadata ops contract", () => {
 				collection: collectionWithoutMany,
 				slug: "cat",
 				metadata: { title: "Cat" },
-				mdx: "",
 				doc: docOf(""),
 				version: 1,
 				folderId: null,

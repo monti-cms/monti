@@ -82,14 +82,6 @@ export function CodeExplorer({
 	return <Explorer open={open} labels={labels} files={items.map(asFile)} items={items} />;
 }
 
-type ComponentProps = Parameters<typeof CodeExplorer>[0];
-
-/** Public component for the code explorer (called by `@monti-cms/core/render`). */
-export default ({ locale }: { locale?: string }) => {
-	const labels = blockLabels(locale);
-	return { CodeExplorer: (props: ComponentProps) => <CodeExplorer {...props} labels={labels} /> };
-};
-
 /** A child of the stored block: a code block with a path in its `title` is a file. The path and the code are read from the stored node, not from a rendered element. */
 const fileOf = (node: BlockProps<typeof codeExplorerBlock>["items"][number]["node"]): FileInfo | undefined => {
 	if (node.type !== "codeBlock") return undefined;

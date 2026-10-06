@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, defaultLocale, requiredMetadata, secondLocale } from "../../../../../test/any-site";
 import { contentOf, docOf } from "../../../../../test/stored-content";
+import { readStoredDocument, type StoredDocument } from "../../../../doc/stored-document";
 import { commonFieldKeys, recordLocalizedFields, storedFields } from "../../../../schema/derive";
+import { withTranslationHints } from "../../../translation/hints";
 import type { ContentStore, Entry } from "../..";
 import { duplicateDraft, publishDraft, restoreDraft, seedEntry } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
@@ -49,11 +51,12 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(translation.translationGroupId).toBe(source.id);
 				expect(translation.status).toBe("draft");
 				expect(translation.workingSlug).toBe("copy-source");
-				expect(translation.working.mdx).toBe("<Untranslated>한국어 본문</Untranslated>\n");
+				expect(contentOf(translation.working.doc)).toEqual(
+					contentOf(withTranslationHints(readStoredDocument(source.working.doc) as StoredDocument)),
+				);
+				expect(JSON.stringify(contentOf(translation.working.doc))).toContain("한국어 본문");
 				expect(translation.working.metadata).toEqual({});
-				// The confirmed source is the source's body as stored (written from its document), so the translation screen compares like with like.
-				expect(source.working.mdx).toBe("한국어 본문\n");
-				// ... together with its document, whose block ids pair the source's blocks across versions.
+				// The confirmed source is the source's document, whose block ids pair the source's blocks across versions.
 				expect(source.working.doc).not.toBeNull();
 				expect(translation.working.translation).toEqual({ version: 4, baseDoc: source.working.doc });
 				expect((await store.getEntry(translation.id)).working.translation).toEqual(translation.working.translation);
@@ -86,7 +89,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "locale-copy-source",
 					metadata: { title: "English" },
-					mdx: "Body\n",
+					text: "Body\n",
 					locale: second,
 				});
 				expect(original.locale).toBe(second);
@@ -94,7 +97,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				const copy = await duplicateDraft(store, { id: original.id });
 				expect(copy.locale).toBe(second);
 				expect(copy.translationGroupId).toBe(copy.id);
-				expect(copy.working.mdx).toBe("Body\n");
+				expect(contentOf(copy.working.doc)).toEqual(contentOf(original.working.doc));
 				expect(copy.working.translation ?? null).toBeNull();
 			});
 
@@ -120,7 +123,7 @@ export const translationsContract: ContractSuite = (factory) => {
 						collection: contentCollection,
 						slug: "common-source",
 						metadata: { title: "English", [commonKey as string]: source.working.metadata[commonKey as string] },
-						format: "mdx",
+						format: "paragraphs",
 						body: "Body",
 						expectedVersion: translation.version,
 					} as never),
@@ -134,7 +137,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "merge-source",
 					metadata: translatedMetadata("English title", "English summary") as never,
-					format: "mdx",
+					format: "paragraphs",
 					body: "English body",
 					expectedVersion: translation.version,
 				});
@@ -198,7 +201,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: source.working.metadata as never,
-					format: "mdx",
+					format: "paragraphs",
 					body: "한국어 본문",
 				};
 				await expect(
@@ -215,7 +218,7 @@ export const translationsContract: ContractSuite = (factory) => {
 						collection: contentCollection,
 						slug: "state-source",
 						metadata: { title: "T" },
-						format: "mdx",
+						format: "paragraphs",
 						body: "",
 						translation: { version: 1, units: [] } as never,
 						expectedVersion: translation.version,
@@ -226,7 +229,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: { title: "Only the title" },
-					format: "mdx",
+					format: "paragraphs",
 					body: "",
 					expectedVersion: translation.version,
 				});
@@ -237,7 +240,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: { title: "Only the title" },
-					format: "mdx",
+					format: "paragraphs",
 					body: "",
 					translation: { version: 4, baseDoc: docOf("바뀐 기준") },
 					expectedVersion: saved.version,
@@ -304,7 +307,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "group-list-source",
 					metadata: { title: "Grouped English title" },
-					format: "mdx",
+					format: "paragraphs",
 					body: "Body",
 					expectedVersion: translation.version,
 				} as never);
@@ -395,7 +398,7 @@ export const translationsContract: ContractSuite = (factory) => {
 								...(thirdLocale ? { [thirdLocale]: { [field]: "" } } : {}),
 							},
 						},
-						format: "mdx",
+						format: "paragraphs",
 						body: "",
 					} as never);
 					expect(record.working.metadata.translations).toEqual({ [second]: { [field]: "Essay" } });
@@ -404,7 +407,7 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: localizedRecord,
 							slug: "bad-locale",
 							metadata: { ...metadata, translations: { [defaultLocale]: { [field]: "x" } } },
-							format: "mdx",
+							format: "paragraphs",
 							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_value" });
@@ -413,7 +416,7 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: localizedRecord,
 							slug: "bad-field",
 							metadata: { ...metadata, translations: { [second]: { [commonField]: "x" } } },
-							format: "mdx",
+							format: "paragraphs",
 							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_key" });
@@ -422,7 +425,7 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: contentCollection,
 							slug: "post-translations",
 							metadata: { title: "x", translations: { [second]: { title: "x" } } },
-							format: "mdx",
+							format: "paragraphs",
 							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_key" });

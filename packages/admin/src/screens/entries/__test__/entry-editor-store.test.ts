@@ -877,20 +877,24 @@ describe("recovery copies saved before the form held the body as a document", ()
 			savedAt: 1_700_000_000_000,
 		} as unknown as ReturnType<typeof recoveryCopy>;
 	};
-	const textOf = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
+	const LEGACY_TEXT = "## 제목\n\n**쓰던** 본문";
 
-	it("restores the body that was typed as MDX, read through the mdx format", async () => {
-		const copy = legacyCopy(ENTRY, { mdx: "## 제목\n\n**쓰던** 본문" });
+	it("restores the body that was typed as MDX as a document holding the text exactly", async () => {
+		const copy = legacyCopy(ENTRY, { mdx: LEGACY_TEXT });
 		const { editor, client } = await opened({ records: [copy] });
 		expect(editor().recovery).toEqual({ kind: "restore", savedAt: copy.savedAt });
 		editor().restoreRecovery();
 		expect(editor().form).not.toHaveProperty("mdx");
-		expect(textOf(editor().form.doc)).toBe(textOf(docOf("## 제목\n\n**쓰던** 본문")));
+		expect(editor().form.doc.content).toHaveLength(1);
+		expect(editor().form.doc.content[0]).toMatchObject({
+			type: "unparsed",
+			attrs: { format: "mdx", source: LEGACY_TEXT },
+		});
 		expect(editor().hasUnsavedChanges).toBe(true);
 		await editor().save();
 		const sent = client.update.mock.calls[0]?.[1] as unknown as { doc: StoredDocument };
 		expect(sent).not.toHaveProperty("mdx");
-		expect(textOf(sent.doc)).toBe(textOf(docOf("## 제목\n\n**쓰던** 본문")));
+		expect(sent.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { format: "mdx", source: LEGACY_TEXT } });
 	});
 
 	it("keeps the title typed with the old body, and restoring does not leave the old key behind", async () => {
@@ -913,11 +917,10 @@ describe("recovery copies saved before the form held the body as a document", ()
 		expect(sent.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: broken } });
 	});
 
-	it("a copy that holds what the server has is dropped, as before", async () => {
+	it("offers a copy even when its text matches the server body, as the admin does not read the text", async () => {
 		const copy = legacyCopy(ENTRY, { mdx: "첫째 줄\n둘째 줄" });
-		const { editor, recovery } = await opened({ records: [copy] });
-		expect(editor().recovery).toBeNull();
-		expect(recovery.records.size).toBe(0);
+		const { editor } = await opened({ records: [copy] });
+		expect(editor().recovery).toEqual({ kind: "restore", savedAt: copy.savedAt });
 	});
 
 	it("offers `conflict` for an old copy when the server changed after it was made", async () => {
@@ -945,7 +948,7 @@ describe("recovery copies saved before the form held the body as a document", ()
 		typed.core.start();
 		await vi.waitFor(() => expect(typed.editor().recovery).not.toBeNull());
 		typed.editor().restoreRecovery();
-		expect(textOf(typed.editor().form.doc)).toBe(textOf(docOf("쓰던 글")));
+		expect(typed.editor().form.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: "쓰던 글" } });
 
 		const untouched = setup({ target: { mode: "new", collection: "post" }, records: [empty("")] });
 		untouched.core.start();

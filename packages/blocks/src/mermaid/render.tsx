@@ -7,9 +7,6 @@ export function Mermaid({ source }: { source?: string }) {
 	return <MermaidView source={source ?? ""} />;
 }
 
-/** Public component for Mermaid (called by `@monti-cms/core/render`). The diagram is drawn in the browser (optional dependency `mermaid`). */
-export default () => ({ Mermaid });
-
 /** Public components for Mermaid in the JSON renderer (`renderDocument`): the block `mermaid`. The code of the fence arrives as `source`. */
 export const documentComponents = (_context: DocumentComponentsContext): LooseDocumentComponents => ({
 	blocks: { mermaid: ({ source }: BlockProps<typeof mermaidBlock>) => <Mermaid source={source} /> },

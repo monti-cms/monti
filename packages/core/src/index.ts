@@ -29,7 +29,6 @@ export {
 	defineConfig,
 	type LocaleConfig,
 	type LocalePrefixMode,
-	type MdxConfig,
 	type SeedConfig,
 	type SeedTemplate,
 	type SiteConfig,

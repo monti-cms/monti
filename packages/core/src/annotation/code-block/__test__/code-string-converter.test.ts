@@ -1,4 +1,3 @@
-import type { Code } from "mdast";
 import { describe, expect, it } from "vitest";
 import { __testable__ as fromCodeFenceToCodeBlockDocumentTestable } from "../code-fence-to-document";
 import { __testable__ as fromCodeBlockDocumentToCodeFenceTestable } from "../document-to-code-fence";
@@ -6,6 +5,7 @@ import type {
 	AnnotationAttr,
 	AnnotationConfig,
 	AnnotationConfigItem,
+	CodeFence as Code,
 	CodeBlockDocument,
 	InlineAnnotation,
 	Line,

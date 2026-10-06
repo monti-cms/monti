@@ -32,14 +32,6 @@ export function Callout({
 	);
 }
 
-type CalloutProps = Parameters<typeof Callout>[0];
-
-/** Public component for the callout (called by `@monti-cms/core/render`). */
-export default ({ locale }: { locale?: string }) => {
-	const labels = blockLabels(locale);
-	return { Callout: (props: CalloutProps) => <Callout {...props} labels={labels} /> };
-};
-
 /** Public components for the callout in the JSON renderer (`renderDocument`): the block `callout`, with its attributes as props. */
 export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
 	const labels = blockLabels(locale);

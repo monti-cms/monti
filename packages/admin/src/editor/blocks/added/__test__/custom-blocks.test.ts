@@ -1,29 +1,34 @@
 import { ADDED_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../../../test/mdx";
+import { docOf } from "../../../../test/mdx";
+import { para, storedDoc } from "../../../../test/stored-doc";
 import { buildBlockSlashCommands } from "../../../slash-command";
-import { OPAQUE_BLOCK_NAME } from "../../../tiptap-content";
+import { OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "../../../tiptap-content";
 import { blockNodeName, insertContentOf } from "..";
 import { ADDED_NODE_BLOCKS, defaultValues } from "../shared";
 
 // Custom blocks of the example config (`packages/core/test/cms.config.ts`): `notice` (editor node container), `embed` (raw-source box).
 describe("custom block editing", () => {
 	it("a custom block with an editor node moves its attributes and body into the node and round-trips unchanged", () => {
-		const mdx = '<Notice level="warn" title="점검">\n\n오늘 밤 점검합니다.\n\n</Notice>\n';
-		const json = tiptapOf(mdx);
+		const stored = storedDoc({
+			type: "notice",
+			attrs: { level: "warn", title: "점검" },
+			content: [para("오늘 밤 점검합니다.")],
+		});
+		const json = storedToTiptap(stored);
 		const node = json.content?.[0];
 		expect(node?.type).toBe(blockNodeName({ name: "notice" }));
 		expect(node?.type).toBe("cmsNotice");
 		expect(node?.attrs?.values).toEqual({ level: "warn", title: "점검" });
 		expect(node?.content?.[0]?.type).toBe("paragraph");
-		expect(mdxOfTiptap(json)).toBe(mdx);
+		expect(tiptapToStored(json)).toEqual(stored);
 	});
 
 	it("a custom block set as a raw-source box is preserved as is", () => {
-		const mdx = '<Embed url="https://example.com/video" />\n';
-		const node = tiptapOf(mdx).content?.[0];
+		const stored = storedDoc({ type: "embed", attrs: { url: "https://example.com/video" } });
+		const node = storedToTiptap(stored).content?.[0];
 		expect(node?.type).toBe(OPAQUE_BLOCK_NAME);
-		expect(mdxOfTiptap(tiptapOf(mdx))).toBe(mdx);
+		expect(tiptapToStored(storedToTiptap(stored))).toEqual(stored);
 	});
 
 	it("insertable custom blocks appear in the slash menu", () => {
@@ -117,9 +122,9 @@ describe("editor representation of added blocks", () => {
 	});
 
 	it("a code fence block moves that language's code block into a node and round-trips the meta", () => {
-		const mdx = "```mermaid title=흐름\ngraph TD\n  A --> B\n```\n";
-		const node = tiptapOf(mdx).content?.[0];
+		const stored = docOf("```mermaid title=흐름\ngraph TD\n  A --> B\n```");
+		const node = storedToTiptap(stored).content?.[0];
 		expect(node).toMatchObject({ type: "cmsMermaid", attrs: { value: "graph TD\n  A --> B", meta: "title=흐름" } });
-		expect(mdxOfTiptap(tiptapOf(mdx))).toBe(mdx);
+		expect(tiptapToStored(storedToTiptap(stored))).toEqual(stored);
 	});
 });

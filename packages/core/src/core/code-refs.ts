@@ -1,6 +1,6 @@
 import { ANCHOR } from "../annotation/code-block/model";
 import { BLOCK_BY_NAME } from "../blocks/derive";
-import type { CmsJsonValue } from "../mdx/types";
+import type { CmsJsonValue } from "../doc/types";
 import type { BodyPosition, Issue } from "./types";
 
 /**

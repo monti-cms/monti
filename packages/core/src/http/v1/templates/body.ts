@@ -1,8 +1,8 @@
 import type { Cms } from "../../../cms";
 import { normalizeImportedDoc } from "../../../core/import-normalize";
 import { DEFAULT_LOCALE } from "../../../core/locales";
+import { readStoredDocument, type StoredDocument } from "../../../doc/stored-document";
 import { exportText, importText } from "../../../format/convert";
-import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
 import { createExportRefs } from "../../../read";
 import { mediaUrlResolver } from "../../../services/media-urls";
 import { linkResolverOf } from "../../../services/write-pipeline";

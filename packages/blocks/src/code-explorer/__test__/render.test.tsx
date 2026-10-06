@@ -7,7 +7,7 @@ vi.mock("../../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../../test/render-config")).default,
 }));
 
-const { renderMdx } = await import("@monti-cms/core/render");
+const { renderMdx } = await import("@monti-cms/mdx/render");
 
 const html = async (source: string, locale?: string, syntax?: Parameters<typeof renderMdx>[1]) =>
 	renderToStaticMarkup((await renderMdx(source, { locale, ...syntax })).content);

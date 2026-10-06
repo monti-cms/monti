@@ -156,6 +156,8 @@ export interface SourcePanelProps {
 	readonly onComposing?: (composing: boolean) => void;
 }
 
+export { SOURCE_ERROR_ID } from "./source-error-id";
+
 /** A source panel a plugin registers (`CmsAdminComponents.sourcePanels`). */
 export interface SourcePanelRegistration {
 	/** The format the panel edits (`mdx`). */

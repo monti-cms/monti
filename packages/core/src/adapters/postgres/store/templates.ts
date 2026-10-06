@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 import { MAX_DOC_BYTES } from "../../../core/limits";
 import { CmsError } from "../../../core/store/errors";
 import type { BodyTemplate } from "../../../core/store/types";
-import { assignBlockIds } from "../../../mdx/block-ids";
+import { assignBlockIds } from "../../../doc/block-ids";
 import {
 	canonicalDocument,
 	emptyStoredDocument,
 	readStoredDocument,
 	type StoredDocument,
-} from "../../../mdx/stored-document";
+} from "../../../doc/stored-document";
 import { type StoreContext, withTransaction } from "./context";
 import { isUniqueViolation } from "./errors";
 import { mapTemplateRow, readDoc, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";

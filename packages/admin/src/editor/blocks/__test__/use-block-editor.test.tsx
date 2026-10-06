@@ -1,3 +1,4 @@
+import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -6,8 +7,9 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { CmsAdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
 import { BlockFrame, type BlockView, Content, type EditorResult, useBlockEditor } from "../../../hooks/public";
-import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
+import { para, storedDoc, withoutIds } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
+import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 
 afterEach(cleanup);
 
@@ -22,10 +24,10 @@ beforeAll(() => {
 	}
 });
 
-function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
+function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
 		extensions: buildEditorExtensions(),
-		content: tiptapOf(source),
+		content: storedToTiptap(doc),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -34,12 +36,12 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 	return <EditorContent editor={editor} />;
 }
 
-const mount = async (source: string, ready: string, views: Record<string, BlockView> = {}) => {
+const mount = async (doc: StoredDocument, ready: string, views: Record<string, BlockView> = {}) => {
 	let editor: Editor | null = null;
 	render(
 		<CmsAdminComponentsProvider components={{ blockViews: views }}>
 			<Harness
-				source={source}
+				doc={doc}
 				onReady={(next) => {
 					editor = next;
 				}}
@@ -60,8 +62,20 @@ const countTransactions = (editor: Editor) => {
 	return counter;
 };
 
-const TABS =
-	'<Tabs defaultValue="둘">\n\n<Tab label="하나">\n\n첫째\n\n</Tab>\n\n<Tab label="둘">\n\n둘째\n\n</Tab>\n\n</Tabs>';
+const tabsNode = (): CmsNode => ({
+	type: "tabs",
+	attrs: { defaultValue: "둘" },
+	content: [
+		{ type: "tab", attrs: { label: "하나" }, content: [para("첫째")] },
+		{ type: "tab", attrs: { label: "둘" }, content: [para("둘째")] },
+	],
+});
+const TABS = storedDoc(tabsNode());
+
+/** The stored document the editor content is saved as. */
+const savedDoc = (editor: Editor) => tiptapToStored(editor.getJSON());
+/** The default tab the saved tabs block names. */
+const savedDefault = (editor: Editor) => savedDoc(editor).content[0]?.attrs?.defaultValue;
 
 const labelsOf = (editor: Editor) =>
 	Array.from({ length: editor.state.doc.firstChild?.childCount ?? 0 }, (_, index) =>
@@ -150,8 +164,8 @@ function CustomTab() {
 	);
 }
 
-const mountTabs = (source = TABS) =>
-	mount(source, "[data-cms-container-node='cmsTabs']", { tabs: CustomTabs, tab: CustomTab });
+const mountTabs = (doc = TABS) =>
+	mount(doc, "[data-cms-container-node='cmsTabs']", { tabs: CustomTabs, tab: CustomTab });
 
 const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
 const failure = () => screen.getByLabelText("failure").textContent;
@@ -219,24 +233,25 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 
 	it("transact writes a child and the parent in one document change and one undo step", async () => {
 		const editor = await mountTabs();
-		const before = mdxOfTiptap(editor.getJSON());
+		const before = savedDoc(editor);
 		const transactions = countTransactions(editor);
 		fireEvent.click(screen.getAllByRole("tab")[1] as HTMLElement);
 		click("rename");
-		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('defaultValue="바뀐 이름"'));
+		await waitFor(() => expect(savedDefault(editor)).toBe("바뀐 이름"));
 		expect(transactions.count).toBe(1);
 		expect(labelsOf(editor)).toEqual(["하나", "바뀐 이름"]);
 		act(() => {
 			editor.commands.undo();
 		});
-		expect(mdxOfTiptap(editor.getJSON())).toBe(before);
+		// The editor gives the ids of the blocks inside a block as they are first needed, so the comparison leaves ids out.
+		expect(withoutIds(savedDoc(editor))).toEqual(withoutIds(before));
 	});
 
 	it("separate commands are separate document changes (what transact groups)", async () => {
 		const editor = await mountTabs();
 		const transactions = countTransactions(editor);
 		click("rename-separately");
-		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('defaultValue="첫 번째"'));
+		await waitFor(() => expect(savedDefault(editor)).toBe("첫 번째"));
 		expect(transactions.count).toBe(2);
 	});
 
@@ -267,10 +282,10 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 			),
 			tab: CustomTab,
 		});
-		const before = mdxOfTiptap(editor.getJSON());
+		const before = savedDoc(editor);
 		fireEvent.click(screen.getByRole("button", { name: "probe" }));
 		expect(result).toMatchObject({ ok: false, error: { code: "limit" } });
-		expect(mdxOfTiptap(editor.getJSON())).toBe(before);
+		expect(savedDoc(editor)).toEqual(before);
 	});
 
 	it("fails with read_only while the editor is locked", async () => {
@@ -329,7 +344,7 @@ describe("useBlockEditor", () => {
 });
 
 describe("useBlockEditor commands", () => {
-	const SOURCE = `앞 문단\n\n${TABS}\n\n뒤 문단`;
+	const SOURCE = storedDoc(para("앞 문단"), tabsNode(), para("뒤 문단"));
 
 	const mountSpy = async () => {
 		let seen: ReturnType<typeof useBlockEditor> | null = null;
@@ -365,7 +380,8 @@ describe("useBlockEditor commands", () => {
 			result = block().remove();
 		});
 		expect(result).toMatchObject({ ok: true });
-		expect(mdxOfTiptap(editor.getJSON()).trim()).toBe("앞 문단\n\n뒤 문단");
+		expect(savedDoc(editor).content.map((node) => node.type)).toEqual(["paragraph", "paragraph"]);
+		expect(savedDoc(editor).content.map((node) => node.content?.[0]?.text)).toEqual(["앞 문단", "뒤 문단"]);
 	});
 
 	it("moves a child together with the cursor inside it", async () => {

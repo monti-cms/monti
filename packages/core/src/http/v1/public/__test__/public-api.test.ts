@@ -1,11 +1,12 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredFields } from "../../../../../test/any-site";
+import { docOf } from "../../../../../test/stored-content";
 import { fakeCms } from "../../../../cms";
 import { type Collection, isItemCollection } from "../../../../core/collections";
 import type { ContentStore } from "../../../../core/store";
 import { publishDraft, seedSave } from "../../../../core/store/__test__/seed";
-import { bodyFromMdx } from "../../../../mdx/stored-document";
+import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format";
 import { storedFields } from "../../../../schema/derive";
 import {
 	closeGlobalPool,
@@ -38,7 +39,7 @@ describe("Public JSON API", () => {
 
 	const get = async (path: string) => {
 		const [pathname, query = ""] = path.split("?");
-		const response = await fakeCms({ store, server: { publicApi } })
+		const response = await fakeCms({ store, server: { publicApi }, formats: [paragraphsFormat] })
 			.routeHandler()
 			.GET(new Request(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`), {
 				params: Promise.resolve({ path: (pathname ?? "").split("/") }),
@@ -52,8 +53,7 @@ describe("Public JSON API", () => {
 				collection: contentCollection,
 				slug,
 				metadata: { title: `Title ${slug}`, ...metadata },
-				mdx: `Body ${slug}`,
-				doc: bodyFromMdx(`Body ${slug}`).doc,
+				doc: docOf(`Body ${slug}`),
 				schemaVersion: 1,
 				contentHash: `hash-${slug}`,
 				references: [],
@@ -131,7 +131,7 @@ describe("Public JSON API", () => {
 			expectedVersion: entry.version,
 			slug: "public-1-renamed",
 			metadata: entry.working.metadata,
-			mdx: entry.working.mdx,
+			doc: entry.working.doc,
 		});
 		await publishDraft(store, { id: entry.id, expectedVersion: saved.version });
 		const alias = await get(`v1/public/entries/${contentCollection}/public-1`);
@@ -142,13 +142,13 @@ describe("Public JSON API", () => {
 	it("single with ?format= also carries the body as text in that format, as { format, text }", async () => {
 		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 
-		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=mdx`);
+		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=paragraphs`);
 
 		expect(one.status).toBe(200);
-		expect(one.body.entry.body).toEqual({ format: "mdx", text: "Body public-2\n" });
+		expect(one.body.entry.body).toEqual({ format: "paragraphs", text: "Body public-2" });
 		// The document is there as without a format, and a list never carries a body.
 		expect(JSON.stringify(one.body.entry.doc)).toContain("Body public-2");
-		const list = await get("v1/public/entries?format=mdx");
+		const list = await get("v1/public/entries?format=paragraphs");
 		expect(list.status).toBe(200);
 		for (const item of list.body.items) expect(item).not.toHaveProperty("body");
 	});

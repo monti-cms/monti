@@ -306,11 +306,10 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				locale: string;
 				translation_group_id: string;
 				metadata: Record<string, unknown>;
-				mdx: string;
 				doc: unknown;
 			}>(
 				`SELECT e.collection, e.version, e.working_slug, e.folder_id, e.locale,
-				        COALESCE(e.translation_group_id, e.id) AS translation_group_id, b.metadata, b.mdx, b.doc
+				        COALESCE(e.translation_group_id, e.id) AS translation_group_id, b.metadata, b.doc
 				 FROM "${qSchema}".entries e
 				 JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id AND b.state = 'working'
 				 WHERE e.id = $1`,
@@ -322,8 +321,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				collection: row.collection,
 				slug: row.working_slug,
 				metadata: row.metadata,
-				mdx: row.mdx,
-				doc: readBodyDoc(row.doc, row.mdx),
+				doc: readBodyDoc(row.doc, null),
 				version: row.version,
 				folderId: row.folder_id,
 				locale: row.locale,

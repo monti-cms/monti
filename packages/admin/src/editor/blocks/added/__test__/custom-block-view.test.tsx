@@ -1,3 +1,4 @@
+import type { StoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -5,16 +6,17 @@ import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CmsAdminComponentsProvider } from "../../../../admin-components";
 import { chooseSelectOption } from "../../../../test/base-ui";
-import { mdxOfTiptap, tiptapOf } from "../../../../test/mdx";
+import { para, storedDoc } from "../../../../test/stored-doc";
 import { buildEditorExtensions } from "../../../extensions";
+import { storedToTiptap, tiptapToStored } from "../../../tiptap-content";
 import { BlockFrame, Content, useBlockEditor } from "../../use-block-editor";
 
 afterEach(cleanup);
 
-function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
+function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
 		extensions: buildEditorExtensions(),
-		content: tiptapOf(source),
+		content: storedToTiptap(doc),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -23,12 +25,12 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 	return <EditorContent editor={editor} />;
 }
 
-const mount = async (source: string, wrap: (node: React.ReactNode) => React.ReactNode = (node) => node) => {
+const mount = async (doc: StoredDocument, wrap: (node: React.ReactNode) => React.ReactNode = (node) => node) => {
 	let editor: Editor | null = null;
 	render(
 		wrap(
 			<Harness
-				source={source}
+				doc={doc}
 				onReady={(ready) => {
 					editor = ready;
 				}}
@@ -40,7 +42,10 @@ const mount = async (source: string, wrap: (node: React.ReactNode) => React.Reac
 	return editor as unknown as Editor;
 };
 
-const NOTICE = '<Notice level="info">\n\n본문\n\n</Notice>';
+const NOTICE = storedDoc({ type: "notice", attrs: { level: "info" }, content: [para("본문")] });
+
+/** The attributes of the saved notice block. */
+const savedNotice = (editor: Editor) => tiptapToStored(editor.getJSON()).content[0];
 
 /** Edit view registered by the site (example): turns the level into a button. */
 function NoticeView() {
@@ -62,9 +67,9 @@ describe("custom block NodeView", () => {
 		expect(screen.queryByLabelText("단계")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		await chooseSelectOption("단계", "주의");
-		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('<Notice level="warn"'));
+		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ type: "notice", attrs: { level: "warn" } }));
 		fireEvent.change(screen.getByLabelText("제목"), { target: { value: "점검" } });
-		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('title="점검"'));
+		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ attrs: { title: "점검" } }));
 	});
 
 	it("hides the settings tool when read-only", async () => {
@@ -80,7 +85,7 @@ describe("custom block NodeView", () => {
 			</CmsAdminComponentsProvider>
 		));
 		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
-		await waitFor(() => expect(mdxOfTiptap(editor.getJSON())).toContain('<Notice level="warn"'));
-		expect(mdxOfTiptap(editor.getJSON())).toContain("본문");
+		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ type: "notice", attrs: { level: "warn" } }));
+		expect(JSON.stringify(savedNotice(editor))).toContain("본문");
 	});
 });

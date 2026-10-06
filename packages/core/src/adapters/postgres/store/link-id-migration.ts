@@ -5,8 +5,8 @@ import { computeContentHash } from "../../../core/content-hash";
 import { linkAddressKey, withEntryLinks } from "../../../core/link-ids";
 import { parseInternalLink } from "../../../core/links";
 import type { JsonValue } from "../../../core/types";
-import { mapLinkAttrs } from "../../../mdx/entry-links";
-import { documentToMdx, type StoredDocument } from "../../../mdx/stored-document";
+import { mapLinkAttrs } from "../../../doc/entry-links";
+import type { StoredDocument } from "../../../doc/stored-document";
 import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
@@ -28,7 +28,6 @@ interface BodyRow {
 	entry_id: string;
 	state: "working" | "published";
 	metadata: JsonValue;
-	mdx: string;
 	doc: unknown;
 	schema_version: number;
 	content_hash: string;
@@ -74,7 +73,7 @@ const converted = (
  * all name an entry), so a link written before a rename still finds its entry. A link that looks internal but resolves to nothing stays as it is and is
  * logged (publishing reports it as `unresolved_internal_link`); nothing here fails because of such a link, so the data of an existing store always migrates.
  *
- * `content_hash` of every body is recomputed (the document, with its version, is what is hashed) and `mdx` is written from the new document, working and
+ * `content_hash` of every body is recomputed (the document, with its version, is what is hashed), working and
  * published bodies together so "unpublished changes" keeps meaning what it meant. `version`, `updated_at` and block ids are not touched. Also rebuilds the
  * body references: every link by id is a reference to its entry (`kind: 'entry'`, occurrence `{type:"body", blockId}`), replacing the body occurrences
  * a reference had (those of relation fields stay). Running it again changes nothing; rows that would not change are not written.
@@ -160,7 +159,7 @@ export async function migrateLinkEntryIds(
 	let last: { entry_id: string; state: string } | undefined;
 	for (;;) {
 		const res = await client.query<BodyRow>(
-			`SELECT entry_id, state, metadata, mdx, doc, schema_version, content_hash, translation FROM "${qSchema}".entry_bodies
+			`SELECT entry_id, state, metadata, doc, schema_version, content_hash, translation FROM "${qSchema}".entry_bodies
 			 WHERE ($1::uuid IS NULL OR (entry_id, state) > ($1::uuid, $2::text))
 			 ORDER BY entry_id, state LIMIT $3`,
 			[last?.entry_id ?? null, last?.state ?? null, batchSize],
@@ -170,7 +169,6 @@ export async function migrateLinkEntryIds(
 		const changed: {
 			entryId: string;
 			state: string;
-			mdx: string;
 			doc: string;
 			contentHash: string;
 			translation: string | null;
@@ -207,7 +205,6 @@ export async function migrateLinkEntryIds(
 				changed.push({
 					entryId: row.entry_id,
 					state: row.state,
-					mdx: docChanged ? documentToMdx(result.doc) : row.mdx,
 					doc: JSON.stringify(result.doc),
 					contentHash,
 					translation,
@@ -218,14 +215,13 @@ export async function migrateLinkEntryIds(
 		if (changed.length > 0) {
 			await client.query(
 				`UPDATE "${qSchema}".entry_bodies AS b SET
-					mdx = v.mdx, doc = v.doc::jsonb, content_hash = v.content_hash, translation = COALESCE(v.translation::jsonb, b.translation)
-				 FROM (SELECT unnest($1::uuid[]) AS entry_id, unnest($2::text[]) AS state, unnest($3::text[]) AS mdx, unnest($4::text[]) AS doc,
-				              unnest($5::text[]) AS content_hash, unnest($6::text[]) AS translation) AS v
+					doc = v.doc::jsonb, content_hash = v.content_hash, translation = COALESCE(v.translation::jsonb, b.translation)
+				 FROM (SELECT unnest($1::uuid[]) AS entry_id, unnest($2::text[]) AS state, unnest($3::text[]) AS doc,
+				              unnest($4::text[]) AS content_hash, unnest($5::text[]) AS translation) AS v
 				 WHERE b.entry_id = v.entry_id AND b.state = v.state`,
 				[
 					changed.map((row) => row.entryId),
 					changed.map((row) => row.state),
-					changed.map((row) => row.mdx),
 					changed.map((row) => row.doc),
 					changed.map((row) => row.contentHash),
 					changed.map((row) => row.translation),
@@ -238,12 +234,12 @@ export async function migrateLinkEntryIds(
 
 	let lastTemplate: string | undefined;
 	for (;;) {
-		const res = await client.query<{ id: string; mdx: string; doc: unknown }>(
-			`SELECT id, mdx, doc FROM "${qSchema}".body_templates WHERE mdx IS NOT NULL AND ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`,
+		const res = await client.query<{ id: string; doc: unknown }>(
+			`SELECT id, doc FROM "${qSchema}".body_templates WHERE doc IS NOT NULL AND ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`,
 			[lastTemplate ?? null, batchSize],
 		);
 		if (res.rows.length === 0) break;
-		const changed: { id: string; mdx: string; doc: string }[] = [];
+		const changed: { id: string; doc: string }[] = [];
 		for (const row of res.rows) {
 			const doc = readDoc(row.doc);
 			if (!doc) {
@@ -259,15 +255,15 @@ export async function migrateLinkEntryIds(
 				);
 			}
 			if (!isDeepStrictEqual(JSON.parse(JSON.stringify(result.doc)), row.doc)) {
-				changed.push({ id: row.id, mdx: documentToMdx(result.doc), doc: JSON.stringify(result.doc) });
+				changed.push({ id: row.id, doc: JSON.stringify(result.doc) });
 			}
 		}
 		if (changed.length > 0) {
 			await client.query(
-				`UPDATE "${qSchema}".body_templates AS t SET mdx = v.mdx, doc = v.doc::jsonb
-				 FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::text[]) AS mdx, unnest($3::text[]) AS doc) AS v
+				`UPDATE "${qSchema}".body_templates AS t SET doc = v.doc::jsonb
+				 FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::text[]) AS doc) AS v
 				 WHERE t.id = v.id`,
-				[changed.map((row) => row.id), changed.map((row) => row.mdx), changed.map((row) => row.doc)],
+				[changed.map((row) => row.id), changed.map((row) => row.doc)],
 			);
 		}
 		lastTemplate = res.rows[res.rows.length - 1]?.id;

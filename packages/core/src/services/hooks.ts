@@ -1,5 +1,5 @@
 import type { AfterCommit } from "../core/store";
-import type { StoredDocument } from "../mdx/stored-document";
+import type { StoredDocument } from "../doc/stored-document";
 import type { Collection, Issue, PreparedSnapshot } from "./types";
 
 /**

@@ -9,7 +9,8 @@ vi.mock("../../../core/src/config/resolved", async () => ({
 }));
 
 const { renderDocument } = await import("@monti-cms/core/render");
-const { bodyFromMdx, STORED_DOCUMENT_VERSION } = await import("@monti-cms/core/mdx");
+const { STORED_DOCUMENT_VERSION } = await import("@monti-cms/core/document");
+const { bodyFromMdx } = await import("@monti-cms/mdx/format");
 
 type Doc = Parameters<typeof renderDocument>[0];
 type Node = Doc["content"][number];

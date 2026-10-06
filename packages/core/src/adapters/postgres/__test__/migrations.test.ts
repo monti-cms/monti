@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contentOf } from "../../../../test/stored-content";
+import { contentOf, docOf } from "../../../../test/stored-content";
 import { seedEntry } from "../../../core/store/__test__/seed";
-import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { createPluginStorage } from "../plugin-storage";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
+import { fakeMdxRegistry } from "./fake-mdx-format";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Migration step records, the concurrent-run lock, schema creation, and run-once jobs. */
@@ -44,6 +44,46 @@ describe("migrations", () => {
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 	});
 
+	it("runs the step that makes the MDX text columns optional after the document steps, and the one-time seed last", () => {
+		const order = (name: string) => CONTENT_STORE_MIGRATIONS.indexOf(name);
+		expect(order("0020_mdx_columns_optional")).toBeGreaterThan(order("0019_templates_documents"));
+		expect(order("seed_initial_body_templates")).toBe(CONTENT_STORE_MIGRATIONS.length - 1);
+		expect(order("0020_mdx_columns_optional")).toBeLessThan(order("seed_initial_body_templates"));
+	});
+
+	it("leaves the MDX text columns of bodies and templates optional, and a normal write does not fill them", async () => {
+		await migrateContentStore(pool, { schema: schemaName });
+		const nullable = await pool.query<{ table_name: string; is_nullable: string }>(
+			`SELECT table_name, is_nullable FROM information_schema.columns
+			 WHERE table_schema = $1 AND column_name = 'mdx' AND table_name IN ('entry_bodies', 'body_templates')`,
+			[schemaName],
+		);
+		expect(nullable.rows.map((row) => row.table_name).sort()).toEqual(["body_templates", "entry_bodies"]);
+		for (const row of nullable.rows) expect(row.is_nullable, row.table_name).toBe("YES");
+
+		const store = createContentStore(pool, { schema: schemaName });
+		const entry = await seedEntry(store, {
+			collection: "x",
+			slug: "no-text",
+			metadata: { title: "No text" },
+			text: "words",
+		});
+		const bodies = await pool.query<{ mdx: string | null }>(
+			`SELECT mdx FROM "${schemaName}".entry_bodies WHERE entry_id = $1`,
+			[entry.id],
+		);
+		expect(bodies.rows.length).toBeGreaterThan(0);
+		for (const row of bodies.rows) expect(row.mdx).toBeNull();
+
+		const template = await store.createTemplate({ name: "No text template", doc: docOf("template words") });
+		const templates = await pool.query<{ mdx: string | null }>(
+			`SELECT mdx FROM "${schemaName}".body_templates WHERE id = $1`,
+			[template.id],
+		);
+		expect(templates.rows).toHaveLength(1);
+		expect(templates.rows[0]?.mdx).toBeNull();
+	});
+
 	it("creates the schema if missing (only set `schema` and run monti migrate)", async () => {
 		const schema = `cms_test_new_${randomBytes(3).toString("hex")}`;
 		extraSchemas.push(schema);
@@ -61,19 +101,23 @@ describe("migrations", () => {
 			collection: "x",
 			slug: "kept",
 			metadata: { title: "Kept" },
-			mdx: "본문",
+			text: "본문",
 		});
-		// A store from before step records existed: it has only the one-off record (initial templates).
+		// A store from before step records existed: it has only the one-off record (initial templates), and its bodies are text (the text a save wrote then).
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name <> 'seed_initial_body_templates'`);
 		await pool.query(`DELETE FROM "${schemaName}".body_templates`);
+		await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = '본문' WHERE entry_id = $1`, [entry.id]);
+		await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = '' WHERE mdx IS NULL`);
+		// Its old steps read the text with the old-body reader of the MDX format (a test double stands for it here).
+		const { formats } = fakeMdxRegistry();
 
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, formats });
 
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
-		// The step that stores documents writes the body from its document (it adds the closing line break) and gives it one.
+		// The steps of that time give the text its document, with the content it had.
 		const migrated = (await store.getEntry(entry.id)).working;
-		expect(migrated.mdx).toBe("본문\n");
-		expect(contentOf(migrated.doc)).toEqual(contentOf(bodyFromMdx("본문").doc));
+		expect(contentOf(migrated.doc)).toEqual(contentOf(docOf("본문")));
+		expect(await store.getEntry(entry.id)).toMatchObject({ version: entry.version });
 		// Initial templates that were already inserted are not revived after being deleted.
 		expect((await pool.query(`SELECT 1 FROM "${schemaName}".body_templates`)).rows).toHaveLength(0);
 	});

@@ -30,11 +30,11 @@ export interface CmsPlugin<
 	/** Admin UI side (pages, providers). The default export is the admin package's `CmsAdminPlugin`. */
 	readonly admin?: () => Promise<{ readonly default: unknown }>;
 	/**
-	 * Public UI side (public components for body blocks). The default export is `(context) => component table` of the MDX renderer (`renderMdx`), and the named
-	 * export `documentComponents` is `(context) => component table` of the JSON renderer (`renderDocument`: `blocks` and `marks` by block name, `codeTags`). `@monti-cms/core/render`
-	 * calls them (`context`: site locale, image resolver); a module can export either or both. It is read on the server; the module marks client components with `"use client"`.
+	 * Public UI side (public components for body blocks). The module's named export `documentComponents` is `(context) => component table` of the document renderer
+	 * (`renderDocument`: `blocks` and `marks` by block name, `codeTags`). `@monti-cms/core/render` calls it (`context`: site locale, image resolver). It is read on
+	 * the server; the module marks client components with `"use client"`.
 	 */
-	readonly render?: () => Promise<{ readonly default: unknown }>;
+	readonly render?: () => Promise<{ readonly documentComponents?: unknown }>;
 	/**
 	 * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
 	 * the read and write APIs. The default export is a `CmsFormat` or a list of them. It is read on the server when the instance first needs its formats;

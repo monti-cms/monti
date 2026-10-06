@@ -1,7 +1,7 @@
 import { contentPath, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../test/mdx";
+import { storedDoc, text } from "../test/stored-doc";
 import { buildEditorExtensions } from "./extensions";
 import { type InternalLinkItem, insertInternalLink, internalLinkHref, parseInternalLinkTrigger } from "./internal-link";
 import { storedToTiptap, tiptapToStored } from "./tiptap-content";
@@ -67,21 +67,31 @@ describe("internal links in the editor", () => {
 		expect(marks).not.toContain(contentPath(collection, "nextjs-guide") ?? "never");
 	});
 
-	it("writes the id into the MDX, and the same text opens as the same link", () => {
+	it("saves the id as the link, and the saved document opens as the same link", () => {
 		const current = typed("See [[next");
 		insertInternalLink(current, { from: 5, to: 11 }, item());
 
-		const mdx = mdxOfTiptap(current.getJSON());
+		const stored = tiptapToStored(current.getJSON());
 
-		expect(mdx).toContain(`(entry:${ID})`);
-		const reopened = tiptapOf(mdx);
+		expect(stored.content[0]?.content).toContainEqual(
+			text("Next.js 완전 정복", [{ type: "link", attrs: { entryId: ID } }]),
+		);
+		const reopened = storedToTiptap(stored);
 		expect(linkMarks(reopened)[0]?.attrs).toMatchObject({ entryId: ID });
-		expect(mdxOfTiptap(reopened)).toBe(mdx);
+		expect(tiptapToStored(reopened)).toEqual(stored);
 	});
 
 	it("opens a stored document with a link by id and saves it back unchanged", () => {
-		const stored = tiptapToStored(tiptapOf(`A [post](entry:${ID}) and [site](https://example.com "T").`));
-		if (!stored) throw new Error("not a document");
+		const stored = storedDoc({
+			type: "paragraph",
+			content: [
+				text("A "),
+				text("post", [{ type: "link", attrs: { entryId: ID } }]),
+				text(" and "),
+				text("site", [{ type: "link", attrs: { href: "https://example.com", title: "T" } }]),
+				text("."),
+			],
+		});
 
 		const again = tiptapToStored(storedToTiptap(stored));
 

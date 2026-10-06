@@ -40,7 +40,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				collection: record,
 				slug: `tag-race-${randomUUID()}`,
 				metadata: { title: "Race tag" },
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
@@ -49,7 +49,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				collection: content,
 				slug: `post-tag-race-${randomUUID()}`,
 				metadata: { title: "Concurrent draft" },
-				mdx: "Draft.",
+				text: "Draft.",
 				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
@@ -93,7 +93,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				collection: content,
 				slug: "post-reset-date",
 				metadata: { title: "Reset" },
-				mdx: "Body",
+				text: "Body",
 				schemaVersion: 1,
 				contentHash: "ts-hash-reset",
 			});
@@ -136,7 +136,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				collection: content,
 				slug: "post-preset-date",
 				metadata: { title: "Migrated" },
-				mdx: "Body",
+				text: "Body",
 				schemaVersion: 1,
 				contentHash: "ts-hash-preset",
 			});

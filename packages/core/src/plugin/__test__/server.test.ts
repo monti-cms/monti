@@ -175,15 +175,15 @@ describe("formats", () => {
 	const format = (name: string) =>
 		defineFormat({ name, label: name, mimeType: "text/plain", extension: name, export: () => name });
 
-	it("has the built-in mdx format with no plugins, and adds the formats of the plugins to it, in the order of the plugins", async () => {
+	it("has no format with no plugins, and lists the formats of the plugins in the order of the plugins", async () => {
 		const registry = await serverPlugins([
 			{ name: "one", formats: async () => ({ default: format("hugo") }) },
 			{ name: "two", formats: async () => ({ default: [format("zola"), format("jekyll")] }) },
 			{ name: "plain" },
 		]).formats();
 
-		expect(registry.list().map((item) => item.name)).toEqual(["mdx", "hugo", "zola", "jekyll"]);
-		expect((await serverPlugins([]).formats()).list().map((item) => item.name)).toEqual(["mdx"]);
+		expect(registry.list().map((item) => item.name)).toEqual(["hugo", "zola", "jekyll"]);
+		expect((await serverPlugins([]).formats()).list()).toEqual([]);
 	});
 
 	it("loads the plugins' formats once, and hands out the same registry afterwards", async () => {
@@ -197,11 +197,14 @@ describe("formats", () => {
 		expect(load).toHaveBeenCalledTimes(1);
 	});
 
-	it("fails when two formats have one name, a plugin's and a built-in one included, and tries again on the next call", async () => {
-		let name = "mdx";
-		const plugins = serverPlugins([{ name: "one", formats: async () => ({ default: format(name) }) }]);
+	it("fails when two formats have one name, and tries again on the next call", async () => {
+		let name = "same";
+		const plugins = serverPlugins([
+			{ name: "one", formats: async () => ({ default: format("same") }) },
+			{ name: "two", formats: async () => ({ default: format(name) }) },
+		]);
 
-		await expect(plugins.formats()).rejects.toThrow(/"mdx" is provided twice/);
+		await expect(plugins.formats()).rejects.toThrow(/"same" is provided twice/);
 		name = "hugo";
 		expect((await plugins.formats()).get("hugo")).toBeDefined();
 
@@ -216,7 +219,7 @@ describe("formats", () => {
 	it("is the registry the instance gives (`cms.formats()`), with the formats a test adds", async () => {
 		const withFormat = fakeCms({ formats: [format("hugo")] });
 
-		expect((await withFormat.formats()).list().map((item) => item.name)).toEqual(["mdx", "hugo"]);
-		expect((await fakeCms().formats()).list().map((item) => item.name)).toEqual(["mdx"]);
+		expect((await withFormat.formats()).list().map((item) => item.name)).toEqual(["hugo"]);
+		expect((await fakeCms().formats()).list()).toEqual([]);
 	});
 });

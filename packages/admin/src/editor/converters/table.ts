@@ -10,8 +10,18 @@ import {
 	tableHasMergedCells,
 	tableWidths,
 } from "@monti-cms/core/document";
+import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { lineBreakNode } from "./shared";
 import type { BlockConverter } from "./types";
+
+/** The id a stored row has, as the editor's `blockId` attribute, so it survives the editor (the cell does the same in its attributes). */
+const idAttrs = (node: { id?: string }) => (node.id === undefined ? {} : { attrs: { [BLOCK_ID_ATTRIBUTE]: node.id } });
+
+/** The id the editor holds for a row or cell, as the stored node's `id`. */
+const idOf = (node: { attrs?: Record<string, unknown> }) => {
+	const id = node.attrs?.[BLOCK_ID_ATTRIBUTE];
+	return typeof id === "string" ? { id } : {};
+};
 
 const tableAttrs = (align: unknown, widths: Array<number | null>) => {
 	const attrs: Record<string, CmsJsonValue> = {};
@@ -43,12 +53,15 @@ export const tableConverter: BlockConverter = {
 			...(Array.isArray(node.attrs?.align) ? { attrs: { align: node.attrs.align } } : {}),
 			content: rows.map((row, rowIndex) => ({
 				type: "tableRow",
+				...idAttrs(row),
 				content: (row.content ?? []).map((cell, cellIndex) => {
 					const isHeader =
 						cell.attrs?.header === true || (!hasMerges && cell.attrs?.header === undefined && rowIndex === 0);
 					const colspan = boundedTableSpan(cell.attrs?.colspan, MAX_TABLE_COLUMNS);
 					const rowspan = boundedTableSpan(cell.attrs?.rowspan, rows.length - rowIndex);
-					const attrs: Record<string, unknown> = {};
+					const attrs: Record<string, unknown> = {
+						...(cell.id === undefined ? {} : { [BLOCK_ID_ATTRIBUTE]: cell.id }),
+					};
 					if (colspan > 1) attrs.colspan = colspan;
 					if (rowspan > 1) attrs.rowspan = rowspan;
 					// Split the table's column widths into prosemirror-tables colwidth per column each cell covers (0 is auto).
@@ -93,6 +106,7 @@ export const tableConverter: BlockConverter = {
 				...tableAttrs(node.attrs?.align, widths),
 				content: rows.map((row) => ({
 					type: "tableRow",
+					...idOf(row),
 					content: (row.content ?? []).map((cell) => {
 						// Multiple paragraphs in a cell cannot go into a GFM table, so they are joined with line breaks.
 						const paragraphs = (cell.content ?? []).map((block) => ctx.inlineToCms(block.content));
@@ -112,6 +126,7 @@ export const tableConverter: BlockConverter = {
 
 						return {
 							type: "tableCell",
+							...idOf(cell),
 							...(Object.keys(attrs).length > 0 ? { attrs } : {}),
 							content: inline,
 						};

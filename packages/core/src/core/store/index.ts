@@ -13,5 +13,4 @@ export type {
 	TemplateStore,
 	TransferStore,
 } from "./ports";
-export { formatRewriteReport } from "./rewrite-report";
 export * from "./types";

@@ -7,8 +7,8 @@ import { computeContentHash } from "../../../core/content-hash";
 import { contentPath } from "../../../core/links";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
-import { entryLinkIds } from "../../../mdx/entry-links";
-import { readStoredDocument, STORED_DOCUMENT_VERSION } from "../../../mdx/stored-document";
+import { entryLinkIds } from "../../../doc/entry-links";
+import { readStoredDocument, STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createWritePipeline } from "../../../services/write-pipeline";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -56,8 +56,7 @@ describe("0018_link_entry_ids", () => {
 			collection: to,
 			slug: unique(to),
 			metadata,
-			format: "mdx",
-			body: "Body",
+			doc: docOf("Body"),
 		});
 		const published =
 			draft.status === "published"
@@ -72,8 +71,7 @@ describe("0018_link_entry_ids", () => {
 			collection: contentCollection,
 			slug,
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			format: "mdx",
-			body: mdx,
+			doc: docOf(mdx),
 		});
 
 	const hrefTo = (slug: string) => {
@@ -94,7 +92,7 @@ describe("0018_link_entry_ids", () => {
 	const row = async (entryId: string, state: "working" | "published") =>
 		(
 			await pool.query<{
-				mdx: string;
+				mdx: string | null;
 				doc: unknown;
 				content_hash: string;
 				schema_version: number;
@@ -162,11 +160,11 @@ describe("0018_link_entry_ids", () => {
 			expect(marks).toContain('"entryId"');
 			expect(marks).not.toContain(hrefTo(targetSlug));
 			expect(marks).toContain("https://example.com/a");
-			// The hash is the one a save of this document makes, and the MDX is written from it.
+			// The hash is the one a save of this document makes, and no text is written next to it.
 			expect(after?.content_hash).toBe(
 				computeContentHash(after?.metadata as never, doc as never, after?.schema_version),
 			);
-			expect(after?.mdx).toContain(`entry:${target.id}`);
+			expect(after?.mdx).toBeNull();
 			expect(await references(source.id, state)).toMatchObject([
 				{ target_id: target.id, target_entry_id: target.id, is_stale: false, occurrences: [{ type: "body" }] },
 			]);
@@ -187,8 +185,7 @@ describe("0018_link_entry_ids", () => {
 			collection: contentCollection,
 			slug: renamedSlug,
 			metadata: (await store.getEntry(target.id)).working.metadata as never,
-			format: "mdx",
-			body: "Target",
+			doc: docOf("Target"),
 			expectedVersion: publishedTarget.version,
 		});
 		await publishDraft(store, { id: target.id, expectedVersion: renamed.version });
@@ -211,14 +208,12 @@ describe("0018_link_entry_ids", () => {
 		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
 		const href = hrefTo(publishedTarget.workingSlug as string);
 		const template = await store.createTemplate({ name: unique("template"), doc: docOf(`[x](${href})`) });
-		// The migration reads the text column of a template of a store that is not migrated yet, so it is set as the store of that time wrote it.
-		await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1 WHERE id = $2`, [`[x](${href})`, template.id]);
 
 		await migrate();
 
 		const stored = await store.getTemplate(template.id);
 		expect(entryLinkIds(stored.doc.content)).toEqual([target.id]);
-		expect(await templateMdx(pool, schemaName, template.id)).toContain(`entry:${target.id}`);
+		expect(await templateMdx(pool, schemaName, template.id)).toBeNull();
 	});
 
 	it("keeps the body references of relation fields and rebuilds the ones of links", async () => {

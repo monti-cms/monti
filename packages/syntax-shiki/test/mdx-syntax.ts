@@ -1,6 +1,5 @@
-import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
-import type { SyntaxExtension } from "@monti-cms/core/syntax";
-import { parseMdxAst } from "@monti-cms/core/testing";
+import type { SyntaxExtension } from "@monti-cms/mdx";
+import { analyze, parseMdxAst, serialize, toDocument } from "@monti-cms/mdx/format";
 
 /**
  * The MDX pipeline (`analyze`, `toDocument`, `serialize`) with a given list of syntax extensions instead of the site config's `mdx.syntax`.

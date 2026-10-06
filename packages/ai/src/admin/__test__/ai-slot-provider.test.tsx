@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
 import { CmsAdminComponentsProvider } from "@monti-cms/admin";
-import { mdxBrowserFormat } from "@monti-cms/admin/editor";
 import { TooltipProvider } from "@monti-cms/admin/kit";
 import { useSlot } from "@monti-cms/admin/slots";
 import { createTranslator } from "@monti-cms/core/client";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
+import { mdxBrowserFormat } from "@monti-cms/mdx/admin";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

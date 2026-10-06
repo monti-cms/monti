@@ -4,8 +4,8 @@ import { type ComponentType, Fragment, type ReactNode } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { annotationConfig } from "../../annotation/code-block/active";
 import { parseCodeFenceMeta } from "../../annotation/code-block/code-fence-to-document";
-import { codeBlockDocumentOf } from "../../mdx/stored-code-block";
-import type { CmsJsonValue, CmsNode } from "../../mdx/types";
+import { codeBlockDocumentOf } from "../../doc/stored-code-block";
+import type { CmsJsonValue, CmsNode } from "../../doc/types";
 import {
 	type CodeHighlightOptions,
 	createAllowedRenderTagsFromConfig,

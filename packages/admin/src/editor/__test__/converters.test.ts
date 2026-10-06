@@ -1,6 +1,9 @@
+import type { CmsNode } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
+import { docOf, tiptapOf } from "../../test/mdx";
+import { storedDoc, table, text, withoutRowIds } from "../../test/stored-doc";
 import { BLOCK_CONVERTERS, converterForCms, converterForTiptap } from "../converters";
+import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 describe("block converter registry", () => {
 	it("no two default converters handle the same node type (matches branches allowed)", () => {
@@ -54,40 +57,69 @@ describe("block converter registry", () => {
 		expect(converterForTiptap("cmsMath")?.name).toBe("math");
 	});
 
-	it.each([
-		["an image", '<Image mediaId="m1" alt="고양이" width="50%" align="left" />'],
-		["a code block", '```ts title="a.ts"\nconst a = 1;\n```'],
-		["a table", "| a | b |\n| :-- | --: |\n| 1 | 2 |"],
-		["a Mermaid diagram", "```mermaid\ngraph TD;\n    A-->B;\n```"],
-		["Mermaid with its case preserved", "```Mermaid\ngraph TD;\n    A-->B;\n```"],
-		["Mermaid with its meta preserved", '```mermaid title="diagram.mmd"\ngraph TD;\n    A-->B;\n```'],
-		["a chart", '```chart\npie\n  "Apple": 40\n  "Banana": 60\n```'],
-		["a chart with its meta and case preserved", '```Chart title="sales"\npie\n  "Apple": 40\n  "Banana": 60\n```'],
-		["math", "$$\nx^2 + y^2 = z^2\n$$"],
-	])("round-trips %s", (_, source) => {
-		expect(mdxOfTiptap(tiptapOf(source)).trim()).toBe(source);
+	it.each<[string, () => ReturnType<typeof storedDoc>]>([
+		[
+			"an image",
+			() => storedDoc({ type: "image", attrs: { mediaId: "m1", alt: "고양이", width: "50%", align: "left" } }),
+		],
+		["a code block", () => docOf('```ts title="a.ts"\nconst a = 1;\n```')],
+		[
+			"a table",
+			() =>
+				storedDoc(
+					table(
+						[
+							[[text("a")], [text("b")]],
+							[[text("1")], [text("2")]],
+						],
+						{ align: ["left", "right"] },
+					),
+				),
+		],
+		["a Mermaid diagram", () => docOf("```mermaid\ngraph TD;\n    A-->B;\n```")],
+		["Mermaid with its case preserved", () => docOf("```Mermaid\ngraph TD;\n    A-->B;\n```")],
+		["Mermaid with its meta preserved", () => docOf('```mermaid title="diagram.mmd"\ngraph TD;\n    A-->B;\n```')],
+		["a chart", () => docOf('```chart\npie\n  "Apple": 40\n  "Banana": 60\n```')],
+		[
+			"a chart with its meta and case preserved",
+			() => docOf('```Chart title="sales"\npie\n  "Apple": 40\n  "Banana": 60\n```'),
+		],
+		["math", () => storedDoc({ type: "math", attrs: { value: "x^2 + y^2 = z^2" } })],
+	])("round-trips %s through the editor", (_, build) => {
+		const doc = build();
+		expect(tiptapToStored(storedToTiptap(doc))).toEqual(doc);
 	});
 
-	it("serializes after a preview block value changes", () => {
+	it("saves a preview block with its new value after it changes", () => {
+		const firstBlock = (doc: ReturnType<typeof tiptapToStored>, index = 0): CmsNode | undefined => doc.content[index];
+
 		// Mermaid
 		const mermaidDoc = tiptapOf("```mermaid\ngraph TD;\n    A-->B;\n```");
 		const mermaidBlock = mermaidDoc.content?.find((b) => b.type === "cmsMermaid");
 		expect(mermaidBlock?.attrs?.value).toBe("graph TD;\n    A-->B;");
 		if (mermaidBlock?.attrs) mermaidBlock.attrs.value = "graph LR;\n    C-->D;";
-		expect(mdxOfTiptap(mermaidDoc).trim()).toBe("```mermaid\ngraph LR;\n    C-->D;\n```");
+		expect(firstBlock(tiptapToStored(mermaidDoc))).toMatchObject({
+			type: "codeBlock",
+			attrs: { language: "mermaid", code: "graph LR;\n    C-->D;" },
+		});
 
 		// Chart
 		const chartDoc = tiptapOf('```chart\npie\n  "A": 10\n```');
 		const chartBlock = chartDoc.content?.find((b) => b.type === "cmsChart");
 		expect(chartBlock?.attrs?.value).toBe('pie\n  "A": 10');
 		if (chartBlock?.attrs) chartBlock.attrs.value = 'pie\n  "B": 20';
-		expect(mdxOfTiptap(chartDoc).trim()).toBe('```chart\npie\n  "B": 20\n```');
+		expect(firstBlock(tiptapToStored(chartDoc))).toMatchObject({
+			type: "codeBlock",
+			attrs: { language: "chart", code: 'pie\n  "B": 20' },
+		});
 
 		// Math
-		const mathDoc = tiptapOf("$$\nx^2\n$$");
+		const mathDoc = tiptapOfMath("x^2");
 		const mathBlock = mathDoc.content?.find((b) => b.type === "cmsMath");
 		expect(mathBlock?.attrs?.value).toBe("x^2");
 		if (mathBlock?.attrs) mathBlock.attrs.value = "y^2";
-		expect(mdxOfTiptap(mathDoc).trim()).toBe("$$\ny^2\n$$");
+		expect(firstBlock(tiptapToStored(mathDoc))).toMatchObject({ type: "math", attrs: { value: "y^2" } });
 	});
 });
+
+const tiptapOfMath = (value: string) => storedToTiptap(storedDoc({ type: "math", attrs: { value } }));

@@ -30,7 +30,6 @@ type PublishedRow = {
 	slug: string;
 	metadata: EntryMetadata;
 	source_metadata: EntryMetadata;
-	mdx: string;
 	doc: unknown;
 	published_at: Date | null;
 	body_updated_at: Date;
@@ -49,7 +48,7 @@ const sourceJoin = (qSchema: string) => `JOIN "${qSchema}".entries src
 const PUBLISHED_COLUMNS = (withBody: boolean, address = "a") =>
 	`e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
 	 ${address}.slug AS slug, b.metadata, sb.metadata AS source_metadata,
-	 ${withBody ? "b.mdx" : "''::text"} AS mdx, ${withBody ? "b.doc" : "NULL::jsonb"} AS doc,
+	 ${withBody ? "b.doc" : "NULL::jsonb"} AS doc,
 	 src.published_at, b.updated_at AS body_updated_at`;
 
 /** Translation metadata = the source's shared values + the translation's per-language values. */

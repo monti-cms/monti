@@ -1,7 +1,6 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
 import type { MediaStore } from "../adapters/r2/types";
 import type { ContentStore } from "../core/store";
-import { BUILT_IN_FORMAT_LIST } from "../format/built-in";
 import { createFormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import { nextRouteHandler } from "../next/route-handler";
@@ -94,7 +93,7 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		pluginRoutes: plugins.routes,
 		pluginFeatures: plugins.features,
 		writeHooks: plugins.writeHooks,
-		formats: async () => createFormatRegistry([...BUILT_IN_FORMAT_LIST, ...(parts.formats ?? [])]),
+		formats: async () => createFormatRegistry(parts.formats ?? []),
 		notifyAfterCommit: plugins.notifyAfterCommit,
 		secrets: cms.secrets,
 		authGateway,
@@ -103,7 +102,7 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		read: createRead({
 			store: cms.store,
 			mediaStore: cms.mediaStore,
-			formats: async () => createFormatRegistry([...BUILT_IN_FORMAT_LIST, ...(parts.formats ?? [])]),
+			formats: async () => createFormatRegistry(parts.formats ?? []),
 			verifyAdmin: authGateway.verifyAdmin,
 		}),
 		...(parts.contentService ? { contentService: () => parts.contentService as ContentService } : {}),

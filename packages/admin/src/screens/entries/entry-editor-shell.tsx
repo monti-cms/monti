@@ -43,7 +43,7 @@ import { useCmsAdminComponents, useEditorExtensions } from "../../admin-componen
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
-import { SOURCE_ERROR_ID } from "../../mdx-source";
+import { SOURCE_ERROR_ID } from "../../source-error-id";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button, buttonVariants } from "../../ui/button";
 import {
@@ -239,6 +239,7 @@ export function EntryEditorShell({
 	const router = useRouter();
 	const { resolvedTheme, setTheme } = useTheme();
 	const editor = useEntryEditor({
+		formats: useCmsAdminComponents().formats,
 		adminId,
 		target:
 			mode === "edit"

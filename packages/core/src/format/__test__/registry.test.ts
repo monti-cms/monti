@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUILT_IN_FORMAT_LIST, BUILT_IN_FORMATS } from "../built-in";
-import { createFormatRegistry } from "../registry";
+import { createFormatRegistry, NO_FORMATS } from "../registry";
 import { defineFormat } from "../types";
 
 const format = (name: string, withImport = true) =>
@@ -43,8 +42,8 @@ describe("the format registry", () => {
 		}
 	});
 
-	it("brings the mdx format itself", () => {
-		expect(BUILT_IN_FORMATS.list()).toEqual(BUILT_IN_FORMAT_LIST);
-		expect(BUILT_IN_FORMATS.get("mdx")?.extension).toBe("mdx");
+	it("brings no format of its own: the default registry is empty", () => {
+		expect(NO_FORMATS.list()).toEqual([]);
+		expect(NO_FORMATS.get("mdx")).toBeUndefined();
 	});
 });

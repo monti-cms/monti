@@ -1,7 +1,6 @@
-import type { Code } from "mdast";
 import { describe, expect, it } from "vitest";
 import { __testable__ as fromCodeFenceToCodeBlockDocumentTestable } from "../code-fence-to-document";
-import type { AnnotationConfig } from "../types";
+import type { AnnotationConfig, CodeFence as Code } from "../types";
 
 const { fromCodeFenceToCodeBlockDocument } = fromCodeFenceToCodeBlockDocumentTestable;
 const annotationConfig: AnnotationConfig = {

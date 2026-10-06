@@ -1,4 +1,4 @@
-import type { StoredDocument } from "../mdx/stored-document";
+import type { StoredDocument } from "../doc/stored-document";
 import { documentText, EXCERPT_TEXT } from "./body-text";
 
 /**

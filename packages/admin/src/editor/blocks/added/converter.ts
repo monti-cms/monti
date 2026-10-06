@@ -1,5 +1,6 @@
 import type { BlockDefinition } from "@monti-cms/core/client";
 import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
+import { BLOCK_ID_ATTRIBUTE } from "../../block-ids";
 import { fenceBlockConverter } from "../../converters/fence-preview";
 import type { BlockConverter } from "../../converters/types";
 import { ADDED_NODE_BLOCKS, blockNodeName, childBlocksOf, isContainer, isFence } from "./shared";
@@ -56,7 +57,15 @@ function blockConverter(
 			if (childNames.size === 0 && content.length === 0) return { ...base, content: [{ type: "paragraph" }] };
 			return {
 				...base,
-				content: content.map((child) => childConverter(child)?.toTiptap(child, ctx) ?? ctx.blockToTiptap(child)),
+				content: content.map((child) => {
+					const converter = childConverter(child);
+					if (!converter) return ctx.blockToTiptap(child);
+					// A child with its own converter (a tab, a column) keeps the id it has, like any other block.
+					const converted = converter.toTiptap(child, ctx);
+					return child.id === undefined || converted.attrs?.[BLOCK_ID_ATTRIBUTE] != null
+						? converted
+						: { ...converted, attrs: { ...(converted.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: child.id } };
+				}),
 			};
 		},
 		toCms(node, ctx): CmsNode[] {

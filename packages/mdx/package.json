@@ -1,0 +1,106 @@
+{
+	"name": "@monti-cms/mdx",
+	"version": "0.1.0",
+	"private": true,
+	"cmsPlugin": true,
+	"description": "MDX for @monti-cms/core: the mdx format (import and export), renderMdx, the admin source panel, syntax extensions and the migrations of stores that kept bodies as MDX",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./format": "./src/format.ts",
+		"./render": "./src/render.tsx",
+		"./admin": "./src/admin/index.ts",
+		"./server": "./src/server.ts",
+		"./testing": "./src/testing.ts",
+		"./styles.css": "./styles.css"
+	},
+	"scripts": {
+		"test": "vitest",
+		"test:run": "vitest run",
+		"typecheck": "tsc --noEmit -p .",
+		"build": "node ../../scripts/build-package.mjs __test__/fixtures/samples"
+	},
+	"dependencies": {
+		"@types/mdast": "^4.0.4",
+		"remark-gfm": "^4.0.1",
+		"remark-math": "^6.0.0",
+		"remark-mdx": "^3.1.1",
+		"remark-parse": "^11.0.0",
+		"shiki": "^3.21.0",
+		"unified": "^11.0.5",
+		"unist-util-visit": "^5.0.0",
+		"vfile": "^6.0.3"
+	},
+	"peerDependencies": {
+		"@monti-cms/core": "workspace:^",
+		"@monti-cms/admin": "workspace:^",
+		"react": ">=19"
+	},
+	"peerDependenciesMeta": {
+		"@monti-cms/admin": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@tanstack/react-query": "^5.104.0",
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.2",
+		"@tiptap/core": "^3.31.3",
+		"@tiptap/pm": "^3.31.3",
+		"@tiptap/react": "^3.31.3",
+		"@types/node": "^20",
+		"@types/pg": "^8.23.1",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"jsdom": "^27.4.0",
+		"lucide-react": "^0.562.0",
+		"next": "16.3.8",
+		"next-auth": "5.0.0-beta.32",
+		"next-themes": "^0.4.6",
+		"pg": "^8.23.0",
+		"react": "19.2.3",
+		"react-dom": "19.2.3",
+		"sonner": "^2.0.8",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.0",
+		"vitest": "^4.0.18"
+	},
+	"files": [
+		"dist",
+		"styles.css",
+		"README.md"
+	],
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./format": {
+				"types": "./dist/format.d.ts",
+				"default": "./dist/format.js"
+			},
+			"./render": {
+				"types": "./dist/render.d.ts",
+				"default": "./dist/render.js"
+			},
+			"./admin": {
+				"types": "./dist/admin/index.d.ts",
+				"default": "./dist/admin/index.js"
+			},
+			"./server": {
+				"types": "./dist/server.d.ts",
+				"default": "./dist/server.js"
+			},
+			"./testing": {
+				"types": "./dist/testing.d.ts",
+				"default": "./dist/testing.js"
+			},
+			"./styles.css": "./styles.css"
+		}
+	}
+}

@@ -2,7 +2,7 @@
 	"name": "@monti-cms/syntax-directive",
 	"version": "0.1.0",
 	"private": true,
-	"description": "Directive syntax extension for @monti-cms/core: read and write :::callout, ::image{…} and :u[text] in MDX bodies",
+	"description": "Directive syntax extension for @monti-cms/mdx: read and write :::callout, ::image{…} and :u[text] in MDX bodies",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -23,10 +23,11 @@
 		"vfile": "^6.0.3"
 	},
 	"peerDependencies": {
-		"@monti-cms/core": "workspace:^"
+		"@monti-cms/mdx": "workspace:^"
 	},
 	"devDependencies": {
 		"@monti-cms/core": "workspace:*",
+		"@monti-cms/mdx": "workspace:*",
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",

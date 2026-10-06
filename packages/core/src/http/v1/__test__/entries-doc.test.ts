@@ -1,14 +1,15 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
-import { contentOf } from "../../../../test/stored-content";
+import { contentOf, docOf } from "../../../../test/stored-content";
 import { type Cms, fakeCms } from "../../../cms";
 import type { Collection } from "../../../core/collections";
 import { MAX_DOC_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
-import { isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
-import { bodyFromMdx } from "../../../mdx/stored-document";
+import { isBlockId, withoutBlockIds } from "../../../doc/block-ids";
+import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../../format/registry";
 import { createContentService } from "../../../services/content-service";
 import {
 	closeGlobalPool,
@@ -21,9 +22,8 @@ import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
 import { POST as postEntries } from "../entries/route";
 import { GET as getTemplates } from "../templates/route";
 
-/** The same content in a spelling the serializer does not write, and the text a save writes for it. */
-const UNTIDY = "Title\n=====\n\nSome _emphasis_ here\n\n* one\n* two\n";
-const TIDY = "# Title\n\nSome *emphasis* here\n\n- one\n- two\n";
+/** A document of a heading, a paragraph and a list, as a client would send it. */
+const sampleDoc = () => docOf("# Title\n\nSome *emphasis* here\n\n- one\n- two");
 
 const send = (url: string, method: string, body: unknown) =>
 	new Request(url, {
@@ -32,7 +32,7 @@ const send = (url: string, method: string, body: unknown) =>
 		body: JSON.stringify(body),
 	});
 
-/** The admin entry API with a real store and service: bodies are accepted as a stored document as well as MDX. */
+/** The admin entry API with a real store and service: bodies are accepted as a stored document as well as text in a format. */
 describe("entry API with a stored document", () => {
 	let pool: Pool;
 	let schemaName: string;
@@ -49,8 +49,8 @@ describe("entry API with a stored document", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
-		cms = fakeCms({ store, contentService: service });
+		service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
+		cms = fakeCms({ store, contentService: service, formats: [paragraphsFormat] });
 	});
 
 	afterAll(async () => {
@@ -65,7 +65,7 @@ describe("entry API with a stored document", () => {
 			collection: to,
 			slug: unique(to),
 			metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-			format: "mdx",
+			format: "paragraphs",
 			body: "Body",
 		});
 		const published =
@@ -116,36 +116,35 @@ describe("entry API with a stored document", () => {
 			)
 		).rows[0];
 
-	it("creates an entry from a document, storing the MDX written from it", async () => {
-		const doc = bodyFromMdx(UNTIDY).doc;
-		expect(doc).not.toBeNull();
+	it("creates an entry from a document, storing the document and no text", async () => {
+		const doc = sampleDoc();
 
 		const entry = await created({ doc });
 
-		expect(entry.working.mdx).toBe(TIDY);
 		expect(entry.working.doc).toEqual(doc);
 		const row = await storedRow(entry.id);
-		expect(row.mdx).toBe(TIDY);
+		// The old text column is no longer written.
+		expect(row.mdx).toBeNull();
 		expect(row.doc).toEqual(doc);
 	});
 
 	it("creates an entry from text with its format, and with no body it is empty", async () => {
-		const fromMdx = await created({ format: "mdx", body: UNTIDY });
-		expect(fromMdx.working.mdx).toBe(TIDY);
-		expect(contentOf(fromMdx.working.doc)).toEqual(contentOf(bodyFromMdx(UNTIDY).doc));
+		const fromText = await created({ format: "paragraphs", body: "One\n\nTwo" });
+		expect(contentOf(fromText.working.doc)).toEqual(contentOf(docOf("One\n\nTwo")));
+		expect((await storedRow(fromText.id)).mdx).toBeNull();
 
 		const empty = await created({});
-		expect(empty.working.mdx).toBe("");
+		expect(empty.working.doc.content).toEqual([]);
 	});
 
 	it("rejects a create that sends both a body and doc", async () => {
-		const res = await post({ format: "mdx", body: TIDY, doc: bodyFromMdx(TIDY).doc });
+		const res = await post({ format: "paragraphs", body: "Text", doc: sampleDoc() });
 		expect(res.status).toBe(400);
 		expect((await res.json()).code).toBe("invalid_input");
 	});
 
 	it("rejects a create with a document that is not a stored document", async () => {
-		const doc = bodyFromMdx(TIDY).doc;
+		const doc = sampleDoc();
 		const invalid: unknown[] = [
 			{ ...(doc as object), version: 999 },
 			{ type: "doc", version: 1, content: "not a list" },
@@ -163,25 +162,23 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("saves a document with a patch", async () => {
-		const entry = await created({ format: "mdx", body: "First\n" });
-		const doc = bodyFromMdx(UNTIDY).doc;
+		const entry = await created({ format: "paragraphs", body: "First" });
+		const doc = sampleDoc();
 
 		const res = await patch(entry.id, { expectedVersion: entry.version, doc });
 
 		expect(res.status).toBe(200);
 		const saved = (await res.json()) as Entry;
 		expect(saved.version).toBe(entry.version + 1);
-		expect(saved.working.mdx).toBe(TIDY);
 		expect(saved.working.doc).toEqual(doc);
 		const row = await storedRow(entry.id);
-		expect(row.mdx).toBe(TIDY);
+		expect(row.mdx).toBeNull();
 		expect(row.doc).toEqual(doc);
 	});
 
 	it("keeps the block ids of a document sent with a patch, and gives a block sent without one its own", async () => {
-		const entry = await created({ format: "mdx", body: "First\n" });
-		const parsed = bodyFromMdx(UNTIDY).doc;
-		if (!parsed) throw new Error("fixture");
+		const entry = await created({ format: "paragraphs", body: "First" });
+		const parsed = sampleDoc();
 		const [heading, paragraph, list] = parsed.content;
 		if (!heading || !paragraph || !list) throw new Error("fixture");
 		const doc = {
@@ -197,17 +194,15 @@ describe("entry API with a stored document", () => {
 		expect(ids?.slice(0, 2)).toEqual(["client01", "client02"]);
 		expect(isBlockId(ids?.[2])).toBe(true);
 		expect((await storedRow(entry.id)).doc).toEqual(saved.working.doc);
-		// MDX written from it carries no ids.
-		expect(saved.working.mdx).toBe(TIDY);
 	});
 
-	it("keeps the block ids of the draft when a patch sends edited MDX", async () => {
-		const entry = await created({ format: "mdx", body: UNTIDY });
+	it("keeps the block ids of the draft when a patch sends edited text", async () => {
+		const entry = await created({ format: "paragraphs", body: "One\n\nTwo" });
 
 		const res = await patch(entry.id, {
 			expectedVersion: entry.version,
-			format: "mdx",
-			body: TIDY.replace("emphasis", "stress"),
+			format: "paragraphs",
+			body: "One\n\nTwo, edited",
 		});
 
 		expect(res.status).toBe(200);
@@ -218,34 +213,34 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("keeps the body when a patch sends neither a body nor doc", async () => {
-		const entry = await created({ doc: bodyFromMdx(UNTIDY).doc });
+		const entry = await created({ doc: sampleDoc() });
 
 		const res = await patch(entry.id, { expectedVersion: entry.version, metadata: entry.working.metadata });
 
 		expect(res.status).toBe(200);
 		const saved = (await res.json()) as Entry;
 		expect(saved.version).toBe(entry.version);
-		expect(saved.working.mdx).toBe(TIDY);
+		expect(saved.working.doc).toEqual(entry.working.doc);
 	});
 
 	it("rejects a patch that sends both a body and doc", async () => {
-		const entry = await created({ format: "mdx", body: "First\n" });
+		const entry = await created({ format: "paragraphs", body: "First" });
 
 		const res = await patch(entry.id, {
 			expectedVersion: entry.version,
-			format: "mdx",
-			body: TIDY,
-			doc: bodyFromMdx(TIDY).doc,
+			format: "paragraphs",
+			body: "Text",
+			doc: sampleDoc(),
 		});
 
 		expect(res.status).toBe(400);
 		expect((await res.json()).code).toBe("invalid_input");
-		expect((await read(entry.id)).working.mdx).toBe("First\n");
+		expect((await read(entry.id)).working.doc).toEqual(entry.working.doc);
 	});
 
 	it("rejects a patch with a document that is not a stored document, and changes nothing", async () => {
-		const entry = await created({ format: "mdx", body: "First\n" });
-		const doc = bodyFromMdx(TIDY).doc;
+		const entry = await created({ format: "paragraphs", body: "First" });
+		const doc = sampleDoc();
 
 		for (const value of [{ ...(doc as object), version: 999 }, { type: "doc", version: 1 }, "text", null]) {
 			const res = await patch(entry.id, { expectedVersion: entry.version, doc: value });
@@ -254,7 +249,7 @@ describe("entry API with a stored document", () => {
 		}
 		const after = await read(entry.id);
 		expect(after.version).toBe(entry.version);
-		expect(after.working.mdx).toBe("First\n");
+		expect(after.working.doc).toEqual(entry.working.doc);
 	});
 
 	it("rejects a document larger than the limit with 413", async () => {
@@ -268,9 +263,9 @@ describe("entry API with a stored document", () => {
 		expect((await res.json()).code).toBe("body_too_large");
 	});
 
-	it("accepts a document larger than the MDX limit", async () => {
-		// Above the MDX limit as JSON but within the document limit; the MDX written from it is within its own limit.
-		// Few long paragraphs keep the test fast: the JSON overhead per paragraph is what pushes it over the MDX limit.
+	it("accepts a document larger than the text limit", async () => {
+		// Above the text limit as JSON but within the document limit.
+		// Few long paragraphs keep the test fast: the JSON overhead per paragraph is what pushes it over the text limit.
 		const paragraph = { type: "paragraph", content: [{ type: "text", text: "word ".repeat(72).trim() }] };
 		const doc = { type: "doc", version: 1, content: Array.from({ length: 5_200 }, () => paragraph) };
 		expect(Buffer.byteLength(JSON.stringify(doc))).toBeGreaterThan(MAX_TEXT_BYTES);
@@ -282,7 +277,7 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("saves the document of a read back unchanged: no new version, nothing written", async () => {
-		const entry = await created({ format: "mdx", body: UNTIDY });
+		const entry = await created({ format: "paragraphs", body: "One\n\nTwo" });
 		const before = await storedRow(entry.id);
 		const loaded = await read(entry.id);
 		expect(loaded.working.doc).not.toBeNull();
@@ -299,23 +294,22 @@ describe("entry API with a stored document", () => {
 	it.skipIf(!secondLocale)(
 		"returns the source's document with a translation, and keeps the confirmed document it is sent",
 		async () => {
-			const source = await created({ format: "mdx", body: "First\n\nSecond\n" });
+			const source = await created({ format: "paragraphs", body: "First\n\nSecond" });
 			expect(source.working.doc).not.toBeNull();
 			const created_ = await service.createTranslation({
 				sourceId: source.id,
 				locale: secondLocale as string,
 			});
 
-			const loaded = (await read(created_.id)) as Entry & { source?: { mdx: string; doc: unknown } };
-			expect(loaded.source?.mdx).toBe(source.working.mdx);
+			const loaded = (await read(created_.id)) as Entry & { source?: { doc: unknown } };
 			expect(loaded.source?.doc).toEqual(source.working.doc);
 			expect(loaded.working.translation).toEqual({ version: 4, baseDoc: source.working.doc });
 
 			// The source changes; the next read carries its new document, and its blocks keep their ids.
 			const changed = await patch(source.id, {
 				expectedVersion: source.version,
-				format: "mdx",
-				body: "Second\n\nFirst\n",
+				format: "paragraphs",
+				body: "Second\n\nFirst",
 			});
 			expect(changed.status).toBe(200);
 			const reloaded = (await read(created_.id)) as Entry & { source?: { doc: { content: { id: string }[] } } };
@@ -344,7 +338,7 @@ describe("entry API with a stored document", () => {
 	it("lists templates with their documents", async () => {
 		const template = await store.createTemplate({
 			name: unique("doc template"),
-			doc: bodyFromMdx(UNTIDY).doc ?? undefined,
+			doc: sampleDoc(),
 		});
 
 		const res = await getTemplates(new Request("http://localhost/api/cms/v1/templates"), { cms });
@@ -352,6 +346,6 @@ describe("entry API with a stored document", () => {
 		const { items } = await res.json();
 		const listed = items.find((item: { id: string }) => item.id === template.id);
 		expect(listed.mdx).toBeUndefined();
-		expect(contentOf(listed.doc)).toEqual(contentOf(bodyFromMdx(UNTIDY).doc));
+		expect(contentOf(listed.doc)).toEqual(contentOf(sampleDoc()));
 	});
 });

@@ -1,7 +1,8 @@
 import { contentCollection, defaultLocale, otherContentCollection, recordRelationField } from "../../../test/any-site";
+import { docOf } from "../../../test/stored-content";
 import { isItemCollection } from "../../core/collections";
 import type { ExportSnapshot } from "../../core/store";
-import { bodyDocument, bodyFromMdx } from "../../mdx/stored-document";
+import type { StoredDocument } from "../../doc/stored-document";
 import { roleField, storedFields } from "../../schema/derive";
 
 /**
@@ -46,30 +47,29 @@ export const fixtureEntryPath = (collection: string, id: string, file: string) =
 export const FIXTURE_TIME = new Date("2026-09-22T00:00:00.000Z");
 
 export const fixtureBody = (
-	mdx: string,
+	text: string,
 	title: string,
 	contentHash: string,
 	extraMetadata: Record<string, unknown> = {},
 ) => ({
 	metadata: { title, ...extraMetadata },
-	mdx,
-	doc: fixtureDocument(mdx),
+	doc: fixtureDocument(text),
 	schemaVersion: 1,
 	contentHash,
 	updatedAt: FIXTURE_TIME,
 });
 
-const documents = new Map<string, ReturnType<typeof bodyDocument>>();
+const documents = new Map<string, StoredDocument>();
 
 /**
- * The stored document of a fixture body. Parsing draws new block ids each time, so a text is parsed once: every snapshot (and every test)
+ * The stored document of a fixture body. Reading a text draws new block ids each time, so a text is read once: every snapshot (and every test)
  * sees the same document for it.
  */
-export function fixtureDocument(mdx: string) {
-	const known = documents.get(mdx);
+export function fixtureDocument(text: string): StoredDocument {
+	const known = documents.get(text);
 	if (known) return known;
-	const doc = bodyDocument(bodyFromMdx(mdx));
-	documents.set(mdx, doc);
+	const doc = docOf(text);
+	documents.set(text, doc);
 	return doc;
 }
 

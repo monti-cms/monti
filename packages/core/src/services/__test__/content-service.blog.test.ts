@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { docOf } from "../../../test/stored-content";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
 import { prepareSnapshot } from "../index";
 
 /**
@@ -15,10 +18,10 @@ describe("ContentService Contract (blog config)", () => {
 					title: "A",
 					tagIds: ["123e4567-e89b-12d3-a456-426614174002", "123e4567-e89b-12d3-a456-426614174001"],
 				},
-				format: "mdx",
+				format: "paragraphs",
 				body: "Hello",
 			},
-			{ schemaVersion: 1 },
+			{ schemaVersion: 1, import: { formats: createFormatRegistry([paragraphsFormat]) } },
 		);
 		// Pins the hash format. The value changed from the v1 vector ("ce4f8728…", which hashed the MDX string) on purpose when the
 		// hash moved to the parsed body ("cms-snapshot-v2"), and again when it moved to the stored document ("cms-snapshot-v3"). The hashed document
@@ -32,17 +35,16 @@ describe("ContentService Contract (blog config)", () => {
 			collection: "memo",
 			slug: "memo",
 			metadata: { title: "Memo" },
-			format: "mdx",
-			body: [
-				"[relative](/posts/draft-post)",
-				"[absolute](https://example.dev/memos/xxx-equal)",
-				"[www](https://www.example.dev/posts/old%20slug)",
-				"[external](https://example.com/posts/not-internal)",
-				"```md",
-				"[code](/posts/not-a-link)",
-				"```",
-			].join("\n"),
-		});
+			doc: docOf(
+				[
+					"[relative](/posts/draft-post)",
+					"[absolute](https://example.dev/memos/xxx-equal)",
+					"[www](https://www.example.dev/posts/old%20slug)",
+					"[external](https://example.com/posts/not-internal)",
+					["```md", "[code](/posts/not-a-link)", "```"].join("\n"),
+				].join("\n\n"),
+			),
+		} as never);
 		expect((snapshot as any).internalLinks).toEqual([
 			expect.objectContaining({
 				collection: "post",

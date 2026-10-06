@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { mdxBrowserFormat as format, OPAQUE_BLOCK_NAME } from "@monti-cms/admin/editor";
+import { OPAQUE_BLOCK_NAME } from "@monti-cms/admin/editor";
+import { mdxBrowserFormat as format } from "@monti-cms/mdx/admin";
 import { describe, expect, it } from "vitest";
 import { contentOfText, documentOfText, textOfContent } from "../mdx-format";
 

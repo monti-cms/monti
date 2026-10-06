@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata } from "../../../test/any-site";
+import { docOf } from "../../../test/stored-content";
 import {
 	commonFieldKeys,
 	isOrphanedMetadataKey,
@@ -32,8 +33,7 @@ const draft = async (extra: Record<string, unknown> = {}) =>
 		collection: contentCollection,
 		slug: "a",
 		metadata: { ...(await requiredMetadata(contentCollection, "T", relationTarget)), ...extra },
-		format: "mdx",
-		body: "Body",
+		doc: docOf("Body"),
 	}) as unknown as ServiceInput;
 
 /** Prepares an input for an entry that already holds exactly these keys: a save of stored metadata. */
@@ -71,8 +71,7 @@ describe("values of removed fields", () => {
 			collection: recordCollection,
 			slug: "a",
 			metadata: { title: "T", [ORPHAN]: "left" },
-			format: "mdx",
-			body: "",
+			doc: docOf(""),
 		} as unknown as ServiceInput);
 		expect(snapshot.metadata[ORPHAN]).toBe("left");
 	});

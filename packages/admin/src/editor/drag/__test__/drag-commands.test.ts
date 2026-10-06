@@ -1,7 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
-import { tiptapOf } from "../../../test/mdx";
+import { para, tiptapOfNodes } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
 import { selectedBlocks, setBlockSelection } from "../block-selection";
 import { calculateDropPosition, canDropBlockNode, moveBlockNode, moveBlockSet, sourceRangeOf } from "../drag-commands";
@@ -250,9 +250,13 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 
 	it("moving the only paragraph of a column into another column leaves an empty paragraph", () => {
 		const editor = createTestEditor(
-			tiptapOf(
-				"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
-			) as unknown as string,
+			tiptapOfNodes({
+				type: "columns",
+				content: [
+					{ type: "column", content: [para("왼쪽")] },
+					{ type: "column", content: [para("오른쪽")] },
+				],
+			}) as unknown as string,
 		);
 		const from = nodePos(editor, (text, type) => type === "paragraph" && text === "왼쪽");
 		const right = nodePos(editor, (text, type) => type === "paragraph" && text === "오른쪽");

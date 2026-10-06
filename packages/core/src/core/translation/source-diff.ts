@@ -1,7 +1,7 @@
 import { BLOCK_BY_NAME, FENCE_BLOCKS } from "../../blocks/derive";
-import { withoutBlockIds } from "../../mdx/block-ids";
-import { type StoredDocument, UNPARSED_NODE } from "../../mdx/stored-document";
-import type { CmsNode } from "../../mdx/types";
+import { withoutBlockIds } from "../../doc/block-ids";
+import { type StoredDocument, UNPARSED_NODE } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
 
 /**
  * Block comparison of two source versions (translation screen).

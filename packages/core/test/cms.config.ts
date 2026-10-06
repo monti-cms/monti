@@ -1,6 +1,14 @@
 import { ALL_BLOCKS } from "../../blocks/src/definitions";
 import { seoFields } from "../../seo/src/fields";
 import { defineBlock, defineCollection, defineConfig, fields } from "../src";
+import type { StoredDocument } from "../src/doc/stored-document";
+
+/** The seed templates are stored documents: the test config needs no text format. (The version is written out: the config cannot import the document module, which reads the config.) */
+const text = (value: string) => ({ type: "text", text: value });
+const heading = (level: number, value: string) => ({ type: "heading", attrs: { level }, content: [text(value)] });
+const paragraph = (value: string) => ({ type: "paragraph", content: [text(value)] });
+const codeBlock = (language: string) => ({ type: "codeBlock", attrs: { language, meta: "", code: "" } });
+const storedDoc = (...content: unknown[]): StoredDocument => ({ type: "doc", version: 3, content }) as StoredDocument;
 
 /**
  * Sample site config used by the package's own tests. It has the same shape as a real blog's config.
@@ -231,20 +239,23 @@ export default defineConfig({
 			{
 				id: "00000000-0000-4000-8000-000000000001",
 				name: "알고리즘 풀이",
-				format: "mdx",
-				body: "## 문제\n\n\n## 풀이\n\n```ts\n\n```\n",
+				doc: storedDoc(heading(2, "문제"), heading(2, "풀이"), codeBlock("ts")),
 			},
 			{
 				id: "00000000-0000-4000-8000-000000000002",
 				name: "Type Challenge 풀이",
-				format: "mdx",
-				body: "### 질문\n\n\n```ts\n\n```\n\n### 풀이\n\n",
+				doc: storedDoc(heading(3, "질문"), codeBlock("ts"), heading(3, "풀이")),
 			},
 			{
 				id: "00000000-0000-4000-8000-000000000003",
 				name: "일반 게시글",
-				format: "mdx",
-				body: "## 개요\n\n글의 핵심을 소개합니다.\n\n## 본문\n\n\n## 정리\n\n마무리 내용을 작성합니다.\n",
+				doc: storedDoc(
+					heading(2, "개요"),
+					paragraph("글의 핵심을 소개합니다."),
+					heading(2, "본문"),
+					heading(2, "정리"),
+					paragraph("마무리 내용을 작성합니다."),
+				),
 			},
 		],
 	},

@@ -1,6 +1,6 @@
-import { mapLinkAttrs } from "../mdx/entry-links";
-import type { StoredDocument } from "../mdx/stored-document";
-import type { CmsNode } from "../mdx/types";
+import { mapLinkAttrs } from "../doc/entry-links";
+import type { StoredDocument } from "../doc/stored-document";
+import type { CmsNode } from "../doc/types";
 import { parseInternalLink } from "./links";
 import { DEFAULT_LOCALE } from "./locales";
 

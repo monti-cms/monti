@@ -15,7 +15,6 @@ export interface PostgresOptions {
  * calling `postgres()` (when `cms.server.ts` creates the instance) does not load the store code.
  */
 const loadStoreModule = () => import("./content-store");
-const loadRewriteModule = () => import("./store/rewrite");
 
 /**
  * A proxy store that creates the real store on first call. Every store function is async, so callers cannot tell the
@@ -59,8 +58,6 @@ export function postgres(options: PostgresOptions): DatabaseAdapter {
 		migrate: async (migrateOptions) =>
 			(await loadStoreModule()).migrateContentStore(getPool(), { ...schema, formats: migrateOptions?.formats }),
 		pluginStorage: (plugin) => createPluginStorage(getPool(), options.schema, plugin),
-		rewriteContent: async ({ apply }) =>
-			(await loadRewriteModule()).rewriteContent(getPool(), { apply, schema: options.schema }),
 		close: async () => {
 			await pool?.end();
 			pool = undefined;

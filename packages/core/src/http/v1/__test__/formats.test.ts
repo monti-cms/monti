@@ -8,11 +8,10 @@ import { contentPath } from "../../../core/links";
 import { localizePath } from "../../../core/locales";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
+import { entryLinkIds } from "../../../doc/entry-links";
 import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
-import { BUILT_IN_FORMAT_LIST } from "../../../format/built-in";
 import { createFormatRegistry } from "../../../format/registry";
 import { defineFormat } from "../../../format/types";
-import { entryLinkIds } from "../../../mdx/entry-links";
 import { createContentService } from "../../../services/content-service";
 import {
 	closeGlobalPool,
@@ -79,7 +78,7 @@ describe("the format option of the admin API", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		const registry = createFormatRegistry([...BUILT_IN_FORMAT_LIST, ...FORMATS]);
+		const registry = createFormatRegistry(FORMATS);
 		service = createContentService<Entry>(store, { formats: async () => registry });
 		cms = fakeCms({ store, contentService: service, formats: FORMATS });
 	});
@@ -96,7 +95,7 @@ describe("the format option of the admin API", () => {
 			collection: to,
 			slug: unique(to),
 			metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-			format: "mdx",
+			format: "paragraphs",
 			body: "Body",
 		});
 		const published =
@@ -144,7 +143,7 @@ describe("the format option of the admin API", () => {
 			collection: contentCollection,
 			slug,
 			metadata: await requiredMetadata(contentCollection, unique("Target"), relationTarget),
-			format: "mdx",
+			format: "paragraphs",
 			body: "Target body",
 		});
 		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
@@ -242,6 +241,31 @@ describe("the format option of the admin API", () => {
 			const entry = await created({ doc });
 			const res = await patch(entry.id, { expectedVersion: entry.version, body: "Text" });
 			expect(res.status).toBe(400);
+		});
+
+		it("with no format installed a text write is a 400 unknown_format, and a document write still works", async () => {
+			const bare = fakeCms({
+				store,
+				contentService: createContentService<Entry>(store, { formats: async () => createFormatRegistry([]) }),
+				formats: [],
+			});
+			const write = async (body: Record<string, unknown>) =>
+				postEntries(
+					send("http://localhost/api/cms/v1/entries", "POST", {
+						collection: contentCollection,
+						slug: unique("bare"),
+						metadata: await requiredMetadata(contentCollection, unique("Bare"), relationTarget),
+						...body,
+					}),
+					{ cms: bare },
+				);
+
+			const text = await write({ format: "paragraphs", body: "Some text" });
+			expect(text.status).toBe(400);
+			expect((await text.json()).code).toBe("unknown_format");
+
+			const doc = await write({ doc: docOf("Some text") });
+			expect(doc.status).toBe(201);
 		});
 
 		it("the old `mdx` property is gone: it is not read as a body", async () => {
@@ -374,7 +398,6 @@ describe("the format option of the admin API", () => {
 
 			expect(formats).toEqual(
 				expect.arrayContaining([
-					{ name: "mdx", label: "MDX", mimeType: "text/mdx", extension: "mdx", canImport: true },
 					{ name: "paragraphs", label: "Paragraphs", mimeType: "text/plain", extension: "txt", canImport: true },
 					{ name: "one-way", label: "One way", mimeType: "text/plain", extension: "out", canImport: false },
 				]),

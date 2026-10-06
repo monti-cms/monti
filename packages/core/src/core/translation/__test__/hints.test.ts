@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
-import { forEachBlock } from "../../../mdx/block-ids";
-import { unparsedDocument } from "../../../mdx/stored-document";
-import type { CmsNode } from "../../../mdx/types";
+import { forEachBlock } from "../../../doc/block-ids";
+import { unparsedDocument } from "../../../doc/stored-document";
+import type { CmsNode } from "../../../doc/types";
 import { documentText, EXCERPT_TEXT, SEARCH_TEXT } from "../../body-text";
 import { withTranslationHints } from "../hints";
 import { compareStructure } from "../skeleton";

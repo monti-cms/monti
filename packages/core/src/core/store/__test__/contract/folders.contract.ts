@@ -254,7 +254,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "fc4-slug",
 				metadata: { title: "FC4" },
-				mdx: "body text",
+				text: "body text",
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
@@ -355,7 +355,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "fc5-e",
 				metadata: { title: "E5" },
-				mdx: "e5 body",
+				text: "e5 body",
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
@@ -422,7 +422,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "fc6-e",
 				metadata: { title: "E6" },
-				mdx: "e6 body",
+				text: "e6 body",
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
@@ -467,8 +467,8 @@ export const foldersContract: ContractSuite = (factory) => {
 
 			const afterWorking = await store.getWorking({ entryId: e6.id });
 			expect(afterWorking).toEqual(beforeWorking);
-			expect({ mdx: afterEntry.working.mdx, contentHash: afterEntry.working.contentHash }).toEqual({
-				mdx: beforeEntry.working.mdx,
+			expect({ doc: afterEntry.working.doc, contentHash: afterEntry.working.contentHash }).toEqual({
+				doc: beforeEntry.working.doc,
 				contentHash: beforeEntry.working.contentHash,
 			});
 

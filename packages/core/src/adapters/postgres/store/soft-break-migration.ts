@@ -1,20 +1,22 @@
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
-import { insertSoftBreaks } from "../../../mdx/soft-breaks";
+import type { LegacyBodies } from "../../../format/types";
 import { mdxContentHash, mdxSearchText } from "./mdx-body";
 
 const DEFAULT_BATCH_SIZE = 200;
 
 export interface SoftBreakMigrationOptions {
+	/** Reads and writes the MDX text of these bodies (supplied by the `mdx` format). */
+	readonly bodies: LegacyBodies;
 	readonly batchSize?: number;
 	/** Called for each body that is left as it is (it does not parse, or the edit could not be made safely). Default: `console.warn`. */
 	readonly log?: (message: string) => void;
 }
 
 /** What one body rewrite did. Bodies that are skipped are left as they are and are named in the log. */
-const rewritten = (mdx: string, where: string, log: (message: string) => void): string => {
-	const result = insertSoftBreaks(mdx);
-	if (result.status === "changed") return result.mdx;
+const rewritten = (bodies: LegacyBodies, mdx: string, where: string, log: (message: string) => void): string => {
+	const result = bodies.insertSoftBreaks(mdx);
+	if (result.status === "changed") return result.text;
 	if (result.status === "skipped") {
 		log(
 			`[monti] soft line endings left as they are in ${where}: ${result.reason}${result.detail ? ` (${result.detail})` : ""}`,
@@ -44,9 +46,10 @@ interface BodyRow {
 export async function migrateSoftBreaks(
 	client: PoolClient,
 	qSchema: string,
-	options: SoftBreakMigrationOptions = {},
+	options: SoftBreakMigrationOptions,
 ): Promise<void> {
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
+	const { bodies } = options;
 	const log = options.log ?? ((message: string) => console.warn(message));
 
 	let last: { entry_id: string; state: string } | undefined;
@@ -61,14 +64,14 @@ export async function migrateSoftBreaks(
 
 		const next = res.rows.map((row) => {
 			const where = `entry_bodies ${row.entry_id}/${row.state}`;
-			const mdx = rewritten(row.mdx, where, log);
+			const mdx = rewritten(bodies, row.mdx, where, log);
 			const base = row.translation?.baseSource;
 			const baseSource =
-				typeof base === "string" ? rewritten(base, `${where} (translation base source)`, log) : undefined;
+				typeof base === "string" ? rewritten(bodies, base, `${where} (translation base source)`, log) : undefined;
 			return {
 				mdx,
-				contentHash: mdxContentHash(row.metadata, mdx, row.schema_version),
-				searchText: mdxSearchText(mdx),
+				contentHash: mdxContentHash(bodies, row.metadata, mdx, row.schema_version),
+				searchText: mdxSearchText(bodies, mdx),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,
 			};
@@ -101,7 +104,7 @@ export async function migrateSoftBreaks(
 		);
 		if (res.rows.length === 0) break;
 		for (const row of res.rows) {
-			const mdx = rewritten(row.mdx, `body_templates ${row.id}`, log);
+			const mdx = rewritten(bodies, row.mdx, `body_templates ${row.id}`, log);
 			if (mdx !== row.mdx)
 				await client.query(`UPDATE "${qSchema}".body_templates SET mdx = $1 WHERE id = $2`, [mdx, row.id]);
 		}

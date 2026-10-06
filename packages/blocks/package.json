@@ -76,6 +76,7 @@
 		"@monti-cms/admin": "workspace:*",
 		"@monti-cms/ai": "workspace:*",
 		"@monti-cms/core": "workspace:*",
+		"@monti-cms/mdx": "workspace:*",
 		"@monti-cms/syntax-directive": "workspace:*",
 		"@tanstack/react-query": "^5.104.0",
 		"@testing-library/dom": "^10.4.1",

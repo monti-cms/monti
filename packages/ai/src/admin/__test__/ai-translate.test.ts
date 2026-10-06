@@ -4,12 +4,12 @@ import {
 	BLOCK_ID_ATTRIBUTE,
 	buildEditorExtensions,
 	findBlock,
-	mdxBrowserFormat as format,
 	storedToTiptap,
 	tiptapToStored,
 } from "@monti-cms/admin/editor";
 import { withTranslationHints as hintDocument } from "@monti-cms/core/client";
 import { assignBlockIds, type StoredDocument } from "@monti-cms/core/document";
+import { mdxBrowserFormat as format } from "@monti-cms/mdx/admin";
 import { Editor, type JSONContent } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";

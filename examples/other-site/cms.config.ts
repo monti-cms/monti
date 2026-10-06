@@ -1,5 +1,6 @@
 import { blocks } from "@monti-cms/blocks";
 import { defineBlock, defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { mdx } from "@monti-cms/mdx";
 import { seo, seoFields } from "@monti-cms/seo";
 
 /**
@@ -107,8 +108,9 @@ export default defineConfig({
 	// Admin screen path (`monti init --admin-path /studio`). Matches the route folder `app/(admin)/studio/`.
 	admin: { path: "/studio" },
 	timeZone: "UTC",
-	// Install only the chart from the blocks extension (`blocks({ only })`) and add two site blocks. The SEO extension provides the search preview and hide switch.
+	// The MDX package provides the `mdx` format: bodies read and written as MDX text (the showcase seed, the source panel of the editor). Install only the chart from the blocks
+	// extension (`blocks({ only })`) and add two site blocks. The SEO extension provides the search preview and hide switch.
 	// The chart editor preview is drawn with the optional dependency `recharts`.
-	plugins: [...blocks({ only: ["chart"] }), seo()],
+	plugins: [mdx(), ...blocks({ only: ["chart"] }), seo()],
 	blocks: [quoteCard, mapBlock],
 });

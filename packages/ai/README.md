@@ -6,6 +6,8 @@ The AI plugin for `@monti-cms/core`. It adds named AI actions (generate and deci
 translation editor, the admin AI screen (`<admin path>/ai`, `/admin/ai` by default), the AI API (`/api/cms/v1/ai/*`), and the AI data in the plugin storage
 (`cms.storage("ai")`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
 
+The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `aiPlugin()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
+
 ## Registration
 
 Add `aiPlugin()` to `plugins` in the site config. Built-in actions turn on by themselves when there is somewhere to attach them, and
@@ -84,7 +86,7 @@ and `seoDescription` attach this way.
 
 The model reads and writes a text format, and MDX is that format. The admin holds the body as a stored document, so the AI buttons work through the `mdx` format registered in the admin
 (`useFormat("mdx")`, `@monti-cms/admin`): the body sent to the model, the selected text and the block to fix are written with the format's `export`, and the MDX the model answers with is read with its
-`import` (a text that does not read is kept whole in a box instead of being half converted). Without a registered `mdx` format, the actions that work on the body are not offered.
+`import` (a text that does not read is kept whole in a box instead of being half converted). The format comes from `mdx()` of `@monti-cms/mdx`, which registers it in the admin. Without it, the actions that work on the body are not offered.
 
 ## Result checks
 
@@ -105,7 +107,7 @@ The model reads and writes a text format, and MDX is that format. The admin hold
   `regexRuns(input, { name?, scope? })` (runs the regex, for code block regexes; without a rule name or scope it folds the whole
   document), and `sameStructure(input)` (keeps the structure, for translation). The block extension exports `mermaidSyntax` and
   `chartSyntax` (`@monti-cms/blocks/mermaid/ai`, `/chart/ai`).
-- The site config loads check files, so core modules that read the site config (code block and MDX reading) must be loaded with
+- The site config loads check files, so core modules that read the site config (code block reading and the MDX format) must be loaded with
   `await import()` inside `run` (importing them at the top breaks the order in which the config is read).
 
 ```ts

@@ -8,7 +8,6 @@ export type {
 	EditorMarkDetailProps,
 	EditorMarkExtension,
 } from "../admin-components";
-export { mdxBrowserFormat } from "../mdx-source/format";
 export { DocPreview } from "../screens/entries/source-pane";
 export { addedMarkName, CODE_ANCHOR_REF, type EditorMarkSpec, type MarkAttrs, markAttrsOf } from "./added-marks";
 export { BLOCK_ID_ATTRIBUTE, findBlock } from "./block-ids";

@@ -1,7 +1,10 @@
 import { buildEditorExtensions } from "@monti-cms/admin/editor";
+import type { StoredDocument } from "@monti-cms/core/document";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { tiptapOf } from "../../../test/mdx";
+import { codeNode, para, storedDoc, table, text } from "../../../test/stored-doc";
+import { storedToTiptap } from "../../tiptap-content";
 import { docRangeToSegment, extractSegments, PLACEHOLDER, segmentRangeToDoc } from "../extract";
 
 let editor: Editor | null = null;
@@ -10,12 +13,15 @@ afterEach(() => {
 	editor = null;
 });
 
-const open = (mdx: string) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(mdx) });
+const open = (source: string | StoredDocument) => {
+	editor = new Editor({
+		extensions: buildEditorExtensions(),
+		content: typeof source === "string" ? tiptapOf(source) : storedToTiptap(source),
+	});
 	return editor;
 };
 
-const segmentsOf = (mdx: string) => extractSegments(open(mdx).state.doc, { locale: "ko" });
+const segmentsOf = (source: string | StoredDocument) => extractSegments(open(source).state.doc, { locale: "ko" });
 
 /** The document text a paragraph-relative position points to. */
 const docText = (current: Editor, from: number, to: number) => current.state.doc.textBetween(from, to);
@@ -75,12 +81,26 @@ describe("extracting check segments", () => {
 	});
 
 	it("does not send code blocks and math blocks", () => {
-		const segments = segmentsOf("앞 문단\n\n```ts\nconst 틀린말 = 1;\n```\n\n$$\nx^2\n$$\n\n뒤 문단\n");
+		const segments = segmentsOf(
+			storedDoc(
+				para("앞 문단"),
+				codeNode("const 틀린말 = 1;"),
+				{ type: "math", attrs: { value: "x^2" } },
+				para("뒤 문단"),
+			),
+		);
 		expect(segments.map((segment) => segment.text)).toEqual(["앞 문단", "뒤 문단"]);
 	});
 
 	it("extracts table cell text one by one too", () => {
-		const segments = segmentsOf("| 이름 | 설명 |\n| --- | --- |\n| 사과 | 빨간 과일 |\n");
+		const segments = segmentsOf(
+			storedDoc(
+				table([
+					[[text("이름")], [text("설명")]],
+					[[text("사과")], [text("빨간 과일")]],
+				]),
+			),
+		);
 		expect(segments.map((segment) => segment.text)).toEqual(["이름", "설명", "사과", "빨간 과일"]);
 	});
 
