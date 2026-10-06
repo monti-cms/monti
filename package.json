@@ -12,6 +12,7 @@
 		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/syntax-directive build && pnpm --filter @monti-cms/syntax-shiki build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/blocks build && pnpm --filter @monti-cms/bareun build && pnpm --filter @monti-cms/seo build",
 		"example:check": "node scripts/check-example.mjs",
 		"example:pack": "node scripts/pack-example.mjs",
+		"preview:example": "node scripts/preview-example.mjs",
 		"prepare": "husky"
 	},
 	"lint-staged": {
