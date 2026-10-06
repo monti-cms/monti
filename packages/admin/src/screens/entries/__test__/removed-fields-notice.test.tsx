@@ -6,6 +6,7 @@ import { EMPTY_FORM } from "../entry-form";
 import { RemovedFieldsNotice } from "../removed-fields-notice";
 import { SchemaFields } from "../schema-fields";
 import { t } from "../translate";
+import { EntryFormProvider } from "../use-field";
 
 afterEach(cleanup);
 
@@ -47,13 +48,15 @@ describe("select value that is no longer an option", () => {
 		if (!found) return;
 		render(
 			<TooltipProvider>
-				<SchemaFields
-					collection={found.collection}
-					form={{ ...EMPTY_FORM, [found.name]: "removed-option" }}
-					context={{ disabled: false }}
-					onChange={() => {}}
-					include={(group) => group.fields.includes(found.name)}
-				/>
+				<EntryFormProvider
+					value={{
+						collection: found.collection,
+						form: { ...EMPTY_FORM, [found.name]: "removed-option" },
+						setForm: () => {},
+					}}
+				>
+					<SchemaFields include={(group) => group.fields.includes(found.name)} />
+				</EntryFormProvider>
 			</TooltipProvider>,
 		);
 		expect(screen.getByRole("combobox").textContent).toContain(t("select.removedOption", { value: "removed-option" }));

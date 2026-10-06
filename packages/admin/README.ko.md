@@ -226,7 +226,7 @@ export default defineAdminPlugin({
 | `/next` | 관리자 레이아웃·페이지(앱 라우트에서 내보낸다) |
 | `/editor` | 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
 | `/blocks` | 블록 편집 화면 도우미 |
-| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`)·`EditorResult`·`EditorError` |
+| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`)·`EditorResult`·`EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
@@ -244,6 +244,12 @@ export default defineAdminPlugin({
 `useSlotActions(request)`는 화면 자리 하나에 붙은 동작과 실행 상태(`idle`·`asking`·`running`·`done`·`error`),
 `run`·`cancel`·`apply`를 준다. 실행 상태는 자리·대상·컬렉션·범위가 같은 훅끼리 공유하고, 컴포넌트가 사라져도 남는다.
 `useSlot`(`@monti-cms/admin/slots`)이 그 위에 만든 기본 단추와 패널이다.
+
+`useField(name)`은 폼 필드 하나의 `value`·`setValue`·`error`/`errors`·`readOnly`(`readOnlyReason`: `disabled` 또는 `locked`)와,
+라벨·입력·오류 문구를 잇는 id(`ids`·`inputProps`), `useSlotActions`에 넘길 `slotRequest`를 준다. `EntryFormProvider` 아래에서만 쓸 수 있다.
+편집 화면의 속성 패널과 레코드 패널이 하나씩 제공하고, 폼 상태를 따로 가진 화면은 직접 제공할 수 있다
+(`collection`·`form`·`setForm`·`issues`·`disabled`·`entryId`·`locale`·`entry`·`locked`). 컴포넌트는 자기 필드가 바뀔 때만 다시 그려지므로
+한 필드에 입력해도 다른 필드는 다시 그려지지 않는다. 기본 필드 화면(`SchemaFields`)도 같은 훅 위에 만들어져 있다.
 
 ## 스타일
 

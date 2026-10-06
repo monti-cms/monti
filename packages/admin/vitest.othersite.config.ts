@@ -22,6 +22,8 @@ const BLOG_FIXTURE_TESTS = [
 	"src/screens/entries/__test__/entry-editor-shell.test.tsx",
 	"src/screens/entries/__test__/entry-form.test.ts",
 	"src/screens/entries/__test__/entry-form-removed.test.ts",
+	"src/screens/entries/__test__/schema-fields-form.test.tsx",
+	"src/screens/entries/__test__/use-field.test.tsx",
 	"src/editor/__test__/m13-accessibility.test.tsx",
 	"src/editor/internal-link.test.ts",
 	// Exercises the editor with the reference blog's blocks (callout, fold, tabs, columns, Mermaid) and the example user blocks (notice, embed).

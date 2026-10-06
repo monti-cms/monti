@@ -226,7 +226,7 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | `/next` | Admin layout and page (exported from the app route) |
 | `/editor` | Editor extension helpers (bubble, slash menu, code block linking) |
 | `/blocks` | Block edit screen helpers |
-| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`), and `EditorResult` / `EditorError` |
+| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`), and `EditorResult` / `EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
 | `/media` | Media picker and preview |
@@ -244,6 +244,12 @@ for expected failures, and `EditorError.code` (`conflict`, `session_expired`, `o
 `useSlotActions(request)` gives the actions attached to one screen slot with their run state (`idle`, `asking`, `running`, `done`, `error`),
 `run`, `cancel` and `apply`. Run state is shared by every hook instance with the same slot, target, collection and scope,
 and it survives the component unmounting. `useSlot` (`@monti-cms/admin/slots`) is the default button and panel on top of it.
+
+`useField(name)` gives one form field's `value`, `setValue`, `error` / `errors`, `readOnly` (`readOnlyReason`: `disabled` or `locked`), the ids that link
+the label, the input and the error text (`ids`, `inputProps`), and the field's `slotRequest` to pass to `useSlotActions`. It must be used below an
+`EntryFormProvider`; the entry editor's properties panel and the record panel provide one, and a screen that keeps its own form state can provide its own
+(`collection`, `form`, `setForm`, `issues`, `disabled`, `entryId`, `locale`, `entry`, `locked`). A component re-renders only when its own field changes,
+so typing in one field does not re-render the others. The default field UI (`SchemaFields`) is built on the same hook.
 
 ## Styles
 

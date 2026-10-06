@@ -14,6 +14,7 @@ import { DEFAULT_TAB, tabOf, tabOfGroup, tabsOf } from "./layout-groups";
 import { RemovedFieldsNotice } from "./removed-fields-notice";
 import { SchemaFields } from "./schema-fields";
 import { t } from "./translate";
+import { EntryFormProvider } from "./use-field";
 
 const tabsFor = (collection: string) => (isCollection(collection) ? tabsOf(collection) : [DEFAULT_TAB]);
 const tabFor = (collection: string, path: string) => (isCollection(collection) ? tabOf(collection, path) : DEFAULT_TAB);
@@ -75,53 +76,47 @@ export function InspectorPanel({
 		}
 	}, [focusPath, tab]);
 
+	const references = useMemo(
+		() => ({ items: incomingReferences, loading: isLoadingIncomingReferences, refresh: onRefreshIncomingReferences }),
+		[incomingReferences, isLoadingIncomingReferences, onRefreshIncomingReferences],
+	);
+	const locked = useMemo(
+		() =>
+			entry?.source && isCollection(collection)
+				? {
+						values: formFromSourceMetadata(collection, entry.source.metadata),
+						note: (
+							<>
+								{t("inspector.source", { locale: localeLabel(entry.source.locale) })}{" "}
+								<Link
+									href={adminEntryEditHref(entry.source.id) as Route}
+									className="text-cms-primary underline-offset-2 hover:underline"
+								>
+									{t("inspector.sourceLink")}
+								</Link>
+							</>
+						),
+					}
+				: undefined,
+		[entry?.source, collection],
+	);
+
 	const fields = (include: (group: LayoutGroup) => boolean) =>
 		isCollection(collection) && (
 			<fieldset disabled={disabled} className="min-w-0 space-y-4 disabled:opacity-70">
 				<SchemaFields
-					collection={collection}
-					form={form}
-					issues={publishIssues}
-					context={{
-						entryId: entry?.id,
-						locale: entry?.locale,
-						groupId: entry?.translationGroupId,
-						disabled,
-						incomingReferences: incomingReferences,
-						incomingReferencesLoading: isLoadingIncomingReferences,
-						refreshIncomingReferences: onRefreshIncomingReferences,
-						entry,
-					}}
 					omit={["title"]}
 					showDescriptions={false}
 					include={include}
 					sections="plain"
-					onChange={onChange}
+					references={references}
 					onSlugChange={onSlugChange}
 					onRegenerateSlug={onRegenerateSlug}
-					locked={
-						entry?.source
-							? {
-									values: formFromSourceMetadata(collection, entry.source.metadata),
-									note: (
-										<>
-											{t("inspector.source", { locale: localeLabel(entry.source.locale) })}{" "}
-											<Link
-												href={adminEntryEditHref(entry.source.id) as Route}
-												className="text-cms-primary underline-offset-2 hover:underline"
-											>
-												{t("inspector.sourceLink")}
-											</Link>
-										</>
-									),
-								}
-							: undefined
-					}
 				/>
 			</fieldset>
 		);
 
-	return (
+	const panel = (
 		<Tabs
 			value={tab}
 			onValueChange={(value) => setTab(String(value))}
@@ -148,5 +143,26 @@ export function InspectorPanel({
 				))}
 			</div>
 		</Tabs>
+	);
+
+	// The fields read the form from this provider; the shell above keeps owning the state.
+	return isCollection(collection) ? (
+		<EntryFormProvider
+			value={{
+				collection,
+				form,
+				setForm: onChange,
+				issues: publishIssues,
+				disabled,
+				entryId: entry?.id,
+				locale: entry?.locale,
+				entry,
+				locked,
+			}}
+		>
+			{panel}
+		</EntryFormProvider>
+	) : (
+		panel
 	);
 }

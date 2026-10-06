@@ -31,6 +31,7 @@ import {
 	recordTranslationKey,
 } from "./entries/entry-form";
 import { RecordLocaleFields, SchemaFields } from "./entries/schema-fields";
+import { EntryFormProvider } from "./entries/use-field";
 import { screensMessages } from "./messages";
 import { useConfirm } from "./shared/confirm-dialog";
 import { SidePanelHeader } from "./shared/side-panel";
@@ -174,67 +175,57 @@ export function RecordPanel({
 					void save();
 				}}
 			>
-				<Tabs
-					value={locale}
-					onValueChange={(value) => setLocale(value as Locale)}
-					className="min-h-0 flex-1 gap-0 overflow-hidden"
-				>
-					<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
-						{LOCALES.map((option) => {
-							const filled = hasLocaleValues(collection, form, option);
-							const name = localeLabel(option);
-							return (
-								<TabsTrigger
-									key={option}
-									value={option}
-									aria-label={
-										option === DEFAULT_LOCALE
-											? name
-											: t(filled ? "record.translationOn" : "record.translationOff", { name })
-									}
-									className="flex-none gap-1.5 px-0 text-xs"
-								>
-									{name}
-									{option !== DEFAULT_LOCALE && (
-										<span
-											aria-hidden
-											className={cn(
-												"size-1.5 rounded-full",
-												filled ? "bg-emerald-500" : "border border-cms-muted-foreground/50",
-											)}
-										/>
-									)}
-								</TabsTrigger>
-							);
-						})}
-					</TabsList>
-					<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-						<TabsContent value={DEFAULT_LOCALE} className="space-y-4">
-							<SchemaFields
-								collection={collection}
-								form={form}
-								context={{ entryId: id ?? undefined, disabled: isSaving }}
-								onChange={setForm}
-								slugPlaceholder={slugFromValues(collection, form) || slugHint}
-							/>
-							{id && <p className="text-cms-muted-foreground text-xs">{t("record.slugChange")}</p>}
-						</TabsContent>
-						{LOCALES.filter((option) => option !== DEFAULT_LOCALE).map((option) => (
-							<TabsContent key={option} value={option} className="space-y-4">
-								<p className="text-cms-muted-foreground text-xs leading-relaxed">
-									{t("record.localeEmpty", { name: localeLabel(option) })}
-								</p>
-								<RecordLocaleFields
-									collection={collection}
-									locale={option}
-									form={form}
-									disabled={isSaving}
-									onChange={setForm}
-								/>
+				<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
+					<Tabs
+						value={locale}
+						onValueChange={(value) => setLocale(value as Locale)}
+						className="min-h-0 flex-1 gap-0 overflow-hidden"
+					>
+						<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
+							{LOCALES.map((option) => {
+								const filled = hasLocaleValues(collection, form, option);
+								const name = localeLabel(option);
+								return (
+									<TabsTrigger
+										key={option}
+										value={option}
+										aria-label={
+											option === DEFAULT_LOCALE
+												? name
+												: t(filled ? "record.translationOn" : "record.translationOff", { name })
+										}
+										className="flex-none gap-1.5 px-0 text-xs"
+									>
+										{name}
+										{option !== DEFAULT_LOCALE && (
+											<span
+												aria-hidden
+												className={cn(
+													"size-1.5 rounded-full",
+													filled ? "bg-emerald-500" : "border border-cms-muted-foreground/50",
+												)}
+											/>
+										)}
+									</TabsTrigger>
+								);
+							})}
+						</TabsList>
+						<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+							<TabsContent value={DEFAULT_LOCALE} className="space-y-4">
+								<SchemaFields slugPlaceholder={slugFromValues(collection, form) || slugHint} />
+								{id && <p className="text-cms-muted-foreground text-xs">{t("record.slugChange")}</p>}
 							</TabsContent>
-						))}
-					</div>
-				</Tabs>
+							{LOCALES.filter((option) => option !== DEFAULT_LOCALE).map((option) => (
+								<TabsContent key={option} value={option} className="space-y-4">
+									<p className="text-cms-muted-foreground text-xs leading-relaxed">
+										{t("record.localeEmpty", { name: localeLabel(option) })}
+									</p>
+									<RecordLocaleFields collection={collection} locale={option} />
+								</TabsContent>
+							))}
+						</div>
+					</Tabs>
+				</EntryFormProvider>
 				<div className="shrink-0 space-y-2 border-t px-4 py-3">
 					{error && (
 						<p role="alert" className="whitespace-pre-wrap text-cms-destructive text-xs">
