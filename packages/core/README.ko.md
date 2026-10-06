@@ -340,7 +340,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`·`defineServerConfig`·`postgres`·`githubAuth`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
 | `@monti-cms/core/next` | `next.config.ts` | `withCms` |
-| `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `renderMdx(mdx, options)` → `{ content, toc }`. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"), `renderMdx(mdx, options)` → `{ content, toc }`. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | 공개 화면(타입) | `ReadEntry`·`MetadataFor` 등 `cms.read`의 타입. `cms.read`가 공개본을 읽는다(`getEntry`·`listEntries`·`getTranslations`·`getPreview`: 관계·주소·옛 주소 이동·원문 대체) |
 | `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
@@ -557,6 +557,37 @@ codeBlock: {
 ### 글자색 목록
 
 글자색은 블록 확장(`@monti-cms/blocks`의 `color({ palette })`)이 준다. 예전 설정 `textColors`는 없어졌다(옵션으로 옮긴다).
+
+## 저장된 문서 그리기
+
+`@monti-cms/core/render`의 `renderDocument`(와 서버 컴포넌트 `CmsContent`)는 저장된 문서(`StoredDocument`)를 React로 그린다. 공개 경로에서 MDX를 컴파일하거나 코드를 실행하지 않는다.
+`renderMdx`는 그대로 남아 있고(나중에 `@monti-cms/mdx`로 옮긴다) 둘은 같은 화면을 그린다.
+
+```tsx
+import { CmsContent, renderDocument, tableOfContents, type DocumentComponents } from "@monti-cms/core/render";
+
+const { content, toc, unknown } = await renderDocument(doc, { locale, imageResolver, components });
+// 서버 컴포넌트에서는:
+<CmsContent doc={doc} locale={locale} imageResolver={imageResolver} components={components} />;
+tableOfContents(doc); // 2·3단계 제목, 같은 앵커, React 없음
+```
+
+- **두 단계.** 비동기 선처리가 문서를 한 번 훑고(제목 앵커와 목차, 각주 번호, 모든 코드 블록의 Shiki 강조, 모든 수식의 KaTeX 출력), 그다음 동기 순수 렌더가 노드를 요소로 바꾼다.
+  결과는 서버 컴포넌트와 `renderToStaticMarkup` 테스트에서 그대로 쓰는 평범한 React 트리다.
+- **내용 때문에 던지지 않는다.** 모르는 노드·마크·블록, 컴포넌트가 없는 블록, 속성이 잘못된 노드는 `fallback` 컴포넌트로 그려지고 `unknown`에 담긴다(`onUnknown`도 부른다).
+  모르는 컨테이너는 안의 내용을 보이고 모르는 리프는 아무것도 그리지 않는다. 개발 중에는 기본 fallback이 숨겨진 `<span data-cms-unknown>`을 남긴다. `strict: true`면 대신 던진다(테스트, 미리보기 화면).
+  저장된 문서가 아닌 값은 빈 본문으로 그리고 로그를 남긴다.
+- **컴포넌트**는 층층이 합쳐진다: 코어 기본값, 블록 확장의 컴포넌트(플러그인 `render` 모듈의 `documentComponents`), 사이트의 `components` 순이다. 노드마다 속성 타입이 하나씩 있고
+  (`ParagraphProps`, `id`가 있는 `HeadingProps`, `ListProps`, `CodeBlockProps`, 해석된 `src`가 있는 `ImageProps`, `FileProps`, `TableProps`·`TableRowProps`·`TableCellProps`, `MathProps`,
+  `FootnoteRefProps`·`FootnotesProps`, `HardBreakProps`), 코어 마크(`link`, `bold`, `italic` …)마다 하나, 코드 블록 안 요소용 `codeTags`(`fold`, `collapse`, `Tooltip`)가 있다.
+  모든 컴포넌트는 `ctx`(`locale`과 고정 문구 `labels`; 순수 JSON이라 클라이언트 컴포넌트로 넘길 수 있다)도 받고, 블록 컴포넌트는 `blockId`, `node`, `items`도 받는다.
+- **블록은 블록 이름으로 등록하고 속성은 평평한 props로 받는다.** props 타입은 사이트 설정에서 나온다: `blocks: { callout: ({ variant, title, children }) => … }`,
+  `marks: { tooltip: ({ content, children }) => … }`. `components`의 타입(`DocumentComponents`)은 `cms.config.ts`의 `blocks`와 플러그인의 `blocks`로 만들어진다
+  (`defineBlock`이 속성을 리터럴로 보존하므로 `variant`는 `"note" | "tip" | …`이다). 불리언 속성은 늘 불리언이고, 기본값이 있는 값과 필수 문자열은 늘 있으며,
+  선택지에 없는 값은 기본값으로 바뀐다. 코드 펜스 블록(`mermaid`, `chart`)은 코드를 `source`로 받는다.
+- **`renderMdx`와 같은 화면.** 제목 앵커는 `github-slugger`를 따르고(`rehype-slug`가 하던 대로), 각주는 처음 참조한 순서로 번호가 붙고, 같은 Shiki 흐름이 코드(줄 효과, 글자 효과, 줄 이름표)를 그리며,
+  블록 수식은 KaTeX `htmlAndMathml`이다. 의도한 차이는 이렇다: GFM 표도 표 컴포넌트가 그린다(JSX 표가 이미 그랬듯 스크롤 래퍼와 `cms-table-*` 클래스),
+  블록 KaTeX 출력은 `<div class="cms-math">` 안에 들어가고, `<strong>`/`<em>`/`<del>`만 있는 문단은 `<p>`를 유지하며, 순수 마크다운 이미지도 이미지 해석기를 거친다.
 
 ## 플러그인
 

@@ -2,6 +2,8 @@
  * Body rendering (`@monti-cms/core/render`). Renders published MDX with React. The core decides the remark and rehype order (same syntax as the editor), and
  * components are overridden in this order: core defaults (link, image, file, table, alignment, code lines) → public components of block extensions (plugin `render`) → the ones the site passes.
  * Call it from a server component.
+ *
+ * This file also exports the JSON renderer (`renderDocument`, `CmsContent`, `tableOfContents`, `./document`), which draws the stored document without compiling MDX.
  */
 import type { Element } from "hast";
 import type { Root, Text } from "mdast";
@@ -16,13 +18,11 @@ import remarkMath from "remark-math";
 import type { PluggableList } from "unified";
 import { visit } from "unist-util-visit";
 import { annotationConfig } from "../annotation/code-block/active";
-import { cmsConfig } from "../config/resolved";
 import { analyze } from "../mdx/analyze";
 import type { ImageResolver } from "../mdx/image-src";
 import { remarkBreakNewline } from "../mdx/remark-break-newline";
 import { remarkFenceBlocksToMdx } from "../mdx/remark-fence-blocks";
 import { configuredSyntax, syntaxRemarkPlugins } from "../mdx/syntax";
-import type { CmsPlugin } from "../plugin/define";
 import type { SyntaxExtension } from "../syntax/types";
 import { type CodeHighlightOptions, rehypeShikiDecorationRender, remarkAnnotationToShikiDecoration } from "./code";
 import { CmsCodeCollapse, CmsCodeFold } from "./components/code-lines";
@@ -32,30 +32,11 @@ import { CmsLink } from "./components/link";
 import { CmsPre } from "./components/pre";
 import { CmsTable, CmsTableCell, CmsTableRow } from "./components/table";
 import { CmsTextAlign } from "./components/text-align";
+import { DEFAULT_LABELS, type RenderLabels } from "./labels";
+import { renderModules } from "./plugin-render";
 
 // biome-ignore lint/suspicious/noExplicitAny: the MDX component table has different props per element
 export type MdxComponents = Record<string, ComponentType<any>>;
-
-/** Fixed texts of the core default components. Passed in the site language. */
-export interface RenderLabels {
-	readonly imageUnavailable: string;
-	readonly fileUnavailable: string;
-	readonly download: string;
-	readonly showFoldedCode: string;
-	readonly copyCode: string;
-	readonly copied: string;
-	readonly codeNotes: string;
-}
-
-const DEFAULT_LABELS: RenderLabels = {
-	imageUnavailable: "Image unavailable",
-	fileUnavailable: "File unavailable",
-	download: "Download",
-	showFoldedCode: "Show folded code",
-	copyCode: "Copy",
-	copied: "Copied",
-	codeNotes: "Code notes",
-};
 
 export interface RenderMdxOptions {
 	/** Resolver for body image and file addresses (`cms.read.imageResolver(mdx)`). Only the outer `src` if absent. */
@@ -154,24 +135,14 @@ export function defaultMdxComponents(options: RenderMdxOptions = {}): MdxCompone
 	};
 }
 
-type RenderPluginModule = {
-	readonly default: (context: PluginRenderContext) => MdxComponents | Promise<MdxComponents>;
-};
-
-/** Function that loads a plugin's public components (`render` of `definePlugin`). */
-const renderModules = (): Promise<RenderPluginModule[]> => {
-	const plugins: readonly CmsPlugin[] = cmsConfig.plugins ?? [];
-	loaded ??= Promise.all(
-		plugins.flatMap((plugin) => (plugin.render ? [plugin.render() as Promise<RenderPluginModule>] : [])),
-	);
-	return loaded;
-};
-let loaded: Promise<RenderPluginModule[]> | undefined;
-
 /** Component table merged in the order core defaults → block extensions → site. */
 export async function mdxComponents(options: RenderMdxOptions = {}): Promise<MdxComponents> {
 	const context: PluginRenderContext = { locale: options.locale, imageResolver: options.imageResolver };
-	const fromPlugins = await Promise.all((await renderModules()).map((module) => module.default(context)));
+	const fromPlugins = await Promise.all(
+		(await renderModules()).map(async (module) =>
+			typeof module.default === "function" ? ((await module.default(context)) as MdxComponents) : {},
+		),
+	);
 	return Object.assign(defaultMdxComponents(options), ...fromPlugins, options.components);
 }
 
@@ -205,3 +176,6 @@ export async function renderMdx(source: string, options: RenderMdxOptions = {}):
 export type { TocItem } from "remark-flexible-toc";
 
 /** Resolver that resolves registered media into public addresses for public MDX (server only). */
+
+export * from "./document";
+export type { RenderLabels } from "./labels";

@@ -2,12 +2,12 @@ import { type ImageResolver, resolveImageUrl } from "../../mdx/image-src";
 import { CmsImageView } from "./image-view";
 
 /** `width` accepts only 1 to 100% or 1 to 4096px. Other values are ignored. */
-const widthStyle = (value?: string) => {
+export const validImageWidth = (value?: string): string | undefined => {
 	if (!value) return undefined;
 	const percent = /^(\d{1,3}(?:\.\d+)?)%$/.exec(value);
-	if (percent && Number(percent[1]) > 0 && Number(percent[1]) <= 100) return { width: value };
+	if (percent && Number(percent[1]) > 0 && Number(percent[1]) <= 100) return value;
 	const pixels = /^(\d+)px$/.exec(value);
-	if (pixels && Number(pixels[1]) > 0 && Number(pixels[1]) <= 4096) return { width: value };
+	if (pixels && Number(pixels[1]) > 0 && Number(pixels[1]) <= 4096) return value;
 	return undefined;
 };
 
@@ -65,7 +65,7 @@ export function CmsImage({
 				src={ok.url}
 				alt={alt ?? ""}
 				decorative={decorative}
-				style={widthStyle(width)}
+				style={validImageWidth(width) ? { width: validImageWidth(width) } : undefined}
 				crop={crop}
 				rotate={rotate}
 				title={title}
