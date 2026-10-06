@@ -1,4 +1,4 @@
-import { bodyDocument, bodyFromMdx, readStoredDocument, type StoredDocument } from "../../mdx/stored-document";
+import { readStoredDocument, type StoredDocument, unparsedDocument } from "../../doc/stored-document";
 
 /**
  * Translation state of a translation (`entry_bodies.translation`). `null` for a source.
@@ -23,7 +23,7 @@ export function confirmedSourceState(doc: StoredDocument): TranslationState {
 /**
  * Validates an incoming value as a translation state. A wrong shape is treated as an error (returns `undefined`).
  * Older states are lifted to version 4, which is always the result: version 3 held the source's MDX (`baseSource`) and, when it had one, its document
- * (`baseDoc`); version 2 only the MDX. A source that has no document is read from its MDX (and kept as an `unparsed` body when it cannot be).
+ * (`baseDoc`); version 2 only the MDX. A source that has no document is kept as an `unparsed` body holding its MDX (the `mdx` format can read it again).
  */
 export function parseTranslationState(value: unknown): TranslationState | null | undefined {
 	if (value === null) return null;
@@ -41,7 +41,7 @@ export function parseTranslationState(value: unknown): TranslationState | null |
 		if (record.version === 3 && !("baseDoc" in record)) return undefined;
 		const stored = record.version === 3 && record.baseDoc !== null ? readStoredDocument(record.baseDoc) : undefined;
 		if (record.version === 3 && record.baseDoc !== null && !stored) return undefined;
-		state = { version: 4, baseDoc: stored ?? bodyDocument(bodyFromMdx(record.baseSource)) };
+		state = { version: 4, baseDoc: stored ?? unparsedDocument(record.baseSource) };
 	} else {
 		return undefined;
 	}

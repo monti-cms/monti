@@ -1,6 +1,6 @@
 import { BLOCK_BY_NAME } from "../blocks/derive";
-import type { StoredDocument } from "../mdx/stored-document";
-import type { CmsNode } from "../mdx/types";
+import type { StoredDocument } from "../doc/stored-document";
+import type { CmsNode } from "../doc/types";
 
 /**
  * Readable text of a stored document. The document says what is text and what is a block, so a block is understood from its definition (its

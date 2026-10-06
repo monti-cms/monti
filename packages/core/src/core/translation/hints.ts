@@ -1,7 +1,7 @@
-import { withoutBlockIds } from "../../mdx/block-ids";
-import { sortMarks } from "../../mdx/registry";
-import type { StoredDocument } from "../../mdx/stored-document";
-import type { CmsMark, CmsNode } from "../../mdx/types";
+import { withoutBlockIds } from "../../doc/block-ids";
+import { sortMarks } from "../../doc/marks";
+import type { StoredDocument } from "../../doc/stored-document";
+import type { CmsMark, CmsNode } from "../../doc/types";
 
 const HINT: CmsMark = { type: "untranslated" };
 

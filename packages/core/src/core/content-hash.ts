@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { withoutBlockIds } from "../mdx/block-ids";
-import { type StoredDocument, UNPARSED_NODE } from "../mdx/stored-document";
+import { withoutBlockIds } from "../doc/block-ids";
+import { type StoredDocument, UNPARSED_NODE } from "../doc/stored-document";
 import type { JsonValue } from "./types";
 
 const isJsonArray = (value: unknown): value is readonly JsonValue[] => Array.isArray(value);

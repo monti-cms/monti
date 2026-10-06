@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../../test/any-site";
-import { docOf } from "../../../../../test/stored-content";
+import { contentOf, docOf } from "../../../../../test/stored-content";
+import { unparsedDocument } from "../../../../doc/stored-document";
 import type { ContentStore } from "../../ports";
 import { publishDraft, restoreDraft, seedEntry } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
@@ -33,7 +34,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "test-publish-1",
 					metadata: { title: "Draft Post" },
-					mdx: "Content 1",
+					text: "Content 1",
 					schemaVersion: 1,
 					contentHash: "hash-1",
 				});
@@ -55,7 +56,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "test-archive-1",
 					metadata: { title: "To Archive" },
-					mdx: "Content",
+					text: "Content",
 					schemaVersion: 1,
 					contentHash: "hash-arch",
 				});
@@ -79,7 +80,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "test-unarchive-1",
 					metadata: { title: "To Unarchive" },
-					mdx: "Content",
+					text: "Content",
 					schemaVersion: 1,
 					contentHash: "hash-unarch",
 				});
@@ -107,7 +108,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "test-trash-1",
 					metadata: { title: "To Trash" },
-					mdx: "Content",
+					text: "Content",
 					schemaVersion: 1,
 					contentHash: "hash-trash",
 				});
@@ -125,7 +126,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "test-restore-1",
 					metadata: { title: "To Restore" },
-					mdx: "Content",
+					text: "Content",
 					schemaVersion: 1,
 					contentHash: "hash-res",
 				});
@@ -148,7 +149,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "test-perm-delete-1",
 					metadata: { title: "Perm Delete" },
-					mdx: "Content",
+					text: "Content",
 					schemaVersion: 1,
 					contentHash: "hash-perm",
 				});
@@ -176,7 +177,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: content,
 						slug: "test-perm-delete-1",
 						metadata: { title: "Reuse Slug Attempt" },
-						mdx: "Content",
+						text: "Content",
 						schemaVersion: 1,
 						contentHash: "hash-reuse",
 					}),
@@ -190,7 +191,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: record,
 					slug: "tag-active",
 					metadata: { title: "Active Tag" },
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: "tag-hash",
 				});
@@ -202,7 +203,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "post-with-ref",
 					metadata: { title: "Post" },
-					mdx: "Hello",
+					text: "Hello",
 					schemaVersion: 1,
 					contentHash: "post-hash",
 				});
@@ -252,7 +253,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: record,
 					slug: `tag-in-use-${randomUUID()}`,
 					metadata: { title: "In-use tag" },
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
@@ -261,7 +262,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: `post-uses-tag-${randomUUID()}`,
 					metadata: { title: "Tagged post" },
-					mdx: "Tagged body.",
+					text: "Tagged body.",
 					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
@@ -324,7 +325,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: `trashed-entry-${randomUUID()}`,
 					metadata: { title: "Trashed entry" },
-					mdx: "Body.",
+					text: "Body.",
 					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
@@ -339,7 +340,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: record,
 					slug: `tag-draft-use-${randomUUID()}`,
 					metadata: { title: "Draft-used tag" },
-					mdx: "",
+					text: "",
 					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
@@ -348,7 +349,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: `draft-uses-tag-${randomUUID()}`,
 					metadata: { title: "Draft using tag" },
-					mdx: "Draft body.",
+					text: "Draft body.",
 					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
@@ -385,7 +386,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: record,
 						slug: "tag-to-archive",
 						metadata: { title: "Tag" },
-						mdx: "",
+						text: "",
 						schemaVersion: 1,
 						contentHash: "tag-hash-arch",
 					});
@@ -394,7 +395,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: content,
 						slug: "post-rollback-test",
 						metadata: { title: "Prior Title" },
-						mdx: "Prior MDX",
+						text: "Prior body",
 						schemaVersion: 1,
 						contentHash: "post-prior-hash",
 					});
@@ -410,7 +411,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 							collection: content,
 							slug: "post-rollback-test",
 							metadata: { title: "Broken Title" },
-							doc: docOf("Broken MDX"),
+							doc: docOf("Broken body"),
 							schemaVersion: 1,
 							contentHash: "post-broken-hash",
 							issues: [],
@@ -437,7 +438,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 
 					// Verify prior published body is completely intact!
 					const current = await store.getEntry(post.id);
-					expect(current.published?.mdx).toBe("Prior MDX\n");
+					expect(contentOf(current.published?.doc)).toEqual(contentOf(docOf("Prior body")));
 					expect(current.published?.metadata.title).toBe("Prior Title");
 				},
 			);
@@ -449,7 +450,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					collection: content,
 					slug: "post-timestamp-test",
 					metadata: { title: "Timestamp Post" },
-					mdx: "V1",
+					text: "V1",
 					schemaVersion: 1,
 					contentHash: "ts-hash-1",
 				});
@@ -485,12 +486,12 @@ export const lifecycleContract: ContractSuite = (factory) => {
 		});
 
 		describe("5. Publish boundary", () => {
-			it("rejects a body with analyze errors in publishEntry and leaves the status unchanged", async () => {
+			it("rejects a body that could not be read in publishEntry and leaves the status unchanged", async () => {
 				const post = await seedEntry(store, {
 					collection: content,
-					slug: "post-broken-mdx",
+					slug: "post-unparsed",
 					metadata: { title: "Broken" },
-					mdx: "<Unclosed>",
+					doc: unparsedDocument("<<<Unclosed", null, "paragraphs"),
 					schemaVersion: 1,
 					contentHash: "broken-hash",
 				});

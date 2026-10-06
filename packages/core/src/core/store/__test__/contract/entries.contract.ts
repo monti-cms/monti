@@ -12,9 +12,11 @@ import {
 	secondLocale,
 	titleFieldOf,
 } from "../../../../../test/any-site";
-import { docOf as docFromMdx } from "../../../../../test/stored-content";
-import { forEachBlock, isBlockId, withoutBlockIds } from "../../../../mdx/block-ids";
-import { readStoredDocument, type StoredDocument } from "../../../../mdx/stored-document";
+import { contentOf, docOf as docOfText } from "../../../../../test/stored-content";
+import { forEachBlock, isBlockId, withoutBlockIds } from "../../../../doc/block-ids";
+import { readStoredDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../../doc/stored-document";
+import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../../../format/registry";
 import { storedFields } from "../../../../schema/derive";
 import { createBulkService } from "../../../../services/bulk-service";
 import { createContentService } from "../../../../services/content-service";
@@ -33,6 +35,19 @@ import type { ContractSuite, StoreFactory, StoreSession } from "./harness";
  * (removed fields, block ids, duplicates). The suites run with the production write paths on top of the store, so they also cover what the services
  * promise.
  */
+
+/** The formats the services of these suites read text bodies in. Core has no text format of its own, so the tests use the plain one of the format tests. */
+const serviceOptions = { formats: async () => createFormatRegistry([paragraphsFormat]) };
+
+/** The text a body said, as the blocks it reads as (ids left out), for comparing bodies. */
+const bodyText = (text: string) => contentOf(docOfText(text));
+
+/** A document of an image of a media asset, which text cannot say. */
+const imageDoc = (mediaId: string, alt: string, ...before: string[]): StoredDocument => ({
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+	content: [...docOfText(before.join("\n\n")).content, { type: "image", attrs: { mediaId, alt } }],
+});
 
 const createSaveAndPublishContract: ContractSuite = (factory) => {
 	/** First required-for-publish field that is not the title (category in the reference blog). Checks that publish is blocked when it is missing. */
@@ -83,7 +98,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "test-timestamps",
 				metadata: { title: "Timestamps" },
-				mdx: "test",
+				text: "test",
 				schemaVersion: 1,
 				contentHash: "hash-ts",
 			});
@@ -103,7 +118,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: null,
 				metadata: { title: "Draft" },
-				mdx: "draft 1",
+				text: "draft 1",
 				schemaVersion: 1,
 				contentHash: "hash-slug-1",
 			});
@@ -111,7 +126,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: null,
 				metadata: { title: "Draft" },
-				mdx: "draft 2",
+				text: "draft 2",
 				schemaVersion: 1,
 				contentHash: "hash-slug-2",
 			});
@@ -124,7 +139,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: draft1.version,
 				slug: "draft-1-slug",
 				metadata: { title: "Draft" },
-				mdx: "draft 1 updated",
+				text: "draft 1 updated",
 				schemaVersion: 1,
 				contentHash: "hash-slug-1-updated",
 			});
@@ -139,7 +154,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: published.version,
 				slug: "draft-1-slug-new",
 				metadata: { title: "Draft" },
-				mdx: "draft 1 updated again",
+				text: "draft 1 updated again",
 				schemaVersion: 1,
 				contentHash: "hash-slug-1-updated-again",
 			});
@@ -153,7 +168,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "time-test",
 				metadata: { title: "Draft" },
-				mdx: "time test",
+				text: "time test",
 				schemaVersion: 1,
 				contentHash: "hash-time",
 			});
@@ -176,7 +191,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const saved = await seedSave(store, published.id, {
 				expectedVersion: published.version,
 				metadata: { title: "Draft" },
-				mdx: "time test updated",
+				text: "time test updated",
 				schemaVersion: 1,
 				contentHash: "hash-time-2",
 			});
@@ -192,7 +207,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "identical",
 				metadata: { title: "Draft" },
-				mdx: "draft content",
+				text: "draft content",
 				schemaVersion: 1,
 				contentHash: "hash-identical",
 			});
@@ -200,7 +215,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const saved = await seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				metadata: { title: "Draft" },
-				mdx: "draft content",
+				text: "draft content",
 				schemaVersion: 1,
 				contentHash: "hash-identical",
 			});
@@ -215,7 +230,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.updatedAt.getTime()).toEqual(entry.updatedAt.getTime());
 			expect(reloaded.working.contentHash).toBe(entry.working.contentHash);
 			expect(reloaded.working.metadata).toEqual(entry.working.metadata);
-			expect(reloaded.working.mdx).toBe(entry.working.mdx);
+			expect(contentOf(reloaded.working.doc)).toEqual(contentOf(entry.working.doc));
 			expect(reloaded.working.schemaVersion).toBe(entry.working.schemaVersion);
 		});
 
@@ -225,7 +240,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "syntax-only-other-change",
 					metadata: { title: "Syntax" },
-					mdx: "words",
+					text: "words",
 					contentHash: "hash-syntax-other",
 				});
 
@@ -233,7 +248,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					expectedVersion: entry.version,
 					slug: "syntax-only-other-change-2",
 					metadata: { title: "Syntax" },
-					mdx: "words again",
+					text: "words again",
 					contentHash: "hash-syntax-other",
 				});
 				expect(slugChanged.version).toBe(entry.version + 1);
@@ -241,7 +256,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				const schemaChanged = await seedSave(store, entry.id, {
 					expectedVersion: slugChanged.version,
 					metadata: { title: "Syntax" },
-					mdx: "words again",
+					text: "words again",
 					schemaVersion: 2,
 					contentHash: "hash-syntax-other",
 				});
@@ -253,7 +268,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "syntax-only-republish",
 					metadata: { title: "Syntax" },
-					mdx: "first words",
+					text: "first words",
 					contentHash: "hash-syntax-republish",
 				});
 				const firstPublish = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
@@ -261,18 +276,18 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				const saved = await seedSave(store, entry.id, {
 					expectedVersion: firstPublish.version,
 					metadata: { title: "Syntax" },
-					mdx: "second words",
+					text: "second words",
 					contentHash: "hash-syntax-republish",
 				});
 				expect(saved.version).toBe(firstPublish.version);
-				expect(saved.working.mdx).toBe("second words\n");
+				expect(contentOf(saved.working.doc)).toEqual(bodyText("second words"));
 
 				const republished = await publishDraft(store, { id: entry.id, expectedVersion: saved.version });
 
 				expect(republished.version).toBe(firstPublish.version);
 				expect(republished.published).toEqual(firstPublish.published);
 				expect(republished.publishedAt?.getTime()).toBe(firstPublish.publishedAt?.getTime());
-				expect((await store.getEntry(entry.id)).published?.mdx).toBe("first words\n");
+				expect(contentOf((await store.getEntry(entry.id)).published?.doc)).toEqual(bodyText("first words"));
 			});
 		});
 
@@ -281,7 +296,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "republish-hash",
 				metadata: { title: "Hash Test" },
-				mdx: "hash test",
+				text: "hash test",
 				schemaVersion: 1,
 				contentHash: "same-hash",
 			});
@@ -291,20 +306,20 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const secondSave = await seedSave(store, entry.id, {
 				expectedVersion: firstPublish.version,
 				metadata: { title: "Hash Test Changed" },
-				mdx: "hash test changed",
+				text: "hash test changed",
 				schemaVersion: 2,
 				contentHash: "same-hash",
 			});
 
 			const secondPublish = await publishDraft(store, { id: entry.id, expectedVersion: secondSave.version });
 			expect(secondPublish.published?.metadata).toEqual(await filled("Hash Test Changed"));
-			expect(secondPublish.published?.mdx).toBe("hash test changed\n");
+			expect(contentOf(secondPublish.published?.doc)).toEqual(bodyText("hash test changed"));
 			expect(secondPublish.published?.schemaVersion).toBe(2);
 			expect(secondPublish.published?.contentHash).toBe("same-hash");
 
 			const reloaded = await store.getEntry(entry.id);
 			expect(reloaded.published?.metadata).toEqual(await filled("Hash Test Changed"));
-			expect(reloaded.published?.mdx).toBe("hash test changed\n");
+			expect(contentOf(reloaded.published?.doc)).toEqual(bodyText("hash test changed"));
 			expect(reloaded.published?.schemaVersion).toBe(2);
 			expect(reloaded.published?.contentHash).toBe("same-hash");
 		});
@@ -314,7 +329,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "json-boundary",
 				metadata: { title: "JSON Boundary" },
-				mdx: "json",
+				text: "json",
 				schemaVersion: 1,
 				contentHash: "hash-json",
 			});
@@ -329,7 +344,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				await seedSave(store, entry.id, {
 					expectedVersion: entry.version,
 					metadata: badMetadata,
-					mdx: "json updated",
+					text: "json updated",
 					schemaVersion: 1,
 					contentHash: "hash-json-2",
 				});
@@ -350,7 +365,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "simul-test",
 				metadata: { title: "Simultaneous" },
-				mdx: "simul",
+				text: "simul",
 				schemaVersion: 1,
 				contentHash: "hash-simul",
 			});
@@ -358,14 +373,14 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const p1 = seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				metadata: { title: "Win 1" },
-				mdx: "win 1",
+				text: "win 1",
 				schemaVersion: 1,
 				contentHash: "hash-simul-1",
 			});
 			const p2 = seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				metadata: { title: "Win 2" },
-				mdx: "win 2",
+				text: "win 2",
 				schemaVersion: 1,
 				contentHash: "hash-simul-2",
 			});
@@ -402,7 +417,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "stale-test",
 				metadata: { title: "Initial" },
-				mdx: "initial",
+				text: "initial",
 				schemaVersion: 1,
 				contentHash: "hash-1",
 			});
@@ -410,7 +425,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const updated = await seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				metadata: { title: "Update 1" },
-				mdx: "update 1",
+				text: "update 1",
 				schemaVersion: 1,
 				contentHash: "hash-2",
 			});
@@ -418,7 +433,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const stalePromise = seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				metadata: { title: "Update 2" },
-				mdx: "update 2",
+				text: "update 2",
 				schemaVersion: 1,
 				contentHash: "hash-3",
 			});
@@ -444,7 +459,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "separation-test",
 				metadata: { title: "Initial Draft" },
-				mdx: "initial draft",
+				text: "initial draft",
 				schemaVersion: 1,
 				contentHash: "hash-draft",
 			});
@@ -455,7 +470,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			await seedSave(store, entry.id, {
 				expectedVersion: published.version,
 				metadata: { title: "Updated Draft" },
-				mdx: "updated draft",
+				text: "updated draft",
 				schemaVersion: 2,
 				contentHash: "hash-updated",
 			});
@@ -463,7 +478,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const reloaded = await store.getEntry(entry.id);
 
 			expect(reloaded.working.metadata).toEqual(await filled("Updated Draft"));
-			expect(reloaded.working.mdx).toBe("updated draft\n");
+			expect(contentOf(reloaded.working.doc)).toEqual(bodyText("updated draft"));
 			expect(reloaded.working.contentHash).toBe("hash-updated");
 			expect(reloaded.working.schemaVersion).toBe(2);
 
@@ -476,7 +491,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "republish-hash-identical",
 				metadata: { title: "Hash Test" },
-				mdx: "hash test",
+				text: "hash test",
 				schemaVersion: 1,
 				contentHash: "same-hash-ident",
 			});
@@ -486,7 +501,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			const secondSave = await seedSave(store, entry.id, {
 				expectedVersion: firstPublish.version,
 				metadata: { title: "Hash Test" },
-				mdx: "hash test",
+				text: "hash test",
 				schemaVersion: 1,
 				contentHash: "same-hash-ident",
 			});
@@ -503,7 +518,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "clear-slug-test",
 				metadata: { title: "Clear" },
-				mdx: "test",
+				text: "test",
 				schemaVersion: 1,
 				contentHash: "hash-c1",
 			});
@@ -514,7 +529,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: published.version,
 				slug: null,
 				metadata: {},
-				mdx: "test null",
+				text: "test null",
 				schemaVersion: 1,
 				contentHash: "hash-c2",
 			});
@@ -535,7 +550,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "clear-slug-test",
 					metadata: {},
-					mdx: "collision",
+					text: "collision",
 					schemaVersion: 1,
 					contentHash: "hash-c3",
 				}),
@@ -549,7 +564,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "validation-missing-required",
 					metadata: { title: "Missing required" },
-					mdx: "A valid body.",
+					text: "A valid body.",
 					schemaVersion: 1,
 					contentHash: "validation-missing-required-hash",
 				});
@@ -571,11 +586,11 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 		);
 
 		it("atomically publishes record creates and rolls invalid edits back", async () => {
-			const service = createContentService(store);
+			const service = createContentService(store, serviceOptions);
 			const badSlug = "validation-invalid-record-create";
 			await expect(
 				service.createDraft(
-					{ collection: recordCollection, slug: badSlug, metadata: { title: "" }, format: "mdx", body: "" },
+					{ collection: recordCollection, slug: badSlug, metadata: { title: "" }, format: "paragraphs", body: "" },
 					{ publishImmediately: true },
 				),
 			).rejects.toBeInstanceOf(ServiceError);
@@ -586,7 +601,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					collection: recordCollection,
 					slug: "validation-valid-record",
 					metadata: await filled("Valid record", recordCollection),
-					format: "mdx",
+					format: "paragraphs",
 					body: "",
 				},
 				{ publishImmediately: true },
@@ -603,7 +618,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 						expectedVersion: before.version,
 						slug: null,
 						metadata: { title: "" },
-						format: "mdx",
+						format: "paragraphs",
 						body: "",
 					},
 					{ publishImmediately: true },
@@ -621,7 +636,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "validation-link-target",
 				metadata: { title: "Target" },
-				mdx: "Target body.",
+				text: "Target body.",
 				schemaVersion: 1,
 				contentHash: "validation-link-target-hash",
 			});
@@ -630,7 +645,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "validation-link-source",
 				metadata: { title: "Source" },
 				// The public URL shape follows the config's `path` (the reference blog uses `/posts/:slug`).
-				mdx: `[Target](${contentPath(contentCollection, "validation-link-target")})`,
+				text: `[Target](${contentPath(contentCollection, "validation-link-target")})`,
 				schemaVersion: 1,
 				contentHash: "validation-link-source-hash",
 			});
@@ -651,12 +666,12 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					collection: to,
 					slug: "validation-collection-draft-item",
 					metadata: { title: "Draft item" },
-					mdx: "Draft body.",
+					text: "Draft body.",
 					schemaVersion: 1,
 					contentHash: "validation-collection-draft-item-hash",
 				});
 				expect(draftItem.status).toBe("draft");
-				const service = createContentService(store);
+				const service = createContentService(store, serviceOptions);
 				const collectionDraft = await service.createDraft({
 					collection,
 					slug: "validation-collection",
@@ -665,7 +680,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 						...(when ? { [when.field]: when.value } : {}),
 						[name]: many ? [draftItem.id] : draftItem.id,
 					},
-					format: "mdx",
+					format: "paragraphs",
 					body: "",
 				});
 				const published = await publishDraft(store, {
@@ -684,7 +699,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "proto-test",
 				metadata,
-				mdx: "test",
+				text: "test",
 				schemaVersion: 1,
 				contentHash: "hash-proto",
 			});
@@ -725,12 +740,12 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 			await session.close();
 		});
 
-		async function seedDraft(slug: string, mdx: string, metadata: Record<string, unknown> = { title: slug }) {
+		async function seedDraft(slug: string, body: string, metadata: Record<string, unknown> = { title: slug }) {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: null,
 				metadata,
-				mdx,
+				text: body,
 				schemaVersion: 1,
 				contentHash: `hash-${slug}`,
 			});
@@ -739,7 +754,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 				expectedVersion: entry.version,
 				slug,
 				metadata,
-				mdx,
+				text: body,
 				schemaVersion: 1,
 				contentHash: `hash-${slug}-saved`,
 			});
@@ -752,7 +767,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 
 			expect(found?.status).toBe("draft");
 			expect(found?.workingSlug).toBe("draft-only-post");
-			expect(found?.working.mdx).toBe("초안 본문\n");
+			expect(contentOf(found?.working.doc)).toEqual(bodyText("초안 본문"));
 			expect(found?.working.metadata).toEqual(
 				await requiredMetadata(contentCollection, "draft-only-post", relationTarget),
 			);
@@ -773,7 +788,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 				expectedVersion: edited.version,
 				slug: "edited-after-publish",
 				metadata: { title: "편집된 제목" },
-				mdx: "발행 후 편집 본문",
+				text: "발행 후 편집 본문",
 				schemaVersion: 1,
 				contentHash: "hash-edited-after-publish",
 			});
@@ -781,8 +796,8 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 			const found = await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "edited-after-publish" });
 
 			expect(found?.status).toBe("published");
-			expect(found?.working.mdx).toBe("발행 후 편집 본문\n");
-			expect(found?.published?.mdx).toBe("발행 전 본문\n");
+			expect(contentOf(found?.working.doc)).toEqual(bodyText("발행 후 편집 본문"));
+			expect(contentOf(found?.published?.doc)).toEqual(bodyText("발행 전 본문"));
 		});
 
 		it("returns null for a missing slug", async () => {
@@ -794,7 +809,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 				collection: elsewhere,
 				slug: "shared-slug",
 				metadata: { title: "메모" },
-				mdx: "메모 본문",
+				text: "메모 본문",
 				schemaVersion: 1,
 				contentHash: "hash-memo-shared",
 			});
@@ -837,14 +852,14 @@ const createSlugsInUseContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: null,
 				metadata: { title: slug },
-				mdx: "Body",
+				text: "Body",
 				locale: defaultLocale,
 			});
 			return seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				slug,
 				metadata: { title: slug },
-				mdx: "Body",
+				text: "Body",
 			});
 		};
 
@@ -902,7 +917,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 		beforeAll(async () => {
 			session = await factory.create();
 			store = session.store;
-			service = createContentService<Entry>(store);
+			service = createContentService<Entry>(store, serviceOptions);
 		});
 
 		afterAll(async () => {
@@ -916,7 +931,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				collection: to,
 				slug: unique(to),
 				metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-				format: "mdx",
+				format: "paragraphs",
 				body: "Body",
 			});
 			const id = (
@@ -942,7 +957,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: unique("stale"),
 				metadata: await staleMetadata(title),
-				mdx: "Body",
+				text: "Body",
 			});
 
 		it("rejects a new unknown key on create and on save: a typo is not a removed field", async () => {
@@ -951,7 +966,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: unique("create"),
 					metadata: { ...(await requiredMetadata(contentCollection, "Create", relationTarget)), titel: "typo" },
-					format: "mdx",
+					format: "paragraphs",
 					body: "Body",
 				} as never),
 			).rejects.toMatchObject({ code: "invalid_metadata_key" });
@@ -962,7 +977,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: draft.workingSlug,
 					metadata: { ...draft.working.metadata, titel: "typo" },
-					format: "mdx",
+					format: "paragraphs",
 					body: "Body",
 					expectedVersion: draft.version,
 				} as never),
@@ -976,7 +991,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: draft.workingSlug,
 				metadata: { ...draft.working.metadata, title: "Renamed" },
-				format: "mdx",
+				format: "paragraphs",
 				body: "Body",
 				expectedVersion: draft.version,
 			} as never);
@@ -995,7 +1010,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: draft.workingSlug,
 				metadata: draft.working.metadata,
-				format: "mdx",
+				format: "paragraphs",
 				body: "Body changed",
 				expectedVersion: draft.version,
 			} as never);
@@ -1017,8 +1032,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 						collection: working.collection,
 						slug: working.slug,
 						metadata: working.metadata,
-						format: "mdx",
-						body: working.mdx,
+						doc: working.doc,
 					} as never,
 					{ previousMetadata: working.metadata },
 				),
@@ -1035,7 +1049,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 
 		it("publishes in bulk an entry holding removed values", async () => {
 			const draft = await staleDraft("Bulk publish");
-			const { results } = await createBulkService(store).run({
+			const { results } = await createBulkService(store, serviceOptions).run({
 				op: "publish",
 				items: [{ id: draft.id, expectedVersion: draft.version }],
 			});
@@ -1049,7 +1063,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			if (!manyRelation) return;
 			const draft = await staleDraft("Bulk relation");
 			const tag = await relationTarget(manyRelation.to as Collection);
-			const { results } = await createBulkService(store).run({
+			const { results } = await createBulkService(store, serviceOptions).run({
 				op: "relation.add",
 				field: manyRelation.name,
 				items: [{ id: draft.id, expectedVersion: draft.version }],
@@ -1076,7 +1090,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: unique("translated"),
 					metadata: await requiredMetadata(contentCollection, "Source", relationTarget),
-					format: "mdx",
+					format: "paragraphs",
 					body: "Body",
 				});
 				const created = await service.createTranslation({ sourceId: source.id, locale: secondLocale ?? "" });
@@ -1084,14 +1098,14 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				const translation = await seedSave(store, created.id, {
 					expectedVersion: created.version,
 					metadata: { title: "Translated", [ORPHAN]: "left behind" },
-					mdx: "Body",
+					text: "Body",
 				});
 				const input = (metadata: Record<string, unknown>) =>
 					({
 						collection: contentCollection,
 						slug: source.workingSlug,
 						metadata,
-						format: "mdx",
+						format: "paragraphs",
 						body: "Body",
 						expectedVersion: translation.version,
 					}) as never;
@@ -1151,7 +1165,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 		beforeAll(async () => {
 			session = await factory.create();
 			store = session.store;
-			service = createContentService<Entry>(store);
+			service = createContentService<Entry>(store, serviceOptions);
 		});
 
 		afterAll(async () => {
@@ -1165,7 +1179,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: to,
 				slug: unique(to),
 				metadata,
-				format: "mdx",
+				format: "paragraphs",
 				body: "Body",
 			});
 			return draft.status === "published"
@@ -1187,13 +1201,13 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			...extra,
 		});
 
-		const publishedPost = async (extra: Record<string, unknown> = {}, mdx = "본문") => {
+		const publishedPost = async (extra: Record<string, unknown> = {}, body = "본문") => {
 			const draft = await service.createDraft({
 				collection: contentCollection,
 				slug: unique("post"),
 				metadata: await contentMetadata("글", extra),
-				format: "mdx",
-				body: mdx,
+				format: "paragraphs",
+				body,
 			});
 			return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		};
@@ -1207,7 +1221,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				...(when ? { [when.field]: when.value } : {}),
 				[name]: many ? [targetId] : targetId,
 			};
-			return service.createDraft({ collection, slug: unique("referrer"), metadata, format: "mdx", body: "x" });
+			return service.createDraft({ collection, slug: unique("referrer"), metadata, format: "paragraphs", body: "x" });
 		};
 
 		it("creates a record from its title alone and derives the slug", async () => {
@@ -1215,7 +1229,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: recordCollection,
 				slug: null,
 				metadata: await requiredMetadata(recordCollection, "Type Script", relationTarget),
-				format: "mdx",
+				format: "paragraphs",
 				body: "",
 			});
 			expect(tag.status).toBe("published");
@@ -1240,7 +1254,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: recordCollection,
 				slug: null,
 				metadata: await requiredMetadata(recordCollection, unique("tag"), relationTarget),
-				format: "mdx",
+				format: "paragraphs",
 				body: "",
 			});
 			const trashed = await store.trashEntry({ id: tag.id, expectedVersion: tag.version });
@@ -1259,7 +1273,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug,
 				metadata: { title: "x" },
-				format: "mdx",
+				format: "paragraphs",
 				body: "x",
 			});
 			const trashedDraft = await store.trashEntry({ id: draft.id, expectedVersion: draft.version });
@@ -1268,7 +1282,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug,
 				metadata: { title: "y" },
-				format: "mdx",
+				format: "paragraphs",
 				body: "y",
 			});
 			expect(reused.workingSlug).toBe(slug);
@@ -1303,10 +1317,10 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: unique("untagged"),
 				metadata,
-				format: "mdx",
+				format: "paragraphs",
 				body: "x",
 			});
-			const { results } = await createBulkService(store).run({
+			const { results } = await createBulkService(store, serviceOptions).run({
 				op: "relation.add",
 				field: manyRelation.name,
 				items: [{ id: post.id, expectedVersion: post.version }],
@@ -1324,7 +1338,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 					collection: documentRelation.to,
 					slug: unique("replaced"),
 					metadata: await requiredMetadata(documentRelation.to, "대체될 글", relationTarget),
-					format: "mdx",
+					format: "paragraphs",
 					body: "x",
 				});
 				const referrer = await createReferrer("참조하는 글", target.id);
@@ -1332,13 +1346,13 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: unique("loose"),
 					metadata: { title: "l" },
-					format: "mdx",
+					format: "paragraphs",
 					body: "l",
 				});
 				const trashedTarget = await store.trashEntry({ id: target.id, expectedVersion: target.version });
 				const trashedLoose = await store.trashEntry({ id: loose.id, expectedVersion: loose.version });
 
-				const { results } = await createBulkService(store).run({
+				const { results } = await createBulkService(store, serviceOptions).run({
 					op: "permanentDelete",
 					items: [
 						{ id: target.id, expectedVersion: trashedTarget.version },
@@ -1361,7 +1375,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: unique("dup"),
 				metadata: await contentMetadata("원본"),
-				format: "mdx",
+				format: "paragraphs",
 				body: "본문",
 			});
 			const source = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
@@ -1373,8 +1387,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: null,
 				metadata: copy.working.metadata as never,
-				format: "mdx",
-				body: copy.working.mdx,
+				doc: copy.working.doc,
 			});
 			expect(copy.working.contentHash).toBe(recomputed.contentHash);
 		});
@@ -1386,8 +1399,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: unique("renamed"),
 				metadata: post.working.metadata as never,
-				format: "mdx",
-				body: post.working.mdx,
+				doc: post.working.doc,
 				expectedVersion: post.version,
 			});
 			const republished = await publishDraft(store, { id: post.id, expectedVersion: renamed.version });
@@ -1395,8 +1407,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: original,
 				metadata: post.working.metadata as never,
-				format: "mdx",
-				body: post.working.mdx,
+				doc: post.working.doc,
 				expectedVersion: republished.version,
 			});
 			const final = await publishDraft(store, { id: post.id, expectedVersion: back.version });
@@ -1411,8 +1422,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: tagged.workingSlug,
 				metadata: { ...(tagged.working.metadata as object), title: "수정 중" } as never,
-				format: "mdx",
-				body: tagged.working.mdx,
+				doc: tagged.working.doc,
 				expectedVersion: tagged.version,
 			});
 
@@ -1449,7 +1459,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			});
 			await store.createTemplate({
 				name: unique("tpl"),
-				doc: docFromMdx(`<Image mediaId="${media.id}" alt="a" />`),
+				doc: imageDoc(media.id, "a"),
 			});
 			await expect(store.beginMediaDelete(media.id)).rejects.toMatchObject({
 				code: "in_use",
@@ -1500,12 +1510,11 @@ const createDuplicateContract: ContractSuite = (factory) => {
 			expect(Object.keys(relations).length).toBeGreaterThan(0);
 
 			// A published entry with a folder and an image (a media reference) in its body, made the way production makes it.
-			const original = await createContentService<Entry>(store).createDraft({
+			const original = await createContentService<Entry>(store, serviceOptions).createDraft({
 				collection: contentCollection,
 				slug: "orig-slug",
 				metadata: { title: "Original Post", ...relations },
-				format: "mdx",
-				body: `Hello world\n\n<Image mediaId="${mediaId}" alt="sample" />\n`,
+				doc: imageDoc(mediaId, "sample", "Hello world"),
 				folderId: folder.id,
 			} as ServiceInput);
 			const originalRefs = await store.getWorkingReferences({ entryId: original.id });
@@ -1545,8 +1554,8 @@ const createDuplicateContract: ContractSuite = (factory) => {
 			const key = (ref: { kind: string; targetId: string }) => `${ref.kind}:${ref.targetId}`;
 			expect(refs.map(key).sort()).toEqual(originalRefs.map(key).sort());
 
-			// 5. MDX and relation metadata (such as categories and tags) preserved
-			expect(duplicated.working.mdx).toBe(publishedOrig.working.mdx);
+			// 5. Body and relation metadata (such as categories and tags) preserved
+			expect(duplicated.working.doc).toEqual(publishedOrig.working.doc);
 			for (const [name, value] of Object.entries(relations)) {
 				expect(duplicated.working.metadata[name]).toEqual(value);
 			}
@@ -1558,7 +1567,7 @@ const createDuplicateContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "keep-title",
 				metadata: { title: "Same title" },
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
@@ -1583,11 +1592,27 @@ const createDuplicateContract: ContractSuite = (factory) => {
 };
 
 const createBlockIdsContract: ContractSuite = (factory) => {
-	/** A heading, three paragraphs and a list: blocks at two depths. */
-	const BODY = "# Title\n\nFirst paragraph\n\nSecond paragraph\n\nThird paragraph\n\n- one\n- two\n";
+	/** Five paragraphs, told apart by their text. */
+	const BODY = "Title\n\nFirst paragraph\n\nSecond paragraph\n\nThird paragraph\n\nLast paragraph";
+
+	/** The same body with a list: blocks at two depths, which only a document can say (the text format of these tests has no lists). */
+	const listDoc = (second: string): StoredDocument => ({
+		type: "doc",
+		version: STORED_DOCUMENT_VERSION,
+		content: [
+			...docOfText("Title\n\nFirst paragraph").content,
+			{
+				type: "bulletList",
+				content: [
+					{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "one" }] }] },
+					{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: second }] }] },
+				],
+			},
+		],
+	});
 
 	/**
-	 * Block ids across the store: a block keeps its id through saves of the same or edited MDX, publishing and duplicating, and a document sent with ids keeps them.
+	 * Block ids across the store: a block keeps its id through saves of the same or edited text, publishing and duplicating, and a document sent with ids keeps them.
 	 * The tests that look at what the adapter writes (a save of the same body must not touch the stored row) are in the adapter's own folder.
 	 */
 	describe("EntryStore: block ids in the store", () => {
@@ -1601,7 +1626,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		beforeAll(async () => {
 			session = await factory.create();
 			store = session.store;
-			service = createContentService<Entry>(store);
+			service = createContentService<Entry>(store, serviceOptions);
 		});
 
 		afterAll(async () => {
@@ -1616,7 +1641,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				collection: to,
 				slug: unique(to),
 				metadata,
-				format: "mdx",
+				format: "paragraphs",
 				body: "Body",
 			});
 			const published =
@@ -1627,21 +1652,21 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			return published.id;
 		};
 
-		const createDraft = async (body: { mdx: string } | { doc: unknown }) =>
+		const createDraft = async (body: { text: string } | { doc: unknown }) =>
 			service.createDraft({
 				collection: contentCollection,
 				slug: unique("post"),
 				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-				...("mdx" in body ? { format: "mdx", body: body.mdx } : body),
+				...("text" in body ? { format: "paragraphs", body: body.text } : body),
 			} as never);
 
-		const save = (entry: Entry, body: { mdx: string } | { doc: unknown }) =>
+		const save = (entry: Entry, body: { text: string } | { doc: unknown }) =>
 			service.saveDraft(entry.id, {
 				collection: contentCollection,
 				slug: entry.workingSlug,
 				metadata: entry.working.metadata as never,
 				expectedVersion: entry.version,
-				...("mdx" in body ? { format: "mdx", body: body.mdx } : body),
+				...("text" in body ? { format: "paragraphs", body: body.text } : body),
 			} as never);
 
 		const publish = (entry: Entry) => publishDraft(store, { id: entry.id, expectedVersion: entry.version });
@@ -1651,6 +1676,8 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			if (!doc) throw new Error("expected a stored document");
 			return doc;
 		};
+
+		const withoutIds = (doc: StoredDocument): StoredDocument => ({ ...doc, content: withoutBlockIds(doc.content) });
 
 		/** The ids of a document in block order. */
 		const idList = (value: unknown) => {
@@ -1683,22 +1710,22 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		};
 
 		it("gives every block of a new body its own id", async () => {
-			const draft = await createDraft({ mdx: BODY });
+			const draft = await createDraft({ text: BODY });
 
 			expectUniqueIds(draft.working.doc);
-			expect(idList(draft.working.doc)).toHaveLength(9);
+			expect(idList(draft.working.doc)).toHaveLength(5);
 			expect(await storedDoc(draft.id, "working")).toEqual(draft.working.doc);
 			// Ids are not part of the text.
-			expect(draft.working.mdx).toBe(BODY);
+			expect(contentOf(draft.working.doc)).toEqual(bodyText(BODY));
 		});
 
-		describe("saving MDX", () => {
+		describe("saving text", () => {
 			it("editing one paragraph keeps the ids of the others and of the edited one", async () => {
-				const draft = await createDraft({ mdx: BODY });
+				const draft = await createDraft({ text: BODY });
 				const before = idsByText(draft.working.doc);
 				const blocksBefore = idList(draft.working.doc);
 
-				const saved = await save(draft, { mdx: BODY.replace("Second paragraph", "Second paragraph, reworded") });
+				const saved = await save(draft, { text: BODY.replace("Second paragraph", "Second paragraph, reworded") });
 
 				expect(saved.version).toBe(draft.version + 1);
 				const after = idsByText(saved.working.doc);
@@ -1712,19 +1739,20 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("editing text inside a list item keeps the ids of the list, its items and the other blocks", async () => {
-				const draft = await createDraft({ mdx: BODY });
+				const draft = await createDraft({ doc: listDoc("two") });
+				expect(idList(draft.working.doc)).toHaveLength(7);
 
-				const saved = await save(draft, { mdx: BODY.replace("- two", "- two and more") });
+				const saved = await save(draft, { doc: withoutIds(listDoc("two and more")) });
 
 				expect(idList(saved.working.doc)).toEqual(idList(draft.working.doc));
 			});
 
 			it("adding a paragraph keeps the other ids and gives the new block an id nobody has", async () => {
-				const draft = await createDraft({ mdx: BODY });
+				const draft = await createDraft({ text: BODY });
 				const before = idsByText(draft.working.doc);
 
 				const saved = await save(draft, {
-					mdx: BODY.replace("Third paragraph", "Inserted paragraph\n\nThird paragraph"),
+					text: BODY.replace("Third paragraph", "Inserted paragraph\n\nThird paragraph"),
 				});
 
 				const after = idsByText(saved.working.doc);
@@ -1736,11 +1764,11 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("moving a paragraph keeps its id", async () => {
-				const draft = await createDraft({ mdx: BODY });
+				const draft = await createDraft({ text: BODY });
 				const before = idsByText(draft.working.doc);
 
 				const saved = await save(draft, {
-					mdx: "# Title\n\nThird paragraph\n\nFirst paragraph\n\nSecond paragraph\n\n- one\n- two\n",
+					text: "Title\n\nThird paragraph\n\nFirst paragraph\n\nSecond paragraph\n\nLast paragraph",
 				});
 
 				const after = idsByText(saved.working.doc);
@@ -1750,11 +1778,11 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("a body that stops parsing and is fixed again gets new ids: the unparsed draft it replaces has no blocks to pair with", async () => {
-				const draft = await createDraft({ mdx: BODY });
-				const broken = await save(draft, { mdx: "Words\n\n<Unclosed" });
+				const draft = await createDraft({ text: BODY });
+				const broken = await save(draft, { text: "Words\n\n<<<Unclosed" });
 				expect(broken.working.doc.content[0]?.type).toBe("unparsed");
 
-				const fixed = await save(broken, { mdx: BODY });
+				const fixed = await save(broken, { text: BODY });
 
 				expectUniqueIds(fixed.working.doc);
 				expect(withoutBlockIds(docOf(fixed.working.doc).content)).toEqual(
@@ -1770,7 +1798,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("a draft saved with a document keeps the ids the client sent", async () => {
-				const draft = await createDraft({ mdx: BODY });
+				const draft = await createDraft({ text: BODY });
 				const ids = ["clientaa", "clientbb", "clientcc", "clientdd", "clientee"];
 
 				const saved = await save(draft, { doc: given(docOf(draft.working.doc), ids) });
@@ -1783,7 +1811,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("a block sent without an id gets one, and a repeated id is given a new one to the later block", async () => {
-				const draft = await createDraft({ mdx: "One\n\nTwo\n\nThree\n" });
+				const draft = await createDraft({ text: "One\n\nTwo\n\nThree" });
 				const doc = docOf(draft.working.doc);
 				const [first, second, third] = doc.content;
 				if (!first || !second || !third) throw new Error("fixture");
@@ -1801,7 +1829,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("a document created with ids keeps them", async () => {
-				const first = await createDraft({ mdx: BODY });
+				const first = await createDraft({ text: BODY });
 				const ids = ["newaaaaa", "newbbbbb", "newccccc", "newddddd", "neweeeee"];
 
 				const created = await createDraft({ doc: given(docOf(first.working.doc), ids) });
@@ -1812,7 +1840,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 
 		describe("publishing", () => {
 			it("copies the ids to the published body", async () => {
-				const draft = await createDraft({ mdx: BODY });
+				const draft = await createDraft({ text: BODY });
 
 				const published = await publish(draft);
 
@@ -1822,10 +1850,10 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("a later save changes the working ids only, and the next publish copies them", async () => {
-				const published = await publish(await createDraft({ mdx: BODY }));
+				const published = await publish(await createDraft({ text: BODY }));
 				const publishedIds = idList(published.published?.doc);
 
-				const edited = await save(published, { mdx: BODY.replace("First paragraph", "First paragraph, reworded") });
+				const edited = await save(published, { text: BODY.replace("First paragraph", "First paragraph, reworded") });
 
 				expect(idList(await storedDoc(published.id, "published"))).toEqual(publishedIds);
 				// The edited paragraph is the same block: the two bodies still share every id.
@@ -1837,7 +1865,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 
 		describe("duplicating", () => {
 			it("keeps the ids of the copy, unique within it, and leaves the original as it was", async () => {
-				const original = await createDraft({ mdx: BODY });
+				const original = await createDraft({ text: BODY });
 				const before = await store.getEntry(original.id);
 
 				const copy = await duplicateDraft(store, { id: original.id });
@@ -1849,10 +1877,10 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("the copy and the original do not affect each other's ids when one is edited", async () => {
-				const original = await createDraft({ mdx: BODY });
+				const original = await createDraft({ text: BODY });
 				const copy = await duplicateDraft(store, { id: original.id });
 
-				const edited = await save(copy, { mdx: BODY.replace("Third paragraph", "Third paragraph, reworded") });
+				const edited = await save(copy, { text: BODY.replace("Third paragraph", "Third paragraph, reworded") });
 
 				expect(idList(edited.working.doc)).toEqual(idList(original.working.doc));
 				expect(await storedDoc(original.id, "working")).toEqual(original.working.doc);
@@ -1861,14 +1889,14 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 
 		describe("changes that leave the body alone", () => {
 			it("a bulk move to another folder keeps every id", async () => {
-				const entry = await createDraft({ mdx: BODY });
+				const entry = await createDraft({ text: BODY });
 				const folder = await store.createFolder({
 					collection: contentCollection,
 					parentId: null,
 					name: unique("Folder"),
 				});
 
-				const { results } = await createBulkService(store).run({
+				const { results } = await createBulkService(store, serviceOptions).run({
 					op: "folder.move",
 					folderId: folder.id,
 					items: [{ id: entry.id, expectedVersion: entry.version }],
@@ -1879,12 +1907,12 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			});
 
 			it("editing a template keeps the ids of the blocks that stay", async () => {
-				const template = await store.createTemplate({ name: unique("Template"), doc: docFromMdx(BODY) });
+				const template = await store.createTemplate({ name: unique("Template"), doc: docOfText(BODY) });
 				const updated = await store.updateTemplate({
 					id: template.id,
 					expectedVersion: template.version,
 					doc: (({ content, ...rest }) => ({ ...rest, content: withoutBlockIds(content) }))(
-						docFromMdx(BODY.replace("Second paragraph", "Second paragraph, reworded")),
+						docOfText(BODY.replace("Second paragraph", "Second paragraph, reworded")),
 					),
 				});
 
@@ -1893,8 +1921,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		});
 
 		describe("reference occurrences", () => {
-			const imageBody = (mediaId: string) =>
-				`# Title\n\nIntro paragraph\n\n<Image mediaId="${mediaId}" alt="Picture" />\n\nLast paragraph\n`;
+			const imageBody = (mediaId: string, intro = "Intro paragraph") => imageDoc(mediaId, "Picture", "Title", intro);
 
 			const withMedia = async () =>
 				(
@@ -1922,20 +1949,20 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 
 			it("stores the block id of the image an occurrence is in", async () => {
 				const mediaId = await withMedia();
-				const draft = await createDraft({ mdx: imageBody(mediaId) });
+				const draft = await createDraft({ doc: imageBody(mediaId) });
 
 				const reference = await mediaReference(draft.id, mediaId);
 				expect(reference?.occurrences).toEqual([{ type: "body", blockId: imageBlockId(draft.working.doc) }]);
 			});
 
-			it("saving the same body again, in the same or another spelling, keeps the occurrences and the version", async () => {
+			it("saving the same body again, with or without its ids, keeps the occurrences and the version", async () => {
 				const mediaId = await withMedia();
-				const draft = await createDraft({ mdx: imageBody(mediaId) });
+				const draft = await createDraft({ doc: imageBody(mediaId) });
 				const before = await store.getWorkingReferences({ entryId: draft.id });
 
-				const same = await save(draft, { mdx: imageBody(mediaId) });
+				const same = await save(draft, { doc: imageBody(mediaId) });
 				expect(same.version).toBe(draft.version);
-				const untidy = await save(same, { mdx: imageBody(mediaId).replace("# Title", "Title\n=====") });
+				const untidy = await save(same, { doc: withoutIds(imageBody(mediaId)) });
 				expect(untidy.version).toBe(draft.version);
 				const fromDoc = await save(untidy, { doc: untidy.working.doc });
 				expect(fromDoc.version).toBe(draft.version);
@@ -1945,11 +1972,9 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 
 			it("editing another block keeps the block id of the occurrence", async () => {
 				const mediaId = await withMedia();
-				const draft = await createDraft({ mdx: imageBody(mediaId) });
+				const draft = await createDraft({ doc: imageBody(mediaId) });
 
-				const saved = await save(draft, {
-					mdx: imageBody(mediaId).replace("Intro paragraph", "Intro paragraph, reworded"),
-				});
+				const saved = await save(draft, { doc: imageBody(mediaId, "Intro paragraph, reworded") });
 
 				expect(saved.version).toBe(draft.version + 1);
 				const reference = await mediaReference(draft.id, mediaId);

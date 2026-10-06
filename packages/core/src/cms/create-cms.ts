@@ -3,7 +3,7 @@ import { resolveTrustHost } from "../adapters/auth/trust-host";
 import type { MediaStore } from "../adapters/r2/types";
 import { cmsConfig } from "../config/resolved";
 import { adminUrl } from "../core/admin-paths";
-import { CmsError, type ContentChange, type ContentStore, type Entry, formatRewriteReport } from "../core/store";
+import { CmsError, type ContentChange, type ContentStore, type Entry } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import { type CmsRouteHandler, nextRouteHandler } from "../next/route-handler";
 import type { CmsPlugin, OwnedPluginRoute } from "../plugin/define";
@@ -120,11 +120,6 @@ export interface Cms {
 	 * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
 	 */
 	migrate(options?: { readonly log?: (message: string) => void }): Promise<void>;
-	/**
-	 * Re-serializes the stored bodies with the site's configured syntax (`monti content:rewrite`). Reports one line per body through `log` and writes only with `apply`.
-	 * Throws on failure.
-	 */
-	rewrite(options?: { readonly apply?: boolean; readonly log?: (message: string) => void }): Promise<void>;
 	/** Closes the database connection (when a command-line tool or a test is done). */
 	close(): Promise<void>;
 }
@@ -261,13 +256,6 @@ export function createCms(options: CreateCmsOptions): Cms {
 			await connections.database.migrate({ formats: await plugins.formats() });
 			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
 			log("CMS database migration completed successfully!");
-		},
-		rewrite: async ({ apply, log = console.log } = {}) => {
-			const { rewriteContent } = connections.database;
-			if (!rewriteContent) {
-				throw new Error(`cms: the ${connections.database.name} database adapter does not support content:rewrite`);
-			}
-			for (const line of formatRewriteReport(await rewriteContent.call(connections.database, { apply }))) log(line);
 		},
 		close: async () => {
 			await connections.database.close?.();

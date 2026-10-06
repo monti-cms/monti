@@ -3,9 +3,8 @@ import { isCollection } from "../core/collections";
 import { type ImportNormalizers, type MediaUrlResolver, normalizeImportedDoc } from "../core/import-normalize";
 import { type LinkResolver, linkAddressKey } from "../core/link-ids";
 import { documentInputBody, prepareSnapshot, readInputBody } from "../core/snapshot";
-import { BUILT_IN_FORMATS } from "../format/built-in";
-import type { FormatRegistry } from "../format/registry";
-import { readStoredDocument } from "../mdx/stored-document";
+import { readStoredDocument } from "../doc/stored-document";
+import { type FormatRegistry, NO_FORMATS } from "../format/registry";
 import type { HookProvider, HookSource, ValidationResult, WriteData, WriteHookContext, WriteOperation } from "./hooks";
 import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, type StorePort } from "./types";
 
@@ -19,7 +18,7 @@ import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, typ
 
 type PrepareOptions = Omit<NonNullable<Parameters<typeof prepareSnapshot>[1]>, "import" | "imported">;
 
-const defaultFormats = async (): Promise<FormatRegistry> => BUILT_IN_FORMATS;
+const defaultFormats = async (): Promise<FormatRegistry> => NO_FORMATS;
 
 export interface WriteRequest {
 	readonly operation: WriteOperation;

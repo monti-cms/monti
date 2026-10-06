@@ -1,9 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
 import type { BlockDefinition } from "../../blocks/define";
 import type { ResolvedConfig } from "../../config/resolved";
-import type { ReadLink, ReadRefs } from "../../mdx/document-refs";
-import type { ImageResolveFailure, ImageResolver } from "../../mdx/image-src";
-import type { CmsJsonValue, CmsNode } from "../../mdx/types";
+import type { ReadLink, ReadRefs } from "../../doc/document-refs";
+import type { ImageResolveFailure, ImageResolver } from "../../doc/image-src";
+import type { CmsJsonValue, CmsNode } from "../../doc/types";
 import type { CodeHighlightOptions } from "../code";
 import type { RenderLabels } from "../labels";
 import type { AttributeProps, SiteBlockDefinitions } from "./block-types";
@@ -373,7 +373,7 @@ export interface RenderDocumentOptions {
 	readonly refs?: ReadRefs;
 	/**
 	 * Resolver for image and file addresses, for a site that resolves them itself. Wins over `refs`. Without both, only the outer `src` is used.
-	 * (`cms.read.imageResolver(mdx)` is for `renderMdx`; for a document, read `entry.refs`.)
+	 * (To draw a document read from the API, pass its `entry.refs` instead.)
 	 */
 	readonly imageResolver?: ImageResolver;
 	/** Language of the public page. Block components receive it as `ctx.locale`. */

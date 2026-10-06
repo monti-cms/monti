@@ -1,8 +1,8 @@
 import { BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
+import { type StoredDocument, UNPARSED_NODE } from "../../doc/stored-document";
+import type { CmsJsonValue, CmsNode } from "../../doc/types";
 import { createTranslator } from "../../i18n";
-import { type StoredDocument, UNPARSED_NODE } from "../../mdx/stored-document";
-import type { CmsJsonValue, CmsNode } from "../../mdx/types";
 import { translationMessages } from "./messages";
 
 /**

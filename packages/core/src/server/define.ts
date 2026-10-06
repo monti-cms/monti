@@ -1,5 +1,5 @@
 import type { MediaStore } from "../adapters/r2/types";
-import type { AfterCommit, ContentStore, RewriteReport } from "../core/store";
+import type { AfterCommit, ContentStore } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { PluginStorage } from "../plugin/storage";
@@ -24,11 +24,6 @@ export interface DatabaseAdapter {
 	 * An adapter implements it over its own database; plugins never see the database.
 	 */
 	pluginStorage(plugin: string): PluginStorage;
-	/**
-	 * Re-serializes every stored body (working, published, templates) with the site's configured syntax (`monti content:rewrite`), and returns what
-	 * happened to each. Writes only with `apply`. An adapter without it cannot run that command.
-	 */
-	rewriteContent?(options: { readonly apply?: boolean }): Promise<RewriteReport>;
 	/** Closes the connection (when the command-line tool finishes). */
 	close?(): Promise<void>;
 }

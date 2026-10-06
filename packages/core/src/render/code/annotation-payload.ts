@@ -1,6 +1,4 @@
-import type { Code, Root } from "mdast";
 import type { DecorationItem } from "shiki";
-import { visit } from "unist-util-visit";
 import type {
 	AnnotationConfig,
 	AnnotationRegistry,
@@ -8,10 +6,8 @@ import type {
 	CodeBlockDocument,
 	LineAnnotation,
 } from "../../code-block";
-import { createAnnotationRegistry, fromCodeFenceToCodeBlockDocument, supportsAnnotationScope } from "../../code-block";
-import { createAllowedRenderTagsFromConfig } from "./render-policy";
+import { createAnnotationRegistry, supportsAnnotationScope } from "../../code-block";
 
-type HProperties = { hProperties?: Record<string, unknown> };
 type AnnotationWithClass = { class: string };
 type AnnotationWithRender = { render: string };
 
@@ -183,31 +179,6 @@ export const fromCodeBlockDocumentToShikiAnnotationPayload = (
 		rowWrappers,
 	};
 };
-
-export function remarkAnnotationToShikiDecoration(annotationConfig: AnnotationConfig) {
-	const allowedRenderTags = createAllowedRenderTagsFromConfig(annotationConfig);
-
-	return (tree: Root) => {
-		visit(tree, "code", (node: Code) => {
-			const document = fromCodeFenceToCodeBlockDocument(node, annotationConfig, { parseLineAnnotations: true });
-			const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, annotationConfig);
-
-			node.value = payload.code;
-			// `hProperties` is a value read by mdast-util-to-hast, so this package narrows it directly instead of pulling in that type.
-			node.data ??= {};
-			const data = node.data as HProperties;
-			data.hProperties = {
-				...data.hProperties,
-				"data-decorations": JSON.stringify(payload.decorations),
-				"data-line-decorations": JSON.stringify(payload.lineDecorations),
-				"data-line-wrappers": JSON.stringify(payload.rowWrappers),
-				"data-render-tags": JSON.stringify(allowedRenderTags),
-				"data-lang": payload.lang,
-				"data-meta": JSON.stringify(payload.meta),
-			};
-		});
-	};
-}
 
 export const __testable__ = {
 	fromCodeBlockDocumentToShikiAnnotationPayload,

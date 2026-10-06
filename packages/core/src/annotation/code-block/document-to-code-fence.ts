@@ -1,7 +1,6 @@
-import type { Code } from "mdast";
 import { type CommentSyntax, formatAnnotationComment, resolveCommentSyntax } from "./comment-syntax";
 import { createAnnotationRegistry } from "./libs";
-import type { AnnotationAttr, AnnotationConfig, CodeBlockDocument, CodeBlockRule } from "./types";
+import type { AnnotationAttr, AnnotationConfig, CodeBlockDocument, CodeBlockRule, CodeFence } from "./types";
 
 const fromLineValueToLeadingIndent = (lineValue: string) => {
 	const match = lineValue.match(/^[\t ]*/);
@@ -82,7 +81,7 @@ const toClosedRange = (range: { start: number; end: number }) => {
 export const fromCodeBlockDocumentToCodeFence = (
 	document: CodeBlockDocument,
 	annotationConfig: AnnotationConfig,
-): Code => {
+): CodeFence => {
 	createAnnotationRegistry(annotationConfig);
 
 	const commentSyntax = resolveCommentSyntax(document.lang);

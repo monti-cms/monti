@@ -2,11 +2,10 @@ import { cmsConfig } from "../config/resolved";
 import type { CmsPlugin } from "../plugin/define";
 
 /**
- * The module a block extension's `render` loader returns. `default` is the table of the MDX renderer (`renderMdx`, component name → component);
- * `documentComponents` is the table of the JSON renderer (`renderDocument`, typed by node, mark and block name). An extension can provide either or both.
+ * The module a block extension's `render` loader returns. `documentComponents` is the table of the document renderer (`renderDocument`, typed by node, mark and
+ * block name).
  */
 export interface RenderPluginModule {
-	readonly default?: unknown;
 	readonly documentComponents?: unknown;
 }
 

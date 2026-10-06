@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentOf, docOf } from "../../../../../test/stored-content";
-import { forEachBlock, isBlockId, withoutBlockIds } from "../../../../mdx/block-ids";
+import { forEachBlock, isBlockId, withoutBlockIds } from "../../../../doc/block-ids";
 import {
 	emptyStoredDocument,
 	STORED_DOCUMENT_VERSION,
 	type StoredDocument,
 	unparsedDocument,
-} from "../../../../mdx/stored-document";
+} from "../../../../doc/stored-document";
 import type { ContentStore } from "../..";
 import type { ContractSuite, StoreSession } from "./harness";
 

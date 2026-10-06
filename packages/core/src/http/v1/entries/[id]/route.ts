@@ -1,7 +1,7 @@
 import { patchEntryBodySchema } from "../../../../core/api";
 import { isItemCollection } from "../../../../core/collections";
+import type { StoredDocument } from "../../../../doc/stored-document";
 import { exportText } from "../../../../format/convert";
-import type { StoredDocument } from "../../../../mdx/stored-document";
 import { createExportRefs } from "../../../../read";
 import type { SaveDraftInput } from "../../../../services/types";
 import { adminRoute, json, readFormatQuery, readVersionedBody, readVersionQuery } from "../../handler";
@@ -49,8 +49,6 @@ export const GET = adminRoute<IdParams>(async ({ request, params, cms }) => {
 						status: source.status,
 						workingSlug: source.workingSlug,
 						metadata: source.working.metadata,
-						// The translation view lines up source blocks with the translation side by side.
-						mdx: source.working.mdx,
 						// The stored document carries the block ids that pair this version's blocks with the confirmed one's.
 						doc: source.working.doc,
 						...(formats && format !== undefined ? { body: (await bodyOf(source.working, source.locale)).body } : {}),

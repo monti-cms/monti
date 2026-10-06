@@ -1,5 +1,5 @@
 import { createEntryBodySchema, LIST_ARRAY_QUERY_KEYS, listEntriesQuerySchema } from "../../../core/api";
-import { emptyStoredDocument } from "../../../mdx/stored-document";
+import { emptyStoredDocument } from "../../../doc/stored-document";
 import type { ServiceInput } from "../../../services/types";
 import { adminRoute, json, parseWith, readJsonBody, readQuery } from "../handler";
 

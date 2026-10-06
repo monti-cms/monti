@@ -1,5 +1,5 @@
 import { fileTypeLabel, formatFileSize } from "../../core/file-display";
-import type { ImageResolver } from "../../mdx/image-src";
+import type { ImageResolver } from "../../doc/image-src";
 
 /**
  * Attachment file card (`::file{mediaId label}`). The address is decided by the resolver passed in (same as images). If it cannot be resolved, only the name shows and

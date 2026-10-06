@@ -1,10 +1,10 @@
 import type { BlockDefinition } from "../blocks/define";
 import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
+import { entryIdOfMark } from "../doc/entry-links";
+import type { StoredDocument } from "../doc/stored-document";
+import { MAX_TABLE_COLUMNS } from "../doc/table-layout";
+import type { CmsImageSource, CmsJsonValue, CmsMark, CmsNode } from "../doc/types";
 import { createTranslator } from "../i18n";
-import { entryIdOfMark } from "../mdx/entry-links";
-import type { StoredDocument } from "../mdx/stored-document";
-import { MAX_TABLE_COLUMNS } from "../mdx/table-layout";
-import type { CmsImageSource, CmsJsonValue, CmsMark, CmsNode } from "../mdx/types";
 import { CodeRefCollector } from "./code-refs";
 import { isUuid } from "./ids";
 import { parseInternalLink } from "./links";

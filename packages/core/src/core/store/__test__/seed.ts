@@ -1,4 +1,5 @@
-import { bodyDocument, bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
+import { docOfText } from "../../../doc/__test__/doc-text";
+import type { StoredDocument } from "../../../doc/stored-document";
 import { createContentService } from "../../../services/content-service";
 import type { PreparedSnapshot } from "../../types";
 import type { ContentStore, Entry } from "..";
@@ -12,8 +13,8 @@ type SeedInput = {
 	collection: string;
 	slug: string | null;
 	metadata: unknown;
-	/** The body as text: stored as the document it reads as (an `unparsed` body when it cannot be read) unless `doc` is given. */
-	mdx: string;
+	/** The body as plain text (read by `docOfText`) unless `doc` is given. */
+	text?: string;
 	doc?: StoredDocument;
 	schemaVersion?: number;
 	contentHash?: string;
@@ -26,7 +27,7 @@ const rawSnapshot = (input: Omit<SeedInput, "folderId" | "locale">): PreparedSna
 		collection: input.collection,
 		slug: input.slug,
 		metadata: input.metadata,
-		doc: input.doc ?? bodyDocument(bodyFromMdx(input.mdx)),
+		doc: input.doc ?? docOfText(input.text ?? ""),
 		schemaVersion: input.schemaVersion ?? 1,
 		contentHash: input.contentHash ?? `seed-${Math.random().toString(36).slice(2)}`,
 		references: [],
@@ -55,7 +56,8 @@ export async function seedSave(
 			collection: current.collection,
 			slug: input.slug !== undefined ? input.slug : current.workingSlug,
 			metadata: input.metadata,
-			mdx: input.mdx,
+			text: input.text,
+			doc: input.doc,
 			schemaVersion: input.schemaVersion,
 			contentHash: input.contentHash,
 		}),
@@ -78,7 +80,6 @@ export async function moveToFolder(
 			collection: current.collection,
 			slug: current.workingSlug,
 			metadata: current.working.metadata,
-			mdx: current.working.mdx,
 			doc: current.working.doc,
 			schemaVersion: current.working.schemaVersion,
 			contentHash: current.working.contentHash,

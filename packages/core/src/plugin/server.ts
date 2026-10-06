@@ -1,6 +1,5 @@
 import type { Cms } from "../cms";
 import type { ContentChange } from "../core/store";
-import { BUILT_IN_FORMAT_LIST } from "../format/built-in";
 import { createFormatRegistry, type FormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
@@ -71,7 +70,7 @@ export function createServerPlugins(
 				return provided === undefined ? [] : Array.isArray(provided) ? provided : [provided as CmsFormat];
 			}),
 		)
-			.then((lists) => createFormatRegistry([...BUILT_IN_FORMAT_LIST, ...lists.flat()]))
+			.then((lists) => createFormatRegistry(lists.flat()))
 			.catch((error) => {
 				formats = undefined;
 				console.error("[cms] failed to load plugin formats", error);

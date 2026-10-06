@@ -1,4 +1,4 @@
-import type { StoredDocument } from "../../mdx/stored-document";
+import type { StoredDocument } from "../../doc/stored-document";
 import type { ListSortField } from "../api";
 import type { TranslationState } from "../translation/state";
 import type { ReferenceKind, ReferenceOccurrence } from "../types";
@@ -22,8 +22,6 @@ export interface PublishedEntryRecord {
 	readonly translationGroupId: string;
 	readonly slug: string;
 	readonly metadata: EntryMetadata;
-	/** An empty string in list reads with `includeBody: false`. */
-	readonly mdx: string;
 	/** The stored document of the body. `null` in list reads with `includeBody: false`. */
 	readonly doc: StoredDocument | null;
 	readonly publishedAt: Date | null;
@@ -42,8 +40,6 @@ export type PublishedEntryLookup =
 
 export interface EntryBody {
 	metadata: EntryMetadata;
-	/** The MDX column, written from `doc`. */
-	mdx: string;
 	/** The stored document of the body (one `unparsed` node when the body could not become a document, which only a draft can be). */
 	doc: StoredDocument;
 	schemaVersion: number;
@@ -296,7 +292,6 @@ export interface IncomingReferenceItem {
 
 export interface ExportSnapshotBody {
 	metadata: EntryMetadata;
-	mdx: string;
 	doc: StoredDocument;
 	schemaVersion: number;
 	contentHash: string;
@@ -372,23 +367,4 @@ export interface PublishedPageParams {
 	/** 1 to 500. Default 25. */
 	readonly pageSize?: number;
 	readonly includeBody?: boolean;
-}
-
-/** What happens to one stored body in a content rewrite. */
-export type RewriteOutcomeStatus = "changed" | "unchanged" | "skipped";
-
-export interface RewriteItem {
-	readonly kind: "entry" | "template";
-	/** `collection/slug (locale) state` for a body, `template "name"` for a template. */
-	readonly label: string;
-	readonly outcome: RewriteOutcomeStatus;
-	readonly reason?: "unparsed" | "hash";
-}
-
-export interface RewriteReport {
-	readonly applied: boolean;
-	readonly items: readonly RewriteItem[];
-	readonly changed: number;
-	readonly unchanged: number;
-	readonly skipped: number;
 }

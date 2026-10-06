@@ -1,5 +1,5 @@
 import type { BlockDefinition } from "../../blocks/define";
-import type { CmsJsonValue } from "../../mdx/types";
+import type { CmsJsonValue } from "../../doc/types";
 
 /**
  * Reads the attributes of a stored block or mark by its definition into the flat props a component receives.

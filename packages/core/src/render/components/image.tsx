@@ -1,4 +1,4 @@
-import { type ImageResolver, resolveImageUrl } from "../../mdx/image-src";
+import { type ImageResolver, resolveImageUrl } from "../../doc/image-src";
 import { CmsImageView } from "./image-view";
 
 /** `width` accepts only 1 to 100% or 1 to 4096px. Other values are ignored. */

@@ -18,17 +18,12 @@ import { contentPath } from "../core/links";
 import { DEFAULT_LOCALE, isLocale, localizePath } from "../core/locales";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
 import { ServiceError } from "../core/types";
+import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../doc/document-refs";
+import { type PublicMediaDeps, resolvePublicMedia, resolvePublicMediaUrl } from "../doc/public-media";
+import type { StoredDocument } from "../doc/stored-document";
 import { type ExportRefs, exportText } from "../format/convert";
 import type { FormatRegistry } from "../format/registry";
 import type { FormatLink, FormatMedia } from "../format/types";
-import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../mdx/document-refs";
-import {
-	createPublicImageResolver,
-	type PublicMediaDeps,
-	resolvePublicMedia,
-	resolvePublicMediaUrl,
-} from "../mdx/public-media";
-import type { StoredDocument } from "../mdx/stored-document";
 import type { MetadataOf } from "../schema/collection";
 import {
 	mergeTranslationMetadata,
@@ -377,11 +372,6 @@ export interface CmsRead {
 		/** Also return the draft as text in this format (`entry.body`). */
 		readonly format?: string;
 	}): Promise<ReadEntry<C> | null>;
-	/**
-	 * Resolver that turns the body's registered media (`Image`, `File`) into public URLs, for `renderMdx`'s `imageResolver`.
-	 * For `renderMdx` only. To render the stored document, use `entry.refs`: `<CmsContent entry={entry} />` resolves images and files from it.
-	 */
-	imageResolver(source: string): ReturnType<typeof createPublicImageResolver>;
 	/** Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage. */
 	mediaUrl(mediaId: string): ReturnType<typeof resolvePublicMediaUrl>;
 }
@@ -482,7 +472,6 @@ export function createRead(deps: ReadDeps): CmsRead {
 				translationGroupId: draft.translationGroupId,
 				slug: draft.workingSlug ?? params.slug,
 				metadata,
-				mdx: draft.working.mdx,
 				doc: draft.working.doc,
 				publishedAt: draft.publishedAt ?? null,
 				updatedAt: draft.updatedAt,
@@ -491,7 +480,6 @@ export function createRead(deps: ReadDeps): CmsRead {
 			return entry ?? null;
 		},
 
-		imageResolver: (source) => createPublicImageResolver(deps, source),
 		mediaUrl: (mediaId) => resolvePublicMediaUrl(deps, mediaId),
 	};
 }
@@ -571,6 +559,6 @@ export function createExportRefs(
 }
 
 export type { PublishedSort } from "../core/store";
-export type { DocumentRefIds, ReadLink, ReadRefs } from "../mdx/document-refs";
-export { collectRefs } from "../mdx/document-refs";
-export type { StoredDocument } from "../mdx/stored-document";
+export type { DocumentRefIds, ReadLink, ReadRefs } from "../doc/document-refs";
+export { collectRefs } from "../doc/document-refs";
+export type { StoredDocument } from "../doc/stored-document";

@@ -1,6 +1,7 @@
 /**
  * The stored document model (`@monti-cms/core/document`): the document type and the helpers that work on a document without knowing the notation it
- * was written in. Screens and plugins that edit or inspect a body (the admin editor, AI) import from here; nothing in it parses or writes MDX.
+ * was written in. Screens, formats and plugins that edit, inspect or convert a body (the admin editor, AI, `@monti-cms/mdx`) import from here;
+ * nothing in it parses or writes a text format.
  */
 
 export { TEXT_ALIGN_VALUES } from "./blocks/derive";
@@ -13,7 +14,7 @@ export {
 	newBlockId,
 	regenerateBlockIds,
 	withoutBlockIds,
-} from "./mdx/block-ids";
+} from "./doc/block-ids";
 export {
 	ENTRY_LINK_PREFIX,
 	entryIdOfHref,
@@ -21,21 +22,32 @@ export {
 	entryLinkHref,
 	entryLinkIds,
 	linkAttrs,
+	linkMarkAttrs,
 	mapLinkAttrs,
-} from "./mdx/entry-links";
-export * from "./mdx/image-src";
-export * from "./mdx/image-transform";
-export { sortMarks } from "./mdx/registry";
-export { storedCodeBlockAttrs, storedCodeBlockFence } from "./mdx/stored-code-block";
-export type { StoredDocument } from "./mdx/stored-document";
+	normalizedLinkMark,
+} from "./doc/entry-links";
+export * from "./doc/image-src";
+export * from "./doc/image-transform";
+export { sortMarks } from "./doc/marks";
 export {
+	outOfRangeAnnotationNames,
+	storedCodeBlockAttrs,
+	storedCodeBlockFence,
+	workingCodeBlockAttrs,
+} from "./doc/stored-code-block";
+export type { StoredDocument } from "./doc/stored-document";
+export {
+	CORE_NODE_TYPES,
 	canonicalDocument,
 	emptyStoredDocument,
 	isUnparsedDocument,
 	readStoredDocument,
 	STORED_DOCUMENT_VERSION,
+	sortJson,
+	storedMark,
+	storedNode,
 	UNPARSED_NODE,
 	unparsedDocument,
-} from "./mdx/stored-document";
-export * from "./mdx/table-layout";
-export type { CmsJsonValue, CmsMark, CmsNode } from "./mdx/types";
+} from "./doc/stored-document";
+export * from "./doc/table-layout";
+export type { CmsJsonValue, CmsMark, CmsNode } from "./doc/types";

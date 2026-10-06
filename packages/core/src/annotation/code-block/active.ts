@@ -14,7 +14,7 @@ import { ANCHOR, COLLAPSE, type CodeLineEffectName } from "./model";
 /** Line effects the site uses (core defaults + the site config's `codeBlock.lineEffects`). Editor menu order. */
 export const CODE_LINE_EFFECTS = resolveCodeLineEffects(cmsConfig.codeBlock?.lineEffects);
 
-/** Code fence comment config the site uses. Used by storage syntax conversion and the public renderer (`remarkAnnotationToShikiDecoration`). */
+/** Code fence comment config the site uses. Used by the text formats' fence conversion and the public renderer (`fromCodeBlockDocumentToShikiAnnotationPayload`). */
 export const annotationConfig = createAnnotationConfig(CODE_LINE_EFFECTS);
 
 /** A line effect definition. `undefined` for an unknown name. */

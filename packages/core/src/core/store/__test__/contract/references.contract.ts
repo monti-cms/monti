@@ -6,7 +6,7 @@ import {
 	recordCollection,
 	recordRelationField,
 } from "../../../../../test/any-site";
-import { docOf, mdxOf } from "../../../../../test/stored-content";
+import { contentOf, docOf } from "../../../../../test/stored-content";
 import { storedFields } from "../../../../schema/derive";
 import { type Collection, isItemCollection } from "../../../collections";
 import type { PreparedSnapshot, Reference } from "../../../types";
@@ -33,15 +33,15 @@ const relation = (() => {
 const targetCollection = relation?.to ?? recordCollection;
 const relationPath = relation?.name ?? "relationId";
 
-/** A prepared snapshot. The body is given as text (`mdx`) and stored as the document it reads as. */
-function buildSnapshot(overrides: Partial<PreparedSnapshot> & { mdx?: string } = {}): PreparedSnapshot {
-	const { mdx, ...rest } = overrides;
+/** A prepared snapshot. The body is given as text (`text`) and stored as the document it reads as. */
+function buildSnapshot(overrides: Partial<PreparedSnapshot> & { text?: string } = {}): PreparedSnapshot {
+	const { text, ...rest } = overrides;
 	const refs = overrides.references || [];
 	return {
 		collection: contentCollection,
 		slug: `test-slug-${Math.random().toString(36).slice(2, 8)}`,
 		metadata: { title: "Test" },
-		doc: docOf(mdx ?? "Test content"),
+		doc: docOf(text ?? "Test content"),
 		schemaVersion: 1,
 		contentHash: `hash-${Math.random().toString(36).slice(2, 8)}`,
 		issues: [],
@@ -83,7 +83,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: relation.to,
 				slug: `incoming-tag-${randomUUID()}`,
 				metadata: { title: "Reference tag" },
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: `tag-${randomUUID()}`,
 			});
@@ -154,7 +154,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-1",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "c1",
 			});
@@ -162,7 +162,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "tag-1",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "t1",
 			});
@@ -186,7 +186,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			const snapshot = buildSnapshot({
 				slug: "create-refs",
 				contentHash: "fixed-hash",
-				mdx: "fixed-mdx",
+				text: "fixed-mdx",
 				schemaVersion: 2,
 				metadata: { test: "val" },
 				references: [ref2, ref1],
@@ -208,7 +208,7 @@ export const referencesContract: ContractSuite = (factory) => {
 
 			const saved = await store.getEntry(entry.id);
 			expect(saved.working.metadata).toEqual(snapshot.metadata);
-			expect(saved.working.mdx).toEqual(mdxOf(snapshot.doc));
+			expect(contentOf(saved.working.doc)).toEqual(contentOf(snapshot.doc));
 			expect(saved.working.schemaVersion).toEqual(snapshot.schemaVersion);
 			expect(saved.working.contentHash).toEqual(snapshot.contentHash);
 			expect(saved.workingSlug).toEqual(snapshot.slug);
@@ -219,7 +219,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "old-tag",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -227,7 +227,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "new-cat",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "2",
 			});
@@ -241,7 +241,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "save-refs-2",
 				metadata: { title: "Updated" },
 				contentHash: "hash-2",
-				mdx: "updated",
+				text: "updated",
 				schemaVersion: 3,
 				references: [refNew],
 			});
@@ -256,7 +256,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			expect(entry2.version).toBe(entry1.version + 1);
 			expect(entry2.workingSlug).toBe("save-refs-2");
 			expect(entry2.working.metadata).toEqual(snapshot2.metadata);
-			expect(entry2.working.mdx).toEqual(mdxOf(snapshot2.doc));
+			expect(contentOf(entry2.working.doc)).toEqual(contentOf(snapshot2.doc));
 			expect(entry2.working.contentHash).toEqual(snapshot2.contentHash);
 			expect(entry2.working.schemaVersion).toEqual(snapshot2.schemaVersion);
 
@@ -270,7 +270,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-stale",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -295,7 +295,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-ref-only",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -341,7 +341,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-opt-1",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -349,7 +349,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-opt-2",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "2",
 			});
@@ -358,7 +358,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			const snapshot1 = buildSnapshot({
 				slug: "conflict-1",
 				contentHash: "opt-hash",
-				mdx: "opt-mdx",
+				text: "opt-mdx",
 				references: [ref1],
 			});
 			const entry1 = await store.createEntryWithReferences({ snapshot: snapshot1, references: [ref1] });
@@ -368,7 +368,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			const snapshot2 = buildSnapshot({
 				slug: "conflict-2",
 				contentHash: "opt-hash-2",
-				mdx: "opt-mdx-2",
+				text: "opt-mdx-2",
 				references: [ref2],
 			});
 
@@ -402,13 +402,13 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-real-1",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
 
 			const ref1 = buildReference({ kind: "entry", targetId: targetReal.id });
-			const snapshot1 = buildSnapshot({ slug: "valid-target", contentHash: "hash1", mdx: "mdx1", references: [ref1] });
+			const snapshot1 = buildSnapshot({ slug: "valid-target", contentHash: "hash1", text: "mdx1", references: [ref1] });
 			const entry1 = await store.createEntryWithReferences({ snapshot: snapshot1, references: [ref1] });
 			const priorRefs = await store.getWorkingReferences({ entryId: entry1.id });
 
@@ -417,7 +417,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			const snapshot2 = buildSnapshot({
 				slug: "invalid-target",
 				contentHash: "hash2",
-				mdx: "mdx2",
+				text: "text2",
 				references: [ref2],
 			});
 
@@ -448,7 +448,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-real-2",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -479,7 +479,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			const snapshot3 = buildSnapshot({
 				slug: "safe-slug",
 				contentHash: "safe-hash",
-				mdx: "safe-mdx",
+				text: "safe-mdx",
 				references: [ref3],
 			});
 			const entry3 = await store.createEntryWithReferences({ snapshot: snapshot3, references: [ref3] });
@@ -490,7 +490,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				const snapshotCollision = buildSnapshot({
 					slug: "collision-slug",
 					contentHash: "col-hash",
-					mdx: "col-mdx",
+					text: "col-mdx",
 					references: [],
 				});
 				await store.saveWorkingWithReferences({
@@ -519,7 +519,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-iso-1",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -527,7 +527,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "cat-iso-2",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "2",
 			});
@@ -554,7 +554,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "empty-save-cat",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -565,7 +565,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			const snapshot2 = buildSnapshot({
 				slug: "empty-save-2",
 				metadata: { title: "Cleared" },
-				mdx: "cleared content",
+				text: "cleared content",
 				schemaVersion: 2,
 				contentHash: "hash-empty-2",
 				references: [],
@@ -579,7 +579,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			expect(entry2.version).toBe(entry1.version + 1);
 			expect(entry2.workingSlug).toBe("empty-save-2");
 			expect(entry2.working.metadata).toEqual(snapshot2.metadata);
-			expect(entry2.working.mdx).toEqual(mdxOf(snapshot2.doc));
+			expect(contentOf(entry2.working.doc)).toEqual(contentOf(snapshot2.doc));
 			expect(entry2.working.schemaVersion).toEqual(snapshot2.schemaVersion);
 			expect(entry2.working.contentHash).toEqual(snapshot2.contentHash);
 
@@ -592,7 +592,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "noop-cat",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -623,7 +623,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: `target-${randomUUID()}`,
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "1",
 			});
@@ -650,7 +650,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: "mismatch-changed",
 				contentHash: "changed-hash",
-				mdx: "changed-mdx",
+				text: "changed-mdx",
 				references: [ref2],
 			});
 
@@ -688,7 +688,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				collection: targetCollection,
 				slug: `cat-norm-${randomUUID()}`,
 				metadata: { name: "Category Normalization Target" },
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: "hash-cat-norm",
 			});
@@ -731,7 +731,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			expect(saved.version).toBe(created.version);
 			expect(saved.updatedAt).toEqual(created.updatedAt);
 			expect(saved.working.updatedAt).toEqual(created.working.updatedAt);
-			expect(saved.working.mdx).toBe(created.working.mdx);
+			expect(saved.working.doc).toEqual(created.working.doc);
 			expect(saved.workingSlug).toBe(created.workingSlug);
 
 			const subsequentDbRefs = await store.getWorkingReferences({ entryId: created.id });

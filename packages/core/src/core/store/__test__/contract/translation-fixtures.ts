@@ -5,6 +5,8 @@ import {
 	requiredMetadata,
 	secondLocale,
 } from "../../../../../test/any-site";
+import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../../../format/registry";
 import { localizedFieldNames, recordLocalizedFields, storedField, storedFields } from "../../../../schema/derive";
 import { createContentService } from "../../../../services/content-service";
 import { COLLECTIONS, type Collection } from "../../../collections";
@@ -53,7 +55,7 @@ export const translatedMetadata = (title: string, text: string) => ({
 
 /** Helpers that create the posts and relation targets of the translation tests in a store. */
 export function translationHelpers(store: ContentStore) {
-	const service = createContentService<Entry>(store);
+	const service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
 	let sequence = 0;
 
 	/** A new published item of the target collection. Created fresh for each entry so that only that entry appears when filtering by relation. */
@@ -63,7 +65,7 @@ export function translationHelpers(store: ContentStore) {
 			collection: to,
 			slug: `${to}-${++sequence}`,
 			metadata,
-			format: "mdx",
+			format: "paragraphs",
 			body: "",
 		});
 		if (draft.status === "published") return draft.id;
@@ -83,7 +85,7 @@ export function translationHelpers(store: ContentStore) {
 			collection: contentCollection,
 			slug,
 			metadata: metadata as never,
-			format: "mdx",
+			format: "paragraphs",
 			body: "한국어 본문",
 		});
 	};

@@ -1,4 +1,3 @@
-import type { Code } from "mdast";
 import { resolveParseCommentSyntaxes } from "./comment-syntax";
 import { createAnnotationRegistry, supportsAnnotationScope } from "./libs";
 import type {
@@ -7,6 +6,7 @@ import type {
 	AnnotationScope,
 	CodeBlockDocument,
 	CodeBlockRule,
+	CodeFence,
 	InlineAnnotation,
 } from "./types";
 
@@ -769,7 +769,7 @@ const applyScopeDocumentDirectives = ({
 };
 
 export const fromCodeFenceToCodeBlockDocument = (
-	codeNode: Code,
+	codeNode: CodeFence,
 	annotationConfig: AnnotationConfig,
 	options?: {
 		parseLineAnnotations?: boolean;

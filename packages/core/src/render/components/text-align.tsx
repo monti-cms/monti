@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { TEXT_ALIGN_VALUES } from "../../mdx";
+import { TEXT_ALIGN_VALUES } from "../../blocks/derive";
 
 type Align = (typeof TEXT_ALIGN_VALUES)[number];
 

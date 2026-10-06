@@ -8,6 +8,7 @@ import {
 	recordRelationField,
 	requiredMetadata,
 } from "../../../../../test/any-site";
+import { contentOf, docOf } from "../../../../../test/stored-content";
 import { storedFields } from "../../../../schema/derive";
 import { SUMMARY_ROLE } from "../../../../schema/fields";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../../collections";
@@ -71,14 +72,14 @@ export const publicReadContract: ContractSuite = (factory) => {
 			collection: string;
 			slug: string;
 			metadata?: Record<string, unknown>;
-			mdx?: string;
+			text?: string;
 		}) {
 			const metadata = params.metadata ?? { title: params.slug };
 			return seedEntry(store, {
 				collection: params.collection,
 				slug: params.slug,
 				metadata,
-				mdx: params.mdx ?? `# ${params.slug}`,
+				text: params.text ?? `# ${params.slug}`,
 				schemaVersion: 1,
 				contentHash: `hash-${params.slug}`,
 			});
@@ -88,7 +89,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			collection: string;
 			slug: string;
 			metadata?: Record<string, unknown>;
-			mdx?: string;
+			text?: string;
 		}) {
 			const entry = await createEntry(params);
 
@@ -123,7 +124,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				collection: content,
 				slug: "live-post",
 				metadata: { title: "공개 글", ...summaryOf("요약") },
-				mdx: "# 공개 본문",
+				text: "# 공개 본문",
 			});
 
 			expect(await publishedSlugs([content])).toContain("live-post");
@@ -134,7 +135,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			expect(lookup.status).toBe("current");
 			if (lookup.status === "current") {
 				expect(lookup.entry.slug).toBe("live-post");
-				expect(lookup.entry.mdx).toBe("# 공개 본문\n");
+				expect(contentOf(lookup.entry.doc)).toEqual(contentOf(docOf("# 공개 본문")));
 				expect(lookup.entry.metadata).toEqual(await filled("공개 글", summaryOf("요약")));
 				expect(lookup.entry.publishedAt).toBeInstanceOf(Date);
 			}
@@ -145,8 +146,8 @@ export const publicReadContract: ContractSuite = (factory) => {
 			const withBody = await store.listPublishedEntries({ collections: [content], includeBody: true });
 
 			expect(withoutBody.length).toBeGreaterThan(0);
-			expect(withoutBody.every((row) => row.mdx === "")).toBe(true);
-			expect(withBody.some((row) => row.mdx.length > 0)).toBe(true);
+			expect(withoutBody.every((row) => row.doc === null)).toBe(true);
+			expect(withBody.some((row) => row.doc !== null)).toBe(true);
 		});
 
 		it("includes the body in single reads by default", async () => {
@@ -154,7 +155,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 
 			expect(lookup.status).toBe("current");
 			if (lookup.status === "current") {
-				expect(lookup.entry.mdx).toBe("# 공개 본문\n");
+				expect(contentOf(lookup.entry.doc)).toEqual(contentOf(docOf("# 공개 본문")));
 			}
 		});
 
@@ -190,7 +191,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				expectedVersion: published.version,
 				slug: "after-rename",
 				metadata: { title: "이름 변경" },
-				mdx: "# 이름 변경",
+				text: "# 이름 변경",
 				schemaVersion: 1,
 				contentHash: "hash-renamed",
 			});
@@ -205,7 +206,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			expect(lookup.status).toBe("alias");
 			if (lookup.status === "alias") {
 				expect(lookup.entry.slug).toBe("after-rename");
-				expect(lookup.entry.mdx).toBe("# 이름 변경\n");
+				expect(contentOf(lookup.entry.doc)).toEqual(contentOf(docOf("# 이름 변경")));
 			}
 		});
 
@@ -232,7 +233,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 						...summaryOf("Published summary"),
 						[tagField]: relationValue(publishedTag.id),
 					},
-					mdx: "# Published body",
+					text: "# Published body",
 				});
 				const working = await seedSave(store, published.id, {
 					expectedVersion: published.version,
@@ -242,7 +243,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 						...summaryOf("Working summary"),
 						[tagField]: relationValue(workingTag.id),
 					},
-					mdx: "# Working body",
+					text: "# Working body",
 					schemaVersion: 1,
 					contentHash: "f10-working-content",
 				});
@@ -257,7 +258,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				expect(beforeRepublish.status).toBe("current");
 				if (beforeRepublish.status === "current") {
 					expect(beforeRepublish.entry.slug).toBe("f10-published-snapshot");
-					expect(beforeRepublish.entry.mdx).toBe("# Published body\n");
+					expect(contentOf(beforeRepublish.entry.doc)).toEqual(contentOf(docOf("# Published body")));
 					expect(beforeRepublish.entry.metadata).toEqual(
 						await filled("Published title", {
 							...summaryOf("Published summary"),
@@ -276,14 +277,21 @@ export const publicReadContract: ContractSuite = (factory) => {
 					await store.getPublishedEntryBySlug({ collection: content, slug: "f10-published-snapshot" }),
 				).toMatchObject({
 					status: "alias",
-					entry: { slug: "f10-working-snapshot", mdx: "# Working body\n" },
+					entry: { slug: "f10-working-snapshot" },
 				});
 				expect(
 					await store.getPublishedEntryBySlug({ collection: content, slug: "f10-working-snapshot" }),
 				).toMatchObject({
 					status: "current",
-					entry: { slug: "f10-working-snapshot", mdx: "# Working body\n", metadata: { title: "Working title" } },
+					entry: { slug: "f10-working-snapshot", metadata: { title: "Working title" } },
 				});
+				const afterRepublish = await store.getPublishedEntryBySlug({
+					collection: content,
+					slug: "f10-working-snapshot",
+				});
+				if (afterRepublish.status === "current") {
+					expect(contentOf(afterRepublish.entry.doc)).toEqual(contentOf(docOf("# Working body")));
+				}
 				expect(republished.status).toBe("published");
 			},
 		);
@@ -293,7 +301,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				expectedVersion: published.version,
 				slug: "alias-then-archive-2",
 				metadata: { title: "이름 변경" },
-				mdx: "# 이름 변경",
+				text: "# 이름 변경",
 				schemaVersion: 1,
 				contentHash: "hash-alias-archive",
 			});

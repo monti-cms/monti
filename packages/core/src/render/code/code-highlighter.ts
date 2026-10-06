@@ -48,6 +48,13 @@ export type CodeHighlighter = Awaited<ReturnType<typeof createCodeHighlighter>>;
 
 export type HighlightFn = CodeHighlighter["highlight"];
 
+/** Code highlighting settings (languages, themes, aliases). Reference defaults if not given. */
+export type CodeHighlightOptions = CodeHighlighterOptions & {
+	ignoreLang?: (lang: string) => boolean;
+	/** Function that highlights code. If given, `langs`, `themes` and `langAlias` are not used. */
+	highlight?: HighlightFn;
+};
+
 const themeName = (theme: ThemeRegistrationAny) => (theme.name ?? "") as string;
 
 /** Creates a code block highlighter with the languages and themes given by options. Without options, it uses the reference defaults (one-light, one-dark-pro). */

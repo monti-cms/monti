@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../../test/any-site";
-import { docOf } from "../../../../../test/stored-content";
+import { contentOf, docOf } from "../../../../../test/stored-content";
 import type { ContentStore } from "../..";
 import { CmsError } from "../..";
 import { publishDraft, seedEntry, seedSave } from "../seed";
@@ -91,19 +91,19 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: "export-draft",
 				metadata: { title: "Export draft" },
-				mdx: "# Draft body",
+				text: "# Draft body",
 			});
 			const created = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "export-live",
 				metadata: { title: "Export live" },
-				mdx: "# Live body",
+				text: "# Live body",
 			});
 			const published = await publishDraft(store, { id: created.id, expectedVersion: created.version });
 			await seedSave(store, published.id, {
 				expectedVersion: published.version,
 				metadata: { title: "Export live, edited" },
-				mdx: "# Edited body",
+				text: "# Edited body",
 			});
 
 			const { entries } = await store.readExportSnapshot();
@@ -115,8 +115,9 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 				workingSlug: "export-draft",
 				publishedSlug: null,
 				publishedAt: null,
-				working: { mdx: "# Draft body\n", metadata: { title: "Export draft" } },
+				working: { metadata: { title: "Export draft" } },
 			});
+			expect(contentOf(exportedDraft?.working.doc)).toEqual(contentOf(docOf("# Draft body")));
 			expect(exportedDraft?.published).toBeUndefined();
 
 			const exportedLive = entries.find((entry) => entry.id === published.id);
@@ -125,9 +126,10 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 				status: "published",
 				workingSlug: "export-live",
 				publishedSlug: "export-live",
-				working: { mdx: "# Edited body\n", metadata: { title: "Export live, edited" } },
-				published: { mdx: "# Live body\n" },
+				working: { metadata: { title: "Export live, edited" } },
 			});
+			expect(contentOf(exportedLive?.working.doc)).toEqual(contentOf(docOf("# Edited body")));
+			expect(contentOf(exportedLive?.published?.doc)).toEqual(contentOf(docOf("# Live body")));
 			expect(exportedLive?.publishedAt).toBeInstanceOf(Date);
 			expect(exportedLive?.working.contentHash).not.toBe(exportedLive?.published?.contentHash);
 		});
@@ -170,7 +172,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 
 		it("reads the same snapshot, with the same entry order, while the data does not change", async () => {
 			for (const slug of ["export-order-a", "export-order-b", "export-order-c"]) {
-				await seedEntry(store, { collection: contentCollection, slug, metadata: { title: slug }, mdx: `# ${slug}` });
+				await seedEntry(store, { collection: contentCollection, slug, metadata: { title: slug }, text: `# ${slug}` });
 			}
 
 			const first = await store.readExportSnapshot();

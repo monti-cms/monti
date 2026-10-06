@@ -5,7 +5,7 @@ import type { Cms } from "../cms";
 import { CONFIG_ALIAS, resolveConfigPaths } from "./config-paths";
 import { loadEnvFiles } from "./env";
 
-/** What the commands that run against the app's own configuration (`migrate`, `content:rewrite`) take. */
+/** What the commands that run against the app's own configuration (`migrate`) take. */
 export interface AppOptions {
 	readonly cwd: string;
 	/** Env files to read. If unset, `.env.local` and `.env` (only those that exist); an empty array reads none. */

@@ -2,14 +2,13 @@ import { type CodeBlockConfig, validateCodeBlockConfig } from "../annotation/cod
 import type { BlockDefinition } from "../blocks/define";
 import { resolveBlocks } from "../blocks/resolve";
 import { type MediaConfig, validateMediaConfig } from "../core/media-types";
+import type { StoredDocument } from "../doc/stored-document";
 import type { MessageValue } from "../i18n/define";
-import type { StoredDocument } from "../mdx/stored-document";
 import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisions";
 import type { CmsPlugin } from "../plugin/define";
 import { type CollectionSchema, normalizeCollection, validateListColumns } from "../schema/collection";
 import { RESERVED_METADATA_KEYS, SUMMARY_ROLE } from "../schema/fields";
 import { valueFieldsOf } from "../schema/walk";
-import type { SyntaxExtension } from "../syntax/types";
 
 /** Shape of a locale code (the language and region/script parts of BCP 47). */
 const LOCALE_CODE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
@@ -17,7 +16,7 @@ const LOCALE_CODE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
 /**
  * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineConfig`, and exports the result as the default export.
  *
- * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values** (plugins and syntax extensions also hold functions).
+ * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values** (plugins also hold functions).
  * Secrets (DB URL, API keys) do not go here; keep them in environment variables.
  */
 
@@ -88,16 +87,6 @@ export interface AdminConfig {
 	readonly messages?: Readonly<Record<string, Readonly<Record<string, MessageValue>>>>;
 }
 
-export interface MdxConfig {
-	/**
-	 * Syntax extensions (`@monti-cms/core/syntax`), in precedence order for writing. Stored MDX is CommonMark + GFM + standard MDX JSX; an extension
-	 * adds a notation (for example `directiveSyntax()` from `@monti-cms/syntax-directive` for `:::callout`). Content written in an extension's notation is read only while the extension is listed.
-	 *
-	 * @experimental
-	 */
-	readonly syntax?: readonly SyntaxExtension[];
-}
-
 /**
  * A body template of the seed: its fixed `id` and `name`, and the body as a stored document (`doc`) or as text in a format (`body` and the `format` that reads it;
  * the format must be one the instance has, so a plugin provides it). Text is read when the migration runs.
@@ -148,8 +137,6 @@ export interface CmsConfig<
 	readonly blocks?: Blocks;
 	/** Plugins (e.g. `aiPlugin()`). Names must not collide. */
 	readonly plugins?: Plugins;
-	/** Body (MDX) settings. */
-	readonly mdx?: MdxConfig;
 	/** Code block settings. Adds line effects (`lineEffects`) or changes the core defaults (highlight, add, delete, warning, error). */
 	readonly codeBlock?: CodeBlockConfig;
 	/** Uploadable media formats and size limits. If unset, all supported formats, images up to 10MB and 40 megapixels, attachments up to 50MB. */
@@ -406,10 +393,6 @@ function validate(
 	const blocks = blockDefinitions.map((block) => block.name);
 	validateCodeBlockConfig(config.codeBlock);
 	validateMediaConfig(config.media);
-
-	const syntaxNames = (config.mdx?.syntax ?? []).map((extension) => extension.name);
-	if (syntaxNames.some((name) => !name)) throw new Error("cms.config: every `mdx.syntax` extension needs a name");
-	if (new Set(syntaxNames).size !== syntaxNames.length) throw new Error("cms.config: `mdx.syntax` has duplicate names");
 
 	const plugins = config.plugins ?? [];
 	const pluginNames = plugins.map((plugin) => plugin.name);
