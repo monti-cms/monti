@@ -1,4 +1,4 @@
-import { createCmsRouteHandler } from "@monti-cms/core/next/route-handler";
+import { cms } from "../../../../cms.server";
 
 /** Admin API (/api/cms/v1/*) and login (/api/cms/auth/*). */
-export const { GET, POST, PATCH, PUT, DELETE } = createCmsRouteHandler();
+export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();

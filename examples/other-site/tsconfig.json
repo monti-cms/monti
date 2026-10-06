@@ -18,8 +18,7 @@
 			}
 		],
 		"paths": {
-			"@cms-config": ["./cms.config.ts"],
-			"@cms-server": ["./cms.server.ts"]
+			"@cms-config": ["./cms.config.ts"]
 		},
 		"allowJs": true
 	},
