@@ -33,6 +33,7 @@ const refs: ReadRefs = {
 			file: { filename: "deck.pdf", byteSize: 100, mimeType: "application/pdf" },
 		},
 	},
+	links: {},
 };
 
 const render = async (props: Parameters<typeof CmsContent>[0]) =>

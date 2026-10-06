@@ -86,8 +86,13 @@ export function createPublishing(ctx: StoreContext) {
 
 		const targetRows = targetIds.size
 			? (
-					await client.query<{ id: string; collection: string; status: EntryStatus }>(
-						`SELECT id, collection, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
+					await client.query<{
+						id: string;
+						collection: string;
+						status: EntryStatus;
+						translation_group_id: string | null;
+					}>(
+						`SELECT id, collection, status, translation_group_id FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
 						[Array.from(targetIds).sort()],
 					)
 				).rows
@@ -119,6 +124,7 @@ export function createPublishing(ctx: StoreContext) {
 				id: target.id,
 				collection: target.collection,
 				isPublished: target.status === "published",
+				isSource: target.translation_group_id === null || target.translation_group_id === target.id,
 			})),
 			media: mediaRows.map((media) => ({ id: media.id, status: media.status, storageKey: media.storage_key })),
 			internalLinks: links.map((link) => {
@@ -232,19 +238,31 @@ export function createPublishing(ctx: StoreContext) {
 		return entry;
 	};
 
-	/** Locks the targets the draft points at. A trashed target cannot be newly referenced. */
-	const lockDraftReferenceTargets = async (client: PoolClient, references: readonly Reference[]) => {
+	/**
+	 * Locks the targets the draft points at. A trashed target cannot be newly referenced. Returns the references a draft stores: one whose target does
+	 * not exist (a link or relation to an entry that is gone) is not stored, because the index cannot point at nothing; the publish check still sees it
+	 * (it works from the prepared snapshot) and blocks publishing it.
+	 */
+	const lockDraftReferenceTargets = async (
+		client: PoolClient,
+		references: readonly Reference[],
+	): Promise<readonly Reference[]> => {
 		const ids = Array.from(
 			new Set(references.filter((ref) => ref.kind !== "media" && isUuid(ref.targetId)).map((ref) => ref.targetId)),
 		).sort();
-		if (ids.length === 0) return;
-		const result = await client.query<{ id: string; status: string }>(
-			`SELECT id, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
-			[ids],
-		);
-		if (result.rows.some((row) => row.status === "trashed")) {
+		const result = ids.length
+			? await client.query<{ id: string; status: string }>(
+					`SELECT id, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
+					[ids],
+				)
+			: { rows: [] as { id: string; status: string }[] };
+		// A link in the body to a trashed entry is not refused (the draft can still be saved and the link removed); publishing it is, as an unpublished link.
+		const trashed = new Set(result.rows.filter((row) => row.status === "trashed").map((row) => row.id));
+		if (references.some((ref) => trashed.has(ref.targetId) && ref.occurrences.some((o) => o.type !== "body"))) {
 			throw new CmsError("Cannot reference a trashed entry", "invalid_reference");
 		}
+		const found = new Set(result.rows.map((row) => row.id));
+		return references.filter((ref) => ref.kind === "media" || found.has(ref.targetId));
 	};
 
 	/**

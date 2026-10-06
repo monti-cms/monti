@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import type { BlockDefinition } from "../../blocks/define";
 import type { ResolvedConfig } from "../../config/resolved";
-import type { ReadRefs } from "../../mdx/document-refs";
+import type { ReadLink, ReadRefs } from "../../mdx/document-refs";
 import type { ImageResolveFailure, ImageResolver } from "../../mdx/image-src";
 import type { CmsJsonValue, CmsNode } from "../../mdx/types";
 import type { CodeHighlightOptions } from "../code";
@@ -227,6 +227,10 @@ export interface LinkProps {
 	readonly title?: string;
 	/** Whether the address is an `http(s)` URL. */
 	readonly external: boolean;
+	/** The entry an internal link points to (its translation group id). Such a link has no `href` of its own: it is the address of `entry`. */
+	readonly entryId?: string;
+	/** Where an internal link goes for this reader. Absent when the target is not published or is gone (then there is no `href` either). */
+	readonly entry?: ReadLink;
 	readonly children: ReactNode;
 	readonly ctx: RenderContext;
 }

@@ -3,7 +3,7 @@ import { storedField } from "../schema/derive";
 import { type ContentServiceOptions, createContentService } from "./content-service";
 import type { Issue, ServiceInput, StorePort, WorkingCopy } from "./types";
 import { ServiceError } from "./types";
-import { createWritePipeline } from "./write-pipeline";
+import { createWritePipeline, linkResolverOf } from "./write-pipeline";
 
 export const BULK_OPS = [
 	"relation.add",
@@ -67,7 +67,7 @@ const toServiceInput = (working: WorkingCopy, metadata: { [key: string]: unknown
  * change is a save. Results and errors are per item.
  */
 export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, options: ContentServiceOptions = {}) => {
-	const pipeline = options.pipeline ?? createWritePipeline({ hooks: options.hooks });
+	const pipeline = options.pipeline ?? createWritePipeline({ hooks: options.hooks, links: linkResolverOf(storePort) });
 	const content = createContentService(storePort, { pipeline });
 	return {
 		run: async (request: BulkRequest): Promise<{ results: BulkItemResult[] }> => {

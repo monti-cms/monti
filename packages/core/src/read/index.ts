@@ -6,7 +6,7 @@
  * - List (`listEntries`): relation filters, sorting and pagination are done in the DB.
  * - Translations (`getTranslations`): the published locales of the same entry and their URLs (hreflang).
  * - Preview (`getPreview`): admins only, the latest draft.
- * - The body is the stored document (`doc`) and what it points to, resolved (`refs`: media URLs). `<CmsContent entry={entry} />` renders both.
+ * - The body is the stored document (`doc`) and what it points to, resolved (`refs`: media URLs and the addresses of internal links). `<CmsContent entry={entry} />` renders both.
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
@@ -16,7 +16,7 @@ import { type Collection, isCollection, isItemCollection } from "../core/collect
 import { contentPath } from "../core/links";
 import { DEFAULT_LOCALE, isLocale, localizePath } from "../core/locales";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
-import { collectRefs, EMPTY_REFS, type ReadRefs } from "../mdx/document-refs";
+import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../mdx/document-refs";
 import {
 	createPublicImageResolver,
 	type PublicMediaDeps,
@@ -114,30 +114,46 @@ const pathOf = (collection: string, slug: string, locale: string): string | null
 	return path ? localizePath(locale, path) : null;
 };
 
-/** Gathers the published versions of relation targets (in one query) and picks this locale -> source text. */
-async function resolveRelations(
+/**
+ * The published version of each entry (translation group) id for a reader: the one in `locale`, else the source text, else any language.
+ * One query for all ids; an id with no published version has no result.
+ */
+async function publishedPicker(
 	store: ContentStore,
-	records: readonly PublishedEntryRecord[],
+	groupIds: Iterable<string>,
 	locale: string,
-): Promise<Map<string, Record<string, ReadRelation[]>>> {
-	const wanted = new Set<string>();
-	for (const record of records) {
-		if (!isCollection(record.collection)) continue;
-		for (const { name } of relationFieldsOf(record.collection)) {
-			for (const id of idsOf((record.metadata as Record<string, unknown>)[name])) wanted.add(id);
-		}
-	}
-	const targets = await store.listPublishedByGroups({ translationGroupIds: [...wanted] });
+): Promise<(groupId: string) => PublishedEntryRecord | undefined> {
+	const wanted = [...new Set(groupIds)];
+	const targets = wanted.length > 0 ? await store.listPublishedByGroups({ translationGroupIds: wanted }) : [];
 	const byGroup = new Map<string, PublishedEntryRecord[]>();
 	for (const target of targets)
 		byGroup.set(target.translationGroupId, [...(byGroup.get(target.translationGroupId) ?? []), target]);
-	const pick = (groupId: string): ReadRelation | null => {
+	return (groupId) => {
 		const members = byGroup.get(groupId);
-		if (!members) return null;
-		const chosen =
+		if (!members) return undefined;
+		return (
 			members.find((member) => member.locale === locale) ??
 			members.find((member) => member.id === member.translationGroupId) ??
-			members[0];
+			members[0]
+		);
+	};
+}
+
+const relationIdsOfRecord = (record: PublishedEntryRecord): string[] =>
+	isCollection(record.collection)
+		? relationFieldsOf(record.collection).flatMap(({ name }) =>
+				idsOf((record.metadata as Record<string, unknown>)[name]),
+			)
+		: [];
+
+/** Relation targets of each record: the published version of each, this locale -> source text. */
+function resolveRelations(
+	records: readonly PublishedEntryRecord[],
+	locale: string,
+	pick: (groupId: string) => PublishedEntryRecord | undefined,
+): Map<string, Record<string, ReadRelation[]>> {
+	const relationOf = (groupId: string): ReadRelation | null => {
+		const chosen = pick(groupId);
 		if (!chosen) return null;
 		return {
 			id: chosen.translationGroupId,
@@ -154,7 +170,7 @@ async function resolveRelations(
 		if (isCollection(record.collection)) {
 			for (const { name } of relationFieldsOf(record.collection)) {
 				relations[name] = idsOf((record.metadata as Record<string, unknown>)[name])
-					.map(pick)
+					.map(relationOf)
 					.filter((relation): relation is ReadRelation => relation !== null);
 			}
 		}
@@ -165,23 +181,40 @@ async function resolveRelations(
 
 /**
  * The refs of each record's document. The media of all records is looked up together (each id once); a record gets only the ids its own document
- * holds, so a read never lists a media item the document does not use.
+ * holds, so a read never lists a media item or a link target the document does not use. A link target is the published version in the reader's
+ * language, else the source's; one that is not published, or has no public path, is left out (the renderer draws that link as plain text).
  */
 async function resolveRefs(
 	deps: PublicMediaDeps,
 	records: readonly PublishedEntryRecord[],
+	locale: string,
+	pick: (groupId: string) => PublishedEntryRecord | undefined,
 ): Promise<Map<string, ReadRefs>> {
-	const idsOf = new Map(records.map((record) => [record.id, collectRefs(record.doc).media] as const));
-	const resolved = await resolvePublicMedia(deps, [...new Set([...idsOf.values()].flat())]);
+	const idsByRecord = new Map(records.map((record) => [record.id, collectRefs(record.doc)] as const));
+	const resolved = await resolvePublicMedia(deps, [...new Set([...idsByRecord.values()].flatMap((ids) => ids.media))]);
+	const linkOf = (groupId: string): ReadLink | undefined => {
+		const chosen = pick(groupId);
+		const path = chosen && pathOf(chosen.collection, chosen.slug, chosen.locale);
+		return chosen && path ? { path, title: titleOf(chosen, locale), locale: chosen.locale } : undefined;
+	};
 	return new Map(
 		records.map((record) => {
+			const ids = idsByRecord.get(record.id);
 			const media: Record<string, ReadRefs["media"][string]> = {};
-			for (const mediaId of idsOf.get(record.id) ?? []) {
+			for (const mediaId of ids?.media ?? []) {
 				// An id with no media row is left out: a renderer reads it as unresolved.
 				const result = resolved.get(mediaId);
 				if (result) media[mediaId] = result;
 			}
-			return [record.id, Object.keys(media).length > 0 ? { media } : EMPTY_REFS] as const;
+			const links: Record<string, ReadLink> = {};
+			for (const groupId of ids?.links ?? []) {
+				const link = linkOf(groupId);
+				if (link) links[groupId] = link;
+			}
+			return [
+				record.id,
+				Object.keys(media).length > 0 || Object.keys(links).length > 0 ? { media, links } : EMPTY_REFS,
+			] as const;
 		}),
 	);
 }
@@ -192,10 +225,14 @@ async function toReadEntries<C extends Collection>(
 	locale: string,
 	fallback = false,
 ): Promise<ReadEntry<C>[]> {
-	const [relations, refs] = await Promise.all([
-		resolveRelations(deps.store(), records, locale),
-		resolveRefs(deps, records),
-	]);
+	// Relation targets and link targets are the same kind of thing (a published entry by translation group id), so they are looked up together.
+	const pick = await publishedPicker(
+		deps.store(),
+		records.flatMap((record) => [...relationIdsOfRecord(record), ...collectRefs(record.doc).links]),
+		locale,
+	);
+	const relations = resolveRelations(records, locale, pick);
+	const refs = await resolveRefs(deps, records, locale, pick);
 	return records.map((record) => ({
 		id: record.id,
 		collection: record.collection as C,
@@ -389,6 +426,6 @@ export function createRead(deps: ReadDeps): CmsRead {
 }
 
 export type { PublishedSort } from "../core/store";
-export type { DocumentRefIds, ReadRefs } from "../mdx/document-refs";
+export type { DocumentRefIds, ReadLink, ReadRefs } from "../mdx/document-refs";
 export { collectRefs } from "../mdx/document-refs";
 export type { StoredDocument } from "../mdx/stored-document";

@@ -23,6 +23,7 @@ import {
 import { checkDocument, isEmptyDocument } from "./body-check";
 import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
 import { computeContentHash, sortKeys } from "./content-hash";
+import { LINKABLE_COLLECTIONS } from "./links";
 import { PREFIXED_LOCALES } from "./locales";
 import { normalizeSlugInput } from "./slug";
 import { parseTranslationState } from "./translation/state";
@@ -333,6 +334,12 @@ export async function prepareSnapshot(
 			}
 		}
 	} else {
+		for (const item of check.entryLinks) {
+			collector.add("entry", item.entryId, {
+				type: "body",
+				...(item.position.blockId === undefined ? {} : { blockId: item.position.blockId }),
+			});
+		}
 		for (const item of check.mediaReferences) {
 			collector.add("media", item.mediaId, {
 				type: "body",
@@ -485,7 +492,8 @@ export function validateForPublish(
 	for (const ref of references) {
 		const occurrences = ref.occurrences.length > 0 ? ref.occurrences : [undefined];
 		const addForAll = (code: string) => {
-			for (const occurrence of occurrences) issues.push(occurrenceIssue(code, occurrence, ref.targetId));
+			for (const occurrence of ref.kind === "entry" ? occurrences.filter((item) => item?.type !== "body") : occurrences)
+				issues.push(occurrenceIssue(code, occurrence, ref.targetId));
 		};
 
 		if (ref.kind === "media") {
@@ -494,6 +502,19 @@ export function validateForPublish(
 		}
 
 		const target = resolved.targets.find((t) => t.id === ref.targetId);
+		// A body occurrence of an entry is a link by id. It has its own codes (the same ones a link by address has), and the target must be a source
+		// entry of a collection with a public path.
+		const bodyOccurrences = occurrences.filter((occurrence) => occurrence?.type === "body");
+		if (bodyOccurrences.length > 0) {
+			const reachable =
+				target && target.isSource !== false && LINKABLE_COLLECTIONS.includes(target.collection as Collection);
+			for (const occurrence of bodyOccurrences) {
+				if (!reachable) issues.push(occurrenceIssue("unresolved_internal_link", occurrence, ref.targetId));
+				else if (!target.isPublished)
+					issues.push(occurrenceIssue("unpublished_internal_link", occurrence, ref.targetId));
+			}
+			if (occurrences.every((occurrence) => occurrence?.type === "body")) continue;
+		}
 		if (!target) {
 			addForAll("unresolved_reference");
 			continue;

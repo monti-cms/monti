@@ -71,6 +71,13 @@ export interface EntryStore {
 		snapshot: PreparedSnapshot;
 		resetPublishedAt?: boolean;
 	}): Promise<Entry>;
+	/**
+	 * The entries the addresses of internal body links point to (default language, `/posts/slug`), as translation group ids. An address no entry holds,
+	 * and one held by a trashed entry, is not in the result.
+	 */
+	resolveLinkTargets(params: {
+		addresses: readonly { collection: string; slug: string }[];
+	}): Promise<{ collection: string; slug: string; entryId: string }[]>;
 	/** Field relations and body references that point at an entry, split into draft and published. */
 	getIncomingReferences(params: { targetId: string }): Promise<IncomingReferenceItem[]>;
 	/**

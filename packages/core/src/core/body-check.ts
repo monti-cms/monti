@@ -1,6 +1,7 @@
 import type { BlockDefinition } from "../blocks/define";
 import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
 import { createTranslator } from "../i18n";
+import { entryIdOfMark } from "../mdx/entry-links";
 import type { StoredDocument } from "../mdx/stored-document";
 import { MAX_TABLE_COLUMNS } from "../mdx/table-layout";
 import type { CmsImageSource, CmsJsonValue, CmsMark, CmsNode } from "../mdx/types";
@@ -25,7 +26,10 @@ export interface DocumentCheck {
 	/** Registered media the body uses (valid ids only), one entry per use. */
 	readonly mediaReferences: { readonly mediaId: string; readonly position: BodyPosition }[];
 	readonly imageSources: CmsImageSource[];
+	/** Links by address (`href`) that point into this site's content. They are looked up by address when the body is published. */
 	readonly internalLinks: InternalLinkSource[];
+	/** Links by entry id (valid ids only), one entry per link. */
+	readonly entryLinks: { readonly entryId: string; readonly position: BodyPosition }[];
 	/** Whether the body holds an `unparsed` node. */
 	readonly unparsed: boolean;
 	/**
@@ -167,6 +171,7 @@ export function checkDocument(doc: StoredDocument): DocumentCheck {
 	const mediaReferences: DocumentCheck["mediaReferences"] = [];
 	const imageSources: CmsImageSource[] = [];
 	const internalLinks: InternalLinkSource[] = [];
+	const entryLinks: DocumentCheck["entryLinks"] = [];
 	const codeRefs = new CodeRefCollector();
 	let unparsed = false;
 	let incomplete = false;
@@ -284,6 +289,16 @@ export function checkDocument(doc: StoredDocument): DocumentCheck {
 	/** One stretch of decorated text: a link, a translation note, or a text block such as a tooltip. */
 	const checkMark = (mark: CmsMark, at: BodyPosition) => {
 		if (mark.type === "link") {
+			const entryId = entryIdOfMark(mark);
+			if (entryId) {
+				// A link by id is a reference like a relation. An id that is not an id is a body error (the references of such a body cannot be trusted).
+				if (isUuid(entryId)) entryLinks.push({ entryId, position: at });
+				else {
+					issues.push({ code: "invalid_reference_id", position: at });
+					incomplete = true;
+				}
+				return;
+			}
 			const href = mark.attrs?.href;
 			const parsed = typeof href === "string" ? parseInternalLink(href) : null;
 			if (parsed) internalLinks.push({ ...parsed, position: at });
@@ -411,7 +426,7 @@ export function checkDocument(doc: StoredDocument): DocumentCheck {
 		});
 	}
 
-	return { issues, warnings, mediaReferences, imageSources, internalLinks, unparsed, incomplete };
+	return { issues, warnings, mediaReferences, imageSources, internalLinks, entryLinks, unparsed, incomplete };
 }
 
 /** Whether a document has nothing a reader would see: no blocks, or only blank paragraphs. */

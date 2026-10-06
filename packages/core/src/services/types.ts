@@ -6,6 +6,13 @@ export * from "../core/types";
 export interface StorePort<T = unknown> {
 	getWorkingReferences(params: { entryId: string }): Promise<Reference[]>;
 	getWorking(params: { entryId: string }): Promise<WorkingCopy>;
+	/**
+	 * The entries the addresses of internal body links (`/posts/slug`, default language) point to, as translation group ids. The write pipeline turns a
+	 * link by address into a link by id with it. Without it, links keep their address.
+	 */
+	resolveLinkTargets?(params: {
+		addresses: readonly { collection: string; slug: string }[];
+	}): Promise<{ collection: string; slug: string; entryId: string }[]>;
 	archiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	unarchiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	trashEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;

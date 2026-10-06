@@ -155,7 +155,13 @@ export type PreparedSnapshot = {
 };
 
 export type ResolvedTargets = {
-	targets: { id: string; isPublished: boolean; collection: string }[];
+	targets: {
+		id: string;
+		isPublished: boolean;
+		collection: string;
+		/** Whether it is a source entry (its id is a translation group id). A link by id can only point to one. Unset: not checked. */
+		isSource?: boolean;
+	}[];
 	/**
 	 * The pre-publish image warnings look at the media status.
 	 * `status` and `storageKey` are optional — if the caller does not fill them, only those warnings are skipped (nothing is blocked).

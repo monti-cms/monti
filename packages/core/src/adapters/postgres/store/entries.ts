@@ -115,7 +115,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				pool,
 				async (client) => {
 					const metadata = normalizeMetadata(params.snapshot.metadata);
-					await lockDraftReferenceTargets(client, params.references);
+					const references = await lockDraftReferenceTargets(client, params.references);
 					await assertFolder(client, params.folderId, params.snapshot.collection);
 					const id = randomUUID();
 					const now = new Date();
@@ -150,7 +150,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						translation,
 					});
 					await reserveSlug(client, id, params.snapshot.collection, locale, params.snapshot.slug);
-					await insertReferences(client, qSchema, id, "working", params.references);
+					await insertReferences(client, qSchema, id, "working", references);
 
 					return params.publishImmediately
 						? publishWithinTransaction(client, id, { expectedVersion: 1, snapshot: params.snapshot })
@@ -197,9 +197,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						`SELECT occurrences FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = 'working'`,
 						[params.entryId],
 					);
-					const refsEqual =
-						isReferencesEqual(currentRefs, params.references) &&
-						!legacy.rows.some((row) => hasLegacyOccurrence(row.occurrences));
 					const nextSlug = params.snapshot.slug;
 					// If no translation status is sent (bulk operations, etc.), keep the stored value.
 					const translation =
@@ -225,7 +222,10 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					);
 					const folderChanged = params.folderId !== undefined;
 
-					await lockDraftReferenceTargets(client, params.references);
+					const references = await lockDraftReferenceTargets(client, params.references);
+					const refsEqual =
+						isReferencesEqual(currentRefs, references) &&
+						!legacy.rows.some((row) => hasLegacyOccurrence(row.occurrences));
 
 					let version = locked.version;
 					if (!bodyIdentical || !refsEqual || folderChanged) {
@@ -262,7 +262,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 								`DELETE FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = 'working'`,
 								[params.entryId],
 							);
-							await insertReferences(client, qSchema, params.entryId, "working", params.references);
+							await insertReferences(client, qSchema, params.entryId, "working", references);
 						}
 					}
 
@@ -413,6 +413,23 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				[params.collection, params.locale, [...params.slugs], params.excludeEntryId ?? null],
 			);
 			return new Set(res.rows.map((row) => row.slug));
+		},
+
+		resolveLinkTargets: async (params: {
+			addresses: readonly { collection: string; slug: string }[];
+		}): Promise<{ collection: string; slug: string; entryId: string }[]> => {
+			if (params.addresses.length === 0) return [];
+			// A body link (`/posts/slug`) is the default-language URL. Current, former and reserved addresses all name an entry; a trashed entry is not one a new
+			// link can be made to (saving a reference to it is refused), so its address is left as written.
+			const res = await pool.query<{ collection: string; slug: string; entry_id: string }>(
+				`SELECT a.collection, a.slug, COALESCE(e.translation_group_id, e.id) AS entry_id
+				 FROM "${qSchema}".content_addresses a
+				 JOIN "${qSchema}".entries e ON e.id = a.entry_id
+				 WHERE a.locale = $3 AND a.type IN ('current', 'alias', 'reservation') AND e.status <> 'trashed'
+				   AND (a.collection, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[]))`,
+				[params.addresses.map((a) => a.collection), params.addresses.map((a) => a.slug), DEFAULT_LOCALE],
+			);
+			return res.rows.map((row) => ({ collection: row.collection, slug: row.slug, entryId: row.entry_id }));
 		},
 
 		/** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
