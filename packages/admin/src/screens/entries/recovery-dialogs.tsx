@@ -5,26 +5,24 @@ import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { useConfirm } from "../shared/confirm-dialog";
 import { formatDateTime } from "../shared/format-date";
-import { type EntryData, type EntryForm, formFromEntry } from "./entry-form";
-import type { LocalBackupRecord } from "./local-backup";
+import type { ConflictInfo, RecoveryOffer } from "./entry-editor-store";
+import { type EntryForm, formFromEntry } from "./entry-form";
 import { t } from "./translate";
 
-/** Browser recovery copy found when the edit screen opened. It is a `conflict` if the server has changed since then. */
-export type Recovery =
-	| { kind: "restore"; backup: LocalBackupRecord<EntryForm> }
-	| { kind: "conflict"; backup: LocalBackupRecord<EntryForm>; server: EntryData };
-
-/** Asks whether to load a browser temporary copy that is not on the server. */
+/**
+ * Asks whether to load a browser temporary copy that is not on the server (`useEntryEditor().recovery`). It is a `conflict` offer if the server has
+ * changed since the copy was made. Closing the dialog only hides it; the copy is kept until the user answers.
+ */
 export function RecoveryDialog({
 	recovery,
 	onClose,
 	onKeepServer,
 	onRestore,
 }: {
-	recovery: Recovery | null;
+	recovery: RecoveryOffer | null;
 	onClose: () => void;
-	onKeepServer: (recovery: Recovery) => void;
-	onRestore: (recovery: Recovery) => void;
+	onKeepServer: () => void;
+	onRestore: () => void;
 }) {
 	return (
 		<Dialog open={recovery !== null} onOpenChange={(open) => !open && onClose()}>
@@ -32,15 +30,15 @@ export function RecoveryDialog({
 				<DialogHeader>
 					<DialogTitle>{t("recovery.title")}</DialogTitle>
 					<DialogDescription>
-						{recovery ? t("recovery.description", { date: formatDateTime(recovery.backup.savedAt) }) : ""}
+						{recovery ? t("recovery.description", { date: formatDateTime(recovery.savedAt) }) : ""}
 						{recovery?.kind === "conflict" && t("recovery.conflict")}
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>
-					<Button type="button" variant="outline" onClick={() => recovery && onKeepServer(recovery)}>
+					<Button type="button" variant="outline" onClick={onKeepServer}>
 						{t("recovery.keepServer")}
 					</Button>
-					<Button type="button" onClick={() => recovery && onRestore(recovery)}>
+					<Button type="button" onClick={onRestore}>
 						{t("recovery.restore")}
 					</Button>
 				</DialogFooter>
@@ -49,24 +47,27 @@ export function RecoveryDialog({
 	);
 }
 
-/** When someone saved elsewhere first during autosave or publish. Compare both sides, then copy or pick one. */
+/**
+ * When someone saved elsewhere first during a save or publish (`useEntryEditor().conflict`). Compare both sides, then copy or pick one.
+ * Neither answer reloads the page: the editor loads the server version, or saves on top of it.
+ */
 export function ConflictDialog({
 	conflict,
 	onClose,
 	onReload,
 	onOverwrite,
 }: {
-	conflict: { server: EntryData; local: EntryForm } | null;
+	conflict: ConflictInfo | null;
 	onClose: () => void;
+	/** Loads the latest server version in place of my input. */
 	onReload: () => void;
 	/** Overwrites the latest server version with my input. */
-	onOverwrite: (serverVersion: number) => void;
+	onOverwrite: () => void;
 }) {
 	const { confirm, dialog } = useConfirm();
 	// This replaces the latest server copy wholesale, so ask once more.
 	const overwrite = async () => {
 		if (!conflict) return;
-		const serverVersion = conflict.server.version;
 		if (
 			await confirm({
 				title: t("conflict.overwrite"),
@@ -75,7 +76,7 @@ export function ConflictDialog({
 				destructive: true,
 			})
 		) {
-			onOverwrite(serverVersion);
+			onOverwrite();
 		}
 	};
 	return (

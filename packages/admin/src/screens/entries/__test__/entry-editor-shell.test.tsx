@@ -176,7 +176,7 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "로컬에서 수정" } });
-		// The recovery copy is kept after input pauses (interval is in the use-entry-autosave test). Here, leaving the screen writes it right away.
+		// The recovery copy is kept after input pauses (interval is in the entry editor store test). Here, leaving the screen writes it right away.
 		expect(saveLocalBackup).not.toHaveBeenCalled();
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() =>
@@ -267,7 +267,7 @@ describe("entry editor shell", () => {
 		});
 		render(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
 		fireEvent.change(await editorTitle(), { target: { value: "새 글" } });
-		// The recovery copy is kept after input pauses (interval is in the use-entry-autosave test). Here, leaving the screen writes it right away.
+		// The recovery copy is kept after input pauses (interval is in the entry editor store test). Here, leaving the screen writes it right away.
 		expect(saveLocalBackup).not.toHaveBeenCalled();
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() =>
@@ -579,6 +579,71 @@ describe("entry editor shell", () => {
 		expect(within(dialog).getByRole("button", { name: "다시 불러오기" })).toBeTruthy();
 		expect(within(dialog).getByRole("button", { name: "내 내용으로 덮어쓰기" })).toBeTruthy();
 		expect(methodCalls("POST", "/publish")).toHaveLength(0);
+	});
+
+	describe("resolving an edit conflict in place", () => {
+		const newer = {
+			...entry,
+			version: 9,
+			working: { ...entry.working, metadata: { ...entry.working.metadata, title: "서버 최신 제목" } },
+		};
+		/** Someone else saved version 9 while this screen holds version 4; the first save meets the conflict. */
+		async function conflicted() {
+			let server: typeof entry = { ...entry };
+			serve((input, init) => {
+				if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(server);
+				if (init?.method === "PATCH") {
+					const body = JSON.parse(String(init.body));
+					if (body.expectedVersion !== server.version)
+						return json({ code: "conflict", serverVersion: server.version }, 409);
+					server = {
+						...server,
+						version: server.version + 1,
+						working: { ...server.working, metadata: body.metadata, mdx: body.mdx },
+					};
+					return json(server);
+				}
+			});
+			renderEdit();
+			fireEvent.change(await editorTitle(), { target: { value: "로컬 수정" } });
+			server = newer;
+			fireEvent.click(screen.getByRole("button", { name: "저장" }));
+			return { dialog: await screen.findByRole("dialog", { name: /편집 충돌/ }), server: () => server };
+		}
+
+		it("loads the server version without reloading the page", async () => {
+			const { dialog } = await conflicted();
+			expect(screen.getByLabelText("충돌")).toBeTruthy();
+			fireEvent.click(within(dialog).getByRole("button", { name: "다시 불러오기" }));
+			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
+			await waitFor(async () => expect(((await editorTitle()) as HTMLInputElement).value).toBe("서버 최신 제목"));
+			expect(screen.getByLabelText("서버에 저장됨")).toBeTruthy();
+			// The local copy was dropped with the local changes, so a reopen does not offer it again.
+			expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
+			expect(methodCalls("PATCH")).toHaveLength(1);
+		});
+
+		it("overwrites the server version with mine after asking once more, at the server's version", async () => {
+			const { dialog, server } = await conflicted();
+			fireEvent.click(within(dialog).getByRole("button", { name: "내 내용으로 덮어쓰기" }));
+			fireEvent.click(await screen.findByRole("button", { name: "덮어쓰기" }));
+			await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(2));
+			expect(JSON.parse(String(methodCalls("PATCH")[1]?.[1]?.body))).toMatchObject({
+				expectedVersion: 9,
+				metadata: expect.objectContaining({ title: "로컬 수정" }),
+			});
+			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
+			await waitFor(() => expect(screen.getByLabelText("서버에 저장됨")).toBeTruthy());
+			expect(server().version).toBe(10);
+		});
+
+		it("closing the dialog only hides it: the editor stays in conflict and keeps what was typed", async () => {
+			const { dialog } = await conflicted();
+			fireEvent.click(within(dialog).getAllByRole("button", { name: "닫기" })[0] as HTMLElement);
+			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
+			expect(screen.getByLabelText("충돌")).toBeTruthy();
+			expect(((await editorTitle()) as HTMLInputElement).value).toBe("로컬 수정");
+		});
 	});
 
 	it("reports offline, server and expired-session failures and keeps a browser backup", async () => {

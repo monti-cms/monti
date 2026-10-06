@@ -3,22 +3,15 @@
 import {
 	adminEntryEditHref,
 	adminHref,
-	bodyExcerpt,
-	cmsApiUrl,
-	confirmedSourceState,
 	previewHref as contentPreviewHref,
 	createTranslator,
 	DEFAULT_COLLECTION,
-	fillFromBodyFields,
-	fillFromBodyLength,
 	isCollection,
 	isItemCollection,
-	slugFieldOf,
-	slugFromValues,
+	localeLabel,
 	storedField,
 	withBasePath,
 } from "@monti-cms/core/client";
-import type { StoredDocument } from "@monti-cms/core/mdx";
 import { analyze } from "@monti-cms/core/mdx";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import type { Editor } from "@tiptap/core";
@@ -65,46 +58,31 @@ import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import { Toggle } from "../../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
-import { CmsApiError, cmsFetch, errorText } from "../admin-api";
 import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
 import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
+import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
-import {
-	copyTitle,
-	EMPTY_FORM,
-	type EntryData,
-	type EntryForm,
-	type EntryFormPatch,
-	formFingerprint,
-	formFromEntry,
-	formText,
-	isTranslationEntry,
-	stringifyTranslation,
-	TRANSLATION_FORM_KEY,
-	translationSourceOf,
-	translationStateFromForm,
-} from "./entry-form";
+import type { ConflictInfo, RecoveryOffer, SaveStatus } from "./entry-editor-store";
+import { formText, isTranslationEntry } from "./entry-form";
 import { InspectorPanel } from "./inspector-panel";
 import { LanguageTabs } from "./language-tabs";
 import {
 	type ConfirmedLifecycleAction,
-	LIFECYCLE_FAILED,
 	LIFECYCLE_LABEL,
 	LIFECYCLE_SUCCESS,
 	type LifecycleAction,
 	lifecycleConfirm,
 } from "./lifecycle-confirm";
-import { backupKey, deleteLocalBackup, getLocalBackup } from "./local-backup";
-import { ConflictDialog, type Recovery, RecoveryDialog } from "./recovery-dialogs";
+import { ConflictDialog, RecoveryDialog } from "./recovery-dialogs";
 import { SourceChangeDialog } from "./source-change-dialog";
 import { SourcePane } from "./source-pane";
 import { useSourceSync } from "./source-sync";
 import { TemplateMenu } from "./template-menu";
 import { t as tc } from "./translate";
-import { SAVE_STATUS_LABELS, type SaveStatus, useEntryAutosave } from "./use-entry-autosave";
+import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
 
 const t = createTranslator(entryEditorShellMessages);
 
@@ -208,6 +186,18 @@ const saveFirstMessage = (purpose: Purpose) => t("saveFirst", { purpose });
 /** The action that was attempted, put into the hint when blocked. */
 type Purpose = "publish" | "duplicate" | LifecycleAction;
 
+/** Name of each save status. */
+const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
+	new: tc("save.new"),
+	saved: tc("save.saved"),
+	dirty: tc("save.dirty"),
+	saving: tc("save.saving"),
+	"local-only": tc("save.local-only"),
+	failed: tc("save.failed"),
+	conflict: tc("save.conflict"),
+	"session-expired": tc("save.session-expired"),
+};
+
 /** Color of the save status dot. When adding a status, its color must be chosen here. */
 const SAVE_STATUS_DOT: Record<SaveStatus, string> = {
 	new: "bg-cms-muted-foreground/50",
@@ -236,16 +226,6 @@ function SaveStatusIndicator({ status, backupAvailable }: { status: SaveStatus; 
 }
 
 /**
- * Save and publish responses carry no translation group info. Keep the values received on load and update only this content's status.
- */
-function keepTranslationGroup(current: EntryData | null, next: EntryData): Pick<EntryData, "translations" | "source"> {
-	const translations = (current?.translations ?? next.translations)?.map((member) =>
-		member.id === next.id ? { ...member, status: next.status } : member,
-	);
-	return { translations, source: current?.source ?? next.source };
-}
-
-/**
  * Edit screen of a document entry. Item collections (tags, categories and the like) are edited in the small form on the list.
  */
 export function EntryEditorShell({
@@ -257,10 +237,22 @@ export function EntryEditorShell({
 }: EntryEditorShellProps) {
 	const router = useRouter();
 	const { resolvedTheme, setTheme } = useTheme();
-	const [entry, setEntry] = useState<EntryData | null>(null);
-	const [collection, setCollection] = useState(propCollection);
-	const [isLoading, setIsLoading] = useState(mode === "edit");
-	const [loadError, setLoadError] = useState<string | null>(null);
+	const editor = useEntryEditor({
+		adminId,
+		target:
+			mode === "edit"
+				? { mode: "edit", entryId: initialEntryId as string }
+				: { mode: "new", collection: propCollection, folderId },
+		// Change only the URL to the edit URL after the first save of a new entry, without remounting the screen.
+		onSaved: (saved, { created }) => {
+			if (created)
+				window.history.replaceState({ ...window.history.state }, "", withBasePath(adminEntryEditHref(saved.id)));
+		},
+	});
+	const { entry, collection, form, load, busy, saveStatus, publishIssues, recovery, conflict, translation } = editor;
+	const isReadOnly = editor.readOnly;
+	const isLoading = load.status === "loading";
+	const loadError = load.status === "error" ? load.error.message : null;
 	const [editorMode, setEditorMode] = useState<"visual" | "source">("visual");
 	const [isInspectorOpen, setIsInspectorOpen] = useState(true);
 	const [isNarrowScreen, setIsNarrowScreen] = useState(false);
@@ -268,15 +260,15 @@ export function EntryEditorShell({
 	const [isSourceCompareOpen, setIsSourceCompareOpen] = useState(false);
 	const editorScrollRef = useRef<HTMLDivElement>(null);
 	const sourcePaneRef = useRef<HTMLElement>(null);
-	const [isSlugTouched, setIsSlugTouched] = useState(mode === "edit");
-	/** What the header button does. While it runs, the button is disabled and its label changes. */
-	const [busy, setBusy] = useState<"publish" | "status" | null>(null);
-	const isSubmitting = busy !== null;
-	const [publishIssues, setPublishIssues] = useState<CmsIssue[]>([]);
+	/** Publish saves first. While that save runs, the header buttons are disabled and the label changes like during the publish request itself. */
+	const [isPreparingPublish, setIsPreparingPublish] = useState(false);
+	const isPublishing = busy === "publish" || isPreparingPublish;
+	const isSubmitting = busy !== null || isPreparingPublish;
 	const [pendingBodyPosition, setPendingBodyPosition] = useState<CmsIssue["position"]>();
 	const [pendingFieldPath, setPendingFieldPath] = useState<string | null>(null);
-	const [recovery, setRecovery] = useState<Recovery | null>(null);
-	const [conflict, setConflict] = useState<{ server: EntryData; local: EntryForm } | null>(null);
+	// Closing a dialog hides it without answering it: the editor keeps the recovery copy and the conflict until they are resolved.
+	const [dismissedRecovery, setDismissedRecovery] = useState<RecoveryOffer | null>(null);
+	const [dismissedConflict, setDismissedConflict] = useState<ConflictInfo | null>(null);
 	const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
 	const [incoming, setIncoming] = useState<{ items: IncomingReferenceItem[]; loading: boolean; error: string | null }>({
 		items: [],
@@ -285,24 +277,17 @@ export function EntryEditorShell({
 	});
 
 	const isTrashed = entry?.status === "trashed";
-	const isReadOnly = isTrashed;
 
-	// The body the visual editor last made, as MDX and as a stored document with its block ids. Saved as the document while the form still holds that MDX.
-	const editorBodyRef = useRef<{ mdx: string; doc: StoredDocument | null } | null>(null);
+	// An item collection (tags, categories and the like) is edited in the small form on the list: the editor says so, and this screen moves there.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once per redirect
+	useEffect(() => {
+		if (load.status !== "redirect") return;
+		router.replace(
+			(load.entryId ? entryHref(load.collection, load.entryId) : adminHref(`?collection=${load.collection}`)) as Route,
+		);
+	}, [load]);
+
 	const visualEditorRef = useRef<Editor | null>(null);
-	const autosave = useEntryAutosave({
-		adminId,
-		collection,
-		entry,
-		initialForm: EMPTY_FORM,
-		enabled: !isReadOnly,
-		newEntryFolderId: folderId,
-		// The save response carries no translation group info. Keep the values received on load.
-		onSaved: (saved) => setEntry((current) => ({ ...saved, ...keepTranslationGroup(current, saved) })),
-		onConflict: (server, local) => setConflict({ server, local }),
-		documentOf: (mdx) => (editorBodyRef.current?.mdx === mdx ? editorBodyRef.current.doc : undefined),
-	});
-	const { form, setForm } = autosave;
 
 	// MDX or frontmatter that cannot be parsed is not opened in visual mode. Opening it would produce an empty document, and
 	// a single keystroke would overwrite the source. It can be fixed in source mode or saved as is.
@@ -363,13 +348,11 @@ export function EntryEditorShell({
 		}
 	};
 
-	const translationSource = translationSourceOf(entry);
-	const translationForm = form[TRANSLATION_FORM_KEY];
+	const translationSource = translation?.source ?? null;
 	/** The source the translator last confirmed. If it differs from the current source, "source changed" is shown. */
-	const confirmed = useMemo(() => translationStateFromForm(translationForm), [translationForm]);
-	const confirmedSource = confirmed.baseSource;
-	const sourceChanged =
-		translationSource !== null && typeof translationForm === "string" && translationSource.mdx !== confirmedSource;
+	const confirmed = translation?.confirmed;
+	const confirmedSource = confirmed?.baseSource ?? "";
+	const sourceChanged = translation?.sourceChanged ?? false;
 
 	useSourceSync({
 		enabled: translationSource !== null && isSourcePaneOpen,
@@ -401,101 +384,47 @@ export function EntryEditorShell({
 	const refreshIncoming = useCallback(async (targetId: string) => {
 		setIncoming((current) => ({ ...current, loading: true, error: null }));
 		try {
-			const data = await cmsFetch<{ incomingReferences: IncomingReferenceItem[] }>(
-				cmsApiUrl(`/v1/entries/${targetId}/relations`),
-			);
+			const data = await cmsEntryClient.relations(targetId);
 			setIncoming({ items: data.incomingReferences ?? [], loading: false, error: null });
 		} catch {
 			setIncoming({ items: [], loading: false, error: t("usagesFailed") });
 		}
 	}, []);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: autosave methods are ref-backed and stable
-	const loadEntry = useCallback(
-		async (id: string) => {
-			const loaded = await cmsFetch<EntryData>(cmsApiUrl(`/v1/entries/${id}`), { fallback: t("loadFailed") });
-			if (isItemCollection(loaded.collection)) {
-				// Item collections (tags, categories, etc.) open in the small form on the list.
-				router.replace(entryHref(loaded.collection, loaded.id) as Route);
-				return null;
-			}
-			const loadedForm = formFromEntry(loaded);
-			setEntry(loaded);
-			setCollection(loaded.collection);
-			autosave.resetFromServer(loaded, loadedForm);
-			void refreshIncoming(loaded.id);
-			return { loaded, loadedForm };
-		},
-		[refreshIncoming, router],
-	);
-
-	// When the edit screen opens, compare the server value with the browser recovery copy.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once per opened entry
+	// The usages of an entry are read when it has loaded, and again when its status changes (and after a publish, below).
+	const entryId = entry?.id;
+	const entryStatus = entry?.status;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a status change reloads the usages
 	useEffect(() => {
-		let cancelled = false;
-		const open = async () => {
-			if (mode === "new") {
-				if (isItemCollection(propCollection)) {
-					router.replace(adminHref(`?collection=${propCollection}`) as Route);
-					return;
-				}
-				const backup = await getLocalBackup<EntryForm>(backupKey(adminId, null, propCollection));
-				if (!cancelled && backup && backup.localFingerprint !== backup.baseFingerprint) {
-					setRecovery({ kind: "restore", backup });
-				}
-				return;
-			}
-			try {
-				const result = await loadEntry(initialEntryId as string);
-				if (!result || cancelled) return;
-				const key = backupKey(adminId, result.loaded.id, result.loaded.collection);
-				const backup = await getLocalBackup<EntryForm>(key);
-				if (!backup || cancelled) return;
-				if (backup.localFingerprint === formFingerprint(result.loadedForm)) {
-					await deleteLocalBackup(key);
-				} else if (backup.baseVersion === result.loaded.version) {
-					setRecovery({ kind: "restore", backup });
-				} else {
-					// The server also changed after the recovery copy. Tell the user that loading will overwrite it.
-					setRecovery({ kind: "conflict", backup, server: result.loaded });
-				}
-			} catch (error) {
-				if (!cancelled) setLoadError(errorText(error, t("loadFailed")));
-			} finally {
-				if (!cancelled) setIsLoading(false);
-			}
-		};
-		void open();
-		return () => {
-			cancelled = true;
-		};
-	}, [mode, initialEntryId]);
+		if (load.status === "ready" && entryId) void refreshIncoming(entryId);
+	}, [load.status, entryId, entryStatus, refreshIncoming]);
 
-	const applyRecovered = (recovered: EntryForm) => {
-		setIsSlugTouched(true);
-		setForm(recovered);
-		setRecovery(null);
-	};
-
-	/** If the slug was not edited by hand, regenerates it when the value that the slug field's `from` points to changes. */
-	const withAutoSlug = (patch: EntryFormPatch): EntryFormPatch => {
-		if (isSlugTouched || !isCollection(collection)) return patch;
-		const from = slugFieldOf(collection)?.from;
-		if (!from || !Object.hasOwn(patch, from)) return patch;
-		return { ...patch, slug: slugFromValues(collection, { ...form, ...patch }) };
-	};
-	const handleTitleChange = (title: string) => setForm(withAutoSlug({ title }));
+	// Shown beside a field a translation shares with the original: where to change it.
+	const lockedNote = useMemo(
+		() =>
+			entry?.source ? (
+				<>
+					{tc("inspector.source", { locale: localeLabel(entry.source.locale) })}{" "}
+					<Link
+						href={adminEntryEditHref(entry.source.id) as Route}
+						className="text-cms-primary underline-offset-2 hover:underline"
+					>
+						{tc("inspector.sourceLink")}
+					</Link>
+				</>
+			) : undefined,
+		[entry?.source],
+	);
 
 	/** Selects the start of a block in the visual editor and scrolls to it. False when the editor does not have that block. */
 	const revealBlock = (blockId: string): boolean => {
-		const editor = visualEditorRef.current;
-		if (!editor || editor.isDestroyed) return false;
-		const pos = findBlock(editor.state.doc, blockId);
+		const visual = visualEditorRef.current;
+		if (!visual || visual.isDestroyed) return false;
+		const pos = findBlock(visual.state.doc, blockId);
 		if (pos === undefined) return false;
-		editor
+		visual
 			.chain()
 			.focus()
-			.setTextSelection(Math.min(pos + 1, editor.state.doc.content.size))
+			.setTextSelection(Math.min(pos + 1, visual.state.doc.content.size))
 			.scrollIntoView()
 			.run();
 		return true;
@@ -551,16 +480,19 @@ export function EntryEditorShell({
 		purpose: Purpose,
 		{ saveChanges = false, report = toast.error }: { saveChanges?: boolean; report?: (message: string) => void } = {},
 	) => {
-		if (autosave.status === "conflict") {
+		if (editor.getSnapshot().saveStatus === "conflict") {
 			report(t("conflictFirst", { purpose }));
 			return null;
 		}
-		if (saveChanges && !(await autosave.flush())) {
-			report(t("notSaved", { purpose, reason: autosave.getLastError() ?? t("checkSaveStatus") }));
-			return null;
+		if (saveChanges) {
+			const saved = await editor.save();
+			if (!saved.ok) {
+				report(t("notSaved", { purpose, reason: saved.error.message || t("checkSaveStatus") }));
+				return null;
+			}
 		}
-		const id = autosave.getEntryId();
-		if (!id || (!saveChanges && autosave.hasPendingChanges())) {
+		const { entryId: id, hasUnsavedChanges } = editor.getSnapshot();
+		if (!id || (!saveChanges && hasUnsavedChanges)) {
 			report(saveFirstMessage(purpose));
 			return null;
 		}
@@ -569,9 +501,10 @@ export function EntryEditorShell({
 
 	const handleSaveNow = async () => {
 		if (isReadOnly) return;
-		if (await autosave.flush()) toast.success(t("saved"));
+		const saved = await editor.save();
+		if (saved.ok) toast.success(t("saved"));
 		// On failure, always show the reason (a conflict opens its own conflict dialog).
-		else if (autosave.getStatus() !== "conflict") toast.error(autosave.getLastError() ?? tc("saveFailed"));
+		else if (saved.error.code !== "conflict") toast.error(saved.error.message || tc("saveFailed"));
 	};
 
 	/**
@@ -581,45 +514,41 @@ export function EntryEditorShell({
 	const handlePreview = async (href: string) => {
 		const opened = window.open("about:blank", "_blank");
 		if (opened) opened.opener = null;
-		if (isReadOnly || (await autosave.flush())) {
+		const saved = isReadOnly ? null : await editor.save();
+		if (!saved || saved.ok) {
 			if (opened) opened.location.href = href;
 			else window.open(href, "_blank", "noopener");
 			return;
 		}
 		opened?.close();
-		toast.error(`${t("previewNotOpened")} ${autosave.getLastError() ?? ""}`.trim());
+		toast.error(`${t("previewNotOpened")} ${saved.error.message}`.trim());
 	};
 
 	const handlePublish = async ({ resetPublishedAt = false }: { resetPublishedAt?: boolean } = {}) => {
 		if (isSubmitting || isReadOnly) return;
-		setPublishIssues([]);
 		// A field filled from the body (`fillFromBody`) that is empty is generated from the body and shown. If there is no body to generate from, it must be entered by hand.
-		for (const { name, field } of isCollection(collection) ? fillFromBodyFields(collection) : []) {
-			if (formText(form, name).trim()) continue;
-			const generated = bodyExcerpt(form.mdx, fillFromBodyLength(field));
-			if (!generated) {
-				setPublishIssues([{ code: "missing_field", message: field.label, path: name }]);
-				toast.error(t("fillEmpty", { label: field.label }));
-				return;
-			}
-			setForm({ [name]: generated });
-			toast.message(t("fillDone", { label: field.label }));
+		const filled = editor.fillFromBody();
+		if (!filled.ok) {
+			toast.error(filled.error.message);
+			return;
 		}
+		for (const { label } of filled.value) toast.message(t("fillDone", { label }));
 		// This does not block. It only warns when leaving with unconfirmed source changes.
 		if (sourceChanged) toast.warning(t("sourceUnreviewed"));
-		setBusy("publish");
+		setIsPreparingPublish(true);
 		try {
 			const id = await ensureSaved("publish", { saveChanges: true });
 			if (!id) return;
-			const published = await cmsFetch<EntryData & { warnings?: CmsIssue[] }>(cmsApiUrl(`/v1/entries/${id}/publish`), {
-				method: "POST",
-				json: { expectedVersion: autosave.getVersion(), ...(resetPublishedAt ? { resetPublishedAt } : {}) },
-				fallback: t("publishFailed"),
-			});
-			autosave.setVersion(published.version);
-			setEntry((current) => ({ ...published, ...keepTranslationGroup(current, published) }));
+			const published = await editor.publish({ resetPublishedAt });
+			if (!published.ok) {
+				// A conflict opens its own conflict dialog.
+				if (published.error.code === "conflict") return;
+				if (published.error.issues?.length) toast.error(t("publishBlocked"));
+				else toast.error(published.error.message);
+				return;
+			}
 			void refreshIncoming(id);
-			const warnings = published.warnings ?? [];
+			const { warnings } = published.value;
 			if (warnings.length > 0) {
 				toast.warning(t("publishedWithWarnings", { count: warnings.length }), {
 					description: warnings.slice(0, 5).map(cmsIssueMessage).join("\n"),
@@ -631,49 +560,26 @@ export function EntryEditorShell({
 			} else {
 				toast.success(t("published"));
 			}
-		} catch (error) {
-			if (error instanceof CmsApiError && error.code === "conflict") {
-				const server = await cmsFetch<EntryData>(cmsApiUrl(`/v1/entries/${autosave.getEntryId()}`)).catch(() => null);
-				if (server) setConflict({ server, local: form });
-				return;
-			}
-			if (error instanceof CmsApiError && error.issues.length > 0) {
-				setPublishIssues(error.issues);
-				toast.error(t("publishBlocked"));
-				return;
-			}
-			toast.error(errorText(error, t("publishFailed")));
 		} finally {
-			setBusy(null);
+			setIsPreparingPublish(false);
 		}
 	};
 
 	/** Archive, unarchive, trash, restore. */
 	const runLifecycle = async (action: LifecycleAction) => {
 		if (!entry || isSubmitting) return;
-		if (action !== "restore" && autosave.hasPendingChanges()) {
+		if (action !== "restore" && editor.getSnapshot().hasUnsavedChanges) {
 			toast.error(saveFirstMessage(action));
 			return;
 		}
-		setBusy("status");
-		try {
-			await cmsFetch(cmsApiUrl(`/v1/entries/${entry.id}/${action}`), {
-				method: "POST",
-				json: { expectedVersion: autosave.getVersion() },
-			});
-			// Sending a translation to the trash returns to the original's edit screen.
-			if (action === "trash" && isTranslationEntry(entry) && entry.translationGroupId) {
-				toast.success(LIFECYCLE_SUCCESS[action]);
-				router.push(adminEntryEditHref(entry.translationGroupId) as Route);
-				return;
-			}
-			await loadEntry(entry.id);
-			toast.success(LIFECYCLE_SUCCESS[action]);
-		} catch (error) {
-			toast.error(errorText(error, LIFECYCLE_FAILED[action]));
-		} finally {
-			setBusy(null);
+		const changed = await editor.changeStatus(action);
+		if (!changed.ok) {
+			toast.error(changed.error.message);
+			return;
 		}
+		toast.success(LIFECYCLE_SUCCESS[action]);
+		// Sending a translation to the trash returns to the original's edit screen.
+		if (changed.value.openEntryId) router.push(adminEntryEditHref(changed.value.openEntryId) as Route);
 	};
 
 	/** Only transitions that take a published post down (archive, move to trash) ask. Unarchive and restore happen right away. */
@@ -689,15 +595,12 @@ export function EntryEditorShell({
 			confirmLabel: t("permanentDelete"),
 			destructive: true,
 			onConfirm: async () => {
-				try {
-					await cmsFetch(cmsApiUrl(`/v1/entries/${entry.id}?expectedVersion=${autosave.getVersion()}`), {
-						method: "DELETE",
-					});
-					await deleteLocalBackup(backupKey(adminId, entry.id, entry.collection));
-					router.push(adminHref(`?collection=${entry.collection}&status=trashed`) as Route);
-				} catch (error) {
-					toast.error(errorText(error, t("deleteFailed")));
+				const deleted = await editor.deletePermanently();
+				if (!deleted.ok) {
+					toast.error(deleted.error.message);
+					return;
 				}
+				router.push(adminHref(`?collection=${entry.collection}&status=trashed`) as Route);
 			},
 		});
 	};
@@ -705,15 +608,12 @@ export function EntryEditorShell({
 	const handleDuplicate = async () => {
 		const id = await ensureSaved("duplicate");
 		if (!id) return;
-		try {
-			const copy = await cmsFetch<EntryData>(cmsApiUrl(`/v1/entries/${id}/duplicate`), {
-				method: "POST",
-				json: { title: copyTitle(collection, formText(formRef.current, "title")) },
-			});
-			router.push(adminEntryEditHref(copy.id) as Route);
-		} catch (error) {
-			toast.error(errorText(error, t("duplicateFailed")));
+		const copy = await editor.duplicate();
+		if (!copy.ok) {
+			toast.error(copy.error.message);
+			return;
 		}
+		router.push(adminEntryEditHref(copy.value.id) as Route);
 	};
 
 	// A translation can share a slug with the original, so the language is passed along.
@@ -761,7 +661,7 @@ export function EntryEditorShell({
 	}
 
 	const statusLabel = entry ? describeEntryStatus(entry) : t("newEntry");
-	const canRetry = ["failed", "local-only", "session-expired"].includes(autosave.status);
+	const canRetry = ["failed", "local-only", "session-expired"].includes(saveStatus);
 	const bodyIssue = publishIssues.find((issue) => issue.path === "mdx" || Boolean(issue.position));
 	const titleIssue = publishIssues.find((issue) => issue.path === "title");
 	const languageTabs =
@@ -769,7 +669,7 @@ export function EntryEditorShell({
 			<LanguageTabs
 				entry={entry}
 				disabled={isReadOnly}
-				onBeforeCreate={async () => !autosave.hasPendingChanges()}
+				onBeforeCreate={async () => !editor.getSnapshot().hasUnsavedChanges}
 				onTrashTranslation={() => confirmLifecycle("trash")}
 			/>
 		) : null;
@@ -787,7 +687,7 @@ export function EntryEditorShell({
 				readOnly={isReadOnly}
 				aria-invalid={Boolean(titleIssue) || undefined}
 				aria-describedby={titleIssue ? "cms-title-error" : undefined}
-				onChange={(event) => handleTitleChange(event.target.value)}
+				onChange={(event) => editor.setForm({ title: event.target.value })}
 				placeholder={translationSource?.title || tc("untitled")}
 				className="h-auto w-full rounded-none border-0 bg-transparent cms-dark:bg-transparent px-6 py-1 font-semibold text-[34px] leading-tight tracking-tight shadow-none placeholder:text-cms-muted-foreground/40 focus-visible:ring-0 md:text-[34px]"
 			/>
@@ -826,9 +726,9 @@ export function EntryEditorShell({
 				aria-describedby={bodyIssue ? "cms-mdx-error" : undefined}
 				value={form.mdx}
 				readOnly={isReadOnly}
-				onChange={(event) => setForm({ mdx: event.target.value })}
-				onCompositionStart={() => autosave.setComposing(true)}
-				onCompositionEnd={() => autosave.setComposing(false)}
+				onChange={(event) => editor.setForm({ mdx: event.target.value })}
+				onCompositionStart={() => editor.setComposing(true)}
+				onCompositionEnd={() => editor.setComposing(false)}
 				placeholder={t("mdxPlaceholder")}
 				className="min-h-[calc(100vh-240px)] w-full flex-1 px-4"
 			/>
@@ -841,382 +741,368 @@ export function EntryEditorShell({
 	);
 
 	return (
-		<div className="flex h-screen w-full flex-col overflow-hidden bg-cms-background text-cms-foreground">
-			<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-cms-background/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
-				<div className="flex min-w-0 items-center gap-2 text-[13px]">
-					<Tooltip>
-						<TooltipTrigger
-							render={
-								<Link
-									href={adminHref(`?collection=${collection}`) as Route}
-									aria-label={t("backToList")}
-									className={cn(
-										buttonVariants({ variant: "ghost", size: "icon-sm" }),
-										"size-8 text-cms-muted-foreground",
-									)}
-								>
-									<ChevronLeft aria-hidden className="size-4" />
-								</Link>
-							}
-						/>
-						<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
-					</Tooltip>
-					<span className="hidden rounded bg-cms-muted px-1.5 py-0.5 text-cms-muted-foreground text-xs sm:inline-flex">
-						{statusLabel}
-					</span>
-				</div>
+		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
+			<div className="flex h-screen w-full flex-col overflow-hidden bg-cms-background text-cms-foreground">
+				<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-cms-background/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
+					<div className="flex min-w-0 items-center gap-2 text-[13px]">
+						<Tooltip>
+							<TooltipTrigger
+								render={
+									<Link
+										href={adminHref(`?collection=${collection}`) as Route}
+										aria-label={t("backToList")}
+										className={cn(
+											buttonVariants({ variant: "ghost", size: "icon-sm" }),
+											"size-8 text-cms-muted-foreground",
+										)}
+									>
+										<ChevronLeft aria-hidden className="size-4" />
+									</Link>
+								}
+							/>
+							<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
+						</Tooltip>
+						<span className="hidden rounded bg-cms-muted px-1.5 py-0.5 text-cms-muted-foreground text-xs sm:inline-flex">
+							{statusLabel}
+						</span>
+					</div>
 
-				<div className="flex w-full items-center justify-end gap-1 whitespace-nowrap sm:w-auto">
-					<SaveStatusIndicator status={autosave.status} backupAvailable={autosave.backupAvailable} />
-					{canRetry && (
-						<Button
-							type="button"
-							size="sm"
-							variant="ghost"
-							className="text-cms-muted-foreground"
-							onClick={() => void autosave.retry(true)}
-						>
-							{tc("retry")}
-						</Button>
-					)}
-					{autosave.status === "session-expired" && (
-						<a
-							href={adminHref("/login") as Route}
-							target="_blank"
-							rel="noreferrer"
-							className={buttonVariants({ variant: "link", size: "xs" })}
-						>
-							{t("signInNewWindow")}
-						</a>
-					)}
+					<div className="flex w-full items-center justify-end gap-1 whitespace-nowrap sm:w-auto">
+						<SaveStatusIndicator status={saveStatus} backupAvailable={editor.recoveryCopyAvailable} />
+						{canRetry && (
+							<Button
+								type="button"
+								size="sm"
+								variant="ghost"
+								className="text-cms-muted-foreground"
+								onClick={() => void editor.retry()}
+							>
+								{tc("retry")}
+							</Button>
+						)}
+						{saveStatus === "session-expired" && (
+							<a
+								href={adminHref("/login") as Route}
+								target="_blank"
+								rel="noreferrer"
+								className={buttonVariants({ variant: "link", size: "xs" })}
+							>
+								{t("signInNewWindow")}
+							</a>
+						)}
 
-					<ToolbarAction
-						label={t("save")}
-						icon={Save}
-						disabled={isReadOnly || isSubmitting || autosave.status === "saving"}
-						onClick={() => void handleSaveNow()}
-					/>
-					{previewHref && (
 						<ToolbarAction
-							label={t("preview")}
-							icon={Eye}
-							href={autosave.hasPendingChanges() ? undefined : previewHref}
-							onClick={() => void handlePreview(previewHref)}
+							label={t("save")}
+							icon={Save}
+							disabled={isReadOnly || isSubmitting || saveStatus === "saving"}
+							onClick={() => void handleSaveNow()}
 						/>
-					)}
-					{/* Single-step transitions (publish, unarchive, restore) happen right away without asking. */}
-					{isTrashed ? (
-						<Button
-							type="button"
-							size="sm"
-							className="ml-1"
-							disabled={isSubmitting}
-							onClick={() => void runLifecycle("restore")}
-						>
-							{busy === "status" ? t("restoring") : LIFECYCLE_LABEL.restore}
-						</Button>
-					) : entry?.status === "archived" ? (
-						<Button
-							type="button"
-							size="sm"
-							className="ml-1"
-							disabled={isSubmitting}
-							onClick={() => void runLifecycle("unarchive")}
-						>
-							{busy === "status" ? t("unarchiving") : LIFECYCLE_LABEL.unarchive}
-						</Button>
-					) : !canResetPublishedAt ? (
-						<Button
-							id="cms-publish"
-							type="button"
-							size="sm"
-							className="ml-1"
-							disabled={isSubmitting}
-							onClick={() => void handlePublish()}
-						>
-							{busy === "publish" ? t("publishing") : t("publish")}
-						</Button>
-					) : (
-						// For an already published post, publish and "republish with today's date" are combined into one button.
-						// To look like one button, the wrapper paints the background and the two buttons are separated only by a thin line.
-						<div className="ml-1 flex h-8 items-center overflow-hidden rounded-[min(var(--radius-md),10px)] bg-cms-primary text-cms-primary-foreground">
+						{previewHref && (
+							<ToolbarAction
+								label={t("preview")}
+								icon={Eye}
+								href={editor.hasUnsavedChanges ? undefined : previewHref}
+								onClick={() => void handlePreview(previewHref)}
+							/>
+						)}
+						{/* Single-step transitions (publish, unarchive, restore) happen right away without asking. */}
+						{isTrashed ? (
+							<Button
+								type="button"
+								size="sm"
+								className="ml-1"
+								disabled={isSubmitting}
+								onClick={() => void runLifecycle("restore")}
+							>
+								{busy === "status" ? t("restoring") : LIFECYCLE_LABEL.restore}
+							</Button>
+						) : entry?.status === "archived" ? (
+							<Button
+								type="button"
+								size="sm"
+								className="ml-1"
+								disabled={isSubmitting}
+								onClick={() => void runLifecycle("unarchive")}
+							>
+								{busy === "status" ? t("unarchiving") : LIFECYCLE_LABEL.unarchive}
+							</Button>
+						) : !canResetPublishedAt ? (
 							<Button
 								id="cms-publish"
 								type="button"
 								size="sm"
-								className="h-full rounded-none bg-transparent pr-2 pl-3 hover:bg-cms-primary-foreground/10"
+								className="ml-1"
 								disabled={isSubmitting}
 								onClick={() => void handlePublish()}
 							>
-								{busy === "publish" ? t("publishing") : t("publish")}
+								{isPublishing ? t("publishing") : t("publish")}
 							</Button>
-							<span aria-hidden className="h-4 w-px bg-cms-primary-foreground/30" />
-							<DropdownMenu>
-								<IconButton
-									label={t("publishOptions")}
-									side="bottom"
-									variant="default"
+						) : (
+							// For an already published post, publish and "republish with today's date" are combined into one button.
+							// To look like one button, the wrapper paints the background and the two buttons are separated only by a thin line.
+							<div className="ml-1 flex h-8 items-center overflow-hidden rounded-[min(var(--radius-md),10px)] bg-cms-primary text-cms-primary-foreground">
+								<Button
+									id="cms-publish"
+									type="button"
+									size="sm"
+									className="h-full rounded-none bg-transparent pr-2 pl-3 hover:bg-cms-primary-foreground/10"
 									disabled={isSubmitting}
-									className="h-full w-7 rounded-none bg-transparent hover:bg-cms-primary-foreground/10 aria-expanded:bg-cms-primary-foreground/10"
-									trigger={(button) => <DropdownMenuTrigger render={button} />}
+									onClick={() => void handlePublish()}
 								>
-									<ChevronDown aria-hidden className="size-3.5" />
-								</IconButton>
-								<DropdownMenuContent align="end" className="w-48">
-									{/* Keeping the original publish date is the default. Choose it only when re-posting an edited post as new. */}
-									{canResetPublishedAt && (
-										<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
-											<CalendarSync aria-hidden />
-											{t("republish")}
-										</DropdownMenuItem>
-									)}
-								</DropdownMenuContent>
-							</DropdownMenu>
+									{isPublishing ? t("publishing") : t("publish")}
+								</Button>
+								<span aria-hidden className="h-4 w-px bg-cms-primary-foreground/30" />
+								<DropdownMenu>
+									<IconButton
+										label={t("publishOptions")}
+										side="bottom"
+										variant="default"
+										disabled={isSubmitting}
+										className="h-full w-7 rounded-none bg-transparent hover:bg-cms-primary-foreground/10 aria-expanded:bg-cms-primary-foreground/10"
+										trigger={(button) => <DropdownMenuTrigger render={button} />}
+									>
+										<ChevronDown aria-hidden className="size-3.5" />
+									</IconButton>
+									<DropdownMenuContent align="end" className="w-48">
+										{/* Keeping the original publish date is the default. Choose it only when re-posting an edited post as new. */}
+										{canResetPublishedAt && (
+											<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
+												<CalendarSync aria-hidden />
+												{t("republish")}
+											</DropdownMenuItem>
+										)}
+									</DropdownMenuContent>
+								</DropdownMenu>
+							</div>
+						)}
+						<span aria-hidden className="mx-1 h-4 w-px bg-cms-border" />
+						<IconButton
+							label={t("properties")}
+							side="bottom"
+							pressed={isInspectorOpen}
+							className="size-8 text-cms-muted-foreground"
+							onClick={() => setIsInspectorOpen((open) => !open)}
+						>
+							<PanelRight aria-hidden className="size-4" />
+						</IconButton>
+						<DropdownMenu>
+							<IconButton
+								label={t("more")}
+								side="bottom"
+								className="size-8 text-cms-muted-foreground"
+								trigger={(button) => <DropdownMenuTrigger render={button} />}
+							>
+								<MoreHorizontal aria-hidden className="size-4" />
+							</IconButton>
+							<DropdownMenuContent align="end" className="w-56">
+								{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
+								{entry && !isTrashed && (
+									<>
+										{/* The store refuses to duplicate a translation, so only a source can be duplicated. */}
+										{!isTranslationEntry(entry) && (
+											<DropdownMenuItem onClick={() => void handleDuplicate()}>
+												<Copy aria-hidden />
+												{t("duplicate")}
+											</DropdownMenuItem>
+										)}
+										{(entry.status === "draft" || entry.status === "published") && (
+											<DropdownMenuItem onClick={() => confirmLifecycle("archive")}>
+												<Archive aria-hidden />
+												{LIFECYCLE_LABEL.archive}
+											</DropdownMenuItem>
+										)}
+									</>
+								)}
+								{entry && (
+									<>
+										{!isTrashed && <DropdownMenuSeparator />}
+										{isTrashed ? (
+											<DropdownMenuItem variant="destructive" onClick={confirmPermanentDelete}>
+												<Trash aria-hidden />
+												{t("permanentDelete")}
+											</DropdownMenuItem>
+										) : (
+											<DropdownMenuItem variant="destructive" onClick={() => confirmLifecycle("trash")}>
+												<Trash2 aria-hidden />
+												{LIFECYCLE_LABEL.trash}
+											</DropdownMenuItem>
+										)}
+									</>
+								)}
+								{entry && <DropdownMenuSeparator />}
+								<DropdownMenuItem onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+									<SunMoon aria-hidden />
+									{t("toggleTheme")}
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				</header>
+
+				{isTrashed && (
+					<section
+						aria-label={t("trash")}
+						className="flex flex-wrap items-center gap-2 border-b bg-cms-muted px-4 py-2 text-sm"
+					>
+						<span>{t("trashNotice")}</span>
+					</section>
+				)}
+				{!canUseVisual && (
+					<output className="border-b bg-amber-500/10 px-4 py-2 text-sm">
+						{t("visualUnavailable")} {sourceProblems[0] ? cmsIssueMessage(sourceProblems[0]) : ""}
+					</output>
+				)}
+				{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
+					<p role="alert" className="border-b px-4 py-2 text-cms-destructive text-sm">
+						{editor.saveError.message}
+					</p>
+				)}
+				{publishIssues.length > 0 && (
+					<ul className="max-h-36 overflow-y-auto border-b px-4 py-2 text-sm" aria-label={t("publishProblems")}>
+						{publishIssues.map((issue) => (
+							<li key={JSON.stringify(issue)}>
+								<Button
+									type="button"
+									variant="link"
+									size="xs"
+									className="h-auto whitespace-normal px-0 text-left"
+									onClick={() => focusIssue(issue)}
+								>
+									{cmsIssueMessage(issue)}
+								</Button>
+							</li>
+						))}
+					</ul>
+				)}
+
+				{sourceChanged && translationSource && (
+					<output className="flex flex-wrap items-center gap-2 border-b bg-amber-500/10 px-4 py-1.5 text-sm">
+						<span className="flex-1 font-medium cms-dark:text-amber-400 text-amber-700">{t("sourceChanged")}</span>
+						<Button type="button" size="sm" variant="outline" onClick={() => setIsSourceCompareOpen(true)}>
+							{t("compare")}
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							disabled={isReadOnly}
+							onClick={editor.confirmTranslationSource}
+						>
+							{t("confirm")}
+						</Button>
+					</output>
+				)}
+
+				<div className="relative flex min-h-0 flex-1 overflow-hidden">
+					{translationSource && isSourcePaneOpen && (
+						<SourcePane
+							ref={sourcePaneRef}
+							mdx={translationSource.mdx}
+							title={translationSource.title}
+							locale={translationSource.locale}
+							onClose={() => toggleSourcePane(false)}
+							className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-lg lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
+						/>
+					)}
+					<div
+						ref={editorScrollRef}
+						// Keep the source pane and bottom padding equal so correspondence holds even when scrolled to the end.
+						className="h-full min-w-0 flex-1 overflow-y-auto"
+						inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
+					>
+						<CmsEditor
+							content={form.mdx}
+							titleField={
+								<>
+									{languageTabs}
+									{titleInput}
+								</>
+							}
+							toolbarAside={
+								<span className="flex items-center gap-1">
+									<TemplateMenu
+										currentMdx={form.mdx}
+										disabled={isReadOnly}
+										onApply={(mdx) => editor.setForm({ mdx })}
+									/>
+									{extensions.toolbar}
+									{sourcePaneToggle}
+									{sourceModeToggle}
+								</span>
+							}
+							sourceView={editorMode === "source" ? sourceEditor : undefined}
+							editable={!isReadOnly}
+							stored={entry ? { mdx: entry.working.mdx, doc: entry.working.doc ?? null } : undefined}
+							onChange={(mdx, doc) => editor.setBody(mdx, doc)}
+							blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
+							selectionActions={extensions.selectionActions}
+							insertActions={extensions.insertActions}
+							onEditor={(editor) => {
+								visualEditorRef.current = editor;
+								extensions.onEditor?.(editor);
+							}}
+							onCompositionStart={() => editor.setComposing(true)}
+							onCompositionEnd={() => editor.setComposing(false)}
+						/>
+						{extensions.overlay}
+					</div>
+
+					{isInspectorOpen && (
+						// On narrow screens it overlays the body; on wide screens it sits beside it at a fixed width.
+						<div
+							className={cn(
+								"absolute inset-y-0 right-0 z-20 max-w-full shadow-lg lg:static lg:z-auto lg:shrink-0 lg:shadow-none",
+								SIDE_PANEL_WIDTH,
+							)}
+						>
+							{isCollection(collection) && (
+								<InspectorPanel
+									incomingReferences={incoming.items}
+									isLoadingIncomingReferences={incoming.loading}
+									onRefreshIncomingReferences={() => {
+										if (entry) void refreshIncoming(entry.id);
+									}}
+									onSlugChange={editor.setSlug}
+									onRegenerateSlug={editor.regenerateSlug}
+									onClose={() => setIsInspectorOpen(false)}
+									focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
+									onFocused={() => setPendingFieldPath(null)}
+								/>
+							)}
 						</div>
 					)}
-					<span aria-hidden className="mx-1 h-4 w-px bg-cms-border" />
-					<IconButton
-						label={t("properties")}
-						side="bottom"
-						pressed={isInspectorOpen}
-						className="size-8 text-cms-muted-foreground"
-						onClick={() => setIsInspectorOpen((open) => !open)}
-					>
-						<PanelRight aria-hidden className="size-4" />
-					</IconButton>
-					<DropdownMenu>
-						<IconButton
-							label={t("more")}
-							side="bottom"
-							className="size-8 text-cms-muted-foreground"
-							trigger={(button) => <DropdownMenuTrigger render={button} />}
-						>
-							<MoreHorizontal aria-hidden className="size-4" />
-						</IconButton>
-						<DropdownMenuContent align="end" className="w-56">
-							{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
-							{entry && !isTrashed && (
-								<>
-									{/* The store refuses to duplicate a translation, so only a source can be duplicated. */}
-									{!isTranslationEntry(entry) && (
-										<DropdownMenuItem onClick={() => void handleDuplicate()}>
-											<Copy aria-hidden />
-											{t("duplicate")}
-										</DropdownMenuItem>
-									)}
-									{(entry.status === "draft" || entry.status === "published") && (
-										<DropdownMenuItem onClick={() => confirmLifecycle("archive")}>
-											<Archive aria-hidden />
-											{LIFECYCLE_LABEL.archive}
-										</DropdownMenuItem>
-									)}
-								</>
-							)}
-							{entry && (
-								<>
-									{!isTrashed && <DropdownMenuSeparator />}
-									{isTrashed ? (
-										<DropdownMenuItem variant="destructive" onClick={confirmPermanentDelete}>
-											<Trash aria-hidden />
-											{t("permanentDelete")}
-										</DropdownMenuItem>
-									) : (
-										<DropdownMenuItem variant="destructive" onClick={() => confirmLifecycle("trash")}>
-											<Trash2 aria-hidden />
-											{LIFECYCLE_LABEL.trash}
-										</DropdownMenuItem>
-									)}
-								</>
-							)}
-							{entry && <DropdownMenuSeparator />}
-							<DropdownMenuItem onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
-								<SunMoon aria-hidden />
-								{t("toggleTheme")}
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-			</header>
-
-			{isTrashed && (
-				<section
-					aria-label={t("trash")}
-					className="flex flex-wrap items-center gap-2 border-b bg-cms-muted px-4 py-2 text-sm"
-				>
-					<span>{t("trashNotice")}</span>
-				</section>
-			)}
-			{!canUseVisual && (
-				<output className="border-b bg-amber-500/10 px-4 py-2 text-sm">
-					{t("visualUnavailable")} {sourceProblems[0] ? cmsIssueMessage(sourceProblems[0]) : ""}
-				</output>
-			)}
-			{autosave.lastError && ["failed", "session-expired"].includes(autosave.status) && (
-				<p role="alert" className="border-b px-4 py-2 text-cms-destructive text-sm">
-					{autosave.lastError}
-				</p>
-			)}
-			{publishIssues.length > 0 && (
-				<ul className="max-h-36 overflow-y-auto border-b px-4 py-2 text-sm" aria-label={t("publishProblems")}>
-					{publishIssues.map((issue) => (
-						<li key={JSON.stringify(issue)}>
-							<Button
-								type="button"
-								variant="link"
-								size="xs"
-								className="h-auto whitespace-normal px-0 text-left"
-								onClick={() => focusIssue(issue)}
-							>
-								{cmsIssueMessage(issue)}
-							</Button>
-						</li>
-					))}
-				</ul>
-			)}
-
-			{sourceChanged && translationSource && (
-				<output className="flex flex-wrap items-center gap-2 border-b bg-amber-500/10 px-4 py-1.5 text-sm">
-					<span className="flex-1 font-medium cms-dark:text-amber-400 text-amber-700">{t("sourceChanged")}</span>
-					<Button type="button" size="sm" variant="outline" onClick={() => setIsSourceCompareOpen(true)}>
-						{t("compare")}
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						disabled={isReadOnly}
-						onClick={() =>
-							setForm({
-								[TRANSLATION_FORM_KEY]: stringifyTranslation(
-									confirmedSourceState(translationSource.mdx, translationSource.doc),
-								),
-							})
-						}
-					>
-						{t("confirm")}
-					</Button>
-				</output>
-			)}
-
-			<div className="relative flex min-h-0 flex-1 overflow-hidden">
-				{translationSource && isSourcePaneOpen && (
-					<SourcePane
-						ref={sourcePaneRef}
-						mdx={translationSource.mdx}
-						title={translationSource.title}
-						locale={translationSource.locale}
-						onClose={() => toggleSourcePane(false)}
-						className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-lg lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
-					/>
-				)}
-				<div
-					ref={editorScrollRef}
-					// Keep the source pane and bottom padding equal so correspondence holds even when scrolled to the end.
-					className="h-full min-w-0 flex-1 overflow-y-auto"
-					inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
-				>
-					<CmsEditor
-						content={form.mdx}
-						titleField={
-							<>
-								{languageTabs}
-								{titleInput}
-							</>
-						}
-						toolbarAside={
-							<span className="flex items-center gap-1">
-								<TemplateMenu currentMdx={form.mdx} disabled={isReadOnly} onApply={(mdx) => setForm({ mdx })} />
-								{extensions.toolbar}
-								{sourcePaneToggle}
-								{sourceModeToggle}
-							</span>
-						}
-						sourceView={editorMode === "source" ? sourceEditor : undefined}
-						editable={!isReadOnly}
-						stored={entry ? { mdx: entry.working.mdx, doc: entry.working.doc ?? null } : undefined}
-						onChange={(mdx, doc) => {
-							editorBodyRef.current = { mdx, doc };
-							setForm({ mdx });
-						}}
-						blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
-						selectionActions={extensions.selectionActions}
-						insertActions={extensions.insertActions}
-						onEditor={(editor) => {
-							visualEditorRef.current = editor;
-							extensions.onEditor?.(editor);
-						}}
-						onCompositionStart={() => autosave.setComposing(true)}
-						onCompositionEnd={() => autosave.setComposing(false)}
-					/>
-					{extensions.overlay}
 				</div>
 
-				{isInspectorOpen && (
-					// On narrow screens it overlays the body; on wide screens it sits beside it at a fixed width.
-					<div
-						className={cn(
-							"absolute inset-y-0 right-0 z-20 max-w-full shadow-lg lg:static lg:z-auto lg:shrink-0 lg:shadow-none",
-							SIDE_PANEL_WIDTH,
-						)}
-					>
-						<InspectorPanel
-							collection={collection}
-							form={form}
-							disabled={isReadOnly}
-							publishIssues={publishIssues}
-							entry={entry}
-							incomingReferences={incoming.items}
-							isLoadingIncomingReferences={incoming.loading}
-							onRefreshIncomingReferences={() => {
-								if (entry) void refreshIncoming(entry.id);
-							}}
-							onSlugChange={(slug) => {
-								setIsSlugTouched(true);
-								setForm({ slug });
-							}}
-							onRegenerateSlug={() => {
-								setIsSlugTouched(false);
-								setForm({ slug: isCollection(collection) ? slugFromValues(collection, form) : "" });
-							}}
-							onChange={(patch) => setForm(withAutoSlug(patch))}
-							onClose={() => setIsInspectorOpen(false)}
-							focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
-							onFocused={() => setPendingFieldPath(null)}
-						/>
-					</div>
+				<RecoveryDialog
+					recovery={recovery === dismissedRecovery ? null : recovery}
+					onClose={() => setDismissedRecovery(recovery)}
+					onKeepServer={() => void editor.discardRecovery()}
+					onRestore={editor.restoreRecovery}
+				/>
+				<ConflictDialog
+					conflict={conflict === dismissedConflict ? null : conflict}
+					onClose={() => setDismissedConflict(conflict)}
+					// The server version is loaded in place: the page is not reloaded.
+					onReload={() =>
+						void editor.reload().then((reloaded) => {
+							if (!reloaded.ok) toast.error(reloaded.error.message);
+						})
+					}
+					onOverwrite={() => void editor.overwriteWithMine()}
+				/>
+
+				<ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+				{translationSource && (
+					<SourceChangeDialog
+						open={isSourceCompareOpen}
+						onOpenChange={setIsSourceCompareOpen}
+						before={confirmedSource}
+						after={translationSource.mdx}
+						beforeDoc={confirmed?.baseDoc ?? null}
+						afterDoc={translationSource.doc}
+					/>
 				)}
 			</div>
-
-			<RecoveryDialog
-				recovery={recovery}
-				onClose={() => setRecovery(null)}
-				onKeepServer={async (current) => {
-					await deleteLocalBackup(current.backup.key);
-					setRecovery(null);
-				}}
-				onRestore={(current) => applyRecovered({ ...EMPTY_FORM, ...current.backup.snapshot })}
-			/>
-			<ConflictDialog
-				conflict={conflict}
-				onClose={() => setConflict(null)}
-				onReload={() => window.location.reload()}
-				onOverwrite={(serverVersion) => {
-					setConflict(null);
-					void autosave.overwriteWithLocal(serverVersion);
-				}}
-			/>
-
-			<ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
-			{translationSource && (
-				<SourceChangeDialog
-					open={isSourceCompareOpen}
-					onOpenChange={setIsSourceCompareOpen}
-					before={confirmedSource}
-					after={translationSource.mdx}
-					beforeDoc={confirmed.baseDoc}
-					afterDoc={translationSource.doc}
-				/>
-			)}
-		</div>
+		</EntryEditorProvider>
 	);
 }
