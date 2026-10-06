@@ -13,6 +13,7 @@ import { runAiActionMany, useAiActions } from "./ai-slot-provider";
 import { aiTranslateMessages } from "./ai-translate.messages";
 import { applyTranslation, collectUnits, type TranslateUnit, unitAt } from "./ai-translate-units";
 import { OptionSelect } from "./custom-editor";
+import { useMdxFormat } from "./mdx-format";
 
 const t = createTranslator(aiTranslateMessages);
 
@@ -74,9 +75,11 @@ function batches<T extends { mdx: string }>(blocks: T[]): T[][] {
  */
 export function useAiTranslate(locales: { sourceLocale: string; targetLocale: string } | null) {
 	const { data } = useAiActions(locales !== null);
+	// The model reads and writes MDX, so translation works through the `mdx` format. Without it there is nothing to translate with.
+	const format = useMdxFormat();
 	const features = useMemo(
 		() =>
-			locales
+			locales && format
 				? (data?.items ?? []).filter(
 						(item) =>
 							item.enabled &&
@@ -85,7 +88,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 							data?.usable.includes(item.key),
 					)
 				: [],
-		[data, locales],
+		[data, locales, format],
 	);
 	/** Action to use for Translate all. If the chosen action is gone, it is the first action. */
 	const [chosenKey, setChosenKey] = useState<string | null>(null);
@@ -115,8 +118,8 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 
 	const translateOne = useCallback(
 		async (editor: Editor, pos: number, action: string) => {
-			if (!locales) return;
-			const unit = unitAt(editor.state.doc, pos);
+			if (!locales || !format) return;
+			const unit = unitAt(format, editor.state.doc, pos);
 			if (!unit) return;
 			// Block translation does not use the toolbar's extra request (that request applies only to Translate all).
 			blockAbortRef.current.get(pos)?.abort();
@@ -136,7 +139,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 					toast.error(t("toast.failedOne", { reason: result.error }));
 					return;
 				}
-				const applied = applyTranslation(editor, unit, result.mdx, pos);
+				const applied = applyTranslation(format, editor, unit, result.mdx, pos);
 				if (applied === "changed") toast.message(t("toast.blockChanged"));
 				else if (applied === "invalid") toast.error(t("toast.invalidOne"));
 			} catch (error) {
@@ -147,13 +150,13 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 				setBusyBlocks((current) => new Set([...current].filter((item) => item !== pos)));
 			}
 		},
-		[locales],
+		[locales, format],
 	);
 
 	const translateAll = useCallback(async () => {
 		const editor = editorRef.current;
-		if (!editor || !locales) return;
-		const blocks: Array<TranslateUnit & { id: string }> = collectUnits(editor.state.doc).map((unit, index) => ({
+		if (!editor || !locales || !format) return;
+		const blocks: Array<TranslateUnit & { id: string }> = collectUnits(format, editor.state.doc).map((unit, index) => ({
 			...unit,
 			id: `b${index}`,
 		}));
@@ -186,7 +189,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 						if (!block) continue;
 						if ("error" in result) failures.push(result.error);
 						else {
-							const applied = applyTranslation(editor, block, result.mdx, null);
+							const applied = applyTranslation(format, editor, block, result.mdx, null);
 							if (applied === "changed") skipped += 1;
 							else if (applied === "invalid") failures.push(t("toast.invalidMany"));
 						}
@@ -208,7 +211,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 				`${t("toast.partial", { done: blocks.length - failures.length - skipped, kept: failures.length + skipped })}${failures[0] ? ` · ${failures[0]}` : ""}`,
 			);
 		} else toast.success(t("toast.all", { count: blocks.length }));
-	}, [locales, request, actionKey]);
+	}, [locales, request, actionKey, format]);
 
 	const blockActions = useMemo<BlockAction[]>(
 		() =>
@@ -216,11 +219,11 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 				id: `ai-translate:${item.key}`,
 				label: item.label,
 				icon: <Languages aria-hidden className="size-3.5" />,
-				isAvailable: (editor, pos) => unitAt(editor.state.doc, pos) !== null && progress === null,
+				isAvailable: (editor, pos) => !!format && unitAt(format, editor.state.doc, pos) !== null && progress === null,
 				isBusy: (pos) => busyBlocks.has(pos),
 				run: (editor, pos) => void translateOne(editor, pos, item.key),
 			})),
-		[features, busyBlocks, progress, translateOne],
+		[features, busyBlocks, progress, translateOne, format],
 	);
 
 	const running = progress !== null || busyBlocks.size > 0;

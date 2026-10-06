@@ -80,6 +80,12 @@ and `seoDescription` attach this way.
 - The decide engine (`engine: "decide"`, System One) gets a probability for each choice (`choices`) and returns only those at or above
   the threshold as candidates.
 
+### The model reads and writes MDX
+
+The model reads and writes a text format, and MDX is that format. The admin holds the body as a stored document, so the AI buttons work through the `mdx` format registered in the admin
+(`useFormat("mdx")`, `@monti-cms/admin`): the body sent to the model, the selected text and the block to fix are written with the format's `export`, and the MDX the model answers with is read with its
+`import` (a text that does not read is kept whole in a box instead of being half converted). Without a registered `mdx` format, the actions that work on the body are not offered.
+
 ## Result checks
 
 - **Built-in checks**: only those usable by any action. Format (`pattern`), length (`maxLength`), existing values only (`exists`, a

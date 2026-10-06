@@ -11,6 +11,7 @@ import type { AiActionView } from "../actions";
 import type { AiRunContext, AiRunResult } from "../definition";
 import { attachedTo } from "../registry";
 import { aiCommonMessages } from "./ai-common.messages";
+import { useMdxFormat } from "./mdx-format";
 
 const t = createTranslator(aiCommonMessages);
 
@@ -187,6 +188,8 @@ const isLoginScreen = (pathname: string | null) =>
 export function AiSlotProvider({ children }: { children: ReactNode }) {
 	const pathname = usePathname();
 	const { data } = useAiActions(!isLoginScreen(pathname));
+	// The model reads the body as MDX: the document of the entry is written with the `mdx` format when an action runs.
+	const format = useMdxFormat();
 
 	const sources = useMemo<SlotSource[]>(() => {
 		const usable = new Set(data?.usable ?? []);
@@ -203,12 +206,16 @@ export function AiSlotProvider({ children }: { children: ReactNode }) {
 					askInstruction: action.askInstruction,
 					instant: action.instant,
 					run: (context, signal) => {
-						const { input, env } = inputFromContext(action, context);
+						const { body, ...rest } = context;
+						const { input, env } = inputFromContext(action, {
+							...rest,
+							...(body && format ? { body: format.export(body).trim() } : {}),
+						});
 						return runAiAction(action.key, input, { env, request: context.request, signal });
 					},
 				}));
 		return [source];
-	}, [data]);
+	}, [data, format]);
 
 	return <SlotRegistryProvider sources={sources}>{children}</SlotRegistryProvider>;
 }
