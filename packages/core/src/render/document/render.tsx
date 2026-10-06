@@ -95,6 +95,20 @@ const withoutTrailingBlank = (nodes: readonly CmsNode[]): readonly CmsNode[] => 
 const keyed = (nodes: readonly ReactNode[]): ReactNode[] =>
 	nodes.map((node, index) => createElement(Fragment, { key: index }, node));
 
+const warnedMissingComponents = new Set<string>();
+
+/** In development, warns once per block name that a block reached the fallback because the site gave it no component. Production stays silent. */
+const warnMissingComponent = (name: string, component: string): void => {
+	if (process.env.NODE_ENV === "production" || warnedMissingComponents.has(name)) return;
+	warnedMissingComponents.add(name);
+	console.warn(
+		`[monti] The block "${name}" has no component, so it renders as a fallback. Pass one with <CmsContent components={{ blocks: { "${name}": ${component} } }} />.`,
+	);
+};
+
+/** Forgets which block names were already warned about (for tests). */
+export const resetMissingComponentWarnings = (): void => warnedMissingComponents.clear();
+
 export const renderDocumentTree = (
 	nodes: readonly CmsNode[],
 	input: RenderInput,
@@ -145,7 +159,10 @@ export const renderDocumentTree = (
 		// A mark nobody knows is shown as plain text.
 		if (!definition || definition.syntax.kind !== "text") return fallback(node, "mark", "unknown-mark", children);
 		const component = components.marks[type];
-		if (!component) return fallback(node, "mark", "no-component", children);
+		if (!component) {
+			warnMissingComponent(definition.name, definition.component);
+			return fallback(node, "mark", "no-component", children);
+		}
 		const { props, malformed } = readAttributes(definition, mark.attrs);
 		if (malformed.length > 0) return fallback(node, "mark", "malformed", children);
 		return createElement(component, { ...props, children, ctx });
@@ -462,7 +479,10 @@ export const renderDocumentTree = (
 		const body = keyed(items.map((item) => item.element));
 		const component = components.blocks[definition.name];
 		const content = kind === "container" ? body : undefined;
-		if (!component) return { element: fallback(node, "block", "no-component", content), children: body };
+		if (!component) {
+			warnMissingComponent(definition.name, definition.component);
+			return { element: fallback(node, "block", "no-component", content), children: body };
+		}
 		const { props, malformed } = readAttributes(definition, node.attrs);
 		if (malformed.length > 0) return { element: fallback(node, "block", "malformed", content), children: body };
 		const element = createElement(

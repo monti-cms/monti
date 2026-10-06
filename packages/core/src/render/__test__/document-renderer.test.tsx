@@ -1,9 +1,10 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ADDED_BLOCKS } from "../../blocks/active";
 import { bodyFromMdx, STORED_DOCUMENT_VERSION, type StoredDocument } from "../../mdx/stored-document";
 import type { CmsNode } from "../../mdx/types";
+import { resetMissingComponentWarnings } from "../document/render";
 import {
 	CmsContent,
 	type CodeBlockProps,
@@ -753,6 +754,35 @@ describe("unknown content: a fallback, never an error", () => {
 		const rendered = await renderDocument(stored);
 		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("안에");
 		expect(rendered.unknown.map((node) => node.type)).toEqual([block.name]);
+	});
+
+	describe("missing component warning", () => {
+		const block = ADDED_BLOCKS.find((candidate) => candidate.syntax.kind === "container" && !candidate.parent);
+		const stored = block ? doc({ type: block.name, content: [paragraph(text("x"))] }) : doc();
+
+		afterEach(() => {
+			vi.unstubAllEnvs();
+			vi.restoreAllMocks();
+		});
+
+		it.skipIf(!block)("warns once per block name in development", async () => {
+			vi.stubEnv("NODE_ENV", "development");
+			resetMissingComponentWarnings();
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+			await renderDocument(stored);
+			await renderDocument(stored);
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(String(warn.mock.calls[0]?.[0])).toContain(`"${block?.name}"`);
+		});
+
+		it.skipIf(!block)("stays silent in production and still renders the fallback", async () => {
+			vi.stubEnv("NODE_ENV", "production");
+			resetMissingComponentWarnings();
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+			const rendered = await renderDocument(stored);
+			expect(warn).not.toHaveBeenCalled();
+			expect(rendered.unknown).toHaveLength(1);
+		});
 	});
 
 	it("falls back for a block with an attribute of the wrong kind", async () => {

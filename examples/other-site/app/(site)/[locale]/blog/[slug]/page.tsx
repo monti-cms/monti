@@ -2,6 +2,7 @@ import { isLocale } from "@monti-cms/core/client";
 import { CmsContent, tableOfContents } from "@monti-cms/core/render";
 import { notFound, permanentRedirect } from "next/navigation";
 import { cms } from "../../../../../cms.server";
+import { siteComponents } from "../../../../components/site-blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ locale
 				</nav>
 			) : null}
 			<article className="prose dark:prose-invert max-w-none">
-				<CmsContent entry={entry} />
+				<CmsContent entry={entry} components={siteComponents} />
 			</article>
 		</main>
 	);
