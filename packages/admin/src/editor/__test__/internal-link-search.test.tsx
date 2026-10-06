@@ -32,6 +32,22 @@ describe("searchLinkTargets", () => {
 		expect(items.every((item) => item.title.length > 0)).toBe(true);
 	});
 
+	it("asks for one result per translation group, so the id of a result is the id a link stores", async () => {
+		const urls: URL[] = [];
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL) => {
+				urls.push(new URL(String(input), "http://localhost"));
+				return jsonResponse(200, { items: [] });
+			}),
+		);
+
+		await searchLinkTargets("a");
+
+		expect(urls.length).toBeGreaterThan(0);
+		for (const url of urls) expect(url.searchParams.get("group")).toBe("translation");
+	});
+
 	it("throws the API error instead of returning an empty list when the request fails", async () => {
 		vi.stubGlobal(
 			"fetch",

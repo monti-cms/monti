@@ -16,6 +16,3 @@ export const BLOCK_NODES: Readonly<Record<string, Node>> = {
 	file: CmsFileNode,
 	math: CmsMathNode,
 };
-
-/** @deprecated Renamed to {@link BLOCK_NODES}: the registry holds the nodes' schema, and the edit views are registered in `blockViews`. */
-export const BLOCK_NODE_VIEWS = BLOCK_NODES;

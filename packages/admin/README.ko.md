@@ -99,7 +99,7 @@ const components = {
 - `blockEditors`와 `CustomBlockEditorProps`는 없어졌다. `content`는 `<Content />`가 되고, `values`·`setValue`는 `useBlockEditor().values`·`.setValue`가 되며,
   `editable`·`selected`도 같은 객체의 값이다. 예전 기본 틀이 해 주던 감싸기는 `<BlockFrame>`으로 직접 한다.
   Tiptap 타입을 받던 편집 화면 도우미(`useContainerValues`·`valuesOf`·`withValue`·`childPos`·`focusInside`·`selectContainer`·`useSelectedChildIndex`·`useEditorEditable`)는
-  더 내보내지 않고 `useBlockEditor()`가 대신한다. `BLOCK_NODE_VIEWS`는 `BLOCK_NODES`로 바뀌었다(옛 이름은 더 쓰지 않는 별칭으로 남긴다).
+  더 내보내지 않고 `useBlockEditor()`가 대신한다. `BLOCK_NODE_VIEWS`는 `BLOCK_NODES`로 바뀌었다(옛 이름은 없앴다).
 
 ```tsx
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";

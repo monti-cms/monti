@@ -140,8 +140,10 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 			return;
 		}
 		const command = editor.chain().focus().setTextSelection({ from: draft.from, to: draft.to });
-		if (draft.existing) collapseToEnd(command.extendMarkRange("link").setLink({ href: normalized })).run();
-		else if (!needsText) collapseToEnd(command.setLink({ href: normalized })).run();
+		// An address typed here replaces the entry an internal link pointed to.
+		const attrs = { href: normalized, entryId: null } as { href: string };
+		if (draft.existing) collapseToEnd(command.extendMarkRange("link").setLink(attrs)).run();
+		else if (!needsText) collapseToEnd(command.setLink(attrs)).run();
 		else
 			command
 				.insertContent({
