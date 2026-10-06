@@ -189,7 +189,11 @@ function metadataWarnings(collection: Collection, metadata: Record<string, Metad
 	];
 }
 
-function validateMetadata(collection: Collection, raw: unknown): Record<string, MetadataValue> {
+function validateMetadata(
+	collection: Collection,
+	raw: unknown,
+	previous: { readonly [key: string]: unknown } = {},
+): Record<string, MetadataValue> {
 	if (
 		!raw ||
 		typeof raw !== "object" ||
@@ -222,7 +226,8 @@ function validateMetadata(collection: Collection, raw: unknown): Record<string, 
 		const stored = storedField(collection, k);
 		if (!stored || !Object.hasOwn(rules, k)) {
 			// The value of a field the site has removed: kept as stored, with only its storage shape checked.
-			if (k === "__proto__") throw new ServiceError("invalid_metadata_key");
+			// A key the entry does not already hold is new, so it is not a removed field but a mistake.
+			if (k === "__proto__" || !Object.hasOwn(previous, k)) throw new ServiceError("invalid_metadata_key");
 			metadata[k] = readStoredValue(v);
 			continue;
 		}
@@ -482,6 +487,11 @@ export async function prepareSnapshot(
 		previousReferences?: readonly Reference[];
 		/** The stored document this body replaces (the current draft). Its block ids carry over to the blocks that pair with them. */
 		previousDoc?: StoredDocument | null;
+		/**
+		 * The metadata stored for this entry (the current draft). A key the schema no longer has is kept only if it is stored here
+		 * (a schema change orphaned it); a new unknown key is rejected. A new entry has none.
+		 */
+		previousMetadata?: { readonly [key: string]: unknown };
 	},
 ): Promise<PreparedSnapshot> {
 	if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -506,7 +516,7 @@ export async function prepareSnapshot(
 	if ("error" in normalizedSlug) throw new ServiceError(normalizedSlug.error);
 	const slug = normalizedSlug.slug;
 
-	const metadata = validateMetadata(rawCollection, input.metadata);
+	const metadata = validateMetadata(rawCollection, input.metadata, options?.previousMetadata);
 
 	const collector = new ReferenceCollector();
 	addMetadataReferences(collector, rawCollection, metadata);
@@ -804,12 +814,15 @@ export async function imageWarningsForPublish(input: {
 	headStorageKey?: (storageKey: string) => Promise<boolean>;
 }): Promise<Issue[]> {
 	try {
-		const snapshot = await prepareSnapshot({
-			collection: input.collection,
-			slug: input.slug,
-			metadata: input.metadata,
-			mdx: input.mdx,
-		} as ServiceInput);
+		const snapshot = await prepareSnapshot(
+			{
+				collection: input.collection,
+				slug: input.slug,
+				metadata: input.metadata,
+				mdx: input.mdx,
+			} as ServiceInput,
+			{ previousMetadata: input.metadata },
+		);
 		const mediaIds = [
 			...new Set(snapshot.imageSources.map((s) => s.mediaId).filter((v): v is string => typeof v === "string")),
 		];

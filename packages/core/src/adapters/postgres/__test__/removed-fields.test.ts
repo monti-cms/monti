@@ -7,7 +7,7 @@ import { storedFields } from "../../../schema/derive";
 import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
 import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { seedEntry } from "./seed";
+import { seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -87,23 +87,37 @@ describe("values of removed fields and options", () => {
 			mdx: "Body",
 		});
 
-	it("keeps the value of a removed field when creating and saving", async () => {
-		const created = await service.createDraft({
-			collection: contentCollection,
-			slug: unique("create"),
-			metadata: await staleMetadata("Create"),
-			mdx: "Body",
-		} as never);
-		expect(created.working.metadata[ORPHAN]).toBe("left behind");
-		expect(created.working.metadata[ORPHAN_LIST]).toEqual(["a", "b"]);
+	it("rejects a new unknown key on create and on save: a typo is not a removed field", async () => {
+		await expect(
+			service.createDraft({
+				collection: contentCollection,
+				slug: unique("create"),
+				metadata: { ...(await requiredMetadata(contentCollection, "Create", relationTarget)), titel: "typo" },
+				mdx: "Body",
+			} as never),
+		).rejects.toMatchObject({ code: "invalid_metadata_key" });
 
+		const draft = await staleDraft("Typo");
+		await expect(
+			service.saveDraft(draft.id, {
+				collection: contentCollection,
+				slug: draft.workingSlug,
+				metadata: { ...draft.working.metadata, titel: "typo" },
+				mdx: "Body",
+				expectedVersion: draft.version,
+			} as never),
+		).rejects.toMatchObject({ code: "invalid_metadata_key" });
+	});
+
+	it("keeps the value of a removed field when saving", async () => {
+		const draft = await staleDraft("Save");
 		// An API client that sends the stored metadata back, edited elsewhere, loses nothing.
-		const saved = await service.saveDraft(created.id, {
+		const saved = await service.saveDraft(draft.id, {
 			collection: contentCollection,
-			slug: created.workingSlug,
-			metadata: { ...created.working.metadata, title: "Renamed" },
+			slug: draft.workingSlug,
+			metadata: { ...draft.working.metadata, title: "Renamed" },
 			mdx: "Body",
-			expectedVersion: created.version,
+			expectedVersion: draft.version,
 		} as never);
 		expect(saved.working.metadata).toMatchObject({
 			title: "Renamed",
@@ -114,19 +128,14 @@ describe("values of removed fields and options", () => {
 
 	it.skipIf(!selectField)("keeps a select value that is no longer an option instead of the default", async () => {
 		const name = selectField?.name ?? "";
-		const created = await service.createDraft({
+		const draft = await staleDraft("Select");
+		expect(draft.working.metadata[name]).toBe(UNKNOWN_OPTION);
+		const saved = await service.saveDraft(draft.id, {
 			collection: contentCollection,
-			slug: unique("select"),
-			metadata: await staleMetadata("Select"),
-			mdx: "Body",
-		} as never);
-		expect(created.working.metadata[name]).toBe(UNKNOWN_OPTION);
-		const saved = await service.saveDraft(created.id, {
-			collection: contentCollection,
-			slug: created.workingSlug,
-			metadata: created.working.metadata,
+			slug: draft.workingSlug,
+			metadata: draft.working.metadata,
 			mdx: "Body changed",
-			expectedVersion: created.version,
+			expectedVersion: draft.version,
 		} as never);
 		expect(saved.working.metadata[name]).toBe(UNKNOWN_OPTION);
 	});
@@ -192,21 +201,38 @@ describe("values of removed fields and options", () => {
 		expect(copy.working.metadata[ORPHAN_LIST]).toEqual(["a", "b"]);
 	});
 
-	it.skipIf(!secondLocale)("lets a translation keep a removed value instead of calling it a shared field", async () => {
-		const source = await service.createDraft({
-			collection: contentCollection,
-			slug: unique("translated"),
-			metadata: await requiredMetadata(contentCollection, "Source", relationTarget),
-			mdx: "Body",
-		});
-		const translation = await service.createTranslation({ sourceId: source.id, locale: secondLocale ?? "" });
-		const saved = await service.saveDraft(translation.id, {
-			collection: contentCollection,
-			slug: source.workingSlug,
-			metadata: { title: "Translated", [ORPHAN]: "left behind" },
-			mdx: "Body",
-			expectedVersion: translation.version,
-		} as never);
-		expect(saved.working.metadata).toMatchObject({ title: "Translated", [ORPHAN]: "left behind" });
-	});
+	it.skipIf(!secondLocale)(
+		"lets a translation keep a removed value it already holds, and rejects a new one",
+		async () => {
+			const source = await service.createDraft({
+				collection: contentCollection,
+				slug: unique("translated"),
+				metadata: await requiredMetadata(contentCollection, "Source", relationTarget),
+				mdx: "Body",
+			});
+			const created = await service.createTranslation({ sourceId: source.id, locale: secondLocale ?? "" });
+			// The translation was saved before the field was removed.
+			const translation = await seedSave(store, created.id, {
+				expectedVersion: created.version,
+				metadata: { title: "Translated", [ORPHAN]: "left behind" },
+				mdx: "Body",
+			});
+			const input = (metadata: Record<string, unknown>) =>
+				({
+					collection: contentCollection,
+					slug: source.workingSlug,
+					metadata,
+					mdx: "Body",
+					expectedVersion: translation.version,
+				}) as never;
+			const saved = await service.saveDraft(translation.id, input({ title: "Retitled", [ORPHAN]: "left behind" }));
+			expect(saved.working.metadata).toMatchObject({ title: "Retitled", [ORPHAN]: "left behind" });
+			await expect(
+				service.saveDraft(translation.id, {
+					...(input({ title: "T", titel: "typo" }) as object),
+					expectedVersion: saved.version,
+				} as never),
+			).rejects.toMatchObject({ code: "invalid_metadata_key" });
+		},
+	);
 });

@@ -100,9 +100,9 @@ describe("ContentService Contract", () => {
 				"invalid_metadata_type",
 			],
 			[
-				"a value of a removed field that is not a string or a list of strings",
-				{ collection: recordCollection, slug: "valid", metadata: { index: 1 }, mdx: "" },
-				"invalid_metadata_type",
+				"a key that is not in the schema and that the entry does not already hold",
+				{ collection: recordCollection, slug: "valid", metadata: { index: "1" }, mdx: "" },
+				"invalid_metadata_key",
 			],
 			[
 				"a removed field named like an object prototype",
