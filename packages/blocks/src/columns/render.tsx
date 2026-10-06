@@ -19,9 +19,6 @@ export function Column({ children }: PropsWithChildren) {
 	return <div className="cms-block-column">{children}</div>;
 }
 
-/** Public component for columns (called by `@monti-cms/core/render`). */
-export default () => ({ Columns, Column });
-
 /** Public components for columns in the JSON renderer (`renderDocument`): the blocks `columns` and `column`. The columns are counted from the stored `column` nodes. */
 export const documentComponents = (_context: DocumentComponentsContext): LooseDocumentComponents => ({
 	blocks: {

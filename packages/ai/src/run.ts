@@ -1,4 +1,5 @@
-import { ADMIN_LOCALE, createTranslator, DEFAULT_LOCALE, readableMdx } from "@monti-cms/core/client";
+import { ADMIN_LOCALE, createTranslator, DEFAULT_LOCALE } from "@monti-cms/core/client";
+import { configuredSyntax, readableMdx } from "@monti-cms/mdx/format";
 import { z } from "zod";
 import {
 	type AiContentLookup,
@@ -330,7 +331,7 @@ async function runGenerate(
 	if (action.result === "mdx") {
 		const mdx = String(output.mdx ?? "").trim();
 		if (!mdx) throw new AiError("ai_failed", t("emptyResult"));
-		const verdict = readableMdx(mdx);
+		const verdict = readableMdx(mdx, configuredSyntax());
 		if (!verdict.ok) throw new AiError("ai_failed", verdict.reason);
 		await runValidatorsWhole(action, call, deps, mdx);
 		return { kind: "mdx", text: mdx };
@@ -403,7 +404,7 @@ export async function streamAiAction(
 		await runValidatorsWhole(action, call, deps, text);
 		return { kind: "text", text };
 	}
-	const verdict = readableMdx(text);
+	const verdict = readableMdx(text, configuredSyntax());
 	if (!verdict.ok) throw new AiError("ai_failed", verdict.reason);
 	await runValidatorsWhole(action, call, deps, text);
 	return { kind: "mdx", text };

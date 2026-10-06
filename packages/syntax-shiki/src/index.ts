@@ -1,4 +1,4 @@
-import type { SyntaxExtension } from "@monti-cms/core/syntax";
+import type { SyntaxExtension } from "@monti-cms/mdx";
 import type { WordEffect } from "./notation";
 import { remarkShikiNotation } from "./remark";
 

@@ -14,7 +14,7 @@
  * so splitting into two shapes leads to fixing only one of them.
  */
 
-import { RAW_SOURCE_PARAGRAPH, type SyntaxBlocks } from "@monti-cms/core/syntax";
+import { RAW_SOURCE_PARAGRAPH, type SyntaxBlocks } from "@monti-cms/mdx";
 import type { Paragraph, Root, RootContent } from "mdast";
 import { SKIP, visit } from "unist-util-visit";
 import type { VFile } from "vfile";

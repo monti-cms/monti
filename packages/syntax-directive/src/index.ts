@@ -1,4 +1,4 @@
-import type { SyntaxExtension } from "@monti-cms/core/syntax";
+import type { SyntaxExtension } from "@monti-cms/mdx";
 import remarkDirective from "remark-directive";
 import { directiveDefinitions, remarkDemoteUnknownDirectives, remarkDirectivesToMdx } from "./remark";
 import { directiveMarkWriters, directiveNodeWriters, escapeDirectiveColon, escapeDirectiveText } from "./serialize";

@@ -31,14 +31,6 @@ export function Chart({ source, labels = blockLabels() }: { source?: string; lab
 	return <ChartClient source={text} />;
 }
 
-type ChartProps = Parameters<typeof Chart>[0];
-
-/** Public chart component (called by `@monti-cms/core/render`). The chart is drawn in the browser (optional dependency `recharts`). */
-export default ({ locale }: { locale?: string }) => {
-	const labels = blockLabels(locale);
-	return { Chart: (props: ChartProps) => <Chart {...props} labels={labels} /> };
-};
-
 /** Public components for the chart in the JSON renderer (`renderDocument`): the block `chart`. The code of the fence arrives as `source`. */
 export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
 	const labels = blockLabels(locale);

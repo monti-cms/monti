@@ -18,14 +18,6 @@ export function Collapsible({
 	);
 }
 
-type ComponentProps = Parameters<typeof Collapsible>[0];
-
-/** Public component for the collapsible (called by `@monti-cms/core/render`). */
-export default ({ locale }: { locale?: string }) => {
-	const labels = blockLabels(locale);
-	return { Collapsible: (props: ComponentProps) => <Collapsible {...props} labels={labels} /> };
-};
-
 /** Public components for the collapsible in the JSON renderer (`renderDocument`). */
 export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
 	const labels = blockLabels(locale);

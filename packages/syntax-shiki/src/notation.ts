@@ -9,7 +9,7 @@
  * a trailing one applies to its own line. `[!code …:N]` extends it over N code lines.
  */
 
-import { type CommentSyntax, formatAnnotationComment, resolveCommentSyntax } from "@monti-cms/core/syntax";
+import { type CommentSyntax, formatAnnotationComment, resolveCommentSyntax } from "@monti-cms/mdx";
 
 /** Text effect a `[!code word:…]` becomes (`@char name {re:/…/g}`). */
 export type WordEffect = "strong" | "em" | "del" | "u";

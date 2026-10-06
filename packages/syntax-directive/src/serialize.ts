@@ -10,7 +10,7 @@ import {
 	type SyntaxNodeWriter,
 	tableHasMergedCells,
 	tableWidths,
-} from "@monti-cms/core/syntax";
+} from "@monti-cms/mdx";
 
 /**
  * Writes the directive spelling (`:::name`, `::name`, `:name[label]{attrs}`). Each writer returns `undefined` when the node is not something

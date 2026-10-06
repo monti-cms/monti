@@ -30,9 +30,6 @@ export function Tabs({ defaultValue, children }: PropsWithChildren<{ defaultValu
 	);
 }
 
-/** Public component for tabs (called by `@monti-cms/core/render`). */
-export default () => ({ Tabs, Tab });
-
 /**
  * Tab group of the JSON renderer. It reads the tabs from the block's `items` (the stored `tab` nodes and what each renders to), not from the props of
  * child elements: the tab names are the `label` attributes and each panel is the content of its tab.

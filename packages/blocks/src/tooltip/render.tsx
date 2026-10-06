@@ -4,9 +4,6 @@ import { Tooltip } from "./render.client";
 
 export { Tooltip };
 
-/** Public component for the tooltip (called by `@monti-cms/core/render`). Shows the description on mouse, keyboard focus, or touch (client component). */
-export default () => ({ Tooltip });
-
 /**
  * Public components for the tooltip in the JSON renderer (`renderDocument`): the mark `tooltip`, and the code tag `Tooltip` that draws a tooltip inside a
  * code block (a text effect). Both show the same component.
