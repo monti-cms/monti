@@ -114,7 +114,7 @@ export const bannerBlock = defineBlock({ name: "banner", syntax: { kind: "contai
 export const banner = () =>
 	definePlugin({ name: "banner", options: {}, blocks: [bannerBlock], admin: () => import("./banner/admin") });
 
-// banner/admin.ts: 편집 화면 전체(blockViews)나 속성 상자(blockEditors)를 넣는 공급자
+// banner/admin.ts: 편집 화면(useBlockEditor와 Content로 만든 blockViews)을 넣는 공급자
 export default defineAdminPlugin({ Provider: BannerProvider });
 ```
 

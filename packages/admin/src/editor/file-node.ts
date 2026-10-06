@@ -1,6 +1,6 @@
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { CmsFileNodeView } from "./file-node-view";
+import { BlockNodeView } from "./blocks/block-node-view";
 
 export const FILE_NODE_NAME = "cmsFile";
 
@@ -39,6 +39,6 @@ export const CmsFileNode = Node.create({
 	},
 
 	addNodeView() {
-		return ReactNodeViewRenderer(CmsFileNodeView);
+		return ReactNodeViewRenderer(BlockNodeView);
 	},
 });

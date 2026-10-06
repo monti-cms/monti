@@ -2,7 +2,6 @@
 
 import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/mdx";
-import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -13,14 +12,8 @@ import { Separator } from "../ui/separator";
 import { Skeleton } from "../ui/skeleton";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
-import {
-	BlockSettings,
-	BlockSettingsField,
-	ContainerToolbar,
-	SELECTED_RING,
-	ToolbarButton,
-	useEditorEditable,
-} from "./blocks/shared";
+import { BlockSettings, BlockSettingsField, ContainerToolbar, ToolbarButton } from "./blocks/shared";
+import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { ImageCropDialog } from "./image-crop-dialog";
 import { ALT_REQUIRED_MESSAGE } from "./image-insert-dialog";
 import { editorMessages } from "./messages";
@@ -42,16 +35,11 @@ const normalizeWidth = (value: string) => {
 	return /^\d+$/.test(trimmed) ? `${trimmed}px` : trimmed;
 };
 
-/** Body text before and after the image (used when the slot action describes the image within the text flow). */
+/** Body text before and after the image, for the slot action that describes the image within the text flow. */
 const AROUND_CHARS = 1500;
-function surroundingText(editor: NodeViewProps["editor"], getPos: NodeViewProps["getPos"], nodeSize: number): string {
-	const pos = typeof getPos === "function" ? getPos() : undefined;
-	if (!editor || typeof pos !== "number") return "";
-	const doc = editor.state.doc;
-	const before = doc.textBetween(Math.max(0, pos - AROUND_CHARS), pos, "\n", " ");
-	const after = doc.textBetween(pos + nodeSize, Math.min(doc.content.size, pos + nodeSize + AROUND_CHARS), "\n", " ");
-	return `${before.trim()}\n${t("imageNode.marker")}\n${after.trim()}`;
-}
+
+/** A string value, or `fallback` when the attribute is unset. */
+const text = (value: string | boolean | undefined, fallback = "") => (typeof value === "string" ? value : fallback);
 
 const ALIGN_TOOLS = [
 	{ value: "left", label: t("toolbar.alignLeftTitle"), icon: AlignLeft },
@@ -59,15 +47,30 @@ const ALIGN_TOOLS = [
 	{ value: "right", label: t("toolbar.alignRightTitle"), icon: AlignRight },
 ] as const;
 
-export function CmsImageNodeView({ node, updateAttributes, selected, editor, getPos }: NodeViewProps) {
+/** Edit view of the core image block (`blockViews.image`). */
+export function ImageBlockView() {
+	const block = useBlockEditor();
 	const widthInputId = useId();
 	const altInputId = useId();
 	const widthErrorId = useId();
 	const altErrorId = useId();
 	const decorativeId = useId();
-	/** AI slot discriminator. Stays the same while the node view is alive (the same image inserted twice is separate). */
-	const slotScope = useId();
-	const { src, alt, width, align, caption, mediaId, decorative, crop, rotate } = node.attrs;
+	/**
+	 * AI slot discriminator: the block id, so a run survives the view being re-created (a move, an undo). The same image inserted twice is separate.
+	 * It stays the same while the view is alive, even when the editor assigns the id after the first render.
+	 */
+	const fallbackScope = useId();
+	const slotScope = useRef(block.id ?? fallbackScope).current;
+	const { values } = block;
+	const src = text(values.src);
+	const alt = text(values.alt);
+	const width = text(values.width);
+	const align = text(values.align);
+	const caption = text(values.caption);
+	const mediaId = text(values.mediaId);
+	const decorative = values.decorative === true;
+	const crop = text(values.crop) || null;
+	const rotate = text(values.rotate) || null;
 	const [isEditing, setIsEditing] = useState(false);
 	const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
 	const [previewWidth, setPreviewWidth] = useState<string | null>(null);
@@ -81,22 +84,23 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 			activeResizeCleanupRef.current?.();
 		};
 	}, []);
-	// A node view is always rendered inside the editor, but rendering without an editor (preview, tests) is not blocked either.
-	const isEditable = useEditorEditable(editor);
+	const isEditable = block.editable;
 	/** Body image slot (alt, caption). The server reads media library images and images at this site's addresses (`/images/...`). */
-	const siteSrc = typeof src === "string" && src.startsWith("/") && !src.startsWith("//") ? src : undefined;
+	const siteSrc = src.startsWith("/") && !src.startsWith("//") ? src : undefined;
 	const imageSlot = (target: "alt" | "caption"): SlotRequest => ({
 		slot: "image",
 		target,
 		scope: slotScope,
 		disabled: !isEditable || (!mediaId && !siteSrc),
 		getContext: () => ({
-			mediaId: typeof mediaId === "string" ? mediaId : undefined,
-			imageSrc: typeof mediaId === "string" ? undefined : siteSrc,
-			around: surroundingText(editor, getPos, node.nodeSize),
+			mediaId: mediaId || undefined,
+			imageSrc: mediaId ? undefined : siteSrc,
+			around: block.textAround(AROUND_CHARS, t("imageNode.marker")),
 			current: (target === "alt" ? alt : caption) || undefined,
 		}),
-		apply: (value) => updateAttributes(target === "alt" ? { alt: value, decorative: null } : { caption: value }),
+		apply: (value) => {
+			block.setValues(target === "alt" ? { alt: value, decorative: null } : { caption: value });
+		},
 	});
 	const altSlot = useSlot(imageSlot("alt"));
 	const captionSlot = useSlot(imageSlot("caption"));
@@ -153,7 +157,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 									: t("imageNode.unresolvable");
 
 	// An image that needs a description must have alt text (same rule as the insert dialog).
-	const altMissing = decorative !== true && !String(alt ?? "").trim();
+	const altMissing = !decorative && !String(alt ?? "").trim();
 
 	const alignClasses =
 		{
@@ -218,7 +222,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 			setPreviewWidth(null);
 			// If clicked without moving, do not commit (preserve images with no width set).
 			if (hasMoved && currentPreview && currentPreview !== (width || null) && isValidImageWidth(currentPreview)) {
-				updateAttributes({ width: normalizeWidth(currentPreview) });
+				block.setValues({ width: normalizeWidth(currentPreview) });
 			}
 		};
 
@@ -238,14 +242,14 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 	// `NodeViewWrapper` adds that attribute, and omitting it crashes at runtime with "Please use the NodeViewWrapper
 	// component for your node view" (seen in posts that contain images).
 	return (
-		<NodeViewWrapper
+		<BlockFrame
 			as="figure"
+			framed={false}
 			data-image-block
 			className={cn(
 				// Keep the 2em top/bottom margin of img in the editor body (prose) from showing as an empty strip inside the gray box.
 				"group group/container relative my-6 flex flex-col rounded-lg transition-all [&_img]:m-0",
 				alignClasses,
-				selected && SELECTED_RING,
 			)}
 			style={{ width: previewWidth || width || "100%", maxWidth: "100%" }}
 		>
@@ -257,7 +261,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 							key={tool.value}
 							label={tool.label}
 							pressed={(align || "center") === tool.value}
-							onClick={() => updateAttributes({ align: tool.value })}
+							onClick={() => block.setValues({ align: tool.value })}
 						>
 							<tool.icon aria-hidden />
 						</ToolbarButton>
@@ -273,7 +277,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 								onChange={(e) => {
 									setWidthDraft(e.target.value);
 									if (isValidImageWidth(e.target.value)) {
-										updateAttributes({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
+										block.setValues({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
 									}
 								}}
 								className="h-7 text-xs"
@@ -288,16 +292,16 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 						<BlockSettingsField
 							label={t("imageDialog.alt")}
 							htmlFor={altInputId}
-							action={decorative !== true ? altSlot.trigger : undefined}
+							action={!decorative ? altSlot.trigger : undefined}
 						>
 							<Textarea
 								id={altInputId}
 								value={alt || ""}
 								rows={2}
-								disabled={decorative === true}
+								disabled={decorative}
 								aria-invalid={altMissing || undefined}
 								aria-describedby={altMissing ? altErrorId : undefined}
-								onChange={(e) => updateAttributes({ alt: e.target.value })}
+								onChange={(e) => block.setValues({ alt: e.target.value })}
 								className="min-h-0 text-xs md:text-xs"
 							/>
 							{altMissing && (
@@ -312,9 +316,9 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 							<Switch
 								id={decorativeId}
 								size="sm"
-								checked={decorative === true}
+								checked={decorative}
 								onCheckedChange={(checked) =>
-									updateAttributes(checked ? { decorative: true, alt: "" } : { decorative: null })
+									block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null })
 								}
 							/>
 						</label>
@@ -386,7 +390,7 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 					placeholder={t("imageDialog.caption")}
 					aria-label={t("imageNode.caption")}
 					readOnly={!isEditable}
-					onChange={(e) => updateAttributes({ caption: e.target.value })}
+					onChange={(e) => block.setValues({ caption: e.target.value })}
 					className={cn(
 						"h-auto w-full rounded-none border-0 bg-transparent cms-dark:bg-transparent px-0 py-0 text-cms-muted-foreground text-xs shadow-none placeholder:text-cms-muted-foreground/50 focus-visible:ring-0 md:text-xs",
 						captionAlignClass,
@@ -425,10 +429,10 @@ export function CmsImageNodeView({ node, updateAttributes, selected, editor, get
 					crop={crop}
 					rotate={rotate}
 					onApply={({ crop: nextCrop, rotate: nextRotate }) => {
-						updateAttributes({ crop: nextCrop, rotate: nextRotate });
+						block.setValues({ crop: nextCrop, rotate: nextRotate });
 					}}
 				/>
 			)}
-		</NodeViewWrapper>
+		</BlockFrame>
 	);
 }

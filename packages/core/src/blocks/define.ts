@@ -5,9 +5,9 @@
  * Editing UI (NodeView, settings form) and public components are referenced by name only; implementations live in their own registries:
  *
  * - Public renderer: the site's MDX component table (`component` name)
- * - Editor: core blocks (image, file, math) use the admin package's `editor/block-views.ts` (`editor.nodeView` name). For added blocks,
- *   the admin package builds editor nodes from the definition, and the edit screen takes `blockViews` (whole view) or
- *   `blockEditors` (attribute and body boxes) from `CmsAdminComponentsProvider`. If neither exists, the default box is used.
+ * - Editor: core blocks (image, file, math) use the admin package's `editor/block-views.ts` (`editor.nodeView` name) for the node. For added blocks,
+ *   the admin package builds editor nodes from the definition. Every block's edit view, core blocks included, is looked up by block name in
+ *   `blockViews` from `CmsAdminComponentsProvider`. If none is registered, the default view is used.
  *
  * Sites add blocks through `blocks` in the config, and block extensions (e.g. `@monti-cms/blocks`) add them through a plugin's `blocks` (`blocks/resolve.ts`).
  */

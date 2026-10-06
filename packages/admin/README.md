@@ -30,8 +30,7 @@ import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 const components = {
 	fencePreviews: { chart: () => import("./chart").then((m) => m.Chart) }, // ({ source }) => ReactNode
 	fieldInputs: { color: ColorInput }, // renders fields with fields.text({ input: "color" }) using this input
-	blockEditors: { notice: NoticeEditor }, // property and body box of an added block ({ definition, values, setValue, content })
-	blockViews: { banner: BannerView }, // whole edit screen of an added block (Tiptap NodeView). Takes precedence over blockEditors
+	blockViews: { notice: NoticeView, image: SiteImageView }, // edit view of any block, the core image, file and math included. A view takes no props: it calls useBlockEditor()
 };
 
 export function SiteAdminComponents({ children }) {
@@ -92,9 +91,31 @@ For a block added by the config's `blocks` or a block extension plugin (`editor.
 name, e.g. `cmsNotice`), conversion, slash menu insertion and drag rules from the definition. You only need to supply the editing look.
 
 - If you supply nothing, a directive block is a box holding the property inputs and body, and a code fence block is a code input with a preview.
-- `blockEditors` replaces the property and body look inside the default frame; `blockViews` replaces the whole screen including the frame.
-- Tools for building `blockViews` screens (reading and writing property values, child position, input panel, tool row, node name) are in `@monti-cms/admin/blocks`.
-  The callout and tabs screens of `@monti-cms/blocks` are examples.
+- `blockViews` is the one place a block's edit view is registered, for every block: the blocks you add and the core `image`, `file` and `math` blocks
+  (register `blockViews.image` to redraw images). A view replaces the default view of that block, frame included.
+- A view takes no props. It reads and writes its block with `useBlockEditor()`, draws the editable nested body of a container with `<Content />` and wraps itself in
+  `<BlockFrame>`, all from `@monti-cms/admin/hooks`. No Tiptap or ProseMirror types are needed. The UI parts (tool row, settings popover, attribute input) are in `@monti-cms/admin/blocks`.
+  The callout, tabs, columns, collapsible and code explorer screens of `@monti-cms/blocks` are examples.
+- `blockEditors` and `CustomBlockEditorProps` are removed. `content` becomes `<Content />`, `values` and `setValue` become `useBlockEditor().values` and `.setValue`,
+  and `editable` and `selected` are fields of the same object. Wrap the result in `<BlockFrame>`, which the old default frame did for you.
+  The edit-view helpers that took Tiptap types (`useContainerValues`, `valuesOf`, `withValue`, `childPos`, `focusInside`, `selectContainer`, `useSelectedChildIndex`, `useEditorEditable`)
+  are no longer exported; `useBlockEditor()` covers them. `BLOCK_NODE_VIEWS` is now `BLOCK_NODES` (the old name stays as a deprecated alias).
+
+```tsx
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
+
+function NoticeView() {
+	const block = useBlockEditor<{ level: string }>();
+	return (
+		<BlockFrame>
+			<button type="button" contentEditable={false} onClick={() => block.setValue("level", "warn")}>
+				{block.values.level}
+			</button>
+			<Content />
+		</BlockFrame>
+	);
+}
+```
 
 ## Text marks
 
@@ -225,8 +246,8 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | `@monti-cms/admin` | Adding site components (`CmsAdminComponentsProvider`), properties panel and list cell types |
 | `/next` | Admin layout and page (exported from the app route) |
 | `/editor` | Editor extension helpers (bubble, slash menu, code block linking) |
-| `/blocks` | Block edit screen helpers |
-| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`), and `EditorResult` / `EditorError` |
+| `/blocks` | Block edit screen UI (tool row, settings popover, attribute input) |
+| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`, `useBlockEditor`), the block view components `Content` and `BlockFrame`, and `EditorResult` / `EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
 | `/media` | Media picker and preview |
@@ -250,6 +271,15 @@ the label, the input and the error text (`ids`, `inputProps`), and the field's `
 `EntryFormProvider`; the entry editor's properties panel and the record panel provide one, and a screen that keeps its own form state can provide its own
 (`collection`, `form`, `setForm`, `issues`, `disabled`, `entryId`, `locale`, `entry`, `locked`). A component re-renders only when its own field changes,
 so typing in one field does not re-render the others. The default field UI (`SchemaFields`) is built on the same hook.
+
+`useBlockEditor()` is the hook of a block view (a component registered in `blockViews`; it throws anywhere else). It returns the block's attribute `values` with
+`setValue` and `setValues` (one undo step), the `source` of a block written as code (math, code fences) with `setSource`, `editable`, `selected` and `focusedChild`
+(the child the cursor is in), `select`, `focus({ child, at })`, `remove` and `textAround` (text around the block, for AI context). A container's `children`
+are managed with `addChild`, `removeChild`, `moveChild` and `setChildValue`; they respect `definition.children.min` and `max` and return an `EditorResult` with
+code `limit` when a bound would be broken (`read_only` while the editor is locked). `transact(tx => ...)` groups several edits, which read the live document, into one document change
+and so one undo step, for example renaming a tab and the default tab that points at it. `raw` (`{ editor, node, getPos }`) is the one escape hatch and the only place Tiptap and
+ProseMirror types appear; it is not stable. `<Content />` renders the editable nested body (with `visibleChild` to show one child, such as the open tab) and `<BlockFrame />`
+is the outer element with the selected ring and hover scope. The child blocks sit inside the first element of `[data-cms-block-content]`.
 
 ## Styles
 

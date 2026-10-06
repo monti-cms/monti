@@ -5,6 +5,22 @@
  * @experimental This entry point may change in a minor release until the installed components (Roadmap C) have used it.
  */
 
+export {
+	type BlockChild,
+	type BlockChildInit,
+	type BlockEditor,
+	type BlockEditorRaw,
+	BlockFrame,
+	type BlockFrameProps,
+	type BlockTransaction,
+	type BlockTransactionChild,
+	type BlockValueInput,
+	type BlockValues,
+	type BlockView,
+	Content,
+	type ContentProps,
+	useBlockEditor,
+} from "../editor/blocks/use-block-editor";
 export type { CmsIssue } from "../screens/api-error-message";
 export type { EntryData, EntryForm, EntryFormPatch, FormValue } from "../screens/entries/entry-form";
 export {

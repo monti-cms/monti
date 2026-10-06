@@ -36,6 +36,8 @@ const BLOG_FIXTURE_TESTS = [
 	"src/editor/blocks/added/__test__/containers.test.ts",
 	"src/editor/blocks/added/__test__/custom-block-view.test.tsx",
 	"src/editor/blocks/added/__test__/custom-blocks.test.ts",
+	// A custom tabs view over the reference blog's tabs block (children, min and max).
+	"src/editor/blocks/__test__/use-block-editor.test.tsx",
 	// Linking body text to code needs text decorations that point at code lines (the block extension's code link). When absent, see `code-link-absent.test.ts`.
 	"src/editor/code-block/__test__/code-link.test.ts",
 	"src/editor/code-block/__test__/anchor-dedupe.test.ts",

@@ -11,7 +11,7 @@ export type {
 export { MdxPreview } from "../screens/entries/source-pane";
 export { addedMarkName, CODE_ANCHOR_REF, type EditorMarkSpec, type MarkAttrs, markAttrsOf } from "./added-marks";
 export { BLOCK_ID_ATTRIBUTE, findBlock } from "./block-ids";
-export { BLOCK_NODE_VIEWS } from "./block-views";
+export { BLOCK_NODE_VIEWS, BLOCK_NODES } from "./block-views";
 export { blockNodeName } from "./blocks/added";
 export { findAnchor, startLinkFromText, unlinkRef } from "./code-block/link-commands";
 export { buildEditorExtensions } from "./extensions";

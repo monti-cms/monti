@@ -1,18 +1,9 @@
 "use client";
 
-import {
-	AttributeInput,
-	BlockSettings,
-	ContainerToolbar,
-	focusInside,
-	SELECTED_RING,
-	selectContainer,
-	useContainerValues,
-	useSelectedChildIndex,
-} from "@monti-cms/admin/blocks";
+import { AttributeInput, BlockSettings, ContainerToolbar } from "@monti-cms/admin/blocks";
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn, Switch } from "@monti-cms/admin/kit";
 import { createTranslator } from "@monti-cms/core/client";
-import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { collapsibleMessages } from "./messages";
@@ -23,13 +14,12 @@ const t = createTranslator(collapsibleMessages);
  * Collapsible editing view (theme colors). The initial state follows `defaultOpen`, and the arrow next to the title toggles it while editing.
  * It expands automatically when the cursor enters it (arrow keys, undo, find).
  */
-export function CollapsibleNodeView(props: NodeViewProps) {
-	const { selected, editor, getPos } = props;
-	const [values, setValue] = useContainerValues(props);
+export function CollapsibleNodeView() {
+	const block = useBlockEditor();
+	const { values, editable, setValue } = block;
 	const defaultOpen = values.defaultOpen === true;
 	const [open, setOpen] = useState(defaultOpen);
-	const selectionInside = useSelectedChildIndex(editor, getPos) !== -1;
-	const editable = editor.isEditable;
+	const selectionInside = block.focusedChild !== null;
 	const defaultOpenId = useId();
 
 	useEffect(() => {
@@ -39,20 +29,16 @@ export function CollapsibleNodeView(props: NodeViewProps) {
 	const toggle = () => {
 		if (open) {
 			// Leaving the cursor inside the hidden body would put text where it cannot be seen. Select the whole collapsible block instead.
-			if (selectionInside) selectContainer(editor, getPos);
+			if (selectionInside) block.select();
 			setOpen(false);
 		} else {
 			setOpen(true);
-			focusInside(editor, getPos);
+			block.focus();
 		}
 	};
 
 	return (
-		<NodeViewWrapper
-			data-cms-container-node="cmsCollapsible"
-			data-cms-framed
-			className={cn("group/container relative my-6 rounded-md border bg-cms-background", selected && SELECTED_RING)}
-		>
+		<BlockFrame className="my-6 rounded-md border bg-cms-background">
 			<div
 				contentEditable={false}
 				className={cn(
@@ -79,17 +65,17 @@ export function CollapsibleNodeView(props: NodeViewProps) {
 					onCommit={(title) => setValue("title", title)}
 					onEnter={() => {
 						setOpen(true);
-						focusInside(editor, getPos);
+						block.focus();
 					}}
 					className="flex-1"
 				/>
 			</div>
-			<NodeViewContent
+			<Content
 				className={cn(
 					"px-3 pt-2 pb-3 text-cms-foreground",
 					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
-					"[&>[data-node-view-content-react]>:first-child]:mt-0 [&>[data-node-view-content-react]>:last-child]:mb-0",
-					"[&>[data-node-view-content-react]>:first-child>[data-node-view-wrapper]]:mt-0 [&>[data-node-view-content-react]>:last-child>[data-node-view-wrapper]]:mb-0",
+					"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
+					"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",
 					!open && "hidden",
 				)}
 				// The read-only source view shows the collapsed body expanded too (`data-cms-collapsed`).
@@ -110,6 +96,6 @@ export function CollapsibleNodeView(props: NodeViewProps) {
 					</BlockSettings>
 				</ContainerToolbar>
 			) : null}
-		</NodeViewWrapper>
+		</BlockFrame>
 	);
 }

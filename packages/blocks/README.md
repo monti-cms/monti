@@ -114,7 +114,7 @@ export const bannerBlock = defineBlock({ name: "banner", syntax: { kind: "contai
 export const banner = () =>
 	definePlugin({ name: "banner", options: {}, blocks: [bannerBlock], admin: () => import("./banner/admin") });
 
-// banner/admin.ts: a provider that supplies a full edit screen (blockViews) or an attribute box (blockEditors)
+// banner/admin.ts: a provider that supplies the edit screen (blockViews, built on useBlockEditor and Content)
 export default defineAdminPlugin({ Provider: BannerProvider });
 ```
 

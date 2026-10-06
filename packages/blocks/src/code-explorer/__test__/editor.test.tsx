@@ -137,7 +137,13 @@ describe("code explorer editing view", () => {
 		expect(fileButtons()).toHaveLength(3);
 		expect(editor.state.doc.firstChild?.lastChild?.type.name).toBe("paragraph");
 		expect(screen.getByText("아래 설명")).toBeDefined();
-		expect(filesOf(editor.state.doc.firstChild as never).map((file) => file.index)).toEqual([0, 1, 2]);
+		const explorer = editor.state.doc.firstChild;
+		const children = Array.from({ length: explorer?.childCount ?? 0 }, (_, index) => ({
+			index,
+			name: explorer?.child(index).type.name ?? "",
+			values: { meta: String(explorer?.child(index).attrs.meta ?? "") },
+		}));
+		expect(filesOf(children).map((file) => file.index)).toEqual([0, 1, 2]);
 	});
 
 	it("adds a file at the end with a unique placeholder path and moves the cursor into it", async () => {

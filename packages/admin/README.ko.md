@@ -30,8 +30,7 @@ import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 const components = {
 	fencePreviews: { chart: () => import("./chart").then((m) => m.Chart) }, // ({ source }) => ReactNode
 	fieldInputs: { color: ColorInput }, // fields.text({ input: "color" })인 필드를 이 입력으로 그린다
-	blockEditors: { notice: NoticeEditor }, // 더한 블록의 속성·본문 상자({ definition, values, setValue, content })
-	blockViews: { banner: BannerView }, // 더한 블록의 편집 화면 전체(Tiptap NodeView). blockEditors보다 먼저 쓴다
+	blockViews: { notice: NoticeView, image: SiteImageView }, // 모든 블록의 편집 화면(기본 image·file·math 포함). 화면은 props를 받지 않고 useBlockEditor()를 부른다
 };
 
 export function SiteAdminComponents({ children }) {
@@ -92,9 +91,31 @@ const components = {
 이름, 예: `cmsNotice`)·변환·슬래시 메뉴 삽입·끌기 규칙을 만든다. 편집 모양만 넣으면 된다.
 
 - 아무것도 넣지 않으면 지시자 블록은 속성 입력과 본문을 담은 상자, 코드 펜스 블록은 코드 입력 칸과 미리보기다.
-- `blockEditors`는 기본 틀 안의 속성·본문 모양을, `blockViews`는 틀까지 포함한 화면 전체를 바꾼다.
-- `blockViews` 화면을 만드는 도구(속성 값 읽고 쓰기·자식 위치·입력 칸·도구 줄·노드 이름)는 `@monti-cms/admin/blocks`에 있다.
-  `@monti-cms/blocks`의 콜아웃·탭 화면이 예시다.
+- `blockViews`가 블록 편집 화면을 등록하는 유일한 자리이고, 더한 블록과 기본 `image`·`file`·`math` 블록 모두 여기에 등록한다
+  (`blockViews.image`를 등록하면 이미지 화면을 다시 그린다). 등록한 화면은 틀까지 포함해 그 블록의 기본 화면을 대신한다.
+- 화면은 props를 받지 않는다. `useBlockEditor()`로 자기 블록을 읽고 쓰고, 컨테이너의 편집 가능한 중첩 본문은 `<Content />`로 그리며,
+  `<BlockFrame>`으로 감싼다. 모두 `@monti-cms/admin/hooks`에 있고 Tiptap·ProseMirror 타입이 필요 없다. 도구 줄·설정 팝오버·속성 입력 칸 같은 화면 부품은 `@monti-cms/admin/blocks`에 있다.
+  `@monti-cms/blocks`의 콜아웃·탭·단·접기·코드 탐색기 화면이 예시다.
+- `blockEditors`와 `CustomBlockEditorProps`는 없어졌다. `content`는 `<Content />`가 되고, `values`·`setValue`는 `useBlockEditor().values`·`.setValue`가 되며,
+  `editable`·`selected`도 같은 객체의 값이다. 예전 기본 틀이 해 주던 감싸기는 `<BlockFrame>`으로 직접 한다.
+  Tiptap 타입을 받던 편집 화면 도우미(`useContainerValues`·`valuesOf`·`withValue`·`childPos`·`focusInside`·`selectContainer`·`useSelectedChildIndex`·`useEditorEditable`)는
+  더 내보내지 않고 `useBlockEditor()`가 대신한다. `BLOCK_NODE_VIEWS`는 `BLOCK_NODES`로 바뀌었다(옛 이름은 더 쓰지 않는 별칭으로 남긴다).
+
+```tsx
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
+
+function NoticeView() {
+	const block = useBlockEditor<{ level: string }>();
+	return (
+		<BlockFrame>
+			<button type="button" contentEditable={false} onClick={() => block.setValue("level", "warn")}>
+				{block.values.level}
+			</button>
+			<Content />
+		</BlockFrame>
+	);
+}
+```
 
 ## 글자 꾸밈
 
@@ -225,8 +246,8 @@ export default defineAdminPlugin({
 | `@monti-cms/admin` | 사이트 컴포넌트 넣기(`CmsAdminComponentsProvider`)·속성 칸·목록 칸 타입 |
 | `/next` | 관리자 레이아웃·페이지(앱 라우트에서 내보낸다) |
 | `/editor` | 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
-| `/blocks` | 블록 편집 화면 도우미 |
-| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`)·`EditorResult`·`EditorError` |
+| `/blocks` | 블록 편집 화면 부품(도구 줄·설정 팝오버·속성 입력 칸) |
+| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`·`useBlockEditor`)·블록 화면 컴포넌트 `Content`·`BlockFrame`·`EditorResult`·`EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
@@ -250,6 +271,14 @@ export default defineAdminPlugin({
 편집 화면의 속성 패널과 레코드 패널이 하나씩 제공하고, 폼 상태를 따로 가진 화면은 직접 제공할 수 있다
 (`collection`·`form`·`setForm`·`issues`·`disabled`·`entryId`·`locale`·`entry`·`locked`). 컴포넌트는 자기 필드가 바뀔 때만 다시 그려지므로
 한 필드에 입력해도 다른 필드는 다시 그려지지 않는다. 기본 필드 화면(`SchemaFields`)도 같은 훅 위에 만들어져 있다.
+
+`useBlockEditor()`는 블록 화면(`blockViews`에 등록한 컴포넌트)에서 쓰는 훅이고, 다른 곳에서 부르면 던진다. 블록의 속성 값 `values`와
+`setValue`·`setValues`(되돌리기 한 번), 코드로 쓴 블록(수식·코드 펜스)의 `source`와 `setSource`, `editable`·`selected`·`focusedChild`(커서가 있는 자식),
+`select`·`focus({ child, at })`·`remove`·`textAround`(블록 앞뒤 글, AI 맥락용)를 준다. 컨테이너의 자식 `children`은 `addChild`·`removeChild`·`moveChild`·`setChildValue`로 다루며,
+`definition.children.min`·`max`를 지키고 범위를 벗어나면 `limit` 코드의 `EditorResult`를, 편집기가 잠겨 있으면 `read_only`를 돌려준다. `transact(tx => ...)`는 현재 문서를 읽는 여러 편집을
+문서 변경 한 번(되돌리기 한 번)으로 묶는다. 예를 들어 탭 이름을 바꾸면서 그 탭을 가리키는 기본 탭도 함께 바꿀 때 쓴다. `raw`(`{ editor, node, getPos }`)는 하나뿐인 탈출구이자
+Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않다. `<Content />`는 편집 가능한 중첩 본문을 그리고(`visibleChild`로 열린 탭처럼 자식 하나만 보인다),
+`<BlockFrame />`은 선택 테두리와 마우스 올림 범위를 가진 바깥 요소다. 자식 블록은 `[data-cms-block-content]`의 첫 요소 안에 놓인다.
 
 ## 스타일
 

@@ -7,7 +7,7 @@ import { CmsAdminComponentsProvider } from "../../../../admin-components";
 import { chooseSelectOption } from "../../../../test/base-ui";
 import { buildEditorExtensions } from "../../../extensions";
 import { mdxToTiptap, tiptapToMdx } from "../../../tiptap-content";
-import type { CustomBlockEditorProps } from "../view";
+import { BlockFrame, Content, useBlockEditor } from "../../use-block-editor";
 
 afterEach(cleanup);
 
@@ -42,20 +42,21 @@ const mount = async (source: string, wrap: (node: React.ReactNode) => React.Reac
 
 const NOTICE = '<Notice level="info">\n\n본문\n\n</Notice>';
 
-/** Edit component registered by the site (example): turns the level into a button. */
-function NoticeEditor({ values, setValue, content }: CustomBlockEditorProps) {
+/** Edit view registered by the site (example): turns the level into a button. */
+function NoticeView() {
+	const block = useBlockEditor();
 	return (
-		<div>
-			<button type="button" contentEditable={false} onClick={() => setValue("level", "warn")}>
-				단계: {String(values.level)}
+		<BlockFrame data-cms-custom-block="notice">
+			<button type="button" contentEditable={false} onClick={() => block.setValue("level", "warn")}>
+				단계: {String(block.values.level)}
 			</button>
-			{content}
-		</div>
+			<Content />
+		</BlockFrame>
 	);
 }
 
 describe("custom block NodeView", () => {
-	it("without a registered edit component it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
+	it("without a registered view it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
 		const editor = await mount(NOTICE);
 		expect(screen.getByText("공지")).toBeTruthy();
 		expect(screen.queryByLabelText("단계")).toBeNull();
@@ -72,9 +73,9 @@ describe("custom block NodeView", () => {
 		await waitFor(() => expect(screen.queryByRole("button", { name: "설정" })).toBeNull());
 	});
 
-	it("renders with the edit component registered by the site", async () => {
+	it("renders with the edit view registered by the site in blockViews", async () => {
 		const editor = await mount(NOTICE, (node) => (
-			<CmsAdminComponentsProvider components={{ blockEditors: { notice: NoticeEditor } }}>
+			<CmsAdminComponentsProvider components={{ blockViews: { notice: NoticeView } }}>
 				{node}
 			</CmsAdminComponentsProvider>
 		));
