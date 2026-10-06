@@ -1,9 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-/** Config alias names. CMS code reads the two config files through these names. */
+/** Config alias name. CMS code reads the site config file through this name. */
 export const CONFIG_ALIAS = "@cms-config";
-export const SERVER_ALIAS = "@cms-server";
 
 /** Reads JSON with comments and trailing commas (tsconfig). Leaves `//` and `/*` inside strings alone. `undefined` if it cannot be read. */
 export function parseJsonc(text: string): unknown {
@@ -60,7 +59,7 @@ export function tsconfigAliasPath(cwd: string, alias: string): string | undefine
 export interface ConfigPaths {
 	/** Site config file (relative to `cwd`). */
 	readonly config: string;
-	/** Server config file (relative to `cwd`). */
+	/** Server file, the module that exports the CMS instance as `cms` (relative to `cwd`). */
 	readonly server: string;
 }
 
@@ -70,31 +69,32 @@ const CANDIDATES = {
 } as const;
 
 /**
- * Locations of the two config files. Looked up in this order: the chosen value (`--config`, `--server`) -> environment variable (`CMS_CONFIG_PATH`, `CMS_SERVER_PATH`) -> the tsconfig `paths`
- * alias -> common locations (`./cms.config.ts`, `./src/cms.config.ts`). It is an error if the file is missing.
+ * Locations of the site config file and the server file (the module that exports the CMS instance). Looked up in this order: the chosen value (`--config`, `--server`) ->
+ * environment variable (`CMS_CONFIG_PATH`, `CMS_SERVER_PATH`) -> for the site config only, the tsconfig `paths` alias -> common locations
+ * (`./cms.config.ts`, `./src/cms.config.ts`, `./cms.server.ts`, `./src/cms.server.ts`). It is an error if the file is missing.
  */
 export function resolveConfigPaths(
 	cwd: string,
 	chosen: { config?: string; server?: string } = {},
 	env: Record<string, string | undefined> = process.env,
 ): ConfigPaths {
-	const find = (kind: "config" | "server", alias: string, envName: string, flag: string): string => {
+	const find = (kind: "config" | "server", envName: string, flag: string): string => {
 		const given = chosen[kind] ?? env[envName];
 		const found =
 			given ??
-			tsconfigAliasPath(cwd, alias) ??
+			(kind === "config" ? tsconfigAliasPath(cwd, CONFIG_ALIAS) : undefined) ??
 			CANDIDATES[kind].find((candidate) => existsSync(path.join(cwd, candidate)));
 		if (!found || !existsSync(path.resolve(cwd, found))) {
 			throw new Error(
 				found
-					? `${alias} file not found: ${found}`
+					? `${kind === "config" ? CONFIG_ALIAS : "server"} file not found: ${found}`
 					: `cannot find ${CANDIDATES[kind][0]}; pass ${flag} <path> or set ${envName} (run \`monti init\` to create one)`,
 			);
 		}
 		return found;
 	};
 	return {
-		config: find("config", CONFIG_ALIAS, "CMS_CONFIG_PATH", "--config"),
-		server: find("server", SERVER_ALIAS, "CMS_SERVER_PATH", "--server"),
+		config: find("config", "CMS_CONFIG_PATH", "--config"),
+		server: find("server", "CMS_SERVER_PATH", "--server"),
 	};
 }

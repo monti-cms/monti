@@ -1,0 +1,30 @@
+import { unstable_rethrow } from "next/navigation";
+import type { NextRequest } from "next/server";
+import { adminUrl } from "../../../../../core/admin-paths";
+import { HttpError, handleApiError } from "../../../error-handler";
+import type { RouteContext } from "../../../handler";
+import { validateSameOrigin } from "../../../security";
+
+/**
+ * `POST /api/cms/v1/session/sign-in/<method>`: starts signing in with one of the login methods (`cms.auth().providers`). The login screen submits a plain form here.
+ * Needs no login (it is how one signs in), but the same-origin check applies. On success the login connection redirects the browser (to the provider, then to the admin).
+ *
+ * It is a route and not a server action because a server action cannot carry the CMS instance: its closed-over values must be serializable.
+ */
+export const POST = async (request: NextRequest, context: RouteContext<{ provider: string }>) => {
+	try {
+		const { cms } = context;
+		validateSameOrigin(request, { trustHost: cms.isHostTrusted(), form: true });
+		const { provider = "" } = (await context.params) ?? {};
+		const auth = cms.auth();
+		if (!auth.providers.some((method) => method.id === provider)) {
+			throw new HttpError(404, "not_found", "Unknown sign-in method");
+		}
+		await auth.signIn(provider, { redirectTo: adminUrl() });
+		return new Response(null, { status: 204 });
+	} catch (error) {
+		// The login connection redirects by throwing; that must reach Next.
+		unstable_rethrow(error);
+		return handleApiError(error);
+	}
+};

@@ -1,89 +1,102 @@
 import type { ContentChange } from "../adapters/postgres/store/after-commit";
-import { cmsConfig } from "../config/resolved";
+import type { Cms } from "../cms";
 import type { CmsServerConfig } from "../server/define";
-import { cmsServerConfig } from "../server/resolved";
 import type { HookSource } from "../services/hooks";
 import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute, PluginDatabase } from "./define";
 
-/** Plugins of the site config. A config without plugins has an empty tuple type, so it is widened for reading. */
-const PLUGINS: readonly CmsPlugin[] = cmsConfig.plugins ?? [];
+/** The server side of a plugin, with the plugin's name. A plugin without a server side is empty. */
+export type LoadedServerPlugin = CmsServerPlugin & { readonly name: string };
 
 /**
- * Loads the server side of the site config's plugins. Read once on the first call and reused afterwards.
- * A plugin without a server side is empty. If loading fails, it is not remembered so the next call retries, and the error is rethrown as is.
+ * The server side of one site's plugins, owned by one CMS instance (`createCms`): the loaded server modules, the route table, feature flags,
+ * migrations, and the write hooks that run in order (server config first, then plugins).
  */
-let loaded: Promise<readonly (CmsServerPlugin & { readonly name: string })[]> | undefined;
-
-export function loadServerPlugins(): Promise<readonly (CmsServerPlugin & { readonly name: string })[]> {
-	loaded ??= Promise.all(
-		PLUGINS.map(async (plugin) => ({ name: plugin.name, ...(await plugin.server?.())?.default })),
-	).catch((error) => {
-		loaded = undefined;
-		console.error("[cms] failed to load plugin server modules", error);
-		throw error;
-	});
-	return loaded;
+export interface ServerPlugins {
+	/**
+	 * Loads the server side of the plugins. Read once on the first call and reused afterwards.
+	 * If loading fails, it is not remembered so the next call retries, and the error is rethrown as is.
+	 */
+	load(): Promise<readonly LoadedServerPlugin[]>;
+	/** Plugin API route table (in plugin order, tagged with the plugin each route belongs to). */
+	routes(): Promise<readonly OwnedPluginRoute[]>;
+	/**
+	 * Collects the feature flags plugins add to the meta API under each plugin's name (`{ ai: { ... } }`).
+	 * Plugins with no feature flags, or that fail, are left out.
+	 */
+	features(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
+	/** Creates the plugin tables. Called after the core tables are created (`monti migrate`). */
+	migrate(database: PluginDatabase, log?: (message: string) => void): Promise<void>;
+	/**
+	 * Write hooks in the order they run: the server config first, then the plugins in the site config's order. Each is tagged with its owner
+	 * (`server`, `plugin:<name>`), which a failing hook is reported with.
+	 */
+	writeHooks(): Promise<readonly HookSource[]>;
+	/** Calls the server config's and the plugins' after-save notifications in turn (the rest are still called if one fails). */
+	notifyAfterCommit(change: ContentChange): Promise<void>;
 }
 
-/** Plugin API route table (in plugin order, tagged with the plugin each route belongs to). */
-export async function pluginRoutes(): Promise<readonly OwnedPluginRoute[]> {
-	return (await loadServerPlugins()).flatMap((plugin) =>
-		(plugin.routes ?? []).map((route) => ({ ...route, plugin: plugin.name })),
-	);
-}
+/** `cms` is the instance that owns these plugins. It is passed to the plugin's `migrate` and `features`. */
+export function createServerPlugins(
+	plugins: readonly CmsPlugin[],
+	serverConfig: () => Pick<CmsServerConfig, "hooks">,
+	cms: () => Cms,
+): ServerPlugins {
+	let loaded: Promise<readonly LoadedServerPlugin[]> | undefined;
 
-/** DB connection used by plugins. */
-export const getCmsDatabase = (): PluginDatabase => cmsServerConfig.database.pluginDatabase();
+	const load = () => {
+		loaded ??= Promise.all(
+			plugins.map(async (plugin) => ({ name: plugin.name, ...(await plugin.server?.())?.default })),
+		).catch((error) => {
+			loaded = undefined;
+			console.error("[cms] failed to load plugin server modules", error);
+			throw error;
+		});
+		return loaded;
+	};
 
-/** Creates the plugin tables. Called after the core tables are created (`monti migrate`). */
-export async function migratePlugins(): Promise<void> {
-	for (const plugin of await loadServerPlugins()) {
-		if (!plugin.migrate) continue;
-		console.log(`Migrating plugin "${plugin.name}"...`);
-		await plugin.migrate(getCmsDatabase());
-	}
-}
-
-/**
- * Collects the feature flags plugins add to the meta API under each plugin's name (`{ ai: { ... } }`).
- * Plugins with no feature flags, or that fail, are left out.
- */
-export async function pluginFeatures(): Promise<Record<string, Readonly<Record<string, boolean>>>> {
-	const plugins = await loadServerPlugins();
-	const entries = await Promise.all(
-		plugins.map(async (plugin) => {
-			if (!plugin.features) return undefined;
-			try {
-				return [plugin.name, await plugin.features()] as const;
-			} catch {
-				return undefined;
-			}
-		}),
-	);
-	return Object.fromEntries(entries.filter((entry) => entry !== undefined));
-}
-
-/**
- * Write hooks in the order they run: the server config first, then the plugins in the site config's order. Each is tagged with its owner
- * (`server`, `plugin:<name>`), which a failing hook is reported with.
- */
-export async function loadWriteHooks(): Promise<readonly HookSource[]> {
-	const serverConfig: CmsServerConfig = cmsServerConfig;
-	const sources: HookSource[] = serverConfig.hooks ? [{ owner: "server", hooks: serverConfig.hooks }] : [];
-	for (const plugin of await loadServerPlugins()) {
-		if (plugin.hooks) sources.push({ owner: `plugin:${plugin.name}`, hooks: plugin.hooks });
-	}
-	return sources;
-}
-
-/** Calls the server config's and the plugins' after-save notifications in turn (the rest are still called if one fails). */
-export async function notifyAfterCommit(change: ContentChange): Promise<void> {
-	for (const { owner, hooks } of await loadWriteHooks()) {
-		if (!hooks.afterCommit) continue;
-		try {
-			await hooks.afterCommit(change);
-		} catch (error) {
-			console.error(`[cms] afterCommit of ${owner} failed`, change.kind, change.entryId, error);
+	const writeHooks = async (): Promise<readonly HookSource[]> => {
+		const { hooks } = serverConfig();
+		const sources: HookSource[] = hooks ? [{ owner: "server", hooks }] : [];
+		for (const plugin of await load()) {
+			if (plugin.hooks) sources.push({ owner: `plugin:${plugin.name}`, hooks: plugin.hooks });
 		}
-	}
+		return sources;
+	};
+
+	return {
+		load,
+		writeHooks,
+		routes: async () =>
+			(await load()).flatMap((plugin) => (plugin.routes ?? []).map((route) => ({ ...route, plugin: plugin.name }))),
+		features: async () => {
+			const entries = await Promise.all(
+				(await load()).map(async (plugin) => {
+					if (!plugin.features) return undefined;
+					try {
+						return [plugin.name, await plugin.features(cms())] as const;
+					} catch {
+						return undefined;
+					}
+				}),
+			);
+			return Object.fromEntries(entries.filter((entry) => entry !== undefined));
+		},
+		migrate: async (database, log = console.log) => {
+			for (const plugin of await load()) {
+				if (!plugin.migrate) continue;
+				log(`Migrating plugin "${plugin.name}"...`);
+				await plugin.migrate(database, cms());
+			}
+		},
+		notifyAfterCommit: async (change) => {
+			for (const { owner, hooks } of await writeHooks()) {
+				if (!hooks.afterCommit) continue;
+				try {
+					await hooks.afterCommit(change);
+				} catch (error) {
+					console.error(`[cms] afterCommit of ${owner} failed`, change.kind, change.entryId, error);
+				}
+			}
+		},
+	};
 }

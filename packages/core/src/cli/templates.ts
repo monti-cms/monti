@@ -64,55 +64,67 @@ ${admin}	// plugins: [...blocks(), seo()],
 `;
 }
 
-export const SERVER_TEMPLATE = `import { defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
+export const SERVER_TEMPLATE = `import { createCms, defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
 
 /**
- * Server config. The database and sign-in connections and the secrets are read from environment variables (.env.local).
- * Only the server reads it. The admin API route also serves the sign-in API (/api/cms/auth/*). The callback URL of the
+ * The CMS instance. It owns the database, sign-in and media connections and the secrets, which are read from environment variables (.env.local).
+ * Everything on the server uses it: the admin API route, the admin screens, and your site's pages (cms.read.getEntry(...)).
+ * Only the server imports this file. The admin API route also serves the sign-in API (/api/cms/auth/*). The callback URL of the
  * GitHub OAuth app is <site URL>/api/cms/auth/callback/github.
  */
-export default defineServerConfig({
-	database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
-	auth: githubAuth({
-		clientId: process.env.AUTH_GITHUB_ID,
-		clientSecret: process.env.AUTH_GITHUB_SECRET,
-		adminIds: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin
-		devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev, only for requests from this machine: treat the visitor as admin without signing in
-		secret: process.env.AUTH_SECRET, // signs the sign-in session
+export const cms = createCms({
+	server: defineServerConfig({
+		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
+		auth: githubAuth({
+			clientId: process.env.AUTH_GITHUB_ID,
+			clientSecret: process.env.AUTH_GITHUB_SECRET,
+			adminIds: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin
+			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev, only for requests from this machine: treat the visitor as admin without signing in
+			secret: process.env.AUTH_SECRET, // signs the sign-in session
+		}),
+		// Encryption key for stored values (AI service keys). If you change it, enter the stored keys again. Keep it separate from the sign-in secret.
+		secret: process.env.CMS_SECRET,
+		// media: r2Storage({ ... }), // image and file uploads (S3-compatible storage), imported from @monti-cms/core/s3
 	}),
-	// Encryption key for stored values (AI service keys). If you change it, enter the stored keys again. Keep it separate from the sign-in secret.
-	secret: process.env.CMS_SECRET,
-	// media: r2Storage({ ... }), // image and file uploads (S3-compatible storage), imported from @monti-cms/core/s3
 });
 `;
 
-export const ADMIN_PAGE_TEMPLATE = `export { CmsAdminPage as default } from "@monti-cms/admin/next";
+/** The generated files import the CMS instance from the server file. \`serverImport\` is its import path from the generated file, without an extension. */
+export const adminPageTemplate = (
+	serverImport: string,
+) => `import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/admin/next";
+import { cms } from ${JSON.stringify(serverImport)};
+
+export default function AdminPage(props: CmsAdminPageProps) {
+	return <CmsAdminPage cms={cms} {...props} />;
+}
 `;
 
-export const ADMIN_LAYOUT_TEMPLATE = `import { CmsAdminLayout } from "@monti-cms/admin/next";
+export const adminLayoutTemplate = (serverImport: string) => `import { CmsAdminLayout } from "@monti-cms/admin/next";
 import type { ReactNode } from "react";
+import { cms } from ${JSON.stringify(serverImport)};
 
 export { cmsAdminMetadata as metadata } from "@monti-cms/admin/next";
 
 /** Admin screen (@monti-cms/admin). Pass site components with CmsAdminComponentsProvider (see the admin README). */
 export default function AdminLayout({ children }: { children: ReactNode }) {
-	return <CmsAdminLayout>{children}</CmsAdminLayout>;
+	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;
 }
 `;
 
-export const API_ROUTE_TEMPLATE = `import { createCmsRouteHandler } from "@monti-cms/core/next/route-handler";
+export const apiRouteTemplate = (serverImport: string) => `import { cms } from ${JSON.stringify(serverImport)};
 
 /** Admin API (/api/cms/v1/*) and sign-in (/api/cms/auth/*). */
-export const { GET, POST, PATCH, PUT, DELETE } = createCmsRouteHandler();
+export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();
 `;
 
-export function nextConfigTemplate(config: string, server: string): string {
+export function nextConfigTemplate(config: string): string {
 	return `import { withCms } from "@monti-cms/core/next";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {};
 
-export default withCms(nextConfig, { config: "${config}", server: "${server}" });
+export default withCms(nextConfig, { config: "${config}" });
 `;
 }
 

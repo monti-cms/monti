@@ -1,17 +1,16 @@
-import { getCmsContentService, getCmsContentStore } from "../../../container";
 import { createEntryBodySchema, LIST_ARRAY_QUERY_KEYS, listEntriesQuerySchema } from "../../../core/api";
 import type { ServiceInput } from "../../../services/types";
 import { adminRoute, json, parseWith, readJsonBody, readQuery } from "../handler";
 
 /** Per-collection list, search, filter, sort, and paging. */
-export const GET = adminRoute(async ({ request }) => {
+export const GET = adminRoute(async ({ request, cms }) => {
 	const query = parseWith(
 		listEntriesQuerySchema,
 		readQuery(request, LIST_ARRAY_QUERY_KEYS),
 		"Invalid query parameters",
 	);
 	const range = (from?: Date, to?: Date) => (from || to ? { from, to } : undefined);
-	const result = await getCmsContentStore().listEntries({
+	const result = await cms.store().listEntries({
 		collection: query.collection,
 		search: query.search,
 		includeBody: query.includeBody,
@@ -35,7 +34,7 @@ export const GET = adminRoute(async ({ request }) => {
 });
 
 /** Create. For record collections (tags, categories, series) the service applies the public values together with creation. */
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
 	const body = parseWith(createEntryBodySchema, await readJsonBody(request));
 	const input = {
 		collection: body.collection,
@@ -44,6 +43,6 @@ export const POST = adminRoute(async ({ request }) => {
 		...(body.doc !== undefined ? { doc: body.doc } : { mdx: body.mdx ?? "" }),
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 	} as ServiceInput;
-	const entry = await getCmsContentService().createDraft(input);
+	const entry = await cms.contentService().createDraft(input);
 	return json(entry, { status: 201 });
 });

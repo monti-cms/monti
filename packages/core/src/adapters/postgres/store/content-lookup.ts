@@ -5,7 +5,7 @@ import type { Pool } from "pg";
  * Exported from `@monti-cms/core/plugin/server`.
  *
  * ```ts
- * const lookup = createContentLookup(getCmsDatabase());
+ * const lookup = createContentLookup(cms.database());
  * await lookup.slugsInUse({ collection: "post", locale: "ko", slugs: ["hello"], excludeEntryId: id });
  * ```
  */

@@ -1,5 +1,5 @@
 /**
- * Public site reading (`@monti-cms/core/read`). Server components, routes, sitemap and RSS read the published content. No write features.
+ * Public site reading (`cms.read`, built by `createRead`). Server components, routes, sitemap and RSS read the published content. No write features.
  * Do not import from browser code.
  *
  * - One entry (`getEntry`): returns the URL to redirect to for an old URL, and can fall back to the source text if this locale has no translation.
@@ -8,14 +8,15 @@
  * - Preview (`getPreview`): admins only, the latest draft.
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
-import { authGateway } from "../adapters/auth";
-import type { EntryMetadata, PublishedEntryRecord } from "../adapters/postgres/content-store";
+import type { AuthContext } from "../adapters/auth/auth-gateway";
+import type { ContentStore, EntryMetadata, PublishedEntryRecord } from "../adapters/postgres/content-store";
 import type { PublishedSort } from "../adapters/postgres/store/public-read";
+import type { MediaStore } from "../adapters/r2/types";
 import type { ResolvedConfig } from "../config/resolved";
-import { getCmsContentStore } from "../container";
 import { type Collection, isCollection, isItemCollection } from "../core/collections";
 import { contentPath } from "../core/links";
 import { DEFAULT_LOCALE, isLocale, localizePath } from "../core/locales";
+import { createPublicImageResolver, resolvePublicMediaUrl } from "../mdx/public-media";
 import type { MetadataOf } from "../schema/collection";
 import {
 	mergeTranslationMetadata,
@@ -94,6 +95,7 @@ const pathOf = (collection: string, slug: string, locale: string): string | null
 
 /** Gathers the published versions of relation targets (in one query) and picks this locale -> source text. */
 async function resolveRelations(
+	store: ContentStore,
 	records: readonly PublishedEntryRecord[],
 	locale: string,
 ): Promise<Map<string, Record<string, ReadRelation[]>>> {
@@ -104,7 +106,7 @@ async function resolveRelations(
 			for (const id of idsOf((record.metadata as Record<string, unknown>)[name])) wanted.add(id);
 		}
 	}
-	const targets = await getCmsContentStore().listPublishedByGroups({ translationGroupIds: [...wanted] });
+	const targets = await store.listPublishedByGroups({ translationGroupIds: [...wanted] });
 	const byGroup = new Map<string, PublishedEntryRecord[]>();
 	for (const target of targets)
 		byGroup.set(target.translationGroupId, [...(byGroup.get(target.translationGroupId) ?? []), target]);
@@ -141,11 +143,12 @@ async function resolveRelations(
 }
 
 async function toReadEntries<C extends Collection>(
+	store: ContentStore,
 	records: readonly PublishedEntryRecord[],
 	locale: string,
 	fallback = false,
 ): Promise<ReadEntry<C>[]> {
-	const relations = await resolveRelations(records, locale);
+	const relations = await resolveRelations(store, records, locale);
 	return records.map((record) => ({
 		id: record.id,
 		collection: record.collection as C,
@@ -175,112 +178,161 @@ const assertCollection = (collection: string): Collection => {
 const storageLocale = (collection: Collection, locale: string | undefined) =>
 	isItemCollection(collection) ? DEFAULT_LOCALE : locale && isLocale(locale) ? locale : DEFAULT_LOCALE;
 
-/**
- * One entry. The URL (`slug`) is that locale's URL. For an old URL it returns `redirect`.
- * With `fallback: true`, if this locale has no translation, it returns the source text (default locale) at the same URL with `fallback: true`.
- */
-export async function getEntry<C extends Collection>(params: {
-	readonly collection: C;
-	readonly slug: string;
-	readonly locale?: string;
-	readonly fallback?: boolean;
-}): Promise<ReadEntryResult<C>> {
-	const collection = assertCollection(params.collection);
-	const locale = storageLocale(collection, params.locale);
-	const slug = params.slug.normalize("NFC").trim();
-	if (!slug) return { status: "not_found" };
-	const store = getCmsContentStore();
-	let lookup = await store.getPublishedEntryBySlug({ collection, slug, locale, includeBody: true });
-	let fellBack = false;
-	if (lookup.status === "not_found" && params.fallback && locale !== DEFAULT_LOCALE) {
-		lookup = await store.getPublishedEntryBySlug({ collection, slug, locale: DEFAULT_LOCALE, includeBody: true });
-		fellBack = lookup.status !== "not_found";
-	}
-	if (lookup.status === "not_found") return { status: "not_found" };
-	const [entry] = await toReadEntries<C>([lookup.entry], params.locale ?? locale, fellBack);
-	if (!entry) return { status: "not_found" };
-	if (lookup.status === "alias") return { status: "redirect", slug: entry.slug, path: entry.path, entry };
-	return { status: "found", entry };
-}
-
-/** One page of a list. Relation filters (`where`), sorting and pagination are done in the DB. The body is read only when `body: true`. */
-export async function listEntries<C extends Collection>(params: {
-	readonly collection: C;
-	readonly locale?: string;
-	/** Relation field name -> item IDs (OR if several). Different fields are ANDed. */
-	readonly where?: Readonly<Record<string, string | readonly string[]>>;
-	readonly sort?: PublishedSort;
-	readonly order?: "asc" | "desc";
-	readonly page?: number;
-	readonly pageSize?: number;
-	readonly body?: boolean;
-}): Promise<{ items: ReadEntry<C>[]; total: number; page: number; pageSize: number }> {
-	const collection = assertCollection(params.collection);
-	const locale = storageLocale(collection, params.locale);
-	const result = await getCmsContentStore().listPublishedPage({
-		collection,
-		locale,
-		where: params.where,
-		sort: params.sort,
-		// For item collections, title sorting uses the displayed name (the translated name in this locale).
-		titleLocale: params.locale ?? locale,
-		order: params.order,
-		page: params.page,
-		pageSize: params.pageSize,
-		includeBody: params.body === true,
-	});
-	return { ...result, items: await toReadEntries<C>(result.items, params.locale ?? locale) };
-}
-
-/** The published locales of the same entry (source first) and their URLs. Used for hreflang and the locale switcher. */
-export async function getTranslations(params: {
-	readonly translationGroupId: string;
-}): Promise<{ locale: string; slug: string; path: string | null }[]> {
-	const members = await getCmsContentStore().listPublishedTranslations(params);
-	return members.map((member) => ({
-		locale: member.locale,
-		slug: member.slug,
-		path: pathOf(member.collection, member.slug, member.locale),
-	}));
+/** What the read API needs from a CMS instance. */
+export interface ReadDeps {
+	readonly store: () => ContentStore;
+	readonly mediaStore: () => MediaStore;
+	/** Throws if the current request is not from an admin (the check `getPreview` uses). */
+	readonly verifyAdmin: () => Promise<AuthContext>;
 }
 
 /**
- * Preview (admins only). Returns the latest draft in the same shape as the published version. A translation is merged with the common values of the source draft.
- * `null` if not logged in or not an admin. Only published relation targets are resolved.
+ * The read API of one CMS instance (`cms.read`). Published content is read through the instance's store, so several instances in one process
+ * read their own databases.
  */
-export async function getPreview<C extends Collection>(params: {
-	readonly collection: C;
-	readonly slug: string;
-	readonly locale?: string;
-}): Promise<ReadEntry<C> | null> {
-	try {
-		await authGateway.verifyAdmin();
-	} catch {
-		return null;
-	}
-	const collection = assertCollection(params.collection);
-	const locale = storageLocale(collection, params.locale);
-	const store = getCmsContentStore();
-	const draft = await store.getWorkingEntryBySlug({ collection, slug: params.slug, locale });
-	if (!draft || draft.status === "trashed") return null;
-	let metadata = draft.working.metadata;
-	if (draft.translationGroupId !== draft.id) {
-		const source = await store.getEntry(draft.translationGroupId).catch(() => null);
-		if (source) metadata = mergeTranslationMetadata(collection, source.working.metadata, metadata) as EntryMetadata;
-	}
-	const record: PublishedEntryRecord = {
-		id: draft.id,
-		collection,
-		locale: draft.locale,
-		translationGroupId: draft.translationGroupId,
-		slug: draft.workingSlug ?? params.slug,
-		metadata,
-		mdx: draft.working.mdx,
-		publishedAt: draft.publishedAt ?? null,
-		updatedAt: draft.updatedAt,
+export interface CmsRead {
+	/**
+	 * One entry. The URL (`slug`) is that locale's URL. For an old URL it returns `redirect`.
+	 * With `fallback: true`, if this locale has no translation, it returns the source text (default locale) at the same URL with `fallback: true`.
+	 */
+	getEntry<C extends Collection>(params: {
+		readonly collection: C;
+		readonly slug: string;
+		readonly locale?: string;
+		readonly fallback?: boolean;
+	}): Promise<ReadEntryResult<C>>;
+	/** One page of a list. Relation filters (`where`), sorting and pagination are done in the DB. The body is read only when `body: true`. */
+	listEntries<C extends Collection>(params: {
+		readonly collection: C;
+		readonly locale?: string;
+		/** Relation field name -> item IDs (OR if several). Different fields are ANDed. */
+		readonly where?: Readonly<Record<string, string | readonly string[]>>;
+		readonly sort?: PublishedSort;
+		readonly order?: "asc" | "desc";
+		readonly page?: number;
+		readonly pageSize?: number;
+		readonly body?: boolean;
+	}): Promise<{ items: ReadEntry<C>[]; total: number; page: number; pageSize: number }>;
+	/** The published locales of the same entry (source first) and their URLs. Used for hreflang and the locale switcher. */
+	getTranslations(params: {
+		readonly translationGroupId: string;
+	}): Promise<{ locale: string; slug: string; path: string | null }[]>;
+	/**
+	 * Preview (admins only). Returns the latest draft in the same shape as the published version. A translation is merged with the common values of the source draft.
+	 * `null` if not logged in or not an admin. Only published relation targets are resolved.
+	 */
+	getPreview<C extends Collection>(params: {
+		readonly collection: C;
+		readonly slug: string;
+		readonly locale?: string;
+	}): Promise<ReadEntry<C> | null>;
+	/** Resolver that turns the body's registered media (`Image`, `File`) into public URLs, for `renderMdx`'s `imageResolver`. */
+	imageResolver(source: string): ReturnType<typeof createPublicImageResolver>;
+	/** Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage. */
+	mediaUrl(mediaId: string): ReturnType<typeof resolvePublicMediaUrl>;
+}
+
+export function createRead(deps: ReadDeps): CmsRead {
+	return {
+		async getEntry<C extends Collection>(params: {
+			readonly collection: C;
+			readonly slug: string;
+			readonly locale?: string;
+			readonly fallback?: boolean;
+		}): Promise<ReadEntryResult<C>> {
+			const collection = assertCollection(params.collection);
+			const locale = storageLocale(collection, params.locale);
+			const slug = params.slug.normalize("NFC").trim();
+			if (!slug) return { status: "not_found" };
+			const store = deps.store();
+			let lookup = await store.getPublishedEntryBySlug({ collection, slug, locale, includeBody: true });
+			let fellBack = false;
+			if (lookup.status === "not_found" && params.fallback && locale !== DEFAULT_LOCALE) {
+				lookup = await store.getPublishedEntryBySlug({ collection, slug, locale: DEFAULT_LOCALE, includeBody: true });
+				fellBack = lookup.status !== "not_found";
+			}
+			if (lookup.status === "not_found") return { status: "not_found" };
+			const [entry] = await toReadEntries<C>(store, [lookup.entry], params.locale ?? locale, fellBack);
+			if (!entry) return { status: "not_found" };
+			if (lookup.status === "alias") return { status: "redirect", slug: entry.slug, path: entry.path, entry };
+			return { status: "found", entry };
+		},
+
+		async listEntries<C extends Collection>(params: {
+			readonly collection: C;
+			readonly locale?: string;
+			readonly where?: Readonly<Record<string, string | readonly string[]>>;
+			readonly sort?: PublishedSort;
+			readonly order?: "asc" | "desc";
+			readonly page?: number;
+			readonly pageSize?: number;
+			readonly body?: boolean;
+		}): Promise<{ items: ReadEntry<C>[]; total: number; page: number; pageSize: number }> {
+			const collection = assertCollection(params.collection);
+			const locale = storageLocale(collection, params.locale);
+			const store = deps.store();
+			const result = await store.listPublishedPage({
+				collection,
+				locale,
+				where: params.where,
+				sort: params.sort,
+				// For item collections, title sorting uses the displayed name (the translated name in this locale).
+				titleLocale: params.locale ?? locale,
+				order: params.order,
+				page: params.page,
+				pageSize: params.pageSize,
+				includeBody: params.body === true,
+			});
+			return { ...result, items: await toReadEntries<C>(store, result.items, params.locale ?? locale) };
+		},
+
+		async getTranslations(params) {
+			const members = await deps.store().listPublishedTranslations(params);
+			return members.map((member) => ({
+				locale: member.locale,
+				slug: member.slug,
+				path: pathOf(member.collection, member.slug, member.locale),
+			}));
+		},
+
+		async getPreview<C extends Collection>(params: {
+			readonly collection: C;
+			readonly slug: string;
+			readonly locale?: string;
+		}): Promise<ReadEntry<C> | null> {
+			try {
+				await deps.verifyAdmin();
+			} catch {
+				return null;
+			}
+			const collection = assertCollection(params.collection);
+			const locale = storageLocale(collection, params.locale);
+			const store = deps.store();
+			const draft = await store.getWorkingEntryBySlug({ collection, slug: params.slug, locale });
+			if (!draft || draft.status === "trashed") return null;
+			let metadata = draft.working.metadata;
+			if (draft.translationGroupId !== draft.id) {
+				const source = await store.getEntry(draft.translationGroupId).catch(() => null);
+				if (source) metadata = mergeTranslationMetadata(collection, source.working.metadata, metadata) as EntryMetadata;
+			}
+			const record: PublishedEntryRecord = {
+				id: draft.id,
+				collection,
+				locale: draft.locale,
+				translationGroupId: draft.translationGroupId,
+				slug: draft.workingSlug ?? params.slug,
+				metadata,
+				mdx: draft.working.mdx,
+				publishedAt: draft.publishedAt ?? null,
+				updatedAt: draft.updatedAt,
+			};
+			const [entry] = await toReadEntries<C>(store, [record], locale);
+			return entry ?? null;
+		},
+
+		imageResolver: (source) => createPublicImageResolver(deps, source),
+		mediaUrl: (mediaId) => resolvePublicMediaUrl(deps, mediaId),
 	};
-	const [entry] = await toReadEntries<C>([record], locale);
-	return entry ?? null;
 }
 
 export type { PublishedSort } from "../adapters/postgres/store/public-read";

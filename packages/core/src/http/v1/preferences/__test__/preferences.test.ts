@@ -1,37 +1,25 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, otherContentCollection, recordCollection } from "../../../../../test/any-site";
+import { fakeCms } from "../../../../cms";
 import { GET as getPreferences, PUT as putPreferences } from "../route";
 
 /** Two collections used to tell the two settings apart (the reference blog setup uses posts and memos). Names are looked up from the config. */
 const FIRST = contentCollection;
 const SECOND = otherContentCollection ?? recordCollection;
 
-vi.mock("../../../../adapters/auth", () => ({
-	authGateway: {
-		verifyAdmin: vi.fn().mockResolvedValue({ userId: "user-42", accountId: "user-42", isAdmin: true }),
-	},
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
+const state = { stored: null as unknown };
 
-const state = vi.hoisted(() => ({ stored: null as unknown }));
-
-vi.mock("../../../../container", () => ({
-	getCmsContentStore: () => ({
+const cms = fakeCms({
+	store: {
 		getPreferences: vi.fn().mockImplementation(() => Promise.resolve(state.stored)),
 		savePreferences: vi.fn().mockImplementation((params: { preferences: unknown }) => {
 			state.stored = params.preferences;
 			return Promise.resolve();
 		}),
-	}),
-}));
+	},
+	verifyAdmin: async () => ({ userId: "user-42", accountId: "user-42", isAdmin: true }),
+});
 
 const getReq = () => new NextRequest("http://localhost/api/cms/v1/preferences");
 const putReq = (body: unknown) =>
@@ -47,19 +35,21 @@ describe("Preferences API — per-collection list preferences", () => {
 	});
 
 	it("stores page size, sort and columns per collection and merges partial updates", async () => {
-		const initial = await (await getPreferences(getReq())).json();
+		const initial = await (await getPreferences(getReq(), { cms })).json();
 		expect(initial.collections[FIRST]).toEqual({});
 
 		const res = await putPreferences(
 			putReq({ collections: { [FIRST]: { pageSize: 50, sort: { field: "publishedAt", direction: "asc" } } } }),
+			{ cms },
 		);
 		expect(res.status).toBe(200);
 		await putPreferences(
 			putReq({ collections: { [FIRST]: { columns: { order: ["title", "category"], visibility: { slug: true } } } } }),
+			{ cms },
 		);
-		await putPreferences(putReq({ collections: { [SECOND]: { pageSize: 100 } } }));
+		await putPreferences(putReq({ collections: { [SECOND]: { pageSize: 100 } } }), { cms });
 
-		const saved = await (await getPreferences(getReq())).json();
+		const saved = await (await getPreferences(getReq(), { cms })).json();
 		expect(saved.collections[FIRST]).toEqual({
 			pageSize: 50,
 			sort: { field: "publishedAt", direction: "asc" },
@@ -75,7 +65,7 @@ describe("Preferences API — per-collection list preferences", () => {
 			columnSettings: { [SECOND]: { visibility: { tags: false } } },
 			collections: { [FIRST]: { pageSize: 100 } },
 		};
-		const saved = await (await getPreferences(getReq())).json();
+		const saved = await (await getPreferences(getReq(), { cms })).json();
 		expect(saved.collections[FIRST]).toEqual({ pageSize: 100 });
 		expect(saved.collections[SECOND]).toEqual({});
 		expect(JSON.stringify(saved)).not.toMatch(/defaultPageSize|columnSettings/);
@@ -89,7 +79,7 @@ describe("Preferences API — per-collection list preferences", () => {
 			{ collections: { [FIRST]: { pageSize: 30 } } },
 			{ collections: { unknown: { pageSize: 25 } } },
 		]) {
-			const res = await putPreferences(putReq(body));
+			const res = await putPreferences(putReq(body), { cms });
 			expect(res.status).toBe(400);
 		}
 	});

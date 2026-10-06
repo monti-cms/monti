@@ -1,23 +1,8 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CmsError } from "../../../adapters/postgres/content-store";
+import { fakeCms } from "../../../cms";
 import { POST as postDuplicate } from "../entries/[id]/duplicate/route";
-
-const mockVerifyAdmin = vi.fn();
-
-vi.mock("../../../adapters/auth", () => ({
-	authGateway: {
-		verifyAdmin: () => mockVerifyAdmin(),
-	},
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
 
 const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => {
 	if (id === "ghost") return Promise.reject(new CmsError("Entry not found", "not_found"));
@@ -36,9 +21,7 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 	});
 });
 
-vi.mock("../../../container", () => ({
-	getCmsContentService: () => ({ duplicate: duplicateEntry }),
-}));
+const cms = fakeCms({ contentService: { duplicate: duplicateEntry as never } });
 
 const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
 	new NextRequest(url, {
@@ -51,13 +34,10 @@ const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
 	});
 
 describe("Duplicate API Route", () => {
-	beforeEach(() => {
-		mockVerifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
-	});
-
 	it("duplicates entry with 201 Created", async () => {
 		const res = await postDuplicate(postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate"), {
 			params: Promise.resolve({ id: "orig-1" }),
+			cms,
 		});
 		expect(res.status).toBe(201);
 		const data = await res.json();
@@ -70,7 +50,7 @@ describe("Duplicate API Route", () => {
 	it("passes the caller's copy title to the service", async () => {
 		const res = await postDuplicate(
 			postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate", "http://localhost", { title: "Original (copy)" }),
-			{ params: Promise.resolve({ id: "orig-1" }) },
+			{ params: Promise.resolve({ id: "orig-1" }), cms },
 		);
 		expect(res.status).toBe(201);
 		expect((await res.json()).working.metadata.title).toBe("Original (copy)");
@@ -80,7 +60,7 @@ describe("Duplicate API Route", () => {
 	it("rejects a non-string title with 400", async () => {
 		const res = await postDuplicate(
 			postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate", "http://localhost", { title: 1 }),
-			{ params: Promise.resolve({ id: "orig-1" }) },
+			{ params: Promise.resolve({ id: "orig-1" }), cms },
 		);
 		expect(res.status).toBe(400);
 	});
@@ -88,6 +68,7 @@ describe("Duplicate API Route", () => {
 	it("returns 404 when entry does not exist", async () => {
 		const res = await postDuplicate(postReq("http://localhost/api/cms/v1/entries/ghost/duplicate"), {
 			params: Promise.resolve({ id: "ghost" }),
+			cms,
 		});
 		expect(res.status).toBe(404);
 		const data = await res.json();
@@ -99,6 +80,7 @@ describe("Duplicate API Route", () => {
 			postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate", "http://evil.com"),
 			{
 				params: Promise.resolve({ id: "orig-1" }),
+				cms,
 			},
 		);
 		expect(res.status).toBe(403);

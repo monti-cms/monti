@@ -3,82 +3,64 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../../test/any-site";
 import { AuthError } from "../../../adapters/auth";
 import { CmsError } from "../../../adapters/postgres/content-store";
+import { fakeCms } from "../../../cms";
 import { PATCH as patchEntry } from "../entries/[id]/route";
 import { POST as postEntries } from "../entries/route";
 import { GET as getMeta } from "../meta/route";
 
 const mockVerifyAdmin = vi.fn();
 
-vi.mock("../../../adapters/auth", () => ({
-	authGateway: {
-		verifyAdmin: () => mockVerifyAdmin(),
-	},
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
+const mockStore = {
+	listEntries: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 }),
+	getEntry: vi.fn().mockImplementation((id: string) => {
+		if (id === "non-existent") {
+			throw new CmsError("Not found", "not_found");
 		}
-	},
-}));
+		return Promise.resolve({
+			id,
+			collection: contentCollection,
+			version: 1,
+			workingSlug: "my-post",
+			working: { metadata: { title: "Title" }, mdx: "Hello", schemaVersion: 1 },
+		});
+	}),
+	publishEntry: vi.fn().mockImplementation(({ id, expectedVersion }: { id: string; expectedVersion: number }) => {
+		return Promise.resolve({
+			id,
+			version: expectedVersion + 1,
+			status: "published",
+		});
+	}),
+};
 
-vi.mock("../../../container", () => {
-	const mockStore = {
-		listEntries: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 }),
-		getEntry: vi.fn().mockImplementation((id: string) => {
-			if (id === "non-existent") {
-				throw new CmsError("Not found", "not_found");
-			}
-			return Promise.resolve({
-				id,
-				collection: contentCollection,
-				version: 1,
-				workingSlug: "my-post",
-				working: { metadata: { title: "Title" }, mdx: "Hello", schemaVersion: 1 },
-			});
-		}),
-		publishEntry: vi.fn().mockImplementation(({ id, expectedVersion }: { id: string; expectedVersion: number }) => {
-			return Promise.resolve({
-				id,
-				version: expectedVersion + 1,
-				status: "published",
-			});
-		}),
-	};
+const mockService = {
+	createDraft: vi.fn().mockImplementation((input) => {
+		return Promise.resolve({
+			id: "new-entry-id",
+			collection: input.collection,
+			version: 1,
+			workingSlug: input.slug,
+			folderId: input.folderId,
+		});
+	}),
+	saveDraft: vi.fn().mockImplementation((id, input) => {
+		if (input.expectedVersion === 1) {
+			throw new CmsError("Conflict", "conflict", 2);
+		}
+		if (input.slug === "existing-slug") {
+			throw new CmsError("Slug conflict", "slug_conflict");
+		}
+		return Promise.resolve({
+			id,
+			collection: input.collection,
+			version: input.expectedVersion + 1,
+			workingSlug: input.slug,
+			folderId: input.folderId,
+		});
+	}),
+};
 
-	const mockService = {
-		createDraft: vi.fn().mockImplementation((input) => {
-			return Promise.resolve({
-				id: "new-entry-id",
-				collection: input.collection,
-				version: 1,
-				workingSlug: input.slug,
-				folderId: input.folderId,
-			});
-		}),
-		saveDraft: vi.fn().mockImplementation((id, input) => {
-			if (input.expectedVersion === 1) {
-				throw new CmsError("Conflict", "conflict", 2);
-			}
-			if (input.slug === "existing-slug") {
-				throw new CmsError("Slug conflict", "slug_conflict");
-			}
-			return Promise.resolve({
-				id,
-				collection: input.collection,
-				version: input.expectedVersion + 1,
-				workingSlug: input.slug,
-				folderId: input.folderId,
-			});
-		}),
-	};
-
-	return {
-		getCmsContentStore: () => mockStore,
-		getCmsContentService: () => mockService,
-	};
-});
+const cms = fakeCms({ store: mockStore, contentService: mockService, verifyAdmin: () => mockVerifyAdmin() });
 
 describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 	beforeEach(() => {
@@ -88,7 +70,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 
 	it("returns 401 when user is unauthorized", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Not logged in"));
-		const res = await getMeta(new NextRequest("http://localhost/api/cms/v1/meta"));
+		const res = await getMeta(new NextRequest("http://localhost/api/cms/v1/meta"), { cms });
 		expect(res.status).toBe(401);
 		const data = await res.json();
 		expect(data.code).toBe("unauthorized");
@@ -96,7 +78,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 
 	it("returns 403 when user is forbidden", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("forbidden", "Wrong admin id"));
-		const res = await getMeta(new NextRequest("http://localhost/api/cms/v1/meta"));
+		const res = await getMeta(new NextRequest("http://localhost/api/cms/v1/meta"), { cms });
 		expect(res.status).toBe(403);
 		const data = await res.json();
 		expect(data.code).toBe("forbidden");
@@ -111,7 +93,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			},
 			body: JSON.stringify({ collection: contentCollection }),
 		});
-		const res = await postEntries(req);
+		const res = await postEntries(req, { cms });
 		expect(res.status).toBe(403);
 		const data = await res.json();
 		expect(data.code).toBe("forbidden");
@@ -133,7 +115,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			}),
 		});
 
-		const res = await postEntries(req);
+		const res = await postEntries(req, { cms });
 		expect(res.status).toBe(201);
 		const data = await res.json();
 		expect(data.id).toBe("new-entry-id");
@@ -152,7 +134,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			}),
 		});
 
-		const res = await patchEntry(req, { params: Promise.resolve({ id: "test-id" }) });
+		const res = await patchEntry(req, { params: Promise.resolve({ id: "test-id" }), cms });
 		expect(res.status).toBe(428);
 		const data = await res.json();
 		expect(data.code).toBe("version_required");
@@ -171,7 +153,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			}),
 		});
 
-		const res = await patchEntry(req, { params: Promise.resolve({ id: "test-id" }) });
+		const res = await patchEntry(req, { params: Promise.resolve({ id: "test-id" }), cms });
 		expect(res.status).toBe(409);
 		const data = await res.json();
 		expect(data.code).toBe("conflict");

@@ -5,8 +5,6 @@ import type { NextConfig } from "next";
 export interface WithCmsOptions {
 	/** Site config file path (shared by server and browser). Relative to the project root (e.g. `./src/cms.config.ts`). */
 	readonly config: string;
-	/** Server config file path (store and login connections, server only). E.g. `./src/cms.server.ts`. */
-	readonly server: string;
 }
 
 const PACKAGES = ["@monti-cms/core"];
@@ -62,13 +60,14 @@ export function missingOptionalPeers(root: string, boundary?: string): string[] 
 }
 
 /**
- * Adds the CMS wiring to the Next config. Builds package sources (TypeScript) together with the app and points the `@cms-config` and
- * `@cms-server` aliases that CMS code reads at the config files. Aliases for type checking go separately in the app's `tsconfig.json` `paths`.
+ * Adds the CMS wiring to the Next config. Builds package sources (TypeScript) together with the app and points the `@cms-config` alias that CMS code reads
+ * at the site config file. The alias for type checking goes separately in the app's `tsconfig.json` `paths`. The server config is not linked: it is passed to
+ * `createCms` in the app's own server file.
  * Optional dependencies of CMS packages that are not installed (e.g. the block extension's `mermaid`) are pointed at an empty module (using that feature raises an error telling you to install it).
  */
 export function withCms(nextConfig: NextConfig, options: WithCmsOptions): NextConfig {
 	const relative = (file: string) => (file.startsWith(".") ? file : `./${file}`);
-	const aliases = { "@cms-config": options.config, "@cms-server": options.server };
+	const aliases = { "@cms-config": options.config };
 	const turbopackRoot = nextConfig.turbopack?.root;
 	const missing = missingOptionalPeers(
 		process.cwd(),

@@ -1,4 +1,3 @@
-import { getCmsContentStore, getCmsMediaStore } from "../../../../container";
 import { adminRoute, json } from "../../handler";
 
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
@@ -7,9 +6,9 @@ const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
  * Cleans up incomplete or failed uploads older than 24 hours. No external cron is needed.
  * Items whose file deletion failed are kept and retried on the next cleanup.
  */
-export const POST = adminRoute(async () => {
-	const store = getCmsContentStore();
-	const mediaStore = getCmsMediaStore();
+export const POST = adminRoute(async ({ cms }) => {
+	const store = cms.store();
+	const mediaStore = cms.mediaStore();
 	const stale = await store.listStaleUploads({ before: new Date(Date.now() - STALE_AFTER_MS) });
 	let removed = 0;
 	const failed: string[] = [];

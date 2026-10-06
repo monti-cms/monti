@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { getCmsContentStore, getCmsMediaStore } from "../../../../container";
 import {
 	ALLOWED_FILE_MIME_TYPES,
 	ALLOWED_IMAGE_MIME_TYPES,
@@ -17,7 +16,7 @@ import { extensionFor, UPLOAD_URL_TTL_SECONDS } from "../media-files";
  * Upload preparation. The server decides the allowed type, size, and file key, and issues a time-limited direct upload URL.
  * Credentials never reach the browser, and the file body does not pass through the app server.
  */
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
 	const raw = (await readJsonBody(request)) as { mimeType?: unknown; original?: { mimeType?: unknown } };
 	// §10.1: a disallowed file type is 415 (distinct from the 400 format error).
 	const allowed = [...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_FILE_MIME_TYPES] as readonly unknown[];
@@ -52,7 +51,7 @@ export const POST = adminRoute(async ({ request }) => {
 		? `staging/${mediaId}/original-${randomUUID()}.${extensionFor(originalFile.mimeType)}`
 		: null;
 
-	await getCmsContentStore().createMediaAsset({
+	await cms.store().createMediaAsset({
 		id: mediaId,
 		filename: body.filename,
 		mimeType: body.mimeType,
@@ -69,7 +68,7 @@ export const POST = adminRoute(async ({ request }) => {
 			: {}),
 	});
 
-	const mediaStore = getCmsMediaStore();
+	const mediaStore = cms.mediaStore();
 	const presigned = await mediaStore.prepareUpload({
 		stagingKey,
 		contentType: body.mimeType,

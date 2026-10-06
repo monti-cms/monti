@@ -1,12 +1,11 @@
-import { getCmsContentStore, getCmsMediaStore } from "../../../container";
 import { mediaListQuerySchema } from "../../../core/api";
 import { adminRoute, json, parseWith, readQuery } from "../handler";
 
 /** Media library: filename search, filters by type, upload date, and usage, newest upload first. */
-export const GET = adminRoute(async ({ request }) => {
+export const GET = adminRoute(async ({ request, cms }) => {
 	const query = parseWith(mediaListQuerySchema, readQuery(request), "Invalid query parameters");
-	const result = await getCmsContentStore().listMediaAssets(query);
-	const mediaStore = getCmsMediaStore();
+	const result = await cms.store().listMediaAssets(query);
+	const mediaStore = cms.mediaStore();
 	return json({
 		...result,
 		items: result.items.map((item) => ({

@@ -1,8 +1,6 @@
 import type { NextRequest } from "next/server";
-import { authGateway } from "../adapters/auth";
-import { getCmsAuth } from "../container";
+import type { Cms, CmsRouteHandler } from "../cms";
 import { assertPluginRoutesFree } from "../plugin/collisions";
-import { pluginRoutes } from "../plugin/server";
 import { CMS_AUTH_BASE_PATH } from "../server/define";
 import * as r9 from "./v1/bulk/route";
 import * as r12 from "./v1/entries/[id]/archive/route";
@@ -29,16 +27,22 @@ import * as r30 from "./v1/preferences/route";
 import * as rPublicEntry from "./v1/public/entries/[collection]/[slug]/route";
 import * as rPublicEntries from "./v1/public/entries/route";
 import { validateSameOrigin } from "./v1/security";
+import * as rSignIn from "./v1/session/sign-in/[provider]/route";
+import * as rSignOut from "./v1/session/sign-out/route";
 import * as r34 from "./v1/templates/[id]/route";
 import * as r33 from "./v1/templates/route";
 
 /**
- * Admin API (`/api/cms/v1/*`) route table. The app exports `createCmsRouteHandler()` from a single catch-all route
+ * Admin API (`/api/cms/v1/*`) route table. The app exports `cms.routeHandler()` from a single catch-all route
  * (`app/api/cms/[...path]/route.ts`). Paths mirror the Next route folders (`[id]` is one segment).
+ * Every route gets the CMS instance in its context (`{ params, cms }`).
  */
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
-type RouteHandler = (request: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<Response>;
+type RouteHandler = (
+	request: NextRequest,
+	context: { params: Promise<Record<string, string>>; cms: Cms },
+) => Promise<Response>;
 /** Route file. Handler params (`{ id }` etc.) differ per route, so they are called as `RouteHandler`. */
 type RouteModule = Partial<Record<Method, unknown>>;
 
@@ -64,6 +68,9 @@ const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule }> = [
 	{ pattern: "v1/media/[id]/complete", module: r28 },
 	{ pattern: "v1/meta", module: r29 },
 	{ pattern: "v1/preferences", module: r30 },
+	// Sign in and out of the admin (browser form posts from the login screen). They check the same origin themselves and need no login.
+	{ pattern: "v1/session/sign-in/[provider]", module: rSignIn },
+	{ pattern: "v1/session/sign-out", module: rSignOut },
 	// Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.
 	{ pattern: "v1/public/entries", module: rPublicEntries },
 	{ pattern: "v1/public/entries/[collection]/[slug]", module: rPublicEntry },
@@ -83,24 +90,6 @@ const compile = (
 	}));
 // Core routes wrap themselves with `adminRoute`.
 const COMPILED = compile(ROUTES, false);
-let pluginCompiled: Promise<CompiledRoute[]> | undefined;
-const compiledPluginRoutes = () => {
-	// The core wraps plugin routes with the admin check (only `public: true` is skipped), so a missing auth check never becomes an open route.
-	// A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
-	pluginCompiled ??= pluginRoutes()
-		.then((routes) => {
-			assertPluginRoutesFree(
-				ROUTES.map((route) => route.pattern),
-				routes,
-			);
-			return compile(routes, true);
-		})
-		.catch((error) => {
-			pluginCompiled = undefined;
-			throw error;
-		});
-	return pluginCompiled;
-};
 
 /** The route and params matching the path segments. Named segments match before `[name]` segments (table order). */
 export function matchRoute(
@@ -129,22 +118,35 @@ export const CMS_ROUTE_PATTERNS: readonly string[] = ROUTES.map((route) => route
 const notFound = () => handleApiError(new HttpError(404, "not_found", "Unknown CMS API path"));
 
 /**
- * Catch-all route handler. `params.path` holds the path segments after `/api/cms/` (e.g. `["v1", "entries", "<id>"]`).
- * Unknown paths return 404; a known path with an unsupported method returns 405. `auth/*` is forwarded to the auth handler
+ * The route handlers of one CMS instance (`cms.routeHandler()` calls it). `auth/*` is forwarded to the auth handler
  * when the auth base path is the default (`/api/cms/auth`), so no separate auth route file is needed.
  */
-export type CmsRouteHandler = (
-	request: NextRequest,
-	context: { params: Promise<{ path: string[] }> },
-) => Promise<Response>;
-
-export function createCmsRouteHandler(): Record<Method, CmsRouteHandler> {
+export function createRouteHandler(cms: Cms): Record<Method, CmsRouteHandler> {
+	let pluginCompiled: Promise<CompiledRoute[]> | undefined;
+	const compiledPluginRoutes = () => {
+		// The core wraps plugin routes with the admin check (only `public: true` is skipped), so a missing auth check never becomes an open route.
+		// A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
+		pluginCompiled ??= cms
+			.pluginRoutes()
+			.then((routes) => {
+				assertPluginRoutesFree(
+					ROUTES.map((route) => route.pattern),
+					routes,
+				);
+				return compile(routes, true);
+			})
+			.catch((error) => {
+				pluginCompiled = undefined;
+				throw error;
+			});
+		return pluginCompiled;
+	};
 	const handle =
 		(method: Method): CmsRouteHandler =>
 		async (request, context) => {
 			const { path = [] } = await context.params;
 			if (path[0] === "auth") {
-				const auth = getCmsAuth();
+				const auth = cms.auth();
 				if (auth.basePath !== CMS_AUTH_BASE_PATH) return notFound();
 				if (method !== "GET" && method !== "POST") {
 					return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
@@ -160,13 +162,13 @@ export function createCmsRouteHandler(): Record<Method, CmsRouteHandler> {
 			}
 			if (matched.guarded) {
 				try {
-					validateSameOrigin(request);
-					await authGateway.verifyAdmin();
+					validateSameOrigin(request, { trustHost: cms.isHostTrusted() });
+					await cms.authGateway.verifyAdmin();
 				} catch (error) {
 					return handleApiError(error);
 				}
 			}
-			return handler(request, { params: Promise.resolve(matched.params) });
+			return handler(request, { params: Promise.resolve(matched.params), cms });
 		};
 	return {
 		GET: handle("GET"),

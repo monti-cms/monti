@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	contentCollection,
 	defaultLocale,
@@ -14,27 +14,24 @@ import {
 	dropIsolatedTestPool,
 } from "../../adapters/postgres/__test__/test-database";
 import { type ContentStore, createContentStore, migrateContentStore } from "../../adapters/postgres/content-store";
+import { type Cms, fakeCms } from "../../cms";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../core/collections";
 import { contentPath } from "../../core/links";
 import { localizePath } from "../../core/locales";
 import { recordLocalizedFields } from "../../schema/derive";
+import type { CmsRead } from "../index";
 
-const state = vi.hoisted(() => ({ store: null as unknown, admin: true }));
+const state = { admin: true };
 
-vi.mock("../../container", () => ({ getCmsContentStore: () => state.store }));
-vi.mock("../../adapters/auth", () => ({
-	authGateway: {
-		verifyAdmin: async () => {
-			if (!state.admin) throw new Error("unauthorized");
-			return { userId: "u", accountId: "a", isAdmin: true };
-		},
-	},
-}));
-
-import { getEntry, getPreview, getTranslations, listEntries } from "../index";
+/** The read API of an instance over the store the tests build. The instance reads through `cms.read`, as the app's pages do. */
+let cms: Cms;
+const getEntry: CmsRead["getEntry"] = (params) => cms.read.getEntry(params);
+const getPreview: CmsRead["getPreview"] = (params) => cms.read.getPreview(params);
+const getTranslations: CmsRead["getTranslations"] = (params) => cms.read.getTranslations(params);
+const listEntries: CmsRead["listEntries"] = (params) => cms.read.listEntries(params);
 
 /** Public site reading. Collection and field names are looked up from the config (it runs against two configs). */
-describe("public site reading @monti-cms/core/read", () => {
+describe("public site reading (cms.read)", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
@@ -52,7 +49,13 @@ describe("public site reading @monti-cms/core/read", () => {
 		const filled = fillRequiredMetadata(store);
 		relationTarget = filled.relationTarget as (to: string) => Promise<string>;
 		rawCreate = filled.raw.createEntryWithReferences;
-		state.store = store;
+		cms = fakeCms({
+			store,
+			verifyAdmin: async () => {
+				if (!state.admin) throw new Error("unauthorized");
+				return { userId: "u", accountId: "a", isAdmin: true };
+			},
+		});
 	});
 
 	afterAll(async () => {

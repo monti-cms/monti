@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../../../../adapters/auth";
 import { CmsError } from "../../../../../../adapters/postgres/content-store";
+import { fakeCms } from "../../../../../../cms";
 import { ServiceError } from "../../../../../../services/types";
 import { POST } from "../route";
 
@@ -12,22 +13,13 @@ const { verifyAdmin, publish, imageWarningsForSnapshot, getMediaAsset } = vi.hoi
 	getMediaAsset: vi.fn(),
 }));
 
-vi.mock("../../../../../../adapters/auth", () => ({
-	authGateway: { verifyAdmin },
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
-vi.mock("../../../../../../container", () => ({
-	getCmsContentService: () => ({ publish }),
-	getCmsContentStore: () => ({ getMediaAsset }),
-	getCmsMediaStore: () => ({ headFile: vi.fn() }),
-}));
+const cms = fakeCms({
+	contentService: { publish },
+	store: { getMediaAsset },
+	mediaStore: { headFile: vi.fn() },
+	verifyAdmin: () => verifyAdmin(),
+});
+
 vi.mock("../../../../../../core/snapshot", () => ({ imageWarningsForSnapshot }));
 
 function request(body: unknown = { expectedVersion: 4 }, origin = "http://localhost") {
@@ -38,7 +30,7 @@ function request(body: unknown = { expectedVersion: 4 }, origin = "http://localh
 	});
 }
 
-const context = { params: Promise.resolve({ id: "entry-1" }) };
+const context = { params: Promise.resolve({ id: "entry-1" }), cms };
 
 describe("publish HTTP contract", () => {
 	beforeEach(() => {

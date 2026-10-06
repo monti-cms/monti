@@ -24,7 +24,6 @@ export default defineConfig(({ mode }) => ({
 		alias: {
 			// The package's own tests run against the reference blog config.
 			"@cms-config": path.resolve(__dirname, "./test/cms.config.ts"),
-			"@cms-server": path.resolve(__dirname, "./test/cms.server.ts"),
 			"server-only": path.resolve(__dirname, "./test/server-only.ts"),
 		},
 	},

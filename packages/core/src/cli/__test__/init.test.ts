@@ -68,16 +68,23 @@ describe("monti init", () => {
 		expect(config).toContain('timeZone: "UTC"');
 		expect(config).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated file has no Korean
 		expect(read(dir, "cms.server.ts")).toContain("githubAuth({");
-		expect(read(dir, "app/(admin)/admin/[[...path]]/page.tsx")).toContain("CmsAdminPage as default");
-		expect(read(dir, "app/(admin)/admin/layout.tsx")).toContain("<CmsAdminLayout>");
-		expect(read(dir, "app/api/cms/[...path]/route.ts")).toContain("createCmsRouteHandler()");
+		// The server file exports the instance; every generated file imports it from there by a relative path.
+		expect(read(dir, "cms.server.ts")).toContain("export const cms = createCms({");
+		const page = read(dir, "app/(admin)/admin/[[...path]]/page.tsx");
+		expect(page).toContain("<CmsAdminPage cms={cms} {...props} />");
+		expect(page).toContain('import { cms } from "../../../../cms.server";');
+		const layout = read(dir, "app/(admin)/admin/layout.tsx");
+		expect(layout).toContain("<CmsAdminLayout cms={cms}>");
+		expect(layout).toContain('import { cms } from "../../../cms.server";');
+		const route = read(dir, "app/api/cms/[...path]/route.ts");
+		expect(route).toContain("cms.routeHandler()");
+		expect(route).toContain('import { cms } from "../../../../cms.server";');
 
-		// Existing aliases and indentation stay as they are.
+		// Existing aliases and indentation stay as they are. Only the site config is an alias: the server file is imported.
 		const tsconfig = read(dir, "tsconfig.json");
 		expect(JSON.parse(tsconfig).compilerOptions.paths).toEqual({
 			"@/*": ["./*"],
 			"@cms-config": ["./cms.config.ts"],
-			"@cms-server": ["./cms.server.ts"],
 		});
 		expect(tsconfig).toContain('\n  "compilerOptions"');
 		expect(tsconfig).toContain('"@cms-config": ["./cms.config.ts"]');
@@ -89,9 +96,7 @@ describe("monti init", () => {
 
 		const nextConfig = read(dir, "next.config.ts");
 		expect(nextConfig.startsWith('import { withCms } from "@monti-cms/core/next";\n')).toBe(true);
-		expect(nextConfig).toContain(
-			'export default withCms(nextConfig, { config: "./cms.config.ts", server: "./cms.server.ts" });',
-		);
+		expect(nextConfig).toContain('export default withCms(nextConfig, { config: "./cms.config.ts" });');
 		expect(nextConfig).not.toContain("export default nextConfig");
 		expect(report.todo.join("\n")).toContain("/api/cms/auth/callback/github");
 		expect(report.todo.join("\n")).toContain("CMS_DATABASE_URL");
@@ -163,16 +168,15 @@ describe("monti init", () => {
 			"src/app/(admin)/admin/[[...path]]/page.tsx",
 		]);
 		const tsconfig = read(dir, "tsconfig.json");
-		expect(JSON.parse(tsconfig).compilerOptions.paths).toEqual({
-			"@cms-config": ["./cms.config.ts"],
-			"@cms-server": ["./cms.server.ts"],
-		});
+		expect(JSON.parse(tsconfig).compilerOptions.paths).toEqual({ "@cms-config": ["./cms.config.ts"] });
 		expect(tsconfig).toContain('\n\t"compilerOptions"');
 		// An existing line (tw-animate-css) is not added again.
 		const css = read(dir, "src/app/globals.css");
 		expect(css.match(/tw-animate-css/g)).toHaveLength(1);
 		expect(css).toContain('@import "@monti-cms/admin/styles.css";');
-		expect(read(dir, "next.config.ts")).toContain('config: "./src/cms.config.ts", server: "./src/cms.server.ts"');
+		expect(read(dir, "next.config.ts")).toContain('config: "./src/cms.config.ts" }');
+		// Files under `src/app` import the server file from `src/`.
+		expect(read(dir, "src/app/api/cms/[...path]/route.ts")).toContain('import { cms } from "../../../../cms.server";');
 	});
 
 	it("when it cannot fix safely, it leaves the file as is and reports a manual step", () => {

@@ -1,4 +1,3 @@
-import { getCmsContentService, getCmsContentStore } from "../../../../container";
 import { patchEntryBodySchema } from "../../../../core/api";
 import { isItemCollection } from "../../../../core/collections";
 import type { SaveDraftInput } from "../../../../services/types";
@@ -10,8 +9,8 @@ type IdParams = { id: string };
  * An entry and the translation group needed by the editor.
  * For a translation, also returns the source's latest draft metadata (`source`). The translation properties panel shows the shared values read-only.
  */
-export const GET = adminRoute<IdParams>(async ({ params }) => {
-	const store = getCmsContentStore();
+export const GET = adminRoute<IdParams>(async ({ params, cms }) => {
+	const store = cms.store();
 	const entry = await store.getEntry(params.id);
 	const translations = isItemCollection(entry.collection)
 		? null
@@ -40,9 +39,9 @@ export const GET = adminRoute<IdParams>(async ({ params }) => {
 });
 
 /** Saves the latest draft. Fields not sent keep their current draft values. */
-export const PATCH = adminRoute<IdParams>(async ({ request, params }) => {
+export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const body = await readVersionedBody(request, patchEntryBodySchema);
-	const current = await getCmsContentStore().getEntry(params.id);
+	const current = await cms.store().getEntry(params.id);
 	const input = {
 		collection: current.collection,
 		expectedVersion: body.expectedVersion,
@@ -52,12 +51,12 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params }) => {
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 		...(body.translation !== undefined ? { translation: body.translation } : {}),
 	} as SaveDraftInput;
-	return json(await getCmsContentService().saveDraft(params.id, input));
+	return json(await cms.contentService().saveDraft(params.id, input));
 });
 
 /** Permanently deletes a trashed entry. Moving to trash is `POST /entries/:id/trash`. */
-export const DELETE = adminRoute<IdParams>(async ({ request, params }) => {
+export const DELETE = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const expectedVersion = readVersionQuery(request);
-	await getCmsContentStore().permanentDeleteEntry({ id: params.id, expectedVersion });
+	await cms.store().permanentDeleteEntry({ id: params.id, expectedVersion });
 	return new Response(null, { status: 204 });
 });

@@ -1,5 +1,4 @@
 import type { JsonObject } from "../../../adapters/postgres/content-store";
-import { getCmsContentStore } from "../../../container";
 import { type PreferencesBody, preferencesBodySchema } from "../../../core/api";
 import { COLLECTIONS } from "../../../core/collections";
 import { adminRoute, json, parseWith, readJsonBody } from "../handler";
@@ -14,15 +13,15 @@ function normalize(stored: PreferencesBody | null): PreferencesBody {
 	return parsed.success ? parsed.data : {};
 }
 
-export const GET = adminRoute(async ({ auth }) => {
-	const stored = await getCmsContentStore().getPreferences({ userId: auth.userId });
+export const GET = adminRoute(async ({ auth, cms }) => {
+	const stored = await cms.store().getPreferences({ userId: auth.userId });
 	return json(normalize(stored as PreferencesBody | null));
 });
 
 /** Merges and saves per collection. Collections and keys not sent are kept. */
-export const PUT = adminRoute(async ({ request, auth }) => {
+export const PUT = adminRoute(async ({ request, auth, cms }) => {
 	const body = parseWith(preferencesBodySchema, await readJsonBody(request), "Invalid preferences body");
-	const store = getCmsContentStore();
+	const store = cms.store();
 	const current = normalize((await store.getPreferences({ userId: auth.userId })) as PreferencesBody | null);
 	const collections = { ...current.collections };
 	for (const [collection, value] of Object.entries(body.collections ?? {})) {
