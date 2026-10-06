@@ -1,7 +1,7 @@
 import { contentCollection, defaultLocale, otherContentCollection, recordRelationField } from "../../../test/any-site";
 import { isItemCollection } from "../../core/collections";
 import type { ExportSnapshot } from "../../core/store";
-import { bodyFromMdx } from "../../mdx/stored-document";
+import { bodyDocument, bodyFromMdx } from "../../mdx/stored-document";
 import { roleField, storedFields } from "../../schema/derive";
 
 /**
@@ -53,22 +53,25 @@ export const fixtureBody = (
 ) => ({
 	metadata: { title, ...extraMetadata },
 	mdx,
-	doc: null,
+	doc: fixtureDocument(mdx),
 	schemaVersion: 1,
 	contentHash,
 	updatedAt: FIXTURE_TIME,
 });
 
-const documents = new Map<string, ReturnType<typeof bodyFromMdx>["doc"]>();
+const documents = new Map<string, ReturnType<typeof bodyDocument>>();
 
 /**
- * The stored document of a fixture body. The draft and the archived post have none, as a body that does not parse has none.
- * Parsing draws new block ids each time, so a text is parsed once: every snapshot (and every test) sees the same document for it.
+ * The stored document of a fixture body. Parsing draws new block ids each time, so a text is parsed once: every snapshot (and every test)
+ * sees the same document for it.
  */
-export const fixtureDocument = (mdx: string) => {
-	if (!documents.has(mdx)) documents.set(mdx, bodyFromMdx(mdx).doc);
-	return documents.get(mdx) ?? null;
-};
+export function fixtureDocument(mdx: string) {
+	const known = documents.get(mdx);
+	if (known) return known;
+	const doc = bodyDocument(bodyFromMdx(mdx));
+	documents.set(mdx, doc);
+	return doc;
+}
 
 /** Shared snapshot for export tests: 1 public post + 1 draft. */
 export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
@@ -86,11 +89,8 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 			createdAt: FIXTURE_TIME,
 			updatedAt: FIXTURE_TIME,
 			publishedAt: FIXTURE_TIME,
-			working: { ...fixtureBody("working body", "게시글", "hash-working-1"), doc: fixtureDocument("working body") },
-			published: {
-				...fixtureBody("published body", "게시글", "hash-published-1", FIXTURE_SEO_METADATA),
-				doc: fixtureDocument("published body"),
-			},
+			working: fixtureBody("working body", "게시글", "hash-working-1"),
+			published: fixtureBody("published body", "게시글", "hash-published-1", FIXTURE_SEO_METADATA),
 		},
 		{
 			id: "22222222-2222-4222-8222-222222222222",

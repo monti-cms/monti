@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
-import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { formatRewriteReport } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
@@ -11,6 +10,7 @@ import { forEachBlock, isBlockId } from "../../../mdx/block-ids";
 import { bodyFromMdx, readStoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
+import { mdxContentHash } from "../store/mdx-body";
 import { rewriteContent } from "../store/rewrite";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
@@ -149,7 +149,7 @@ describe("content rewrite", () => {
 			// The hash covers the parsed body, so it is the same for both spellings: asserted, not assumed.
 			expect(working?.content_hash).toBe(workingBefore?.content_hash);
 			expect(publishedAfter?.content_hash).toBe(publishedBefore?.content_hash);
-			expect(computeContentHash(published.working.metadata, TIDY, published.working.schemaVersion)).toBe(
+			expect(mdxContentHash(published.working.metadata, TIDY, published.working.schemaVersion)).toBe(
 				workingBefore?.content_hash,
 			);
 			expect(working?.updated_at.getTime()).toBe(workingBefore?.updated_at.getTime());
@@ -212,7 +212,7 @@ describe("content rewrite", () => {
 
 			expect(lineOf(report, broken, "working")).toMatchObject({ outcome: "skipped", reason: "unparsed" });
 			expect((await stored(broken.id, "working"))?.mdx).toBe("Words\n\n<Unclosed");
-			expect((await stored(broken.id, "working"))?.doc).toBeNull();
+			expect((await stored(broken.id, "working"))?.doc).toMatchObject({ content: [{ type: "unparsed" }] });
 			expect((await stored(untidy.id, "working"))?.mdx).toBe(TIDY);
 			expect(formatRewriteReport(report).some((line) => line.endsWith("working: skipped (does not parse)"))).toBe(true);
 		});

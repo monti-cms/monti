@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { docOf } from "../../../test/stored-content";
 import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
 import { computeContentHash } from "../../core/content-hash";
@@ -36,7 +37,7 @@ describe("standard MDX output", () => {
 		});
 
 		it("have the same content hash whichever way they were spelled", () => {
-			const hash = (source: string) => computeContentHash({ title: "t" }, source);
+			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(source));
 			expect(hash("가<br />나")).toBe(hash("가\\\n나"));
 			expect(hash("**가<br />나**")).toBe(hash("**가\\\n나**"));
 			// The serializer closes marks before a break, so a re-save must not change the hash either.
@@ -126,7 +127,7 @@ describe("standard MDX output", () => {
 		});
 
 		it("do not change the content hash when a body is re-saved", () => {
-			const hash = (source: string) => computeContentHash({ title: "t" }, source);
+			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(source));
 			const written = withBlankLines(3);
 			expect(hash(write(written))).toBe(hash(written));
 			// A different number of blank lines is different content.

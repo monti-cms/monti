@@ -64,8 +64,8 @@ describe("references a publish checks", () => {
 	});
 
 	it("merges a reference present in both, keeping every occurrence once", () => {
-		const first = { type: "mdx", line: 1, column: 1 } as const;
-		const second = { type: "mdx", line: 2, column: 1 } as const;
+		const first = { type: "body", blockId: "aaaaaaaa" } as const;
+		const second = { type: "body", blockId: "bbbbbbbb" } as const;
 		const merged = mergePublishReferences([ref("a", [first])], [ref("a", [first, second])]);
 		expect(merged).toHaveLength(1);
 		expect(merged[0]?.occurrences).toEqual([first, second]);
@@ -76,7 +76,7 @@ describe("references a publish checks", () => {
 	});
 
 	it("compares two reference lists regardless of order and id case, occurrences included", () => {
-		const occurrence = { type: "mdx", line: 1, column: 1, blockId: "x" } as const;
+		const occurrence = { type: "body", blockId: "x" } as const;
 		expect(isReferencesEqual([ref("A", [occurrence]), ref("b")], [ref("b"), ref("a", [{ ...occurrence }])])).toBe(true);
 		expect(isReferencesEqual([ref("a", [occurrence])], [ref("a", [{ ...occurrence, blockId: "y" }])])).toBe(false);
 		expect(isReferencesEqual([ref("a")], [ref("a"), ref("b")])).toBe(false);

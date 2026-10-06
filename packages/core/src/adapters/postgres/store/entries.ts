@@ -20,11 +20,26 @@ import {
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { CmsError } from "../../../core/store/errors";
 import type { Entry, IncomingReferenceItem, TranslationGroup } from "../../../core/store/types";
-import { normalizeReferenceKind, type PreparedSnapshot, type Reference, type WorkingCopy } from "../../../core/types";
+import {
+	hasLegacyOccurrence,
+	normalizeReferenceKind,
+	type PreparedSnapshot,
+	type Reference,
+	readReferenceOccurrences,
+	type WorkingCopy,
+} from "../../../core/types";
 import { type StoreContext, withTransaction } from "./context";
 import { mapEntryWriteError } from "./errors";
 import type { Publishing } from "./publish";
-import { insertReferences, loadEntry, lockEntryForUpdate, readBody, readDoc, readReferences, writeBody } from "./rows";
+import {
+	insertReferences,
+	loadEntry,
+	lockEntryForUpdate,
+	readBody,
+	readBodyDoc,
+	readReferences,
+	writeBody,
+} from "./rows";
 
 export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	const { pool, qSchema } = ctx;
@@ -128,7 +143,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					assertTranslationStateAllowed(translation, Boolean(params.translationOf));
 					await writeBody(client, qSchema, id, "working", {
 						metadata,
-						mdx: params.snapshot.mdx,
 						doc: params.snapshot.doc,
 						schemaVersion: params.snapshot.schemaVersion,
 						contentHash: params.snapshot.contentHash,
@@ -178,7 +192,14 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 
 					const body = await readBody(client, qSchema, params.entryId, "working");
 					const currentRefs = await readReferences(client, qSchema, params.entryId, "working");
-					const refsEqual = isReferencesEqual(currentRefs, params.references);
+					// A reference stored with a body occurrence in the old shape (`{type:"mdx"}`) is rewritten in the new one by this save.
+					const legacy = await client.query<{ occurrences: unknown }>(
+						`SELECT occurrences FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = 'working'`,
+						[params.entryId],
+					);
+					const refsEqual =
+						isReferencesEqual(currentRefs, params.references) &&
+						!legacy.rows.some((row) => hasLegacyOccurrence(row.occurrences));
 					const nextSlug = params.snapshot.slug;
 					// If no translation status is sent (bulk operations, etc.), keep the stored value.
 					const translation =
@@ -226,7 +247,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						if (!bodyIdentical) {
 							await writeBody(client, qSchema, params.entryId, "working", {
 								metadata,
-								mdx: params.snapshot.mdx,
 								doc: params.snapshot.doc,
 								schemaVersion: params.snapshot.schemaVersion,
 								contentHash: params.snapshot.contentHash,
@@ -246,16 +266,11 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						}
 					}
 
-					// Same content written differently: keep the new string and document (and the search text), but it is not a content change,
-					// so the content modified date stays.
-					if (
-						body &&
-						bodyIdentical &&
-						(body.mdx !== params.snapshot.mdx || !isDeepStrictEqual(body.doc, params.snapshot.doc))
-					) {
+					// Same content written differently (other block ids, say): keep the new document (and the search text), but it is not a content
+					// change, so the content modified date stays.
+					if (body && bodyIdentical && !isDeepStrictEqual(body.doc, params.snapshot.doc)) {
 						await writeBody(client, qSchema, params.entryId, "working", {
 							metadata,
-							mdx: params.snapshot.mdx,
 							doc: params.snapshot.doc,
 							schemaVersion: body.schema_version,
 							contentHash: body.content_hash,
@@ -304,7 +319,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				slug: row.working_slug,
 				metadata: row.metadata,
 				mdx: row.mdx,
-				doc: readDoc(row.doc),
+				doc: readBodyDoc(row.doc, row.mdx),
 				version: row.version,
 				folderId: row.folder_id,
 				locale: row.locale,
@@ -410,7 +425,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				source_slug: string | null;
 				kind: string;
 				is_stale: boolean;
-				occurrences: IncomingReferenceItem["occurrences"];
+				occurrences: unknown;
 			}>(
 				`SELECT
 					r.state,
@@ -440,7 +455,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				sourceSlug: row.source_slug,
 				kind: normalizeReferenceKind(row.kind),
 				isStale: row.is_stale,
-				occurrences: row.occurrences,
+				occurrences: readReferenceOccurrences(row.occurrences),
 			}));
 		},
 	};

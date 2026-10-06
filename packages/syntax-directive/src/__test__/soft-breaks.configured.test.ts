@@ -53,6 +53,8 @@ describe("soft line endings migration with directive syntax in the site config",
 			metadata: { title: "T" },
 			mdx: BODY,
 		});
+		// A store writes the MDX column from the document; this body is one a store held before that, as the text it was given.
+		await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2`, [BODY, entry.id]);
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = $1`, [STEP]);
 
 		await migrateContentStore(pool, { schema: schemaName });

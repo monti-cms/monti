@@ -41,7 +41,8 @@ describe("code-ref pre-publish validation", () => {
 				code: "code_ref_broken",
 				message: "c9",
 				params: { id: "c9" },
-				position: expect.objectContaining({ line: 3, blockId: expect.any(String) }),
+				// At the link: the paragraph it is in.
+				position: { blockId: snapshot.doc.content[1]?.id },
 			}),
 		]);
 	});
@@ -62,7 +63,8 @@ describe("code-ref pre-publish validation", () => {
 			expect.objectContaining({
 				code: "code_anchor_duplicate",
 				message: "c1",
-				position: expect.objectContaining({ line: 8 }),
+				// At the second code block.
+				position: { blockId: snapshot.doc.content[2]?.id },
 			}),
 		]);
 	});

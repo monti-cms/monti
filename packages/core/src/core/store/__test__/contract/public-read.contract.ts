@@ -134,7 +134,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			expect(lookup.status).toBe("current");
 			if (lookup.status === "current") {
 				expect(lookup.entry.slug).toBe("live-post");
-				expect(lookup.entry.mdx).toBe("# 공개 본문");
+				expect(lookup.entry.mdx).toBe("# 공개 본문\n");
 				expect(lookup.entry.metadata).toEqual(await filled("공개 글", summaryOf("요약")));
 				expect(lookup.entry.publishedAt).toBeInstanceOf(Date);
 			}
@@ -154,7 +154,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 
 			expect(lookup.status).toBe("current");
 			if (lookup.status === "current") {
-				expect(lookup.entry.mdx).toBe("# 공개 본문");
+				expect(lookup.entry.mdx).toBe("# 공개 본문\n");
 			}
 		});
 
@@ -205,7 +205,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			expect(lookup.status).toBe("alias");
 			if (lookup.status === "alias") {
 				expect(lookup.entry.slug).toBe("after-rename");
-				expect(lookup.entry.mdx).toBe("# 이름 변경");
+				expect(lookup.entry.mdx).toBe("# 이름 변경\n");
 			}
 		});
 
@@ -257,7 +257,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				expect(beforeRepublish.status).toBe("current");
 				if (beforeRepublish.status === "current") {
 					expect(beforeRepublish.entry.slug).toBe("f10-published-snapshot");
-					expect(beforeRepublish.entry.mdx).toBe("# Published body");
+					expect(beforeRepublish.entry.mdx).toBe("# Published body\n");
 					expect(beforeRepublish.entry.metadata).toEqual(
 						await filled("Published title", {
 							...summaryOf("Published summary"),
@@ -276,13 +276,13 @@ export const publicReadContract: ContractSuite = (factory) => {
 					await store.getPublishedEntryBySlug({ collection: content, slug: "f10-published-snapshot" }),
 				).toMatchObject({
 					status: "alias",
-					entry: { slug: "f10-working-snapshot", mdx: "# Working body" },
+					entry: { slug: "f10-working-snapshot", mdx: "# Working body\n" },
 				});
 				expect(
 					await store.getPublishedEntryBySlug({ collection: content, slug: "f10-working-snapshot" }),
 				).toMatchObject({
 					status: "current",
-					entry: { slug: "f10-working-snapshot", mdx: "# Working body", metadata: { title: "Working title" } },
+					entry: { slug: "f10-working-snapshot", mdx: "# Working body\n", metadata: { title: "Working title" } },
 				});
 				expect(republished.status).toBe("published");
 			},

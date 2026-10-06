@@ -1,11 +1,17 @@
 import { isDeepStrictEqual } from "node:util";
 import type { Pool, PoolClient } from "pg";
-import { computeContentHash } from "../../../core/content-hash";
 import type { RewriteItem, RewriteReport } from "../../../core/store/types";
 import type { JsonValue } from "../../../core/types";
-import { type Body, bodyFromDocument, bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
+import {
+	type Body,
+	bodyFromDocument,
+	bodyFromMdx,
+	isUnparsedDocument,
+	type StoredDocument,
+} from "../../../mdx/stored-document";
 import { validateSchemaName, withTransaction } from "./context";
-import { extractVisibleText, readDoc } from "./rows";
+import { mdxContentHash, mdxSearchText } from "./mdx-body";
+import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -14,7 +20,7 @@ const DEFAULT_BATCH_SIZE = 200;
  * `undefined` when there is no document to write from.
  */
 const deriveWithSiteSyntax = (mdx: string, doc: StoredDocument | null): Body | undefined => {
-	const body = doc ? bodyFromDocument(doc) : bodyFromMdx(mdx);
+	const body = doc && !isUnparsedDocument(doc) ? bodyFromDocument(doc) : bodyFromMdx(mdx);
 	return body.doc ? body : undefined;
 };
 
@@ -49,7 +55,7 @@ export const rewriteBody = (
 	}
 	if (body === undefined || body.doc === null) return { status: "skipped", reason: "unparsed" };
 	if (body.mdx === mdx && isDeepStrictEqual(body.doc, doc)) return { status: "unchanged" };
-	if (computeContentHash(metadata, body.mdx, schemaVersion) !== computeContentHash(metadata, mdx, schemaVersion)) {
+	if (mdxContentHash(metadata, body.mdx, schemaVersion) !== mdxContentHash(metadata, mdx, schemaVersion)) {
 		return { status: "skipped", reason: "hash" };
 	}
 	return { status: "changed", mdx: body.mdx, doc: body.doc };
@@ -120,7 +126,7 @@ export async function rewriteContent(pool: Pool, options: RewriteOptions = {}): 
 							write: (client) =>
 								client.query(
 									`UPDATE "${qSchema}".entry_bodies SET mdx = $1, doc = $2, search_text = $3 WHERE entry_id = $4 AND state = $5`,
-									[outcome.mdx, JSON.stringify(outcome.doc), extractVisibleText(outcome.mdx), row.entry_id, row.state],
+									[outcome.mdx, JSON.stringify(outcome.doc), mdxSearchText(outcome.mdx), row.entry_id, row.state],
 								),
 						}
 					: {}),

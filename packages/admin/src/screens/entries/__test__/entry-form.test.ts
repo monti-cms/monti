@@ -85,51 +85,51 @@ describe("translation state form", () => {
 			working: { metadata: { title: "Hello" }, mdx: "Body", translation: state as never },
 		});
 
+	const DOC = {
+		version: 2,
+		type: "doc",
+		content: [{ type: "paragraph", id: "aaaaaaaa", content: [{ type: "text", text: "원문" }] }],
+	} as const;
+	const EMPTY = { version: 4, baseDoc: { type: "doc", version: 2, content: [] } };
+
 	it("a translation form holds the confirmed source as JSON with fixed key order and sends it in the save request", () => {
 		// The server (JSONB) returns keys reordered.
-		const form = formFromEntry(translation({ baseDoc: null, baseSource: "원문\n", version: 3 }));
-		expect(form[TRANSLATION_FORM_KEY]).toBe(stringifyTranslation({ version: 3, baseSource: "원문\n", baseDoc: null }));
-		expect(form[TRANSLATION_FORM_KEY]).toBe('{"version":3,"baseSource":"원문\\n","baseDoc":null}');
-		expect(translationPayload(form)).toEqual({ version: 3, baseSource: "원문\n", baseDoc: null });
+		const form = formFromEntry(translation({ baseDoc: DOC, version: 4 }));
+		expect(form[TRANSLATION_FORM_KEY]).toBe(stringifyTranslation({ version: 4, baseDoc: DOC } as never));
+		expect(translationPayload(form)).toEqual({ version: 4, baseDoc: DOC });
 	});
 
 	it("the confirmed document keeps one key order however the server ordered it", () => {
-		const doc = {
-			version: 2,
-			type: "doc",
-			content: [{ type: "paragraph", id: "aaaaaaaa", content: [{ type: "text", text: "원문" }] }],
-		};
 		const reordered = {
 			type: "doc",
 			content: [{ content: [{ text: "원문", type: "text" }], id: "aaaaaaaa", type: "paragraph" }],
 			version: 2,
 		};
-		const first = formFromEntry(translation({ version: 3, baseSource: "원문\n", baseDoc: doc }));
-		const second = formFromEntry(translation({ baseDoc: reordered, baseSource: "원문\n", version: 3 }));
+		const first = formFromEntry(translation({ version: 4, baseDoc: DOC }));
+		const second = formFromEntry(translation({ baseDoc: reordered, version: 4 }));
 		expect(first[TRANSLATION_FORM_KEY]).toBe(second[TRANSLATION_FORM_KEY]);
-		expect(translationPayload(first)).toEqual({ version: 3, baseSource: "원문\n", baseDoc: doc });
+		expect(translationPayload(first)).toEqual({ version: 4, baseDoc: DOC });
 	});
 
-	it("a version 2 state is read as version 3 without a document", () => {
-		const form = formFromEntry(translation({ baseSource: "원문\n", version: 2 }));
-		expect(translationPayload(form)).toEqual({ version: 3, baseSource: "원문\n", baseDoc: null });
+	it("a state of an older version is read as version 4, with the document of its source", () => {
+		const fromText = translationPayload(formFromEntry(translation({ baseSource: "원문\n", version: 2 })));
+		expect(fromText?.version).toBe(4);
+		expect(fromText?.baseDoc.content.map((node) => node.type)).toEqual(["paragraph"]);
+		const withDoc = translationPayload(formFromEntry(translation({ version: 3, baseSource: "원문\n", baseDoc: DOC })));
+		expect(withDoc).toEqual({ version: 4, baseDoc: DOC });
 	});
 
 	it("a state with an invalid document is treated as unconfirmed", () => {
-		const form = formFromEntry(translation({ version: 3, baseSource: "원문\n", baseDoc: { type: "doc" } }));
-		expect(translationPayload(form)).toEqual({ version: 3, baseSource: "", baseDoc: null });
+		const form = formFromEntry(translation({ version: 4, baseDoc: { type: "doc" } }));
+		expect(translationPayload(form)).toEqual(EMPTY);
 	});
 
 	it("with no valid state, nothing is treated as confirmed", () => {
 		for (const state of [null, undefined, { version: 1, units: [] }, { version: 2 }]) {
-			expect(translationPayload(formFromEntry(translation(state)))).toEqual({
-				version: 3,
-				baseSource: "",
-				baseDoc: null,
-			});
+			expect(translationPayload(formFromEntry(translation(state)))).toEqual(EMPTY);
 		}
-		expect(translationStateFromForm("깨진 값")).toEqual({ version: 3, baseSource: "", baseDoc: null });
-		expect(translationStateFromForm(undefined)).toEqual({ version: 3, baseSource: "", baseDoc: null });
+		expect(translationStateFromForm("깨진 값")).toEqual(EMPTY);
+		expect(translationStateFromForm(undefined)).toEqual(EMPTY);
 	});
 
 	it("the original does not send translation state", () => {

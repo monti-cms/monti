@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
-import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
@@ -12,7 +11,7 @@ import { bodyFromMdx, readStoredDocument, type StoredDocument } from "../../../m
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateCodeAnnotations } from "../store/code-annotation-migration";
-import { extractVisibleText } from "../store/rows";
+import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
@@ -245,11 +244,9 @@ describe("0015_code_annotations", () => {
 
 		for (const state of ["working", "published"] as const) {
 			const stored = await row(published.id, state);
-			expect(stored?.content_hash).toBe(
-				computeContentHash(stored?.metadata ?? {}, WRITTEN, stored?.schema_version ?? 1),
-			);
+			expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, WRITTEN, stored?.schema_version ?? 1));
 			expect(stored?.content_hash).toBe(published[state === "working" ? "working" : "published"]?.contentHash);
-			expect(stored?.search_text).toBe(extractVisibleText(WRITTEN));
+			expect(stored?.search_text).toBe(mdxSearchText(WRITTEN));
 			expect(stored?.search_text).toContain("const needle = 1;");
 			expect(stored?.search_text).not.toContain("@line");
 			expect(stored?.search_text).not.toContain("@document");
@@ -353,7 +350,7 @@ describe("0015_code_annotations", () => {
 		const stored = await row(draft.id, "working");
 		expect(stored?.doc).toEqual(unreadable);
 		expect(stored?.mdx).toBe(LEGACY);
-		expect(stored?.content_hash).toBe(computeContentHash(stored?.metadata ?? {}, LEGACY, stored?.schema_version ?? 1));
+		expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, LEGACY, stored?.schema_version ?? 1));
 		expect(messages.filter((message) => message.includes(`${draft.id}/working`))).toHaveLength(1);
 		expect((await row(fine.id, "working"))?.mdx).toBe(WRITTEN);
 		expect(messages.some((message) => message.includes(fine.id))).toBe(false);
@@ -377,8 +374,8 @@ describe("0015_code_annotations", () => {
 			const stored = await row(entry.id, "working");
 			expect(stored?.mdx).toBe(mdx);
 			expect(stored?.doc).toBeNull();
-			expect(stored?.content_hash).toBe(computeContentHash(stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1));
-			expect(stored?.search_text).toBe(extractVisibleText(mdx));
+			expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1));
+			expect(stored?.search_text).toBe(mdxSearchText(mdx));
 		}
 		// A body that never had a document was logged by the step that gave documents.
 		expect(messages.filter((message) => message.includes(broken.id) || message.includes(frontMatter.id))).toEqual([]);
@@ -467,6 +464,7 @@ describe("0015_code_annotations", () => {
 
 		it("leaves a template that has no document, or one that cannot be read, as it is", async () => {
 			const broken = await store.createTemplate({ name: unique("broken"), mdx: "Words\n\n<Unclosed" });
+			await pool.query(`UPDATE "${schemaName}".body_templates SET doc = NULL WHERE id = $1`, [broken.id]);
 			const unreadable = await store.createTemplate({ name: unique("unreadable"), mdx: "Words\n" });
 			await pool.query(`UPDATE "${schemaName}".body_templates SET doc = $1::jsonb WHERE id = $2`, [
 				JSON.stringify({ type: "doc", version: 99, content: [] }),
@@ -478,7 +476,8 @@ describe("0015_code_annotations", () => {
 				migrateCodeAnnotations(client, schemaName, { log: (message) => messages.push(message) }),
 			);
 
-			expect((await store.getTemplate(broken.id)).doc).toBeNull();
+			const stored = await pool.query(`SELECT doc FROM "${schemaName}".body_templates WHERE id = $1`, [broken.id]);
+			expect(stored.rows[0]?.doc).toBeNull();
 			expect((await store.getTemplate(broken.id)).mdx).toBe("Words\n\n<Unclosed");
 			expect((await store.getTemplate(unreadable.id)).mdx).toBe("Words\n");
 			expect(messages.filter((message) => message.includes(`body_templates ${unreadable.id}`))).toHaveLength(1);

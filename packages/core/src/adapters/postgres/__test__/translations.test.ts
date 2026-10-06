@@ -39,7 +39,7 @@ describe("translation groups (postgres storage)", () => {
 	});
 
 	describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
-		it("reads a version 2 translation status as version 3 without a document, and writes version 3", async () => {
+		it("reads a version 2 translation status as version 4 with the document of its source, and writes version 4", async () => {
 			const source = await createPost("legacy-state-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 			await pool.query(`UPDATE "${schemaName}".entry_bodies SET translation = $1::jsonb WHERE entry_id = $2`, [
@@ -47,7 +47,10 @@ describe("translation groups (postgres storage)", () => {
 				translation.id,
 			]);
 			const legacy = await store.getEntry(translation.id);
-			expect(legacy.working.translation).toEqual({ version: 3, baseSource: "예전 기준", baseDoc: null });
+			expect(legacy.working.translation?.version).toBe(4);
+			expect(legacy.working.translation).not.toHaveProperty("baseSource");
+			expect(legacy.working.translation?.baseDoc.content[0]).toMatchObject({ type: "paragraph" });
+			expect(JSON.stringify(legacy.working.translation?.baseDoc)).toContain("예전 기준");
 
 			const resent = await service.saveDraft(translation.id, {
 				collection: contentCollection,
@@ -57,12 +60,13 @@ describe("translation groups (postgres storage)", () => {
 				translation: { version: 2, baseSource: "예전 기준" } as never,
 				expectedVersion: legacy.version,
 			});
-			expect(resent.working.translation).toEqual({ version: 3, baseSource: "예전 기준", baseDoc: null });
-			const stored = await pool.query<{ translation: unknown }>(
+			expect(resent.working.translation?.version).toBe(4);
+			const stored = await pool.query<{ translation: { version: number; baseDoc: unknown } }>(
 				`SELECT translation FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
 				[translation.id],
 			);
-			expect(stored.rows[0]?.translation).toEqual({ version: 3, baseSource: "예전 기준", baseDoc: null });
+			expect(stored.rows[0]?.translation.version).toBe(4);
+			expect(JSON.stringify(stored.rows[0]?.translation.baseDoc)).toContain("예전 기준");
 		});
 
 		const statusOf = async (id: string) =>

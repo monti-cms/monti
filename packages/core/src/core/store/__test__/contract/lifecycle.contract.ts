@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../../test/any-site";
+import { docOf } from "../../../../../test/stored-content";
 import type { ContentStore } from "../../ports";
 import { publishDraft, restoreDraft, seedEntry } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
@@ -214,12 +215,11 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: content,
 						slug: "post-with-ref",
 						metadata: { title: "Post" },
-						mdx: "Hello",
+						doc: docOf("Hello"),
 						schemaVersion: 1,
 						contentHash: "post-hash-2",
 						issues: [],
 						references: [],
-						doc: null,
 						imageSources: [],
 					},
 					references: [
@@ -272,12 +272,11 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: content,
 						slug: post.workingSlug,
 						metadata: { title: "Tagged post" },
-						mdx: "Tagged body.",
+						doc: docOf("Tagged body."),
 						schemaVersion: 1,
 						contentHash: "tagged-post-with-reference",
 						issues: [],
 						references: [],
-						doc: null,
 						imageSources: [],
 					},
 					references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
@@ -303,12 +302,11 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: content,
 						slug: publishedPost.workingSlug,
 						metadata: { title: "Tagged post" },
-						mdx: "Tagged body.",
+						doc: docOf("Tagged body."),
 						schemaVersion: 1,
 						contentHash: randomUUID(),
 						issues: [],
 						references: [],
-						doc: null,
 						imageSources: [],
 					},
 					references: [],
@@ -361,12 +359,11 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: content,
 						slug: post.workingSlug,
 						metadata: { title: "Draft using tag" },
-						mdx: "Draft body.",
+						doc: docOf("Draft body."),
 						schemaVersion: 1,
 						contentHash: "draft-post-with-reference",
 						issues: [],
 						references: [],
-						doc: null,
 						imageSources: [],
 					},
 					references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
@@ -413,12 +410,11 @@ export const lifecycleContract: ContractSuite = (factory) => {
 							collection: content,
 							slug: "post-rollback-test",
 							metadata: { title: "Broken Title" },
-							mdx: "Broken MDX",
+							doc: docOf("Broken MDX"),
 							schemaVersion: 1,
 							contentHash: "post-broken-hash",
 							issues: [],
 							references: [],
-							doc: null,
 							imageSources: [],
 						},
 						references: [
@@ -441,7 +437,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 
 					// Verify prior published body is completely intact!
 					const current = await store.getEntry(post.id);
-					expect(current.published?.mdx).toBe("Prior MDX");
+					expect(current.published?.mdx).toBe("Prior MDX\n");
 					expect(current.published?.metadata.title).toBe("Prior Title");
 				},
 			);
@@ -468,12 +464,11 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						collection: content,
 						slug: "post-timestamp-test",
 						metadata: { title: "Timestamp Post V2" },
-						mdx: "V2",
+						doc: docOf("V2"),
 						schemaVersion: 1,
 						contentHash: "ts-hash-2",
 						issues: [],
 						references: [],
-						doc: null,
 						imageSources: [],
 					},
 					references: [],

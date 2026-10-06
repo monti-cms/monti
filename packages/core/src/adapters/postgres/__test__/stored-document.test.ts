@@ -2,15 +2,15 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
+import { documentText, SEARCH_TEXT } from "../../../core/body-text";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { duplicateDraft, publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
-import { bodyFromMdx, readStoredDocument } from "../../../mdx/stored-document";
+import { bodyFromMdx, readStoredDocument, unparsedDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
-import { extractVisibleText } from "../store/rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** The same content in a spelling the serializer does not write, and the text a save writes for it. */
@@ -105,10 +105,15 @@ describe("stored documents", () => {
 		const row = await stored(entryId, state);
 		// The text read again is the stored document: it keeps the ids of the document it was written from.
 		const body = bodyFromMdx(row.mdx, undefined, { previous: readStoredDocument(row.doc) });
+		const doc = readStoredDocument(row.doc);
+		expect(doc).toBeDefined();
 		expect(row.mdx).toBe(body.mdx);
-		expect(row.doc).toEqual(body.doc);
-		expect(row.content_hash).toBe(computeContentHash(row.metadata, row.mdx, row.schema_version));
-		expect(row.search_text).toBe(extractVisibleText(row.mdx));
+		// A body that could not become a document is stored as an unparsed document of its text.
+		if (body.doc) expect(row.doc).toEqual(body.doc);
+		else expect(contentOf(row.doc)).toEqual(contentOf(unparsedDocument(body.mdx)));
+		// The hash and the search text are the document's.
+		expect(row.content_hash).toBe(computeContentHash(row.metadata, doc as never, row.schema_version));
+		expect(row.search_text).toBe(documentText(doc as never, SEARCH_TEXT));
 		return row;
 	};
 
@@ -134,21 +139,23 @@ describe("stored documents", () => {
 		expect(fromDoc.working.doc).toEqual(doc);
 	});
 
-	it("a body that does not parse is stored as given, without a document", async () => {
+	it("a body that does not parse is stored as an unparsed document, and its MDX is the text as given", async () => {
 		const draft = await createDraft({ mdx: "Words\n\n<Unclosed" });
 
 		const row = await expectConsistent(draft.id, "working");
 		expect(row.mdx).toBe("Words\n\n<Unclosed");
-		expect(row.doc).toBeNull();
-		expect(draft.working.doc).toBeNull();
+		expect(row.doc).toMatchObject({
+			content: [{ type: "unparsed", attrs: { format: "mdx", source: "Words\n\n<Unclosed" } }],
+		});
+		expect(draft.working.doc).toEqual(row.doc);
 	});
 
-	it("a body with front matter is stored as given, without a document", async () => {
+	it("a body with front matter is stored as an unparsed document, and its MDX is the text as given", async () => {
 		const draft = await createDraft({ mdx: "---\ntitle: x\n---\n\nBody" });
 
 		const row = await expectConsistent(draft.id, "working");
 		expect(row.mdx).toBe("---\ntitle: x\n---\n\nBody");
-		expect(row.doc).toBeNull();
+		expect(row.doc).toMatchObject({ content: [{ type: "unparsed" }] });
 	});
 
 	describe("saving", () => {
@@ -205,12 +212,12 @@ describe("stored documents", () => {
 			expect((await expectConsistent(draft.id, "working")).doc).not.toBeNull();
 		});
 
-		it("a body that stops parsing loses its document, and gets one back when it is fixed", async () => {
+		it("a body that stops parsing becomes an unparsed document, and a document again when it is fixed", async () => {
 			const draft = await createDraft({ mdx: TIDY });
 
 			const broken = await save(draft, "Words\n\n<Unclosed");
-			expect((await expectConsistent(draft.id, "working")).doc).toBeNull();
-			expect(broken.working.doc).toBeNull();
+			expect((await expectConsistent(draft.id, "working")).doc).toMatchObject({ content: [{ type: "unparsed" }] });
+			expect(broken.working.doc.content[0]?.type).toBe("unparsed");
 
 			const fixed = await save(broken, "Words\n");
 			const row = await expectConsistent(draft.id, "working");
@@ -258,14 +265,14 @@ describe("stored documents", () => {
 			expect(copy.working.doc).toEqual(source.doc);
 		});
 
-		it("copies a body without a document as it is", async () => {
+		it("copies an unparsed body as it is", async () => {
 			const original = await createDraft({ mdx: "Words\n\n<Unclosed" });
 
 			const copy = await duplicateDraft(store, { id: original.id });
 
 			const row = await expectConsistent(copy.id, "working");
 			expect(row.mdx).toBe("Words\n\n<Unclosed");
-			expect(row.doc).toBeNull();
+			expect(row.doc).toMatchObject({ content: [{ type: "unparsed", attrs: { source: "Words\n\n<Unclosed" } }] });
 		});
 	});
 
@@ -284,15 +291,21 @@ describe("stored documents", () => {
 			expect(exported?.published?.doc).toEqual(doc);
 		});
 
-		it("a stored value that is not a document reads as no document", async () => {
+		it("a stored value that is not a document reads as an unparsed body of the MDX column", async () => {
 			const draft = await createDraft({ mdx: TIDY });
 			await pool.query(`UPDATE "${schemaName}".entry_bodies SET doc = $1::jsonb WHERE entry_id = $2`, [
 				JSON.stringify({ type: "doc", version: 99, content: [] }),
 				draft.id,
 			]);
 
-			expect((await store.getEntry(draft.id)).working.doc).toBeNull();
-			expect((await store.getWorking({ entryId: draft.id })).doc).toBeNull();
+			for (const doc of [
+				(await store.getEntry(draft.id)).working.doc,
+				(await store.getWorking({ entryId: draft.id })).doc,
+			]) {
+				expect(doc.content).toEqual([
+					expect.objectContaining({ type: "unparsed", attrs: { format: "mdx", source: TIDY } }),
+				]);
+			}
 		});
 
 		it("the public read returns the stored document, and a list returns it only with the body", async () => {
@@ -325,7 +338,9 @@ describe("stored documents", () => {
 
 			const row = await expectConsistent(translation.id, "working");
 			expect(row.doc).not.toBeNull();
-			expect(translation.working.translation?.baseSource).toBe((await stored(source.id, "working")).mdx);
+			expect(translation.working.translation?.baseDoc).toEqual(
+				readStoredDocument((await stored(source.id, "working")).doc),
+			);
 		});
 	});
 });

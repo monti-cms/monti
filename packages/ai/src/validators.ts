@@ -79,8 +79,8 @@ export const sameStructure = (input: string) =>
 		run: async (value, context) => {
 			const source = context.input[input];
 			if (typeof source !== "string") return true;
-			const { compareStructure } = await import("@monti-cms/core/client");
-			const verdict = compareStructure(source, value);
+			const { compareMdxStructure } = await import("@monti-cms/core/client");
+			const verdict = compareMdxStructure(source, value);
 			return verdict.ok ? true : verdict.reason;
 		},
 	});

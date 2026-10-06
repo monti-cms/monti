@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../test/any-site";
-import { bodyFromMdx } from "../../mdx/stored-document";
+import { contentOf, docOf, mdxOf } from "../../../test/stored-content";
 import type { HookSource, WriteHookContext } from "../hooks";
 import { type PreparedSnapshot, ServiceError, type ServiceInput } from "../types";
 import { createWritePipeline, type WriteRequest } from "../write-pipeline";
@@ -91,19 +91,18 @@ describe("write pipeline", () => {
 			owner: "server",
 			hooks: { transform: ({ metadata, doc }) => ({ metadata: { ...metadata, title: "Changed" }, doc }) },
 		}).run(request({ input: input({ title: "Title" }, mdx) }));
-		expect(withHook.snapshot.mdx).toBe(plain.snapshot.mdx);
+		// Each preparation draws its own block ids; what the body says is the same.
+		expect(contentOf(withHook.snapshot.doc)).toEqual(contentOf(plain.snapshot.doc));
 		expect(withHook.snapshot.metadata.title).toBe("Changed");
 	});
 
 	it("prepares a body a transform replaced, as a document", async () => {
-		const replacement = bodyFromMdx("Replaced\n").doc;
-		expect(replacement).not.toBeNull();
+		const replacement = docOf("Replaced\n");
 		const { snapshot } = await pipelineWith({
 			owner: "server",
 			hooks: { transform: ({ metadata }) => ({ metadata, doc: replacement }) },
 		}).run(request());
-		expect(snapshot.mdx).toContain("Replaced");
-		expect(snapshot.doc).not.toBeNull();
+		expect(mdxOf(snapshot.doc)).toContain("Replaced");
 	});
 
 	it("rejects what core preparation rejects, whatever a transform returns", async () => {

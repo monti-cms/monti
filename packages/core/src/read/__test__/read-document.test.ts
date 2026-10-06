@@ -197,19 +197,19 @@ describe("cms.read returns the document", () => {
 		expect(stillPublished.entry.refs).toEqual({ media: {} });
 	});
 
-	it("a draft that has no document previews without one", async () => {
+	it("a draft that could not become a document previews as an unparsed body, with no references", async () => {
 		const unparsed = await seedEntry(store, {
 			collection: contentCollection,
 			slug: "doc-unparsed",
 			metadata: { title: "Unparsed" },
 			mdx: "---\ntitle: front matter\n---\n\nBody",
-			doc: null,
 		});
 
 		const preview = await cms.read.getPreview({ collection: contentCollection, slug: "doc-unparsed" });
 
-		expect(unparsed.working.doc).toBeNull();
-		expect(preview).toMatchObject({ doc: null, refs: { media: {} } });
+		expect(unparsed.working.doc.content).toEqual([expect.objectContaining({ type: "unparsed" })]);
+		expect(preview).toMatchObject({ refs: { media: {} } });
+		expect(preview?.doc?.content[0]).toMatchObject({ type: "unparsed", attrs: { format: "mdx" } });
 		expect(preview?.mdx).toContain("Body");
 	});
 });

@@ -142,8 +142,8 @@ export const createContentService = <T = unknown>(
 					collection: source.collection,
 					slug: source.slug,
 					metadata: {},
-					mdx: withTranslationHints(source.mdx),
-					translation: confirmedSourceState(source.mdx, source.doc),
+					doc: withTranslationHints(source.doc),
+					translation: confirmedSourceState(source.doc),
 				} as ServiceInput,
 			});
 			const entry = await storePort.createEntryWithReferences({
@@ -172,7 +172,7 @@ export const createContentService = <T = unknown>(
 			const { snapshot, warnings } = await pipeline.run({
 				operation: "duplicate",
 				locale: source.locale ?? DEFAULT_LOCALE,
-				input: { collection: source.collection, slug: null, metadata, mdx: source.mdx } as ServiceInput,
+				input: { collection: source.collection, slug: null, metadata, doc: source.doc } as ServiceInput,
 				// The copy is a new entry, but the values of fields the schema no longer has go with it, as they do in the original.
 				prepare: { previousDoc: source.doc, previousMetadata: source.metadata },
 			});
@@ -205,7 +205,7 @@ export const createContentService = <T = unknown>(
 					collection: working.collection,
 					slug: working.slug,
 					metadata: working.metadata,
-					mdx: working.mdx,
+					doc: working.doc,
 				} as ServiceInput,
 				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
 			});
@@ -249,7 +249,7 @@ export const createContentService = <T = unknown>(
 					collection: working.collection,
 					slug: working.slug,
 					metadata: working.metadata,
-					mdx: working.mdx,
+					doc: working.doc,
 				} as ServiceInput,
 				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
 				skipTransform: true,

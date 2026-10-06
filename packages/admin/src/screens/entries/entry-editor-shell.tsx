@@ -66,7 +66,7 @@ import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { ConflictInfo, RecoveryOffer, SaveStatus } from "./entry-editor-store";
-import { formText, isTranslationEntry } from "./entry-form";
+import { editableDoc, formText, isTranslationEntry } from "./entry-form";
 import { InspectorPanel } from "./inspector-panel";
 import { LanguageTabs } from "./language-tabs";
 import {
@@ -351,7 +351,6 @@ export function EntryEditorShell({
 	const translationSource = translation?.source ?? null;
 	/** The source the translator last confirmed. If it differs from the current source, "source changed" is shown. */
 	const confirmed = translation?.confirmed;
-	const confirmedSource = confirmed?.baseSource ?? "";
 	const sourceChanged = translation?.sourceChanged ?? false;
 
 	useSourceSync({
@@ -436,11 +435,11 @@ export function EntryEditorShell({
 			setPendingFieldPath("title-canvas");
 			return;
 		}
-		if (issue.position || issue.path === "mdx" || issue.path === "frontmatter") {
+		if (issue.position || issue.path === "body" || issue.path === "frontmatter") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
 			// In the visual editor, go to the block the issue is in (found by its id); otherwise to the line in source mode.
 			if (editorMode !== "source" && issue.position?.blockId && revealBlock(issue.position.blockId)) return;
-			setPendingBodyPosition(issue.position ?? { line: 1, column: 1 });
+			setPendingBodyPosition(issue.position?.line !== undefined ? issue.position : { line: 1, column: 1 });
 			setEditorMode("source");
 			return;
 		}
@@ -455,8 +454,8 @@ export function EntryEditorShell({
 		const textarea = document.getElementById("cms-mdx-source") as HTMLTextAreaElement | null;
 		if (!textarea) return;
 		const lines = form.mdx.split("\n");
-		const offset = lines.slice(0, pendingBodyPosition.line - 1).reduce((sum, line) => sum + line.length + 1, 0);
-		const index = Math.min(form.mdx.length, offset + pendingBodyPosition.column - 1);
+		const offset = lines.slice(0, (pendingBodyPosition.line ?? 1) - 1).reduce((sum, line) => sum + line.length + 1, 0);
+		const index = Math.min(form.mdx.length, offset + (pendingBodyPosition.column ?? 1) - 1);
 		textarea.focus();
 		textarea.setSelectionRange(index, index);
 		setPendingBodyPosition(undefined);
@@ -662,7 +661,7 @@ export function EntryEditorShell({
 
 	const statusLabel = entry ? describeEntryStatus(entry) : t("newEntry");
 	const canRetry = ["failed", "local-only", "session-expired"].includes(saveStatus);
-	const bodyIssue = publishIssues.find((issue) => issue.path === "mdx" || Boolean(issue.position));
+	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
 	const titleIssue = publishIssues.find((issue) => issue.path === "title");
 	const languageTabs =
 		entry && !isItemCollection(collection) ? (
@@ -1032,7 +1031,7 @@ export function EntryEditorShell({
 							}
 							sourceView={editorMode === "source" ? sourceEditor : undefined}
 							editable={!isReadOnly}
-							stored={entry ? { mdx: entry.working.mdx, doc: entry.working.doc ?? null } : undefined}
+							stored={entry ? { mdx: entry.working.mdx, doc: editableDoc(entry.working.doc) ?? null } : undefined}
 							onChange={(mdx, doc) => editor.setBody(mdx, doc)}
 							blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
 							selectionActions={extensions.selectionActions}
@@ -1096,10 +1095,8 @@ export function EntryEditorShell({
 					<SourceChangeDialog
 						open={isSourceCompareOpen}
 						onOpenChange={setIsSourceCompareOpen}
-						before={confirmedSource}
-						after={translationSource.mdx}
-						beforeDoc={confirmed?.baseDoc ?? null}
-						afterDoc={translationSource.doc}
+						before={confirmed?.baseDoc}
+						after={translationSource.doc}
 					/>
 				)}
 			</div>

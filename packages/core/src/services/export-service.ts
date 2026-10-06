@@ -171,7 +171,7 @@ const entryDigest = (
 const bodyFile = (
 	entry: ExportSnapshotEntry,
 	state: "working" | "published",
-): { json: string; mdx: string; doc: string | null } => {
+): { json: string; mdx: string; doc: string } => {
 	const body = state === "working" ? entry.working : entry.published;
 	if (!body) throw new Error(`Entry ${entry.id} has no ${state} body`);
 	return {
@@ -194,8 +194,7 @@ const bodyFile = (
 			folderId: entry.folderId,
 		})}\n`,
 		mdx: body.mdx,
-		// A body that does not parse (or has front matter) has no document and no file for it.
-		doc: body.doc ? `${canonicalJson(body.doc)}\n` : null,
+		doc: `${canonicalJson(body.doc)}\n`,
 	};
 };
 
@@ -211,7 +210,7 @@ const publicEntry = (entry: ExportSnapshotEntry): PublicExportEntry | null => {
 		updatedAt: iso(entry.published.updatedAt) ?? iso(entry.updatedAt) ?? "",
 		metadata: pickPublicMetadata(entry.collection, entry.published.metadata),
 		mdx: entry.published.mdx,
-		doc: entry.published.doc ?? null,
+		doc: entry.published.doc,
 		schemaVersion: entry.published.schemaVersion,
 		contentHash: entry.published.contentHash,
 	});
@@ -252,20 +251,16 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			files.push({ path: `${base}/working.json`, data: new TextEncoder().encode(working.json) });
 			files.push({ path: `${base}/working.mdx`, data: new TextEncoder().encode(working.mdx) });
 			entryFiles.push(`${base}/working.json`, `${base}/working.mdx`);
-			if (working.doc !== null) {
-				files.push({ path: `${base}/working.doc.json`, data: new TextEncoder().encode(working.doc) });
-				entryFiles.push(`${base}/working.doc.json`);
-			}
+			files.push({ path: `${base}/working.doc.json`, data: new TextEncoder().encode(working.doc) });
+			entryFiles.push(`${base}/working.doc.json`);
 
 			if (entry.published) {
 				const published = bodyFile(entry, "published");
 				files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(published.json) });
 				files.push({ path: `${base}/published.mdx`, data: new TextEncoder().encode(published.mdx) });
 				entryFiles.push(`${base}/published.json`, `${base}/published.mdx`);
-				if (published.doc !== null) {
-					files.push({ path: `${base}/published.doc.json`, data: new TextEncoder().encode(published.doc) });
-					entryFiles.push(`${base}/published.doc.json`);
-				}
+				files.push({ path: `${base}/published.doc.json`, data: new TextEncoder().encode(published.doc) });
+				entryFiles.push(`${base}/published.doc.json`);
 			}
 
 			const references = snapshot.references

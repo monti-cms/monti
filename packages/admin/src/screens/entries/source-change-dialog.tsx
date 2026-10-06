@@ -1,6 +1,7 @@
 "use client";
 
 import { diffSources, type SourceChange, type StoredDocument } from "@monti-cms/core/client";
+import { fromStoredDocument, serialize } from "@monti-cms/core/mdx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { MdxPreview } from "./source-pane";
 import { t } from "./translate";
@@ -24,11 +25,15 @@ const headerText = (source: string) => {
 	return source;
 };
 
-function UnitView({ unit }: { unit: { kind: string; source: string } }) {
+/** The block of a unit as MDX, for the preview. */
+const unitMdx = (node: StoredDocument["content"][number]) =>
+	serialize(fromStoredDocument({ type: "doc", version: 2, content: [node] })).trimEnd();
+
+function UnitView({ unit }: { unit: { kind: string; source: string; node: StoredDocument["content"][number] } }) {
 	return unit.kind === "header" ? (
 		<p className="text-sm">{headerText(unit.source)}</p>
 	) : (
-		<MdxPreview mdx={unit.source} />
+		<MdxPreview mdx={unitMdx(unit.node)} />
 	);
 }
 
@@ -65,18 +70,14 @@ export function SourceChangeDialog({
 	onOpenChange,
 	before,
 	after,
-	beforeDoc,
-	afterDoc,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	before: string;
-	after: string;
-	/** The stored documents of both versions. With both, blocks are compared by block id and moves are shown. */
-	beforeDoc?: StoredDocument | null;
-	afterDoc?: StoredDocument | null;
+	/** The stored documents of both versions. Blocks are compared by block id, and moves are shown. */
+	before: StoredDocument | undefined;
+	after: StoredDocument;
 }) {
-	const changes = open ? diffSources(before, after, { before: beforeDoc, after: afterDoc }) : null;
+	const changes = open && before ? diffSources(before, after) : null;
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">

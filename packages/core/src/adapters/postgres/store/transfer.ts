@@ -7,6 +7,7 @@ import type {
 	JsonObject,
 } from "../../../core/store/types";
 import type { TranslationState } from "../../../core/translation/state";
+import { readReferenceOccurrences } from "../../../core/types";
 import { type StoreContext, withTransaction } from "./context";
 import {
 	type FolderRow,
@@ -15,7 +16,7 @@ import {
 	mapFolderRow,
 	mapMediaRow,
 	mapTemplateRow,
-	readDoc,
+	readBodyDoc,
 	readTranslation,
 	TEMPLATE_COLUMNS,
 	type TemplateRow,
@@ -113,7 +114,7 @@ export function createTransferOps(ctx: StoreContext) {
 						const body: ExportSnapshotBody = {
 							metadata: row.metadata,
 							mdx: row.mdx,
-							doc: readDoc(row.doc),
+							doc: readBodyDoc(row.doc, row.mdx),
 							schemaVersion: row.schema_version,
 							contentHash: row.content_hash,
 							updatedAt: row.updated_at,
@@ -155,7 +156,7 @@ export function createTransferOps(ctx: StoreContext) {
 							kind: row.kind,
 							targetId: row.target_id,
 							isStale: row.is_stale,
-							occurrences: row.occurrences,
+							occurrences: readReferenceOccurrences(row.occurrences),
 						})),
 						folders: foldersRes.rows.map(mapFolderRow),
 						addresses: addressesRes.rows.map((row) => ({

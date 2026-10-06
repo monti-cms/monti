@@ -33,14 +33,14 @@ export interface WriteHookContext {
 	/** Content locale of the entry. */
 	readonly locale: string;
 	readonly metadata: { readonly [key: string]: unknown };
-	/** The body as a stored document. `null` when the body does not parse as one (only a draft can be like that). */
-	readonly doc: StoredDocument | null;
+	/** The body as a stored document (one `unparsed` node when the body could not become a document, which only a draft can be). */
+	readonly doc: StoredDocument;
 }
 
 /** The data a `transform` receives and returns. */
 export interface WriteData {
 	readonly metadata: { readonly [key: string]: unknown };
-	readonly doc: StoredDocument | null;
+	readonly doc: StoredDocument;
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import { bodyText, SEARCH_TEXT } from "../../../core/body-text";
+import { documentText, SEARCH_TEXT } from "../../../core/body-text";
 import { CmsError } from "../../../core/store/errors";
 import type {
 	BodyTemplate,
@@ -11,22 +11,28 @@ import type {
 	PublishedEntryRecord,
 } from "../../../core/store/types";
 import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
-import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
-import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
+import { normalizeReferenceKind, type Reference, readReferenceOccurrences } from "../../../core/types";
+import { documentToMdx, readStoredDocument, type StoredDocument, unparsedDocument } from "../../../mdx/stored-document";
 import type { Queryable } from "./context";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
 
 /**
- * Plain text for body search, taken from the parsed body (so it follows the site's syntax): the text of paragraphs, headings, lists, tables and block bodies,
+ * Plain text for body search, taken from the stored document: the text of paragraphs, headings, lists, tables and block bodies,
  * the text attributes of blocks (a callout title, an image's alt text and caption), code and math as written, and the text of translation notes. Links keep their label, not their address.
  */
-export function extractVisibleText(mdx: string): string {
-	return bodyText(mdx, SEARCH_TEXT);
+export function extractVisibleText(doc: StoredDocument): string {
+	return documentText(doc, SEARCH_TEXT);
 }
 
 /** A stored document read from a `jsonb` column. A value that is not a stored document of a known version reads as `null`. */
 export const readDoc = (value: unknown): StoredDocument | null => readStoredDocument(value) ?? null;
+
+/**
+ * The document of a stored body. A body whose `doc` column is empty or unreadable (a row older than stored documents) reads as the document
+ * of one `unparsed` node holding its `mdx` column, so every body a store hands out is a document.
+ */
+export const readBodyDoc = (value: unknown, mdx: string): StoredDocument => readDoc(value) ?? unparsedDocument(mdx);
 
 /** A translation state read from a `jsonb` column. A version 2 state (no document) is lifted to version 3. */
 export const readTranslation = (value: unknown): TranslationState | null =>
@@ -35,8 +41,7 @@ export const readTranslation = (value: unknown): TranslationState | null =>
 export interface BodyRow {
 	content_hash: string;
 	mdx: string;
-	/** The stored document `mdx` is written from. `null` when the body does not parse (or has front matter). */
-	doc: StoredDocument | null;
+	doc: StoredDocument;
 	schema_version: number;
 	metadata: EntryMetadata;
 	updated_at: Date;
@@ -48,7 +53,8 @@ export interface ReferenceRow {
 	kind: string;
 	target_id: string;
 	is_stale: boolean;
-	occurrences: readonly ReferenceOccurrence[];
+	/** As stored: a body occurrence may still be in the old shape (`{type:"mdx", line, column}`). */
+	occurrences: unknown;
 }
 
 export interface AddressRow {
@@ -80,7 +86,7 @@ export const mapReferenceRow = (row: ReferenceRow): Reference => ({
 	kind: normalizeReferenceKind(row.kind),
 	targetId: row.target_id,
 	isStale: row.is_stale,
-	occurrences: row.occurrences,
+	occurrences: readReferenceOccurrences(row.occurrences),
 });
 
 export function mapPublishedEntryRow(row: {
@@ -103,7 +109,7 @@ export function mapPublishedEntryRow(row: {
 		slug: row.slug,
 		metadata: row.metadata,
 		mdx: row.mdx,
-		doc: readDoc(row.doc),
+		doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc, row.mdx),
 		publishedAt: row.published_at,
 		updatedAt: row.body_updated_at,
 	};
@@ -182,7 +188,7 @@ export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 	id: row.id,
 	name: row.name,
 	mdx: row.mdx,
-	doc: readDoc(row.doc),
+	doc: readBodyDoc(row.doc, row.mdx),
 	version: row.version,
 	createdAt: row.created_at,
 	updatedAt: row.updated_at,
@@ -243,10 +249,10 @@ export async function readBody(
 		[entryId, state],
 	);
 	const row = res.rows[0];
-	return row && { ...row, doc: readDoc(row.doc), translation: readTranslation(row.translation) };
+	return row && { ...row, doc: readBodyDoc(row.doc, row.mdx), translation: readTranslation(row.translation) };
 }
 
-/** Writes the working/published body. Also updates the plain text used for search. `doc` is the stored document `mdx` is written from (`null` when the body has none). */
+/** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is written from `doc`. */
 export async function writeBody(
 	client: PoolClient,
 	qSchema: string,
@@ -254,8 +260,7 @@ export async function writeBody(
 	state: "working" | "published",
 	body: {
 		metadata: EntryMetadata;
-		mdx: string;
-		doc: StoredDocument | null;
+		doc: StoredDocument;
 		schemaVersion: number;
 		contentHash: string;
 		updatedAt: Date;
@@ -274,12 +279,12 @@ export async function writeBody(
 			entryId,
 			state,
 			JSON.stringify(body.metadata),
-			body.mdx,
-			body.doc === null ? null : JSON.stringify(body.doc),
+			documentToMdx(body.doc),
+			JSON.stringify(body.doc),
 			body.schemaVersion,
 			body.contentHash,
 			body.updatedAt,
-			extractVisibleText(body.mdx),
+			extractVisibleText(body.doc),
 			body.translation === null ? null : JSON.stringify(body.translation),
 		],
 	);
@@ -333,7 +338,7 @@ export async function loadEntry(client: Queryable, id: string, qSchema: string):
 		const body: EntryBody = {
 			metadata: row.metadata,
 			mdx: row.mdx,
-			doc: readDoc(row.doc),
+			doc: readBodyDoc(row.doc, row.mdx),
 			schemaVersion: row.schema_version,
 			contentHash: row.content_hash,
 			updatedAt: row.body_updated_at,

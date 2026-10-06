@@ -19,6 +19,7 @@ export * from "./core/plain-text";
 export * from "./core/slug";
 export * from "./core/time";
 export * from "./core/translation/hints";
+export * from "./core/translation/mdx-check";
 export * from "./core/translation/skeleton";
 export * from "./core/translation/source-diff";
 export * from "./core/translation/state";

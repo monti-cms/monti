@@ -1,5 +1,7 @@
-import { analyze, type CmsMark, type CmsNode, serialize, toDocument } from "../../mdx";
+import { withoutBlockIds } from "../../mdx/block-ids";
 import { sortMarks } from "../../mdx/registry";
+import type { StoredDocument } from "../../mdx/stored-document";
+import type { CmsMark, CmsNode } from "../../mdx/types";
 
 const HINT: CmsMark = { type: "untranslated" };
 
@@ -14,12 +16,13 @@ const hint = (node: CmsNode): CmsNode => {
 };
 
 /**
- * Body of a new translation: keeps the source structure (headings, paragraphs, boxes, lists, tables) as is and wraps text
- * in translation hint markers (`<Untranslated>source text</Untranslated>`). The editor shows the hint text dimmed and removes it on typing.
- * Things that are not text nodes, such as code, images, math and box titles, are copied from the source unchanged. If the source cannot be parsed, it is returned unchanged.
+ * Body of a new translation: keeps the source structure (headings, paragraphs, boxes, lists, tables) as is and gives its text the translation
+ * hint mark (`untranslated`). The editor shows the hint text dimmed and removes it on typing.
+ * Things that are not text nodes, such as code, images, math and box titles, are copied from the source unchanged. The blocks of a translation
+ * are its own, so the result carries no block ids. A source that is not a document (an `unparsed` body) is returned as it is.
  */
-export function withTranslationHints(sourceMdx: string): string {
-	const analysis = analyze(sourceMdx);
-	if (analysis.errors.length > 0) return sourceMdx;
-	return serialize(hint(toDocument(analysis)));
+export function withTranslationHints(source: StoredDocument): StoredDocument {
+	if (source.content.some((node) => node.type === "unparsed"))
+		return { ...source, content: withoutBlockIds(source.content) };
+	return { ...source, content: withoutBlockIds(source.content.map(hint)) };
 }

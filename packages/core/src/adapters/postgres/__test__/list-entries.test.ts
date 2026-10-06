@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { docOf } from "../../../../test/stored-content";
 import { type Collection, isItemCollection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { CmsError } from "../../../core/store";
@@ -61,7 +62,7 @@ interface ExtendedContentStore {
 			collection: string;
 			slug: string | null;
 			metadata: Record<string, unknown>;
-			mdx: string;
+			doc: unknown;
 			schemaVersion: number;
 			contentHash: string;
 			references: unknown[];
@@ -482,7 +483,7 @@ describe("listEntries in Postgres", () => {
 					collection: content,
 					slug: "d1-ref",
 					metadata: { [single.name]: "cat-meta", [many.name]: ["tag-meta1", "tag-meta2"] },
-					mdx: "body",
+					doc: docOf("body"),
 					schemaVersion: 1,
 					contentHash: randomBytes(16).toString("hex"),
 					references: [],

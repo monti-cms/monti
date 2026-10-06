@@ -1,21 +1,21 @@
-import type { SyntaxExtension } from "../syntax/types";
-import { bodyText, EXCERPT_TEXT } from "./body-text";
+import type { StoredDocument } from "../mdx/stored-document";
+import { documentText, EXCERPT_TEXT } from "./body-text";
 
 /**
- * Readable plain text of an MDX body. Used for filling fields from the body (`fillFromBody`).
- * It is taken from the parsed body, so it works for any notation the site reads (`mdx.syntax`): the text of paragraphs, headings, list items, table cells and the bodies of
+ * Readable plain text of a stored document. Used for filling fields from the body (`fillFromBody`).
+ * It is taken from the document, so it works for any notation the body was written in: the text of paragraphs, headings, list items, table cells and the bodies of
  * blocks, and the text attributes of blocks (a callout title). Code, math, images and the text a reader does not see are left out.
  */
-export function toPlainText(mdx: string, syntax?: readonly SyntaxExtension[]): string {
-	return bodyText(mdx, EXCERPT_TEXT, syntax);
+export function toPlainText(doc: StoredDocument): string {
+	return documentText(doc, EXCERPT_TEXT);
 }
 
 /**
  * Leading plain text of the body (up to `maxLength` characters, with `…` appended if longer). Used when filling an empty field from the body (`fillFromBody`).
  * Empty string if there is no text to produce.
  */
-export function bodyExcerpt(mdx: string, maxLength = 160, syntax?: readonly SyntaxExtension[]): string {
-	const text = toPlainText(mdx, syntax);
+export function bodyExcerpt(doc: StoredDocument, maxLength = 160): string {
+	const text = toPlainText(doc);
 	const chars = Array.from(text);
 	if (chars.length <= maxLength) return text;
 	return `${chars

@@ -8,12 +8,15 @@ import {
 	storedToTiptap,
 	tiptapToMdx,
 } from "@monti-cms/admin/editor";
-import { withTranslationHints } from "@monti-cms/core/client";
-import { bodyFromMdx } from "@monti-cms/core/mdx";
+import { withTranslationHints as hintDocument } from "@monti-cms/core/client";
+import { bodyDocument, bodyFromMdx, documentToMdx } from "@monti-cms/core/mdx";
 import { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
 import { applyTranslation, collectUnits, sourceMdxFromJson, unitAt } from "../ai-translate-units";
+
+/** The source MDX with translation hints: the source is read as a document, hinted, and written back. */
+const withTranslationHints = (source: string) => documentToMdx(hintDocument(bodyDocument(bodyFromMdx(source))));
 
 let editor: Editor | null = null;
 afterEach(() => {

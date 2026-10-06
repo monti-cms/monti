@@ -1,8 +1,8 @@
 import type { SyntaxExtension } from "../syntax/types";
 import { analyze } from "./analyze";
-import { assignBlockIds, copyBlockIds, withoutBlockIds } from "./block-ids";
+import { assignBlockIds, copyBlockIds, forEachBlock, withoutBlockIds } from "./block-ids";
 import { attributeRecord } from "./jsx";
-import { BLOCK_JSX_NAMES } from "./registry";
+import { BLOCK_JSX_NAMES, sortMarks } from "./registry";
 import { serialize } from "./serialize";
 import { storedCodeBlockAttrs, workingCodeBlockAttrs } from "./stored-code-block";
 import { configuredSyntax, syntaxBlocks } from "./syntax";
@@ -58,6 +58,7 @@ const CORE_NODE_TYPES = new Set([
 	"mdxEsm",
 	"mdxExpression",
 	"mdxJsx",
+	"unparsed",
 	"text",
 	"hardBreak",
 ]);
@@ -322,9 +323,78 @@ export const bodyFromMdx = (
 	return { mdx: written, doc, analysis: rewritten };
 };
 
+/** Text runs of one parent as a reader of the MDX would see them: empty text dropped, neighbours with the same marks joined, marks in their stored order. */
+const canonicalInline = (content: readonly CmsNode[]): CmsNode[] => {
+	const out: CmsNode[] = [];
+	for (const item of content) {
+		if (item.text === undefined) {
+			out.push(canonicalNode(item));
+			continue;
+		}
+		if (item.text.length === 0) continue;
+		const marks = item.marks && item.marks.length > 0 ? sortMarks(item.marks) : undefined;
+		const previous = out.at(-1);
+		if (previous?.text !== undefined && JSON.stringify(previous.marks ?? null) === JSON.stringify(marks ?? null)) {
+			out[out.length - 1] = { ...previous, text: previous.text + item.text };
+			continue;
+		}
+		out.push(node("text", undefined, undefined, marks, item.text));
+	}
+	return out;
+};
+
+const canonicalNode = (item: CmsNode): CmsNode =>
+	item.content ? { ...item, content: canonicalInline(item.content) } : item;
+
 /**
- * A body from a stored document: its MDX is written with the site's syntax and read back, so the result is the same as from that MDX.
- * The block ids of `doc` are kept (a block without one, or with a copy of another's, gets one as `bodyFromMdx` would).
+ * The form a document is stored in whichever way it was made (a client, an API request, a hook): trailing blank paragraphs dropped, text runs
+ * normalised (see `canonicalInline`). A document read from MDX is already in it, so the same body hashes the same from either source.
+ */
+export const canonicalDocument = (doc: StoredDocument): StoredDocument => {
+	const content = canonicalInline(doc.content);
+	while (content.length > 0 && isBlankParagraph(content[content.length - 1] as CmsNode)) content.pop();
+	return { content, type: "doc", version: doc.version };
+};
+
+/** Node type of a body that could not become a document (see `unparsedDocument`). */
+export const UNPARSED_NODE = "unparsed";
+
+/**
+ * The document of a body that could not be read as one (it does not parse, has front matter, or would not read back the same): a single `unparsed`
+ * node that keeps the text as it was given. A draft can hold it and the editor shows it as it is; `unparsed_body` blocks publishing it.
+ */
+export const unparsedDocument = (source: string, previous?: StoredDocument | null, format = "mdx"): StoredDocument => {
+	const node: CmsNode = { attrs: { format, source }, type: UNPARSED_NODE };
+	return { content: assignBlockIds([node], [previous?.content]), type: "doc", version: STORED_DOCUMENT_VERSION };
+};
+
+/** Whether a document holds a body that could not be read (an `unparsed` node anywhere in its blocks). */
+export const isUnparsedDocument = (doc: StoredDocument): boolean => {
+	let found = false;
+	forEachBlock(doc.content, (block) => {
+		if (block.type === UNPARSED_NODE) found = true;
+	});
+	return found;
+};
+
+/** The document of a body read from MDX: its parsed document, or an `unparsed` node holding the text when it has none. */
+export const bodyDocument = (body: Body, previous?: StoredDocument | null): StoredDocument =>
+	body.doc ?? unparsedDocument(body.mdx, previous);
+
+/**
+ * The MDX a document is written as (the `mdx` column, until the MDX package is split out): the site's syntax over the document,
+ * and for a body that could not be read, the text it was given, exactly.
+ */
+export const documentToMdx = (doc: StoredDocument, syntax: readonly SyntaxExtension[] = configuredSyntax()): string => {
+	const only = doc.content.length === 1 ? doc.content[0] : undefined;
+	if (only?.type === UNPARSED_NODE && typeof only.attrs?.source === "string") return only.attrs.source;
+	return serialize(fromStoredDocument(doc), syntax);
+};
+
+/**
+ * A body from a stored document, through the MDX it is written as: written with the site's syntax and read back, so the result is the same as from that MDX.
+ * The block ids of `doc` are kept (a block without one, or with a copy of another's, gets one as `bodyFromMdx` would). Used where the MDX text has to be
+ * derived from a document (store migrations and `content:rewrite`); the write path keeps the document as given.
  */
 export const bodyFromDocument = (
 	doc: StoredDocument,

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { CmsError } from "../../../core/store/errors";
 import type { BodyTemplate } from "../../../core/store/types";
-import { bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
+import { bodyDocument, bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
 import { type StoreContext, withTransaction } from "./context";
 import { isUniqueViolation } from "./errors";
-import { mapTemplateRow, readDoc, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";
+import { mapTemplateRow, readBodyDoc, readDoc, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";
 
 const mapTemplateError = (err: unknown) =>
 	isUniqueViolation(err, ["body_templates_name_idx", "body_templates_pkey"])
@@ -12,12 +12,12 @@ const mapTemplateError = (err: unknown) =>
 		: err;
 
 /**
- * A template body as it is stored: written from its document when it parses (normalized), as given otherwise.
+ * A template body as it is stored: its document (one `unparsed` node when the text cannot be read as a document) and the MDX written from it.
  * Its blocks keep the ids of `previous`, the body it replaces, where they pair up.
  */
 const storedTemplateBody = (mdx: string, previous?: StoredDocument | null) => {
-	const { mdx: written, doc } = bodyFromMdx(mdx, undefined, { previous });
-	return { mdx: written, doc: doc === null ? null : JSON.stringify(doc) };
+	const body = bodyFromMdx(mdx, undefined, { previous });
+	return { mdx: body.mdx, doc: JSON.stringify(bodyDocument(body, previous)) };
 };
 
 /**
@@ -83,7 +83,7 @@ export function createTemplateOps(ctx: StoreContext) {
 					// A name-only update keeps the stored body as it is.
 					const body =
 						params.mdx === undefined
-							? { mdx: cur.mdx, doc: cur.doc === null ? null : JSON.stringify(cur.doc) }
+							? { mdx: cur.mdx, doc: JSON.stringify(readBodyDoc(cur.doc, cur.mdx)) }
 							: storedTemplateBody(params.mdx, readDoc(cur.doc));
 					const res = await client.query<TemplateRow>(
 						`UPDATE "${qSchema}".body_templates

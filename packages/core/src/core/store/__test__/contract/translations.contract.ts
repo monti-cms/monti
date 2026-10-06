@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, defaultLocale, requiredMetadata, secondLocale } from "../../../../../test/any-site";
+import { contentOf, docOf } from "../../../../../test/stored-content";
 import { commonFieldKeys, recordLocalizedFields, storedFields } from "../../../../schema/derive";
 import type { ContentStore, Entry } from "../..";
 import { duplicateDraft, publishDraft, restoreDraft, seedEntry } from "../seed";
@@ -54,11 +55,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(source.working.mdx).toBe("한국어 본문\n");
 				// ... together with its document, whose block ids pair the source's blocks across versions.
 				expect(source.working.doc).not.toBeNull();
-				expect(translation.working.translation).toEqual({
-					version: 3,
-					baseSource: source.working.mdx,
-					baseDoc: source.working.doc,
-				});
+				expect(translation.working.translation).toEqual({ version: 4, baseDoc: source.working.doc });
 				expect((await store.getEntry(translation.id)).working.translation).toEqual(translation.working.translation);
 				expect(source.working.translation ?? null).toBeNull();
 
@@ -204,7 +201,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				await expect(
 					service.saveDraft(source.id, {
 						...base,
-						translation: { version: 3, baseSource: "", baseDoc: null },
+						translation: { version: 3, baseSource: "", baseDoc: null } as never,
 						expectedVersion: source.version,
 					}),
 				).rejects.toMatchObject({ code: "invalid_input" });
@@ -236,11 +233,12 @@ export const translationsContract: ContractSuite = (factory) => {
 					slug: "state-source",
 					metadata: { title: "Only the title" },
 					mdx: "",
-					translation: { version: 3, baseSource: "바뀐 기준", baseDoc: null },
+					translation: { version: 4, baseDoc: docOf("바뀐 기준") },
 					expectedVersion: saved.version,
 				});
 				expect(ignored.version).toBe(saved.version + 1);
-				expect(ignored.working.translation).toEqual({ version: 3, baseSource: "바뀐 기준", baseDoc: null });
+				expect(ignored.working.translation).toMatchObject({ version: 4 });
+				expect(contentOf(ignored.working.translation?.baseDoc)).toEqual(contentOf(docOf("바뀐 기준")));
 			});
 
 			it("keeps slugs separate per language", async () => {

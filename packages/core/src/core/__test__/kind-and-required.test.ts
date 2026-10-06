@@ -35,6 +35,7 @@ const { COLLECTION_DEFINITIONS, DOCUMENT_COLLECTIONS, isDocumentCollection, isIt
 	"../collections"
 );
 const { validateForPublish } = await import("../snapshot");
+const { docOf } = await import("../../../test/stored-content");
 const { missingRequiredIssues, schemaOf, storedField } = await import("../../schema/derive");
 const { fillFromBodyLength } = await import("../../schema/fields");
 
@@ -46,7 +47,7 @@ const snapshot = (collection: string, patch: object = {}) =>
 		collection,
 		slug: "a",
 		metadata: { title: "T" },
-		mdx: "",
+		doc: { type: "doc", version: 2, content: [] },
 		schemaVersion: 1,
 		contentHash: "h",
 		references: [],
@@ -85,10 +86,13 @@ describe("empty body check", () => {
 
 	it("a different target collection is `invalid_reference_collection` even for relations that allow unpublished targets", () => {
 		const target = "123e4567-e89b-12d3-a456-426614174001";
-		const result = validateForPublish(snapshot("note", { mdx: "본문", metadata: { title: "T", pageId: target } }), {
-			targets: [{ id: target, isPublished: false, collection: "note" }],
-			media: [],
-		});
+		const result = validateForPublish(
+			snapshot("note", { doc: docOf("본문"), metadata: { title: "T", pageId: target } }),
+			{
+				targets: [{ id: target, isPublished: false, collection: "note" }],
+				media: [],
+			},
+		);
 		expect(result.issues.map((issue) => issue.code)).toEqual(["invalid_reference_collection"]);
 	});
 });

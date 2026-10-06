@@ -1,7 +1,7 @@
 import type { BlockAttribute, BlockDefinition } from "@monti-cms/core";
 import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "@monti-cms/core/client";
 import { analyze } from "@monti-cms/core/mdx";
-import { computeContentHash } from "@monti-cms/core/runtime";
+import { mdxContentHash } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import { mdxWith } from "../../test/mdx-syntax";
 import { directiveSyntax } from "..";
@@ -15,9 +15,9 @@ const readOnly = [directiveSyntax({ write: false })];
 const { write, writeTwice } = mdxWith(readOnly);
 
 const metadata = { title: "A" };
-const hashBefore = (mdx: string) => computeContentHash(metadata, mdx, 1, analyze(mdx, undefined, readOnly));
+const hashBefore = (mdx: string) => mdxContentHash(metadata, mdx, 1, readOnly);
 /** The written body is read with no extension at all: it is standard MDX. */
-const hashAfter = (mdx: string) => computeContentHash(metadata, mdx, 1);
+const hashAfter = (mdx: string) => mdxContentHash(metadata, mdx, 1);
 
 const DIRECTIVE_NOTATION = /^:{2,}[a-z]|[^\\]:[a-z-]+\[/m;
 

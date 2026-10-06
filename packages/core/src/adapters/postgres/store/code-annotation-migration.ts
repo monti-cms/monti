@@ -1,9 +1,9 @@
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
-import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
 import { bodyFromDocument, bodyFromMdx } from "../../../mdx/stored-document";
-import { extractVisibleText, readDoc } from "./rows";
+import { mdxContentHash, mdxSearchText } from "./mdx-body";
+import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -103,8 +103,8 @@ export async function migrateCodeAnnotations(
 		const changed = res.rows.flatMap((row) => {
 			const where = `entry_bodies ${row.entry_id}/${row.state}`;
 			const body = rewritten(row.mdx, row.doc, where, log);
-			const contentHash = computeContentHash(row.metadata, body.mdx, row.schema_version);
-			const searchText = extractVisibleText(body.mdx);
+			const contentHash = mdxContentHash(row.metadata, body.mdx, row.schema_version);
+			const searchText = mdxSearchText(body.mdx);
 			const translation = translationAfter(row, where, log);
 			const docChanged = body.doc !== null && !isDeepStrictEqual(body.doc.stored, row.doc);
 			if (

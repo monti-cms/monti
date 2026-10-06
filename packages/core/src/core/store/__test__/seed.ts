@@ -1,4 +1,4 @@
-import type { StoredDocument } from "../../../mdx/stored-document";
+import { bodyDocument, bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import type { PreparedSnapshot } from "../../types";
 import type { ContentStore, Entry } from "..";
@@ -12,9 +12,9 @@ type SeedInput = {
 	collection: string;
 	slug: string | null;
 	metadata: unknown;
+	/** The body as text: stored as the document it reads as (an `unparsed` body when it cannot be read) unless `doc` is given. */
 	mdx: string;
-	/** The stored document of the body. Raw bodies carry none unless one is given. */
-	doc?: StoredDocument | null;
+	doc?: StoredDocument;
 	schemaVersion?: number;
 	contentHash?: string;
 	folderId?: string | null;
@@ -26,9 +26,7 @@ const rawSnapshot = (input: Omit<SeedInput, "folderId" | "locale">): PreparedSna
 		collection: input.collection,
 		slug: input.slug,
 		metadata: input.metadata,
-		mdx: input.mdx,
-		// Raw bodies carry no document unless one is given: they are stored as given.
-		doc: input.doc ?? null,
+		doc: input.doc ?? bodyDocument(bodyFromMdx(input.mdx)),
 		schemaVersion: input.schemaVersion ?? 1,
 		contentHash: input.contentHash ?? `seed-${Math.random().toString(36).slice(2)}`,
 		references: [],

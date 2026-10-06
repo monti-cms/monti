@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { docOf } from "../../../test/stored-content";
 import { ADDED_BLOCKS } from "../../blocks/active";
-import { bodyText, SEARCH_TEXT } from "../body-text";
+import { documentText, SEARCH_TEXT } from "../body-text";
 import { bodyExcerpt, toPlainText } from "../plain-text";
+
+/** The text of a body written as MDX: of the document a write stores for it (an `unparsed` body when it cannot be read). */
+const plain = (mdx: string) => toPlainText(docOf(mdx));
+const excerpt = (mdx: string, maxLength?: number) => bodyExcerpt(docOf(mdx), maxLength);
 
 /** A container block with a translatable text attribute (a callout's title) and a value for that attribute; the site's blocks are looked up, not named. */
 const titled = (() => {
@@ -36,39 +41,39 @@ describe("body plain text and automatic summary", () => {
 			"| --- | --- |",
 			"| 셀 | 값 |",
 		].join("\n");
-		expect(toPlainText(mdx)).toBe("개요 굵은 문장과 링크, 밑줄 표현. 할 일 머리 칸 셀 값");
+		expect(plain(mdx)).toBe("개요 굵은 문장과 링크, 밑줄 표현. 할 일 머리 칸 셀 값");
 	});
 
 	it("reads the text of a block body and of the text attributes the block definition marks translatable", () => {
 		if (!titled) return;
 		const { component, attribute } = titled;
 		const mdx = `앞 문장.\n\n<${component} ${attribute}="상자 제목">\n\n상자 안 문장\n\n</${component}>\n\n뒷 문장.`;
-		expect(toPlainText(mdx)).toBe("앞 문장. 상자 제목 상자 안 문장 뒷 문장.");
+		expect(plain(mdx)).toBe("앞 문장. 상자 제목 상자 안 문장 뒷 문장.");
 	});
 
 	it("keeps a word that emphasis splits as one word, and sets apart the words of different blocks", () => {
-		expect(toPlainText("한**글**\n\n다음")).toBe("한글 다음");
-		expect(toPlainText("# 제목\n본문")).toBe("제목 본문");
-		expect(toPlainText("- 하나\n- 둘")).toBe("하나 둘");
+		expect(plain("한**글**\n\n다음")).toBe("한글 다음");
+		expect(plain("# 제목\n본문")).toBe("제목 본문");
+		expect(plain("- 하나\n- 둘")).toBe("하나 둘");
 	});
 
 	it("leaves out text the page does not show", () => {
-		expect(toPlainText("공개 <Untranslated>번역 안내</Untranslated> 문장")).toBe("공개 문장");
+		expect(plain("공개 <Untranslated>번역 안내</Untranslated> 문장")).toBe("공개 문장");
 	});
 
 	it("truncates long text and returns empty for bodies without prose", () => {
-		expect(Array.from(bodyExcerpt("가".repeat(300), 10))).toHaveLength(10);
-		expect(bodyExcerpt("```js\nonly();\n```")).toBe("");
-		expect(bodyExcerpt("")).toBe("");
+		expect(Array.from(excerpt("가".repeat(300), 10))).toHaveLength(10);
+		expect(excerpt("```js\nonly();\n```")).toBe("");
+		expect(excerpt("")).toBe("");
 	});
 
 	it("still gives text for a body that does not parse", () => {
-		expect(toPlainText("끝나지 않은 <Box> 문장")).toContain("문장");
+		expect(plain("끝나지 않은 <Box> 문장")).toContain("문장");
 	});
 });
 
 describe("body search text", () => {
-	const search = (mdx: string) => bodyText(mdx, SEARCH_TEXT);
+	const search = (mdx: string) => documentText(docOf(mdx), SEARCH_TEXT);
 
 	it("is the plain words for plain Markdown, in one line", () => {
 		expect(search("second words")).toBe("second words");
@@ -128,7 +133,7 @@ describe("body search text", () => {
 		if (decoration && attribute) {
 			const mdx = `앞 <${decoration.component} ${attribute}="숨은 설명">글자</${decoration.component}> 뒤`;
 			expect(search(mdx)).toBe("앞 글자 숨은 설명 뒤");
-			expect(toPlainText(mdx)).toBe("앞 글자 뒤");
+			expect(plain(mdx)).toBe("앞 글자 뒤");
 		}
 	});
 

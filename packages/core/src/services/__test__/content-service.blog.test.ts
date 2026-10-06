@@ -26,7 +26,7 @@ describe("ContentService Contract (blog config)", () => {
 		expect(snap.contentHash).toBe("6e29aef176a7373f4c2bad69f73e5f77f2302a7285b94d0e6ee0a9ce6ebbe14d");
 	});
 
-	it("extracts only supported prose links and keeps source positions", async () => {
+	it("extracts only supported prose links and keeps the block of each", async () => {
 		const snapshot = await prepareSnapshot({
 			collection: "memo",
 			slug: "memo",
@@ -45,17 +45,17 @@ describe("ContentService Contract (blog config)", () => {
 			expect.objectContaining({
 				collection: "post",
 				slug: "draft-post",
-				position: { line: 1, column: 1, blockId: expect.any(String) },
+				position: { blockId: expect.any(String) },
 			}),
 			expect.objectContaining({
 				collection: "memo",
 				slug: "xxx-equal",
-				position: { line: 2, column: 1, blockId: expect.any(String) },
+				position: { blockId: expect.any(String) },
 			}),
 			expect.objectContaining({
 				collection: "post",
 				slug: "old slug",
-				position: { line: 3, column: 1, blockId: expect.any(String) },
+				position: { blockId: expect.any(String) },
 			}),
 		]);
 	});

@@ -1,6 +1,5 @@
 import { analyze } from "@monti-cms/core/mdx";
-import { computeContentHash } from "@monti-cms/core/runtime";
-import { readSamples } from "@monti-cms/core/testing";
+import { mdxContentHash, readSamples } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import { mdxWith } from "../../test/mdx-syntax";
 import { directiveSyntax } from "..";
@@ -9,9 +8,9 @@ import { directiveSyntax } from "..";
 const readOnly = [directiveSyntax({ write: false })];
 const { write } = mdxWith(readOnly);
 const metadata = { title: "A" };
-const hashBefore = (mdx: string) => computeContentHash(metadata, mdx, 1, analyze(mdx, undefined, readOnly));
+const hashBefore = (mdx: string) => mdxContentHash(metadata, mdx, 1, readOnly);
 /** The written body is read with no extension at all: it is standard MDX. */
-const hashAfter = (mdx: string) => computeContentHash(metadata, mdx, 1);
+const hashAfter = (mdx: string) => mdxContentHash(metadata, mdx, 1);
 
 describe("migrating real posts to standard MDX", () => {
 	it("real posts keep their content hash", () => {
