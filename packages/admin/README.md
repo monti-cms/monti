@@ -226,12 +226,24 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | `/next` | Admin layout and page (exported from the app route) |
 | `/editor` | Editor extension helpers (bubble, slash menu, code block linking) |
 | `/blocks` | Block edit screen helpers |
+| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`), and `EditorResult` / `EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
 | `/media` | Media picker and preview |
 | `/api` | Calling the admin API (`cmsFetch`) |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles |
+
+### Editor hooks (experimental)
+
+`@monti-cms/admin/hooks` is experimental and may change in a minor release until the installed components have used it.
+Its hooks return state and results only: they never show a toast, open a confirm dialog or navigate, so a site can draw its own UI on them.
+The default admin UI is built on the same hooks. Commands return an `EditorResult` (`{ ok: true, value }` or `{ ok: false, error }`) instead of throwing
+for expected failures, and `EditorError.code` (`conflict`, `session_expired`, `offline`, `validation`, `invalid_state`, ...) is what to branch on.
+
+`useSlotActions(request)` gives the actions attached to one screen slot with their run state (`idle`, `asking`, `running`, `done`, `error`),
+`run`, `cancel` and `apply`. Run state is shared by every hook instance with the same slot, target, collection and scope,
+and it survives the component unmounting. `useSlot` (`@monti-cms/admin/slots`) is the default button and panel on top of it.
 
 ## Styles
 

@@ -10,6 +10,7 @@
 		"./next": "./src/next/index.tsx",
 		"./editor": "./src/editor/public.ts",
 		"./blocks": "./src/editor/blocks/public.ts",
+		"./hooks": "./src/hooks/public.ts",
 		"./plugins": "./src/plugins.ts",
 		"./media": "./src/media.ts",
 		"./slots": "./src/slots/slots.tsx",
@@ -44,7 +45,8 @@
 		"react-day-picker": "^10.0.1",
 		"server-only": "^0.0.1",
 		"shiki": "^3.21.0",
-		"tailwind-merge": "^3.4.0"
+		"tailwind-merge": "^3.4.0",
+		"zustand": "^5.0.15"
 	},
 	"peerDependencies": {
 		"@monti-cms/core": "workspace:^",
@@ -105,6 +107,10 @@
 			"./blocks": {
 				"types": "./dist/editor/blocks/public.d.ts",
 				"default": "./dist/editor/blocks/public.js"
+			},
+			"./hooks": {
+				"types": "./dist/hooks/public.d.ts",
+				"default": "./dist/hooks/public.js"
 			},
 			"./plugins": {
 				"types": "./dist/plugins.d.ts",
