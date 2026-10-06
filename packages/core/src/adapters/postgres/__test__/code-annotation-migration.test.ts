@@ -14,11 +14,11 @@ import {
 	type StoredDocument,
 } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateCodeAnnotations } from "../store/code-annotation-migration";
 import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { migrateForEarlierSteps, templateMdx } from "./template-rows";
+import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0015_code_annotations";
@@ -79,7 +79,7 @@ describe("0015_code_annotations", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});
@@ -170,7 +170,7 @@ describe("0015_code_annotations", () => {
 
 	const run = async () => {
 		await rewind();
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 	};
 
 	const hasUnpublishedChanges = async (entryId: string) => {

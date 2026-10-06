@@ -7,11 +7,11 @@ import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { mdxContentHash } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateSoftBreaks } from "../store/soft-break-migration";
-import { migrateForEarlierSteps, templateMdx } from "./template-rows";
+import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -31,7 +31,7 @@ describe("document shape migrations", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});
@@ -129,7 +129,7 @@ describe("document shape migrations", () => {
 			await setWorkingBody(edited.id, "첫 줄<br />\n다른 줄");
 
 			await rewindTo(STEP);
-			await migrateForEarlierSteps(pool, schemaName);
+			await migrateContentStore(pool, { schema: schemaName });
 
 			expect(await staleHashes()).toEqual([]);
 			expect(await hasUnpublishedChanges(same.id)).toBe(false);
@@ -141,7 +141,7 @@ describe("document shape migrations", () => {
 			const published = await publishedWith("첫 줄<br />\n둘째 줄");
 			await rewindTo(STEP);
 
-			await migrateForEarlierSteps(pool, schemaName);
+			await migrateContentStore(pool, { schema: schemaName });
 
 			const after = await store.getEntry(published.id);
 			expect(after.version).toBe(published.version);
@@ -172,7 +172,7 @@ describe("document shape migrations", () => {
 
 		const run = async () => {
 			await rewindTo(STEP);
-			await migrateForEarlierSteps(pool, schemaName);
+			await migrateContentStore(pool, { schema: schemaName });
 		};
 
 		it("is a recorded migration step that runs after the hash step and before the template seed", () => {

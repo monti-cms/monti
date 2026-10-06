@@ -9,10 +9,9 @@ import { publishDraft } from "../../../core/store/__test__/seed";
 import { forEachBlock, isBlockId } from "../../../mdx/block-ids";
 import { bodyFromMdx, readStoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { mdxContentHash } from "../store/mdx-body";
 import { rewriteContent } from "../store/rewrite";
-import { migrateForEarlierSteps } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -40,7 +39,7 @@ describe("content rewrite", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});

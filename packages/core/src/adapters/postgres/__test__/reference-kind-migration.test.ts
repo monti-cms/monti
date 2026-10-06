@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createContentStore } from "../content-store";
-import { migrateForEarlierSteps } from "./template-rows";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -15,7 +14,7 @@ describe("entry_references kind migration", () => {
 
 	beforeAll(async () => {
 		({ pool, schemaName } = await createIsolatedTestPool());
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 	});
 
 	afterAll(async () => {
@@ -103,7 +102,7 @@ describe("entry_references kind migration", () => {
 
 		// A legacy store has no step record (this step has not run yet).
 		await forgetSteps();
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		const read = async () =>
 			(
 				await pool.query<{ state: string; kind: string; target_id: string; is_stale: boolean; occurrences: unknown }>(
@@ -142,9 +141,9 @@ describe("entry_references kind migration", () => {
 		);
 
 		// Running it repeatedly gives the same result (even when it runs again because there is no step record).
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		await forgetSteps();
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		expect(await read()).toEqual(after);
 		expect(await constraintDefs()).toEqual(defs);
 	});

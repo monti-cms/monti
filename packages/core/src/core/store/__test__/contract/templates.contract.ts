@@ -1,9 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentOf, docOf } from "../../../../../test/stored-content";
-import { forEachBlock, isBlockId } from "../../../../mdx/block-ids";
-import { emptyStoredDocument, STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../../mdx/stored-document";
+import { forEachBlock, isBlockId, withoutBlockIds } from "../../../../mdx/block-ids";
+import {
+	emptyStoredDocument,
+	STORED_DOCUMENT_VERSION,
+	type StoredDocument,
+	unparsedDocument,
+} from "../../../../mdx/stored-document";
 import type { ContentStore } from "../..";
 import type { ContractSuite, StoreSession } from "./harness";
+
+/** A document as a text read gives it: no block ids, so the store pairs its blocks with the body it replaces. */
+const withoutIds = (doc: StoredDocument): StoredDocument => ({ ...doc, content: withoutBlockIds(doc.content) });
 
 /** Contract of TemplateStore. */
 export const templatesContract: ContractSuite = (factory) => {
@@ -55,7 +63,7 @@ export const templatesContract: ContractSuite = (factory) => {
 			const updated = await store.updateTemplate({
 				id: created.id,
 				expectedVersion: created.version,
-				doc: docOf("First\n\nSecond, edited\n\nThird\n"),
+				doc: withoutIds(docOf("First\n\nSecond, edited\n\nThird\n")),
 			});
 			expect(updated.doc.content[0]?.id).toBe(first?.id);
 			expect(updated.doc.content[1]?.id).toBe(second?.id);

@@ -8,10 +8,10 @@ import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import { unparsedDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateUnparsedBodies } from "../store/unparsed-migration";
-import { migrateForEarlierSteps, templateMdx } from "./template-rows";
+import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0017_unparsed_bodies";
@@ -34,7 +34,7 @@ describe("0017_unparsed_bodies", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});
@@ -135,7 +135,7 @@ describe("0017_unparsed_bodies", () => {
 		const before = await row(draft.id, "working");
 
 		await forgetStep();
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 
 		const after = await row(draft.id, "working");
 		const doc = after?.doc as { content: { type: string; attrs: { format: string; source: string }; id: string }[] };

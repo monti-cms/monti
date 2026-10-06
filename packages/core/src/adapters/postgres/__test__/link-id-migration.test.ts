@@ -11,10 +11,10 @@ import { entryLinkIds } from "../../../mdx/entry-links";
 import { readStoredDocument, STORED_DOCUMENT_VERSION } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createWritePipeline } from "../../../services/write-pipeline";
-import { createContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateLinkEntryIds } from "../store/link-id-migration";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { migrateForEarlierSteps, templateMdx } from "./template-rows";
+import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0018_link_entry_ids";
@@ -38,7 +38,7 @@ describe("0018_link_entry_ids", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store, { pipeline: createWritePipeline() });
 	});
@@ -150,7 +150,7 @@ describe("0018_link_entry_ids", () => {
 		const before = await row(source.id, "working");
 
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = $1`, [STEP]);
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 
 		for (const state of ["working", "published"] as const) {
 			const after = await row(source.id, state);

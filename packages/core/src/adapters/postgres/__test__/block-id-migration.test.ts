@@ -11,7 +11,6 @@ import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateBlockIds } from "../store/block-id-migration";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { migrateForEarlierSteps } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0014_block_ids";
@@ -37,7 +36,7 @@ describe("0014_block_ids", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});

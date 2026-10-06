@@ -120,7 +120,8 @@ export const translationsContract: ContractSuite = (factory) => {
 						collection: contentCollection,
 						slug: "common-source",
 						metadata: { title: "English", [commonKey as string]: source.working.metadata[commonKey as string] },
-						mdx: "Body",
+						format: "mdx",
+						body: "Body",
 						expectedVersion: translation.version,
 					} as never),
 				).rejects.toMatchObject({ code: "invalid_input" });
@@ -303,7 +304,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "group-list-source",
 					metadata: { title: "Grouped English title" },
-					mdx: "Body",
+					format: "mdx",
+					body: "Body",
 					expectedVersion: translation.version,
 				} as never);
 				// A trashed translation counts neither toward the group row nor toward the "existing languages".
@@ -393,7 +395,8 @@ export const translationsContract: ContractSuite = (factory) => {
 								...(thirdLocale ? { [thirdLocale]: { [field]: "" } } : {}),
 							},
 						},
-						mdx: "",
+						format: "mdx",
+						body: "",
 					} as never);
 					expect(record.working.metadata.translations).toEqual({ [second]: { [field]: "Essay" } });
 					await expect(
@@ -401,7 +404,8 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: localizedRecord,
 							slug: "bad-locale",
 							metadata: { ...metadata, translations: { [defaultLocale]: { [field]: "x" } } },
-							mdx: "",
+							format: "mdx",
+							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_value" });
 					await expect(
@@ -409,7 +413,8 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: localizedRecord,
 							slug: "bad-field",
 							metadata: { ...metadata, translations: { [second]: { [commonField]: "x" } } },
-							mdx: "",
+							format: "mdx",
+							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_key" });
 					await expect(
@@ -417,7 +422,8 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: contentCollection,
 							slug: "post-translations",
 							metadata: { title: "x", translations: { [second]: { title: "x" } } },
-							mdx: "",
+							format: "mdx",
+							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_key" });
 				},

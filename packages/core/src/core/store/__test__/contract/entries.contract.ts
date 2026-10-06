@@ -951,7 +951,8 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: unique("create"),
 					metadata: { ...(await requiredMetadata(contentCollection, "Create", relationTarget)), titel: "typo" },
-					mdx: "Body",
+					format: "mdx",
+					body: "Body",
 				} as never),
 			).rejects.toMatchObject({ code: "invalid_metadata_key" });
 
@@ -961,7 +962,8 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: draft.workingSlug,
 					metadata: { ...draft.working.metadata, titel: "typo" },
-					mdx: "Body",
+					format: "mdx",
+					body: "Body",
 					expectedVersion: draft.version,
 				} as never),
 			).rejects.toMatchObject({ code: "invalid_metadata_key" });
@@ -974,7 +976,8 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: draft.workingSlug,
 				metadata: { ...draft.working.metadata, title: "Renamed" },
-				mdx: "Body",
+				format: "mdx",
+				body: "Body",
 				expectedVersion: draft.version,
 			} as never);
 			expect(saved.working.metadata).toMatchObject({
@@ -992,7 +995,8 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: draft.workingSlug,
 				metadata: draft.working.metadata,
-				mdx: "Body changed",
+				format: "mdx",
+				body: "Body changed",
 				expectedVersion: draft.version,
 			} as never);
 			expect(saved.working.metadata[name]).toBe(UNKNOWN_OPTION);
@@ -1009,7 +1013,13 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			const working = await store.getWorking({ entryId: draft.id });
 			const warnings = await imageWarningsForSnapshot(
 				await prepareSnapshot(
-					{ collection: working.collection, slug: working.slug, metadata: working.metadata, mdx: working.mdx } as never,
+					{
+						collection: working.collection,
+						slug: working.slug,
+						metadata: working.metadata,
+						format: "mdx",
+						body: working.mdx,
+					} as never,
 					{ previousMetadata: working.metadata },
 				),
 				{ getMediaAsset: async () => null },
@@ -1081,7 +1091,8 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 						collection: contentCollection,
 						slug: source.workingSlug,
 						metadata,
-						mdx: "Body",
+						format: "mdx",
+						body: "Body",
 						expectedVersion: translation.version,
 					}) as never;
 				const saved = await service.saveDraft(translation.id, input({ title: "Retitled", [ORPHAN]: "left behind" }));
@@ -1621,7 +1632,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				collection: contentCollection,
 				slug: unique("post"),
 				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-				...body,
+				...("mdx" in body ? { format: "mdx", body: body.mdx } : body),
 			} as never);
 
 		const save = (entry: Entry, body: { mdx: string } | { doc: unknown }) =>
@@ -1630,7 +1641,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				slug: entry.workingSlug,
 				metadata: entry.working.metadata as never,
 				expectedVersion: entry.version,
-				...body,
+				...("mdx" in body ? { format: "mdx", body: body.mdx } : body),
 			} as never);
 
 		const publish = (entry: Entry) => publishDraft(store, { id: entry.id, expectedVersion: entry.version });
@@ -1872,7 +1883,9 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				const updated = await store.updateTemplate({
 					id: template.id,
 					expectedVersion: template.version,
-					doc: docFromMdx(BODY.replace("Second paragraph", "Second paragraph, reworded")),
+					doc: (({ content, ...rest }) => ({ ...rest, content: withoutBlockIds(content) }))(
+						docFromMdx(BODY.replace("Second paragraph", "Second paragraph, reworded")),
+					),
 				});
 
 				expect(idList(updated.doc)).toEqual(idList(template.doc));

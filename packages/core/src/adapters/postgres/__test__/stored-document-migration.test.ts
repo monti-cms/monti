@@ -8,11 +8,11 @@ import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateStoredDocuments } from "../store/stored-document-migration";
-import { migrateForEarlierSteps, templateMdx } from "./template-rows";
+import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0013_stored_documents";
@@ -39,7 +39,7 @@ describe("0013_stored_documents", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});
@@ -137,7 +137,7 @@ describe("0013_stored_documents", () => {
 
 	const run = async (options: { dropColumns?: boolean } = {}) => {
 		await rewind(options);
-		await migrateForEarlierSteps(pool, schemaName);
+		await migrateContentStore(pool, { schema: schemaName });
 	};
 
 	const hasUnpublishedChanges = async (entryId: string) => {
