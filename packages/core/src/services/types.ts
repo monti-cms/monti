@@ -1,4 +1,4 @@
-import type { PreparedSnapshot, Reference, WorkingCopy } from "../core/types";
+import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../core/types";
 
 export * from "../core/types";
 
@@ -6,6 +6,13 @@ export * from "../core/types";
 export interface StorePort<T = unknown> {
 	getWorkingReferences(params: { entryId: string }): Promise<Reference[]>;
 	getWorking(params: { entryId: string }): Promise<WorkingCopy>;
+	/**
+	 * The entries the addresses of internal body links (`/posts/slug`, default language) point to, as translation group ids. The write pipeline turns a
+	 * link by address into a link by id with it. Without it, links keep their address.
+	 */
+	resolveLinkTargets?(params: {
+		addresses: readonly { collection: string; slug: string; locale?: string }[];
+	}): Promise<{ collection: string; slug: string; locale: string; entryId: string }[]>;
 	archiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	unarchiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	trashEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
@@ -15,6 +22,8 @@ export interface StorePort<T = unknown> {
 		expectedVersion: number;
 		snapshot: PreparedSnapshot;
 		resetPublishedAt?: boolean;
+		/** Receives the notices the checks against locked rows found (a link to an entry that is not published). They never block. */
+		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<{ version: number }>;
 
 	createEntryWithReferences(params: {
@@ -33,6 +42,7 @@ export interface StorePort<T = unknown> {
 		folderId?: string | null;
 		publishImmediately?: boolean;
 		resetPublishedAt?: boolean;
+		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<T>;
 }
 

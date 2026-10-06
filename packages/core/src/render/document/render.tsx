@@ -2,6 +2,7 @@ import { type ComponentType, createElement, Fragment, type ReactNode } from "rea
 import { ADDED_BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
 import { BLOCK_BY_NAME, fenceBlockOf, TEXT_ALIGN_VALUES } from "../../blocks/derive";
+import { entryIdOfMark } from "../../mdx/entry-links";
 import { type ImageResolveResult, resolveImageUrl } from "../../mdx/image-src";
 import { sortMarks } from "../../mdx/registry";
 import {
@@ -148,10 +149,21 @@ export const renderDocumentTree = (
 	const applyMark = (mark: CmsMark, children: ReactNode, node: CmsNode): ReactNode => {
 		const type = mark.type;
 		if (type === "link") {
-			const href = resolveLinkHref(mark.attrs?.href);
+			const entryId = entryIdOfMark(mark);
+			// An entry link has no address of its own: it is read from the refs of the read. One that is not there (the target is not published, or is gone)
+			// has no `href`, and the default component draws it as plain text.
+			const entry = entryId ? options.refs?.links[entryId] : undefined;
+			const href = resolveLinkHref(entryId ? entry?.path : mark.attrs?.href);
 			const title = typeof mark.attrs?.title === "string" && mark.attrs.title ? mark.attrs.title : undefined;
 			const external = typeof href === "string" && /^https?:\/\//.test(href);
-			return createElement(components.marks.link as AnyComponent, { href, title, external, children, ctx });
+			return createElement(components.marks.link as AnyComponent, {
+				href,
+				title,
+				external,
+				...(entryId ? { entryId, entry } : {}),
+				children,
+				ctx,
+			});
 		}
 		// A core mark has a component of its own (`bold`, `underline`, `untranslated`), whatever blocks the site defines.
 		if (CORE_MARKS.has(type)) return createElement(components.marks[type] as AnyComponent, { children, ctx });

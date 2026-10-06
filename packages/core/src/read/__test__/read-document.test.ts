@@ -132,7 +132,7 @@ describe("cms.read returns the document", () => {
 		await publish("doc-plain", "Just text");
 		const plain = await cms.read.getEntry({ collection: contentCollection, slug: "doc-plain" });
 		if (plain.status !== "found") throw new Error("not found");
-		expect(plain.entry.refs).toEqual({ media: {} });
+		expect(plain.entry.refs).toEqual({ media: {}, links: {} });
 		expect(plain.entry.doc).not.toBeNull();
 	});
 
@@ -157,7 +157,7 @@ describe("cms.read returns the document", () => {
 		const bare = await cms.read.listEntries({ collection: contentCollection, pageSize: 100 });
 		for (const item of bare.items) {
 			expect(item.doc).toBeNull();
-			expect(item.refs).toEqual({ media: {} });
+			expect(item.refs).toEqual({ media: {}, links: {} });
 		}
 
 		const full = await cms.read.listEntries({ collection: contentCollection, pageSize: 100, body: true });
@@ -194,7 +194,7 @@ describe("cms.read returns the document", () => {
 		const stillPublished = await cms.read.getEntry({ collection: contentCollection, slug: "doc-preview" });
 		if (stillPublished.status !== "found") throw new Error("not found");
 		expect(JSON.stringify(stillPublished.entry.doc)).toContain("Published text");
-		expect(stillPublished.entry.refs).toEqual({ media: {} });
+		expect(stillPublished.entry.refs).toEqual({ media: {}, links: {} });
 	});
 
 	it("a draft that could not become a document previews as an unparsed body, with no references", async () => {

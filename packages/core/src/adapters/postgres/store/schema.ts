@@ -6,6 +6,7 @@ import { migrateBlockIds } from "./block-id-migration";
 import { migrateCodeAnnotations } from "./code-annotation-migration";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
+import { migrateLinkEntryIds } from "./link-id-migration";
 import { migrateSoftBreaks } from "./soft-break-migration";
 import { migrateStoredDocuments } from "./stored-document-migration";
 import { migrateUnparsedBodies } from "./unparsed-migration";
@@ -369,6 +370,18 @@ const STEPS: readonly MigrationStep[] = [
 		 * because of such a body: the data of an existing store always migrates.
 		 */
 		run: (client, qSchema) => migrateUnparsedBodies(client, qSchema),
+	},
+	{
+		name: "0018_link_entry_ids",
+		/**
+		 * An internal link of a stored document is the id of the entry it points to (`entryId`, the translation group id; document version 3), not the address it was
+		 * written with. Resolves every internal `href` of the working and published bodies, of the document a translation was confirmed against and of the body
+		 * templates through the slug addresses, recomputes `content_hash`, writes `mdx` from the new documents and rebuilds the body references (`kind: 'entry'`).
+		 * A link that resolves to nothing stays as it is and is logged. `version`, `updated_at` and block ids are kept.
+		 */
+		run: async (client, qSchema) => {
+			await migrateLinkEntryIds(client, qSchema);
+		},
 	},
 	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.

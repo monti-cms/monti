@@ -6,6 +6,7 @@ import { BLOCK_NODES } from "./block-views";
 import { ADDED_BLOCK_NODES } from "./blocks/added";
 import { CodeTextStyleKeys } from "./code-block/text-style-keys";
 import { CmsBlockDrag } from "./drag";
+import { CmsLinkEntryId } from "./link-entry-id";
 import { CMS_SCHEMA_EXTENSIONS } from "./tiptap-schema";
 
 /**
@@ -22,6 +23,7 @@ export function buildEditorExtensions(marks: Readonly<Record<string, EditorMarkS
 			codeBlock: false,
 			link: { openOnClick: false },
 		}),
+		CmsLinkEntryId,
 		...CMS_SCHEMA_EXTENSIONS,
 		...Object.values(BLOCK_NODES),
 		// Blocks added by block extensions or site config (`editor.view: "node"`).

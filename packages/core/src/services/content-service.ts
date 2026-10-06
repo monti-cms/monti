@@ -14,7 +14,7 @@ import {
 	type ServiceInput,
 	type StorePort,
 } from "./types";
-import { createWritePipeline, type WritePipeline } from "./write-pipeline";
+import { createWritePipeline, linkResolverOf, type WritePipeline } from "./write-pipeline";
 
 // Snapshot rules live in the domain layer (`core/snapshot`). Re-exported to keep the existing import path.
 export { imageWarningsForSnapshot, prepareSnapshot, validateForPublish } from "../core/snapshot";
@@ -56,7 +56,7 @@ export const createContentService = <T = unknown>(
 	storePort: StorePort<T> & Partial<RestorePort<NoInfer<T>>>,
 	options: ContentServiceOptions = {},
 ) => {
-	const pipeline = options.pipeline ?? createWritePipeline({ hooks: options.hooks });
+	const pipeline = options.pipeline ?? createWritePipeline({ hooks: options.hooks, links: linkResolverOf(storePort) });
 
 	return {
 		/**
@@ -210,7 +210,9 @@ export const createContentService = <T = unknown>(
 				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
 			});
 			const noticed = options?.extraWarnings ? await options.extraWarnings(snapshot) : (snapshot.warnings ?? []);
-			const all = [...noticed, ...warnings];
+			// Notices found while the targets are locked (a link to an entry that is not published) join the ones found before the transaction.
+			const locked: Issue[] = [];
+			const onWarnings = (found: readonly Issue[]) => locked.push(...found);
 			const entry = transformed
 				? await storePort.saveWorkingWithReferences({
 						entryId: params.id,
@@ -219,14 +221,16 @@ export const createContentService = <T = unknown>(
 						references: snapshot.references,
 						publishImmediately: true,
 						resetPublishedAt: params.resetPublishedAt,
+						onWarnings,
 					})
 				: ((await storePort.publishEntry({
 						id: params.id,
 						expectedVersion: params.expectedVersion,
 						snapshot,
 						resetPublishedAt: params.resetPublishedAt,
+						onWarnings,
 					})) as T);
-			return { entry, warnings: all };
+			return { entry, warnings: [...noticed, ...locked, ...warnings] };
 		},
 
 		/**

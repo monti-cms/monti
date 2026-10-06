@@ -4,6 +4,7 @@ import { cmsConfig } from "../../config/resolved";
 import { schemaOf } from "../../schema/derive";
 import { COLLECTIONS } from "../collections";
 import { contentPath, LINKABLE_COLLECTIONS, parseContentPath, parseInternalLink, previewHref } from "../links";
+import { localizePath } from "../locales";
 
 /**
  * Internal body link rules that do not depend on the config. Collections, public paths and the site address are looked up in the current config (`test/any-site.ts`).
@@ -35,6 +36,19 @@ describe("internal body link rules", () => {
 		expect(parseContentPath(pathOf("a/b"))).toBeNull();
 		expect(parseContentPath(`/${recordCollection}-unknown/react`)).toBeNull();
 		expect(parseContentPath(pathOf("%E0%A4%A"))).toBeNull();
+	});
+
+	it("reads the language of a path that has the locale prefix of the site's URLs", () => {
+		for (const locale of [defaultLocale, secondLocale]) {
+			if (!locale) continue;
+			const prefixed = localizePath(locale, pathOf("a"));
+			// Without a prefix there is nothing to read: the default language.
+			expect(parseContentPath(prefixed)).toEqual(
+				prefixed === pathOf("a")
+					? { collection: contentCollection, slug: "a" }
+					: { collection: contentCollection, slug: "a", locale },
+			);
+		}
 	});
 
 	it("only links written as a path or with the site address count as internal links", () => {

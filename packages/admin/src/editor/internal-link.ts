@@ -2,6 +2,7 @@ import { contentPath } from "@monti-cms/core/client";
 import type { Editor, Range } from "@tiptap/core";
 
 export interface InternalLinkItem {
+	/** The id of the source entry (its translation group id). */
 	id: string;
 	collection: string;
 	title: string;
@@ -11,23 +12,18 @@ export interface InternalLinkItem {
 }
 
 /**
- * Internal post link address. Stored as a plain Markdown link `[title](<path built from the collection path and the address>)`; no fixed ID is stored.
- * The address shape is the collection definition's `path`. No broken link is made for a collection without a path or a missing slug.
+ * The address an internal link shows in the editor, built from the collection's `path` and the slug. It is display only: the link is stored as the id of
+ * the entry, so a later rename of the slug changes nothing in the body. `null` for a collection without a path, which cannot be linked to.
  */
 export function internalLinkHref(item: InternalLinkItem): string | null {
 	return contentPath(item.collection, item.slug);
 }
 
-/** MDX storage format. Used by raw-source mode insertion and tests. */
-export function formatContentLinkMdx(item: InternalLinkItem, alias?: string): string {
-	const displayText = alias ? alias.trim() : item.title;
-	const href = internalLinkHref(item);
-	return href ? `[${displayText}](${href})` : displayText;
-}
-
 /**
- * Replaces the `[[query` range with text carrying a link mark. The link text is the title at insertion time and can be freely edited afterward.
- * Inserting the string `[title](address)` as text would be escaped on save and would not become a link.
+ * Replaces the `[[query` range with text carrying a link mark that points to the entry (`entryId`, with the address to show as `href`, which is dropped
+ * on save). The link text is the title at insertion time and can be freely edited afterward. `item.id` is the id of the source entry (the translation
+ * group), so the link follows the reader's language.
+ * A collection without a public path cannot be linked to; the title is inserted as plain text.
  */
 export function insertInternalLink(editor: Editor, range: Range, item: InternalLinkItem): void {
 	const href = internalLinkHref(item);
@@ -38,7 +34,7 @@ export function insertInternalLink(editor: Editor, range: Range, item: InternalL
 	}
 	chain
 		.insertContent([
-			{ type: "text", text: item.title, marks: [{ type: "link", attrs: { href } }] },
+			{ type: "text", text: item.title, marks: [{ type: "link", attrs: { entryId: item.id, href } }] },
 			{ type: "text", text: " " },
 		])
 		.run();

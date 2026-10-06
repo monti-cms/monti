@@ -1,7 +1,7 @@
 "use client";
 
 import { diffSources, type SourceChange, type StoredDocument } from "@monti-cms/core/client";
-import { fromStoredDocument, serialize } from "@monti-cms/core/mdx";
+import { fromStoredDocument, STORED_DOCUMENT_VERSION, serialize } from "@monti-cms/core/mdx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { MdxPreview } from "./source-pane";
 import { t } from "./translate";
@@ -27,7 +27,7 @@ const headerText = (source: string) => {
 
 /** The block of a unit as MDX, for the preview. */
 const unitMdx = (node: StoredDocument["content"][number]) =>
-	serialize(fromStoredDocument({ type: "doc", version: 2, content: [node] })).trimEnd();
+	serialize(fromStoredDocument({ type: "doc", version: STORED_DOCUMENT_VERSION, content: [node] })).trimEnd();
 
 function UnitView({ unit }: { unit: { kind: string; source: string; node: StoredDocument["content"][number] } }) {
 	return unit.kind === "header" ? (

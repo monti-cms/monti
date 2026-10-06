@@ -17,32 +17,6 @@ const read = (file: string) => readFileSync(fileURLToPath(new URL(file, import.m
 
 const service = cms.contentService();
 
-/** Creates a draft with a placeholder body, saves the real body, and publishes it (what the admin does when an editor writes and publishes). */
-async function writeArticle(input: {
-	slug: string;
-	metadata: Record<string, unknown>;
-	mdx: string;
-	publish: boolean;
-}): Promise<{ id: string }> {
-	const created = await service.createDraft({
-		collection: "article",
-		slug: input.slug,
-		metadata: input.metadata,
-		mdx: "Placeholder body.",
-	});
-	const saved = await service.saveDraft(created.id, {
-		collection: "article",
-		slug: input.slug,
-		metadata: input.metadata,
-		mdx: input.mdx,
-		expectedVersion: created.version,
-	});
-	if (!input.publish) return { id: saved.id };
-	const { entry, warnings } = await service.publish({ id: saved.id, expectedVersion: saved.version });
-	for (const warning of warnings) console.warn(`warning (${input.slug}): ${JSON.stringify(warning)}`);
-	return { id: entry.id };
-}
-
 const author = await service.createDraft({
 	collection: "author",
 	slug: "showcase-author",
@@ -57,24 +31,62 @@ const topic = await service.createDraft({
 });
 
 const common = { authorId: author.id, topicIds: [topic.id], format: "guide" };
-const elements = await writeArticle({
-	slug: "cms-elements",
-	metadata: { ...common, title: "CMS elements" },
-	mdx: read("cms-elements.mdx"),
-	publish: true,
-});
-const details = await writeArticle({
-	slug: "cms-elements-details",
-	metadata: { ...common, title: "CMS elements: details" },
-	mdx: read("cms-elements-details.mdx"),
-	publish: true,
-});
-const draft = await writeArticle({
-	slug: "cms-elements-draft",
-	metadata: { ...common, title: "CMS elements: unpublished draft" },
-	mdx: "This draft is not published. It shows as a draft in the admin list and returns 404 on the public site.",
-	publish: false,
-});
+type Article = { slug: string; metadata: Record<string, unknown>; mdx: string; publish: boolean };
+
+const articles: Article[] = [
+	{
+		slug: "cms-elements",
+		metadata: { ...common, title: "CMS elements" },
+		mdx: read("cms-elements.mdx"),
+		publish: true,
+	},
+	{
+		slug: "cms-elements-details",
+		metadata: { ...common, title: "CMS elements: details" },
+		mdx: read("cms-elements-details.mdx"),
+		publish: true,
+	},
+	{
+		slug: "cms-elements-draft",
+		metadata: { ...common, title: "CMS elements: unpublished draft" },
+		mdx: "This draft is not published. It shows as a draft in the admin list and returns 404 on the public site.",
+		publish: false,
+	},
+];
+
+// The articles link to each other, and a link to a page is stored as the id of that page when the body is saved. So every draft is created first,
+// then every body is saved (each link finds its page), and only then are the articles published.
+const created = await Promise.all(
+	articles.map(async (article) => ({
+		article,
+		draft: await service.createDraft({
+			collection: "article",
+			slug: article.slug,
+			metadata: article.metadata,
+			mdx: "Placeholder body.",
+		}),
+	})),
+);
+const saved: { article: Article; id: string; version: number }[] = [];
+for (const { article, draft } of created) {
+	const entry = await service.saveDraft(draft.id, {
+		collection: "article",
+		slug: article.slug,
+		metadata: article.metadata,
+		mdx: article.mdx,
+		expectedVersion: draft.version,
+	});
+	saved.push({ article, id: entry.id, version: entry.version });
+}
+for (const { article, id, version } of saved) {
+	if (!article.publish) continue;
+	const { warnings } = await service.publish({ id, expectedVersion: version });
+	for (const warning of warnings) console.warn(`warning (${article.slug}): ${JSON.stringify(warning)}`);
+}
+const idOf = (slug: string) => saved.find((item) => item.article.slug === slug)?.id ?? "";
+const elements = { id: idOf("cms-elements") };
+const details = { id: idOf("cms-elements-details") };
+const draft = { id: idOf("cms-elements-draft") };
 
 const admin = (id: string) => `${origin}/studio/entries/${id}/edit`;
 console.log("\nPublic pages");

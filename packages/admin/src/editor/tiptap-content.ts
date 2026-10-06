@@ -143,6 +143,12 @@ const toTiptapMarks = (marks: CmsMark[] | undefined): JSONContent["marks"] => {
 		}
 		// isMappableInline has filtered these, so every mark here is native.
 		if (mark.type === "link") {
+			// An internal link is its entry id. The address is not in the document, so the editor has none to show until the link is inserted again.
+			const entryId = asString(mark.attrs?.entryId);
+			if (entryId) {
+				out.push({ type: "link", attrs: { entryId, href: null } });
+				continue;
+			}
 			const href = asString(mark.attrs?.href) ?? "";
 			const title = asString(mark.attrs?.title);
 			out.push(title != null ? { type: "link", attrs: { href, title } } : { type: "link", attrs: { href } });
@@ -301,6 +307,12 @@ const tiptapMarksToCms = (marks: JSONContent["marks"]): CmsMark[] => {
 			continue;
 		}
 		if (mark.type === "link") {
+			// The `href` of an entry link is only what the editor shows (the address of the entry when it was inserted); the document holds the id alone.
+			const entryId = asString(mark.attrs?.entryId);
+			if (entryId) {
+				out.push({ type: "link", attrs: { entryId } });
+				continue;
+			}
 			const href = asString(mark.attrs?.href) ?? "";
 			const title = asString(mark.attrs?.title);
 			out.push(title != null ? { type: "link", attrs: { href, title } } : { type: "link", attrs: { href } });

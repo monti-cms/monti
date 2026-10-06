@@ -23,6 +23,7 @@ import {
 import { checkDocument, isEmptyDocument } from "./body-check";
 import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
 import { computeContentHash, sortKeys } from "./content-hash";
+import { LINKABLE_COLLECTIONS } from "./links";
 import { PREFIXED_LOCALES } from "./locales";
 import { normalizeSlugInput } from "./slug";
 import { parseTranslationState } from "./translation/state";
@@ -333,6 +334,12 @@ export async function prepareSnapshot(
 			}
 		}
 	} else {
+		for (const item of check.entryLinks) {
+			collector.add("entry", item.entryId, {
+				type: "body",
+				...(item.position.blockId === undefined ? {} : { blockId: item.position.blockId }),
+			});
+		}
 		for (const item of check.mediaReferences) {
 			collector.add("media", item.mediaId, {
 				type: "body",
@@ -446,6 +453,11 @@ export function validateForPublish(
 	resolved: ResolvedTargets,
 ): { ready: boolean; issues: Issue[]; warnings: Issue[] } {
 	const issues: Issue[] = [...snapshot.issues];
+	/**
+	 * A link to an entry that is not published (a draft, or one in the trash) does not block publishing: links are resolved when the page is read, and an
+	 * unresolved one is drawn as plain text until the target is published. It would also make two new posts that link to each other impossible to publish.
+	 */
+	const linkWarnings: Issue[] = [];
 	const occurrenceIssue = (code: string, occurrence: ReferenceOccurrence | undefined, message?: string): Issue => ({
 		code,
 		...(message ? { message } : {}),
@@ -485,7 +497,8 @@ export function validateForPublish(
 	for (const ref of references) {
 		const occurrences = ref.occurrences.length > 0 ? ref.occurrences : [undefined];
 		const addForAll = (code: string) => {
-			for (const occurrence of occurrences) issues.push(occurrenceIssue(code, occurrence, ref.targetId));
+			for (const occurrence of ref.kind === "entry" ? occurrences.filter((item) => item?.type !== "body") : occurrences)
+				issues.push(occurrenceIssue(code, occurrence, ref.targetId));
 		};
 
 		if (ref.kind === "media") {
@@ -494,6 +507,19 @@ export function validateForPublish(
 		}
 
 		const target = resolved.targets.find((t) => t.id === ref.targetId);
+		// A body occurrence of an entry is a link by id. It has its own codes (the same ones a link by address has), and the target must be a source
+		// entry of a collection with a public path.
+		const bodyOccurrences = occurrences.filter((occurrence) => occurrence?.type === "body");
+		if (bodyOccurrences.length > 0) {
+			const reachable =
+				target && target.isSource !== false && LINKABLE_COLLECTIONS.includes(target.collection as Collection);
+			for (const occurrence of bodyOccurrences) {
+				if (!reachable) issues.push(occurrenceIssue("unresolved_internal_link", occurrence, ref.targetId));
+				else if (!target.isPublished)
+					linkWarnings.push(occurrenceIssue("unpublished_internal_link", occurrence, ref.targetId));
+			}
+			if (occurrences.every((occurrence) => occurrence?.type === "body")) continue;
+		}
 		if (!target) {
 			addForAll("unresolved_reference");
 			continue;
@@ -515,7 +541,12 @@ export function validateForPublish(
 		if (!target || target.addressType === "missing" || target.addressType === "deleted") {
 			issues.push({ code: "unresolved_internal_link", message: source.url, path: "body", position: source.position });
 		} else if (target.addressType === "reservation" || !target.isPublished) {
-			issues.push({ code: "unpublished_internal_link", message: source.url, path: "body", position: source.position });
+			linkWarnings.push({
+				code: "unpublished_internal_link",
+				message: source.url,
+				path: "body",
+				position: source.position,
+			});
 		}
 	}
 
@@ -523,6 +554,6 @@ export function validateForPublish(
 	return {
 		ready: issues.length === 0,
 		issues,
-		warnings: [...(snapshot.warnings ?? []), ...imageWarnings(snapshot.imageSources, resolved.media)],
+		warnings: [...(snapshot.warnings ?? []), ...linkWarnings, ...imageWarnings(snapshot.imageSources, resolved.media)],
 	};
 }

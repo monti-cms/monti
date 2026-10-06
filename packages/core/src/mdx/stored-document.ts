@@ -1,6 +1,7 @@
 import type { SyntaxExtension } from "../syntax/types";
 import { analyze } from "./analyze";
 import { assignBlockIds, copyBlockIds, forEachBlock, withoutBlockIds } from "./block-ids";
+import { normalizedLinkMark } from "./entry-links";
 import { attributeRecord } from "./jsx";
 import { BLOCK_JSX_NAMES, sortMarks } from "./registry";
 import { serialize } from "./serialize";
@@ -13,7 +14,7 @@ import type { CmsJsonValue, CmsJsxAttribute, CmsMark, CmsMdxAnalysis, CmsNode } 
  * Format version of a stored document. Raise it when a node or attribute changes its name or meaning, and add the step
  * from the previous version to `STORED_DOCUMENT_MIGRATIONS`. A new kind of block does not raise it.
  */
-export const STORED_DOCUMENT_VERSION = 2;
+export const STORED_DOCUMENT_VERSION = 3;
 
 /**
  * A body as it is stored: the parsed document in a shape that does not depend on how the body was written.
@@ -99,7 +100,8 @@ const node = (
 	return out;
 };
 
-const storedMark = (mark: CmsMark): CmsMark => {
+const storedMark = (given: CmsMark): CmsMark => {
+	const mark = normalizedLinkMark(given);
 	const attrs = mark.attrs ? sortedAttrs(mark.attrs) : undefined;
 	return attrs ? { attrs, type: mark.type } : { type: mark.type };
 };
@@ -214,6 +216,12 @@ const STORED_DOCUMENT_MIGRATIONS: Readonly<Record<number, (doc: StoredDocument) 
 		type: "doc",
 		version: 2,
 	}),
+	/**
+	 * 2 → 3: an internal link is `{ entryId }` (the id of the entry's translation group) instead of the `href` of its address. Nothing in a version 2
+	 * document has to change to be read as version 3: its links are all `href` links, which stay valid. The store migration `0018_link_entry_ids` rewrites the
+	 * internal ones, and a write converts the ones that still match an internal address.
+	 */
+	2: (doc) => ({ content: doc.content, type: "doc", version: 3 }),
 };
 
 const NODE_KEYS = new Set(["type", "id", "attrs", "content", "marks", "text"]);
@@ -355,7 +363,7 @@ const canonicalInline = (content: readonly CmsNode[]): CmsNode[] => {
 			continue;
 		}
 		if (item.text.length === 0) continue;
-		const marks = item.marks && item.marks.length > 0 ? sortMarks(item.marks) : undefined;
+		const marks = item.marks && item.marks.length > 0 ? sortMarks(item.marks.map(normalizedLinkMark)) : undefined;
 		const previous = out.at(-1);
 		if (previous?.text !== undefined && JSON.stringify(previous.marks ?? null) === JSON.stringify(marks ?? null)) {
 			out[out.length - 1] = { ...previous, text: previous.text + item.text };

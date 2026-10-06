@@ -5,7 +5,7 @@ import { getSchema } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, expect, it } from "vitest";
 import { ADDED_MARKS, addedMarkName, createAddedMark } from "../added-marks";
-import { BLOCK_NODE_VIEWS } from "../block-views";
+import { BLOCK_NODES } from "../block-views";
 import { ADDED_BLOCK_NODES } from "../blocks/added";
 import { cmsNodeToTiptap, mdxToTiptap, OPAQUE_BLOCK_NAME, tiptapToCmsNode, tiptapToMdx } from "../tiptap-content";
 import { CMS_SCHEMA_EXTENSIONS } from "../tiptap-schema";
@@ -17,7 +17,7 @@ import { CMS_SCHEMA_EXTENSIONS } from "../tiptap-schema";
 const schema = getSchema([
 	StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }),
 	...CMS_SCHEMA_EXTENSIONS,
-	...Object.values(BLOCK_NODE_VIEWS),
+	...Object.values(BLOCK_NODES),
 	...ADDED_BLOCK_NODES,
 	...[...ADDED_MARKS.values()].map((block) => createAddedMark(block)),
 ]);

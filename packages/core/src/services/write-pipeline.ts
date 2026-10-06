@@ -1,9 +1,10 @@
 import { isDeepStrictEqual } from "node:util";
 import { isCollection } from "../core/collections";
+import { internalLinkAddresses, type LinkResolver, linkAddressKey, withEntryLinks } from "../core/link-ids";
 import { inputBody, prepareSnapshot } from "../core/snapshot";
 import { readStoredDocument } from "../mdx/stored-document";
 import type { HookProvider, HookSource, ValidationResult, WriteData, WriteHookContext, WriteOperation } from "./hooks";
-import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput } from "./types";
+import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, type StorePort } from "./types";
 
 /**
  * The one place content is prepared for a write. Create, save, publish (single and bulk), duplicate, translation and bulk metadata or folder
@@ -43,9 +44,20 @@ export interface WriteResult {
 
 export interface WritePipelineOptions {
 	readonly hooks?: HookProvider;
+	/** Looks up the entries internal links point to. Without it, links keep the address they were written with. */
+	readonly links?: LinkResolver;
 }
 
 const NO_HOOKS: HookProvider = () => [];
+
+/** The link resolver of a store, when it can look up addresses. */
+export const linkResolverOf = (store: Pick<StorePort, "resolveLinkTargets">): LinkResolver | undefined =>
+	store.resolveLinkTargets
+		? async (addresses) =>
+				new Map(
+					(await store.resolveLinkTargets?.({ addresses }))?.map((found) => [linkAddressKey(found), found.entryId]),
+				)
+		: undefined;
 
 /** A hook that throws (or returns something that is not its contract) fails the write. The error names the owner and the hook, never the hook's own message. */
 const hookFailed = (source: HookSource, hook: string, error?: unknown): ServiceError => {
@@ -161,6 +173,29 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 		};
 	};
 
+	/**
+	 * Core's normalisation of an imported body, whatever notation or API it came from: a link written as the address of this site's content
+	 * (`/posts/slug`) becomes a link by entry id. A link whose address nobody holds stays as written. The input is returned as it is when nothing changes
+	 * (an MDX body stays MDX, and a body that could not be read keeps its text).
+	 */
+	const linkIds = async (request: WriteRequest, input: ServiceInput): Promise<ServiceInput> => {
+		if (!options.links || !isRecord(input) || !isCollection(input.collection)) return input;
+		let body: ReturnType<typeof inputBody>;
+		try {
+			body = inputBody(input, request.prepare?.previousDoc);
+		} catch (error) {
+			// Core preparation rejects it with the same error.
+			if (error instanceof ServiceError) return input;
+			throw error;
+		}
+		const addresses = internalLinkAddresses(body.doc.content);
+		if (addresses.length === 0) return input;
+		const doc = withEntryLinks(body.doc, await options.links(addresses));
+		if (doc === body.doc) return input;
+		const { mdx: _mdx, ...rest } = input as ServiceInput & { mdx?: string };
+		return { ...rest, doc } as ServiceInput;
+	};
+
 	const validate = async (
 		sources: readonly HookSource[],
 		hook: "validate" | "validatePublish",
@@ -202,7 +237,7 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 			const { input, transformed } = request.skipTransform
 				? { input: request.input, transformed: false }
 				: await transform(sources, request);
-			const snapshot = await prepareSnapshot(input, request.prepare);
+			const snapshot = await prepareSnapshot(await linkIds(request, input), request.prepare);
 			if (sources.length === 0) return { snapshot, warnings: [], transformed };
 
 			const warnings: Issue[] = [];

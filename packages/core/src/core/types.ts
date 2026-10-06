@@ -120,6 +120,8 @@ export type InternalLinkSource = {
 	/** The collection a link points to (a collection with `path`). */
 	readonly collection: Collection;
 	readonly slug: string;
+	/** The language of the address, when it has the locale prefix of the site's URLs. Absent: the default language. */
+	readonly locale?: string;
 	readonly url: string;
 	readonly position: BodyPosition;
 };
@@ -127,6 +129,7 @@ export type InternalLinkSource = {
 export type ResolvedInternalLink = {
 	readonly collection: Collection;
 	readonly slug: string;
+	readonly locale?: string;
 	readonly addressType: "current" | "alias" | "reservation" | "deleted" | "missing";
 	readonly isPublished: boolean;
 };
@@ -155,7 +158,13 @@ export type PreparedSnapshot = {
 };
 
 export type ResolvedTargets = {
-	targets: { id: string; isPublished: boolean; collection: string }[];
+	targets: {
+		id: string;
+		isPublished: boolean;
+		collection: string;
+		/** Whether it is a source entry (its id is a translation group id). A link by id can only point to one. Unset: not checked. */
+		isSource?: boolean;
+	}[];
 	/**
 	 * The pre-publish image warnings look at the media status.
 	 * `status` and `storageKey` are optional — if the caller does not fill them, only those warnings are skipped (nothing is blocked).

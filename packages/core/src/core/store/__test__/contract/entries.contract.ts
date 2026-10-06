@@ -632,12 +632,9 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				contentHash: "validation-link-source-hash",
 			});
 
-			await expect(publishDraft(store, { id: source.id, expectedVersion: source.version })).rejects.toMatchObject({
-				code: "publish_validation_failed",
-				issues: expect.arrayContaining([expect.objectContaining({ code: "unpublished_internal_link" })]),
-			});
-			const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
+			// A target that is not published does not block publishing the link (it is a warning); one nobody holds does.
 			const publishedSource = await publishDraft(store, { id: source.id, expectedVersion: source.version });
+			const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
 			expect(publishedTarget.status).toBe("published");
 			expect(publishedSource.status).toBe("published");
 		});

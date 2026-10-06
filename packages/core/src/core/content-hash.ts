@@ -26,12 +26,18 @@ const unparsedSource = (doc: StoredDocument): string | undefined => {
 };
 
 /**
+ * The document version the hash is defined over. A later version only changes how a link is written (an internal link is its entry id), which the hashed
+ * content already tells apart, so a version bump alone changes no hash and no stored entry looks edited.
+ */
+const HASHED_DOCUMENT_VERSION = 2;
+
+/**
  * The form of a document that is hashed: the document itself without block ids (they say which block is which, not what the body says), with
  * object keys sorted at every depth. Two bodies get the same value exactly when they read the same to a reader: the same text, marks,
  * blocks and attribute values. The stored form already ignores how a body was written (see `StoredDocument`).
  */
 export const canonicalBodyForHash = (doc: StoredDocument): JsonValue =>
-	sortKeys({ ...doc, content: withoutBlockIds(doc.content) } as unknown as JsonValue);
+	sortKeys({ ...doc, content: withoutBlockIds(doc.content), version: HASHED_DOCUMENT_VERSION } as unknown as JsonValue);
 
 /**
  * Content hash of a snapshot: schema version, metadata (key order ignored) and the stored document of the body.

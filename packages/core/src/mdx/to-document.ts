@@ -2,6 +2,7 @@ import type { Code } from "mdast";
 import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
 import { RAW_SOURCE_PARAGRAPH } from "../syntax/raw-source";
+import { linkMarkAttrs } from "./entry-links";
 import { splitFrontmatter } from "./frontmatter";
 import { attributeRecord, readJsxAttributes } from "./jsx";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
@@ -217,15 +218,13 @@ const convertPhrasing = (nodes: MdastLike[], marks: CmsMark[] = []): CmsNode[] =
 				output.push(HARD_BREAK());
 				break;
 			case "link": {
-				const attrs: Record<string, CmsJsonValue> = { href: node.url ?? "" };
-				if (node.title) attrs.title = node.title;
+				const attrs = linkMarkAttrs(node.url ?? "", node.title);
 				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "link", attrs }]));
 				break;
 			}
 			case "linkReference": {
 				const definition = resolveReference(node);
-				const attrs: Record<string, CmsJsonValue> = { href: definition?.url ?? "" };
-				if (definition?.title) attrs.title = definition.title;
+				const attrs = linkMarkAttrs(definition?.url ?? "", definition?.title);
 				output.push(...convertPhrasing(node.children ?? [], [...marks, { type: "link", attrs }]));
 				break;
 			}

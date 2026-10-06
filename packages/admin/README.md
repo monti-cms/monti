@@ -99,7 +99,7 @@ name, e.g. `cmsNotice`), conversion, slash menu insertion and drag rules from th
 - `blockEditors` and `CustomBlockEditorProps` are removed. `content` becomes `<Content />`, `values` and `setValue` become `useBlockEditor().values` and `.setValue`,
   and `editable` and `selected` are fields of the same object. Wrap the result in `<BlockFrame>`, which the old default frame did for you.
   The edit-view helpers that took Tiptap types (`useContainerValues`, `valuesOf`, `withValue`, `childPos`, `focusInside`, `selectContainer`, `useSelectedChildIndex`, `useEditorEditable`)
-  are no longer exported; `useBlockEditor()` covers them. `BLOCK_NODE_VIEWS` is now `BLOCK_NODES` (the old name stays as a deprecated alias).
+  are no longer exported; `useBlockEditor()` covers them. `BLOCK_NODE_VIEWS` is now `BLOCK_NODES` (the old name is removed).
 
 ```tsx
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";

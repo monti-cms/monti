@@ -11,7 +11,7 @@ import { DEFAULT_LOCALE } from "../../../core/locales";
 import { validateForPublish } from "../../../core/snapshot";
 import { CmsError } from "../../../core/store/errors";
 import type { Entry, EntryStatus } from "../../../core/store/types";
-import { type Collection, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
+import { type Collection, type Issue, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
 import type { StoreContext } from "./context";
 import { type AddressRow, loadEntry, lockEntryForUpdate, readBody, readReferences, writeBody } from "./rows";
 
@@ -24,6 +24,11 @@ export interface PublishOptions {
 	snapshot: PreparedSnapshot;
 	/** On re-publish, reset the publish date to now. Otherwise keep the first publish time. */
 	resetPublishedAt?: boolean;
+	/**
+	 * Called with the notices the checks against locked rows found (a link to an entry that is not published): they never block, and the caller
+	 * returns them with the publish result.
+	 */
+	onWarnings?: (warnings: readonly Issue[]) => void;
 }
 
 /**
@@ -67,17 +72,25 @@ export function createPublishing(ctx: StoreContext) {
 		const findAddresses = async (lock: boolean) => {
 			if (links.length === 0) return [] as AddressRow[];
 			const result = await client.query<AddressRow>(
-				// A body link (`/posts/slug`) is the default-language URL. It is swapped to the translation's URL at render time.
-				`SELECT a.collection, a.slug, a.type, a.entry_id
+				// A body link names an address in a language: `/posts/slug` the default language, `/en/posts/slug` the one of the locale prefix.
+				// It is swapped to the reader's language at render time.
+				`SELECT a.collection, a.locale, a.slug, a.type, a.entry_id
 				 FROM "${qSchema}".content_addresses a
-				 WHERE a.locale = $3 AND (a.collection, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[]))
-				 ORDER BY a.collection, a.slug${lock ? " FOR SHARE" : ""}`,
-				[links.map((link) => link.collection), links.map((link) => link.slug), DEFAULT_LOCALE],
+				 WHERE (a.collection, a.locale, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[], $3::text[]))
+				 ORDER BY a.collection, a.locale, a.slug${lock ? " FOR SHARE" : ""}`,
+				[
+					links.map((link) => link.collection),
+					links.map((link) => link.locale ?? DEFAULT_LOCALE),
+					links.map((link) => link.slug),
+				],
 			);
 			return result.rows;
 		};
-		const addressKey = (collection: string, slug: string) => `${collection}:${slug}`;
-		const firstAddresses = new Map((await findAddresses(false)).map((a) => [addressKey(a.collection, a.slug), a]));
+		const addressKey = (collection: string, locale: string | undefined, slug: string) =>
+			`${collection}:${locale ?? DEFAULT_LOCALE}:${slug}`;
+		const firstAddresses = new Map(
+			(await findAddresses(false)).map((a) => [addressKey(a.collection, a.locale, a.slug), a]),
+		);
 
 		const targetIds = new Set<string>();
 		for (const ref of publishSnapshot.references)
@@ -86,17 +99,24 @@ export function createPublishing(ctx: StoreContext) {
 
 		const targetRows = targetIds.size
 			? (
-					await client.query<{ id: string; collection: string; status: EntryStatus }>(
-						`SELECT id, collection, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
+					await client.query<{
+						id: string;
+						collection: string;
+						status: EntryStatus;
+						translation_group_id: string | null;
+					}>(
+						`SELECT id, collection, status, translation_group_id FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
 						[Array.from(targetIds).sort()],
 					)
 				).rows
 			: [];
 		const targetMap = new Map(targetRows.map((target) => [target.id, target]));
-		const lockedAddresses = new Map((await findAddresses(true)).map((a) => [addressKey(a.collection, a.slug), a]));
+		const lockedAddresses = new Map(
+			(await findAddresses(true)).map((a) => [addressKey(a.collection, a.locale, a.slug), a]),
+		);
 		for (const link of links) {
-			const before = firstAddresses.get(addressKey(link.collection, link.slug));
-			const after = lockedAddresses.get(addressKey(link.collection, link.slug));
+			const before = firstAddresses.get(addressKey(link.collection, link.locale, link.slug));
+			const after = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
 			if (linkTargetChanged(before && holderOf(before), after && holderOf(after))) {
 				throw new CmsError("Internal link target changed during publish", "conflict", entry.version);
 			}
@@ -119,14 +139,16 @@ export function createPublishing(ctx: StoreContext) {
 				id: target.id,
 				collection: target.collection,
 				isPublished: target.status === "published",
+				isSource: target.translation_group_id === null || target.translation_group_id === target.id,
 			})),
 			media: mediaRows.map((media) => ({ id: media.id, status: media.status, storageKey: media.storage_key })),
 			internalLinks: links.map((link) => {
-				const address = lockedAddresses.get(addressKey(link.collection, link.slug));
+				const address = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
 				const target = address?.entry_id ? targetMap.get(address.entry_id) : undefined;
 				return {
 					collection: link.collection,
 					slug: link.slug,
+					...(link.locale ? { locale: link.locale } : {}),
 					addressType: address?.type ?? "missing",
 					isPublished: target?.collection === link.collection && target.status === "published",
 				};
@@ -134,7 +156,7 @@ export function createPublishing(ctx: StoreContext) {
 			...(translation ? { translation } : {}),
 		});
 		if (!validation.ready) throw new ServiceError("publish_validation_failed", validation.issues);
-		return snapshot;
+		return { snapshot, warnings: validation.warnings.filter((issue) => issue.code === "unpublished_internal_link") };
 	};
 
 	/**
@@ -146,7 +168,9 @@ export function createPublishing(ctx: StoreContext) {
 		const locked = await lockEntryForUpdate(client, qSchema, id, options.expectedVersion);
 		assertPublishableStatus(locked.status);
 
-		await validatePreparedForPublish(client, id, options.snapshot);
+		// Not `onWarnings?.(await ...)`: an absent callback must not skip the checks.
+		const checked = await validatePreparedForPublish(client, id, options.snapshot);
+		options.onWarnings?.(checked.warnings);
 
 		const working = await readBody(client, qSchema, id, "working");
 		if (!working) throw new CmsError("Working draft not found", "not_found");
@@ -232,19 +256,32 @@ export function createPublishing(ctx: StoreContext) {
 		return entry;
 	};
 
-	/** Locks the targets the draft points at. A trashed target cannot be newly referenced. */
-	const lockDraftReferenceTargets = async (client: PoolClient, references: readonly Reference[]) => {
+	/**
+	 * Locks the targets the draft points at. A trashed target cannot be newly referenced. Returns the references a draft stores: one whose target does
+	 * not exist and is only a link in a body (a link to an entry that is gone) is not stored, because the index cannot point at nothing; the publish check still sees it
+	 * (it works from the prepared snapshot). A relation to a missing entry is still refused by the foreign key and blocks publishing it.
+	 */
+	const lockDraftReferenceTargets = async (
+		client: PoolClient,
+		references: readonly Reference[],
+	): Promise<readonly Reference[]> => {
 		const ids = Array.from(
 			new Set(references.filter((ref) => ref.kind !== "media" && isUuid(ref.targetId)).map((ref) => ref.targetId)),
 		).sort();
-		if (ids.length === 0) return;
-		const result = await client.query<{ id: string; status: string }>(
-			`SELECT id, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
-			[ids],
-		);
-		if (result.rows.some((row) => row.status === "trashed")) {
+		const result = ids.length
+			? await client.query<{ id: string; status: string }>(
+					`SELECT id, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`,
+					[ids],
+				)
+			: { rows: [] as { id: string; status: string }[] };
+		// A link in the body to a trashed entry is not refused (the draft can still be saved and the link removed); publishing it is, as an unpublished link.
+		const trashed = new Set(result.rows.filter((row) => row.status === "trashed").map((row) => row.id));
+		if (references.some((ref) => trashed.has(ref.targetId) && ref.occurrences.some((o) => o.type !== "body"))) {
 			throw new CmsError("Cannot reference a trashed entry", "invalid_reference");
 		}
+		const found = new Set(result.rows.map((row) => row.id));
+		const onlyLinks = (ref: Reference) => ref.occurrences.length > 0 && ref.occurrences.every((o) => o.type === "body");
+		return references.filter((ref) => ref.kind === "media" || !onlyLinks(ref) || found.has(ref.targetId.toLowerCase()));
 	};
 
 	/**

@@ -1,4 +1,4 @@
-import { BLOCK_NODE_VIEWS } from "@monti-cms/admin/editor";
+import { BLOCK_NODES } from "@monti-cms/admin/editor";
 import { BLOCK_BY_NAME, BLOCKS, invalidOptionAttributes } from "@monti-cms/core/client";
 import { analyze, DIRECTIVES, serialize, toDocument } from "@monti-cms/core/mdx";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
@@ -35,7 +35,7 @@ describe("block definitions", () => {
 			}
 			// Core blocks use the editor node from the registry; added blocks (block extensions) use the node built from the definition.
 			if (block.editor.view === "node" && block.editor.nodeView) {
-				expect(BLOCK_NODE_VIEWS[block.editor.nodeView], `${block.name}.editor.nodeView`).toBeDefined();
+				expect(BLOCK_NODES[block.editor.nodeView], `${block.name}.editor.nodeView`).toBeDefined();
 			}
 		}
 	});

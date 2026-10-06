@@ -287,7 +287,7 @@ export const cms = createCms({
 | Next가 아닌 호스트의 관리자 API(실험적) | `cms.handle(request)`: 표준 `Request`를 받아 `Response`를 돌려준다 |
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)` |
-| 공개 미디어 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL. `<CmsContent entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)`(`cms.read.imageResolver(mdx)`는 `renderMdx`용) |
+| 공개 미디어와 링크 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL과 내부 링크의 주소. `<CmsContent entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)`(`cms.read.imageResolver(mdx)`는 `renderMdx`용) |
 | 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
 | 스크립트·명령줄 | `cms.migrate()`·`cms.rewrite({ apply })`·`cms.close()` |
 | 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
@@ -431,7 +431,10 @@ MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑
   읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.mdxBytes` 옆에 `limits.docBytes`로 알려 준다. 템플릿 API는 계속 `mdx`만 받고, 템플릿마다 `doc`을 돌려준다.
 - **관리자 내보내기**(`GET /api/cms/v1/export`)는 형식 버전 3이다(공개 내보내기의 `published.json`도 `doc`을 담는다). 모든 본문에 `working.mdx`·`published.mdx` 옆으로 `working.doc.json`·`published.doc.json`이 있고, `templates.json` 항목에 `doc`이 있으며, 다이제스트가 문서를 포함한다.
 - **공개 읽기 API와 공개 내보내기**도 문서를 돌려준다. `cms.read.getEntry` / `listEntries` / `getPreview`는 `entry.doc`(저장된 문서. 목록에서는 `body: true`일 때만, 아니면 `null`)과 `entry.refs`
-  (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } } }`: 그 문서의 이미지와 파일을 그리는 데 필요한 값. 문서가 쓰는 미디어만 들어 있고, `collectRefs(doc)`가 id 목록을 준다)를 담는다.
+  (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: 그 문서의 이미지, 파일, 내부 링크를 그리는 데 필요한 값. 문서가 쓰는 것만 들어 있고, `collectRefs(doc)`가 id 목록을 준다)를 담는다.
+  문서의 링크는 `{ entryId }`(내부) 또는 `{ href, title? }`(외부)다. `entryId`는 번역 그룹 id(원문 항목의 id. 관계 필드가 담는 id와 같다)라서, `refs.links`는 읽는 사람의 언어로 된 주소와 제목을 주고 번역이 없으면 원문 것을 준다.
+  가리키는 글이 공개되지 않았으면 `refs.links`에 없고 링크는 일반 글자로 그려진다. 주소(slug)를 바꿔도 저장된 문서는 그대로다. 링크는 관계 필드처럼 참조다. 항목의 참조에 블록 단위로 기록되고, 없는 항목(또는 아무도 쓰지 않는 주소)을 가리키는 링크는 발행을 막는다(`unresolved_internal_link`). 공개되지 않았거나 휴지통에 있는 항목을 가리키는 링크는 경고만 한다(`unpublished_internal_link`). 가리키는 글이 공개될 때까지 페이지는 그 링크를 일반 글자로 그리므로, 서로 링크한 글은 어떤 순서로 발행해도 된다.
+  글 주소로 쓴 링크(`[x](/posts/slug)`. MDX든 문서든)는 그 주소를 가진 항목이 있으면 쓸 때 id 링크로 바뀐다. 주소를 가진 항목이 없으면 쓴 그대로 남고 발행을 막는다. MDX는 id 링크를 `[x](entry:<id>)`로 쓴다. 기존 데이터베이스의 저장된 문서는 마이그레이션 `0018_link_entry_ids`가 옮긴다(문서 버전 3).
   `entry.mdx`는 당분간 남아 있다. `GET /api/cms/v1/public/entries/:collection/:slug`는 `doc`과 `refs`를 돌려주고 MDX 텍스트는 주지 않는다(나중에 선택 형식으로 돌아온다). 목록에는 없다.
   공개 내보내기는 각 `published.json`에 `mdx` 옆으로 `doc`을 담고, 다이제스트도 이를 포함한다. 문서가 될 수 없는 초안은 `unparsed` 문서로 미리보기가 된다.
 
@@ -793,8 +796,7 @@ export const cms = createCms({ server });
 - **목록(`list.columns`).** 없으면 기본 컬럼이다. 문서는 제목·상태·언어(언어가 둘 이상일 때)·분류 필드(항목 컬렉션을 가리키는
   관계)·수정일·발행일, 항목은 제목·주소(주소 필드가 있을 때)·언어·상태·수정일.
 
-컬렉션의 `path`(예: `/posts/:slug`)는 공개 주소 모양이다. 본문의 내부 링크를 알아보고(가리키는 글이 있는지·공개됐는지
-발행 전에 검사) 편집기가 링크를 만들 때 쓴다. `path`가 없는 컬렉션은 본문 링크로 가리킬 수 없다.
+컬렉션의 `path`(예: `/posts/:slug`)는 공개 주소 모양이다. 주소로 쓴 내부 링크를 알아보고(항목의 id로 저장된다. 공개 읽기 API 참고) 편집기가 링크를 만들 때 쓴다. `path`가 없는 컬렉션은 본문 링크로 가리킬 수 없다.
 
 ### 필드 규칙
 

@@ -257,11 +257,15 @@ const Footnotes = ({ items, ctx }: FootnotesProps) => (
 	</section>
 );
 
-const Link = ({ href, title, children }: LinkProps) => (
-	<CmsLink href={href ?? ""} title={title}>
-		{children}
-	</CmsLink>
-);
+const Link = ({ href, title, entryId, children }: LinkProps) =>
+	// An entry link whose target cannot be reached (not published, or gone) is plain text.
+	entryId !== undefined && !href ? (
+		<>{children}</>
+	) : (
+		<CmsLink href={href ?? ""} title={title}>
+			{children}
+		</CmsLink>
+	);
 
 const mark = (Tag: "strong" | "em" | "del" | "u" | "sup" | "sub" | "code") => {
 	const Component = ({ children }: MarkProps) => <Tag>{children}</Tag>;

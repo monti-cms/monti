@@ -1,4 +1,4 @@
-import type { PreparedSnapshot, Reference, WorkingCopy } from "../types";
+import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types";
 import type {
 	BodyTemplate,
 	CompleteMediaAssetInput,
@@ -56,6 +56,7 @@ export interface EntryStore {
 		publishImmediately?: boolean;
 		/** With `publishImmediately`: reset the publish date to now. */
 		resetPublishedAt?: boolean;
+		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<Entry>;
 	getWorkingReferences(params: { entryId: string }): Promise<Reference[]>;
 	getWorking(params: { entryId: string }): Promise<WorkingCopy>;
@@ -70,7 +71,16 @@ export interface EntryStore {
 		expectedVersion: number;
 		snapshot: PreparedSnapshot;
 		resetPublishedAt?: boolean;
+		/** Receives the notices the checks against locked rows found (a link to an entry that is not published). They never block. */
+		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<Entry>;
+	/**
+	 * The entries the addresses of internal body links point to (default language, `/posts/slug`), as translation group ids. An address no entry holds,
+	 * and one held by a trashed entry, is not in the result.
+	 */
+	resolveLinkTargets(params: {
+		addresses: readonly { collection: string; slug: string; locale?: string }[];
+	}): Promise<{ collection: string; slug: string; locale: string; entryId: string }[]>;
 	/** Field relations and body references that point at an entry, split into draft and published. */
 	getIncomingReferences(params: { targetId: string }): Promise<IncomingReferenceItem[]>;
 	/**

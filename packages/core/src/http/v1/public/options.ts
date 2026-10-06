@@ -25,7 +25,7 @@ export interface PublicApiOptions {
 
 /**
  * Default response shape. No admin-only values (edition, folder, status).
- * A single read adds the body: `doc` (the stored document), `refs` (the public URLs of its media, keyed by media id; only media the document uses)
+ * A single read adds the body: `doc` (the stored document), `refs` (the public URLs of its media keyed by media id, and the address and title of its internal links keyed by entry id; only what the document uses)
  * The MDX text is not included (it comes back as an optional format later).
  */
 export function defaultPublicJson(entry: ReadEntry, { body }: { readonly body: boolean }) {

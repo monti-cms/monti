@@ -287,7 +287,7 @@ Everything else imports `cms` from this file.
 | Admin API in a host other than Next (experimental) | `cms.handle(request)`: a standard `Request` in, a `Response` out |
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` |
-| Public media | `entry.refs` (the URLs of the media of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` (`cms.read.imageResolver(mdx)` is for `renderMdx`) |
+| Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` (`cms.read.imageResolver(mdx)` is for `renderMdx`) |
 | Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
 | Scripts and the command line | `cms.migrate()`, `cms.rewrite({ apply })`, `cms.close()` |
 | Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
@@ -430,7 +430,10 @@ Nothing fails because of such a body, published ones and templates included, sin
   Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/meta` reports the size limit as `limits.docBytes` next to `limits.mdxBytes`. The template API keeps accepting `mdx` only and returns `doc` with each template.
 - **Admin export** (`GET /api/cms/v1/export`) is format version 3 (the public archive's `published.json` carries `doc` too): each body also has `working.doc.json` / `published.doc.json` next to `working.mdx` / `published.mdx`, `templates.json` items have `doc`, and the digests cover the document.
 - **Public read API and public export** return the document too. `cms.read.getEntry` / `listEntries` / `getPreview` give `entry.doc` (the stored document; in a list only with `body: true`, otherwise `null`) and `entry.refs`
-  (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } } }`: what a renderer needs for the images and files of that document, only for media the document uses; `collectRefs(doc)` lists the ids).
+  (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: what a renderer needs for the images, files and internal links of that document, only for what the document uses; `collectRefs(doc)` lists the ids).
+  A link in a document is `{ entryId }` (internal) or `{ href, title? }` (external). `entryId` is the translation group id (the source entry's id, the same id a relation holds), so `refs.links` gives the address and title in the reader's language and falls back to the source's;
+  a link whose target is not published is not in `refs.links` and is drawn as plain text. Renaming a slug changes nothing in the stored document. Links are references like relations: they are in the references of the entry, block by block, and a link to an entry that does not exist (or an address nobody holds) blocks publishing (`unresolved_internal_link`). A link to an entry that is not published, or is in the trash, only warns (`unpublished_internal_link`): the page draws it as plain text until the target is published, so posts that link to each other can be published in any order.
+  Text written with the address of a post (`[x](/posts/slug)`, in MDX or in a document) is turned into a link by id when it is written, if an entry holds that address; an address no entry holds stays as written and blocks publishing. MDX writes a link by id as `[x](entry:<id>)`. Migration `0018_link_entry_ids` does this for the stored documents of an existing database (document version 3).
   `entry.mdx` stays for now. `GET /api/cms/v1/public/entries/:collection/:slug` returns `doc` and `refs` and no MDX text (it comes back as an optional format later); lists have none of them.
   The public export carries `doc` in each `published.json` next to `mdx`, and the digests cover it. A draft that could not become a document previews with its `unparsed` document.
 
@@ -792,8 +795,7 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 - **List (`list.columns`).** If absent, the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation
   pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date.
 
-A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It is used to recognize internal links in the body (checking before publishing whether the target entry exists and is published)
-and by the editor when it creates links. A collection without `path` cannot be linked to from the body.
+A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It is used to recognize internal links written as an address (they are stored as the id of the entry, see the public read API) and by the editor when it creates links. A collection without `path` cannot be linked to from the body.
 
 ### Field rules
 
