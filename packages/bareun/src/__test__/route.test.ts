@@ -1,5 +1,7 @@
 // @vitest-environment node
+import { AuthError } from "@monti-cms/core/adapters/auth";
 import { createTranslator } from "@monti-cms/core/client";
+import { fakeCms } from "@monti-cms/core/testing";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bareunMessages } from "../messages";
@@ -10,17 +12,7 @@ import sample from "./fixtures/bareun-sample.json";
 
 const mockVerifyAdmin = vi.fn();
 
-vi.mock("@monti-cms/core/adapters/auth", () => ({
-	authGateway: { verifyAdmin: () => mockVerifyAdmin() },
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
+const cms = fakeCms({ verifyAdmin: () => mockVerifyAdmin() });
 
 const KEY_ENV = "TEST_BAREUN_KEY";
 const FAKE_KEY = "test-key-123";
@@ -33,6 +25,7 @@ const post = (body: unknown, options = resolveBareunOptions({ apiKeyEnv: KEY_ENV
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify(body),
 		}),
+		{ cms },
 	);
 
 describe("Bareun check route", () => {
@@ -100,7 +93,7 @@ describe("Bareun check route", () => {
 
 	it("rejects non-admins first, even without a key", async () => {
 		vi.stubEnv(KEY_ENV, "");
-		mockVerifyAdmin.mockRejectedValue(Object.assign(new Error("no"), { code: "unauthorized" }));
+		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "no"));
 		const res = await post({ segments });
 		expect(res.status).not.toBe(200);
 		expect(res.status).not.toBe(503);
