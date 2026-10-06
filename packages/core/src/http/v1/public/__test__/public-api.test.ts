@@ -5,6 +5,7 @@ import { fakeCms } from "../../../../cms";
 import { type Collection, isItemCollection } from "../../../../core/collections";
 import type { ContentStore } from "../../../../core/store";
 import { publishDraft, seedSave } from "../../../../core/store/__test__/seed";
+import { bodyFromMdx } from "../../../../mdx/stored-document";
 import { storedFields } from "../../../../schema/derive";
 import {
 	closeGlobalPool,
@@ -52,6 +53,7 @@ describe("Public JSON API", () => {
 				slug,
 				metadata: { title: `Title ${slug}`, ...metadata },
 				mdx: `Body ${slug}`,
+				doc: bodyFromMdx(`Body ${slug}`).doc,
 				schemaVersion: 1,
 				contentHash: `hash-${slug}`,
 				references: [],
