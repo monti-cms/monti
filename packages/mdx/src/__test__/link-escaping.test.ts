@@ -1,5 +1,6 @@
+import type { CmsNode } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
-import { analyze, type CmsNode, serialize, toDocument } from "..";
+import { analyze, serialize, toDocument } from "../format";
 
 const linkDoc = (href: string, title?: string, text = "label"): CmsNode => ({
 	type: "doc",

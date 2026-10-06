@@ -118,10 +118,14 @@ describe("translation state form", () => {
 		expect(translationPayload(first)).toEqual({ version: 4, baseDoc: DOC });
 	});
 
-	it("a state of an older version is read as version 4, with the document of its source", () => {
+	it("a state of an older version is read as version 4, with its source text kept as it is in an unparsed document", () => {
 		const fromText = translationPayload(formFromEntry(translation({ baseSource: "원문\n", version: 2 })));
 		expect(fromText?.version).toBe(4);
-		expect(fromText?.baseDoc.content.map((node) => node.type)).toEqual(["paragraph"]);
+		expect(fromText?.baseDoc.content).toHaveLength(1);
+		expect(fromText?.baseDoc.content[0]).toMatchObject({
+			type: "unparsed",
+			attrs: { format: "mdx", source: "원문\n" },
+		});
 		const withDoc = translationPayload(formFromEntry(translation({ version: 3, baseSource: "원문\n", baseDoc: DOC })));
 		expect(withDoc).toEqual({ version: 4, baseDoc: DOC });
 	});

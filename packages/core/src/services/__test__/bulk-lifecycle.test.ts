@@ -48,7 +48,6 @@ const newFakeLifecycleStore = (seed: Record<string, EntryState>) => {
 				collection: contentCollection,
 				slug: "bulk-publish",
 				metadata: { title: "Title" },
-				mdx: "Body",
 				doc: docOf("Body"),
 				version: found.version,
 				folderId: null,

@@ -72,7 +72,7 @@ describe("store import boundary", () => {
 			'import { createContentStore } from "../adapters/postgres/content-store";',
 			'import type { Entry } from "../adapters/postgres/store/types";',
 			'export * from "../adapters/postgres";',
-			'const lazy = await import("../adapters/postgres/store/rewrite");',
+			'const lazy = await import("../adapters/postgres/store/schema");',
 			'import { CmsError } from "../core/store";',
 			'import { Pool } from "pg";',
 			'import { x } from "../adapters/r2/types";',
@@ -81,7 +81,7 @@ describe("store import boundary", () => {
 			"../adapters/postgres/content-store",
 			"../adapters/postgres/store/types",
 			"../adapters/postgres",
-			"../adapters/postgres/store/rewrite",
+			"../adapters/postgres/store/schema",
 		]);
 	});
 });

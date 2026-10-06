@@ -1,6 +1,6 @@
 import { BLOCK_NODES } from "@monti-cms/admin/editor";
 import { BLOCK_BY_NAME, BLOCKS, invalidOptionAttributes } from "@monti-cms/core/client";
-import { analyze, DIRECTIVES, serialize, toDocument } from "@monti-cms/core/mdx";
+import { analyze, DIRECTIVES, serialize, toDocument } from "@monti-cms/mdx/format";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,7 +9,7 @@ vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
 
-const { mdxComponents } = await import("@monti-cms/core/render");
+const { renderFixture } = await import("@monti-cms/mdx/testing");
 
 describe("block definitions", () => {
 	it("survives a JSON round trip unchanged — no functions or components", () => {
@@ -26,13 +26,8 @@ describe("block definitions", () => {
 		}
 	});
 
-	it("has implementations in the public component map and the editor NodeView registry", async () => {
-		const components = await mdxComponents();
+	it("has implementations in the editor NodeView registry", () => {
 		for (const block of BLOCKS) {
-			const intrinsic = block.component === block.component.toLowerCase();
-			if (!intrinsic && !("renderedBy" in block && block.renderedBy)) {
-				expect(components[block.component], `${block.name}.component`).toBeDefined();
-			}
 			// Core blocks use the editor node from the registry; added blocks (block extensions) use the node built from the definition.
 			if (block.editor.view === "node" && block.editor.nodeView) {
 				expect(BLOCK_NODES[block.editor.nodeView], `${block.name}.editor.nodeView`).toBeDefined();
@@ -53,7 +48,7 @@ describe("block definitions", () => {
 		expect(callout && invalidOptionAttributes(callout, { variant: "tip", title: "x" })).toEqual([]);
 	});
 
-	it("every registered directive round-trips parse -> document -> serialize", () => {
+	it("every registered directive round-trips parse -> document -> serialize, and renders without unknown nodes", async () => {
 		// The directive notation is opt-in (`mdx.syntax`), so the extension is passed explicitly.
 		const syntax = [directiveSyntax()];
 		const blockOf = (name: string) => BLOCK_BY_NAME.get(name);
@@ -113,6 +108,9 @@ describe("block definitions", () => {
 			const standardDocument = toDocument(analyze(standard));
 			expect(standardDocument, directive.name).toEqual(document);
 			expect(serialize(standardDocument), directive.name).toBe(standard);
+			// The public page draws it with the block's own component, never the fallback.
+			const rendered = await renderFixture(source, { syntax });
+			expect(rendered.unknown, directive.name).toEqual([]);
 		}
 		expect([...covered].sort()).toEqual(DIRECTIVES.map((directive) => directive.name).sort());
 	});

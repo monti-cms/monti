@@ -1,8 +1,10 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { collectRefs, type ReadRefs } from "../../mdx/document-refs";
-import { bodyFromMdx, type StoredDocument } from "../../mdx/stored-document";
+import { docOf } from "../../../test/stored-content";
+import { collectRefs, type ReadRefs } from "../../doc/document-refs";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
 import {
 	CmsContent,
 	type DocumentComponents,
@@ -17,11 +19,7 @@ const MEDIA = "00000000-0000-4000-8000-000000000001";
 const MISSING = "00000000-0000-4000-8000-000000000002";
 const ATTACHMENT = "00000000-0000-4000-8000-000000000003";
 
-const fromMdx = (source: string): StoredDocument => {
-	const body = bodyFromMdx(source);
-	if (!body.doc) throw new Error("not a document");
-	return body.doc;
-};
+const docWith = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
 const loose = (components: LooseDocumentComponents) => components as unknown as DocumentComponents;
 
@@ -41,13 +39,11 @@ const render = async (props: Parameters<typeof CmsContent>[0]) =>
 
 /** `<CmsContent entry={entry} />`: an entry of the read API is drawn with the images and files of its own refs. */
 describe("CmsContent with an entry", () => {
-	const doc = fromMdx(
-		[
-			"## Intro",
-			`<Image mediaId="${MEDIA}" alt="a photo" />`,
-			`<Image mediaId="${MISSING}" alt="gone" />`,
-			`<File mediaId="${ATTACHMENT}" label="Deck" />`,
-		].join("\n\n"),
+	const doc = docWith(
+		{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Intro" }] },
+		{ type: "image", attrs: { mediaId: MEDIA, alt: "a photo" } },
+		{ type: "image", attrs: { mediaId: MISSING, alt: "gone" } },
+		{ type: "file", attrs: { mediaId: ATTACHMENT, label: "Deck" } },
 	);
 
 	it("draws images and files from the entry's refs, with no image resolver", async () => {
@@ -91,7 +87,7 @@ describe("CmsContent with an entry", () => {
 				return createElement("p", null, children);
 			},
 		});
-		const paragraphs = fromMdx("본문");
+		const paragraphs = docOf("본문");
 
 		await render({ entry: { doc: paragraphs, locale: "ko" }, components });
 		await render({ entry: { doc: paragraphs, locale: "ko" }, locale: "en", components });
@@ -131,7 +127,7 @@ describe("CmsContent with an entry", () => {
 
 describe("tableOfContents with an entry's document", () => {
 	it("lists the headings of the document, and has none for an entry without one", () => {
-		const toc = tableOfContents(fromMdx("## One\n\ntext\n\n### Two"));
+		const toc = tableOfContents(docOf("## One\n\ntext\n\n### Two"));
 
 		expect(toc.map((item) => [item.value, item.level])).toEqual([
 			["One", 2],

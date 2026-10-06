@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { withoutBlockIds } from "@monti-cms/core/document";
-import { analyze } from "@monti-cms/core/mdx";
+import { analyze } from "@monti-cms/mdx/format";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { docOfMdx, mdxToTiptap, tiptapToMdx } from "../test/editor-text";
@@ -11,7 +11,7 @@ vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
 
-const { renderMdx } = await import("@monti-cms/core/render");
+const { renderMdx } = await import("@monti-cms/mdx/render");
 
 const source = readFileSync(path.join(__dirname, "fixtures/component-showcase.mdx"), "utf8");
 

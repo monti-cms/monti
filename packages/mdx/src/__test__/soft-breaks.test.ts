@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyze, toDocument } from "..";
+import { analyze, toDocument } from "../format";
 import { insertSoftBreaks } from "../soft-breaks";
 
 const document = (source: string) => toDocument(analyze(source));

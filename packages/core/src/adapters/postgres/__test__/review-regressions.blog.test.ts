@@ -1,36 +1,48 @@
 import { describe, expect, it } from "vitest";
 import { prepareSnapshot, validateForPublish } from "../../../core/snapshot";
+import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
+import type { CmsNode } from "../../../doc/types";
 
 /**
  * Code review (2026-09-26) regression tests that use the reference blog config's blocks (tabs, tooltip, alignment).
  * The rest, which are config-independent, live in `review-regressions.test.ts`.
  */
 describe("review regressions (blog blocks)", () => {
-	it("blocks publishing blocks without required attributes", async () => {
-		const cases: [string, string][] = [
-			["<Tabs>\n\n<Tab>\n\n첫\n\n</Tab>\n\n<Tab>\n\n둘\n\n</Tab>\n\n</Tabs>", "missing_block_attribute"],
-			// Written back, a missing required attribute becomes an empty one, so this text does not read back the same: it is an unparsed body.
-			["문장 <Tooltip>표시</Tooltip> 끝", "unparsed_body"],
-			["<TextAlign>\n\n가운데\n\n</TextAlign>", "missing_block_attribute"],
-			['<TextAlign align="justify">\n\n가운데\n\n</TextAlign>', "invalid_block_attribute"],
+	it("blocks publishing blocks without required or valid attributes", async () => {
+		const text = (value: string): CmsNode => ({ type: "paragraph", content: [{ type: "text", text: value }] });
+		const tab = (attrs: Record<string, string>, value: string): CmsNode => ({
+			type: "tab",
+			attrs,
+			content: [text(value)],
+		});
+		const cases: [string, CmsNode, string][] = [
 			[
-				'<Tabs defaultValue="없음">\n\n<Tab label="a">\n\n1\n\n</Tab>\n\n<Tab label="b">\n\n2\n\n</Tab>\n\n</Tabs>',
+				"a tab without its label",
+				{ type: "tabs", content: [tab({}, "첫"), tab({ label: "b" }, "둘")] },
+				"missing_block_attribute",
+			],
+			[
+				"a default tab that no tab has",
+				{
+					type: "tabs",
+					attrs: { defaultValue: "없음" },
+					content: [tab({ label: "a" }, "1"), tab({ label: "b" }, "2")],
+				},
 				"invalid_block_attribute",
 			],
 		];
-		for (const [mdx, code] of cases) {
+		for (const [name, block, code] of cases) {
 			const snapshot = await prepareSnapshot({
 				collection: "memo",
 				slug: "m",
 				metadata: { title: "m" },
-				format: "mdx",
-				body: mdx,
+				doc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [block] },
 			});
 			const result = validateForPublish(snapshot, { targets: [], media: [] });
-			expect(result.ready, mdx).toBe(false);
+			expect(result.ready, name).toBe(false);
 			expect(
 				result.issues.map((issue) => issue.code),
-				mdx,
+				name,
 			).toContain(code);
 		}
 	});

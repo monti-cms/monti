@@ -14,6 +14,7 @@ import { contentPath } from "../../core/links";
 import { localizePath } from "../../core/locales";
 import type { ContentStore } from "../../core/store";
 import { publishDraft, seedEntry, seedSave } from "../../core/store/__test__/seed";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { recordLocalizedFields } from "../../schema/derive";
 import {
 	closeGlobalPool,
@@ -54,6 +55,7 @@ describe("public site reading (cms.read)", () => {
 		rawCreate = filled.raw.createEntryWithReferences;
 		cms = fakeCms({
 			store,
+			formats: [paragraphsFormat],
 			verifyAdmin: async () => {
 				if (!state.admin) throw new Error("unauthorized");
 				return { userId: "u", accountId: "a", isAdmin: true };
@@ -98,7 +100,7 @@ describe("public site reading (cms.read)", () => {
 			collection: contentCollection,
 			slug: "read-list-draft",
 			metadata: { title: "Draft" },
-			mdx: "x",
+			text: "x",
 		});
 
 		const page1 = await listEntries({ collection: contentCollection, pageSize: 1, sort: "publishedAt", order: "desc" });
@@ -106,9 +108,15 @@ describe("public site reading (cms.read)", () => {
 		expect(page1.items).toHaveLength(1);
 		expect(page1.items[0]?.id).toBe(second.id);
 		expect(page1.items[0]?.body).toBeUndefined();
-		const page2 = await listEntries({ collection: contentCollection, pageSize: 1, page: 2, body: true, format: "mdx" });
+		const page2 = await listEntries({
+			collection: contentCollection,
+			pageSize: 1,
+			page: 2,
+			body: true,
+			format: "paragraphs",
+		});
 		expect(page2.items[0]?.id).toBe(first.id);
-		expect(page2.items[0]?.body).toEqual({ format: "mdx", text: "Body read-list-1\n" });
+		expect(page2.items[0]?.body).toEqual({ format: "paragraphs", text: "Body read-list-1" });
 		const all = await listEntries({ collection: contentCollection, pageSize: 100 });
 		expect(all.items.map((item) => item.slug)).not.toContain("read-list-draft");
 
@@ -168,13 +176,13 @@ describe("public site reading (cms.read)", () => {
 			"read-detail",
 			relation && target ? { [relation.name]: relation.many ? [target] : target } : {},
 		);
-		const found = await getEntry({ collection: contentCollection, slug: "read-detail", format: "mdx" });
+		const found = await getEntry({ collection: contentCollection, slug: "read-detail", format: "paragraphs" });
 		expect(found.status).toBe("found");
 		if (found.status !== "found") return;
 		expect(found.entry).toMatchObject({
 			id: published.id,
 			title: "Title read-detail",
-			body: { format: "mdx", text: "Body read-detail\n" },
+			body: { format: "paragraphs", text: "Body read-detail" },
 			fallback: false,
 			path: localizePath(defaultLocale, contentPath(contentCollection, "read-detail") ?? ""),
 		});
@@ -188,7 +196,7 @@ describe("public site reading (cms.read)", () => {
 			expectedVersion: published.version,
 			slug: "read-detail-renamed",
 			metadata: published.working.metadata,
-			mdx: published.working.mdx,
+			doc: published.working.doc,
 		});
 		await publishDraft(store, { id: published.id, expectedVersion: renamed.version });
 		const old = await getEntry({ collection: contentCollection, slug: "read-detail" });
@@ -228,15 +236,15 @@ describe("public site reading (cms.read)", () => {
 		await seedSave(store, published.id, {
 			expectedVersion: published.version,
 			metadata: published.working.metadata,
-			mdx: "Edited draft",
+			text: "Edited draft",
 			contentHash: "hash-edited",
 		});
 		state.admin = true;
-		expect((await getPreview({ collection: contentCollection, slug: "read-preview", format: "mdx" }))?.body?.text).toBe(
-			"Edited draft\n",
-		);
-		const published2 = await getEntry({ collection: contentCollection, slug: "read-preview", format: "mdx" });
-		expect(published2.status === "found" && published2.entry.body?.text).toBe("Body read-preview\n");
+		expect(
+			(await getPreview({ collection: contentCollection, slug: "read-preview", format: "paragraphs" }))?.body?.text,
+		).toBe("Edited draft");
+		const published2 = await getEntry({ collection: contentCollection, slug: "read-preview", format: "paragraphs" });
+		expect(published2.status === "found" && published2.entry.body?.text).toBe("Body read-preview");
 		state.admin = false;
 		expect(await getPreview({ collection: contentCollection, slug: "read-preview" })).toBeNull();
 		state.admin = true;

@@ -1,7 +1,10 @@
+import "@monti-cms/core/client";
+import { createFormatRegistry } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
-import { contentCollection } from "../../../../test/any-site";
-import { documentText, EXCERPT_TEXT, SEARCH_TEXT } from "../../body-text";
-import { prepareSnapshot, validateForPublish } from "../../snapshot";
+import { documentText, EXCERPT_TEXT, SEARCH_TEXT } from "../../../../core/src/core/body-text";
+import { type Collection, DOCUMENT_COLLECTIONS } from "../../../../core/src/core/collections";
+import { prepareSnapshot as prepareCoreSnapshot, validateForPublish } from "../../../../core/src/core/snapshot";
+import { mdxFormat } from "../../format";
 import { parityCorpus } from "./corpus";
 import golden from "./golden.json";
 
@@ -40,6 +43,11 @@ const withAccepted = (name: string, codes: readonly string[]) =>
 const unique = (items: readonly { code: string }[] | undefined) =>
 	[...new Set((items ?? []).map((i) => i.code))].sort();
 const goldenOf = (name: string) => (golden as Record<string, Golden>)[name] as Golden;
+
+const contentCollection = DOCUMENT_COLLECTIONS[0] as Collection;
+
+const prepareSnapshot = (input: Parameters<typeof prepareCoreSnapshot>[0]) =>
+	prepareCoreSnapshot(input, { import: { formats: createFormatRegistry([mdxFormat]) } });
 
 const prepare = async (mdx: string) => {
 	const snap = await prepareSnapshot({

@@ -1,7 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { storedCodeBlockAttrs } from "../../doc/stored-code-block";
+import { STORED_DOCUMENT_VERSION } from "../../doc/stored-document";
 import { highlight } from "../code/code-highlighter";
-import { renderMdx } from "../index";
+import { renderDocument } from "../index";
+
+const codeDoc = (language: string, value: string) => ({
+	type: "doc" as const,
+	version: STORED_DOCUMENT_VERSION,
+	content: [{ type: "codeBlock", attrs: storedCodeBlockAttrs({ language, meta: "", value }) }],
+});
 
 const textOf = (node: unknown): string => {
 	if (!node || typeof node !== "object") return "";
@@ -23,13 +31,13 @@ describe("code in a language that is not loaded", () => {
 	});
 
 	it("does not fail a page that has it", async () => {
-		await expect(renderMdx("```no-such-language\nlet x = 1\n```\n")).resolves.toBeTruthy();
+		await expect(renderDocument(codeDoc("no-such-language", "let x = 1"))).resolves.toBeTruthy();
 	});
 });
 
 describe("focus lines", () => {
 	it("carry the class the public styles dim the other lines by", async () => {
-		const { content } = await renderMdx("```ts\nconst a = 1;\n// @line focus\nconst b = 2;\nconst c = 3;\n```\n");
+		const { content } = await renderDocument(codeDoc("ts", "const a = 1;\n// @line focus\nconst b = 2;\nconst c = 3;"));
 		const markup = renderToStaticMarkup(content);
 		const lines = [...markup.matchAll(/<span class="([^"]*\bline\b[^"]*)"/g)].map((match) => match[1] ?? "");
 		expect(lines.map((names) => names.split(/\s+/).includes("code-focus"))).toEqual([false, true, false]);

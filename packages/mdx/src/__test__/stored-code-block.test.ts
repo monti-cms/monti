@@ -1,14 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { withoutBlockIds } from "../block-ids";
-import { storedCodeBlockFence } from "../stored-code-block";
 import {
-	bodyFromDocument,
-	bodyFromMdx,
-	fromStoredDocument,
+	type CmsNode,
 	readStoredDocument,
 	type StoredDocument,
-} from "../stored-document";
-import type { CmsNode } from "../types";
+	storedCodeBlockFence,
+	withoutBlockIds,
+} from "@monti-cms/core/document";
+import { describe, expect, it } from "vitest";
+import { bodyFromDocument, bodyFromMdx, fromStoredDocument } from "../body";
 
 const FENCE = [
 	'```ts title="a.ts"',

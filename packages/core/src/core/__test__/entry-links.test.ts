@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../test/any-site";
-import { entryLinkHref } from "../../mdx/entry-links";
-import type { StoredDocument } from "../../mdx/stored-document";
-import { bodyFromMdx } from "../../mdx/stored-document";
+import { docOf as docOfText } from "../../../test/stored-content";
+import { entryLinkHref, linkMarkAttrs, mapLinkAttrs } from "../../doc/entry-links";
+import type { StoredDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
 import { createWritePipeline } from "../../services/write-pipeline";
 import { checkDocument } from "../body-check";
 import { internalLinkAddresses, linkAddressKey, withEntryLinks } from "../link-ids";
@@ -13,20 +16,33 @@ import type { ServiceInput } from "../types";
 const ID = "123e4567-e89b-42d3-a456-426614174000";
 const pathOf = (slug: string) => contentPath(contentCollection, slug) as string;
 
-const docOf = (mdx: string): StoredDocument => {
-	const { doc } = bodyFromMdx(mdx);
-	if (!doc) throw new Error("not a document");
-	return doc;
+/** The text read by the test reader, with a link to `entry:<id>` made an entry link, as a format that knows the notation writes it. */
+const docOf = (text: string): StoredDocument => {
+	const doc = docOfText(text);
+	const content = mapLinkAttrs(doc.content, (attrs) =>
+		typeof attrs.href === "string"
+			? linkMarkAttrs(attrs.href, typeof attrs.title === "string" ? attrs.title : null)
+			: undefined,
+	);
+	return { ...doc, content: content as CmsNode[] };
 };
 
-const input = async (mdx: string): Promise<ServiceInput> =>
+const formats = async () => createFormatRegistry([paragraphsFormat]);
+
+/** A write of a body given as a document (the text read by the test reader). */
+const input = async (text: string): Promise<ServiceInput> =>
 	({
 		collection: contentCollection,
 		slug: "post",
 		metadata: await requiredMetadata(contentCollection, "Post", async () => "00000000-0000-4000-8000-000000000009"),
-		format: "mdx",
-		body: mdx,
+		doc: docOf(text),
 	}) as ServiceInput;
+
+/** A write of the same body given as text in a format. */
+const textInput = async (text: string): Promise<ServiceInput> => {
+	const { doc: _doc, ...rest } = (await input("")) as ServiceInput & { doc?: unknown };
+	return { ...rest, format: "paragraphs", body: text } as ServiceInput;
+};
 
 describe("checking links by entry id", () => {
 	it("records one reference per target, with the block of every link, and no href check for it", async () => {
@@ -112,6 +128,7 @@ describe("turning links by address into links by id", () => {
 	it("the write pipeline does it for text and for a document, and keeps the input as it came when there is nothing to do", async () => {
 		const seen: string[] = [];
 		const pipeline = createWritePipeline({
+			formats,
 			links: async (addresses) => {
 				seen.push(...addresses.map(linkAddressKey));
 				return new Map(addresses.map((address) => [linkAddressKey(address), ID]));
@@ -119,13 +136,8 @@ describe("turning links by address into links by id", () => {
 		});
 		const run = (given: ServiceInput) => pipeline.run({ operation: "create", locale: "ko", input: given });
 
-		const fromText = await run(await input(`[a](${pathOf("a")})`));
-		const {
-			body: _body,
-			format: _format,
-			...withoutBody
-		} = (await input("")) as ServiceInput & { body?: string; format?: string };
-		const fromDoc = await run({ ...withoutBody, doc: docOf(`[a](${pathOf("a")})`) } as never);
+		const fromText = await run(await textInput(`[a](${pathOf("a")})`));
+		const fromDoc = await run(await input(`[a](${pathOf("a")})`));
 		const plain = await run(await input("No links."));
 
 		for (const result of [fromText, fromDoc]) {

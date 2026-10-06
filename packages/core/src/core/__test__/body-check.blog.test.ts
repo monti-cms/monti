@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { StoredDocument } from "../../mdx/stored-document";
-import type { CmsNode } from "../../mdx/types";
+import type { StoredDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
 import { checkDocument, isEmptyDocument } from "../body-check";
 
 /** Checks that need the reference blog's addresses and blocks (`/posts/:slug`, `code-ref`). */

@@ -1,5 +1,6 @@
+import type { CmsNode } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
-import { analyze, type CmsNode, serialize, toDocument } from "..";
+import { analyze, serialize, toDocument } from "../format";
 
 const parse = (mdx: string) => toDocument(analyze(mdx));
 const roundTrip = (mdx: string) => serialize(parse(mdx));

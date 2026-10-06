@@ -1,8 +1,7 @@
 import { readdirSync } from "node:fs";
+import { ADDED_BLOCKS, BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { ADDED_BLOCKS, BLOCKS } from "../../blocks/active";
-import type { BlockDefinition } from "../../blocks/define";
-import { analyze, serialize, toDocument } from "..";
+import { analyze, serialize, toDocument } from "../format";
 import { readSample, SAMPLES_DIR } from "./fixtures/samples";
 
 /**

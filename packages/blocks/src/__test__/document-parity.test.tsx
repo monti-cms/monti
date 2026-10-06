@@ -1,44 +1,42 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { bodyFromMdx } from "@monti-cms/mdx/format";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { describe, expect, it, vi } from "vitest";
-import { readSamples } from "../../../core/src/mdx/__test__/fixtures/samples";
-import { bodyFromMdx } from "../../../core/src/mdx/stored-document";
-import { renderBoth } from "../../../core/src/render/__test__/parity";
 
 // Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
 vi.mock("../../../core/src/config/resolved", async () => ({
 	cmsConfig: (await import("../test/render-config")).default,
 }));
 
-/** The JSON renderer (`renderDocument`) and `renderMdx` draw the same page from the same stored body, with the real block components. */
+const { readSamples, renderFixture } = await import("@monti-cms/mdx/testing");
+
+/** MDX text is read into a stored document and drawn with the real block components: nothing is left to the fallback. */
 const syntax = [directiveSyntax()];
 
-const expectSame = async (source: string, label: string, options: Parameters<typeof renderBoth>[1] = {}) => {
-	const parity = await renderBoth(source, { syntax, ...options });
-	expect(parity.document, label).toBe(parity.mdx);
-	expect(parity.tocDocument, label).toEqual(parity.tocMdx);
-	expect(parity.unknown, label).toBe(0);
-	return parity;
+const expectRenders = async (source: string, label: string, options: Parameters<typeof renderFixture>[1] = {}) => {
+	const rendered = await renderFixture(source, { syntax, ...options });
+	expect(rendered.unknown, label).toEqual([]);
+	return rendered;
 };
 
-describe("JSON renderer parity with renderMdx: block extensions", () => {
-	it("renders every sample post the same", async () => {
+describe("rendering of block extensions", () => {
+	it("renders every sample post without unknown nodes", async () => {
 		const samples = readSamples();
 		expect(samples.length).toBeGreaterThan(0);
 		for (const { name, mdx } of samples) {
 			expect(bodyFromMdx(mdx, syntax).doc, name).not.toBeNull();
-			await expectSame(mdx, name);
+			await expectRenders(mdx, name);
 		}
 	});
 
-	it("renders the component showcase the same, in every locale", async () => {
+	it("renders the component showcase in every locale", async () => {
 		const source = readFileSync(path.join(__dirname, "fixtures/component-showcase.mdx"), "utf8");
 		for (const locale of [undefined, "ko", "en"]) {
-			const parity = await expectSame(source, `showcase ${locale}`, { locale });
-			// It holds every block of the extension, so a block the JSON renderer skipped would have left a gap above.
+			const rendered = await expectRenders(source, `showcase ${locale}`, { locale });
+			// It holds every block of the extension, so a block the renderer skipped would be missing here.
 			for (const marker of ["cms-block-callout", "cms-block-collapsible", "cms-block-columns", 'role="tablist"']) {
-				expect(parity.document).toContain(marker);
+				expect(rendered.html).toContain(marker);
 			}
 		}
 	});
@@ -114,9 +112,9 @@ describe("JSON renderer parity with renderMdx: block extensions", () => {
 	};
 
 	for (const [name, source] of Object.entries(cases)) {
-		it(`renders ${name} the same`, async () => {
+		it(`renders ${name}`, async () => {
 			expect(bodyFromMdx(source, syntax).doc, name).not.toBeNull();
-			await expectSame(source, name);
+			await expectRenders(source, name);
 		});
 	}
 });

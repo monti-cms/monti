@@ -29,40 +29,35 @@ describe("ContentStore (Postgres)", () => {
 		await closeGlobalPool();
 	});
 
-	describe("a syntax-only change (same content hash, different MDX string)", () => {
+	describe("a syntax-only change (same content hash, different text)", () => {
 		const searchTextOf = async (entryId: string, state: "working" | "published") =>
 			(
-				await pool.query<{ mdx: string; search_text: string }>(
-					`SELECT mdx, search_text FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
+				await pool.query<{ search_text: string }>(
+					`SELECT search_text FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
 					[entryId, state],
 				)
 			).rows[0];
 
-		it("stores the new MDX and search text without a version bump or a new updatedAt", async () => {
+		it("stores the new search text without a version bump or a new updatedAt", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "syntax-only-save",
 				metadata: { title: "Syntax" },
-				mdx: "first words",
+				text: "first words",
 				contentHash: "hash-syntax-only",
 			});
 
 			const saved = await seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				metadata: { title: "Syntax" },
-				mdx: "second words",
+				text: "second words",
 				contentHash: "hash-syntax-only",
 			});
 
 			expect(saved.version).toBe(entry.version);
 			expect(saved.updatedAt.getTime()).toBe(entry.updatedAt.getTime());
 			expect(saved.working.updatedAt?.getTime()).toBe(entry.working.updatedAt?.getTime());
-			// The MDX column is written from the document (which ends its text with a newline).
-			expect(saved.working.mdx).toBe("second words\n");
-			expect(await searchTextOf(entry.id, "working")).toMatchObject({
-				mdx: "second words\n",
-				search_text: "second words",
-			});
+			expect(await searchTextOf(entry.id, "working")).toMatchObject({ search_text: "second words" });
 		});
 	});
 
@@ -71,7 +66,7 @@ describe("ContentStore (Postgres)", () => {
 			collection: contentCollection,
 			slug: "rollback-test",
 			metadata: { title: "First Publish" },
-			mdx: "first publish",
+			text: "first publish",
 			schemaVersion: 1,
 			contentHash: "hash-rollback-1",
 		});
@@ -81,7 +76,7 @@ describe("ContentStore (Postgres)", () => {
 		const update = await seedSave(store, entry.id, {
 			expectedVersion: firstPublish.version,
 			metadata: { title: "Second Publish" },
-			mdx: "second publish",
+			text: "second publish",
 			schemaVersion: 1,
 			contentHash: "hash-rollback-2",
 		});

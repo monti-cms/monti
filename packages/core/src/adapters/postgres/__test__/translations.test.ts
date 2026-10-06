@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, secondLocale } from "../../../../test/any-site";
+import { docOf } from "../../../../test/stored-content";
 import type { ContentStore, Entry } from "../../../core/store";
 import { second, translationHelpers } from "../../../core/store/__test__/contract/translation-fixtures";
 import type { createContentService } from "../../../services/content-service";
@@ -39,7 +40,7 @@ describe("translation groups (postgres storage)", () => {
 	});
 
 	describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
-		it("reads a version 2 translation status as version 4 with the document of its source, and writes version 4", async () => {
+		it("reads a version 2 translation status as version 4 with a document holding the text of its source, and writes version 4", async () => {
 			const source = await createPost("legacy-state-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 			await pool.query(`UPDATE "${schemaName}".entry_bodies SET translation = $1::jsonb WHERE entry_id = $2`, [
@@ -49,15 +50,15 @@ describe("translation groups (postgres storage)", () => {
 			const legacy = await store.getEntry(translation.id);
 			expect(legacy.working.translation?.version).toBe(4);
 			expect(legacy.working.translation).not.toHaveProperty("baseSource");
-			expect(legacy.working.translation?.baseDoc.content[0]).toMatchObject({ type: "paragraph" });
+			// Core reads no text format: the text of the old status is kept as the unparsed document it is until the MDX package upgrades it.
+			expect(legacy.working.translation?.baseDoc.content[0]).toMatchObject({ type: "unparsed" });
 			expect(JSON.stringify(legacy.working.translation?.baseDoc)).toContain("예전 기준");
 
 			const resent = await service.saveDraft(translation.id, {
 				collection: contentCollection,
 				slug: "legacy-state-source",
 				metadata: { title: "Only the title" },
-				format: "mdx",
-				body: "",
+				doc: docOf(""),
 				translation: { version: 2, baseSource: "예전 기준" } as never,
 				expectedVersion: legacy.version,
 			});

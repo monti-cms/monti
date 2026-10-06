@@ -151,14 +151,6 @@ describe("defineConfig", () => {
 		).toThrow(/duplicate/);
 	});
 
-	it("accepts syntax extensions and rejects unnamed or duplicate ones", () => {
-		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
-		const extension = { name: "notation" };
-		expect(defineConfig({ ...base, mdx: { syntax: [extension] } }).mdx?.syntax).toEqual([extension]);
-		expect(() => defineConfig({ ...base, mdx: { syntax: [extension, extension] } })).toThrow(/duplicate/);
-		expect(() => defineConfig({ ...base, mdx: { syntax: [{ name: "" }] } })).toThrow(/needs a name/);
-	});
-
 	it("rejects relations and backlinks to unknown or mismatched collections", () => {
 		const article = defineCollection({
 			label: "Article",

@@ -1,19 +1,76 @@
 import { describe, expect, it } from "vitest";
+import { docOf as docOfText } from "../../../test/stored-content";
 import { computeContentHash } from "../../core/content-hash";
 import { assignBlockIds, BLOCK_ID_PATTERN, forEachBlock, regenerateBlockIds, withoutBlockIds } from "../block-ids";
-import { bodyFromDocument, bodyFromMdx, type StoredDocument } from "../stored-document";
+import { canonicalDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from "../stored-document";
 import type { CmsNode } from "../types";
 
-const docOf = (mdx: string, previous?: StoredDocument | null): StoredDocument => {
-	const { doc } = bodyFromMdx(mdx, undefined, { previous });
-	if (!doc) throw new Error("no document");
-	return doc;
+const text = (value: string): CmsNode => ({ type: "text", text: value });
+const paragraph = (value: string): CmsNode => ({ type: "paragraph", content: [text(value)] });
+
+/** A document of the given blocks, with ids that pair with the blocks of `previous` where they match (as every write gives them). */
+const docWith = (content: CmsNode[], previous?: StoredDocument | null): StoredDocument => {
+	const doc = canonicalDocument({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
+	return { ...doc, content: assignBlockIds(doc.content, [previous?.content]) };
 };
+
+/** The text reader of the core tests (it knows headings, paragraphs, lists and fenced code), with ids paired with those of `previous`. */
+const docOf = (source: string, previous?: StoredDocument | null): StoredDocument => docOfText(source, previous);
+
+/** What a block says in the sample: a heading, paragraphs, a list, a block with attributes, a table and a code block, as a format reads them. */
+interface Changes {
+	readonly first?: string;
+	readonly afterCentered?: string;
+	readonly withoutSecondItem?: boolean;
+	readonly last?: string;
+}
+
+const sample = (changes: Changes = {}, previous?: StoredDocument | null): StoredDocument =>
+	docWith(
+		[
+			{ type: "heading", attrs: { level: 1 }, content: [text("Title")] },
+			paragraph(changes.first ?? "First paragraph."),
+			{
+				type: "bulletList",
+				content: [
+					{ type: "listItem", content: [paragraph("one")] },
+					...(changes.withoutSecondItem ? [] : [{ type: "listItem", content: [paragraph("two")] }]),
+				],
+			},
+			{ type: "text-align", attrs: { align: "center" }, content: [paragraph("Centered.")] },
+			{
+				type: "table",
+				content: [
+					{
+						type: "tableRow",
+						content: [
+							{ type: "tableCell", content: [text("a")] },
+							{ type: "tableCell", content: [text("b")] },
+						],
+					},
+					{
+						type: "tableRow",
+						content: [
+							{ type: "tableCell", content: [text("1")] },
+							{ type: "tableCell", content: [text("2")] },
+						],
+					},
+				],
+			},
+			{ type: "codeBlock", attrs: { language: "ts", meta: "", code: "const a = 1;" } },
+			...(changes.afterCentered ? [paragraph(changes.afterCentered)] : []),
+			paragraph(changes.last ?? "Last paragraph."),
+		],
+		previous,
+	);
 
 /** Block ids in document order, with the block's text, so tests read as "this block kept that id". */
 const blocks = (doc: StoredDocument): { type: string; text: string; id: string }[] => {
 	const out: { type: string; text: string; id: string }[] = [];
-	const textOf = (node: CmsNode): string => (node.text ?? "") + (node.content ?? []).map(textOf).join("");
+	const textOf = (node: CmsNode): string =>
+		(node.text ?? "") +
+		(typeof node.attrs?.code === "string" ? node.attrs.code : "") +
+		(node.content ?? []).map(textOf).join("");
 	forEachBlock(doc.content, (node) => out.push({ type: node.type, text: textOf(node), id: node.id ?? "" }));
 	return out;
 };
@@ -21,35 +78,9 @@ const blocks = (doc: StoredDocument): { type: string; text: string; id: string }
 const idOf = (doc: StoredDocument, text: string, type = "paragraph") =>
 	blocks(doc).find((block) => block.type === type && block.text === text)?.id;
 
-const SAMPLE = [
-	"# Title",
-	"",
-	"First paragraph.",
-	"",
-	"- one",
-	"- two",
-	"",
-	'<TextAlign align="center">',
-	"",
-	"Centered.",
-	"",
-	"</TextAlign>",
-	"",
-	"| a | b |",
-	"| - | - |",
-	"| 1 | 2 |",
-	"",
-	"```ts",
-	"const a = 1;",
-	"```",
-	"",
-	"Last paragraph.",
-	"",
-].join("\n");
-
 describe("block ids", () => {
 	it("gives every block, and only blocks, a unique id", () => {
-		const doc = docOf(SAMPLE);
+		const doc = sample();
 		const all = blocks(doc);
 		expect(all.map((block) => block.type)).toEqual([
 			"heading",
@@ -77,27 +108,24 @@ describe("block ids", () => {
 		expect(JSON.stringify(doc)).not.toMatch(/"id":"[^"]+","text"|"id":"[^"]+","type":"text"/);
 	});
 
-	it("are not written to MDX and do not change the content hash", () => {
-		const body = bodyFromMdx(SAMPLE);
-		for (const { id } of blocks(body.doc as StoredDocument)) expect(body.mdx).not.toContain(id);
-		const again = bodyFromMdx(SAMPLE);
-		expect(again.doc).not.toEqual(body.doc);
-		expect(computeContentHash({}, again.doc as StoredDocument)).toBe(
-			computeContentHash({}, body.doc as StoredDocument),
-		);
+	it("do not change the content hash", () => {
+		const body = sample();
+		const again = sample();
+		expect(again).not.toEqual(body);
+		expect(computeContentHash({}, again)).toBe(computeContentHash({}, body));
 	});
 
-	it("are inherited from the previous version when the same MDX is read again", () => {
-		const first = docOf(SAMPLE);
-		expect(docOf(SAMPLE, first)).toEqual(first);
+	it("are inherited from the previous version when the same content is read again", () => {
+		const first = sample();
+		expect(sample({}, first)).toEqual(first);
+		const text = docOf("# Title\n\nOne.\n\n- a\n- b\n");
+		expect(docOf("# Title\n\nOne.\n\n- a\n- b\n", text)).toEqual(text);
 	});
 
 	it("survive an edited paragraph, an inserted block and a removed block", () => {
-		const first = docOf(SAMPLE);
-		const edited = docOf(
-			SAMPLE.replace("First paragraph.", "First paragraph, edited.")
-				.replace("Last paragraph.", "New paragraph.\n\nLast paragraph.")
-				.replace("- two\n", ""),
+		const first = sample();
+		const edited = sample(
+			{ first: "First paragraph, edited.", afterCentered: "New paragraph.", withoutSecondItem: true },
 			first,
 		);
 		expect(idOf(edited, "First paragraph, edited.")).toBe(idOf(first, "First paragraph."));
@@ -117,9 +145,9 @@ describe("block ids", () => {
 	});
 
 	it("follow a moved block", () => {
-		const first = docOf("One.\n\nTwo.\n\nThree.\n\n```js\nx\n```\n");
-		const moved = docOf("```js\nx\n```\n\nOne.\n\nTwo.\n\nThree.\n", first);
-		expect(idOf(moved, "x", "codeBlock")).toBe(idOf(first, "x", "codeBlock"));
+		const first = docOf("One.\n\nTwo.\n\nThree.\n\nFour.\n");
+		const moved = docOf("Four.\n\nOne.\n\nTwo.\n\nThree.\n", first);
+		expect(idOf(moved, "Four.")).toBe(idOf(first, "Four."));
 		expect(idOf(moved, "Three.")).toBe(idOf(first, "Three."));
 	});
 
@@ -134,23 +162,22 @@ describe("block ids", () => {
 	});
 
 	it("are kept from a stored document, and inherited when it has none", () => {
-		const first = docOf(SAMPLE);
-		expect(bodyFromDocument(first).doc).toEqual(first);
-		const bare = { ...first, content: withoutBlockIds(first.content) };
-		expect(bodyFromDocument(bare, undefined, { previous: first }).doc).toEqual(first);
-		const fresh = bodyFromDocument(bare).doc as StoredDocument;
-		expect(blocks(fresh).every((block) => BLOCK_ID_PATTERN.test(block.id))).toBe(true);
+		const first = sample();
+		expect(assignBlockIds(first.content, [first.content])).toEqual(first.content);
+		const bare = withoutBlockIds(first.content);
+		expect(assignBlockIds(bare, [first.content])).toEqual(first.content);
+		const fresh = assignBlockIds(bare);
+		expect(blocks({ ...first, content: fresh }).every((block) => BLOCK_ID_PATTERN.test(block.id))).toBe(true);
 	});
 
 	it("replace an id that is not a valid block id", () => {
 		const first = docOf("One.\n");
-		const odd = { ...first, content: [{ ...(first.content[0] as CmsNode), id: "NOT-AN-ID" }] };
-		const id = (bodyFromDocument(odd).doc as StoredDocument).content[0]?.id;
-		expect(id).toMatch(BLOCK_ID_PATTERN);
+		const odd = [{ ...(first.content[0] as CmsNode), id: "NOT-AN-ID" }];
+		expect(assignBlockIds(odd)[0]?.id).toMatch(BLOCK_ID_PATTERN);
 	});
 
 	it("are all new when a body is copied into another: nothing of the copy's ids is kept", () => {
-		const original = docOf(SAMPLE);
+		const original = sample();
 		const copy = { ...original, content: regenerateBlockIds(original.content) };
 
 		const before = blocks(original);

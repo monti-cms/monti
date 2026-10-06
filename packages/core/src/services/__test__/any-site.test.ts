@@ -12,6 +12,8 @@ import {
 import type { Collection } from "../../core/collections";
 import type { ContentStore, Entry } from "../../core/store";
 import { duplicateDraft, publishDraft } from "../../core/store/__test__/seed";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -43,7 +45,7 @@ describe("any site: core content flow", () => {
 			collection: to,
 			slug: unique(to),
 			metadata,
-			format: "mdx",
+			format: "paragraphs",
 			body: "Body",
 		});
 		const entry =
@@ -59,7 +61,7 @@ describe("any site: core content flow", () => {
 			collection: contentCollection,
 			slug: unique("content"),
 			metadata: await requiredMetadata(contentCollection, title, relationTarget),
-			format: "mdx",
+			format: "paragraphs",
 			body: "Body text",
 		});
 
@@ -69,7 +71,7 @@ describe("any site: core content flow", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
+		service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
 	});
 
 	afterAll(async () => {
@@ -82,7 +84,7 @@ describe("any site: core content flow", () => {
 			collection: recordCollection,
 			slug: null,
 			metadata: await requiredMetadata(recordCollection, "Any Site Record", relationTarget),
-			format: "mdx",
+			format: "paragraphs",
 			body: "",
 		});
 		expect(record.status).toBe("published");
@@ -101,7 +103,7 @@ describe("any site: core content flow", () => {
 			collection: contentCollection,
 			slug: unique("untitled"),
 			metadata: {},
-			format: "mdx",
+			format: "paragraphs",
 			body: "Body text",
 		});
 		await expect(publishDraft(store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
@@ -177,7 +179,7 @@ describe("any site: core content flow", () => {
 				collection,
 				slug: unique("media"),
 				metadata: { ...metadata, [media.name]: mediaId },
-				format: "mdx",
+				format: "paragraphs",
 				body: "Body text",
 			} as Parameters<typeof service.createDraft>[0]);
 		};

@@ -1,10 +1,10 @@
 import { STORED_DOCUMENT_VERSION, type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
-import { readSamples } from "@monti-cms/core/testing";
+import { mdxBrowserFormat } from "@monti-cms/mdx/admin";
+import { readSamples } from "@monti-cms/mdx/testing";
 import type { JSONContent } from "@tiptap/core";
 import { getSchema } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, expect, it } from "vitest";
-import { mdxBrowserFormat } from "../../mdx-source/format";
 import { docOf, mdxOfDoc, mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { ADDED_MARKS, addedMarkName, createAddedMark } from "../added-marks";
 import { BLOCK_NODES } from "../block-views";

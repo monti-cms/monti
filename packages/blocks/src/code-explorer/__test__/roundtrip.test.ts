@@ -1,5 +1,5 @@
 import { buildEditorExtensions } from "@monti-cms/admin/editor";
-import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
+import { analyze, serialize, toDocument } from "@monti-cms/mdx/format";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it } from "vitest";

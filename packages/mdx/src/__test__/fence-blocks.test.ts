@@ -1,9 +1,9 @@
+import { ADDED_BLOCKS, BLOCKS } from "@monti-cms/core/client";
 import type { Root } from "mdast";
 import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
-import { ADDED_BLOCKS, BLOCKS } from "../../blocks/active";
 import { analyze } from "../analyze";
 import { remarkFenceBlocksToMdx } from "../remark-fence-blocks";
 

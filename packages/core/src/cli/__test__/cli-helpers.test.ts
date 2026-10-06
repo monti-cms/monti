@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseJsonc, resolveConfigPaths } from "../config-paths";
 import { loadEnvFiles } from "../env";
-import { contentRewrite, migrate, runCli } from "../index";
+import { migrate, runCli } from "../index";
 
 let dirs: string[] = [];
 afterEach(() => {
@@ -57,25 +57,12 @@ describe("monti command helpers", () => {
 		expect(out.at(-1)).toContain("Usage: monti <command>");
 		expect(out.at(-1)).toContain("--locale <code>");
 		expect(out.at(-1)).toContain("--time-zone <tz>");
+		// The removed command is not advertised.
+		expect(out.at(-1)).not.toContain("content:rewrite");
 		expect(await runCli(["deploy"], io)).toBe(1);
 		expect(out.at(-1)).toContain("E:Unknown command: deploy");
 		expect(await runCli(["init"], io)).toBe(1); // no package.json
 		expect(out.at(-1)).toContain("E:package.json not found");
-	});
-
-	it("lists content:rewrite, which is a dry run unless --apply is given, and needs the app's config files", async () => {
-		const out: string[] = [];
-		const io = { cwd: tempDir({}), log: (m: string) => out.push(m), error: (m: string) => out.push(`E:${m}`) };
-		await runCli(["help"], io);
-		expect(out.at(-1)).toContain("content:rewrite");
-		expect(out.at(-1)).toContain("--apply");
-		expect(out.at(-1)).toContain("dry run");
-		// Without the app's config files it stops before touching anything, as `migrate` does.
-		expect(await runCli(["content:rewrite"], io)).toBe(1);
-		expect(out.at(-1)).toContain("monti init");
-		// An unknown option is refused rather than ignored.
-		expect(await runCli(["content:rewrite", "--write"], io)).toBe(1);
-		expect(out.at(-1)).toMatch(/^E:.*--write/);
 	});
 });
 
@@ -96,7 +83,6 @@ describe("monti commands run against the instance the server file exports", () =
 		const { dir, options } = appWith(
 			`export const cms = {
 				migrate: async ({ log }) => { calls.push("migrate"); log("migrating"); },
-				rewrite: async () => {},
 				close: async () => { calls.push("close"); },
 			};`,
 		);
@@ -112,7 +98,6 @@ describe("monti commands run against the instance the server file exports", () =
 		const { dir, options } = appWith(
 			`export const cms = {
 				migrate: async () => { throw new Error("no database"); },
-				rewrite: async () => {},
 				close: async () => { calls.push("close"); },
 			};`,
 		);
@@ -121,20 +106,6 @@ describe("monti commands run against the instance the server file exports", () =
 		expect(calls).toEqual(["close"]);
 		expect(error).toHaveBeenCalledWith("Migration failed:", expect.any(Error));
 		error.mockRestore();
-	});
-
-	it("`content:rewrite` passes `apply` to the instance (a dry run without it) and closes it", async () => {
-		const { dir, options } = appWith(
-			`export const cms = {
-				migrate: async () => {},
-				rewrite: async ({ apply }) => { calls.push(apply ? "apply" : "dry"); },
-				close: async () => { calls.push("close"); },
-			};`,
-		);
-		expect(await contentRewrite(options)).toBe(true);
-		expect(await contentRewrite({ ...options, apply: true })).toBe(true);
-		const { calls } = await import(pathToFileURL(path.join(dir, "cms.server.mjs")).href);
-		expect(calls).toEqual(["dry", "close", "apply", "close"]);
 	});
 
 	it("a server file that does not export an instance is refused with the shape to use", async () => {

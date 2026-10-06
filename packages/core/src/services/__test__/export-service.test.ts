@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { recordCollection } from "../../../test/any-site";
-import { STORED_DOCUMENT_VERSION } from "../../mdx/stored-document";
+import { STORED_DOCUMENT_VERSION, unparsedDocument } from "../../doc/stored-document";
 import {
 	buildExportArchive,
 	canonicalJson,
@@ -220,7 +220,7 @@ describe("export archive builder", () => {
 		const snapshot = makeSnapshot();
 		const draft = snapshot.entries.find((entry) => entry.id === DRAFT_ID);
 		if (!draft) throw new Error("fixture");
-		draft.working = { ...draft.working, doc: fixtureDocument("<Open") };
+		draft.working = { ...draft.working, doc: unparsedDocument("<Open") };
 		const archive = readAll(buildExportArchive(snapshot, { scope: "admin", exportedAt: FIXED_TIME }).zip);
 
 		for (const [collection, id, file] of [

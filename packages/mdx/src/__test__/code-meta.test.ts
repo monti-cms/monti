@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyze, serialize, toDocument } from "..";
+import { analyze, serialize, toDocument } from "../format";
 
 const codeBlockOf = (mdx: string) => toDocument(analyze(mdx)).content?.find((node) => node.type === "codeBlock");
 

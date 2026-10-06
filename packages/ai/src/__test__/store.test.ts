@@ -1,3 +1,4 @@
+import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { createContentLookup } from "@monti-cms/core/plugin/server";
 import { type ContentStore, createContentService, type Entry } from "@monti-cms/core/runtime";
 import {
@@ -126,8 +127,7 @@ describe("AI action edited-value store", () => {
 			collection: "category",
 			slug: "used-address",
 			metadata: { title: "주소 확인" },
-			format: "mdx",
-			body: "",
+			doc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] },
 		});
 		const lookup = createContentLookup({ store: () => content });
 		const slugs = ["used-address", "free-address"];

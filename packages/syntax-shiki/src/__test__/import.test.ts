@@ -1,4 +1,4 @@
-import { bodyFromMdx } from "@monti-cms/core/mdx";
+import { bodyFromMdx } from "@monti-cms/mdx/format";
 import { describe, expect, it } from "vitest";
 import { shikiNotation } from "..";
 

@@ -1,5 +1,5 @@
+import { createTranslator } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { createTranslator } from "../../i18n";
 import { analyze } from "../analyze";
 import { mdxMessages } from "../messages";
 

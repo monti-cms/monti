@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import { BLOCKS } from "../../../blocks/active";
 import type { BlockDefinition } from "../../../blocks/define";
-import { bodyFromMdx, type StoredDocument, serialize, withoutBlockIds } from "../../../mdx";
-import { fromStoredDocument, unparsedDocument } from "../../../mdx/stored-document";
+import { assignBlockIds, withoutBlockIds } from "../../../doc/block-ids";
+import { STORED_DOCUMENT_VERSION, type StoredDocument, unparsedDocument } from "../../../doc/stored-document";
+import type { CmsNode } from "../../../doc/types";
 import { diffSources, type SourceChange, type TranslationUnit } from "../source-diff";
 
 /**
@@ -26,8 +27,22 @@ const titleAttribute = translatableOf(titledBox);
 const otherAttribute = titledBox
 	? Object.entries(titledBox.attributes)
 			.filter(([name, attribute]) => attribute.type === "string" && name !== titleAttribute)
-			.map(([name, attribute]) => `${name}="${attribute.options ? Object.keys(attribute.options)[0] : "x"}"`)[0]
+			.map(([name, attribute]) => [name, attribute.options ? Object.keys(attribute.options)[0] : "x"] as const)[0]
 	: undefined;
+
+/** A document of the titled box with the given title and one paragraph in it (and a paragraph before it). */
+const titled = (title: string, body: string, previous?: StoredDocument | null): StoredDocument =>
+	documentOf(
+		[
+			paragraph("앞"),
+			{
+				type: titledBox?.name ?? "",
+				attrs: { ...(otherAttribute ? { [otherAttribute[0]]: otherAttribute[1] } : {}), [titleAttribute ?? ""]: title },
+				content: [paragraph(body)],
+			},
+		],
+		previous,
+	);
 /** An expandable group that gathers children's translatable attributes (e.g. tab names) into one header line (e.g. tab group). */
 const labeledGroup = BLOCKS.flatMap((block) => {
 	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
@@ -35,13 +50,32 @@ const labeledGroup = BLOCKS.flatMap((block) => {
 	return block.translateInside && child && label ? [{ block, child, label }] : [];
 })[0];
 
-/** A unit as text: a header line as its JSON, a block as the MDX it is written as. */
-const text = (unit: TranslationUnit) =>
-	unit.kind === "header"
-		? unit.source
-		: serialize(fromStoredDocument({ type: "doc", version: 2, content: [unit.node] })).trimEnd();
+const inlineText = (node: CmsNode): string => node.text ?? (node.content ?? []).map(inlineText).join("");
 
-/** The blocks of two bodies written as MDX compared (each read as a document of its own, so only kind and content pair the blocks). */
+/** A block as text: its words, a heading with its `#` marks. */
+const blockText = (node: CmsNode) =>
+	node.type === "heading" ? `${"#".repeat(Number(node.attrs?.level ?? 1))} ${inlineText(node)}` : inlineText(node);
+
+/** A unit as text: a header line as its JSON, a block as its words. */
+const text = (unit: TranslationUnit) => (unit.kind === "header" ? unit.source : blockText(unit.node));
+
+/** A document of the given blocks, with ids drawn for blocks that have none and inherited from `previous` where they pair. */
+const documentOf = (content: CmsNode[], previous?: StoredDocument | null): StoredDocument => ({
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+	content: assignBlockIds(content, [previous?.content]),
+});
+
+const paragraph = (value: string): CmsNode => ({ type: "paragraph", content: [{ type: "text", text: value }] });
+
+/** An expandable alignment box (a core block, so any config has it) around paragraphs. */
+const alignBox = (align: string, ...inner: string[]): CmsNode => ({
+	type: "text-align",
+	attrs: { align },
+	content: inner.map(paragraph),
+});
+
+/** The blocks of two bodies written as text compared (each read as a document of its own, so only kind and content pair the blocks). */
 const diffText = (before: string, after: string) => diffSources(docOf(before), docOf(after));
 
 const summary = (changes: SourceChange[] | null) =>
@@ -70,16 +104,14 @@ describe("comparing two source versions", () => {
 	});
 
 	it("blocks inside a box are compared separately", () => {
-		const before = '<TextAlign align="center">\n\n안쪽\n\n그대로\n\n</TextAlign>\n';
-		const after = '<TextAlign align="center">\n\n안쪽 고침\n\n그대로\n\n</TextAlign>\n';
-		expect(summary(diffText(before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
+		const before = documentOf([alignBox("center", "안쪽", "그대로")]);
+		const after = documentOf([alignBox("center", "안쪽 고침", "그대로")]);
+		expect(summary(diffSources(before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
 	});
 
 	it.skipIf(!titledBox || !titleAttribute)("blocks and the title inside a box are compared separately", () => {
 		if (!titledBox || !titleAttribute) return;
-		const box = (title: string, body: string) =>
-			`<${titledBox.component} ${[otherAttribute, `${titleAttribute}="${title}"`].filter(Boolean).join(" ")}>\n\n${body}\n\n</${titledBox.component}>\n`;
-		expect(summary(diffText(box("알림", "안쪽"), box("주의", "안쪽 고침")))).toEqual([
+		expect(summary(diffSources(titled("알림", "안쪽"), titled("주의", "안쪽 고침")))).toEqual([
 			["changed", JSON.stringify({ title: "알림" }), JSON.stringify({ title: "주의" })],
 			["changed", "안쪽", "안쪽 고침"],
 		]);
@@ -89,50 +121,39 @@ describe("comparing two source versions", () => {
 		if (!labeledGroup) return;
 		const { block, child, label } = labeledGroup;
 		const tabs = (second: string) =>
-			`<${block.component}>\n\n<${child.component} ${label}="하나">\n\n첫째\n\n</${child.component}>\n\n<${child.component} ${label}="${second}">\n\n둘째\n\n</${child.component}>\n\n</${block.component}>\n`;
-		expect(summary(diffText(tabs("둘"), tabs("둘 고침")))).toEqual([
+			documentOf([
+				{
+					type: block.name,
+					content: [
+						{ type: child.name, attrs: { [label]: "하나" }, content: [paragraph("첫째")] },
+						{ type: child.name, attrs: { [label]: second }, content: [paragraph("둘째")] },
+					],
+				},
+			]);
+		expect(summary(diffSources(tabs("둘"), tabs("둘 고침")))).toEqual([
 			["changed", JSON.stringify({ labels: ["하나", "둘"] }), JSON.stringify({ labels: ["하나", "둘 고침"] })],
 		]);
 	});
 
-	it("treats a footnote definition as one unit and compares it like other blocks", () => {
-		const before = "본문[^a]\n\n[^a]: 첫 각주\n";
-		const after = "본문[^a]\n\n[^a]: 고친 각주\n";
-		expect(summary(diffText(before, after))).toEqual([["changed", "[^a]: 첫 각주", "[^a]: 고친 각주"]]);
-		const [change] = diffText(before, after) ?? [];
-		expect(change?.kind === "changed" && change.after.type).toBe("footnoteDefinition");
-		expect(change?.kind === "changed" && change.after.auto).toBe(false);
-	});
-
-	it("finds added and removed footnote definitions", () => {
-		const base = "본문[^a]\n\n[^a]: 하나\n";
-		const extended = "본문[^a][^b]\n\n[^a]: 하나\n\n[^b]: 둘\n";
-		expect(summary(diffText(base, extended))).toEqual([
-			["changed", "본문[^a]", "본문[^a][^b]"],
-			["added", "[^b]: 둘"],
-		]);
-		expect(summary(diffText(extended, base))).toEqual([
-			["changed", "본문[^a][^b]", "본문[^a]"],
-			["removed", "[^b]: 둘"],
-		]);
-	});
-
-	it("does not pair a footnote definition with a paragraph", () => {
-		expect(summary(diffText("본문[^a]\n\n[^a]: 하나\n", "본문[^a]\n\n[^a]: 하나\n\n마지막 문단\n"))).toEqual([
-			["added", "마지막 문단"],
-		]);
-	});
-
 	it("null when either body is unparsed", () => {
-		expect(diffText("본문 <TextAlign>닫히지 않음", "하나\n")).toBeNull();
+		expect(diffSources(unparsedDocument("본문 <TextAlign>닫히지 않음"), docOf("하나"))).toBeNull();
+		expect(diffSources(docOf("하나"), unparsedDocument("본문 <TextAlign>닫히지 않음"))).toBeNull();
 	});
 });
 
-/** A version of a body as the translation screen sees it: its MDX and its document, whose block ids are inherited from `previous`. */
-const version = (mdx: string, previous?: StoredDocument | null) => {
-	const body = bodyFromMdx(mdx, undefined, { previous });
-	if (!body.doc) throw new Error("fixture does not parse");
-	return { mdx: body.mdx, doc: body.doc };
+/** The words of a document's blocks, one block per line pair. */
+const wordsOf = (doc: StoredDocument) => doc.content.map(blockText).join("\n\n");
+
+/** A version of a body as the translation screen sees it: its words and its document, whose block ids are inherited from `previous`. */
+const version = (words: string, previous?: StoredDocument | null) => ({
+	mdx: words.trim(),
+	doc: docOf(words, previous),
+});
+
+/** A version of a document built by hand (a box), whose block ids are inherited from `previous`. */
+const versionOf = (content: CmsNode[], previous?: StoredDocument | null) => {
+	const doc = documentOf(content, previous);
+	return { mdx: wordsOf(doc), doc };
 };
 
 type Version = ReturnType<typeof version>;
@@ -148,7 +169,7 @@ const reorder = (from: Version, order: number[], edits: Record<number, string> =
 		return text === undefined ? block : { ...block, content: [{ type: "text", text }] };
 	});
 	const doc = { ...from.doc, content };
-	return { mdx: serialize(fromStoredDocument(doc)), doc };
+	return { mdx: wordsOf(doc), doc };
 };
 
 const withoutIds = (from: Version): Version => ({
@@ -191,7 +212,7 @@ describe("comparing two source versions by block id", () => {
 
 	it("a block that moved is moved, not removed and added", () => {
 		const after = reorder(base, [3, 0, 1, 2]);
-		expect(after.mdx).toBe("라\n\n가\n\n나\n\n다\n");
+		expect(after.mdx).toBe("라\n\n가\n\n나\n\n다");
 		expect(summary(compare(base, after))).toEqual([["moved", "라", "라"]]);
 		expect(summary(compare(base, reorder(base, [1, 2, 3, 0])))).toEqual([["moved", "가", "가"]]);
 	});
@@ -214,7 +235,7 @@ describe("comparing two source versions by block id", () => {
 
 	it("a move does not hide an edit or an added block elsewhere", () => {
 		const moved = reorder(base, [3, 0, 1, 2], { 1: "나 고침" });
-		const after = version(`${moved.mdx}\n마\n`, moved.doc);
+		const after = version(`${moved.mdx}\n\n마`, moved.doc);
 		expect(summary(compare(base, after))).toEqual([
 			["moved", "라", "라"],
 			["changed", "나", "나 고침"],
@@ -223,26 +244,21 @@ describe("comparing two source versions by block id", () => {
 	});
 
 	it("blocks inside a box are paired by id and moved inside it", () => {
-		const box = version('<TextAlign align="center">\n\n안쪽 하나\n\n안쪽 둘\n\n</TextAlign>\n\n바깥\n');
+		const box = versionOf([alignBox("center", "안쪽 하나", "안쪽 둘"), paragraph("바깥")]);
 		const inside = box.doc.content[0];
 		if (!inside?.content) throw new Error("fixture");
 		const swapped = {
 			...box.doc,
 			content: [{ ...inside, content: [...inside.content].reverse() }, ...box.doc.content.slice(1)],
 		};
-		const after = { mdx: serialize(fromStoredDocument(swapped)), doc: swapped };
+		const after = { mdx: wordsOf(swapped), doc: swapped };
 		expect(compare(box, after)?.map((change) => change.kind)).toEqual(["moved"]);
-		const edited = version(
-			'<TextAlign align="center">\n\n안쪽 하나\n\n안쪽 둘 고침\n\n</TextAlign>\n\n바깥\n',
-			box.doc,
-		);
+		const edited = versionOf([alignBox("center", "안쪽 하나", "안쪽 둘 고침"), paragraph("바깥")], box.doc);
 		expect(summary(compare(box, edited))).toEqual([["changed", "안쪽 둘", "안쪽 둘 고침"]]);
 	});
 
 	it("a block moved into another box is moved though its position among the blocks is the same", () => {
-		const before = version(
-			'<TextAlign align="center">\n\n하나\n\n</TextAlign>\n\n<TextAlign align="right">\n\n둘\n\n</TextAlign>\n',
-		);
+		const before = versionOf([alignBox("center", "하나"), alignBox("right", "둘")]);
 		const [left, right] = before.doc.content;
 		const one = left?.content?.[0];
 		if (!left || !right || !one) throw new Error("fixture");
@@ -253,16 +269,14 @@ describe("comparing two source versions by block id", () => {
 				{ ...right, content: [one, ...(right.content ?? [])] },
 			],
 		};
-		const after = { mdx: serialize(fromStoredDocument(doc)), doc } as Version;
+		const after = { mdx: wordsOf(doc as StoredDocument), doc } as Version;
 		expect(summary(compare(before, after))).toEqual([["moved", "하나", "하나"]]);
 	});
 
 	it.skipIf(!titledBox || !titleAttribute)("the title of a box is paired by the box's id", () => {
 		if (!titledBox || !titleAttribute) return;
-		const box = (title: string, body: string) =>
-			`<${titledBox.component} ${[otherAttribute, `${titleAttribute}="${title}"`].filter(Boolean).join(" ")}>\n\n${body}\n\n</${titledBox.component}>\n`;
-		const before = version(`앞\n\n${box("알림", "안쪽")}`);
-		const after = version(`앞\n\n${box("주의", "안쪽 고침")}`, before.doc);
+		const before = { mdx: "", doc: titled("알림", "안쪽") };
+		const after = { mdx: "", doc: titled("주의", "안쪽 고침", before.doc) };
 		expect(summary(compare(before, after))).toEqual([
 			["changed", JSON.stringify({ title: "알림" }), JSON.stringify({ title: "주의" })],
 			["changed", "안쪽", "안쪽 고침"],

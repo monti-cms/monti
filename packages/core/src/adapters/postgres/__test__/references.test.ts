@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, recordRelationField } from "../../../../test/any-site";
-import { docOf, mdxOf } from "../../../../test/stored-content";
+import { docOf } from "../../../../test/stored-content";
 import { type Collection, isItemCollection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { seedEntry } from "../../../core/store/__test__/seed";
@@ -29,15 +29,15 @@ const relation = (() => {
 const targetCollection = relation?.to ?? recordCollection;
 const relationPath = relation?.name ?? "relationId";
 
-/** A prepared snapshot. The body is given as text (`mdx`) and stored as the document it reads as. */
-function buildSnapshot(overrides: Partial<PreparedSnapshot> & { mdx?: string } = {}): PreparedSnapshot {
-	const { mdx, ...rest } = overrides;
+/** A prepared snapshot. The body is given as text (`text`) and stored as the document it reads as. */
+function buildSnapshot(overrides: Partial<PreparedSnapshot> & { text?: string } = {}): PreparedSnapshot {
+	const { text, ...rest } = overrides;
 	const refs = overrides.references || [];
 	return {
 		collection: contentCollection,
 		slug: `test-slug-${Math.random().toString(36).slice(2, 8)}`,
 		metadata: { title: "Test" },
-		doc: docOf(mdx ?? "Test content"),
+		doc: docOf(text ?? "Test content"),
 		schemaVersion: 1,
 		contentHash: `hash-${Math.random().toString(36).slice(2, 8)}`,
 		issues: [],
@@ -151,7 +151,7 @@ describe("ContentStore References", () => {
 			collection: contentCollection,
 			slug: `source-${randomUUID()}`,
 			metadata: {},
-			mdx: "",
+			text: "",
 			schemaVersion: 1,
 			contentHash: "src",
 		});
@@ -159,7 +159,7 @@ describe("ContentStore References", () => {
 			collection: targetCollection,
 			slug: `target-a-${randomUUID()}`,
 			metadata: {},
-			mdx: "",
+			text: "",
 			schemaVersion: 1,
 			contentHash: "ta",
 		});
@@ -167,7 +167,7 @@ describe("ContentStore References", () => {
 			collection: targetCollection,
 			slug: `target-b-${randomUUID()}`,
 			metadata: {},
-			mdx: "",
+			text: "",
 			schemaVersion: 1,
 			contentHash: "tb",
 		});
@@ -237,7 +237,7 @@ describe("ContentStore References", () => {
 			collection: contentCollection,
 			slug: `media-src-${randomUUID()}`,
 			metadata: {},
-			mdx: "",
+			text: "",
 			schemaVersion: 1,
 			contentHash: "m-src",
 		});
@@ -319,7 +319,7 @@ describe("ContentStore References", () => {
 			collection: contentCollection,
 			slug: `media-valid-2-${randomUUID()}`,
 			metadata: { title: "Media 2" },
-			mdx: "Updated media content",
+			text: "Updated media content",
 			schemaVersion: 2,
 			contentHash: "hash-media-2",
 			references: [refValid2],
@@ -335,7 +335,7 @@ describe("ContentStore References", () => {
 		expect(entryUpdated.version).toBe(entryValid.version + 1);
 		expect(entryUpdated.workingSlug).toBe(snapshotValid2.slug);
 		expect(entryUpdated.working.metadata).toEqual(snapshotValid2.metadata);
-		expect(entryUpdated.working.mdx).toEqual(mdxOf(snapshotValid2.doc));
+		expect(entryUpdated.working.doc).toEqual(snapshotValid2.doc);
 		expect(entryUpdated.working.schemaVersion).toEqual(snapshotValid2.schemaVersion);
 		expect(entryUpdated.working.contentHash).toEqual(snapshotValid2.contentHash);
 
@@ -354,7 +354,7 @@ describe("ContentStore References", () => {
 			collection: contentCollection,
 			slug: `media-fail-${randomUUID()}`,
 			metadata: { title: "Media Fail" },
-			mdx: "Failed media content",
+			text: "Failed media content",
 			schemaVersion: 3,
 			contentHash: "hash-media-fail",
 			references: [refFail],

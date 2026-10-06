@@ -1,11 +1,10 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { analyze, serialize, toDocument } from "../../mdx";
-import { renderMdx } from "../index";
+import type { RenderMdxOptions } from "../render";
+import { analyze, renderFixture, serialize, toDocument } from "../testing";
 
-const render = async (source: string, options?: Parameters<typeof renderMdx>[1]) => {
-	const rendered = await renderMdx(source, options);
-	return { markup: renderToStaticMarkup(rendered.content), toc: rendered.toc };
+const render = async (source: string, options?: RenderMdxOptions) => {
+	const rendered = await renderFixture(source, options);
+	return { markup: rendered.html, toc: rendered.toc };
 };
 
 const SOURCE = [

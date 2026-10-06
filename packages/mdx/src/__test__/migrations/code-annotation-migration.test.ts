@@ -1,25 +1,42 @@
-import type { Pool, PoolClient } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import { contentOf, docOf as docFromMdx } from "../../../../test/stored-content";
-import type { Collection } from "../../../core/collections";
-import type { Entry } from "../../../core/store";
-import { publishDraft } from "../../../core/store/__test__/seed";
-import type { JsonValue } from "../../../core/types";
-import { forEachBlock } from "../../../mdx/block-ids";
 import {
-	bodyFromMdx,
+	forEachBlock,
 	readStoredDocument,
 	STORED_DOCUMENT_VERSION,
 	type StoredDocument,
-} from "../../../mdx/stored-document";
-import { createContentService } from "../../../services/content-service";
-import { createContentStore, migrateContentStore } from "../content-store";
-import { migrateCodeAnnotations } from "../store/code-annotation-migration";
-import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
-import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { templateMdx } from "./template-rows";
-import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
+} from "@monti-cms/core/document";
+import { createFormatRegistry } from "@monti-cms/core/format";
+import {
+	CONTENT_STORE_MIGRATIONS,
+	type Collection,
+	closeGlobalPool,
+	createContentService,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	type Entry,
+	type JsonValue,
+	mdxContentHash,
+	mdxSearchText,
+	migrateCodeAnnotations,
+	migrateContentStore,
+	publishDraft,
+} from "@monti-cms/core/testing";
+import type { Pool, PoolClient } from "pg";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { contentCollection, requiredMetadata } from "../../../../core/test/any-site";
+import { contentOf } from "../../../../core/test/stored-content";
+import { bodyFromMdx } from "../../body";
+import { createServerMdxFormat, legacyBodies } from "../../server";
+import { docOfMdx as docFromMdx } from "../../testing";
+
+/** The `mdx` format as a server registers it: it also reads the text of old bodies, which the step under test needs. */
+const formats = createFormatRegistry([createServerMdxFormat()]);
+const bodies = legacyBodies();
+
+/** The `mdx` column of a body template, `null` when it has no text. */
+const templateMdx = async (pool: Pool, schemaName: string, id: string): Promise<string | null> =>
+	(await pool.query<{ mdx: string | null }>(`SELECT mdx FROM "${schemaName}".body_templates WHERE id = $1`, [id]))
+		.rows[0]?.mdx ?? null;
 
 const STEP = "0015_code_annotations";
 
@@ -79,9 +96,9 @@ describe("0015_code_annotations", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, formats });
 		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
+		service = createContentService<Entry>(store, { formats: async () => formats });
 	});
 
 	afterAll(async () => {
@@ -166,11 +183,29 @@ describe("0015_code_annotations", () => {
 		return published;
 	};
 
+	/**
+	 * A store from before documents: a save no longer writes the text of a body, so every body that has none gets the text the format writes for its document.
+	 * Bodies that were given a text on purpose keep it.
+	 */
+	const giveLegacyText = async () => {
+		const rows = await pool.query<{ entry_id: string; state: string; doc: StoredDocument }>(
+			`SELECT entry_id, state, doc FROM "${schemaName}".entry_bodies WHERE mdx IS NULL AND doc IS NOT NULL`,
+		);
+		for (const stored of rows.rows) {
+			await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2 AND state = $3`, [
+				bodies.write(stored.doc).text,
+				stored.entry_id,
+				stored.state,
+			]);
+		}
+	};
+
 	const rewind = () => pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = $1`, [STEP]);
 
 	const run = async () => {
+		await giveLegacyText();
 		await rewind();
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, formats });
 	};
 
 	const hasUnpublishedChanges = async (entryId: string) => {
@@ -257,9 +292,11 @@ describe("0015_code_annotations", () => {
 
 		for (const state of ["working", "published"] as const) {
 			const stored = await row(published.id, state);
-			expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, WRITTEN, stored?.schema_version ?? 1));
+			expect(stored?.content_hash).toBe(
+				mdxContentHash(bodies, stored?.metadata ?? {}, WRITTEN, stored?.schema_version ?? 1),
+			);
 			expect(stored?.content_hash).toBe(published[state === "working" ? "working" : "published"]?.contentHash);
-			expect(stored?.search_text).toBe(mdxSearchText(WRITTEN));
+			expect(stored?.search_text).toBe(mdxSearchText(bodies, WRITTEN));
 			expect(stored?.search_text).toContain("const needle = 1;");
 			expect(stored?.search_text).not.toContain("@line");
 			expect(stored?.search_text).not.toContain("@document");
@@ -354,16 +391,19 @@ describe("0015_code_annotations", () => {
 		const unreadable = { type: "doc", version: 99, content: [] };
 		await setLegacy(draft.id, LEGACY, unreadable);
 		const fine = await legacyPublished();
+		await giveLegacyText();
 		const messages: string[] = [];
 
 		await withMigrationClient((client) =>
-			migrateCodeAnnotations(client, schemaName, { log: (message) => messages.push(message) }),
+			migrateCodeAnnotations(client, schemaName, { bodies, log: (message) => messages.push(message) }),
 		);
 
 		const stored = await row(draft.id, "working");
 		expect(stored?.doc).toEqual(unreadable);
 		expect(stored?.mdx).toBe(LEGACY);
-		expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, LEGACY, stored?.schema_version ?? 1));
+		expect(stored?.content_hash).toBe(
+			mdxContentHash(bodies, stored?.metadata ?? {}, LEGACY, stored?.schema_version ?? 1),
+		);
 		expect(messages.filter((message) => message.includes(`${draft.id}/working`))).toHaveLength(1);
 		expect((await row(fine.id, "working"))?.mdx).toBe(WRITTEN);
 		expect(messages.some((message) => message.includes(fine.id))).toBe(false);
@@ -374,10 +414,11 @@ describe("0015_code_annotations", () => {
 		await setLegacy(broken.id, "가\n<Unclosed", null);
 		const frontMatter = await createDraft("---\ntitle: x\n---\n\n```ts\n// @line plus\nconst a = 1;\n```\n");
 		await setLegacy(frontMatter.id, "---\ntitle: x\n---\n\n```ts\n// @line plus\nconst a = 1;\n```\n", null);
+		await giveLegacyText();
 		const messages: string[] = [];
 
 		await withMigrationClient((client) =>
-			migrateCodeAnnotations(client, schemaName, { log: (message) => messages.push(message) }),
+			migrateCodeAnnotations(client, schemaName, { bodies, log: (message) => messages.push(message) }),
 		);
 
 		for (const [entry, mdx] of [
@@ -387,8 +428,10 @@ describe("0015_code_annotations", () => {
 			const stored = await row(entry.id, "working");
 			expect(stored?.mdx).toBe(mdx);
 			expect(stored?.doc).toBeNull();
-			expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1));
-			expect(stored?.search_text).toBe(mdxSearchText(mdx));
+			expect(stored?.content_hash).toBe(
+				mdxContentHash(bodies, stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1),
+			);
+			expect(stored?.search_text).toBe(mdxSearchText(bodies, mdx));
 		}
 		// A body that never had a document was logged by the step that gave documents.
 		expect(messages.filter((message) => message.includes(broken.id) || message.includes(frontMatter.id))).toEqual([]);
@@ -397,6 +440,7 @@ describe("0015_code_annotations", () => {
 	it("does not write a body that has no code block, or one that is already in the current form", async () => {
 		const plain = await publishedWith("Just words\n\n- one\n- two\n");
 		const current = await publishedWith(WRITTEN);
+		await giveLegacyText();
 		const rowsBefore = [
 			await row(plain.id, "working"),
 			await row(plain.id, "published"),
@@ -489,10 +533,11 @@ describe("0015_code_annotations", () => {
 				JSON.stringify({ type: "doc", version: 99, content: [] }),
 				unreadable.id,
 			]);
+			await giveLegacyText();
 			const messages: string[] = [];
 
 			await withMigrationClient((client) =>
-				migrateCodeAnnotations(client, schemaName, { log: (message) => messages.push(message) }),
+				migrateCodeAnnotations(client, schemaName, { bodies, log: (message) => messages.push(message) }),
 			);
 
 			const stored = await pool.query(`SELECT doc FROM "${schemaName}".body_templates WHERE id = $1`, [broken.id]);
@@ -521,6 +566,7 @@ describe("0015_code_annotations", () => {
 				]);
 				templates.push(template);
 			}
+			await giveLegacyText();
 			const legacyRows = new Map<string, unknown>();
 			for (const entry of entries) {
 				for (const state of ["working", "published"] as const) {
@@ -531,7 +577,7 @@ describe("0015_code_annotations", () => {
 			const legacyTemplateRows = (await pool.query(`SELECT id, mdx, doc FROM "${schemaName}".body_templates`)).rows;
 
 			for (const batchSize of [1, 2, 1000]) {
-				await withMigrationClient((client) => migrateCodeAnnotations(client, schemaName, { batchSize }));
+				await withMigrationClient((client) => migrateCodeAnnotations(client, schemaName, { bodies, batchSize }));
 
 				for (const [index, entry] of entries.entries()) {
 					for (const state of ["working", "published"] as const) {

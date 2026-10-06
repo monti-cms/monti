@@ -2,38 +2,41 @@ import { describe, expect, it } from "vitest";
 import type { MediaAssetRecord } from "../../core/store";
 import { collectRefs, EMPTY_REFS, imageResolverFromRefs } from "../document-refs";
 import { type PublicMediaDeps, resolvePublicMedia } from "../public-media";
-import { bodyFromMdx, type StoredDocument } from "../stored-document";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../stored-document";
+import type { CmsNode } from "../types";
 
 const ID_A = "00000000-0000-4000-8000-00000000000a";
 const ID_B = "00000000-0000-4000-8000-00000000000b";
 const ID_C = "00000000-0000-4000-8000-00000000000c";
 const ID_D = "00000000-0000-4000-8000-00000000000d";
 
-const docOf = (mdx: string): StoredDocument => {
-	const { doc } = bodyFromMdx(mdx);
-	if (!doc) throw new Error("not a document");
-	return doc;
-};
+const text = (value: string): CmsNode => ({ type: "text", text: value });
+const paragraph = (...content: CmsNode[]): CmsNode => ({ type: "paragraph", content });
+const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
 describe("collectRefs", () => {
 	it("lists the media of images and files wherever they sit, each once, in document order", () => {
-		const doc = docOf(
-			[
-				`<Image mediaId="${ID_A}" alt="a" />`,
-				`Text with an inline <Image mediaId="${ID_B}" alt="b" /> image.`,
-				`- <Image mediaId="${ID_A}" alt="again" />`,
-				`> <File mediaId="${ID_C}" label="Report" />`,
-				"![outer](https://example.com/a.png)",
-			].join("\n\n"),
+		const document = doc(
+			{ type: "image", attrs: { mediaId: ID_A, alt: "a" } },
+			paragraph(text("Text with an inline "), { type: "image", attrs: { mediaId: ID_B, alt: "b" } }, text(" image.")),
+			{
+				type: "bulletList",
+				content: [{ type: "listItem", content: [{ type: "image", attrs: { mediaId: ID_A, alt: "again" } }] }],
+			},
+			{ type: "blockquote", content: [{ type: "file", attrs: { mediaId: ID_C, label: "Report" } }] },
+			{ type: "image", attrs: { src: "https://example.com/a.png", alt: "outer" } },
 		);
 
-		expect(collectRefs(doc).media).toEqual([ID_A, ID_B, ID_C]);
+		expect(collectRefs(document).media).toEqual([ID_A, ID_B, ID_C]);
 	});
 
 	it("does not list an outer address or a media id that only appears in text", () => {
-		const doc = docOf(`![outer](https://example.com/a.png)\n\nThe id ${ID_D} is only text.`);
+		const document = doc(
+			{ type: "image", attrs: { src: "https://example.com/a.png", alt: "outer" } },
+			paragraph(text(`The id ${ID_D} is only text.`)),
+		);
 
-		expect(collectRefs(doc).media).toEqual([]);
+		expect(collectRefs(document).media).toEqual([]);
 	});
 
 	it("has nothing for a missing document", () => {

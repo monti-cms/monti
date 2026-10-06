@@ -1,7 +1,6 @@
+import { ADDED_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { ADDED_BLOCKS } from "../../blocks/active";
-import type { BlockDefinition } from "../../blocks/define";
-import { analyze, serialize, toDocument } from "..";
+import { analyze, serialize, toDocument } from "../format";
 
 /**
  * Body round trip of blocks added in config (block extensions and site blocks), as a regression guard. Block names are not hard-coded; they are read from the current config.

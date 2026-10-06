@@ -1,5 +1,5 @@
+import { ADDED_BLOCKS, BLOCKS } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { ADDED_BLOCKS, BLOCKS } from "../../blocks/active";
 import { analyze } from "../analyze";
 
 /** Public component name of a block that holds body content. Uses the site's added container block if there is one, otherwise the core block. */

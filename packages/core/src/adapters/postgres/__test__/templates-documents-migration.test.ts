@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentOf, docOf } from "../../../../test/stored-content";
-import { readStoredDocument, STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../mdx/stored-document";
+import { readStoredDocument, STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../doc/stored-document";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateTemplatesToDocuments } from "../store/templates-documents-migration";
@@ -69,7 +69,8 @@ describe(STEP, () => {
 		const index = CONTENT_STORE_MIGRATIONS.indexOf(STEP);
 		expect(index).toBeGreaterThan(CONTENT_STORE_MIGRATIONS.indexOf("0018_link_entry_ids"));
 		expect(CONTENT_STORE_MIGRATIONS.at(-1)).toBe("seed_initial_body_templates");
-		expect(index).toBe(CONTENT_STORE_MIGRATIONS.length - 2);
+		// The step that makes the text column optional for every table comes right after it, and the seed stays last.
+		expect(index).toBeLessThan(CONTENT_STORE_MIGRATIONS.indexOf("0020_mdx_columns_optional"));
 	});
 
 	it("gives a template with no document the unparsed document of its text, and keeps the text, version and date", async () => {

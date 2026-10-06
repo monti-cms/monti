@@ -1,17 +1,28 @@
 import { createHash } from "node:crypto";
+import { createFormatRegistry } from "@monti-cms/core/format";
+import {
+	CONTENT_STORE_MIGRATIONS,
+	type Collection,
+	closeGlobalPool,
+	createContentService,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	type Entry,
+	type JsonValue,
+	mdxContentHash,
+	migrateContentStore,
+	publishDraft,
+	recomputeContentHashes,
+} from "@monti-cms/core/testing";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import type { Collection } from "../../../core/collections";
-import type { Entry } from "../../../core/store";
-import { publishDraft } from "../../../core/store/__test__/seed";
-import type { JsonValue } from "../../../core/types";
-import { createContentService } from "../../../services/content-service";
-import { createContentStore, migrateContentStore } from "../content-store";
-import { recomputeContentHashes } from "../store/content-hash-backfill";
-import { mdxContentHash } from "../store/mdx-body";
-import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
+import { contentCollection, requiredMetadata } from "../../../../core/test/any-site";
+import { createServerMdxFormat, legacyBodies } from "../../server";
+
+/** The `mdx` format as a server registers it: it also reads the text of old bodies, which the migration steps under test need. */
+const formats = createFormatRegistry([createServerMdxFormat()]);
+const bodies = legacyBodies();
 
 /** The content hash as it was before the parsed-body hash: it covered the MDX string itself. */
 const hashV1 = (metadata: JsonValue, mdx: string, schemaVersion: number): string => {
@@ -47,9 +58,9 @@ describe("content hash v2", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, formats });
 		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
+		service = createContentService<Entry>(store, { formats: async () => formats });
 	});
 
 	afterAll(async () => {
@@ -120,9 +131,8 @@ describe("content hash v2", () => {
 			expect(resaved.version).toBe(published.version);
 			expect(resaved.updatedAt.getTime()).toBe(published.updatedAt.getTime());
 			expect(resaved.working.contentHash).toBe(published.working.contentHash);
-			// The body is stored written from its document, so both spellings are stored as the same text.
-			expect(resaved.working.mdx).toBe(published.working.mdx);
-			expect(resaved.working.mdx).toBe("An *a* word\n");
+			// Both spellings are stored as the same document.
+			expect(resaved.working.doc).toEqual(published.working.doc);
 			expect(await hasUnpublishedChanges(published.id)).toBe(false);
 		});
 
@@ -159,6 +169,23 @@ describe("content hash v2", () => {
 				).rows.map((row) => [row.state, row.content_hash]),
 			);
 
+		/**
+		 * A store from before documents: the text of every body that has none (a save no longer writes it) is written as the format writes the document.
+		 * Rows that were given a text on purpose are left as they are.
+		 */
+		const giveLegacyText = async () => {
+			const rows = await pool.query<{ entry_id: string; state: string; doc: Parameters<typeof bodies.write>[0] }>(
+				`SELECT entry_id, state, doc FROM "${schemaName}".entry_bodies WHERE mdx IS NULL`,
+			);
+			for (const row of rows.rows) {
+				await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2 AND state = $3`, [
+					bodies.write(row.doc).text,
+					row.entry_id,
+					row.state,
+				]);
+			}
+		};
+
 		/** Stored rows whose hash is not what the current hash rule gives for their metadata, MDX and schema version. */
 		const staleHashes = async () => {
 			const rows = await pool.query<{
@@ -171,12 +198,13 @@ describe("content hash v2", () => {
 			}>(`SELECT entry_id, state, metadata, mdx, schema_version, content_hash FROM "${schemaName}".entry_bodies`);
 			expect(rows.rows.length).toBeGreaterThan(0);
 			return rows.rows
-				.filter((row) => row.content_hash !== mdxContentHash(row.metadata, row.mdx, row.schema_version))
+				.filter((row) => row.content_hash !== mdxContentHash(bodies, row.metadata, row.mdx, row.schema_version))
 				.map((row) => `${row.entry_id}/${row.state}`);
 		};
 
 		/** Rewrites every stored hash the way the previous version would have, and marks the step as not applied yet. */
 		const downgradeToV1 = async () => {
+			await giveLegacyText();
 			const rows = await pool.query<{
 				entry_id: string;
 				state: string;
@@ -201,14 +229,15 @@ describe("content hash v2", () => {
 			const same = await publishedWith(STAR);
 			// Published with one spelling, edited to the other, saved with the old (v1) hash: v1 reported a change that is not one.
 			const syntaxOnly = await publishedWith(STAR);
-			await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2 AND state = 'working'`, [
-				UNDERSCORE,
-				syntaxOnly.id,
-			]);
 			const edited = await publishedWith(STAR);
 			await saveMdx(edited, "An *b* word");
 			await createDraft("Hello {");
 
+			await giveLegacyText();
+			await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2 AND state = 'working'`, [
+				UNDERSCORE,
+				syntaxOnly.id,
+			]);
 			await downgradeToV1();
 			const before = {
 				same: await hasUnpublishedChanges(same.id),
@@ -217,7 +246,7 @@ describe("content hash v2", () => {
 			};
 			expect(before).toEqual({ same: false, syntaxOnly: true, edited: true });
 
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateContentStore(pool, { schema: schemaName, formats });
 
 			expect(await staleHashes()).toEqual([]);
 			expect(await hasUnpublishedChanges(same.id)).toBe(false);
@@ -240,7 +269,7 @@ describe("content hash v2", () => {
 			const client = await pool.connect();
 			try {
 				// Fewer rows per batch than there are rows, with a remainder.
-				await recomputeContentHashes(client, schemaName, { batchSize: 2 });
+				await recomputeContentHashes(client, schemaName, { batchSize: 2, bodies });
 			} finally {
 				client.release();
 			}
@@ -252,13 +281,13 @@ describe("content hash v2", () => {
 			const published = await publishedWith(STAR);
 			await downgradeToV1();
 
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateContentStore(pool, { schema: schemaName, formats });
 
 			const after = await store.getEntry(published.id);
 			expect(after.version).toBe(published.version);
 			expect(after.updatedAt.getTime()).toBe(published.updatedAt.getTime());
 			expect(after.working.updatedAt?.getTime()).toBe(published.working.updatedAt?.getTime());
-			expect(after.working.mdx).toBe(published.working.mdx);
+			expect(after.working.doc).toEqual(published.working.doc);
 			expect(after.published).toEqual(published.published);
 		});
 	});

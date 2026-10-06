@@ -1,11 +1,11 @@
+import type { CmsNode } from "@monti-cms/core/document";
 import type { Root } from "mdast";
 import { renderToStaticMarkup } from "react-dom/server";
 import { visit } from "unist-util-visit";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../../test/mdx-syntax";
-import type { CmsNode } from "../../mdx";
-import { renderMdx } from "../../render";
-import type { SyntaxExtension } from "..";
+import { renderMdx } from "../render";
+import type { SyntaxExtension } from "../syntax";
+import { mdxWith } from "../testing";
 
 /** The extension interface: what an extension can read, write and escape, and how several of them combine. Uses made-up notations, not the directive one. */
 

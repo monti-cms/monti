@@ -1,6 +1,6 @@
+import "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { contentCollection } from "../../../test/any-site";
-import { prepareSnapshot } from "../snapshot";
+import { contentCollection, prepareSnapshot } from "./snapshot-helpers";
 
 /** Written as JSX: the test site has no syntax extension, and `:code-ref[text]{to}` is read to the same element. */
 const snapshotOf = (mdx: string) =>

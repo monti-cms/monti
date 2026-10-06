@@ -1,9 +1,9 @@
+import "@monti-cms/core/client";
+import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
-import { contentCollection } from "../../../test/any-site";
-import { forEachBlock } from "../../mdx/block-ids";
-import type { StoredDocument } from "../../mdx/stored-document";
-import type { CmsNode } from "../../mdx/types";
-import { prepareSnapshot, validateForPublish } from "../snapshot";
+import { validateForPublish } from "../../../core/src/core/snapshot";
+import { forEachBlock } from "../../../core/src/doc/block-ids";
+import { contentCollection, prepareSnapshot } from "./snapshot-helpers";
 
 const MEDIA_ID = "11111111-1111-4111-8111-111111111111";
 

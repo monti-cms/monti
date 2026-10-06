@@ -120,7 +120,7 @@ describe("listEntries in Postgres", () => {
 				collection: to,
 				slug: `list-test-${to}`,
 				metadata: await requiredMetadata(to, relationTargetTitle(to), relationTarget),
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
@@ -192,14 +192,14 @@ describe("listEntries in Postgres", () => {
 		opts: {
 			status?: "draft" | "published";
 			folderId?: string | null;
-			mdx?: string;
+			text?: string;
 		} = {},
 	): Promise<Entry & { folderId?: string | null }> {
 		const entry = await seedEntry(store, {
 			collection,
 			slug,
 			metadata: await metadataFor(collection, title),
-			mdx: opts.mdx ?? "default body",
+			text: opts.text ?? "default body",
 			schemaVersion: 1,
 			contentHash: uniqueHash(),
 		});
@@ -448,7 +448,7 @@ describe("listEntries in Postgres", () => {
 				collection: content,
 				slug: "d1-direct",
 				metadata: { [single.name]: "cat-1", [many.name]: ["tag-a", "tag-b"] },
-				mdx: "body",
+				text: "body",
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
@@ -457,7 +457,7 @@ describe("listEntries in Postgres", () => {
 				collection: single.to,
 				slug: "cat-real",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
@@ -465,7 +465,7 @@ describe("listEntries in Postgres", () => {
 				collection: many.to,
 				slug: "tag-real1",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
@@ -473,7 +473,7 @@ describe("listEntries in Postgres", () => {
 				collection: many.to,
 				slug: "tag-real2",
 				metadata: {},
-				mdx: "",
+				text: "",
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
@@ -501,7 +501,7 @@ describe("listEntries in Postgres", () => {
 				collection: content,
 				slug: "d1-hist",
 				metadata: await metadataFor(content, "Historical date"),
-				mdx: "body",
+				text: "body",
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
@@ -513,7 +513,7 @@ describe("listEntries in Postgres", () => {
 				collection: content,
 				slug: "d1-nometa",
 				metadata: await metadataFor(content, "No explicit published date"),
-				mdx: "body",
+				text: "body",
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
@@ -561,7 +561,7 @@ describe("listEntries in Postgres", () => {
 				collection: content,
 				slug,
 				metadata: await metadataFor(content, slug),
-				mdx: "body",
+				text: "body",
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});

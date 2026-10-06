@@ -1,9 +1,11 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { docOf } from "../../../test/stored-content";
 import { ADDED_BLOCKS } from "../../blocks/active";
-import { bodyFromMdx, STORED_DOCUMENT_VERSION, type StoredDocument } from "../../mdx/stored-document";
-import type { CmsNode } from "../../mdx/types";
+import { storedCodeBlockAttrs } from "../../doc/stored-code-block";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
 import { resetMissingComponentWarnings } from "../document/render";
 import {
 	CmsContent,
@@ -43,11 +45,17 @@ const html = async (stored: StoredDocument, options: Parameters<typeof renderDoc
 /** Components for any config: the table is loosely typed here, as the test sites have different blocks. */
 const loose = (components: LooseDocumentComponents) => components as unknown as DocumentComponents;
 
-const fromMdx = (source: string): StoredDocument => {
-	const body = bodyFromMdx(source);
-	if (!body.doc) throw new Error("not a document");
-	return body.doc;
-};
+/** A code block as the stored document keeps it: the fence text (with the annotation comments) read into the code and its annotations. */
+const codeBlock = (language: string, meta: string, value: string): CmsNode => ({
+	type: "codeBlock",
+	attrs: storedCodeBlockAttrs({ language, meta, value }),
+});
+const footnoteDoc = (): StoredDocument =>
+	doc(heading(2, "제목"), paragraph(text("본문"), { type: "footnoteReference", attrs: { label: "1" } }), {
+		type: "footnoteDefinition",
+		attrs: { label: "1" },
+		content: [paragraph(text("각주"))],
+	});
 
 describe("renderDocument: the result", () => {
 	it("returns the content, the table of contents and the unknown nodes", async () => {
@@ -91,7 +99,7 @@ describe("renderDocument: the result", () => {
 	});
 
 	it("renders without compiling MDX: it is a pure function of the stored document", async () => {
-		const stored = fromMdx("## 제목\n\n본문 **굵게**\n\n```ts\nconst a = 1;\n```");
+		const stored = docOf("## 제목\n\n본문 **굵게**\n\n```ts\nconst a = 1;\n```");
 		const first = await html(stored);
 		const second = await html(JSON.parse(JSON.stringify(stored)) as StoredDocument);
 		expect(second).toBe(first);
@@ -157,9 +165,9 @@ describe("heading anchors and the table of contents", () => {
 	});
 
 	it("does not list the footnote heading, and gives it no anchor", async () => {
-		const markup = await html(fromMdx("## 제목\n\n본문[^1]\n\n[^1]: 각주"));
+		const markup = await html(footnoteDoc());
 		expect(markup).toContain('<h2 class="sr-only" id="footnote-label">Footnotes</h2>');
-		expect(tableOfContents(fromMdx("## 제목\n\n본문[^1]\n\n[^1]: 각주")).map((item) => item.value)).toEqual(["제목"]);
+		expect(tableOfContents(footnoteDoc()).map((item) => item.value)).toEqual(["제목"]);
 	});
 });
 
@@ -217,7 +225,26 @@ describe("component overrides", () => {
 			seen.push(props);
 			return <div>{props.children}</div>;
 		};
-		await html(fromMdx("3. a\n4. b\n\n- [ ] c\n\n- d\n\n  more"), { components: loose({ list: List }) });
+		await html(
+			doc(
+				{
+					type: "orderedList",
+					attrs: { start: 3 },
+					content: [
+						{ type: "listItem", content: [paragraph(text("a"))] },
+						{ type: "listItem", content: [paragraph(text("b"))] },
+					],
+				},
+				{
+					type: "bulletList",
+					content: [
+						{ type: "listItem", attrs: { checked: false }, content: [paragraph(text("c"))] },
+						{ type: "listItem", content: [paragraph(text("d")), paragraph(text("more"))] },
+					],
+				},
+			),
+			{ components: loose({ list: List }) },
+		);
 		expect(seen.map(({ ordered, start, loose, tasks }) => ({ ordered, start, loose, tasks }))).toEqual([
 			{ ordered: true, start: 3, loose: false, tasks: false },
 			{ ordered: false, start: undefined, loose: true, tasks: true },
@@ -228,9 +255,26 @@ describe("component overrides", () => {
 		const tables: TableProps[] = [];
 		const cells: TableCellProps[] = [];
 		await html(
-			fromMdx(
-				'<Table align="left,right" widths="100,200">\n<TableRow><TableCell header>A</TableCell><TableCell header>B</TableCell></TableRow>\n<TableRow><TableCell>1</TableCell><TableCell colspan="2">2</TableCell></TableRow>\n</Table>',
-			),
+			doc({
+				type: "table",
+				attrs: { align: ["left", "right"], widths: [100, 200] },
+				content: [
+					{
+						type: "tableRow",
+						content: [
+							{ type: "tableCell", attrs: { header: true }, content: [text("A")] },
+							{ type: "tableCell", attrs: { header: true }, content: [text("B")] },
+						],
+					},
+					{
+						type: "tableRow",
+						content: [
+							{ type: "tableCell", content: [text("1")] },
+							{ type: "tableCell", attrs: { colspan: 2 }, content: [text("2")] },
+						],
+					},
+				],
+			}),
 			{
 				components: loose({
 					table: (props: TableProps) => {
@@ -325,8 +369,12 @@ describe("code blocks", () => {
 			seen.push(props);
 			return <figure data-language={props.language}>{props.children}</figure>;
 		};
-		const stored = fromMdx(
-			'```ts title="a.ts" lnum\n// @line highlight {0-1}\nconst a = 1;\n// @char Tooltip {6-7} content="설명"\nconst b = 2;\n```',
+		const stored = doc(
+			codeBlock(
+				"ts",
+				'title="a.ts" lnum',
+				'// @line highlight {0-1}\nconst a = 1;\n// @char Tooltip {6-7} content="설명"\nconst b = 2;',
+			),
 		);
 		const markup = await html(stored, { components: loose({ codeBlock: CodeBlock }) });
 		const [props] = seen;
@@ -345,7 +393,7 @@ describe("code blocks", () => {
 
 	it("keeps the stored code of a tooltip note for a site component", async () => {
 		const seen: string[][] = [];
-		const stored = fromMdx('```ts\n// @char Tooltip {0-5} content="설명"\nconst a = 1;\n```');
+		const stored = doc(codeBlock("ts", "", '// @char Tooltip {0-5} content="설명"\nconst a = 1;'));
 		await html(stored, {
 			components: loose({
 				codeBlock: ({ notes }: CodeBlockProps) => {
@@ -359,7 +407,7 @@ describe("code blocks", () => {
 	});
 
 	it("draws a render tag nobody provides as its text, and a provided one with its component", async () => {
-		const stored = fromMdx('```ts\n// @char Tooltip {0-5} content="설명"\nconst a = 1;\n```');
+		const stored = doc(codeBlock("ts", "", '// @char Tooltip {0-5} content="설명"\nconst a = 1;'));
 		const without = await html(stored);
 		expect(without).not.toContain("<Tooltip");
 		expect(without).not.toContain("<tooltip");
@@ -370,7 +418,7 @@ describe("code blocks", () => {
 	});
 
 	it("shows a language that is not loaded, and code that cannot be annotated, as plain text and never throws", async () => {
-		const unknownLanguage = await html(fromMdx("```nolang\nsome code\n```"));
+		const unknownLanguage = await html(doc(codeBlock("nolang", "", "some code")));
 		expect(unknownLanguage).toContain("some code");
 		// A stored block whose attributes are not what a fence makes.
 		const odd = doc({ type: "codeBlock", attrs: { language: 7, code: 3, meta: false } as never });
@@ -396,13 +444,13 @@ describe("code blocks", () => {
 				},
 			],
 		}));
-		const markup = await html(fromMdx("```ts\nconst a = 1;\n```"), { code: { highlight: highlight as never } });
+		const markup = await html(docOf("```ts\nconst a = 1;\n```"), { code: { highlight: highlight as never } });
 		expect(highlight).toHaveBeenCalledWith("const a = 1;", "ts", expect.anything(), expect.anything());
 		expect(markup).toContain('<pre class="mine"><code>X</code></pre>');
 	});
 
 	it("leaves a language the site ignores unhighlighted", async () => {
-		const markup = await html(fromMdx("```ts\nconst a = 1;\n```"), { code: { ignoreLang: () => true } });
+		const markup = await html(docOf("```ts\nconst a = 1;\n```"), { code: { ignoreLang: () => true } });
 		expect(markup).toContain("<pre><code>const a = 1;</code></pre>");
 		expect(markup).not.toContain("shiki");
 	});
@@ -451,7 +499,7 @@ describe("images and files", () => {
 
 	it("tells an inline Markdown image from a block of its own", async () => {
 		const seen: { inline: boolean; plain: boolean }[] = [];
-		await html(fromMdx("![a](/a.png)\n\n문장 ![b](/b.png) 속"), {
+		await html(docOf("![a](/a.png)\n\n문장 ![b](/b.png) 속"), {
 			components: loose({
 				image: ({ inline, plain }: ImageProps) => {
 					seen.push({ inline, plain });
@@ -467,21 +515,27 @@ describe("images and files", () => {
 
 	it("gives a file component the card facts", async () => {
 		const seen: FileProps[] = [];
-		await html(fromMdx('<File mediaId="pdf" label="자료" />\n\n<File mediaId="none" label="없음" />'), {
-			components: loose({
-				file: (props: FileProps) => {
-					seen.push(props);
-					return null;
-				},
-			}),
-			imageResolver: ({ mediaId }) =>
-				mediaId === "pdf"
-					? {
-							url: "https://cdn.example/a.pdf",
-							file: { filename: "deck.pdf", byteSize: 100, mimeType: "application/pdf" },
-						}
-					: { failure: "unresolved" },
-		});
+		await html(
+			doc(
+				{ type: "file", attrs: { mediaId: "pdf", label: "자료" } },
+				{ type: "file", attrs: { mediaId: "none", label: "없음" } },
+			),
+			{
+				components: loose({
+					file: (props: FileProps) => {
+						seen.push(props);
+						return null;
+					},
+				}),
+				imageResolver: ({ mediaId }) =>
+					mediaId === "pdf"
+						? {
+								url: "https://cdn.example/a.pdf",
+								file: { filename: "deck.pdf", byteSize: 100, mimeType: "application/pdf" },
+							}
+						: { failure: "unresolved" },
+			},
+		);
 		expect(seen[0]).toMatchObject({
 			mediaId: "pdf",
 			label: "자료",
@@ -497,7 +551,7 @@ describe("images and files", () => {
 describe("math", () => {
 	it("passes the formula and the KaTeX output", async () => {
 		const seen: { value: string; html: string }[] = [];
-		await html(fromMdx("$$\nx^2\n$$"), {
+		await html(doc({ type: "math", attrs: { value: "x^2" } }), {
 			components: loose({
 				math: ({ value, html: output }: { value: string; html: string }) => {
 					seen.push({ value, html: output });
@@ -511,7 +565,7 @@ describe("math", () => {
 	});
 
 	it("shows a formula KaTeX cannot read, and never throws", async () => {
-		expect(await html(fromMdx("$$\n\\frac{1\n$$"))).toContain("katex");
+		expect(await html(doc({ type: "math", attrs: { value: "\\frac{1" } }))).toContain("katex");
 		expect(await html(doc({ type: "math", attrs: { value: 5 as never } }))).toContain("katex");
 	});
 });
@@ -519,7 +573,18 @@ describe("math", () => {
 describe("footnotes", () => {
 	it("numbers footnotes by first reference and passes the items to the footnotes component", async () => {
 		const seen: FootnotesProps[] = [];
-		const stored = fromMdx("하나[^b] 둘[^a] 다시[^b]\n\n[^a]: A\n[^b]: B");
+		const stored = doc(
+			paragraph(
+				text("하나"),
+				{ type: "footnoteReference", attrs: { label: "b" } },
+				text(" 둘"),
+				{ type: "footnoteReference", attrs: { label: "a" } },
+				text(" 다시"),
+				{ type: "footnoteReference", attrs: { label: "b" } },
+			),
+			{ type: "footnoteDefinition", attrs: { label: "a" }, content: [paragraph(text("A"))] },
+			{ type: "footnoteDefinition", attrs: { label: "b" }, content: [paragraph(text("B"))] },
+		);
 		await html(stored, {
 			components: loose({
 				footnotes: (props: FootnotesProps) => {
@@ -553,7 +618,9 @@ describe("footnotes", () => {
 	});
 
 	it("writes a reference without a definition as the text it was", async () => {
-		expect(await html(fromMdx("정의 없는 참조[^none]"))).toContain("[^none]");
+		expect(
+			await html(doc(paragraph(text("정의 없는 참조"), { type: "footnoteReference", attrs: { label: "none" } }))),
+		).toContain("[^none]");
 	});
 
 	it("does not draw a definition nobody refers to, and uses the first of two", async () => {
@@ -571,7 +638,7 @@ describe("footnotes", () => {
 	});
 
 	it("uses the labels of the site", async () => {
-		const markup = await html(fromMdx("본문[^1]\n\n[^1]: 각주"), {
+		const markup = await html(footnoteDoc(), {
 			labels: { footnotes: "각주", footnoteBack: "{ref}번 참조로" },
 		});
 		expect(markup).toContain(">각주</h2>");

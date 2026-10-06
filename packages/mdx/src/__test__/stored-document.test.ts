@@ -1,16 +1,9 @@
+import { readStoredDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
-import { readSamples } from "../../testing";
 import { analyze } from "../analyze";
+import { bodyFromDocument, bodyFromMdx, fromStoredDocument, toStoredDocument } from "../body";
 import { serialize } from "../serialize";
-import {
-	bodyFromDocument,
-	bodyFromMdx,
-	fromStoredDocument,
-	readStoredDocument,
-	STORED_DOCUMENT_VERSION,
-	type StoredDocument,
-	toStoredDocument,
-} from "../stored-document";
+import { readSamples } from "../testing";
 import { toDocument } from "../to-document";
 
 /** Postgres `jsonb` does not keep key order. Reversing every object's keys is the worst case. */

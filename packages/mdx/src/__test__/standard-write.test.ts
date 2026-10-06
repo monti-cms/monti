@@ -1,10 +1,9 @@
+import { ADDED_BLOCKS, ADDED_MARK_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
+import type { CmsNode } from "@monti-cms/core/document";
+import { computeContentHash } from "@monti-cms/core/runtime";
 import { describe, expect, it } from "vitest";
-import { docOf } from "../../../test/stored-content";
-import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "../../blocks/active";
-import type { BlockDefinition } from "../../blocks/define";
-import { computeContentHash } from "../../core/content-hash";
-import { analyze, serialize, toDocument } from "..";
-import type { CmsNode } from "../types";
+import { analyze, serialize, toDocument } from "../format";
+import { docOfMdx as docOf } from "../testing";
 
 /**
  * The standard notation: with no syntax extension, saved MDX is CommonMark + GFM + standard MDX JSX. Blocks are read from the current config

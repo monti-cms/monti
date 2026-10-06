@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata, secondLocale } from "../../../test/any-site";
-import { docOf } from "../../../test/stored-content";
 import type { Collection } from "../../core/collections";
 import type { ContentChange, ContentStore, Entry } from "../../core/store";
 import { seedEntry } from "../../core/store/__test__/seed";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -49,8 +51,9 @@ describe("write hook contract", () => {
 			},
 		});
 		const hooks = () => sources;
-		service = createContentService<Entry>(store, { hooks });
-		bulk = createBulkService<Entry>(store, { hooks });
+		const formats = async () => createFormatRegistry([paragraphsFormat]);
+		service = createContentService<Entry>(store, { hooks, formats });
+		bulk = createBulkService<Entry>(store, { hooks, formats });
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
 	});
 
@@ -76,7 +79,7 @@ describe("write hook contract", () => {
 				collection: to,
 				slug: unique(to),
 				metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-				format: "mdx",
+				format: "paragraphs",
 				body: "Body",
 			});
 			targets.set(to, draft.id);
@@ -87,15 +90,15 @@ describe("write hook contract", () => {
 	};
 
 	/** Input for a new post. What making its relation targets reported to afterCommit is not part of the test. */
-	const postInput = async (title: string, mdx = "Body") => {
+	const postInput = async (title: string, text = "Body") => {
 		const metadata = await requiredMetadata(contentCollection, title, relationTarget);
 		changes = [];
 		return {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata,
-			format: "mdx",
-			body: mdx,
+			format: "paragraphs",
+			body: text,
 		} as unknown as ServiceInput;
 	};
 
@@ -106,11 +109,11 @@ describe("write hook contract", () => {
 	};
 
 	/** A draft that can be published, made with no hooks registered. */
-	const newPost = async (title = "Post", mdx = "Body"): Promise<Entry> => {
+	const newPost = async (title = "Post", text = "Body"): Promise<Entry> => {
 		const registered = sources;
 		sources = [];
 		try {
-			const draft = await service.createDraft(await postInput(title, mdx));
+			const draft = await service.createDraft(await postInput(title, text));
 			changes = [];
 			return draft;
 		} finally {
@@ -123,8 +126,7 @@ describe("write hook contract", () => {
 			collection: entry.collection,
 			slug: entry.workingSlug,
 			metadata,
-			format: "mdx",
-			body: entry.working.mdx,
+			doc: entry.working.doc,
 			expectedVersion: entry.version,
 		}) as never;
 
@@ -161,7 +163,11 @@ describe("write hook contract", () => {
 				byteSize: 1024,
 				stagingKey: `staging/${randomUUID()}.png`,
 			});
-			const doc = docOf(`<Image mediaId="${mediaId}" alt="added by a hook" />\n`);
+			const doc = {
+				type: "doc",
+				version: STORED_DOCUMENT_VERSION,
+				content: [{ type: "image", attrs: { mediaId, alt: "added by a hook" } }],
+			} as StoredDocument;
 			sources = server({ transform: ({ metadata }) => ({ metadata, doc }) });
 			const created = await service.createDraft(await postInput("With image"));
 			const references = await store.getWorkingReferences({ entryId: created.id });
@@ -243,7 +249,7 @@ describe("write hook contract", () => {
 
 		it("does not stop the core checks of a publish: a draft that core rejects stays unpublished however the hooks answer", async () => {
 			// A body that does not parse can be saved as a draft (as an unparsed body), and core publish validation blocks it.
-			const draft = await newPost("Broken", "<Unclosed");
+			const draft = await newPost("Broken", "<<<Unclosed");
 			sources = server({
 				validate: () => ({ issues: [], warnings: [{ code: "all_fine" }] }),
 				validatePublish: ({ snapshot }) => {
@@ -602,7 +608,7 @@ describe("write hook contract", () => {
 					collection: recordCollection,
 					slug: unique("record"),
 					metadata: await requiredMetadata(recordCollection, unique("record title"), relationTarget),
-					format: "mdx",
+					format: "paragraphs",
 					body: "",
 				});
 				const trashed = await store.trashEntry({ id: record.id, expectedVersion: record.version });
@@ -669,7 +675,7 @@ describe("write hook contract", () => {
 			collection: contentCollection,
 			slug: unique("seeded"),
 			metadata: await requiredMetadata(contentCollection, "seeded", relationTarget),
-			mdx: "Body",
+			text: "Body",
 		});
 		const seen: unknown[] = [];
 		sources = server({

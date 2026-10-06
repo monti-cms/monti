@@ -8,8 +8,13 @@ import { contentPath } from "../../core/links";
 import { localizePath } from "../../core/locales";
 import type { ContentStore, Entry } from "../../core/store";
 import { publishDraft, seedEntry } from "../../core/store/__test__/seed";
-import { collectRefs } from "../../mdx/document-refs";
-import { entryLinkIds } from "../../mdx/entry-links";
+import { collectRefs, imageResolverFromRefs } from "../../doc/document-refs";
+import { entryIdOfMark, entryLinkIds } from "../../doc/entry-links";
+import { STORED_DOCUMENT_VERSION, type StoredDocument, unparsedDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
+import { defineFormat } from "../../format/types";
 import { CmsContent } from "../../render";
 import { createContentService } from "../../services/content-service";
 import {
@@ -21,6 +26,26 @@ import {
 } from "../../testing";
 
 /** The read API returns the stored document and what it points to (`doc`, `refs`), and a page renders them with `CmsContent`. */
+/** A format that writes a link to a published entry as `[label](url)` and any other link as its label alone. */
+const labelsFormat = defineFormat({
+	name: "labels",
+	label: "Labels",
+	mimeType: "text/plain",
+	extension: "txt",
+	export: (document, ctx) =>
+		document.content
+			.map((block) =>
+				(block.content ?? [])
+					.map((inline) => {
+						const entryId = inline.marks?.map(entryIdOfMark).find(Boolean);
+						const url = entryId ? ctx.link(entryId)?.url : undefined;
+						return url ? `[${inline.text}](${url})` : (inline.text ?? "");
+					})
+					.join(""),
+			)
+			.join("\n\n"),
+});
+
 describe("cms.read returns the document", () => {
 	let pool: Pool;
 	let schemaName: string;
@@ -40,9 +65,13 @@ describe("cms.read returns the document", () => {
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		relationTarget = fillRequiredMetadata(store).relationTarget as typeof relationTarget;
-		service = createContentService<Entry>(store);
+		service = createContentService<Entry>(store, {
+			formats: async () => createFormatRegistry([paragraphsFormat, labelsFormat]),
+		});
 		cms = fakeCms({
 			store,
+			contentService: service,
+			formats: [paragraphsFormat, labelsFormat],
 			mediaStore: { getPublicUrl: publicUrl },
 			verifyAdmin: async () => ({ userId: "u", accountId: "a", isAdmin: true }),
 		});
@@ -83,33 +112,43 @@ describe("cms.read returns the document", () => {
 	});
 
 	/** A draft written the way the app writes one: the body goes through the write pipeline, which stores its document. */
-	const draft = async (slug: string, mdx: string) =>
+	const draft = async (slug: string, body: string | StoredDocument) =>
 		service.createDraft({
 			collection: contentCollection,
 			slug,
 			metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
-			format: "mdx",
-			body: mdx,
+			...(typeof body === "string" ? { format: "paragraphs", body } : { doc: body }),
 		} as never);
 
-	const publish = async (slug: string, mdx: string) => {
-		const created = await draft(slug, mdx);
+	const publish = async (slug: string, body: string | StoredDocument) => {
+		const created = await draft(slug, body);
 		return publishDraft(store, { id: created.id, expectedVersion: created.version });
 	};
 
-	const bodyWith = (...lines: string[]) => lines.join("\n\n");
-	const image = (id: string, alt: string) => `<Image mediaId="${id}" alt="${alt}" />`;
+	/** A body with the blocks a text format of the test cannot write: registered images and files. */
+	const bodyWith = (...content: CmsNode[]): StoredDocument => ({
+		type: "doc",
+		version: STORED_DOCUMENT_VERSION,
+		content,
+	});
+	const image = (id: string, alt: string): CmsNode => ({ type: "image", attrs: { mediaId: id, alt } });
+	const file = (id: string, label: string): CmsNode => ({ type: "file", attrs: { mediaId: id, label } });
+	const heading = (value: string): CmsNode => ({
+		type: "heading",
+		attrs: { level: 2 },
+		content: [{ type: "text", text: value }],
+	});
 
 	it("one entry: returns the stored document and the resolved media of exactly that document", async () => {
 		const published = await publish(
 			"doc-detail",
-			bodyWith("## Intro", image(media.ready, "photo"), `<File mediaId="${media.attachment}" label="Deck" />`),
+			bodyWith(heading("Intro"), image(media.ready, "photo"), file(media.attachment, "Deck")),
 		);
 
 		const found = await cms.read.getEntry({ collection: contentCollection, slug: "doc-detail" });
 		if (found.status !== "found") throw new Error("not found");
 		const { entry } = found;
-		// The document that was stored, not one parsed again from `mdx`.
+		// The document that was stored.
 		expect(entry.doc).toEqual((await store.getEntry(published.id)).published?.doc);
 		expect(entry.doc).toMatchObject({ type: "doc" });
 		// Every media the document uses is resolved, and nothing else is (another ready media exists in the store).
@@ -128,7 +167,7 @@ describe("cms.read returns the document", () => {
 	});
 
 	it("a media that is not ready resolves to the reason, and an entry without media has empty refs", async () => {
-		await publish("doc-pending", image(media.pending, "later"));
+		await publish("doc-pending", bodyWith(image(media.pending, "later")));
 		const pending = await cms.read.getEntry({ collection: contentCollection, slug: "doc-pending" });
 		if (pending.status !== "found") throw new Error("not found");
 		expect(pending.entry.refs.media).toEqual({ [media.pending]: { failure: "not-ready" } });
@@ -141,22 +180,23 @@ describe("cms.read returns the document", () => {
 	});
 
 	it("a page renders the entry with CmsContent, with no image resolver", async () => {
-		await publish("doc-render", bodyWith("## Heading", image(media.ready, "the photo")));
-		const found = await cms.read.getEntry({ collection: contentCollection, slug: "doc-render", format: "mdx" });
+		await publish("doc-render", bodyWith(heading("Heading"), image(media.ready, "the photo")));
+		const found = await cms.read.getEntry({ collection: contentCollection, slug: "doc-render", format: "paragraphs" });
 		if (found.status !== "found") throw new Error("not found");
 
 		const markup = renderToStaticMarkup(await CmsContent({ entry: found.entry }));
 
 		expect(markup).toContain("Heading");
 		expect(markup).toContain(publicUrl("media/photo.png"));
-		// The text of the body in a format gives the same address for the same body (the image is written by its URL).
-		const resolve = await cms.read.imageResolver(found.entry.body?.text ?? "");
-		expect(resolve({ src: publicUrl("media/photo.png") })).toMatchObject({ url: publicUrl("media/photo.png") });
+		// The refs of the entry are all a page needs to resolve its images.
+		const resolve = imageResolverFromRefs(found.entry.refs);
+		expect(resolve({ mediaId: media.ready })).toMatchObject({ url: publicUrl("media/photo.png") });
+		expect(resolve({ mediaId: media.other })).toEqual({ failure: "unresolved" });
 	});
 
 	it("a list reads the document only with the body, and each item gets only the media its own document uses", async () => {
-		const first = await publish("doc-list-1", image(media.ready, "one"));
-		const second = await publish("doc-list-2", image(media.other, "two"));
+		const first = await publish("doc-list-1", bodyWith(image(media.ready, "one")));
+		const second = await publish("doc-list-2", bodyWith(image(media.other, "two")));
 
 		const bare = await cms.read.listEntries({ collection: contentCollection, pageSize: 100 });
 		for (const item of bare.items) {
@@ -180,8 +220,7 @@ describe("cms.read returns the document", () => {
 			collection: contentCollection,
 			slug: published.workingSlug,
 			metadata: published.working.metadata as never,
-			format: "mdx",
-			body: image(media.ready, "edited draft"),
+			doc: bodyWith(image(media.ready, "edited draft")),
 			expectedVersion: published.version,
 		});
 		const edited = await cms.read.getPreview({ collection: contentCollection, slug: "doc-preview" });
@@ -190,7 +229,7 @@ describe("cms.read returns the document", () => {
 		expect(edited?.refs.media[media.ready]).toMatchObject({ url: publicUrl("media/photo.png") });
 
 		// A draft that was never published: its media may not be ready yet.
-		const bodyOfDraft = await draft("doc-preview-draft", image(media.pending, "draft only"));
+		const bodyOfDraft = await draft("doc-preview-draft", bodyWith(image(media.pending, "draft only")));
 		const preview = await cms.read.getPreview({ collection: contentCollection, slug: "doc-preview-draft" });
 		expect(bodyOfDraft.working.doc).not.toBeNull();
 		expect(preview?.doc).toEqual(bodyOfDraft.working.doc);
@@ -207,15 +246,19 @@ describe("cms.read returns the document", () => {
 			collection: contentCollection,
 			slug: "doc-unparsed",
 			metadata: { title: "Unparsed" },
-			mdx: "---\ntitle: front matter\n---\n\nBody",
+			doc: unparsedDocument("---\ntitle: front matter\n---\n\nBody", null, "paragraphs"),
 		});
 
-		const preview = await cms.read.getPreview({ collection: contentCollection, slug: "doc-unparsed", format: "mdx" });
+		const preview = await cms.read.getPreview({
+			collection: contentCollection,
+			slug: "doc-unparsed",
+			format: "paragraphs",
+		});
 
 		expect(unparsed.working.doc.content).toEqual([expect.objectContaining({ type: "unparsed" })]);
 		expect(preview).toMatchObject({ refs: { media: {} } });
-		expect(preview?.doc?.content[0]).toMatchObject({ type: "unparsed", attrs: { format: "mdx" } });
-		expect(preview?.body?.text).toContain("Body");
+		expect(preview?.doc?.content[0]).toMatchObject({ type: "unparsed", attrs: { format: "paragraphs" } });
+		expect(preview?.body?.format).toBe("paragraphs");
 	});
 
 	describe("with a format", () => {
@@ -223,14 +266,34 @@ describe("cms.read returns the document", () => {
 
 		it("also writes the body as text: a link to a published entry is the real path of its target, an image is its public URL", async () => {
 			const target = await publish("fmt-target", "Target body");
-			await publish("fmt-source", bodyWith(`See [the target](${pathOf("fmt-target")}).`, image(media.ready, "photo")));
+			await publish(
+				"fmt-source",
+				bodyWith(
+					{
+						type: "paragraph",
+						content: [
+							{ type: "text", text: "See " },
+							{
+								type: "text",
+								text: "the target",
+								marks: [{ type: "link", attrs: { href: pathOf("fmt-target") } }],
+							},
+						],
+					},
+					image(media.ready, "photo"),
+				),
+			);
 
-			const found = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-source", format: "mdx" });
+			const found = await cms.read.getEntry({
+				collection: contentCollection,
+				slug: "fmt-source",
+				format: "paragraphs",
+			});
 			if (found.status !== "found") throw new Error("not found");
 			const { entry } = found;
 
 			const path = localizePath(target.locale, pathOf("fmt-target"));
-			expect(entry.body?.format).toBe("mdx");
+			expect(entry.body?.format).toBe("paragraphs");
 			expect(entry.body?.text).toContain(`[the target](${path})`);
 			expect(entry.body?.text).toContain(publicUrl("media/photo.png"));
 			expect(entry.body?.text).not.toContain(target.id);
@@ -247,7 +310,11 @@ describe("cms.read returns the document", () => {
 		it("follows the target when its address changes, with no change to the document that links to it", async () => {
 			const target = await publish("fmt-moving", "Target body");
 			const source = await publish("fmt-follows", `[x](${pathOf("fmt-moving")})`);
-			const before = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-follows", format: "mdx" });
+			const before = await cms.read.getEntry({
+				collection: contentCollection,
+				slug: "fmt-follows",
+				format: "paragraphs",
+			});
 			if (before.status !== "found") throw new Error("not found");
 			expect(before.entry.body?.text).toContain(`(${localizePath(target.locale, pathOf("fmt-moving"))})`);
 
@@ -262,7 +329,11 @@ describe("cms.read returns the document", () => {
 			const saved = await store.getEntry(target.id);
 			await service.publish({ id: target.id, expectedVersion: saved.version });
 
-			const after = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-follows", format: "mdx" });
+			const after = await cms.read.getEntry({
+				collection: contentCollection,
+				slug: "fmt-follows",
+				format: "paragraphs",
+			});
 			if (after.status !== "found") throw new Error("not found");
 			expect(after.entry.body?.text).toContain(`(${localizePath(target.locale, pathOf("fmt-moved"))})`);
 			expect(after.entry.body?.text).not.toContain("fmt-moving");
@@ -274,7 +345,7 @@ describe("cms.read returns the document", () => {
 			await publish("fmt-dangling", `A [draft](${pathOf("fmt-unpublished")}) link.`);
 			void unpublished;
 
-			const found = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-dangling", format: "mdx" });
+			const found = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-dangling", format: "labels" });
 			if (found.status !== "found") throw new Error("not found");
 
 			expect(found.entry.body?.text).toContain("A draft link.");
@@ -287,17 +358,25 @@ describe("cms.read returns the document", () => {
 			const withBody = await cms.read.listEntries({
 				collection: contentCollection,
 				body: true,
-				format: "mdx",
+				format: "paragraphs",
 				pageSize: 100,
 			});
 			const listed = withBody.items.find((item) => item.slug === "fmt-listed");
-			expect(listed?.body).toEqual({ format: "mdx", text: "Listed body\n" });
+			expect(listed?.body).toEqual({ format: "paragraphs", text: "Listed body" });
 
-			const withoutBody = await cms.read.listEntries({ collection: contentCollection, format: "mdx", pageSize: 100 });
+			const withoutBody = await cms.read.listEntries({
+				collection: contentCollection,
+				format: "paragraphs",
+				pageSize: 100,
+			});
 			for (const item of withoutBody.items) expect(item.body).toBeUndefined();
 
-			const preview = await cms.read.getPreview({ collection: contentCollection, slug: "fmt-listed", format: "mdx" });
-			expect(preview?.body?.text).toBe("Listed body\n");
+			const preview = await cms.read.getPreview({
+				collection: contentCollection,
+				slug: "fmt-listed",
+				format: "paragraphs",
+			});
+			expect(preview?.body?.text).toBe("Listed body");
 		});
 
 		it("an unknown format throws a ServiceError unknown_format, and no format means no text", async () => {

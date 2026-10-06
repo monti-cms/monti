@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
 import { docOf } from "../../../test/stored-content";
-import type { StoredDocument } from "../../mdx/stored-document";
-import type { CmsNode } from "../../mdx/types";
+import type { StoredDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
 import { checkDocument, isEmptyDocument } from "../body-check";
 import { prepareSnapshot } from "../snapshot";
 
-/** The checks of a stored document, on documents given directly (the cases an MDX text cannot spell). */
+/** The checks of a stored document, on documents given directly (the cases a text cannot spell). */
 const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: 2, content });
 const paragraph = (id: string, ...content: CmsNode[]): CmsNode => ({ id, type: "paragraph", content });
 const text = (value: string, ...marks: CmsNode["marks"] & object): CmsNode => ({
@@ -68,11 +70,13 @@ describe("checks of a stored document", () => {
 
 describe("a document and its text are one body", () => {
 	const prepare = (input: { body: string; format: string } | { doc: unknown }) =>
-		prepareSnapshot({ collection: contentCollection, slug: "same", metadata: { title: "Same" }, ...input });
+		prepareSnapshot({ collection: contentCollection, slug: "same", metadata: { title: "Same" }, ...input } as never, {
+			import: { formats: createFormatRegistry([paragraphsFormat]) },
+		});
 
 	it("has the content hash of the text it was read from, whichever way it is sent", async () => {
-		const mdx = "A **bold** and *it* with `code` and a [link](https://example.com).\n\n## Heading\n";
-		const fromText = await prepare({ body: mdx, format: "mdx" });
+		const written = "A bold and it with code and a [link](https://example.com).\n\nHeading";
+		const fromText = await prepare({ body: written, format: "paragraphs" });
 		const fromDocument = await prepare({ doc: fromText.doc });
 		expect(fromDocument.contentHash).toBe(fromText.contentHash);
 	});
@@ -94,13 +98,13 @@ describe("a document and its text are one body", () => {
 			],
 		};
 		const fromDocument = await prepare({ doc: byHand });
-		const fromText = await prepare({ format: "mdx", body: "Hello\n" });
+		const fromText = await prepare({ format: "paragraphs", body: "Hello" });
 		expect(fromDocument.contentHash).toBe(fromText.contentHash);
 		expect(fromDocument.doc.content).toHaveLength(1);
 	});
 
 	it("gives every block of a document an id, keeps the ones it has, and takes the ones of the draft it replaces", async () => {
-		const first = await prepare({ format: "mdx", body: "One\n\nTwo\n" });
+		const first = await prepare({ format: "paragraphs", body: "One\n\nTwo" });
 		const sent = {
 			type: "doc",
 			version: 2,

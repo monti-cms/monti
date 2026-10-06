@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../test/any-site";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import { ADDED_BLOCKS } from "../active";
 import { type BlockDefinition, defineBlock } from "../define";
 import { BUILTIN_BLOCKS } from "../definitions";
@@ -132,13 +133,22 @@ describe("custom block publish check", () => {
 		.sort((a, b) => Number(b.syntax.kind === "leaf") - Number(a.syntax.kind === "leaf"))
 		.find((block) => attributeOf(block, (attribute) => Boolean(attribute.required) && !attribute.options));
 
-	/** Source of one block as standard JSX (takes an attribute string such as ` name="value"`). */
-	const jsxBlock = (block: BlockDefinition, props: string) =>
-		block.syntax.kind === "leaf"
-			? `<${block.component}${props} />\n`
-			: `<${block.component}${props}>\n\n본문\n\n</${block.component}>\n`;
+	/** A document of one block with the given attributes. A container holds one paragraph. */
+	const blockDoc = (block: BlockDefinition, attrs: Record<string, string>): StoredDocument => ({
+		type: "doc",
+		version: STORED_DOCUMENT_VERSION,
+		content: [
+			{
+				type: block.name,
+				...(Object.keys(attrs).length > 0 ? { attrs } : {}),
+				...(block.syntax.kind === "leaf"
+					? {}
+					: { content: [{ type: "paragraph", content: [{ type: "text", text: "본문" }] }] }),
+			},
+		],
+	});
 
-	const issuesOf = async (mdx: string) => {
+	const issuesOf = async (doc: StoredDocument) => {
 		const { prepareSnapshot } = await import("../../core/snapshot");
 		const snapshot = await prepareSnapshot({
 			collection: contentCollection,
@@ -149,8 +159,7 @@ describe("custom block publish check", () => {
 				"사용자 블록",
 				async () => "00000000-0000-4000-8000-000000000000",
 			),
-			format: "mdx",
-			body: mdx,
+			doc,
 		});
 		return snapshot.issues.map((issue) => issue.code);
 	};
@@ -159,14 +168,16 @@ describe("custom block publish check", () => {
 		if (!choiceBlock) return;
 		const [name, attribute] = attributeOf(choiceBlock, (candidate) => Boolean(candidate.options)) ?? [];
 		const valid = Object.keys(attribute?.options ?? {})[0];
-		expect(await issuesOf(jsxBlock(choiceBlock, ` ${name}="not-an-option"`))).toContain("invalid_block_attribute");
-		expect(await issuesOf(jsxBlock(choiceBlock, ` ${name}="${valid}"`))).toEqual([]);
+		expect(await issuesOf(blockDoc(choiceBlock, { [name as string]: "not-an-option" }))).toContain(
+			"invalid_block_attribute",
+		);
+		expect(await issuesOf(blockDoc(choiceBlock, { [name as string]: valid as string }))).toEqual([]);
 	});
 
 	it.skipIf(!requiredBlock)("blocks a missing required attribute", async () => {
 		if (!requiredBlock) return;
 		const [name] = attributeOf(requiredBlock, (attribute) => Boolean(attribute.required) && !attribute.options) ?? [];
-		expect(await issuesOf(jsxBlock(requiredBlock, ""))).toContain("missing_block_attribute");
-		expect(await issuesOf(jsxBlock(requiredBlock, ` ${name}="https://example.com"`))).toEqual([]);
+		expect(await issuesOf(blockDoc(requiredBlock, {}))).toContain("missing_block_attribute");
+		expect(await issuesOf(blockDoc(requiredBlock, { [name as string]: "https://example.com" }))).toEqual([]);
 	});
 });

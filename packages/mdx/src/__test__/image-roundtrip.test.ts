@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyze, serialize, toDocument } from "../index";
+import { analyze, serialize, toDocument } from "../format";
 
 describe("MDX Image Component Roundtrip & Conversion", () => {
 	it("parses <Image mediaId='123' alt='Test' width='60%' align='center' caption='Cap' /> into image node and serializes both mediaId and src", () => {

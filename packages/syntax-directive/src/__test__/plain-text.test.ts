@@ -1,5 +1,6 @@
 import { ADDED_BLOCKS, toPlainText } from "@monti-cms/core/client";
-import { docOfMdx, documentText, SEARCH_TEXT } from "@monti-cms/core/testing";
+import { documentText, SEARCH_TEXT } from "@monti-cms/core/testing";
+import { docOfMdx } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";
 import { directiveSyntax } from "..";
 

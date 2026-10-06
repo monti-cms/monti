@@ -1,10 +1,22 @@
+import {
+	entryLinkHref,
+	entryLinkIds,
+	readStoredDocument,
+	STORED_DOCUMENT_VERSION,
+	type StoredDocument,
+	withoutBlockIds,
+} from "@monti-cms/core/document";
+import type { FormatExportContext, FormatIssue, FormatLink, FormatMedia } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
-import { contentOf, docOf } from "../../../test/stored-content";
-import { entryLinkHref, entryLinkIds } from "../../mdx/entry-links";
-import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../mdx/stored-document";
-import { syntaxBlocks, syntaxCodeLineEffects } from "../../mdx/syntax";
-import { mdxFormat } from "../mdx";
-import type { FormatExportContext, FormatIssue, FormatLink, FormatMedia } from "../types";
+import { createMdxFormat, mdxFormat } from "../format";
+import { siteSyntaxBlocks as syntaxBlocks, siteCodeLineEffects as syntaxCodeLineEffects } from "../syntax-config";
+import { docOfMdx as docOf } from "../testing";
+
+/** The blocks of a stored document without their ids, for comparing what a body says. */
+const contentOf = (doc: unknown) => {
+	const read = readStoredDocument(doc);
+	return read ? withoutBlockIds(read.content) : null;
+};
 
 const ENTRY_ID = "123e4567-e89b-42d3-a456-426614174000";
 const MEDIA_ID = "223e4567-e89b-42d3-a456-426614174000";
@@ -38,7 +50,7 @@ const exportContext = (
 /** A document with an internal link by id and a registered image, as the stored document holds them. */
 const documentWith = (body: string): StoredDocument => docOf(body);
 
-describe("the built-in mdx format", () => {
+describe("the mdx format", () => {
 	it("is a two-way format with the usual file facts", () => {
 		expect(mdxFormat).toMatchObject({ name: "mdx", extension: "mdx", mimeType: "text/mdx" });
 		expect(typeof mdxFormat.import).toBe("function");

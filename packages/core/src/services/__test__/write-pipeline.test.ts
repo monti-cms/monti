@@ -1,14 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../test/any-site";
-import { contentOf, docOf, mdxOf } from "../../../test/stored-content";
+import { contentOf, docOf } from "../../../test/stored-content";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
 import type { HookSource, WriteHookContext } from "../hooks";
 import { type PreparedSnapshot, ServiceError, type ServiceInput } from "../types";
 import { createWritePipeline, type WriteRequest } from "../write-pipeline";
 
 /** The ordering, isolation and failure rules of the write pipeline, without a database. Collection names come from the config. */
 
-const input = (metadata: Record<string, unknown> = { title: "Title" }, mdx = "Body\n"): ServiceInput =>
-	({ collection: contentCollection, slug: "slug", metadata, format: "mdx", body: mdx }) as unknown as ServiceInput;
+const formats = async () => createFormatRegistry([paragraphsFormat]);
+
+/** A write of a body given as text in the format of the format tests (a text with `<<<` is one it cannot read). */
+const input = (metadata: Record<string, unknown> = { title: "Title" }, text = "Body"): ServiceInput =>
+	({
+		collection: contentCollection,
+		slug: "slug",
+		metadata,
+		format: "paragraphs",
+		body: text,
+	}) as unknown as ServiceInput;
 
 const request = (overrides: Partial<WriteRequest> = {}): WriteRequest => ({
 	operation: "create",
@@ -17,7 +28,7 @@ const request = (overrides: Partial<WriteRequest> = {}): WriteRequest => ({
 	...overrides,
 });
 
-const pipelineWith = (...sources: HookSource[]) => createWritePipeline({ hooks: () => sources });
+const pipelineWith = (...sources: HookSource[]) => createWritePipeline({ hooks: () => sources, formats });
 
 const rejection = async (run: Promise<unknown>) => {
 	try {
@@ -85,12 +96,12 @@ describe("write pipeline", () => {
 	});
 
 	it("keeps the body as it came in when a transform leaves it alone", async () => {
-		const mdx = "Body\n";
-		const plain = await createWritePipeline().run(request({ input: input({ title: "Title" }, mdx) }));
+		const text = "Body";
+		const plain = await createWritePipeline({ formats }).run(request({ input: input({ title: "Title" }, text) }));
 		const withHook = await pipelineWith({
 			owner: "server",
 			hooks: { transform: ({ metadata, doc }) => ({ metadata: { ...metadata, title: "Changed" }, doc }) },
-		}).run(request({ input: input({ title: "Title" }, mdx) }));
+		}).run(request({ input: input({ title: "Title" }, text) }));
 		// Each preparation draws its own block ids; what the body says is the same.
 		expect(contentOf(withHook.snapshot.doc)).toEqual(contentOf(plain.snapshot.doc));
 		expect(withHook.snapshot.metadata.title).toBe("Changed");
@@ -102,7 +113,7 @@ describe("write pipeline", () => {
 			owner: "server",
 			hooks: { transform: ({ metadata }) => ({ metadata, doc: replacement }) },
 		}).run(request());
-		expect(mdxOf(snapshot.doc)).toContain("Replaced");
+		expect(contentOf(snapshot.doc)).toEqual(contentOf(replacement));
 	});
 
 	it("rejects what core preparation rejects, whatever a transform returns", async () => {
@@ -120,7 +131,7 @@ describe("write pipeline", () => {
 			collection: contentCollection,
 			slug: "slug",
 			metadata: "not metadata",
-			format: "mdx",
+			format: "paragraphs",
 			body: "",
 		} as unknown as ServiceInput;
 		const error = await rejection(pipeline.run(request({ input: bad })));
@@ -162,10 +173,10 @@ describe("write pipeline", () => {
 		});
 		// A body that does not parse is a core issue of a publish. The hook emptied its copy of the issues; the result still has them.
 		const { snapshot } = await pipeline.run(
-			request({ operation: "publish", input: input({ title: "Title" }, "<Unclosed") }),
+			request({ operation: "publish", input: input({ title: "Title" }, "<<<Unclosed") }),
 		);
 		expect(seen?.issues).toEqual([]);
-		expect(snapshot.issues.map((issue) => issue.code)).toContain("mdx_error");
+		expect(snapshot.issues.map((issue) => issue.code)).toContain("unparsed_body");
 		expect(snapshot.metadata.title).toBe("Title");
 	});
 
@@ -249,7 +260,7 @@ describe("write pipeline", () => {
 
 	it("reads the hooks on every write, so a plugin that loads late is used", async () => {
 		let sources: HookSource[] = [];
-		const pipeline = createWritePipeline({ hooks: () => sources });
+		const pipeline = createWritePipeline({ hooks: () => sources, formats });
 		await expect(pipeline.run(request())).resolves.toBeDefined();
 		sources = [{ owner: "server", hooks: { validate: () => ({ issues: [{ code: "late" }] }) } }];
 		await expect(pipeline.run(request())).rejects.toMatchObject({ code: "validation_failed" });

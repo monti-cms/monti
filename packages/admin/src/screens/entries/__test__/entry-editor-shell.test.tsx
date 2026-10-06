@@ -1,4 +1,5 @@
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
+import { MdxAdminProvider } from "@monti-cms/mdx/admin";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,7 +8,6 @@ import {
 	type SourcePanelProps,
 	type SourcePanelRegistration,
 } from "../../../admin-components";
-import { MdxSourceProvider } from "../../../mdx-source";
 import { docOf } from "../../../test/mdx";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
@@ -160,7 +160,7 @@ const renderShell = (ui: React.ReactElement, sourcePanels?: SourcePanelRegistrat
 		sourcePanels ? (
 			<CmsAdminComponentsProvider components={{ sourcePanels }}>{ui}</CmsAdminComponentsProvider>
 		) : (
-			<MdxSourceProvider>{ui}</MdxSourceProvider>
+			<MdxAdminProvider>{ui}</MdxAdminProvider>
 		),
 	);
 const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
@@ -1207,12 +1207,7 @@ describe("translation source pane", () => {
 		working: {
 			metadata: { title: "Title" },
 			doc: docOf("First\n\nSecond\n"),
-			translation:
-				baseSource === null
-					? null
-					: documents.base
-						? { version: 3, baseSource, baseDoc: documents.base }
-						: { version: 2, baseSource },
+			translation: baseSource === null ? null : { version: 4, baseDoc: documents.base ?? docOf(baseSource) },
 		},
 	});
 	const sourcePane = () => screen.queryByRole("complementary", { name: "원문 창" });
@@ -1288,7 +1283,7 @@ describe("translation source pane", () => {
 		expect(screen.queryByText("원문이 바뀌었습니다")).toBeNull();
 		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
-		// The confirmed source is the document of the source (read from its text when the server sent none).
+		// The confirmed source is the document of the source.
 		const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation;
 		expect(sent.version).toBe(4);
 		expect(contentKey(sent.baseDoc)).toBe(contentKey(docOf(SOURCE_MDX)));
@@ -1378,7 +1373,7 @@ describe("translation source pane", () => {
 	});
 
 	it("an unparseable source is reported as not comparable", async () => {
-		serve(() => undefined, translationWith("<Callout>닫히지 않음"));
+		serve(() => undefined, translationWith("", { base: unparsedDocument("<Callout>닫히지 않음") }));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: "비교" }));
 		const dialog = await screen.findByRole("dialog", { name: "원문 변경" });

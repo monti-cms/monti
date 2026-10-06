@@ -1,19 +1,36 @@
+import { createFormatRegistry } from "@monti-cms/core/format";
+import {
+	CONTENT_STORE_MIGRATIONS,
+	type Collection,
+	closeGlobalPool,
+	createContentService,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	type Entry,
+	type JsonValue,
+	mdxContentHash,
+	mdxSearchText,
+	migrateContentStore,
+	migrateStoredDocuments,
+	publishDraft,
+} from "@monti-cms/core/testing";
 import type { Pool, PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import { contentOf, docOf } from "../../../../test/stored-content";
-import type { Collection } from "../../../core/collections";
-import type { Entry } from "../../../core/store";
-import { publishDraft } from "../../../core/store/__test__/seed";
-import type { JsonValue } from "../../../core/types";
-import { bodyFromMdx } from "../../../mdx/stored-document";
-import { createContentService } from "../../../services/content-service";
-import { createContentStore, migrateContentStore } from "../content-store";
-import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
-import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { migrateStoredDocuments } from "../store/stored-document-migration";
-import { templateMdx } from "./template-rows";
-import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
+import { contentCollection, requiredMetadata } from "../../../../core/test/any-site";
+import { contentOf } from "../../../../core/test/stored-content";
+import { bodyFromMdx } from "../../body";
+import { createServerMdxFormat, legacyBodies } from "../../server";
+import { docOfMdx as docOf } from "../../testing";
+
+/** The `mdx` format as a server registers it: it also reads the text of old bodies, which the step under test needs. */
+const formats = createFormatRegistry([createServerMdxFormat()]);
+const bodies = legacyBodies();
+
+/** The `mdx` column of a body template, `null` when it has no text. */
+const templateMdx = async (pool: Pool, schemaName: string, id: string): Promise<string | null> =>
+	(await pool.query<{ mdx: string | null }>(`SELECT mdx FROM "${schemaName}".body_templates WHERE id = $1`, [id]))
+		.rows[0]?.mdx ?? null;
 
 const STEP = "0013_stored_documents";
 
@@ -39,9 +56,9 @@ describe("0013_stored_documents", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, formats });
 		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
+		service = createContentService<Entry>(store, { formats: async () => formats });
 	});
 
 	afterAll(async () => {
@@ -126,8 +143,35 @@ describe("0013_stored_documents", () => {
 			)
 		).rows;
 
+	/**
+	 * A store from before documents: a save no longer writes the text of a body or of a template, so each one that has none gets the text the format writes for
+	 * its document. Rows that were given a text on purpose keep it.
+	 */
+	const giveLegacyText = async () => {
+		const found = await pool.query<{ entry_id: string; state: string; doc: Parameters<typeof bodies.write>[0] }>(
+			`SELECT entry_id, state, doc FROM "${schemaName}".entry_bodies WHERE mdx IS NULL AND doc IS NOT NULL`,
+		);
+		for (const stored of found.rows) {
+			await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2 AND state = $3`, [
+				bodies.write(stored.doc).text,
+				stored.entry_id,
+				stored.state,
+			]);
+		}
+		const templates = await pool.query<{ id: string; doc: Parameters<typeof bodies.write>[0] }>(
+			`SELECT id, doc FROM "${schemaName}".body_templates WHERE mdx IS NULL AND doc IS NOT NULL`,
+		);
+		for (const template of templates.rows) {
+			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1 WHERE id = $2`, [
+				bodies.write(template.doc).text,
+				template.id,
+			]);
+		}
+	};
+
 	/** Puts the store back before the step: its record is gone, and (with `dropColumns`) so are its columns. */
 	const rewind = async (options: { dropColumns?: boolean } = {}) => {
+		await giveLegacyText();
 		if (options.dropColumns) {
 			await pool.query(`ALTER TABLE "${schemaName}".entry_bodies DROP COLUMN doc`);
 			await pool.query(`ALTER TABLE "${schemaName}".body_templates DROP COLUMN doc`);
@@ -137,7 +181,7 @@ describe("0013_stored_documents", () => {
 
 	const run = async (options: { dropColumns?: boolean } = {}) => {
 		await rewind(options);
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, formats });
 	};
 
 	const hasUnpublishedChanges = async (entryId: string) => {
@@ -148,6 +192,7 @@ describe("0013_stored_documents", () => {
 	};
 
 	const withMigrationClient = async <T>(work: (client: PoolClient) => Promise<T>): Promise<T> => {
+		await giveLegacyText();
 		const client = await pool.connect();
 		try {
 			return await work(client);
@@ -202,9 +247,9 @@ describe("0013_stored_documents", () => {
 			expect(stored?.mdx).toBe(expected.mdx);
 			expect(contentOf(stored?.doc)).toEqual(contentOf(expected.doc));
 			expect(stored?.content_hash).toBe(
-				mdxContentHash(stored?.metadata ?? {}, expected.mdx, stored?.schema_version ?? 1),
+				mdxContentHash(bodies, stored?.metadata ?? {}, expected.mdx, stored?.schema_version ?? 1),
 			);
-			expect(stored?.search_text).toBe(mdxSearchText(expected.mdx));
+			expect(stored?.search_text).toBe(mdxSearchText(bodies, expected.mdx));
 		}
 		expect((await row(published.id, "working"))?.mdx).toBe(WRITTEN);
 		expect((await row(published.id, "working"))?.search_text).toContain("emphasis");
@@ -241,9 +286,10 @@ describe("0013_stored_documents", () => {
 
 	it("replaces a document that is already there with the one the MDX reads as", async () => {
 		const draft = await createDraft(WRITTEN);
-		await pool.query(`UPDATE "${schemaName}".entry_bodies SET doc = $1::jsonb WHERE entry_id = $2`, [
+		await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $3, doc = $1::jsonb WHERE entry_id = $2`, [
 			JSON.stringify({ type: "doc", version: 1, content: [] }),
 			draft.id,
+			WRITTEN,
 		]);
 
 		await run();
@@ -287,7 +333,7 @@ describe("0013_stored_documents", () => {
 		const messages: string[] = [];
 
 		await withMigrationClient((client) =>
-			migrateStoredDocuments(client, schemaName, { log: (message) => messages.push(message) }),
+			migrateStoredDocuments(client, schemaName, { bodies, log: (message) => messages.push(message) }),
 		);
 
 		for (const [entry, mdx] of [
@@ -298,8 +344,10 @@ describe("0013_stored_documents", () => {
 			expect(stored?.mdx).toBe(mdx);
 			expect(stored?.doc).toBeNull();
 			// It still has the current hash (of its raw text) and search text.
-			expect(stored?.content_hash).toBe(mdxContentHash(stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1));
-			expect(stored?.search_text).toBe(mdxSearchText(mdx));
+			expect(stored?.content_hash).toBe(
+				mdxContentHash(bodies, stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1),
+			);
+			expect(stored?.search_text).toBe(mdxSearchText(bodies, mdx));
 			expect(messages.filter((message) => message.includes(`${entry.id}/working`))).toHaveLength(1);
 		}
 		expect((await row(good.id, "working"))?.mdx).toBe(WRITTEN);
@@ -368,7 +416,7 @@ describe("0013_stored_documents", () => {
 			const messages: string[] = [];
 
 			await withMigrationClient((client) =>
-				migrateStoredDocuments(client, schemaName, { log: (message) => messages.push(message) }),
+				migrateStoredDocuments(client, schemaName, { bodies, log: (message) => messages.push(message) }),
 			);
 
 			expect(await templateMdx(pool, schemaName, broken.id)).toBe("Words\n\n<Unclosed");
@@ -405,7 +453,7 @@ describe("0013_stored_documents", () => {
 					templates.map((template) => template.id),
 				]);
 
-				await withMigrationClient((client) => migrateStoredDocuments(client, schemaName, { batchSize }));
+				await withMigrationClient((client) => migrateStoredDocuments(client, schemaName, { bodies, batchSize }));
 
 				for (const [index, entry] of entries.entries()) {
 					const stored = await row(entry.id, "working");

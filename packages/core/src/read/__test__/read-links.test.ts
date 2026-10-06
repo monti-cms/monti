@@ -10,7 +10,10 @@ import { DEFAULT_LOCALE, localizePath } from "../../core/locales";
 import type { ContentStore, Entry } from "../../core/store";
 import { publishDraft } from "../../core/store/__test__/seed";
 import { ServiceError } from "../../core/types";
-import { entryLinkIds } from "../../mdx/entry-links";
+import { entryLinkIds } from "../../doc/entry-links";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
+import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
+import { createFormatRegistry } from "../../format/registry";
 import { CmsContent } from "../../render";
 import { createContentService } from "../../services/content-service";
 import {
@@ -40,8 +43,13 @@ describe("links by entry id", () => {
 		const filled = fillRequiredMetadata(store);
 		relationTarget = filled.relationTarget as typeof relationTarget;
 		rawCreate = filled.raw.createEntryWithReferences;
-		service = createContentService<Entry>(store);
-		cms = fakeCms({ store, verifyAdmin: async () => ({ userId: "u", accountId: "a", isAdmin: true }) });
+		service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
+		cms = fakeCms({
+			store,
+			contentService: service,
+			formats: [paragraphsFormat],
+			verifyAdmin: async () => ({ userId: "u", accountId: "a", isAdmin: true }),
+		});
 	});
 
 	afterAll(async () => {
@@ -54,28 +62,42 @@ describe("links by entry id", () => {
 	/** The public address a read gives: the same path with the prefix of the language of the version (the config may set one for every language). */
 	const publicPath = (slug: string, locale: string = DEFAULT_LOCALE) => localizePath(locale, pathOf(slug));
 
-	const draft = async (slug: string, mdx: string) =>
+	const draft = async (slug: string, body: string | StoredDocument) =>
 		service.createDraft({
 			collection: contentCollection,
 			slug,
 			metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
-			format: "mdx",
-			body: mdx,
+			...(typeof body === "string" ? { format: "paragraphs", body } : { doc: body }),
 		} as never);
 
-	const publish = async (slug: string, mdx = `Body ${slug}`) => {
-		const created = await draft(slug, mdx);
+	/** A paragraph of links by id, written as the document keeps them (a text format of the test reads addresses, not ids). */
+	const linksByIdTo = (...links: [label: string, entryId: string][]): StoredDocument => ({
+		type: "doc",
+		version: STORED_DOCUMENT_VERSION,
+		content: [
+			{
+				type: "paragraph",
+				content: links.flatMap(([label, entryId], index) => [
+					...(index > 0 ? [{ type: "text", text: " " }] : []),
+					{ type: "text", text: label, marks: [{ type: "link", attrs: { entryId } }] },
+				]),
+			},
+		],
+	});
+
+	const publish = async (slug: string, body: string | StoredDocument = `Body ${slug}`) => {
+		const created = await draft(slug, body);
 		return publishDraft(store, { id: created.id, expectedVersion: created.version });
 	};
 
-	/** A published translation. Its body is given as text (a link by id is `entry:<id>`); the common values stay with the source. */
-	const publishTranslation = async (slug: string, locale: string, sourceId: string, mdx: string) => {
+	/** A published translation. Its body is given as text or as a document; the common values stay with the source. */
+	const publishTranslation = async (slug: string, locale: string, sourceId: string, body: string | StoredDocument) => {
 		const created = await rawCreate({
 			snapshot: {
 				collection: contentCollection,
 				slug,
 				metadata: { title: `Title ${slug}` },
-				doc: docOf(mdx),
+				doc: typeof body === "string" ? docOf(body) : body,
 				schemaVersion: 1,
 				contentHash: `hash-${slug}`,
 				references: [],
@@ -159,7 +181,7 @@ describe("links by entry id", () => {
 			collection: contentCollection,
 			slug: "links-series-1",
 			metadata: first.working.metadata as never,
-			format: "mdx",
+			format: "paragraphs",
 			body: `Next: [two](${pathOf("links-series-2")})`,
 			expectedVersion: first.version,
 		});
@@ -167,7 +189,7 @@ describe("links by entry id", () => {
 			collection: contentCollection,
 			slug: "links-series-2",
 			metadata: second.working.metadata as never,
-			format: "mdx",
+			format: "paragraphs",
 			body: `Back: [one](${pathOf("links-series-1")})`,
 			expectedVersion: second.version,
 		});
@@ -204,7 +226,7 @@ describe("links by entry id", () => {
 
 	it("a link to an id that is not an entry is an unresolved link at publish, and a draft with it still saves", async () => {
 		const id = "00000000-0000-4000-8000-0000000000aa";
-		const created = await draft("links-bad-id", `[x](entry:${id})`);
+		const created = await draft("links-bad-id", linksByIdTo(["x", id]));
 		expect(entryLinkIds(created.working.doc.content)).toEqual([id]);
 		expect(await references(created.id)).toEqual([]);
 
@@ -273,7 +295,7 @@ describe("links by entry id", () => {
 				"links-lang-source-t",
 				locale,
 				source.id,
-				`[one](entry:${translated.id}) [two](entry:${plain.id})`,
+				linksByIdTo(["one", translated.id], ["two", plain.id]),
 			);
 
 			const inLocale = await cms.read.getEntry({ collection: contentCollection, slug: "links-lang-source-t", locale });

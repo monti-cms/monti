@@ -1,18 +1,33 @@
+import { createFormatRegistry } from "@monti-cms/core/format";
+import {
+	CONTENT_STORE_MIGRATIONS,
+	type Collection,
+	closeGlobalPool,
+	createContentService,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	type Entry,
+	type JsonValue,
+	mdxContentHash,
+	migrateContentStore,
+	migrateSoftBreaks,
+	publishDraft,
+} from "@monti-cms/core/testing";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import { docOf } from "../../../../test/stored-content";
-import type { Collection } from "../../../core/collections";
-import type { Entry } from "../../../core/store";
-import { publishDraft } from "../../../core/store/__test__/seed";
-import type { JsonValue } from "../../../core/types";
-import { createContentService } from "../../../services/content-service";
-import { createContentStore, migrateContentStore } from "../content-store";
-import { mdxContentHash } from "../store/mdx-body";
-import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { migrateSoftBreaks } from "../store/soft-break-migration";
-import { templateMdx } from "./template-rows";
-import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
+import { contentCollection, requiredMetadata } from "../../../../core/test/any-site";
+import { docOf } from "../../../../core/test/stored-content";
+import { createServerMdxFormat, legacyBodies } from "../../server";
+
+/** The `mdx` format as a server registers it: it also reads the text of old bodies, which the steps under test need. */
+const formats = createFormatRegistry([createServerMdxFormat()]);
+const bodies = legacyBodies();
+
+/** The `mdx` column of a body template, `null` when it has no text. */
+const templateMdx = async (pool: Pool, schemaName: string, id: string): Promise<string | null> =>
+	(await pool.query<{ mdx: string | null }>(`SELECT mdx FROM "${schemaName}".body_templates WHERE id = $1`, [id]))
+		.rows[0]?.mdx ?? null;
 
 /**
  * Migration steps that follow a change of how a body is read: stored hashes are recomputed (and, where the step says so, bodies and search text are rewritten),
@@ -31,9 +46,9 @@ describe("document shape migrations", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, formats });
 		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
+		service = createContentService<Entry>(store, { formats: async () => formats });
 	});
 
 	afterAll(async () => {
@@ -103,12 +118,30 @@ describe("document shape migrations", () => {
 		}>(`SELECT entry_id, state, metadata, mdx, schema_version, content_hash FROM "${schemaName}".entry_bodies`);
 		expect(rows.rows.length).toBeGreaterThan(0);
 		return rows.rows
-			.filter((row) => row.content_hash !== mdxContentHash(row.metadata, row.mdx, row.schema_version))
+			.filter((row) => row.content_hash !== mdxContentHash(bodies, row.metadata, row.mdx, row.schema_version))
 			.map((row) => `${row.entry_id}/${row.state}`);
+	};
+
+	/**
+	 * A store from before documents: a save no longer writes the text of a body, so every body that has none gets the text the format writes for its document.
+	 * Bodies that were given a text on purpose keep it.
+	 */
+	const giveLegacyText = async () => {
+		const rows = await pool.query<{ entry_id: string; state: string; doc: Parameters<typeof bodies.write>[0] }>(
+			`SELECT entry_id, state, doc FROM "${schemaName}".entry_bodies WHERE mdx IS NULL`,
+		);
+		for (const row of rows.rows) {
+			await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2 AND state = $3`, [
+				bodies.write(row.doc).text,
+				row.entry_id,
+				row.state,
+			]);
+		}
 	};
 
 	/** Stores a hash a previous version would have computed (anything that is not the current one) and marks the step as not applied yet. */
 	const rewindTo = async (step: string) => {
+		await giveLegacyText();
 		await pool.query(`UPDATE "${schemaName}".entry_bodies SET content_hash = 'stale-' || state || '-' || entry_id`);
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = $1`, [step]);
 	};
@@ -129,7 +162,7 @@ describe("document shape migrations", () => {
 			await setWorkingBody(edited.id, "첫 줄<br />\n다른 줄");
 
 			await rewindTo(STEP);
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateContentStore(pool, { schema: schemaName, formats });
 
 			expect(await staleHashes()).toEqual([]);
 			expect(await hasUnpublishedChanges(same.id)).toBe(false);
@@ -141,13 +174,13 @@ describe("document shape migrations", () => {
 			const published = await publishedWith("첫 줄<br />\n둘째 줄");
 			await rewindTo(STEP);
 
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateContentStore(pool, { schema: schemaName, formats });
 
 			const after = await store.getEntry(published.id);
 			expect(after.version).toBe(published.version);
 			expect(after.updatedAt.getTime()).toBe(published.updatedAt.getTime());
 			expect(after.working.updatedAt?.getTime()).toBe(published.working.updatedAt?.getTime());
-			expect(after.working.mdx).toBe(published.working.mdx);
+			expect(after.working.doc).toEqual(published.working.doc);
 			expect(after.published).toEqual(published.published);
 		});
 	});
@@ -172,7 +205,7 @@ describe("document shape migrations", () => {
 
 		const run = async () => {
 			await rewindTo(STEP);
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateContentStore(pool, { schema: schemaName, formats });
 		};
 
 		it("is a recorded migration step that runs after the hash step and before the template seed", () => {
@@ -263,10 +296,11 @@ describe("document shape migrations", () => {
 			await setWorkingBody(broken.id, "가\n<Unclosed");
 			const good = await createDraft(SOFT);
 			await setLegacyBodies(good.id, SOFT);
+			await giveLegacyText();
 			const messages: string[] = [];
 			const client = await pool.connect();
 			try {
-				await migrateSoftBreaks(client, schemaName, { log: (message) => messages.push(message) });
+				await migrateSoftBreaks(client, schemaName, { bodies, log: (message) => messages.push(message) });
 			} finally {
 				client.release();
 			}
@@ -279,10 +313,14 @@ describe("document shape migrations", () => {
 		});
 
 		it("reaches every row whatever the batch size", async () => {
-			for (let index = 0; index < 5; index += 1) await createDraft(`줄 ${index}\n다음 줄`);
+			for (let index = 0; index < 5; index += 1) {
+				const draft = await createDraft(`줄 ${index}\n다음 줄`);
+				await setLegacyBodies(draft.id, `줄 ${index}\n다음 줄`);
+			}
+			await giveLegacyText();
 			const client = await pool.connect();
 			try {
-				await migrateSoftBreaks(client, schemaName, { batchSize: 2 });
+				await migrateSoftBreaks(client, schemaName, { bodies, batchSize: 2 });
 			} finally {
 				client.release();
 			}

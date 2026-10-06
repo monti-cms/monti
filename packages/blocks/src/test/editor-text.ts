@@ -1,5 +1,6 @@
-import { mdxBrowserFormat, storedToTiptap, tiptapToStored } from "@monti-cms/admin/editor";
+import { storedToTiptap, tiptapToStored } from "@monti-cms/admin/editor";
 import { assignBlockIds, type StoredDocument } from "@monti-cms/core/document";
+import { mdxBrowserFormat } from "@monti-cms/mdx/admin";
 import type { JSONContent } from "@tiptap/core";
 
 /**
@@ -10,7 +11,10 @@ import type { JSONContent } from "@tiptap/core";
 /** The stored document a fixture reads as, with block ids as a body loaded from the server has them. */
 export const docOfMdx = (mdx: string): StoredDocument => {
 	const read = mdxBrowserFormat.import(mdx);
-	if (!read.ok) throw new Error(`not readable: ${read.issues.map((issue) => issue.message ?? issue.code).join(", ")}`);
+	if (!read.ok)
+		throw new Error(
+			`not readable: ${read.issues.map((issue: { message?: string; code: string }) => issue.message ?? issue.code).join(", ")}`,
+		);
 	return { ...read.doc, content: assignBlockIds(read.doc.content) };
 };
 

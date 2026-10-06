@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
-import { STORED_DOCUMENT_VERSION } from "../../../mdx/stored-document";
+import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
+import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
 import {
 	FIXTURE_CONTENT_COLLECTION,
 	FIXTURE_DRAFT_COLLECTION,
@@ -17,13 +18,14 @@ const mockReadExportSnapshot = vi.fn();
 const cms = fakeCms({
 	store: { readExportSnapshot: () => mockReadExportSnapshot() },
 	verifyAdmin: () => mockVerifyAdmin(),
+	formats: [paragraphsFormat],
 });
 
 const decoder = new TextDecoder();
 /** Working files of the fixture draft (a memo in the reference blog setup, otherwise that config's collection). */
 const DRAFT_ID = "22222222-2222-4222-8222-222222222222";
 const DRAFT_WORKING = fixtureEntryPath(FIXTURE_DRAFT_COLLECTION, DRAFT_ID, "working.doc.json");
-const DRAFT_WORKING_TEXT = fixtureEntryPath(FIXTURE_DRAFT_COLLECTION, DRAFT_ID, "working.mdx");
+const DRAFT_WORKING_TEXT = fixtureEntryPath(FIXTURE_DRAFT_COLLECTION, DRAFT_ID, "working.txt");
 
 const PUBLISHED_WORKING_DOC = fixtureEntryPath(
 	FIXTURE_CONTENT_COLLECTION,
@@ -74,7 +76,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		expect(manifest.counts.entries).toBe(3);
 		expect(findFile(zip, DRAFT_WORKING)).toContain("draft secret body");
 		// Without a format the archive holds the documents only.
-		expect(readZipArchive(zip).some((item) => item.path.endsWith(".mdx"))).toBe(false);
+		expect(readZipArchive(zip).some((item) => item.path.endsWith(".txt"))).toBe(false);
 		expect(JSON.parse(findFile(zip, PUBLISHED_WORKING_DOC))).toMatchObject({
 			type: "doc",
 			version: STORED_DOCUMENT_VERSION,
@@ -82,16 +84,16 @@ describe("GET/POST /api/cms/v1/export", () => {
 	});
 
 	it("an export with ?format= also writes every body as text in that format", async () => {
-		const res = await GET(request("http://localhost/api/cms/v1/export?format=mdx"), { cms });
+		const res = await GET(request("http://localhost/api/cms/v1/export?format=paragraphs"), { cms });
 		expect(res.status).toBe(200);
 
 		const zip = new Uint8Array(await res.arrayBuffer());
 		const manifest = JSON.parse(findFile(zip, "manifest.json"));
-		expect(manifest.format).toEqual({ name: "mdx", extension: "mdx" });
-		expect(findFile(zip, DRAFT_WORKING_TEXT)).toBe("draft secret body\n");
+		expect(manifest.format).toEqual({ name: "paragraphs", extension: "txt" });
+		expect(findFile(zip, DRAFT_WORKING_TEXT)).toBe("draft secret body");
 		expect(findFile(zip, DRAFT_WORKING)).toContain("draft secret body");
 		const templates = JSON.parse(findFile(zip, "templates.json"));
-		expect(templates[0].body).toBe("## 문제\n");
+		expect(templates[0].body).toBe("문제");
 		expect(manifest.files).toContain(DRAFT_WORKING_TEXT);
 	});
 
@@ -100,7 +102,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 			request("http://localhost/api/cms/v1/export", {
 				method: "POST",
 				headers: { origin: "http://localhost", "content-type": "application/json", host: "localhost" },
-				body: JSON.stringify({ scope: "public", format: "mdx" }),
+				body: JSON.stringify({ scope: "public", format: "paragraphs" }),
 			}),
 			{ cms },
 		);
@@ -109,9 +111,9 @@ describe("GET/POST /api/cms/v1/export", () => {
 		const zip = new Uint8Array(await res.arrayBuffer());
 		const paths = readZipArchive(zip).map((entry) => entry.path);
 		expect(paths).toContain(
-			fixtureEntryPath(FIXTURE_CONTENT_COLLECTION, "11111111-1111-4111-8111-111111111111", "published.mdx"),
+			fixtureEntryPath(FIXTURE_CONTENT_COLLECTION, "11111111-1111-4111-8111-111111111111", "published.txt"),
 		);
-		expect(paths.some((path) => path.endsWith("working.mdx"))).toBe(false);
+		expect(paths.some((path) => path.endsWith("working.txt"))).toBe(false);
 		expect(decoder.decode(zip)).not.toContain("draft secret body");
 	});
 
