@@ -226,12 +226,24 @@ export default defineAdminPlugin({
 | `/next` | 관리자 레이아웃·페이지(앱 라우트에서 내보낸다) |
 | `/editor` | 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
 | `/blocks` | 블록 편집 화면 도우미 |
+| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`)·`EditorResult`·`EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
 | `/api` | 관리자 API 부르기(`cmsFetch`) |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일 |
+
+### 편집기 훅 (실험)
+
+`@monti-cms/admin/hooks`는 실험 단계이고, 설치형 컴포넌트에서 충분히 써 보기 전까지 마이너 릴리스에서 바뀔 수 있다.
+훅은 상태와 결과만 돌려준다. 토스트를 띄우거나 확인 대화상자를 열거나 화면을 옮기지 않으므로, 사이트가 그 위에 자기 화면을 그릴 수 있다.
+기본 관리자 화면도 같은 훅 위에 만들어져 있다. 명령은 예상할 수 있는 실패에서 던지지 않고 `EditorResult`(`{ ok: true, value }` 또는 `{ ok: false, error }`)를 돌려주며,
+분기는 `EditorError.code`(`conflict`·`session_expired`·`offline`·`validation`·`invalid_state` …)로 한다.
+
+`useSlotActions(request)`는 화면 자리 하나에 붙은 동작과 실행 상태(`idle`·`asking`·`running`·`done`·`error`),
+`run`·`cancel`·`apply`를 준다. 실행 상태는 자리·대상·컬렉션·범위가 같은 훅끼리 공유하고, 컴포넌트가 사라져도 남는다.
+`useSlot`(`@monti-cms/admin/slots`)이 그 위에 만든 기본 단추와 패널이다.
 
 ## 스타일
 
