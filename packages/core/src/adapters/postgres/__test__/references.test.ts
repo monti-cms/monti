@@ -12,7 +12,7 @@ import { storedFields } from "../../../schema/derive";
 import type { PreparedSnapshot, Reference, StorePort } from "../../../services";
 import type { Entry } from "../content-store";
 import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { seedEntry } from "./seed";
+import { publishDraft, seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 type ExtendedStore = ReturnType<typeof createContentStore> & StorePort<Entry>;
@@ -94,7 +94,7 @@ describe("ContentStore References", () => {
 			schemaVersion: 1,
 			contentHash: `tag-${randomUUID()}`,
 		});
-		if (target.status !== "published") await store.publishEntry({ id: target.id, expectedVersion: target.version });
+		if (target.status !== "published") await publishDraft(store, { id: target.id, expectedVersion: target.version });
 
 		const occurrence = relation.many
 			? { type: "metadata" as const, path: relation.name, ordinal: 0 }
@@ -109,7 +109,7 @@ describe("ContentStore References", () => {
 			}),
 			references: [reference],
 		});
-		const published = await store.publishEntry({ id: source.id, expectedVersion: source.version });
+		const published = await publishDraft(store, { id: source.id, expectedVersion: source.version });
 		const draftSlug = `incoming-draft-${randomUUID()}`;
 		await filled.saveWorkingWithReferences({
 			entryId: source.id,

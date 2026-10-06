@@ -9,7 +9,7 @@ import {
 } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
 import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { seedEntry, seedSave } from "./seed";
+import { publishDraft, seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -85,7 +85,7 @@ describe("getWorkingEntryBySlug", () => {
 	it("shows the latest working copy in the preview after the working body is edited post-publish", async () => {
 		const draft = await seedDraft("edited-after-publish", "발행 전 본문");
 
-		await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 
 		const edited = await store.getEntry(draft.id);
 		await seedSave(store, draft.id, {

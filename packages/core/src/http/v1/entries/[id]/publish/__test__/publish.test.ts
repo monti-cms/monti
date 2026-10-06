@@ -5,11 +5,11 @@ import { CmsError } from "../../../../../../adapters/postgres/content-store";
 import { ServiceError } from "../../../../../../services/types";
 import { POST } from "../route";
 
-const { verifyAdmin, getWorking, publishEntry, imageWarningsForPublish } = vi.hoisted(() => ({
+const { verifyAdmin, publish, imageWarningsForSnapshot, getMediaAsset } = vi.hoisted(() => ({
 	verifyAdmin: vi.fn(),
-	getWorking: vi.fn(),
-	publishEntry: vi.fn(),
-	imageWarningsForPublish: vi.fn(),
+	publish: vi.fn(),
+	imageWarningsForSnapshot: vi.fn(),
+	getMediaAsset: vi.fn(),
 }));
 
 vi.mock("../../../../../../adapters/auth", () => ({
@@ -24,10 +24,11 @@ vi.mock("../../../../../../adapters/auth", () => ({
 	},
 }));
 vi.mock("../../../../../../container", () => ({
-	getCmsContentStore: () => ({ getWorking, publishEntry, getMediaAsset: vi.fn() }),
+	getCmsContentService: () => ({ publish }),
+	getCmsContentStore: () => ({ getMediaAsset }),
 	getCmsMediaStore: () => ({ headFile: vi.fn() }),
 }));
-vi.mock("../../../../../../core/snapshot", () => ({ imageWarningsForPublish }));
+vi.mock("../../../../../../core/snapshot", () => ({ imageWarningsForSnapshot }));
 
 function request(body: unknown = { expectedVersion: 4 }, origin = "http://localhost") {
 	return new NextRequest("http://localhost/api/cms/v1/entries/entry-1/publish", {
@@ -43,43 +44,64 @@ describe("publish HTTP contract", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		verifyAdmin.mockResolvedValue({ isAdmin: true });
-		getWorking.mockResolvedValue({ collection: "post", slug: "entry-1", metadata: { title: "Title" }, mdx: "Body" });
-		publishEntry.mockResolvedValue({ id: "entry-1", version: 5, status: "published" });
-		imageWarningsForPublish.mockResolvedValue([]);
+		publish.mockResolvedValue({ entry: { id: "entry-1", version: 5, status: "published" }, warnings: [] });
 	});
 
 	it("returns warnings with a successful committed publish", async () => {
 		const warnings = [{ code: "image_media_not_ready", position: { line: 3, column: 2 } }];
-		imageWarningsForPublish.mockResolvedValue(warnings);
+		publish.mockResolvedValue({ entry: { id: "entry-1", version: 5, status: "published" }, warnings });
 		const response = await POST(request(), context);
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ status: "published", warnings });
-		expect(publishEntry).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 });
+		expect(await response.json()).toMatchObject({ id: "entry-1", status: "published", warnings });
+		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 }, expect.anything());
+	});
+
+	it("computes the image warnings from the snapshot the pipeline prepared", async () => {
+		const snapshot = { collection: "post" };
+		imageWarningsForSnapshot.mockResolvedValue([]);
+		await POST(request(), context);
+		const { extraWarnings } = publish.mock.calls[0][1];
+		await extraWarnings(snapshot);
+		expect(imageWarningsForSnapshot).toHaveBeenCalledWith(
+			snapshot,
+			expect.objectContaining({ getMediaAsset: expect.any(Function), headStorageKey: expect.any(Function) }),
+		);
 	});
 
 	it("ignores a request publishedAt; the display date comes from the saved draft metadata", async () => {
 		const response = await POST(request({ expectedVersion: 4, publishedAt: "2020-03-04T12:00:00.000Z" }), context);
 		expect(response.status).toBe(200);
-		expect(publishEntry).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 });
+		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 }, expect.anything());
 	});
 
-	it("rejects a non-integer expectedVersion before reading or publishing", async () => {
+	it("rejects a non-integer expectedVersion before publishing", async () => {
 		const invalid = await POST(request({ expectedVersion: "4" }), context);
 		expect(invalid.status).toBe(400);
-		expect(getWorking).not.toHaveBeenCalled();
-		expect(publishEntry).not.toHaveBeenCalled();
+		expect(publish).not.toHaveBeenCalled();
 	});
 
 	it("does not publish when validation fails", async () => {
 		const issues = [{ code: "missing_field", path: "title", message: "제목" }];
-		publishEntry.mockRejectedValue(new ServiceError("publish_validation_failed", issues));
+		publish.mockRejectedValue(new ServiceError("publish_validation_failed", issues));
 		const response = await POST(request(), context);
 		expect(response.status).toBe(422);
 		expect(await response.json()).toMatchObject({ code: "publish_validation_failed", issues });
 	});
 
+	it("reports a failing hook with its own code and owner", async () => {
+		publish.mockRejectedValue(
+			new ServiceError("hook_failed", [{ code: "hook_failed", params: { hook: "transform", owner: "plugin:seo" } }]),
+		);
+		const response = await POST(request(), context);
+		expect(response.status).toBe(500);
+		expect(await response.json()).toMatchObject({
+			code: "hook_failed",
+			issues: [{ params: { hook: "transform", owner: "plugin:seo" } }],
+		});
+	});
+
 	it("keeps optimistic version conflicts", async () => {
-		publishEntry.mockRejectedValue(new CmsError("Conflict", "conflict", 7));
+		publish.mockRejectedValue(new CmsError("Conflict", "conflict", 7));
 		const response = await POST(request(), context);
 		expect(response.status).toBe(409);
 		expect(await response.json()).toMatchObject({ code: "conflict", serverVersion: 7 });
@@ -88,7 +110,7 @@ describe("publish HTTP contract", () => {
 	it("requires expectedVersion before any publish", async () => {
 		const response = await POST(request({}), context);
 		expect(response.status).toBe(428);
-		expect(publishEntry).not.toHaveBeenCalled();
+		expect(publish).not.toHaveBeenCalled();
 	});
 
 	it("blocks unauthorized and cross-origin requests before reads and writes", async () => {
@@ -97,7 +119,6 @@ describe("publish HTTP contract", () => {
 		expect(unauthorized.status).toBe(401);
 		const crossOrigin = await POST(request({ expectedVersion: 4 }, "http://attacker.invalid"), context);
 		expect(crossOrigin.status).toBe(403);
-		expect(getWorking).not.toHaveBeenCalled();
-		expect(publishEntry).not.toHaveBeenCalled();
+		expect(publish).not.toHaveBeenCalled();
 	});
 });

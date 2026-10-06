@@ -2,12 +2,12 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, recordRelationField, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
-import { imageWarningsForPublish } from "../../../core/snapshot";
+import { imageWarningsForSnapshot, prepareSnapshot } from "../../../core/snapshot";
 import { storedFields } from "../../../schema/derive";
 import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
 import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { seedEntry, seedSave } from "./seed";
+import { duplicateDraft, publishDraft, seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -64,7 +64,7 @@ describe("values of removed fields and options", () => {
 			mdx: "Body",
 		});
 		const id = (
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version })
+			draft.status === "published" ? draft : await publishDraft(store, { id: draft.id, expectedVersion: draft.version })
 		).id;
 		targets.set(to, id);
 		return id;
@@ -142,20 +142,20 @@ describe("values of removed fields and options", () => {
 
 	it("publishes an entry holding removed values, keeps them in the published version and warns", async () => {
 		const draft = await staleDraft("Publish");
-		const published = await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		expect(published.status).toBe("published");
 		expect(published.published?.metadata[ORPHAN]).toBe("left behind");
 		expect(published.published?.metadata[ORPHAN_LIST]).toEqual(["a", "b"]);
 		if (selectField) expect(published.published?.metadata[selectField.name]).toBe(UNKNOWN_OPTION);
 
 		const working = await store.getWorking({ entryId: draft.id });
-		const warnings = await imageWarningsForPublish({
-			collection: working.collection,
-			slug: working.slug,
-			metadata: working.metadata,
-			mdx: working.mdx,
-			getMediaAsset: async () => null,
-		});
+		const warnings = await imageWarningsForSnapshot(
+			await prepareSnapshot(
+				{ collection: working.collection, slug: working.slug, metadata: working.metadata, mdx: working.mdx } as never,
+				{ previousMetadata: working.metadata },
+			),
+			{ getMediaAsset: async () => null },
+		);
 		expect(warnings).toContainEqual(expect.objectContaining({ code: "orphaned_metadata_key", path: ORPHAN }));
 		expect(warnings).toContainEqual(expect.objectContaining({ code: "orphaned_metadata_key", path: ORPHAN_LIST }));
 		if (selectField) {
@@ -196,7 +196,7 @@ describe("values of removed fields and options", () => {
 
 	it("keeps removed values in a duplicate", async () => {
 		const draft = await staleDraft("Duplicate");
-		const copy = await store.duplicateEntry({ id: draft.id });
+		const copy = await duplicateDraft(store, { id: draft.id });
 		expect(copy.working.metadata[ORPHAN]).toBe("left behind");
 		expect(copy.working.metadata[ORPHAN_LIST]).toEqual(["a", "b"]);
 	});

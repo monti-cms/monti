@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { isItemCollection } from "../../../core/collections";
+import type { PreparedSnapshot } from "../../../core/types";
 import { type StoreContext, withTransaction } from "./context";
 import { CmsError, mapEntryWriteError } from "./errors";
 import type { Publishing } from "./publish";
@@ -125,7 +126,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		 * Trash to restore. Publish collections return to draft; record collections are validated for current values and relations
 		 * and then returned to active (published) records.
 		 */
-		restoreEntry: (params: LifecycleParams) =>
+		restoreEntry: (params: LifecycleParams & { snapshot?: PreparedSnapshot }) =>
 			transition(params, ["trashed"], async (client, locked) => {
 				const isSource = locked.translation_group_id === params.id;
 				if (!isSource) {
@@ -152,7 +153,12 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					[version, params.id],
 				);
 				if (isItemCollection(locked.collection)) {
-					await publishing.publishWithinTransaction(client, params.id, { expectedVersion: version });
+					// A record is published again on restore, so the service passes the prepared draft.
+					if (!params.snapshot) throw new CmsError("Restoring a record needs its prepared draft", "invalid_input");
+					await publishing.publishWithinTransaction(client, params.id, {
+						expectedVersion: version,
+						snapshot: params.snapshot,
+					});
 				}
 				// Restore only translations trashed together with the source. Translations trashed separately stay in the trash.
 				if (isSource && trashedAt) {

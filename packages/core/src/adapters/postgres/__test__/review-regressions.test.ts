@@ -7,6 +7,7 @@ import { storedFields } from "../../../schema/derive";
 import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
 import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { duplicateDraft, publishDraft, restoreDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** First relation field in a body collection that multi-selects from an item collection (like tags). If none, the bulk-add test is skipped. */
@@ -67,7 +68,7 @@ describe("review regressions", () => {
 	const createTarget = async (to: Collection, title = unique(`target ${to}`)): Promise<Entry> => {
 		const metadata = await requiredMetadata(to, title, relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
-		return draft.status === "published" ? draft : store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return draft.status === "published" ? draft : publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	/** Target used by the required-for-publish relation (created once and reused). */
@@ -91,7 +92,7 @@ describe("review regressions", () => {
 			metadata: await contentMetadata("글", extra),
 			mdx,
 		});
-		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	/** An entry that points at `targetId` through `documentRelation`. For a conditional field, the condition value is filled too. */
@@ -122,7 +123,7 @@ describe("review regressions", () => {
 		await expect(store.unarchiveEntry({ id: post.id, expectedVersion: post.version })).rejects.toMatchObject({
 			code: "invalid_status",
 		});
-		await expect(store.restoreEntry({ id: post.id, expectedVersion: post.version })).rejects.toMatchObject({
+		await expect(restoreDraft(store, { id: post.id, expectedVersion: post.version })).rejects.toMatchObject({
 			code: "invalid_status",
 		});
 		expect(
@@ -138,7 +139,7 @@ describe("review regressions", () => {
 			mdx: "",
 		});
 		const trashed = await store.trashEntry({ id: tag.id, expectedVersion: tag.version });
-		const restored = await store.restoreEntry({ id: tag.id, expectedVersion: trashed.version });
+		const restored = await restoreDraft(store, { id: tag.id, expectedVersion: trashed.version });
 		expect(restored.status).toBe("published");
 	});
 
@@ -173,7 +174,7 @@ describe("review regressions", () => {
 			const target = await createTarget(documentRelation.to);
 			const referrer = await createReferrer("참조하는 글", target.id);
 			if (referrer.status !== "published")
-				await store.publishEntry({ id: referrer.id, expectedVersion: referrer.version });
+				await publishDraft(store, { id: referrer.id, expectedVersion: referrer.version });
 			const trashed = await store.trashEntry({ id: target.id, expectedVersion: target.version });
 			await expect(
 				store.permanentDeleteEntry({ id: target.id, expectedVersion: trashed.version }),
@@ -264,9 +265,9 @@ describe("review regressions", () => {
 			metadata: await contentMetadata("원본"),
 			mdx: "본문",
 		});
-		const source = await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		const source = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		expect(source.publishedAt).toBeInstanceOf(Date);
-		const copy = await store.duplicateEntry({ id: source.id, title: "원본 (복사)" });
+		const copy = await duplicateDraft(store, { id: source.id, title: "원본 (복사)" });
 		expect(copy.publishedAt).toBeUndefined();
 		expect(copy.working.metadata.title).toBe("원본 (복사)");
 		const recomputed = await prepareSnapshot({
@@ -288,7 +289,7 @@ describe("review regressions", () => {
 			mdx: post.working.mdx,
 			expectedVersion: post.version,
 		});
-		const republished = await store.publishEntry({ id: post.id, expectedVersion: renamed.version });
+		const republished = await publishDraft(store, { id: post.id, expectedVersion: renamed.version });
 		const back = await service.saveDraft(post.id, {
 			collection: contentCollection,
 			slug: original,
@@ -296,7 +297,7 @@ describe("review regressions", () => {
 			mdx: post.working.mdx,
 			expectedVersion: republished.version,
 		});
-		const final = await store.publishEntry({ id: post.id, expectedVersion: back.version });
+		const final = await publishDraft(store, { id: post.id, expectedVersion: back.version });
 		expect(final.publishedSlug).toBe(original);
 	});
 

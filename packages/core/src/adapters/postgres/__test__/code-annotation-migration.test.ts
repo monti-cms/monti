@@ -12,6 +12,7 @@ import { createContentStore, type Entry, migrateContentStore } from "../content-
 import { migrateCodeAnnotations } from "../store/code-annotation-migration";
 import { extractVisibleText } from "../store/rows";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
+import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0015_code_annotations";
@@ -88,7 +89,9 @@ describe("0015_code_annotations", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -103,7 +106,7 @@ describe("0015_code_annotations", () => {
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
-		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	interface StoredRow {

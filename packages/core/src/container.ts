@@ -6,6 +6,7 @@ import { notifyAfterCommit } from "./plugin/server";
 import type { CmsAuth } from "./server/define";
 import { cmsServerConfig } from "./server/resolved";
 import { isCmsHostTrusted } from "./server/trust";
+import { createBulkService } from "./services/bulk-service";
 import { createContentService } from "./services/content-service";
 
 /**
@@ -14,10 +15,12 @@ import { createContentService } from "./services/content-service";
  */
 
 export type ContentService = ReturnType<typeof createContentService<Entry>>;
+export type BulkService = ReturnType<typeof createBulkService<Entry>>;
 
 declare global {
 	var __cmsStore: ContentStore | undefined;
 	var __cmsService: ContentService | undefined;
+	var __cmsBulkService: BulkService | undefined;
 	var __cmsMediaStore: MediaStore | undefined;
 	var __cmsAuth: CmsAuth | undefined;
 }
@@ -30,6 +33,11 @@ export function getCmsContentStore(): ContentStore {
 export function getCmsContentService(): ContentService {
 	global.__cmsService ??= createContentService<Entry>(getCmsContentStore());
 	return global.__cmsService;
+}
+
+export function getCmsBulkService(): BulkService {
+	global.__cmsBulkService ??= createBulkService<Entry>(getCmsContentStore());
+	return global.__cmsBulkService;
 }
 
 /** Whether the server config has a media store. Without one, the admin hides the media menu and uploads. */

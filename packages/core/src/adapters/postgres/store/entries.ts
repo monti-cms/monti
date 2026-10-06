@@ -3,15 +3,8 @@ import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
 import { isCollection, isItemCollection } from "../../../core/collections";
 import { DEFAULT_LOCALE, isLocale } from "../../../core/locales";
-import { computeContentHash } from "../../../core/snapshot";
-import {
-	normalizeReferenceKind,
-	type PreparedSnapshot,
-	type Reference,
-	ServiceError,
-	type WorkingCopy,
-} from "../../../core/types";
-import { commonFieldKeys, fieldValueError, storedField } from "../../../schema/derive";
+import { normalizeReferenceKind, type PreparedSnapshot, type Reference, type WorkingCopy } from "../../../core/types";
+import { commonFieldKeys } from "../../../schema/derive";
 import { type StoreContext, withTransaction } from "./context";
 import { CmsError, mapEntryWriteError } from "./errors";
 import type { Publishing } from "./publish";
@@ -27,13 +20,6 @@ import {
 	writeBody,
 } from "./rows";
 import type { Entry, IncomingReferenceItem, TranslationGroup } from "./types";
-
-/** Validates the title field value (`title` by library convention). A mismatch throws an error carrying the field path. */
-function assertTitleValue(collection: string, title: string): void {
-	const stored = isCollection(collection) ? storedField(collection, "title") : undefined;
-	const error = stored ? fieldValueError(stored.field, title) : null;
-	if (error) throw new ServiceError(error, [{ code: error, path: "title", message: stored?.field.label }]);
-}
 
 export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	const { pool, qSchema } = ctx;
@@ -166,7 +152,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					await insertReferences(client, qSchema, id, "working", params.references);
 
 					return params.publishImmediately
-						? publishWithinTransaction(client, id, { expectedVersion: 1 })
+						? publishWithinTransaction(client, id, { expectedVersion: 1, snapshot: params.snapshot })
 						: loadEntry(client, id, qSchema);
 				},
 				{ mapError: mapEntryWriteError },
@@ -184,6 +170,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			references: readonly Reference[];
 			folderId?: string | null;
 			publishImmediately?: boolean;
+			/** With `publishImmediately`: reset the publish date to now. */
+			resetPublishedAt?: boolean;
 		}): Promise<Entry> =>
 			withTransaction(
 				pool,
@@ -289,7 +277,11 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					}
 
 					return params.publishImmediately
-						? publishWithinTransaction(client, params.entryId, { expectedVersion: version })
+						? publishWithinTransaction(client, params.entryId, {
+								expectedVersion: version,
+								snapshot: params.snapshot,
+								resetPublishedAt: params.resetPublishedAt,
+							})
 						: loadEntry(client, params.entryId, qSchema);
 				},
 				{ mapError: mapEntryWriteError },
@@ -393,74 +385,15 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			return res.rows[0] ? loadEntry(pool, res.rows[0].id, qSchema) : null;
 		},
 
-		publishEntry: async (params: { id: string; expectedVersion: number; resetPublishedAt?: boolean }): Promise<Entry> =>
+		/** Publishes the saved draft. `snapshot` is the prepared draft (see `PublishOptions.snapshot`). */
+		publishEntry: async (params: {
+			id: string;
+			expectedVersion: number;
+			snapshot: PreparedSnapshot;
+			resetPublishedAt?: boolean;
+		}): Promise<Entry> =>
 			withTransaction(pool, (client) => publishWithinTransaction(client, params.id, params), {
 				mapError: mapEntryWriteError,
-			}),
-
-		/**
-		 * Duplicate: copies the latest draft's body, fields, and relations into a new draft with a new ID.
-		 * The copy is a new source in the original's locale. Translations cannot be duplicated (translate the source instead).
-		 * Slug, publish status, reservation, published version, publish date, and created/modified times are not copied.
-		 * If `title` is given, it replaces the copy's title (`title` field). Any suffix (such as "(copy)") is up to the caller.
-		 * The store saves the given value as is and only checks the title field's rules (length, etc.).
-		 */
-		duplicateEntry: async (params: { id: string; title?: string }): Promise<Entry> =>
-			withTransaction(pool, async (client) => {
-				const res = await client.query<{
-					collection: string;
-					folder_id: string | null;
-					locale: string;
-					translation_group_id: string | null;
-					metadata: Record<string, unknown>;
-					mdx: string;
-					doc: unknown;
-					schema_version: number;
-				}>(
-					`SELECT e.collection, e.folder_id, e.locale, e.translation_group_id, b.metadata, b.mdx, b.doc, b.schema_version
-					 FROM "${qSchema}".entries e
-					 JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id AND b.state = 'working'
-					 WHERE e.id = $1`,
-					[params.id],
-				);
-				const orig = res.rows[0];
-				if (!orig) throw new CmsError("Entry not found", "not_found");
-				if (isItemCollection(orig.collection)) {
-					throw new CmsError("Record collections cannot be duplicated", "invalid_input");
-				}
-				if (orig.translation_group_id !== null) {
-					throw new CmsError("Duplicate the source entry, not a translation", "invalid_input");
-				}
-
-				const rest = orig.metadata ?? {};
-				if (params.title !== undefined) assertTitleValue(orig.collection, params.title);
-				const metadata = normalizeMetadata(params.title === undefined ? rest : { ...rest, title: params.title });
-				const newId = randomUUID();
-				const now = new Date();
-
-				await client.query(
-					`INSERT INTO "${qSchema}".entries (id, collection, version, created_at, updated_at, working_slug, folder_id, status, locale, translation_group_id)
-					 VALUES ($1, $2, 1, $3, $3, NULL, $4, 'draft', $5, NULL)`,
-					[newId, orig.collection, now, orig.folder_id, orig.locale],
-				);
-				await writeBody(client, qSchema, newId, "working", {
-					metadata,
-					mdx: orig.mdx,
-					doc: readDoc(orig.doc),
-					schemaVersion: orig.schema_version,
-					contentHash: computeContentHash(metadata, orig.mdx, orig.schema_version),
-					updatedAt: now,
-					// The copy is an independent source.
-					translation: null,
-				});
-				await client.query(
-					`INSERT INTO "${qSchema}".entry_references (entry_id, state, kind, target_id, target_entry_id, target_media_id, is_stale, occurrences)
-					 SELECT $1, 'working', kind, target_id, target_entry_id, target_media_id, is_stale, occurrences
-					 FROM "${qSchema}".entry_references
-					 WHERE entry_id = $2 AND state = 'working'`,
-					[newId, params.id],
-				);
-				return loadEntry(client, newId, qSchema);
 			}),
 
 		/** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */

@@ -1,5 +1,6 @@
 import type { PreparedSnapshot } from "../../../core/types";
 import type { StoredDocument } from "../../../mdx/stored-document";
+import { createContentService } from "../../../services/content-service";
 import type { ContentStore, Entry } from "../content-store";
 
 /**
@@ -87,4 +88,25 @@ export async function moveToFolder(
 		references,
 		folderId: params.folderId,
 	});
+}
+
+/**
+ * Publishes the saved draft the way production does: the draft goes through the write pipeline (no hooks) and the store commits the prepared snapshot.
+ * The store does not prepare content, so a store test that publishes goes through here.
+ */
+export async function publishDraft(
+	store: ContentStore,
+	params: { id: string; expectedVersion: number; resetPublishedAt?: boolean },
+): Promise<Entry> {
+	return (await createContentService<Entry>(store).publish(params)).entry;
+}
+
+/** Restores a trashed entry the way production does (a record is prepared by the pipeline first). */
+export function restoreDraft(store: ContentStore, params: { id: string; expectedVersion: number }): Promise<Entry> {
+	return createContentService<Entry>(store).restore(params);
+}
+
+/** Duplicates a draft the way production does (through the write pipeline). */
+export function duplicateDraft(store: ContentStore, params: { id: string; title?: string }): Promise<Entry> {
+	return createContentService<Entry>(store).duplicate(params);
 }

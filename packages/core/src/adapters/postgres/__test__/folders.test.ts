@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../test/any-site";
 import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { moveToFolder, seedEntry } from "./seed";
+import { moveToFolder, publishDraft, seedEntry } from "./seed";
 
 // ---------------------------------------------------------------------------
 // Local type declarations for the not-yet-implemented folder API
@@ -308,7 +308,7 @@ describe("Folders contract", () => {
 		});
 
 		// Publish first so we can verify published address stability
-		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 		const preMoveEntry = await store.getEntry(entry.id);
 		const preMoveAddress = await pool.query<{ slug: string; type: string }>(
@@ -420,7 +420,7 @@ describe("Folders contract", () => {
 			schemaVersion: 1,
 			contentHash: uniqueHash(),
 		});
-		const e5pub = await store.publishEntry({ id: e5.id, expectedVersion: e5.version });
+		const e5pub = await publishDraft(store, { id: e5.id, expectedVersion: e5.version });
 		const _e5moved = await moveToFolder(store, {
 			entryId: e5.id,
 			folderId: mid.id,
@@ -505,7 +505,7 @@ describe("Folders contract", () => {
 			schemaVersion: 1,
 			contentHash: uniqueHash(),
 		});
-		const e6pub = await store.publishEntry({ id: e6.id, expectedVersion: e6.version });
+		const e6pub = await publishDraft(store, { id: e6.id, expectedVersion: e6.version });
 		const e6moved = await moveToFolder(store, {
 			entryId: e6.id,
 			folderId: parent.id,

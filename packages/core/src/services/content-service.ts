@@ -1,13 +1,23 @@
 import { isCollection, isItemCollection } from "../core/collections";
-import { isLocale } from "../core/locales";
-import { prepareSnapshot, serviceInputKeys, validateExactRecord } from "../core/snapshot";
+import { DEFAULT_LOCALE, isLocale } from "../core/locales";
+import { serviceInputKeys, validateExactRecord } from "../core/snapshot";
 import { withTranslationHints } from "../core/translation/hints";
 import { confirmedSourceState } from "../core/translation/state";
 import { slugFromValues } from "../schema/derive";
-import { type SaveDraftInput, ServiceError, type ServiceInput, type StorePort } from "./types";
+import type { HookProvider } from "./hooks";
+import {
+	type Issue,
+	type PreparedSnapshot,
+	type RestorePort,
+	type SaveDraftInput,
+	ServiceError,
+	type ServiceInput,
+	type StorePort,
+} from "./types";
+import { createWritePipeline, type WritePipeline } from "./write-pipeline";
 
 // Snapshot rules live in the domain layer (`core/snapshot`). Re-exported to keep the existing import path.
-export { imageWarningsForPublish, prepareSnapshot, validateForPublish } from "../core/snapshot";
+export { imageWarningsForSnapshot, prepareSnapshot, validateForPublish } from "../core/snapshot";
 
 const assertInputKeys = (input: unknown, baseKeys: readonly string[]) => {
 	if (!input || typeof input !== "object" || Array.isArray(input)) throw new ServiceError("invalid_input");
@@ -25,81 +35,225 @@ const withRecordSlug = (input: ServiceInput): ServiceInput => {
 	return slug ? { ...input, slug } : input;
 };
 
-export const createContentService = <T = unknown>(storePort: StorePort<T>) => ({
-	/**
-	 * Creates new content. A record collection is published right away by default (when `publishImmediately` is omitted).
-	 */
-	createDraft: async (input: ServiceInput, options?: { publishImmediately?: boolean }) => {
-		assertInputKeys(input, serviceInputKeys(input));
-		const { folderId, ...rest } = withRecordSlug(input);
-		const snapshot = await prepareSnapshot(rest as ServiceInput);
-		return storePort.createEntryWithReferences({
-			snapshot,
-			references: snapshot.references,
-			folderId,
-			publishImmediately: options?.publishImmediately ?? isItemCollection(input.collection),
-		});
-	},
+export interface ContentServiceOptions {
+	/** Hooks of the server config and the plugins. Without it, writes run core preparation only. */
+	readonly hooks?: HookProvider;
+	/** A pipeline shared with other services (bulk). Takes the place of `hooks`. */
+	readonly pipeline?: WritePipeline;
+}
 
-	/**
-	 * Saves the latest draft. A record collection by default applies to the public value together with the save.
-	 */
-	saveDraft: async (entryId: string, input: SaveDraftInput, options?: { publishImmediately?: boolean }) => {
-		assertInputKeys(input, [
-			...serviceInputKeys(input),
-			"expectedVersion",
-			// If the incoming value is not an object, `assertInputKeys` rejects it. Property reads (accessors) happen only after that.
-			...(input && typeof input === "object" && Object.hasOwn(input, "translation") ? ["translation"] : []),
-		]);
-		const { expectedVersion, folderId, ...rest } = input;
-		if (typeof expectedVersion !== "number" || expectedVersion <= 0 || !Number.isInteger(expectedVersion)) {
-			throw new ServiceError("invalid_input");
-		}
+/** What a write returns, with the warnings hooks added (only when there are any). */
+export type WithWarnings<T> = T & { readonly warnings?: readonly Issue[] };
 
-		const previousReferences = await storePort.getWorkingReferences({ entryId });
-		// Blocks keep their ids across saves: a body sent as MDX carries none, so they are paired with the current draft's blocks.
-		const { doc: previousDoc, metadata: previousMetadata } = await storePort.getWorking({ entryId });
-		const snapshot = await prepareSnapshot(rest as ServiceInput, { previousReferences, previousDoc, previousMetadata });
-		return storePort.saveWorkingWithReferences({
-			entryId,
-			expectedVersion,
-			snapshot,
-			references: snapshot.references,
-			folderId,
-			publishImmediately: options?.publishImmediately ?? isItemCollection(input.collection),
-		});
-	},
+const withWarnings = <T>(entry: T, warnings: readonly Issue[]): WithWarnings<T> =>
+	(warnings.length > 0 ? { ...(entry as object), warnings } : entry) as WithWarnings<T>;
 
-	/**
-	 * Creates a translation. A draft whose structure follows the latest draft of the source (the source of the group), with the source text placed as translation notes.
-	 * The address reuses the source address (languages differ, so they do not collide). The folder is the same as the source.
-	 * If called on a translation, it is created from that group's source.
-	 */
-	createTranslation: async (params: { sourceId: string; locale: string }) => {
-		if (!isLocale(params.locale)) throw new ServiceError("invalid_input");
-		const picked = await storePort.getWorking({ entryId: params.sourceId });
-		const sourceId = picked.translationGroupId ?? params.sourceId;
-		const source = sourceId === params.sourceId ? picked : await storePort.getWorking({ entryId: sourceId });
-		if (!isCollection(source.collection) || isItemCollection(source.collection)) {
-			throw new ServiceError("invalid_input");
-		}
-		// A translation starts from the source skeleton. Structure (headings, paragraphs, boxes, lists, tables), code and images are kept, and text
-		// becomes translation notes (faded source text). Per-language values such as title and summary are emptied (the edit screen shows the source title as a placeholder).
-		// The translation state records the current source (its MDX and document) as the "confirmed source". If the source changes, the translation screen tells you.
-		const snapshot = await prepareSnapshot({
-			collection: source.collection,
-			slug: source.slug,
-			metadata: {},
-			mdx: withTranslationHints(source.mdx),
-			translation: confirmedSourceState(source.mdx, source.doc),
-		} as ServiceInput);
-		return storePort.createEntryWithReferences({
-			snapshot,
-			references: snapshot.references,
-			folderId: source.folderId,
-			publishImmediately: false,
-			locale: params.locale,
-			translationOf: sourceId,
-		});
-	},
-});
+/**
+ * Content writes. Each builds its input and sends it through the one write pipeline (`write-pipeline.ts`) before the store commits it.
+ * The store never prepares content itself.
+ */
+export const createContentService = <T = unknown>(
+	storePort: StorePort<T> & Partial<RestorePort<NoInfer<T>>>,
+	options: ContentServiceOptions = {},
+) => {
+	const pipeline = options.pipeline ?? createWritePipeline({ hooks: options.hooks });
+
+	return {
+		/**
+		 * Creates new content. A record collection is published right away by default (when `publishImmediately` is omitted).
+		 */
+		createDraft: async (input: ServiceInput, options?: { publishImmediately?: boolean }): Promise<WithWarnings<T>> => {
+			assertInputKeys(input, serviceInputKeys(input));
+			const { folderId, ...rest } = withRecordSlug(input);
+			const { snapshot, warnings } = await pipeline.run({
+				operation: "create",
+				locale: DEFAULT_LOCALE,
+				input: rest as ServiceInput,
+			});
+			const entry = await storePort.createEntryWithReferences({
+				snapshot,
+				references: snapshot.references,
+				folderId,
+				publishImmediately: options?.publishImmediately ?? isItemCollection(input.collection),
+			});
+			return withWarnings(entry, warnings);
+		},
+
+		/**
+		 * Saves the latest draft. A record collection by default applies to the public value together with the save.
+		 */
+		saveDraft: async (
+			entryId: string,
+			input: SaveDraftInput,
+			options?: { publishImmediately?: boolean },
+		): Promise<WithWarnings<T>> => {
+			assertInputKeys(input, [
+				...serviceInputKeys(input),
+				"expectedVersion",
+				// If the incoming value is not an object, `assertInputKeys` rejects it. Property reads (accessors) happen only after that.
+				...(input && typeof input === "object" && Object.hasOwn(input, "translation") ? ["translation"] : []),
+			]);
+			const { expectedVersion, folderId, ...rest } = input;
+			if (typeof expectedVersion !== "number" || expectedVersion <= 0 || !Number.isInteger(expectedVersion)) {
+				throw new ServiceError("invalid_input");
+			}
+
+			const previousReferences = await storePort.getWorkingReferences({ entryId });
+			// Blocks keep their ids across saves: a body sent as MDX carries none, so they are paired with the current draft's blocks.
+			const { doc: previousDoc, metadata: previousMetadata, locale } = await storePort.getWorking({ entryId });
+			const { snapshot, warnings } = await pipeline.run({
+				operation: "save",
+				entryId,
+				locale: locale ?? DEFAULT_LOCALE,
+				input: rest as ServiceInput,
+				prepare: { previousReferences, previousDoc, previousMetadata },
+			});
+			const entry = await storePort.saveWorkingWithReferences({
+				entryId,
+				expectedVersion,
+				snapshot,
+				references: snapshot.references,
+				folderId,
+				publishImmediately: options?.publishImmediately ?? isItemCollection(input.collection),
+			});
+			return withWarnings(entry, warnings);
+		},
+
+		/**
+		 * Creates a translation. A draft whose structure follows the latest draft of the source (the source of the group), with the source text placed as translation notes.
+		 * The address reuses the source address (languages differ, so they do not collide). The folder is the same as the source.
+		 * If called on a translation, it is created from that group's source.
+		 */
+		createTranslation: async (params: { sourceId: string; locale: string }): Promise<WithWarnings<T>> => {
+			if (!isLocale(params.locale)) throw new ServiceError("invalid_input");
+			const picked = await storePort.getWorking({ entryId: params.sourceId });
+			const sourceId = picked.translationGroupId ?? params.sourceId;
+			const source = sourceId === params.sourceId ? picked : await storePort.getWorking({ entryId: sourceId });
+			if (!isCollection(source.collection) || isItemCollection(source.collection)) {
+				throw new ServiceError("invalid_input");
+			}
+			// A translation starts from the source skeleton. Structure (headings, paragraphs, boxes, lists, tables), code and images are kept, and text
+			// becomes translation notes (faded source text). Per-language values such as title and summary are emptied (the edit screen shows the source title as a placeholder).
+			// The translation state records the current source (its MDX and document) as the "confirmed source". If the source changes, the translation screen tells you.
+			const { snapshot, warnings } = await pipeline.run({
+				operation: "translate",
+				locale: params.locale,
+				input: {
+					collection: source.collection,
+					slug: source.slug,
+					metadata: {},
+					mdx: withTranslationHints(source.mdx),
+					translation: confirmedSourceState(source.mdx, source.doc),
+				} as ServiceInput,
+			});
+			const entry = await storePort.createEntryWithReferences({
+				snapshot,
+				references: snapshot.references,
+				folderId: source.folderId,
+				publishImmediately: false,
+				locale: params.locale,
+				translationOf: sourceId,
+			});
+			return withWarnings(entry, warnings);
+		},
+
+		/**
+		 * Duplicates the latest draft as a new draft: same body and fields, in the original's locale and folder. Slug, publish status and the
+		 * published version are not copied. `title` replaces the copy's title; any suffix (such as "(copy)") is up to the caller.
+		 * A record or a translation cannot be duplicated (translate the source instead).
+		 */
+		duplicate: async (params: { id: string; title?: string }): Promise<WithWarnings<T>> => {
+			const source = await storePort.getWorking({ entryId: params.id });
+			if (isItemCollection(source.collection)) throw new ServiceError("invalid_input");
+			if (source.translationGroupId !== undefined && source.translationGroupId !== params.id) {
+				throw new ServiceError("invalid_input");
+			}
+			const metadata = params.title === undefined ? source.metadata : { ...source.metadata, title: params.title };
+			const { snapshot, warnings } = await pipeline.run({
+				operation: "duplicate",
+				locale: source.locale ?? DEFAULT_LOCALE,
+				input: { collection: source.collection, slug: null, metadata, mdx: source.mdx } as ServiceInput,
+				// The copy is a new entry, but the values of fields the schema no longer has go with it, as they do in the original.
+				prepare: { previousDoc: source.doc, previousMetadata: source.metadata },
+			});
+			const entry = await storePort.createEntryWithReferences({
+				snapshot,
+				references: snapshot.references,
+				folderId: source.folderId,
+				publishImmediately: false,
+				locale: source.locale,
+			});
+			return withWarnings(entry, warnings);
+		},
+
+		/**
+		 * Publishes the latest saved draft. The draft goes through the write pipeline first (a hook that changed it has the change saved with the
+		 * publish, in one transaction), then the store checks the prepared draft against the rows it has to lock and commits.
+		 * `extraWarnings` adds notices computed from the prepared draft (image state), which never block.
+		 */
+		publish: async (
+			params: { id: string; expectedVersion: number; resetPublishedAt?: boolean },
+			options?: { extraWarnings?: (snapshot: PreparedSnapshot) => Promise<readonly Issue[]> },
+		): Promise<{ entry: T; warnings: readonly Issue[] }> => {
+			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
+			const working = await storePort.getWorking({ entryId: params.id });
+			const { snapshot, warnings, transformed } = await pipeline.run({
+				operation: "publish",
+				entryId: params.id,
+				locale: working.locale ?? DEFAULT_LOCALE,
+				input: {
+					collection: working.collection,
+					slug: working.slug,
+					metadata: working.metadata,
+					mdx: working.mdx,
+				} as ServiceInput,
+				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
+			});
+			const noticed = options?.extraWarnings ? await options.extraWarnings(snapshot) : (snapshot.warnings ?? []);
+			const all = [...noticed, ...warnings];
+			const entry = transformed
+				? await storePort.saveWorkingWithReferences({
+						entryId: params.id,
+						expectedVersion: params.expectedVersion,
+						snapshot,
+						references: snapshot.references,
+						publishImmediately: true,
+						resetPublishedAt: params.resetPublishedAt,
+					})
+				: ((await storePort.publishEntry({
+						id: params.id,
+						expectedVersion: params.expectedVersion,
+						snapshot,
+						resetPublishedAt: params.resetPublishedAt,
+					})) as T);
+			return { entry, warnings: all };
+		},
+
+		/**
+		 * Trash to restore. A record is published again, so its draft is prepared first (core preparation only: a restore is not a content
+		 * change, so hooks do not run). Other collections return to draft.
+		 */
+		restore: async (params: { id: string; expectedVersion: number }): Promise<T> => {
+			if (!storePort.restoreEntry) throw new Error("content service: the store cannot restore entries");
+			const working = await storePort.getWorking({ entryId: params.id });
+			if (!isItemCollection(working.collection)) {
+				return storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion });
+			}
+			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
+			const { snapshot } = await pipeline.run({
+				operation: "publish",
+				entryId: params.id,
+				locale: working.locale ?? DEFAULT_LOCALE,
+				input: {
+					collection: working.collection,
+					slug: working.slug,
+					metadata: working.metadata,
+					mdx: working.mdx,
+				} as ServiceInput,
+				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
+				skipHooks: true,
+			});
+			return storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion, snapshot });
+		},
+	};
+};

@@ -2,7 +2,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../test/any-site";
 import { type ContentChange, createContentStore, migrateContentStore } from "../content-store";
-import { seedEntry } from "./seed";
+import { publishDraft, restoreDraft, seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Post-save notification: only committed changes are reported, and a failed notification does not roll back the save. */
@@ -48,10 +48,10 @@ describe("post-save notification afterCommit", () => {
 		// When a required relation target is first created, that item also arrives as "created". Look only at this entry's notifications.
 		expect(changes.at(-1)).toMatchObject({ kind: "created", entryId: entry.id, status: "draft" });
 		changes.length = 0;
-		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 		const archived = await store.archiveEntry({ id: entry.id, expectedVersion: published.version });
 		const trashed = await store.trashEntry({ id: entry.id, expectedVersion: archived.version });
-		const restored = await store.restoreEntry({ id: entry.id, expectedVersion: trashed.version });
+		const restored = await restoreDraft(store, { id: entry.id, expectedVersion: trashed.version });
 		const again = await store.trashEntry({ id: entry.id, expectedVersion: restored.version });
 		await store.permanentDeleteEntry({ id: entry.id, expectedVersion: again.version });
 
@@ -76,7 +76,7 @@ describe("post-save notification afterCommit", () => {
 	it("does not report rolled-back changes (version conflict)", async () => {
 		const entry = await create("after-commit-conflict");
 		changes.length = 0;
-		await expect(store.publishEntry({ id: entry.id, expectedVersion: entry.version + 5 })).rejects.toMatchObject({
+		await expect(publishDraft(store, { id: entry.id, expectedVersion: entry.version + 5 })).rejects.toMatchObject({
 			code: "conflict",
 		});
 		expect(changes).toEqual([]);
@@ -85,7 +85,7 @@ describe("post-save notification afterCommit", () => {
 	it("keeps the save committed even if the notification fails", async () => {
 		const entry = await create("after-commit-failing-hook");
 		failNext = true;
-		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 		expect(published.status).toBe("published");
 		expect((await store.getEntry(entry.id)).status).toBe("published");
 	});

@@ -18,7 +18,7 @@ import {
 } from "../../../schema/derive";
 import { createContentService } from "../../../services/content-service";
 import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { seedEntry } from "./seed";
+import { duplicateDraft, publishDraft, restoreDraft, seedEntry } from "./seed";
 import { createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -80,7 +80,7 @@ describe("translation groups", () => {
 		const metadata = await requiredMetadata(to, "에세이", relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: `${to}-${++sequence}`, metadata, mdx: "" });
 		if (draft.status === "published") return draft.id;
-		return (await store.publishEntry({ id: draft.id, expectedVersion: draft.version })).id;
+		return (await publishDraft(store, { id: draft.id, expectedVersion: draft.version })).id;
 	};
 
 	const createPost = async (slug: string) => {
@@ -106,7 +106,7 @@ describe("translation groups", () => {
 		...(translatedText ? { [translatedText]: text } : {}),
 	});
 
-	const publish = (entry: Entry) => store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+	const publish = (entry: Entry) => publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 	it("gives the same result when migrated again (columns and primary key)", async () => {
 		await migrateContentStore(pool, { schema: schemaName });
@@ -170,22 +170,22 @@ describe("translation groups", () => {
 				collection: contentCollection,
 				slug: "locale-copy-source",
 				metadata: { title: "English" },
-				mdx: "Body",
+				mdx: "Body\n",
 				locale: second,
 			});
 			expect(original.locale).toBe(second);
 
-			const copy = await store.duplicateEntry({ id: original.id });
+			const copy = await duplicateDraft(store, { id: original.id });
 			expect(copy.locale).toBe(second);
 			expect(copy.translationGroupId).toBe(copy.id);
-			expect(copy.working.mdx).toBe("Body");
+			expect(copy.working.mdx).toBe("Body\n");
 			expect(copy.working.translation ?? null).toBeNull();
 		});
 
 		it("refuses to duplicate a translation", async () => {
 			const source = await createPost("duplicate-translation-source");
 			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
-			await expect(store.duplicateEntry({ id: translation.id })).rejects.toMatchObject({ code: "invalid_input" });
+			await expect(duplicateDraft(store, { id: translation.id })).rejects.toMatchObject({ code: "invalid_input" });
 		});
 
 		it.skipIf(!thirdLocale)("creates a translation of a translation from the source", async () => {
@@ -377,16 +377,16 @@ describe("translation groups", () => {
 				expect(await versionOf(together.id)).toBe(together.version + 1);
 
 				await expect(
-					store.restoreEntry({ id: together.id, expectedVersion: await versionOf(together.id) }),
+					restoreDraft(store, { id: together.id, expectedVersion: await versionOf(together.id) }),
 				).rejects.toMatchObject({ code: "source_trashed" });
 
-				await store.restoreEntry({ id: source.id, expectedVersion: trashed.version });
+				await restoreDraft(store, { id: source.id, expectedVersion: trashed.version });
 				expect(await statusOf(source.id)).toBe("draft");
 				expect(await statusOf(together.id)).toBe("draft");
 				expect(await statusOf(apart.id)).toBe("trashed");
 
 				// While the source is alive, a translation trashed separately can also be restored.
-				await store.restoreEntry({ id: apart.id, expectedVersion: await versionOf(apart.id) });
+				await restoreDraft(store, { id: apart.id, expectedVersion: await versionOf(apart.id) });
 				expect(await statusOf(apart.id)).toBe("draft");
 			},
 		);

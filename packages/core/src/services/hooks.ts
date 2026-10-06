@@ -1,0 +1,85 @@
+import type { AfterCommit } from "../adapters/postgres/store/after-commit";
+import type { StoredDocument } from "../mdx/stored-document";
+import type { Collection, Issue, PreparedSnapshot } from "./types";
+
+/**
+ * Write hooks. The server config (`hooks` of `cms.server.ts`) and plugins (`CmsServerPlugin.hooks`) register them with the same shape.
+ * Every content write runs the same stages (`write-pipeline.ts`):
+ *
+ * 1. build the input (from the request, or from the stored draft)
+ * 2. `transform`: may change the data
+ * 3. core preparation: normalization, reference collection, core validation. Always runs, on the transformed data.
+ * 4. `validate`: may add failures and warnings
+ * 5. publish only, `validatePublish`: may add failures and warnings
+ * 6. store commit, one transaction per entry
+ * 7. `afterCommit`: a failure is logged and never undoes the committed write
+ *
+ * Hooks run outside the database transaction and get no database client. The server config's hooks run first, then the plugins' in config order.
+ * A hook that throws fails the write with `hook_failed` (naming its owner) and nothing is stored.
+ */
+
+/** What a write does. A bulk change to metadata or folder is a `save`, a bulk publish is a `publish`. */
+export type WriteOperation = "create" | "save" | "publish" | "duplicate" | "translate";
+
+/** Read-only context every hook gets. The data is a copy: changing it does not change the write unless a `transform` returns it. */
+export interface WriteHookContext {
+	readonly operation: WriteOperation;
+	readonly collection: Collection;
+	/** The entry being changed. Absent while the entry is being created (`create`, `duplicate`, `translate`). */
+	readonly entryId?: string;
+	/** Content locale of the entry. */
+	readonly locale: string;
+	readonly metadata: { readonly [key: string]: unknown };
+	/** The body as a stored document. `null` when the body does not parse as one (only a draft can be like that). */
+	readonly doc: StoredDocument | null;
+}
+
+/** The data a `transform` receives and returns. */
+export interface WriteData {
+	readonly metadata: { readonly [key: string]: unknown };
+	readonly doc: StoredDocument | null;
+}
+
+/**
+ * Runs before core preparation. Returns the data to prepare, or nothing to keep it as it is. The result still goes through normalization,
+ * reference collection and validation, so a transform cannot get anything past core checks.
+ */
+export type TransformHook = (context: WriteHookContext) => WriteData | void | Promise<WriteData | void>;
+
+/** The context of `validate` and `validatePublish`: the data as prepared, and the prepared snapshot (a copy). */
+export interface ValidationHookContext extends WriteHookContext {
+	readonly snapshot: PreparedSnapshot;
+}
+
+/** What validation adds. It can only add: the core issues and warnings always stay. */
+export interface ValidationResult {
+	/** Failures. Any of them blocks the write (`validation_failed`, or `publish_validation_failed` for `validatePublish`). */
+	readonly issues?: readonly Issue[];
+	/** Notices that do not block. They come back with the write's result. */
+	readonly warnings?: readonly Issue[];
+}
+
+/** Runs after core preparation, for every write. */
+export type ValidateHook = (
+	context: ValidationHookContext,
+) => ValidationResult | void | Promise<ValidationResult | void>;
+
+/** Runs after core preparation, for a publish only (single and bulk). */
+export type ValidatePublishHook = ValidateHook;
+
+export interface WriteHooks {
+	readonly transform?: TransformHook;
+	readonly validate?: ValidateHook;
+	readonly validatePublish?: ValidatePublishHook;
+	/** After the transaction commits (create, save, publish, archive, trash, restore, delete). The change stands even if it fails. */
+	readonly afterCommit?: AfterCommit;
+}
+
+/** Hooks with the owner that registered them: `server` for the server config, `plugin:<name>` for a plugin. */
+export interface HookSource {
+	readonly owner: string;
+	readonly hooks: WriteHooks;
+}
+
+/** Hooks in the order they run. May be read on every write, so it should return a cached list. */
+export type HookProvider = () => readonly HookSource[] | Promise<readonly HookSource[]>;

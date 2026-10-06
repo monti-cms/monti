@@ -9,6 +9,7 @@ import {
 	requiredMetadata,
 	titleFieldOf,
 } from "../../../test/any-site";
+import { duplicateDraft, publishDraft } from "../../adapters/postgres/__test__/seed";
 import {
 	closeGlobalPool,
 	createIsolatedTestPool,
@@ -43,7 +44,9 @@ describe("any site: core content flow", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const entry =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, entry.id);
 		return entry.id;
 	};
@@ -83,7 +86,7 @@ describe("any site: core content flow", () => {
 
 	it("publishes a content entry built from the schema's required fields", async () => {
 		const draft = await createContent("Published from schema");
-		const published = await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		expect(published.status).toBe("published");
 		expect(published.published?.metadata.title).toBe("Published from schema");
 	});
@@ -95,7 +98,7 @@ describe("any site: core content flow", () => {
 			metadata: {},
 			mdx: "Body text",
 		});
-		await expect(store.publishEntry({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
+		await expect(publishDraft(store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
 			code: "publish_validation_failed",
 			issues: expect.arrayContaining([
 				{ code: "missing_field", path: "title", message: titleFieldOf(contentCollection).label },
@@ -134,10 +137,10 @@ describe("any site: core content flow", () => {
 
 	it("duplicates with the title the caller gives and keeps it otherwise", async () => {
 		const draft = await createContent("Original");
-		const copy = await store.duplicateEntry({ id: draft.id, title: "Original (copy)" });
+		const copy = await duplicateDraft(store, { id: draft.id, title: "Original (copy)" });
 		expect(copy.working.metadata.title).toBe("Original (copy)");
 		expect(copy.workingSlug).toBeNull();
-		const same = await store.duplicateEntry({ id: draft.id });
+		const same = await duplicateDraft(store, { id: draft.id });
 		expect(same.working.metadata.title).toBe("Original");
 	});
 
@@ -196,7 +199,7 @@ describe("any site: core content flow", () => {
 			});
 			expect((await store.getMediaAsset(used.id))?.status).toBe("ready");
 			// The published copy also has the same references.
-			const published = await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 			expect(published.published?.metadata[media.name]).toBe(used.id);
 			const after = (await store.listMediaAssets({ pageSize: 100 })).items.find((item) => item.id === used.id);
 			expect(after?.references.map((reference) => reference.state).sort()).toEqual(["published", "working"]);

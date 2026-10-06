@@ -45,7 +45,6 @@ const changeOf = (kind: ContentChangeKind, entry: Entry): ContentChange => ({
 /** Changes that return an entry, and their notification kinds. */
 const ENTRY_CHANGES = {
 	createEntryWithReferences: "created",
-	duplicateEntry: "created",
 	saveWorkingWithReferences: "saved",
 	publishEntry: "published",
 	archiveEntry: "archived",
