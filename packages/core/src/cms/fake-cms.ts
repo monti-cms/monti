@@ -86,9 +86,7 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		pluginFeatures: plugins.features,
 		writeHooks: plugins.writeHooks,
 		notifyAfterCommit: plugins.notifyAfterCommit,
-		get secret() {
-			return cms.secret;
-		},
+		secrets: cms.secrets,
 		authGateway,
 		routeHandler: () => lazyRouteHandler(() => fake),
 		read: createRead({ store: cms.store, mediaStore: cms.mediaStore, verifyAdmin: authGateway.verifyAdmin }),

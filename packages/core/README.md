@@ -118,7 +118,7 @@ Put them in `.env.local`.
 | `CMS_DATABASE_URL` | Postgres connection URL |
 | `CMS_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing |
 | `AUTH_SECRET` | A random long value. Signs login sessions (`githubAuth({ secret })`) |
-| `CMS_SECRET` | A random long value (different from `AUTH_SECRET`). Encrypts stored values (AI service keys) (server config `secret`). If you change it, re-enter the stored keys |
+| `CMS_SECRET` | A random long value (different from `AUTH_SECRET`). The master secret that plugins' stored values (AI service keys) are encrypted under (server config `secret`). To change it, keep the old value in `previousSecrets` ("Plugin secrets") |
 | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app. The callback URL is `<site URL>/api/cms/auth/callback/github` |
 | `CMS_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID |
 | `CMS_DEV_AUTH_BYPASS` | Optional. If `1`, requests from your own machine open the admin without login under `next dev` (see "Login bypass for development") |
@@ -287,7 +287,7 @@ Everything else imports `cms` from this file.
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` |
 | Public media | `cms.read.imageResolver(mdx)` (for `renderMdx`'s `imageResolver`), `cms.read.mediaUrl(mediaId)` |
-| Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.database()`, `cms.secret`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
+| Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.database()`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
 | Scripts and the command line | `cms.migrate()`, `cms.rewrite({ apply })`, `cms.close()` |
 | Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
 | Tests | `fakeCms({ store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides |
@@ -309,7 +309,8 @@ Changing the database connection itself needs a restart. In production and in te
 - Pass the instance to the admin: `<CmsAdminLayout cms={cms}>` and `<CmsAdminPage cms={cms} {...props} />` (the page file becomes a small component; `monti init` shows the shape).
 - Site pages read through `cms.read.*` instead of the free functions of `@monti-cms/core/read`; `cms.read.imageResolver(mdx)` replaces `createPublicImageResolver(mdx)` and `cms.read.mediaUrl(id)` replaces `resolvePublicMediaUrl(id)`.
 - Gone: `getCmsContentStore`, `getCmsMediaStore`, `getCmsSecret`, `getCmsDatabase`, `loadServerPlugins` and the login free functions of `@monti-cms/core/runtime` (`authGateway`, `auth`, `signIn`, `signOut`, `handlers`, `isDevAuthBypassEnabled`, …). Use the instance:
-  `cms.store()`, `cms.mediaStore()`, `cms.secret`, `cms.database()`, `cms.plugins()`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`.
+  `cms.store()`, `cms.mediaStore()`, `cms.secrets(pluginName)`, `cms.database()`, `cms.plugins()`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`.
+  Nothing hands out the raw master secret any more (`cms.secret` and `cms.server.secret` are gone too); see "Plugin secrets".
   A plugin's route gets `cms` in its handler input, `CmsServerPlugin.features(cms)` and `migrate(db, cms)` get it as an argument, and hooks read it from a closure over your own `cms`.
 - `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` and `monti content:rewrite` now import the server file and need it to export `cms`.
   `@monti-cms/core/register` links only the `@cms-config` alias.
@@ -569,7 +570,26 @@ export const myPlugin = () =>
   `migrate` is called by `monti migrate` after the core tables.
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
 - The server-side `hooks` (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract".
-- A plugin's route gets the instance that serves it, so plugin code reads the DB connection (`cms.database()`), stores (`cms.store()`, `cms.mediaStore()`) and the secret (`cms.secret`) from it, and keeps no global state for them. `adminRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(db, cms)` receive the instance too.
+- A plugin's route gets the instance that serves it, so plugin code reads the DB connection (`cms.database()`), stores (`cms.store()`, `cms.mediaStore()`) and its secrets (`cms.secrets("<plugin name>")`) from it, and keeps no global state for them. `adminRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(db, cms)` receive the instance too.
+
+### Plugin secrets
+
+A plugin never receives the master secret (`secret` in the server config). The instance derives one key per plugin from it with HKDF-SHA256, using the info string `monti:plugin:<plugin name>:v1`, and hands the plugin an API that only works with that key:
+
+```ts
+const secrets = cms.secrets("my-plugin");   // inside a route, `features(cms)` or `migrate(db, cms)`
+secrets.available;                          // false when the server config has no `secret`
+const stored = secrets.encrypt("sk-live-1234");   // "mk1:<key id>:<iv>:<tag>:<body>", AES-256-GCM, safe to keep in a text column
+secrets.decrypt(stored);                    // "sk-live-1234", or null if it is not this plugin's value, from an unknown secret, or corrupted
+secrets.isCurrent(stored);                  // false if it was made with a previous secret: decrypt it and encrypt it again
+secrets.deriveKey("signing");               // a 32-byte key for another purpose (HMAC, hashing), different per plugin and purpose
+```
+
+- Two plugins get unrelated keys, so a plugin cannot decrypt another plugin's values, and a value read from one plugin's table says nothing about the master secret or another plugin's data. Plugin code still runs in your server process, so this separates what plugins store; it is not a sandbox.
+- Each value carries the id of the key it was made with (the `mk1:<key id>` prefix), so `decrypt` picks the right secret without trying them all.
+- Rotation: put the new value in `secret` and the old ones in `previousSecrets` (`previousSecrets: process.env.CMS_PREVIOUS_SECRET ? [process.env.CMS_PREVIOUS_SECRET] : []`). `decrypt` tries the current secret and then the previous ones, and `encrypt` always uses the current one. A plugin re-encrypts values with `isCurrent` false when it saves them again. Drop a secret from `previousSecrets` only after everything stored under it was re-encrypted (the AI plugin does this on `monti migrate`).
+- A plugin that stored values in its own format before this API can declare it: `cms.secrets("my-plugin", { legacy: { prefix: "v1", domain: "my-key:" } })` makes `decrypt` also read `v1:<iv>:<tag>:<body>` values encrypted under `sha256("my-key:" + secret)`. The legacy format is read-only; `encrypt` never uses it.
+- `cms.server` is the server config without `secret` and `previousSecrets`.
 
 ## Server config
 
@@ -579,7 +599,8 @@ export const myPlugin = () =>
 | `media` | Store for images and attachments. `r2Storage` or `s3Storage` from `@monti-cms/core/s3` (`region`, `forcePathStyle`), or a connection implementing the `MediaStore` contract. Without it, media features are unavailable. |
 | `auth` | Admin login. `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, NextAuth reads `AUTH_SECRET`) |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else off in production and on in development |
-| `secret` | Key used to keep stored values (AI service keys) encrypted in the DB. Keep it separate from the login signing value. If you change it, re-enter the stored keys. |
+| `secret` | Master secret for values plugins keep encrypted in the DB (AI service keys). Plugins never see it: each gets a key derived from it and the plugin name ("Plugin secrets"). Keep it separate from the login signing value. |
+| `previousSecrets` | Optional. Secrets `secret` replaced. Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
 | `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
 | `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed: cache revalidation, webhooks, search indexing). See "Hook contract". Plugins can set `hooks` too |
 

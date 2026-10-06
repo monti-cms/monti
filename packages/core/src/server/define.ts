@@ -99,10 +99,16 @@ export interface CmsServerConfig {
 	readonly media?: MediaAdapter;
 	readonly auth: AuthAdapter;
 	/**
-	 * Secret encryption key (for storing AI service keys in the DB). Changing it makes stored keys undecryptable, so they must be entered again.
-	 * Without it, AI service keys cannot be stored.
+	 * The master secret. Plugins never receive it: the instance derives a separate key per plugin from it and gives each plugin an API to encrypt
+	 * stored values (AI service keys) with that key. Without it, such values cannot be stored.
+	 * To change it without losing stored values, move the old one to `previousSecrets`.
 	 */
 	readonly secret?: string;
+	/**
+	 * Secrets `secret` replaced. Values encrypted with them stay readable and are encrypted again with `secret` the next time they are saved
+	 * (the AI plugin also does it on `monti migrate`). Drop a secret from the list only after its values are re-encrypted.
+	 */
+	readonly previousSecrets?: readonly string[];
 	/**
 	 * Hooks on every content write: `transform` (change the data before it is prepared), `validate` and `validatePublish` (add failures and warnings), and
 	 * `afterCommit` (notification after the change is committed: cache refresh, webhooks, search indexing; the change stands even if it fails).

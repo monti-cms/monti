@@ -1,10 +1,12 @@
+import { createCipheriv, createHash, randomBytes } from "node:crypto";
+import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { resolveAction } from "../action";
 import type { AiProviderInput } from "../connection";
 import { createDecider, createGenerator } from "../provider";
 import { AI_ACTIONS } from "../registry";
-import { decryptSecret } from "../secret";
+import { aiSecrets, decryptSecret } from "../secret";
 import {
 	type AiSettingsStore,
 	addAiProvider,
@@ -13,17 +15,22 @@ import {
 	loadAiRuntime,
 	removeAiProvider,
 	updateAiProvider,
+	upgradeStoredKeys,
 	usableActionKeys,
 } from "../settings";
 
 /** The encryption key the in-memory stores use. A test changes `current` to simulate a rotated `secret`. */
-const secret = { current: "test-secret" };
+const secret = { current: "test-secret", previous: [] as string[] };
+
+/** The AI plugin's secrets API as the instance with the given master secrets hands it out. */
+const secretsFor = (current: string, previous: string[] = []) =>
+	aiSecrets(fakeCms({ server: { secret: current, previousSecrets: previous } }));
 
 /** In-memory settings store. The version check matches the DB store. */
 function memoryStore(): AiSettingsStore & { value: unknown } {
 	const state = { value: undefined as unknown, version: 0 };
 	return {
-		secret: () => secret.current,
+		secrets: () => secretsFor(secret.current, secret.previous),
 		get value() {
 			return state.value;
 		},
@@ -64,6 +71,7 @@ const spec = (key: string, patch: { providerId?: string; modelName?: string } = 
 describe("AI connection settings", () => {
 	beforeEach(() => {
 		secret.current = "test-secret";
+		secret.previous = [];
 		vi.stubEnv("CMS_AI_FAKE", "");
 	});
 	afterEach(() => {
@@ -76,7 +84,7 @@ describe("AI connection settings", () => {
 		const view = await addAiProvider(store, 0, chat());
 		const stored = store.value as { providers: Array<{ apiKey: string; url: string }> };
 		expect(stored.providers[0]?.apiKey).not.toContain("sk-chat");
-		expect(decryptSecret(stored.providers[0]?.apiKey ?? "", "test-secret")).toBe("sk-chat-1234");
+		expect(decryptSecret(stored.providers[0]?.apiKey ?? "", secretsFor("test-secret"))).toBe("sk-chat-1234");
 		expect(stored.providers[0]?.url).toBe("https://example.test/v1");
 		expect(view.providers[0]).toMatchObject({ name: "OpenRouter", keyHint: "…1234", ready: true });
 		expect(JSON.stringify(view)).not.toContain("sk-chat");
@@ -176,6 +184,123 @@ describe("AI connection settings", () => {
 		expect(await usableActionKeys(store, [spec("tags")])).toEqual(["tags"]);
 		const runtime = await loadAiRuntime(store, spec("tags"));
 		expect(runtime.decider?.name).toBe("fake");
+	});
+});
+
+/** A key as the plugin stored it before per-plugin keys: `v1:<iv>:<tag>:<body>` under `sha256("cms-ai-key:" + secret)`. */
+function legacyKey(plain: string, masterSecret: string): string {
+	const iv = randomBytes(12);
+	const cipher = createCipheriv("aes-256-gcm", createHash("sha256").update(`cms-ai-key:${masterSecret}`).digest(), iv);
+	const body = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
+	return ["v1", iv.toString("base64"), cipher.getAuthTag().toString("base64"), body.toString("base64")].join(":");
+}
+
+/** A store holding settings saved by the old plugin version, with the key in the legacy format. */
+async function storeWithLegacyKey(masterSecret: string) {
+	const store = memoryStore();
+	await store.saveAiSettings({
+		expectedVersion: 0,
+		value: {
+			providers: [
+				{
+					id: "p1",
+					name: "OpenRouter",
+					kind: "chat",
+					url: "https://example.test/v1",
+					apiKey: legacyKey("sk-chat-1234", masterSecret),
+					defaultModel: "m-default",
+				},
+			],
+		},
+	});
+	return store;
+}
+
+const storedKey = (store: { value: unknown }) =>
+	(store.value as { providers: Array<{ apiKey: string }> }).providers[0]?.apiKey ?? "";
+
+describe("AI service keys stored before per-plugin keys", () => {
+	beforeEach(() => {
+		secret.current = "test-secret";
+		secret.previous = [];
+		vi.stubEnv("CMS_AI_FAKE", "");
+	});
+	afterEach(() => vi.unstubAllEnvs());
+
+	it("still decrypt, so the connection stays ready without entering the key again", async () => {
+		const store = await storeWithLegacyKey("test-secret");
+		const view = await getAiSettingsView(store);
+		expect(view.providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
+	});
+
+	it("are encrypted again in the current format the next time any connection is saved", async () => {
+		const store = await storeWithLegacyKey("test-secret");
+		const before = storedKey(store);
+		expect(before.startsWith("v1:")).toBe(true);
+
+		// Saving another connection upgrades the key of the untouched one too.
+		await addAiProvider(store, 1, decisions());
+		const after = storedKey(store);
+		expect(after.startsWith("mk1:")).toBe(true);
+		expect(secretsFor("test-secret").decrypt(after)).toBe("sk-chat-1234");
+		expect((await getAiSettingsView(store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
+	});
+
+	it("are upgraded by the migration step without any edit, and the step can be repeated", async () => {
+		const store = await storeWithLegacyKey("test-secret");
+		expect(await upgradeStoredKeys(store)).toBe(1);
+		expect(storedKey(store).startsWith("mk1:")).toBe(true);
+		const upgraded = storedKey(store);
+		expect(await upgradeStoredKeys(store)).toBe(0);
+		expect(storedKey(store)).toBe(upgraded);
+		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBe("…1234");
+	});
+
+	it("do nothing without a secret, and are left alone when they cannot be decrypted", async () => {
+		const store = await storeWithLegacyKey("other-secret");
+		const before = storedKey(store);
+		expect(await upgradeStoredKeys(store)).toBe(0);
+		expect(storedKey(store)).toBe(before);
+		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBeNull();
+	});
+});
+
+describe("AI service keys when the secret is rotated", () => {
+	beforeEach(() => {
+		secret.current = "test-secret";
+		secret.previous = [];
+		vi.stubEnv("CMS_AI_FAKE", "");
+	});
+	afterEach(() => vi.unstubAllEnvs());
+
+	it("stay readable through previousSecrets, and are encrypted with the new secret on the next save", async () => {
+		const store = memoryStore();
+		await addAiProvider(store, 0, chat());
+		secret.current = "rotated";
+		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBeNull();
+
+		secret.previous = ["test-secret"];
+		expect((await getAiSettingsView(store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
+		expect(await upgradeStoredKeys(store)).toBe(1);
+
+		// Once upgraded, the old secret can be dropped from the list.
+		secret.previous = [];
+		expect((await getAiSettingsView(store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
+	});
+
+	it("upgrade legacy keys written under a previous secret in one step", async () => {
+		const store = await storeWithLegacyKey("test-secret");
+		secret.current = "rotated";
+		secret.previous = ["test-secret"];
+		expect(await upgradeStoredKeys(store)).toBe(1);
+		secret.previous = [];
+		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBe("…1234");
+	});
+
+	it("refuses to store a key when the instance has no secret", async () => {
+		const store = memoryStore();
+		store.secrets = () => aiSecrets(fakeCms());
+		await expect(addAiProvider(store, 0, chat())).rejects.toMatchObject({ code: "ai_unavailable" });
 	});
 });
 

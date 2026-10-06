@@ -10,6 +10,7 @@ import { adminUrl } from "../core/admin-paths";
 import type { CmsPlugin, OwnedPluginRoute, PluginDatabase } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import { type CmsRead, createRead } from "../read";
+import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
@@ -29,6 +30,9 @@ export type CmsRouteHandler = (
 	context: { params: Promise<{ path: string[] }> },
 ) => Promise<Response>;
 
+/** The server config as plugins see it: everything but the master secrets. */
+export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecrets">;
+
 export interface CreateCmsOptions {
 	/** The server config (`defineServerConfig(...)`): database, auth, media, secret, hooks, public API. */
 	readonly server: CmsServerConfig;
@@ -47,8 +51,8 @@ export interface CreateCmsOptions {
  * Connections are created on first use, so creating the instance (at import or build time) connects to nothing.
  */
 export interface Cms {
-	/** The server config this instance was created from. */
-	readonly server: CmsServerConfig;
+	/** The server config this instance was created from, without the master secrets (`secret`, `previousSecrets`): plugins reach those only through `secrets()`. */
+	readonly server: PublicServerConfig;
 	/** The content store. Created on first use. */
 	store(): ContentStore;
 	/** Content write operations (drafts, publishing, duplicates, translations). Runs the write hooks. */
@@ -61,8 +65,12 @@ export interface Cms {
 	mediaStore(): MediaStore;
 	/** DB connection for plugins to read and create their own tables. */
 	database(): PluginDatabase;
-	/** Encryption key for secrets (`secret` in the server config). */
-	readonly secret: string | undefined;
+	/**
+	 * The secrets API of one plugin: encryption of stored values and key derivation, with a key derived from the server config's `secret` and the plugin's
+	 * name. The master secret itself is never handed out. A plugin asks for its own name (`cms.secrets("ai")`); another plugin's values do not decrypt
+	 * with it. `options.legacy` lets the plugin keep reading values it stored in an older format.
+	 */
+	secrets(plugin: string, options?: PluginSecretsOptions): PluginSecrets;
 	/** The login connection (`auth` in the server config): session, sign in and out, login methods, route handlers. */
 	auth(): CmsAuth;
 	/**
@@ -170,6 +178,8 @@ const sitePlugins = (): readonly CmsPlugin[] => cmsConfig.plugins ?? [];
  */
 export function createCms(options: CreateCmsOptions): Cms {
 	const { server, id = "default" } = options;
+	const { secret, previousSecrets, ...publicServer } = server;
+	const vault = createSecretsVault({ secret, previousSecrets });
 	const connections = connectionsFor(id, server);
 	const plugins = createServerPlugins(
 		sitePlugins(),
@@ -199,7 +209,7 @@ export function createCms(options: CreateCmsOptions): Cms {
 	const authGateway = new CmsAuthGateway(getAuth);
 
 	const cms: Cms = {
-		server,
+		server: publicServer,
 		store: getStore,
 		contentService: () => {
 			service ??= createContentService<Entry>(getStore(), { hooks: plugins.writeHooks });
@@ -212,9 +222,7 @@ export function createCms(options: CreateCmsOptions): Cms {
 		isMediaConfigured: Boolean(server.media),
 		mediaStore: getMediaStore,
 		database: () => connections.database.pluginDatabase(),
-		get secret() {
-			return server.secret;
-		},
+		secrets: (plugin, secretsOptions) => vault.forPlugin(plugin, secretsOptions),
 		auth: getAuth,
 		authHandlers: {
 			GET: (request) => getAuth().handlers.GET(request),
