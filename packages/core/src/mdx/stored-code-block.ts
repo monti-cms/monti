@@ -50,6 +50,22 @@ const asRecords = (value: CmsJsonValue | undefined): Record<string, CmsJsonValue
 			)
 		: [];
 
+/** Names of the line annotations of a working code block whose range reaches past its last code line. Stored, they are cut or dropped. */
+export const outOfRangeAnnotationNames = (attrs: Record<string, CmsJsonValue>): string[] => {
+	const names: string[] = [];
+	fromCodeFenceToCodeBlockDocument(
+		{
+			type: "code",
+			lang: asString(attrs.language) || undefined,
+			meta: asString(attrs.meta) || undefined,
+			value: asString(attrs.value),
+		},
+		annotationConfig,
+		{ onOutOfRange: (annotation) => names.push(annotation.name) },
+	);
+	return names;
+};
+
 /** The stored attributes of a code block from its working attributes (`language`, `meta`, and `value` with the annotation comments). */
 export const storedCodeBlockAttrs = (attrs: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> => {
 	const language = asString(attrs.language);

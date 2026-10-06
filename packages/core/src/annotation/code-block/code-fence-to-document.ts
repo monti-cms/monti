@@ -771,7 +771,11 @@ const applyScopeDocumentDirectives = ({
 export const fromCodeFenceToCodeBlockDocument = (
 	codeNode: Code,
 	annotationConfig: AnnotationConfig,
-	options?: { parseLineAnnotations?: boolean },
+	options?: {
+		parseLineAnnotations?: boolean;
+		/** Called for each line annotation whose range reaches past the last code line (cut, or dropped when it starts past it). */
+		onOutOfRange?: (annotation: { name: string; start: number; end: number }) => void;
+	},
 ): CodeBlockDocument => {
 	const registry = createAnnotationRegistry(annotationConfig);
 	const lang = codeNode.lang?.trim() || DEFAULT_CODE_LANG;
@@ -805,11 +809,16 @@ export const fromCodeFenceToCodeBlockDocument = (
 	// nothing for it) and the written text has no line to put its comment above, so the part past the code is cut and an annotation
 	// that starts past the code is dropped. Without this the same code would read back as a different document.
 	const lineCount = parsed.lines.length;
-	const annotations = parsed.annotations
-		.filter((annotation) => annotation.range.start < lineCount)
-		.map((annotation) =>
+	const annotations: CodeBlockDocument["annotations"] = [];
+	for (const annotation of parsed.annotations) {
+		if (annotation.range.end > lineCount) {
+			options?.onOutOfRange?.({ name: annotation.name, start: annotation.range.start, end: annotation.range.end });
+		}
+		if (annotation.range.start >= lineCount) continue;
+		annotations.push(
 			annotation.range.end > lineCount ? { ...annotation, range: { ...annotation.range, end: lineCount } } : annotation,
 		);
+	}
 	return {
 		lang,
 		meta,

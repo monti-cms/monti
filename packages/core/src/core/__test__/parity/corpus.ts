@@ -66,7 +66,7 @@ const rules: { name: string; mdx: string }[] = [
 	{ name: "untranslated", mdx: "<Untranslated>Source text</Untranslated> and <Untranslated>more</Untranslated>.\n" },
 	{ name: "untranslated with break", mdx: "<Untranslated>a<br />b</Untranslated>\n" },
 	{ name: "code block", mdx: `${fence(["const a = 1;"])}\n` },
-	{ name: "code block with annotation", mdx: `${fence(["// @line plus {1-1}", "const a = 1;"])}\n` },
+	// A ranged annotation that starts past the last code line is covered by `code-annotations-snapshot.test.ts`.
 	{
 		name: "code refs resolved",
 		mdx: `See <CodeRef to="c1">the sum</CodeRef> and <CodeRef to="c1">it again</CodeRef>.\n\n${fence(['// @line anchor {1-1} id="c1"', "const a = 1;", "const b = a + 1;"])}\n`,

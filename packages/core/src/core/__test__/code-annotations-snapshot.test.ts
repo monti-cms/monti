@@ -78,6 +78,23 @@ describe("code annotations the text cannot keep", () => {
 		expect(attrs.annotations.lines.find((line) => line.name === "plus")).toMatchObject({ start: 3, end: CODE.length });
 	});
 
+	it("warns about each one (not an error), with the block, so the body still saves and publishes", async () => {
+		const snapshot = await prepare({ mdx: pastTheEnd });
+		const block = snapshot.doc.content[0]?.id;
+		expect(block).toBeDefined();
+		const warnings = (snapshot.warnings ?? []).filter((warning) => warning.code === "code_annotation_out_of_range");
+		expect(warnings.map((warning) => warning.message).sort()).toEqual(["minus", "plus"]);
+		for (const warning of warnings) expect(warning.position).toEqual({ blockId: block });
+		expect(snapshot.issues).toEqual([]);
+	});
+
+	it("does not warn about annotations that stay in the code", async () => {
+		for (const mdx of [stacked, perLine]) {
+			const snapshot = await prepare({ mdx });
+			expect((snapshot.warnings ?? []).map((warning) => warning.code)).not.toContain("code_annotation_out_of_range");
+		}
+	});
+
 	it("still makes a body unparsed when it does not parse", async () => {
 		const snapshot = await prepare({ mdx: "<Open\n" });
 		expect(snapshot.doc.content[0]?.type).toBe("unparsed");

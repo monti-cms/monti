@@ -654,19 +654,6 @@
 		"searchText": "const a = 1;",
 		"excerptText": ""
 	},
-	"code block with annotation": {
-		"parsed": false,
-		"hash": "ca186b87f1b7827537a9ee3ea4fe130bed7a0e3c7e12e16aa1954f5e9005a718",
-		"issues": [],
-		"warnings": [],
-		"publishIssues": ["missing_field"],
-		"publishWarnings": [],
-		"references": [],
-		"internalLinks": [],
-		"imageSources": [],
-		"searchText": "const a = 1;",
-		"excerptText": ""
-	},
 	"code refs resolved": {
 		"parsed": true,
 		"hash": "a3e0a0100b68bba65c5c0fb6c704bd62a4ec66c1f751fba8ed5fe90e50bc1661",

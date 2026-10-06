@@ -124,6 +124,8 @@ export interface InputBody {
 	readonly doc: StoredDocument;
 	/** For a body given as text that could not be read: why (`mdx_error`, `frontmatter_present`), with the line and column in that text. */
 	readonly importIssues: Issue[];
+	/** Warnings about a text that was read, but not kept as written (a code annotation that reaches past the code). */
+	readonly importWarnings?: Issue[];
 }
 
 /**
@@ -151,7 +153,16 @@ export const inputBody = (input: ServiceInput, previous: StoredDocument | null |
 	if (typeof input.mdx !== "string") throw new ServiceError("invalid_input");
 	if (Buffer.byteLength(input.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
 	const body = bodyFromMdx(input.mdx, undefined, { previous });
-	if (body.doc) return { doc: body.doc, importIssues: [] };
+	if (body.doc) {
+		const importWarnings: Issue[] = (body.outOfRange ?? []).map((item) => ({
+			code: "code_annotation_out_of_range",
+			message: item.name,
+			params: { name: item.name },
+			path: "body",
+			position: item.blockId === undefined ? {} : { blockId: item.blockId },
+		}));
+		return { doc: body.doc, importIssues: [], importWarnings };
+	}
 	const importIssues: Issue[] = body.analysis.errors.map((error) => ({
 		code: "mdx_error",
 		message: error.message,
@@ -306,7 +317,11 @@ export async function prepareSnapshot(
 	const body = inputBody(input, options?.previousDoc);
 	const { doc } = body;
 	const check = checkDocument(doc);
-	const warnings: Issue[] = [...metadataWarnings(rawCollection, metadata), ...check.warnings];
+	const warnings: Issue[] = [
+		...metadataWarnings(rawCollection, metadata),
+		...(body.importWarnings ?? []),
+		...check.warnings,
+	];
 	const issues: Issue[] = [...body.importIssues, ...check.issues];
 
 	if (check.incomplete) {
