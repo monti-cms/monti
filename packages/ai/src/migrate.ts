@@ -1,11 +1,16 @@
 import type { PluginDatabase } from "@monti-cms/core";
+import type { Cms } from "@monti-cms/core/plugin/server";
 import { legacyFeatureOverride } from "./actions";
+import { aiSecrets } from "./secret";
+import { upgradeStoredKeys } from "./settings";
+import { createAiStore } from "./store";
 
 /**
  * AI plugin tables. `monti migrate` calls this after the core tables. Safe to call repeatedly.
  * Stores from before (when AI lived in the core) share the table names and migration markers, so they keep working as they are.
  */
-export async function migrateAi({ pool, schema, once }: PluginDatabase): Promise<void> {
+export async function migrateAi(db: PluginDatabase, cms?: Cms): Promise<void> {
+	const { pool, schema, once } = db;
 	const qSchema = schema;
 	await pool.query(`
 		-- Edited values of AI actions. Definitions live in the site config; only values edited in the admin are stored per action name.
@@ -54,4 +59,8 @@ export async function migrateAi({ pool, schema, once }: PluginDatabase): Promise
 			);
 		}
 	});
+
+	// Stored service keys from before per-plugin keys (or made with a previous secret) are encrypted again with the current secret.
+	// It does nothing when there is no secret or nothing to upgrade, so running it again changes nothing.
+	if (cms) await upgradeStoredKeys(createAiStore(db, { secrets: () => aiSecrets(cms) }));
 }

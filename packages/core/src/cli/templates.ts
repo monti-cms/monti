@@ -82,7 +82,8 @@ export const cms = createCms({
 			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev, only for requests from this machine: treat the visitor as admin without signing in
 			secret: process.env.AUTH_SECRET, // signs the sign-in session
 		}),
-		// Encryption key for stored values (AI service keys). If you change it, enter the stored keys again. Keep it separate from the sign-in secret.
+		// Master secret for stored values (AI service keys). Plugins get keys derived from it, never the secret itself. Keep it separate from the sign-in secret.
+		// To change it, move the old value to "previousSecrets: [oldSecret]" so stored values stay readable.
 		secret: process.env.CMS_SECRET,
 		// media: r2Storage({ ... }), // image and file uploads (S3-compatible storage), imported from @monti-cms/core/s3
 	}),

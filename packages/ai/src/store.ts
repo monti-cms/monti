@@ -1,5 +1,6 @@
 import type { PluginDatabase } from "@monti-cms/core";
-import { type Cms, CmsError, withTransaction } from "@monti-cms/core/plugin/server";
+import { type Cms, CmsError, type PluginSecrets, withTransaction } from "@monti-cms/core/plugin/server";
+import { aiSecrets, NO_SECRETS } from "./secret";
 
 /** Row name in the AI settings table (`ai_settings`). */
 export type AiSettingsId = "default" | "shared";
@@ -16,11 +17,11 @@ export interface AiActionOverrideRow {
 /** Edited AI action values (`ai_action_overrides`), connection settings (`ai_settings`) and UI actions (`ai_custom_actions`). */
 export function createAiStore(
 	{ pool, schema: qSchema }: PluginDatabase,
-	/** `secret`: the encryption key for stored service keys (`cms.secret`). */
-	options: { readonly secret?: () => string | undefined } = {},
+	/** `secrets`: the AI plugin's secrets API for the stored service keys (`aiSecrets(cms)`). Without it, keys cannot be stored or read. */
+	options: { readonly secrets?: () => PluginSecrets } = {},
 ) {
 	return {
-		secret: (): string | undefined => options.secret?.(),
+		secrets: (): PluginSecrets => options.secrets?.() ?? NO_SECRETS,
 		/** All edited values. Actions never edited have none. */
 		listAiActionOverrides: async (): Promise<AiActionOverrideRow[]> => {
 			const res = await pool.query<{ key: string; value: unknown; version: number; updated_at: Date }>(
@@ -153,7 +154,7 @@ const stores = new WeakMap<Cms, AiStore>();
 export function aiStoreFor(cms: Cms): AiStore {
 	let store = stores.get(cms);
 	if (!store) {
-		store = createAiStore(cms.database(), { secret: () => cms.secret });
+		store = createAiStore(cms.database(), { secrets: () => aiSecrets(cms) });
 		stores.set(cms, store);
 	}
 	return store;

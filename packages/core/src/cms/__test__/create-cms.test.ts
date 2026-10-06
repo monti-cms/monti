@@ -96,7 +96,8 @@ describe("createCms: an instance owns its server resources", () => {
 		expect((cmsB.store() as unknown as { tag: string }).tag).toBe("b");
 		expect(cmsA.database().schema).toBe("a");
 		expect(cmsB.database().schema).toBe("b");
-		expect([cmsA.secret, cmsB.secret]).toEqual(["secret-a", "secret-b"]);
+		expect(cmsA.secrets("ai").decrypt(cmsA.secrets("ai").encrypt("x"))).toBe("x");
+		expect(cmsB.secrets("ai").decrypt(cmsA.secrets("ai").encrypt("x"))).toBeNull();
 		expect([cmsA.isHostTrusted(), cmsB.isHostTrusted()]).toEqual([true, false]);
 		expect([cmsA.isMediaConfigured, cmsB.isMediaConfigured]).toEqual([false, true]);
 		expect(() => cmsA.mediaStore()).toThrow(/not configured/);
@@ -191,7 +192,8 @@ describe("createCms: a development reload does not leak connections", () => {
 		const reloaded = serverFor("reloaded");
 		createCms({ server: first.server });
 		const after = createCms({ server: reloaded.server });
-		expect(after.secret).toBe("secret-reloaded");
+		const sealed = createCms({ server: reloaded.server }).secrets("ai").encrypt("x");
+		expect(after.secrets("ai").decrypt(sealed)).toBe("x");
 		await (after.store() as unknown as { afterCommit: AfterCommit }).afterCommit({
 			kind: "saved",
 			entryId: "e",

@@ -30,11 +30,13 @@ describe("features", () => {
 	});
 
 	it("hands the instance to a plugin's features, so the plugin reads its own instance's data", async () => {
-		const first = fakeCms({ server: { secret: "one" } });
-		const second = fakeCms({ server: { secret: "two" } });
+		const first = fakeCms({ server: { trustHost: true } });
+		const second = fakeCms({ server: { trustHost: false } });
 		const plugin = {
 			name: "echo",
-			server: async () => ({ default: { features: async (c: typeof first) => ({ [c.secret ?? "?"]: true }) } }),
+			server: async () => ({
+				default: { features: async (c: typeof first) => ({ [`trusted-${c.isHostTrusted()}`]: true }) },
+			}),
 		};
 		const plugins = [plugin] as unknown as readonly CmsPlugin[];
 		expect(
@@ -43,14 +45,14 @@ describe("features", () => {
 				() => ({}),
 				() => first,
 			).features(),
-		).toEqual({ echo: { one: true } });
+		).toEqual({ echo: { "trusted-true": true } });
 		expect(
 			await createServerPlugins(
 				plugins,
 				() => ({}),
 				() => second,
 			).features(),
-		).toEqual({ echo: { two: true } });
+		).toEqual({ echo: { "trusted-false": true } });
 	});
 });
 

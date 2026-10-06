@@ -1,7 +1,7 @@
 /**
  * Server-side entry point for plugins. Used by plugin API routes, stores and migrations (core route scaffolding, DB connection, errors).
  * A plugin route reads the CMS instance it is served by from its handler input (`adminRoute(async ({ cms }) => ...)`): `cms.store()`, `cms.mediaStore()`,
- * `cms.database()`, `cms.secret`. Do not import from browser code.
+ * `cms.database()`, `cms.secrets(pluginName)`. Do not import from browser code.
  */
 
 export { AuthError } from "./adapters/auth/auth-gateway";
@@ -16,6 +16,7 @@ export type { Cms } from "./cms";
 export { HttpError, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";
 export type { LoadedServerPlugin } from "./plugin/server";
+export type { LegacySecretFormat, PluginSecrets, PluginSecretsOptions } from "./secrets";
 export type {
 	TransformHook,
 	ValidateHook,

@@ -89,7 +89,7 @@ export interface PluginDatabase {
 export interface CmsServerPlugin {
 	/**
 	 * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context
-	 * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, the database and the secret from `cms` and keeps no global state for them.
+	 * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, the database and its secrets (`cms.secrets(name)`) from `cms` and keeps no global state for them.
 	 */
 	readonly routes?: readonly PluginRoute[];
 	/** Called by `monti migrate` after the core tables. Must give the same result when called repeatedly. `cms` is the instance being migrated. */

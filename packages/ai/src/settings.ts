@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createTranslator } from "@monti-cms/core/client";
+import type { PluginSecrets } from "@monti-cms/core/plugin/server";
 import { z } from "zod";
 import type { ResolvedAiAction } from "./action";
 import type { AiProviderInput, AiProviderKind, AiProviderView, AiSettingsView } from "./connection";
@@ -13,15 +14,15 @@ import {
 	createGenerator,
 	isFakeAi,
 } from "./provider";
-import { decryptSecret, encryptSecret, keyHint } from "./secret";
+import { decryptSecret, encryptSecret, keyHint, refreshSecret } from "./secret";
 import { settingsMessages } from "./settings.messages";
 
 const t = createTranslator(settingsMessages);
 
 /** Settings store (part of the content store). Tests pass an in-memory implementation. */
 export interface AiSettingsStore {
-	/** Encryption key for the stored service keys (`cms.secret`). Read when a key is stored or used. */
-	secret(): string | undefined;
+	/** Secrets API of the AI plugin (`cms.secrets("ai")`) for the stored service keys. Read when a key is stored or used. */
+	secrets(): PluginSecrets;
 	getAiSettings(): Promise<{ value: unknown; version: number } | null>;
 	saveAiSettings(params: { expectedVersion: number; value: unknown }): Promise<number>;
 }
@@ -75,7 +76,7 @@ function readStored(value: unknown): StoredProvider[] {
 }
 
 interface ResolvedProvider extends StoredProvider {
-	/** Decrypted key. `null` if it cannot be decrypted because the server config's `secret` changed. */
+	/** Decrypted key. `null` if it cannot be decrypted because the server config's `secret` changed without `previousSecrets`. */
 	key: string | null;
 }
 
@@ -83,7 +84,7 @@ async function load(store: AiSettingsStore): Promise<{ version: number; provider
 	const row = await store.getAiSettings();
 	const providers = readStored(row?.value).map((provider) => ({
 		...provider,
-		key: provider.apiKey ? decryptSecret(provider.apiKey, store.secret()) : null,
+		key: provider.apiKey ? decryptSecret(provider.apiKey, store.secrets()) : null,
 	}));
 	return { version: row?.version ?? 0, providers };
 }
@@ -105,38 +106,68 @@ export async function getAiSettingsView(store: AiSettingsStore): Promise<AiSetti
 	return { version, providers: providers.map(viewOf), fake: isFakeAi() };
 }
 
+/**
+ * The value saved to the settings row. Every stored key is encrypted again with the current secret if it is still in the legacy format
+ * (from before per-plugin keys) or was made with a previous secret, so any save upgrades the keys of all connections.
+ */
+function storedValue(providers: StoredProvider[], secrets: PluginSecrets) {
+	return {
+		providers: providers.map(({ id, name, kind, url, apiKey, defaultModel }) => ({
+			id,
+			name,
+			kind,
+			url,
+			apiKey: apiKey === null ? null : refreshSecret(apiKey, secrets),
+			defaultModel,
+		})),
+	};
+}
+
 async function writeProviders(
 	store: AiSettingsStore,
 	expectedVersion: number,
 	providers: StoredProvider[],
 ): Promise<AiSettingsView> {
-	await store.saveAiSettings({
-		expectedVersion,
-		value: {
-			providers: providers.map(({ id, name, kind, url, apiKey, defaultModel }) => ({
-				id,
-				name,
-				kind,
-				url,
-				apiKey,
-				defaultModel,
-			})),
-		},
-	});
+	await store.saveAiSettings({ expectedVersion, value: storedValue(providers, store.secrets()) });
 	return getAiSettingsView(store);
+}
+
+/**
+ * Encrypts every stored key that is in the legacy format or was made with a previous secret again with the current secret (`monti migrate` runs it).
+ * Keys that cannot be decrypted are left as they are. Does nothing when there is no current secret or nothing to upgrade, so it is safe to repeat.
+ * A save of the connections that races with it wins (it also upgrades), so a version conflict is not an error.
+ * @returns how many keys were upgraded
+ */
+export async function upgradeStoredKeys(store: AiSettingsStore): Promise<number> {
+	const secrets = store.secrets();
+	if (!secrets.available) return 0;
+	const row = await store.getAiSettings();
+	if (!row) return 0;
+	const providers = readStored(row.value);
+	const stale = providers.filter(
+		(provider) => provider.apiKey !== null && refreshSecret(provider.apiKey, secrets) !== provider.apiKey,
+	);
+	if (stale.length === 0) return 0;
+	try {
+		await store.saveAiSettings({ expectedVersion: row.version, value: storedValue(providers, secrets) });
+	} catch (error) {
+		if ((error as { code?: unknown }).code === "conflict") return 0;
+		throw error;
+	}
+	return stale.length;
 }
 
 const toStored = (
 	id: string,
 	input: AiProviderInput,
 	storedKey: string | null,
-	secret: string | undefined,
+	secrets: PluginSecrets,
 ): StoredProvider => ({
 	id,
 	name: input.name,
 	kind: input.kind,
 	url: input.url.replace(/\/+$/, ""),
-	apiKey: input.apiKey === undefined ? storedKey : input.apiKey === null ? null : encryptSecret(input.apiKey, secret),
+	apiKey: input.apiKey === undefined ? storedKey : input.apiKey === null ? null : encryptSecret(input.apiKey, secrets),
 	defaultModel: input.defaultModel,
 });
 
@@ -146,7 +177,7 @@ export async function addAiProvider(
 	input: AiProviderInput,
 ): Promise<AiSettingsView> {
 	const { providers } = await load(store);
-	return writeProviders(store, expectedVersion, [...providers, toStored(randomUUID(), input, null, store.secret())]);
+	return writeProviders(store, expectedVersion, [...providers, toStored(randomUUID(), input, null, store.secrets())]);
 }
 
 /** Edits a connection. If the key is omitted, the stored key stays; `null` deletes it; a string is encrypted and replaces it. */
@@ -164,7 +195,7 @@ export async function updateAiProvider(
 	return writeProviders(
 		store,
 		expectedVersion,
-		providers.map((provider) => (provider.id === id ? toStored(id, input, keepKey, store.secret()) : provider)),
+		providers.map((provider) => (provider.id === id ? toStored(id, input, keepKey, store.secrets()) : provider)),
 	);
 }
 
