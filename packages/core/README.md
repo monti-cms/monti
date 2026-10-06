@@ -495,8 +495,8 @@ blocks: [
   validated before publishing.
 - Removing a block that was in use drops it from the stored syntax. Bodies that already used that block turn into plain text when saved again, so do not remove blocks that are in use.
 - A container that holds body content starts with an empty paragraph when inserted from the slash menu. `editor.insert.codeBlocks` (`[{ language, title?, code? }]`) starts it with those code blocks instead, `title` being the code fence's `title` meta (the code explorer uses it to start with one `src/index.ts` file).
-- The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockEditors` (attribute and body boxes) or
-  `blockViews` (the whole view), and supply previews of code fence blocks with `fencePreviews`.
+- The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockViews` (the whole view of any block,
+  built on `useBlockEditor` and `Content`), and supply previews of code fence blocks with `fencePreviews`.
 - For code fence blocks on public pages, put `remarkFenceBlocksToMdx` from `@monti-cms/core/mdx` into the render chain (after the syntax extensions' plugins) so they are rendered
   with `component`.
 - The translation structure check (`compareStructure`) only accepts changes in translation for `translatable` attributes and for `childValue` attributes that point at their values (e.g. the tab to open first).

@@ -79,8 +79,9 @@ describe("hooks import graph", () => {
 		const roots = filesUnder(path.join(SRC, "hooks"));
 		expect(roots.map((file) => path.relative(SRC, file))).toContain("hooks/public.ts");
 		const { violations, visited } = findViolations(roots, SRC);
-		// The graph reaches the slot hook that `public.ts` re-exports.
+		// The graph reaches the hooks that `public.ts` re-exports: the slot hook and the block editor (so the block view contract stays UI-free).
 		expect(visited).toContain("slots/use-slot-actions.ts");
+		expect(visited).toContain("editor/blocks/use-block-editor.tsx");
 		expect(violations).toEqual([]);
 	});
 

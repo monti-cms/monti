@@ -1,39 +1,16 @@
 "use client";
 
 import { type BlockDefinition, createTranslator } from "@monti-cms/core/client";
-import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import type { ReactNode } from "react";
-import { useCmsAdminComponents } from "../../../admin-components";
 import { cn } from "../../../lib/utils/cn";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select";
 import { Switch } from "../../../ui/switch";
-import { type FenceEditorMeta, FencePreviewNodeView, LazyFencePreview } from "../fence-preview";
+import { type FenceEditorMeta, FencePreviewBlockView, LazyFencePreview } from "../fence-preview";
 import { blocksMessages } from "../messages";
-import {
-	AttributeInput,
-	BlockSettings,
-	BlockSettingsField,
-	ContainerToolbar,
-	type ContainerValues,
-	SELECTED_RING,
-	useContainerValues,
-	useEditorEditable,
-} from "../shared";
-import { addedBlockOfNode, isContainer } from "./shared";
+import { AttributeInput, BlockSettings, BlockSettingsField, ContainerToolbar } from "../shared";
+import { BlockFrame, type BlockValues, Content, useBlockEditor } from "../use-block-editor";
+import { isContainer } from "./shared";
 
 const t = createTranslator(blocksMessages);
-
-/** Values received by the edit component that a site or blocks extension registers for a block (`CmsAdminComponents.blockEditors`). */
-export interface CustomBlockEditorProps {
-	readonly definition: BlockDefinition;
-	/** Directive attribute values. Emptied values (empty string, false) are not saved. */
-	readonly values: Readonly<ContainerValues>;
-	readonly setValue: (name: string, value: string | boolean) => void;
-	/** Slot for the container block body. Rendered where the body goes. `null` for single-line blocks. */
-	readonly content: ReactNode;
-	readonly editable: boolean;
-	readonly selected: boolean;
-}
 
 /** Default input for one attribute (inside the settings popover). A select if it has choices, a switch for booleans, a text input otherwise. */
 function AttributeField({
@@ -45,7 +22,7 @@ function AttributeField({
 }: {
 	name: string;
 	definition: BlockDefinition;
-	values: ContainerValues;
+	values: BlockValues;
 	setValue: (name: string, value: string | boolean) => void;
 	editable: boolean;
 }) {
@@ -112,11 +89,17 @@ function AttributeField({
 	);
 }
 
-/** Default look when no edit component is registered: the block name with the body below it. Attributes are edited in the toolbar's settings popover. */
-function DefaultCustomBlockEditor({ definition, values, setValue, content, editable }: CustomBlockEditorProps) {
+/**
+ * Default view of an added directive block that has no view registered in `blockViews`: the block name with the body below it.
+ * Attributes are edited in the toolbar's settings popover.
+ */
+export function DefaultBlockView() {
+	const block = useBlockEditor();
+	const { definition, values, editable } = block;
 	const names = Object.keys(definition.attributes);
+	const container = isContainer(definition);
 	return (
-		<>
+		<BlockFrame data-cms-custom-block={definition.name} className="my-6 rounded-md border">
 			{editable && names.length > 0 && (
 				<ContainerToolbar label={t("added.toolbar", { label: definition.label })}>
 					<BlockSettings>
@@ -126,7 +109,7 @@ function DefaultCustomBlockEditor({ definition, values, setValue, content, edita
 								name={name}
 								definition={definition}
 								values={values}
-								setValue={setValue}
+								setValue={block.setValue}
 								editable={editable}
 							/>
 						))}
@@ -135,45 +118,22 @@ function DefaultCustomBlockEditor({ definition, values, setValue, content, edita
 			)}
 			<div
 				contentEditable={false}
-				className={cn("not-prose px-3 py-2 font-medium text-cms-muted-foreground text-xs", content && "border-b")}
+				className={cn("not-prose px-3 py-2 font-medium text-cms-muted-foreground text-xs", container && "border-b")}
 			>
 				{definition.label}
 			</div>
-			{content && <div className="px-3">{content}</div>}
-		</>
+			{container && (
+				<div className="px-3">
+					<Content />
+				</div>
+			)}
+		</BlockFrame>
 	);
 }
 
-/** Default NodeView of a directive block. If an edit component (`blockEditors[block name]`) is registered, it is used to render. */
-export function CustomBlockNodeView(props: NodeViewProps) {
-	const { node, selected, editor } = props;
-	const definition = addedBlockOfNode(node.type.name);
-	const [values, setValue] = useContainerValues(props);
-	const editable = useEditorEditable(editor);
-	const { blockEditors } = useCmsAdminComponents();
-	if (!definition) return <NodeViewWrapper />;
-	const Editor = blockEditors?.[definition.name] ?? DefaultCustomBlockEditor;
-	return (
-		<NodeViewWrapper
-			data-cms-custom-block={definition.name}
-			data-cms-framed
-			className={cn("group/container relative my-6 rounded-md border", selected && SELECTED_RING)}
-		>
-			<Editor
-				definition={definition}
-				values={values}
-				setValue={setValue}
-				content={isContainer(definition) ? <NodeViewContent /> : null}
-				editable={editable}
-				selected={selected}
-			/>
-		</NodeViewWrapper>
-	);
-}
-
-/** Default NodeView of a code fence block: a code input and the preview supplied by the site (`fencePreviews[language]`). */
-function FenceBlockNodeView(props: NodeViewProps & { readonly definition: BlockDefinition }) {
-	const { definition } = props;
+/** Default view of a code fence block: a code input and the preview supplied by the site (`fencePreviews[language]`). */
+export function FenceBlockView() {
+	const { definition } = useBlockEditor();
 	const lang = definition.syntax.kind === "fence" ? definition.syntax.lang : definition.name;
 	const meta: FenceEditorMeta = {
 		kind: lang,
@@ -188,19 +148,5 @@ function FenceBlockNodeView(props: NodeViewProps & { readonly definition: BlockD
 			/>
 		),
 	};
-	return <FencePreviewNodeView {...props} meta={meta} />;
-}
-
-/**
- * NodeView of an added block. If a blocks extension or site supplies the whole edit view (`blockViews[block name]`) it is used; otherwise a code fence
- * block is drawn as a code and preview view, and a directive block as an attribute and body box.
- */
-export function AddedBlockNodeView(props: NodeViewProps) {
-	const definition = addedBlockOfNode(props.node.type.name);
-	const { blockViews } = useCmsAdminComponents();
-	if (!definition) return <NodeViewWrapper />;
-	const View = blockViews?.[definition.name];
-	if (View) return <View {...props} />;
-	if (definition.syntax.kind === "fence") return <FenceBlockNodeView {...props} definition={definition} />;
-	return <CustomBlockNodeView {...props} />;
+	return <FencePreviewBlockView meta={meta} />;
 }

@@ -1,26 +1,19 @@
 /**
- * Tools for building block editing views (`@monti-cms/admin/blocks`). Used when a block extension draws the whole editing view (`blockViews`).
+ * UI for building block editing views (`@monti-cms/admin/blocks`): the toolbar, the settings popover and the attribute input.
+ * A block view reads and writes its block with `useBlockEditor` and draws its nested body with `Content` (`@monti-cms/admin/hooks`);
+ * register the view by block name in `blockViews`.
  */
 
 export { formatMeta, parseMeta } from "../code-block/meta";
 export { blockNodeName } from "./added/shared";
-export type { CustomBlockEditorProps } from "./added/view";
-export { type FenceEditorMeta, FencePreviewNodeView, LazyFencePreview } from "./fence-preview";
+export { DEFAULT_BLOCK_VIEWS } from "./block-node-view";
+export { type FenceEditorMeta, FencePreviewBlockView, LazyFencePreview } from "./fence-preview";
 export {
 	AttributeInput,
 	BLOCK_TOOLBAR,
 	BlockSettings,
 	BlockSettingsField,
 	ContainerToolbar,
-	type ContainerValues,
-	childPos,
-	focusInside,
 	SELECTED_RING,
-	selectContainer,
 	ToolbarButton,
-	useContainerValues,
-	useEditorEditable,
-	useSelectedChildIndex,
-	valuesOf,
-	withValue,
 } from "./shared";

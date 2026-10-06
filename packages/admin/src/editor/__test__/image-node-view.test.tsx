@@ -1,11 +1,12 @@
-import { createTranslator } from "@monti-cms/core/client";
+import { createTranslator, image } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { withBlockEditor } from "../../test/block-editor";
 import { blocksMessages } from "../blocks/messages";
 import { ALT_REQUIRED_MESSAGE } from "../image-insert-dialog";
-import { CmsImageNodeView } from "../image-node-view";
+import { ImageBlockView } from "../image-node-view";
 import { editorMessages } from "../messages";
 
 const t = createTranslator(editorMessages);
@@ -26,6 +27,8 @@ vi.mock("@tiptap/react", async (importOriginal) => {
 });
 
 afterEach(cleanup);
+
+const CmsImageNodeView = withBlockEditor(ImageBlockView, image);
 
 describe("CmsImageNodeView", () => {
 	const createProps = (attrs: Record<string, unknown> = {}, isEditable = true) => {

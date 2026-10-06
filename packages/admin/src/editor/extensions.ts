@@ -2,7 +2,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { ADDED_MARKS, createAddedMark, type EditorMarkSpec } from "./added-marks";
 import { CmsBlockKeymap } from "./block-commands";
 import { CmsBlockIds } from "./block-ids";
-import { BLOCK_NODE_VIEWS } from "./block-views";
+import { BLOCK_NODES } from "./block-views";
 import { ADDED_BLOCK_NODES } from "./blocks/added";
 import { CodeTextStyleKeys } from "./code-block/text-style-keys";
 import { CmsBlockDrag } from "./drag";
@@ -10,7 +10,7 @@ import { CMS_SCHEMA_EXTENSIONS } from "./tiptap-schema";
 
 /**
  * Editor extension assembly. Feature extensions (key handling, drag, plugins) are added to this list.
- * Schema nodes go in `tiptap-schema.ts`, block nodes with dedicated edit UI in `block-views.ts`,
+ * Schema nodes go in `tiptap-schema.ts`, core block nodes (image, file, math) in `block-views.ts`,
  * and CmsNode ↔ Tiptap conversion in `converters/`. The look of added text styles (`marks`) is provided by the admin extension (`CmsAdminComponents.marks`).
  */
 export function buildEditorExtensions(marks: Readonly<Record<string, EditorMarkSpec>> = {}) {
@@ -23,7 +23,7 @@ export function buildEditorExtensions(marks: Readonly<Record<string, EditorMarkS
 			link: { openOnClick: false },
 		}),
 		...CMS_SCHEMA_EXTENSIONS,
-		...Object.values(BLOCK_NODE_VIEWS),
+		...Object.values(BLOCK_NODES),
 		// Blocks added by block extensions or site config (`editor.view: "node"`).
 		...ADDED_BLOCK_NODES,
 		// Text styles added by block extensions or site config. The look is provided by the extension (`marks`, block name → look).

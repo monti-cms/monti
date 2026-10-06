@@ -1,9 +1,8 @@
 "use client";
 
 import { createTranslator } from "@monti-cms/core/client";
-import type { NodeViewProps } from "@tiptap/react";
 import { blocksMessages } from "../messages";
-import { type FenceEditorMeta, FencePreviewNodeView } from "./fence-preview-node-view";
+import { type FenceEditorMeta, FencePreviewBlockView } from "./fence-preview-node-view";
 import { MathPreview } from "./preview-renderers";
 
 const t = createTranslator(blocksMessages);
@@ -15,7 +14,7 @@ const MATH_META: FenceEditorMeta = {
 	preview: (value) => <MathPreview value={value} />,
 };
 
-/** Math block (`$$`) edit view. */
-export function MathNodeView(props: NodeViewProps) {
-	return <FencePreviewNodeView {...props} meta={MATH_META} />;
+/** Edit view of the core math block (`blockViews.math`, `$$`). */
+export function MathBlockView() {
+	return <FencePreviewBlockView meta={MATH_META} />;
 }

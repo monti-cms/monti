@@ -1,8 +1,8 @@
 import type { BlockDefinition } from "@monti-cms/core/client";
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import { BlockNodeView } from "../block-node-view";
 import { ADDED_NODE_BLOCKS, blockNodeName, childBlocksOf, isContainer, isFence } from "./shared";
-import { AddedBlockNodeView } from "./view";
 
 const parseJson = (value: string | null, fallback: unknown) => {
 	try {
@@ -40,14 +40,14 @@ function createFenceNode(block: BlockDefinition & { syntax: { kind: "fence"; lan
 			return ["div", mergeAttributes(HTMLAttributes, { "data-cms-fence": block.syntax.lang })];
 		},
 		addNodeView() {
-			return ReactNodeViewRenderer(AddedBlockNodeView);
+			return ReactNodeViewRenderer(BlockNodeView);
 		},
 	});
 }
 
 /**
  * Tiptap node for a single added block. A container holds body content (or fixed child blocks); single-line blocks and code fence blocks are selected
- * as a whole. The edit view is chosen by `AddedBlockNodeView`.
+ * as a whole. The edit view is chosen by `BlockNodeView`.
  */
 export function createAddedBlockNode(block: BlockDefinition, all: readonly BlockDefinition[]): Node {
 	if (isFence(block)) return createFenceNode(block as BlockDefinition & { syntax: { kind: "fence"; lang: string } });
@@ -85,7 +85,7 @@ export function createAddedBlockNode(block: BlockDefinition, all: readonly Block
 				: ["div", mergeAttributes(HTMLAttributes, { "data-cms-block": block.name })];
 		},
 		addNodeView() {
-			return ReactNodeViewRenderer(AddedBlockNodeView);
+			return ReactNodeViewRenderer(BlockNodeView);
 		},
 	});
 }

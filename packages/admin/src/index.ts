@@ -16,5 +16,4 @@ export {
 	type ListCellProps,
 	useCmsAdminComponents,
 } from "./admin-components";
-export type { CustomBlockEditorProps } from "./editor/blocks/added/view";
 export type { FieldContext, FieldInputProps } from "./screens/entries/field-inputs";

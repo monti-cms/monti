@@ -1,3 +1,4 @@
+import { image } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
@@ -5,9 +6,10 @@ import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminSidebar } from "../../screens/admin-sidebar";
 import { type FolderActions, useFolderActions } from "../../screens/shared/use-folder-actions";
+import { withBlockEditor } from "../../test/block-editor";
 import { SidebarProvider } from "../../ui/sidebar";
 import { BlockHandleOverlay } from "../block-handle-overlay";
-import { CmsImageNodeView } from "../image-node-view";
+import { ImageBlockView } from "../image-node-view";
 import { InternalLinkPopup } from "../internal-link-popup";
 import { SLASH_COMMANDS } from "../slash-command";
 import { SlashMenuPopup } from "../slash-menu-popup";
@@ -27,6 +29,8 @@ vi.mock("@tiptap/react", async (importOriginal) => {
 });
 
 afterEach(cleanup);
+
+const CmsImageNodeView = withBlockEditor(ImageBlockView, image);
 
 describe("editor accessibility", () => {
 	it("names image and block controls and exposes alignment state", async () => {

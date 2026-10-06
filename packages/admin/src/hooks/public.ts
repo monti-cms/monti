@@ -14,6 +14,22 @@ export {
 	type FieldState,
 	useField,
 } from "../screens/entries/use-field";
+export {
+	type BlockChild,
+	type BlockChildInit,
+	type BlockEditor,
+	type BlockEditorRaw,
+	BlockFrame,
+	type BlockFrameProps,
+	type BlockTransaction,
+	type BlockTransactionChild,
+	type BlockValueInput,
+	type BlockValues,
+	type BlockView,
+	Content,
+	type ContentProps,
+	useBlockEditor,
+} from "../editor/blocks/use-block-editor";
 export type {
 	SlotAction,
 	SlotApplyMode,

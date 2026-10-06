@@ -1,112 +1,17 @@
 "use client";
 
 import { createTranslator } from "@monti-cms/core/client";
-import type { Editor } from "@tiptap/core";
-import type { Node as PmNode } from "@tiptap/pm/model";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { type NodeViewProps, useEditorState } from "@tiptap/react";
 import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
+import { BLOCK_TOOLBAR } from "./block-model";
 import { blocksMessages } from "./messages";
 
+export { BLOCK_TOOLBAR, SELECTED_RING, useEditorEditable } from "./block-model";
+
 const t = createTranslator(blocksMessages);
-
-/** Selected block border. All blocks use the same look. */
-export const SELECTED_RING = "ring-2 ring-cms-ring ring-offset-2 ring-offset-cms-background";
-
-/** Look of the control toolbar floating over a block (shared by the block toolbar, images, and tables). */
-export const BLOCK_TOOLBAR =
-	"z-10 flex items-center gap-0.5 rounded-md border bg-cms-popover/95 p-0.5 text-cms-popover-foreground shadow-sm backdrop-blur";
-
-export type ContainerValues = Record<string, string | boolean>;
-
-export const valuesOf = (node: PmNode): ContainerValues => (node.attrs.values ?? {}) as ContainerValues;
-
-/** Emptied values (empty string, false) are removed from attributes. Keeping them would save a `title=""` that was not in the source. */
-export const withValue = (values: ContainerValues, key: string, value: string | boolean): ContainerValues => {
-	const { [key]: _removed, ...rest } = values;
-	return value === "" || value === false ? rest : { ...rest, [key]: value };
-};
-
-export const useContainerValues = ({ node, updateAttributes }: Pick<NodeViewProps, "node" | "updateAttributes">) => {
-	const values = valuesOf(node);
-	const setValue = (key: string, value: string | boolean) =>
-		updateAttributes({ values: withValue(values, key, value) });
-	return [values, setValue] as const;
-};
-
-/**
- * Whether the editor can be edited. Re-renders when the lock (trash, raw mode) changes.
- * A node view that reads `editor.isEditable` once while rendering does not follow lock changes, so use this.
- */
-export function useEditorEditable(editor: Editor | null | undefined): boolean {
-	// When rendering without an editor (preview, fake editor in tests), do not subscribe and read the value at that time.
-	const tracked = typeof editor?.on === "function" ? editor : null;
-	const editable = useEditorState({
-		editor: tracked,
-		selector: ({ editor: current }) => current?.isEditable ?? true,
-	});
-	return tracked ? (editable ?? true) : (editor?.isEditable ?? true);
-}
-
-/** Start position of the i-th child inside the parent container. */
-export const childPos = (parent: PmNode, parentPos: number, index: number) => {
-	let offset = parentPos + 1;
-	for (let i = 0; i < index; i += 1) offset += parent.child(i).nodeSize;
-	return offset;
-};
-
-/**
- * Which child of this container the current selection is in. -1 if outside.
- * -1 when the editor has no focus, so that the cursor at the very start of the document when first opening a post (the first tab if the first block is tabs)
- * does not overwrite the initial open tab or collapsed state.
- */
-export const useSelectedChildIndex = (editor: Editor, getPos: NodeViewProps["getPos"]) =>
-	useEditorState({
-		editor,
-		selector: ({ editor: current }) => {
-			const pos = getPos();
-			if (!current?.isFocused || typeof pos !== "number") return -1;
-			const parent = current.state.doc.nodeAt(pos);
-			const { from } = current.state.selection;
-			if (!parent || from <= pos || from >= pos + parent.nodeSize) return -1;
-			let offset = pos + 1;
-			for (let i = 0; i < parent.childCount; i += 1) {
-				const end = offset + parent.child(i).nodeSize;
-				if (from >= offset && from < end) return i;
-				offset = end;
-			}
-			return -1;
-		},
-	}) ?? -1;
-
-/** Moves the cursor into the container (a child index or the start of the body). */
-export const focusInside = (editor: Editor, getPos: NodeViewProps["getPos"], index?: number) => {
-	const pos = getPos();
-	if (typeof pos !== "number") return;
-	editor
-		.chain()
-		.focus()
-		.command(({ tr }) => {
-			const parent = tr.doc.nodeAt(pos);
-			if (!parent) return false;
-			const start = index === undefined ? pos + 1 : childPos(parent, pos, index) + 1;
-			tr.setSelection(TextSelection.near(tr.doc.resolve(start)));
-			return true;
-		})
-		.scrollIntoView()
-		.run();
-};
-
-/** Selects the whole container (when no cursor should be left inside the body to hide). */
-export const selectContainer = (editor: Editor, getPos: NodeViewProps["getPos"]) => {
-	const pos = getPos();
-	if (typeof pos !== "number") return;
-	editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)));
-};
 
 /**
  * Input field for attributes (title, tab name). During Korean composition it does not write to the document, and writes when composition ends.

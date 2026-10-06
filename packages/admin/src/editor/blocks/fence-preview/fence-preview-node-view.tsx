@@ -1,11 +1,11 @@
 "use client";
 
 import { createTranslator } from "@monti-cms/core/client";
-import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { cn } from "../../../lib/utils/cn";
+import { SELECTED_RING } from "../block-model";
 import { blocksMessages } from "../messages";
-import { SELECTED_RING, useEditorEditable } from "../shared";
+import { BlockFrame, useBlockEditor } from "../use-block-editor";
 
 const t = createTranslator(blocksMessages);
 
@@ -35,21 +35,17 @@ const PROSEMIRROR_CURSOR_KEYS = new Set([
 ]);
 
 /**
- * Edit view showing the code input field and the preview together. Selecting or clicking opens the input field; otherwise only the preview shows.
+ * Edit view of a block written as code (`useBlockEditor().source`), showing the code input field and the preview together. Selecting or clicking opens the input field; otherwise only the preview shows.
  * Input is written to the document after a short pause or when leaving the field (not during Korean composition).
  */
-export function FencePreviewNodeView({
-	node,
-	updateAttributes,
-	selected,
-	editor,
-	meta,
-}: NodeViewProps & { readonly meta: FenceEditorMeta }) {
+export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta }) {
+	const block = useBlockEditor();
 	const { kind } = meta;
+	const value = block.source ?? "";
 	const [isEditing, setIsEditing] = useState(false);
-	const [draft, setDraft] = useState<string>(node.attrs.value ?? "");
-	const [previewValue, setPreviewValue] = useState<string>(node.attrs.value ?? "");
-	const lastCommittedRef = useRef<string>(node.attrs.value ?? "");
+	const [draft, setDraft] = useState<string>(value);
+	const [previewValue, setPreviewValue] = useState<string>(value);
+	const lastCommittedRef = useRef<string>(value);
 	const inputId = useId();
 	const isComposingRef = useRef(false);
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,10 +54,10 @@ export function FencePreviewNodeView({
 
 	const containerRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	const isEditable = useEditorEditable(editor);
+	const isEditable = block.editable;
 
-	const updateRef = useRef(updateAttributes);
-	updateRef.current = updateAttributes;
+	const setSourceRef = useRef(block.setSource);
+	setSourceRef.current = block.setSource;
 
 	const commitValue = (val: string) => {
 		if (debounceTimerRef.current) {
@@ -71,23 +67,22 @@ export function FencePreviewNodeView({
 		setPreviewValue(val);
 		if (val !== lastCommittedRef.current) {
 			lastCommittedRef.current = val;
-			updateAttributes({ value: val });
+			block.setSource(val);
 		}
 	};
 
 	useEffect(() => {
-		if (!isComposingRef.current && node.attrs.value !== lastCommittedRef.current) {
+		if (!isComposingRef.current && value !== lastCommittedRef.current) {
 			// An outside transaction (e.g. undo) changed the value. Cancel the pending input commit so it does not overwrite the new value.
 			if (debounceTimerRef.current) {
 				clearTimeout(debounceTimerRef.current);
 				debounceTimerRef.current = null;
 			}
-			const externalVal = node.attrs.value ?? "";
-			lastCommittedRef.current = externalVal;
-			setDraft(externalVal);
-			setPreviewValue(externalVal);
+			lastCommittedRef.current = value;
+			setDraft(value);
+			setPreviewValue(value);
 		}
-	}, [node.attrs.value]);
+	}, [value]);
 
 	useEffect(() => {
 		return () => {
@@ -96,15 +91,12 @@ export function FencePreviewNodeView({
 			debounceTimerRef.current = null;
 			// Write input not yet committed to the document before disappearing. If the node is already deleted, there is nowhere to write.
 			if (draftRef.current === lastCommittedRef.current) return;
-			try {
-				updateRef.current({ value: draftRef.current });
-			} catch {
-				// Unmount after the node left the document
-			}
+			// Fails quietly when the node already left the document.
+			setSourceRef.current(draftRef.current);
 		};
 	}, []);
 
-	const isOpen = (selected || isEditing) && isEditable;
+	const isOpen = (block.selected || isEditing) && isEditable;
 
 	const handleClick = () => {
 		if (!isEditable) return;
@@ -172,9 +164,10 @@ export function FencePreviewNodeView({
 	const renderPreview = () => meta.preview(previewValue);
 
 	return (
-		<NodeViewWrapper
-			as="div"
+		<BlockFrame
 			ref={containerRef}
+			framed={false}
+			selectedRing={false}
 			data-fence-preview={kind}
 			onBlur={handleBlur}
 			className={cn(
@@ -235,6 +228,6 @@ export function FencePreviewNodeView({
 					)}
 				</button>
 			)}
-		</NodeViewWrapper>
+		</BlockFrame>
 	);
 }

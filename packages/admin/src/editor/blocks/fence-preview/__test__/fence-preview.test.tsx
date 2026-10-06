@@ -1,8 +1,10 @@
+import { math } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type FenceEditorMeta, FencePreviewNodeView } from "../fence-preview-node-view";
+import { BlockEditorProvider } from "../../use-block-editor";
+import { type FenceEditorMeta, FencePreviewBlockView } from "../fence-preview-node-view";
 import { LazyFencePreview, MathPreview, PreviewErrorBoundary } from "../preview-renderers";
 
 vi.mock("@tiptap/react", async (importOriginal) => {
@@ -56,9 +58,13 @@ const metaOf = (typeName: string): FenceEditorMeta =>
 				preview: (value) => <LazyFencePreview lang="mermaid" label="다이어그램" value={value} emptyText="비었음" />,
 			};
 
-const View = (props: NodeViewProps) => <FencePreviewNodeView {...props} meta={metaOf(props.node.type.name)} />;
+const View = (props: NodeViewProps) => (
+	<BlockEditorProvider nodeView={props} definition={math}>
+		<FencePreviewBlockView meta={metaOf(props.node.type.name)} />
+	</BlockEditorProvider>
+);
 
-describe("FencePreviewNodeView", () => {
+describe("FencePreviewBlockView", () => {
 	it("shows only the preview, without a textarea, when not selected", () => {
 		const props = createNodeViewProps("cmsMermaid", "graph TD;\n  A-->B;", false);
 		const { container } = render(<View {...props} />);

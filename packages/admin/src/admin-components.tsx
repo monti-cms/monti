@@ -2,7 +2,7 @@
 
 import type { Field, TextChecker } from "@monti-cms/core/client";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
-import type { Editor, NodeViewProps } from "@tiptap/react";
+import type { Editor } from "@tiptap/react";
 import type { LucideIcon } from "lucide-react";
 import {
 	type ComponentType,
@@ -15,7 +15,7 @@ import {
 	useRef,
 } from "react";
 import type { EditorMarkSpec } from "./editor/added-marks";
-import type { CustomBlockEditorProps } from "./editor/blocks/added/view";
+import type { BlockView } from "./editor/blocks/use-block-editor";
 import type { ActiveInlineMark } from "./editor/inline-marks";
 import { useTextCheckEditor } from "./editor/text-check/extension";
 import type { BlockAction } from "./editor/tiptap-editor";
@@ -153,15 +153,17 @@ export interface CmsAdminComponents {
 	 */
 	readonly fieldInputs?: Readonly<Record<string, FieldInputEntry>>;
 	/**
-	 * Property and body editing component for an added block (block extension or the site config's `blocks`, `editor.view: "node"`). The key is the block name.
-	 * Rendered inside the default frame. If absent, it is edited with the default box holding the block name, property inputs and body.
+	 * Edit view of a block. The one place a block's editing UI is registered, for every block: the core image, file and math blocks and the blocks
+	 * added by block extensions or site config (`editor.view: "node"`). The key is the block name (`image`, `file`, `math`, `callout`, ...).
+	 * A view registered here replaces the default view of that block.
+	 *
+	 * A view takes no props. It reads and writes its block with `useBlockEditor`, draws the nested body of a container with `Content`, and
+	 * wraps itself in `BlockFrame` (all from `@monti-cms/admin/hooks`). Without a registered view, a core block uses its default view and any
+	 * other added block the default box holding the block name, attribute inputs and body.
+	 *
+	 * @experimental
 	 */
-	readonly blockEditors?: Readonly<Record<string, ComponentType<CustomBlockEditorProps>>>;
-	/**
-	 * Full edit view of an added block (Tiptap NodeView). The key is the block name. Takes precedence over `blockEditors`.
-	 * Renders the frame (`NodeViewWrapper`) and the body slot (`NodeViewContent`) itself (e.g. callout, tabs).
-	 */
-	readonly blockViews?: Readonly<Record<string, ComponentType<NodeViewProps>>>;
+	readonly blockViews?: Readonly<Record<string, BlockView>>;
 	/** Edit screen extension (toolbar, block actions). */
 	readonly editorExtensions?: readonly EditorExtension[];
 	/**
@@ -244,7 +246,6 @@ export function CmsAdminComponentsProvider({
 		() => ({
 			fencePreviews: { ...parent.fencePreviews, ...components.fencePreviews },
 			fieldInputs: { ...parent.fieldInputs, ...components.fieldInputs },
-			blockEditors: { ...parent.blockEditors, ...components.blockEditors },
 			blockViews: { ...parent.blockViews, ...components.blockViews },
 			editorExtensions: [...(parent.editorExtensions ?? []), ...(components.editorExtensions ?? [])],
 			textCheckers: [...(parent.textCheckers ?? []), ...(components.textCheckers ?? [])],

@@ -1,6 +1,6 @@
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { CmsImageNodeView } from "./image-node-view";
+import { BlockNodeView } from "./blocks/block-node-view";
 
 export interface CmsImageAttributes {
 	mediaId?: string;
@@ -81,6 +81,6 @@ export const CmsImageNode = Node.create({
 	},
 
 	addNodeView() {
-		return ReactNodeViewRenderer(CmsImageNodeView);
+		return ReactNodeViewRenderer(BlockNodeView);
 	},
 });
