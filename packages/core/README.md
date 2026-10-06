@@ -121,7 +121,8 @@ Put them in `.env.local`.
 | `CMS_SECRET` | A random long value (different from `AUTH_SECRET`). Encrypts stored values (AI service keys) (server config `secret`). If you change it, re-enter the stored keys |
 | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app. The callback URL is `<site URL>/api/cms/auth/callback/github` |
 | `CMS_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID |
-| `CMS_DEV_AUTH_BYPASS` | Optional. If `1`, the admin opens without login under `next dev` |
+| `CMS_DEV_AUTH_BYPASS` | Optional. If `1`, requests from your own machine open the admin without login under `next dev` (see "Login bypass for development") |
+| `AUTH_TRUST_HOST` | Optional. `true` when the server runs behind a proxy or on a platform that sets `Host` and `X-Forwarded-Host` (Vercel, nginx, a load balancer); see "Host trust" |
 
 ```sh
 pnpm exec monti migrate
@@ -515,7 +516,7 @@ export const myPlugin = () =>
 - The server-side `routes` receive addresses that are not in the core routes (`/api/cms/v1/*`). The core wraps them with the admin login check and the same-origin check, so
   forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` and verify on their own.
   `migrate` is called by `monti migrate` after the core tables.
-- The same-origin check accepts the host of `X-Forwarded-Host` (first value), `Host` and `site.url`. Behind a proxy that rewrites `Host`, set `site.url`.
+- The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
 - Plugin code uses `getCmsDatabase()` (the DB connection) from `@monti-cms/core/plugin/server` and the core route scaffolding (`adminRoute`, etc.).
 
 ## Server config
@@ -525,11 +526,29 @@ export const myPlugin = () =>
 | `database` | Content store. `postgres({ connectionString, schema })` |
 | `media` | Store for images and attachments. `r2Storage` or `s3Storage` from `@monti-cms/core/s3` (`region`, `forcePathStyle`), or a connection implementing the `MediaStore` contract. Without it, media features are unavailable. |
 | `auth` | Admin login. `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, NextAuth reads `AUTH_SECRET`) |
+| `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else off in production and on in development |
 | `secret` | Key used to keep stored values (AI service keys) encrypted in the DB. Keep it separate from the login signing value. If you change it, re-enter the stored keys. |
 | `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
 | `afterCommit` | Optional. Post-save notification `(change) => …`: after a change that creates, saves, publishes, archives, trashes, restores or deletes an entry is committed, it receives `{ kind, entryId, collection, locale, translationGroupId, status, publishedSlug, workingSlug }`. A place for cache revalidation (`revalidatePath`), webhooks and search indexing. Rolled-back changes are not delivered, and a failure does not undo the save. Plugins can also set `afterCommit` |
 
 To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` or `AuthAdapter`.
+
+### Host trust
+
+A client can send `Host` and `X-Forwarded-Host` itself, so the server does not trust them by default in production. Trusting them means two things: login callback URLs are built from the request host, and the same-origin check accepts the first value of `X-Forwarded-Host`.
+
+- Behind a proxy or on a platform that sets those headers (Vercel, nginx, a load balancer), turn it on with `trustHost: true` in the server config, or `AUTH_TRUST_HOST=true`. The option wins over the variable.
+- Otherwise set `AUTH_URL` to the site's public URL. It fixes the origin login uses, so login works without trusting the host. For the same-origin check, set `site.url` so the public host is accepted.
+- Default: the `AUTH_TRUST_HOST` variable, else off in production and on in development and tests (the host is `localhost` there). Without it, login on a production server fails with an `UntrustedHost` error (and a warning that names these options).
+- Vercel is no longer trusted automatically: add `AUTH_TRUST_HOST=true` to the project's environment variables.
+
+### Login bypass for development
+
+`githubAuth({ devBypass: true })` (`CMS_DEV_AUTH_BYPASS=1` in the generated config) treats the visitor as the first admin without login. It is limited so a staging server cannot be opened by accident:
+
+- `NODE_ENV` must be `development`. In any other mode the flag is ignored and a warning is logged.
+- The process must not look deployed: it is refused if a hosting platform variable (`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`) is set or `AUTH_URL` points to a public address. In that case the server refuses to start (the login connection throws on first use) with a message that names the reason.
+- Each request must come from this machine: `Host` is `localhost`, `*.localhost`, `127.0.0.0/8` or `::1`, and `X-Forwarded-Host` and `X-Forwarded-For` (when present) are loopback too. Other requests have to sign in normally, and a warning is logged once. `isDevAuthBypassEnabled()` from `@monti-cms/core/runtime` is now async and applies the same check.
 
 ## Config
 

@@ -19,7 +19,7 @@ pnpm dev                     # http://localhost:3000/studio
 
 pnpm 12 stops the install unless the esbuild install script is allowed. Copy this folder out of the repo, put `allowBuilds: { esbuild: true }` in `pnpm-workspace.yaml`, and install with `pnpm install` (with `--ignore-workspace` that setting is not read). pnpm 10, which the repo uses, only warns.
 
-With `CMS_DEV_AUTH_BYPASS=1`, `next dev` opens the admin screen without logging in.
+With `CMS_DEV_AUTH_BYPASS=1`, `next dev` opens the admin screen without logging in for requests from your own machine (`localhost`). The bypass is refused on a server that looks deployed. Deploying behind a proxy or on Vercel needs `AUTH_TRUST_HOST=true` for login (core README, "Host trust").
 
 ## Files
 

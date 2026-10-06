@@ -21,6 +21,7 @@ describe("postgres() lazy loading", () => {
 		const { r2Storage } = await import("../../../storage/s3");
 		const auth = githubAuth({ clientId: "id", clientSecret: "secret", adminIds: ["1"] }).create({
 			loginPath: "/admin/login",
+			trustHost: false,
 		});
 		expect(auth.providers?.[0]?.label).toBeTruthy();
 		expect(() =>

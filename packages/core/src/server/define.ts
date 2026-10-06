@@ -81,6 +81,8 @@ export interface CmsAuth {
 
 /** Values the core passes when creating the login connection. */
 export interface AuthCreateContext {
+	/** Whether the `Host` header may be trusted to build login callback URLs (see `trustHost` in the server config). */
+	readonly trustHost: boolean;
 	/** Admin login page URL (admin path + `/login`, e.g. `/admin/login`). Includes the Next `basePath` if set, so it is the browser-facing URL. */
 	readonly loginPath: string;
 }
@@ -105,6 +107,13 @@ export interface CmsServerConfig {
 	 * The save stands even if it fails (the error is only logged). Plugins' `afterCommit` is called too.
 	 */
 	readonly afterCommit?: AfterCommit;
+	/**
+	 * Whether the server sits behind a proxy or platform (Vercel, nginx, a load balancer) that sets `Host` and `X-Forwarded-Host`.
+	 * When on, login callback URLs are built from the request host and the same-origin check accepts `X-Forwarded-Host`;
+	 * when off, a client-supplied `X-Forwarded-Host` is ignored and login needs `AUTH_URL`. Default: the `AUTH_TRUST_HOST` environment variable
+	 * (`true`/`1` or `false`/`0`), else off in production and on in development.
+	 */
+	readonly trustHost?: boolean;
 	/** Public JSON API (`/api/cms/v1/public/*`). Off if unset (404). */
 	readonly publicApi?: PublicApiOptions;
 }

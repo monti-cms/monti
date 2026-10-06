@@ -77,7 +77,7 @@ export default defineServerConfig({
 		clientId: process.env.AUTH_GITHUB_ID,
 		clientSecret: process.env.AUTH_GITHUB_SECRET,
 		adminIds: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin
-		devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev: treat everyone as admin without signing in
+		devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev, only for requests from this machine: treat the visitor as admin without signing in
 		secret: process.env.AUTH_SECRET, // signs the sign-in session
 	}),
 	// Encryption key for stored values (AI service keys). If you change it, enter the stored keys again. Keep it separate from the sign-in secret.
@@ -141,5 +141,12 @@ export const ENV_VARS: readonly { readonly name: string; readonly note: string }
 	{ name: "AUTH_GITHUB_ID", note: "Client ID of the GitHub OAuth app" },
 	{ name: "AUTH_GITHUB_SECRET", note: "Client secret of the GitHub OAuth app" },
 	{ name: "CMS_ADMIN_GITHUB_ID", note: "Numeric GitHub ID of the admin" },
-	{ name: "CMS_DEV_AUTH_BYPASS", note: "Optional. 1 treats everyone as admin in next dev without signing in" },
+	{
+		name: "CMS_DEV_AUTH_BYPASS",
+		note: "Optional. 1 treats requests from this machine as admin in next dev without signing in",
+	},
+	{
+		name: "AUTH_TRUST_HOST",
+		note: "Optional. true behind a proxy or on a platform such as Vercel that sets Host and X-Forwarded-Host (needed for login in production)",
+	},
 ];

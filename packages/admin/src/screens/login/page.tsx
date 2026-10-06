@@ -17,7 +17,7 @@ import { loginMessages } from "./messages";
 const t = createTranslator(loginMessages);
 
 export default async function AdminLoginPage() {
-	if (isDevAuthBypassEnabled()) {
+	if (await isDevAuthBypassEnabled()) {
 		redirect(adminHref() as Route);
 	}
 

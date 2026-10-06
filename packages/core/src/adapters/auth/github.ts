@@ -2,7 +2,7 @@ import { withBasePath } from "../../core/base-path";
 import { createActiveTranslator } from "../../i18n/active";
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "../../server/define";
 import type { createGithubNextAuth } from "./auth-config";
-import { isAllowedAdminId, isDevAuthBypassEnabled } from "./auth-gateway";
+import { assertDevBypassSafe, isAllowedAdminId, isDevAuthBypassEnabled } from "./auth-gateway";
 import { authMessages } from "./messages";
 
 /** The UI locale is picked when text is read. Used instead of `i18n`, which reads the site config, so that `cms.server.ts` does not pull in the config. */
@@ -13,7 +13,11 @@ export interface GithubAuthOptions {
 	readonly clientSecret: string | undefined;
 	/** Admin GitHub numeric IDs. If empty, nobody is an admin. */
 	readonly adminIds: readonly (string | undefined)[];
-	/** Treats the user as admin without login in local development. Only takes effect when `NODE_ENV=development`. */
+	/**
+	 * Treats requests from this machine as admin without login, in local development. Only takes effect when `NODE_ENV=development`,
+	 * the environment does not look like a deployed server (hosting platform variables, a public `AUTH_URL`) and the request's host is localhost.
+	 * With `NODE_ENV=development` on something that looks deployed, it refuses to start instead.
+	 */
 	readonly devBypass?: boolean;
 	/**
 	 * Login API path. Default `/api/cms/auth`, which the admin API route handles too, so no login route file is needed.
@@ -37,7 +41,14 @@ type NextAuthResult = ReturnType<typeof createGithubNextAuth>;
 export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 	return {
 		name: "github",
-		create: ({ loginPath }): CmsAuth => {
+		create: ({ loginPath, trustHost }): CmsAuth => {
+			assertDevBypassSafe(options.devBypass);
+			if (!trustHost && process.env.NODE_ENV === "production" && !(process.env.AUTH_URL ?? process.env.NEXTAUTH_URL)) {
+				console.warn(
+					"[cms-auth] The host is not trusted, so login will fail with an UntrustedHost error. Behind a proxy or on a platform such as Vercel, " +
+						"set `trustHost: true` in the server config or AUTH_TRUST_HOST=true; or set AUTH_URL to the site's public URL.",
+				);
+			}
 			const basePath = (options.basePath ?? CMS_AUTH_BASE_PATH).replace(/\/$/, "");
 			let nextAuth: Promise<NextAuthResult> | undefined;
 			const load = () => {
@@ -47,6 +58,7 @@ export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 						// NextAuth matches paths against the request URL the browser sees, so it includes the Next `basePath` (`CmsAuth.basePath` is the in-app path).
 						basePath: withBasePath(basePath),
 						signInPage: loginPath,
+						trustHost,
 					}),
 				);
 				return nextAuth;

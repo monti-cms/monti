@@ -19,7 +19,7 @@ pnpm dev                     # http://localhost:3000/studio
 
 pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈춘다. 이 폴더를 저장소 밖으로 복사해 `pnpm-workspace.yaml`에 `allowBuilds: { esbuild: true }`를 적고 `pnpm install`로 설치한다(`--ignore-workspace`를 붙이면 그 설정을 읽지 않는다). 저장소가 쓰는 pnpm 10은 경고만 한다.
 
-`CMS_DEV_AUTH_BYPASS=1`이면 `next dev`에서 로그인 없이 관리자 화면을 연다.
+`CMS_DEV_AUTH_BYPASS=1`이면 `next dev`에서 내 컴퓨터(`localhost`)가 보낸 요청은 로그인 없이 관리자 화면을 연다. 배포된 서버처럼 보이면 거부한다. 프록시 뒤나 Vercel에 배포할 때 로그인하려면 `AUTH_TRUST_HOST=true`가 필요하다(본체 README "호스트 신뢰").
 
 ## 파일
 

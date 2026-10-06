@@ -121,7 +121,8 @@ media: s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true, buck
 | `CMS_SECRET` | 임의의 긴 값(`AUTH_SECRET`과 다르게). 저장 값(AI 서비스 키) 암호화(서버 설정 `secret`). 바꾸면 저장한 키를 다시 넣는다 |
 | `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | GitHub OAuth 앱. 콜백 주소는 `<사이트 주소>/api/cms/auth/callback/github` |
 | `CMS_ADMIN_GITHUB_ID` | 관리자 GitHub 숫자 ID |
-| `CMS_DEV_AUTH_BYPASS` | 선택. `1`이면 `next dev`에서 로그인 없이 관리자 |
+| `CMS_DEV_AUTH_BYPASS` | 선택. `1`이면 `next dev`에서 내 컴퓨터가 보낸 요청은 로그인 없이 관리자("개발용 로그인 우회" 참고) |
+| `AUTH_TRUST_HOST` | 선택. 서버가 `Host`·`X-Forwarded-Host`를 채워 주는 프록시 뒤나 플랫폼(Vercel, nginx, 로드 밸런서)에서 돌면 `true`("호스트 신뢰" 참고) |
 
 ```sh
 pnpm exec monti migrate
@@ -515,7 +516,7 @@ export const myPlugin = () =>
 - 서버 쪽 `routes`는 본체 경로(`/api/cms/v1/*`)에 없는 주소를 받는다. 본체가 관리자 로그인 확인과 같은 출처 검사로 감싸므로
   인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로(외부 실행기·웹훅)만 `public: true`로 빼고 스스로 확인한다.
   `migrate`는 `monti migrate`가 본체 표 다음에 부른다.
-- 같은 출처 검사는 `X-Forwarded-Host`(첫 값)·`Host`·`site.url`의 호스트를 받는다. `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적는다.
+- 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
 - 플러그인 코드는 `@monti-cms/core/plugin/server`의 `getCmsDatabase()`(DB 연결)와 본체 라우트 틀(`adminRoute` 등)을 쓴다.
 
 ## 서버 설정
@@ -525,11 +526,29 @@ export const myPlugin = () =>
 | `database` | 콘텐츠 저장소. `postgres({ connectionString, schema })` |
 | `media` | 이미지·첨부 파일 저장소. `@monti-cms/core/s3`의 `r2Storage`·`s3Storage`(`region`·`forcePathStyle`) 또는 `MediaStore` 계약을 구현한 연결. 없으면 미디어 기능을 못 쓴다. |
 | `auth` | 관리자 로그인. `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로"), `secret`은 로그인 세션 서명 값(없으면 NextAuth가 `AUTH_SECRET`을 읽는다) |
+| `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 운영에서는 끔·개발에서는 켬 |
 | `secret` | 저장 값(AI 서비스 키)을 DB에 암호화해 둘 때 쓰는 키. 로그인 서명 값과 따로 둔다. 바꾸면 저장된 키를 다시 넣어야 한다. |
 | `publicApi` | 선택. 공개 JSON API(`/api/cms/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
 | `afterCommit` | 선택. 저장 뒤 알림 `(change) => …`: 글을 만들고·저장하고·발행·보관·휴지통·복원·지운 변경이 커밋된 뒤 `{ kind, entryId, collection, locale, translationGroupId, status, publishedSlug, workingSlug }`를 받는다. 캐시 갱신(`revalidatePath`)·웹훅·검색 색인 자리. 되돌린 변경은 오지 않고, 실패해도 저장은 그대로다. 플러그인도 `afterCommit`을 둘 수 있다 |
 
 다른 저장소·로그인을 쓰려면 `DatabaseAdapter`·`MediaAdapter`·`AuthAdapter`를 직접 만들어 넣는다.
+
+### 호스트 신뢰
+
+`Host`와 `X-Forwarded-Host`는 클라이언트가 직접 보낼 수 있어서, 운영에서는 기본적으로 믿지 않는다. 믿는다는 것은 두 가지다. 로그인 콜백 주소를 요청의 호스트로 만들고, 같은 출처 검사가 `X-Forwarded-Host`의 첫 값을 받는다.
+
+- 이 헤더를 채워 주는 프록시 뒤나 플랫폼(Vercel, nginx, 로드 밸런서)에서는 서버 설정의 `trustHost: true` 또는 `AUTH_TRUST_HOST=true`로 켠다. 옵션이 환경 변수보다 우선한다.
+- 그렇지 않으면 `AUTH_URL`에 사이트의 공개 주소를 적는다. 로그인이 쓰는 출처가 고정되므로 호스트를 믿지 않아도 로그인이 된다. 같은 출처 검사에는 `site.url`을 적어 공개 호스트를 받게 한다.
+- 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 운영에서는 끄고 개발·테스트에서는 켠다(그곳의 호스트는 `localhost`다). 켜지 않은 운영 서버에서는 로그인이 `UntrustedHost` 오류로 실패한다(이 옵션들을 알려 주는 경고도 남긴다).
+- Vercel도 더는 자동으로 믿지 않는다. 프로젝트 환경 변수에 `AUTH_TRUST_HOST=true`를 더한다.
+
+### 개발용 로그인 우회
+
+`githubAuth({ devBypass: true })`(생성된 설정에서는 `CMS_DEV_AUTH_BYPASS=1`)는 방문자를 로그인 없이 첫 번째 관리자로 본다. 스테이징 서버가 실수로 열리지 않도록 다음처럼 제한한다.
+
+- `NODE_ENV`가 `development`여야 한다. 다른 모드에서는 이 값을 무시하고 경고를 남긴다.
+- 배포된 서버처럼 보이면 안 된다. 호스팅 플랫폼 변수(`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`)가 있거나 `AUTH_URL`이 공개 주소를 가리키면 거부한다. 이때 서버는 시작을 거부하고(로그인 연결을 처음 쓸 때 오류를 던진다) 이유를 알려 준다.
+- 요청마다 내 컴퓨터에서 온 것이어야 한다. `Host`가 `localhost`·`*.localhost`·`127.0.0.0/8`·`::1`이고, `X-Forwarded-Host`와 `X-Forwarded-For`가 있으면 그것도 루프백이어야 한다. 그 밖의 요청은 평소처럼 로그인해야 하고, 경고를 한 번 남긴다. `@monti-cms/core/runtime`의 `isDevAuthBypassEnabled()`는 이제 비동기이며 같은 검사를 한다.
 
 ## 설정
 
