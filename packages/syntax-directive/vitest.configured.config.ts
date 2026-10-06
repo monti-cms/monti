@@ -24,7 +24,6 @@ export default defineConfig(({ mode }) => ({
 	resolve: {
 		alias: {
 			"@cms-config": path.resolve(__dirname, "./test/directive.config.ts"),
-			"@cms-server": path.resolve(__dirname, "../core/test/cms.server.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

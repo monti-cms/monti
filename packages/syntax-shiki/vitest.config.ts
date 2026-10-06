@@ -24,7 +24,6 @@ export default defineConfig(({ mode }) => ({
 		alias: {
 			// The tests read the site's code block settings from the core package's reference blog config.
 			"@cms-config": path.resolve(__dirname, "./test/cms.config.ts"),
-			"@cms-server": path.resolve(__dirname, "../core/test/cms.server.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

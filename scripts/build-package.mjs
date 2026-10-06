@@ -6,7 +6,7 @@
 // - `tsc` runs per file, so "use client" directives are preserved.
 // - Other workspace packages (@monti-cms/*) resolve to that package's `dist` type declarations (build it first).
 // - Sources import without extensions, so `.js` and `/index.js` are appended to relative paths in the output.
-// - `@cms-config` and `@cms-server` are left as-is. The app links them to its own config files via `withCms` and tsconfig `paths`.
+// - `@cms-config` is left as-is. The app links it to its own site config file via `withCms` and tsconfig `paths`. The server config is not an alias: the app passes it to `createCms`.
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -49,7 +49,7 @@ const rel = (file) => {
 	const relative = path.relative(root, file);
 	return relative.startsWith("./") || relative.startsWith("../") ? relative : `./${relative}`;
 };
-// Types for the app config slots (`@cms-config`, `@cms-server`). The core sees its own source; other packages see the core's release types.
+// Types for the app's site config slot (`@cms-config`). The core sees its own source; other packages see the core's release types.
 const stubs = path.join(root, ".build-stubs");
 rmSync(stubs, { recursive: true, force: true });
 if (pkg.name !== "@monti-cms/core") {
@@ -58,15 +58,10 @@ if (pkg.name !== "@monti-cms/core") {
 		path.join(stubs, "cms-config.d.ts"),
 		'import type { CmsConfig } from "@monti-cms/core";\ndeclare const config: CmsConfig;\nexport default config;\n',
 	);
-	writeFileSync(
-		path.join(stubs, "cms-server.d.ts"),
-		'import type { CmsServerConfig } from "@monti-cms/core/server";\ndeclare const config: CmsServerConfig;\nexport default config;\n',
-	);
 }
 const stubDir = pkg.name === "@monti-cms/core" ? path.join(root, "build") : stubs;
 const paths = {
 	"@cms-config": [rel(path.join(stubDir, "cms-config.d.ts"))],
-	"@cms-server": [rel(path.join(stubDir, "cms-server.d.ts"))],
 };
 const deps = { ...pkg.dependencies, ...pkg.peerDependencies, ...pkg.devDependencies };
 for (const name of Object.keys(deps).filter((dep) => dep.startsWith("@monti-cms/"))) {
