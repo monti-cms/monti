@@ -1,18 +1,13 @@
-import { createCmsRouteHandler } from "@monti-cms/core/next/route-handler";
+import { fakeCms } from "@monti-cms/core/testing";
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import aiServer from "../server";
-
-vi.mock("@monti-cms/core/adapters/auth", () => ({
-	authGateway: { verifyAdmin: async () => ({ userId: "u", accountId: "g", isAdmin: true }) },
-	AuthError: class AuthError extends Error {},
-}));
 
 /** A store holding the screen action rows (including version check). */
 const custom = vi.hoisted(() => ({ rows: new Map<string, { value: unknown; version: number }>() }));
 
 vi.mock("../store", () => ({
-	getAiStore: () => ({
+	aiStoreFor: () => ({
 		getAiSettings: async () => null,
 		listAiActionOverrides: async () => [],
 		listAiCustomActions: async () => [...custom.rows].map(([key, row]) => ({ key, ...row, updatedAt: new Date(0) })),
@@ -40,11 +35,11 @@ describe("AI plugin registration", () => {
 	it("the server side provides the AI API routes, table creation and meta flag", async () => {
 		expect(aiServer.routes?.map((route) => route.pattern)).toContain("v1/ai/run");
 		expect(aiServer.migrate).toBeTypeOf("function");
-		expect(await aiServer.features?.()).toEqual({ ready: false });
+		expect(await aiServer.features?.(fakeCms())).toEqual({ ready: false });
 	});
 
 	it("the core API handler looks up paths missing from core routes in the plugin route table", async () => {
-		const handler = createCmsRouteHandler();
+		const handler = fakeCms({ plugins: [{ name: "ai", ...aiServer }] }).routeHandler();
 		const call = (path: string) =>
 			handler.GET(new NextRequest(`http://localhost/api/cms/${path}`, { headers: { origin: "http://localhost" } }), {
 				params: Promise.resolve({ path: path.split("/") }),
@@ -56,7 +51,7 @@ describe("AI plugin registration", () => {
 	});
 
 	it("creates (`POST /v1/ai/actions`) and deletes (`DELETE …?expectedVersion=`) screen actions through the API", async () => {
-		const handler = createCmsRouteHandler();
+		const handler = fakeCms({ plugins: [{ name: "ai", ...aiServer }] }).routeHandler();
 		const request = (method: "POST" | "DELETE", path: string, body?: unknown) =>
 			handler[method](
 				new NextRequest(`http://localhost/api/cms/${path}`, {

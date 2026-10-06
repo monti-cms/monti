@@ -1,3 +1,4 @@
+import { fakeCms } from "@monti-cms/core/testing";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as postRun } from "../routes/run/route";
@@ -5,20 +6,8 @@ import { POST as postRun } from "../routes/run/route";
 const mockVerifyAdmin = vi.fn();
 const overrides = vi.hoisted(() => ({ rows: [] as Array<{ key: string; value: unknown; version: number }> }));
 
-vi.mock("@monti-cms/core/adapters/auth", () => ({
-	authGateway: { verifyAdmin: () => mockVerifyAdmin() },
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
-
 vi.mock("../store", () => ({
-	getAiStore: () => ({
+	aiStoreFor: () => ({
 		listAiActionOverrides: async () => overrides.rows.map((row) => ({ ...row, updatedAt: new Date(0) })),
 		getAiSettings: async () => null,
 	}),
@@ -26,14 +15,18 @@ vi.mock("../store", () => ({
 
 vi.mock("@monti-cms/core/plugin/server", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@monti-cms/core/plugin/server")>()),
-	getCmsContentStore: () => ({
-		listEntries: async () => ({ items: [], total: 0 }),
-		getMediaAsset: async () => null,
-	}),
-	getCmsMediaStore: () => ({}),
-	getCmsDatabase: () => ({ pool: {}, schema: "cms" }),
 	createContentLookup: () => ({ slugsInUse: async () => new Set(["taken"]) }),
 }));
+
+const cms = fakeCms({
+	store: {
+		listEntries: async () => ({ items: [], total: 0, page: 1, pageSize: 20 }),
+		getMediaAsset: async () => null,
+	},
+	mediaStore: {},
+	database: { pool: {} as never, schema: "cms" },
+	verifyAdmin: () => mockVerifyAdmin(),
+});
 
 const run = (body: unknown) =>
 	postRun(
@@ -42,6 +35,7 @@ const run = (body: unknown) =>
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify(body),
 		}),
+		{ cms },
 	);
 
 describe("AI run API", () => {

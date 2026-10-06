@@ -7,7 +7,7 @@ import { type AiCall, type AiRunDeps, runAiAction, streamAiAction } from "../../
 import { runMessages } from "../../run.messages";
 import { loadAiRuntime } from "../../settings";
 import { loadSharedTexts } from "../../shared";
-import { getAiStore } from "../../store";
+import { aiStoreFor } from "../../store";
 import { aiRunDeps } from "../ai-route";
 
 const t = createTranslator(runMessages);
@@ -68,8 +68,8 @@ function streamResponse(run: (send: (event: StreamEvent) => void) => Promise<voi
  * problems, stop the whole request. The AI screen's Test sends `draft`, the edited value that is not saved yet.
  * With `stream`, the result is streamed bit by bit (only one input of a streaming action).
  */
-export const POST = adminRoute(async ({ request }) => {
-	const store = getAiStore();
+export const POST = adminRoute(async ({ request, cms }) => {
+	const store = aiStoreFor(cms);
 	const body = parseWith(aiRunBodySchema, await readJsonBody(request));
 	const action =
 		body.draft === undefined
@@ -79,7 +79,7 @@ export const POST = adminRoute(async ({ request }) => {
 
 	const runtime = await loadAiRuntime(store, action);
 	const deps = {
-		...aiRunDeps(runtime, request.signal, new URL(request.url).origin),
+		...aiRunDeps(cms, runtime, request.signal, new URL(request.url).origin),
 		shared: await loadSharedTexts(store),
 	};
 	const model = action.engine === "decide" ? runtime.decider?.model : runtime.generator?.model;

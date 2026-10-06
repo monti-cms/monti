@@ -2,15 +2,15 @@ import { adminRoute, json, parseWith, readJsonBody } from "@monti-cms/core/plugi
 import { aiModelsQuerySchema } from "../../connection";
 import { isFakeAi, listModels } from "../../provider";
 import { savedProvider } from "../../settings";
-import { getAiStore } from "../../store";
+import { aiStoreFor } from "../../store";
 
 /**
  * Model list of a generation connection's address (`GET {address}/models`). A saved connection is called by `providerId`; before saving, by address and key.
  * The key is never returned to the browser. If the address gives no list, the list is empty and the screen has the user type the name.
  */
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
 	const query = parseWith(aiModelsQuerySchema, await readJsonBody(request));
-	const saved = query.providerId ? await savedProvider(getAiStore(), query.providerId) : null;
+	const saved = query.providerId ? await savedProvider(aiStoreFor(cms), query.providerId) : null;
 	if (saved && saved.kind !== "chat") return json({ items: [] });
 	const url = query.url || saved?.url;
 	if (!url) return json({ items: isFakeAi() ? [{ id: "fake-generator" }] : [] });

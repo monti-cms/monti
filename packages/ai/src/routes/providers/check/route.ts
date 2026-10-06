@@ -3,17 +3,17 @@ import { z } from "zod";
 import { type AiCheckResult, aiProviderCheckSchema } from "../../../connection";
 import { AiError } from "../../../errors";
 import { connectionForCheck } from "../../../settings";
-import { getAiStore } from "../../../store";
+import { aiStoreFor } from "../../../store";
 
 /**
  * Connection check. Sends one short request with the input values (address, key, default model) before saving. Saves after the check.
  * A failure is also 200, with `ok: false` and the reason.
  */
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
 	const { providerId, provider } = parseWith(aiProviderCheckSchema, await readJsonBody(request));
 	const started = Date.now();
 	try {
-		const target = await connectionForCheck(getAiStore(), {
+		const target = await connectionForCheck(aiStoreFor(cms), {
 			providerId,
 			kind: provider.kind,
 			url: provider.url,

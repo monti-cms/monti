@@ -11,7 +11,7 @@ import * as run from "./routes/run/route";
 import * as settings from "./routes/settings/route";
 import * as shared from "./routes/shared/route";
 import { getAiSettingsView } from "./settings";
-import { getAiStore } from "./store";
+import { aiStoreFor } from "./store";
 
 /** Server side of the AI plugin. Loaded by the core API handler and `monti migrate`. Not included in the browser bundle. */
 const aiServer: CmsServerPlugin = {
@@ -29,8 +29,8 @@ const aiServer: CmsServerPlugin = {
 	],
 	migrate: migrateAi,
 	// `features.ai.ready` of the admin meta API: is at least one connection ready?
-	features: async () => ({
-		ready: await getAiSettingsView(getAiStore()).then(
+	features: async (cms) => ({
+		ready: await getAiSettingsView(aiStoreFor(cms)).then(
 			(view) => view.fake || view.providers.some((item) => item.ready),
 			() => false,
 		),
