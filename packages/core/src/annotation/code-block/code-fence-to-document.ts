@@ -801,11 +801,20 @@ export const fromCodeFenceToCodeBlockDocument = (
 	for (const line of parsed.lines)
 		for (const annotation of line.annotations)
 			if (annotation.rule !== undefined) annotation.rule = renumbered.get(annotation.rule);
+	// A ranged line annotation (`{3-9}`) covers the lines it reaches. Past the last line it covers nothing (the public view draws
+	// nothing for it) and the written text has no line to put its comment above, so the part past the code is cut and an annotation
+	// that starts past the code is dropped. Without this the same code would read back as a different document.
+	const lineCount = parsed.lines.length;
+	const annotations = parsed.annotations
+		.filter((annotation) => annotation.range.start < lineCount)
+		.map((annotation) =>
+			annotation.range.end > lineCount ? { ...annotation, range: { ...annotation.range, end: lineCount } } : annotation,
+		);
 	return {
 		lang,
 		meta,
 		lines: parsed.lines,
-		annotations: parsed.annotations,
+		annotations,
 		...(rules.length ? { rules } : {}),
 	};
 };
