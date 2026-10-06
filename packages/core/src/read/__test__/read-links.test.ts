@@ -59,7 +59,8 @@ describe("links by entry id", () => {
 			collection: contentCollection,
 			slug,
 			metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		} as never);
 
 	const publish = async (slug: string, mdx = `Body ${slug}`) => {
@@ -158,14 +159,16 @@ describe("links by entry id", () => {
 			collection: contentCollection,
 			slug: "links-series-1",
 			metadata: first.working.metadata as never,
-			mdx: `Next: [two](${pathOf("links-series-2")})`,
+			format: "mdx",
+			body: `Next: [two](${pathOf("links-series-2")})`,
 			expectedVersion: first.version,
 		});
 		const two = await service.saveDraft(second.id, {
 			collection: contentCollection,
 			slug: "links-series-2",
 			metadata: second.working.metadata as never,
-			mdx: `Back: [one](${pathOf("links-series-1")})`,
+			format: "mdx",
+			body: `Back: [one](${pathOf("links-series-1")})`,
 			expectedVersion: second.version,
 		});
 

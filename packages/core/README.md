@@ -146,7 +146,7 @@ pnpm exec monti content:rewrite           # a dry run: reports what would change
 pnpm exec monti content:rewrite --apply   # writes the changes
 ```
 
-Rewrites every stored body (the working and published bodies of entries, and body templates) from its stored document with the site's configured syntax ("Stored bodies" under "Body syntax"), so the stored text is one notation:
+Rewrites every stored body (the working and published bodies of entries; a template is a document with no text to rewrite) from its stored document with the site's configured syntax ("Stored bodies" under "Body syntax"), so the stored text is one notation:
 after turning `directiveSyntax()` on or off, or after upgrading the serializer, this brings old bodies in line at once instead of one post at a time as each is saved. Run it after `monti migrate`.
 It takes the same `--env-file`, `--no-env-file`, `--config` and `--server` options as `migrate` (in a script: `cms.rewrite({ apply })`).
 
@@ -286,7 +286,7 @@ Everything else imports `cms` from this file.
 | Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` (the Next adapter of `cms.handle(request)`) |
 | Admin API in a host other than Next (experimental) | `cms.handle(request)`: a standard `Request` in, a `Response` out |
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
-| Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` |
+| Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` (pass `format: "mdx"` to also get the body as text in `entry.body`, "Formats") |
 | Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` (`cms.read.imageResolver(mdx)` is for `renderMdx`) |
 | Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
 | Scripts and the command line | `cms.migrate()`, `cms.rewrite({ apply })`, `cms.close()` |
@@ -344,6 +344,7 @@ Changing the database connection itself needs a restart. In production and in te
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
 | `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
+| `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
 | `@monti-cms/core/syntax` (experimental) | `cms.config.ts`, syntax extension packages | The `SyntaxExtension` interface and the helpers extensions build on ("Body syntax"). The directive notation is `@monti-cms/syntax-directive` |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables), `monti content:rewrite` (re-serialize stored bodies) |
@@ -415,7 +416,7 @@ Where a finding is, is the block it is in: an issue's `position` is `{ blockId }
 **Block ids.** Every block of the document has an `id` (8 characters of base36) that is unique within the body. It says which block is which across versions: it is not written to MDX and is not part of the content hash, so it never counts as a change.
 A body saved as MDX inherits ids from the version it replaces: a block that reads the same keeps its id, and so do edited, split and moved blocks (the first part of a split paragraph keeps it); blocks with no partner get new ids, and a document sent through the API keeps the ids it carries.
 `monti migrate` runs the step `0014_block_ids`, which gives the existing documents their ids (and gives a published body the ids of the working blocks it shares); it changes only `doc`, never the MDX, the hash, `version` or `updated_at`.
-The admin editor keeps every block's id while you edit and saves the document instead of its MDX, so blocks keep their ids exactly; text it did not write (source mode, a template) is saved as MDX and paired as above.
+The admin editor keeps every block's id while you edit and always saves a document, so blocks keep their ids exactly; text it did not write (source mode) is saved as the document it reads as, without ids, and paired as above. Applying a template to an entry copies the template's document with new block ids (ids are unique within one body, and the translation and diff views pair blocks by them).
 The ids are what the admin uses to point at a block: a publish issue or reference position names its block (`position.blockId`) and opens it in the visual editor, the translation screen compares the source a translation was confirmed against with the current source block by block (a block that only moved shows as moved), and AI translation finds the block it translates by its id.
 
 **Upgrading.** Set `mdx.syntax` the way the site should write before running `monti migrate`, which runs the step `0013_stored_documents`. It adds the `doc` columns, gives every existing body its document and **rewrites its MDX in the site's notation** (so the stored text of many bodies changes at once; `version` and `updated_at` do not).
@@ -426,16 +427,19 @@ Bodies that do not parse, have front matter or would not read back the same are 
 Nothing fails because of such a body, published ones and templates included, since the data of an existing store always migrates. The published bodies and templates among them are logged by id (`[monti] N published bodies have no document …`): they read as unparsed (a page renders it as nothing) until you fix them in the editor.
 **Reference occurrences.** A body occurrence of a stored reference used to be `{ "type": "mdx", "line", "column", "blockId"? }`. Reads accept both shapes, and the next save of the entry writes the new one (`{ "type": "body", "blockId" }`); there is no SQL migration for them.
 
-- **Admin entry API.** `POST /api/cms/v1/entries` and `PATCH /api/cms/v1/entries/:id` accept `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) instead of `mdx`; sending both is `400 invalid_input`, and so is a document that is not a valid stored document. With neither, a new entry has an empty body and a patch keeps the current one.
-  Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/meta` reports the size limit as `limits.docBytes` next to `limits.mdxBytes`. The template API keeps accepting `mdx` only and returns `doc` with each template.
-- **Admin export** (`GET /api/cms/v1/export`) is format version 3 (the public archive's `published.json` carries `doc` too): each body also has `working.doc.json` / `published.doc.json` next to `working.mdx` / `published.mdx`, `templates.json` items have `doc`, and the digests cover the document.
-- **Public read API and public export** return the document too. `cms.read.getEntry` / `listEntries` / `getPreview` give `entry.doc` (the stored document; in a list only with `body: true`, otherwise `null`) and `entry.refs`
+- **Admin entry API.** `POST /api/cms/v1/entries` and `PATCH /api/cms/v1/entries/:id` take the body as `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) or as `body` (a text) with the `format` that reads it ("Formats"); `mdx` is gone. Sending a document and a text together, a text without its format, or a document that is not a valid stored document is `400 invalid_input`. With none of them, a new entry has an empty body and a patch keeps the current one.
+  Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/entries/:id?format=<name>` adds `body` (a string) to `working` and `published` (and to the source of a translation): the document as text in that format, written to be imported again. `GET /api/cms/v1/meta` reports the size limits as `limits.textBytes` (a text, in any format) and `limits.docBytes`, and the formats of the instance as `formats` (`{ name, label, mimeType, extension, canImport }`). The admin editor always sends `doc`.
+- **Template API and templates.** A body template is a document like an entry body: `body_templates.doc` is its only source and nothing writes `body_templates.mdx` any more (the column stays, optional). `POST /api/cms/v1/templates` and `PATCH /api/cms/v1/templates/:id` take `{ name, doc }` or `{ name, body, format }` (with neither, a template is empty; a patch keeps the body), and answer with `doc` and no `mdx`; `?format=<name>` on a `GET` adds `body` to each template. A text the format rejects is `422 format_import_failed` with the format's findings, because a template, unlike an entry draft, has no place to keep text that is not a document.
+  The admin template manager and the template menu of the editor work on documents. Applying a template copies its document into the entry with new block ids. Seed templates (`seed.templates` in the site config) are `{ id, name, doc }` or `{ id, name, body, format }`; a text is read by its format when the migration seeds a new store, and a seed that no installed plugin can read stops the migration with a message that names the format (for `mdx`: install `@monti-cms/mdx`). Nothing like that stops a store that already has its data.
+  `monti migrate` runs `0019_templates_documents`: a template that has no readable document gets the `unparsed` document of its text, and `body_templates.mdx` stops being required. `version`, `updated_at` and the text already in the column do not change; nothing fails because of a template, and the ones that had no document are logged by id. Running it again changes nothing. `monti content:rewrite` no longer touches templates (they have no text).
+- **Admin export** (`GET` or `POST /api/cms/v1/export`) is format version 4. The archive holds the documents: `working.doc.json` / `published.doc.json` for each body, `templates.json` items with `doc`, the public archive's `published.json` with `doc`, and the digests cover them. It has no MDX of its own; `format=<name>` (in the query, or `format` in the body of a `POST`) also writes each body as `working.<extension>` / `published.<extension>` and each template as `body` in that format, and `manifest.format` names it. The admin archive's texts are written to be imported again (a link to an entry that cannot be resolved keeps its id); the public archive's are for readers (it has published entries only, and an unpublished target is not a link). An unknown format is `400 unknown_format`.
+- **Public read API and public export** return the document. `cms.read.getEntry` / `listEntries` / `getPreview` give `entry.doc` (the stored document; in a list only with `body: true`, otherwise `null`) and `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: what a renderer needs for the images, files and internal links of that document, only for what the document uses; `collectRefs(doc)` lists the ids).
   A link in a document is `{ entryId }` (internal) or `{ href, title? }` (external). `entryId` is the translation group id (the source entry's id, the same id a relation holds), so `refs.links` gives the address and title in the reader's language and falls back to the source's;
   a link whose target is not published is not in `refs.links` and is drawn as plain text. Renaming a slug changes nothing in the stored document. Links are references like relations: they are in the references of the entry, block by block, and a link to an entry that does not exist (or an address nobody holds) blocks publishing (`unresolved_internal_link`). A link to an entry that is not published, or is in the trash, only warns (`unpublished_internal_link`): the page draws it as plain text until the target is published, so posts that link to each other can be published in any order.
-  Text written with the address of a post (`[x](/posts/slug)`, in MDX or in a document) is turned into a link by id when it is written, if an entry holds that address; an address no entry holds stays as written and blocks publishing. MDX writes a link by id as `[x](entry:<id>)`. Migration `0018_link_entry_ids` does this for the stored documents of an existing database (document version 3).
-  `entry.mdx` stays for now. `GET /api/cms/v1/public/entries/:collection/:slug` returns `doc` and `refs` and no MDX text (it comes back as an optional format later); lists have none of them.
-  The public export carries `doc` in each `published.json` next to `mdx`, and the digests cover it. A draft that could not become a document previews with its `unparsed` document.
+  Text written with the address of a post (`[x](/posts/slug)`, in any format or in a document) is turned into a link by id when it is written, if an entry holds that address; an address no entry holds stays as written and blocks publishing. Migration `0018_link_entry_ids` does this for the stored documents of an existing database (document version 3).
+  `entry.mdx` is gone: pass `format: "mdx"` and read `entry.body` (`{ format, text }`, "Formats"). `GET /api/cms/v1/public/entries/:collection/:slug` returns `doc` and `refs`, and with `?format=<name>` also `body: { format, text }` (an unknown format is `400 invalid_input`); lists have none of them.
+  A draft that could not become a document previews with its `unparsed` document.
 
 ### Writing a syntax extension (experimental)
 
@@ -459,6 +463,60 @@ interface SyntaxExtension {
 `serializeBlocks` and `serializeInlines` for children, `componentName`, `hasSpread`, `nodeAttributes` and `markAttributes` (the attribute list the standard notation uses), and `escapeAttribute`.
 Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. The directive extension (`packages/syntax-directive`) is the reference implementation, and it imports only from `@monti-cms/core/syntax`.
 The entry point also exports the code comment syntax helpers (`resolveCommentSyntax`, `formatAnnotationComment`) that Monti's code annotations use, for extensions that read or write code comments (`packages/syntax-shiki`).
+
+## Formats
+
+The stored document is the only source of a body. A **format** is a notation it can be written as and, when the format can, read from: MDX, Markdown with Hugo front matter, plain text. Formats are plugins reached through the `format` option of the read and write APIs: the plugin converts, and core validates and stores. Anyone can write one. The `mdx` format is built in for now (the same MDX code core always had, behind this seam); it moves to the `@monti-cms/mdx` package later.
+
+```ts
+import { defineFormat } from "@monti-cms/core/format";
+
+export default defineFormat({
+	name: "hugo", // the value of the `format` option: lowercase letters, digits and hyphens
+	label: "Hugo Markdown",
+	mimeType: "text/markdown",
+	extension: "md",
+	// Document → text. Pure: no database, no network, no site config.
+	export(doc, ctx) {
+		return "…";
+	},
+	// Text → document. Leave it out for a one-way format (one that can only be written).
+	import(text, ctx) {
+		return { ok: true, doc, warnings: [] }; // or { ok: false, issues: [{ code, position: { line, column } }] }
+	},
+});
+```
+
+A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice (a built-in one included) fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/cms/v1/meta` lists it as `formats`.
+
+**What a format gets.** Both directions get `ctx.locale`, `ctx.blocks` (the body blocks of the site) and `ctx.codeLineEffects`. `export` also gets `ctx.purpose` (`"read"`: a consumer reads the text, so it needs addresses that work outside the database; `"sync"`: it will be imported again, so a two-way format keeps what it needs to round-trip), `ctx.link(entryId)` (`{ url, title, locale }`, the current address of the entry a link points to, or `null`), `ctx.media(mediaId)` (`{ url, width?, height?, filename, mimeType, byteSize }` or `null`) and `ctx.report(issue)` for what it could not write as the document says. Core resolves every link and media item of the document before it calls `export`, so these are plain synchronous lookups.
+`import` returns the document the text says without caring about block ids or the document version: core gives every block an id (pairing it with the body the text replaces, so unchanged blocks keep theirs) and puts the document in its canonical form. A warning may name a block of the returned document by `blockIndex`; core turns it into the block's id.
+
+**What core does for every format.**
+- *Export:* an internal link is written as the **real path of its target** (`ctx.link(entryId)`, for MDX `[x](/en/posts/slug)`), never as `entry:<id>`, so the files work in Astro, Hugo and git-sync, and the path follows the target when its slug changes (the document does not change). A link whose target is gone or not published is dropped (the label stays) in a text for readers (`read`), and keeps its id (`entry:<id>` in MDX) in a text to be imported again (`sync`). A registered image is its public URL for `read`, and keeps its `mediaId` for `sync`.
+- *Import:* a link written as the address of this site's content (`/posts/slug`, with or without the locale prefix) becomes a link by entry id when an entry holds that address, and an image whose `src` is the public URL of a registered media file becomes that file (`mediaId`). What nobody holds stays as written (publishing reports an address nobody holds as `unresolved_internal_link`). A text exported by a format imports back to the same ids.
+- *Validation and storage* are core's: what a format returns is checked and stored like a document sent directly (`prepareSnapshot`, write hooks, the content hash, references), so a format cannot get past a core rule. A text the format rejects (`ok: false`) is not lost: a draft keeps it as an `unparsed` document (`{ "type": "unparsed", "attrs": { "format", "source" } }`) with the format's findings as issues, and publishing is blocked until it is fixed ("Stored bodies").
+
+**The `format` option.**
+
+| Where | How |
+| --- | --- |
+| `cms.read.getEntry`, `listEntries` (with `body: true`), `getPreview` | `format: "mdx"` adds `entry.body = { format, text }`. Links are the paths readers see (an unpublished target is not a link) and images are public URLs. An unknown format throws a `ServiceError` coded `unknown_format` |
+| `GET /api/cms/v1/public/entries/:collection/:slug` | `?format=mdx` adds `body: { format, text }` |
+| `POST /api/cms/v1/entries`, `PATCH /api/cms/v1/entries/:id`, `cms.contentService()` (create, save, bulk) | the body is `{ doc }` or `{ body, format }`, never both |
+| `GET /api/cms/v1/entries/:id` | `?format=mdx` adds `working.body` and `published.body` (strings) |
+| `/api/cms/v1/templates` | `{ name, doc }` or `{ name, body, format }`; `?format=` on a `GET` adds `body` |
+| `GET` or `POST /api/cms/v1/export` | `format=mdx` also writes the bodies as files of that format |
+
+| Error code | Status | When |
+| --- | --- | --- |
+| `unknown_format` | 400 (public API: `invalid_input`) | no plugin provides the format |
+| `format_not_importable` | 400 | a write with a one-way format |
+| `format_import_failed` | 422 | the format threw or returned something that is not a document (its own message is only logged), or a template's text was rejected (`issues` carry the positions in the text) |
+| `format_export_failed` | 500 (public API: 503 `unavailable`) | the format threw |
+| `body_too_large` | 413 | a text over `limits.textBytes` (2 MiB) or a document over `limits.docBytes` (8 MiB) |
+
+**Upgrading from the `mdx` property.** There are no aliases. Send `{ doc }` or `{ body, format: "mdx" }` instead of `{ mdx }` to the write APIs and `createDraft` / `saveDraft`; read `entry.body.text` (with `format: "mdx"`) instead of `entry.mdx`; the template API and `seed.templates` take `doc` or `{ body, format: "mdx" }`; `limits.mdxBytes` is `limits.textBytes` and the error `mdx_too_large` is `body_too_large`. The text that exports write for an internal link is the target's path, where the `mdx` column still holds `entry:<id>` until MDX leaves core.
 
 ## Body blocks
 
@@ -620,10 +678,12 @@ export const myPlugin = () =>
 		validate: ({ collections }) => {}, // called when the site config is built
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display
 		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
+		formats: () => import("my-plugin/formats"), // a CmsFormat or a list of them ("Formats")
 	});
 ```
 
 - The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
+- `formats` adds formats (notations the document can be written as and read from, "Formats"). It is read on the server when the instance first needs its formats.
 - `validate` receives the collection, locale and block definitions and all plugins (`plugins`). Extensions that use roles check field kinds here.
 - `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
   `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
@@ -780,6 +840,7 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 | `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
 | `admin.path` | Admin UI path (default `/admin`). Must match the app's admin route folder. `/` and anything under `/api` are not allowed. Links inside the UI, login redirects and plugin screen URLs follow it. |
 | `mdx.syntax` | Syntax extensions (experimental, `@monti-cms/core/syntax`) in writing-precedence order, e.g. `[directiveSyntax()]` from `@monti-cms/syntax-directive`. Stored MDX is standard (CommonMark + GFM + MDX JSX) without them ("Body syntax"). |
+| `seed.templates` | Body templates inserted once, when the first migration creates a store: `{ id, name, doc }` (a stored document) or `{ id, name, body, format }` (a text and the format that reads it, "Formats"). |
 | `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
 | `codeBlock.omitLineEffects` / `features` / `themes` / `languages` | Hide line effects and tools in the editor, set the highlighting themes, and add languages ("Turning code block tools off, themes and languages"). |
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |

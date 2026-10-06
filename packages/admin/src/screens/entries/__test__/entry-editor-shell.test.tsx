@@ -1,4 +1,11 @@
-import { bodyDocument, bodyFromMdx, type StoredDocument, withoutBlockIds } from "@monti-cms/core/mdx";
+import {
+	bodyDocument,
+	bodyFromMdx,
+	documentToMdx,
+	emptyStoredDocument,
+	type StoredDocument,
+	withoutBlockIds,
+} from "@monti-cms/core/mdx";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -171,7 +178,11 @@ describe("entry editor shell", () => {
 		serve((_input, init) => {
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
-				return json({ ...entry, version: 5, working: { metadata: body.metadata, mdx: body.mdx } });
+				return json({
+					...entry,
+					version: 5,
+					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+				});
 			}
 		});
 		renderEdit();
@@ -209,7 +220,11 @@ describe("entry editor shell", () => {
 		serve((_input, init) => {
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
-				return json({ ...entry, version: 5, working: { metadata: body.metadata, mdx: body.mdx } });
+				return json({
+					...entry,
+					version: 5,
+					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+				});
 			}
 		});
 		renderEdit();
@@ -238,7 +253,11 @@ describe("entry editor shell", () => {
 		serve((_input, init) => {
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
-				return json({ ...entry, version: 5, working: { metadata: body.metadata, mdx: body.mdx } });
+				return json({
+					...entry,
+					version: 5,
+					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+				});
 			}
 		});
 		renderEdit();
@@ -259,7 +278,7 @@ describe("entry editor shell", () => {
 						id: "created-entry",
 						version: 1,
 						workingSlug: body.slug,
-						working: { metadata: body.metadata, mdx: body.mdx },
+						working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
 					},
 					201,
 				);
@@ -293,7 +312,7 @@ describe("entry editor shell", () => {
 					collection: "memo",
 					version: 1,
 					workingSlug: body.slug,
-					working: { metadata: body.metadata, mdx: body.mdx },
+					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
 				});
 			}
 			if (input === "/api/cms/v1/entries/published-entry/publish" && init?.method === "POST") {
@@ -561,8 +580,8 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(screen.getAllByText("새 태그").length).toBeGreaterThan(0), { timeout: 10_000 });
 		const creations = methodCalls("POST", "/api/cms/v1/entries").map(([, init]) => JSON.parse(String(init?.body)));
 		expect(creations).toMatchObject([
-			{ collection: "category", metadata: { title: "새 카테고리" }, mdx: "" },
-			{ collection: "tag", metadata: { title: "새 태그" }, mdx: "" },
+			{ collection: "category", metadata: { title: "새 카테고리" }, doc: emptyStoredDocument() },
+			{ collection: "tag", metadata: { title: "새 태그" }, doc: emptyStoredDocument() },
 		]);
 	}, 30_000);
 
@@ -599,7 +618,7 @@ describe("entry editor shell", () => {
 					server = {
 						...server,
 						version: server.version + 1,
-						working: { ...server.working, metadata: body.metadata, mdx: body.mdx },
+						working: { ...server.working, metadata: body.metadata, mdx: documentToMdx(body.doc) },
 					};
 					return json(server);
 				}
@@ -688,7 +707,8 @@ describe("entry editor shell", () => {
 			if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(server);
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
-				server = { ...server, version: 5, working: { ...server.working, metadata: body.metadata, mdx: body.mdx } };
+				// Only the title changed, so the body text the server holds is the one it had.
+				server = { ...server, version: 5, working: { ...server.working, metadata: body.metadata } };
 				throw new TypeError("committed, response lost");
 			}
 		});
@@ -838,7 +858,7 @@ describe("entry editor shell", () => {
 });
 
 describe("templates", () => {
-	const templates = { items: [{ id: "t1", name: "회고", mdx: "## 회고" }] };
+	const templates = { items: [{ id: "t1", name: "회고", doc: bodyFromMdx("## 회고").doc }] };
 	const sourceText = () => {
 		fireEvent.click(
 			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: "MDX 원문" }),
@@ -857,7 +877,7 @@ describe("templates", () => {
 		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
 
 		expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull();
-		expect(sourceText()).toBe("## 회고");
+		expect(sourceText()).toBe("## 회고\n");
 	});
 
 	it("asks before replacing existing body text, and replaces only when applied", async () => {
@@ -872,7 +892,50 @@ describe("templates", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: "적용" }));
 
 		await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull());
-		expect(sourceText()).toBe("## 회고");
+		expect(sourceText()).toBe("## 회고\n");
+	});
+
+	it("applies a template as a copy with new block ids, and saves it as a document", async () => {
+		const template = {
+			id: "t1",
+			name: "회고",
+			doc: {
+				type: "doc",
+				version: 3,
+				content: [
+					{ type: "heading", id: "tpl00001", attrs: { level: 2 }, content: [{ type: "text", text: "회고" }] },
+					{ type: "paragraph", id: "tpl00002", content: [{ type: "text", text: "배운 점" }] },
+				],
+			},
+		};
+		const before = JSON.stringify(template.doc);
+		serve(
+			(input, init) => {
+				if (input === "/api/cms/v1/templates") return json({ items: [template] });
+				if (init?.method === "PATCH") return json({ ...entry, version: 5 });
+			},
+			{ ...entry, working: { ...entry.working, mdx: "" } },
+		);
+		renderEdit();
+		await editorTitle();
+		fireEvent.click(screen.getByRole("button", { name: "템플릿" }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
+		fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+
+		const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)) as {
+			doc: { content: { type: string; id?: string }[] };
+		};
+		expect(sent).not.toHaveProperty("mdx");
+		expect(sent.doc.content.map((block) => block.type)).toEqual(["heading", "paragraph"]);
+		for (const block of sent.doc.content) {
+			expect(block.id).toMatch(/^[0-9a-z]{8}$/);
+			// Ids are unique within a body: the template's own are not copied into the entry.
+			expect(["tpl00001", "tpl00002"]).not.toContain(block.id);
+		}
+		expect(new Set(sent.doc.content.map((block) => block.id)).size).toBe(2);
+		// The template itself is untouched.
+		expect(JSON.stringify(template.doc)).toBe(before);
 	});
 
 	it("says so when there are no templates", async () => {

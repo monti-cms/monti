@@ -1,4 +1,5 @@
 import { createEntryBodySchema, LIST_ARRAY_QUERY_KEYS, listEntriesQuerySchema } from "../../../core/api";
+import { emptyStoredDocument } from "../../../mdx/stored-document";
 import type { ServiceInput } from "../../../services/types";
 import { adminRoute, json, parseWith, readJsonBody, readQuery } from "../handler";
 
@@ -33,14 +34,19 @@ export const GET = adminRoute(async ({ request, cms }) => {
 	return json(result);
 });
 
-/** Create. For record collections (tags, categories, series) the service applies the public values together with creation. */
+/** Create. The body is `doc`, or `body` with its `format`. For record collections (tags, categories, series) the service applies the public values together with creation. */
 export const POST = adminRoute(async ({ request, cms }) => {
 	const body = parseWith(createEntryBodySchema, await readJsonBody(request));
 	const input = {
 		collection: body.collection,
 		slug: body.slug ?? null,
 		metadata: body.metadata,
-		...(body.doc !== undefined ? { doc: body.doc } : { mdx: body.mdx ?? "" }),
+		// The body: a document, a text with its format, or none (an empty body).
+		...(body.doc !== undefined
+			? { doc: body.doc }
+			: body.body !== undefined
+				? { body: body.body, format: body.format }
+				: { doc: emptyStoredDocument() }),
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 	} as ServiceInput;
 	const entry = await cms.contentService().createDraft(input);

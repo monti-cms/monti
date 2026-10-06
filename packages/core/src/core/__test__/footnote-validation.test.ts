@@ -7,7 +7,8 @@ const footnoteWarnings = async (mdx: string) => {
 		collection: contentCollection,
 		slug: "footnotes",
 		metadata: { title: "Footnotes" },
-		mdx,
+		format: "mdx",
+		body: mdx,
 	});
 	return {
 		snapshot,

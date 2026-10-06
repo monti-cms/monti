@@ -24,7 +24,8 @@ const input = async (mdx: string): Promise<ServiceInput> =>
 		collection: contentCollection,
 		slug: "post",
 		metadata: await requiredMetadata(contentCollection, "Post", async () => "00000000-0000-4000-8000-000000000009"),
-		mdx,
+		format: "mdx",
+		body: mdx,
 	}) as ServiceInput;
 
 describe("checking links by entry id", () => {
@@ -119,7 +120,12 @@ describe("turning links by address into links by id", () => {
 		const run = (given: ServiceInput) => pipeline.run({ operation: "create", locale: "ko", input: given });
 
 		const fromText = await run(await input(`[a](${pathOf("a")})`));
-		const fromDoc = await run({ ...(await input("")), mdx: undefined, doc: docOf(`[a](${pathOf("a")})`) } as never);
+		const {
+			body: _body,
+			format: _format,
+			...withoutBody
+		} = (await input("")) as ServiceInput & { body?: string; format?: string };
+		const fromDoc = await run({ ...withoutBody, doc: docOf(`[a](${pathOf("a")})`) } as never);
 		const plain = await run(await input("No links."));
 
 		for (const result of [fromText, fromDoc]) {

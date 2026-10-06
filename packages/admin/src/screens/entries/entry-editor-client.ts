@@ -10,8 +10,8 @@ import { t } from "./translate";
 /** A status change of an entry. */
 export type EntryStatusAction = "archive" | "unarchive" | "trash" | "restore";
 
-/** The body of a save: the editor's stored document (with block ids) when it made the MDX, otherwise the MDX. */
-export type EntryBodyPayload = { readonly mdx: string } | { readonly doc: StoredDocument };
+/** The body of a save: always the stored document (with block ids). The admin never sends text. */
+export type EntryBodyPayload = { readonly doc: StoredDocument };
 
 /** What a save sends. `translation` is set only when the entry is a translation. */
 export type EntrySaveInput = {

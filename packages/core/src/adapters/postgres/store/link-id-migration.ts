@@ -239,7 +239,7 @@ export async function migrateLinkEntryIds(
 	let lastTemplate: string | undefined;
 	for (;;) {
 		const res = await client.query<{ id: string; mdx: string; doc: unknown }>(
-			`SELECT id, mdx, doc FROM "${qSchema}".body_templates WHERE ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`,
+			`SELECT id, mdx, doc FROM "${qSchema}".body_templates WHERE mdx IS NOT NULL AND ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`,
 			[lastTemplate ?? null, batchSize],
 		);
 		if (res.rows.length === 0) break;

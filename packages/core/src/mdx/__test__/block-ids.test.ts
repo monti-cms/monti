@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeContentHash } from "../../core/content-hash";
-import { assignBlockIds, BLOCK_ID_PATTERN, forEachBlock, withoutBlockIds } from "../block-ids";
+import { assignBlockIds, BLOCK_ID_PATTERN, forEachBlock, regenerateBlockIds, withoutBlockIds } from "../block-ids";
 import { bodyFromDocument, bodyFromMdx, type StoredDocument } from "../stored-document";
 import type { CmsNode } from "../types";
 
@@ -147,5 +147,22 @@ describe("block ids", () => {
 		const odd = { ...first, content: [{ ...(first.content[0] as CmsNode), id: "NOT-AN-ID" }] };
 		const id = (bodyFromDocument(odd).doc as StoredDocument).content[0]?.id;
 		expect(id).toMatch(BLOCK_ID_PATTERN);
+	});
+
+	it("are all new when a body is copied into another: nothing of the copy's ids is kept", () => {
+		const original = docOf(SAMPLE);
+		const copy = { ...original, content: regenerateBlockIds(original.content) };
+
+		const before = blocks(original);
+		const after = blocks(copy);
+		expect(after.map((block) => block.text)).toEqual(before.map((block) => block.text));
+		expect(after.every((block) => BLOCK_ID_PATTERN.test(block.id))).toBe(true);
+		expect(new Set(after.map((block) => block.id)).size).toBe(after.length);
+		const kept = new Set(before.map((block) => block.id));
+		expect(after.some((block) => kept.has(block.id))).toBe(false);
+		// The content is the same: only ids changed.
+		expect(withoutBlockIds(copy.content)).toEqual(withoutBlockIds(original.content));
+		// The original is not touched.
+		expect(blocks(original)).toEqual(before);
 	});
 });

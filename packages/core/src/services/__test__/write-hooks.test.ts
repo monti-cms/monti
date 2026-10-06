@@ -76,7 +76,8 @@ describe("write hook contract", () => {
 				collection: to,
 				slug: unique(to),
 				metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-				mdx: "Body",
+				format: "mdx",
+				body: "Body",
 			});
 			targets.set(to, draft.id);
 			return draft.id;
@@ -89,7 +90,13 @@ describe("write hook contract", () => {
 	const postInput = async (title: string, mdx = "Body") => {
 		const metadata = await requiredMetadata(contentCollection, title, relationTarget);
 		changes = [];
-		return { collection: contentCollection, slug: unique("post"), metadata, mdx } as unknown as ServiceInput;
+		return {
+			collection: contentCollection,
+			slug: unique("post"),
+			metadata,
+			format: "mdx",
+			body: mdx,
+		} as unknown as ServiceInput;
 	};
 
 	/** Throws a bulk item's failure as the error a single write would throw. */
@@ -116,7 +123,8 @@ describe("write hook contract", () => {
 			collection: entry.collection,
 			slug: entry.workingSlug,
 			metadata,
-			mdx: entry.working.mdx,
+			format: "mdx",
+			body: entry.working.mdx,
 			expectedVersion: entry.version,
 		}) as never;
 
@@ -594,7 +602,8 @@ describe("write hook contract", () => {
 					collection: recordCollection,
 					slug: unique("record"),
 					metadata: await requiredMetadata(recordCollection, unique("record title"), relationTarget),
-					mdx: "",
+					format: "mdx",
+					body: "",
 				});
 				const trashed = await store.trashEntry({ id: record.id, expectedVersion: record.version });
 				changes = [];

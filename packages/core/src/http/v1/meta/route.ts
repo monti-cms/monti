@@ -10,8 +10,8 @@ import {
 	PAGE_SIZES,
 } from "../../../core/api";
 import { COLLECTION_DEFINITIONS, COLLECTIONS } from "../../../core/collections";
+import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import { MAX_SLUG_LENGTH } from "../../../core/slug";
-import { MAX_DOC_BYTES, MAX_MDX_BYTES, MAX_METADATA_BYTES } from "../../../core/snapshot";
 import { adminRoute, json } from "../handler";
 
 /**
@@ -27,6 +27,8 @@ export const GET = adminRoute(async ({ cms }) => {
 		definitions: COLLECTION_DEFINITIONS,
 		schemas: cmsConfig.collections,
 		blocks: BLOCKS,
+		// The formats a body can be read and written in (the `format` option): the built-in ones and those plugins add.
+		formats: (await cms.formats()).info(),
 		features: {
 			folders: true,
 			references: true,
@@ -36,7 +38,7 @@ export const GET = adminRoute(async ({ cms }) => {
 			...plugins,
 		},
 		limits: {
-			mdxBytes: MAX_MDX_BYTES,
+			textBytes: MAX_TEXT_BYTES,
 			docBytes: MAX_DOC_BYTES,
 			metadataBytes: MAX_METADATA_BYTES,
 			slugLength: MAX_SLUG_LENGTH,

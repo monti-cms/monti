@@ -12,7 +12,13 @@ import type {
 } from "../../../core/store/types";
 import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
 import { normalizeReferenceKind, type Reference, readReferenceOccurrences } from "../../../core/types";
-import { documentToMdx, readStoredDocument, type StoredDocument, unparsedDocument } from "../../../mdx/stored-document";
+import {
+	documentToMdx,
+	emptyStoredDocument,
+	readStoredDocument,
+	type StoredDocument,
+	unparsedDocument,
+} from "../../../mdx/stored-document";
 import type { Queryable } from "./context";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
@@ -173,12 +179,11 @@ export const mapMediaRow = (row: MediaRow): MediaAssetRecord => ({
 	readyAt: row.ready_at,
 });
 
-export const TEMPLATE_COLUMNS = "id, name, mdx, doc, version, created_at, updated_at";
+export const TEMPLATE_COLUMNS = "id, name, doc, version, created_at, updated_at";
 
 export interface TemplateRow {
 	id: string;
 	name: string;
-	mdx: string;
 	doc: unknown;
 	version: number;
 	created_at: Date;
@@ -188,8 +193,8 @@ export interface TemplateRow {
 export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 	id: row.id,
 	name: row.name,
-	mdx: row.mdx,
-	doc: readBodyDoc(row.doc, row.mdx),
+	// Migration 0019 gave every template a document; one that still has none (a row written by hand) reads as empty.
+	doc: readDoc(row.doc) ?? emptyStoredDocument(),
 	version: row.version,
 	createdAt: row.created_at,
 	updatedAt: row.updated_at,

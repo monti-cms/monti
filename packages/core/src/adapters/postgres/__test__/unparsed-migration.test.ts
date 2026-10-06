@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
@@ -10,6 +11,7 @@ import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateUnparsedBodies } from "../store/unparsed-migration";
+import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0017_unparsed_bodies";
@@ -46,7 +48,13 @@ describe("0017_unparsed_bodies", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -60,7 +68,8 @@ describe("0017_unparsed_bodies", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 	/** The body as a store from before stored documents held it: the text as it was, no document, a stale hash. */
@@ -148,7 +157,7 @@ describe("0017_unparsed_bodies", () => {
 		const draft = await createDraft("Body");
 		const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		await withoutDocument(published.id, "<Unclosed");
-		const template = await store.createTemplate({ name: unique("template"), mdx: "Template" });
+		const template = await store.createTemplate({ name: unique("template"), doc: docOf("Template") });
 		await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = '<Open', doc = NULL WHERE id = $1`, [
 			template.id,
 		]);
@@ -163,7 +172,7 @@ describe("0017_unparsed_bodies", () => {
 			expect((await row(published.id, state))?.doc).toMatchObject({ content: [{ type: "unparsed" }] });
 		}
 		const kept = await store.getTemplate(template.id);
-		expect(kept.mdx).toBe("<Open");
+		expect(await templateMdx(pool, schemaName, template.id)).toBe("<Open");
 		expect(kept.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: "<Open" } });
 	});
 

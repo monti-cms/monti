@@ -4,7 +4,7 @@ import { contentCollection, requiredMetadata, secondLocale } from "../../../../t
 import { contentOf } from "../../../../test/stored-content";
 import { type Cms, fakeCms } from "../../../cms";
 import type { Collection } from "../../../core/collections";
-import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
+import { MAX_DOC_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import { isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
@@ -65,7 +65,8 @@ describe("entry API with a stored document", () => {
 			collection: to,
 			slug: unique(to),
 			metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-			mdx: "Body",
+			format: "mdx",
+			body: "Body",
 		});
 		const published =
 			draft.status === "published"
@@ -128,8 +129,8 @@ describe("entry API with a stored document", () => {
 		expect(row.doc).toEqual(doc);
 	});
 
-	it("creates an entry from MDX as before, and with no body it is empty", async () => {
-		const fromMdx = await created({ mdx: UNTIDY });
+	it("creates an entry from text with its format, and with no body it is empty", async () => {
+		const fromMdx = await created({ format: "mdx", body: UNTIDY });
 		expect(fromMdx.working.mdx).toBe(TIDY);
 		expect(contentOf(fromMdx.working.doc)).toEqual(contentOf(bodyFromMdx(UNTIDY).doc));
 
@@ -137,8 +138,8 @@ describe("entry API with a stored document", () => {
 		expect(empty.working.mdx).toBe("");
 	});
 
-	it("rejects a create that sends both mdx and doc", async () => {
-		const res = await post({ mdx: TIDY, doc: bodyFromMdx(TIDY).doc });
+	it("rejects a create that sends both a body and doc", async () => {
+		const res = await post({ format: "mdx", body: TIDY, doc: bodyFromMdx(TIDY).doc });
 		expect(res.status).toBe(400);
 		expect((await res.json()).code).toBe("invalid_input");
 	});
@@ -162,7 +163,7 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("saves a document with a patch", async () => {
-		const entry = await created({ mdx: "First\n" });
+		const entry = await created({ format: "mdx", body: "First\n" });
 		const doc = bodyFromMdx(UNTIDY).doc;
 
 		const res = await patch(entry.id, { expectedVersion: entry.version, doc });
@@ -178,7 +179,7 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("keeps the block ids of a document sent with a patch, and gives a block sent without one its own", async () => {
-		const entry = await created({ mdx: "First\n" });
+		const entry = await created({ format: "mdx", body: "First\n" });
 		const parsed = bodyFromMdx(UNTIDY).doc;
 		if (!parsed) throw new Error("fixture");
 		const [heading, paragraph, list] = parsed.content;
@@ -201,9 +202,13 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("keeps the block ids of the draft when a patch sends edited MDX", async () => {
-		const entry = await created({ mdx: UNTIDY });
+		const entry = await created({ format: "mdx", body: UNTIDY });
 
-		const res = await patch(entry.id, { expectedVersion: entry.version, mdx: TIDY.replace("emphasis", "stress") });
+		const res = await patch(entry.id, {
+			expectedVersion: entry.version,
+			format: "mdx",
+			body: TIDY.replace("emphasis", "stress"),
+		});
 
 		expect(res.status).toBe(200);
 		const saved = (await res.json()) as Entry;
@@ -212,7 +217,7 @@ describe("entry API with a stored document", () => {
 		);
 	});
 
-	it("keeps the body when a patch sends neither mdx nor doc", async () => {
+	it("keeps the body when a patch sends neither a body nor doc", async () => {
 		const entry = await created({ doc: bodyFromMdx(UNTIDY).doc });
 
 		const res = await patch(entry.id, { expectedVersion: entry.version, metadata: entry.working.metadata });
@@ -223,10 +228,15 @@ describe("entry API with a stored document", () => {
 		expect(saved.working.mdx).toBe(TIDY);
 	});
 
-	it("rejects a patch that sends both mdx and doc", async () => {
-		const entry = await created({ mdx: "First\n" });
+	it("rejects a patch that sends both a body and doc", async () => {
+		const entry = await created({ format: "mdx", body: "First\n" });
 
-		const res = await patch(entry.id, { expectedVersion: entry.version, mdx: TIDY, doc: bodyFromMdx(TIDY).doc });
+		const res = await patch(entry.id, {
+			expectedVersion: entry.version,
+			format: "mdx",
+			body: TIDY,
+			doc: bodyFromMdx(TIDY).doc,
+		});
 
 		expect(res.status).toBe(400);
 		expect((await res.json()).code).toBe("invalid_input");
@@ -234,7 +244,7 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("rejects a patch with a document that is not a stored document, and changes nothing", async () => {
-		const entry = await created({ mdx: "First\n" });
+		const entry = await created({ format: "mdx", body: "First\n" });
 		const doc = bodyFromMdx(TIDY).doc;
 
 		for (const value of [{ ...(doc as object), version: 999 }, { type: "doc", version: 1 }, "text", null]) {
@@ -255,7 +265,7 @@ describe("entry API with a stored document", () => {
 		};
 		const res = await post({ doc });
 		expect(res.status).toBe(413);
-		expect((await res.json()).code).toBe("mdx_too_large");
+		expect((await res.json()).code).toBe("body_too_large");
 	});
 
 	it("accepts a document larger than the MDX limit", async () => {
@@ -263,7 +273,7 @@ describe("entry API with a stored document", () => {
 		// Few long paragraphs keep the test fast: the JSON overhead per paragraph is what pushes it over the MDX limit.
 		const paragraph = { type: "paragraph", content: [{ type: "text", text: "word ".repeat(72).trim() }] };
 		const doc = { type: "doc", version: 1, content: Array.from({ length: 5_200 }, () => paragraph) };
-		expect(Buffer.byteLength(JSON.stringify(doc))).toBeGreaterThan(MAX_MDX_BYTES);
+		expect(Buffer.byteLength(JSON.stringify(doc))).toBeGreaterThan(MAX_TEXT_BYTES);
 		expect(Buffer.byteLength(JSON.stringify(doc))).toBeLessThan(MAX_DOC_BYTES);
 
 		const res = await post({ doc });
@@ -272,7 +282,7 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("saves the document of a read back unchanged: no new version, nothing written", async () => {
-		const entry = await created({ mdx: UNTIDY });
+		const entry = await created({ format: "mdx", body: UNTIDY });
 		const before = await storedRow(entry.id);
 		const loaded = await read(entry.id);
 		expect(loaded.working.doc).not.toBeNull();
@@ -289,7 +299,7 @@ describe("entry API with a stored document", () => {
 	it.skipIf(!secondLocale)(
 		"returns the source's document with a translation, and keeps the confirmed document it is sent",
 		async () => {
-			const source = await created({ mdx: "First\n\nSecond\n" });
+			const source = await created({ format: "mdx", body: "First\n\nSecond\n" });
 			expect(source.working.doc).not.toBeNull();
 			const created_ = await service.createTranslation({
 				sourceId: source.id,
@@ -302,7 +312,11 @@ describe("entry API with a stored document", () => {
 			expect(loaded.working.translation).toEqual({ version: 4, baseDoc: source.working.doc });
 
 			// The source changes; the next read carries its new document, and its blocks keep their ids.
-			const changed = await patch(source.id, { expectedVersion: source.version, mdx: "Second\n\nFirst\n" });
+			const changed = await patch(source.id, {
+				expectedVersion: source.version,
+				format: "mdx",
+				body: "Second\n\nFirst\n",
+			});
 			expect(changed.status).toBe(200);
 			const reloaded = (await read(created_.id)) as Entry & { source?: { doc: { content: { id: string }[] } } };
 			const [first, second] = (source.working.doc as unknown as { content: { id: string }[] }).content;
@@ -328,13 +342,16 @@ describe("entry API with a stored document", () => {
 	);
 
 	it("lists templates with their documents", async () => {
-		const template = await store.createTemplate({ name: unique("doc template"), mdx: UNTIDY });
+		const template = await store.createTemplate({
+			name: unique("doc template"),
+			doc: bodyFromMdx(UNTIDY).doc ?? undefined,
+		});
 
 		const res = await getTemplates(new Request("http://localhost/api/cms/v1/templates"), { cms });
 
 		const { items } = await res.json();
 		const listed = items.find((item: { id: string }) => item.id === template.id);
-		expect(listed.mdx).toBe(TIDY);
+		expect(listed.mdx).toBeUndefined();
 		expect(contentOf(listed.doc)).toEqual(contentOf(bodyFromMdx(UNTIDY).doc));
 	});
 });

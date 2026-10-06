@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
 import { contentPath } from "../../../core/links";
@@ -13,6 +14,7 @@ import { createWritePipeline } from "../../../services/write-pipeline";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateLinkEntryIds } from "../store/link-id-migration";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
+import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0018_link_entry_ids";
@@ -50,7 +52,13 @@ describe("0018_link_entry_ids", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -64,7 +72,8 @@ describe("0018_link_entry_ids", () => {
 			collection: contentCollection,
 			slug,
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 	const hrefTo = (slug: string) => {
@@ -178,7 +187,8 @@ describe("0018_link_entry_ids", () => {
 			collection: contentCollection,
 			slug: renamedSlug,
 			metadata: (await store.getEntry(target.id)).working.metadata as never,
-			mdx: "Target",
+			format: "mdx",
+			body: "Target",
 			expectedVersion: publishedTarget.version,
 		});
 		await publishDraft(store, { id: target.id, expectedVersion: renamed.version });
@@ -200,13 +210,15 @@ describe("0018_link_entry_ids", () => {
 		const target = await create(unique("target"), "Target");
 		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
 		const href = hrefTo(publishedTarget.workingSlug as string);
-		const template = await store.createTemplate({ name: unique("template"), mdx: `[x](${href})` });
+		const template = await store.createTemplate({ name: unique("template"), doc: docOf(`[x](${href})`) });
+		// The migration reads the text column of a template of a store that is not migrated yet, so it is set as the store of that time wrote it.
+		await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1 WHERE id = $2`, [`[x](${href})`, template.id]);
 
 		await migrate();
 
 		const stored = await store.getTemplate(template.id);
 		expect(entryLinkIds(stored.doc.content)).toEqual([target.id]);
-		expect(stored.mdx).toContain(`entry:${target.id}`);
+		expect(await templateMdx(pool, schemaName, template.id)).toContain(`entry:${target.id}`);
 	});
 
 	it("keeps the body references of relation fields and rebuilds the ones of links", async () => {

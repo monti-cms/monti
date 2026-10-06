@@ -67,7 +67,14 @@ const toServiceInput = (working: WorkingCopy, metadata: { [key: string]: unknown
  * change is a save. Results and errors are per item.
  */
 export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, options: ContentServiceOptions = {}) => {
-	const pipeline = options.pipeline ?? createWritePipeline({ hooks: options.hooks, links: linkResolverOf(storePort) });
+	const pipeline =
+		options.pipeline ??
+		createWritePipeline({
+			hooks: options.hooks,
+			formats: options.formats,
+			media: options.media,
+			links: linkResolverOf(storePort),
+		});
 	const content = createContentService(storePort, { pipeline });
 	return {
 		run: async (request: BulkRequest): Promise<{ results: BulkItemResult[] }> => {

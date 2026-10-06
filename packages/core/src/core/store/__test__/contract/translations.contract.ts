@@ -120,7 +120,8 @@ export const translationsContract: ContractSuite = (factory) => {
 						collection: contentCollection,
 						slug: "common-source",
 						metadata: { title: "English", [commonKey as string]: source.working.metadata[commonKey as string] },
-						mdx: "Body",
+						format: "mdx",
+						body: "Body",
 						expectedVersion: translation.version,
 					} as never),
 				).rejects.toMatchObject({ code: "invalid_input" });
@@ -133,7 +134,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "merge-source",
 					metadata: translatedMetadata("English title", "English summary") as never,
-					mdx: "English body",
+					format: "mdx",
+					body: "English body",
 					expectedVersion: translation.version,
 				});
 
@@ -196,7 +198,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: source.working.metadata as never,
-					mdx: "한국어 본문",
+					format: "mdx",
+					body: "한국어 본문",
 				};
 				await expect(
 					service.saveDraft(source.id, {
@@ -212,7 +215,8 @@ export const translationsContract: ContractSuite = (factory) => {
 						collection: contentCollection,
 						slug: "state-source",
 						metadata: { title: "T" },
-						mdx: "",
+						format: "mdx",
+						body: "",
 						translation: { version: 1, units: [] } as never,
 						expectedVersion: translation.version,
 					}),
@@ -222,7 +226,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: { title: "Only the title" },
-					mdx: "",
+					format: "mdx",
+					body: "",
 					expectedVersion: translation.version,
 				});
 				expect(saved.working.translation).toEqual(translation.working.translation);
@@ -232,7 +237,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: { title: "Only the title" },
-					mdx: "",
+					format: "mdx",
+					body: "",
 					translation: { version: 4, baseDoc: docOf("바뀐 기준") },
 					expectedVersion: saved.version,
 				});
@@ -298,7 +304,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "group-list-source",
 					metadata: { title: "Grouped English title" },
-					mdx: "Body",
+					format: "mdx",
+					body: "Body",
 					expectedVersion: translation.version,
 				} as never);
 				// A trashed translation counts neither toward the group row nor toward the "existing languages".
@@ -388,7 +395,8 @@ export const translationsContract: ContractSuite = (factory) => {
 								...(thirdLocale ? { [thirdLocale]: { [field]: "" } } : {}),
 							},
 						},
-						mdx: "",
+						format: "mdx",
+						body: "",
 					} as never);
 					expect(record.working.metadata.translations).toEqual({ [second]: { [field]: "Essay" } });
 					await expect(
@@ -396,7 +404,8 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: localizedRecord,
 							slug: "bad-locale",
 							metadata: { ...metadata, translations: { [defaultLocale]: { [field]: "x" } } },
-							mdx: "",
+							format: "mdx",
+							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_value" });
 					await expect(
@@ -404,7 +413,8 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: localizedRecord,
 							slug: "bad-field",
 							metadata: { ...metadata, translations: { [second]: { [commonField]: "x" } } },
-							mdx: "",
+							format: "mdx",
+							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_key" });
 					await expect(
@@ -412,7 +422,8 @@ export const translationsContract: ContractSuite = (factory) => {
 							collection: contentCollection,
 							slug: "post-translations",
 							metadata: { title: "x", translations: { [second]: { title: "x" } } },
-							mdx: "",
+							format: "mdx",
+							body: "",
 						} as never),
 					).rejects.toMatchObject({ code: "invalid_metadata_key" });
 				},

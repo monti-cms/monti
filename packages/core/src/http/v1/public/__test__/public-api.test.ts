@@ -139,6 +139,30 @@ describe("Public JSON API", () => {
 		expect((await get(`v1/public/entries/${contentCollection}/missing`)).status).toBe(404);
 	});
 
+	it("single with ?format= also carries the body as text in that format, as { format, text }", async () => {
+		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
+
+		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=mdx`);
+
+		expect(one.status).toBe(200);
+		expect(one.body.entry.body).toEqual({ format: "mdx", text: "Body public-2\n" });
+		// The document is there as without a format, and a list never carries a body.
+		expect(JSON.stringify(one.body.entry.doc)).toContain("Body public-2");
+		const list = await get("v1/public/entries?format=mdx");
+		expect(list.status).toBe(200);
+		for (const item of list.body.items) expect(item).not.toHaveProperty("body");
+	});
+
+	it("an unknown format is a 400 invalid_input, and nothing about the format plugin leaks", async () => {
+		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
+
+		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=hugo`);
+
+		expect(one.status).toBe(400);
+		expect(one.body).toEqual({ code: "invalid_input", message: "Unknown format" });
+		expect(one.cache).toBe("no-store");
+	});
+
 	it("hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
 		publicApi = {
 			collections: [contentCollection],

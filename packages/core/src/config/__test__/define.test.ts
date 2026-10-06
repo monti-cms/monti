@@ -211,8 +211,21 @@ describe("defineConfig", () => {
 		).toThrow(/site.url/);
 	});
 
+	it("checks that a seed template has a document, or a text with its format", () => {
+		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
+		const id = "00000000-0000-4000-8000-000000000001";
+		const doc = { type: "doc", version: 3, content: [] } as const;
+		expect(() => defineConfig({ ...base, seed: { templates: [{ id, name: "Note", doc }] } })).not.toThrow();
+		const neither = { id, name: "Note" } as never;
+		expect(() => defineConfig({ ...base, seed: { templates: [neither] } })).toThrow(/doc.*body.*format/);
+		const textWithoutFormat = { id, name: "Note", body: "x" } as never;
+		expect(() => defineConfig({ ...base, seed: { templates: [textWithoutFormat] } })).toThrow(/doc.*body.*format/);
+		const both = { id, name: "Note", doc, body: "x", format: "mdx" } as never;
+		expect(() => defineConfig({ ...base, seed: { templates: [both] } })).toThrow(/doc.*body.*format/);
+	});
+
 	it("checks seed template ids", () => {
-		const template = { id: "00000000-0000-4000-8000-000000000001", name: "Note", mdx: "" };
+		const template = { id: "00000000-0000-4000-8000-000000000001", name: "Note", format: "mdx", body: "" };
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineConfig({ ...base, seed: { templates: [template] } })).not.toThrow();
 		expect(() => defineConfig({ ...base, seed: { templates: [{ ...template, id: "1" }] } })).toThrow(/UUID/);

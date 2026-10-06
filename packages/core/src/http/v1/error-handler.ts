@@ -39,8 +39,14 @@ const SERVICE_ERROR_STATUS: Record<string, number> = {
 	invalid_input: 400,
 	unknown_collection: 400,
 	slug_reserved: 409,
-	mdx_too_large: 413,
+	body_too_large: 413,
 	metadata_too_large: 413,
+	// The `format` option names a format no plugin provides, or one that can only write text.
+	unknown_format: 400,
+	format_not_importable: 400,
+	// The format could not read the text, or a plugin's format threw.
+	format_import_failed: 422,
+	format_export_failed: 500,
 	// A hook of the server config or a plugin threw: a server-side failure, not a problem with the request.
 	hook_failed: 500,
 };

@@ -32,7 +32,8 @@ const draft = async (extra: Record<string, unknown> = {}) =>
 		collection: contentCollection,
 		slug: "a",
 		metadata: { ...(await requiredMetadata(contentCollection, "T", relationTarget)), ...extra },
-		mdx: "Body",
+		format: "mdx",
+		body: "Body",
 	}) as unknown as ServiceInput;
 
 /** Prepares an input for an entry that already holds exactly these keys: a save of stored metadata. */
@@ -70,7 +71,8 @@ describe("values of removed fields", () => {
 			collection: recordCollection,
 			slug: "a",
 			metadata: { title: "T", [ORPHAN]: "left" },
-			mdx: "",
+			format: "mdx",
+			body: "",
 		} as unknown as ServiceInput);
 		expect(snapshot.metadata[ORPHAN]).toBe("left");
 	});

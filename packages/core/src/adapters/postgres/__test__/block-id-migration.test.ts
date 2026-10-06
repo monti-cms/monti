@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import { contentOf } from "../../../../test/stored-content";
+import { contentOf, docOf as docFromMdx } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
@@ -50,7 +50,13 @@ describe("0014_block_ids", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -64,7 +70,8 @@ describe("0014_block_ids", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 	const edit = (entry: Entry, mdx: string) =>
@@ -72,7 +79,8 @@ describe("0014_block_ids", () => {
 			collection: contentCollection,
 			slug: entry.workingSlug,
 			metadata: entry.working.metadata as never,
-			mdx,
+			format: "mdx",
+			body: mdx,
 			expectedVersion: entry.version,
 		});
 
@@ -166,6 +174,7 @@ describe("0014_block_ids", () => {
 
 	const run = async () => {
 		await rewind();
+		// Only this step runs again. It reads the document of a template, never its text, so the templates the tests create (they have none) stay.
 		await migrateContentStore(pool, { schema: schemaName });
 	};
 
@@ -393,7 +402,7 @@ describe("0014_block_ids", () => {
 		const draft = await createDraft(NESTED);
 		await stripIds(entry.id);
 		await stripIds(draft.id);
-		const template = await store.createTemplate({ name: unique("again"), mdx: NESTED });
+		const template = await store.createTemplate({ name: unique("again"), doc: docFromMdx(NESTED) });
 		await stripTemplateIds(template);
 		await run();
 		const once = { bodies: await allRows(), templates: await store.listTemplates() };
@@ -424,7 +433,7 @@ describe("0014_block_ids", () => {
 
 	describe("body templates", () => {
 		it("gives a template its ids, leaving its text, version and date alone", async () => {
-			const template = await store.createTemplate({ name: unique("template"), mdx: NESTED });
+			const template = await store.createTemplate({ name: unique("template"), doc: docFromMdx(NESTED) });
 			await stripTemplateIds(template);
 
 			await run();
@@ -433,14 +442,13 @@ describe("0014_block_ids", () => {
 			expect(after.doc).not.toBeNull();
 			expectIds(after.doc as StoredDocument);
 			expect(contentOf(after.doc)).toEqual(contentOf(template.doc));
-			expect(after.mdx).toBe(template.mdx);
 			expect(after.version).toBe(template.version);
 			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
 		});
 
 		it("keeps the ids a template has, and leaves one without a document as it is", async () => {
-			const template = await store.createTemplate({ name: unique("template"), mdx: NESTED });
-			const broken = await store.createTemplate({ name: unique("broken"), mdx: "Words\n\n<Unclosed" });
+			const template = await store.createTemplate({ name: unique("template"), doc: docFromMdx(NESTED) });
+			const broken = await store.createTemplate({ name: unique("broken"), doc: docFromMdx("Words\n\n<Unclosed") });
 			await pool.query(`UPDATE "${schemaName}".body_templates SET doc = NULL WHERE id = $1`, [broken.id]);
 
 			await run();
@@ -463,7 +471,9 @@ describe("0014_block_ids", () => {
 			for (let index = 0; index < 3; index += 1) drafts.push(await createDraft(`Solo ${index}\n`));
 			const templates = [];
 			for (let index = 0; index < 5; index += 1) {
-				templates.push(await store.createTemplate({ name: unique("batch"), mdx: `Heading ${index}\n=====\n` }));
+				templates.push(
+					await store.createTemplate({ name: unique("batch"), doc: docFromMdx(`Heading ${index}\n=====\n`) }),
+				);
 			}
 
 			for (const batchSize of [1, 2, 1000]) {

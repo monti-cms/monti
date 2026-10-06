@@ -1,3 +1,4 @@
+import { documentToMdx } from "@monti-cms/core/mdx";
 import { vi } from "vitest";
 import { CmsApiError } from "../../admin-api";
 import type { CmsIssue } from "../../api-error-message";
@@ -41,7 +42,7 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				collection: input.collection,
 				version: 1,
 				workingSlug: input.slug,
-				working: { metadata: input.metadata, mdx: "mdx" in input ? input.mdx : "" },
+				working: { metadata: input.metadata, mdx: documentToMdx(input.doc), doc: input.doc },
 			};
 			return structuredClone(server.current);
 		}),
@@ -51,7 +52,7 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				...server.current,
 				version: server.current.version + 1,
 				workingSlug: input.slug,
-				working: { metadata: input.metadata, mdx: "mdx" in input ? input.mdx : server.current.working.mdx },
+				working: { metadata: input.metadata, mdx: documentToMdx(input.doc), doc: input.doc },
 			};
 			return structuredClone(server.current);
 		}),

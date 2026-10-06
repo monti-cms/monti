@@ -6,7 +6,7 @@ export interface ContentRewriteOptions extends AppOptions {
 }
 
 /**
- * `monti content:rewrite`: re-serializes every stored body (working, published, templates) with the site's configured syntax, so the stored text is one notation.
+ * `monti content:rewrite`: re-serializes every stored body (working and published) with the site's configured syntax, so the stored text is one notation.
  * A dry run unless `apply` is set. Returns `true` on success (bodies that are skipped are reported, not failures).
  */
 export async function contentRewrite(options: ContentRewriteOptions): Promise<boolean> {

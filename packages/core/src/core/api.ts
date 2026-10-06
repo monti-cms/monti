@@ -106,36 +106,47 @@ export type ListEntriesQuery = z.infer<typeof listEntriesQuerySchema>;
 
 const expectedVersionSchema = z.number().int().positive();
 
-/** A body is given as MDX or as a stored document (`doc`, validated by the service), never both. */
-const bodyIsMdxOrDoc = (body: { mdx?: string; doc?: unknown }) => body.mdx === undefined || body.doc === undefined;
-const BODY_IS_MDX_OR_DOC = { message: "Send either mdx or doc, not both", path: ["doc"] };
+/** The name of a format (the `format` option). Whether one is installed is decided when it is used. */
+export const formatNameSchema = z.string().regex(/^[a-z][a-z0-9-]*$/);
 
-/** With neither `mdx` nor `doc`, the new entry has an empty body. */
+/**
+ * A body is given as a stored document (`doc`, validated by the service) or as text (`body`) with the `format` that reads it; never both, and a text
+ * always names its format.
+ */
+const bodyIsDocOrText = (body: { body?: string; format?: string; doc?: unknown }) =>
+	body.doc === undefined
+		? (body.body === undefined) === (body.format === undefined)
+		: body.body === undefined && body.format === undefined;
+const BODY_IS_DOC_OR_TEXT = { message: "Send either doc, or body together with its format", path: ["doc"] };
+
+/** With neither `doc` nor `body`, the new entry has an empty body. */
 export const createEntryBodySchema = z
 	.object({
 		collection: collectionSchema,
 		slug: z.string().nullable().optional().default(null),
 		metadata: z.record(z.string(), z.unknown()).default({}),
-		mdx: z.string().optional(),
 		doc: z.unknown().optional(),
+		body: z.string().optional(),
+		format: formatNameSchema.optional(),
 		folderId: z.uuid().nullable().optional(),
 	})
-	.refine(bodyIsMdxOrDoc, BODY_IS_MDX_OR_DOC);
+	.refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
 export type CreateEntryBody = z.infer<typeof createEntryBodySchema>;
 
-/** With neither `mdx` nor `doc`, the body of the current draft is kept. */
+/** With neither `doc` nor `body`, the body of the current draft is kept. */
 export const patchEntryBodySchema = z
 	.object({
 		expectedVersion: expectedVersionSchema,
 		slug: z.string().nullable().optional(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
-		mdx: z.string().optional(),
 		doc: z.unknown().optional(),
+		body: z.string().optional(),
+		format: formatNameSchema.optional(),
 		folderId: z.uuid().nullable().optional(),
 		/** Translation state of a translation. The service validates the shape. If omitted, the stored value is kept. */
 		translation: z.unknown().optional(),
 	})
-	.refine(bodyIsMdxOrDoc, BODY_IS_MDX_OR_DOC);
+	.refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
 export type PatchEntryBody = z.infer<typeof patchEntryBodySchema>;
 
 /** State transitions that take only a version (archive, unarchive, trash, restore). */
@@ -213,20 +224,31 @@ export type PreferencesBody = z.infer<typeof preferencesBodySchema>;
 
 export const exportScopeSchema = z.object({
 	scope: z.enum(["admin", "public"]).default("admin"),
+	/** Also write every body as a text file in this format (`working.<ext>`, `published.<ext>`). Without it the archive holds the documents only. */
+	format: formatNameSchema.optional(),
 });
 export type ExportScopeInput = z.infer<typeof exportScopeSchema>;
 
-export const createTemplateBodySchema = z.object({
-	name: z.string().trim().min(1).max(100),
-	mdx: z.string().default(""),
-});
+/** A template body is a document (`doc`) or a text with its format, as an entry body is. With neither, the template is empty. */
+export const createTemplateBodySchema = z
+	.object({
+		name: z.string().trim().min(1).max(100),
+		doc: z.unknown().optional(),
+		body: z.string().optional(),
+		format: formatNameSchema.optional(),
+	})
+	.refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
 export type CreateTemplateBody = z.infer<typeof createTemplateBodySchema>;
 
-export const patchTemplateBodySchema = z.object({
-	expectedVersion: expectedVersionSchema,
-	name: z.string().trim().min(1).max(100).optional(),
-	mdx: z.string().optional(),
-});
+export const patchTemplateBodySchema = z
+	.object({
+		expectedVersion: expectedVersionSchema,
+		name: z.string().trim().min(1).max(100).optional(),
+		doc: z.unknown().optional(),
+		body: z.string().optional(),
+		format: formatNameSchema.optional(),
+	})
+	.refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
 export type PatchTemplateBody = z.infer<typeof patchTemplateBodySchema>;
 
 const folderNameSchema = z.string().trim().min(1).max(100);

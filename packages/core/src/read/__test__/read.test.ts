@@ -105,10 +105,10 @@ describe("public site reading (cms.read)", () => {
 		expect(page1.total).toBeGreaterThanOrEqual(2);
 		expect(page1.items).toHaveLength(1);
 		expect(page1.items[0]?.id).toBe(second.id);
-		expect(page1.items[0]?.mdx).toBe("");
-		const page2 = await listEntries({ collection: contentCollection, pageSize: 1, page: 2, body: true });
+		expect(page1.items[0]?.body).toBeUndefined();
+		const page2 = await listEntries({ collection: contentCollection, pageSize: 1, page: 2, body: true, format: "mdx" });
 		expect(page2.items[0]?.id).toBe(first.id);
-		expect(page2.items[0]?.mdx).toBe("Body read-list-1\n");
+		expect(page2.items[0]?.body).toEqual({ format: "mdx", text: "Body read-list-1\n" });
 		const all = await listEntries({ collection: contentCollection, pageSize: 100 });
 		expect(all.items.map((item) => item.slug)).not.toContain("read-list-draft");
 
@@ -168,13 +168,13 @@ describe("public site reading (cms.read)", () => {
 			"read-detail",
 			relation && target ? { [relation.name]: relation.many ? [target] : target } : {},
 		);
-		const found = await getEntry({ collection: contentCollection, slug: "read-detail" });
+		const found = await getEntry({ collection: contentCollection, slug: "read-detail", format: "mdx" });
 		expect(found.status).toBe("found");
 		if (found.status !== "found") return;
 		expect(found.entry).toMatchObject({
 			id: published.id,
 			title: "Title read-detail",
-			mdx: "Body read-detail\n",
+			body: { format: "mdx", text: "Body read-detail\n" },
 			fallback: false,
 			path: localizePath(defaultLocale, contentPath(contentCollection, "read-detail") ?? ""),
 		});
@@ -232,9 +232,11 @@ describe("public site reading (cms.read)", () => {
 			contentHash: "hash-edited",
 		});
 		state.admin = true;
-		expect((await getPreview({ collection: contentCollection, slug: "read-preview" }))?.mdx).toBe("Edited draft\n");
-		const published2 = await getEntry({ collection: contentCollection, slug: "read-preview" });
-		expect(published2.status === "found" && published2.entry.mdx).toBe("Body read-preview\n");
+		expect((await getPreview({ collection: contentCollection, slug: "read-preview", format: "mdx" }))?.body?.text).toBe(
+			"Edited draft\n",
+		);
+		const published2 = await getEntry({ collection: contentCollection, slug: "read-preview", format: "mdx" });
+		expect(published2.status === "found" && published2.entry.body?.text).toBe("Body read-preview\n");
 		state.admin = false;
 		expect(await getPreview({ collection: contentCollection, slug: "read-preview" })).toBeNull();
 		state.admin = true;

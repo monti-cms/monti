@@ -7,6 +7,7 @@
  * - Translations (`getTranslations`): the published locales of the same entry and their URLs (hreflang).
  * - Preview (`getPreview`): admins only, the latest draft.
  * - The body is the stored document (`doc`) and what it points to, resolved (`refs`: media URLs and the addresses of internal links). `<CmsContent entry={entry} />` renders both.
+ *   With the `format` option the body is also written as text in that format (`body`), with internal links as the real path of the target.
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
@@ -16,6 +17,10 @@ import { type Collection, isCollection, isItemCollection } from "../core/collect
 import { contentPath } from "../core/links";
 import { DEFAULT_LOCALE, isLocale, localizePath } from "../core/locales";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
+import { ServiceError } from "../core/types";
+import { type ExportRefs, exportText } from "../format/convert";
+import type { FormatRegistry } from "../format/registry";
+import type { FormatLink, FormatMedia } from "../format/types";
 import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../mdx/document-refs";
 import {
 	createPublicImageResolver,
@@ -78,13 +83,19 @@ export interface ReadEntry<C extends Collection = Collection> {
 	 */
 	readonly refs: ReadRefs;
 	/**
-	 * Body MDX. In lists it is filled only when `body: true`.
-	 * @deprecated Render `doc` instead (`<CmsContent entry={entry} />`): it needs no MDX compile and no `imageResolver`. The MDX text moves to an
-	 * optional format of the `@monti-cms/mdx` package.
+	 * The body written as text, when the read asked for a `format`: the document through that format, with internal links as the real path of the target
+	 * (an unpublished target is not a link) and registered images by their public URL, so the text works outside this CMS. Absent without `format`, and for
+	 * a list without `body: true`.
 	 */
-	readonly mdx: string;
+	readonly body?: ReadBody;
 	/** The source text is shown because there is no translation for the requested locale. */
 	readonly fallback: boolean;
+}
+
+/** A body written as text in a format. */
+export interface ReadBody {
+	readonly format: string;
+	readonly text: string;
 }
 
 export type ReadEntryResult<C extends Collection = Collection> =
@@ -219,12 +230,46 @@ async function resolveRefs(
 	);
 }
 
+/** The refs of a read as the lookups a format uses: links by the address they resolved to, media by public URL. */
+const exportRefsOf = (refs: ReadRefs): ExportRefs => ({
+	links: Object.fromEntries(
+		Object.entries(refs.links).map(([id, link]) => [
+			id,
+			{ url: link.path, title: link.title, locale: link.locale } satisfies FormatLink,
+		]),
+	),
+	media: Object.fromEntries(
+		Object.entries(refs.media).flatMap(([id, media]) =>
+			"url" in media
+				? [
+						[
+							id,
+							{
+								url: media.url,
+								...(media.width === undefined ? {} : { width: media.width }),
+								...(media.height === undefined ? {} : { height: media.height }),
+								filename: media.file?.filename ?? "",
+								mimeType: media.file?.mimeType ?? null,
+								byteSize: media.file?.byteSize ?? null,
+							} satisfies FormatMedia,
+						],
+					]
+				: [],
+		),
+	),
+});
+
 async function toReadEntries<C extends Collection>(
 	deps: ReadDeps,
 	records: readonly PublishedEntryRecord[],
 	locale: string,
 	fallback = false,
+	format?: string,
 ): Promise<ReadEntry<C>[]> {
+	const formats = format === undefined ? undefined : await deps.formats();
+	if (formats && format !== undefined && !formats.get(format)) {
+		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: format, params: { format } }]);
+	}
 	// Relation targets and link targets are the same kind of thing (a published entry by translation group id), so they are looked up together.
 	const pick = await publishedPicker(
 		deps.store(),
@@ -233,6 +278,18 @@ async function toReadEntries<C extends Collection>(
 	);
 	const relations = resolveRelations(records, locale, pick);
 	const refs = await resolveRefs(deps, records, locale, pick);
+	const bodies = new Map<string, ReadBody>();
+	if (formats && format !== undefined) {
+		for (const record of records) {
+			if (!record.doc) continue;
+			const { text } = await exportText(formats, format, record.doc, {
+				locale: record.locale,
+				purpose: "read",
+				refs: exportRefsOf(refs.get(record.id) ?? EMPTY_REFS),
+			});
+			bodies.set(record.id, { format, text });
+		}
+	}
 	return records.map((record) => ({
 		id: record.id,
 		collection: record.collection as C,
@@ -250,7 +307,7 @@ async function toReadEntries<C extends Collection>(
 		updatedAt: record.updatedAt,
 		doc: record.doc,
 		refs: refs.get(record.id) ?? EMPTY_REFS,
-		mdx: record.mdx,
+		...(bodies.has(record.id) ? { body: bodies.get(record.id) } : {}),
 		fallback,
 	}));
 }
@@ -268,6 +325,8 @@ const storageLocale = (collection: Collection, locale: string | undefined) =>
 export interface ReadDeps {
 	readonly store: () => ContentStore;
 	readonly mediaStore: () => MediaStore;
+	/** The formats of the instance (`cms.formats()`), for the `format` option. */
+	readonly formats: () => Promise<FormatRegistry>;
 	/** Throws if the current request is not from an admin (the check `getPreview` uses). */
 	readonly verifyAdmin: () => Promise<AuthContext>;
 }
@@ -286,6 +345,8 @@ export interface CmsRead {
 		readonly slug: string;
 		readonly locale?: string;
 		readonly fallback?: boolean;
+		/** Also return the body as text in this format (`entry.body`). An unknown format throws a `ServiceError` coded `unknown_format`. */
+		readonly format?: string;
 	}): Promise<ReadEntryResult<C>>;
 	/** One page of a list. Relation filters (`where`), sorting and pagination are done in the DB. The body is read only when `body: true`. */
 	listEntries<C extends Collection>(params: {
@@ -298,6 +359,8 @@ export interface CmsRead {
 		readonly page?: number;
 		readonly pageSize?: number;
 		readonly body?: boolean;
+		/** With `body: true`, also return each body as text in this format (`entry.body`). */
+		readonly format?: string;
 	}): Promise<{ items: ReadEntry<C>[]; total: number; page: number; pageSize: number }>;
 	/** The published locales of the same entry (source first) and their URLs. Used for hreflang and the locale switcher. */
 	getTranslations(params: {
@@ -311,6 +374,8 @@ export interface CmsRead {
 		readonly collection: C;
 		readonly slug: string;
 		readonly locale?: string;
+		/** Also return the draft as text in this format (`entry.body`). */
+		readonly format?: string;
 	}): Promise<ReadEntry<C> | null>;
 	/**
 	 * Resolver that turns the body's registered media (`Image`, `File`) into public URLs, for `renderMdx`'s `imageResolver`.
@@ -328,6 +393,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 			readonly slug: string;
 			readonly locale?: string;
 			readonly fallback?: boolean;
+			readonly format?: string;
 		}): Promise<ReadEntryResult<C>> {
 			const collection = assertCollection(params.collection);
 			const locale = storageLocale(collection, params.locale);
@@ -341,7 +407,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 				fellBack = lookup.status !== "not_found";
 			}
 			if (lookup.status === "not_found") return { status: "not_found" };
-			const [entry] = await toReadEntries<C>(deps, [lookup.entry], params.locale ?? locale, fellBack);
+			const [entry] = await toReadEntries<C>(deps, [lookup.entry], params.locale ?? locale, fellBack, params.format);
 			if (!entry) return { status: "not_found" };
 			if (lookup.status === "alias") return { status: "redirect", slug: entry.slug, path: entry.path, entry };
 			return { status: "found", entry };
@@ -356,6 +422,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 			readonly page?: number;
 			readonly pageSize?: number;
 			readonly body?: boolean;
+			readonly format?: string;
 		}): Promise<{ items: ReadEntry<C>[]; total: number; page: number; pageSize: number }> {
 			const collection = assertCollection(params.collection);
 			const locale = storageLocale(collection, params.locale);
@@ -372,7 +439,10 @@ export function createRead(deps: ReadDeps): CmsRead {
 				pageSize: params.pageSize,
 				includeBody: params.body === true,
 			});
-			return { ...result, items: await toReadEntries<C>(deps, result.items, params.locale ?? locale) };
+			return {
+				...result,
+				items: await toReadEntries<C>(deps, result.items, params.locale ?? locale, false, params.format),
+			};
 		},
 
 		async getTranslations(params) {
@@ -388,6 +458,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 			readonly collection: C;
 			readonly slug: string;
 			readonly locale?: string;
+			readonly format?: string;
 		}): Promise<ReadEntry<C> | null> {
 			try {
 				await deps.verifyAdmin();
@@ -416,12 +487,86 @@ export function createRead(deps: ReadDeps): CmsRead {
 				publishedAt: draft.publishedAt ?? null,
 				updatedAt: draft.updatedAt,
 			};
-			const [entry] = await toReadEntries<C>(deps, [record], locale);
+			const [entry] = await toReadEntries<C>(deps, [record], locale, false, params.format);
 			return entry ?? null;
 		},
 
 		imageResolver: (source) => createPublicImageResolver(deps, source),
 		mediaUrl: (mediaId) => resolvePublicMediaUrl(deps, mediaId),
+	};
+}
+
+/**
+ * Resolves what documents point to, for writing them as text outside a page read: `published` resolves links the way a reader sees them (the published
+ * version of the target in the document's language, else the source's; an unpublished target is not a link). `working` is for a draft or a backup: the target
+ * is whichever entry the id names, at its current address (its draft address when it is not published yet), unless it is trashed or has no public path.
+ * Media is the ready file either way. Lookups are remembered, so exporting many documents asks for each target once.
+ */
+export function createExportRefs(
+	deps: PublicMediaDeps,
+	scope: "published" | "working",
+): (doc: StoredDocument, locale: string) => Promise<ExportRefs> {
+	const links = new Map<string, FormatLink | null>();
+	const media = new Map<string, FormatMedia | null>();
+	const store = () => deps.store();
+
+	const workingLink = async (id: string, locale: string): Promise<FormatLink | null> => {
+		try {
+			const entry = await store().getEntry(id);
+			if (entry.status === "trashed") return null;
+			const group = await store().getTranslationGroup({ entryId: id });
+			const member =
+				group.members.find((item) => item.locale === locale) ?? group.members.find((item) => item.isSource);
+			if (!member?.workingSlug) return null;
+			const path = pathOf(entry.collection, member.workingSlug, member.locale);
+			return path ? { url: path, title: member.title, locale: member.locale } : null;
+		} catch {
+			return null;
+		}
+	};
+
+	return async (doc, locale) => {
+		const ids = collectRefs(doc);
+		const missingLinks = ids.links.filter((id) => !links.has(`${locale}:${id}`));
+		if (scope === "published") {
+			const pick = await publishedPicker(store(), missingLinks, locale);
+			for (const id of missingLinks) {
+				const chosen = pick(id);
+				const path = chosen && pathOf(chosen.collection, chosen.slug, chosen.locale);
+				links.set(
+					`${locale}:${id}`,
+					chosen && path ? { url: path, title: titleOf(chosen, locale), locale: chosen.locale } : null,
+				);
+			}
+		} else {
+			for (const id of missingLinks) links.set(`${locale}:${id}`, await workingLink(id, locale));
+		}
+		const missingMedia = ids.media.filter((id) => !media.has(id));
+		if (missingMedia.length > 0) {
+			const resolved = await resolvePublicMedia(deps, missingMedia);
+			for (const id of missingMedia) {
+				const result = resolved.get(id);
+				media.set(
+					id,
+					result && "url" in result
+						? {
+								url: result.url,
+								...(result.width === undefined ? {} : { width: result.width }),
+								...(result.height === undefined ? {} : { height: result.height }),
+								filename: result.file?.filename ?? "",
+								mimeType: result.file?.mimeType ?? null,
+								byteSize: result.file?.byteSize ?? null,
+							}
+						: null,
+				);
+			}
+		}
+		const found = <T>(entries: [string, T | null][]) =>
+			new Map(entries.filter((entry): entry is [string, T] => entry[1] !== null));
+		return {
+			links: found(ids.links.map((id): [string, FormatLink | null] => [id, links.get(`${locale}:${id}`) ?? null])),
+			media: found(ids.media.map((id): [string, FormatMedia | null] => [id, media.get(id) ?? null])),
+		};
 	};
 }
 

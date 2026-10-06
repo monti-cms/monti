@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fakeCms } from "../../../cms";
-import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
+import { MAX_DOC_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import { GET as getMeta } from "../meta/route";
 
 const readFeatures = async (cms = fakeCms()) => {
@@ -32,7 +32,7 @@ describe("GET /v1/meta limits", () => {
 	it("reports the document limit next to the MDX limit", async () => {
 		const res = await getMeta(new Request("http://localhost/api/cms/v1/meta"), { cms: fakeCms() });
 		const { limits } = await res.json();
-		expect(limits.mdxBytes).toBe(MAX_MDX_BYTES);
+		expect(limits.textBytes).toBe(MAX_TEXT_BYTES);
 		expect(limits.docBytes).toBe(MAX_DOC_BYTES);
 	});
 });

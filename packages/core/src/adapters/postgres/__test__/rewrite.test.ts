@@ -53,7 +53,13 @@ describe("content rewrite", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -67,7 +73,8 @@ describe("content rewrite", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 	const publishedWith = async (mdx: string) => {
@@ -185,22 +192,6 @@ describe("content rewrite", () => {
 
 			expect(again.changed).toBe(0);
 			expect(await stored(draft.id, "working")).toEqual(once);
-		});
-
-		it("rewrites body templates and leaves their version and date alone", async () => {
-			const template = await store.createTemplate({ name: unique("untidy"), mdx: UNTIDY });
-			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
-				UNTIDY,
-				template.id,
-			]);
-
-			await rewriteContent(pool, { schema: schemaName, apply: true });
-
-			const after = await store.getTemplate(template.id);
-			expect(after.mdx).toBe(TIDY);
-			expect(contentOf(after.doc)).toEqual(contentOf(bodyFromMdx(TIDY).doc));
-			expect(after.version).toBe(template.version);
-			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
 		});
 
 		it("skips a body that does not parse, reports it, and still rewrites the others", async () => {

@@ -15,6 +15,7 @@ import {
 	slugFieldOf,
 	slugFromValues,
 } from "@monti-cms/core/client";
+import { emptyStoredDocument } from "@monti-cms/core/mdx";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";
@@ -147,7 +148,12 @@ export function RecordPanel({
 						})
 					: await cmsFetch<EntryData>(cmsApiUrl("/v1/entries"), {
 							method: "POST",
-							json: { collection, slug: form.slug.trim() || null, metadata: built.metadata, mdx: "" },
+							json: {
+								collection,
+								slug: form.slug.trim() || null,
+								metadata: built.metadata,
+								doc: emptyStoredDocument(),
+							},
 							fallback: t("record.saveFailed"),
 						});
 			// The panel stays open. Switch to the received item so the next save is based on the new revision.

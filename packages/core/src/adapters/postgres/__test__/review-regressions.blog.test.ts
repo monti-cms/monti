@@ -19,7 +19,13 @@ describe("review regressions (blog blocks)", () => {
 			],
 		];
 		for (const [mdx, code] of cases) {
-			const snapshot = await prepareSnapshot({ collection: "memo", slug: "m", metadata: { title: "m" }, mdx });
+			const snapshot = await prepareSnapshot({
+				collection: "memo",
+				slug: "m",
+				metadata: { title: "m" },
+				format: "mdx",
+				body: mdx,
+			});
 			const result = validateForPublish(snapshot, { targets: [], media: [] });
 			expect(result.ready, mdx).toBe(false);
 			expect(

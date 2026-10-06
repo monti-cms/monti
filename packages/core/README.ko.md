@@ -146,7 +146,7 @@ pnpm exec monti content:rewrite           # 예행: 바뀔 것을 알려 주고 
 pnpm exec monti content:rewrite --apply   # 바뀐 내용을 쓴다
 ```
 
-저장된 모든 본문(항목의 작업본·발행본, 본문 템플릿)을 저장된 문서에서 사이트에 설정된 문법으로 다시 써("저장된 본문" 절 참고), 저장 글이 한 표기가 되게 한다.
+저장된 모든 본문(항목의 작업본·발행본. 템플릿은 글이 없는 문서라 다시 쓸 것이 없다)을 저장된 문서에서 사이트에 설정된 문법으로 다시 써("저장된 본문" 절 참고), 저장 글이 한 표기가 되게 한다.
 `directiveSyntax()`를 켜거나 끈 뒤, 또는 직렬화기를 올린 뒤에 글을 저장할 때마다 한 편씩 맞춰지길 기다리지 않고 한 번에 맞춘다. `monti migrate` 다음에 돌린다.
 `migrate`와 같은 `--env-file`·`--no-env-file`·`--config`·`--server` 옵션을 받는다(스크립트에서는 `cms.rewrite({ apply })`).
 
@@ -286,7 +286,7 @@ export const cms = createCms({
 | 관리자 API 라우트(`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` (`cms.handle(request)`의 Next 어댑터) |
 | Next가 아닌 호스트의 관리자 API(실험적) | `cms.handle(request)`: 표준 `Request`를 받아 `Response`를 돌려준다 |
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
-| 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)` |
+| 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)`(`format: "mdx"`를 넘기면 본문을 그 형식의 글로도 받는다. `entry.body`, "형식" 절) |
 | 공개 미디어와 링크 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL과 내부 링크의 주소. `<CmsContent entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)`(`cms.read.imageResolver(mdx)`는 `renderMdx`용) |
 | 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
 | 스크립트·명령줄 | `cms.migrate()`·`cms.rewrite({ apply })`·`cms.close()` |
@@ -345,6 +345,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
 | `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
+| `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
 | `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `SyntaxExtension` 인터페이스와 확장이 쓰는 도우미("본문 문법"). 지시자 표기는 `@monti-cms/syntax-directive`다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기)·`monti content:rewrite`(저장된 본문 다시 직렬화) |
@@ -416,7 +417,7 @@ export default defineConfig({
 **블록 ID.** 문서의 모든 블록은 본문 안에서 유일한 `id`(소문자 영숫자 8자)를 가진다. 블록 ID는 버전이 달라져도 어느 블록이 어느 블록인지 알려 주는 값이며, MDX에는 쓰이지 않고 콘텐츠 해시에도 들어가지 않으므로 변경으로 취급되지 않는다.
 MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑같이 읽히는 블록은 ID를 그대로 가지고, 수정한 블록, 둘로 나눈 블록, 옮긴 블록도 마찬가지다(나눈 문단은 앞부분이 ID를 가진다). 짝이 없는 블록은 새 ID를 받고, API로 보낸 문서는 담고 있는 ID를 그대로 유지한다.
 `monti migrate`는 `0014_block_ids` 단계를 실행해 기존 문서에 ID를 달아 준다(발행본은 작업본과 공통인 블록의 ID를 함께 쓴다). 바뀌는 것은 `doc`뿐이며 MDX, 해시, `version`, `updated_at`은 그대로다.
-관리자 편집기는 편집하는 동안 블록마다 ID를 유지하고, 저장할 때 MDX 대신 문서를 보내므로 블록 ID가 정확히 유지된다. 편집기가 쓰지 않은 글(소스 모드, 템플릿)은 MDX로 저장되고 위와 같이 짝지어진다.
+관리자 편집기는 편집하는 동안 블록마다 ID를 유지하고, 저장할 때 늘 문서를 보내므로 블록 ID가 정확히 유지된다. 편집기가 쓰지 않은 글(소스 모드)은 그 글이 읽히는 문서로, ID 없이 저장되고 위와 같이 짝지어진다. 템플릿을 항목에 적용하면 템플릿 문서를 새 블록 ID로 복사한다(ID는 본문 하나 안에서만 유일하고, 번역·비교 화면이 ID로 블록을 짝짓기 때문이다).
 관리자는 이 ID로 블록을 가리킨다. 발행 검증 문제와 참조 위치는 해당 블록을 알려 주고(`position.blockId`) 시각 편집기에서 그 블록으로 이동한다. 번역 화면은 번역할 때 확인한 원문과 지금 원문을 블록 단위로 비교하며, 자리만 옮긴 블록은 이동으로 보여 준다. AI 번역은 번역할 블록을 ID로 찾는다.
 
 **업그레이드.** `monti migrate`를 돌리기 전에 `mdx.syntax`를 사이트가 쓰려는 대로 맞춰 둔다. `monti migrate`는 `0013_stored_documents` 단계를 실행한다. `doc` 열을 더하고, 기존 본문마다 문서를 만들어 주고, **MDX를 사이트의 표기로 다시 쓴다**(많은 본문의 저장 글이 한꺼번에 바뀐다. `version`과 `updated_at`은 그대로다).
@@ -427,16 +428,19 @@ MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑
 이런 본문 때문에 실패하는 일은 없다. 발행본과 템플릿도 마찬가지인데, 기존 저장소의 데이터는 언제나 옮겨져야 하기 때문이다. 그중 발행본과 템플릿은 id로 로그에 남는다(`[monti] N published bodies have no document …`). 편집기에서 고치기 전까지는 `unparsed`로 읽힌다(페이지는 아무것도 그리지 않는다).
 **참조 위치.** 저장된 참조의 본문 위치는 전에 `{ "type": "mdx", "line", "column", "blockId"? }`였다. 읽을 때는 두 모양을 모두 받고, 그 항목을 다음에 저장하면 새 모양(`{ "type": "body", "blockId" }`)으로 쓴다. SQL 마이그레이션은 없다.
 
-- **관리자 항목 API.** `POST /api/cms/v1/entries`와 `PATCH /api/cms/v1/entries/:id`는 `mdx` 대신 `doc`(항목의 `working.doc`·`published.doc`로 읽은 문서 JSON)을 받는다. 둘을 함께 보내거나 올바른 저장 문서가 아닌 값을 보내면 `400 invalid_input`이다. 둘 다 없으면 새 항목은 빈 본문이고, 패치는 지금 본문을 그대로 둔다.
-  읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.mdxBytes` 옆에 `limits.docBytes`로 알려 준다. 템플릿 API는 계속 `mdx`만 받고, 템플릿마다 `doc`을 돌려준다.
-- **관리자 내보내기**(`GET /api/cms/v1/export`)는 형식 버전 3이다(공개 내보내기의 `published.json`도 `doc`을 담는다). 모든 본문에 `working.mdx`·`published.mdx` 옆으로 `working.doc.json`·`published.doc.json`이 있고, `templates.json` 항목에 `doc`이 있으며, 다이제스트가 문서를 포함한다.
-- **공개 읽기 API와 공개 내보내기**도 문서를 돌려준다. `cms.read.getEntry` / `listEntries` / `getPreview`는 `entry.doc`(저장된 문서. 목록에서는 `body: true`일 때만, 아니면 `null`)과 `entry.refs`
+- **관리자 항목 API.** `POST /api/cms/v1/entries`와 `PATCH /api/cms/v1/entries/:id`는 본문을 `doc`(항목의 `working.doc`·`published.doc`로 읽은 문서 JSON) 또는 `body`(글)와 그것을 읽는 `format`으로 받는다("형식" 절). `mdx`는 없다. 문서와 글을 함께 보내거나, 형식 없이 글만 보내거나, 올바른 저장 문서가 아닌 값을 보내면 `400 invalid_input`이다. 아무것도 없으면 새 항목은 빈 본문이고, 패치는 지금 본문을 그대로 둔다.
+  읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/entries/:id?format=<이름>`은 `working`과 `published`(번역이면 원문도)에 `body`(문자열)를 더한다. 그 형식으로 쓴 글이며, 다시 가져올 수 있게 쓴다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.textBytes`(어떤 형식이든 글)와 `limits.docBytes`로, 인스턴스의 형식을 `formats`(`{ name, label, mimeType, extension, canImport }`)로 알려 준다. 관리자 편집기는 늘 `doc`을 보낸다.
+- **템플릿 API와 템플릿.** 본문 템플릿은 항목 본문처럼 문서다. `body_templates.doc`이 유일한 원본이고 `body_templates.mdx`는 이제 아무도 쓰지 않는다(열은 남고 선택 사항이다). `POST /api/cms/v1/templates`와 `PATCH /api/cms/v1/templates/:id`는 `{ name, doc }` 또는 `{ name, body, format }`을 받고(둘 다 없으면 빈 템플릿이고, 패치는 본문을 그대로 둔다) `doc`을 돌려주며 `mdx`는 주지 않는다. `GET`의 `?format=<이름>`은 템플릿마다 `body`를 더한다. 형식이 거절한 글은 형식의 발견 사항과 함께 `422 format_import_failed`다. 템플릿에는 항목 초안과 달리 문서가 아닌 글을 담아 둘 자리가 없기 때문이다.
+  관리자 템플릿 관리 화면과 편집기의 템플릿 메뉴는 문서로 일한다. 템플릿을 적용하면 그 문서를 새 블록 ID로 항목에 복사한다. 시드 템플릿(사이트 설정의 `seed.templates`)은 `{ id, name, doc }` 또는 `{ id, name, body, format }`이다. 글은 새 저장소를 처음 채우는 마이그레이션이 그 형식으로 읽고, 설치된 어떤 플러그인도 읽지 못하는 시드는 그 형식을 알리는 메시지와 함께 마이그레이션을 멈춘다(`mdx`라면 `@monti-cms/mdx`를 설치한다). 이미 데이터가 있는 저장소는 이 때문에 멈추지 않는다.
+  `monti migrate`는 `0019_templates_documents`를 실행한다. 읽을 수 있는 문서가 없는 템플릿은 그 글의 `unparsed` 문서를 받고, `body_templates.mdx`는 더 이상 필수가 아니다. `version`, `updated_at`, 열에 이미 있는 글은 그대로다. 템플릿 때문에 실패하는 일은 없고, 문서가 없던 것은 id로 로그에 남는다. 다시 돌려도 바뀌는 것이 없다. `monti content:rewrite`는 이제 템플릿을 건드리지 않는다(글이 없다).
+- **관리자 내보내기**(`GET` 또는 `POST /api/cms/v1/export`)는 형식 버전 4다. 보관 파일은 문서를 담는다. 본문마다 `working.doc.json`·`published.doc.json`, `doc`이 있는 `templates.json` 항목, `doc`이 있는 공개 내보내기의 `published.json`이며, 다이제스트가 이를 포함한다. MDX는 따로 없다. `format=<이름>`(쿼리, 또는 `POST` 본문의 `format`)을 주면 본문마다 `working.<확장자>`·`published.<확장자>`로, 템플릿은 `body`로 그 형식의 글도 쓰고 `manifest.format`이 그 형식을 알려 준다. 관리자 보관 파일의 글은 다시 가져올 수 있게 쓴다(풀 수 없는 항목 링크는 id를 유지한다). 공개 보관 파일의 글은 읽는 사람을 위한 것이다(공개된 항목만 담고, 공개되지 않은 대상은 링크가 아니다). 모르는 형식은 `400 unknown_format`이다.
+- **공개 읽기 API와 공개 내보내기**는 문서를 돌려준다. `cms.read.getEntry` / `listEntries` / `getPreview`는 `entry.doc`(저장된 문서. 목록에서는 `body: true`일 때만, 아니면 `null`)과 `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: 그 문서의 이미지, 파일, 내부 링크를 그리는 데 필요한 값. 문서가 쓰는 것만 들어 있고, `collectRefs(doc)`가 id 목록을 준다)를 담는다.
   문서의 링크는 `{ entryId }`(내부) 또는 `{ href, title? }`(외부)다. `entryId`는 번역 그룹 id(원문 항목의 id. 관계 필드가 담는 id와 같다)라서, `refs.links`는 읽는 사람의 언어로 된 주소와 제목을 주고 번역이 없으면 원문 것을 준다.
   가리키는 글이 공개되지 않았으면 `refs.links`에 없고 링크는 일반 글자로 그려진다. 주소(slug)를 바꿔도 저장된 문서는 그대로다. 링크는 관계 필드처럼 참조다. 항목의 참조에 블록 단위로 기록되고, 없는 항목(또는 아무도 쓰지 않는 주소)을 가리키는 링크는 발행을 막는다(`unresolved_internal_link`). 공개되지 않았거나 휴지통에 있는 항목을 가리키는 링크는 경고만 한다(`unpublished_internal_link`). 가리키는 글이 공개될 때까지 페이지는 그 링크를 일반 글자로 그리므로, 서로 링크한 글은 어떤 순서로 발행해도 된다.
-  글 주소로 쓴 링크(`[x](/posts/slug)`. MDX든 문서든)는 그 주소를 가진 항목이 있으면 쓸 때 id 링크로 바뀐다. 주소를 가진 항목이 없으면 쓴 그대로 남고 발행을 막는다. MDX는 id 링크를 `[x](entry:<id>)`로 쓴다. 기존 데이터베이스의 저장된 문서는 마이그레이션 `0018_link_entry_ids`가 옮긴다(문서 버전 3).
-  `entry.mdx`는 당분간 남아 있다. `GET /api/cms/v1/public/entries/:collection/:slug`는 `doc`과 `refs`를 돌려주고 MDX 텍스트는 주지 않는다(나중에 선택 형식으로 돌아온다). 목록에는 없다.
-  공개 내보내기는 각 `published.json`에 `mdx` 옆으로 `doc`을 담고, 다이제스트도 이를 포함한다. 문서가 될 수 없는 초안은 `unparsed` 문서로 미리보기가 된다.
+  글 주소로 쓴 링크(`[x](/posts/slug)`. 어떤 형식이든 문서든)는 그 주소를 가진 항목이 있으면 쓸 때 id 링크로 바뀐다. 주소를 가진 항목이 없으면 쓴 그대로 남고 발행을 막는다. 기존 데이터베이스의 저장된 문서는 마이그레이션 `0018_link_entry_ids`가 옮긴다(문서 버전 3).
+  `entry.mdx`는 없다. `format: "mdx"`를 넘기고 `entry.body`(`{ format, text }`, "형식" 절)를 읽는다. `GET /api/cms/v1/public/entries/:collection/:slug`는 `doc`과 `refs`를 돌려주고, `?format=<이름>`이면 `body: { format, text }`도 준다(모르는 형식은 `400 invalid_input`). 목록에는 없다.
+  문서가 될 수 없는 초안은 `unparsed` 문서로 미리보기가 된다.
 
 ### 문법 확장 만들기(실험적)
 
@@ -460,6 +464,60 @@ interface SyntaxExtension {
 자식을 쓰는 `serializeBlocks`·`serializeInlines`, `componentName`, `hasSpread`, 표준 표기가 쓰는 속성 목록을 만드는 `nodeAttributes`·`markAttributes`, `escapeAttribute`를 더한다.
 줄바꿈은 언제나 `<br />`라서 확장에 넘기지 않는다. `image` 노드는 Markdown으로 쓸 수 없을 때만 넘긴다. 지시자 확장(`packages/syntax-directive`)이 참고 구현이며 `@monti-cms/core/syntax`에서만 가져온다.
 이 진입점은 Monti 코드 주석이 쓰는 코드 주석 문법 도우미(`resolveCommentSyntax`·`formatAnnotationComment`)도 내보내므로, 코드 주석을 읽거나 쓰는 확장(`packages/syntax-shiki`)이 쓴다.
+
+## 형식
+
+저장된 문서가 본문의 유일한 원본이다. **형식**은 문서를 써 낼 수 있는 표기이고, 형식이 가능하면 그 표기에서 문서를 읽어 올 수도 있다. MDX, Hugo 머리말이 붙은 Markdown, 일반 글 같은 것이다. 형식은 플러그인이고, 읽기·쓰기 API의 `format` 옵션으로 쓴다. 플러그인은 변환하고 코어는 검사하고 저장한다. 누구나 형식을 만들 수 있다. `mdx` 형식은 지금은 기본으로 들어 있다(코어가 늘 가졌던 MDX 코드를 이 자리 뒤에 둔 것이다). 나중에 `@monti-cms/mdx` 패키지로 옮겨 간다.
+
+```ts
+import { defineFormat } from "@monti-cms/core/format";
+
+export default defineFormat({
+	name: "hugo", // `format` 옵션의 값. 소문자·숫자·하이픈
+	label: "Hugo Markdown",
+	mimeType: "text/markdown",
+	extension: "md",
+	// 문서 → 글. 순수하다: 데이터베이스도 네트워크도 사이트 설정도 쓰지 않는다.
+	export(doc, ctx) {
+		return "…";
+	},
+	// 글 → 문서. 쓰기만 되는 형식이면 빼 둔다.
+	import(text, ctx) {
+		return { ok: true, doc, warnings: [] }; // 또는 { ok: false, issues: [{ code, position: { line, column } }] }
+	},
+});
+```
+
+플러그인은 `server`·`render`처럼 느리게 불러오는 함수로 형식을 준다. `definePlugin({ name: "hugo", formats: () => import("./formats") })`이고, 기본 내보내기는 형식 하나 또는 그 목록이다. 같은 이름이 두 번 나오면(기본 제공 형식 포함) 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/cms/v1/meta`가 이를 `formats`로 알려 준다.
+
+**형식이 받는 것.** 두 방향 모두 `ctx.locale`, `ctx.blocks`(사이트의 본문 블록), `ctx.codeLineEffects`를 받는다. `export`는 `ctx.purpose`(`"read"`: 읽는 쪽이 글을 쓰므로 데이터베이스 밖에서도 통하는 주소가 필요하다. `"sync"`: 다시 가져올 글이므로 양방향 형식은 돌려받는 데 필요한 것을 유지한다), `ctx.link(entryId)`(링크가 가리키는 항목의 지금 주소 `{ url, title, locale }`, 없으면 `null`), `ctx.media(mediaId)`(`{ url, width?, height?, filename, mimeType, byteSize }` 또는 `null`), 문서가 말하는 대로 쓰지 못한 것을 알리는 `ctx.report(issue)`도 받는다. 코어가 `export`를 부르기 전에 문서의 모든 링크와 미디어를 풀어 두므로, 이 조회는 모두 동기식이다.
+`import`는 글이 말하는 문서를 돌려준다. 블록 ID나 문서 버전은 신경 쓰지 않는다. 코어가 모든 블록에 ID를 달고(글이 바꾸는 본문과 짝지어서, 바뀌지 않은 블록은 ID를 유지한다) 문서를 정해진 모양으로 맞춘다. 경고는 `blockIndex`로 돌려준 문서의 블록을 가리킬 수 있고, 코어가 그것을 블록 ID로 바꾼다.
+
+**코어가 모든 형식에 해 주는 것.**
+- *내보내기:* 내부 링크는 **가리키는 항목의 실제 경로**(`ctx.link(entryId)`. MDX라면 `[x](/en/posts/slug)`)로 쓰고 `entry:<id>`로는 쓰지 않는다. 그래서 파일이 Astro·Hugo·git 동기화에서 통하고, 대상의 slug가 바뀌면 경로가 따라간다(문서는 바뀌지 않는다). 대상이 없거나 공개되지 않은 링크는 읽는 사람을 위한 글(`read`)에서는 빠지고(글자는 남는다), 다시 가져올 글(`sync`)에서는 id를 유지한다(MDX는 `entry:<id>`). 등록된 이미지는 `read`에서는 공개 URL이고 `sync`에서는 `mediaId`를 유지한다.
+- *가져오기:* 이 사이트 콘텐츠의 주소로 쓴 링크(`/posts/slug`. 언어 접두사가 있어도 없어도)는 그 주소를 가진 항목이 있으면 항목 id 링크가 되고, `src`가 등록된 미디어 파일의 공개 URL인 이미지는 그 파일(`mediaId`)이 된다. 아무도 갖지 않은 것은 쓴 그대로 남는다(아무도 쓰지 않는 주소는 발행할 때 `unresolved_internal_link`로 알려 준다). 형식이 내보낸 글을 가져오면 같은 id로 돌아온다.
+- *검사와 저장*은 코어의 일이다. 형식이 돌려준 문서는 바로 보낸 문서처럼 검사하고 저장한다(`prepareSnapshot`, 쓰기 훅, 내용 해시, 참조). 그래서 형식은 코어 규칙을 넘어갈 수 없다. 형식이 거절한 글(`ok: false`)도 사라지지 않는다. 초안은 그 글을 `unparsed` 문서(`{ "type": "unparsed", "attrs": { "format", "source" } }`)로 두고 형식이 발견한 것을 문제로 알려 주며, 고칠 때까지 발행은 막힌다("저장된 본문" 절).
+
+**`format` 옵션.**
+
+| 어디 | 어떻게 |
+| --- | --- |
+| `cms.read.getEntry`·`listEntries`(`body: true`일 때)·`getPreview` | `format: "mdx"`가 `entry.body = { format, text }`를 더한다. 링크는 읽는 사람이 보는 경로(공개되지 않은 대상은 링크가 아니다)이고 이미지는 공개 URL이다. 모르는 형식은 `unknown_format` 코드의 `ServiceError`를 던진다 |
+| `GET /api/cms/v1/public/entries/:collection/:slug` | `?format=mdx`가 `body: { format, text }`를 더한다 |
+| `POST /api/cms/v1/entries`·`PATCH /api/cms/v1/entries/:id`·`cms.contentService()`(만들기·저장·일괄) | 본문은 `{ doc }` 또는 `{ body, format }`이고 둘을 함께 보낼 수 없다 |
+| `GET /api/cms/v1/entries/:id` | `?format=mdx`가 `working.body`와 `published.body`(문자열)를 더한다 |
+| `/api/cms/v1/templates` | `{ name, doc }` 또는 `{ name, body, format }`. `GET`의 `?format=`은 `body`를 더한다 |
+| `GET` 또는 `POST /api/cms/v1/export` | `format=mdx`는 본문을 그 형식의 파일로도 쓴다 |
+
+| 오류 코드 | 상태 | 언제 |
+| --- | --- | --- |
+| `unknown_format` | 400(공개 API: `invalid_input`) | 그 형식을 주는 플러그인이 없다 |
+| `format_not_importable` | 400 | 쓰기만 되는 형식으로 쓰려 했다 |
+| `format_import_failed` | 422 | 형식이 예외를 던졌거나 문서가 아닌 것을 돌려줬다(그 메시지는 로그에만 남는다). 또는 템플릿의 글이 거절됐다(`issues`가 글 안의 위치를 담는다) |
+| `format_export_failed` | 500(공개 API: 503 `unavailable`) | 형식이 예외를 던졌다 |
+| `body_too_large` | 413 | `limits.textBytes`(2 MiB)를 넘는 글, 또는 `limits.docBytes`(8 MiB)를 넘는 문서 |
+
+**`mdx` 속성에서 올리기.** 별칭은 없다. 쓰기 API와 `createDraft` / `saveDraft`에는 `{ mdx }` 대신 `{ doc }` 또는 `{ body, format: "mdx" }`를 보낸다. `entry.mdx` 대신 (`format: "mdx"`를 넘기고) `entry.body.text`를 읽는다. 템플릿 API와 `seed.templates`는 `doc` 또는 `{ body, format: "mdx" }`를 받는다. `limits.mdxBytes`는 `limits.textBytes`가 되었고 오류 `mdx_too_large`는 `body_too_large`가 되었다. 내보내는 글이 내부 링크에 쓰는 것은 대상의 경로이고, `mdx` 열은 MDX가 코어를 떠날 때까지 `entry:<id>`를 그대로 담는다.
 
 ## 본문 블록
 
@@ -621,10 +679,12 @@ export const myPlugin = () =>
 		validate: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API 경로·표 만들기·메타 표시
 		admin: () => import("my-plugin/admin"), // CmsAdminPlugin(@monti-cms/admin): 화면·공급자
+		formats: () => import("my-plugin/formats"), // CmsFormat 하나 또는 그 목록("형식" 절)
 	});
 ```
 
 - 서버 쪽(`server`)은 브라우저 묶음에 들어가지 않게 패키지 `exports`의 `browser` 조건으로 빈 진입점을 준다.
+- `formats`는 형식(문서를 써 내고 읽어 올 수 있는 표기, "형식" 절)을 더한다. 인스턴스가 형식이 처음 필요할 때 서버에서 읽는다.
 - `validate`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받는다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
 - `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
   `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
@@ -781,6 +841,7 @@ export const cms = createCms({ server });
 | `site.previewLocaleParam` | 미리보기 주소에 언어를 넘기는 쿼리 이름(기본 `locale`, 기본 언어가 아닐 때만 `?locale=en`). `false`면 `localePrefix` 규칙대로 경로에 넣는다(`/preview/en/posts/a`). |
 | `admin.path` | 관리자 화면 경로(기본 `/admin`). 앱의 관리자 라우트 폴더와 같아야 한다. `/`나 `/api` 아래는 안 된다. 화면 안 링크·로그인 이동·플러그인 화면 주소가 따른다. |
 | `mdx.syntax` | 문법 확장(실험적, `@monti-cms/core/syntax`)을 쓰기 우선순위 순으로 나열한다. 예: `@monti-cms/syntax-directive`의 `[directiveSyntax()]`. 없으면 저장하는 MDX는 표준(CommonMark + GFM + MDX JSX)이다("본문 문법"). |
+| `seed.templates` | 첫 마이그레이션이 저장소를 만들 때 한 번 넣는 본문 템플릿. `{ id, name, doc }`(저장된 문서) 또는 `{ id, name, body, format }`(글과 그것을 읽는 형식, "형식" 절). |
 | `codeBlock.lineEffects` | 코드 블록 줄 효과 더하기·바꾸기("코드 블록 줄 효과"). |
 | `codeBlock.omitLineEffects` / `features` / `themes` / `languages` | 편집기의 줄 효과·도구 감추기, 강조 테마, 언어 더하기("코드 블록 도구 끄기·테마·언어"). |
 | `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |

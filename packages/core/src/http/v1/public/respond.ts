@@ -1,4 +1,5 @@
 import { CmsError } from "../../../core/store";
+import { ServiceError } from "../../../core/types";
 
 /** Public responses are not cached (errors too: if a CDN stores a 404, it stays 404 even right after publishing). */
 const NO_STORE = { "Cache-Control": "no-store" } as const;
@@ -13,6 +14,10 @@ export function publicApiError(error: unknown): Response {
 	if (error instanceof CmsError) {
 		if (error.code === "not_found") return publicError("not_found", "Not found");
 		if (error.code === "invalid_input") return publicError("invalid_input", error.message);
+	}
+	// The `format` option names a format the site does not have: a request problem, not an outage.
+	if (error instanceof ServiceError && (error.code === "unknown_format" || error.code === "format_not_importable")) {
+		return publicError("invalid_input", "Unknown format");
 	}
 	console.error("[cms] public API error:", error);
 	return Response.json(

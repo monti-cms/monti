@@ -1,7 +1,10 @@
 import { isDeepStrictEqual } from "node:util";
 import { isCollection } from "../core/collections";
-import { internalLinkAddresses, type LinkResolver, linkAddressKey, withEntryLinks } from "../core/link-ids";
-import { inputBody, prepareSnapshot } from "../core/snapshot";
+import { type ImportNormalizers, type MediaUrlResolver, normalizeImportedDoc } from "../core/import-normalize";
+import { type LinkResolver, linkAddressKey } from "../core/link-ids";
+import { documentInputBody, prepareSnapshot, readInputBody } from "../core/snapshot";
+import { BUILT_IN_FORMATS } from "../format/built-in";
+import type { FormatRegistry } from "../format/registry";
 import { readStoredDocument } from "../mdx/stored-document";
 import type { HookProvider, HookSource, ValidationResult, WriteData, WriteHookContext, WriteOperation } from "./hooks";
 import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, type StorePort } from "./types";
@@ -14,7 +17,9 @@ import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, typ
  * `validatePublish` hooks. The store commit and `afterCommit` come after, in the caller and the store.
  */
 
-type PrepareOptions = NonNullable<Parameters<typeof prepareSnapshot>[1]>;
+type PrepareOptions = Omit<NonNullable<Parameters<typeof prepareSnapshot>[1]>, "import" | "imported">;
+
+const defaultFormats = async (): Promise<FormatRegistry> => BUILT_IN_FORMATS;
 
 export interface WriteRequest {
 	readonly operation: WriteOperation;
@@ -44,8 +49,12 @@ export interface WriteResult {
 
 export interface WritePipelineOptions {
 	readonly hooks?: HookProvider;
+	/** The formats a body given as text can be in. Without it, only the built-in ones. */
+	readonly formats?: () => Promise<FormatRegistry>;
 	/** Looks up the entries internal links point to. Without it, links keep the address they were written with. */
 	readonly links?: LinkResolver;
+	/** Looks up the registered media files image URLs point to. Without it, images keep the URL they were written with. */
+	readonly media?: MediaUrlResolver;
 }
 
 const NO_HOOKS: HookProvider = () => [];
@@ -112,21 +121,53 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 	const provider = options.hooks ?? NO_HOOKS;
 
 	/**
-	 * Runs the transforms in order, each on the previous one's result. The original input is kept when nothing changed (an MDX body stays
-	 * MDX), and only what a hook changed is replaced. Input that core preparation will reject is left alone for it to reject.
+	 * Reads the body of the input into a document, once: a text is read by its format, a document is checked. The input that goes on has the document
+	 * in place of the text, so transforms, normalisation and preparation all see a document. What reading the text found (a text the format could not read,
+	 * warnings about what was not kept) goes to preparation as it is. Input that preparation will reject is left alone for it to reject.
+	 */
+	const readBody = async (
+		request: WriteRequest,
+	): Promise<{ input: ServiceInput; imported: { issues: Issue[]; warnings: Issue[] } | undefined }> => {
+		const { input } = request;
+		if (!isRecord(input) || !isRecord(input.metadata) || !isCollection(input.collection))
+			return { input, imported: undefined };
+		if (input.doc === undefined && typeof input.body !== "string") return { input, imported: undefined };
+		const formats = await (options.formats ?? defaultFormats)();
+		const body = await readInputBody(input, request.prepare?.previousDoc, {
+			formats,
+			locale: request.locale,
+			entryId: request.entryId,
+		});
+		const {
+			body: _body,
+			format: _format,
+			doc: _doc,
+			...rest
+		} = input as ServiceInput & { body?: string; format?: string };
+		return {
+			input: { ...rest, doc: body.doc } as ServiceInput,
+			imported: { issues: body.importIssues, warnings: body.importWarnings ?? [] },
+		};
+	};
+
+	/**
+	 * Runs the transforms in order, each on the previous one's result. The input is kept when nothing changed, and only what a hook changed is replaced.
+	 * Input that core preparation will reject is left alone for it to reject.
 	 */
 	const transform = async (
 		sources: readonly HookSource[],
 		request: WriteRequest,
+		given: ServiceInput,
 	): Promise<{ input: ServiceInput; transformed: boolean }> => {
-		const unchanged = { input: request.input, transformed: false };
+		const unchanged = { input: given, transformed: false };
 		const hooks = sources.filter((source) => source.hooks.transform);
-		const { input } = request;
+		const input = given;
 		if (hooks.length === 0 || !isRecord(input) || !isRecord(input.metadata) || !isCollection(input.collection))
 			return unchanged;
-		let body: ReturnType<typeof inputBody>;
+		if (input.doc === undefined) return unchanged;
+		let body: ReturnType<typeof documentInputBody>;
 		try {
-			body = inputBody(input, request.prepare?.previousDoc);
+			body = documentInputBody(input, request.prepare?.previousDoc);
 		} catch (error) {
 			if (error instanceof ServiceError) return unchanged;
 			throw error;
@@ -162,38 +203,36 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 		const metadataChanged = !isDeepStrictEqual(data.metadata, original.metadata);
 		const docChanged = !isDeepStrictEqual(data.doc, original.doc);
 		if (!metadataChanged && !docChanged) return unchanged;
-		const { mdx: _mdx, ...rest } = input as ServiceInput & { mdx?: string };
 		return {
 			input: {
-				...rest,
+				...input,
 				metadata: metadataChanged ? data.metadata : input.metadata,
-				...(docChanged ? { doc: data.doc } : input.doc === undefined ? { mdx: input.mdx } : {}),
+				...(docChanged ? { doc: data.doc } : {}),
 			} as ServiceInput,
 			transformed: true,
 		};
 	};
 
 	/**
-	 * Core's normalisation of an imported body, whatever notation or API it came from: a link written as the address of this site's content
-	 * (`/posts/slug`) becomes a link by entry id. A link whose address nobody holds stays as written. The input is returned as it is when nothing changes
-	 * (an MDX body stays MDX, and a body that could not be read keeps its text).
+	 * Core's normalisation of an imported body, whatever format or API it came from: a link written as the address of this site's content
+	 * (`/posts/slug`) becomes a link by entry id, and an image written with the public URL of a registered media file becomes a registered image.
+	 * What nobody holds stays as written. The input is returned as it is when nothing changes.
 	 */
-	const linkIds = async (request: WriteRequest, input: ServiceInput): Promise<ServiceInput> => {
-		if (!options.links || !isRecord(input) || !isCollection(input.collection)) return input;
-		let body: ReturnType<typeof inputBody>;
+	const normalize = async (request: WriteRequest, input: ServiceInput): Promise<ServiceInput> => {
+		const normalizers: ImportNormalizers = { links: options.links, media: options.media };
+		if (!normalizers.links && !normalizers.media) return input;
+		if (!isRecord(input) || !isCollection(input.collection) || input.doc === undefined) return input;
+		let body: ReturnType<typeof documentInputBody>;
 		try {
-			body = inputBody(input, request.prepare?.previousDoc);
+			body = documentInputBody(input, request.prepare?.previousDoc);
 		} catch (error) {
 			// Core preparation rejects it with the same error.
 			if (error instanceof ServiceError) return input;
 			throw error;
 		}
-		const addresses = internalLinkAddresses(body.doc.content);
-		if (addresses.length === 0) return input;
-		const doc = withEntryLinks(body.doc, await options.links(addresses));
+		const doc = await normalizeImportedDoc(body.doc, normalizers);
 		if (doc === body.doc) return input;
-		const { mdx: _mdx, ...rest } = input as ServiceInput & { mdx?: string };
-		return { ...rest, doc } as ServiceInput;
+		return { ...input, doc } as ServiceInput;
 	};
 
 	const validate = async (
@@ -234,10 +273,14 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 		 */
 		run: async (request: WriteRequest): Promise<WriteResult> => {
 			const sources = await provider();
+			const read = await readBody(request);
 			const { input, transformed } = request.skipTransform
-				? { input: request.input, transformed: false }
-				: await transform(sources, request);
-			const snapshot = await prepareSnapshot(await linkIds(request, input), request.prepare);
+				? { input: read.input, transformed: false }
+				: await transform(sources, request, read.input);
+			const snapshot = await prepareSnapshot(await normalize(request, input), {
+				...request.prepare,
+				...(read.imported ? { imported: read.imported } : {}),
+			});
 			if (sources.length === 0) return { snapshot, warnings: [], transformed };
 
 			const warnings: Issue[] = [];

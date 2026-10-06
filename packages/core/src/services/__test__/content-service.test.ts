@@ -64,7 +64,8 @@ const input = (value: {
 	collection: Collection;
 	slug: string | null;
 	metadata: Record<string, unknown>;
-	mdx: string;
+	format: string;
+	body: string;
 }): ServiceInput => value as unknown as ServiceInput;
 
 /** Metadata with every stored field of the collection filled. A select field uses the first option, and the conditional fields dependent on that value are filled too. */
@@ -84,30 +85,34 @@ const canonicalMetadata = (collection: Collection): Record<string, unknown> => {
 describe("ContentService Contract", () => {
 	describe("1. Metadata Allowlists & Collection Rules", () => {
 		it.each([
-			["unknown collection", { collection: "unknown", slug: "test", metadata: {}, mdx: "" }, "unknown_collection"],
+			[
+				"unknown collection",
+				{ collection: "unknown", slug: "test", metadata: {}, format: "mdx", body: "" },
+				"unknown_collection",
+			],
 			[
 				"content with wrong title type",
-				{ collection: content, slug: "valid", metadata: { title: 123 }, mdx: "" },
+				{ collection: content, slug: "valid", metadata: { title: 123 }, format: "mdx", body: "" },
 				"invalid_metadata_type",
 			],
 			[
 				"content with wrong many-relation type",
-				{ collection: content, slug: "valid", metadata: { [many.name]: "tag-1" }, mdx: "" },
+				{ collection: content, slug: "valid", metadata: { [many.name]: "tag-1" }, format: "mdx", body: "" },
 				"invalid_metadata_type",
 			],
 			[
 				"non-JSON value in title",
-				{ collection: content, slug: "valid", metadata: { title: () => {} }, mdx: "" },
+				{ collection: content, slug: "valid", metadata: { title: () => {} }, format: "mdx", body: "" },
 				"invalid_metadata_type",
 			],
 			[
 				"a key that is not in the schema and that the entry does not already hold",
-				{ collection: recordCollection, slug: "valid", metadata: { index: "1" }, mdx: "" },
+				{ collection: recordCollection, slug: "valid", metadata: { index: "1" }, format: "mdx", body: "" },
 				"invalid_metadata_key",
 			],
 			[
 				"a removed field named like an object prototype",
-				{ collection: content, slug: "valid", metadata: JSON.parse('{"__proto__":"x"}'), mdx: "" },
+				{ collection: content, slug: "valid", metadata: JSON.parse('{"__proto__":"x"}'), format: "mdx", body: "" },
 				"invalid_metadata_key",
 			],
 		] satisfies Array<[string, unknown, string]>)("rejects %s", async (_, input, expectedCode) => {
@@ -117,7 +122,7 @@ describe("ContentService Contract", () => {
 		it.each(
 			COLLECTIONS.map((collection) => [
 				collection,
-				input({ collection, slug: "s", metadata: canonicalMetadata(collection), mdx: "" }),
+				input({ collection, slug: "s", metadata: canonicalMetadata(collection), format: "mdx", body: "" }),
 			]),
 		)("permits canonical keys for %s", async (_, input) => {
 			const result = await prepareSnapshot(input);
@@ -129,7 +134,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "draft-post",
 				metadata: {},
-				mdx: "",
+				format: "mdx",
+				body: "",
 			});
 			expect(result.metadata).toEqual({});
 			expect(result.issues.some((i: { code: string }) => i.code === "missing_field")).toBe(false);
@@ -145,7 +151,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: inputSlug,
 				metadata: {},
-				mdx: "",
+				format: "mdx",
+				body: "",
 			});
 			expect(result.slug).toBe(expectedSlug);
 		});
@@ -157,17 +164,23 @@ describe("ContentService Contract", () => {
 			"test\u0000",
 		])("rejects forbidden characters in slug: %j", async (inputSlug) => {
 			await expect(
-				prepareSnapshot({ collection: content, slug: inputSlug, metadata: {}, mdx: "" }),
+				prepareSnapshot({ collection: content, slug: inputSlug, metadata: {}, format: "mdx", body: "" }),
 			).rejects.toMatchObject({ code: "invalid_slug_format" });
 		});
 
 		it("accepts exactly 200 Unicode code points and rejects 201", async () => {
 			const slug200 = "😀".repeat(200);
 			const slug201 = "😀".repeat(201);
-			const result = await prepareSnapshot({ collection: content, slug: slug200, metadata: {}, mdx: "" });
+			const result = await prepareSnapshot({
+				collection: content,
+				slug: slug200,
+				metadata: {},
+				format: "mdx",
+				body: "",
+			});
 			expect(result.slug).toBe(slug200);
 			await expect(
-				prepareSnapshot({ collection: content, slug: slug201, metadata: {}, mdx: "" }),
+				prepareSnapshot({ collection: content, slug: slug201, metadata: {}, format: "mdx", body: "" }),
 			).rejects.toMatchObject({ code: "slug_too_long" });
 		});
 
@@ -178,11 +191,13 @@ describe("ContentService Contract", () => {
 				const titleMax = "😀".repeat(max);
 				const titleOver = "😀".repeat(max + 1);
 				const result = await prepareSnapshot(
-					input({ collection: content, slug: "valid", metadata: { title: titleMax }, mdx: "" }),
+					input({ collection: content, slug: "valid", metadata: { title: titleMax }, format: "mdx", body: "" }),
 				);
 				expect(result.metadata.title).toBe(titleMax);
 				await expect(
-					prepareSnapshot(input({ collection: content, slug: "valid", metadata: { title: titleOver }, mdx: "" })),
+					prepareSnapshot(
+						input({ collection: content, slug: "valid", metadata: { title: titleOver }, format: "mdx", body: "" }),
+					),
 				).rejects.toMatchObject({
 					code: "field_too_long",
 					issues: [{ code: "field_too_long", path: "title", message: label }],
@@ -191,8 +206,16 @@ describe("ContentService Contract", () => {
 		);
 
 		it("allows equal slug in two different collection inputs", async () => {
-			const result1 = await prepareSnapshot({ collection: content, slug: "shared-slug", metadata: {}, mdx: "" });
-			const result2 = await prepareSnapshot(input({ collection: second, slug: "shared-slug", metadata: {}, mdx: "" }));
+			const result1 = await prepareSnapshot({
+				collection: content,
+				slug: "shared-slug",
+				metadata: {},
+				format: "mdx",
+				body: "",
+			});
+			const result2 = await prepareSnapshot(
+				input({ collection: second, slug: "shared-slug", metadata: {}, format: "mdx", body: "" }),
+			);
 			expect(result1.slug).toBe("shared-slug");
 			expect(result2.slug).toBe("shared-slug");
 		});
@@ -202,7 +225,9 @@ describe("ContentService Contract", () => {
 		it("computes the SHA-256 vector with key-order equivalence and metadata/MDX/schema changes", async () => {
 			const ids = ["123e4567-e89b-12d3-a456-426614174002", "123e4567-e89b-12d3-a456-426614174001"];
 			const snapshotOf = (metadata: Record<string, unknown>, mdx = "Hello", schemaVersion = 1) =>
-				prepareSnapshot(input({ collection: content, slug: "a", metadata, mdx }), { schemaVersion });
+				prepareSnapshot(input({ collection: content, slug: "a", metadata, format: "mdx", body: mdx }), {
+					schemaVersion,
+				});
 			const snap1 = await snapshotOf({ title: "A", [many.name]: ids });
 			const snap2 = await snapshotOf({ [many.name]: ids, title: "A" });
 
@@ -236,7 +261,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: {},
-				mdx: "Hello",
+				format: "mdx",
+				body: "Hello",
 				contentHash: "fakehash",
 			};
 			await expect(prepareSnapshot(input as unknown as ServiceInput)).rejects.toMatchObject({ code: "invalid_input" });
@@ -256,7 +282,8 @@ describe("ContentService Contract", () => {
 						"123e4567-e89b-12d3-a456-426614174002",
 					],
 				},
-				mdx: "",
+				format: "mdx",
+				body: "",
 			});
 
 			expect(snap.references).toHaveLength(3);
@@ -296,7 +323,8 @@ describe("ContentService Contract", () => {
 					metadata: {
 						[orderedList.name]: ["123e4567-e89b-12d3-a456-426614174001", "123e4567-e89b-12d3-a456-426614174001"],
 					},
-					mdx: "",
+					format: "mdx",
+					body: "",
 				}),
 			);
 			expect(snap.references).toHaveLength(1);
@@ -313,7 +341,7 @@ describe("ContentService Contract", () => {
 		it("extracts ordered/deduplicated refs with occurrences from Image", async () => {
 			const mdx =
 				'<Image mediaId="123e4567-e89b-12d3-a456-426614174000" />\n<Image mediaId="987e4567-e89b-12d3-a456-426614174000" />\n<Image mediaId="123e4567-e89b-12d3-a456-426614174000" />';
-			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, mdx });
+			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, format: "mdx", body: mdx });
 			expect(snap.references).toHaveLength(2);
 
 			expect(snap.references[0]).toMatchObject({
@@ -344,7 +372,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: {},
-				mdx: '<ContentLink targetId="123e4567-e89b-12d3-a456-426614174000" />',
+				format: "mdx",
+				body: '<ContentLink targetId="123e4567-e89b-12d3-a456-426614174000" />',
 			});
 			expect(snap.issues).toContainEqual(
 				expect.objectContaining({
@@ -362,7 +391,7 @@ describe("ContentService Contract", () => {
 			["<File mediaId={dynamicId} />", "mdx_error"],
 			['<File mediaId="not-a-uuid" />', "invalid_reference_id"],
 		])("creates structured issues for dynamic IDs: %s", async (mdx, expectedIssue) => {
-			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, mdx });
+			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, format: "mdx", body: mdx });
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: expectedIssue }));
 			expect(snap.references).toEqual([]);
 		});
@@ -385,7 +414,7 @@ describe("ContentService Contract", () => {
 			['<Image mediaId="987e4567-e89b-12d3-a456-426614174000" alt="a" />'],
 			['<File mediaId="987e4567-e89b-12d3-a456-426614174000" />'],
 		])("records a media reference for a registered media ID: %s", async (mdx) => {
-			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, mdx });
+			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, format: "mdx", body: mdx });
 			expect(snap.issues).toEqual([]);
 			expect(snap.references).toEqual([
 				{
@@ -404,7 +433,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: {},
-				mdx: '<Image src="https://example.com/a.png" alt="a" />',
+				format: "mdx",
+				body: '<Image src="https://example.com/a.png" alt="a" />',
 			});
 			expect(snap.issues).toEqual([]);
 			expect(snap.references).toEqual([]);
@@ -423,7 +453,10 @@ describe("ContentService Contract", () => {
 					occurrences: [{ type: "body", blockId: "abcd1234" }],
 				},
 			];
-			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, mdx }, { previousReferences });
+			const snap = await prepareSnapshot(
+				{ collection: content, slug: "a", metadata: {}, format: "mdx", body: mdx },
+				{ previousReferences },
+			);
 
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "mdx_error" }));
 			// The text is kept as it was given, in an unparsed body.
@@ -480,7 +513,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: {},
-				mdx,
+				format: "mdx",
+				body: mdx,
 			});
 
 			const callArg = vi.mocked(storePort.createEntryWithReferences).mock.calls[0][0];
@@ -664,7 +698,8 @@ describe("ContentService Contract", () => {
 							"123e4567-e89b-12d3-a456-426614174002",
 						],
 					},
-					mdx: "",
+					format: "mdx",
+					body: "",
 				}),
 			);
 			const items = snap.metadata[list.name as keyof typeof snap.metadata];
@@ -684,7 +719,8 @@ describe("ContentService Contract", () => {
 					title: "T",
 					[list.name]: ["123e4567-e89b-12d3-a456-426614174001", "123e4567-e89b-12d3-a456-426614174002"],
 				},
-				mdx: "",
+				format: "mdx",
+				body: "",
 				schemaVersion: 1,
 				contentHash: "hash",
 				references: [],
@@ -715,7 +751,8 @@ describe("ContentService Contract", () => {
 						"123e4567-e89b-12d3-a456-426614174001",
 					],
 				},
-				mdx: "",
+				format: "mdx",
+				body: "",
 				schemaVersion: 1,
 				contentHash: "hash",
 				references: [
@@ -760,7 +797,8 @@ describe("ContentService Contract", () => {
 					collection: orderedList.collection,
 					slug: "series",
 					metadata: { title: "Series", [orderedList.name]: [id] },
-					mdx: "",
+					format: "mdx",
+					body: "",
 				}),
 			);
 			const validation = validateForPublish(snapshot, {
@@ -773,7 +811,13 @@ describe("ContentService Contract", () => {
 		it("reports every unresolved reference with metadata occurrence", async () => {
 			const ids = ["123e4567-e89b-12d3-a456-426614174091", "123e4567-e89b-12d3-a456-426614174092"];
 			const snapshot = await prepareSnapshot(
-				input({ collection: content, slug: "memo", metadata: { title: "Memo", [many.name]: ids }, mdx: "Body" }),
+				input({
+					collection: content,
+					slug: "memo",
+					metadata: { title: "Memo", [many.name]: ids },
+					format: "mdx",
+					body: "Body",
+				}),
 			);
 			const validation = validateForPublish(snapshot, { targets: [], media: [] });
 			expect(validation.issues.filter((issue) => issue.code === "unresolved_reference")).toEqual([
@@ -788,7 +832,8 @@ describe("ContentService Contract", () => {
 					collection: content,
 					slug: "memo",
 					metadata: { title: "Memo" },
-					mdx: 'First line\n<ContentLink targetId="bad" />',
+					format: "mdx",
+					body: 'First line\n<ContentLink targetId="bad" />',
 				}),
 			);
 			expect(snapshot.issues).toContainEqual(
@@ -817,7 +862,8 @@ describe("ContentService Contract", () => {
 					collection: content,
 					slug: "a",
 					metadata: { title: "Title" },
-					mdx: "Hello",
+					format: "mdx",
+					body: "Hello",
 					expectedVersion: 2,
 				}),
 			).rejects.toBe(exactError);
@@ -841,7 +887,8 @@ describe("ContentService Contract", () => {
 					collection: "unknown",
 					slug: "a",
 					metadata: {},
-					mdx: "",
+					format: "mdx",
+					body: "",
 				} as unknown as SaveDraftInput),
 			).rejects.toBeDefined();
 
@@ -861,7 +908,7 @@ describe("ContentService Contract", () => {
 			};
 			const service = createContentService(storePort);
 			await service.createDraft(
-				input({ collection: recordCollection, slug: "", metadata: { title: "Hello World" }, mdx: "" }),
+				input({ collection: recordCollection, slug: "", metadata: { title: "Hello World" }, format: "mdx", body: "" }),
 			);
 			expect(vi.mocked(storePort.createEntryWithReferences).mock.calls[0][0].snapshot.slug).toBe("hello-world");
 		});
@@ -883,7 +930,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: { title: "Title" },
-				mdx: "Hello",
+				format: "mdx",
+				body: "Hello",
 			});
 
 			expect(storePort.getWorkingReferences).not.toHaveBeenCalled();
@@ -916,7 +964,8 @@ describe("ContentService Contract", () => {
 					collection: content,
 					slug: "a",
 					metadata: {},
-					mdx: "",
+					format: "mdx",
+					body: "",
 				}),
 			).rejects.toBe(exactError);
 
@@ -926,7 +975,8 @@ describe("ContentService Contract", () => {
 					collection: "unknown",
 					slug: "a",
 					metadata: {},
-					mdx: "",
+					format: "mdx",
+					body: "",
 				} as unknown as ServiceInput),
 			).rejects.toBeDefined();
 			expect(conflictPort.createEntryWithReferences).not.toHaveBeenCalled();
@@ -957,7 +1007,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: { title: "Title" },
-				mdx: "</Invalid>",
+				format: "mdx",
+				body: "</Invalid>",
 				expectedVersion: 2,
 			});
 
@@ -991,7 +1042,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: { title: "Title" },
-				mdx: "Hello",
+				format: "mdx",
+				body: "Hello",
 				expectedVersion: 2,
 			});
 
@@ -1021,7 +1073,7 @@ describe("ContentService Contract", () => {
 			createEntryWithReferences: vi.fn(),
 			saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
 		});
-		const saveWith = (storePort: StorePort, body: { mdx: string } | { doc: StoredDocument }) =>
+		const saveWith = (storePort: StorePort, body: { format: string; body: string } | { doc: StoredDocument }) =>
 			createContentService(storePort).saveDraft(entryId, {
 				collection: content,
 				slug: "a",
@@ -1037,7 +1089,7 @@ describe("ContentService Contract", () => {
 			const current = bodyFromMdx("One\n\nTwo\n\nThree\n").doc as StoredDocument;
 			const storePort = portWith(current);
 
-			await saveWith(storePort, { mdx: "One\n\nTwo reworded\n\nThree\n" });
+			await saveWith(storePort, { format: "mdx", body: "One\n\nTwo reworded\n\nThree\n" });
 
 			expect(storePort.getWorking).toHaveBeenCalledWith({ entryId });
 			expect(idsOf(savedDoc(storePort))).toEqual(idsOf(current));
@@ -1046,7 +1098,7 @@ describe("ContentService Contract", () => {
 		it("saveDraft gives new ids when the current draft has no document", async () => {
 			const storePort = portWith(null);
 
-			await saveWith(storePort, { mdx: "One\n\nTwo\n" });
+			await saveWith(storePort, { format: "mdx", body: "One\n\nTwo\n" });
 
 			const ids = idsOf(savedDoc(storePort));
 			expect(ids).toHaveLength(2);
@@ -1074,7 +1126,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "a",
 				metadata: { title: "Title" },
-				mdx: "One\n\nTwo\n",
+				format: "mdx",
+				body: "One\n\nTwo\n",
 			} as ServiceInput);
 
 			const doc = vi.mocked(storePort.createEntryWithReferences).mock.calls[0]?.[0].snapshot.doc as StoredDocument;
@@ -1084,20 +1137,21 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("9. Exact Byte Limits & Structural Boundaries", () => {
-		it("accepts exact boundary and rejects +1-byte for mdx_too_large", async () => {
+		it("accepts exact boundary and rejects +1-byte for body_too_large", async () => {
 			const mdxExact = "a".repeat(2097152);
 			const mdxTooLarge = "a".repeat(2097153);
 			await expect(
-				prepareSnapshot({ collection: content, slug: "valid", metadata: {}, mdx: mdxExact }),
+				prepareSnapshot({ collection: content, slug: "valid", metadata: {}, format: "mdx", body: mdxExact }),
 			).resolves.toBeDefined();
 			await expect(
 				prepareSnapshot({
 					collection: content,
 					slug: "valid",
 					metadata: {},
-					mdx: mdxTooLarge,
+					format: "mdx",
+					body: mdxTooLarge,
 				}),
-			).rejects.toMatchObject({ code: "mdx_too_large" });
+			).rejects.toMatchObject({ code: "body_too_large" });
 		});
 
 		it.skipIf(!unboundedText)("accepts exact boundary and rejects +1-byte for metadata_too_large", async () => {
@@ -1106,17 +1160,25 @@ describe("ContentService Contract", () => {
 			const overhead = JSON.stringify({ [name]: "" }).length;
 			const boundaryString = "a".repeat(262144 - overhead);
 			await expect(
-				prepareSnapshot(input({ collection: content, slug: "valid", metadata: { [name]: boundaryString }, mdx: "" })),
+				prepareSnapshot(
+					input({ collection: content, slug: "valid", metadata: { [name]: boundaryString }, format: "mdx", body: "" }),
+				),
 			).resolves.toBeDefined();
 			const tooLargeString = "a".repeat(262144 - overhead + 1);
 			await expect(
-				prepareSnapshot(input({ collection: content, slug: "valid", metadata: { [name]: tooLargeString }, mdx: "" })),
+				prepareSnapshot(
+					input({ collection: content, slug: "valid", metadata: { [name]: tooLargeString }, format: "mdx", body: "" }),
+				),
 			).rejects.toMatchObject({ code: "metadata_too_large" });
 		});
 
 		it.each([
-			["missing slug", { collection: content, metadata: {}, mdx: "" }, "invalid_input"],
-			["extra key", { collection: content, slug: "valid", metadata: {}, mdx: "", extra: 1 }, "invalid_input"],
+			["missing slug", { collection: content, metadata: {}, format: "mdx", body: "" }, "invalid_input"],
+			[
+				"extra key",
+				{ collection: content, slug: "valid", metadata: {}, format: "mdx", body: "", extra: 1 },
+				"invalid_input",
+			],
 			[
 				"prototype-inherited required fields",
 				Object.create(
@@ -1124,19 +1186,20 @@ describe("ContentService Contract", () => {
 					{
 						collection: { value: content, enumerable: true },
 						metadata: { value: {}, enumerable: true },
-						mdx: { value: "", enumerable: true },
+						body: { value: "", enumerable: true },
+						format: { value: "mdx", enumerable: true },
 					},
 				),
 				"invalid_input",
 			],
 			[
 				"symbol extra",
-				{ collection: content, slug: "valid", metadata: {}, mdx: "", [Symbol("extra")]: 1 },
+				{ collection: content, slug: "valid", metadata: {}, format: "mdx", body: "", [Symbol("extra")]: 1 },
 				"invalid_input",
 			],
 			[
 				"non-enumerable extra",
-				Object.defineProperty({ collection: content, slug: "valid", metadata: {}, mdx: "" }, "hidden", {
+				Object.defineProperty({ collection: content, slug: "valid", metadata: {}, format: "mdx", body: "" }, "hidden", {
 					value: 1,
 					enumerable: false,
 				}),
@@ -1149,7 +1212,7 @@ describe("ContentService Contract", () => {
 		it("prevents mutation of snapshot via caller input mutation and deep freezes snapshot", async () => {
 			const ids = ["123e4567-e89b-12d3-a456-426614174001"];
 			const snap = await prepareSnapshot(
-				input({ collection: content, slug: "valid", metadata: { [many.name]: ids }, mdx: "" }),
+				input({ collection: content, slug: "valid", metadata: { [many.name]: ids }, format: "mdx", body: "" }),
 			);
 			const originalHash = snap.contentHash;
 			const snapIds = (snap.metadata as Record<string, unknown>)[many.name];
@@ -1188,7 +1251,8 @@ describe("ContentService Contract", () => {
 					collection: content,
 					slug: "valid",
 					metadata: meta,
-					mdx: "",
+					format: "mdx",
+					body: "",
 				} as unknown as ServiceInput),
 			).rejects.toMatchObject({ code: "invalid_input" });
 		});
@@ -1206,7 +1270,8 @@ describe("ContentService Contract", () => {
 					collection: content,
 					slug: "valid",
 					metadata: meta,
-					mdx: "",
+					format: "mdx",
+					body: "",
 				} as unknown as ServiceInput),
 			).rejects.toMatchObject({ code: "invalid_input" });
 
@@ -1221,7 +1286,8 @@ describe("ContentService Contract", () => {
 					collection: content,
 					slug: "valid",
 					metadata: { [many.name]: sparseArray },
-					mdx: "",
+					format: "mdx",
+					body: "",
 				} as unknown as ServiceInput),
 			).rejects.toMatchObject({ code: "invalid_metadata_type" });
 		});
@@ -1300,7 +1366,8 @@ describe("ContentService Contract", () => {
 				},
 				slug: "valid",
 				metadata: {},
-				mdx: "",
+				format: "mdx",
+				body: "",
 			};
 
 			const promise = service.createDraft(inputWithGetter as unknown as ServiceInput);
@@ -1369,7 +1436,8 @@ describe("ContentService Contract", () => {
 				collection: content,
 				slug: "valid",
 				metadata: {},
-				mdx: "",
+				format: "mdx",
+				body: "",
 				get expectedVersion() {
 					return getterSpy();
 				},
@@ -1400,7 +1468,8 @@ describe("ContentService Contract", () => {
 			collection: content,
 			slug: "a",
 			metadata: await requiredMetadata(content, "T", relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 		const draft = async (mdx: string) => input(await draftInput(mdx));
 		/** Image (media) references excluding the required relation reference. */
@@ -1425,7 +1494,7 @@ describe("ContentService Contract", () => {
 		});
 
 		it("an image with no source stays blocked", async () => {
-			const { mdx: _text, ...fields } = await draftInput("");
+			const { body: _text, format: _format, ...fields } = await draftInput("");
 			const snap = await prepareSnapshot({
 				...fields,
 				doc: { type: "doc", version: 2, content: [{ type: "image", attrs: { alt: "a" } }] },

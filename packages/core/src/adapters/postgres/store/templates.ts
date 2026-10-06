@@ -1,10 +1,17 @@
 import { randomUUID } from "node:crypto";
+import { MAX_DOC_BYTES } from "../../../core/limits";
 import { CmsError } from "../../../core/store/errors";
 import type { BodyTemplate } from "../../../core/store/types";
-import { bodyDocument, bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
+import { assignBlockIds } from "../../../mdx/block-ids";
+import {
+	canonicalDocument,
+	emptyStoredDocument,
+	readStoredDocument,
+	type StoredDocument,
+} from "../../../mdx/stored-document";
 import { type StoreContext, withTransaction } from "./context";
 import { isUniqueViolation } from "./errors";
-import { mapTemplateRow, readBodyDoc, readDoc, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";
+import { mapTemplateRow, readDoc, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";
 
 const mapTemplateError = (err: unknown) =>
 	isUniqueViolation(err, ["body_templates_name_idx", "body_templates_pkey"])
@@ -12,16 +19,25 @@ const mapTemplateError = (err: unknown) =>
 		: err;
 
 /**
- * A template body as it is stored: its document (one `unparsed` node when the text cannot be read as a document) and the MDX written from it.
- * Its blocks keep the ids of `previous`, the body it replaces, where they pair up.
+ * A template body as it is stored: a stored document, checked for its shape and put in the canonical form every body is stored in. Its blocks keep the ids of
+ * `previous`, the body it replaces, where they pair up, and the others get new ones. Anything else is `invalid_input`.
  */
-const storedTemplateBody = (mdx: string, previous?: StoredDocument | null) => {
-	const body = bodyFromMdx(mdx, undefined, { previous });
-	return { mdx: body.mdx, doc: JSON.stringify(bodyDocument(body, previous)) };
+const storedTemplateDoc = (value: unknown, previous?: StoredDocument | null): string => {
+	let size: number;
+	try {
+		size = Buffer.byteLength(JSON.stringify(value) ?? "", "utf8");
+	} catch {
+		throw new CmsError("Template body is not a stored document", "invalid_input");
+	}
+	if (size > MAX_DOC_BYTES) throw new CmsError("Template body is too large", "invalid_input");
+	const read = readStoredDocument(value);
+	if (!read) throw new CmsError("Template body is not a stored document", "invalid_input");
+	const doc = canonicalDocument(read);
+	return JSON.stringify({ ...doc, content: assignBlockIds(doc.content, [previous?.content]) });
 };
 
 /**
- * Body templates. Picked from `새 글`; changing one does not affect entries already created.
+ * Body templates, stored as documents. Picked from `새 글`; changing one does not affect entries already created.
  * The initial templates come from the site config (`seed.templates`), inserted once by a migration.
  */
 export function createTemplateOps(ctx: StoreContext) {
@@ -44,16 +60,16 @@ export function createTemplateOps(ctx: StoreContext) {
 			return mapTemplateRow(res.rows[0]);
 		},
 
-		createTemplate: async (data: { name: string; mdx: string }): Promise<BodyTemplate> => {
+		createTemplate: async (data: { name: string; doc?: unknown }): Promise<BodyTemplate> => {
 			const name = (data.name || "").trim();
 			if (!name) throw new CmsError("Template name is required", "invalid_input");
-			const body = storedTemplateBody(typeof data.mdx === "string" ? data.mdx : "");
+			const doc = storedTemplateDoc(data.doc === undefined ? emptyStoredDocument() : data.doc);
 			try {
 				const res = await pool.query<TemplateRow>(
-					`INSERT INTO "${qSchema}".body_templates (id, name, mdx, doc, version, created_at, updated_at)
-					 VALUES ($1, $2, $3, $4, 1, $5, $5)
+					`INSERT INTO "${qSchema}".body_templates (id, name, doc, version, created_at, updated_at)
+					 VALUES ($1, $2, $3, 1, $4, $4)
 					 RETURNING ${TEMPLATE_COLUMNS}`,
-					[randomUUID(), name, body.mdx, body.doc, new Date()],
+					[randomUUID(), name, doc, new Date()],
 				);
 				return mapTemplateRow(res.rows[0] as TemplateRow);
 			} catch (err) {
@@ -65,7 +81,7 @@ export function createTemplateOps(ctx: StoreContext) {
 			id: string;
 			expectedVersion: number;
 			name?: string;
-			mdx?: string;
+			doc?: unknown;
 		}): Promise<BodyTemplate> =>
 			withTransaction(
 				pool,
@@ -81,16 +97,16 @@ export function createTemplateOps(ctx: StoreContext) {
 					if (!name) throw new CmsError("Template name cannot be empty", "invalid_input");
 
 					// A name-only update keeps the stored body as it is.
-					const body =
-						params.mdx === undefined
-							? { mdx: cur.mdx, doc: JSON.stringify(readBodyDoc(cur.doc, cur.mdx)) }
-							: storedTemplateBody(params.mdx, readDoc(cur.doc));
+					const doc =
+						params.doc === undefined
+							? JSON.stringify(readDoc(cur.doc) ?? emptyStoredDocument())
+							: storedTemplateDoc(params.doc, readDoc(cur.doc));
 					const res = await client.query<TemplateRow>(
 						`UPDATE "${qSchema}".body_templates
-						 SET name = $1, mdx = $2, doc = $3, version = $4, updated_at = $5
-						 WHERE id = $6
+						 SET name = $1, doc = $2, version = $3, updated_at = $4
+						 WHERE id = $5
 						 RETURNING ${TEMPLATE_COLUMNS}`,
-						[name, body.mdx, body.doc, cur.version + 1, new Date(), params.id],
+						[name, doc, cur.version + 1, new Date(), params.id],
 					);
 					return mapTemplateRow(res.rows[0] as TemplateRow);
 				},

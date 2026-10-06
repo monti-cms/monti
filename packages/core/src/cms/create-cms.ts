@@ -4,6 +4,7 @@ import type { MediaStore } from "../adapters/r2/types";
 import { cmsConfig } from "../config/resolved";
 import { adminUrl } from "../core/admin-paths";
 import { CmsError, type ContentChange, type ContentStore, type Entry, formatRewriteReport } from "../core/store";
+import type { FormatRegistry } from "../format/registry";
 import { type CmsRouteHandler, nextRouteHandler } from "../next/route-handler";
 import type { CmsPlugin, OwnedPluginRoute } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
@@ -14,6 +15,7 @@ import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../server/define
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import type { HookSource } from "../services/hooks";
+import { mediaUrlResolver } from "../services/media-urls";
 
 export type { CmsRouteHandler };
 export type ContentService = ReturnType<typeof createContentService<Entry>>;
@@ -93,6 +95,11 @@ export interface Cms {
 	pluginFeatures(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
 	/** Write hooks in the order they run: the server config's first, then the plugins'. */
 	writeHooks(): Promise<readonly HookSource[]>;
+	/**
+	 * The formats a body can be read and written in: the built-in ones, then those the plugins add (`CmsPlugin.formats`). Loaded on first use.
+	 * A name provided twice throws.
+	 */
+	formats(): Promise<FormatRegistry>;
 	/** Calls the after-save notifications of the server config and the plugins. Never throws. */
 	notifyAfterCommit(change: ContentChange): Promise<void>;
 	/**
@@ -209,11 +216,19 @@ export function createCms(options: CreateCmsOptions): Cms {
 		server: publicServer,
 		store: getStore,
 		contentService: () => {
-			service ??= createContentService<Entry>(getStore(), { hooks: plugins.writeHooks });
+			service ??= createContentService<Entry>(getStore(), {
+				hooks: plugins.writeHooks,
+				formats: plugins.formats,
+				...(server.media ? { media: mediaUrlResolver(getStore, getMediaStore) } : {}),
+			});
 			return service;
 		},
 		bulkService: () => {
-			bulk ??= createBulkService<Entry>(getStore(), { hooks: plugins.writeHooks });
+			bulk ??= createBulkService<Entry>(getStore(), {
+				hooks: plugins.writeHooks,
+				formats: plugins.formats,
+				...(server.media ? { media: mediaUrlResolver(getStore, getMediaStore) } : {}),
+			});
 			return bulk;
 		},
 		isMediaConfigured: Boolean(server.media),
@@ -231,13 +246,19 @@ export function createCms(options: CreateCmsOptions): Cms {
 		pluginRoutes: plugins.routes,
 		pluginFeatures: plugins.features,
 		writeHooks: plugins.writeHooks,
+		formats: plugins.formats,
 		notifyAfterCommit: plugins.notifyAfterCommit,
 		handle: lazyHandle(() => cms),
 		routeHandler: () => nextRouteHandler(cms),
-		read: createRead({ store: getStore, mediaStore: getMediaStore, verifyAdmin: () => authGateway.verifyAdmin() }),
+		read: createRead({
+			store: getStore,
+			mediaStore: getMediaStore,
+			formats: plugins.formats,
+			verifyAdmin: () => authGateway.verifyAdmin(),
+		}),
 		migrate: async ({ log = console.log } = {}) => {
 			log(`Starting CMS database migration (${connections.database.name})...`);
-			await connections.database.migrate();
+			await connections.database.migrate({ formats: await plugins.formats() });
 			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
 			log("CMS database migration completed successfully!");
 		},

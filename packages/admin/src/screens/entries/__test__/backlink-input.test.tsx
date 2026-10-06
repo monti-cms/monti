@@ -1,4 +1,5 @@
 import type { BacklinkField } from "@monti-cms/core/client";
+import { emptyStoredDocument } from "@monti-cms/core/mdx";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -184,7 +185,7 @@ describe("adding a memo to a collection", () => {
 		expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
 			collection: "collection",
 			metadata: { title: "새 메모 시리즈", itemKind: "memo", memoIds: ["memo-1"] },
-			mdx: "",
+			doc: emptyStoredDocument(),
 		});
 	});
 });

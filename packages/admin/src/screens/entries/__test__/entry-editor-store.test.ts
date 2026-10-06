@@ -193,9 +193,11 @@ describe("save", () => {
 		expect(input).toMatchObject({
 			expectedVersion: 4,
 			slug: "test",
-			mdx: "첫째 줄\n둘째 줄",
 			metadata: { title: "수정", categoryId: "cat-1", summary: "요약" },
 		});
+		// The body is always sent as a document, never as text.
+		expect(input).not.toHaveProperty("mdx");
+		expect(JSON.stringify(input.doc)).toContain("첫째 줄");
 		expect(editor().saveStatus).toBe("saved");
 		expect(editor().hasUnsavedChanges).toBe(false);
 		expect(editor().saveError).toBeNull();
@@ -270,7 +272,7 @@ describe("save", () => {
 		expect(client.update).toHaveBeenCalledWith("created-1", expect.objectContaining({ expectedVersion: 1 }));
 	});
 
-	it("sends the editor's document with its block ids while the form still holds the MDX it made, otherwise the MDX", async () => {
+	it("always sends a document: the editor's with its block ids while the form still holds the MDX it made, otherwise the one the MDX reads as", async () => {
 		const doc = {
 			type: "doc",
 			version: 1,
@@ -283,12 +285,14 @@ describe("save", () => {
 		expect(first.doc).toEqual(doc);
 		expect(first).not.toHaveProperty("mdx");
 
-		// Text the editor did not make (source mode, a template): the MDX is sent.
+		// Text the editor did not make (source mode): the document it reads as is sent, without block ids so the server pairs the blocks with the body it replaces.
 		editor().setForm({ mdx: "다른 본문\n" });
 		await editor().save();
-		const second = client.update.mock.calls[1]?.[1] as Record<string, unknown>;
-		expect(second.mdx).toBe("다른 본문\n");
-		expect(second).not.toHaveProperty("doc");
+		const second = client.update.mock.calls[1]?.[1] as unknown as { doc: { content: { type: string; id?: string }[] } };
+		expect(second).not.toHaveProperty("mdx");
+		expect(second.doc.content.map((block) => block.type)).toEqual(["paragraph"]);
+		expect(second.doc.content[0]).not.toHaveProperty("id");
+		expect(JSON.stringify(second.doc)).toContain("다른 본문");
 	});
 
 	it("the document can also come from the documentOf callback", async () => {

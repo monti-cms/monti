@@ -1,8 +1,10 @@
 import { isCollection, isItemCollection } from "../core/collections";
+import type { MediaUrlResolver } from "../core/import-normalize";
 import { DEFAULT_LOCALE, isLocale } from "../core/locales";
 import { serviceInputKeys, validateExactRecord } from "../core/snapshot";
 import { withTranslationHints } from "../core/translation/hints";
 import { confirmedSourceState } from "../core/translation/state";
+import type { FormatRegistry } from "../format/registry";
 import { slugFromValues } from "../schema/derive";
 import type { HookProvider } from "./hooks";
 import {
@@ -38,7 +40,11 @@ const withRecordSlug = (input: ServiceInput): ServiceInput => {
 export interface ContentServiceOptions {
 	/** Hooks of the server config and the plugins. Without it, writes run core preparation only. */
 	readonly hooks?: HookProvider;
-	/** A pipeline shared with other services (bulk). Takes the place of `hooks`. */
+	/** The formats a body given as text can be in. Without it, only the built-in ones. */
+	readonly formats?: () => Promise<FormatRegistry>;
+	/** Looks up the registered media files the image URLs of an imported body point to. Without it, image URLs are kept as written. */
+	readonly media?: MediaUrlResolver;
+	/** A pipeline shared with other services (bulk). Takes the place of `hooks`, `formats` and `media`. */
 	readonly pipeline?: WritePipeline;
 }
 
@@ -56,7 +62,14 @@ export const createContentService = <T = unknown>(
 	storePort: StorePort<T> & Partial<RestorePort<NoInfer<T>>>,
 	options: ContentServiceOptions = {},
 ) => {
-	const pipeline = options.pipeline ?? createWritePipeline({ hooks: options.hooks, links: linkResolverOf(storePort) });
+	const pipeline =
+		options.pipeline ??
+		createWritePipeline({
+			hooks: options.hooks,
+			formats: options.formats,
+			media: options.media,
+			links: linkResolverOf(storePort),
+		});
 
 	return {
 		/**

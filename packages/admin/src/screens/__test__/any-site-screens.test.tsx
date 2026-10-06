@@ -10,6 +10,7 @@ import {
 	storedField,
 	storedFields,
 } from "@monti-cms/core/client";
+import { documentToMdx, emptyStoredDocument } from "@monti-cms/core/mdx";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useSyncExternalStore } from "react";
@@ -252,7 +253,7 @@ describe("any site: record panel", () => {
 			collection: record,
 			slug: null,
 			metadata: { title: "New record" },
-			mdx: "",
+			doc: emptyStoredDocument(),
 		});
 		await waitFor(() => expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "r1" })));
 	});
@@ -278,7 +279,11 @@ describe("any site: entry editor", () => {
 			if (!init?.method) return json(entry);
 			if (init.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
-				return json({ ...entry, version: 5, working: { metadata: body.metadata, mdx: body.mdx } });
+				return json({
+					...entry,
+					version: 5,
+					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+				});
 			}
 			return undefined;
 		};

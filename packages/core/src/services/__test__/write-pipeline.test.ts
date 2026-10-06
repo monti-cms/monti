@@ -8,7 +8,7 @@ import { createWritePipeline, type WriteRequest } from "../write-pipeline";
 /** The ordering, isolation and failure rules of the write pipeline, without a database. Collection names come from the config. */
 
 const input = (metadata: Record<string, unknown> = { title: "Title" }, mdx = "Body\n"): ServiceInput =>
-	({ collection: contentCollection, slug: "slug", metadata, mdx }) as unknown as ServiceInput;
+	({ collection: contentCollection, slug: "slug", metadata, format: "mdx", body: mdx }) as unknown as ServiceInput;
 
 const request = (overrides: Partial<WriteRequest> = {}): WriteRequest => ({
 	operation: "create",
@@ -120,7 +120,8 @@ describe("write pipeline", () => {
 			collection: contentCollection,
 			slug: "slug",
 			metadata: "not metadata",
-			mdx: "",
+			format: "mdx",
+			body: "",
 		} as unknown as ServiceInput;
 		const error = await rejection(pipeline.run(request({ input: bad })));
 		expect(error.code).toBe("invalid_input");

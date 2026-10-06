@@ -4,9 +4,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredMetadata } from "../../../test/any-site";
 import { type Cms, fakeCms } from "../../cms";
 import type { Collection } from "../../core/collections";
+import { contentPath } from "../../core/links";
+import { localizePath } from "../../core/locales";
 import type { ContentStore, Entry } from "../../core/store";
 import { publishDraft, seedEntry } from "../../core/store/__test__/seed";
 import { collectRefs } from "../../mdx/document-refs";
+import { entryLinkIds } from "../../mdx/entry-links";
 import { CmsContent } from "../../render";
 import { createContentService } from "../../services/content-service";
 import {
@@ -85,7 +88,8 @@ describe("cms.read returns the document", () => {
 			collection: contentCollection,
 			slug,
 			metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		} as never);
 
 	const publish = async (slug: string, mdx: string) => {
@@ -138,16 +142,16 @@ describe("cms.read returns the document", () => {
 
 	it("a page renders the entry with CmsContent, with no image resolver", async () => {
 		await publish("doc-render", bodyWith("## Heading", image(media.ready, "the photo")));
-		const found = await cms.read.getEntry({ collection: contentCollection, slug: "doc-render" });
+		const found = await cms.read.getEntry({ collection: contentCollection, slug: "doc-render", format: "mdx" });
 		if (found.status !== "found") throw new Error("not found");
 
 		const markup = renderToStaticMarkup(await CmsContent({ entry: found.entry }));
 
 		expect(markup).toContain("Heading");
 		expect(markup).toContain(publicUrl("media/photo.png"));
-		// The deprecated way still gives the same address for the same body.
-		const resolve = await cms.read.imageResolver(found.entry.mdx);
-		expect(resolve({ mediaId: media.ready })).toMatchObject({ url: publicUrl("media/photo.png") });
+		// The text of the body in a format gives the same address for the same body (the image is written by its URL).
+		const resolve = await cms.read.imageResolver(found.entry.body?.text ?? "");
+		expect(resolve({ src: publicUrl("media/photo.png") })).toMatchObject({ url: publicUrl("media/photo.png") });
 	});
 
 	it("a list reads the document only with the body, and each item gets only the media its own document uses", async () => {
@@ -176,7 +180,8 @@ describe("cms.read returns the document", () => {
 			collection: contentCollection,
 			slug: published.workingSlug,
 			metadata: published.working.metadata as never,
-			mdx: image(media.ready, "edited draft"),
+			format: "mdx",
+			body: image(media.ready, "edited draft"),
 			expectedVersion: published.version,
 		});
 		const edited = await cms.read.getPreview({ collection: contentCollection, slug: "doc-preview" });
@@ -205,11 +210,105 @@ describe("cms.read returns the document", () => {
 			mdx: "---\ntitle: front matter\n---\n\nBody",
 		});
 
-		const preview = await cms.read.getPreview({ collection: contentCollection, slug: "doc-unparsed" });
+		const preview = await cms.read.getPreview({ collection: contentCollection, slug: "doc-unparsed", format: "mdx" });
 
 		expect(unparsed.working.doc.content).toEqual([expect.objectContaining({ type: "unparsed" })]);
 		expect(preview).toMatchObject({ refs: { media: {} } });
 		expect(preview?.doc?.content[0]).toMatchObject({ type: "unparsed", attrs: { format: "mdx" } });
-		expect(preview?.mdx).toContain("Body");
+		expect(preview?.body?.text).toContain("Body");
+	});
+
+	describe("with a format", () => {
+		const pathOf = (slug: string) => contentPath(contentCollection, slug) as string;
+
+		it("also writes the body as text: a link to a published entry is the real path of its target, an image is its public URL", async () => {
+			const target = await publish("fmt-target", "Target body");
+			await publish("fmt-source", bodyWith(`See [the target](${pathOf("fmt-target")}).`, image(media.ready, "photo")));
+
+			const found = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-source", format: "mdx" });
+			if (found.status !== "found") throw new Error("not found");
+			const { entry } = found;
+
+			const path = localizePath(target.locale, pathOf("fmt-target"));
+			expect(entry.body?.format).toBe("mdx");
+			expect(entry.body?.text).toContain(`[the target](${path})`);
+			expect(entry.body?.text).toContain(publicUrl("media/photo.png"));
+			expect(entry.body?.text).not.toContain(target.id);
+			expect(entry.body?.text).not.toContain(media.ready);
+			expect(entry.body?.text).not.toContain("entry:");
+			// The document is as it was: a link by id, and the same refs as without a format.
+			expect(entryLinkIds(entry.doc?.content)).toEqual([target.translationGroupId]);
+			const plain = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-source" });
+			if (plain.status !== "found") throw new Error("not found");
+			expect(plain.entry.refs).toEqual(entry.refs);
+			expect(plain.entry).not.toHaveProperty("body");
+		});
+
+		it("follows the target when its address changes, with no change to the document that links to it", async () => {
+			const target = await publish("fmt-moving", "Target body");
+			const source = await publish("fmt-follows", `[x](${pathOf("fmt-moving")})`);
+			const before = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-follows", format: "mdx" });
+			if (before.status !== "found") throw new Error("not found");
+			expect(before.entry.body?.text).toContain(`(${localizePath(target.locale, pathOf("fmt-moving"))})`);
+
+			const current = await store.getEntry(target.id);
+			await service.saveDraft(target.id, {
+				collection: contentCollection,
+				slug: "fmt-moved",
+				metadata: current.working.metadata as never,
+				doc: current.working.doc,
+				expectedVersion: current.version,
+			} as never);
+			const saved = await store.getEntry(target.id);
+			await service.publish({ id: target.id, expectedVersion: saved.version });
+
+			const after = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-follows", format: "mdx" });
+			if (after.status !== "found") throw new Error("not found");
+			expect(after.entry.body?.text).toContain(`(${localizePath(target.locale, pathOf("fmt-moved"))})`);
+			expect(after.entry.body?.text).not.toContain("fmt-moving");
+			expect((await store.getEntry(source.id)).published?.doc).toEqual(before.entry.doc);
+		});
+
+		it("a link to an entry that is not published is not a link in the text, as it is not on the page", async () => {
+			const unpublished = await draft("fmt-unpublished", "Not yet");
+			await publish("fmt-dangling", `A [draft](${pathOf("fmt-unpublished")}) link.`);
+			void unpublished;
+
+			const found = await cms.read.getEntry({ collection: contentCollection, slug: "fmt-dangling", format: "mdx" });
+			if (found.status !== "found") throw new Error("not found");
+
+			expect(found.entry.body?.text).toContain("A draft link.");
+			expect(found.entry.body?.text).not.toContain("fmt-unpublished");
+		});
+
+		it("lists and previews take the option too, and a list reads the text only with the body", async () => {
+			await publish("fmt-listed", "Listed body");
+
+			const withBody = await cms.read.listEntries({
+				collection: contentCollection,
+				body: true,
+				format: "mdx",
+				pageSize: 100,
+			});
+			const listed = withBody.items.find((item) => item.slug === "fmt-listed");
+			expect(listed?.body).toEqual({ format: "mdx", text: "Listed body\n" });
+
+			const withoutBody = await cms.read.listEntries({ collection: contentCollection, format: "mdx", pageSize: 100 });
+			for (const item of withoutBody.items) expect(item.body).toBeUndefined();
+
+			const preview = await cms.read.getPreview({ collection: contentCollection, slug: "fmt-listed", format: "mdx" });
+			expect(preview?.body?.text).toBe("Listed body\n");
+		});
+
+		it("an unknown format throws a ServiceError unknown_format, and no format means no text", async () => {
+			await publish("fmt-unknown", "Body");
+
+			await expect(
+				cms.read.getEntry({ collection: contentCollection, slug: "fmt-unknown", format: "hugo" }),
+			).rejects.toMatchObject({ code: "unknown_format" });
+			await expect(
+				cms.read.listEntries({ collection: contentCollection, body: true, format: "hugo" }),
+			).rejects.toMatchObject({ code: "unknown_format" });
+		});
 	});
 });
