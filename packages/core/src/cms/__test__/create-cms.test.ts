@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, defaultLocale } from "../../../test/any-site";
-import type { ContentStore } from "../../adapters/postgres/content-store";
-import type { AfterCommit } from "../../adapters/postgres/store/after-commit";
+import type { AfterCommit, ContentStore } from "../../core/store";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../../server/define";
 import { createCms } from "../create-cms";
 
@@ -21,7 +20,7 @@ function fakeDatabase(tag: string) {
 			return store as unknown as ContentStore & typeof store;
 		}),
 		migrate: vi.fn(async () => undefined),
-		pluginDatabase: vi.fn(() => ({ schema: tag }) as never),
+		pluginStorage: vi.fn((plugin: string) => ({ plugin: `${tag}:${plugin}` }) as never),
 		close: vi.fn(async () => undefined),
 	};
 	return adapter satisfies DatabaseAdapter;
@@ -68,7 +67,7 @@ describe("createCms: an instance owns its server resources", () => {
 		const cms = createCms({ server });
 		cms.routeHandler();
 		expect(database.createStore).not.toHaveBeenCalled();
-		expect(database.pluginDatabase).not.toHaveBeenCalled();
+		expect(database.pluginStorage).not.toHaveBeenCalled();
 		cms.store();
 		expect(database.createStore).toHaveBeenCalledTimes(1);
 	});
@@ -93,8 +92,8 @@ describe("createCms: an instance owns its server resources", () => {
 		// Each reads its own database, secret, trust setting and media storage.
 		expect((cmsA.store() as unknown as { tag: string }).tag).toBe("a");
 		expect((cmsB.store() as unknown as { tag: string }).tag).toBe("b");
-		expect(cmsA.database().schema).toBe("a");
-		expect(cmsB.database().schema).toBe("b");
+		expect(cmsA.storage("ai").plugin).toBe("a:ai");
+		expect(cmsB.storage("ai").plugin).toBe("b:ai");
 		expect(cmsA.secrets("ai").decrypt(cmsA.secrets("ai").encrypt("x"))).toBe("x");
 		expect(cmsB.secrets("ai").decrypt(cmsA.secrets("ai").encrypt("x"))).toBeNull();
 		expect([cmsA.isHostTrusted(), cmsB.isHostTrusted()]).toEqual([true, false]);
@@ -177,7 +176,7 @@ describe("createCms: a development reload does not leak connections", () => {
 		expect(store.tag).toBe("first");
 		expect(first.database.createStore).toHaveBeenCalledTimes(2);
 		expect(reloaded.database.createStore).not.toHaveBeenCalled();
-		expect(after.database().schema).toBe("first");
+		expect(after.storage("ai").plugin).toBe("first:ai");
 	});
 
 	it("rebuilds everything else from the new server config, so edits to hooks and options take effect", async () => {

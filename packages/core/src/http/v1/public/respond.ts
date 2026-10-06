@@ -1,4 +1,4 @@
-import { CmsError } from "../../../adapters/postgres/store/errors";
+import { CmsError } from "../../../core/store";
 
 /** Public responses are not cached (errors too: if a CDN stores a 404, it stays 404 even right after publishing). */
 const NO_STORE = { "Cache-Control": "no-store" } as const;

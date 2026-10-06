@@ -93,6 +93,6 @@ export function aiRunDeps(cms: Cms, runtime: AiRuntime, signal?: AbortSignal, or
 			};
 		},
 		// The core content lookup that code checks read (the core public API).
-		content: createContentLookup(cms.database()),
+		content: createContentLookup(cms),
 	};
 }

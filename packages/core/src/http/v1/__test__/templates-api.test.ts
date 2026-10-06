@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { CmsError } from "../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../cms";
+import { CmsError } from "../../../core/store";
 import { DELETE as deleteTemplate, GET as getTemplate, PATCH as patchTemplate } from "../templates/[id]/route";
 import { GET as getTemplates, POST as postTemplate } from "../templates/route";
 

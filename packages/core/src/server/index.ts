@@ -5,7 +5,6 @@
 
 export { type GithubAuthOptions, githubAuth } from "../adapters/auth/github";
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
-export type { AfterCommit, ContentChange, ContentChangeKind } from "../adapters/postgres/store/after-commit";
 export type {
 	AllowedMediaMime,
 	MediaStore,
@@ -24,6 +23,7 @@ export {
 	type HandleOptions,
 	type PublicServerConfig,
 } from "../cms";
+export type { AfterCommit, ContentChange, ContentChangeKind } from "../core/store";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
 export type {
 	TransformHook,

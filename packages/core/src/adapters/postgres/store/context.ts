@@ -1,5 +1,5 @@
 import type { Pool, PoolClient } from "pg";
-import type { Entry } from "./types";
+import type { Entry } from "../../../core/store/types";
 
 export type ContentStoreHooks = {
 	beforePublishCommit?: (entry: Entry, txClient: PoolClient) => Promise<void>;

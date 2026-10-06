@@ -1,8 +1,9 @@
-import type { PluginDatabase } from "@monti-cms/core";
-import { type Cms, CmsError, type PluginSecrets, withTransaction } from "@monti-cms/core/plugin/server";
+import type { Cms, PluginCollection, PluginSecrets, PluginStorage } from "@monti-cms/core/plugin/server";
+import { AI_COLLECTIONS } from "./collections";
+import { AI_PLUGIN_NAME } from "./plugin-name";
 import { aiSecrets, NO_SECRETS } from "./secret";
 
-/** Row name in the AI settings table (`ai_settings`). */
+/** Row name in the AI settings (collection `settings`). */
 export type AiSettingsId = "default" | "shared";
 
 /** One row of edited values per action name. */
@@ -14,26 +15,26 @@ export interface AiActionOverrideRow {
 	updatedAt: Date;
 }
 
-/** Edited AI action values (`ai_action_overrides`), connection settings (`ai_settings`) and UI actions (`ai_custom_actions`). */
+const toRow = (item: { key: string; value: unknown; version: number; updatedAt: Date }): AiActionOverrideRow => ({
+	key: item.key,
+	value: item.value,
+	version: item.version,
+	updatedAt: item.updatedAt,
+});
+
+/** Edited AI action values, connection settings and UI actions, kept in the AI plugin's storage. */
 export function createAiStore(
-	{ pool, schema: qSchema }: PluginDatabase,
+	storage: PluginStorage,
 	/** `secrets`: the AI plugin's secrets API for the stored service keys (`aiSecrets(cms)`). Without it, keys cannot be stored or read. */
 	options: { readonly secrets?: () => PluginSecrets } = {},
 ) {
+	const overrides: PluginCollection = storage.collection(AI_COLLECTIONS.actionOverrides);
+	const custom: PluginCollection = storage.collection(AI_COLLECTIONS.customActions);
+	const settings: PluginCollection = storage.collection(AI_COLLECTIONS.settings);
 	return {
 		secrets: (): PluginSecrets => options.secrets?.() ?? NO_SECRETS,
-		/** All edited values. Actions never edited have none. */
-		listAiActionOverrides: async (): Promise<AiActionOverrideRow[]> => {
-			const res = await pool.query<{ key: string; value: unknown; version: number; updated_at: Date }>(
-				`SELECT key, value, version, updated_at FROM "${qSchema}".ai_action_overrides ORDER BY key`,
-			);
-			return res.rows.map((row) => ({
-				key: row.key,
-				value: row.value,
-				version: row.version,
-				updatedAt: row.updated_at,
-			}));
-		},
+		/** All edited values, by action name. Actions never edited have none. */
+		listAiActionOverrides: async (): Promise<AiActionOverrideRow[]> => (await overrides.list()).map(toRow),
 
 		/**
 		 * Changes the edited values. The first time, `expectedVersion` is 0; after that, a different version gives 409.
@@ -44,64 +45,25 @@ export function createAiStore(
 			expectedVersion: number;
 			value: unknown;
 		}): Promise<AiActionOverrideRow> =>
-			withTransaction(pool, async (client) => {
-				const cur = await client.query<{ version: number }>(
-					`SELECT version FROM "${qSchema}".ai_action_overrides WHERE key = $1 FOR UPDATE`,
-					[params.key],
-				);
-				const version = cur.rows[0]?.version ?? 0;
-				if (version !== params.expectedVersion) throw new CmsError("Conflict", "conflict", version);
-				const res = await client.query<{ key: string; value: unknown; version: number; updated_at: Date }>(
-					`INSERT INTO "${qSchema}".ai_action_overrides (key, value, version, updated_at) VALUES ($1, $2, $3, NOW())
-					 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, version = EXCLUDED.version, updated_at = NOW()
-					 RETURNING key, value, version, updated_at`,
-					[params.key, JSON.stringify(params.value), version + 1],
-				);
-				const row = res.rows[0] as { key: string; value: unknown; version: number; updated_at: Date };
-				return { key: row.key, value: row.value, version: row.version, updatedAt: row.updated_at };
-			}),
+			toRow(await overrides.set(params.key, params.value, { expectedVersion: params.expectedVersion })),
 
 		/**
 		 * One AI settings row (as stored). `default` is the service connection and `shared` is the edited shared text. `null` if none.
 		 */
 		getAiSettings: async (id: AiSettingsId = "default"): Promise<{ value: unknown; version: number } | null> => {
-			const res = await pool.query<{ value: unknown; version: number }>(
-				`SELECT value, version FROM "${qSchema}".ai_settings WHERE id = $1`,
-				[id],
-			);
-			return res.rows[0] ?? null;
+			const item = await settings.get(id);
+			return item ? { value: item.value, version: item.version } : null;
 		},
 
 		/** Saves one settings row. The first time, `expectedVersion` is 0; after that, a different version gives 409. */
 		saveAiSettings: async (params: { id?: AiSettingsId; expectedVersion: number; value: unknown }): Promise<number> =>
-			withTransaction(pool, async (client) => {
-				const id = params.id ?? "default";
-				const cur = await client.query<{ version: number }>(
-					`SELECT version FROM "${qSchema}".ai_settings WHERE id = $1 FOR UPDATE`,
-					[id],
-				);
-				const version = cur.rows[0]?.version ?? 0;
-				if (version !== params.expectedVersion) throw new CmsError("Conflict", "conflict", version);
-				await client.query(
-					`INSERT INTO "${qSchema}".ai_settings (id, value, version, updated_at) VALUES ($1, $2, $3, NOW())
-					 ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value, version = EXCLUDED.version, updated_at = NOW()`,
-					[id, JSON.stringify(params.value), version + 1],
-				);
-				return version + 1;
-			}),
+			(await settings.set(params.id ?? "default", params.value, { expectedVersion: params.expectedVersion })).version,
 
 		/** All UI actions (actions created in the admin screen). In creation order. */
-		listAiCustomActions: async (): Promise<AiActionOverrideRow[]> => {
-			const res = await pool.query<{ key: string; value: unknown; version: number; updated_at: Date }>(
-				`SELECT key, value, version, updated_at FROM "${qSchema}".ai_custom_actions ORDER BY created_at, key`,
-			);
-			return res.rows.map((row) => ({
-				key: row.key,
-				value: row.value,
-				version: row.version,
-				updatedAt: row.updated_at,
-			}));
-		},
+		listAiCustomActions: async (): Promise<AiActionOverrideRow[]> =>
+			(await custom.list())
+				.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+				.map(toRow),
 
 		/** Creates (`expectedVersion` 0) or edits a UI action. A different version gives 409. */
 		saveAiCustomAction: async (params: {
@@ -109,40 +71,11 @@ export function createAiStore(
 			expectedVersion: number;
 			value: unknown;
 		}): Promise<AiActionOverrideRow> =>
-			withTransaction(pool, async (client) => {
-				const cur = await client.query<{ version: number }>(
-					`SELECT version FROM "${qSchema}".ai_custom_actions WHERE key = $1 FOR UPDATE`,
-					[params.key],
-				);
-				const version = cur.rows[0]?.version ?? 0;
-				if (version !== params.expectedVersion) throw new CmsError("Conflict", "conflict", version);
-				const res = await client.query<{ updated_at: Date }>(
-					`INSERT INTO "${qSchema}".ai_custom_actions (key, value, version, created_at, updated_at)
-					 VALUES ($1, $2, $3, NOW(), NOW())
-					 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, version = EXCLUDED.version, updated_at = NOW()
-					 RETURNING updated_at`,
-					[params.key, JSON.stringify(params.value), version + 1],
-				);
-				return {
-					key: params.key,
-					value: params.value,
-					version: version + 1,
-					updatedAt: res.rows[0]?.updated_at ?? new Date(),
-				};
-			}),
+			toRow(await custom.set(params.key, params.value, { expectedVersion: params.expectedVersion })),
 
 		/** Deletes a UI action. A different version gives 409; if it does not exist, 404. */
 		deleteAiCustomAction: async (params: { key: string; expectedVersion: number }): Promise<void> =>
-			withTransaction(pool, async (client) => {
-				const cur = await client.query<{ version: number }>(
-					`SELECT version FROM "${qSchema}".ai_custom_actions WHERE key = $1 FOR UPDATE`,
-					[params.key],
-				);
-				const version = cur.rows[0]?.version;
-				if (version === undefined) throw new CmsError("Not found", "not_found");
-				if (version !== params.expectedVersion) throw new CmsError("Conflict", "conflict", version);
-				await client.query(`DELETE FROM "${qSchema}".ai_custom_actions WHERE key = $1`, [params.key]);
-			}),
+			custom.delete(params.key, { expectedVersion: params.expectedVersion }),
 	};
 }
 
@@ -150,11 +83,11 @@ export type AiStore = ReturnType<typeof createAiStore>;
 
 const stores = new WeakMap<Cms, AiStore>();
 
-/** The AI store of one CMS instance, built from its main DB connection on first use. Each instance has its own. */
+/** The AI store of one CMS instance, built from its plugin storage on first use. Each instance has its own. */
 export function aiStoreFor(cms: Cms): AiStore {
 	let store = stores.get(cms);
 	if (!store) {
-		store = createAiStore(cms.database(), { secrets: () => aiSecrets(cms) });
+		store = createAiStore(cms.storage(AI_PLUGIN_NAME), { secrets: () => aiSecrets(cms) });
 		stores.set(cms, store);
 	}
 	return store;

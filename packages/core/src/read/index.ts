@@ -9,13 +9,12 @@
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
-import type { ContentStore, EntryMetadata, PublishedEntryRecord } from "../adapters/postgres/content-store";
-import type { PublishedSort } from "../adapters/postgres/store/public-read";
 import type { MediaStore } from "../adapters/r2/types";
 import type { ResolvedConfig } from "../config/resolved";
 import { type Collection, isCollection, isItemCollection } from "../core/collections";
 import { contentPath } from "../core/links";
 import { DEFAULT_LOCALE, isLocale, localizePath } from "../core/locales";
+import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
 import { createPublicImageResolver, resolvePublicMediaUrl } from "../mdx/public-media";
 import type { MetadataOf } from "../schema/collection";
 import {
@@ -335,4 +334,4 @@ export function createRead(deps: ReadDeps): CmsRead {
 	};
 }
 
-export type { PublishedSort } from "../adapters/postgres/store/public-read";
+export type { PublishedSort } from "../core/store";

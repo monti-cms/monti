@@ -1,60 +1,21 @@
-import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
 import { bodyText, SEARCH_TEXT } from "../../../core/body-text";
-import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
-import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
-import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
-import type { Queryable } from "./context";
-import { CmsError } from "./errors";
+import { CmsError } from "../../../core/store/errors";
 import type {
 	BodyTemplate,
 	Entry,
 	EntryBody,
 	EntryMetadata,
 	Folder,
-	JsonObject,
-	JsonValue,
 	MediaAssetRecord,
 	PublishedEntryRecord,
-} from "./types";
+} from "../../../core/store/types";
+import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
+import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
+import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
+import type { Queryable } from "./context";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
-
-function normalizeJsonValue(val: unknown): JsonValue {
-	if (val === null) return null;
-	if (typeof val === "string" || typeof val === "boolean") return val;
-	if (typeof val === "number") {
-		if (!Number.isFinite(val)) throw new CmsError("Non-finite number", "invalid_input");
-		return val;
-	}
-	if (Array.isArray(val)) return val.map((v) => normalizeJsonValue(v));
-	if (typeof val === "object") {
-		if (Object.getPrototypeOf(val) !== Object.prototype && Object.getPrototypeOf(val) !== null) {
-			throw new CmsError("Invalid object type", "invalid_input");
-		}
-		const obj: JsonObject = {};
-		for (const key of Object.keys(val).sort()) {
-			Object.defineProperty(obj, key, {
-				value: normalizeJsonValue((val as Record<string, unknown>)[key]),
-				enumerable: true,
-				writable: true,
-				configurable: true,
-			});
-		}
-		return obj;
-	}
-	throw new CmsError(`Invalid JSON type: ${typeof val}`, "invalid_input");
-}
-
-export function normalizeMetadata(input: unknown): EntryMetadata {
-	if (typeof input !== "object" || input === null || Array.isArray(input)) {
-		throw new CmsError("Metadata must be a JSON object", "invalid_input");
-	}
-	if (Object.getPrototypeOf(input) !== Object.prototype && Object.getPrototypeOf(input) !== null) {
-		throw new CmsError("Metadata must be a plain object", "invalid_input");
-	}
-	return normalizeJsonValue(input) as EntryMetadata;
-}
 
 /**
  * Plain text for body search, taken from the parsed body (so it follows the site's syntax): the text of paragraphs, headings, lists, tables and block bodies,
@@ -224,22 +185,6 @@ export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 	createdAt: row.created_at,
 	updatedAt: row.updated_at,
 });
-
-/** Whether two reference lists are the same, occurrences included (a body occurrence's `blockId` is part of it). */
-export function isReferencesEqual(a: readonly Reference[], b: readonly Reference[]): boolean {
-	if (a.length !== b.length) return false;
-	const key = (r: Reference) => `${r.kind}:${r.targetId.toLowerCase()}`;
-	const mapA = new Map(a.map((r) => [key(r), r]));
-	const mapB = new Map(b.map((r) => [key(r), r]));
-	if (mapA.size !== mapB.size) return false;
-	for (const [k, refA] of mapA.entries()) {
-		const refB = mapB.get(k);
-		if (!refB) return false;
-		if (refA.isStale !== refB.isStale) return false;
-		if (!isDeepStrictEqual(refA.occurrences, refB.occurrences)) return false;
-	}
-	return true;
-}
 
 /** Inserts a reference index row. Picks the FK target column by kind (same rule as the CHECK constraint). */
 export async function insertReferences(

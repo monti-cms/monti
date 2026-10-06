@@ -130,7 +130,7 @@ pnpm exec monti migrate
 
 표를 만들거나 최신 모양으로 맞춘다(플러그인 표 포함). 여러 번 돌려도 결과가 같고, 패키지를 올린 뒤에도 다시 돌린다.
 본체 변경은 번호 붙은 단계로 `cms_migrations`에 남아 아직 돌지 않은 단계만 돌고(한 트랜잭션), 같은 스키마에 동시에 돌려도
-하나씩 돈다. 플러그인은 한 번만 할 일을 `db.once(이름, 함수)`로 맡긴다.
+하나씩 돈다. 플러그인은 한 번만 할 일을 `storage.once(이름, 단계)`로 맡긴다("플러그인 저장소").
 
 - 환경 파일: 기본으로 `.env.local`·`.env`(있는 것만)를 읽는다. 셸에서 준 값이 이기고 앞 파일이 뒤 파일을 이긴다.
   `--env-file <파일>`(여러 번)로 고르고 `--no-env-file`이면 읽지 않는다.
@@ -288,7 +288,7 @@ export const cms = createCms({
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)` |
 | 공개 미디어 | `cms.read.imageResolver(mdx)`(`renderMdx`의 `imageResolver`), `cms.read.mediaUrl(mediaId)` |
-| 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.database()`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
+| 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
 | 스크립트·명령줄 | `cms.migrate()`·`cms.rewrite({ apply })`·`cms.close()` |
 | 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
 | 테스트 | `@monti-cms/core/testing`의 `fakeCms({ store, verifyAdmin, … })`: 테스트가 준 부품 위에 만든 진짜 인스턴스 |
@@ -317,12 +317,20 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 - 관리자에 인스턴스를 넘긴다: `<CmsAdminLayout cms={cms}>`, `<CmsAdminPage cms={cms} {...props} />`(페이지 파일이 작은 컴포넌트가 된다. 모양은 `monti init`이 보여 준다).
 - 사이트 페이지는 `@monti-cms/core/read`의 자유 함수 대신 `cms.read.*`로 읽는다. `createPublicImageResolver(mdx)`는 `cms.read.imageResolver(mdx)`, `resolvePublicMediaUrl(id)`는 `cms.read.mediaUrl(id)`가 대신한다.
 - 없어진 것: `getCmsContentStore`·`getCmsMediaStore`·`getCmsSecret`·`getCmsDatabase`·`loadServerPlugins`와 `@monti-cms/core/runtime`의 로그인 자유 함수(`authGateway`·`auth`·`signIn`·`signOut`·`handlers`·`isDevAuthBypassEnabled` 등). 인스턴스를 쓴다:
-  `cms.store()`·`cms.mediaStore()`·`cms.secrets(플러그인이름)`·`cms.database()`·`cms.plugins()`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`.
+  `cms.store()`·`cms.mediaStore()`·`cms.secrets(플러그인이름)`·`cms.storage(플러그인이름)`·`cms.plugins()`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`.
   마스터 비밀 값 자체를 내주는 길은 이제 없다(`cms.secret`과 `cms.server.secret`도 없어졌다). "플러그인 비밀 값"을 본다.
-  플러그인 라우트는 핸들러 입력으로 `cms`를 받고, `CmsServerPlugin.features(cms)`와 `migrate(db, cms)`는 인자로 받고, 훅은 직접 만든 `cms`를 클로저로 쓴다.
+  플러그인 라우트는 핸들러 입력으로 `cms`를 받고, `CmsServerPlugin.features(cms)`와 `migrate(storage, cms)`는 인자로 받고, 훅은 직접 만든 `cms`를 클로저로 쓴다.
 - `@monti-cms/core/migrate`는 없어졌다: `monti migrate`를 돌리거나 스크립트에서 `await cms.migrate()`를 쓴다. `monti migrate`와 `monti content:rewrite`는 이제 서버 파일을 불러오므로 그 파일이 `cms`를 내보내야 한다.
   `@monti-cms/core/register`는 `@cms-config` 별칭만 잇는다.
 - 로그인·로그아웃은 서버 액션이 아니라 `/api/cms/v1/session/*`로 보내는 일반 폼 전송이다(서버 액션은 인스턴스를 실을 수 없다). 앱에서 바꿀 것은 없다.
+
+### `cms.database()`를 쓰던 플러그인 올리기
+
+- `cms.database()`·`PluginDatabase`(`pool`과 `once` 포함)·`withTransaction`은 `@monti-cms/core`와 `@monti-cms/core/plugin/server`에서 없어졌다. 플러그인은 데이터를 `cms.storage("<플러그인 이름>")`에 두고("플러그인 저장소") `migrate(db, cms)`는 `migrate(storage, cms)`가 된다.
+- 자기 표를 만들던 플러그인은 그 데이터를 한 번 옮겨야 한다. `storage.once(이름, 단계)` 안에서 `migration.readLegacyTable(표)`과 `migration.importItem(...)`으로 옮긴다. 옛 표는 읽기만 하므로 백업으로 남는다. AI 플러그인이 이렇게 했다(그 README를 본다).
+- 배포할 때 `monti migrate`를 돌린다. `plugin_documents` 표를 만들고 AI 플러그인의 데이터를 옮긴다. 옛 버전 인스턴스는 계속 옛 AI 표에 쓰므로 한꺼번에 바꾼다.
+- `createContentLookup(cms.database())`는 `createContentLookup(cms)`다. `createContentStore`와 `migrateContentStore`는 더 이상 `@monti-cms/core/runtime`에서 내보내지 않는다. 테스트는 `@monti-cms/core/testing`에서 가져온다.
+- `Entry`·`ListEntriesParams`·`CmsError` 같은 타입은 전과 같이 `@monti-cms/core/runtime`에서 온다. 정의는 Postgres 어댑터가 아니라 `src/core/store`에 있다.
 
 ## 진입점
 
@@ -578,14 +586,14 @@ export const myPlugin = () =>
   `migrate`는 `monti migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
 - 서버 쪽 `hooks`(`transform`·`validate`·`validatePublish`·`afterCommit`)는 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다.
-- 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 DB 연결(`cms.database()`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(db, cms)`도 인스턴스를 받는다.
+- 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
 
 ### 플러그인 비밀 값
 
 플러그인은 마스터 비밀 값(서버 설정의 `secret`)을 받지 않는다. 인스턴스가 이 값에서 플러그인마다 키를 하나씩 만들고(HKDF-SHA256, info 문자열은 `monti:plugin:<플러그인 이름>:v1`), 그 키로만 동작하는 API를 플러그인에 건넨다.
 
 ```ts
-const secrets = cms.secrets("my-plugin");   // 라우트, `features(cms)`, `migrate(db, cms)` 안에서
+const secrets = cms.secrets("my-plugin");   // 라우트, `features(cms)`, `migrate(storage, cms)` 안에서
 secrets.available;                          // 서버 설정에 `secret`이 없으면 false
 const stored = secrets.encrypt("sk-live-1234");   // "mk1:<키 id>:<iv>:<tag>:<body>", AES-256-GCM, 텍스트 열에 그대로 저장해도 된다
 secrets.decrypt(stored);                    // "sk-live-1234". 이 플러그인의 값이 아니거나, 모르는 secret으로 만들었거나, 깨졌으면 null
@@ -598,6 +606,26 @@ secrets.deriveKey("signing");               // 다른 용도(HMAC, 해시)용 32
 - 교체: 새 값을 `secret`에, 옛 값들을 `previousSecrets`에 둔다(`previousSecrets: process.env.CMS_PREVIOUS_SECRET ? [process.env.CMS_PREVIOUS_SECRET] : []`). `decrypt`는 현재 secret을 먼저, 그다음 이전 secret들을 시도하고, `encrypt`는 항상 현재 secret을 쓴다. 플러그인은 `isCurrent`가 false인 값을 다시 저장할 때 새로 암호화한다. 그 secret으로 저장된 값을 모두 다시 암호화한 뒤에만 `previousSecrets`에서 뺀다(AI 플러그인은 `monti migrate`에서 이 일을 한다).
 - 이 API가 생기기 전에 자기 형식으로 값을 저장한 플러그인은 그 형식을 알릴 수 있다. `cms.secrets("my-plugin", { legacy: { prefix: "v1", domain: "my-key:" } })`로 알리면 `decrypt`가 `sha256("my-key:" + secret)`으로 암호화한 `v1:<iv>:<tag>:<body>` 값도 읽는다. 옛 형식은 읽기 전용이며 `encrypt`는 쓰지 않는다.
 - `cms.server`는 `secret`과 `previousSecrets`를 뺀 서버 설정이다.
+
+### 플러그인 저장소
+
+플러그인은 자기 데이터(설정, 글마다의 동기화 상태, 캐시한 결과)를 자기 표나 데이터베이스 드라이버가 아니라 인스턴스의 플러그인 저장소에 둔다.
+`cms.storage("<플러그인 이름>")`은 그 플러그인으로 범위가 정해진 저장소를 돌려준다. 이름 붙은 컬렉션에 문자열 키로 JSON 문서를 두고, 문서마다 버전이 있다.
+
+```ts
+const settings = cms.storage("my-plugin").collection<{ endpoint: string }>("settings");
+await settings.get("default");                                                       // { key, value, version, createdAt, updatedAt } 또는 null
+const saved = await settings.set("default", { endpoint: "https://…" }, { expectedVersion: 0 });   // 0이면 만든다
+await settings.set("default", { endpoint: "https://…/v2" }, { expectedVersion: saved.version }); // 바꾼다
+await settings.list({ prefix: "team-" });                                            // 키 순서
+await settings.delete("default", { expectedVersion: saved.version + 1 });
+```
+
+- 쓰기는 기대하는 버전을 적는다. 저장된 버전이 다르면 저장된 버전(없으면 0)을 담은 `CmsError`(코드 `conflict`)로 실패하므로, 두 편집자가 모르는 새 덮어쓰지 못하고 동시에 쓰는 둘 중 하나만 이긴다. 없는 문서를 지우면 `not_found`다.
+- 플러그인과 컬렉션 이름은 소문자 낱말이다(`ai`, `action-overrides`). 값은 JSON이다. JSON으로 저장되고 파싱되어 돌아오므로 `Date`는 ISO 문자열이 되고 `undefined`는 거절된다(`invalid_input`).
+- 마이그레이션 훅은 `CmsServerPlugin.migrate(storage, cms)`이고 `monti migrate`가 본체 표 다음에 부른다. `storage.once(이름, 단계)`는 `단계`를 한 번만 돌리고(`cms_migrations`에 `plugin:<플러그인>:<이름>`으로 남고, 동시에 불러도 한 번이며, 던지면 남지 않는다) 돌았는지를 돌려준다. `단계`는 `PluginMigration`을 받는다. 단계의 트랜잭션 안에서 쓰는 컬렉션, `importItem(컬렉션, { key, value, version, createdAt, updatedAt })`(문서가 갖고 있던 버전과 날짜로 넣고 덮어쓰지 않는다), 플러그인의 이전 버전이 직접 만든 표의 행을 읽는 `readLegacyTable(표)`(없으면 `null`, 표는 읽기만 한다)가 있다. `once(이름, 단계, { legacyNames })`는 이전 버전이 그 이름 중 하나를 남겼을 때도 단계를 끝난 것으로 본다.
+- Postgres 어댑터는 문서를 본체 표 `plugin_documents`에 둔다(본체 마이그레이션이 만든다). 다른 어댑터의 저장소도 똑같이 동작해야 한다. `src/plugin/__test__/storage-contract.ts`가 그 계약이고, Postgres와 `@monti-cms/core/testing`의 `createMemoryPluginStorage()`로 돌린다. `fakeCms`는 이를 기본으로 쓴다(`fakeCms({ storage })`로 바꾼다).
+- 플러그인 API에는 데이터베이스 드라이버 타입이 없다. `PluginDatabase`·`cms.database()`·`withTransaction`은 없어졌고, `@monti-cms/core`와 `@monti-cms/core/plugin/server`는 `pg`의 어떤 것도 내보내지 않는다.
 
 ## 서버 설정
 
@@ -781,7 +809,7 @@ layout: [{ fields: ["title", "slug", "excerpt"] }], // hero·credit은 Media 탭
 
 이 패키지는 한 블로그에서 떼어 낸 것이라, 다른 블로그에서 쓰기 전에 아래를 정리해야 한다.
 
-- 저장소는 Postgres(`ContentStore`)만 있다. 다른 DB를 쓰려면 같은 계약을 구현해야 하는데 계약이 아직 크다.
+- 저장소는 Postgres만 있다. 저장소는 포트(`src/core/store/ports.ts`의 `ContentStore`)이고 글·생애 주기·목록·폴더·공개 읽기·미디어 메타데이터·템플릿·환경설정·내보내기 하위 포트로 나뉜다. Postgres 어댑터(`src/adapters/postgres`)가 이를 구현한다. 저장소가 적용하는 규칙(슬러그 주소, 번역, 발행·생애 주기 전이)은 `src/core/domain`의 순수 함수다. `src/core/store/__test__/contract`는 두 번째 어댑터가 통과해야 할 계약 테스트 묶음이고, 계약은 아직 크다.
 
 ## 개발
 

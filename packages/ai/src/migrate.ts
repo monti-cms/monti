@@ -1,66 +1,70 @@
-import type { PluginDatabase } from "@monti-cms/core";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms, PluginMigration, PluginStorage } from "@monti-cms/core/plugin/server";
 import { legacyFeatureOverride } from "./actions";
+import { AI_COLLECTIONS } from "./collections";
 import { aiSecrets } from "./secret";
 import { upgradeStoredKeys } from "./settings";
 import { createAiStore } from "./store";
 
 /**
- * AI plugin tables. `monti migrate` calls this after the core tables. Safe to call repeatedly.
- * Stores from before (when AI lived in the core) share the table names and migration markers, so they keep working as they are.
+ * Tables the AI plugin kept in the database itself, before it used the plugin storage API (`cms.storage("ai")`), and where their rows go now.
+ * Their names stay the collection names, so an old row `key` or `id` is the new item key.
  */
-export async function migrateAi(db: PluginDatabase, cms?: Cms): Promise<void> {
-	const { pool, schema, once } = db;
-	const qSchema = schema;
-	await pool.query(`
-		-- Edited values of AI actions. Definitions live in the site config; only values edited in the admin are stored per action name.
-		CREATE TABLE IF NOT EXISTS "${qSchema}".ai_action_overrides (
-			key TEXT PRIMARY KEY,
-			value JSONB NOT NULL,
-			version INTEGER NOT NULL DEFAULT 1,
-			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		);
+const LEGACY_TABLES = [
+	{ table: "ai_action_overrides", collection: AI_COLLECTIONS.actionOverrides, keyColumn: "key" },
+	{ table: "ai_custom_actions", collection: AI_COLLECTIONS.customActions, keyColumn: "key" },
+	{ table: "ai_settings", collection: AI_COLLECTIONS.settings, keyColumn: "id" },
+] as const;
 
-		-- Actions made in the admin AI screen. The value holds the basic info and the edited values.
-		CREATE TABLE IF NOT EXISTS "${qSchema}".ai_custom_actions (
-			key TEXT PRIMARY KEY,
-			value JSONB NOT NULL,
-			version INTEGER NOT NULL DEFAULT 1,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		);
+const asDate = (value: unknown): Date | undefined => (value instanceof Date ? value : undefined);
 
-		-- AI service connections (address, encrypted key, model). One row (id = 'default'). Edited shared texts are the 'shared' row.
-		CREATE TABLE IF NOT EXISTS "${qSchema}".ai_settings (
-			id TEXT PRIMARY KEY,
-			value JSONB NOT NULL,
-			version INTEGER NOT NULL DEFAULT 1,
-			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		);
-	`);
-
-	// If the old AI actions table (`ai_features`) has edited values, move them once into per-action edited values. The old table is not dropped.
-	// The name matches the old records (there are records written before the plugin name was attached).
-	await once("migrate_ai_features_to_actions", async (client) => {
-		const legacy = await client.query<{ exists: string | null }>(`SELECT to_regclass($1)::text AS exists`, [
-			`"${qSchema}".ai_features`,
-		]);
-		if (!legacy.rows[0]?.exists) return;
-		const rows = await client.query<{ builtin: string | null; spec: unknown }>(
-			`SELECT builtin, spec FROM "${qSchema}".ai_features WHERE builtin IS NOT NULL`,
-		);
-		for (const row of rows.rows) {
-			const value = row.builtin ? legacyFeatureOverride(row.builtin, row.spec) : null;
-			if (!value || Object.keys(value).length === 0) continue;
-			await client.query(
-				`INSERT INTO "${qSchema}".ai_action_overrides (key, value, version, updated_at) VALUES ($1, $2, 1, NOW())
-				 ON CONFLICT (key) DO NOTHING`,
-				[row.builtin, JSON.stringify(value)],
-			);
+/** Copies the rows of the three legacy tables into the storage, keeping each row's value, version and dates. A table that does not exist has nothing to copy. */
+async function importLegacyTables(migration: PluginMigration): Promise<void> {
+	for (const { table, collection, keyColumn } of LEGACY_TABLES) {
+		for (const row of (await migration.readLegacyTable(table)) ?? []) {
+			const key = row[keyColumn];
+			if (typeof key !== "string") continue;
+			const updatedAt = asDate(row.updated_at);
+			await migration.importItem(collection, {
+				key,
+				value: row.value,
+				version: typeof row.version === "number" ? row.version : 1,
+				createdAt: asDate(row.created_at) ?? updatedAt,
+				updatedAt,
+			});
 		}
+	}
+}
+
+/**
+ * Moves the edited values of the oldest AI actions table (`ai_features`, from when AI lived in the core) into per-action edited values, once.
+ * The old table is not dropped. An edited value that is already in the storage is kept.
+ */
+async function importLegacyFeatures(migration: PluginMigration): Promise<void> {
+	const overrides = await migration.readLegacyTable("ai_features");
+	for (const row of overrides ?? []) {
+		const builtin = row.builtin;
+		if (typeof builtin !== "string") continue;
+		const value = legacyFeatureOverride(builtin, row.spec);
+		if (!value || Object.keys(value).length === 0) continue;
+		await migration.importItem(AI_COLLECTIONS.actionOverrides, { key: builtin, value });
+	}
+}
+
+/**
+ * AI plugin migration. `monti migrate` calls it after the core tables, with the plugin's storage. Safe to call repeatedly.
+ *
+ * Data from before the storage API is moved once: the three tables the plugin used to create itself (`ai_action_overrides`, `ai_custom_actions`, `ai_settings`)
+ * are copied into the plugin's collections with their versions and dates, and the old tables stay where they are, untouched.
+ */
+export async function migrateAi(storage: PluginStorage, cms?: Cms): Promise<void> {
+	await storage.once("import_legacy_tables", importLegacyTables);
+
+	// The name of this step before the storage API was `migrate_ai_features_to_actions` (recorded without the plugin's name). Where that record exists, the work is done.
+	await storage.once("ai_features_to_actions", importLegacyFeatures, {
+		legacyNames: ["migrate_ai_features_to_actions"],
 	});
 
 	// Stored service keys from before per-plugin keys (or made with a previous secret) are encrypted again with the current secret.
 	// It does nothing when there is no secret or nothing to upgrade, so running it again changes nothing.
-	if (cms) await upgradeStoredKeys(createAiStore(db, { secrets: () => aiSecrets(cms) }));
+	if (cms) await upgradeStoredKeys(createAiStore(storage, { secrets: () => aiSecrets(cms) }));
 }

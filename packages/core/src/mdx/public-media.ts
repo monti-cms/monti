@@ -1,5 +1,5 @@
-import type { ContentStore } from "../adapters/postgres/content-store";
 import type { MediaStore } from "../adapters/r2/types";
+import type { ContentStore } from "../core/store";
 import { analyze } from "./analyze";
 import { type ImageResolveResult, resolveImageUrl } from "./image-src";
 

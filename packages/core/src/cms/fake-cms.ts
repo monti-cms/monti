@@ -1,9 +1,10 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
-import type { ContentStore } from "../adapters/postgres/content-store";
 import type { MediaStore } from "../adapters/r2/types";
+import type { ContentStore } from "../core/store";
 import { nextRouteHandler } from "../next/route-handler";
-import type { PluginDatabase } from "../plugin/define";
+import { createMemoryPluginStorage } from "../plugin/memory-storage";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
+import type { PluginStorage } from "../plugin/storage";
 import { createRead } from "../read";
 import type { CmsAuth, CmsServerConfig } from "../server/define";
 import { type BulkService, type Cms, type ContentService, createCms, lazyHandle } from "./create-cms";
@@ -15,8 +16,8 @@ export interface FakeCmsParts {
 	readonly contentService?: Partial<ContentService>;
 	readonly bulkService?: Partial<BulkService>;
 	readonly mediaStore?: Partial<MediaStore>;
-	/** Plugin database (`cms.database()`). */
-	readonly database?: Partial<PluginDatabase>;
+	/** Plugin storage (`cms.storage(name)`). Default: in memory, one per instance, so plugins keep their data between calls of a test. */
+	readonly storage?: (plugin: string) => PluginStorage;
 	/** The admin check. Default: every request is an admin. Make it throw an `AuthError` to test a refused request. */
 	readonly verifyAdmin?: AuthGateway["verifyAdmin"];
 	/** Pieces of the login connection (`cms.auth()`): session, providers, handlers and so on. */
@@ -39,13 +40,15 @@ const missing = (what: string) => () => {
  * Several fake instances can live in one test file, each with its own parts.
  */
 export function fakeCms(parts: FakeCmsParts = {}): Cms {
+	const memory = createMemoryPluginStorage();
+	const storageOf = parts.storage ?? memory.storage;
 	const server: CmsServerConfig = {
 		database: {
 			name: "fake",
 			createStore: () =>
 				(parts.store ?? new Proxy({}, { get: (_t, name) => missing(`store.${String(name)}`) })) as ContentStore,
 			migrate: async () => undefined,
-			pluginDatabase: () => (parts.database ?? {}) as PluginDatabase,
+			pluginStorage: (plugin) => storageOf(plugin),
 		},
 		auth: {
 			name: "fake",

@@ -7,18 +7,20 @@ import {
 	recordRelationField,
 	secondLocale,
 } from "../../../test/any-site";
-import { publishDraft, seedEntry, seedSave } from "../../adapters/postgres/__test__/seed";
-import {
-	closeGlobalPool,
-	createIsolatedTestPool,
-	dropIsolatedTestPool,
-} from "../../adapters/postgres/__test__/test-database";
-import { type ContentStore, createContentStore, migrateContentStore } from "../../adapters/postgres/content-store";
 import { type Cms, fakeCms } from "../../cms";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../core/collections";
 import { contentPath } from "../../core/links";
 import { localizePath } from "../../core/locales";
+import type { ContentStore } from "../../core/store";
+import { publishDraft, seedEntry, seedSave } from "../../core/store/__test__/seed";
 import { recordLocalizedFields } from "../../schema/derive";
+import {
+	closeGlobalPool,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	migrateContentStore,
+} from "../../testing";
 import type { CmsRead } from "../index";
 
 const state = { admin: true };

@@ -1,7 +1,7 @@
-import type { PreparedSnapshot } from "../../../core/types";
 import type { StoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import type { ContentStore, Entry } from "../content-store";
+import type { PreparedSnapshot } from "../../types";
+import type { ContentStore, Entry } from "..";
 
 /**
  * Test setup helpers. They use the same write paths as production code (`createEntryWithReferences`, `saveWorkingWithReferences`)

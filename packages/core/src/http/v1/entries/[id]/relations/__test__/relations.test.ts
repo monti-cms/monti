@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../../../../adapters/auth";
-import { CmsError } from "../../../../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../../../../cms";
+import { CmsError } from "../../../../../../core/store";
 import { GET as getRelations } from "../route";
 
 const verifyAdmin = vi.fn();

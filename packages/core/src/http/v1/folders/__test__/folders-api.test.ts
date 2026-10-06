@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../../../test/any-site";
-import { CmsError } from "../../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../../cms";
+import { CmsError } from "../../../../core/store";
 import { PATCH as patchFolder } from "../[id]/route";
 import { GET as getFolders } from "../route";
 

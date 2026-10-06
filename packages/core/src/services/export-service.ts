@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import type { ExportSnapshot, ExportSnapshotEntry, ExportSnapshotReference } from "../adapters/postgres/content-store";
 import { COLLECTIONS } from "../core/collections";
+import type { ExportSnapshot, ExportSnapshotEntry, ExportSnapshotReference } from "../core/store";
 import { storedFields } from "../schema/derive";
 import { createZipArchive, type ZipEntry } from "./zip";
 

@@ -1,6 +1,6 @@
 import { contentCollection, defaultLocale, otherContentCollection, recordRelationField } from "../../../test/any-site";
-import type { ExportSnapshot } from "../../adapters/postgres/content-store";
 import { isItemCollection } from "../../core/collections";
+import type { ExportSnapshot } from "../../core/store";
 import { bodyFromMdx } from "../../mdx/stored-document";
 import { roleField, storedFields } from "../../schema/derive";
 

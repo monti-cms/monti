@@ -2,11 +2,11 @@ import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentOf } from "../../../../test/stored-content";
+import { seedEntry } from "../../../core/store/__test__/seed";
 import { bodyFromMdx } from "../../../mdx/stored-document";
-import { pluginDatabaseFor } from "../adapter";
 import { createContentStore, migrateContentStore } from "../content-store";
+import { createPluginStorage } from "../plugin-storage";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Migration step records, the concurrent-run lock, schema creation, and run-once jobs. */
@@ -78,26 +78,12 @@ describe("migrations", () => {
 		expect((await pool.query(`SELECT 1 FROM "${schemaName}".body_templates`)).rows).toHaveLength(0);
 	});
 
-	it("runs a plugin's run-once job only once even when called concurrently, and records nothing on failure", async () => {
-		const db = pluginDatabaseFor(pool, schemaName);
-		let runs = 0;
-		const results = await Promise.all(
-			[1, 2, 3].map(() =>
-				db.once("test:count", async (client) => {
-					runs += 1;
-					await client.query("SELECT 1");
-				}),
-			),
-		);
-		expect(runs).toBe(1);
-		expect(results.filter(Boolean)).toHaveLength(1);
-
-		await expect(
-			db.once("test:fails", async () => {
-				throw new Error("boom");
-			}),
-		).rejects.toThrow("boom");
-		expect(await applied(schemaName)).not.toContain("test:fails");
-		expect(await db.once("test:fails", async () => {})).toBe(true);
+	it("records a plugin's one-time step in the core migration log, under the plugin's name", async () => {
+		const storage = createPluginStorage(pool, schemaName, "logged");
+		expect(await storage.once("first-step", async () => {})).toBe(true);
+		expect(await applied(schemaName)).toContain("plugin:logged:first-step");
+		// Another plugin's step of the same name is a different step.
+		expect(await createPluginStorage(pool, schemaName, "other").once("first-step", async () => {})).toBe(true);
+		expect(await storage.once("first-step", async () => {})).toBe(false);
 	});
 });

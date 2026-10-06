@@ -1,11 +1,11 @@
-import type { Pool } from "pg";
+import type { ContentStore } from "../core/store/ports";
 
 /**
  * Core content lookup for plugins (read-only). Plugins do not read core tables directly; they ask through this function.
  * Exported from `@monti-cms/core/plugin/server`.
  *
  * ```ts
- * const lookup = createContentLookup(cms.database());
+ * const lookup = createContentLookup(cms);
  * await lookup.slugsInUse({ collection: "post", locale: "ko", slugs: ["hello"], excludeEntryId: id });
  * ```
  */
@@ -27,17 +27,7 @@ export interface ContentLookup {
 	slugsInUse(params: SlugsInUseParams): Promise<Set<string>>;
 }
 
-export function createContentLookup({ pool, schema }: { readonly pool: Pool; readonly schema: string }): ContentLookup {
-	return {
-		slugsInUse: async ({ collection, locale, slugs, excludeEntryId }) => {
-			if (slugs.length === 0) return new Set();
-			const res = await pool.query<{ slug: string }>(
-				`SELECT slug FROM "${schema}".content_addresses
-				 WHERE collection = $1 AND locale = $2 AND slug = ANY($3::text[])
-				   AND ($4::uuid IS NULL OR entry_id IS DISTINCT FROM $4::uuid)`,
-				[collection, locale, [...slugs], excludeEntryId ?? null],
-			);
-			return new Set(res.rows.map((row) => row.slug));
-		},
-	};
+/** The lookup of one CMS instance (any object with its `store()` will do). */
+export function createContentLookup(cms: { store(): Pick<ContentStore, "slugsInUse"> }): ContentLookup {
+	return { slugsInUse: (params) => cms.store().slugsInUse(params) };
 }

@@ -1,8 +1,9 @@
-import type { ContentChange } from "../adapters/postgres/store/after-commit";
 import type { Cms } from "../cms";
+import type { ContentChange } from "../core/store";
 import type { CmsServerConfig } from "../server/define";
 import type { HookSource } from "../services/hooks";
-import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute, PluginDatabase } from "./define";
+import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute } from "./define";
+import type { PluginStorage } from "./storage";
 
 /** The server side of a plugin, with the plugin's name. A plugin without a server side is empty. */
 export type LoadedServerPlugin = CmsServerPlugin & { readonly name: string };
@@ -24,8 +25,8 @@ export interface ServerPlugins {
 	 * Plugins with no feature flags, or that fail, are left out.
 	 */
 	features(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
-	/** Creates the plugin tables. Called after the core tables are created (`monti migrate`). */
-	migrate(database: PluginDatabase, log?: (message: string) => void): Promise<void>;
+	/** Runs each plugin's migration hook with that plugin's storage. Called after the core tables are created (`monti migrate`). */
+	migrate(storageOf: (plugin: string) => PluginStorage, log?: (message: string) => void): Promise<void>;
 	/**
 	 * Write hooks in the order they run: the server config first, then the plugins in the site config's order. Each is tagged with its owner
 	 * (`server`, `plugin:<name>`), which a failing hook is reported with.
@@ -81,11 +82,11 @@ export function createServerPlugins(
 			);
 			return Object.fromEntries(entries.filter((entry) => entry !== undefined));
 		},
-		migrate: async (database, log = console.log) => {
+		migrate: async (storageOf, log = console.log) => {
 			for (const plugin of await load()) {
 				if (!plugin.migrate) continue;
 				log(`Migrating plugin "${plugin.name}"...`);
-				await plugin.migrate(database, cms());
+				await plugin.migrate(storageOf(plugin.name), cms());
 			}
 		},
 		notifyAfterCommit: async (change) => {

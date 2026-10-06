@@ -1,13 +1,19 @@
-import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
+import {
+	assertPublishableStatus,
+	assertSameCollection,
+	isRepublish,
+	mergePublishReferences,
+} from "../../../core/domain/publish";
+import { assertPromotedToCurrent, linkTargetChanged, planPublishAddress } from "../../../core/domain/slug-address";
 import { isUuid } from "../../../core/ids";
 import { DEFAULT_LOCALE } from "../../../core/locales";
 import { validateForPublish } from "../../../core/snapshot";
+import { CmsError } from "../../../core/store/errors";
+import type { Entry, EntryStatus } from "../../../core/store/types";
 import { type Collection, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
 import type { StoreContext } from "./context";
-import { CmsError } from "./errors";
 import { type AddressRow, loadEntry, lockEntryForUpdate, readBody, readReferences, writeBody } from "./rows";
-import type { Entry, EntryStatus } from "./types";
 
 export interface PublishOptions {
 	expectedVersion: number;
@@ -23,6 +29,8 @@ export interface PublishOptions {
 /**
  * Shared rules for publish transactions. Publishing and record restore use the same validation.
  */
+const holderOf = (row: Pick<AddressRow, "entry_id" | "type">) => ({ entryId: row.entry_id, type: row.type });
+
 export function createPublishing(ctx: StoreContext) {
 	const { qSchema, hooks } = ctx;
 
@@ -35,7 +43,7 @@ export function createPublishing(ctx: StoreContext) {
 		}>(`SELECT collection, version, translation_group_id FROM "${qSchema}".entries WHERE id = $1`, [entryId]);
 		const entry = entryRes.rows[0];
 		if (!entry) throw new CmsError("Entry not found", "not_found");
-		if (entry.collection !== snapshot.collection) throw new CmsError("Collection mismatch", "invalid_input");
+		assertSameCollection(entry.collection, snapshot.collection);
 		// A translation locks its source and checks its published status, so the source cannot leave the public layer during publish.
 		const translation = entry.translation_group_id
 			? {
@@ -50,20 +58,10 @@ export function createPublishing(ctx: StoreContext) {
 			: undefined;
 		const previousReferences = await readReferences(client, qSchema, entryId, "working");
 
-		// Even stale leftover references are checked before publish to confirm the target still exists.
-		const merged = new Map<string, Reference>(snapshot.references.map((ref) => [`${ref.kind}:${ref.targetId}`, ref]));
-		for (const ref of previousReferences) {
-			const key = `${ref.kind}:${ref.targetId}`;
-			const current = merged.get(key);
-			if (!current) merged.set(key, ref);
-			else {
-				const occurrences = new Map(
-					[...current.occurrences, ...ref.occurrences].map((occurrence) => [JSON.stringify(occurrence), occurrence]),
-				);
-				merged.set(key, { ...current, occurrences: [...occurrences.values()] });
-			}
-		}
-		const publishSnapshot = { ...snapshot, references: [...merged.values()] };
+		const publishSnapshot = {
+			...snapshot,
+			references: mergePublishReferences(snapshot.references, previousReferences),
+		};
 
 		const links = snapshot.internalLinks ?? [];
 		const findAddresses = async (lock: boolean) => {
@@ -99,10 +97,7 @@ export function createPublishing(ctx: StoreContext) {
 		for (const link of links) {
 			const before = firstAddresses.get(addressKey(link.collection, link.slug));
 			const after = lockedAddresses.get(addressKey(link.collection, link.slug));
-			if (
-				(before?.type ?? null) !== (after?.type ?? null) ||
-				(before?.entry_id ?? null) !== (after?.entry_id ?? null)
-			) {
+			if (linkTargetChanged(before && holderOf(before), after && holderOf(after))) {
 				throw new CmsError("Internal link target changed during publish", "conflict", entry.version);
 			}
 		}
@@ -149,10 +144,7 @@ export function createPublishing(ctx: StoreContext) {
 	 */
 	const publishWithinTransaction = async (client: PoolClient, id: string, options: PublishOptions): Promise<Entry> => {
 		const locked = await lockEntryForUpdate(client, qSchema, id, options.expectedVersion);
-		if (locked.status === "trashed") throw new CmsError("A trashed entry cannot be published", "invalid_status");
-		if (locked.status === "archived") {
-			throw new CmsError("An archived entry must be unarchived before publishing", "invalid_status");
-		}
+		assertPublishableStatus(locked.status);
 
 		await validatePreparedForPublish(client, id, options.snapshot);
 
@@ -166,18 +158,20 @@ export function createPublishing(ctx: StoreContext) {
 		const currentSlug = currentSlugRes.rows[0]?.slug ?? null;
 		const targetSlug = locked.working_slug;
 
-		const isRepublish = Boolean(
-			published &&
-				published.content_hash === working.content_hash &&
-				published.schema_version === working.schema_version &&
-				published.updated_at.getTime() === working.updated_at.getTime() &&
-				currentSlug === targetSlug &&
-				isDeepStrictEqual(published.metadata, working.metadata) &&
-				isDeepStrictEqual(published.translation, working.translation),
-		);
+		const bodyState = (body: NonNullable<typeof working>) => ({
+			contentHash: body.content_hash,
+			schemaVersion: body.schema_version,
+			updatedAt: body.updated_at,
+			metadata: body.metadata,
+			translation: body.translation,
+		});
+		const republish = isRepublish(published ? bodyState(published) : null, bodyState(working), {
+			current: currentSlug,
+			target: targetSlug,
+		});
 
 		const now = new Date();
-		if (!isRepublish) {
+		if (!republish) {
 			await client.query(
 				`UPDATE "${qSchema}".entries SET version = $1, status = 'published',
 				 published_at = CASE WHEN $4 THEN $2 ELSE COALESCE(published_at, $2) END WHERE id = $3`,
@@ -195,13 +189,14 @@ export function createPublishing(ctx: StoreContext) {
 			await client.query(`DELETE FROM "${qSchema}".content_addresses WHERE entry_id = $1 AND type = 'reservation'`, [
 				id,
 			]);
-			if (currentSlug !== null && currentSlug !== targetSlug) {
+			const address = planPublishAddress(currentSlug, targetSlug);
+			if (address.demoteCurrent) {
 				await client.query(
 					`UPDATE "${qSchema}".content_addresses SET type = 'alias' WHERE entry_id = $1 AND type = 'current'`,
 					[id],
 				);
 			}
-			if (targetSlug !== null && targetSlug !== currentSlug) {
+			if (address.promote) {
 				// When returning to a former alias, promote that slug back to current.
 				await client.query(
 					`INSERT INTO "${qSchema}".content_addresses (collection, locale, slug, entry_id, type) VALUES ($1, $2, $3, $4, 'current')
@@ -209,13 +204,11 @@ export function createPublishing(ctx: StoreContext) {
 					 WHERE "${qSchema}".content_addresses.entry_id = EXCLUDED.entry_id`,
 					[locked.collection, locked.locale, targetSlug, id],
 				);
-				const check = await client.query<{ entry_id: string | null; type: string }>(
+				const check = await client.query<{ entry_id: string | null; type: AddressRow["type"] }>(
 					`SELECT entry_id, type FROM "${qSchema}".content_addresses WHERE collection = $1 AND locale = $2 AND slug = $3`,
 					[locked.collection, locked.locale, targetSlug],
 				);
-				if (check.rows[0]?.entry_id !== id || check.rows[0]?.type !== "current") {
-					throw new CmsError("Slug conflict", "slug_conflict");
-				}
+				assertPromotedToCurrent(id, check.rows[0] ? holderOf(check.rows[0]) : null);
 			}
 		} else if (options.resetPublishedAt) {
 			await client.query(

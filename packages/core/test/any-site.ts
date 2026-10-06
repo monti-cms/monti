@@ -1,7 +1,7 @@
-import { publishDraft } from "../src/adapters/postgres/__test__/seed";
-import type { ContentStore } from "../src/adapters/postgres/content-store";
 import { COLLECTIONS, type Collection, DOCUMENT_COLLECTIONS, isItemCollection } from "../src/core/collections";
 import { DEFAULT_LOCALE, LOCALES } from "../src/core/locales";
+import type { ContentStore } from "../src/core/store";
+import { publishDraft } from "../src/core/store/__test__/seed";
 import type { PreparedSnapshot } from "../src/core/types";
 import { type StoredField, schemaOf, storedField, storedFields } from "../src/schema/derive";
 import { isRequiredField } from "../src/schema/fields";

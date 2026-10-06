@@ -1,25 +1,30 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
-import { isCollection, isItemCollection } from "../../../core/collections";
-import { DEFAULT_LOCALE, isLocale } from "../../../core/locales";
-import { normalizeReferenceKind, type PreparedSnapshot, type Reference, type WorkingCopy } from "../../../core/types";
-import { commonFieldKeys } from "../../../schema/derive";
-import { type StoreContext, withTransaction } from "./context";
-import { CmsError, mapEntryWriteError } from "./errors";
-import type { Publishing } from "./publish";
+import { assertFolderInCollection } from "../../../core/domain/folders";
+import { normalizeMetadata } from "../../../core/domain/metadata";
 import {
-	insertReferences,
-	isReferencesEqual,
-	loadEntry,
-	lockEntryForUpdate,
-	normalizeMetadata,
-	readBody,
-	readDoc,
-	readReferences,
-	writeBody,
-} from "./rows";
-import type { Entry, IncomingReferenceItem, TranslationGroup } from "./types";
+	assertEditableStatus,
+	assertExpectedVersion,
+	assertSameCollection,
+	isSameWorkingBody,
+} from "../../../core/domain/publish";
+import { isReferencesEqual } from "../../../core/domain/references";
+import { reservationFor } from "../../../core/domain/slug-address";
+import {
+	assertKnownLocale,
+	assertTranslationMetadata,
+	assertTranslationSource,
+	assertTranslationStateAllowed,
+} from "../../../core/domain/translation";
+import { DEFAULT_LOCALE } from "../../../core/locales";
+import { CmsError } from "../../../core/store/errors";
+import type { Entry, IncomingReferenceItem, TranslationGroup } from "../../../core/store/types";
+import { normalizeReferenceKind, type PreparedSnapshot, type Reference, type WorkingCopy } from "../../../core/types";
+import { type StoreContext, withTransaction } from "./context";
+import { mapEntryWriteError } from "./errors";
+import type { Publishing } from "./publish";
+import { insertReferences, loadEntry, lockEntryForUpdate, readBody, readDoc, readReferences, writeBody } from "./rows";
 
 export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	const { pool, qSchema } = ctx;
@@ -31,12 +36,11 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			`SELECT collection FROM "${qSchema}".folders WHERE id = $1`,
 			[folderId],
 		);
-		if (res.rows[0]?.collection !== collection) throw new CmsError("Invalid folder", "invalid_input");
+		assertFolderInCollection(res.rows[0]?.collection, collection);
 	};
 
 	/**
-	 * Reserves the draft's slug. Releases a previous reservation that was never published, and does not
-	 * reserve anew when returning to the entry's own current or alias slug (promoted to current on publish). 409 if another entry owns the slug.
+	 * Reserves the draft's slug (the rule is `reservationFor`). Releases a previous reservation that was never published.
 	 */
 	const reserveSlug = async (
 		client: PoolClient,
@@ -54,45 +58,31 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			`SELECT entry_id FROM "${qSchema}".content_addresses WHERE collection = $1 AND locale = $2 AND slug = $3`,
 			[collection, locale, slug],
 		);
-		if (existing.rows.length > 0) {
-			if (existing.rows[0]?.entry_id === entryId) return;
-			throw new CmsError("Slug conflict", "slug_conflict");
-		}
+		const holder = existing.rows[0] ? { entryId: existing.rows[0].entry_id } : null;
+		if (reservationFor(entryId, holder) === "keep") return;
 		await client.query(
 			`INSERT INTO "${qSchema}".content_addresses (collection, locale, slug, entry_id, type) VALUES ($1, $2, $3, $4, 'reservation')`,
 			[collection, locale, slug, entryId],
 		);
 	};
 
-	/**
-	 * Checks and locks the source to translate. It must be the source of its translation group (no translation of a translation),
-	 * belong to a collection that has a body, and not be in the trash. A unique index blocks a second translation in the same language.
-	 */
-	const assertTranslationSource = async (client: PoolClient, sourceId: string, collection: string, locale: string) => {
-		const res = await client.query<{ collection: string; status: string; locale: string; group_id: string | null }>(
+	/** Locks the source to translate and checks it (`assertTranslationSource`). */
+	const checkTranslationSource = async (client: PoolClient, sourceId: string, collection: string, locale: string) => {
+		const res = await client.query<{
+			collection: string;
+			status: Entry["status"];
+			locale: string;
+			group_id: string | null;
+		}>(
 			`SELECT collection, status, locale, translation_group_id AS group_id
 			 FROM "${qSchema}".entries WHERE id = $1 FOR SHARE`,
 			[sourceId],
 		);
-		const source = res.rows[0];
-		if (!source) throw new CmsError("Source entry not found", "not_found");
-		if (source.collection !== collection || isItemCollection(collection)) {
-			throw new CmsError("Only content collections have translations", "invalid_input");
-		}
-		if (source.group_id !== null) throw new CmsError("Translate the source entry, not a translation", "invalid_input");
-		if (source.status === "trashed") throw new CmsError("A trashed entry cannot be translated", "invalid_status");
-		if (source.locale === locale) {
-			throw new CmsError("A translation for this locale already exists", "translation_exists");
-		}
-	};
-
-	/** A translation stores only per-language values. Shared fields belong to the source. */
-	const assertTranslationMetadata = (collection: string, isTranslation: boolean, metadata: Record<string, unknown>) => {
-		if (!isTranslation || !isCollection(collection)) return;
-		const common = commonFieldKeys(collection, metadata);
-		if (common.length > 0) {
-			throw new CmsError(`Common fields belong to the source: ${common.join(", ")}`, "invalid_input");
-		}
+		const row = res.rows[0];
+		assertTranslationSource(
+			row && { collection: row.collection, status: row.status, locale: row.locale, translationGroupId: row.group_id },
+			{ collection, locale },
+		);
 	};
 
 	return {
@@ -115,9 +105,9 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					const id = randomUUID();
 					const now = new Date();
 					const locale = params.locale ?? DEFAULT_LOCALE;
-					if (!isLocale(locale)) throw new CmsError("Unknown locale", "invalid_input");
+					assertKnownLocale(locale);
 					if (params.translationOf) {
-						await assertTranslationSource(client, params.translationOf, params.snapshot.collection, locale);
+						await checkTranslationSource(client, params.translationOf, params.snapshot.collection, locale);
 						assertTranslationMetadata(params.snapshot.collection, true, params.snapshot.metadata);
 					}
 
@@ -135,10 +125,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						],
 					);
 					const translation = params.snapshot.translation ?? null;
-					// Only translations carry a translation status.
-					if (translation !== null && !params.translationOf) {
-						throw new CmsError("Only translations have a translation state", "invalid_input");
-					}
+					assertTranslationStateAllowed(translation, Boolean(params.translationOf));
 					await writeBody(client, qSchema, id, "working", {
 						metadata,
 						mdx: params.snapshot.mdx,
@@ -178,15 +165,9 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				async (client) => {
 					const metadata = normalizeMetadata(params.snapshot.metadata);
 					const locked = await lockEntryForUpdate(client, qSchema, params.entryId);
-					if (locked.collection !== params.snapshot.collection) {
-						throw new CmsError("Collection mismatch", "invalid_input");
-					}
-					if (locked.version !== params.expectedVersion) {
-						throw new CmsError("Conflict", "conflict", locked.version);
-					}
-					if (locked.status === "trashed") {
-						throw new CmsError("A trashed entry must be restored before editing", "invalid_status");
-					}
+					assertSameCollection(locked.collection, params.snapshot.collection);
+					assertExpectedVersion(locked.version, params.expectedVersion);
+					assertEditableStatus(locked.status);
 					assertTranslationMetadata(
 						locked.collection,
 						locked.translation_group_id !== params.entryId,
@@ -202,17 +183,24 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					// If no translation status is sent (bulk operations, etc.), keep the stored value.
 					const translation =
 						params.snapshot.translation === undefined ? (body?.translation ?? null) : params.snapshot.translation;
-					if (translation !== null && locked.translation_group_id === params.entryId) {
-						throw new CmsError("Only translations have a translation state", "invalid_input");
-					}
-					// The content hash decides whether the body changed, not the MDX string: it is the same for a syntax-only change.
-					const bodyIdentical = Boolean(
-						body &&
-							body.content_hash === params.snapshot.contentHash &&
-							body.schema_version === params.snapshot.schemaVersion &&
-							locked.working_slug === nextSlug &&
-							isDeepStrictEqual(body.metadata, metadata) &&
-							isDeepStrictEqual(body.translation ?? null, translation),
+					assertTranslationStateAllowed(translation, locked.translation_group_id !== params.entryId);
+					const bodyIdentical = isSameWorkingBody(
+						body
+							? {
+									contentHash: body.content_hash,
+									schemaVersion: body.schema_version,
+									slug: locked.working_slug,
+									metadata: body.metadata,
+									translation: body.translation,
+								}
+							: null,
+						{
+							contentHash: params.snapshot.contentHash,
+							schemaVersion: params.snapshot.schemaVersion,
+							slug: nextSlug,
+							metadata,
+							translation,
+						},
 					);
 					const folderChanged = params.folderId !== undefined;
 
@@ -395,6 +383,22 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			withTransaction(pool, (client) => publishWithinTransaction(client, params.id, params), {
 				mapError: mapEntryWriteError,
 			}),
+
+		slugsInUse: async (params: {
+			collection: string;
+			locale: string;
+			slugs: readonly string[];
+			excludeEntryId?: string;
+		}): Promise<Set<string>> => {
+			if (params.slugs.length === 0) return new Set();
+			const res = await pool.query<{ slug: string }>(
+				`SELECT slug FROM "${qSchema}".content_addresses
+				 WHERE collection = $1 AND locale = $2 AND slug = ANY($3::text[])
+				   AND ($4::uuid IS NULL OR entry_id IS DISTINCT FROM $4::uuid)`,
+				[params.collection, params.locale, [...params.slugs], params.excludeEntryId ?? null],
+			);
+			return new Set(res.rows.map((row) => row.slug));
+		},
 
 		/** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
 		getIncomingReferences: async (params: { targetId: string }): Promise<IncomingReferenceItem[]> => {

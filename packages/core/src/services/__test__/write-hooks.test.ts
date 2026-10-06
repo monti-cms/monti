@@ -2,21 +2,17 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata, secondLocale } from "../../../test/any-site";
-import { seedEntry } from "../../adapters/postgres/__test__/seed";
+import type { Collection } from "../../core/collections";
+import type { ContentChange, ContentStore, Entry } from "../../core/store";
+import { seedEntry } from "../../core/store/__test__/seed";
+import { bodyFromMdx } from "../../mdx/stored-document";
 import {
 	closeGlobalPool,
+	createContentStore,
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
-} from "../../adapters/postgres/__test__/test-database";
-import {
-	type ContentChange,
-	type ContentStore,
-	createContentStore,
-	type Entry,
 	migrateContentStore,
-} from "../../adapters/postgres/content-store";
-import type { Collection } from "../../core/collections";
-import { bodyFromMdx } from "../../mdx/stored-document";
+} from "../../testing";
 import { type BulkItemResult, createBulkService } from "../bulk-service";
 import { createContentService } from "../content-service";
 import type { HookSource, WriteOperation } from "../hooks";

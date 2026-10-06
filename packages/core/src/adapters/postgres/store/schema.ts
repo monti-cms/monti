@@ -343,6 +343,23 @@ const STEPS: readonly MigrationStep[] = [
 		run: (client, qSchema) => migrateCodeAnnotations(client, qSchema),
 	},
 	{
+		name: "0016_plugin_documents",
+		/** The documents of the plugin storage (`PluginStorage`): one row per plugin, collection and key. */
+		run: (client, qSchema) =>
+			client.query(`
+			CREATE TABLE IF NOT EXISTS "${qSchema}".plugin_documents (
+				plugin TEXT NOT NULL,
+				collection TEXT NOT NULL,
+				key TEXT NOT NULL,
+				value JSONB NOT NULL,
+				version INTEGER NOT NULL DEFAULT 1,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+				PRIMARY KEY (plugin, collection, key)
+			)
+		`),
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */

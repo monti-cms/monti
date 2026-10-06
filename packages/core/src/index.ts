@@ -55,11 +55,18 @@ export {
 	type CmsServerPlugin,
 	definePlugin,
 	type PluginConfigView,
-	type PluginDatabase,
 	type PluginNamed,
 	type PluginNavItem,
 	type PluginRoute,
 } from "./plugin/define";
+export type {
+	ImportedItem,
+	PluginCollection,
+	PluginMigration,
+	PluginStorage,
+	StorageItem,
+	StorageWriteOptions,
+} from "./plugin/storage";
 export {
 	type CollectionSchema,
 	defineCollection,

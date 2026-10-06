@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import type { Pool, PoolClient } from "pg";
 import { computeContentHash } from "../../../core/content-hash";
+import type { RewriteItem, RewriteReport } from "../../../core/store/types";
 import type { JsonValue } from "../../../core/types";
 import { type Body, bodyFromDocument, bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
 import { validateSchemaName, withTransaction } from "./context";
@@ -53,22 +54,6 @@ export const rewriteBody = (
 	}
 	return { status: "changed", mdx: body.mdx, doc: body.doc };
 };
-
-export interface RewriteItem {
-	readonly kind: "entry" | "template";
-	/** `collection/slug (locale) state` for a body, `template "name"` for a template. */
-	readonly label: string;
-	readonly outcome: RewriteOutcome["status"];
-	readonly reason?: "unparsed" | "hash";
-}
-
-export interface RewriteReport {
-	readonly applied: boolean;
-	readonly items: readonly RewriteItem[];
-	readonly changed: number;
-	readonly unchanged: number;
-	readonly skipped: number;
-}
 
 export interface RewriteOptions {
 	/** Write the changes. Without it nothing is written and the report says what would change. */
@@ -191,20 +176,4 @@ export async function rewriteContent(pool: Pool, options: RewriteOptions = {}): 
 		unchanged: count("unchanged"),
 		skipped: count("skipped"),
 	};
-}
-
-const REASON_TEXT = { unparsed: "does not parse", hash: "the content hash would change" } as const;
-
-/** One line per body (`collection/slug (locale) state: changed|unchanged|skipped (reason)`) and a summary line. */
-export function formatRewriteReport(report: RewriteReport): string[] {
-	const lines = report.items.map((item) =>
-		item.outcome === "skipped" && item.reason
-			? `${item.label}: skipped (${REASON_TEXT[item.reason]})`
-			: `${item.label}: ${item.outcome}`,
-	);
-	const summary = `${report.changed} changed, ${report.unchanged} unchanged, ${report.skipped} skipped`;
-	lines.push(
-		report.applied ? `${summary}. Written.` : `${summary}. Dry run: nothing was written (pass --apply to write).`,
-	);
-	return lines;
 }

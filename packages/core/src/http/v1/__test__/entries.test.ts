@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../../test/any-site";
 import { AuthError } from "../../../adapters/auth";
-import { CmsError } from "../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../cms";
+import { CmsError } from "../../../core/store";
 import { PATCH as patchEntry } from "../entries/[id]/route";
 import { POST as postEntries } from "../entries/route";
 import { GET as getMeta } from "../meta/route";
