@@ -1,5 +1,7 @@
+import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
 import type { PropsWithChildren } from "react";
 import { type BlockLabels, blockLabels } from "../shared/labels";
+import type { collapsibleBlock } from "./definition";
 
 /** Collapsible. Expands when the title is clicked (it is a `<details>`, so no script is needed). With no title, the default text in the site language is used. */
 export function Collapsible({
@@ -22,4 +24,18 @@ type ComponentProps = Parameters<typeof Collapsible>[0];
 export default ({ locale }: { locale?: string }) => {
 	const labels = blockLabels(locale);
 	return { Collapsible: (props: ComponentProps) => <Collapsible {...props} labels={labels} /> };
+};
+
+/** Public components for the collapsible in the JSON renderer (`renderDocument`). */
+export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
+	const labels = blockLabels(locale);
+	return {
+		blocks: {
+			collapsible: ({ title, defaultOpen, children }: BlockProps<typeof collapsibleBlock>) => (
+				<Collapsible title={title} defaultOpen={defaultOpen} labels={labels}>
+					{children}
+				</Collapsible>
+			),
+		},
+	};
 };

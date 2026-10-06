@@ -1,10 +1,12 @@
+import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
 import { Children, type CSSProperties, isValidElement, type PropsWithChildren } from "react";
+import type { columnBlock, columnsBlock } from "./definition";
 import { columnsGridTemplate, parseColumnWidths } from "./layout";
 
 /** Columns. Stacked vertically on narrow screens, and side by side on wide screens using the `widths` ratios (equal if absent). */
-export function Columns({ widths, children }: PropsWithChildren<{ widths?: string }>) {
-	const count = Children.toArray(children).filter(isValidElement).length;
-	const style = { "--cms-columns": columnsGridTemplate(parseColumnWidths(widths, count), count) } as CSSProperties;
+export function Columns({ widths, children, count }: PropsWithChildren<{ widths?: string; count?: number }>) {
+	const columns = count ?? Children.toArray(children).filter(isValidElement).length;
+	const style = { "--cms-columns": columnsGridTemplate(parseColumnWidths(widths, columns), columns) } as CSSProperties;
 	return (
 		<div className="cms-block-columns" style={style}>
 			{children}
@@ -19,3 +21,15 @@ export function Column({ children }: PropsWithChildren) {
 
 /** Public component for columns (called by `@monti-cms/core/render`). */
 export default () => ({ Columns, Column });
+
+/** Public components for columns in the JSON renderer (`renderDocument`): the blocks `columns` and `column`. The columns are counted from the stored `column` nodes. */
+export const documentComponents = (_context: DocumentComponentsContext): LooseDocumentComponents => ({
+	blocks: {
+		columns: ({ widths, items, children }: BlockProps<typeof columnsBlock>) => (
+			<Columns widths={widths} count={items.filter((item) => item.node.type === "column").length}>
+				{children}
+			</Columns>
+		),
+		column: ({ children }: BlockProps<typeof columnBlock>) => <Column>{children}</Column>,
+	},
+});
