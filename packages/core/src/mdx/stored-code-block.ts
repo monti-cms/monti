@@ -153,6 +153,10 @@ const fenceValue = (attrs: Record<string, CmsJsonValue>): string => {
 	return fromCodeBlockDocumentToCodeFence(document, annotationConfig).value;
 };
 
+/** The annotation document of a stored code block (the one `workingCodeBlockAttrs` keeps as `codeDocument`), for a renderer that needs only that. */
+export const codeBlockDocumentOf = (attrs: Record<string, CmsJsonValue>): CodeBlockDocument =>
+	parseFence(asString(attrs.language), asString(attrs.meta), fenceValue(attrs));
+
 /** Fields the code block node owns. A fence meta key with the same name (`value="x"`) must not overwrite them. */
 const OWN_FIELDS = new Set(["language", "meta", "value", "codeDocument"]);
 

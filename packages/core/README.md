@@ -339,7 +339,7 @@ Changing the database connection itself needs a restart. In production and in te
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, `githubAuth`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
 | `@monti-cms/core/next` | `next.config.ts` | `withCms` |
-| `@monti-cms/core/render` | public pages (server components) | `renderMdx(mdx, options)` → `{ content, toc }`. In the site CSS: `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/render` | public pages (server components) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"); `renderMdx(mdx, options)` → `{ content, toc }`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
@@ -556,6 +556,37 @@ codeBlock: {
 ### Text color list
 
 Text colors come from the blocks extension (`color({ palette })` of `@monti-cms/blocks`). The old config `textColors` is gone (move it to the option).
+
+## Rendering a stored document
+
+`renderDocument` (and the server component `CmsContent`) of `@monti-cms/core/render` draws the stored document (`StoredDocument`) with React: no MDX compile and no code execution
+on the public path. `renderMdx` keeps working next to it (it moves to `@monti-cms/mdx` later) and the two draw the same page.
+
+```tsx
+import { CmsContent, renderDocument, tableOfContents, type DocumentComponents } from "@monti-cms/core/render";
+
+const { content, toc, unknown } = await renderDocument(doc, { locale, imageResolver, components });
+// or, in a server component:
+<CmsContent doc={doc} locale={locale} imageResolver={imageResolver} components={components} />;
+tableOfContents(doc); // the headings of levels 2 and 3, the same anchors, no React
+```
+
+- **Two phases.** An async pre-pass reads the whole document once (heading anchors and the table of contents, footnote numbers, Shiki highlighting of every code block, KaTeX output
+  of every formula), then a synchronous, pure render turns nodes into elements. The result is a plain React tree for server components and `renderToStaticMarkup` tests.
+- **Never throws on content.** An unknown node, mark or block, a block without a component and a node with malformed attributes go through the `fallback` component and are
+  listed in `unknown` (and passed to `onUnknown`). An unknown container shows its content, an unknown leaf nothing; in development the default fallback leaves a hidden
+  `<span data-cms-unknown>`. `strict: true` throws instead (tests, the preview page). A value that is not a stored document renders an empty body and is logged.
+- **Components** are layered: core defaults, then the block extensions' components (`documentComponents` of a plugin's `render` module), then the site's `components`. One props type per node
+  (`ParagraphProps`, `HeadingProps` with its `id`, `ListProps`, `CodeBlockProps`, `ImageProps` with the resolved `src`, `FileProps`, `TableProps`/`TableRowProps`/`TableCellProps`, `MathProps`,
+  `FootnoteRefProps`/`FootnotesProps`, `HardBreakProps`), one per core mark (`link`, `bold`, `italic`, ...), plus `codeTags` for the elements inside code blocks (`fold`, `collapse`, `Tooltip`).
+  Every component also gets `ctx` (`locale` and the fixed `labels`; plain JSON, so it can cross to a client component), and a block component gets `blockId`, `node` and `items`.
+- **Blocks are registered by block name with the attributes as flat props**, and the prop types come from the site config: `blocks: { callout: ({ variant, title, children }) => … }`,
+  `marks: { tooltip: ({ content, children }) => … }`. The type of `components` (`DocumentComponents`) is built from the `blocks` of `cms.config.ts` and of its plugins
+  (`defineBlock` keeps the attributes as literals, so `variant` is `"note" | "tip" | …`). A boolean attribute is always a boolean, a value with a default or a required string is always there,
+  and a choice that is not one of the options is replaced by the default. A code fence block (`mermaid`, `chart`) gets the code as `source`.
+- **Same page as `renderMdx`.** Heading anchors follow `github-slugger` (as `rehype-slug` did), footnotes number by first reference, the same Shiki pipeline draws code (line effects, text effects, line labels),
+  and block formulas are KaTeX `htmlAndMathml`. Differences, all intended: a GFM table is drawn by the table component (a scroll wrapper and `cms-table-*` classes, as a JSX table already was),
+  block KaTeX output sits in `<div class="cms-math">`, a paragraph of only `<strong>`/`<em>`/`<del>` keeps its `<p>`, and a plain Markdown image goes through the image resolver.
 
 ## Plugins
 

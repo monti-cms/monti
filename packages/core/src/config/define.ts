@@ -116,6 +116,7 @@ export interface CmsConfig<
 	Collections extends CollectionsConfig = CollectionsConfig,
 	Locale extends string = string,
 	Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[],
+	Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
 > {
 	/** Collection name -> definition. The name is a stored value (`entries.collection`), so do not change it in production. */
 	readonly collections: Collections;
@@ -137,7 +138,7 @@ export interface CmsConfig<
 	 * Body blocks the site adds (`defineBlock`). Blocks such as callouts and tabs are added by putting the block extension (`@monti-cms/blocks`) in `plugins`.
 	 * The public site renders them by the `component` name.
 	 */
-	readonly blocks?: readonly BlockDefinition[];
+	readonly blocks?: Blocks;
 	/** Plugins (e.g. `aiPlugin()`). Names must not collide. */
 	readonly plugins?: Plugins;
 	/** Body (MDX) settings. */
@@ -256,7 +257,9 @@ const isHomeHref = (href: string): boolean => {
 };
 
 /** Checks that the config is consistent. Reports an error right away when the app starts if it is not. */
-function validate(config: CmsConfig<CollectionsConfig, string, readonly CmsPlugin[]>): void {
+function validate(
+	config: CmsConfig<CollectionsConfig, string, readonly CmsPlugin[], readonly BlockDefinition[]>,
+): void {
 	const names = Object.keys(config.collections);
 	if (names.length === 0) throw new Error("cms.config: `collections` is empty");
 
@@ -415,7 +418,8 @@ export function defineConfig<
 	const Collections extends CollectionsConfig,
 	const Locale extends string,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
->(config: CmsConfig<Collections, Locale, Plugins>): CmsConfig<Collections, Locale, Plugins> {
+	const Blocks extends readonly BlockDefinition[] = readonly [],
+>(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks> {
 	// Also accepts definitions written without `defineCollection`. The core only reads the normalized `kind`.
 	const collections = Object.fromEntries(
 		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema)]),

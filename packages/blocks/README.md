@@ -71,6 +71,9 @@ You can also add them one by one (`plugins: [callout(), columns(), color({ palet
   name (`Callout`, `Tabs` …) to `renderMdx({ components })` wins. Code fence blocks are turned into
   `<Mermaid source="…" />` by `remarkFenceBlocksToMdx` (`@monti-cms/core/mdx`). Column widths are read with `parseColumnWidths` and `columnsGridTemplate` from `@monti-cms/blocks/columns`,
   and chart syntax and size with `parseChartDsl`, `normalizeChartDsl` and `resolvePieGeometry` from `@monti-cms/blocks/chart`.
+- Public pages in the JSON renderer: each extension's render module also exports `documentComponents(context)`, the table `renderDocument` merges in (`blocks` by block name with the attributes as
+  flat props, `marks` for `tooltip`, `code-ref` and `color`, and the `Tooltip` code tag). Tabs and the code explorer read their children from the stored nodes (`items`), not from the props of child elements.
+  A site overrides one with `renderDocument(doc, { components: { blocks: { callout: … } } })`; the props are typed from the block definitions of the site config.
 - Changing the editor look: the app sets the variables in `styles.css` (`--cms-callout-note`, `-tip`, `-info`, `-warning`, `-danger`, `--chart-1` to `5`).
 - If you remove the plugin of a block that is already used, that block drops out of the stored syntax and turns into plain text the next time it is saved.
 

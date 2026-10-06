@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "./define";
+import { type BlockDefinition, RESERVED_BLOCK_ATTRIBUTES } from "./define";
 import { BUILTIN_BLOCKS } from "./definitions";
 
 /**
@@ -67,6 +67,12 @@ export function resolveBlocks(sources: BlockSources | undefined): readonly Block
 			if (block.children || block.parent) throw new Error(`${at}: a text block has no children or parent`);
 		} else if (block.editor.view !== "node" && block.editor.view !== "opaque") {
 			throw new Error(`${at}: editor.view must be "node" or "opaque"`);
+		}
+		const reserved = Object.keys(block.attributes).find((name) => RESERVED_BLOCK_ATTRIBUTES.includes(name));
+		if (reserved) {
+			throw new Error(
+				`${at}: attribute "${reserved}" is reserved (${RESERVED_BLOCK_ATTRIBUTES.join(", ")}): the public renderer passes it to the component itself`,
+			);
 		}
 		const anchors = Object.entries(block.attributes).filter(([, attribute]) => attribute.codeAnchor);
 		if (anchors.length > 0 && (syntax.kind !== "text" || anchors.length > 1 || anchors[0]?.[1].type !== "string")) {

@@ -48,6 +48,10 @@ describe("body blocks from the site config", () => {
 		expect(() => bad({ syntax: { kind: "container", directive: "other" } })).toThrow(/directive must equal/);
 		expect(() => bad({ component: "card" })).toThrow(/PascalCase/);
 		expect(() => bad({ name: "image", syntax: { kind: "leaf", directive: "image" } })).toThrow(/already used/);
+		// The public renderer passes `children`, `node`, `blockId`, `items`, `ctx` and `source` to the component itself, so an attribute cannot take these names.
+		for (const name of ["children", "node", "blockId", "items", "ctx", "source"]) {
+			expect(() => bad({ attributes: { [name]: { type: "string", label: name } } })).toThrow(/reserved/);
+		}
 		expect(() => bad({ component: "Image" })).toThrow(/already used/);
 		expect(() => bad({ editor: { view: "mark" } })).toThrow(/editor.view/);
 		expect(() => bad({ children: { blocks: ["tab"] } })).toThrow(/added block with this parent/);

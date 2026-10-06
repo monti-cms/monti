@@ -71,6 +71,9 @@ export default defineConfig({
   이름의 컴포넌트(`Callout`·`Tabs` …)를 넘기면 그것이 이긴다. 코드 펜스 블록은 `remarkFenceBlocksToMdx`(`@monti-cms/core/mdx`)가
   `<Mermaid source="…" />`로 바꾼다. 단 너비는 `@monti-cms/blocks/columns`의 `parseColumnWidths`·`columnsGridTemplate`로,
   차트 문법·크기는 `@monti-cms/blocks/chart`의 `parseChartDsl`·`normalizeChartDsl`·`resolvePieGeometry`로 읽는다.
+- JSON 렌더러의 공개 화면: 각 확장의 render 모듈은 `documentComponents(context)`도 내보낸다. `renderDocument`가 합치는 표이며(블록 이름별 `blocks`와 평평한 속성 props, `tooltip`·`code-ref`·`color`용 `marks`,
+  코드 태그 `Tooltip`), 탭과 코드 탐색기는 자식 요소의 props가 아니라 저장된 노드(`items`)에서 자식을 읽는다.
+  사이트는 `renderDocument(doc, { components: { blocks: { callout: … } } })`로 바꿀 수 있고, props 타입은 사이트 설정의 블록 정의에서 나온다.
 - 편집기 모양 바꾸기: `styles.css`의 변수(`--cms-callout-note`·`-tip`·`-info`·`-warning`·`-danger`, `--chart-1`~`5`)를 앱에서 정한다.
 - 이미 쓴 블록의 플러그인을 빼면 그 블록은 저장 문법에서 빠져 다시 저장할 때 일반 글로 바뀐다.
 

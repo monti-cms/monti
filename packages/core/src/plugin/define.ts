@@ -11,13 +11,17 @@ import type { PluginStorage } from "./storage";
  * - Server code (`server`) and admin UI code (`admin`) are loader functions. They are read only when used, and the plugin package provides an empty browser entry point (the `browser` condition of `exports`)
  *   so server code stays out of the browser bundle.
  */
-export interface CmsPlugin<Name extends string = string, Options = unknown> {
+export interface CmsPlugin<
+	Name extends string = string,
+	Options = unknown,
+	Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
+> {
 	readonly name: Name;
 	readonly options: Options;
 	/** Items to add to the "Manage" group of the admin sidebar. `path` is a single-segment path after the admin path (`admin.path`, default `/admin`), rendered by the admin plugin's `pages`. */
 	readonly nav?: readonly PluginNavItem[];
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
-	readonly blocks?: readonly BlockDefinition[];
+	readonly blocks?: Blocks;
 	/** Validation called when the site config is created. Throws if the config is invalid. */
 	readonly validate?: (config: PluginConfigView) => void;
 	/** Server side (API routes, migrations). The default export is a `CmsServerPlugin`. */
@@ -25,8 +29,9 @@ export interface CmsPlugin<Name extends string = string, Options = unknown> {
 	/** Admin UI side (pages, providers). The default export is the admin package's `CmsAdminPlugin`. */
 	readonly admin?: () => Promise<{ readonly default: unknown }>;
 	/**
-	 * Public UI side (public components for body blocks). The default export is `(context) => component table` and `@monti-cms/core/render` calls it
-	 * (`context`: site locale, image resolver). It is read on the server; the module marks client components with `"use client"`.
+	 * Public UI side (public components for body blocks). The default export is `(context) => component table` of the MDX renderer (`renderMdx`), and the named
+	 * export `documentComponents` is `(context) => component table` of the JSON renderer (`renderDocument`: `blocks` and `marks` by block name, `codeTags`). `@monti-cms/core/render`
+	 * calls them (`context`: site locale, image resolver); a module can export either or both. It is read on the server; the module marks client components with `"use client"`.
 	 */
 	readonly render?: () => Promise<{ readonly default: unknown }>;
 	/**
@@ -101,10 +106,11 @@ export interface CmsServerPlugin {
 export function definePlugin<
 	const Name extends string,
 	Options,
+	const Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
 	const Contributes extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>,
 >(
-	plugin: CmsPlugin<Name, Options> & { readonly contributes?: Contributes },
-): CmsPlugin<Name, Options> & { readonly contributes?: Contributes } {
+	plugin: CmsPlugin<Name, Options, Blocks> & { readonly contributes?: Contributes },
+): CmsPlugin<Name, Options, Blocks> & { readonly contributes?: Contributes } {
 	if (!/^[a-z][a-z0-9-]*$/.test(plugin.name)) throw new Error(`cms plugin: invalid name "${plugin.name}"`);
 	return plugin;
 }

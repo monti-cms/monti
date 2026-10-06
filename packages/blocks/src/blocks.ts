@@ -55,6 +55,20 @@ export type BlocksOptions = {
 
 type BlockPlugin = ReturnType<(typeof FACTORIES)[BlockExtensionName]>;
 
+/** The extensions `blocks(options)` adds: `only` picks, `omit` and `false` leave out. Typed so the site config knows which blocks (and their props) are installed. */
+type SelectedNames<Options extends BlocksOptions> = Exclude<
+	Options extends { readonly only: readonly (infer Name)[] } ? Extract<Name, BlockExtensionName> : BlockExtensionName,
+	| (Options extends { readonly omit: readonly (infer Name)[] } ? Name : never)
+	| {
+			[Name in BlockExtensionName]: Options extends { readonly [Key in Name]: false } ? Name : never;
+	  }[BlockExtensionName]
+>;
+
+/** The plugins `blocks(options)` returns (their `blocks` are literal types). */
+export type BlocksPlugins<Options extends BlocksOptions = BlocksOptions> = ReturnType<
+	(typeof FACTORIES)[SelectedNames<Options>]
+>[];
+
 /**
  * Adds all of this package's block extensions at once. Spread it into the site config's `plugins`.
  *
@@ -67,13 +81,16 @@ type BlockPlugin = ReturnType<(typeof FACTORIES)[BlockExtensionName]>;
  *
  * The individual factories (`callout()`, `color({ palette })`, ...) can also be used directly. Adding the same extension twice is a config error.
  */
-export function blocks(options: BlocksOptions = {}): BlockPlugin[] {
+export function blocks<const Options extends BlocksOptions = BlocksOptions>(
+	options: Options = {} as Options,
+): BlocksPlugins<Options> {
 	const names = Object.keys(FACTORIES) as BlockExtensionName[];
 	for (const name of [...(options.only ?? []), ...(options.omit ?? [])]) {
 		if (!names.includes(name)) throw new Error(`@monti-cms/blocks: unknown block extension "${name}"`);
 	}
-	return names
+	const plugins: BlockPlugin[] = names
 		.filter((name) => !options.only || options.only.includes(name))
 		.filter((name) => !options.omit?.includes(name) && options[name] !== false)
 		.map((name) => (name === "color" ? color(options.color || {}) : FACTORIES[name]()));
+	return plugins as BlocksPlugins<Options>;
 }
