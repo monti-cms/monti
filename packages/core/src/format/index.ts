@@ -5,8 +5,9 @@
  * purpose (types, `defineFormat` and the registry): it does not read the site config, so a plugin may import it wherever it is loaded.
  */
 export type { FormatRegistry } from "./registry";
-export { createFormatRegistry } from "./registry";
+export { createFormatRegistry, NO_FORMATS } from "./registry";
 export type {
+	BlockCatalog,
 	CmsFormat,
 	FormatContext,
 	FormatExportContext,
@@ -17,5 +18,6 @@ export type {
 	FormatLink,
 	FormatMedia,
 	FormatPurpose,
+	LegacyBodies,
 } from "./types";
 export { assertFormatName, defineFormat } from "./types";

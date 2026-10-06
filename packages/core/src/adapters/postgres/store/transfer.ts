@@ -57,14 +57,13 @@ export function createTransferOps(ctx: StoreContext) {
 						entry_id: string;
 						state: string;
 						metadata: EntryMetadata;
-						mdx: string;
 						doc: unknown;
 						schema_version: number;
 						content_hash: string;
 						updated_at: Date;
 						translation: TranslationState | null;
 					}>(
-						`SELECT entry_id, state, metadata, mdx, doc, schema_version, content_hash, updated_at, translation
+						`SELECT entry_id, state, metadata, doc, schema_version, content_hash, updated_at, translation
 					 FROM "${qSchema}".entry_bodies ORDER BY entry_id ASC, state ASC`,
 					);
 
@@ -113,8 +112,7 @@ export function createTransferOps(ctx: StoreContext) {
 					for (const row of bodiesRes.rows) {
 						const body: ExportSnapshotBody = {
 							metadata: row.metadata,
-							mdx: row.mdx,
-							doc: readBodyDoc(row.doc, row.mdx),
+							doc: readBodyDoc(row.doc, null),
 							schemaVersion: row.schema_version,
 							contentHash: row.content_hash,
 							updatedAt: row.updated_at,

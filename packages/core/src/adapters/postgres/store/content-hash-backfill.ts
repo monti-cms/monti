@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
+import type { LegacyBodies } from "../../../format/types";
 import { mdxContentHash } from "./mdx-body";
 
 const DEFAULT_BATCH_SIZE = 200;
@@ -23,9 +24,9 @@ interface BodyHashInput extends BodyKey {
 export async function recomputeContentHashes(
 	client: PoolClient,
 	qSchema: string,
-	options?: { batchSize?: number },
+	options: { batchSize?: number; bodies: LegacyBodies },
 ): Promise<void> {
-	const batchSize = options?.batchSize ?? DEFAULT_BATCH_SIZE;
+	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
 	let last: BodyKey | undefined;
 	for (;;) {
 		const res = await client.query<BodyHashInput>(
@@ -42,7 +43,7 @@ export async function recomputeContentHashes(
 			[
 				res.rows.map((row) => row.entry_id),
 				res.rows.map((row) => row.state),
-				res.rows.map((row) => mdxContentHash(row.metadata, row.mdx, row.schema_version)),
+				res.rows.map((row) => mdxContentHash(options.bodies, row.metadata, row.mdx, row.schema_version)),
 			],
 		);
 		last = res.rows[res.rows.length - 1];

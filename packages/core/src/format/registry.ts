@@ -29,3 +29,6 @@ export function createFormatRegistry(formats: readonly CmsFormat[]): FormatRegis
 			})),
 	};
 }
+
+/** A registry with no format. A CMS without a format plugin accepts documents only (`doc`), not text. */
+export const NO_FORMATS: FormatRegistry = createFormatRegistry([]);

@@ -13,12 +13,11 @@ import type {
 import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
 import { normalizeReferenceKind, type Reference, readReferenceOccurrences } from "../../../core/types";
 import {
-	documentToMdx,
 	emptyStoredDocument,
 	readStoredDocument,
 	type StoredDocument,
 	unparsedDocument,
-} from "../../../mdx/stored-document";
+} from "../../../doc/stored-document";
 import type { Queryable } from "./context";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
@@ -36,9 +35,10 @@ export const readDoc = (value: unknown): StoredDocument | null => readStoredDocu
 
 /**
  * The document of a stored body. A body whose `doc` column is empty or unreadable (a row older than stored documents) reads as the document
- * of one `unparsed` node holding its `mdx` column, so every body a store hands out is a document.
+ * of one `unparsed` node holding its `mdx` column when there is one, so every body a store hands out is a document.
  */
-export const readBodyDoc = (value: unknown, mdx: string): StoredDocument => readDoc(value) ?? unparsedDocument(mdx);
+export const readBodyDoc = (value: unknown, mdx: string | null): StoredDocument =>
+	readDoc(value) ?? unparsedDocument(mdx ?? "");
 
 /** A translation state read from a `jsonb` column. A version 2 state (no document) is lifted to version 3. */
 export const readTranslation = (value: unknown): TranslationState | null =>
@@ -46,7 +46,7 @@ export const readTranslation = (value: unknown): TranslationState | null =>
 
 export interface BodyRow {
 	content_hash: string;
-	mdx: string;
+	mdx: string | null;
 	doc: StoredDocument;
 	schema_version: number;
 	metadata: EntryMetadata;
@@ -103,7 +103,6 @@ export function mapPublishedEntryRow(row: {
 	translation_group_id: string;
 	slug: string;
 	metadata: EntryMetadata;
-	mdx: string;
 	doc: unknown;
 	published_at: Date | null;
 	body_updated_at: Date;
@@ -115,8 +114,7 @@ export function mapPublishedEntryRow(row: {
 		translationGroupId: row.translation_group_id,
 		slug: row.slug,
 		metadata: row.metadata,
-		mdx: row.mdx,
-		doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc, row.mdx),
+		doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc, null),
 		publishedAt: row.published_at,
 		updatedAt: row.body_updated_at,
 	};
@@ -258,7 +256,7 @@ export async function readBody(
 	return row && { ...row, doc: readBodyDoc(row.doc, row.mdx), translation: readTranslation(row.translation) };
 }
 
-/** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is written from `doc`. */
+/** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is not written: `doc` is the only source of a body. */
 export async function writeBody(
 	client: PoolClient,
 	qSchema: string,
@@ -275,17 +273,16 @@ export async function writeBody(
 	},
 ): Promise<void> {
 	await client.query(
-		`INSERT INTO "${qSchema}".entry_bodies (entry_id, state, metadata, mdx, doc, schema_version, content_hash, updated_at, search_text, translation)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		`INSERT INTO "${qSchema}".entry_bodies (entry_id, state, metadata, doc, schema_version, content_hash, updated_at, search_text, translation)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		 ON CONFLICT (entry_id, state) DO UPDATE SET
-		   metadata = EXCLUDED.metadata, mdx = EXCLUDED.mdx, doc = EXCLUDED.doc, schema_version = EXCLUDED.schema_version,
+		   metadata = EXCLUDED.metadata, doc = EXCLUDED.doc, schema_version = EXCLUDED.schema_version,
 		   content_hash = EXCLUDED.content_hash, updated_at = EXCLUDED.updated_at, search_text = EXCLUDED.search_text,
 		   translation = EXCLUDED.translation`,
 		[
 			entryId,
 			state,
 			JSON.stringify(body.metadata),
-			documentToMdx(body.doc),
 			JSON.stringify(body.doc),
 			body.schemaVersion,
 			body.contentHash,
@@ -339,11 +336,10 @@ export async function loadEntry(client: Queryable, id: string, qSchema: string):
 	let working: EntryBody | undefined;
 	let published: EntryBody | undefined;
 	for (const row of res.rows) {
-		if (row.state === null || row.metadata === null || row.mdx === null) continue;
+		if (row.state === null || row.metadata === null) continue;
 		if (row.schema_version === null || row.content_hash === null || row.body_updated_at === null) continue;
 		const body: EntryBody = {
 			metadata: row.metadata,
-			mdx: row.mdx,
 			doc: readBodyDoc(row.doc, row.mdx),
 			schemaVersion: row.schema_version,
 			contentHash: row.content_hash,

@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import { readStoredDocument, unparsedDocument } from "../../../mdx/stored-document";
+import { readStoredDocument, unparsedDocument } from "../../../doc/stored-document";
 
 const DEFAULT_BATCH_SIZE = 200;
 

@@ -1,12 +1,14 @@
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
-import { bodyFromMdx } from "../../../mdx/stored-document";
+import type { LegacyBodies } from "../../../format/types";
 import { mdxContentHash, mdxSearchText } from "./mdx-body";
 import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
 
 export interface StoredDocumentMigrationOptions {
+	/** Reads and writes the MDX text of these bodies (supplied by the `mdx` format). */
+	readonly bodies: LegacyBodies;
 	readonly batchSize?: number;
 	/** Called for each body that gets no document and is left as it is. Default: `console.warn`. */
 	readonly log?: (message: string) => void;
@@ -35,9 +37,10 @@ interface BodyRow {
 export async function migrateStoredDocuments(
 	client: PoolClient,
 	qSchema: string,
-	options: StoredDocumentMigrationOptions = {},
+	options: StoredDocumentMigrationOptions,
 ): Promise<void> {
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
+	const { bodies } = options;
 	const log = options.log ?? ((message: string) => console.warn(message));
 
 	const withoutDocument = (where: string) =>
@@ -57,15 +60,15 @@ export async function migrateStoredDocuments(
 
 		const next = res.rows.map((row) => {
 			// A document already there (the step ran before) keeps its block ids.
-			const body = bodyFromMdx(row.mdx, undefined, { previous: readDoc(row.doc) });
+			const body = bodies.read(row.mdx, { previous: readDoc(row.doc) });
 			if (body.doc === null) withoutDocument(`entry_bodies ${row.entry_id}/${row.state}`);
 			const base = row.translation?.baseSource;
-			const baseSource = typeof base === "string" ? bodyFromMdx(base).mdx : undefined;
+			const baseSource = typeof base === "string" ? bodies.read(base).text : undefined;
 			return {
-				mdx: body.mdx,
+				mdx: body.text,
 				doc: body.doc === null ? null : JSON.stringify(body.doc),
-				contentHash: mdxContentHash(row.metadata, body.mdx, row.schema_version),
-				searchText: mdxSearchText(body.mdx),
+				contentHash: mdxContentHash(bodies, row.metadata, body.text, row.schema_version),
+				searchText: mdxSearchText(bodies, body.text),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,
 			};
@@ -100,9 +103,9 @@ export async function migrateStoredDocuments(
 		if (res.rows.length === 0) break;
 
 		const next = res.rows.map((row) => {
-			const body = bodyFromMdx(row.mdx, undefined, { previous: readDoc(row.doc) });
+			const body = bodies.read(row.mdx, { previous: readDoc(row.doc) });
 			if (body.doc === null) withoutDocument(`body_templates ${row.id}`);
-			return { mdx: body.mdx, doc: body.doc === null ? null : JSON.stringify(body.doc) };
+			return { mdx: body.text, doc: body.doc === null ? null : JSON.stringify(body.doc) };
 		});
 		await client.query(
 			`UPDATE "${qSchema}".body_templates AS t SET mdx = v.mdx, doc = v.doc::jsonb

@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import { computeContentHash } from "../../../core/content-hash";
 import { parseTranslationState } from "../../../core/translation/state";
 import type { JsonValue } from "../../../core/types";
-import { unparsedDocument } from "../../../mdx/stored-document";
+import { unparsedDocument } from "../../../doc/stored-document";
 
 const DEFAULT_BATCH_SIZE = 200;
 

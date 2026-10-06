@@ -1,13 +1,13 @@
 import type { Pool, PoolClient } from "pg";
 import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
-import { BUILT_IN_FORMATS } from "../../../format/built-in";
-import type { FormatRegistry } from "../../../format/registry";
+import { type FormatRegistry, NO_FORMATS } from "../../../format/registry";
 import { migrateBlockIds } from "./block-id-migration";
 import { migrateCodeAnnotations } from "./code-annotation-migration";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 import { migrateLinkEntryIds } from "./link-id-migration";
+import { legacyBodiesOf } from "./mdx-body";
 import { seedTemplateDocument } from "./seed-templates";
 import { migrateSoftBreaks } from "./soft-break-migration";
 import { migrateStoredDocuments } from "./stored-document-migration";
@@ -16,7 +16,10 @@ import { migrateUnparsedBodies } from "./unparsed-migration";
 
 /** What a step may need besides the database. */
 interface MigrationContext {
-	/** The formats seed templates written as text are read with. */
+	/**
+	 * The formats of the instance. Seed templates written as text are read with them, and the steps that predate stored documents (`0010` to `0015`) read the
+	 * MDX text of old bodies with the `mdx` format (`@monti-cms/mdx`), only when there is a body to read.
+	 */
 	readonly formats: FormatRegistry;
 }
 
@@ -300,7 +303,8 @@ const STEPS: readonly MigrationStep[] = [
 	{
 		name: "0010_content_hash_v2",
 		/** Content hashes now cover the parsed body instead of the MDX string (`cms-snapshot-v2`). Recomputes every stored hash. */
-		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
+		run: (client, qSchema, context) =>
+			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
 	},
 	{
 		name: "0011_line_break_hashes",
@@ -308,7 +312,8 @@ const STEPS: readonly MigrationStep[] = [
 		 * A line break is one document node (`hardBreak`) whichever way it was written, and a line of only `<br />` is an empty paragraph, so the parsed
 		 * body of some stored bodies changed. Recomputes every stored hash so that "unpublished changes" keeps meaning what it meant.
 		 */
-		run: (client, qSchema) => recomputeContentHashes(client, qSchema),
+		run: (client, qSchema, context) =>
+			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
 	},
 	{
 		name: "0012_soft_line_endings",
@@ -317,7 +322,7 @@ const STEPS: readonly MigrationStep[] = [
 		 * look by getting a `<br />` at each such line ending (working and published bodies, translation base sources, templates). Also recomputes
 		 * `content_hash` and `search_text` of every body. A body that does not parse is left as it is and logged.
 		 */
-		run: (client, qSchema) => migrateSoftBreaks(client, qSchema),
+		run: (client, qSchema, context) => migrateSoftBreaks(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
 	},
 	{
 		name: "0013_stored_documents",
@@ -326,12 +331,12 @@ const STEPS: readonly MigrationStep[] = [
 		 * bodies and templates, then gives every body its document, rewrites its MDX from it and recomputes `content_hash` and `search_text`
 		 * (and the base source of a translation). A body that does not parse is left as it is, without a document, and logged.
 		 */
-		run: async (client, qSchema) => {
+		run: async (client, qSchema, context) => {
 			await client.query(`
 				ALTER TABLE "${qSchema}".entry_bodies ADD COLUMN IF NOT EXISTS doc JSONB;
 				ALTER TABLE "${qSchema}".body_templates ADD COLUMN IF NOT EXISTS doc JSONB;
 			`);
-			await migrateStoredDocuments(client, qSchema);
+			await migrateStoredDocuments(client, qSchema, { bodies: legacyBodiesOf(context.formats) });
 		},
 	},
 	{
@@ -351,7 +356,8 @@ const STEPS: readonly MigrationStep[] = [
 		 * annotation comments of a code fence are in the form Monti writes them. Also recomputes `content_hash` and `search_text`. Block ids, `version` and
 		 * `updated_at` are kept. A body whose document cannot be read is left as it is and logged.
 		 */
-		run: (client, qSchema) => migrateCodeAnnotations(client, qSchema),
+		run: (client, qSchema, context) =>
+			migrateCodeAnnotations(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
 	},
 	{
 		name: "0016_plugin_documents",
@@ -401,6 +407,18 @@ const STEPS: readonly MigrationStep[] = [
 		run: (client, qSchema) => migrateTemplatesToDocuments(client, qSchema),
 	},
 	{
+		name: "0020_mdx_columns_optional",
+		/**
+		 * The MDX text of a body is no longer stored: `doc` is the only source of an entry body and of a body template, and nothing writes `mdx` any more. The column
+		 * stays (it is not dropped, so a downgrade or an inspection still finds the text of old bodies) but a row does not need a value for it.
+		 */
+		run: (client, qSchema) =>
+			client.query(`
+			ALTER TABLE "${qSchema}".entry_bodies ALTER COLUMN mdx DROP NOT NULL;
+			ALTER TABLE "${qSchema}".body_templates ALTER COLUMN mdx DROP NOT NULL;
+		`),
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */
@@ -447,7 +465,7 @@ export async function migrateContentStore(
 	options?: { schema?: string; formats?: FormatRegistry },
 ): Promise<void> {
 	const qSchema = validateSchemaName(options?.schema);
-	const context: MigrationContext = { formats: options?.formats ?? BUILT_IN_FORMATS };
+	const context: MigrationContext = { formats: options?.formats ?? NO_FORMATS };
 	await withTransaction(pool, async (client) => {
 		await prepare(client, qSchema);
 		const applied = new Set(

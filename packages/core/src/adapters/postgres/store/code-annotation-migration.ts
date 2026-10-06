@@ -1,13 +1,15 @@
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
-import { bodyFromDocument, bodyFromMdx } from "../../../mdx/stored-document";
+import type { LegacyBodies } from "../../../format/types";
 import { mdxContentHash, mdxSearchText } from "./mdx-body";
 import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
 
 export interface CodeAnnotationMigrationOptions {
+	/** Reads and writes the MDX text of these bodies (supplied by the `mdx` format). */
+	readonly bodies: LegacyBodies;
 	readonly batchSize?: number;
 	/** Called for each body that is left as it is (its document cannot be read or would not read back the same). Default: `console.warn`. */
 	readonly log?: (message: string) => void;
@@ -23,17 +25,23 @@ interface Rewritten {
  * The body of a stored document written with the current form (a code block as its code and annotations, see `stored-code-block.ts`), its block ids kept.
  * A body without a document, or one that cannot be lifted, stays as it is; the latter is logged.
  */
-const rewritten = (mdx: string, stored: unknown, where: string, log: (message: string) => void): Rewritten => {
+const rewritten = (
+	bodies: LegacyBodies,
+	mdx: string,
+	stored: unknown,
+	where: string,
+	log: (message: string) => void,
+): Rewritten => {
 	if (stored === null || stored === undefined) return { mdx, doc: null };
 	const doc = readDoc(stored);
-	const body = doc && bodyFromDocument(doc, undefined, { previous: doc });
+	const body = doc && bodies.write(doc, { previous: doc });
 	if (!body?.doc) {
 		log(
 			`[monti] code annotations left as they are in ${where}: its stored document cannot be read or would not read back the same`,
 		);
 		return { mdx, doc: null };
 	}
-	return { mdx: body.mdx, doc: { stored: JSON.parse(JSON.stringify(body.doc)) } };
+	return { mdx: body.text, doc: { stored: JSON.parse(JSON.stringify(body.doc)) } };
 };
 
 interface BodyRow {
@@ -54,6 +62,7 @@ interface BodyRow {
  * Returns `null` when nothing changes.
  */
 const translationAfter = (
+	bodies: LegacyBodies,
 	row: BodyRow,
 	where: string,
 	log: (message: string) => void,
@@ -61,13 +70,13 @@ const translationAfter = (
 	const state = row.translation;
 	if (!state || typeof state.baseSource !== "string") return null;
 	if (state.baseDoc !== null && state.baseDoc !== undefined) {
-		const base = rewritten(state.baseSource, state.baseDoc, `${where} (translation base)`, log);
+		const base = rewritten(bodies, state.baseSource, state.baseDoc, `${where} (translation base)`, log);
 		if (!base.doc) return null;
 		return isDeepStrictEqual(base.doc.stored, state.baseDoc) && base.mdx === state.baseSource
 			? null
 			: { ...state, baseSource: base.mdx, baseDoc: base.doc.stored };
 	}
-	const baseSource = bodyFromMdx(state.baseSource).mdx;
+	const baseSource = bodies.read(state.baseSource).text;
 	return baseSource === state.baseSource ? null : { ...state, baseSource };
 };
 
@@ -85,9 +94,10 @@ const translationAfter = (
 export async function migrateCodeAnnotations(
 	client: PoolClient,
 	qSchema: string,
-	options: CodeAnnotationMigrationOptions = {},
+	options: CodeAnnotationMigrationOptions,
 ): Promise<void> {
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
+	const { bodies } = options;
 	const log = options.log ?? ((message: string) => console.warn(message));
 
 	let last: { entry_id: string; state: string } | undefined;
@@ -102,10 +112,10 @@ export async function migrateCodeAnnotations(
 
 		const changed = res.rows.flatMap((row) => {
 			const where = `entry_bodies ${row.entry_id}/${row.state}`;
-			const body = rewritten(row.mdx, row.doc, where, log);
-			const contentHash = mdxContentHash(row.metadata, body.mdx, row.schema_version);
-			const searchText = mdxSearchText(body.mdx);
-			const translation = translationAfter(row, where, log);
+			const body = rewritten(bodies, row.mdx, row.doc, where, log);
+			const contentHash = mdxContentHash(bodies, row.metadata, body.mdx, row.schema_version);
+			const searchText = mdxSearchText(bodies, body.mdx);
+			const translation = translationAfter(bodies, row, where, log);
 			const docChanged = body.doc !== null && !isDeepStrictEqual(body.doc.stored, row.doc);
 			if (
 				!docChanged &&
@@ -160,7 +170,7 @@ export async function migrateCodeAnnotations(
 		if (res.rows.length === 0) break;
 
 		const changed = res.rows.flatMap((row) => {
-			const body = rewritten(row.mdx, row.doc, `body_templates ${row.id}`, log);
+			const body = rewritten(bodies, row.mdx, row.doc, `body_templates ${row.id}`, log);
 			const docChanged = body.doc !== null && !isDeepStrictEqual(body.doc.stored, row.doc);
 			if (!docChanged && body.mdx === row.mdx) return [];
 			return [{ id: row.id, mdx: body.mdx, doc: docChanged ? JSON.stringify(body.doc?.stored) : null }];
