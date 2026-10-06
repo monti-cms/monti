@@ -31,7 +31,9 @@ const topic = await service.createDraft({
 });
 
 const common = { authorId: author.id, topicIds: [topic.id], format: "guide" };
-const articles = [
+type Article = { slug: string; metadata: Record<string, unknown>; mdx: string; publish: boolean };
+
+const articles: Article[] = [
 	{
 		slug: "cms-elements",
 		metadata: { ...common, title: "CMS elements" },
@@ -65,7 +67,7 @@ const created = await Promise.all(
 		}),
 	})),
 );
-const saved = [];
+const saved: { article: Article; id: string; version: number }[] = [];
 for (const { article, draft } of created) {
 	const entry = await service.saveDraft(draft.id, {
 		collection: "article",

@@ -168,7 +168,9 @@ export function createPublishing(ctx: StoreContext) {
 		const locked = await lockEntryForUpdate(client, qSchema, id, options.expectedVersion);
 		assertPublishableStatus(locked.status);
 
-		options.onWarnings?.((await validatePreparedForPublish(client, id, options.snapshot)).warnings);
+		// Not `onWarnings?.(await ...)`: an absent callback must not skip the checks.
+		const checked = await validatePreparedForPublish(client, id, options.snapshot);
+		options.onWarnings?.(checked.warnings);
 
 		const working = await readBody(client, qSchema, id, "working");
 		if (!working) throw new CmsError("Working draft not found", "not_found");
