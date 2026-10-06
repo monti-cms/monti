@@ -4,7 +4,7 @@ import { assignBlockIds, copyBlockIds, forEachBlock, withoutBlockIds } from "./b
 import { attributeRecord } from "./jsx";
 import { BLOCK_JSX_NAMES, sortMarks } from "./registry";
 import { serialize } from "./serialize";
-import { storedCodeBlockAttrs, workingCodeBlockAttrs } from "./stored-code-block";
+import { outOfRangeAnnotationNames, storedCodeBlockAttrs, workingCodeBlockAttrs } from "./stored-code-block";
 import { configuredSyntax, syntaxBlocks } from "./syntax";
 import { toDocument } from "./to-document";
 import type { CmsJsonValue, CmsJsxAttribute, CmsMark, CmsMdxAnalysis, CmsNode } from "./types";
@@ -274,6 +274,14 @@ export interface Body {
 	readonly mdx: string;
 	readonly doc: StoredDocument | null;
 	readonly analysis: CmsMdxAnalysis;
+	/** Line annotations of code blocks that reach past the last code line. The document keeps them cut, or drops them when they start past the code. */
+	readonly outOfRange?: readonly OutOfRangeAnnotation[];
+}
+
+export interface OutOfRangeAnnotation {
+	readonly name: string;
+	/** The top-level block that holds the code block. */
+	readonly blockId?: string;
 }
 
 /** Two documents with the same content (block ids are not content). */
@@ -293,6 +301,20 @@ const storedFrom = (analysis: CmsMdxAnalysis): StoredDocument | null => {
 	} catch {
 		return null;
 	}
+};
+
+const outOfRangeIn = (node: CmsNode): string[] => [
+	...(node.type === "codeBlock" ? outOfRangeAnnotationNames(node.attrs ?? {}) : []),
+	...(node.content ?? []).flatMap(outOfRangeIn),
+];
+
+/** Annotations of the code blocks of a parsed body that the stored document cannot keep as written. */
+const outOfRangeOf = (analysis: CmsMdxAnalysis, doc: StoredDocument): OutOfRangeAnnotation[] => {
+	const working = toDocument(analysis);
+	return (working.content ?? []).flatMap((block, index) => {
+		const blockId = doc.content[index]?.id;
+		return outOfRangeIn(block).map((name) => ({ name, ...(blockId === undefined ? {} : { blockId }) }));
+	});
 };
 
 export interface BodyOptions {
@@ -315,12 +337,13 @@ export const bodyFromMdx = (
 	const parsed = storedFrom(analysis);
 	if (!parsed) return { mdx, doc: null, analysis };
 	const doc = withContent(parsed, assignBlockIds(parsed.content, [options.previous?.content]));
+	const outOfRange = outOfRangeOf(analysis, doc);
 	const written = serialize(fromStoredDocument(doc), syntax);
-	if (written === mdx) return { mdx, doc, analysis };
+	if (written === mdx) return { mdx, doc, analysis, outOfRange };
 	const rewritten = analyze(written, undefined, syntax);
 	const reread = storedFrom(rewritten);
 	if (!reread || !sameDocument(doc, reread)) return { mdx, doc: null, analysis };
-	return { mdx: written, doc, analysis: rewritten };
+	return { mdx: written, doc, analysis: rewritten, outOfRange };
 };
 
 /** Text runs of one parent as a reader of the MDX would see them: empty text dropped, neighbours with the same marks joined, marks in their stored order. */

@@ -655,12 +655,12 @@
 		"excerptText": ""
 	},
 	"code block with annotation": {
-		"parsed": false,
-		"hash": "ca186b87f1b7827537a9ee3ea4fe130bed7a0e3c7e12e16aa1954f5e9005a718",
+		"parsed": true,
+		"hash": "358d5db1422dfa5fbb0996280cd3a22fb0562d9dd62fb6ca94891fbef94e39ff",
 		"issues": [],
-		"warnings": [],
+		"warnings": ["code_annotation_out_of_range"],
 		"publishIssues": ["missing_field"],
-		"publishWarnings": [],
+		"publishWarnings": ["code_annotation_out_of_range"],
 		"references": [],
 		"internalLinks": [],
 		"imageSources": [],
