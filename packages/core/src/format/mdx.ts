@@ -1,10 +1,12 @@
 import { withoutBlockIds } from "../mdx/block-ids";
 import { entryIdOfMark } from "../mdx/entry-links";
 import { bodyFromMdx, documentToMdx, type StoredDocument } from "../mdx/stored-document";
+import { syntaxBlocks, syntaxCodeLineEffects } from "../mdx/syntax";
 import type { CmsMark, CmsNode } from "../mdx/types";
 import {
 	type CmsFormat,
 	defineFormat,
+	type FormatContext,
 	type FormatExportContext,
 	type FormatImportResult,
 	type FormatIssue,
@@ -14,6 +16,13 @@ import {
  * The built-in `mdx` format: the stored document written as MDX (CommonMark + GFM + standard MDX JSX, and the site's syntax extensions) and read back.
  * It is the same code core always used for MDX, behind the format seam; it moves to the `@monti-cms/mdx` package when MDX leaves core.
  */
+
+/** What a format may rely on, from the site config: its blocks and code line effects. Core and the admin build the context of the built-in format with it. */
+export const builtInFormatContext = (locale: string): FormatContext => ({
+	locale,
+	blocks: syntaxBlocks,
+	codeLineEffects: syntaxCodeLineEffects,
+});
 
 /**
  * The marks of a text with its internal links resolved: a link by id becomes a link to the real path of its target. A link that cannot be resolved is
