@@ -10,6 +10,15 @@ export {
 export type { SourceConversionResult } from "./converter";
 export { SourceConverter } from "./converter";
 export * from "./directives";
+export {
+	ENTRY_LINK_PREFIX,
+	entryIdOfHref,
+	entryIdOfMark,
+	entryLinkHref,
+	entryLinkIds,
+	linkAttrs,
+	mapLinkAttrs,
+} from "./entry-links";
 export * from "./image-src";
 export * from "./image-transform";
 export * from "./registry";

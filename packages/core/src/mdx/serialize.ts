@@ -3,6 +3,7 @@ import { fromCodeBlockDocumentToCodeFence } from "../annotation/code-block/docum
 import type { CodeBlockDocument } from "../annotation/code-block/types";
 import type { BlockDefinition } from "../blocks/define";
 import type { SerializeContext, SerializeInlinesOptions, SyntaxExtension } from "../syntax/types";
+import { entryIdOfMark, entryLinkHref } from "./entry-links";
 import { serializeFrontmatter } from "./frontmatter";
 import { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, sortMarks } from "./registry";
 import { configuredSyntax, syntaxBlocks, syntaxCodeLineEffects } from "./syntax";
@@ -307,7 +308,9 @@ const standardMark = (mark: CmsMark, inner: string): string => {
 		case "code":
 			return `\`${inner}\``;
 		case "link": {
-			const href = String(mark.attrs?.href ?? "");
+			// An entry link has no address of its own: a text notation names the entry (`entry:<id>`), unless the editor gave it an address to show.
+			const entryId = entryIdOfMark(mark);
+			const href = String(mark.attrs?.href ?? (entryId ? entryLinkHref(entryId) : ""));
 			const title = mark.attrs?.title;
 			const destination = formatLinkDestination(href);
 			return typeof title === "string" && title.length > 0
