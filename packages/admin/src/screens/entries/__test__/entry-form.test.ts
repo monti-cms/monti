@@ -1,3 +1,4 @@
+import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/mdx";
 import { describe, expect, it } from "vitest";
 import {
 	type EntryData,
@@ -86,11 +87,11 @@ describe("translation state form", () => {
 		});
 
 	const DOC = {
-		version: 2,
+		version: STORED_DOCUMENT_VERSION,
 		type: "doc",
 		content: [{ type: "paragraph", id: "aaaaaaaa", content: [{ type: "text", text: "원문" }] }],
 	} as const;
-	const EMPTY = { version: 4, baseDoc: { type: "doc", version: 2, content: [] } };
+	const EMPTY = { version: 4, baseDoc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] } };
 
 	it("a translation form holds the confirmed source as JSON with fixed key order and sends it in the save request", () => {
 		// The server (JSONB) returns keys reordered.
@@ -103,7 +104,7 @@ describe("translation state form", () => {
 		const reordered = {
 			type: "doc",
 			content: [{ content: [{ text: "원문", type: "text" }], id: "aaaaaaaa", type: "paragraph" }],
-			version: 2,
+			version: STORED_DOCUMENT_VERSION,
 		};
 		const first = formFromEntry(translation({ version: 4, baseDoc: DOC }));
 		const second = formFromEntry(translation({ baseDoc: reordered, version: 4 }));
