@@ -277,7 +277,7 @@ export interface CmsRead {
 	}): Promise<ReadEntry<C> | null>;
 	/**
 	 * Resolver that turns the body's registered media (`Image`, `File`) into public URLs, for `renderMdx`'s `imageResolver`.
-	 * @deprecated Reads the MDX text again to find the media. Use `entry.refs`: `<CmsContent entry={entry} />` resolves images and files from it.
+	 * For `renderMdx` only. To render the stored document, use `entry.refs`: `<CmsContent entry={entry} />` resolves images and files from it.
 	 */
 	imageResolver(source: string): ReturnType<typeof createPublicImageResolver>;
 	/** Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage. */

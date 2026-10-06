@@ -52,10 +52,10 @@ export function pickPublicMetadata(collection: string, metadata: Record<string, 
 
 /**
  * Format version of the archive, in the manifest and in the body JSON files. Version 2 added `working.doc.json` / `published.doc.json` and the
- * `doc` of templates to the admin archive. The public archive's `published.json` carries the stored document as `doc` (the same document as
+ * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
  * `published.doc.json` in the admin archive), next to the MDX text.
  */
-export const EXPORT_FORMAT_VERSION = 2;
+export const EXPORT_FORMAT_VERSION = 3;
 
 export interface ExportManifestEntry {
 	id: string;

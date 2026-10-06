@@ -17,7 +17,7 @@ export interface PublicApiOptions {
 	/** Maximum page size (default 100). The default page size is 25. */
 	readonly maxPageSize?: number;
 	/**
-	 * Shape of an entry in the response. Defaults to `defaultPublicJson`. The body (`doc`, `refs` and the MDX text `body`) is included only for a single read (`body: true`).
+	 * Shape of an entry in the response. Defaults to `defaultPublicJson`. The body (`doc` and `refs`) is included only for a single read (`body: true`).
 	 * Returning `null` hides that entry from the public API (dropped from lists, 404 for a single read). A page's `total` is the count before hiding.
 	 */
 	readonly toJson?: (entry: ReadEntry, options: { readonly body: boolean }) => unknown;
@@ -26,7 +26,7 @@ export interface PublicApiOptions {
 /**
  * Default response shape. No admin-only values (edition, folder, status).
  * A single read adds the body: `doc` (the stored document), `refs` (the public URLs of its media, keyed by media id; only media the document uses)
- * and, deprecated, `body` (the MDX text).
+ * The MDX text is not included (it comes back as an optional format later).
  */
 export function defaultPublicJson(entry: ReadEntry, { body }: { readonly body: boolean }) {
 	return {
@@ -40,6 +40,6 @@ export function defaultPublicJson(entry: ReadEntry, { body }: { readonly body: b
 		updatedAt: entry.updatedAt.toISOString(),
 		metadata: entry.metadata,
 		relations: entry.relations,
-		...(body ? { doc: entry.doc, refs: entry.refs, body: entry.mdx } : {}),
+		...(body ? { doc: entry.doc, refs: entry.refs } : {}),
 	};
 }

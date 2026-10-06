@@ -190,14 +190,14 @@ describe("export archive builder", () => {
 		expect(buildExportArchive(changed, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
 	});
 
-	it("the admin archive is format version 2 and writes the document next to the MDX it was written to", () => {
+	it("the admin archive is format version 3 and writes the document next to the MDX it was written to", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
 		const archive = readAll(zip);
 
-		expect(manifest.formatVersion).toBe(2);
-		expect(JSON.parse(archive.text("manifest.json")).formatVersion).toBe(2);
+		expect(manifest.formatVersion).toBe(3);
+		expect(JSON.parse(archive.text("manifest.json")).formatVersion).toBe(3);
 		for (const path of archive.paths.filter((item) => /\/(working|published)\.json$/.test(item))) {
-			expect(JSON.parse(archive.text(path)).formatVersion, path).toBe(2);
+			expect(JSON.parse(archive.text(path)).formatVersion, path).toBe(3);
 		}
 		const workingDoc = archive.text(entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"));
 		expect(workingDoc).toBe(`${canonicalJson(fixtureDocument("working body"))}\n`);
@@ -268,7 +268,7 @@ describe("export archive builder", () => {
 		const base = buildExportArchive(makeSnapshot(), options);
 		const archive = readAll(base.zip);
 
-		expect(base.manifest.formatVersion).toBe(2);
+		expect(base.manifest.formatVersion).toBe(3);
 		// The document is a field of the entry, not a file of its own, and it is the document the admin archive stores.
 		expect(archive.paths.some((path) => path.includes(".doc.json"))).toBe(false);
 		const published = JSON.parse(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.json")));

@@ -287,7 +287,7 @@ Everything else imports `cms` from this file.
 | Admin API in a host other than Next (experimental) | `cms.handle(request)`: a standard `Request` in, a `Response` out |
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` |
-| Public media | `entry.refs` (the URLs of the media of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)`; `cms.read.imageResolver(mdx)` is deprecated |
+| Public media | `entry.refs` (the URLs of the media of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` (`cms.read.imageResolver(mdx)` is for `renderMdx`) |
 | Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
 | Scripts and the command line | `cms.migrate()`, `cms.rewrite({ apply })`, `cms.close()` |
 | Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
@@ -421,10 +421,10 @@ Bodies that do not parse, have front matter or would not read back the same are 
 
 - **Admin entry API.** `POST /api/cms/v1/entries` and `PATCH /api/cms/v1/entries/:id` accept `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) instead of `mdx`; sending both is `400 invalid_input`, and so is a document that is not a valid stored document. With neither, a new entry has an empty body and a patch keeps the current one.
   Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/meta` reports the size limit as `limits.docBytes` next to `limits.mdxBytes`. The template API keeps accepting `mdx` only and returns `doc` with each template.
-- **Admin export** (`GET /api/cms/v1/export`) is format version 2: each body that has a document also has `working.doc.json` / `published.doc.json` next to `working.mdx` / `published.mdx`, `templates.json` items have `doc`, and the digests cover the document.
+- **Admin export** (`GET /api/cms/v1/export`) is format version 3 (the public archive's `published.json` carries `doc` too): each body that has a document also has `working.doc.json` / `published.doc.json` next to `working.mdx` / `published.mdx`, `templates.json` items have `doc`, and the digests cover the document.
 - **Public read API and public export** return the document too. `cms.read.getEntry` / `listEntries` / `getPreview` give `entry.doc` (the stored document; in a list only with `body: true`, otherwise `null`) and `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } } }`: what a renderer needs for the images and files of that document, only for media the document uses; `collectRefs(doc)` lists the ids).
-  `entry.mdx` stays and is deprecated. `GET /api/cms/v1/public/entries/:collection/:slug` adds `doc` and `refs` next to `body` (the MDX text, deprecated); lists have none of them.
+  `entry.mdx` stays for now. `GET /api/cms/v1/public/entries/:collection/:slug` returns `doc` and `refs` and no MDX text (it comes back as an optional format later); lists have none of them.
   The public export carries `doc` in each `published.json` next to `mdx` (a body without a document has `null`), and the digests cover it. A preview of a draft that does not parse has `doc: null`.
 
 ### Writing a syntax extension (experimental)

@@ -86,7 +86,7 @@ export async function resolvePublicMedia(
 
 /**
  * Connects public MDX so that it resolves registered media into actual public URLs.
- * @deprecated Reads the MDX text again to find the media. Read the stored document instead (`entry.doc`, `entry.refs`) and render it with `CmsContent`.
+ * For `renderMdx`: it reads the MDX text again to find the media. To render the stored document, use `entry.refs` with `CmsContent`.
  */
 export async function createPublicImageResolver(deps: PublicMediaDeps, source: string) {
 	const urls = await resolvePublicMedia(deps, collectMediaIds(source));

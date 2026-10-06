@@ -66,7 +66,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 		const zip = new Uint8Array(await res.arrayBuffer());
 		const manifest = JSON.parse(findFile(zip, "manifest.json"));
 		expect(manifest.scope).toBe("admin");
-		expect(manifest.formatVersion).toBe(2);
+		expect(manifest.formatVersion).toBe(3);
 		expect(manifest.counts.entries).toBe(3);
 		expect(findFile(zip, DRAFT_WORKING)).toBe("draft secret body");
 		expect(JSON.parse(findFile(zip, PUBLISHED_WORKING_DOC))).toMatchObject({ type: "doc", version: 2 });

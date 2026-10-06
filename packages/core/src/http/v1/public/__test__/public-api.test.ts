@@ -117,7 +117,8 @@ describe("Public JSON API", () => {
 	it("single: includes the body as a document with its refs, reports the canonical address for an old address, and is 404 if missing", async () => {
 		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 		const one = await get(`v1/public/entries/${contentCollection}/public-1`);
-		expect(one.body).toMatchObject({ entry: { slug: "public-1", body: "Body public-1" }, address: { isAlias: false } });
+		expect(one.body).toMatchObject({ entry: { slug: "public-1" }, address: { isAlias: false } });
+		expect(one.body.entry).not.toHaveProperty("body");
 		// The stored document and what it points to, as JSON: the text of the body is in the document, and a body without media has nothing to resolve.
 		const stored = await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "public-1" });
 		expect(one.body.entry.doc).toEqual(JSON.parse(JSON.stringify(stored?.published?.doc)));

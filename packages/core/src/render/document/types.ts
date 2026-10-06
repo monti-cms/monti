@@ -369,7 +369,7 @@ export interface RenderDocumentOptions {
 	readonly refs?: ReadRefs;
 	/**
 	 * Resolver for image and file addresses, for a site that resolves them itself. Wins over `refs`. Without both, only the outer `src` is used.
-	 * (`cms.read.imageResolver(mdx)` is deprecated: read `entry.refs` instead.)
+	 * (`cms.read.imageResolver(mdx)` is for `renderMdx`; for a document, read `entry.refs`.)
 	 */
 	readonly imageResolver?: ImageResolver;
 	/** Language of the public page. Block components receive it as `ctx.locale`. */
