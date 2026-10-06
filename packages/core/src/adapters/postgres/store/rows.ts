@@ -91,6 +91,7 @@ export function mapPublishedEntryRow(row: {
 	slug: string;
 	metadata: EntryMetadata;
 	mdx: string;
+	doc: unknown;
 	published_at: Date | null;
 	body_updated_at: Date;
 }): PublishedEntryRecord {
@@ -102,6 +103,7 @@ export function mapPublishedEntryRow(row: {
 		slug: row.slug,
 		metadata: row.metadata,
 		mdx: row.mdx,
+		doc: readDoc(row.doc),
 		publishedAt: row.published_at,
 		updatedAt: row.body_updated_at,
 	};

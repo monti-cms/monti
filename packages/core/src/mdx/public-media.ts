@@ -46,39 +46,50 @@ export interface PublicMediaDeps {
 	readonly mediaStore: () => MediaStore;
 }
 
-/** Connects public MDX so that it resolves registered media into actual public URLs. */
-export async function createPublicImageResolver(deps: PublicMediaDeps, source: string) {
+/**
+ * Resolves registered media ids into public URLs, sizes and file info (a ready file) or the reason there is none. Ids with no media row are left out
+ * (the resolvers read them as unresolved). A deployment without a database or storage resolves nothing and still renders.
+ */
+export async function resolvePublicMedia(
+	deps: PublicMediaDeps,
+	mediaIds: readonly string[],
+): Promise<Map<string, ImageResolveResult>> {
 	const urls = new Map<string, ImageResolveResult>();
-	const mediaIds = collectMediaIds(source);
-
-	if (mediaIds.length > 0) {
-		try {
-			const store = deps.store();
-			const mediaStore = deps.mediaStore();
-			await Promise.all(
-				mediaIds.map(async (mediaId) => {
-					const media = await store.getMediaAsset(mediaId);
-					if (!media) return;
-					if (media.status !== "ready") {
-						urls.set(mediaId, { failure: "not-ready" });
-						return;
-					}
-					if (!media.storageKey) {
-						urls.set(mediaId, { failure: "unresolved" });
-						return;
-					}
-					const url = mediaStore.getPublicUrl(media.storageKey);
-					const { width, height } = media;
-					const file = { filename: media.filename, byteSize: media.byteSize, mimeType: media.mimeType };
-					urls.set(mediaId, width && height && width > 0 && height > 0 ? { url, width, height, file } : { url, file });
-				}),
-			);
-		} catch {
-			// Keystatic/public-only deployments may not configure the CMS database or R2.
-			// Keep rendering and let CmsImage show its neutral fallback.
-		}
+	if (mediaIds.length === 0) return urls;
+	try {
+		const store = deps.store();
+		const mediaStore = deps.mediaStore();
+		await Promise.all(
+			mediaIds.map(async (mediaId) => {
+				const media = await store.getMediaAsset(mediaId);
+				if (!media) return;
+				if (media.status !== "ready") {
+					urls.set(mediaId, { failure: "not-ready" });
+					return;
+				}
+				if (!media.storageKey) {
+					urls.set(mediaId, { failure: "unresolved" });
+					return;
+				}
+				const url = mediaStore.getPublicUrl(media.storageKey);
+				const { width, height } = media;
+				const file = { filename: media.filename, byteSize: media.byteSize, mimeType: media.mimeType };
+				urls.set(mediaId, width && height && width > 0 && height > 0 ? { url, width, height, file } : { url, file });
+			}),
+		);
+	} catch {
+		// Keystatic/public-only deployments may not configure the CMS database or R2.
+		// Keep rendering and let CmsImage show its neutral fallback.
 	}
+	return urls;
+}
 
+/**
+ * Connects public MDX so that it resolves registered media into actual public URLs.
+ * For `renderMdx`: it reads the MDX text again to find the media. To render the stored document, use `entry.refs` with `CmsContent`.
+ */
+export async function createPublicImageResolver(deps: PublicMediaDeps, source: string) {
+	const urls = await resolvePublicMedia(deps, collectMediaIds(source));
 	return ({ mediaId, src }: { mediaId?: string; src?: string }): ImageResolveResult => {
 		if (mediaId) return urls.get(mediaId) ?? { failure: "unresolved" };
 		return resolveImageUrl(src) ?? { failure: "unresolved" };

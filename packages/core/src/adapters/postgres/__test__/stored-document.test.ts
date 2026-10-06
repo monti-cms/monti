@@ -295,8 +295,9 @@ describe("stored documents", () => {
 			expect((await store.getWorking({ entryId: draft.id })).doc).toBeNull();
 		});
 
-		it("the public read does not expose the document", async () => {
+		it("the public read returns the stored document, and a list returns it only with the body", async () => {
 			const published = await publish(await createDraft({ mdx: UNTIDY }));
+			const row = await stored(published.id, "published");
 
 			const lookup = await store.getPublishedEntryBySlug({
 				collection: contentCollection,
@@ -304,10 +305,15 @@ describe("stored documents", () => {
 			});
 			if (lookup.status !== "current") throw new Error("expected the published entry");
 			expect(lookup.entry.mdx).toBe(TIDY);
-			expect(Object.keys(lookup.entry)).not.toContain("doc");
-			const listed = await store.listPublishedEntries({ collections: [contentCollection], includeBody: true });
-			expect(listed.length).toBeGreaterThan(0);
-			for (const entry of listed) expect(Object.keys(entry)).not.toContain("doc");
+			// The document that was stored, not one parsed again from the text.
+			expect(lookup.entry.doc).toEqual(readStoredDocument(row.doc));
+			expect(lookup.entry.doc).not.toBeNull();
+
+			const withBody = await store.listPublishedEntries({ collections: [contentCollection], includeBody: true });
+			expect(withBody.find((entry) => entry.id === published.id)?.doc).toEqual(lookup.entry.doc);
+			const withoutBody = await store.listPublishedEntries({ collections: [contentCollection] });
+			expect(withoutBody.length).toBeGreaterThan(0);
+			for (const entry of withoutBody) expect(entry.doc).toBeNull();
 		});
 	});
 
