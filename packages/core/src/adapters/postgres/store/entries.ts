@@ -416,20 +416,29 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		},
 
 		resolveLinkTargets: async (params: {
-			addresses: readonly { collection: string; slug: string }[];
-		}): Promise<{ collection: string; slug: string; entryId: string }[]> => {
+			addresses: readonly { collection: string; slug: string; locale?: string }[];
+		}): Promise<{ collection: string; slug: string; locale: string; entryId: string }[]> => {
 			if (params.addresses.length === 0) return [];
 			// A body link (`/posts/slug`) is the default-language URL. Current, former and reserved addresses all name an entry; a trashed entry is not one a new
 			// link can be made to (saving a reference to it is refused), so its address is left as written.
-			const res = await pool.query<{ collection: string; slug: string; entry_id: string }>(
-				`SELECT a.collection, a.slug, COALESCE(e.translation_group_id, e.id) AS entry_id
+			const res = await pool.query<{ collection: string; slug: string; locale: string; entry_id: string }>(
+				`SELECT a.collection, a.slug, a.locale, COALESCE(e.translation_group_id, e.id) AS entry_id
 				 FROM "${qSchema}".content_addresses a
 				 JOIN "${qSchema}".entries e ON e.id = a.entry_id
-				 WHERE a.locale = $3 AND a.type IN ('current', 'alias', 'reservation') AND e.status <> 'trashed'
-				   AND (a.collection, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[]))`,
-				[params.addresses.map((a) => a.collection), params.addresses.map((a) => a.slug), DEFAULT_LOCALE],
+				 WHERE a.type IN ('current', 'alias', 'reservation') AND e.status <> 'trashed'
+				   AND (a.collection, a.locale, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[], $3::text[]))`,
+				[
+					params.addresses.map((a) => a.collection),
+					params.addresses.map((a) => a.locale ?? DEFAULT_LOCALE),
+					params.addresses.map((a) => a.slug),
+				],
 			);
-			return res.rows.map((row) => ({ collection: row.collection, slug: row.slug, entryId: row.entry_id }));
+			return res.rows.map((row) => ({
+				collection: row.collection,
+				slug: row.slug,
+				locale: row.locale,
+				entryId: row.entry_id,
+			}));
 		},
 
 		/** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */

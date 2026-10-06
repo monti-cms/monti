@@ -11,8 +11,8 @@ export interface StorePort<T = unknown> {
 	 * link by address into a link by id with it. Without it, links keep their address.
 	 */
 	resolveLinkTargets?(params: {
-		addresses: readonly { collection: string; slug: string }[];
-	}): Promise<{ collection: string; slug: string; entryId: string }[]>;
+		addresses: readonly { collection: string; slug: string; locale?: string }[];
+	}): Promise<{ collection: string; slug: string; locale: string; entryId: string }[]>;
 	archiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	unarchiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	trashEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;

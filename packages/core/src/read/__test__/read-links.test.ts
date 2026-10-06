@@ -49,7 +49,10 @@ describe("links by entry id", () => {
 		await closeGlobalPool();
 	});
 
+	/** The address a body is written with: the default-language path, no locale prefix. */
 	const pathOf = (slug: string) => contentPath(contentCollection, slug) as string;
+	/** The public address a read gives: the same path with the prefix of the language of the version (the config may set one for every language). */
+	const publicPath = (slug: string, locale: string = DEFAULT_LOCALE) => localizePath(locale, pathOf(slug));
 
 	const draft = async (slug: string, mdx: string) =>
 		service.createDraft({
@@ -120,6 +123,23 @@ describe("links by entry id", () => {
 		expect(incoming.some((item) => item.sourceId === source.id && item.kind === "entry")).toBe(true);
 	});
 
+	it("an address with the locale prefix of the site's URLs (as the public page shows it) is a link by id too", async () => {
+		const target = await publish("links-prefixed-target");
+
+		const source = await draft("links-prefixed-source", `[x](${publicPath("links-prefixed-target")})`);
+
+		expect(entryLinkIds(source.working.doc.content)).toEqual([target.translationGroupId]);
+		expect(JSON.stringify(source.working.doc)).not.toContain("links-prefixed-target");
+	});
+
+	it("an address with a prefix that no entry holds blocks publishing, like any other", async () => {
+		const created = await draft("links-prefixed-dangling", `[x](${publicPath("links-nobody-prefixed")})`);
+
+		const error = await publishError(created.id, created.version);
+
+		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
+	});
+
 	it("an address no entry holds stays as written, and publishing says it does not resolve", async () => {
 		const created = await draft("links-dangling", `[nowhere](${pathOf("nobody-holds-this")})`);
 		expect(entryLinkIds(created.working.doc.content)).toEqual([]);
@@ -179,14 +199,14 @@ describe("links by entry id", () => {
 
 		expect(found.entry.refs.links).toEqual({
 			[target.translationGroupId]: {
-				path: pathOf("links-read-target"),
+				path: publicPath("links-read-target"),
 				title: "Title links-read-target",
 				locale: DEFAULT_LOCALE,
 			},
 		});
 		// Only the links of this document are listed, and a link is drawn from them.
 		const markup = renderToStaticMarkup(await CmsContent({ entry: found.entry }));
-		expect(markup).toContain(`href="${pathOf("links-read-target")}"`);
+		expect(markup).toContain(`href="${publicPath("links-read-target")}"`);
 		expect(markup).toContain(">it</a>");
 	});
 
@@ -224,18 +244,18 @@ describe("links by entry id", () => {
 
 			expect(inLocale.entry.refs.links).toEqual({
 				[translated.id]: {
-					path: localizePath(locale, pathOf("links-lang-target-t")),
+					path: publicPath("links-lang-target-t", locale),
 					title: "Title links-lang-target-t",
 					locale,
 				},
 				// No translation of this one: the source's address, in the source's language.
-				[plain.id]: { path: pathOf("links-lang-plain"), title: "Title links-lang-plain", locale: DEFAULT_LOCALE },
+				[plain.id]: { path: publicPath("links-lang-plain"), title: "Title links-lang-plain", locale: DEFAULT_LOCALE },
 			});
 			void translatedEn;
 			// The same document read in the source language points at the source pages.
 			const inSource = await cms.read.getEntry({ collection: contentCollection, slug: "links-lang-source" });
 			if (inSource.status !== "found") throw new Error("not found");
-			expect(inSource.entry.refs.links[translated.id]?.path).toBe(pathOf("links-lang-target"));
+			expect(inSource.entry.refs.links[translated.id]?.path).toBe(publicPath("links-lang-target"));
 		},
 	);
 });

@@ -2,19 +2,23 @@ import { mapLinkAttrs } from "../mdx/entry-links";
 import type { StoredDocument } from "../mdx/stored-document";
 import type { CmsNode } from "../mdx/types";
 import { parseInternalLink } from "./links";
+import { DEFAULT_LOCALE } from "./locales";
 
 /**
  * Turning the links of an imported body into links by entry id. A format (MDX, an API client, the AI) writes a link to a post as its address
  * (`/posts/slug`); the stored document holds the id of the entry instead, so a rename of the slug changes nothing in the document.
  */
 
-/** The content an address names: a collection and the slug in the default language. */
+/** The content an address names: a collection and a slug in a language. */
 export interface LinkAddress {
 	readonly collection: string;
 	readonly slug: string;
+	/** The language of the address (from the locale prefix of the URL). Absent: the default language. */
+	readonly locale?: string;
 }
 
-export const linkAddressKey = (address: LinkAddress): string => `${address.collection}:${address.slug}`;
+export const linkAddressKey = (address: LinkAddress): string =>
+	`${address.collection}:${address.locale ?? DEFAULT_LOCALE}:${address.slug}`;
 
 /**
  * Finds the entries addresses point to: the translation group id of the entry that holds each address (a current address, a former one or a draft's
@@ -27,7 +31,12 @@ export const internalLinkAddresses = (content: readonly CmsNode[]): LinkAddress[
 	const found = new Map<string, LinkAddress>();
 	mapLinkAttrs(content, (attrs) => {
 		const target = typeof attrs.href === "string" ? parseInternalLink(attrs.href) : null;
-		if (target) found.set(linkAddressKey(target), { collection: target.collection, slug: target.slug });
+		if (target)
+			found.set(linkAddressKey(target), {
+				collection: target.collection,
+				slug: target.slug,
+				...(target.locale ? { locale: target.locale } : {}),
+			});
 		return undefined;
 	});
 	return [...found.values()];

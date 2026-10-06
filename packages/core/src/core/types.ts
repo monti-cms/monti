@@ -120,6 +120,8 @@ export type InternalLinkSource = {
 	/** The collection a link points to (a collection with `path`). */
 	readonly collection: Collection;
 	readonly slug: string;
+	/** The language of the address, when it has the locale prefix of the site's URLs. Absent: the default language. */
+	readonly locale?: string;
 	readonly url: string;
 	readonly position: BodyPosition;
 };
@@ -127,6 +129,7 @@ export type InternalLinkSource = {
 export type ResolvedInternalLink = {
 	readonly collection: Collection;
 	readonly slug: string;
+	readonly locale?: string;
 	readonly addressType: "current" | "alias" | "reservation" | "deleted" | "missing";
 	readonly isPublished: boolean;
 };

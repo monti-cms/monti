@@ -76,8 +76,8 @@ export interface EntryStore {
 	 * and one held by a trashed entry, is not in the result.
 	 */
 	resolveLinkTargets(params: {
-		addresses: readonly { collection: string; slug: string }[];
-	}): Promise<{ collection: string; slug: string; entryId: string }[]>;
+		addresses: readonly { collection: string; slug: string; locale?: string }[];
+	}): Promise<{ collection: string; slug: string; locale: string; entryId: string }[]>;
 	/** Field relations and body references that point at an entry, split into draft and published. */
 	getIncomingReferences(params: { targetId: string }): Promise<IncomingReferenceItem[]>;
 	/**

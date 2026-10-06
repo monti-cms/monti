@@ -67,17 +67,25 @@ export function createPublishing(ctx: StoreContext) {
 		const findAddresses = async (lock: boolean) => {
 			if (links.length === 0) return [] as AddressRow[];
 			const result = await client.query<AddressRow>(
-				// A body link (`/posts/slug`) is the default-language URL. It is swapped to the translation's URL at render time.
-				`SELECT a.collection, a.slug, a.type, a.entry_id
+				// A body link names an address in a language: `/posts/slug` the default language, `/en/posts/slug` the one of the locale prefix.
+				// It is swapped to the reader's language at render time.
+				`SELECT a.collection, a.locale, a.slug, a.type, a.entry_id
 				 FROM "${qSchema}".content_addresses a
-				 WHERE a.locale = $3 AND (a.collection, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[]))
-				 ORDER BY a.collection, a.slug${lock ? " FOR SHARE" : ""}`,
-				[links.map((link) => link.collection), links.map((link) => link.slug), DEFAULT_LOCALE],
+				 WHERE (a.collection, a.locale, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[], $3::text[]))
+				 ORDER BY a.collection, a.locale, a.slug${lock ? " FOR SHARE" : ""}`,
+				[
+					links.map((link) => link.collection),
+					links.map((link) => link.locale ?? DEFAULT_LOCALE),
+					links.map((link) => link.slug),
+				],
 			);
 			return result.rows;
 		};
-		const addressKey = (collection: string, slug: string) => `${collection}:${slug}`;
-		const firstAddresses = new Map((await findAddresses(false)).map((a) => [addressKey(a.collection, a.slug), a]));
+		const addressKey = (collection: string, locale: string | undefined, slug: string) =>
+			`${collection}:${locale ?? DEFAULT_LOCALE}:${slug}`;
+		const firstAddresses = new Map(
+			(await findAddresses(false)).map((a) => [addressKey(a.collection, a.locale, a.slug), a]),
+		);
 
 		const targetIds = new Set<string>();
 		for (const ref of publishSnapshot.references)
@@ -98,10 +106,12 @@ export function createPublishing(ctx: StoreContext) {
 				).rows
 			: [];
 		const targetMap = new Map(targetRows.map((target) => [target.id, target]));
-		const lockedAddresses = new Map((await findAddresses(true)).map((a) => [addressKey(a.collection, a.slug), a]));
+		const lockedAddresses = new Map(
+			(await findAddresses(true)).map((a) => [addressKey(a.collection, a.locale, a.slug), a]),
+		);
 		for (const link of links) {
-			const before = firstAddresses.get(addressKey(link.collection, link.slug));
-			const after = lockedAddresses.get(addressKey(link.collection, link.slug));
+			const before = firstAddresses.get(addressKey(link.collection, link.locale, link.slug));
+			const after = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
 			if (linkTargetChanged(before && holderOf(before), after && holderOf(after))) {
 				throw new CmsError("Internal link target changed during publish", "conflict", entry.version);
 			}
@@ -128,11 +138,12 @@ export function createPublishing(ctx: StoreContext) {
 			})),
 			media: mediaRows.map((media) => ({ id: media.id, status: media.status, storageKey: media.storage_key })),
 			internalLinks: links.map((link) => {
-				const address = lockedAddresses.get(addressKey(link.collection, link.slug));
+				const address = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
 				const target = address?.entry_id ? targetMap.get(address.entry_id) : undefined;
 				return {
 					collection: link.collection,
 					slug: link.slug,
+					...(link.locale ? { locale: link.locale } : {}),
 					addressType: address?.type ?? "missing",
 					isPublished: target?.collection === link.collection && target.status === "published",
 				};

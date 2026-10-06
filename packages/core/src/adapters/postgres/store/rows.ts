@@ -59,6 +59,7 @@ export interface ReferenceRow {
 
 export interface AddressRow {
 	collection: string;
+	locale: string;
 	slug: string;
 	type: "current" | "alias" | "reservation" | "deleted";
 	entry_id: string | null;

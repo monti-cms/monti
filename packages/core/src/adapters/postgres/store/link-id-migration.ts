@@ -4,7 +4,6 @@ import { checkDocument } from "../../../core/body-check";
 import { computeContentHash } from "../../../core/content-hash";
 import { linkAddressKey, withEntryLinks } from "../../../core/link-ids";
 import { parseInternalLink } from "../../../core/links";
-import { DEFAULT_LOCALE } from "../../../core/locales";
 import type { JsonValue } from "../../../core/types";
 import { mapLinkAttrs } from "../../../mdx/entry-links";
 import { documentToMdx, type StoredDocument } from "../../../mdx/stored-document";
@@ -89,12 +88,11 @@ export async function migrateLinkEntryIds(
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
 	const log = options.log ?? ((message: string) => console.warn(message));
 
-	const addressRows = await client.query<{ collection: string; slug: string; entry_id: string }>(
-		`SELECT a.collection, a.slug, COALESCE(e.translation_group_id, e.id) AS entry_id
+	const addressRows = await client.query<{ collection: string; slug: string; locale: string; entry_id: string }>(
+		`SELECT a.collection, a.slug, a.locale, COALESCE(e.translation_group_id, e.id) AS entry_id
 		 FROM "${qSchema}".content_addresses a
 		 JOIN "${qSchema}".entries e ON e.id = a.entry_id
-		 WHERE a.locale = $1 AND a.type IN ('current', 'alias', 'reservation')`,
-		[DEFAULT_LOCALE],
+		 WHERE a.type IN ('current', 'alias', 'reservation')`,
 	);
 	const addresses = new Map(addressRows.rows.map((row) => [linkAddressKey(row), row.entry_id]));
 	let totalConverted = 0;

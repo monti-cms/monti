@@ -1,7 +1,7 @@
 import { cmsConfig } from "../config/resolved";
 import { schemaOf } from "../schema/derive";
 import { COLLECTIONS, type Collection } from "./collections";
-import { localePrefix, localizePathWith } from "./locales";
+import { LOCALES, localePrefix, localizePathWith } from "./locales";
 
 /**
  * Internal body links. The public URL shape is the collection definition's `path` (e.g. `/posts/:slug`), and the body stores plain Markdown links
@@ -41,8 +41,7 @@ export function contentPath(collection: string, slug: string | null | undefined)
 	return `${rule.prefix}${slug.replace(/[\s()<>]/g, (char) => encodeURIComponent(char))}${rule.suffix}`;
 }
 
-/** The content a path (`URL.pathname`) points to. `null` for an unknown path. */
-export function parseContentPath(pathname: string): { collection: Collection; slug: string } | null {
+const matchPath = (pathname: string): { collection: Collection; slug: string } | null => {
 	for (const { collection, pattern } of PATH_PATTERNS) {
 		const match = pattern.exec(pathname);
 		if (!match) continue;
@@ -55,6 +54,22 @@ export function parseContentPath(pathname: string): { collection: Collection; sl
 		return slug && !slug.includes("/") ? { collection, slug } : null;
 	}
 	return null;
+};
+
+/**
+ * The content a path (`URL.pathname`) points to. `null` for an unknown path. A path with the locale prefix of the site's URLs (`/en/posts/a`, as the public
+ * page shows it) names the same content in that language: `locale` is then the language of the prefix. A path without one has no `locale` (the default language).
+ */
+export function parseContentPath(pathname: string): { collection: Collection; slug: string; locale?: string } | null {
+	const plain = matchPath(pathname);
+	if (plain) return plain;
+	for (const code of LOCALES) {
+		const prefix = localePrefix(code);
+		if (!prefix || !pathname.startsWith(`${prefix}/`)) continue;
+		const found = matchPath(pathname.slice(prefix.length));
+		if (found) return { ...found, locale: code };
+	}
+	return null;
 }
 
 const siteUrl = cmsConfig.site?.url;
@@ -65,7 +80,9 @@ const SITE_HOSTS = new Set(
 );
 
 /** The target if a body link address points to this site's content. Only links written as a path (`/...`) or with the site address are recognized. */
-export function parseInternalLink(url: string): { collection: Collection; slug: string; url: string } | null {
+export function parseInternalLink(
+	url: string,
+): { collection: Collection; slug: string; locale?: string; url: string } | null {
 	let parsed: URL;
 	try {
 		parsed = new URL(url, siteUrl ?? "http://localhost");
