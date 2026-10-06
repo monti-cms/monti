@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { CmsError } from "../../../adapters/postgres/content-store";
@@ -61,7 +60,7 @@ const store = {
 const cms = fakeCms({ store, bulkService: createBulkService(store as never) });
 
 const postReq = (body: unknown) =>
-	new NextRequest("http://localhost/api/cms/v1/bulk", {
+	new Request("http://localhost/api/cms/v1/bulk", {
 		method: "POST",
 		headers: { origin: "http://localhost", "content-type": "application/json" },
 		body: JSON.stringify(body),

@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredFields } from "../../../../../test/any-site";
@@ -42,7 +41,7 @@ describe("Public JSON API", () => {
 		const [pathname, query = ""] = path.split("?");
 		const response = await fakeCms({ store, server: { publicApi } })
 			.routeHandler()
-			.GET(new NextRequest(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`), {
+			.GET(new Request(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`), {
 				params: Promise.resolve({ path: (pathname ?? "").split("/") }),
 			});
 		return { status: response.status, cache: response.headers.get("cache-control"), body: await response.json() };

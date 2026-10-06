@@ -1,5 +1,4 @@
 import { unstable_rethrow } from "next/navigation";
-import type { NextRequest } from "next/server";
 import { adminUrl } from "../../../../../core/admin-paths";
 import { HttpError, handleApiError } from "../../../error-handler";
 import type { RouteContext } from "../../../handler";
@@ -11,7 +10,7 @@ import { validateSameOrigin } from "../../../security";
  *
  * It is a route and not a server action because a server action cannot carry the CMS instance: its closed-over values must be serializable.
  */
-export const POST = async (request: NextRequest, context: RouteContext<{ provider: string }>) => {
+export const POST = async (request: Request, context: RouteContext<{ provider: string }>) => {
 	try {
 		const { cms } = context;
 		validateSameOrigin(request, { trustHost: cms.isHostTrusted(), form: true });

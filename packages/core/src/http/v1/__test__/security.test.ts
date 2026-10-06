@@ -1,10 +1,9 @@
-import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cmsConfig } from "../../../config/resolved";
 import { validateSameOrigin } from "../security";
 
 const post = (url: string, headers: Record<string, string>) =>
-	new NextRequest(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: "{}" });
+	new Request(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: "{}" });
 
 describe("same-origin check", () => {
 	afterEach(() => {
@@ -65,6 +64,6 @@ describe("same-origin check", () => {
 
 	it("rejects when there is no origin signal, and does not check read requests", () => {
 		expect(() => validateSameOrigin(post("http://cms.local/api/cms/v1/x", {}))).toThrow(/Missing origin/);
-		expect(() => validateSameOrigin(new NextRequest("http://cms.local/api/cms/v1/x"))).not.toThrow();
+		expect(() => validateSameOrigin(new Request("http://cms.local/api/cms/v1/x"))).not.toThrow();
 	});
 });

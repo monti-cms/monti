@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import type { Cms } from "../../../cms";
 import { exportScopeSchema } from "../../../core/api";
 import { buildExportArchive, type ExportScope } from "../../../services/export-service";
@@ -26,8 +25,6 @@ const buildResponse = async (cms: Cms, scope: ExportScope): Promise<Response> =>
 const scopeFrom = (value: unknown) => parseWith(exportScopeSchema, value, "Invalid export scope").scope;
 
 /** Admin export. GET is also open so it can be downloaded via a link. */
-export const GET = adminRoute(async ({ request, cms }) =>
-	buildResponse(cms, scopeFrom(readQuery(request as NextRequest))),
-);
+export const GET = adminRoute(async ({ request, cms }) => buildResponse(cms, scopeFrom(readQuery(request))));
 
 export const POST = adminRoute(async ({ request, cms }) => buildResponse(cms, scopeFrom(await readJsonBody(request))));

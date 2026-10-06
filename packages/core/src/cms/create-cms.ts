@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { resolveTrustHost } from "../adapters/auth/trust-host";
 import type { ContentStore, Entry } from "../adapters/postgres/content-store";
@@ -7,6 +6,7 @@ import { CmsError } from "../adapters/postgres/store/errors";
 import type { MediaStore } from "../adapters/r2/types";
 import { cmsConfig } from "../config/resolved";
 import { adminUrl } from "../core/admin-paths";
+import { type CmsRouteHandler, nextRouteHandler } from "../next/route-handler";
 import type { CmsPlugin, OwnedPluginRoute, PluginDatabase } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import { type CmsRead, createRead } from "../read";
@@ -16,19 +16,20 @@ import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import type { HookSource } from "../services/hooks";
 
+export type { CmsRouteHandler };
 export type ContentService = ReturnType<typeof createContentService<Entry>>;
 export type BulkService = ReturnType<typeof createBulkService<Entry>>;
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
-/**
- * Catch-all route handler. `params.path` holds the path segments after `/api/cms/` (e.g. `["v1", "entries", "<id>"]`).
- * Unknown paths return 404; a known path with an unsupported method returns 405.
- */
-export type CmsRouteHandler = (
-	request: NextRequest,
-	context: { params: Promise<{ path: string[] }> },
-) => Promise<Response>;
+/** Options of {@link Cms.handle}. */
+export interface HandleOptions {
+	/**
+	 * The path segments after the API prefix (`/api/cms/`), e.g. `["v1", "entries", "<id>"]`. By default they are read from the request URL.
+	 * A host that mounts the API somewhere else, or whose router already split the path, passes them here.
+	 */
+	readonly path?: readonly string[];
+}
 
 /** The server config as plugins see it: everything but the master secrets. */
 export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecrets">;
@@ -93,9 +94,14 @@ export interface Cms {
 	/** Calls the after-save notifications of the server config and the plugins. Never throws. */
 	notifyAfterCommit(change: ContentChange): Promise<void>;
 	/**
-	 * Route handlers of the admin API (`/api/cms/v1/*`), the public API and the plugin routes, for the app's single catch-all route file
-	 * (`app/api/cms/[...path]/route.ts`): `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();`.
-	 * The route code loads on the first request, so importing the route file loads little.
+	 * Serves one request of the admin API (`/api/cms/v1/*`), the login connection, the public API and the plugin routes. It takes a standard web
+	 * `Request` and returns a `Response`, so any host that speaks them can mount it (experimental outside Next). Unknown paths return 404 and a known
+	 * path with an unsupported method returns 405. The route code loads on the first request.
+	 */
+	handle(request: Request, options?: HandleOptions): Promise<Response>;
+	/**
+	 * The Next adapter of {@link Cms.handle}, for the app's single catch-all route file (`app/api/cms/[...path]/route.ts`):
+	 * `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();`.
 	 */
 	routeHandler(): Record<Method, CmsRouteHandler>;
 	/** Reads published content for the site's pages, and resolves public media. */
@@ -144,23 +150,12 @@ function connectionsFor(id: string, server: CmsServerConfig): SharedConnections 
 	return connections;
 }
 
-/** The route handlers of an instance, loading the route code on the first request. */
-export function lazyRouteHandler(cms: () => Cms): Record<Method, CmsRouteHandler> {
-	let handler: Promise<Record<Method, CmsRouteHandler>> | undefined;
-	const load = () => {
-		handler ??= import("../http/router").then((module) => module.createRouteHandler(cms()));
-		return handler;
-	};
-	const method =
-		(name: Method): CmsRouteHandler =>
-		async (request, context) =>
-			(await load())[name](request, context);
-	return {
-		GET: method("GET"),
-		POST: method("POST"),
-		PATCH: method("PATCH"),
-		PUT: method("PUT"),
-		DELETE: method("DELETE"),
+/** The request handler of an instance, loading the route code on the first request. */
+export function lazyHandle(cms: () => Cms): Cms["handle"] {
+	let handler: Promise<ReturnType<typeof import("../http/router").createRequestHandler>> | undefined;
+	return async (request, options) => {
+		handler ??= import("../http/router").then((module) => module.createRequestHandler(cms()));
+		return (await handler)(request, options);
 	};
 }
 
@@ -235,7 +230,8 @@ export function createCms(options: CreateCmsOptions): Cms {
 		pluginFeatures: plugins.features,
 		writeHooks: plugins.writeHooks,
 		notifyAfterCommit: plugins.notifyAfterCommit,
-		routeHandler: () => lazyRouteHandler(() => cms),
+		handle: lazyHandle(() => cms),
+		routeHandler: () => nextRouteHandler(cms),
 		read: createRead({ store: getStore, mediaStore: getMediaStore, verifyAdmin: () => authGateway.verifyAdmin() }),
 		migrate: async ({ log = console.log } = {}) => {
 			log(`Starting CMS database migration (${connections.database.name})...`);

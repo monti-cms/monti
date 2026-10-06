@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import { CmsError } from "../../../adapters/postgres/store/errors";
 import type { Cms } from "../../../cms";
 import { isCollection, isItemCollection } from "../../../core/collections";
@@ -30,11 +29,11 @@ async function targetId(cms: Cms, collection: string, field: string, slug: strin
 }
 
 /** `GET /api/cms/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
-export async function GET(request: NextRequest, { cms }: { cms: Cms }): Promise<Response> {
+export async function GET(request: Request, { cms }: { cms: Cms }): Promise<Response> {
 	const config: PublicApiOptions | undefined = cms.server.publicApi;
 	if (!config) return publicError("not_found", "Not found");
 	try {
-		const params = request.nextUrl.searchParams;
+		const params = new URL(request.url).searchParams;
 		const collection = params.get("collection") ?? config.defaultCollection ?? config.collections[0];
 		if (!collection || !config.collections.includes(collection) || !isCollection(collection)) {
 			return publicError("invalid_input", "Invalid query parameters");
@@ -67,7 +66,7 @@ export async function GET(request: NextRequest, { cms }: { cms: Cms }): Promise<
 
 /** `GET /api/cms/v1/public/entries/:collection/:slug?locale` — a single published entry. For an old address, reports the canonical address as `address`. */
 export async function getOne(
-	request: NextRequest,
+	request: Request,
 	params: { collection: string; slug: string },
 	cms: Cms,
 ): Promise<Response> {
@@ -82,7 +81,7 @@ export async function getOne(
 		const result = await cms.read.getEntry({
 			collection,
 			slug,
-			locale: localeOf(request.nextUrl.searchParams.get("locale")),
+			locale: localeOf(new URL(request.url).searchParams.get("locale")),
 		});
 		if (result.status === "not_found") return publicError("not_found", "Not found");
 		const entry = toJson(config)(result.entry, { body: true });

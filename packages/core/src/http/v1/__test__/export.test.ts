@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
@@ -29,7 +28,7 @@ const PUBLISHED_WORKING_DOC = fixtureEntryPath(
 	"working.doc.json",
 );
 
-const request = (url: string, init?: ConstructorParameters<typeof NextRequest>[1]) => new NextRequest(url, init);
+const request = (url: string, init?: RequestInit) => new Request(url, init);
 
 const findFile = (zip: Uint8Array, path: string): string => {
 	const entry = readZipArchive(zip).find((item) => item.path === path);

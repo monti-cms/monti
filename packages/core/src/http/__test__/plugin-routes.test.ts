@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
@@ -35,13 +34,12 @@ const call = (
 	path: string,
 	headers: Record<string, string> = {},
 ) =>
-	cms.routeHandler()[method](
-		new NextRequest(`${ORIGIN}/api/cms/${path}`, {
+	cms.handle(
+		new Request(`${ORIGIN}/api/cms/${path}`, {
 			method,
 			headers: { "content-type": "application/json", ...headers },
 			...(method === "POST" ? { body: "{}" } : {}),
 		}),
-		{ params: Promise.resolve({ path: path.split("/") }) },
 	);
 
 beforeEach(() => {

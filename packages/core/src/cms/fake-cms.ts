@@ -1,11 +1,12 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
 import type { ContentStore } from "../adapters/postgres/content-store";
 import type { MediaStore } from "../adapters/r2/types";
+import { nextRouteHandler } from "../next/route-handler";
 import type { PluginDatabase } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import { createRead } from "../read";
 import type { CmsAuth, CmsServerConfig } from "../server/define";
-import { type BulkService, type Cms, type ContentService, createCms, lazyRouteHandler } from "./create-cms";
+import { type BulkService, type Cms, type ContentService, createCms, lazyHandle } from "./create-cms";
 
 /** What a test supplies to {@link fakeCms}. Whatever it leaves out fails loudly when the code under test touches it. */
 export interface FakeCmsParts {
@@ -88,7 +89,8 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		notifyAfterCommit: plugins.notifyAfterCommit,
 		secrets: cms.secrets,
 		authGateway,
-		routeHandler: () => lazyRouteHandler(() => fake),
+		handle: lazyHandle(() => fake),
+		routeHandler: () => nextRouteHandler(fake),
 		read: createRead({ store: cms.store, mediaStore: cms.mediaStore, verifyAdmin: authGateway.verifyAdmin }),
 		...(parts.contentService ? { contentService: () => parts.contentService as ContentService } : {}),
 		...(parts.bulkService ? { bulkService: () => parts.bulkService as BulkService } : {}),

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { AuthError } from "../../adapters/auth";
 import { CmsError } from "../../adapters/postgres/content-store";
 import { ServiceError } from "../../services/types";
@@ -59,16 +58,16 @@ const isUnavailable = (error: unknown) => {
 	);
 };
 
-export function handleApiError(error: unknown): NextResponse {
+export function handleApiError(error: unknown): Response {
 	if (error instanceof HttpError) {
-		return NextResponse.json(
+		return Response.json(
 			{ code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) },
 			{ status: error.status },
 		);
 	}
 
 	if (error instanceof AuthError) {
-		return NextResponse.json(
+		return Response.json(
 			{ code: error.code, message: error.message },
 			{ status: error.code === "unauthorized" ? 401 : 403 },
 		);
@@ -77,7 +76,7 @@ export function handleApiError(error: unknown): NextResponse {
 	if (error instanceof CmsError) {
 		const status = CMS_ERROR_STATUS[error.code] ?? 400;
 		if (status === 500) console.error("CMS store invariant broken:", error);
-		return NextResponse.json(
+		return Response.json(
 			{
 				code: error.code,
 				message: status === 500 ? "Internal server error" : error.message,
@@ -89,22 +88,22 @@ export function handleApiError(error: unknown): NextResponse {
 	}
 
 	if (error instanceof ServiceError) {
-		return NextResponse.json(
+		return Response.json(
 			{ code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) },
 			{ status: SERVICE_ERROR_STATUS[error.code] ?? 422 },
 		);
 	}
 
 	// The UI withdrew the request (e.g. reloading the model list). Nobody is waiting, so end quietly.
-	if (isClientAbort(error)) return new NextResponse(null, { status: 499 });
+	if (isClientAbort(error)) return new Response(null, { status: 499 });
 
 	if (isUnavailable(error)) {
 		console.error("CMS storage unavailable:", error);
-		return NextResponse.json({ code: "unavailable", message: "Storage is temporarily unavailable" }, { status: 503 });
+		return Response.json({ code: "unavailable", message: "Storage is temporarily unavailable" }, { status: 503 });
 	}
 
 	console.error("Unhandled API error:", error);
-	return NextResponse.json({ code: "internal_error", message: "Internal server error" }, { status: 500 });
+	return Response.json({ code: "internal_error", message: "Internal server error" }, { status: 500 });
 }
 
 /** Work stopped because the browser dropped the request (body not fully read) or the request signal aborted. */

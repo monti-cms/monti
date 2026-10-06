@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import type { AuthContext } from "../../adapters/auth";
 import type { Cms } from "../../cms";
@@ -9,7 +8,7 @@ import { validateSameOrigin } from "./security";
  * Shared frame for admin API routes. Every admin request is authenticated on the server,
  * and state-changing requests go through the same-origin check first. Errors are converted to one shape in a single place.
  *
- * The route handler (`cms.routeHandler()`) passes the CMS instance in the context of every route (`{ params, cms }`), so a route reads
+ * The request handler (`cms.handle()`, or `cms.routeHandler()` in Next) passes the CMS instance in the context of every route (`{ params, cms }`), so a route reads
  * stores and settings from `cms` instead of from module-level state.
  */
 
@@ -18,7 +17,7 @@ type Params = Record<string, string>;
 export type RouteContext<P extends Params = Params> = { params?: Promise<P>; cms: Cms };
 
 export interface AdminRequest<P extends Params> {
-	request: NextRequest;
+	request: Request;
 	params: P;
 	auth: AuthContext;
 	cms: Cms;
@@ -26,18 +25,18 @@ export interface AdminRequest<P extends Params> {
 
 /**
  * Wraps a route with the admin check. The route handler passes the instance in the context. A route file mounted on its own in the app
- * (not served by `cms.routeHandler()`) names the instance it belongs to with `bound.cms`.
+ * (not served by `cms.handle()`) names the instance it belongs to with `bound.cms`.
  */
 export function adminRoute<P extends Params = Params>(
 	handler: (input: AdminRequest<P>) => Promise<Response>,
 	bound: { readonly cms?: Cms } = {},
-): (request: NextRequest, context?: Partial<RouteContext<P>>) => Promise<Response> {
+): (request: Request, context?: Partial<RouteContext<P>>) => Promise<Response> {
 	return async (request, context) => {
 		try {
 			const cms = context?.cms ?? bound.cms;
 			if (!cms) {
 				throw new Error(
-					"admin route called without a CMS instance: serve it through `cms.routeHandler()` or pass `{ cms }` when wrapping it",
+					"admin route called without a CMS instance: serve it through `cms.handle()` or pass `{ cms }` when wrapping it",
 				);
 			}
 			validateSameOrigin(request, { trustHost: cms.isHostTrusted() });
@@ -51,7 +50,7 @@ export function adminRoute<P extends Params = Params>(
 }
 
 /** Reads the JSON body. 400 if malformed. A missing body is treated as `{}`. */
-export async function readJsonBody(request: NextRequest): Promise<unknown> {
+export async function readJsonBody(request: Request): Promise<unknown> {
 	const text = await request.text();
 	if (!text.trim()) return {};
 	try {
@@ -82,15 +81,15 @@ export function parseWith<S extends z.ZodType>(
 }
 
 /** Reads the body, checks that a version is present, then validates it against the schema. */
-export async function readVersionedBody<S extends z.ZodType>(request: NextRequest, schema: S): Promise<z.output<S>> {
+export async function readVersionedBody<S extends z.ZodType>(request: Request, schema: S): Promise<z.output<S>> {
 	const body = await readJsonBody(request);
 	assertVersionPresent((body as { expectedVersion?: unknown })?.expectedVersion);
 	return parseWith(schema, body);
 }
 
 /** The `expectedVersion` query param (DELETE requests). */
-export function readVersionQuery(request: NextRequest): number {
-	const raw = request.nextUrl.searchParams.get("expectedVersion");
+export function readVersionQuery(request: Request): number {
+	const raw = new URL(request.url).searchParams.get("expectedVersion");
 	assertVersionPresent(raw ?? undefined);
 	const version = Number(raw);
 	if (!Number.isInteger(version) || version <= 0) {
@@ -100,9 +99,9 @@ export function readVersionQuery(request: NextRequest): number {
 }
 
 /** Converts the query to an object. Keys in `arrayKeys` may appear multiple times. */
-export function readQuery(request: NextRequest, arrayKeys: readonly string[] = []): Record<string, unknown> {
+export function readQuery(request: Request, arrayKeys: readonly string[] = []): Record<string, unknown> {
 	const query: Record<string, unknown> = {};
-	const params = request.nextUrl.searchParams;
+	const params = new URL(request.url).searchParams;
 	for (const key of new Set(params.keys())) {
 		query[key] = arrayKeys.includes(key) ? params.getAll(key) : params.get(key);
 	}

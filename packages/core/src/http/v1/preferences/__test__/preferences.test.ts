@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, otherContentCollection, recordCollection } from "../../../../../test/any-site";
 import { fakeCms } from "../../../../cms";
@@ -21,9 +20,9 @@ const cms = fakeCms({
 	verifyAdmin: async () => ({ userId: "user-42", accountId: "user-42", isAdmin: true }),
 });
 
-const getReq = () => new NextRequest("http://localhost/api/cms/v1/preferences");
+const getReq = () => new Request("http://localhost/api/cms/v1/preferences");
 const putReq = (body: unknown) =>
-	new NextRequest("http://localhost/api/cms/v1/preferences", {
+	new Request("http://localhost/api/cms/v1/preferences", {
 		method: "PUT",
 		headers: { origin: "http://localhost", "content-type": "application/json" },
 		body: JSON.stringify(body),

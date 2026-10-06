@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { CmsError } from "../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../cms";
@@ -63,7 +62,7 @@ const cms = fakeCms({
 });
 
 const req = (url: string, method = "GET", body?: unknown, origin = "http://localhost") =>
-	new NextRequest(url, {
+	new Request(url, {
 		method,
 		headers: {
 			origin,

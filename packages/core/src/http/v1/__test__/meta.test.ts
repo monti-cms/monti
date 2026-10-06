@@ -1,11 +1,10 @@
-import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import { fakeCms } from "../../../cms";
 import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
 import { GET as getMeta } from "../meta/route";
 
 const readFeatures = async (cms = fakeCms()) => {
-	const res = await getMeta(new NextRequest("http://localhost/api/cms/v1/meta"), { cms });
+	const res = await getMeta(new Request("http://localhost/api/cms/v1/meta"), { cms });
 	expect(res.status).toBe(200);
 	return (await res.json()).features as Record<string, boolean | Record<string, boolean>>;
 };
@@ -31,7 +30,7 @@ describe("GET /v1/meta features.media", () => {
 
 describe("GET /v1/meta limits", () => {
 	it("reports the document limit next to the MDX limit", async () => {
-		const res = await getMeta(new NextRequest("http://localhost/api/cms/v1/meta"), { cms: fakeCms() });
+		const res = await getMeta(new Request("http://localhost/api/cms/v1/meta"), { cms: fakeCms() });
 		const { limits } = await res.json();
 		expect(limits.mdxBytes).toBe(MAX_MDX_BYTES);
 		expect(limits.docBytes).toBe(MAX_DOC_BYTES);

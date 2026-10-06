@@ -1,5 +1,4 @@
 import { fakeCms } from "@monti-cms/core/testing";
-import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import aiServer from "../server";
 
@@ -39,11 +38,9 @@ describe("AI plugin registration", () => {
 	});
 
 	it("the core API handler looks up paths missing from core routes in the plugin route table", async () => {
-		const handler = fakeCms({ plugins: [{ name: "ai", ...aiServer }] }).routeHandler();
+		const cms = fakeCms({ plugins: [{ name: "ai", ...aiServer }] });
 		const call = (path: string) =>
-			handler.GET(new NextRequest(`http://localhost/api/cms/${path}`, { headers: { origin: "http://localhost" } }), {
-				params: Promise.resolve({ path: path.split("/") }),
-			});
+			cms.handle(new Request(`http://localhost/api/cms/${path}`, { headers: { origin: "http://localhost" } }));
 		const actions = await call("v1/ai/actions");
 		expect(actions.status).toBe(200);
 		expect(((await actions.json()) as { items: { key: string }[] }).items.map((item) => item.key)).toContain("summary");
@@ -51,15 +48,14 @@ describe("AI plugin registration", () => {
 	});
 
 	it("creates (`POST /v1/ai/actions`) and deletes (`DELETE …?expectedVersion=`) screen actions through the API", async () => {
-		const handler = fakeCms({ plugins: [{ name: "ai", ...aiServer }] }).routeHandler();
+		const cms = fakeCms({ plugins: [{ name: "ai", ...aiServer }] });
 		const request = (method: "POST" | "DELETE", path: string, body?: unknown) =>
-			handler[method](
-				new NextRequest(`http://localhost/api/cms/${path}`, {
+			cms.handle(
+				new Request(`http://localhost/api/cms/${path}`, {
 					method,
 					headers: { origin: "http://localhost", "content-type": "application/json" },
 					...(body ? { body: JSON.stringify(body) } : {}),
 				}),
-				{ params: Promise.resolve({ path: path.split("?")[0]?.split("/") ?? [] }) },
 			);
 		const created = await request("POST", "v1/ai/actions", {
 			base: { label: "새 기능", surface: { slot: "insert" }, result: "mdx" },

@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import { AuthError } from "../../adapters/auth";
 import { resolveTrustHost } from "../../adapters/auth/trust-host";
 import { cmsConfig } from "../../config/resolved";
@@ -13,7 +12,7 @@ import { HttpError } from "./error-handler";
  * that header itself. Behind a proxy that rewrites `Host` without that option, set `site.url` so the public host is still accepted.
  */
 export function validateSameOrigin(
-	request: NextRequest,
+	request: Request,
 	options: {
 		/** Whether `X-Forwarded-Host` can be trusted (`cms.isHostTrusted()`). Default: the `AUTH_TRUST_HOST` environment variable, else off in production. */
 		readonly trustHost?: boolean;
@@ -71,10 +70,10 @@ const SITE_HOST = (() => {
 })();
 
 /** Hosts this request is received on. `X-Forwarded-Host` may be comma-separated, so use the first value (received by the outermost proxy). Used only when the host is trusted. */
-function allowedHosts(request: NextRequest, trustHost: boolean): Set<string> {
+function allowedHosts(request: Request, trustHost: boolean): Set<string> {
 	const hosts = new Set<string>();
 	const forwarded = trustHost ? request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() : undefined;
-	for (const host of [forwarded, request.headers.get("host"), request.nextUrl.host, SITE_HOST]) {
+	for (const host of [forwarded, request.headers.get("host"), new URL(request.url).host, SITE_HOST]) {
 		if (host) hosts.add(host.toLowerCase());
 	}
 	return hosts;

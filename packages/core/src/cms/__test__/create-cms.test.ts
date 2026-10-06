@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, defaultLocale } from "../../../test/any-site";
 import type { ContentStore } from "../../adapters/postgres/content-store";
@@ -105,19 +104,14 @@ describe("createCms: an instance owns its server resources", () => {
 		expect(a.database.createStore).toHaveBeenCalledTimes(1);
 		expect(b.database.createStore).toHaveBeenCalledTimes(1);
 
-		// Each serves its own requests: the route handler, the login connection and the read API all go through the instance.
+		// Each serves its own requests: `handle`, the login connection and the read API all go through the instance.
 		const preferences = async (cms: typeof cmsA) => {
-			const response = await cms.routeHandler().GET(new NextRequest("http://localhost/api/cms/v1/preferences"), {
-				params: Promise.resolve({ path: ["v1", "preferences"] }),
-			});
+			const response = await cms.handle(new Request("http://localhost/api/cms/v1/preferences"));
 			return { status: response.status, editor: (await response.json()).editor };
 		};
 		expect(await preferences(cmsA)).toEqual({ status: 200, editor: { inspectorOpen: true } });
 		expect(await preferences(cmsB)).toEqual({ status: 200, editor: { inspectorOpen: false } });
-		const authSession = (cms: typeof cmsA) =>
-			cms.routeHandler().GET(new NextRequest("http://localhost/api/cms/auth/session"), {
-				params: Promise.resolve({ path: ["auth", "session"] }),
-			});
+		const authSession = (cms: typeof cmsA) => cms.handle(new Request("http://localhost/api/cms/auth/session"));
 		expect(await (await authSession(cmsA)).text()).toBe("auth-a");
 		expect(await (await authSession(cmsB)).text()).toBe("auth-b");
 		// A login route file of the app (for a login path that is not the default) uses the instance's own handlers, created on the first request.

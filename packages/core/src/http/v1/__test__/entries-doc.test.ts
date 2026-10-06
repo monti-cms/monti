@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
@@ -25,7 +24,7 @@ const UNTIDY = "Title\n=====\n\nSome _emphasis_ here\n\n* one\n* two\n";
 const TIDY = "# Title\n\nSome *emphasis* here\n\n- one\n- two\n";
 
 const send = (url: string, method: string, body: unknown) =>
-	new NextRequest(url, {
+	new Request(url, {
 		method,
 		headers: { origin: "http://localhost", "content-type": "application/json" },
 		body: JSON.stringify(body),
@@ -92,7 +91,7 @@ describe("entry API with a stored document", () => {
 		});
 
 	const read = async (id: string) => {
-		const res = await getEntry(new NextRequest(`http://localhost/api/cms/v1/entries/${id}`), {
+		const res = await getEntry(new Request(`http://localhost/api/cms/v1/entries/${id}`), {
 			params: Promise.resolve({ id }),
 			cms,
 		});
@@ -334,7 +333,7 @@ describe("entry API with a stored document", () => {
 	it("lists templates with their documents", async () => {
 		const template = await store.createTemplate({ name: unique("doc template"), mdx: UNTIDY });
 
-		const res = await getTemplates(new NextRequest("http://localhost/api/cms/v1/templates"), { cms });
+		const res = await getTemplates(new Request("http://localhost/api/cms/v1/templates"), { cms });
 
 		const { items } = await res.json();
 		const listed = items.find((item: { id: string }) => item.id === template.id);

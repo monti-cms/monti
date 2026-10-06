@@ -21,6 +21,7 @@ export {
 	type ContentService,
 	type CreateCmsOptions,
 	createCms,
+	type HandleOptions,
 	type PublicServerConfig,
 } from "../cms";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";

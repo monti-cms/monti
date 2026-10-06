@@ -5,7 +5,7 @@ import { adminRoute, json, parseWith, readJsonBody } from "../handler";
 export const GET = adminRoute(async ({ request, cms }) => {
 	const collection = parseWith(
 		collectionSchema,
-		request.nextUrl.searchParams.get("collection"),
+		new URL(request.url).searchParams.get("collection"),
 		"collection is required",
 	);
 	return json(await cms.store().listFolders({ collection }));
