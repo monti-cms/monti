@@ -2,8 +2,8 @@
 
 [English](README.md) | 한국어
 
-DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키마, 콘텐츠 저장·발행, MDX 변환, 관리자 API, 플러그인 연결을 맡는다.
-관리자 화면은 `@monti-cms/admin`, AI 기능은 플러그인 `@monti-cms/ai`다. 다 붙인 예는 `examples/other-site`다.
+DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키마, 콘텐츠 저장·발행, 문서 모델, 관리자 API, 플러그인 연결을 맡는다.
+관리자 화면은 `@monti-cms/admin`, MDX(`mdx` 형식·원문 패널·문법 확장)는 플러그인 `@monti-cms/mdx`, AI 기능은 플러그인 `@monti-cms/ai`다. 다 붙인 예는 `examples/other-site`다.
 
 ## 빈 Next 앱에 설치
 
@@ -131,6 +131,7 @@ pnpm exec monti migrate
 표를 만들거나 최신 모양으로 맞춘다(플러그인 표 포함). 여러 번 돌려도 결과가 같고, 패키지를 올린 뒤에도 다시 돌린다.
 본체 변경은 번호 붙은 단계로 `cms_migrations`에 남아 아직 돌지 않은 단계만 돌고(한 트랜잭션), 같은 스키마에 동시에 돌려도
 하나씩 돈다. 플러그인은 한 번만 할 일을 `storage.once(이름, 단계)`로 맡긴다("플러그인 저장소").
+`monti migrate`(와 `cms.migrate()`)는 인스턴스의 형식(플러그인이 주는 것)을 마이그레이션에 넘긴다. MDX 글로 저장해 둔 본문을 읽는 옛 단계는 저장소에 그런 본문이 있을 때만 `@monti-cms/mdx`의 `mdx` 형식을 필요로 한다("코어에 있던 MDX에서 올리기").
 
 - 환경 파일: 기본으로 `.env.local`·`.env`(있는 것만)를 읽는다. 셸에서 준 값이 이기고 앞 파일이 뒤 파일을 이긴다.
   `--env-file <파일>`(여러 번)로 고르고 `--no-env-file`이면 읽지 않는다.
@@ -138,23 +139,6 @@ pnpm exec monti migrate
   서버 파일(인스턴스를 `cms`로 내보내는 모듈)은 `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`·`./src/cms.server.ts` 순서다.
 - 직접 만든 스크립트에서는 인스턴스를 불러와 부른다: `import { cms } from "./cms.server"; await cms.migrate(); await cms.close();`
   (`tsx --env-file=.env.local --import @monti-cms/core/register script.ts`로 돌린다. `@cms-config` 별칭을 이어 준다).
-
-#### `monti content:rewrite`
-
-```sh
-pnpm exec monti content:rewrite           # 예행: 바뀔 것을 알려 주고 아무것도 쓰지 않는다
-pnpm exec monti content:rewrite --apply   # 바뀐 내용을 쓴다
-```
-
-저장된 모든 본문(항목의 작업본·발행본. 템플릿은 글이 없는 문서라 다시 쓸 것이 없다)을 저장된 문서에서 사이트에 설정된 문법으로 다시 써("저장된 본문" 절 참고), 저장 글이 한 표기가 되게 한다.
-`directiveSyntax()`를 켜거나 끈 뒤, 또는 직렬화기를 올린 뒤에 글을 저장할 때마다 한 편씩 맞춰지길 기다리지 않고 한 번에 맞춘다. `monti migrate` 다음에 돌린다.
-`migrate`와 같은 `--env-file`·`--no-env-file`·`--config`·`--server` 옵션을 받는다(스크립트에서는 `cms.rewrite({ apply })`).
-
-- 본문마다 한 줄씩 `collection/slug (locale) state: changed|unchanged`를 찍고 요약을 보인다.
-- 글자(문서가 없던 본문은 문서도)만 바뀐다. 내용 해시는 해석한 본문을 덮으므로 표기가 달라져도 같다. `version`·`updated_at`·`content_hash`는 건드리지 않고 "발행하지 않은 변경"도 그대로다.
-  명령이 본문마다 이를 확인해서, 해시가 바뀔 본문은 쓰지 않고 건너뛴 채 알린다.
-- `unparsed` 본문("저장된 본문" 절)은 건너뛰고 알린다. 그 글이 이제 문서로 읽히면 예외다. 다시 쓴 본문의 검색용 글자는 새로 만든다.
-- 쓰기는 한 트랜잭션이고, 두 번째로 돌리면 바뀌는 것이 없다.
 
 ### 5. 실행
 
@@ -195,6 +179,28 @@ CMS 패키지의 선택 의존성(예: 블록 확장의 `mermaid`·`recharts`)�
 @import "@monti-cms/admin/styles.css"; /* `cms-*` 색과 `cms-dark`·`cms-horizontal`·`cms-vertical` 변형을 정한다(앱의 이름과 겹치지 않는다). Tailwind 4가 필요하다 */
 @plugin "@tailwindcss/typography";
 ```
+
+### MDX 확장 (선택)
+
+```sh
+pnpm add @monti-cms/mdx
+```
+
+```ts
+// cms.config.ts
+import { mdx } from "@monti-cms/mdx";
+
+export default defineConfig({
+	// …
+	plugins: [mdx()], // `mdx` 형식과 관리자 원문 패널. 문법 확장은 mdx({ syntax: [...] })에 넣는다
+});
+```
+
+```css
+@import "@monti-cms/mdx/styles.css"; /* 관리자 패키지 스타일 뒤에 */
+```
+
+코어는 문서를 저장하며 글 형식을 따로 갖지 않는다. 형식 플러그인이 없는 사이트는 문서(`doc`)만 받고, 글로 쓰면 `unknown_format`으로 실패한다. `format: "mdx"`와 `?format=mdx`는 이 패키지가 있어야 한다. 자세한 것은 `@monti-cms/mdx`의 README.
 
 ### 블록 확장 (선택)
 
@@ -287,9 +293,9 @@ export const cms = createCms({
 | Next가 아닌 호스트의 관리자 API(실험적) | `cms.handle(request)`: 표준 `Request`를 받아 `Response`를 돌려준다 |
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)`(`format: "mdx"`를 넘기면 본문을 그 형식의 글로도 받는다. `entry.body`, "형식" 절) |
-| 공개 미디어와 링크 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL과 내부 링크의 주소. `<CmsContent entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)`(`cms.read.imageResolver(mdx)`는 `renderMdx`용) |
+| 공개 미디어와 링크 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL과 내부 링크의 주소. `<CmsContent entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)` |
 | 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
-| 스크립트·명령줄 | `cms.migrate()`·`cms.rewrite({ apply })`·`cms.close()` |
+| 스크립트·명령줄 | `cms.migrate()`·`cms.close()` |
 | 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
 | 테스트 | `@monti-cms/core/testing`의 `fakeCms({ store, verifyAdmin, … })`: 테스트가 준 부품 위에 만든 진짜 인스턴스 |
 
@@ -315,12 +321,12 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 - 플러그인 라우트와 직접 만든 관리자 라우트는 `NextRequest` 대신 표준 `Request`를 받는다. `request.nextUrl`은 `new URL(request.url)`로, `NextResponse.json`은 `Response.json`으로 바꾼다. `CmsRouteHandler`는 `@monti-cms/core/next`로 옮겼고 `createRouteHandler`는 `cms.handle()`로 대체됐다.
 - 관리자 API 라우트는 `cms.routeHandler()`다. `createCmsRouteHandler`와 `@monti-cms/core/next/route-handler` 진입점은 없어졌다.
 - 관리자에 인스턴스를 넘긴다: `<CmsAdminLayout cms={cms}>`, `<CmsAdminPage cms={cms} {...props} />`(페이지 파일이 작은 컴포넌트가 된다. 모양은 `monti init`이 보여 준다).
-- 사이트 페이지는 `@monti-cms/core/read`의 자유 함수 대신 `cms.read.*`로 읽는다. `createPublicImageResolver(mdx)`는 `cms.read.imageResolver(mdx)`, `resolvePublicMediaUrl(id)`는 `cms.read.mediaUrl(id)`가 대신한다.
+- 사이트 페이지는 `@monti-cms/core/read`의 자유 함수 대신 `cms.read.*`로 읽는다. `createPublicImageResolver(mdx)`는 `entry.refs`(`cms.read.imageResolver`도 없어졌다. "코어에 있던 MDX에서 올리기"), `resolvePublicMediaUrl(id)`는 `cms.read.mediaUrl(id)`가 대신한다.
 - 없어진 것: `getCmsContentStore`·`getCmsMediaStore`·`getCmsSecret`·`getCmsDatabase`·`loadServerPlugins`와 `@monti-cms/core/runtime`의 로그인 자유 함수(`authGateway`·`auth`·`signIn`·`signOut`·`handlers`·`isDevAuthBypassEnabled` 등). 인스턴스를 쓴다:
   `cms.store()`·`cms.mediaStore()`·`cms.secrets(플러그인이름)`·`cms.storage(플러그인이름)`·`cms.plugins()`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`.
   마스터 비밀 값 자체를 내주는 길은 이제 없다(`cms.secret`과 `cms.server.secret`도 없어졌다). "플러그인 비밀 값"을 본다.
   플러그인 라우트는 핸들러 입력으로 `cms`를 받고, `CmsServerPlugin.features(cms)`와 `migrate(storage, cms)`는 인자로 받고, 훅은 직접 만든 `cms`를 클로저로 쓴다.
-- `@monti-cms/core/migrate`는 없어졌다: `monti migrate`를 돌리거나 스크립트에서 `await cms.migrate()`를 쓴다. `monti migrate`와 `monti content:rewrite`는 이제 서버 파일을 불러오므로 그 파일이 `cms`를 내보내야 한다.
+- `@monti-cms/core/migrate`는 없어졌다: `monti migrate`를 돌리거나 스크립트에서 `await cms.migrate()`를 쓴다. `monti migrate`는 이제 서버 파일을 불러오므로 그 파일이 `cms`를 내보내야 한다.
   `@monti-cms/core/register`는 `@cms-config` 별칭만 잇는다.
 - 로그인·로그아웃은 서버 액션이 아니라 `/api/cms/v1/session/*`로 보내는 일반 폼 전송이다(서버 액션은 인스턴스를 실을 수 없다). 앱에서 바꿀 것은 없다.
 
@@ -332,6 +338,29 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 - `createContentLookup(cms.database())`는 `createContentLookup(cms)`다. `createContentStore`와 `migrateContentStore`는 더 이상 `@monti-cms/core/runtime`에서 내보내지 않는다. 테스트는 `@monti-cms/core/testing`에서 가져온다.
 - `Entry`·`ListEntriesParams`·`CmsError` 같은 타입은 전과 같이 `@monti-cms/core/runtime`에서 온다. 정의는 Postgres 어댑터가 아니라 `src/core/store`에 있다.
 
+### 코어에 있던 MDX에서 올리기
+
+MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이제 MDX 의존성이 없다(`next-mdx-remote`·`remark-*`·`rehype-*`·`unified`·`vfile`·mdast 타입이 `package.json`에서 빠졌다). 이 버전을 배포하기 **전에** 다음을 한다.
+
+1. `@monti-cms/mdx`를 설치한다.
+2. `plugins`에 `mdx()`를 넣고 `mdx.syntax`를 그 안으로 **옮긴다**. `defineConfig({ mdx: { syntax: [directiveSyntax()] } })`는 `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`가 된다. 옵션은 그대로 둔다(지시자로 쓰던 사이트는 쓰기 모드가 켜진 `directiveSyntax()`). `mdx` 설정 키는 없어졌다.
+3. 앱 CSS에 `@import "@monti-cms/mdx/styles.css";`를 관리자 스타일 뒤에 넣는다.
+4. `@monti-cms/core/render`의 `renderMdx` import를 `@monti-cms/mdx/render`로 바꾸거나(또는 `CmsContent`로 문서를 그린다), `cms.read.imageResolver(...)`를 `entry.refs`로 바꾼다(`renderMdx(source, { refs: entry.refs })`). `renderMdx`는 `{ content, toc, unknown }`을 돌려주며 MDX를 컴파일하거나 실행하지 않는다.
+5. 없어진 `@monti-cms/core/mdx`·`@monti-cms/core/syntax`·`@monti-cms/core/format/mdx` import를 바꾼다. 문법 확장 인터페이스(`SyntaxExtension`·`SerializeContext`·`RAW_SOURCE_PARAGRAPH`, 표·코드 주석 문법 도우미)는 `@monti-cms/mdx`에서, 해석기와 직렬화기(`analyze`·`serialize`·`toDocument`·`bodyFromMdx`·`mdxFormat` 등)는 `@monti-cms/mdx/format`에서 가져온다. 문법 확장 패키지는 이제 `@monti-cms/mdx`를 피어로 둔다.
+6. 직접 만든 블록 확장은 `render` 모듈의 기본 내보내기를 지우고 `documentComponents`만 둔다(`CmsPlugin.render`는 `{ documentComponents }`를 돌려준다).
+7. `monti migrate`를 돌린다. 설정에 `mdx()`가 있으면 옛 데이터베이스가 알맞은 문법 확장으로 올라간다. 없으면 옛 단계로 읽을 본문이 남은 저장소는 `@monti-cms/mdx`를 설치하고 사이트 설정의 `plugins`에 `mdx()`를 넣으라는 메시지와 함께 실패한다.
+8. 스크립트에서 `monti content:rewrite`를 뺀다. 없어졌다(`cms.rewrite`도). 정규화할 저장 글이 없다.
+
+그 밖에 바뀐 것:
+
+- **기본 제공 형식이 없다.** 형식 플러그인이 없는 사이트는 문서(`doc`)만 받고, 글로 쓰면 `unknown_format`으로 실패한다. `format: "mdx"`와 `?format=mdx`는 `@monti-cms/mdx`가 있어야 한다.
+- **데이터베이스.** `entry_bodies.mdx`와 `body_templates.mdx`는 null을 허용하고(`seed_initial_body_templates` 앞에서 도는 `0020_mdx_columns_optional` 단계) 더는 쓰지 않는다. 열을 지우지는 않으므로 옛 행에는 글이 남는다. 미디어 사용 중 검사는 `doc`을 본다.
+- **옛 단계.** `0010`·`0011`·`0012`·`0013`·`0015`는 이름은 코어에 그대로 두고, `@monti-cms/mdx/server`가 주는 `mdx` 형식(`CmsFormat.legacyBodies`, "형식" 절)으로 해석한다. 저장소에 그 단계로 읽을 본문이 실제로 있을 때만 패키지가 필요하다. 새 저장소와 이미 그 단계를 지난 저장소는 마이그레이션 때 필요 없다. `monti migrate`와 `cms.migrate()`는 인스턴스의 형식을 마이그레이션에 넘기므로, `mdx()`를 설정에 둔 사이트는 문법 확장과 함께 옛 데이터를 옮긴다.
+- **그리기.** `renderMdx`와 `compileMDX`는 `@monti-cms/core/render`에 없다. 코어는 문서를 그린다(`CmsContent`, `renderDocument`). 블록 확장은 `render` 모듈에서 `documentComponents`만 내보내고, `@monti-cms/blocks`에는 MDX 컴포넌트 표가 없다.
+- **관리자.** 원문 패널은 `mdx()` 플러그인이 등록한다(없으면 원문 전환이 없다). 문구 이름공간은 `cms-mdx.source`다(전에는 `cms-admin.mdx-source`). 관리자는 `SOURCE_ERROR_ID`와 `useLinkPaths`(`@monti-cms/admin/hooks`)를 내보내고, `mdxBrowserFormat`은 `@monti-cms/admin/editor`에서 더는 내보내지 않는다. 문서가 생기기 전에 브라우저가 저장한 복구 사본은 `unparsed` 문서로 보관되고 패널이 다시 읽는다.
+- **AI.** `@monti-cms/ai`는 `@monti-cms/mdx`를 피어로 둔다. 모델은 `mdx` 형식으로 MDX를 읽고 쓴다.
+- `@monti-cms/core/notation`은 새 가벼운 진입점이다(표기용 코드 주석 문법과 표 도우미).
+
 ## 진입점
 
 | 진입점 | 쓰는 곳 | 내용 |
@@ -340,20 +369,19 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`·`defineServerConfig`·`postgres`·`githubAuth`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
 | `@monti-cms/core/next` | `next.config.ts` | `withCms` |
-| `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"), `renderMdx(mdx, options)` → `{ content, toc }`. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"). MDX 글은 `@monti-cms/mdx/render`의 `renderMdx`가 그린다. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | 공개 화면(타입) | `ReadEntry`·`MetadataFor` 등 `cms.read`의 타입. `cms.read`가 공개본을 읽는다(`getEntry`·`listEntries`·`getTranslations`·`getPreview`: 관계·주소·옛 주소 이동·원문 대체) |
 | `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
-| `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
-| `@monti-cms/core/document` | 본문을 고치거나 살피는 화면·플러그인 | `StoredDocument` 타입과, 표기법을 모르고 문서만으로 일하는 도우미: 블록 ID(`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, 링크·이미지·표 도우미, 저장 코드 블록 모델. MDX를 읽거나 쓰는 것은 없다. 관리자 편집기와 AI가 여기서 불러온다 |
+| `@monti-cms/core/code-block` | 공개 렌더러·편집기 | 코드 블록 주석 모델 |
+| `@monti-cms/core/document` | 본문을 고치거나 살피는 화면·플러그인 | `StoredDocument` 타입과, 표기법을 모르고 문서만으로 일하는 도우미: 블록 ID(`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, 링크·이미지·표 도우미, 저장 코드 블록 모델. 글 표기를 읽거나 쓰는 것은 없다. 관리자 편집기와 AI가 여기서 불러온다 |
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
-| `@monti-cms/core/format/mdx` | MDX가 따로 패키지가 되기 전까지의 관리자 | 내장 `mdx` 형식(`mdxFormat`)과 사이트 블록이 주는 맥락 `builtInFormatContext(locale)`. 사이트 설정을 읽으므로 `@monti-cms/core/format`에 두지 않았다 |
-| `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `SyntaxExtension` 인터페이스와 확장이 쓰는 도우미("본문 문법"). 지시자 표기는 `@monti-cms/syntax-directive`다 |
+| `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기)·`monti content:rewrite`(저장된 본문 다시 직렬화) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`·`contentRewrite`(명령 `monti`의 코드) |
+| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기) |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`(명령 `monti`의 코드) |
 | `@monti-cms/core/register` | 직접 만든 스크립트 | `tsx --import`로 돌리는 스크립트에서 `@cms-config` 별칭 잇기 |
-| `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터, 주어진 확장 목록으로 MDX를 해석하는 함수와 remark 플러그인(`parseMdxAst`·`syntaxRemarkPlugins`) |
+| `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드
 
@@ -362,69 +390,29 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 
 ## 본문 문법
 
-저장하는 MDX는 **CommonMark + GFM + 표준 MDX JSX**다. 그 밖의 표기는 선택해서 켜는 *문법 확장*이 맡고, 확장은 한 표기의 읽기와 쓰기를 함께 제공한다.
-한 가지 뜻에는 저장 표기가 하나다. 다른 표기도 읽을 때는 받아들이고, 저장할 때 바꿔 쓴다.
-
-확장이 없을 때 기본으로 쓰는 표기:
-
-| 뜻 | 저장 표기 |
-| --- | --- |
-| 줄바꿈 | `<br />`(문단에서는 뒤에 줄을 바꿔 `줄<br />` + 줄바꿈 + `다음`). `\` + 줄바꿈, 줄 끝 공백 두 칸, `<br />`을 모두 읽고 이렇게 쓴다. 문단 안의 줄바꿈 한 번은 공개 화면과 편집기 모두에서 공백일 뿐이다(CommonMark) |
-| 빈 줄(편집기에서 블록 사이에 Enter를 눌러 만든 줄) | `<br />`만 있는 줄, 빈 문단 하나에 한 줄씩 순서대로. 문서 노드로는 빈 `paragraph`다. 본문 맨 끝의 빈 줄은 저장하지 않는다 |
-| 밑줄·위 첨자·아래 첨자·번역 안내 | `<u>`·`<sup>`·`<sub>`·`<Untranslated>` |
-| 글 정렬 | `<TextAlign align="center">` |
-| 셀 병합·열 너비·GFM이 아닌 머리글이 있는 표 | `<Table>`·`<TableRow>`·`<TableCell colspan="2">`(나머지 표는 GFM) |
-| 미디어 이미지, 또는 크기·정렬·캡션·자르기·회전·장식 표시가 있는 이미지 | `<Image mediaId="…" />`(바깥 주소의 보통 이미지는 `![대체글](주소 "제목")` 그대로) |
-| 파일 카드 | `<File mediaId="…" />` |
-| 컨테이너·리프 블록(콜아웃·탭·단·사이트 블록) | `<컴포넌트 속성>` … `</컴포넌트>`. 불리언은 참일 때 이름만 쓰고 거짓이면 생략한다 |
-| 글자 꾸밈(툴팁·코드 연결·글자색·사이트 글자 블록) | `<컴포넌트 속성>글자</컴포넌트>` |
-
-문단 안의 줄바꿈 한 번이 줄바꿈으로 보이던 때 쓴 글이 같은 모습을 유지하도록, 마이그레이션 `0012_soft_line_endings`(`monti migrate`가 실행)가 문단 글에서 그런 줄 끝마다 `<br />`을 써 넣는다.
-대상은 작업본·발행본 본문, 번역의 기준 원문, 템플릿이다. 저장된 문자열을 파서가 알려 주는 위치에서만 고치며(코드·수식·표·속성·표현식은 건드리지 않고, 파싱되지 않는 본문은 그대로 두고 알린다) 다른 글자는 바뀌지 않는다.
-
-표기를 더하려면 `mdx.syntax`에 확장을 나열한다. 순서가 쓰기 우선순위다.
-
-```ts
-import { directiveSyntax } from "@monti-cms/syntax-directive";
-
-export default defineConfig({
-	// …
-	mdx: { syntax: [directiveSyntax()] },
-});
-```
-
-- [`@monti-cms/syntax-directive`](../syntax-directive/README.ko.md)는 표준 MDX 이전에 Monti가 쓰던 지시자(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다. 없으면 `:::callout`은 그냥 글자다.
-  `directiveSyntax({ write: false })`는 지시자를 읽기만 하고 표준 MDX로 저장하므로, 글을 저장할 때마다 한 편씩 옮겨 가게 된다(`monti content:rewrite --apply`로 한 번에 옮길 수도 있다). 줄바꿈은 `:br[]`로 쓰지 않는다.
-- [`@monti-cms/syntax-shiki`](../syntax-shiki/README.ko.md)는 코드 펜스의 Shiki 코드 표기(`// [!code ++]`·`[!code highlight]`·`[!code focus]`, `[!code ++:3]` 같은 개수)를 읽어 Monti 코드 주석(`// @line plus`)으로 바꾼다. 읽기만 하며 본문은 언제나 Monti 주석으로 쓴다.
-- 공개 렌더러(`@monti-cms/core/render`)는 편집기 해석기와 같은 플러그인을 돌리므로 편집기가 읽은 대로 사이트에 그려진다.
-
-**지시자 본문이 있는 사이트의 업그레이드.** 이 버전을 배포하기 전에 `@monti-cms/syntax-directive`를 설치하고 `mdx.syntax`에 `directiveSyntax({ write: false })`(지시자로 계속 저장하려면 `directiveSyntax()`)를 넣는다.
-`directiveSyntax`는 더 이상 `@monti-cms/core/syntax`에서 내보내지 않으니 import를 `@monti-cms/syntax-directive`로 바꾼다.
-확장이 없으면 기존 글이 지시자 문자 그대로 그려지고 검사에도 걸린다(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). `write: false`로 두면 글을 표준 표기로 저장해도 내용 해시(해석한 본문을 해시한다)는 바뀌지 않는다.
-저장된 본문 어디에도 지시자가 남지 않으면 확장을 뺀다.
+코어는 본문을 문서로 저장하며 글 표기를 읽거나 쓰지 않는다. 표기는 **형식**("형식" 절)이고, MDX는 [`@monti-cms/mdx`](../mdx/README.ko.md) 패키지의 형식이다. 기본으로 쓰는 표기(줄바꿈·표·이미지·JSX 블록), 표기를 더하는 *문법 확장*
+(`:::callout`은 `@monti-cms/syntax-directive`, Shiki 코드 표기는 `@monti-cms/syntax-shiki`), 확장을 만드는 법은 그 README에 있다. 문법 확장은 코어의 설정 키가 아니라 `plugins`의 `mdx({ syntax })`에 나열한다.
 
 #### 저장된 본문
 
-모든 본문(항목의 작업본·발행본, 번역이 확인한 기준 원문, 본문 템플릿)은 버전이 있는 **문서**(`entry_bodies.doc`·`body_templates.doc`, 해석한 본문을 JSON으로 담은 것)와 **그 문서에서 써 낸 MDX**를 함께 저장한다.
-문서가 원본이고 MDX는 그 글이므로, 저장하면 표기가 정규화된다. 같은 내용은 어떤 표기로 입력했든 늘 같은 글이 된다(`제목` + `=====`와 `# 제목`은 둘 다 `# 제목`으로 저장). 이미 가진 내용을 다른 표기로 저장하면 아무것도 바뀌지 않는다(새 버전도 생기지 않는다).
-편집기의 소스 모드는 보조 수단이다. 입력한 글은 저장할 때 해석되어 사이트의 표기로 다시 쓰인다.
-문서가 될 수 없는 본문(글이 해석되지 않거나, 머리말이 있거나, 다시 읽었을 때 같지 않은 본문)은 **`unparsed`** 문서로 저장된다. 노드 하나 `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<받은 글 그대로>" } }`이고, MDX는 그 글 그대로다. 초안은 이 상태로 둘 수 있고 편집기는 소스로 보여 주며, 발행은 `unparsed_body` 문제로 막힌다. 거절된 이유(글의 줄·칸을 담은 `mdx_error`, `frontmatter_present`)는 함께 알려 준다.
+모든 본문(항목의 작업본·발행본, 번역이 확인한 기준 원문, 본문 템플릿)은 버전이 있는 **문서**(`entry_bodies.doc`·`body_templates.doc`, 해석한 본문을 JSON으로 담은 것)로 저장한다. 문서가 유일한 원본이며 그 옆에 글을 따로 쓰지 않는다. `entry_bodies`와 `body_templates`의 `mdx` 열은 선택 사항(`0020_mdx_columns_optional`)이고 더는 쓰지 않는다. 열을 지우지는 않으므로 옛 행에는 글이 남아 있다.
+이미 가진 내용을 다른 표기로 저장하면 아무것도 바뀌지 않는다(새 버전도 생기지 않는다). 원문 패널(`mdx()` 플러그인이 준다)에 입력한 글은 브라우저에서 문서로 읽히고, 저장되는 것은 그 문서다.
+문서가 될 수 없는 본문(글이 해석되지 않거나, 머리말이 있거나, 다시 읽었을 때 같지 않은 본문)은 **`unparsed`** 문서로 저장된다. 노드 하나 `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<받은 글 그대로>" } }`이고, 글은 그대로 보존된다. 초안은 이 상태로 둘 수 있고 편집기는 소스로 보여 주며, 발행은 `unparsed_body` 문제로 막힌다. 거절된 이유(글의 줄·칸을 담은 `mdx_error`, `frontmatter_present`)는 함께 알려 준다.
 
-**무엇을 검사하나.** 코어는 MDX 글이 아니라 저장된 문서를 검사하고, 해시를 만들고, 검색한다. 그래서 본문은 어떻게 쓰였든 어떤 경로로 왔든 똑같이 다뤄진다. 대상은 `prepareSnapshot`과 `validateForPublish`(블록 속성의 필수·모르는·잘못된 값, 참조, 내부 링크, 이미지 출처, 각주, 코드 줄 링크, 표 병합, 글에 남은 번역 안내), 내용 해시(`computeContentHash(metadata, doc, schemaVersion)`. 값은 전과 같다. 블록 ID를 뺀 문서를 키 순서대로 정렬해 해시한다), 검색용 글자와 발췌(`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`), 번역 도구(`withTranslationHints`, `compareStructure`, `diffSources`는 문서를 받는다)다. MDX 글로 받은 본문은 먼저 문서로 읽고, 문서로 받은 본문은 그대로 쓴다(글 조각과 끝의 빈 문단만 정해진 모양으로 맞춘다).
-발견한 것의 위치는 그것이 든 블록이다. 문제의 `position`은 `{ blockId }`이고(읽히지 않은 글은 그 글의 `{ line, column }`을 대신 가진다), 본문 참조 위치는 `{ "type": "body", "blockId" }`다. `mdx` 열은 저장할 때 여전히 문서에서 써 낸다.
+**무엇을 검사하나.** 코어는 글이 아니라 저장된 문서를 검사하고, 해시를 만들고, 검색한다. 그래서 본문은 어떻게 쓰였든 어떤 경로로 왔든 똑같이 다뤄진다. 대상은 `prepareSnapshot`과 `validateForPublish`(블록 속성의 필수·모르는·잘못된 값, 참조, 내부 링크, 이미지 출처, 각주, 코드 줄 링크, 표 병합, 글에 남은 번역 안내), 내용 해시(`computeContentHash(metadata, doc, schemaVersion)`. 값은 전과 같다. 블록 ID를 뺀 문서를 키 순서대로 정렬해 해시한다), 검색용 글자와 발췌(`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`), 번역 도구(`withTranslationHints`, `compareStructure`, `diffSources`는 문서를 받는다)다. 글로 받은 본문은 먼저 그 형식으로 문서로 읽고, 문서로 받은 본문은 그대로 쓴다(글 조각과 끝의 빈 문단만 정해진 모양으로 맞춘다).
+발견한 것의 위치는 그것이 든 블록이다. 문제의 `position`은 `{ blockId }`이고(읽히지 않은 글은 그 글의 `{ line, column }`을 대신 가진다), 본문 참조 위치는 `{ "type": "body", "blockId" }`다.
 
-**코드 블록.** 코드 블록은 주석을 뺀 코드와 데이터로 둔 주석(줄 효과, 글자 효과, 정규식 규칙)으로 저장하고, MDX로 쓸 때는 Monti 주석으로 되돌려 쓴다. MDX를 읽는 다른 도구에서도 주석이 그대로 보인다.
-`monti migrate`는 `0015_code_annotations` 단계를 실행해 기존 문서(번역이 확인한 기준 문서 포함)를 바꾸고, 코드 펜스의 주석을 정해진 한 모양으로 다시 쓴다(`// @line plus`는 `// @line plus {0-0}`이 되고, 코드 전체에 걸리는 규칙은 맨 위로 간다). 내용 해시와 검색용 글자(이제 주석을 담지 않는다)는 새로 만들며, `version`과 `updated_at`은 그대로다.
+**코드 블록.** 코드 블록은 주석을 뺀 코드와 데이터로 둔 주석(줄 효과, 글자 효과, 정규식 규칙)으로 저장하고, 글 형식이 Monti 주석으로 되돌려 쓴다. 글을 읽는 다른 도구에서도 주석이 그대로 보인다.
+`monti migrate`는 `0015_code_annotations` 단계를 실행해 기존 문서(번역이 확인한 기준 문서 포함)를 바꾸고, 코드 펜스의 주석을 정해진 한 모양으로 다시 쓴다(`// @line plus`는 `// @line plus {0-0}`이 되고, 코드 전체에 걸리는 규칙은 맨 위로 간다). 내용 해시와 검색용 글자(이제 주석을 담지 않는다)는 새로 만들며, `version`과 `updated_at`은 그대로다. 옛 글은 저장소에 그런 본문이 있을 때만 `mdx` 형식으로 읽는다("코어에 있던 MDX에서 올리기").
 
-**블록 ID.** 문서의 모든 블록은 본문 안에서 유일한 `id`(소문자 영숫자 8자)를 가진다. 블록 ID는 버전이 달라져도 어느 블록이 어느 블록인지 알려 주는 값이며, MDX에는 쓰이지 않고 콘텐츠 해시에도 들어가지 않으므로 변경으로 취급되지 않는다.
-MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑같이 읽히는 블록은 ID를 그대로 가지고, 수정한 블록, 둘로 나눈 블록, 옮긴 블록도 마찬가지다(나눈 문단은 앞부분이 ID를 가진다). 짝이 없는 블록은 새 ID를 받고, API로 보낸 문서는 담고 있는 ID를 그대로 유지한다.
-`monti migrate`는 `0014_block_ids` 단계를 실행해 기존 문서에 ID를 달아 준다(발행본은 작업본과 공통인 블록의 ID를 함께 쓴다). 바뀌는 것은 `doc`뿐이며 MDX, 해시, `version`, `updated_at`은 그대로다.
+**블록 ID.** 문서의 모든 블록은 본문 안에서 유일한 `id`(소문자 영숫자 8자)를 가진다. 블록 ID는 버전이 달라져도 어느 블록이 어느 블록인지 알려 주는 값이며, 글 형식에는 쓰이지 않고 콘텐츠 해시에도 들어가지 않으므로 변경으로 취급되지 않는다.
+글로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑같이 읽히는 블록은 ID를 그대로 가지고, 수정한 블록, 둘로 나눈 블록, 옮긴 블록도 마찬가지다(나눈 문단은 앞부분이 ID를 가진다). 짝이 없는 블록은 새 ID를 받고, API로 보낸 문서는 담고 있는 ID를 그대로 유지한다.
+`monti migrate`는 `0014_block_ids` 단계를 실행해 기존 문서에 ID를 달아 준다(발행본은 작업본과 공통인 블록의 ID를 함께 쓴다). 바뀌는 것은 `doc`뿐이며 글, 해시, `version`, `updated_at`은 그대로다.
 관리자 편집기는 표기법을 거치지 않고 문서 자체로 일한다. 편집하는 동안 블록마다 ID를 유지하고, 저장할 때 늘 문서를 보내므로 블록 ID가 정확히 유지된다. 원문 패널에 쓴 글은 브라우저에서 읽어 그 글이 읽히는 문서로 바꾸고, 그 블록은 위와 같이 바꿔 치우는 본문과 짝지어진다. 템플릿을 항목에 적용하면 템플릿 문서를 새 블록 ID로 복사한다(ID는 본문 하나 안에서만 유일하고, 번역·비교 화면이 ID로 블록을 짝짓기 때문이다).
 관리자는 이 ID로 블록을 가리킨다. 발행 검증 문제와 참조 위치는 해당 블록을 알려 주고(`position.blockId`) 시각 편집기에서 그 블록으로 이동한다. 번역 화면은 번역할 때 확인한 원문과 지금 원문을 블록 단위로 비교하며, 자리만 옮긴 블록은 이동으로 보여 준다. AI 번역은 번역할 블록을 ID로 찾는다.
 
-**업그레이드.** `monti migrate`를 돌리기 전에 `mdx.syntax`를 사이트가 쓰려는 대로 맞춰 둔다. `monti migrate`는 `0013_stored_documents` 단계를 실행한다. `doc` 열을 더하고, 기존 본문마다 문서를 만들어 주고, **MDX를 사이트의 표기로 다시 쓴다**(많은 본문의 저장 글이 한꺼번에 바뀐다. `version`과 `updated_at`은 그대로다).
+**업그레이드.** `0013_stored_documents` 단계는 `doc` 열을 더하고 기존 본문마다 문서를 만들어 준다. 옛 글은 `@monti-cms/mdx`의 `mdx` 형식으로, `mdx({ syntax })`의 문법 확장과 함께 읽는다("코어에 있던 MDX에서 올리기"). 그때 옛 글을 사이트의 표기로 다시 썼으므로 많은 본문의 저장 글이 한꺼번에 바뀌었다(`version`과 `updated_at`은 그대로였다).
 해석되지 않거나, 머리말이 있거나, 다시 읽었을 때 같지 않은 본문은 문서 없이 그대로 두고 하나씩 로그에 남긴다(`[monti] no stored document for …`). 이어서 `0017_unparsed_bodies` 단계가 이런 본문에 `unparsed` 문서를 만들어 준다(아래). 먼저 데이터베이스를 백업하고, 실행한 뒤 로그를 확인한다.
-`monti content:rewrite`는 이제 문서에서 다시 쓰고, `unparsed` 본문은 그 글이 문서로 읽히면 문서를 만들어 준다.
 
 `monti migrate`는 `0017_unparsed_bodies`도 실행한다. 문서가 없는 본문과 템플릿마다 그 글의 `unparsed` 문서를 만들고, 내용 해시를 새로 계산하며(문서가 아닌 글은 늘 그랬듯 따로 붙인 태그로 해시한다), 모든 번역의 번역 상태를 버전 4(`{ version: 4, baseDoc }`, 번역이 확인한 원문의 문서)로 올린다. 원문 MDX를 담던 버전 2·3도 계속 읽힌다. `mdx`, `search_text`, `version`, `updated_at`은 그대로다.
 이런 본문 때문에 실패하는 일은 없다. 발행본과 템플릿도 마찬가지인데, 기존 저장소의 데이터는 언제나 옮겨져야 하기 때문이다. 그중 발행본과 템플릿은 id로 로그에 남는다(`[monti] N published bodies have no document …`). 편집기에서 고치기 전까지는 `unparsed`로 읽힌다(페이지는 아무것도 그리지 않는다).
@@ -434,7 +422,7 @@ MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑
   읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/entries/:id?format=<이름>`은 `working`과 `published`(번역이면 원문도)에 `body`(문자열)를 더한다. 그 형식으로 쓴 글이며, 다시 가져올 수 있게 쓴다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.textBytes`(어떤 형식이든 글)와 `limits.docBytes`로, 인스턴스의 형식을 `formats`(`{ name, label, mimeType, extension, canImport }`)로 알려 준다. 관리자 편집기는 늘 `doc`을 보낸다.
 - **템플릿 API와 템플릿.** 본문 템플릿은 항목 본문처럼 문서다. `body_templates.doc`이 유일한 원본이고 `body_templates.mdx`는 이제 아무도 쓰지 않는다(열은 남고 선택 사항이다). `POST /api/cms/v1/templates`와 `PATCH /api/cms/v1/templates/:id`는 `{ name, doc }` 또는 `{ name, body, format }`을 받고(둘 다 없으면 빈 템플릿이고, 패치는 본문을 그대로 둔다) `doc`을 돌려주며 `mdx`는 주지 않는다. `GET`의 `?format=<이름>`은 템플릿마다 `body`를 더한다. 형식이 거절한 글은 형식의 발견 사항과 함께 `422 format_import_failed`다. 템플릿에는 항목 초안과 달리 문서가 아닌 글을 담아 둘 자리가 없기 때문이다.
   관리자 템플릿 관리 화면과 편집기의 템플릿 메뉴는 문서로 일한다. 템플릿을 적용하면 그 문서를 새 블록 ID로 항목에 복사한다. 시드 템플릿(사이트 설정의 `seed.templates`)은 `{ id, name, doc }` 또는 `{ id, name, body, format }`이다. 글은 새 저장소를 처음 채우는 마이그레이션이 그 형식으로 읽고, 설치된 어떤 플러그인도 읽지 못하는 시드는 그 형식을 알리는 메시지와 함께 마이그레이션을 멈춘다(`mdx`라면 `@monti-cms/mdx`를 설치한다). 이미 데이터가 있는 저장소는 이 때문에 멈추지 않는다.
-  `monti migrate`는 `0019_templates_documents`를 실행한다. 읽을 수 있는 문서가 없는 템플릿은 그 글의 `unparsed` 문서를 받고, `body_templates.mdx`는 더 이상 필수가 아니다. `version`, `updated_at`, 열에 이미 있는 글은 그대로다. 템플릿 때문에 실패하는 일은 없고, 문서가 없던 것은 id로 로그에 남는다. 다시 돌려도 바뀌는 것이 없다. `monti content:rewrite`는 이제 템플릿을 건드리지 않는다(글이 없다).
+  `monti migrate`는 `0019_templates_documents`를 실행한다. 읽을 수 있는 문서가 없는 템플릿은 그 글의 `unparsed` 문서를 받고, `body_templates.mdx`는 더 이상 필수가 아니다. `version`, `updated_at`, 열에 이미 있는 글은 그대로다. 템플릿 때문에 실패하는 일은 없고, 문서가 없던 것은 id로 로그에 남는다. 다시 돌려도 바뀌는 것이 없다.
 - **관리자 내보내기**(`GET` 또는 `POST /api/cms/v1/export`)는 형식 버전 4다. 보관 파일은 문서를 담는다. 본문마다 `working.doc.json`·`published.doc.json`, `doc`이 있는 `templates.json` 항목, `doc`이 있는 공개 내보내기의 `published.json`이며, 다이제스트가 이를 포함한다. MDX는 따로 없다. `format=<이름>`(쿼리, 또는 `POST` 본문의 `format`)을 주면 본문마다 `working.<확장자>`·`published.<확장자>`로, 템플릿은 `body`로 그 형식의 글도 쓰고 `manifest.format`이 그 형식을 알려 준다. 관리자 보관 파일의 글은 다시 가져올 수 있게 쓴다(풀 수 없는 항목 링크는 id를 유지한다). 공개 보관 파일의 글은 읽는 사람을 위한 것이다(공개된 항목만 담고, 공개되지 않은 대상은 링크가 아니다). 모르는 형식은 `400 unknown_format`이다.
 - **공개 읽기 API와 공개 내보내기**는 문서를 돌려준다. `cms.read.getEntry` / `listEntries` / `getPreview`는 `entry.doc`(저장된 문서. 목록에서는 `body: true`일 때만, 아니면 `null`)과 `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: 그 문서의 이미지, 파일, 내부 링크를 그리는 데 필요한 값. 문서가 쓰는 것만 들어 있고, `collectRefs(doc)`가 id 목록을 준다)를 담는다.
@@ -446,30 +434,11 @@ MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑
 
 ### 문법 확장 만들기(실험적)
 
-`@monti-cms/core/syntax`는 실험적이라 마이너 버전에서 바뀔 수 있다.
-
-```ts
-interface SyntaxExtension {
-	name: string;
-	/** 읽기: remark 플러그인(또는 사이트 블록을 받아 플러그인을 돌려주는 함수). 공개 렌더 체인에도 들어간다. */
-	remarkPlugins?: PluggableList | ((context: SyntaxContext) => PluggableList);
-	/** CmsNode → MDX. 키는 노드 타입(또는 블록의 렌더러 이름), "*"는 나머지. undefined를 돌려주면 다음 확장, 그다음 표준 직렬화기로 넘어간다. */
-	fromDocument?: Record<string, (node: CmsNode, context: SerializeContext) => string | undefined>;
-	/** 이 확장이 쓰는 마크. 키는 마크 타입이고 넘김 규칙은 같다. `inner`는 이미 쓴 안쪽 내용이다. */
-	fromMark?: Record<string, (mark: CmsMark, inner: string, context: SerializeContext) => string | undefined>;
-	/** 본문 글자가 이 문법으로 읽히지 않게 이스케이프한다(예: `\:name`). */
-	escapeText?: (text: string, context: SerializeContext) => string;
-}
-```
-
-`SyntaxContext`는 사이트 블록(`blocks.list`·`blocks.byName`·`blocks.byComponent`)과 코드 블록 줄 효과 이름(`codeLineEffects`)을 준다. `SerializeContext`는 여기에 `indent`(노드가 시작하는 줄의 들여쓰기이며 쓰는 쪽이 직접 넣는다),
-자식을 쓰는 `serializeBlocks`·`serializeInlines`, `componentName`, `hasSpread`, 표준 표기가 쓰는 속성 목록을 만드는 `nodeAttributes`·`markAttributes`, `escapeAttribute`를 더한다.
-줄바꿈은 언제나 `<br />`라서 확장에 넘기지 않는다. `image` 노드는 Markdown으로 쓸 수 없을 때만 넘긴다. 지시자 확장(`packages/syntax-directive`)이 참고 구현이며 `@monti-cms/core/syntax`에서만 가져온다.
-이 진입점은 Monti 코드 주석이 쓰는 코드 주석 문법 도우미(`resolveCommentSyntax`·`formatAnnotationComment`)도 내보내므로, 코드 주석을 읽거나 쓰는 확장(`packages/syntax-shiki`)이 쓴다.
+`SyntaxExtension` 인터페이스(`remarkPlugins`·`fromDocument`·`fromMark`·`escapeText`), `SerializeContext`, `RAW_SOURCE_PARAGRAPH`, 표 도우미, 코드 주석 문법 도우미는 `@monti-cms/mdx`가 내보내며, 그 README("문법 확장 만들기")에 설명이 있다. 코어는 이것들이 기대는 가벼운 진입점 `@monti-cms/core/notation`만 준다.
 
 ## 형식
 
-저장된 문서가 본문의 유일한 원본이다. **형식**은 문서를 써 낼 수 있는 표기이고, 형식이 가능하면 그 표기에서 문서를 읽어 올 수도 있다. MDX, Hugo 머리말이 붙은 Markdown, 일반 글 같은 것이다. 형식은 플러그인이고, 읽기·쓰기 API의 `format` 옵션으로 쓴다. 플러그인은 변환하고 코어는 검사하고 저장한다. 누구나 형식을 만들 수 있다. `mdx` 형식은 지금은 기본으로 들어 있다(코어가 늘 가졌던 MDX 코드를 이 자리 뒤에 둔 것이다). 나중에 `@monti-cms/mdx` 패키지로 옮겨 간다.
+저장된 문서가 본문의 유일한 원본이다. **형식**은 문서를 써 낼 수 있는 표기이고, 형식이 가능하면 그 표기에서 문서를 읽어 올 수도 있다. MDX, Hugo 머리말이 붙은 Markdown, 일반 글 같은 것이다. 형식은 플러그인이고, 읽기·쓰기 API의 `format` 옵션으로 쓴다. 플러그인은 변환하고 코어는 검사하고 저장한다. 누구나 형식을 만들 수 있다. 코어에는 기본 제공 형식이 없다. `mdx` 형식은 `@monti-cms/mdx`가 준다. 형식 플러그인이 없는 사이트는 문서(`doc`)만 받고, 글로 쓰면 `unknown_format`으로 실패한다.
 
 ```ts
 import { defineFormat } from "@monti-cms/core/format";
@@ -490,7 +459,7 @@ export default defineFormat({
 });
 ```
 
-플러그인은 `server`·`render`처럼 느리게 불러오는 함수로 형식을 준다. `definePlugin({ name: "hugo", formats: () => import("./formats") })`이고, 기본 내보내기는 형식 하나 또는 그 목록이다. 같은 이름이 두 번 나오면(기본 제공 형식 포함) 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/cms/v1/meta`가 이를 `formats`로 알려 준다.
+플러그인은 `server`·`render`처럼 느리게 불러오는 함수로 형식을 준다. `definePlugin({ name: "hugo", formats: () => import("./formats") })`이고, 기본 내보내기는 형식 하나 또는 그 목록이다. 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/cms/v1/meta`가 이를 `formats`로 알려 준다.
 
 **형식이 받는 것.** 두 방향 모두 `ctx.locale`, `ctx.blocks`(사이트의 본문 블록), `ctx.codeLineEffects`를 받는다. `export`는 `ctx.purpose`(`"read"`: 읽는 쪽이 글을 쓰므로 데이터베이스 밖에서도 통하는 주소가 필요하다. `"sync"`: 다시 가져올 글이므로 양방향 형식은 돌려받는 데 필요한 것을 유지한다), `ctx.link(entryId)`(링크가 가리키는 항목의 지금 주소 `{ url, title, locale }`, 없으면 `null`), `ctx.media(mediaId)`(`{ url, width?, height?, filename, mimeType, byteSize }` 또는 `null`), 문서가 말하는 대로 쓰지 못한 것을 알리는 `ctx.report(issue)`도 받는다. 코어가 `export`를 부르기 전에 문서의 모든 링크와 미디어를 풀어 두므로, 이 조회는 모두 동기식이다.
 `import`는 글이 말하는 문서를 돌려준다. 블록 ID나 문서 버전은 신경 쓰지 않는다. 코어가 모든 블록에 ID를 달고(글이 바꾸는 본문과 짝지어서, 바뀌지 않은 블록은 ID를 유지한다) 문서를 정해진 모양으로 맞춘다. 경고는 `blockIndex`로 돌려준 문서의 블록을 가리킬 수 있고, 코어가 그것을 블록 ID로 바꾼다.
@@ -519,7 +488,9 @@ export default defineFormat({
 | `format_export_failed` | 500(공개 API: 503 `unavailable`) | 형식이 예외를 던졌다 |
 | `body_too_large` | 413 | `limits.textBytes`(2 MiB)를 넘는 글, 또는 `limits.docBytes`(8 MiB)를 넘는 문서 |
 
-**`mdx` 속성에서 올리기.** 별칭은 없다. 쓰기 API와 `createDraft` / `saveDraft`에는 `{ mdx }` 대신 `{ doc }` 또는 `{ body, format: "mdx" }`를 보낸다. `entry.mdx` 대신 (`format: "mdx"`를 넘기고) `entry.body.text`를 읽는다. 템플릿 API와 `seed.templates`는 `doc` 또는 `{ body, format: "mdx" }`를 받는다. `limits.mdxBytes`는 `limits.textBytes`가 되었고 오류 `mdx_too_large`는 `body_too_large`가 되었다. 내보내는 글이 내부 링크에 쓰는 것은 대상의 경로이고, `mdx` 열은 MDX가 코어를 떠날 때까지 `entry:<id>`를 그대로 담는다.
+**옛 본문(`legacyBodies`).** 형식은 `legacyBodies`(`@monti-cms/core/format`의 `LegacyBodies` 타입)도 줄 수 있다. 옛 저장소가 본문을 담아 둔 글을 읽고 쓰는 방법(`read`·`write`·`insertSoftBreaks`·`documentOf`)이다. `mdx` 형식만 갖고 있으며(`@monti-cms/mdx/server`가 준다), 마이그레이션 단계 `0010`·`0011`·`0012`·`0013`·`0015`는 이름은 코어에 그대로 두고 이것으로 해석한다. 읽을 본문이 있을 때만 이를 요청한다("코어에 있던 MDX에서 올리기").
+
+**`mdx` 속성에서 올리기.** 별칭은 없다. 쓰기 API와 `createDraft` / `saveDraft`에는 `{ mdx }` 대신 `{ doc }` 또는 `{ body, format: "mdx" }`를 보낸다. `entry.mdx` 대신 (`format: "mdx"`를 넘기고) `entry.body.text`를 읽는다. 템플릿 API와 `seed.templates`는 `doc` 또는 `{ body, format: "mdx" }`를 받는다. `limits.mdxBytes`는 `limits.textBytes`가 되었고 오류 `mdx_too_large`는 `body_too_large`가 되었다. 내보내는 글이 내부 링크에 쓰는 것은 대상의 경로이고, 이제 아무도 쓰지 않는 옛 `mdx` 열은 `entry:<id>`를 담고 있었다. 내장 `mdx` 형식은 없어졌고 `@monti-cms/mdx`가 준다("코어에 있던 MDX에서 올리기").
 
 ## 본문 블록
 
@@ -543,7 +514,7 @@ blocks: [
 		name: "notice", // <Notice level="warn"> … </Notice>로 저장
 		label: "공지",
 		syntax: { kind: "container", directive: "notice" },
-		component: "Notice", // 공개 화면은 사이트의 MDX 컴포넌트 표에서 이 이름으로 그린다
+		component: "Notice", // 글 표기에서 블록의 이름(MDX의 JSX 이름). 공개 화면은 블록 이름에 등록된 컴포넌트로 그린다
 		attributes: {
 			level: { type: "string", label: "단계", options: { info: "안내", warn: "주의" }, defaultValue: "info" },
 			title: { type: "string", label: "제목", translatable: true }, // 번역 화면이 머리 줄로 따로 번역한다
@@ -560,14 +531,14 @@ blocks: [
 		name: "graphviz", // 저장 문법 ```graphviz … ```
 		label: "Graphviz",
 		syntax: { kind: "fence", lang: "graphviz" },
-		component: "Graphviz", // 공개 화면은 remarkFenceBlocksToMdx가 <Graphviz source="…" />로 바꾼다
+		component: "Graphviz", // 공개 화면은 블록에 등록된 컴포넌트로 그린다(코드를 `source`로 받는다)
 		attributes: {},
 		editor: { view: "node", insertable: true, insert: { code: "digraph { a -> b }" }, placeholder: "Graphviz 코드를 입력하세요" },
 	}),
 ],
 ```
 
-- 더할 수 있는 블록은 요소 블록(`container`·`leaf`. `component` 이름의 MDX JSX 요소로 저장하며, 지시자 확장을 쓰면 지시자로도 저장한다. 이때 `directive`가 지시자 이름이다), 글자 꾸밈(`text` + `editor.view: "mark"`), 코드 펜스 블록(`fence`)이다.
+- 더할 수 있는 블록은 요소 블록(`container`·`leaf`. `component` 이름의 MDX JSX 요소로 저장하며, 지시자 확장을 쓰면 지시자로도 저장한다. 이때 `directive`가 지시자 이름이다. `@monti-cms/mdx` 참고), 글자 꾸밈(`text` + `editor.view: "mark"`), 코드 펜스 블록(`fence`)이다.
   코드 펜스 블록은 그 언어의 코드 펜스를 모두 가져가므로 일반 코드 언어 이름(`ts` 등)을 쓰지 않는다.
 - 글자 꾸밈은 `<컴포넌트 속성>글자</컴포넌트>`로 저장한다(지시자 확장을 쓰면 `:이름[글자]{속성}`). 속성은 정의 순서대로 쓰고, 꼭 있어야 하는 속성(`required`)은 비어도, 나머지는
   값이 있을 때만 쓴다. 겹친 꾸밈은 더한 순서(바깥부터)로 저장한다. 편집기 표시는 관리자 패키지가 정의에서 만들고, 모양·서식
@@ -579,8 +550,7 @@ blocks: [
 - 본문을 담는 컨테이너는 슬래시 메뉴로 넣으면 빈 문단으로 시작한다. `editor.insert.codeBlocks`(`[{ language, title?, code? }]`)를 주면 그 코드 블록들로 시작하며, `title`은 코드 펜스의 `title` 메타다(코드 탐색기가 `src/index.ts` 파일 하나로 시작하는 데 쓴다).
 - 편집기 노드는 관리자 패키지가 정의에서 만든다. 편집 모양은 관리자 패키지의 `blockViews`(모든 블록의 화면 전체,
   `useBlockEditor`와 `Content`로 만든다)로 바꾸고, 코드 펜스 블록의 미리보기는 `fencePreviews`로 넣는다.
-- 공개 화면의 코드 펜스 블록은 `@monti-cms/core/mdx`의 `remarkFenceBlocksToMdx`를 렌더 체인(문법 확장의 플러그인 뒤)에 넣어
-  `component`로 그린다.
+- 공개 화면의 코드 펜스 블록은 `renderDocument`/`CmsContent`가 문서에서 바로 그린다. 블록에 등록된 컴포넌트(플러그인 `render` 모듈의 `documentComponents`나 사이트의 `components`)를 쓰므로 렌더 체인에 따로 넣을 것이 없다.
 - 번역 구조 검사(`compareStructure`)는 `translatable` 속성과, 그 값을 가리키는 `childValue` 속성(예: 처음 열 탭)만 번역에서
   바뀌어도 된다고 본다. 사람이 읽는 속성(제목·설명 등)에는 `translatable: true`를 단다.
 - `editor.icon`이 관리자 패키지의 기본 아이콘에 없는 이름이면 관리자 화면에 아이콘을 등록한다(`@monti-cms/admin` README).
@@ -634,7 +604,7 @@ codeBlock: {
 ## 저장된 문서 그리기
 
 `@monti-cms/core/render`의 `renderDocument`(와 서버 컴포넌트 `CmsContent`)는 저장된 문서(`StoredDocument`)를 React로 그린다. 공개 경로에서 MDX를 컴파일하거나 코드를 실행하지 않는다.
-`renderMdx`는 그대로 남아 있고(나중에 `@monti-cms/mdx`로 옮긴다) 둘은 같은 화면을 그린다.
+코어는 문서만 그린다. 글은 먼저 문서로 읽어서 그린다(MDX는 `@monti-cms/mdx/render`의 `renderMdx`가 그렇게 한다).
 
 ```tsx
 import { CmsContent, renderDocument, tableOfContents, type DocumentComponents } from "@monti-cms/core/render";
@@ -646,7 +616,6 @@ tableOfContents(entry.doc); // 2·3단계 제목, 같은 앵커, React 없음
 // 문서 하나만 있을 때:
 const { content, toc, unknown } = await renderDocument(doc, { locale, refs, components });
 <CmsContent doc={doc} refs={refs} locale={locale} components={components} />;
-// `imageResolver`도 그대로 동작하고 `refs`보다 우선한다. 주소를 사이트가 직접 풀 때 쓴다
 ```
 
 - **두 단계.** 비동기 선처리가 문서를 한 번 훑고(제목 앵커와 목차, 각주 번호, 모든 코드 블록의 Shiki 강조, 모든 수식의 KaTeX 출력), 그다음 동기 순수 렌더가 노드를 요소로 바꾼다.
@@ -654,7 +623,7 @@ const { content, toc, unknown } = await renderDocument(doc, { locale, refs, comp
 - **내용 때문에 던지지 않는다.** 모르는 노드·마크·블록, 컴포넌트가 없는 블록, 속성이 잘못된 노드는 `fallback` 컴포넌트로 그려지고 `unknown`에 담긴다(`onUnknown`도 부른다).
   모르는 컨테이너는 안의 내용을 보이고 모르는 리프는 아무것도 그리지 않는다. 개발 중에는 기본 fallback이 숨겨진 `<span data-cms-unknown>`을 남긴다. `strict: true`면 대신 던진다(테스트, 미리보기 화면).
   저장된 문서가 아닌 값은 빈 본문으로 그리고 로그를 남긴다.
-- **컴포넌트**는 층층이 합쳐진다: 코어 기본값, 블록 확장의 컴포넌트(플러그인 `render` 모듈의 `documentComponents`), 사이트의 `components` 순이다. 노드마다 속성 타입이 하나씩 있고
+- **컴포넌트**는 층층이 합쳐진다: 코어 기본값, 블록 확장의 컴포넌트(플러그인 `render` 모듈의 `documentComponents`. `CmsPlugin.render`는 `{ documentComponents }`를 돌려주며, MDX 모양의 옛 기본 내보내기는 없어졌다), 사이트의 `components` 순이다. 노드마다 속성 타입이 하나씩 있고
   (`ParagraphProps`, `id`가 있는 `HeadingProps`, `ListProps`, `CodeBlockProps`, 해석된 `src`가 있는 `ImageProps`, `FileProps`, `TableProps`·`TableRowProps`·`TableCellProps`, `MathProps`,
   `FootnoteRefProps`·`FootnotesProps`, `HardBreakProps`), 코어 마크(`link`, `bold`, `italic` …)마다 하나, 코드 블록 안 요소용 `codeTags`(`fold`, `collapse`, `Tooltip`)가 있다.
   모든 컴포넌트는 `ctx`(`locale`과 고정 문구 `labels`; 순수 JSON이라 클라이언트 컴포넌트로 넘길 수 있다)도 받고, 블록 컴포넌트는 `blockId`, `node`, `items`도 받는다.
@@ -662,9 +631,8 @@ const { content, toc, unknown } = await renderDocument(doc, { locale, refs, comp
   `marks: { tooltip: ({ content, children }) => … }`. `components`의 타입(`DocumentComponents`)은 `cms.config.ts`의 `blocks`와 플러그인의 `blocks`로 만들어진다
   (`defineBlock`이 속성을 리터럴로 보존하므로 `variant`는 `"note" | "tip" | …`이다). 불리언 속성은 늘 불리언이고, 기본값이 있는 값과 필수 문자열은 늘 있으며,
   선택지에 없는 값은 기본값으로 바뀐다. 코드 펜스 블록(`mermaid`, `chart`)은 코드를 `source`로 받는다.
-- **`renderMdx`와 같은 화면.** 제목 앵커는 `github-slugger`를 따르고(`rehype-slug`가 하던 대로), 각주는 처음 참조한 순서로 번호가 붙고, 같은 Shiki 흐름이 코드(줄 효과, 글자 효과, 줄 이름표)를 그리며,
-  블록 수식은 KaTeX `htmlAndMathml`이다. 의도한 차이는 이렇다: GFM 표도 표 컴포넌트가 그린다(JSX 표가 이미 그랬듯 스크롤 래퍼와 `cms-table-*` 클래스),
-  블록 KaTeX 출력은 `<div class="cms-math">` 안에 들어가고, `<strong>`/`<em>`/`<del>`만 있는 문단은 `<p>`를 유지하며, 순수 마크다운 이미지도 이미지 해석기를 거친다.
+- **렌더러는 하나.** 제목 앵커는 `github-slugger`를 따르고, 각주는 처음 참조한 순서로 번호가 붙고, 같은 Shiki 흐름이 코드(줄 효과, 글자 효과, 줄 이름표)를 그리며,
+  블록 수식은 KaTeX `htmlAndMathml`이다. 표는 표 컴포넌트가 그리고(스크롤 래퍼와 `cms-table-*` 클래스), 블록 KaTeX 출력은 `<div class="cms-math">` 안에 들어가며, 이미지는 `refs`를 거친다.
 
 ## 플러그인
 
@@ -842,13 +810,12 @@ export const cms = createCms({ server });
 | `site.previewPath` | 초안 미리보기 주소 앞부분(예: `/preview`). 없으면 미리보기 단추가 없다. |
 | `site.previewLocaleParam` | 미리보기 주소에 언어를 넘기는 쿼리 이름(기본 `locale`, 기본 언어가 아닐 때만 `?locale=en`). `false`면 `localePrefix` 규칙대로 경로에 넣는다(`/preview/en/posts/a`). |
 | `admin.path` | 관리자 화면 경로(기본 `/admin`). 앱의 관리자 라우트 폴더와 같아야 한다. `/`나 `/api` 아래는 안 된다. 화면 안 링크·로그인 이동·플러그인 화면 주소가 따른다. |
-| `mdx.syntax` | 문법 확장(실험적, `@monti-cms/core/syntax`)을 쓰기 우선순위 순으로 나열한다. 예: `@monti-cms/syntax-directive`의 `[directiveSyntax()]`. 없으면 저장하는 MDX는 표준(CommonMark + GFM + MDX JSX)이다("본문 문법"). |
 | `seed.templates` | 첫 마이그레이션이 저장소를 만들 때 한 번 넣는 본문 템플릿. `{ id, name, doc }`(저장된 문서) 또는 `{ id, name, body, format }`(글과 그것을 읽는 형식, "형식" 절). |
 | `codeBlock.lineEffects` | 코드 블록 줄 효과 더하기·바꾸기("코드 블록 줄 효과"). |
 | `codeBlock.omitLineEffects` / `features` / `themes` / `languages` | 편집기의 줄 효과·도구 감추기, 강조 테마, 언어 더하기("코드 블록 도구 끄기·테마·언어"). |
 | `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |
 | `admin.locale` | 관리자 화면 언어와 날짜·숫자 표기(BCP 47, 예: `en`·`ko-KR`). 없으면 사이트 기본 언어(`defaultLocale`). 시각은 `timeZone`으로 보인다. |
-| `admin.messages` | 화면 문구 덮어쓰기: 이름공간 → 키 → 문구. 본체 블록 이름표는 `"cms.blocks"`(`image.label`처럼 `<블록>.label`), 코드 블록 효과는 `"cms.code-block"`, 검사 오류 문구는 `"cms.mdx"`·`"cms.core"`·`"cms.translation"`이다. |
+| `admin.messages` | 화면 문구 덮어쓰기: 이름공간 → 키 → 문구. 본체 블록 이름표는 `"cms.blocks"`(`image.label`처럼 `<블록>.label`), 코드 블록 효과는 `"cms.code-block"`, 검사 오류 문구는 `"cms.core"`·`"cms.translation"`이다(MDX를 읽을 때의 문구는 `@monti-cms/mdx`의 `"cms.mdx"`). |
 
 ### 컬렉션
 

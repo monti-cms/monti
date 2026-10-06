@@ -17,7 +17,7 @@ Block extensions for `@monti-cms/core`. Install only the body blocks and inline 
 | Code link | `codeRef()` | `<CodeRef to="c1">text</CodeRef>` (code line label `// @line anchor {..} id="c1"`) | `CodeRef` |
 | Text color | `color({ palette? })` | `<Color fg="#…" fgDark="#…" bg="#…" bgDark="#…">text</Color>` | `Color` |
 
-Stored as standard MDX (JSX elements). Sites that use the directive notation (`:::callout{…}`, `:tooltip[text]{…}`) read and write it by adding `directiveSyntax()` from `@monti-cms/syntax-directive` to `mdx.syntax` in the config.
+Stored as standard MDX (JSX elements). Sites that use the directive notation (`:::callout{…}`, `:tooltip[text]{…}`) read and write it by adding `directiveSyntax()` from `@monti-cms/syntax-directive` to `mdx({ syntax })` of `@monti-cms/mdx` in the config `plugins`.
 
 ## Installation
 
@@ -64,16 +64,14 @@ You can also add them one by one (`plugins: [callout(), columns(), color({ palet
 - The text color picker list is `color({ palette })` (the default 8 colors `DEFAULT_TEXT_PALETTE` if omitted). The body stores hex values, so changing the list leaves
   already written text as it is. Public pages render with `cleanTextColor` and `textColorProps` from `@monti-cms/blocks/color`, and the color is
   chosen to match the theme by `.cms-color` in `styles.css`.
-- Public pages: each extension provides default public components (the plugin `render`, used automatically by `renderMdx` from `@monti-cms/core/render`).
+- Public pages: each extension provides default public components (the plugin `render`, which returns `{ documentComponents }`; `renderDocument` and `CmsContent` of `@monti-cms/core/render` use it automatically).
   Only the parts that run in the browser (tab switching, tooltip, code link, Mermaid, chart) are split into `"use client"` files. Mermaid and chart render only when the app installs the optional dependencies
   `mermaid` and `recharts` (on the server and before loading, the source text is shown), and the callout default title, collapsible
-  default title and chart error messages follow the site language (`locale`). The look is the `cms-block-*` classes in `styles.css` (no Tailwind needed), and passing components of the same
-  name (`Callout`, `Tabs` …) to `renderMdx({ components })` wins. Code fence blocks are turned into
-  `<Mermaid source="…" />` by `remarkFenceBlocksToMdx` (`@monti-cms/core/mdx`). Column widths are read with `parseColumnWidths` and `columnsGridTemplate` from `@monti-cms/blocks/columns`,
+  default title and chart error messages follow the site language (`locale`). The look is the `cms-block-*` classes in `styles.css` (no Tailwind needed). Code fence blocks (`mermaid`, `chart`) get their code as `source`. Column widths are read with `parseColumnWidths` and `columnsGridTemplate` from `@monti-cms/blocks/columns`,
   and chart syntax and size with `parseChartDsl`, `normalizeChartDsl` and `resolvePieGeometry` from `@monti-cms/blocks/chart`.
-- Public pages in the JSON renderer: each extension's render module also exports `documentComponents(context)`, the table `renderDocument` merges in (`blocks` by block name with the attributes as
+- Each extension's render module exports only `documentComponents(context)` (the MDX-shaped default export and the MDX component tables are gone), the table `renderDocument` merges in (`blocks` by block name with the attributes as
   flat props, `marks` for `tooltip`, `code-ref` and `color`, and the `Tooltip` code tag). Tabs and the code explorer read their children from the stored nodes (`items`), not from the props of child elements.
-  A site overrides one with `renderDocument(doc, { components: { blocks: { callout: … } } })`; the props are typed from the block definitions of the site config.
+  A site overrides one with `renderDocument(doc, { components: { blocks: { callout: … } } })` (or the same `components` option of `CmsContent` and `renderMdx`); the props are typed from the block definitions of the site config.
 - Changing the editor look: the app sets the variables in `styles.css` (`--cms-callout-note`, `-tip`, `-info`, `-warning`, `-danger`, `--chart-1` to `5`).
 - If you remove the plugin of a block that is already used, that block drops out of the stored syntax and turns into plain text the next time it is saved.
 

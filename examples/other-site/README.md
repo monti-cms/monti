@@ -4,7 +4,7 @@ English | [한국어](README.ko.md)
 
 A minimal Next app that attaches `@monti-cms/core` with collections (Article, Topic, Author), fields and a language (English) that differ from the main blog's. From the blocks extension (`@monti-cms/blocks`) it
 installs only the chart and adds site blocks (`quote-card` and the `map` code fence). The SEO fields come from `seoFields` in the SEO extension (`@monti-cms/seo`),
-added with different names and a `Search` tab. Packages are installed from **built bundles** (`vendor/*.tgz`), not from the repository sources.
+added with different names and a `Search` tab. MDX comes from `@monti-cms/mdx` (the `mdx()` plugin: the `mdx` format and the admin source panel). Packages are installed from **built bundles** (`vendor/*.tgz`), not from the repository sources.
 
 ```sh
 # From the repo root: build the packages and pack them into vendor/
@@ -27,13 +27,13 @@ The shape is what `monti init --admin-path /studio` generates, plus this site's 
 
 | File | Contents |
 | --- | --- |
-| `cms.config.ts` | Collections, blocks and extensions. Unlike the blog: admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/en` for every language), and the preview language comes from the path (`previewLocaleParam: false`) |
+| `cms.config.ts` | Collections, blocks and extensions (`mdx()`, the chart block and `seo()` in `plugins`). Unlike the blog: admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/en` for every language), and the preview language comes from the path (`previewLocaleParam: false`) |
 | `cms.server.ts` | The CMS instance: `createCms` over the DB and GitHub login server config (as `monti init` generates). The admin, the API route and the site pages (`cms.read.*`) all import `cms` from it |
 | `app/components/site-blocks.tsx` | Public components of the site blocks (`quote-card`, `map`), typed from the block definitions through `DocumentComponents` and passed to `<CmsContent components={...} />` |
 | `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`) and an example spell-check extension (`admin-components.tsx`) |
 | `showcase/` | The "CMS elements" sample articles (`*.mdx`) and `seed.ts`, which `pnpm preview:example` runs to put them into the preview database |
 | `app/api/cms/[...path]/route.ts` | Admin API and login (`/api/cms/auth/*`). There is no separate login route file |
-| `app/globals.css` | Only the Tailwind and package style imports. Admin colors and variants (`cms-*`, `cms-dark`, and so on) are defined by the admin package styles and do not collide with the app's names |
+| `app/globals.css` | Only the Tailwind and package style imports (including `@monti-cms/mdx/styles.css`, after the admin styles). Admin colors and variants (`cms-*`, `cms-dark`, and so on) are defined by the admin package styles and do not collide with the app's names |
 
 To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/cms/auth/callback/github`.
 

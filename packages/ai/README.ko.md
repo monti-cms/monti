@@ -6,6 +6,8 @@
 관리자 AI 화면(`<관리자 경로>/ai`, 기본 `/admin/ai`)과 AI API(`/api/cms/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
 
+이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `aiPlugin()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
+
 ## 등록
 
 사이트 설정의 `plugins`에 `aiPlugin()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
@@ -72,7 +74,7 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
 ### 모델은 MDX를 읽고 쓴다
 
 모델은 글 형식을 읽고 쓰는데, 그 형식이 MDX다. 관리자는 본문을 저장 문서로 들고 있으므로 AI 버튼은 관리자에 등록된 `mdx` 형식(`useFormat("mdx")`, `@monti-cms/admin`)으로 일한다. 모델에 보내는
-본문·선택한 글·고칠 블록은 그 형식의 `export`로 쓰고, 모델이 답한 MDX는 `import`로 읽는다(읽을 수 없는 글은 반쯤만 바꾸지 않고 상자에 통째로 담는다). `mdx` 형식이 등록되어 있지 않으면 본문에 일하는
+본문·선택한 글·고칠 블록은 그 형식의 `export`로 쓰고, 모델이 답한 MDX는 `import`로 읽는다(읽을 수 없는 글은 반쯤만 바꾸지 않고 상자에 통째로 담는다). 이 형식은 `@monti-cms/mdx`의 `mdx()`가 관리자에 등록한다. 없으면 본문에 일하는
 기능은 나타나지 않는다.
 
 ## 결과 검사
@@ -91,7 +93,7 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
 - 기본 코드 검사: `uniqueSlug`(중복 없음, 주소 추천. `content.slugsInUse`로 묻는다), `regexRuns(입력, { name?, scope? })`
   (정규식 실행, 코드 블록 정규식. 규칙 이름·범위는 없으면 문서 전체 접기), `sameStructure(입력)`(구조 유지, 번역).
   블록 확장은 `mermaidSyntax`·`chartSyntax`(`@monti-cms/blocks/mermaid/ai`·`/chart/ai`)를 낸다.
-- 검사 파일은 사이트 설정이 불러오므로, 사이트 설정을 읽는 본체 모듈(코드 블록·MDX 읽기)은 `run` 안에서 `await import()`로
+- 검사 파일은 사이트 설정이 불러오므로, 사이트 설정을 읽는 본체 모듈(코드 블록 읽기와 MDX 형식)은 `run` 안에서 `await import()`로
   불러온다(맨 위에서 불러오면 설정을 읽는 순서가 꼬인다).
 
 ```ts

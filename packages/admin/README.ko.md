@@ -64,7 +64,7 @@ const components = { icons: { eye: Eye } };
   (같은 내용에 id나 키 순서만 다른 문서는 그대로 둔다). `@monti-cms/admin/editor`의 `storedToTiptap(doc)`·`tiptapToStored(json)`이 바로 바꿔 준다. 편집 화면이 없는 노드나
   문서로 읽지 못한 본문(`unparsed` 노드 하나)은 읽기 전용 상자(`cmsOpaqueBlock`)에 통째로 담아 아무것도 잃지 않는다.
 - 편집 화면의 폼은 본문을 `form.doc`으로 든다(초안, 브라우저 복구본, 충돌 비교가 모두 문서를 본다. 내용으로 비교하므로 블록 id와 키 순서는 따지지 않는다). 그 전에 본문을 MDX 글로 `form.mdx`에 담아
-  저장한 복구본도 그대로 되살린다. 열 때 내장 `mdx` 형식으로 읽는다(읽을 수 없는 글은 그대로 `unparsed` 문서에 담는다).
+  저장한 복구본도 그대로 되살린다. 이런 복구본은 `unparsed` 문서로 보관되고, 원문 패널(`@monti-cms/mdx`의 `mdx()` 플러그인)이 열려 있으면 다시 읽는다.
 - `DocPreview`(`@monti-cms/admin/editor`)는 번역 화면이 원문을 보이고 AI가 결과를 보이는 문서 읽기 전용 보기다.
 
 ### 원문 패널
@@ -73,6 +73,7 @@ const components = { icons: { eye: Eye } };
 (`useCmsAdminComponents().sourcePanels`). 여러 개면 먼저 등록한 것을 쓴다.
 
 ```tsx
+// `@monti-cms/mdx`의 `mdx()` 플러그인이 대신 등록해 주는 것:
 const components = {
 	sourcePanels: [{ format: "mdx", label: "MDX 원문", Panel: MdxPanel }],
 	formats: { mdx: mdxFormat }, // 브라우저가 읽고 쓸 수 있는 형식(`BrowserFormat`). `useFormat("mdx")`로 찾는다
@@ -82,8 +83,8 @@ const components = {
 `Panel`은 `SourcePanelProps`를 받는다. `doc`(본문), `onChange(doc, issues)`(글이 바뀜: 그 글이 읽히는 문서와 글에서 찾은 것. 읽을 수 없는 글은 `unparsed` 노드 하나에 담은 문서로 돌려주고
 찾은 것은 `issues`에 담는다), `focusBlock`(캐럿을 둘 블록의 id. 발행 문제를 따라갈 때), 화면이 필요로 하는 덤으로 `readOnly`와 `onComposing(composing)`(IME 조합이 끝나야 저장한다)이다.
 패널은 브라우저에서 읽으므로 틀린 곳이 쓰는 동안 바로 보인다. `BrowserFormat`은 맥락(사이트 블록, 언어)을 묶어 둔 형식이다. `export(doc): string`과 `import(text)`(`{ ok: true, doc, warnings }` 또는
-`{ ok: false, issues }`)가 있고 둘 다 동기다. MDX가 따로 패키지가 되기 전까지 내장 `mdx` 형식과 그 패널은 이 패키지의 한 모듈(`mdx-source/`)이 주고, 관리자 레이아웃이 플러그인이 하듯 등록한다.
-`mdxBrowserFormat`은 테스트용으로 `@monti-cms/admin/editor`에서 내보낸다.
+`{ ok: false, issues }`)가 있고 둘 다 동기다. 관리자에는 자체 패널이 없다. MDX 원문 패널과 `mdx` 브라우저 형식은 `@monti-cms/mdx`(`@monti-cms/mdx/admin`)가 주고, `mdx()` 플러그인의 관리자 공급자가 등록한다. 이 플러그인이 없으면 원문 토글도 없다. 패널의 문구는 이름공간 `cms-mdx.source`에 있다.
+`SOURCE_ERROR_ID`(`@monti-cms/admin`)는 패널이 발견한 것을 보이는 요소의 id이고, `useLinkPaths`(`@monti-cms/admin/hooks`)는 패널에 글 링크의 경로를 준다. `mdxBrowserFormat`은 `@monti-cms/admin/editor`에서 더는 내보내지 않는다.
 
 ### 글 링크
 

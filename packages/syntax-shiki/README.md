@@ -2,7 +2,7 @@
 
 English | [한국어](README.ko.md)
 
-Shiki code notation extension for `@monti-cms/core`. Posts written for Shiki mark code lines with comments such as `const a = 1 // [!code ++]`
+Shiki code notation extension for `@monti-cms/mdx`. Posts written for Shiki mark code lines with comments such as `const a = 1 // [!code ++]`
 (see the [Shiki transformers](https://shiki.style/packages/transformers)). This package reads that notation when a body is parsed and turns it into Monti's own
 code annotations (`// @line plus`, see "Code block line effects" in the core README).
 
@@ -21,20 +21,21 @@ Not on npm yet. Until the public release, install the release bundle from the `r
 }
 ```
 
-It needs `@monti-cms/core` as a peer dependency.
+It needs `@monti-cms/mdx` (and so `@monti-cms/core`) as a peer dependency.
 
 ## Registration
 
-List the extension in `mdx.syntax`.
+List the extension in `mdx({ syntax })` of `@monti-cms/mdx`, in the site config `plugins`.
 
 ```ts
 // cms.config.ts
 import { defineConfig } from "@monti-cms/core";
+import { mdx } from "@monti-cms/mdx";
 import { shikiNotation } from "@monti-cms/syntax-shiki";
 
 export default defineConfig({
 	// …
-	mdx: { syntax: [shikiNotation()] },
+	plugins: [mdx({ syntax: [shikiNotation()] })],
 });
 ```
 
@@ -88,4 +89,4 @@ const b = 3
 
 ## Writing your own extension
 
-This package is a small `SyntaxExtension` with only `remarkPlugins` (no writers). It imports only from `@monti-cms/core/syntax`. See "Writing a syntax extension" in the core README.
+This package is a small `SyntaxExtension` with only `remarkPlugins` (no writers). It imports only from `@monti-cms/mdx`. See "Writing a syntax extension" in the README of `@monti-cms/mdx`.

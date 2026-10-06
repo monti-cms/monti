@@ -2,10 +2,10 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 지시자(directive) 문법 확장. 표준 MDX 이전에 Monti가 쓰던 표기(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다.
+`@monti-cms/mdx`의 지시자(directive) 문법 확장. 표준 MDX 이전에 Monti가 쓰던 표기(`:::callout{…}`·`::image{…}`·`:u[글자]`·`::::table`)를 읽고 쓴다.
 지시자 본문이 있는 사이트는 계속 읽을 수 있고, 지시자로 계속 저장하거나 글을 저장할 때마다 표준 MDX로 옮겨 갈 수 있다.
 
-이 패키지가 없으면 저장하는 MDX는 표준(CommonMark + GFM + MDX JSX)이다. 기본으로 쓰는 표기와 문법 확장이 일하는 방식은 core README의 "본문 문법"을 본다.
+이 패키지가 없으면 저장하는 MDX는 표준(CommonMark + GFM + MDX JSX)이다. 기본으로 쓰는 표기와 문법 확장이 일하는 방식은 `@monti-cms/mdx`의 README를 본다.
 
 ## 설치
 
@@ -19,34 +19,35 @@
 }
 ```
 
-피어 의존성으로 `@monti-cms/core`가 필요하다.
+피어 의존성으로 `@monti-cms/mdx`(와 그 안의 `@monti-cms/core`)가 필요하다.
 
 ## 등록
 
-`mdx.syntax`에 확장을 나열한다. 순서가 쓰기 우선순위다.
+사이트 설정 `plugins`의 `@monti-cms/mdx`가 주는 `mdx({ syntax })`에 확장을 나열한다. 순서가 쓰기 우선순위다.
 
 ```ts
 // cms.config.ts
 import { defineConfig } from "@monti-cms/core";
+import { mdx } from "@monti-cms/mdx";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 
 export default defineConfig({
 	// …
-	mdx: { syntax: [directiveSyntax()] }, // 지시자를 읽고 쓴다
+	plugins: [mdx({ syntax: [directiveSyntax()] })], // 지시자를 읽고 쓴다
 });
 ```
 
 읽기 전용. 표준 MDX로 저장하므로 글을 저장할 때마다 한 편씩 옮겨 간다.
 
 ```ts
-mdx: { syntax: [directiveSyntax({ write: false })] },
+plugins: [mdx({ syntax: [directiveSyntax({ write: false })] })],
 ```
 
 | 옵션 | 기본값 | 뜻 |
 | --- | --- | --- |
 | `write` | `true` | `true`는 표기로 나타낼 수 있는 내용을 지시자로 쓴다. `false`는 지시자를 읽기만 하고 표준 MDX(JSX)로 쓴다. 지시자처럼 보이는 글자(`:u`)는 두 모드 모두 이스케이프(`\:u`)한다. 확장이 지시자를 계속 읽기 때문이다. |
 
-공개 렌더러(`@monti-cms/core/render`)도 확장의 remark 플러그인을 돌리므로 편집기가 읽은 대로 사이트에 그려진다.
+공개 렌더러(`@monti-cms/mdx/render`의 `renderMdx`)도 같은 확장으로 읽으므로 편집기가 읽은 대로 사이트에 그려진다.
 
 ## 다루는 표기
 
@@ -66,18 +67,19 @@ mdx: { syntax: [directiveSyntax({ write: false })] },
 
 ## 업그레이드
 
-이 패키지가 생기기 전에는 `@monti-cms/core/syntax`가 `directiveSyntax`를 내보냈다. 이제는 이 패키지만 내보낸다.
+`directiveSyntax`는 한때 `@monti-cms/core/syntax`가 내보냈다. 그 진입점은 없어졌고 이제는 이 패키지만 확장을 내보낸다. 확장의 인터페이스는 이 패키지가 피어로 두는 `@monti-cms/mdx`에서 온다.
+사이트 설정에는 더는 `mdx` 키가 없다. 확장 목록이 `mdx()` 플러그인 안으로 옮겨 갔다.
 
 ```diff
--import { directiveSyntax } from "@monti-cms/core/syntax";
-+import { directiveSyntax } from "@monti-cms/syntax-directive";
+-export default defineConfig({ mdx: { syntax: [directiveSyntax()] } });
++export default defineConfig({ plugins: [mdx({ syntax: [directiveSyntax()] })] });
 ```
 
-core 옆에 이 패키지를 설치하고 import만 바꾼다. 동작과 옵션은 그대로다.
+이 패키지 옆에 `@monti-cms/mdx`를 설치하고 목록을 옮긴다. 동작과 옵션은 그대로다(owner 스타일 블로그라면 쓰기 모드를 켠 `directiveSyntax()`).
 
-**지시자 본문이 있는 사이트**는 `mdx.syntax`에 이 확장을 반드시 둔다. 없으면 기존 글이 지시자 문자 그대로 그려지고 검사에도 걸린다
-(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). 표준 MDX로 옮기려면 `directiveSyntax({ write: false })`를 쓰고(`monti content:rewrite --apply`로 저장된 본문 전부를 한 번에 다시 쓸 수 있다), 저장된 본문 어디에도 지시자가 남지 않으면 확장을 뺀다.
+**지시자 본문이 있는 사이트**는 `mdx({ syntax })`에 이 확장을 반드시 둔다. 없으면 기존 글이 지시자 문자 그대로 그려지고 검사에도 걸린다
+(`:::callout{…}`의 `{…}`를 표현식으로 읽는다). 표준 MDX로 옮기려면 `directiveSyntax({ write: false })`를 쓰고(글을 저장할 때마다 한 편씩 옮겨 간다), 저장된 본문 어디에도 지시자가 남지 않으면 확장을 뺀다.
 
 ## 문법 확장 직접 만들기
 
-이 패키지는 `@monti-cms/core/syntax`의 실험적 `SyntaxExtension` 인터페이스의 참고 구현이며, core에서 그 밖의 것은 가져오지 않는다. core README의 "문법 확장 만들기"를 본다.
+이 패키지는 `@monti-cms/mdx`의 실험적 `SyntaxExtension` 인터페이스의 참고 구현이다. `@monti-cms/mdx` README의 "문법 확장 만들기"를 본다.

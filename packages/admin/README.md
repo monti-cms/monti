@@ -65,8 +65,7 @@ involved in loading it into the editor or saving it from there.
   convert directly. A node the editor has no edit view for, and a body that could not be read as a document (one `unparsed` node), is kept whole in a read-only box
   (`cmsOpaqueBlock`), so nothing is lost.
 - The edit screen's form holds the body as `form.doc` (the draft, the browser recovery copy and the conflict comparison all see the document, compared by what it says:
-  block ids and key order do not count). Recovery copies saved before that, with the body as MDX text in `form.mdx`, still restore: they are read through the built-in `mdx` format
-  when they are opened (text that does not read is kept as it is, in an `unparsed` document).
+  block ids and key order do not count). Recovery copies saved before that, with the body as MDX text in `form.mdx`, still restore: they are kept as an `unparsed` document, and the source panel of the `mdx()` plugin (`@monti-cms/mdx`) reads them again when it is open.
 - `DocPreview` (`@monti-cms/admin/editor`) is the read-only view of a document the translation screen shows the source in, and AI shows results in.
 
 ### Source panels
@@ -75,6 +74,7 @@ The source toggle at the end of the toolbar edits the body as text in some notat
 same provider as the other site components (`useCmsAdminComponents().sourcePanels`). With several registered, the first one is used.
 
 ```tsx
+// what the `mdx()` plugin of @monti-cms/mdx registers for you:
 const components = {
 	sourcePanels: [{ format: "mdx", label: "MDX source", Panel: MdxPanel }],
 	formats: { mdx: mdxFormat }, // the formats the browser can read and write (`BrowserFormat`), found with `useFormat("mdx")`
@@ -85,8 +85,8 @@ const components = {
 as a document holding it in one `unparsed` node, with the findings in `issues`), `focusBlock` (the id of the block to bring the caret to, for a publish issue) and, as extras the screen needs,
 `readOnly` and `onComposing(composing)` (a save waits for an IME composition to end). The panel parses in the browser, so a mistake shows as it is typed.
 A `BrowserFormat` is a format with its context bound: `export(doc): string` and `import(text)` (`{ ok: true, doc, warnings }` or `{ ok: false, issues }`), both synchronous.
-Until MDX is a package of its own, the built-in `mdx` format and its panel come from one module of this package (`mdx-source/`), which the admin layout registers like a plugin would;
-`mdxBrowserFormat` is exported from `@monti-cms/admin/editor` for tests.
+The admin has no panel of its own: the MDX source panel and the `mdx` browser format are provided by `@monti-cms/mdx` (`@monti-cms/mdx/admin`), registered by the admin provider of its `mdx()` plugin. Without that plugin there is no source toggle. The panel's messages are in the namespace `cms-mdx.source`.
+`SOURCE_ERROR_ID` (`@monti-cms/admin`) is the id of the element a panel shows its findings in, and `useLinkPaths` (`@monti-cms/admin/hooks`) gives a panel the paths of entry links. `mdxBrowserFormat` is no longer exported by `@monti-cms/admin/editor`.
 
 ### Links to entries
 
