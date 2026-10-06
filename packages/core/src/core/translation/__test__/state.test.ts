@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
-import { bodyFromMdx, unparsedDocument } from "../../../mdx/stored-document";
+import { bodyFromMdx, STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../mdx/stored-document";
 import { confirmedSourceState, MAX_TRANSLATION_BYTES, parseTranslationState } from "../state";
 
 const doc = docOf("하나\n\n둘\n");
@@ -39,10 +39,14 @@ describe("translation state", () => {
 	});
 
 	it("sorts the keys of the document as a stored document is", () => {
-		const reordered = { version: 2, type: "doc", content: [{ type: "paragraph", id: "aaaaaaaa" }] };
+		const reordered = {
+			version: STORED_DOCUMENT_VERSION,
+			type: "doc",
+			content: [{ type: "paragraph", id: "aaaaaaaa" }],
+		};
 		const state = parseTranslationState({ version: 4, baseDoc: reordered });
 		expect(JSON.stringify(state?.baseDoc)).toBe(
-			'{"content":[{"id":"aaaaaaaa","type":"paragraph"}],"type":"doc","version":2}',
+			`{"content":[{"id":"aaaaaaaa","type":"paragraph"}],"type":"doc","version":${STORED_DOCUMENT_VERSION}}`,
 		);
 	});
 
@@ -50,7 +54,7 @@ describe("translation state", () => {
 		const fence = { language: "ts", meta: "", value: "// @line plus\nconst a = 1;" };
 		const old = { version: 1, type: "doc", content: [{ type: "codeBlock", attrs: fence, id: "aaaaaaaa" }] };
 		const state = parseTranslationState({ version: 4, baseDoc: old });
-		expect(state?.baseDoc.version).toBe(2);
+		expect(state?.baseDoc.version).toBe(STORED_DOCUMENT_VERSION);
 		expect(state?.baseDoc.content[0]?.attrs).toEqual({
 			annotations: { lines: [{ end: 1, name: "plus", start: 0 }] },
 			code: "const a = 1;",

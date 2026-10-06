@@ -123,7 +123,7 @@ describe("Public JSON API", () => {
 		const stored = await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "public-1" });
 		expect(one.body.entry.doc).toEqual(JSON.parse(JSON.stringify(stored?.published?.doc)));
 		expect(JSON.stringify(one.body.entry.doc)).toContain("Body public-1");
-		expect(one.body.entry.refs).toEqual({ media: {} });
+		expect(one.body.entry.refs).toEqual({ media: {}, links: {} });
 
 		const entry = await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "public-1" });
 		if (!entry) throw new Error("missing");

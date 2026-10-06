@@ -240,8 +240,8 @@ export function createPublishing(ctx: StoreContext) {
 
 	/**
 	 * Locks the targets the draft points at. A trashed target cannot be newly referenced. Returns the references a draft stores: one whose target does
-	 * not exist (a link or relation to an entry that is gone) is not stored, because the index cannot point at nothing; the publish check still sees it
-	 * (it works from the prepared snapshot) and blocks publishing it.
+	 * not exist and is only a link in a body (a link to an entry that is gone) is not stored, because the index cannot point at nothing; the publish check still sees it
+	 * (it works from the prepared snapshot). A relation to a missing entry is still refused by the foreign key and blocks publishing it.
 	 */
 	const lockDraftReferenceTargets = async (
 		client: PoolClient,
@@ -262,7 +262,8 @@ export function createPublishing(ctx: StoreContext) {
 			throw new CmsError("Cannot reference a trashed entry", "invalid_reference");
 		}
 		const found = new Set(result.rows.map((row) => row.id));
-		return references.filter((ref) => ref.kind === "media" || found.has(ref.targetId));
+		const onlyLinks = (ref: Reference) => ref.occurrences.length > 0 && ref.occurrences.every((o) => o.type === "body");
+		return references.filter((ref) => ref.kind === "media" || !onlyLinks(ref) || found.has(ref.targetId.toLowerCase()));
 	};
 
 	/**

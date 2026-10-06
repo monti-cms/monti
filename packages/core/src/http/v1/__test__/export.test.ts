@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
+import { STORED_DOCUMENT_VERSION } from "../../../mdx/stored-document";
 import {
 	FIXTURE_CONTENT_COLLECTION,
 	FIXTURE_DRAFT_COLLECTION,
@@ -69,7 +70,10 @@ describe("GET/POST /api/cms/v1/export", () => {
 		expect(manifest.formatVersion).toBe(3);
 		expect(manifest.counts.entries).toBe(3);
 		expect(findFile(zip, DRAFT_WORKING)).toBe("draft secret body");
-		expect(JSON.parse(findFile(zip, PUBLISHED_WORKING_DOC))).toMatchObject({ type: "doc", version: 2 });
+		expect(JSON.parse(findFile(zip, PUBLISHED_WORKING_DOC))).toMatchObject({
+			type: "doc",
+			version: STORED_DOCUMENT_VERSION,
+		});
 	});
 
 	it("public export excludes drafts and does not include working values", async () => {

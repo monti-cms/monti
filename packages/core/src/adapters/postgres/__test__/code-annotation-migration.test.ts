@@ -7,7 +7,12 @@ import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { forEachBlock } from "../../../mdx/block-ids";
-import { bodyFromMdx, readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
+import {
+	bodyFromMdx,
+	readStoredDocument,
+	STORED_DOCUMENT_VERSION,
+	type StoredDocument,
+} from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateCodeAnnotations } from "../store/code-annotation-migration";
@@ -213,7 +218,7 @@ describe("0015_code_annotations", () => {
 		for (const state of ["working", "published"] as const) {
 			const stored = await row(published.id, state);
 			const doc = docOf(stored?.doc);
-			expect(doc.version).toBe(2);
+			expect(doc.version).toBe(STORED_DOCUMENT_VERSION);
 			expect(codeBlockOf(doc).attrs).toEqual({
 				annotations: {
 					lines: [{ end: 1, name: "plus", start: 0 }],
@@ -308,7 +313,7 @@ describe("0015_code_annotations", () => {
 		expect(stored?.translation?.baseSource).toBe(WRITTEN);
 		expect(stored?.translation?.baseSource).toBe(stored?.mdx);
 		const lifted = docOf(stored?.translation?.baseDoc);
-		expect(lifted.version).toBe(2);
+		expect(lifted.version).toBe(STORED_DOCUMENT_VERSION);
 		expect(codeBlockOf(lifted).attrs?.code).toBe("const needle = 1;\nconst old = 2;");
 		// The base is the same document as the body, with the same ids, so the translation screen sees no change.
 		expect(lifted).toEqual(docOf(stored?.doc));
@@ -434,7 +439,9 @@ describe("0015_code_annotations", () => {
 		expect((await pool.query(`SELECT id, xmin::text FROM "${schemaName}".body_templates ORDER BY id`)).rows).toEqual(
 			templateRows,
 		);
-		expect(once.bodies.some((stored) => (stored.doc as { version?: number } | null)?.version === 2)).toBe(true);
+		expect(
+			once.bodies.some((stored) => (stored.doc as { version?: number } | null)?.version === STORED_DOCUMENT_VERSION),
+		).toBe(true);
 	});
 
 	describe("body templates", () => {
@@ -455,7 +462,7 @@ describe("0015_code_annotations", () => {
 
 			const after = await store.getTemplate(template.id);
 			expect(after.mdx).toBe(WRITTEN);
-			expect(after.doc?.version).toBe(2);
+			expect(after.doc?.version).toBe(STORED_DOCUMENT_VERSION);
 			expect(codeBlockOf(after.doc as StoredDocument).attrs?.code).toBe("const needle = 1;\nconst old = 2;");
 			expect(idList(after.doc as StoredDocument)).toEqual(idList(template.doc as StoredDocument));
 			expect(after.version).toBe(template.version);
