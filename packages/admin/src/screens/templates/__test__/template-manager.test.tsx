@@ -14,10 +14,16 @@ vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 vi.mock("../../../editor/tiptap-editor", () => ({ CmsEditor: () => null }));
 vi.mock("../../admin-sidebar", () => ({ AdminSidebar: () => null }));
 
+const DOC = {
+	type: "doc",
+	version: 3,
+	content: [{ type: "heading", id: "abcd1234", attrs: { level: 2 }, content: [{ type: "text", text: "개요" }] }],
+};
+
 const template = (id: string, name: string, version = 1) => ({
 	id,
 	name,
-	mdx: "## 개요",
+	doc: DOC,
 	version,
 	createdAt: "2026-01-01T00:00:00.000Z",
 	updatedAt: "2026-01-01T00:00:00.000Z",
@@ -26,10 +32,13 @@ const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json:
 
 let fetchMock: ReturnType<typeof vi.fn>;
 let listFails = false;
+/** The bodies the manager sent to save a template. */
+let saved: { name: string; doc: unknown; expectedVersion: number; mdx?: unknown }[] = [];
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	listFails = false;
+	saved = [];
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET";
 		if (input === "/api/cms/v1/templates" && method === "GET")
@@ -38,7 +47,8 @@ beforeEach(() => {
 				: json({ items: [template("a", "일반 게시글"), template("b", "메모")] });
 		if (input === "/api/cms/v1/templates/a" && method === "PATCH") {
 			const body = JSON.parse(String(init?.body));
-			return json({ ...template("a", body.name, 2), mdx: body.mdx });
+			saved.push(body);
+			return json({ ...template("a", body.name, 2), doc: body.doc });
 		}
 		throw new Error(`Unexpected fetch ${method} ${input}`);
 	});
@@ -77,6 +87,19 @@ describe("TemplateManager", () => {
 
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("common.saved")));
 		expect((screen.getByRole("textbox", { name: t("edit.nameLabel") }) as HTMLInputElement).value).toBe("긴 글");
+	});
+
+	it("saves a template as its document, never as text", async () => {
+		renderManager();
+		fireEvent.click(await screen.findByRole("button", { name: /^일반 게시글/ }));
+		fireEvent.change(await screen.findByRole("textbox", { name: t("edit.nameLabel") }), {
+			target: { value: "긴 글" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
+
+		await waitFor(() => expect(saved).toHaveLength(1));
+		expect(saved[0]).toMatchObject({ name: "긴 글", expectedVersion: 1, doc: DOC });
+		expect(saved[0]).not.toHaveProperty("mdx");
 	});
 
 	it("asks before discarding unsaved changes when opening another template", async () => {

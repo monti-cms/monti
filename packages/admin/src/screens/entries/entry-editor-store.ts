@@ -317,12 +317,19 @@ function failureOf(error: unknown, fallback: string): EditorError {
 
 const failed = (error: EditorError): Failure => ({ ok: false, error });
 
-/** The body of a save request: the editor's document when it made this MDX, otherwise the MDX. */
 /** What a document says, without its block ids: two documents with the same key read the same. */
 const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
 
-const bodyPayload = (mdx: string, doc: StoredDocument | null | undefined): EntryBodyPayload =>
-	doc ? { doc } : { mdx };
+/**
+ * The body of a save request: always a document. The editor's own document when it made this MDX; otherwise the document the MDX reads as
+ * (a text that cannot be read is one `unparsed` node, which only a draft can hold).
+ */
+const bodyPayload = (mdx: string, doc: StoredDocument | null | undefined): EntryBodyPayload => {
+	if (doc) return { doc };
+	// The ids of a document read from text are new ones: dropped, so the server pairs the blocks with the body being replaced and they keep its ids.
+	const read = bodyDocument(bodyFromMdx(mdx));
+	return { doc: { ...read, content: withoutBlockIds(read.content) } };
+};
 
 /** Save and publish responses carry no translation group info. Keep what was received on load and update only this entry's status. */
 function keepTranslationGroup(current: EntryData | null, next: EntryData): Pick<EntryData, "translations" | "source"> {

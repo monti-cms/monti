@@ -1,6 +1,7 @@
 "use client";
 
 import { adminUrl, cmsApiUrl } from "@monti-cms/core/client";
+import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/mdx";
 import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
 import {
@@ -15,11 +16,13 @@ import { cmsFetch } from "../admin-api";
 import { useConfirm } from "../shared/confirm-dialog";
 import { t } from "./translate";
 
-type Template = { id: string; name: string; mdx: string };
+type Template = { id: string; name: string; doc: StoredDocument };
 
 /**
  * Template menu at the end of the editor toolbar. Fetches the list on first open.
  * If the body is empty, inserts the chosen template right away; if there is body text, asks first whether to replace it.
+ * A template is a document; applying one hands the entry a copy of it with new block ids (ids are unique within a body, and the translation and
+ * diff views pair blocks by them, so the template's own ids must not end up in many entries).
  */
 export function TemplateMenu({
 	currentMdx,
@@ -28,7 +31,7 @@ export function TemplateMenu({
 }: {
 	currentMdx: string;
 	disabled: boolean;
-	onApply: (mdx: string) => void;
+	onApply: (doc: StoredDocument) => void;
 }) {
 	const [open, setOpen] = useState(false);
 	const [templates, setTemplates] = useState<Template[] | null>(null);
@@ -63,7 +66,7 @@ export function TemplateMenu({
 		) {
 			return;
 		}
-		onApply(template.mdx);
+		onApply({ ...template.doc, content: regenerateBlockIds(template.doc.content) });
 	};
 
 	return (

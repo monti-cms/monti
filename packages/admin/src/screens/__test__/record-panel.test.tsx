@@ -1,3 +1,4 @@
+import { emptyStoredDocument } from "@monti-cms/core/mdx";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordPanel } from "../record-panel";
@@ -81,7 +82,12 @@ describe("taxonomy edit panel", () => {
 		fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
 		await waitFor(() => expect(calls("POST")).toHaveLength(1));
-		expect(bodyOf(calls("POST")[0])).toEqual({ collection: "tag", slug: null, metadata: { title: "Vue" }, mdx: "" });
+		expect(bodyOf(calls("POST")[0])).toEqual({
+			collection: "tag",
+			slug: null,
+			metadata: { title: "Vue" },
+			doc: emptyStoredDocument(),
+		});
 		await waitFor(() => expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "tag-2" })));
 		expect(onClose).not.toHaveBeenCalled();
 	});

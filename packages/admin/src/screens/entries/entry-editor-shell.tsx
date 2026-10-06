@@ -12,7 +12,7 @@ import {
 	storedField,
 	withBasePath,
 } from "@monti-cms/core/client";
-import { analyze } from "@monti-cms/core/mdx";
+import { analyze, documentToMdx } from "@monti-cms/core/mdx";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import type { Editor } from "@tiptap/core";
 import {
@@ -1022,7 +1022,7 @@ export function EntryEditorShell({
 									<TemplateMenu
 										currentMdx={form.mdx}
 										disabled={isReadOnly}
-										onApply={(mdx) => editor.setForm({ mdx })}
+										onApply={(doc) => editor.setBody(documentToMdx(doc), doc)}
 									/>
 									{extensions.toolbar}
 									{sourcePaneToggle}
