@@ -44,7 +44,7 @@ export interface WriteData {
  * Runs before core preparation. Returns the data to prepare, or nothing to keep it as it is. The result still goes through normalization,
  * reference collection and validation, so a transform cannot get anything past core checks.
  */
-export type TransformHook = (context: WriteHookContext) => WriteData | void | Promise<WriteData | void>;
+export type TransformHook = (context: WriteHookContext) => WriteData | undefined | Promise<WriteData | undefined>;
 
 /** The context of `validate` and `validatePublish`: the data as prepared, and the prepared snapshot (a copy). */
 export interface ValidationHookContext extends WriteHookContext {
@@ -62,7 +62,7 @@ export interface ValidationResult {
 /** Runs after core preparation, for every write. */
 export type ValidateHook = (
 	context: ValidationHookContext,
-) => ValidationResult | void | Promise<ValidationResult | void>;
+) => ValidationResult | undefined | Promise<ValidationResult | undefined>;
 
 /** Runs after core preparation, for a publish only (single and bulk). */
 export type ValidatePublishHook = ValidateHook;

@@ -2,7 +2,7 @@ import type { ContentStore, Entry } from "./adapters/postgres/content-store";
 import { CmsError } from "./adapters/postgres/store/errors";
 import type { MediaStore } from "./adapters/r2/types";
 import { adminUrl } from "./core/admin-paths";
-import { notifyAfterCommit } from "./plugin/server";
+import { loadWriteHooks, notifyAfterCommit } from "./plugin/server";
 import type { CmsAuth } from "./server/define";
 import { cmsServerConfig } from "./server/resolved";
 import { isCmsHostTrusted } from "./server/trust";
@@ -31,12 +31,12 @@ export function getCmsContentStore(): ContentStore {
 }
 
 export function getCmsContentService(): ContentService {
-	global.__cmsService ??= createContentService<Entry>(getCmsContentStore());
+	global.__cmsService ??= createContentService<Entry>(getCmsContentStore(), { hooks: loadWriteHooks });
 	return global.__cmsService;
 }
 
 export function getCmsBulkService(): BulkService {
-	global.__cmsBulkService ??= createBulkService<Entry>(getCmsContentStore());
+	global.__cmsBulkService ??= createBulkService<Entry>(getCmsContentStore(), { hooks: loadWriteHooks });
 	return global.__cmsBulkService;
 }
 

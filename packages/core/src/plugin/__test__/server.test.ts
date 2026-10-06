@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
 	plugins: [] as unknown[],
+	serverHooks: undefined as unknown,
 	attempts: 0,
 }));
 
@@ -12,7 +13,13 @@ vi.mock("../../config/resolved", () => ({
 		},
 	},
 }));
-vi.mock("../../server/resolved", () => ({ cmsServerConfig: {} }));
+vi.mock("../../server/resolved", () => ({
+	cmsServerConfig: {
+		get hooks() {
+			return state.serverHooks;
+		},
+	},
+}));
 
 // `PLUGINS` is fixed when the module is loaded, so each test loads the module anew.
 const load = async () => {
@@ -22,6 +29,7 @@ const load = async () => {
 
 beforeEach(() => {
 	state.attempts = 0;
+	state.serverHooks = undefined;
 	vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
@@ -57,5 +65,63 @@ describe("loadServerPlugins", () => {
 		// Once it succeeds, it is not read again.
 		await loadServerPlugins();
 		expect(state.attempts).toBe(2);
+	});
+});
+
+describe("loadWriteHooks", () => {
+	it("lists the server config's hooks first, then the plugins' in config order, each with its owner", async () => {
+		const serverHooks = { validate: () => undefined };
+		const aHooks = { transform: () => undefined };
+		const bHooks = { validatePublish: () => undefined };
+		state.serverHooks = serverHooks;
+		state.plugins = [
+			{ name: "plain" },
+			{ name: "alpha", server: async () => ({ default: { hooks: aHooks } }) },
+			{ name: "no-hooks", server: async () => ({ default: {} }) },
+			{ name: "beta", server: async () => ({ default: { hooks: bHooks } }) },
+		];
+		const { loadWriteHooks } = await load();
+		expect(await loadWriteHooks()).toEqual([
+			{ owner: "server", hooks: serverHooks },
+			{ owner: "plugin:alpha", hooks: aHooks },
+			{ owner: "plugin:beta", hooks: bHooks },
+		]);
+	});
+
+	it("is empty when nothing registers hooks", async () => {
+		state.plugins = [{ name: "plain" }];
+		const { loadWriteHooks } = await load();
+		expect(await loadWriteHooks()).toEqual([]);
+	});
+});
+
+describe("notifyAfterCommit", () => {
+	const change = { kind: "saved", entryId: "e1" } as never;
+
+	it("calls the server config's afterCommit and then each plugin's, in order", async () => {
+		const calls: string[] = [];
+		state.serverHooks = { afterCommit: () => void calls.push("server") };
+		state.plugins = [
+			{ name: "a", server: async () => ({ default: { hooks: { afterCommit: () => void calls.push("a") } } }) },
+			{ name: "b", server: async () => ({ default: { hooks: { afterCommit: () => void calls.push("b") } } }) },
+		];
+		const { notifyAfterCommit } = await load();
+		await notifyAfterCommit(change);
+		expect(calls).toEqual(["server", "a", "b"]);
+	});
+
+	it("keeps calling the rest when one afterCommit fails, and never throws", async () => {
+		const calls: string[] = [];
+		state.serverHooks = {
+			afterCommit: async () => {
+				throw new Error("down");
+			},
+		};
+		state.plugins = [
+			{ name: "a", server: async () => ({ default: { hooks: { afterCommit: () => void calls.push("a") } } }) },
+		];
+		const { notifyAfterCommit } = await load();
+		await expect(notifyAfterCommit(change)).resolves.toBeUndefined();
+		expect(calls).toEqual(["a"]);
 	});
 });
