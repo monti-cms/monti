@@ -517,6 +517,7 @@ export const myPlugin = () =>
   인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로(외부 실행기·웹훅)만 `public: true`로 빼고 스스로 확인한다.
   `migrate`는 `monti migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
+- 서버 쪽 `hooks`(`transform`·`validate`·`validatePublish`·`afterCommit`)는 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다.
 - 플러그인 코드는 `@monti-cms/core/plugin/server`의 `getCmsDatabase()`(DB 연결)와 본체 라우트 틀(`adminRoute` 등)을 쓴다.
 
 ## 서버 설정
@@ -529,7 +530,7 @@ export const myPlugin = () =>
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 운영에서는 끔·개발에서는 켬 |
 | `secret` | 저장 값(AI 서비스 키)을 DB에 암호화해 둘 때 쓰는 키. 로그인 서명 값과 따로 둔다. 바꾸면 저장된 키를 다시 넣어야 한다. |
 | `publicApi` | 선택. 공개 JSON API(`/api/cms/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
-| `afterCommit` | 선택. 저장 뒤 알림 `(change) => …`: 글을 만들고·저장하고·발행·보관·휴지통·복원·지운 변경이 커밋된 뒤 `{ kind, entryId, collection, locale, translationGroupId, status, publishedSlug, workingSlug }`를 받는다. 캐시 갱신(`revalidatePath`)·웹훅·검색 색인 자리. 되돌린 변경은 오지 않고, 실패해도 저장은 그대로다. 플러그인도 `afterCommit`을 둘 수 있다 |
+| `hooks` | 선택. 모든 콘텐츠 쓰기에 거는 훅: `transform`·`validate`·`validatePublish`·`afterCommit`(변경이 커밋된 뒤 알림: 캐시 갱신·웹훅·검색 색인). "훅 계약"을 본다. 플러그인도 `hooks`를 둘 수 있다 |
 
 다른 저장소·로그인을 쓰려면 `DatabaseAdapter`·`MediaAdapter`·`AuthAdapter`를 직접 만들어 넣는다.
 
@@ -549,6 +550,62 @@ export const myPlugin = () =>
 - `NODE_ENV`가 `development`여야 한다. 다른 모드에서는 이 값을 무시하고 경고를 남긴다.
 - 배포된 서버처럼 보이면 안 된다. 호스팅 플랫폼 변수(`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`)가 있거나 `AUTH_URL`이 공개 주소를 가리키면 거부한다. 이때 서버는 시작을 거부하고(로그인 연결을 처음 쓸 때 오류를 던진다) 이유를 알려 준다.
 - 요청마다 내 컴퓨터에서 온 것이어야 한다. `Host`가 `localhost`·`*.localhost`·`127.0.0.0/8`·`::1`이고, `X-Forwarded-Host`와 `X-Forwarded-For`가 있으면 그것도 루프백이어야 한다. 그 밖의 요청은 평소처럼 로그인해야 하고, 경고를 한 번 남긴다. `@monti-cms/core/runtime`의 `isDevAuthBypassEnabled()`는 이제 비동기이며 같은 검사를 한다.
+
+## 훅 계약
+
+모든 콘텐츠 쓰기는 본체 서비스의 한 파이프라인을 지난다: 만들기, 저장, 발행(하나 또는 일괄), 복제, 번역본 만들기, 메타데이터·폴더 일괄 변경.
+훅은 서버 설정(`defineServerConfig({ hooks })`)이나 플러그인 서버 쪽(`CmsServerPlugin.hooks`)에 같은 모양으로 등록한다.
+타입(`WriteHooks`·`WriteHookContext`·`WriteData`·`ValidationHookContext`·`ValidationResult`·`WriteOperation`)은 `@monti-cms/core/server`와 `@monti-cms/core/plugin/server`에서 내보낸다.
+
+```ts
+import { defineServerConfig } from "@monti-cms/core/server";
+
+export default defineServerConfig({
+	// database, auth, ...
+	hooks: {
+		// 본체 준비 전에 돈다. 준비할 데이터를 돌려준다(아무것도 안 돌려주면 그대로).
+		transform: ({ operation, collection, entryId, locale, metadata, doc }) => ({
+			metadata: { ...metadata, title: String(metadata.title ?? "").trim() },
+			doc,
+		}),
+		// 본체 준비 뒤, 모든 쓰기에서 돈다. 실패는 쓰기를 막고, 경고는 결과와 함께 돌아간다.
+		validate: ({ metadata, snapshot }) => ({
+			issues: String(metadata.title ?? "").includes("TODO") ? [{ code: "title_has_todo", path: "title" }] : [],
+		}),
+		// 같은 방식, 발행에서만.
+		validatePublish: ({ metadata }) => ({ warnings: metadata.summary ? [] : [{ code: "no_summary", path: "summary" }] }),
+		// 변경이 커밋된 뒤.
+		afterCommit: (change) => revalidate(change.collection, change.publishedSlug),
+	},
+});
+```
+
+| 단계 | 하는 일 |
+|---|---|
+| 1 | 입력 만들기: 요청에서, 또는 저장된 초안에서(발행·일괄) |
+| 2 | `transform` 훅. 등록 순서대로(서버 설정이 먼저, 그다음 플러그인을 설정 순서대로). 각 훅은 앞 훅의 결과를 받는다 |
+| 3 | 본체 준비: 정규화·참조 수집·본체 검증. **항상, 변환된 데이터에 대해 돈다** |
+| 4 | `validate` 훅: 실패와 경고를 더한다 |
+| 5 | 발행(그리고 다시 발행되는 항목 복원)에서 `validatePublish` 훅: 실패와 경고를 더한다 |
+| 6 | 저장소 커밋. 글 하나에 트랜잭션 하나(일괄은 항목마다 커밋) |
+| 7 | `afterCommit` 훅 |
+
+- `operation`은 `create`·`save`·`publish`·`duplicate`·`translate`·`restore`다. 메타데이터·폴더 일괄 변경은 항목마다 `save`, 일괄 발행은 항목마다 `publish`다.
+  글을 만드는 중에는 `entryId`가 없다. `metadata`와 `doc`(저장 문서 형태의 본문, 해석되지 않는 초안은 `null`)은 복사본이라, `transform`이 돌려주지 않으면 바꿔도 아무 일도 없다.
+  `validate`와 `validatePublish`는 준비된 `snapshot`(복사본)도 받는다.
+- 보관·보관 해제·휴지통·삭제는 내용을 바꾸지 않으므로 2~5단계를 건너뛰고 `afterCommit`만 부른다. 항목(record)을 복원하면 다시 발행되므로 `restore`로 3~5단계를 거친다(`validate`와 `validatePublish`가 돌아서 휴지통에 넣었다 복원하는 식으로 발행 제한을 피할 수 없다. 내용이 그대로이므로 `transform`은 돌지 않는다). 다른 글의 복원은 초안으로 돌려놓을 뿐이라 아무 훅도 돌지 않는다.
+- 훅은 DB 트랜잭션 밖에서 돌고 DB 클라이언트를 받지 않는다. 비동기여도 된다. 저장소 내부 옵션 `beforePublishCommit`(트랜잭션 클라이언트를 받는다)은 이 계약에 들지 않고 그대로다.
+- 발행하는 중에 `transform`이 초안을 바꾸면 그 변경은 발행과 함께 한 트랜잭션으로 저장된다(`afterCommit`에는 그 글의 `saved` 변경 다음에 `published` 변경이 온다. 바뀐 것이 없는 발행은 `published`만 온다). 만들거나 저장하면서 바로 발행하는 경우(항목)도 같게 `created` 또는 `saved`, 그다음 `published`로 알린다.
+- 훅이 예외를 던지거나 계약에 맞지 않는 값을 돌려주면 쓰기는 `hook_failed`(HTTP 500)로 실패한다. 오류의 `issues[].params`에 훅 이름과 소유자(`server` 또는 `plugin:<이름>`)가 들어가고, 아무것도 저장되지 않는다. `validate` 실패는 `validation_failed`, `validatePublish` 실패는 `publish_validation_failed`(HTTP 422)이며, 더한 이슈가 초안 자체의 이슈 옆에 붙는다.
+- `afterCommit`은 id·상태·주소만 받고 본문은 받지 않는다. 커밋된 글은 `getCmsContentStore().getEntry(change.entryId)`로 읽는다. 전달은 프로세스 안에서 최대 한 번이며, 다시 시도하지 않고 아직 아웃박스도 없다.
+
+계약(각각 `src/services/__test__/write-hooks.test.ts`와 `write-pipeline.test.ts`에 시험이 있다):
+
+1. **변환된 데이터도 본체를 거친다.** 정규화·참조 수집·검증이 `transform`의 결과에 대해 돌아서, 변환으로 본체 검사를 피할 수 없다.
+2. **추가 검증은 실패를 더할 수만 있다.** `validate`와 `validatePublish`가 돌려준 이슈와 경고는 본체의 것에 더해진다. 훅은 스냅샷의 복사본을 받으므로 본체 이슈를 지우거나 낮출 수 없고, 발행의 본체 무결성 검사(참조·미디어·링크·필수 값)는 항상 돈다.
+3. **커밋 전의 실패는 쓰기를 막는다.** 본체 준비 실패, 훅이 더한 실패, 훅의 예외는 아무것도 저장하지 않고 `afterCommit`도 부르지 않는다.
+4. **`afterCommit`의 실패는 끝난 쓰기를 되돌리지 않는다.** 기록만 남기고, 다른 `afterCommit` 훅은 그대로 돈다.
+5. **일괄은 모든 항목에 같은 훅을 적용한다.** 항목마다 파이프라인 전체를 돌고, 결과나 오류(`hook_failed`·`validation_failed` 등)는 항목별로 돌아간다.
 
 ## 설정
 
@@ -636,7 +693,7 @@ layout: [{ fields: ["title", "slug", "excerpt"] }], // hero·credit은 Media 탭
 모양이 틀리면 앱이 뜰 때 바로 오류를 낸다.
 
 복제(`POST /api/cms/v1/entries/:id/duplicate`)는 본문에 `{ title }`을 받으면 복제본 제목을 그 값으로 둔다(관리자 화면은 원본
-제목에 "(복사)"를 붙여 보낸다). 없으면 원본 제목 그대로다. 저장소는 붙일 말을 정하지 않는다.
+제목에 "(복사)"를 붙여 보낸다). 없으면 원본 제목 그대로다. 본체는 붙일 말을 정하지 않고, 복제본도 다른 쓰기와 같은 쓰기 파이프라인을 지난다.
 
 ## 아직 남은 일
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { contentCollection } from "../../../test/any-site";
 import { createBulkService } from "../bulk-service";
 import type { Reference } from "../index";
 import { ServiceError } from "../index";
@@ -38,8 +39,19 @@ const newFakeLifecycleStore = (seed: Record<string, EntryState>) => {
 		async getWorkingReferences() {
 			return [] as Reference[];
 		},
-		async getWorking() {
-			throw new ServiceError("invalid_input");
+		/** A publish reads the draft first (the write pipeline prepares it before the store commits). */
+		async getWorking(params: { entryId: string }) {
+			const found = entries.get(params.entryId);
+			if (!found) throw new ServiceError("not_found");
+			return {
+				collection: contentCollection,
+				slug: "bulk-publish",
+				metadata: { title: "Title" },
+				mdx: "Body",
+				doc: null,
+				version: found.version,
+				folderId: null,
+			};
 		},
 		async createEntryWithReferences() {
 			throw new ServiceError("invalid_input");

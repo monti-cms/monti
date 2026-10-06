@@ -7,7 +7,7 @@ import {
 	recordRelationField,
 	secondLocale,
 } from "../../../test/any-site";
-import { seedEntry, seedSave } from "../../adapters/postgres/__test__/seed";
+import { publishDraft, seedEntry, seedSave } from "../../adapters/postgres/__test__/seed";
 import {
 	closeGlobalPool,
 	createIsolatedTestPool,
@@ -82,7 +82,7 @@ describe("public site reading @monti-cms/core/read", () => {
 			locale,
 			translationOf,
 		});
-		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	it("paginates and sorts the list in the DB, leaves out drafts, and filters by relation", async () => {
@@ -142,7 +142,7 @@ describe("public site reading @monti-cms/core/read", () => {
 					} as never,
 					references: [],
 				});
-				return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+				return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 			};
 			const first = await item("sort-item-a", "AAA sort", "ZZZ sort");
 			const second = await item("sort-item-b", "BBB sort", "YYY sort");
@@ -184,7 +184,7 @@ describe("public site reading @monti-cms/core/read", () => {
 			metadata: published.working.metadata,
 			mdx: published.working.mdx,
 		});
-		await store.publishEntry({ id: published.id, expectedVersion: renamed.version });
+		await publishDraft(store, { id: published.id, expectedVersion: renamed.version });
 		const old = await getEntry({ collection: contentCollection, slug: "read-detail" });
 		expect(old).toMatchObject({ status: "redirect", slug: "read-detail-renamed" });
 		expect(await getEntry({ collection: contentCollection, slug: "no-such-entry" })).toEqual({ status: "not_found" });

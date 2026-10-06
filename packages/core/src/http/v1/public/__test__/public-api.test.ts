@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredFields } from "../../../../../test/any-site";
-import { seedSave } from "../../../../adapters/postgres/__test__/seed";
+import { publishDraft, seedSave } from "../../../../adapters/postgres/__test__/seed";
 import {
 	closeGlobalPool,
 	createIsolatedTestPool,
@@ -70,7 +70,7 @@ describe("Public JSON API", () => {
 			} as never,
 			references: [],
 		});
-		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	beforeAll(async () => {
@@ -134,7 +134,7 @@ describe("Public JSON API", () => {
 			metadata: entry.working.metadata,
 			mdx: entry.working.mdx,
 		});
-		await store.publishEntry({ id: entry.id, expectedVersion: saved.version });
+		await publishDraft(store, { id: entry.id, expectedVersion: saved.version });
 		const alias = await get(`v1/public/entries/${contentCollection}/public-1`);
 		expect(alias.body.address).toEqual({ slug: "public-1-renamed", isAlias: true });
 		expect((await get(`v1/public/entries/${contentCollection}/missing`)).status).toBe(404);

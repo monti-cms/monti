@@ -9,6 +9,7 @@ import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { migrateBlockIds } from "../store/block-id-migration";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
+import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0014_block_ids";
@@ -50,7 +51,9 @@ describe("0014_block_ids", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -75,7 +78,7 @@ describe("0014_block_ids", () => {
 	/** A published entry whose working body has moved on: `workingMdx` is the draft, `publishedMdx` what was published. */
 	const publishedThenEdited = async (publishedMdx: string, workingMdx: string) => {
 		const draft = await createDraft(publishedMdx);
-		const published = await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		return workingMdx === publishedMdx ? published : edit(published, workingMdx);
 	};
 

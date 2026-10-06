@@ -3,7 +3,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../test/any-site";
 import { createContentStore, migrateContentStore } from "../content-store";
-import { seedEntry } from "./seed";
+import { publishDraft, restoreDraft, seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Collection names are looked up in the current config (`test/any-site.ts`). Posts are the document collection with a body; tags are the item collection. */
@@ -49,7 +49,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 
 			// The publish date is the time of first publish.
 			const before = Date.now();
-			const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+			const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 			expect(published.status).toBe("published");
 			expect(published.publishedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
@@ -66,7 +66,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				contentHash: "hash-arch",
 			});
 
-			const pub = await store.publishEntry({
+			const pub = await publishDraft(store, {
 				id: entry.id,
 				expectedVersion: entry.version,
 			});
@@ -90,7 +90,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				contentHash: "hash-unarch",
 			});
 
-			const pub = await store.publishEntry({
+			const pub = await publishDraft(store, {
 				id: entry.id,
 				expectedVersion: entry.version,
 			});
@@ -141,7 +141,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				expectedVersion: entry.version,
 			});
 
-			const restored = await store.restoreEntry({
+			const restored = await restoreDraft(store, {
 				id: entry.id,
 				expectedVersion: trashed.version,
 			});
@@ -159,7 +159,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				contentHash: "hash-perm",
 			});
 
-			const pub = await store.publishEntry({
+			const pub = await publishDraft(store, {
 				id: entry.id,
 				expectedVersion: entry.version,
 			});
@@ -202,7 +202,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 			});
 
 			// tag must be published or active
-			await store.publishEntry({ id: tag.id, expectedVersion: tag.version });
+			await publishDraft(store, { id: tag.id, expectedVersion: tag.version });
 
 			const post = await seedEntry(store, {
 				collection: content,
@@ -238,7 +238,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 			});
 
 			// Now publish post - should succeed and copy reference to state='published'
-			const pubPost = await store.publishEntry({
+			const pubPost = await publishDraft(store, {
 				id: post.id,
 				expectedVersion: post.version + 1,
 			});
@@ -262,7 +262,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
-			const publishedTag = await store.publishEntry({ id: tag.id, expectedVersion: tag.version });
+			const publishedTag = await publishDraft(store, { id: tag.id, expectedVersion: tag.version });
 			const post = await seedEntry(store, {
 				collection: content,
 				slug: `post-uses-tag-${randomUUID()}`,
@@ -286,7 +286,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				},
 				references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
 			});
-			const publishedPost = await store.publishEntry({ id: post.id, expectedVersion: saved.version });
+			const publishedPost = await publishDraft(store, { id: post.id, expectedVersion: saved.version });
 
 			await expect(store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version })).rejects.toMatchObject({
 				code: "in_use",
@@ -318,7 +318,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 			await expect(store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version })).rejects.toMatchObject({
 				code: "in_use",
 			});
-			await store.publishEntry({ id: publishedPost.id, expectedVersion: editedWithoutTag.version });
+			await publishDraft(store, { id: publishedPost.id, expectedVersion: editedWithoutTag.version });
 			const trashedTag = await store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version });
 			expect(trashedTag.status).toBe("trashed");
 		});
@@ -333,7 +333,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				contentHash: randomUUID(),
 			});
 			const trashed = await store.trashEntry({ id: draft.id, expectedVersion: draft.version });
-			await expect(store.publishEntry({ id: trashed.id, expectedVersion: trashed.version })).rejects.toMatchObject({
+			await expect(publishDraft(store, { id: trashed.id, expectedVersion: trashed.version })).rejects.toMatchObject({
 				code: "invalid_status",
 			});
 		});
@@ -347,7 +347,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
-			const tag = await store.publishEntry({ id: tagDraft.id, expectedVersion: tagDraft.version });
+			const tag = await publishDraft(store, { id: tagDraft.id, expectedVersion: tagDraft.version });
 			const post = await seedEntry(store, {
 				collection: content,
 				slug: `post-tag-race-${randomUUID()}`,
@@ -397,7 +397,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
-			const tag = await store.publishEntry({ id: tagDraft.id, expectedVersion: tagDraft.version });
+			const tag = await publishDraft(store, { id: tagDraft.id, expectedVersion: tagDraft.version });
 			const post = await seedEntry(store, {
 				collection: content,
 				slug: `draft-uses-tag-${randomUUID()}`,
@@ -453,7 +453,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				});
 
 				// 1st publish (clean, no refs)
-				const firstPub = await store.publishEntry({ id: post.id, expectedVersion: post.version });
+				const firstPub = await publishDraft(store, { id: post.id, expectedVersion: post.version });
 
 				// Save draft on post referencing the unpublished tag
 				await store.saveWorkingWithReferences({
@@ -481,7 +481,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 
 				// Attempt 2nd publish - MUST FAIL because the referenced tag is not published
 				await expect(
-					store.publishEntry({
+					publishDraft(store, {
 						id: post.id,
 						expectedVersion: firstPub.version + 1,
 					}),
@@ -505,7 +505,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				schemaVersion: 1,
 				contentHash: "ts-hash-1",
 			});
-			const pub1 = await store.publishEntry({ id: post.id, expectedVersion: post.version });
+			const pub1 = await publishDraft(store, { id: post.id, expectedVersion: post.version });
 			const firstPublishedAt = pub1.publishedAt;
 			expect(firstPublishedAt).toBeInstanceOf(Date);
 
@@ -525,12 +525,12 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				references: [],
 			});
 			await new Promise((r) => setTimeout(r, 50));
-			const pub2 = await store.publishEntry({ id: post.id, expectedVersion: pub1.version + 1 });
+			const pub2 = await publishDraft(store, { id: post.id, expectedVersion: pub1.version + 1 });
 			expect(pub2.publishedAt).toEqual(firstPublishedAt);
 
 			const archived = await store.archiveEntry({ id: post.id, expectedVersion: pub2.version });
 			const draft = await store.unarchiveEntry({ id: post.id, expectedVersion: archived.version });
-			const pub3 = await store.publishEntry({ id: post.id, expectedVersion: draft.version });
+			const pub3 = await publishDraft(store, { id: post.id, expectedVersion: draft.version });
 			expect(pub3.publishedAt).toEqual(firstPublishedAt);
 		});
 
@@ -545,12 +545,12 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				contentHash: "ts-hash-reset",
 			});
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [post.id, original]);
-			const pub1 = await store.publishEntry({ id: post.id, expectedVersion: post.version });
+			const pub1 = await publishDraft(store, { id: post.id, expectedVersion: post.version });
 			expect(pub1.publishedAt).toEqual(original);
 
 			// Even a re-publish with no changes updates only the publish date and bumps the version.
 			const before = Date.now();
-			const pub2 = await store.publishEntry({ id: post.id, expectedVersion: pub1.version, resetPublishedAt: true });
+			const pub2 = await publishDraft(store, { id: post.id, expectedVersion: pub1.version, resetPublishedAt: true });
 			expect(pub2.version).toBe(pub1.version + 1);
 			expect(pub2.publishedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
 
@@ -570,7 +570,11 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				references: [],
 			});
 			await new Promise((r) => setTimeout(r, 20));
-			const pub3 = await store.publishEntry({ id: post.id, expectedVersion: pub2.version + 1, resetPublishedAt: true });
+			const pub3 = await publishDraft(store, {
+				id: post.id,
+				expectedVersion: pub2.version + 1,
+				resetPublishedAt: true,
+			});
 			expect(pub3.publishedAt?.getTime()).toBeGreaterThan(pub2.publishedAt?.getTime() ?? 0);
 		});
 
@@ -586,7 +590,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 			const original = new Date("2023-07-16T15:00:00Z");
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [post.id, original]);
 
-			const published = await store.publishEntry({ id: post.id, expectedVersion: post.version });
+			const published = await publishDraft(store, { id: post.id, expectedVersion: post.version });
 			expect(published.publishedAt).toEqual(original);
 		});
 	});
@@ -602,7 +606,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				contentHash: "broken-hash",
 			});
 
-			await expect(store.publishEntry({ id: post.id, expectedVersion: post.version })).rejects.toMatchObject({
+			await expect(publishDraft(store, { id: post.id, expectedVersion: post.version })).rejects.toMatchObject({
 				code: "publish_validation_failed",
 			});
 

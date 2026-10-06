@@ -14,7 +14,7 @@ import { LOCALES } from "../../../core/locales";
 import { recordLocalizedFields, storedField, storedFields } from "../../../schema/derive";
 import type { Entry } from "../content-store";
 import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { moveToFolder, seedEntry } from "./seed";
+import { moveToFolder, publishDraft, seedEntry } from "./seed";
 
 // ---------------------------------------------------------------------------
 // Local type declarations for the not-yet-implemented listEntries API
@@ -161,7 +161,7 @@ describe("listEntries contract", () => {
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
-			return (await store.publishEntry({ id: draft.id, expectedVersion: draft.version })).id;
+			return (await publishDraft(store, { id: draft.id, expectedVersion: draft.version })).id;
 		})();
 		relationTargets.set(to, created);
 		return created;
@@ -247,7 +247,7 @@ describe("listEntries contract", () => {
 			if (slug === null) {
 				throw new Error("Cannot publish an entry with null slug in fixture");
 			}
-			current = await store.publishEntry({ id: entry.id, expectedVersion: current.version });
+			current = await publishDraft(store, { id: entry.id, expectedVersion: current.version });
 		}
 
 		if (opts.folderId) {
@@ -828,7 +828,7 @@ console.log("FencedCode000");
 			});
 			// If the publish date is set beforehand, like a migrated entry, it stays as is after publishing.
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [histE.id, histDate]);
-			await store.publishEntry({ id: histE.id, expectedVersion: histE.version });
+			await publishDraft(store, { id: histE.id, expectedVersion: histE.version });
 
 			const noMetaE = await seedEntry(store, {
 				collection: content,
@@ -838,7 +838,7 @@ console.log("FencedCode000");
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
-			const pubNoMetaE = await store.publishEntry({ id: noMetaE.id, expectedVersion: noMetaE.version });
+			const pubNoMetaE = await publishDraft(store, { id: noMetaE.id, expectedVersion: noMetaE.version });
 
 			const list = await store.listEntries({ collection: content });
 
@@ -973,7 +973,7 @@ console.log("FencedCode000");
 		await entry("d-2024", "2024-03-15T00:00:00.000+09:00");
 		await entry("d-none");
 		const published = await entry("p-now");
-		await store.publishEntry({ id: published.id, expectedVersion: published.version });
+		await publishDraft(store, { id: published.id, expectedVersion: published.version });
 
 		const order = async (direction: "asc" | "desc") =>
 			(await store.listEntries({ collection: content, sort: { field: "publishedAt", direction } as never })).items.map(

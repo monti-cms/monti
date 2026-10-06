@@ -45,7 +45,6 @@ const changeOf = (kind: ContentChangeKind, entry: Entry): ContentChange => ({
 /** Changes that return an entry, and their notification kinds. */
 const ENTRY_CHANGES = {
 	createEntryWithReferences: "created",
-	duplicateEntry: "created",
 	saveWorkingWithReferences: "saved",
 	publishEntry: "published",
 	archiveEntry: "archived",
@@ -60,7 +59,7 @@ interface ChangingStore {
 }
 
 /**
- * Wraps the store's mutation functions so `afterCommit` is called after the commit. If the notification fails, the committed change stays
+ * Wraps the store's mutation functions so `afterCommit` is called after the commit. A write that saves and publishes in one transaction is reported as two changes, in order. If the notification fails, the committed change stays
  * and the request does not fail (the error is only logged).
  */
 export function withAfterCommit<S extends ChangingStore>(store: S, afterCommit: AfterCommit): S {
@@ -78,6 +77,11 @@ export function withAfterCommit<S extends ChangingStore>(store: S, afterCommit: 
 		wrapped[method] = async (...args: unknown[]) => {
 			const entry = (await original.apply(store, args)) as Entry;
 			await notify(changeOf(kind, entry));
+			// A create or save that also published (`publishImmediately`) did both: the change, then the publish.
+			const published = (args[0] as { publishImmediately?: boolean } | undefined)?.publishImmediately;
+			if ((kind === "created" || kind === "saved") && published && entry.status === "published") {
+				await notify(changeOf("published", entry));
+			}
 			return entry;
 		};
 	}

@@ -3,9 +3,11 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, titleFieldOf } from "../../../../test/any-site";
 import { type Collection, isItemCollection } from "../../../core/collections";
+import type { ServiceInput } from "../../../core/types";
 import { storedFields } from "../../../schema/derive";
-import { createContentStore, migrateContentStore } from "../content-store";
-import { seedEntry } from "./seed";
+import { createContentService } from "../../../services/content-service";
+import { createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { duplicateDraft, publishDraft, seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 describe("Duplicate Entry Contract", () => {
@@ -56,37 +58,28 @@ describe("Duplicate Entry Contract", () => {
 		const relations = await itemRelationValues();
 		expect(Object.keys(relations).length).toBeGreaterThan(0);
 
-		// Seed a published entry with folder and working references
-		const original = await store.createEntryWithReferences({
-			snapshot: {
-				collection: contentCollection,
-				slug: "orig-slug",
-				metadata: { title: "Original Post", ...relations },
-				mdx: "Hello world ![img](mediaId)",
-				schemaVersion: 1,
-				contentHash: "hash-orig",
-				issues: [],
-			},
-			references: [
-				{
-					kind: "media",
-					targetId: mediaId,
-					isStale: false,
-					occurrences: [{ type: "mdx", line: 1, column: 13 }],
-				},
-			],
+		// A published entry with a folder and an image (a media reference) in its body, made the way production makes it.
+		const original = await createContentService<Entry>(store).createDraft({
+			collection: contentCollection,
+			slug: "orig-slug",
+			metadata: { title: "Original Post", ...relations },
+			mdx: `Hello world\n\n<Image mediaId="${mediaId}" alt="sample" />\n`,
 			folderId: folder.id,
-		});
+		} as ServiceInput);
+		const originalRefs = await store.getWorkingReferences({ entryId: original.id });
+		expect(
+			originalRefs.some((ref: { kind: string; targetId: string }) => ref.kind === "media" && ref.targetId === mediaId),
+		).toBe(true);
 
 		// Publish original so it has published body/status
-		await store.publishEntry({ id: original.id, expectedVersion: original.version });
+		await publishDraft(store, { id: original.id, expectedVersion: original.version });
 		const publishedOrig = await store.getEntry(original.id);
 		expect(publishedOrig.status).toBe("published");
 		expect(publishedOrig.publishedSlug).toBe("orig-slug");
 
 		// Execute duplicate
 		// Any suffix is up to the caller (the admin screen). The store saves the given title as is.
-		const duplicated = await store.duplicateEntry({ id: original.id, title: "Original Post (copy)" });
+		const duplicated = await duplicateDraft(store, { id: original.id, title: "Original Post (copy)" });
 
 		// 1. Different ID, version 1, draft status
 		expect(duplicated.id).toBeDefined();
@@ -107,14 +100,13 @@ describe("Duplicate Entry Contract", () => {
 		);
 		expect(dbRow.rows[0].folder_id).toBe(folder.id);
 
-		// 4. Working references preserved (media reuse without re-upload)
+		// 4. Working references preserved (media reuse without re-upload). The copy's are collected from its own body and fields.
 		const refs = await store.getWorkingReferences({ entryId: duplicated.id });
-		expect(refs).toHaveLength(1);
-		expect(refs[0].kind).toBe("media");
-		expect(refs[0].targetId).toBe(mediaId);
+		const key = (ref: { kind: string; targetId: string }) => `${ref.kind}:${ref.targetId}`;
+		expect(refs.map(key).sort()).toEqual(originalRefs.map(key).sort());
 
 		// 5. MDX and relation metadata (such as categories and tags) preserved
-		expect(duplicated.working.mdx).toBe("Hello world ![img](mediaId)");
+		expect(duplicated.working.mdx).toBe(publishedOrig.working.mdx);
 		for (const [name, value] of Object.entries(relations)) {
 			expect(duplicated.working.metadata[name]).toEqual(value);
 		}
@@ -130,12 +122,12 @@ describe("Duplicate Entry Contract", () => {
 			schemaVersion: 1,
 			contentHash: randomUUID(),
 		});
-		const copy = await store.duplicateEntry({ id: original.id });
+		const copy = await duplicateDraft(store, { id: original.id });
 		expect(copy.working.metadata.title).toBe("Same title");
 		// Exceeding the title field's `max` (it varies by config) gives a plain error carrying the field label and path.
 		const { max, label } = titleFieldOf(contentCollection);
 		if (max === undefined) return;
-		await expect(store.duplicateEntry({ id: original.id, title: "가".repeat(max + 1) })).rejects.toMatchObject({
+		await expect(duplicateDraft(store, { id: original.id, title: "가".repeat(max + 1) })).rejects.toMatchObject({
 			code: "field_too_long",
 			issues: [{ code: "field_too_long", path: "title", message: label }],
 		});
@@ -143,7 +135,7 @@ describe("Duplicate Entry Contract", () => {
 
 	it("throws not_found when duplicating non-existent entry", async () => {
 		const ghostId = randomUUID();
-		await expect(store.duplicateEntry({ id: ghostId })).rejects.toThrowError(
+		await expect(duplicateDraft(store, { id: ghostId })).rejects.toThrowError(
 			expect.objectContaining({ code: "not_found" }),
 		);
 	});

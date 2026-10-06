@@ -9,6 +9,7 @@ import { bodyFromMdx, readStoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { extractVisibleText } from "../store/rows";
+import { duplicateDraft, publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** The same content in a spelling the serializer does not write, and the text a save writes for it. */
@@ -48,7 +49,9 @@ describe("stored documents", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -72,7 +75,7 @@ describe("stored documents", () => {
 			expectedVersion: entry.version,
 		});
 
-	const publish = (entry: Entry) => store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+	const publish = (entry: Entry) => publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 	interface Stored {
 		metadata: JsonValue;
@@ -245,7 +248,7 @@ describe("stored documents", () => {
 		it("copies the document and the text, and the copy has its own hash", async () => {
 			const original = await createDraft({ mdx: UNTIDY });
 
-			const copy = await store.duplicateEntry({ id: original.id });
+			const copy = await duplicateDraft(store, { id: original.id });
 
 			const row = await expectConsistent(copy.id, "working");
 			const source = await stored(original.id, "working");
@@ -257,7 +260,7 @@ describe("stored documents", () => {
 		it("copies a body without a document as it is", async () => {
 			const original = await createDraft({ mdx: "Words\n\n<Unclosed" });
 
-			const copy = await store.duplicateEntry({ id: original.id });
+			const copy = await duplicateDraft(store, { id: original.id });
 
 			const row = await expectConsistent(copy.id, "working");
 			expect(row.mdx).toBe("Words\n\n<Unclosed");

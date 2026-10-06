@@ -2,6 +2,7 @@ import type { AfterCommit, ContentStore } from "../adapters/postgres/content-sto
 import type { MediaStore } from "../adapters/r2/types";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { PluginDatabase } from "../plugin/define";
+import type { WriteHooks } from "../services/hooks";
 
 /**
  * Server config (`cms.server.ts`) schema. Holds the store, media and login connections and secrets. Read on the server only.
@@ -103,10 +104,11 @@ export interface CmsServerConfig {
 	 */
 	readonly secret?: string;
 	/**
-	 * Notification after a save (cache refresh, webhooks, search indexing). Called after a change that creates, saves, publishes, archives, trashes, restores or deletes an entry is committed.
-	 * The save stands even if it fails (the error is only logged). Plugins' `afterCommit` is called too.
+	 * Hooks on every content write: `transform` (change the data before it is prepared), `validate` and `validatePublish` (add failures and warnings), and
+	 * `afterCommit` (notification after the change is committed: cache refresh, webhooks, search indexing; the change stands even if it fails).
+	 * They run before the plugins' hooks of the same name. See "Hook contract" in the core README.
 	 */
-	readonly afterCommit?: AfterCommit;
+	readonly hooks?: WriteHooks;
 	/**
 	 * Whether the server sits behind a proxy or platform (Vercel, nginx, a load balancer) that sets `Host` and `X-Forwarded-Host`.
 	 * When on, login callback URLs are built from the request host and the same-origin check accepts `X-Forwarded-Host`;

@@ -9,6 +9,7 @@ import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { recomputeContentHashes } from "../store/content-hash-backfill";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
+import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** The content hash as it was before the parsed-body hash: it covered the MDX string itself. */
@@ -61,7 +62,9 @@ describe("content hash v2", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -80,7 +83,7 @@ describe("content hash v2", () => {
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
-		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	const saveMdx = (entry: Entry, mdx: string) =>
@@ -127,7 +130,7 @@ describe("content hash v2", () => {
 			const published = await publishedWith(STAR);
 			const resaved = await saveMdx(published, UNDERSCORE);
 
-			const republished = await store.publishEntry({ id: published.id, expectedVersion: resaved.version });
+			const republished = await publishDraft(store, { id: published.id, expectedVersion: resaved.version });
 
 			expect(republished.version).toBe(published.version);
 			expect(republished.published).toEqual(published.published);

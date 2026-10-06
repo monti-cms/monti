@@ -8,6 +8,7 @@ import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateSoftBreaks } from "../store/soft-break-migration";
+import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -43,7 +44,9 @@ describe("document shape migrations", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -58,7 +61,7 @@ describe("document shape migrations", () => {
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
-		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	const setWorkingBody = (entryId: string, mdx: string) =>

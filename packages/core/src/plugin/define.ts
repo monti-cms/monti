@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
-import type { AfterCommit } from "../adapters/postgres/store/after-commit";
 import type { BlockDefinition } from "../blocks/define";
 import type { CollectionsConfig } from "../config/define";
+import type { WriteHooks } from "../services/hooks";
 
 /**
  * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`).
@@ -92,8 +92,11 @@ export interface CmsServerPlugin {
 	readonly migrate?: (db: PluginDatabase) => Promise<void>;
 	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. */
 	readonly features?: () => Promise<Readonly<Record<string, boolean>>>;
-	/** Notification after a save (same as the server config `afterCommit`). The save stands even if it fails. */
-	readonly afterCommit?: AfterCommit;
+	/**
+	 * Hooks on every content write (same as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit`.
+	 * They run after the server config's hooks, in the order of the plugins in the site config.
+	 */
+	readonly hooks?: WriteHooks;
 }
 
 /**

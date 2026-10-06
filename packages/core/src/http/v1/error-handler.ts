@@ -42,6 +42,8 @@ const SERVICE_ERROR_STATUS: Record<string, number> = {
 	slug_reserved: 409,
 	mdx_too_large: 413,
 	metadata_too_large: 413,
+	// A hook of the server config or a plugin threw: a server-side failure, not a problem with the request.
+	hook_failed: 500,
 };
 
 /** A DB connection failure is a transient error (503). It is not disguised as missing content or an empty list. */

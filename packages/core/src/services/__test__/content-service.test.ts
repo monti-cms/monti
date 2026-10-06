@@ -15,7 +15,7 @@ import { isRequiredField } from "../../schema/fields";
 import type { PreparedSnapshot, Reference, ResolvedTargets, SaveDraftInput, ServiceInput, StorePort } from "../index";
 import {
 	createContentService,
-	imageWarningsForPublish,
+	imageWarningsForSnapshot,
 	prepareSnapshot,
 	ServiceError,
 	validateForPublish,
@@ -1442,24 +1442,20 @@ describe("ContentService Contract", () => {
 		});
 
 		it("the warning for the publish response looks at both the DB state and the actual storage object", async () => {
-			const publishInput = {
-				...(await draftInput(`<Image mediaId="${mediaId}" />`)),
-				getMediaAsset: async () => ({ status: "pending", storageKey: null }),
-			};
+			const snapshot = await prepareSnapshot(await draft(`<Image mediaId="${mediaId}" />`));
+			const pending = { getMediaAsset: async () => ({ status: "pending", storageKey: null }) };
 
-			expect(await imageWarningsForPublish(publishInput)).toEqual([
+			expect(await imageWarningsForSnapshot(snapshot, pending)).toEqual([
 				expect.objectContaining({ code: "image_media_not_ready", message: "pending" }),
 			]);
 			expect(
-				await imageWarningsForPublish({
-					...publishInput,
+				await imageWarningsForSnapshot(snapshot, {
 					getMediaAsset: async () => ({ status: "ready", storageKey: "k/a.png" }),
 					headStorageKey: async () => true,
 				}),
 			).toEqual([]);
 			expect(
-				await imageWarningsForPublish({
-					...publishInput,
+				await imageWarningsForSnapshot(snapshot, {
 					getMediaAsset: async () => ({ status: "ready", storageKey: "k/a.png" }),
 					headStorageKey: async () => false,
 				}),
@@ -1467,12 +1463,14 @@ describe("ContentService Contract", () => {
 		});
 
 		it("warning computation does not block publishing (empty array on failure)", async () => {
-			const warnings = await imageWarningsForPublish({
-				...(await draftInput(`<Image mediaId="${mediaId}" />`)),
-				getMediaAsset: async () => {
-					throw new Error("db down");
+			const warnings = await imageWarningsForSnapshot(
+				await prepareSnapshot(await draft(`<Image mediaId="${mediaId}" />`)),
+				{
+					getMediaAsset: async () => {
+						throw new Error("db down");
+					},
 				},
-			});
+			);
 
 			expect(warnings).toEqual([]);
 		});

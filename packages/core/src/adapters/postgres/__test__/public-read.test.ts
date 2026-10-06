@@ -12,7 +12,7 @@ import { COLLECTIONS, type Collection, isItemCollection } from "../../../core/co
 import { storedFields } from "../../../schema/derive";
 import { SUMMARY_ROLE } from "../../../schema/fields";
 import { type ContentStore, createContentStore, migrateContentStore } from "../content-store";
-import { seedEntry, seedSave } from "./seed";
+import { publishDraft, seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -98,7 +98,7 @@ describe("public published-read contract", () => {
 	}) {
 		const entry = await createEntry(params);
 
-		return store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		return publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 	}
 
 	async function publishedSlugs(collections: readonly string[]): Promise<string[]> {
@@ -204,7 +204,7 @@ describe("public published-read contract", () => {
 			contentHash: "hash-renamed",
 		});
 
-		await store.publishEntry({ id: saved.id, expectedVersion: saved.version });
+		await publishDraft(store, { id: saved.id, expectedVersion: saved.version });
 
 		expect(await addressType("before-rename")).toBe("alias");
 		expect(await addressType("after-rename")).toBe("current");
@@ -280,7 +280,7 @@ describe("public published-read contract", () => {
 				status: "not_found",
 			});
 
-			const republished = await store.publishEntry({ id: working.id, expectedVersion: working.version });
+			const republished = await publishDraft(store, { id: working.id, expectedVersion: working.version });
 			expect(
 				await store.getPublishedEntryBySlug({ collection: content, slug: "f10-published-snapshot" }),
 			).toMatchObject({
@@ -304,7 +304,7 @@ describe("public published-read contract", () => {
 			schemaVersion: 1,
 			contentHash: "hash-alias-archive",
 		});
-		const republished = await store.publishEntry({ id: saved.id, expectedVersion: saved.version });
+		const republished = await publishDraft(store, { id: saved.id, expectedVersion: saved.version });
 
 		await store.archiveEntry({ id: republished.id, expectedVersion: republished.version });
 

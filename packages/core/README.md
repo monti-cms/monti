@@ -517,6 +517,7 @@ export const myPlugin = () =>
   forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` and verify on their own.
   `migrate` is called by `monti migrate` after the core tables.
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
+- The server-side `hooks` (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract".
 - Plugin code uses `getCmsDatabase()` (the DB connection) from `@monti-cms/core/plugin/server` and the core route scaffolding (`adminRoute`, etc.).
 
 ## Server config
@@ -529,7 +530,7 @@ export const myPlugin = () =>
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else off in production and on in development |
 | `secret` | Key used to keep stored values (AI service keys) encrypted in the DB. Keep it separate from the login signing value. If you change it, re-enter the stored keys. |
 | `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
-| `afterCommit` | Optional. Post-save notification `(change) => …`: after a change that creates, saves, publishes, archives, trashes, restores or deletes an entry is committed, it receives `{ kind, entryId, collection, locale, translationGroupId, status, publishedSlug, workingSlug }`. A place for cache revalidation (`revalidatePath`), webhooks and search indexing. Rolled-back changes are not delivered, and a failure does not undo the save. Plugins can also set `afterCommit` |
+| `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed: cache revalidation, webhooks, search indexing). See "Hook contract". Plugins can set `hooks` too |
 
 To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` or `AuthAdapter`.
 
@@ -549,6 +550,62 @@ A client can send `Host` and `X-Forwarded-Host` itself, so the server does not t
 - `NODE_ENV` must be `development`. In any other mode the flag is ignored and a warning is logged.
 - The process must not look deployed: it is refused if a hosting platform variable (`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`) is set or `AUTH_URL` points to a public address. In that case the server refuses to start (the login connection throws on first use) with a message that names the reason.
 - Each request must come from this machine: `Host` is `localhost`, `*.localhost`, `127.0.0.0/8` or `::1`, and `X-Forwarded-Host` and `X-Forwarded-For` (when present) are loopback too. Other requests have to sign in normally, and a warning is logged once. `isDevAuthBypassEnabled()` from `@monti-cms/core/runtime` is now async and applies the same check.
+
+## Hook contract
+
+Every content write goes through one pipeline in the core services: creating, saving, publishing (one entry or in bulk), duplicating, creating a translation, and a bulk change of metadata or folder.
+Hooks are registered in the server config (`defineServerConfig({ hooks })`) or in a plugin's server side (`CmsServerPlugin.hooks`), with the same shape.
+The types (`WriteHooks`, `WriteHookContext`, `WriteData`, `ValidationHookContext`, `ValidationResult`, `WriteOperation`) are exported from `@monti-cms/core/server` and `@monti-cms/core/plugin/server`.
+
+```ts
+import { defineServerConfig } from "@monti-cms/core/server";
+
+export default defineServerConfig({
+	// database, auth, ...
+	hooks: {
+		// Runs before core preparation. Return the data to prepare (or nothing to keep it as it is).
+		transform: ({ operation, collection, entryId, locale, metadata, doc }) => ({
+			metadata: { ...metadata, title: String(metadata.title ?? "").trim() },
+			doc,
+		}),
+		// Runs after core preparation, for every write. Failures block the write, warnings come back with the result.
+		validate: ({ metadata, snapshot }) => ({
+			issues: String(metadata.title ?? "").includes("TODO") ? [{ code: "title_has_todo", path: "title" }] : [],
+		}),
+		// The same, for a publish only.
+		validatePublish: ({ metadata }) => ({ warnings: metadata.summary ? [] : [{ code: "no_summary", path: "summary" }] }),
+		// After the change is committed.
+		afterCommit: (change) => revalidate(change.collection, change.publishedSlug),
+	},
+});
+```
+
+| Stage | What runs |
+|---|---|
+| 1 | Build the input: from the request, or from the stored draft (publish, bulk) |
+| 2 | `transform` hooks, in registration order (server config first, then the plugins in config order). Each gets the previous one's result |
+| 3 | Core preparation: normalization, reference collection, core validation. **Always runs, on the transformed data** |
+| 4 | `validate` hooks: extra failures and warnings |
+| 5 | Publish (and restoring a record, which publishes it again): `validatePublish` hooks: extra failures and warnings |
+| 6 | Store commit, one transaction per entry (a bulk change commits item by item) |
+| 7 | `afterCommit` hooks |
+
+- `operation` is `create`, `save`, `publish`, `duplicate`, `translate` or `restore`. A bulk metadata or folder change is a `save` per item, and a bulk publish is a `publish` per item.
+  `entryId` is absent while the entry is being created. `metadata` and `doc` (the body as a stored document, `null` for a draft whose body does not parse) are copies: changing them does nothing unless a `transform` returns them.
+  `validate` and `validatePublish` also get the prepared `snapshot` (a copy).
+- Archiving, trashing, unarchiving and deleting do not change content, so they skip stages 2 to 5 and still fire `afterCommit`. Restoring a record publishes it again, so it runs stages 3 to 5 as a `restore` (`validate` and `validatePublish` run, so a restriction on publishing cannot be bypassed by trash and restore; `transform` does not, the content is unchanged). Restoring any other entry returns it to draft and runs nothing.
+- Hooks run outside the database transaction and get no database client. They may be async. The internal store option `beforePublishCommit` (which does get the transaction's client) is not part of this contract and is unchanged.
+- A `transform` that changes the draft while publishing has the change saved together with the publish, in one transaction (`afterCommit` then gets a `saved` change followed by a `published` one for the entry; a publish that changes nothing gets only `published`). A create or save that publishes at once (records) is reported the same way: `created` or `saved`, then `published`.
+- A hook that throws, or returns something that is not its contract, fails the write with `hook_failed` (HTTP 500). The error names the hook and its owner (`server` or `plugin:<name>`) in `issues[].params`; nothing is stored. `validate` failures give `validation_failed` and `validatePublish` failures give `publish_validation_failed` (HTTP 422), with the added issues next to the draft's own.
+- `afterCommit` gets ids, status and slugs only, never the body. Read the committed entry with `getCmsContentStore().getEntry(change.entryId)`. Delivery is in-process and at most once: it is not retried, and there is no outbox yet.
+
+Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `write-pipeline.test.ts`):
+
+1. **Transformed data still goes through core.** Normalization, reference collection and validation run on what a `transform` returns, so a transform cannot get a value past a core check.
+2. **Extra validation can only add failures.** `validate` and `validatePublish` return issues and warnings that are added to the core ones. They get a copy of the snapshot, so they cannot remove or downgrade a core issue, and the core integrity checks of a publish (references, media, links, required values) always run.
+3. **A failure before the commit blocks the write.** A failing core preparation, a failure a hook adds, or a hook that throws stores nothing and does not call `afterCommit`.
+4. **An `afterCommit` failure never undoes a completed write.** It is logged, and the other `afterCommit` hooks still run.
+5. **Bulk applies the same hooks to every item.** Each item runs the full pipeline, and its result or error (`hook_failed`, `validation_failed`, ...) is reported per item.
 
 ## Config
 
@@ -636,7 +693,7 @@ a field is named `translations`, a collection has no kind, or the shape of `admi
 is wrong.
 
 Duplicating (`POST /api/cms/v1/entries/:id/duplicate`) sets the copy's title to the `{ title }` in the body if given (the admin UI sends the original
-title with " (copy)" appended). Without it, the title is the original's as is. The store does not decide what to append.
+title with " (copy)" appended). Without it, the title is the original's as is. The core does not decide what to append; the copy goes through the same write pipeline as any other write.
 
 ## Remaining work
 

@@ -37,7 +37,7 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 });
 
 vi.mock("../../../container", () => ({
-	getCmsContentStore: () => ({ duplicateEntry }),
+	getCmsContentService: () => ({ duplicate: duplicateEntry }),
 }));
 
 const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
@@ -67,7 +67,7 @@ describe("Duplicate API Route", () => {
 		expect(duplicateEntry).toHaveBeenLastCalledWith({ id: "orig-1", title: undefined });
 	});
 
-	it("passes the caller's copy title to the store", async () => {
+	it("passes the caller's copy title to the service", async () => {
 		const res = await postDuplicate(
 			postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate", "http://localhost", { title: "Original (copy)" }),
 			{ params: Promise.resolve({ id: "orig-1" }) },

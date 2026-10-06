@@ -9,6 +9,7 @@ import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, type Entry, migrateContentStore } from "../content-store";
 import { isReferencesEqual } from "../store/rows";
+import { duplicateDraft, publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** A heading, three paragraphs and a list: blocks at two depths. */
@@ -48,7 +49,9 @@ describe("block ids in the store", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -70,7 +73,7 @@ describe("block ids in the store", () => {
 			...body,
 		} as never);
 
-	const publish = (entry: Entry) => store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+	const publish = (entry: Entry) => publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 	const docOf = (value: unknown): StoredDocument => {
 		const doc = readStoredDocument(value);
@@ -312,7 +315,7 @@ describe("block ids in the store", () => {
 			const original = await createDraft({ mdx: BODY });
 			const before = await stored(original.id, "working");
 
-			const copy = await store.duplicateEntry({ id: original.id });
+			const copy = await duplicateDraft(store, { id: original.id });
 
 			expect(idList(copy.working.doc)).toEqual(idList(original.working.doc));
 			expectUniqueIds(copy.working.doc);
@@ -322,7 +325,7 @@ describe("block ids in the store", () => {
 
 		it("the copy and the original do not affect each other's ids when one is edited", async () => {
 			const original = await createDraft({ mdx: BODY });
-			const copy = await store.duplicateEntry({ id: original.id });
+			const copy = await duplicateDraft(store, { id: original.id });
 
 			const edited = await save(copy, { mdx: BODY.replace("Third paragraph", "Third paragraph, reworded") });
 

@@ -47,8 +47,9 @@ const working = (version: number) => ({
 	folderId: null,
 });
 
-vi.mock("../../../container", () => ({
-	getCmsContentStore: () => ({
+vi.mock("../../../container", async () => {
+	const { createBulkService } = await import("../../../services/bulk-service");
+	const store = {
 		getWorkingReferences: vi.fn().mockResolvedValue([]),
 		getWorking: vi.fn().mockImplementation(({ entryId }: { entryId: string }) => {
 			if (entryId === MISSING) throw new CmsError("Entry not found", "not_found");
@@ -71,8 +72,9 @@ vi.mock("../../../container", () => ({
 		publishEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {
 			return Promise.resolve({ version: 4, id });
 		}),
-	}),
-}));
+	};
+	return { getCmsContentStore: () => store, getCmsBulkService: () => createBulkService(store as never) };
+});
 
 const postReq = (body: unknown) =>
 	new NextRequest("http://localhost/api/cms/v1/bulk", {

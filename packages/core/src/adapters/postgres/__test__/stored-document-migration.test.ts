@@ -11,6 +11,7 @@ import { createContentStore, type Entry, migrateContentStore } from "../content-
 import { extractVisibleText } from "../store/rows";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateStoredDocuments } from "../store/stored-document-migration";
+import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0013_stored_documents";
@@ -53,7 +54,9 @@ describe("0013_stored_documents", () => {
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
 		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -68,7 +71,7 @@ describe("0013_stored_documents", () => {
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
-		return store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	/** What a body looked like before the step: the text as given, no document, and a hash and search text that are not the current ones. */

@@ -14,7 +14,7 @@ import { createContentService } from "../../../services/content-service";
 import { ServiceError } from "../../../services/types";
 import type { ContentStore, Entry, EntryMetadata } from "../content-store";
 import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { seedEntry, seedSave } from "./seed";
+import { publishDraft, seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** First required-for-publish field that is not the title (category in the reference blog). Checks that publish is blocked when it is missing. */
@@ -122,7 +122,7 @@ describe("ContentStore", () => {
 		expect(saved1.workingSlug).toBe("draft-1-slug");
 		expect(saved1.publishedSlug ?? null).toBeNull();
 
-		const published = await store.publishEntry({ id: saved1.id, expectedVersion: saved1.version });
+		const published = await publishDraft(store, { id: saved1.id, expectedVersion: saved1.version });
 		expect(published.publishedSlug).toBe("draft-1-slug");
 
 		const savedAgain = await seedSave(store, published.id, {
@@ -152,7 +152,7 @@ describe("ContentStore", () => {
 
 		await new Promise((r) => setTimeout(r, 10));
 
-		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 		expect(published.working.updatedAt?.getTime()).toBe(initialWorkingUpdatedAt);
 		expect(published.published?.updatedAt?.getTime()).toBe(initialWorkingUpdatedAt);
@@ -280,7 +280,7 @@ describe("ContentStore", () => {
 				mdx: "first words",
 				contentHash: "hash-syntax-republish",
 			});
-			const firstPublish = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+			const firstPublish = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 			const saved = await seedSave(store, entry.id, {
 				expectedVersion: firstPublish.version,
@@ -291,7 +291,7 @@ describe("ContentStore", () => {
 			expect(saved.version).toBe(firstPublish.version);
 			expect(saved.working.mdx).toBe("second words");
 
-			const republished = await store.publishEntry({ id: entry.id, expectedVersion: saved.version });
+			const republished = await publishDraft(store, { id: entry.id, expectedVersion: saved.version });
 
 			expect(republished.version).toBe(firstPublish.version);
 			expect(republished.published).toEqual(firstPublish.published);
@@ -310,7 +310,7 @@ describe("ContentStore", () => {
 			contentHash: "same-hash",
 		});
 
-		const firstPublish = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const firstPublish = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 		const secondSave = await seedSave(store, entry.id, {
 			expectedVersion: firstPublish.version,
@@ -320,7 +320,7 @@ describe("ContentStore", () => {
 			contentHash: "same-hash",
 		});
 
-		const secondPublish = await store.publishEntry({ id: entry.id, expectedVersion: secondSave.version });
+		const secondPublish = await publishDraft(store, { id: entry.id, expectedVersion: secondSave.version });
 		expect(secondPublish.published?.metadata).toEqual(await filled("Hash Test Changed"));
 		expect(secondPublish.published?.mdx).toBe("hash test changed");
 		expect(secondPublish.published?.schemaVersion).toBe(2);
@@ -473,7 +473,7 @@ describe("ContentStore", () => {
 			contentHash: "hash-draft",
 		});
 
-		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 		expect(published.publishedAt).toBeDefined();
 
 		await seedSave(store, entry.id, {
@@ -505,7 +505,7 @@ describe("ContentStore", () => {
 			contentHash: "same-hash-ident",
 		});
 
-		const firstPublish = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const firstPublish = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 		const secondSave = await seedSave(store, entry.id, {
 			expectedVersion: firstPublish.version,
@@ -515,7 +515,7 @@ describe("ContentStore", () => {
 			contentHash: "same-hash-ident",
 		});
 
-		await store.publishEntry({ id: entry.id, expectedVersion: secondSave.version });
+		await publishDraft(store, { id: entry.id, expectedVersion: secondSave.version });
 
 		const reloaded = await store.getEntry(entry.id);
 		expect(reloaded.published).toEqual(firstPublish.published);
@@ -532,7 +532,7 @@ describe("ContentStore", () => {
 			contentHash: "hash-rollback-1",
 		});
 
-		const firstPublish = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const firstPublish = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 		const update = await seedSave(store, entry.id, {
 			expectedVersion: firstPublish.version,
@@ -553,7 +553,7 @@ describe("ContentStore", () => {
 			},
 		});
 
-		await expect(failingStore.publishEntry({ id: entry.id, expectedVersion: update.version })).rejects.toThrow();
+		await expect(publishDraft(failingStore, { id: entry.id, expectedVersion: update.version })).rejects.toThrow();
 
 		expect(hookReached).toBe(true);
 
@@ -571,7 +571,7 @@ describe("ContentStore", () => {
 			contentHash: "hash-c1",
 		});
 
-		const published = await store.publishEntry({ id: entry.id, expectedVersion: entry.version });
+		const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
 
 		const saved = await seedSave(store, entry.id, {
 			expectedVersion: published.version,
@@ -587,7 +587,7 @@ describe("ContentStore", () => {
 		expect(reloaded.publishedSlug).toBe("clear-slug-test");
 
 		// A draft without a slug cannot be published. The public URL stays as it is.
-		await expect(store.publishEntry({ id: entry.id, expectedVersion: saved.version })).rejects.toMatchObject({
+		await expect(publishDraft(store, { id: entry.id, expectedVersion: saved.version })).rejects.toMatchObject({
 			code: "publish_validation_failed",
 			issues: expect.arrayContaining([expect.objectContaining({ code: "null_slug" })]),
 		});
@@ -615,7 +615,7 @@ describe("ContentStore", () => {
 			contentHash: "validation-missing-required-hash",
 		});
 
-		await expect(store.publishEntry({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
+		await expect(publishDraft(store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
 			code: "publish_validation_failed",
 			issues: expect.arrayContaining([
 				expect.objectContaining({
@@ -697,12 +697,12 @@ describe("ContentStore", () => {
 			contentHash: "validation-link-source-hash",
 		});
 
-		await expect(store.publishEntry({ id: source.id, expectedVersion: source.version })).rejects.toMatchObject({
+		await expect(publishDraft(store, { id: source.id, expectedVersion: source.version })).rejects.toMatchObject({
 			code: "publish_validation_failed",
 			issues: expect.arrayContaining([expect.objectContaining({ code: "unpublished_internal_link" })]),
 		});
-		const publishedTarget = await store.publishEntry({ id: target.id, expectedVersion: target.version });
-		const publishedSource = await store.publishEntry({ id: source.id, expectedVersion: source.version });
+		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		const publishedSource = await publishDraft(store, { id: source.id, expectedVersion: source.version });
 		expect(publishedTarget.status).toBe("published");
 		expect(publishedSource.status).toBe("published");
 	});
@@ -732,7 +732,7 @@ describe("ContentStore", () => {
 				},
 				mdx: "",
 			});
-			const published = await store.publishEntry({ id: collectionDraft.id, expectedVersion: collectionDraft.version });
+			const published = await publishDraft(store, { id: collectionDraft.id, expectedVersion: collectionDraft.version });
 			expect(published.status).toBe("published");
 		},
 	);

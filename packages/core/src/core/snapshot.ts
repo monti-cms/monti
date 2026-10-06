@@ -129,7 +129,7 @@ export const serviceInputKeys = (input: unknown): readonly string[] => [
 ];
 
 /** The body of a service input in both forms. Blocks inherit their ids from `previous`, the body being replaced, where the input has none. */
-const inputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): Body => {
+export const inputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): Body => {
 	if (input.doc !== undefined) {
 		let size: number;
 		try {
@@ -800,44 +800,34 @@ const imageWarnings = (sources: readonly CmsImageSource[], media: ResolvedTarget
 };
 
 /**
- * Collects only the image warnings to include in the publish response. **Non-blocking**; if computation fails it returns an empty array.
+ * Collects only the image warnings to include in the publish response, for a snapshot the write pipeline prepared. **Non-blocking**; if computation fails it returns an empty array.
  *
  * For media that is `ready` with a `storageKey`, if `headStorageKey` is provided, the actual object in storage is checked once more.
  * If it is missing, an `image_media_missing_in_storage` warning is added. On an infrastructure error it falls back to the DB decision.
  */
-export async function imageWarningsForPublish(input: {
-	collection: Collection;
-	slug: string | null;
-	metadata: { readonly [key: string]: unknown };
-	mdx: string;
-	getMediaAsset: (id: string) => Promise<{ status?: string; storageKey?: string | null } | null>;
-	headStorageKey?: (storageKey: string) => Promise<boolean>;
-}): Promise<Issue[]> {
+export async function imageWarningsForSnapshot(
+	snapshot: PreparedSnapshot,
+	resolvers: {
+		getMediaAsset: (id: string) => Promise<{ status?: string; storageKey?: string | null } | null>;
+		headStorageKey?: (storageKey: string) => Promise<boolean>;
+	},
+): Promise<Issue[]> {
 	try {
-		const snapshot = await prepareSnapshot(
-			{
-				collection: input.collection,
-				slug: input.slug,
-				metadata: input.metadata,
-				mdx: input.mdx,
-			} as ServiceInput,
-			{ previousMetadata: input.metadata },
-		);
 		const mediaIds = [
 			...new Set(snapshot.imageSources.map((s) => s.mediaId).filter((v): v is string => typeof v === "string")),
 		];
 		const media: ResolvedTargets["media"] = [];
 		for (const id of mediaIds) {
-			const row = await input.getMediaAsset(id);
+			const row = await resolvers.getMediaAsset(id);
 			if (row) media.push({ id, status: row.status, storageKey: row.storageKey ?? null });
 		}
 		const warnings = [...(snapshot.warnings ?? []), ...imageWarnings(snapshot.imageSources, media)];
-		if (input.headStorageKey) {
+		if (resolvers.headStorageKey) {
 			const byId = new Map(media.map((row) => [row.id, row]));
 			for (const source of snapshot.imageSources) {
 				const row = source.mediaId ? byId.get(source.mediaId) : undefined;
 				if (row?.status !== "ready" || !row.storageKey) continue;
-				const exists = await input.headStorageKey(row.storageKey).catch(() => true);
+				const exists = await resolvers.headStorageKey(row.storageKey).catch(() => true);
 				if (!exists) {
 					warnings.push({ code: "image_media_missing_in_storage", message: row.storageKey, position: source.position });
 				}

@@ -1,3 +1,4 @@
+import { publishDraft } from "../src/adapters/postgres/__test__/seed";
 import type { ContentStore } from "../src/adapters/postgres/content-store";
 import { COLLECTIONS, type Collection, DOCUMENT_COLLECTIONS, isItemCollection } from "../src/core/collections";
 import { DEFAULT_LOCALE, LOCALES } from "../src/core/locales";
@@ -141,7 +142,7 @@ export function fillRequiredMetadata(store: ContentStore) {
 				publishImmediately: isItemCollection(to),
 			});
 			if (entry.status === "published") return entry.id;
-			return (await store.publishEntry({ id: entry.id, expectedVersion: entry.version })).id;
+			return (await publishDraft(store, { id: entry.id, expectedVersion: entry.version })).id;
 		})();
 		targets.set(to, created);
 		return created;

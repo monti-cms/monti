@@ -2,6 +2,7 @@ import type { ContentChange } from "../adapters/postgres/store/after-commit";
 import { cmsConfig } from "../config/resolved";
 import type { CmsServerConfig } from "../server/define";
 import { cmsServerConfig } from "../server/resolved";
+import type { HookSource } from "../services/hooks";
 import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute, PluginDatabase } from "./define";
 
 /** Plugins of the site config. A config without plugins has an empty tuple type, so it is widened for reading. */
@@ -62,16 +63,27 @@ export async function pluginFeatures(): Promise<Record<string, Readonly<Record<s
 	return Object.fromEntries(entries.filter((entry) => entry !== undefined));
 }
 
+/**
+ * Write hooks in the order they run: the server config first, then the plugins in the site config's order. Each is tagged with its owner
+ * (`server`, `plugin:<name>`), which a failing hook is reported with.
+ */
+export async function loadWriteHooks(): Promise<readonly HookSource[]> {
+	const serverConfig: CmsServerConfig = cmsServerConfig;
+	const sources: HookSource[] = serverConfig.hooks ? [{ owner: "server", hooks: serverConfig.hooks }] : [];
+	for (const plugin of await loadServerPlugins()) {
+		if (plugin.hooks) sources.push({ owner: `plugin:${plugin.name}`, hooks: plugin.hooks });
+	}
+	return sources;
+}
+
 /** Calls the server config's and the plugins' after-save notifications in turn (the rest are still called if one fails). */
 export async function notifyAfterCommit(change: ContentChange): Promise<void> {
-	const serverConfig: CmsServerConfig = cmsServerConfig;
-	const hooks = [serverConfig.afterCommit, ...(await loadServerPlugins()).map((plugin) => plugin.afterCommit)];
-	for (const hook of hooks) {
-		if (!hook) continue;
+	for (const { owner, hooks } of await loadWriteHooks()) {
+		if (!hooks.afterCommit) continue;
 		try {
-			await hook(change);
+			await hooks.afterCommit(change);
 		} catch (error) {
-			console.error("[cms] afterCommit failed", change.kind, change.entryId, error);
+			console.error(`[cms] afterCommit of ${owner} failed`, change.kind, change.entryId, error);
 		}
 	}
 }

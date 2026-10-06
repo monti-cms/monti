@@ -15,4 +15,16 @@ export { getCmsContentStore, getCmsMediaStore, getCmsSecret } from "./container"
 export { HttpError, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";
 export { getCmsDatabase, loadServerPlugins } from "./plugin/server";
+export type {
+	TransformHook,
+	ValidateHook,
+	ValidatePublishHook,
+	ValidationHookContext,
+	ValidationResult,
+	WriteData,
+	WriteHookContext,
+	WriteHooks,
+	WriteOperation,
+} from "./services/hooks";
+
 export * from "./text-check/route";

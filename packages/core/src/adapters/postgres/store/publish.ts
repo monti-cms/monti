@@ -2,8 +2,8 @@ import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
 import { isUuid } from "../../../core/ids";
 import { DEFAULT_LOCALE } from "../../../core/locales";
-import { prepareSnapshot, validateForPublish } from "../../../core/snapshot";
-import { type Collection, type Reference, ServiceError } from "../../../core/types";
+import { validateForPublish } from "../../../core/snapshot";
+import { type Collection, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
 import type { StoreContext } from "./context";
 import { CmsError } from "./errors";
 import { type AddressRow, loadEntry, lockEntryForUpdate, readBody, readReferences, writeBody } from "./rows";
@@ -11,6 +11,11 @@ import type { Entry, EntryStatus } from "./types";
 
 export interface PublishOptions {
 	expectedVersion: number;
+	/**
+	 * The prepared snapshot of the draft being published. The service builds it (hooks, normalization, reference collection) before the
+	 * transaction; the store only checks it against rows it has to lock (reference targets, media, link addresses) and never prepares content itself.
+	 */
+	snapshot: PreparedSnapshot;
 	/** On re-publish, reset the publish date to now. Otherwise keep the first publish time. */
 	resetPublishedAt?: boolean;
 }
@@ -21,18 +26,16 @@ export interface PublishOptions {
 export function createPublishing(ctx: StoreContext) {
 	const { qSchema, hooks } = ctx;
 
-	/** Re-validates the latest saved draft inside the transaction. Locks reference targets and internal link slugs. */
-	const validateStoredWorkingForPublish = async (client: PoolClient, entryId: string) => {
+	/** Checks the prepared snapshot of the draft inside the transaction. Locks reference targets and internal link slugs. */
+	const validatePreparedForPublish = async (client: PoolClient, entryId: string, snapshot: PreparedSnapshot) => {
 		const entryRes = await client.query<{
 			collection: Collection;
-			working_slug: string | null;
 			version: number;
 			translation_group_id: string | null;
-		}>(`SELECT collection, working_slug, version, translation_group_id FROM "${qSchema}".entries WHERE id = $1`, [
-			entryId,
-		]);
+		}>(`SELECT collection, version, translation_group_id FROM "${qSchema}".entries WHERE id = $1`, [entryId]);
 		const entry = entryRes.rows[0];
 		if (!entry) throw new CmsError("Entry not found", "not_found");
+		if (entry.collection !== snapshot.collection) throw new CmsError("Collection mismatch", "invalid_input");
 		// A translation locks its source and checks its published status, so the source cannot leave the public layer during publish.
 		const translation = entry.translation_group_id
 			? {
@@ -45,14 +48,8 @@ export function createPublishing(ctx: StoreContext) {
 						).rows[0]?.status === "published",
 				}
 			: undefined;
-		const body = await readBody(client, qSchema, entryId, "working");
-		if (!body) throw new CmsError("Working draft not found", "not_found");
 		const previousReferences = await readReferences(client, qSchema, entryId, "working");
 
-		const snapshot = await prepareSnapshot(
-			{ collection: entry.collection, slug: entry.working_slug, metadata: body.metadata as never, mdx: body.mdx },
-			{ previousReferences, previousMetadata: body.metadata },
-		);
 		// Even stale leftover references are checked before publish to confirm the target still exists.
 		const merged = new Map<string, Reference>(snapshot.references.map((ref) => [`${ref.kind}:${ref.targetId}`, ref]));
 		for (const ref of previousReferences) {
@@ -157,7 +154,7 @@ export function createPublishing(ctx: StoreContext) {
 			throw new CmsError("An archived entry must be unarchived before publishing", "invalid_status");
 		}
 
-		await validateStoredWorkingForPublish(client, id);
+		await validatePreparedForPublish(client, id, options.snapshot);
 
 		const working = await readBody(client, qSchema, id, "working");
 		if (!working) throw new CmsError("Working draft not found", "not_found");
@@ -289,7 +286,7 @@ export function createPublishing(ctx: StoreContext) {
 		}
 	};
 
-	return { validateStoredWorkingForPublish, publishWithinTransaction, lockDraftReferenceTargets, assertNotReferenced };
+	return { validatePreparedForPublish, publishWithinTransaction, lockDraftReferenceTargets, assertNotReferenced };
 }
 
 export type Publishing = ReturnType<typeof createPublishing>;

@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
+import { publishDraft } from "../../../adapters/postgres/__test__/seed";
 import {
 	closeGlobalPool,
 	createIsolatedTestPool,
@@ -75,7 +76,9 @@ describe("entry API with a stored document", () => {
 			mdx: "Body",
 		});
 		const published =
-			draft.status === "published" ? draft : await store.publishEntry({ id: draft.id, expectedVersion: draft.version });
+			draft.status === "published"
+				? draft
+				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};

@@ -9,7 +9,13 @@ export interface StorePort<T = unknown> {
 	archiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	unarchiveEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
 	trashEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
-	publishEntry(params: { id: string; expectedVersion: number }): Promise<{ version: number }>;
+	/** Publishes the saved draft. `snapshot` is the draft as the write pipeline prepared it; the store only checks it against rows it locks. */
+	publishEntry(params: {
+		id: string;
+		expectedVersion: number;
+		snapshot: PreparedSnapshot;
+		resetPublishedAt?: boolean;
+	}): Promise<{ version: number }>;
 
 	createEntryWithReferences(params: {
 		snapshot: PreparedSnapshot;
@@ -26,5 +32,11 @@ export interface StorePort<T = unknown> {
 		references: readonly Reference[];
 		folderId?: string | null;
 		publishImmediately?: boolean;
+		resetPublishedAt?: boolean;
 	}): Promise<T>;
+}
+
+/** What a restore needs from the store, on top of `StorePort`. A record is published again on restore, so it needs its prepared draft (`snapshot`). */
+export interface RestorePort<T = unknown> {
+	restoreEntry(params: { id: string; expectedVersion: number; snapshot?: PreparedSnapshot }): Promise<T>;
 }
