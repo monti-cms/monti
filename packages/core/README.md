@@ -283,7 +283,8 @@ Everything else imports `cms` from this file.
 
 | Where | Code |
 | --- | --- |
-| Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` |
+| Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` (the Next adapter of `cms.handle(request)`) |
+| Admin API in a host other than Next (experimental) | `cms.handle(request)`: a standard `Request` in, a `Response` out |
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` |
 | Public media | `cms.read.imageResolver(mdx)` (for `renderMdx`'s `imageResolver`), `cms.read.mediaUrl(mediaId)` |
@@ -291,6 +292,11 @@ Everything else imports `cms` from this file.
 | Scripts and the command line | `cms.migrate()`, `cms.rewrite({ apply })`, `cms.close()` |
 | Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
 | Tests | `fakeCms({ store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides |
+
+**HTTP layer.** The admin API, the login connection, the public API and the plugin routes work on the standard web `Request` and `Response`; no `NextRequest`, `NextResponse` or `request.nextUrl` is used.
+`cms.handle(request)` serves one request (the path after `/api/cms/` is read from the URL), and `cms.routeHandler()` is the thin Next adapter built on it.
+Plugin routes (`adminRoute`) receive a standard `Request`: read the query with `new URL(request.url).searchParams` and answer with `Response.json(…)`.
+Using `handle` in a host other than Next is experimental: the admin screen, the login connection (Auth.js) and the admin check still read Next's request context, so only the API routes are host-neutral for now.
 
 The reading API hangs off the instance (`cms.read.getEntry(…)`, not `getEntry(cms, …)`): site code imports one thing, and its types (`MetadataFor` and so on) stay in `@monti-cms/core/read`.
 
@@ -305,6 +311,7 @@ Changing the database connection itself needs a restart. In production and in te
 
 - `cms.server.ts` no longer default-exports the server config. Wrap it: `export const cms = createCms({ server: defineServerConfig({ … }) })` (`createCms` is in `@monti-cms/core/server`).
 - Remove `"@cms-server"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`. `withCms(nextConfig, { config })` takes no `server` option any more.
+- Plugin routes and custom admin routes get a standard `Request` instead of `NextRequest`: replace `request.nextUrl` with `new URL(request.url)` and `NextResponse.json` with `Response.json`. `CmsRouteHandler` now lives in `@monti-cms/core/next` and `createRouteHandler` is replaced by `cms.handle()`.
 - The admin API route is `cms.routeHandler()`. `createCmsRouteHandler` and the `@monti-cms/core/next/route-handler` entry point are gone.
 - Pass the instance to the admin: `<CmsAdminLayout cms={cms}>` and `<CmsAdminPage cms={cms} {...props} />` (the page file becomes a small component; `monti init` shows the shape).
 - Site pages read through `cms.read.*` instead of the free functions of `@monti-cms/core/read`; `cms.read.imageResolver(mdx)` replaces `createPublicImageResolver(mdx)` and `cms.read.mediaUrl(id)` replaces `resolvePublicMediaUrl(id)`.

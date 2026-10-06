@@ -283,7 +283,8 @@ export const cms = createCms({
 
 | 어디서 | 코드 |
 | --- | --- |
-| 관리자 API 라우트(`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` |
+| 관리자 API 라우트(`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` (`cms.handle(request)`의 Next 어댑터) |
+| Next가 아닌 호스트의 관리자 API(실험적) | `cms.handle(request)`: 표준 `Request`를 받아 `Response`를 돌려준다 |
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)` |
 | 공개 미디어 | `cms.read.imageResolver(mdx)`(`renderMdx`의 `imageResolver`), `cms.read.mediaUrl(mediaId)` |
@@ -291,6 +292,12 @@ export const cms = createCms({
 | 스크립트·명령줄 | `cms.migrate()`·`cms.rewrite({ apply })`·`cms.close()` |
 | 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
 | 테스트 | `@monti-cms/core/testing`의 `fakeCms({ store, verifyAdmin, … })`: 테스트가 준 부품 위에 만든 진짜 인스턴스 |
+
+HTTP 계층은 표준 웹 `Request`와 `Response`로 동작한다.
+관리자 API, 로그인 연결, 공개 API, 플러그인 라우트에는 `NextRequest`, `NextResponse`, `request.nextUrl`을 쓰지 않는다.
+`cms.handle(request)`가 요청 하나를 처리하고(`/api/cms/` 뒤의 경로는 URL에서 읽는다), `cms.routeHandler()`는 그 위에 얹은 얇은 Next 어댑터다.
+플러그인 라우트(`adminRoute`)는 표준 `Request`를 받는다. 쿼리는 `new URL(request.url).searchParams`로 읽고, 응답은 `Response.json(…)`으로 만든다.
+Next가 아닌 호스트에서 `handle`을 쓰는 것은 실험적이다. 관리자 화면, 로그인 연결(Auth.js), 관리자 확인은 아직 Next의 요청 컨텍스트를 읽으므로, 지금은 API 라우트만 호스트에 묶이지 않는다.
 
 읽기 API는 인스턴스에 달려 있다(`getEntry(cms, …)`가 아니라 `cms.read.getEntry(…)`). 사이트 코드가 하나만 불러오면 되고, 타입(`MetadataFor` 등)은 `@monti-cms/core/read`에 남는다.
 
@@ -305,6 +312,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 
 - `cms.server.ts`는 더 이상 서버 설정을 default로 내보내지 않는다. 감싼다: `export const cms = createCms({ server: defineServerConfig({ … }) })`(`createCms`는 `@monti-cms/core/server`에 있다).
 - `tsconfig.json` `paths`와 Vitest `resolve.alias`에서 `"@cms-server"`를 지운다. `withCms(nextConfig, { config })`는 `server` 옵션을 받지 않는다.
+- 플러그인 라우트와 직접 만든 관리자 라우트는 `NextRequest` 대신 표준 `Request`를 받는다. `request.nextUrl`은 `new URL(request.url)`로, `NextResponse.json`은 `Response.json`으로 바꾼다. `CmsRouteHandler`는 `@monti-cms/core/next`로 옮겼고 `createRouteHandler`는 `cms.handle()`로 대체됐다.
 - 관리자 API 라우트는 `cms.routeHandler()`다. `createCmsRouteHandler`와 `@monti-cms/core/next/route-handler` 진입점은 없어졌다.
 - 관리자에 인스턴스를 넘긴다: `<CmsAdminLayout cms={cms}>`, `<CmsAdminPage cms={cms} {...props} />`(페이지 파일이 작은 컴포넌트가 된다. 모양은 `monti init`이 보여 준다).
 - 사이트 페이지는 `@monti-cms/core/read`의 자유 함수 대신 `cms.read.*`로 읽는다. `createPublicImageResolver(mdx)`는 `cms.read.imageResolver(mdx)`, `resolvePublicMediaUrl(id)`는 `cms.read.mediaUrl(id)`가 대신한다.
