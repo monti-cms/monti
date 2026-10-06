@@ -178,7 +178,9 @@ const checker = remoteTextChecker({ id: "bareun", label: "바른", locales: ["ko
 
 // app/api/text-check/route.ts(서버)
 import { textCheckRoute } from "@monti-cms/core/plugin/server";
+import { cms } from "../../../cms.server";
 export const POST = textCheckRoute({
+	cms, // 앱의 라우트 파일은 관리자 확인에 쓸 인스턴스를 적는다
 	limits: { maxChars: 20_000 },
 	check: async (segments, { signal }) => callProvider(segments, process.env.MY_API_KEY, signal), // TextIssue[]
 });
@@ -247,10 +249,10 @@ export default defineAdminPlugin({
 - **그 밖에.** 배포 묶음의 Tailwind 클래스 찾기(`@source`), 테두리·포커스 윤곽 기본색, 관리자 문서의 둥글기(`--radius*`) 값(Tailwind 기본
   이름이라 관리자가 있는 문서에서만 바뀐다).
 
-`CmsAdminLayout`의 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
+`CmsAdminLayout`은 CMS 인스턴스(`cms`, 앱의 `cms.server.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
 
 ```tsx
-<CmsAdminLayout themeProvider={false} toaster={false}>
+<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>
 	{children}
 </CmsAdminLayout>
 ```
