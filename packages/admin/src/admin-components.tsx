@@ -136,7 +136,7 @@ export interface EditorMarkExtension extends EditorMarkSpec {
 	readonly insertActions?: readonly EditorInsertAction[];
 }
 
-export type { BrowserFormat, BrowserImportResult } from "./browser-format";
+export type { BrowserExportOptions, BrowserFormat, BrowserImportResult } from "./browser-format";
 
 /**
  * What a source panel receives. The panel edits the body as text in the notation of its format and hands the result back as a stored document: the

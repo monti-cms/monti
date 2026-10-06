@@ -1,4 +1,12 @@
-import { adminUrl, contentPath, createTranslator, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
+import {
+	adminUrl,
+	contentPath,
+	createTranslator,
+	DEFAULT_LOCALE,
+	LINKABLE_COLLECTIONS,
+	localizePath,
+	PREFIXED_LOCALES,
+} from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import React from "react";
@@ -36,6 +44,7 @@ const entryRow = (changes: Record<string, unknown> = {}) => ({
 	id: TARGET,
 	collection: COLLECTION,
 	status: "published",
+	locale: DEFAULT_LOCALE,
 	workingSlug: "hello-draft",
 	publishedSlug: "hello",
 	working: { metadata: { title: "안녕하세요" } },
@@ -94,11 +103,21 @@ describe("where an internal link goes, shown in the editor", () => {
 		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });
 		expect(link.textContent).toContain("안녕하세요");
 		// The address readers see is the published one.
-		const path = contentPath(COLLECTION, "hello") as string;
+		const path = localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "hello") as string);
 		expect(link.textContent).toContain(path);
 		expect(link.getAttribute("href")).toBe(path);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		expect(String(fetchMock.mock.calls[0]?.[0])).toContain(`/v1/entries/${TARGET}`);
+	});
+
+	it("shows and opens the address with the locale prefix the site gives the entry's language", async () => {
+		const locale = PREFIXED_LOCALES[0] ?? DEFAULT_LOCALE;
+		fetchMock.mockImplementation(async () => respond(entryRow({ locale })));
+		renderBubble(openOnDocument());
+		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });
+		const expected = localizePath(locale, contentPath(COLLECTION, "hello") as string);
+		expect(link.getAttribute("href")).toBe(expected);
+		expect(link.textContent).toContain(expected);
 	});
 
 	it("opens the entry in the admin while it is not published, and says so", async () => {
@@ -109,7 +128,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		const link = await screen.findByRole("link", { name: t("link.targetOpenAdmin", { title: "안녕하세요" }) });
 		expect(link.getAttribute("href")).toBe(adminUrl(`/entries/${TARGET}/edit`));
 		expect(link.textContent).toContain(t("link.targetDraft"));
-		expect(link.textContent).toContain(contentPath(COLLECTION, "hello-draft") as string);
+		expect(link.textContent).toContain(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "hello-draft") as string));
 	});
 
 	it("says so when the entry is gone, and when it cannot be looked up", async () => {
@@ -147,7 +166,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		editor.view.focus();
 		renderBubble(editor);
 		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "방금 고른 글" }) });
-		expect(link.getAttribute("href")).toBe(contentPath(COLLECTION, "picked"));
+		expect(link.getAttribute("href")).toBe(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "picked") as string));
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 

@@ -4,10 +4,10 @@ import type { StoredDocument } from "@monti-cms/core/document";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
-import { useCmsAdminComponents } from "../../admin-components";
+import { useCmsAdminComponents, useSourceFormat } from "../../admin-components";
 import { documentKey } from "../../editor/document-key";
 import { buildEditorExtensions } from "../../editor/extensions";
-import { storedToTiptap } from "../../editor/tiptap-content";
+import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { t } from "./translate";
@@ -23,12 +23,13 @@ const PROSE =
 function PreviewEditor({ doc, label }: { doc: StoredDocument; label: string }) {
 	// Render text-decoration extensions (text color etc.) the same as in the editor.
 	const { marks } = useCmsAdminComponents();
+	const boxPreview = boxPreviewOf(useSourceFormat());
 	const [extensions] = useState(() => buildEditorExtensions(marks));
 	const editor = useEditor({
 		immediatelyRender: false,
 		editable: false,
 		extensions,
-		content: storedToTiptap(doc),
+		content: storedToTiptap(doc, { boxPreview }),
 		editorProps: { attributes: { "aria-label": label, class: PROSE } },
 	});
 	return <EditorContent editor={editor} />;

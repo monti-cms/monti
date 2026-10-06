@@ -3,13 +3,16 @@
 import { createTranslator } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
+	entryLinkIds,
 	forEachBlock,
 	isUnparsedDocument,
+	mapLinkAttrs,
 	type StoredDocument,
 	unparsedDocument,
 } from "@monti-cms/core/document";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SourcePanelProps } from "../admin-components";
+import { useLinkPaths } from "../editor/link-targets";
 import { mdxBrowserFormat } from "./format";
 import { MdxSourceEditor } from "./mdx-source-editor";
 import { mdxSourceMessages } from "./messages";
@@ -48,7 +51,14 @@ const offsetOfLine = (text: string, line: number): number => {
  * typed. A text that does not read becomes a document holding it as it is (one `unparsed` node), so a draft keeps it and no keystroke is lost.
  */
 export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposing }: SourcePanelProps) {
-	const [text, setText] = useState(() => mdxBrowserFormat.export(doc));
+	// A link to an entry is written with the entry's address, so a writer sees and types real addresses. The entries are looked up (the way the link bubble does), and the
+	// text is written again when their addresses arrive, unless it was edited meanwhile. A link that cannot be resolved keeps its id (`entry:<id>`).
+	const ids = useMemo(() => entryLinkIds(doc.content), [doc]);
+	const pathOf = useLinkPaths(ids);
+	const resolved = ids.map((id) => pathOf(id) ?? "").join("|");
+	const write = (value: StoredDocument) => mdxBrowserFormat.export(value, { link: pathOf });
+	const [text, setText] = useState(() => write(doc));
+	const written = useRef(text);
 	const [failed, setFailed] = useState(() => isUnparsedDocument(doc));
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	// The document the panel last handed back or reported on. A `doc` that is something else came from outside (a template, the visual editor): its text
@@ -58,7 +68,8 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 	useEffect(() => {
 		if (doc === known.current) return;
 		known.current = doc;
-		const source = mdxBrowserFormat.export(doc);
+		const source = write(doc);
+		written.current = source;
 		setText(source);
 		const unreadable = isUnparsedDocument(doc);
 		setFailed(unreadable);
@@ -66,12 +77,28 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 		onChange(doc, read && !read.ok ? read.issues : []);
 	}, [doc]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when addresses arrive
+	useEffect(() => {
+		const current = known.current ?? doc;
+		if (isUnparsedDocument(current) || text !== written.current) return;
+		const source = write(current);
+		if (source === text) return;
+		written.current = source;
+		setText(source);
+	}, [resolved]);
+
 	const change = (next: string) => {
 		setText(next);
 		const read = mdxBrowserFormat.import(next);
 		if (read.ok) {
+			// A link typed with the address of an entry the body already links to is that link (the server turns other paths into ids on save).
+			const entryOf = new Map(ids.flatMap((id) => (pathOf(id) ? [[pathOf(id) as string, id] as const] : [])));
+			const linked = mapLinkAttrs(read.doc.content, (attrs) => {
+				const id = typeof attrs.href === "string" ? entryOf.get(attrs.href) : undefined;
+				return id ? { entryId: id } : undefined;
+			}) as StoredDocument["content"];
 			// The blocks of the text keep the ids of the blocks they pair with.
-			const merged = { ...read.doc, content: assignBlockIds(read.doc.content, [doc.content]) };
+			const merged = { ...read.doc, content: assignBlockIds(linked, [doc.content]) };
 			known.current = merged;
 			setFailed(false);
 			onChange(merged, read.warnings);

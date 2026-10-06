@@ -41,7 +41,12 @@ import {
 	useState,
 } from "react";
 import { toast } from "sonner";
-import { type EditorInsertAction, type EditorSelectionAction, useCmsAdminComponents } from "../admin-components";
+import {
+	type EditorInsertAction,
+	type EditorSelectionAction,
+	useCmsAdminComponents,
+	useSourceFormat,
+} from "../admin-components";
 import { errorText } from "../screens/admin-api";
 import { MEDIA_NOT_CONFIGURED } from "../screens/api-error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
@@ -77,7 +82,7 @@ import {
 } from "./slash-command";
 import { SlashMenuPopup } from "./slash-menu-popup";
 import { TableToolbar } from "./table-toolbar";
-import { storedToTiptap, tiptapToStored } from "./tiptap-content";
+import { boxPreviewOf, storedToTiptap, tiptapToStored } from "./tiptap-content";
 import { ToolbarButton, type ToolbarItem } from "./toolbar-button";
 import { type ToolbarEntry, ToolbarMenuGroup, ToolbarMenuItem, ToolbarMenuSection, ToolbarRow } from "./toolbar-row";
 import { uploadAttachment } from "./upload-helper";
@@ -404,7 +409,9 @@ export function CmsEditor({
 	const canEdit = editable && !isSourceMode;
 	const { media } = useAdminFeatures();
 	// A body opened in source mode may be unparsable. The visual editor starts as an empty document and is filled when returning.
-	const [initialContent] = useState(() => storedToTiptap(isSourceMode ? emptyStoredDocument() : doc));
+	const sourceFormat = useSourceFormat();
+	const boxPreview = useMemo(() => boxPreviewOf(sourceFormat), [sourceFormat]);
+	const [initialContent] = useState(() => storedToTiptap(isSourceMode ? emptyStoredDocument() : doc, { boxPreview }));
 	const isInternalUpdateRef = useRef(false);
 	// Width of the element at the right end of the toolbar. Leave this much space on both sides so the tool group stays centered.
 	const asideRef = useRef<HTMLDivElement>(null);
@@ -627,7 +634,7 @@ export function CmsEditor({
 			// Bodies are compared by what they say (`documentKey`): comparing Tiptap JSON objects breaks due to key order, and block ids are not content.
 			if (documentKey(tiptapToStored(editor.getJSON())) === documentKey(doc)) return;
 			// Blocks keep the ids the document gives them.
-			const next = storedToTiptap(doc);
+			const next = storedToTiptap(doc, { boxPreview });
 			isInternalUpdateRef.current = true;
 			editor.commands.setContent(next, { emitUpdate: false });
 			isInternalUpdateRef.current = false;
@@ -635,7 +642,7 @@ export function CmsEditor({
 		return () => {
 			cancelled = true;
 		};
-	}, [doc, editor, isSourceMode]);
+	}, [doc, editor, isSourceMode, boxPreview]);
 
 	// Toolbar tools read editor.isEditable while rendering. After changing the lock, render once more to sync tool state.
 	const [, rerender] = useReducer((count: number) => count + 1, 0);

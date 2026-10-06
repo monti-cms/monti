@@ -10,7 +10,7 @@ import { ADDED_MARKS, addedMarkName, createAddedMark } from "../added-marks";
 import { BLOCK_NODES } from "../block-views";
 import { ADDED_BLOCK_NODES } from "../blocks/added";
 import { CmsLinkEntryId } from "../link-entry-id";
-import { OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "../tiptap-content";
+import { boxPreviewOf, OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "../tiptap-content";
 import { CMS_SCHEMA_EXTENSIONS } from "../tiptap-schema";
 
 /**
@@ -186,6 +186,22 @@ describe("stored document <-> Tiptap round trip", () => {
 		// A copy of the box gets a new id from the editor, and the saved node follows it.
 		const copied = { ...json, content: [{ ...box, attrs: { ...box?.attrs, blockId: "zzzzzzzz" } }] } as JSONContent;
 		expect(tiptapToStored(copied).content[0]?.id).toBe("zzzzzzzz");
+	});
+
+	it("shows a box's node written in the registered format, and as JSON when there is none", () => {
+		const doc = docOf('A<br data-x="1" />B');
+		const plain = storedToTiptap(doc).content?.[0];
+		expect(plain?.type).toBe(OPAQUE_BLOCK_NAME);
+		expect(plain?.attrs?.preview).toBe("");
+
+		const written = storedToTiptap(doc, { boxPreview: boxPreviewOf(mdxBrowserFormat) }).content?.[0];
+		expect(written?.attrs?.preview).toBe(mdxOfDoc({ ...doc, content: [doc.content[0] as never] }).trim());
+		expect(written?.attrs?.preview).toContain("<br");
+		// What is shown is not what is saved: the box still holds the stored node.
+		expect(tiptapToStored({ type: "doc", content: [written as JSONContent] }).content).toEqual(doc.content);
+		expect(
+			throughSchema(storedToTiptap(doc, { boxPreview: boxPreviewOf(mdxBrowserFormat) })).content?.[0]?.attrs?.preview,
+		).toContain("<br");
 	});
 
 	it("keeps a body that could not be read as a box holding its text", () => {

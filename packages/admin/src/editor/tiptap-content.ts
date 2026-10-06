@@ -7,6 +7,7 @@ import {
 	isBlockId,
 	STORED_DOCUMENT_VERSION,
 	sortMarks,
+	UNPARSED_NODE,
 } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
 import { ADDED_MARK_BY_EDITOR_NAME, ADDED_MARKS, addedMarkName, markAttrsOf } from "./added-marks";
@@ -55,10 +56,16 @@ const TEXT_ALIGN_VALUES: ReadonlySet<string> = new Set(ALIGN_VALUES);
 /** The first node of a list, for a container that holds exactly one. */
 const onlyChild = (node: CmsNode): CmsNode | undefined => (node.content?.length === 1 ? node.content[0] : undefined);
 
+/** Writes a node as text for the box that shows it (the registered source format), or gives `""` for the box to show the node as JSON. */
+export type BoxPreview = (node: CmsNode) => string;
+
+let previewWriter: BoxPreview | undefined;
+
 /** Wraps a subtree in a box. `node` is the stored node as JSON (read back as it is on save), so nothing the box holds is lost. */
 const toOpaque = (node: CmsNode): JSONContent => {
+	const preview = previewWriter && node.type !== UNPARSED_NODE ? previewWriter(node) : "";
 	const named = typeof node.attrs?.name === "string" && node.attrs.name.length > 0 ? node.attrs.name : node.type;
-	return { type: OPAQUE_BLOCK_NAME, attrs: { node: JSON.stringify(node), label: named } };
+	return { type: OPAQUE_BLOCK_NAME, attrs: { node: JSON.stringify(node), label: named, preview } };
 };
 
 const isMappableInline = (node: CmsNode): boolean => {
@@ -238,17 +245,36 @@ const convertBlockToTiptap = (node: CmsNode): JSONContent => {
 };
 
 /** A stored document → Tiptap JSON, with its block ids. Converts what it can; a body that could not be read stays a box holding it. */
-export const storedToTiptap = (doc: StoredDocument): JSONContent => ({
-	type: "doc",
-	content: doc.content.map((block) => {
+export const storedToTiptap = (doc: StoredDocument, options: { boxPreview?: BoxPreview } = {}): JSONContent => {
+	previewWriter = options.boxPreview;
+	try {
+		return {
+			type: "doc",
+			content: doc.content.map((block) => {
+				try {
+					return blockToTiptap(block);
+				} catch {
+					// Even on a mapping bug the body is not dropped — keeping it as a box makes saving exact.
+					return toOpaque(block);
+				}
+			}),
+		};
+	} finally {
+		previewWriter = undefined;
+	}
+};
+
+/** The box preview for a format: the node as a one-block document written in it. A node the format cannot write is shown as JSON. */
+export const boxPreviewOf =
+	(format: { export(doc: StoredDocument): string } | undefined): BoxPreview | undefined =>
+	(node) => {
+		if (!format) return "";
 		try {
-			return blockToTiptap(block);
+			return format.export({ type: "doc", version: STORED_DOCUMENT_VERSION, content: [node] }).trim();
 		} catch {
-			// Even on a mapping bug the body is not dropped — keeping it as a box makes saving exact.
-			return toOpaque(block);
+			return "";
 		}
-	}),
-});
+	};
 
 const tiptapMarksToStored = (marks: JSONContent["marks"]): CmsMark[] => {
 	const out: CmsMark[] = [];

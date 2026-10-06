@@ -13,12 +13,20 @@ export interface BrowserFormat {
 	 * Document → text, written to be read again: an internal link keeps the id of its entry and an image keeps its media id, so `import` returns what was given.
 	 * A node the format does not know is kept as the format can.
 	 */
-	export(doc: StoredDocument): string;
+	export(doc: StoredDocument, options?: BrowserExportOptions): string;
 	/**
 	 * Text → document. Block ids are not given (they are core's: pair the blocks with the body the text replaces with `assignBlockIds`). A text the format
 	 * cannot read is `ok: false` with its findings.
 	 */
 	import(text: string): BrowserImportResult;
+}
+
+export interface BrowserExportOptions {
+	/**
+	 * The address of the entry a link points to, when it is known (look entries up first: this is synchronous). A link that resolves is written with its address,
+	 * so a writer sees and types real addresses; one that does not keeps its id.
+	 */
+	readonly link?: (entryId: string) => string | null;
 }
 
 export type BrowserImportResult =

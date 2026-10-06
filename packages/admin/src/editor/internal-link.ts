@@ -1,4 +1,4 @@
-import { contentPath } from "@monti-cms/core/client";
+import { contentPath, DEFAULT_LOCALE, localizePath } from "@monti-cms/core/client";
 import type { Editor, Range } from "@tiptap/core";
 import { rememberLinkTarget } from "./link-targets";
 
@@ -8,6 +8,8 @@ export interface InternalLinkItem {
 	collection: string;
 	title: string;
 	slug: string;
+	/** Language of the entry, which gives its address the locale prefix. */
+	locale?: string;
 	/** State of the target. Links to draft targets are allowed while editing but flagged. */
 	status?: string;
 }
@@ -17,7 +19,8 @@ export interface InternalLinkItem {
  * the entry, so a later rename of the slug changes nothing in the body. `null` for a collection without a path, which cannot be linked to.
  */
 export function internalLinkHref(item: InternalLinkItem): string | null {
-	return contentPath(item.collection, item.slug);
+	const path = contentPath(item.collection, item.slug);
+	return path ? localizePath(item.locale ?? DEFAULT_LOCALE, path) : null;
 }
 
 /**

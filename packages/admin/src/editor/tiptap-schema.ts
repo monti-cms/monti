@@ -46,6 +46,8 @@ export const CmsOpaqueBlock = Node.create({
 	addAttributes() {
 		return {
 			node: { default: "" },
+			/** The node written in the registered source format, for showing it. Not saved. */
+			preview: { default: "" },
 			label: { default: t("opaqueBlock.label") },
 		};
 	},
@@ -62,6 +64,7 @@ export const CmsOpaqueBlock = Node.create({
 	},
 	renderHTML({ node }) {
 		const held = String(node.attrs.node ?? "");
+		const written = String(node.attrs.preview ?? "");
 		const label = String(node.attrs.label ?? t("opaqueBlock.label"));
 		return [
 			"div",
@@ -77,7 +80,7 @@ export const CmsOpaqueBlock = Node.create({
 				{ class: "text-xs font-medium text-neutral-500 cms-dark:text-neutral-400" },
 				t("opaqueBlock.editInSource", { label }),
 			],
-			["pre", { class: "mt-2 overflow-x-auto whitespace-pre-wrap text-xs" }, previewOf(held)],
+			["pre", { class: "mt-2 overflow-x-auto whitespace-pre-wrap text-xs" }, written || previewOf(held)],
 		];
 	},
 });

@@ -10,12 +10,15 @@ import type { BrowserFormat } from "../browser-format";
 
 /**
  * The context a text for an editor is written with: purpose `sync`, so the text can be read again as it is. An internal link keeps the id of its entry
- * (`entry:<id>`) and an image keeps its media id; nothing is resolved because the text is not for a reader of the site.
+ * (`entry:<id>`) and an image keeps its media id, unless the caller can give the address of the entry (`options.link`).
  */
-const exportContext = (): FormatExportContext => ({
+const exportContext = (link?: (entryId: string) => string | null): FormatExportContext => ({
 	...builtInFormatContext(DEFAULT_LOCALE),
 	purpose: "sync",
-	link: () => null,
+	link: (entryId) => {
+		const url = link?.(entryId);
+		return url ? { url, title: null, locale: DEFAULT_LOCALE } : null;
+	},
 	media: () => null,
 	report: () => {},
 });
@@ -23,8 +26,8 @@ const exportContext = (): FormatExportContext => ({
 export const mdxBrowserFormat: BrowserFormat = {
 	name: mdxFormat.name,
 	label: mdxFormat.label,
-	export(doc) {
-		const text = mdxFormat.export(doc, exportContext());
+	export(doc, options) {
+		const text = mdxFormat.export(doc, exportContext(options?.link));
 		// The built-in format is synchronous; a format that is not cannot run where the editor needs the text at once.
 		if (typeof text !== "string") throw new TypeError("The mdx format must write synchronously");
 		return text;

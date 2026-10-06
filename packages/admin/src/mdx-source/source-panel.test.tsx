@@ -1,9 +1,16 @@
-import { createTranslator } from "@monti-cms/core/client";
+import {
+	contentPath,
+	createTranslator,
+	DEFAULT_LOCALE,
+	LINKABLE_COLLECTIONS,
+	localizePath,
+} from "@monti-cms/core/client";
 import { isBlockId, STORED_DOCUMENT_VERSION, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CmsAdminComponentsProvider, useCmsAdminComponents, useFormat, useSourceFormat } from "../admin-components";
+import { resetLinkTargets } from "../editor/link-targets";
 import { docOf, mdxOfDoc } from "../test/mdx";
 import { mdxBrowserFormat } from "./format";
 import { mdxSourceMessages } from "./messages";
@@ -125,6 +132,65 @@ describe("the MDX source panel", () => {
 			expect(lineOfBlock(docOf("문단"), "zzzzzzzz")).toBeNull();
 			expect(lineOfBlock(unparsedDocument("<A>", null, "mdx"), "zzzzzzzz")).toBe(1);
 		});
+	});
+});
+
+describe("internal links in the source text", () => {
+	const ID = "6f1c0b0e-3c1d-4a0e-9f5a-0d9c2f1e7a11";
+	const COLLECTION = LINKABLE_COLLECTIONS[0] as string;
+	const PATH = localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "details") as string);
+	const linked = () => docOf(`앞 [상세 글](entry:${ID}) 뒤\n`);
+	const answer = (ok: boolean) =>
+		vi.fn(async () =>
+			ok
+				? {
+						ok: true,
+						status: 200,
+						json: async () => ({
+							id: ID,
+							collection: COLLECTION,
+							status: "published",
+							locale: DEFAULT_LOCALE,
+							workingSlug: "details",
+							publishedSlug: "details",
+							working: { metadata: { title: "상세" } },
+						}),
+					}
+				: { ok: false, status: 404, json: async () => ({ code: "not_found" }) },
+		);
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		resetLinkTargets();
+	});
+
+	it("are written with the entry's address once it is looked up, not as entry:<id>", async () => {
+		resetLinkTargets();
+		vi.stubGlobal("fetch", answer(true));
+		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
+		await waitFor(() => expect(textarea().value).toContain(`[상세 글](${PATH})`));
+		expect(textarea().value).not.toContain("entry:");
+	});
+
+	it("keep entry:<id> when the entry cannot be resolved", async () => {
+		resetLinkTargets();
+		const fetchMock = answer(false);
+		vi.stubGlobal("fetch", fetchMock);
+		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
+		await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+		expect(textarea().value).toContain(`(entry:${ID})`);
+	});
+
+	it("an address typed for the entry already linked stays that link; any other typed path stays an href for the server", async () => {
+		resetLinkTargets();
+		vi.stubGlobal("fetch", answer(true));
+		const onChange = vi.fn();
+		render(<MdxSourcePanel doc={linked()} onChange={onChange} />);
+		await waitFor(() => expect(textarea().value).toContain(PATH));
+		type(`앞 [상세 글](${PATH}) 뒤 [다른](/en/blog/other/)\n`);
+		const [doc] = onChange.mock.calls.at(-1) as [StoredDocument];
+		const marks = (doc.content[0]?.content ?? []).flatMap((node) => node.marks ?? []);
+		expect(marks.map((mark) => mark.attrs)).toEqual([{ entryId: ID }, { href: "/en/blog/other/" }]);
 	});
 });
 

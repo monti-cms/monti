@@ -1,6 +1,6 @@
 "use client";
 
-import { adminUrl, cmsApiUrl, contentPath, withBasePath } from "@monti-cms/core/client";
+import { adminUrl, cmsApiUrl, contentPath, DEFAULT_LOCALE, localizePath, withBasePath } from "@monti-cms/core/client";
 import { useEffect, useSyncExternalStore } from "react";
 import { CmsApiError, cmsFetch } from "../screens/admin-api";
 import type { InternalLinkItem } from "./internal-link";
@@ -17,7 +17,7 @@ export interface LinkTarget {
 	readonly collection: string;
 	/** The title of the entry, empty when it has none. */
 	readonly title: string;
-	/** The entry's public path, or `null` when its collection has no public path or it has no address. */
+	/** The entry's public path as readers see it, with the locale prefix the site uses (`localePrefix`), or `null` when its collection has no public path or it has no address. */
 	readonly path: string | null;
 	/** Whether the entry is published: only then does its public path work. */
 	readonly published: boolean;
@@ -65,6 +65,7 @@ interface EntryRow {
 	readonly id: string;
 	readonly collection: string;
 	readonly status: string;
+	readonly locale?: string;
 	readonly workingSlug: string | null;
 	readonly publishedSlug: string | null;
 	readonly working?: { readonly metadata?: Record<string, unknown> };
@@ -74,11 +75,21 @@ interface EntryRow {
 const hrefOf = (id: string, published: boolean, path: string | null): string =>
 	published && path ? withBasePath(path) : adminUrl(`/entries/${id}/edit`);
 
+/** The path of an entry on the site, with the locale prefix of its language (the same path the public read gives). */
+const publicPath = (collection: string, slug: string | null | undefined, locale: string | undefined): string | null => {
+	const path = contentPath(collection, slug);
+	return path ? localizePath(locale ?? DEFAULT_LOCALE, path) : null;
+};
+
 const targetOf = (row: EntryRow): LinkTarget => {
 	const published = row.status === "published";
 	const title = row.working?.metadata?.title;
 	// The address readers see is the published one; a draft shows the address it would get.
-	const path = contentPath(row.collection, published ? (row.publishedSlug ?? row.workingSlug) : row.workingSlug);
+	const path = publicPath(
+		row.collection,
+		published ? (row.publishedSlug ?? row.workingSlug) : row.workingSlug,
+		row.locale,
+	);
 	return {
 		id: row.id,
 		collection: row.collection,
@@ -116,7 +127,7 @@ export function requestLinkTarget(id: string): void {
 /** Remembers an entry the editor already knows (the one just picked for a link), so its bubble shows it without a lookup. */
 export function rememberLinkTarget(item: InternalLinkItem): void {
 	const published = item.status === "published";
-	const path = contentPath(item.collection, item.slug);
+	const path = publicPath(item.collection, item.slug, item.locale);
 	put(item.id, {
 		status: "ready",
 		target: {
@@ -128,6 +139,27 @@ export function rememberLinkTarget(item: InternalLinkItem): void {
 			href: hrefOf(item.id, published, path),
 		},
 	});
+}
+
+/** The path of the entry a link points to, once it is known (`null` while it is being looked up, or when it has none). */
+export function linkPathOf(id: string): string | null {
+	const state = cache.get(id)?.state;
+	return state?.status === "ready" ? state.target.path : null;
+}
+
+/** Looks the entries up and re-renders when what is known changes. Gives the paths known now. */
+export function useLinkPaths(ids: readonly string[]): (id: string) => string | null {
+	const key = ids.join(",");
+	useSyncExternalStore(
+		subscribe,
+		() => ids.map((id) => linkPathOf(id) ?? "").join(","),
+		() => "",
+	);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `key` is the list
+	useEffect(() => {
+		for (const id of ids) requestLinkTarget(id);
+	}, [key]);
+	return linkPathOf;
 }
 
 /** Forgets every lookup. For tests, which share the module. */
