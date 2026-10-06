@@ -151,18 +151,45 @@ describe("links by entry id", () => {
 		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
 	});
 
-	it("publishing needs the target to be published, and says so with the same code as before", async () => {
+	it("two new posts that link to each other can both be published, and each link works once its target is published", async () => {
+		const first = await draft("links-series-1", "One");
+		const second = await draft("links-series-2", "Two");
+		const one = await service.saveDraft(first.id, {
+			collection: contentCollection,
+			slug: "links-series-1",
+			metadata: first.working.metadata as never,
+			mdx: `Next: [two](${pathOf("links-series-2")})`,
+			expectedVersion: first.version,
+		});
+		const two = await service.saveDraft(second.id, {
+			collection: contentCollection,
+			slug: "links-series-2",
+			metadata: second.working.metadata as never,
+			mdx: `Back: [one](${pathOf("links-series-1")})`,
+			expectedVersion: second.version,
+		});
+
+		const publishedOne = await publishDraft(store, { id: one.id, expectedVersion: one.version });
+		// The target is not published yet: the page draws the link as plain text.
+		const early = await cms.read.getEntry({ collection: contentCollection, slug: "links-series-1" });
+		if (early.status !== "found") throw new Error("not found");
+		expect(early.entry.refs.links).toEqual({});
+		await publishDraft(store, { id: two.id, expectedVersion: two.version });
+		const later = await cms.read.getEntry({ collection: contentCollection, slug: "links-series-1" });
+		if (later.status !== "found") throw new Error("not found");
+		expect(Object.keys(later.entry.refs.links)).toEqual([two.translationGroupId]);
+		expect(publishedOne.status).toBe("published");
+	});
+
+	it("publishing does not need the target to be published: the link is a warning", async () => {
 		const target = await draft("links-unpublished", "Not yet");
 		const source = await draft("links-to-draft", `[draft](${pathOf("links-unpublished")})`);
 		expect(entryLinkIds(source.working.doc.content)).toEqual([target.translationGroupId]);
 
-		const error = await publishError(source.id, source.version);
-		expect(error.issues?.filter((issue) => issue.code === "unpublished_internal_link")).toHaveLength(1);
-		expect(error.issues?.[0]?.position?.blockId).toBeDefined();
-
-		await publishDraft(store, { id: target.id, expectedVersion: target.version });
 		const published = await publishDraft(store, { id: source.id, expectedVersion: source.version });
+
 		expect(published.status).toBe("published");
+		await publishDraft(store, { id: target.id, expectedVersion: target.version });
 	});
 
 	it("a link to an id that is not an entry is an unresolved link at publish, and a draft with it still saves", async () => {
@@ -185,9 +212,9 @@ describe("links by entry id", () => {
 			.catch((e) => e);
 
 		expect(removal).toMatchObject({ code: "in_use" });
-		// The draft that links to a trashed post can still be saved (and the link removed); it cannot be published like that.
-		const error = await publishError(source.id, source.version);
-		expect(error.issues?.map((issue) => issue.code)).toContain("unpublished_internal_link");
+		// The draft that links to a trashed post can still be saved, and published: a link to a trashed post is a warning, like an unpublished one.
+		const published = await publishDraft(store, { id: source.id, expectedVersion: source.version });
+		expect(published.status).toBe("published");
 	});
 
 	it("the read API gives each link the address and title of its target for this reader", async () => {

@@ -61,14 +61,17 @@ describe("checking links by entry id", () => {
 	it("publishing reports a target that is gone, unpublished, a translation or not linkable with the link codes, at the link's block", async () => {
 		const snapshot = await prepareSnapshot(await input(`[a](${entryLinkHref(ID)})`));
 		const blockId = snapshot.references.find((ref) => ref.targetId === ID)?.occurrences.find((o) => o.type === "body");
+		const result = (target: Parameters<typeof validateForPublish>[1]["targets"][number] | undefined) =>
+			validateForPublish(snapshot, { targets: target ? [target] : [], media: [] });
 		const codes = (target: Parameters<typeof validateForPublish>[1]["targets"][number] | undefined) =>
-			validateForPublish(snapshot, { targets: target ? [target] : [], media: [] }).issues.filter((issue) =>
-				issue.code.endsWith("internal_link"),
-			);
+			result(target).issues.filter((issue) => issue.code.endsWith("internal_link"));
 
 		expect(codes(undefined).map((issue) => issue.code)).toEqual(["unresolved_internal_link"]);
-		expect(codes({ id: ID, collection: contentCollection, isPublished: false }).map((issue) => issue.code)).toEqual([
-			"unpublished_internal_link",
+		// A target that is not published is a warning, at the link's block: it does not block publishing (the link is plain text until the target is published).
+		const unpublished = result({ id: ID, collection: contentCollection, isPublished: false });
+		expect(unpublished.issues.filter((issue) => issue.code.endsWith("internal_link"))).toEqual([]);
+		expect(unpublished.warnings.filter((issue) => issue.code === "unpublished_internal_link")).toEqual([
+			expect.objectContaining({ position: blockId?.type === "body" ? { blockId: blockId.blockId } : {} }),
 		]);
 		expect(
 			codes({ id: ID, collection: contentCollection, isPublished: true, isSource: false }).map((i) => i.code),

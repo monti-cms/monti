@@ -453,6 +453,11 @@ export function validateForPublish(
 	resolved: ResolvedTargets,
 ): { ready: boolean; issues: Issue[]; warnings: Issue[] } {
 	const issues: Issue[] = [...snapshot.issues];
+	/**
+	 * A link to an entry that is not published (a draft, or one in the trash) does not block publishing: links are resolved when the page is read, and an
+	 * unresolved one is drawn as plain text until the target is published. It would also make two new posts that link to each other impossible to publish.
+	 */
+	const linkWarnings: Issue[] = [];
 	const occurrenceIssue = (code: string, occurrence: ReferenceOccurrence | undefined, message?: string): Issue => ({
 		code,
 		...(message ? { message } : {}),
@@ -511,7 +516,7 @@ export function validateForPublish(
 			for (const occurrence of bodyOccurrences) {
 				if (!reachable) issues.push(occurrenceIssue("unresolved_internal_link", occurrence, ref.targetId));
 				else if (!target.isPublished)
-					issues.push(occurrenceIssue("unpublished_internal_link", occurrence, ref.targetId));
+					linkWarnings.push(occurrenceIssue("unpublished_internal_link", occurrence, ref.targetId));
 			}
 			if (occurrences.every((occurrence) => occurrence?.type === "body")) continue;
 		}
@@ -536,7 +541,12 @@ export function validateForPublish(
 		if (!target || target.addressType === "missing" || target.addressType === "deleted") {
 			issues.push({ code: "unresolved_internal_link", message: source.url, path: "body", position: source.position });
 		} else if (target.addressType === "reservation" || !target.isPublished) {
-			issues.push({ code: "unpublished_internal_link", message: source.url, path: "body", position: source.position });
+			linkWarnings.push({
+				code: "unpublished_internal_link",
+				message: source.url,
+				path: "body",
+				position: source.position,
+			});
 		}
 	}
 
@@ -544,6 +554,6 @@ export function validateForPublish(
 	return {
 		ready: issues.length === 0,
 		issues,
-		warnings: [...(snapshot.warnings ?? []), ...imageWarnings(snapshot.imageSources, resolved.media)],
+		warnings: [...(snapshot.warnings ?? []), ...linkWarnings, ...imageWarnings(snapshot.imageSources, resolved.media)],
 	};
 }
