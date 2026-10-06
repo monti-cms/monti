@@ -21,7 +21,13 @@ const describeBlock = (doc: StoredDocument | null, id: string | undefined): stri
 };
 
 const prepare = (mdx: string) =>
-	prepareSnapshot({ collection: contentCollection, slug: "position", metadata: { title: "Position" }, mdx });
+	prepareSnapshot({
+		collection: contentCollection,
+		slug: "position",
+		metadata: { title: "Position" },
+		format: "mdx",
+		body: mdx,
+	});
 
 describe("block ids of body positions", () => {
 	it("names the block of a missing image alt and an invalid block attribute", async () => {
@@ -97,7 +103,7 @@ describe("block ids of body positions", () => {
 		const mdx = `# Title\n\n<Image mediaId="${MEDIA_ID}" alt="a" />\n\nText.\n`;
 		const first = await prepare(mdx);
 		const again = await prepareSnapshot(
-			{ collection: contentCollection, slug: "position", metadata: { title: "Position" }, mdx },
+			{ collection: contentCollection, slug: "position", metadata: { title: "Position" }, format: "mdx", body: mdx },
 			{ previousDoc: first.doc },
 		);
 		expect(again.references).toEqual(first.references);
@@ -120,7 +126,13 @@ describe("block ids of body positions", () => {
 			},
 		];
 		const snapshot = await prepareSnapshot(
-			{ collection: contentCollection, slug: "position", metadata: { title: "Position" }, mdx: "Words\n\n<Unclosed" },
+			{
+				collection: contentCollection,
+				slug: "position",
+				metadata: { title: "Position" },
+				format: "mdx",
+				body: "Words\n\n<Unclosed",
+			},
 			{ previousReferences },
 		);
 		expect(snapshot.issues.map((issue) => issue.code)).toContain("unparsed_body");

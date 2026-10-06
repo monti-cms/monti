@@ -175,6 +175,8 @@ export interface MediaMetadataStore {
 	}): Promise<MediaAssetRecord>;
 	listMediaAssets(params?: ListMediaParams): Promise<ListMediaResult>;
 	getMediaAsset(id: string): Promise<MediaAssetRecord | null>;
+	/** The ready media files stored under these keys (the keys of public URLs). A key no ready file holds is left out. Core turns image URLs of an imported body into media ids with it. */
+	findReadyMediaByStorageKeys(params: { keys: readonly string[] }): Promise<{ id: string; storageKey: string }[]>;
 	/** Delete step 1: checks the media is not in use and sets it to `deleting`. */
 	beginMediaDelete(id: string): Promise<MediaAssetRecord>;
 	/** Delete step 2: removes the row after the file was deleted. */
@@ -187,8 +189,10 @@ export interface MediaMetadataStore {
 export interface TemplateStore {
 	listTemplates(): Promise<BodyTemplate[]>;
 	getTemplate(id: string): Promise<BodyTemplate>;
-	createTemplate(data: { name: string; mdx: string }): Promise<BodyTemplate>;
-	updateTemplate(params: { id: string; expectedVersion: number; name?: string; mdx?: string }): Promise<BodyTemplate>;
+	/** `doc` is checked as a stored document; its blocks get ids. Without it the template is empty. */
+	createTemplate(data: { name: string; doc?: unknown }): Promise<BodyTemplate>;
+	/** Without `doc` the stored body is kept. Blocks keep the ids of the body they replace where they pair up. */
+	updateTemplate(params: { id: string; expectedVersion: number; name?: string; doc?: unknown }): Promise<BodyTemplate>;
 	deleteTemplate(params: { id: string; expectedVersion: number }): Promise<void>;
 }
 

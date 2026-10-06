@@ -98,10 +98,12 @@ type WithRecordTranslations<S, M> = S extends { readonly kind: "item" } ? M & { 
 export type MetadataFor<C extends Collection> = WithRecordTranslations<SCHEMAS[C], MetadataOf<SCHEMAS[C]>>;
 
 /**
- * A body is given either as MDX text or as a stored document (`StoredDocument` JSON), never both. The document is what is checked, hashed and
- * stored; text is read into a document first (a text that cannot be read is kept as an `unparsed` node).
+ * A body is given either as a stored document (`StoredDocument` JSON) or as text in a format (`body` and the `format` that reads it), never both. The
+ * document is what is checked, hashed and stored; text is read into a document first by the format (a text it cannot read is kept as an `unparsed` node).
  */
-type BodyInput = { mdx: string; doc?: undefined } | { doc: unknown; mdx?: undefined };
+type BodyInput =
+	| { doc: unknown; body?: undefined; format?: undefined }
+	| { body: string; format: string; doc?: undefined };
 
 type InputFor<C extends Collection, M> = BodyInput & {
 	collection: C;

@@ -39,7 +39,13 @@ describe("any site: core content flow", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const entry =
 			draft.status === "published"
 				? draft
@@ -53,7 +59,8 @@ describe("any site: core content flow", () => {
 			collection: contentCollection,
 			slug: unique("content"),
 			metadata: await requiredMetadata(contentCollection, title, relationTarget),
-			mdx: "Body text",
+			format: "mdx",
+			body: "Body text",
 		});
 
 	beforeAll(async () => {
@@ -75,7 +82,8 @@ describe("any site: core content flow", () => {
 			collection: recordCollection,
 			slug: null,
 			metadata: await requiredMetadata(recordCollection, "Any Site Record", relationTarget),
-			mdx: "",
+			format: "mdx",
+			body: "",
 		});
 		expect(record.status).toBe("published");
 		expect(record.publishedSlug).toBe("any-site-record");
@@ -93,7 +101,8 @@ describe("any site: core content flow", () => {
 			collection: contentCollection,
 			slug: unique("untitled"),
 			metadata: {},
-			mdx: "Body text",
+			format: "mdx",
+			body: "Body text",
 		});
 		await expect(publishDraft(store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
 			code: "publish_validation_failed",
@@ -168,7 +177,8 @@ describe("any site: core content flow", () => {
 				collection,
 				slug: unique("media"),
 				metadata: { ...metadata, [media.name]: mediaId },
-				mdx: "Body text",
+				format: "mdx",
+				body: "Body text",
 			} as Parameters<typeof service.createDraft>[0]);
 		};
 

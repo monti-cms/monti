@@ -3,6 +3,7 @@ import type { BlockDefinition } from "../blocks/define";
 import { resolveBlocks } from "../blocks/resolve";
 import { type MediaConfig, validateMediaConfig } from "../core/media-types";
 import type { MessageValue } from "../i18n/define";
+import type { StoredDocument } from "../mdx/stored-document";
 import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisions";
 import type { CmsPlugin } from "../plugin/define";
 import { type CollectionSchema, normalizeCollection, validateListColumns } from "../schema/collection";
@@ -97,12 +98,18 @@ export interface MdxConfig {
 	readonly syntax?: readonly SyntaxExtension[];
 }
 
-export interface SeedTemplate {
+/**
+ * A body template of the seed: its fixed `id` and `name`, and the body as a stored document (`doc`) or as text in a format (`body` and the `format` that reads it;
+ * the format must be one the instance has, so a plugin provides it). Text is read when the migration runs.
+ */
+export type SeedTemplate = {
 	/** Fixed ID (UUID). Running the migration repeatedly still creates only one such template. */
 	readonly id: string;
 	readonly name: string;
-	readonly mdx: string;
-}
+} & (
+	| { readonly doc: StoredDocument; readonly body?: undefined; readonly format?: undefined }
+	| { readonly body: string; readonly format: string; readonly doc?: undefined }
+);
 
 export interface SeedConfig {
 	/**
@@ -333,6 +340,16 @@ function validate(
 			throw new Error(`cms.config: seed template id "${template.id}" is duplicated`);
 		}
 		templateIds.add(template.id.toLowerCase());
+		const asDocument = template.doc !== undefined;
+		const asText = template.body !== undefined || template.format !== undefined;
+		if (
+			asDocument === asText ||
+			(asText && (typeof template.body !== "string" || typeof template.format !== "string"))
+		) {
+			throw new Error(
+				`cms.config: seed template "${template.name}" needs either \`doc\` or both \`body\` and \`format\``,
+			);
+		}
 	}
 
 	const paths = new Map<string, string>();

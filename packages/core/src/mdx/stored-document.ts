@@ -387,6 +387,13 @@ export const canonicalDocument = (doc: StoredDocument): StoredDocument => {
 	return { content, type: "doc", version: doc.version };
 };
 
+/** A document with no blocks (a new body, a new template). */
+export const emptyStoredDocument = (): StoredDocument => ({
+	content: [],
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+});
+
 /** Node type of a body that could not become a document (see `unparsedDocument`). */
 export const UNPARSED_NODE = "unparsed";
 

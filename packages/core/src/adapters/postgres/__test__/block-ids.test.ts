@@ -44,7 +44,13 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -58,7 +64,7 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			...body,
+			...("mdx" in body ? { format: "mdx", body: body.mdx } : body),
 		} as never);
 
 	const save = (entry: Entry, body: { mdx: string } | { doc: unknown }) =>
@@ -67,7 +73,7 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 			slug: entry.workingSlug,
 			metadata: entry.working.metadata as never,
 			expectedVersion: entry.version,
-			...body,
+			...("mdx" in body ? { format: "mdx", body: body.mdx } : body),
 		} as never);
 
 	const stored = async (entryId: string, state: "working" | "published") => {

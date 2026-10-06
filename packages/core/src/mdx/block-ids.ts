@@ -232,6 +232,12 @@ export const assignBlockIds = (
 	return copyWithIds(nodes, idOf);
 };
 
+/**
+ * The same nodes with every block given a new id. Ids are unique within one document, and the translation and diff views pair blocks by them, so a body copied
+ * into another (a template applied to an entry) must not bring its ids along: the copies would read as the same blocks as the original's.
+ */
+export const regenerateBlockIds = (nodes: readonly CmsNode[]): CmsNode[] => assignBlockIds(withoutBlockIds(nodes));
+
 /** Copies the block ids of `from` onto `to`, which has the same tree (the same document read back). */
 export const copyBlockIds = (to: readonly CmsNode[], from: readonly CmsNode[]): CmsNode[] => {
 	const source = slotsOf(from);

@@ -26,7 +26,7 @@ const perLine = fence([
 // Ranges that reach past the last code line: the lines they cover are the ones the code has.
 const pastTheEnd = fence(["// @line plus {3-9}", "// @line minus {7-9}", "// @line warning {0-1}", ...CODE]);
 
-const prepare = (input: { mdx: string } | { doc: unknown }) =>
+const prepare = (input: { body: string; format: string } | { doc: unknown }) =>
 	prepareSnapshot({ collection: contentCollection, slug: "code", metadata: { title: "Code" }, ...input });
 
 describe.each([
@@ -35,13 +35,13 @@ describe.each([
 	["ranged annotations that reach past the code", pastTheEnd],
 ])("code with %s", (_name, mdx) => {
 	it("is read as a document, not an unparsed body", async () => {
-		const snapshot = await prepare({ mdx });
+		const snapshot = await prepare({ body: mdx, format: "mdx" });
 		expect(snapshot.doc.content.map((node) => node.type)).toEqual(["codeBlock"]);
 		expect(snapshot.issues.map((issue) => issue.code)).not.toContain("unparsed_body");
 	});
 
 	it("keeps its annotations and the code without the annotation comments", async () => {
-		const attrs = (await prepare({ mdx })).doc.content[0]?.attrs as {
+		const attrs = (await prepare({ body: mdx, format: "mdx" })).doc.content[0]?.attrs as {
 			code: string;
 			annotations: { lines: { name: string; start: number; end: number }[] };
 		};
@@ -54,10 +54,10 @@ describe.each([
 	});
 
 	it("has the same content hash when the document is sent back, and when the text it was written as is saved again", async () => {
-		const first = await prepare({ mdx });
+		const first = await prepare({ body: mdx, format: "mdx" });
 		const fromDocument = await prepare({ doc: first.doc });
 		const written = mdxOf(first.doc);
-		const fromWritten = await prepare({ mdx: written });
+		const fromWritten = await prepare({ format: "mdx", body: written });
 		expect(fromDocument.contentHash).toBe(first.contentHash);
 		expect(fromWritten.contentHash).toBe(first.contentHash);
 		expect(mdxOf(fromWritten.doc)).toBe(written);
@@ -71,7 +71,7 @@ describe.each([
 
 describe("code annotations the text cannot keep", () => {
 	it("drops an annotation that starts past the last code line, and keeps the others", async () => {
-		const attrs = (await prepare({ mdx: pastTheEnd })).doc.content[0]?.attrs as {
+		const attrs = (await prepare({ format: "mdx", body: pastTheEnd })).doc.content[0]?.attrs as {
 			annotations: { lines: { name: string; start: number; end: number }[] };
 		};
 		expect(attrs.annotations.lines.map((line) => line.name).sort()).toEqual(["plus", "warning"]);
@@ -79,7 +79,7 @@ describe("code annotations the text cannot keep", () => {
 	});
 
 	it("warns about each one (not an error), with the block, so the body still saves and publishes", async () => {
-		const snapshot = await prepare({ mdx: pastTheEnd });
+		const snapshot = await prepare({ format: "mdx", body: pastTheEnd });
 		const block = snapshot.doc.content[0]?.id;
 		expect(block).toBeDefined();
 		const warnings = (snapshot.warnings ?? []).filter((warning) => warning.code === "code_annotation_out_of_range");
@@ -90,13 +90,13 @@ describe("code annotations the text cannot keep", () => {
 
 	it("does not warn about annotations that stay in the code", async () => {
 		for (const mdx of [stacked, perLine]) {
-			const snapshot = await prepare({ mdx });
+			const snapshot = await prepare({ body: mdx, format: "mdx" });
 			expect((snapshot.warnings ?? []).map((warning) => warning.code)).not.toContain("code_annotation_out_of_range");
 		}
 	});
 
 	it("still makes a body unparsed when it does not parse", async () => {
-		const snapshot = await prepare({ mdx: "<Open\n" });
+		const snapshot = await prepare({ format: "mdx", body: "<Open\n" });
 		expect(snapshot.doc.content[0]?.type).toBe("unparsed");
 		expect(snapshot.issues.map((issue) => issue.code)).toContain("unparsed_body");
 	});

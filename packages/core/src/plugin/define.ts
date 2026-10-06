@@ -1,6 +1,7 @@
 import type { BlockDefinition } from "../blocks/define";
 import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
+import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
 import type { PluginStorage } from "./storage";
 
@@ -34,6 +35,12 @@ export interface CmsPlugin<
 	 * calls them (`context`: site locale, image resolver); a module can export either or both. It is read on the server; the module marks client components with `"use client"`.
 	 */
 	readonly render?: () => Promise<{ readonly default: unknown }>;
+	/**
+	 * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
+	 * the read and write APIs. The default export is a `CmsFormat` or a list of them. It is read on the server when the instance first needs its formats;
+	 * two formats with one name (a plugin's and a built-in one included) fail there.
+	 */
+	readonly formats?: () => Promise<{ readonly default: CmsFormat | readonly CmsFormat[] }>;
 	/**
 	 * What this plugin adds to other plugins. The key is a name chosen by the receiving side (e.g. the AI plugin reads `ai: { actions }`), and the core does not read it.
 	 * It is unused if no plugin receives it, so an extension can add features without knowing the receiving plugin.

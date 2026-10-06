@@ -5,6 +5,7 @@ export {
 	forEachBlock,
 	isBlockId,
 	newBlockId,
+	regenerateBlockIds,
 	withoutBlockIds,
 } from "./block-ids";
 export type { SourceConversionResult } from "./converter";
@@ -31,6 +32,7 @@ export {
 	bodyFromMdx,
 	canonicalDocument,
 	documentToMdx,
+	emptyStoredDocument,
 	fromStoredDocument,
 	isUnparsedDocument,
 	readStoredDocument,

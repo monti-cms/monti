@@ -21,9 +21,8 @@ export const publicExportEntrySchema = z
 		publishedAt: z.string().nullable(),
 		updatedAt: z.string(),
 		metadata: z.record(z.string(), z.unknown()),
-		mdx: z.string(),
-		/** The stored document `mdx` is written from. `null` for a body that does not parse (only a draft can be, so a published one has it). */
-		doc: z.record(z.string(), z.unknown()).nullable(),
+		/** The stored document: the body. (A text of the body in a format is a file of its own, written only when the export asks for a `format`.) */
+		doc: z.record(z.string(), z.unknown()),
 		schemaVersion: z.number().int(),
 		contentHash: z.string(),
 	})
@@ -53,9 +52,20 @@ export function pickPublicMetadata(collection: string, metadata: Record<string, 
 /**
  * Format version of the archive, in the manifest and in the body JSON files. Version 2 added `working.doc.json` / `published.doc.json` and the
  * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
- * `published.doc.json` in the admin archive), next to the MDX text.
+ * `published.doc.json` in the admin archive), next to the MDX text. Version 4: the document is the only body. Text files (`working.<ext>`, `published.<ext>`)
+ * and the `body` of a template are written only when the export asked for a `format` (the manifest names it), and the `mdx` of an item and a template is gone.
  */
-export const EXPORT_FORMAT_VERSION = 3;
+export const EXPORT_FORMAT_VERSION = 4;
+
+/** The bodies of an export written as text in one format, produced before the archive is built (formats are asynchronous, the archive is not). */
+export interface ExportTexts {
+	readonly format: { readonly name: string; readonly extension: string };
+	/** The text of each body, by `exportTextKey`. A body that has none (an entry without a published copy) is not in it. */
+	readonly bodies: ReadonlyMap<string, string>;
+}
+
+/** The key of a body in `ExportTexts.bodies`: an entry's `working` or `published` body, or a template. */
+export const exportTextKey = (id: string, state: "working" | "published" | "template"): string => `${state}:${id}`;
 
 export interface ExportManifestEntry {
 	id: string;
@@ -98,6 +108,8 @@ export interface ExportManifest {
 		references: number;
 		files: number;
 	};
+	/** The format the text files of the archive are written in. `null`: the archive holds documents only. */
+	format: ExportTexts["format"] | null;
 	entries: ExportManifestEntry[];
 	files: string[];
 }
@@ -126,7 +138,7 @@ const sha256 = (value: string): string => createHash("sha256").update(value, "ut
 const sha256Bytes = (value: Uint8Array): string => createHash("sha256").update(value).digest("hex");
 
 /**
- * Canonical digest of one state. Includes content (the MDX and the stored document), slug, status, folder and references so skip/conflict decisions stay stable.
+ * Canonical digest of one state. Includes content (the stored document), slug, status, folder and references so skip/conflict decisions stay stable.
  */
 const stateDigest = (
 	entry: ExportSnapshotEntry,
@@ -142,7 +154,6 @@ const stateDigest = (
 			folderId: entry.folderId,
 			slug: state === "working" ? entry.workingSlug : entry.publishedSlug,
 			metadata: state === "working" ? entry.working.metadata : entry.published?.metadata,
-			mdx: state === "working" ? entry.working.mdx : entry.published?.mdx,
 			doc: (state === "working" ? entry.working.doc : entry.published?.doc) ?? null,
 			references: references
 				.filter((reference) => reference.entryId === entry.id && reference.state === state)
@@ -168,10 +179,7 @@ const entryDigest = (
 				}),
 			);
 
-const bodyFile = (
-	entry: ExportSnapshotEntry,
-	state: "working" | "published",
-): { json: string; mdx: string; doc: string } => {
+const bodyFile = (entry: ExportSnapshotEntry, state: "working" | "published"): { json: string; doc: string } => {
 	const body = state === "working" ? entry.working : entry.published;
 	if (!body) throw new Error(`Entry ${entry.id} has no ${state} body`);
 	return {
@@ -193,7 +201,6 @@ const bodyFile = (
 			publishedAt: iso(entry.publishedAt),
 			folderId: entry.folderId,
 		})}\n`,
-		mdx: body.mdx,
 		doc: `${canonicalJson(body.doc)}\n`,
 	};
 };
@@ -209,7 +216,6 @@ const publicEntry = (entry: ExportSnapshotEntry): PublicExportEntry | null => {
 		publishedAt: iso(entry.publishedAt),
 		updatedAt: iso(entry.published.updatedAt) ?? iso(entry.updatedAt) ?? "",
 		metadata: pickPublicMetadata(entry.collection, entry.published.metadata),
-		mdx: entry.published.mdx,
 		doc: entry.published.doc,
 		schemaVersion: entry.published.schemaVersion,
 		contentHash: entry.published.contentHash,
@@ -232,12 +238,20 @@ const sortEntries = (entries: readonly ExportSnapshotEntry[]): ExportSnapshotEnt
 export interface BuildExportOptions {
 	scope: ExportScope;
 	exportedAt: Date;
+	/** The bodies as text in a format. Without it the archive holds the documents only. */
+	texts?: ExportTexts;
 	/** File timestamp inside the archive. A fixed value can be used for snapshot tests. */
 	archiveModifiedAt?: Date;
 }
 
 export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExportOptions): ExportArchive {
-	const { scope, exportedAt } = options;
+	const { scope, exportedAt, texts } = options;
+	const textFile = (base: string, state: "working" | "published", id: string): ZipEntry | undefined => {
+		const text = texts?.bodies.get(exportTextKey(id, state));
+		return texts && text !== undefined
+			? { path: `${base}/${state}.${texts.format.extension}`, data: new TextEncoder().encode(text) }
+			: undefined;
+	};
 	const entries = sortEntries(snapshot.entries);
 	const files: ZipEntry[] = [];
 	const manifestEntries: ExportManifestEntry[] = [];
@@ -249,18 +263,26 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 		if (scope === "admin") {
 			const working = bodyFile(entry, "working");
 			files.push({ path: `${base}/working.json`, data: new TextEncoder().encode(working.json) });
-			files.push({ path: `${base}/working.mdx`, data: new TextEncoder().encode(working.mdx) });
-			entryFiles.push(`${base}/working.json`, `${base}/working.mdx`);
+			entryFiles.push(`${base}/working.json`);
 			files.push({ path: `${base}/working.doc.json`, data: new TextEncoder().encode(working.doc) });
 			entryFiles.push(`${base}/working.doc.json`);
+			const workingText = textFile(base, "working", entry.id);
+			if (workingText) {
+				files.push(workingText);
+				entryFiles.push(workingText.path);
+			}
 
 			if (entry.published) {
 				const published = bodyFile(entry, "published");
 				files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(published.json) });
-				files.push({ path: `${base}/published.mdx`, data: new TextEncoder().encode(published.mdx) });
-				entryFiles.push(`${base}/published.json`, `${base}/published.mdx`);
+				entryFiles.push(`${base}/published.json`);
 				files.push({ path: `${base}/published.doc.json`, data: new TextEncoder().encode(published.doc) });
 				entryFiles.push(`${base}/published.doc.json`);
+				const publishedText = textFile(base, "published", entry.id);
+				if (publishedText) {
+					files.push(publishedText);
+					entryFiles.push(publishedText.path);
+				}
 			}
 
 			const references = snapshot.references
@@ -301,8 +323,12 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 		const projected = publicEntry(entry);
 		if (!projected) continue;
 		files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(`${canonicalJson(projected)}\n`) });
-		files.push({ path: `${base}/published.mdx`, data: new TextEncoder().encode(projected.mdx) });
-		entryFiles.push(`${base}/published.json`, `${base}/published.mdx`);
+		entryFiles.push(`${base}/published.json`);
+		const publicText = textFile(base, "published", entry.id);
+		if (publicText) {
+			files.push(publicText);
+			entryFiles.push(publicText.path);
+		}
 
 		manifestEntries.push({
 			id: entry.id,
@@ -374,8 +400,10 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 				snapshot.templates.map((template) => ({
 					id: template.id,
 					name: template.name,
-					mdx: template.mdx,
 					doc: template.doc,
+					...(texts?.bodies.has(exportTextKey(template.id, "template"))
+						? { body: texts.bodies.get(exportTextKey(template.id, "template")) }
+						: {}),
 					version: template.version,
 					createdAt: iso(template.createdAt),
 					updatedAt: iso(template.updatedAt),
@@ -418,6 +446,7 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			references: scope === "admin" ? snapshot.references.length : 0,
 			files: files.length + 1,
 		},
+		format: texts ? texts.format : null,
 		entries: manifestEntries,
 		files: ["manifest.json", ...files.map((file) => file.path)],
 	};

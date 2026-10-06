@@ -1,6 +1,9 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
 import type { MediaStore } from "../adapters/r2/types";
 import type { ContentStore } from "../core/store";
+import { BUILT_IN_FORMAT_LIST } from "../format/built-in";
+import { createFormatRegistry } from "../format/registry";
+import type { CmsFormat } from "../format/types";
 import { nextRouteHandler } from "../next/route-handler";
 import { createMemoryPluginStorage } from "../plugin/memory-storage";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
@@ -26,6 +29,8 @@ export interface FakeCmsParts {
 	readonly server?: Partial<CmsServerConfig>;
 	/** The server side of the site's plugins (routes, features, hooks, migrations), as if the site config listed them. Default: none. */
 	readonly plugins?: readonly LoadedServerPlugin[];
+	/** Formats added to the built-in ones, as if a plugin provided them. Default: none. */
+	readonly formats?: readonly CmsFormat[];
 }
 
 const ADMIN: AuthContext = { userId: "u", accountId: "g", isAdmin: true };
@@ -89,12 +94,18 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		pluginRoutes: plugins.routes,
 		pluginFeatures: plugins.features,
 		writeHooks: plugins.writeHooks,
+		formats: async () => createFormatRegistry([...BUILT_IN_FORMAT_LIST, ...(parts.formats ?? [])]),
 		notifyAfterCommit: plugins.notifyAfterCommit,
 		secrets: cms.secrets,
 		authGateway,
 		handle: lazyHandle(() => fake),
 		routeHandler: () => nextRouteHandler(fake),
-		read: createRead({ store: cms.store, mediaStore: cms.mediaStore, verifyAdmin: authGateway.verifyAdmin }),
+		read: createRead({
+			store: cms.store,
+			mediaStore: cms.mediaStore,
+			formats: async () => createFormatRegistry([...BUILT_IN_FORMAT_LIST, ...(parts.formats ?? [])]),
+			verifyAdmin: authGateway.verifyAdmin,
+		}),
 		...(parts.contentService ? { contentService: () => parts.contentService as ContentService } : {}),
 		...(parts.bulkService ? { bulkService: () => parts.bulkService as BulkService } : {}),
 	};

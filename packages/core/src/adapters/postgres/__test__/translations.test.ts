@@ -56,7 +56,8 @@ describe("translation groups (postgres storage)", () => {
 				collection: contentCollection,
 				slug: "legacy-state-source",
 				metadata: { title: "Only the title" },
-				mdx: "",
+				format: "mdx",
+				body: "",
 				translation: { version: 2, baseSource: "예전 기준" } as never,
 				expectedVersion: legacy.version,
 			});

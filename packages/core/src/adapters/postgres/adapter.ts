@@ -56,7 +56,8 @@ export function postgres(options: PostgresOptions): DatabaseAdapter {
 		name: "postgres",
 		createStore: (storeOptions) =>
 			lazyStore(async () => (await loadStoreModule()).createContentStore(getPool(), { ...schema, ...storeOptions })),
-		migrate: async () => (await loadStoreModule()).migrateContentStore(getPool(), schema),
+		migrate: async (migrateOptions) =>
+			(await loadStoreModule()).migrateContentStore(getPool(), { ...schema, formats: migrateOptions?.formats }),
 		pluginStorage: (plugin) => createPluginStorage(getPool(), options.schema, plugin),
 		rewriteContent: async ({ apply }) =>
 			(await loadRewriteModule()).rewriteContent(getPool(), { apply, schema: options.schema }),

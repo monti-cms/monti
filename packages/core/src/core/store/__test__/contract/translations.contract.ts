@@ -133,7 +133,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "merge-source",
 					metadata: translatedMetadata("English title", "English summary") as never,
-					mdx: "English body",
+					format: "mdx",
+					body: "English body",
 					expectedVersion: translation.version,
 				});
 
@@ -196,7 +197,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: source.working.metadata as never,
-					mdx: "한국어 본문",
+					format: "mdx",
+					body: "한국어 본문",
 				};
 				await expect(
 					service.saveDraft(source.id, {
@@ -212,7 +214,8 @@ export const translationsContract: ContractSuite = (factory) => {
 						collection: contentCollection,
 						slug: "state-source",
 						metadata: { title: "T" },
-						mdx: "",
+						format: "mdx",
+						body: "",
 						translation: { version: 1, units: [] } as never,
 						expectedVersion: translation.version,
 					}),
@@ -222,7 +225,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: { title: "Only the title" },
-					mdx: "",
+					format: "mdx",
+					body: "",
 					expectedVersion: translation.version,
 				});
 				expect(saved.working.translation).toEqual(translation.working.translation);
@@ -232,7 +236,8 @@ export const translationsContract: ContractSuite = (factory) => {
 					collection: contentCollection,
 					slug: "state-source",
 					metadata: { title: "Only the title" },
-					mdx: "",
+					format: "mdx",
+					body: "",
 					translation: { version: 4, baseDoc: docOf("바뀐 기준") },
 					expectedVersion: saved.version,
 				});

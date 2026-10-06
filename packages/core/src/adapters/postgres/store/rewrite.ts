@@ -136,37 +136,6 @@ export async function rewriteContent(pool: Pool, options: RewriteOptions = {}): 
 		if (res.rows.length < batchSize) break;
 	}
 
-	let lastTemplate: string | undefined;
-	for (;;) {
-		const res = await pool.query<{ id: string; name: string; mdx: string; doc: unknown }>(
-			`SELECT id, name, mdx, doc FROM "${qSchema}".body_templates WHERE ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`,
-			[lastTemplate ?? null, batchSize],
-		);
-		for (const row of res.rows) {
-			const outcome = rewriteBody(row.mdx, readDoc(row.doc), {}, 1, options.write);
-			pending.push({
-				item: {
-					kind: "template",
-					label: `template "${row.name}"`,
-					outcome: outcome.status,
-					...(outcome.status === "skipped" ? { reason: outcome.reason } : {}),
-				},
-				...(outcome.status === "changed"
-					? {
-							write: (client) =>
-								client.query(`UPDATE "${qSchema}".body_templates SET mdx = $1, doc = $2 WHERE id = $3`, [
-									outcome.mdx,
-									JSON.stringify(outcome.doc),
-									row.id,
-								]),
-						}
-					: {}),
-			});
-		}
-		lastTemplate = res.rows[res.rows.length - 1]?.id;
-		if (res.rows.length < batchSize) break;
-	}
-
 	if (options.apply) {
 		await withTransaction(pool, async (client) => {
 			for (const entry of pending) await entry.write?.(client);

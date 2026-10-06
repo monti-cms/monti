@@ -108,4 +108,12 @@ export function readQuery(request: Request, arrayKeys: readonly string[] = []): 
 	return query;
 }
 
+/** The `format` query param of a read, or `undefined`. An invalid name is a 400; whether the format is installed is decided where it is used. */
+export function readFormatQuery(request: Request): string | undefined {
+	const raw = new URL(request.url).searchParams.get("format");
+	if (raw === null || raw === "") return undefined;
+	if (!/^[a-z][a-z0-9-]*$/.test(raw)) throw new HttpError(400, "invalid_input", "Invalid format");
+	return raw;
+}
+
 export const json = (body: unknown, init?: ResponseInit) => Response.json(body, init);

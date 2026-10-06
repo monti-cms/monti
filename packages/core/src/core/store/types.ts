@@ -56,8 +56,7 @@ export interface EntryBody {
 export interface BodyTemplate {
 	id: string;
 	name: string;
-	/** The MDX column, written from `doc`. */
-	mdx: string;
+	/** The template body, a stored document like an entry body (one `unparsed` node when it came from a text that could not be read). */
 	doc: StoredDocument;
 	version: number;
 	createdAt: Date;

@@ -126,7 +126,8 @@ describe("AI action edited-value store", () => {
 			collection: "category",
 			slug: "used-address",
 			metadata: { title: "주소 확인" },
-			mdx: "",
+			format: "mdx",
+			body: "",
 		});
 		const lookup = createContentLookup({ store: () => content });
 		const slugs = ["used-address", "free-address"];

@@ -15,7 +15,8 @@ describe("ContentService Contract (blog config)", () => {
 					title: "A",
 					tagIds: ["123e4567-e89b-12d3-a456-426614174002", "123e4567-e89b-12d3-a456-426614174001"],
 				},
-				mdx: "Hello",
+				format: "mdx",
+				body: "Hello",
 			},
 			{ schemaVersion: 1 },
 		);
@@ -31,7 +32,8 @@ describe("ContentService Contract (blog config)", () => {
 			collection: "memo",
 			slug: "memo",
 			metadata: { title: "Memo" },
-			mdx: [
+			format: "mdx",
+			body: [
 				"[relative](/posts/draft-post)",
 				"[absolute](https://example.dev/memos/xxx-equal)",
 				"[www](https://www.example.dev/posts/old%20slug)",

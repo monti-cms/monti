@@ -59,7 +59,13 @@ export function translationHelpers(store: ContentStore) {
 	/** A new published item of the target collection. Created fresh for each entry so that only that entry appears when filtering by relation. */
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const metadata = await requiredMetadata(to, "에세이", relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: `${to}-${++sequence}`, metadata, mdx: "" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: `${to}-${++sequence}`,
+			metadata,
+			format: "mdx",
+			body: "",
+		});
 		if (draft.status === "published") return draft.id;
 		return (await publishDraft(store, { id: draft.id, expectedVersion: draft.version })).id;
 	};
@@ -77,7 +83,8 @@ export function translationHelpers(store: ContentStore) {
 			collection: contentCollection,
 			slug,
 			metadata: metadata as never,
-			mdx: "한국어 본문",
+			format: "mdx",
+			body: "한국어 본문",
 		});
 	};
 

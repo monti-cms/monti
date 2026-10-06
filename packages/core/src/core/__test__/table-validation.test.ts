@@ -24,7 +24,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			collection: contentCollection,
 			slug: "huge-table",
 			metadata: { title: "표 테스트" },
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 		expect(mdxOf(snap.doc)).not.toContain("1000000000");
 		expect(mdxOf(snap.doc)).toContain(`colspan="${MAX_TABLE_COLUMNS}"`);
@@ -56,7 +57,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			collection: contentCollection,
 			slug: "valid-table",
 			metadata: { title: "표 테스트" },
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 		const tableWarnings = (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span");
@@ -70,7 +72,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			collection: contentCollection,
 			slug: "rowspan-overflow",
 			metadata: { title: "표 테스트" },
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 		// `rowspan_overflow` cannot be reached through a snapshot any more: the stored span never passes the last row.
@@ -91,7 +94,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			collection: contentCollection,
 			slug: "overlapping-cells",
 			metadata: { title: "표 테스트" },
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 		const tableWarnings = (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span");
@@ -105,7 +109,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 			collection: contentCollection,
 			slug: "mismatched-columns",
 			metadata: { title: "표 테스트" },
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 		const tableWarnings = (snap.warnings ?? []).filter((w) => w.code === "invalid_table_span");
@@ -123,7 +128,8 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 				collection: contentCollection,
 				slug: "invalid-span-value",
 				metadata: { title: "표 테스트" },
-				mdx: table([[cell("셀1", `${attribute}="${value}"`)]]),
+				format: "mdx",
+				body: table([[cell("셀1", `${attribute}="${value}"`)]]),
 			});
 
 			// `invalid_colspan` and `invalid_rowspan` cannot be reached through a snapshot any more: the value is gone from the stored text.

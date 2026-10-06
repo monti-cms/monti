@@ -1,20 +1,29 @@
 import type { Pool, PoolClient } from "pg";
 import { cmsConfig } from "../../../config/resolved";
 import { DEFAULT_LOCALE } from "../../../core/locales";
-import { bodyDocument, bodyFromMdx } from "../../../mdx/stored-document";
+import { BUILT_IN_FORMATS } from "../../../format/built-in";
+import type { FormatRegistry } from "../../../format/registry";
 import { migrateBlockIds } from "./block-id-migration";
 import { migrateCodeAnnotations } from "./code-annotation-migration";
 import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 import { migrateLinkEntryIds } from "./link-id-migration";
+import { seedTemplateDocument } from "./seed-templates";
 import { migrateSoftBreaks } from "./soft-break-migration";
 import { migrateStoredDocuments } from "./stored-document-migration";
+import { migrateTemplatesToDocuments } from "./templates-documents-migration";
 import { migrateUnparsedBodies } from "./unparsed-migration";
+
+/** What a step may need besides the database. */
+interface MigrationContext {
+	/** The formats seed templates written as text are read with. */
+	readonly formats: FormatRegistry;
+}
 
 /** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
 interface MigrationStep {
 	readonly name: string;
-	readonly run: (client: PoolClient, qSchema: string) => Promise<unknown>;
+	readonly run: (client: PoolClient, qSchema: string, context: MigrationContext) => Promise<unknown>;
 }
 
 /**
@@ -384,18 +393,26 @@ const STEPS: readonly MigrationStep[] = [
 		},
 	},
 	{
+		name: "0019_templates_documents",
+		/**
+		 * A body template is a document: `doc` is its only source and `mdx` is no longer written. A template with no readable document becomes the document of
+		 * one `unparsed` node holding its MDX as it was, and `mdx` stops being required. Nothing here fails because of a template.
+		 */
+		run: (client, qSchema) => migrateTemplatesToDocuments(client, qSchema),
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */
-		run: async (client, qSchema) => {
+		run: async (client, qSchema, context) => {
 			for (const t of cmsConfig.seed?.templates ?? []) {
-				// Seeded as it is stored: its document, and the MDX written from it.
-				const body = bodyFromMdx(t.mdx);
+				// Seeded as it is stored: its document. A template written as text is read by its format.
+				const doc = await seedTemplateDocument(t, context.formats);
 				await client.query(
-					`INSERT INTO "${qSchema}".body_templates (id, name, mdx, doc, version, created_at, updated_at)
-					 VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
+					`INSERT INTO "${qSchema}".body_templates (id, name, doc, version, created_at, updated_at)
+					 VALUES ($1, $2, $3, 1, NOW(), NOW())
 					 ON CONFLICT DO NOTHING`,
-					[t.id, t.name, body.mdx, JSON.stringify(bodyDocument(body))],
+					[t.id, t.name, JSON.stringify(doc)],
 				);
 			}
 		},
@@ -425,8 +442,12 @@ async function prepare(client: PoolClient, qSchema: string): Promise<void> {
  * Creates the schema or brings it up to date. Creates the schema if missing (the `schema` option), then runs only the steps that have not run yet, in numbered order.
  * It is one transaction, so a mid-way failure changes nothing, and concurrent runs on the same schema go one at a time.
  */
-export async function migrateContentStore(pool: Pool, options?: { schema?: string }): Promise<void> {
+export async function migrateContentStore(
+	pool: Pool,
+	options?: { schema?: string; formats?: FormatRegistry },
+): Promise<void> {
 	const qSchema = validateSchemaName(options?.schema);
+	const context: MigrationContext = { formats: options?.formats ?? BUILT_IN_FORMATS };
 	await withTransaction(pool, async (client) => {
 		await prepare(client, qSchema);
 		const applied = new Set(
@@ -436,7 +457,7 @@ export async function migrateContentStore(pool: Pool, options?: { schema?: strin
 		);
 		for (const step of STEPS) {
 			if (applied.has(step.name)) continue;
-			await step.run(client, qSchema);
+			await step.run(client, qSchema, context);
 			await client.query(`INSERT INTO "${qSchema}".cms_migrations (name) VALUES ($1)`, [step.name]);
 		}
 	});

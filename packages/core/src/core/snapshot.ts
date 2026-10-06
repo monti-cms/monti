@@ -1,12 +1,9 @@
+import { BUILT_IN_FORMATS } from "../format/built-in";
+import { importText } from "../format/convert";
+import type { FormatRegistry } from "../format/registry";
 import { assignBlockIds } from "../mdx/block-ids";
 import { isAllowedImageSrc } from "../mdx/image-src";
-import {
-	bodyDocument,
-	bodyFromMdx,
-	canonicalDocument,
-	readStoredDocument,
-	type StoredDocument,
-} from "../mdx/stored-document";
+import { canonicalDocument, readStoredDocument, type StoredDocument } from "../mdx/stored-document";
 import type { CmsImageSource } from "../mdx/types";
 import {
 	fieldValueError,
@@ -23,8 +20,9 @@ import {
 import { checkDocument, isEmptyDocument } from "./body-check";
 import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
 import { computeContentHash, sortKeys } from "./content-hash";
+import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "./limits";
 import { LINKABLE_COLLECTIONS } from "./links";
-import { PREFIXED_LOCALES } from "./locales";
+import { DEFAULT_LOCALE, PREFIXED_LOCALES } from "./locales";
 import { normalizeSlugInput } from "./slug";
 import { parseTranslationState } from "./translation/state";
 import {
@@ -45,10 +43,7 @@ import {
  * The service (draft save) and the repository implementation (re-validation inside the publish transaction) use the same rules.
  */
 
-export const MAX_MDX_BYTES = 2 * 1024 * 1024;
-/** A stored document given instead of MDX (JSON spells the same body out at a few times the size). */
-export const MAX_DOC_BYTES = 8 * 1024 * 1024;
-export const MAX_METADATA_BYTES = 256 * 1024;
+export { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES };
 
 export { computeContentHash };
 
@@ -112,68 +107,68 @@ export function validateExactRecord(
 	}
 }
 
-/** Keys a service input must have: the body is `doc` when that key is present, otherwise `mdx`. */
+/** Keys a service input must have: the body is `doc`, or `body` with its `format`. */
 export const serviceInputKeys = (input: unknown): readonly string[] => [
 	"collection",
 	"slug",
 	"metadata",
-	input !== null && typeof input === "object" && Object.hasOwn(input, "doc") ? "doc" : "mdx",
+	...(input !== null && typeof input === "object" && Object.hasOwn(input, "doc") ? ["doc"] : ["body", "format"]),
 ];
 
 /** What reading the body of a service input gives: the document, and the findings about a text that could not become one. */
 export interface InputBody {
 	readonly doc: StoredDocument;
-	/** For a body given as text that could not be read: why (`mdx_error`, `frontmatter_present`), with the line and column in that text. */
+	/** For a body given as text that the format could not read: why (`mdx_error`, `frontmatter_present`), with the line and column in that text. */
 	readonly importIssues: Issue[];
 	/** Warnings about a text that was read, but not kept as written (a code annotation that reaches past the code). */
 	readonly importWarnings?: Issue[];
 }
 
 /**
- * The body of a service input as a document. A document is taken as given (checked in shape, put in its canonical form); text is read into one.
- * Text that cannot be read (it does not parse, has front matter, or would not read back the same) becomes a document of one `unparsed` node that
- * keeps it, with the reasons as `importIssues`. Blocks inherit their ids from `previous`, the body being replaced, where the input has none.
+ * The body of a service input given as a stored document: taken as given (checked in shape, put in its canonical form). Blocks inherit their ids from
+ * `previous`, the body being replaced, where the input has none.
  */
-export const inputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): InputBody => {
-	if (input.doc !== undefined) {
-		let size: number;
-		try {
-			size = Buffer.byteLength(JSON.stringify(input.doc) ?? "", "utf8");
-		} catch {
-			throw new ServiceError("invalid_input");
-		}
-		if (size > MAX_DOC_BYTES) throw new ServiceError("mdx_too_large");
-		const read = readStoredDocument(input.doc);
-		if (!read) throw new ServiceError("invalid_input");
-		const doc = canonicalDocument(read);
-		return {
-			doc: { ...doc, content: assignBlockIds(doc.content, [previous?.content]) },
-			importIssues: [],
-		};
+export const documentInputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): InputBody => {
+	let size: number;
+	try {
+		size = Buffer.byteLength(JSON.stringify(input.doc) ?? "", "utf8");
+	} catch {
+		throw new ServiceError("invalid_input");
 	}
-	if (typeof input.mdx !== "string") throw new ServiceError("invalid_input");
-	if (Buffer.byteLength(input.mdx, "utf8") > MAX_MDX_BYTES) throw new ServiceError("mdx_too_large");
-	const body = bodyFromMdx(input.mdx, undefined, { previous });
-	if (body.doc) {
-		const importWarnings: Issue[] = (body.outOfRange ?? []).map((item) => ({
-			code: "code_annotation_out_of_range",
-			message: item.name,
-			params: { name: item.name },
-			path: "body",
-			position: item.blockId === undefined ? {} : { blockId: item.blockId },
-		}));
-		return { doc: body.doc, importIssues: [], importWarnings };
-	}
-	const importIssues: Issue[] = body.analysis.errors.map((error) => ({
-		code: "mdx_error",
-		message: error.message,
-		params: { reason: error.code, ...error.params },
-		position: error.position,
-	}));
-	if (body.analysis.frontmatter !== null) {
-		importIssues.push({ code: "frontmatter_present", path: "frontmatter", position: { line: 1, column: 1 } });
-	}
-	return { doc: bodyDocument(body, previous), importIssues };
+	if (size > MAX_DOC_BYTES) throw new ServiceError("body_too_large");
+	const read = readStoredDocument(input.doc);
+	if (!read) throw new ServiceError("invalid_input");
+	const doc = canonicalDocument(read);
+	return {
+		doc: { ...doc, content: assignBlockIds(doc.content, [previous?.content]) },
+		importIssues: [],
+	};
+};
+
+/** What `readInputBody` needs to read a text: the formats and the language of the body. Without `formats`, only the built-in ones. */
+export interface TextImport {
+	readonly formats?: FormatRegistry;
+	readonly locale?: string;
+	readonly entryId?: string;
+}
+
+/**
+ * The body of a service input as a document: the one given, or the text read by its format. A text the format rejects becomes a document of one
+ * `unparsed` node that keeps it (with the reasons as `importIssues`): a draft can hold it, and `unparsed_body` blocks publishing it.
+ */
+export const readInputBody = async (
+	input: ServiceInput,
+	previous: StoredDocument | null | undefined,
+	options: TextImport = {},
+): Promise<InputBody> => {
+	if (input.doc !== undefined) return documentInputBody(input, previous);
+	if (typeof input.body !== "string" || typeof input.format !== "string") throw new ServiceError("invalid_input");
+	const imported = await importText(options.formats ?? BUILT_IN_FORMATS, input.format, input.body, {
+		locale: options.locale ?? DEFAULT_LOCALE,
+		entryId: options.entryId,
+		previous,
+	});
+	return { doc: imported.doc, importIssues: imported.issues, importWarnings: imported.warnings };
 };
 
 /**
@@ -285,6 +280,10 @@ export async function prepareSnapshot(
 		 * (a schema change orphaned it); a new unknown key is rejected. A new entry has none.
 		 */
 		previousMetadata?: { readonly [key: string]: unknown };
+		/** Reading a body given as text: the formats (default: the built-in ones), the language of the body, the entry it is written to. */
+		import?: TextImport;
+		/** What the write pipeline already found while reading the body, when it read the text itself (the input then holds the document). */
+		imported?: { readonly issues: readonly Issue[]; readonly warnings: readonly Issue[] };
 	},
 ): Promise<PreparedSnapshot> {
 	if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -315,15 +314,16 @@ export async function prepareSnapshot(
 	addMetadataReferences(collector, rawCollection, metadata);
 
 	// The body is a document: given as one, or read from text (a text that could not be read is one `unparsed` node).
-	const body = inputBody(input, options?.previousDoc);
+	const body = await readInputBody(input, options?.previousDoc, options?.import);
 	const { doc } = body;
 	const check = checkDocument(doc);
 	const warnings: Issue[] = [
 		...metadataWarnings(rawCollection, metadata),
+		...(options?.imported?.warnings ?? []),
 		...(body.importWarnings ?? []),
 		...check.warnings,
 	];
-	const issues: Issue[] = [...body.importIssues, ...check.issues];
+	const issues: Issue[] = [...(options?.imported?.issues ?? []), ...body.importIssues, ...check.issues];
 
 	if (check.incomplete) {
 		// For a body whose references cannot be trusted (unparsed, or a reference in it is missing or malformed), past body references stay stale.

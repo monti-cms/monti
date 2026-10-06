@@ -13,6 +13,7 @@
 		"./client": "./src/client.ts",
 		"./runtime": "./src/runtime.ts",
 		"./read": "./src/read/index.ts",
+		"./format": "./src/format/index.ts",
 		"./mdx": "./src/mdx/index.ts",
 		"./syntax": "./src/syntax/index.ts",
 		"./code-block": "./src/code-block.ts",
@@ -139,6 +140,10 @@
 			"./read": {
 				"types": "./dist/read/index.d.ts",
 				"default": "./dist/read/index.js"
+			},
+			"./format": {
+				"types": "./dist/format/index.d.ts",
+				"default": "./dist/format/index.js"
 			},
 			"./mdx": {
 				"types": "./dist/mdx/index.d.ts",

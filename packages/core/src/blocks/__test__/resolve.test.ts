@@ -149,7 +149,8 @@ describe("custom block publish check", () => {
 				"사용자 블록",
 				async () => "00000000-0000-4000-8000-000000000000",
 			),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 		return snapshot.issues.map((issue) => issue.code);
 	};

@@ -1,5 +1,8 @@
 import type { Cms } from "../cms";
 import type { ContentChange } from "../core/store";
+import { BUILT_IN_FORMAT_LIST } from "../format/built-in";
+import { createFormatRegistry, type FormatRegistry } from "../format/registry";
+import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
 import type { HookSource } from "../services/hooks";
 import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute } from "./define";
@@ -18,6 +21,11 @@ export interface ServerPlugins {
 	 * If loading fails, it is not remembered so the next call retries, and the error is rethrown as is.
 	 */
 	load(): Promise<readonly LoadedServerPlugin[]>;
+	/**
+	 * The formats of the instance: the built-in ones, then those of the plugins in the site config's order. Read once on the first call and reused afterwards.
+	 * A name provided twice fails here, and the failure is not remembered.
+	 */
+	formats(): Promise<FormatRegistry>;
 	/** Plugin API route table (in plugin order, tagged with the plugin each route belongs to). */
 	routes(): Promise<readonly OwnedPluginRoute[]>;
 	/**
@@ -55,6 +63,23 @@ export function createServerPlugins(
 		return loaded;
 	};
 
+	let formats: Promise<FormatRegistry> | undefined;
+	const loadFormats = () => {
+		formats ??= Promise.all(
+			plugins.map(async (plugin) => {
+				const provided = (await plugin.formats?.())?.default;
+				return provided === undefined ? [] : Array.isArray(provided) ? provided : [provided as CmsFormat];
+			}),
+		)
+			.then((lists) => createFormatRegistry([...BUILT_IN_FORMAT_LIST, ...lists.flat()]))
+			.catch((error) => {
+				formats = undefined;
+				console.error("[cms] failed to load plugin formats", error);
+				throw error;
+			});
+		return formats;
+	};
+
 	const writeHooks = async (): Promise<readonly HookSource[]> => {
 		const { hooks } = serverConfig();
 		const sources: HookSource[] = hooks ? [{ owner: "server", hooks }] : [];
@@ -66,6 +91,7 @@ export function createServerPlugins(
 
 	return {
 		load,
+		formats: loadFormats,
 		writeHooks,
 		routes: async () =>
 			(await load()).flatMap((plugin) => (plugin.routes ?? []).map((route) => ({ ...route, plugin: plugin.name }))),

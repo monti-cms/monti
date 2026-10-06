@@ -29,7 +29,7 @@ Commands:
               --no-env-file         Don't read any env file
               --config <file>       Site config (default: @cms-config in tsconfig paths, ./cms.config.ts, ./src/cms.config.ts)
               --server <file>       Server config (default: cms.server.ts, looked up the same way)
-  content:rewrite   Re-serialize every stored body (working, published, templates) with the site's syntax
+  content:rewrite   Re-serialize every stored body (working and published) with the site's syntax
                     Prints "collection/slug (locale) state: changed|unchanged" per body and a summary; run it after "monti migrate"
               --apply               Write the changes (default: a dry run that writes nothing)
               --env-file, --no-env-file, --config, --server   As for migrate

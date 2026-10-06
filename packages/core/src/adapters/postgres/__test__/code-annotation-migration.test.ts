@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import { contentOf } from "../../../../test/stored-content";
+import { contentOf, docOf as docFromMdx } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
@@ -14,10 +14,11 @@ import {
 	type StoredDocument,
 } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, migrateContentStore } from "../content-store";
+import { createContentStore } from "../content-store";
 import { migrateCodeAnnotations } from "../store/code-annotation-migration";
 import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
+import { migrateForEarlierSteps, templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0015_code_annotations";
@@ -78,7 +79,7 @@ describe("0015_code_annotations", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateForEarlierSteps(pool, schemaName);
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});
@@ -92,7 +93,13 @@ describe("0015_code_annotations", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -106,7 +113,8 @@ describe("0015_code_annotations", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 	const publishedWith = async (mdx: string) => {
@@ -162,7 +170,7 @@ describe("0015_code_annotations", () => {
 
 	const run = async () => {
 		await rewind();
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateForEarlierSteps(pool, schemaName);
 	};
 
 	const hasUnpublishedChanges = async (entryId: string) => {
@@ -420,7 +428,7 @@ describe("0015_code_annotations", () => {
 		);
 		const broken = await createDraft("가\n<Unclosed");
 		await setLegacy(broken.id, "가\n<Unclosed", null);
-		const template = await store.createTemplate({ name: unique("again"), mdx: LEGACY });
+		const template = await store.createTemplate({ name: unique("again"), doc: docFromMdx(LEGACY) });
 		await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = $2::jsonb WHERE id = $3`, [
 			LEGACY,
 			JSON.stringify(legacyDocOf(template.doc)),
@@ -446,7 +454,7 @@ describe("0015_code_annotations", () => {
 
 	describe("body templates", () => {
 		const legacyTemplate = async (mdx: string, values: readonly string[]) => {
-			const template = await store.createTemplate({ name: unique("template"), mdx });
+			const template = await store.createTemplate({ name: unique("template"), doc: docFromMdx(mdx) });
 			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = $2::jsonb WHERE id = $3`, [
 				mdx,
 				JSON.stringify(legacyDocOf(template.doc, values)),
@@ -461,7 +469,7 @@ describe("0015_code_annotations", () => {
 			await run();
 
 			const after = await store.getTemplate(template.id);
-			expect(after.mdx).toBe(WRITTEN);
+			expect(await templateMdx(pool, schemaName, template.id)).toBe(WRITTEN);
 			expect(after.doc?.version).toBe(STORED_DOCUMENT_VERSION);
 			expect(codeBlockOf(after.doc as StoredDocument).attrs?.code).toBe("const needle = 1;\nconst old = 2;");
 			expect(idList(after.doc as StoredDocument)).toEqual(idList(template.doc as StoredDocument));
@@ -470,10 +478,14 @@ describe("0015_code_annotations", () => {
 		});
 
 		it("leaves a template that has no document, or one that cannot be read, as it is", async () => {
-			const broken = await store.createTemplate({ name: unique("broken"), mdx: "Words\n\n<Unclosed" });
-			await pool.query(`UPDATE "${schemaName}".body_templates SET doc = NULL WHERE id = $1`, [broken.id]);
-			const unreadable = await store.createTemplate({ name: unique("unreadable"), mdx: "Words\n" });
-			await pool.query(`UPDATE "${schemaName}".body_templates SET doc = $1::jsonb WHERE id = $2`, [
+			const broken = await store.createTemplate({ name: unique("broken"), doc: docFromMdx("Words\n\n<Unclosed") });
+			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
+				"Words\n\n<Unclosed",
+				broken.id,
+			]);
+			const unreadable = await store.createTemplate({ name: unique("unreadable"), doc: docFromMdx("Words\n") });
+			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = $2::jsonb WHERE id = $3`, [
+				"Words\n",
 				JSON.stringify({ type: "doc", version: 99, content: [] }),
 				unreadable.id,
 			]);
@@ -485,8 +497,8 @@ describe("0015_code_annotations", () => {
 
 			const stored = await pool.query(`SELECT doc FROM "${schemaName}".body_templates WHERE id = $1`, [broken.id]);
 			expect(stored.rows[0]?.doc).toBeNull();
-			expect((await store.getTemplate(broken.id)).mdx).toBe("Words\n\n<Unclosed");
-			expect((await store.getTemplate(unreadable.id)).mdx).toBe("Words\n");
+			expect(await templateMdx(pool, schemaName, broken.id)).toBe("Words\n\n<Unclosed");
+			expect(await templateMdx(pool, schemaName, unreadable.id)).toBe("Words\n");
 			expect(messages.filter((message) => message.includes(`body_templates ${unreadable.id}`))).toHaveLength(1);
 		});
 	});
@@ -501,7 +513,7 @@ describe("0015_code_annotations", () => {
 			const templates = [];
 			for (let index = 0; index < 5; index += 1) {
 				const value = `// @line plus\nconst t${index} = ${index};`;
-				const template = await store.createTemplate({ name: unique("batch"), mdx: legacyMdx(value) });
+				const template = await store.createTemplate({ name: unique("batch"), doc: docFromMdx(legacyMdx(value)) });
 				await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = $2::jsonb WHERE id = $3`, [
 					legacyMdx(value),
 					JSON.stringify(legacyDocOf(template.doc, [value])),

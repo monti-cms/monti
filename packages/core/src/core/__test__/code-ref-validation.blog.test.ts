@@ -4,7 +4,13 @@ import { prepareSnapshot } from "../snapshot";
 
 /** Written as JSX: the test site has no syntax extension, and `:code-ref[text]{to}` is read to the same element. */
 const snapshotOf = (mdx: string) =>
-	prepareSnapshot({ collection: contentCollection, slug: "code-refs", metadata: { title: "Code refs" }, mdx });
+	prepareSnapshot({
+		collection: contentCollection,
+		slug: "code-refs",
+		metadata: { title: "Code refs" },
+		format: "mdx",
+		body: mdx,
+	});
 
 const fence = (lines: string[], lang = "ts") => [`\`\`\`${lang}`, ...lines, "```"].join("\n");
 

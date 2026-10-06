@@ -1,17 +1,18 @@
 import type { Pool, PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import { contentOf } from "../../../../test/stored-content";
+import { contentOf, docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, migrateContentStore } from "../content-store";
+import { createContentStore } from "../content-store";
 import { mdxContentHash, mdxSearchText } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateStoredDocuments } from "../store/stored-document-migration";
+import { migrateForEarlierSteps, templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0013_stored_documents";
@@ -38,7 +39,7 @@ describe("0013_stored_documents", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateForEarlierSteps(pool, schemaName);
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});
@@ -52,7 +53,13 @@ describe("0013_stored_documents", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -66,7 +73,8 @@ describe("0013_stored_documents", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 	const publishedWith = async (mdx: string) => {
@@ -129,7 +137,7 @@ describe("0013_stored_documents", () => {
 
 	const run = async (options: { dropColumns?: boolean } = {}) => {
 		await rewind(options);
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateForEarlierSteps(pool, schemaName);
 	};
 
 	const hasUnpublishedChanges = async (entryId: string) => {
@@ -318,7 +326,7 @@ describe("0013_stored_documents", () => {
 		await legacyPublished(LEGACY);
 		const broken = await createDraft("가\n<Unclosed");
 		await setLegacy(broken.id, "가\n<Unclosed");
-		const template = await store.createTemplate({ name: unique("again"), mdx: LEGACY });
+		const template = await store.createTemplate({ name: unique("again"), doc: docOf(LEGACY) });
 		await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
 			LEGACY,
 			template.id,
@@ -335,7 +343,7 @@ describe("0013_stored_documents", () => {
 
 	describe("body templates", () => {
 		const legacyTemplate = async (mdx: string) => {
-			const template = await store.createTemplate({ name: unique("template"), mdx });
+			const template = await store.createTemplate({ name: unique("template"), doc: docOf(mdx) });
 			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
 				mdx,
 				template.id,
@@ -349,7 +357,7 @@ describe("0013_stored_documents", () => {
 			await run();
 
 			const after = await store.getTemplate(template.id);
-			expect(after.mdx).toBe(WRITTEN);
+			expect(await templateMdx(pool, schemaName, template.id)).toBe(WRITTEN);
 			expect(contentOf(after.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
 			expect(after.version).toBe(template.version);
 			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
@@ -363,8 +371,7 @@ describe("0013_stored_documents", () => {
 				migrateStoredDocuments(client, schemaName, { log: (message) => messages.push(message) }),
 			);
 
-			const after = await store.getTemplate(broken.id);
-			expect(after.mdx).toBe("Words\n\n<Unclosed");
+			expect(await templateMdx(pool, schemaName, broken.id)).toBe("Words\n\n<Unclosed");
 			// The step leaves it without a document (the one after it, `0017_unparsed_bodies`, gives it its unparsed document).
 			const raw = await pool.query(`SELECT doc FROM "${schemaName}".body_templates WHERE id = $1`, [broken.id]);
 			expect(raw.rows[0]?.doc).toBeNull();
@@ -382,7 +389,7 @@ describe("0013_stored_documents", () => {
 			}
 			const templates = [];
 			for (let index = 0; index < 5; index += 1) {
-				const template = await store.createTemplate({ name: unique("batch"), mdx: `Heading ${index}\n=====\n` });
+				const template = await store.createTemplate({ name: unique("batch"), doc: docOf(`Heading ${index}\n=====\n`) });
 				await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
 					`Heading ${index}\n=====\n`,
 					template.id,

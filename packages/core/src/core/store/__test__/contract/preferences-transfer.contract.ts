@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../../test/any-site";
+import { docOf } from "../../../../../test/stored-content";
 import type { ContentStore } from "../..";
 import { CmsError } from "../..";
 import { publishDraft, seedEntry, seedSave } from "../seed";
@@ -140,7 +141,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 				byteSize: 10,
 				stagingKey: `staging/${filename}`,
 			});
-			const template = await store.createTemplate({ name: "Export template", mdx: "# Template body" });
+			const template = await store.createTemplate({ name: "Export template", doc: docOf("# Template body") });
 			const userId = `user-${randomUUID()}`;
 			await store.savePreferences({ userId, preferences: { theme: "dark" } });
 
@@ -158,7 +159,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			});
 			expect(snapshot.templates.find((candidate) => candidate.id === template.id)).toMatchObject({
 				name: "Export template",
-				mdx: template.mdx,
+				doc: template.doc,
 			});
 			expect(snapshot.preferences.find((candidate) => candidate.userId === userId)).toMatchObject({
 				userId,

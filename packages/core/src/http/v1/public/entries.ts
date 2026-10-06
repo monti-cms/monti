@@ -78,10 +78,12 @@ export async function getOne(
 			return publicError("invalid_input", `Unsupported collection: ${collection}`);
 		}
 		if (!slug.trim()) return publicError("invalid_input", "slug is required");
+		const format = new URL(request.url).searchParams.get("format") || undefined;
 		const result = await cms.read.getEntry({
 			collection,
 			slug,
 			locale: localeOf(new URL(request.url).searchParams.get("locale")),
+			...(format ? { format } : {}),
 		});
 		if (result.status === "not_found") return publicError("not_found", "Not found");
 		const entry = toJson(config)(result.entry, { body: true });

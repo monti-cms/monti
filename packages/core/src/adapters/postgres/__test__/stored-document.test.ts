@@ -48,7 +48,13 @@ describe("stored documents", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -64,7 +70,7 @@ describe("stored documents", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await metadataFor(),
-			...body,
+			...("mdx" in body ? { format: "mdx", body: body.mdx } : body),
 		} as never);
 
 	const save = async (entry: Entry, mdx: string) =>
@@ -72,7 +78,8 @@ describe("stored documents", () => {
 			collection: contentCollection,
 			slug: entry.workingSlug,
 			metadata: entry.working.metadata as never,
-			mdx,
+			format: "mdx",
+			body: mdx,
 			expectedVersion: entry.version,
 		});
 

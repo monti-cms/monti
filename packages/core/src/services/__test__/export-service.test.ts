@@ -4,6 +4,8 @@ import { STORED_DOCUMENT_VERSION } from "../../mdx/stored-document";
 import {
 	buildExportArchive,
 	canonicalJson,
+	type ExportTexts,
+	exportTextKey,
 	PUBLIC_METADATA_KEYS,
 	pickPublicMetadata,
 	publicExportEntrySchema,
@@ -50,21 +52,16 @@ describe("export archive builder", () => {
 				entryPath(DRAFT, DRAFT_ID, "references.json"),
 				entryPath(DRAFT, DRAFT_ID, "working.doc.json"),
 				entryPath(DRAFT, DRAFT_ID, "working.json"),
-				entryPath(DRAFT, DRAFT_ID, "working.mdx"),
 				entryPath(CONTENT, PUBLISHED_ID, "published.doc.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "published.json"),
-				entryPath(CONTENT, PUBLISHED_ID, "published.mdx"),
 				entryPath(CONTENT, PUBLISHED_ID, "references.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"),
 				entryPath(CONTENT, PUBLISHED_ID, "working.json"),
-				entryPath(CONTENT, PUBLISHED_ID, "working.mdx"),
 				entryPath(CONTENT, ARCHIVED_ID, "published.doc.json"),
 				entryPath(CONTENT, ARCHIVED_ID, "published.json"),
-				entryPath(CONTENT, ARCHIVED_ID, "published.mdx"),
 				entryPath(CONTENT, ARCHIVED_ID, "references.json"),
 				entryPath(CONTENT, ARCHIVED_ID, "working.doc.json"),
 				entryPath(CONTENT, ARCHIVED_ID, "working.json"),
-				entryPath(CONTENT, ARCHIVED_ID, "working.mdx"),
 				"folders.json",
 				"manifest.json",
 				"media.json",
@@ -72,10 +69,11 @@ describe("export archive builder", () => {
 				"templates.json",
 			].sort(),
 		);
-		expect(archive.text(entryPath(DRAFT, DRAFT_ID, "working.mdx"))).toBe("draft secret body");
-		expect(archive.text(entryPath(CONTENT, PUBLISHED_ID, "working.mdx"))).toBe("working body");
-		expect(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.mdx"))).toBe("published body");
-		expect(archive.text(entryPath(CONTENT, ARCHIVED_ID, "published.mdx"))).toBe("archived published body");
+		// The archive holds the documents; text files exist only when the export asks for a format.
+		expect(manifest.format).toBeNull();
+		expect(archive.text(entryPath(DRAFT, DRAFT_ID, "working.doc.json"))).toBe(
+			`${canonicalJson(fixtureDocument("draft secret body"))}\n`,
+		);
 		expect(manifest.counts).toMatchObject({
 			entries: 3,
 			workingBodies: 3,
@@ -95,12 +93,7 @@ describe("export archive builder", () => {
 		const archive = readAll(zip);
 
 		expect(archive.paths).toEqual(
-			[
-				entryPath(CONTENT, PUBLISHED_ID, "published.json"),
-				entryPath(CONTENT, PUBLISHED_ID, "published.mdx"),
-				"manifest.json",
-				"media.json",
-			].sort(),
+			[entryPath(CONTENT, PUBLISHED_ID, "published.json"), "manifest.json", "media.json"].sort(),
 		);
 		// The draft-only string does not remain in any file.
 		for (const path of archive.paths) {
@@ -194,14 +187,16 @@ describe("export archive builder", () => {
 		expect(buildExportArchive(changed, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
 	});
 
-	it("the admin archive is format version 3 and writes the document next to the MDX it was written to", () => {
+	it("the admin archive is format version 4 and writes the document, the only body", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
 		const archive = readAll(zip);
 
-		expect(manifest.formatVersion).toBe(3);
-		expect(JSON.parse(archive.text("manifest.json")).formatVersion).toBe(3);
+		expect(manifest.formatVersion).toBe(4);
+		expect(JSON.parse(archive.text("manifest.json")).formatVersion).toBe(4);
 		for (const path of archive.paths.filter((item) => /\/(working|published)\.json$/.test(item))) {
-			expect(JSON.parse(archive.text(path)).formatVersion, path).toBe(3);
+			const body = JSON.parse(archive.text(path));
+			expect(body.formatVersion, path).toBe(4);
+			expect(body).not.toHaveProperty("mdx");
 		}
 		const workingDoc = archive.text(entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"));
 		expect(workingDoc).toBe(`${canonicalJson(fixtureDocument("working body"))}\n`);
@@ -225,7 +220,7 @@ describe("export archive builder", () => {
 		const snapshot = makeSnapshot();
 		const draft = snapshot.entries.find((entry) => entry.id === DRAFT_ID);
 		if (!draft) throw new Error("fixture");
-		draft.working = { ...draft.working, mdx: "<Open", doc: fixtureDocument("<Open") };
+		draft.working = { ...draft.working, doc: fixtureDocument("<Open") };
 		const archive = readAll(buildExportArchive(snapshot, { scope: "admin", exportedAt: FIXED_TIME }).zip);
 
 		for (const [collection, id, file] of [
@@ -241,13 +236,68 @@ describe("export archive builder", () => {
 		});
 	});
 
-	it("templates.json carries the document of each template", () => {
+	it("templates.json carries the document of each template, and no text", () => {
 		const { zip } = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
-		const templates = JSON.parse(readAll(zip).text("templates.json")) as { mdx: string; doc: unknown }[];
+		const templates = JSON.parse(readAll(zip).text("templates.json")) as { doc: unknown }[];
 
 		expect(templates).toHaveLength(1);
-		expect(templates[0]?.mdx).toBe("## 문제");
+		expect(templates[0]).not.toHaveProperty("mdx");
+		expect(templates[0]).not.toHaveProperty("body");
 		expect(templates[0]?.doc).toEqual(fixtureDocument("## 문제"));
+	});
+
+	describe("with a format", () => {
+		const TEMPLATE_ID = "66666666-6666-4666-8666-666666666666";
+		const texts: ExportTexts = {
+			format: { name: "demo", extension: "demo" },
+			bodies: new Map([
+				[exportTextKey(DRAFT_ID, "working"), "draft text"],
+				[exportTextKey(PUBLISHED_ID, "working"), "working text"],
+				[exportTextKey(PUBLISHED_ID, "published"), "published text"],
+				[exportTextKey(TEMPLATE_ID, "template"), "template text"],
+			]),
+		};
+
+		it("the admin archive also holds each body as a file of that format, named by the format's extension", () => {
+			const { manifest, zip } = buildExportArchive(makeSnapshot(), {
+				scope: "admin",
+				exportedAt: FIXED_TIME,
+				texts,
+			});
+			const archive = readAll(zip);
+
+			expect(manifest.format).toEqual({ name: "demo", extension: "demo" });
+			expect(archive.text(entryPath(DRAFT, DRAFT_ID, "working.demo"))).toBe("draft text");
+			expect(archive.text(entryPath(CONTENT, PUBLISHED_ID, "working.demo"))).toBe("working text");
+			expect(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.demo"))).toBe("published text");
+			// A body that has no text (the archived item was not given one) has no file, and the documents are all still there.
+			expect(archive.paths).not.toContain(entryPath(CONTENT, ARCHIVED_ID, "working.demo"));
+			expect(archive.paths).toContain(entryPath(CONTENT, ARCHIVED_ID, "working.doc.json"));
+			const item = manifest.entries.find((entry) => entry.id === PUBLISHED_ID);
+			expect(item?.files).toContain(entryPath(CONTENT, PUBLISHED_ID, "published.demo"));
+			expect(manifest.counts.files).toBe(manifest.files.length);
+			const templates = JSON.parse(archive.text("templates.json")) as { body?: string; doc: unknown }[];
+			expect(templates[0]).toMatchObject({ body: "template text", doc: fixtureDocument("## 문제") });
+		});
+
+		it("the public archive holds the published text of the published items only", () => {
+			const { zip } = buildExportArchive(makeSnapshot(), { scope: "public", exportedAt: FIXED_TIME, texts });
+			const archive = readAll(zip);
+
+			expect(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.demo"))).toBe("published text");
+			expect(archive.paths.some((path) => path.endsWith("working.demo"))).toBe(false);
+			expect(archive.paths).not.toContain(entryPath(DRAFT, DRAFT_ID, "working.demo"));
+			for (const path of archive.paths) expect(archive.text(path)).not.toContain("working text");
+		});
+
+		it("the same documents give the same digest whether or not text files are added", () => {
+			const plain = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME });
+			const withText = buildExportArchive(makeSnapshot(), { scope: "admin", exportedAt: FIXED_TIME, texts });
+			// The item digests cover the state (document, slug, references), not how it was spelled out.
+			expect(withText.manifest.entries.map((entry) => entry.itemDigest)).toEqual(
+				plain.manifest.entries.map((entry) => entry.itemDigest),
+			);
+		});
 	});
 
 	it("the admin digests change when only the document changes", () => {
@@ -279,12 +329,12 @@ describe("export archive builder", () => {
 		expect(buildExportArchive(noDoc, { scope: "admin", exportedAt: FIXED_TIME }).digest).not.toBe(base.digest);
 	});
 
-	it("the public archive carries the published document next to the MDX text, and its digests depend on it", () => {
+	it("the public archive carries the published document, and its digests depend on it", () => {
 		const options = { scope: "public", exportedAt: FIXED_TIME } as const;
 		const base = buildExportArchive(makeSnapshot(), options);
 		const archive = readAll(base.zip);
 
-		expect(base.manifest.formatVersion).toBe(3);
+		expect(base.manifest.formatVersion).toBe(4);
 		// The document is a field of the entry, not a file of its own, and it is the document the admin archive stores.
 		expect(archive.paths.some((path) => path.includes(".doc.json"))).toBe(false);
 		const published = JSON.parse(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.json")));
@@ -317,7 +367,6 @@ describe("export archive builder", () => {
 			publishedAt: null,
 			updatedAt: "2026-09-22T00:00:00.000Z",
 			metadata: {},
-			mdx: "body",
 			doc: fixtureDocument("body"),
 			schemaVersion: 1,
 			contentHash: "h",
@@ -331,11 +380,10 @@ describe("export archive builder", () => {
 			publishedAt: null,
 			updatedAt: "2026-09-22T00:00:00.000Z",
 			metadata: {},
-			mdx: "body",
-			doc: null,
+			doc: fixtureDocument("body"),
 			schemaVersion: 1,
 			contentHash: "h",
-			working: { mdx: "draft" },
+			working: { doc: fixtureDocument("draft") },
 		});
 		expect(withWorking.success).toBe(false);
 	});

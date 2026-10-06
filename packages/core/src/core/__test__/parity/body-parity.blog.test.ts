@@ -46,7 +46,8 @@ const prepare = async (mdx: string) => {
 		collection: contentCollection,
 		slug: "parity",
 		metadata: { title: "Parity" },
-		mdx,
+		format: "mdx",
+		body: mdx,
 	});
 	const publish = validateForPublish(snap, {
 		targets: [],

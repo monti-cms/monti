@@ -49,6 +49,17 @@ export function createMediaOps(ctx: StoreContext) {
 
 		getMediaAsset,
 
+		findReadyMediaByStorageKeys: async (params: {
+			keys: readonly string[];
+		}): Promise<{ id: string; storageKey: string }[]> => {
+			if (params.keys.length === 0) return [];
+			const res = await pool.query<{ id: string; storage_key: string }>(
+				`SELECT id, storage_key FROM "${qSchema}".media_assets WHERE status = 'ready' AND storage_key = ANY($1::text[])`,
+				[[...params.keys]],
+			);
+			return res.rows.map((row) => ({ id: row.id, storageKey: row.storage_key }));
+		},
+
 		completeMediaAsset: async (input: CompleteMediaAssetInput): Promise<MediaAssetRecord> => {
 			const now = new Date();
 			const res = await pool.query<MediaRow>(
@@ -194,7 +205,7 @@ export function createMediaOps(ctx: StoreContext) {
 					`SELECT
 					   (SELECT COUNT(*) FROM "${qSchema}".entry_bodies
 					     WHERE position($1 in mdx) > 0 OR position($1 in metadata::text) > 0)::text AS count,
-					   (SELECT COUNT(*) FROM "${qSchema}".body_templates WHERE position($1 in mdx) > 0)::text AS templates`,
+					   (SELECT COUNT(*) FROM "${qSchema}".body_templates WHERE position($1 in doc::text) > 0)::text AS templates`,
 					[id],
 				);
 				const referenceCount = Number(refs.rows[0]?.count ?? 0);

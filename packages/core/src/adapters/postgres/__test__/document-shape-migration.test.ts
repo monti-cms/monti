@@ -1,15 +1,17 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, migrateContentStore } from "../content-store";
+import { createContentStore } from "../content-store";
 import { mdxContentHash } from "../store/mdx-body";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateSoftBreaks } from "../store/soft-break-migration";
+import { migrateForEarlierSteps, templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
@@ -29,7 +31,7 @@ describe("document shape migrations", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateForEarlierSteps(pool, schemaName);
 		store = createContentStore(pool, { schema: schemaName });
 		service = createContentService<Entry>(store);
 	});
@@ -43,7 +45,13 @@ describe("document shape migrations", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({ collection: to, slug: unique(to), metadata, mdx: "Body" });
+		const draft = await service.createDraft({
+			collection: to,
+			slug: unique(to),
+			metadata,
+			format: "mdx",
+			body: "Body",
+		});
 		const published =
 			draft.status === "published"
 				? draft
@@ -57,7 +65,8 @@ describe("document shape migrations", () => {
 			collection: contentCollection,
 			slug: unique("post"),
 			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			mdx,
+			format: "mdx",
+			body: mdx,
 		});
 
 	const publishedWith = async (mdx: string) => {
@@ -120,7 +129,7 @@ describe("document shape migrations", () => {
 			await setWorkingBody(edited.id, "첫 줄<br />\n다른 줄");
 
 			await rewindTo(STEP);
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateForEarlierSteps(pool, schemaName);
 
 			expect(await staleHashes()).toEqual([]);
 			expect(await hasUnpublishedChanges(same.id)).toBe(false);
@@ -132,7 +141,7 @@ describe("document shape migrations", () => {
 			const published = await publishedWith("첫 줄<br />\n둘째 줄");
 			await rewindTo(STEP);
 
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateForEarlierSteps(pool, schemaName);
 
 			const after = await store.getEntry(published.id);
 			expect(after.version).toBe(published.version);
@@ -163,7 +172,7 @@ describe("document shape migrations", () => {
 
 		const run = async () => {
 			await rewindTo(STEP);
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateForEarlierSteps(pool, schemaName);
 		};
 
 		it("is a recorded migration step that runs after the hash step and before the template seed", () => {
@@ -238,13 +247,13 @@ describe("document shape migrations", () => {
 		});
 
 		it("rewrites body templates and leaves their version alone", async () => {
-			const template = await store.createTemplate({ name: unique("soft"), mdx: SOFT });
+			const template = await store.createTemplate({ name: unique("soft"), doc: docOf(SOFT) });
 			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1 WHERE id = $2`, [SOFT, template.id]);
 
 			await run();
 
 			const after = await store.getTemplate(template.id);
-			expect(after.mdx).toBe(EXPLICIT);
+			expect(await templateMdx(pool, schemaName, template.id)).toBe(EXPLICIT);
 			expect(after.version).toBe(template.version);
 			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
 		});
