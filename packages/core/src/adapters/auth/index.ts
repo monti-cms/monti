@@ -20,6 +20,7 @@ export const auth = () => getCmsAuth().session();
 export const signIn = (provider?: string, options?: { redirectTo?: string }) => getCmsAuth().signIn(provider, options);
 export const signOut = (options?: { redirectTo?: string }) => getCmsAuth().signOut(options);
 export const isAllowedAdminId = (userId: string | null | undefined) => getCmsAuth().isAdmin(userId);
-export const isDevAuthBypassEnabled = () => getCmsAuth().devBypass;
+/** Whether the development bypass applies to the current request (see `devBypass`). Call it inside a request. */
+export const isDevAuthBypassEnabled = () => authGateway.isDevBypassActive();
 /** Login methods to show on the login page. */
 export const authProviders = () => getCmsAuth().providers;

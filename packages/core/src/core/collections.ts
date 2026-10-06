@@ -14,7 +14,7 @@ import type { StorageType } from "../schema/fields";
 export type Collection = SchemaCollection;
 export const COLLECTIONS = Object.keys(cmsConfig.collections) as readonly Collection[];
 
-export type { CollectionKind, CollectionWorkflow } from "../schema/collection";
+export type { CollectionKind } from "../schema/collection";
 
 export type FieldType = StorageType;
 
@@ -64,13 +64,6 @@ export const isDocumentCollection = (val: unknown): val is Collection =>
 
 /** Document collections (`kind: "document"`). */
 export const DOCUMENT_COLLECTIONS = COLLECTIONS.filter((c) => COLLECTION_DEFINITIONS[c].kind === "document");
-
-/** @deprecated `isItemCollection`. */
-export const isRecordCollection = isItemCollection;
-/** @deprecated `DOCUMENT_COLLECTIONS`. */
-export const CONTENT_COLLECTIONS = DOCUMENT_COLLECTIONS;
-/** @deprecated `isDocumentCollection`. */
-export const isContentCollection = isDocumentCollection;
 
 /** The collection opened when the URL names none. The first content collection, or the first collection if none. */
 export const DEFAULT_COLLECTION: Collection = (DOCUMENT_COLLECTIONS[0] ?? COLLECTIONS[0]) as Collection;

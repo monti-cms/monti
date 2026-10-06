@@ -23,6 +23,8 @@ export interface GithubCredentials {
 	readonly signInPage: string;
 	/** Login session signing value. If unset, NextAuth reads `AUTH_SECRET`. */
 	readonly secret?: string;
+	/** Whether to build callback URLs from the request host (NextAuth `trustHost`). Default off. `AUTH_URL` fixes the origin, which makes it safe without. */
+	readonly trustHost?: boolean;
 }
 
 /** NextAuth config for logging in with GitHub OAuth. The session carries the GitHub numeric ID (`githubId`). */
@@ -32,6 +34,7 @@ export const githubAuthConfig = ({
 	basePath,
 	signInPage,
 	secret,
+	trustHost = false,
 }: GithubCredentials): NextAuthConfig => ({
 	basePath,
 	...(secret ? { secret } : {}),
@@ -75,7 +78,7 @@ export const githubAuthConfig = ({
 	pages: {
 		signIn: signInPage,
 	},
-	trustHost: true,
+	trustHost: trustHost || Boolean(process.env.AUTH_URL ?? process.env.NEXTAUTH_URL),
 });
 
 export const createGithubNextAuth = (credentials: GithubCredentials) => NextAuth(githubAuthConfig(credentials));

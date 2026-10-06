@@ -1,4 +1,5 @@
-import { defineMessages, josa } from "@monti-cms/core";
+import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/client";
 
 /** English: noun matching the count ("1 item" / "3 items"). */
 const items = (count: unknown) => `${count} ${Number(count) === 1 ? "item" : "items"}`;

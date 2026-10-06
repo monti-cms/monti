@@ -255,9 +255,11 @@ What `@monti-cms/admin/styles.css` provides (everything carries the `cms` prefix
 </CmsAdminLayout>
 ```
 
-- `themeProvider` (default `true`): the admin UI adds a `next-themes` provider (`attribute="class"`). When off, it follows the
-  `.dark` or `[data-theme="dark"]` that the site's provider puts on `html`. If left on, when leaving the admin the provider clears the `dark` class and `color-scheme` it left on `html`
-  (otherwise public screens in the same root layout would stay dark).
+- `themeProvider` (default `true`): the admin UI adds a `next-themes` provider (`attribute="class"`) that keeps its theme under its own storage key, `monti-admin-theme`, so switching the
+  theme in the admin does not change the site's theme. When leaving the admin, the provider puts the `dark` and `light` classes and `color-scheme` on `html` back the way they were before the admin mounted
+  (the site's own theme is left alone, and public screens in the same root layout do not stay dark). When off, the admin follows the
+  `.dark` or `[data-theme="dark"]` that the site's provider puts on `html`, and the theme toggle in the admin changes the site's theme.
+- `themeStorageKey` (default `monti-admin-theme`): the `localStorage` key for the admin's theme, used only with `themeProvider`.
 - `toaster` (default `true`): the admin UI adds `sonner`'s `Toaster`. When off, admin notifications appear in the site's `Toaster` (when using the same `sonner`).
 
 ## Development

@@ -29,9 +29,9 @@ interface BaseField {
 	readonly description?: string;
 	/**
 	 * A field that must not be empty. Document (`document`) collections check it when publishing, item (`item`) collections when saving.
-	 * Saving a draft is not blocked. The legacy value `"publish"` is accepted with the same meaning.
+	 * Saving a draft is not blocked.
 	 */
-	readonly required?: true | "publish";
+	readonly required?: true;
 	readonly localized?: Localized;
 	/** Name in the client input registry to use instead of the default input. */
 	readonly input?: string;
@@ -162,9 +162,8 @@ export interface ViewField {
  */
 export const RESERVED_METADATA_KEYS: readonly string[] = ["translations"];
 
-/** Whether the field must not be empty (`required: true` and the legacy value `"publish"`). */
-export const isRequiredField = (field: { readonly required?: true | "publish" }): boolean =>
-	field.required === true || field.required === "publish";
+/** Whether the field must not be empty (`required: true`). */
+export const isRequiredField = (field: { readonly required?: true }): boolean => field.required === true;
 
 /** Default character count when filling from the body. */
 export const FILL_FROM_BODY_MAX_LENGTH = 160;

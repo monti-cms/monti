@@ -182,7 +182,7 @@ const zonedDayBoundary = (date: string, end: boolean) => {
 /**
  * List API (`GET /entries`) query. Multiple values of the same filter are OR; different filters are AND.
  * With `trash`, requests only trashed items.
- * Publishable collections (posts, memos) are requested one row per translation group. Trash lists items individually so a single translation can be restored.
+ * Publishable collections (`kind: "document"`) are requested one row per translation group. Trash lists items individually so a single translation can be restored.
  */
 export function listStateToApiQuery(state: ListState, options: { trash?: boolean } = {}): URLSearchParams {
 	const query = new URLSearchParams({

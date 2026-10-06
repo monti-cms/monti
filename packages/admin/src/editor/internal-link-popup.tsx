@@ -14,6 +14,8 @@ const t = createTranslator(editorMessages);
 interface InternalLinkPopupProps {
 	items: InternalLinkItem[];
 	isLoading: boolean;
+	/** Message to show in place of the result list when the search request failed. */
+	error?: string | null;
 	coords: { top: number; left: number };
 	selectedIndex: number;
 	onSelect: (item: InternalLinkItem) => void;
@@ -41,6 +43,7 @@ function itemMeta(item: InternalLinkItem): string {
 export function InternalLinkPopup({
 	items,
 	isLoading,
+	error,
 	coords,
 	selectedIndex,
 	onSelect,
@@ -111,6 +114,10 @@ export function InternalLinkPopup({
 					<Spinner className="size-3.5" />
 					{t("internalLink.searching")}
 				</output>
+			) : error ? (
+				<p role="alert" className="px-2 py-1.5 text-cms-destructive text-xs">
+					{error}
+				</p>
 			) : (
 				items.length === 0 && <p className="px-2 py-1.5 text-cms-muted-foreground text-xs">{t("internalLink.empty")}</p>
 			)}

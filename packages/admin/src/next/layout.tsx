@@ -26,6 +26,11 @@ export type CmsAdminLayoutProps = {
 	 */
 	themeProvider?: boolean;
 	/**
+	 * localStorage key the admin UI's own theme is stored under. Default `monti-admin-theme`, so switching the admin theme does not change the site's theme.
+	 * Only used with `themeProvider`.
+	 */
+	themeStorageKey?: string;
+	/**
 	 * Whether to render the admin UI's toast container (`sonner`'s `Toaster`). Default `true`. Set `false` if the site already has a `Toaster`.
 	 * Admin UI toasts also appear in the site's `Toaster` (when using the same `sonner` package).
 	 */
@@ -37,7 +42,12 @@ export type CmsAdminLayoutProps = {
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
  * If the site already has them, turn them off with `<CmsAdminLayout themeProvider={false} toaster={false}>`.
  */
-export async function CmsAdminLayout({ children, themeProvider = true, toaster = true }: CmsAdminLayoutProps) {
+export async function CmsAdminLayout({
+	children,
+	themeProvider = true,
+	themeStorageKey,
+	toaster = true,
+}: CmsAdminLayoutProps) {
 	const plugins = await loadAdminPlugins();
 	// Plugin providers wrap from the outside in registration order, inside the server data cache.
 	const content = plugins.reduceRight<ReactNode>(
@@ -52,5 +62,5 @@ export async function CmsAdminLayout({ children, themeProvider = true, toaster =
 			<AdminFeaturesProvider features={{ media: isCmsMediaConfigured() }}>{content}</AdminFeaturesProvider>
 		</AdminQueryProvider>
 	);
-	return themeProvider ? <AdminThemeProvider>{app}</AdminThemeProvider> : app;
+	return themeProvider ? <AdminThemeProvider storageKey={themeStorageKey}>{app}</AdminThemeProvider> : app;
 }

@@ -9,19 +9,6 @@ import { valueFieldsOf } from "./walk";
  */
 export type CollectionKind = "document" | "item";
 
-/**
- * Legacy name (`workflow`). `publish` is `document` and `record` is `item`.
- * @deprecated Use `kind`. `defineCollection` still accepts it and converts it to `kind`.
- */
-export type CollectionWorkflow = "publish" | "record";
-
-/** Kind in the legacy name (`workflow`). */
-export type KindOfWorkflow<W extends CollectionWorkflow> = W extends "record" ? "item" : "document";
-
-/** Converts the legacy name (`workflow`) into the kind (`kind`). */
-export const kindOfWorkflow = (workflow: CollectionWorkflow): CollectionKind =>
-	workflow === "record" ? "item" : "document";
-
 /** System columns of the list. They are values of the content itself, not fields. */
 export const SYSTEM_LIST_COLUMNS = ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"] as const;
 export type SystemListColumn = (typeof SYSTEM_LIST_COLUMNS)[number];
@@ -133,40 +120,36 @@ type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<
 export function defineCollection<
 	const Fields extends Readonly<Record<string, Field>>,
 	const Kind extends CollectionKind,
->(schema: CollectionInput<Fields> & { kind: Kind; workflow?: undefined }): CollectionSchema<Fields, Kind>;
-/** @deprecated Use `kind` instead of `workflow` (`publish` → `document`, `record` → `item`). */
-export function defineCollection<
-	const Fields extends Readonly<Record<string, Field>>,
-	const Workflow extends CollectionWorkflow,
->(
-	schema: CollectionInput<Fields> & { workflow: Workflow; kind?: undefined },
-): CollectionSchema<Fields, KindOfWorkflow<Workflow>>;
+>(schema: CollectionInput<Fields> & { kind: Kind }): CollectionSchema<Fields, Kind>;
 export function defineCollection(
-	schema: CollectionInput<Readonly<Record<string, Field>>> & { kind?: CollectionKind; workflow?: CollectionWorkflow },
+	schema: CollectionInput<Readonly<Record<string, Field>>> & { kind?: CollectionKind },
 ): CollectionSchema {
 	return normalizeCollection(schema);
 }
 
 /**
- * Normalizes a collection definition: converts the legacy name (`workflow`) into the kind (`kind`) and fills the body default (only `document` has a body).
+ * Normalizes a collection definition: checks the kind and fills the body default (only `document` has a body).
  * Called by `defineCollection` and `defineConfig` (an already normalized definition stays as is).
+ * The retired `workflow` option (`"publish"` / `"record"`) is rejected with the `kind` to use instead.
  */
 export function normalizeCollection(
 	schema: Omit<CollectionSchema, "kind" | "body"> & {
 		readonly kind?: CollectionKind;
-		readonly workflow?: CollectionWorkflow;
 		readonly body?: boolean;
 	},
 ): CollectionSchema {
-	const { workflow, ...rest } = schema;
-	const kind = schema.kind ?? (workflow ? kindOfWorkflow(workflow) : undefined);
+	const { kind } = schema;
+	if ("workflow" in schema) {
+		const workflow = (schema as { readonly workflow?: unknown }).workflow;
+		const replacement = workflow === "record" ? "item" : workflow === "publish" ? "document" : undefined;
+		throw new Error(
+			`cms.config: collection "${schema.label}" uses \`workflow\`, which was removed; use \`kind\`${replacement ? ` (kind: "${replacement}" instead of workflow: "${workflow}")` : ' ("document" or "item")'}`,
+		);
+	}
 	if (kind !== "document" && kind !== "item") {
 		throw new Error(`cms.config: collection "${schema.label}" needs kind "document" or "item"`);
 	}
-	if (schema.kind !== undefined && workflow !== undefined && kindOfWorkflow(workflow) !== schema.kind) {
-		throw new Error(`cms.config: collection "${schema.label}" has kind "${schema.kind}" and workflow "${workflow}"`);
-	}
-	return { ...rest, kind, body: schema.body ?? kind === "document" };
+	return { ...schema, kind, body: schema.body ?? kind === "document" };
 }
 
 type Stored<Fields> = {

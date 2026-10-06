@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@cms-config", async () => {
 	const { defineCollection, defineConfig, fields } = await import("../..");
 	const title = fields.text({ label: "Title", required: true });
-	const slug = fields.slug({ label: "Slug", from: "title", required: "publish" });
+	const slug = fields.slug({ label: "Slug", from: "title", required: true });
 	return {
 		default: defineConfig({
 			collections: {
@@ -23,8 +23,7 @@ vi.mock("@cms-config", async () => {
 						summary: fields.text({ label: "Summary", fillFromBody: { maxLength: 40 }, max: 30 }),
 					},
 				}),
-				// The old name (`workflow`) is accepted too.
-				label: defineCollection({ label: "Label", workflow: "record", fields: { title, slug } }),
+				label: defineCollection({ label: "Label", kind: "item", fields: { title, slug } }),
 			},
 			locales: [{ code: "en", name: "English" }],
 			defaultLocale: "en",
@@ -57,7 +56,7 @@ const snapshot = (collection: string, patch: object = {}) =>
 	}) as never;
 
 describe("collection kind", () => {
-	it("the core reads only the normalized `kind` (the old `workflow` is converted)", () => {
+	it("the core reads the normalized `kind`", () => {
 		expect((COLLECTION_DEFINITIONS as Record<string, { kind: string }>).label?.kind).toBe("item");
 		expect(schemaOf(c("label")).body).toBe(false);
 		expect(isItemCollection("label")).toBe(true);
@@ -67,7 +66,7 @@ describe("collection kind", () => {
 });
 
 describe("required fields (`required: true`)", () => {
-	it('an empty value is an issue (the old value `"publish"` too)', () => {
+	it("an empty value is an issue", () => {
 		expect(missingRequiredIssues(c("label"), { slug: null, metadata: {} })).toEqual([
 			{ code: "null_slug", path: "slug" },
 			{ code: "missing_field", path: "title", message: "Title" },

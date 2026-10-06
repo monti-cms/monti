@@ -1,4 +1,5 @@
-import { defineMessages, josa } from "@monti-cms/core";
+import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/client";
 
 /** English: the noun in the right number ("1 selected post" / "3 selected posts"). */
 const selected = (count: unknown, noun: string) => `${count} selected ${noun}${Number(count) === 1 ? "" : "s"}`;

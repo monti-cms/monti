@@ -5,6 +5,7 @@ import { adminUrl } from "./core/admin-paths";
 import { notifyAfterCommit } from "./plugin/server";
 import type { CmsAuth } from "./server/define";
 import { cmsServerConfig } from "./server/resolved";
+import { isCmsHostTrusted } from "./server/trust";
 import { createContentService } from "./services/content-service";
 
 /**
@@ -41,7 +42,7 @@ export function getCmsMediaStore(): MediaStore {
 }
 
 export function getCmsAuth(): CmsAuth {
-	global.__cmsAuth ??= cmsServerConfig.auth.create({ loginPath: adminUrl("/login") });
+	global.__cmsAuth ??= cmsServerConfig.auth.create({ loginPath: adminUrl("/login"), trustHost: isCmsHostTrusted() });
 	return global.__cmsAuth;
 }
 

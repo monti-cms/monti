@@ -1,4 +1,5 @@
-import { defineMessages, josa } from "@monti-cms/core";
+import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/client";
 
 /** The action the user was attempting, used in the "blocked" notice. English: "before ○○ing"; Korean: "○○하세요". */
 const PURPOSE_KO: Record<string, string> = {

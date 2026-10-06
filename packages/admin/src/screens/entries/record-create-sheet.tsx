@@ -18,7 +18,7 @@ export const optionOf = (saved: EntryData) => ({
 });
 
 /**
- * Right-hand sheet for adding a category (tag, category, collection) from the post edit screen. Opens the same sheet as the category sheet on the list screen
+ * Right-hand sheet for adding a category (tag, category, collection) from the entry edit screen. Opens the same sheet as the category sheet on the list screen
  * and fills in name, slug, description and translations at once. `create(...)` resolves to the created item on save, or null on close.
  * Render `sheet` once on the screen.
  */

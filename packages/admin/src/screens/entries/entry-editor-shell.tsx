@@ -246,7 +246,7 @@ function keepTranslationGroup(current: EntryData | null, next: EntryData): Pick<
 }
 
 /**
- * Post and memo edit screen. Tags, categories and collections (record collections) are edited in the small form on the list.
+ * Edit screen of a document entry. Item collections (tags, categories and the like) are edited in the small form on the list.
  */
 export function EntryEditorShell({
 	mode,

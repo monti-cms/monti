@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsApiUrl, createTranslator, FILE_ACCEPT, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
+import { createTranslator, FILE_ACCEPT } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/mdx";
 import type { Editor, Range } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -42,6 +42,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { type EditorInsertAction, type EditorSelectionAction, useCmsAdminComponents } from "../admin-components";
+import { errorText } from "../screens/admin-api";
 import { MEDIA_NOT_CONFIGURED } from "../screens/api-error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import { Button } from "../ui/button";
@@ -64,6 +65,7 @@ import { InlineBubble, useMarkExtensions } from "./inline-bubble";
 import { INLINE_MARK_TOOLS } from "./inline-marks";
 import { type InternalLinkItem, insertInternalLink, parseInternalLinkTrigger } from "./internal-link";
 import { InternalLinkPopup } from "./internal-link-popup";
+import { searchLinkTargets } from "./internal-link-search";
 import { type LinkDraft, LinkForm, linkDraftFromSelection } from "./link-form";
 import { editorMessages } from "./messages";
 import {
@@ -353,29 +355,6 @@ function ToolbarDropdown({
 	);
 }
 
-async function searchLinkTargets(query: string): Promise<InternalLinkItem[]> {
-	const search = async (collection: string) => {
-		const params = new URLSearchParams({ collection, pageSize: "25" });
-		if (query) params.set("search", query);
-		for (const status of ["draft", "published"]) params.append("status", status);
-		const res = await fetch(cmsApiUrl(`/v1/entries?${params.toString()}`));
-		if (!res.ok) return [];
-		const data = (await res.json()) as {
-			items: { id: string; collection: string; title: string | null; slug: string | null; status: string }[];
-		};
-		return data.items.map((item) => ({
-			id: item.id,
-			collection: item.collection,
-			title: item.title || t("toolbar.untitled"),
-			slug: item.slug ?? "",
-			status: item.status,
-		}));
-	};
-	// Find only collections that have a public path (ones a body link can point to).
-	const results = await Promise.all(LINKABLE_COLLECTIONS.map(search));
-	return results.flat().slice(0, 20);
-}
-
 /** Handle width (px) and gap from the block. BlockHandleOverlay places a 24px button at `left - 32`. */
 const HANDLE_OFFSET = 32;
 const HANDLE_WIDTH = 24;
@@ -491,6 +470,7 @@ export function CmsEditor({
 	const [link, setLink] = useState<{ query: string; index: number; coords: Coords } | null>(null);
 	const [linkItems, setLinkItems] = useState<InternalLinkItem[]>([]);
 	const [isLinkLoading, setIsLinkLoading] = useState(false);
+	const [linkError, setLinkError] = useState<string | null>(null);
 	const linkRangeRef = useRef<Range | null>(null);
 	const linkRef = useRef(link);
 	linkRef.current = link;
@@ -693,13 +673,16 @@ export function CmsEditor({
 		if (linkQuery === undefined) return;
 		let cancelled = false;
 		setIsLinkLoading(true);
+		setLinkError(null);
 		const timer = setTimeout(() => {
 			searchLinkTargets(linkQuery)
 				.then((items) => {
 					if (!cancelled) setLinkItems(items);
 				})
-				.catch(() => {
-					if (!cancelled) setLinkItems([]);
+				.catch((error) => {
+					if (cancelled) return;
+					setLinkItems([]);
+					setLinkError(errorText(error, t("internalLink.error")));
 				})
 				.finally(() => {
 					if (!cancelled) setIsLinkLoading(false);
@@ -1171,6 +1154,7 @@ export function CmsEditor({
 				<InternalLinkPopup
 					items={linkItems}
 					isLoading={isLinkLoading}
+					error={linkError}
 					coords={link.coords}
 					selectedIndex={link.index}
 					onSelect={chooseLink}

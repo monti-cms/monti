@@ -255,9 +255,11 @@ export default defineAdminPlugin({
 </CmsAdminLayout>
 ```
 
-- `themeProvider`(기본 `true`): 관리자 화면이 `next-themes` 공급자(`attribute="class"`)를 둔다. 끄면 사이트의 공급자가 `html`에 붙이는
-  `.dark`·`[data-theme="dark"]`를 따른다. 켜 둔 채 관리자를 떠나면 공급자가 `html`에 남긴 `dark` 클래스와 `color-scheme`을 지운다
-  (지우지 않으면 같은 루트 레이아웃의 공개 화면이 어둡게 남는다).
+- `themeProvider`(기본 `true`): 관리자 화면이 `next-themes` 공급자(`attribute="class"`)를 두고, 테마를 자기만의 저장 키 `monti-admin-theme`에 보관한다. 그래서 관리자에서
+  테마를 바꿔도 사이트의 테마는 바뀌지 않는다. 관리자를 떠날 때는 `html`의 `dark`·`light` 클래스와 `color-scheme`을 관리자가 뜨기 전 상태로 되돌린다
+  (사이트 자신의 테마는 건드리지 않고, 같은 루트 레이아웃의 공개 화면이 어둡게 남지도 않는다). 끄면 사이트의 공급자가 `html`에 붙이는
+  `.dark`·`[data-theme="dark"]`를 따르며, 관리자의 테마 토글은 사이트의 테마를 바꾼다.
+- `themeStorageKey`(기본 `monti-admin-theme`): 관리자 테마를 담는 `localStorage` 키. `themeProvider`를 켰을 때만 쓴다.
 - `toaster`(기본 `true`): 관리자 화면이 `sonner`의 `Toaster`를 둔다. 끄면 사이트의 `Toaster`에 관리자 알림이 뜬다(같은 `sonner`를 쓸 때).
 
 ## 개발

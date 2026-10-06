@@ -76,7 +76,7 @@ type EntryOption = { id: string; title: string; status: string };
 const ENTRY_OPTIONS_PAGE_SIZE = 100;
 
 /**
- * Full list of relation targets (posts, memos). Fetched all at once up front so it can be shown right away without search when picking.
+ * Full list of relation targets (entries of the target collection). Fetched all at once up front so it can be shown right away without search when picking.
  * The list API excludes trashed posts, and with `publishedOnly` only published posts are received.
  */
 function useEntryOptions(field: RelationField) {
@@ -120,7 +120,7 @@ const targetLabel = (relation: RelationField) =>
 const entryLabel = (option: EntryOption) =>
 	option.status === "published" ? option.title : `${option.title}${t("entry.unpublished")}`;
 
-/** Single relation (post or memo target). Pressing it opens the full post list to pick from. Used by the replacement post. */
+/** Single relation. Pressing it opens the full list of target entries to pick from. */
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const relation = field as RelationField;
 	const options = useEntryOptions(relation);
@@ -309,7 +309,7 @@ export type IncomingReference = {
 };
 
 /**
- * If an inverse relation is a conditional list on the other record (e.g. `memoIds`, present only when a collection's `contained posts` are memos),
+ * If an inverse relation is a conditional list on the other record (a field that exists only for one value of a select field),
  * only records matching that condition can be picked. The currently chosen kind is read per record to filter.
  * Relations without a condition are not filtered.
  */

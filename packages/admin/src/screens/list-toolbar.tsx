@@ -71,7 +71,7 @@ export function filterChips(state: ListState, options: TaxonomyOptions): FilterC
 	return chips;
 }
 
-/** Search box in the header. Sends a server search when typing pauses. Posts and memos can turn on body search. */
+/** Search box in the header. Sends a server search when typing pauses. Document collections can turn on body search. */
 export function ListSearch({
 	state,
 	onChange,

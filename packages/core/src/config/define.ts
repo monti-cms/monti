@@ -85,11 +85,6 @@ export interface AdminConfig {
 	 * (`defineMessages`). Example: `{ "cms-admin.entries": { publish: "Ship it" } }`.
 	 */
 	readonly messages?: Readonly<Record<string, Readonly<Record<string, MessageValue>>>>;
-	/**
-	 * Name of the legacy browser recovery DB (IndexedDB). The admin UI still reads and deletes recovery copies left under this name but never creates new ones.
-	 * The current name is `cms_backup`. Only sites that used the old name need to set this.
-	 */
-	readonly legacyBackupNames?: readonly string[];
 }
 
 export interface MdxConfig {
@@ -205,6 +200,11 @@ function validateFieldMeanings(collection: string, schema: CollectionSchema): vo
 		if (RESERVED_METADATA_KEYS.includes(name)) {
 			throw new Error(`cms.config: ${collection}.${name} uses a reserved name; rename the field`);
 		}
+		if (field.required !== undefined && field.required !== true) {
+			throw new Error(
+				`cms.config: ${collection}.${name} has required: ${JSON.stringify(field.required)}; only \`required: true\` exists (the old "publish" value was removed)`,
+			);
+		}
 		if (field.kind === "text" && field.fillFromBody && !schema.body) {
 			throw new Error(`cms.config: ${collection}.${name} fillFromBody needs a collection with a body`);
 		}
@@ -305,6 +305,12 @@ function validate(config: CmsConfig<CollectionsConfig, string, readonly CmsPlugi
 	}
 	if (config.site?.home !== undefined && !isHomeHref(config.site.home)) {
 		throw new Error(`cms.config: site.home "${config.site.home}" must be a path ("/") or an http(s) URL`);
+	}
+
+	if (config.admin && "legacyBackupNames" in config.admin) {
+		throw new Error(
+			"cms.config: admin.legacyBackupNames was removed; delete it (the admin UI only uses the `cms_backup` recovery database)",
+		);
 	}
 
 	if (config.admin?.locale !== undefined) {
@@ -410,7 +416,7 @@ export function defineConfig<
 	const Locale extends string,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
 >(config: CmsConfig<Collections, Locale, Plugins>): CmsConfig<Collections, Locale, Plugins> {
-	// Also accepts definitions written without `defineCollection` and the legacy name (`workflow`). The core only reads the normalized `kind`.
+	// Also accepts definitions written without `defineCollection`. The core only reads the normalized `kind`.
 	const collections = Object.fromEntries(
 		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema)]),
 	) as unknown as Collections;

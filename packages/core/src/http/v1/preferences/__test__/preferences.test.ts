@@ -68,19 +68,17 @@ describe("Preferences API — per-collection list preferences", () => {
 		expect(saved.collections[SECOND]).toEqual({ pageSize: 100 });
 	});
 
-	it("reads the previous global shape as per-collection settings", async () => {
+	it("drops the removed global shape instead of reading it as per-collection settings", async () => {
 		state.stored = {
 			defaultPageSize: 50,
 			sort: { field: "title", direction: "asc" },
 			columnSettings: { [SECOND]: { visibility: { tags: false } } },
+			collections: { [FIRST]: { pageSize: 100 } },
 		};
 		const saved = await (await getPreferences(getReq())).json();
-		expect(saved.collections[SECOND]).toEqual({
-			pageSize: 50,
-			sort: { field: "title", direction: "asc" },
-			columns: { visibility: { tags: false } },
-		});
-		expect(saved.collections[FIRST]).toEqual({ pageSize: 50, sort: { field: "title", direction: "asc" } });
+		expect(saved.collections[FIRST]).toEqual({ pageSize: 100 });
+		expect(saved.collections[SECOND]).toEqual({});
+		expect(JSON.stringify(saved)).not.toMatch(/defaultPageSize|columnSettings/);
 	});
 
 	it("rejects malformed column names, duplicate order entries and invalid page sizes with 400", async () => {

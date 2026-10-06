@@ -67,7 +67,7 @@ export function RecordPanel({
 	onSaved: (saved: EntryData) => void;
 	/** When unsaved changes appear or go away. Used to ask before the list opens another item. */
 	onDirtyChange?: (dirty: boolean) => void;
-	/** Initial values of a new item (e.g. a name when added by search term in the post edit screen). */
+	/** Initial values of a new item (e.g. a name when added by search term in the entry edit screen). */
 	initial?: EntryFormPatch;
 	className?: string;
 }) {
