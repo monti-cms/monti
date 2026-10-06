@@ -1,12 +1,5 @@
-import { adminHref, adminUrl, createTranslator } from "@monti-cms/core/client";
-import {
-	auth,
-	authProviders,
-	isAllowedAdminId,
-	isDevAuthBypassEnabled,
-	signIn,
-	signOut,
-} from "@monti-cms/core/runtime";
+import { adminHref, cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import type { Cms } from "@monti-cms/core/runtime";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
@@ -16,21 +9,26 @@ import { loginMessages } from "./messages";
 
 const t = createTranslator(loginMessages);
 
-export default async function AdminLoginPage() {
-	if (await isDevAuthBypassEnabled()) {
+/**
+ * Sign in and out are plain form posts to the core API (its `v1/session/*` routes), not server actions: a server action cannot carry the
+ * CMS instance, because the values it closes over must be serializable.
+ */
+export default async function AdminLoginPage({ cms }: { cms: Cms }) {
+	if (await cms.authGateway.isDevBypassActive()) {
 		redirect(adminHref() as Route);
 	}
 
-	const session = await auth();
+	const auth = cms.auth();
+	const session = await auth.session();
 	const accountId = session?.user?.accountId;
 
 	// If already signed in as admin, go straight to the dashboard.
-	if (accountId && isAllowedAdminId(accountId)) {
+	if (accountId && auth.isAdmin(accountId)) {
 		redirect(adminHref() as Route);
 	}
 
-	const isUnauthorizedUser = Boolean(accountId && !isAllowedAdminId(accountId));
-	const providers = authProviders();
+	const isUnauthorizedUser = Boolean(accountId && !auth.isAdmin(accountId));
+	const providers = auth.providers;
 	// With a single login method, use its name in the guidance text (e.g. "GitHub admin account").
 	const provider = providers.length === 1 ? (providers[0]?.name ?? "") : "";
 
@@ -48,13 +46,7 @@ export default async function AdminLoginPage() {
 							<AlertDescription className="mt-1 text-xs">
 								{t("forbidden", { provider, accountId: accountId ?? "" })}
 							</AlertDescription>
-							<form
-								action={async () => {
-									"use server";
-									await signOut({ redirectTo: adminUrl("/login") });
-								}}
-								className="mt-3"
-							>
+							<form method="post" action={cmsApiUrl("/v1/session/sign-out")} className="mt-3">
 								<Button type="submit" variant="link" size="xs">
 									{t("signOut")}
 								</Button>
@@ -65,10 +57,8 @@ export default async function AdminLoginPage() {
 							{providers.map((authProvider) => (
 								<form
 									key={authProvider.id}
-									action={async () => {
-										"use server";
-										await signIn(authProvider.id, { redirectTo: adminUrl() });
-									}}
+									method="post"
+									action={cmsApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
 								>
 									<Button type="submit" className="w-full">
 										{t("signIn", { provider: authProvider.name })}

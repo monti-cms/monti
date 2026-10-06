@@ -1,18 +1,17 @@
-import { getCmsContentStore } from "../../../container";
 import { collectionSchema, createFolderBodySchema } from "../../../core/api";
 import { adminRoute, json, parseWith, readJsonBody } from "../handler";
 
 /** Folder tree per collection. */
-export const GET = adminRoute(async ({ request }) => {
+export const GET = adminRoute(async ({ request, cms }) => {
 	const collection = parseWith(
 		collectionSchema,
 		request.nextUrl.searchParams.get("collection"),
 		"collection is required",
 	);
-	return json(await getCmsContentStore().listFolders({ collection }));
+	return json(await cms.store().listFolders({ collection }));
 });
 
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
 	const body = parseWith(createFolderBodySchema, await readJsonBody(request));
-	return json(await getCmsContentStore().createFolder(body), { status: 201 });
+	return json(await cms.store().createFolder(body), { status: 201 });
 });

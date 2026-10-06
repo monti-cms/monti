@@ -1,6 +1,6 @@
 /**
- * Server config authoring API. The entry point imported by the server config file (`cms.server.ts`).
- * Modules exported here must not import the server config (`server/resolved.ts`) or `container.ts` (cycle).
+ * Server entry point imported by the app's server file (`cms.server.ts`): the server config authoring API (`defineServerConfig`, `postgres`, `githubAuth`)
+ * and `createCms`, which turns the server config into the CMS instance the rest of the app uses.
  */
 
 export { type GithubAuthOptions, githubAuth } from "../adapters/auth/github";
@@ -14,6 +14,14 @@ export type {
 	PromoteFileInput,
 	StoredFileHead,
 } from "../adapters/r2/types";
+export {
+	type BulkService,
+	type Cms,
+	type CmsRouteHandler,
+	type ContentService,
+	type CreateCmsOptions,
+	createCms,
+} from "../cms";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
 export type {
 	TransformHook,

@@ -23,7 +23,6 @@ export default defineConfig(({ mode }) => ({
 		alias: {
 			// Block extension tests run with the core package's example config (which uses all of this package's blocks).
 			"@cms-config": path.resolve(__dirname, "../core/test/cms.config.ts"),
-			"@cms-server": path.resolve(__dirname, "../core/test/cms.server.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

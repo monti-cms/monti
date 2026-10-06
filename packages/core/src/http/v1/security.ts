@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { AuthError } from "../../adapters/auth";
+import { resolveTrustHost } from "../../adapters/auth/trust-host";
 import { cmsConfig } from "../../config/resolved";
-import { isCmsHostTrusted } from "../../server/trust";
 import { HttpError } from "./error-handler";
 
 /**
@@ -12,11 +12,19 @@ import { HttpError } from "./error-handler";
  * the host is trusted (`trustHost` in the server config or `AUTH_TRUST_HOST`, i.e. the server runs behind a proxy that sets it), because a client can send
  * that header itself. Behind a proxy that rewrites `Host` without that option, set `site.url` so the public host is still accepted.
  */
-export function validateSameOrigin(request: NextRequest, options: { readonly trustHost?: boolean } = {}): void {
+export function validateSameOrigin(
+	request: NextRequest,
+	options: {
+		/** Whether `X-Forwarded-Host` can be trusted (`cms.isHostTrusted()`). Default: the `AUTH_TRUST_HOST` environment variable, else off in production. */
+		readonly trustHost?: boolean;
+		/** Also accept a browser form post (`application/x-www-form-urlencoded`), for the sign-in and sign-out forms. */
+		readonly form?: boolean;
+	} = {},
+): void {
 	const method = request.method.toUpperCase();
 	if (["GET", "HEAD", "OPTIONS"].includes(method)) return;
 
-	const hosts = allowedHosts(request, options.trustHost ?? isCmsHostTrusted());
+	const hosts = allowedHosts(request, options.trustHost ?? resolveTrustHost(undefined));
 	const origin = request.headers.get("origin");
 	const secFetchSite = request.headers.get("sec-fetch-site");
 	const referer = request.headers.get("referer");
@@ -46,8 +54,9 @@ export function validateSameOrigin(request: NextRequest, options: { readonly tru
 
 	if (["POST", "PATCH", "PUT"].includes(method)) {
 		const contentType = request.headers.get("content-type");
-		if (!contentType?.toLowerCase().includes("application/json")) {
-			throw new HttpError(415, "unsupported_media_type", "Content-Type must be application/json");
+		const accepted = options.form ? ["application/json", "application/x-www-form-urlencoded"] : ["application/json"];
+		if (!accepted.some((type) => contentType?.toLowerCase().includes(type))) {
+			throw new HttpError(415, "unsupported_media_type", `Content-Type must be ${accepted.join(" or ")}`);
 		}
 	}
 }

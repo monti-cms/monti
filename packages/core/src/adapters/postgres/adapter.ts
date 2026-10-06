@@ -13,7 +13,7 @@ export interface PostgresOptions {
 
 /**
  * The store module (SQL, MDX parsing, and the business rules that read the site config) is loaded on first use, so
- * importing only `postgres()` from `cms.server.ts` does not pull in store code or the site config.
+ * calling `postgres()` (when `cms.server.ts` creates the instance) does not load the store code.
  */
 const loadStoreModule = () => import("./content-store");
 const loadSchemaModule = () => import("./store/schema");

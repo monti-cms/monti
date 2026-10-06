@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { getCmsContentStore, getCmsMediaStore } from "../../../../../container";
 import { isImageMime } from "../../../../../core/api";
 import { HttpError } from "../../../error-handler";
 import { adminRoute, json } from "../../../handler";
@@ -9,12 +8,12 @@ import { attachmentDisposition, extensionFor, inspectUploadedFile } from "../../
  * Upload completion check. Marks the media `ready` only after the server inspects the stored file.
  * If the check fails, the media does not become usable and stays `failed`, to be cleaned up.
  */
-export const POST = adminRoute<{ id: string }>(async ({ params }) => {
-	const store = getCmsContentStore();
+export const POST = adminRoute<{ id: string }>(async ({ params, cms }) => {
+	const store = cms.store();
 	const media = await store.getMediaAsset(params.id);
 	if (!media) throw new HttpError(404, "not_found", "Media asset not found");
 
-	const mediaStore = getCmsMediaStore();
+	const mediaStore = cms.mediaStore();
 	const describe = (record: NonNullable<typeof media>) => ({
 		mediaId: record.id,
 		status: "ready",

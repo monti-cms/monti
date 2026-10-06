@@ -1,5 +1,5 @@
 import type { PluginDatabase } from "@monti-cms/core";
-import { CmsError, getCmsDatabase, withTransaction } from "@monti-cms/core/plugin/server";
+import { type Cms, CmsError, withTransaction } from "@monti-cms/core/plugin/server";
 
 /** Row name in the AI settings table (`ai_settings`). */
 export type AiSettingsId = "default" | "shared";
@@ -14,8 +14,13 @@ export interface AiActionOverrideRow {
 }
 
 /** Edited AI action values (`ai_action_overrides`), connection settings (`ai_settings`) and UI actions (`ai_custom_actions`). */
-export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
+export function createAiStore(
+	{ pool, schema: qSchema }: PluginDatabase,
+	/** `secret`: the encryption key for stored service keys (`cms.secret`). */
+	options: { readonly secret?: () => string | undefined } = {},
+) {
 	return {
+		secret: (): string | undefined => options.secret?.(),
 		/** All edited values. Actions never edited have none. */
 		listAiActionOverrides: async (): Promise<AiActionOverrideRow[]> => {
 			const res = await pool.query<{ key: string; value: unknown; version: number; updated_at: Date }>(
@@ -142,12 +147,14 @@ export function createAiStore({ pool, schema: qSchema }: PluginDatabase) {
 
 export type AiStore = ReturnType<typeof createAiStore>;
 
-declare global {
-	var __cmsAiStore: AiStore | undefined;
-}
+const stores = new WeakMap<Cms, AiStore>();
 
-/** AI store built from the main DB connection. Only one is kept even if the dev server reloads the module. */
-export function getAiStore(): AiStore {
-	global.__cmsAiStore ??= createAiStore(getCmsDatabase());
-	return global.__cmsAiStore;
+/** The AI store of one CMS instance, built from its main DB connection on first use. Each instance has its own. */
+export function aiStoreFor(cms: Cms): AiStore {
+	let store = stores.get(cms);
+	if (!store) {
+		store = createAiStore(cms.database(), { secret: () => cms.secret });
+		stores.set(cms, store);
+	}
+	return store;
 }

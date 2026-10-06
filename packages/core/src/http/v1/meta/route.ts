@@ -1,6 +1,5 @@
 import { BLOCKS } from "../../../blocks/active";
 import { cmsConfig } from "../../../config/resolved";
-import { isCmsMediaConfigured } from "../../../container";
 import {
 	ALLOWED_FILE_MIME_TYPES,
 	ALLOWED_IMAGE_MIME_TYPES,
@@ -13,16 +12,15 @@ import {
 import { COLLECTION_DEFINITIONS, COLLECTIONS } from "../../../core/collections";
 import { MAX_SLUG_LENGTH } from "../../../core/slug";
 import { MAX_DOC_BYTES, MAX_MDX_BYTES, MAX_METADATA_BYTES } from "../../../core/snapshot";
-import { pluginFeatures } from "../../../plugin/server";
 import { adminRoute, json } from "../handler";
 
 /**
  * Collection definitions (`schemas` and the summarized v1-shaped `definitions`), body block definitions (`blocks`), and server limits (§5.6 "the server config and
  * API metadata show the same limits"). The field character limit is the field's `max` in `schemas` (the title too).
  */
-export const GET = adminRoute(async () => {
+export const GET = adminRoute(async ({ cms }) => {
 	// Plugin feature flags live under the plugin name (`features.ai` etc.). The config rejects plugin names that collide with core names.
-	const plugins = await pluginFeatures();
+	const plugins = await cms.pluginFeatures();
 	return json({
 		version: "v1",
 		collections: COLLECTIONS,
@@ -34,7 +32,7 @@ export const GET = adminRoute(async () => {
 			references: true,
 			search: true,
 			templates: true,
-			media: isCmsMediaConfigured(),
+			media: cms.isMediaConfigured,
 			...plugins,
 		},
 		limits: {

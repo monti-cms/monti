@@ -1,3 +1,4 @@
+import type { Cms } from "@monti-cms/core/runtime";
 import { notFound } from "next/navigation";
 import { loadAdminPlugins } from "../plugins";
 import EditEntryPage from "../screens/entries/[id]/edit/page";
@@ -22,27 +23,27 @@ export interface CmsAdminPageProps {
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  * - `/admin/<path>` plugin screens (e.g. the AI plugin's `/admin/ai`)
  */
-export async function CmsAdminPage({ params, searchParams }: CmsAdminPageProps) {
+export async function CmsAdminPage({ cms, params, searchParams }: CmsAdminPageProps & { cms: Cms }) {
 	const path = (await params).path ?? [];
 	const [first, second, third, ...rest] = path;
 	if (rest.length > 0) notFound();
-	if (path.length === 0) return <DashboardPage />;
+	if (path.length === 0) return <DashboardPage cms={cms} />;
 	if (path.length === 1) {
 		switch (first) {
 			case "trash":
-				return <TrashPage />;
+				return <TrashPage cms={cms} />;
 			case "media":
-				return <MediaPage />;
+				return <MediaPage cms={cms} />;
 			case "templates":
-				return <TemplatesPage />;
+				return <TemplatesPage cms={cms} />;
 			case "login":
-				return <LoginPage />;
+				return <LoginPage cms={cms} />;
 		}
 	}
 	if (path.length === 1 && first) {
 		const Page = (await loadAdminPlugins()).find((plugin) => plugin.pages?.[first])?.pages?.[first];
 		if (Page) {
-			await requireAdminPage();
+			await requireAdminPage(cms);
 			return <Page />;
 		}
 	}
@@ -50,11 +51,14 @@ export async function CmsAdminPage({ params, searchParams }: CmsAdminPageProps) 
 		const query = await searchParams;
 		const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 		return (
-			<NewEntryPage searchParams={Promise.resolve({ collection: one(query.collection), folder: one(query.folder) })} />
+			<NewEntryPage
+				cms={cms}
+				searchParams={Promise.resolve({ collection: one(query.collection), folder: one(query.folder) })}
+			/>
 		);
 	}
 	if (first === "entries" && second && third === "edit") {
-		return <EditEntryPage params={Promise.resolve({ id: second })} />;
+		return <EditEntryPage cms={cms} params={Promise.resolve({ id: second })} />;
 	}
 	notFound();
 }

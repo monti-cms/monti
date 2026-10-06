@@ -10,7 +10,6 @@
 		"./server": "./src/server/index.ts",
 		"./s3": "./src/storage/s3.ts",
 		"./next": "./src/next/index.ts",
-		"./next/route-handler": "./src/next/route-handler.ts",
 		"./client": "./src/client.ts",
 		"./runtime": "./src/runtime.ts",
 		"./read": "./src/read/index.ts",
@@ -22,7 +21,6 @@
 		"./plugin/server": "./src/plugin-server.ts",
 		"./adapters/auth": "./src/adapters/auth/index.ts",
 		"./testing": "./src/testing.ts",
-		"./migrate": "./src/adapters/postgres/migrate-cli.ts",
 		"./register": "./src/register.ts",
 		"./cli": "./src/cli/index.ts",
 		"./stubs/missing-optional": "./stubs/missing-optional.cjs",
@@ -125,10 +123,6 @@
 				"types": "./dist/next/index.d.ts",
 				"default": "./dist/next/index.js"
 			},
-			"./next/route-handler": {
-				"types": "./dist/next/route-handler.d.ts",
-				"default": "./dist/next/route-handler.js"
-			},
 			"./client": {
 				"types": "./dist/client.d.ts",
 				"default": "./dist/client.js"
@@ -172,10 +166,6 @@
 			"./testing": {
 				"types": "./dist/testing.d.ts",
 				"default": "./dist/testing.js"
-			},
-			"./migrate": {
-				"types": "./dist/adapters/postgres/migrate-cli.d.ts",
-				"default": "./dist/adapters/postgres/migrate-cli.js"
 			},
 			"./register": {
 				"types": "./dist/register.d.ts",

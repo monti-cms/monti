@@ -1,5 +1,5 @@
 import { createTranslator } from "@monti-cms/core/client";
-import { isCmsMediaConfigured } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/runtime";
 import { Empty, EmptyHeader, EmptyTitle } from "../../ui/empty";
 import { MEDIA_NOT_CONFIGURED } from "../api-error-message";
 import { requireAdminPage } from "../require-admin";
@@ -9,9 +9,9 @@ import { mediaMessages } from "./messages";
 
 const t = createTranslator(mediaMessages);
 
-export default async function AdminMediaPage() {
-	await requireAdminPage();
-	if (!isCmsMediaConfigured()) {
+export default async function AdminMediaPage({ cms }: { cms: Cms }) {
+	await requireAdminPage(cms);
+	if (!cms.isMediaConfigured) {
 		return (
 			<AdminShell title={t("title")} sidebar={{ activeNav: "media" }}>
 				<Empty className="py-16">

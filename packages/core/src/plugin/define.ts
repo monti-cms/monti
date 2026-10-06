@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from "pg";
 import type { BlockDefinition } from "../blocks/define";
+import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
 import type { WriteHooks } from "../services/hooks";
 
@@ -86,12 +87,15 @@ export interface PluginDatabase {
 }
 
 export interface CmsServerPlugin {
-	/** Looks up paths missing from the core routes in this route table. */
+	/**
+	 * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context
+	 * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, the database and the secret from `cms` and keeps no global state for them.
+	 */
 	readonly routes?: readonly PluginRoute[];
-	/** Called by `monti migrate` after the core tables. Must give the same result when called repeatedly. */
-	readonly migrate?: (db: PluginDatabase) => Promise<void>;
-	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. */
-	readonly features?: () => Promise<Readonly<Record<string, boolean>>>;
+	/** Called by `monti migrate` after the core tables. Must give the same result when called repeatedly. `cms` is the instance being migrated. */
+	readonly migrate?: (db: PluginDatabase, cms: Cms) => Promise<void>;
+	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
+	readonly features?: (cms: Cms) => Promise<Readonly<Record<string, boolean>>>;
 	/**
 	 * Hooks on every content write (same as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit`.
 	 * They run after the server config's hooks, in the order of the plugins in the site config.

@@ -1,32 +1,49 @@
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
-import { type AuthContext, authGateway } from "../../adapters/auth";
+import type { AuthContext } from "../../adapters/auth";
+import type { Cms } from "../../cms";
 import { HttpError, handleApiError } from "./error-handler";
 import { validateSameOrigin } from "./security";
 
 /**
  * Shared frame for admin API routes. Every admin request is authenticated on the server,
  * and state-changing requests go through the same-origin check first. Errors are converted to one shape in a single place.
+ *
+ * The route handler (`cms.routeHandler()`) passes the CMS instance in the context of every route (`{ params, cms }`), so a route reads
+ * stores and settings from `cms` instead of from module-level state.
  */
 
 type Params = Record<string, string>;
-type HandlerContext<P extends Params> = { params: Promise<P> };
+/** What the route handler passes to a route: the path params and the CMS instance the request is served by. */
+export type RouteContext<P extends Params = Params> = { params?: Promise<P>; cms: Cms };
 
 export interface AdminRequest<P extends Params> {
 	request: NextRequest;
 	params: P;
 	auth: AuthContext;
+	cms: Cms;
 }
 
+/**
+ * Wraps a route with the admin check. The route handler passes the instance in the context. A route file mounted on its own in the app
+ * (not served by `cms.routeHandler()`) names the instance it belongs to with `bound.cms`.
+ */
 export function adminRoute<P extends Params = Params>(
 	handler: (input: AdminRequest<P>) => Promise<Response>,
-): (request: NextRequest, context?: HandlerContext<P>) => Promise<Response> {
+	bound: { readonly cms?: Cms } = {},
+): (request: NextRequest, context?: Partial<RouteContext<P>>) => Promise<Response> {
 	return async (request, context) => {
 		try {
-			validateSameOrigin(request);
-			const auth = await authGateway.verifyAdmin();
+			const cms = context?.cms ?? bound.cms;
+			if (!cms) {
+				throw new Error(
+					"admin route called without a CMS instance: serve it through `cms.routeHandler()` or pass `{ cms }` when wrapping it",
+				);
+			}
+			validateSameOrigin(request, { trustHost: cms.isHostTrusted() });
+			const auth = await cms.authGateway.verifyAdmin();
 			const params = (await context?.params) ?? ({} as P);
-			return await handler({ request, params, auth });
+			return await handler({ request, params, auth, cms });
 		} catch (error) {
 			return handleApiError(error);
 		}

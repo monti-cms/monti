@@ -1,4 +1,3 @@
-import { getCmsContentService, getCmsContentStore, getCmsMediaStore } from "../../../../../container";
 import { publishBodySchema } from "../../../../../core/api";
 import { imageWarningsForSnapshot } from "../../../../../core/snapshot";
 import { adminRoute, json, readVersionedBody } from "../../../handler";
@@ -8,10 +7,10 @@ import { adminRoute, json, readVersionedBody } from "../../../handler";
  * on failure it returns 422 with located `issues`.
  * The publish date is the first publish time, and `resetPublishedAt` resets it to now. Image resolution problems are reported only as non-blocking `warnings`.
  */
-export const POST = adminRoute<{ id: string }>(async ({ request, params }) => {
+export const POST = adminRoute<{ id: string }>(async ({ request, params, cms }) => {
 	const { expectedVersion, resetPublishedAt } = await readVersionedBody(request, publishBodySchema);
-	const store = getCmsContentStore();
-	const { entry, warnings } = await getCmsContentService().publish(
+	const store = cms.store();
+	const { entry, warnings } = await cms.contentService().publish(
 		{ id: params.id, expectedVersion, resetPublishedAt },
 		{
 			extraWarnings: (snapshot) =>
@@ -19,7 +18,7 @@ export const POST = adminRoute<{ id: string }>(async ({ request, params }) => {
 					getMediaAsset: (mediaId) => store.getMediaAsset(mediaId),
 					headStorageKey: async (storageKey) => {
 						try {
-							return (await getCmsMediaStore().headFile({ key: storageKey })) !== null;
+							return (await cms.mediaStore().headFile({ key: storageKey })) !== null;
 						} catch {
 							// Store config and outages fall back to the DB result (non-blocking).
 							return true;

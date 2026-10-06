@@ -1,6 +1,5 @@
-import "server-only";
-
-import { getCmsContentStore, getCmsMediaStore } from "../container";
+import type { ContentStore } from "../adapters/postgres/content-store";
+import type { MediaStore } from "../adapters/r2/types";
 import { analyze } from "./analyze";
 import { type ImageResolveResult, resolveImageUrl } from "./image-src";
 
@@ -41,15 +40,21 @@ function collectMediaIds(source: string): string[] {
 	return [...ids];
 }
 
+/** The stores the public media helpers read. They are looked up when used, so nothing connects until then. */
+export interface PublicMediaDeps {
+	readonly store: () => ContentStore;
+	readonly mediaStore: () => MediaStore;
+}
+
 /** Connects public MDX so that it resolves registered media into actual public URLs. */
-export async function createPublicImageResolver(source: string) {
+export async function createPublicImageResolver(deps: PublicMediaDeps, source: string) {
 	const urls = new Map<string, ImageResolveResult>();
 	const mediaIds = collectMediaIds(source);
 
 	if (mediaIds.length > 0) {
 		try {
-			const store = getCmsContentStore();
-			const mediaStore = getCmsMediaStore();
+			const store = deps.store();
+			const mediaStore = deps.mediaStore();
 			await Promise.all(
 				mediaIds.map(async (mediaId) => {
 					const media = await store.getMediaAsset(mediaId);
@@ -80,4 +85,19 @@ export async function createPublicImageResolver(source: string) {
 	};
 }
 
-export { resolvePublicMediaUrl } from "./public-media-url";
+/**
+ * Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage.
+ */
+export async function resolvePublicMediaUrl(
+	deps: PublicMediaDeps,
+	mediaId: string,
+): Promise<{ url: string; width?: number; height?: number } | null> {
+	try {
+		const media = await deps.store().getMediaAsset(mediaId);
+		if (!media || media.status !== "ready" || !media.storageKey) return null;
+		const url = deps.mediaStore().getPublicUrl(media.storageKey);
+		return media.width && media.height ? { url, width: media.width, height: media.height } : { url };
+	} catch {
+		return null;
+	}
+}

@@ -13,8 +13,7 @@
 		"jsx": "react-jsx",
 		"types": ["node", "next", "vitest/globals", "@testing-library/jest-dom"],
 		"paths": {
-			"@cms-config": ["./test/cms.config.ts"],
-			"@cms-server": ["../core/test/cms.server.ts"]
+			"@cms-config": ["./test/cms.config.ts"]
 		}
 	},
 	"include": ["src", "test", "vitest.config.ts", "vitest.othersite.config.ts"]

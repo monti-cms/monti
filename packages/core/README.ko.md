@@ -42,10 +42,10 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # 사이트 기본 언�
 | 하는 일 | 파일 |
 | --- | --- |
 | 사이트 설정(컬렉션 하나짜리 시작점, 영어 이름표) | `cms.config.ts` |
-| 서버 설정(DB·GitHub 로그인, 비밀 값은 환경 변수) | `cms.server.ts` |
+| CMS 인스턴스와 서버 설정(DB·GitHub 로그인, 비밀 값은 환경 변수) | `cms.server.ts` |
 | 관리자 화면 | `app/(admin)/admin/[[...path]]/page.tsx`·`layout.tsx` |
 | 관리자 API와 로그인(`/api/cms/v1/*`·`/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| 설정 별칭 `@cms-config`·`@cms-server` | `tsconfig.json` `paths`에 더한다 |
+| 설정 별칭 `@cms-config` | `tsconfig.json` `paths`에 더한다 |
 | 관리자 스타일 줄 | 전역 CSS(`app/globals.css` 등)의 마지막 `@import` 다음에 더한다 |
 | 설정 잇기(`withCms`) | `next.config.ts`(`export default nextConfig;` 한 줄인 기본 모양일 때), 없으면 만든다 |
 
@@ -92,8 +92,8 @@ export default defineConfig({
 
 컬렉션 이름(`post`)은 DB에 저장되므로 운영 중에 바꾸지 않는다. 필드 규칙은 아래 "설정"을 본다.
 
-서버 설정 `cms.server.ts`는 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다. 연결은 처음 쓸 때 만들어 빌드 중에는
-환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/core/s3`의 저장소를 `media`에 더하고 AWS SDK를 설치한다
+`cms.server.ts`는 CMS 인스턴스를 만든다(`createCms({ server })`, "CMS 인스턴스" 절). 그 서버 설정은 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다.
+연결은 처음 쓸 때 만들어 빌드 중에는 환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/core/s3`의 저장소를 `media`에 더하고 AWS SDK를 설치한다
 (`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, 미디어를 쓰는 사이트만):
 
 ```ts
@@ -134,9 +134,10 @@ pnpm exec monti migrate
 
 - 환경 파일: 기본으로 `.env.local`·`.env`(있는 것만)를 읽는다. 셸에서 준 값이 이기고 앞 파일이 뒤 파일을 이긴다.
   `--env-file <파일>`(여러 번)로 고르고 `--no-env-file`이면 읽지 않는다.
-- 설정 파일: `--config`·`--server` → `CMS_CONFIG_PATH`·`CMS_SERVER_PATH` → `tsconfig.json` `paths`의 별칭 →
-  `./cms.config.ts`·`./src/cms.config.ts` 순서로 찾는다.
-- 예전 방식(`migrate.ts`에 `import "@monti-cms/core/migrate";`를 두고 `tsx --import @monti-cms/core/register migrate.ts`)도 그대로 돈다.
+- 파일: 사이트 설정은 `--config` → `CMS_CONFIG_PATH` → `tsconfig.json` `paths`의 `@cms-config` 별칭 → `./cms.config.ts`·`./src/cms.config.ts` 순서로 찾는다.
+  서버 파일(인스턴스를 `cms`로 내보내는 모듈)은 `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`·`./src/cms.server.ts` 순서다.
+- 직접 만든 스크립트에서는 인스턴스를 불러와 부른다: `import { cms } from "./cms.server"; await cms.migrate(); await cms.close();`
+  (`tsx --env-file=.env.local --import @monti-cms/core/register script.ts`로 돌린다. `@cms-config` 별칭을 이어 준다).
 
 #### `monti content:rewrite`
 
@@ -147,7 +148,7 @@ pnpm exec monti content:rewrite --apply   # 바뀐 내용을 쓴다
 
 저장된 모든 본문(항목의 작업본·발행본, 본문 템플릿)을 저장된 문서에서 사이트에 설정된 문법으로 다시 써("저장된 본문" 절 참고), 저장 글이 한 표기가 되게 한다.
 `directiveSyntax()`를 켜거나 끈 뒤, 또는 직렬화기를 올린 뒤에 글을 저장할 때마다 한 편씩 맞춰지길 기다리지 않고 한 번에 맞춘다. `monti migrate` 다음에 돌린다.
-`migrate`와 같은 `--env-file`·`--no-env-file`·`--config`·`--server` 옵션을 받는다.
+`migrate`와 같은 `--env-file`·`--no-env-file`·`--config`·`--server` 옵션을 받는다(스크립트에서는 `cms.rewrite({ apply })`).
 
 - 본문마다 한 줄씩 `collection/slug (locale) state: changed|unchanged`를 찍고 요약을 보인다.
 - 글자(문서가 없던 본문은 문서도)만 바뀐다. 내용 해시는 해석한 본문을 덮으므로 표기가 달라져도 같다. `version`·`updated_at`·`content_hash`는 건드리지 않고 "발행하지 않은 변경"도 그대로다.
@@ -169,8 +170,8 @@ GitHub 로그인 API는 기본으로 관리자 API 라우트가 함께 받는다
 auth: githubAuth({ /* … */, basePath: "/api/auth" }),
 
 // app/api/auth/[...nextauth]/route.ts
-import { handlers } from "@monti-cms/core/runtime";
-export const { GET, POST } = handlers;
+import { cms } from "../../../../cms.server";
+export const { GET, POST } = cms.authHandlers;
 ```
 
 `basePath`가 기본값이 아니면 관리자 API 라우트는 `/api/cms/auth/*`를 받지 않는다(404).
@@ -183,10 +184,10 @@ CMS 패키지의 선택 의존성(예: 블록 확장의 `mermaid`·`recharts`)�
 
 ### 직접 잇기 (`monti init` 없이)
 
-`monti init`이 하는 일을 손으로 하려면: 두 설정 파일을 만들고, `next.config.ts`를
-`withCms(nextConfig, { config: "./cms.config.ts", server: "./cms.server.ts" })`로 감싸고, `tsconfig.json` `paths`에
-`"@cms-config": ["./cms.config.ts"]`·`"@cms-server": ["./cms.server.ts"]`를 더하고(테스트(Vitest)를 쓰면 `resolve.alias`에도),
-위 표의 라우트 파일 셋을 두고, 전역 CSS에 아래 줄을 넣는다.
+`monti init`이 하는 일을 손으로 하려면: 사이트 설정과 서버 파일(인스턴스)을 만들고, `next.config.ts`를
+`withCms(nextConfig, { config: "./cms.config.ts" })`로 감싸고, `tsconfig.json` `paths`에
+`"@cms-config": ["./cms.config.ts"]`를 더하고(테스트(Vitest)를 쓰면 `resolve.alias`에도),
+위 표의 라우트 파일 셋을 두고(각 파일이 서버 파일에서 `cms`를 불러온다), 전역 CSS에 아래 줄을 넣는다.
 
 ```css
 @import "tailwindcss";
@@ -263,26 +264,76 @@ export default defineConfig({
 
 자세한 것은 `@monti-cms/seo`의 README.
 
+## CMS 인스턴스
+
+`createCms({ server })`(`@monti-cms/core/server`)는 서버 설정을 서버의 모든 곳이 쓰는 인스턴스로 만든다. 인스턴스가 콘텐츠 저장소·서비스·미디어 저장소·로그인 연결·
+플러그인 서버 모듈·쓰기 훅·비밀 값을 가진다. 전역 상태는 없어서, 서버 설정이 다른 인스턴스 둘이 한 프로세스에 나란히 있을 수 있다(테스트·스크립트·DB 여러 개).
+연결은 처음 쓸 때 만들므로 import나 빌드 때 인스턴스를 만들어도 어디에도 연결하지 않는다.
+
+```ts
+// cms.server.ts
+import { createCms, defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
+
+export const cms = createCms({
+	server: defineServerConfig({ database: postgres({ /* … */ }), auth: githubAuth({ /* … */ }) }),
+});
+```
+
+나머지는 모두 이 파일에서 `cms`를 불러다 쓴다.
+
+| 어디서 | 코드 |
+| --- | --- |
+| 관리자 API 라우트(`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` |
+| 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
+| 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)` |
+| 공개 미디어 | `cms.read.imageResolver(mdx)`(`renderMdx`의 `imageResolver`), `cms.read.mediaUrl(mediaId)` |
+| 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.database()`·`cms.secret`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
+| 스크립트·명령줄 | `cms.migrate()`·`cms.rewrite({ apply })`·`cms.close()` |
+| 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
+| 테스트 | `@monti-cms/core/testing`의 `fakeCms({ store, verifyAdmin, … })`: 테스트가 준 부품 위에 만든 진짜 인스턴스 |
+
+읽기 API는 인스턴스에 달려 있다(`getEntry(cms, …)`가 아니라 `cms.read.getEntry(…)`). 사이트 코드가 하나만 불러오면 되고, 타입(`MetadataFor` 등)은 `@monti-cms/core/read`에 남는다.
+
+**개발 중 다시 불러오기.** `next dev`는 고친 뒤 `cms.server.ts`를 다시 실행하고, 그러면 `createCms`가 또 불린다. 새 DB 어댑터가 연결 풀을 하나 더 열고 앞의 것은 닫지 않는다.
+그래서 개발 중(`NODE_ENV=development`)에만, 같은 `id`(기본 `"default"`)로 먼저 만든 인스턴스의 DB 어댑터(와 미디어 저장소)를 새 인스턴스가 다시 쓴다.
+`globalThis`의 `Symbol.for("monti.cms.dev-connections")` 항목 하나에 둔다. 나머지(저장소·서비스·로그인 연결·플러그인·훅·비밀 값)는 새 서버 설정으로 다시 만들어서 훅과 옵션을 고치면 바로 반영된다.
+DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테스트에는 이런 캐시가 없고 인스턴스가 자기 연결만 가진다. 개발 프로세스 하나에서 인스턴스를 둘 이상 만들면 각각 `id`를 준다: `createCms({ id: "reports", server })`.
+
+**사이트 설정은 아직 `@cms-config` 별칭으로 읽는다.** 사이트 설정(컬렉션·언어·플러그인·블록)은 당분간 `@cms-config` 별칭으로 이어서, 한 프로세스에 사이트 설정은 하나다. `createCms`는 서버 쪽만 받는다.
+
+### `@cms-server` 별칭에서 올리기
+
+- `cms.server.ts`는 더 이상 서버 설정을 default로 내보내지 않는다. 감싼다: `export const cms = createCms({ server: defineServerConfig({ … }) })`(`createCms`는 `@monti-cms/core/server`에 있다).
+- `tsconfig.json` `paths`와 Vitest `resolve.alias`에서 `"@cms-server"`를 지운다. `withCms(nextConfig, { config })`는 `server` 옵션을 받지 않는다.
+- 관리자 API 라우트는 `cms.routeHandler()`다. `createCmsRouteHandler`와 `@monti-cms/core/next/route-handler` 진입점은 없어졌다.
+- 관리자에 인스턴스를 넘긴다: `<CmsAdminLayout cms={cms}>`, `<CmsAdminPage cms={cms} {...props} />`(페이지 파일이 작은 컴포넌트가 된다. 모양은 `monti init`이 보여 준다).
+- 사이트 페이지는 `@monti-cms/core/read`의 자유 함수 대신 `cms.read.*`로 읽는다. `createPublicImageResolver(mdx)`는 `cms.read.imageResolver(mdx)`, `resolvePublicMediaUrl(id)`는 `cms.read.mediaUrl(id)`가 대신한다.
+- 없어진 것: `getCmsContentStore`·`getCmsMediaStore`·`getCmsSecret`·`getCmsDatabase`·`loadServerPlugins`와 `@monti-cms/core/runtime`의 로그인 자유 함수(`authGateway`·`auth`·`signIn`·`signOut`·`handlers`·`isDevAuthBypassEnabled` 등). 인스턴스를 쓴다:
+  `cms.store()`·`cms.mediaStore()`·`cms.secret`·`cms.database()`·`cms.plugins()`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`.
+  플러그인 라우트는 핸들러 입력으로 `cms`를 받고, `CmsServerPlugin.features(cms)`와 `migrate(db, cms)`는 인자로 받고, 훅은 직접 만든 `cms`를 클로저로 쓴다.
+- `@monti-cms/core/migrate`는 없어졌다: `monti migrate`를 돌리거나 스크립트에서 `await cms.migrate()`를 쓴다. `monti migrate`와 `monti content:rewrite`는 이제 서버 파일을 불러오므로 그 파일이 `cms`를 내보내야 한다.
+  `@monti-cms/core/register`는 `@cms-config` 별칭만 잇는다.
+- 로그인·로그아웃은 서버 액션이 아니라 `/api/cms/v1/session/*`로 보내는 일반 폼 전송이다(서버 액션은 인스턴스를 실을 수 없다). 앱에서 바꿀 것은 없다.
+
 ## 진입점
 
 | 진입점 | 쓰는 곳 | 내용 |
 | --- | --- | --- |
 | `@monti-cms/core` | `cms.config.ts` | `defineConfig`·`defineCollection`·`fields`·`defineBlock`·`definePlugin` |
-| `@monti-cms/core/server` | `cms.server.ts` | `defineServerConfig`·`postgres`·`githubAuth`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
+| `@monti-cms/core/server` | `cms.server.ts` | `createCms`·`defineServerConfig`·`postgres`·`githubAuth`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
 | `@monti-cms/core/next` | `next.config.ts` | `withCms` |
-| `@monti-cms/core/next/route-handler` | 관리자 API 라우트 | `createCmsRouteHandler` |
 | `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `renderMdx(mdx, options)` → `{ content, toc }`. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
-| `@monti-cms/core/read` | 공개 화면(서버 컴포넌트·sitemap·RSS) | `getEntry`·`listEntries`·`getTranslations`·`getPreview`: 공개본 읽기(관계·주소·옛 주소 이동·원문 대체) |
-| `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스·로그인 확인·미디어 공개 주소(`resolvePublicMediaUrl`). `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
+| `@monti-cms/core/read` | 공개 화면(타입) | `ReadEntry`·`MetadataFor` 등 `cms.read`의 타입. `cms.read`가 공개본을 읽는다(`getEntry`·`listEntries`·`getTranslations`·`getPreview`: 관계·주소·옛 주소 이동·원문 대체) |
+| `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
 | `@monti-cms/core/mdx`·`/code-block` | 공개 렌더러·편집기 | MDX 해석·직렬화, 코드 블록 주석 모델 |
 | `@monti-cms/core/syntax`(실험적) | `cms.config.ts`, 문법 확장 패키지 | `SyntaxExtension` 인터페이스와 확장이 쓰는 도우미("본문 문법"). 지시자 표기는 `@monti-cms/syntax-directive`다 |
-| `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀·DB 연결·오류 |
+| `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti migrate`(표 만들기)·`monti content:rewrite`(저장된 본문 다시 직렬화) |
 | `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`migrate`·`contentRewrite`(명령 `monti`의 코드) |
-| `@monti-cms/core/migrate`·`/register` | 명령줄(예전 방식) | 표 만들기, 직접 만든 스크립트에서 설정 별칭 잇기 |
-| `@monti-cms/core/testing` | 테스트 | 격리 스키마 DB·예시 데이터, 주어진 확장 목록으로 MDX를 해석하는 함수와 remark 플러그인(`parseMdxAst`·`syntaxRemarkPlugins`) |
+| `@monti-cms/core/register` | 직접 만든 스크립트 | `tsx --import`로 돌리는 스크립트에서 `@cms-config` 별칭 잇기 |
+| `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터, 주어진 확장 목록으로 MDX를 해석하는 함수와 remark 플러그인(`parseMdxAst`·`syntaxRemarkPlugins`) |
 
 ## 패키지 빌드
 
@@ -518,7 +569,7 @@ export const myPlugin = () =>
   `migrate`는 `monti migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
 - 서버 쪽 `hooks`(`transform`·`validate`·`validatePublish`·`afterCommit`)는 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다.
-- 플러그인 코드는 `@monti-cms/core/plugin/server`의 `getCmsDatabase()`(DB 연결)와 본체 라우트 틀(`adminRoute` 등)을 쓴다.
+- 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 DB 연결(`cms.database()`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secret`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(db, cms)`도 인스턴스를 받는다.
 
 ## 서버 설정
 
@@ -549,18 +600,18 @@ export const myPlugin = () =>
 
 - `NODE_ENV`가 `development`여야 한다. 다른 모드에서는 이 값을 무시하고 경고를 남긴다.
 - 배포된 서버처럼 보이면 안 된다. 호스팅 플랫폼 변수(`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`)가 있거나 `AUTH_URL`이 공개 주소를 가리키면 거부한다. 이때 서버는 시작을 거부하고(로그인 연결을 처음 쓸 때 오류를 던진다) 이유를 알려 준다.
-- 요청마다 내 컴퓨터에서 온 것이어야 한다. `Host`가 `localhost`·`*.localhost`·`127.0.0.0/8`·`::1`이고, `X-Forwarded-Host`와 `X-Forwarded-For`가 있으면 그것도 루프백이어야 한다. 그 밖의 요청은 평소처럼 로그인해야 하고, 경고를 한 번 남긴다. `@monti-cms/core/runtime`의 `isDevAuthBypassEnabled()`는 이제 비동기이며 같은 검사를 한다.
+- 요청마다 내 컴퓨터에서 온 것이어야 한다. `Host`가 `localhost`·`*.localhost`·`127.0.0.0/8`·`::1`이고, `X-Forwarded-Host`와 `X-Forwarded-For`가 있으면 그것도 루프백이어야 한다. 그 밖의 요청은 평소처럼 로그인해야 하고, 경고를 한 번 남긴다. `cms.authGateway.isDevBypassActive()`가 같은 검사를 한다(비동기).
 
 ## 훅 계약
 
 모든 콘텐츠 쓰기는 본체 서비스의 한 파이프라인을 지난다: 만들기, 저장, 발행(하나 또는 일괄), 복제, 번역본 만들기, 메타데이터·폴더 일괄 변경.
-훅은 서버 설정(`defineServerConfig({ hooks })`)이나 플러그인 서버 쪽(`CmsServerPlugin.hooks`)에 같은 모양으로 등록한다.
+훅은 서버 설정(`createCms({ server: defineServerConfig({ hooks }) })`)이나 플러그인 서버 쪽(`CmsServerPlugin.hooks`)에 같은 모양으로 등록한다.
 타입(`WriteHooks`·`WriteHookContext`·`WriteData`·`ValidationHookContext`·`ValidationResult`·`WriteOperation`)은 `@monti-cms/core/server`와 `@monti-cms/core/plugin/server`에서 내보낸다.
 
 ```ts
-import { defineServerConfig } from "@monti-cms/core/server";
+import { createCms, defineServerConfig } from "@monti-cms/core/server";
 
-export default defineServerConfig({
+const server = defineServerConfig({
 	// database, auth, ...
 	hooks: {
 		// 본체 준비 전에 돈다. 준비할 데이터를 돌려준다(아무것도 안 돌려주면 그대로).
@@ -578,6 +629,8 @@ export default defineServerConfig({
 		afterCommit: (change) => revalidate(change.collection, change.publishedSlug),
 	},
 });
+
+export const cms = createCms({ server });
 ```
 
 | 단계 | 하는 일 |
@@ -597,7 +650,7 @@ export default defineServerConfig({
 - 훅은 DB 트랜잭션 밖에서 돌고 DB 클라이언트를 받지 않는다. 비동기여도 된다. 저장소 내부 옵션 `beforePublishCommit`(트랜잭션 클라이언트를 받는다)은 이 계약에 들지 않고 그대로다.
 - 발행하는 중에 `transform`이 초안을 바꾸면 그 변경은 발행과 함께 한 트랜잭션으로 저장된다(`afterCommit`에는 그 글의 `saved` 변경 다음에 `published` 변경이 온다. 바뀐 것이 없는 발행은 `published`만 온다). 만들거나 저장하면서 바로 발행하는 경우(항목)도 같게 `created` 또는 `saved`, 그다음 `published`로 알린다.
 - 훅이 예외를 던지거나 계약에 맞지 않는 값을 돌려주면 쓰기는 `hook_failed`(HTTP 500)로 실패한다. 오류의 `issues[].params`에 훅 이름과 소유자(`server` 또는 `plugin:<이름>`)가 들어가고, 아무것도 저장되지 않는다. `validate` 실패는 `validation_failed`, `validatePublish` 실패는 `publish_validation_failed`(HTTP 422)이며, 더한 이슈가 초안 자체의 이슈 옆에 붙는다.
-- `afterCommit`은 id·상태·주소만 받고 본문은 받지 않는다. 커밋된 글은 `getCmsContentStore().getEntry(change.entryId)`로 읽는다. 전달은 프로세스 안에서 최대 한 번이며, 다시 시도하지 않고 아직 아웃박스도 없다.
+- `afterCommit`은 id·상태·주소만 받고 본문은 받지 않는다. 커밋된 글은 `cms.store().getEntry(change.entryId)`로 읽는다. 전달은 프로세스 안에서 최대 한 번이며, 다시 시도하지 않고 아직 아웃박스도 없다.
 
 계약(각각 `src/services/__test__/write-hooks.test.ts`와 `write-pipeline.test.ts`에 시험이 있다):
 
@@ -708,7 +761,7 @@ pnpm --filter @monti-cms/core test:run
 pnpm --filter @monti-cms/core typecheck
 ```
 
-패키지 자체 테스트는 예시 설정 `test/cms.config.ts`·`test/cms.server.ts`로 돈다.
+패키지 자체 테스트는 예시 사이트 설정 `test/cms.config.ts`로 돈다. 인스턴스가 필요한 테스트는 `fakeCms`(또는 가짜 어댑터 위의 `createCms`)로 만들고, 그것 때문에 모듈을 모킹하는 테스트는 없다.
 
 **다른 사이트 설정으로도 돈다(재발 방지).** `test/other-site.config.ts`는 블로그와 일부러 다른 설정이다(컬렉션 article·topic·author,
 `title`·`slug` 말고는 다른 필드 이름, 영어만, 차트 + 사이트 블록, 글자 꾸밈 없음). 본체·관리자·AI 패키지마다 `vitest.othersite.config.ts`가 같은

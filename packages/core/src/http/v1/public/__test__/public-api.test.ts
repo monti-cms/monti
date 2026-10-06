@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredFields } from "../../../../../test/any-site";
 import { publishDraft, seedSave } from "../../../../adapters/postgres/__test__/seed";
 import {
@@ -13,19 +13,10 @@ import {
 	createContentStore,
 	migrateContentStore,
 } from "../../../../adapters/postgres/content-store";
+import { fakeCms } from "../../../../cms";
 import { type Collection, isItemCollection } from "../../../../core/collections";
 import { storedFields } from "../../../../schema/derive";
 import type { PublicApiOptions } from "../options";
-
-const state = vi.hoisted(() => ({ store: null as unknown, publicApi: undefined as unknown }));
-vi.mock("../../../../container", () => ({ getCmsContentStore: () => state.store, getCmsAuth: () => ({}) }));
-vi.mock("../../../../server/resolved", () => ({
-	get cmsServerConfig() {
-		return { publicApi: state.publicApi };
-	},
-}));
-
-import { createCmsRouteHandler } from "../../../router";
 
 /** An optional relation pointing at an entry collection (a field the required-value filler does not put on every entry). */
 const relation = (() => {
@@ -45,13 +36,15 @@ describe("Public JSON API", () => {
 	let store: ContentStore;
 	let targetSlug = "";
 	let targetId = "";
+	let publicApi: PublicApiOptions | undefined;
 
 	const get = async (path: string) => {
 		const [pathname, query = ""] = path.split("?");
-		const response = await createCmsRouteHandler().GET(
-			new NextRequest(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`),
-			{ params: Promise.resolve({ path: (pathname ?? "").split("/") }) },
-		);
+		const response = await fakeCms({ store, server: { publicApi } })
+			.routeHandler()
+			.GET(new NextRequest(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`), {
+				params: Promise.resolve({ path: (pathname ?? "").split("/") }),
+			});
 		return { status: response.status, cache: response.headers.get("cache-control"), body: await response.json() };
 	};
 
@@ -80,7 +73,6 @@ describe("Public JSON API", () => {
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
 		const { relationTarget } = fillRequiredMetadata(store);
-		state.store = store;
 		if (relation) {
 			targetId = await relationTarget(relation.to);
 			targetSlug = (await store.getEntry(targetId)).publishedSlug ?? "";
@@ -95,12 +87,12 @@ describe("Public JSON API", () => {
 	});
 
 	it("is 404 when not configured", async () => {
-		state.publicApi = undefined;
+		publicApi = undefined;
 		expect((await get("v1/public/entries")).status).toBe(404);
 	});
 
 	it("list: paging, relation filter (target address), no caching; a bad query is 400", async () => {
-		state.publicApi = {
+		publicApi = {
 			collections: [contentCollection],
 			filters: relation ? { related: relation.name } : {},
 		} satisfies PublicApiOptions;
@@ -122,7 +114,7 @@ describe("Public JSON API", () => {
 	});
 
 	it("single: includes the body, reports the canonical address for an old address, and is 404 if missing", async () => {
-		state.publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
+		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 		const one = await get(`v1/public/entries/${contentCollection}/public-1`);
 		expect(one.body).toMatchObject({ entry: { slug: "public-1", body: "Body public-1" }, address: { isAlias: false } });
 
@@ -141,7 +133,7 @@ describe("Public JSON API", () => {
 	});
 
 	it("hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
-		state.publicApi = {
+		publicApi = {
 			collections: [contentCollection],
 			toJson: (entry) => (entry.slug === "public-2" ? null : { s: entry.slug }),
 		} satisfies PublicApiOptions;
@@ -151,7 +143,7 @@ describe("Public JSON API", () => {
 	});
 
 	it("the site can set the response shape (toJson)", async () => {
-		state.publicApi = {
+		publicApi = {
 			collections: [contentCollection],
 			toJson: (entry, { body }) => ({ s: entry.slug, hasBody: body }),
 		} satisfies PublicApiOptions;

@@ -16,10 +16,14 @@ import {
 	usableActionKeys,
 } from "../settings";
 
+/** The encryption key the in-memory stores use. A test changes `current` to simulate a rotated `secret`. */
+const secret = { current: "test-secret" };
+
 /** In-memory settings store. The version check matches the DB store. */
 function memoryStore(): AiSettingsStore & { value: unknown } {
 	const state = { value: undefined as unknown, version: 0 };
 	return {
+		secret: () => secret.current,
 		get value() {
 			return state.value;
 		},
@@ -59,7 +63,7 @@ const spec = (key: string, patch: { providerId?: string; modelName?: string } = 
 
 describe("AI connection settings", () => {
 	beforeEach(() => {
-		vi.stubEnv("AUTH_SECRET", "test-secret");
+		secret.current = "test-secret";
 		vi.stubEnv("CMS_AI_FAKE", "");
 	});
 	afterEach(() => {
@@ -72,7 +76,7 @@ describe("AI connection settings", () => {
 		const view = await addAiProvider(store, 0, chat());
 		const stored = store.value as { providers: Array<{ apiKey: string; url: string }> };
 		expect(stored.providers[0]?.apiKey).not.toContain("sk-chat");
-		expect(decryptSecret(stored.providers[0]?.apiKey ?? "")).toBe("sk-chat-1234");
+		expect(decryptSecret(stored.providers[0]?.apiKey ?? "", "test-secret")).toBe("sk-chat-1234");
 		expect(stored.providers[0]?.url).toBe("https://example.test/v1");
 		expect(view.providers[0]).toMatchObject({ name: "OpenRouter", keyHint: "…1234", ready: true });
 		expect(JSON.stringify(view)).not.toContain("sk-chat");
@@ -125,7 +129,7 @@ describe("AI connection settings", () => {
 		await addAiProvider(store, 0, chat());
 		const features = [spec("slug"), spec("tags")];
 		expect(await usableActionKeys(store, features)).toEqual(["slug"]);
-		vi.stubEnv("AUTH_SECRET", "rotated");
+		secret.current = "rotated";
 		expect(await usableActionKeys(store, features)).toEqual([]);
 		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBeNull();
 	});

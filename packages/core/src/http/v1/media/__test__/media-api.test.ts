@@ -2,26 +2,13 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../../adapters/auth";
 import { CmsError } from "../../../../adapters/postgres/content-store";
+import { fakeCms } from "../../../../cms";
 import { POST as handleComplete } from "../[id]/complete/route";
 import { DELETE as handleDeleteMedia } from "../[id]/route";
 import { GET as handleListMedia } from "../route";
 import { POST as handleUploads } from "../uploads/route";
 
 const mockVerifyAdmin = vi.fn();
-
-vi.mock("../../../../adapters/auth", () => ({
-	authGateway: {
-		verifyAdmin: () => mockVerifyAdmin(),
-	},
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
 
 const mockCreateMediaAsset = vi.fn();
 const mockGetMediaAsset = vi.fn();
@@ -38,8 +25,8 @@ const mockPromoteFile = vi.fn();
 const mockDeleteFile = vi.fn();
 const mockGetPublicUrl = vi.fn();
 
-vi.mock("../../../../container", () => ({
-	getCmsContentStore: () => ({
+const cms = fakeCms({
+	store: {
 		createMediaAsset: mockCreateMediaAsset,
 		getMediaAsset: mockGetMediaAsset,
 		completeMediaAsset: mockCompleteMediaAsset,
@@ -47,16 +34,17 @@ vi.mock("../../../../container", () => ({
 		listMediaAssets: mockListMediaAssets,
 		beginMediaDelete: mockBeginMediaDelete,
 		finalizeMediaDelete: mockFinalizeMediaDelete,
-	}),
-	getCmsMediaStore: () => ({
+	},
+	mediaStore: {
 		prepareUpload: mockPrepareUpload,
 		headFile: mockHeadFile,
 		readFile: mockReadFile,
 		promoteFile: mockPromoteFile,
 		deleteFile: mockDeleteFile,
 		getPublicUrl: mockGetPublicUrl,
-	}),
-}));
+	},
+	verifyAdmin: () => mockVerifyAdmin(),
+});
 
 describe("Media Upload API Endpoints", () => {
 	beforeEach(() => {
@@ -81,7 +69,7 @@ describe("Media Upload API Endpoints", () => {
 			}),
 		});
 
-		const res = await handleUploads(req);
+		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(401);
 	});
 
@@ -100,7 +88,7 @@ describe("Media Upload API Endpoints", () => {
 			}),
 		});
 
-		const res = await handleUploads(req);
+		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(413);
 	});
 
@@ -119,7 +107,7 @@ describe("Media Upload API Endpoints", () => {
 			}),
 		});
 
-		const res = await handleUploads(req);
+		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(415);
 	});
 
@@ -145,7 +133,7 @@ describe("Media Upload API Endpoints", () => {
 			}),
 		});
 
-		const res = await handleUploads(req);
+		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(201);
 		const json = await res.json();
 		expect(json.mediaId).toBeDefined();
@@ -173,6 +161,7 @@ describe("Media Upload API Endpoints", () => {
 
 		const res = await handleComplete(req, {
 			params: Promise.resolve({ id: "00000000-0000-0000-0000-000000000000" }),
+			cms,
 		});
 		expect(res.status).toBe(404);
 	});
@@ -197,6 +186,7 @@ describe("Media Upload API Endpoints", () => {
 
 		const res = await handleComplete(req, {
 			params: Promise.resolve({ id: "media-1" }),
+			cms,
 		});
 		expect(res.status).toBe(409);
 	});
@@ -251,6 +241,7 @@ describe("Media Upload API Endpoints", () => {
 
 		const res = await handleComplete(req, {
 			params: Promise.resolve({ id: "media-1" }),
+			cms,
 		});
 		expect(res.status).toBe(200);
 		const json = await res.json();
@@ -280,7 +271,7 @@ describe("Media Upload API Endpoints", () => {
 			method: "POST",
 			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
 		});
-		const res = await handleComplete(req, { params: Promise.resolve({ id: "media-2" }) });
+		const res = await handleComplete(req, { params: Promise.resolve({ id: "media-2" }), cms });
 		expect(res.status).toBe(413);
 		expect((await res.json()).code).toBe("too_many_pixels");
 		expect(mockFailMediaAsset).toHaveBeenCalledWith("media-2");
@@ -305,7 +296,7 @@ describe("Media Upload API Endpoints", () => {
 				original: { mimeType: "image/jpeg", byteSize: 5000 },
 			}),
 		});
-		const res = await handleUploads(req);
+		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(201);
 		const body = await res.json();
 		expect(body.original.uploadUrl).toBe("https://r2/upload");
@@ -355,7 +346,7 @@ describe("Media Upload API Endpoints", () => {
 			method: "GET",
 		});
 
-		const res = await handleListMedia(req);
+		const res = await handleListMedia(req, { cms });
 		expect(res.status).toBe(200);
 		const json = await res.json();
 		expect(json.total).toBe(1);
@@ -383,6 +374,7 @@ describe("Media Upload API Endpoints", () => {
 
 		const res = await handleDeleteMedia(req, {
 			params: Promise.resolve({ id: "media-1" }),
+			cms,
 		});
 		expect(res.status).toBe(409);
 		const json = await res.json();
@@ -412,6 +404,7 @@ describe("Media Upload API Endpoints", () => {
 
 		const res = await handleDeleteMedia(req, {
 			params: Promise.resolve({ id: "media-1" }),
+			cms,
 		});
 		expect(res.status).toBe(200);
 		const json = await res.json();
@@ -435,7 +428,7 @@ describe("Media Upload API Endpoints", () => {
 			method: "DELETE",
 			headers: { origin: "http://localhost", host: "localhost" },
 		});
-		const res = await handleDeleteMedia(req, { params: Promise.resolve({ id: "media-1" }) });
+		const res = await handleDeleteMedia(req, { params: Promise.resolve({ id: "media-1" }), cms });
 		expect(res.status).toBe(500);
 		expect(mockFinalizeMediaDelete).not.toHaveBeenCalled();
 	});
@@ -461,7 +454,7 @@ describe("attachment upload", () => {
 	});
 
 	it("accepts PDF, zip, and text files up to 50MiB, and rejects a type that differs from the extension or an oversized file", async () => {
-		const upload = (body: unknown) => handleUploads(post("http://localhost/api/cms/v1/media/uploads", body));
+		const upload = (body: unknown) => handleUploads(post("http://localhost/api/cms/v1/media/uploads", body), { cms });
 		expect((await upload({ filename: "보고서.pdf", mimeType: "application/pdf", byteSize: 30_000_000 })).status).toBe(
 			201,
 		);
@@ -503,6 +496,7 @@ describe("attachment upload", () => {
 
 		const res = await handleComplete(post("http://localhost/api/cms/v1/media/file-1/complete"), {
 			params: Promise.resolve({ id: "file-1" }),
+			cms,
 		});
 		expect(res.status).toBe(200);
 		expect(mockPromoteFile).toHaveBeenCalledWith(
@@ -532,6 +526,7 @@ describe("attachment upload", () => {
 
 		const res = await handleComplete(post("http://localhost/api/cms/v1/media/file-2/complete"), {
 			params: Promise.resolve({ id: "file-2" }),
+			cms,
 		});
 		expect(res.status).toBe(415);
 		expect(mockFailMediaAsset).toHaveBeenCalledWith("file-2");

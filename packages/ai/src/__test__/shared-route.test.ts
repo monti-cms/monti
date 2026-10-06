@@ -1,11 +1,7 @@
+import { fakeCms } from "@monti-cms/core/testing";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DELETE, GET, PATCH, POST, PUT } from "../routes/shared/route";
-
-vi.mock("@monti-cms/core/adapters/auth", () => ({
-	authGateway: { verifyAdmin: async () => ({ userId: "u", accountId: "g", isAdmin: true }) },
-	AuthError: class AuthError extends Error {},
-}));
 
 /** A store holding the shared text rows and action overrides. A version mismatch gives 409. */
 const state = vi.hoisted(() => ({
@@ -16,7 +12,7 @@ const state = vi.hoisted(() => ({
 vi.mock("../store", async () => {
 	const { CmsError } = await import("@monti-cms/core/plugin/server");
 	return {
-		getAiStore: () => ({
+		aiStoreFor: () => ({
 			getAiSettings: async () => state.shared,
 			saveAiSettings: async ({ expectedVersion, value }: { expectedVersion: number; value: unknown }) => {
 				const version = state.shared?.version ?? 0;
@@ -30,13 +26,21 @@ vi.mock("../store", async () => {
 	};
 });
 
-const call = (handler: (request: NextRequest) => Promise<Response>, method: string, body?: unknown, query = "") =>
+const cms = fakeCms();
+
+const call = (
+	handler: (request: NextRequest, context: { cms: typeof cms }) => Promise<Response>,
+	method: string,
+	body?: unknown,
+	query = "",
+) =>
 	handler(
 		new NextRequest(`http://localhost/api/cms/v1/ai/shared${query}`, {
 			method,
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			...(body === undefined ? {} : { body: JSON.stringify(body) }),
 		}),
+		{ cms },
 	);
 
 describe("shared texts API", () => {

@@ -1,24 +1,9 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CmsError } from "../../../adapters/postgres/content-store";
+import { fakeCms } from "../../../cms";
 import { DELETE as deleteTemplate, GET as getTemplate, PATCH as patchTemplate } from "../templates/[id]/route";
 import { GET as getTemplates, POST as postTemplate } from "../templates/route";
-
-const mockVerifyAdmin = vi.fn();
-
-vi.mock("../../../adapters/auth", () => ({
-	authGateway: {
-		verifyAdmin: () => mockVerifyAdmin(),
-	},
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
 
 const mockTemplates = [
 	{
@@ -39,8 +24,8 @@ const mockTemplates = [
 	},
 ];
 
-vi.mock("../../../container", () => ({
-	getCmsContentStore: () => ({
+const cms = fakeCms({
+	store: {
 		listTemplates: vi.fn().mockResolvedValue(mockTemplates),
 		getTemplate: vi.fn().mockImplementation((id: string) => {
 			const found = mockTemplates.find((t) => t.id === id);
@@ -74,8 +59,8 @@ vi.mock("../../../container", () => ({
 			}
 			return Promise.resolve();
 		}),
-	}),
-}));
+	},
+});
 
 const req = (url: string, method = "GET", body?: unknown, origin = "http://localhost") =>
 	new NextRequest(url, {
@@ -88,12 +73,8 @@ const req = (url: string, method = "GET", body?: unknown, origin = "http://local
 	});
 
 describe("Templates API Route Contract", () => {
-	beforeEach(() => {
-		mockVerifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
-	});
-
 	it("GET /templates lists templates for both editors", async () => {
-		const allRes = await getTemplates(req("http://localhost/api/cms/v1/templates"));
+		const allRes = await getTemplates(req("http://localhost/api/cms/v1/templates"), { cms });
 		expect(allRes.status).toBe(200);
 		const allData = await allRes.json();
 		expect(allData.items).toHaveLength(2);
@@ -107,6 +88,7 @@ describe("Templates API Route Contract", () => {
 				name: "새 템플릿",
 				mdx: "## 내용",
 			}),
+			{ cms },
 		);
 		expect(res.status).toBe(201);
 		const data = await res.json();
@@ -117,6 +99,7 @@ describe("Templates API Route Contract", () => {
 			req("http://localhost/api/cms/v1/templates", "POST", {
 				name: "중복",
 			}),
+			{ cms },
 		);
 		expect(conflictRes.status).toBe(409);
 	});
@@ -124,6 +107,7 @@ describe("Templates API Route Contract", () => {
 	it("GET /templates/:id returns single template or 404", async () => {
 		const res = await getTemplate(req("http://localhost/api/cms/v1/templates/t-1"), {
 			params: Promise.resolve({ id: "t-1" }),
+			cms,
 		});
 		expect(res.status).toBe(200);
 		const data = await res.json();
@@ -131,6 +115,7 @@ describe("Templates API Route Contract", () => {
 
 		const missingRes = await getTemplate(req("http://localhost/api/cms/v1/templates/ghost"), {
 			params: Promise.resolve({ id: "ghost" }),
+			cms,
 		});
 		expect(missingRes.status).toBe(404);
 	});
@@ -141,7 +126,7 @@ describe("Templates API Route Contract", () => {
 				expectedVersion: 1,
 				name: "수정된 템플릿",
 			}),
-			{ params: Promise.resolve({ id: "t-1" }) },
+			{ params: Promise.resolve({ id: "t-1" }), cms },
 		);
 		expect(res.status).toBe(200);
 		const data = await res.json();
@@ -153,7 +138,7 @@ describe("Templates API Route Contract", () => {
 				expectedVersion: 99,
 				name: "충돌 테스트",
 			}),
-			{ params: Promise.resolve({ id: "t-1" }) },
+			{ params: Promise.resolve({ id: "t-1" }), cms },
 		);
 		expect(conflictRes.status).toBe(409);
 	});
@@ -161,6 +146,7 @@ describe("Templates API Route Contract", () => {
 	it("DELETE /templates/:id deletes template with optional expectedVersion", async () => {
 		const res = await deleteTemplate(req("http://localhost/api/cms/v1/templates/t-1?expectedVersion=1", "DELETE"), {
 			params: Promise.resolve({ id: "t-1" }),
+			cms,
 		});
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({ ok: true });
@@ -168,7 +154,7 @@ describe("Templates API Route Contract", () => {
 		// Conflict on stale expectedVersion
 		const conflictRes = await deleteTemplate(
 			req("http://localhost/api/cms/v1/templates/t-1?expectedVersion=99", "DELETE"),
-			{ params: Promise.resolve({ id: "t-1" }) },
+			{ params: Promise.resolve({ id: "t-1" }), cms },
 		);
 		expect(conflictRes.status).toBe(409);
 	});

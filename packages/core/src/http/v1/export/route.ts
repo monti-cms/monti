@@ -1,11 +1,11 @@
 import type { NextRequest } from "next/server";
-import { getCmsContentStore } from "../../../container";
+import type { Cms } from "../../../cms";
 import { exportScopeSchema } from "../../../core/api";
 import { buildExportArchive, type ExportScope } from "../../../services/export-service";
 import { adminRoute, parseWith, readJsonBody, readQuery } from "../handler";
 
-const buildResponse = async (scope: ExportScope): Promise<Response> => {
-	const snapshot = await getCmsContentStore().readExportSnapshot();
+const buildResponse = async (cms: Cms, scope: ExportScope): Promise<Response> => {
+	const snapshot = await cms.store().readExportSnapshot();
 	const exportedAt = new Date();
 	const archive = buildExportArchive(snapshot, { scope, exportedAt });
 
@@ -26,6 +26,8 @@ const buildResponse = async (scope: ExportScope): Promise<Response> => {
 const scopeFrom = (value: unknown) => parseWith(exportScopeSchema, value, "Invalid export scope").scope;
 
 /** Admin export. GET is also open so it can be downloaded via a link. */
-export const GET = adminRoute(async ({ request }) => buildResponse(scopeFrom(readQuery(request as NextRequest))));
+export const GET = adminRoute(async ({ request, cms }) =>
+	buildResponse(cms, scopeFrom(readQuery(request as NextRequest))),
+);
 
-export const POST = adminRoute(async ({ request }) => buildResponse(scopeFrom(await readJsonBody(request))));
+export const POST = adminRoute(async ({ request, cms }) => buildResponse(cms, scopeFrom(await readJsonBody(request))));

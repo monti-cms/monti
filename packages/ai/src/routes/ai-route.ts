@@ -1,10 +1,5 @@
 import { createTranslator, isCollection, localeName, schemaOf, storedField } from "@monti-cms/core/client";
-import {
-	createContentLookup,
-	getCmsContentStore,
-	getCmsDatabase,
-	getCmsMediaStore,
-} from "@monti-cms/core/plugin/server";
+import { type Cms, createContentLookup } from "@monti-cms/core/plugin/server";
 import { AiError } from "../errors";
 import type { AiOption, AiRunDeps } from "../run";
 import { runMessages } from "../run.messages";
@@ -18,9 +13,9 @@ const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /** All published items of other collections (tags, categories, collections, posts). */
-async function loadRecords(collection: string): Promise<AiOption[]> {
+async function loadRecords(cms: Cms, collection: string): Promise<AiOption[]> {
 	if (!isCollection(collection)) return [];
-	const store = getCmsContentStore();
+	const store = cms.store();
 	const options: AiOption[] = [];
 	for (let page = 1; page <= 20; page++) {
 		const result = await store.listEntries({
@@ -69,12 +64,12 @@ async function fetchSiteImage(url: URL, signal?: AbortSignal): Promise<LoadedIma
  * Store connection to pass to the runner. Tags, categories, images and the content lookup of code checks are read directly by the server.
  * `origin` is this site's address. Images outside the media library (site files) are read from here.
  */
-export function aiRunDeps(runtime: AiRuntime, signal?: AbortSignal, origin?: string): AiRunDeps {
-	const store = getCmsContentStore();
+export function aiRunDeps(cms: Cms, runtime: AiRuntime, signal?: AbortSignal, origin?: string): AiRunDeps {
+	const store = cms.store();
 	return {
 		...runtime,
 		signal,
-		loadRecords,
+		loadRecords: (collection) => loadRecords(cms, collection),
 		fieldOptions,
 		languageName: localeName,
 		loadImage: async ({ mediaId, src }) => {
@@ -91,13 +86,13 @@ export function aiRunDeps(runtime: AiRuntime, signal?: AbortSignal, origin?: str
 			if ((media.byteSize ?? 0) > MAX_IMAGE_BYTES) {
 				throw new AiError("ai_input_too_large", t("imageTooLarge"));
 			}
-			const bytes = await getCmsMediaStore().readFile({ key: media.storageKey, maxBytes: MAX_IMAGE_BYTES, signal });
+			const bytes = await cms.mediaStore().readFile({ key: media.storageKey, maxBytes: MAX_IMAGE_BYTES, signal });
 			return {
 				mediaType: media.mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
 				data: Buffer.from(bytes).toString("base64"),
 			};
 		},
 		// The core content lookup that code checks read (the core public API).
-		content: createContentLookup(getCmsDatabase()),
+		content: createContentLookup(cms.database()),
 	};
 }

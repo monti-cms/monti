@@ -1,26 +1,12 @@
 import { NextRequest } from "next/server";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { CmsError } from "../../../adapters/postgres/content-store";
+import { fakeCms } from "../../../cms";
 import { isItemCollection } from "../../../core/collections";
 import { storedFields } from "../../../schema/derive";
+import { createBulkService } from "../../../services/bulk-service";
 import { POST as postBulk } from "../bulk/route";
-
-const mockVerifyAdmin = vi.fn();
-
-vi.mock("../../../adapters/auth", () => ({
-	authGateway: {
-		verifyAdmin: () => mockVerifyAdmin(),
-	},
-	AuthError: class AuthError extends Error {
-		constructor(
-			public code: string,
-			message: string,
-		) {
-			super(message);
-		}
-	},
-}));
 
 const CAT_1 = "11111111-1111-4111-8111-111111111111";
 const TAG_1 = "33333333-3333-4333-8333-333333333333";
@@ -47,34 +33,32 @@ const working = (version: number) => ({
 	folderId: null,
 });
 
-vi.mock("../../../container", async () => {
-	const { createBulkService } = await import("../../../services/bulk-service");
-	const store = {
-		getWorkingReferences: vi.fn().mockResolvedValue([]),
-		getWorking: vi.fn().mockImplementation(({ entryId }: { entryId: string }) => {
-			if (entryId === MISSING) throw new CmsError("Entry not found", "not_found");
-			return Promise.resolve(working(3));
-		}),
-		saveWorkingWithReferences: vi.fn().mockImplementation(({ entryId, expectedVersion }) => {
-			if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", 9);
-			return Promise.resolve({ version: 4, id: entryId });
-		}),
-		archiveEntry: vi.fn().mockImplementation(({ id, expectedVersion }: { id: string; expectedVersion: number }) => {
-			if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", 9);
-			return Promise.resolve({ version: 4, id });
-		}),
-		unarchiveEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {
-			return Promise.resolve({ version: 4, id });
-		}),
-		trashEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {
-			return Promise.resolve({ version: 4, id });
-		}),
-		publishEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {
-			return Promise.resolve({ version: 4, id });
-		}),
-	};
-	return { getCmsContentStore: () => store, getCmsBulkService: () => createBulkService(store as never) };
-});
+const store = {
+	getWorkingReferences: vi.fn().mockResolvedValue([]),
+	getWorking: vi.fn().mockImplementation(({ entryId }: { entryId: string }) => {
+		if (entryId === MISSING) throw new CmsError("Entry not found", "not_found");
+		return Promise.resolve(working(3));
+	}),
+	saveWorkingWithReferences: vi.fn().mockImplementation(({ entryId, expectedVersion }) => {
+		if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", 9);
+		return Promise.resolve({ version: 4, id: entryId });
+	}),
+	archiveEntry: vi.fn().mockImplementation(({ id, expectedVersion }: { id: string; expectedVersion: number }) => {
+		if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", 9);
+		return Promise.resolve({ version: 4, id });
+	}),
+	unarchiveEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {
+		return Promise.resolve({ version: 4, id });
+	}),
+	trashEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {
+		return Promise.resolve({ version: 4, id });
+	}),
+	publishEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {
+		return Promise.resolve({ version: 4, id });
+	}),
+};
+
+const cms = fakeCms({ store, bulkService: createBulkService(store as never) });
 
 const postReq = (body: unknown) =>
 	new NextRequest("http://localhost/api/cms/v1/bulk", {
@@ -86,10 +70,6 @@ const postReq = (body: unknown) =>
 describe("Bulk route contract", () => {
 	beforeAll(async () => {
 		workingMetadata = await requiredMetadata(contentCollection, "Hello", async () => CAT_1);
-	});
-
-	beforeEach(() => {
-		mockVerifyAdmin.mockResolvedValue({ userId: "u", accountId: "g", isAdmin: true });
 	});
 
 	it("returns per-item results with partial success", async () => {
@@ -104,6 +84,7 @@ describe("Bulk route contract", () => {
 				],
 				ids: [TAG_2],
 			}),
+			{ cms },
 		);
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({
@@ -126,17 +107,18 @@ describe("Bulk route contract", () => {
 				})),
 				ids: [TAG_1],
 			}),
+			{ cms },
 		);
 		expect(res.status).toBe(400);
 	});
 
 	it("rejects non-UUID item IDs with 400", async () => {
-		const res = await postBulk(postReq({ op: "archive", items: [{ id: "e1", expectedVersion: 1 }] }));
+		const res = await postBulk(postReq({ op: "archive", items: [{ id: "e1", expectedVersion: 1 }] }), { cms });
 		expect(res.status).toBe(400);
 	});
 
 	it("rejects unknown op with 400", async () => {
-		const res = await postBulk(postReq({ op: "nope", items: [] }));
+		const res = await postBulk(postReq({ op: "nope", items: [] }), { cms });
 		expect(res.status).toBe(400);
 	});
 
@@ -149,6 +131,7 @@ describe("Bulk route contract", () => {
 					{ id: E1, expectedVersion: 2 },
 				],
 			}),
+			{ cms },
 		);
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({

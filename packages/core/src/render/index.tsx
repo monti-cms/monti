@@ -58,7 +58,7 @@ const DEFAULT_LABELS: RenderLabels = {
 };
 
 export interface RenderMdxOptions {
-	/** Resolver for body image and file addresses (`createPublicImageResolver(mdx)`). Only the outer `src` if absent. */
+	/** Resolver for body image and file addresses (`cms.read.imageResolver(mdx)`). Only the outer `src` if absent. */
 	readonly imageResolver?: ImageResolver;
 	/** Language of the public page. Block public components receive it. */
 	readonly locale?: string;
@@ -205,4 +205,3 @@ export async function renderMdx(source: string, options: RenderMdxOptions = {}):
 export type { TocItem } from "remark-flexible-toc";
 
 /** Resolver that resolves registered media into public addresses for public MDX (server only). */
-export { createPublicImageResolver } from "../mdx/public-image-resolver";

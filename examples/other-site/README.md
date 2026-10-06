@@ -28,7 +28,7 @@ The shape is what `monti init --admin-path /studio` generates, plus this site's 
 | File | Contents |
 | --- | --- |
 | `cms.config.ts` | Collections, blocks and extensions. Unlike the blog: admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/en` for every language), and the preview language comes from the path (`previewLocaleParam: false`) |
-| `cms.server.ts` | DB and GitHub login (as `monti init` generates) |
+| `cms.server.ts` | The CMS instance: `createCms` over the DB and GitHub login server config (as `monti init` generates). The admin, the API route and the site pages (`cms.read.*`) all import `cms` from it |
 | `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`) and an example spell-check extension (`admin-components.tsx`) |
 | `app/api/cms/[...path]/route.ts` | Admin API and login (`/api/cms/auth/*`). There is no separate login route file |
 | `app/globals.css` | Only the Tailwind and package style imports. Admin colors and variants (`cms-*`, `cms-dark`, and so on) are defined by the admin package styles and do not collide with the app's names |

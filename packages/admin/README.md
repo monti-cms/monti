@@ -178,7 +178,9 @@ const checker = remoteTextChecker({ id: "bareun", label: "Bareun", locales: ["ko
 
 // app/api/text-check/route.ts (server)
 import { textCheckRoute } from "@monti-cms/core/plugin/server";
+import { cms } from "../../../cms.server";
 export const POST = textCheckRoute({
+	cms, // a route file of the app names its instance for the admin check
 	limits: { maxChars: 20_000 },
 	check: async (segments, { signal }) => callProvider(segments, process.env.MY_API_KEY, signal), // TextIssue[]
 });
@@ -247,10 +249,10 @@ What `@monti-cms/admin/styles.css` provides (everything carries the `cms` prefix
 - **Everything else.** Tailwind class discovery for the published bundle (`@source`), default border and focus outline colors, and the admin document's radius (`--radius*`) values (these use Tailwind's default
   names, so they change only in documents that contain the admin UI).
 
-`CmsAdminLayout` has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
+`CmsAdminLayout` takes the CMS instance (`cms`, exported by the app's `cms.server.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
 
 ```tsx
-<CmsAdminLayout themeProvider={false} toaster={false}>
+<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>
 	{children}
 </CmsAdminLayout>
 ```

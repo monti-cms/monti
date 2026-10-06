@@ -42,10 +42,10 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # to set the site's def
 | What it does | File |
 | --- | --- |
 | Site config (a one-collection starting point, English labels) | `cms.config.ts` |
-| Server config (DB, GitHub login; secrets come from environment variables) | `cms.server.ts` |
+| The CMS instance and its server config (DB, GitHub login; secrets come from environment variables) | `cms.server.ts` |
 | Admin UI | `app/(admin)/admin/[[...path]]/page.tsx`, `layout.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| Config aliases `@cms-config`, `@cms-server` | added to `paths` in `tsconfig.json` |
+| Config alias `@cms-config` | added to `paths` in `tsconfig.json` |
 | Admin style line | added after the last `@import` in the global CSS (`app/globals.css`, etc.) |
 | Config wiring (`withCms`) | `next.config.ts` (when it has the default shape with a single `export default nextConfig;` line); created if missing |
 
@@ -92,8 +92,8 @@ export default defineConfig({
 
 The collection name (`post`) is stored in the DB, so do not change it in production. See "Config" below for the field rules.
 
-The server config `cms.server.ts` holds the store, media and login connections and the secrets, and is only read on the server. Connections are created on first use, so
-the environment variables may be empty during the build. To use image uploads, add a store from `@monti-cms/core/s3` to `media` and install the AWS SDK
+`cms.server.ts` creates the CMS instance (`createCms({ server })`, see "The CMS instance"). Its server config holds the store, media and login connections and the secrets, and is only read on the server.
+Connections are created on first use, so the environment variables may be empty during the build. To use image uploads, add a store from `@monti-cms/core/s3` to `media` and install the AWS SDK
 (`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, only for sites that use media):
 
 ```ts
@@ -134,9 +134,10 @@ against the same schema, they run one at a time. A plugin hands over once-only w
 
 - Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
   Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
-- Config files: looked up in this order: `--config`/`--server` → `CMS_CONFIG_PATH`/`CMS_SERVER_PATH` → aliases in `tsconfig.json` `paths` →
-  `./cms.config.ts`/`./src/cms.config.ts`.
-- The old way (put `import "@monti-cms/core/migrate";` in `migrate.ts` and run `tsx --import @monti-cms/core/register migrate.ts`) still works.
+- Files: the site config is looked up in this order: `--config` → `CMS_CONFIG_PATH` → the `@cms-config` alias in `tsconfig.json` `paths` → `./cms.config.ts`/`./src/cms.config.ts`.
+  The server file, the module that exports the instance as `cms`, is `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`/`./src/cms.server.ts`.
+- In a script of your own, import the instance and call it: `import { cms } from "./cms.server"; await cms.migrate(); await cms.close();`
+  (run it with `tsx --env-file=.env.local --import @monti-cms/core/register script.ts`, which links the `@cms-config` alias).
 
 #### `monti content:rewrite`
 
@@ -147,7 +148,7 @@ pnpm exec monti content:rewrite --apply   # writes the changes
 
 Rewrites every stored body (the working and published bodies of entries, and body templates) from its stored document with the site's configured syntax ("Stored bodies" under "Body syntax"), so the stored text is one notation:
 after turning `directiveSyntax()` on or off, or after upgrading the serializer, this brings old bodies in line at once instead of one post at a time as each is saved. Run it after `monti migrate`.
-It takes the same `--env-file`, `--no-env-file`, `--config` and `--server` options as `migrate`.
+It takes the same `--env-file`, `--no-env-file`, `--config` and `--server` options as `migrate` (in a script: `cms.rewrite({ apply })`).
 
 - It prints one line per body, `collection/slug (locale) state: changed|unchanged`, and a summary.
 - Only the text (and the document, for a body that had none) changes. The content hash covers the parsed body, so a re-spelled body has the same hash: `version`, `updated_at` and `content_hash` are not touched, and "unpublished changes" is unaffected.
@@ -169,8 +170,8 @@ Apps that still use `/api/auth/*` as before (apps that do not want to change an 
 auth: githubAuth({ /* … */, basePath: "/api/auth" }),
 
 // app/api/auth/[...nextauth]/route.ts
-import { handlers } from "@monti-cms/core/runtime";
-export const { GET, POST } = handlers;
+import { cms } from "../../../../cms.server";
+export const { GET, POST } = cms.authHandlers;
 ```
 
 If `basePath` is not the default, the admin API route does not serve `/api/cms/auth/*` (404).
@@ -183,10 +184,10 @@ After installing, restart the dev server.
 
 ### Manual wiring (without `monti init`)
 
-To do by hand what `monti init` does: create the two config files, wrap `next.config.ts` in
-`withCms(nextConfig, { config: "./cms.config.ts", server: "./cms.server.ts" })`, add
-`"@cms-config": ["./cms.config.ts"]` and `"@cms-server": ["./cms.server.ts"]` to `tsconfig.json` `paths` (and to `resolve.alias` if you use tests (Vitest)),
-add the set of route files from the table above, and put the following lines in the global CSS.
+To do by hand what `monti init` does: create the site config and the server file (the instance), wrap `next.config.ts` in
+`withCms(nextConfig, { config: "./cms.config.ts" })`, add
+`"@cms-config": ["./cms.config.ts"]` to `tsconfig.json` `paths` (and to `resolve.alias` if you use tests (Vitest)),
+add the set of route files from the table above (each imports `cms` from the server file), and put the following lines in the global CSS.
 
 ```css
 @import "tailwindcss";
@@ -263,26 +264,76 @@ export default defineConfig({
 
 See the README of `@monti-cms/seo` for details.
 
+## The CMS instance
+
+`createCms({ server })` (from `@monti-cms/core/server`) turns the server config into the instance everything on the server uses. The instance owns the content store, services, media store,
+login connection, plugin server modules, write hooks and the secret. Nothing is global: two instances with different server configs live side by side in one process (tests, scripts, several databases).
+Connections are created on first use, so creating the instance at import or build time connects to nothing.
+
+```ts
+// cms.server.ts
+import { createCms, defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
+
+export const cms = createCms({
+	server: defineServerConfig({ database: postgres({ /* … */ }), auth: githubAuth({ /* … */ }) }),
+});
+```
+
+Everything else imports `cms` from this file.
+
+| Where | Code |
+| --- | --- |
+| Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` |
+| Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
+| Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` |
+| Public media | `cms.read.imageResolver(mdx)` (for `renderMdx`'s `imageResolver`), `cms.read.mediaUrl(mediaId)` |
+| Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.database()`, `cms.secret`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
+| Scripts and the command line | `cms.migrate()`, `cms.rewrite({ apply })`, `cms.close()` |
+| Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
+| Tests | `fakeCms({ store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides |
+
+The reading API hangs off the instance (`cms.read.getEntry(…)`, not `getEntry(cms, …)`): site code imports one thing, and its types (`MetadataFor` and so on) stay in `@monti-cms/core/read`.
+
+**Development reload.** `next dev` evaluates `cms.server.ts` again after an edit, which calls `createCms` again, and a new database adapter would open a second connection pool without closing the first.
+So, in development only (`NODE_ENV=development`), an instance reuses the database adapter (and the media store) of the first instance created with the same `id` (default `"default"`),
+kept under one `Symbol.for("monti.cms.dev-connections")` entry on `globalThis`. Everything else (store, services, login connection, plugins, hooks, secret) is rebuilt from the new server config, so edits to hooks and options take effect.
+Changing the database connection itself needs a restart. In production and in tests there is no such cache: an instance owns its connections alone. If one development process creates more than one instance, give each its own `id`: `createCms({ id: "reports", server })`.
+
+**Still read through the `@cms-config` alias.** The site config (collections, locales, plugins, blocks) is still linked by the `@cms-config` alias for now, so one process has one site config. `createCms` takes only the server side.
+
+### Upgrading from the `@cms-server` alias
+
+- `cms.server.ts` no longer default-exports the server config. Wrap it: `export const cms = createCms({ server: defineServerConfig({ … }) })` (`createCms` is in `@monti-cms/core/server`).
+- Remove `"@cms-server"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`. `withCms(nextConfig, { config })` takes no `server` option any more.
+- The admin API route is `cms.routeHandler()`. `createCmsRouteHandler` and the `@monti-cms/core/next/route-handler` entry point are gone.
+- Pass the instance to the admin: `<CmsAdminLayout cms={cms}>` and `<CmsAdminPage cms={cms} {...props} />` (the page file becomes a small component; `monti init` shows the shape).
+- Site pages read through `cms.read.*` instead of the free functions of `@monti-cms/core/read`; `cms.read.imageResolver(mdx)` replaces `createPublicImageResolver(mdx)` and `cms.read.mediaUrl(id)` replaces `resolvePublicMediaUrl(id)`.
+- Gone: `getCmsContentStore`, `getCmsMediaStore`, `getCmsSecret`, `getCmsDatabase`, `loadServerPlugins` and the login free functions of `@monti-cms/core/runtime` (`authGateway`, `auth`, `signIn`, `signOut`, `handlers`, `isDevAuthBypassEnabled`, …). Use the instance:
+  `cms.store()`, `cms.mediaStore()`, `cms.secret`, `cms.database()`, `cms.plugins()`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`.
+  A plugin's route gets `cms` in its handler input, `CmsServerPlugin.features(cms)` and `migrate(db, cms)` get it as an argument, and hooks read it from a closure over your own `cms`.
+- `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` and `monti content:rewrite` now import the server file and need it to export `cms`.
+  `@monti-cms/core/register` links only the `@cms-config` alias.
+- Signing in and out are plain form posts to `/api/cms/v1/session/*`, not server actions (a server action cannot carry the instance). Nothing to change in apps.
+
 ## Entry points
 
 | Entry point | Used in | Contents |
 | --- | --- | --- |
 | `@monti-cms/core` | `cms.config.ts` | `defineConfig`·`defineCollection`·`fields`·`defineBlock`·`definePlugin` |
-| `@monti-cms/core/server` | `cms.server.ts` | `defineServerConfig`, `postgres`, `githubAuth`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
+| `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, `githubAuth`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
 | `@monti-cms/core/next` | `next.config.ts` | `withCms` |
-| `@monti-cms/core/next/route-handler` | admin API route | `createCmsRouteHandler` |
 | `@monti-cms/core/render` | public pages (server components) | `renderMdx(mdx, options)` → `{ content, toc }`. In the site CSS: `@import "@monti-cms/core/render.css";` |
-| `@monti-cms/core/read` | public pages (server components, sitemap, RSS) | `getEntry`, `listEntries`, `getTranslations`, `getPreview`: read published content (relations, URLs, old-URL redirects, source fallback) |
-| `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | stores, services, login checks, public media URLs (`resolvePublicMediaUrl`). It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
+| `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
+| `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
 | `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
 | `@monti-cms/core/mdx`, `/code-block` | public renderer, editor | MDX parsing and serialization, the code block annotation model |
 | `@monti-cms/core/syntax` (experimental) | `cms.config.ts`, syntax extension packages | The `SyntaxExtension` interface and the helpers extensions build on ("Body syntax"). The directive notation is `@monti-cms/syntax-directive` |
-| `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding, DB connection, errors |
+| `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables), `monti content:rewrite` (re-serialize stored bodies) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate`, `contentRewrite` (the code behind the `monti` command) |
-| `@monti-cms/core/migrate`, `/register` | command line (old way) | create tables; wire the config aliases in custom scripts |
-| `@monti-cms/core/testing` | tests | isolated-schema DB, sample data, the MDX parser and remark plugins of a given extension list (`parseMdxAst`, `syntaxRemarkPlugins`) |
+| `@monti-cms/core/register` | custom scripts | links the `@cms-config` alias for a script run with `tsx --import` |
+| `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data, the MDX parser and remark plugins of a given extension list (`parseMdxAst`, `syntaxRemarkPlugins`) |
 
 ## Building the packages
 
@@ -518,7 +569,7 @@ export const myPlugin = () =>
   `migrate` is called by `monti migrate` after the core tables.
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
 - The server-side `hooks` (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract".
-- Plugin code uses `getCmsDatabase()` (the DB connection) from `@monti-cms/core/plugin/server` and the core route scaffolding (`adminRoute`, etc.).
+- A plugin's route gets the instance that serves it, so plugin code reads the DB connection (`cms.database()`), stores (`cms.store()`, `cms.mediaStore()`) and the secret (`cms.secret`) from it, and keeps no global state for them. `adminRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(db, cms)` receive the instance too.
 
 ## Server config
 
@@ -549,18 +600,18 @@ A client can send `Host` and `X-Forwarded-Host` itself, so the server does not t
 
 - `NODE_ENV` must be `development`. In any other mode the flag is ignored and a warning is logged.
 - The process must not look deployed: it is refused if a hosting platform variable (`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`) is set or `AUTH_URL` points to a public address. In that case the server refuses to start (the login connection throws on first use) with a message that names the reason.
-- Each request must come from this machine: `Host` is `localhost`, `*.localhost`, `127.0.0.0/8` or `::1`, and `X-Forwarded-Host` and `X-Forwarded-For` (when present) are loopback too. Other requests have to sign in normally, and a warning is logged once. `isDevAuthBypassEnabled()` from `@monti-cms/core/runtime` is now async and applies the same check.
+- Each request must come from this machine: `Host` is `localhost`, `*.localhost`, `127.0.0.0/8` or `::1`, and `X-Forwarded-Host` and `X-Forwarded-For` (when present) are loopback too. Other requests have to sign in normally, and a warning is logged once. `cms.authGateway.isDevBypassActive()` applies the same check (async).
 
 ## Hook contract
 
 Every content write goes through one pipeline in the core services: creating, saving, publishing (one entry or in bulk), duplicating, creating a translation, and a bulk change of metadata or folder.
-Hooks are registered in the server config (`defineServerConfig({ hooks })`) or in a plugin's server side (`CmsServerPlugin.hooks`), with the same shape.
+Hooks are registered in the server config (`createCms({ server: defineServerConfig({ hooks }) })`) or in a plugin's server side (`CmsServerPlugin.hooks`), with the same shape.
 The types (`WriteHooks`, `WriteHookContext`, `WriteData`, `ValidationHookContext`, `ValidationResult`, `WriteOperation`) are exported from `@monti-cms/core/server` and `@monti-cms/core/plugin/server`.
 
 ```ts
-import { defineServerConfig } from "@monti-cms/core/server";
+import { createCms, defineServerConfig } from "@monti-cms/core/server";
 
-export default defineServerConfig({
+const server = defineServerConfig({
 	// database, auth, ...
 	hooks: {
 		// Runs before core preparation. Return the data to prepare (or nothing to keep it as it is).
@@ -578,6 +629,8 @@ export default defineServerConfig({
 		afterCommit: (change) => revalidate(change.collection, change.publishedSlug),
 	},
 });
+
+export const cms = createCms({ server });
 ```
 
 | Stage | What runs |
@@ -597,7 +650,7 @@ export default defineServerConfig({
 - Hooks run outside the database transaction and get no database client. They may be async. The internal store option `beforePublishCommit` (which does get the transaction's client) is not part of this contract and is unchanged.
 - A `transform` that changes the draft while publishing has the change saved together with the publish, in one transaction (`afterCommit` then gets a `saved` change followed by a `published` one for the entry; a publish that changes nothing gets only `published`). A create or save that publishes at once (records) is reported the same way: `created` or `saved`, then `published`.
 - A hook that throws, or returns something that is not its contract, fails the write with `hook_failed` (HTTP 500). The error names the hook and its owner (`server` or `plugin:<name>`) in `issues[].params`; nothing is stored. `validate` failures give `validation_failed` and `validatePublish` failures give `publish_validation_failed` (HTTP 422), with the added issues next to the draft's own.
-- `afterCommit` gets ids, status and slugs only, never the body. Read the committed entry with `getCmsContentStore().getEntry(change.entryId)`. Delivery is in-process and at most once: it is not retried, and there is no outbox yet.
+- `afterCommit` gets ids, status and slugs only, never the body. Read the committed entry with `cms.store().getEntry(change.entryId)`. Delivery is in-process and at most once: it is not retried, and there is no outbox yet.
 
 Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `write-pipeline.test.ts`):
 
@@ -708,7 +761,7 @@ pnpm --filter @monti-cms/core test:run
 pnpm --filter @monti-cms/core typecheck
 ```
 
-The package's own tests run with the sample configs `test/cms.config.ts` and `test/cms.server.ts`.
+The package's own tests run with the sample site config `test/cms.config.ts`. A test that needs an instance builds one with `fakeCms` (or `createCms` over fake adapters); no test mocks a module for it.
 
 **Tests also run with another site config (regression guard).** `test/other-site.config.ts` is a config deliberately different from the blog's (collections article, topic and author,
 field names other than `title` and `slug`, English only, chart + site blocks, no text decorations). In each of the core, admin and AI packages, `vitest.othersite.config.ts` reruns the same

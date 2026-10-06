@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DEFAULT_ADMIN_PATH, isAdminPath } from "../config/define";
-import { CONFIG_ALIAS, parseJsonc, SERVER_ALIAS } from "./config-paths";
+import { CONFIG_ALIAS, parseJsonc } from "./config-paths";
 import {
-	ADMIN_LAYOUT_TEMPLATE,
-	ADMIN_PAGE_TEMPLATE,
-	API_ROUTE_TEMPLATE,
+	adminLayoutTemplate,
+	adminPageTemplate,
+	apiRouteTemplate,
 	CSS_LINES,
 	configTemplate,
 	DEFAULT_INIT_LOCALE,
@@ -57,7 +57,7 @@ const NEXT_CONFIGS = ["next.config.ts", "next.config.mjs", "next.config.js"];
 
 /**
  * `monti init`: creates the files that attach the CMS to a Next app. **Existing files are not overwritten**; they are reported as skipped.
- * Creates: site and server config, admin routes (page and layout), admin API route (including login).
+ * Creates: site config, the server file (the CMS instance), admin routes (page and layout), admin API route (including login).
  * Modifies (only when safe): tsconfig `paths`, the style line in global CSS, a next config of the default shape. If it cannot, it reports a manual step.
  */
 export function initProject(options: InitOptions): InitReport {
@@ -109,17 +109,20 @@ export function initProject(options: InitOptions): InitReport {
 		report.todo.push(`Add admin: { path: "${adminPath}" } to ${configFile} (it must match the admin route folder).`);
 	}
 	create(serverFile, SERVER_TEMPLATE);
-	const adminDir = posix(path.join(appDir, "(admin)", ...adminPath.split("/").filter(Boolean), "[[...path]]"));
-	create(`${adminDir}/page.tsx`, ADMIN_PAGE_TEMPLATE);
-	create(
-		posix(path.join(appDir, "(admin)", ...adminPath.split("/").filter(Boolean), "layout.tsx")),
-		ADMIN_LAYOUT_TEMPLATE,
-	);
-	create(`${appDir}/api/cms/[...path]/route.ts`, API_ROUTE_TEMPLATE);
+	// The generated files import the CMS instance from the server file, by a path relative to themselves.
+	const serverImport = (from: string) =>
+		dotted(posix(path.relative(path.dirname(from), serverFile.replace(/\.ts$/, ""))));
+	const adminDir = posix(path.join(appDir, "(admin)", ...adminPath.split("/").filter(Boolean)));
+	const pageFile = `${adminDir}/[[...path]]/page.tsx`;
+	const layoutFile = `${adminDir}/layout.tsx`;
+	const routeFile = `${appDir}/api/cms/[...path]/route.ts`;
+	create(pageFile, adminPageTemplate(serverImport(pageFile)));
+	create(layoutFile, adminLayoutTemplate(serverImport(layoutFile)));
+	create(routeFile, apiRouteTemplate(serverImport(routeFile)));
 
-	addTsconfigPaths(cwd, { [CONFIG_ALIAS]: configFile, [SERVER_ALIAS]: serverFile }, report);
+	addTsconfigPaths(cwd, { [CONFIG_ALIAS]: configFile }, report);
 	addCssLines(cwd, report);
-	addWithCms(cwd, dotted(configFile), dotted(serverFile), report);
+	addWithCms(cwd, dotted(configFile), report);
 
 	report.todo.push(
 		`Install packages: ${INSTALL_COMMANDS.join(" && ")}`,
@@ -130,7 +133,7 @@ export function initProject(options: InitOptions): InitReport {
 	return report;
 }
 
-/** Adds the config aliases to tsconfig `paths`. Only edits JSON without comments, and leaves existing aliases as they are. */
+/** Adds the site config alias to tsconfig `paths`. Only edits JSON without comments, and leaves existing aliases as they are. */
 function addTsconfigPaths(cwd: string, aliases: Readonly<Record<string, string>>, report: InitReport): void {
 	const file = path.join(cwd, "tsconfig.json");
 	const manual = () =>
@@ -202,10 +205,10 @@ function addCssLines(cwd: string, report: InitReport): void {
 }
 
 /** Wraps the next config with `withCms`. Only edits the default shape (a single `export default nextConfig;` line), and creates one if missing. */
-function addWithCms(cwd: string, config: string, server: string, report: InitReport): void {
+function addWithCms(cwd: string, config: string, report: InitReport): void {
 	const file = NEXT_CONFIGS.find((candidate) => existsSync(path.join(cwd, candidate)));
 	if (!file) {
-		writeFileSync(path.join(cwd, "next.config.ts"), nextConfigTemplate(config, server));
+		writeFileSync(path.join(cwd, "next.config.ts"), nextConfigTemplate(config));
 		report.created.push("next.config.ts");
 		return;
 	}
@@ -218,15 +221,12 @@ function addWithCms(cwd: string, config: string, server: string, report: InitRep
 	const exports = text.match(new RegExp(exportLine.source, "gm")) ?? [];
 	if (exports.length !== 1) {
 		report.todo.push(
-			`Wrap the config in ${file}: import { withCms } from "@monti-cms/core/next"; export default withCms(nextConfig, { config: "${config}", server: "${server}" });`,
+			`Wrap the config in ${file}: import { withCms } from "@monti-cms/core/next"; export default withCms(nextConfig, { config: "${config}" });`,
 		);
 		return;
 	}
 	const importLine = 'import { withCms } from "@monti-cms/core/next";\n';
-	const replaced = text.replace(
-		exportLine,
-		`export default withCms(nextConfig, { config: "${config}", server: "${server}" });`,
-	);
+	const replaced = text.replace(exportLine, `export default withCms(nextConfig, { config: "${config}" });`);
 	writeFileSync(path.join(cwd, file), `${importLine}${replaced}`);
 	report.updated.push(file);
 }

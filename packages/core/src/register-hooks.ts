@@ -2,13 +2,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * Node module resolution hook (registered by `register.ts` and `monti migrate`). Only the config aliases are redirected to the app's files; everything else passes through.
- * File paths come from the value passed at registration (`initialize`); otherwise `CMS_CONFIG_PATH` and `CMS_SERVER_PATH` (default `./cms.config.ts` and
- * `./cms.server.ts`, relative to the current directory).
+ * Node module resolution hook (registered by `register.ts` and `monti migrate`). Only the site config alias is redirected to the app's file; everything else passes through.
+ * The file path comes from the value passed at registration (`initialize`); otherwise `CMS_CONFIG_PATH` (default `./cms.config.ts`, relative to the current directory).
  */
 let aliases: Readonly<Record<string, string>> = {
 	"@cms-config": process.env.CMS_CONFIG_PATH ?? "./cms.config.ts",
-	"@cms-server": process.env.CMS_SERVER_PATH ?? "./cms.server.ts",
 };
 
 /** Alias files passed at registration (`register(url, { data: { aliases } })`). */

@@ -1,7 +1,7 @@
 import { isLocale } from "@monti-cms/core/client";
-import { listEntries } from "@monti-cms/core/read";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cms } from "../../../../cms.server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function BlogPage({
 	const { locale } = await params;
 	if (!isLocale(locale)) notFound();
 	const page = Math.max(1, Number((await searchParams).page ?? 1) || 1);
-	const { items, total, pageSize } = await listEntries({ collection: "article", locale, page, pageSize: 10 });
+	const { items, total, pageSize } = await cms.read.listEntries({ collection: "article", locale, page, pageSize: 10 });
 	return (
 		<main className="mx-auto max-w-2xl px-4 py-12">
 			<h1 className="mb-8 font-bold text-3xl">Blog</h1>

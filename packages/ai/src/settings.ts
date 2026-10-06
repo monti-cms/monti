@@ -20,6 +20,8 @@ const t = createTranslator(settingsMessages);
 
 /** Settings store (part of the content store). Tests pass an in-memory implementation. */
 export interface AiSettingsStore {
+	/** Encryption key for the stored service keys (`cms.secret`). Read when a key is stored or used. */
+	secret(): string | undefined;
 	getAiSettings(): Promise<{ value: unknown; version: number } | null>;
 	saveAiSettings(params: { expectedVersion: number; value: unknown }): Promise<number>;
 }
@@ -81,7 +83,7 @@ async function load(store: AiSettingsStore): Promise<{ version: number; provider
 	const row = await store.getAiSettings();
 	const providers = readStored(row?.value).map((provider) => ({
 		...provider,
-		key: provider.apiKey ? decryptSecret(provider.apiKey) : null,
+		key: provider.apiKey ? decryptSecret(provider.apiKey, store.secret()) : null,
 	}));
 	return { version: row?.version ?? 0, providers };
 }
@@ -124,12 +126,17 @@ async function writeProviders(
 	return getAiSettingsView(store);
 }
 
-const toStored = (id: string, input: AiProviderInput, storedKey: string | null): StoredProvider => ({
+const toStored = (
+	id: string,
+	input: AiProviderInput,
+	storedKey: string | null,
+	secret: string | undefined,
+): StoredProvider => ({
 	id,
 	name: input.name,
 	kind: input.kind,
 	url: input.url.replace(/\/+$/, ""),
-	apiKey: input.apiKey === undefined ? storedKey : input.apiKey === null ? null : encryptSecret(input.apiKey),
+	apiKey: input.apiKey === undefined ? storedKey : input.apiKey === null ? null : encryptSecret(input.apiKey, secret),
 	defaultModel: input.defaultModel,
 });
 
@@ -139,7 +146,7 @@ export async function addAiProvider(
 	input: AiProviderInput,
 ): Promise<AiSettingsView> {
 	const { providers } = await load(store);
-	return writeProviders(store, expectedVersion, [...providers, toStored(randomUUID(), input, null)]);
+	return writeProviders(store, expectedVersion, [...providers, toStored(randomUUID(), input, null, store.secret())]);
 }
 
 /** Edits a connection. If the key is omitted, the stored key stays; `null` deletes it; a string is encrypted and replaces it. */
@@ -157,7 +164,7 @@ export async function updateAiProvider(
 	return writeProviders(
 		store,
 		expectedVersion,
-		providers.map((provider) => (provider.id === id ? toStored(id, input, keepKey) : provider)),
+		providers.map((provider) => (provider.id === id ? toStored(id, input, keepKey, store.secret()) : provider)),
 	);
 }
 

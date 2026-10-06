@@ -1,7 +1,7 @@
 import { isLocale } from "@monti-cms/core/client";
-import { getEntry } from "@monti-cms/core/read";
-import { createPublicImageResolver, renderMdx } from "@monti-cms/core/render";
+import { renderMdx } from "@monti-cms/core/render";
 import { notFound, permanentRedirect } from "next/navigation";
+import { cms } from "../../../../../cms.server";
 
 export const dynamic = "force-dynamic";
 
@@ -9,13 +9,13 @@ export const dynamic = "force-dynamic";
 export default async function ArticlePage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
 	const { locale, slug } = await params;
 	if (!isLocale(locale)) notFound();
-	const result = await getEntry({ collection: "article", slug: decodeURIComponent(slug), locale });
+	const result = await cms.read.getEntry({ collection: "article", slug: decodeURIComponent(slug), locale });
 	if (result.status === "not_found") notFound();
 	if (result.status === "redirect") permanentRedirect(result.path ?? result.slug);
 	const { entry } = result;
 	const { content, toc } = await renderMdx(entry.mdx, {
 		locale,
-		imageResolver: await createPublicImageResolver(entry.mdx),
+		imageResolver: await cms.read.imageResolver(entry.mdx),
 	});
 	return (
 		<main className="mx-auto max-w-2xl px-4 py-12">

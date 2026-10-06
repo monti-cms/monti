@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import { publishDraft } from "../../../adapters/postgres/__test__/seed";
@@ -10,6 +10,7 @@ import {
 	dropIsolatedTestPool,
 } from "../../../adapters/postgres/__test__/test-database";
 import { createContentStore, type Entry, migrateContentStore } from "../../../adapters/postgres/content-store";
+import { type Cms, fakeCms } from "../../../cms";
 import type { Collection } from "../../../core/collections";
 import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
 import { isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
@@ -18,18 +19,6 @@ import { createContentService } from "../../../services/content-service";
 import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
 import { POST as postEntries } from "../entries/route";
 import { GET as getTemplates } from "../templates/route";
-
-const holder = vi.hoisted(() => ({ store: undefined as unknown, service: undefined as unknown }));
-
-vi.mock("../../../adapters/auth", () => ({
-	authGateway: { verifyAdmin: () => Promise.resolve({ userId: "admin" }) },
-	AuthError: class AuthError extends Error {},
-}));
-
-vi.mock("../../../container", () => ({
-	getCmsContentStore: () => holder.store,
-	getCmsContentService: () => holder.service,
-}));
 
 /** The same content in a spelling the serializer does not write, and the text a save writes for it. */
 const UNTIDY = "Title\n=====\n\nSome _emphasis_ here\n\n* one\n* two\n";
@@ -47,6 +36,8 @@ describe("entry API with a stored document", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
+	let service: ReturnType<typeof createContentService<Entry>>;
+	let cms: Cms;
 	let sequence = 0;
 	const unique = (prefix: string) => `${prefix}-${++sequence}`;
 	const targets = new Map<Collection, string>();
@@ -57,8 +48,8 @@ describe("entry API with a stored document", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		holder.store = store;
-		holder.service = createContentService<Entry>(store);
+		service = createContentService<Entry>(store);
+		cms = fakeCms({ store, contentService: service });
 	});
 
 	afterAll(async () => {
@@ -69,7 +60,7 @@ describe("entry API with a stored document", () => {
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const known = targets.get(to);
 		if (known) return known;
-		const draft = await (holder.service as ReturnType<typeof createContentService<Entry>>).createDraft({
+		const draft = await service.createDraft({
 			collection: to,
 			slug: unique(to),
 			metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
@@ -91,14 +82,19 @@ describe("entry API with a stored document", () => {
 				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
 				...body,
 			}),
+			{ cms },
 		);
 
 	const patch = (id: string, body: Record<string, unknown>) =>
-		patchEntry(send(`http://localhost/api/cms/v1/entries/${id}`, "PATCH", body), { params: Promise.resolve({ id }) });
+		patchEntry(send(`http://localhost/api/cms/v1/entries/${id}`, "PATCH", body), {
+			params: Promise.resolve({ id }),
+			cms,
+		});
 
 	const read = async (id: string) => {
 		const res = await getEntry(new NextRequest(`http://localhost/api/cms/v1/entries/${id}`), {
 			params: Promise.resolve({ id }),
+			cms,
 		});
 		expect(res.status).toBe(200);
 		return (await res.json()) as Entry;
@@ -294,7 +290,7 @@ describe("entry API with a stored document", () => {
 		async () => {
 			const source = await created({ mdx: "First\n\nSecond\n" });
 			expect(source.working.doc).not.toBeNull();
-			const created_ = await (holder.service as ReturnType<typeof createContentService<Entry>>).createTranslation({
+			const created_ = await service.createTranslation({
 				sourceId: source.id,
 				locale: secondLocale as string,
 			});
@@ -336,9 +332,9 @@ describe("entry API with a stored document", () => {
 	);
 
 	it("lists templates with their documents", async () => {
-		const template = await (holder.store as typeof store).createTemplate({ name: unique("doc template"), mdx: UNTIDY });
+		const template = await store.createTemplate({ name: unique("doc template"), mdx: UNTIDY });
 
-		const res = await getTemplates(new NextRequest("http://localhost/api/cms/v1/templates"));
+		const res = await getTemplates(new NextRequest("http://localhost/api/cms/v1/templates"), { cms });
 
 		const { items } = await res.json();
 		const listed = items.find((item: { id: string }) => item.id === template.id);

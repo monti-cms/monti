@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { listActions } from "../../actions";
 import { addShared, deleteShared, getSharedView, updateShared, updateSharedItem } from "../../shared";
-import { getAiStore } from "../../store";
+import { aiStoreFor } from "../../store";
 
 /**
  * Shared texts. Every request returns the whole changed list (`{ version, items }`). To edit, send `expectedVersion`;
@@ -18,21 +18,21 @@ import { getAiStore } from "../../store";
 
 const versioned = z.looseObject({ expectedVersion: z.number().int().min(0) });
 
-export const GET = adminRoute(async () => json(await getSharedView(getAiStore())));
+export const GET = adminRoute(async ({ cms }) => json(await getSharedView(aiStoreFor(cms))));
 
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
 	const { expectedVersion, ...item } = await readVersionedBody(request, versioned);
-	return json(await addShared(getAiStore(), expectedVersion, item), { status: 201 });
+	return json(await addShared(aiStoreFor(cms), expectedVersion, item), { status: 201 });
 });
 
-export const PATCH = adminRoute(async ({ request }) => {
+export const PATCH = adminRoute(async ({ request, cms }) => {
 	const { expectedVersion, ...item } = await readVersionedBody(request, versioned);
-	return json(await updateSharedItem(getAiStore(), expectedVersion, item));
+	return json(await updateSharedItem(aiStoreFor(cms), expectedVersion, item));
 });
 
-export const PUT = adminRoute(async ({ request }) => {
+export const PUT = adminRoute(async ({ request, cms }) => {
 	const { expectedVersion, texts } = await readVersionedBody(request, versioned);
-	return json(await updateShared(getAiStore(), expectedVersion, { texts }));
+	return json(await updateShared(aiStoreFor(cms), expectedVersion, { texts }));
 });
 
 const readKey = (request: NextRequest): string => {
@@ -41,8 +41,8 @@ const readKey = (request: NextRequest): string => {
 	return key;
 };
 
-export const DELETE = adminRoute(async ({ request }) => {
-	const store = getAiStore();
+export const DELETE = adminRoute(async ({ request, cms }) => {
+	const store = aiStoreFor(cms);
 	const key = readKey(request);
 	const expectedVersion = readVersionQuery(request);
 	return json(await deleteShared(store, expectedVersion, key, await listActions(store)));

@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleApiError } from "../error-handler";
 
-vi.mock("../../../adapters/auth", () => ({ AuthError: class AuthError extends Error {} }));
-
 afterEach(() => vi.restoreAllMocks());
 
 describe("API error responses", () => {
