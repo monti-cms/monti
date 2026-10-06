@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../test/any-site";
+import { publishDraft, restoreDraft, seedEntry } from "../../../core/store/__test__/seed";
 import { createContentStore, migrateContentStore } from "../content-store";
-import { publishDraft, restoreDraft, seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Collection names are looked up in the current config (`test/any-site.ts`). Posts are the document collection with a body; tags are the item collection. */

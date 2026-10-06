@@ -1,5 +1,5 @@
-import type { AfterCommit, ContentStore } from "../adapters/postgres/content-store";
 import type { MediaStore } from "../adapters/r2/types";
+import type { AfterCommit, ContentStore, RewriteReport } from "../core/store";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { PluginDatabase } from "../plugin/define";
 import type { WriteHooks } from "../services/hooks";
@@ -20,6 +20,11 @@ export interface DatabaseAdapter {
 	migrate(): Promise<void>;
 	/** Connection for plugins to create and read their own tables (`CmsServerPlugin.migrate`, plugin API). */
 	pluginDatabase(): PluginDatabase;
+	/**
+	 * Re-serializes every stored body (working, published, templates) with the site's configured syntax (`monti content:rewrite`), and returns what
+	 * happened to each. Writes only with `apply`. An adapter without it cannot run that command.
+	 */
+	rewriteContent?(options: { readonly apply?: boolean }): Promise<RewriteReport>;
 	/** Closes the connection (when the command-line tool finishes). */
 	close?(): Promise<void>;
 }

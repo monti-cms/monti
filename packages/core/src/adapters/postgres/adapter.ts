@@ -1,7 +1,7 @@
 import { Pool } from "pg";
+import type { ContentStore } from "../../core/store";
 import type { PluginDatabase } from "../../plugin/define";
 import type { DatabaseAdapter } from "../../server/define";
-import type { ContentStore } from "./content-store";
 import { validateSchemaName } from "./store/context";
 
 export interface PostgresOptions {
@@ -17,6 +17,7 @@ export interface PostgresOptions {
  */
 const loadStoreModule = () => import("./content-store");
 const loadSchemaModule = () => import("./store/schema");
+const loadRewriteModule = () => import("./store/rewrite");
 
 /**
  * A proxy store that creates the real store on first call. Every store function is async, so callers cannot tell the
@@ -59,6 +60,8 @@ export function postgres(options: PostgresOptions): DatabaseAdapter {
 			lazyStore(async () => (await loadStoreModule()).createContentStore(getPool(), { ...schema, ...storeOptions })),
 		migrate: async () => (await loadStoreModule()).migrateContentStore(getPool(), schema),
 		pluginDatabase: () => pluginDatabaseFor(getPool(), options.schema),
+		rewriteContent: async ({ apply }) =>
+			(await loadRewriteModule()).rewriteContent(getPool(), { apply, schema: options.schema }),
 		close: async () => {
 			await pool?.end();
 			pool = undefined;

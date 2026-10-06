@@ -2,19 +2,21 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
-import { publishDraft } from "../../../adapters/postgres/__test__/seed";
-import {
-	closeGlobalPool,
-	createIsolatedTestPool,
-	dropIsolatedTestPool,
-} from "../../../adapters/postgres/__test__/test-database";
-import { createContentStore, type Entry, migrateContentStore } from "../../../adapters/postgres/content-store";
 import { type Cms, fakeCms } from "../../../cms";
 import type { Collection } from "../../../core/collections";
 import { MAX_DOC_BYTES, MAX_MDX_BYTES } from "../../../core/snapshot";
+import type { Entry } from "../../../core/store";
+import { publishDraft } from "../../../core/store/__test__/seed";
 import { isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
+import {
+	closeGlobalPool,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	migrateContentStore,
+} from "../../../testing";
 import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
 import { POST as postEntries } from "../entries/route";
 import { GET as getTemplates } from "../templates/route";

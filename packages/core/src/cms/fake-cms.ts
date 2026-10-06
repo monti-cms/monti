@@ -1,6 +1,6 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
-import type { ContentStore } from "../adapters/postgres/content-store";
 import type { MediaStore } from "../adapters/r2/types";
+import type { ContentStore } from "../core/store";
 import { nextRouteHandler } from "../next/route-handler";
 import type { PluginDatabase } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";

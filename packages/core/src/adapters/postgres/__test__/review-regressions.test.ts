@@ -3,11 +3,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, recordRelationField, requiredMetadata } from "../../../../test/any-site";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../../core/collections";
 import { prepareSnapshot, validateForPublish } from "../../../core/snapshot";
+import type { ContentStore, Entry } from "../../../core/store";
+import { duplicateDraft, publishDraft, restoreDraft } from "../../../core/store/__test__/seed";
 import { storedFields } from "../../../schema/derive";
 import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
-import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { duplicateDraft, publishDraft, restoreDraft } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** First relation field in a body collection that multi-selects from an item collection (like tags). If none, the bulk-add test is skipped. */

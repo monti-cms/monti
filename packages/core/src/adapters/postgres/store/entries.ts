@@ -3,10 +3,12 @@ import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
 import { isCollection, isItemCollection } from "../../../core/collections";
 import { DEFAULT_LOCALE, isLocale } from "../../../core/locales";
+import { CmsError } from "../../../core/store/errors";
+import type { Entry, IncomingReferenceItem, TranslationGroup } from "../../../core/store/types";
 import { normalizeReferenceKind, type PreparedSnapshot, type Reference, type WorkingCopy } from "../../../core/types";
 import { commonFieldKeys } from "../../../schema/derive";
 import { type StoreContext, withTransaction } from "./context";
-import { CmsError, mapEntryWriteError } from "./errors";
+import { mapEntryWriteError } from "./errors";
 import type { Publishing } from "./publish";
 import {
 	insertReferences,
@@ -19,7 +21,6 @@ import {
 	readReferences,
 	writeBody,
 } from "./rows";
-import type { Entry, IncomingReferenceItem, TranslationGroup } from "./types";
 
 export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	const { pool, qSchema } = ctx;
@@ -395,6 +396,22 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			withTransaction(pool, (client) => publishWithinTransaction(client, params.id, params), {
 				mapError: mapEntryWriteError,
 			}),
+
+		slugsInUse: async (params: {
+			collection: string;
+			locale: string;
+			slugs: readonly string[];
+			excludeEntryId?: string;
+		}): Promise<Set<string>> => {
+			if (params.slugs.length === 0) return new Set();
+			const res = await pool.query<{ slug: string }>(
+				`SELECT slug FROM "${qSchema}".content_addresses
+				 WHERE collection = $1 AND locale = $2 AND slug = ANY($3::text[])
+				   AND ($4::uuid IS NULL OR entry_id IS DISTINCT FROM $4::uuid)`,
+				[params.collection, params.locale, [...params.slugs], params.excludeEntryId ?? null],
+			);
+			return new Set(res.rows.map((row) => row.slug));
+		},
 
 		/** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
 		getIncomingReferences: async (params: { targetId: string }): Promise<IncomingReferenceItem[]> => {

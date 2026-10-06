@@ -5,16 +5,12 @@
  */
 
 export { AuthError } from "./adapters/auth/auth-gateway";
-export {
-	type ContentLookup,
-	createContentLookup,
-	type SlugsInUseParams,
-} from "./adapters/postgres/store/content-lookup";
 export { withTransaction } from "./adapters/postgres/store/context";
-export { CmsError } from "./adapters/postgres/store/errors";
 export type { Cms } from "./cms";
+export { CmsError } from "./core/store";
 export { HttpError, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";
+export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "./plugin/content-lookup";
 export type { LoadedServerPlugin } from "./plugin/server";
 export type { LegacySecretFormat, PluginSecrets, PluginSecretsOptions } from "./secrets";
 export type {

@@ -1,7 +1,7 @@
-import { CmsError } from "../../../adapters/postgres/store/errors";
 import type { Cms } from "../../../cms";
 import { isCollection, isItemCollection } from "../../../core/collections";
 import { DEFAULT_LOCALE, isLocale } from "../../../core/locales";
+import { CmsError } from "../../../core/store";
 import { storedField } from "../../../schema/derive";
 import { defaultPublicJson, type PublicApiOptions } from "./options";
 import { publicApiError, publicError, publicJson } from "./respond";

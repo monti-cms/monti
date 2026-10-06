@@ -4,14 +4,15 @@ import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
+import type { Entry } from "../../../core/store";
+import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { extractVisibleText } from "../store/rows";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
 import { migrateStoredDocuments } from "../store/stored-document-migration";
-import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0013_stored_documents";

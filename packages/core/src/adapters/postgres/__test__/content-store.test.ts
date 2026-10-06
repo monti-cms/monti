@@ -9,12 +9,13 @@ import {
 } from "../../../../test/any-site";
 import { COLLECTIONS, type Collection } from "../../../core/collections";
 import { contentPath } from "../../../core/links";
+import type { ContentStore, Entry, EntryMetadata } from "../../../core/store";
+import { CmsError } from "../../../core/store";
+import { publishDraft, seedEntry, seedSave } from "../../../core/store/__test__/seed";
 import { storedFields } from "../../../schema/derive";
 import { createContentService } from "../../../services/content-service";
 import { ServiceError } from "../../../services/types";
-import type { ContentStore, Entry, EntryMetadata } from "../content-store";
-import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { publishDraft, seedEntry, seedSave } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** First required-for-publish field that is not the title (category in the reference blog). Checks that publish is blocked when it is missing. */

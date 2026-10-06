@@ -1,4 +1,4 @@
-import type { AfterCommit } from "../adapters/postgres/store/after-commit";
+import type { AfterCommit } from "../core/store";
 import type { StoredDocument } from "../mdx/stored-document";
 import type { Collection, Issue, PreparedSnapshot } from "./types";
 

@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type ContentStore, createContentStore, migrateContentStore } from "../content-store";
+import type { ContentStore } from "../../../core/store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 describe("media list kind filter", () => {

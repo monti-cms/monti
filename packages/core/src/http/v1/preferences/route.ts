@@ -1,6 +1,6 @@
-import type { JsonObject } from "../../../adapters/postgres/content-store";
 import { type PreferencesBody, preferencesBodySchema } from "../../../core/api";
 import { COLLECTIONS } from "../../../core/collections";
+import type { JsonObject } from "../../../core/store";
 import { adminRoute, json, parseWith, readJsonBody } from "../handler";
 
 /** Normalizes stored preferences to the per-collection shape. Unknown or corrupt values (including the removed global page size and sort) are dropped. */

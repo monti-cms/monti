@@ -3,11 +3,12 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, titleFieldOf } from "../../../../test/any-site";
 import { type Collection, isItemCollection } from "../../../core/collections";
+import type { Entry } from "../../../core/store";
+import { duplicateDraft, publishDraft, seedEntry } from "../../../core/store/__test__/seed";
 import type { ServiceInput } from "../../../core/types";
 import { storedFields } from "../../../schema/derive";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { duplicateDraft, publishDraft, seedEntry } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 describe("Duplicate Entry Contract", () => {

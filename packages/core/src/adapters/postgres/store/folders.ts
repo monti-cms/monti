@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
+import { CmsError } from "../../../core/store/errors";
+import type { Folder } from "../../../core/store/types";
 import { type StoreContext, withTransaction } from "./context";
-import { CmsError, isTransactionConflict, isUniqueViolation } from "./errors";
+import { isTransactionConflict, isUniqueViolation } from "./errors";
 import { type FolderRow, mapFolderRow } from "./rows";
-import type { Folder } from "./types";
 
 const mapFolderError = (err: unknown) => {
 	// A duplicate name under the same parent asks the user to rename.

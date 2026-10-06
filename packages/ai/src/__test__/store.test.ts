@@ -1,15 +1,11 @@
 import { createContentLookup } from "@monti-cms/core/plugin/server";
-import {
-	type ContentStore,
-	createContentService,
-	createContentStore,
-	type Entry,
-	migrateContentStore,
-} from "@monti-cms/core/runtime";
+import { type ContentStore, createContentService, type Entry } from "@monti-cms/core/runtime";
 import {
 	closeGlobalPool,
+	createContentStore,
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
+	migrateContentStore,
 	pluginDatabaseFor,
 } from "@monti-cms/core/testing";
 import type { Pool } from "pg";
@@ -132,7 +128,7 @@ describe("AI action edited-value store", () => {
 			metadata: { title: "주소 확인" },
 			mdx: "",
 		});
-		const lookup = createContentLookup(pluginDatabaseFor(pool, schemaName));
+		const lookup = createContentLookup({ store: () => content });
 		const slugs = ["used-address", "free-address"];
 		expect(await lookup.slugsInUse({ collection: "category", locale: "ko", slugs })).toEqual(new Set(["used-address"]));
 		expect(await lookup.slugsInUse({ collection: "category", locale: "en", slugs })).toEqual(new Set());

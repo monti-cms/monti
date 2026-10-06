@@ -3,13 +3,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
+import type { Entry } from "../../../core/store";
+import { publishDraft } from "../../../core/store/__test__/seed";
 import { forEachBlock, isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
 import { bodyFromMdx, readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateBlockIds } from "../store/block-id-migration";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0014_block_ids";

@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
-import { CmsError } from "../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../cms";
 import { isItemCollection } from "../../../core/collections";
+import { CmsError } from "../../../core/store";
 import { storedFields } from "../../../schema/derive";
 import { createBulkService } from "../../../services/bulk-service";
 import { POST as postBulk } from "../bulk/route";

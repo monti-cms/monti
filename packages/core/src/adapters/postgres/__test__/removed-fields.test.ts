@@ -3,11 +3,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, recordRelationField, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
 import { imageWarningsForSnapshot, prepareSnapshot } from "../../../core/snapshot";
+import type { ContentStore, Entry } from "../../../core/store";
+import { duplicateDraft, publishDraft, seedEntry, seedSave } from "../../../core/store/__test__/seed";
 import { storedFields } from "../../../schema/derive";
 import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
-import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { duplicateDraft, publishDraft, seedEntry, seedSave } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**

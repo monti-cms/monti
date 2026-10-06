@@ -780,7 +780,7 @@ title with " (copy)" appended). Without it, the title is the original's as is. T
 
 This package was split out of a single blog, so the following needs to be sorted out before using it on another blog.
 
-- The only store is Postgres (`ContentStore`). Using another DB means implementing the same contract, and the contract is still large.
+- The only store is Postgres. The store is a port (`ContentStore` in `src/core/store/ports.ts`, split into sub-ports for entries, lifecycle, the list, folders, public reads, media metadata, templates, preferences and export), and the Postgres adapter (`src/adapters/postgres`) implements it. The rules a store applies (slug addresses, translations, publish and lifecycle transitions) are pure functions in `src/core/domain`. `src/core/store/__test__/contract` is the contract test suite a second adapter has to pass; the contract is still large.
 
 ## Development
 

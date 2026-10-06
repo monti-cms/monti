@@ -3,8 +3,9 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentOf } from "../../../../test/stored-content";
 import { cmsConfig } from "../../../config/resolved";
+import type { ContentStore } from "../../../core/store";
 import { bodyFromMdx } from "../../../mdx/stored-document";
-import { type ContentStore, createContentStore, migrateContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** The site config's initial body templates (`seed.templates`). For a config without any, the seeding tests are skipped. */

@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
+import { CmsError } from "../../../core/store/errors";
+import type { BodyTemplate } from "../../../core/store/types";
 import { bodyFromMdx, type StoredDocument } from "../../../mdx/stored-document";
 import { type StoreContext, withTransaction } from "./context";
-import { CmsError, isUniqueViolation } from "./errors";
+import { isUniqueViolation } from "./errors";
 import { mapTemplateRow, readDoc, TEMPLATE_COLUMNS, type TemplateRow } from "./rows";
-import type { BodyTemplate } from "./types";
 
 const mapTemplateError = (err: unknown) =>
 	isUniqueViolation(err, ["body_templates_name_idx", "body_templates_pkey"])

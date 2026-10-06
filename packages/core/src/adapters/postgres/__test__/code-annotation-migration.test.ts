@@ -4,15 +4,16 @@ import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
+import type { Entry } from "../../../core/store";
+import { publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
 import { forEachBlock } from "../../../mdx/block-ids";
 import { bodyFromMdx, readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { migrateCodeAnnotations } from "../store/code-annotation-migration";
 import { extractVisibleText } from "../store/rows";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 const STEP = "0015_code_annotations";

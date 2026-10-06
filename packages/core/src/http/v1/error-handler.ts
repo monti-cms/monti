@@ -1,5 +1,5 @@
 import { AuthError } from "../../adapters/auth";
-import { CmsError } from "../../adapters/postgres/content-store";
+import { CmsError } from "../../core/store";
 import { ServiceError } from "../../services/types";
 
 /**

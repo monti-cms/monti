@@ -1,11 +1,9 @@
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { resolveTrustHost } from "../adapters/auth/trust-host";
-import type { ContentStore, Entry } from "../adapters/postgres/content-store";
-import type { ContentChange } from "../adapters/postgres/store/after-commit";
-import { CmsError } from "../adapters/postgres/store/errors";
 import type { MediaStore } from "../adapters/r2/types";
 import { cmsConfig } from "../config/resolved";
 import { adminUrl } from "../core/admin-paths";
+import { CmsError, type ContentChange, type ContentStore, type Entry, formatRewriteReport } from "../core/store";
 import { type CmsRouteHandler, nextRouteHandler } from "../next/route-handler";
 import type { CmsPlugin, OwnedPluginRoute, PluginDatabase } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
@@ -240,9 +238,11 @@ export function createCms(options: CreateCmsOptions): Cms {
 			log("CMS database migration completed successfully!");
 		},
 		rewrite: async ({ apply, log = console.log } = {}) => {
-			const { rewriteContent, formatRewriteReport } = await import("../adapters/postgres/store/rewrite");
-			const { pool, schema } = connections.database.pluginDatabase();
-			for (const line of formatRewriteReport(await rewriteContent(pool, { apply, schema }))) log(line);
+			const { rewriteContent } = connections.database;
+			if (!rewriteContent) {
+				throw new Error(`cms: the ${connections.database.name} database adapter does not support content:rewrite`);
+			}
+			for (const line of formatRewriteReport(await rewriteContent.call(connections.database, { apply }))) log(line);
 		},
 		close: async () => {
 			await connections.database.close?.();

@@ -1,11 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
 import { bodyText, SEARCH_TEXT } from "../../../core/body-text";
-import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
-import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
-import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
-import type { Queryable } from "./context";
-import { CmsError } from "./errors";
+import { CmsError } from "../../../core/store/errors";
 import type {
 	BodyTemplate,
 	Entry,
@@ -16,7 +12,11 @@ import type {
 	JsonValue,
 	MediaAssetRecord,
 	PublishedEntryRecord,
-} from "./types";
+} from "../../../core/store/types";
+import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
+import { normalizeReferenceKind, type Reference, type ReferenceOccurrence } from "../../../core/types";
+import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
+import type { Queryable } from "./context";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
 

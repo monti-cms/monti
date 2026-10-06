@@ -1,15 +1,16 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, defaultLocale } from "../../../../test/any-site";
+import type { ContentStore } from "../../../core/store";
+import { seedEntry, seedSave } from "../../../core/store/__test__/seed";
+import { createContentLookup } from "../../../plugin/content-lookup";
 import { createContentStore, migrateContentStore } from "../content-store";
-import { createContentLookup } from "../store/content-lookup";
-import { seedEntry, seedSave } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 describe("core content lookup", () => {
 	let pool: Pool;
 	let schemaName: string;
-	let store: ReturnType<typeof createContentStore>;
+	let store: ContentStore;
 	let lookup: ReturnType<typeof createContentLookup>;
 
 	beforeAll(async () => {
@@ -18,7 +19,7 @@ describe("core content lookup", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { schema: schemaName });
 		store = createContentStore(pool, { schema: schemaName });
-		lookup = createContentLookup({ pool, schema: schemaName });
+		lookup = createContentLookup({ store: () => store });
 	});
 
 	afterAll(async () => {
@@ -57,11 +58,7 @@ describe("core content lookup", () => {
 		expect(await lookup.slugsInUse({ ...params, locale: "xx-unused", slugs: ["lookup-used"] })).toEqual(new Set());
 	});
 
-	it("returns an empty set for no slugs without querying", async () => {
-		const query = vi.fn();
-		const counting = { query } as unknown as Pool;
-		const empty = createContentLookup({ pool: counting, schema: schemaName });
-		expect(await empty.slugsInUse({ collection: "post", locale: "ko", slugs: [] })).toEqual(new Set());
-		expect(query).not.toHaveBeenCalled();
+	it("returns an empty set for no slugs", async () => {
+		expect(await lookup.slugsInUse({ collection: "post", locale: "ko", slugs: [] })).toEqual(new Set());
 	});
 });

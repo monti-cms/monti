@@ -1,7 +1,7 @@
-import type { ListSortField } from "../../../core/api";
-import type { TranslationState } from "../../../core/translation/state";
-import type { ReferenceKind, ReferenceOccurrence } from "../../../core/types";
-import type { StoredDocument } from "../../../mdx/stored-document";
+import type { StoredDocument } from "../../mdx/stored-document";
+import type { ListSortField } from "../api";
+import type { TranslationState } from "../translation/state";
+import type { ReferenceKind, ReferenceOccurrence } from "../types";
 
 export type JsonPrimitive = string | number | boolean | null;
 export interface JsonArray extends Array<JsonValue> {}
@@ -347,4 +347,46 @@ export interface ExportSnapshot {
 	media: MediaAssetRecord[];
 	templates: BodyTemplate[];
 	preferences: { userId: string; preferences: JsonObject; updatedAt: Date }[];
+}
+
+/** Public list sort. Publish date is the source's, modified date is this language body's, title is this language's title. */
+export type PublishedSort = "publishedAt" | "updatedAt" | "title";
+
+export interface PublishedPageParams {
+	readonly collection: string;
+	/** Only this language's content. Defaults to the default language. */
+	readonly locale?: string;
+	/** Relation field name to selected item IDs. Multiple values of the same field are OR; different fields are AND. */
+	readonly where?: Readonly<Record<string, string | readonly string[]>>;
+	readonly sort?: PublishedSort;
+	/**
+	 * Display language used for title sorting. An item collection keeps one default-language record with per-language names (`translations`), so it sorts
+	 * by that language's name (falling back to the default name). If unset, `locale`.
+	 */
+	readonly titleLocale?: string;
+	readonly order?: "asc" | "desc";
+	/** 1-based. */
+	readonly page?: number;
+	/** 1 to 500. Default 25. */
+	readonly pageSize?: number;
+	readonly includeBody?: boolean;
+}
+
+/** What happens to one stored body in a content rewrite. */
+export type RewriteOutcomeStatus = "changed" | "unchanged" | "skipped";
+
+export interface RewriteItem {
+	readonly kind: "entry" | "template";
+	/** `collection/slug (locale) state` for a body, `template "name"` for a template. */
+	readonly label: string;
+	readonly outcome: RewriteOutcomeStatus;
+	readonly reason?: "unparsed" | "hash";
+}
+
+export interface RewriteReport {
+	readonly applied: boolean;
+	readonly items: readonly RewriteItem[];
+	readonly changed: number;
+	readonly unchanged: number;
+	readonly skipped: number;
 }

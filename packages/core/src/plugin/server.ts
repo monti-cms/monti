@@ -1,5 +1,5 @@
-import type { ContentChange } from "../adapters/postgres/store/after-commit";
 import type { Cms } from "../cms";
+import type { ContentChange } from "../core/store";
 import type { CmsServerConfig } from "../server/define";
 import type { HookSource } from "../services/hooks";
 import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute, PluginDatabase } from "./define";

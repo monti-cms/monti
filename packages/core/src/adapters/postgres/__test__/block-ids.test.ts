@@ -3,13 +3,14 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
+import type { Entry } from "../../../core/store";
+import { duplicateDraft, publishDraft } from "../../../core/store/__test__/seed";
 import { forEachBlock, isBlockId, withoutBlockIds } from "../../../mdx/block-ids";
 import { readStoredDocument, type StoredDocument } from "../../../mdx/stored-document";
 import { createBulkService } from "../../../services/bulk-service";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, type Entry, migrateContentStore } from "../content-store";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { isReferencesEqual } from "../store/rows";
-import { duplicateDraft, publishDraft } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** A heading, three paragraphs and a list: blocks at two depths. */

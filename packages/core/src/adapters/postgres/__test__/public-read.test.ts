@@ -9,10 +9,11 @@ import {
 	requiredMetadata,
 } from "../../../../test/any-site";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../../core/collections";
+import type { ContentStore } from "../../../core/store";
+import { publishDraft, seedEntry, seedSave } from "../../../core/store/__test__/seed";
 import { storedFields } from "../../../schema/derive";
 import { SUMMARY_ROLE } from "../../../schema/fields";
-import { type ContentStore, createContentStore, migrateContentStore } from "../content-store";
-import { publishDraft, seedEntry, seedSave } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**

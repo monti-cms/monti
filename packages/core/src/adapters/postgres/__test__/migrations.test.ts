@@ -2,11 +2,11 @@ import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentOf } from "../../../../test/stored-content";
+import { seedEntry } from "../../../core/store/__test__/seed";
 import { bodyFromMdx } from "../../../mdx/stored-document";
 import { pluginDatabaseFor } from "../adapter";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../store/schema";
-import { seedEntry } from "./seed";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Migration step records, the concurrent-run lock, schema creation, and run-once jobs. */

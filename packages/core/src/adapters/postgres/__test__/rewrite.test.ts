@@ -4,12 +4,14 @@ import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { contentOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
+import type { Entry } from "../../../core/store";
+import { formatRewriteReport } from "../../../core/store";
+import { publishDraft } from "../../../core/store/__test__/seed";
 import { forEachBlock, isBlockId } from "../../../mdx/block-ids";
 import { bodyFromMdx, readStoredDocument } from "../../../mdx/stored-document";
 import { createContentService } from "../../../services/content-service";
-import { createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { formatRewriteReport, rewriteContent } from "../store/rewrite";
-import { publishDraft } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
+import { rewriteContent } from "../store/rewrite";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**

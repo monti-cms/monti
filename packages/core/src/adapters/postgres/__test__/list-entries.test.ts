@@ -11,10 +11,11 @@ import {
 } from "../../../../test/any-site";
 import { COLLECTIONS, type Collection, isItemCollection } from "../../../core/collections";
 import { LOCALES } from "../../../core/locales";
+import type { Entry } from "../../../core/store";
+import { CmsError } from "../../../core/store";
+import { moveToFolder, publishDraft, seedEntry } from "../../../core/store/__test__/seed";
 import { recordLocalizedFields, storedField, storedFields } from "../../../schema/derive";
-import type { Entry } from "../content-store";
-import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { moveToFolder, publishDraft, seedEntry } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 
 // ---------------------------------------------------------------------------
 // Local type declarations for the not-yet-implemented listEntries API

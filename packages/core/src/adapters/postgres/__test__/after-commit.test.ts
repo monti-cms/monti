@@ -1,8 +1,9 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../test/any-site";
-import { type ContentChange, createContentStore, migrateContentStore } from "../content-store";
-import { publishDraft, restoreDraft, seedEntry } from "./seed";
+import type { ContentChange } from "../../../core/store";
+import { publishDraft, restoreDraft, seedEntry } from "../../../core/store/__test__/seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Post-save notification: only committed changes are reported, and a failed notification does not roll back the save. */

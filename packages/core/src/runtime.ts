@@ -5,8 +5,8 @@
  */
 
 export * from "./adapters/auth";
-export * from "./adapters/postgres/content-store";
 export type { BulkService, Cms, ContentService } from "./cms";
 export * from "./core/snapshot";
+export * from "./core/store";
 export type { CmsRead } from "./read";
 export * from "./services/content-service";

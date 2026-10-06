@@ -9,19 +9,16 @@ import {
 	requiredMetadata,
 	titleFieldOf,
 } from "../../../test/any-site";
-import { duplicateDraft, publishDraft } from "../../adapters/postgres/__test__/seed";
+import type { Collection } from "../../core/collections";
+import type { ContentStore, Entry } from "../../core/store";
+import { duplicateDraft, publishDraft } from "../../core/store/__test__/seed";
 import {
 	closeGlobalPool,
+	createContentStore,
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
-} from "../../adapters/postgres/__test__/test-database";
-import {
-	type ContentStore,
-	createContentStore,
-	type Entry,
 	migrateContentStore,
-} from "../../adapters/postgres/content-store";
-import type { Collection } from "../../core/collections";
+} from "../../testing";
 import { createContentService } from "../content-service";
 
 /**

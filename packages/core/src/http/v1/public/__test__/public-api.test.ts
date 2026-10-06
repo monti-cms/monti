@@ -1,20 +1,18 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredFields } from "../../../../../test/any-site";
-import { publishDraft, seedSave } from "../../../../adapters/postgres/__test__/seed";
-import {
-	closeGlobalPool,
-	createIsolatedTestPool,
-	dropIsolatedTestPool,
-} from "../../../../adapters/postgres/__test__/test-database";
-import {
-	type ContentStore,
-	createContentStore,
-	migrateContentStore,
-} from "../../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../../cms";
 import { type Collection, isItemCollection } from "../../../../core/collections";
+import type { ContentStore } from "../../../../core/store";
+import { publishDraft, seedSave } from "../../../../core/store/__test__/seed";
 import { storedFields } from "../../../../schema/derive";
+import {
+	closeGlobalPool,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	migrateContentStore,
+} from "../../../../testing";
 import type { PublicApiOptions } from "../options";
 
 /** An optional relation pointing at an entry collection (a field the required-value filler does not put on every entry). */

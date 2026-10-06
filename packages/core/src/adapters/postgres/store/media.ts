@@ -1,8 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type StoreContext, withTransaction } from "./context";
-import { CmsError } from "./errors";
-import { MEDIA_COLUMNS, type MediaRow, mapMediaRow } from "./rows";
-import { likeContainsPattern, likePrefixPattern } from "./sql";
+import { CmsError } from "../../../core/store/errors";
 import type {
 	CompleteMediaAssetInput,
 	CreateMediaAssetInput,
@@ -11,7 +8,10 @@ import type {
 	ListMediaResult,
 	MediaAssetRecord,
 	MediaReferenceItem,
-} from "./types";
+} from "../../../core/store/types";
+import { type StoreContext, withTransaction } from "./context";
+import { MEDIA_COLUMNS, type MediaRow, mapMediaRow } from "./rows";
+import { likeContainsPattern, likePrefixPattern } from "./sql";
 
 /** Media metadata. The file itself is handled by `MediaStore` (R2). */
 export function createMediaOps(ctx: StoreContext) {

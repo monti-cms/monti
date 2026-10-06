@@ -9,6 +9,8 @@ import {
 } from "../../../../test/any-site";
 import { COLLECTIONS, type Collection } from "../../../core/collections";
 import { LOCALES } from "../../../core/locales";
+import type { ContentStore, Entry } from "../../../core/store";
+import { duplicateDraft, publishDraft, restoreDraft, seedEntry } from "../../../core/store/__test__/seed";
 import {
 	commonFieldKeys,
 	localizedFieldNames,
@@ -17,8 +19,7 @@ import {
 	storedFields,
 } from "../../../schema/derive";
 import { createContentService } from "../../../services/content-service";
-import { type ContentStore, createContentStore, type Entry, migrateContentStore } from "../content-store";
-import { duplicateDraft, publishDraft, restoreDraft, seedEntry } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**

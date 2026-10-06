@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { CmsError } from "../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../cms";
+import { CmsError } from "../../../core/store";
 import { POST as postDuplicate } from "../entries/[id]/duplicate/route";
 
 const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => {

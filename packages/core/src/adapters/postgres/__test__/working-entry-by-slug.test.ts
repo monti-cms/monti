@@ -8,8 +8,9 @@ import {
 	requiredMetadata,
 } from "../../../../test/any-site";
 import type { Collection } from "../../../core/collections";
-import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { publishDraft, seedEntry, seedSave } from "./seed";
+import { CmsError } from "../../../core/store";
+import { publishDraft, seedEntry, seedSave } from "../../../core/store/__test__/seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**

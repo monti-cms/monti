@@ -2,8 +2,9 @@ import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../test/any-site";
-import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { moveToFolder, publishDraft, seedEntry } from "./seed";
+import { CmsError } from "../../../core/store";
+import { moveToFolder, publishDraft, seedEntry } from "../../../core/store/__test__/seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 
 // ---------------------------------------------------------------------------
 // Local type declarations for the not-yet-implemented folder API

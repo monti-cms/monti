@@ -8,11 +8,12 @@ import {
 	recordRelationField,
 } from "../../../../test/any-site";
 import { type Collection, isItemCollection } from "../../../core/collections";
+import type { Entry } from "../../../core/store";
+import { CmsError } from "../../../core/store";
+import { publishDraft, seedEntry } from "../../../core/store/__test__/seed";
 import { storedFields } from "../../../schema/derive";
 import type { PreparedSnapshot, Reference, StorePort } from "../../../services";
-import type { Entry } from "../content-store";
-import { CmsError, createContentStore, migrateContentStore } from "../content-store";
-import { publishDraft, seedEntry } from "./seed";
+import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 type ExtendedStore = ReturnType<typeof createContentStore> & StorePort<Entry>;

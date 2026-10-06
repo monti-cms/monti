@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
-import { CmsError } from "../adapters/postgres/store/errors";
+import { CmsError } from "../core/store";
 
 /**
  * Per-plugin secrets. A plugin never sees the master secret (`secret` in the server config). The CMS instance derives one key per plugin from it
