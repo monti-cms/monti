@@ -15,6 +15,7 @@
 		"src/**/*.test.ts",
 		"src/**/*.test.tsx",
 		"src/**/__test__/**/*.test.*",
+		"src/render/__test__/parity.tsx",
 		"src/services/__test__/export-fixture.ts",
 		"src/core/store/__test__/contract/**",
 		"src/plugin/__test__/storage-contract.ts"

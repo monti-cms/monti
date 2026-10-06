@@ -13,7 +13,7 @@ import { defineBlock } from "../../blocks/define";
 import type { CmsConfig, CollectionsConfig } from "../../config/define";
 import { definePlugin } from "../../plugin/define";
 import type { AttributeProps } from "../document/block-types";
-import type { BlockProps, DocumentComponentsFor, MarkBlockProps } from "../document/types";
+import type { BlockProps, DocumentComponents, DocumentComponentsFor, MarkBlockProps } from "../document/types";
 
 /**
  * Type tests (checked by `tsc`, run by `pnpm typecheck`): the props of a block component come from the block definition in the site config,
@@ -115,6 +115,12 @@ describe("block component types", () => {
 		expectTypeOf<NonNullable<HelperBlocks["callout"]>>().toEqualTypeOf<React.ComponentType<CalloutProps>>();
 		type HelperMarks = NonNullable<FromHelper["marks"]>;
 		expectTypeOf<"tooltip" extends keyof HelperMarks ? true : false>().toEqualTypeOf<true>();
+	});
+
+	it("is built from the real site config (`@cms-config`): the keys are the block names of that config, not any string", () => {
+		type Site = NonNullable<DocumentComponents["blocks"]>;
+		expectTypeOf<string extends keyof Site ? true : false>().toEqualTypeOf<false>();
+		expectTypeOf<keyof Site>().not.toBeNever();
 	});
 
 	it("falls back to no site blocks for a definition that is not a literal", () => {
