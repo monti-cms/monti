@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { fakeCms } from "../../../../cms";
 import { adminUrl } from "../../../../core/admin-paths";
@@ -9,7 +8,7 @@ import { POST as signOut } from "../sign-out/route";
 const FORM = "application/x-www-form-urlencoded";
 
 const post = (path: string, headers: Record<string, string> = { origin: "http://localhost", "content-type": FORM }) =>
-	new NextRequest(`http://localhost/api/cms/${path}`, { method: "POST", headers, body: "" });
+	new Request(`http://localhost/api/cms/${path}`, { method: "POST", headers, body: "" });
 
 type Auth = NonNullable<NonNullable<Parameters<typeof fakeCms>[0]>["auth"]>;
 

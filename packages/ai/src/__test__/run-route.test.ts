@@ -1,5 +1,4 @@
 import { fakeCms } from "@monti-cms/core/testing";
-import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as postRun } from "../routes/run/route";
 
@@ -30,7 +29,7 @@ const cms = fakeCms({
 
 const run = (body: unknown) =>
 	postRun(
-		new NextRequest("http://localhost/api/cms/v1/ai/run", {
+		new Request("http://localhost/api/cms/v1/ai/run", {
 			method: "POST",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify(body),

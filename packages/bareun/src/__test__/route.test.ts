@@ -2,7 +2,6 @@
 import { AuthError } from "@monti-cms/core/adapters/auth";
 import { createTranslator } from "@monti-cms/core/client";
 import { fakeCms } from "@monti-cms/core/testing";
-import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bareunMessages } from "../messages";
 import { resolveBareunOptions } from "../options";
@@ -20,7 +19,7 @@ const segments = sample.request.split("\n").map((text, index) => ({ id: `p-${ind
 
 const post = (body: unknown, options = resolveBareunOptions({ apiKeyEnv: KEY_ENV })) =>
 	bareunRoute(options).POST(
-		new NextRequest("http://localhost/api/cms/v1/text-check/bareun", {
+		new Request("http://localhost/api/cms/v1/text-check/bareun", {
 			method: "POST",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify(body),

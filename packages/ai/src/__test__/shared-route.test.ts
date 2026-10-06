@@ -1,5 +1,4 @@
 import { fakeCms } from "@monti-cms/core/testing";
-import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DELETE, GET, PATCH, POST, PUT } from "../routes/shared/route";
 
@@ -29,13 +28,13 @@ vi.mock("../store", async () => {
 const cms = fakeCms();
 
 const call = (
-	handler: (request: NextRequest, context: { cms: typeof cms }) => Promise<Response>,
+	handler: (request: Request, context: { cms: typeof cms }) => Promise<Response>,
 	method: string,
 	body?: unknown,
 	query = "",
 ) =>
 	handler(
-		new NextRequest(`http://localhost/api/cms/v1/ai/shared${query}`, {
+		new Request(`http://localhost/api/cms/v1/ai/shared${query}`, {
 			method,
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			...(body === undefined ? {} : { body: JSON.stringify(body) }),

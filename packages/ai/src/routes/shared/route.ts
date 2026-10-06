@@ -1,5 +1,4 @@
 import { adminRoute, HttpError, json, readVersionedBody, readVersionQuery } from "@monti-cms/core/plugin/server";
-import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { listActions } from "../../actions";
 import { addShared, deleteShared, getSharedView, updateShared, updateSharedItem } from "../../shared";
@@ -35,8 +34,8 @@ export const PUT = adminRoute(async ({ request, cms }) => {
 	return json(await updateShared(aiStoreFor(cms), expectedVersion, { texts }));
 });
 
-const readKey = (request: NextRequest): string => {
-	const key = request.nextUrl.searchParams.get("key");
+const readKey = (request: Request): string => {
+	const key = new URL(request.url).searchParams.get("key");
 	if (!key) throw new HttpError(400, "invalid_input", "key is required");
 	return key;
 };

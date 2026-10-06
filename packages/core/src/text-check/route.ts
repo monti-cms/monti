@@ -22,7 +22,7 @@ export {
  * });
  * ```
  *
- * A route file of the app names its instance with `cms`. A route a plugin lists in its `routes` is served by `cms.routeHandler()`, which passes the instance, so it needs no `cms`.
+ * A route file of the app names its instance with `cms`. A route a plugin lists in its `routes` is served by `cms.handle()`, which passes the instance, so it needs no `cms`.
  */
 export function textCheckRoute(options: TextCheckRouteOptions & { readonly cms?: Cms }) {
 	return adminRoute(

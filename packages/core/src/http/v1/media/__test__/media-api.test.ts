@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../../adapters/auth";
 import { CmsError } from "../../../../adapters/postgres/content-store";
@@ -55,7 +54,7 @@ describe("Media Upload API Endpoints", () => {
 	it("POST /media/uploads rejects unauthenticated calls with 401", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/uploads", {
+		const req = new Request("http://localhost/api/cms/v1/media/uploads", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -74,7 +73,7 @@ describe("Media Upload API Endpoints", () => {
 	});
 
 	it("POST /media/uploads rejects files larger than 10MiB (10485760 bytes)", async () => {
-		const req = new NextRequest("http://localhost/api/cms/v1/media/uploads", {
+		const req = new Request("http://localhost/api/cms/v1/media/uploads", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -93,7 +92,7 @@ describe("Media Upload API Endpoints", () => {
 	});
 
 	it("POST /media/uploads rejects disallowed MIME types (SVG, PDF, text)", async () => {
-		const req = new NextRequest("http://localhost/api/cms/v1/media/uploads", {
+		const req = new Request("http://localhost/api/cms/v1/media/uploads", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -119,7 +118,7 @@ describe("Media Upload API Endpoints", () => {
 			expiresAt: new Date("2026-09-21T12:10:00Z"),
 		});
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/uploads", {
+		const req = new Request("http://localhost/api/cms/v1/media/uploads", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -150,7 +149,7 @@ describe("Media Upload API Endpoints", () => {
 	it("POST /media/:id/complete returns 404 for nonexistent media asset", async () => {
 		mockGetMediaAsset.mockResolvedValue(null);
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/00000000-0000-0000-0000-000000000000/complete", {
+		const req = new Request("http://localhost/api/cms/v1/media/00000000-0000-0000-0000-000000000000/complete", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -175,7 +174,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 		mockHeadFile.mockResolvedValue(null);
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/media-1/complete", {
+		const req = new Request("http://localhost/api/cms/v1/media/media-1/complete", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -230,7 +229,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 		mockGetPublicUrl.mockReturnValue("https://media.example.com/media/media-1/uuid.png");
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/media-1/complete", {
+		const req = new Request("http://localhost/api/cms/v1/media/media-1/complete", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -267,7 +266,7 @@ describe("Media Upload API Endpoints", () => {
 		pngBytes.set([0x00, 0x00, 0x13, 0x88], 20); // height 5000 → 50MP
 		mockReadFile.mockResolvedValue(pngBytes);
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/media-2/complete", {
+		const req = new Request("http://localhost/api/cms/v1/media/media-2/complete", {
 			method: "POST",
 			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
 		});
@@ -286,7 +285,7 @@ describe("Media Upload API Endpoints", () => {
 			expiresAt: new Date(),
 		});
 		mockCreateMediaAsset.mockResolvedValue({});
-		const req = new NextRequest("http://localhost/api/cms/v1/media/uploads", {
+		const req = new Request("http://localhost/api/cms/v1/media/uploads", {
 			method: "POST",
 			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
 			body: JSON.stringify({
@@ -342,7 +341,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 		mockGetPublicUrl.mockReturnValue("https://media.example.com/media/media-1/pic.png");
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media?search=pic&used=all", {
+		const req = new Request("http://localhost/api/cms/v1/media?search=pic&used=all", {
 			method: "GET",
 		});
 
@@ -364,7 +363,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 		mockBeginMediaDelete.mockRejectedValue(new CmsError("Media asset is in use", "in_use"));
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/media-1", {
+		const req = new Request("http://localhost/api/cms/v1/media/media-1", {
 			method: "DELETE",
 			headers: {
 				origin: "http://localhost",
@@ -394,7 +393,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 		mockFinalizeMediaDelete.mockResolvedValue(undefined);
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/media-1", {
+		const req = new Request("http://localhost/api/cms/v1/media/media-1", {
 			method: "DELETE",
 			headers: {
 				origin: "http://localhost",
@@ -424,7 +423,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 		mockDeleteFile.mockRejectedValue(new Error("R2 unavailable"));
 
-		const req = new NextRequest("http://localhost/api/cms/v1/media/media-1", {
+		const req = new Request("http://localhost/api/cms/v1/media/media-1", {
 			method: "DELETE",
 			headers: { origin: "http://localhost", host: "localhost" },
 		});
@@ -436,7 +435,7 @@ describe("Media Upload API Endpoints", () => {
 
 describe("attachment upload", () => {
 	const post = (url: string, body?: unknown) =>
-		new NextRequest(url, {
+		new Request(url, {
 			method: "POST",
 			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
 			...(body ? { body: JSON.stringify(body) } : {}),

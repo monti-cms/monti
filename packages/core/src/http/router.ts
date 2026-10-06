@@ -1,5 +1,5 @@
-import type { NextRequest } from "next/server";
-import type { Cms, CmsRouteHandler } from "../cms";
+import type { Cms, HandleOptions } from "../cms";
+import { CMS_API_PATH, cmsBasePath } from "../core/base-path";
 import { assertPluginRoutesFree } from "../plugin/collisions";
 import { CMS_AUTH_BASE_PATH } from "../server/define";
 import * as r9 from "./v1/bulk/route";
@@ -33,14 +33,16 @@ import * as r34 from "./v1/templates/[id]/route";
 import * as r33 from "./v1/templates/route";
 
 /**
- * Admin API (`/api/cms/v1/*`) route table. The app exports `cms.routeHandler()` from a single catch-all route
- * (`app/api/cms/[...path]/route.ts`). Paths mirror the Next route folders (`[id]` is one segment).
+ * Admin API (`/api/cms/v1/*`) route table, served by `cms.handle(request)` (a Next app mounts it with `cms.routeHandler()` from a single catch-all route,
+ * `app/api/cms/[...path]/route.ts`). Paths mirror the route folders (`[id]` is one segment).
  * Every route gets the CMS instance in its context (`{ params, cms }`).
  */
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+const METHODS: readonly string[] = ["GET", "POST", "PATCH", "PUT", "DELETE"];
+const isMethod = (value: string): value is Method => METHODS.includes(value);
 type RouteHandler = (
-	request: NextRequest,
+	request: Request,
 	context: { params: Promise<Record<string, string>>; cms: Cms },
 ) => Promise<Response>;
 /** Route file. Handler params (`{ id }` etc.) differ per route, so they are called as `RouteHandler`. */
@@ -118,10 +120,32 @@ export const CMS_ROUTE_PATTERNS: readonly string[] = ROUTES.map((route) => route
 const notFound = () => handleApiError(new HttpError(404, "not_found", "Unknown CMS API path"));
 
 /**
- * The route handlers of one CMS instance (`cms.routeHandler()` calls it). `auth/*` is forwarded to the auth handler
- * when the auth base path is the default (`/api/cms/auth`), so no separate auth route file is needed.
+ * The path segments after the API prefix (`/api/cms/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/cms/v1/entries/<id>`.
+ * The site's `basePath` is skipped when the URL has it. `null` if the URL is not under the API prefix.
  */
-export function createRouteHandler(cms: Cms): Record<Method, CmsRouteHandler> {
+export function pathFromRequest(request: Request): string[] | null {
+	let pathname = new URL(request.url).pathname;
+	const basePath = cmsBasePath();
+	if (basePath && (pathname === basePath || pathname.startsWith(`${basePath}/`))) {
+		pathname = pathname.slice(basePath.length);
+	}
+	if (!pathname.startsWith(`${CMS_API_PATH}/`)) return null;
+	try {
+		return pathname
+			.slice(CMS_API_PATH.length + 1)
+			.split("/")
+			.filter((segment) => segment !== "")
+			.map(decodeURIComponent);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * The request handler of one CMS instance (`cms.handle()` calls it): standard `Request` in, `Response` out, no framework types.
+ * `auth/*` is forwarded to the auth handler when the auth base path is the default (`/api/cms/auth`), so no separate auth route file is needed.
+ */
+export function createRequestHandler(cms: Cms): (request: Request, options?: HandleOptions) => Promise<Response> {
 	let pluginCompiled: Promise<CompiledRoute[]> | undefined;
 	const compiledPluginRoutes = () => {
 		// The core wraps plugin routes with the admin check (only `public: true` is skipped), so a missing auth check never becomes an open route.
@@ -141,40 +165,36 @@ export function createRouteHandler(cms: Cms): Record<Method, CmsRouteHandler> {
 			});
 		return pluginCompiled;
 	};
-	const handle =
-		(method: Method): CmsRouteHandler =>
-		async (request, context) => {
-			const { path = [] } = await context.params;
-			if (path[0] === "auth") {
-				const auth = cms.auth();
-				if (auth.basePath !== CMS_AUTH_BASE_PATH) return notFound();
-				if (method !== "GET" && method !== "POST") {
-					return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
-				}
-				return auth.handlers[method](request);
-			}
-			// If not a core route, look in the plugin route table.
-			const matched = matchRoute(path) ?? matchRoute(path, await compiledPluginRoutes());
-			if (!matched) return notFound();
-			const handler = matched.module[method] as RouteHandler | undefined;
-			if (!handler) {
+	return async (request, options) => {
+		const path = options?.path ?? pathFromRequest(request);
+		if (!path) return notFound();
+		const method = request.method.toUpperCase();
+		if (!isMethod(method)) {
+			return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
+		}
+		if (path[0] === "auth") {
+			const auth = cms.auth();
+			if (auth.basePath !== CMS_AUTH_BASE_PATH) return notFound();
+			if (method !== "GET" && method !== "POST") {
 				return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
 			}
-			if (matched.guarded) {
-				try {
-					validateSameOrigin(request, { trustHost: cms.isHostTrusted() });
-					await cms.authGateway.verifyAdmin();
-				} catch (error) {
-					return handleApiError(error);
-				}
+			return auth.handlers[method](request);
+		}
+		// If not a core route, look in the plugin route table.
+		const matched = matchRoute(path) ?? matchRoute(path, await compiledPluginRoutes());
+		if (!matched) return notFound();
+		const handler = matched.module[method] as RouteHandler | undefined;
+		if (!handler) {
+			return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
+		}
+		if (matched.guarded) {
+			try {
+				validateSameOrigin(request, { trustHost: cms.isHostTrusted() });
+				await cms.authGateway.verifyAdmin();
+			} catch (error) {
+				return handleApiError(error);
 			}
-			return handler(request, { params: Promise.resolve(matched.params), cms });
-		};
-	return {
-		GET: handle("GET"),
-		POST: handle("POST"),
-		PATCH: handle("PATCH"),
-		PUT: handle("PUT"),
-		DELETE: handle("DELETE"),
+		}
+		return handler(request, { params: Promise.resolve(matched.params), cms });
 	};
 }

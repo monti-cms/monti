@@ -1,7 +1,6 @@
-import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { fakeCms } from "../../cms";
-import { CMS_ROUTE_PATTERNS, createRouteHandler, matchRoute } from "../router";
+import { CMS_ROUTE_PATTERNS, matchRoute, pathFromRequest } from "../router";
 
 const handlers = {
 	GET: vi.fn(async (_request: Request) => new Response("auth-get")),
@@ -31,12 +30,8 @@ describe("admin API route table", () => {
 	});
 
 	it("an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
-		const handler = createRouteHandler(cms);
 		const call = (method: "GET" | "DELETE", path: string) =>
-			handler[method](
-				new NextRequest(`http://localhost/api/cms/${path}`, { method, headers: { origin: "http://localhost" } }),
-				{ params: Promise.resolve({ path: path.split("/") }) },
-			);
+			cms.handle(new Request(`http://localhost/api/cms/${path}`, { method, headers: { origin: "http://localhost" } }));
 		expect((await call("GET", "v1/nope")).status).toBe(404);
 		expect((await call("DELETE", "v1/preferences")).status).toBe(405);
 		expect((await call("GET", "v1/preferences")).status).toBe(200);
@@ -44,9 +39,7 @@ describe("admin API route table", () => {
 
 	it("when the auth path is the default (`/api/cms/auth`), forwards `auth/*` to the auth handler", async () => {
 		const call = (instance: typeof cms, method: "GET" | "POST" | "DELETE", path: string) =>
-			createRouteHandler(instance)[method](new NextRequest(`http://localhost/api/cms/${path}`, { method }), {
-				params: Promise.resolve({ path: path.split("/") }),
-			});
+			instance.handle(new Request(`http://localhost/api/cms/${path}`, { method }));
 		expect(await (await call(cms, "GET", "auth/session")).text()).toBe("auth-get");
 		expect(await (await call(cms, "POST", "auth/signin/github")).text()).toBe("auth-post");
 		expect(handlers.GET).toHaveBeenCalledTimes(1);
@@ -58,11 +51,43 @@ describe("admin API route table", () => {
 		expect(handlers.GET).toHaveBeenCalledTimes(1);
 	});
 
-	it("`cms.routeHandler()` is the same handler, loaded on the first request", async () => {
+	it("`cms.routeHandler()` is the Next adapter of `handle`: it serves the path segments Next split", async () => {
 		const handler = cms.routeHandler();
-		const response = await handler.GET(new NextRequest("http://localhost/api/cms/v1/preferences"), {
+		const response = await handler.GET(new Request("http://localhost/api/cms/v1/preferences"), {
 			params: Promise.resolve({ path: ["v1", "preferences"] }),
 		});
 		expect(response.status).toBe(200);
+		const unknown = await handler.GET(new Request("http://localhost/api/cms/v1/nope"), {
+			params: Promise.resolve({ path: ["v1", "nope"] }),
+		});
+		expect(unknown.status).toBe(404);
+	});
+
+	it("`handle` reads the path from the request URL, with no framework in between", async () => {
+		const response = await cms.handle(new Request("http://localhost/api/cms/v1/preferences"));
+		expect(response).toBeInstanceOf(Response);
+		expect(response.status).toBe(200);
+		expect((await cms.handle(new Request("http://localhost/elsewhere/v1/preferences"))).status).toBe(404);
+		expect(
+			(await cms.handle(new Request("http://localhost/api/cms/v1/preferences", { method: "OPTIONS" }))).status,
+		).toBe(405);
+	});
+
+	it("`handle` takes the path segments from the options when the host already split them", async () => {
+		const response = await cms.handle(new Request("http://localhost/mounted/anywhere"), {
+			path: ["v1", "preferences"],
+		});
+		expect(response.status).toBe(200);
+	});
+
+	it("the path comes from the URL: decoded, query ignored, empty segments dropped", () => {
+		expect(pathFromRequest(new Request("http://localhost/api/cms/v1/entries/a%20b?x=1"))).toEqual([
+			"v1",
+			"entries",
+			"a b",
+		]);
+		expect(pathFromRequest(new Request("http://localhost/api/cms/v1//meta/"))).toEqual(["v1", "meta"]);
+		expect(pathFromRequest(new Request("http://localhost/api/cms"))).toBeNull();
+		expect(pathFromRequest(new Request("http://localhost/api/cms/v1/%E0%A4%A"))).toBeNull();
 	});
 });

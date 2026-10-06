@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { CmsError } from "../../../adapters/postgres/content-store";
 import { fakeCms } from "../../../cms";
@@ -24,7 +23,7 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 const cms = fakeCms({ contentService: { duplicate: duplicateEntry as never } });
 
 const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
-	new NextRequest(url, {
+	new Request(url, {
 		method: "POST",
 		headers: {
 			origin,
