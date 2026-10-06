@@ -12,6 +12,7 @@ import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { docOf } from "../../test/mdx";
+import { storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
 import { InlineBubble } from "../inline-bubble";
 import { insertInternalLink } from "../internal-link";
@@ -83,7 +84,10 @@ afterEach(() => {
 
 /** An editor opened on a stored document: the link holds the entry's id and nothing else, as it does when loaded from the server. */
 const openOnDocument = () => {
-	const doc = docOf(`앞 [링크 글](entry:${TARGET}) 뒤`);
+	const doc = storedDoc({
+		type: "paragraph",
+		content: [text("앞 "), text("링크 글", [{ type: "link", attrs: { entryId: TARGET } }]), text(" 뒤")],
+	});
 	const element = document.createElement("div");
 	document.body.append(element);
 	const editor = new Editor({ element, extensions: buildEditorExtensions(), content: storedToTiptap(doc) });

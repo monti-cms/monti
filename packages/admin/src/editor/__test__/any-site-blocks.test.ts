@@ -1,9 +1,9 @@
 import { Editor, type JSONContent } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
-import { docOf, mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { ADDED_BLOCK_INSERT_ACTIONS, ADDED_NODE_BLOCKS, blockNodeName } from "../blocks/added";
 import { buildEditorExtensions } from "../extensions";
 import { buildBlockSlashCommands } from "../slash-command";
+import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 /**
  * Editor flow of blocks added to the config (regression guard). Block names are not hardcoded; they are read from the current config.
@@ -37,16 +37,17 @@ describe("any site: added blocks in the editor", () => {
 
 	it.each(
 		insertable.map((block) => [block.name, block] as const),
-	)("%s inserted from the slash menu saves as valid MDX and reopens as the same node", (_name, block) => {
+	)("%s inserted from the slash menu saves as a stored document and reopens as the same node", (_name, block) => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p></p>" });
 		ADDED_BLOCK_INSERT_ACTIONS[block.name]?.(editor, { from: 1, to: 1 });
 		// A block that holds body text is saved with the typed text in place (a block that must have a body opens as a raw box when empty).
-		const mdx = mdxOfTiptap(fillEmptyParagraphs(editor.getJSON()));
+		const stored = tiptapToStored(fillEmptyParagraphs(editor.getJSON()));
 		editor.destroy();
-		// The text the editor wrote reads as a document.
-		expect(() => docOf(mdx)).not.toThrow();
-		const reopened = tiptapOf(mdx);
+		const reopened = storedToTiptap(stored);
 		expect(reopened.content?.some((node) => node.type === blockNodeName(block))).toBe(true);
-		expect(mdxOfTiptap(reopened)).toBe(mdx);
+		// Saving again changes nothing (ids of the children inside a block are the editor's, so the first save is compared with the second only by its shape).
+		const again = tiptapToStored(reopened);
+		expect(again.content.map((node) => node.type)).toEqual(stored.content.map((node) => node.type));
+		expect(tiptapToStored(storedToTiptap(again))).toEqual(again);
 	});
 });

@@ -1,4 +1,4 @@
-import { useCmsAdminComponents } from "../../admin-components";
+import type { BrowserFormat } from "../../browser-format";
 
 ("use client");
 
@@ -38,6 +38,11 @@ export interface UseEntryEditorOptions {
 	client?: EntryEditorClient;
 	/** Where the recovery copy is kept. Default: the browser's IndexedDB. */
 	recoveryStore?: RecoveryStore;
+	/**
+	 * The formats the browser can read (`useCmsAdminComponents().formats`). An old recovery copy written as text is read through the one named like its notation (`mdx`),
+	 * so it compares with the server body like any other copy.
+	 */
+	formats?: Readonly<Record<string, BrowserFormat>>;
 }
 
 /**
@@ -60,9 +65,8 @@ export interface UseEntryEditorOptions {
  */
 export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 	const callbacksRef = useRef<EntryEditorCallbacks>({});
-	const { formats } = useCmsAdminComponents();
-	const formatsRef = useRef(formats);
-	formatsRef.current = formats;
+	const formatsRef = useRef(options.formats);
+	formatsRef.current = options.formats;
 	callbacksRef.current = { onSaved: options.onSaved };
 	const [core] = useState(() =>
 		createEntryEditor({

@@ -5,8 +5,10 @@ import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
+import { tiptapOf } from "../../../test/mdx";
+import { withoutIds } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
+import { tiptapToStored } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 import { RulesPanel } from "../rules-panel";
 
@@ -208,7 +210,7 @@ describe("code block tools turned off in the site config", () => {
 			const row = await screen.findByRole("listitem", { name: t("rulesPanel.rule", { pattern: "const" }) });
 			expect(within(row).getByLabelText(t("rulesPanel.pattern"))).toBeTruthy();
 			expect((block(editor).attrs.rules as CodeRule[])[0]).toMatchObject({ name: "strong", pattern: "const" });
-			expect(mdxOfTiptap(editor.getJSON())).toBe(mdxOfTiptap(tiptapOf(RULE_CODE)));
+			expect(withoutIds(tiptapToStored(editor.getJSON()))).toEqual(withoutIds(tiptapToStored(tiptapOf(RULE_CODE))));
 		});
 	});
 
@@ -281,14 +283,14 @@ describe("code block tools turned off in the site config", () => {
 		].join("\n");
 
 		it("loads, edits and saves a body that uses turned-off tools exactly as before", async () => {
-			const before = mdxOfTiptap(tiptapOf(SOURCE));
+			const before = tiptapToStored(tiptapOf(SOURCE));
 			configure({
 				omit: ["plus"],
 				features: { rules: false, fold: false, tooltip: false, textStyles: false },
 			});
 			const editor = await mount(SOURCE);
 			expect(block(editor).attrs.rawMode).toBe(false);
-			expect(mdxOfTiptap(editor.getJSON())).toBe(before);
+			expect(withoutIds(tiptapToStored(editor.getJSON()))).toEqual(withoutIds(before));
 			expect((block(editor).attrs.lineEffects as CodeLineEffect[]).map((effect) => effect.name)).toEqual([
 				"plus",
 				"collapse",
@@ -299,8 +301,12 @@ describe("code block tools turned off in the site config", () => {
 			act(() => {
 				editor.commands.insertContentAt(block(editor).nodeSize - 1, "x");
 			});
-			expect(mdxOfTiptap(editor.getJSON())).toContain("// @document strong {re:/const/g}");
-			expect(mdxOfTiptap(editor.getJSON())).toContain("// @line plus");
+			const annotations = tiptapToStored(editor.getJSON()).content[0]?.attrs?.annotations as {
+				lines?: { name: string }[];
+				rules?: { name: string; pattern: string }[];
+			};
+			expect(annotations.rules).toContainEqual(expect.objectContaining({ name: "strong", pattern: "const" }));
+			expect(annotations.lines?.map((line) => line.name)).toContain("plus");
 		});
 	});
 

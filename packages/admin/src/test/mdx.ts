@@ -1,29 +1,18 @@
-import { assignBlockIds, type StoredDocument } from "@monti-cms/core/document";
-import { mdxBrowserFormat } from "@monti-cms/mdx/admin";
+import type { StoredDocument } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
-import { storedToTiptap, tiptapToStored } from "../editor/tiptap-content";
+import { storedToTiptap } from "../editor/tiptap-content";
+import { docOfText } from "./doc-text";
 
 /**
- * Test helpers: write a fixture as MDX text (the MDX package's browser format) and get the stored document the editor works on, or the other way round. The editor itself
- * knows no notation; tests use MDX because it is the shortest way to describe a body.
+ * Test helpers: describe a body as plain text and get the stored document the editor works on. The admin knows no text notation and does not depend on the MDX
+ * package, so `docOfText` (`doc-text.ts`) reads a small CommonMark subset (paragraphs, headings, lists, quotes, fenced code, images, links, bold, italic, strike,
+ * code, `<br />`). A test that needs anything else (a block with attributes, a table, a footnote) builds the document by hand, or, when its point is the round trip
+ * between MDX text and the editor, lives in `packages/mdx`.
  */
 
-/** The stored document a fixture reads as. Blocks get block ids as they do on the way in from a text. Fails for text the format cannot read. */
-export const docOf = (mdx: string, previous?: StoredDocument | null): StoredDocument => {
-	const read = mdxBrowserFormat.import(mdx);
-	if (!read.ok)
-		throw new Error(
-			`not readable: ${read.issues.map((issue: { message?: string; code: string }) => issue.message ?? issue.code).join(", ")}`,
-		);
-	return { ...read.doc, content: assignBlockIds(read.doc.content, [previous?.content]) };
-};
+/** The stored document a fixture reads as, with block ids paired with those of `previous`. */
+export const docOf = (text: string, previous?: StoredDocument | null): StoredDocument => docOfText(text, previous);
 
 /** The editor's JSON for a fixture. */
-export const tiptapOf = (mdx: string, previous?: StoredDocument | null): JSONContent =>
-	storedToTiptap(docOf(mdx, previous));
-
-/** The text the document of the editor's JSON is written as. */
-export const mdxOfTiptap = (json: JSONContent): string => mdxBrowserFormat.export(tiptapToStored(json));
-
-/** The text of a document. */
-export const mdxOfDoc = (doc: StoredDocument): string => mdxBrowserFormat.export(doc);
+export const tiptapOf = (text: string, previous?: StoredDocument | null): JSONContent =>
+	storedToTiptap(docOf(text, previous));

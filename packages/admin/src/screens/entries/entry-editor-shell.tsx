@@ -39,10 +39,11 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { SOURCE_ERROR_ID, useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
+import { useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
+import { SOURCE_ERROR_ID } from "../../source-error-id";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button, buttonVariants } from "../../ui/button";
 import {
@@ -238,6 +239,7 @@ export function EntryEditorShell({
 	const router = useRouter();
 	const { resolvedTheme, setTheme } = useTheme();
 	const editor = useEntryEditor({
+		formats: useCmsAdminComponents().formats,
 		adminId,
 		target:
 			mode === "edit"

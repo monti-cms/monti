@@ -1,9 +1,18 @@
 import { Editor } from "@tiptap/core";
 import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
+import {
+	anchorIdsOf,
+	codeLink,
+	codeLinkTargetsOf,
+	codeNode,
+	storedDoc,
+	text,
+	withoutIds,
+} from "../../../test/stored-doc";
 import { duplicateBlock } from "../../block-commands";
 import { buildEditorExtensions } from "../../extensions";
+import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 import { findAnchor } from "../link-commands";
 
 let editor: Editor | null = null;
@@ -12,22 +21,19 @@ afterEach(() => {
 	editor = null;
 });
 
-const SOURCE = [
-	'Read <CodeRef to="c1">the sum</CodeRef>.',
-	"",
-	"```ts",
-	'// @line anchor {1-1} id="c1"',
-	"const a = 1;",
-	"const b = a + 1;",
-	"```",
-].join("\n");
+const SOURCE = storedDoc(
+	{ type: "paragraph", content: [text("Read "), codeLink("the sum", "c1"), text(".")] },
+	codeNode("const a = 1;\nconst b = a + 1;", {
+		annotations: { lines: [{ name: "anchor", start: 1, end: 2, attrs: { id: "c1" } }] },
+	}),
+);
 
-const mount = (source = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(source) });
+const mount = (doc = SOURCE) => {
+	editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
 	return editor;
 };
 
-const save = (instance: Editor) => mdxOfTiptap(instance.getJSON()).trimEnd();
+const save = (instance: Editor) => tiptapToStored(instance.getJSON());
 
 /** Position of the n-th code block. */
 const codeBlockAt = (instance: Editor, nth = 0) => {
@@ -39,16 +45,13 @@ const codeBlockAt = (instance: Editor, nth = 0) => {
 	return found[nth] as number;
 };
 
-const labelsOf = (mdx: string) => [...mdx.matchAll(/@line anchor \{[^}]*\} id="([^"]+)"/g)].map((match) => match[1]);
-const linksOf = (mdx: string) => [...mdx.matchAll(/<CodeRef to="([^"]+)">/g)].map((match) => match[1]);
-
 describe("line labels stay unique in the editor", () => {
 	it("a duplicated code block does not take the label: links keep pointing to the original lines", () => {
 		const instance = mount();
 		duplicateBlock(instance, codeBlockAt(instance));
-		const mdx = save(instance);
-		expect(mdx.match(/const a = 1;/g)).toHaveLength(2);
-		expect(labelsOf(mdx)).toEqual(["c1"]);
+		const saved = save(instance);
+		expect(saved.content.filter((node) => JSON.stringify(node).includes("const a = 1;"))).toHaveLength(2);
+		expect(anchorIdsOf(saved)).toEqual(["c1"]);
 		expect(findAnchor(instance.state.doc, "c1")?.blockPos).toBe(codeBlockAt(instance, 0));
 	});
 
@@ -62,9 +65,9 @@ describe("line labels stay unique in the editor", () => {
 				new Slice(copied.content, 0, 0),
 			),
 		);
-		const mdx = save(instance);
-		expect(labelsOf(mdx)).toEqual(["c1", "c2"]);
-		expect(linksOf(mdx)).toEqual(["c1", "c2"]);
+		const saved = save(instance);
+		expect(anchorIdsOf(saved)).toEqual(["c1", "c2"]);
+		expect(codeLinkTargetsOf(saved)).toEqual(["c1", "c2"]);
 	});
 
 	it("pasting only a code block with a label already in the document drops the pasted label", () => {
@@ -74,9 +77,9 @@ describe("line labels stay unique in the editor", () => {
 		// A pasted block carries no block id: the HTML it comes from has none.
 		const pasted = block.type.create({ ...block.attrs, blockId: null }, block.content, block.marks);
 		instance.view.dispatch(instance.state.tr.insert(0, pasted));
-		const mdx = save(instance);
+		const saved = save(instance);
 		// The pasted copy is first in the document, but the block that held the label keeps it.
-		expect(labelsOf(mdx)).toEqual(["c1"]);
+		expect(anchorIdsOf(saved)).toEqual(["c1"]);
 		expect(findAnchor(instance.state.doc, "c1")?.blockPos).toBe(codeBlockAt(instance, 1));
 	});
 
@@ -85,6 +88,6 @@ describe("line labels stay unique in the editor", () => {
 		const before = save(instance);
 		duplicateBlock(instance, codeBlockAt(instance));
 		instance.commands.undo();
-		expect(save(instance)).toBe(before);
+		expect(withoutIds(save(instance))).toEqual(withoutIds(before));
 	});
 });

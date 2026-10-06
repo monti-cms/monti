@@ -1,7 +1,8 @@
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
+import { storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
+import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 let editor: Editor | null = null;
 afterEach(() => {
@@ -9,8 +10,14 @@ afterEach(() => {
 	editor = null;
 });
 
-const open = (mdx: string) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(mdx) });
+const untranslated = (value: string) => ({
+	type: "paragraph",
+	content: [text(value, [{ type: "untranslated" }])],
+});
+const plain = (value: string) => ({ type: "paragraph", content: [text(value)] });
+
+const open = (...content: Parameters<typeof storedDoc>) => {
+	editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(storedDoc(...content)) });
 	return editor;
 };
 
@@ -23,23 +30,24 @@ const typeAt = (current: Editor, pos: number, text: string) => {
 
 describe("editing untranslated notice text", () => {
 	it("typing in a block with notice text clears the notice text and enters the input", () => {
-		const current = open("<Untranslated>첫 문단</Untranslated>\n\n<Untranslated>둘째 문단</Untranslated>\n");
+		const current = open(untranslated("첫 문단"), untranslated("둘째 문단"));
 		typeAt(current, 3, "F");
-		expect(mdxOfTiptap(current.getJSON())).toBe("F\n\n<Untranslated>둘째 문단</Untranslated>\n");
+		expect(tiptapToStored(current.getJSON()).content).toMatchObject([plain("F"), untranslated("둘째 문단")]);
 	});
 
 	it("pressing clear removes the block's notice text at once", () => {
-		const current = open("<Untranslated>첫 문단</Untranslated>\n");
+		const current = open(untranslated("첫 문단"));
 		current.commands.setTextSelection(4);
 		const { view } = current;
 		view.someProp("handleKeyDown", (handler) => handler(view, new KeyboardEvent("keydown", { key: "Backspace" })));
-		expect(mdxOfTiptap(current.getJSON())).toBe("");
+		expect(JSON.stringify(tiptapToStored(current.getJSON()))).not.toContain('"text"');
 	});
 
 	it("a block without notice text accepts input as usual", () => {
-		const current = open("번역 끝\n");
+		const current = open(plain("번역 끝"));
 		typeAt(current, 2, "X");
-		expect(mdxOfTiptap(current.getJSON())).toContain("X");
-		expect(mdxOfTiptap(current.getJSON())).not.toContain("Untranslated");
+		const written = JSON.stringify(tiptapToStored(current.getJSON()));
+		expect(written).toContain("X");
+		expect(written).not.toContain("untranslated");
 	});
 });

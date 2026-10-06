@@ -1,5 +1,4 @@
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
-import { MdxAdminProvider } from "@monti-cms/mdx/admin";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -154,19 +153,31 @@ function serve(handler: Handler, current: unknown = entry) {
 const methodCalls = (method: string, suffix = "") =>
 	fetchMock.mock.calls.filter(([input, init]) => init?.method === method && String(input).endsWith(suffix));
 
-/** The edit screen as the admin layout renders it: with the built-in MDX format and its source panel registered. */
-const renderShell = (ui: React.ReactElement, sourcePanels?: SourcePanelRegistration[]) =>
-	render(
-		sourcePanels ? (
-			<CmsAdminComponentsProvider components={{ sourcePanels }}>{ui}</CmsAdminComponentsProvider>
-		) : (
-			<MdxAdminProvider>{ui}</MdxAdminProvider>
-		),
+const SOURCE_LABEL = "원문 보기";
+const blockText = (block: StoredDocument["content"][number]): string =>
+	(block.content ?? []).map((node) => ("text" in node ? String(node.text) : "")).join("");
+/** A source panel with no notation of its own: it shows the body's plain text and which block it was asked to focus. */
+const asked: string[] = [];
+const TextPanel = ({ doc, focusBlock, readOnly }: SourcePanelProps) => {
+	if (focusBlock) asked.push(focusBlock);
+	return (
+		<div>
+			<output aria-label="패널 본문">{doc.content.map(blockText).join("\n\n")}</output>
+			<output aria-label="포커스">{focusBlock ?? "-"}</output>
+			<output aria-label="읽기 전용">{String(readOnly)}</output>
+		</div>
 	);
+};
+const TEXT_PANEL: SourcePanelRegistration = { format: "text", label: SOURCE_LABEL, Panel: TextPanel };
+
+/** The edit screen as the admin layout renders it, with a fake source panel registered (the admin knows no text notation). */
+const renderShell = (ui: React.ReactElement, sourcePanels: SourcePanelRegistration[] = [TEXT_PANEL]) =>
+	render(<CmsAdminComponentsProvider components={{ sourcePanels }}>{ui}</CmsAdminComponentsProvider>);
 const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 const editorTitle = () => screen.findByRole("textbox", { name: "제목" });
 
 beforeEach(() => {
+	asked.length = 0;
 	vi.clearAllMocks();
 	getLocalBackup.mockResolvedValue(null);
 	deleteLocalBackup.mockResolvedValue(undefined);
@@ -443,12 +454,11 @@ describe("entry editor shell", () => {
 		expect(screen.getAllByRole("textbox", { name: "제목" })).toHaveLength(1);
 		fireEvent.click(screen.getByRole("button", { name: /제목을 입력하세요/ }));
 		await waitFor(() => expect(document.activeElement).toBe(title));
-		// In source mode, the issue is shown in the text, at the start of its block.
-		fireEvent.click(screen.getByRole("button", { name: "MDX 원문" }));
+		// In source mode, the panel is asked to focus the block the issue is in.
+		fireEvent.click(screen.getByRole("button", { name: SOURCE_LABEL }));
+		await screen.findByLabelText("패널 본문");
 		fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
-		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
-		await waitFor(() => expect(document.activeElement).toBe(source));
-		expect(source.selectionStart).toBe("첫째 문단\n\n".length);
+		await waitFor(() => expect(asked).toContain(body.content[1]?.id));
 	});
 
 	it("goes to the issue's block in the visual editor, and to the block in source mode when the editor does not have it", async () => {
@@ -477,16 +487,16 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(mockEditor.current).not.toBeNull());
 		fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
 		await waitFor(() => expect(mockEditor.current?.state.selection.$from.parent.textContent).toBe("둘째 문단"));
-		expect(screen.queryByRole("textbox", { name: "MDX 본문" })).toBeNull();
+		expect(screen.queryByLabelText("패널 본문")).toBeNull();
 
 		blockId = "zzzzzzzz";
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
 		await waitFor(() => expect(methodCalls("POST").length).toBeGreaterThanOrEqual(2));
 		fireEvent.click(await screen.findByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
-		expect(await screen.findByRole("textbox", { name: "MDX 본문" })).toBeTruthy();
+		expect(await screen.findByLabelText("패널 본문")).toBeTruthy();
 	});
 
-	it("opens unparseable MDX in source mode and does not allow the visual editor (no silent overwrite)", async () => {
+	it("opens a body that cannot be read in source mode and does not allow the visual editor (no silent overwrite)", async () => {
 		serve(() => undefined, {
 			...entry,
 			working: { ...entry.working, doc: unparsedDocument("본문 <Callout>닫히지 않음") },
@@ -500,31 +510,31 @@ describe("entry editor shell", () => {
 		watcher.observe(document.body, { childList: true, subtree: true });
 		renderEdit();
 		// The body opens after the deferred analysis of the loaded text.
-		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
+		const source = await screen.findByLabelText("패널 본문");
 		watcher.disconnect();
 		expect(visualEditorMounted).toBe(false);
-		expect(source.value).toBe("본문 <Callout>닫히지 않음");
+		expect(source).toBeTruthy();
 		expect((await editorTitle()).getAttribute("value")).toBe("테스트");
 		expect(screen.queryByLabelText("시각 본문")).toBeNull();
-		const toggle = screen.getByRole("button", { name: "MDX 원문" }) as HTMLButtonElement;
+		const toggle = screen.getByRole("button", { name: SOURCE_LABEL }) as HTMLButtonElement;
 		expect(toggle.getAttribute("aria-pressed")).toBe("true");
 		expect(toggle.disabled).toBe(true);
 		expect(screen.getByText(/원문 모드로만 편집합니다/)).toBeTruthy();
 	});
 
-	it("switches only the body to MDX source and keeps the toolbar and title", async () => {
+	it("switches only the body to the source panel and keeps the toolbar and title", async () => {
 		renderEdit();
 		await screen.findByLabelText("시각 본문");
-		const toggle = screen.getByRole("button", { name: "MDX 원문" });
+		const toggle = screen.getByRole("button", { name: SOURCE_LABEL });
 		fireEvent.click(toggle);
-		const source = (await screen.findByRole("textbox", { name: "MDX 본문" })) as HTMLTextAreaElement;
-		expect(source.value).toBe("첫째 줄\n둘째 줄\n");
+		const source = await screen.findByLabelText("패널 본문");
+		expect(source.textContent).toBe("첫째 줄\n둘째 줄");
 		expect(screen.queryByLabelText("시각 본문")).toBeNull();
 		expect((await editorTitle()).getAttribute("value")).toBe("테스트");
 		expect(screen.getByRole("button", { name: "템플릿" })).toBeTruthy();
 		fireEvent.click(toggle);
 		expect(await screen.findByLabelText("시각 본문")).toBeTruthy();
-		expect(screen.queryByRole("textbox", { name: "MDX 본문" })).toBeNull();
+		expect(screen.queryByLabelText("패널 본문")).toBeNull();
 	});
 
 	describe("the source toggle is the source panel slot", () => {
@@ -557,7 +567,7 @@ describe("entry editor shell", () => {
 			render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 			await screen.findByLabelText("시각 본문");
 			const toolbar = screen.getByRole("toolbar", { name: "서식 도구" });
-			expect(within(toolbar).queryByRole("button", { name: "MDX 원문" })).toBeNull();
+			expect(within(toolbar).queryByRole("button", { name: SOURCE_LABEL })).toBeNull();
 			expect(within(toolbar).getByRole("button", { name: "템플릿" })).toBeTruthy();
 		});
 
@@ -902,7 +912,7 @@ describe("entry editor shell", () => {
 		const toolbar = screen.getByRole("banner");
 		expect(within(toolbar).queryByRole("button", { name: "MDX 원문" })).toBeNull();
 		expect(
-			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: "MDX 원문" }),
+			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: SOURCE_LABEL }),
 		).toBeTruthy();
 		expect(within(toolbar).getByRole("link", { name: "미리보기" })).toBeTruthy();
 		fireEvent.click(within(toolbar).getByRole("button", { name: "더보기" }));
@@ -988,9 +998,9 @@ describe("templates", () => {
 	const templates = { items: [{ id: "t1", name: "회고", doc: docOf("## 회고") }] };
 	const sourceText = () => {
 		fireEvent.click(
-			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: "MDX 원문" }),
+			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: SOURCE_LABEL }),
 		);
-		return (screen.getByRole("textbox", { name: "MDX 본문" }) as HTMLTextAreaElement).value;
+		return screen.getByLabelText("패널 본문").textContent;
 	};
 
 	it("inserts the chosen template right away into an empty body", async () => {
@@ -1004,7 +1014,7 @@ describe("templates", () => {
 		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
 
 		expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull();
-		expect(sourceText()).toBe("## 회고\n");
+		expect(sourceText()).toBe("회고");
 	});
 
 	it("asks before replacing existing body text, and replaces only when applied", async () => {
@@ -1019,7 +1029,7 @@ describe("templates", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: "적용" }));
 
 		await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull());
-		expect(sourceText()).toBe("## 회고\n");
+		expect(sourceText()).toBe("회고");
 	});
 
 	it("applies a template as a copy with new block ids, and saves it as a document", async () => {
@@ -1229,9 +1239,9 @@ describe("translation source pane", () => {
 		expect(within(sourcePane() as HTMLElement).getByText("KO 원문")).toBeTruthy();
 		// The title slot hint is the source title.
 		expect((await editorTitle()).getAttribute("placeholder")).toBe("원문 제목");
-		// A translation uses the same editor too (formatting tools, MDX switch).
+		// A translation uses the same editor too (formatting tools, source switch).
 		expect(screen.getByRole("toolbar", { name: "서식 도구" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "MDX 원문" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: SOURCE_LABEL })).toBeTruthy();
 
 		cleanup();
 		serve(() => undefined, source);

@@ -1,8 +1,17 @@
 import { Editor } from "@tiptap/core";
 import type { DecorationSet } from "@tiptap/pm/view";
 import { afterEach, describe, expect, it } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
+import {
+	anchorIdsOf,
+	codeLink,
+	codeLinkTargetsOf,
+	codeNode,
+	storedDoc,
+	text,
+	withoutIds,
+} from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
+import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 import { codeEffectsKey, pickLines } from "../effects-plugin";
 import { cancelLink, commitLink, findAnchor, startLinkFromLines, startLinkFromText, unlinkRef } from "../link-commands";
 
@@ -12,12 +21,11 @@ afterEach(() => {
 	editor = null;
 });
 
-const SOURCE = ["이 함수가 값을 돌려준다.", "", "```ts", "function add(a, b) {", "  return a + b;", "}", "```"].join(
-	"\n",
-);
+const CODE = "function add(a, b) {\n  return a + b;\n}";
+const SOURCE = storedDoc({ type: "paragraph", content: [text("이 함수가 값을 돌려준다.")] }, codeNode(CODE));
 
-const mount = (source = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(source) });
+const mount = (doc = SOURCE) => {
+	editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
 	return editor;
 };
 
@@ -27,7 +35,7 @@ const wordRange = (instance: Editor, word = "함수가") => {
 	return { from, to: from + word.length };
 };
 const codePos = (instance: Editor) => instance.state.doc.child(0).nodeSize;
-const save = (instance: Editor) => mdxOfTiptap(instance.getJSON()).trimEnd();
+const save = (instance: Editor) => tiptapToStored(instance.getJSON());
 
 describe("linking body text to code (editor)", () => {
 	it("pick body text first, then a line by its number, then link: the body link and line label are created together", () => {
@@ -40,17 +48,13 @@ describe("linking body text to code (editor)", () => {
 		expect(commitLink(instance.view)).toBe(true);
 
 		expect(codeEffectsKey.getState(instance.state)?.linking).toBeNull();
-		expect(save(instance)).toBe(
-			[
-				'이 <CodeRef to="c1">함수가</CodeRef> 값을 돌려준다.',
-				"",
-				"```ts",
-				'// @line anchor {0-1} id="c1"',
-				"function add(a, b) {",
-				"  return a + b;",
-				"}",
-				"```",
-			].join("\n"),
+		expect(withoutIds(save(instance))).toEqual(
+			withoutIds(
+				storedDoc(
+					{ type: "paragraph", content: [text("이 "), codeLink("함수가", "c1"), text(" 값을 돌려준다.")] },
+					codeNode(CODE, { annotations: { lines: [{ name: "anchor", start: 0, end: 2, attrs: { id: "c1" } }] } }),
+				),
+			),
 		);
 	});
 
@@ -66,9 +70,10 @@ describe("linking body text to code (editor)", () => {
 		commitLink(instance.view);
 
 		const output = save(instance);
-		expect(output).toContain('<CodeRef to="c1">함수가</CodeRef>');
-		expect(output).toContain('<CodeRef to="c1">값을</CodeRef>');
-		expect(output.match(/@line anchor/g)).toHaveLength(1);
+		const linked = (output.content[0]?.content ?? []).filter((node) => node.marks?.length).map((node) => node.text);
+		expect(linked).toEqual(["함수가", "값을"]);
+		expect(codeLinkTargetsOf(output)).toEqual(["c1", "c1"]);
+		expect(anchorIdsOf(output)).toEqual(["c1"]);
 	});
 
 	it("does not link if there is no body text or no line is picked, and Esc or cancel backs out", () => {
@@ -95,11 +100,13 @@ describe("linking body text to code (editor)", () => {
 
 		unlinkRef(instance.view, range.from, range.to);
 		expect(findAnchor(instance.state.doc, "c1")).toBeNull();
-		expect(save(instance)).toBe(SOURCE);
+		expect(withoutIds(save(instance))).toEqual(withoutIds(SOURCE));
 	});
 
 	it("a body link with no linked line is flagged with a red wavy underline", () => {
-		const instance = mount('이 <CodeRef to="c9">함수가</CodeRef> 값을 돌려준다.');
+		const instance = mount(
+			storedDoc({ type: "paragraph", content: [text("이 "), codeLink("함수가", "c9"), text(" 값을 돌려준다.")] }),
+		);
 		const plugin = codeEffectsKey.get(instance.state);
 		const set = plugin?.props.decorations?.call(plugin, instance.state) as DecorationSet;
 		const broken = set

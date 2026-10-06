@@ -3,7 +3,7 @@ import type { StoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { docOf, mdxOfDoc } from "../../test/mdx";
+import { docOf } from "../../test/mdx";
 import { editorMessages } from "../messages";
 import { CmsEditor } from "../tiptap-editor";
 
@@ -37,7 +37,7 @@ const toolbarButtonNames = (toolbar: HTMLElement) =>
 		.map((button) => button.getAttribute("aria-label") || button.textContent);
 const savedText = (onChange: ReturnType<typeof vi.fn>) => {
 	const doc: StoredDocument | undefined = onChange.mock.lastCall?.[0];
-	return doc ? mdxOfDoc(doc) : "";
+	return doc ? JSON.stringify(doc) : "";
 };
 
 describe("formatting toolbar group", () => {

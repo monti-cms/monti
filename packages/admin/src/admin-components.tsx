@@ -156,8 +156,7 @@ export interface SourcePanelProps {
 	readonly onComposing?: (composing: boolean) => void;
 }
 
-/** Id of the element a screen puts the findings about the text in. A source panel's input refers to it as its description (`aria-describedby`). */
-export const SOURCE_ERROR_ID = "cms-source-error";
+export { SOURCE_ERROR_ID } from "./source-error-id";
 
 /** A source panel a plugin registers (`CmsAdminComponents.sourcePanels`). */
 export interface SourcePanelRegistration {

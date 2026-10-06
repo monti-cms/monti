@@ -1,13 +1,18 @@
 import { createTranslator, defineBlock } from "@monti-cms/core/client";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it, vi } from "vitest";
-import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
+import { storedDoc, text } from "../../test/stored-doc";
 import { BLOCK_INSERT_ACTIONS, type BlockInsertAction } from "../block-inserts";
 import { buildEditorExtensions } from "../extensions";
 import { editorMessages } from "../messages";
 import { buildBlockSlashCommands, filterCommands, OPEN_FILE_PICKER_EVENT, SLASH_COMMANDS } from "../slash-command";
+import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 const t = createTranslator(editorMessages);
+
+/** A stored node as one string, to look for the text inside it. */
+const textOf = (node: unknown): string => JSON.stringify(node);
+const tooltip = (content: string) => [{ type: "tooltip", attrs: { content } }];
 
 describe("slash menu insertion driven by block definitions", () => {
 	it("builds slash commands for BLOCKS entries with insertable=true and view='node'", () => {
@@ -129,54 +134,54 @@ describe("slash menu insertion driven by block definitions", () => {
 	});
 });
 
-describe("MDX serialization after block insert actions", () => {
+describe("stored document after block insert actions", () => {
 	const createEditor = () =>
 		new Editor({
 			extensions: buildEditorExtensions(),
 			content: "<p></p>",
 		});
 
-	it("serializes to MDX correctly after inserting mermaid", () => {
+	it("saves a stored code block after inserting mermaid", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
 		BLOCK_INSERT_ACTIONS.mermaid(editor, range);
 
-		const serialized = mdxOfTiptap(editor.getJSON());
-		expect(serialized).toContain("```mermaid");
-		expect(serialized).toContain("graph TD");
-		expect(serialized).toContain("A --> B");
+		const block = tiptapToStored(editor.getJSON()).content[0];
+		expect(block).toMatchObject({ type: "codeBlock", attrs: { language: "mermaid" } });
+		expect(textOf(block)).toContain("graph TD");
+		expect(textOf(block)).toContain("A --> B");
 		editor.destroy();
 	});
 
-	it("serializes to MDX correctly after inserting chart", () => {
+	it("saves a stored code block after inserting chart", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
 		BLOCK_INSERT_ACTIONS.chart(editor, range);
 
-		const serialized = mdxOfTiptap(editor.getJSON());
-		expect(serialized).toContain("```chart");
-		expect(serialized).toContain("chart bar");
-		expect(serialized).toContain("x month");
-		expect(serialized).toContain("series views");
+		const block = tiptapToStored(editor.getJSON()).content[0];
+		expect(block).toMatchObject({ type: "codeBlock", attrs: { language: "chart" } });
+		expect(textOf(block)).toContain("chart bar");
+		expect(textOf(block)).toContain("x month");
+		expect(textOf(block)).toContain("series views");
 		editor.destroy();
 	});
 
-	it("serializes to MDX correctly after inserting math", () => {
+	it("saves a stored math block after inserting math", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
 		BLOCK_INSERT_ACTIONS.math(editor, range);
 
-		const serialized = mdxOfTiptap(editor.getJSON());
-		expect(serialized).toContain("$$");
-		expect(serialized).toContain("E = mc^2");
+		const block = tiptapToStored(editor.getJSON()).content[0];
+		expect(block).toMatchObject({ type: "math" });
+		expect(textOf(block)).toContain("E = mc^2");
 		editor.destroy();
 	});
 });
 
-describe("setting, editing and removing a tooltip, and MDX round trip", () => {
+describe("setting, editing and removing a tooltip, and stored round trip", () => {
 	const createEditor = (html = "<p>안녕하세요 세상입니다</p>") =>
 		new Editor({
 			extensions: buildEditorExtensions(),
@@ -186,13 +191,13 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 	it("round-trips a tooltip label containing a closing bracket unescaped", () => {
 		const editor = createEditor("<p>a]b</p>");
 		editor.chain().focus().setTextSelection({ from: 1, to: 4 }).setMark("cmsTooltip", { content: "설명" }).run();
-		const mdx = mdxOfTiptap(editor.getJSON());
-		expect(mdx).toContain('<Tooltip content="설명">a]b</Tooltip>');
-		expect(mdxOfTiptap(tiptapOf(mdx))).toBe(mdx);
+		const stored = tiptapToStored(editor.getJSON());
+		expect(stored.content[0]?.content).toEqual([text("a]b", tooltip("설명"))]);
+		expect(tiptapToStored(storedToTiptap(stored))).toEqual(stored);
 		editor.destroy();
 	});
 
-	it("sets the cmsTooltip mark on the selection and serializes it to MDX", () => {
+	it("sets the cmsTooltip mark on the selection and saves it in the stored document", () => {
 		const editor = createEditor();
 		// Select the "세상" range (pos 7 to 9)
 		editor.chain().focus().setTextSelection({ from: 7, to: 9 }).run();
@@ -203,8 +208,8 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("우리가 사는 지구");
 
-		const mdx = mdxOfTiptap(editor.getJSON());
-		expect(mdx).toContain('<Tooltip content="우리가 사는 지구">세상</Tooltip>');
+		const stored = tiptapToStored(editor.getJSON());
+		expect(stored.content[0]?.content).toContainEqual(text("세상", tooltip("우리가 사는 지구")));
 		editor.destroy();
 	});
 
@@ -222,8 +227,8 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		editor.chain().focus().extendMarkRange("cmsTooltip").setMark("cmsTooltip", { content: "업데이트된 설명" }).run();
 
 		expect(editor.getAttributes("cmsTooltip").content).toBe("업데이트된 설명");
-		const mdx = mdxOfTiptap(editor.getJSON());
-		expect(mdx).toContain('<Tooltip content="업데이트된 설명">세상</Tooltip>');
+		const stored = tiptapToStored(editor.getJSON());
+		expect(stored.content[0]?.content).toContainEqual(text("세상", tooltip("업데이트된 설명")));
 		editor.destroy();
 	});
 
@@ -235,15 +240,18 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		editor.chain().focus().setTextSelection(8).extendMarkRange("cmsTooltip").unsetMark("cmsTooltip").run();
 
 		expect(editor.isActive("cmsTooltip")).toBe(false);
-		const mdx = mdxOfTiptap(editor.getJSON());
-		expect(mdx).not.toContain("<Tooltip");
-		expect(mdx).toContain("세상");
+		const written = JSON.stringify(tiptapToStored(editor.getJSON()));
+		expect(written).not.toContain("tooltip");
+		expect(written).toContain("세상");
 		editor.destroy();
 	});
 
-	it("loads the Tooltip element from MDX into the editor and round-trips it losslessly on re-serialization", () => {
-		const initialMdx = '본문 속 <Tooltip content="상세 설명">단어</Tooltip> 확인하기\n';
-		const json = tiptapOf(initialMdx);
+	it("loads a stored tooltip mark into the editor and round-trips it losslessly on re-saving", () => {
+		const initial = storedDoc({
+			type: "paragraph",
+			content: [text("본문 속 "), text("단어", tooltip("상세 설명")), text(" 확인하기")],
+		});
+		const json = storedToTiptap(initial);
 
 		const editor = new Editor({
 			extensions: buildEditorExtensions(),
@@ -256,8 +264,7 @@ describe("setting, editing and removing a tooltip, and MDX round trip", () => {
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("상세 설명");
 
-		const roundtripMdx = mdxOfTiptap(editor.getJSON());
-		expect(roundtripMdx).toBe(initialMdx);
+		expect(tiptapToStored(editor.getJSON())).toEqual(initial);
 		editor.destroy();
 	});
 });
