@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import type { BlockDefinition } from "../../blocks/define";
 import type { ResolvedConfig } from "../../config/resolved";
+import type { ReadRefs } from "../../mdx/document-refs";
 import type { ImageResolveFailure, ImageResolver } from "../../mdx/image-src";
 import type { CmsJsonValue, CmsNode } from "../../mdx/types";
 import type { CodeHighlightOptions } from "../code";
@@ -361,7 +362,15 @@ export interface DocumentComponentsContext {
 }
 
 export interface RenderDocumentOptions {
-	/** Resolver for image and file addresses (`cms.read.imageResolver(mdx)`). Only the outer `src` if absent. */
+	/**
+	 * What the document points to, resolved: `entry.refs` of a read. Images and files are drawn from it (a registered media id that is not in it is
+	 * unresolved). `<CmsContent entry={entry} />` passes it for you.
+	 */
+	readonly refs?: ReadRefs;
+	/**
+	 * Resolver for image and file addresses, for a site that resolves them itself. Wins over `refs`. Without both, only the outer `src` is used.
+	 * (`cms.read.imageResolver(mdx)` is deprecated: read `entry.refs` instead.)
+	 */
 	readonly imageResolver?: ImageResolver;
 	/** Language of the public page. Block components receive it as `ctx.locale`. */
 	readonly locale?: string;

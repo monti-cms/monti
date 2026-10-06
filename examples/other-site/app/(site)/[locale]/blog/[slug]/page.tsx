@@ -1,11 +1,11 @@
 import { isLocale } from "@monti-cms/core/client";
-import { renderMdx } from "@monti-cms/core/render";
+import { CmsContent, tableOfContents } from "@monti-cms/core/render";
 import { notFound, permanentRedirect } from "next/navigation";
 import { cms } from "../../../../../cms.server";
 
 export const dynamic = "force-dynamic";
 
-/** A single article. An old URL redirects to the new one, and the body is drawn by the core renderer (including the blocks extension's public components). */
+/** A single article. An old URL redirects to the new one, and the stored document is drawn by the core renderer (including the blocks extension's public components), with no MDX compile. */
 export default async function ArticlePage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
 	const { locale, slug } = await params;
 	if (!isLocale(locale)) notFound();
@@ -13,10 +13,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ locale
 	if (result.status === "not_found") notFound();
 	if (result.status === "redirect") permanentRedirect(result.path ?? result.slug);
 	const { entry } = result;
-	const { content, toc } = await renderMdx(entry.mdx, {
-		locale,
-		imageResolver: await cms.read.imageResolver(entry.mdx),
-	});
+	const toc = tableOfContents(entry.doc);
 	return (
 		<main className="mx-auto max-w-2xl px-4 py-12">
 			<h1 className="mb-2 font-bold text-3xl">{entry.title}</h1>
@@ -35,7 +32,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ locale
 					</ul>
 				</nav>
 			) : null}
-			<article className="prose dark:prose-invert max-w-none">{content}</article>
+			<article className="prose dark:prose-invert max-w-none">
+				<CmsContent entry={entry} />
+			</article>
 		</main>
 	);
 }

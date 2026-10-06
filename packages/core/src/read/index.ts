@@ -6,6 +6,7 @@
  * - List (`listEntries`): relation filters, sorting and pagination are done in the DB.
  * - Translations (`getTranslations`): the published locales of the same entry and their URLs (hreflang).
  * - Preview (`getPreview`): admins only, the latest draft.
+ * - The body is the stored document (`doc`) and what it points to, resolved (`refs`: media URLs). `<CmsContent entry={entry} />` renders both.
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
@@ -15,7 +16,14 @@ import { type Collection, isCollection, isItemCollection } from "../core/collect
 import { contentPath } from "../core/links";
 import { DEFAULT_LOCALE, isLocale, localizePath } from "../core/locales";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
-import { createPublicImageResolver, resolvePublicMediaUrl } from "../mdx/public-media";
+import { collectRefs, EMPTY_REFS, type ReadRefs } from "../mdx/document-refs";
+import {
+	createPublicImageResolver,
+	type PublicMediaDeps,
+	resolvePublicMedia,
+	resolvePublicMediaUrl,
+} from "../mdx/public-media";
+import type { StoredDocument } from "../mdx/stored-document";
 import type { MetadataOf } from "../schema/collection";
 import {
 	mergeTranslationMetadata,
@@ -59,7 +67,21 @@ export interface ReadEntry<C extends Collection = Collection> {
 	readonly publishedAt: Date | null;
 	/** Modified date of this locale's body. */
 	readonly updatedAt: Date;
-	/** Body MDX. In lists it is filled only when `body: true`. */
+	/**
+	 * The body as a stored document, the input of `<CmsContent entry={entry} />` and `renderDocument`. In lists it is filled only when `body: true`
+	 * (otherwise `null`). `null` for a preview of a draft that does not parse (it has no document); the published version always has one.
+	 */
+	readonly doc: StoredDocument | null;
+	/**
+	 * What `doc` points to, resolved for rendering: the public URL, size and file info of each registered image and file. Only media that occurs
+	 * in `doc` is listed. Empty when `doc` is `null`.
+	 */
+	readonly refs: ReadRefs;
+	/**
+	 * Body MDX. In lists it is filled only when `body: true`.
+	 * @deprecated Render `doc` instead (`<CmsContent entry={entry} />`): it needs no MDX compile and no `imageResolver`. The MDX text moves to an
+	 * optional format of the `@monti-cms/mdx` package.
+	 */
 	readonly mdx: string;
 	/** The source text is shown because there is no translation for the requested locale. */
 	readonly fallback: boolean;
@@ -141,13 +163,39 @@ async function resolveRelations(
 	return result;
 }
 
+/**
+ * The refs of each record's document. The media of all records is looked up together (each id once); a record gets only the ids its own document
+ * holds, so a read never lists a media item the document does not use.
+ */
+async function resolveRefs(
+	deps: PublicMediaDeps,
+	records: readonly PublishedEntryRecord[],
+): Promise<Map<string, ReadRefs>> {
+	const idsOf = new Map(records.map((record) => [record.id, collectRefs(record.doc).media] as const));
+	const resolved = await resolvePublicMedia(deps, [...new Set([...idsOf.values()].flat())]);
+	return new Map(
+		records.map((record) => {
+			const media: Record<string, ReadRefs["media"][string]> = {};
+			for (const mediaId of idsOf.get(record.id) ?? []) {
+				// An id with no media row is left out: a renderer reads it as unresolved.
+				const result = resolved.get(mediaId);
+				if (result) media[mediaId] = result;
+			}
+			return [record.id, Object.keys(media).length > 0 ? { media } : EMPTY_REFS] as const;
+		}),
+	);
+}
+
 async function toReadEntries<C extends Collection>(
-	store: ContentStore,
+	deps: ReadDeps,
 	records: readonly PublishedEntryRecord[],
 	locale: string,
 	fallback = false,
 ): Promise<ReadEntry<C>[]> {
-	const relations = await resolveRelations(store, records, locale);
+	const [relations, refs] = await Promise.all([
+		resolveRelations(deps.store(), records, locale),
+		resolveRefs(deps, records),
+	]);
 	return records.map((record) => ({
 		id: record.id,
 		collection: record.collection as C,
@@ -163,6 +211,8 @@ async function toReadEntries<C extends Collection>(
 		relations: relations.get(record.id) ?? {},
 		publishedAt: record.publishedAt,
 		updatedAt: record.updatedAt,
+		doc: record.doc,
+		refs: refs.get(record.id) ?? EMPTY_REFS,
 		mdx: record.mdx,
 		fallback,
 	}));
@@ -225,7 +275,10 @@ export interface CmsRead {
 		readonly slug: string;
 		readonly locale?: string;
 	}): Promise<ReadEntry<C> | null>;
-	/** Resolver that turns the body's registered media (`Image`, `File`) into public URLs, for `renderMdx`'s `imageResolver`. */
+	/**
+	 * Resolver that turns the body's registered media (`Image`, `File`) into public URLs, for `renderMdx`'s `imageResolver`.
+	 * @deprecated Reads the MDX text again to find the media. Use `entry.refs`: `<CmsContent entry={entry} />` resolves images and files from it.
+	 */
 	imageResolver(source: string): ReturnType<typeof createPublicImageResolver>;
 	/** Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage. */
 	mediaUrl(mediaId: string): ReturnType<typeof resolvePublicMediaUrl>;
@@ -251,7 +304,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 				fellBack = lookup.status !== "not_found";
 			}
 			if (lookup.status === "not_found") return { status: "not_found" };
-			const [entry] = await toReadEntries<C>(store, [lookup.entry], params.locale ?? locale, fellBack);
+			const [entry] = await toReadEntries<C>(deps, [lookup.entry], params.locale ?? locale, fellBack);
 			if (!entry) return { status: "not_found" };
 			if (lookup.status === "alias") return { status: "redirect", slug: entry.slug, path: entry.path, entry };
 			return { status: "found", entry };
@@ -282,7 +335,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 				pageSize: params.pageSize,
 				includeBody: params.body === true,
 			});
-			return { ...result, items: await toReadEntries<C>(store, result.items, params.locale ?? locale) };
+			return { ...result, items: await toReadEntries<C>(deps, result.items, params.locale ?? locale) };
 		},
 
 		async getTranslations(params) {
@@ -322,10 +375,11 @@ export function createRead(deps: ReadDeps): CmsRead {
 				slug: draft.workingSlug ?? params.slug,
 				metadata,
 				mdx: draft.working.mdx,
+				doc: draft.working.doc,
 				publishedAt: draft.publishedAt ?? null,
 				updatedAt: draft.updatedAt,
 			};
-			const [entry] = await toReadEntries<C>(store, [record], locale);
+			const [entry] = await toReadEntries<C>(deps, [record], locale);
 			return entry ?? null;
 		},
 
@@ -335,3 +389,6 @@ export function createRead(deps: ReadDeps): CmsRead {
 }
 
 export type { PublishedSort } from "../core/store";
+export type { DocumentRefIds, ReadRefs } from "../mdx/document-refs";
+export { collectRefs } from "../mdx/document-refs";
+export type { StoredDocument } from "../mdx/stored-document";

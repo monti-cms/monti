@@ -31,6 +31,7 @@ type PublishedRow = {
 	metadata: EntryMetadata;
 	source_metadata: EntryMetadata;
 	mdx: string;
+	doc: unknown;
 	published_at: Date | null;
 	body_updated_at: Date;
 };
@@ -45,9 +46,10 @@ const sourceJoin = (qSchema: string) => `JOIN "${qSchema}".entries src
 	   ON sb.entry_id = src.id AND sb.state = 'published'`;
 
 /** The publish date is the source's (a translation uses the source date too). The modified date is that of this language's body. */
-const PUBLISHED_COLUMNS = (mdxExpr: string, address = "a") =>
+const PUBLISHED_COLUMNS = (withBody: boolean, address = "a") =>
 	`e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
-	 ${address}.slug AS slug, b.metadata, sb.metadata AS source_metadata, ${mdxExpr} AS mdx,
+	 ${address}.slug AS slug, b.metadata, sb.metadata AS source_metadata,
+	 ${withBody ? "b.mdx" : "''::text"} AS mdx, ${withBody ? "b.doc" : "NULL::jsonb"} AS doc,
 	 src.published_at, b.updated_at AS body_updated_at`;
 
 /** Translation metadata = the source's shared values + the translation's per-language values. */
@@ -113,9 +115,8 @@ export function createPublicReadOps(ctx: StoreContext) {
 				throw new CmsError("Invalid locale", "invalid_input");
 			}
 
-			const mdxExpr = params.includeBody === true ? "b.mdx" : "''::text";
 			const res = await pool.query<PublishedRow>(
-				`SELECT ${PUBLISHED_COLUMNS(mdxExpr)}
+				`SELECT ${PUBLISHED_COLUMNS(params.includeBody === true)}
 				 FROM "${qSchema}".entries e
 				 JOIN "${qSchema}".content_addresses a
 				   ON a.entry_id = e.id AND a.collection = e.collection AND a.type = 'current'
@@ -154,9 +155,8 @@ export function createPublicReadOps(ctx: StoreContext) {
 				throw new CmsError("Invalid includeBody", "invalid_input");
 			}
 
-			const mdxExpr = params.includeBody !== false ? "b.mdx" : "''::text";
 			const res = await pool.query<PublishedRow & { is_alias: boolean }>(
-				`SELECT ${PUBLISHED_COLUMNS(mdxExpr, "cur")}, (matched.type = 'alias') AS is_alias
+				`SELECT ${PUBLISHED_COLUMNS(params.includeBody !== false, "cur")}, (matched.type = 'alias') AS is_alias
 				 FROM "${qSchema}".entries e
 				 JOIN "${qSchema}".content_addresses matched
 				   ON matched.entry_id = e.id AND matched.collection = e.collection AND matched.locale = $3
@@ -230,7 +230,6 @@ export function createPublicReadOps(ctx: StoreContext) {
 			const total = Number(
 				(await pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count ${from}`, values)).rows[0]?.count ?? 0,
 			);
-			const mdxExpr = params.includeBody === true ? "b.mdx" : "''::text";
 			// Values not used by the count query are appended separately (Postgres errors on unused placeholders because it cannot infer their type).
 			const rowValues = [...values];
 			let orderBy = SORT_COLUMNS[sort];
@@ -243,7 +242,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 				orderBy = `COALESCE(NULLIF(btrim(b.metadata->'${RECORD_TRANSLATIONS_KEY}'->$${rowValues.length}::text->>'title'), ''), b.metadata->>'title')`;
 			}
 			const rows = await pool.query<PublishedRow>(
-				`SELECT ${PUBLISHED_COLUMNS(mdxExpr)} ${from}
+				`SELECT ${PUBLISHED_COLUMNS(params.includeBody === true)} ${from}
 				 ORDER BY ${orderBy} ${order} NULLS LAST, e.id ASC
 				 LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
 				rowValues,
@@ -278,7 +277,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 			const ids = params.translationGroupIds.filter((id) => typeof id === "string");
 			if (ids.length === 0) return [];
 			const res = await pool.query<PublishedRow>(
-				`SELECT ${PUBLISHED_COLUMNS("''::text")}
+				`SELECT ${PUBLISHED_COLUMNS(false)}
 				 FROM "${qSchema}".entries e
 				 JOIN "${qSchema}".content_addresses a
 				   ON a.entry_id = e.id AND a.collection = e.collection AND a.type = 'current'

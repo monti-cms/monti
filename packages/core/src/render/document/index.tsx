@@ -1,6 +1,7 @@
 import katex from "katex";
 import type { ReactNode } from "react";
 import { fenceBlockOf } from "../../blocks/derive";
+import { imageResolverFromRefs, type ReadRefs } from "../../mdx/document-refs";
 import { readStoredDocument, type StoredDocument } from "../../mdx/stored-document";
 import type { CmsNode } from "../../mdx/types";
 import { DEFAULT_LABELS } from "../labels";
@@ -103,8 +104,13 @@ const EMPTY: RenderedDocument = { content: null, toc: [], unknown: [] };
  */
 export async function renderDocument(
 	input: StoredDocument,
-	options: RenderDocumentOptions = {},
+	given: RenderDocumentOptions = {},
 ): Promise<RenderedDocument> {
+	// Images and files are drawn from `refs` unless the site brought its own resolver.
+	const options: RenderDocumentOptions = {
+		...given,
+		imageResolver: given.imageResolver ?? (given.refs ? imageResolverFromRefs(given.refs) : undefined),
+	};
 	const doc = readStoredDocument(input);
 	if (!doc) {
 		console.error("renderDocument: the value is not a stored document of a known version; rendering an empty body");
@@ -139,23 +145,58 @@ export async function renderDocument(
 	return { content, toc: tocOf(analysis), unknown };
 }
 
-/**
- * The body of an entry as a server component: `<CmsContent doc={entry.doc} locale={locale} />`. Takes the options of `renderDocument`.
- * The table of contents is not available here; call `renderDocument` or `tableOfContents` for it.
- */
-export async function CmsContent({
-	doc,
-	...options
-}: { readonly doc: StoredDocument } & RenderDocumentOptions): Promise<ReactNode> {
-	return (await renderDocument(doc, options)).content;
+/** What `CmsContent` reads from an entry of the read API (`ReadEntry`): the document, what it points to, and the language of the page. */
+export interface CmsContentEntry {
+	readonly doc: StoredDocument | null;
+	readonly refs?: ReadRefs;
+	readonly locale?: string;
 }
 
-/** The headings of a document with their anchors (pure, no React). `range` is the levels to list; the default is `h2` and `h3`. */
-export function tableOfContents(doc: StoredDocument, range: TocRange = DEFAULT_TOC_RANGE): DocumentTocItem[] {
+export type CmsContentProps = RenderDocumentOptions &
+	(
+		| {
+				/** An entry of the read API. Its `refs` draw the images and files, and its `locale` is the language of the page. */
+				readonly entry: CmsContentEntry;
+				readonly doc?: never;
+		  }
+		| {
+				/** A stored document, for one that did not come from the read API. Pass `refs` or `imageResolver` to draw its images and files. */
+				readonly doc: StoredDocument | null;
+				readonly entry?: never;
+		  }
+	);
+
+/**
+ * The body of an entry as a server component: `<CmsContent entry={entry} />` (the document, its media from `entry.refs`, the language from
+ * `entry.locale`), or `<CmsContent doc={doc} />` for a document on its own. The rest are the options of `renderDocument`, which win over the entry's.
+ * An entry without a document renders nothing. The table of contents is not available here; call `renderDocument` or `tableOfContents` for it.
+ */
+export async function CmsContent({ entry, doc, ...options }: CmsContentProps): Promise<ReactNode> {
+	const source: CmsContentEntry = entry ?? { doc };
+	if (!source.doc) return null;
+	return (
+		await renderDocument(source.doc, {
+			...options,
+			refs: options.refs ?? source.refs,
+			locale: options.locale ?? source.locale,
+		})
+	).content;
+}
+
+/**
+ * The headings of a document with their anchors (pure, no React). `range` is the levels to list; the default is `h2` and `h3`.
+ * A missing document (`entry.doc` of a list read without a body) has none.
+ */
+export function tableOfContents(
+	doc: StoredDocument | null | undefined,
+	range: TocRange = DEFAULT_TOC_RANGE,
+): DocumentTocItem[] {
+	if (!doc) return [];
 	const stored = readStoredDocument(doc);
 	return stored ? tocOf(analyzeDocument(stored), range) : [];
 }
 
+export { collectRefs, type DocumentRefIds, imageResolverFromRefs, type ReadRefs } from "../../mdx/document-refs";
 export { readCodeBlock } from "./code";
 export type {
 	BlockItem,

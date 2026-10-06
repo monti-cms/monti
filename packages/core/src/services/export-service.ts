@@ -22,6 +22,8 @@ export const publicExportEntrySchema = z
 		updatedAt: z.string(),
 		metadata: z.record(z.string(), z.unknown()),
 		mdx: z.string(),
+		/** The stored document `mdx` is written from. `null` for a body that does not parse (only a draft can be, so a published one has it). */
+		doc: z.record(z.string(), z.unknown()).nullable(),
 		schemaVersion: z.number().int(),
 		contentHash: z.string(),
 	})
@@ -50,7 +52,8 @@ export function pickPublicMetadata(collection: string, metadata: Record<string, 
 
 /**
  * Format version of the archive, in the manifest and in the body JSON files. Version 2 added `working.doc.json` / `published.doc.json` and the
- * `doc` of templates to the admin archive. The public archive has the same shape as before; it only carries the same version number.
+ * `doc` of templates to the admin archive. The public archive's `published.json` carries the stored document as `doc` (the same document as
+ * `published.doc.json` in the admin archive), next to the MDX text.
  */
 export const EXPORT_FORMAT_VERSION = 2;
 
@@ -123,14 +126,12 @@ const sha256 = (value: string): string => createHash("sha256").update(value, "ut
 const sha256Bytes = (value: Uint8Array): string => createHash("sha256").update(value).digest("hex");
 
 /**
- * Canonical digest of one state. Includes content, slug, status, folder and references so skip/conflict decisions stay stable.
- * The admin digest also covers the stored document; the public archive has none, so its digests do not.
+ * Canonical digest of one state. Includes content (the MDX and the stored document), slug, status, folder and references so skip/conflict decisions stay stable.
  */
 const stateDigest = (
 	entry: ExportSnapshotEntry,
 	state: "working" | "published",
 	references: readonly ExportSnapshotReference[],
-	scope: ExportScope,
 ): string =>
 	sha256(
 		canonicalJson({
@@ -142,7 +143,7 @@ const stateDigest = (
 			slug: state === "working" ? entry.workingSlug : entry.publishedSlug,
 			metadata: state === "working" ? entry.working.metadata : entry.published?.metadata,
 			mdx: state === "working" ? entry.working.mdx : entry.published?.mdx,
-			...(scope === "admin" ? { doc: (state === "working" ? entry.working.doc : entry.published?.doc) ?? null } : {}),
+			doc: (state === "working" ? entry.working.doc : entry.published?.doc) ?? null,
 			references: references
 				.filter((reference) => reference.entryId === entry.id && reference.state === state)
 				.map((reference) => ({ kind: reference.kind, targetId: reference.targetId, isStale: reference.isStale }))
@@ -159,11 +160,11 @@ const entryDigest = (
 	references: readonly ExportSnapshotReference[],
 ): string =>
 	scope === "public"
-		? sha256(canonicalJson({ published: stateDigest(entry, "published", references, scope) }))
+		? sha256(canonicalJson({ published: stateDigest(entry, "published", references) }))
 		: sha256(
 				canonicalJson({
-					working: stateDigest(entry, "working", references, scope),
-					published: entry.published ? stateDigest(entry, "published", references, scope) : null,
+					working: stateDigest(entry, "working", references),
+					published: entry.published ? stateDigest(entry, "published", references) : null,
 				}),
 			);
 
@@ -210,6 +211,7 @@ const publicEntry = (entry: ExportSnapshotEntry): PublicExportEntry | null => {
 		updatedAt: iso(entry.published.updatedAt) ?? iso(entry.updatedAt) ?? "",
 		metadata: pickPublicMetadata(entry.collection, entry.published.metadata),
 		mdx: entry.published.mdx,
+		doc: entry.published.doc ?? null,
 		schemaVersion: entry.published.schemaVersion,
 		contentHash: entry.published.contentHash,
 	});
@@ -293,8 +295,8 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 				publishedAt: iso(entry.publishedAt),
 				hasWorking: true,
 				hasPublished: entry.published !== undefined,
-				workingDigest: stateDigest(entry, "working", snapshot.references, scope),
-				publishedDigest: entry.published ? stateDigest(entry, "published", snapshot.references, scope) : null,
+				workingDigest: stateDigest(entry, "working", snapshot.references),
+				publishedDigest: entry.published ? stateDigest(entry, "published", snapshot.references) : null,
 				itemDigest: entryDigest(entry, "admin", snapshot.references),
 				files: entryFiles.sort(),
 			});
@@ -323,7 +325,7 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			hasWorking: false,
 			hasPublished: true,
 			workingDigest: null,
-			publishedDigest: stateDigest(entry, "published", snapshot.references, scope),
+			publishedDigest: stateDigest(entry, "published", snapshot.references),
 			itemDigest: entryDigest(entry, "public", snapshot.references),
 			files: entryFiles.sort(),
 		});

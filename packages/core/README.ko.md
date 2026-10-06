@@ -287,7 +287,7 @@ export const cms = createCms({
 | Next가 아닌 호스트의 관리자 API(실험적) | `cms.handle(request)`: 표준 `Request`를 받아 `Response`를 돌려준다 |
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)` |
-| 공개 미디어 | `cms.read.imageResolver(mdx)`(`renderMdx`의 `imageResolver`), `cms.read.mediaUrl(mediaId)` |
+| 공개 미디어 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL. `<CmsContent entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)`. `cms.read.imageResolver(mdx)`는 deprecated |
 | 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
 | 스크립트·명령줄 | `cms.migrate()`·`cms.rewrite({ apply })`·`cms.close()` |
 | 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
@@ -423,7 +423,10 @@ MDX로 저장한 본문은 바꾸기 전 버전에서 ID를 물려받는다. 똑
 - **관리자 항목 API.** `POST /api/cms/v1/entries`와 `PATCH /api/cms/v1/entries/:id`는 `mdx` 대신 `doc`(항목의 `working.doc`·`published.doc`로 읽은 문서 JSON)을 받는다. 둘을 함께 보내거나 올바른 저장 문서가 아닌 값을 보내면 `400 invalid_input`이다. 둘 다 없으면 새 항목은 빈 본문이고, 패치는 지금 본문을 그대로 둔다.
   읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.mdxBytes` 옆에 `limits.docBytes`로 알려 준다. 템플릿 API는 계속 `mdx`만 받고, 템플릿마다 `doc`을 돌려준다.
 - **관리자 내보내기**(`GET /api/cms/v1/export`)는 형식 버전 2다. 문서가 있는 본문에는 `working.mdx`·`published.mdx` 옆에 `working.doc.json`·`published.doc.json`이 있고, `templates.json` 항목에 `doc`이 있으며, 다이제스트가 문서를 포함한다.
-- **공개 읽기 API와 공개 내보내기**는 그대로다. MDX만 있고 `doc`은 없다(공개 내보내기는 새 `formatVersion` 값만 달라진다).
+- **공개 읽기 API와 공개 내보내기**도 문서를 돌려준다. `cms.read.getEntry` / `listEntries` / `getPreview`는 `entry.doc`(저장된 문서. 목록에서는 `body: true`일 때만, 아니면 `null`)과 `entry.refs`
+  (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } } }`: 그 문서의 이미지와 파일을 그리는 데 필요한 값. 문서가 쓰는 미디어만 들어 있고, `collectRefs(doc)`가 id 목록을 준다)를 담는다.
+  `entry.mdx`는 남아 있고 deprecated다. `GET /api/cms/v1/public/entries/:collection/:slug`는 `body`(MDX 텍스트, deprecated) 옆에 `doc`과 `refs`를 더하고, 목록에는 없다.
+  공개 내보내기는 각 `published.json`에 `mdx` 옆으로 `doc`을 담고(문서가 없는 본문은 `null`), 다이제스트도 이를 포함한다. 파싱되지 않는 초안의 미리보기는 `doc: null`이다.
 
 ### 문법 확장 만들기(실험적)
 
@@ -566,10 +569,14 @@ codeBlock: {
 ```tsx
 import { CmsContent, renderDocument, tableOfContents, type DocumentComponents } from "@monti-cms/core/render";
 
-const { content, toc, unknown } = await renderDocument(doc, { locale, imageResolver, components });
-// 서버 컴포넌트에서는:
-<CmsContent doc={doc} locale={locale} imageResolver={imageResolver} components={components} />;
-tableOfContents(doc); // 2·3단계 제목, 같은 앵커, React 없음
+const entry = (await cms.read.getEntry({ collection: "post", slug, locale })).entry; // 문서와 refs
+// 서버 컴포넌트에서는: 이미지와 파일은 entry.refs에서, 언어는 entry.locale에서 가져온다
+<CmsContent entry={entry} components={components} />;
+tableOfContents(entry.doc); // 2·3단계 제목, 같은 앵커, React 없음
+// 문서 하나만 있을 때:
+const { content, toc, unknown } = await renderDocument(doc, { locale, refs, components });
+<CmsContent doc={doc} refs={refs} locale={locale} components={components} />;
+// `imageResolver`도 그대로 동작하고 `refs`보다 우선한다. 주소를 사이트가 직접 풀 때 쓴다
 ```
 
 - **두 단계.** 비동기 선처리가 문서를 한 번 훑고(제목 앵커와 목차, 각주 번호, 모든 코드 블록의 Shiki 강조, 모든 수식의 KaTeX 출력), 그다음 동기 순수 렌더가 노드를 요소로 바꾼다.

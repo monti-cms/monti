@@ -24,6 +24,8 @@ export interface PublishedEntryRecord {
 	readonly metadata: EntryMetadata;
 	/** An empty string in list reads with `includeBody: false`. */
 	readonly mdx: string;
+	/** The stored document of the body. `null` in list reads with `includeBody: false`, and for a draft that has no document (it does not parse). */
+	readonly doc: StoredDocument | null;
 	readonly publishedAt: Date | null;
 	readonly updatedAt: Date;
 }
