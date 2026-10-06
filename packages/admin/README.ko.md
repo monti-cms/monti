@@ -247,7 +247,7 @@ export default defineAdminPlugin({
 | `/next` | 관리자 레이아웃·페이지(앱 라우트에서 내보낸다) |
 | `/editor` | 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
 | `/blocks` | 블록 편집 화면 부품(도구 줄·설정 팝오버·속성 입력 칸) |
-| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`·`useBlockEditor`)·블록 화면 컴포넌트 `Content`·`BlockFrame`·`EditorResult`·`EditorError` |
+| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`·`useBlockEditor`·`useEntryEditor`)·블록 화면 컴포넌트 `Content`·`BlockFrame`·`EditorResult`·`EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
@@ -279,6 +279,17 @@ export default defineAdminPlugin({
 문서 변경 한 번(되돌리기 한 번)으로 묶는다. 예를 들어 탭 이름을 바꾸면서 그 탭을 가리키는 기본 탭도 함께 바꿀 때 쓴다. `raw`(`{ editor, node, getPos }`)는 하나뿐인 탈출구이자
 Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않다. `<Content />`는 편집 가능한 중첩 본문을 그리고(`visibleChild`로 열린 탭처럼 자식 하나만 보인다),
 `<BlockFrame />`은 선택 테두리와 마우스 올림 범위를 가진 바깥 요소다. 자식 블록은 `[data-cms-block-content]`의 첫 요소 안에 놓인다.
+
+`useEntryEditor(options)`는 화면을 뺀 항목 편집기다. 불러오기, 브라우저 복구본, 명시적 서버 저장, 발행, 상태 변경(보관·휴지통·복원), 복구와 충돌 상태를 맡는다.
+**서버 자동 저장이 아니다.** 편집하는 동안에는 브라우저에만 복구본이 남고(IndexedDB, 입력이 멈춘 뒤 기록하며 서버로 보내지 않는다),
+서버 초안은 `save()`·`publish()`·상태 변경을 실행할 때만 바뀐다. 서버에 무엇이 있는지는 `saveStatus`(`saved`·`dirty`·`saving`·`local-only`·`conflict` …)가 말해 준다.
+상태는 `load`(`loading`·`ready`·`error`, 항목 컬렉션이면 화면이 따라가야 할 `redirect`. 훅은 화면을 옮기지 않는다), `entry`, `form`, `saveStatus`, `saveError`,
+`hasUnsavedChanges`, `publishIssues`, `recovery`(열 때 발견한 브라우저 복구본), `conflict`(다른 곳에서 먼저 저장함)다. 명령은 `setForm`, `setBody`, `save`, `retry`, `publish`,
+`changeStatus`, `duplicate`, `deletePermanently`, `restoreRecovery`·`discardRecovery`, 충돌을 푸는 `overwriteWithMine`·`reload`이며,
+충돌은 페이지를 새로고침하지 않고 그 자리에서 해결한다. 화면을 `EntryEditorProvider`로 감싸면(`useField`가 읽는 `EntryFormProvider`를 함께 제공한다)
+그 아래에서 `useEntryEditorContext()`로 편집기를 읽고, 값 하나만 보고 다시 그리려면 `useEntryEditorContext((editor) => editor.saveStatus)`처럼 쓴다.
+서버 호출과 복구본 저장소는 테스트를 위해 `client`·`recoveryStore` 옵션으로 바꿀 수 있다. 기본 항목 편집 화면(`EntryEditorShell`)이 이 훅 위에 만들어져 있고,
+토스트·확인 대화상자·화면 이동은 그 화면이 맡는다.
 
 ## 스타일
 

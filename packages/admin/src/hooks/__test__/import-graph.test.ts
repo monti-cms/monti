@@ -48,6 +48,23 @@ function filesUnder(dir: string): string[] {
 	});
 }
 
+/**
+ * Hooks do not navigate or touch the address bar: no `router`, no `window.open`, no `window.history`, no `location` change or reload.
+ * (`next/navigation` is already forbidden above; this catches the same thing done through `window`.)
+ */
+const NAVIGATION =
+	/\bwindow\.(?:open|history|location)\b|\blocation\.(?:reload|assign|replace|href\s*=)|\bhistory\.(?:push|replace)State\b/;
+
+/** Lists the files of the graph whose code (comments left out) navigates. */
+function findNavigation(files: string[], srcRoot: string): string[] {
+	return files.filter((file) => {
+		const code = readFileSync(path.join(srcRoot, file), "utf8")
+			.replace(/\/\*[\s\S]*?\*\//g, "")
+			.replace(/(^|[^:])\/\/.*$/gm, "$1");
+		return NAVIGATION.test(code);
+	});
+}
+
 /** Walks the import graph from `roots` and lists every forbidden import as `file -> specifier`. */
 function findViolations(roots: string[], srcRoot: string): { violations: string[]; visited: string[] } {
 	const visited = new Set<string>();
@@ -79,11 +96,39 @@ describe("hooks import graph", () => {
 		const roots = filesUnder(path.join(SRC, "hooks"));
 		expect(roots.map((file) => path.relative(SRC, file))).toContain("hooks/public.ts");
 		const { violations, visited } = findViolations(roots, SRC);
-		// The graph reaches the hooks that `public.ts` re-exports: the slot hook, the field hook and the block editor.
+		// The graph reaches the hooks that `public.ts` re-exports: the slot hook, the field hook, the block editor and the entry editor.
 		expect(visited).toContain("slots/use-slot-actions.ts");
 		expect(visited).toContain("editor/blocks/use-block-editor.tsx");
 		expect(visited).toContain("screens/entries/use-field.tsx");
+		expect(visited).toContain("screens/entries/use-entry-editor.tsx");
+		expect(visited).toContain("screens/entries/entry-editor-store.ts");
 		expect(violations).toEqual([]);
+	});
+
+	it("no file in the graph navigates: no window.open, window.history, window.location or reload", () => {
+		const { visited } = findViolations(filesUnder(path.join(SRC, "hooks")), SRC);
+		expect(findNavigation(visited, SRC)).toEqual([]);
+	});
+
+	it("the navigation scan catches each way of leaving the page", () => {
+		const dir = mkdtempSync(path.join(tmpdir(), "hooks-nav-"));
+		const cases = [
+			"window.location.reload();",
+			"window.history.replaceState({}, '', '/x');",
+			"window.open(href);",
+			"location.reload();",
+			"history.pushState({}, '', '/x');",
+		];
+		const files = cases.map((code, index) => {
+			const name = `case-${index}.ts`;
+			writeFileSync(path.join(dir, name), `export const run = () => { ${code} };\n`);
+			return name;
+		});
+		writeFileSync(
+			path.join(dir, "clean.ts"),
+			"// window.location.reload() is only a comment here\nexport const ok = 1;\n",
+		);
+		expect(findNavigation([...files, "clean.ts"], dir)).toEqual(files);
 	});
 
 	it("the scan itself catches forbidden imports, direct and through a re-export chain", () => {
