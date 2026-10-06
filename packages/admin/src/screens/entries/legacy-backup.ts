@@ -5,7 +5,6 @@ import {
 	type StoredDocument,
 	unparsedDocument,
 } from "@monti-cms/core/document";
-import { mdxBrowserFormat } from "../../mdx-source/format";
 import type { RecoveryRecord } from "./entry-editor-client";
 import { EMPTY_FORM, type EntryForm, formFingerprint } from "./entry-form";
 
@@ -13,14 +12,15 @@ import { EMPTY_FORM, type EntryForm, formFingerprint } from "./entry-form";
  * Recovery copies written before the form held the body as a document. They are in users' browsers (IndexedDB), so they are real stored data and must still
  * restore: such a copy has the body as MDX text in `snapshot.mdx` and no `snapshot.doc`.
  *
- * The text is read through the built-in `mdx` format, the one notation those copies were written in. A text that does not read is kept as it is, in an
- * `unparsed` document, which a draft can hold: nothing the user typed is lost.
+ * The admin knows no notation, so the text is kept as it is, in an `unparsed` document (format `mdx`), which a draft can hold: nothing the user typed is lost, and
+ * the MDX source panel (`@monti-cms/mdx`) reads it as a text again when the writer opens it.
  */
 
 /** The body of a legacy snapshot as a document, with block ids paired with the body of the entry it is a copy of. */
 const documentOfLegacy = (mdx: string, server: StoredDocument | undefined): StoredDocument => {
-	const read = mdxBrowserFormat.import(mdx);
-	const doc = read.ok ? read.doc : unparsedDocument(mdx, server, mdxBrowserFormat.name);
+	// An empty text is the empty body (a copy of a new entry with nothing typed), not an unreadable one.
+	if (mdx.trim() === "") return emptyStoredDocument();
+	const doc = unparsedDocument(mdx, server, "mdx");
 	return { ...doc, content: assignBlockIds(doc.content, [server?.content]) };
 };
 

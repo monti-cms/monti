@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /** Message dictionary of the MDX source panel. */
-export const mdxSourceMessages = defineMessages("cms-admin.mdx-source", {
+export const mdxSourceMessages = defineMessages("cms-mdx.source", {
 	en: {
 		toggle: "MDX source",
 		body: "MDX body",

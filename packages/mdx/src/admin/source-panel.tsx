@@ -1,5 +1,7 @@
 "use client";
 
+import { type BrowserFormat, type SourcePanelProps, useFormat } from "@monti-cms/admin";
+import { useLinkPaths } from "@monti-cms/admin/hooks";
 import { createTranslator } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
@@ -11,8 +13,6 @@ import {
 	unparsedDocument,
 } from "@monti-cms/core/document";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SourcePanelProps } from "../admin-components";
-import { useLinkPaths } from "../editor/link-targets";
 import { mdxBrowserFormat } from "./format";
 import { MdxSourceEditor } from "./mdx-source-editor";
 import { mdxSourceMessages } from "./messages";
@@ -23,7 +23,11 @@ const t = createTranslator(mdxSourceMessages);
 export const SOURCE_ERROR_ID = "cms-source-error";
 
 /** The 1-based line of the text where a top-level block of `doc` starts, or `null` when no block has this id (the text is that of `doc`). */
-export function lineOfBlock(doc: StoredDocument, blockId: string): number | null {
+export function lineOfBlock(
+	doc: StoredDocument,
+	blockId: string,
+	format: BrowserFormat = mdxBrowserFormat,
+): number | null {
 	if (isUnparsedDocument(doc)) return 1;
 	const index = doc.content.findIndex((top) => {
 		let found = false;
@@ -35,7 +39,7 @@ export function lineOfBlock(doc: StoredDocument, blockId: string): number | null
 	if (index < 0) return null;
 	if (index === 0) return 1;
 	// Blocks are written one after another with a blank line between them.
-	const before = mdxBrowserFormat.export({ ...doc, content: doc.content.slice(0, index) });
+	const before = format.export({ ...doc, content: doc.content.slice(0, index) });
 	return before.split("\n").length + 1;
 }
 
@@ -51,12 +55,14 @@ const offsetOfLine = (text: string, line: number): number => {
  * typed. A text that does not read becomes a document holding it as it is (one `unparsed` node), so a draft keeps it and no keystroke is lost.
  */
 export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposing }: SourcePanelProps) {
+	// The format the admin registered (with the site's syntax extensions); without one the panel reads standard MDX.
+	const format = useFormat("mdx") ?? mdxBrowserFormat;
 	// A link to an entry is written with the entry's address, so a writer sees and types real addresses. The entries are looked up (the way the link bubble does), and the
 	// text is written again when their addresses arrive, unless it was edited meanwhile. A link that cannot be resolved keeps its id (`entry:<id>`).
 	const ids = useMemo(() => entryLinkIds(doc.content), [doc]);
 	const pathOf = useLinkPaths(ids);
 	const resolved = ids.map((id) => pathOf(id) ?? "").join("|");
-	const write = (value: StoredDocument) => mdxBrowserFormat.export(value, { link: pathOf });
+	const write = (value: StoredDocument) => format.export(value, { link: pathOf });
 	const [text, setText] = useState(() => write(doc));
 	const written = useRef(text);
 	const [failed, setFailed] = useState(() => isUnparsedDocument(doc));
@@ -73,7 +79,7 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 		setText(source);
 		const unreadable = isUnparsedDocument(doc);
 		setFailed(unreadable);
-		const read = unreadable ? mdxBrowserFormat.import(source) : null;
+		const read = unreadable ? format.import(source) : null;
 		onChange(doc, read && !read.ok ? read.issues : []);
 	}, [doc]);
 
@@ -89,7 +95,7 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 
 	const change = (next: string) => {
 		setText(next);
-		const read = mdxBrowserFormat.import(next);
+		const read = format.import(next);
 		if (read.ok) {
 			// A link typed with the address of an entry the body already links to is that link (the server turns other paths into ids on save).
 			const entryOf = new Map(ids.flatMap((id) => (pathOf(id) ? [[pathOf(id) as string, id] as const] : [])));
@@ -104,7 +110,7 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 			onChange(merged, read.warnings);
 			return;
 		}
-		const kept = unparsedDocument(next, doc, mdxBrowserFormat.name);
+		const kept = unparsedDocument(next, doc, format.name);
 		known.current = kept;
 		setFailed(true);
 		onChange(kept, read.issues);
@@ -115,7 +121,7 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 	useEffect(() => {
 		if (!focusBlock) return;
 		const textarea = textareaRef.current;
-		const line = lineOfBlock(known.current ?? doc, focusBlock);
+		const line = lineOfBlock(known.current ?? doc, focusBlock, format);
 		if (!textarea || line === null) return;
 		const offset = offsetOfLine(textarea.value, line);
 		textarea.focus();

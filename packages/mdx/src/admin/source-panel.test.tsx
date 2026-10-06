@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { CmsAdminComponentsProvider, useCmsAdminComponents, useFormat } from "@monti-cms/admin";
+import { CmsApiError } from "@monti-cms/admin/api";
 import {
 	contentPath,
 	createTranslator,
@@ -5,17 +8,34 @@ import {
 	LINKABLE_COLLECTIONS,
 	localizePath,
 } from "@monti-cms/core/client";
-import { isBlockId, STORED_DOCUMENT_VERSION, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
+import { isBlockId, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import type { Root } from "mdast";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { CmsAdminComponentsProvider, useCmsAdminComponents, useFormat, useSourceFormat } from "../admin-components";
-import { resetLinkTargets } from "../editor/link-targets";
-import { docOf, mdxOfDoc } from "../test/mdx";
+import { visit } from "unist-util-visit";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { SyntaxExtension } from "../syntax";
+import { docOfMdx as docOf } from "../testing";
 import { mdxBrowserFormat } from "./format";
 import { mdxSourceMessages } from "./messages";
-import { MdxSourceProvider } from "./provider";
+import { MdxAdminProvider } from "./provider";
 import { lineOfBlock, MdxSourcePanel } from "./source-panel";
+
+const mocks = vi.hoisted(() => ({ cmsFetch: vi.fn(), syntax: [] as readonly unknown[] }));
+
+// The lookups of the entries a link points to go through the admin API; the panel reads the answers the test gives.
+vi.mock("@monti-cms/admin/api", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/admin/api")>()),
+	cmsFetch: mocks.cmsFetch,
+}));
+
+// The syntax extensions the site gave to `mdx({ syntax })`.
+vi.mock("../syntax-config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../syntax-config")>()),
+	configuredSyntax: () => mocks.syntax,
+}));
+
+const mdxOfDoc = (doc: StoredDocument): string => mdxBrowserFormat.export(doc);
 
 const t = createTranslator(mdxSourceMessages);
 
@@ -136,54 +156,47 @@ describe("the MDX source panel", () => {
 });
 
 describe("internal links in the source text", () => {
-	const ID = "6f1c0b0e-3c1d-4a0e-9f5a-0d9c2f1e7a11";
 	const COLLECTION = LINKABLE_COLLECTIONS[0] as string;
 	const PATH = localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "details") as string);
+	// Every test links to an entry of its own: the editor remembers what it looked up, so a shared id would carry an answer from one test to the next.
+	let counter = 0;
+	let ID = "";
 	const linked = () => docOf(`앞 [상세 글](entry:${ID}) 뒤\n`);
-	const answer = (ok: boolean) =>
-		vi.fn(async () =>
-			ok
-				? {
-						ok: true,
-						status: 200,
-						json: async () => ({
-							id: ID,
-							collection: COLLECTION,
-							status: "published",
-							locale: DEFAULT_LOCALE,
-							workingSlug: "details",
-							publishedSlug: "details",
-							working: { metadata: { title: "상세" } },
-						}),
-					}
-				: { ok: false, status: 404, json: async () => ({ code: "not_found" }) },
-		);
+	const answerFound = () =>
+		mocks.cmsFetch.mockResolvedValue({
+			id: ID,
+			collection: COLLECTION,
+			status: "published",
+			locale: DEFAULT_LOCALE,
+			workingSlug: "details",
+			publishedSlug: "details",
+			working: { metadata: { title: "상세" } },
+		});
+	const answerMissing = () =>
+		mocks.cmsFetch.mockRejectedValue(new CmsApiError(404, "not_found", "not found", [], { code: "not_found" }));
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-		resetLinkTargets();
+	beforeEach(() => {
+		counter += 1;
+		ID = `6f1c0b0e-3c1d-4a0e-9f5a-${String(counter).padStart(12, "0")}`;
+		mocks.cmsFetch.mockReset();
 	});
 
 	it("are written with the entry's address once it is looked up, not as entry:<id>", async () => {
-		resetLinkTargets();
-		vi.stubGlobal("fetch", answer(true));
+		answerFound();
 		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
 		await waitFor(() => expect(textarea().value).toContain(`[상세 글](${PATH})`));
 		expect(textarea().value).not.toContain("entry:");
 	});
 
 	it("keep entry:<id> when the entry cannot be resolved", async () => {
-		resetLinkTargets();
-		const fetchMock = answer(false);
-		vi.stubGlobal("fetch", fetchMock);
+		answerMissing();
 		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
-		await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+		await waitFor(() => expect(mocks.cmsFetch).toHaveBeenCalled());
 		expect(textarea().value).toContain(`(entry:${ID})`);
 	});
 
 	it("an address typed for the entry already linked stays that link; any other typed path stays an href for the server", async () => {
-		resetLinkTargets();
-		vi.stubGlobal("fetch", answer(true));
+		answerFound();
 		const onChange = vi.fn();
 		render(<MdxSourcePanel doc={linked()} onChange={onChange} />);
 		await waitFor(() => expect(textarea().value).toContain(PATH));
@@ -195,49 +208,71 @@ describe("internal links in the source text", () => {
 });
 
 describe("registering the source panel and the format", () => {
-	it("MdxSourceProvider registers the mdx format and one source panel for it", () => {
-		const { result } = renderHook(() => useCmsAdminComponents(), { wrapper: MdxSourceProvider });
-		expect(result.current.sourcePanels?.map((panel) => panel.format)).toEqual(["mdx"]);
-		expect(result.current.sourcePanels?.[0]?.Panel).toBe(MdxSourcePanel);
-		expect(result.current.formats?.mdx).toBe(mdxBrowserFormat);
+	// An extension for a made-up notation: `@@word@@` becomes an underline element.
+	const atNotation: SyntaxExtension = {
+		name: "at",
+		remarkPlugins: [
+			() => (tree: Root) => {
+				visit(tree, "text", (node, index, parent) => {
+					const match = /@@(\w+)@@/.exec(node.value);
+					if (!match || index == null || !parent) return;
+					parent.children.splice(index, 1, {
+						type: "mdxJsxTextElement",
+						name: "u",
+						attributes: [],
+						children: [{ type: "text", value: match[1] ?? "" }],
+					} as never);
+				});
+			},
+		],
+	};
+
+	it("MdxAdminProvider registers one source panel for mdx, which is MdxSourcePanel", () => {
+		const { result } = renderHook(() => useCmsAdminComponents(), { wrapper: MdxAdminProvider });
+		const panels = result.current.sourcePanels?.filter((panel) => panel.format === "mdx") ?? [];
+		expect(panels).toHaveLength(1);
+		expect(panels[0]?.Panel).toBe(MdxSourcePanel);
 	});
 
-	it("useFormat finds a format by name, and has none when nothing registered it", () => {
+	it("MdxAdminProvider registers the mdx format, found by name and absent without the provider", () => {
 		expect(renderHook(() => useFormat("mdx")).result.current).toBeUndefined();
-		expect(renderHook(() => useFormat("mdx"), { wrapper: MdxSourceProvider }).result.current).toBe(mdxBrowserFormat);
-		expect(renderHook(() => useFormat("markdown"), { wrapper: MdxSourceProvider }).result.current).toBeUndefined();
+		const { result } = renderHook(() => useFormat("mdx"), { wrapper: MdxAdminProvider });
+		expect(result.current?.name).toBe("mdx");
+		expect(renderHook(() => useFormat("markdown"), { wrapper: MdxAdminProvider }).result.current).toBeUndefined();
 	});
 
-	it("useSourceFormat is the format of the registered panel, and nothing without one", () => {
-		expect(renderHook(() => useSourceFormat()).result.current).toBeUndefined();
-		expect(renderHook(() => useSourceFormat(), { wrapper: MdxSourceProvider }).result.current).toBe(mdxBrowserFormat);
+	it("the registered format reads with the syntax extensions of mdx({ syntax })", async () => {
+		// The provider keeps what it registered for the page, so the syntax is set before the module is read again.
+		vi.resetModules();
+		mocks.syntax = [atNotation];
+		try {
+			const { MdxAdminProvider: Fresh } = await import("./provider");
+			// The modules are read again, so the hook comes from the same copy of the admin package as the provider.
+			const { useFormat: useFreshFormat } = await import("@monti-cms/admin");
+			const { result } = renderHook(() => useFreshFormat("mdx"), { wrapper: Fresh });
+			const read = result.current?.import("앞 @@word@@ 뒤");
+			expect(read?.ok).toBe(true);
+			expect(JSON.stringify(read && "doc" in read ? read.doc : null)).toContain("underline");
+			// Without the extension the notation is ordinary text.
+			const plain = mdxBrowserFormat.import("앞 @@word@@ 뒤");
+			expect(JSON.stringify(plain.ok ? plain.doc : null)).toContain("@@word@@");
+		} finally {
+			mocks.syntax = [];
+			vi.resetModules();
+		}
 	});
 
-	it("panels and formats add up across providers, outer ones first", () => {
+	it("adds its panel to the ones other providers registered", () => {
 		const Other = () => null;
-		const markdown = {
-			name: "markdown",
-			label: "Markdown",
-			export: () => "",
-			import: () => ({
-				ok: true as const,
-				doc: { type: "doc" as const, version: STORED_DOCUMENT_VERSION, content: [] },
-				warnings: [],
-			}),
-		};
 		const { result } = renderHook(() => useCmsAdminComponents(), {
 			wrapper: ({ children }) => (
-				<CmsAdminComponentsProvider
-					components={{
-						sourcePanels: [{ format: "markdown", label: "Markdown", Panel: Other }],
-						formats: { markdown },
-					}}
-				>
-					<MdxSourceProvider>{children}</MdxSourceProvider>
+				<CmsAdminComponentsProvider components={{ sourcePanels: [{ format: "other", label: "Other", Panel: Other }] }}>
+					<MdxAdminProvider>{children}</MdxAdminProvider>
 				</CmsAdminComponentsProvider>
 			),
 		});
-		expect(result.current.sourcePanels?.map((panel) => panel.format)).toEqual(["markdown", "mdx"]);
-		expect(Object.keys(result.current.formats ?? {}).sort()).toEqual(["markdown", "mdx"]);
+		const formats = result.current.sourcePanels?.map((panel) => panel.format) ?? [];
+		expect(formats).toContain("other");
+		expect(formats).toContain("mdx");
 	});
 });

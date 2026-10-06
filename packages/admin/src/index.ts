@@ -16,6 +16,7 @@ export {
 	type FieldInputParts,
 	type FieldViewProps,
 	type ListCellProps,
+	SOURCE_ERROR_ID,
 	type SourcePanelProps,
 	type SourcePanelRegistration,
 	useCmsAdminComponents,

@@ -39,11 +39,10 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
+import { SOURCE_ERROR_ID, useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
-import { SOURCE_ERROR_ID } from "../../mdx-source";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button, buttonVariants } from "../../ui/button";
 import {

@@ -1,18 +1,29 @@
 "use client";
 
 import { type ComponentProps, type CSSProperties, useEffect, useMemo, useState } from "react";
-import { getShikiHighlighter } from "../editor/code-block/highlight-plugin";
-import { cn } from "../lib/utils/cn";
 
 type Token = { content: string; light?: string; dark?: string };
 type HighlightedLine = { text: string; tokens: Token[] };
 
+const THEMES = { light: "one-light", dark: "one-dark-pro" } as const;
+
+type Highlighter = Awaited<ReturnType<typeof import("shiki")["createHighlighter"]>>;
+let highlighterPromise: Promise<Highlighter> | undefined;
+
+/** The Shiki highlighter of the source field, created on first use (it is a heavy import, so it loads only when the panel is shown). */
+const getHighlighter = (): Promise<Highlighter> => {
+	highlighterPromise ??= import("shiki").then(({ createHighlighter }) =>
+		createHighlighter({ themes: [THEMES.light, THEMES.dark], langs: ["mdx"] }),
+	);
+	return highlighterPromise;
+};
+
 /** A token colored per line. The color uses the light theme value and switches to `--shiki-dark` in the dark theme. */
 async function highlightMdx(source: string): Promise<HighlightedLine[]> {
-	const highlighter = await getShikiHighlighter();
+	const highlighter = await getHighlighter();
 	const lines = highlighter.codeToTokensWithThemes(source, {
 		lang: "mdx",
-		themes: { light: "one-light", dark: "one-dark-pro" },
+		themes: THEMES,
 	});
 	return lines.map((line) => ({
 		text: line.map((token) => token.content).join(""),
@@ -58,7 +69,7 @@ export function MdxSourceEditor({
 	const lines = useMemo(() => value.split("\n"), [value]);
 
 	return (
-		<div className={cn("grid font-mono text-sm leading-6", className)}>
+		<div className={["grid font-mono text-sm leading-6", className].filter(Boolean).join(" ")}>
 			<pre
 				aria-hidden
 				className="pointer-events-none col-start-1 row-start-1 m-0 min-w-0 whitespace-pre-wrap break-words bg-transparent p-0 font-[inherit] text-cms-foreground cms-dark:[&_span[style]]:text-(--shiki-dark)!"

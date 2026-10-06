@@ -1,6 +1,6 @@
+import type { BrowserFormat } from "@monti-cms/admin";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
-import type { BrowserFormat } from "../browser-format";
 import { mdxBrowserFormat } from "./format";
 
 export type EditorMode = "visual" | "source";
