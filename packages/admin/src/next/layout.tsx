@@ -1,5 +1,5 @@
 import { createTranslator, SITE_NAME } from "@monti-cms/core/client";
-import { isCmsMediaConfigured } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/runtime";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { loadAdminPlugins } from "../plugins";
@@ -19,6 +19,8 @@ export const cmsAdminMetadata: Metadata = {
 };
 
 export type CmsAdminLayoutProps = {
+	/** The CMS instance: the `cms` exported by the app's server file. */
+	cms: Cms;
 	children: ReactNode;
 	/**
 	 * Whether to render the admin UI's theme provider (`next-themes`). Default `true`. Set `false` if the site already has a theme provider.
@@ -40,9 +42,10 @@ export type CmsAdminLayoutProps = {
 /**
  * Admin UI layout. Rendered by the app's `app/(admin)/admin/layout.tsx`. Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
- * If the site already has them, turn them off with `<CmsAdminLayout themeProvider={false} toaster={false}>`.
+ * If the site already has them, turn them off with `<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>`.
  */
 export async function CmsAdminLayout({
+	cms,
 	children,
 	themeProvider = true,
 	themeStorageKey,
@@ -59,7 +62,7 @@ export async function CmsAdminLayout({
 	);
 	const app = (
 		<AdminQueryProvider>
-			<AdminFeaturesProvider features={{ media: isCmsMediaConfigured() }}>{content}</AdminFeaturesProvider>
+			<AdminFeaturesProvider features={{ media: cms.isMediaConfigured }}>{content}</AdminFeaturesProvider>
 		</AdminQueryProvider>
 	);
 	return themeProvider ? <AdminThemeProvider storageKey={themeStorageKey}>{app}</AdminThemeProvider> : app;
