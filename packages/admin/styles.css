@@ -10,6 +10,9 @@
  * Color variables (`--cms-*`) apply only to documents that contain the admin UI. Radius (`--radius*`) also changes only in that document.
  */
 
+/* KaTeX styles and fonts for the math preview in the editor. Sites do not import KaTeX CSS themselves. */
+@import "katex/dist/katex.min.css";
+
 /* Finds Tailwind classes in the components of the published bundle (inside the workspace the app reads the sources directly). */
 @source "./dist";
 

@@ -4,6 +4,9 @@
  * Sites that override the default components (`cms-*` classes) can skip those parts.
  */
 
+/* KaTeX styles and fonts (typeset math is drawn with them). Sites do not import KaTeX CSS themselves. */
+@import "katex/dist/katex.min.css";
+
 /* Let Tailwind scan the classes of code line effects (the core's line effect definitions). Reads the source inside the repo and dist in an installed package. */
 @source "./src/annotation";
 @source "./dist/annotation";
