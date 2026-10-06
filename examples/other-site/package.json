@@ -16,6 +16,7 @@
 		"@monti-cms/core": "file:vendor/monti-cms-core.tgz",
 		"@monti-cms/admin": "file:vendor/monti-cms-admin.tgz",
 		"@monti-cms/blocks": "file:vendor/monti-cms-blocks.tgz",
+		"@monti-cms/mdx": "file:vendor/monti-cms-mdx.tgz",
 		"@monti-cms/seo": "file:vendor/monti-cms-seo.tgz",
 		"@monti-cms/bareun": "file:vendor/monti-cms-bareun.tgz",
 		"@tanstack/react-query": "^5.104.0",

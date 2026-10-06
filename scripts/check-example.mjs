@@ -98,7 +98,7 @@ const allExtensions = exampleConfig
 		'import { blocks } from "@monti-cms/blocks";',
 		'import { aiPlugin } from "@monti-cms/ai";\nimport { blocks } from "@monti-cms/blocks";\nimport { bareun } from "@monti-cms/bareun";',
 	)
-	.replace(/plugins: \[[^\n]*\],/, "plugins: [...blocks(), seo(), aiPlugin(), bareun()],");
+	.replace(/plugins: \[[^\n]*\],/, "plugins: [mdx(), ...blocks(), seo(), aiPlugin(), bareun()],");
 if (allExtensions === exampleConfig || !allExtensions.includes("aiPlugin()")) {
 	throw new Error("check-example: could not rewrite cms.config.ts plugins for the all-extensions run");
 }
