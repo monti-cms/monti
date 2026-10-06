@@ -125,7 +125,7 @@ export const storedCodeBlockAttrs = (attrs: Record<string, CmsJsonValue>): Recor
 };
 
 /** The fence text of a stored code block: its code with the annotations written back as Monti annotation comments. */
-const fenceValue = (attrs: Record<string, CmsJsonValue>): string => {
+export const storedCodeBlockFence = (attrs: Record<string, CmsJsonValue>): string => {
 	const code = asString(attrs.code);
 	const annotations =
 		attrs.annotations && typeof attrs.annotations === "object" && !Array.isArray(attrs.annotations)
@@ -154,12 +154,25 @@ const fenceValue = (attrs: Record<string, CmsJsonValue>): string => {
 			}),
 		),
 	};
+	// Text offsets are into the whole code, as the parser keeps them. The writer takes a range that fits inside its line as the line's own, so an offset into the
+	// code is given as one into the line: otherwise a range on a later line that happens to fit (after a short first line) would be written where it is not.
+	const lineStarts: number[] = [];
+	let lineStart = 0;
+	for (const line of document.lines) {
+		lineStarts.push(lineStart);
+		lineStart += line.value.length + 1;
+	}
 	asRecords(annotations.text).forEach((item, order) => {
-		const line = document.lines[asNumber(item.line)];
+		const lineIndex = asNumber(item.line);
+		const line = document.lines[lineIndex];
+		const scope = item.scope === "document" ? "document" : "char";
+		const offset = scope === "char" ? (lineStarts[lineIndex] ?? 0) : 0;
+		const start = asNumber(item.start) - offset;
+		const end = asNumber(item.end) - offset;
 		line?.annotations.push({
-			scope: item.scope === "document" ? "document" : "char",
+			scope,
 			name: asString(item.name),
-			range: { start: asNumber(item.start), end: asNumber(item.end) },
+			range: start >= 0 ? { start, end } : { start: asNumber(item.start), end: asNumber(item.end) },
 			attributes: attributesOf(item.attrs),
 			priority: 0,
 			order,
@@ -171,7 +184,7 @@ const fenceValue = (attrs: Record<string, CmsJsonValue>): string => {
 
 /** The annotation document of a stored code block (the one `workingCodeBlockAttrs` keeps as `codeDocument`), for a renderer that needs only that. */
 export const codeBlockDocumentOf = (attrs: Record<string, CmsJsonValue>): CodeBlockDocument =>
-	parseFence(asString(attrs.language), asString(attrs.meta), fenceValue(attrs));
+	parseFence(asString(attrs.language), asString(attrs.meta), storedCodeBlockFence(attrs));
 
 /** Fields the code block node owns. A fence meta key with the same name (`value="x"`) must not overwrite them. */
 const OWN_FIELDS = new Set(["language", "meta", "value", "codeDocument"]);
@@ -183,7 +196,7 @@ const OWN_FIELDS = new Set(["language", "meta", "value", "codeDocument"]);
 export const workingCodeBlockAttrs = (attrs: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> => {
 	const language = asString(attrs.language);
 	const meta = asString(attrs.meta);
-	const value = fenceValue(attrs);
+	const value = storedCodeBlockFence(attrs);
 	const codeDocument = parseFence(language, meta, value);
 	const out: Record<string, CmsJsonValue> = {
 		language,
