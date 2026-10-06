@@ -26,6 +26,7 @@ export default {
 				"admin",
 				"ai",
 				"blocks",
+				"mdx",
 				"seo",
 				"bareun",
 				"syntax",
