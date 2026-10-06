@@ -1,5 +1,5 @@
-import { documentToMdx } from "@monti-cms/core/mdx";
 import { vi } from "vitest";
+import { docOf } from "../../../test/mdx";
 import { CmsApiError } from "../../admin-api";
 import type { CmsIssue } from "../../api-error-message";
 import type { EntryEditorClient, RecoveryRecord, RecoveryStore } from "../entry-editor-client";
@@ -17,7 +17,7 @@ export const ENTRY: EntryData = {
 	folderId: null,
 	workingSlug: "test",
 	publishedSlug: null,
-	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "요약" }, mdx: "첫째 줄\n둘째 줄" },
+	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "요약" }, doc: docOf("첫째 줄\n둘째 줄") },
 };
 
 export const conflictError = () => new CmsApiError(409, "conflict", "someone saved first", [], { code: "conflict" });
@@ -42,7 +42,7 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				collection: input.collection,
 				version: 1,
 				workingSlug: input.slug,
-				working: { metadata: input.metadata, mdx: documentToMdx(input.doc), doc: input.doc },
+				working: { metadata: input.metadata, doc: input.doc },
 			};
 			return structuredClone(server.current);
 		}),
@@ -52,7 +52,7 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				...server.current,
 				version: server.current.version + 1,
 				workingSlug: input.slug,
-				working: { metadata: input.metadata, mdx: documentToMdx(input.doc), doc: input.doc },
+				working: { metadata: input.metadata, doc: input.doc },
 			};
 			return structuredClone(server.current);
 		}),

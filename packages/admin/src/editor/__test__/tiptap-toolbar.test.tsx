@@ -1,7 +1,9 @@
 import { createTranslator } from "@monti-cms/core/client";
+import type { StoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { docOf, mdxOfDoc } from "../../test/mdx";
 import { editorMessages } from "../messages";
 import { CmsEditor } from "../tiptap-editor";
 
@@ -25,7 +27,7 @@ afterEach(() => {
 
 const renderEditor = async () => {
 	const onChange = vi.fn();
-	render(<CmsEditor content="안녕하세요" onChange={onChange} />);
+	render(<CmsEditor doc={docOf("안녕하세요")} onChange={onChange} />);
 	await screen.findByRole("toolbar", { name: t("toolbar.format") });
 	return onChange;
 };
@@ -33,7 +35,10 @@ const toolbarButtonNames = (toolbar: HTMLElement) =>
 	within(toolbar)
 		.getAllByRole("button")
 		.map((button) => button.getAttribute("aria-label") || button.textContent);
-const savedText = (onChange: ReturnType<typeof vi.fn>) => String(onChange.mock.lastCall?.[0] ?? "");
+const savedText = (onChange: ReturnType<typeof vi.fn>) => {
+	const doc: StoredDocument | undefined = onChange.mock.lastCall?.[0];
+	return doc ? mdxOfDoc(doc) : "";
+};
 
 describe("formatting toolbar group", () => {
 	it("alignment and script are single-icon dropdowns with no individual buttons", async () => {
@@ -52,7 +57,7 @@ describe("formatting toolbar group", () => {
 		let editor: Editor | null = null;
 		render(
 			<CmsEditor
-				content={"안녕하세요\n\n```ts\nconst a = 1;\n```"}
+				doc={docOf("안녕하세요\n\n```ts\nconst a = 1;\n```")}
 				onChange={vi.fn()}
 				onEditor={(ready) => {
 					editor = ready;
@@ -91,7 +96,7 @@ describe("formatting toolbar group", () => {
 		let editor: Editor | null = null;
 		render(
 			<CmsEditor
-				content="[주소](https://example.com) 뒤"
+				doc={docOf("[주소](https://example.com) 뒤")}
 				onChange={vi.fn()}
 				onEditor={(ready) => {
 					editor = ready;
@@ -100,11 +105,17 @@ describe("formatting toolbar group", () => {
 		);
 		const toolbar = await screen.findByRole("toolbar", { name: t("toolbar.format") });
 		await waitFor(() => expect(editor).not.toBeNull());
-		expect(
-			within(toolbar)
-				.getByRole("button", { name: t("toolbar.link") })
-				.getAttribute("aria-pressed"),
-		).toBe("false");
+		// After the link, in the text that follows it.
+		act(() => {
+			(editor as unknown as Editor).commands.setTextSelection(5);
+		});
+		await waitFor(() =>
+			expect(
+				within(toolbar)
+					.getByRole("button", { name: t("toolbar.link") })
+					.getAttribute("aria-pressed"),
+			).toBe("false"),
+		);
 		act(() => {
 			(editor as unknown as Editor).commands.setTextSelection(2);
 		});

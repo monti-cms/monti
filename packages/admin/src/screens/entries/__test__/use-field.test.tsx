@@ -10,6 +10,7 @@ import {
 	useSlotActions,
 } from "../../../hooks/public";
 import { SlotRegistryProvider } from "../../../slots/registry";
+import { docOf } from "../../../test/mdx";
 import { EMPTY_FORM, type EntryForm, type EntryFormPatch } from "../entry-form";
 
 afterEach(cleanup);
@@ -166,7 +167,7 @@ describe("useField", () => {
 	});
 
 	it("builds the slot request of the field: scope, collection and a context read when the action runs", () => {
-		let form: EntryForm = { ...EMPTY_FORM, title: "Title v1", mdx: "Body", tagIds: ["a"] };
+		let form: EntryForm = { ...EMPTY_FORM, title: "Title v1", doc: docOf("Body"), tagIds: ["a"] };
 		const setForm = vi.fn();
 		const { result, rerender } = renderHook(() => useField("tagIds"), {
 			wrapper: ({ children }: { children: ReactNode }) => (
@@ -194,7 +195,7 @@ describe("useField", () => {
 			entryId: "e1",
 			title: "Title v2",
 			summary: undefined,
-			body: "Body",
+			body: form.doc,
 			current: ["a", "b"],
 		});
 

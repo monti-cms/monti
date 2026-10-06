@@ -8,18 +8,12 @@ import {
 	slugFieldOf,
 	slugFromValues,
 } from "@monti-cms/core/client";
-import { bodyDocument, bodyFromMdx, type StoredDocument, withoutBlockIds } from "@monti-cms/core/mdx";
+import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore, type StateStore } from "../../hooks/store";
 import { CmsApiError, errorText } from "../admin-api";
 import type { CmsIssue } from "../api-error-message";
-import type {
-	EntryBodyPayload,
-	EntryEditorClient,
-	EntryStatusAction,
-	RecoveryRecord,
-	RecoveryStore,
-} from "./entry-editor-client";
+import type { EntryEditorClient, EntryStatusAction, RecoveryRecord, RecoveryStore } from "./entry-editor-client";
 import {
 	copyTitle,
 	EMPTY_FORM,
@@ -38,6 +32,7 @@ import {
 	translationSourceOf,
 	translationStateFromForm,
 } from "./entry-form";
+import { upgradeRecoveryRecord } from "./legacy-backup";
 import { backupKey } from "./local-backup";
 import { t } from "./translate";
 
@@ -242,8 +237,8 @@ export interface EntryEditor {
 	setSlug(slug: string): void;
 	/** Recomputes the slug from the field its definition names and un-touches it. */
 	regenerateSlug(): void;
-	/** The body from the body editor. The stored document is remembered, so the next save sends it (with block ids) while the form still holds that MDX. */
-	setBody(mdx: string, doc: StoredDocument | null): void;
+	/** The body from the body editor or a source panel: the stored document (with block ids), which the next save sends. */
+	setBody(doc: StoredDocument): void;
 	/** IME guard: a save waits (up to {@link COMPOSITION_WAIT_MS}) until composition ends. */
 	setComposing(composing: boolean): void;
 	/** Fills the empty `fillFromBody` fields from the body. Fails with `validation` (a `missing_field` issue) when a field has no body to come from. `publish` does this itself. */
@@ -277,7 +272,6 @@ export interface EntryEditor {
 }
 
 export interface EntryEditorCallbacks {
-	documentOf?: (mdx: string) => StoredDocument | null | undefined;
 	onSaved?: (entry: EntryData, info: { created: boolean }) => void;
 }
 
@@ -319,17 +313,6 @@ const failed = (error: EditorError): Failure => ({ ok: false, error });
 
 /** What a document says, without its block ids: two documents with the same key read the same. */
 const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
-
-/**
- * The body of a save request: always a document. The editor's own document when it made this MDX; otherwise the document the MDX reads as
- * (a text that cannot be read is one `unparsed` node, which only a draft can hold).
- */
-const bodyPayload = (mdx: string, doc: StoredDocument | null | undefined): EntryBodyPayload => {
-	if (doc) return { doc };
-	// The ids of a document read from text are new ones: dropped, so the server pairs the blocks with the body being replaced and they keep its ids.
-	const read = bodyDocument(bodyFromMdx(mdx));
-	return { doc: { ...read, content: withoutBlockIds(read.content) } };
-};
 
 /** Save and publish responses carry no translation group info. Keep what was received on load and update only this entry's status. */
 function keepTranslationGroup(current: EntryData | null, next: EntryData): Pick<EntryData, "translations" | "source"> {
@@ -406,7 +389,6 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		backupWrite: Promise.resolve() as Promise<void>,
 		pendingBackup: null as { snapshot: EntryForm; changeSeq: number } | null,
 		backupTimer: null as ReturnType<typeof setTimeout> | null,
-		editorBody: null as { mdx: string; doc: StoredDocument | null } | null,
 		recoveryRecord: null as RecoveryRecord | null,
 		generation: 0,
 	};
@@ -559,12 +541,6 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		return { ...patch, slug: slugFromValues(collection, { ...form, ...patch }) };
 	};
 
-	const documentFor = (mdx: string): StoredDocument | null | undefined => {
-		const own = callbacks().documentOf?.(mdx);
-		if (own !== undefined) return own;
-		return m.editorBody?.mdx === mdx ? m.editorBody.doc : undefined;
-	};
-
 	// ---- save
 
 	const performSave = (): Promise<EditorResult<EntrySaveOutcome>> => {
@@ -602,7 +578,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				const body = {
 					slug: snapshot.slug.trim() || null,
 					metadata: built.metadata,
-					...bodyPayload(snapshot.mdx, documentFor(snapshot.mdx)),
+					doc: snapshot.doc,
 					...(translation ? { translation } : {}),
 				};
 				const folderId = target.mode === "new" ? target.folderId : null;
@@ -716,10 +692,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		// A field filled from the body (`fillFromBody`) that is empty is generated from the body. If there is no body to generate from, it must be entered by hand.
 		for (const { name, field } of isCollection(collection) ? fillFromBodyFields(collection) : []) {
 			if (formText(state().form, name).trim()) continue;
-			const generated = bodyExcerpt(
-				documentFor(form.mdx) ?? bodyDocument(bodyFromMdx(form.mdx)),
-				fillFromBodyLength(field),
-			);
+			const generated = bodyExcerpt(form.doc, fillFromBodyLength(field));
 			if (!generated) {
 				const issue: CmsIssue = { code: "missing_field", message: field.label, path: name };
 				const error: EditorError = {
@@ -891,7 +864,8 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		const alive = () => generation === m.generation;
 		if (target.mode === "new") {
 			if (isItemCollection(target.collection)) return;
-			const backup = await safely(() => recoveryStore.get(backupKey(adminId, null, target.collection)), null);
+			const stored = await safely(() => recoveryStore.get(backupKey(adminId, null, target.collection)), null);
+			const backup = stored && upgradeRecoveryRecord(stored);
 			if (alive() && backup && backup.localFingerprint !== backup.baseFingerprint) offerRecovery(backup);
 			return;
 		}
@@ -900,7 +874,8 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			const loaded = await fetchAndApply(target.entryId, alive);
 			if (!loaded || !alive()) return;
 			const key = backupKey(adminId, loaded.id, loaded.collection);
-			const backup = await safely(() => recoveryStore.get(key), null);
+			const stored = await safely(() => recoveryStore.get(key), null);
+			const backup = stored && upgradeRecoveryRecord(stored, loaded.working.doc);
 			if (backup && alive()) {
 				if (backup.localFingerprint === formFingerprint(state().form)) {
 					await discardBackup(key);
@@ -943,10 +918,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			commit({ slugTouched: false });
 			applyForm({ slug: isCollection(collection) ? slugFromValues(collection, form) : "" });
 		},
-		setBody: (mdx: string, doc: StoredDocument | null) => {
-			m.editorBody = { mdx, doc };
-			applyForm({ mdx });
-		},
+		setBody: (doc: StoredDocument) => applyForm({ doc }),
 		setComposing,
 		fillFromBody,
 		save,

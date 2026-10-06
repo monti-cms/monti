@@ -1,4 +1,4 @@
-import type { CmsNode } from "@monti-cms/core/mdx";
+import type { CmsNode } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
 
 /** Functions the converter uses for recursive and inline conversion. Passed in by `tiptap-content.ts`. */

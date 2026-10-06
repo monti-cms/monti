@@ -1,8 +1,8 @@
 "use client";
 
 import { type ComponentProps, type CSSProperties, useEffect, useMemo, useState } from "react";
+import { getShikiHighlighter } from "../editor/code-block/highlight-plugin";
 import { cn } from "../lib/utils/cn";
-import { getShikiHighlighter } from "./code-block/highlight-plugin";
 
 type Token = { content: string; light?: string; dark?: string };
 type HighlightedLine = { text: string; tokens: Token[] };

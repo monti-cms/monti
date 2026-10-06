@@ -1,7 +1,7 @@
 "use client";
 
 import { adminUrl, cmsApiUrl } from "@monti-cms/core/client";
-import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/mdx";
+import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/document";
 import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
 import {
@@ -25,11 +25,11 @@ type Template = { id: string; name: string; doc: StoredDocument };
  * diff views pair blocks by them, so the template's own ids must not end up in many entries).
  */
 export function TemplateMenu({
-	currentMdx,
+	currentDoc,
 	disabled,
 	onApply,
 }: {
-	currentMdx: string;
+	currentDoc: StoredDocument;
 	disabled: boolean;
 	onApply: (doc: StoredDocument) => void;
 }) {
@@ -56,7 +56,7 @@ export function TemplateMenu({
 	const choose = async (template: Template) => {
 		setOpen(false);
 		if (
-			currentMdx.trim() &&
+			currentDoc.content.length > 0 &&
 			!(await confirm({
 				title: t("template.applyTitle"),
 				description: t("template.applyAsk", { name: template.name }),

@@ -2,7 +2,7 @@ import { Editor } from "@tiptap/core";
 import { CellSelection, cellAround } from "@tiptap/pm/tables";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
-import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
+import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { CMS_SCHEMA_EXTENSIONS } from "../tiptap-schema";
 
 let editor: Editor | null = null;
@@ -11,7 +11,7 @@ afterEach(() => {
 	editor = null;
 });
 
-const createTableEditor = (content: ReturnType<typeof mdxToTiptap>) => {
+const createTableEditor = (content: ReturnType<typeof tiptapOf>) => {
 	editor = new Editor({
 		extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }), ...CMS_SCHEMA_EXTENSIONS],
 		content,
@@ -36,7 +36,7 @@ describe("editor table cell merge and split", () => {
 			"</Table>",
 		].join("\n");
 
-		const instance = createTableEditor(mdxToTiptap(source));
+		const instance = createTableEditor(tiptapOf(source));
 		const json = instance.getJSON();
 		const table = json.content?.[0];
 		expect(table?.type).toBe("table");
@@ -49,13 +49,13 @@ describe("editor table cell merge and split", () => {
 		const cell1 = row1?.content?.[0] as typeof table;
 		expect(cell1?.attrs?.rowspan).toBe(2);
 
-		expect(tiptapToMdx(json).trim()).toBe(source);
+		expect(mdxOfTiptap(json).trim()).toBe(source);
 	});
 
 	it("merging cells (mergeCells) in a GFM table serializes it as an element table", () => {
 		const gfm = ["| a | b |", "| :-- | :-: |", "| 1 | 2 |"].join("\n");
 
-		const instance = createTableEditor(mdxToTiptap(gfm));
+		const instance = createTableEditor(tiptapOf(gfm));
 
 		// set the cell selection (CellSelection)
 		const doc = instance.state.doc;
@@ -93,7 +93,7 @@ describe("editor table cell merge and split", () => {
 		const merged = instance.commands.mergeCells();
 		expect(merged).toBe(true);
 
-		const resultMdx = tiptapToMdx(instance.getJSON()).trim();
+		const resultMdx = mdxOfTiptap(instance.getJSON()).trim();
 		expect(resultMdx).toContain("<Table");
 		expect(resultMdx).toContain('colspan="2"');
 	});
@@ -111,7 +111,7 @@ describe("editor table cell merge and split", () => {
 			"</Table>",
 		].join("\n");
 
-		const instance = createTableEditor(mdxToTiptap(source));
+		const instance = createTableEditor(tiptapOf(source));
 		const doc = instance.state.doc;
 
 		// select the merged first cell with a CellSelection
@@ -137,7 +137,7 @@ describe("editor table cell merge and split", () => {
 		const split = instance.commands.splitCell();
 		expect(split).toBe(true);
 
-		const resultMdx = tiptapToMdx(instance.getJSON()).trim();
+		const resultMdx = mdxOfTiptap(instance.getJSON()).trim();
 		// all merges are undone, so it returns to a GFM table
 		expect(resultMdx).not.toContain("<Table");
 		expect(resultMdx).toContain("| 제목 |");
@@ -146,7 +146,7 @@ describe("editor table cell merge and split", () => {
 	it("mergeCells and splitCell must be unavailable when the selection is not a CellSelection", () => {
 		const gfm = ["| a | b |", "| --- | --- |", "| 1 | 2 |"].join("\n");
 
-		const instance = createTableEditor(mdxToTiptap(gfm));
+		const instance = createTableEditor(tiptapOf(gfm));
 		// default cursor selection (TextSelection)
 		expect(instance.state.selection instanceof CellSelection).toBe(false);
 	});
@@ -164,7 +164,7 @@ describe("editor table cell merge and split", () => {
 			"</TableRow>",
 			"</Table>",
 		].join("\n");
-		expect(tiptapToMdx(mdxToTiptap(source)).trim()).toBe(source);
+		expect(mdxOfTiptap(tiptapOf(source)).trim()).toBe(source);
 	});
 
 	it("loads column widths as cell colwidth and saves adjusted widths as widths", () => {
@@ -179,19 +179,19 @@ describe("editor table cell merge and split", () => {
 			"</TableRow>",
 			"</Table>",
 		].join("\n");
-		const json = mdxToTiptap(source);
+		const json = tiptapOf(source);
 		const firstRow = json.content?.[0]?.content?.[0];
 		const secondRow = json.content?.[0]?.content?.[1];
 		expect(firstRow?.content?.[0]?.attrs?.colwidth).toEqual([80, 160]);
 		expect(secondRow?.content?.[1]?.attrs?.colwidth).toEqual([160]);
-		expect(tiptapToMdx(json).trim()).toBe(source);
+		expect(mdxOfTiptap(json).trim()).toBe(source);
 
 		// Adjusting column widths in a GFM table without merges saves it as an element table with the header made explicit.
 		const gfm = ["| a | b |", "| --- | --- |", "| 1 | 2 |"].join("\n");
-		const instance = createTableEditor(mdxToTiptap(gfm));
+		const instance = createTableEditor(tiptapOf(gfm));
 		instance.commands.setTextSelection(3);
 		instance.commands.setCellAttribute("colwidth", [150]);
-		expect(tiptapToMdx(instance.getJSON()).trim()).toBe(
+		expect(mdxOfTiptap(instance.getJSON()).trim()).toBe(
 			[
 				'<Table widths="150">',
 				"<TableRow>",

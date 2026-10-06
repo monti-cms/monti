@@ -220,8 +220,8 @@ const hasValuesMap = (node: PmNode) => node.attrs != null && "values" in node.at
 
 const typeHasValuesMap = (type: NodeType) => Boolean(type.spec.attrs && "values" in type.spec.attrs);
 
-/** Attributes that are not block values: the stored id, the preserved source attributes, and the source text of code blocks. */
-const INTERNAL_ATTRIBUTES: ReadonlySet<string> = new Set([BLOCK_ID_ATTRIBUTE, "originalAttributes", "value"]);
+/** Attributes that are not block values: the stored id and the source text of code blocks. */
+const INTERNAL_ATTRIBUTES: ReadonlySet<string> = new Set([BLOCK_ID_ATTRIBUTE, "value"]);
 
 const readValues = (node: PmNode): BlockValues => {
 	if (hasValuesMap(node)) return valuesOf(node);

@@ -1,11 +1,12 @@
-import { bodyFromMdx, type CmsNode, forEachBlock, isBlockId, type StoredDocument } from "@monti-cms/core/mdx";
+import { type CmsNode, forEachBlock, isBlockId, type StoredDocument } from "@monti-cms/core/document";
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { afterEach, describe, expect, it } from "vitest";
+import { docOf, tiptapOf } from "../../test/mdx";
 import { duplicateBlock } from "../block-commands";
 import { BLOCK_ID_ATTRIBUTE, findBlock } from "../block-ids";
 import { buildEditorExtensions } from "../extensions";
-import { mdxToTiptap, storedToTiptap, tiptapToStored } from "../tiptap-content";
+import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 const BODY = [
 	"# Title",
@@ -25,11 +26,7 @@ const BODY = [
 	"",
 ].join("\n");
 
-const stored = (mdx: string): StoredDocument => {
-	const { doc } = bodyFromMdx(mdx);
-	if (!doc) throw new Error("no document");
-	return doc;
-};
+const stored = (mdx: string): StoredDocument => docOf(mdx);
 
 /** Block ids of a stored document in block order, with each block's kind and text. */
 const blocksOf = (doc: StoredDocument | null) => {
@@ -110,7 +107,7 @@ describe("block ids in the editor", () => {
 	});
 
 	it("are given to every block of a body loaded from MDX, all different", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(BODY) });
+		const editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(BODY) });
 		editors.push(editor);
 		editor.commands.insertContent("x");
 		const ids: unknown[] = [];
@@ -123,7 +120,7 @@ describe("block ids in the editor", () => {
 
 	it("are paired with the previous document when MDX comes back from source mode", () => {
 		const doc = stored(BODY);
-		const content = mdxToTiptap(BODY.replace("Last paragraph", "Last paragraph, rewritten in source"), [doc]);
+		const content = tiptapOf(BODY.replace("Last paragraph", "Last paragraph, rewritten in source"), doc);
 		const editor = new Editor({ extensions: buildEditorExtensions(), content });
 		editors.push(editor);
 		const after = saved(editor);

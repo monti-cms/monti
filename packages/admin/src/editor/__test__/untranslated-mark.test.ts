@@ -1,7 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { buildEditorExtensions } from "../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
 
 let editor: Editor | null = null;
 afterEach(() => {
@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 const open = (mdx: string) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(mdx) });
+	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(mdx) });
 	return editor;
 };
 
@@ -25,7 +25,7 @@ describe("editing untranslated notice text", () => {
 	it("typing in a block with notice text clears the notice text and enters the input", () => {
 		const current = open("<Untranslated>첫 문단</Untranslated>\n\n<Untranslated>둘째 문단</Untranslated>\n");
 		typeAt(current, 3, "F");
-		expect(tiptapToMdx(current.getJSON())).toBe("F\n\n<Untranslated>둘째 문단</Untranslated>\n");
+		expect(mdxOfTiptap(current.getJSON())).toBe("F\n\n<Untranslated>둘째 문단</Untranslated>\n");
 	});
 
 	it("pressing clear removes the block's notice text at once", () => {
@@ -33,13 +33,13 @@ describe("editing untranslated notice text", () => {
 		current.commands.setTextSelection(4);
 		const { view } = current;
 		view.someProp("handleKeyDown", (handler) => handler(view, new KeyboardEvent("keydown", { key: "Backspace" })));
-		expect(tiptapToMdx(current.getJSON())).toBe("");
+		expect(mdxOfTiptap(current.getJSON())).toBe("");
 	});
 
 	it("a block without notice text accepts input as usual", () => {
 		const current = open("번역 끝\n");
 		typeAt(current, 2, "X");
-		expect(tiptapToMdx(current.getJSON())).toContain("X");
-		expect(tiptapToMdx(current.getJSON())).not.toContain("Untranslated");
+		expect(mdxOfTiptap(current.getJSON())).toContain("X");
+		expect(mdxOfTiptap(current.getJSON())).not.toContain("Untranslated");
 	});
 });

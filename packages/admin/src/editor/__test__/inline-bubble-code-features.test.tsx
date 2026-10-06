@@ -3,11 +3,11 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { tiptapOf } from "../../test/mdx";
 import { buildEditorExtensions } from "../extensions";
 import { InlineBubble } from "../inline-bubble";
 import { allowedMarkTools, INLINE_MARK_TOOLS } from "../inline-marks";
 import { editorMessages } from "../messages";
-import { mdxToTiptap } from "../tiptap-content";
 
 /**
  * `codeBlock.features` cannot be changed per test (the admin tests use one fixed site config), so the resolved values are replaced here.
@@ -52,7 +52,7 @@ afterEach(() => {
 const createEditor = (source: string) => {
 	const element = document.createElement("div");
 	document.body.append(element);
-	const editor = new Editor({ element, extensions: buildEditorExtensions(), content: mdxToTiptap(source) });
+	const editor = new Editor({ element, extensions: buildEditorExtensions(), content: tiptapOf(source) });
 	editors.push(editor);
 	return editor;
 };

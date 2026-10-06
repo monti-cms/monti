@@ -1,15 +1,16 @@
 import { createTranslator } from "@monti-cms/core/client";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
+import { mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { buildEditorExtensions } from "../extensions";
 import { footnoteNumbers, nextFootnoteLabel } from "../footnote-nodes";
 import { editorMessages } from "../messages";
 import { filterCommands, SLASH_COMMANDS } from "../slash-command";
-import { mdxToTiptap, OPAQUE_BLOCK_NAME, tiptapToMdx } from "../tiptap-content";
+import { OPAQUE_BLOCK_NAME } from "../tiptap-content";
 
 const t = createTranslator(editorMessages);
 
-const createEditor = (mdx: string) => new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(mdx) });
+const createEditor = (mdx: string) => new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(mdx) });
 
 const SOURCE = [
 	"First[^a] and second[^b] and first again[^a].",
@@ -26,7 +27,7 @@ const SOURCE = [
 
 describe("footnotes in the visual editor", () => {
 	it("loads footnotes as editable nodes instead of a source box", () => {
-		const json = mdxToTiptap(SOURCE);
+		const json = tiptapOf(SOURCE);
 		expect(JSON.stringify(json)).not.toContain(OPAQUE_BLOCK_NAME);
 		expect(json.content?.[0]?.content?.map((node) => node.type)).toEqual([
 			"text",
@@ -44,29 +45,29 @@ describe("footnotes in the visual editor", () => {
 	});
 
 	it("round-trips through the editor unchanged", () => {
-		expect(tiptapToMdx(mdxToTiptap(SOURCE))).toBe(SOURCE);
+		expect(mdxOfTiptap(tiptapOf(SOURCE))).toBe(SOURCE);
 		const editor = createEditor(SOURCE);
-		expect(tiptapToMdx(editor.getJSON())).toBe(SOURCE);
+		expect(mdxOfTiptap(editor.getJSON())).toBe(SOURCE);
 		editor.destroy();
 	});
 
 	it("gives an empty definition a paragraph so it can be typed into, and saves it as empty", () => {
 		const mdx = "Text[^1]\n\n[^1]:\n";
-		const json = mdxToTiptap(mdx);
+		const json = tiptapOf(mdx);
 		expect(json.content?.[1]?.content).toEqual([{ type: "paragraph", content: [] }]);
 		const editor = createEditor(mdx);
-		expect(tiptapToMdx(editor.getJSON())).toBe(mdx);
+		expect(mdxOfTiptap(editor.getJSON())).toBe(mdx);
 		editor.destroy();
 	});
 
 	it("keeps footnote references in headings, lists and table cells editable", () => {
 		const mdx = "## Title[^1]\n\n- item[^2]\n\n| h |\n| --- |\n| cell[^3] |\n\n[^1]: a\n\n[^2]: b\n\n[^3]: c\n";
-		expect(JSON.stringify(mdxToTiptap(mdx))).not.toContain(OPAQUE_BLOCK_NAME);
-		expect(tiptapToMdx(mdxToTiptap(mdx))).toBe(mdx);
+		expect(JSON.stringify(tiptapOf(mdx))).not.toContain(OPAQUE_BLOCK_NAME);
+		expect(mdxOfTiptap(tiptapOf(mdx))).toBe(mdx);
 	});
 
 	it("moves a definition nested by pasting or dragging out to the top level when saving", () => {
-		const mdx = tiptapToMdx({
+		const mdx = mdxOfTiptap({
 			type: "doc",
 			content: [
 				{
@@ -94,7 +95,7 @@ describe("footnote numbering", () => {
 			["zebra", 1],
 			["apple", 2],
 		]);
-		expect(tiptapToMdx(editor.getJSON())).toContain("[^zebra]: z");
+		expect(mdxOfTiptap(editor.getJSON())).toContain("[^zebra]: z");
 		editor.destroy();
 	});
 
@@ -125,9 +126,9 @@ describe("footnote numbering", () => {
 		const chip = editor.view.dom.querySelector("[data-footnote-ref]");
 		expect(chip?.getAttribute("data-footnote-number")).toBe("1");
 		expect(chip?.hasAttribute("data-footnote-missing")).toBe(true);
-		const saved = tiptapToMdx(editor.getJSON());
+		const saved = mdxOfTiptap(editor.getJSON());
 		expect(saved).toBe(mdx);
-		expect(tiptapToMdx(mdxToTiptap(saved))).toBe(mdx);
+		expect(mdxOfTiptap(tiptapOf(saved))).toBe(mdx);
 		editor.destroy();
 	});
 
@@ -169,7 +170,7 @@ describe("Footnote slash command", () => {
 		expect(last).toMatchObject({ type: "footnoteDefinition", attrs: { label: "4" } });
 		expect(last?.content).toEqual([expect.objectContaining({ type: "paragraph" })]);
 		expect(last?.content?.[0]?.content).toBeUndefined();
-		expect(tiptapToMdx(json)).toBe("Hello[^4] world\n\n[^1]: one\n\n[^3]: three\n\n[^4]:\n");
+		expect(mdxOfTiptap(json)).toBe("Hello[^4] world\n\n[^1]: one\n\n[^3]: three\n\n[^4]:\n");
 		editor.destroy();
 	});
 
@@ -182,7 +183,7 @@ describe("Footnote slash command", () => {
 		const types = (editor.getJSON().content ?? []).map((node) => node.type);
 		expect(types.filter((type) => type === "paragraph")).toHaveLength(2);
 		expect(types.slice(0, 4)).toEqual(["paragraph", "footnoteDefinition", "footnoteDefinition", "footnoteDefinition"]);
-		expect(tiptapToMdx(editor.getJSON())).toBe("[^3]One[^2] two\n\n[^1]: one\n\n[^2]:\n\n[^3]:\n");
+		expect(mdxOfTiptap(editor.getJSON())).toBe("[^3]One[^2] two\n\n[^1]: one\n\n[^2]:\n\n[^3]:\n");
 		editor.destroy();
 	});
 
@@ -191,7 +192,7 @@ describe("Footnote slash command", () => {
 		editor.commands.setTextSelection(6);
 		item()?.action(editor, { from: 6, to: 6 });
 		editor.commands.insertContent("The note");
-		expect(tiptapToMdx(editor.getJSON())).toBe("Hello[^1]\n\n[^1]: The note\n");
+		expect(mdxOfTiptap(editor.getJSON())).toBe("Hello[^1]\n\n[^1]: The note\n");
 		editor.destroy();
 	});
 
@@ -227,7 +228,7 @@ describe("deleting footnotes", () => {
 		const json: JSONContent = editor.getJSON();
 		expect(JSON.stringify(json)).not.toContain("footnoteReference");
 		expect(json.content?.[1]).toMatchObject({ type: "footnoteDefinition", attrs: { label: "1" } });
-		expect(tiptapToMdx(json)).toContain("[^1]: note");
+		expect(mdxOfTiptap(json)).toContain("[^1]: note");
 		editor.destroy();
 	});
 });

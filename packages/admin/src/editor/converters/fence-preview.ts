@@ -1,19 +1,7 @@
 import type { BlockDefinition } from "@monti-cms/core/client";
-import type { CodeBlockDocument } from "@monti-cms/core/code-block";
-import { annotationConfig, fromCodeBlockDocumentToCodeFence } from "@monti-cms/core/code-block";
-import type { CmsNode } from "@monti-cms/core/mdx";
+import { codeFenceOf, storedCodeAttrs } from "./code-block";
 import { asString } from "./shared";
 import type { BlockConverter } from "./types";
-
-const extractCodeValue = (node: CmsNode): string => {
-	const value = asString(node.attrs?.value);
-	if (value != null) return value;
-	const document = node.attrs?.codeDocument;
-	if (document && typeof document === "object" && !Array.isArray(document)) {
-		return fromCodeBlockDocumentToCodeFence(document as unknown as CodeBlockDocument, annotationConfig).value;
-	}
-	return "";
-};
 
 /**
  * Converter for an added code fence block (e.g. ` ```mermaid `). Turns a code block of that language into a block node and restores the language and meta
@@ -30,13 +18,13 @@ export function fenceBlockConverter(block: BlockDefinition, nodeName: string): B
 		toTiptap(node) {
 			const language = asString(node.attrs?.language) ?? lang;
 			const meta = asString(node.attrs?.meta) ?? "";
-			return { type: nodeName, attrs: { value: extractCodeValue(node), language, ...(meta ? { meta } : {}) } };
+			return { type: nodeName, attrs: { value: codeFenceOf(node), language, ...(meta ? { meta } : {}) } };
 		},
 		toCms(node) {
 			const value = asString(node.attrs?.value) ?? "";
 			const language = asString(node.attrs?.language) || lang;
-			const meta = asString(node.attrs?.meta);
-			return [{ type: "codeBlock", attrs: { language, ...(meta ? { meta } : {}), value } }];
+			const meta = asString(node.attrs?.meta) ?? null;
+			return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, value) }];
 		},
 	};
 }

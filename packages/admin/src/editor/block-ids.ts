@@ -1,4 +1,4 @@
-import { isBlockId, newBlockId } from "@monti-cms/core/mdx";
+import { isBlockId, newBlockId } from "@monti-cms/core/document";
 import { type AnyExtension, Extension, getExtensionField, type NodeConfig } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";

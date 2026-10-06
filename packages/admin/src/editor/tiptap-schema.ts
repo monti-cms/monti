@@ -18,12 +18,24 @@ import { CmsUntranslatedMark } from "./untranslated-mark";
 
 const t = createTranslator(editorMessages);
 
+/** What the box shows of the node it holds: the text of a body that could not be read, or the node as JSON. */
+const previewOf = (held: string): string => {
+	try {
+		const node: unknown = JSON.parse(held);
+		const source = (node as { type?: unknown; attrs?: { source?: unknown } }).attrs?.source;
+		if ((node as { type?: unknown }).type === "unparsed" && typeof source === "string") return source;
+		return JSON.stringify(node, null, 2);
+	} catch {
+		return held;
+	}
+};
+
 /**
- * A read-only box that preserves CMS blocks not in the Tiptap schema (math, chart, callout, tabs, mermaid, merged tables, etc.).
+ * A read-only box that preserves CMS blocks not in the Tiptap schema (a block without an edit view, a merged table with block content, a body that could
+ * not be read, etc.).
  *
- * `attrs.source` holds the stored string (MDX) of that subtree. On save, the box is parsed
- * again and spliced back in, so the content never changes (nodes are never silently deleted).
- * As an `atom`, the inside of the box is not editable; it can only be selected and deleted as a whole.
+ * `attrs.node` holds the stored node of that subtree as JSON. On save, the box is read again and spliced back in, so the content never changes
+ * (nodes are never silently deleted). As an `atom`, the inside of the box is not editable; it can only be selected and deleted as a whole.
  */
 export const CmsOpaqueBlock = Node.create({
 	name: "cmsOpaqueBlock",
@@ -33,7 +45,7 @@ export const CmsOpaqueBlock = Node.create({
 	draggable: false,
 	addAttributes() {
 		return {
-			source: { default: "" },
+			node: { default: "" },
 			label: { default: t("opaqueBlock.label") },
 		};
 	},
@@ -42,20 +54,20 @@ export const CmsOpaqueBlock = Node.create({
 			{
 				tag: "div[data-cms-opaque]",
 				getAttrs: (element) => ({
-					source: element.getAttribute("data-source") ?? "",
+					node: element.getAttribute("data-node") ?? "",
 					label: element.getAttribute("data-label") ?? t("opaqueBlock.label"),
 				}),
 			},
 		];
 	},
 	renderHTML({ node }) {
-		const source = String(node.attrs.source ?? "");
+		const held = String(node.attrs.node ?? "");
 		const label = String(node.attrs.label ?? t("opaqueBlock.label"));
 		return [
 			"div",
 			{
 				"data-cms-opaque": "",
-				"data-source": source,
+				"data-node": held,
 				"data-label": label,
 				class:
 					"my-4 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-3 cms-dark:border-neutral-700 cms-dark:bg-neutral-900",
@@ -65,7 +77,7 @@ export const CmsOpaqueBlock = Node.create({
 				{ class: "text-xs font-medium text-neutral-500 cms-dark:text-neutral-400" },
 				t("opaqueBlock.editInSource", { label }),
 			],
-			["pre", { class: "mt-2 overflow-x-auto whitespace-pre-wrap text-xs" }, source],
+			["pre", { class: "mt-2 overflow-x-auto whitespace-pre-wrap text-xs" }, previewOf(held)],
 		];
 	},
 });

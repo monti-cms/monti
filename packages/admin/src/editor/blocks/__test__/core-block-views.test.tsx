@@ -6,15 +6,15 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CmsAdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
 import { BlockFrame, type BlockView, useBlockEditor } from "../../../hooks/public";
+import { mdxOfTiptap, tiptapOf } from "../../../test/mdx";
 import { buildEditorExtensions } from "../../extensions";
-import { mdxToTiptap, tiptapToMdx } from "../../tiptap-content";
 
 afterEach(cleanup);
 
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
 		extensions: buildEditorExtensions(),
-		content: mdxToTiptap(source),
+		content: tiptapOf(source),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -80,7 +80,7 @@ describe("image, file and math on the blockViews contract", () => {
 		expect(document.querySelector("[data-image-block]")).toBeNull();
 		click("set-alt");
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs).toMatchObject({ alt: "바뀐 설명", width: "50%" }));
-		expect(tiptapToMdx(editor.getJSON())).toContain('alt="바뀐 설명"');
+		expect(mdxOfTiptap(editor.getJSON())).toContain('alt="바뀐 설명"');
 		await waitFor(() => expect(screen.getByTestId("alt").textContent).toBe("바뀐 설명"));
 	});
 
@@ -94,7 +94,7 @@ describe("image, file and math on the blockViews contract", () => {
 		const editor = await mount("$$\nx^2\n$$", "[data-test-view='math']", { math: MathView });
 		expect(screen.getByTestId("source").textContent).toBe("x^2");
 		click("set-source");
-		await waitFor(() => expect(tiptapToMdx(editor.getJSON()).trim()).toBe("$$\ny^2\n$$"));
+		await waitFor(() => expect(mdxOfTiptap(editor.getJSON()).trim()).toBe("$$\ny^2\n$$"));
 	});
 
 	it("without a registration the default views render", async () => {

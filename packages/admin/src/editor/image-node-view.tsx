@@ -1,7 +1,7 @@
 "use client";
 
 import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
-import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/mdx";
+import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";

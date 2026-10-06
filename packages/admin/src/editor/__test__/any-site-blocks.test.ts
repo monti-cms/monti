@@ -1,10 +1,9 @@
-import { analyze } from "@monti-cms/core/mdx";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
+import { docOf, mdxOfTiptap, tiptapOf } from "../../test/mdx";
 import { ADDED_BLOCK_INSERT_ACTIONS, ADDED_NODE_BLOCKS, blockNodeName } from "../blocks/added";
 import { buildEditorExtensions } from "../extensions";
 import { buildBlockSlashCommands } from "../slash-command";
-import { mdxToTiptap, tiptapToMdx } from "../tiptap-content";
 
 /**
  * Editor flow of blocks added to the config (regression guard). Block names are not hardcoded; they are read from the current config.
@@ -42,11 +41,12 @@ describe("any site: added blocks in the editor", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p></p>" });
 		ADDED_BLOCK_INSERT_ACTIONS[block.name]?.(editor, { from: 1, to: 1 });
 		// A block that holds body text is saved with the typed text in place (a block that must have a body opens as a raw box when empty).
-		const mdx = tiptapToMdx(fillEmptyParagraphs(editor.getJSON()));
+		const mdx = mdxOfTiptap(fillEmptyParagraphs(editor.getJSON()));
 		editor.destroy();
-		expect(analyze(mdx).errors).toEqual([]);
-		const reopened = mdxToTiptap(mdx);
+		// The text the editor wrote reads as a document.
+		expect(() => docOf(mdx)).not.toThrow();
+		const reopened = tiptapOf(mdx);
 		expect(reopened.content?.some((node) => node.type === blockNodeName(block))).toBe(true);
-		expect(tiptapToMdx(reopened)).toBe(mdx);
+		expect(mdxOfTiptap(reopened)).toBe(mdx);
 	});
 });

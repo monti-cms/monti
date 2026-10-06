@@ -1,6 +1,7 @@
 import { createTranslator } from "@monti-cms/core/client";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { docOf } from "../../test/mdx";
 import { EDITOR_WIDTHS } from "../editor-width";
 import { editorMessages } from "../messages";
 import { CmsEditor } from "../tiptap-editor";
@@ -22,7 +23,7 @@ afterEach(() => {
 });
 
 const renderEditor = async () => {
-	render(<CmsEditor content="안녕하세요" onChange={() => {}} titleField={<input aria-label="제목" />} />);
+	render(<CmsEditor doc={docOf("안녕하세요")} onChange={() => {}} titleField={<input aria-label="제목" />} />);
 	await screen.findByRole("toolbar", { name: t("toolbar.format") });
 };
 /** Body width applied to the editor frame. The title, body and source all use this value. */

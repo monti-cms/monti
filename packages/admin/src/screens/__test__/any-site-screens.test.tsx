@@ -10,11 +10,12 @@ import {
 	storedField,
 	storedFields,
 } from "@monti-cms/core/client";
-import { documentToMdx, emptyStoredDocument } from "@monti-cms/core/mdx";
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { docOf } from "../../test/mdx";
 import { AdminClientDashboard } from "../admin-dashboard";
 import { EntryEditorShell } from "../entries/entry-editor-shell";
 import { entryEditorShellMessages } from "../entries/entry-editor-shell.messages";
@@ -239,7 +240,13 @@ describe("any site: record panel", () => {
 	it("creates a record from its title field alone", async () => {
 		handle = (url, init) =>
 			url.pathname === "/api/cms/v1/entries" && init?.method === "POST"
-				? json({ id: "r1", collection: record, status: "published", version: 1, working: { metadata: {}, mdx: "" } })
+				? json({
+						id: "r1",
+						collection: record,
+						status: "published",
+						version: 1,
+						working: { metadata: {}, doc: emptyStoredDocument() },
+					})
 				: undefined;
 		const onSaved = vi.fn();
 		render(<RecordPanel target={{ collection: record, id: null }} onClose={vi.fn()} onSaved={onSaved} />);
@@ -270,7 +277,7 @@ describe("any site: entry editor", () => {
 		folderId: null,
 		workingSlug: "any-entry",
 		publishedSlug: null,
-		working: { metadata: { title: "Any title" }, mdx: "Body" },
+		working: { metadata: { title: "Any title" }, doc: docOf("Body") },
 	};
 
 	it("opens an entry with the title field's label and saves only schema fields", async () => {
@@ -282,7 +289,7 @@ describe("any site: entry editor", () => {
 				return json({
 					...entry,
 					version: 5,
-					working: { metadata: body.metadata, mdx: documentToMdx(body.doc), doc: body.doc },
+					working: { metadata: body.metadata, doc: body.doc },
 				});
 			}
 			return undefined;

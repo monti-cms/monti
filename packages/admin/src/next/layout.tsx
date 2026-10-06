@@ -2,6 +2,7 @@ import { createTranslator, SITE_NAME } from "@monti-cms/core/client";
 import type { Cms } from "@monti-cms/core/runtime";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { MdxSourceProvider } from "../mdx-source";
 import { loadAdminPlugins } from "../plugins";
 import { AdminFeaturesProvider } from "../screens/shared/admin-features";
 import { AdminQueryProvider } from "../screens/shared/query-provider";
@@ -55,10 +56,13 @@ export async function CmsAdminLayout({
 	// Plugin providers wrap from the outside in registration order, inside the server data cache.
 	const content = plugins.reduceRight<ReactNode>(
 		(inner, { name, Provider }) => (Provider ? <Provider key={name}>{inner}</Provider> : inner),
-		<TooltipProvider>
-			<div className="cms-admin min-h-screen bg-cms-background text-cms-foreground">{children}</div>
-			{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
-		</TooltipProvider>,
+		// The built-in `mdx` format and its source panel, registered the way a plugin's would be (`sourcePanels`, `formats`).
+		<MdxSourceProvider>
+			<TooltipProvider>
+				<div className="cms-admin min-h-screen bg-cms-background text-cms-foreground">{children}</div>
+				{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
+			</TooltipProvider>
+		</MdxSourceProvider>,
 	);
 	const app = (
 		<AdminQueryProvider>

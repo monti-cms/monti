@@ -1,5 +1,6 @@
-import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/mdx";
+import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import { docOf } from "../../../test/mdx";
 import {
 	type EntryData,
 	formFromEntry,
@@ -22,7 +23,7 @@ const entry = (fields: Partial<EntryData>): EntryData => ({
 	folderId: null,
 	workingSlug: "hello",
 	publishedSlug: null,
-	working: { metadata: {}, mdx: "" },
+	working: { metadata: {}, doc: emptyStoredDocument() },
 	...fields,
 });
 
@@ -33,7 +34,7 @@ describe("translation form", () => {
 			translationGroupId: SOURCE,
 			locale: "en",
 			publishedAt: "2026-01-01T00:00:00.000Z",
-			working: { metadata: { title: "Hello", summary: "Sum" }, mdx: "Body" },
+			working: { metadata: { title: "Hello", summary: "Sum" }, doc: docOf("Body") },
 		});
 		const form = formFromEntry(translation);
 		// The form also handles the translation state (`$translation`); it must not leak into metadata.
@@ -48,7 +49,9 @@ describe("translation form", () => {
 	});
 
 	it("the original also handles shared values", () => {
-		const form = formFromEntry(entry({ working: { metadata: { title: "안녕", categoryId: CATEGORY }, mdx: "" } }));
+		const form = formFromEntry(
+			entry({ working: { metadata: { title: "안녕", categoryId: CATEGORY }, doc: emptyStoredDocument() } }),
+		);
 		expect(form.categoryId).toBe(CATEGORY);
 		expect(metadataFromForm(form, "post")).toEqual({ metadata: { title: "안녕", categoryId: CATEGORY } });
 	});
@@ -59,7 +62,10 @@ describe("record per-language names", () => {
 		const form = formFromEntry(
 			entry({
 				collection: "category",
-				working: { metadata: { title: "에세이", translations: { en: { title: "Essay" } } }, mdx: "" },
+				working: {
+					metadata: { title: "에세이", translations: { en: { title: "Essay" } } },
+					doc: emptyStoredDocument(),
+				},
 			}),
 		);
 		expect(form[recordTranslationKey("title", "en")]).toBe("Essay");
@@ -83,7 +89,7 @@ describe("translation state form", () => {
 			id: "33333333-3333-4333-8333-333333333333",
 			translationGroupId: SOURCE,
 			locale: "en",
-			working: { metadata: { title: "Hello" }, mdx: "Body", translation: state as never },
+			working: { metadata: { title: "Hello" }, doc: docOf("Body"), translation: state as never },
 		});
 
 	const DOC = {

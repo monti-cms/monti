@@ -1,4 +1,4 @@
-import type { CmsNode } from "@monti-cms/core/mdx";
+import type { CmsNode } from "@monti-cms/core/document";
 import type { BlockConverter } from "./types";
 
 /**

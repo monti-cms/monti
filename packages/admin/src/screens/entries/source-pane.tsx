@@ -1,11 +1,13 @@
 "use client";
 
+import type { StoredDocument } from "@monti-cms/core/document";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
-import { type Ref, useState } from "react";
+import { type Ref, useMemo, useState } from "react";
 import { useCmsAdminComponents } from "../../admin-components";
+import { documentKey } from "../../editor/document-key";
 import { buildEditorExtensions } from "../../editor/extensions";
-import { mdxToTiptap } from "../../editor/tiptap-content";
+import { storedToTiptap } from "../../editor/tiptap-content";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { t } from "./translate";
@@ -18,7 +20,7 @@ const PROSE =
 	// Let only a faint background spread around the block, with no bar (a shadow spread, so it does not shift layout and also wraps list bullets).
 	"[&_.cms-source-active]:rounded-sm [&_.cms-source-active]:bg-cms-primary/8 [&_.cms-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-cms-primary)_8%,transparent)] [&_.cms-source-active]:transition-[background-color,box-shadow]";
 
-function PreviewEditor({ mdx, label }: { mdx: string; label: string }) {
+function PreviewEditor({ doc, label }: { doc: StoredDocument; label: string }) {
 	// Render text-decoration extensions (text color etc.) the same as in the editor.
 	const { marks } = useCmsAdminComponents();
 	const [extensions] = useState(() => buildEditorExtensions(marks));
@@ -26,27 +28,28 @@ function PreviewEditor({ mdx, label }: { mdx: string; label: string }) {
 		immediatelyRender: false,
 		editable: false,
 		extensions,
-		content: mdxToTiptap(mdx),
+		content: storedToTiptap(doc),
 		editorProps: { attributes: { "aria-label": label, class: PROSE } },
 	});
 	return <EditorContent editor={editor} />;
 }
 
-/** Read-only MDX preview. Rendered the same as the post. Recreates the editor when the content changes. */
-export function MdxPreview({ mdx, label = t("sourcePane.preview") }: { mdx: string; label?: string }) {
-	return <PreviewEditor key={mdx} mdx={mdx} label={label} />;
+/** Read-only preview of a document. Rendered the same as the post. Recreates the editor when the content changes. */
+export function DocPreview({ doc, label = t("sourcePane.preview") }: { doc: StoredDocument; label?: string }) {
+	const key = useMemo(() => documentKey(doc), [doc]);
+	return <PreviewEditor key={key} doc={doc} label={label} />;
 }
 
 /** The full source placed beside the translation. Scrolls separately from the translation editor. */
 export function SourcePane({
-	mdx,
+	doc,
 	locale,
 	title,
 	onClose,
 	className,
 	ref,
 }: {
-	mdx: string;
+	doc: StoredDocument;
 	locale: string;
 	/** Source title. Shown large above the body, matching the title slot of the translation editor. */
 	title: string;
@@ -79,7 +82,7 @@ export function SourcePane({
 				{title || t("untitled")}
 			</h1>
 			<div className="px-6 pt-6 pb-[35vh]">
-				<MdxPreview mdx={mdx} label={t("sourcePane.body")} />
+				<DocPreview doc={doc} label={t("sourcePane.body")} />
 			</div>
 		</aside>
 	);

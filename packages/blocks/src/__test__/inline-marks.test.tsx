@@ -1,4 +1,4 @@
-import { buildEditorExtensions, CmsEditor, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import { buildEditorExtensions, CmsEditor } from "@monti-cms/admin/editor";
 import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
 import { readSamples } from "@monti-cms/core/testing";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CodeRefProvider, codeRefMarkExtension } from "../code-ref/provider";
 import { ColorProvider, colorMarkExtension } from "../color/provider";
+import { docOfMdx, mdxToTiptap, tiptapToMdx } from "../test/editor-text";
 import { TooltipProvider, tooltipMarkExtension } from "../tooltip/provider";
 
 /**
@@ -95,7 +96,7 @@ describe("formatting toolbar", () => {
 	const renderEditor = async () => {
 		render(
 			<WithMarks>
-				<CmsEditor content="안녕하세요" onChange={vi.fn()} />
+				<CmsEditor doc={docOfMdx("안녕하세요")} onChange={vi.fn()} />
 			</WithMarks>,
 		);
 		return screen.findByRole("toolbar", { name: "서식 도구" });
@@ -146,7 +147,7 @@ describe("formatting toolbar", () => {
 	it("the slash menu tooltip comes after the text formatting items, and choosing it selects sample text and opens the description input", async () => {
 		render(
 			<WithMarks>
-				<CmsEditor content="" onChange={vi.fn()} />
+				<CmsEditor doc={docOfMdx("")} onChange={vi.fn()} />
 			</WithMarks>,
 		);
 		await screen.findByRole("toolbar", { name: "서식 도구" });
@@ -173,7 +174,7 @@ describe("inline bubble", () => {
 		render(
 			<WithMarks>
 				<CmsEditor
-					content={content}
+					doc={docOfMdx(content)}
 					onChange={vi.fn()}
 					onEditor={(editor) => {
 						ready = editor;

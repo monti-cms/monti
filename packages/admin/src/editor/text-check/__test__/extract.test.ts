@@ -1,6 +1,7 @@
-import { buildEditorExtensions, mdxToTiptap } from "@monti-cms/admin/editor";
+import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { tiptapOf } from "../../../test/mdx";
 import { docRangeToSegment, extractSegments, PLACEHOLDER, segmentRangeToDoc } from "../extract";
 
 let editor: Editor | null = null;
@@ -10,7 +11,7 @@ afterEach(() => {
 });
 
 const open = (mdx: string) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: mdxToTiptap(mdx) });
+	editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(mdx) });
 	return editor;
 };
 

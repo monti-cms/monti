@@ -9,7 +9,7 @@ import {
 	parseRotate,
 	type RotateDegree,
 	roundCropBox,
-} from "@monti-cms/core/mdx";
+} from "@monti-cms/core/document";
 import { RotateCw } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";

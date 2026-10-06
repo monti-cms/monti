@@ -14,20 +14,21 @@ import {
 	lineStarts,
 	modelFingerprint,
 } from "@monti-cms/core/code-block";
-import type { CmsNode } from "@monti-cms/core/mdx";
+import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
+import { storedCodeBlockAttrs, storedCodeBlockFence } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
 import { asString } from "./shared";
 import type { BlockConverter } from "./types";
 
-const extractCodeBlockValue = (node: CmsNode): string => {
-	const value = asString(node.attrs?.value);
-	if (value != null) return value;
-	const document = node.attrs?.codeDocument;
-	if (document && typeof document === "object" && !Array.isArray(document)) {
-		return fromCodeBlockDocumentToCodeFence(document as unknown as CodeBlockDocument, annotationConfig).value;
-	}
-	return "";
-};
+/** The fence text of a stored code block: its code with the annotations written as Monti annotation comments. This is the model the code editor works on. */
+export const codeFenceOf = (node: CmsNode): string => storedCodeBlockFence(node.attrs ?? {});
+
+/** The stored attributes of a code block from the editor's fence text (`language`, `meta`, and the value with its annotation comments). */
+export const storedCodeAttrs = (
+	language: string | null,
+	meta: string | null,
+	value: string,
+): Record<string, CmsJsonValue> => storedCodeBlockAttrs({ language: language ?? "", meta: meta ?? "", value });
 
 const attrsFrom = (attributes: AnnotationAttr[] | undefined): Record<string, unknown> =>
 	Object.fromEntries((attributes ?? []).map((attr) => [attr.name, attr.value]));
@@ -265,7 +266,7 @@ export const codeBlockConverter: BlockConverter = {
 	toTiptap(node: CmsNode) {
 		const language = asString(node.attrs?.language) ?? null;
 		const meta = asString(node.attrs?.meta) ?? null;
-		const source = extractCodeBlockValue(node);
+		const source = codeFenceOf(node);
 		const parsed = parseCodeFence(source, language, meta);
 
 		if (!parsed) {
@@ -297,18 +298,17 @@ export const codeBlockConverter: BlockConverter = {
 		const text = content.map((child) => (child?.type === "text" ? (child.text ?? "") : "")).join("");
 		const language = asString(node.attrs?.language) ?? null;
 		const meta = asString(node.attrs?.meta) ?? null;
-		const attrs = { ...(language ? { language } : {}), ...(meta ? { meta } : {}) };
 
-		if (node.attrs?.rawMode === true) return [{ type: "codeBlock", attrs: { ...attrs, value: text } }];
+		if (node.attrs?.rawMode === true) return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, text) }];
 
 		const lineEffects = Array.isArray(node.attrs?.lineEffects) ? (node.attrs.lineEffects as CodeLineEffect[]) : [];
 		const rules = Array.isArray(node.attrs?.rules) ? (node.attrs.rules as CodeRule[]) : [];
 		const source = asString(node.attrs?.source);
 		// If nothing changed since loading, save the original text as is (byte-identical, including comment line positions and style).
 		if (source != null && fingerprintOf(language, content, lineEffects, rules) === node.attrs?.sourceKey)
-			return [{ type: "codeBlock", attrs: { ...attrs, value: source } }];
+			return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, source) }];
 
 		const value = serializeCodeFence({ text, spans: spansFromContent(content), lineEffects, rules }, language);
-		return [{ type: "codeBlock", attrs: { ...attrs, value } }];
+		return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, value) }];
 	},
 };

@@ -1,5 +1,5 @@
 import { cmsApiUrl } from "@monti-cms/core/client";
-import type { StoredDocument } from "@monti-cms/core/mdx";
+import type { StoredDocument } from "@monti-cms/core/document";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import { cmsFetch } from "../admin-api";
 import type { CmsIssue } from "../api-error-message";

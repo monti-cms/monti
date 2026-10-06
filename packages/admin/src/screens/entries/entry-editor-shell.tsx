@@ -12,7 +12,8 @@ import {
 	storedField,
 	withBasePath,
 } from "@monti-cms/core/client";
-import { analyze, documentToMdx } from "@monti-cms/core/mdx";
+import { isUnparsedDocument } from "@monti-cms/core/document";
+import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import type { Editor } from "@tiptap/core";
 import {
@@ -36,13 +37,13 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useEditorExtensions } from "../../admin-components";
+import { useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
 import { findBlock } from "../../editor/block-ids";
-import { MdxSourceEditor } from "../../editor/mdx-source-editor";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
+import { SOURCE_ERROR_ID } from "../../mdx-source";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button, buttonVariants } from "../../ui/button";
 import {
@@ -66,7 +67,7 @@ import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { ConflictInfo, RecoveryOffer, SaveStatus } from "./entry-editor-store";
-import { editableDoc, formText, isTranslationEntry } from "./entry-form";
+import { formText, isTranslationEntry } from "./entry-form";
 import { InspectorPanel } from "./inspector-panel";
 import { LanguageTabs } from "./language-tabs";
 import {
@@ -264,7 +265,6 @@ export function EntryEditorShell({
 	const [isPreparingPublish, setIsPreparingPublish] = useState(false);
 	const isPublishing = busy === "publish" || isPreparingPublish;
 	const isSubmitting = busy !== null || isPreparingPublish;
-	const [pendingBodyPosition, setPendingBodyPosition] = useState<CmsIssue["position"]>();
 	const [pendingFieldPath, setPendingFieldPath] = useState<string | null>(null);
 	// Closing a dialog hides it without answering it: the editor keeps the recovery copy and the conflict until they are resolved.
 	const [dismissedRecovery, setDismissedRecovery] = useState<RecoveryOffer | null>(null);
@@ -289,31 +289,21 @@ export function EntryEditorShell({
 
 	const visualEditorRef = useRef<Editor | null>(null);
 
-	// MDX or frontmatter that cannot be parsed is not opened in visual mode. Opening it would produce an empty document, and
-	// a single keystroke would overwrite the source. It can be fixed in source mode or saved as is.
-	const deferredMdx = useDeferredValue(form.mdx);
-	const sourceProblems = useMemo<CmsIssue[]>(() => {
-		const analysis = analyze(deferredMdx);
-		const problems: CmsIssue[] = analysis.errors.map((error) => ({
-			code: "mdx_error",
-			message: error.message,
-			position: error.position,
-		}));
-		if (analysis.frontmatter !== null) problems.push({ code: "frontmatter_present", position: { line: 1, column: 1 } });
-		return problems;
-	}, [deferredMdx]);
-	const canUseVisual = sourceProblems.length === 0;
+	// The source toggle exists only when a source panel is registered (`sourcePanels`). With several, the first registered is used.
+	const sourcePanel = useCmsAdminComponents().sourcePanels?.[0];
+	// A body that could not be read (one `unparsed` node) is not opened in visual mode. Opening it would show it as a box the user cannot edit, and
+	// it can be fixed in source mode or saved as is.
+	const canUseVisual = !isUnparsedDocument(form.doc);
+	const isSourceMode = sourcePanel !== undefined && (editorMode === "source" || !canUseVisual);
+	// What the source panel found about the text as it was typed (parse errors). The body itself says whether it could be read.
+	const [sourceIssues, setSourceIssues] = useState<readonly FormatIssue[]>([]);
+	const sourceProblems = canUseVisual ? [] : sourceIssues;
+	// The block to bring the caret to when the source panel opens or is told to (from a publish problem).
+	const [focusBlock, setFocusBlock] = useState<string>();
 	useEffect(() => {
-		if (!canUseVisual && editorMode === "visual") setEditorMode("source");
-	}, [canUseVisual, editorMode]);
-	// The deferred value lags one render behind the loaded body. Until it has caught up once, the analysis above is about
-	// the previous (empty) body, and the visual editor would mount on a body it cannot read for a frame. Wait for it
-	// instead, then keep deferring while the user types (the visual editor wrote that text itself).
-	const [analysisSettled, setAnalysisSettled] = useState(false);
-	const isAnalysisReady = analysisSettled || deferredMdx === form.mdx;
-	useEffect(() => {
-		if (!isLoading && deferredMdx === form.mdx) setAnalysisSettled(true);
-	}, [isLoading, deferredMdx, form.mdx]);
+		// The panel takes the block when it renders with it; it is asked once.
+		if (focusBlock !== undefined) setFocusBlock(undefined);
+	}, [focusBlock]);
 
 	useEffect(() => {
 		const media = window.matchMedia?.("(max-width: 1023px)");
@@ -355,7 +345,7 @@ export function EntryEditorShell({
 
 	useSourceSync({
 		enabled: translationSource !== null && isSourcePaneOpen,
-		syncScroll: editorMode === "visual",
+		syncScroll: !isSourceMode,
 		editorRef: editorScrollRef,
 		paneRef: sourcePaneRef,
 	});
@@ -437,9 +427,10 @@ export function EntryEditorShell({
 		}
 		if (issue.position || issue.path === "body" || issue.path === "frontmatter") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
-			// In the visual editor, go to the block the issue is in (found by its id); otherwise to the line in source mode.
-			if (editorMode !== "source" && issue.position?.blockId && revealBlock(issue.position.blockId)) return;
-			setPendingBodyPosition(issue.position?.line !== undefined ? issue.position : { line: 1, column: 1 });
+			// In the visual editor, go to the block the issue is in (found by its id); otherwise to the block in the source text.
+			if (!isSourceMode && issue.position?.blockId && revealBlock(issue.position.blockId)) return;
+			if (!sourcePanel) return;
+			setFocusBlock(issue.position?.blockId);
 			setEditorMode("source");
 			return;
 		}
@@ -448,18 +439,6 @@ export function EntryEditorShell({
 			setIsInspectorOpen(true);
 		}
 	};
-
-	useEffect(() => {
-		if (!pendingBodyPosition || editorMode !== "source") return;
-		const textarea = document.getElementById("cms-mdx-source") as HTMLTextAreaElement | null;
-		if (!textarea) return;
-		const lines = form.mdx.split("\n");
-		const offset = lines.slice(0, (pendingBodyPosition.line ?? 1) - 1).reduce((sum, line) => sum + line.length + 1, 0);
-		const index = Math.min(form.mdx.length, offset + (pendingBodyPosition.column ?? 1) - 1);
-		textarea.focus();
-		textarea.setSelectionRange(index, index);
-		setPendingBodyPosition(undefined);
-	}, [pendingBodyPosition, editorMode, form.mdx]);
 
 	// For property fields, the properties panel opens that tab and moves focus. Here only the title above the body is handled.
 	useEffect(() => {
@@ -636,7 +615,7 @@ export function EntryEditorShell({
 
 	const canResetPublishedAt = Boolean(entry?.publishedAt);
 
-	if (isLoading || !isAnalysisReady) {
+	if (isLoading) {
 		return (
 			<div className="space-y-4 p-8" aria-busy>
 				<span className="sr-only">{t("loadingDocument")}</span>
@@ -706,33 +685,30 @@ export function EntryEditorShell({
 			onPressedChange={toggleSourcePane}
 		/>
 	);
-	const sourceModeToggle = (
+	const sourceModeToggle = sourcePanel && (
 		<ToolbarToggle
-			label={t("mdxSource")}
+			label={sourcePanel.label}
 			icon={FileCode}
-			pressed={editorMode === "source"}
-			// Content that cannot be parsed cannot return to visual mode.
-			disabled={editorMode === "source" && !canUseVisual}
+			pressed={isSourceMode}
+			// A body that could not be read cannot return to visual mode.
+			disabled={isSourceMode && !canUseVisual}
 			onPressedChange={(pressed) => setEditorMode(pressed ? "source" : "visual")}
 		/>
 	);
-	const sourceEditor = (
+	const sourceEditor = sourcePanel && (
 		<>
-			<MdxSourceEditor
-				id="cms-mdx-source"
-				aria-label={t("mdxBody")}
-				aria-invalid={Boolean(bodyIssue) || !canUseVisual || undefined}
-				aria-describedby={bodyIssue ? "cms-mdx-error" : undefined}
-				value={form.mdx}
+			<sourcePanel.Panel
+				doc={form.doc}
+				onChange={(doc, issues) => {
+					setSourceIssues(issues);
+					editor.setBody(doc);
+				}}
+				focusBlock={focusBlock}
 				readOnly={isReadOnly}
-				onChange={(event) => editor.setForm({ mdx: event.target.value })}
-				onCompositionStart={() => editor.setComposing(true)}
-				onCompositionEnd={() => editor.setComposing(false)}
-				placeholder={t("mdxPlaceholder")}
-				className="min-h-[calc(100vh-240px)] w-full flex-1 px-4"
+				onComposing={editor.setComposing}
 			/>
 			{bodyIssue && (
-				<p id="cms-mdx-error" className="mt-2 text-cms-destructive text-sm">
+				<p id={SOURCE_ERROR_ID} className="mt-2 text-cms-destructive text-sm">
 					{cmsIssueMessage(bodyIssue)}
 				</p>
 			)}
@@ -946,7 +922,7 @@ export function EntryEditorShell({
 						<span>{t("trashNotice")}</span>
 					</section>
 				)}
-				{!canUseVisual && (
+				{!canUseVisual && sourcePanel && (
 					<output className="border-b bg-amber-500/10 px-4 py-2 text-sm">
 						{t("visualUnavailable")} {sourceProblems[0] ? cmsIssueMessage(sourceProblems[0]) : ""}
 					</output>
@@ -996,7 +972,7 @@ export function EntryEditorShell({
 					{translationSource && isSourcePaneOpen && (
 						<SourcePane
 							ref={sourcePaneRef}
-							mdx={translationSource.mdx}
+							doc={translationSource.doc}
 							title={translationSource.title}
 							locale={translationSource.locale}
 							onClose={() => toggleSourcePane(false)}
@@ -1010,7 +986,7 @@ export function EntryEditorShell({
 						inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
 					>
 						<CmsEditor
-							content={form.mdx}
+							doc={form.doc}
 							titleField={
 								<>
 									{languageTabs}
@@ -1019,20 +995,15 @@ export function EntryEditorShell({
 							}
 							toolbarAside={
 								<span className="flex items-center gap-1">
-									<TemplateMenu
-										currentMdx={form.mdx}
-										disabled={isReadOnly}
-										onApply={(doc) => editor.setBody(documentToMdx(doc), doc)}
-									/>
+									<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
 									{extensions.toolbar}
 									{sourcePaneToggle}
 									{sourceModeToggle}
 								</span>
 							}
-							sourceView={editorMode === "source" ? sourceEditor : undefined}
+							sourceView={isSourceMode ? sourceEditor : undefined}
 							editable={!isReadOnly}
-							stored={entry ? { mdx: entry.working.mdx, doc: editableDoc(entry.working.doc) ?? null } : undefined}
-							onChange={(mdx, doc) => editor.setBody(mdx, doc)}
+							onChange={editor.setBody}
 							blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
 							selectionActions={extensions.selectionActions}
 							insertActions={extensions.insertActions}

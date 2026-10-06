@@ -46,6 +46,7 @@ import {
 	removeInlineMark,
 } from "./inline-marks";
 import { type LinkDraft, LinkForm, linkDraftFromSelection } from "./link-form";
+import { LinkTargetAnchor } from "./link-target-view";
 import { MarkTextForm, type MarkTextLabels } from "./mark-text-form";
 import { editorMessages } from "./messages";
 import { ToolbarButton } from "./toolbar-button";
@@ -289,24 +290,30 @@ export function InlineBubble({
 
 	const renderMark = (mark: ActiveInlineMark) => {
 		if (mark.name === "link") {
-			const href = String(mark.attrs.href ?? "");
+			// An internal link holds the id of its entry: the bubble shows the entry it goes to, not an address.
+			const entryId = typeof mark.attrs.entryId === "string" && mark.attrs.entryId ? mark.attrs.entryId : null;
+			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
 				<div key={mark.name} className="flex items-center gap-0.5">
 					<Link2 aria-hidden className="mx-1 size-4 shrink-0 text-cms-muted-foreground" />
-					<a
-						href={href}
-						target="_blank"
-						rel="noreferrer noopener"
-						title={href}
-						// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
-						onMouseDown={(event) => event.preventDefault()}
-						className="max-w-56 truncate px-1 text-cms-primary text-xs underline underline-offset-2"
-					>
-						{href}
-					</a>
+					{entryId ? (
+						<LinkTargetAnchor entryId={entryId} />
+					) : (
+						<a
+							href={href}
+							target="_blank"
+							rel="noreferrer noopener"
+							title={href}
+							// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
+							onMouseDown={(event) => event.preventDefault()}
+							className="max-w-56 truncate px-1 text-cms-primary text-xs underline underline-offset-2"
+						>
+							{href}
+						</a>
+					)}
 					<BubbleButton
 						label={t("link.edit")}
-						onClick={() => openLink({ from: mark.from, to: mark.to, existing: true, href })}
+						onClick={() => openLink({ from: mark.from, to: mark.to, existing: true, href, entryId })}
 					>
 						<Pencil aria-hidden className="size-4" />
 					</BubbleButton>

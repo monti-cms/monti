@@ -1,5 +1,6 @@
 import { contentPath } from "@monti-cms/core/client";
 import type { Editor, Range } from "@tiptap/core";
+import { rememberLinkTarget } from "./link-targets";
 
 export interface InternalLinkItem {
 	/** The id of the source entry (its translation group id). */
@@ -32,6 +33,8 @@ export function insertInternalLink(editor: Editor, range: Range, item: InternalL
 		chain.insertContent(item.title).run();
 		return;
 	}
+	// The link bubble shows where the link goes; the entry is known now, so it does not have to be looked up.
+	rememberLinkTarget(item);
 	chain
 		.insertContent([
 			{ type: "text", text: item.title, marks: [{ type: "link", attrs: { entryId: item.id, href } }] },

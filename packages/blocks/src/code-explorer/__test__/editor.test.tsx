@@ -1,10 +1,11 @@
-import { buildEditorExtensions, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { BLOCK_INSERT_ACTIONS } from "../../../../admin/src/editor/block-inserts";
+import { mdxToTiptap, tiptapToMdx } from "../../test/editor-text";
 import { filesOf, uniquePath } from "../editor-files";
 import { CodeExplorerProvider } from "../provider";
 

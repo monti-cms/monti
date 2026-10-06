@@ -1,5 +1,6 @@
 "use client";
 
+import type { StoredDocument } from "@monti-cms/core/document";
 import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
 import { createSlotRuns, type SlotRuns } from "./runs";
 
@@ -46,7 +47,8 @@ export interface SlotContext {
 	entryId?: string;
 	title?: string;
 	summary?: string;
-	body?: string;
+	/** The body of the entry being edited, as a stored document (a plugin that needs text asks a format for it: `useFormat`). */
+	body?: StoredDocument;
 	/** The target's current value. List values (tag ids, etc.) are arrays. */
 	current?: string | readonly string[];
 	around?: string;

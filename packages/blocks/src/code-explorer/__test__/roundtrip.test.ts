@@ -1,8 +1,9 @@
-import { buildEditorExtensions, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { analyze, serialize, toDocument } from "@monti-cms/core/mdx";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
+import { mdxToTiptap, tiptapToMdx } from "../../test/editor-text";
 
 const JSX = [
 	'<CodeExplorer open="a.ts">',
