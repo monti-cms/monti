@@ -5,15 +5,6 @@
  * @experimental This entry point may change in a minor release until the installed components (Roadmap C) have used it.
  */
 
-export type { CmsIssue } from "../screens/api-error-message";
-export type { EntryData, EntryForm, EntryFormPatch, FormValue } from "../screens/entries/entry-form";
-export {
-	EntryFormProvider,
-	type EntryFormValue,
-	type FieldError,
-	type FieldState,
-	useField,
-} from "../screens/entries/use-field";
 export {
 	type BlockChild,
 	type BlockChildInit,
@@ -30,6 +21,15 @@ export {
 	type ContentProps,
 	useBlockEditor,
 } from "../editor/blocks/use-block-editor";
+export type { CmsIssue } from "../screens/api-error-message";
+export type { EntryData, EntryForm, EntryFormPatch, FormValue } from "../screens/entries/entry-form";
+export {
+	EntryFormProvider,
+	type EntryFormValue,
+	type FieldError,
+	type FieldState,
+	useField,
+} from "../screens/entries/use-field";
 export type {
 	SlotAction,
 	SlotApplyMode,
