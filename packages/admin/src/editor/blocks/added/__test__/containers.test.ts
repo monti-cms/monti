@@ -40,11 +40,12 @@ describe("container body editing", () => {
 			(expected, index) => [index, expected] as const,
 		),
 	)("stored document -> Tiptap schema -> stored document round trip: block %i", (index, expected) => {
-		const content = tiptapOfSource(index);
+		const source = docOfSource(index);
+		const content = storedToTiptap(source);
 		expect(content.content?.[0]?.type).toBe(expected);
 		const editor = new Editor({ extensions: buildEditorExtensions(), content });
-		// Ids of the blocks inside a container are the editor's, so the comparison leaves ids out.
-		expect(withoutIds(tiptapToStored(editor.getJSON()))).toEqual(withoutIds(docOfSource(index)));
+		// The ids of the blocks inside a container, tabs and columns included, survive the round trip.
+		expect(tiptapToStored(editor.getJSON())).toEqual(source);
 		editor.destroy();
 	});
 

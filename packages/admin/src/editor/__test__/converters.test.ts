@@ -87,7 +87,7 @@ describe("block converter registry", () => {
 		["math", () => storedDoc({ type: "math", attrs: { value: "x^2 + y^2 = z^2" } })],
 	])("round-trips %s through the editor", (_, build) => {
 		const doc = build();
-		expect(withoutRowIds(tiptapToStored(storedToTiptap(doc)))).toEqual(withoutRowIds(doc));
+		expect(tiptapToStored(storedToTiptap(doc))).toEqual(doc);
 	});
 
 	it("saves a preview block with its new value after it changes", () => {
