@@ -4,6 +4,7 @@ import { CmsAdminComponentsProvider } from "../../../admin-components";
 import { EMPTY_FORM } from "../entry-form";
 import type { FieldInputProps } from "../field-inputs";
 import { SchemaFields } from "../schema-fields";
+import { EntryFormProvider } from "../use-field";
 
 afterEach(cleanup);
 
@@ -21,13 +22,11 @@ describe("site-registered field input", () => {
 		const onChange = vi.fn();
 		render(
 			<CmsAdminComponentsProvider components={{ fieldInputs: { "seo-title": UpperInput } }}>
-				<SchemaFields
-					collection="post"
-					form={{ ...EMPTY_FORM, seoTitle: "제목 abc" }}
-					context={{ disabled: false }}
-					onChange={onChange}
-					include={(group) => group.fields.includes("seoTitle")}
-				/>
+				<EntryFormProvider
+					value={{ collection: "post", form: { ...EMPTY_FORM, seoTitle: "제목 abc" }, setForm: onChange }}
+				>
+					<SchemaFields include={(group) => group.fields.includes("seoTitle")} />
+				</EntryFormProvider>
 			</CmsAdminComponentsProvider>,
 		);
 		fireEvent.click(screen.getByText("사이트 입력: 제목 abc"));
@@ -36,13 +35,9 @@ describe("site-registered field input", () => {
 
 	it("a multi-line text field is a multi-line input with `rows` rows", () => {
 		render(
-			<SchemaFields
-				collection="post"
-				form={{ ...EMPTY_FORM, summary: "요약" }}
-				context={{ disabled: false }}
-				onChange={vi.fn()}
-				include={(group) => group.fields.includes("summary")}
-			/>,
+			<EntryFormProvider value={{ collection: "post", form: { ...EMPTY_FORM, summary: "요약" }, setForm: vi.fn() }}>
+				<SchemaFields include={(group) => group.fields.includes("summary")} />
+			</EntryFormProvider>,
 		);
 		const input = screen.getByDisplayValue("요약") as HTMLTextAreaElement;
 		expect(input.tagName).toBe("TEXTAREA");

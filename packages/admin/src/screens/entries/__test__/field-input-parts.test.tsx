@@ -6,6 +6,7 @@ import { TooltipProvider } from "../../../ui/tooltip";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { SchemaFields } from "../schema-fields";
 import { t } from "../translate";
+import { EntryFormProvider } from "../use-field";
 
 /**
  * Input parts registered by extensions (`FieldInputParts`) and the media field's default input. Regardless of config, it finds in the current config
@@ -39,13 +40,9 @@ function renderFields(
 	render(
 		<TooltipProvider>
 			<CmsAdminComponentsProvider components={{ fieldInputs }}>
-				<SchemaFields
-					collection={target.collection}
-					form={form}
-					context={{ disabled: false }}
-					onChange={onChange}
-					include={(group) => group.fields.includes(target.name)}
-				/>
+				<EntryFormProvider value={{ collection: target.collection, form, setForm: onChange }}>
+					<SchemaFields include={(group) => group.fields.includes(target.name)} />
+				</EntryFormProvider>
 			</CmsAdminComponentsProvider>
 		</TooltipProvider>,
 	);
