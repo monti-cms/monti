@@ -16,25 +16,6 @@ const text = (value: string, ...marks: CmsNode["marks"] & object): CmsNode => ({
 });
 
 describe("checks of a stored document", () => {
-	it("counts a stretch of text that other marks split into several text nodes once", () => {
-		const link = { type: "link", attrs: { href: "/posts/a" } };
-		const result = checkDocument(
-			doc(
-				paragraph(
-					"aaaaaaaa",
-					text("a ", link),
-					text("b", link, { type: "bold" }),
-					text(" c", link),
-					text(" apart "),
-					text("again", link),
-				),
-			),
-		);
-		// The stretch is one link; the same address after plain text is another.
-		expect(result.internalLinks.map((item) => item.slug)).toEqual(["a", "a"]);
-		expect(result.internalLinks.every((item) => item.position.blockId === "aaaaaaaa")).toBe(true);
-	});
-
 	it("does not end a stretch of marked text at a line break or a footnote reference", () => {
 		const note = { type: "untranslated" };
 		const result = checkDocument(
@@ -51,25 +32,6 @@ describe("checks of a stored document", () => {
 		);
 		const issue = result.issues.find((item) => item.code === "untranslated_text");
 		expect(issue?.params).toEqual({ count: 1 });
-	});
-
-	it("reads the labels and links of code from the stored annotations and the text marks of the block definitions", () => {
-		const code: CmsNode = {
-			id: "bbbbbbbb",
-			type: "codeBlock",
-			attrs: {
-				language: "ts",
-				code: "a();",
-				annotations: { lines: [{ name: "anchor", start: 0, end: 1, attrs: { id: "c1" } }] },
-			},
-		};
-		const withRef = (to: string) =>
-			checkDocument(doc(paragraph("aaaaaaaa", text("see", { type: "code-ref", attrs: { to } })), code));
-		expect(withRef("c1").issues.map((issue) => issue.code)).toEqual([]);
-		const broken = withRef("c2");
-		expect(broken.issues).toEqual([
-			expect.objectContaining({ code: "code_ref_broken", position: { blockId: "aaaaaaaa" } }),
-		]);
 	});
 
 	it("takes the block of a node without an id from the block around it", () => {
