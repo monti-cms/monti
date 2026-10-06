@@ -21,6 +21,7 @@ import {
 	mergeTranslationMetadata,
 	RECORD_TRANSLATIONS_KEY,
 	recordLocalizedFields,
+	schemaMetadata,
 	storedFields,
 } from "../schema/derive";
 
@@ -153,7 +154,10 @@ async function toReadEntries<C extends Collection>(
 		slug: record.slug,
 		path: pathOf(record.collection, record.slug, record.locale),
 		title: titleOf(record, locale),
-		metadata: record.metadata as MetadataFor<C>,
+		// Values of fields the site has removed stay stored but are not public: the site code sees the shape its config types.
+		metadata: (isCollection(record.collection)
+			? schemaMetadata(record.collection, record.metadata)
+			: record.metadata) as MetadataFor<C>,
 		relations: relations.get(record.id) ?? {},
 		publishedAt: record.publishedAt,
 		updatedAt: record.updatedAt,

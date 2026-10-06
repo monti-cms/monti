@@ -119,6 +119,51 @@ export function fieldValueError(field: ValueField, value: string | readonly stri
 	}
 }
 
+/**
+ * Whether a metadata key is an "orphaned value": a value whose field is no longer in the schema (the site removed the field).
+ * The per-language names of an item collection (`translations`) are not orphaned: the core owns that key.
+ */
+export function isOrphanedMetadataKey(collection: SchemaCollection, key: string): boolean {
+	return key !== RECORD_TRANSLATIONS_KEY && !storedField(collection, key);
+}
+
+/** Keys of the metadata whose fields are no longer in the schema, in the order they are stored. They are kept, never validated or shown as fields. */
+export function orphanedMetadataKeys(
+	collection: SchemaCollection,
+	metadata: { readonly [key: string]: unknown },
+): string[] {
+	return Object.keys(metadata).filter((key) => isOrphanedMetadataKey(collection, key));
+}
+
+/**
+ * Select values that are no longer an option of their field (the site removed the option). They are kept as stored, never replaced by the default.
+ * One entry per field, in declaration order, listing each unknown value once.
+ */
+export function unknownSelectValues(
+	collection: SchemaCollection,
+	metadata: { readonly [key: string]: unknown },
+): { path: string; values: string[] }[] {
+	const found: { path: string; values: string[] }[] = [];
+	for (const { name, field } of storedFields(collection)) {
+		if (field.kind !== "select") continue;
+		const value = metadata[name];
+		const values = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
+		const unknown = [...new Set(values.filter((item): item is string => typeof item === "string"))].filter(
+			(item) => !Object.hasOwn(field.options, item),
+		);
+		if (unknown.length > 0) found.push({ path: name, values: unknown });
+	}
+	return found;
+}
+
+/** The metadata as the current schema types it: values of removed fields are left out (the public read shows no orphaned values). */
+export function schemaMetadata<T>(
+	collection: SchemaCollection,
+	metadata: { readonly [key: string]: T },
+): Record<string, T> {
+	return Object.fromEntries(Object.entries(metadata).filter(([key]) => !isOrphanedMetadataKey(collection, key)));
+}
+
 export type MetadataReference = {
 	/**
 	 * Relation fields point to content (`entry`) and media fields point to media (`media`). The target collection of the content is decided by the field definition
@@ -213,11 +258,12 @@ export function localizedFieldNames(collection: SchemaCollection): { own: string
 	return { own, inherit };
 }
 
-/** Common field keys a translation must not have. Stored fields whose definition has no `localized`. */
+/** Common field keys a translation must not have. Stored fields whose definition has no `localized` (not values of removed fields). */
 export function commonFieldKeys(collection: SchemaCollection, metadata: { readonly [key: string]: unknown }): string[] {
 	const { own, inherit } = localizedFieldNames(collection);
 	const localized = new Set([...own, ...inherit]);
-	return Object.keys(metadata).filter((key) => !localized.has(key));
+	// Values of removed fields are not common fields: they stay wherever they are stored.
+	return Object.keys(metadata).filter((key) => !localized.has(key) && !isOrphanedMetadataKey(collection, key));
 }
 
 /** Picks only the per-language values to carry from the source metadata to the translation. */
