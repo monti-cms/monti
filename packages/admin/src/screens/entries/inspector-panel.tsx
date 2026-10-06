@@ -1,36 +1,26 @@
 "use client";
 
 import type { LayoutGroup } from "@monti-cms/core/client";
-import { adminEntryEditHref, isCollection, localeLabel } from "@monti-cms/core/client";
+import { isCollection } from "@monti-cms/core/client";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
-import type { Route } from "next";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
-import type { CmsIssue } from "../api-error-message";
 import { SidePanelHeader } from "../shared/side-panel";
-import { type EntryData, type EntryForm, type EntryFormPatch, formFromSourceMetadata } from "./entry-form";
 import { DEFAULT_TAB, tabOf, tabOfGroup, tabsOf } from "./layout-groups";
 import { RemovedFieldsNotice } from "./removed-fields-notice";
 import { SchemaFields } from "./schema-fields";
 import { t } from "./translate";
-import { EntryFormProvider } from "./use-field";
+import { useEntryFormSelector } from "./use-field";
 
 const tabsFor = (collection: string) => (isCollection(collection) ? tabsOf(collection) : [DEFAULT_TAB]);
 const tabFor = (collection: string, path: string) => (isCollection(collection) ? tabOf(collection, path) : DEFAULT_TAB);
 
 interface InspectorPanelProps {
-	collection: string;
-	form: EntryForm;
-	disabled: boolean;
-	publishIssues?: CmsIssue[];
-	entry: EntryData | null;
 	incomingReferences: IncomingReferenceItem[];
 	isLoadingIncomingReferences: boolean;
 	onRefreshIncomingReferences: () => void;
 	onSlugChange: (slug: string) => void;
 	onRegenerateSlug: () => void;
-	onChange: (patch: EntryFormPatch) => void;
 	onClose: () => void;
 	/** Moves focus to this field (jump to a publish problem). Calls `onFocused` once moved. */
 	focusPath?: string | null;
@@ -40,23 +30,23 @@ interface InspectorPanelProps {
 /**
  * Properties panel on the right of the edit screen. Splits tabs by group/field `tab` and fixes the inner width so inputs
  * do not shift or overflow when it opens/closes or the window width changes.
+ *
+ * Reads the collection, issues, entry and disabled state from the `EntryFormProvider` above it (the entry editor provides one).
  */
 export function InspectorPanel({
-	collection,
-	form,
-	disabled,
-	publishIssues = [],
-	entry,
 	incomingReferences,
 	isLoadingIncomingReferences,
 	onRefreshIncomingReferences,
 	onSlugChange,
 	onRegenerateSlug,
-	onChange,
 	onClose,
 	focusPath,
 	onFocused,
 }: InspectorPanelProps) {
+	const collection = useEntryFormSelector((state) => state.collection);
+	const disabled = useEntryFormSelector((state) => state.disabled);
+	const publishIssues = useEntryFormSelector((state) => state.issues);
+	const entry = useEntryFormSelector((state) => state.entry);
 	const [tab, setTab] = useState(DEFAULT_TAB);
 	const tabs = useMemo(() => tabsFor(collection), [collection]);
 	const issuesIn = (name: string) =>
@@ -80,27 +70,6 @@ export function InspectorPanel({
 		() => ({ items: incomingReferences, loading: isLoadingIncomingReferences, refresh: onRefreshIncomingReferences }),
 		[incomingReferences, isLoadingIncomingReferences, onRefreshIncomingReferences],
 	);
-	const locked = useMemo(
-		() =>
-			entry?.source && isCollection(collection)
-				? {
-						values: formFromSourceMetadata(collection, entry.source.metadata),
-						note: (
-							<>
-								{t("inspector.source", { locale: localeLabel(entry.source.locale) })}{" "}
-								<Link
-									href={adminEntryEditHref(entry.source.id) as Route}
-									className="text-cms-primary underline-offset-2 hover:underline"
-								>
-									{t("inspector.sourceLink")}
-								</Link>
-							</>
-						),
-					}
-				: undefined,
-		[entry?.source, collection],
-	);
-
 	const fields = (include: (group: LayoutGroup) => boolean) =>
 		isCollection(collection) && (
 			<fieldset disabled={disabled} className="min-w-0 space-y-4 disabled:opacity-70">
@@ -116,7 +85,7 @@ export function InspectorPanel({
 			</fieldset>
 		);
 
-	const panel = (
+	return (
 		<Tabs
 			value={tab}
 			onValueChange={(value) => setTab(String(value))}
@@ -143,26 +112,5 @@ export function InspectorPanel({
 				))}
 			</div>
 		</Tabs>
-	);
-
-	// The fields read the form from this provider; the shell above keeps owning the state.
-	return isCollection(collection) ? (
-		<EntryFormProvider
-			value={{
-				collection,
-				form,
-				setForm: onChange,
-				issues: publishIssues,
-				disabled,
-				entryId: entry?.id,
-				locale: entry?.locale,
-				entry,
-				locked,
-			}}
-		>
-			{panel}
-		</EntryFormProvider>
-	) : (
-		panel
 	);
 }

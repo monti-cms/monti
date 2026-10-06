@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // The properties panel is read from the admin package source, not the public entry point (tests only).
 import { InspectorPanel } from "../../../admin/src/screens/entries/inspector-panel";
+import { EntryFormProvider } from "../../../admin/src/screens/entries/use-field";
 import { SEO_ROLES } from "..";
 import { SeoAdminProvider } from "../admin/provider";
 import { seoMessages } from "../messages";
@@ -42,19 +43,16 @@ function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] 
 		<TooltipProvider>
 			<SeoAdminProvider>
 				<SlotRegistryProvider sources={[(request) => (request.target === field(SEO_ROLES.title).name ? sources : [])]}>
-					<InspectorPanel
-						collection={collection}
-						form={form}
-						disabled={false}
-						entry={null}
-						incomingReferences={[]}
-						isLoadingIncomingReferences={false}
-						onRefreshIncomingReferences={vi.fn()}
-						onSlugChange={vi.fn()}
-						onRegenerateSlug={vi.fn()}
-						onChange={onChange}
-						onClose={vi.fn()}
-					/>
+					<EntryFormProvider value={{ collection, form, setForm: onChange }}>
+						<InspectorPanel
+							incomingReferences={[]}
+							isLoadingIncomingReferences={false}
+							onRefreshIncomingReferences={vi.fn()}
+							onSlugChange={vi.fn()}
+							onRegenerateSlug={vi.fn()}
+							onClose={vi.fn()}
+						/>
+					</EntryFormProvider>
 				</SlotRegistryProvider>
 			</SeoAdminProvider>
 		</TooltipProvider>,
@@ -122,19 +120,16 @@ describe("SEO extension admin UI", () => {
 		render(
 			<TooltipProvider>
 				<SeoAdminProvider>
-					<InspectorPanel
-						collection={plain}
-						form={{ ...EMPTY_FORM, title: "Plain" }}
-						disabled={false}
-						entry={null}
-						incomingReferences={[]}
-						isLoadingIncomingReferences={false}
-						onRefreshIncomingReferences={vi.fn()}
-						onSlugChange={vi.fn()}
-						onRegenerateSlug={vi.fn()}
-						onChange={vi.fn()}
-						onClose={vi.fn()}
-					/>
+					<EntryFormProvider value={{ collection: plain, form: { ...EMPTY_FORM, title: "Plain" }, setForm: vi.fn() }}>
+						<InspectorPanel
+							incomingReferences={[]}
+							isLoadingIncomingReferences={false}
+							onRefreshIncomingReferences={vi.fn()}
+							onSlugChange={vi.fn()}
+							onRegenerateSlug={vi.fn()}
+							onClose={vi.fn()}
+						/>
+					</EntryFormProvider>
 				</SeoAdminProvider>
 			</TooltipProvider>,
 		);

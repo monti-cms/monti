@@ -6,6 +6,7 @@ import { TooltipProvider } from "../../../ui/tooltip";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { InspectorPanel } from "../inspector-panel";
 import { t } from "../translate";
+import { EntryFormProvider } from "../use-field";
 
 /**
  * Field `tab` and view fields (regression guard, independent of config). Collection, field and tab names are found in the current config
@@ -38,19 +39,16 @@ const viewField = found
 
 function renderPanel(collection: Collection, form: EntryForm, children?: (panel: React.ReactNode) => React.ReactNode) {
 	const panel = (
-		<InspectorPanel
-			collection={collection}
-			form={form}
-			disabled={false}
-			entry={null}
-			incomingReferences={[]}
-			isLoadingIncomingReferences={false}
-			onRefreshIncomingReferences={vi.fn()}
-			onSlugChange={vi.fn()}
-			onRegenerateSlug={vi.fn()}
-			onChange={vi.fn()}
-			onClose={vi.fn()}
-		/>
+		<EntryFormProvider value={{ collection, form, setForm: vi.fn() }}>
+			<InspectorPanel
+				incomingReferences={[]}
+				isLoadingIncomingReferences={false}
+				onRefreshIncomingReferences={vi.fn()}
+				onSlugChange={vi.fn()}
+				onRegenerateSlug={vi.fn()}
+				onClose={vi.fn()}
+			/>
+		</EntryFormProvider>
 	);
 	render(<TooltipProvider>{children ? children(panel) : panel}</TooltipProvider>);
 }

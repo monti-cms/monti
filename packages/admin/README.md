@@ -247,7 +247,7 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | `/next` | Admin layout and page (exported from the app route) |
 | `/editor` | Editor extension helpers (bubble, slash menu, code block linking) |
 | `/blocks` | Block edit screen UI (tool row, settings popover, attribute input) |
-| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`, `useBlockEditor`), the block view components `Content` and `BlockFrame`, and `EditorResult` / `EditorError` |
+| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`, `useBlockEditor`, `useEntryEditor`), the block view components `Content` and `BlockFrame`, and `EditorResult` / `EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
 | `/media` | Media picker and preview |
@@ -280,6 +280,29 @@ code `limit` when a bound would be broken (`read_only` while the editor is locke
 and so one undo step, for example renaming a tab and the default tab that points at it. `raw` (`{ editor, node, getPos }`) is the one escape hatch and the only place Tiptap and
 ProseMirror types appear; it is not stable. `<Content />` renders the editable nested body (with `visibleChild` to show one child, such as the open tab) and `<BlockFrame />`
 is the outer element with the selected ring and hover scope. The child blocks sit inside the first element of `[data-cms-block-content]`.
+
+`useEntryEditor(options)` is the entry editor without its screen: load, a local recovery copy, explicit server save, publish, status changes
+(archive, trash, restore), and recovery and conflict state. **It is not a server autosave.** While editing, only a recovery copy is kept in the browser
+(IndexedDB, written after input pauses, never sent to the server); the server draft changes only when `save()`, `publish()` or a status change runs, and
+`saveStatus` (`saved`, `dirty`, `saving`, `local-only`, `conflict`, ...) says what the server has. State: `load` (`loading`, `ready`, `error`, or `redirect` for an item
+collection, which the UI follows: the hook never navigates), `entry`, `form`, `saveStatus`, `saveError`, `hasUnsavedChanges`, `publishIssues`, `recovery` (a browser copy
+found on open) and `conflict` (someone saved first). Commands: `setForm`, `setBody`, `save`, `retry`, `publish`, `changeStatus`, `duplicate`, `deletePermanently`,
+`restoreRecovery` / `discardRecovery`, and `overwriteWithMine` / `reload` for a conflict, which resolve it in place without reloading the page. Wrap the UI in
+`EntryEditorProvider` (it provides the `EntryFormProvider` that `useField` reads) and read the editor below it with `useEntryEditorContext()` or, to re-render for one
+value only, `useEntryEditorContext((editor) => editor.saveStatus)`. The server calls and the recovery store can be replaced (`client`, `recoveryStore` options) for tests.
+The default entry editor (`EntryEditorShell`) is built on it and keeps the toasts, confirm dialogs and navigation.
+
+```tsx
+const editor = useEntryEditor({ adminId, target: { mode: "edit", entryId } });
+if (editor.load.status !== "ready") return null;
+return (
+	<EntryEditorProvider editor={editor}>
+		<TitleInput /> {/* useField("title") */}
+		<button onClick={async () => { const saved = await editor.save(); if (!saved.ok) alert(saved.error.message); }}>Save</button>
+		{editor.conflict && <button onClick={() => void editor.overwriteWithMine()}>Overwrite with mine</button>}
+	</EntryEditorProvider>
+);
+```
 
 ## Styles
 
