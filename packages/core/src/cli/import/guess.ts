@@ -130,9 +130,12 @@ export function guessCollections(site: Site, sources: readonly ParsedSource[], o
 	}
 
 	const folders = new Map<string, ParsedSource[]>();
+	/** Folders whose files lie directly in the scanned folder: the person pointed at this folder of posts itself. */
+	const directFolders = new Set<string>();
 	for (const source of sources) {
 		const folder = folderKeyOf(source, site.LOCALES);
 		folders.set(folder, [...(folders.get(folder) ?? []), source]);
+		if (derivePath(source.rel, site.LOCALES).folder === ".") directFolders.add(folder);
 		// A mapping saved before the keys were paths from the working directory names the folder relative to the scanned one: it keeps its decisions under the new key.
 		const legacy = legacyFolderKeyOf(source.rel, site.LOCALES);
 		const old = mapping.folders[legacy];
@@ -174,7 +177,7 @@ export function guessCollections(site: Site, sources: readonly ParsedSource[], o
 				);
 			}
 		} else {
-			guessCollection(site, state, folder, options.rootName, questions);
+			guessCollection(site, state, folder, options.rootName, questions, directFolders.has(key));
 		}
 	}
 	return { mapping, questions, notes };
@@ -202,6 +205,7 @@ function guessCollection(
 	folder: FolderMapping,
 	rootName: string,
 	questions: Question[],
+	direct: boolean,
 ): void {
 	const name = state.key === "." ? rootName : state.key.split("/").pop() || state.key;
 	const matches = collectionMatches(site, name);
@@ -224,9 +228,10 @@ function guessCollection(
 		text: `Which collection do the ${state.files.length} file${state.files.length === 1 ? "" : "s"} in "${state.key === "." ? rootName : state.key}" go to?`,
 		choices,
 		defaultIndex: lone >= 0 ? lone : choices.length - 1,
-		// Nobody is asked: an unclear folder is left out rather than put in the wrong collection. The exception is a site with a single document collection (what
-		// `monti init` writes): posts can only go there, so a folder like `content/blog` is not left out for being called something else than `post`.
-		autoIndex: lone === 0 && matches.length === 0 ? 0 : choices.length - 1,
+		// Nobody is asked: an unclear folder is left out rather than put in the wrong collection. The exception is the folder that was pointed at itself
+		// (`monti import content/blog`, the next step `monti init` prints) on a site with a single document collection: posts can only go there, so it is not
+		// left out for being called something else than `post`.
+		autoIndex: lone === 0 && matches.length === 0 && direct ? 0 : choices.length - 1,
 		apply: (value) => {
 			folder.collection = value === "" ? null : value;
 		},

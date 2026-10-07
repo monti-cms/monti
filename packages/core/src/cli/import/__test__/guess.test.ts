@@ -50,7 +50,7 @@ describe("guessing the collection of a folder", () => {
 		expect(mapping.folders.content?.collection).toBeNull();
 	});
 
-	it("puts a folder in the only document collection when nobody can be asked, whatever the folder is called", async () => {
+	it("puts the folder that was pointed at in the only document collection when nobody can be asked, whatever it is called", async () => {
 		const solo = createSite({
 			collections: {
 				post: defineCollection({ label: "Post", kind: "document", path: "/blog/:slug", fields: { title, slug } }),
@@ -63,7 +63,10 @@ describe("guessing the collection of a folder", () => {
 		const result = guessCollections(solo, files, { rootName: "blog" });
 		await resolveQuestions(result.questions, undefined);
 		expect(result.mapping.folders["content"]?.collection).toBe("post");
-		// With two document collections nothing is chosen without asking (see the test above).
+		// A subfolder of what was scanned is still left out, as is any folder when there are two document collections.
+		const nested = guessCollections(solo, [source("pages/a.mdx", "---\ntitle: A\n---\n")], { rootName: "content" });
+		await resolveQuestions(nested.questions, undefined);
+		expect(nested.mapping.folders["content/pages"]?.collection).toBeNull();
 	});
 
 	it("--collection decides every folder, and must name a collection", async () => {
