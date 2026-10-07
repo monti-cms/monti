@@ -332,6 +332,93 @@ export const cms = defineConfig({
 
 자세한 것은 `@monti-cms/seo`의 README.
 
+## 기존 글 가져오기
+
+`monti import <path>`는 `.md`·`.mdx` 글이 든 폴더(Astro, contentlayer를 쓰는 Next, Hugo, 메모 폴더)를 CMS로 가져온다. 한 번 옮기는 용도지만 다시 돌려도 된다. 어디로 갈지 짐작하고, 불분명한 것만 묻고, 글 사이 링크와 이미지를 풀어 주고, 관리자와 같은 파이프라인으로 쓴다(검증과 훅이 돌아서 발행 문제가 그대로 드러난다). 이름이 `migrate`가 아니라 `import`인 것은 `monti migrate`가 이미 데이터베이스 테이블을 만드는 명령이기 때문이다.
+
+```sh
+pnpm exec monti import content/posts --dry-run   # 먼저 보기: 개수, 필드 매핑, 문제 파일. 아무것도 쓰지 않는다
+pnpm exec monti import content/posts             # 몇 가지 질문에 답하면 초안이 만들어진다
+pnpm exec monti import content/posts --publish   # 프런트매터가 초안이 아닌 글을 발행한다
+```
+
+**필요한 것.** 파일의 형식은 확장자로 정하고, 설정이 등록한 형식(`cms.formats()`, "형식")에서 찾는다. MDX 플러그인(`@monti-cms/mdx`의 `plugins: [mdx()]`, 디렉티브 표기로 쓴 글이면 `directiveSyntax()`도)을 넣어야 하고, 없으면 명령이 멈추면서 그렇게 알려 준다. `.md`를 맡은 형식이 없으면 `.md`도 MDX 형식으로 읽으므로, 일반 마크다운에 `{`나 `<`가 섞여 있으면 그 파일이 파싱 오류가 된다(줄 번호와 함께 알려 주고 나머지 파일은 계속한다). `--format <name>`은 모든 파일을 한 형식으로 읽고, 매핑 파일의 `formats`는 확장자마다 하나씩 정한다. 로컬 이미지는 설정의 미디어 저장소(`storage`, 예: `s3Storage()`)에 올린다. 저장소가 없으면 URL로 남고 보고서가 그렇게 알려 준다. 가져오기는 기억을 데이터베이스에 두므로 먼저 `monti migrate`를 돌려 둔다.
+
+**무엇을 짐작하고 언제 묻는가.** 이름이 맞으면 묻지 않고 짐작한 대로 쓴다. 그 밖에는 질문이다(번호를 고르고, Enter는 기본값). `--yes`이거나 터미널이 아니면 불분명한 것은 빼 둔다.
+
+| 원본 | 가는 곳 | 묻는 경우 |
+| --- | --- | --- |
+| 폴더(`content/posts`) | 컬렉션: 폴더 이름을 컬렉션 이름·레이블과 단수·복수 구분 없이 견준다(`posts` → `post`) | 맞는 컬렉션이 없을 때(선택지는 컬렉션들과 "이 폴더는 가져오지 않기") |
+| 프런트매터의 `slug`, 없으면 파일 이름(`hello.mdx`, `hello/index.mdx`는 `hello`) | 주소 | 묻지 않는다 |
+| 파일 이름 `hello.ko.mdx`, 언어 폴더(`ko/hello.mdx`), 프런트매터의 `lang`/`locale`/`language` | 언어. 한 글의 여러 언어 파일은 짝지어지고, 기본 언어 파일이 원본이고 나머지는 그 주소를 쓰는 번역이 된다 | 묻지 않는다. 사이트에 없는 언어면 그 파일이 실패한다 |
+| `title` | 제목 역할 필드 | 묻지 않는다 |
+| `date`, `pubDate`, `publishDate`, `publishedAt` | 항목의 발행일(발행할 때 정해지므로 옛 글이 제 날짜를 지닌다) | 묻지 않는다 |
+| `draft: true`, `published: false` | `--publish`를 줘도 초안으로 남는다 | 묻지 않는다 |
+| `description`, `summary`, `excerpt` | `summary` 역할 필드 | 묻지 않는다 |
+| `tags`, `categories`, `category`, `keywords`, `series` | 슬러그로 찾는 관계 필드(`Next.js` 같은 이름은 슬러그 `nextjs`로 바꾼다). 없는 대상은 매핑에 `create: true`가 있으면 만든다(태그 같은 아이템 컬렉션은 기본 켜짐) | 맞을 수 있는 관계 필드가 여럿이거나 없을 때, 그리고 없는 대상을 만들지 한 번 |
+| 그 밖의 키 | 이름이 같은 필드 | 묻지 않는다. 필드가 없는 키는 건너뛰고, 그 키가 있는 파일마다 알려 준다 |
+
+질문이 끝나면 매핑을 보여 주고 한 번 묻는다("Use it and save it for the next run?"). 저장된 매핑이 모든 것에 답하는 실행은 아무것도 묻지 않는다.
+
+**매핑 파일**은 명령을 돌리는 곳 옆의 `monti.import.json`이다(`--mapping <file>`로 다른 파일을 고른다). 처음 확인한 실행 뒤에 쓰이고(`--dry-run`은 쓰지 않는다) 이후 모든 실행이 읽는다. 결정을 바꾸려면 직접 고치고, 폴더 항목을 지우면 그 폴더를 다시 짐작한다. 파일에 아직 없는 키(새 프런트매터 키)는 묻지 않고 건너뛰며 알려 준다.
+
+```json
+{
+	"version": 1,
+	"locale": { "from": ["frontMatter", "filename"] },
+	"publicDir": "public",
+	"folders": {
+		"posts": {
+			"collection": "post",
+			"fields": {
+				"title": "title",
+				"slug": "@slug",
+				"date": "@publishedAt",
+				"draft": "@draft",
+				"lang": "@locale",
+				"summary": "summary",
+				"tags": { "field": "tagIds", "create": true },
+				"category": { "field": "categoryId", "create": false },
+				"author": "@skip"
+			}
+		},
+		"pages": { "collection": null, "fields": {} }
+	}
+}
+```
+
+폴더는 가져오는 폴더 아래 파일 경로의 첫 폴더다(언어 폴더와 `index` 파일의 폴더는 세지 않는다). `.`은 가져오는 폴더 바로 아래의 파일이며 그 폴더 이름으로 견준다. `collection: null`은 폴더를 뺀다. 키는 필드 이름으로 가거나, 관계는 `{ "field", "create" }`로 가거나, `@publishedAt`·`@slug`·`@locale`·`@draft`(참이면 초안)·`@published`(거짓이면 초안)·`@skip` 중 하나로 간다. `locale.from`은 언어를 읽는 곳을 앞에서부터 나열한다(`frontMatter`, `filename`, `folder`. 기본은 파일이 실제로 쓰는 것). `publicDir`은 `/images/a.png`를 찾는 곳이다(글 옆이나 그 위의 `public` 또는 `static`). `formats`(확장자 → 형식 이름)는 선택이다.
+
+**링크와 이미지.** 가져온 파일끼리의 내부 링크는 항목 id 링크가 되므로 나중에 슬러그를 바꿔도 깨지지 않는다. 상대 경로(`./other.mdx`, `../posts/other`, `other/`, 폴더의 `index`)와 사이트 경로(`/posts/other`, 또는 옛 사이트의 `/blog/2024/other`. 그 주소를 가진 글이 하나뿐일 때 마지막 부분으로 찾고, 둘이면 폴더로 가른다)를 모두 풀어 준다. 찾지 못했거나 둘 중 하나일 수 있는 링크는 쓴 그대로 두고 알려 준다. `#section`이나 `?query`는 항목 링크가 담을 수 없어 버려진다(보고서에 개수가 나온다). 같은 실행에서 나중에 만들어지는 파일의 링크는 두 번째 패스에서 푼다. 로컬 이미지(`![](./cover.png)`, `![](/images/a.png)`, 미디어 필드의 경로)는 SHA-256 기준으로 한 번만 올라가므로 한 파일을 쓰는 두 글이 미디어 항목 하나를 함께 쓰고(실행이 달라도 같다) 본문은 미디어 항목을 가리킨다. 디스크에 없거나 미디어 라이브러리가 받지 않는 형식의 이미지는 쓴 그대로 두고 경고한다. MDX 안의 HTML `<img>`는 바꾸지 않는다.
+
+**쓰기.** 모든 파일이 하나뿐인 쓰기 파이프라인인 `cms.contentService()`를 지난다. 1패스는 모든 파일을 초안으로 저장하고(기본 언어 파일이 먼저, 그다음 원본에서 `createTranslation`으로 만드는 번역), 2패스는 아직 항목이 없던 파일을 가리키던 본문을 다시 저장하고, 3패스는 `--publish`일 때 발행한다. 파이프라인이 거절한 발행(필수 필드 누락, `unparsed_body`)은 가져오기 실패가 아니다. 항목은 초안으로 남고 파일 줄에 이유가 나온다. `--publish`는 프런트매터가 초안이 아닌 항목만 발행하고 발행일을 `date`로 정한다. 없으면 모두 초안으로 만들고 요약이 그렇게 말한다.
+
+**다시 돌리기.** 어느 파일이 어느 항목이 되었는지는 저장소의 파일이 아니라 데이터베이스의 플러그인 저장소(`cms.storage("monti-import")`, 컬렉션 `files`, 키는 명령을 돌리는 곳 기준 파일 경로)에 기억한다. 기억은 항목에 속하므로, 두 번째 데이터베이스는 처음부터 시작하고 복원한 백업은 기억도 되돌려 오며 git의 내용이 데이터베이스와 어긋날 일이 없다. 기록에는 항목 id, 파일과 그것을 읽은 매핑을 함께 해시한 값, 발행 여부, 가져오기가 끝났을 때 항목의 버전이 들어 있다. 그래서 다시 돌리면:
+
+- 해시가 같은 파일은 건너뛴다("unchanged since the last import"). `--publish`이면 남아 있던 초안은 다시 쓰지 않고 발행만 한다.
+- 파일이나 매핑이 바뀌면 새 항목이 아니라 같은 항목을 고친다. 블록이 짝지어지는 곳은 블록 id를 유지한다.
+- 바뀐 파일이라도 지난 가져오기 뒤 CMS에서 고친 항목은 건너뛴다("edited in the CMS since the last import"). `--overwrite`를 주면 덮어쓴다. 휴지통이나 보관함에 있는 항목도 건너뛴다.
+- CMS에서 지운 항목은 다시 만든다.
+- 실패한 파일은 다시 시도하고, 중간에 멈춘 실행은 이어서 한다(멈추기 전에 만든 항목은 중복 없이 다시 찾는다).
+
+이미지는 같은 식으로 기억하고(`media` 컬렉션, SHA-256), 태그와 카테고리는 만들기 전에 슬러그로 먼저 찾으므로 어느 것도 두 번 만들어지지 않는다.
+
+| 플래그 | 뜻 |
+| --- | --- |
+| `--dry-run` | 컬렉션별 개수, 필드 매핑, 만들어질 것, 문제 파일(파싱 오류, 없는 필드, 필수 누락, 풀리지 않는 링크·이미지)을 출력한다. 매핑도 포함해 아무것도 쓰지 않는다 |
+| `--publish` | 프런트매터가 초안이 아닌 항목을 발행한다(기본은 초안으로 만들기) |
+| `--collection <name>` | 모든 폴더를 이 컬렉션으로 보낸다 |
+| `--format <name>` | 모든 파일을 이 형식으로 읽는다 |
+| `--mapping <file>` | 매핑 파일(기본 `./monti.import.json`) |
+| `--yes`, `-y` | 묻지 않는다. 짐작한 대로 쓰고 불분명한 것은 뺀다 |
+| `--json` | 보고서를 JSON으로 출력한다(질문 없음. 스크립트·CI용) |
+| `--overwrite` | 지난 가져오기 뒤 CMS에서 고친 항목을 덮어쓴다 |
+| `--env-file`, `--no-env-file`, `--config` | `monti migrate`와 같다 |
+
+**보고서**는 가져온·고친·건너뛴·실패한 파일을 이유와 함께 나열하고, 태그·카테고리로 만든 항목, 이미지, 링크, 그리고 쉬운 말 요약을 보여 준다("Of 12 files, imported 9 new files, skipped 2 files, 1 file failed. 8 entries are drafts. Run again with --publish ..."). 파일이 하나라도 실패하면 종료 코드가 1이다(dry run은 제외). 스크립트가 거기서 멈출 수 있다.
+
+아직 다루지 않는 것: 다른 원본(`--from wordpress`는 계획 중), 기본 언어가 아닌 언어의 아이템 컬렉션, 훅에서 파일의 출처를 아는 것(훅은 항목만 볼 뿐 어느 파일에서 왔는지는 보지 못한다).
+
 ## CMS 인스턴스
 
 `defineConfig({ … })`(`@monti-cms/core/server`)는 사이트 옵션과 서버 옵션을 서버의 모든 곳이 쓰는 인스턴스로 만든다. 인스턴스가 사이트(풀어 놓은 사이트 설정, `cms.site`)·콘텐츠 저장소·서비스·미디어 저장소·로그인 연결·
@@ -658,10 +745,11 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/code-block` | 공개 렌더러·편집기 | 코드 블록 주석 모델 |
 | `@monti-cms/core/document` | 본문을 고치거나 살피는 화면·플러그인 | `StoredDocument` 타입과, 표기법을 모르고 문서만으로 일하는 도우미: 블록 ID(`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, 링크·이미지·표 도우미, 저장 코드 블록 모델. 글 표기를 읽거나 쓰는 것은 없다. 관리자 편집기와 AI가 여기서 불러온다 |
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
+| `@monti-cms/core/front-matter` | 마크다운 파일을 읽고 쓰는 도구(git-sync, `monti import`) | `parseFile`(YAML 프런트매터와 본문, YAML 오류의 줄 번호 포함)과 `composeFile` |
 | `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti check:boundary`(클라이언트 컴포넌트가 서버 전용 설정에 닿으면 실패)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`addComponents`·`migrate`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
+| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti check:boundary`(클라이언트 컴포넌트가 서버 전용 설정에 닿으면 실패)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti import`(기존 MD/MDX 글 가져오기, "기존 글 가져오기")·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`addComponents`·`migrate`·`runImport`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
 | `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드

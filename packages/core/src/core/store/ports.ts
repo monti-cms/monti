@@ -66,6 +66,8 @@ export interface EntryStore {
 		publishImmediately?: boolean;
 		/** With `publishImmediately`: reset the publish date to now. */
 		resetPublishedAt?: boolean;
+		/** Sets the publish date (instead of now or the kept first-publish time), for content that was published before it came here. */
+		publishedAt?: Date;
 		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<Entry>;
 	getWorkingReferences(params: { entryId: string }): Promise<Reference[]>;
@@ -81,6 +83,8 @@ export interface EntryStore {
 		expectedVersion: number;
 		snapshot: PreparedSnapshot;
 		resetPublishedAt?: boolean;
+		/** Sets the publish date (instead of now or the kept first-publish time), for content that was published before it came here. */
+		publishedAt?: Date;
 		/** Receives the notices the checks against locked rows found (a link to an entry that is not published). They never block. */
 		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<Entry>;

@@ -210,7 +210,7 @@ export const createContentService = <T = unknown>(
 		 * `extraWarnings` adds notices computed from the prepared draft (image state), which never block.
 		 */
 		publish: async (
-			params: { id: string; expectedVersion: number; resetPublishedAt?: boolean },
+			params: { id: string; expectedVersion: number; resetPublishedAt?: boolean; publishedAt?: Date },
 			options?: { extraWarnings?: (snapshot: PreparedSnapshot) => Promise<readonly Issue[]> },
 		): Promise<{ entry: T; warnings: readonly Issue[] }> => {
 			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
@@ -239,6 +239,7 @@ export const createContentService = <T = unknown>(
 						references: snapshot.references,
 						publishImmediately: true,
 						resetPublishedAt: params.resetPublishedAt,
+						publishedAt: params.publishedAt,
 						onWarnings,
 					})
 				: ((await storePort.publishEntry({
@@ -246,6 +247,7 @@ export const createContentService = <T = unknown>(
 						expectedVersion: params.expectedVersion,
 						snapshot,
 						resetPublishedAt: params.resetPublishedAt,
+						publishedAt: params.publishedAt,
 						onWarnings,
 					})) as T);
 			return { entry, warnings: [...noticed, ...locked, ...warnings] };

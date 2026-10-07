@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
+import { composeFile, parseFile } from "@monti-cms/core/front-matter";
 import { type Cms, type Entry, type EntryBody, exportBodyText } from "@monti-cms/core/plugin/server";
-import { composeFile, parseFile } from "./front-matter";
 import { blobSha } from "./github/blob-sha";
 import { RESERVED_FRONT_MATTER_KEYS, type ResolvedTarget } from "./options";
 import type { PathPattern } from "./path-pattern";
