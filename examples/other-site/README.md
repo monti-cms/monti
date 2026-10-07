@@ -28,11 +28,11 @@ The shape is what `monti init --admin-path /studio` generates, plus this site's 
 | File | Contents |
 | --- | --- |
 | `cms.config.ts` | Collections, blocks and extensions (`mdx()`, the chart block and `seo()` in `plugins`). Unlike the blog: admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/en` for every language), and the preview language comes from the path (`previewLocaleParam: false`) |
-| `cms.server.ts` | The CMS instance: `createCms` over the DB and GitHub login server config (as `monti init` generates). The admin, the API route and the site pages (`cms.read.*`) all import `cms` from it |
+| `cms.server.ts` | The CMS instance: `createCms` over the DB and GitHub login server config (as `monti init` generates; `githubAuth` comes from `@monti-cms/nextjs/auth`). The admin, the API route and the site pages (`cms.read.*`) all import `cms` from it |
 | `app/components/site-blocks.tsx` | Public components of the site blocks (`quote-card`, `map`), typed from the block definitions through `DocumentComponents` and passed to `<CmsContent components={...} />` |
-| `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`) and an example spell-check extension (`admin-components.tsx`) |
+| `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`, using `@monti-cms/nextjs/admin`) and an example spell-check extension (`admin-components.tsx`) |
 | `showcase/` | The "CMS elements" sample articles (`*.mdx`) and `seed.ts`, which `pnpm preview:example` runs to put them into the preview database |
-| `app/api/cms/[...path]/route.ts` | Admin API and login (`/api/cms/auth/*`). There is no separate login route file |
+| `app/api/cms/[...path]/route.ts` | Admin API and login (`/api/cms/auth/*`), served by `createRouteHandler(cms)` of `@monti-cms/nextjs`. There is no separate login route file |
 | `app/globals.css` | Only the Tailwind and package style imports (including `@monti-cms/mdx/styles.css`, after the admin styles). Admin colors and variants (`cms-*`, `cms-dark`, and so on) are defined by the admin package styles and do not collide with the app's names |
 
 To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/cms/auth/callback/github`.

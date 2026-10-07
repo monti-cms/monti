@@ -2,13 +2,14 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 관리자 화면(Next.js App Router). 목록·편집기(tiptap)·미디어·본문 템플릿·휴지통·로그인 화면을 준다.
+`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·본문 템플릿·휴지통·로그인 화면을 준다.
+프레임워크에 묶이지 않는다. Next.js에서 아무것도 가져오지 않고, 라우터는 받은 어댑터로만 닿는다("라우터 어댑터"). 지금 지원하는 호스트는 `@monti-cms/nextjs`를 통한 Next.js(App Router)다.
 플러그인(예: `@monti-cms/ai`)이 화면·사이드바 항목·필드 옆 버튼·편집 화면 동작을 더한다.
 화면은 본체의 관리자 API(`/api/cms/v1/*`)만 부른다. 설치하지 않고 같은 API로 화면을 직접 만들어도 된다.
 
 ## 붙이기
 
-설치·라우트·스타일은 `@monti-cms/core` README의 "빈 Next 앱에 설치"를 따른다(`monti init`이 관리자 라우트·스타일 줄을 만든다).
+설치·라우트·스타일은 `@monti-cms/core` README의 "빈 Next 앱에 설치"를 따른다(`monti init`이 관리자 라우트·스타일 줄을 만든다). 관리자 라우트 파일은 `@monti-cms/nextjs/admin`의 `CmsAdminLayout`·`CmsAdminPage`를 쓴다.
 
 - **관리자 경로.** 기본 `/admin`이고 사이트 설정 `admin.path`로 바꾼다(예: `/studio`). 앱의 관리자 라우트 폴더
   (`app/(admin)/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
@@ -280,7 +281,8 @@ export default defineAdminPlugin({
 | 진입점 | 내용 |
 |---|---|
 | `@monti-cms/admin` | 사이트 컴포넌트 넣기(`CmsAdminComponentsProvider`: 원문 패널·형식·`useFormat`)·속성 칸·목록 칸 타입 |
-| `/next` | 관리자 레이아웃·페이지(앱 라우트에서 내보낸다) |
+| `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
+| `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
 | `/blocks` | 블록 편집 화면 부품(도구 줄·설정 팝오버·속성 입력 칸) |
 | `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`·`useBlockEditor`·`useEntryEditor`)·블록 화면 컴포넌트 `Content`·`BlockFrame`·`EditorResult`·`EditorError` |
@@ -290,6 +292,24 @@ export default defineAdminPlugin({
 | `/api` | 관리자 API 부르기(`cmsFetch`) |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일 |
+
+### 라우터 어댑터
+
+화면과 훅은 프레임워크를 가져오지 않는다. 라우터에서 필요한 것은 모두 호스트 패키지가 `AdminRouterProvider`(`@monti-cms/admin/router`)에 주는 객체 하나, `AdminRouter`에서 온다.
+
+| 항목 | 뜻 |
+|---|---|
+| `Link` | 사이트 안 주소로 가는 링크 컴포넌트(`<a>` props, 문자열 `href`). 프레임워크에 있으면 클라이언트 이동을 한다 |
+| `navigate(href, { scroll? })` | 그 주소로 가고 기록을 하나 더한다 |
+| `replace(href, { scroll? })` | 지금 기록을 그 주소로 바꾼다. 쿼리만 바꾸는 목록은 `scroll: false`를 넘긴다 |
+| `usePathname()` | 훅: 지금 주소의 경로 |
+| `useSearchParams()` | 훅: 지금 주소의 쿼리(읽기 전용 `URLSearchParams`) |
+
+관리자 안에서는 같은 진입점의 `AdminLink`·`useAdminRouter()`·`useAdminPathname()`·`useAdminSearchParams()`를 쓴다. 제공자 밖에서는 이유를 알리는 오류가 난다. 플러그인 화면도 이것을 쓴다(AI 플러그인이 이렇게 경로를 읽는다).
+
+서버 화면이 필요로 하는 리다이렉트와 404는 `AdminServer`(`{ redirect(href): never; notFound(): never }`)로 `AdminPage`(`@monti-cms/admin/host`)에 넘긴다.
+`@monti-cms/nextjs/admin`이 `next/link`·`next/navigation`과 Next의 `redirect`·`notFound`로 둘 다 만든다. 다른 프레임워크의 호스트는 제 것을 주고 `AdminLayout`을 `AdminRouterProvider` 안에 그린다.
+테스트가 경계를 지킨다. 관리자의 소스 파일은 `next/*`를 가져올 수 없다.
 
 ### 편집기 훅 (실험)
 
@@ -343,7 +363,7 @@ Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않�
 - **그 밖에.** 배포 묶음의 Tailwind 클래스 찾기(`@source`), 테두리·포커스 윤곽 기본색, 관리자 문서의 둥글기(`--radius*`) 값(Tailwind 기본
   이름이라 관리자가 있는 문서에서만 바뀐다).
 
-`CmsAdminLayout`은 CMS 인스턴스(`cms`, 앱의 `cms.server.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
+`CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `cms.server.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
 
 ```tsx
 <CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>
