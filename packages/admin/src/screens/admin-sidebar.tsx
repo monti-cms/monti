@@ -11,6 +11,7 @@ import {
 	Globe,
 	LayoutTemplate,
 	Plus,
+	Settings2,
 	Trash2,
 } from "lucide-react";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
@@ -47,7 +48,7 @@ import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/ent
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 
 /** Value that points to the current screen in the sidebar. For a plugin screen, that screen's address (`nav.path`, e.g. `ai`). */
-export type AdminNavId = Collection | "media" | "templates" | "trash" | (string & {});
+export type AdminNavId = Collection | "media" | "templates" | "schema" | "trash" | (string & {});
 
 /** Folder navigation used only on the list screen. */
 export interface FolderNavigation {
@@ -357,6 +358,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 						<SidebarMenu aria-label={t("sidebar.manage")}>
 							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
 							{navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
+							{navLink(site.adminHref("/schema"), "schema", t("sidebar.schema"), <Settings2 />)}
 							{pluginNav.map((item) =>
 								navLink(site.adminHref(`/${item.path}`), item.path, item.label, <NamedIcon name={item.icon} />),
 							)}

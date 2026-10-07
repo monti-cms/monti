@@ -6,6 +6,7 @@ import LoginPage from "../screens/login/page";
 import MediaPage from "../screens/media/page";
 import DashboardPage from "../screens/page";
 import { requireAdminPage } from "../screens/require-admin";
+import SchemaPage from "../screens/schema/page";
 import TemplatesPage from "../screens/templates/page";
 import TrashPage from "../screens/trash/page";
 import type { AdminServer } from "./server";
@@ -23,7 +24,7 @@ export interface AdminPageProps {
  * A single admin screen, framework-neutral. A host package renders it from the app's admin route (default `app/(admin)/admin/[[...path]]/page.tsx`). The path after the admin path
  * selects the screen. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  *
- * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates
+ * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/schema` schema settings
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  * - `/admin/<path>` plugin screens (e.g. the AI plugin's `/admin/ai`)
  */
@@ -40,6 +41,8 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 				return <MediaPage cms={cms} server={server} />;
 			case "templates":
 				return <TemplatesPage cms={cms} server={server} />;
+			case "schema":
+				return <SchemaPage cms={cms} server={server} />;
 			case "login":
 				return <LoginPage cms={cms} server={server} />;
 		}

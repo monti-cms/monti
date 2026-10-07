@@ -14,6 +14,7 @@ export {
 	type SchemaDecision,
 	type SchemaEditInput,
 	type SchemaEditPreview,
+	type SchemaIssue,
 	type SchemaSaveInput,
 	type SchemaSaveResult,
 	type SchemaScreenState,
