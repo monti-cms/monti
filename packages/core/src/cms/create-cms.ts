@@ -354,7 +354,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				log(
 					summary
 						? `Applied ${summary.applied} step${summary.applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
-						: "Migration done.",
+						: "Migration completed.",
 				);
 			},
 			close: async () => {

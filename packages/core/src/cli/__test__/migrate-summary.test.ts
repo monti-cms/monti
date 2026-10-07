@@ -1,10 +1,6 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	closeGlobalPool,
-	createIsolatedTestPool,
-	dropIsolatedTestPool,
-} from "../../adapters/postgres/__test__/test-database";
+import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
 import { migrate } from "../migrate";
 import { project, setEnv } from "./doctor-helpers";
 
