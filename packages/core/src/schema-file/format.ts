@@ -258,13 +258,66 @@ const seedTemplate = z.union(
 	{ error: "a template needs either `doc` (a stored document) or both `body` and `format`" },
 );
 
+const migrationBase = {
+	id: text.min(1).describe("Name of the transform, for good: it is recorded when it ran, so it runs once."),
+	note: text.optional().describe("Why, for people reading the file."),
+	collection: text.describe("Collection of the schema after the change."),
+};
+
+const migration = z.discriminatedUnion(
+	"op",
+	[
+		z.strictObject({
+			...migrationBase,
+			op: z.literal("renameField"),
+			from: text.describe("The field name stored values are under now."),
+			to: text.describe("The new field name (a field of the schema)."),
+		}),
+		z.strictObject({
+			...migrationBase,
+			op: z.literal("mapOption"),
+			field: text,
+			from: text.describe("The select value that is no longer an option."),
+			to: text.describe("The option it becomes."),
+		}),
+		z.strictObject({
+			...migrationBase,
+			op: z.literal("dropField"),
+			field: text.describe("A field the schema no longer has. Its stored values are deleted."),
+		}),
+		z.strictObject({
+			...migrationBase,
+			op: z.literal("setDefault"),
+			field: text,
+			value: text.describe(
+				"Stored in entries that have no value for the field (a text field, or an option of a select).",
+			),
+		}),
+	],
+	{ error: 'a migration needs an "op" of renameField, mapOption, dropField or setDefault' },
+);
+
 /** The schema file. Exported for the JSON Schema build; use `parseSchemaFile` to read one. */
 export const schemaFileShape = z
 	.strictObject({
 		$schema: text.optional().describe("Link to this schema, for editor autocomplete."),
+		schemaVersion: z
+			.number()
+			.int()
+			.min(1)
+			.optional()
+			.describe(
+				"Version of the schema (1 if left out). `monti schema:apply` raises it when the schema changes; entries record the version they were written or transformed under.",
+			),
 		collections: z
 			.record(text, collection)
 			.describe("Collection name -> definition. The name is a stored value, so do not change it in production."),
+		migrations: z
+			.array(migration)
+			.optional()
+			.describe(
+				"Data transforms `monti schema:apply` runs once each, in order (rename a field, map a removed select option, drop a field, set a default). Applied ones stay as history.",
+			),
 		locales: z
 			.array(locale)
 			.min(1, { error: "needs at least one locale" })
@@ -284,6 +337,13 @@ export const schemaFileShape = z
 	.superRefine((file, ctx) => {
 		if (Object.keys(file.collections).length === 0) {
 			ctx.addIssue({ code: "custom", path: ["collections"], message: "needs at least one collection" });
+		}
+		const ids = new Set<string>();
+		for (const [index, item] of (file.migrations ?? []).entries()) {
+			if (ids.has(item.id)) {
+				ctx.addIssue({ code: "custom", path: ["migrations", index, "id"], message: `"${item.id}" is used twice` });
+			}
+			ids.add(item.id);
 		}
 		const codes = file.locales.map((item) => item.code);
 		for (const [index, code] of codes.entries()) {

@@ -8,6 +8,5 @@ export const hashOf = (
 	site: Site,
 	metadata: Parameters<typeof mdxContentHash>[1],
 	mdx: string,
-	version: number,
 	syntax?: readonly SyntaxExtension[],
-) => mdxContentHash(legacyBodies(site, syntax ? { syntax } : {}), metadata, mdx, version);
+) => mdxContentHash(legacyBodies(site, syntax ? { syntax } : {}), metadata, mdx);

@@ -247,9 +247,7 @@ describe("0013_stored_documents", () => {
 			expect(expected.doc).not.toBeNull();
 			expect(stored?.mdx).toBe(expected.mdx);
 			expect(contentOf(stored?.doc)).toEqual(contentOf(expected.doc));
-			expect(stored?.content_hash).toBe(
-				mdxContentHash(bodies, stored?.metadata ?? {}, expected.mdx, stored?.schema_version ?? 1),
-			);
+			expect(stored?.content_hash).toBe(mdxContentHash(bodies, stored?.metadata ?? {}, expected.mdx));
 			expect(stored?.search_text).toBe(mdxSearchText(testSite, bodies, expected.mdx));
 		}
 		expect((await row(published.id, "working"))?.mdx).toBe(WRITTEN);
@@ -345,9 +343,7 @@ describe("0013_stored_documents", () => {
 			expect(stored?.mdx).toBe(mdx);
 			expect(stored?.doc).toBeNull();
 			// It still has the current hash (of its raw text) and search text.
-			expect(stored?.content_hash).toBe(
-				mdxContentHash(bodies, stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1),
-			);
+			expect(stored?.content_hash).toBe(mdxContentHash(bodies, stored?.metadata ?? {}, mdx));
 			expect(stored?.search_text).toBe(mdxSearchText(testSite, bodies, mdx));
 			expect(messages.filter((message) => message.includes(`${entry.id}/working`))).toHaveLength(1);
 		}

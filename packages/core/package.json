@@ -23,6 +23,7 @@
 		"./testing": "./src/testing.ts",
 		"./cli": "./src/cli/index.ts",
 		"./schema-types": "./src/cli/schema-types.ts",
+		"./schema-change": "./src/schema-change/index.ts",
 		"./schema.json": "./schema.json",
 		"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 		"./render.css": "./render.css"
@@ -158,6 +159,10 @@
 			"./schema-types": {
 				"types": "./dist/cli/schema-types.d.ts",
 				"default": "./dist/cli/schema-types.js"
+			},
+			"./schema-change": {
+				"types": "./dist/schema-change/index.d.ts",
+				"default": "./dist/schema-change/index.js"
 			},
 			"./schema.json": "./schema.json",
 			"./stubs/missing-optional": "./stubs/missing-optional.cjs",

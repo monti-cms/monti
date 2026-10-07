@@ -210,7 +210,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						body
 							? {
 									contentHash: body.content_hash,
-									schemaVersion: body.schema_version,
 									slug: locked.working_slug,
 									metadata: body.metadata,
 									translation: body.translation,
@@ -218,7 +217,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 							: null,
 						{
 							contentHash: params.snapshot.contentHash,
-							schemaVersion: params.snapshot.schemaVersion,
 							slug: nextSlug,
 							metadata,
 							translation,

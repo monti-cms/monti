@@ -55,7 +55,7 @@ export async function migrateUnparsedBodies(
 			const doc = unparsedDocument(row.mdx);
 			if (row.state === "published") published.push(row.entry_id);
 			else drafts += 1;
-			return { doc: JSON.stringify(doc), contentHash: computeContentHash(row.metadata, doc, row.schema_version) };
+			return { doc: JSON.stringify(doc), contentHash: computeContentHash(row.metadata, doc) };
 		});
 		await client.query(
 			`UPDATE "${qSchema}".entry_bodies AS b SET doc = v.doc::jsonb, content_hash = v.content_hash

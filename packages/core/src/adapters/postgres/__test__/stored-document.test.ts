@@ -120,7 +120,7 @@ describe("stored documents", () => {
 		// The text of a body is not stored: the document is the only source.
 		expect(row.mdx).toBeNull();
 		// The hash and the search text are the document's.
-		expect(row.content_hash).toBe(computeContentHash(row.metadata, doc as never, row.schema_version));
+		expect(row.content_hash).toBe(computeContentHash(row.metadata, doc as never));
 		expect(row.search_text).toBe(documentText(testSite, doc as never, SEARCH_TEXT));
 		return { ...row, doc: doc as NonNullable<typeof doc> };
 	};

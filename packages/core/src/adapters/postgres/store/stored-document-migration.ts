@@ -70,7 +70,7 @@ export async function migrateStoredDocuments(
 			return {
 				mdx: body.text,
 				doc: body.doc === null ? null : JSON.stringify(body.doc),
-				contentHash: mdxContentHash(bodies, row.metadata, body.text, row.schema_version),
+				contentHash: mdxContentHash(bodies, row.metadata, body.text),
 				searchText: mdxSearchText(site, bodies, body.text),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,

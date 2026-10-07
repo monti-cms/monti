@@ -12,7 +12,7 @@ import { directiveSyntax } from "..";
 const syntax = [directiveSyntax()];
 const { analyze: read, toDocument, write, writeTwice } = mdxWith(testSite, syntax);
 
-const hash = (source: string) => hashOf(testSite, { title: "t" }, source, 1, syntax);
+const hash = (source: string) => hashOf(testSite, { title: "t" }, source, syntax);
 
 describe("directive syntax: line breaks", () => {
 	it("reads every spelling of a break into the same document", () => {

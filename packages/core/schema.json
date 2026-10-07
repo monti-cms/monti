@@ -6,6 +6,12 @@
 			"description": "Link to this schema, for editor autocomplete.",
 			"type": "string"
 		},
+		"schemaVersion": {
+			"description": "Version of the schema (1 if left out). `monti schema:apply` raises it when the schema changes; entries record the version they were written or transformed under.",
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
 		"collections": {
 			"type": "object",
 			"propertyNames": {
@@ -1211,6 +1217,164 @@
 				"additionalProperties": false
 			},
 			"description": "Collection name -> definition. The name is a stored value, so do not change it in production."
+		},
+		"migrations": {
+			"description": "Data transforms `monti schema:apply` runs once each, in order (rename a field, map a removed select option, drop a field, set a default). Applied ones stay as history.",
+			"type": "array",
+			"items": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"minLength": 1,
+								"description": "Name of the transform, for good: it is recorded when it ran, so it runs once."
+							},
+							"note": {
+								"description": "Why, for people reading the file.",
+								"type": "string"
+							},
+							"collection": {
+								"type": "string",
+								"description": "Collection of the schema after the change."
+							},
+							"op": {
+								"type": "string",
+								"const": "renameField"
+							},
+							"from": {
+								"type": "string",
+								"description": "The field name stored values are under now."
+							},
+							"to": {
+								"type": "string",
+								"description": "The new field name (a field of the schema)."
+							}
+						},
+						"required": [
+							"id",
+							"collection",
+							"op",
+							"from",
+							"to"
+						],
+						"additionalProperties": false
+					},
+					{
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"minLength": 1,
+								"description": "Name of the transform, for good: it is recorded when it ran, so it runs once."
+							},
+							"note": {
+								"description": "Why, for people reading the file.",
+								"type": "string"
+							},
+							"collection": {
+								"type": "string",
+								"description": "Collection of the schema after the change."
+							},
+							"op": {
+								"type": "string",
+								"const": "mapOption"
+							},
+							"field": {
+								"type": "string"
+							},
+							"from": {
+								"type": "string",
+								"description": "The select value that is no longer an option."
+							},
+							"to": {
+								"type": "string",
+								"description": "The option it becomes."
+							}
+						},
+						"required": [
+							"id",
+							"collection",
+							"op",
+							"field",
+							"from",
+							"to"
+						],
+						"additionalProperties": false
+					},
+					{
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"minLength": 1,
+								"description": "Name of the transform, for good: it is recorded when it ran, so it runs once."
+							},
+							"note": {
+								"description": "Why, for people reading the file.",
+								"type": "string"
+							},
+							"collection": {
+								"type": "string",
+								"description": "Collection of the schema after the change."
+							},
+							"op": {
+								"type": "string",
+								"const": "dropField"
+							},
+							"field": {
+								"type": "string",
+								"description": "A field the schema no longer has. Its stored values are deleted."
+							}
+						},
+						"required": [
+							"id",
+							"collection",
+							"op",
+							"field"
+						],
+						"additionalProperties": false
+					},
+					{
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"minLength": 1,
+								"description": "Name of the transform, for good: it is recorded when it ran, so it runs once."
+							},
+							"note": {
+								"description": "Why, for people reading the file.",
+								"type": "string"
+							},
+							"collection": {
+								"type": "string",
+								"description": "Collection of the schema after the change."
+							},
+							"op": {
+								"type": "string",
+								"const": "setDefault"
+							},
+							"field": {
+								"type": "string"
+							},
+							"value": {
+								"type": "string",
+								"description": "Stored in entries that have no value for the field (a text field, or an option of a select)."
+							}
+						},
+						"required": [
+							"id",
+							"collection",
+							"op",
+							"field",
+							"value"
+						],
+						"additionalProperties": false
+					}
+				]
+			}
 		},
 		"locales": {
 			"minItems": 1,

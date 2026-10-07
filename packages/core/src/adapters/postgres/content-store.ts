@@ -11,6 +11,7 @@ import { createMediaOps } from "./store/media";
 import { createPreferenceOps } from "./store/preferences";
 import { createPublicReadOps } from "./store/public-read";
 import { createPublishing } from "./store/publish";
+import { createSchemaChangeOps } from "./store/schema-change";
 import { createTemplateOps } from "./store/templates";
 import { createTransferOps } from "./store/transfer";
 
@@ -44,6 +45,7 @@ export function createContentStore(
 		...createTransferOps(ctx),
 		...createMediaOps(ctx),
 		...createTemplateOps(ctx),
+		...createSchemaChangeOps(ctx),
 	};
 	return options?.afterCommit ? withAfterCommit(store, options.afterCommit) : store;
 }

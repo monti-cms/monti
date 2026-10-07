@@ -10,7 +10,16 @@ export type {
 	MediaMetadataStore,
 	PreferenceStore,
 	PublicReadStore,
+	SchemaChangeStore,
 	TemplateStore,
 	TransferStore,
 } from "./ports";
+export type {
+	AppliedSchemaChange,
+	ApplySchemaChangeParams,
+	BodyCursor,
+	RewrittenBody,
+	ScannedBody,
+	SchemaState,
+} from "./schema-change";
 export * from "./types";

@@ -427,6 +427,22 @@ const STEPS: readonly MigrationStep[] = [
 		`),
 	},
 	{
+		name: "0021_schema_state",
+		/**
+		 * The schema last applied to the store (`monti schema:apply`): one row holding its version and its data model as JSON, which the next `schema:diff` reads as the
+		 * old side. A store that never applied one has no row; the first apply records the baseline without touching any entry.
+		 */
+		run: (client, qSchema) =>
+			client.query(`
+			CREATE TABLE IF NOT EXISTS "${qSchema}".schema_state (
+				id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+				schema_version INTEGER NOT NULL CHECK (schema_version >= 1),
+				schema JSONB NOT NULL,
+				applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+			)
+		`),
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */
@@ -453,7 +469,7 @@ const lockMigrations = (client: PoolClient, qSchema: string) =>
 	client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`cms_migrate:${qSchema}`]);
 
 /** Creates the schema and the step record table (after taking the lock). */
-async function prepare(client: PoolClient, qSchema: string): Promise<void> {
+export async function prepare(client: PoolClient, qSchema: string): Promise<void> {
 	await lockMigrations(client, qSchema);
 	await client.query(`CREATE SCHEMA IF NOT EXISTS "${qSchema}"`);
 	await client.query(`

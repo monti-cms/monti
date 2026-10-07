@@ -163,9 +163,7 @@ describe("0018_link_entry_ids", () => {
 			expect(marks).not.toContain(hrefTo(targetSlug));
 			expect(marks).toContain("https://example.com/a");
 			// The hash is the one a save of this document makes, and no text is written next to it.
-			expect(after?.content_hash).toBe(
-				computeContentHash(after?.metadata as never, doc as never, after?.schema_version),
-			);
+			expect(after?.content_hash).toBe(computeContentHash(after?.metadata as never, doc as never));
 			expect(after?.mdx).toBeNull();
 			expect(await references(source.id, state)).toMatchObject([
 				{ target_id: target.id, target_entry_id: target.id, is_stale: false, occurrences: [{ type: "body" }] },

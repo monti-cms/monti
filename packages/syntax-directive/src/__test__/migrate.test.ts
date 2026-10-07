@@ -15,9 +15,9 @@ const readOnly = [directiveSyntax({ write: false })];
 const { write, writeTwice } = mdxWith(testSite, readOnly);
 
 const metadata = { title: "A" };
-const hashBefore = (mdx: string) => hashOf(testSite, metadata, mdx, 1, readOnly);
+const hashBefore = (mdx: string) => hashOf(testSite, metadata, mdx, readOnly);
 /** The written body is read with no extension at all: it is standard MDX. */
-const hashAfter = (mdx: string) => hashOf(testSite, metadata, mdx, 1);
+const hashAfter = (mdx: string) => hashOf(testSite, metadata, mdx);
 
 const DIRECTIVE_NOTATION = /^:{2,}[a-z]|[^\\]:[a-z-]+\[/m;
 

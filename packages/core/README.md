@@ -458,8 +458,8 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti add` (install components as source), `monti migrate` (create tables), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate`, `generateSchemaTypes`, `extractSchema` (the code behind the `monti` command) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti add` (install components as source), `monti migrate` (create tables), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages
@@ -478,7 +478,8 @@ Every body (the working and published bodies of entries, the source a translatio
 Saving a body in another spelling of the content it already has changes nothing (no new version). A text typed in a source panel (the `mdx()` plugin provides one) is read in the browser into a document, and the document is what is saved.
 A body that cannot become a document (its text does not parse, has front matter, or would not read back the same) is stored as an **`unparsed`** document: one node `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<the text as given>" } }`, which keeps the text exactly. A draft can hold it, the editor shows it as source, and publishing it is blocked by the issue `unparsed_body`. The reasons it was rejected (`mdx_error` with the line and column in the text, `frontmatter_present`) are reported next to it.
 
-**What is checked.** Core checks, hashes and searches the stored document, never a text, so a body is treated the same however it was written or sent. Those are `prepareSnapshot` and `validateForPublish` (required, unknown and invalid block attributes, references, internal links, image sources, footnotes, code-line links, table merges, translation notes left in the text), the content hash (`computeContentHash(metadata, doc, schemaVersion)`, the same value as before: the document without block ids, keys sorted), the search text and excerpts (`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`) and the translation helpers (`withTranslationHints`, `compareStructure`, `diffSources` take documents). A body given as text is read into a document by its format first, and a document is taken as given (its text runs and trailing blank paragraphs are put in their canonical form).
+**What is checked.** Core checks, hashes and searches the stored document, never a text, so a body is treated the same however it was written or sent. Those are `prepareSnapshot` and `validateForPublish` (required, unknown and invalid block attributes, references, internal links, image sources, footnotes, code-line links, table merges, translation notes left in the text), the content hash (`computeContentHash(metadata, doc)`, the same value as before: the document without block ids, keys sorted; the schema version an entry is stored under is not part of it, see "Changing the schema")
+, the search text and excerpts (`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`) and the translation helpers (`withTranslationHints`, `compareStructure`, `diffSources` take documents). A body given as text is read into a document by its format first, and a document is taken as given (its text runs and trailing blank paragraphs are put in their canonical form).
 Where a finding is, is the block it is in: an issue's `position` is `{ blockId }` (a text that could not be read has `{ line, column }` in that text instead), and a body reference occurrence is `{ "type": "body", "blockId" }`.
 
 **Code blocks.** A code block is stored as its code (without annotation comments) and its annotations as data (line effects, text effects and regex rules), and a text format writes it back as Monti annotation comments, so other tools that read the text still see them.
@@ -914,7 +915,7 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 
 ## The schema file
 
-`monti.schema.json` at the site root holds the plain-data part of the site config: the collections with their fields and layouts, the locales and the default locale, the time zone, the plain-data `site` settings, `admin` (the path, the language and string text overrides) and the seed templates (stored documents, or a text and its format).
+`monti.schema.json` at the site root holds the plain-data part of the site config: the collections with their fields and layouts, the locales and the default locale, the time zone, the plain-data `site` settings, `admin` (the path, the language and string text overrides), the seed templates (stored documents, or a text and its format), the `schemaVersion` and the data transforms (`migrations`, see "Changing the schema").
 It is a repo file, not code the bundler runs, so a tool can read and write it, and types are generated from it.
 
 ```json
@@ -983,7 +984,7 @@ monti.schema.json is not a valid schema file:
 | Part | Rule |
 | --- | --- |
 | `collections` | The file's collections, then the ones written in code (`defineCollection`). The same name in both is an error |
-| `locales`, `defaultLocale` | Only in the file. Setting them in code too is an error |
+| `locales`, `defaultLocale`, `schemaVersion` | Only in the file. Setting them in code too is an error (`schemaVersion` can be set in a config that has no schema file) |
 | `site`, `admin` | Key by key, the code's value wins. A key set to `undefined` (an unset environment variable) leaves the file's value. `site.url` usually lives in code |
 | `timeZone` | The code's value wins |
 | `seed.templates` | The file's templates, then the code's |
@@ -1019,6 +1020,70 @@ Stays in code (cms.config.ts):
 ```
 
 Then replace the collections, locales, `defaultLocale`, `timeZone`, `seed` and the data part of `site` and `admin` in `cms.config.ts` with `schema`, keeping `plugins` and the rest. Loading the result back gives the same site (a test extracts and reloads the reference configs and compares them).
+
+### Changing the schema: `monti schema:diff` and `monti schema:apply`
+
+Removing a field or a select option is routine once the schema is edited. The data does not break (a removed field or option keeps its stored values as "orphans": publishing warns, the public read hides them), and nothing is dropped unless you say so. Two commands and a few functions make a change **safe and explainable**: they show which entries a change touches before it is saved, run data transforms you declare, and record which schema every entry was written under.
+
+**The applied schema.** The database remembers the schema that was last applied (`monti schema:apply`): its `schemaVersion` and its data model (collections, fields, options, locales, allowed blocks) as a JSON snapshot in the `schema_state` table. That snapshot is the old side of every diff, because it is exactly what the stored data was last conformed to (a branch or tag of the repo can differ from it). A store that never applied one is at its **baseline**: the first `schema:apply` records the schema and changes no entry. So the migration path of an existing blog is `monti schema:extract`, then `monti schema:apply` with no transforms, which is a no-op.
+
+**`schemaVersion`.** A whole number from 1 in the schema file (1 if it is left out; `monti schema:extract` writes it). Every entry body records the version it was written or transformed under (`entry_bodies.schema_version`). The version is **not part of the content hash**: `computeContentHash(metadata, doc)` is defined over a constant, so every hash stored so far stays as it is, and a schema change that does not touch an entry's content does not make it look edited. Saving the same content under a newer version changes nothing (no new entry version, no new modified date; the stored version stays), and an edit is stored under the site's current version. `schema:apply` raises the number in the file when the schema changed (or transforms are pending) and the file still has the old one; commit the file. A file that already carries the raised number (applied on a development machine, then deployed) is left alone, so the production run records the same version and writes nothing to the file.
+
+**Transforms** live in the schema file, in `migrations`, next to the schema they belong to. Each has an `id` (a name for good: it is recorded in `cms_migrations` as `schema:<id>` once it ran, like `storage.once`, so it never runs twice, and applied ones stay in the list as history), an `op` and the names of the schema **after** the change:
+
+```json
+{
+	"schemaVersion": 3,
+	"collections": { "post": { "fields": { "excerpt": { "kind": "text", "label": "Excerpt" }, "stage": { "kind": "select", "label": "Stage", "options": { "idea": "Idea", "done": "Done" }, "defaultValue": "idea" } } } },
+	"migrations": [
+		{ "id": "2026-10-rename-summary", "op": "renameField", "collection": "post", "from": "summary", "to": "excerpt" },
+		{ "id": "2026-10-merge-draft", "op": "mapOption", "collection": "post", "field": "stage", "from": "draft", "to": "idea" },
+		{ "id": "2026-10-drop-legacy", "op": "dropField", "collection": "post", "field": "legacy", "note": "no longer used anywhere" },
+		{ "id": "2026-10-author-default", "op": "setDefault", "collection": "post", "field": "author", "value": "Staff" }
+	]
+}
+```
+
+| `op` | What it does |
+| --- | --- |
+| `renameField` | The value of `from` moves to `to`. Nothing is overwritten: an entry that already has a value under `to` keeps both, and the apply reports it. `to` must be a field of the schema (or the `from` of a later rename, for a chain), and `from` must not be |
+| `mapOption` | A stored select value that is no longer an option becomes another option of the field, also inside a list of values (without duplicates) |
+| `dropField` | **Deletes** the stored values of a field the schema no longer has. The only transform that deletes data; it is an error if the schema still has the field |
+| `setDefault` | An entry with no value for a text or select field gets `value` (a field that became required, say). In a conditional branch it only fills entries the branch shows, and a translation only gets it for a per-language field |
+
+Moving a field into or out of a conditional branch needs no transform: every stored value is kept wherever its field is (conditional values are stored flat), so the data does not move. The diff reports it (`field_moved`) and the check counts the entries whose value the new branch does not show. A **collection** rename is not a transform: the collection name is a stored value (`entries.collection`, folders, addresses), so a renamed collection is a removed one plus an added one; the diff points out a pair that looks alike (`renameHints`) and nothing is applied.
+
+**Nothing is dropped silently.** A removal with no `dropField` keeps the orphans exactly as before. A transform that does not fit the schema (a drop of a field the schema still has, a mapping to something that is not an option, a default that is not valid for its field) is a problem and the apply refuses to start. If one entry cannot be rewritten, nothing at all is changed.
+
+**How a transform writes.** Every transform runs through the write rules (`prepareSnapshot`, without the write hooks): the changed metadata is checked, and the content hash, the search text and the metadata references (a renamed or dropped relation or media field moves or removes its reference, so deletion checks stay right) are recomputed from it. Working and published bodies are rewritten the same way in one transaction, and `version` and `updated_at` of the entry and its bodies are kept, as in the data migrations before: an entry that had unpublished changes still has them, one that did not still does not. A transformed body is stamped with the new version. The run holds the lock the migrations use, so two applies at once run each transform once.
+
+**Commands.**
+
+- `monti schema:diff [--schema <file>] [--check]` (read-only) compares the schema of the app with the applied one and prints every change with the entries it touches and what happens to them: kept as orphans, rewritten by a transform, deleted by a `dropField`, cannot be published until filled, and so on. With `--check` it exits 1 when there is anything to apply.
+- `monti schema:apply [--schema <file>] [--dry-run]` migrates the store (`monti migrate`), runs the transforms that did not run yet, records the schema and its version, and raises `schemaVersion` in the file when needed. It is idempotent. `--dry-run` runs everything in a transaction that is rolled back and writes nothing, not even the file.
+
+```text
+$ monti schema:diff
+Applied schema version: 2. After the apply: 3.
+Changes (3):
+  - post.summary renamed to excerpt [transform 2026-10-rename-summary]: 12 entries ("Hello", "Notes", ...); rewritten by its transform
+  - post.stage option "draft" removed [transform 2026-10-merge-draft]: 4 entries ("WIP", ...); rewritten by its transform
+  - post.legacy removed (text): 2 entries ("Old post", ...); values kept as orphans (hidden from the public read; publishing warns)
+Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
+```
+
+**The API (what a settings screen calls).** `@monti-cms/core/schema-change` exports plain functions over the instance's store and site:
+
+| Function | What it gives |
+| --- | --- |
+| `diffSchema(old, new, { transforms })` | `{ changes, renameHints }`. A change is one of `collection_added`, `collection_removed`, `collection_kind_changed`, `body_changed`, `allowed_changed`, `field_added`, `field_removed`, `field_renamed`, `field_type_changed`, `field_required_changed`, `field_locale_changed`, `field_moved`, `option_added`, `option_removed`, `option_renamed`, `locale_added`, `locale_removed`, `default_locale_changed`. A `renameField` or `mapOption` transform turns a removal plus an addition into a rename; a change a transform handles has `handledBy`. `changeKey(change)` is a stable key for a list, `describeSchemaChange(change)` an English sentence. Pure |
+| `checkSchemaChange(store, diff, { site, transforms, sampleSize })` | Per change: `entries` (an entry counts once), a `sample` of ids and titles, the `consequence` and whether it was `checked`. It reads every stored body once and writes nothing. `site` (the new schema's) is needed to check allowed-blocks changes and required fields in a branch |
+| `suggestTransforms(change, { options, renameTo })` | The transforms that fit a change (a drop, a rename, a mapping per remaining option, a default), without ids, for a screen to offer |
+| `planSchemaChange({ site, store, migrations })` | The diff against the applied schema, the pending transforms, `problems`, the `nextVersion` and whether the file needs a raise (`needsVersionBump`). Read-only |
+| `applySchemaChange({ site, store, migrations, dryRun })` | Runs the plan. Returns what ran, how many entries and bodies each transform changed, and the `conflicts` of renames. Throws `SchemaChangeError` (changing nothing) |
+| `applyTransforms`, `checkTransforms` | The pure pieces: one entry's metadata through the transforms, and the check of transforms against a schema |
+
+The store side is the `SchemaChangeStore` port (`readSchemaState`, `appliedSchemaTransforms`, `scanBodies`, `applySchemaChange`), part of `ContentStore`.
 
 ## Config
 

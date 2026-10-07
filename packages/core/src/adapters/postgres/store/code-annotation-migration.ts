@@ -116,7 +116,7 @@ export async function migrateCodeAnnotations(
 		const changed = res.rows.flatMap((row) => {
 			const where = `entry_bodies ${row.entry_id}/${row.state}`;
 			const body = rewritten(bodies, row.mdx, row.doc, where, log);
-			const contentHash = mdxContentHash(bodies, row.metadata, body.mdx, row.schema_version);
+			const contentHash = mdxContentHash(bodies, row.metadata, body.mdx);
 			const searchText = mdxSearchText(site, bodies, body.mdx);
 			const translation = translationAfter(bodies, row, where, log);
 			const docChanged = body.doc !== null && !isDeepStrictEqual(body.doc.stored, row.doc);
