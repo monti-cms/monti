@@ -13,7 +13,17 @@
 
 @import "./admin.css";
 
-/* The classes of this package's sources (the plugins compile their own sources into their own bundles). */
+/*
+ * The classes of this package's sources and of the first-party plugins that add admin UI. They are compiled here, once, so the shared utilities,
+ * `prose`, the theme and the reset are defined in one file only (a plugin file loaded later that defined `.prose` again would reset
+ * the admin's dark variant). A third-party plugin ships its own CSS with only classes of its own.
+ */
 @source "../src";
 @source not "../src/**/__test__";
 @source not "../src/test";
+@source "../../ai/src";
+@source "../../blocks/src";
+@source "../../mdx/src";
+@source "../../seo/src";
+@source not "../../*/src/**/__test__";
+@source not "../../*/src/test";

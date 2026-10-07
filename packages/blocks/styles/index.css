@@ -1,25 +1,19 @@
 /*
  * @monti-cms/blocks admin styles: the source of the prebuilt `dist/styles.css` (built by `scripts/build-styles.mjs`).
- * The host imports the built file after `@monti-cms/admin/styles.css` and needs no Tailwind. The public page styles are in `render.css`.
+ * Only what Tailwind utilities cannot say lives here: the callout look, the text color rule and the default variables. The utilities the block
+ * edit screens use are compiled into `@monti-cms/admin/styles.css` (it scans this package's sources), which the host imports first.
+ * The public page styles are in `render.css`.
  *
  * The edit screens of the blocks use the admin theme colors (--cms-background, --cms-foreground, --cms-border, --cms-muted-foreground, --cms-destructive, --cms-warning).
- * The defaults below are wrapped in `:where()`, so a value the host sets on `:root` or `html` wins.
+ * The defaults below have zero specificity, so a value the host sets on `:root` or `html` wins.
  */
-@layer theme, base, components, utilities;
-
-@import "../../admin/styles/theme.css";
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
-
-/* The classes of this package's sources. */
-@source "../src";
-@source not "../src/**/__test__";
-@source not "../src/test";
 
 /*
+ * (`:where(:root)` is added only so this selector differs from the admin file's own `:where(html:has(.cms-admin))` rules: no selector may be defined in two files.)
  * Defaults: accent colors per callout variant and chart series colors. The chart colors are read as `var(--cms-chart-N, var(--chart-N))`,
  * so the host's `--chart-N` (shadcn, `render.css`) is used when it sets one.
  */
-:where(html:has(.cms-admin)) {
+:where(html:has(.cms-admin)):where(:root) {
 	--cms-callout-note: var(--cms-muted-foreground);
 	--cms-callout-tip: oklch(0.6 0.15 155);
 	--cms-callout-info: oklch(0.6 0.14 240);

@@ -12,14 +12,13 @@
 		"./render": "./src/render.tsx",
 		"./admin": "./src/admin/index.ts",
 		"./server": "./src/server.ts",
-		"./testing": "./src/testing.ts",
-		"./styles.css": "./dist/styles.css"
+		"./testing": "./src/testing.ts"
 	},
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run",
 		"typecheck": "tsc --noEmit -p .",
-		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
+		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {
 		"@types/mdast": "^4.0.4",
@@ -98,8 +97,7 @@
 			"./testing": {
 				"types": "./dist/testing.d.ts",
 				"default": "./dist/testing.js"
-			},
-			"./styles.css": "./dist/styles.css"
+			}
 		}
 	}
 }

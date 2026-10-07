@@ -12,6 +12,8 @@
 // - No `@layer` is left (Tailwind's layers are flattened after it has sorted its output): unlayered rules beat the host's layered ones, whatever order
 //   the stylesheets load in, so a host's `.hidden`, `.prose` or reset in its own `utilities` or `base` layer cannot override the admin.
 // - KaTeX fonts are copied next to the CSS and linked relatively.
+// - The admin bundle also compiles the sources of the first-party plugins (ai, blocks, mdx, seo), so the shared utilities, `prose`, theme and reset
+//   exist once. A later file that redefined `.prose` would reset what the admin's dark variant set.
 import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -66,6 +68,9 @@ export const confine = () => ({
 		const declared = new Set();
 		root.walkDecls((decl) => {
 			if (decl.prop.startsWith("--")) declared.add(decl.prop);
+			// Tailwind's own variables are renamed even where a bundle only reads them (a plugin's `transition-colors` reads `--tw-ease`,
+			// which the admin bundle declares).
+			for (const name of decl.value.match(/--tw-[\w-]+/g) ?? []) declared.add(name);
 		});
 		root.walkAtRules("property", (rule) => declared.add(rule.params.trim()));
 		const rename = new Map(
@@ -115,23 +120,29 @@ export const confine = () => ({
 });
 confine.postcss = true;
 
+/** Compiles `<packageDir>/styles/index.css` and confines it. Returns the CSS text (not minified). */
+async function compileStyles(packageDir) {
+	const require = createRequire(import.meta.url);
+	const postcss = require("postcss");
+	const tailwind = require("@tailwindcss/postcss");
+	const input = path.join(packageDir, "styles", "index.css");
+	const result = await postcss([tailwind({ optimize: { minify: false } }), confine()]).process(
+		readFileSync(input, "utf8"),
+		{ from: input },
+	);
+	return result.css;
+}
+
 /**
- * Compiles `<packageDir>/styles/index.css`. Returns the CSS text (minified).
+ * Builds `<packageDir>/styles/index.css`. Returns the CSS text (minified).
  * @param {string} packageDir
  */
 export async function buildStyles(packageDir) {
 	const require = createRequire(import.meta.url);
-	const postcss = require("postcss");
-	const tailwind = require("@tailwindcss/postcss");
 	const { transform } = require("lightningcss");
 	const input = path.join(packageDir, "styles", "index.css");
-	const result = await postcss([tailwind({ optimize: { minify: false } }), confine()]).process(
-		readFileSync(input, "utf8"),
-		{
-			from: input,
-		},
-	);
-	return transform({ filename: input, code: Buffer.from(result.css), minify: true }).code.toString();
+	const css = await compileStyles(packageDir);
+	return transform({ filename: input, code: Buffer.from(css), minify: true }).code.toString();
 }
 
 /** Class names (unescaped) a stylesheet defines: the first class of every selector. */
@@ -161,7 +172,10 @@ function sourceTokens(packageDir) {
 			}
 		}
 	};
-	walk(path.join(packageDir, "src"));
+	// The admin bundle also compiles the first-party plugins' sources (see `packages/admin/styles/index.css`).
+	const packages =
+		path.basename(packageDir) === "admin" ? ["admin", "ai", "blocks", "mdx", "seo"] : [path.basename(packageDir)];
+	for (const name of packages) walk(path.join(packageDir, "..", name, "src"));
 	return [...tokens];
 }
 

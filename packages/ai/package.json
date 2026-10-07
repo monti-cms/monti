@@ -12,15 +12,14 @@
 			"browser": "./src/server.browser.ts",
 			"default": "./src/server.ts"
 		},
-		"./admin": "./src/admin/index.ts",
-		"./styles.css": "./dist/styles.css"
+		"./admin": "./src/admin/index.ts"
 	},
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
-		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
+		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "^3.0.61",
@@ -83,8 +82,7 @@
 			"./admin": {
 				"types": "./dist/admin/index.d.ts",
 				"default": "./dist/admin/index.js"
-			},
-			"./styles.css": "./dist/styles.css"
+			}
 		}
 	}
 }

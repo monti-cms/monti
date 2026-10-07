@@ -238,7 +238,6 @@ block's source, are left as is.
 | `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
 | `@monti-cms/ai/server` | Server side (API routes, data migration). Loaded by the core. It is an empty entry point in browser bundles |
 | `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton` |
-| `@monti-cms/ai/styles.css` | The admin layout: the styles of the AI screen and buttons, prebuilt and scoped to the admin (no Tailwind needed in the app). Import it after `@monti-cms/admin/styles.css` |
 
 ## Development
 

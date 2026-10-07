@@ -15,7 +15,8 @@ const buildScript = path.resolve(packagesDir, "../scripts/build-styles.mjs");
 const themeCss = readFileSync(path.resolve(__dirname, "../../styles/theme.css"), "utf8");
 const adminCss = readFileSync(path.resolve(__dirname, "../../styles/admin.css"), "utf8");
 /** Packages with an admin stylesheet (`styles/index.css`). */
-const STYLE_PACKAGES = ["admin", "ai", "blocks", "mdx", "seo"];
+/** (ai, mdx and seo ship none: their utilities are compiled into the admin's file, which scans their sources.) */
+const STYLE_PACKAGES = ["admin", "blocks"];
 
 const TOKENS = [
 	"sidebar-primary-foreground",
@@ -159,18 +160,44 @@ describe("admin CSS confinement", () => {
 			});
 		}
 
-		for (const pkg of STYLE_PACKAGES) {
-			it(`${pkg}: every utility its sources use is in the built CSS`, () => {
-				const cwd = path.join(packagesDir, pkg);
-				const out = execFileSync("node", [buildScript, "--missing"], {
-					cwd,
-					encoding: "utf8",
-					maxBuffer: 64 * 1024 * 1024,
+		it("no selector is defined in more than one bundle", () => {
+			// Bundles load one after another (admin first). A second copy of `.prose` or another shared utility in a plugin's file would load later and
+			// reset what the admin's dark variant had set, so a file defines only rules of its own.
+			const owner = new Map<string, string>();
+			const duplicates: string[] = [];
+			for (const pkg of STYLE_PACKAGES) {
+				const seen = new Set<string>();
+				postcss.parse(built.get(pkg) ?? "").walkRules((rule) => {
+					const parent = rule.parent;
+					if (parent?.type === "atrule" && /keyframes$/.test((parent as postcss.AtRule).name)) return;
+					const context =
+						parent?.type === "atrule" ? `${(parent as postcss.AtRule).name} ${(parent as postcss.AtRule).params}` : "";
+					for (const selector of rule.selectors) {
+						const key = `${context}|${selector}`;
+						const first = owner.get(key);
+						if (first && first !== pkg) duplicates.push(`${selector} (${first}, ${pkg})`);
+						seen.add(key);
+					}
 				});
-				// Tailwind decides what is a utility; one it knows in a source file but the bundle lacks means the scan missed that file.
-				expect(JSON.parse(out) as string[]).toEqual([]);
+				for (const key of seen) if (!owner.has(key)) owner.set(key, pkg);
+			}
+			expect(duplicates).toEqual([]);
+		});
+
+		it("no bundle reads Tailwind's own --tw-* variables under their original name", () => {
+			for (const pkg of STYLE_PACKAGES) expect(built.get(pkg) ?? "").not.toMatch(/(?<![\w-])--tw-/);
+		});
+
+		it("every utility the admin and the first-party plugins use is in the admin CSS", () => {
+			const cwd = path.join(packagesDir, "admin");
+			const out = execFileSync("node", [buildScript, "--missing"], {
+				cwd,
+				encoding: "utf8",
+				maxBuffer: 64 * 1024 * 1024,
 			});
-		}
+			// Tailwind decides what is a utility; one it knows in a source file but the bundle lacks means the scan missed that file.
+			expect(JSON.parse(out) as string[]).toEqual([]);
+		});
 
 		it("admin: the reset is scoped, the tokens and color-scheme stay, KaTeX is included, and no radius name leaks", () => {
 			const css = built.get("admin") ?? "";

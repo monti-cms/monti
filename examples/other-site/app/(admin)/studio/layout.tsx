@@ -1,8 +1,6 @@
-// The admin and plugin stylesheets are prebuilt: they need no Tailwind setup, and only the admin pages load them.
+// The admin stylesheets are prebuilt (the admin file covers the mdx and seo screens): they need no Tailwind setup, and only the admin pages load them.
 import "@monti-cms/admin/styles.css";
 import "@monti-cms/blocks/styles.css";
-import "@monti-cms/mdx/styles.css";
-import "@monti-cms/seo/styles.css";
 import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
 import { cms } from "../../../cms.server";

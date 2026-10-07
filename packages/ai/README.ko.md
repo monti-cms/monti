@@ -213,7 +213,6 @@ aiPlugin({
 | `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, 기여 타입(`AiContribution`·`AiActionFactory`·`AiSiteView`) (사이트 설정용, 서버·브라우저 공용) |
 | `@monti-cms/ai/server` | 서버 쪽(API 경로·데이터 이전). 본체가 불러 쓴다. 브라우저 묶음에서는 빈 진입점이다 |
 | `@monti-cms/ai/admin` | 관리자 쪽(AI 화면·공급자), `useAiAction`, `AiButton` |
-| `@monti-cms/ai/styles.css` | 관리자 레이아웃: AI 화면과 버튼 스타일, 미리 만든 것이며 관리자 안으로 한정된다(앱에 Tailwind가 필요 없다). `@monti-cms/admin/styles.css` 뒤에 불러온다 |
 
 ## 개발
 

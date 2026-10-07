@@ -377,10 +377,11 @@ import "@monti-cms/admin/styles.css";
   어두운 테마가 따라간다.
 - **그 밖에.** 테두리·포커스 윤곽 기본색, `color-scheme`, 얇은 스크롤바, 관리자의 모서리 둥글기(`--cms-radius`, 묶음의 `rounded-*`는 이 값으로 계산된다).
 
-관리자 화면을 더하는 플러그인(`@monti-cms/blocks`·`@monti-cms/mdx`·`@monti-cms/seo`·`@monti-cms/ai`)은 같은 스크립트와 같은 테마(이 패키지의 `styles/theme.css`)로 만든
-자기 `styles.css`를 따로 내고, 앱은 이 파일 뒤에 불러온다. 관리자가 플러그인 클래스를 같이 컴파일할 수 없는 까닭은 앱이 어떤 플러그인을 설치하는지 관리자가 모르고,
-앱은 쓰는 플러그인의 CSS만 받아야 하기 때문이다. 둘 다 쓰는 유틸리티는 그냥 되풀이되며 규칙은 같다. 관리자 화면이 있는 플러그인을 직접 만들면 다른 플러그인처럼
-`styles/index.css`를 두면 된다(`packages/seo/styles/index.css` 참고).
+관리자 화면을 더하는 플러그인: 관리자 묶음이 자체 제공 플러그인(`@monti-cms/ai`·`@monti-cms/blocks`·`@monti-cms/mdx`·`@monti-cms/seo`, `styles/index.css`의 `@source` 줄 참고)의 소스도 함께 컴파일한다.
+그래서 공유 유틸리티·`prose`·테마·리셋이 **한 파일**에만 정의된다. 이것이 핵심이다. `.prose`를 다시 정의하는 파일이 뒤에 불러와지면 관리자의 다크 변형이 정한 값을 되돌려 버린다.
+따라서 `ai`·`mdx`·`seo`는 CSS를 내지 않는다. `@monti-cms/blocks/styles.css`는 유틸리티로 말할 수 없는 것(콜아웃 모양, 글자색 규칙, 기본 변수)만 담으며 관리자 파일 뒤에 불러온다.
+서드파티 플러그인은 자기 클래스(`cms-` 접두 이름)만 담은 미리 만든 CSS를 내고 공유 유틸리티나 `prose`는 다시 정의하지 않는다. 같은 선택자가 두 묶음에 정의되면 한계 검사 테스트가 실패한다.
+대신 관리자 파일에는 앱이 설치하지 않은 자체 제공 플러그인의 클래스도 들어 있다(몇 KB).
 
 `CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `cms.server.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
 

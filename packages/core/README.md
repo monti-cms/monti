@@ -203,9 +203,6 @@ export default defineConfig({
 });
 ```
 
-```ts
-import "@monti-cms/mdx/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css"
-```
 
 Core stores documents and has no text format of its own: a site without a format plugin accepts documents (`doc`) only, and a text write fails with `unknown_format`. `format: "mdx"` and `?format=mdx` need this package. See the README of `@monti-cms/mdx` for details.
 
@@ -226,7 +223,7 @@ export default defineConfig({
 ```
 
 ```ts
-import "@monti-cms/blocks/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css" (the public page styles are `@monti-cms/blocks/render.css`)
+import "@monti-cms/blocks/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css" (callout look and block variables; the public page styles are `@monti-cms/blocks/render.css`)
 ```
 
 See the README of `@monti-cms/blocks` for details.
@@ -248,9 +245,6 @@ export default defineConfig({
 });
 ```
 
-```ts
-import "@monti-cms/ai/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css"
-```
 
 See the README of `@monti-cms/ai` for details.
 
@@ -275,9 +269,6 @@ export default defineConfig({
 });
 ```
 
-```ts
-import "@monti-cms/seo/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css"
-```
 
 See the README of `@monti-cms/seo` for details.
 
@@ -368,7 +359,7 @@ MDX moved out of core into the package `@monti-cms/mdx`. Core has no MDX depende
 
 1. Install `@monti-cms/mdx`.
 2. Add `mdx()` to `plugins` and **move** `mdx.syntax` into it: `defineConfig({ mdx: { syntax: [directiveSyntax()] } })` becomes `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`. Keep the same options (for a site that wrote directives, `directiveSyntax()` with write mode on). The `mdx` config key is gone.
-3. Import `@monti-cms/mdx/styles.css` in the admin layout, after `@monti-cms/admin/styles.css`.
+3. Nothing to import for its admin styles: `@monti-cms/admin/styles.css` already covers the MDX source panel.
 4. Replace `renderMdx` imports from `@monti-cms/core/render` with `@monti-cms/mdx/render` (or render documents with `CmsContent`), and `cms.read.imageResolver(...)` with `entry.refs` (`renderMdx(source, { refs: entry.refs })`). `renderMdx` returns `{ content, toc, unknown }` and compiles or executes no MDX.
 5. Replace imports of `@monti-cms/core/mdx`, `@monti-cms/core/syntax` and `@monti-cms/core/format/mdx`, which are removed: the syntax extension interface (`SyntaxExtension`, `SerializeContext`, `RAW_SOURCE_PARAGRAPH`, the table and comment syntax helpers) comes from `@monti-cms/mdx`, and the parser and writer (`analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `mdxFormat`, ...) from `@monti-cms/mdx/format`. Syntax extension packages peer on `@monti-cms/mdx` now.
 6. Block extensions you wrote: drop the default export of your `render` modules and keep `documentComponents` (`CmsPlugin.render` returns `{ documentComponents }`).

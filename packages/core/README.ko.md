@@ -203,9 +203,6 @@ export default defineConfig({
 });
 ```
 
-```ts
-import "@monti-cms/mdx/styles.css"; // 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 뒤에
-```
 
 코어는 문서를 저장하며 글 형식을 따로 갖지 않는다. 형식 플러그인이 없는 사이트는 문서(`doc`)만 받고, 글로 쓰면 `unknown_format`으로 실패한다. `format: "mdx"`와 `?format=mdx`는 이 패키지가 있어야 한다. 자세한 것은 `@monti-cms/mdx`의 README.
 
@@ -248,9 +245,6 @@ export default defineConfig({
 });
 ```
 
-```ts
-import "@monti-cms/ai/styles.css"; // 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 뒤에
-```
 
 자세한 것은 `@monti-cms/ai`의 README.
 
@@ -275,9 +269,6 @@ export default defineConfig({
 });
 ```
 
-```ts
-import "@monti-cms/seo/styles.css"; // 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 뒤에
-```
 
 자세한 것은 `@monti-cms/seo`의 README.
 
@@ -369,7 +360,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 1. `@monti-cms/mdx`를 설치한다.
 2. `plugins`에 `mdx()`를 넣고 `mdx.syntax`를 그 안으로 **옮긴다**. `defineConfig({ mdx: { syntax: [directiveSyntax()] } })`는 `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`가 된다. 옵션은 그대로 둔다(지시자로 쓰던 사이트는 쓰기 모드가 켜진 `directiveSyntax()`). `mdx` 설정 키는 없어졌다.
-3. 관리자 레이아웃에서 `@monti-cms/mdx/styles.css`를 `@monti-cms/admin/styles.css` 뒤에 불러온다.
+3. 관리자 스타일을 위해 따로 불러올 것은 없다. `@monti-cms/admin/styles.css`가 MDX 원문 패널까지 담고 있다.
 4. `@monti-cms/core/render`의 `renderMdx` import를 `@monti-cms/mdx/render`로 바꾸거나(또는 `CmsContent`로 문서를 그린다), `cms.read.imageResolver(...)`를 `entry.refs`로 바꾼다(`renderMdx(source, { refs: entry.refs })`). `renderMdx`는 `{ content, toc, unknown }`을 돌려주며 MDX를 컴파일하거나 실행하지 않는다.
 5. 없어진 `@monti-cms/core/mdx`·`@monti-cms/core/syntax`·`@monti-cms/core/format/mdx` import를 바꾼다. 문법 확장 인터페이스(`SyntaxExtension`·`SerializeContext`·`RAW_SOURCE_PARAGRAPH`, 표·코드 주석 문법 도우미)는 `@monti-cms/mdx`에서, 해석기와 직렬화기(`analyze`·`serialize`·`toDocument`·`bodyFromMdx`·`mdxFormat` 등)는 `@monti-cms/mdx/format`에서 가져온다. 문법 확장 패키지는 이제 `@monti-cms/mdx`를 피어로 둔다.
 6. 직접 만든 블록 확장은 `render` 모듈의 기본 내보내기를 지우고 `documentComponents`만 둔다(`CmsPlugin.render`는 `{ documentComponents }`를 돌려준다).

@@ -30,10 +30,7 @@ export default defineConfig({
 });
 ```
 
-```tsx
-// 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 다음(미리 만든 것, 관리자 안으로 한정된다. 앱에 Tailwind가 필요 없다)
-import "@monti-cms/seo/styles.css";
-```
+SEO 패널은 자기 스타일시트가 필요 없다. `@monti-cms/admin/styles.css`가 이미 담고 있다(앱에 Tailwind가 필요 없다).
 
 ## 필드 묶음 `seoFields(options?)`
 

@@ -392,9 +392,11 @@ What the bundle provides (everything carries the `cms` prefix, so nothing collid
   dark theme follows it.
 - **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the admin's corner radius (`--cms-radius`; the `rounded-*` utilities of the bundle are computed from it).
 
-Plugins that add admin UI (`@monti-cms/blocks`, `@monti-cms/mdx`, `@monti-cms/seo`, `@monti-cms/ai`) ship their own prebuilt `styles.css` the same way, built with the same script and the same theme
-(`styles/theme.css` of this package), and import it after this one. The admin cannot compile their classes in, because it does not know which plugins an app installs, and an app only loads
-the CSS of the plugins it uses. A utility used by both is simply repeated; the rules are identical. If you write a plugin with admin UI, give it `styles/index.css` like the others (see `packages/seo/styles/index.css`).
+Plugins that add admin UI: the admin bundle also compiles the sources of the first-party plugins (`@monti-cms/ai`, `@monti-cms/blocks`, `@monti-cms/mdx`, `@monti-cms/seo`; see the `@source` lines of `styles/index.css`),
+so the shared utilities, `prose`, the theme and the reset are defined in **one** file. That is the point: a second file that defined `.prose` again would load later and reset what the admin's dark variant had set.
+`ai`, `mdx` and `seo` therefore ship no CSS. `@monti-cms/blocks/styles.css` holds only what utilities cannot say (the callout look, the text color rule, default variables) and is imported after the admin file.
+A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `cms-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
+The cost is that the admin file carries the classes of first-party plugins an app does not install (a few KB).
 
 `CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `cms.server.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
 

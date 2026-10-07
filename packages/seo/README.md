@@ -30,10 +30,7 @@ export default defineConfig({
 });
 ```
 
-```tsx
-// the admin layout, after "@monti-cms/admin/styles.css" (prebuilt, scoped to the admin; no Tailwind needed in the app)
-import "@monti-cms/seo/styles.css";
-```
+The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` already covers it (no Tailwind needed in the app).
 
 ## Field set `seoFields(options?)`
 
