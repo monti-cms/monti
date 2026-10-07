@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import type { ContentStore } from "../../core/store/ports";
 import type { Site } from "../../site";
+import { createDb, dbOn } from "./db/kysely";
 import { type ContentStoreHooks, type StoreContext, validateSchemaName } from "./store/context";
 import { createEntryOps } from "./store/entries";
 import { createEventOps } from "./store/events";
@@ -27,10 +28,14 @@ export function createContentStore(
 	pool: Pool,
 	options: { site: Site; schema?: string } & ContentStoreHooks,
 ): ContentStore {
+	const qSchema = validateSchemaName(options?.schema);
+	// One Kysely instance per store, on the pool the adapter owns; `db(tx)` is the same schema on the client of a transaction.
+	const poolDb = createDb(pool, qSchema);
 	const ctx: StoreContext = {
 		pool,
 		site: options.site,
-		qSchema: validateSchemaName(options?.schema),
+		qSchema,
+		db: (tx) => (tx ? dbOn(tx, qSchema) : poolDb),
 		hooks: { beforePublishCommit: options?.beforePublishCommit },
 	};
 	const publishing = createPublishing(ctx);

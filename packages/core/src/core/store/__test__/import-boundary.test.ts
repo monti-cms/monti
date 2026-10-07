@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -45,11 +46,12 @@ function reachesIntoAdapter(root: string): string[] {
 
 const isTestFile = (file: string) => /(__test__|\.test\.)/.test(file);
 
-/** Non-test source files outside the Postgres adapter that import the `pg` driver (its types included). */
-function importsDriver(root: string): string[] {
+/** Non-test source files outside the Postgres adapter that import the module `name` (the `pg` driver, or Kysely on top of it), whole or by subpath. */
+function importsModule(root: string, name: string): string[] {
+	const pattern = new RegExp(`(?:from|import)\\s*\\(?\\s*["']${name}(?:/[^"']*)?["']`);
 	return sourceFiles(root)
 		.filter((file) => !file.startsWith(ADAPTER + path.sep) && !isTestFile(file))
-		.filter((file) => /from\s*["']pg["']|import\s*\(?\s*["']pg["']/.test(readFileSync(file, "utf8")))
+		.filter((file) => pattern.test(readFileSync(file, "utf8")))
 		.map((file) => path.relative(path.dirname(CORE_SRC), file));
 }
 
@@ -63,7 +65,24 @@ describe("store import boundary", () => {
 	});
 
 	it("the Postgres driver and its types stay in the adapter: the plugin API, the root entry and the services do not see `pg`", () => {
-		expect(importsDriver(CORE_SRC)).toEqual([]);
+		expect(importsModule(CORE_SRC, "pg")).toEqual([]);
+	});
+
+	it("Kysely stays in the adapter too: it is a server-only dependency of the Postgres store, and the browser entries, the plugin API and the services never import it", () => {
+		expect(importsModule(CORE_SRC, "kysely")).toEqual([]);
+	});
+
+	it("recognizes how a module is imported, whole or by subpath, and does not take a longer name for it", () => {
+		const root = mkdtempSync(path.join(tmpdir(), "boundary-"));
+		try {
+			writeFileSync(path.join(root, "a.ts"), 'import { sql } from "kysely";\n');
+			writeFileSync(path.join(root, "b.ts"), 'const x = await import("kysely/helpers/postgres");\n');
+			writeFileSync(path.join(root, "c.ts"), 'import { y } from "kysely-extras";\nimport { z } from "pg-format";\n');
+			expect(importsModule(root, "kysely").map((file) => path.basename(file))).toEqual(["a.ts", "b.ts"]);
+			expect(importsModule(root, "pg")).toEqual([]);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
 	});
 
 	it("recognizes static, type-only, re-export and dynamic imports of the adapter, and ignores others", () => {
