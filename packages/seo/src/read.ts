@@ -1,9 +1,9 @@
-import { type CollectionSchema, SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
+import { type CollectionSchema, findTitleField, SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
 import { SEO_ROLES } from "./fields";
 
 /** SEO values for the public page. Empty values are `undefined`. */
 export interface SeoValues {
-	/** Search title. Falls back to the title (`title`, a library convention) when empty. */
+	/** Search title. Falls back to the title (the field with the `title` role) when empty. */
 	readonly title?: string;
 	/** Search description. Falls back to the summary role (`summary`) value when empty. */
 	readonly description?: string;
@@ -30,7 +30,9 @@ export function seoOf(
 	metadata: { readonly [key: string]: unknown },
 ): SeoValues {
 	const role = (name: string) => filled(valueWithRole(schema, name, metadata));
-	const title = role(SEO_ROLES.title) ?? (typeof metadata.title === "string" ? filled(metadata.title) : undefined);
+	const titleName = findTitleField(schema)?.name;
+	const titleValue = titleName === undefined ? undefined : metadata[titleName];
+	const title = role(SEO_ROLES.title) ?? (typeof titleValue === "string" ? filled(titleValue) : undefined);
 	const description = role(SEO_ROLES.description) ?? role(SUMMARY_ROLE);
 	const imageId = role(SEO_ROLES.image);
 	const canonical = role(SEO_ROLES.canonical);

@@ -136,7 +136,7 @@
 											"type": "boolean"
 										},
 										"role": {
-											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 											"type": "string"
 										},
 										"tab": {
@@ -242,7 +242,7 @@
 											"type": "boolean"
 										},
 										"role": {
-											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 											"type": "string"
 										},
 										"tab": {
@@ -318,7 +318,7 @@
 											"type": "boolean"
 										},
 										"role": {
-											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 											"type": "string"
 										},
 										"tab": {
@@ -414,7 +414,7 @@
 											"type": "boolean"
 										},
 										"role": {
-											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 											"type": "string"
 										},
 										"tab": {
@@ -498,7 +498,7 @@
 											"type": "boolean"
 										},
 										"role": {
-											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 											"type": "string"
 										},
 										"tab": {
@@ -571,7 +571,7 @@
 											"type": "boolean"
 										},
 										"role": {
-											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 											"type": "string"
 										},
 										"tab": {
@@ -633,7 +633,7 @@
 													"type": "boolean"
 												},
 												"role": {
-													"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+													"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 													"type": "string"
 												},
 												"tab": {
@@ -730,7 +730,7 @@
 																	"type": "boolean"
 																},
 																"role": {
-																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 																	"type": "string"
 																},
 																"tab": {
@@ -836,7 +836,7 @@
 																	"type": "boolean"
 																},
 																"role": {
-																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 																	"type": "string"
 																},
 																"tab": {
@@ -932,7 +932,7 @@
 																	"type": "boolean"
 																},
 																"role": {
-																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 																	"type": "string"
 																},
 																"tab": {
@@ -1016,7 +1016,7 @@
 																	"type": "boolean"
 																},
 																"role": {
-																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 																	"type": "string"
 																},
 																"tab": {
@@ -1091,7 +1091,7 @@
 											"type": "boolean"
 										},
 										"role": {
-											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"description": "The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 											"type": "string"
 										},
 										"tab": {
@@ -1153,7 +1153,7 @@
 								}
 							]
 						},
-						"description": "Field name -> definition. A `title` text field is required."
+						"description": "Field name -> definition. One text field is the title: the one with role `title`, or, when none has it, the one named `title`."
 					},
 					"path": {
 						"description": "Public address shape with `:slug` once, e.g. `/posts/:slug`.",

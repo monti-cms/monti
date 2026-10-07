@@ -14,9 +14,11 @@ import {
 	type EntryData,
 	type EntryForm,
 	type EntryFormPatch,
+	emptyFormOf,
 	formFingerprint,
 	formFromEntry,
 	formText,
+	formTitle,
 	isTranslationEntry,
 	metadataFromForm,
 	stringifyTranslation,
@@ -361,12 +363,16 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				: { status: "ready" }
 			: { status: "loading" };
 
+	// A new entry starts from the empty form of its collection; an entry that is loaded replaces it.
+	const emptyForm =
+		target.mode === "new" && site.isCollection(target.collection) ? emptyFormOf(site, target.collection) : EMPTY_FORM;
+
 	const store = createStateStore<EntryEditorState>({
 		load: initialLoad,
 		entry: null,
 		collection: initialCollection,
 		readOnly: false,
-		form: EMPTY_FORM,
+		form: emptyForm,
 		saveStatus: "new",
 		saveError: null,
 		hasUnsavedChanges: false,
@@ -387,7 +393,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		baseMetadata: {} as Record<string, unknown>,
 		/** A translation saves only per-language values. */
 		translation: false,
-		serverFingerprint: formFingerprint(site, EMPTY_FORM),
+		serverFingerprint: formFingerprint(site, emptyForm),
 		changeSeq: 0,
 		ackSeq: 0,
 		inflight: null as Promise<EditorResult<EntrySaveOutcome>> | null,
@@ -793,7 +799,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		if (!id || m.changeSeq > m.ackSeq) return editorFailure("invalid_state", t("editor.unsaved"));
 		try {
 			const copy = await client.duplicate(id, {
-				title: copyTitle(site, current.collection, formText(current.form, "title")),
+				title: copyTitle(site, current.collection, formTitle(site, current.collection, current.form)),
 			});
 			return { ok: true, value: copy };
 		} catch (caught) {
@@ -821,7 +827,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		if (!record) return;
 		m.recoveryRecord = null;
 		commit({ slugTouched: true, recovery: null });
-		applyForm({ ...EMPTY_FORM, ...record.snapshot });
+		applyForm({ ...emptyForm, ...record.snapshot });
 	};
 
 	const discardRecovery = async () => {
@@ -858,7 +864,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 
 	const confirmTranslationSource = () => {
 		const { entry, readOnly } = state();
-		const source = translationSourceOf(entry);
+		const source = translationSourceOf(site, entry);
 		if (!source || readOnly) return;
 		applyForm({ [TRANSLATION_FORM_KEY]: stringifyTranslation(confirmedSourceState(source.doc)) });
 	};
@@ -953,7 +959,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		const raw = form[TRANSLATION_FORM_KEY];
 		if (translationCache && translationCache.entry === entry && translationCache.raw === raw)
 			return translationCache.value;
-		const source = translationSourceOf(entry);
+		const source = translationSourceOf(site, entry);
 		let value: TranslationView | null = null;
 		if (source) {
 			const confirmed = translationStateFromForm(raw);

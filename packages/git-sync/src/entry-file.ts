@@ -10,7 +10,8 @@ import type { PathPattern } from "./path-pattern";
  *
  * File format (one file per published entry and language): YAML front matter, then the body written by the target's format.
  *
- * - The collection's own fields (title, summary, tags, ...) are top-level front matter keys, as stored. A relation field is written as the **slug** of the entry it
+ * - The title is always the key `title` (the field with the `title` role, whatever its name): the key a static site generator reads. On import `title` goes back
+ *   to that field. The collection's own other fields (summary, tags, ...) are top-level front matter keys, as stored.A relation field is written as the **slug** of the entry it
  *   points to (a list of slugs for a many-relation), which is what a site's templates use. The exact ids are under `monti.refs` (`{ tagIds: [uuid, ...] }`), so the
  *   file imports back to the same entry even if the target was renamed since. The per-language names of a record collection are the nested `translations` mapping.
  * - `slug`, `date` (published) and `lastmod` (modified) are the keys a static site generator reads. `date` and `lastmod` are written for the site and ignored on import.
@@ -101,6 +102,9 @@ async function slugsOfTargets(cms: Cms, ids: readonly string[], locale: string):
 	return found;
 }
 
+/** The front matter key of the title. */
+const FRONT_MATTER_TITLE = "title";
+
 /** The front matter of an entry. Fields come in the order the collection declares them; relations are slugs with the exact ids under `monti.refs`. */
 export async function frontMatterOf(
 	cms: Cms,
@@ -112,8 +116,15 @@ export async function frontMatterOf(
 		? cms.site.storedFields(entry.collection).map((stored) => stored.name)
 		: [];
 	const data: Record<string, unknown> = {};
-	for (const key of declared) if (metadata[key] !== undefined) data[key] = metadata[key];
-	for (const key of Object.keys(metadata).sort()) if (data[key] === undefined) data[key] = metadata[key];
+	// The title is written as `title` whatever the field is named (see the file format above).
+	const titleName = cms.site.isCollection(entry.collection) ? cms.site.titleField(entry.collection).name : undefined;
+	const keyOf = (name: string) => (name === titleName ? FRONT_MATTER_TITLE : name);
+	for (const key of declared) if (metadata[key] !== undefined) data[keyOf(key)] = metadata[key];
+	for (const key of Object.keys(metadata).sort()) {
+		// A stored `title` that is not the title field (left behind by a rename) must not take the place of the title.
+		if (titleName !== undefined && key !== titleName && keyOf(key) === FRONT_MATTER_TITLE) continue;
+		if (data[keyOf(key)] === undefined) data[keyOf(key)] = metadata[key];
+	}
 	const refs: Record<string, string | string[]> = {};
 	const relations = relationFieldsOf(cms, entry.collection);
 	const slugs = await slugsOfTargets(
@@ -296,6 +307,12 @@ export async function resolveRelations(
 	where: { readonly collection: string; readonly locale: string },
 ): Promise<Record<string, unknown>> {
 	const metadata = { ...file.metadata };
+	// The front matter calls the title `title`, whatever the field is named.
+	const titleName = cms.site.isCollection(where.collection) ? cms.site.titleField(where.collection).name : undefined;
+	if (titleName !== undefined && titleName !== FRONT_MATTER_TITLE && Object.hasOwn(metadata, FRONT_MATTER_TITLE)) {
+		metadata[titleName] = metadata[FRONT_MATTER_TITLE];
+		delete metadata[FRONT_MATTER_TITLE];
+	}
 	const problems: string[] = [];
 	for (const { name, to, many } of relationFieldsOf(cms, where.collection)) {
 		if (metadata[name] === undefined) continue;

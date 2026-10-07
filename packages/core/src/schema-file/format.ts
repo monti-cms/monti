@@ -37,7 +37,9 @@ const base = {
 	hidden: flag.optional().describe("Stored and validated, but no input is drawn."),
 	role: text
 		.optional()
-		.describe("The meaning of the field (`summary`, or a role a plugin reads). Unique per collection."),
+		.describe(
+			"The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
+		),
 	tab: text.optional().describe("Tab of the edit screen the field is drawn in."),
 };
 
@@ -199,7 +201,11 @@ const collection = z.strictObject({
 		.describe(
 			"Whether entries have a body (default: documents do, items do not), or an object that limits the blocks, marks and heading levels the body allows.",
 		),
-	fields: z.record(text, field).describe("Field name -> definition. A `title` text field is required."),
+	fields: z
+		.record(text, field)
+		.describe(
+			"Field name -> definition. One text field is the title: the one with role `title`, or, when none has it, the one named `title`.",
+		),
 	path: text.optional().describe("Public address shape with `:slug` once, e.g. `/posts/:slug`."),
 	icon: text.optional().describe("Admin sidebar icon name (lucide)."),
 	layout: z.array(layoutGroup).optional().describe("Layout of the properties panel."),

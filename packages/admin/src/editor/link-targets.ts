@@ -79,7 +79,9 @@ const storeOf = perSite((site: Site) => {
 
 	const targetOf = (row: EntryRow): LinkTarget => {
 		const published = row.status === "published";
-		const title = row.working?.metadata?.title;
+		const title = site.isCollection(row.collection)
+			? site.titleOfValues(row.collection, row.working?.metadata ?? {})
+			: null;
 		// The address readers see is the published one; a draft shows the address it would get.
 		const path = publicPath(
 			row.collection,
@@ -89,7 +91,7 @@ const storeOf = perSite((site: Site) => {
 		return {
 			id: row.id,
 			collection: row.collection,
-			title: typeof title === "string" ? title.trim() : "",
+			title: title?.trim() ?? "",
 			path,
 			published,
 			href: hrefOf(row.id, published, path),

@@ -9,8 +9,8 @@ import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisio
 import type { CmsPlugin } from "../plugin/define";
 import { validateBodyAllowed } from "../schema/allowed";
 import { type CollectionSchema, normalizeCollection, validateListColumns } from "../schema/collection";
-import { RESERVED_METADATA_KEYS, SUMMARY_ROLE } from "../schema/fields";
-import { valueFieldsOf } from "../schema/walk";
+import { DEFAULT_TITLE_FIELD, RESERVED_METADATA_KEYS, SUMMARY_ROLE, TITLE_ROLE } from "../schema/fields";
+import { findTitleField, valueFieldsOf } from "../schema/walk";
 import { resolveSchemaConfig } from "../schema-file/merge";
 import { SCHEMA_SOURCE } from "../schema-file/source";
 import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types";
@@ -201,7 +201,7 @@ const checkTab = (at: string, tab: string | undefined) => {
 
 /**
  * Checks that field roles (`role`), tabs (`tab`), fill-from-body (`fillFromBody`) and URL source (`from`) are consistent. A role is unique per collection,
- * and only the roles the core knows (`summary`) get their type checked. The type of other roles is checked in `validate` by the plugin that uses the role.
+ * and only the roles the core knows (`summary`, `title`) get their type checked. The type of other roles is checked in `validate` by the plugin that uses the role.
  */
 function validateFieldMeanings(collection: string, schema: CollectionSchema): void {
 	const roles = new Map<string, string>();
@@ -209,8 +209,11 @@ function validateFieldMeanings(collection: string, schema: CollectionSchema): vo
 		const role = field.role;
 		if (role !== undefined) {
 			if (!ROLE_NAME.test(role)) throw new Error(`cms.config: ${collection}.${name} has an invalid role "${role}"`);
-			if (role === SUMMARY_ROLE && field.kind !== "text") {
+			if ((role === SUMMARY_ROLE || role === TITLE_ROLE) && field.kind !== "text") {
 				throw new Error(`cms.config: ${collection}.${name} role "${role}" needs a text field`);
+			}
+			if (role === TITLE_ROLE && !Object.hasOwn(schema.fields, name)) {
+				throw new Error(`cms.config: ${collection}.${name} role "${role}" cannot be on a field of a conditional field`);
 			}
 			const other = roles.get(role);
 			if (other) throw new Error(`cms.config: ${collection} has role "${role}" on both ${other} and ${name}`);
@@ -236,6 +239,20 @@ function validateFieldMeanings(collection: string, schema: CollectionSchema): vo
 		if (field.kind === "media" && field.accept !== undefined && field.accept !== "image" && field.accept !== "file") {
 			throw new Error(`cms.config: ${collection}.${name} accept must be "image" or "file"`);
 		}
+	}
+	// Every collection has one title text field: the field with role "title" or, without one, the field named `title` (its label is free).
+	// The list, search, relation picker, body links and the editor's title input use it.
+	const titleField = findTitleField(schema);
+	if (!titleField) {
+		throw new Error(
+			`cms.config: ${collection} needs a title field: a text field with role "${TITLE_ROLE}" (or one named "${DEFAULT_TITLE_FIELD}")`,
+		);
+	}
+	// The name `title` is the list's title column and the sort of the API, so it cannot name another field once the title role is somewhere else.
+	if (titleField.name !== DEFAULT_TITLE_FIELD && Object.hasOwn(schema.fields, DEFAULT_TITLE_FIELD)) {
+		throw new Error(
+			`cms.config: ${collection}.${DEFAULT_TITLE_FIELD} is not the title field (${titleField.name} has the role "${TITLE_ROLE}"); rename it`,
+		);
 	}
 	for (const [index, group] of (schema.layout ?? []).entries()) {
 		checkTab(`cms.config: ${collection}.layout[${index}]`, group.tab);
@@ -361,10 +378,6 @@ function validate(
 
 	const paths = new Map<string, string>();
 	for (const [collection, schema] of Object.entries(config.collections)) {
-		// Library contract: the title field is named `title` (its label is free). The list, search, relation picker, body links and the editor's title input use it.
-		if (schema.fields.title?.kind !== "text") {
-			throw new Error(`cms.config: ${collection} needs a "title" text field (fields.text)`);
-		}
 		// A content item has a single URL (the store has one URL column). A second URL field would go unused, so it is rejected as a config error.
 		const slugFields = Object.entries(schema.fields).filter(([, field]) => field.kind === "slug");
 		if (slugFields.length > 1) {

@@ -1008,7 +1008,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		// An item collection opens that item in the small form on the list.
 		await waitFor(() => expect(testRouter.replace).toHaveBeenCalledWith(`/admin?collection=tag&open=${entry.id}`));
-		expect(EMPTY_FORM.title).toBe("");
+		expect(EMPTY_FORM.slug).toBe("");
 	});
 });
 

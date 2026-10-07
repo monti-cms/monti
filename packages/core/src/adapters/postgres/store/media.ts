@@ -12,10 +12,11 @@ import type {
 import { type StoreContext, withTransaction } from "./context";
 import { MEDIA_COLUMNS, type MediaRow, mapMediaRow } from "./rows";
 import { likeContainsPattern, likePrefixPattern } from "./sql";
+import { ROW_COLLECTION, titleSql } from "./title-sql";
 
 /** Media metadata. The file itself is handled by `MediaStore` (R2). */
 export function createMediaOps(ctx: StoreContext) {
-	const { pool, qSchema } = ctx;
+	const { pool, qSchema, site } = ctx;
 
 	const getMediaAsset = async (id: string): Promise<MediaAssetRecord | null> => {
 		const res = await pool.query<MediaRow>(`SELECT ${MEDIA_COLUMNS} FROM "${qSchema}".media_assets WHERE id = $1`, [
@@ -164,7 +165,7 @@ export function createMediaOps(ctx: StoreContext) {
 					.join(", ")},
 					COUNT(r.entry_id)::text AS ref_count,
 					COALESCE(json_agg(json_build_object(
-						'entryId', r.entry_id, 'state', r.state, 'collection', e.collection, 'title', eb.metadata->>'title'
+						'entryId', r.entry_id, 'state', r.state, 'collection', e.collection, 'title', ${titleSql(site, "eb.metadata", ROW_COLLECTION)}
 					)) FILTER (WHERE r.entry_id IS NOT NULL), '[]') AS references_json
 				 ${grouped}
 				 ORDER BY m.created_at DESC, m.id DESC

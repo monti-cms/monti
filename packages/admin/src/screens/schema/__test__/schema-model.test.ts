@@ -16,6 +16,8 @@ import {
 	renameField,
 	renameOption,
 	setProp,
+	setTitleField,
+	titleFieldName,
 	withBody,
 	withKind,
 } from "../schema-model";
@@ -63,6 +65,23 @@ describe("schema model", () => {
 		expect((renamed.layout as { fields: string[] }[])[0]?.fields).toEqual(["heading", "summary"]);
 		expect((renamed.list as { columns: string[] }).columns).toEqual(["heading", "summary", "status"]);
 		expect((fieldsOf(renamed).slug as Obj).from).toBe("heading");
+	});
+
+	it("keeps the title field the title when it is renamed: the field named title gets the title role", () => {
+		expect(titleFieldName(post())).toBe("title");
+		const renamed = renameField(post(), {}, "title", "headline");
+		expect(fieldsOf(renamed).headline).toEqual({ kind: "text", label: "Title", required: true, role: "title" });
+		expect(titleFieldName(renamed)).toBe("headline");
+		// A title that already has the role keeps it, and a field that is not the title gets nothing.
+		expect(fieldsOf(renameField(renamed, {}, "headline", "name")).name).toMatchObject({ role: "title" });
+		expect(fieldsOf(renameField(post(), {}, "summary", "blurb")).blurb).not.toHaveProperty("role");
+	});
+
+	it("moves the title role to another text field", () => {
+		const moved = setTitleField(renameField(post(), {}, "title", "headline"), "summary");
+		expect(titleFieldName(moved)).toBe("summary");
+		expect(fieldsOf(moved).headline).not.toHaveProperty("role");
+		expect(fieldsOf(moved).summary).toMatchObject({ role: "title" });
 	});
 
 	it("removes a field and the places that named it", () => {

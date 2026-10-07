@@ -140,7 +140,7 @@ export function columnsFor(
 ): { available: AdminListColumn[]; defaults: AdminListColumn[] } {
 	if (!site.isCollection(collection)) return { available: [...SYSTEM_COLUMNS], defaults: ["title", "status"] };
 	const schema = site.schemaOf(collection);
-	// The slug column is used whenever there is a slug field (`fields.slug`), whatever its name. `title` exists in every collection.
+	// The slug column is used whenever there is a slug field (`fields.slug`), whatever its name.
 	const slugField = Object.entries(schema.fields).find(([, field]) => field.kind === "slug")?.[0];
 	const system = SYSTEM_COLUMNS.filter((column) => {
 		// Item collections have no publishing: saving is publishing. The locale column shows locales that have a name.
@@ -152,13 +152,17 @@ export function columnsFor(
 	});
 	const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
 	// Other fields listed in the list setting (`defineConfig` verified they are stored fields).
+	// The title field is the system column `title` whatever its name, so its own name is not a second column.
+	const titleName = site.titleField(collection).name;
 	const listed = [...new Set(schema.list?.columns ?? [])];
-	const fieldColumns = listed.filter((column) => !taxonomy.includes(column) && fieldColumnOf(site, collection, column));
+	const fieldColumns = listed.filter(
+		(column) => column !== titleName && !taxonomy.includes(column) && fieldColumnOf(site, collection, column),
+	);
 	// Taxonomy field columns go after the locale column, and other field columns follow.
 	const at = system.indexOf(system.includes("locale") ? "locale" : "status") + 1;
 	const available = [...system.slice(0, at), ...taxonomy, ...fieldColumns, ...system.slice(at)];
 	const defaults = (schema.list?.columns ?? defaultListColumns(site, collection))
-		.map((column) => (column === slugField ? "slug" : column))
+		.map((column) => (column === slugField ? "slug" : column === titleName ? "title" : column))
 		.filter((column) => available.includes(column));
 	return { available, defaults };
 }

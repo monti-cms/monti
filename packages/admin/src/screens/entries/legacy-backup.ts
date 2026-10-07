@@ -58,7 +58,8 @@ export function upgradeRecoveryRecord(
 		...record,
 		snapshot: next,
 		localFingerprint: formFingerprint(site, next),
-		// A copy of a new entry is compared with the empty form to see whether anything was typed.
-		baseFingerprint: record.entryId === "new" ? formFingerprint(site, EMPTY_FORM) : record.baseFingerprint,
+		// A copy of a new entry is compared with the empty form to see whether anything was typed: the empty form of the time the copy was written, when the title was the key `title`.
+		baseFingerprint:
+			record.entryId === "new" ? formFingerprint(site, { ...EMPTY_FORM, title: "" }) : record.baseFingerprint,
 	};
 }

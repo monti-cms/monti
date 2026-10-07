@@ -257,7 +257,7 @@ describe("defineConfig", () => {
 			list: { columns: [] },
 		});
 		expect(() => defineConfig({ collections: { untitled }, locales, defaultLocale: "en" })).toThrow(
-			/untitled needs a "title" text field/,
+			/untitled needs a title field: a text field with role "title" \(or one named "title"\)/,
 		);
 		const wrongKind = defineCollection({
 			label: "Note",
@@ -266,6 +266,64 @@ describe("defineConfig", () => {
 			list: { columns: [] },
 		});
 		expect(() => defineConfig({ collections: { wrongKind }, locales, defaultLocale: "en" })).toThrow(/title/);
+	});
+
+	describe("the title role", () => {
+		const note = (noteFields: Record<string, ReturnType<typeof fields.text> | ReturnType<typeof fields.select>>) =>
+			defineCollection({ label: "Note", kind: "item", fields: noteFields, list: { columns: [] } });
+		const config = (collection: ReturnType<typeof note>) =>
+			defineConfig({ collections: { note: collection }, locales, defaultLocale: "en" });
+
+		it("takes a text field of any name that has the role", () => {
+			const site = config(note({ headline: fields.text({ label: "Headline", role: "title" }) }));
+			expect(Object.keys(site.collections.note.fields)).toEqual(["headline"]);
+		});
+
+		it("keeps the name title for the title field once the role is elsewhere", () => {
+			expect(() =>
+				config(
+					note({ title: fields.text({ label: "Title" }), headline: fields.text({ label: "Headline", role: "title" }) }),
+				),
+			).toThrow(/note\.title is not the title field \(headline has the role "title"\)/);
+		});
+
+		it("rejects a title role on a field that is not text", () => {
+			const select = fields.select({ label: "Kind", options: { a: "A" }, defaultValue: "a", role: "title" });
+			expect(() => config(note({ title: fields.text({ label: "Title" }), kind: select }))).toThrow(
+				/note\.kind role "title" needs a text field/,
+			);
+		});
+
+		it("rejects two title fields", () => {
+			expect(() =>
+				config(
+					note({
+						first: fields.text({ label: "First", role: "title" }),
+						second: fields.text({ label: "Second", role: "title" }),
+					}),
+				),
+			).toThrow(/note has role "title" on both first and second/);
+		});
+
+		it("rejects a title role inside a conditional field", () => {
+			const nested = fields.conditional(fields.select({ label: "Kind", options: { a: "A" }, defaultValue: "a" }), {
+				a: { inner: fields.text({ label: "Inner", role: "title" }) },
+			});
+			expect(() =>
+				defineConfig({
+					collections: {
+						note: defineCollection({
+							label: "Note",
+							kind: "item",
+							fields: { title: fields.text({ label: "Title" }), kind: nested },
+							list: { columns: [] },
+						}),
+					},
+					locales,
+					defaultLocale: "en",
+				}),
+			).toThrow(/cannot be on a field of a conditional field/);
+		});
 	});
 
 	it("rejects a collection with more than one slug field", () => {

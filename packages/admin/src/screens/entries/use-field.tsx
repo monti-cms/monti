@@ -12,7 +12,7 @@ import {
 } from "../../hooks/store";
 import type { SlotRequest } from "../../slots/registry";
 import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
-import type { EntryData, EntryForm, EntryFormPatch, FormValue } from "./entry-form";
+import { type EntryData, type EntryForm, type EntryFormPatch, type FormValue, formTitle } from "./entry-form";
 
 /**
  * One problem found in a field. `message` is the localized text to show as it is. Branch on `code`, never on the text.
@@ -269,7 +269,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 					collection,
 					locale,
 					entryId,
-					title: form.title,
+					title: formTitle(site, collection, form),
 					summary: summaryOf(site, collection, form),
 					body: form.doc,
 					current: Array.isArray(current) ? current : typeof current === "string" ? current : undefined,

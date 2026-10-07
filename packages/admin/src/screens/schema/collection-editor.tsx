@@ -36,6 +36,7 @@ import {
 	SYSTEM_COLUMNS,
 	setProp,
 	storedFieldNames,
+	titleFieldName,
 	withBody,
 	withColumns,
 	withLayout,
@@ -225,7 +226,11 @@ function ListEditor({ collection, update }: { collection: Obj; update: (change: 
 				label={t("list.custom")}
 				hint={columns ? undefined : t("list.default")}
 				checked={columns !== undefined}
-				onChange={(on) => update((current) => withColumns(current, on ? ["title"] : undefined))}
+				onChange={(on) =>
+					update((current) =>
+						withColumns(current, on ? [titleFieldName(current)].filter((name) => name !== undefined) : undefined),
+					)
+				}
 			/>
 			{columns && (
 				<OrderedNames

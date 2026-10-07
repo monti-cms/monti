@@ -153,6 +153,7 @@ function SlotFieldRow({
 
 /** Relation to a record target (category, tag, collection). Search and pick; with `createInline`, a missing name can be created right from the list. */
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
+	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const relation = field as RelationField;
 	const selected = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
@@ -186,9 +187,9 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 				onCreate={
 					relation.createInline
 						? async (title) => {
-								const saved = await creator.create(relation.to as Collection, { title });
+								const saved = await creator.create(relation.to as Collection, title);
 								if (!saved) return null;
-								records.remember({ ...optionOf(t, saved), status: saved.status });
+								records.remember({ ...optionOf(site, t, relation.to, saved), status: saved.status });
 								return saved.id;
 							}
 						: undefined

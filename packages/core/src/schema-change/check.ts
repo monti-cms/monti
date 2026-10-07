@@ -34,7 +34,7 @@ export type ImpactConsequence =
 
 export interface ImpactSample {
 	readonly id: string;
-	/** The `title` value of the entry, or `null`. */
+	/** The value of the entry's title field, or `null` (also when the check was not given a site, which knows the title field). */
 	readonly title: string | null;
 	readonly collection: string;
 	readonly locale: string;
@@ -67,7 +67,10 @@ export interface CheckOptions {
 	 * The site of the new schema. Needed for what only the new rules can tell: whether a body holds blocks the new list does not allow, and which fields sit in a
 	 * conditional branch when checking required values. Without it an allowed-blocks change is not checked (`checked: false`).
 	 */
-	readonly site?: Pick<Site, "storedField" | "BLOCKS" | "ADDED_BLOCKS" | "BLOCK_BY_NAME">;
+	readonly site?: Pick<
+		Site,
+		"storedField" | "titleField" | "isCollection" | "BLOCKS" | "ADDED_BLOCKS" | "BLOCK_BY_NAME"
+	>;
 	/** The transforms of the change, so a handled change reports what the transform does (`transformed`, `deleted`). */
 	readonly transforms?: readonly SchemaMigration[];
 	/** Bodies per read. */
@@ -244,6 +247,20 @@ export async function checkSchemaChange(
 	const rules = diff.changes.map((change) => ({ change, rule: ruleFor(change, options) }));
 	const scanning = rules.filter(({ rule }) => rule.collections !== null && rule.touches !== undefined);
 
+	// A stored body holds the title under the key it was written with, which is the new title field's name, or the old one while a rename of it is pending.
+	const titleKeys = (collection: string): string[] => {
+		if (!options.site?.isCollection(collection)) return [];
+		const key = options.site.titleField(collection).name;
+		const renamedFrom = diff.changes.flatMap((change) =>
+			change.kind === "field_renamed" && change.collection === collection && change.to === key ? [change.from] : [],
+		);
+		return [key, ...renamedFrom];
+	};
+	const titleOfBody = (body: ScannedBody): unknown =>
+		titleKeys(body.collection)
+			.map((key) => body.metadata[key])
+			.find((value) => typeof value === "string");
+
 	const counts = rules.map(() => ({ entries: 0, sample: [] as ImpactSample[] }));
 	let bodiesRead = 0;
 
@@ -266,7 +283,7 @@ export async function checkSchemaChange(
 					if (!count) continue;
 					count.entries += 1;
 					if (count.sample.length < sampleSize) {
-						const title = working.metadata.title;
+						const title = titleOfBody(working);
 						count.sample.push({
 							id: working.entryId,
 							title: typeof title === "string" ? title : null,

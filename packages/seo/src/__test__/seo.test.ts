@@ -119,6 +119,21 @@ describe("public page helper (`seoOf`)", () => {
 			noindex: true,
 		});
 	});
+
+	it("falls back to the title field found by its role, not by the name `title`", () => {
+		const article = defineCollection({
+			label: "Article",
+			kind: "document",
+			fields: {
+				headline: fields.text({ label: "Headline", role: "title" }),
+				...seoFields(),
+			},
+			list: { columns: [] },
+		});
+		expect(seoOf(article, { headline: "Article headline" })).toMatchObject({ title: "Article headline" });
+		// A stored `title` that is not the title field is not the fallback.
+		expect(seoOf(article, { headline: "", title: "Not the title" }).title).toBeUndefined();
+	});
 });
 
 describe("current config: AI features", () => {

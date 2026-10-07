@@ -53,13 +53,12 @@ export function tabsOf(site: Site, collection: SchemaCollection): string[] {
 /** Tab that holds the field. A field attached to a conditional field uses that field's tab. When jumping to a publish problem, that tab is opened first. */
 export function tabOf(site: Site, collection: SchemaCollection, path: string): string {
 	const schema = site.schemaOf(collection);
-	const top =
-		Object.hasOwn(schema.fields, path) || path === "title"
-			? path
-			: Object.entries(schema.fields).find(
-					([, field]) =>
-						field.kind === "conditional" && Object.values(field.values).some((group) => group && path in group),
-				)?.[0];
+	const top = Object.hasOwn(schema.fields, path)
+		? path
+		: Object.entries(schema.fields).find(
+				([, field]) =>
+					field.kind === "conditional" && Object.values(field.values).some((group) => group && path in group),
+			)?.[0];
 	const group =
 		top === undefined ? undefined : layoutGroupsOf(site, collection).find((item) => item.fields.includes(top));
 	return group ? tabOfGroup(site, group) : defaultTab(site);

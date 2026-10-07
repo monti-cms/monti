@@ -28,14 +28,14 @@ export function seoRoleValue(
 
 /** Title and description for the search result and share preview. Falls back to the title and summary when empty. */
 export function seoPreviewText(
-	site: Pick<Site, "roleField">,
+	site: Pick<Site, "roleField" | "titleOfValues">,
 	collection: SchemaCollection,
 	form: EntryForm,
 	entry: Pick<EntryData, "source"> | null,
 ) {
 	const value = (role: string) => seoRoleValue(site, collection, role, form, entry).trim();
 	return {
-		title: value(SEO_ROLES.title) || form.title.trim(),
+		title: value(SEO_ROLES.title) || (site.titleOfValues(collection, form) ?? "").trim(),
 		description: value(SEO_ROLES.description) || value("summary"),
 	};
 }

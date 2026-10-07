@@ -45,11 +45,13 @@ async function readEntry(ctx: SyncContext, entryId: string): Promise<Entry | nul
 	}
 }
 
-const labelOf = (entry: Entry | null, fallback: string): string => {
+const labelOf = (ctx: SyncContext, entry: Entry | null, fallback: string): string => {
 	const metadata = (entry?.published?.metadata ?? entry?.working.metadata ?? {}) as Record<string, unknown>;
-	return typeof metadata.title === "string" && metadata.title
-		? metadata.title
-		: (entry?.publishedSlug ?? entry?.workingSlug ?? fallback);
+	const title =
+		entry && ctx.cms.site.isCollection(entry.collection)
+			? ctx.cms.site.titleOfValues(entry.collection, metadata)
+			: null;
+	return title ? title : (entry?.publishedSlug ?? entry?.workingSlug ?? fallback);
 };
 
 /** The open conflicts, each with the server's text as it is now. */
@@ -81,7 +83,7 @@ export async function listConflicts(ctx: SyncContext): Promise<ConflictView[]> {
 			kind: conflict.kind,
 			reason: conflict.reason,
 			detectedAt: conflict.detectedAt,
-			label: labelOf(entry, conflict.entryId),
+			label: labelOf(ctx, entry, conflict.entryId),
 			serverText,
 			gitText: conflict.gitText,
 			gitSha: conflict.gitSha,

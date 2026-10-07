@@ -57,7 +57,7 @@ import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { ConflictInfo, RecoveryOffer, SaveStatus } from "./entry-editor-store";
-import { formText, isTranslationEntry } from "./entry-form";
+import { formText, isTranslationEntry, titleKeyOf } from "./entry-form";
 import { InspectorPanel } from "./inspector-panel";
 import { LanguageTabs } from "./language-tabs";
 import {
@@ -248,6 +248,8 @@ export function EntryEditorShell({
 		},
 	});
 	const { entry, collection, form, load, busy, saveStatus, publishIssues, recovery, conflict, translation } = editor;
+	// The form keeps the title under the name of the collection's title field.
+	const titleKey = site.isCollection(collection) ? titleKeyOf(site, collection) : undefined;
 	const isReadOnly = editor.readOnly;
 	const isLoading = load.status === "loading";
 	const loadError = load.status === "error" ? load.error.message : null;
@@ -350,12 +352,12 @@ export function EntryEditorShell({
 	formRef.current = form;
 	const getEntry = useCallback(
 		() => ({
-			title: formText(formRef.current, "title"),
+			title: titleKey ? formText(formRef.current, titleKey) : "",
 			collection,
 			...(entry?.locale ? { locale: entry.locale } : {}),
 			...(entry?.id ? { entryId: entry.id } : {}),
 		}),
-		[collection, entry?.locale, entry?.id],
+		[collection, titleKey, entry?.locale, entry?.id],
 	);
 	const extensions = useEditorExtensions({ translateLocales, getEntry });
 
@@ -412,7 +414,7 @@ export function EntryEditorShell({
 	};
 
 	const focusIssue = (issue: CmsIssue) => {
-		if (issue.path === "title") {
+		if (titleKey !== undefined && issue.path === titleKey) {
 			if (isNarrowScreen) setIsInspectorOpen(false);
 			setPendingFieldPath("title-canvas");
 			return;
@@ -639,7 +641,7 @@ export function EntryEditorShell({
 	const statusLabel = entry ? describeEntryStatus(site, entry) : t("newEntry", nounVars(site, collection));
 	const canRetry = ["failed", "local-only", "session-expired"].includes(saveStatus);
 	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
-	const titleIssue = publishIssues.find((issue) => issue.path === "title");
+	const titleIssue = publishIssues.find((issue) => issue.path === titleKey);
 	const languageTabs =
 		site.ADMIN_TRANSLATIONS && entry && !site.isItemCollection(collection) ? (
 			<LanguageTabs
@@ -649,9 +651,9 @@ export function EntryEditorShell({
 				onTrashTranslation={() => confirmLifecycle("trash")}
 			/>
 		) : null;
-	// The title field is the library-convention `title` field. The label is decided by the site.
+	// The title field is the one with the title role. The label is decided by the site.
 	const titleLabel =
-		(site.isCollection(collection) ? site.storedField(collection, "title")?.field.label : undefined) ?? t("title");
+		(site.isCollection(collection) ? site.titleField(collection).field.label : undefined) ?? t("title");
 	const titleInput = (
 		<>
 			<FieldLabel htmlFor="cms-title-canvas" className="sr-only">
@@ -659,11 +661,11 @@ export function EntryEditorShell({
 			</FieldLabel>
 			<Input
 				id="cms-title-canvas"
-				value={form.title}
+				value={titleKey ? formText(form, titleKey) : ""}
 				readOnly={isReadOnly}
 				aria-invalid={Boolean(titleIssue) || undefined}
 				aria-describedby={titleIssue ? "cms-title-error" : undefined}
-				onChange={(event) => editor.setForm({ title: event.target.value })}
+				onChange={(event) => titleKey && editor.setForm({ [titleKey]: event.target.value })}
 				placeholder={translationSource?.title || tc("untitled")}
 				className="h-auto w-full rounded-none border-0 bg-transparent cms-dark:bg-transparent px-6 py-1 font-semibold text-[34px] leading-tight tracking-tight shadow-none placeholder:text-cms-muted-foreground/40 focus-visible:ring-0 md:text-[34px]"
 			/>

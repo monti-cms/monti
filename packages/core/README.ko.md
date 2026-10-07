@@ -109,7 +109,7 @@ export default defineConfig({
 });
 ```
 
-컬렉션 이름(`post`)은 DB에 저장되므로 운영 중에 바꾸지 않는다. `kind`는 `document`(본문·초안·발행) 또는 `item`(태그 같은 작은 항목), `path`는 공개 주소로 본문 내부 링크와 미리보기 주소에 쓰고, 제목 필드 이름은 `title`이다.
+컬렉션 이름(`post`)은 DB에 저장되므로 운영 중에 바꾸지 않는다. `kind`는 `document`(본문·초안·발행) 또는 `item`(태그 같은 작은 항목), `path`는 공개 주소로 본문 내부 링크와 미리보기 주소에 쓰고, 제목 필드는 `role: "title"`을 가진 필드(없으면 이름이 `title`인 필드)다.
 `layout`·`list`를 적지 않으면 필드 순서대로 그리고 기본 목록 컬럼을 쓴다("컬렉션"). 파일을 고친 뒤에는 `pnpm exec monti schema:types`를 돌린다(`next dev`가 떠 있으면 저절로 돌아간다). 규칙은 아래 "스키마 파일"과 "설정"을 본다.
 
 `cms.server.ts`는 CMS 인스턴스를 만든다(`createCms({ config, server })`, "CMS 인스턴스" 절). 그 서버 설정은 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다.
@@ -1232,8 +1232,9 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 ### 필드 규칙
 
-- **제목 필드 이름은 `title`, 이름표는 자유.** 라이브러리 약속이다. 모든 컬렉션은 `title` 텍스트 필드(`fields.text`)를 가진다.
-  목록·검색·관계 고르기·본문 링크·복제·편집 화면 제목 칸이 이 필드를 쓴다. 이름표(`label`)는 사이트가 정한다(예: `Headline`·
+- **제목 필드는 역할로 정하고, 이름과 이름표는 자유.** 모든 컬렉션은 제목 텍스트 필드를 정확히 하나 가진다. `role: "title"`을 가진 필드, 없으면 이름이 `title`인 텍스트 필드다(그래서 기존 스키마는 그대로 동작한다).
+  조건부 필드 안에는 둘 수 없고, 다른 필드가 역할을 가지면 다른 필드 이름을 `title`로 둘 수 없다. 제목은 `titleFieldOf(schema)`(`site.titleField(collection)`, `site.titleOfValues(collection, metadata)`)로 읽고 키로 직접 읽지 않는다.
+  목록·검색·관계 고르기·본문 링크·복제·SEO 대체값·동기화 이름표·편집 화면 제목 칸이 이 필드를 쓴다. 스키마 설정에서 이름을 바꿔도 제목으로 남는다(바뀐 필드에 `role: "title"`이 붙는다). 이름표(`label`)는 사이트가 정한다(예: `Headline`·
   `이름`). 제목 글자 수 한도는 따로 없고 이 필드의 `max`를 따른다(없으면 한도 없음).
 - **주소 필드는 하나.** 주소(`fields.slug`)는 본체 개념이라 콘텐츠마다 하나다. 한 컬렉션에 주소 필드를 둘 이상 두면 설정 오류다.
 - **주소는 `from`에서 만든다.** `fields.slug({ from: "title" })`이면 주소를 직접 고치기 전까지 그 필드 값으로 주소를 만들고,
@@ -1241,7 +1242,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
   텍스트 필드여야 한다.
 - **필드 역할(`role`).** 확장과 화면은 값을 필드 이름이 아니라 역할로 찾는다(`roleField(collection, role)`, 설정을 읽지 않는
   `fieldWithRole(schema, role)`). 역할 이름은 자유(영문자·숫자·하이픈)이고 한 컬렉션에 역할마다 한 필드만 둔다. 본체가 아는
-  역할은 `summary`(텍스트 필드, 요약) 하나다. 필드 옆 동작(AI 등)에 `summary`로 넘어간다. 다른 역할은 그 역할을 쓰는 확장이
+  역할은 `title`(텍스트 필드, 제목, 위 참고)과 `summary`(텍스트 필드, 요약)다. 요약은 필드 옆 동작(AI 등)에 `summary`로 넘어간다. 다른 역할은 그 역할을 쓰는 확장이
   정하고 필드 종류를 플러그인 `validate`에서 확인한다(예: SEO 확장의 `seoTitle`·`ogImage`·`noindex`).
 - **미디어 필드.** `fields.media({ label, accept?: "image" | "file" })`는 미디어 라이브러리의 파일 하나를 고르고 미디어 ID를
   글자로 저장한다. 값은 미디어 사용처(`entry_references`, 종류 `media`)에 잡혀 미디어 화면의 "사용처"·"사용하지 않음" 거르기에
@@ -1276,8 +1277,8 @@ fields: {
 layout: [{ fields: ["title", "slug", "excerpt"] }], // hero·credit은 Media 탭에 모인다
 ```
 
-`defineConfig`는 관계 필드가 없는 컬렉션을 가리키거나, 기본 언어가 목록에 없거나, `title`이 없거나, 주소 필드가 둘 이상이거나,
-역할이 겹치거나 `summary`가 텍스트 필드가 아니거나, 탭 이름이 1~20자가 아니거나, `from`·`fillFromBody`가 필드와 맞지 않거나,
+`defineConfig`는 관계 필드가 없는 컬렉션을 가리키거나, 기본 언어가 목록에 없거나, 제목 필드가 없거나, 주소 필드가 둘 이상이거나,
+역할이 겹치거나 `summary`나 `title`이 텍스트 필드가 아니거나, 탭 이름이 1~20자가 아니거나, `from`·`fillFromBody`가 필드와 맞지 않거나,
 필드 이름이 `translations`이거나, 컬렉션 종류가 없거나, `admin.path`·`site.localePrefix`·`site.previewLocaleParam`·`site.home`
 모양이 틀리면 앱이 뜰 때 바로 오류를 낸다.
 

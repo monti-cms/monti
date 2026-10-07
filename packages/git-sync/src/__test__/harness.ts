@@ -1,4 +1,4 @@
-import { defineConfig } from "@monti-cms/core";
+import { type CollectionSchema, defineConfig } from "@monti-cms/core";
 import { type Cms, type CmsAuth, createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "@monti-cms/core/testing";
 import { mdx } from "@monti-cms/mdx";
@@ -36,6 +36,8 @@ export interface HarnessOptions {
 	readonly noSettings?: boolean;
 	/** The server config has no `secret`: nothing can be encrypted. Implies `noSettings`. */
 	readonly noSecret?: boolean;
+	/** Collections of the site instead of the default posts, memos and tags (a site whose title field is not named `title`). */
+	readonly collections?: Record<string, CollectionSchema>;
 	/** Tries an event delivery gets before it is dead-lettered (the server config's `events.maxAttempts`). */
 	readonly maxAttempts?: number;
 }
@@ -60,6 +62,7 @@ export async function createHarness(options: HarnessOptions = {}) {
 	const repo = github.repo("acme/site", { main: { "README.md": "# site\n" } });
 	const config = defineConfig({
 		...baseConfig,
+		...(options.collections ? { collections: options.collections } : {}),
 		plugins: [
 			mdx(),
 			gitSync({
