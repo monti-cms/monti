@@ -1,4 +1,4 @@
-import type { ContentEvent, Entry } from "@monti-cms/core/plugin/server";
+import type { Cms, ContentEvent, Entry } from "@monti-cms/core/plugin/server";
 import { readEntry } from "./apply";
 import { exportDraft, exportEntry, hasDraftFile, isSyncable } from "./entry-file";
 import { type FileChange, type GitHubClient, isMergeBlocked } from "./github/client";
@@ -63,14 +63,18 @@ export function adminLinkOf(ctx: SyncContext, entry: Pick<Entry, "id" | "collect
 	return origin ? new URL(path, origin).toString() : path;
 }
 
-const labelOf = (entry: Entry & { workingSlug: string }): string => {
-	const title = (entry.working.metadata as Record<string, unknown>).title;
-	return typeof title === "string" && title.trim() !== "" ? title.trim() : entry.workingSlug;
+/** The title of the entry (its title field), or the fallback when it has none. */
+const titleLabel = (cms: Cms, entry: Entry, metadata: Record<string, unknown>, fallback: string): string => {
+	const title = cms.site.isCollection(entry.collection) ? cms.site.titleOfValues(entry.collection, metadata) : null;
+	return title && title.trim() !== "" ? title.trim() : fallback;
 };
+
+const labelOf = (cms: Cms, entry: Entry & { workingSlug: string }): string =>
+	titleLabel(cms, entry, entry.working.metadata as Record<string, unknown>, entry.workingSlug);
 
 /** The title and the body of a draft pull request. */
 function describePullRequest(ctx: SyncContext, entry: Entry & { workingSlug: string }) {
-	const label = labelOf(entry);
+	const label = labelOf(ctx.cms, entry);
 	return {
 		title: `Draft: ${label}`,
 		body: [
@@ -297,8 +301,7 @@ export async function publishDraft(ctx: SyncContext, target: ResolvedTarget, ent
 			await client.updateBranch(record.branch, tip);
 		}
 
-		const heading = (entry.published.metadata as Record<string, unknown>).title;
-		const title = `Publish: ${typeof heading === "string" && heading.trim() !== "" ? heading.trim() : file.slug}`;
+		const title = `Publish: ${titleLabel(ctx.cms, entry, entry.published.metadata as Record<string, unknown>, file.slug)}`;
 		const publishedRecord = (baseSha: string | null) => ({
 			target: target.id,
 			entryId: entry.id,

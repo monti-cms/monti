@@ -13,7 +13,7 @@ import {
 	type TextField,
 	type ValueField,
 } from "./fields";
-import { type StoredField, valueFieldsOf } from "./walk";
+import { type StoredField, type TitleField, titleFieldOf, titleValue, valueFieldsOf } from "./walk";
 
 export type { StoredField } from "./walk";
 
@@ -124,6 +124,16 @@ export function createSchemas(collections: CollectionsConfig) {
 		const stored = roleField(collection, role);
 		const value = stored ? values[stored.name] : undefined;
 		return typeof value === "string" ? value : "";
+	}
+
+	/** The title field of a collection (see `titleFieldOf`). */
+	function titleField(collection: SchemaCollection): TitleField {
+		return titleFieldOf(schemaOf(collection));
+	}
+
+	/** The title in the stored values (metadata) of a collection. `null` if it is not a string. */
+	function titleOfValues(collection: SchemaCollection, values: { readonly [key: string]: unknown }): string | null {
+		return titleValue(schemaOf(collection), values);
 	}
 
 	/** A field filled from the start of the body when publishing if empty (`fillFromBody`). */
@@ -346,6 +356,8 @@ export function createSchemas(collections: CollectionsConfig) {
 		slugFieldOf,
 		roleField,
 		roleValue,
+		titleField,
+		titleOfValues,
 		fillFromBodyFields,
 		slugFromValues,
 		storageTypes,

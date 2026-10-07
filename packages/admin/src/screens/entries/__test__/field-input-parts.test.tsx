@@ -60,7 +60,7 @@ describe("input parts (`FieldInputParts`)", () => {
 			{ ...EMPTY_FORM, title: "Fallback title" },
 			{
 				[text.field.input]: {
-					placeholder: ({ form }) => form.title,
+					placeholder: ({ form }) => String(form.title),
 					Aside: ({ value, form }) => <span>count {String(value || form.title).length}</span>,
 				},
 			},

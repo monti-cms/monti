@@ -19,6 +19,7 @@ import type { StoredField } from "../../../schema/walk";
 import type { Site } from "../../../site";
 import type { StoreContext } from "./context";
 import { likeContainsPattern, likePrefixPattern, likeWordPattern } from "./sql";
+import { ROW_COLLECTION, titleSql } from "./title-sql";
 
 /**
  * Languages that have a value in the entry. A language exists if any per-language text field (`localized: true`) has a value. The default language is the field itself,
@@ -184,7 +185,7 @@ export function createListOps(ctx: StoreContext) {
 				`SELECT id, title, working_slug, status
 				 FROM (
 					SELECT e.id, e.working_slug, e.status,
-					       COALESCE(NULLIF(w.metadata->>'title', ''), NULLIF(e.working_slug, '')) AS title
+					       COALESCE(NULLIF(${titleSql(site, "w.metadata", { collection: params.collection })}, ''), NULLIF(e.working_slug, '')) AS title
 					FROM "${qSchema}".entries e
 					JOIN "${qSchema}".entry_bodies w ON w.entry_id = e.id AND w.state = 'working'
 					WHERE ${conditions.join(" AND ")}
@@ -248,7 +249,7 @@ export function createListOps(ctx: StoreContext) {
 			if (params.search) {
 				const token = bind(likeContainsPattern(params.search));
 				const matches = (alias: string, slug: string) =>
-					`(${slug} ILIKE ${token} OR ${alias}.metadata->>'title' ILIKE ${token}${
+					`(${slug} ILIKE ${token} OR ${titleSql(site, `${alias}.metadata`, { collection: params.collection })} ILIKE ${token}${
 						params.includeBody ? ` OR ${alias}.search_text ILIKE ${token}` : ""
 					})`;
 				conditions.push(
@@ -258,7 +259,9 @@ export function createListOps(ctx: StoreContext) {
 				);
 			}
 			if (params.titleContains) {
-				conditions.push(`w.metadata->>'title' ILIKE ${bind(likeContainsPattern(params.titleContains))}`);
+				conditions.push(
+					`${titleSql(site, "w.metadata", { collection: params.collection })} ILIKE ${bind(likeContainsPattern(params.titleContains))}`,
+				);
 			}
 			if (params.slugContains) {
 				conditions.push(`e.working_slug ILIKE ${bind(likeContainsPattern(params.slugContains))}`);
@@ -296,7 +299,7 @@ export function createListOps(ctx: StoreContext) {
 				updatedAt: "e.updated_at",
 				createdAt: "e.created_at",
 				publishedAt: "e.published_at",
-				title: "w.metadata->>'title'",
+				title: titleSql(site, "w.metadata", { collection: params.collection }),
 				slug: "e.working_slug",
 			};
 			const sortColumn = sortColumns[params.sort?.field ?? "updatedAt"];
@@ -364,7 +367,7 @@ export function createListOps(ctx: StoreContext) {
 					collection: row.collection,
 					locale: row.locale,
 					translationGroupId: row.translation_group_id,
-					title: typeof meta.title === "string" ? meta.title : null,
+					title: site.titleOfValues(row.collection, meta),
 					slug: row.working_slug,
 					status: row.status,
 					version: row.version,
@@ -389,7 +392,7 @@ export function createListOps(ctx: StoreContext) {
 			if (relatedIds.length > 0) {
 				const res = await pool.query<{ id: string; title: string | null }>(
 					`SELECT e.id::text AS id,
-						COALESCE(NULLIF(w.metadata->>'title', ''), NULLIF(p.metadata->>'title', ''), e.working_slug) AS title
+						COALESCE(NULLIF(${titleSql(site, "w.metadata", ROW_COLLECTION)}, ''), NULLIF(${titleSql(site, "p.metadata", ROW_COLLECTION)}, ''), e.working_slug) AS title
 					 FROM "${qSchema}".entries e
 					 LEFT JOIN "${qSchema}".entry_bodies w ON w.entry_id = e.id AND w.state = 'working'
 					 LEFT JOIN "${qSchema}".entry_bodies p ON p.entry_id = e.id AND p.state = 'published'

@@ -2,6 +2,7 @@
  * The schema file as the settings screen edits it: plain JSON, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
+import { DEFAULT_TITLE_FIELD, TITLE_ROLE } from "@monti-cms/core/client";
 
 export type Obj = Record<string, unknown>;
 
@@ -316,12 +317,47 @@ export function moveField(collection: Obj, place: FieldPlace, name: string, delt
 	return updateFields(collection, place, (fields) => moveKey(fields, name, delta));
 }
 
+/**
+ * The name of the title field of a collection: the field with the `title` role, else the one named `title` (the file only has it at the top level of `fields`).
+ * `undefined` when there is none.
+ */
+export function titleFieldName(collection: Obj): string | undefined {
+	const fields = fieldsOf(collection);
+	const byRole = Object.keys(fields).find((name) => fields[name]?.role === TITLE_ROLE);
+	if (byRole) return byRole;
+	return fields[DEFAULT_TITLE_FIELD]?.kind === "text" ? DEFAULT_TITLE_FIELD : undefined;
+}
+
+/** Makes `name` the title field: it gets the `title` role, and the field that had it loses it. */
+export function setTitleField(collection: Obj, name: string): Obj {
+	const fields = Object.fromEntries(
+		Object.entries(fieldsOf(collection)).map(([key, field]) => [
+			key,
+			key === name
+				? setProp(field, "role", TITLE_ROLE, FIELD_KEY_ORDER)
+				: field.role === TITLE_ROLE
+					? setProp(field, "role", undefined)
+					: field,
+		]),
+	);
+	return { ...collection, fields };
+}
+
+/**
+ * Renames a field. The title field keeps being the title field under its new name: a title found by its name (the default) gets the `title` role, which is
+ * what names it from then on.
+ */
 export function renameField(collection: Obj, place: FieldPlace, from: string, to: string): Obj {
-	return rewriteReferences(
+	const renamedTitle =
+		!place.branch && titleFieldName(collection) === from && fieldsOf(collection)[from]?.role !== TITLE_ROLE;
+	const renamed = rewriteReferences(
 		updateFields(collection, place, (fields) => renameKey(fields, from, to)),
 		from,
 		to,
 	);
+	return renamedTitle
+		? setField(renamed, place, to, (field) => setProp(field, "role", TITLE_ROLE, FIELD_KEY_ORDER))
+		: renamed;
 }
 
 // ----- select options -----

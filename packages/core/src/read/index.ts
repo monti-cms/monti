@@ -106,13 +106,15 @@ const idsOf = (value: unknown): string[] =>
 	typeof value === "string" ? [value] : Array.isArray(value) ? value.filter((id) => typeof id === "string") : [];
 
 const titleOf = (site: Site, record: PublishedEntryRecord, locale: string): string | null => {
+	if (!site.isCollection(record.collection)) return null;
 	const metadata = record.metadata as Record<string, unknown>;
-	if (site.isCollection(record.collection) && site.recordLocalizedFields(record.collection).includes("title")) {
+	const { name } = site.titleField(record.collection);
+	if (site.recordLocalizedFields(record.collection).includes(name)) {
 		const translations = metadata[RECORD_TRANSLATIONS_KEY] as Record<string, Record<string, unknown>> | undefined;
-		const localized = translations?.[locale]?.title;
+		const localized = translations?.[locale]?.[name];
 		if (typeof localized === "string" && localized.trim()) return localized;
 	}
-	return typeof metadata.title === "string" ? metadata.title : null;
+	return site.titleOfValues(record.collection, metadata);
 };
 
 const pathOf = (site: Site, collection: string, slug: string, locale: string): string | null => {

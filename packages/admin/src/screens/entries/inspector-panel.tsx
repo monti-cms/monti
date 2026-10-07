@@ -78,7 +78,7 @@ export function InspectorPanel({
 		site.isCollection(collection) && (
 			<fieldset disabled={disabled} className="min-w-0 space-y-4 disabled:opacity-70">
 				<SchemaFields
-					omit={["title"]}
+					omit={[site.titleField(collection).name]}
 					showDescriptions={false}
 					include={include}
 					sections="plain"

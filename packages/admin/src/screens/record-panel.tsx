@@ -22,8 +22,10 @@ import {
 	type EntryForm,
 	type EntryFormPatch,
 	formFromEntry,
+	formTitle,
 	metadataFromForm,
 	recordTranslationKey,
+	titlePatch,
 } from "./entries/entry-form";
 import { RecordLocaleFields, SchemaFields } from "./entries/schema-fields";
 import { EntryFormProvider } from "./entries/use-field";
@@ -79,7 +81,7 @@ export function RecordPanel({
 	const { collection, id } = target;
 	const label = site.COLLECTION_DEFINITIONS[collection].label;
 	const heading = id ? t("record.edit", { label }) : t("list.add", { label });
-	const title = form.title;
+	const title = formTitle(site, collection, form);
 	/** Hint for the value that will be generated when the slug is empty. If the slug field has no `from`, uses the field's hint text as is. */
 	const slugFrom = site.slugFieldOf(collection)?.from;
 	const slugHint = slugFrom
@@ -121,7 +123,12 @@ export function RecordPanel({
 
 	const save = async () => {
 		if (!title.trim()) return;
-		const built = metadataFromForm(site, { ...form, title: title.trim() }, collection, loaded?.working.metadata ?? {});
+		const built = metadataFromForm(
+			site,
+			{ ...form, ...titlePatch(site, collection, title.trim()) },
+			collection,
+			loaded?.working.metadata ?? {},
+		);
 		if ("error" in built) {
 			setError(built.error);
 			return;

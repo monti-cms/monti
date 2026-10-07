@@ -184,6 +184,41 @@ describe("SchemaScreen", () => {
 		expect((screen.getByRole("button", { name: t("field.add") }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
+	it("shows which field is the title, lets the title field be renamed, and keeps it the title with the title role", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		// The field named `title` is the title until a field has the role.
+		expect(within(screen.getByTestId("field-title")).getByTestId("title-badge")).toBeTruthy();
+		expect(within(screen.getByTestId("field-summary")).queryByTestId("title-badge")).toBeNull();
+
+		fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: "title" }) }));
+		const name = within(screen.getByTestId("field-title")).getByLabelText(t("field.name"));
+		type(name, "headline");
+		fireEvent.keyDown(name, { key: "Enter" });
+		const renamed = await screen.findByTestId("field-headline");
+		expect(within(renamed).getByTestId("title-badge")).toBeTruthy();
+
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const post = (
+			lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Record<string, unknown>> } } }
+		).collections.post;
+		expect(post.fields.headline).toMatchObject({ kind: "text", role: "title" });
+		expect(post.fields.slug).toMatchObject({ from: "headline" });
+		expect(lastPreview()?.body?.renames).toEqual([
+			{ kind: "field", collection: "post", from: "title", to: "headline" },
+		]);
+	});
+
+	it("moves the title to another text field with the switch", async () => {
+		renderScreen();
+		fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: "summary" }) }));
+		const summary = screen.getByTestId("field-summary");
+		fireEvent.click(within(summary).getByRole("switch", { name: t("field.isTitle") }));
+		expect(within(summary).getByTestId("title-badge")).toBeTruthy();
+		expect(within(screen.getByTestId("field-title")).queryByTestId("title-badge")).toBeNull();
+	});
+
 	it("tells the server about a rename, and shows the choice of what happens to the stored values", async () => {
 		previewAnswer = (body) => {
 			const renamed = (body.renames as unknown[])?.length > 0;

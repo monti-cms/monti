@@ -42,6 +42,7 @@ import {
 	readReferences,
 	writeBody,
 } from "./rows";
+import { ROW_COLLECTION, titleSql } from "./title-sql";
 
 export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	const { pool, qSchema, site } = ctx;
@@ -359,7 +360,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			}>(
 				`SELECT m.id, m.locale, m.status, (m.translation_group_id IS NULL) AS is_source,
 				        COALESCE(m.translation_group_id, m.id) AS group_id,
-				        b.metadata->>'title' AS title, m.working_slug
+				        ${titleSql(site, "b.metadata", { column: "m.collection" })} AS title, m.working_slug
 				 FROM "${qSchema}".entries e
 				 JOIN "${qSchema}".entries m
 				   ON COALESCE(m.translation_group_id, m.id) = COALESCE(e.translation_group_id, e.id)
@@ -481,7 +482,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					r.state,
 					e.id as source_id,
 					e.collection as source_collection,
-					(b.metadata->>'title') as source_title,
+					(${titleSql(site, "b.metadata", ROW_COLLECTION)}) as source_title,
 					CASE WHEN r.state = 'published' THEN current_address.slug ELSE e.working_slug END as source_slug,
 					r.kind,
 					r.is_stale,

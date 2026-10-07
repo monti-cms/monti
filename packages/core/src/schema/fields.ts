@@ -17,11 +17,18 @@ export type Localized = boolean | "inherit";
  * has only one field (`defineConfig` checks it). The field kinds that fit a role name are decided and checked by the extension that uses that role
  * (plugin `validate`).
  *
- * The only role the core knows is `summary` (summary, a text field). It is passed as `summary` to actions next to a field (AI etc.) and is the default for list and search result
- * descriptions.
+ * The roles the core knows are `summary` and `title`, both on text fields. The summary is passed as `summary` to actions next to a field (AI etc.) and is the default for
+ * list and search result descriptions. The title names the field the list, search, relation picker, body links, SEO fallback and git-sync labels read as the entry's title.
  */
 export type FieldRole = string;
 export const SUMMARY_ROLE = "summary";
+/**
+ * The role of the title field. A collection has exactly one title field: the field with this role, or, when no field has it, the text field named {@link DEFAULT_TITLE_FIELD}.
+ * Read it with `titleFieldOf`, never by the key.
+ */
+export const TITLE_ROLE = "title";
+/** The name of the title field of a collection that does not give the title role to any field. */
+export const DEFAULT_TITLE_FIELD = "title";
 
 interface BaseField {
 	readonly label: string;

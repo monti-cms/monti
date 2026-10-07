@@ -109,7 +109,7 @@ export default defineConfig({
 });
 ```
 
-The collection name (`post`) is stored in the DB, so do not change it in production. `kind` is `document` (a body, drafts and publishing) or `item` (a small entry such as a tag); `path` is the public URL, used for internal links in the body and for preview URLs; the title field is named `title`.
+The collection name (`post`) is stored in the DB, so do not change it in production. `kind` is `document` (a body, drafts and publishing) or `item` (a small entry such as a tag); `path` is the public URL, used for internal links in the body and for preview URLs; the title field is the one with `role: "title"` (or, without one, the field named `title`).
 Without `layout` and `list`, fields are drawn in field order with the default list columns ("Collections"). Run `pnpm exec monti schema:types` (or keep `next dev` running, which does it for you) after editing the file. See "The schema file" and "Config" below for the rules.
 
 `cms.server.ts` creates the CMS instance (`createCms({ config, server })`, see "The CMS instance"). Its server config holds the store, media and login connections and the secrets, and is only read on the server.
@@ -1232,16 +1232,17 @@ A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It i
 
 ### Field rules
 
-- **The title field is named `title`; its label is free.** This is a library convention. Every collection has a `title` text field (`fields.text`).
-  Lists, search, relation picking, body links, duplication and the title box of the edit screen use this field. The label (`label`) is up to the site (e.g. `Headline`,
-  `Name`). There is no separate limit on title length; it follows this field's `max` (no limit if absent).
+- **The title field is named by its role; its name and label are free.** Every collection has exactly one title text field: the field with `role: "title"` or, when no field has it, the text field named `title` (so existing
+  schemas keep working). It cannot be in a conditional field, and once another field has the role no other field may be called `title`. Read it with `titleFieldOf(schema)` (`site.titleField(collection)`, `site.titleOfValues(collection, metadata)`), never by the key.
+  Lists, search, relation picking, body links, duplication, SEO fallbacks, sync labels and the title box of the edit screen use this field. The label (`label`) is up to the site (e.g. `Headline`,
+  `Name`). Renaming it in the schema settings keeps it the title (the renamed field gets `role: "title"`). There is no separate limit on title length; it follows this field's `max` (no limit if absent).
 - **Exactly one URL field.** The URL (`fields.slug`) is a core concept, so there is one per entry. Having two or more URL fields in a collection is a config error.
 - **The URL is built from `from`.** With `fields.slug({ from: "title" })`, the URL is built from that field's value until you edit the URL yourself,
   and for an item collection, saving with an empty URL builds it from that value. Without `from`, nothing is built automatically. `from` must be a text field of the same
   collection.
 - **Field role (`role`).** Extensions and screens find values by role, not by field name (`roleField(collection, role)`, and `fieldWithRole(schema, role)`, which does not read
-  the config). Role names are free (letters, digits, hyphens), and a collection has only one field per role. The only role the core knows is
-  `summary` (a text field, the summary). It is passed to field-side actions (AI, etc.) as `summary`. Other roles are decided by the extension that uses them,
+  the config). Role names are free (letters, digits, hyphens), and a collection has only one field per role. The roles the core knows are
+  `title` (a text field, the title, see above) and `summary` (a text field, the summary). The summary is passed to field-side actions (AI, etc.) as `summary`. Other roles are decided by the extension that uses them,
   and it checks the field kind in the plugin `validate` (e.g. `seoTitle`, `ogImage`, `noindex` of the SEO extension).
 - **Media field.** `fields.media({ label, accept?: "image" | "file" })` picks one file from the media library and stores the media ID
   as text. The value is recorded in media usage (`entry_references`, kind `media`), shows up in the media screen's "Used in" and "Unused" filters,
@@ -1276,8 +1277,8 @@ fields: {
 layout: [{ fields: ["title", "slug", "excerpt"] }], // hero and credit gather in the Media tab
 ```
 
-`defineConfig` throws an error as soon as the app starts if: a relation field points at a collection that does not exist, the default language is not in the list, `title` is missing, there are two or more URL fields,
-roles collide or `summary` is not a text field, a tab name is not 1 to 20 characters, `from` or `fillFromBody` does not match the fields,
+`defineConfig` throws an error as soon as the app starts if: a relation field points at a collection that does not exist, the default language is not in the list, a collection has no title field, there are two or more URL fields,
+roles collide or `summary` or `title` is not a text field, a tab name is not 1 to 20 characters, `from` or `fillFromBody` does not match the fields,
 a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix`, `site.previewLocaleParam` or `site.home`
 is wrong.
 

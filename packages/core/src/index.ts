@@ -96,10 +96,20 @@ export {
 	type SlugField,
 	SUMMARY_ROLE,
 	type TextField,
+	TITLE_ROLE,
 	type ValueField,
 	type ViewField,
 } from "./schema/fields";
-export { fieldWithRole, type StoredField, valueFieldsOf, valueWithRole } from "./schema/walk";
+export {
+	fieldWithRole,
+	findTitleField,
+	type StoredField,
+	type TitleField,
+	titleFieldOf,
+	titleValue,
+	valueFieldsOf,
+	valueWithRole,
+} from "./schema/walk";
 export { parseSchemaFile, SchemaFileError, type SchemaIssue } from "./schema-file/format";
 export type {
 	MontiRegister,

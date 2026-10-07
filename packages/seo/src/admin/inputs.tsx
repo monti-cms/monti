@@ -44,7 +44,11 @@ const withFallback = (
 });
 
 /** Search title: falls back to the title when empty. */
-export const seoTitleInput = withFallback((_site, props) => props.form.title, SEO_DEFAULT_LIMITS.title);
+export const seoTitleInput = withFallback(
+	(site, props) =>
+		site.isCollection(props.collection) ? (site.titleOfValues(props.collection, props.form) ?? "") : "",
+	SEO_DEFAULT_LIMITS.title,
+);
 
 /** Search description: falls back to the summary role value when empty. */
 export const seoDescriptionInput = withFallback(

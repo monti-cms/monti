@@ -48,6 +48,8 @@ import {
 	setField,
 	setOptionLabel,
 	setProp,
+	setTitleField,
+	titleFieldName,
 	VALUE_KINDS,
 	withKind,
 } from "./schema-model";
@@ -446,6 +448,8 @@ export function FieldEditor({
 		});
 	const valueKind = kind !== "view" && kind !== "backlink";
 	const label = typeof field.label === "string" ? field.label : "";
+	// The title field is a top-level text field: the one with the title role, or the one named `title`.
+	const isTitle = !place.branch && titleFieldName(editing.collection) === name;
 
 	return (
 		<Collapsible
@@ -465,6 +469,11 @@ export function FieldEditor({
 					<Badge variant="secondary" className="shrink-0">
 						{t(`kind.${kind}`)}
 					</Badge>
+					{isTitle && (
+						<Badge variant="outline" className="shrink-0" data-testid="title-badge">
+							{t("field.titleBadge")}
+						</Badge>
+					)}
 					{field.required === true && (
 						<Badge variant="outline" className="shrink-0">
 							{t("field.requiredBadge")}
@@ -513,6 +522,14 @@ export function FieldEditor({
 					</div>
 					{valueKind && (
 						<div className="grid gap-3 sm:grid-cols-2">
+							{kind === "text" && !place.branch && (
+								<FlagSwitch
+									label={t("field.isTitle")}
+									hint={t("field.isTitleHint")}
+									checked={isTitle}
+									onChange={(on) => on && editing.update((collection) => setTitleField(collection, name))}
+								/>
+							)}
 							{kind !== "conditional" && (
 								<FlagSwitch
 									label={t("field.required")}

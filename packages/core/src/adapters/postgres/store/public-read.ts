@@ -1,9 +1,9 @@
 import { CmsError } from "../../../core/store/errors";
 import type { EntryMetadata, PublishedEntryLookup, PublishedEntryRecord } from "../../../core/store/types";
-import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive";
 import type { Site } from "../../../site";
 import type { StoreContext } from "./context";
 import { mapPublishedEntryRow } from "./rows";
+import { titleSql, translatedTitleSql } from "./title-sql";
 
 function assertPublicCollections(site: Site, collections: readonly string[]): void {
 	if (!Array.isArray(collections) || collections.length === 0) {
@@ -78,10 +78,10 @@ export interface PublishedPageParams {
 	readonly includeBody?: boolean;
 }
 
-const SORT_COLUMNS: Record<PublishedSort, string> = {
+/** The columns of the sorts that do not read a field. The title sort reads the collection's title field (`titleSql`). */
+const SORT_COLUMNS: Record<Exclude<PublishedSort, "title">, string> = {
 	publishedAt: "src.published_at",
 	updatedAt: "b.updated_at",
-	title: "b.metadata->>'title'",
 };
 
 /**
@@ -191,7 +191,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 				throw new CmsError("Invalid pageSize", "invalid_input");
 			}
 			const sort = params.sort ?? "publishedAt";
-			if (!(sort in SORT_COLUMNS)) throw new CmsError("Invalid sort", "invalid_input");
+			if (sort !== "title" && !(sort in SORT_COLUMNS)) throw new CmsError("Invalid sort", "invalid_input");
 			const order = params.order === "asc" ? "ASC" : "DESC";
 
 			const values: unknown[] = [params.collection, params.locale ?? site.DEFAULT_LOCALE];
@@ -225,14 +225,14 @@ export function createPublicReadOps(ctx: StoreContext) {
 			);
 			// Values not used by the count query are appended separately (Postgres errors on unused placeholders because it cannot infer their type).
 			const rowValues = [...values];
-			let orderBy = SORT_COLUMNS[sort];
+			let orderBy =
+				sort === "title" ? titleSql(site, "b.metadata", { collection: params.collection }) : SORT_COLUMNS[sort];
 			if (
 				sort === "title" &&
-				site.isCollection(params.collection) &&
-				site.recordLocalizedFields(params.collection).includes("title")
+				site.recordLocalizedFields(params.collection).includes(site.titleField(params.collection).name)
 			) {
 				rowValues.push(params.titleLocale ?? params.locale ?? site.DEFAULT_LOCALE);
-				orderBy = `COALESCE(NULLIF(btrim(b.metadata->'${RECORD_TRANSLATIONS_KEY}'->$${rowValues.length}::text->>'title'), ''), b.metadata->>'title')`;
+				orderBy = translatedTitleSql(site, "b.metadata", params.collection, `$${rowValues.length}`);
 			}
 			const rows = await pool.query<PublishedRow>(
 				`SELECT ${PUBLISHED_COLUMNS(params.includeBody === true)} ${from}

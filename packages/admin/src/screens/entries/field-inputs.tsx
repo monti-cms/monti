@@ -545,14 +545,13 @@ export function BacklinkInput({
 					field.createInline
 						? async (title) => {
 								// Open with this post already in the add field. After saving, reload the options so it shows up in the list right away.
-								const saved = await creator.create(field.from as Collection, {
-									title,
+								const saved = await creator.create(field.from as Collection, title, {
 									...kind.createMetadata,
 									[field.via]: [targetId],
 								});
 								if (!saved) return null;
 								createdRef.current.add(saved.id);
-								records.remember({ ...optionOf(t, saved), status: saved.status });
+								records.remember({ ...optionOf(site, t, field.from, saved), status: saved.status });
 								awaitingServerRef.current = true;
 								void load();
 								return saved.id;

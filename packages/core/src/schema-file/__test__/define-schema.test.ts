@@ -127,7 +127,7 @@ describe("defineConfig with a schema file", () => {
 		);
 		const noTitle = cloneSchema();
 		delete noTitle.collections.tag.fields.title;
-		expect(() => defineConfig({ schema: fileSchema(noTitle) })).toThrow(/tag needs a "title" text field/);
+		expect(() => defineConfig({ schema: fileSchema(noTitle) })).toThrow(/tag needs a title field/);
 	});
 
 	it("reads the file from a path, and says what is wrong with a missing or malformed one", () => {

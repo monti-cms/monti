@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useConfirm } from "../shared/confirm-dialog";
 import { formatDateTime } from "../shared/format-date";
 import type { ConflictInfo, RecoveryOffer } from "./entry-editor-store";
-import { type EntryForm, formFromEntry } from "./entry-form";
+import { type EntryForm, formFromEntry, formTitle } from "./entry-form";
 import { entriesMessages } from "./messages";
 
 /**
@@ -106,6 +106,7 @@ export function ConflictDialog({
 				</DialogHeader>
 				{conflict && (
 					<ComparePanes
+						collection={conflict.server.collection}
 						local={conflict.local}
 						server={formFromEntry(site, conflict.server)}
 						serverVersion={conflict.server.version}
@@ -130,14 +131,17 @@ export function ConflictDialog({
 
 /** Side-by-side comparison on the conflict screen ("check and copy both contents"). */
 function ComparePanes({
+	collection,
 	local,
 	server,
 	serverVersion,
 }: {
+	collection: string;
 	local: EntryForm;
 	server: EntryForm;
 	serverVersion: number;
 }) {
+	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	// The body is shown as text in the notation of the source panel; without one, as the document itself.
 	const format = useSourceFormat();
@@ -156,7 +160,10 @@ function ComparePanes({
 			<div className="space-y-2 rounded border p-3">
 				<p className="font-semibold text-sm">{label}</p>
 				<p className="text-xs">
-					{t("conflict.summary", { title: value.title || t("untitled"), slug: value.slug || t("conflict.noSlug") })}
+					{t("conflict.summary", {
+						title: formTitle(site, collection, value) || t("untitled"),
+						slug: value.slug || t("conflict.noSlug"),
+					})}
 				</p>
 				<Button type="button" variant="link" size="xs" className="px-0" onClick={() => void copy(body)}>
 					{t("conflict.copyBody")}

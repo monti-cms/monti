@@ -18,18 +18,37 @@ import { entriesMessages } from "./messages";
 export type FormValue = string | string[] | StoredDocument | null;
 
 /**
- * Draft values the edit screen handles. Fields other than title, slug and body come from the collection definition and
- * are stored flat, keyed by field name. Date fields hold the `datetime-local` input value (in the configured time zone).
+ * Draft values the edit screen handles. Fields other than the slug and the body come from the collection definition and
+ * are stored flat, keyed by field name (the title too: its key is the name of the title field, see `titleKeyOf`). Date fields hold the `datetime-local` input value
+ * (in the configured time zone).
  */
-export type EntryForm = { title: string; slug: string; doc: StoredDocument } & { [field: string]: FormValue };
+export type EntryForm = { slug: string; doc: StoredDocument } & { [field: string]: FormValue };
 
 /** Partial form change. Only the given keys are changed. */
 export type EntryFormPatch = { readonly [field: string]: FormValue };
 
-export const EMPTY_FORM: EntryForm = { title: "", slug: "", doc: emptyStoredDocument() };
+export const EMPTY_FORM: EntryForm = { slug: "", doc: emptyStoredDocument() };
+
+/** The form of a new entry of that collection: the title (under the name of its title field, '') and the address are empty. */
+export const emptyFormOf = (site: Site, collection: string): EntryForm => ({
+	...EMPTY_FORM,
+	[titleKeyOf(site, collection)]: "",
+});
+
+/** The form key (and metadata key) of the title of a collection: the name of its title field. */
+export const titleKeyOf = (site: Site, collection: string): string => site.titleField(collection).name;
+
+/** The title in a form of that collection. */
+export const formTitle = (site: Site, collection: string, form: EntryForm): string =>
+	formText(form, titleKeyOf(site, collection));
+
+/** A form patch that sets the title of that collection. */
+export const titlePatch = (site: Site, collection: string, title: string): EntryFormPatch => ({
+	[titleKeyOf(site, collection)]: title,
+});
 
 /**
- * Title of a duplicate (by library convention the title field is named `title`). Appends a "copy" suffix to the source title and trims the source part
+ * Title of a duplicate. Appends a "copy" suffix to the source title and trims the source part
  * if it would exceed the title field's `max`.
  */
 export function copyTitle(site: Site, collection: string, title: string | null | undefined): string {
@@ -37,7 +56,7 @@ export function copyTitle(site: Site, collection: string, title: string | null |
 	// The suffix added to a duplicate's title and the name for an untitled source are screen text, so the admin screen decides them, not the repository.
 	const copySuffix = t("copy.suffix");
 	const base = title?.trim() ? title : t("untitled");
-	const field = site.isCollection(collection) ? site.storedField(collection, "title")?.field : undefined;
+	const field = site.isCollection(collection) ? site.titleField(collection).field : undefined;
 	const max = field?.kind === "text" ? field.max : undefined;
 	const room = max === undefined ? Number.POSITIVE_INFINITY : max - Array.from(copySuffix).length;
 	const chars = Array.from(base);
@@ -114,13 +133,12 @@ export interface TranslationSource {
 }
 
 /** For a translation, the original's body, language and title. Used by the source pane, the title hint and AI translation. */
-export function translationSourceOf(entry: EntryData | null): TranslationSource | null {
+export function translationSourceOf(site: Site, entry: EntryData | null): TranslationSource | null {
 	if (!entry || !isTranslationEntry(entry) || !entry.source?.doc) return null;
-	const title = entry.source.metadata.title;
 	return {
 		doc: entry.source.doc,
 		locale: entry.source.locale,
-		title: typeof title === "string" ? title : "",
+		title: site.titleOfValues(entry.collection, entry.source.metadata) ?? "",
 	};
 }
 
@@ -186,9 +204,9 @@ function toFormValue({ field }: StoredField, value: unknown): FormValue {
 
 export function formFromEntry(site: Site, entry: EntryData): EntryForm {
 	const metadata = entry.working.metadata ?? {};
-	const form: EntryForm = { title: text(metadata.title), slug: entry.workingSlug ?? "", doc: entry.working.doc };
+	const form: EntryForm = { slug: entry.workingSlug ?? "", doc: entry.working.doc };
 	for (const stored of fieldsOf(site, entry.collection, isTranslationEntry(entry))) {
-		if (stored.name === "title" || stored.field.hidden) continue;
+		if (stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
 	}
 	Object.assign(form, recordTranslationsToForm(site, entry.collection, metadata));
@@ -222,9 +240,9 @@ function recordTranslationsToForm(
 
 /** Converts original metadata to form values. Used when the translation's properties panel shows shared values read-only. */
 export function formFromSourceMetadata(site: Site, collection: string, metadata: Record<string, unknown>): EntryForm {
-	const form: EntryForm = { title: text(metadata.title), slug: "", doc: emptyStoredDocument() };
+	const form: EntryForm = { slug: "", doc: emptyStoredDocument() };
 	for (const stored of fieldsOf(site, collection)) {
-		if (stored.name === "title" || stored.field.hidden) continue;
+		if (stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
 	}
 	return form;

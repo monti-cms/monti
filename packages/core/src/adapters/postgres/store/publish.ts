@@ -14,6 +14,7 @@ import type { Entry, EntryStatus } from "../../../core/store/types";
 import { type Collection, type Issue, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
 import type { StoreContext } from "./context";
 import { type AddressRow, loadEntry, lockEntryForUpdate, readBody, readReferences, writeBody } from "./rows";
+import { ROW_COLLECTION, titleSql } from "./title-sql";
 
 export interface PublishOptions {
 	expectedVersion: number;
@@ -295,7 +296,7 @@ export function createPublishing(ctx: StoreContext) {
 		options: { ignoreTrashedSources: boolean },
 	): Promise<void> => {
 		const usage = await client.query<{ source_id: string; title: string | null; collection: string; state: string }>(
-			`SELECT DISTINCT r.entry_id AS source_id, b.metadata->>'title' AS title, e.collection, r.state
+			`SELECT DISTINCT r.entry_id AS source_id, ${titleSql(site, "b.metadata", ROW_COLLECTION)} AS title, e.collection, r.state
 			 FROM "${qSchema}".entry_references r
 			 JOIN "${qSchema}".entries e ON e.id = r.entry_id
 			 LEFT JOIN "${qSchema}".entry_bodies b ON b.entry_id = r.entry_id AND b.state = r.state

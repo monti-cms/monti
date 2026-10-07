@@ -183,7 +183,10 @@ export const createContentService = <T = unknown>(
 			if (source.translationGroupId !== undefined && source.translationGroupId !== params.id) {
 				throw new ServiceError("invalid_input");
 			}
-			const metadata = params.title === undefined ? source.metadata : { ...source.metadata, title: params.title };
+			const metadata =
+				params.title === undefined
+					? source.metadata
+					: { ...source.metadata, [site.titleField(source.collection).name]: params.title };
 			const { snapshot, warnings } = await pipeline.run({
 				operation: "duplicate",
 				locale: source.locale ?? site.DEFAULT_LOCALE,
