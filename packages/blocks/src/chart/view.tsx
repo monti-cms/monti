@@ -1,7 +1,7 @@
 /*
  * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
  * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with
- * `cms-block-chart-*` classes (this package's `styles.css`) without admin UI code or Tailwind.
+ * `cms-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
  */
 
 import { createContext, type ReactElement, useContext, useEffect, useMemo, useRef, useState } from "react";

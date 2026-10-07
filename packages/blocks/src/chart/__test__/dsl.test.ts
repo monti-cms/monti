@@ -110,9 +110,9 @@ describe("parseChartDsl", () => {
 			options: { showTooltip: true, showLegend: true },
 		});
 		expect(normalized.spec?.data).toEqual([
-			{ browser: "Chrome", visitors: 275, fill: "var(--chart-1)" },
-			{ browser: "Safari", visitors: 200, fill: "var(--chart-2)" },
-			{ browser: "Firefox", visitors: 187, fill: "var(--chart-3)" },
+			{ browser: "Chrome", visitors: 275, fill: "var(--cms-chart-1, var(--chart-1))" },
+			{ browser: "Safari", visitors: 200, fill: "var(--cms-chart-2, var(--chart-2))" },
+			{ browser: "Firefox", visitors: 187, fill: "var(--cms-chart-3, var(--chart-3))" },
 		]);
 	});
 

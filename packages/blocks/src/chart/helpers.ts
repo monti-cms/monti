@@ -1,18 +1,18 @@
-import type { CartesianChartSpec, NormalizedChartSpec } from "./types";
+import { type CartesianChartSpec, chartColor, type NormalizedChartSpec } from "./types";
 import type { ChartConfig } from "./ui";
 
-/** Sets the name and color for each series (each slice for pie charts). Colors are theme variables (`--chart-1` to `--chart-5`). */
+/** Sets the name and color for each series (each slice for pie charts). Colors are theme variables (`--chart-1` to `--chart-5`, see `chartColor`). */
 export const toChartConfig = (spec: NormalizedChartSpec): ChartConfig => {
 	if (spec.type === "pie" && spec.labelKey) {
 		return Object.fromEntries(
 			spec.data.map((row) => [
 				String(row[spec.labelKey] ?? ""),
-				{ label: String(row[spec.labelKey] ?? ""), color: String(row.fill ?? "var(--chart-1)") },
+				{ label: String(row[spec.labelKey] ?? ""), color: String(row.fill ?? chartColor("chart-1")) },
 			]),
 		);
 	}
 	return Object.fromEntries(
-		spec.series.map((series) => [series.key, { label: series.label, color: `var(--${series.colorToken})` }]),
+		spec.series.map((series) => [series.key, { label: series.label, color: chartColor(series.colorToken) }]),
 	);
 };
 

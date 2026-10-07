@@ -1,14 +1,12 @@
 /*
- * @monti-cms/blocks styles. Import it after `@monti-cms/admin/styles.css` in the app's Tailwind input CSS.
- * The editor look is built from the admin theme colors (--cms-background, --cms-foreground, --cms-border, --cms-muted-foreground, --cms-destructive, --cms-warning).
- * Public pages have no admin colors, so the callout accent colors use the app's `--muted-foreground`, `--warning` and `--destructive`, falling back to default colors.
+ * @monti-cms/blocks/render.css: styles of the public page for the block components (`@monti-cms/blocks/<block>/render`).
+ * Import it in the site's CSS. It needs no Tailwind, and the admin screen does not use it (the admin's block styles are in `@monti-cms/blocks/styles.css`).
+ * The `cms-block-*` section styles the default public components. Sites that override the components do not need that part.
+ * The dark theme is `.dark` or `[data-theme="dark"]`.
+ *
+ * Callout accent colors use the app's `--muted-foreground`, `--warning` and `--destructive`, falling back to default colors.
  * All defaults below are wrapped in `:where()` so the app's value wins when it sets the same variable.
- * The `cms-block-*` section at the bottom styles the default public components (`@monti-cms/blocks/<block>/render`). It is used without Tailwind,
- * and the dark theme is `.dark` or `[data-theme="dark"]`. Sites that override the components do not need that part.
  */
-
-/* Finds Tailwind classes in the edit screens of the published bundle (inside the workspace the app reads the source directly). */
-@source "./dist";
 
 /* Defaults: accent colors per callout variant and chart series colors (`chart-1` to `chart-5`). */
 :where(:root) {
@@ -30,32 +28,6 @@
 	--chart-3: oklch(0.82 0.12 70);
 	--chart-4: oklch(0.72 0.16 15);
 	--chart-5: oklch(0.72 0.13 310);
-}
-
-/* Callout edit screen (`callout/view.tsx`). Mixes the accent color into the theme background and border. The public look is up to the site. */
-.cms-callout {
-	--cms-callout-accent: var(--cms-callout-note);
-	background-color: color-mix(in oklab, var(--cms-callout-accent) 10%, var(--cms-background));
-	border-color: color-mix(in oklab, var(--cms-callout-accent) 40%, var(--cms-border));
-	color: var(--cms-foreground);
-}
-.cms-callout[data-variant="tip"] {
-	--cms-callout-accent: var(--cms-callout-tip);
-}
-.cms-callout[data-variant="info"] {
-	--cms-callout-accent: var(--cms-callout-info);
-}
-.cms-callout[data-variant="warning"] {
-	--cms-callout-accent: var(--cms-callout-warning);
-}
-.cms-callout[data-variant="danger"] {
-	--cms-callout-accent: var(--cms-callout-danger);
-}
-.cms-callout [data-callout-icon] {
-	color: var(--cms-callout-accent);
-}
-.cms-callout :is(ul, ol) > li::marker {
-	color: var(--cms-muted-foreground);
 }
 
 /* Text and background colors (`:color`, the text color extension). Values come as a light/dark theme pair, and the light value is used when there is no dark value. */

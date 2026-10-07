@@ -6,6 +6,7 @@ import {
 	type ChartDslParseResult,
 	type ChartThemeToken,
 	type ChartType,
+	chartColor,
 	type NormalizeChartResult,
 } from "./types";
 
@@ -224,7 +225,7 @@ export const normalizeChartDsl = (parsed: ChartDslParseResult): NormalizeChartRe
 				return {
 					[labelKey]: String(record[labelKey] ?? ""),
 					[valueKey]: Number.NaN,
-					fill: `var(--${CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]})`,
+					fill: chartColor(CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]),
 				};
 			}
 			const numericValue = Number(record[valueKey]);
@@ -235,7 +236,7 @@ export const normalizeChartDsl = (parsed: ChartDslParseResult): NormalizeChartRe
 			return {
 				[labelKey]: String(record[labelKey] ?? ""),
 				[valueKey]: numericValue,
-				fill: `var(--${CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]})`,
+				fill: chartColor(CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]),
 			};
 		});
 

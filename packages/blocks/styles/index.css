@@ -1,0 +1,86 @@
+/*
+ * @monti-cms/blocks admin styles: the source of the prebuilt `dist/styles.css` (built by `scripts/build-styles.mjs`).
+ * The host imports the built file after `@monti-cms/admin/styles.css` and needs no Tailwind. The public page styles are in `render.css`.
+ *
+ * The edit screens of the blocks use the admin theme colors (--cms-background, --cms-foreground, --cms-border, --cms-muted-foreground, --cms-destructive, --cms-warning).
+ * The defaults below are wrapped in `:where()`, so a value the host sets on `:root` or `html` wins.
+ */
+@layer theme, base, components, utilities;
+
+@import "../../admin/styles/theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/* The classes of this package's sources. */
+@source "../src";
+@source not "../src/**/__test__";
+@source not "../src/test";
+
+/*
+ * Defaults: accent colors per callout variant and chart series colors. The chart colors are read as `var(--cms-chart-N, var(--chart-N))`,
+ * so the host's `--chart-N` (shadcn, `render.css`) is used when it sets one.
+ */
+:where(html:has(.cms-admin)) {
+	--cms-callout-note: var(--cms-muted-foreground);
+	--cms-callout-tip: oklch(0.6 0.15 155);
+	--cms-callout-info: oklch(0.6 0.14 240);
+	--cms-callout-warning: var(--cms-warning);
+	--cms-callout-danger: var(--cms-destructive);
+	--cms-chart-1: var(--chart-1, oklch(0.65 0.17 265));
+	--cms-chart-2: var(--chart-2, oklch(0.7 0.14 160));
+	--cms-chart-3: var(--chart-3, oklch(0.75 0.15 70));
+	--cms-chart-4: var(--chart-4, oklch(0.65 0.2 15));
+	--cms-chart-5: var(--chart-5, oklch(0.6 0.15 310));
+}
+
+:where(html:is(.dark, [data-theme="dark"]):has(.cms-admin)) {
+	--cms-chart-1: var(--chart-1, oklch(0.75 0.13 265));
+	--cms-chart-2: var(--chart-2, oklch(0.78 0.12 160));
+	--cms-chart-3: var(--chart-3, oklch(0.82 0.12 70));
+	--cms-chart-4: var(--chart-4, oklch(0.72 0.16 15));
+	--cms-chart-5: var(--chart-5, oklch(0.72 0.13 310));
+}
+
+/* Callout edit screen (`callout/view.tsx`). Mixes the accent color into the theme background and border. The public look is up to the site. */
+.cms-callout {
+	--cms-callout-accent: var(--cms-callout-note);
+	background-color: color-mix(in oklab, var(--cms-callout-accent) 10%, var(--cms-background));
+	border-color: color-mix(in oklab, var(--cms-callout-accent) 40%, var(--cms-border));
+	color: var(--cms-foreground);
+}
+.cms-callout[data-variant="tip"] {
+	--cms-callout-accent: var(--cms-callout-tip);
+}
+.cms-callout[data-variant="info"] {
+	--cms-callout-accent: var(--cms-callout-info);
+}
+.cms-callout[data-variant="warning"] {
+	--cms-callout-accent: var(--cms-callout-warning);
+}
+.cms-callout[data-variant="danger"] {
+	--cms-callout-accent: var(--cms-callout-danger);
+}
+.cms-callout [data-callout-icon] {
+	color: var(--cms-callout-accent);
+}
+.cms-callout :is(ul, ol) > li::marker {
+	color: var(--cms-muted-foreground);
+}
+
+/* Text and background colors (`:color`, the text color extension). Values come as a light/dark theme pair, and the light value is used when there is no dark value. */
+.cms-color[data-fg] {
+	color: var(--cms-fg);
+}
+.cms-color[data-bg] {
+	background-color: var(--cms-bg);
+	border-radius: 0.25em;
+	padding: 0.05em 0.2em;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+/* `:where(.dark *)` matches elements below a dark `html` too, which a plain scope prefix followed by `.dark` would not. */
+.cms-color[data-fg]:where(.dark *, [data-theme="dark"] *) {
+	color: var(--cms-fg-dark, var(--cms-fg));
+}
+.cms-color[data-bg]:where(.dark *, [data-theme="dark"] *) {
+	background-color: var(--cms-bg-dark, var(--cms-bg));
+}

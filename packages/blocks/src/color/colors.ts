@@ -121,7 +121,7 @@ export function cleanTextColor(attrs: Readonly<Record<string, unknown>> | null |
 export const hasTextColor = (attrs: TextColorAttrs): boolean => Boolean(attrs.fg || attrs.bg);
 
 /**
- * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `styles.css`) picks the variable for the theme.
+ * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
  * Color is applied only when `data-fg` or `data-bg` is present.
  */
 export function textColorProps(attrs: TextColorAttrs): {
