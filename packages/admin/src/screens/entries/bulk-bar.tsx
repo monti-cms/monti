@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { cmsFetch, errorText } from "../admin-api";
 import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
-import { nounVars } from "../shared/noun";
+import { nounVars } from "../shared/noun.messages";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
 

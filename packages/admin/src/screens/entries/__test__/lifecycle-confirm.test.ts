@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { nounVars } from "../../shared/noun";
+import { nounVars } from "../../shared/noun.messages";
 import { lifecycleConfirm, lifecycleSuccess } from "../lifecycle-confirm";
 import { entriesMessages } from "../messages";
 

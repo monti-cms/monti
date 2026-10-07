@@ -6,7 +6,7 @@ import { entryEditorShellMessages } from "../../entries/entry-editor-shell.messa
 import { lifecycleConfirm } from "../../entries/lifecycle-confirm";
 import { entriesMessages } from "../../entries/messages";
 import { screensMessages } from "../../messages";
-import { collectionNoun, nounVars } from "../noun";
+import { collectionNoun, nounVars } from "../noun.messages";
 
 /** The site of the test config with its first content collection relabeled and the admin in `language`. */
 const siteLabeled = (label: string, language: "en" | "ko") => {

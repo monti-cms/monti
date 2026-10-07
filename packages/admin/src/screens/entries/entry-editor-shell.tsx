@@ -51,7 +51,7 @@ import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
-import { nounVars } from "../shared/noun";
+import { nounVars } from "../shared/noun.messages";
 import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -647,7 +647,7 @@ export function EntryEditorShell({
 	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
 	const titleIssue = publishIssues.find((issue) => issue.path === "title");
 	const languageTabs =
-		entry && !site.isItemCollection(collection) ? (
+		site.ADMIN_TRANSLATIONS && entry && !site.isItemCollection(collection) ? (
 			<LanguageTabs
 				entry={entry}
 				disabled={isReadOnly}
@@ -1000,7 +1000,9 @@ export function EntryEditorShell({
 							}
 							toolbarAside={
 								<span className="flex items-center gap-1">
-									<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
+									{site.ADMIN_TEMPLATES && (
+										<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
+									)}
 									{extensions.toolbar}
 									{sourcePaneToggle}
 									{sourceModeToggle}

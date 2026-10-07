@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
-import { enSelected, koSelected } from "../shared/noun";
+import { enSelected, koSelected } from "../shared/noun.messages";
 
 /** English: the generic noun in the right number ("1 selected item" / "3 selected items"). */
 const selected = (count: unknown, noun: string) => `${count} selected ${noun}${Number(count) === 1 ? "" : "s"}`;

@@ -1,6 +1,8 @@
+import { createSite } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../core/test/site";
 import { RecordPanel } from "../record-panel";
 import { withSite } from "./site-wrapper";
 
@@ -74,6 +76,16 @@ describe("taxonomy edit panel", () => {
 			metadata: { title: "리액트", translations: { en: { title: "React" }, ja: { title: "リアクト" } } },
 		});
 		await waitFor(() => expect(onSaved).toHaveBeenCalled());
+	});
+
+	it("shows no language tabs when the site turns the translation UI off, and still edits the default language", async () => {
+		const site = createSite({ ...testConfig, admin: { ...testConfig.admin, translations: false } });
+		render(
+			withSite(<RecordPanel target={{ collection: "tag", id: "tag-1" }} onClose={vi.fn()} onSaved={vi.fn()} />, site),
+		);
+		await screen.findByDisplayValue("리액트");
+		expect(within(panel()).queryAllByRole("tab")).toHaveLength(0);
+		expect(screen.getByRole("textbox", { name: /^이름/ })).toBeTruthy();
 	});
 
 	it("a new item is saved with just a name, passes the created item on, and does not close the slot", async () => {

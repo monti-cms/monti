@@ -32,7 +32,7 @@ import {
 	foldersKey,
 	type OptimisticOp,
 } from "./shared/list-cache";
-import { nounVars } from "./shared/noun";
+import { nounVars } from "./shared/noun.messages";
 import { useFolderActions } from "./shared/use-folder-actions";
 import { type TaxonomyOptions, useTaxonomyOptions } from "./shared/use-taxonomy";
 

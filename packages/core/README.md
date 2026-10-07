@@ -1190,6 +1190,8 @@ Everything in this table except `codeBlock` and `media` can be written in the sc
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
 | `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.core"` and `"cms.translation"` (the texts of reading MDX are in `"cms.mdx"`, from `@monti-cms/mdx`). |
+| `admin.templates` | `false` hides body templates in the admin: the template menu of the editor, the sidebar link and the Templates screen (a 404). Default `true`. Stored templates are kept. |
+| `admin.translations` | `false` hides the translation UI in the admin: the language tabs of the editor, the locale column and filter of the list, and the language tabs of the item panel. Default `true`. A site with one locale never shows it, whatever this says. |
 
 ### Collections
 

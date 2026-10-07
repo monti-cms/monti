@@ -1,8 +1,9 @@
+import { createSite } from "@monti-cms/core/client";
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testSite } from "../../../../../core/test/site";
+import { testConfig, testSite } from "../../../../../core/test/site";
 import {
 	CmsAdminComponentsProvider,
 	type SourcePanelProps,
@@ -1180,6 +1181,34 @@ describe("language tabs", () => {
 		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
 		await editorTitle();
 		expect(screen.queryByRole("navigation", { name: "언어" })).toBeNull();
+	});
+});
+
+describe("admin options that hide features", () => {
+	const hiding = createSite({ ...testConfig, admin: { ...testConfig.admin, templates: false, translations: false } });
+	const grouped = {
+		...entry,
+		locale: "ko",
+		translationGroupId: "entry-1",
+		translations: [
+			{ id: "entry-1", locale: "ko", status: "published", isSource: true, title: "테스트", workingSlug: "test" },
+			{ id: "entry-en", locale: "en", status: "draft", isSource: false, title: "테스트", workingSlug: "test" },
+		],
+	};
+
+	it("shows the template menu and the language tabs unless the site turns them off", async () => {
+		serve(() => undefined, grouped);
+		renderEdit();
+		await screen.findByRole("navigation", { name: "언어" });
+		expect(screen.getByRole("button", { name: "템플릿" })).toBeTruthy();
+	});
+
+	it("hides the template menu and the language tabs of the editor", async () => {
+		serve(() => undefined, grouped);
+		render(withSite(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, hiding));
+		await editorTitle();
+		expect(screen.queryByRole("navigation", { name: "언어" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "템플릿" })).toBeNull();
 	});
 });
 

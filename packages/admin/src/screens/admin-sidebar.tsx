@@ -360,7 +360,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 					<SidebarGroupContent>
 						<SidebarMenu aria-label={t("sidebar.manage")}>
 							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
-							{navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
+							{site.ADMIN_TEMPLATES &&
+								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
 							{navLink(site.adminHref("/schema"), "schema", t("sidebar.schema"), <Settings2 />)}
 							{pluginNav.map((item) =>
 								navLink(site.adminHref(`/${item.path}`), item.path, item.label, <NamedIcon name={item.icon} />),

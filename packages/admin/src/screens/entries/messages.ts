@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
-import { enNoun, koNoun, koObject } from "../shared/noun";
+import { enNoun, koNoun, koObject } from "../shared/noun.messages";
 
 /** Messages for the editor screen (fields, restore dialog, locale tabs, property panel, source dialog, template menu). The header and shell live in `entry-editor-shell.messages.ts`. */
 export const entriesMessages = defineMessages("cms-admin.entries", {

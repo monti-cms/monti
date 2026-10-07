@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
-import { enSelected, koSelected } from "./shared/noun";
+import { enSelected, koSelected } from "./shared/noun.messages";
 
 /** English: noun matching the count ("1 item" / "3 items"). */
 const items = (count: unknown) => `${count} ${Number(count) === 1 ? "item" : "items"}`;

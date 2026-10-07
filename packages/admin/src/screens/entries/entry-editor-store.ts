@@ -6,7 +6,7 @@ import { createStateStore, type StateStore } from "../../hooks/store";
 import type { TranslatorFor } from "../../translator";
 import { CmsApiError, errorText } from "../admin-api";
 import type { CmsIssue } from "../api-error-message";
-import { nounVars } from "../shared/noun";
+import { nounVars } from "../shared/noun.messages";
 import type { EntryEditorClient, EntryStatusAction, RecoveryRecord, RecoveryStore } from "./entry-editor-client";
 import {
 	copyTitle,

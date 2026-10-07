@@ -72,3 +72,35 @@ describe("list columns", () => {
 		expect(defaultListColumns(site, "topic")).toContain("slug");
 	});
 });
+
+describe("locale column and the translation UI option", () => {
+	const make = (locales: { code: string; name: string }[], admin?: { translations?: boolean }) =>
+		createSite(
+			defineConfig({
+				collections: { article, note, story, topic },
+				locales,
+				defaultLocale: "en",
+				...(admin ? { admin } : {}),
+			}),
+		);
+	const one = [{ code: "en", name: "English" }];
+	const two = [...one, { code: "ko", name: "Korean" }];
+
+	it("has a locale column on a site with several locales", () => {
+		expect(columnsFor(make(two), "story").available).toContain("locale");
+	});
+
+	it("has no locale column on a single-locale site, and the other columns stay in order", () => {
+		const { available, defaults } = columnsFor(make(one), "story");
+		expect(available).not.toContain("locale");
+		expect(defaults).not.toContain("locale");
+		expect(defaults.slice(0, 2)).toEqual(["title", "status"]);
+		expect(available.indexOf("topicId")).toBe(available.indexOf("status") + 1);
+	});
+
+	it("has no locale column on a multi-locale site that turns the translation UI off", () => {
+		const site = make(two, { translations: false });
+		expect(columnsFor(site, "story").available).not.toContain("locale");
+		expect(columnsFor(site, "topic").defaults).not.toContain("locale");
+	});
+});

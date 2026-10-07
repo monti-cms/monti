@@ -1,7 +1,7 @@
 import type { Site } from "@monti-cms/core/client";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import type { ConfirmRequest } from "../shared/confirm-dialog";
-import { nounVars } from "../shared/noun";
+import { nounVars } from "../shared/noun.messages";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";
 

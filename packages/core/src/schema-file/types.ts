@@ -19,6 +19,10 @@ export interface SchemaAdmin {
 	readonly path?: string;
 	readonly locale?: string;
 	readonly messages?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+	/** `false` hides body templates in the admin: the editor's template menu, the sidebar link and the Templates screen. */
+	readonly templates?: boolean;
+	/** `false` hides the translation UI in the admin (language tabs, locale column and filter). A site with one locale hides it anyway. */
+	readonly translations?: boolean;
 }
 
 /**
