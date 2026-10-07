@@ -57,6 +57,8 @@ export interface AuthProvider {
 	readonly name: string;
 	/** Button text (e.g. `Sign in with GitHub`). */
 	readonly label: string;
+	/** Icon shown on the button: an image address (an `https:` or `data:` URL). Optional; the button shows text only without it. */
+	readonly icon?: string;
 }
 
 /**
@@ -77,12 +79,20 @@ export interface CmsAuth {
 		GET(request: Request): Promise<Response>;
 		POST(request: Request): Promise<Response>;
 	};
-	/** Current session. `null` if none. */
-	session(): Promise<{ user?: { id?: string; accountId?: string; name?: string } } | null>;
+	/**
+	 * Current session. `null` if none. With the `request` of a call being handled, it is read from that request's cookies; without one, from the headers
+	 * of the request being handled (`requestHeaders`).
+	 */
+	session(request?: Request): Promise<{ user?: { id?: string; accountId?: string; name?: string } } | null>;
 	/** Login methods to show on the login page. */
 	readonly providers: readonly AuthProvider[];
-	signIn(provider?: string, options?: { redirectTo?: string }): Promise<unknown>;
-	signOut(options?: { redirectTo?: string }): Promise<unknown>;
+	/**
+	 * Starts signing in with one login method. Either resolves with a `Response` (a redirect that carries the login cookies), which the sign-in route
+	 * returns as it is, or sends the browser away by throwing a host framework signal (see `rethrow`).
+	 */
+	signIn(provider?: string, options?: { redirectTo?: string; request?: Request }): Promise<unknown>;
+	/** Signs out: resolves with a `Response` that clears the session cookie and redirects, or throws a host framework signal like `signIn`. */
+	signOut(options?: { redirectTo?: string; request?: Request }): Promise<unknown>;
 	/** Whether this user is an admin. */
 	isAdmin(userId: string | null | undefined): boolean;
 	/** Whether the local development bypass, which treats the user as admin without login, is on. */
@@ -109,6 +119,8 @@ export interface AuthCreateContext {
 	readonly trustHost: boolean;
 	/** Admin login page URL (admin path + `/login`, e.g. `/admin/login`). Includes the Next `basePath` if set, so it is the browser-facing URL. */
 	readonly loginPath: string;
+	/** Storage of a plugin (`cms.storage(plugin)`). A login method that keeps its own users (a password login) keeps them here. */
+	readonly storage: (plugin: string) => PluginStorage;
 }
 
 export interface AuthAdapter {

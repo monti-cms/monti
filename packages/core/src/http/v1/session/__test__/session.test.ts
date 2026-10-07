@@ -36,7 +36,21 @@ describe("sign in and out of the admin through the instance's login connection",
 			cms,
 		});
 		expect(response.status).toBe(204);
-		expect(signInFn).toHaveBeenCalledWith("github", { redirectTo: testSite.adminUrl() });
+		expect(signInFn).toHaveBeenCalledWith("github", { redirectTo: testSite.adminUrl(), request: expect.any(Request) });
+	});
+
+	it("a login connection that answers with a Response (a redirect carrying cookies) has it returned as it is", async () => {
+		const redirect = new Response(null, {
+			status: 302,
+			headers: { location: "https://github.com/login/oauth/authorize", "set-cookie": "authjs.state=x; Path=/" },
+		});
+		const cms = instance({ signIn: vi.fn(async () => redirect), signOut: vi.fn(async () => redirect) });
+		const signedIn = await signIn(post("v1/session/sign-in/github"), {
+			params: Promise.resolve({ provider: "github" }),
+			cms,
+		});
+		expect(signedIn).toBe(redirect);
+		expect(await signOut(post("v1/session/sign-out"), { params: Promise.resolve({}), cms })).toBe(redirect);
 	});
 
 	it("a login method the instance does not offer is 404 and nothing is started", async () => {
@@ -81,7 +95,7 @@ describe("sign in and out of the admin through the instance's login connection",
 		const signOutFn = vi.fn(async () => undefined);
 		const response = await signOut(post("v1/session/sign-out"), { cms: instance({ signOut: signOutFn }) });
 		expect(response.status).toBe(204);
-		expect(signOutFn).toHaveBeenCalledWith({ redirectTo: testSite.adminUrl("/login") });
+		expect(signOutFn).toHaveBeenCalledWith({ redirectTo: testSite.adminUrl("/login"), request: expect.any(Request) });
 	});
 
 	it("a post from another site is refused before anything happens", async () => {

@@ -7,8 +7,8 @@ export const POST = async (request: Request, context: RouteContext) => {
 	try {
 		const { cms } = context;
 		validateSameOrigin(cms, request, { form: true });
-		await cms.auth().signOut({ redirectTo: cms.site.adminUrl("/login") });
-		return new Response(null, { status: 204 });
+		const result = await cms.auth().signOut({ redirectTo: cms.site.adminUrl("/login"), request });
+		return result instanceof Response ? result : new Response(null, { status: 204 });
 	} catch (error) {
 		context.cms.auth().rethrow?.(error);
 		return handleApiError(error);
