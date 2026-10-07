@@ -1,0 +1,21 @@
+{
+	"name": "@monti-cms/registry",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Source of the Monti component registry: components that `monti add` copies into a host app (not published to npm)",
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"typecheck": "tsc --noEmit -p ."
+	},
+	"devDependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"react": "19.2.3",
+		"react-dom": "19.2.3",
+		"typescript": "^7.0.2"
+	}
+}

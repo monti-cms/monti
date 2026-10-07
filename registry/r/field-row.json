@@ -1,0 +1,18 @@
+{
+	"$schema": "https://ui.shadcn.com/schema/registry-item.json",
+	"name": "field-row",
+	"type": "registry:component",
+	"title": "Field row",
+	"description": "One form field of the entry editor drawn on useField: label, input for the value, error text and read-only state.",
+	"dependencies": [
+		"@monti-cms/admin",
+		"react"
+	],
+	"files": [
+		{
+			"path": "items/field-row/field-row.tsx",
+			"type": "registry:component",
+			"content": "\"use client\";\n\nimport { useField } from \"@monti-cms/admin/hooks\";\nimport type { ReactNode } from \"react\";\n\nconst CONTROL =\n\t\"w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm aria-invalid:border-red-600 disabled:opacity-60 dark:border-neutral-700\";\n\n/**\n * One field of an entry form, drawn on `useField(name)`: label, the control for the value, the description and the first error. The component\n * re-renders only when this field changes, so typing here does not redraw the other rows. It must sit below an `EntryEditorProvider`.\n *\n * It covers text, slug and select fields (the value is a string). A field of another kind (a relation, a media field) shows a note: draw it with\n * your own control, reading the same `useField` state.\n */\nexport function FieldRow({ name }: { name: string }) {\n\tconst field = useField(name);\n\tif (field.hidden) return null;\n\tconst kind = field.definition?.kind;\n\tconst value = typeof field.value === \"string\" ? field.value : \"\";\n\tconst editable = field.value === null || typeof field.value === \"string\";\n\n\tlet control: ReactNode;\n\tif (!editable) {\n\t\tcontrol = <p className=\"text-neutral-500 text-sm\">This field is edited in the admin screen.</p>;\n\t} else if (field.definition?.kind === \"select\") {\n\t\tcontrol = (\n\t\t\t<select\n\t\t\t\t{...field.inputProps}\n\t\t\t\tclassName={CONTROL}\n\t\t\t\tvalue={value}\n\t\t\t\tonChange={(event) => field.setValue(event.target.value)}\n\t\t\t>\n\t\t\t\t{Object.entries(field.definition.options).map(([key, label]) => (\n\t\t\t\t\t<option key={key} value={key}>\n\t\t\t\t\t\t{label}\n\t\t\t\t\t</option>\n\t\t\t\t))}\n\t\t\t</select>\n\t\t);\n\t} else if (field.definition?.kind === \"text\" && field.definition.multiline) {\n\t\tcontrol = (\n\t\t\t<textarea\n\t\t\t\t{...field.inputProps}\n\t\t\t\tclassName={CONTROL}\n\t\t\t\trows={field.definition.rows ?? 4}\n\t\t\t\tvalue={value}\n\t\t\t\tmaxLength={field.definition.max}\n\t\t\t\tplaceholder={field.definition.placeholder}\n\t\t\t\tonChange={(event) => field.setValue(event.target.value)}\n\t\t\t/>\n\t\t);\n\t} else {\n\t\tcontrol = (\n\t\t\t<input\n\t\t\t\t{...field.inputProps}\n\t\t\t\tclassName={CONTROL}\n\t\t\t\tvalue={value}\n\t\t\t\tmaxLength={field.definition?.kind === \"text\" ? field.definition.max : undefined}\n\t\t\t\tplaceholder={kind === \"text\" || kind === \"slug\" ? field.definition?.placeholder : undefined}\n\t\t\t\tonChange={(event) => field.setValue(event.target.value)}\n\t\t\t/>\n\t\t);\n\t}\n\n\treturn (\n\t\t<div className=\"grid gap-1.5\">\n\t\t\t<label htmlFor={field.ids.input} className=\"font-medium text-sm\">\n\t\t\t\t{field.label}\n\t\t\t\t{field.required ? <span aria-hidden> *</span> : null}\n\t\t\t</label>\n\t\t\t{control}\n\t\t\t{field.description ? <p className=\"text-neutral-500 text-xs\">{field.description}</p> : null}\n\t\t\t{field.lockedNote ? <p className=\"text-neutral-500 text-xs\">{field.lockedNote}</p> : null}\n\t\t\t{field.error ? (\n\t\t\t\t<p id={field.ids.error} role=\"alert\" className=\"text-red-600 text-xs\">\n\t\t\t\t\t{field.error.message}\n\t\t\t\t</p>\n\t\t\t) : null}\n\t\t</div>\n\t);\n}\n"
+		}
+	]
+}

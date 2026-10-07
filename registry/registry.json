@@ -1,0 +1,40 @@
+{
+	"$schema": "https://ui.shadcn.com/schema/registry.json",
+	"name": "monti",
+	"homepage": "https://github.com/monti-cms/monti/tree/overhaul/registry",
+	"items": [
+		{
+			"name": "article-body",
+			"type": "registry:component",
+			"title": "Article body",
+			"description": "A public article body: the stored document drawn by CmsContent, with an optional table of contents above it.",
+			"dependencies": ["@monti-cms/core", "react"],
+			"files": [{ "path": "items/article-body/article-body.tsx", "type": "registry:component" }]
+		},
+		{
+			"name": "field-row",
+			"type": "registry:component",
+			"title": "Field row",
+			"description": "One form field of the entry editor drawn on useField: label, input for the value, error text and read-only state.",
+			"dependencies": ["@monti-cms/admin", "react"],
+			"files": [{ "path": "items/field-row/field-row.tsx", "type": "registry:component" }]
+		},
+		{
+			"name": "entry-editor",
+			"type": "registry:block",
+			"title": "Entry editor",
+			"description": "A minimal custom editor screen for one entry, built on useEntryEditor and useField: fields, save and publish, recovery and conflict.",
+			"dependencies": ["@monti-cms/admin", "react"],
+			"registryDependencies": ["field-row"],
+			"files": [{ "path": "items/entry-editor/entry-editor-screen.tsx", "type": "registry:block" }]
+		},
+		{
+			"name": "notice-block-view",
+			"type": "registry:component",
+			"title": "Notice block view",
+			"description": "An edit view for a `notice` block, registered through blockViews: an editable title, a level switch and the nested body (BlockFrame, Content, useBlockEditor).",
+			"dependencies": ["@monti-cms/admin", "react"],
+			"files": [{ "path": "items/notice-block-view/notice-block-view.tsx", "type": "registry:component" }]
+		}
+	]
+}

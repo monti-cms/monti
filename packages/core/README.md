@@ -384,6 +384,22 @@ What else changed:
 - **AI.** `@monti-cms/ai` peers on `@monti-cms/mdx`: its model reads and writes MDX through the `mdx` format.
 - `@monti-cms/core/notation` is a new light entry (comment syntax and table helpers for notations).
 
+## Components as source
+
+`monti add <name...>` copies ready-made components from the Monti registry into your app as source you own: a public `article-body` (the stored document and a table of contents),
+an admin `entry-editor` screen built on `useEntryEditor` and `useField`, a block edit view for `blockViews`. Imports are rewritten to your alias (`components.json` or `@/components`), the npm packages they
+need are installed with your package manager, and a file you changed is never overwritten unless you pass `--overwrite`.
+
+```sh
+pnpm exec monti add article-body              # -> components/monti/article-body/article-body.tsx
+pnpm exec monti add entry-editor --dry-run    # show the plan, change nothing
+pnpm exec monti add article-body --registry ./registry/r   # another registry (folder or URL)
+```
+
+The registry follows the shadcn registry schema and lives in `registry/` of the repository (built into `registry/r`, committed). The components use the host's Tailwind and only public entry points
+(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/nextjs`). `examples/other-site` installs `article-body` this way and uses it on its article page.
+Full reference, the list of components and how to add one: [`registry/README.md`](../../registry/README.md).
+
 ## Entry points
 
 | Entry point | Used in | Contents |
@@ -404,8 +420,8 @@ What else changed:
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti migrate` (create tables) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `migrate` (the code behind the `monti` command) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti add` (install components as source), `monti migrate` (create tables) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate` (the code behind the `monti` command) |
 | `@monti-cms/core/register` | custom scripts | links the `@cms-config` alias for a script run with `tsx --import` |
 | `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 

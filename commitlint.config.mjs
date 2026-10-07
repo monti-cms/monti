@@ -29,6 +29,7 @@ export default {
 				"blocks",
 				"mdx",
 				"seo",
+				"registry",
 				"bareun",
 				"syntax",
 				"example",
