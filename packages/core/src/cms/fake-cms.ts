@@ -1,9 +1,9 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
-import type { MediaStore } from "../adapters/r2/types";
 import { defineConfig } from "../config/define";
 import type { ContentStore } from "../core/store";
 import { createFormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
+import type { MediaStore } from "../media/store";
 import { createMemoryPluginStorage } from "../plugin/memory-storage";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";

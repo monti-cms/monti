@@ -108,7 +108,7 @@ export const cms = createCms({
 		// Master secret for stored values (AI service keys). Plugins get keys derived from it, never the secret itself. Keep it separate from the sign-in secret.
 		// To change it, move the old value to "previousSecrets: [oldSecret]" so stored values stay readable.
 		secret: process.env.CMS_SECRET,
-		// media: r2Storage({ ... }), // image and file uploads (S3-compatible storage), imported from @monti-cms/core/s3
+		// media: r2Storage(), // image and file uploads (S3-compatible storage): pnpm add @monti-cms/storage-s3, then import { r2Storage } from it. Reads R2_* from .env.local
 	}),
 });
 `;

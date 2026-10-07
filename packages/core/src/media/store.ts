@@ -3,7 +3,7 @@ import {
 	type AllowedImageMimeType as AllowedImageMime,
 	SUPPORTED_FILE_MIME_TYPES,
 	SUPPORTED_IMAGE_MIME_TYPES,
-} from "../../core/media-types";
+} from "../core/media-types";
 
 export type { AllowedImageMime };
 /** Formats the store accepts: images and attachments. */
@@ -48,21 +48,6 @@ export interface PromoteFileInput {
 	cacheControl?: string;
 	/** Makes attachments download under their original name (`attachment; filename*=...`). */
 	contentDisposition?: string;
-}
-
-/** S3 API store connection (R2, S3, MinIO, etc.). */
-export interface MediaStoreConfig {
-	accessKeyId: string;
-	secretAccessKey: string;
-	bucket: string;
-	/** S3 API URL (R2: `https://<account>.r2.cloudflarestorage.com`, AWS S3: `https://s3.<region>.amazonaws.com`). */
-	endpoint: string;
-	/** Start of the public URL (CDN or public bucket URL). The public URL of an uploaded file is `<publicBaseUrl>/<key>`. */
-	publicBaseUrl: string;
-	/** Region. R2 uses `auto` (default), AWS S3 the bucket region (e.g. `ap-northeast-2`). */
-	region?: string;
-	/** Path-style URL (`<endpoint>/<bucket>/<key>`). Turn on for stores like MinIO. */
-	forcePathStyle?: boolean;
 }
 
 export interface MediaStore {

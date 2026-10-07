@@ -1,7 +1,7 @@
-import type { MediaStore } from "../adapters/r2/types";
 import type { ContentStore } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import type { PublicApiOptions } from "../http/v1/public/options";
+import type { MediaStore } from "../media/store";
 import type { PluginStorage } from "../plugin/storage";
 import type { EventDeliveryOptions } from "../services/events";
 import type { WriteHooks } from "../services/hooks";

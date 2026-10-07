@@ -114,19 +114,16 @@ The collection name (`post`) is stored in the DB, so do not change it in product
 Without `layout` and `list`, fields are drawn in field order with the default list columns ("Collections"). Run `pnpm exec monti schema:types` (or keep `next dev` running, which does it for you) after editing the file. See "The schema file" and "Config" below for the rules.
 
 `cms.server.ts` creates the CMS instance (`createCms({ config, server })`, see "The CMS instance"). Its server config holds the store, media and login connections and the secrets, and is only read on the server.
-Connections are created on first use, so the environment variables may be empty during the build. To use image uploads, add a store from `@monti-cms/core/s3` to `media` and install the AWS SDK
-(`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, only for sites that use media):
+Connections are created on first use, so the environment variables may be empty during the build. To use image uploads, install `@monti-cms/storage-s3` and add its store to `media` (only for sites that use media; the AWS SDK comes with it):
 
 ```ts
-import { r2Storage, s3Storage } from "@monti-cms/core/s3";
+import { r2Storage, s3Storage } from "@monti-cms/storage-s3";
 
-// Cloudflare R2
-media: r2Storage({ endpoint, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
-// AWS S3
-media: s3Storage({ endpoint: "https://s3.ap-northeast-2.amazonaws.com", region: "ap-northeast-2", bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
-// Path-style, e.g. MinIO
-media: s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
+media: r2Storage(), // Cloudflare R2, reads the R2_* variables
+media: s3Storage(), // AWS S3, MinIO and other S3 API stores, reads the S3_* variables
 ```
+
+The variable names and options are in the package README (`packages/storage-s3`).
 
 For another store, pass a `MediaAdapter` (`{ name, createStore() }`) that implements the `MediaStore` contract from `@monti-cms/core/server`.
 
@@ -463,7 +460,6 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/schema-change` | settings screen, command line | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange` ("Changing the schema") |
 | `@monti-cms/core/schema-edit` | settings screen (server side) | `schemaEditAccess` (who may write the schema file), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `formatSchemaText` ("Editing the schema in the admin") |
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
-| `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
@@ -878,7 +874,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | Item | Meaning |
 |---|---|
 | `database` | Content store. `postgres({ connectionString, schema })` |
-| `media` | Store for images and attachments. `r2Storage` or `s3Storage` from `@monti-cms/core/s3` (`region`, `forcePathStyle`), or a connection implementing the `MediaStore` contract. Without it, media features are unavailable. |
+| `media` | Store for images and attachments. `r2Storage()` or `s3Storage()` from `@monti-cms/storage-s3`, or a `MediaAdapter` implementing the `MediaStore` contract. Without it, media features are unavailable. |
 | `auth` | Admin login, from `@monti-cms/auth`: `auth({ providers: [github({ clientId, clientSecret, admins })], host?, devBypass?, basePath?, secret? })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, the `AUTH_SECRET` environment variable). In a Next.js app, `host` is `nextHost` of `@monti-cms/nextjs/auth` |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else off in production and on in development |
 | `secret` | Master secret for values plugins keep encrypted in the DB (AI service keys). Plugins never see it: each gets a key derived from it and the plugin name ("Plugin secrets"). Keep it separate from the login signing value. |

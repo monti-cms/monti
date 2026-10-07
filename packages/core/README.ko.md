@@ -114,19 +114,16 @@ export default defineConfig({
 `layout`·`list`를 적지 않으면 필드 순서대로 그리고 기본 목록 컬럼을 쓴다("컬렉션"). 파일을 고친 뒤에는 `pnpm exec monti schema:types`를 돌린다(`next dev`가 떠 있으면 저절로 돌아간다). 규칙은 아래 "스키마 파일"과 "설정"을 본다.
 
 `cms.server.ts`는 CMS 인스턴스를 만든다(`createCms({ config, server })`, "CMS 인스턴스" 절). 그 서버 설정은 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다.
-연결은 처음 쓸 때 만들어 빌드 중에는 환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/core/s3`의 저장소를 `media`에 더하고 AWS SDK를 설치한다
-(`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, 미디어를 쓰는 사이트만):
+연결은 처음 쓸 때 만들어 빌드 중에는 환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/storage-s3`를 설치하고 그 저장소를 `media`에 더한다(미디어를 쓰는 사이트만, AWS SDK는 함께 설치된다):
 
 ```ts
-import { r2Storage, s3Storage } from "@monti-cms/core/s3";
+import { r2Storage, s3Storage } from "@monti-cms/storage-s3";
 
-// Cloudflare R2
-media: r2Storage({ endpoint, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
-// AWS S3
-media: s3Storage({ endpoint: "https://s3.ap-northeast-2.amazonaws.com", region: "ap-northeast-2", bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
-// MinIO 등 경로 방식
-media: s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true, bucket, accessKeyId, secretAccessKey, publicBaseUrl }),
+media: r2Storage(), // Cloudflare R2, R2_* 환경 변수를 읽는다
+media: s3Storage(), // AWS S3, MinIO 등 S3 API 저장소, S3_* 환경 변수를 읽는다
 ```
+
+변수 이름과 옵션은 패키지 README(`packages/storage-s3`)에 있다.
 
 다른 저장소는 `@monti-cms/core/server`의 `MediaStore` 계약을 구현한 `MediaAdapter`(`{ name, createStore() }`)를 넣는다.
 
@@ -463,7 +460,6 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/schema-change` | 설정 화면, 명령줄 | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange`("스키마 바꾸기") |
 | `@monti-cms/core/schema-edit` | 설정 화면(서버 쪽) | `schemaEditAccess`(누가 스키마 파일을 쓸 수 있나), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `formatSchemaText`("관리자에서 스키마 편집하기") |
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`·`defineServerConfig`·`postgres`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
-| `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
@@ -878,7 +874,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | 항목 | 뜻 |
 |---|---|
 | `database` | 콘텐츠 저장소. `postgres({ connectionString, schema })` |
-| `media` | 이미지·첨부 파일 저장소. `@monti-cms/core/s3`의 `r2Storage`·`s3Storage`(`region`·`forcePathStyle`) 또는 `MediaStore` 계약을 구현한 연결. 없으면 미디어 기능을 못 쓴다. |
+| `media` | 이미지·첨부 파일 저장소. `@monti-cms/storage-s3`의 `r2Storage()`·`s3Storage()` 또는 `MediaStore` 계약을 구현한 `MediaAdapter`. 없으면 미디어 기능을 못 쓴다. |
 | `auth` | 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github({ clientId, clientSecret, admins })], host?, devBypass?, basePath?, secret? })`. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로"), `secret`은 로그인 세션 서명 값(없으면 `AUTH_SECRET` 환경 변수)이다. Next.js 앱에서 `host`는 `@monti-cms/nextjs/auth`의 `nextHost`다 |
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 운영에서는 끔·개발에서는 켬 |
 | `secret` | 플러그인이 DB에 암호화해 두는 값(AI 서비스 키)의 마스터 비밀 값. 플러그인은 이 값을 보지 못하고, 이 값과 플러그인 이름에서 만든 키만 받는다("플러그인 비밀 값"). 로그인 서명 값과 따로 둔다. |

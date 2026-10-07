@@ -1,6 +1,6 @@
-import type { AllowedMediaMime, MediaStore } from "../../../adapters/r2/types";
 import type { AllowedFileMime } from "../../../core/api";
 import { detectImageDimensionsAndType } from "../../../media/image-detect";
+import type { AllowedMediaMime, MediaStore } from "../../../media/store";
 import type { Site } from "../../../site";
 import { HttpError } from "../error-handler";
 

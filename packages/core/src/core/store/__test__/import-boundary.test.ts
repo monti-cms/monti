@@ -94,7 +94,7 @@ describe("store import boundary", () => {
 			'const lazy = await import("../adapters/postgres/store/schema");',
 			'import { CmsError } from "../core/store";',
 			'import { Pool } from "pg";',
-			'import { x } from "../adapters/r2/types";',
+			'import { x } from "../media/store";',
 		].join("\n");
 		expect(adapterImports(file, source)).toEqual([
 			"../adapters/postgres/content-store",

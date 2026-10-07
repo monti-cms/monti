@@ -1,6 +1,6 @@
-import type { MediaStore } from "../adapters/r2/types";
 import type { MediaUrlResolver } from "../core/import-normalize";
 import type { ContentStore } from "../core/store";
+import type { MediaStore } from "../media/store";
 
 /**
  * Finds the registered media file a public URL belongs to. A public URL is the media store's base followed by the storage key, so the key is what follows

@@ -5,14 +5,6 @@
  */
 
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
-export type {
-	AllowedMediaMime,
-	MediaStore,
-	PrepareUploadInput,
-	PrepareUploadOutput,
-	PromoteFileInput,
-	StoredFileHead,
-} from "../adapters/r2/types";
 export {
 	type BulkService,
 	type Cms,
@@ -34,6 +26,15 @@ export type {
 } from "../core/store";
 export { DeferDelivery } from "../core/store";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
+export type {
+	AllowedMediaMime,
+	MediaStore,
+	PrepareUploadInput,
+	PrepareUploadOutput,
+	PromoteFileInput,
+	StoredFileHead,
+} from "../media/store";
+export { ALLOWED_MEDIA_MIMES } from "../media/store";
 export type {
 	CmsEvents,
 	EventDeliveryOptions,

@@ -19,6 +19,7 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 | [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |
 | [`@monti-cms/seo`](packages/seo) | SEO extension. Search and sharing fields with a preview |
 | [`@monti-cms/bareun`](packages/bareun) | Bareun spell checking |
+| [`@monti-cms/storage-s3`](packages/storage-s3) | Media storage on the S3 API (AWS S3, Cloudflare R2, MinIO), configured from `S3_*` / `R2_*` environment variables |
 | [`@monti-cms/git-sync`](packages/git-sync) | Git sync extension. Two-way sync of published entries with files in a GitHub repo, with a conflict screen |
 | [`@monti-cms/syntax-directive`](packages/syntax-directive) | Directive syntax extension. Reads and writes `:::callout`, `::image{…}` and `:u[text]` |
 | [`@monti-cms/syntax-shiki`](packages/syntax-shiki) | Shiki code notation extension. Reads `// [!code ++]` and friends in code fences as Monti code annotations |
@@ -52,12 +53,12 @@ pnpm install          # install
 pnpm lint             # lint (fix with pnpm lint:fix)
 pnpm check:korean     # check that Korean strings in runtime code live only in the message dictionaries
 pnpm typecheck        # type check all packages
-pnpm build            # build all packages (core → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
+pnpm build            # build all packages (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
 pnpm test:run         # tests (needs Postgres)
 pnpm example:check    # pack the packages, install them into the example app and build it
 ```
 
-On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
+On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
 
 All tests run only if `.env.local` has a test DB URL (`CMS_TEST_DATABASE_URL`). The tests create a temporary schema in this DB and drop it when finished.
 
