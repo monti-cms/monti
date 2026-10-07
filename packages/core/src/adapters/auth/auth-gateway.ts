@@ -37,21 +37,21 @@ export function isAllowedAdminId(
 }
 
 /**
- * Whether the auth bypass, local development only, is on. Even if enabled in config, it is true only when `NODE_ENV=development`
- * and the environment does not look like a deployed server ({@link productionLikeEnvironment}).
- * Ignored otherwise (fail-closed). Whether a request may use it is decided per request by {@link CmsAuthGateway.isDevBypassActive}.
+ * Whether the auth bypass, local development only, is on. It is on by default under `next dev` (`NODE_ENV=development`) and off in every other mode;
+ * `false` turns it off there too. Even when asked for with `true`, it is on only when `NODE_ENV=development` and the environment does not look like a
+ * deployed server ({@link productionLikeEnvironment}): fail-closed. Whether a request may use it is decided per request by {@link CmsAuthGateway.isDevBypassActive}.
  */
 export function isDevAuthBypassEnabled(
 	enabled: boolean | undefined,
 	env: Readonly<Record<string, string | undefined>> = process.env,
 ): boolean {
-	return enabled === true && env.NODE_ENV === "development" && productionLikeEnvironment(env) === undefined;
+	return enabled !== false && env.NODE_ENV === "development" && productionLikeEnvironment(env) === undefined;
 }
 
 /**
- * Refuses to build the login connection when the bypass is switched on in a development-mode process that looks deployed
- * (e.g. a staging server started with `NODE_ENV=development`), where it would open the CMS to everyone.
- * In any other mode the bypass is simply ignored, and says so.
+ * Refuses to build the login connection when the bypass is switched on explicitly (`devBypass: true`) in a development-mode process that looks deployed
+ * (e.g. a staging server started with `NODE_ENV=development`), where it would open the CMS to everyone. The default (nothing said) is simply off there.
+ * In any other mode an explicit `true` is ignored, and says so.
  */
 export function assertDevBypassSafe(
 	enabled: boolean | undefined,
@@ -66,7 +66,7 @@ export function assertDevBypassSafe(
 	if (reason) {
 		throw new Error(
 			`[cms-auth] Refusing to start with devBypass: NODE_ENV is "development" but this looks like a deployed server (${reason}). ` +
-				"The bypass opens the CMS to everyone as an admin. Turn devBypass off (CMS_DEV_AUTH_BYPASS) on this server.",
+				"The bypass opens the CMS to everyone as an admin. Turn devBypass off (devBypass: false) on this server, or run it with NODE_ENV=production.",
 		);
 	}
 }
@@ -74,7 +74,7 @@ export function assertDevBypassSafe(
 let devBypassWarned = false;
 let devBypassSkippedWarned = false;
 
-/** Authentication for the admin API and UI. The login method is set by `auth` in the server config. */
+/** Authentication for the admin API and UI. The login method is set by `auth` in `monti.config.ts`. */
 export class CmsAuthGateway implements AuthGateway {
 	constructor(
 		private readonly getAuth: () => CmsAuth,

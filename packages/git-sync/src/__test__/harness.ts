@@ -1,5 +1,5 @@
-import { type CollectionSchema, defineConfig } from "@monti-cms/core";
-import { type Cms, type CmsAuth, createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
+import { type CollectionSchema, defineSite } from "@monti-cms/core";
+import { type Cms, type CmsAuth, createCms, postgres } from "@monti-cms/core/server";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "@monti-cms/core/testing";
 import { mdx } from "@monti-cms/mdx";
 import { vi } from "vitest";
@@ -60,7 +60,7 @@ export const DRAFT_TARGET: GitSyncTarget = { ...DEFAULT_TARGET, drafts: true };
 export async function createHarness(options: HarnessOptions = {}) {
 	const github = createFakeGitHub();
 	const repo = github.repo("acme/site", { main: { "README.md": "# site\n" } });
-	const config = defineConfig({
+	const config = defineSite({
 		...baseConfig,
 		...(options.collections ? { collections: options.collections } : {}),
 		plugins: [
@@ -76,13 +76,13 @@ export async function createHarness(options: HarnessOptions = {}) {
 	const { pool, schemaName } = await createIsolatedTestPool();
 	const cms: Cms = createCms({
 		config,
-		server: defineServerConfig({
+		server: {
 			database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),
 			auth: { name: "test", create: adminAuth },
 			...(options.noSecret ? {} : { secret: "a-long-test-secret-for-git-sync-tests" }),
 			// Retries are driven by the tests: a failed delivery is due again after a minute (or at once with `retry({ all: true })`).
 			events: { backoffMs: () => 60_000, ...(options.maxAttempts ? { maxAttempts: options.maxAttempts } : {}) },
-		}),
+		},
 	});
 	await cms.migrate({ log: () => undefined });
 	const ctx: SyncContext = syncContextFor(cms);

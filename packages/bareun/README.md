@@ -7,10 +7,11 @@ The button, underlines and results panel are drawn by the admin package (see "Te
 
 
 ```ts
-// cms.config.ts
+// monti.config.ts
 import { bareun } from "@monti-cms/bareun";
+import { defineConfig } from "@monti-cms/core/server";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [bareun()],
 });

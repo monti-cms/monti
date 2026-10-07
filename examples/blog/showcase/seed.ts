@@ -1,5 +1,5 @@
 /**
- * Seeds the showcase content into the database the example app points at (`CMS_DATABASE_URL`, `CMS_SCHEMA`), through the app's own write path
+ * Seeds the showcase content into the database the example app points at (`DATABASE_URL`, `DATABASE_SCHEMA`), through the app's own write path
  * (`cms.contentService()`: create, save, publish). It is run by `pnpm preview:example` (`scripts/preview-example.mjs`) from this app's folder:
  *
  *   pnpm exec tsx --env-file=.env.local showcase/seed.ts <port>
@@ -10,7 +10,7 @@
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { cms } from "../cms.server";
+import { cms } from "../monti.config";
 
 const port = process.argv[2] ?? "3997";
 const origin = `http://localhost:${port}`;

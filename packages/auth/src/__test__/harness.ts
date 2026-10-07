@@ -1,5 +1,6 @@
 import { createSite } from "@monti-cms/core/client";
 import type { AuthCreateContext, CmsAuth } from "@monti-cms/core/server";
+import { createSecretsVault } from "@monti-cms/core/testing";
 import { vi } from "vitest";
 import { testConfig } from "../../../core/test/site";
 import { type AuthOptions, auth } from "../auth";
@@ -9,11 +10,21 @@ export const ORIGIN = "http://localhost:3000";
 export const LOGIN_PATH = "/studio/login";
 
 /** A login connection built the way the core builds it. */
-export const connect = (options: AuthOptions, context: Partial<AuthCreateContext> = {}): CmsAuth =>
-	auth({ secret: SECRET, ...options }).create({
+export const connect = (options: AuthOptions, context: Partial<AuthCreateContext> = {}): CmsAuth => {
+	// A `github()` with no arguments reads its OAuth app from the environment.
+	vi.stubEnv("AUTH_GITHUB_ID", "id");
+	vi.stubEnv("AUTH_GITHUB_SECRET", "secret");
+	return connectWithEnv(options, context);
+};
+
+/** Like {@link connect}, with the environment as it is. */
+export const connectWithEnv = (options: AuthOptions, context: Partial<AuthCreateContext> = {}): CmsAuth =>
+	auth(options).create({
 		site: createSite(testConfig),
 		loginPath: LOGIN_PATH,
 		trustHost: true,
+		secrets: createSecretsVault({ secret: SECRET }).forPlugin("auth"),
+		host: {},
 		storage: () => {
 			throw new Error("this test does not use plugin storage");
 		},

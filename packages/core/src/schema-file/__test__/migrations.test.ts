@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineConfig } from "../../config/define";
+import { defineSite } from "../../config/define";
 import { parseSchemaFile, SchemaFileError } from "../format";
 import type { SchemaInput } from "../types";
 import { cloneSchema, type EditableSchema } from "./fixture";
@@ -77,7 +77,7 @@ describe("schemaVersion and migrations in the schema file", () => {
 	});
 });
 
-describe("defineConfig with a schema version", () => {
+describe("defineSite with a schema version", () => {
 	const fromFile = (edit: (schema: EditableSchema) => void = () => {}) => {
 		const schema = cloneSchema();
 		edit(schema);
@@ -85,7 +85,7 @@ describe("defineConfig with a schema version", () => {
 	};
 
 	it("takes the version from the schema file, and leaves the transforms out of the config", () => {
-		const config = defineConfig({
+		const config = defineSite({
 			schema: fromFile((schema) => {
 				schema.schemaVersion = 4;
 				schema.migrations = [{ id: "a", op: "dropField", collection: "post", field: "legacy" }];
@@ -93,13 +93,13 @@ describe("defineConfig with a schema version", () => {
 		});
 		expect(config.schemaVersion).toBe(4);
 		expect(config).not.toHaveProperty("migrations");
-		expect(defineConfig({ schema: fromFile() }).schemaVersion).toBeUndefined();
+		expect(defineSite({ schema: fromFile() }).schemaVersion).toBeUndefined();
 	});
 
 	it("keeps the version in the file only, and checks a version set in code", () => {
-		expect(() => defineConfig({ schema: fromFile(), schemaVersion: 2 } as never)).toThrow(/schemaVersion.*schema file/);
+		expect(() => defineSite({ schema: fromFile(), schemaVersion: 2 } as never)).toThrow(/schemaVersion.*schema file/);
 		const plain = { collections: cloneSchema().collections, locales: cloneSchema().locales, defaultLocale: "ko" };
-		expect(defineConfig({ ...plain, schemaVersion: 2 } as never).schemaVersion).toBe(2);
-		expect(() => defineConfig({ ...plain, schemaVersion: 0 } as never)).toThrow(/whole number from 1/);
+		expect(defineSite({ ...plain, schemaVersion: 2 } as never).schemaVersion).toBe(2);
+		expect(() => defineSite({ ...plain, schemaVersion: 0 } as never)).toThrow(/whole number from 1/);
 	});
 });

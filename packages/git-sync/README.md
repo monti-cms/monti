@@ -7,14 +7,15 @@ Two-way sync of **published entries** with files in a GitHub repo: a separate co
 - Talks to GitHub through the API with a token and a webhook, so it works on serverless hosting. No checkout, no `git` binary.
 - Delivered through the core's event outbox (`afterCommit`): a failed push is retried, not lost.
 - The text of a file comes from a format plugin (`mdx` by default) with `purpose: "sync"`, so what is written can be read back.
-- The GitHub token and the webhook secret are saved on the plugin's admin screen, encrypted with the server config's `secret` (`cms.secrets("git-sync")`). They are never in config.
+- The GitHub token and the webhook secret are saved on the plugin's admin screen, encrypted with a key derived from `MONTI_SECRET` (`cms.secrets("git-sync")`). They are never in config.
 
 ```ts
-// cms.config.ts
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [
 		mdx(),
@@ -33,6 +34,8 @@ export default defineConfig({
 	],
 });
 ```
+
+`gitSync()` with no `targets` registers the plugin and syncs nothing until `targets` lists a repo.
 
 Then run `monti migrate` (it creates the plugin's storage), open `/<admin path>/git-sync`, and follow "Setting it up" below.
 
@@ -68,7 +71,7 @@ The config is checked when the site config is created: a missing collection, a p
 
 ## Setting it up
 
-1. **Token.** Create a fine-grained personal access token on GitHub with **read and write** access to *Contents* and *Pull requests* of the repo (a classic token with `repo` scope also works). On the Git sync screen, Settings tab, save it. It is stored encrypted and shown only as its last four characters. The server config needs a `secret` (`CMS_SECRET`); without one nothing can be saved.
+1. **Token.** Create a fine-grained personal access token on GitHub with **read and write** access to *Contents* and *Pull requests* of the repo (a classic token with `repo` scope also works). On the Git sync screen, Settings tab, save it. It is stored encrypted and shown only as its last four characters. The app needs `MONTI_SECRET`; without it nothing can be saved.
 2. **Webhook** (to get changes back). In the repo: Settings, Webhooks, Add webhook. Payload URL: the one the Settings tab shows (`https://<site>/api/cms/v1/git-sync/webhook`), content type `application/json`, the **push** event (and **Pull requests** for a target with `drafts: true`), and a secret: use "Generate" on the Settings tab, save it there, and paste the same value into GitHub. The route checks `X-Hub-Signature-256` against that secret and refuses anything else. The site must be reachable from GitHub.
 3. **First sync.** `monti git-sync:push --all` writes every published entry to the repo (below).
 
@@ -206,7 +209,7 @@ Writes every published entry of the target's collections in one commit (a pull r
 
 ## Commands
 
-All of them load the app like `monti migrate` (`--env-file`, `--no-env-file`, `--server`).
+All of them load the app like `monti migrate` (`--env-file`, `--no-env-file`, `--config`).
 
 | Command | Does |
 | --- | --- |

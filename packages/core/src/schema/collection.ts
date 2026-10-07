@@ -17,7 +17,7 @@ export type SystemListColumn = (typeof SYSTEM_LIST_COLUMNS)[number];
 /**
  * Checks whether a name can be used by the list columns (`list.columns`). Only system columns, stored field names (including fields dependent on a conditional field),
  * address field names, and `slug` when an address field exists are allowed. It is an error if the name is unknown, the field is not stored (view or reverse relation),
- * or the same name is written twice. Called by `defineConfig`.
+ * or the same name is written twice. Called by `defineSite`.
  */
 export function validateListColumns(
 	collection: string,
@@ -79,7 +79,7 @@ export interface CollectionSchema<
 	 */
 	readonly allowed?: BodyAllowed;
 	/**
-	 * Field name → definition. A `title` text field (`fields.text`) is required (`defineConfig` checks it). The list, search,
+	 * Field name → definition. A `title` text field (`fields.text`) is required (`defineSite` checks it). The list, search,
 	 * relation picker, body links and the edit screen's title box use this field.
 	 */
 	readonly fields: Fields;
@@ -104,7 +104,7 @@ export interface CollectionSchema<
 	 */
 	readonly list?: {
 		/**
-		 * Columns the list shows and their order. Field names or system columns. Unknown names are reported as errors by `defineConfig`.
+		 * Columns the list shows and their order. Field names or system columns. Unknown names are reported as errors by `defineSite`.
 		 * Text (`text`), select (`select`) and relation fields are drawn as default cells, and an admin extension (`listCells`) can change the cell look.
 		 */
 		readonly columns: readonly string[];
@@ -136,7 +136,7 @@ export function defineCollection(
 
 /**
  * Normalizes a collection definition: checks the kind and fills the body default (only `document` has a body).
- * Called by `defineCollection` and `defineConfig` (an already normalized definition stays as is).
+ * Called by `defineCollection` and `defineSite` (an already normalized definition stays as is).
  * The retired `workflow` option (`"publish"` / `"record"`) is rejected with the `kind` to use instead.
  */
 export function normalizeCollection(

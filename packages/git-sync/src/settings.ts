@@ -52,7 +52,7 @@ export async function saveSettings(ctx: SyncContext, patch: SettingsPatch): Prom
 	const secrets = secretsOf(ctx);
 	if (!secrets.available) {
 		throw new CmsError(
-			"The server config has no `secret`, so a token cannot be stored (set CMS_SECRET)",
+			"MONTI_SECRET is not set, so a token cannot be stored (set MONTI_SECRET in the environment, or `secret` in the config)",
 			"secret_not_configured",
 		);
 	}

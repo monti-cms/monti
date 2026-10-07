@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createCms } from "../../cms";
-import { defineConfig } from "../../config/define";
+import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
 import { postgres } from "../../server";
 import type { CmsAuth } from "../../server/define";
@@ -67,7 +67,7 @@ describe("renaming the title field", () => {
 	const cms = () =>
 		createCms({
 			id: "title-rename",
-			config: defineConfig({ schema: JSON.parse(readFileSync(file, "utf8")) }),
+			config: defineSite({ schema: JSON.parse(readFileSync(file, "utf8")) }),
 			schemaFile: file,
 			server: {
 				database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),

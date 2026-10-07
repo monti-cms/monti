@@ -29,7 +29,7 @@ import {
  *   the prompt (so the model does not follow instruction-like sentences inside the text). Only language inputs can go into `{{name}}` in the prompt.
  * - **Result**: one of several candidates, a single text, an MDX fragment, or a note, plus a list of checks.
  * - **Attach point (`attach`)**: a fixed place in the admin UI (beside a field, image, media, code block, translation). An action can attach
- *   only when the material that place provides can fill its inputs (checked by the types and `defineConfig`).
+ *   only when the material that place provides can fill its inputs (checked by the types and `defineSite`).
  *
  * The admin AI screen only edits enabled state, extra requests, connection, model, inputs to send, prompt, threshold and check values; only edited values are stored in the DB.
  * The definition is read by both server and browser. The function of a code check (`defineValidator`) is only called on the server.

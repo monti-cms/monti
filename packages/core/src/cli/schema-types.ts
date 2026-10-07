@@ -37,7 +37,7 @@ export function toTypeLiteral(value: unknown, depth = 0): string {
 }
 
 /**
- * The declaration file for a schema: it registers the file's collections, locales and default locale in `MontiRegister`, so `defineConfig({ schema })`,
+ * The declaration file for a schema: it registers the file's collections, locales and default locale in `MontiRegister`, so `defineSite({ schema })`,
  * `createCms`, `cms.read` and `DocumentComponentsFor` know the site's collection names, the shape of each collection's metadata, and the locale codes,
  * with nothing written by hand. It holds types only: nothing is imported at run time.
  */

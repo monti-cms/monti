@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, defineConfig, definePlugin, fields } from "../..";
+import { defineCollection, definePlugin, defineSite, fields } from "../..";
 import { assertPluginNamesFree, assertPluginPagesFree, assertPluginRoutesFree, CORE_ADMIN_PAGES } from "../collisions";
 
 describe("assertPluginPagesFree", () => {
@@ -82,7 +82,7 @@ describe("assertPluginNamesFree", () => {
 	});
 });
 
-describe("defineConfig: plugin collisions", () => {
+describe("defineSite: plugin collisions", () => {
 	const collection = defineCollection({
 		label: "Topic",
 		kind: "item",
@@ -94,22 +94,22 @@ describe("defineConfig: plugin collisions", () => {
 		definePlugin({ name, options: {}, nav: path === undefined ? undefined : [{ path, label: name }] });
 
 	it("accepts plugins with distinct names and pages", () => {
-		expect(() => defineConfig({ ...base, plugins: [plugin("a", "a"), plugin("b", "b")] })).not.toThrow();
+		expect(() => defineSite({ ...base, plugins: [plugin("a", "a"), plugin("b", "b")] })).not.toThrow();
 	});
 
 	it("rejects a nav path equal to a core admin page", () => {
-		expect(() => defineConfig({ ...base, plugins: [plugin("a", "media")] })).toThrow(
+		expect(() => defineSite({ ...base, plugins: [plugin("a", "media")] })).toThrow(
 			/admin page "\/media" of plugin "a" collides with the core admin page/,
 		);
 	});
 
 	it("rejects a nav path two plugins share", () => {
-		expect(() => defineConfig({ ...base, plugins: [plugin("a", "tools"), plugin("b", "tools")] })).toThrow(
+		expect(() => defineSite({ ...base, plugins: [plugin("a", "tools"), plugin("b", "tools")] })).toThrow(
 			/of plugin "b" collides with plugin "a"/,
 		);
 	});
 
 	it("rejects a plugin named like a core feature", () => {
-		expect(() => defineConfig({ ...base, plugins: [plugin("search")] })).toThrow(/collides with the core feature/);
+		expect(() => defineSite({ ...base, plugins: [plugin("search")] })).toThrow(/collides with the core feature/);
 	});
 });

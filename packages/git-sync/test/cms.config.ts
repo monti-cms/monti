@@ -1,4 +1,4 @@
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { defineCollection, defineSite, fields } from "@monti-cms/core";
 
 /**
  * A small site for the git-sync tests: posts and memos (documents), tags (items), English (default) and Korean.
@@ -47,4 +47,4 @@ export const baseConfig = {
 	defaultLocale: "en",
 } as const;
 
-export default defineConfig(baseConfig);
+export default defineSite(baseConfig);

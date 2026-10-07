@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createCms } from "../../cms";
-import { defineConfig } from "../../config/define";
+import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
 import { postgres } from "../../server";
 import type { CmsAuth } from "../../server/define";
@@ -84,7 +84,7 @@ describe("schema settings API", () => {
 	const newCms = (admin = true) =>
 		createCms({
 			id: `schema-edit-${++serial}`,
-			config: defineConfig({ schema: JSON.parse(text()) }),
+			config: defineSite({ schema: JSON.parse(text()) }),
 			schemaFile: file,
 			server: {
 				database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),

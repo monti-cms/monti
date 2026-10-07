@@ -1,6 +1,6 @@
 import { ALL_BLOCKS } from "../../blocks/src/definitions";
 import { seoFields } from "../../seo/src/fields";
-import { defineBlock, defineCollection, defineConfig, fields } from "../src";
+import { defineBlock, defineCollection, defineSite, fields } from "../src";
 import type { StoredDocument } from "../src/doc/stored-document";
 
 /** The seed templates are stored documents: the test config needs no text format. (The version is written out: the config cannot import the document module, which reads the config.) */
@@ -222,7 +222,7 @@ const embed = defineBlock({
 	editor: { view: "opaque" },
 });
 
-export default defineConfig({
+export default defineSite({
 	collections: { post, memo, category, tag, collection: series },
 	locales: [
 		{ code: "ko", name: "한국어", label: "한국어" },

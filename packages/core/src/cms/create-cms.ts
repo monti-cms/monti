@@ -13,7 +13,7 @@ import { type CmsRead, createRead } from "../read";
 import { readSchemaFile } from "../schema-file/read";
 import { schemaSourceOf } from "../schema-file/source";
 import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
-import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../server/define";
+import type { CmsAuth, CmsServerConfig, DatabaseAdapter, RequestHost } from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import { type CmsEvents, createEventDispatcher } from "../services/events";
@@ -38,12 +38,12 @@ export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecre
 
 export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 	/**
-	 * The site config (`cms.config.ts`, `defineConfig(...)`): collections, locales, blocks, plugins, admin and site settings. The instance holds it, and the store, the
+	 * The site config (`defineSite(...)` of `@monti-cms/core`, the data and plugins part of what `defineConfig` takes in `monti.config.ts`): collections, locales, blocks, plugins, admin and site settings. The instance holds it, and the store, the
 	 * services, the read API, the HTTP handler, the plugins, the admin and the renderer all get it from the instance. Its type is kept, so `cms.read` knows the
 	 * site's collection names and the shape of their metadata.
 	 */
 	readonly config: Config;
-	/** The server config (`defineServerConfig(...)`): database, auth, media, secret, hooks, public API. */
+	/** The server config: database, auth, media, secret, hooks, public API. */
 	readonly server: CmsServerConfig;
 	/**
 	 * Name of this instance, only used to find it again when a development server reloads modules (see {@link createCms}). Default `"default"`.
@@ -51,7 +51,7 @@ export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 	 */
 	readonly id?: string;
 	/**
-	 * The schema file of a site whose config was made with `defineConfig({ schema })` (path relative to the working directory). The settings screen edits it
+	 * The schema file of a site whose config was made with `defineSite({ schema })` (path relative to the working directory). The settings screen edits it
 	 * and the dev server reads it again when it changes. Default: the path the config was given, else `monti.schema.json` (or `src/monti.schema.json`) in
 	 * the working directory.
 	 */
@@ -105,6 +105,11 @@ export interface Cms<
 	 * with it. `options.legacy` lets the plugin keep reading values it stored in an older format.
 	 */
 	secrets(plugin: string, options?: PluginSecretsOptions): PluginSecrets;
+	/**
+	 * Gives the login the request headers of the framework serving this instance (Next.js: `nextHost`). `@monti-cms/nextjs` calls it from the route handler and the admin
+	 * layout and page, so a site never does. An explicit `host` of `auth()` wins over it.
+	 */
+	attachHost(host: RequestHost): void;
 	/** The login connection (`auth` in the server config): session, sign in and out, login methods, route handlers. */
 	auth(): CmsAuth;
 	/**
@@ -114,7 +119,7 @@ export interface Cms<
 	readonly authHandlers: CmsAuth["handlers"];
 	/** Admin check for requests and screens. Uses `auth()`. */
 	readonly authGateway: AuthGateway;
-	/** Whether `Host` and `X-Forwarded-Host` can be trusted (`trustHost` in the server config, `AUTH_TRUST_HOST`, else off in production). */
+	/** Whether `Host` and `X-Forwarded-Host` can be trusted (`trustHost` in the config, `AUTH_TRUST_HOST`, a known proxy platform, else off in production). */
 	isHostTrusted(): boolean;
 	/** The server side of the site config's plugins. Loaded on first use. */
 	plugins(): Promise<readonly LoadedServerPlugin[]>;
@@ -158,7 +163,7 @@ export interface Cms<
 	/**
 	 * Another instance of the same site over a different schema (the parsed content of the schema file), sharing this instance's connections. It is not
 	 * installed: this instance keeps running the old schema. The settings screen uses it to check a change (diff, impact, a dry run of the transforms)
-	 * before the file is written. Throws what `defineConfig` throws when the schema is not valid, and when the config has no schema file.
+	 * before the file is written. Throws what `defineSite` throws when the schema is not valid, and when the config has no schema file.
 	 */
 	forSchema(schema: unknown): Cms<Config>;
 	/**
@@ -170,7 +175,7 @@ export interface Cms<
 }
 
 /**
- * Connections that must survive a development server reloading modules. Next's dev server evaluates `cms.server.ts` again after an edit, which calls
+ * Connections that must survive a development server reloading modules. Next's dev server evaluates `monti.config.ts` again after an edit, which calls
  * `createCms` again. A new database adapter would open a second connection pool and leave the first one open, so in development the first adapter
  * (and the media store, which keeps its own client) of an instance is reused by the instances created later with the same `id`.
  * Everything else (store, services, login connection, plugins, hooks) is rebuilt by the new instance from its own server config, so edits to
@@ -209,11 +214,12 @@ export function lazyHandle(cms: () => Cms): Cms["handle"] {
 }
 
 /**
- * Creates the CMS instance. Export it from a module of your app (conventionally `cms.server.ts`) and import it where you need it:
+ * Creates the CMS instance from a site config and a server config. An app does not call this: `defineConfig` of `@monti-cms/core/server` (what `monti.config.ts`
+ * uses) takes the site options and the server options together and calls it. It stays for code that builds the two parts itself (tests, tools):
  *
  * ```ts
- * import config from "./cms.config";
- * export const cms = createCms({ config, server: defineServerConfig({ database: postgres({ ... }), auth: auth({ providers: [github({ ... })] }) }) });
+ * import { defineSite } from "@monti-cms/core"; // the site config only
+ * export const cms = createCms({ config: defineSite({ schema, plugins }), server: { database: postgres(), auth: auth({ ... }) } });
  * ```
  *
  * Any number of instances live in one process, each with its own config and server config: nothing is read from a module or the environment except the
@@ -225,6 +231,12 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 	const vault = createSecretsVault({ secret, previousSecrets });
 	const connections = connectionsFor(id, server);
 	const isHostTrusted = () => resolveTrustHost(server.trustHost);
+	let attachedHost: RequestHost | undefined;
+	/** Looks the attached host up when asked, so a login created before an integration attached itself still sees it. */
+	const host: RequestHost = {
+		requestHeaders: async () => (await attachedHost?.requestHeaders?.()) ?? null,
+		rethrow: (error) => attachedHost?.rethrow?.(error),
+	};
 
 	/** Everything of an instance that depends on its site (its config): rebuilt when the schema changes. `self` is the instance the parts belong to. */
 	const build = (config: Config, self: () => Cms<Config>): Omit<Cms<Config>, SchemaMembers> => {
@@ -246,6 +258,8 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				site,
 				loginPath: site.adminUrl("/login"),
 				trustHost: isHostTrusted(),
+				secrets: vault.forPlugin("auth"),
+				host,
 				storage: (plugin) => connections.database.pluginStorage(plugin),
 			});
 			return auth;
@@ -305,6 +319,9 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			},
 			authGateway,
 			isHostTrusted,
+			attachHost: (next) => {
+				attachedHost = next;
+			},
 			plugins: plugins.load,
 			pluginRoutes: plugins.routes,
 			pluginFeatures: plugins.features,
@@ -352,9 +369,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 
 	const forSchema = (schema: unknown): Cms<Config> => {
 		if (!source)
-			throw new Error(
-				"cms: this instance's config has no schema file (it is not made with `defineConfig({ schema })`)",
-			);
+			throw new Error("cms: this instance's config has no schema file (it is not made with `defineSite({ schema })`)");
 		const next = source.rebuild(schema) as Config;
 		const detached: Cms<Config> = {
 			...build(next, () => detached),

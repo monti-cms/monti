@@ -15,7 +15,7 @@ const LEVEL_CLASS: Record<Level, string> = {
  * The edit view of a `notice` block: an editable title, a level switch, and the nested body edited in place. A view takes no props: it reads and
  * writes its block with `useBlockEditor()`, draws the nested body with `<Content />` and wraps itself in `<BlockFrame>`.
  *
- * The block itself is yours to define in `cms.config.ts`: `defineBlock({ name: "notice", syntax: { kind: "container", directive: "notice" },
+ * The block itself is yours to define in `monti.config.ts`: `defineBlock({ name: "notice", syntax: { kind: "container", directive: "notice" },
  * attributes: { title: ..., level: ... }, ... })` with a `level` attribute of `info` or `warning`.
  */
 export function NoticeBlockView() {

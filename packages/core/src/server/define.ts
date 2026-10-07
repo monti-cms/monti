@@ -3,13 +3,15 @@ import type { FormatRegistry } from "../format/registry";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { MediaStore } from "../media/store";
 import type { PluginStorage } from "../plugin/storage";
+import type { PluginSecrets } from "../secrets";
 import type { EventDeliveryOptions } from "../services/events";
 import type { WriteHooks } from "../services/hooks";
 import type { Site } from "../site";
 
 /**
- * Server config (`cms.server.ts`) schema. Holds the store, media and login connections and secrets. Read on the server only.
- * Unlike the site config (`cms.config.ts`), it may hold secrets, and usually reads them from environment variables.
+ * The server part of the config (`monti.config.ts`): the store, media and login connections, the secret, hooks and the public API. Read on the server only.
+ * Unlike the site data (`monti.schema.json`), it may hold secrets, and usually reads them from environment variables.
+ * An app writes these options in `defineConfig({ database, auth, storage, ... })` of `@monti-cms/core/server`, which hands them to `createCms` as this shape.
  *
  * Connections are created on first use. Reading the config where environment variables are absent, such as during a build, does not fail.
  */
@@ -111,12 +113,31 @@ export interface CmsAuth {
 	rethrow?(error: unknown): void;
 }
 
+/**
+ * What the host framework supplies to the login: the headers of the request being handled, and a way to let the framework's own signals through.
+ * The framework integration (`@monti-cms/nextjs`) attaches it to the instance it serves (`cms.attachHost`), so a site does not write it; code outside such an
+ * integration passes one as `host` of `auth()`.
+ */
+export interface RequestHost {
+	/** Headers of the request being handled, or `null` outside a request (a command-line tool, or a module loaded at build time). */
+	requestHeaders?(): Promise<Pick<Headers, "get"> | null>;
+	/** Throws `error` again when it is a signal the framework uses to leave the handler, so it is not turned into an API error. Does nothing otherwise. */
+	rethrow?(error: unknown): void;
+}
+
 /** Values the core passes when creating the login connection. */
 export interface AuthCreateContext {
 	/** The instance's site: the login connection takes the language of its texts (`site.createTranslator`) from it. */
 	readonly site: Site;
 	/** Whether the `Host` header may be trusted to build login callback URLs (see `trustHost` in the server config). */
 	readonly trustHost: boolean;
+	/**
+	 * The secrets API of the login connection (`cms.secrets("auth")`): keys derived from the config's `secret` (`MONTI_SECRET`), never the secret itself.
+	 * The login derives its session-signing key from it. `available` is false when no secret is set.
+	 */
+	readonly secrets: PluginSecrets;
+	/** The host attached to the instance (`cms.attachHost`). It answers `null` for the headers until a framework integration has attached itself. An explicit `host` of `auth()` is used instead. */
+	readonly host: RequestHost;
 	/** Admin login page URL (admin path + `/login`, e.g. `/admin/login`). Includes the Next `basePath` if set, so it is the browser-facing URL. */
 	readonly loginPath: string;
 	/** Storage of a plugin (`cms.storage(plugin)`). A login method that keeps its own users (a password login) keeps them here. */
@@ -134,8 +155,9 @@ export interface CmsServerConfig {
 	readonly media?: MediaAdapter;
 	readonly auth: AuthAdapter;
 	/**
-	 * The master secret. Plugins never receive it: the instance derives a separate key per plugin from it and gives each plugin an API to encrypt
-	 * stored values (AI service keys) with that key. Without it, such values cannot be stored.
+	 * The one master secret (`MONTI_SECRET` in the environment). Nothing receives it as it is: the instance derives a separate key per use from it (HKDF), the
+	 * login's session-signing key and a key per plugin, and gives each plugin an API to encrypt stored values (AI service keys, tokens) with its own key.
+	 * Without it, such values cannot be stored and the login cannot sign sessions.
 	 * To change it without losing stored values, move the old one to `previousSecrets`.
 	 */
 	readonly secret?: string;
@@ -156,12 +178,10 @@ export interface CmsServerConfig {
 	 * Whether the server sits behind a proxy or platform (Vercel, nginx, a load balancer) that sets `Host` and `X-Forwarded-Host`.
 	 * When on, login callback URLs are built from the request host and the same-origin check accepts `X-Forwarded-Host`;
 	 * when off, a client-supplied `X-Forwarded-Host` is ignored and login needs `AUTH_URL`. Default: the `AUTH_TRUST_HOST` environment variable
-	 * (`true`/`1` or `false`/`0`), else off in production and on in development.
+	 * (`true`/`1` or `false`/`0`), else on when the environment is a known proxy platform (`VERCEL`, `NETLIFY`, `CF_PAGES`, ...) and in development, and off
+	 * in any other production (a proxy you run yourself needs `true`).
 	 */
 	readonly trustHost?: boolean;
 	/** Public JSON API (`/api/cms/v1/public/*`). Off if unset (404). */
 	readonly publicApi?: PublicApiOptions;
 }
-
-/** Defines the server config. */
-export const defineServerConfig = <const C extends CmsServerConfig>(config: C): C => config;

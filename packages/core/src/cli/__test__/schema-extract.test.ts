@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import blog from "../../../test/cms.config";
 import otherSite from "../../../test/other-site.config";
-import { defineCollection, defineConfig, definePlugin, fields } from "../..";
+import { defineCollection, definePlugin, defineSite, fields } from "../..";
 import type { CmsConfig } from "../../config/define";
 import { createSite } from "../../site";
 import { runCli } from "..";
@@ -43,7 +43,7 @@ describe("extract -> load round trip", () => {
 			const { schema } = extractSchemaData(config as CmsConfig);
 			// Through text, the way the file is written and read.
 			const file = JSON.parse(schemaFileText(schema));
-			const loaded = defineConfig({ schema: file, ...codePart(config as CmsConfig) });
+			const loaded = defineSite({ schema: file, ...codePart(config as CmsConfig) });
 			const original = config as CmsConfig;
 
 			expect(collectionsOf(loaded)).toEqual(collectionsOf(original));
@@ -73,7 +73,7 @@ describe("extract -> load round trip", () => {
 		const file = JSON.parse(text);
 		expect(file.collections.post).not.toHaveProperty("body");
 		expect(file.collections.category).not.toHaveProperty("body");
-		const withBody = defineConfig({
+		const withBody = defineSite({
 			collections: {
 				note: defineCollection({
 					label: "Note",
@@ -90,7 +90,7 @@ describe("extract -> load round trip", () => {
 
 	it("writes the allowed list of a body as the object form of `body`, and loads it back as the same list", () => {
 		const allowed = { blocks: ["table"], marks: ["bold", "link"], headings: [2, 3] } as const;
-		const limited = defineConfig({
+		const limited = defineSite({
 			collections: {
 				memo: defineCollection({
 					label: "Memo",
@@ -104,7 +104,7 @@ describe("extract -> load round trip", () => {
 		});
 		const { schema } = extractSchemaData(limited);
 		expect(schema.collections.memo?.body).toEqual(allowed);
-		const loaded = defineConfig({ schema: JSON.parse(schemaFileText(schema)) });
+		const loaded = defineSite({ schema: JSON.parse(schemaFileText(schema)) });
 		expect(loaded.collections.memo).toMatchObject({ body: true, allowed });
 	});
 
@@ -133,7 +133,7 @@ describe("what stays in code", () => {
 
 	it("lists plugins by name, codeBlock and media, and options that cannot be written as JSON", () => {
 		const plugin = definePlugin({ name: "my-plugin", options: {} });
-		const config = defineConfig({
+		const config = defineSite({
 			collections: {
 				note: defineCollection({
 					label: "Note",
@@ -167,7 +167,7 @@ describe("what stays in code", () => {
 	});
 
 	it("says nothing needs to stay in code for a config that is all data", () => {
-		const config = defineConfig({
+		const config = defineSite({
 			collections: {
 				note: defineCollection({
 					label: "Note",
@@ -202,7 +202,7 @@ describe("what stays in code", () => {
 
 describe("monti schema:extract", () => {
 	const plugin = definePlugin({ name: "my-plugin", options: {} });
-	const config = defineConfig({
+	const config = defineSite({
 		collections: {
 			note: defineCollection({
 				label: "Note",
@@ -275,7 +275,7 @@ describe("monti schema:extract", () => {
 		const report = await extractSchema({ cwd: dir, load, types: false });
 		expect(report.types).toBeUndefined();
 		const empty = tempDir();
-		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/cannot find cms\.config\.ts; pass --config/);
+		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/cannot find monti\.config\.ts; pass --config/);
 		await expect(extractSchema({ cwd: dir, load, config: "nope.ts", overwrite: true })).rejects.toThrow(
 			/config file not found: nope\.ts/,
 		);

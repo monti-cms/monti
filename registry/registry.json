@@ -60,8 +60,8 @@
 			"name": "blog-theme",
 			"type": "registry:block",
 			"title": "Blog theme",
-			"description": "A thin blog theme for one collection: a paged post list and a post detail page (title, date, author, table of contents, body, previous and next post) with metadata, 404 and redirects. Pages are written to app/(site)/blog.",
-			"dependencies": ["@monti-cms/core", "next", "react"],
+			"description": "A thin blog theme for one collection: a paged post list and a post detail page (title, date, author, table of contents, body, previous and next post) with metadata, 404 and redirects. Pages are written to app/(site)/blog, plus a draft preview page at app/(site)/preview/blog (for site.previewPath = /preview).",
+			"dependencies": ["@monti-cms/core", "@monti-cms/nextjs", "next", "react"],
 			"registryDependencies": ["article-body"],
 			"files": [
 				{
@@ -93,6 +93,11 @@
 					"path": "items/blog-theme/app/blog/[slug]/page.tsx",
 					"type": "registry:page",
 					"target": "~/{app}/(site)/blog/[slug]/page.tsx"
+				},
+				{
+					"path": "items/blog-theme/app/preview/blog/[slug]/page.tsx",
+					"type": "registry:page",
+					"target": "~/{app}/(site)/preview/blog/[slug]/page.tsx"
 				}
 			]
 		}

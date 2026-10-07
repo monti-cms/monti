@@ -10,7 +10,7 @@ The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing 
 
 ## Registration
 
-Add `aiPlugin()` to `plugins` in the site config. Built-in actions turn on by themselves when there is somewhere to attach them, and
+Add `aiPlugin()` to `plugins` in `monti.config.ts`. Built-in actions turn on by themselves when there is somewhere to attach them, and
 actions added by other plugins (block extensions, SEO extension, and so on) attach by themselves too. List an action by name (key) in
 `actions` only to change or turn it off.
 
@@ -138,15 +138,15 @@ const unusedAddress = defineValidator({
 
 ## Stored service keys
 
-The service keys entered on the AI screen are kept encrypted in the `settings` collection of the plugin storage. The plugin never sees the server config's `secret`: the CMS instance derives
+The service keys entered on the AI screen are kept encrypted in the `settings` collection of the plugin storage. The plugin never sees the app's one secret (`MONTI_SECRET`): the CMS instance derives
 a key for the plugin from it and the plugin name (`cms.secrets("ai")`, HKDF-SHA256, `monti:plugin:ai:v1`), so the key cannot be used for another plugin's data
 and other plugins cannot read these keys. See "Plugin secrets" in the core README. Stored values look like `mk1:<key id>:<iv>:<tag>:<body>`.
 
 - **Upgrade from before per-plugin keys**: keys stored by earlier versions (`v1:<iv>:<tag>:<body>`, encrypted under `sha256("cms-ai-key:" + secret)`) keep
-  working with no step from you, and `CMS_SECRET` stays as it is. The plugin reads them with the old derivation and re-encrypts them in the new format in two
+  working with no step from you; set `MONTI_SECRET` to the value of the old `CMS_SECRET` (or list that value in `previousSecrets`). The plugin reads them with the old derivation and re-encrypts them in the new format in two
   places: on the next save of any AI connection (all stored keys are re-encrypted together), and on `monti migrate` (a one-time upgrade of whatever is left;
   running it again changes nothing). Nothing needs to be entered again.
-- **Changing `secret`**: put the new value in `secret` and keep the old one in `previousSecrets` in the server config. Stored keys (new or old format) still
+- **Changing the secret**: put the new value in `MONTI_SECRET` (or `secret` of `defineConfig`) and keep the old one in `previousSecrets` in `monti.config.ts`. Stored keys (new or old format) still
   decrypt with the old secret, and `monti migrate` or the next save re-encrypts them with the new one. Drop the old value from `previousSecrets` after that.
   Without `previousSecrets`, keys made under the old secret can no longer be read and have to be entered again.
 

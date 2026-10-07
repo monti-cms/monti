@@ -3,6 +3,7 @@
 import { fakeCms } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import { createRouteHandler } from "..";
+import { nextHost } from "../auth/host";
 
 const cms = fakeCms({ store: { getPreferences: async () => null } });
 
@@ -30,5 +31,11 @@ describe("createRouteHandler", () => {
 			{ params: Promise.resolve({ path: ["v1", "preferences"] }) },
 		);
 		expect(wrongMethod.status).toBe(405);
+	});
+
+	it("attaches the Next request headers to the instance, so the config needs no host", () => {
+		const attached: unknown[] = [];
+		createRouteHandler({ handle: cms.handle, attachHost: (host) => attached.push(host) });
+		expect(attached).toEqual([nextHost]);
 	});
 });

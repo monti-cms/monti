@@ -62,7 +62,10 @@ export interface GitSyncTarget {
 }
 
 export interface GitSyncOptions {
-	readonly targets: readonly GitSyncTarget[];
+	/**
+	 * The places to sync to. Default: none, so `gitSync()` with no arguments adds the screen and the commands but syncs nothing until a target is listed.
+	 */
+	readonly targets?: readonly GitSyncTarget[];
 	/** `false` registers nothing (no screen, hooks or routes), so a config can carry the plugin switched off. Default `true`. */
 	readonly enabled?: boolean;
 	/**
@@ -182,8 +185,9 @@ export function resolveTarget(target: GitSyncTarget, index: number): ResolvedTar
 
 /** Every target with its defaults, after checking the list as a whole (ids are unique). */
 export function resolveTargets(options: GitSyncOptions): ResolvedTarget[] {
-	if (!Array.isArray(options.targets)) throw new Error("git-sync: `targets` must be a list");
-	const targets = options.targets.map(resolveTarget);
+	const given = options.targets ?? [];
+	if (!Array.isArray(given)) throw new Error("git-sync: `targets` must be a list");
+	const targets = given.map(resolveTarget);
 	const seen = new Set<string>();
 	for (const target of targets) {
 		if (seen.has(target.id))

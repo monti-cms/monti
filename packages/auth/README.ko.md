@@ -15,32 +15,29 @@ Next.js 앱에서는 `monti init`이 설정해 준다. `@monti-cms/core`는 peer
 ## 사용
 
 ```ts
-// cms.server.ts
+// monti.config.ts
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
-import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth"; // Next.js 앱에서만
-import config from "./cms.config";
+import { defineConfig, postgres } from "@monti-cms/core/server";
+import schema from "./monti.schema.json";
 
-export const cms = createCms({
-	config,
-	server: defineServerConfig({
-		database: postgres({ connectionString: process.env.CMS_DATABASE_URL }),
-		auth: auth({
-			providers: [
-				github({
-					clientId: process.env.AUTH_GITHUB_ID,
-					clientSecret: process.env.AUTH_GITHUB_SECRET,
-					admins: [process.env.CMS_ADMIN_GITHUB_ID], // GitHub 숫자 ID
-				}),
-			],
-			host: nextHost,
-			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1",
-			secret: process.env.AUTH_SECRET,
-		}),
-	}),
+export const cms = defineConfig({
+	schema,
+	database: postgres(),
+	auth: auth({ providers: [github()] }),
 });
 ```
+
+`github()`와 `postgres()`는 설정을 환경 변수에서 읽으므로 인자 없이 부르면 된다.
+
+| 변수 | 읽는 곳 | 뜻 |
+| --- | --- | --- |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | `github()` | GitHub OAuth 앱 |
+| `MONTI_ADMIN_GITHUB_ID` | `github()` | 관리자. GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여러 개 |
+| `MONTI_SECRET` | `defineConfig` | 하나뿐인 비밀 값. 로그인 세션 키가 여기서 파생된다("비밀 값" 참고) |
+| `DATABASE_URL`, `DATABASE_SCHEMA` | `postgres()` | 콘텐츠 DB |
+
+값을 직접 넘기면 변수보다 우선한다(`github({ clientId, clientSecret, admins: ["12345678"] })`). 다른 이름에서 값을 짐작해 가져오지 않으며, 꼭 필요한 값이 없으면 변수 이름을 알려 주는 오류가 난다. GitHub 앱은 로그인 연결을 만들 때 확인하고, 개발용 우회(아래)에서는 로그인을 시도할 때만 확인하므로 `next dev`는 이 변수가 하나도 없어도 돈다.
 
 GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/cms/auth/callback/github`다.
 
@@ -50,12 +47,34 @@ GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/cms/au
 | --- | --- |
 | `providers` | 로그인 방법. 로그인 버튼 순서가 된다. 하나 이상이어야 하고 id가 서로 달라야 한다 |
 | `admins` | 프로바이더를 붙인 계정 ID(`"github:12345678"`)로 적은 관리자. 프로바이더에 적은 것(`github({ admins })`)도 같이 센다 |
-| `secret` | 로그인 세션 쿠키 서명 값. 없으면 `AUTH_SECRET` 환경 변수. 저장 값을 암호화하는 서버 설정의 `secret`과는 따로 둔다 |
-| `devBypass` | 로컬 개발에서만. 이 컴퓨터에서 온 요청을 첫 번째 관리자로 본다. 제한은 그대로다(`NODE_ENV=development`, 배포 서버처럼 보이지 않을 것, 루프백 요청. 코어 README의 "개발용 로그인 우회") |
+| `devBypass` | 로컬 개발에서만. 이 컴퓨터에서 온 요청을 첫 번째 관리자로 본다. `next dev`에서는 기본으로 켜져 있고 `false`로 끈다("개발용 우회" 참고) |
 | `basePath` | 로그인 API 경로. 기본 `/api/cms/auth`(관리자 API 라우트가 같이 처리한다. 코어 README의 "로그인 경로") |
-| `host` | 호스트 프레임워크가 대 주는 것. `requestHeaders()`(처리 중인 요청의 헤더)와 `rethrow(error)`. `@monti-cms/nextjs/auth`의 `nextHost`가 Next.js용이다. `requestHeaders`가 없으면 `session()`에 요청을 넘겨야 하고 개발용 우회는 적용되지 않는다 |
+| `host` | Next.js에서는 `@monti-cms/nextjs`가 붙여 주므로 필요 없다. 다른 프레임워크에서는 `{ requestHeaders, rethrow }`를 넘긴다. 붙여진 것보다 우선한다. `requestHeaders`가 없으면 `session()`에 요청을 넘겨야 하고 개발용 우회는 적용되지 않는다 |
 
-호스트 신뢰(`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`)는 코어 README의 "호스트 신뢰"대로 동작한다. 세션은 서명한 JWT 쿠키(8시간, 갱신형)라 따로 저장하는 것이 없다.
+`secret` 옵션은 없다. 세션 키는 `MONTI_SECRET`에서 나온다("비밀 값" 참고). 호스트 신뢰(`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`)는 "호스트 신뢰"에 있다. 세션은 서명한 JWT 쿠키(8시간, 갱신형)라 따로 저장하는 것이 없다.
+
+## 비밀 값
+
+하나뿐인 비밀 값 `MONTI_SECRET`(`defineConfig`)이 설정해야 할 비밀 값의 전부다. 세션 쿠키 키(`cms.secrets("auth").deriveKey("session")`)와 각 플러그인의 암호화 키(AI 서비스 키, git-sync 토큰)가 모두 이 값에서 HKDF로 파생된다. `AUTH_SECRET`과 `CMS_SECRET`은 더 읽지 않고, `auth()`에도 `secret` 옵션이 없다. 값이 없으면 `MONTI_SECRET`을 짚는 오류와 함께 로그인이 실패한다. 값을 바꾸면 모두 로그아웃되며, 바꾸기 전 값을 `defineConfig`의 `previousSecrets`에 적어 두면 그 값으로 저장된 것을 계속 읽을 수 있다.
+
+세션 키를 직접 만드는 로그인 연결도 같은 도구를 받는다. `AuthCreateContext`에 `secrets: PluginSecrets`(`cms.secrets("auth")`)가 있다.
+
+## 호스트 신뢰
+
+`trustHost`는 Auth.js가 콜백 URL을 `X-Forwarded-Host`·`X-Forwarded-Proto` 헤더로 만들어도 되는지 정한다. 다음 순서로 결정된다.
+
+1. `trustHost` 옵션이 있으면 그것.
+2. 환경 변수 `AUTH_TRUST_HOST`.
+3. 알려진 프록시 플랫폼이 감지되면(Vercel, Netlify, Cloudflare Pages, Render, Railway, Fly.io, Cloud Run의 환경 변수: `VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`) 또는 개발·테스트에서는 **켬**.
+4. 그 밖에 운영 환경에서는 **끔**.
+
+직접 운영하는 프록시(nginx, 로드 밸런서)는 감지되지 않으므로 `trustHost: true` 또는 `AUTH_TRUST_HOST=true`를 둔다. 단 그 프록시가 `X-Forwarded-Host`를 덮어쓸 때만 둔다. 그렇지 않으면 클라이언트가 로그인 콜백을 만들 호스트를 고를 수 있다. `AUTH_URL`이 있으면 사이트의 출처를 그 값으로 고정한다.
+
+## 개발용 우회
+
+`next dev`(`NODE_ENV=development`)에서는 로그인 설정이 전혀 없어도 첫 번째 관리자로 로그인된다. 기본으로 켜져 있고, 다음을 모두 만족할 때만 적용된다. 요청이 이 컴퓨터(루프백 호스트)에서 왔고, 환경이 배포된 것처럼 보이지 않아야 한다(호스팅 플랫폼 변수나 공개 `AUTH_URL`이 없을 것). 운영 환경에서는 절대 적용되지 않는다. `auth({ devBypass: false })`로 끌 수 있고, 배포된 것처럼 보이는 프로세스에서 `devBypass: true`를 주면 시작을 거부한다. 이를 위한 환경 변수는 없다(`CMS_DEV_AUTH_BYPASS`는 없어졌다).
+
+요청 헤더가 필요한데, Next.js 연동이 자동으로 붙여 주므로 설정 없이 동작한다. Next.js 밖에서 `host.requestHeaders`가 없으면 로그인이 요청을 볼 수 없어 우회가 적용되지 않으며, 경고가 그 사실을 알린다.
 
 ## 누가 관리자인가
 
@@ -130,13 +149,12 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 -import { githubAuth } from "@monti-cms/nextjs/auth";
 +import { auth } from "@monti-cms/auth";
 +import { github } from "@monti-cms/auth/github";
-+import { nextHost } from "@monti-cms/nextjs/auth";
  ...
 -auth: githubAuth({ clientId, clientSecret, adminIds: [id], devBypass, secret }),
-+auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret }),
++auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })] }),
 ```
 
-- **관리자.** `adminIds`는 프로바이더의 `admins`가 된다. 예전 옵션은 GitHub 숫자 ID(`CMS_ADMIN_GITHUB_ID`) 목록이었고, `admins`도 그대로 그것을 받는다. 바꿀 값은 없다. 로그인 이름은 처음부터 비교하지 않았다.
+- **관리자.** `adminIds`는 프로바이더의 `admins`, 또는 `MONTI_ADMIN_GITHUB_ID` 변수(전의 `CMS_ADMIN_GITHUB_ID`)가 된다. 여전히 GitHub 숫자 ID를 받으므로 바꿀 값은 없다. 로그인 이름은 처음부터 비교하지 않았다.
 - **다시 로그인.** NextAuth가 만든 세션은 더 읽지 않는다(안의 계정 ID가 이제 `github:<id>`다). 그래서 모두 한 번 다시 로그인한다.
-- **새 환경 변수 없음.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`는 그대로 쓰고, OAuth 콜백 URL도 바뀌지 않는다. `package.json`에서 `next-auth`는 빼도 된다.
+- **환경 변수.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`는 그대로 쓰고, OAuth 콜백 URL도 바뀌지 않는다. `AUTH_SECRET`은 `MONTI_SECRET`으로("비밀 값" 참고), `CMS_ADMIN_GITHUB_ID`는 `MONTI_ADMIN_GITHUB_ID`로 바뀌었고, `CMS_DEV_AUTH_BYPASS`는 없어졌다(우회는 `next dev`에서 켜진다). `package.json`에서 `next-auth`는 빼도 된다.
 - **기록되는 작성자.** 이름이 없어 계정 ID가 변경 기록에 남는 곳은 전에 `12345678`이었고 이제 `github:12345678`이다.

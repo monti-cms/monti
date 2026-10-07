@@ -22,21 +22,30 @@
 ## 설치
 
 ```ts
-// cms.config.ts
-import { blocks } from "@monti-cms/blocks";
+// monti.config.ts
+import { callout, chart, codeExplorer, codeRef, collapsible, color, columns, mermaid, tabs, tooltip } from "@monti-cms/blocks";
+import { defineConfig } from "@monti-cms/core/server";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [
-		...blocks(), // 전부(콜아웃·접기·탭·단·코드 탐색기·Mermaid·차트·툴팁·코드 연결·글자색)
-		// ...blocks({ only: ["callout", "tooltip"] })   고른 것만
-		// ...blocks({ omit: ["chart"], codeRef: false }) 빼고(`false`도 뺀다)
-		// ...blocks({ color: { palette: [...] } })       확장별 옵션
+		// 블록마다 한 줄: 원하는 것만 적고, 한 줄을 지우면 그 블록이 없어진다. 모두 인자 없이 쓸 수 있다.
+		callout(),
+		collapsible(),
+		tabs(),
+		columns(),
+		codeExplorer(),
+		mermaid(),
+		chart(),
+		// 인라인 꾸밈이 겹칠 때는 이 순서로 저장된다.
+		tooltip(),
+		codeRef(),
+		color(), // color({ palette: [...] })로 색 선택 목록을 정한다
 	],
 });
 ```
 
-하나씩 넣어도 된다(`plugins: [callout(), columns(), color({ palette })]`). 같은 확장을 두 번 넣으면 설정 오류다.
+전부 한 번에 넣는 함수는 없다. 블록마다 플러그인이 따로 있고, 설정의 목록이 곧 사이트가 가진 블록 목록이다. 같은 플러그인을 두 번 넣으면 설정 오류다.
 
 스타일시트는 둘이고 앱에 Tailwind가 필요 없다.
 

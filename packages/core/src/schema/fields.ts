@@ -14,7 +14,7 @@ export type Localized = boolean | "inherit";
 
 /**
  * The meaning (role) of a field. Extensions and screens look up values by role, not by field name. In one collection, each role
- * has only one field (`defineConfig` checks it). The field kinds that fit a role name are decided and checked by the extension that uses that role
+ * has only one field (`defineSite` checks it). The field kinds that fit a role name are decided and checked by the extension that uses that role
  * (plugin `validate`).
  *
  * The roles the core knows are `summary` and `title`, both on text fields. The summary is passed as `summary` to actions next to a field (AI etc.) and is the default for
@@ -85,7 +85,7 @@ export interface SlugField extends BaseField {
 
 export interface RelationField extends BaseField {
 	readonly kind: "relation";
-	/** Name of the target collection of the relation. Whether it is a real collection is checked by `defineConfig`. */
+	/** Name of the target collection of the relation. Whether it is a real collection is checked by `defineSite`. */
 	readonly to: string;
 	readonly many?: boolean;
 	/** Creates a missing target right next to the input. */
@@ -164,7 +164,7 @@ export interface ViewField {
 }
 
 /**
- * Keys the core uses separately in metadata. They cannot be used as field names (`defineConfig` blocks them).
+ * Keys the core uses separately in metadata. They cannot be used as field names (`defineSite` blocks them).
  * `translations` holds the per-language values of an item collection.
  */
 export const RESERVED_METADATA_KEYS: readonly string[] = ["translations"];

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { cms } from "@/cms.server";
 import { ArticleBody } from "@/components/monti/article-body/article-body";
 import { PostMeta } from "@/components/monti/blog-theme/post-meta";
+import { cms } from "@/monti.config";
 
 // The memos are read from the database on each request.
 export const dynamic = "force-dynamic";

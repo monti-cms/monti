@@ -4,10 +4,7 @@ import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/
 import { defineTextChecker, type TextIssue } from "@monti-cms/core/client";
 import type { ReactNode } from "react";
 
-/**
- * Example of a spelling and grammar check extension. The core ships no checker. Here a small checker that only looks at a banned-word list runs in the browser.
- * APIs that need a key attach through `remoteTextChecker({ url })` plus a server route (`textCheckRoute`) (see "Text checking" in the admin package README).
- */
+/** A small checker that only looks at a banned-word list and runs in the browser (a free checker, so `auto: true` would be fine too). */
 const WORDS: Readonly<Record<string, { readonly message: string; readonly suggestions: readonly string[] }>> = {
 	alot: { message: "Write “a lot” as two words.", suggestions: ["a lot"] },
 	teh: { message: "Possible typo.", suggestions: ["the"] },
@@ -44,6 +41,7 @@ const wordListChecker = defineTextChecker({
 
 const components: CmsAdminComponents = { textCheckers: [wordListChecker] };
 
-export function SiteAdminComponents({ children }: { children: ReactNode }) {
+/** Wraps the admin UI (the provider of the plugin's admin side) and hands it the checker. */
+export function WordListProvider({ children }: { children: ReactNode }) {
 	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
 }

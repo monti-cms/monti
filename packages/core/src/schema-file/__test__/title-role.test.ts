@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, defineConfig, fields } from "../..";
+import { defineCollection, defineSite, fields } from "../..";
 import { extractSchemaData } from "../../cli/schema-extract";
 import { schemaTypesText } from "../../cli/schema-types";
 import { createSite } from "../../site";
@@ -23,7 +23,7 @@ describe("the title role in the schema file", () => {
 	it("is a field role the format reads, and the config built from the file names the title field by it", () => {
 		const file = parseSchemaFile(renamed());
 		expect(file.collections.post?.fields.headline).toMatchObject({ kind: "text", role: "title" });
-		const config = defineConfig({ schema: renamed() as SchemaInput });
+		const config = defineSite({ schema: renamed() as SchemaInput });
 		expect(createSite(config).titleField("post").name).toBe("headline");
 		expect(createSite(config).titleField("tag").name).toBe("title");
 	});
@@ -48,14 +48,14 @@ describe("the title role in the schema file", () => {
 				slug: fields.slug({ label: "Slug", from: "headline", required: true }),
 			},
 		});
-		const config = defineConfig({
+		const config = defineSite({
 			collections: { post },
 			locales: [{ code: "en", name: "English" }],
 			defaultLocale: "en",
 		});
 		const { schema } = extractSchemaData(config);
 		expect(schema.collections.post?.fields.headline).toMatchObject({ role: "title" });
-		const again = createSite(defineConfig({ schema: JSON.parse(JSON.stringify(schema)) as SchemaInput }));
+		const again = createSite(defineSite({ schema: JSON.parse(JSON.stringify(schema)) as SchemaInput }));
 		expect(again.titleField("post").name).toBe("headline");
 	});
 });

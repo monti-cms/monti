@@ -3,16 +3,21 @@ import type { ContentStore } from "../../core/store";
 import type { DatabaseAdapter } from "../../server/define";
 import { createPluginStorage } from "./plugin-storage";
 
+/** The environment variable `postgres()` reads the connection string from when `connectionString` is not given. */
+export const DATABASE_URL_ENV = "DATABASE_URL";
+/** The environment variable `postgres()` reads the schema name from when `schema` is not given. */
+export const DATABASE_SCHEMA_ENV = "DATABASE_SCHEMA";
+
 export interface PostgresOptions {
-	/** Connection string. Throws on first use if missing (it may be empty during builds). */
-	readonly connectionString: string | undefined;
-	/** Schema that holds the tables. Change it when the same DB is shared with previews or staging. Defaults to `public`. */
-	readonly schema?: string;
+	/** Connection string. If unset, the `DATABASE_URL` environment variable. Throws on first use if both are missing (they may be absent during builds). */
+	readonly connectionString?: string | undefined;
+	/** Schema that holds the tables. Change it when the same DB is shared with previews or staging. If unset, the `DATABASE_SCHEMA` environment variable, else `public`. */
+	readonly schema?: string | undefined;
 }
 
 /**
  * The store module (SQL, MDX parsing, and the business rules that read the site config) is loaded on first use, so
- * calling `postgres()` (when `cms.server.ts` creates the instance) does not load the store code.
+ * calling `postgres()` (when `monti.config.ts` creates the instance) does not load the store code.
  */
 const loadStoreModule = () => import("./content-store");
 
@@ -42,26 +47,41 @@ function lazyStore(create: () => Promise<ContentStore>): ContentStore {
 	});
 }
 
-/** Postgres content store. */
-export function postgres(options: PostgresOptions): DatabaseAdapter {
+/**
+ * Postgres content store. It works with no arguments: the connection string is read from `DATABASE_URL` and the schema name from `DATABASE_SCHEMA`
+ * (no other variable is looked at), and a value passed here wins. The environment is read when the connection is first used, so building the app
+ * without it does not fail; a missing connection string is an error that names the variable.
+ */
+export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 	let pool: Pool | undefined;
 	const getPool = () => {
-		if (!options.connectionString) throw new Error("cms.server: postgres connectionString is not configured");
-		pool ??= new Pool({ connectionString: options.connectionString });
+		const connectionString = options.connectionString || process.env[DATABASE_URL_ENV];
+		if (!connectionString) {
+			throw new Error(
+				`\`${DATABASE_URL_ENV}\` is empty; set it (for example in .env.local), or pass \`postgres({ connectionString })\``,
+			);
+		}
+		pool ??= new Pool({ connectionString });
 		return pool;
 	};
-	const schema = options.schema ? { schema: options.schema } : undefined;
+	/** Read when used (like the connection string), so the environment of the running process decides. */
+	const schemaOptions = () => {
+		const schema = options.schema || process.env[DATABASE_SCHEMA_ENV];
+		return schema ? { schema } : undefined;
+	};
 	return {
 		name: "postgres",
 		createStore: (storeOptions) =>
-			lazyStore(async () => (await loadStoreModule()).createContentStore(getPool(), { ...schema, ...storeOptions })),
+			lazyStore(async () =>
+				(await loadStoreModule()).createContentStore(getPool(), { ...schemaOptions(), ...storeOptions }),
+			),
 		migrate: async (migrateOptions) =>
 			(await loadStoreModule()).migrateContentStore(getPool(), {
-				...schema,
+				...schemaOptions(),
 				site: migrateOptions.site,
 				formats: migrateOptions.formats,
 			}),
-		pluginStorage: (plugin) => createPluginStorage(getPool(), options.schema, plugin),
+		pluginStorage: (plugin) => createPluginStorage(getPool(), schemaOptions()?.schema, plugin),
 		close: async () => {
 			await pool?.end();
 			pool = undefined;

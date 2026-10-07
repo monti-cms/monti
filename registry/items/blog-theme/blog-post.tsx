@@ -1,4 +1,5 @@
 import type { ReadEntry } from "@monti-cms/core/read";
+import { previewEntry } from "@monti-cms/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -11,10 +12,23 @@ export interface BlogPostProps {
 	params: Promise<{ locale?: string; slug: string }>;
 }
 
+/** What `readPost` reads: the published post, or the draft the signed-in admin previews. */
+type PostSource = "published" | "preview";
+
 /** The post of the request: a 404 for an unknown, unpublished or foreign-locale address, and a permanent redirect from an old address. */
-async function readPost({ params }: BlogPostProps): Promise<ReadEntry> {
+async function readPost({ params }: BlogPostProps, source: PostSource = "published"): Promise<ReadEntry> {
 	const { locale, slug } = await params;
 	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) notFound();
+	if (source === "preview") {
+		// `previewEntry` attaches the request headers first, so the admin session is read even on the first request after a cold start. Anyone else gets a 404.
+		const draft = await previewEntry(blogTheme.cms, {
+			collection: blogTheme.collection,
+			slug: decodeURIComponent(slug),
+			locale,
+		});
+		if (!draft) notFound();
+		return draft;
+	}
 	const result = await blogTheme.cms.read.getEntry({
 		collection: blogTheme.collection,
 		slug: decodeURIComponent(slug),
@@ -50,8 +64,8 @@ function Neighbor({ entry, label, align }: { entry: ReadEntry; label: string; al
 }
 
 /** The detail page: title, byline (date, author, topics), a table of contents and the body (`ArticleBody`), and the newer and older post. */
-export async function BlogPostPage(props: BlogPostProps) {
-	const entry = await readPost(props);
+export async function BlogPostPage(props: BlogPostProps, source: PostSource = "published") {
+	const entry = await readPost(props, source);
 	const { newer, older } = await neighborsOf(entry);
 	return (
 		<main className="mx-auto max-w-2xl px-4 py-12">
@@ -75,6 +89,19 @@ export async function BlogPostPage(props: BlogPostProps) {
 		</main>
 	);
 }
+
+/**
+ * The preview page of a post (`site.previewPath`, for example `/preview/blog/<slug>`): the same page as the post, over the draft the admin is editing. It shows only
+ * to a signed-in admin (in `next dev`, you), and is a 404 for everyone else.
+ */
+export function BlogPostPreviewPage(props: BlogPostProps) {
+	return BlogPostPage(props, "preview");
+}
+
+/** A preview is never indexed. */
+export const generateBlogPostPreviewMetadata = async (): Promise<Metadata> => ({
+	robots: { index: false, follow: false },
+});
 
 /** Title, description (the excerpt) and Open Graph of the post. An unknown address gets no metadata: the page itself answers 404 or redirects. */
 export async function generateBlogPostMetadata({ params }: BlogPostProps): Promise<Metadata> {

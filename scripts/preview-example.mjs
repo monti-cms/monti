@@ -31,7 +31,7 @@ const run = (cmd, args, cwd, env = {}) => {
 	execFileSync(cmd, args, { cwd, stdio: "inherit", env: { ...process.env, ...env } });
 };
 
-// 1. The test database. Nothing else is ever used: no `CMS_DATABASE_URL` from the shell, no other env file.
+// 1. The test database. Nothing else is ever used: no `DATABASE_URL` from the shell, no other env file.
 const envFile = path.join(root, ".env.local");
 const fileValues = existsSync(envFile) ? parseEnv(readFileSync(envFile, "utf8")) : {};
 const databaseUrl = fileValues.CMS_TEST_DATABASE_URL || process.env.CMS_TEST_DATABASE_URL;
@@ -64,11 +64,11 @@ try {
 console.log(`schema ${SCHEMA} created`);
 
 // 4. The example's env file, and the same values for the commands below (values from the shell would win over an env file, so they are set explicitly).
+// `next dev` signs you in as the admin by itself (the dev bypass is on by default there), so no GitHub login is set. MONTI_SECRET is the one secret.
 const env = {
-	CMS_DATABASE_URL: databaseUrl,
-	CMS_SCHEMA: SCHEMA,
-	CMS_DEV_AUTH_BYPASS: "1",
-	AUTH_SECRET: "local-only",
+	DATABASE_URL: databaseUrl,
+	DATABASE_SCHEMA: SCHEMA,
+	MONTI_SECRET: "local-only-preview-secret",
 };
 // Never write through a symlink (a linked `.env.local` would overwrite the file it points to): replace the link with a regular file.
 const replacedLink = writeRegularFile(

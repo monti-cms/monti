@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import { findBoundaryViolations, formatBoundaryViolations } from "@monti-cms/core/import-boundary";
 import { findSchemaFile, watchSchemaTypes } from "@monti-cms/core/schema-types";
 import type { NextConfig } from "next";
 
@@ -88,15 +89,44 @@ export function watchSchemaTypesInDev(
 	};
 }
 
+const CHECKED = Symbol.for("monti.import-boundary.checked");
+
+/**
+ * Warns, once per dev server start, when a client component (`"use client"`) imports `monti.config.ts` or another server-only module, directly or through other
+ * files. The config file holds the database and login settings and is server-only. Does nothing outside development, and never stops the server: the check
+ * reads source text, so `monti check:boundary` is the one to fail a CI job. Returns the warning, or `undefined` when there is nothing to say.
+ */
+export function checkImportBoundaryInDev(
+	cwd: string,
+	env: { readonly NODE_ENV?: string } = process.env,
+	warn: (message: string) => void = console.warn,
+): string | undefined {
+	if (env.NODE_ENV !== "development") return undefined;
+	const holder = globalThis as { [CHECKED]?: Set<string> };
+	const checked = holder[CHECKED] ?? new Set<string>();
+	holder[CHECKED] = checked;
+	if (checked.has(cwd)) return undefined;
+	checked.add(cwd);
+	try {
+		const message = formatBoundaryViolations(findBoundaryViolations(cwd));
+		if (!message) return undefined;
+		warn(`monti: ${message}`);
+		return message;
+	} catch {
+		// A folder that cannot be read is not the check's business.
+		return undefined;
+	}
+}
+
 /**
  * Adds the CMS wiring to the Next config. Builds package sources (TypeScript) together with the app, tells the server and browser bundles Next's `basePath`, and
  * points optional dependencies of CMS packages that are not installed (e.g. the block extension's `mermaid`) at an empty module (using that feature raises
  * an error telling you to install it).
  *
- * In development it also keeps the generated types of the schema file up to date (see {@link watchSchemaTypesInDev}).
+ * In development it also keeps the generated types of the schema file up to date (see {@link watchSchemaTypesInDev}) and warns when a client component imports
+ * the server-only `monti.config.ts` (see {@link checkImportBoundaryInDev}).
  *
- * It links no config file: the site config and the server config are passed to `createCms` in the app's own server file, and the admin gets the site
- * from that instance.
+ * It links no config file: `monti.config.ts` exports the CMS instance, the app's server files import it, and the admin gets the site from that instance as data.
  */
 export function withCms(nextConfig: NextConfig): NextConfig {
 	const turbopackRoot = nextConfig.turbopack?.root;
@@ -106,6 +136,7 @@ export function withCms(nextConfig: NextConfig): NextConfig {
 	);
 	const userWebpack = nextConfig.webpack;
 	watchSchemaTypesInDev(process.cwd());
+	checkImportBoundaryInDev(process.cwd());
 
 	return {
 		...nextConfig,

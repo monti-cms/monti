@@ -26,12 +26,12 @@
 사이트 설정 `plugins`의 `@monti-cms/mdx`가 주는 `mdx({ syntax })`에 확장을 나열한다. 순서가 쓰기 우선순위다.
 
 ```ts
-// cms.config.ts
-import { defineConfig } from "@monti-cms/core";
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [mdx({ syntax: [directiveSyntax()] })], // 지시자를 읽고 쓴다
 });
@@ -71,8 +71,8 @@ plugins: [mdx({ syntax: [directiveSyntax({ write: false })] })],
 사이트 설정에는 더는 `mdx` 키가 없다. 확장 목록이 `mdx()` 플러그인 안으로 옮겨 갔다.
 
 ```diff
--export default defineConfig({ mdx: { syntax: [directiveSyntax()] } });
-+export default defineConfig({ plugins: [mdx({ syntax: [directiveSyntax()] })] });
+-export const cms = defineConfig({ mdx: { syntax: [directiveSyntax()] } });
++export const cms = defineConfig({ plugins: [mdx({ syntax: [directiveSyntax()] })] });
 ```
 
 이 패키지 옆에 `@monti-cms/mdx`를 설치하고 목록을 옮긴다. 동작과 옵션은 그대로다(owner 스타일 블로그라면 쓰기 모드를 켠 `directiveSyntax()`).

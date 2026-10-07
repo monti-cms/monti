@@ -19,37 +19,22 @@ export interface S3StorageOptions {
 	readonly forcePathStyle?: boolean;
 }
 
-/** Cloudflare R2. The region is always `auto`. Anything left out is read from the `R2_*` environment variables. */
-export interface R2Options {
-	/** S3 API URL. Env `R2_ENDPOINT`. When unset, built from the account ID. */
-	readonly endpoint?: string;
-	/** Cloudflare account ID, used to build the endpoint. Env `R2_ACCOUNT_ID`. */
-	readonly accountId?: string;
-	/** Env `R2_BUCKET`. */
-	readonly bucket?: string;
-	/** Env `R2_ACCESS_KEY_ID`. */
-	readonly accessKeyId?: string;
-	/** Env `R2_SECRET_ACCESS_KEY`. */
-	readonly secretAccessKey?: string;
-	/** Start of the public URL of uploaded files (custom domain or `r2.dev` URL). Env `R2_PUBLIC_URL`. */
-	readonly publicBaseUrl?: string;
-}
-
 const env = (name: string): string | undefined => process.env[name]?.trim() || undefined;
 
-const missing = (fn: string, variable: string, option: string): never => {
-	throw new Error(`${fn}: ${variable} is not set (set the environment variable, or pass \`${option}\`)`);
+const missing = (variable: string, option: string): never => {
+	throw new Error(`\`${variable}\` is empty; set it, or pass \`s3Storage({ ${option} })\``);
 };
 
 /** An option wins over its environment variable. A missing required value is an error naming the variable. */
-function pick(fn: string, prefix: string, key: string, option: string, value: string | undefined): string {
-	return value || env(`${prefix}_${key}`) || missing(fn, `${prefix}_${key}`, option);
+function pick(key: string, option: string, value: string | undefined): string {
+	return value || env(`S3_${key}`) || missing(`S3_${key}`, option);
 }
 
 /**
- * S3 API store (AWS S3, MinIO and others). With no arguments everything comes from the `S3_*` environment variables: `S3_ENDPOINT`
+ * S3 API store: AWS S3, Cloudflare R2, MinIO and any other store that speaks the S3 API. With no arguments everything comes from the `S3_*` environment variables: `S3_ENDPOINT`
  * (optional when `S3_REGION` is set), `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` and
- * `S3_FORCE_PATH_STYLE`. Options override. The values are read on first use, so they may be empty while building.
+ * `S3_FORCE_PATH_STYLE`. Options override, each one on its own (a partial set of options is completed from the environment). The values are read on first use, so they may be empty while building.
+ * Cloudflare R2: `S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com` and `S3_REGION=auto`. MinIO: `S3_ENDPOINT=http://localhost:9000` and `S3_FORCE_PATH_STYLE=true`.
  */
 export function s3Storage(options: S3StorageOptions = {}): MediaAdapter {
 	return {
@@ -59,41 +44,17 @@ export function s3Storage(options: S3StorageOptions = {}): MediaAdapter {
 			const endpoint =
 				options.endpoint ||
 				env("S3_ENDPOINT") ||
-				(region ? `https://s3.${region}.amazonaws.com` : missing("s3Storage", "S3_ENDPOINT", "endpoint"));
+				(region ? `https://s3.${region}.amazonaws.com` : missing("S3_ENDPOINT", "endpoint"));
 			const config: MediaStoreConfig = {
 				endpoint,
 				region,
 				forcePathStyle: options.forcePathStyle ?? ["true", "1"].includes(env("S3_FORCE_PATH_STYLE") ?? ""),
-				bucket: pick("s3Storage", "S3", "BUCKET", "bucket", options.bucket),
-				accessKeyId: pick("s3Storage", "S3", "ACCESS_KEY_ID", "accessKeyId", options.accessKeyId),
-				secretAccessKey: pick("s3Storage", "S3", "SECRET_ACCESS_KEY", "secretAccessKey", options.secretAccessKey),
-				publicBaseUrl: pick("s3Storage", "S3", "PUBLIC_URL", "publicBaseUrl", options.publicBaseUrl),
+				bucket: pick("BUCKET", "bucket", options.bucket),
+				accessKeyId: pick("ACCESS_KEY_ID", "accessKeyId", options.accessKeyId),
+				secretAccessKey: pick("SECRET_ACCESS_KEY", "secretAccessKey", options.secretAccessKey),
+				publicBaseUrl: pick("PUBLIC_URL", "publicBaseUrl", options.publicBaseUrl),
 			};
 			return createS3MediaStore(config);
-		},
-	};
-}
-
-/**
- * Cloudflare R2. With no arguments everything comes from the `R2_*` environment variables: `R2_ACCOUNT_ID` (or `R2_ENDPOINT`),
- * `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`. Options override. The values are read on first use.
- */
-export function r2Storage(options: R2Options = {}): MediaAdapter {
-	return {
-		name: "r2",
-		createStore: () => {
-			const endpoint =
-				options.endpoint ||
-				env("R2_ENDPOINT") ||
-				`https://${pick("r2Storage", "R2", "ACCOUNT_ID", "accountId", options.accountId)}.r2.cloudflarestorage.com`;
-			return createS3MediaStore({
-				endpoint,
-				region: "auto",
-				bucket: pick("r2Storage", "R2", "BUCKET", "bucket", options.bucket),
-				accessKeyId: pick("r2Storage", "R2", "ACCESS_KEY_ID", "accessKeyId", options.accessKeyId),
-				secretAccessKey: pick("r2Storage", "R2", "SECRET_ACCESS_KEY", "secretAccessKey", options.secretAccessKey),
-				publicBaseUrl: pick("r2Storage", "R2", "PUBLIC_URL", "publicBaseUrl", options.publicBaseUrl),
-			});
 		},
 	};
 }

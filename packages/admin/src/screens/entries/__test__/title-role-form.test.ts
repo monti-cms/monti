@@ -1,4 +1,4 @@
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
@@ -16,7 +16,7 @@ import {
 
 /** A site whose title lives in `headline` (role `title`) in a document collection and in `name` in an item collection. */
 const site = createSite(
-	defineConfig({
+	defineSite({
 		collections: {
 			article: defineCollection({
 				label: "Article",

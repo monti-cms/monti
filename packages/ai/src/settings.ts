@@ -75,7 +75,7 @@ function readStored(site: Site, value: unknown): StoredProvider[] {
 }
 
 interface ResolvedProvider extends StoredProvider {
-	/** Decrypted key. `null` if it cannot be decrypted because the server config's `secret` changed without `previousSecrets`. */
+	/** Decrypted key. `null` if it cannot be decrypted because the config's `secret` (`MONTI_SECRET`) changed without `previousSecrets`. */
 	key: string | null;
 }
 

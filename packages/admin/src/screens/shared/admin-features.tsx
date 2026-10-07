@@ -4,7 +4,7 @@ import { createContext, type ReactNode, useContext } from "react";
 
 /** Admin features toggled by server settings. The server layout decides and passes them down so the screen draws correctly from the start. */
 export interface AdminFeatures {
-	/** Whether there is a media storage (`media` in `cms.server.ts`). */
+	/** Whether there is a media storage (`storage` in `monti.config.ts`). */
 	media: boolean;
 }
 

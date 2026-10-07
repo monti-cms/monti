@@ -1,19 +1,40 @@
 import { CmsAdminComponentsProvider, useCmsAdminComponents } from "@monti-cms/admin";
-import { defineCollection, defineConfig, fields, translate } from "@monti-cms/core";
+import { defineCollection, defineSite, fields, translate } from "@monti-cms/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
-import { blocks, callout, color, defaultTextPalette } from "..";
+import {
+	callout,
+	chart,
+	codeExplorer,
+	codeRef,
+	collapsible,
+	color,
+	columns,
+	defaultTextPalette,
+	mermaid,
+	tabs,
+	tooltip,
+} from "..";
 import { ChartProvider } from "../chart/provider";
 import { colorMessages } from "../color/messages";
 import { MermaidProvider } from "../mermaid/provider";
 
 const names = (plugins: readonly { name: string }[]) => plugins.map((plugin) => plugin.name);
 
-describe("blocks()", () => {
-	it("adds every block extension at once (inline marks in tooltip → code ref → text color order)", () => {
-		const all = names(blocks());
-		for (const name of [
+const post = defineCollection({ label: "Post", kind: "document", fields: { title: fields.text({ label: "T" }) } });
+const base = { collections: { post }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
+
+describe("one plugin per block", () => {
+	it("every block extension is a plain plugin entry that works with no arguments", () => {
+		const everyone = [callout, collapsible, tabs, columns, codeExplorer, mermaid, chart, tooltip, codeRef, color];
+		for (const factory of everyone) {
+			const plugin = factory();
+			expect(plugin.name, factory.name).toMatch(/^[a-z][a-z-]*$/);
+			expect((plugin.blocks ?? []).length, plugin.name).toBeGreaterThan(0);
+			expect(plugin.render, plugin.name).toBeTypeOf("function");
+		}
+		expect(names(everyone.map((factory) => factory()))).toEqual([
 			"callout",
 			"collapsible",
 			"tabs",
@@ -24,50 +45,48 @@ describe("blocks()", () => {
 			"tooltip",
 			"code-ref",
 			"color",
-		]) {
-			expect(all).toContain(name);
-		}
-		expect(all.indexOf("tooltip")).toBeLessThan(all.indexOf("code-ref"));
-		expect(all.indexOf("code-ref")).toBeLessThan(all.indexOf("color"));
-		// Same as the extensions created one by one.
-		expect(blocks({ only: ["callout"] })[0]?.blocks).toEqual(callout().blocks);
+		]);
 	});
 
-	it("picks (`only`), omits (`omit`·`false`) and passes per-extension options", () => {
-		expect(names(blocks({ only: ["tooltip", "color"] }))).toEqual(["tooltip", "color"]);
-		const remaining = names(blocks({ omit: ["chart", "mermaid"], codeRef: false }));
-		for (const omitted of ["chart", "mermaid", "code-ref"]) expect(remaining).not.toContain(omitted);
-		for (const kept of ["callout", "collapsible", "tabs", "columns", "code-explorer", "tooltip", "color"])
-			expect(remaining).toContain(kept);
+	it("there is no bundle that adds them all behind one call", async () => {
+		const exported = await import("..");
+		expect(exported).not.toHaveProperty("blocks");
+	});
+
+	it("listing them in the config adds exactly the blocks listed, in the order given", () => {
+		const config = defineSite({ ...base, plugins: [tooltip(), callout(), codeRef()] });
+		expect(names(config.plugins ?? [])).toEqual(["tooltip", "callout", "code-ref"]);
+	});
+
+	it("a block that is not listed is not there", () => {
+		const blocksOf = (config: { plugins?: readonly { blocks?: readonly { name: string }[] }[] }) =>
+			(config.plugins ?? []).flatMap((plugin) => (plugin.blocks ?? []).map((block) => block.name));
+		const some = blocksOf(defineSite({ ...base, plugins: [callout(), tooltip()] }));
+		expect(some).toContain("callout");
+		expect(some).not.toContain("chart");
+		expect(some).not.toContain("tabs");
+	});
+
+	it("takes its own options, and a bad option is a config error", () => {
 		const palette = [defaultTextPalette((key) => translate(colorMessages, "en", key))[0]].filter(
 			(item) => item !== undefined,
 		);
-		const [colorPlugin] = blocks({ only: ["color"], color: { palette } });
-		expect(colorPlugin?.options).toEqual({ palette });
-		expect(colorPlugin?.options).toEqual(color({ palette }).options);
-		expect(() => blocks({ only: ["nope" as never] })).toThrow(/unknown block extension "nope"/);
-	});
-
-	it("spreading into the site config adds the blocks, and invalid options are config errors", () => {
-		const post = defineCollection({ label: "Post", kind: "document", fields: { title: fields.text({ label: "T" }) } });
-		const base = { collections: { post }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
-		expect(() => defineConfig({ ...base, plugins: [...blocks()] })).not.toThrow();
+		expect(color({ palette }).options).toEqual({ palette });
+		expect(() => defineSite({ ...base, plugins: [color({ palette })] })).not.toThrow();
 		expect(() =>
-			defineConfig({
+			defineSite({
 				...base,
 				plugins: [
-					...blocks({
-						color: {
-							palette: [
-								{ id: "x", name: "x", fg: { light: "red", dark: "#fff" }, bg: { light: "#fff", dark: "#000" } },
-							],
-						},
+					color({
+						palette: [{ id: "x", name: "x", fg: { light: "red", dark: "#fff" }, bg: { light: "#fff", dark: "#000" } }],
 					}),
 				],
 			}),
 		).toThrow(/hex/);
-		// Adding the same extension twice is a config error.
-		expect(() => defineConfig({ ...base, plugins: [...blocks(), callout()] })).toThrow();
+	});
+
+	it("adding the same block twice is a config error", () => {
+		expect(() => defineSite({ ...base, plugins: [callout(), callout()] })).toThrow();
 	});
 });
 

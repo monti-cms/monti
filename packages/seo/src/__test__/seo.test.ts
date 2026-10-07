@@ -1,4 +1,4 @@
-import { type CollectionsConfig, defineCollection, defineConfig, fields, valueFieldsOf } from "@monti-cms/core";
+import { type CollectionsConfig, defineCollection, defineSite, fields, valueFieldsOf } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { aiRegistryOf } from "../../../ai/src/registry";
@@ -31,7 +31,7 @@ describe("seoFields", () => {
 			list: { columns: [] },
 		});
 		// The labels are read when a site is created from the config, in that site's admin language.
-		const site = createSite(defineConfig({ ...testConfig, collections: { page } as CollectionsConfig }));
+		const site = createSite(defineSite({ ...testConfig, collections: { page } as CollectionsConfig }));
 		const t = site.createTranslator(seoMessages);
 		const bundle = site.schemaOf("page").fields as unknown as typeof seoBundle;
 		expect(bundle.seoTitle.label).toBe(t("field.title"));

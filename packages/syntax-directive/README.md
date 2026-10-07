@@ -26,12 +26,12 @@ It needs `@monti-cms/mdx` (and so `@monti-cms/core`) as a peer dependency.
 List the extension in `mdx({ syntax })` of `@monti-cms/mdx`, in the site config `plugins`. The order is the precedence for writing.
 
 ```ts
-// cms.config.ts
-import { defineConfig } from "@monti-cms/core";
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [mdx({ syntax: [directiveSyntax()] })], // read and write directives
 });
@@ -71,8 +71,8 @@ The public renderer (`renderMdx` of `@monti-cms/mdx/render`) reads with the same
 The site config no longer has an `mdx` key: the extension list moved into the `mdx()` plugin.
 
 ```diff
--export default defineConfig({ mdx: { syntax: [directiveSyntax()] } });
-+export default defineConfig({ plugins: [mdx({ syntax: [directiveSyntax()] })] });
+-export const cms = defineConfig({ mdx: { syntax: [directiveSyntax()] } });
++export const cms = defineConfig({ plugins: [mdx({ syntax: [directiveSyntax()] })] });
 ```
 
 Install `@monti-cms/mdx` next to this package and move the list. Behavior and options are the same (for the owner-style blog, `directiveSyntax()` with write mode on).

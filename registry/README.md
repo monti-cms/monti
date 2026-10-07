@@ -18,7 +18,7 @@ pnpm exec monti add article-body --dry-run       # show what would be written an
 | Name | Type | What it is | Needs |
 | --- | --- | --- | --- |
 | `article-body` | public page | `<ArticleBody cms={cms} entry={entry} components={...} />`: the stored document drawn by `CmsContent`, with a table of contents from `tableOfContents` above it. A server component | `@monti-cms/core` |
-| `blog-theme` | public pages | A post list (paged) and a post page (title, date, author, table of contents, body, newer and older post) for one collection, with `generateMetadata`, 404 and redirects. Route files go to `app/(site)/blog/` | `@monti-cms/core`, `next`, `article-body` |
+| `blog-theme` | public pages | A post list (paged) and a post page (title, date, author, table of contents, body, newer and older post) for one collection, with `generateMetadata`, 404 and redirects. Route files go to `app/(site)/blog/`, and a draft preview page to `app/(site)/preview/blog/` (for `site.previewPath: "/preview"`, read with `previewEntry` of `@monti-cms/nextjs`) | `@monti-cms/core`, `@monti-cms/nextjs`, `next`, `article-body` |
 | `entry-editor` | admin | `<EntryEditorScreen adminId target fields />`: a minimal custom editor screen on `useEntryEditor` (load, save, publish, recovery copy, conflict) and `useField` | `@monti-cms/admin`, `field-row` |
 | `field-row` | admin | `<FieldRow name="title" />`: one form field on `useField` (label, control, description, error) | `@monti-cms/admin` |
 | `notice-block-view` | admin | The edit view of a `notice` block for `blockViews`: an editable title, a level switch and the nested body (`useBlockEditor`, `BlockFrame`, `Content`). Export `noticeBlockViews` | `@monti-cms/admin` |
@@ -36,7 +36,7 @@ pnpm exec monti add blog-theme
 # app/(site)/blog/[slug]/page.tsx   the post:   /blog/<slug>
 ```
 
-- **Edit `theme.config.ts`.** It is the one place for what differs per site: the `cms` import (`@/cms.server`), the `collection` name (default `post`), `routeBase` (`/blog`), `pageSize`, the relation
+- **Edit `theme.config.ts`.** It is the one place for what differs per site: the `cms` import (`@/monti.config`), the `collection` name (default `post`), `routeBase` (`/blog`), `pageSize`, the relation
   fields for the author and topics, the summary field, `blogTitle`, `components` (the public components of your blocks, as for `CmsContent`) and `neighborWindow` (how many of the newest posts are searched for the
   newer and older post; `0` turns those links off).
 - **The route.** The route files are thin: they re-export the page and `generateMetadata` from `blog-list.tsx` and `blog-post.tsx` and set `dynamic = "force-dynamic"`. To serve the blog under another path, move
@@ -45,8 +45,8 @@ pnpm exec monti add blog-theme
 - **Not found and redirects.** An unknown, unpublished or draft address is a 404, and an old address of a renamed post is a permanent redirect to the new one.
 - **Metadata.** The post page sets the title, the description (the summary field), a canonical path and Open Graph article fields.
 
-`notice-block-view` draws a block your config defines: add a `notice` block with a container syntax and a `level` attribute (`info` or `warning`) to `cms.config.ts`,
-then register the view in your admin components:
+`notice-block-view` draws a block your config defines: add a `notice` block with a container syntax and a `level` attribute (`info` or `warning`) to the schema or blocks of `monti.config.ts`,
+then register the view through the `CmsAdminComponentsProvider` of your own admin plugin (`definePlugin({ ..., admin: () => import("./admin") })` with `defineAdminPlugin({ Provider })`):
 
 ```tsx
 import { noticeBlockViews } from "@/components/monti/notice-block-view/notice-block-view";

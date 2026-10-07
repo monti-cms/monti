@@ -3,7 +3,7 @@ import { sql } from "kysely";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
-import { defineCollection, defineConfig, fields } from "../../../index";
+import { defineCollection, defineSite, fields } from "../../../index";
 import { createSite } from "../../../site";
 import { migrateContentStore } from "../content-store";
 import { createDb, dbOn } from "../db/kysely";
@@ -223,7 +223,7 @@ describe("kysely", () => {
 				fields: { [titleKey]: fields.text({ label: "Title", role: "title" }) },
 			});
 		const site = createSite(
-			defineConfig({
+			defineSite({
 				collections: { a: collection("headline"), b: collection("name") },
 				locales: [{ code: "en", name: "English" }],
 				defaultLocale: "en",

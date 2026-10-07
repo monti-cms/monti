@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { CmsAdminComponentsProvider, useCmsAdminComponents, useFormat } from "@monti-cms/admin";
 import { CmsApiError } from "@monti-cms/admin/api";
-import { defineConfig } from "@monti-cms/core";
+import { defineSite } from "@monti-cms/core";
 import { createSite, SiteProvider } from "@monti-cms/core/client";
 import { isBlockId, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, renderHook, render as renderWithoutSite, screen, waitFor } from "@testing-library/react";
@@ -246,7 +246,7 @@ describe("registering the source panel and the format", () => {
 	});
 
 	it("the registered format reads with the syntax extensions of mdx({ syntax })", () => {
-		const syntaxSite = createSite(defineConfig({ ...testConfig, plugins: [mdx({ syntax: [atNotation] })] } as never));
+		const syntaxSite = createSite(defineSite({ ...testConfig, plugins: [mdx({ syntax: [atNotation] })] } as never));
 		const Wrapper = ({ children }: { children: ReactNode }) => (
 			<SiteProvider site={syntaxSite}>
 				<MdxAdminProvider>{children}</MdxAdminProvider>

@@ -1,5 +1,5 @@
 import { useAdminPathname, useAdminRouter, useAdminSearchParams } from "@monti-cms/admin/router";
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { AuthError } from "@monti-cms/core/runtime";
 import { fakeCms } from "@monti-cms/core/testing";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -105,7 +105,7 @@ describe("cmsAdminMetadata", () => {
 
 	it("puts the name of the instance's site in the title", () => {
 		const cms = fakeCms({
-			config: defineConfig({
+			config: defineSite({
 				collections: {
 					page: defineCollection({
 						label: "Page",

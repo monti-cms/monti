@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { defineCollection, defineConfig, fields } from "../..";
+import { defineCollection, defineSite, fields } from "../..";
 import type { Cms } from "../../cms";
 import type { CollectionName, MetadataFor } from "../../core/types";
 import type { DocumentComponentsFor } from "../../render";
@@ -55,8 +55,8 @@ const schema = {
 	defaultLocale: "ko",
 } as const;
 
-describe("defineConfig({ schema }) types", () => {
-	const config = defineConfig({ schema });
+describe("defineSite({ schema }) types", () => {
+	const config = defineSite({ schema });
 
 	it("keeps collection names, locale codes and the shape of each collection's metadata", () => {
 		expectTypeOf<CollectionName<typeof config>>().toEqualTypeOf<"post" | "tag">();
@@ -87,7 +87,7 @@ describe("defineConfig({ schema }) types", () => {
 			kind: "item",
 			fields: { title: fields.text({ label: "Name" }), slug: fields.slug({ label: "Address" }) },
 		});
-		const code = defineConfig({
+		const code = defineSite({
 			collections: { post, tag },
 			locales: [{ code: "ko", name: "x" }],
 			defaultLocale: "ko",
@@ -111,7 +111,7 @@ describe("defineConfig({ schema }) types", () => {
 			kind: "item",
 			fields: { title: fields.text({ label: "Name" }), slug: fields.slug({ label: "Address" }) },
 		});
-		const merged = defineConfig({ schema, collections: { note } });
+		const merged = defineSite({ schema, collections: { note } });
 		expectTypeOf<CollectionName<typeof merged>>().toEqualTypeOf<"post" | "tag" | "note">();
 	});
 });

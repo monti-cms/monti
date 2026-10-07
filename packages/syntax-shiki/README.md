@@ -28,12 +28,12 @@ It needs `@monti-cms/mdx` (and so `@monti-cms/core`) as a peer dependency.
 List the extension in `mdx({ syntax })` of `@monti-cms/mdx`, in the site config `plugins`.
 
 ```ts
-// cms.config.ts
-import { defineConfig } from "@monti-cms/core";
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
 import { shikiNotation } from "@monti-cms/syntax-shiki";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [mdx({ syntax: [shikiNotation()] })],
 });

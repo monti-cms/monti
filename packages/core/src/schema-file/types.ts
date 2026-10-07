@@ -96,7 +96,7 @@ export interface SchemaTypes {
 }
 
 /**
- * What `defineConfig({ schema })` accepts as the file's content: loosely typed on purpose. A JSON file imported by TypeScript has wide types (`kind: string`),
+ * What `defineSite({ schema })` accepts as the file's content: loosely typed on purpose. A JSON file imported by TypeScript has wide types (`kind: string`),
  * which never match the strict `SchemaFile`. The strict check happens at runtime; the strict types come from the generated file (`MontiRegister`).
  */
 export interface SchemaInput {
@@ -121,7 +121,7 @@ export type RegisteredSchema = MontiRegister extends { readonly schema: infer Sc
 	: never;
 
 /**
- * The strict types of the file passed to `defineConfig`. A schema written in code with literal types (an inline object, a generated type) is used as it is.
+ * The strict types of the file passed to `defineSite`. A schema written in code with literal types (an inline object, a generated type) is used as it is.
  * A JSON file imported by TypeScript has wide types, so the types come from the generated file; with none, names are plain strings.
  */
 export type ResolvedSchema<Schema extends SchemaInput> = Schema extends SchemaTypes
@@ -130,12 +130,12 @@ export type ResolvedSchema<Schema extends SchemaInput> = Schema extends SchemaTy
 		? SchemaTypes
 		: RegisteredSchema;
 
-/** A collection with the `body` flag `defineConfig` fills in: `true` or `false`, also when the file writes the object form that limits the body. */
+/** A collection with the `body` flag `defineSite` fills in: `true` or `false`, also when the file writes the object form that limits the body. */
 type WithBodyFlag<Collection> = 0 extends 1 & Collection
 	? Collection
 	: Omit<Collection, "body"> & { readonly body: boolean };
 
-/** The collections of the file, each with the `body` flag `defineConfig` fills in. */
+/** The collections of the file, each with the `body` flag `defineSite` fills in. */
 export type SchemaCollectionsOf<Schema extends SchemaInput> = {
 	readonly [Name in keyof ResolvedSchema<Schema>["collections"]]: WithBodyFlag<
 		ResolvedSchema<Schema>["collections"][Name]

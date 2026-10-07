@@ -120,7 +120,7 @@ describe("the secret", () => {
 			expect(response.status).toBe(400);
 			expect(await response.json()).toMatchObject({
 				code: "secret_not_configured",
-				message: expect.stringContaining("CMS_SECRET"),
+				message: expect.stringContaining("MONTI_SECRET"),
 			});
 			const view = await (await bare.cms.handle(new Request("http://localhost/api/cms/v1/git-sync/settings"))).json();
 			expect(view).toMatchObject({ secretsAvailable: false, token: { set: false } });

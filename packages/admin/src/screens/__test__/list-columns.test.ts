@@ -1,4 +1,4 @@
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { columnsFor, defaultListColumns } from "../list-columns";
@@ -35,7 +35,7 @@ const topic = defineCollection({
 	fields: { title: fields.text({ label: "Title" }), key: fields.slug({ label: "Key", from: "title" }) },
 });
 const site = createSite(
-	defineConfig({
+	defineSite({
 		collections: { article, note, story, topic },
 		locales: [
 			{ code: "en", name: "English" },
@@ -76,7 +76,7 @@ describe("list columns", () => {
 describe("locale column and the translation UI option", () => {
 	const make = (locales: { code: string; name: string }[], admin?: { translations?: boolean }) =>
 		createSite(
-			defineConfig({
+			defineSite({
 				collections: { article, note, story, topic },
 				locales,
 				defaultLocale: "en",

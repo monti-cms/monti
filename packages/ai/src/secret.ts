@@ -10,7 +10,7 @@ type SecretSite = Pick<Site, "createTranslator">;
 const noSecretMessage = (site: SecretSite) => site.createTranslator(providerMessages)("noSecret");
 
 /**
- * Encryption of AI service keys. The CMS instance derives this plugin's own key from the server config's `secret` and the plugin name
+ * Encryption of AI service keys. The CMS instance derives this plugin's own key from the config's one secret (`MONTI_SECRET`) and the plugin name
  * (`cms.secrets("ai")`), so the plugin never sees the master secret. Keys are stored as `mk1:<key id>:<iv>:<tag>:<body>`.
  *
  * Keys stored before per-plugin keys (`v1:<iv>:<tag>:<body>`, AES-256-GCM under `sha256("cms-ai-key:" + secret)`) still decrypt through the legacy

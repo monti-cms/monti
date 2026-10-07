@@ -21,6 +21,7 @@
 		"./adapters/auth": "./src/adapters/auth/index.ts",
 		"./testing": "./src/testing.ts",
 		"./cli": "./src/cli/index.ts",
+		"./import-boundary": "./src/cli/import-boundary.ts",
 		"./schema-types": "./src/cli/schema-types.ts",
 		"./schema-change": "./src/schema-change/index.ts",
 		"./schema-edit": "./src/schema-edit/index.ts",
@@ -140,6 +141,10 @@
 			"./cli": {
 				"types": "./dist/cli/index.d.ts",
 				"default": "./dist/cli/index.js"
+			},
+			"./import-boundary": {
+				"types": "./dist/cli/import-boundary.d.ts",
+				"default": "./dist/cli/import-boundary.js"
 			},
 			"./schema-types": {
 				"types": "./dist/cli/schema-types.d.ts",

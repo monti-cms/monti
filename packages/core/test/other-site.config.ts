@@ -1,6 +1,6 @@
 import { chartBlock } from "../../blocks/src/definitions";
 import { seoFields } from "../../seo/src/fields";
-import { defineBlock, defineCollection, defineConfig, fields } from "../src";
+import { defineBlock, defineCollection, defineSite, fields } from "../src";
 
 /**
  * Alternative site config used as a regression guard. Deliberately different from the reference blog config (`cms.config.ts`).
@@ -102,7 +102,7 @@ const mapBlock = defineBlock({
 	editor: { view: "node", insertable: true, keywords: ["map"], insert: { code: "lat 37.5\nlng 127.0" } },
 });
 
-export default defineConfig({
+export default defineSite({
 	collections: { article, topic, author },
 	locales: [{ code: "en", name: "English" }],
 	defaultLocale: "en",

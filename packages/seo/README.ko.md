@@ -8,7 +8,8 @@
 ## 등록
 
 ```ts
-// cms.config.ts
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { seo, seoFields } from "@monti-cms/seo";
 
 const article = defineCollection({
@@ -24,7 +25,7 @@ const article = defineCollection({
 	list: { columns: ["title", "status"] },
 });
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [seo()],
 });
@@ -73,14 +74,14 @@ seoFields({
 
 ```ts
 import { seoOf } from "@monti-cms/seo";
-import { post } from "@/cms.config";
+import { post } from "@/monti.config";
 
 const { title, description, imageId, canonical, noindex } = seoOf(post, entry.metadata);
 ```
 
 컬렉션 정의(`defineCollection`의 결과)와 저장된 메타데이터에서 역할로 값을 읽는다. 비운 제목·설명은 제목(`title`)·요약
 (`role: "summary"`)으로 채우고, 비운 값은 없다(`undefined`). 공유 이미지는 미디어 ID라 공개 주소는 사이트가 만든다
-(`cms.read.mediaUrl(id)`, 앱의 `cms.server.ts`가 내보내는 `cms` 인스턴스).
+(`cms.read.mediaUrl(id)`, 앱의 `monti.config.ts`가 내보내는 `cms` 인스턴스).
 
 ## 진입점
 

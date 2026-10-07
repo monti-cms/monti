@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createCms } from "../../cms";
-import { defineConfig } from "../../config/define";
+import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
 import type { SchemaFile } from "../../schema-file/types";
 import { postgres } from "../../server";
@@ -80,7 +80,7 @@ describe("schema:diff and schema:apply", () => {
 	const loadCms = async () =>
 		createCms({
 			id: `schema-apply-${++serial}`,
-			config: defineConfig({ schema: JSON.parse(readFileSync(file, "utf8")) }),
+			config: defineSite({ schema: JSON.parse(readFileSync(file, "utf8")) }),
 			server: {
 				database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),
 				auth: { name: "test", create: () => ({}) as never },
@@ -206,6 +206,6 @@ describe("schema:diff and schema:apply", () => {
 			error: (message) => lines.push(message),
 		});
 		expect(code).toBe(1);
-		expect(lines.join("\n")).toContain("cannot find cms.server.ts");
+		expect(lines.join("\n")).toContain("cannot find monti.config.ts");
 	});
 });

@@ -1,4 +1,4 @@
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/client";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { cleanup, screen, within } from "@testing-library/react";
@@ -35,7 +35,7 @@ const article = defineCollection({
 	list: { columns: ["title", "format", "subtitle", "accent", "hero", "related", "lead", "status"] },
 });
 const site = createSite(
-	defineConfig({ collections: { article }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
+	defineSite({ collections: { article }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
 );
 
 afterEach(cleanup);

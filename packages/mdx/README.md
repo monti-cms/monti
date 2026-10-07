@@ -29,12 +29,12 @@ It needs `@monti-cms/core` and `react` as peer dependencies, and `@monti-cms/adm
 Add `mdx()` to `plugins` in the site config, and import the styles after the admin styles.
 
 ```ts
-// cms.config.ts
-import { defineConfig } from "@monti-cms/core";
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [mdx({ syntax: [directiveSyntax()] })], // `mdx()` alone for standard MDX
 });
@@ -55,7 +55,7 @@ A site without `mdx()` accepts documents (`doc`) only: a text write fails with `
 
 | Entry point | Used in | Contents |
 | --- | --- | --- |
-| `@monti-cms/mdx` | `cms.config.ts`, syntax extension packages | The plugin `mdx({ syntax })` and the syntax extension API: the types (`SyntaxExtension`, `SyntaxContext`, `SerializeContext`, ...), `RAW_SOURCE_PARAGRAPH`, the table helpers and the code comment syntax helpers. It stays light (no remark imports) because the config imports it |
+| `@monti-cms/mdx` | `monti.config.ts`, syntax extension packages | The plugin `mdx({ syntax })` and the syntax extension API: the types (`SyntaxExtension`, `SyntaxContext`, `SerializeContext`, ...), `RAW_SOURCE_PARAGRAPH`, the table helpers and the code comment syntax helpers. It stays light (no remark imports) because the config imports it |
 | `@monti-cms/mdx/format` | server code, tests | `mdxFormat`, `createMdxFormat({ syntax })`, and the parse and write API: `analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `bodyFromDocument`, `bodyDocument`, `documentToMdx`, `toStoredDocument`, `fromStoredDocument`, `parseMdxAst`, `insertSoftBreaks`, `readableMdx`, `compareMdxStructure`, `configuredSyntax`, `remarkFenceBlocksToMdx`, ... |
 | `@monti-cms/mdx/render` | public pages (server components) | `renderMdx(source, options)` |
 | `@monti-cms/mdx/admin` | the admin (loaded by the plugin) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, and the admin provider that registers them |

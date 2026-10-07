@@ -1,4 +1,5 @@
 import type { Cms } from "@monti-cms/core/runtime";
+import { nextHost } from "./auth/host";
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -11,13 +12,17 @@ export type CmsRouteHandler = (request: Request, context: { params: Promise<{ pa
 
 /**
  * The Next adapter of `cms.handle()`: one handler per HTTP method for `app/api/cms/[...path]/route.ts`.
- * It only passes the request and the path segments Next already split on to the core handler.
+ * It only passes the request and the path segments Next already split on to the core handler, and attaches the Next request headers to the instance
+ * (`cms.attachHost(nextHost)`), so the login can read the session and the dev bypass can see the request without anything in `monti.config.ts`.
  *
  * ```ts
  * export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
  * ```
  */
-export function createRouteHandler(cms: Pick<Cms, "handle">): Record<Method, CmsRouteHandler> {
+export function createRouteHandler(
+	cms: Pick<Cms, "handle"> & Partial<Pick<Cms, "attachHost">>,
+): Record<Method, CmsRouteHandler> {
+	cms.attachHost?.(nextHost);
 	const handler: CmsRouteHandler = async (request, context) =>
 		cms.handle(request, { path: (await context.params).path });
 	return { GET: handler, POST: handler, PATCH: handler, PUT: handler, DELETE: handler };

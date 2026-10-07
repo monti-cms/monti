@@ -164,7 +164,7 @@ describe("typing from the generated file", () => {
 		write(
 			dir,
 			"cms.config.ts",
-			`import { defineConfig } from "@monti-cms/core";\nimport schema from "./monti.schema.json";\n\nexport default defineConfig({ schema });\n`,
+			`import { defineSite } from "@monti-cms/core";\nimport schema from "./monti.schema.json";\n\nexport default defineSite({ schema });\n`,
 		);
 		write(dir, "check.ts", options.check);
 		write(dir, "tsconfig.json", {

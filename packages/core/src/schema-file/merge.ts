@@ -2,7 +2,7 @@ import { parseSchemaFile } from "./format";
 import { readSchemaFile } from "./read";
 import type { SchemaFile } from "./types";
 
-/** What `defineConfig` takes next to `schema`: the code part of the config (anything the config has, except what the file owns). */
+/** What `defineSite` takes next to `schema`: the code part of the config (anything the config has, except what the file owns). */
 type CodeConfig = { readonly schema: unknown } & { readonly [key: string]: unknown };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -23,7 +23,7 @@ export function loadSchemaOption(schema: unknown): SchemaFile {
 }
 
 /**
- * Merges the schema file into the code part of a config, and returns the config `defineConfig` checks like any other. The rule is that code adds to the file
+ * Merges the schema file into the code part of a config, and returns the config `defineSite` checks like any other. The rule is that code adds to the file
  * and may override its environment-specific settings, but never silently replaces its data:
  *
  * - `collections`: the file's collections and the code's, side by side. The same name in both is an error.

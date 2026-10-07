@@ -17,4 +17,5 @@ export * from "./core/store/__test__/seed";
 export type { JsonValue } from "./core/types";
 export { matchRoute } from "./http/router";
 export { createMemoryPluginStorage, type MemoryPluginStorage } from "./plugin/memory-storage";
+export { createSecretsVault } from "./secrets";
 export { createContentService } from "./services/content-service";

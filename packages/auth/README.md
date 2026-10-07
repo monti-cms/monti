@@ -15,32 +15,29 @@ pnpm add @monti-cms/auth
 ## Use
 
 ```ts
-// cms.server.ts
+// monti.config.ts
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
-import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth"; // only in a Next.js app
-import config from "./cms.config";
+import { defineConfig, postgres } from "@monti-cms/core/server";
+import schema from "./monti.schema.json";
 
-export const cms = createCms({
-	config,
-	server: defineServerConfig({
-		database: postgres({ connectionString: process.env.CMS_DATABASE_URL }),
-		auth: auth({
-			providers: [
-				github({
-					clientId: process.env.AUTH_GITHUB_ID,
-					clientSecret: process.env.AUTH_GITHUB_SECRET,
-					admins: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub id
-				}),
-			],
-			host: nextHost,
-			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1",
-			secret: process.env.AUTH_SECRET,
-		}),
-	}),
+export const cms = defineConfig({
+	schema,
+	database: postgres(),
+	auth: auth({ providers: [github()] }),
 });
 ```
+
+`github()` and `postgres()` read their settings from the environment, so the call needs no arguments:
+
+| Variable | Read by | Meaning |
+| --- | --- | --- |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | `github()` | The GitHub OAuth app |
+| `MONTI_ADMIN_GITHUB_ID` | `github()` | The admin: one numeric GitHub id, or several separated by commas |
+| `MONTI_SECRET` | `defineConfig` | The one secret; the login session key is derived from it (see "Secret") |
+| `DATABASE_URL`, `DATABASE_SCHEMA` | `postgres()` | The content database |
+
+An explicit value overrides the variable (`github({ clientId, clientSecret, admins: ["12345678"] })`). Nothing is guessed from other names, and a missing required value is an error that names the variable. The GitHub app is checked when the login connection is created; under the dev bypass (below) only when a sign-in is attempted, so `next dev` runs with none of them set.
 
 The callback URL of the GitHub OAuth app is `<site>/api/cms/auth/callback/github`, as it was with NextAuth.
 
@@ -50,12 +47,34 @@ The callback URL of the GitHub OAuth app is `<site>/api/cms/auth/callback/github
 | --- | --- |
 | `providers` | The ways to log in, in the order of the login buttons. At least one; ids must differ |
 | `admins` | Admins as qualified account ids (`"github:12345678"`). The ones on a provider (`github({ admins })`) count too |
-| `secret` | Signs the login session cookie. If unset, the `AUTH_SECRET` environment variable. Separate from the server config `secret`, which encrypts stored values |
-| `devBypass` | Local development only: treat requests from this machine as the first admin. Same limits as before (`NODE_ENV=development`, not a deployed server, a loopback request; see "Login bypass for development" in the core README) |
+| `devBypass` | Local development only: treat requests from this machine as the first admin. On by default under `next dev`; `false` turns it off (see "Dev bypass") |
 | `basePath` | Login API path, default `/api/cms/auth` (served by the admin API route; see "Login path" in the core README) |
-| `host` | What the host framework supplies: `requestHeaders()` (the headers of the request being handled) and `rethrow(error)`. `nextHost` of `@monti-cms/nextjs/auth` is the Next.js one. Without `requestHeaders`, `session()` needs the request passed in and the development bypass never applies |
+| `host` | Not needed in Next.js, where `@monti-cms/nextjs` attaches it. For other frameworks pass `{ requestHeaders, rethrow }`; it wins over the attached one. Without `requestHeaders`, `session()` needs the request passed in and the development bypass never applies |
 
-Host trust (`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`) works as described in "Host trust" in the core README. The session is a signed JWT cookie (8 hours, rolling), so nothing is stored for it.
+There is no `secret` option: the session key comes from `MONTI_SECRET` (see "Secret"). Host trust (`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`) is described under "Host trust". The session is a signed JWT cookie (8 hours, rolling), so nothing is stored for it.
+
+## Secret
+
+The one secret, `MONTI_SECRET` (`defineConfig`), is the only secret to set. The session cookie key is derived from it with HKDF (`cms.secrets("auth").deriveKey("session")`), and so is each plugin's encryption key (AI service keys, the git-sync token). Neither `AUTH_SECRET` nor `CMS_SECRET` is read any more, and `auth()` has no `secret` option. If it is missing, the login fails with an error that names `MONTI_SECRET`. Changing it signs everyone out; list the replaced value in `previousSecrets` of `defineConfig` to keep values stored under it readable.
+
+A login connection that builds its own session key gets the same helper: `AuthCreateContext` has `secrets: PluginSecrets` (`cms.secrets("auth")`).
+
+## Host trust
+
+`trustHost` tells Auth.js whether it may build the callback URL from the `X-Forwarded-Host` and `X-Forwarded-Proto` headers. It is decided in this order:
+
+1. The `trustHost` option, if given.
+2. The `AUTH_TRUST_HOST` environment variable.
+3. **On** when a known proxy platform is detected (an environment variable of Vercel, Netlify, Cloudflare Pages, Render, Railway, Fly.io or Cloud Run: `VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`), or in development and tests.
+4. Otherwise **off** in production.
+
+A proxy you run yourself (nginx, a load balancer) is not detected: set `trustHost: true` or `AUTH_TRUST_HOST=true`, and only if that proxy overwrites `X-Forwarded-Host`. Otherwise a client could choose the host the login callback is built from. `AUTH_URL`, if set, pins the site's origin instead.
+
+## Dev bypass
+
+Under `next dev` (`NODE_ENV=development`) you are signed in as the first admin with no login settings at all. It is on by default and applies only when all of these hold: the request comes from this machine (a loopback host), and the environment does not look deployed (no hosting platform variables, no public `AUTH_URL`). It never applies in production. `auth({ devBypass: false })` turns it off; `devBypass: true` on a process that looks deployed refuses to start. There is no environment variable for it (`CMS_DEV_AUTH_BYPASS` is gone).
+
+It needs the request headers, which the Next.js integration attaches automatically, so it works with no config. Outside Next.js, without `host.requestHeaders` the login cannot see the request and the bypass never applies; a warning says so.
 
 ## Who is an admin
 
@@ -130,13 +149,12 @@ The login screen posts a plain form to the core (`POST /api/cms/v1/session/sign-
 -import { githubAuth } from "@monti-cms/nextjs/auth";
 +import { auth } from "@monti-cms/auth";
 +import { github } from "@monti-cms/auth/github";
-+import { nextHost } from "@monti-cms/nextjs/auth";
  ...
 -auth: githubAuth({ clientId, clientSecret, adminIds: [id], devBypass, secret }),
-+auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret }),
++auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })] }),
 ```
 
-- **Admins.** `adminIds` becomes `admins` on the provider. The old option listed numeric GitHub ids (`CMS_ADMIN_GITHUB_ID`), and that is still what `admins` takes; no value changes. Logins were never matched.
+- **Admins.** `adminIds` becomes `admins` on the provider, or the `MONTI_ADMIN_GITHUB_ID` variable (formerly `CMS_ADMIN_GITHUB_ID`). It still takes numeric GitHub ids; no value changes. Logins were never matched.
 - **Sign-in again.** Sessions made by NextAuth are not read any more (the account id in them is `github:<id>` now), so everyone signs in once more.
-- **No new environment variables.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` work as before, and the OAuth callback URL does not change. `next-auth` can be removed from `package.json`.
+- **Environment.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` work as before, and the OAuth callback URL does not change. `AUTH_SECRET` is replaced by `MONTI_SECRET` (see "Secret"), `CMS_ADMIN_GITHUB_ID` by `MONTI_ADMIN_GITHUB_ID`, and `CMS_DEV_AUTH_BYPASS` is gone (the bypass is on under `next dev`). `next-auth` can be removed from `package.json`.
 - **Recorded authors.** Where a change records an account id because there was no name (`12345678` before), it is now `github:12345678`.

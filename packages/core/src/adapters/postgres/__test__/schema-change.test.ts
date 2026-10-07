@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
-import { defineConfig } from "../../../config/define";
+import { defineSite } from "../../../config/define";
 import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { defineCollection } from "../../../schema/collection";
@@ -21,7 +21,7 @@ import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from ".
 const title = { kind: "text", label: "Title", required: true } as const;
 const slug = { kind: "slug", label: "Address", from: "title" } as const;
 
-const beforeConfig = defineConfig({
+const beforeConfig = defineSite({
 	collections: {
 		category: defineCollection({ label: "Category", kind: "item", fields: { title, slug } }),
 		post: defineCollection({
@@ -50,7 +50,7 @@ const beforeConfig = defineConfig({
 
 /** The schema after the change: `summary` is `excerpt`, `old` is gone, `legacy` is gone (dropped), `legacy2` is gone (kept as an orphan), `author` is required, `categoryId` is `topicId`. */
 const afterConfig = (schemaVersion?: number) =>
-	defineConfig({
+	defineSite({
 		collections: {
 			category: defineCollection({ label: "Category", kind: "item", fields: { title, slug } }),
 			post: defineCollection({
