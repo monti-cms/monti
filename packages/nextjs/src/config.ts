@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import { findSchemaFile, watchSchemaTypes } from "@monti-cms/core/schema-types";
 import type { NextConfig } from "next";
 
 const PACKAGES = ["@monti-cms/core"];
@@ -54,10 +55,45 @@ export function missingOptionalPeers(root: string, boundary?: string): string[] 
 	return [...missing].sort();
 }
 
+const WATCHING = Symbol.for("monti.schema-types.watching");
+
+/**
+ * Keeps the types of the site's schema file (`monti.schema.json` -> `monti-env.d.ts`) in step with it while the dev server runs: writes them at start and again
+ * whenever the schema file changes (for example when it is edited by hand or saved from the admin). Does nothing outside development (a production build reads
+ * the committed types), when the site has no schema file, or when `cwd` is already watched (Next loads its config more than once). A schema that does not parse is
+ * reported and the last good types stay. Returns the function that stops the watch, or `undefined` if there is none.
+ */
+export function watchSchemaTypesInDev(
+	cwd: string,
+	env: { readonly NODE_ENV?: string } = process.env,
+	log: (message: string) => void = console.log,
+): (() => void) | undefined {
+	if (env.NODE_ENV !== "development") return undefined;
+	let schema: string;
+	try {
+		schema = findSchemaFile(cwd);
+	} catch {
+		return undefined;
+	}
+	const holder = globalThis as { [WATCHING]?: Set<string> };
+	const registry = holder[WATCHING] ?? new Set<string>();
+	holder[WATCHING] = registry;
+	const key = path.resolve(cwd, schema);
+	if (registry.has(key)) return undefined;
+	registry.add(key);
+	const stop = watchSchemaTypes({ cwd, schema, log, persistent: false });
+	return () => {
+		stop();
+		registry.delete(key);
+	};
+}
+
 /**
  * Adds the CMS wiring to the Next config. Builds package sources (TypeScript) together with the app, tells the server and browser bundles Next's `basePath`, and
  * points optional dependencies of CMS packages that are not installed (e.g. the block extension's `mermaid`) at an empty module (using that feature raises
  * an error telling you to install it).
+ *
+ * In development it also keeps the generated types of the schema file up to date (see {@link watchSchemaTypesInDev}).
  *
  * It links no config file: the site config and the server config are passed to `createCms` in the app's own server file, and the admin gets the site
  * from that instance.
@@ -69,6 +105,7 @@ export function withCms(nextConfig: NextConfig): NextConfig {
 		turbopackRoot ? realpathSync(path.resolve(process.cwd(), turbopackRoot)) : undefined,
 	);
 	const userWebpack = nextConfig.webpack;
+	watchSchemaTypesInDev(process.cwd());
 
 	return {
 		...nextConfig,
