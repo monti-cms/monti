@@ -9,7 +9,7 @@ import {
 import { listConflicts, type Resolution, resolveConflict } from "./conflicts";
 import { GitHubApiError } from "./github/client";
 import { pullTarget } from "./inbound";
-import { flushTarget } from "./outbound";
+import { flushTarget, resumeAfterToken } from "./outbound";
 import { saveSettings, settingsView } from "./settings";
 import { statusView } from "./status";
 import { GitSyncError, syncContextFor } from "./sync";
@@ -61,13 +61,12 @@ export const settings = {
 		}
 		const pick = (key: "token" | "webhookSecret"): string | null | undefined =>
 			body[key] === null ? null : text(body, key);
-		return json(
-			await saveSettings(syncContextFor(cms), {
-				token: pick("token"),
-				webhookSecret: pick("webhookSecret"),
-				expectedVersion,
-			}),
-		);
+		const ctx = syncContextFor(cms);
+		const token = pick("token");
+		const saved = await saveSettings(ctx, { token, webhookSecret: pick("webhookSecret"), expectedVersion });
+		// A token was just saved: what waited for it goes out now.
+		if (typeof token === "string" && token.trim() !== "") await resumeAfterToken(ctx);
+		return json(saved);
 	}),
 };
 

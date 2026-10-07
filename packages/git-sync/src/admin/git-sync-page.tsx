@@ -257,7 +257,7 @@ function SyncTab({
 	return (
 		<div className="space-y-4 p-5">
 			{!status.settings.token.set && (
-				<Alert>
+				<Alert layout="stack">
 					<AlertDescription className="col-start-auto">{t("sync.noToken")}</AlertDescription>
 				</Alert>
 			)}
@@ -567,7 +567,7 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 	return (
 		<div className="max-w-2xl space-y-8 p-5">
 			{!settings.secretsAvailable && (
-				<Alert variant="danger">
+				<Alert variant="danger" layout="stack">
 					<AlertDescription className="col-start-auto">{t("settings.secretMissing")}</AlertDescription>
 				</Alert>
 			)}

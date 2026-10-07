@@ -123,12 +123,46 @@ describe("a failed push is retried through the outbox, not lost", () => {
 		expect(h.repo.files("main").has("content/memo/never.en.mdx")).toBe(true);
 	});
 
-	it("fails with a message a person can act on when no token is saved", async () => {
-		const h = await make({ noSettings: true });
-		await publish(h, "no-token");
-		const failed = await h.cms.events.list();
-		expect(failed.items[0]?.lastError).toMatch(/No GitHub token is saved/);
+	it("waits for a token instead of failing: deferred for an hour, queued, never dead, and saving the token sends it", async () => {
+		const h = await make({ noSettings: true, maxAttempts: 2 });
+		const entry = await publish(h, "no-token");
+		await publish(h, "no-token-2");
+		// A setup state, not a failure: nothing listed as failed or dead, nothing logged, the entries wait in the queue.
+		expect(await h.cms.events.counts()).toMatchObject({ failed: 0, dead: 0, pending: 2 });
+		expect((await h.cms.events.list()).items).toEqual([]);
+		expect(h.errors).not.toHaveBeenCalled();
+		expect(await h.ctx.state.queue.list("site")).toHaveLength(2);
 		expect(h.github.tokens).toEqual([]);
+		const pending = await h.cms.events.list({ states: ["pending"] });
+		const due = pending.items.find((item) => item.change.entryId === entry.id)?.nextAttemptAt;
+		expect((due?.getTime() ?? 0) - Date.now()).toBeGreaterThan(55 * 60_000);
+		// Retrying without a token defers again, however often (more than maxAttempts).
+		for (let round = 0; round < 3; round += 1) await h.cms.events.retry({ all: true });
+		expect(await h.cms.events.counts()).toMatchObject({ failed: 0, dead: 0 });
+
+		// Saving the token (the Settings tab) sends what waited, and delivers the deferred events.
+		const saved = await h.cms.handle(
+			new Request("http://localhost/api/cms/v1/git-sync/settings", {
+				method: "PUT",
+				headers: { origin: "http://localhost", "content-type": "application/json" },
+				body: JSON.stringify({ token: "ghp_late_token", expectedVersion: 0 }),
+			}),
+		);
+		expect(saved.status).toBe(200);
+		expect(h.repo.files("main").has("content/memo/no-token.en.mdx")).toBe(true);
+		expect(h.repo.files("main").has("content/memo/no-token-2.en.mdx")).toBe(true);
+		expect(await h.ctx.state.queue.list("site")).toHaveLength(0);
+		expect(await h.cms.events.counts()).toMatchObject({ pending: 0, failed: 0, dead: 0 });
+	});
+
+	it("still fails and retries a real error while a token exists (401, 404, network)", async () => {
+		const h = await make();
+		h.github.failNext("getBranchHead", { status: 401, message: "GitHub answered 401: Bad credentials" });
+		await publish(h, "bad-credentials");
+		expect((await h.cms.events.list()).items[0]).toMatchObject({
+			state: "failed",
+			lastError: expect.stringContaining("401"),
+		});
 	});
 
 	it("does not let a failing entry hold the others back", async () => {

@@ -21,6 +21,20 @@ export class GitSyncError extends Error {
 	}
 }
 
+/**
+ * No usable GitHub token is saved. That is a setup state, not a failure: the events of synced entries are deferred (not failed) until a token is saved, and the entries
+ * wait in the queue.
+ */
+export class GitSyncNotConfigured extends GitSyncError {
+	constructor(message: string) {
+		super(message);
+		this.name = "GitSyncNotConfigured";
+	}
+}
+
+/** How long a delivery waits when no token is saved. Saving a token resumes the deliveries at once. */
+export const NOT_CONFIGURED_RETRY_MS = 60 * 60 * 1000;
+
 /** The lock of a target is kept for this long if its holder stops without releasing it. */
 const LOCK_TTL_MS = 5 * 60 * 1000;
 /** How long a lock is waited for before giving up (the caller is retried). */
@@ -91,7 +105,7 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			const stored = (await state.settings.get())?.value.token;
 			const token = stored ? secrets.decrypt(stored) : null;
 			if (!token) {
-				throw new GitSyncError(
+				throw new GitSyncNotConfigured(
 					stored
 						? "The saved GitHub token cannot be read (the CMS secret changed); save the token again on the Git sync screen"
 						: "No GitHub token is saved; add one on the Git sync screen",

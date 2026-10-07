@@ -5,7 +5,13 @@ import type { ResolvedTarget } from "./options";
 import type { PathPattern } from "./path-pattern";
 import type { ConflictRecord, SyncRecord } from "./state";
 import { entryKey } from "./state";
-import { APPLYING_WINDOW_MS, GitSyncError, type SyncContext } from "./sync";
+import {
+	APPLYING_WINDOW_MS,
+	GitSyncError,
+	GitSyncNotConfigured,
+	NOT_CONFIGURED_RETRY_MS,
+	type SyncContext,
+} from "./sync";
 
 /**
  * Outbound: from the CMS to the repo.
@@ -445,7 +451,9 @@ function scheduleTrailingFlush(ctx: SyncContext, target: ResolvedTarget, delayMs
 	if (timers.has(target.id)) return;
 	const timer = setTimeout(() => {
 		timers.delete(target.id);
-		flushTarget(ctx, target).catch((error) => console.error(`[git-sync] flush of ${target.id} failed`, error));
+		flushTarget(ctx, target).catch((error) => {
+			if (!(error instanceof GitSyncNotConfigured)) console.error(`[git-sync] flush of ${target.id} failed`, error);
+		});
 	}, delayMs);
 	timer.unref?.();
 	timers.set(target.id, timer);
@@ -515,13 +523,31 @@ export async function onContentEvent(ctx: SyncContext, event: ContentEvent): Pro
 			const retryAt = await settle(ctx, target, event.entryId, queuedAt);
 			if (retryAt) deferred.push(retryAt);
 		} catch (error) {
-			failures.push(error);
+			// No token saved yet is a setup state: wait for it (an hour at a time; saving the token resumes the deliveries at once) instead of failing.
+			if (error instanceof GitSyncNotConfigured) deferred.push(new Date(ctx.now() + NOT_CONFIGURED_RETRY_MS));
+			else failures.push(error);
 		}
 	}
 	// The first failure of a target does not hide the others (they were all tried). Deferring is not a failure: the outbox calls again when the window ends.
 	if (failures[0] !== undefined) throw failures[0];
 	if (deferred.length > 0) return { retryAt: new Date(Math.max(...deferred.map((date) => date.getTime()))) };
 	return undefined;
+}
+
+/**
+ * Called after a token was saved: commits what waited in the queues and delivers the deferred events (they find their entries committed). Failures are not
+ * the save's business, so none is thrown: they stay queued and are retried like any other.
+ */
+export async function resumeAfterToken(ctx: SyncContext): Promise<void> {
+	for (const target of ctx.targets) {
+		if ((await ctx.state.queue.list(target.id)).length === 0) continue;
+		await flushTarget(ctx, target).catch((error) =>
+			console.error(`[git-sync] flush of ${target.id} after saving the token failed`, error),
+		);
+	}
+	await ctx.cms.events
+		.retry({ all: true })
+		.catch((error) => console.error("[git-sync] event retry after saving the token failed", error));
 }
 
 /** Queues every published entry of a target (the first sync) and commits them in one go. Entries already in git as they are cost nothing. */
