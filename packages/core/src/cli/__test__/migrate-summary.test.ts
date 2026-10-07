@@ -35,8 +35,15 @@ describe("monti migrate says where it migrates and what it did", () => {
 		expect(first.text).toContain(`${target.hostname}`);
 		expect(first.text).toContain(target.pathname.slice(1));
 		expect(first.text).toContain(`schema "${schemaName}"`);
-		// The password never appears.
-		expect(first.text).not.toContain(decodeURIComponent(target.password));
+		// No credentials: take away what is meant to be shown (the adapter name, host, port, database, schema) and neither the user nor the password is left,
+		// whatever they are called (in CI both can equal the database name, so the whole text cannot be searched for them).
+		const allowed = [target.hostname, target.port, target.pathname.slice(1), schemaName, "postgres"].filter(Boolean);
+		const rest = allowed.reduce((text, part) => text.split(part).join(""), first.text);
+		for (const secret of [target.username, target.password].map(decodeURIComponent).filter(Boolean)) {
+			if (!allowed.includes(secret)) expect(rest).not.toContain(secret);
+		}
+		expect(first.text).not.toMatch(/@/);
+		expect(first.text).not.toContain(`${target.username}:`);
 		const applied = /Applied (\d+) steps?, (\d+) already up to date\./.exec(first.text);
 		expect(Number(applied?.[1])).toBeGreaterThan(0);
 		expect(applied?.[2]).toBe("0");
