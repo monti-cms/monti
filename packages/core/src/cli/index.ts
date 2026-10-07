@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
 import { eventsRetry } from "./events";
 import { findBoundaryViolations, formatBoundaryViolations } from "./import-boundary";
-import { formatInitReport, initProject } from "./init";
+import { runInitCommand } from "./init-command";
 import { migrate } from "./migrate";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command";
 import { schemaApply, schemaDiff } from "./schema-apply";
@@ -12,7 +12,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
 /**
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
- * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: creates `monti.config.ts`, its schema file and the Next files (admin layout and page, API route) and wires up the next config.
+ * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
  * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
@@ -43,7 +43,17 @@ export {
 	formatBoundaryViolations,
 	SERVER_ONLY_MODULES,
 } from "./import-boundary";
-export { formatInitReport, type InitOptions, type InitReport, initProject } from "./init";
+export {
+	formatInitReport,
+	InitError,
+	type InitHost,
+	type InitOptions,
+	type InitReport,
+	initProject,
+	unifiedDiff,
+} from "./init";
+export { type DetectedApp, detectApp } from "./init-detect";
+export { collectAnswers, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
 export { type MigrateOptions, migrate } from "./migrate";
 export { isPluginCommandName, type PluginCommandRun, runPluginCommand } from "./plugin-command";
 export { DEFAULT_REGISTRY_URL, type RegistryItem, readItem, resolveItems } from "./registry";
@@ -84,10 +94,26 @@ export {
 const HELP = `Usage: monti <command> [options]
 
 Commands:
-  init      Create the CMS files in a Next app (existing files are never overwritten)
-              --admin-path <path>   Admin screen path (default /admin)
-              --locale <code>       Default site language, also the admin language (default en)
+  init      Add Monti to an existing Next app (App Router): asks a few questions, writes explicit files, installs the packages and runs the migrations.
+            Existing files are never overwritten without a yes. Every question has a flag; with --yes, --json, or no terminal nothing is asked.
+              --yes, -y             Take the default for every question that has no flag
+              --json                Print the result as JSON (implies --yes)
+              --dry-run             Show what would be written and run, and change nothing
+              --database <v>        A postgres:// URL, "docker" (a local Postgres, writes docker-compose.yml and starts it) or "skip" (default skip)
+              --admin-github-id <n> Numeric GitHub id of the admin (MONTI_ADMIN_GITHUB_ID in .env.local)
+              --site-url <url>      Public site URL, for the GitHub OAuth callback URL (default http://localhost:3000)
+              --locales <list>      Language codes, the default first (default en); --locale <code> is the same for one
               --time-zone <tz>      IANA time zone for dates and times (default UTC)
+              --storage <s3|none>   Image storage: an S3-compatible store (S3, R2, MinIO), or none for now (default none)
+              --extras <list>       ai, git-sync, or none (default none)
+              --blocks <list>       all, none, or block names: callout, collapsible, tabs, columns, code-explorer, mermaid, chart, tooltip, code-ref, color (default all)
+              --admin-path <path>   Admin screen path (default /studio)
+              --blog-theme          Also add the blog theme pages (monti add blog-theme); --no-blog-theme to skip (default skip)
+              --overwrite           Replace existing files that differ (default: keep them)
+              --no-install          Do not install packages (and so do not migrate or add the theme)
+              --no-migrate          Do not run monti migrate
+              --no-docker-start     Write docker-compose.yml but do not start it
+              --package-manager <m> npm, pnpm, yarn or bun (default: detected)
   add       Copy components from the registry into the app as source you own, and install their npm packages
               <name...>             Components to add; the ones they need come along
               --registry <url|path> Registry folder or URL with registry.json (default: the registry of this repo)
@@ -138,21 +164,11 @@ export async function runCli(
 	const [command, ...rest] = argv;
 	try {
 		if (command === "init") {
-			const { values } = parseArgs({
-				args: [...rest],
-				options: { "admin-path": { type: "string" }, locale: { type: "string" }, "time-zone": { type: "string" } },
-			});
-			io.log(
-				formatInitReport(
-					initProject({
-						cwd: io.cwd,
-						adminPath: values["admin-path"],
-						locale: values.locale,
-						timeZone: values["time-zone"],
-					}),
-				),
-			);
-			return 0;
+			if (rest.includes("--help") || rest.includes("-h")) {
+				io.log(HELP);
+				return 0;
+			}
+			return await runInitCommand(rest, io);
 		}
 		if (command === "add") {
 			const { values, positionals } = parseArgs({

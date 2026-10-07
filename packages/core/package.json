@@ -41,6 +41,7 @@
 		"schema:build": "tsx scripts/write-json-schema.ts"
 	},
 	"dependencies": {
+		"@clack/prompts": "^1.8.1",
 		"@shikijs/langs": "^3.21.0",
 		"@shikijs/themes": "^3.21.0",
 		"@shikijs/transformers": "^3.22.0",

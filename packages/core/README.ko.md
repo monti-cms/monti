@@ -18,7 +18,7 @@ DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키�
 
 ## 빈 Next 앱에 설치
 
-Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필요 없다. 스타일이 미리 만들어져 있어서 앱은 어떤 CSS 구성이든 쓸 수 있다. 저장소는 Postgres만 지원한다. 순서는 `monti init` → 컬렉션 고치기 → `monti migrate`다.
+Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필요 없다. 스타일이 미리 만들어져 있어서 앱은 어떤 CSS 구성이든 쓸 수 있다. 저장소는 Postgres만 지원한다. 가장 쉬운 길은 `npx monti init`(아래 2단계)이다. 1·2단계를 대신 해 주고 데이터베이스도 묻는다. 이 절의 나머지는 `monti init`이 하는 일이고, 읽어 보거나 손으로 할 때 쓴다. 순서는 `monti init` → 컬렉션 고치기 → `monti migrate`다.
 
 ### 1. 패키지
 
@@ -41,35 +41,76 @@ allowBuilds:
 
 ### 2. `monti init`
 
-앱 폴더(`package.json`이 있는 곳)에서 돌린다. **있는 파일은 덮어쓰지 않고** "건너뛴 파일"로 알린다. 다시 돌려도 안전하다.
+앱 폴더(`package.json`이 있는 곳)에서 `npx monti init`으로 돌린다(`@monti-cms/core`를 설치한 뒤라면 `pnpm exec monti init`). 기존 Next.js(App Router) 앱에 Monti를 더한다. 앱을 읽고, 몇 가지를 묻고, 읽을 수 있는 파일을 적고, 패키지를 설치한 뒤, 남은 일을 쉬운 말로 적어 준다. **묻지 않고 파일을 덮어쓰지 않고**, 다시 돌려도 안전하다.
+
+**알아내는 것:** App Router 폴더(`app/` 또는 `src/app/`), 패키지 매니저(락 파일이나 `packageManager`), TypeScript, 이미 있는 Tailwind·typography, 개발 포트(`dev` 스크립트), `.env.local`을 빠뜨린 `.gitignore`, Markdown·MDX 폴더(`content/`, `posts/`, `_posts/`, `blog/` 등). 그 폴더의 front matter 키가 시작용 `post` 컬렉션의 모양이 되고, 끝에서 `monti import <폴더>`를 권한다. `pages/`만 있는 앱은 이유를 알리고 멈춘다.
+
+**질문**(각각 플래그가 있다. 아래 표):
+
+| 질문 | 고르는 것 | 기본값 |
+| --- | --- | --- |
+| 데이터베이스 | Postgres URL 붙여넣기, 로컬 Docker Postgres(5432부터 비어 있는 첫 포트로 `docker-compose.yml`을 쓰고, Docker가 있으면 띄운다), 건너뛰기 | 건너뛰기 |
+| 관리자 로그인 | GitHub. OAuth 앱을 만드는 순서와 정확한 콜백 주소(`<사이트 주소>/api/cms/auth/callback/github`)를 보여 주고, 숫자 GitHub id를 묻는다(비워도 된다) | |
+| 언어 | 언어 코드, 기본 언어가 먼저 | `en` |
+| 이미지 저장소 | S3 호환(S3·R2·MinIO. 설정은 `S3_*`), 또는 없음 | 없음 |
+| 부가 기능 | AI 글쓰기, git 동기화(Bareun은 묻지 않는다) | 없음 |
+| 블록 | 전부, 또는 `callout`, `collapsible`, `tabs`, `columns`, `code-explorer`, `mermaid`, `chart`, `tooltip`, `code-ref`, `color` 중에서 고르기 | 전부 |
+| 관리자 경로 | `/studio` 같은 경로 | `/studio` |
+| 블로그 테마 | 레지스트리로 블로그 테마 페이지 설치(`monti add blog-theme`) | 안 함 |
+
+**쓰는 파일**(있는 파일은 그대로 두고, 그러겠다고 하거나 `--overwrite`를 줄 때만 바꾼다. `next.config`·`tsconfig.json`·`.gitignore`의 고침은 diff로 보여 주고 질문에서 물으며, `--yes`면 바로 한다):
+
+| 내용 | 파일 |
+| --- | --- |
+| 하나뿐인 설정: 고른 기능마다 한 줄과 짧은 주석, 그다음 데이터베이스·로그인·저장소. 프리셋 뒤에 숨기는 것이 없다. 줄을 지우면 기능이 빠진다 | `monti.config.ts` |
+| 스키마 파일: 시작용 `post` 컬렉션(콘텐츠를 찾으면 그 front matter대로), 언어, 시간대, 관리자 경로, 에디터용 `$schema` 링크 | `monti.schema.json` |
+| 스키마 파일에서 쓴 타입(손으로 고치지 않는다) | `monti-env.d.ts` |
+| 관리자 화면: 레이아웃(미리 만든 관리자 스타일시트를 불러온다)과 페이지 | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
+| 관리자 API와 로그인(`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
+| 설정 잇기(`withCms`): 기본 모양이면 합치고 diff로 보여 주며, 아니면 바꿀 내용을 그대로 적어 준다 | `next.config.ts` |
+| tsconfig에 없으면 `"resolveJsonModule": true`: 주석과 서식을 지키는 텍스트 삽입이고 diff로 보여 준다. `extends`가 있거나 모양이 특이하면 그대로 두고 할 일로 적는다 | `tsconfig.json` |
+| `.gitignore`에 없으면 `.env.local`과 `.env*.local`(파일이 없으면 만든다). diff로 보여 준다 | `.gitignore` |
+| 고른 기능이 읽는 모든 변수(값 없음) | `.env.example` |
+| 직접 입력했거나 만든 값만: `MONTI_SECRET`(만든다), `DATABASE_URL`, `MONTI_ADMIN_GITHUB_ID`. 이미 있는 파일에는 없는 이름만 더한다 | `.env.local` |
+| 로컬 Postgres(Docker를 골랐을 때만. compose 파일이 이미 있으면 건드리지 않고 넣을 서비스를 보여 준다) | `docker-compose.yml` |
+
+`src/`를 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 페이지, API 라우트. 레이아웃은 일부러 따로 둔다. Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀔 때마다 그 아래 트리 전체를 다시 마운트하므로, 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자(내비게이션·쿼리 캐시·테마 프로바이더)가 다시 마운트된다. 한 세그먼트 위에 두어야 계속 마운트된 채로 남는다.
+
+**파일을 쓴 뒤에는** 고른 기능에 필요한 패키지를 찾아낸 패키지 매니저로 설치하고, Docker 데이터베이스를 띄워 기다린 뒤, DB에 닿으면 `monti migrate`를 돌린다. 실패한 단계(네트워크 없음, Docker 없음)는 파일을 되돌리지 않는다. 실패로 표시하고 손으로 돌릴 명령을 목록에 적는다. 요약은 한 일을 먼저, 남은 일을 정확한 값이 든 번호 단계로 적는다: GitHub OAuth 앱, 그 콜백 주소와 ID·시크릿을 넣을 환경 변수 이름, `pnpm dev`, `/studio` 주소.
+
+**질문 없이.** 플래그를 준 질문은 묻지 않는다. `--yes`, `--json`이거나 터미널이 없으면(CI) 아무것도 묻지 않고, 모든 질문이 플래그나 기본값을 쓴다. `--json` 출력은 JSON 문서 하나(`ok`, `created`, `updated`, `skipped`, `steps`, `notes`, `next` 등)이고, 오류는 `{ "ok": false, "error": "..." }`다. 종료 코드는 성공 0, 단계 실패나 잘못된 입력 1, 취소 130이다.
 
 ```sh
-pnpm exec monti init                       # 관리자 화면 /admin, 영어(en), 시간대 UTC
-pnpm exec monti init --admin-path /studio  # 관리자 화면 경로를 바꿀 때
-pnpm exec monti init --locale ko --time-zone Asia/Seoul  # 사이트 기본 언어와 시간대를 정할 때
+npx monti init                       # 대화형
+npx monti init --yes                 # 전부 기본값: DB는 나중에, 블록 전부, /studio
+npx monti init --yes --json --database docker --locales ko,en --storage s3 --extras ai,git-sync --blocks callout,tabs,mermaid
+npx monti init --dry-run --yes       # 쓰고 돌릴 일만 보여 준다
 ```
 
-| 하는 일 | 파일 |
-| --- | --- |
-| 스키마 파일: 사이트의 데이터(컬렉션 하나짜리 시작점, 영어 이름표), 에디터용 `$schema` 링크가 있다 | `monti.schema.json` |
-| 하나뿐인 설정: 스키마 파일을 불러오고, 플러그인·데이터베이스·로그인을 적고, 만들어진 CMS 인스턴스를 `cms`로 내보낸다(값은 환경 변수에서 읽는다) | `monti.config.ts` |
-| 스키마 파일에서 쓴 타입(손으로 고치지 않는다) | `monti-env.d.ts` |
-| 관리자 화면: 레이아웃(미리 만든 관리자 스타일시트를 불러온다)과 페이지 | `app/admin/layout.tsx`·`app/admin/[[...path]]/page.tsx` |
-| 관리자 API와 로그인(`/api/cms/v1/*`·`/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| 설정 잇기(`withCms`) | `next.config.ts`(`export default nextConfig;` 한 줄인 기본 모양일 때), 없으면 만든다 |
+| 플래그 | 뜻 | 기본값 |
+| --- | --- | --- |
+| `--yes`, `-y` | 질문 없이. 답이 없는 질문은 기본값 | |
+| `--json` | 결과를 JSON으로 출력(`--yes`를 포함) | |
+| `--dry-run` | 쓰지도 돌리지도 않고 계획만 보인다 | |
+| `--database <값>` | `postgres://` URL, `docker`, `skip` | `skip` |
+| `--admin-github-id <번호>` | 관리자의 숫자 GitHub id(`MONTI_ADMIN_GITHUB_ID`) | 없음 |
+| `--site-url <url>` | 공개 사이트 주소. OAuth 콜백 주소에 쓴다 | `http://localhost:<개발 포트>` |
+| `--locales <목록>` | 언어 코드, 기본 언어가 먼저(하나면 `--locale <코드>`도 같다) | `en` |
+| `--time-zone <시간대>` | IANA 시간대 | `UTC` |
+| `--storage <s3\|none>` | 이미지 저장소 | `none` |
+| `--extras <목록>` | `ai`, `git-sync`, `none` | `none` |
+| `--blocks <목록>` | `all`, `none`, 블록 이름 | `all` |
+| `--admin-path <경로>` | 관리자 경로(영문자·숫자·`-`·`_`. `/`와 `/api` 아래는 안 된다) | `/studio` |
+| `--blog-theme` / `--no-blog-theme` | 블로그 테마 페이지 추가 | 안 함 |
+| `--overwrite` | 다른 내용인 기존 파일을 바꾼다 | 그대로 둔다 |
+| `--no-install` | 패키지를 설치하지 않는다(그래서 마이그레이션과 테마 추가도 없다) | |
+| `--no-migrate` | `monti migrate`를 돌리지 않는다 | |
+| `--no-docker-start` | `docker-compose.yml`만 쓰고 띄우지 않는다 | |
+| `--package-manager <이름>` | `npm`, `pnpm`, `yarn`, `bun` | 찾아낸 것 |
 
-Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 페이지, API 라우트. 레이아웃은 일부러 따로 둔다. Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀔 때마다 그 아래 트리 전체를 다시 마운트하므로, 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자(내비게이션·쿼리 캐시·테마 프로바이더)가 다시 마운트된다. 한 세그먼트 위에 두어야 계속 마운트된 채로 남는다.
+**관리자 경로는 `admin.path`(스키마 파일 또는 사이트 설정)와 라우트 폴더가 같아야 한다.** `monti init`은 둘을 함께 맞춘다. 나중에 바꿀 때는 둘을 함께 바꾼다. 관리자 API 경로(`/api/cms/v1`)는 바뀌지 않는다.
 
-`src/app`을 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. 안전하게 고칠 수 없는 파일(기본 모양이 아닌 next 설정)은 그대로 두고 넣을 내용을 "할 일"로 보인다.
-끝에 설치할 패키지·환경 변수·GitHub 콜백 주소를 알려 준다.
-
-`--admin-path`를 주면 라우트 폴더가 그 경로(`app/studio/…`)가 되고 스키마 파일에 `admin: { path: "/studio" }`가
-들어간다. **관리자 경로는 `admin.path`(스키마 파일 또는 사이트 설정)와 라우트 폴더가 같아야 한다.** 나중에 바꿀 때도 둘을 함께 바꾼다.
-관리자 API 경로(`/api/cms/v1`)는 바뀌지 않는다.
-
-`--locale <코드>`는 사이트 기본 언어(`defaultLocale`)이고 기본값은 `en`이다(`ko`처럼 소문자 언어 코드). 관리자 화면의 언어와
-날짜·숫자 표기가 이 언어를 따르고, 설정의 `admin.locale`로 따로 고를 수 있다. `--time-zone <시간대>`는 날짜·시각을 입력하고
-보이는 시간대(IANA 이름, 기본 `UTC`)다. 만든 설정 파일과 명령줄 도움말·결과는 개발자가 읽으므로 영어다.
+**안전.** 모든 쓰기는 프로젝트 밖의 경로(`..` 경로, 절대 경로, 밖으로 나가는 심볼릭 링크)를 거부하는 한 곳을 지난다. 모든 질문에 답하기 전에는 아무것도 쓰지 않으므로 Ctrl+C로 멈추면 프로젝트는 그대로다. 쓰다가 실패하면 오류가 이미 쓴 파일을 알려 주고(되돌리지 않는다) `monti init`을 다시 돌리라고 안내한다. 다시 돌리면 그 파일들은 그대로 둔다.
 
 이미 `cms.config.ts`나 `cms.server.ts`가 있는 앱은 그대로 둔다. `monti init`은 두 번째 설정을 만들지 않고, 자기가 만들지 않은 설정 옆에는 스키마 파일도 만들지 않는다. 대신 둘을 `monti.config.ts`로 옮기라고("`cms.config.ts` + `cms.server.ts`에서 올리기") 알리고 `monti schema:extract`를 돌리라고 알린다("스키마 파일"). `monti.config.ts`가 JSON을 가져오므로 `tsconfig.json`에 `"resolveJsonModule": true`가 필요하다(`create-next-app`이 켜 두고, 없으면 `monti init`이 알린다).
 
@@ -196,7 +237,7 @@ CMS 패키지의 선택 의존성(예: 블록 확장의 `mermaid`·`recharts`)�
 
 `monti init`이 하는 일을 손으로 하려면: `monti.config.ts`(`export const cms = defineConfig({ … })`)를 만들고, `next.config.ts`를
 `withCms(nextConfig)`(`import { withCms } from "@monti-cms/nextjs/config"`)로 감싸고(더할 별칭도 `tsconfig.json` `paths` 항목도, 테스트(Vitest) 쪽 별칭도 없다),
-Next 파일 셋(관리자 레이아웃과 페이지, API 라우트. 각 파일이 `monti.config.ts`에서 `cms`를 불러온다)을 두고, 관리자 레이아웃(`app/admin/layout.tsx`)에서 미리 만든 관리자 스타일시트를 불러온다.
+Next 파일 셋(관리자 레이아웃과 페이지, API 라우트. 각 파일이 `monti.config.ts`에서 `cms`를 불러온다)을 두고, 관리자 레이아웃(`app/studio/layout.tsx`, 또는 고른 관리자 경로의 레이아웃)에서 미리 만든 관리자 스타일시트를 불러온다.
 
 ```ts
 import "@monti-cms/admin/styles.css"; // 미리 만들어져 있다. 앱에 Tailwind·typography·tw-animate가 필요 없다

@@ -6,6 +6,23 @@ A CMS for developer blogs.
 
 The name is short for Montaigne. In Italian, "monti" also means "mountains".
 
+## Quick start: add Monti to an existing Next app
+
+Run this in the folder of a Next.js (App Router) app:
+
+```sh
+npx monti init
+```
+
+It looks at the app (App Router, `src/` or not, package manager, TypeScript, Tailwind, existing `content/` folders of Markdown or MDX), asks a few questions, and then writes explicit files you can read and change: `monti.config.ts` (one line per feature, each with a comment), `monti.schema.json` (a starter `post` collection, shaped by your front matter if it finds content), the three Next files (`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example` and `.env.local` (only a generated `MONTI_SECRET` and the values you typed). It installs the packages, wraps `next.config.ts` with `withCms` (showing the diff), runs `monti migrate` when the database is reachable, and ends with a plain list of what is left, with exact values.
+
+- **Questions:** the database (a URL, a local Docker Postgres, or later), the GitHub login, languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, the admin path (default `/studio`), and whether to install the blog theme pages.
+- **No prompts:** every question has a flag, and `--yes` takes the defaults. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
+- **Safe:** it never overwrites a file without asking, never writes outside the project, and says what it wrote if a run stops partway.
+- **Existing posts:** if it finds Markdown or MDX folders, it ends by suggesting `npx monti import <folder>`.
+
+Until the public release, `@monti-cms/core` is installed from the release bundle first (see "Install"); `npx monti init` then installs the rest.
+
 ## Packages
 
 | Package | What it does |
