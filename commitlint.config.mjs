@@ -31,6 +31,7 @@ export default {
 				"seo",
 				"registry",
 				"bareun",
+				"git-sync",
 				"syntax",
 				"example",
 				"scripts",
