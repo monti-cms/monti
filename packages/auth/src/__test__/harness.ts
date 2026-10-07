@@ -24,6 +24,7 @@ export const connectWithEnv = (options: AuthOptions, context: Partial<AuthCreate
 		loginPath: LOGIN_PATH,
 		trustHost: true,
 		secrets: createSecretsVault({ secret: SECRET }).forPlugin("auth"),
+		host: {},
 		storage: () => {
 			throw new Error("this test does not use plugin storage");
 		},

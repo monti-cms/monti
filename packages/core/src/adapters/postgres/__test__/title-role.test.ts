@@ -4,7 +4,7 @@ import { docOf } from "../../../../test/stored-content";
 import { fakeCms } from "../../../cms";
 import type { ContentStore, Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
-import { defineCollection, defineConfig, fields } from "../../../index";
+import { defineCollection, defineSite, fields } from "../../../index";
 import { createContentService } from "../../../services/content-service";
 import { createSite } from "../../../site";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -14,7 +14,7 @@ import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from ".
  * The title field is named by its role (`role: "title"`), not by the key `title`. A site whose articles keep the title in `headline` and whose topics keep it in `name`
  * (two different keys, so a query across collections has to tell them apart) works end to end: create, list, sort, search, relations, the public read.
  */
-const config = defineConfig({
+const config = defineSite({
 	collections: {
 		article: defineCollection({
 			label: "Article",

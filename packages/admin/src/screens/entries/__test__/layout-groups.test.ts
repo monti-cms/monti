@@ -1,4 +1,4 @@
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { defaultTab, layoutGroupsOf, tabOf, tabsOf } from "../layout-groups";
@@ -33,7 +33,7 @@ const plainCollection = defineCollection({
 	},
 });
 const site = createSite(
-	defineConfig({
+	defineSite({
 		collections: { page, plain: plainCollection },
 		locales: [{ code: "en", name: "English" }],
 		defaultLocale: "en",

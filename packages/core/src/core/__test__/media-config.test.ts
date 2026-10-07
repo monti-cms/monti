@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, defineConfig, fields } from "../..";
+import { defineCollection, defineSite, fields } from "../..";
 import { createSite } from "../../site";
 import { validateMediaConfig } from "../media-types";
 
 const site = createSite(
-	defineConfig({
+	defineSite({
 		collections: {
 			page: defineCollection({
 				label: "Page",

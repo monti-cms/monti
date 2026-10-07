@@ -1,3 +1,4 @@
+import { CmsAuthGateway } from "@monti-cms/core/adapters/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { github } from "../github";
 import { connect, connectWithEnv, loginThrough, requestWith, stubOAuthServers } from "./harness";
@@ -117,5 +118,28 @@ describe("the one secret, MONTI_SECRET", () => {
 		vi.stubEnv("AUTH_SECRET", "legacy-secret-legacy-secret-legacy");
 		const { createSecretsVault } = await import("@monti-cms/core/testing");
 		expect(() => connect(options, { secrets: createSecretsVault({}).forPlugin("auth") })).toThrow(/MONTI_SECRET/);
+	});
+});
+
+describe("the request host", () => {
+	const loopback = new Headers({ host: "localhost:3000", "x-forwarded-for": "::1" });
+	const other = new Headers({ host: "staging.example.com" });
+	const admin = { providers: [github({ clientId: "id", clientSecret: "secret", admins: [ADMIN_ID] })] };
+
+	it("is the one the framework integration attached to the instance, so auth() needs no host", async () => {
+		vi.stubEnv("NODE_ENV", "development");
+		vi.spyOn(console, "warn").mockImplementation(() => {});
+		const cmsAuth = connect(admin, { host: { requestHeaders: async () => loopback } });
+		expect(await new CmsAuthGateway(() => cmsAuth).verifyAdmin()).toMatchObject({ isAdmin: true });
+	});
+
+	it("is the explicit `host` of auth() when one is given, which wins over the attached one", async () => {
+		vi.stubEnv("NODE_ENV", "development");
+		vi.spyOn(console, "warn").mockImplementation(() => {});
+		const cmsAuth = connect(
+			{ ...admin, host: { requestHeaders: async () => other } },
+			{ host: { requestHeaders: async () => loopback } },
+		);
+		await expect(new CmsAuthGateway(() => cmsAuth).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
 	});
 });

@@ -1,4 +1,4 @@
-import { defineConfig } from "@monti-cms/core";
+import { defineSite } from "@monti-cms/core";
 import { mdx } from "@monti-cms/mdx";
 import { shikiNotation } from "../src";
 import base from "./cms.config";
@@ -8,7 +8,7 @@ import base from "./cms.config";
  * It runs only the tests that check the config-driven path (`*.configured.test.ts`, `vitest.configured.config.ts`):
  * the extension reaches the `mdx` format of the instance through the plugin options, and `[!code focus]` becomes the site's `focus` effect.
  */
-export default defineConfig({
+export default defineSite({
 	...base,
 	codeBlock: {
 		lineEffects: [{ name: "focus", label: "Focus", class: "line-focus", editor: { background: "bg-cms-primary/10" } }],

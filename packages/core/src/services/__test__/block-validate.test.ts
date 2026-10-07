@@ -4,7 +4,7 @@ import { mermaidBlock } from "../../../../blocks/src/mermaid/definition";
 import { defineBlock } from "../../blocks/define";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
-import { defineCollection, defineConfig, fields } from "../../index";
+import { defineCollection, defineSite, fields } from "../../index";
 import { createSite } from "../../site";
 import type { WriteOperation } from "../hooks";
 import { createWritePipeline } from "../write-pipeline";
@@ -57,7 +57,7 @@ const brokenBlock = defineBlock({
 });
 
 const site = createSite(
-	defineConfig({
+	defineSite({
 		collections: {
 			post: defineCollection({
 				label: "Post",

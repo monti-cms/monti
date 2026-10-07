@@ -11,7 +11,7 @@ DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키�
 
 - `@monti-cms/core`는 표준 `Request`·`Response`로 말하고(`cms.handle(request)`) Next.js에서 아무것도 가져오지 않는다. 호스트가 대 줘야 하는 것(지금 요청의 헤더, 로그인 뒤 리다이렉트)은 로그인 연결(`CmsAuth.requestHeaders`·`CmsAuth.rethrow`)로 들어온다.
 - `@monti-cms/admin`(화면과 `@monti-cms/admin/hooks`)도 Next.js에서 아무것도 가져오지 않는다. 라우터는 받은 어댑터 `{ Link, navigate, replace, usePathname, useSearchParams }`로만 닿고(`@monti-cms/admin/router`의 `AdminRouterProvider`), 서버 화면이 필요로 하는 리다이렉트와 404는 `AdminServer`(`@monti-cms/admin/host`)로 받는다.
-- `@monti-cms/nextjs`가 Next에 묶인 것을 모두 갖는다. 라우트 핸들러, `next.config.ts`용 `withCms`, App Router 어댑터를 얹은 관리자 페이지·레이아웃, `nextHost`(로그인의 Next 쪽)다.
+- `@monti-cms/nextjs`가 Next에 묶인 것을 모두 갖는다. 라우트 핸들러, `next.config.ts`용 `withCms`, App Router 어댑터를 얹은 관리자 페이지·레이아웃, 호스트 연결(Next 요청 헤더를 인스턴스에 붙여 주므로 `monti.config.ts`에는 `host` 옵션이 필요 없다)이다.
 - `@monti-cms/auth`가 관리자 로그인이고, 이것도 프레임워크에 묶이지 않는다. Auth.js core 위에서 `CmsAuth`를 `Request`·`Response`로 구현하며, 로그인 방법은 갈아 끼우는 프로바이더다(GitHub가 들어 있다).
 
 다른 호스트(Astro, Remix 등)는 코어나 관리자를 고치지 않고 어댑터 패키지를 새로 만들어 붙인다. 테스트가 경계를 지킨다. 코어와 관리자의 소스 파일은 `next/*`를 가져올 수 없다.
@@ -105,14 +105,13 @@ Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 �
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema, // 데이터는 monti.schema.json에 그대로 둔다
 	plugins: [], // 기능마다 한 줄, 모두 인자 없이 동작한다: mdx(), seo(), callout(), ...
 	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 	// storage: <아무 패키지의 어댑터>, // 미디어 올리기. 없으면 관리자가 미디어 메뉴를 숨긴다
 });
 ```
@@ -146,6 +145,7 @@ storage: s3Storage(), // AWS S3, Cloudflare R2(S3_ENDPOINT=https://<account>.r2.
 | `MONTI_SECRET` | 임의의 긴 값(예: `openssl rand -base64 32`). 하나뿐인 비밀 값이다. 로그인 세션은 이 값에서 만든 키로 서명하고, 플러그인이 저장하는 값(AI 서비스 키, git-sync 토큰)도 이 값에서 만든 키로 암호화한다(`defineConfig({ secret })`에도 같은 값을 줄 수 있다). 바꿀 때는 옛 값을 `previousSecrets`에 남긴다("비밀 값") |
 | `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | GitHub OAuth 앱(`github()`가 읽는다). 콜백 주소는 `<사이트 주소>/api/cms/auth/callback/github`. `next dev`에서는 필요 없다 |
 | `MONTI_ADMIN_GITHUB_ID` | 관리자 GitHub 숫자 ID. 여럿이면 쉼표로 구분한다(`github()`가 읽는다). `next dev`에서는 필요 없다 |
+| `SITE_URL` | 선택. 사이트의 공개 URL(`site.url`). 환경마다 다르다. 코드나 스키마 파일의 `site.url`이 있으면 그쪽이 이긴다 |
 | `AUTH_TRUST_HOST` | 선택. `X-Forwarded-Host`를 덮어쓰는, 직접 운영하는 프록시(nginx, 로드 밸런서) 뒤에서 돌 때만 `true`. Vercel·Netlify·Cloudflare Pages 같은 플랫폼은 알아서 감지한다("호스트 신뢰" 참고) |
 
 옵션에 명시한 값이 항상 이 환경 변수보다 앞서고, 다른 이름에서 값을 짐작하지 않는다. 필요한 값이 없으면 변수 이름을 알려 주는 오류가 난다(환경 변수는 값이 처음 쓰일 때 읽으므로 환경 변수 없이 빌드해도 실패하지 않는다). 개발용 로그인을 위한 변수는 없다. `next dev`에서는 저절로 켜진다("개발용 로그인 우회").
@@ -177,7 +177,7 @@ pnpm exec monti migrate
 
 ```ts
 // monti.config.ts
-auth: auth({ providers: [/* … */], host: nextHost, basePath: "/api/auth" }),
+auth: auth({ providers: [/* … */], basePath: "/api/auth" }),
 
 // app/api/auth/[...auth]/route.ts
 import { cms } from "../../../../monti.config";
@@ -302,7 +302,6 @@ export const cms = defineConfig({
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import { mdx } from "@monti-cms/mdx";
 import { callout } from "@monti-cms/blocks";
 import schema from "./monti.schema.json";
@@ -311,14 +310,16 @@ export const cms = defineConfig({
 	schema,                                   // 데이터는 monti.schema.json에 그대로 둔다
 	plugins: [mdx(), callout()],              // 기능마다 한 줄, 모두 인자 없이 동작한다
 	database: postgres(),                     // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 	// storage: <아무 패키지의 어댑터>,        // 미디어 올리기. 없으면 관리자가 미디어 메뉴를 숨긴다
 });
 ```
 
 나머지는 모두 이 파일에서 `cms`를 불러다 쓴다. `defineConfig`는 사이트 옵션(`schema`, 또는 `collections`와 `locales`, 그리고 `plugins`·`blocks`·`site`·`admin`·`codeBlock`·`media`·`seed` …)과 서버 옵션("서버 옵션" 절)을 받는다. `database`와 `auth`는 필수이고 나머지는 선택이다.
 
-`@monti-cms/core`(루트 진입점)의 `defineConfig`는 사이트 설정만 다루는 쪽이다. 설정 객체를 돌려줄 뿐 데이터베이스도 로그인도 없다. 테스트와 도구는 이것을 낮은 수준 API인 `@monti-cms/core/server`의 `createCms({ config, server })`(`server`는 `CmsServerConfig`)와 함께 쓰고, 앱은 `@monti-cms/core/server`의 `defineConfig`를 쓴다. `defineServerConfig`는 없어졌다.
+공개된 `defineConfig`는 `@monti-cms/core/server`의 것 하나뿐이다. `@monti-cms/core`(루트 진입점)는 더 이상 `defineConfig`를 내보내지 않는다. 낮은 수준 API인 `createCms({ config, server })`(`server`는 `CmsServerConfig`)는 `@monti-cms/core`의 `defineSite`로 만든 사이트 설정을 받으며, 테스트와 도구가 이것을 쓴다. `defineServerConfig`는 없어졌다.
+
+`site.url`은 관례대로 `SITE_URL` 환경 변수에서 읽는다. 코드의 `site.url`이나 스키마 파일의 `site.url`이 정하면 그쪽이 이긴다.
 
 `cms.config.ts` + `cms.server.ts`에서 옮긴다면 "`cms.config.ts` + `cms.server.ts`에서 올리기"를 본다.
 
@@ -339,7 +340,7 @@ HTTP 계층은 표준 웹 `Request`와 `Response`로 동작한다.
 관리자 API, 로그인 연결, 공개 API, 플러그인 라우트에는 `NextRequest`, `NextResponse`, `request.nextUrl`을 쓰지 않는다.
 `cms.handle(request)`가 요청 하나를 처리하고(`/api/cms/` 뒤의 경로는 URL에서 읽는다), `@monti-cms/nextjs`의 `createRouteHandler(cms)`는 그 위에 얹은 얇은 Next 어댑터다.
 플러그인 라우트(`adminRoute`)는 표준 `Request`를 받는다. 쿼리는 `new URL(request.url).searchParams`로 읽고, 응답은 `Response.json(…)`으로 만든다.
-코어는 Next.js에서 아무것도 가져오지 않는다. 호스트가 대 주는 것은 로그인 연결로 들어온다. `CmsAuth.requestHeaders()`(처리 중인 요청의 헤더, 개발용 로그인 우회와 `session()`이 읽는다)와 `CmsAuth.rethrow(error)`(로그인 라이브러리가 던지는 리다이렉트를 호스트까지 보낸다. `@monti-cms/auth`는 `Response`로 답하므로 필요 없다)다. `@monti-cms/nextjs/auth`의 `nextHost`가 `requestHeaders`를 Next의 함수로 채우며 `auth({ host })`에 넘기고, 다른 프레임워크의 호스트는 제 것을 채운다.
+코어는 Next.js에서 아무것도 가져오지 않는다. 호스트가 대 주는 것은 로그인 연결로 들어온다. `CmsAuth.requestHeaders()`(처리 중인 요청의 헤더, 개발용 로그인 우회와 `session()`이 읽는다)와 `CmsAuth.rethrow(error)`(로그인 라이브러리가 던지는 리다이렉트를 호스트까지 보낸다. `@monti-cms/auth`는 `Response`로 답하므로 필요 없다)다. Next 통합(`@monti-cms/nextjs`의 `createRouteHandler(cms)`, `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata`)이 `cms.attachHost(host)`로 Next 요청 헤더를 인스턴스에 직접 붙이므로(`RequestHost`는 `@monti-cms/core/server`에서 온다. `AuthCreateContext`에는 `host: RequestHost`가 있다) 설정에 호스트를 적지 않는다. `auth({ host })`는 Next 통합 밖에서 쓰는 명시적 재정의로 남아 있고, 붙여 둔 호스트보다 우선한다. 다른 프레임워크의 호스트는 제 것을 채운다.
 
 읽기 API는 인스턴스에 달려 있다(`getEntry(cms, …)`가 아니라 `cms.read.getEntry(…)`). 사이트 코드가 하나만 불러오면 되고, 타입(`MetadataFor` 등)은 `@monti-cms/core/read`에 남는다.
 
@@ -408,7 +409,7 @@ Next에 묶인 코드는 모두 `@monti-cms/core`와 `@monti-cms/admin`에서 �
 GitHub 로그인이 NextAuth(`next-auth`, `@monti-cms/nextjs` 안)에서 프레임워크에 묶이지 않는 패키지 `@monti-cms/auth`로 옮겼다. Auth.js core 위에 만들었고 로그인 방법을 프로바이더로 받는다.
 
 - `@monti-cms/auth`를 설치한다. `@monti-cms/nextjs/auth`의 `githubAuth`는 없어졌다. 아래 모양으로 바꾼다.
-- 새 모양은 `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })`다(지금은 관례적인 환경 변수가 있으면 `github()`와 `auth()`에 옵션이 필요 없다. "환경 변수와 `monti migrate`" 참고). `auth`는 `@monti-cms/auth`, `github`는 `@monti-cms/auth/github`, `nextHost`는 `@monti-cms/nextjs/auth`에서 온다. `adminIds`는 프로바이더의 `admins`가 되고 여전히 GitHub 숫자 ID를 받는다(로그인 이름은 처음부터 비교하지 않았다).
+- 새 모양은 `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], devBypass, secret })`다(지금은 관례적인 환경 변수가 있으면 `github()`와 `auth()`에 옵션이 필요 없다. "환경 변수와 `monti migrate`" 참고). `auth`는 `@monti-cms/auth`, `github`는 `@monti-cms/auth/github`에서 온다(호스트는 Next 통합이 붙인다. "CMS 인스턴스" 절 참고). `adminIds`는 프로바이더의 `admins`가 되고 여전히 GitHub 숫자 ID를 받는다(로그인 이름은 처음부터 비교하지 않았다).
 - 모두 한 번 다시 로그인한다. NextAuth가 만든 세션은 읽지 않는다. OAuth 콜백 URL(`/api/cms/auth/callback/github`)과 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`AUTH_URL`·`AUTH_TRUST_HOST`는 이 이동에서 바뀌지 않았다(세션 비밀 값은 지금 `MONTI_SECRET`이다. "`cms.config.ts` + `cms.server.ts`에서 올리기" 참고). `package.json`에서 `next-auth`는 빼도 된다.
 - 계정 ID에 프로바이더가 붙는다(`github:12345678`). `AuthContext.accountId`, `CmsAuth.devUserId`, 이름이 없을 때 변경 기록에 남는 작성자가 그렇다. 직접 만든 `CmsAuth`의 `isAdmin(userId)`는 이 값을 받는다.
 - `CmsAuth`가 바뀐 곳(직접 만든 `AuthAdapter`용): `session(request?)`가 요청을 받을 수 있고, `signIn`·`signOut`이 라우트가 그대로 돌려줄 `Response`(쿠키를 실은 리다이렉트)로 끝날 수 있으며, `AuthProvider`에 선택 항목 `icon`이, `AuthCreateContext`에 `storage(plugin)`(`cms.storage`)이 생겼다.
@@ -462,7 +463,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 ## `cms.config.ts` + `cms.server.ts`에서 올리기
 
-사이트 설정은 파일 둘로 나뉘어 있었다. `cms.config.ts`(사이트 설정, `export default defineConfig({ … })`)와 `cms.server.ts`(`createCms({ config, server: defineServerConfig({ … }) })`)다. 이제는 만들어진 인스턴스를 `cms`로 내보내는 파일 하나, `monti.config.ts`다. `defineServerConfig`는 없어졌다(대체 shim도 없다). `monti` 명령은 `monti.config.ts`(또는 `src/monti.config.ts`)를 찾고, 코드로 쓴 설정에 대한 `monti schema:extract`는 바뀐 것이 없다. 블로그 예시를 줄인 모습이다.
+사이트 설정은 파일 둘로 나뉘어 있었다. `cms.config.ts`(사이트 설정, `@monti-cms/core`의 `defineConfig`로 쓴 `export default defineConfig({ … })`. 이것은 이제 `@monti-cms/core/server`의 `defineConfig` 하나에 합쳐졌다)와 `cms.server.ts`(`createCms({ config, server: defineServerConfig({ … }) })`)다. 이제는 만들어진 인스턴스를 `cms`로 내보내는 파일 하나, `monti.config.ts`다. `defineServerConfig`는 없어졌다(대체 shim도 없다). `monti` 명령은 `monti.config.ts`(또는 `src/monti.config.ts`)를 찾고, 코드로 쓴 설정에 대한 `monti schema:extract`는 바뀐 것이 없다. 블로그 예시를 줄인 모습이다.
 
 ```diff
 -// cms.config.ts
@@ -523,7 +524,6 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 +import { defineConfig, postgres } from "@monti-cms/core/server";
 +import { gitSync } from "@monti-cms/git-sync";
 +import { mdx } from "@monti-cms/mdx";
-+import { nextHost } from "@monti-cms/nextjs/auth";
 +import { seo } from "@monti-cms/seo";
 +import { directiveSyntax } from "@monti-cms/syntax-directive";
 +import schema from "./monti.schema.json";
@@ -531,7 +531,6 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 +
 +export const cms = defineConfig({
 +	schema,
-+	site: { url: process.env.HOST_URL || undefined },
 +	plugins: [
 +		mdx({ syntax: [directiveSyntax()] }),
 +		callout(),
@@ -550,7 +549,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 +		gitSync({ enabled: false, targets: [/* ... */] }),
 +	],
 +	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-+	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
++	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 +	// MONTI_SECRET signs the login session and encrypts stored values
 +});
 ```
@@ -559,7 +558,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 1. **두 파일을 `monti.config.ts`로 합친다.** 사이트 옵션과 서버 옵션을 `@monti-cms/core/server`의 `export const cms = defineConfig({ … })` 하나에 넣고 `cms.config.ts`와 `cms.server.ts`를 지운다. `@/cms.server`나 `../cms.server`를 불러오던 import(라우트 파일, 관리자 레이아웃·페이지, 사이트 페이지, 스크립트)는 모두 새 파일로 바꾼다.
 2. **`...blocks()`를 블록마다 한 줄로 바꾼다.** `blocks()`와 `blocks({ only, omit })`는 없어졌다. `@monti-cms/blocks`에서 `callout()`·`collapsible()`·`tabs()`·`columns()`·`codeExplorer()`·`mermaid()`·`chart()`·`tooltip()`·`codeRef()`·`color(options?)`를 불러온다. 쓰는 것만 적는다. `tooltip()`·`codeRef()`·`color()`는 겹치는 마크를 저장하고 싶은 순서대로 둔다.
-3. **환경 변수 이름을 바꾼다.** 그다음 `postgres()`와 `github()`에 넘기던 `process.env.X` 인자를 지운다. 둘이 관례적인 이름을 알아서 읽는다.
+3. **환경 변수 이름을 바꾼다**(`HOST_URL`은 `SITE_URL`이 되고 `site` 줄은 지운다). 그다음 `postgres()`와 `github()`에 넘기던 `process.env.X` 인자를 지운다. 둘이 관례적인 이름을 알아서 읽는다.
 
    | 전 | 후 |
    | --- | --- |
@@ -569,12 +568,14 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
    | `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | 그대로 |
    | `CMS_DEV_AUTH_BYPASS` | 지운다. 개발용 로그인은 `next dev`에서 저절로 켜진다("개발용 로그인 우회") |
    | `AUTH_TRUST_HOST` | 직접 운영하는 프록시 뒤에서만 필요하다. Vercel·Netlify·Cloudflare Pages는 감지한다("호스트 신뢰") |
+   | `HOST_URL` | `SITE_URL`, 그리고 `site: { url: … }` 줄을 지운다. `defineConfig`가 `SITE_URL`을 알아서 읽는다 |
    | `CMS_SECRET`·`AUTH_SECRET` | `MONTI_SECRET`, 다음 단계를 본다 |
 
 4. **비밀 값.** `MONTI_SECRET`을 **옛 `CMS_SECRET` 값**으로 정하면 전에 암호화한 값(AI 서비스 키, git-sync 토큰)이 모두 그대로 풀린다. 또는 새 `MONTI_SECRET`을 정하고 `defineConfig`의 `previousSecrets: [process.env.CMS_SECRET]`로 옛 값을 계속 읽게 한다. 값은 다시 저장할 때 새 비밀 값으로 다시 암호화되고, 옛 값은 그 뒤에 뺀다. `AUTH_SECRET`은 더 이상 읽지 않으므로 지워도 된다. 로그인 세션 키가 이제 `MONTI_SECRET`에서 만들어지므로 모두 한 번 로그아웃된다(세션이 초기화될 뿐 잃는 것은 없다).
-5. **Next 파일.** `app/(admin)/studio/*`를 `app/studio/*`로 옮긴다(라우트 그룹은 이제 선택이다). Monti 파일은 셋이 된다: `app/<관리자 경로>/layout.tsx`, `app/<관리자 경로>/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`(레이아웃을 페이지에 합칠 수 없는 이유는 "`monti init`"을 본다). `admin-components.tsx`는 지우고 그 컴포넌트를 플러그인으로 등록한다. `definePlugin({ name, options: {}, admin: () => import("./admin") })`를 만들고, 그 관리자 모듈의 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 한다. `Provider`는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓴다(`examples/blog/plugins/word-list/`). 세 파일의 import는 `monti.config.ts`로 고친다.
-6. **`bareun()`을 쓰지 않으려면 뺀다.** 패키지는 그대로 남아 있고, 블로그 예시에서는 뺐다.
-7. **확인하고 마이그레이션한다.** `monti check:boundary`(`"use client"` 파일이 설정에 닿으면 안 된다)를 돌리고, `monti migrate`를 돌린다.
+5. **호스트.** `host: nextHost`와 그 import를 지운다. Next 통합이 붙여 준다.
+6. **Next 파일.** `app/(admin)/studio/*`를 `app/studio/*`로 옮긴다(라우트 그룹은 이제 선택이다). Monti 파일은 셋이 된다: `app/<관리자 경로>/layout.tsx`, `app/<관리자 경로>/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`(레이아웃을 페이지에 합칠 수 없는 이유는 "`monti init`"을 본다). `admin-components.tsx`는 지우고 그 컴포넌트를 플러그인으로 등록한다. `definePlugin({ name, options: {}, admin: () => import("./admin") })`를 만들고, 그 관리자 모듈의 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 한다. `Provider`는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓴다(`examples/blog/plugins/word-list/`). 세 파일의 import는 `monti.config.ts`로 고친다.
+7. **`bareun()`을 쓰지 않으려면 뺀다.** 패키지는 그대로 남아 있고, 블로그 예시에서는 뺐다.
+8. **확인하고 마이그레이션한다.** `monti check:boundary`(`"use client"` 파일이 설정에 닿으면 안 된다)를 돌리고, `monti migrate`를 돌린다.
 
 ## 소스로 쓰는 컴포넌트
 
@@ -596,7 +597,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 
 | 진입점 | 쓰는 곳 | 내용 |
 | --- | --- | --- |
-| `@monti-cms/core` | 테스트·도구·스키마 코드 | `defineConfig`(사이트 설정만 다루는 쪽, `schema`와 함께. 앱은 `/server`의 것을 쓴다)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, `SchemaFile` 타입 |
+| `@monti-cms/core` | 테스트·도구·스키마 코드 | `defineSite`(사이트 설정만 다루는 쪽, `schema`와 함께. 여기에는 `defineConfig`가 없고 앱은 `/server`의 것을 쓴다)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, `SchemaFile` 타입 |
 | `@monti-cms/core/schema.json` | 에디터, `$schema` | `monti.schema.json`의 JSON Schema("스키마 파일") |
 | `@monti-cms/core/schema-types` | 개발 도구(`withCms`) | `generateSchemaTypes`, `watchSchemaTypes`: 스키마 파일에서 `monti-env.d.ts`를 쓴다 |
 | `@monti-cms/core/schema-change` | 설정 화면, 명령줄 | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange`("스키마 바꾸기") |
@@ -605,7 +606,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost`(`auth()`의 `host`로 넘긴다) |
+| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost`(로그인의 Next 쪽. 사이트에는 필요 없고 Next 통합이 붙인다) |
 | `@monti-cms/auth` | `monti.config.ts` | `auth({ providers, devBypass?, basePath?, host? })`, `LoginProvider` 타입 |
 | `@monti-cms/auth/github` | `monti.config.ts` | `github({ clientId?, clientSecret?, admins? })`(주지 않으면 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`를 읽는다) |
 | `@monti-cms/admin/plugins` | 플러그인의 관리자 모듈 | `defineAdminPlugin({ Provider })`("플러그인") |
@@ -1034,7 +1035,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | 항목 | 뜻 |
 |---|---|
 | `database` | 필수. 콘텐츠 저장소. `postgres()`는 `DATABASE_URL`과 `DATABASE_SCHEMA`를 읽고, `postgres({ connectionString, schema })`는 코드에서 정한다 |
-| `auth` | 필수. 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()`는 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`(GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여럿)를 읽고, `github({ clientId, clientSecret, admins })`는 코드에서 정한다. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로")다. 세션 서명 키는 비밀 값에서 만든다("비밀 값"). Next.js 앱에서 `host`는 `@monti-cms/nextjs/auth`의 `nextHost`다. 개발 우회가 켜진 `next dev`에서는 GitHub 앱이 없어도 로그인을 시도할 때만 오류가 나고, 로그인이 필요한 서버에서는 로그인 연결을 만들 때 오류가 난다 |
+| `auth` | 필수. 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()`는 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`(GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여럿)를 읽고, `github({ clientId, clientSecret, admins })`는 코드에서 정한다. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로")다. 세션 서명 키는 비밀 값에서 만든다("비밀 값"). `host`는 Next 통합 밖에서 쓰는 명시적 재정의다(`cms.attachHost`가 붙인 호스트보다 우선한다). Next.js 앱에서는 적지 않는다. 개발 우회가 켜진 `next dev`에서는 GitHub 앱이 없어도 로그인을 시도할 때만 오류가 나고, 로그인이 필요한 서버에서는 로그인 연결을 만들 때 오류가 난다 |
 | `storage` | 선택. 이미지·첨부 파일 저장소. 아무 패키지의 어댑터(예: `@monti-cms/storage-s3`의 `s3Storage`: AWS S3·Cloudflare R2·MinIO) 또는 `MediaStore` 계약을 구현한 연결(`MediaAdapter`). 없으면 미디어 기능을 못 쓰고 관리자가 미디어 메뉴를 숨긴다. |
 | `secret` | 선택. 하나뿐인 비밀 값. 없으면 `MONTI_SECRET` 환경 변수. 로그인 세션과 플러그인이 암호화해 두는 값(AI 서비스 키, git-sync 토큰)이 이 값에서 만든 키를 받는다. 비밀 값 자체는 누구도 받지 않는다("비밀 값"). |
 | `previousSecrets` | 선택. `secret`이 바뀌기 전의 값들(항목이 정의되지 않은 환경 변수 값이어도 된다). 이 값으로 암호화한 저장 값도 계속 읽히고, 다시 저장할 때 `secret`으로 새로 암호화된다. 그래서 `secret`을 바꿔도 저장된 키를 다시 넣지 않아도 된다. |
@@ -1216,19 +1217,17 @@ import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema,
-	site: { url: process.env.HOST_URL || undefined }, // 환경마다 다르다
 	plugins: [mdx()],
 	database: postgres(),
-	auth: auth({ providers: [github()], host: nextHost }),
+	auth: auth({ providers: [github()] }),
 });
 ```
 
-사이트 부분만 다루는 것은 `@monti-cms/core`의 `defineConfig`다(데이터베이스도 로그인도 없고, 테스트와 도구용이다). `createCms`·`createSite`와 나머지는 사이트 설정을 다른 설정과 똑같이 받으므로, 제 파일을 가진 여러 사이트가 한 프로세스에 함께 있을 수 있다. 올바르지 않은 파일은 시작할 때 모든 문제를 JSON 경로와 함께 알리고 멈춘다:
+낮은 수준 `createCms({ config: defineSite({ … }), server })`는 `@monti-cms/core`의 `defineSite`로 만든 사이트 부분만 받는다(데이터베이스도 로그인도 없고, 테스트와 도구용이다. `@monti-cms/core`는 더 이상 `defineConfig`를 내보내지 않는다). `createCms`·`createSite`와 나머지는 사이트 설정을 다른 설정과 똑같이 받으므로, 제 파일을 가진 여러 사이트가 한 프로세스에 함께 있을 수 있다. 올바르지 않은 파일은 시작할 때 모든 문제를 JSON 경로와 함께 알리고 멈춘다:
 
 ```text
 monti.schema.json is not a valid schema file:
@@ -1265,7 +1264,7 @@ monti.schema.json is not a valid schema file:
 
 ### TypeScript 설정 옮기기: `monti schema:extract`
 
-`monti schema:extract`는 `monti.config.ts`(그것이 내보낸 `cms`)나 옛 방식 `cms.config.ts`의 default export를 읽어(`--config <파일>`, 코드로 쓴 설정은 전과 같이 동작한다) 데이터 부분을 `monti.schema.json`(`--out <파일>`, 있는 파일을 바꾸려면 `--overwrite`, 플러그인이 주는 이름표의 언어는 `--locale <코드>`)과 `monti-env.d.ts`(`--no-types`로 건너뜀)에 쓰고, 코드에 남는 것을 알려 준다.
+`monti schema:extract`는 `monti.config.ts`(그것이 내보낸 `cms`)나 default export가 `defineSite(...)`인 옛 방식 `cms.config.ts`를 읽어(`--config <파일>`, 코드로 쓴 설정은 전과 같이 동작한다) 데이터 부분을 `monti.schema.json`(`--out <파일>`, 있는 파일을 바꾸려면 `--overwrite`, 플러그인이 주는 이름표의 언어는 `--locale <코드>`)과 `monti-env.d.ts`(`--no-types`로 건너뜀)에 쓰고, 코드에 남는 것을 알려 준다.
 설정 파일은 고치지 않고, 거기에 넣을 얇은 설정을 보여 준다:
 
 ```text
@@ -1273,7 +1272,7 @@ Wrote monti.schema.json (5 collections, 2 locales, 3 seed templates).
 Wrote monti-env.d.ts (the types of the schema; run `monti schema:types --watch` while you edit it).
 
 Stays in code (monti.config.ts):
-  - site.url: differs per environment, so it is read from the environment in code (`site: { url: process.env.HOST_URL }`)
+  - site.url: differs per environment, so it is read from `SITE_URL` by convention (no line in code)
   - plugins: mdx, callout, ..., seo, ai (code; the fields they add to collections are in the schema)
 ```
 

@@ -16,7 +16,6 @@ import {
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import { seo } from "@monti-cms/seo";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import schema from "./monti.schema.json";
@@ -34,8 +33,7 @@ import { wordList } from "./plugins/word-list";
  */
 export const cms = defineConfig({
 	schema,
-	// Only read on the server (it is empty in the browser). The rest of `site` is in the schema file.
-	site: { url: process.env.HOST_URL || undefined },
+	// The public site URL comes from SITE_URL. The rest of `site` is in the schema file.
 
 	plugins: [
 		// Bodies are written as MDX in the directive notation (`:::callout{…}`), read and written both ways: this is how the maintainer writes posts.
@@ -92,7 +90,7 @@ export const cms = defineConfig({
 
 	// The admin login: AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (the OAuth app; its callback URL is `<site URL>/api/cms/auth/callback/github`) and MONTI_ADMIN_GITHUB_ID (the admin's
 	// numeric GitHub id). Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.
-	auth: auth({ providers: [github()], host: nextHost }),
+	auth: auth({ providers: [github()] }),
 
 	// Media uploads: none here. A storage adapter from any package goes in `storage`.
 	// storage: ...,

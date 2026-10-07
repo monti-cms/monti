@@ -151,7 +151,7 @@ export function columnsFor(
 		return true;
 	});
 	const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
-	// Other fields listed in the list setting (`defineConfig` verified they are stored fields).
+	// Other fields listed in the list setting (`defineSite` verified they are stored fields).
 	// The title field is the system column `title` whatever its name, so its own name is not a second column.
 	const titleName = site.titleField(collection).name;
 	const listed = [...new Set(schema.list?.columns ?? [])];

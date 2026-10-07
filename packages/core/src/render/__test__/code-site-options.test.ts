@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineConfig } from "../../config/define";
+import { defineSite } from "../../config/define";
 import { defineCollection } from "../../schema/collection";
 import { fields } from "../../schema/fields";
 import { createSite } from "../../site";
@@ -18,8 +18,8 @@ const collections = {
 };
 const locales = [{ code: "en", name: "English" }];
 
-const siteWith = (codeBlock?: Parameters<typeof defineConfig>[0]["codeBlock"]) =>
-	createSite(defineConfig({ collections, locales, defaultLocale: "en", codeBlock }));
+const siteWith = (codeBlock?: Parameters<typeof defineSite>[0]["codeBlock"]) =>
+	createSite(defineSite({ collections, locales, defaultLocale: "en", codeBlock }));
 
 const ELIXIR = 'defmodule Hello do\n  def hi, do: "hi"\nend';
 

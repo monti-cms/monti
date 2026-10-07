@@ -12,6 +12,7 @@ const context = {
 	loginPath: "/studio/login",
 	trustHost: false,
 	secrets: createSecretsVault({ secret: "test-secret" }).forPlugin("auth"),
+	host: {},
 	storage: () => {
 		throw new Error("not used");
 	},

@@ -7,7 +7,7 @@ Monti의 Next.js 어댑터. Next에 묶인 것을 모두 갖고 있어서 `@mont
 - 관리자 API의 라우트 핸들러(`createRouteHandler`),
 - `next.config.ts` 연결(`withCms`),
 - 관리자가 필요로 하는 App Router 어댑터를 얹은 관리자 페이지·레이아웃(`CmsAdminLayout`·`CmsAdminPage`·`NextAdminRouter`),
-- 관리자 로그인(`@monti-cms/auth`)의 Next.js 쪽인 `nextHost`,
+- 관리자 로그인(`@monti-cms/auth`)의 Next.js 쪽인 요청 헤더(라우트 핸들러·레이아웃·페이지가 인스턴스에 붙인다),
 - 클라이언트 컴포넌트가 서버 전용 설정을 불러올 때 개발 중에 내는 경고(`checkImportBoundaryInDev`, `withCms`가 실행한다).
 
 지금 지원하는 호스트는 Next.js(App Router)뿐이다. `@monti-cms/core` README의 "지원하는 프레임워크"를 본다. 다른 프레임워크는 이 패키지 같은 다른 패키지가 된다.
@@ -27,7 +27,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, `CmsRouteHandler` 타입 |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` |
+| `@monti-cms/nextjs/auth` | (라우트 핸들러와 관리자가 알아서 붙인다) | `nextHost` |
 
 ### 라우트 핸들러
 
@@ -88,17 +88,16 @@ export default function AdminPage(props: CmsAdminPageProps) {
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema,
 	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 });
 ```
 
-환경 변수, 하나뿐인 비밀 값(`MONTI_SECRET`), 호스트 신뢰, 개발용 우회(`next dev`에서 켜짐)는 `@monti-cms/auth` README에 있다. 로그인 자체는 `@monti-cms/auth`(`Request`·`Response` 위의 Auth.js core. 로그인 방법을 프로바이더로 받는다)이고 Next에서 아무것도 가져오지 않는다. 이 패키지는 로그인이 Next 호스트에 요구하는 한 가지를 채운다. 지금 요청의 헤더인 `nextHost`다(요청할 때 `next/headers`에서 읽으므로 콘텐츠만 읽는 코드와 명령줄 도구는 불러오지 않는다). 던진 리다이렉트를 Next까지 보낼 일이 더는 없어서 `rethrow`도 없다. `host: nextHost`가 없으면 로그인이 요청을 볼 수 없어 개발용 우회가 적용되지 않는다.
+환경 변수, 하나뿐인 비밀 값(`MONTI_SECRET`), 호스트 신뢰, 개발용 우회(`next dev`에서 켜짐)는 `@monti-cms/auth` README에 있다. 로그인 자체는 `@monti-cms/auth`(`Request`·`Response` 위의 Auth.js core. 로그인 방법을 프로바이더로 받는다)이고 Next에서 아무것도 가져오지 않는다. 이 패키지는 로그인이 Next 호스트에 요구하는 한 가지, 지금 요청의 헤더를 채운다(요청할 때 `next/headers`에서 읽으므로 콘텐츠만 읽는 코드와 명령줄 도구는 불러오지 않는다). 라우트 핸들러·관리자 레이아웃·관리자 페이지가 이것을 인스턴스에 자동으로 붙이므로(`cms.attachHost(nextHost)`) 설정 없이 개발용 우회와 세션이 동작하고, 아래 세 파일도 그대로다. `nextHost`는 `@monti-cms/nextjs/auth`에서 여전히 내보내지만 사이트가 쓸 필요는 없다.
 
 ## 파일
 

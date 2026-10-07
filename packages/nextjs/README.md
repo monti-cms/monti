@@ -7,7 +7,7 @@ The Next.js adapter of Monti. It holds everything Next-specific, so `@monti-cms/
 - the route handler of the admin API (`createRouteHandler`),
 - the `next.config.ts` wiring (`withCms`),
 - the admin page and layout, with the App Router adapter the admin needs (`CmsAdminLayout`, `CmsAdminPage`, `NextAdminRouter`),
-- `nextHost`, the Next.js side of the admin login (`@monti-cms/auth`),
+- the Next.js side of the admin login (`@monti-cms/auth`): the request headers, attached to the instance by the route handler, layout and page,
 - a development warning when a client component imports the server-only config (`checkImportBoundaryInDev`, run by `withCms`).
 
 Next.js (App Router) is the only supported host for now; see "Supported frameworks" in the `@monti-cms/core` README. Another framework would be another package like this one.
@@ -27,7 +27,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, the `CmsRouteHandler` type |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` |
+| `@monti-cms/nextjs/auth` | (attached for you by the route handler and the admin) | `nextHost` |
 
 ### Route handler
 
@@ -88,17 +88,16 @@ export default function AdminPage(props: CmsAdminPageProps) {
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema,
 	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 });
 ```
 
-The environment variables, the one secret (`MONTI_SECRET`), host trust and the development bypass (on under `next dev`) are described in the `@monti-cms/auth` README. The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers), and it imports nothing from Next. This package supplies the one thing the login asks of a Next host: `nextHost`, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). Nothing has to reach Next as a thrown redirect any more, so there is no `rethrow`. Without `host: nextHost` the login cannot see the request, and the development bypass never applies.
+The environment variables, the one secret (`MONTI_SECRET`), host trust and the development bypass (on under `next dev`) are described in the `@monti-cms/auth` README. The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers), and it imports nothing from Next. This package supplies the one thing the login asks of a Next host, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). The route handler, the admin layout and the admin page attach it to the instance automatically (`cms.attachHost(nextHost)`), so the development bypass and sessions work with no config, and the three files below are unchanged. `nextHost` is still exported by `@monti-cms/nextjs/auth`, but sites do not need it.
 
 ## Files
 

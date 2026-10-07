@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { docOf } from "../../../test/stored-content";
-import { defineCollection, defineConfig, fields } from "../..";
+import { defineCollection, defineSite, fields } from "../..";
 import { fillFromBodyLength } from "../../schema/fields";
 import { createSite } from "../../site";
 import { validateForPublish } from "../snapshot";
@@ -12,7 +12,7 @@ import { validateForPublish } from "../snapshot";
 const title = fields.text({ label: "Title", required: true });
 const slug = fields.slug({ label: "Slug", from: "title", required: true });
 const site = createSite(
-	defineConfig({
+	defineSite({
 		collections: {
 			// A document without a body (e.g. a link collection). It publishes but its body is not checked.
 			page: defineCollection({ label: "Page", kind: "document", body: false, fields: { title, slug } }),

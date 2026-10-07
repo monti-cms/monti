@@ -11,7 +11,7 @@ Next.js (App Router) is the only supported host for now. The code is layered so 
 
 - `@monti-cms/core` speaks the standard `Request` and `Response` (`cms.handle(request)`) and imports nothing from Next.js. What a host has to supply (the headers of the current request, a redirect after login) comes in through the login connection (`CmsAuth.requestHeaders` and `CmsAuth.rethrow`).
 - `@monti-cms/admin` (the screens and `@monti-cms/admin/hooks`) imports nothing from Next.js either. It reaches the router only through an adapter it is given, `{ Link, navigate, replace, usePathname, useSearchParams }` (`AdminRouterProvider` of `@monti-cms/admin/router`), and the two things its server screens need, a redirect and a 404, through `AdminServer` (`@monti-cms/admin/host`).
-- `@monti-cms/nextjs` holds all the Next glue: the route handler, `withCms` for `next.config.ts`, the admin page and layout with the App Router adapter, and `nextHost`, the Next side of the login.
+- `@monti-cms/nextjs` holds all the Next glue: the route handler, `withCms` for `next.config.ts`, the admin page and layout with the App Router adapter, and the host hookup: it attaches the Next request headers to the instance, so `monti.config.ts` needs no `host` option.
 - `@monti-cms/auth` is the admin login, and it is framework-neutral too: it implements `CmsAuth` on `Request` and `Response` over Auth.js core, with the ways to log in as pluggable providers (GitHub ships with it).
 
 Another host (Astro, Remix, ...) would be a new adapter package, not a change to the core or the admin. Tests keep the boundary: no source file of the core or the admin may import `next/*`.
@@ -105,14 +105,13 @@ The site's data lives in `monti.schema.json`; `monti.config.ts` loads it and add
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema, // the data stays in monti.schema.json
 	plugins: [], // one line per feature, each works with no arguments: mdx(), seo(), callout(), ...
 	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 	// storage: <adapter from any package>, // media uploads; without it the admin hides the media menu
 });
 ```
@@ -146,6 +145,7 @@ Put them in `.env.local`.
 | `MONTI_SECRET` | A random long value, for example from `openssl rand -base64 32`. The one secret: login sessions are signed with a key derived from it, and plugins' stored values (AI service keys, git-sync tokens) are encrypted under keys derived from it (`defineConfig({ secret })` takes the same value). To change it, keep the old value in `previousSecrets` ("Secrets") |
 | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app (read by `github()`). The callback URL is `<site URL>/api/cms/auth/callback/github`. Not needed in `next dev` |
 | `MONTI_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID, or several separated by commas (read by `github()`). Not needed in `next dev` |
+| `SITE_URL` | Optional. The public URL of the site (`site.url`), different per environment; `site.url` in code or in the schema file wins |
 | `AUTH_TRUST_HOST` | Optional. `true` only when the server runs behind a proxy you run yourself (nginx, a load balancer) that overwrites `X-Forwarded-Host`; Vercel, Netlify, Cloudflare Pages and the like are detected. See "Host trust" |
 
 Explicit option values always win over these variables, and nothing is guessed from other names. A missing required value is an error that names the variable (the environment is read when a value is first used, so building without it does not fail). There is no variable for the development login: under `next dev` it is on by itself ("Login bypass for development").
@@ -177,7 +177,7 @@ Apps that still use `/api/auth/*` as before (apps that do not want to change an 
 
 ```ts
 // monti.config.ts
-auth: auth({ providers: [/* … */], host: nextHost, basePath: "/api/auth" }),
+auth: auth({ providers: [/* … */], basePath: "/api/auth" }),
 
 // app/api/auth/[...auth]/route.ts
 import { cms } from "../../../../monti.config";
@@ -303,7 +303,6 @@ Connections are created on first use, so creating the instance at import or buil
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import { mdx } from "@monti-cms/mdx";
 import { callout } from "@monti-cms/blocks";
 import schema from "./monti.schema.json";
@@ -312,14 +311,16 @@ export const cms = defineConfig({
 	schema,                                   // data stays in monti.schema.json
 	plugins: [mdx(), callout()],              // one line per feature, each works with no arguments
 	database: postgres(),                     // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 	// storage: <adapter from any package>,   // media uploads; without it the admin hides the media menu
 });
 ```
 
 Everything else imports `cms` from this file. `defineConfig` takes the site options (`schema`, or `collections` and `locales`, plus `plugins`, `blocks`, `site`, `admin`, `codeBlock`, `media`, `seed`, ...) and the server options ("Server options"): `database` and `auth` are required, the rest is optional.
 
-`defineConfig` of `@monti-cms/core` (the root entry) is the site-config-only part: it returns the config object and has no database or login. Tests and tools use it with the low-level `createCms({ config, server })` of `@monti-cms/core/server` (where `server` is a `CmsServerConfig`); apps use `defineConfig` of `@monti-cms/core/server`. `defineServerConfig` is removed.
+There is one public `defineConfig`, the one of `@monti-cms/core/server`; `@monti-cms/core` (the root entry) no longer exports `defineConfig`. The low-level `createCms({ config, server })` (where `server` is a `CmsServerConfig`) takes a site config built with `defineSite` of `@monti-cms/core`, which tests and tools use. `defineServerConfig` is removed.
+
+`site.url` is read from the `SITE_URL` environment variable by convention, unless `site.url` in code or in the schema file sets it.
 
 When moving from `cms.config.ts` + `cms.server.ts`, see "Upgrading from `cms.config.ts` + `cms.server.ts`".
 
@@ -339,7 +340,7 @@ When moving from `cms.config.ts` + `cms.server.ts`, see "Upgrading from `cms.con
 **HTTP layer.** The admin API, the login connection, the public API and the plugin routes work on the standard web `Request` and `Response`; no `NextRequest`, `NextResponse` or `request.nextUrl` is used.
 `cms.handle(request)` serves one request (the path after `/api/cms/` is read from the URL), and `createRouteHandler(cms)` of `@monti-cms/nextjs` is the thin Next adapter built on it.
 Plugin routes (`adminRoute`) receive a standard `Request`: read the query with `new URL(request.url).searchParams` and answer with `Response.json(…)`.
-The core imports nothing from Next.js. What a host supplies reaches it through the login connection: `CmsAuth.requestHeaders()` (the headers of the request being handled, which the development login bypass and `session()` read) and `CmsAuth.rethrow(error)` (lets a redirect that a login library throws pass through to the host; `@monti-cms/auth` answers with a `Response` and does not need it). `nextHost` of `@monti-cms/nextjs/auth` provides `requestHeaders` with Next's own function, and is passed to `auth({ host })`; a host for another framework provides its own.
+The core imports nothing from Next.js. What a host supplies reaches it through the login connection: `CmsAuth.requestHeaders()` (the headers of the request being handled, which the development login bypass and `session()` read) and `CmsAuth.rethrow(error)` (lets a redirect that a login library throws pass through to the host; `@monti-cms/auth` answers with a `Response` and does not need it). The Next integration (`createRouteHandler(cms)`, `CmsAdminLayout`, `CmsAdminPage` and `cmsAdminMetadata` of `@monti-cms/nextjs`) attaches the Next request headers to the instance itself with `cms.attachHost(host)` (`RequestHost` from `@monti-cms/core/server`; `AuthCreateContext` has `host: RequestHost`), so the config does not name a host. `auth({ host })` is still there as an explicit override for use outside a Next integration, and it wins over the attached one; a host for another framework provides its own.
 
 The reading API hangs off the instance (`cms.read.getEntry(…)`, not `getEntry(cms, …)`): site code imports one thing, and its types (`MetadataFor` and so on) stay in `@monti-cms/core/read`.
 
@@ -408,7 +409,7 @@ All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` int
 GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to the framework-neutral package `@monti-cms/auth`, which is built on Auth.js core and takes the ways to log in as providers.
 
 - Install `@monti-cms/auth`. `githubAuth` of `@monti-cms/nextjs/auth` is removed; replace it with the shape below.
-- The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })` (with the conventional environment variables `github()` and `auth()` need no options now, see "Environment variables and `monti migrate`"), with `auth` from `@monti-cms/auth`, `github` from `@monti-cms/auth/github` and `nextHost` from `@monti-cms/nextjs/auth`. `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
+- The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], devBypass, secret })` (with the conventional environment variables `github()` and `auth()` need no options now, see "Environment variables and `monti migrate`"), with `auth` from `@monti-cms/auth` and `github` from `@monti-cms/auth/github` (the host is attached by the Next integration, see "The CMS instance"). `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
 - Everyone signs in once more: sessions made by NextAuth are not read. The OAuth callback URL (`/api/cms/auth/callback/github`), `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` were unchanged by that move (the session secret is `MONTI_SECRET` now, see "Upgrading from `cms.config.ts` + `cms.server.ts`"). `next-auth` can be removed from `package.json`.
 - Account ids are qualified with the provider (`github:12345678`): `AuthContext.accountId`, `CmsAuth.devUserId`, and the author recorded for a change when the login gives no name. `isAdmin(userId)` of your own `CmsAuth` receives that value.
 - `CmsAuth` changes (for your own `AuthAdapter`): `session(request?)` may be given the request, `signIn` and `signOut` may resolve with a `Response` that the route returns as it is (a redirect that carries cookies), `AuthProvider` has an optional `icon`, and `AuthCreateContext` has `storage(plugin)` (`cms.storage`).
@@ -462,7 +463,7 @@ What else changed:
 
 ## Upgrading from `cms.config.ts` + `cms.server.ts`
 
-The site was set up in two files, `cms.config.ts` (the site config, `export default defineConfig({ … })`) and `cms.server.ts` (`createCms({ config, server: defineServerConfig({ … }) })`). It is one file now, `monti.config.ts`, that exports the ready instance as `cms`. `defineServerConfig` is removed (there is no shim). The `monti` command finds `monti.config.ts` (or `src/monti.config.ts`), and `monti schema:extract` is unchanged for code-first configs. This is the blog example, trimmed:
+The site was set up in two files, `cms.config.ts` (the site config, `export default defineConfig({ … })` with `defineConfig` of `@monti-cms/core`, which is now part of the one `defineConfig` of `@monti-cms/core/server`) and `cms.server.ts` (`createCms({ config, server: defineServerConfig({ … }) })`). It is one file now, `monti.config.ts`, that exports the ready instance as `cms`. `defineServerConfig` is removed (there is no shim). The `monti` command finds `monti.config.ts` (or `src/monti.config.ts`), and `monti schema:extract` is unchanged for code-first configs. This is the blog example, trimmed:
 
 ```diff
 -// cms.config.ts
@@ -523,7 +524,6 @@ The site was set up in two files, `cms.config.ts` (the site config, `export defa
 +import { defineConfig, postgres } from "@monti-cms/core/server";
 +import { gitSync } from "@monti-cms/git-sync";
 +import { mdx } from "@monti-cms/mdx";
-+import { nextHost } from "@monti-cms/nextjs/auth";
 +import { seo } from "@monti-cms/seo";
 +import { directiveSyntax } from "@monti-cms/syntax-directive";
 +import schema from "./monti.schema.json";
@@ -531,7 +531,6 @@ The site was set up in two files, `cms.config.ts` (the site config, `export defa
 +
 +export const cms = defineConfig({
 +	schema,
-+	site: { url: process.env.HOST_URL || undefined },
 +	plugins: [
 +		mdx({ syntax: [directiveSyntax()] }),
 +		callout(),
@@ -550,7 +549,7 @@ The site was set up in two files, `cms.config.ts` (the site config, `export defa
 +		gitSync({ enabled: false, targets: [/* ... */] }),
 +	],
 +	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-+	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
++	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 +	// MONTI_SECRET signs the login session and encrypts stored values
 +});
 ```
@@ -559,7 +558,7 @@ Do these steps in order:
 
 1. **Merge the two files into `monti.config.ts`.** Put the site options and the server options in one `export const cms = defineConfig({ … })` (from `@monti-cms/core/server`), then delete `cms.config.ts` and `cms.server.ts`. Change every import of `@/cms.server` or `../cms.server` (the route file, the admin layout and page, your site's pages, scripts) to the new file.
 2. **Replace `...blocks()` with one line per block.** `blocks()` and `blocks({ only, omit })` are gone: `callout()`, `collapsible()`, `tabs()`, `columns()`, `codeExplorer()`, `mermaid()`, `chart()`, `tooltip()`, `codeRef()` and `color(options?)`, each imported from `@monti-cms/blocks`. List only the ones you use. Keep `tooltip()`, `codeRef()` and `color()` in the order you want overlapping marks stored in.
-3. **Rename the environment variables.** Then delete the `process.env.X` arguments of `postgres()` and `github()`, which read the conventional names themselves.
+3. **Rename the environment variables** (`HOST_URL` becomes `SITE_URL`, and the `site` line goes). Then delete the `process.env.X` arguments of `postgres()` and `github()`, which read the conventional names themselves.
 
    | Before | After |
    | --- | --- |
@@ -569,12 +568,14 @@ Do these steps in order:
    | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | unchanged |
    | `CMS_DEV_AUTH_BYPASS` | delete: the development login is on by itself under `next dev` ("Login bypass for development") |
    | `AUTH_TRUST_HOST` | only needed behind a proxy you run yourself; Vercel, Netlify and Cloudflare Pages are detected ("Host trust") |
-   | `CMS_SECRET`, `AUTH_SECRET` | `MONTI_SECRET`, see the next step |
+   | `HOST_URL` | `SITE_URL`, and delete the `site: { url: … }` line: `defineConfig` reads `SITE_URL` itself |
+| `CMS_SECRET`, `AUTH_SECRET` | `MONTI_SECRET`, see the next step |
 
 4. **The secret.** Set `MONTI_SECRET` to the **old `CMS_SECRET` value**: every value encrypted before (AI service keys, git-sync tokens) keeps decrypting. Or set a new `MONTI_SECRET` and keep the old one readable with `previousSecrets: [process.env.CMS_SECRET]` in `defineConfig`; values are re-encrypted with the new secret when they are saved again, and you drop the old one only after that. `AUTH_SECRET` is not read any more and can be deleted: the login session key now comes from `MONTI_SECRET`, so everyone is signed out once (sessions reset, nothing else is lost).
-5. **The Next files.** Move `app/(admin)/studio/*` to `app/studio/*` (route groups are optional now), so there are three Monti files: `app/<admin path>/layout.tsx`, `app/<admin path>/[[...path]]/page.tsx` and `app/api/cms/[...path]/route.ts` (the layout cannot be folded into the page, see "`monti init`"). Delete `admin-components.tsx` and register its components as a plugin: `definePlugin({ name, options: {}, admin: () => import("./admin") })`, whose admin module's default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`) with a `Provider` that wraps the admin and uses `CmsAdminComponentsProvider` (`examples/blog/plugins/word-list/`). Update the imports of the three files to `monti.config.ts`.
-6. **Remove `bareun()`** if you do not want it. It is still a package, and the blog example dropped it.
-7. **Check and migrate.** Run `monti check:boundary` (no `"use client"` file may reach the config), then `monti migrate`.
+5. **The host.** Delete `host: nextHost` and its import: the Next integration attaches it.
+6. **The Next files.** Move `app/(admin)/studio/*` to `app/studio/*` (route groups are optional now), so there are three Monti files: `app/<admin path>/layout.tsx`, `app/<admin path>/[[...path]]/page.tsx` and `app/api/cms/[...path]/route.ts` (the layout cannot be folded into the page, see "`monti init`"). Delete `admin-components.tsx` and register its components as a plugin: `definePlugin({ name, options: {}, admin: () => import("./admin") })`, whose admin module's default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`) with a `Provider` that wraps the admin and uses `CmsAdminComponentsProvider` (`examples/blog/plugins/word-list/`). Update the imports of the three files to `monti.config.ts`.
+7. **Remove `bareun()`** if you do not want it. It is still a package, and the blog example dropped it.
+8. **Check and migrate.** Run `monti check:boundary` (no `"use client"` file may reach the config), then `monti migrate`.
 
 ## Components as source
 
@@ -596,7 +597,7 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 
 | Entry point | Used in | Contents |
 | --- | --- | --- |
-| `@monti-cms/core` | tests, tools, schema code | `defineConfig` (the site-config-only part, with `schema`; apps use the one of `/server`)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, the `SchemaFile` types |
+| `@monti-cms/core` | tests, tools, schema code | `defineSite` (the site-config-only part, with `schema`; no `defineConfig` here, apps use the one of `/server`)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, the `SchemaFile` types |
 | `@monti-cms/core/schema.json` | editors, `$schema` | The JSON Schema of `monti.schema.json` ("The schema file") |
 | `@monti-cms/core/schema-types` | dev tooling (`withCms`) | `generateSchemaTypes`, `watchSchemaTypes`: write `monti-env.d.ts` from the schema file |
 | `@monti-cms/core/schema-change` | settings screen, command line | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange` ("Changing the schema") |
@@ -605,7 +606,7 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` (pass as `host` to `auth()`) |
+| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` (the Next side of the login; a site does not need it, the Next integration attaches it) |
 | `@monti-cms/auth` | `monti.config.ts` | `auth({ providers, devBypass?, basePath?, host? })`, the `LoginProvider` type |
 | `@monti-cms/auth/github` | `monti.config.ts` | `github({ clientId?, clientSecret?, admins? })` (reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` when not given) |
 | `@monti-cms/admin/plugins` | the admin module of a plugin | `defineAdminPlugin({ Provider })` ("Plugins") |
@@ -1034,7 +1035,7 @@ The server options are part of the one `defineConfig({ … })` call, next to the
 | Item | Meaning |
 |---|---|
 | `database` | Required. Content store. `postgres()` reads `DATABASE_URL` and `DATABASE_SCHEMA`; `postgres({ connectionString, schema })` sets them in code |
-| `auth` | Required. Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). In a Next.js app, `host` is `nextHost` of `@monti-cms/nextjs/auth`. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
+| `auth` | Required. Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). `host` is an explicit override for use outside a Next integration (it wins over the host that `cms.attachHost` attached); in a Next.js app leave it out. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
 | `storage` | Optional. Store for images and attachments: an adapter from any package, for example `s3Storage` (AWS S3, Cloudflare R2, MinIO) from `@monti-cms/storage-s3`, or a connection implementing the `MediaStore` contract (`MediaAdapter`). Without it, media features are unavailable and the admin hides the media menu. |
 | `secret` | Optional. The one secret. If unset, the `MONTI_SECRET` environment variable. Login sessions and plugins' encrypted values (AI service keys, git-sync tokens) get keys derived from it; nothing receives the secret itself ("Secrets"). |
 | `previousSecrets` | Optional. Secrets `secret` replaced (entries may be undefined environment values). Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
@@ -1216,19 +1217,17 @@ import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema,
-	site: { url: process.env.HOST_URL || undefined }, // differs per environment
 	plugins: [mdx()],
 	database: postgres(),
-	auth: auth({ providers: [github()], host: nextHost }),
+	auth: auth({ providers: [github()] }),
 });
 ```
 
-The site part alone is `defineConfig` of `@monti-cms/core` (no database or login; for tests and tools). `createCms`, `createSite` and everything else take a site config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its JSON path:
+The low-level `createCms({ config: defineSite({ … }), server })` takes the site part alone, built with `defineSite` of `@monti-cms/core` (no database or login; for tests and tools; `@monti-cms/core` no longer exports `defineConfig`). `createCms`, `createSite` and everything else take a site config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its JSON path:
 
 ```text
 monti.schema.json is not a valid schema file:
@@ -1265,7 +1264,7 @@ and `createCms`, `cms.read`, `MetadataFor`, `CollectionName` and `DocumentCompon
 
 ### Moving a TypeScript config: `monti schema:extract`
 
-`monti schema:extract` loads `monti.config.ts` (the `cms` it exports) or the default export of an old-style `cms.config.ts` (`--config <file>`; code-first configs work as before), writes its data part to `monti.schema.json` (`--out <file>`, `--overwrite` to replace an existing one, `--locale <code>` for the language of plugin-provided labels) and `monti-env.d.ts` (`--no-types` skips it), and prints what stays in code.
+`monti schema:extract` loads `monti.config.ts` (the `cms` it exports) or the default export of an old-style `cms.config.ts` whose default export is `defineSite(...)` (`--config <file>`; code-first configs work as before), writes its data part to `monti.schema.json` (`--out <file>`, `--overwrite` to replace an existing one, `--locale <code>` for the language of plugin-provided labels) and `monti-env.d.ts` (`--no-types` skips it), and prints what stays in code.
 It never edits the config file; it prints the slim config to put there:
 
 ```text
@@ -1273,7 +1272,7 @@ Wrote monti.schema.json (5 collections, 2 locales, 3 seed templates).
 Wrote monti-env.d.ts (the types of the schema; run `monti schema:types --watch` while you edit it).
 
 Stays in code (monti.config.ts):
-  - site.url: differs per environment, so it is read from the environment in code (`site: { url: process.env.HOST_URL }`)
+  - site.url: differs per environment, so it is read from `SITE_URL` by convention (no line in code)
   - plugins: mdx, callout, ..., seo, ai (code; the fields they add to collections are in the schema)
 ```
 

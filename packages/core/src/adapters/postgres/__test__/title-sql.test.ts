@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, defineConfig, fields } from "../../../index";
+import { defineCollection, defineSite, fields } from "../../../index";
 import { createSite } from "../../../site";
 import { createDb } from "../db/kysely";
 import { ROW_COLLECTION, titleExpr, translatedTitleExpr } from "../store/title-sql";
@@ -12,7 +12,7 @@ const collection = (titleKey: string) =>
 	});
 const siteOf = (keys: Record<string, string>) =>
 	createSite(
-		defineConfig({
+		defineSite({
 			collections: Object.fromEntries(Object.entries(keys).map(([name, key]) => [name, collection(key)])),
 			locales: [{ code: "en", name: "English" }],
 			defaultLocale: "en",

@@ -185,7 +185,7 @@ export interface SchemaEditPreview {
 	readonly bodiesRead: number;
 }
 
-/** A message of `defineConfig` as an issue: it starts with `cms.config:` and names a collection, which gives the JSON path. */
+/** A message of `defineSite` as an issue: it starts with `cms.config:` and names a collection, which gives the JSON path. */
 function issueFromError(error: unknown, collections: readonly string[]): SchemaIssue {
 	const message = error instanceof Error ? error.message : String(error);
 	const text = message.replace(/^cms\.config:\s*/, "");
@@ -230,7 +230,7 @@ interface Checked {
 	readonly next: Cms;
 }
 
-/** Checks the edited content: the file format, then the rules between collections that `defineConfig` checks. */
+/** Checks the edited content: the file format, then the rules between collections that `defineSite` checks. */
 function checkEdit(cms: Cms, schema: unknown): { issues: SchemaIssue[]; checked?: Checked } {
 	let parsed: SchemaFile;
 	try {

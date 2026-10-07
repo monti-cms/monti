@@ -53,7 +53,7 @@ export type {
 	WriteHooks,
 	WriteOperation,
 } from "../services/hooks";
-export { defineConfig, type MontiServerOptions, SECRET_ENV } from "./config";
+export { defineConfig, type MontiServerOptions, SECRET_ENV, SITE_URL_ENV } from "./config";
 export {
 	type AuthAdapter,
 	type AuthContext,
@@ -64,4 +64,5 @@ export {
 	type CmsServerConfig,
 	type DatabaseAdapter,
 	type MediaAdapter,
+	type RequestHost,
 } from "./define";

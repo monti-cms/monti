@@ -19,13 +19,12 @@ pnpm add @monti-cms/auth
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth"; // only in a Next.js app
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema,
 	database: postgres(),
-	auth: auth({ providers: [github()], host: nextHost }),
+	auth: auth({ providers: [github()] }),
 });
 ```
 
@@ -50,7 +49,7 @@ The callback URL of the GitHub OAuth app is `<site>/api/cms/auth/callback/github
 | `admins` | Admins as qualified account ids (`"github:12345678"`). The ones on a provider (`github({ admins })`) count too |
 | `devBypass` | Local development only: treat requests from this machine as the first admin. On by default under `next dev`; `false` turns it off (see "Dev bypass") |
 | `basePath` | Login API path, default `/api/cms/auth` (served by the admin API route; see "Login path" in the core README) |
-| `host` | What the host framework supplies: `requestHeaders()` (the headers of the request being handled) and `rethrow(error)`. `nextHost` of `@monti-cms/nextjs/auth` is the Next.js one. Without `requestHeaders`, `session()` needs the request passed in and the development bypass never applies |
+| `host` | Not needed in Next.js, where `@monti-cms/nextjs` attaches it. For other frameworks pass `{ requestHeaders, rethrow }`; it wins over the attached one. Without `requestHeaders`, `session()` needs the request passed in and the development bypass never applies |
 
 There is no `secret` option: the session key comes from `MONTI_SECRET` (see "Secret"). Host trust (`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`) is described under "Host trust". The session is a signed JWT cookie (8 hours, rolling), so nothing is stored for it.
 
@@ -75,7 +74,7 @@ A proxy you run yourself (nginx, a load balancer) is not detected: set `trustHos
 
 Under `next dev` (`NODE_ENV=development`) you are signed in as the first admin with no login settings at all. It is on by default and applies only when all of these hold: the request comes from this machine (a loopback host), and the environment does not look deployed (no hosting platform variables, no public `AUTH_URL`). It never applies in production. `auth({ devBypass: false })` turns it off; `devBypass: true` on a process that looks deployed refuses to start. There is no environment variable for it (`CMS_DEV_AUTH_BYPASS` is gone).
 
-It needs the request headers, so it needs `host: nextHost`: without `host.requestHeaders` the login cannot see the request, the bypass never applies, and a warning says so.
+It needs the request headers, which the Next.js integration attaches automatically, so it works with no config. Outside Next.js, without `host.requestHeaders` the login cannot see the request and the bypass never applies; a warning says so.
 
 ## Who is an admin
 
@@ -150,10 +149,9 @@ The login screen posts a plain form to the core (`POST /api/cms/v1/session/sign-
 -import { githubAuth } from "@monti-cms/nextjs/auth";
 +import { auth } from "@monti-cms/auth";
 +import { github } from "@monti-cms/auth/github";
-+import { nextHost } from "@monti-cms/nextjs/auth";
  ...
 -auth: githubAuth({ clientId, clientSecret, adminIds: [id], devBypass, secret }),
-+auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost }),
++auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })] }),
 ```
 
 - **Admins.** `adminIds` becomes `admins` on the provider, or the `MONTI_ADMIN_GITHUB_ID` variable (formerly `CMS_ADMIN_GITHUB_ID`). It still takes numeric GitHub ids; no value changes. Logins were never matched.

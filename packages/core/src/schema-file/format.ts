@@ -8,7 +8,7 @@ import type { SchemaFile } from "./types";
  * definition. Objects are strict: a key the format does not have is an error (this is how the retired `workflow` option and a misspelt option are caught).
  *
  * Only the shape and the rules that name one value are checked here. Rules between collections (a relation to a collection that exists, one URL pattern per
- * collection, layout names) are checked by `defineConfig`, which every schema goes through.
+ * collection, layout names) are checked by `defineSite`, which every schema goes through.
  */
 
 const text = z.string();

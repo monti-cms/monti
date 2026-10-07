@@ -97,9 +97,7 @@ export class CmsAuthGateway implements AuthGateway {
 		if (!devBypassSkippedWarned) {
 			devBypassSkippedWarned = true;
 			console.warn(
-				headers
-					? `[cms-auth] DEV AUTH BYPASS skipped: the request does not come from localhost (host: ${headers.get("host") ?? "unknown"}). Signing in is required.`
-					: "[cms-auth] DEV AUTH BYPASS skipped: the login cannot see the headers of the request. In a Next.js app pass `host: nextHost` (from @monti-cms/nextjs/auth) to auth(). Signing in is required.",
+				`[cms-auth] DEV AUTH BYPASS skipped: the request does not come from localhost (host: ${headers?.get("host") ?? "unknown"}). Signing in is required.`,
 			);
 		}
 		return false;

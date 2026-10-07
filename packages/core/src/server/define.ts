@@ -113,6 +113,18 @@ export interface CmsAuth {
 	rethrow?(error: unknown): void;
 }
 
+/**
+ * What the host framework supplies to the login: the headers of the request being handled, and a way to let the framework's own signals through.
+ * The framework integration (`@monti-cms/nextjs`) attaches it to the instance it serves (`cms.attachHost`), so a site does not write it; code outside such an
+ * integration passes one as `host` of `auth()`.
+ */
+export interface RequestHost {
+	/** Headers of the request being handled, or `null` outside a request (a command-line tool, or a module loaded at build time). */
+	requestHeaders?(): Promise<Pick<Headers, "get"> | null>;
+	/** Throws `error` again when it is a signal the framework uses to leave the handler, so it is not turned into an API error. Does nothing otherwise. */
+	rethrow?(error: unknown): void;
+}
+
 /** Values the core passes when creating the login connection. */
 export interface AuthCreateContext {
 	/** The instance's site: the login connection takes the language of its texts (`site.createTranslator`) from it. */
@@ -124,6 +136,8 @@ export interface AuthCreateContext {
 	 * The login derives its session-signing key from it. `available` is false when no secret is set.
 	 */
 	readonly secrets: PluginSecrets;
+	/** The host attached to the instance (`cms.attachHost`). It answers `null` for the headers until a framework integration has attached itself. An explicit `host` of `auth()` is used instead. */
+	readonly host: RequestHost;
 	/** Admin login page URL (admin path + `/login`, e.g. `/admin/login`). Includes the Next `basePath` if set, so it is the browser-facing URL. */
 	readonly loginPath: string;
 	/** Storage of a plugin (`cms.storage(plugin)`). A login method that keeps its own users (a password login) keeps them here. */

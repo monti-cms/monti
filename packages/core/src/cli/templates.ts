@@ -61,7 +61,6 @@ export function schemaTemplate(adminPath: string, options: ConfigTemplateOptions
 export const MONTI_CONFIG_TEMPLATE = `import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 /**
@@ -74,7 +73,7 @@ import schema from "./monti.schema.json";
  */
 export const cms = defineConfig({
 	schema,
-	// Site settings that differ per environment override the file's: site: { url: process.env.HOST_URL },
+	// The public site URL is read from SITE_URL. Other site settings that differ per environment override the file's: site: { name: "..." },
 
 	// One line per feature, each works with no arguments. Install the package, import it above, add it here, for example:
 	//   mdx()      from @monti-cms/mdx      MDX bodies
@@ -86,9 +85,9 @@ export const cms = defineConfig({
 	database: postgres(),
 
 	// Who can log in. github() reads AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (the OAuth app) and MONTI_ADMIN_GITHUB_ID (the admin's numeric GitHub id). Another provider
-	// (GitLab, Google, ...) goes in the same list. host: nextHost lets the login read the headers of the request Next.js is handling.
+	// (GitLab, Google, ...) goes in the same list.
 	// In next dev you are signed in as the admin automatically (only from this machine); production never does that.
-	auth: auth({ providers: [github()], host: nextHost }),
+	auth: auth({ providers: [github()] }),
 
 	// Image and file uploads: an adapter from a storage package. pnpm add @monti-cms/storage-s3, import { s3Storage } from it, and it reads its settings
 	// from the environment (S3_* in .env.local; Cloudflare R2 and MinIO too). Without one, the admin hides the media menu.

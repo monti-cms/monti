@@ -19,13 +19,12 @@ Next.js 앱에서는 `monti init`이 설정해 준다. `@monti-cms/core`는 peer
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { nextHost } from "@monti-cms/nextjs/auth"; // Next.js 앱에서만
 import schema from "./monti.schema.json";
 
 export const cms = defineConfig({
 	schema,
 	database: postgres(),
-	auth: auth({ providers: [github()], host: nextHost }),
+	auth: auth({ providers: [github()] }),
 });
 ```
 
@@ -50,7 +49,7 @@ GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/cms/au
 | `admins` | 프로바이더를 붙인 계정 ID(`"github:12345678"`)로 적은 관리자. 프로바이더에 적은 것(`github({ admins })`)도 같이 센다 |
 | `devBypass` | 로컬 개발에서만. 이 컴퓨터에서 온 요청을 첫 번째 관리자로 본다. `next dev`에서는 기본으로 켜져 있고 `false`로 끈다("개발용 우회" 참고) |
 | `basePath` | 로그인 API 경로. 기본 `/api/cms/auth`(관리자 API 라우트가 같이 처리한다. 코어 README의 "로그인 경로") |
-| `host` | 호스트 프레임워크가 대 주는 것. `requestHeaders()`(처리 중인 요청의 헤더)와 `rethrow(error)`. `@monti-cms/nextjs/auth`의 `nextHost`가 Next.js용이다. `requestHeaders`가 없으면 `session()`에 요청을 넘겨야 하고 개발용 우회는 적용되지 않는다 |
+| `host` | Next.js에서는 `@monti-cms/nextjs`가 붙여 주므로 필요 없다. 다른 프레임워크에서는 `{ requestHeaders, rethrow }`를 넘긴다. 붙여진 것보다 우선한다. `requestHeaders`가 없으면 `session()`에 요청을 넘겨야 하고 개발용 우회는 적용되지 않는다 |
 
 `secret` 옵션은 없다. 세션 키는 `MONTI_SECRET`에서 나온다("비밀 값" 참고). 호스트 신뢰(`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`)는 "호스트 신뢰"에 있다. 세션은 서명한 JWT 쿠키(8시간, 갱신형)라 따로 저장하는 것이 없다.
 
@@ -75,7 +74,7 @@ GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/cms/au
 
 `next dev`(`NODE_ENV=development`)에서는 로그인 설정이 전혀 없어도 첫 번째 관리자로 로그인된다. 기본으로 켜져 있고, 다음을 모두 만족할 때만 적용된다. 요청이 이 컴퓨터(루프백 호스트)에서 왔고, 환경이 배포된 것처럼 보이지 않아야 한다(호스팅 플랫폼 변수나 공개 `AUTH_URL`이 없을 것). 운영 환경에서는 절대 적용되지 않는다. `auth({ devBypass: false })`로 끌 수 있고, 배포된 것처럼 보이는 프로세스에서 `devBypass: true`를 주면 시작을 거부한다. 이를 위한 환경 변수는 없다(`CMS_DEV_AUTH_BYPASS`는 없어졌다).
 
-요청 헤더가 필요하므로 `host: nextHost`가 있어야 한다. `host.requestHeaders`가 없으면 로그인이 요청을 볼 수 없어 우회가 적용되지 않으며, 경고가 그 사실을 알린다.
+요청 헤더가 필요한데, Next.js 연동이 자동으로 붙여 주므로 설정 없이 동작한다. Next.js 밖에서 `host.requestHeaders`가 없으면 로그인이 요청을 볼 수 없어 우회가 적용되지 않으며, 경고가 그 사실을 알린다.
 
 ## 누가 관리자인가
 
@@ -150,10 +149,9 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 -import { githubAuth } from "@monti-cms/nextjs/auth";
 +import { auth } from "@monti-cms/auth";
 +import { github } from "@monti-cms/auth/github";
-+import { nextHost } from "@monti-cms/nextjs/auth";
  ...
 -auth: githubAuth({ clientId, clientSecret, adminIds: [id], devBypass, secret }),
-+auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost }),
++auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })] }),
 ```
 
 - **관리자.** `adminIds`는 프로바이더의 `admins`, 또는 `MONTI_ADMIN_GITHUB_ID` 변수(전의 `CMS_ADMIN_GITHUB_ID`)가 된다. 여전히 GitHub 숫자 ID를 받으므로 바꿀 값은 없다. 로그인 이름은 처음부터 비교하지 않았다.

@@ -24,7 +24,7 @@ import {
 } from "./rules";
 
 /**
- * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineConfig`, and exports the result as the default export.
+ * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
  *
  * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values** (plugins also hold functions).
  * Secrets (DB URL, API keys) do not go here; keep them in environment variables.
@@ -484,7 +484,7 @@ export interface SchemaCmsConfig<
  * The collection and locale names and the metadata types come from the generated types of the file (`monti schema:types`), or from the file's content when
  * it is written in code with literal types.
  */
-export function defineConfig<
+export function defineSite<
 	const Schema extends SchemaInput,
 	const Collections extends CollectionsConfig = Record<never, never>,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
@@ -492,13 +492,13 @@ export function defineConfig<
 >(
 	config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks>,
 ): CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>;
-export function defineConfig<
+export function defineSite<
 	const Collections extends CollectionsConfig,
 	const Locale extends string,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
 >(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks>;
-export function defineConfig(
+export function defineSite(
 	input:
 		| CmsConfig<CollectionsConfig, string, readonly CmsPlugin[], readonly BlockDefinition[]>
 		| (SchemaCmsConfig & { readonly schema: unknown }),
@@ -518,7 +518,7 @@ export function defineConfig(
 		Object.defineProperty(normalized, SCHEMA_SOURCE, {
 			value: {
 				...(typeof schemaInput.schema === "string" ? { file: schemaInput.schema } : {}),
-				rebuild: (schema: unknown) => defineConfig({ ...schemaInput, schema } as never),
+				rebuild: (schema: unknown) => defineSite({ ...schemaInput, schema } as never),
 			},
 		});
 	}

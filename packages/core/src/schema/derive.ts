@@ -26,7 +26,7 @@ export type { StoredField } from "./walk";
 
 /** Collection names (keys of `collections` in the site config). Follows declaration order. */
 export type SchemaCollection = string;
-/** Target collection of a relation. `to` and `from` in the definition are strings, and `defineConfig` has checked they are real collections. */
+/** Target collection of a relation. `to` and `from` in the definition are strings, and `defineSite` has checked they are real collections. */
 export type RelationTarget = SchemaCollection;
 
 /**
@@ -74,7 +74,7 @@ const isEmptyValue = (value: unknown) =>
 	(Array.isArray(value) && value.length === 0);
 
 /**
- * Metadata key that holds the per-language values of item collections (categories, tags, collections). It cannot be used as a field name (`defineConfig`).
+ * Metadata key that holds the per-language values of item collections (categories, tags, collections). It cannot be used as a field name (`defineSite`).
  * `{ en: { title: "..." }, ja: { ... } }`. The address and links are shared, so records are not split per language.
  */
 export const RECORD_TRANSLATIONS_KEY = RESERVED_METADATA_KEYS[0] as "translations";

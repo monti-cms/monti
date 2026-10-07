@@ -14,7 +14,7 @@ import type { CmsPlugin } from "../plugin/define";
 import { createSchemas, type SiteSchemas } from "../schema/derive";
 
 /**
- * A site config that is any config: what code that works on a site without knowing which one it is accepts. The config a site writes (`defineConfig(...)`) is
+ * A site config that is any config: what code that works on a site without knowing which one it is accepts. The config a site writes (`defineSite(...)`) is
  * assignable to it and keeps its own, narrower type in `Site<typeof config>`.
  */
 export type AnyCmsConfig = CmsConfig;
@@ -102,7 +102,7 @@ function snapshotOf(config: AnyCmsConfig, blocks: SiteBlocks): SiteSnapshot {
 /**
  * Resolves a site config into a `Site`: its locales, collections and schema rules, links and admin addresses, time zone, blocks, code block settings, admin language and
  * request schemas. Nothing is read from a module or the environment, and nothing is shared between sites, so any number of sites live in one process (a CMS instance
- * per `createCms`, the admin in the browser per `<SiteProvider>`). It throws if the config is inconsistent in a way `defineConfig` would also reject.
+ * per `createCms`, the admin in the browser per `<SiteProvider>`). It throws if the config is inconsistent in a way `defineSite` would also reject.
  *
  * The labels of block and line effect definitions (getters, because the language is not known when the config file imports them) are read here, in the admin language.
  */

@@ -1,5 +1,5 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
-import { defineConfig } from "../config/define";
+import { defineSite } from "../config/define";
 import type { ContentStore } from "../core/store";
 import { createFormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
@@ -41,7 +41,7 @@ export interface FakeCmsParts<Config extends AnyCmsConfig = AnyCmsConfig> {
 	readonly formats?: readonly CmsFormat[];
 }
 
-const DEFAULT_CONFIG = defineConfig({
+const DEFAULT_CONFIG = defineSite({
 	collections: {
 		page: defineCollection({
 			label: "Page",
@@ -130,6 +130,7 @@ export function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFI
 		formats: async () => createFormatRegistry(parts.formats ?? []),
 		secrets: cms.secrets,
 		authGateway,
+		attachHost: () => undefined,
 		handle: lazyHandle(() => fake as unknown as Cms),
 		read: createRead<Config>({
 			site: cms.site,

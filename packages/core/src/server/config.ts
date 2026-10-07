@@ -1,17 +1,15 @@
 import type { BlockDefinition } from "../blocks/define";
 import { type Cms, createCms } from "../cms";
-import {
-	type CmsConfig,
-	type CollectionsConfig,
-	defineConfig as defineSiteConfig,
-	type SchemaCmsConfig,
-} from "../config/define";
+import { type CmsConfig, type CollectionsConfig, defineSite, type SchemaCmsConfig } from "../config/define";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { CmsPlugin } from "../plugin/define";
 import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types";
 import type { EventDeliveryOptions } from "../services/events";
 import type { WriteHooks } from "../services/hooks";
 import type { AuthAdapter, CmsServerConfig, DatabaseAdapter, MediaAdapter } from "./define";
+
+/** The environment variable the public site URL is read from when neither `site.url` nor the schema file sets it. */
+export const SITE_URL_ENV = "SITE_URL";
 
 /** The environment variable the one master secret is read from when `secret` is not given. */
 export const SECRET_ENV = "MONTI_SECRET";
@@ -86,7 +84,7 @@ const isServerKey = (key: string): key is (typeof SERVER_KEYS)[number] =>
  * });
  * ```
  *
- * It takes the site options of `defineConfig` of `@monti-cms/core` (`schema` or `collections` and `locales`, `plugins`, `blocks`, `site`, `admin`, ...) and the
+ * It takes the site options (`defineSite` of `@monti-cms/core`, which the config builds for you) (`schema` or `collections` and `locales`, `plugins`, `blocks`, `site`, `admin`, ...) and the
  * server options ({@link MontiServerOptions}). Connections are created on first use, so importing this file where the environment is absent (a build) does not fail.
  * The file is server-only: the admin gets a JSON snapshot of the site, never the file, and importing it into a client bundle throws.
  */
@@ -125,7 +123,13 @@ export function defineConfig(input: MontiServerOptions): Cms {
 	}
 	const site: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(input as object)) if (!isServerKey(key)) site[key] = value;
-	const config = defineSiteConfig(site as never);
+	// The public site URL by convention: `SITE_URL`, unless the code (`site.url`) or the schema file says it.
+	const schema = site.schema as { site?: { url?: unknown } } | string | undefined;
+	const fileUrl = typeof schema === "object" ? schema?.site?.url : undefined;
+	const siteOptions = site.site as { url?: string } | undefined;
+	const envUrl = process.env[SITE_URL_ENV]?.trim();
+	if (!siteOptions?.url && !fileUrl && envUrl) site.site = { ...siteOptions, url: envUrl };
+	const config = defineSite(site as never);
 	const server: CmsServerConfig = {
 		database: input.database,
 		auth: input.auth,

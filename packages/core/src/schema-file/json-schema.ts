@@ -7,7 +7,7 @@ import { schemaFileShape } from "./format";
  * a test fails when the committed file is out of date.
  *
  * The JSON Schema describes the shape. The runtime check also applies rules a JSON Schema cannot say (a default option that exists, a relation to a collection
- * that exists), so an editor accepting a file does not mean `defineConfig` will.
+ * that exists), so an editor accepting a file does not mean `defineSite` will.
  */
 export function buildJsonSchema(): Record<string, unknown> {
 	const schema = z.toJSONSchema(schemaFileShape, { target: "draft-7", io: "input", unrepresentable: "any" });

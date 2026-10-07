@@ -1,5 +1,5 @@
 import { CmsAdminComponentsProvider, useCmsAdminComponents } from "@monti-cms/admin";
-import { defineCollection, defineConfig, fields, translate } from "@monti-cms/core";
+import { defineCollection, defineSite, fields, translate } from "@monti-cms/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
@@ -54,14 +54,14 @@ describe("one plugin per block", () => {
 	});
 
 	it("listing them in the config adds exactly the blocks listed, in the order given", () => {
-		const config = defineConfig({ ...base, plugins: [tooltip(), callout(), codeRef()] });
+		const config = defineSite({ ...base, plugins: [tooltip(), callout(), codeRef()] });
 		expect(names(config.plugins ?? [])).toEqual(["tooltip", "callout", "code-ref"]);
 	});
 
 	it("a block that is not listed is not there", () => {
 		const blocksOf = (config: { plugins?: readonly { blocks?: readonly { name: string }[] }[] }) =>
 			(config.plugins ?? []).flatMap((plugin) => (plugin.blocks ?? []).map((block) => block.name));
-		const some = blocksOf(defineConfig({ ...base, plugins: [callout(), tooltip()] }));
+		const some = blocksOf(defineSite({ ...base, plugins: [callout(), tooltip()] }));
 		expect(some).toContain("callout");
 		expect(some).not.toContain("chart");
 		expect(some).not.toContain("tabs");
@@ -72,9 +72,9 @@ describe("one plugin per block", () => {
 			(item) => item !== undefined,
 		);
 		expect(color({ palette }).options).toEqual({ palette });
-		expect(() => defineConfig({ ...base, plugins: [color({ palette })] })).not.toThrow();
+		expect(() => defineSite({ ...base, plugins: [color({ palette })] })).not.toThrow();
 		expect(() =>
-			defineConfig({
+			defineSite({
 				...base,
 				plugins: [
 					color({
@@ -86,7 +86,7 @@ describe("one plugin per block", () => {
 	});
 
 	it("adding the same block twice is a config error", () => {
-		expect(() => defineConfig({ ...base, plugins: [callout(), callout()] })).toThrow();
+		expect(() => defineSite({ ...base, plugins: [callout(), callout()] })).toThrow();
 	});
 });
 

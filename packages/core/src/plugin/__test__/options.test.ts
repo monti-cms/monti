@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, defineConfig, definePlugin, fields } from "../..";
+import { defineCollection, definePlugin, defineSite, fields } from "../..";
 import { createSite } from "../../site";
 
 const page = defineCollection({
@@ -12,7 +12,7 @@ const page = defineCollection({
 });
 
 const site = createSite(
-	defineConfig({
+	defineSite({
 		collections: { page },
 		locales: [{ code: "en", name: "English" }],
 		defaultLocale: "en",
@@ -34,14 +34,14 @@ describe("site.getPluginOptions", () => {
 
 	it("is undefined for every name when the config lists no plugins", () => {
 		const bare = createSite(
-			defineConfig({ collections: { page }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
+			defineSite({ collections: { page }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
 		);
 		expect(bare.getPluginOptions("color")).toBeUndefined();
 	});
 
 	it("keeps the options of two sites apart", () => {
 		const other = createSite(
-			defineConfig({
+			defineSite({
 				collections: { page },
 				locales: [{ code: "en", name: "English" }],
 				defaultLocale: "en",

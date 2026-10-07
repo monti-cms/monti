@@ -27,6 +27,7 @@ beforeEach(() => {
 		"VERCEL",
 		"NETLIFY",
 		"CF_PAGES",
+		"SITE_URL",
 	]) {
 		vi.stubEnv(name, "");
 	}
@@ -168,5 +169,65 @@ describe("trust host", () => {
 		expect(trusted({ trustHost: false })).toBe(false);
 		vi.stubEnv("NETLIFY", "");
 		expect(trusted({ trustHost: true })).toBe(true);
+	});
+});
+
+describe("site URL by convention, SITE_URL", () => {
+	const urlOf = (extra: object = {}) => defineConfig({ ...site, database, auth, ...extra }).site.config.site?.url;
+
+	it("is read from SITE_URL when nothing else says it", () => {
+		expect(urlOf()).toBeUndefined();
+		vi.stubEnv("SITE_URL", "https://env.example.com");
+		expect(urlOf()).toBe("https://env.example.com");
+	});
+
+	it("is overridden by an explicit site.url, and by the schema file's", () => {
+		vi.stubEnv("SITE_URL", "https://env.example.com");
+		expect(urlOf({ site: { url: "https://code.example.com", name: "n" } })).toBe("https://code.example.com");
+		const fromFile = defineConfig({
+			schema: { ...site, site: { url: "https://file.example.com" } } as never,
+			database,
+			auth,
+		});
+		expect(fromFile.site.config.site?.url).toBe("https://file.example.com");
+	});
+
+	it("keeps the other site settings when it fills the URL in", () => {
+		vi.stubEnv("SITE_URL", "https://env.example.com");
+		expect(defineConfig({ ...site, database, auth, site: { name: "Blog" } }).site.config.site).toEqual({
+			name: "Blog",
+			url: "https://env.example.com",
+		});
+	});
+});
+
+describe("the host framework attaches itself to the instance", () => {
+	const seen: { host?: import("../define").RequestHost } = {};
+	const capturing: AuthAdapter = {
+		name: "capture",
+		create: (context) => {
+			seen.host = context.host;
+			return fakeCms().auth();
+		},
+	};
+
+	it("gives the login the attached host's headers, also when the login was created first", async () => {
+		const cms = defineConfig({ ...site, database, auth: capturing });
+		cms.auth();
+		const host = seen.host;
+		expect(await host?.requestHeaders?.()).toBeNull();
+		cms.attachHost({ requestHeaders: async () => new Headers({ host: "localhost:3000" }), rethrow: () => undefined });
+		expect((await host?.requestHeaders?.())?.get("host")).toBe("localhost:3000");
+	});
+
+	it("lets the framework's signals through", () => {
+		const cms = defineConfig({ ...site, database, auth: capturing });
+		cms.auth();
+		cms.attachHost({
+			rethrow: (error) => {
+				throw error;
+			},
+		});
+		expect(() => seen.host?.rethrow?.(new Error("redirect"))).toThrow("redirect");
 	});
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, defineConfig, fields } from "../..";
+import { defineCollection, defineSite, fields } from "../..";
 import { createSite } from "../../site";
 import { fieldValueError } from "../derive";
 
@@ -30,7 +30,7 @@ const topicCollection = defineCollection({
 	fields: { title: fields.text({ label: "Name" }), slug: fields.slug({ label: "Slug" }) },
 	list: { columns: [] },
 });
-const config = defineConfig({
+const config = defineSite({
 	collections: { article: articleCollection, topic: topicCollection },
 	locales: [{ code: "en", name: "English" }],
 	defaultLocale: "en",

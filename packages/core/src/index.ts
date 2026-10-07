@@ -30,7 +30,7 @@ export {
 	type AdminConfig,
 	type CmsConfig,
 	type CollectionsConfig,
-	defineConfig,
+	defineSite,
 	type LocaleConfig,
 	type LocalePrefixMode,
 	type SchemaCmsConfig,

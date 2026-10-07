@@ -1,4 +1,4 @@
-import { defineConfig } from "@monti-cms/core";
+import { defineSite } from "@monti-cms/core";
 import { mdx } from "@monti-cms/mdx";
 import { directiveSyntax } from "../src";
 import base from "./cms.config";
@@ -8,4 +8,4 @@ import base from "./cms.config";
  * It runs only the tests that check the config-driven path (`*.configured.test.ts`, `vitest.configured.config.ts`):
  * the extension reaches the `mdx` format of the instance (the server, the migrations and the admin) through the plugin options, without an explicit list.
  */
-export default defineConfig({ ...base, plugins: [mdx({ syntax: [directiveSyntax()] })] });
+export default defineSite({ ...base, plugins: [mdx({ syntax: [directiveSyntax()] })] });

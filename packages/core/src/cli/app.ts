@@ -37,7 +37,7 @@ export async function loadApp(options: AppOptions): Promise<Cms> {
 	const cms = configModule.cms ?? configModule.default;
 	if (!isCms(cms)) {
 		throw new Error(
-			`${configPath} must export the CMS instance: \`export const cms = defineConfig({ ... })\` (defineConfig of @monti-cms/core/server, not the one of @monti-cms/core)`,
+			`${configPath} must export the CMS instance: \`export const cms = defineConfig({ ... })\` (defineConfig is exported by @monti-cms/core/server)`,
 		);
 	}
 	return cms;

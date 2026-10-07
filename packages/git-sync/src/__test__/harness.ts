@@ -1,4 +1,4 @@
-import { type CollectionSchema, defineConfig } from "@monti-cms/core";
+import { type CollectionSchema, defineSite } from "@monti-cms/core";
 import { type Cms, type CmsAuth, createCms, postgres } from "@monti-cms/core/server";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "@monti-cms/core/testing";
 import { mdx } from "@monti-cms/mdx";
@@ -60,7 +60,7 @@ export const DRAFT_TARGET: GitSyncTarget = { ...DEFAULT_TARGET, drafts: true };
 export async function createHarness(options: HarnessOptions = {}) {
 	const github = createFakeGitHub();
 	const repo = github.repo("acme/site", { main: { "README.md": "# site\n" } });
-	const config = defineConfig({
+	const config = defineSite({
 		...baseConfig,
 		...(options.collections ? { collections: options.collections } : {}),
 		plugins: [

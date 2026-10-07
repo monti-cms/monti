@@ -92,7 +92,7 @@ export type MetadataValue =
 export type JsonValue = string | number | boolean | null | readonly JsonValue[] | { readonly [key: string]: JsonValue };
 
 /**
- * The collection names of a site config: the keys of its `collections`, as the literal names when the config is typed (`defineConfig(...)`) and `string` for the
+ * The collection names of a site config: the keys of its `collections`, as the literal names when the config is typed (`defineSite(...)`) and `string` for the
  * loose config.
  */
 export type CollectionName<Config extends AnyCmsConfig = AnyCmsConfig> = keyof Config["collections"] & string;

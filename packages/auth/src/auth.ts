@@ -34,7 +34,10 @@ export interface AuthOptions {
 	 * The callback URL of an OAuth app is `<site>/<basePath>/callback/<provider id>`.
 	 */
 	readonly basePath?: string;
-	/** What the host framework supplies. See {@link AuthHost}. */
+	/**
+	 * What the host framework supplies. See {@link AuthHost}. Not needed in a Next.js app: `@monti-cms/nextjs` attaches its host to the instance it serves.
+	 * Pass one only for code that runs outside such an integration.
+	 */
 	readonly host?: AuthHost;
 }
 
@@ -129,14 +132,15 @@ export function auth(options: AuthOptions): AuthAdapter {
 		if (ids.has(provider.id)) throw new Error(`[cms-auth] Two providers have the id "${provider.id}".`);
 		ids.add(provider.id);
 	}
-	const host: AuthHost = options.host ?? {};
 	const requireConfigured = () => {
 		for (const provider of providers) provider.requireConfigured?.();
 	};
 
 	return {
 		name: "auth",
-		create: ({ site, loginPath, trustHost, secrets, storage }): CmsAuth => {
+		create: ({ site, loginPath, trustHost, secrets, storage, host: attachedHost }): CmsAuth => {
+			// An explicit host wins; else the one the framework integration attaches to the instance.
+			const host: AuthHost = options.host ?? attachedHost;
 			assertDevBypassSafe(options.devBypass);
 			if (!secrets.available) {
 				throw new Error(

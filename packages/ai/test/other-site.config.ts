@@ -1,4 +1,4 @@
-import { defineConfig } from "@monti-cms/core";
+import { defineSite } from "@monti-cms/core";
 import { chart } from "../../blocks/src";
 import { chartBlock } from "../../blocks/src/definitions";
 import base from "../../core/test/other-site.config";
@@ -10,7 +10,7 @@ import { aiPlugin, aiPresets } from "../src";
  * attach to this site's fields (`excerpt`, `topicIds`, `authorId`, `metaTitle`...) by kind, role, and relation target, without naming them.
  * Used by the AI plugin tests' other-site suite (`vitest.othersite.config.ts`).
  */
-export default defineConfig({
+export default defineSite({
 	...base,
 	blocks: (base.blocks ?? []).filter((block) => block !== chartBlock),
 	plugins: [

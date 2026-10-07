@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { defineConfig } from "@monti-cms/core";
+import { defineSite } from "@monti-cms/core";
 import { AuthError } from "@monti-cms/core/adapters/auth";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +21,7 @@ const segments = sample.request.split("\n").map((text, index) => ({ id: `p-${ind
 // The route reads its settings from the Bareun plugin of the instance that serves the request.
 const cmsWith = (options: BareunOptions) =>
 	fakeCms({
-		config: defineConfig({ ...testConfig, plugins: [bareun(options)] }),
+		config: defineSite({ ...testConfig, plugins: [bareun(options)] }),
 		verifyAdmin: () => mockVerifyAdmin(),
 	});
 

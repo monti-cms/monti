@@ -9,7 +9,7 @@ import { generateSchemaTypes, SCHEMA_FILE_CANDIDATES, SCHEMA_LINK } from "./sche
 
 /**
  * Where a site keeps its config, in the order `monti schema:extract` looks for it: `monti.config.ts` (a config whose data is still written in code), then the
- * site config file of the earlier setup (`cms.config.ts`, a default export of `defineConfig` from `@monti-cms/core`).
+ * site config file of the earlier setup (`cms.config.ts`, a default export of `defineSite` from `@monti-cms/core`).
  */
 export const CONFIG_FILE_CANDIDATES = [
 	"monti.config.ts",
@@ -77,7 +77,7 @@ export function extractSchemaData(config: CmsConfig, options: { readonly locale?
 		stays.push({
 			what: "site.url",
 			detail:
-				"differs per environment, so it is read from the environment in code (`site: { url: process.env.HOST_URL }`)",
+				"differs per environment, so it is read from the SITE_URL environment variable (`site.url` in code overrides it)",
 		});
 	}
 
@@ -165,7 +165,7 @@ export interface ExtractReport {
 
 /**
  * `monti schema:extract`: loads the site's config file (TypeScript is read by tsx, which `bin/monti.mjs` registers), writes its data part to `monti.schema.json`
- * and the types of that file, and reports what stays in code. It reads the site config as the default export (`defineConfig` of `@monti-cms/core`) or, for
+ * and the types of that file, and reports what stays in code. It reads the site config as the default export (`defineSite` of `@monti-cms/core`) or, for
  * `monti.config.ts`, from the `cms` it exports. It never changes the config file; the report shows how to load the schema from it.
  */
 export async function extractSchema(options: ExtractOptions): Promise<ExtractReport> {
@@ -190,7 +190,7 @@ export async function extractSchema(options: ExtractOptions): Promise<ExtractRep
 	const config = (cms?.site?.config ?? loaded.default ?? loaded.config) as CmsConfig | undefined;
 	if (!config || !isRecord(config.collections) || !Array.isArray(config.locales)) {
 		throw new Error(
-			`${configFile} must export the site config (\`export default defineConfig({ ... })\`) or the CMS instance (\`export const cms = defineConfig({ ... })\`)`,
+			`${configFile} must export the site config (\`export default defineSite({ ... })\`) or the CMS instance (\`export const cms = defineConfig({ ... })\`)`,
 		);
 	}
 	const { schema, stays } = extractSchemaData(config, { locale: options.locale });
@@ -228,13 +228,11 @@ export function formatExtractReport(report: ExtractReport): string {
 		`${report.config} is unchanged. To use the schema, replace its collections, locales, default locale, time zone, seed and admin path with the file:`,
 		"",
 		`  import schema from "${schemaImport}";`,
-		report.config.endsWith("monti.config.ts")
-			? "  export const cms = defineConfig({"
-			: "  export default defineConfig({",
+		report.config.endsWith("monti.config.ts") ? "  export const cms = defineConfig({" : "  export default defineSite({",
 		"    schema,",
 		...(plugins ? ["    plugins: [/* the plugins above */],"] : []),
 		...report.stays.flatMap((item) => {
-			if (item.what === "site.url") return ["    site: { url: process.env.HOST_URL },"];
+			if (item.what === "site.url") return ["    // site.url: set the SITE_URL environment variable"];
 			return item.what === "blocks" || item.what === "codeBlock" || item.what === "media"
 				? [`    ${item.what}: /* as before */,`]
 				: [];

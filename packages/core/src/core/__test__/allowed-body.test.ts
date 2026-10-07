@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ALL_BLOCKS } from "../../../../blocks/src/definitions";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
-import { defineCollection, defineConfig, fields } from "../../index";
+import { defineCollection, defineSite, fields } from "../../index";
 import { bodyVocabulary, disallowedInDocument } from "../../schema/allowed";
 import { createContentService } from "../../services/content-service";
 import { createSite } from "../../site";
@@ -17,7 +17,7 @@ const title = fields.text({ label: "Title", required: true });
 const slug = fields.slug({ label: "Slug", from: "title", required: true });
 
 const config = (body: unknown) =>
-	defineConfig({
+	defineSite({
 		collections: {
 			post: defineCollection({ label: "Post", kind: "document", fields: { title, slug } }),
 			memo: defineCollection({

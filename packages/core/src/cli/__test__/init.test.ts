@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { defineConfig } from "../../config/define";
+import { defineSite } from "../../config/define";
 import { parseSchemaFile } from "../../schema-file/format";
 import { formatInitReport, initProject } from "../init";
 
@@ -63,17 +63,15 @@ describe("monti init", () => {
 		expect(config).toContain('import { defineConfig, postgres } from "@monti-cms/core/server";');
 		expect(config).toContain("export const cms = defineConfig({\n\tschema,");
 		expect(config).toContain("database: postgres(),");
-		expect(config).toContain("auth: auth({ providers: [github()], host: nextHost }),");
+		expect(config).toContain("auth: auth({ providers: [github()] }),");
+		expect(config).not.toContain("nextHost");
 		expect(config).toContain("plugins: [],");
 		expect(config).toContain('import { auth } from "@monti-cms/auth";');
 		expect(config).toContain('import { github } from "@monti-cms/auth/github";');
-		expect(config).toContain('import { nextHost } from "@monti-cms/nextjs/auth";');
 		// No separate server file, no defineServerConfig, no secret or other value read from process.env here, and nothing of the old names.
 		expect(() => read(dir, "cms.server.ts")).toThrow();
 		expect(() => read(dir, "cms.config.ts")).toThrow();
-		expect(config).not.toMatch(
-			/defineServerConfig|createCms|process\.env\.(?!HOST_URL)|CMS_|AUTH_SECRET|next-auth|\.\.\.blocks/,
-		);
+		expect(config).not.toMatch(/defineServerConfig|createCms|process\.env|CMS_|AUTH_SECRET|next-auth|\.\.\.blocks/);
 		expect(config).not.toContain("defineCollection");
 		const schema = JSON.parse(read(dir, "monti.schema.json"));
 		expect(schema.$schema).toBe("./node_modules/@monti-cms/core/schema.json");
@@ -162,7 +160,7 @@ describe("monti init", () => {
 		const report = initProject({ cwd: dir, adminPath: "/studio", locale: "ko", timeZone: "Asia/Seoul" });
 		const file = JSON.parse(read(dir, "monti.schema.json"));
 		expect(() => parseSchemaFile(file)).not.toThrow();
-		const config = defineConfig({ schema: file });
+		const config = defineSite({ schema: file });
 		expect(Object.keys(config.collections)).toEqual(["post"]);
 		expect(config.admin?.path).toBe("/studio");
 		expect(config.timeZone).toBe("Asia/Seoul");

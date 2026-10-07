@@ -3,7 +3,7 @@ import { DEFAULT_TITLE_FIELD, type FieldRole, type TextField, TITLE_ROLE, type V
 
 /**
  * Pure function that reads one collection definition. It reads no site, so it is used by extensions the config file imports
- * (e.g. an extension's field checks and public-page helpers) and by `defineConfig`. The functions that look a collection up by name are members of a `Site` (`createSchemas` in `derive.ts`).
+ * (e.g. an extension's field checks and public-page helpers) and by `defineSite`. The functions that look a collection up by name are members of a `Site` (`createSchemas` in `derive.ts`).
  */
 
 /** A field stored as one value in the metadata. The choice value of a conditional field and its dependent fields are each flattened to one. */
@@ -55,7 +55,7 @@ export type TitleField = StoredField & { readonly field: TextField };
 
 /**
  * The title field of a collection: the field with the `title` role, or, when none has it, the field named `title`. `undefined` if there is none
- * (`defineConfig` rejects such a collection, so a checked config always has one). This is the only place that knows the default name:
+ * (`defineSite` rejects such a collection, so a checked config always has one). This is the only place that knows the default name:
  * everything that reads or writes the title (SQL included, see `titleExpr`) goes through it.
  */
 export function findTitleField(schema: Pick<CollectionSchema, "fields">): TitleField | undefined {
@@ -65,7 +65,7 @@ export function findTitleField(schema: Pick<CollectionSchema, "fields">): TitleF
 	return found && found.field.kind === "text" && !found.when ? (found as TitleField) : undefined;
 }
 
-/** The title field of a (checked) collection. Throws if there is none, which `defineConfig` has already rejected. */
+/** The title field of a (checked) collection. Throws if there is none, which `defineSite` has already rejected. */
 export function titleFieldOf(schema: Pick<CollectionSchema, "fields">): TitleField {
 	const found = findTitleField(schema);
 	if (!found) {

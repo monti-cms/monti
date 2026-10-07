@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import blog from "../../../test/cms.config";
 import otherSiteConfig from "../../../test/other-site.config";
-import { defineConfig } from "../../config/define";
+import { defineSite } from "../../config/define";
 import type { ContentStore, PublishedEntryRecord } from "../../core/store";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
@@ -19,7 +19,7 @@ import { fakeCms } from "../fake-cms";
  * `/blog/:slug/`, a locale prefix for every locale), the latter with a smaller image size limit. They must share nothing: each answers from its own site.
  */
 
-const other = defineConfig({ ...otherSiteConfig, media: { maxImageBytes: 1_000_000 } });
+const other = defineSite({ ...otherSiteConfig, media: { maxImageBytes: 1_000_000 } });
 
 const NOW = new Date("2026-01-01T00:00:00.000Z");
 
@@ -192,7 +192,7 @@ describe("two instances with different site configs", () => {
 	it("an admin message override of one site does not reach the other", () => {
 		const bundle = defineMessages("test.two-instances", { en: { hello: "Hello" } });
 		const overridden = createSite(
-			defineConfig({
+			defineSite({
 				...otherSiteConfig,
 				admin: { ...otherSiteConfig.admin, messages: { "test.two-instances": { hello: "Howdy" } } },
 			}),
@@ -289,7 +289,7 @@ describe("renderDocument renders the same stored document with each site's own b
 		const effect = (name: string) => ({ name, label: name, class: `fx-${name}`, icon: "highlighter" });
 		const withEffects = (name: string) =>
 			createSite(
-				defineConfig({
+				defineSite({
 					collections: otherSiteConfig.collections,
 					locales: otherSiteConfig.locales,
 					defaultLocale: "en",
