@@ -258,7 +258,7 @@ export const POST = textCheckRoute({
   They do not check spacing or grammar.
 - For checkers that return only the misspelled word without a position, find the word in the paragraph text to determine the position (in order if the same word appears several times).
 
-`app/(admin)/studio/admin-components.tsx` in `examples/other-site` is an example of a small banned-word checker that runs in the browser.
+`app/(admin)/studio/admin-components.tsx` in `examples/blog` is an example of a small banned-word checker that runs in the browser.
 
 The underline styles are included in `@monti-cms/admin/styles.css`.
 

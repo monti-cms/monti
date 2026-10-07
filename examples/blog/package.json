@@ -1,8 +1,8 @@
 {
-	"name": "cms-example-other-site",
+	"name": "cms-example-blog",
 	"version": "0.0.0",
 	"private": true,
-	"description": "@monti-cms/core example app: a minimal Next app with its own collections (article, topic) and language (English)",
+	"description": "@monti-cms/core example app: a personal tech blog (posts, memos, categories, tags, series) in Korean and English with every body block and the directive notation",
 	"license": "MIT",
 	"type": "module",
 	"scripts": {
@@ -13,18 +13,21 @@
 		"db:migrate": "monti migrate"
 	},
 	"dependencies": {
+		"@monti-cms/ai": "file:vendor/monti-cms-ai.tgz",
 		"@monti-cms/core": "file:vendor/monti-cms-core.tgz",
 		"@monti-cms/admin": "file:vendor/monti-cms-admin.tgz",
 		"@monti-cms/nextjs": "file:vendor/monti-cms-nextjs.tgz",
 		"@monti-cms/blocks": "file:vendor/monti-cms-blocks.tgz",
 		"@monti-cms/mdx": "file:vendor/monti-cms-mdx.tgz",
 		"@monti-cms/seo": "file:vendor/monti-cms-seo.tgz",
+		"@monti-cms/syntax-directive": "file:vendor/monti-cms-syntax-directive.tgz",
 		"@monti-cms/bareun": "file:vendor/monti-cms-bareun.tgz",
 		"@tanstack/react-query": "^5.104.0",
 		"@tiptap/core": "^3.31.3",
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
 		"lucide-react": "^0.562.0",
+		"mermaid": "^11.12.2",
 		"next": "16.3.8",
 		"next-auth": "5.0.0-beta.32",
 		"next-themes": "^0.4.6",

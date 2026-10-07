@@ -10,7 +10,7 @@ import { defineBlock, defineCollection, defineConfig, fields } from "../src";
  * - Locales: English only. Blocks: only the chart from the blocks extension, plus site blocks (quote card, code fence map).
  *
  * Some core, admin and AI tests also run with this config (each package's `vitest.othersite.config.ts`). It is also type-checked
- * (`tsconfig.other-site.json`). Its shape matches the example app `examples/other-site/cms.config.ts`.
+ * (`tsconfig.other-site.json`).
  */
 
 const article = defineCollection({

@@ -1,5 +1,4 @@
 import type { DocumentComponents } from "@monti-cms/core/render";
-import { siteComponents } from "@/app/components/site-blocks";
 import { cms } from "@/cms.server";
 
 /** The collection the theme reads: the name of a collection in `cms.config.ts`. */
@@ -31,13 +30,11 @@ export interface BlogThemeConfig {
 /** The one place to edit: the collection, the route base and the names of your fields. */
 export const blogTheme: BlogThemeConfig = {
 	cms,
-	collection: "article",
-	routeBase: "/blog",
+	collection: "post",
+	routeBase: "/posts",
 	pageSize: 10,
-	authorField: "authorId",
-	topicsField: "topicIds",
-	excerptField: "excerpt",
-	blogTitle: "Blog",
-	components: siteComponents,
+	topicsField: "tagIds",
+	excerptField: "summary",
+	blogTitle: "Posts",
 	neighborWindow: 100,
 };

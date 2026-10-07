@@ -3,7 +3,7 @@
 [English](README.md) | 한국어
 
 DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키마, 콘텐츠 저장·발행, 문서 모델, 관리자 API, 플러그인 연결을 맡는다.
-관리자 화면은 `@monti-cms/admin`, Next.js에 묶인 것은 모두 `@monti-cms/nextjs`, MDX(`mdx` 형식·원문 패널·문법 확장)는 플러그인 `@monti-cms/mdx`, AI 기능은 플러그인 `@monti-cms/ai`다. 다 붙인 예는 `examples/other-site`다.
+관리자 화면은 `@monti-cms/admin`, Next.js에 묶인 것은 모두 `@monti-cms/nextjs`, MDX(`mdx` 형식·원문 패널·문법 확장)는 플러그인 `@monti-cms/mdx`, AI 기능은 플러그인 `@monti-cms/ai`다. 다 붙인 예는 `examples/blog`다.
 
 ## 지원하는 프레임워크
 
@@ -419,7 +419,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 ```
 
 레지스트리는 shadcn 레지스트리 스키마를 따르며 저장소의 `registry/`에 있습니다(`registry/r`로 빌드해 커밋). 컴포넌트는 호스트의 Tailwind와 공개 진입점
-(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`)만 씁니다. `examples/other-site`가 이 방법으로 `blog-theme`을 설치해 블로그 목록과 글 페이지에서 씁니다.
+(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`)만 씁니다. `examples/blog`가 이 방법으로 `blog-theme`을 설치해 블로그 목록과 글 페이지에서 씁니다.
 전체 설명, 컴포넌트 목록, 추가하는 법은 [`registry/README.ko.md`](../../registry/README.ko.md)에 있습니다.
 
 ## 진입점
@@ -449,7 +449,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 ## 패키지 빌드
 
 저장소 안에서는 소스(`src`)를 바로 쓴다. 배포 묶음은 `pnpm build:packages`로 `dist`를 만들고 `pnpm pack`이
-`publishConfig.exports`(dist)로 묶는다. `pnpm example:pack`은 묶음을 `examples/other-site/vendor`에 넣는다.
+`publishConfig.exports`(dist)로 묶는다. `pnpm example:pack`은 묶음을 `examples/blog/vendor`에 넣는다.
 
 ## 본문 문법
 

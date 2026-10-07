@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Prepares a local preview of the example app (`examples/other-site`) with the showcase articles in it, to look at on screen after a change.
+ * Prepares a local preview of the example app (`examples/blog`) with the showcase posts, memo and series in it, to look at on screen after a change.
  *
  *   pnpm preview:example               # pack the packages, install the example, reset the schema, migrate, seed
  *   pnpm preview:example --seed-only   # skip packing and installing; reset the schema, migrate and seed again
@@ -19,7 +19,7 @@ import { parseEnv } from "node:util";
 import { writeRegularFile } from "./write-regular-file.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const app = path.join(root, "examples/other-site");
+const app = path.join(root, "examples/blog");
 const SCHEMA = "cms_preview_example";
 const seedOnly = process.argv.includes("--seed-only");
 // Only used in the printed URLs and the printed dev server command (default 3997); the script does not start a server.
@@ -78,16 +78,14 @@ const replacedLink = writeRegularFile(
 		.join("\n")}\n`,
 );
 if (replacedLink)
-	console.log(
-		"examples/other-site/.env.local was a symlink: replaced it with a regular file (its target is untouched)",
-	);
-console.log("wrote examples/other-site/.env.local");
+	console.log("examples/blog/.env.local was a symlink: replaced it with a regular file (its target is untouched)");
+console.log("wrote examples/blog/.env.local");
 
 // 5. Tables and content.
 run("pnpm", ["exec", "monti", "migrate", "--no-env-file"], app, env);
 run("pnpm", ["exec", "tsx", "--env-file=.env.local", "showcase/seed.ts", PORT], app, env);
 
 console.log(
-	`\nStart the preview (Ctrl+C stops it), then open the URLs above:\n  cd examples/other-site && pnpm exec next dev -p ${PORT}`,
+	`\nStart the preview (Ctrl+C stops it), then open the URLs above:\n  cd examples/blog && pnpm exec next dev -p ${PORT}`,
 );
 console.log("Do not commit the AGENTS.md and CLAUDE.md that `next dev` creates in that folder.");
