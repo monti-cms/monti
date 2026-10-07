@@ -1,6 +1,7 @@
 import type { BlockDefinition } from "../blocks/define";
 import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
+import type { ContentEvent } from "../core/store";
 import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
 import type { PluginStorage } from "./storage";
@@ -104,6 +105,43 @@ export interface CmsServerPlugin {
 	 * They run after the server config's hooks, in the order of the plugins in the site config.
 	 */
 	readonly hooks?: WriteHooks;
+	/**
+	 * Receives every committed change, like `hooks.afterCommit` (delivered through the event outbox, retried when it throws, at least once), and also gets the
+	 * instance it runs for, so a subscriber that must read its storage or the content (`cms.storage(name)`, `cms.store()`, `cms.formats()`) needs no state of its own.
+	 * A plugin that has both this and `hooks.afterCommit` is one subscriber (`plugin:<name>`) that runs `hooks.afterCommit` first.
+	 */
+	readonly afterCommit?: (event: ContentEvent, cms: Cms) => void | Promise<void>;
+	/**
+	 * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti migrate`), runs the command with the instance and
+	 * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).
+	 */
+	readonly commands?: Readonly<Record<string, PluginCommand>>;
+}
+
+/** One command line option of a plugin command. */
+export interface PluginCommandOption {
+	readonly type: "string" | "boolean";
+	/** One line for `monti <plugin>:<command> --help`. */
+	readonly description?: string;
+}
+
+/** What a plugin command receives. */
+export interface PluginCommandContext {
+	readonly cms: Cms;
+	/** The values of the options the command declared (`undefined` when not given). */
+	readonly args: Readonly<Record<string, string | boolean | undefined>>;
+	readonly log: (message: string) => void;
+	readonly error: (message: string) => void;
+}
+
+/** A command a plugin adds to the `monti` command line. */
+export interface PluginCommand {
+	/** One line shown in `monti help` and `monti <plugin>:<command> --help`. */
+	readonly description: string;
+	/** The options it accepts, besides the ones every app command takes (`--env-file`, `--no-env-file`, `--server`). */
+	readonly options?: Readonly<Record<string, PluginCommandOption>>;
+	/** Runs the command. Returns the exit code (0 or nothing: success). Throwing prints the message and exits with 1. */
+	readonly run: (context: PluginCommandContext) => Promise<number | undefined | void>;
 }
 
 /**

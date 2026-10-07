@@ -1,4 +1,5 @@
 import type { Cms } from "../cms";
+import type { AfterCommit } from "../core/store";
 import { createFormatRegistry, type FormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
@@ -117,9 +118,30 @@ export function createServerPlugins(
 				await plugin.migrate(storageOf(plugin.name), cms());
 			}
 		},
-		eventSubscribers: async () =>
-			(await writeHooks()).flatMap(({ owner, hooks }) =>
-				hooks.afterCommit ? [{ name: owner, handler: hooks.afterCommit }] : [],
-			),
+		eventSubscribers: async () => {
+			const hooked = new Map((await writeHooks()).map(({ owner, hooks }) => [owner, hooks.afterCommit] as const));
+			const subscribers: { name: string; handler: AfterCommit }[] = [];
+			const server = hooked.get("server");
+			if (server) subscribers.push({ name: "server", handler: server });
+			for (const plugin of await load()) {
+				const name = `plugin:${plugin.name}`;
+				const hook = hooked.get(name);
+				const { afterCommit } = plugin;
+				if (!hook && !afterCommit) continue;
+				if (!afterCommit && hook) {
+					subscribers.push({ name, handler: hook });
+					continue;
+				}
+				// A subscriber that wants the instance: runs the plain hook first when the plugin has one too.
+				subscribers.push({
+					name,
+					handler: async (event) => {
+						await hook?.(event);
+						await afterCommit?.(event, cms());
+					},
+				});
+			}
+			return subscribers;
+		},
 	};
 }

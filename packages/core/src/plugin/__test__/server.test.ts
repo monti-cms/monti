@@ -137,6 +137,35 @@ describe("eventSubscribers", () => {
 		]);
 	});
 
+	it("hands the instance to a plugin's own afterCommit, and runs the plain hook first when the plugin has both", async () => {
+		const calls: string[] = [];
+		const event = { eventId: "e1" } as never;
+		const plugins = serverPlugins([
+			{
+				name: "wants-cms",
+				server: async () => ({
+					default: {
+						afterCommit: async (_event: unknown, instance: unknown) => void calls.push(`own:${instance === cms}`),
+					},
+				}),
+			},
+			{
+				name: "both",
+				server: async () => ({
+					default: {
+						hooks: { afterCommit: () => void calls.push("hook") },
+						afterCommit: async (incoming: unknown, instance: unknown) =>
+							void calls.push(`own:${incoming === event}:${instance === cms}`),
+					},
+				}),
+			},
+		]);
+		const subscribers = await plugins.eventSubscribers();
+		expect(subscribers.map((subscriber) => subscriber.name)).toEqual(["plugin:wants-cms", "plugin:both"]);
+		for (const subscriber of subscribers) await subscriber.handler(event);
+		expect(calls).toEqual(["own:true", "hook", "own:true:true"]);
+	});
+
 	it("is empty when nothing registers afterCommit", async () => {
 		expect(await serverPlugins([{ name: "plain" }]).eventSubscribers()).toEqual([]);
 	});

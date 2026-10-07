@@ -8,6 +8,8 @@ export { AuthError } from "./adapters/auth/auth-gateway";
 export type { Cms } from "./cms";
 export type { AfterCommit, ContentChange, ContentChangeKind, ContentEvent } from "./core/store";
 export { CmsError } from "./core/store";
+export { type Issue, ServiceError } from "./core/types";
+export { type ExportBodyParams, exportBodyText } from "./format/export-body";
 export { HttpError, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "./plugin/content-lookup";
