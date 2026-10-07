@@ -58,7 +58,7 @@ Run it in the app folder (where `package.json` is): `npx monti init` (or `pnpm e
 | Admin path | a path like `/studio` | `/studio` |
 | Blog theme | install the blog theme pages through the registry (`monti add blog-theme`) | no |
 
-**What it writes** (existing files are kept, or replaced only on a yes or `--overwrite`):
+**What it writes** (existing files are kept, or replaced only on a yes or `--overwrite`; edits to `next.config`, `tsconfig.json` and `.gitignore` are shown as diffs and asked in the prompts, and made with `--yes`):
 
 | What | File |
 | --- | --- |
@@ -68,6 +68,8 @@ Run it in the app folder (where `package.json` is): `npx monti init` (or `pnpm e
 | Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
 | Config wiring (`withCms`): merged in when the file has the default shape, shown as a diff; otherwise the exact change is printed | `next.config.ts` |
+| `"resolveJsonModule": true` when the tsconfig lacks it: a text insert that keeps comments and formatting, shown as a diff. A tsconfig with `extends`, or an unusual shape, is left alone and the step is printed | `tsconfig.json` |
+| `.env.local` and `.env*.local` when `.gitignore` misses them (the file is created if missing), shown as a diff | `.gitignore` |
 | Every variable the chosen features read, with no values | `.env.example` |
 | Only values you typed or that were generated: `MONTI_SECRET` (generated), `DATABASE_URL`, `MONTI_ADMIN_GITHUB_ID`. An existing file only gets the names it lacks | `.env.local` |
 | A local Postgres (only when you chose Docker; an existing compose file is left alone and the service is printed) | `docker-compose.yml` |

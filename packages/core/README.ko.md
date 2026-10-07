@@ -58,7 +58,7 @@ allowBuilds:
 | 관리자 경로 | `/studio` 같은 경로 | `/studio` |
 | 블로그 테마 | 레지스트리로 블로그 테마 페이지 설치(`monti add blog-theme`) | 안 함 |
 
-**쓰는 파일**(있는 파일은 그대로 두고, 그러겠다고 하거나 `--overwrite`를 줄 때만 바꾼다):
+**쓰는 파일**(있는 파일은 그대로 두고, 그러겠다고 하거나 `--overwrite`를 줄 때만 바꾼다. `next.config`·`tsconfig.json`·`.gitignore`의 고침은 diff로 보여 주고 질문에서 물으며, `--yes`면 바로 한다):
 
 | 내용 | 파일 |
 | --- | --- |
@@ -68,6 +68,8 @@ allowBuilds:
 | 관리자 화면: 레이아웃(미리 만든 관리자 스타일시트를 불러온다)과 페이지 | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | 관리자 API와 로그인(`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
 | 설정 잇기(`withCms`): 기본 모양이면 합치고 diff로 보여 주며, 아니면 바꿀 내용을 그대로 적어 준다 | `next.config.ts` |
+| tsconfig에 없으면 `"resolveJsonModule": true`: 주석과 서식을 지키는 텍스트 삽입이고 diff로 보여 준다. `extends`가 있거나 모양이 특이하면 그대로 두고 할 일로 적는다 | `tsconfig.json` |
+| `.gitignore`에 없으면 `.env.local`과 `.env*.local`(파일이 없으면 만든다). diff로 보여 준다 | `.gitignore` |
 | 고른 기능이 읽는 모든 변수(값 없음) | `.env.example` |
 | 직접 입력했거나 만든 값만: `MONTI_SECRET`(만든다), `DATABASE_URL`, `MONTI_ADMIN_GITHUB_ID`. 이미 있는 파일에는 없는 이름만 더한다 | `.env.local` |
 | 로컬 Postgres(Docker를 골랐을 때만. compose 파일이 이미 있으면 건드리지 않고 넣을 서비스를 보여 준다) | `docker-compose.yml` |

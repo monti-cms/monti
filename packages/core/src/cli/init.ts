@@ -7,6 +7,7 @@ import { parseEnv } from "node:util";
 import { parseSchemaFile } from "../schema-file/format";
 import { addComponents, type InstallCommand } from "./add";
 import { detectApp, type PackageManager } from "./init-detect";
+import { addEnvToGitignore, addResolveJsonModule } from "./init-edits";
 import { collectAnswers, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
 import { migrate } from "./migrate";
 import { SCHEMA_TYPES_FILE, schemaTypesText } from "./schema-types";
@@ -528,27 +529,47 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 				: `${envLocalText}${envLocalText.endsWith("\n") || envLocalText === "" ? "" : "\n"}${lines}\n`;
 	}
 
-	// The next config: merge withCms in when the shape allows, and show the change.
-	let nextConfigAfter: { file: string; text: string; before?: string } | undefined;
+	// Edits to files the app owns: each shows its diff and, in the prompts, asks first. With no prompts the edit is made (it is what the run is for).
+	const edits: { file: string; text: string; before: string; isNew: boolean }[] = [];
+	const propose = async (file: string, before: string, after: string, question: string, isNew = false) => {
+		prompter?.note(unifiedDiff(file, before, after), `Change to ${file}`);
+		const apply = prompter ? await prompter.confirm({ message: question, initial: true }) : true;
+		if (apply) edits.push({ file, text: after, before, isNew });
+		return apply;
+	};
+	// The next config: merge withCms in when the shape allows.
 	let nextConfigManual: string | undefined;
 	if (app.nextConfig) {
 		const before = writer.read(app.nextConfig);
 		if (before.includes("withCms")) report.skipped.push(app.nextConfig);
 		else {
 			const merged = mergeWithCms(before);
-			if (merged === undefined) nextConfigManual = app.nextConfig;
-			else {
-				const diff = unifiedDiff(app.nextConfig, before, merged);
-				prompter?.note(diff, `Change to ${app.nextConfig}`);
-				const apply = prompter
-					? await prompter.confirm({ message: `Add withCms to ${app.nextConfig}?`, initial: true })
-					: true;
-				if (apply) nextConfigAfter = { file: app.nextConfig, text: merged, before };
-				else nextConfigManual = app.nextConfig;
+			if (
+				merged === undefined ||
+				!(await propose(app.nextConfig, before, merged, `Add withCms to ${app.nextConfig}?`))
+			) {
+				nextConfigManual = app.nextConfig;
 			}
 		}
 	} else {
 		writes.push({ file: "next.config.ts", content: nextConfigTemplate(), replace: false });
+	}
+	// tsconfig: the config imports the schema JSON.
+	let tsconfigManual = false;
+	if (app.resolveJsonModule === false && !keepConfig) {
+		const before = writer.read("tsconfig.json");
+		const after = addResolveJsonModule(before);
+		tsconfigManual =
+			after === undefined ||
+			!(await propose("tsconfig.json", before, after, 'Set "resolveJsonModule": true in tsconfig.json?'));
+	}
+	// The secret file must never be committed.
+	let gitignoreManual = false;
+	if (!app.envLocalIgnored) {
+		const exists = writer.exists(".gitignore");
+		const before = exists ? writer.read(".gitignore") : "";
+		const after = addEnvToGitignore(exists ? before : undefined);
+		gitignoreManual = !(await propose(".gitignore", before, after, "Add .env.local to .gitignore?", !exists));
 	}
 
 	// What gets installed.
@@ -573,13 +594,10 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 					`Added ${envAdd.map(([name]) => name).join(", ")} to the existing ${envLocalFile}; its other lines were not touched.`,
 				);
 		}
-		if (nextConfigAfter) {
-			if (!dryRun) writer.write(nextConfigAfter.file, nextConfigAfter.text);
-			report.updated.push(nextConfigAfter.file);
-			report.diffs.push({
-				file: nextConfigAfter.file,
-				diff: unifiedDiff(nextConfigAfter.file, nextConfigAfter.before ?? "", nextConfigAfter.text),
-			});
+		for (const edit of edits) {
+			if (!dryRun) writer.write(edit.file, edit.text);
+			(edit.isNew ? report.created : report.updated).push(edit.file);
+			report.diffs.push({ file: edit.file, diff: unifiedDiff(edit.file, edit.before, edit.text) });
 		}
 	} catch (error) {
 		throw new InitError(error instanceof Error ? error.message : String(error), writer.written);
@@ -714,7 +732,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			`Wrap the config in ${nextConfigManual}. Add this import at the top and export the result of withCms:\nimport { withCms } from "@monti-cms/nextjs/config";\nexport default withCms(nextConfig);   // wherever you export your config now`,
 		);
 	}
-	if (app.resolveJsonModule === false && !keepConfig) {
+	if (tsconfigManual) {
 		todo.push(
 			`Set "resolveJsonModule": true in compilerOptions of tsconfig.json (${configFile} imports ${schemaFile}).`,
 		);
@@ -725,7 +743,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 				commandText(addCommand(manager, ["typescript", "@types/react", "@types/node"], cwd, true)),
 		);
 	}
-	if (!app.envLocalIgnored) todo.push("Add .env.local to .gitignore: it holds MONTI_SECRET (and your database URL).");
+	if (gitignoreManual) todo.push("Add .env.local to .gitignore: it holds MONTI_SECRET (and your database URL).");
 	const willInstall = installed || (dryRun && installing);
 	if (missing.length > 0 && !willInstall) {
 		todo.push(`Install the packages:\n${commandText(addCommand(manager, missing, cwd))}`);

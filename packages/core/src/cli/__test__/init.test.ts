@@ -501,15 +501,72 @@ describe("monti init and files that already exist", () => {
 		expect(read(none, "next.config.ts")).toContain("withCms(nextConfig)");
 	});
 
-	it("says what to fix by hand: resolveJsonModule, .gitignore, TypeScript", async () => {
-		const dir = fixtureApp({
-			"tsconfig.json": '{ "compilerOptions": { "strict": true } }',
-			".gitignore": "node_modules\n",
-		});
+	it("adds resolveJsonModule to the tsconfig and .env.local to .gitignore itself, showing the diffs", async () => {
+		const tsconfig =
+			'{\n  // my options\n  "compilerOptions": {\n    "strict": true, // keep\n    "target": "es2022"\n  },\n  "include": ["**/*.ts"]\n}\n';
+		const dir = fixtureApp({ "tsconfig.json": tsconfig, ".gitignore": "node_modules" });
+		const report = await initProject({ cwd: dir, ...quiet() });
+		expect(read(dir, "tsconfig.json")).toBe(
+			'{\n  // my options\n  "compilerOptions": {\n    "resolveJsonModule": true,\n    "strict": true, // keep\n    "target": "es2022"\n  },\n  "include": ["**/*.ts"]\n}\n',
+		);
+		expect(read(dir, ".gitignore")).toBe("node_modules\n\n# Local env files (monti init)\n.env.local\n.env*.local\n");
+		expect(report.updated).toEqual(expect.arrayContaining(["tsconfig.json", ".gitignore"]));
+		expect(report.diffs.map((entry) => entry.file)).toEqual(expect.arrayContaining(["tsconfig.json", ".gitignore"]));
+		expect(report.diffs.find((entry) => entry.file === "tsconfig.json")?.diff).toContain(
+			'+    "resolveJsonModule": true,',
+		);
+		const next = report.next.join("\n");
+		expect(next).not.toContain("resolveJsonModule");
+		expect(next).not.toContain("to .gitignore");
+	});
+
+	it("creates .gitignore when it is missing, and leaves one that already ignores .env.local alone", async () => {
+		const none = fixtureApp({ ".gitignore": null });
+		const report = await initProject({ cwd: none, ...quiet() });
+		expect(read(none, ".gitignore")).toBe("# Local env files (monti init)\n.env.local\n.env*.local\n");
+		expect(report.created).toContain(".gitignore");
+
+		const has = fixtureApp({ ".gitignore": ".env*.local\n" });
+		await initProject({ cwd: has, ...quiet() });
+		expect(read(has, ".gitignore")).toBe(".env*.local\n");
+	});
+
+	it("falls back to a printed step when the tsconfig cannot be edited safely", async () => {
+		const extended = '{ "extends": "./base.json", "compilerOptions": { "strict": true } }';
+		const dir = fixtureApp({ "tsconfig.json": extended });
 		const next = (await initProject({ cwd: dir, ...quiet() })).next.join("\n");
+		expect(read(dir, "tsconfig.json")).toBe(extended);
+		expect(next).toContain('Set "resolveJsonModule": true');
+		const noOptions = fixtureApp({ "tsconfig.json": '{ "include": [] }' });
+		expect((await initProject({ cwd: noOptions, ...quiet() })).next.join("\n")).toContain(
+			'Set "resolveJsonModule": true',
+		);
+	});
+
+	it("asks before editing tsconfig and .gitignore; a no leaves them and prints the step", async () => {
+		const dir = fixtureApp({ "tsconfig.json": '{ "compilerOptions": {} }', ".gitignore": "node_modules\n" });
+		const prompter = scriptedPrompter({
+			Postgres: "skip",
+			GitHub: "",
+			Languages: "en",
+			uploaded: "none",
+			Extra: [],
+			blocks: "all",
+			admin: "/studio",
+			"blog theme": false,
+			"Add withCms": true,
+			resolveJsonModule: false,
+			"to .gitignore": false,
+		});
+		const report = await initProject({ cwd: dir, ...quiet(), prompter });
+		expect(read(dir, "tsconfig.json")).toBe('{ "compilerOptions": {} }');
+		expect(read(dir, ".gitignore")).toBe("node_modules\n");
+		expect(
+			prompter.notes.some((note) => note.title === "Change to .gitignore" && note.body.includes("+.env.local")),
+		).toBe(true);
+		const next = report.next.join("\n");
 		expect(next).toContain('Set "resolveJsonModule": true');
 		expect(next).toContain("Add .env.local to .gitignore");
-		expect(read(dir, "tsconfig.json")).toBe('{ "compilerOptions": { "strict": true } }');
 	});
 });
 
