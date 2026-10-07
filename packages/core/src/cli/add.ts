@@ -129,6 +129,26 @@ function aliasFolder(cwd: string, alias: string): { dir: string; mapped: boolean
 	return { dir: path.join(cwd, existsSync(path.join(cwd, "src")) ? "src" : "", match[1] ?? ""), mapped: false };
 }
 
+/** Whether `next.config` turns on Next's `cacheComponents`. */
+function usesCacheComponents(cwd: string): boolean {
+	for (const name of ["next.config.ts", "next.config.mjs", "next.config.js"]) {
+		const file = path.join(cwd, name);
+		if (existsSync(file)) return /\bcacheComponents\s*:\s*true\b/.test(readFileSync(file, "utf8"));
+	}
+	return false;
+}
+
+/**
+ * A line a registry file marks with `// monti:cache-components` (an `export const instant = false;`, only valid with that option) is kept, without its marker, when
+ * the app turns `cacheComponents` on, and dropped (with the comment lines right above it) when it does not.
+ */
+export function applyCacheComponentsMarker(source: string, enabled: boolean): string {
+	const marked = /(?:^\/\/[^\n]*\n)*^([^\n]*?)[ \t]*\/\/ monti:cache-components[^\n]*\n?/gm;
+	return source.replace(marked, (whole, line: string) =>
+		enabled ? `${whole.slice(0, whole.indexOf(line))}${line}\n` : "",
+	);
+}
+
 /** Turns the registry's own import prefix into the host's alias. Only quoted specifiers (`from "..."`, `import("...")`). */
 export const rewriteRegistryImports = (source: string, installAlias: string): string =>
 	source.replace(/(["'])@\/registry\/monti\//g, (_, quote: string) => `${quote}${installAlias}/`);
@@ -219,6 +239,7 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 	const folder = aliasFolder(cwd, alias);
 	const installAlias = `${alias}/${INSTALL_FOLDER}`;
 
+	const cacheComponents = usesCacheComponents(cwd);
 	const created: string[] = [];
 	const overwritten: string[] = [];
 	const unchanged: string[] = [];
@@ -229,7 +250,9 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 			if (file.content === undefined)
 				throw new Error(`${item.name}: ${file.path} has no content in the registry item.`);
 			const absolute = destinationOf(cwd, folder.dir, item, file);
-			const content = SOURCE_FILE.test(file.path) ? rewriteRegistryImports(file.content, installAlias) : file.content;
+			const content = SOURCE_FILE.test(file.path)
+				? applyCacheComponentsMarker(rewriteRegistryImports(file.content, installAlias), cacheComponents)
+				: file.content;
 			const relative = path.relative(cwd, absolute).split(path.sep).join("/");
 			if (!existsSync(absolute)) {
 				created.push(relative);

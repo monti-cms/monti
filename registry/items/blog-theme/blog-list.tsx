@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { Suspense } from "react";
 import { Pagination } from "./pagination";
 import { metadataText, PostMeta } from "./post-meta";
 import { blogTheme } from "./theme.config";
@@ -16,19 +15,11 @@ export interface BlogListProps {
 /**
  * The list page: the newest published posts first, paged. The read API supplies each post's URL and its relation names.
  *
- * The posts are read on each request, so the content sits behind a `Suspense` boundary and opts out of prerendering with `connection()`. That is what
- * Next's Cache Components (`cacheComponents: true`) asks of a page that reads live data, and it behaves the same without that option. Route segment
- * settings such as `export const dynamic` are not used: Cache Components rejects them.
+ * The posts are read on each request: `connection()` opts out of prerendering and an unknown language answers a real 404 before anything is sent. Under Next's
+ * Cache Components (`cacheComponents: true`) the route file exports `instant = false` for that (`monti add` writes it when `next.config` turns the option on;
+ * Next rejects it when the option is off). Route segment settings such as `dynamic` are not used: Cache Components rejects them.
  */
-export function BlogListPage(props: BlogListProps) {
-	return (
-		<Suspense fallback={<main aria-busy="true" className="mx-auto max-w-2xl px-4 py-12" />}>
-			<BlogListContent {...props} />
-		</Suspense>
-	);
-}
-
-async function BlogListContent({ params, searchParams }: BlogListProps) {
+export async function BlogListPage({ params, searchParams }: BlogListProps) {
 	await connection();
 	const { locale } = await params;
 	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) notFound();

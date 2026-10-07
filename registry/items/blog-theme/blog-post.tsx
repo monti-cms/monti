@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { connection } from "next/server";
-import { Suspense } from "react";
 import { ArticleBody } from "@/registry/monti/article-body/article-body";
 import { metadataText, PostMeta } from "./post-meta";
 import { blogTheme } from "./theme.config";
@@ -68,20 +67,12 @@ function Neighbor({ entry, label, align }: { entry: ReadEntry; label: string; al
 /**
  * The detail page: title, byline (date, author, topics), a table of contents and the body (`ArticleBody`), and the newer and older post.
  *
- * The post is read on each request, so the content sits behind a `Suspense` boundary and opts out of prerendering with `connection()`. That is what
- * Next's Cache Components (`cacheComponents: true`) asks of a page that reads live data, and it behaves the same without that option. Route segment
- * settings such as `export const dynamic` are not used: Cache Components rejects them. An unknown address still ends in `notFound()`, but the page
- * streams from inside the boundary, so the 404 shows in the page and its `noindex`, not always in the HTTP status.
+ * The post is read on each request: `connection()` opts out of prerendering, and the lookup runs before anything is sent, so an unknown address answers a real
+ * 404 and an old address a real 308 (inside a `Suspense` boundary the page would already be streaming with a 200). Under Next's Cache Components
+ * (`cacheComponents: true`) a page that waits for the request like this has to say it may block: the route file exports `instant = false` (`monti add` writes it
+ * when `next.config` turns the option on; Next rejects it when the option is off). Route segment settings such as `dynamic` are not used: Cache Components rejects them.
  */
-export function BlogPostPage(props: BlogPostProps, source: PostSource = "published") {
-	return (
-		<Suspense fallback={<main aria-busy="true" className="mx-auto max-w-2xl px-4 py-12" />}>
-			<BlogPostContent props={props} source={source} />
-		</Suspense>
-	);
-}
-
-async function BlogPostContent({ props, source }: { props: BlogPostProps; source: PostSource }) {
+export async function BlogPostPage(props: BlogPostProps, source: PostSource = "published") {
 	await connection();
 	const entry = await readPost(props, source);
 	const { newer, older } = await neighborsOf(entry);

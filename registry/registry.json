@@ -60,7 +60,7 @@
 			"name": "blog-theme",
 			"type": "registry:block",
 			"title": "Blog theme",
-			"description": "A thin blog theme for one collection: a paged post list and a post detail page (title, date, author, table of contents, body, previous and next post) with metadata, 404 and redirects. Pages are written to app/(site)/blog, plus a draft preview page at app/(site)/preview/blog (for site.previewPath = /preview).",
+			"description": "A thin blog theme for one collection: a paged post list and a post detail page (title, date, author, table of contents, body, previous and next post) with metadata, 404 and redirects (real 404 and 308 statuses come from a root proxy.ts, which Next 16 needs under cacheComponents). Pages are written to app/(site)/blog, plus a draft preview page at app/(site)/preview/blog (for site.previewPath = /preview).",
 			"dependencies": ["@monti-cms/core", "@monti-cms/nextjs", "next", "react"],
 			"registryDependencies": ["article-body"],
 			"files": [
@@ -83,6 +83,15 @@
 				{
 					"path": "items/blog-theme/pagination.tsx",
 					"type": "registry:component"
+				},
+				{
+					"path": "items/blog-theme/blog-proxy.ts",
+					"type": "registry:lib"
+				},
+				{
+					"path": "items/blog-theme/proxy.ts",
+					"type": "registry:file",
+					"target": "~/{app}/../proxy.ts"
 				},
 				{
 					"path": "items/blog-theme/app/blog/page.tsx",

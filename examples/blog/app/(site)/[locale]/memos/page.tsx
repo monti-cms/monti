@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { Suspense } from "react";
 import { PostMeta } from "@/components/monti/blog-theme/post-meta";
 import { cms } from "@/monti.config";
+
+// The page waits for the request before anything is sent; with cacheComponents that needs instant = false.
+export const instant = false;
 
 export const metadata: Metadata = { title: "Memos" };
 
@@ -12,17 +14,9 @@ type Props = { params: Promise<{ locale: string }> };
 
 /**
  * The memo list: the blog theme has no memo page, so this one is small and written by hand with the same read API.
- * The memos are read on each request: `connection()` inside a `Suspense` boundary, which works with and without `cacheComponents`.
+ * The memos are read on each request: `connection()` before anything is sent, so an unknown language is a real 404. With cacheComponents that needs `instant = false`.
  */
-export default function MemoListPage(props: Props) {
-	return (
-		<Suspense fallback={<main aria-busy="true" className="mx-auto max-w-2xl px-4 py-12" />}>
-			<MemoList {...props} />
-		</Suspense>
-	);
-}
-
-async function MemoList({ params }: Props) {
+export default async function MemoListPage({ params }: Props) {
 	await connection();
 	const { locale } = await params;
 	if (!cms.site.isLocale(locale)) notFound();
