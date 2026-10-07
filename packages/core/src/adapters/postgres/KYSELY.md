@@ -65,10 +65,10 @@ owner's transaction early. Code that is not in a transaction uses `ctx.db()`, wh
 | `store/preferences.ts` | - | done | 2 |
 | `store/folders.ts` | - | done | 2 |
 | `store/media.ts` (`titleExpr`) | - | done | 2 |
-| `store/public-read.ts` (uses `titleSql`, `translatedTitleSql`) | 6 | todo | 3 |
-| `store/list.ts` (uses `titleSql`) | 7 | todo | 3 |
-| `store/transfer.ts` | 8 | todo | 3 |
-| `store/schema-change.ts` | 10 | todo | 3 |
+| `store/public-read.ts` (`titleExpr`, `translatedTitleExpr`) | - | done | 3 |
+| `store/list.ts` (`titleExpr`) | - | done | 3 |
+| `store/transfer.ts` | - | done | 3 |
+| `store/schema-change.ts` | - | done | 3 |
 | `store/rows.ts` helpers (`loadEntry`, `readBody`, `writeBody`, `insertReferences`, `readReferences`, `lockEntryForUpdate`) | 6 | todo | 4 |
 | `store/entries.ts` (uses `titleSql`) | 15 | todo | 4 |
 | `store/publish.ts` (uses `titleSql`) | 17 | todo | 4 |

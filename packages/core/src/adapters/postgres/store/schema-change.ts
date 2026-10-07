@@ -1,10 +1,11 @@
 import { isDeepStrictEqual } from "node:util";
-import type { PoolClient } from "pg";
+import { sql } from "kysely";
 import type { SchemaChangeStore } from "../../../core/store/ports";
 import type { ScannedBody } from "../../../core/store/schema-change";
 import type { EntryMetadata, EntryStatus, JsonObject } from "../../../core/store/types";
 import { readReferenceOccurrences } from "../../../core/types";
-import { type Queryable, type StoreContext, withTransaction } from "./context";
+import type { Db } from "../db/kysely";
+import { type StoreContext, withTrx } from "./context";
 import { extractVisibleText, readBodyDoc } from "./rows";
 import { prepare } from "./schema";
 
@@ -40,8 +41,7 @@ const toScanned = (row: BodyScanRow): ScannedBody => ({
 
 /** A batch of bodies after the key `after` (entry id, state), `collections` only when given. `lock` takes the row locks of the transaction. */
 async function readBatch(
-	client: Queryable,
-	qSchema: string,
+	db: Db,
 	params: {
 		collections?: readonly string[];
 		after?: { entryId: string; state: string };
@@ -49,15 +49,36 @@ async function readBatch(
 		lock?: boolean;
 	},
 ): Promise<BodyScanRow[]> {
-	const res = await client.query<BodyScanRow>(
-		`SELECT b.entry_id, e.collection, e.locale, (e.translation_group_id IS NOT NULL AND e.translation_group_id <> e.id) AS is_translation, e.status, b.state, b.metadata, b.doc, b.mdx, b.schema_version
-		 FROM "${qSchema}".entry_bodies b JOIN "${qSchema}".entries e ON e.id = b.entry_id
-		 WHERE ($1::text[] IS NULL OR e.collection = ANY($1::text[]))
-		   AND ($2::uuid IS NULL OR (b.entry_id, b.state) > ($2::uuid, $3::text))
-		 ORDER BY b.entry_id, b.state LIMIT $4${params.lock ? " FOR UPDATE OF b" : ""}`,
-		[params.collections ?? null, params.after?.entryId ?? null, params.after?.state ?? null, params.limit],
-	);
-	return res.rows;
+	const { collections, after } = params;
+	return db
+		.selectFrom("entry_bodies as b")
+		.innerJoin("entries as e", "e.id", "b.entry_id")
+		.select((eb) => [
+			"b.entry_id",
+			"e.collection",
+			"e.locale",
+			eb
+				.and([eb("e.translation_group_id", "is not", null), eb("e.translation_group_id", "<>", eb.ref("e.id"))])
+				.$castTo<boolean>()
+				.as("is_translation"),
+			"e.status",
+			"b.state",
+			"b.metadata",
+			"b.doc",
+			"b.mdx",
+			"b.schema_version",
+		])
+		.$if(collections !== undefined, (qb) =>
+			qb.where("e.collection", "=", sql<string>`any(${[...(collections as readonly string[])]}::text[])`),
+		)
+		.$if(after !== undefined, (qb) =>
+			qb.where(sql<boolean>`(b.entry_id, b.state) > (${after?.entryId}::uuid, ${after?.state}::text)`),
+		)
+		.orderBy("b.entry_id")
+		.orderBy("b.state")
+		.limit(params.limit)
+		.$if(params.lock === true, (qb) => qb.forUpdate("b"))
+		.execute();
 }
 
 /**
@@ -65,8 +86,7 @@ async function readBatch(
  * occurrence is left. Occurrences are written metadata first and body after, the order a save writes them, so a later identical save sees nothing to change.
  */
 async function replaceMetadataReferences(
-	client: PoolClient,
-	qSchema: string,
+	db: Db,
 	entryId: string,
 	state: "working" | "published",
 	metadataReferences: readonly {
@@ -75,12 +95,12 @@ async function replaceMetadataReferences(
 		readonly occurrences: readonly unknown[];
 	}[],
 ): Promise<void> {
-	const current = (
-		await client.query<{ kind: string; target_id: string; is_stale: boolean; occurrences: unknown }>(
-			`SELECT kind, target_id, is_stale, occurrences FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = $2`,
-			[entryId, state],
-		)
-	).rows;
+	const current = await db
+		.selectFrom("entry_references")
+		.select(["kind", "target_id", "is_stale", "occurrences"])
+		.where("entry_id", "=", entryId)
+		.where("state", "=", state)
+		.execute();
 	const key = (kind: string, targetId: string) => `${kind === "media" ? "media" : "entry"}:${targetId}`;
 
 	const next = new Map<
@@ -124,23 +144,22 @@ async function replaceMetadataReferences(
 		});
 	if (same) return;
 
-	await client.query(`DELETE FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = $2`, [entryId, state]);
+	await db.deleteFrom("entry_references").where("entry_id", "=", entryId).where("state", "=", state).execute();
 	for (const entry of next.values()) {
 		const isMedia = entry.kind === "media";
-		await client.query(
-			`INSERT INTO "${qSchema}".entry_references (entry_id, state, kind, target_id, target_entry_id, target_media_id, is_stale, occurrences)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			[
-				entryId,
+		await db
+			.insertInto("entry_references")
+			.values({
+				entry_id: entryId,
 				state,
-				entry.kind,
-				entry.targetId,
-				isMedia ? null : entry.targetId,
-				isMedia ? entry.targetId : null,
-				entry.isStale,
-				JSON.stringify(entry.occurrences),
-			],
-		);
+				kind: entry.kind,
+				target_id: entry.targetId,
+				target_entry_id: isMedia ? null : entry.targetId,
+				target_media_id: isMedia ? entry.targetId : null,
+				is_stale: entry.isStale,
+				occurrences: JSON.stringify(entry.occurrences),
+			})
+			.execute();
 	}
 }
 
@@ -149,17 +168,14 @@ class DryRunRollback extends Error {}
 
 /** The schema-change part of the content store: reads the applied schema, scans bodies, and applies the transforms (`SchemaChangeStore`). */
 export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
-	const { pool, qSchema, site } = ctx;
+	const { site } = ctx;
+	const db = ctx.db();
 
 	return {
 		readSchemaState: async () => {
 			let rows: { schema_version: number; schema: JsonObject; applied_at: Date }[];
 			try {
-				rows = (
-					await pool.query<{ schema_version: number; schema: JsonObject; applied_at: Date }>(
-						`SELECT schema_version, schema, applied_at FROM "${qSchema}".schema_state`,
-					)
-				).rows;
+				rows = await db.selectFrom("schema_state").select(["schema_version", "schema", "applied_at"]).execute();
 			} catch (error) {
 				// A store that was not migrated to the step that creates the table has recorded nothing.
 				if ((error as { code?: string }).code === "42P01") return null;
@@ -172,11 +188,12 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 		appliedSchemaTransforms: async (ids) => {
 			if (ids.length === 0) return [];
 			try {
-				const res = await pool.query<{ name: string }>(
-					`SELECT name FROM "${qSchema}".cms_migrations WHERE name = ANY($1::text[])`,
-					[ids.map(recordName)],
-				);
-				const done = new Set(res.rows.map((row) => row.name));
+				const rows = await db
+					.selectFrom("cms_migrations")
+					.select("name")
+					.where("name", "=", sql<string>`any(${ids.map(recordName)}::text[])`)
+					.execute();
+				const done = new Set(rows.map((row) => row.name));
 				return ids.filter((id) => done.has(recordName(id)));
 			} catch (error) {
 				if ((error as { code?: string }).code === "42P01") return [];
@@ -186,7 +203,7 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 
 		scanBodies: async (params) => {
 			const limit = params?.limit ?? DEFAULT_BATCH_SIZE;
-			const rows = await readBatch(pool, qSchema, {
+			const rows = await readBatch(db, {
 				collections: params?.collections,
 				after: params?.after,
 				limit,
@@ -200,14 +217,15 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 
 		applySchemaChange: async (params) => {
 			try {
-				return await withTransaction(pool, async (client) => {
-					await prepare(client, qSchema);
+				return await withTrx(ctx, async (trx, client) => {
+					await prepare(client, ctx.qSchema);
 					const recorded = (
-						await client.query<{ name: string }>(
-							`SELECT name FROM "${qSchema}".cms_migrations WHERE name = ANY($1::text[])`,
-							[params.transformIds.map(recordName)],
-						)
-					).rows.map((row) => row.name);
+						await trx
+							.selectFrom("cms_migrations")
+							.select("name")
+							.where("name", "=", sql<string>`any(${params.transformIds.map(recordName)}::text[])`)
+							.execute()
+					).map((row) => row.name);
 					const done = new Set(recorded);
 					const pending = params.transformIds.filter((id) => !done.has(recordName(id)));
 					const skipped = params.transformIds.filter((id) => done.has(recordName(id)));
@@ -222,7 +240,7 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 					if (pending.length > 0 && params.collections.length > 0) {
 						let after: { entryId: string; state: string } | undefined;
 						for (;;) {
-							const rows = await readBatch(client, qSchema, {
+							const rows = await readBatch(trx, {
 								collections: params.collections,
 								after,
 								limit: DEFAULT_BATCH_SIZE,
@@ -232,20 +250,19 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 							for (const row of rows) {
 								const result = await params.rewrite(toScanned(row), pending);
 								if (!result) continue;
-								await client.query(
-									`UPDATE "${qSchema}".entry_bodies SET metadata = $3, doc = $4, content_hash = $5, schema_version = $6, search_text = $7
-									 WHERE entry_id = $1 AND state = $2`,
-									[
-										row.entry_id,
-										row.state,
-										JSON.stringify(result.metadata),
-										JSON.stringify(result.doc),
-										result.contentHash,
-										params.schemaVersion,
-										extractVisibleText(site, result.doc),
-									],
-								);
-								await replaceMetadataReferences(client, qSchema, row.entry_id, row.state, result.references);
+								await trx
+									.updateTable("entry_bodies")
+									.set({
+										metadata: JSON.stringify(result.metadata),
+										doc: JSON.stringify(result.doc),
+										content_hash: result.contentHash,
+										schema_version: params.schemaVersion,
+										search_text: extractVisibleText(site, result.doc),
+									})
+									.where("entry_id", "=", row.entry_id)
+									.where("state", "=", row.state)
+									.execute();
+								await replaceMetadataReferences(trx, row.entry_id, row.state, result.references);
 								bodies += 1;
 								if (lastRewritten !== row.entry_id) entries += 1;
 								lastRewritten = row.entry_id;
@@ -264,13 +281,27 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 					}
 
 					for (const id of pending) {
-						await client.query(`INSERT INTO "${qSchema}".cms_migrations (name) VALUES ($1)`, [recordName(id)]);
+						await trx
+							.insertInto("cms_migrations")
+							.values({ name: recordName(id) })
+							.execute();
 					}
-					await client.query(
-						`INSERT INTO "${qSchema}".schema_state (id, schema_version, schema, applied_at) VALUES (TRUE, $1, $2, NOW())
-						 ON CONFLICT (id) DO UPDATE SET schema_version = EXCLUDED.schema_version, schema = EXCLUDED.schema, applied_at = EXCLUDED.applied_at`,
-						[params.schemaVersion, JSON.stringify(params.schema)],
-					);
+					await trx
+						.insertInto("schema_state")
+						.values({
+							id: true,
+							schema_version: params.schemaVersion,
+							schema: JSON.stringify(params.schema),
+							applied_at: sql<Date>`now()`,
+						})
+						.onConflict((conflict) =>
+							conflict.column("id").doUpdateSet((eb) => ({
+								schema_version: eb.ref("excluded.schema_version"),
+								schema: eb.ref("excluded.schema"),
+								applied_at: eb.ref("excluded.applied_at"),
+							})),
+						)
+						.execute();
 
 					const report = { applied: pending, skipped, changed, bodies, entries, dryRun: Boolean(params.dryRun) };
 					if (params.dryRun) throw Object.assign(new DryRunRollback(), { report });
