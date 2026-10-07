@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Example app bundle check. Builds and packs the repo packages (`packages/*`), copies the example app (`examples/blog`) to a temp folder outside the repo,
- * installs it from those bundles, then runs a type check (`skipLibCheck: false`) and `next build`. The example config attaches every extension. It also runs the config checks of `monti doctor` (the config loads, and no client component imports it).
+ * installs it from those bundles, then runs a type check (`skipLibCheck: false`) and `next build`, once with `cacheComponents` on (as in a new Next app) and once with it off. The example config attaches every extension. It also runs the config checks of `monti doctor` (the config loads, and no client component imports it).
  * Inside the repo the sources are used directly, so this catches what breaks only in the bundles (`dist`, `exports`, dependency declarations).
  *
  *   node scripts/check-example.mjs            # build first
@@ -11,7 +11,7 @@
  * No DB or login connection is used (the build works without one).
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -96,6 +96,21 @@ run("pnpm", ["exec", "monti", "schema:types", "--check"], app);
 // `monti.config.ts` holds the database and login settings and is server-only: no client component may import it (directly or through other files).
 run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);
 
+// The blog theme as `monti add blog-theme` gives it to a newcomer (its pages under app/(site)/blog and app/(site)/preview/blog) is built too, next to the
+// example's own copy of the theme: the registry sources are what new apps get, and they must build with and without `cacheComponents`.
+run(
+	"pnpm",
+	["exec", "monti", "add", "blog-theme", "--registry", path.join(root, "registry/r"), "--overwrite", "--yes"],
+	app,
+);
+for (const page of [
+	"app/(site)/blog/page.tsx",
+	"app/(site)/blog/[slug]/page.tsx",
+	"app/(site)/preview/blog/[slug]/page.tsx",
+]) {
+	if (!existsSync(path.join(app, page))) throw new Error(`check-example: monti add blog-theme did not write ${page}`);
+}
+
 const check = (label) => {
 	console.log(`\n=== ${label} ===`);
 	run("pnpm", ["exec", "tsc", "--noEmit", "-p", "."], app);
@@ -103,8 +118,22 @@ const check = (label) => {
 	run("pnpm", ["exec", "next", "build"], app, { NEXT_TELEMETRY_DISABLED: "1" });
 };
 
+// New Next apps start with `cacheComponents` and `partialPrefetching` on, so the example keeps them on: the build with them is the one a newcomer gets
+// (the studio route and the blog theme pages must build), and the build without them proves the same sources work for an app that has not turned them on.
+const nextConfigPath = path.join(app, "next.config.ts");
+const nextConfigText = readFileSync(nextConfigPath, "utf8");
+if (!/cacheComponents:\s*true/.test(nextConfigText) || !/partialPrefetching:\s*true/.test(nextConfigText)) {
+	throw new Error("check-example: examples/blog/next.config.ts must turn on cacheComponents and partialPrefetching");
+}
+const withoutCacheComponents = nextConfigText.replace(/^\s*(?:cacheComponents|partialPrefetching):\s*true,\n/gm, "");
+if (withoutCacheComponents === nextConfigText || /cacheComponents/.test(withoutCacheComponents)) {
+	throw new Error("check-example: could not turn cacheComponents off in the copied next.config.ts");
+}
+
 try {
-	check("example config");
+	check("example config, cacheComponents on (the default of a new Next app)");
+	writeFileSync(nextConfigPath, withoutCacheComponents);
+	check("example config, cacheComponents off");
 	console.log("\ncheck-example: ok");
 } finally {
 	if (args.has("--keep")) console.log(`kept: ${work}`);
