@@ -60,7 +60,7 @@ export const blogConfig = (withMdx = true) =>
 		plugins: withMdx ? [mdx({ syntax: [directiveSyntax()] })] : [],
 	});
 
-const adminAuth = (): CmsAuth => ({
+export const adminAuth = (): CmsAuth => ({
 	basePath: "/api/cms/auth",
 	handlers: { GET: async () => new Response("auth"), POST: async () => new Response("auth") },
 	session: async () => ({ user: { id: "admin", accountId: "admin" } }),

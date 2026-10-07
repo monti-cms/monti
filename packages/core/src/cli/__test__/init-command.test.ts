@@ -187,6 +187,7 @@ describe("monti init on the command line", () => {
 		const before = read(dir, "next.config.ts");
 		const prompter = scriptedPrompter({
 			[QUESTIONS.database]: "skip",
+			[QUESTIONS.databaseSchema]: "",
 			[QUESTIONS.adminGithubId]: "",
 			[QUESTIONS.locales]: "en",
 			[QUESTIONS.storage]: "none",

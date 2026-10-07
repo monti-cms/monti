@@ -26,7 +26,9 @@ import {
 	type InitAnswers,
 	nextConfigTemplate,
 	packagesFor,
+	pathFor,
 	schemaTemplate,
+	starterCollections,
 } from "./templates";
 
 /**
@@ -413,7 +415,8 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		if (folder) {
 			const keys = folder.keys.map((key) => key.name);
 			report.notes.push(
-				`The post collection follows the front matter of ${folder.dir}/ (${keys.length > 0 ? keys.slice(0, 8).join(", ") : "no front matter found"}). Keys that have no matching field kind are text fields; edit ${schemaFile} to fit.`,
+				`The post collection follows the front matter of ${folder.dir}/ (${keys.length > 0 ? keys.slice(0, 8).join(", ") : "no front matter found"}), at the path ${pathFor(folder)}. Keys that have no matching field kind are text fields; edit ${schemaFile} to fit.`,
+				...starterCollections(folder.keys, answers.locales.length > 1).notes,
 			);
 		}
 	} else if (app.existingConfig !== undefined) {
@@ -473,6 +476,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	const wanted: [string, string | undefined][] = [
 		["MONTI_SECRET", secret],
 		["DATABASE_URL", databaseUrl],
+		["DATABASE_SCHEMA", answers.databaseSchema],
 		["MONTI_ADMIN_GITHUB_ID", answers.adminGithubId],
 	];
 	const envAdd = wanted.filter((pair): pair is [string, string] => pair[1] !== undefined && !have.has(pair[0]));
@@ -696,6 +700,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 				if (added.styles?.updated) report.updated.push(added.styles.updated);
 				if (added.styles?.diff) report.diffs.push(added.styles.diff);
 				report.skipped.push(...added.unchanged);
+				report.notes.push(...added.configured);
 				report.next.push(...added.manual);
 				report.steps.push({
 					name: "Add the blog theme",
@@ -781,11 +786,6 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	if (answers.gitSync) {
 		todo.push(
 			`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/git-sync to save the GitHub token. Run ${exec(manager, "migrate")} again after adding the plugin if you did not just run it.`,
-		);
-	}
-	if (answers.blogTheme) {
-		todo.push(
-			`Point the theme at your fields: in the theme.config.ts that was added under components/monti/blog-theme (the @/components alias), set excerptField to "summary" and authorField/topicsField to undefined (the starter collection has neither).`,
 		);
 	}
 	todo.push(

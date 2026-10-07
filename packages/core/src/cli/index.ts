@@ -2,6 +2,7 @@ import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
 import { DOCTOR_HELP, runDoctorCommand } from "./doctor";
 import { eventsRetry } from "./events";
+import { HELP, helpFor } from "./help";
 import { IMPORT_HELP, runImportCommand } from "./import/command";
 import { runInitCommand } from "./init-command";
 import { createClackPrompter, type Prompter } from "./init-prompts";
@@ -118,65 +119,6 @@ export {
 	watchSchemaTypes,
 } from "./schema-types";
 
-const HELP = `Usage: monti <command> [options]
-
-Commands:
-  init      Add Monti to an existing Next app (App Router): asks a few questions, writes explicit files, installs the packages and runs the migrations.
-            Existing files are never overwritten without a yes. Every question has a flag; with --yes, --json, or no terminal nothing is asked.
-              --yes, -y             Take the default for every question that has no flag
-              --json                Print the result as JSON (implies --yes)
-              --dry-run             Show what would be written and run, and change nothing
-              --database <v>        A postgres:// URL, "docker" (a local Postgres, writes docker-compose.yml and starts it) or "skip" (default skip)
-              --admin-github-id <n> Numeric GitHub id of the admin (MONTI_ADMIN_GITHUB_ID in .env.local)
-              --site-url <url>      Public site URL, for the GitHub OAuth callback URL (default http://localhost:3000)
-              --locales <list>      Language codes, the default first (default en); --locale <code> is the same for one
-              --time-zone <tz>      IANA time zone for dates and times (default UTC)
-              --storage <s3|none>   Image storage: an S3-compatible store (S3, R2, MinIO), or none for now (default none)
-              --extras <list>       ai, git-sync, or none (default none)
-              --blocks <list>       all, none, or block names: callout, collapsible, tabs, columns, code-explorer, mermaid, chart, tooltip, code-ref, color (default all)
-              --admin-path <path>   Admin screen path (default /studio)
-              --blog-theme          Also add the blog theme pages (monti add blog-theme); --no-blog-theme to skip (default skip)
-              --overwrite           Replace existing files that differ (default: keep them)
-              --no-install          Do not install packages (and so do not migrate or add the theme)
-              --no-migrate          Do not run monti migrate
-              --no-docker-start     Write docker-compose.yml but do not start it
-              --package-manager <m> npm, pnpm, yarn or bun (default: detected)
-  add       Copy components from the registry into the app as source you own, and install their npm packages
-              <name...>             Components to add; the ones they need come along
-              --registry <url|path> Registry folder or URL with registry.json (default: the registry of this repo)
-              --overwrite           Replace files that differ from the registry (default: stop and write nothing)
-              --dry-run             Show what would be written and installed
-              --yes, -y             Also add the typography plugin and the render.css imports the theme needs to your global CSS without asking (default: ask, or print the lines)
-${IMPORT_HELP}  migrate   Create or update the tables in the database of monti.config.ts
-              --env-file <file>     Env file to read (repeatable, default .env.local and .env)
-              --no-env-file         Don't read any env file
-              --config <file>       The config file that exports the CMS instance (default: ./monti.config.ts, ./src/monti.config.ts)
-  events:retry    Deliver the afterCommit events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)
-              --all                 Also try the failed deliveries that are not due yet
-              --limit <n>           Most deliveries to try (default 100)
-              --env-file <file>, --no-env-file, --config <file>   As for migrate
-  <plugin>:<command>    Run a command a plugin adds, with the app loaded as for migrate (for example git-sync:pull). Add --help for its options
-${DOCTOR_HELP}  schema:types    Write the types of the schema file (monti-env.d.ts), so collections and locales are typed without writing types
-              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
-              --out <file>          Declaration file (default: monti-env.d.ts next to the schema file)
-              --watch               Keep running and rewrite the types when the schema file changes
-              --check               Write nothing; exit 1 if the declaration file is out of date
-  schema:extract  Write the data part of the config file to monti.schema.json and list what stays in code
-              --config <file>       Config file (default: ./monti.config.ts, then ./cms.config.ts; each also under ./src)
-              --out <file>          Schema file to write (default: monti.schema.json next to the config file)
-              --overwrite           Replace the schema file if it exists
-              --locale <code>       Language for labels plugins provide (default: the admin language)
-              --no-types            Do not write the declaration file
-  schema:diff     Compare the schema with the one last applied to the database and list the stored entries each change touches (read-only)
-              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
-              --check               Exit 1 when there is anything to apply
-              --env-file <file>, --no-env-file, --config <file>   As for migrate
-  schema:apply    Run the data transforms of the schema file (migrations) once each, record the schema, and raise schemaVersion in the file when the schema changed
-              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
-              --dry-run             Run everything in a transaction that is rolled back, and write nothing
-              --env-file <file>, --no-env-file, --config <file>   As for migrate
-`;
-
 export interface CliIo {
 	readonly cwd: string;
 	readonly log: (message: string) => void;
@@ -192,11 +134,15 @@ export async function runCli(
 ): Promise<number> {
 	const [command, ...rest] = argv;
 	try {
-		if (command === "init") {
-			if (rest.includes("--help") || rest.includes("-h")) {
-				io.log(HELP);
+		// `monti <command> --help` prints that command's section only. (`doctor` and `import` answer it themselves, and a plugin command has its own.)
+		if (command !== undefined && (rest.includes("--help") || rest.includes("-h"))) {
+			const section = helpFor(command);
+			if (section !== undefined && command !== "doctor" && command !== "import") {
+				io.log(section);
 				return 0;
 			}
+		}
+		if (command === "init") {
 			return await runInitCommand(rest, io);
 		}
 		if (command === "add") {
