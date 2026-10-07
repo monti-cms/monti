@@ -1,7 +1,8 @@
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderInRouter as render } from "../../test/router";
 import { AdminEntriesTable, columnsFor } from "../admin-entries-table";
 import { parseListState } from "../list-state";
 import { filterChips } from "../list-toolbar";

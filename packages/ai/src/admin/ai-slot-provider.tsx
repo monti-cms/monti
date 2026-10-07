@@ -1,11 +1,11 @@
 "use client";
 
 import { CmsApiError, cmsFetch } from "@monti-cms/admin/api";
+import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
 import { adminHref, cmsApiUrl, createTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
-import { usePathname } from "next/navigation";
 import { type ReactNode, useMemo } from "react";
 import type { AiActionView } from "../actions";
 import type { AiRunContext, AiRunResult } from "../definition";
@@ -186,7 +186,7 @@ const isLoginScreen = (pathname: string | null) =>
  * An action is not attached if the connection it uses is not ready.
  */
 export function AiSlotProvider({ children }: { children: ReactNode }) {
-	const pathname = usePathname();
+	const pathname = useAdminPathname();
 	const { data } = useAiActions(!isLoginScreen(pathname));
 	// The model reads the body as MDX: the document of the entry is written with the `mdx` format when an action runs.
 	const format = useMdxFormat();

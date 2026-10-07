@@ -11,7 +11,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"jsx": "react-jsx",
-		"types": ["node", "next"],
+		"types": ["node"],
 		"paths": {
 			"@cms-config": ["./test/cms.config.ts"]
 		}

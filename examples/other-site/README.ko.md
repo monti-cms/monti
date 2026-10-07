@@ -28,11 +28,11 @@ pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈�
 | 파일 | 내용 |
 | --- | --- |
 | `cms.config.ts` | 컬렉션·블록·확장(`plugins`의 `mdx()`·차트 블록·`seo()`). 블로그와 다르게 관리자 경로 `admin.path: "/studio"`, 주소 규칙 `site.localePrefix: "always"`(모든 언어에 `/en`), 미리보기 언어는 경로(`previewLocaleParam: false`) |
-| `cms.server.ts` | CMS 인스턴스: DB·GitHub 로그인 서버 설정 위의 `createCms`(`monti init` 그대로). 관리자·API 라우트·사이트 페이지(`cms.read.*`)가 모두 여기서 `cms`를 불러온다 |
+| `cms.server.ts` | CMS 인스턴스: DB·GitHub 로그인 서버 설정 위의 `createCms`(`monti init` 그대로, `githubAuth`는 `@monti-cms/nextjs/auth`에서 온다). 관리자·API 라우트·사이트 페이지(`cms.read.*`)가 모두 여기서 `cms`를 불러온다 |
 | `app/components/site-blocks.tsx` | 사이트 블록(`quote-card`, `map`)의 공개 컴포넌트. 블록 정의에서 타입이 정해지는 `DocumentComponents`로 쓰고 `<CmsContent components={...} />`에 넘긴다 |
-| `app/(admin)/studio/` | 관리자 화면(`[[...path]]/page.tsx`·`layout.tsx`)과 맞춤법 검사 확장 예시(`admin-components.tsx`) |
+| `app/(admin)/studio/` | 관리자 화면(`[[...path]]/page.tsx`·`layout.tsx`, `@monti-cms/nextjs/admin` 사용)과 맞춤법 검사 확장 예시(`admin-components.tsx`) |
 | `showcase/` | "CMS elements" 샘플 글(`*.mdx`)과, `pnpm preview:example`이 그 글을 미리보기 DB에 넣으려고 돌리는 `seed.ts` |
-| `app/api/cms/[...path]/route.ts` | 관리자 API와 로그인(`/api/cms/auth/*`). 로그인 라우트 파일이 따로 없다 |
+| `app/api/cms/[...path]/route.ts` | 관리자 API와 로그인(`/api/cms/auth/*`). `@monti-cms/nextjs`의 `createRouteHandler(cms)`가 맡는다. 로그인 라우트 파일이 따로 없다 |
 | `app/globals.css` | Tailwind와 패키지 스타일 import만(관리자 스타일 뒤의 `@monti-cms/mdx/styles.css` 포함). 관리자 화면 색·변형(`cms-*`, `cms-dark` 등)은 관리자 패키지 스타일이 정하고 앱의 이름과 겹치지 않는다 |
 
 GitHub 로그인을 쓰려면 OAuth 앱의 콜백 주소를 `http://localhost:3000/api/cms/auth/callback/github`로 둔다.

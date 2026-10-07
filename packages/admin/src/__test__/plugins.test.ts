@@ -77,7 +77,7 @@ describe("loadAdminPlugins", () => {
 
 describe("core admin pages", () => {
 	it("the admin page router handles every core page the collision check reserves", () => {
-		const source = readFileSync(path.resolve(__dirname, "../next/page.tsx"), "utf8");
+		const source = readFileSync(path.resolve(__dirname, "../host/page.tsx"), "utf8");
 		for (const core of CORE_ADMIN_PAGES.filter(Boolean)) {
 			expect(source, core).toMatch(new RegExp(`case "${core}":|first === "${core}"`));
 		}

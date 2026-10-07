@@ -1,42 +1,13 @@
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { useSyncExternalStore } from "react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createTestRouter } from "../../test/router";
 import { AdminClientDashboard, AdminTrashDashboard } from "../admin-dashboard";
 import { AdminQueryProvider } from "../shared/query-provider";
 
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
-const nav = vi.hoisted(() => {
-	const listeners = new Set<() => void>();
-	const state = {
-		search: new URLSearchParams(),
-		replace: vi.fn(),
-		push: vi.fn(),
-		listeners,
-		set(query: string) {
-			state.search = new URLSearchParams(query);
-			for (const listener of listeners) listener();
-		},
-	};
-	return state;
-});
-vi.mock("next/navigation", () => ({
-	useRouter: () => ({
-		replace: (url: string) => {
-			nav.replace(url);
-			nav.set(url.split("?")[1] ?? "");
-		},
-		push: nav.push,
-	}),
-	useSearchParams: () =>
-		useSyncExternalStore(
-			(listener) => {
-				nav.listeners.add(listener);
-				return () => nav.listeners.delete(listener);
-			},
-			() => nav.search,
-		),
-}));
+const nav = createTestRouter();
+const { render } = nav;
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 
@@ -86,7 +57,7 @@ const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as 
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	nav.set("collection=post");
+	nav.setSearch("collection=post");
 	server.posts = [item("가"), item("나"), item("다")];
 	server.trashed = [];
 	server.folders = [];
@@ -150,7 +121,7 @@ describe("list screen — list settings", () => {
 	});
 
 	it("values written in the address take precedence over saved settings", async () => {
-		nav.set("collection=post&pageSize=100&sort=createdAt&dir=asc");
+		nav.setSearch("collection=post&pageSize=100&sort=createdAt&dir=asc");
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "desc" } } } };
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
@@ -309,20 +280,20 @@ describe("list screen — row menu and bulk actions", () => {
 	});
 
 	it("adding a post creates it in the current folder", async () => {
-		nav.set("collection=post&folder=f1");
+		nav.setSearch("collection=post&folder=f1");
 		server.folders = [folder];
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
 		fireEvent.click(screen.getByRole("button", { name: "게시글 추가" }));
 
-		expect(nav.push).toHaveBeenCalledWith("/admin/entries/new?collection=post&folder=f1");
+		expect(nav.navigate).toHaveBeenCalledWith("/admin/entries/new?collection=post&folder=f1");
 	});
 });
 
 describe("list screen — folders", () => {
 	it("deleting the folder being viewed returns to the all view", async () => {
-		nav.set("collection=post&folder=f1");
+		nav.setSearch("collection=post&folder=f1");
 		server.folders = [folder];
 		server.handle = (url, init) => {
 			if (url.pathname === "/api/cms/v1/folders/f1" && !init?.method) return json({ entryCount: 0, childFolders: [] });
@@ -379,7 +350,7 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		working: { metadata: { title }, mdx: "" },
 	});
 	beforeEach(() => {
-		nav.set("collection=tag");
+		nav.setSearch("collection=tag");
 		const tags = [
 			item("t1", { collection: "tag", title: "리액트", status: "published" }),
 			item("t2", { collection: "tag", title: "뷰", status: "published" }),

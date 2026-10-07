@@ -1,6 +1,5 @@
 import { createTranslator, SITE_NAME } from "@monti-cms/core/client";
 import type { Cms } from "@monti-cms/core/runtime";
-import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { loadAdminPlugins } from "../plugins";
 import { AdminFeaturesProvider } from "../screens/shared/admin-features";
@@ -8,17 +7,20 @@ import { AdminQueryProvider } from "../screens/shared/query-provider";
 import { Toaster } from "../ui/sonner";
 import { TooltipProvider } from "../ui/tooltip";
 import { AdminThemeProvider } from "./admin-theme-provider";
-import { nextMessages } from "./messages";
+import { layoutMessages } from "./messages";
 
-const t = createTranslator(nextMessages);
+const t = createTranslator(layoutMessages);
 
-/** Admin UI metadata. Use it in the app's admin layout as `export const metadata = cmsAdminMetadata;`. */
-export const cmsAdminMetadata: Metadata = {
+/**
+ * Metadata of the admin pages (title, no indexing), in the shape the framework's metadata export expects (Next's `Metadata` accepts it as is).
+ * A host package re-exports it as the admin layout's metadata.
+ */
+export const adminMetadata = {
 	title: SITE_NAME ? t("titleWithSite", { site: SITE_NAME }) : t("title"),
 	robots: { index: false, follow: false },
-};
+} as const;
 
-export type CmsAdminLayoutProps = {
+export type AdminLayoutProps = {
 	/** The CMS instance: the `cms` exported by the app's server file. */
 	cms: Cms;
 	children: ReactNode;
@@ -40,17 +42,17 @@ export type CmsAdminLayoutProps = {
 };
 
 /**
- * Admin UI layout. Rendered by the app's `app/(admin)/admin/layout.tsx`. Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
+ * Admin UI layout, framework-neutral. A host package renders it inside the router provider (`CmsAdminLayout` of `@monti-cms/nextjs/admin` for Next.js). Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
- * If the site already has them, turn them off with `<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>`.
+ * If the site already has them, turn them off with `<AdminLayout cms={cms} themeProvider={false} toaster={false}>`.
  */
-export async function CmsAdminLayout({
+export async function AdminLayout({
 	cms,
 	children,
 	themeProvider = true,
 	themeStorageKey,
 	toaster = true,
-}: CmsAdminLayoutProps) {
+}: AdminLayoutProps) {
 	const plugins = await loadAdminPlugins();
 	// Plugin providers wrap from the outside in registration order, inside the server data cache.
 	const content = plugins.reduceRight<ReactNode>(

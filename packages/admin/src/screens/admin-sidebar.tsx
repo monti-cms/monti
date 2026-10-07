@@ -23,10 +23,9 @@ import {
 	Plus,
 	Trash2,
 } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
 import { type KeyboardEvent, useEffect, useState } from "react";
 import { cn } from "../lib/utils/cn";
+import { AdminLink as Link } from "../router";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { IconButton } from "../ui/icon-button";
 import { Label } from "../ui/label";
@@ -309,9 +308,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 			<SidebarMenuButton
 				isActive={activeNav === id}
 				tooltip={label}
-				render={
-					<Link href={href as Route} onClick={closeMobile} aria-current={activeNav === id ? "page" : undefined} />
-				}
+				render={<Link href={href} onClick={closeMobile} aria-current={activeNav === id ? "page" : undefined} />}
 			>
 				{icon}
 				<span>{label}</span>
@@ -324,7 +321,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 		<Sidebar collapsible="icon">
 			<SidebarHeader className="flex-row items-center gap-1 px-3 pt-3.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
 				<Link
-					href={adminHref() as Route}
+					href={adminHref()}
 					onClick={closeMobile}
 					className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1.5 py-1 group-data-[collapsible=icon]:hidden"
 				>
@@ -392,7 +389,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 					<TooltipTrigger
 						render={
 							<Link
-								href={SITE_HOME as Route}
+								href={SITE_HOME}
 								aria-label={t("sidebar.viewSite")}
 								className="flex h-8 flex-1 items-center gap-2 rounded-md px-2 text-[13px] text-cms-muted-foreground hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
 							/>

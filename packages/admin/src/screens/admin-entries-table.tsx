@@ -27,11 +27,10 @@ import {
 	useTable,
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, Columns3, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
 import { Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useCmsAdminComponents } from "../admin-components";
 import { cn } from "../lib/utils/cn";
+import { AdminLink as Link } from "../router";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -217,7 +216,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 				return (
 					<Link
 						key={locale}
-						href={adminEntryEditHref(member.id) as Route}
+						href={adminEntryEditHref(member.id)}
 						className={cn(BADGE_CLASS, BADGE_TONE[tone], "cms-dark:hover:brightness-125 hover:brightness-95")}
 					>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
@@ -414,7 +413,7 @@ export function AdminEntriesTable({
 					) : (
 						<span className="flex min-w-0 items-center gap-2">
 							<Link
-								href={adminEntryEditHref(item.id) as Route}
+								href={adminEntryEditHref(item.id)}
 								className="truncate font-medium text-cms-foreground hover:text-cms-primary"
 							>
 								{title}

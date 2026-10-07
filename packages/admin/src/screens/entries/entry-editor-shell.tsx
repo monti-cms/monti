@@ -33,9 +33,6 @@ import {
 	Trash,
 	Trash2,
 } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -43,6 +40,7 @@ import { useCmsAdminComponents, useEditorExtensions } from "../../admin-componen
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
+import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button, buttonVariants } from "../../ui/button";
@@ -236,7 +234,7 @@ export function EntryEditorShell({
 	adminId,
 	folderId,
 }: EntryEditorShellProps) {
-	const router = useRouter();
+	const router = useAdminRouter();
 	const { resolvedTheme, setTheme } = useTheme();
 	const editor = useEntryEditor({
 		formats: useCmsAdminComponents().formats,
@@ -284,7 +282,7 @@ export function EntryEditorShell({
 	useEffect(() => {
 		if (load.status !== "redirect") return;
 		router.replace(
-			(load.entryId ? entryHref(load.collection, load.entryId) : adminHref(`?collection=${load.collection}`)) as Route,
+			load.entryId ? entryHref(load.collection, load.entryId) : adminHref(`?collection=${load.collection}`),
 		);
 	}, [load]);
 
@@ -395,7 +393,7 @@ export function EntryEditorShell({
 				<>
 					{tc("inspector.source", { locale: localeLabel(entry.source.locale) })}{" "}
 					<Link
-						href={adminEntryEditHref(entry.source.id) as Route}
+						href={adminEntryEditHref(entry.source.id)}
 						className="text-cms-primary underline-offset-2 hover:underline"
 					>
 						{tc("inspector.sourceLink")}
@@ -558,7 +556,7 @@ export function EntryEditorShell({
 		}
 		toast.success(LIFECYCLE_SUCCESS[action]);
 		// Sending a translation to the trash returns to the original's edit screen.
-		if (changed.value.openEntryId) router.push(adminEntryEditHref(changed.value.openEntryId) as Route);
+		if (changed.value.openEntryId) router.navigate(adminEntryEditHref(changed.value.openEntryId));
 	};
 
 	/** Only transitions that take a published post down (archive, move to trash) ask. Unarchive and restore happen right away. */
@@ -579,7 +577,7 @@ export function EntryEditorShell({
 					toast.error(deleted.error.message);
 					return;
 				}
-				router.push(adminHref(`?collection=${entry.collection}&status=trashed`) as Route);
+				router.navigate(adminHref(`?collection=${entry.collection}&status=trashed`));
 			},
 		});
 	};
@@ -592,7 +590,7 @@ export function EntryEditorShell({
 			toast.error(copy.error.message);
 			return;
 		}
-		router.push(adminEntryEditHref(copy.value.id) as Route);
+		router.navigate(adminEntryEditHref(copy.value.id));
 	};
 
 	// A translation can share a slug with the original, so the language is passed along.
@@ -632,7 +630,7 @@ export function EntryEditorShell({
 				<Alert variant="danger">
 					<AlertDescription className="col-start-auto">{loadError}</AlertDescription>
 				</Alert>
-				<Link href={adminHref() as Route} className={buttonVariants({ variant: "outline" })}>
+				<Link href={adminHref()} className={buttonVariants({ variant: "outline" })}>
 					{t("backToList")}
 				</Link>
 			</div>
@@ -725,7 +723,7 @@ export function EntryEditorShell({
 							<TooltipTrigger
 								render={
 									<Link
-										href={adminHref(`?collection=${collection}`) as Route}
+										href={adminHref(`?collection=${collection}`)}
 										aria-label={t("backToList")}
 										className={cn(
 											buttonVariants({ variant: "ghost", size: "icon-sm" }),
@@ -758,7 +756,7 @@ export function EntryEditorShell({
 						)}
 						{saveStatus === "session-expired" && (
 							<a
-								href={adminHref("/login") as Route}
+								href={adminHref("/login")}
 								target="_blank"
 								rel="noreferrer"
 								className={buttonVariants({ variant: "link", size: "xs" })}

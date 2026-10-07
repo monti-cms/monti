@@ -5,7 +5,6 @@ import { cmsConfig } from "../config/resolved";
 import { adminUrl } from "../core/admin-paths";
 import { CmsError, type ContentChange, type ContentStore, type Entry } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
-import { type CmsRouteHandler, nextRouteHandler } from "../next/route-handler";
 import type { CmsPlugin, OwnedPluginRoute } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
@@ -17,11 +16,8 @@ import { createContentService } from "../services/content-service";
 import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
 
-export type { CmsRouteHandler };
 export type ContentService = ReturnType<typeof createContentService<Entry>>;
 export type BulkService = ReturnType<typeof createBulkService<Entry>>;
-
-type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 /** Options of {@link Cms.handle}. */
 export interface HandleOptions {
@@ -104,15 +100,10 @@ export interface Cms {
 	notifyAfterCommit(change: ContentChange): Promise<void>;
 	/**
 	 * Serves one request of the admin API (`/api/cms/v1/*`), the login connection, the public API and the plugin routes. It takes a standard web
-	 * `Request` and returns a `Response`, so any host that speaks them can mount it (experimental outside Next). Unknown paths return 404 and a known
+	 * `Request` and returns a `Response`, so any host that speaks them can mount it. `@monti-cms/nextjs` mounts it in a Next.js route file (`createRouteHandler(cms)`). Unknown paths return 404 and a known
 	 * path with an unsupported method returns 405. The route code loads on the first request.
 	 */
 	handle(request: Request, options?: HandleOptions): Promise<Response>;
-	/**
-	 * The Next adapter of {@link Cms.handle}, for the app's single catch-all route file (`app/api/cms/[...path]/route.ts`):
-	 * `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();`.
-	 */
-	routeHandler(): Record<Method, CmsRouteHandler>;
 	/** Reads published content for the site's pages, and resolves public media. */
 	readonly read: CmsRead;
 	/**
@@ -244,7 +235,6 @@ export function createCms(options: CreateCmsOptions): Cms {
 		formats: plugins.formats,
 		notifyAfterCommit: plugins.notifyAfterCommit,
 		handle: lazyHandle(() => cms),
-		routeHandler: () => nextRouteHandler(cms),
 		read: createRead({
 			store: getStore,
 			mediaStore: getMediaStore,

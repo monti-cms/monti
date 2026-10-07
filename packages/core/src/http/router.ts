@@ -33,7 +33,7 @@ import * as r34 from "./v1/templates/[id]/route";
 import * as r33 from "./v1/templates/route";
 
 /**
- * Admin API (`/api/cms/v1/*`) route table, served by `cms.handle(request)` (a Next app mounts it with `cms.routeHandler()` from a single catch-all route,
+ * Admin API (`/api/cms/v1/*`) route table, served by `cms.handle(request)` (a Next app mounts it with `createRouteHandler(cms)` of `@monti-cms/nextjs` from a single catch-all route,
  * `app/api/cms/[...path]/route.ts`). Paths mirror the route folders (`[id]` is one segment).
  * Every route gets the CMS instance in its context (`{ params, cms }`).
  */

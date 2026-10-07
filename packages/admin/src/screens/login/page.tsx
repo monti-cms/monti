@@ -1,7 +1,6 @@
 import { adminHref, cmsApiUrl, createTranslator } from "@monti-cms/core/client";
 import type { Cms } from "@monti-cms/core/runtime";
-import type { Route } from "next";
-import { redirect } from "next/navigation";
+import type { AdminServer } from "../../host/server";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
@@ -13,9 +12,9 @@ const t = createTranslator(loginMessages);
  * Sign in and out are plain form posts to the core API (its `v1/session/*` routes), not server actions: a server action cannot carry the
  * CMS instance, because the values it closes over must be serializable.
  */
-export default async function AdminLoginPage({ cms }: { cms: Cms }) {
+export default async function AdminLoginPage({ cms, server }: { cms: Cms; server: AdminServer }) {
 	if (await cms.authGateway.isDevBypassActive()) {
-		redirect(adminHref() as Route);
+		server.redirect(adminHref());
 	}
 
 	const auth = cms.auth();
@@ -24,7 +23,7 @@ export default async function AdminLoginPage({ cms }: { cms: Cms }) {
 
 	// If already signed in as admin, go straight to the dashboard.
 	if (accountId && auth.isAdmin(accountId)) {
-		redirect(adminHref() as Route);
+		server.redirect(adminHref());
 	}
 
 	const isUnauthorizedUser = Boolean(accountId && !auth.isAdmin(accountId));

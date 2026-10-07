@@ -13,10 +13,9 @@ import {
 } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Route } from "next";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useAdminRouter, useAdminSearchParams } from "../router";
 import { cmsFetch, errorText } from "./admin-api";
 import { type BulkItemResult, type BulkSelection, describeBulkFailure, runBulk } from "./entries/bulk-bar";
 import { copyTitle } from "./entries/entry-form";
@@ -54,8 +53,8 @@ export type ListMode = "list" | "trash";
  * and saves when sort, page size or column settings change.
  */
 function useListState(mode: ListMode) {
-	const router = useRouter();
-	const searchParams = useSearchParams();
+	const router = useAdminRouter();
+	const searchParams = useAdminSearchParams();
 	const basePath = mode === "trash" ? adminHref("/trash") : adminHref();
 	const parsed = useMemo(() => parseListState(new URLSearchParams(searchParams.toString())), [searchParams]);
 	const [preferences, setPreferences] = useState<PreferencesBody | null>(null);
@@ -74,8 +73,7 @@ function useListState(mode: ListMode) {
 	);
 
 	const navigate = useCallback(
-		(next: ListState) =>
-			router.replace(`${basePath}?${listStateToSearchParams(next).toString()}` as Route, { scroll: false }),
+		(next: ListState) => router.replace(`${basePath}?${listStateToSearchParams(next).toString()}`, { scroll: false }),
 		[router, basePath],
 	);
 	/** Updates the state and writes it to the address. Resets to the first page by default. */
@@ -269,7 +267,7 @@ function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode
  * Shared by the sidebar folder navigation (list screen) and the body.
  */
 export function useEntryList(mode: ListMode) {
-	const router = useRouter();
+	const router = useAdminRouter();
 	const queryClient = useQueryClient();
 	const isTrash = mode === "trash";
 	const { state, update, columnSettings, savePreferences } = useListState(mode);
@@ -303,7 +301,7 @@ export function useEntryList(mode: ListMode) {
 		setRecordTarget(null);
 	};
 	// The address's `open` (an item opened from, e.g., media usages) opens once into the item slot and is then removed from the address.
-	const searchParams = useSearchParams();
+	const searchParams = useAdminSearchParams();
 	const openParam = searchParams.get(OPEN_ITEM_PARAM);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: open only when the address value changes
 	useEffect(() => {
@@ -311,7 +309,7 @@ export function useEntryList(mode: ListMode) {
 		showRecord({ collection: state.collection, id: openParam });
 		const next = new URLSearchParams(searchParams.toString());
 		next.delete(OPEN_ITEM_PARAM);
-		router.replace(adminHref(`?${next.toString()}`) as Route, { scroll: false });
+		router.replace(adminHref(`?${next.toString()}`), { scroll: false });
 	}, [openParam]);
 
 	const mutations = useEntryMutations({
@@ -389,7 +387,7 @@ export function useEntryList(mode: ListMode) {
 				fallback: t("duplicate.failed"),
 			});
 			toast.success(t("duplicate.done", { title: item.title || t("common.untitled") }));
-			router.push(adminEntryEditHref(copy.id) as Route);
+			router.navigate(adminEntryEditHref(copy.id));
 		} catch (error) {
 			toast.error(errorText(error, t("duplicate.failed")));
 		}
@@ -399,10 +397,8 @@ export function useEntryList(mode: ListMode) {
 	const createNew = () =>
 		isRecord
 			? void openRecord({ collection, id: null })
-			: router.push(
-					adminHref(
-						`/entries/new?collection=${collection}${state.folder !== "all" ? `&folder=${state.folder}` : ""}`,
-					) as Route,
+			: router.navigate(
+					adminHref(`/entries/new?collection=${collection}${state.folder !== "all" ? `&folder=${state.folder}` : ""}`),
 				);
 
 	const editHref = (item: ListEntriesItem) => adminEntryEditHref(item.id);
@@ -411,7 +407,7 @@ export function useEntryList(mode: ListMode) {
 			actionTargets(item, items, selectedIds),
 			{ mode, isRecord, isContent, folders, collection, options },
 			{
-				openEditor: (target) => router.push(editHref(target) as Route),
+				openEditor: (target) => router.navigate(editHref(target)),
 				openInNewTab: (target) => window.open(withBasePath(editHref(target)), "_blank", "noopener"),
 				openRecord: (target) => void openRecord({ collection, id: target.id }),
 				duplicate: (target) => void duplicate(target),

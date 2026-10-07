@@ -8,7 +8,7 @@ import { validateSameOrigin } from "./security";
  * Shared frame for admin API routes. Every admin request is authenticated on the server,
  * and state-changing requests go through the same-origin check first. Errors are converted to one shape in a single place.
  *
- * The request handler (`cms.handle()`, or `cms.routeHandler()` in Next) passes the CMS instance in the context of every route (`{ params, cms }`), so a route reads
+ * The request handler (`cms.handle()`, which a host package such as `@monti-cms/nextjs` mounts) passes the CMS instance in the context of every route (`{ params, cms }`), so a route reads
  * stores and settings from `cms` instead of from module-level state.
  */
 

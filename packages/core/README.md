@@ -3,7 +3,17 @@
 English | [한국어](README.ko.md)
 
 The core of a DB (Postgres)-backed blog CMS. It handles the site config, collection schemas, content saving and publishing, the document model, the admin API and plugin wiring.
-The admin UI is `@monti-cms/admin`, MDX (the `mdx` format, the source panel and the syntax extensions) is the plugin `@monti-cms/mdx`, and the AI features are the plugin `@monti-cms/ai`. `examples/other-site` is an example with everything wired together.
+The admin UI is `@monti-cms/admin`, everything specific to Next.js is `@monti-cms/nextjs`, MDX (the `mdx` format, the source panel and the syntax extensions) is the plugin `@monti-cms/mdx`, and the AI features are the plugin `@monti-cms/ai`. `examples/other-site` is an example with everything wired together.
+
+## Supported frameworks
+
+Next.js (App Router) is the only supported host for now. The code is layered so that this is a property of one package, not of the core or the admin:
+
+- `@monti-cms/core` speaks the standard `Request` and `Response` (`cms.handle(request)`) and imports nothing from Next.js. What a host has to supply (the headers of the current request, a redirect after login) comes in through the login connection (`CmsAuth.requestHeaders` and `CmsAuth.rethrow`).
+- `@monti-cms/admin` (the screens and `@monti-cms/admin/hooks`) imports nothing from Next.js either. It reaches the router only through an adapter it is given, `{ Link, navigate, replace, usePathname, useSearchParams }` (`AdminRouterProvider` of `@monti-cms/admin/router`), and the two things its server screens need, a redirect and a 404, through `AdminServer` (`@monti-cms/admin/host`).
+- `@monti-cms/nextjs` holds all the Next glue: the route handler, `withCms` for `next.config.ts`, the admin page and layout with the App Router adapter, and the NextAuth login (`githubAuth`).
+
+Another host (Astro, Remix, ...) would be a new adapter package, not a change to the core or the admin. Tests keep the boundary: no source file of the core or the admin may import `next/*`.
 
 ## Install in an empty Next app
 
@@ -12,13 +22,13 @@ This assumes a Next 16 (App Router), React 19 and Tailwind CSS 4 app. Only Postg
 ### 1. Packages
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
+pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
   @tiptap/core @tiptap/pm @tiptap/react lucide-react
 pnpm add -D tw-animate-css @tailwindcss/typography
 ```
 
 The admin package and the AI plugin must share one copy of React Query, sonner, Tiptap and the lucide icons with the app, so the app installs them (peers).
-`next-auth` is only needed when you use GitHub login (`githubAuth`).
+`next-auth` is only needed when you use GitHub login (`githubAuth` of `@monti-cms/nextjs/auth`).
 The `monti` command line ships inside `@monti-cms/core` (TypeScript config files are read by tsx, which is installed with it).
 
 pnpm 12 fails the install if there are install scripts that have not been allowed (10 only warns). Allow the install script of esbuild, which tsx uses.
@@ -162,14 +172,14 @@ If `basePath` is not the default, the admin API route does not serve `/api/cms/a
 
 ### Optional dependencies
 
-Optional dependencies of the CMS packages (e.g. `mermaid` and `recharts` of the blocks extension) are installed only when you use that feature. For anything not installed, `withCms`
+Optional dependencies of the CMS packages (e.g. `mermaid` and `recharts` of the blocks extension) are installed only when you use that feature. For anything not installed, `withCms` (of `@monti-cms/nextjs/config`)
 links an empty module (`@monti-cms/core/stubs/missing-optional`) so the build does not stop, and using that feature raises an error telling you to install it.
 After installing, restart the dev server.
 
 ### Manual wiring (without `monti init`)
 
 To do by hand what `monti init` does: create the site config and the server file (the instance), wrap `next.config.ts` in
-`withCms(nextConfig, { config: "./cms.config.ts" })`, add
+`withCms(nextConfig, { config: "./cms.config.ts" })` (`import { withCms } from "@monti-cms/nextjs/config"`), add
 `"@cms-config": ["./cms.config.ts"]` to `tsconfig.json` `paths` (and to `resolve.alias` if you use tests (Vitest)),
 add the set of route files from the table above (each imports `cms` from the server file), and put the following lines in the global CSS.
 
@@ -278,7 +288,8 @@ Connections are created on first use, so creating the instance at import or buil
 
 ```ts
 // cms.server.ts
-import { createCms, defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
+import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
+import { githubAuth } from "@monti-cms/nextjs/auth";
 
 export const cms = createCms({
 	server: defineServerConfig({ database: postgres({ /* … */ }), auth: githubAuth({ /* … */ }) }),
@@ -289,9 +300,9 @@ Everything else imports `cms` from this file.
 
 | Where | Code |
 | --- | --- |
-| Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();` (the Next adapter of `cms.handle(request)`) |
-| Admin API in a host other than Next (experimental) | `cms.handle(request)`: a standard `Request` in, a `Response` out |
-| Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` |
+| Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);` (`createRouteHandler` of `@monti-cms/nextjs`, the Next adapter of `cms.handle(request)`) |
+| Admin API in another host | `cms.handle(request)`: a standard `Request` in, a `Response` out |
+| Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` (from `@monti-cms/nextjs/admin`) |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` (pass a `format`, for example `"mdx"` with `@monti-cms/mdx`, to also get the body as text in `entry.body`, "Formats") |
 | Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` |
 | Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
@@ -300,9 +311,9 @@ Everything else imports `cms` from this file.
 | Tests | `fakeCms({ store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides |
 
 **HTTP layer.** The admin API, the login connection, the public API and the plugin routes work on the standard web `Request` and `Response`; no `NextRequest`, `NextResponse` or `request.nextUrl` is used.
-`cms.handle(request)` serves one request (the path after `/api/cms/` is read from the URL), and `cms.routeHandler()` is the thin Next adapter built on it.
+`cms.handle(request)` serves one request (the path after `/api/cms/` is read from the URL), and `createRouteHandler(cms)` of `@monti-cms/nextjs` is the thin Next adapter built on it.
 Plugin routes (`adminRoute`) receive a standard `Request`: read the query with `new URL(request.url).searchParams` and answer with `Response.json(…)`.
-Using `handle` in a host other than Next is experimental: the admin screen, the login connection (Auth.js) and the admin check still read Next's request context, so only the API routes are host-neutral for now.
+The core imports nothing from Next.js. What a host supplies reaches it through the login connection: `CmsAuth.requestHeaders()` (the headers of the request being handled, which the development login bypass reads) and `CmsAuth.rethrow(error)` (lets a redirect that the login library throws pass through to the host). `githubAuth` of `@monti-cms/nextjs/auth` provides both with Next's own functions; an `AuthAdapter` for another host provides its own.
 
 The reading API hangs off the instance (`cms.read.getEntry(…)`, not `getEntry(cms, …)`): site code imports one thing, and its types (`MetadataFor` and so on) stay in `@monti-cms/core/read`.
 
@@ -313,12 +324,25 @@ Changing the database connection itself needs a restart. In production and in te
 
 **Still read through the `@cms-config` alias.** The site config (collections, locales, plugins, blocks) is still linked by the `@cms-config` alias for now, so one process has one site config. `createCms` takes only the server side.
 
+### Upgrading to `@monti-cms/nextjs`
+
+All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` into the new package `@monti-cms/nextjs`. There are no aliases left at the old places.
+
+- Install `@monti-cms/nextjs` (`next` and, for GitHub login, `next-auth` are its peers; core and admin no longer ask for them).
+- `next.config.ts`: `import { withCms } from "@monti-cms/core/next"` becomes `from "@monti-cms/nextjs/config"`.
+- `cms.server.ts`: `githubAuth` moves from `@monti-cms/core/server` to `@monti-cms/nextjs/auth`.
+- `app/api/cms/[...path]/route.ts`: `cms.routeHandler()` becomes `createRouteHandler(cms)` from `@monti-cms/nextjs`. The `CmsRouteHandler` type is exported from there too.
+- Admin layout and page: `@monti-cms/admin/next` becomes `@monti-cms/nextjs/admin` (`CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata`; same props). The layout renders the App Router adapter for the admin.
+- Admin messages: the page title keys moved from the `cms-admin.next` dictionary to `cms-admin.layout` (only matters if you override `admin.messages["cms-admin.next"]`).
+- Your own `AuthAdapter`: `CmsAuth` has two optional members, `requestHeaders()` and `rethrow(error)`. Without `requestHeaders`, the development login bypass never applies.
+- Mounting the admin screens some other way than `CmsAdminLayout`: wrap them in `NextAdminRouter` (`@monti-cms/nextjs/admin`), or in `AdminRouterProvider` with your own adapter.
+
 ### Upgrading from the `@cms-server` alias
 
 - `cms.server.ts` no longer default-exports the server config. Wrap it: `export const cms = createCms({ server: defineServerConfig({ … }) })` (`createCms` is in `@monti-cms/core/server`).
 - Remove `"@cms-server"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`. `withCms(nextConfig, { config })` takes no `server` option any more.
-- Plugin routes and custom admin routes get a standard `Request` instead of `NextRequest`: replace `request.nextUrl` with `new URL(request.url)` and `NextResponse.json` with `Response.json`. `CmsRouteHandler` now lives in `@monti-cms/core/next` and `createRouteHandler` is replaced by `cms.handle()`.
-- The admin API route is `cms.routeHandler()`. `createCmsRouteHandler` and the `@monti-cms/core/next/route-handler` entry point are gone.
+- Plugin routes and custom admin routes get a standard `Request` instead of `NextRequest`: replace `request.nextUrl` with `new URL(request.url)` and `NextResponse.json` with `Response.json`.
+- The admin API route is `createRouteHandler(cms)` of `@monti-cms/nextjs` (see "Upgrading to `@monti-cms/nextjs`").
 - Pass the instance to the admin: `<CmsAdminLayout cms={cms}>` and `<CmsAdminPage cms={cms} {...props} />` (the page file becomes a small component; `monti init` shows the shape).
 - Site pages read through `cms.read.*` instead of the free functions of `@monti-cms/core/read`; `entry.refs` replaces `createPublicImageResolver(mdx)` (`cms.read.imageResolver` is gone too, "Upgrading from MDX in core") and `cms.read.mediaUrl(id)` replaces `resolvePublicMediaUrl(id)`.
 - Gone: `getCmsContentStore`, `getCmsMediaStore`, `getCmsSecret`, `getCmsDatabase`, `loadServerPlugins` and the login free functions of `@monti-cms/core/runtime` (`authGateway`, `auth`, `signIn`, `signOut`, `handlers`, `isDevAuthBypassEnabled`, …). Use the instance:
@@ -365,9 +389,12 @@ What else changed:
 | Entry point | Used in | Contents |
 | --- | --- | --- |
 | `@monti-cms/core` | `cms.config.ts` | `defineConfig`·`defineCollection`·`fields`·`defineBlock`·`definePlugin` |
-| `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, `githubAuth`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
+| `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
-| `@monti-cms/core/next` | `next.config.ts` | `withCms` |
+| `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
+| `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
+| `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata`, `NextAdminRouter` |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth` |
 | `@monti-cms/core/render` | public pages (server components) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
@@ -710,7 +737,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 |---|---|
 | `database` | Content store. `postgres({ connectionString, schema })` |
 | `media` | Store for images and attachments. `r2Storage` or `s3Storage` from `@monti-cms/core/s3` (`region`, `forcePathStyle`), or a connection implementing the `MediaStore` contract. Without it, media features are unavailable. |
-| `auth` | Admin login. `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, NextAuth reads `AUTH_SECRET`) |
+| `auth` | Admin login, from `@monti-cms/nextjs/auth`: `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, NextAuth reads `AUTH_SECRET`) |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else off in production and on in development |
 | `secret` | Master secret for values plugins keep encrypted in the DB (AI service keys). Plugins never see it: each gets a key derived from it and the plugin name ("Plugin secrets"). Keep it separate from the login signing value. |
 | `previousSecrets` | Optional. Secrets `secret` replaced. Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |

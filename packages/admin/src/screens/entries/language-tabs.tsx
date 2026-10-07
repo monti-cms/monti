@@ -2,11 +2,10 @@
 
 import { adminEntryEditHref, cmsApiUrl, LOCALES, localeLabel } from "@monti-cms/core/client";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
-import type { Route } from "next";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "../../lib/utils/cn";
+import { useAdminRouter } from "../../router";
 import { Button } from "../../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
@@ -36,7 +35,7 @@ export function LanguageTabs({
 	onBeforeCreate: () => Promise<boolean>;
 	onTrashTranslation: () => void;
 }) {
-	const router = useRouter();
+	const router = useAdminRouter();
 	const [creating, setCreating] = useState<string | null>(null);
 	const members = entry.translations ?? [];
 	const isTranslation = isTranslationEntry(entry);
@@ -56,7 +55,7 @@ export function LanguageTabs({
 				fallback: t("lang.createFailed"),
 			});
 			toast.success(t("lang.created", { lang: localeLabel(target) }));
-			router.push(adminEntryEditHref(created.id) as Route);
+			router.navigate(adminEntryEditHref(created.id));
 		} catch (error) {
 			toast.error(errorText(error, t("lang.createFailed")));
 		} finally {
@@ -102,7 +101,7 @@ export function LanguageTabs({
 								current ? "bg-cms-muted text-cms-foreground" : "text-cms-muted-foreground",
 							)}
 							onClick={() => {
-								if (!current) router.push(adminEntryEditHref(member.id) as Route);
+								if (!current) router.navigate(adminEntryEditHref(member.id));
 							}}
 						>
 							<span

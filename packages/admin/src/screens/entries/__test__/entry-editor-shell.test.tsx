@@ -1,5 +1,5 @@
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -8,20 +8,11 @@ import {
 	type SourcePanelRegistration,
 } from "../../../admin-components";
 import { docOf } from "../../../test/mdx";
+import { createTestRouter } from "../../../test/router";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
-const {
-	getLocalBackup,
-	deleteLocalBackup,
-	saveLocalBackup,
-	success,
-	warning,
-	message,
-	error,
-	routerReplace,
-	routerPush,
-} = vi.hoisted(() => ({
+const { getLocalBackup, deleteLocalBackup, saveLocalBackup, success, warning, message, error } = vi.hoisted(() => ({
 	getLocalBackup: vi.fn(),
 	deleteLocalBackup: vi.fn(),
 	saveLocalBackup: vi.fn(),
@@ -29,8 +20,6 @@ const {
 	warning: vi.fn(),
 	message: vi.fn(),
 	error: vi.fn(),
-	routerReplace: vi.fn(),
-	routerPush: vi.fn(),
 }));
 vi.mock("../local-backup", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../local-backup")>()),
@@ -120,7 +109,8 @@ vi.mock("sonner", () => ({ Toaster: () => null, toast: { success, warning, messa
 vi.mock("../ai-translate", () => ({
 	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: routerReplace, push: routerPush }) }));
+const testRouter = createTestRouter();
+const { render } = testRouter;
 
 const ADMIN = "u1";
 const entry = {
@@ -989,7 +979,7 @@ describe("entry editor shell", () => {
 		serve(() => undefined, { ...entry, collection: "tag" });
 		renderEdit();
 		// An item collection opens that item in the small form on the list.
-		await waitFor(() => expect(routerReplace).toHaveBeenCalledWith(`/admin?collection=tag&open=${entry.id}`));
+		await waitFor(() => expect(testRouter.replace).toHaveBeenCalledWith(`/admin?collection=tag&open=${entry.id}`));
 		expect(EMPTY_FORM.title).toBe("");
 	});
 });
@@ -1119,7 +1109,7 @@ describe("language tabs", () => {
 		serve(() => undefined, source);
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: "영어 · 초안" }));
-		expect(routerPush).toHaveBeenCalledWith("/admin/entries/entry-en/edit");
+		expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-en/edit");
 	});
 
 	it("creates a translation from the missing-language button and opens it", async () => {
@@ -1130,7 +1120,7 @@ describe("language tabs", () => {
 		}, source);
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: "일본어 번역본 추가" }));
-		await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/admin/entries/entry-ja/edit"));
+		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-ja/edit"));
 		expect(JSON.parse(String(methodCalls("POST", "/translations")[0]?.[1]?.body))).toEqual({ locale: "ja" });
 		expect(success).toHaveBeenCalledWith("일본어 번역본을 만들었습니다.");
 	});
@@ -1160,7 +1150,7 @@ describe("language tabs", () => {
 		expect(within(dialog).queryByText(/함께/)).toBeNull();
 		fireEvent.click(within(dialog).getByRole("button", { name: "휴지통으로 이동" }));
 		await waitFor(() => expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(1));
-		await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
+		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
 	});
 
 	it("does not offer duplicate on a translation", async () => {

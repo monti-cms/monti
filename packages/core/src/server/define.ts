@@ -82,6 +82,16 @@ export interface CmsAuth {
 	readonly devBypass: boolean;
 	/** Admin ID to use for the development bypass. */
 	readonly devUserId: string;
+	/**
+	 * Headers of the request being handled, or `null` outside a request. Supplied by the login connection because reading the current request
+	 * is something the host framework does (the Next.js one reads `next/headers`). Without it, the development bypass never applies.
+	 */
+	requestHeaders?(): Promise<Pick<Headers, "get"> | null>;
+	/**
+	 * Throws `error` again when it is not a failure but a signal the host framework uses to leave the handler (Next.js throws a redirect to
+	 * send the browser away after `signIn` and `signOut`), so it reaches the framework instead of becoming an API error. Does nothing otherwise.
+	 */
+	rethrow?(error: unknown): void;
 }
 
 /** Values the core passes when creating the login connection. */

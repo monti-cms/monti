@@ -12,15 +12,6 @@ export interface AuthGateway {
 /** Headers of the request being handled, or `null` outside a request. */
 export type RequestHeaders = () => Promise<Pick<Headers, "get"> | null>;
 
-const nextRequestHeaders: RequestHeaders = async () => {
-	try {
-		const { headers } = await import("next/headers");
-		return await headers();
-	} catch {
-		return null;
-	}
-};
-
 export class AuthError extends Error {
 	constructor(
 		public readonly code: "unauthorized" | "forbidden",
@@ -87,7 +78,8 @@ let devBypassSkippedWarned = false;
 export class CmsAuthGateway implements AuthGateway {
 	constructor(
 		private readonly getAuth: () => CmsAuth,
-		private readonly requestHeaders: RequestHeaders = nextRequestHeaders,
+		/** Where the headers of the request being handled come from. Default: the login connection's own (`CmsAuth.requestHeaders`), the host framework's. */
+		private readonly requestHeaders: RequestHeaders = async () => (await this.getAuth().requestHeaders?.()) ?? null,
 	) {}
 
 	async isDevBypassActive(): Promise<boolean> {

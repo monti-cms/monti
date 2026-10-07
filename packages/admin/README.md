@@ -2,13 +2,14 @@
 
 English | [한국어](README.ko.md)
 
-Admin UI (Next.js App Router) for `@monti-cms/core`. Provides the list, editor (tiptap), media, body templates, trash and login screens.
+Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, body templates, trash and login screens.
+It is framework-neutral: it imports nothing from Next.js and reaches the router through an adapter it is given (see "Router adapter"). Next.js (App Router) is the supported host for now, through `@monti-cms/nextjs`.
 Plugins (e.g. `@monti-cms/ai`) add screens, sidebar items, field-side buttons and edit screen actions.
 The screens only call the core's admin API (`/api/cms/v1/*`). You can also skip installing it and build your own screens against the same API.
 
 ## Setup
 
-For installation, routes and styles, follow "Install in an empty Next app" in the `@monti-cms/core` README (`monti init` generates the admin route and style lines).
+For installation, routes and styles, follow "Install in an empty Next app" in the `@monti-cms/core` README (`monti init` generates the admin route and style lines). The admin route files use `CmsAdminLayout` and `CmsAdminPage` of `@monti-cms/nextjs/admin`.
 
 - **Admin path.** Defaults to `/admin`; change it with the site config's `admin.path` (e.g. `/studio`). The app's admin route folder
   (`app/(admin)/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
@@ -282,7 +283,8 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | Entry point | Contents |
 |---|---|
 | `@monti-cms/admin` | Adding site components (`CmsAdminComponentsProvider`: source panels, formats, `useFormat`), properties panel and list cell types |
-| `/next` | Admin layout and page (exported from the app route) |
+| `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
+| `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
 | `/blocks` | Block edit screen UI (tool row, settings popover, attribute input) |
 | `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`, `useBlockEditor`, `useEntryEditor`), the block view components `Content` and `BlockFrame`, and `EditorResult` / `EditorError` |
@@ -292,6 +294,24 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | `/api` | Calling the admin API (`cmsFetch`) |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles |
+
+### Router adapter
+
+The screens and the hooks never import a framework. Everything they need from the router comes from one object, an `AdminRouter`, that a host package gives to `AdminRouterProvider` (`@monti-cms/admin/router`):
+
+| Member | Meaning |
+|---|---|
+| `Link` | A component for a link to an address inside the site (`<a>` props, a string `href`). Client-side navigation where the framework has it |
+| `navigate(href, { scroll? })` | Goes to the address and adds a history entry |
+| `replace(href, { scroll? })` | Goes to the address in place of the current history entry. A list that only changes its query passes `scroll: false` |
+| `usePathname()` | Hook: the path of the current address |
+| `useSearchParams()` | Hook: the query of the current address (read-only `URLSearchParams`) |
+
+Inside the admin, use `AdminLink`, `useAdminRouter()`, `useAdminPathname()` and `useAdminSearchParams()` from the same entry point; they throw a clear error outside the provider. Plugin screens use them too (the AI plugin reads the path this way).
+
+The two things a server screen needs, a redirect and a 404, are an `AdminServer` (`{ redirect(href): never; notFound(): never }`) handed to `AdminPage` (`@monti-cms/admin/host`).
+`@monti-cms/nextjs/admin` builds both from `next/link`, `next/navigation` and Next's `redirect` and `notFound`. A host for another framework supplies its own and renders `AdminLayout` inside `AdminRouterProvider`.
+A test keeps the boundary: no source file of the admin may import `next/*`.
 
 ### Editor hooks (experimental)
 
@@ -358,7 +378,7 @@ What `@monti-cms/admin/styles.css` provides (everything carries the `cms` prefix
 - **Everything else.** Tailwind class discovery for the published bundle (`@source`), default border and focus outline colors, and the admin document's radius (`--radius*`) values (these use Tailwind's default
   names, so they change only in documents that contain the admin UI).
 
-`CmsAdminLayout` takes the CMS instance (`cms`, exported by the app's `cms.server.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
+`CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `cms.server.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
 
 ```tsx
 <CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>

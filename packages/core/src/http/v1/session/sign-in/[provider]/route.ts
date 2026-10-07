@@ -1,4 +1,3 @@
-import { unstable_rethrow } from "next/navigation";
 import { adminUrl } from "../../../../../core/admin-paths";
 import { HttpError, handleApiError } from "../../../error-handler";
 import type { RouteContext } from "../../../handler";
@@ -22,8 +21,8 @@ export const POST = async (request: Request, context: RouteContext<{ provider: s
 		await auth.signIn(provider, { redirectTo: adminUrl() });
 		return new Response(null, { status: 204 });
 	} catch (error) {
-		// The login connection redirects by throwing; that must reach Next.
-		unstable_rethrow(error);
+		// The login connection may redirect by throwing (Next.js does); that signal must reach the host framework.
+		context.cms.auth().rethrow?.(error);
 		return handleApiError(error);
 	}
 };

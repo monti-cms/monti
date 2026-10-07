@@ -16,14 +16,8 @@ describe("postgres() lazy loading", () => {
 		await adapter.close?.();
 	});
 
-	it("does not load the site config for the login and file storage adapters used by the server config either", async () => {
-		const { githubAuth } = await import("../../auth/github");
+	it("does not load the site config for the file storage adapter used by the server config either", async () => {
 		const { r2Storage } = await import("../../../storage/s3");
-		const auth = githubAuth({ clientId: "id", clientSecret: "secret", adminIds: ["1"] }).create({
-			loginPath: "/admin/login",
-			trustHost: false,
-		});
-		expect(auth.providers?.[0]?.label).toBeTruthy();
 		expect(() =>
 			r2Storage({
 				accessKeyId: "a",

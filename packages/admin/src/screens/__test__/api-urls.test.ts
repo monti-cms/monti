@@ -4,7 +4,13 @@ import { describe, expect, it } from "vitest";
 
 const PACKAGES = path.resolve(__dirname, "../../../..");
 /** Places where address strings may remain because they define or describe server routes. */
-const ALLOWED = [/\/core\/src\//, /\/(plugin|server)\.ts$/, /\/bareun\/src\/(route|options|index)\.ts$/];
+const ALLOWED = [
+	/\/core\/src\//,
+	/\/(plugin|server)\.ts$/,
+	/\/bareun\/src\/(route|options|index)\.ts$/,
+	// The Next adapter mounts the server routes and the login API, so it names their paths.
+	/\/nextjs\/src\/(route-handler\.ts|auth\/)/,
+];
 
 const sources = (dir: string): string[] =>
 	readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

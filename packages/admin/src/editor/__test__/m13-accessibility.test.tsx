@@ -1,12 +1,13 @@
 import { image } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminSidebar } from "../../screens/admin-sidebar";
 import { type FolderActions, useFolderActions } from "../../screens/shared/use-folder-actions";
 import { withBlockEditor } from "../../test/block-editor";
+import { renderInRouter as render } from "../../test/router";
 import { SidebarProvider } from "../../ui/sidebar";
 import { BlockHandleOverlay } from "../block-handle-overlay";
 import { ImageBlockView } from "../image-node-view";

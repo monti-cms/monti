@@ -1,0 +1,82 @@
+{
+	"name": "@monti-cms/nextjs",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Next.js adapter for @monti-cms/core and @monti-cms/admin: route handler, next.config wiring, admin page and layout with the App Router adapter, GitHub login (NextAuth)",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./config": "./src/config.ts",
+		"./admin": "./src/admin/index.tsx",
+		"./auth": "./src/auth/index.ts"
+	},
+	"scripts": {
+		"test": "vitest",
+		"test:run": "vitest run",
+		"typecheck": "tsc --noEmit -p .",
+		"build": "node ../../scripts/build-package.mjs"
+	},
+	"peerDependencies": {
+		"@monti-cms/admin": "workspace:^",
+		"@monti-cms/core": "workspace:^",
+		"next": ">=16",
+		"next-auth": "^5.0.0-beta.32",
+		"react": ">=19"
+	},
+	"peerDependenciesMeta": {
+		"next-auth": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@tanstack/react-query": "^5.104.0",
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.2",
+		"@tiptap/core": "^3.31.3",
+		"@tiptap/pm": "^3.31.3",
+		"@tiptap/react": "^3.31.3",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"jsdom": "^27.4.0",
+		"lucide-react": "^0.562.0",
+		"next": "16.3.8",
+		"next-auth": "5.0.0-beta.32",
+		"next-themes": "^0.4.6",
+		"react": "19.2.3",
+		"react-dom": "19.2.3",
+		"sonner": "^2.0.8",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.0",
+		"vitest": "^4.0.18"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./config": {
+				"types": "./dist/config.d.ts",
+				"default": "./dist/config.js"
+			},
+			"./admin": {
+				"types": "./dist/admin/index.d.ts",
+				"default": "./dist/admin/index.js"
+			},
+			"./auth": {
+				"types": "./dist/auth/index.d.ts",
+				"default": "./dist/auth/index.js"
+			}
+		}
+	}
+}
