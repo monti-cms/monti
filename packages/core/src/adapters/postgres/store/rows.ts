@@ -121,9 +121,31 @@ export function mapPublishedEntryRow(row: {
 	};
 }
 
-export const MEDIA_COLUMNS = `id, status, filename, mime_type, byte_size, width, height, staging_key, storage_key,
-	original_storage_key, original_staging_key, original_mime_type, original_byte_size, original_width, original_height,
-	default_alt, default_caption, created_at, updated_at, ready_at`;
+/** The columns of `media_assets` that make a `MediaAssetRecord`, in the order the queries select them. */
+export const MEDIA_COLUMN_NAMES = [
+	"id",
+	"status",
+	"filename",
+	"mime_type",
+	"byte_size",
+	"width",
+	"height",
+	"staging_key",
+	"storage_key",
+	"original_storage_key",
+	"original_staging_key",
+	"original_mime_type",
+	"original_byte_size",
+	"original_width",
+	"original_height",
+	"default_alt",
+	"default_caption",
+	"created_at",
+	"updated_at",
+	"ready_at",
+] as const;
+
+export const MEDIA_COLUMNS = MEDIA_COLUMN_NAMES.join(", ");
 
 export interface MediaRow {
 	id: string;

@@ -62,9 +62,9 @@ owner's transaction early. Code that is not in a transaction uses `ctx.db()`, wh
 | `plugin-storage.ts` | - | done | 1 (this) |
 | `store/events.ts`, `recordEvents` (#128) | - | done | 1 (this) |
 | `store/title-sql.ts` as expressions | - | done (`titleExpr`) | 1 (this) |
-| `store/preferences.ts` | 2 | todo | 2 |
-| `store/folders.ts` | 12 | todo | 2 |
-| `store/media.ts` (uses `titleSql`) | 14 | todo | 2 |
+| `store/preferences.ts` | - | done | 2 |
+| `store/folders.ts` | - | done | 2 |
+| `store/media.ts` (`titleExpr`) | - | done | 2 |
 | `store/public-read.ts` (uses `titleSql`, `translatedTitleSql`) | 6 | todo | 3 |
 | `store/list.ts` (uses `titleSql`) | 7 | todo | 3 |
 | `store/transfer.ts` | 8 | todo | 3 |

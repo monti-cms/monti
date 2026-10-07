@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "kysely";
 import { CmsError } from "../../../core/store/errors";
 import type {
 	CompleteMediaAssetInput,
@@ -9,43 +10,45 @@ import type {
 	MediaAssetRecord,
 	MediaReferenceItem,
 } from "../../../core/store/types";
-import { type StoreContext, withTransaction } from "./context";
-import { MEDIA_COLUMNS, type MediaRow, mapMediaRow } from "./rows";
+import { type StoreContext, withTrx } from "./context";
+import { MEDIA_COLUMN_NAMES, mapMediaRow } from "./rows";
 import { likeContainsPattern, likePrefixPattern } from "./sql";
-import { ROW_COLLECTION, titleSql } from "./title-sql";
+import { ROW_COLLECTION, titleExpr } from "./title-sql";
+
+/** `MEDIA_COLUMN_NAMES` as columns of the alias `m` (`listMediaAssets`). */
+const MEDIA_COLUMNS_OF_M = MEDIA_COLUMN_NAMES.map((column) => `m.${column}` as const);
 
 /** Media metadata. The file itself is handled by `MediaStore` (R2). */
 export function createMediaOps(ctx: StoreContext) {
-	const { pool, qSchema, site } = ctx;
+	const { qSchema, site } = ctx;
+	const db = ctx.db();
 
 	const getMediaAsset = async (id: string): Promise<MediaAssetRecord | null> => {
-		const res = await pool.query<MediaRow>(`SELECT ${MEDIA_COLUMNS} FROM "${qSchema}".media_assets WHERE id = $1`, [
-			id,
-		]);
-		return res.rows[0] ? mapMediaRow(res.rows[0]) : null;
+		const row = await db.selectFrom("media_assets").select(MEDIA_COLUMN_NAMES).where("id", "=", id).executeTakeFirst();
+		return row ? mapMediaRow(row) : null;
 	};
 
 	return {
 		createMediaAsset: async (input: CreateMediaAssetInput): Promise<MediaAssetRecord> => {
 			const now = new Date();
-			const res = await pool.query<MediaRow>(
-				`INSERT INTO "${qSchema}".media_assets
-				 (id, status, filename, mime_type, byte_size, staging_key, original_staging_key, original_mime_type, original_byte_size, created_at, updated_at)
-				 VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8, $9, $9)
-				 RETURNING ${MEDIA_COLUMNS}`,
-				[
-					input.id ?? randomUUID(),
-					input.filename,
-					input.mimeType,
-					input.byteSize,
-					input.stagingKey,
-					input.original?.stagingKey ?? null,
-					input.original?.mimeType ?? null,
-					input.original?.byteSize ?? null,
-					now,
-				],
-			);
-			return mapMediaRow(res.rows[0] as MediaRow);
+			const row = await db
+				.insertInto("media_assets")
+				.values({
+					id: input.id ?? randomUUID(),
+					status: "pending",
+					filename: input.filename,
+					mime_type: input.mimeType,
+					byte_size: input.byteSize,
+					staging_key: input.stagingKey,
+					original_staging_key: input.original?.stagingKey ?? null,
+					original_mime_type: input.original?.mimeType ?? null,
+					original_byte_size: input.original?.byteSize ?? null,
+					created_at: now,
+					updated_at: now,
+				})
+				.returning(MEDIA_COLUMN_NAMES)
+				.executeTakeFirstOrThrow();
+			return mapMediaRow(row);
 		},
 
 		getMediaAsset,
@@ -54,46 +57,47 @@ export function createMediaOps(ctx: StoreContext) {
 			keys: readonly string[];
 		}): Promise<{ id: string; storageKey: string }[]> => {
 			if (params.keys.length === 0) return [];
-			const res = await pool.query<{ id: string; storage_key: string }>(
-				`SELECT id, storage_key FROM "${qSchema}".media_assets WHERE status = 'ready' AND storage_key = ANY($1::text[])`,
-				[[...params.keys]],
-			);
-			return res.rows.map((row) => ({ id: row.id, storageKey: row.storage_key }));
+			const rows = await db
+				.selectFrom("media_assets")
+				.select(["id", "storage_key"])
+				.where("status", "=", "ready")
+				.where("storage_key", "=", sql<string>`any(${[...params.keys]}::text[])`)
+				.execute();
+			return rows.map((row) => ({ id: row.id, storageKey: row.storage_key as string }));
 		},
 
 		completeMediaAsset: async (input: CompleteMediaAssetInput): Promise<MediaAssetRecord> => {
 			const now = new Date();
-			const res = await pool.query<MediaRow>(
-				`UPDATE "${qSchema}".media_assets
-				 SET status = 'ready', storage_key = $1, mime_type = $2, byte_size = $3, width = $4, height = $5,
-				     original_storage_key = $6, original_mime_type = COALESCE($7, original_mime_type),
-				     original_byte_size = COALESCE($8, original_byte_size), original_width = $9, original_height = $10,
-				     updated_at = $11, ready_at = $11
-				 WHERE id = $12
-				 RETURNING ${MEDIA_COLUMNS}`,
-				[
-					input.storageKey,
-					input.mimeType,
-					input.byteSize,
-					input.width,
-					input.height,
-					input.original?.storageKey ?? null,
-					input.original?.mimeType ?? null,
-					input.original?.byteSize ?? null,
-					input.original?.width ?? null,
-					input.original?.height ?? null,
-					now,
-					input.id,
-				],
-			);
-			if (!res.rows[0]) throw new CmsError("Media asset not found", "not_found");
-			return mapMediaRow(res.rows[0]);
+			const row = await db
+				.updateTable("media_assets")
+				.set({
+					status: "ready",
+					storage_key: input.storageKey,
+					mime_type: input.mimeType,
+					byte_size: input.byteSize,
+					width: input.width,
+					height: input.height,
+					original_storage_key: input.original?.storageKey ?? null,
+					original_mime_type: sql<string | null>`coalesce(${input.original?.mimeType ?? null}, original_mime_type)`,
+					original_byte_size: sql<string | null>`coalesce(${input.original?.byteSize ?? null}, original_byte_size)`,
+					original_width: input.original?.width ?? null,
+					original_height: input.original?.height ?? null,
+					updated_at: now,
+					ready_at: now,
+				})
+				.where("id", "=", input.id)
+				.returning(MEDIA_COLUMN_NAMES)
+				.executeTakeFirst();
+			if (!row) throw new CmsError("Media asset not found", "not_found");
+			return mapMediaRow(row);
 		},
 
 		failMediaAsset: async (id: string): Promise<void> => {
-			await pool.query(`UPDATE "${qSchema}".media_assets SET status = 'failed', updated_at = NOW() WHERE id = $1`, [
-				id,
-			]);
+			await db
+				.updateTable("media_assets")
+				.set({ status: "failed", updated_at: sql<Date>`now()` })
+				.where("id", "=", id)
+				.execute();
 		},
 
 		/** The library's default alt and caption. They are copied only on insert, so bodies already written do not change. */
@@ -103,82 +107,80 @@ export function createMediaOps(ctx: StoreContext) {
 			defaultAlt?: string;
 			defaultCaption?: string;
 		}): Promise<MediaAssetRecord> => {
-			const res = await pool.query<MediaRow>(
-				`UPDATE "${qSchema}".media_assets
-				 SET default_alt = COALESCE($2, default_alt), default_caption = COALESCE($3, default_caption),
-				     filename = COALESCE($4, filename), updated_at = NOW()
-				 WHERE id = $1 AND status = 'ready'
-				 RETURNING ${MEDIA_COLUMNS}`,
-				[
-					params.id,
-					params.defaultAlt ?? null,
-					params.defaultCaption ?? null,
-					params.filename?.normalize("NFC") ?? null,
-				],
-			);
-			if (!res.rows[0]) throw new CmsError("Media asset not found", "not_found");
-			return mapMediaRow(res.rows[0]);
+			const row = await db
+				.updateTable("media_assets")
+				.set({
+					default_alt: sql<string>`coalesce(${params.defaultAlt ?? null}, default_alt)`,
+					default_caption: sql<string>`coalesce(${params.defaultCaption ?? null}, default_caption)`,
+					filename: sql<string>`coalesce(${params.filename?.normalize("NFC") ?? null}, filename)`,
+					updated_at: sql<Date>`now()`,
+				})
+				.where("id", "=", params.id)
+				.where("status", "=", "ready")
+				.returning(MEDIA_COLUMN_NAMES)
+				.executeTakeFirst();
+			if (!row) throw new CmsError("Media asset not found", "not_found");
+			return mapMediaRow(row);
 		},
 
 		/** Library: only completed and deleting files are shown. Files waiting for upload are targets of the cleanup job. */
 		listMediaAssets: async (params: ListMediaParams = {}): Promise<ListMediaResult> => {
 			const page = Math.max(1, params.page || 1);
 			const pageSize = Math.max(1, Math.min(params.pageSize || 25, 100));
-			const values: unknown[] = [];
-			const bind = (value: unknown) => {
-				values.push(value);
-				return `$${values.length}`;
-			};
 
-			const conditions = ["m.status IN ('ready', 'deleting')"];
-			if (params.search?.trim()) conditions.push(`m.filename ILIKE ${bind(likeContainsPattern(params.search.trim()))}`);
+			let grouped = db
+				.selectFrom("media_assets as m")
+				.leftJoin("entry_references as r", (join) =>
+					join.on("r.kind", "=", "media").onRef("r.target_media_id", "=", "m.id"),
+				)
+				.leftJoin("entries as e", "e.id", "r.entry_id")
+				.leftJoin("entry_bodies as eb", (join) =>
+					join.onRef("eb.entry_id", "=", "r.entry_id").onRef("eb.state", "=", "r.state"),
+				)
+				.where("m.status", "in", ["ready", "deleting"])
+				.groupBy("m.id");
+			if (params.search?.trim()) {
+				grouped = grouped.where("m.filename", "ilike", likeContainsPattern(params.search.trim()));
+			}
 			// Compare by prefix so that giving only the leading part, such as `image/`, still filters.
-			if (params.mimeType?.trim())
-				conditions.push(`m.mime_type LIKE ${bind(likePrefixPattern(params.mimeType.trim()))}`);
-			if (params.kind === "image") conditions.push("m.mime_type LIKE 'image/%'");
-			if (params.kind === "file") conditions.push("(m.mime_type IS NULL OR m.mime_type NOT LIKE 'image/%')");
-			if (params.uploadedFrom) conditions.push(`m.created_at >= ${bind(params.uploadedFrom)}`);
-			if (params.uploadedTo) conditions.push(`m.created_at <= ${bind(params.uploadedTo)}`);
-			const having =
-				params.used === "used"
-					? "HAVING COUNT(r.entry_id) > 0"
-					: params.used === "unused"
-						? "HAVING COUNT(r.entry_id) = 0"
-						: "";
+			if (params.mimeType?.trim()) {
+				grouped = grouped.where("m.mime_type", "like", likePrefixPattern(params.mimeType.trim()));
+			}
+			if (params.kind === "image") grouped = grouped.where("m.mime_type", "like", "image/%");
+			if (params.kind === "file") {
+				grouped = grouped.where((eb) =>
+					eb.or([eb("m.mime_type", "is", null), eb("m.mime_type", "not like", "image/%")]),
+				);
+			}
+			if (params.uploadedFrom) grouped = grouped.where("m.created_at", ">=", params.uploadedFrom);
+			if (params.uploadedTo) grouped = grouped.where("m.created_at", "<=", params.uploadedTo);
+			if (params.used === "used") grouped = grouped.having((eb) => eb(eb.fn.count("r.entry_id"), ">", 0));
+			if (params.used === "unused") grouped = grouped.having((eb) => eb(eb.fn.count("r.entry_id"), "=", 0));
 
-			const grouped = `
-				FROM "${qSchema}".media_assets m
-				LEFT JOIN "${qSchema}".entry_references r ON r.kind = 'media' AND r.target_media_id = m.id
-				LEFT JOIN "${qSchema}".entries e ON e.id = r.entry_id
-				LEFT JOIN "${qSchema}".entry_bodies eb ON eb.entry_id = r.entry_id AND eb.state = r.state
-				WHERE ${conditions.join(" AND ")}
-				GROUP BY m.id
-				${having}`;
+			const count = await db
+				.selectFrom(grouped.select("m.id").as("sub"))
+				.select((eb) => eb.fn.countAll<string>().as("count"))
+				.executeTakeFirst();
+			const rows = await grouped
+				.select(MEDIA_COLUMNS_OF_M)
+				.select((eb) => [
+					sql<string>`${eb.fn.count("r.entry_id")}::text`.as("ref_count"),
+					sql<MediaReferenceItem[] | null>`coalesce(json_agg(json_build_object(
+						'entryId', r.entry_id, 'state', r.state, 'collection', e.collection, 'title', ${titleExpr(site, "eb.metadata", ROW_COLLECTION)}
+					)) filter (where r.entry_id is not null), '[]')`.as("references_json"),
+				])
+				.orderBy("m.created_at", "desc")
+				.orderBy("m.id", "desc")
+				.limit(pageSize)
+				.offset((page - 1) * pageSize)
+				.execute();
 
-			const countRes = await pool.query<{ count: string }>(
-				`SELECT COUNT(*)::text AS count FROM (SELECT m.id ${grouped}) sub`,
-				values,
-			);
-			const res = await pool.query<MediaRow & { ref_count: string; references_json: MediaReferenceItem[] }>(
-				`SELECT ${MEDIA_COLUMNS.split(",")
-					.map((column) => `m.${column.trim()}`)
-					.join(", ")},
-					COUNT(r.entry_id)::text AS ref_count,
-					COALESCE(json_agg(json_build_object(
-						'entryId', r.entry_id, 'state', r.state, 'collection', e.collection, 'title', ${titleSql(site, "eb.metadata", ROW_COLLECTION)}
-					)) FILTER (WHERE r.entry_id IS NOT NULL), '[]') AS references_json
-				 ${grouped}
-				 ORDER BY m.created_at DESC, m.id DESC
-				 LIMIT ${bind(pageSize)} OFFSET ${bind((page - 1) * pageSize)}`,
-				values,
-			);
-
-			const items: ListMediaItem[] = res.rows.map((row) => ({
+			const items: ListMediaItem[] = rows.map((row) => ({
 				...mapMediaRow(row),
 				referencesCount: Number(row.ref_count),
 				references: row.references_json ?? [],
 			}));
-			return { items, total: Number(countRes.rows[0]?.count ?? 0), page, pageSize };
+			return { items, total: Number(count?.count ?? 0), page, pageSize };
 		},
 
 		/**
@@ -190,26 +192,29 @@ export function createMediaOps(ctx: StoreContext) {
 		 * so values not yet in the reference index (media IDs kept in text fields) are not deleted.
 		 */
 		beginMediaDelete: async (id: string): Promise<MediaAssetRecord> =>
-			withTransaction(pool, async (client) => {
-				const res = await client.query<MediaRow>(
-					`SELECT ${MEDIA_COLUMNS} FROM "${qSchema}".media_assets WHERE id = $1 FOR UPDATE`,
-					[id],
-				);
-				const row = res.rows[0];
+			withTrx(ctx, async (trx) => {
+				const row = await trx
+					.selectFrom("media_assets")
+					.select(MEDIA_COLUMN_NAMES)
+					.where("id", "=", id)
+					.forUpdate()
+					.executeTakeFirst();
 				if (!row) throw new CmsError("Media asset not found", "not_found");
 
-				const refs = await client.query<{ count: string }>(
-					`SELECT COUNT(*)::text AS count FROM "${qSchema}".entry_references WHERE kind = 'media' AND target_media_id = $1`,
-					[id],
+				const refs = await trx
+					.selectFrom("entry_references")
+					.select((eb) => eb.fn.countAll<string>().as("count"))
+					.where("kind", "=", "media")
+					.where("target_media_id", "=", id)
+					.executeTakeFirst();
+				const mentions = await sql<{ count: string; templates: string }>`
+					select
+					  (select count(*) from ${sql.id(qSchema, "entry_bodies")}
+					    where position(${id} in doc::text) > 0 or position(${id} in metadata::text) > 0)::text as count,
+					  (select count(*) from ${sql.id(qSchema, "body_templates")} where position(${id} in doc::text) > 0)::text as templates`.execute(
+					trx,
 				);
-				const mentions = await client.query<{ count: string; templates: string }>(
-					`SELECT
-					   (SELECT COUNT(*) FROM "${qSchema}".entry_bodies
-					     WHERE position($1 in doc::text) > 0 OR position($1 in metadata::text) > 0)::text AS count,
-					   (SELECT COUNT(*) FROM "${qSchema}".body_templates WHERE position($1 in doc::text) > 0)::text AS templates`,
-					[id],
-				);
-				const referenceCount = Number(refs.rows[0]?.count ?? 0);
+				const referenceCount = Number(refs?.count ?? 0);
 				const bodyMentions = Number(mentions.rows[0]?.count ?? 0);
 				const templateMentions = Number(mentions.rows[0]?.templates ?? 0);
 				if (referenceCount > 0 || bodyMentions > 0 || templateMentions > 0) {
@@ -220,29 +225,35 @@ export function createMediaOps(ctx: StoreContext) {
 					});
 				}
 
-				const updated = await client.query<MediaRow>(
-					`UPDATE "${qSchema}".media_assets SET status = 'deleting', updated_at = NOW() WHERE id = $1 RETURNING ${MEDIA_COLUMNS}`,
-					[id],
-				);
-				return mapMediaRow(updated.rows[0] as MediaRow);
+				const updated = await trx
+					.updateTable("media_assets")
+					.set({ status: "deleting", updated_at: sql<Date>`now()` })
+					.where("id", "=", id)
+					.returning(MEDIA_COLUMN_NAMES)
+					.executeTakeFirstOrThrow();
+				return mapMediaRow(updated);
 			}),
 
 		/** Delete step 2: removes the row after confirming the file was deleted. */
 		finalizeMediaDelete: async (id: string): Promise<void> => {
-			await pool.query(
-				`DELETE FROM "${qSchema}".media_assets WHERE id = $1 AND status IN ('deleting', 'pending', 'failed')`,
-				[id],
-			);
+			await db
+				.deleteFrom("media_assets")
+				.where("id", "=", id)
+				.where("status", "in", ["deleting", "pending", "failed"])
+				.execute();
 		},
 
 		/** Cleanup targets: incomplete (`pending`) and failed (`failed`) uploads older than the cutoff time. */
 		listStaleUploads: async (params: { before: Date }): Promise<MediaAssetRecord[]> => {
-			const res = await pool.query<MediaRow>(
-				`SELECT ${MEDIA_COLUMNS} FROM "${qSchema}".media_assets
-				 WHERE status IN ('pending', 'failed') AND created_at < $1 ORDER BY created_at ASC LIMIT 500`,
-				[params.before],
-			);
-			return res.rows.map(mapMediaRow);
+			const rows = await db
+				.selectFrom("media_assets")
+				.select(MEDIA_COLUMN_NAMES)
+				.where("status", "in", ["pending", "failed"])
+				.where("created_at", "<", params.before)
+				.orderBy("created_at", "asc")
+				.limit(500)
+				.execute();
+			return rows.map(mapMediaRow);
 		},
 	};
 }

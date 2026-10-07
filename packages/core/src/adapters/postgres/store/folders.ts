@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { PoolClient } from "pg";
 import { assertNoFolderCycle, assertParentInCollection } from "../../../core/domain/folders";
 import { CmsError } from "../../../core/store/errors";
 import type { Folder } from "../../../core/store/types";
-import { type StoreContext, withTransaction } from "./context";
+import type { Db } from "../db/kysely";
+import { type StoreContext, withTrx } from "./context";
 import { isTransactionConflict, isUniqueViolation } from "./errors";
-import { type FolderRow, mapFolderRow } from "./rows";
+import { mapFolderRow } from "./rows";
+
+const COLUMNS = ["id", "collection", "parent_id", "name", "position", "version"] as const;
 
 const mapFolderError = (err: unknown) => {
 	// A duplicate name under the same parent asks the user to rename.
@@ -17,14 +19,11 @@ const mapFolderError = (err: unknown) => {
 
 /** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
 export function createFolderOps(ctx: StoreContext) {
-	const { pool, qSchema } = ctx;
+	const db = ctx.db();
 
-	const assertParent = async (client: PoolClient, parentId: string, collection: string) => {
-		const res = await client.query<{ collection: string }>(
-			`SELECT collection FROM "${qSchema}".folders WHERE id = $1`,
-			[parentId],
-		);
-		assertParentInCollection(res.rows[0]?.collection, collection);
+	const assertParent = async (trx: Db, parentId: string, collection: string) => {
+		const parent = await trx.selectFrom("folders").select("collection").where("id", "=", parentId).executeTakeFirst();
+		assertParentInCollection(parent?.collection, collection);
 	};
 
 	return {
@@ -34,10 +33,10 @@ export function createFolderOps(ctx: StoreContext) {
 			name: string;
 			position?: number;
 		}): Promise<Folder> =>
-			withTransaction(
-				pool,
-				async (client) => {
-					if (params.parentId) await assertParent(client, params.parentId, params.collection);
+			withTrx(
+				ctx,
+				async (trx) => {
+					if (params.parentId) await assertParent(trx, params.parentId, params.collection);
 					const folder: Folder = {
 						id: randomUUID(),
 						collection: params.collection,
@@ -46,11 +45,17 @@ export function createFolderOps(ctx: StoreContext) {
 						position: params.position ?? 0,
 						version: 1,
 					};
-					await client.query(
-						`INSERT INTO "${qSchema}".folders (id, collection, parent_id, name, position, version)
-						 VALUES ($1, $2, $3, $4, $5, 1)`,
-						[folder.id, folder.collection, folder.parentId, folder.name, folder.position],
-					);
+					await trx
+						.insertInto("folders")
+						.values({
+							id: folder.id,
+							collection: folder.collection,
+							parent_id: folder.parentId,
+							name: folder.name,
+							position: folder.position,
+							version: 1,
+						})
+						.execute();
 					return folder;
 				},
 				{ mapError: mapFolderError },
@@ -64,20 +69,21 @@ export function createFolderOps(ctx: StoreContext) {
 			parentId?: string | null;
 			position?: number;
 		}): Promise<Folder> =>
-			withTransaction(
-				pool,
-				async (client) => {
-					const currRes = await client.query<FolderRow>(
-						`SELECT id, collection, parent_id, name, position, version FROM "${qSchema}".folders WHERE id = $1 FOR UPDATE`,
-						[params.id],
-					);
-					const curr = currRes.rows[0];
+			withTrx(
+				ctx,
+				async (trx) => {
+					const curr = await trx
+						.selectFrom("folders")
+						.select(COLUMNS)
+						.where("id", "=", params.id)
+						.forUpdate()
+						.executeTakeFirst();
 					if (!curr) throw new CmsError("Not found", "not_found");
 					if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
 						throw new CmsError("Conflict", "conflict", curr.version);
 					}
 
-					const next: FolderRow = {
+					const next = {
 						...curr,
 						name: params.name ?? curr.name,
 						parent_id: params.parentId !== undefined ? params.parentId : curr.parent_id,
@@ -86,26 +92,28 @@ export function createFolderOps(ctx: StoreContext) {
 					};
 
 					if (next.parent_id) {
-						await assertParent(client, next.parent_id, curr.collection);
+						await assertParent(trx, next.parent_id, curr.collection);
 						// The new parent and its ancestors, nearest first. The rule (no cycle) is `assertNoFolderCycle`.
 						const ancestors: string[] = [];
 						let ancestor: string | null = next.parent_id;
 						while (ancestor && !ancestors.includes(ancestor)) {
 							ancestors.push(ancestor);
 							if (ancestor === params.id) break;
-							const ancestorRes: { rows: { parent_id: string | null }[] } = await client.query(
-								`SELECT parent_id FROM "${qSchema}".folders WHERE id = $1`,
-								[ancestor],
-							);
-							ancestor = ancestorRes.rows[0]?.parent_id ?? null;
+							const above: { parent_id: string | null } | undefined = await trx
+								.selectFrom("folders")
+								.select("parent_id")
+								.where("id", "=", ancestor)
+								.executeTakeFirst();
+							ancestor = above?.parent_id ?? null;
 						}
 						assertNoFolderCycle(params.id, ancestors);
 					}
 
-					await client.query(
-						`UPDATE "${qSchema}".folders SET name = $1, parent_id = $2, position = $3, version = $4 WHERE id = $5`,
-						[next.name, next.parent_id, next.position, next.version, params.id],
-					);
+					await trx
+						.updateTable("folders")
+						.set({ name: next.name, parent_id: next.parent_id, position: next.position, version: next.version })
+						.where("id", "=", params.id)
+						.execute();
 					return mapFolderRow(next);
 				},
 				{
@@ -119,28 +127,31 @@ export function createFolderOps(ctx: StoreContext) {
 		 * If a moved child folder's name collides in the parent, rejects with 409 so the user renames first.
 		 */
 		deleteFolder: async (params: { id: string; expectedVersion?: number }): Promise<void> =>
-			withTransaction(
-				pool,
-				async (client) => {
-					const currRes = await client.query<{ parent_id: string | null; version: number }>(
-						`SELECT parent_id, version FROM "${qSchema}".folders WHERE id = $1 FOR UPDATE`,
-						[params.id],
-					);
-					const curr = currRes.rows[0];
+			withTrx(
+				ctx,
+				async (trx) => {
+					const curr = await trx
+						.selectFrom("folders")
+						.select(["parent_id", "version"])
+						.where("id", "=", params.id)
+						.forUpdate()
+						.executeTakeFirst();
 					if (!curr) throw new CmsError("Not found", "not_found");
 					if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
 						throw new CmsError("Conflict", "conflict", curr.version);
 					}
 
-					await client.query(`UPDATE "${qSchema}".folders SET parent_id = $1 WHERE parent_id = $2`, [
-						curr.parent_id,
-						params.id,
-					]);
-					await client.query(`UPDATE "${qSchema}".entries SET folder_id = $1 WHERE folder_id = $2`, [
-						curr.parent_id,
-						params.id,
-					]);
-					await client.query(`DELETE FROM "${qSchema}".folders WHERE id = $1`, [params.id]);
+					await trx
+						.updateTable("folders")
+						.set({ parent_id: curr.parent_id })
+						.where("parent_id", "=", params.id)
+						.execute();
+					await trx
+						.updateTable("entries")
+						.set({ folder_id: curr.parent_id })
+						.where("folder_id", "=", params.id)
+						.execute();
+					await trx.deleteFrom("folders").where("id", "=", params.id).execute();
 				},
 				{ mapError: mapFolderError },
 			),
@@ -148,27 +159,32 @@ export function createFolderOps(ctx: StoreContext) {
 		/** Preview before folder deletion: the number of direct entries and child folders. */
 		getFolderContents: async (params: { id: string }): Promise<{ entryCount: number; childFolders: Folder[] }> => {
 			const [entries, children] = await Promise.all([
-				pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM "${qSchema}".entries WHERE folder_id = $1`, [
-					params.id,
-				]),
-				pool.query<FolderRow>(
-					`SELECT id, collection, parent_id, name, position, version FROM "${qSchema}".folders
-					 WHERE parent_id = $1 ORDER BY position ASC, id ASC`,
-					[params.id],
-				),
+				db
+					.selectFrom("entries")
+					.select((eb) => eb.fn.countAll<string>().as("count"))
+					.where("folder_id", "=", params.id)
+					.executeTakeFirst(),
+				db
+					.selectFrom("folders")
+					.select(COLUMNS)
+					.where("parent_id", "=", params.id)
+					.orderBy("position", "asc")
+					.orderBy("id", "asc")
+					.execute(),
 			]);
-			return { entryCount: Number(entries.rows[0]?.count ?? 0), childFolders: children.rows.map(mapFolderRow) };
+			return { entryCount: Number(entries?.count ?? 0), childFolders: children.map(mapFolderRow) };
 		},
 
 		listFolders: async (params: { collection: string }): Promise<Folder[]> => {
-			const res = await pool.query<FolderRow>(
-				`SELECT id, collection, parent_id, name, position, version
-				 FROM "${qSchema}".folders
-				 WHERE collection = $1
-				 ORDER BY parent_id NULLS FIRST, position ASC, id ASC`,
-				[params.collection],
-			);
-			return res.rows.map(mapFolderRow);
+			const rows = await db
+				.selectFrom("folders")
+				.select(COLUMNS)
+				.where("collection", "=", params.collection)
+				.orderBy("parent_id", (order) => order.asc().nullsFirst())
+				.orderBy("position", "asc")
+				.orderBy("id", "asc")
+				.execute();
+			return rows.map(mapFolderRow);
 		},
 	};
 }
