@@ -142,6 +142,8 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"conflict.title": "Edit conflict",
 		"conflict.description":
 			"Someone saved first from another tab or device. Your input is still in this browser. Compare both sides, then copy what you need or pick one.",
+		"conflict.savedBy": "Saved by {name} on {date}.",
+		"conflict.savedAt": "Saved on {date}.",
 		"conflict.reload": "Reload",
 		"conflict.overwriteMine": "Overwrite with mine",
 		"conflict.copied": "Body copied.",
@@ -289,6 +291,8 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"conflict.title": "편집 충돌",
 		"conflict.description":
 			"다른 탭이나 기기에서 먼저 저장했습니다. 내 입력은 브라우저에 남아 있습니다. 양쪽을 비교해 복사하거나 하나를 고르세요.",
+		"conflict.savedBy": "{date}에 {name} 님이 저장했습니다.",
+		"conflict.savedAt": "{date}에 저장했습니다.",
 		"conflict.reload": "다시 불러오기",
 		"conflict.overwriteMine": "내 내용으로 덮어쓰기",
 		"conflict.copied": "본문을 복사했습니다.",

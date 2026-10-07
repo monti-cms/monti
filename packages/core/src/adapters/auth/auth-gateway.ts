@@ -119,6 +119,7 @@ export class CmsAuthGateway implements AuthGateway {
 			throw new AuthError("forbidden", "Forbidden: not an authorized admin");
 		}
 
-		return { userId: session.user.id || accountId, accountId, isAdmin: true };
+		const name = session.user.name?.trim();
+		return { userId: session.user.id || accountId, accountId, isAdmin: true, ...(name ? { name } : {}) };
 	}
 }

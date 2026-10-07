@@ -92,7 +92,13 @@ export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 				session: async () => {
 					const session = await (await load()).auth();
 					if (!session) return null;
-					return { user: { id: session.user?.id, accountId: session.user?.githubId } };
+					return {
+						user: {
+							id: session.user?.id,
+							accountId: session.user?.githubId,
+							...(session.user?.name ? { name: session.user.name } : {}),
+						},
+					};
 				},
 				providers: [
 					{

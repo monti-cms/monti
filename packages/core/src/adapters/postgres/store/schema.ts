@@ -482,6 +482,18 @@ const STEPS: readonly MigrationStep[] = [
 		`),
 	},
 	{
+		name: "0023_entry_changed_by",
+		/**
+		 * Who made the latest change that raised an entry's version, and when. The edit screen shows both when someone else saved first. Both stay empty for an entry
+		 * no change has been recorded for (`changed_at` then reads as `updated_at`).
+		 */
+		run: (client, qSchema) =>
+			client.query(`
+			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS changed_by TEXT;
+			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS changed_at TIMESTAMPTZ;
+		`),
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */

@@ -45,6 +45,8 @@ export interface AuthContext {
 	isAdmin: boolean;
 	/** Account ID of the login method (numeric ID for GitHub). Compared against the admin list. */
 	accountId: string;
+	/** Name the login method gives the user (the GitHub name or login). Recorded as who made a change, and shown when someone else saved first. */
+	name?: string;
 }
 
 /** One login button on the login page. */
@@ -76,7 +78,7 @@ export interface CmsAuth {
 		POST(request: Request): Promise<Response>;
 	};
 	/** Current session. `null` if none. */
-	session(): Promise<{ user?: { id?: string; accountId?: string } } | null>;
+	session(): Promise<{ user?: { id?: string; accountId?: string; name?: string } } | null>;
 	/** Login methods to show on the login page. */
 	readonly providers: readonly AuthProvider[];
 	signIn(provider?: string, options?: { redirectTo?: string }): Promise<unknown>;

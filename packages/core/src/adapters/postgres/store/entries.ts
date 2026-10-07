@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { PoolClient } from "pg";
+import { currentActor } from "../../../core/actor";
 import { assertFolderInCollection } from "../../../core/domain/folders";
 import { normalizeMetadata } from "../../../core/domain/metadata";
 import {
@@ -242,7 +243,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						const now = new Date();
 						await client.query(
 							`UPDATE "${qSchema}".entries SET version = $1, updated_at = $2, working_slug = $3,
-							 folder_id = CASE WHEN $4::boolean THEN $5::uuid ELSE folder_id END
+							 folder_id = CASE WHEN $4::boolean THEN $5::uuid ELSE folder_id END,
+							 changed_by = $7, changed_at = $8
 							 WHERE id = $6`,
 							[
 								version,
@@ -251,6 +253,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 								folderChanged,
 								params.folderId ?? null,
 								params.entryId,
+								currentActor(),
+								now,
 							],
 						);
 						if (!bodyIdentical) {

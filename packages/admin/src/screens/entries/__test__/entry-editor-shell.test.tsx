@@ -12,6 +12,7 @@ import {
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../__test__/site-wrapper";
+import { formatDateTime } from "../../shared/format-date";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
@@ -738,7 +739,7 @@ describe("entry editor shell", () => {
 			working: { ...entry.working, metadata: { ...entry.working.metadata, title: "서버 최신 제목" } },
 		};
 		/** Someone else saved version 9 while this screen holds version 4; the first save meets the conflict. */
-		async function conflicted() {
+		async function conflicted(latest: typeof newer = newer) {
 			let server: typeof entry = { ...entry };
 			serve((input, init) => {
 				if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(server);
@@ -756,10 +757,30 @@ describe("entry editor shell", () => {
 			});
 			renderEdit();
 			fireEvent.change(await editorTitle(), { target: { value: "로컬 수정" } });
-			server = newer;
+			server = latest;
 			fireEvent.click(screen.getByRole("button", { name: "저장" }));
 			return { dialog: await screen.findByRole("dialog", { name: /편집 충돌/ }), server: () => server };
 		}
+
+		it("tells who saved the newer version and when", async () => {
+			const changedAt = "2026-03-04T05:06:00.000Z";
+			const { dialog } = await conflicted({ ...newer, changedBy: "박미나", changedAt } as typeof newer);
+			expect(
+				within(dialog).getByText(`${formatDateTime(testSite, changedAt)}에 박미나 님이 저장했습니다.`),
+			).toBeTruthy();
+		});
+
+		it("tells only when it was saved when the saving admin is not known", async () => {
+			const changedAt = "2026-03-04T05:06:00.000Z";
+			const { dialog } = await conflicted({ ...newer, changedAt } as typeof newer);
+			expect(within(dialog).getByText(`${formatDateTime(testSite, changedAt)}에 저장했습니다.`)).toBeTruthy();
+			expect(within(dialog).queryByText(/님이 저장/)).toBeNull();
+		});
+
+		it("shows no saved line when the server did not say when", async () => {
+			const { dialog } = await conflicted();
+			expect(within(dialog).queryByText(/에 저장했습니다\.|님이 저장했습니다\./)).toBeNull();
+		});
 
 		it("loads the server version without reloading the page", async () => {
 			const { dialog } = await conflicted();
