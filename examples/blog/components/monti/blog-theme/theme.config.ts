@@ -1,11 +1,11 @@
 import type { DocumentComponents } from "@monti-cms/core/render";
-import { cms } from "@/cms.server";
+import { cms } from "@/monti.config";
 
-/** The collection the theme reads: the name of a collection in `cms.config.ts`. */
+/** The collection the theme reads: the name of a collection in `monti.schema.json`. */
 type ThemeCollection = Parameters<typeof cms.read.listEntries>[0]["collection"];
 
 export interface BlogThemeConfig {
-	/** Your CMS instance (`createCms`), the one the admin and the API route use. Change the import above if it lives elsewhere. */
+	/** Your CMS instance (`cms` of `monti.config.ts`), the one the admin and the API route use. Change the import above if it lives elsewhere. */
 	cms: typeof cms;
 	/** The collection of the posts. */
 	collection: ThemeCollection;

@@ -3,15 +3,12 @@ import "@monti-cms/admin/styles.css";
 import "@monti-cms/blocks/styles.css";
 import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
-import { cms } from "../../../cms.server";
-import { SiteAdminComponents } from "./admin-components";
+import { cms } from "@/monti.config";
 
 export const generateMetadata = () => cmsAdminMetadata(cms);
 
+// The layout stays apart from the page on purpose: it keeps the admin (navigation, data, theme) mounted while you move between screens.
+// Your own admin components are not here: they are a plugin (plugins/word-list), listed in monti.config.ts.
 export default function AdminLayout({ children }: { children: ReactNode }) {
-	return (
-		<CmsAdminLayout cms={cms}>
-			<SiteAdminComponents>{children}</SiteAdminComponents>
-		</CmsAdminLayout>
-	);
+	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;
 }
