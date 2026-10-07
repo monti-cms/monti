@@ -69,9 +69,9 @@ owner's transaction early. Code that is not in a transaction uses `ctx.db()`, wh
 | `store/list.ts` (`titleExpr`) | - | done | 3 |
 | `store/transfer.ts` | - | done | 3 |
 | `store/schema-change.ts` | - | done | 3 |
-| `store/rows.ts` helpers (`loadEntry`, `readBody`, `writeBody`, `insertReferences`, `readReferences`, `lockEntryForUpdate`) | 6 | todo | 4 |
-| `store/entries.ts` (uses `titleSql`) | 15 | todo | 4 |
-| `store/publish.ts` (uses `titleSql`) | 17 | todo | 4 |
+| `store/rows.ts` helpers (`loadEntry`, `readBody`, `writeBody`, `insertReferences`, `readReferences`, `lockEntryForUpdate`) | - | done | 4 |
+| `store/entries.ts` (`titleExpr`) | - | done | 4 |
+| `store/publish.ts` (`titleExpr`) | - | done | 4 |
 | `store/lifecycle.ts` | 12 | todo | 5 |
 | Cleanup: drop `titleSql` and `translatedTitleSql`, `Queryable`, `TEMPLATE_COLUMNS` and the row interfaces `Database` replaces | - | todo | 5 |
 | `store/schema.ts`, `*-migration.ts`, `content-hash-backfill.ts` (migrations) | - | stays plain SQL | - |

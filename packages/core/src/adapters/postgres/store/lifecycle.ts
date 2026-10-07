@@ -48,10 +48,10 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		withTransaction(
 			pool,
 			async (client) => {
-				const locked = await lockEntryForUpdate(client, qSchema, params.id, params.expectedVersion);
+				const locked = await lockEntryForUpdate(ctx.db(client), params.id, params.expectedVersion);
 				assertTransitionAllowed(action, locked.status, locked.version);
 				await apply(client, locked);
-				const entry = await loadEntry(client, params.id, qSchema);
+				const entry = await loadEntry(ctx.db(client), params.id);
 				await recordEvents(client, qSchema, entry, [kind]);
 				return entry;
 			},
@@ -187,10 +187,10 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		 */
 		permanentDeleteEntry: async (params: LifecycleParams): Promise<void> =>
 			withTransaction(pool, async (client) => {
-				const locked = await lockEntryForUpdate(client, qSchema, params.id, params.expectedVersion);
+				const locked = await lockEntryForUpdate(ctx.db(client), params.id, params.expectedVersion);
 				assertDeletable(locked.status, locked.version);
 				// The event keeps the entry as it was; it is written after the rows are gone, in the same transaction.
-				const last = await loadEntry(client, params.id, qSchema);
+				const last = await loadEntry(ctx.db(client), params.id);
 				await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: false });
 				// Deleting a source deletes its translations too. Rejected if a translation outside the trash remains, since it would lose its shared values.
 				const members = await lockTranslations(client, params.id);
