@@ -8,7 +8,7 @@ import { createSite } from "../../../site";
 import { migrateContentStore } from "../content-store";
 import { createDb, dbOn } from "../db/kysely";
 import { type StoreContext, withTransaction, withTrx } from "../store/context";
-import { ROW_COLLECTION, titleExpr, titleSql, translatedTitleExpr, translatedTitleSql } from "../store/title-sql";
+import { ROW_COLLECTION, titleExpr, translatedTitleExpr } from "../store/title-sql";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** Kysely on the adapter's pool and on a transaction's client: the schema, the shared connection and the rollback. */
@@ -263,13 +263,8 @@ describe("kysely", () => {
 				.select(["e.id", titleExpr(site, "b.metadata", ROW_COLLECTION).as("title")])
 				.where("e.id", "in", ids)
 				.execute();
-			const acrossText = await pool.query<{ id: string; title: string | null }>(
-				`SELECT e.id, ${titleSql(site, "b.metadata", ROW_COLLECTION)} AS title FROM "${schema}".entries e JOIN "${schema}".entry_bodies b ON b.entry_id = e.id WHERE e.id = ANY($1::uuid[])`,
-				[ids],
-			);
 			const byId = (list: { id: string; title: string | null }[]) =>
 				Object.fromEntries(list.map((row) => [row.id, row.title]));
-			expect(byId(across)).toEqual(byId(acrossText.rows));
 			expect(byId(across)).toEqual({
 				[ids[0] as string]: "Head",
 				[ids[1] as string]: "Name",
@@ -284,7 +279,7 @@ describe("kysely", () => {
 			expect(one).toEqual([{ title: "Name" }]);
 		});
 
-		it("reads the name in a display language, falling back to the title, like the SQL text", async () => {
+		it("reads the name in a display language, falling back to the title", async () => {
 			const db = createDb(pool, schema);
 			const id = randomUUID();
 			const now = new Date();
@@ -313,12 +308,7 @@ describe("kysely", () => {
 					.select(translatedTitleExpr(site, "b.metadata", "b", locale).as("title"))
 					.where("b.entry_id", "=", id)
 					.executeTakeFirstOrThrow();
-				const viaText = await pool.query<{ title: string | null }>(
-					`SELECT ${translatedTitleSql(site, "b.metadata", "b", "$2")} AS title FROM "${schema}".entry_bodies b WHERE b.entry_id = $1`,
-					[id, locale],
-				);
 				expect(viaKysely.title).toBe(expected);
-				expect(viaText.rows[0]?.title).toBe(expected);
 			}
 		});
 	});

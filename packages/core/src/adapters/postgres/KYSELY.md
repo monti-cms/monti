@@ -12,7 +12,7 @@ change what a query does: the store contract suite (`core/store/__test__/contrac
 | `dbOn(client, qSchema)` | `db/kysely.ts` | The same schema on one `PoolClient`, cached per client. This is how Kysely joins a transaction. |
 | `ctx.db(tx?)` | `store/context.ts` | `ctx.db()` is the store's pool instance, `ctx.db(client)` is `dbOn(client, ctx.qSchema)`. Modules use these two and never build an instance. |
 | `withTrx(ctx, fn)` | `store/context.ts` | `withTransaction` that calls `fn(trx, client)`: `trx` is a `Db` on the transaction's client, `client` is the same `PoolClient` for code that still writes `client.query`. Options (`begin`, `mapError`) are those of `withTransaction`. |
-| `titleExpr`, `translatedTitleExpr` | `store/title-sql.ts` | The title expression (`titleSql`, `translatedTitleSql`) as Kysely expressions. The text forms stay until the last module that uses them moves. |
+| `titleExpr`, `translatedTitleExpr` | `store/title-sql.ts` | The SQL that reads the title of an entry (the field with the `title` role), as Kysely expressions. No query writes a title key by hand. |
 
 ### Transactions
 
@@ -38,7 +38,7 @@ owner's transaction early. Code that is not in a transaction uses `ctx.db()`, wh
    `NOT EXISTS` are builder code. Use `sql` for: `unnest(...) AS s(name)` and other set-returning functions in `FROM`, JSONB operators and builders (`->>`, `@>`,
    `jsonb_agg`, `jsonb_build_object`), `COLLATE`, `starts_with`, `to_regclass`, advisory locks and `CASE` with several arms. Give the fragment its type
    (`sql<boolean>`, `sql<string | null>`).
-3. **Values are parameters, identifiers are `sql.id` / `sql.ref`, and `sql.lit` is only for keys from the site config** (as `titleSql` always did). A user value is never
+3. **Values are parameters, identifiers are `sql.id` / `sql.ref`, and `sql.lit` is only for keys from the site config** (as the title expressions do). A user value is never
    joined into SQL text.
 4. **A `sql` fragment is not schema-qualified.** Inside one, name a table `sql.id(ctx.qSchema, "table")`. Outside one, the schema is applied for you.
 5. **An array that may be empty is `= any(${array}::type[])`, not `in (...)`** (an empty `in ()` is a syntax error; `= any('{}')` matches nothing, which is what the old
@@ -72,10 +72,12 @@ owner's transaction early. Code that is not in a transaction uses `ctx.db()`, wh
 | `store/rows.ts` helpers (`loadEntry`, `readBody`, `writeBody`, `insertReferences`, `readReferences`, `lockEntryForUpdate`) | - | done | 4 |
 | `store/entries.ts` (`titleExpr`) | - | done | 4 |
 | `store/publish.ts` (`titleExpr`) | - | done | 4 |
-| `store/lifecycle.ts` | 12 | todo | 5 |
-| Cleanup: drop `titleSql` and `translatedTitleSql`, `Queryable`, `TEMPLATE_COLUMNS` and the row interfaces `Database` replaces | - | todo | 5 |
+| `store/lifecycle.ts` | - | done | 5 |
+| Cleanup: `titleSql` and `translatedTitleSql`, `Queryable`, `TEMPLATE_COLUMNS` and `MEDIA_COLUMNS` (text) are gone; `FolderRow`, `MediaRow`, `TemplateRow` and `AddressRow` are now derived from `Database` | - | done | 5 |
 | `store/schema.ts`, `*-migration.ts`, `content-hash-backfill.ts` (migrations) | - | stays plain SQL | - |
 
 Order: the self-contained modules first (small, few joins, no shared helpers), then the reads (they only need `titleExpr`), then the write path that shares the row helpers
-(entries, publish and the helpers move together, because they run inside one transaction and share its client), then lifecycle and the cleanup. Four more PRs after this
-one. A PR may split if a module turns out larger than its count says (`publish.ts` and `list.ts` are the likeliest).
+(entries, publish and the helpers move together, because they run inside one transaction and share its client), then lifecycle and the cleanup.
+
+Every module of the store that is not a migration step is on Kysely. What stays on plain `sql` inside them is what rule 2 names: `unnest(...)` in `FROM`, JSONB operators and
+builders, `= any(array)`, a `CASE` with several arms, `excluded.<column>`, the recursive folder CTE and the ranked `CASE` of the entry search.
