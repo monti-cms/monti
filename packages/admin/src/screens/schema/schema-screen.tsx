@@ -259,28 +259,30 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 								</TabsList>
 								<TabsContent value="collections" className="pt-3">
 									<div className="flex flex-col gap-4 lg:flex-row">
-										<nav
-											aria-label={t("tabs.collections")}
-											className="flex shrink-0 gap-1 overflow-x-auto pb-1 lg:w-52 lg:flex-col lg:overflow-visible lg:pb-0"
-										>
-											{names.map((name) => {
-												const collection = collections[name];
-												const active = name === selected;
-												return (
-													<Button
-														key={name}
-														type="button"
-														variant={active ? "secondary" : "ghost"}
-														size="sm"
-														aria-current={active ? "true" : undefined}
-														className={cn("shrink-0 justify-start", active && "font-medium")}
-														onClick={() => setSelected(name)}
-													>
-														<span className="truncate">{String(collection?.label ?? name)}</span>
-														{!savedNames.includes(name) && <Badge variant="outline">{t("collection.new")}</Badge>}
-													</Button>
-												);
-											})}
+										<div className="flex shrink-0 flex-col gap-2 lg:w-52">
+											<nav
+												aria-label={t("tabs.collections")}
+												className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+											>
+												{names.map((name) => {
+													const collection = collections[name];
+													const active = name === selected;
+													return (
+														<Button
+															key={name}
+															type="button"
+															variant={active ? "secondary" : "ghost"}
+															size="sm"
+															aria-current={active ? "true" : undefined}
+															className={cn("shrink-0 justify-start", active && "font-medium")}
+															onClick={() => setSelected(name)}
+														>
+															<span className="truncate">{String(collection?.label ?? name)}</span>
+															{!savedNames.includes(name) && <Badge variant="outline">{t("collection.new")}</Badge>}
+														</Button>
+													);
+												})}
+											</nav>
 											{writable && (
 												<AddCollection
 													taken={names}
@@ -290,7 +292,7 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 													}}
 												/>
 											)}
-										</nav>
+										</div>
 										<div className="min-w-0 flex-1">
 											{selected && collections[selected] ? (
 												<CollectionEditor

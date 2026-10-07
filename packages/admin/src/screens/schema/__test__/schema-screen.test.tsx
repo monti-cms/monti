@@ -248,7 +248,7 @@ describe("SchemaScreen", () => {
 		expect(radios.map((radio) => radio.checked)).toEqual([false, true, false]);
 		// The sample links to the entry in the admin.
 		const link = within(decision).getByRole("link", { name: "Hello" });
-		expect(link.getAttribute("href")).toBe("/admin/entries/11111111-1111-4111-8111-111111111111/edit");
+		expect(link.getAttribute("href")).toBe(testSite.adminEntryEditHref("11111111-1111-4111-8111-111111111111"));
 
 		// Picking another way sends that pick, and the save carries it.
 		fireEvent.click(radios[2] as HTMLInputElement);

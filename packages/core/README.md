@@ -443,6 +443,8 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core` | `cms.config.ts` | `defineConfig` (with `schema`)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, the `SchemaFile` types |
 | `@monti-cms/core/schema.json` | editors, `$schema` | The JSON Schema of `monti.schema.json` ("The schema file") |
 | `@monti-cms/core/schema-types` | dev tooling (`withCms`) | `generateSchemaTypes`, `watchSchemaTypes`: write `monti-env.d.ts` from the schema file |
+| `@monti-cms/core/schema-change` | settings screen, command line | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange` ("Changing the schema") |
+| `@monti-cms/core/schema-edit` | settings screen (server side) | `schemaEditAccess` (who may write the schema file), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `formatSchemaText` ("Editing the schema in the admin") |
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
@@ -1084,6 +1086,35 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `applyTransforms`, `checkTransforms` | The pure pieces: one entry's metadata through the transforms, and the check of transforms against a schema |
 
 The store side is the `SchemaChangeStore` port (`readSchemaState`, `appliedSchemaTransforms`, `scanBodies`, `applySchemaChange`), part of `ContentStore`.
+
+### Editing the schema in the admin (development only)
+
+The admin has a **Schema** screen (`<admin path>/schema`, in the sidebar under "Manage") that edits `monti.schema.json`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
+
+**Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists and can be written. The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/cms/v1/schema` and `POST /api/cms/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file` or `not_writable`), and the screen shows the schema read-only with a short explanation. `GET /api/cms/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
+
+**The routes** (`/api/cms/v1/schema`, served by `cms.handle()`):
+
+| Route | What it does |
+| --- | --- |
+| `GET` | The file's content and `hash`, whether it can be written (`access`), its `issues` if it does not check (with JSON paths), the applied version, the collections the config adds in code, and the block and mark names a body list can use |
+| `POST /preview` | Body `{ schema, transforms?, renames? }`. Checks an edit and writes nothing: `valid` and `issues` (JSON path and message), the `impacts` of every change (entries touched, a sample of ids and titles, the consequence), the `decisions` (changes whose stored values can be treated in more than one way, with the `suggestTransforms` choices and the one in effect), the `transforms` that would be recorded and their `problems`, and `nextVersion` |
+| `PUT` | Body `{ schema, transforms?, renames?, baseHash }`. Saves the edit (below). `409 schema_conflict` when the file changed since `baseHash`, `400 invalid_schema` with `issues`, `422 invalid_transforms`, `500 schema_apply_failed` (the file was written, the database was not changed) |
+
+`transforms` are the picks of the writer, without ids (the server names them `v<version>-<op>-<collection>-<field>`). Left out, the server picks for each decision: a rename when the screen reports one in `renames` (a field or option the writer renamed), a mapping or a drop only where **no stored entry** holds the value (a drop that would delete values is never picked for the writer), a default only where it has a value. Without a pick the values stay as orphans, as before.
+
+**What a save does, in this order**, stopping at the first failure:
+
+1. Checks the file format and `defineConfig`'s rules on the edited content, and the transforms against it. The save is refused if the file changed on disk since the edit started.
+2. Dry-runs the transforms on the dev database, so an entry that cannot be rewritten stops the save before the file is touched.
+3. Writes `monti.schema.json` with the picked transforms appended to `migrations` and `schemaVersion` raised. The old text is kept wherever it did not change (hand-formatted arrays, spacing, key order, the trailing newline) and the new parts are written in the file's own indentation, so the change is a small diff (`formatSchemaText`).
+4. Writes the generated types (`monti-env.d.ts`), as `monti schema:types` does.
+5. Runs `applySchemaChange` against the dev database (creating the tables first if there are none), which also records the schema as applied.
+6. Reloads the running instance (`cms.reloadSchema()`); the screen then reloads the admin page.
+
+**How the running instance picks up the schema.** An instance made from `defineConfig({ schema })` remembers how to rebuild its config with another schema, and the schema file's path (`cms.schemaFile()`, found as `monti.schema.json` or `src/monti.schema.json` in the working directory, or given as `schemaFile` to `createCms`). In development it swaps its site, store, services, read API and handlers **in place** (the same `cms` object, the database connections shared) when the settings screen saved, and also on its own when it finds the file changed on disk (a hand edit, or a save from another process; it looks at most every 250 ms). A file that does not read or check is reported once and the instance keeps the last good schema. So the admin shows a saved change without restarting `next dev`; the types are kept by the watcher of `withCms` and by the save itself. In production `cms.reloadSchema()` does nothing: a production server runs the schema it was built with. `cms.forSchema(schema)` builds another instance over a schema without installing it; the settings screen uses it to check an edit.
+
+The screen edits collections (label, icon, kind, public address, body and the allowed blocks, marks and heading levels), every kind of field with its options (add, remove, rename, reorder, required and languages, select options, conditional branches), layout groups, list columns, the locales and the time zone. It does not edit what is plain data but rarely changes (`site`, `admin`, `seed`, recorded `migrations`): they are shown, and edited in the file. A collection written in code (`cms.config.ts`) is not in the file, so the screen lists it as not editable.
 
 ## Config
 

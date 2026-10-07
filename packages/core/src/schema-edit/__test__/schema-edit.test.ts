@@ -141,6 +141,19 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
+	it("refuses to write on a server that runs in development mode but looks deployed", async () => {
+		vi.stubEnv("NODE_ENV", "development");
+		vi.stubEnv("VERCEL", "1");
+		write(schemaOf({}));
+		const before = text();
+		const cms = newCms();
+		const { hash, schema } = await read(cms);
+		const res = await call(cms, "PUT", "schema", { schema, baseHash: hash });
+		expect(res.status).toBe(403);
+		expect(await res.json()).toMatchObject({ code: "schema_read_only", reason: "production" });
+		expect(text()).toBe(before);
+	});
+
 	it("also refuses a signed-in user who is not an admin, in development", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		write(schemaOf({}));

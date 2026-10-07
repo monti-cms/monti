@@ -1,4 +1,5 @@
 import { accessSync, constants } from "node:fs";
+import { productionLikeEnvironment } from "../adapters/auth/dev-bypass";
 import type { Cms } from "../cms";
 
 /**
@@ -9,7 +10,7 @@ import type { Cms } from "../cms";
 
 /** Why the screen is read-only. */
 export type SchemaReadOnlyReason =
-	/** The server does not run in development (`NODE_ENV` is not `development`). */
+	/** The server does not run in development (`NODE_ENV` is not `development`), or its environment looks like a deployed server. */
 	| "production"
 	/** The instance's config has no schema file (it is written in code only), or the file cannot be found. */
 	| "no_schema_file"
@@ -20,8 +21,12 @@ export type SchemaEditAccess =
 	| { readonly writable: true; readonly file: string }
 	| { readonly writable: false; readonly reason: SchemaReadOnlyReason; readonly file?: string };
 
-/** Whether the server runs in development (`next dev`). Read at call time. */
-export const isDevelopmentServer = (): boolean => process.env.NODE_ENV === "development";
+/**
+ * Whether the server runs in development (`next dev`). Read at call time. A development-mode process that looks deployed (a hosting platform's variables, a public
+ * `AUTH_URL`) does not count, the same rule the login bypass follows: a staging server started with `NODE_ENV=development` must not rewrite its schema.
+ */
+export const isDevelopmentServer = (env: Readonly<Record<string, string | undefined>> = process.env): boolean =>
+	env.NODE_ENV === "development" && productionLikeEnvironment(env) === undefined;
 
 export function schemaEditAccess(cms: Pick<Cms, "schemaFile">): SchemaEditAccess {
 	const file = cms.schemaFile();

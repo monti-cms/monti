@@ -180,7 +180,8 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"review.loadFailed": "Couldn't check the changes.",
 		"review.invalid": "The schema does not check",
 		"review.problems": "A data transform does not fit the new schema",
-		"review.summary": ({ count, from, to }) => `${changes(count)} to stored data; schema version ${from} to ${to}.`,
+		"review.summary": ({ count, from, to }) =>
+			`${Number(count) === 0 ? "No change to stored data" : `${changes(count)} to stored data`}; ${from === to ? `schema version stays ${to}` : `schema version ${from} to ${to}`}.`,
 		"review.unchanged": "Nothing to save.",
 		"review.baselineFile":
 			"This database has no applied schema yet, so changes are compared with the schema the server runs now.",
@@ -423,7 +424,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"review.invalid": "스키마가 올바르지 않습니다",
 		"review.problems": "데이터 변환이 새 스키마와 맞지 않습니다",
 		"review.summary": ({ count, from, to }) =>
-			`저장된 데이터에 영향을 주는 변경 ${count}개. 스키마 버전 ${from}에서 ${to}로 올라갑니다.`,
+			`${Number(count) === 0 ? "저장된 데이터에 영향을 주는 변경은 없습니다" : `저장된 데이터에 영향을 주는 변경 ${count}개`}. ${from === to ? `스키마 버전 ${to} 유지` : `스키마 버전 ${from} → ${to}`}.`,
 		"review.unchanged": "저장할 내용이 없습니다.",
 		"review.baselineFile": "이 데이터베이스에는 적용된 스키마가 아직 없어서, 서버가 지금 쓰는 스키마와 비교합니다.",
 		"review.decisions": "저장된 값을 어떻게 할지 정하세요",
@@ -481,7 +482,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"change.locale_removed": "언어 {locale} 삭제",
 		"change.default_locale_changed": "기본 언어가 {from}에서 {to}(으)로 바뀜",
 		"save.done": ({ version, transforms, entries: rewritten }) =>
-			`스키마를 버전 ${version}(으)로 저장했습니다${Number(transforms) > 0 ? `. 데이터 변환 ${transforms}개를 실행했습니다(항목 ${rewritten}개 다시 씀)` : ""}.`,
+			`스키마를 저장했습니다(버전 ${version})${Number(transforms) > 0 ? `. 데이터 변환 ${transforms}개를 실행했습니다(항목 ${rewritten}개 다시 씀)` : ""}.`,
 		"save.failed": "스키마를 저장하지 못했습니다.",
 		"save.conflict": "이 화면을 연 뒤 스키마 파일이 디스크에서 바뀌었습니다. 다시 불러와 현재 파일을 편집하세요.",
 		"save.applyFailed": "파일은 저장했지만 데이터베이스에 적용하지 못했습니다: {message}",
