@@ -2,6 +2,7 @@
 
 import { cn } from "@monti-cms/admin/kit";
 import { type RefObject, useEffect, useRef, useState } from "react";
+import { drawMermaid } from "./draw";
 
 /**
  * Default editor preview of the Mermaid block (optional dependency `mermaid`). The Mermaid block extension's admin provider registers it as `fencePreviews.mermaid`,
@@ -40,7 +41,7 @@ export function MermaidPreview({ source, className }: { readonly source: string;
 			.then(async ({ default: mermaid }) => {
 				mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
 				renderCount += 1;
-				const { svg } = await mermaid.render(`cms-mermaid-${renderCount}`, source);
+				const svg = await drawMermaid(mermaid, `cms-mermaid-${renderCount}`, source);
 				if (disposed || !target.current) return;
 				target.current.innerHTML = svg;
 				setError(null);

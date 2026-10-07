@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { drawMermaid } from "./draw";
 
 /** Whether the document is in the dark theme (the `dark` class or `data-theme="dark"` on `html`, else the system setting). */
 const isDarkDocument = () => {
@@ -43,7 +44,7 @@ export function MermaidView({ source }: { source: string }) {
 				const { default: mermaid } = await import("mermaid");
 				mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
 				counter.current += 1;
-				const { svg } = await mermaid.render(`cms-mermaid-${baseId}-${counter.current}`, source);
+				const svg = await drawMermaid(mermaid, `cms-mermaid-${baseId}-${counter.current}`, source);
 				if (!disposed) setState({ svg });
 			} catch (error) {
 				if (!disposed) setState({ error: error instanceof Error ? error.message : "Mermaid render error" });
