@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"skipLibCheck": true,
+		"strict": true,
+		"noEmit": true,
+		"esModuleInterop": true,
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"jsx": "react-jsx",
+		"types": ["node"],
+		"paths": {
+			"@cms-config": ["../packages/core/test/cms.config.ts"],
+			"@/registry/monti/*": ["./items/*"]
+		}
+	},
+	"include": ["items"]
+}

@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { addComponents, formatAddReport } from "./add";
 import { formatInitReport, initProject } from "./init";
 import { migrate } from "./migrate";
 
@@ -6,13 +7,25 @@ import { migrate } from "./migrate";
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
  * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: creates config and route files in a Next app and wires up tsconfig, CSS and the next config.
+ * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--server <file>]`: creates the DB tables.
  */
 
+export {
+	type AddOptions,
+	type AddReport,
+	addComponents,
+	DEFAULT_COMPONENTS_ALIAS,
+	detectPackageManager,
+	formatAddReport,
+	type InstallCommand,
+	rewriteRegistryImports,
+} from "./add";
 export { type ConfigPaths, parseJsonc, resolveConfigPaths } from "./config-paths";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { formatInitReport, type InitOptions, type InitReport, initProject } from "./init";
 export { type MigrateOptions, migrate } from "./migrate";
+export { DEFAULT_REGISTRY_URL, type RegistryItem, readItem, resolveItems } from "./registry";
 
 const HELP = `Usage: monti <command> [options]
 
@@ -21,6 +34,11 @@ Commands:
               --admin-path <path>   Admin screen path (default /admin)
               --locale <code>       Default site language, also the admin language (default en)
               --time-zone <tz>      IANA time zone for dates and times (default UTC)
+  add       Copy components from the registry into the app as source you own, and install their npm packages
+              <name...>             Components to add; the ones they need come along
+              --registry <url|path> Registry folder or URL with registry.json (default: the registry of this repo)
+              --overwrite           Replace files that differ from the registry (default: stop and write nothing)
+              --dry-run             Show what would be written and installed
   migrate   Create or update the tables in the database of the server config
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
@@ -57,6 +75,22 @@ export async function runCli(
 				),
 			);
 			return 0;
+		}
+		if (command === "add") {
+			const { values, positionals } = parseArgs({
+				args: [...rest],
+				allowPositionals: true,
+				options: { registry: { type: "string" }, overwrite: { type: "boolean" }, "dry-run": { type: "boolean" } },
+			});
+			const report = await addComponents({
+				cwd: io.cwd,
+				names: positionals,
+				registry: values.registry,
+				overwrite: values.overwrite,
+				dryRun: values["dry-run"],
+			});
+			io.log(formatAddReport(report));
+			return report.conflicts.length > 0 && !report.dryRun ? 1 : 0;
 		}
 		if (command === "migrate") {
 			const { values } = parseArgs({

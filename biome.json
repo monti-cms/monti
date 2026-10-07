@@ -11,7 +11,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": ["**", "!registry/r"]
 	},
 	"formatter": {
 		"enabled": true,
