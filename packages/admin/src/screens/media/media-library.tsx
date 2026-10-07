@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
 import { cn } from "../../lib/utils/cn";
+import { readPreference, writePreference } from "../../lib/utils/site-storage";
 import type { TranslatorFor } from "../../translator";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
@@ -56,25 +57,19 @@ const usedOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 ];
 
 type MediaView = "grid" | "list";
-const VIEW_STORAGE_KEY = "cms:media-view";
+/** Name of the remembered view in the site's browser storage (`lib/utils/site-storage.ts`). */
+const VIEW_STORAGE_NAME = "media-view";
 
-/** Grid or list view choice. Remembered in this browser; if storage is unavailable, starts with the grid. */
+/** Grid or list view choice. Remembered in this browser, per site; if storage is unavailable, starts with the grid. */
 function useMediaView(): [MediaView, (view: MediaView) => void] {
+	const site = useSite();
 	const [view, setView] = useState<MediaView>("grid");
 	useEffect(() => {
-		try {
-			if (window.localStorage.getItem(VIEW_STORAGE_KEY) === "list") setView("list");
-		} catch {
-			// If storage is unavailable, use the default view.
-		}
-	}, []);
+		if (readPreference(site, VIEW_STORAGE_NAME) === "list") setView("list");
+	}, [site]);
 	const change = (next: MediaView) => {
 		setView(next);
-		try {
-			window.localStorage.setItem(VIEW_STORAGE_KEY, next);
-		} catch {
-			// The view still changes even if it cannot be remembered.
-		}
+		writePreference(site, VIEW_STORAGE_NAME, next);
 	};
 	return [view, change];
 }

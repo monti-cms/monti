@@ -32,6 +32,7 @@ import {
 	foldersKey,
 	type OptimisticOp,
 } from "./shared/list-cache";
+import { nounVars } from "./shared/noun.messages";
 import { useFolderActions } from "./shared/use-folder-actions";
 import { type TaxonomyOptions, useTaxonomyOptions } from "./shared/use-taxonomy";
 
@@ -362,7 +363,7 @@ export function useEntryList(mode: ListMode) {
 			description:
 				targets.length === 1
 					? t("archive.askOne", { title: titleOf(targets) })
-					: t("archive.askMany", { count: targets.length }),
+					: t("archive.askMany", { count: targets.length, ...nounVars(site, collection) }),
 			confirmLabel: t("archive.title"),
 		});
 		if (ok) await bulk("archive", t("bulk.archive"), targets);

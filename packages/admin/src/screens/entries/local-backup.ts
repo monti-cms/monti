@@ -1,16 +1,26 @@
+import type { Site } from "@monti-cms/core/client";
+import { storageNamespace } from "../../lib/utils/site-storage";
+
 /**
  * Browser recovery copy. Keeps the latest in-progress input in IndexedDB.
  *
  * - The key is `admin ID:content ID` (`admin ID:new:collection` for a new post), so it never mixes with another account's recovery copy.
+ * - Each site has a database of its own (`cms_backup:<site name><admin path>`), so two sites served from one origin keep their copies apart.
+ * - Copies written before that live in the `cms_backup` database. A copy found there is moved to the site's own database the first time it is read, and it is
+ *   deleted from there with the rest of the copy's life (a discard removes both). Their keys hold an entry ID, which is unique across sites, so moving one copy
+ *   never takes another site's.
  * - If saving fails (private browsing mode, storage quota denied, etc.), it returns `false` so the screen reports exactly that recovery is unavailable.
  * - The snapshot is the entry form, which holds the body as `doc` (a stored document). Copies written before that hold it as MDX text in `mdx`; they are upgraded when they
  *   are read (`legacy-backup.ts`), so what is stored here is never rewritten in place.
  */
 
-/** Recovery DB name. IndexedDB is separate per site address (origin), so the site name is not appended. */
-const DB_NAME = "cms_backup";
+/** The database that held every site's copies before they were kept per site. Only read from and cleared, never written. */
+export const LEGACY_DB_NAME = "cms_backup";
 const STORE_NAME = "backups";
 const DB_VERSION = 1;
+
+/** The name of a site's recovery database. */
+export const backupDatabaseName = (site: Site): string => `${LEGACY_DB_NAME}:${storageNamespace(site)}`;
 
 export interface LocalBackupRecord<Snapshot = Record<string, unknown>> {
 	key: string;
@@ -27,14 +37,14 @@ export interface LocalBackupRecord<Snapshot = Record<string, unknown>> {
 export const backupKey = (adminId: string, entryId: string | null, collection: string) =>
 	entryId ? `${adminId}:${entryId}` : `${adminId}:new:${collection}`;
 
-/** Opens the recovery DB, creating it if it does not exist. */
-function openDB(): Promise<IDBDatabase> {
+/** Opens a recovery DB, creating it if it does not exist. */
+function openDB(name: string): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
 		if (typeof window === "undefined" || !window.indexedDB) {
 			reject(new Error("IndexedDB not available"));
 			return;
 		}
-		const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+		const request = window.indexedDB.open(name, DB_VERSION);
 		request.onupgradeneeded = () => {
 			const db = request.result;
 			if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: "key" });
@@ -44,42 +54,86 @@ function openDB(): Promise<IDBDatabase> {
 	});
 }
 
-async function run<T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-	const db = await openDB();
-	return new Promise<T>((resolve, reject) => {
-		const tx = db.transaction(STORE_NAME, mode);
-		const request = action(tx.objectStore(STORE_NAME));
-		tx.oncomplete = () => resolve(request.result);
-		tx.onerror = () => reject(tx.error);
-		tx.onabort = () => reject(tx.error);
-	});
+async function run<T>(
+	name: string,
+	mode: IDBTransactionMode,
+	action: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
+	const db = await openDB(name);
+	try {
+		return await new Promise<T>((resolve, reject) => {
+			const tx = db.transaction(STORE_NAME, mode);
+			const request = action(tx.objectStore(STORE_NAME));
+			tx.oncomplete = () => resolve(request.result);
+			tx.onerror = () => reject(tx.error);
+			tx.onabort = () => reject(tx.error);
+		});
+	} finally {
+		// A connection left open would block a later upgrade or deletion of the database.
+		db.close();
+	}
 }
 
-/** Stores a recovery copy. Returns `false` on failure. */
-export async function saveLocalBackup(record: LocalBackupRecord): Promise<boolean> {
+/**
+ * Whether the old shared database exists. Opening a database creates it, and a site that never had one has no reason to get an empty one, so it is looked up
+ * first where the browser can list databases; where it cannot, it is simply opened.
+ */
+async function legacyDatabaseExists(): Promise<boolean> {
 	try {
-		await run("readwrite", (store) => store.put(record));
+		const list = await window.indexedDB.databases?.();
+		return list === undefined ? true : list.some((database) => database.name === LEGACY_DB_NAME);
+	} catch {
+		return true;
+	}
+}
+
+/** Stores a recovery copy in the site's database. Returns `false` on failure. */
+export async function saveLocalBackup(record: LocalBackupRecord, site: Site): Promise<boolean> {
+	try {
+		await run(backupDatabaseName(site), "readwrite", (store) => store.put(record));
 		return true;
 	} catch {
 		return false;
 	}
 }
 
+/**
+ * The recovery copy under `key`: the site's own, else one the old shared database holds, which is moved to the site's database on the way (kept where it was if it
+ * cannot be moved, so it is found again next time).
+ */
 export async function getLocalBackup<Snapshot = Record<string, unknown>>(
 	key: string,
+	site: Site,
 ): Promise<LocalBackupRecord<Snapshot> | null> {
 	try {
-		const record = (await run("readonly", (store) => store.get(key))) as LocalBackupRecord<Snapshot> | undefined;
-		return record ?? null;
+		const own = (await run(backupDatabaseName(site), "readonly", (store) => store.get(key))) as
+			| LocalBackupRecord<Snapshot>
+			| undefined;
+		if (own) return own;
+		if (!(await legacyDatabaseExists())) return null;
+		const old = (await run(LEGACY_DB_NAME, "readonly", (store) => store.get(key))) as
+			| LocalBackupRecord<Snapshot>
+			| undefined;
+		if (!old) return null;
+		if (await saveLocalBackup(old as LocalBackupRecord, site)) {
+			await run(LEGACY_DB_NAME, "readwrite", (store) => store.delete(key)).catch(() => undefined);
+		}
+		return old;
 	} catch {
 		return null;
 	}
 }
 
-export async function deleteLocalBackup(key: string): Promise<void> {
+/** Deletes the recovery copy under `key` from the site's database and from the old shared one, so a discarded copy is not found again there. */
+export async function deleteLocalBackup(key: string, site: Site): Promise<void> {
 	try {
-		await run("readwrite", (store) => store.delete(key));
+		await run(backupDatabaseName(site), "readwrite", (store) => store.delete(key));
 	} catch {
 		// A recovery copy that could not be deleted is deleted again next time it is opened if it matches the server.
+	}
+	try {
+		if (await legacyDatabaseExists()) await run(LEGACY_DB_NAME, "readwrite", (store) => store.delete(key));
+	} catch {
+		// Same as above.
 	}
 }

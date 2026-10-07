@@ -4,6 +4,8 @@ import { requireAdminPage } from "../require-admin";
 import { TemplateManager } from "./template-manager";
 
 export default async function AdminTemplatesPage({ cms, server }: { cms: Cms; server: AdminServer }) {
+	// The site turned templates off (`admin.templates: false`): the screen does not exist.
+	if (!cms.site.ADMIN_TEMPLATES) server.notFound();
 	await requireAdminPage(cms, server);
 	return <TemplateManager />;
 }

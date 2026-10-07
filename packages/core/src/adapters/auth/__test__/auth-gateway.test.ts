@@ -71,6 +71,15 @@ describe("AuthGateway Contract", () => {
 		expect(result).toEqual({ userId: ADMIN_ID, accountId: ADMIN_ID, isAdmin: true });
 	});
 
+	it("carries the name the login method gave, and leaves it out when there is none", async () => {
+		const named = await gatewayOf(
+			fakeAuth({ user: { id: ADMIN_ID, accountId: ADMIN_ID, name: " Mina Park " } }),
+		).verifyAdmin();
+		expect(named.name).toBe("Mina Park");
+		const unnamed = await gatewayOf(fakeAuth({ user: { id: ADMIN_ID, accountId: ADMIN_ID, name: " " } })).verifyAdmin();
+		expect(unnamed).not.toHaveProperty("name");
+	});
+
 	it("isDevAuthBypassEnabled is true only in development with the option on", () => {
 		const development = { NODE_ENV: "development" };
 		expect(isDevAuthBypassEnabled(true, development)).toBe(true);

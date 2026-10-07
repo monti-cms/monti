@@ -1,6 +1,7 @@
 import { createCodeBlock, type SiteCodeBlock } from "../annotation/code-block/active";
 import { createBlocks, type SiteBlocks } from "../blocks/active";
 import type { CmsConfig } from "../config/define";
+import { createAdminFeatures, type SiteAdminFeatures } from "../core/admin-features";
 import { createAdminPaths, type SiteAdminPaths } from "../core/admin-paths";
 import { createApi, type SiteApi } from "../core/api";
 import { createCollections, type SiteCollections } from "../core/collections";
@@ -36,6 +37,7 @@ export type Site<Config extends AnyCmsConfig = AnyCmsConfig> = SiteI18n &
 	SiteCollections &
 	SiteLinks &
 	SiteAdminPaths &
+	SiteAdminFeatures &
 	SiteTime &
 	SiteBlocks &
 	SiteCodeBlock & {
@@ -122,6 +124,7 @@ export function createSite<const Config extends AnyCmsConfig>(config: Config): S
 			...collections,
 			...links,
 			...createAdminPaths(config),
+			...createAdminFeatures(config),
 			...createTime(config),
 			...blocks,
 			...createCodeBlock(config.codeBlock),

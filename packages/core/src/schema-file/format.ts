@@ -246,6 +246,18 @@ const admin = z.strictObject({
 		)
 		.optional(),
 	messages: z.record(text, z.record(text, text)).optional().describe("Admin text overrides: namespace -> key -> text."),
+	templates: z
+		.boolean()
+		.optional()
+		.describe(
+			"false hides body templates in the admin: the editor's template menu, the sidebar link and the Templates screen.",
+		),
+	translations: z
+		.boolean()
+		.optional()
+		.describe(
+			"false hides the translation UI in the admin (language tabs, locale column and filter). A site with one locale hides it anyway.",
+		),
 });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

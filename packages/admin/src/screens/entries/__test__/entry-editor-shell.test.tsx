@@ -1,16 +1,19 @@
+import { createSite } from "@monti-cms/core/client";
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testSite } from "../../../../../core/test/site";
+import { testConfig, testSite } from "../../../../../core/test/site";
 import {
 	CmsAdminComponentsProvider,
 	type SourcePanelProps,
 	type SourcePanelRegistration,
 } from "../../../admin-components";
+import { preferenceKey } from "../../../lib/utils/site-storage";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../__test__/site-wrapper";
+import { formatDateTime } from "../../shared/format-date";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
@@ -23,11 +26,12 @@ const { getLocalBackup, deleteLocalBackup, saveLocalBackup, success, warning, me
 	message: vi.fn(),
 	error: vi.fn(),
 }));
+// The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
 vi.mock("../local-backup", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../local-backup")>()),
-	getLocalBackup,
-	deleteLocalBackup,
-	saveLocalBackup,
+	getLocalBackup: (key: string) => getLocalBackup(key),
+	deleteLocalBackup: (key: string) => deleteLocalBackup(key),
+	saveLocalBackup: (record: unknown) => saveLocalBackup(record),
 }));
 vi.mock("../../../editor/tiptap-editor", async () => {
 	const React = await import("react");
@@ -737,7 +741,7 @@ describe("entry editor shell", () => {
 			working: { ...entry.working, metadata: { ...entry.working.metadata, title: "서버 최신 제목" } },
 		};
 		/** Someone else saved version 9 while this screen holds version 4; the first save meets the conflict. */
-		async function conflicted() {
+		async function conflicted(latest: typeof newer = newer) {
 			let server: typeof entry = { ...entry };
 			serve((input, init) => {
 				if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(server);
@@ -755,10 +759,30 @@ describe("entry editor shell", () => {
 			});
 			renderEdit();
 			fireEvent.change(await editorTitle(), { target: { value: "로컬 수정" } });
-			server = newer;
+			server = latest;
 			fireEvent.click(screen.getByRole("button", { name: "저장" }));
 			return { dialog: await screen.findByRole("dialog", { name: /편집 충돌/ }), server: () => server };
 		}
+
+		it("tells who saved the newer version and when", async () => {
+			const changedAt = "2026-03-04T05:06:00.000Z";
+			const { dialog } = await conflicted({ ...newer, changedBy: "박미나", changedAt } as typeof newer);
+			expect(
+				within(dialog).getByText(`${formatDateTime(testSite, changedAt)}에 박미나 님이 저장했습니다.`),
+			).toBeTruthy();
+		});
+
+		it("tells only when it was saved when the saving admin is not known", async () => {
+			const changedAt = "2026-03-04T05:06:00.000Z";
+			const { dialog } = await conflicted({ ...newer, changedAt } as typeof newer);
+			expect(within(dialog).getByText(`${formatDateTime(testSite, changedAt)}에 저장했습니다.`)).toBeTruthy();
+			expect(within(dialog).queryByText(/님이 저장/)).toBeNull();
+		});
+
+		it("shows no saved line when the server did not say when", async () => {
+			const { dialog } = await conflicted();
+			expect(within(dialog).queryByText(/에 저장했습니다\.|님이 저장했습니다\./)).toBeNull();
+		});
 
 		it("loads the server version without reloading the page", async () => {
 			const { dialog } = await conflicted();
@@ -1183,6 +1207,34 @@ describe("language tabs", () => {
 	});
 });
 
+describe("admin options that hide features", () => {
+	const hiding = createSite({ ...testConfig, admin: { ...testConfig.admin, templates: false, translations: false } });
+	const grouped = {
+		...entry,
+		locale: "ko",
+		translationGroupId: "entry-1",
+		translations: [
+			{ id: "entry-1", locale: "ko", status: "published", isSource: true, title: "테스트", workingSlug: "test" },
+			{ id: "entry-en", locale: "en", status: "draft", isSource: false, title: "테스트", workingSlug: "test" },
+		],
+	};
+
+	it("shows the template menu and the language tabs unless the site turns them off", async () => {
+		serve(() => undefined, grouped);
+		renderEdit();
+		await screen.findByRole("navigation", { name: "언어" });
+		expect(screen.getByRole("button", { name: "템플릿" })).toBeTruthy();
+	});
+
+	it("hides the template menu and the language tabs of the editor", async () => {
+		serve(() => undefined, grouped);
+		render(withSite(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, hiding));
+		await editorTitle();
+		expect(screen.queryByRole("navigation", { name: "언어" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "템플릿" })).toBeNull();
+	});
+});
+
 describe("translation source pane", () => {
 	const SOURCE_MDX = "첫 문단\n\n둘째 문단\n";
 	const source = {
@@ -1250,16 +1302,16 @@ describe("translation source pane", () => {
 		await waitFor(() => expect(sourcePane()).not.toBeNull());
 		fireEvent.click(within(sourcePane() as HTMLElement).getByRole("button", { name: "닫기" }));
 		expect(sourcePane()).toBeNull();
-		expect(window.localStorage.getItem("cms:translation-source-pane")).toBe("closed");
+		expect(window.localStorage.getItem(preferenceKey(testSite, "translation-source-pane"))).toBe("closed");
 		const toggle = screen.getByRole("button", { name: "원문" });
 		expect(toggle.getAttribute("aria-pressed")).toBe("false");
 		fireEvent.click(toggle);
 		expect(sourcePane()).not.toBeNull();
-		expect(window.localStorage.getItem("cms:translation-source-pane")).toBe("open");
+		expect(window.localStorage.getItem(preferenceKey(testSite, "translation-source-pane"))).toBe("open");
 	});
 
 	it("opens a previously collapsed pane collapsed", async () => {
-		window.localStorage.setItem("cms:translation-source-pane", "closed");
+		window.localStorage.setItem(preferenceKey(testSite, "translation-source-pane"), "closed");
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();

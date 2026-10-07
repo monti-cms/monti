@@ -55,6 +55,13 @@ describe("defineConfig with a schema file", () => {
 		expect(config.media).toEqual({ maxImageBytes: 1000 });
 	});
 
+	it("reads the admin options that hide templates and the translation UI, and code can turn them back on", () => {
+		const file = cloneSchema();
+		file.admin = { ...file.admin, templates: false, translations: false };
+		expect(defineConfig({ schema: fileSchema(file) }).admin).toMatchObject({ templates: false, translations: false });
+		expect(defineConfig({ schema: fileSchema(file), admin: { templates: true } }).admin?.templates).toBe(true);
+	});
+
 	it("lets code override site and admin keys one by one, and keeps the file's value for a key left undefined", () => {
 		const config = defineConfig({
 			schema: fileSchema(),

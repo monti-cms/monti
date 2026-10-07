@@ -116,12 +116,12 @@ export const columnLabel = (site: Site, collection: string, column: AdminListCol
 
 /**
  * Default columns when there is no list setting (`list.columns`). Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
- * title, slug, locale, status, updated date. The locale column appears only with two or more locales, the slug column only when there is a slug field.
+ * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
  */
 export function defaultListColumns(site: Site, collection: string): AdminListColumn[] {
 	if (!site.isCollection(collection)) return ["title", "status"];
 	const schema = site.schemaOf(collection);
-	const locale = site.LOCALES.length > 1 ? ["locale"] : [];
+	const locale = site.ADMIN_TRANSLATIONS ? ["locale"] : [];
 	if (schema.kind === "item") {
 		const slug = Object.values(schema.fields).some((field) => field.kind === "slug") ? ["slug"] : [];
 		return ["title", ...slug, ...locale, "status", "updatedAt"];
@@ -146,6 +146,8 @@ export function columnsFor(
 		// Item collections have no publishing: saving is publishing. The locale column shows locales that have a name.
 		if (column === "publishedAt") return schema.kind === "document";
 		if (column === "slug") return slugField !== undefined;
+		// A site with one locale, or one that turned the translation UI off, has no locale column.
+		if (column === "locale") return site.ADMIN_TRANSLATIONS;
 		return true;
 	});
 	const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
@@ -153,7 +155,7 @@ export function columnsFor(
 	const listed = [...new Set(schema.list?.columns ?? [])];
 	const fieldColumns = listed.filter((column) => !taxonomy.includes(column) && fieldColumnOf(site, collection, column));
 	// Taxonomy field columns go after the locale column, and other field columns follow.
-	const at = system.indexOf("locale") + 1;
+	const at = system.indexOf(system.includes("locale") ? "locale" : "status") + 1;
 	const available = [...system.slice(0, at), ...taxonomy, ...fieldColumns, ...system.slice(at)];
 	const defaults = (schema.list?.columns ?? defaultListColumns(site, collection))
 		.map((column) => (column === slugField ? "slug" : column))

@@ -71,6 +71,10 @@ export interface Entry {
 	folderId: string | null;
 	createdAt: Date;
 	updatedAt: Date;
+	/** When the latest change that raised `version` was made (a save, publish or status change). Falls back to `updatedAt` for an entry with no change recorded. */
+	changedAt?: Date;
+	/** Who made that change (see `core/actor`). Absent when it was made outside an admin request, or before changes were recorded. */
+	changedBy?: string;
 	publishedAt?: Date;
 	trashedAt?: Date;
 	workingSlug: string | null;

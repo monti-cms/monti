@@ -48,7 +48,7 @@ export const eventsMessages = defineMessages("cms-admin.events", {
 		"column.when": "발생 시각",
 		"column.subscriber": "구독자",
 		"column.kind": "이벤트",
-		"column.entry": "글",
+		"column.entry": "항목",
 		"column.state": "상태",
 		"column.attempts": "시도",
 		"column.lastError": "마지막 오류",

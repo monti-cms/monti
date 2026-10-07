@@ -1482,6 +1482,14 @@
 							"type": "string"
 						}
 					}
+				},
+				"templates": {
+					"description": "false hides body templates in the admin: the editor's template menu, the sidebar link and the Templates screen.",
+					"type": "boolean"
+				},
+				"translations": {
+					"description": "false hides the translation UI in the admin (language tabs, locale column and filter). A site with one locale hides it anyway.",
+					"type": "boolean"
 				}
 			},
 			"additionalProperties": false

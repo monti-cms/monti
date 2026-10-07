@@ -93,6 +93,16 @@ export interface AdminConfig {
 	 * (`defineMessages`). Example: `{ "cms-admin.entries": { publish: "Ship it" } }`.
 	 */
 	readonly messages?: Readonly<Record<string, Readonly<Record<string, MessageValue>>>>;
+	/**
+	 * Whether the admin offers body templates: the template menu of the editor, the sidebar link and the Templates screen. Default `true`. `false` hides all three
+	 * (the templates already stored stay in the database).
+	 */
+	readonly templates?: boolean;
+	/**
+	 * Whether the admin shows the translation UI: the language tabs of the editor, the locale column, filter and badges of the list, and the language tabs of the
+	 * item panel. Default `true`. A site with one locale never shows it, whatever this says; `false` also hides it on a site with several locales.
+	 */
+	readonly translations?: boolean;
 }
 
 /**
@@ -307,6 +317,13 @@ function validate(
 		throw new Error(
 			"cms.config: admin.legacyBackupNames was removed; delete it (the admin UI only uses the `cms_backup` recovery database)",
 		);
+	}
+
+	for (const key of ["templates", "translations"] as const) {
+		const value = config.admin?.[key];
+		if (value !== undefined && typeof value !== "boolean") {
+			throw new Error(`cms.config: admin.${key} must be true or false`);
+		}
 	}
 
 	if (config.admin?.locale !== undefined) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { nounVars } from "../../shared/noun.messages";
 import { lifecycleConfirm, lifecycleSuccess } from "../lifecycle-confirm";
 import { entriesMessages } from "../messages";
 
@@ -15,38 +16,42 @@ const source = {
 	],
 } as never;
 const translation = { id: "en-1", translationGroupId: "src", translations: [] } as never;
+const collection = testSite.DEFAULT_COLLECTION;
+const noun = nounVars(testSite, collection);
 
 describe("status transition confirmation text", () => {
 	it("counts and reports only usages in the published version", () => {
-		const confirm = lifecycleConfirm(testSite, "archive", null, [
-			{ state: "published" },
-			{ state: "published" },
-			{ state: "draft" },
-		] as never);
+		const confirm = lifecycleConfirm(
+			testSite,
+			"archive",
+			null,
+			[{ state: "published" }, { state: "published" }, { state: "draft" }] as never,
+			collection,
+		);
 		expect(confirm.description).toBe(
-			`${t("lifecycle.archive.ask", { translation: 0 })}${t("lifecycle.usage", { count: 2 })}`,
+			`${t("lifecycle.archive.ask", { translation: 0, ...noun })}${t("lifecycle.usage", { count: 2, ...noun })}`,
 		);
 	});
 
 	it("moving the original to trash reports translation languages not in trash", () => {
-		const confirm = lifecycleConfirm(testSite, "trash", source, []);
+		const confirm = lifecycleConfirm(testSite, "trash", source, [], collection);
 		expect(confirm).toEqual({
 			title: t("lifecycle.trash"),
-			description: `${t("lifecycle.trash.ask", { translation: 0 })}${t("lifecycle.trash.group", { locales: "EN" })}`,
+			description: `${t("lifecycle.trash.ask", { translation: 0, ...noun })}${t("lifecycle.trash.group", { locales: "EN" })}`,
 			confirmLabel: t("lifecycle.trash"),
 			destructive: true,
 		});
 	});
 
 	it("archiving the original reports that translations are archived too", () => {
-		expect(lifecycleConfirm(testSite, "archive", source, []).description).toBe(
-			`${t("lifecycle.archive.ask", { translation: 0 })}${t("lifecycle.archive.group")}`,
+		expect(lifecycleConfirm(testSite, "archive", source, [], collection).description).toBe(
+			`${t("lifecycle.archive.ask", { translation: 0, ...noun })}${t("lifecycle.archive.group")}`,
 		);
 	});
 
 	it("there is no group notice when moving a translation", () => {
-		expect(lifecycleConfirm(testSite, "trash", translation, []).description).toBe(
-			t("lifecycle.trash.ask", { translation: 1 }),
+		expect(lifecycleConfirm(testSite, "trash", translation, [], collection).description).toBe(
+			t("lifecycle.trash.ask", { translation: 1, ...noun }),
 		);
 	});
 

@@ -7,6 +7,7 @@ export * from "./blocks/active";
 export * from "./blocks/define";
 export * from "./blocks/definitions";
 export * from "./blocks/derive";
+export * from "./core/admin-features";
 export * from "./core/admin-paths";
 export * from "./core/api";
 export * from "./core/collections";

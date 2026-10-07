@@ -102,6 +102,16 @@ describe("parseSchemaFile", () => {
 		).toBe("admin.path");
 		expect(
 			problems((schema) => {
+				schema.admin.templates = "no";
+			})[0]?.path,
+		).toBe("admin.templates");
+		expect(
+			problems((schema) => {
+				schema.admin.translations = 0;
+			})[0]?.path,
+		).toBe("admin.translations");
+		expect(
+			problems((schema) => {
 				schema.site.url = "ftp://example.com";
 			})[0]?.path,
 		).toBe("site.url");

@@ -181,41 +181,43 @@ export function RecordPanel({
 						onValueChange={(value) => setLocale(value as Locale)}
 						className="min-h-0 flex-1 gap-0 overflow-hidden"
 					>
-						<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
-							{site.LOCALES.map((option) => {
-								const filled = hasLocaleValues(site, collection, form, option);
-								const name = site.localeLabel(option);
-								return (
-									<TabsTrigger
-										key={option}
-										value={option}
-										aria-label={
-											option === site.DEFAULT_LOCALE
-												? name
-												: t(filled ? "record.translationOn" : "record.translationOff", { name })
-										}
-										className="flex-none gap-1.5 px-0 text-xs"
-									>
-										{name}
-										{option !== site.DEFAULT_LOCALE && (
-											<span
-												aria-hidden
-												className={cn(
-													"size-1.5 rounded-full",
-													filled ? "bg-emerald-500" : "border border-cms-muted-foreground/50",
-												)}
-											/>
-										)}
-									</TabsTrigger>
-								);
-							})}
-						</TabsList>
+						{site.ADMIN_TRANSLATIONS && (
+							<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
+								{site.LOCALES.map((option) => {
+									const filled = hasLocaleValues(site, collection, form, option);
+									const name = site.localeLabel(option);
+									return (
+										<TabsTrigger
+											key={option}
+											value={option}
+											aria-label={
+												option === site.DEFAULT_LOCALE
+													? name
+													: t(filled ? "record.translationOn" : "record.translationOff", { name })
+											}
+											className="flex-none gap-1.5 px-0 text-xs"
+										>
+											{name}
+											{option !== site.DEFAULT_LOCALE && (
+												<span
+													aria-hidden
+													className={cn(
+														"size-1.5 rounded-full",
+														filled ? "bg-emerald-500" : "border border-cms-muted-foreground/50",
+													)}
+												/>
+											)}
+										</TabsTrigger>
+									);
+								})}
+							</TabsList>
+						)}
 						<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
 							<TabsContent value={site.DEFAULT_LOCALE} className="space-y-4">
 								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
 								{id && <p className="text-cms-muted-foreground text-xs">{t("record.slugChange")}</p>}
 							</TabsContent>
-							{site.LOCALES.filter((option) => option !== site.DEFAULT_LOCALE).map((option) => (
+							{(site.ADMIN_TRANSLATIONS ? site.PREFIXED_LOCALES : []).map((option) => (
 								<TabsContent key={option} value={option} className="space-y-4">
 									<p className="text-cms-muted-foreground text-xs leading-relaxed">
 										{t("record.localeEmpty", { name: site.localeLabel(option) })}

@@ -1190,6 +1190,8 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |
 | `admin.locale` | 관리자 화면 언어와 날짜·숫자 표기(BCP 47, 예: `en`·`ko-KR`). 없으면 사이트 기본 언어(`defaultLocale`). 시각은 `timeZone`으로 보인다. |
 | `admin.messages` | 화면 문구 덮어쓰기: 이름공간 → 키 → 문구. 본체 블록 이름표는 `"cms.blocks"`(`image.label`처럼 `<블록>.label`), 코드 블록 효과는 `"cms.code-block"`, 검사 오류 문구는 `"cms.core"`·`"cms.translation"`이다(MDX를 읽을 때의 문구는 `@monti-cms/mdx`의 `"cms.mdx"`). |
+| `admin.templates` | `false`면 관리자에서 본문 템플릿을 감춘다: 편집기의 템플릿 메뉴, 사이드바 링크, 템플릿 화면(404). 기본 `true`. 저장된 템플릿은 그대로 남는다. |
+| `admin.translations` | `false`면 관리자에서 번역 UI를 감춘다: 편집기의 언어 탭, 목록의 언어 열·필터, 항목 패널의 언어 탭. 기본 `true`. 언어가 하나인 사이트는 이 값과 상관없이 보이지 않는다. |
 
 ### 컬렉션
 

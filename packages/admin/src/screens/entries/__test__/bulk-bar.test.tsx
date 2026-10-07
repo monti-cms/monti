@@ -67,7 +67,7 @@ describe("bulk actions", () => {
 		fireEvent.keyDown(screen.getByPlaceholderText("태그 검색"), { key: "Escape" });
 		await waitFor(() => expect(screen.queryByPlaceholderText("태그 검색")).toBeNull());
 		fireEvent.click(screen.getByRole("button", { name: "태그 추가" }));
-		await confirmIn("태그 추가", "선택한 글 1개에 'Tag One' 태그를 추가할까요?");
+		await confirmIn("태그 추가", "선택한 게시글 1개에 'Tag One' 태그를 추가할까요?");
 		await waitFor(() => expect(payloads).toHaveLength(1));
 		expect(payloads[0]).toEqual({
 			op: "relation.add",
@@ -79,7 +79,7 @@ describe("bulk actions", () => {
 		await choose("일괄 작업 종류", "카테고리 바꾸기");
 		await choose("대상 카테고리", "없음");
 		fireEvent.click(screen.getByRole("button", { name: "카테고리 바꾸기" }));
-		await confirmIn("카테고리 바꾸기", "선택한 글 1개의 카테고리를 비울까요?");
+		await confirmIn("카테고리 바꾸기", "선택한 게시글 1개의 카테고리를 비울까요?");
 		await waitFor(() => expect(payloads).toHaveLength(2));
 		expect(payloads[1]).toMatchObject({ op: "relation.set", field: "categoryId", id: null });
 
@@ -102,7 +102,7 @@ describe("bulk actions", () => {
 		expect(payloads).toHaveLength(0);
 		await confirmIn(
 			"보관 해제",
-			"선택한 글 1개의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않습니다.",
+			"선택한 게시글 1개의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않습니다.",
 		);
 		await waitFor(() => expect(payloads).toHaveLength(1));
 		expect(payloads[0]).toEqual({ op: "unarchive", items: [{ id: "entry-1", expectedVersion: 3 }] });

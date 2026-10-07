@@ -1,5 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
+import { enNoun, koNoun, koObject } from "../shared/noun.messages";
 
 /** Messages for the editor screen (fields, restore dialog, locale tabs, property panel, source dialog, template menu). The header and shell live in `entry-editor-shell.messages.ts`. */
 export const entriesMessages = defineMessages("cms-admin.entries", {
@@ -25,13 +26,13 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lifecycle.failed.unarchive": "Couldn't unarchive.",
 		"lifecycle.failed.trash": "Couldn't move to the trash.",
 		"lifecycle.failed.restore": "Couldn't restore.",
-		"lifecycle.usage": ({ count }) =>
-			` ${count} published ${Number(count) === 1 ? "item references" : "items reference"} this post.`,
-		"lifecycle.archive.ask": ({ translation }) =>
-			`Archive this ${translation ? "translation" : "post"}? It will no longer be public.`,
+		"lifecycle.usage": ({ count, ...vars }) =>
+			` ${count} published ${Number(count) === 1 ? "item references" : "items reference"} this ${enNoun(vars)}.`,
+		"lifecycle.archive.ask": ({ translation, ...vars }) =>
+			`Archive this ${translation ? "translation" : enNoun(vars)}? It will no longer be public.`,
 		"lifecycle.archive.group": " Its translations are archived too.",
-		"lifecycle.trash.ask": ({ translation }) =>
-			`Move this ${translation ? "translation" : "post"} to the trash? It will no longer be public.`,
+		"lifecycle.trash.ask": ({ translation, ...vars }) =>
+			`Move this ${translation ? "translation" : enNoun(vars)} to the trash? It will no longer be public.`,
 		"lifecycle.trash.group": ({ locales }) => ` The ${locales} translations are moved to the trash too.`,
 
 		"save.new": "Not saved",
@@ -49,13 +50,13 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		deleteFailed: "Couldn't delete.",
 		duplicateFailed: "Couldn't duplicate.",
 		fillEmpty: ({ label }) => `There's no body to create ${label} from. Enter it yourself.`,
-		"editor.readOnly": "This post can't be edited.",
+		"editor.readOnly": (vars) => `This ${enNoun(vars)} can't be edited.`,
 		"editor.busy": "Another action is still running.",
 		"editor.conflict": "Resolve the edit conflict first.",
 		"editor.unsaved": "Save your changes first.",
 		"editor.noConflict": "There is no edit conflict to resolve.",
 		"editor.noRecovery": "There is no browser copy to restore.",
-		"editor.notLoaded": "The post isn't loaded yet.",
+		"editor.notLoaded": (vars) => `The ${enNoun(vars)} isn't loaded yet.`,
 
 		"inspector.source": "This is the source ({locale}) value.",
 		"inspector.sourceLink": "Change it in the source",
@@ -141,6 +142,8 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"conflict.title": "Edit conflict",
 		"conflict.description":
 			"Someone saved first from another tab or device. Your input is still in this browser. Compare both sides, then copy what you need or pick one.",
+		"conflict.savedBy": "Saved by {name} on {date}.",
+		"conflict.savedAt": "Saved on {date}.",
 		"conflict.reload": "Reload",
 		"conflict.overwriteMine": "Overwrite with mine",
 		"conflict.copied": "Body copied.",
@@ -173,12 +176,13 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lifecycle.failed.unarchive": "보관 해제하지 못했습니다.",
 		"lifecycle.failed.trash": "휴지통으로 이동하지 못했습니다.",
 		"lifecycle.failed.restore": "복원하지 못했습니다.",
-		"lifecycle.usage": " 공개본에서 이 글을 참조하는 콘텐츠가 {count}개 있습니다.",
-		"lifecycle.archive.ask": ({ translation }) =>
-			`${translation ? "이 번역본을" : "이 글을"} 보관할까요? 공개가 종료됩니다.`,
+		"lifecycle.usage": ({ count, ...vars }) =>
+			` 공개본에서 이 ${koObject(vars)} 참조하는 콘텐츠가 ${count}개 있습니다.`,
+		"lifecycle.archive.ask": ({ translation, ...vars }) =>
+			`${translation ? "이 번역본을" : `이 ${koObject(vars)}`} 보관할까요? 공개가 종료됩니다.`,
 		"lifecycle.archive.group": " 번역본도 함께 보관합니다.",
-		"lifecycle.trash.ask": ({ translation }) =>
-			`${translation ? "이 번역본을" : "이 글을"} 휴지통으로 이동할까요? 공개가 종료됩니다.`,
+		"lifecycle.trash.ask": ({ translation, ...vars }) =>
+			`${translation ? "이 번역본을" : `이 ${koObject(vars)}`} 휴지통으로 이동할까요? 공개가 종료됩니다.`,
 		"lifecycle.trash.group": " {locales} 번역본도 함께 휴지통으로 이동합니다.",
 
 		"save.new": "저장 전",
@@ -196,19 +200,19 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		deleteFailed: "삭제하지 못했습니다.",
 		duplicateFailed: "복제하지 못했습니다.",
 		fillEmpty: ({ label }) => `${josa(String(label), "을", "를")} 만들 본문이 없습니다. 직접 입력하세요.`,
-		"editor.readOnly": "편집할 수 없는 글입니다.",
+		"editor.readOnly": (vars) => `편집할 수 없는 ${koNoun(vars)}입니다.`,
 		"editor.busy": "다른 작업이 아직 진행 중입니다.",
 		"editor.conflict": "편집 충돌을 먼저 해결하세요.",
 		"editor.unsaved": "변경사항을 먼저 저장하세요.",
 		"editor.noConflict": "해결할 편집 충돌이 없습니다.",
 		"editor.noRecovery": "불러올 브라우저 임시 저장본이 없습니다.",
-		"editor.notLoaded": "아직 문서를 불러오지 못했습니다.",
+		"editor.notLoaded": (vars) => `아직 ${koObject(vars)} 불러오지 못했습니다.`,
 
 		"inspector.source": "원문({locale}) 값입니다.",
 		"inspector.sourceLink": "원문에서 바꿉니다",
 		"inspector.removed.title": "삭제된 필드의 값",
 		"inspector.removed.body":
-			"사이트 설정에서 사라진 필드입니다. 값은 이 글에 그대로 남아 있지만 여기서는 고칠 수 없습니다: {keys}",
+			"사이트 설정에서 사라진 필드입니다. 값은 이 항목에 그대로 남아 있지만 여기서는 고칠 수 없습니다: {keys}",
 		"select.removedOption": "{value} (더 이상 없는 선택지)",
 
 		"lang.saveFirst": "변경사항을 먼저 저장한 후 번역본을 만드세요.",
@@ -287,6 +291,8 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"conflict.title": "편집 충돌",
 		"conflict.description":
 			"다른 탭이나 기기에서 먼저 저장했습니다. 내 입력은 브라우저에 남아 있습니다. 양쪽을 비교해 복사하거나 하나를 고르세요.",
+		"conflict.savedBy": "{date}에 {name} 님이 저장했습니다.",
+		"conflict.savedAt": "{date}에 저장했습니다.",
 		"conflict.reload": "다시 불러오기",
 		"conflict.overwriteMine": "내 내용으로 덮어쓰기",
 		"conflict.copied": "본문을 복사했습니다.",

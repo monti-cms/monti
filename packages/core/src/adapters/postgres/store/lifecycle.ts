@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { currentActor } from "../../../core/actor";
 import {
 	assertArchivable,
 	assertDeletable,
@@ -74,8 +75,9 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 	const setMembersStatus = async (client: PoolClient, ids: readonly string[], status: EntryStatus, extra = "") => {
 		if (ids.length === 0) return;
 		await client.query(
-			`UPDATE "${qSchema}".entries SET status = $1, version = version + 1${extra} WHERE id = ANY($2::uuid[])`,
-			[status, ids],
+			`UPDATE "${qSchema}".entries SET status = $1, version = version + 1, changed_by = $3, changed_at = NOW()${extra}
+			 WHERE id = ANY($2::uuid[])`,
+			[status, ids, currentActor()],
 		);
 	};
 
@@ -94,11 +96,10 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		archiveEntry: (params: LifecycleParams) =>
 			transition(params, "archive", "archived", async (client, locked) => {
 				assertArchivable(site, locked.collection, locked.version);
-				await client.query(`UPDATE "${qSchema}".entries SET status = $1, version = $2 WHERE id = $3`, [
-					STATUS_AFTER.archive,
-					locked.version + 1,
-					params.id,
-				]);
+				await client.query(
+					`UPDATE "${qSchema}".entries SET status = $1, version = $2, changed_by = $4, changed_at = NOW() WHERE id = $3`,
+					[STATUS_AFTER.archive, locked.version + 1, params.id, currentActor()],
+				);
 				const members = await lockTranslations(client, params.id);
 				await setMembersStatus(client, membersToArchive(members), STATUS_AFTER.archive);
 			}),
@@ -106,11 +107,10 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		/** Archived to draft. Does not republish automatically. */
 		unarchiveEntry: (params: LifecycleParams) =>
 			transition(params, "unarchive", "unarchived", async (client, locked) => {
-				await client.query(`UPDATE "${qSchema}".entries SET status = $1, version = $2 WHERE id = $3`, [
-					STATUS_AFTER.unarchive,
-					locked.version + 1,
-					params.id,
-				]);
+				await client.query(
+					`UPDATE "${qSchema}".entries SET status = $1, version = $2, changed_by = $4, changed_at = NOW() WHERE id = $3`,
+					[STATUS_AFTER.unarchive, locked.version + 1, params.id, currentActor()],
+				);
 				const members = await lockTranslations(client, params.id);
 				await setMembersStatus(client, membersToUnarchive(members), STATUS_AFTER.unarchive);
 			}),
@@ -125,8 +125,9 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: true });
 				}
 				await client.query(
-					`UPDATE "${qSchema}".entries SET status = $1, trashed_at = NOW(), version = $2 WHERE id = $3`,
-					[STATUS_AFTER.trash, locked.version + 1, params.id],
+					`UPDATE "${qSchema}".entries SET status = $1, trashed_at = NOW(), version = $2, changed_by = $4, changed_at = NOW()
+					 WHERE id = $3`,
+					[STATUS_AFTER.trash, locked.version + 1, params.id, currentActor()],
 				);
 				// NOW() is the same value within one transaction. On restore, this timestamp finds the "translations trashed together".
 				const members = await lockTranslations(client, params.id);
@@ -157,8 +158,9 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					: null;
 				const version = locked.version + 1;
 				await client.query(
-					`UPDATE "${qSchema}".entries SET status = $1, trashed_at = NULL, version = $2 WHERE id = $3`,
-					[STATUS_AFTER.restore, version, params.id],
+					`UPDATE "${qSchema}".entries SET status = $1, trashed_at = NULL, version = $2, changed_by = $4, changed_at = NOW()
+					 WHERE id = $3`,
+					[STATUS_AFTER.restore, version, params.id, currentActor()],
 				);
 				if (restorePublishesAgain(site, locked.collection)) {
 					// A record is published again on restore, so the service passes the prepared draft.

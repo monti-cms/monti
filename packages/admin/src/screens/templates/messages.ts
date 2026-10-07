@@ -32,7 +32,7 @@ export const templatesMessages = defineMessages("cms-admin.templates", {
 		"delete.failed": "Couldn't delete.",
 		"delete.done": "Deleted template '{name}'.",
 		"delete.title": "Delete template",
-		"delete.ask": "Delete template '{name}'? Posts written with it aren't affected.",
+		"delete.ask": "Delete template '{name}'? Content written with it isn't affected.",
 	},
 	ko: {
 		title: "본문 템플릿",
@@ -64,6 +64,6 @@ export const templatesMessages = defineMessages("cms-admin.templates", {
 		"delete.failed": "삭제하지 못했습니다.",
 		"delete.done": "'{name}' 템플릿을 삭제했습니다.",
 		"delete.title": "템플릿 삭제",
-		"delete.ask": "'{name}' 템플릿을 삭제할까요? 이 템플릿으로 쓴 글에는 영향이 없습니다.",
+		"delete.ask": "'{name}' 템플릿을 삭제할까요? 이 템플릿으로 쓴 본문에는 영향이 없습니다.",
 	},
 });

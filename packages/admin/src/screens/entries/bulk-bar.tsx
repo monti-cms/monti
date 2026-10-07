@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { cmsFetch, errorText } from "../admin-api";
 import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
+import { nounVars } from "../shared/noun.messages";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
 
@@ -56,6 +57,7 @@ type ActionDef = {
  */
 export function taxonomyActions(site: Site, collection: string): ActionDef[] {
 	const t = site.createTranslator(bulkBarMessages);
+	const noun = nounVars(site, collection);
 	const fields = site
 		.taxonomyFieldsOf(collection)
 		.flatMap((stored) =>
@@ -74,10 +76,10 @@ export function taxonomyActions(site: Site, collection: string): ActionDef[] {
 			.filter((field) => field.many)
 			.flatMap((field) => [
 				action("relation.add", field, (count, target) =>
-					t("ask.relation.add", { count, label: field.label, target: target ?? "" }),
+					t("ask.relation.add", { count, ...noun, label: field.label, target: target ?? "" }),
 				),
 				action("relation.remove", field, (count, target) =>
-					t("ask.relation.remove", { count, label: field.label, target: target ?? "" }),
+					t("ask.relation.remove", { count, ...noun, label: field.label, target: target ?? "" }),
 				),
 			]),
 		...fields
@@ -85,23 +87,23 @@ export function taxonomyActions(site: Site, collection: string): ActionDef[] {
 			.map((field) =>
 				action("relation.set", field, (count, target) =>
 					target === null
-						? t("ask.relation.clear", { count, label: field.label })
-						: t("ask.relation.set", { count, label: field.label, target }),
+						? t("ask.relation.clear", { count, ...noun, label: field.label })
+						: t("ask.relation.set", { count, ...noun, label: field.label, target }),
 				),
 			),
 	];
 }
 
-const listActions = (t: TranslatorFor<typeof bulkBarMessages>): ActionDef[] => [
+const listActions = (t: TranslatorFor<typeof bulkBarMessages>, noun: { noun: string }): ActionDef[] => [
 	{
 		value: "folder.move",
 		label: t("folder.move"),
 		ask: (count, target) =>
 			target === null ? t("ask.folder.root", { count }) : t("ask.folder.move", { count, target }),
 	},
-	{ value: "publish", label: t("publish"), ask: (count) => t("ask.publish", { count }), content: true },
-	{ value: "archive", label: t("archive"), ask: (count) => t("ask.archive", { count }), content: true },
-	{ value: "unarchive", label: t("unarchive"), ask: (count) => t("ask.unarchive", { count }), content: true },
+	{ value: "publish", label: t("publish"), ask: (count) => t("ask.publish", { count, ...noun }), content: true },
+	{ value: "archive", label: t("archive"), ask: (count) => t("ask.archive", { count, ...noun }), content: true },
+	{ value: "unarchive", label: t("unarchive"), ask: (count) => t("ask.unarchive", { count, ...noun }), content: true },
 	{ value: "trash", label: t("trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
 ];
 
@@ -257,7 +259,10 @@ export function BulkBar({
 		() =>
 			mode === "trash"
 				? trashActions(t)
-				: [...taxonomyActions(site, collection), ...listActions(t).filter((action) => !action.content || !isRecord)],
+				: [
+						...taxonomyActions(site, collection),
+						...listActions(t, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
+					],
 		[isRecord, collection, mode, site, t],
 	);
 	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");

@@ -93,6 +93,16 @@ export function ConflictDialog({
 				<DialogHeader>
 					<DialogTitle>{t("conflict.title")}</DialogTitle>
 					<DialogDescription>{t("conflict.description")}</DialogDescription>
+					{conflict?.server.changedAt && (
+						<p className="font-medium text-sm">
+							{conflict.server.changedBy
+								? t("conflict.savedBy", {
+										name: conflict.server.changedBy,
+										date: formatDateTime(site, conflict.server.changedAt),
+									})
+								: t("conflict.savedAt", { date: formatDateTime(site, conflict.server.changedAt) })}
+						</p>
+					)}
 				</DialogHeader>
 				{conflict && (
 					<ComparePanes

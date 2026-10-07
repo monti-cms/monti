@@ -1,7 +1,8 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
+import { enSelected, koSelected } from "../shared/noun.messages";
 
-/** English: the noun in the right number ("1 selected post" / "3 selected posts"). */
+/** English: the generic noun in the right number ("1 selected item" / "3 selected items"). */
 const selected = (count: unknown, noun: string) => `${count} selected ${noun}${Number(count) === 1 ? "" : "s"}`;
 
 /** Korean: picks the "으로"/"로" particle by final consonant ("로" after no final or ㄹ). */
@@ -17,21 +18,20 @@ export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
 		"relation.add": "Add {label}",
 		"relation.remove": "Remove {label}",
 		"relation.set": "Change {label}",
-		"ask.relation.add": ({ count, label, target }) => `Add ${label} '${target}' to ${selected(count, "post")}?`,
-		"ask.relation.remove": ({ count, label, target }) => `Remove ${label} '${target}' from ${selected(count, "post")}?`,
-		"ask.relation.clear": ({ count, label }) => `Clear ${label} of ${selected(count, "post")}?`,
-		"ask.relation.set": ({ count, label, target }) => `Change ${label} of ${selected(count, "post")} to '${target}'?`,
+		"ask.relation.add": ({ label, target, ...vars }) => `Add ${label} '${target}' to ${enSelected(vars)}?`,
+		"ask.relation.remove": ({ label, target, ...vars }) => `Remove ${label} '${target}' from ${enSelected(vars)}?`,
+		"ask.relation.clear": ({ label, ...vars }) => `Clear ${label} of ${enSelected(vars)}?`,
+		"ask.relation.set": ({ label, target, ...vars }) => `Change ${label} of ${enSelected(vars)} to '${target}'?`,
 		"folder.move": "Move to folder",
 		"ask.folder.move": ({ count, target }) => `Move ${selected(count, "item")} to '${target}'?`,
 		"ask.folder.root": ({ count }) => `Move ${selected(count, "item")} to the top level?`,
 		publish: "Publish",
-		"ask.publish": ({ count }) =>
-			`Publish ${selected(count, "post")}? Each is checked first, and the latest draft goes live.`,
+		"ask.publish": (vars) => `Publish ${enSelected(vars)}? Each is checked first, and the latest draft goes live.`,
 		archive: "Archive",
-		"ask.archive": ({ count }) => `Archive ${selected(count, "post")}? They will no longer be public.`,
+		"ask.archive": (vars) => `Archive ${enSelected(vars)}? They will no longer be public.`,
 		unarchive: "Unarchive",
-		"ask.unarchive": ({ count }) =>
-			`Unarchive ${selected(count, "post")}? They go back to draft and aren't republished automatically.`,
+		"ask.unarchive": (vars) =>
+			`Unarchive ${enSelected(vars)}? They go back to draft and aren't republished automatically.`,
 		trash: "Move to trash",
 		"ask.trash": ({ count }) => `Move ${selected(count, "item")} to the trash? They will no longer be public.`,
 		permanentDelete: "Delete permanently",
@@ -74,22 +74,23 @@ export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
 		"relation.add": "{label} 추가",
 		"relation.remove": "{label} 빼기",
 		"relation.set": "{label} 바꾸기",
-		"ask.relation.add": ({ count, label, target }) =>
-			`선택한 글 ${count}개에 '${target}' ${josa(String(label), "을", "를")} 추가할까요?`,
-		"ask.relation.remove": ({ count, label, target }) =>
-			`선택한 글 ${count}개에서 '${target}' ${josa(String(label), "을", "를")} 뺄까요?`,
-		"ask.relation.clear": ({ count, label }) => `선택한 글 ${count}개의 ${josa(String(label), "을", "를")} 비울까요?`,
-		"ask.relation.set": ({ count, label, target }) =>
-			`선택한 글 ${count}개의 ${josa(String(label), "을", "를")} ${toward(`'${target}'`)} 바꿀까요?`,
+		"ask.relation.add": ({ label, target, ...vars }) =>
+			`${koSelected(vars)}에 '${target}' ${josa(String(label), "을", "를")} 추가할까요?`,
+		"ask.relation.remove": ({ label, target, ...vars }) =>
+			`${koSelected(vars)}에서 '${target}' ${josa(String(label), "을", "를")} 뺄까요?`,
+		"ask.relation.clear": ({ label, ...vars }) => `${koSelected(vars)}의 ${josa(String(label), "을", "를")} 비울까요?`,
+		"ask.relation.set": ({ label, target, ...vars }) =>
+			`${koSelected(vars)}의 ${josa(String(label), "을", "를")} ${toward(`'${target}'`)} 바꿀까요?`,
 		"folder.move": "폴더로 이동",
 		"ask.folder.move": "선택한 항목 {count}개를 '{target}' 폴더로 이동할까요?",
 		"ask.folder.root": "선택한 항목 {count}개를 최상위로 이동할까요?",
 		publish: "발행",
-		"ask.publish": "선택한 글 {count}개를 발행할까요? 각 글에 발행 검증을 적용하고 최신 초안이 공개됩니다.",
+		"ask.publish": (vars) => `${koSelected(vars)}를 발행할까요? 각각 발행 검증을 적용하고 최신 초안이 공개됩니다.`,
 		archive: "보관",
-		"ask.archive": "선택한 글 {count}개를 보관할까요? 공개가 종료됩니다.",
+		"ask.archive": (vars) => `${koSelected(vars)}를 보관할까요? 공개가 종료됩니다.`,
 		unarchive: "보관 해제",
-		"ask.unarchive": "선택한 글 {count}개의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않습니다.",
+		"ask.unarchive": (vars) =>
+			`${koSelected(vars)}의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않습니다.`,
 		trash: "휴지통으로 이동",
 		"ask.trash": "선택한 항목 {count}개를 휴지통으로 이동할까요? 공개가 종료됩니다.",
 		permanentDelete: "영구 삭제",

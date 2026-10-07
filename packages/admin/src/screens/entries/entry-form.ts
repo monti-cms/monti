@@ -75,6 +75,9 @@ export interface EntryData {
 	status: "draft" | "published" | "archived" | "trashed";
 	version: number;
 	folderId: string | null;
+	/** When the latest change that raised `version` was made, and who made it (absent when it was made outside an admin request). The conflict dialog shows both. */
+	changedAt?: string;
+	changedBy?: string;
 	publishedAt?: string;
 	workingSlug: string | null;
 	publishedSlug: string | null;

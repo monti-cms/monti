@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { preferenceKey } from "../../lib/utils/site-storage";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { EDITOR_WIDTHS } from "../editor-width";
@@ -20,7 +21,7 @@ beforeAll(() => {
 });
 afterEach(() => {
 	cleanup();
-	window.localStorage.removeItem("cms:editor-width");
+	window.localStorage.removeItem(preferenceKey(testSite, "editor-width"));
 });
 
 const renderEditor = async () => {
@@ -35,6 +36,13 @@ describe(t("editorWidth.label"), () => {
 	it("starts at the normal width", async () => {
 		await renderEditor();
 		expect(editorWidth()).toBe(EDITOR_WIDTHS.normal);
+	});
+
+	it("still uses the width remembered under the key from before keys were per site", async () => {
+		window.localStorage.setItem("cms:editor-width", "full");
+		await renderEditor();
+		await waitFor(() => expect(editorWidth()).toBe(EDITOR_WIDTHS.full));
+		window.localStorage.removeItem("cms:editor-width");
 	});
 
 	it("changes when picked from the width menu and is remembered after reopening", async () => {

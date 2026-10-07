@@ -95,12 +95,13 @@ export interface RecoveryStore {
 }
 
 /**
- * The browser's IndexedDB.
+ * The browser's IndexedDB, in a database of the site's own (two sites on one origin keep their copies apart). Copies the old shared database holds are still found:
+ * the first read of one moves it to the site's database.
  *
  * @experimental
  */
-export const localRecoveryStore: RecoveryStore = {
-	get: (key) => getLocalBackup<EntryForm>(key),
-	put: (record) => saveLocalBackup(record),
-	delete: (key) => deleteLocalBackup(key),
-};
+export const localRecoveryStoreOf = (site: Site): RecoveryStore => ({
+	get: (key) => getLocalBackup<EntryForm>(key, site),
+	put: (record) => saveLocalBackup(record, site),
+	delete: (key) => deleteLocalBackup(key, site),
+});

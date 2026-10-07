@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { currentActor } from "../../../core/actor";
 import {
 	assertPublishableStatus,
 	assertSameCollection,
@@ -196,8 +197,9 @@ export function createPublishing(ctx: StoreContext) {
 		if (!republish) {
 			await client.query(
 				`UPDATE "${qSchema}".entries SET version = $1, status = 'published',
-				 published_at = CASE WHEN $4 THEN $2 ELSE COALESCE(published_at, $2) END WHERE id = $3`,
-				[locked.version + 1, now, id, Boolean(options.resetPublishedAt)],
+				 published_at = CASE WHEN $4 THEN $2 ELSE COALESCE(published_at, $2) END,
+				 changed_by = $5, changed_at = $2 WHERE id = $3`,
+				[locked.version + 1, now, id, Boolean(options.resetPublishedAt), currentActor()],
 			);
 			await writeBody(site, client, qSchema, id, "published", {
 				metadata: working.metadata,
@@ -233,8 +235,9 @@ export function createPublishing(ctx: StoreContext) {
 			}
 		} else if (options.resetPublishedAt) {
 			await client.query(
-				`UPDATE "${qSchema}".entries SET version = $1, status = 'published', published_at = $2 WHERE id = $3`,
-				[locked.version + 1, now, id],
+				`UPDATE "${qSchema}".entries SET version = $1, status = 'published', published_at = $2,
+				 changed_by = $4, changed_at = $2 WHERE id = $3`,
+				[locked.version + 1, now, id, currentActor()],
 			);
 		} else {
 			await client.query(`UPDATE "${qSchema}".entries SET status = 'published' WHERE id = $1`, [id]);

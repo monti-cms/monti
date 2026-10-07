@@ -6,6 +6,7 @@ import { createStateStore, type StateStore } from "../../hooks/store";
 import type { TranslatorFor } from "../../translator";
 import { CmsApiError, errorText } from "../admin-api";
 import type { CmsIssue } from "../api-error-message";
+import { nounVars } from "../shared/noun.messages";
 import type { EntryEditorClient, EntryStatusAction, RecoveryRecord, RecoveryStore } from "./entry-editor-client";
 import {
 	copyTitle,
@@ -545,7 +546,8 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const performSave = (): Promise<EditorResult<EntrySaveOutcome>> => {
 		if (m.inflight) return m.inflight;
 		const current = state();
-		if (current.readOnly) return Promise.resolve(editorFailure("read_only", t("editor.readOnly")));
+		if (current.readOnly)
+			return Promise.resolve(editorFailure("read_only", t("editor.readOnly", nounVars(site, current.collection))));
 		if (current.saveStatus === "conflict") return Promise.resolve(editorFailure("conflict", t("editor.conflict")));
 		if (m.entryId && m.changeSeq <= m.ackSeq && current.entry) {
 			if (current.saveStatus !== "session-expired") commit({ saveStatus: "saved" });
@@ -711,7 +713,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 
 	const publish = async (options: { resetPublishedAt?: boolean } = {}): Promise<EditorResult<PublishOutcome>> => {
 		const current = state();
-		if (current.readOnly) return editorFailure("read_only", t("editor.readOnly"));
+		if (current.readOnly) return editorFailure("read_only", t("editor.readOnly", nounVars(site, current.collection)));
 		if (current.busy) return editorFailure("invalid_state", t("editor.busy"));
 		if (current.saveStatus === "conflict") return editorFailure("conflict", t("editor.conflict"));
 		commit({ busy: "publish", publishIssues: [] });
@@ -752,7 +754,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const changeStatus = async (action: EntryStatusAction): Promise<EditorResult<StatusOutcome>> => {
 		const current = state();
 		const entry = current.entry;
-		if (!entry) return editorFailure("invalid_state", t("editor.notLoaded"));
+		if (!entry) return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
 		if (current.busy) return editorFailure("invalid_state", t("editor.busy"));
 		if (action !== "restore" && m.changeSeq > m.ackSeq) return editorFailure("invalid_state", t("editor.unsaved"));
 		commit({ busy: "status" });
@@ -789,7 +791,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 
 	const deletePermanently = async (): Promise<EditorResult> => {
 		const entry = state().entry;
-		if (!entry) return editorFailure("invalid_state", t("editor.notLoaded"));
+		if (!entry) return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
 		try {
 			await client.remove(entry.id, { expectedVersion: m.version });
 			cancelPendingBackup();
@@ -828,11 +830,11 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 
 	const reload = async (): Promise<EditorResult<EntryData>> => {
 		const id = m.entryId;
-		if (!id) return editorFailure("invalid_state", t("editor.notLoaded"));
+		if (!id) return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
 		if (m.inflight) await m.inflight;
 		try {
 			const loaded = await fetchAndApply(id);
-			if (!loaded) return editorFailure("invalid_state", t("editor.notLoaded"));
+			if (!loaded) return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
 			m.recoveryRecord = null;
 			commit({ recovery: null });
 			await discardBackup(backupKey(adminId, loaded.id, loaded.collection));
