@@ -1,9 +1,11 @@
+import { sql } from "kysely";
 import { CmsError } from "../../../core/store/errors";
 import type { EntryMetadata, PublishedEntryLookup, PublishedEntryRecord } from "../../../core/store/types";
 import type { Site } from "../../../site";
+import type { Db } from "../db/kysely";
 import type { StoreContext } from "./context";
 import { mapPublishedEntryRow } from "./rows";
-import { titleSql, translatedTitleSql } from "./title-sql";
+import { titleExpr, translatedTitleExpr } from "./title-sql";
 
 function assertPublicCollections(site: Site, collections: readonly string[]): void {
 	if (!Array.isArray(collections) || collections.length === 0) {
@@ -29,21 +31,41 @@ type PublishedRow = {
 	body_updated_at: Date;
 };
 
+/** The group an entry belongs to: its source, or itself for a source. */
+const groupOf = sql<string>`coalesce(e.translation_group_id, e.id)`;
+
 /**
- * A translation is read together with its source's published version. If the source is not published, the translation is not in the public layer either.
- * For a source, `src` is itself.
+ * Entries with a current address and a published body, read together with their source's published version: a translation is in the public layer only
+ * while its source is published. For a source, `src` is itself.
  */
-const sourceJoin = (qSchema: string) => `JOIN "${qSchema}".entries src
-	   ON src.id = COALESCE(e.translation_group_id, e.id) AND src.status = 'published'
-	 JOIN "${qSchema}".entry_bodies sb
-	   ON sb.entry_id = src.id AND sb.state = 'published'`;
+const publishedFrom = (db: Db) =>
+	db
+		.selectFrom("entries as e")
+		.innerJoin("content_addresses as a", (join) =>
+			join.onRef("a.entry_id", "=", "e.id").onRef("a.collection", "=", "e.collection").on("a.type", "=", "current"),
+		)
+		.innerJoin("entry_bodies as b", (join) => join.onRef("b.entry_id", "=", "e.id").on("b.state", "=", "published"))
+		.innerJoin("entries as src", (join) => join.on("src.id", "=", groupOf).on("src.status", "=", "published"))
+		.innerJoin("entry_bodies as sb", (join) =>
+			join.onRef("sb.entry_id", "=", "src.id").on("sb.state", "=", "published"),
+		);
+
+type PublishedFrom = ReturnType<typeof publishedFrom>;
 
 /** The publish date is the source's (a translation uses the source date too). The modified date is that of this language's body. */
-const PUBLISHED_COLUMNS = (withBody: boolean, address = "a") =>
-	`e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
-	 ${address}.slug AS slug, b.metadata, sb.metadata AS source_metadata,
-	 ${withBody ? "b.doc" : "NULL::jsonb"} AS doc,
-	 src.published_at, b.updated_at AS body_updated_at`;
+const selectPublished = (from: PublishedFrom, withBody: boolean) =>
+	from.select([
+		"e.id",
+		"e.collection",
+		"e.locale",
+		sql<string>`coalesce(e.translation_group_id, e.id)`.as("translation_group_id"),
+		"a.slug",
+		"b.metadata",
+		"sb.metadata as source_metadata",
+		(withBody ? sql.ref<unknown>("b.doc") : sql<unknown>`null::jsonb`).as("doc"),
+		"src.published_at",
+		"b.updated_at as body_updated_at",
+	]);
 
 /** Translation metadata = the source's shared values + the translation's per-language values. */
 function mapPublishedRow(site: Site, row: PublishedRow): PublishedEntryRecord {
@@ -78,7 +100,7 @@ export interface PublishedPageParams {
 	readonly includeBody?: boolean;
 }
 
-/** The columns of the sorts that do not read a field. The title sort reads the collection's title field (`titleSql`). */
+/** The columns of the sorts that do not read a field. The title sort reads the collection's title field (`titleExpr`). */
 const SORT_COLUMNS: Record<Exclude<PublishedSort, "title">, string> = {
 	publishedAt: "src.published_at",
 	updatedAt: "b.updated_at",
@@ -89,7 +111,8 @@ const SORT_COLUMNS: Record<Exclude<PublishedSort, "title">, string> = {
  * It requires both a published body and published status, so drafts, archived, and trashed entries are never returned by any path.
  */
 export function createPublicReadOps(ctx: StoreContext) {
-	const { pool, qSchema, site } = ctx;
+	const { site } = ctx;
+	const db = ctx.db();
 	return {
 		listPublishedEntries: async (params: {
 			collections: readonly string[];
@@ -108,21 +131,16 @@ export function createPublicReadOps(ctx: StoreContext) {
 				throw new CmsError("Invalid locale", "invalid_input");
 			}
 
-			const res = await pool.query<PublishedRow>(
-				`SELECT ${PUBLISHED_COLUMNS(params.includeBody === true)}
-				 FROM "${qSchema}".entries e
-				 JOIN "${qSchema}".content_addresses a
-				   ON a.entry_id = e.id AND a.collection = e.collection AND a.type = 'current'
-				 JOIN "${qSchema}".entry_bodies b
-				   ON b.entry_id = e.id AND b.state = 'published'
-				 ${sourceJoin(qSchema)}
-				 WHERE e.status = 'published' AND e.collection = ANY($1::text[])
-				   AND ($2::text IS NULL OR e.locale = $2)
-				 ORDER BY b.updated_at DESC, e.id ASC`,
-				[params.collections, params.locale ?? null],
-			);
+			const { locale } = params;
+			const rows = await selectPublished(publishedFrom(db), params.includeBody === true)
+				.where("e.status", "=", "published")
+				.where("e.collection", "=", sql<string>`any(${[...params.collections]}::text[])`)
+				.$if(locale !== undefined, (qb) => qb.where("e.locale", "=", locale as string))
+				.orderBy("b.updated_at", "desc")
+				.orderBy("e.id", "asc")
+				.execute();
 
-			return res.rows.map((row) => mapPublishedRow(site, row));
+			return rows.map((row) => mapPublishedRow(site, row));
 		},
 
 		// If the requested slug is a former address (alias), return the entry that owns the canonical current slug.
@@ -148,24 +166,23 @@ export function createPublicReadOps(ctx: StoreContext) {
 				throw new CmsError("Invalid includeBody", "invalid_input");
 			}
 
-			const res = await pool.query<PublishedRow & { is_alias: boolean }>(
-				`SELECT ${PUBLISHED_COLUMNS(params.includeBody !== false, "cur")}, (matched.type = 'alias') AS is_alias
-				 FROM "${qSchema}".entries e
-				 JOIN "${qSchema}".content_addresses matched
-				   ON matched.entry_id = e.id AND matched.collection = e.collection AND matched.locale = $3
-				  AND matched.slug = $2 AND matched.type IN ('current', 'alias')
-				 JOIN "${qSchema}".content_addresses cur
-				   ON cur.entry_id = e.id AND cur.collection = e.collection AND cur.type = 'current'
-				 JOIN "${qSchema}".entry_bodies b
-				   ON b.entry_id = e.id AND b.state = 'published'
-				 ${sourceJoin(qSchema)}
-				 WHERE e.status = 'published' AND e.collection = $1
-				 ORDER BY (matched.type = 'current') DESC
-				 LIMIT 1`,
-				[params.collection, params.slug, params.locale ?? site.DEFAULT_LOCALE],
-			);
+			// `a` is the current address of the entry, `matched` the address the request named (the current one or a former one).
+			const row = await selectPublished(publishedFrom(db), params.includeBody !== false)
+				.innerJoin("content_addresses as matched", (join) =>
+					join
+						.onRef("matched.entry_id", "=", "e.id")
+						.onRef("matched.collection", "=", "e.collection")
+						.on("matched.locale", "=", params.locale ?? site.DEFAULT_LOCALE)
+						.on("matched.slug", "=", params.slug)
+						.on("matched.type", "in", ["current", "alias"]),
+				)
+				.select((eb) => eb("matched.type", "=", "alias").as("is_alias"))
+				.where("e.status", "=", "published")
+				.where("e.collection", "=", params.collection)
+				.orderBy((eb) => eb("matched.type", "=", "current"), "desc")
+				.limit(1)
+				.executeTakeFirst();
 
-			const row = res.rows[0];
 			if (!row) return { status: "not_found" };
 
 			return {
@@ -192,73 +209,59 @@ export function createPublicReadOps(ctx: StoreContext) {
 			}
 			const sort = params.sort ?? "publishedAt";
 			if (sort !== "title" && !(sort in SORT_COLUMNS)) throw new CmsError("Invalid sort", "invalid_input");
-			const order = params.order === "asc" ? "ASC" : "DESC";
+			const descending = params.order !== "asc";
 
-			const values: unknown[] = [params.collection, params.locale ?? site.DEFAULT_LOCALE];
-			const bind = (value: unknown) => {
-				values.push(value);
-				return `$${values.length}`;
-			};
-			const conditions = ["e.status = 'published'", "e.collection = $1", "e.locale = $2"];
+			let from = publishedFrom(db)
+				.where("e.status", "=", "published")
+				.where("e.collection", "=", params.collection)
+				.where("e.locale", "=", params.locale ?? site.DEFAULT_LOCALE);
 			for (const [field, raw] of Object.entries(params.where ?? {})) {
 				const stored = site.isCollection(params.collection) ? site.storedField(params.collection, field) : undefined;
 				if (stored?.field.kind !== "relation") throw new CmsError(`Invalid where field ${field}`, "invalid_input");
 				const ids = (typeof raw === "string" ? [raw] : [...raw]).filter((id) => typeof id === "string");
 				if (ids.length === 0) continue;
-				const metadata = stored.field.localized ? "b.metadata" : "sb.metadata";
-				conditions.push(
+				const metadata = sql.ref(stored.field.localized ? "b.metadata" : "sb.metadata");
+				from = from.where(
 					stored.field.many
-						? `COALESCE(${metadata}->${bind(field)}, '[]'::jsonb) ?| ${bind(ids)}::text[]`
-						: `${metadata}->>${bind(field)} = ANY(${bind(ids)}::text[])`,
+						? sql<boolean>`coalesce(${metadata}->${field}, '[]'::jsonb) ?| ${ids}::text[]`
+						: sql<boolean>`${metadata}->>${field} = any(${ids}::text[])`,
 				);
 			}
 
-			const from = `FROM "${qSchema}".entries e
-				 JOIN "${qSchema}".content_addresses a
-				   ON a.entry_id = e.id AND a.collection = e.collection AND a.type = 'current'
-				 JOIN "${qSchema}".entry_bodies b
-				   ON b.entry_id = e.id AND b.state = 'published'
-				 ${sourceJoin(qSchema)}
-				 WHERE ${conditions.join(" AND ")}`;
-			const total = Number(
-				(await pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count ${from}`, values)).rows[0]?.count ?? 0,
-			);
-			// Values not used by the count query are appended separately (Postgres errors on unused placeholders because it cannot infer their type).
-			const rowValues = [...values];
-			let orderBy =
-				sort === "title" ? titleSql(site, "b.metadata", { collection: params.collection }) : SORT_COLUMNS[sort];
-			if (
-				sort === "title" &&
-				site.recordLocalizedFields(params.collection).includes(site.titleField(params.collection).name)
-			) {
-				rowValues.push(params.titleLocale ?? params.locale ?? site.DEFAULT_LOCALE);
-				orderBy = translatedTitleSql(site, "b.metadata", params.collection, `$${rowValues.length}`);
-			}
-			const rows = await pool.query<PublishedRow>(
-				`SELECT ${PUBLISHED_COLUMNS(params.includeBody === true)} ${from}
-				 ORDER BY ${orderBy} ${order} NULLS LAST, e.id ASC
-				 LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
-				rowValues,
-			);
-			return { items: rows.rows.map((row) => mapPublishedRow(site, row)), total, page, pageSize };
+			const count = await from.select((eb) => eb.fn.countAll<string>().as("count")).executeTakeFirst();
+			const total = Number(count?.count ?? 0);
+			const titleLocale = params.titleLocale ?? params.locale ?? site.DEFAULT_LOCALE;
+			const sortBy =
+				sort !== "title"
+					? sql.ref(SORT_COLUMNS[sort])
+					: site.recordLocalizedFields(params.collection).includes(site.titleField(params.collection).name)
+						? translatedTitleExpr(site, "b.metadata", params.collection, titleLocale)
+						: titleExpr(site, "b.metadata", { collection: params.collection });
+			const rows = await selectPublished(from, params.includeBody === true)
+				.orderBy(sortBy, (order) => (descending ? order.desc() : order.asc()).nullsLast())
+				.orderBy("e.id", "asc")
+				.limit(pageSize)
+				.offset((page - 1) * pageSize)
+				.execute();
+			return { items: rows.map((row) => mapPublishedRow(site, row)), total, page, pageSize };
 		},
 
 		/** Published languages of a translation group (including the source). Empty if the source is not published. */
 		listPublishedTranslations: async (params: {
 			translationGroupId: string;
-		}): Promise<{ id: string; collection: string; locale: string; slug: string }[]> => {
-			const res = await pool.query<{ id: string; collection: string; locale: string; slug: string }>(
-				`SELECT e.id, e.collection, e.locale, a.slug
-				 FROM "${qSchema}".entries e
-				 JOIN "${qSchema}".content_addresses a
-				   ON a.entry_id = e.id AND a.collection = e.collection AND a.type = 'current'
-				 JOIN "${qSchema}".entries src ON src.id = COALESCE(e.translation_group_id, e.id) AND src.status = 'published'
-				 WHERE e.status = 'published' AND COALESCE(e.translation_group_id, e.id) = $1
-				 ORDER BY (e.translation_group_id IS NULL) DESC, e.locale`,
-				[params.translationGroupId],
-			);
-			return res.rows;
-		},
+		}): Promise<{ id: string; collection: string; locale: string; slug: string }[]> =>
+			db
+				.selectFrom("entries as e")
+				.innerJoin("content_addresses as a", (join) =>
+					join.onRef("a.entry_id", "=", "e.id").onRef("a.collection", "=", "e.collection").on("a.type", "=", "current"),
+				)
+				.innerJoin("entries as src", (join) => join.on("src.id", "=", groupOf).on("src.status", "=", "published"))
+				.select(["e.id", "e.collection", "e.locale", "a.slug"])
+				.where("e.status", "=", "published")
+				.where(groupOf, "=", params.translationGroupId)
+				.orderBy((eb) => eb("e.translation_group_id", "is", null), "desc")
+				.orderBy("e.locale")
+				.execute(),
 
 		/**
 		 * Published versions (all languages) for translation group IDs. Used when resolving relations: the caller picks the language and falls back to the source.
@@ -269,18 +272,11 @@ export function createPublicReadOps(ctx: StoreContext) {
 		}): Promise<PublishedEntryRecord[]> => {
 			const ids = params.translationGroupIds.filter((id) => typeof id === "string");
 			if (ids.length === 0) return [];
-			const res = await pool.query<PublishedRow>(
-				`SELECT ${PUBLISHED_COLUMNS(false)}
-				 FROM "${qSchema}".entries e
-				 JOIN "${qSchema}".content_addresses a
-				   ON a.entry_id = e.id AND a.collection = e.collection AND a.type = 'current'
-				 JOIN "${qSchema}".entry_bodies b
-				   ON b.entry_id = e.id AND b.state = 'published'
-				 ${sourceJoin(qSchema)}
-				 WHERE e.status = 'published' AND COALESCE(e.translation_group_id, e.id) = ANY($1::uuid[])`,
-				[ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id))],
-			);
-			return res.rows.map((row) => mapPublishedRow(site, row));
+			const rows = await selectPublished(publishedFrom(db), false)
+				.where("e.status", "=", "published")
+				.where(groupOf, "=", sql<string>`any(${ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id))}::uuid[])`)
+				.execute();
+			return rows.map((row) => mapPublishedRow(site, row));
 		},
 	};
 }

@@ -145,8 +145,6 @@ export const MEDIA_COLUMN_NAMES = [
 	"ready_at",
 ] as const;
 
-export const MEDIA_COLUMNS = MEDIA_COLUMN_NAMES.join(", ");
-
 export interface MediaRow {
 	id: string;
 	status: MediaAssetRecord["status"];
@@ -199,8 +197,6 @@ export const mapMediaRow = (row: MediaRow): MediaAssetRecord => ({
 	updatedAt: row.updated_at,
 	readyAt: row.ready_at,
 });
-
-export const TEMPLATE_COLUMNS = "id, name, doc, version, created_at, updated_at";
 
 export interface TemplateRow {
 	id: string;
