@@ -72,12 +72,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/nextjs/admin";
 import { cms } from "@/monti.config";
 
+// 세그먼트 설정은 여기에 써야 합니다(다시 내보낼 수 없습니다). 어드민은 요청마다 그려지는 앱이므로 Next의 instant 내비게이션 검증이 건너뜁니다.
+export const instant = false;
+
 export default function AdminPage(props: CmsAdminPageProps) {
 	return <CmsAdminPage cms={cms} {...props} />;
 }
 ```
 
 `CmsAdminLayout`은 관리자 레이아웃의 props(`themeProvider`·`themeStorageKey`·`toaster`, `@monti-cms/admin` README)를 받아 `NextAdminRouter` 안에 그린다.
+
+**Cache Components.** 관리자는 Next의 `cacheComponents`(와 `partialPrefetching`)가 있든 없든 동작한다. `create-next-app`은 새 앱에서 이 둘을 켠다. `CmsAdminLayout`은 폴백 없는 `Suspense` 경계 안에서 요청을 기다리므로(`connection()`) 그 아래는 미리 렌더링되지 않는다. 세션, 데이터베이스, 현재 시각, URL이 모두 요청 시점의 데이터이기 때문이다. 페이지는 그 경계의 자식이라 따로 경계가 필요 없다. 페이지의 `export const instant = false`는 절대 instant하지 않은 라우트를 Next 16.4의 개발 전용 instant 검증이 검사하지 않게 한다. 다른 Next 버전은 이 export를 무시한다. 관리자 테마 프로바이더는 React가 하이드레이션하기 전에 `<html>`에 클래스와 `color-scheme`을 달므로, 루트 레이아웃의 `<html>` 태그에 `suppressHydrationWarning`이 필요하다(`monti init`이 추가한다).
 
 `NextAdminRouter`는 관리자용 App Router 어댑터다. `next/link`와 `next/navigation` 위에 만든 `Link`·`navigate`·`replace`·`usePathname`·`useSearchParams`를 `@monti-cms/admin`에 주는 클라이언트 컴포넌트다. `CmsAdminPage`는 관리자의 서버 화면에 Next의 `redirect`와 `notFound`를 준다. 관리자 자체는 Next에서 아무것도 가져오지 않는다.
 
