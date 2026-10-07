@@ -2,6 +2,7 @@ import type { Cms } from "@monti-cms/core/runtime";
 import { loadAdminPlugins } from "../plugins";
 import EditEntryPage from "../screens/entries/[id]/edit/page";
 import NewEntryPage from "../screens/entries/new/page";
+import EventsPage from "../screens/events/page";
 import LoginPage from "../screens/login/page";
 import MediaPage from "../screens/media/page";
 import DashboardPage from "../screens/page";
@@ -24,7 +25,7 @@ export interface AdminPageProps {
  * A single admin screen, framework-neutral. A host package renders it from the app's admin route (default `app/(admin)/admin/[[...path]]/page.tsx`). The path after the admin path
  * selects the screen. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  *
- * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/schema` schema settings
+ * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/events` failed event deliveries · `/admin/schema` schema settings
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  * - `/admin/<path>` plugin screens (e.g. the AI plugin's `/admin/ai`)
  */
@@ -41,6 +42,8 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 				return <MediaPage cms={cms} server={server} />;
 			case "templates":
 				return <TemplatesPage cms={cms} server={server} />;
+			case "events":
+				return <EventsPage cms={cms} server={server} />;
 			case "schema":
 				return <SchemaPage cms={cms} server={server} />;
 			case "login":

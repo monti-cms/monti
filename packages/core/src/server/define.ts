@@ -1,8 +1,9 @@
 import type { MediaStore } from "../adapters/r2/types";
-import type { AfterCommit, ContentStore } from "../core/store";
+import type { ContentStore } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { PluginStorage } from "../plugin/storage";
+import type { EventDeliveryOptions } from "../services/events";
 import type { WriteHooks } from "../services/hooks";
 import type { Site } from "../site";
 
@@ -17,10 +18,10 @@ import type { Site } from "../site";
 export interface DatabaseAdapter {
 	readonly name: string;
 	/**
-	 * Creates the store. `site` is the instance's site (its collections, locales, blocks, links); `afterCommit` is passed in by the core (after-save
-	 * notifications from the server config and plugins).
+	 * Creates the store. `site` is the instance's site (its collections, locales, blocks, links). The store writes the events of every change (the outbox,
+	 * `EventStore`) in the transaction of the change; the core delivers them (`afterCommit` of the server config and plugins) after the commit.
 	 */
-	createStore(options: { readonly site: Site; readonly afterCommit?: AfterCommit }): ContentStore;
+	createStore(options: { readonly site: Site }): ContentStore;
 	/** Creates the tables or brings them to the latest shape (`monti migrate`). Running it repeatedly gives the same result. */
 	migrate(options: { readonly site: Site; readonly formats?: FormatRegistry }): Promise<void>;
 	/**
@@ -131,10 +132,12 @@ export interface CmsServerConfig {
 	readonly previousSecrets?: readonly string[];
 	/**
 	 * Hooks on every content write: `transform` (change the data before it is prepared), `validate` and `validatePublish` (add failures and warnings), and
-	 * `afterCommit` (notification after the change is committed: cache refresh, webhooks, search indexing; the change stands even if it fails).
-	 * They run before the plugins' hooks of the same name. See "Hook contract" in the core README.
+	 * `afterCommit` (notification after the change is committed: cache refresh, webhooks, search indexing; the change stands even if it fails, and a failed
+	 * delivery is retried, so it must be idempotent). They run before the plugins' hooks of the same name. See "Hook contract" in the core README.
 	 */
 	readonly hooks?: WriteHooks;
+	/** How `afterCommit` deliveries are retried and kept, and the secret of the retry route. See "Event delivery" in the core README. */
+	readonly events?: EventDeliveryOptions;
 	/**
 	 * Whether the server sits behind a proxy or platform (Vercel, nginx, a load balancer) that sets `Host` and `X-Forwarded-Host`.
 	 * When on, login callback URLs are built from the request host and the same-origin check accepts `X-Forwarded-Host`;

@@ -2,7 +2,7 @@
 
 English | [한국어](README.ko.md)
 
-Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, body templates, trash and login screens.
+Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, body templates, failed event deliveries (`/admin/events`), trash and login screens.
 It is framework-neutral: it imports nothing from Next.js and reaches the router through an adapter it is given (see "Router adapter"). Next.js (App Router) is the supported host for now, through `@monti-cms/nextjs`.
 Plugins (e.g. `@monti-cms/ai`) add screens, sidebar items, field-side buttons and edit screen actions.
 The screens only call the core's admin API (`/api/cms/v1/*`). You can also skip installing it and build your own screens against the same API.

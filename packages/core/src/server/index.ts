@@ -22,8 +22,23 @@ export {
 	type HandleOptions,
 	type PublicServerConfig,
 } from "../cms";
-export type { AfterCommit, ContentChange, ContentChangeKind } from "../core/store";
+export type {
+	AfterCommit,
+	ContentChange,
+	ContentChangeKind,
+	ContentEvent,
+	EventDelivery,
+	EventDeliveryCounts,
+	EventDeliveryState,
+} from "../core/store";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
+export type {
+	CmsEvents,
+	EventDeliveryOptions,
+	EventListOptions,
+	EventRetryOptions,
+	EventRetryResult,
+} from "../services/events";
 export type {
 	TransformHook,
 	ValidateHook,

@@ -6,6 +6,7 @@
 
 export { AuthError } from "./adapters/auth/auth-gateway";
 export type { Cms } from "./cms";
+export type { AfterCommit, ContentChange, ContentChangeKind, ContentEvent } from "./core/store";
 export { CmsError } from "./core/store";
 export { HttpError, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";

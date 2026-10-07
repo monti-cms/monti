@@ -443,6 +443,45 @@ const STEPS: readonly MigrationStep[] = [
 		`),
 	},
 	{
+		name: "0022_events",
+		/**
+		 * The event outbox. `cms_events` holds one row per committed change of an entry, written in the transaction of the change (`seq` is the order; per entry it is the
+		 * commit order, because the entry row is locked until commit). It has no foreign key to `entries`: the event of a deletion outlives the entry. `cms_event_deliveries`
+		 * holds the delivery state of each event for each subscriber (`afterCommit` of the server config and of the plugins), made by the dispatcher after the commit.
+		 */
+		run: (client, qSchema) =>
+			client.query(`
+			CREATE TABLE IF NOT EXISTS "${qSchema}".cms_events (
+				seq BIGSERIAL PRIMARY KEY,
+				id UUID NOT NULL UNIQUE,
+				kind TEXT NOT NULL,
+				entry_id UUID NOT NULL,
+				collection TEXT NOT NULL,
+				locale TEXT NOT NULL,
+				content_hash TEXT,
+				version INTEGER NOT NULL,
+				payload JSONB NOT NULL,
+				occurred_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+			);
+			CREATE INDEX IF NOT EXISTS cms_events_entry_idx ON "${qSchema}".cms_events (entry_id, seq);
+			CREATE INDEX IF NOT EXISTS cms_events_occurred_idx ON "${qSchema}".cms_events (occurred_at);
+
+			CREATE TABLE IF NOT EXISTS "${qSchema}".cms_event_deliveries (
+				event_id UUID NOT NULL REFERENCES "${qSchema}".cms_events(id) ON DELETE CASCADE,
+				subscriber TEXT NOT NULL,
+				state TEXT NOT NULL CHECK (state IN ('pending', 'delivering', 'delivered', 'failed', 'dead', 'dismissed')),
+				attempts INTEGER NOT NULL DEFAULT 0,
+				last_error TEXT,
+				last_attempt_at TIMESTAMPTZ,
+				next_attempt_at TIMESTAMPTZ,
+				locked_until TIMESTAMPTZ,
+				delivered_at TIMESTAMPTZ,
+				PRIMARY KEY (event_id, subscriber)
+			);
+			CREATE INDEX IF NOT EXISTS cms_event_deliveries_state_idx ON "${qSchema}".cms_event_deliveries (state, subscriber);
+		`),
+	},
+	{
 		// The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */

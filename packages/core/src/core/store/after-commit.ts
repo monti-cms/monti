@@ -1,46 +1,5 @@
-import type { Entry, EntryStatus } from "./types";
-
-/** Kind of change the store made. */
-export type ContentChangeKind =
-	| "created"
-	| "saved"
-	| "published"
-	| "archived"
-	| "unarchived"
-	| "trashed"
-	| "restored"
-	| "deleted";
-
-/**
- * Post-save notification. Delivered only after the transaction commits (changes rolled back by failure or conflict are not reported).
- * Used by cache refresh, webhooks, and search indexing. Archiving, trashing, or restoring a source also changes its translations, so `translationGroupId` covers the whole group.
- */
-export interface ContentChange {
-	readonly kind: ContentChangeKind;
-	readonly entryId: string;
-	readonly collection: string;
-	readonly locale: string;
-	readonly translationGroupId: string;
-	/** State after the change. For a deletion, the last state. */
-	readonly status: EntryStatus;
-	/** Public URL (if a published version exists). */
-	readonly publishedSlug: string | null;
-	/** Draft URL. */
-	readonly workingSlug: string | null;
-}
-
-export type AfterCommit = (change: ContentChange) => void | Promise<void>;
-
-const changeOf = (kind: ContentChangeKind, entry: Entry): ContentChange => ({
-	kind,
-	entryId: entry.id,
-	collection: entry.collection,
-	locale: entry.locale,
-	translationGroupId: entry.translationGroupId,
-	status: entry.status,
-	publishedSlug: entry.publishedSlug,
-	workingSlug: entry.workingSlug,
-});
+import type { ContentChangeKind } from "./events";
+import type { Entry } from "./types";
 
 /** Changes that return an entry, and their notification kinds. */
 const ENTRY_CHANGES = {
@@ -54,41 +13,41 @@ const ENTRY_CHANGES = {
 } as const satisfies Record<string, ContentChangeKind>;
 
 interface ChangingStore {
-	getEntry(id: string): Promise<Entry>;
 	permanentDeleteEntry(params: { id: string; expectedVersion: number }): Promise<void>;
 }
 
 /**
- * Wraps the store's mutation functions so `afterCommit` is called after the commit. A write that saves and publishes in one transaction is reported as two changes, in order. If the notification fails, the committed change stays
- * and the request does not fail (the error is only logged).
+ * Wraps the store's mutation functions so `dispatch` is called with the entry id after each commit. The store has already written the events of the change
+ * in its own transaction (the outbox), so `dispatch` only delivers them. If it throws, the committed change stays and the request does not fail (the
+ * error is logged), and the undelivered events are found by the next retry.
  */
-export function withAfterCommit<S extends ChangingStore>(store: S, afterCommit: AfterCommit): S {
-	const notify = async (change: ContentChange) => {
+export function withEventDispatch<S extends ChangingStore>(store: S, dispatch: (entryId: string) => Promise<void>): S {
+	const notify = async (entryId: string) => {
 		try {
-			await afterCommit(change);
+			await dispatch(entryId);
 		} catch (error) {
-			console.error("[cms] afterCommit failed", change.kind, change.entryId, error);
+			console.error("[cms] event delivery failed", entryId, error);
 		}
 	};
-	const wrapped: Record<string, unknown> = { ...(store as unknown as Record<string, unknown>) };
-	for (const [method, kind] of Object.entries(ENTRY_CHANGES)) {
+	// A proxy, not a copy: the store may itself be a proxy that answers any name (the lazy adapter store), which a spread would not see.
+	const overrides = new Map<PropertyKey, unknown>();
+	for (const method of Object.keys(ENTRY_CHANGES)) {
 		const original = (store as unknown as Record<string, unknown>)[method];
 		if (typeof original !== "function") continue;
-		wrapped[method] = async (...args: unknown[]) => {
+		overrides.set(method, async (...args: unknown[]) => {
 			const entry = (await original.apply(store, args)) as Entry;
-			await notify(changeOf(kind, entry));
-			// A create or save that also published (`publishImmediately`) did both: the change, then the publish.
-			const published = (args[0] as { publishImmediately?: boolean } | undefined)?.publishImmediately;
-			if ((kind === "created" || kind === "saved") && published && entry.status === "published") {
-				await notify(changeOf("published", entry));
-			}
+			await notify(entry.id);
 			return entry;
-		};
+		});
 	}
-	wrapped.permanentDeleteEntry = async (params: { id: string; expectedVersion: number }) => {
-		const before = await store.getEntry(params.id).catch(() => null);
-		await store.permanentDeleteEntry(params);
-		if (before) await notify(changeOf("deleted", before));
-	};
-	return wrapped as unknown as S;
+	const deleteEntry = store.permanentDeleteEntry;
+	if (typeof deleteEntry === "function") {
+		overrides.set("permanentDeleteEntry", async (params: { id: string; expectedVersion: number }) => {
+			await deleteEntry.call(store, params);
+			await notify(params.id);
+		});
+	}
+	return new Proxy(store, {
+		get: (target, name) => (overrides.has(name) ? overrides.get(name) : Reflect.get(target, name)),
+	});
 }

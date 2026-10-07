@@ -30,6 +30,7 @@ import {
 } from "../../../core/types";
 import { type StoreContext, withTransaction } from "./context";
 import { mapEntryWriteError } from "./errors";
+import { recordEvents } from "./events";
 import type { Publishing } from "./publish";
 import {
 	insertReferences,
@@ -153,9 +154,15 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					await reserveSlug(client, id, params.snapshot.collection, locale, params.snapshot.slug);
 					await insertReferences(client, qSchema, id, "working", references);
 
-					return params.publishImmediately
-						? publishWithinTransaction(client, id, { expectedVersion: 1, snapshot: params.snapshot })
-						: loadEntry(client, id, qSchema);
+					const entry = params.publishImmediately
+						? await publishWithinTransaction(client, id, { expectedVersion: 1, snapshot: params.snapshot })
+						: await loadEntry(client, id, qSchema);
+					// A create that also published is reported as the create, then the publish.
+					await recordEvents(client, qSchema, entry, [
+						"created",
+						...(params.publishImmediately && entry.status === "published" ? (["published"] as const) : []),
+					]);
+					return entry;
 				},
 				{ mapError: mapEntryWriteError },
 			),
@@ -281,14 +288,19 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						});
 					}
 
-					return params.publishImmediately
-						? publishWithinTransaction(client, params.entryId, {
+					const entry = params.publishImmediately
+						? await publishWithinTransaction(client, params.entryId, {
 								expectedVersion: version,
 								snapshot: params.snapshot,
 								resetPublishedAt: params.resetPublishedAt,
 								onWarnings: params.onWarnings,
 							})
-						: loadEntry(client, params.entryId, qSchema);
+						: await loadEntry(client, params.entryId, qSchema);
+					await recordEvents(client, qSchema, entry, [
+						"saved",
+						...(params.publishImmediately && entry.status === "published" ? (["published"] as const) : []),
+					]);
+					return entry;
 				},
 				{ mapError: mapEntryWriteError },
 			),
@@ -397,9 +409,15 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			resetPublishedAt?: boolean;
 			onWarnings?: (warnings: readonly Issue[]) => void;
 		}): Promise<Entry> =>
-			withTransaction(pool, (client) => publishWithinTransaction(client, params.id, params), {
-				mapError: mapEntryWriteError,
-			}),
+			withTransaction(
+				pool,
+				async (client) => {
+					const entry = await publishWithinTransaction(client, params.id, params);
+					await recordEvents(client, qSchema, entry, ["published"]);
+					return entry;
+				},
+				{ mapError: mapEntryWriteError },
+			),
 
 		slugsInUse: async (params: {
 			collection: string;

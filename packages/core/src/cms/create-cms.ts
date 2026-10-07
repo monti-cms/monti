@@ -4,7 +4,7 @@ import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway"
 import { resolveTrustHost } from "../adapters/auth/trust-host";
 import type { MediaStore } from "../adapters/r2/types";
 import { findSchemaFile } from "../cli/schema-types";
-import { CmsError, type ContentChange, type ContentStore, type Entry } from "../core/store";
+import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import type { OwnedPluginRoute } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
@@ -16,6 +16,7 @@ import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } fro
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
+import { type CmsEvents, createEventDispatcher } from "../services/events";
 import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
 import { type AnyCmsConfig, createSite, type Site } from "../site";
@@ -32,8 +33,8 @@ export interface HandleOptions {
 	readonly path?: readonly string[];
 }
 
-/** The server config as plugins see it: everything but the master secrets. */
-export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecrets">;
+/** The server config as plugins see it: everything but the master secrets and the event delivery settings (which hold the retry secret). */
+export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecrets" | "events">;
 
 export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 	/**
@@ -128,8 +129,12 @@ export interface Cms<
 	 * A name provided twice throws.
 	 */
 	formats(): Promise<FormatRegistry>;
-	/** Calls the after-save notifications of the server config and the plugins. Never throws. */
-	notifyAfterCommit(change: ContentChange): Promise<void>;
+	/**
+	 * The delivery side of the event outbox: the committed changes the server config's and the plugins' `hooks.afterCommit` receive, retried when they fail.
+	 * `cms.events.retry()` delivers what is due (call it from a cron job, or use `monti events:retry`), `list`, `counts`, `retryDelivery` and `dismiss` are what the
+	 * admin's events screen uses.
+	 */
+	readonly events: CmsEvents;
 	/**
 	 * Serves one request of the admin API (`/api/cms/v1/*`), the login connection, the public API and the plugin routes. It takes a standard web
 	 * `Request` and returns a `Response`, so any host that speaks them can mount it. `@monti-cms/nextjs` mounts it in a Next.js route file (`createRouteHandler(cms)`). Unknown paths return 404 and a known
@@ -216,7 +221,7 @@ export function lazyHandle(cms: () => Cms): Cms["handle"] {
  */
 export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsOptions<Config>): Cms<Config> {
 	const { server, id = "default" } = options;
-	const { secret, previousSecrets, ...publicServer } = server;
+	const { secret, previousSecrets, events: eventOptions, ...publicServer } = server;
 	const vault = createSecretsVault({ secret, previousSecrets });
 	const connections = connectionsFor(id, server);
 	const isHostTrusted = () => resolveTrustHost(server.trustHost);
@@ -240,8 +245,19 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			auth ??= server.auth.create({ site, loginPath: site.adminUrl("/login"), trustHost: isHostTrusted() });
 			return auth;
 		};
+		let rawStore: ContentStore | undefined;
+		const getRawStore = (): ContentStore => {
+			rawStore ??= connections.database.createStore({ site });
+			return rawStore;
+		};
+		const dispatcher = createEventDispatcher({
+			...eventOptions,
+			store: getRawStore,
+			subscribers: plugins.eventSubscribers,
+		});
+		// Every write goes through the dispatcher: the store writes the events in the transaction of the change, the wrapper delivers them after the commit.
 		const getStore = (): ContentStore => {
-			store ??= connections.database.createStore({ site, afterCommit: plugins.notifyAfterCommit });
+			store ??= withEventDispatch(getRawStore(), dispatcher.dispatchEntry);
 			return store;
 		};
 		const getMediaStore = (): MediaStore => {
@@ -289,7 +305,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			pluginFeatures: plugins.features,
 			writeHooks: plugins.writeHooks,
 			formats: plugins.formats,
-			notifyAfterCommit: plugins.notifyAfterCommit,
+			events: dispatcher.events,
 			handle: lazyHandle(() => self() as unknown as Cms),
 			read: createRead({
 				site,

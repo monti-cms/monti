@@ -17,10 +17,12 @@ import {
 	trashRequiresNoReferences,
 } from "../../../core/domain/lifecycle";
 import { CmsError } from "../../../core/store/errors";
+import type { ContentChangeKind } from "../../../core/store/events";
 import type { Entry, EntryStatus } from "../../../core/store/types";
 import type { PreparedSnapshot } from "../../../core/types";
 import { type StoreContext, withTransaction } from "./context";
 import { mapEntryWriteError } from "./errors";
+import { recordEvents } from "./events";
 import type { Publishing } from "./publish";
 import { loadEntry, lockEntryForUpdate } from "./rows";
 
@@ -36,6 +38,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 	const transition = (
 		params: LifecycleParams,
 		action: LifecycleAction,
+		kind: ContentChangeKind,
 		apply: (
 			client: PoolClient,
 			locked: { version: number; collection: string; status: EntryStatus; translation_group_id: string },
@@ -47,7 +50,9 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 				const locked = await lockEntryForUpdate(client, qSchema, params.id, params.expectedVersion);
 				assertTransitionAllowed(action, locked.status, locked.version);
 				await apply(client, locked);
-				return loadEntry(client, params.id, qSchema);
+				const entry = await loadEntry(client, params.id, qSchema);
+				await recordEvents(client, qSchema, entry, [kind]);
+				return entry;
 			},
 			{ mapError: mapEntryWriteError },
 		);
@@ -87,7 +92,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 	return {
 		/** Draft/published to archived. Ends publication. Record collections have no archive. */
 		archiveEntry: (params: LifecycleParams) =>
-			transition(params, "archive", async (client, locked) => {
+			transition(params, "archive", "archived", async (client, locked) => {
 				assertArchivable(site, locked.collection, locked.version);
 				await client.query(`UPDATE "${qSchema}".entries SET status = $1, version = $2 WHERE id = $3`, [
 					STATUS_AFTER.archive,
@@ -100,7 +105,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 
 		/** Archived to draft. Does not republish automatically. */
 		unarchiveEntry: (params: LifecycleParams) =>
-			transition(params, "unarchive", async (client, locked) => {
+			transition(params, "unarchive", "unarchived", async (client, locked) => {
 				await client.query(`UPDATE "${qSchema}".entries SET status = $1, version = $2 WHERE id = $3`, [
 					STATUS_AFTER.unarchive,
 					locked.version + 1,
@@ -115,7 +120,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		 * A category item in use (record collections: tags, categories, etc.) must have its references released first.
 		 */
 		trashEntry: (params: LifecycleParams) =>
-			transition(params, "trash", async (client, locked) => {
+			transition(params, "trash", "trashed", async (client, locked) => {
 				if (trashRequiresNoReferences(site, locked.collection)) {
 					await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: true });
 				}
@@ -133,7 +138,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		 * and then returned to active (published) records.
 		 */
 		restoreEntry: (params: LifecycleParams & { snapshot?: PreparedSnapshot }) =>
-			transition(params, "restore", async (client, locked) => {
+			transition(params, "restore", "restored", async (client, locked) => {
 				const isSource = locked.translation_group_id === params.id;
 				if (!isSource) {
 					const source = await client.query<{ status: EntryStatus }>(
@@ -182,6 +187,8 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 			withTransaction(pool, async (client) => {
 				const locked = await lockEntryForUpdate(client, qSchema, params.id, params.expectedVersion);
 				assertDeletable(locked.status, locked.version);
+				// The event keeps the entry as it was; it is written after the rows are gone, in the same transaction.
+				const last = await loadEntry(client, params.id, qSchema);
 				await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: false });
 				// Deleting a source deletes its translations too. Rejected if a translation outside the trash remains, since it would lose its shared values.
 				const members = await lockTranslations(client, params.id);
@@ -200,6 +207,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					await deleteEntryRow(client, member.id);
 				}
 				await deleteEntryRow(client, params.id);
+				await recordEvents(client, qSchema, last, ["deleted"]);
 			}),
 	};
 }

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, defaultLocale } from "../../../test/any-site";
 import { testConfig } from "../../../test/site";
-import type { AfterCommit, ContentStore } from "../../core/store";
+import type { ClaimedDelivery, ContentChange, ContentStore } from "../../core/store";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../../server/define";
 import { createCms } from "../create-cms";
 
@@ -9,10 +9,16 @@ import { createCms } from "../create-cms";
 function fakeDatabase(tag: string) {
 	const adapter = {
 		name: `fake-${tag}`,
-		createStore: vi.fn((options?: { afterCommit?: AfterCommit }) => {
+		createStore: vi.fn(() => {
 			const store = {
 				tag,
-				afterCommit: options?.afterCommit,
+				// A one-slot outbox: what a test puts in `claims` is what the next claim returns.
+				claims: [] as ClaimedDelivery[],
+				enqueueEvents: vi.fn(async () => 0),
+				claimDeliveries: vi.fn(async () => store.claims.splice(0)),
+				completeDelivery: vi.fn(async () => undefined),
+				failDelivery: vi.fn(async () => "failed" as const),
+				pruneEvents: vi.fn(async () => 0),
 				getPreferences: async () => ({ editor: { inspectorOpen: tag === "a" } }),
 				listPublishedTranslations: async () => [
 					{ collection: contentCollection, slug: `slug-${tag}`, locale: defaultLocale },
@@ -127,12 +133,23 @@ describe("createCms: an instance owns its server resources", () => {
 		const cmsB = createCms({ config: testConfig, server: b.server });
 		expect((await cmsA.writeHooks()).map((source) => source.owner)).toEqual(["server"]);
 
-		const change = { kind: "saved", entryId: "e1" } as never;
-		const store = cmsA.store() as unknown as { afterCommit: AfterCommit };
-		await store.afterCommit(change);
-		expect(a.afterCommit).toHaveBeenCalledWith(change);
+		const claim = (subscriber: string): ClaimedDelivery => ({
+			change: { eventId: "ev1", kind: "saved", entryId: "e1" } as ContentChange,
+			subscriber,
+			attempts: 1,
+		});
+		const storeA = cmsA.store() as unknown as ReturnType<typeof a.database.createStore>;
+		const storeB = cmsB.store() as unknown as ReturnType<typeof b.database.createStore>;
+		storeA.claims.push(claim("server"));
+		await cmsA.events.retry();
+		expect(a.afterCommit).toHaveBeenCalledTimes(1);
+		expect(a.afterCommit).toHaveBeenCalledWith(expect.objectContaining({ eventId: "ev1", kind: "saved", attempt: 1 }));
 		expect(b.afterCommit).not.toHaveBeenCalled();
-		await cmsB.notifyAfterCommit(change);
+		// Each instance claims for its own subscribers, on its own store.
+		expect(storeA.claimDeliveries).toHaveBeenCalledWith(expect.objectContaining({ subscribers: ["server"] }));
+		expect(storeB.claimDeliveries).not.toHaveBeenCalled();
+		storeB.claims.push(claim("server"));
+		await cmsB.events.retry();
 		expect(b.afterCommit).toHaveBeenCalledTimes(1);
 		expect(a.afterCommit).toHaveBeenCalledTimes(1);
 	});
@@ -187,10 +204,12 @@ describe("createCms: a development reload does not leak connections", () => {
 		const after = createCms({ config: testConfig, server: reloaded.server });
 		const sealed = createCms({ config: testConfig, server: reloaded.server }).secrets("ai").encrypt("x");
 		expect(after.secrets("ai").decrypt(sealed)).toBe("x");
-		await (after.store() as unknown as { afterCommit: AfterCommit }).afterCommit({
-			kind: "saved",
-			entryId: "e",
-		} as never);
+		(after.store() as unknown as { claims: ClaimedDelivery[] }).claims.push({
+			change: { eventId: "ev", kind: "saved", entryId: "e" } as ContentChange,
+			subscriber: "server",
+			attempts: 1,
+		});
+		await after.events.retry();
 		expect(reloaded.afterCommit).toHaveBeenCalledTimes(1);
 		expect(first.afterCommit).not.toHaveBeenCalled();
 	});

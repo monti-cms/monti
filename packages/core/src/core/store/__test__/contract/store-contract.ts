@@ -1,6 +1,6 @@
 import { afterAll, describe } from "vitest";
-import { afterCommitContract } from "./after-commit.contract";
 import { entriesContract } from "./entries.contract";
+import { eventsContract } from "./events.contract";
 import { foldersContract } from "./folders.contract";
 import type { ContractSuite, StoreFactory } from "./harness";
 import { lifecycleContract } from "./lifecycle.contract";
@@ -24,7 +24,7 @@ const SUITES: readonly ContractSuite[] = [
 	mediaContract,
 	templatesContract,
 	preferencesTransferContract,
-	afterCommitContract,
+	eventsContract,
 ];
 
 /** Runs the whole store contract against an adapter. */

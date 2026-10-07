@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { contentCollection, recordCollection, requiredMetadata, secondLocale } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import type { Collection } from "../../core/collections";
-import type { ContentChange, ContentStore, Entry } from "../../core/store";
+import { type ContentChange, type ContentStore, type Entry, withEventDispatch } from "../../core/store";
 import { seedEntry } from "../../core/store/__test__/seed";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
@@ -18,6 +18,7 @@ import {
 } from "../../testing";
 import { type BulkItemResult, createBulkService } from "../bulk-service";
 import { createContentService } from "../content-service";
+import { createEventDispatcher } from "../events";
 import type { HookSource, WriteOperation } from "../hooks";
 import type { ServiceInput } from "../types";
 
@@ -44,14 +45,23 @@ describe("write hook contract", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		store = createContentStore(pool, {
-			site: testSite,
-			schema: schemaName,
-			afterCommit: (change) => {
-				if (afterCommitFails) throw new Error("afterCommit is down");
-				changes.push(change);
-			},
+		const raw = createContentStore(pool, { site: testSite, schema: schemaName });
+		// The delivery of `afterCommit` as the instance does it, with a subscriber that records what it gets. Retries are never due, so a failed delivery
+		// of one test cannot show up in the next.
+		const dispatcher = createEventDispatcher({
+			store: () => raw,
+			backoffMs: () => 365 * 24 * 3600_000,
+			subscribers: async () => [
+				{
+					name: "test",
+					handler: (change) => {
+						if (afterCommitFails) throw new Error("afterCommit is down");
+						changes.push(change);
+					},
+				},
+			],
 		});
+		store = withEventDispatch(raw, dispatcher.dispatchEntry);
 		const hooks = () => sources;
 		const formats = async () => createFormatRegistry([paragraphsFormat]);
 		service = createContentService<Entry>(store, { site: testSite, hooks, formats });
