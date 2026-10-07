@@ -332,6 +332,93 @@ export const cms = defineConfig({
 
 See the README of `@monti-cms/seo` for details.
 
+## Import existing posts
+
+`monti import <path>` brings a folder of `.md` and `.mdx` posts (from Astro, Next with contentlayer, Hugo, a notes folder) into the CMS. It is a one-time move that you can also run again: it guesses where things go, asks only about what is unclear, resolves the links between the posts and their images, and writes through the same pipeline as the admin (validation and hooks run, so publishing problems show up). It is called `import`, not `migrate`, because `monti migrate` already creates the database tables.
+
+```sh
+pnpm exec monti import content/posts --dry-run   # look first: counts, field mapping, problem files; nothing is written
+pnpm exec monti import content/posts             # answer the few questions, get drafts
+pnpm exec monti import content/posts --publish   # publish the ones whose front matter is not a draft
+```
+
+**What it needs.** The format of a file comes from its extension, through the formats the config registers (`cms.formats()`, "Formats"). Add the MDX plugin (`plugins: [mdx()]` from `@monti-cms/mdx`, with `directiveSyntax()` for posts in that notation); without it the command stops and says so. A `.md` file is read with the MDX format when no format claims `.md`, so a stray `{` or `<` in a plain Markdown file is a parse error of that file (reported with its line, the other files go on). `--format <name>` reads every file with one format, and `formats` in the mapping file sets one per extension. Local images are uploaded to the media storage of the config (`storage`, for example `s3Storage()`); without one they stay URLs and the report says so. Run `monti migrate` first: the import keeps its memory in the database.
+
+**What it guesses, and when it asks.** A guess is used without asking when a name matches. Anything else is a question (numbered choices; Enter takes the default), and with `--yes` or without a terminal the answer is to leave it out.
+
+| Source | Becomes | Asks when |
+| --- | --- | --- |
+| a folder (`content/posts`) | a collection: the folder name against the collection names and labels, singular or plural (`posts` → `post`) | no collection matches (the choices are the collections, and "do not import this folder") |
+| `slug` in the front matter, else the file name (`hello.mdx`; `hello/index.mdx` is `hello`) | the address | never |
+| the file name `hello.ko.mdx`, a language folder (`ko/hello.mdx`), or `lang`/`locale`/`language` in the front matter | the language; the files of one post in several languages are paired, the default-language file is the source and the others are translations that take its address | never. A language the site does not have fails that file |
+| `title` | the field with the title role | never |
+| `date`, `pubDate`, `publishDate`, `publishedAt` | the publish date of the entry (set on publish, so an old post keeps its date) | never |
+| `draft: true`, `published: false` | the entry stays a draft even with `--publish` | never |
+| `description`, `summary`, `excerpt` | the field with the `summary` role | never |
+| `tags`, `categories`, `category`, `keywords`, `series` | a relation field, by slug (a name like `Next.js` is turned into the slug `nextjs`). Missing targets are created when the mapping says `create: true` (the default for item collections such as tags) | several relation fields could match or none does; and once, whether to create missing targets |
+| any other key | the field with the same name | never: a key with no field is skipped and reported on every file that has it |
+
+After the questions it prints the mapping and asks once ("Use it and save it for the next run?"). A run whose saved mapping answers everything asks nothing.
+
+**The mapping file** is `monti.import.json` next to where you run the command (`--mapping <file>` picks another). It is written after the first confirmed run (never by `--dry-run`) and read by every run after it; edit it by hand to change a decision, and delete a folder's entry to have it guessed again. Keys the file does not know yet (a new front matter key) are skipped and reported, not asked about.
+
+```json
+{
+	"version": 1,
+	"locale": { "from": ["frontMatter", "filename"] },
+	"publicDir": "public",
+	"folders": {
+		"posts": {
+			"collection": "post",
+			"fields": {
+				"title": "title",
+				"slug": "@slug",
+				"date": "@publishedAt",
+				"draft": "@draft",
+				"lang": "@locale",
+				"summary": "summary",
+				"tags": { "field": "tagIds", "create": true },
+				"category": { "field": "categoryId", "create": false },
+				"author": "@skip"
+			}
+		},
+		"pages": { "collection": null, "fields": {} }
+	}
+}
+```
+
+A folder is the first folder of a file's path under the scanned folder (a language folder and the folder of an `index` file do not count); `.` is the files directly in the scanned folder, named after it. `collection: null` leaves a folder out. A key goes to a field name, to `{ "field", "create" }` for a relation, or to `@publishedAt`, `@slug`, `@locale`, `@draft` (a true value keeps a draft), `@published` (a false value keeps a draft) or `@skip`. `locale.from` lists where the language is read from, first match wins (`frontMatter`, `filename`, `folder`; by default the ones the files use). `publicDir` is where `/images/a.png` is looked up (`public` or `static`, found next to the posts or above them). `formats` (extension → format name) is optional.
+
+**Links and images.** An internal link between imported files becomes a link by entry id, so renaming a slug later breaks nothing. Relative paths (`./other.mdx`, `../posts/other`, `other/`, a folder's `index`) and site paths (`/posts/other`, or `/blog/2024/other` of the old site, matched on the last part when only one imported post has that address, using the folders to tell two apart) are both resolved; a link to a post that is not found, or that could be two, stays as written and is reported. A `#section` or `?query` cannot be kept by an entry link and is dropped (counted in the report). Links to files that are created later in the same run are resolved in a second pass. A local image (`![](./cover.png)`, `![](/images/a.png)`, or a media field's path) is uploaded once (by its SHA-256, so two posts using one file share one media item, also across runs) and the body points to the media item. An image that is missing on disk, or of a type the media library does not accept, stays as written with a warning. HTML `<img>` in MDX is not converted.
+
+**Writing.** Every file goes through `cms.contentService()`, the one write pipeline. Pass 1 saves every file as a draft (the default-language files first, then their translations, which are made with `createTranslation` from the source), pass 2 saves again the bodies that linked to a file that had no entry yet, and pass 3 publishes with `--publish`. A publish the pipeline refuses (a required field is missing, `unparsed_body`) is not an import failure: the entry stays a draft and the file says why. `--publish` publishes only entries whose front matter is not a draft, and sets the publish date from `date`; without it everything is created as a draft and the summary says so.
+
+**Running it again.** The command remembers which file became which entry in the plugin storage of the database (`cms.storage("monti-import")`, collection `files`, keyed by the path of the file relative to where you run the command), not in a file in your repo: the memory belongs to the entries, so a second database starts fresh, a restored backup brings it back, and nothing in git can drift from the database. Each record has the entry id, a hash of the file together with the mapping it was read with, whether it was published, and the version the entry had when the import left it. A run then:
+
+- skips a file whose hash is unchanged ("unchanged since the last import"); with `--publish` it publishes a draft that was left behind, without writing again;
+- updates the same entry (never a second one) when the file or its mapping changed, keeping block ids where the blocks pair up;
+- skips a changed file whose entry was edited in the CMS since the last import ("edited in the CMS since the last import"), unless you pass `--overwrite`; the same for a trashed or archived entry;
+- creates the entry again when it was deleted from the CMS;
+- retries a file that failed, and resumes a run that stopped half way (an entry created before the stop is found again, not duplicated).
+
+Images are remembered the same way (`media` collection, by SHA-256), and tags and categories are found by slug before they are created, so nothing is created twice.
+
+| Flag | Meaning |
+| --- | --- |
+| `--dry-run` | Print counts per collection, the field mapping, what would be created, and the problem files (parse errors, unknown fields, missing required fields, links and images that do not resolve); write nothing, not even the mapping |
+| `--publish` | Publish entries whose front matter is not a draft (default: create drafts) |
+| `--collection <name>` | Send every folder to this collection |
+| `--format <name>` | Read every file with this format |
+| `--mapping <file>` | The mapping file (default `./monti.import.json`) |
+| `--yes`, `-y` | Never ask: take the guesses, leave out what is unclear |
+| `--json` | Print the report as JSON (no questions; for scripts and CI) |
+| `--overwrite` | Replace entries that were edited in the CMS since the last import |
+| `--env-file`, `--no-env-file`, `--config` | As for `monti migrate` |
+
+**The report** lists the imported, updated, skipped and failed files, each with the reason, the entries created for tags and categories, the images, the links, and a summary in plain words ("Of 12 files, imported 9 new files, skipped 2 files, 1 file failed. 8 entries are drafts. Run again with --publish ..."). The exit code is 1 when a file failed (not for a dry run), so a script can stop on it.
+
+Not covered yet: other sources (`--from wordpress` is planned), item collections in languages other than the default one, and the origin of a file in hooks (a hook sees the entry, not the file it came from).
+
 ## The CMS instance
 
 `defineConfig({ … })` (from `@monti-cms/core/server`) turns the site options and the server options into the instance everything on the server uses. The instance owns the site (the resolved
@@ -658,10 +745,11 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/code-block` | public renderer, editor | The code block annotation model |
 | `@monti-cms/core/document` | screens and plugins that edit or inspect a body | The `StoredDocument` type and the helpers that work on a document without knowing its notation: block ids (`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, link, image and table helpers, the stored code block model. Nothing in it parses or writes a text notation. The admin editor and AI import from here |
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
+| `@monti-cms/core/front-matter` | tools that read or write Markdown files (git-sync, `monti import`) | `parseFile` (YAML front matter and body, with the line of a YAML error) and `composeFile` |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti check:boundary` (fail when a client component reaches the server-only config), `monti add` (install components as source), `monti migrate` (create tables), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti check:boundary` (fail when a client component reaches the server-only config), `monti add` (install components as source), `monti migrate` (create tables), `monti import` (bring in existing MD/MDX posts, "Import existing posts"), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages

@@ -1,6 +1,8 @@
 import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
 import { eventsRetry } from "./events";
+import { IMPORT_HELP, runImportCommand } from "./import/command";
+import type { Prompter } from "./import/prompt";
 import { findBoundaryViolations, formatBoundaryViolations } from "./import-boundary";
 import { runInitCommand } from "./init-command";
 import { migrate } from "./migrate";
@@ -14,6 +16,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  *
  * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
  * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
+ * - `monti import <path> [--dry-run] [--publish] [--collection <name>] [--format <name>] [--mapping <file>] [--yes] [--json] [--overwrite] [env options]`: imports existing `.md` and `.mdx` posts through the CMS.
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
@@ -37,6 +40,20 @@ export {
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { type EventsRetryOptions, eventsRetry } from "./events";
+export {
+	formatReport,
+	IMPORT_HELP,
+	type ImportCommandIo,
+	ImportError,
+	type ImportMapping,
+	type ImportOptions,
+	type ImportReport,
+	MAPPING_FILE,
+	type Prompter,
+	runImport,
+	runImportCommand,
+	scriptedPrompter,
+} from "./import";
 export {
 	type BoundaryViolation,
 	findBoundaryViolations,
@@ -119,7 +136,7 @@ Commands:
               --registry <url|path> Registry folder or URL with registry.json (default: the registry of this repo)
               --overwrite           Replace files that differ from the registry (default: stop and write nothing)
               --dry-run             Show what would be written and installed
-  migrate   Create or update the tables in the database of monti.config.ts
+${IMPORT_HELP}  migrate   Create or update the tables in the database of monti.config.ts
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
               --config <file>       The config file that exports the CMS instance (default: ./monti.config.ts, ./src/monti.config.ts)
@@ -154,6 +171,8 @@ export interface CliIo {
 	readonly cwd: string;
 	readonly log: (message: string) => void;
 	readonly error: (message: string) => void;
+	/** Answers the questions of `monti import` (tests). Default: the terminal, when there is one. */
+	readonly prompter?: Prompter;
 }
 
 /** Runs the command and returns the exit code. */
@@ -185,6 +204,9 @@ export async function runCli(
 			});
 			io.log(formatAddReport(report));
 			return report.conflicts.length > 0 && !report.dryRun ? 1 : 0;
+		}
+		if (command === "import") {
+			return await runImportCommand(rest, io);
 		}
 		if (command === "migrate") {
 			const { values } = parseArgs({
