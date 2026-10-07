@@ -16,6 +16,8 @@ export const post = defineCollection({
 		slug,
 		summary: fields.text({ label: "Summary", multiline: true, localized: true }),
 		tagIds: fields.relation({ label: "Tags", to: "tag", many: true }),
+		/** A single-valued relation (the owner's blog has `categoryId`). */
+		categoryId: fields.relation({ label: "Category", to: "tag" }),
 	},
 });
 

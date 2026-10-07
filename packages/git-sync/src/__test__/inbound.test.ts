@@ -381,6 +381,75 @@ describe("round trip", () => {
 		expect(target.id).toBeDefined();
 	});
 
+	describe("a single-valued relation (categoryId)", () => {
+		const tagOf = (slug: string) =>
+			h.service.createDraft(
+				{ collection: "tag", slug, metadata: { title: slug }, body: "", format: "mdx" },
+				{ publishImmediately: true },
+			);
+		const postIn = (slug: string, categoryId: string) =>
+			h.service.createDraft(
+				{ collection: "post", slug, metadata: { title: slug, categoryId }, body: "body", format: "mdx" },
+				{ publishImmediately: true },
+			);
+		const path = (slug: string) => `content/post/${slug}.en.mdx`;
+
+		it("is exported as one slug (not a list) with the id in monti.refs, and imports back to the same hash", async () => {
+			const category = await tagOf("single-cat");
+			const post = await postIn("single-post", category.id);
+			const before = await h.store.getEntry(post.id);
+			const parsed = parseFile(h.repo.files("main").get(path("single-post")) ?? "");
+			expect(parsed.ok && parsed.data).toMatchObject({
+				categoryId: "single-cat",
+				monti: { refs: { categoryId: category.id } },
+			});
+			editInGit(path("single-post"), (text) => text.replace(/lastmod: .*/, "lastmod: 2020-01-01T00:00:00.000Z"));
+			expect((await pullTarget(h.ctx, h.target)).errors).toEqual([]);
+			const after = await h.store.getEntry(post.id);
+			expect(after.published?.metadata).toMatchObject({ categoryId: category.id });
+			expect(after.published?.contentHash).toBe(before.published?.contentHash);
+		});
+
+		it("still finds a renamed target by its id in monti.refs", async () => {
+			const category = await tagOf("old-cat");
+			const post = await postIn("renamed-cat-post", category.id);
+			const current = await h.store.getEntry(category.id);
+			await h.service.saveDraft(
+				category.id,
+				{
+					collection: "tag",
+					slug: "new-cat",
+					metadata: { title: "old-cat" },
+					body: "",
+					format: "mdx",
+					expectedVersion: current.version,
+				},
+				{ publishImmediately: true },
+			);
+			expect(parseFile(h.repo.files("main").get(path("renamed-cat-post")) ?? "")).toMatchObject({
+				data: { categoryId: "old-cat" },
+			});
+			editInGit(path("renamed-cat-post"), (text) => text.replace("body", "edited body"));
+			expect((await pullTarget(h.ctx, h.target)).errors).toEqual([]);
+			expect((await h.store.getEntry(post.id)).published?.metadata).toMatchObject({ categoryId: category.id });
+		});
+
+		it("reports an unknown slug and writes nothing", async () => {
+			h.repo.commit("main", [
+				{
+					path: path("cat-bad"),
+					text: composeFile({ title: "Cat bad", slug: "cat-bad", categoryId: "no-such-cat" }, "t\n"),
+				},
+			]);
+			const summary = await pullTarget(h.ctx, h.target);
+			expect(summary.errors).toEqual([
+				{ path: path("cat-bad"), message: 'relations: field categoryId: no tag has the slug "no-such-cat"' },
+			]);
+			expect(await publishedOf("post", "cat-bad")).toBeNull();
+			h.repo.commit("main", [{ path: path("cat-bad"), delete: true }]);
+		});
+	});
+
 	describe("relations are slugs in the file, ids in the entry", () => {
 		const tagOf = (slug: string, title = slug) =>
 			h.service.createDraft(
