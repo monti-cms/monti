@@ -169,6 +169,14 @@ describe("what stays in code", () => {
 			stays,
 		});
 		expect(text).toContain("Nothing needs to stay in code");
+		// The import line is relative to the config file, whichever side the schema file is on.
+		const importOf = (config: string, schema: string) =>
+			formatExtractReport({ config, schema, collections: 1, locales: 1, templates: 0, stays }).match(
+				/import schema from "(.*)";/,
+			)?.[1];
+		expect(importOf("cms.config.ts", "monti.schema.json")).toBe("./monti.schema.json");
+		expect(importOf("src/cms.config.ts", "src/monti.schema.json")).toBe("./monti.schema.json");
+		expect(importOf("src/cms.config.ts", "monti.schema.json")).toBe("../monti.schema.json");
 	});
 });
 

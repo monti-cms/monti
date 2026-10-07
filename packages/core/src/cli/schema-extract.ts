@@ -195,7 +195,8 @@ export async function extractSchema(options: ExtractOptions): Promise<ExtractRep
 
 /** Turns the report into human-readable text, ending with the slim config to put in `cms.config.ts`. */
 export function formatExtractReport(report: ExtractReport): string {
-	const schemaImport = `./${path.posix.relative(path.posix.dirname(report.config), report.schema)}`;
+	const relative = path.posix.relative(path.posix.dirname(report.config), report.schema);
+	const schemaImport = relative.startsWith(".") ? relative : `./${relative}`;
 	const plugins = report.stays.some((item) => item.what === "plugins");
 	const lines = [
 		`Wrote ${report.schema} (${report.collections} collections, ${report.locales} locales, ${report.templates} seed templates).`,
