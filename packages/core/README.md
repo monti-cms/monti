@@ -126,10 +126,9 @@ Without `layout` and `list`, fields are drawn in field order with the default li
 Connections are created on first use and the environment is read when a value is first needed, so the environment variables may be empty during the build. To use image uploads, install `@monti-cms/storage-s3` and pass its store as `storage` (only for sites that use media; the AWS SDK comes with it):
 
 ```ts
-import { r2Storage, s3Storage } from "@monti-cms/storage-s3";
+import { s3Storage } from "@monti-cms/storage-s3";
 
-storage: r2Storage(), // Cloudflare R2, reads the R2_* variables
-storage: s3Storage(), // AWS S3, MinIO and other S3 API stores, reads the S3_* variables
+storage: s3Storage(), // AWS S3, Cloudflare R2 (S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com, S3_REGION=auto), MinIO and other S3 API stores; reads the S3_* variables
 ```
 
 The variable names and options are in the package README (`packages/storage-s3`).
@@ -1036,7 +1035,7 @@ The server options are part of the one `defineConfig({ … })` call, next to the
 |---|---|
 | `database` | Required. Content store. `postgres()` reads `DATABASE_URL` and `DATABASE_SCHEMA`; `postgres({ connectionString, schema })` sets them in code |
 | `auth` | Required. Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). In a Next.js app, `host` is `nextHost` of `@monti-cms/nextjs/auth`. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
-| `storage` | Optional. Store for images and attachments: an adapter from any package, for example `r2Storage` or `s3Storage` from `@monti-cms/storage-s3`, or a connection implementing the `MediaStore` contract (`MediaAdapter`). Without it, media features are unavailable and the admin hides the media menu. |
+| `storage` | Optional. Store for images and attachments: an adapter from any package, for example `s3Storage` (AWS S3, Cloudflare R2, MinIO) from `@monti-cms/storage-s3`, or a connection implementing the `MediaStore` contract (`MediaAdapter`). Without it, media features are unavailable and the admin hides the media menu. |
 | `secret` | Optional. The one secret. If unset, the `MONTI_SECRET` environment variable. Login sessions and plugins' encrypted values (AI service keys, git-sync tokens) get keys derived from it; nothing receives the secret itself ("Secrets"). |
 | `previousSecrets` | Optional. Secrets `secret` replaced (entries may be undefined environment values). Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else on when a known proxy platform is detected or in development, else off |

@@ -58,7 +58,7 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 		const connectionString = options.connectionString || process.env[DATABASE_URL_ENV];
 		if (!connectionString) {
 			throw new Error(
-				`monti: the Postgres connection string is not set. Set ${DATABASE_URL_ENV} (for example in .env.local) or pass postgres({ connectionString }).`,
+				`\`${DATABASE_URL_ENV}\` is empty; set it (for example in .env.local), or pass \`postgres({ connectionString })\``,
 			);
 		}
 		pool ??= new Pool({ connectionString });

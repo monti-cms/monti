@@ -90,9 +90,9 @@ export const cms = defineConfig({
 	// In next dev you are signed in as the admin automatically (only from this machine); production never does that.
 	auth: auth({ providers: [github()], host: nextHost }),
 
-	// Image and file uploads: an adapter from a storage package. pnpm add @monti-cms/storage-s3, import { r2Storage } (or s3Storage) from it, and it reads its settings
-	// from the environment (R2_* in .env.local). Without one, the admin hides the media menu.
-	// storage: r2Storage(),
+	// Image and file uploads: an adapter from a storage package. pnpm add @monti-cms/storage-s3, import { s3Storage } from it, and it reads its settings
+	// from the environment (S3_* in .env.local; Cloudflare R2 and MinIO too). Without one, the admin hides the media menu.
+	// storage: s3Storage(),
 
 	// The one secret (MONTI_SECRET) signs the login session and encrypts stored values (AI service keys, tokens): each use gets its own key derived from it.
 	// To change it without losing stored values: previousSecrets: [oldSecret].

@@ -19,7 +19,7 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 | [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |
 | [`@monti-cms/seo`](packages/seo) | SEO extension. Search and sharing fields with a preview |
 | [`@monti-cms/bareun`](packages/bareun) | Bareun spell checking |
-| [`@monti-cms/storage-s3`](packages/storage-s3) | Media storage on the S3 API (AWS S3, Cloudflare R2, MinIO), configured from `S3_*` / `R2_*` environment variables |
+| [`@monti-cms/storage-s3`](packages/storage-s3) | Media storage on the S3 API (AWS S3, Cloudflare R2, MinIO), one `s3Storage()` configured from `S3_*` environment variables |
 | [`@monti-cms/git-sync`](packages/git-sync) | Git sync extension. Two-way sync of published entries with files in a GitHub repo, with a conflict screen |
 | [`@monti-cms/syntax-directive`](packages/syntax-directive) | Directive syntax extension. Reads and writes `:::callout`, `::image{…}` and `:u[text]` |
 | [`@monti-cms/syntax-shiki`](packages/syntax-shiki) | Shiki code notation extension. Reads `// [!code ++]` and friends in code fences as Monti code annotations |

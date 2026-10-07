@@ -71,7 +71,7 @@ describe("postgres() reads the conventional environment variables", () => {
 		const adapter = postgres();
 		expect(() => adapter.createStore({ site: testSite })).not.toThrow();
 		await expect(adapter.migrate({ site: testSite })).rejects.toThrow(
-			/DATABASE_URL.*\.env\.local.*postgres\(\{ connectionString \}\)/,
+			/`DATABASE_URL` is empty; set it.*or pass `postgres\(\{ connectionString \}\)`/,
 		);
 	});
 });

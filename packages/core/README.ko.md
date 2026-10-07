@@ -126,10 +126,9 @@ export const cms = defineConfig({
 연결은 처음 쓸 때 만들고 환경 변수도 값이 처음 필요할 때 읽으므로, 빌드 중에는 환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/storage-s3`를 설치하고 그 저장소를 `storage`로 넣는다(미디어를 쓰는 사이트만, AWS SDK는 함께 설치된다):
 
 ```ts
-import { r2Storage, s3Storage } from "@monti-cms/storage-s3";
+import { s3Storage } from "@monti-cms/storage-s3";
 
-storage: r2Storage(), // Cloudflare R2, R2_* 변수를 읽는다
-storage: s3Storage(), // AWS S3, MinIO 등 S3 API 저장소, S3_* 변수를 읽는다
+storage: s3Storage(), // AWS S3, Cloudflare R2(S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com, S3_REGION=auto), MinIO 등 S3 API 저장소. S3_* 변수를 읽는다
 ```
 
 변수 이름과 옵션은 패키지 README(`packages/storage-s3`)에 있다.
@@ -1036,7 +1035,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 |---|---|
 | `database` | 필수. 콘텐츠 저장소. `postgres()`는 `DATABASE_URL`과 `DATABASE_SCHEMA`를 읽고, `postgres({ connectionString, schema })`는 코드에서 정한다 |
 | `auth` | 필수. 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()`는 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`(GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여럿)를 읽고, `github({ clientId, clientSecret, admins })`는 코드에서 정한다. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로")다. 세션 서명 키는 비밀 값에서 만든다("비밀 값"). Next.js 앱에서 `host`는 `@monti-cms/nextjs/auth`의 `nextHost`다. 개발 우회가 켜진 `next dev`에서는 GitHub 앱이 없어도 로그인을 시도할 때만 오류가 나고, 로그인이 필요한 서버에서는 로그인 연결을 만들 때 오류가 난다 |
-| `storage` | 선택. 이미지·첨부 파일 저장소. 아무 패키지의 어댑터(예: `@monti-cms/storage-s3`의 `r2Storage`·`s3Storage`) 또는 `MediaStore` 계약을 구현한 연결(`MediaAdapter`). 없으면 미디어 기능을 못 쓰고 관리자가 미디어 메뉴를 숨긴다. |
+| `storage` | 선택. 이미지·첨부 파일 저장소. 아무 패키지의 어댑터(예: `@monti-cms/storage-s3`의 `s3Storage`: AWS S3·Cloudflare R2·MinIO) 또는 `MediaStore` 계약을 구현한 연결(`MediaAdapter`). 없으면 미디어 기능을 못 쓰고 관리자가 미디어 메뉴를 숨긴다. |
 | `secret` | 선택. 하나뿐인 비밀 값. 없으면 `MONTI_SECRET` 환경 변수. 로그인 세션과 플러그인이 암호화해 두는 값(AI 서비스 키, git-sync 토큰)이 이 값에서 만든 키를 받는다. 비밀 값 자체는 누구도 받지 않는다("비밀 값"). |
 | `previousSecrets` | 선택. `secret`이 바뀌기 전의 값들(항목이 정의되지 않은 환경 변수 값이어도 된다). 이 값으로 암호화한 저장 값도 계속 읽히고, 다시 저장할 때 `secret`으로 새로 암호화된다. 그래서 `secret`을 바꿔도 저장된 키를 다시 넣지 않아도 된다. |
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 알려진 프록시 플랫폼이 감지되거나 개발일 때 켬, 그 밖에는 끔 |

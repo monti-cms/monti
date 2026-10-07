@@ -17,31 +17,18 @@ pnpm add @monti-cms/storage-s3
 ## 사용
 
 ```ts
-// cms.server.ts
-import { r2Storage } from "@monti-cms/storage-s3";
+// monti.config.ts
+import { s3Storage } from "@monti-cms/storage-s3";
 
-defineServerConfig({
+export const cms = defineConfig({
 	// …
-	media: r2Storage(), // 아래 R2_* 변수를 읽는다
+	storage: s3Storage(), // 아래 S3_* 변수를 읽는다
 });
 ```
 
-인자 없이 쓰면 환경 변수를 읽고, 옵션을 주면 옵션이 우선한다. 값은 처음 쓸 때 읽으므로 빌드 중에는 비어 있어도 된다. 빠진 값이 있으면 변수 이름을 담은 오류가 난다(`r2Storage: R2_BUCKET is not set ...`).
+인자 없이 쓰면 환경 변수를 읽고, 옵션을 주면 옵션이 우선한다(일부만 줘도 되고, 나머지는 환경 변수에서 채운다). 값은 처음 쓸 때 읽으므로 빌드 중에는 비어 있어도 된다. 빠진 값이 있으면 변수 이름을 담고 직접 넘기는 방법을 알려 주는 오류가 난다(`` `S3_BUCKET` is empty; set it, or pass `s3Storage({ bucket })` ``). 함수 하나, 변수 접두사 하나(`S3_*`)다.
 
-### Cloudflare R2: `r2Storage()`
-
-| 변수 | 옵션 | 의미 |
-| --- | --- | --- |
-| `R2_ACCOUNT_ID` | `accountId` | Cloudflare 계정 ID. 엔드포인트는 `https://<id>.r2.cloudflarestorage.com` |
-| `R2_ENDPOINT` | `endpoint` | 계정 ID 대신 쓴다(EU 같은 관할 엔드포인트) |
-| `R2_BUCKET` | `bucket` | 버킷 이름 |
-| `R2_ACCESS_KEY_ID` | `accessKeyId` | R2 API 토큰의 액세스 키 ID |
-| `R2_SECRET_ACCESS_KEY` | `secretAccessKey` | R2 API 토큰의 시크릿 |
-| `R2_PUBLIC_URL` | `publicBaseUrl` | 파일 공개 주소의 앞부분: 커스텀 도메인 또는 `r2.dev` 주소 |
-
-리전은 항상 `auto`다. `R2_ACCOUNT_ID`와 `R2_ENDPOINT` 중 하나면 된다.
-
-### AWS S3, MinIO 등: `s3Storage()`
+### 변수
 
 | 변수 | 옵션 | 의미 |
 | --- | --- | --- |
@@ -53,9 +40,22 @@ defineServerConfig({
 | `S3_PUBLIC_URL` | `publicBaseUrl` | 파일 공개 주소의 앞부분: CDN 또는 공개 버킷 주소 |
 | `S3_FORCE_PATH_STYLE` | `forcePathStyle` | 경로 방식 주소(`<endpoint>/<bucket>/<key>`)를 쓰려면 `true`. MinIO에 필요 |
 
-```ts
-media: s3Storage(), // AWS: S3_REGION 등을 .env.local에서 읽는다
-media: s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true }), // MinIO
+### Cloudflare R2
+
+R2도 S3 API라서 같은 함수를 쓴다.
+
+```sh
+S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+S3_REGION=auto
 ```
+
+### MinIO
+
+```sh
+S3_ENDPOINT=http://localhost:9000
+S3_FORCE_PATH_STYLE=true
+```
+
+(`s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true })`처럼 옵션으로 줘도 된다.)
 
 파일은 공개 주소에서 읽을 수 있어야 하고, 브라우저 업로드를 위해 버킷에 사이트에서 오는 `PUT`을 허용하는 CORS 규칙이 필요하다.

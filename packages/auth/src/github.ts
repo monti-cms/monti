@@ -56,12 +56,12 @@ export function github(options: GithubOptions = {}): LoginProvider {
 		requireConfigured: () => {
 			if (!clientId()) {
 				throw new Error(
-					`[cms-auth] The GitHub client id is not set. Set ${GITHUB_ENV.clientId} (the OAuth app's client id, for example in .env.local) or pass github({ clientId }).`,
+					`[cms-auth] \`${GITHUB_ENV.clientId}\` is empty; set it (the OAuth app's client id, for example in .env.local), or pass \`github({ clientId })\``,
 				);
 			}
 			if (!clientSecret()) {
 				throw new Error(
-					`[cms-auth] The GitHub client secret is not set. Set ${GITHUB_ENV.clientSecret} (the OAuth app's client secret, for example in .env.local) or pass github({ clientSecret }).`,
+					`[cms-auth] \`${GITHUB_ENV.clientSecret}\` is empty; set it (the OAuth app's client secret, for example in .env.local), or pass \`github({ clientSecret })\``,
 				);
 			}
 		},

@@ -74,10 +74,14 @@ describe("github() reads the conventional environment variables", () => {
 
 	it("says which variable is missing", () => {
 		vi.stubEnv("AUTH_GITHUB_SECRET", "env-secret");
-		expect(() => connectWithEnv({ providers: [github()] })).toThrow(/AUTH_GITHUB_ID/);
+		expect(() => connectWithEnv({ providers: [github()] })).toThrow(
+			/`AUTH_GITHUB_ID` is empty; set it.*or pass `github\(\{ clientId \}\)`/,
+		);
 		vi.stubEnv("AUTH_GITHUB_ID", "env-id");
 		vi.stubEnv("AUTH_GITHUB_SECRET", "");
-		expect(() => connectWithEnv({ providers: [github()] })).toThrow(/AUTH_GITHUB_SECRET/);
+		expect(() => connectWithEnv({ providers: [github()] })).toThrow(
+			/`AUTH_GITHUB_SECRET` is empty; set it.*or pass `github\(\{ clientSecret \}\)`/,
+		);
 	});
 
 	it("does not need the GitHub app to start under the development bypass, and asks for it when a sign-in is attempted", async () => {

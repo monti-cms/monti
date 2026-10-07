@@ -140,7 +140,7 @@ export function auth(options: AuthOptions): AuthAdapter {
 			assertDevBypassSafe(options.devBypass);
 			if (!secrets.available) {
 				throw new Error(
-					"[cms-auth] MONTI_SECRET is not set, so login sessions cannot be signed. Set MONTI_SECRET (any long random value, for example `openssl rand -base64 32`) in .env.local, or pass `secret` to defineConfig.",
+					"[cms-auth] `MONTI_SECRET` is empty, so login sessions cannot be signed; set it (any long random value, for example `openssl rand -base64 32`) in .env.local, or pass `defineConfig({ secret })`",
 				);
 			}
 			// A server that requires login fails here, naming what is missing; one on the development bypass fails only when a sign-in is attempted.
