@@ -1,9 +1,10 @@
 import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSchemaFile } from "../../schema-file/format";
-import { formatInitReport, InitError, initProject, ProjectWriter, unifiedDiff } from "../init";
+import { defaultInitHost, formatInitReport, InitError, initProject, ProjectWriter, unifiedDiff } from "../init";
 import { InitCancelled } from "../init-prompts";
 import {
 	CREATE_NEXT_APP,
@@ -636,5 +637,21 @@ describe("unifiedDiff", () => {
 			"-export default nextConfig;",
 			"+export default withCms(nextConfig);",
 		]);
+	});
+});
+
+describe("the real host", () => {
+	it("finds a free port, and tells an open database port from a closed one", async () => {
+		const server = net.createServer();
+		await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+		const { port } = server.address() as net.AddressInfo;
+		try {
+			expect(await defaultInitHost.databaseReachable(`postgres://u:p@127.0.0.1:${port}/db`, 0)).toBe(true);
+			expect(await defaultInitHost.freePort(port)).toBeGreaterThan(port);
+		} finally {
+			await new Promise((resolve) => server.close(resolve));
+		}
+		expect(await defaultInitHost.databaseReachable(`postgres://u:p@127.0.0.1:${port}/db`, 0)).toBe(false);
+		expect(await defaultInitHost.databaseReachable("not a url", 0)).toBe(false);
 	});
 });

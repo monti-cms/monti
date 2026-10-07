@@ -219,7 +219,8 @@ export function unifiedDiff(file: string, before: string, after: string): string
 	return lines.join("\n");
 }
 
-const defaultHost: InitHost = {
+/** The real host: spawns the package manager and Docker, probes the database port. */
+export const defaultInitHost: InitHost = {
 	run: (command, args, cwd) => {
 		const result = spawnSync(command, [...args], { cwd, stdio: "ignore" });
 		return !result.error && result.status === 0;
@@ -240,20 +241,28 @@ const defaultHost: InitHost = {
 		}
 		return start;
 	},
+	// A TCP connect to the host and port of the URL (the Postgres driver stays in the store adapter). `monti migrate` is what really logs in.
 	databaseReachable: async (url, waitMs) => {
-		const { default: pg } = await import("pg");
+		let target: URL;
+		try {
+			target = new URL(url);
+		} catch {
+			return false;
+		}
+		// A socket path or no host: nothing to probe here, let `monti migrate` try.
+		if (!target.hostname) return true;
+		const port = Number(target.port || 5432);
 		const deadline = Date.now() + waitMs;
 		for (;;) {
-			const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 3000 });
-			try {
-				await client.connect();
-				await client.end();
-				return true;
-			} catch {
-				await client.end().catch(() => undefined);
-				if (Date.now() >= deadline) return false;
-				await new Promise((resolve) => setTimeout(resolve, 1000));
-			}
+			const open = await new Promise<boolean>((resolve) => {
+				const socket = net.connect({ host: target.hostname, port, timeout: 3000 });
+				socket.once("connect", () => socket.end(() => resolve(true)));
+				socket.once("timeout", () => socket.destroy(new Error("timeout")));
+				socket.once("error", () => resolve(false));
+			});
+			if (open) return true;
+			if (Date.now() >= deadline) return false;
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 		}
 	},
 	generateSecret: () => randomBytes(32).toString("base64"),
@@ -326,7 +335,7 @@ function mergeWithCms(text: string): string | undefined {
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
 export async function initProject(options: InitOptions): Promise<InitReport> {
 	const { cwd } = options;
-	const host: InitHost = { ...defaultHost, ...options.host };
+	const host: InitHost = { ...defaultInitHost, ...options.host };
 	const log = options.log ?? (() => undefined);
 	const dryRun = options.dryRun === true;
 	const prompter = options.prompter;
