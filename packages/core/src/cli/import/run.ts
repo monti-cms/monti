@@ -63,7 +63,8 @@ export class ImportError extends Error {
 	}
 }
 
-const MDX_HINT = 'add the MDX plugin to monti.config.ts: `plugins: [mdx()]` (import { mdx } from "@monti-cms/mdx")';
+const MDX_HINT =
+	"add the MDX plugin to monti.config.ts: `plugins: [mdx()]` (the mdx function of the MDX plugin package)";
 
 const toNotices = (list: readonly Notice[]): FileNotice[] => list.map(({ kind, message }) => ({ kind, message }));
 
