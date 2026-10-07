@@ -17,7 +17,7 @@ import {
  */
 class FakeIndexedDB {
 	readonly databases_ = new Map<string, Map<string, unknown>>();
-	constructor(private readonly listable = true) {
+	constructor(listable = true) {
 		if (!listable) (this as { databases?: unknown }).databases = undefined;
 	}
 	databases() {
