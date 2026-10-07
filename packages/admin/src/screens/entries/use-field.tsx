@@ -1,7 +1,7 @@
 "use client";
 
-import type { SlugField, ValueField } from "@monti-cms/core/client";
-import { roleValue, type SchemaCollection, schemaOf, storedField } from "@monti-cms/core/client";
+import type { Site, SlugField, ValueField } from "@monti-cms/core/client";
+import { type SchemaCollection, useSite } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 import {
 	assignStateSilently,
@@ -196,11 +196,11 @@ interface ResolvedField {
 }
 
 /** The definition of a field by name (nested fields of a conditional field included) and whether a translation shares it. */
-function resolveField(collection: SchemaCollection, name: string): ResolvedField {
-	const fields = schemaOf(collection).fields;
+function resolveField(site: Site, collection: SchemaCollection, name: string): ResolvedField {
+	const fields = site.schemaOf(collection).fields;
 	const own = fields[name];
 	if (own?.kind === "slug") return { definition: own, lockable: false };
-	const stored = storedField(collection, name);
+	const stored = site.storedField(collection, name);
 	if (!stored) return { definition: undefined, lockable: false };
 	// A field that depends on a conditional field follows that field's `localized`.
 	const owner = stored.when ? fields[stored.when.field] : own;
@@ -217,9 +217,10 @@ function resolveField(collection: SchemaCollection, name: string): ResolvedField
  * @experimental
  */
 export function useField<V extends FormValue = FormValue>(name: string): FieldState<V> {
+	const site = useSite();
 	const store = useEntryFormStore();
 	const collection = useStoreSelector(store, (state) => state.collection);
-	const { definition, lockable } = useMemo(() => resolveField(collection, name), [collection, name]);
+	const { definition, lockable } = useMemo(() => resolveField(site, collection, name), [site, collection, name]);
 
 	const locked = useStoreSelector(store, (state) => lockable && Boolean(state.locked));
 	const lockedNote = useStoreSelector(store, (state) => (lockable ? state.locked?.note : undefined));
@@ -249,8 +250,8 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 				? []
 				: issues
 						.filter((issue) => issue.path === name)
-						.map((issue) => ({ code: issue.code, message: cmsIssueMessage(issue), issue })),
-		[issues, name, locked],
+						.map((issue) => ({ code: issue.code, message: cmsIssueMessage(site, issue), issue })),
+		[issues, name, locked, site],
 	);
 
 	const slotRequest = useMemo((): SlotRequest | null => {
@@ -269,7 +270,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 					locale,
 					entryId,
 					title: form.title,
-					summary: summaryOf(collection, form),
+					summary: summaryOf(site, collection, form),
 					body: form.doc,
 					current: Array.isArray(current) ? current : typeof current === "string" ? current : undefined,
 				};
@@ -283,7 +284,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 				} else setForm({ [name]: next });
 			},
 		};
-	}, [store, locked, name, collection, entryId, locale, disabled]);
+	}, [store, locked, name, collection, entryId, locale, disabled, site]);
 
 	const error = errors[0] ?? null;
 	const ids = useMemo(() => ({ input: fieldId(name), error: `${fieldId(name)}-error` }), [name]);
@@ -334,6 +335,6 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 	);
 }
 
-function summaryOf(collection: SchemaCollection, form: EntryForm): string | undefined {
-	return roleValue(collection, "summary", form) || undefined;
+function summaryOf(site: Site, collection: SchemaCollection, form: EntryForm): string | undefined {
+	return site.roleValue(collection, "summary", form) || undefined;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -18,12 +18,11 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { TranslatorFor } from "../translator";
 import { Separator } from "../ui/separator";
 import { BLOCK_TOOLBAR } from "./blocks/shared";
 import { editorMessages } from "./messages";
 import { ToolbarButton, type ToolbarItem } from "./toolbar-button";
-
-const t = createTranslator(editorMessages);
 
 const chain = (editor: Editor) => editor.chain().focus();
 const isCellSelection = (editor: Editor): boolean => editor.state.selection instanceof CellSelection;
@@ -67,7 +66,7 @@ const fillTableWidth = (editor: Editor) => {
 };
 
 /** Controls floating above the table while the cursor is inside it. Deleting the table is in the block handle menu. */
-const TABLE_TOOL_GROUPS: ToolbarItem[][] = [
+const TABLE_TOOL_GROUPS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[][] => [
 	[
 		{
 			label: t("tableToolbar.addRowBeforeLabel"),
@@ -141,6 +140,7 @@ const TABLE_TOOL_GROUPS: ToolbarItem[][] = [
 const TOOLBAR_GAP = 6;
 
 export function TableToolbar({ editor }: { editor: Editor }) {
+	const t = useTranslator(editorMessages);
 	// Re-render whenever the selection or document changes (cell movement, mergeability, column widths). null outside a table.
 	const tableKey = useEditorState({
 		editor,
@@ -203,7 +203,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 			style={{ position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 30 }}
 			className={BLOCK_TOOLBAR}
 		>
-			{TABLE_TOOL_GROUPS.map((group, index) => (
+			{TABLE_TOOL_GROUPS(t).map((group, index) => (
 				<div key={group[0]?.label} className="flex items-center gap-0.5">
 					{index > 0 && <Separator orientation="vertical" className="mx-0.5 h-4" />}
 					{group.map((item) => (

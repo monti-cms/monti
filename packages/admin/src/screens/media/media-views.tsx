@@ -1,12 +1,12 @@
 "use client";
 
 import {
-	createTranslator,
 	type FileKind,
 	fileKindOf,
 	fileTypeLabel,
 	formatFileSize,
-	isImageMime,
+	useSite,
+	useTranslator,
 } from "@monti-cms/core/client";
 import { File, FileArchive, FileText, FileType } from "lucide-react";
 import type { KeyboardEvent } from "react";
@@ -20,13 +20,12 @@ import { OPEN_ITEM } from "../shared/side-panel";
 import { type MediaItem, usageLabel } from "./media-item";
 import { mediaMessages } from "./messages";
 
-const t = createTranslator(mediaMessages);
-
 const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
 
 /** Thumbnail for images, a type icon for other files. */
 export function MediaThumb({ media, iconClassName }: { media: MediaItem; iconClassName?: string }) {
-	if (!isImageMime(media.mimeType)) {
+	const site = useSite();
+	if (!site.api.isImageMime(media.mimeType)) {
 		const Icon = FILE_ICONS[fileKindOf(media.mimeType)];
 		return <Icon className={cn("text-cms-muted-foreground", iconClassName)} aria-hidden />;
 	}
@@ -56,6 +55,8 @@ const deleteKey = (media: MediaItem, onDeleteKey: (media: MediaItem) => void) =>
 
 /** Grid view. Shows the thumbnail and usage state large. */
 export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDeleteKey }: MediaViewProps) {
+	const site = useSite();
+	const t = useTranslator(mediaMessages);
 	return (
 		<ul
 			className={cn(
@@ -79,7 +80,7 @@ export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDele
 						)}
 					>
 						<span className="relative flex aspect-square items-center justify-center bg-cms-muted">
-							{isImageMime(media.mimeType) ? (
+							{site.api.isImageMime(media.mimeType) ? (
 								<MediaThumb media={media} iconClassName="size-10" />
 							) : (
 								<span className="flex flex-col items-center gap-1.5 text-cms-muted-foreground">
@@ -88,7 +89,7 @@ export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDele
 								</span>
 							)}
 							<Badge variant="secondary" className="absolute top-1.5 left-1.5 text-[10px]">
-								{usageLabel(media)}
+								{usageLabel(t, media)}
 							</Badge>
 						</span>
 						<span className="truncate p-2 text-xs">{media.filename}</span>
@@ -106,6 +107,8 @@ export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDele
 
 /** List view. Shows name, type, size, dimensions, usage state and upload date, one per row. */
 export function MediaTable({ items, selectedId, dimmed, onSelect, menuFor, onDeleteKey }: MediaViewProps) {
+	const site = useSite();
+	const t = useTranslator(mediaMessages);
 	return (
 		<Table aria-label={t("views.table")} className={cn("text-xs transition-opacity", dimmed && "opacity-60")}>
 			<TableHeader>
@@ -159,7 +162,7 @@ export function MediaTable({ items, selectedId, dimmed, onSelect, menuFor, onDel
 								</button>
 							</TableCell>
 							<TableCell className="text-cms-muted-foreground">
-								{isImageMime(media.mimeType)
+								{site.api.isImageMime(media.mimeType)
 									? (media.mimeType?.replace("image/", "").toUpperCase() ?? "—")
 									: fileTypeLabel(media.filename, media.mimeType)}
 							</TableCell>
@@ -167,9 +170,9 @@ export function MediaTable({ items, selectedId, dimmed, onSelect, menuFor, onDel
 							<TableCell className="text-cms-muted-foreground tabular-nums">
 								{media.width && media.height ? `${media.width}×${media.height}` : "—"}
 							</TableCell>
-							<TableCell>{usageLabel(media)}</TableCell>
+							<TableCell>{usageLabel(t, media)}</TableCell>
 							<TableCell className="text-cms-muted-foreground tabular-nums">
-								{formatDateTime(media.createdAt, { dateStyle: "medium", timeStyle: "short" })}
+								{formatDateTime(site, media.createdAt, { dateStyle: "medium", timeStyle: "short" })}
 							</TableCell>
 							<TableCell onClick={(event) => event.stopPropagation()}>
 								<MoreActionsButton

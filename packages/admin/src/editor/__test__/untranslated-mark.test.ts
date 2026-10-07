@@ -1,5 +1,6 @@
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
@@ -17,7 +18,10 @@ const untranslated = (value: string) => ({
 const plain = (value: string) => ({ type: "paragraph", content: [text(value)] });
 
 const open = (...content: Parameters<typeof storedDoc>) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(storedDoc(...content)) });
+	editor = new Editor({
+		extensions: buildEditorExtensions(testSite),
+		content: storedToTiptap(testSite, storedDoc(...content)),
+	});
 	return editor;
 };
 
@@ -32,7 +36,7 @@ describe("editing untranslated notice text", () => {
 	it("typing in a block with notice text clears the notice text and enters the input", () => {
 		const current = open(untranslated("첫 문단"), untranslated("둘째 문단"));
 		typeAt(current, 3, "F");
-		expect(tiptapToStored(current.getJSON()).content).toMatchObject([plain("F"), untranslated("둘째 문단")]);
+		expect(tiptapToStored(testSite, current.getJSON()).content).toMatchObject([plain("F"), untranslated("둘째 문단")]);
 	});
 
 	it("pressing clear removes the block's notice text at once", () => {
@@ -40,13 +44,13 @@ describe("editing untranslated notice text", () => {
 		current.commands.setTextSelection(4);
 		const { view } = current;
 		view.someProp("handleKeyDown", (handler) => handler(view, new KeyboardEvent("keydown", { key: "Backspace" })));
-		expect(JSON.stringify(tiptapToStored(current.getJSON()))).not.toContain('"text"');
+		expect(JSON.stringify(tiptapToStored(testSite, current.getJSON()))).not.toContain('"text"');
 	});
 
 	it("a block without notice text accepts input as usual", () => {
 		const current = open(plain("번역 끝"));
 		typeAt(current, 2, "X");
-		const written = JSON.stringify(tiptapToStored(current.getJSON()));
+		const written = JSON.stringify(tiptapToStored(testSite, current.getJSON()));
 		expect(written).toContain("X");
 		expect(written).not.toContain("untranslated");
 	});

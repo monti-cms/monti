@@ -1,5 +1,7 @@
 "use client";
 
+import { useSite, useTranslator } from "@monti-cms/core/client";
+
 import type { StoredDocument } from "@monti-cms/core/document";
 import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components";
@@ -9,7 +11,7 @@ import { useConfirm } from "../shared/confirm-dialog";
 import { formatDateTime } from "../shared/format-date";
 import type { ConflictInfo, RecoveryOffer } from "./entry-editor-store";
 import { type EntryForm, formFromEntry } from "./entry-form";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 /**
  * Asks whether to load a browser temporary copy that is not on the server (`useEntryEditor().recovery`). It is a `conflict` offer if the server has
@@ -26,13 +28,15 @@ export function RecoveryDialog({
 	onKeepServer: () => void;
 	onRestore: () => void;
 }) {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
 	return (
 		<Dialog open={recovery !== null} onOpenChange={(open) => !open && onClose()}>
 			<DialogContent className="max-w-md">
 				<DialogHeader>
 					<DialogTitle>{t("recovery.title")}</DialogTitle>
 					<DialogDescription>
-						{recovery ? t("recovery.description", { date: formatDateTime(recovery.savedAt) }) : ""}
+						{recovery ? t("recovery.description", { date: formatDateTime(site, recovery.savedAt) }) : ""}
 						{recovery?.kind === "conflict" && t("recovery.conflict")}
 					</DialogDescription>
 				</DialogHeader>
@@ -66,6 +70,8 @@ export function ConflictDialog({
 	/** Overwrites the latest server version with my input. */
 	onOverwrite: () => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
 	const { confirm, dialog } = useConfirm();
 	// This replaces the latest server copy wholesale, so ask once more.
 	const overwrite = async () => {
@@ -91,7 +97,7 @@ export function ConflictDialog({
 				{conflict && (
 					<ComparePanes
 						local={conflict.local}
-						server={formFromEntry(conflict.server)}
+						server={formFromEntry(site, conflict.server)}
 						serverVersion={conflict.server.version}
 					/>
 				)}
@@ -122,6 +128,7 @@ function ComparePanes({
 	server: EntryForm;
 	serverVersion: number;
 }) {
+	const t = useTranslator(entriesMessages);
 	// The body is shown as text in the notation of the source panel; without one, as the document itself.
 	const format = useSourceFormat();
 	const bodyText = (doc: StoredDocument) => (format ? format.export(doc) : JSON.stringify(doc, null, 2));

@@ -1,10 +1,11 @@
-import { createTranslator } from "@monti-cms/core/client";
-import { CODE_LINE_EFFECTS, type CodeLineEffect, type CodeRule } from "@monti-cms/core/code-block";
+import { SiteProvider } from "@monti-cms/core/client";
+import type { CodeLineEffect, CodeRule } from "@monti-cms/core/code-block";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { findBlockDOM, refineBlock } from "../../drag";
 import { buildEditorExtensions } from "../../extensions";
@@ -12,9 +13,9 @@ import { inlineBubbleTarget } from "../../inline-marks";
 import { tiptapToStored } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 
-const t = createTranslator(codeBlockMessages);
+const t = testSite.createTranslator(codeBlockMessages);
 /** Highlight effect names (taken from the effect definitions). */
-const HIGHLIGHT_LABEL = CODE_LINE_EFFECTS.find((effect) => effect.name === "highlight")?.label ?? "";
+const HIGHLIGHT_LABEL = testSite.CODE_LINE_EFFECTS.find((effect) => effect.name === "highlight")?.label ?? "";
 
 afterEach(cleanup);
 
@@ -31,7 +32,7 @@ beforeAll(() => {
 
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(),
+		extensions: buildEditorExtensions(testSite),
 		content: tiptapOf(source),
 		immediatelyRender: true,
 	});
@@ -44,12 +45,14 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 const mount = async (source: string) => {
 	let editor: Editor | null = null;
 	render(
-		<Harness
-			source={source}
-			onReady={(ready) => {
-				editor = ready;
-			}}
-		/>,
+		<SiteProvider site={testSite}>
+			<Harness
+				source={source}
+				onReady={(ready) => {
+					editor = ready;
+				}}
+			/>
+		</SiteProvider>,
 	);
 	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).not.toBeNull());
 	return editor as unknown as Editor;
@@ -58,7 +61,7 @@ const mount = async (source: string) => {
 const block = (editor: Editor) => editor.state.doc.child(0);
 /** The annotations the first code block is saved with. */
 const savedAnnotations = (editor: Editor) =>
-	(tiptapToStored(editor.getJSON()).content[0]?.attrs?.annotations ?? {}) as {
+	(tiptapToStored(testSite, editor.getJSON()).content[0]?.attrs?.annotations ?? {}) as {
 		lines?: { name: string; start: number; end: number }[];
 		rules?: { scope: string; name: string; pattern: string; flags: string }[];
 	};

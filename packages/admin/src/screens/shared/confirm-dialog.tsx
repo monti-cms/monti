@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { type Translator, useTranslator } from "@monti-cms/core/client";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import {
 	AlertDialog,
@@ -14,8 +14,6 @@ import {
 } from "../../ui/alert-dialog";
 import { sharedMessages } from "./messages";
 
-const t = createTranslator(sharedMessages);
-
 export interface ConfirmRequest {
 	title: string;
 	description: ReactNode;
@@ -26,6 +24,7 @@ export interface ConfirmRequest {
 
 /** Confirm dialog for hard-to-undo actions. On cancel, focus returns to the button that opened it. */
 export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | null; onClose: () => void }) {
+	const t = useTranslator(sharedMessages);
 	return (
 		<AlertDialog open={request !== null} onOpenChange={(open) => !open && onClose()}>
 			<AlertDialogContent>
@@ -55,18 +54,20 @@ export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | 
 }
 
 /** The question asked when discarding unsaved content. Every edit slot with a save button uses the same wording. */
-export const DISCARD_CONFIRM = {
-	title: t("discard.title"),
-	description: t("discard.description"),
-	confirmLabel: t("discard.confirm"),
-	destructive: true,
-} as const satisfies Omit<ConfirmRequest, "onConfirm">;
+export const discardConfirm = (t: Translator<"discard.title" | "discard.description" | "discard.confirm">) =>
+	({
+		title: t("discard.title"),
+		description: t("discard.description"),
+		confirmLabel: t("discard.confirm"),
+		destructive: true,
+	}) as const satisfies Omit<ConfirmRequest, "onConfirm">;
 
 /**
  * Opens the confirm dialog as a Promise. `confirm(...)` resolves to true or false depending on which button was pressed.
  * Render `dialog` once somewhere on the screen.
  */
 export function useConfirm() {
+	const t = useTranslator(sharedMessages);
 	const [request, setRequest] = useState<ConfirmRequest | null>(null);
 	const resolveRef = useRef<((ok: boolean) => void) | null>(null);
 	const confirm = useCallback(
@@ -86,8 +87,8 @@ export function useConfirm() {
 	);
 	/** Asks whether to discard only when `dirty`. If clean, it is true immediately. */
 	const confirmDiscard = useCallback(
-		(dirty: boolean) => (dirty ? confirm(DISCARD_CONFIRM) : Promise.resolve(true)),
-		[confirm],
+		(dirty: boolean) => (dirty ? confirm(discardConfirm(t)) : Promise.resolve(true)),
+		[confirm, t],
 	);
 	const dialog = (
 		<ConfirmDialog

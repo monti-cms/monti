@@ -1,17 +1,18 @@
 "use client";
 
-import { diffSources, type SourceChange, type StoredDocument } from "@monti-cms/core/client";
+import { diffSources, type SourceChange, type StoredDocument, useSite, useTranslator } from "@monti-cms/core/client";
 import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
+import type { TranslatorFor } from "../../translator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { entriesMessages } from "./messages";
 import { DocPreview } from "./source-pane";
-import { t } from "./translate";
 
-const KIND_LABELS: Record<SourceChange["kind"], string> = {
+const kindLabels = (t: TranslatorFor<typeof entriesMessages>): Record<SourceChange["kind"], string> => ({
 	changed: t("sourceChange.changed"),
 	added: t("sourceChange.added"),
 	removed: t("sourceChange.removed"),
 	moved: t("sourceChange.moved"),
-};
+});
 
 /** Text of a header-row fragment (`{"title":..}`, `{"labels":[..]}`). */
 const headerText = (source: string) => {
@@ -41,11 +42,12 @@ function UnitView({ unit }: { unit: { kind: string; source: string; node: Stored
 }
 
 function ChangeItem({ change }: { change: SourceChange }) {
+	const t = useTranslator(entriesMessages);
 	// A block that only moved reads the same before and now, so it is shown once.
 	const unedited = change.kind === "moved" && !change.edited;
 	const before = change.kind === "added" || unedited ? null : change.before;
 	const after = change.kind === "removed" ? null : change.after;
-	const label = change.kind === "moved" && change.edited ? t("sourceChange.movedChanged") : KIND_LABELS[change.kind];
+	const label = change.kind === "moved" && change.edited ? t("sourceChange.movedChanged") : kindLabels(t)[change.kind];
 	return (
 		<li className="flex flex-col gap-2 rounded-md border p-3">
 			<span className="w-fit rounded bg-cms-muted px-1.5 py-0.5 font-medium text-xs">{label}</span>
@@ -80,7 +82,9 @@ export function SourceChangeDialog({
 	before: StoredDocument | undefined;
 	after: StoredDocument;
 }) {
-	const changes = open && before ? diffSources(before, after) : null;
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
+	const changes = open && before ? diffSources(site, before, after) : null;
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">

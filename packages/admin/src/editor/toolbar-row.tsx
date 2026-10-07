@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { Check, MoreHorizontal } from "lucide-react";
 import { Fragment, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -16,8 +16,6 @@ import { IconButton } from "../ui/icon-button";
 import { editorMessages } from "./messages";
 import type { ToolbarItem } from "./toolbar-button";
 import { type FitItem, fitSlots, layoutKeys } from "./toolbar-fit";
-
-const t = createTranslator(editorMessages);
 
 /** One tool. When narrow, tools with the largest `priority` move into the "More" menu (`menu`) first. */
 export interface ToolbarSlot {
@@ -83,6 +81,7 @@ export function ToolbarMenuGroup({ editor, label, items }: { editor: Editor; lab
 }
 
 function OverflowMenu({ editor, children }: { editor: Editor; children: ReactNode }) {
+	const t = useTranslator(editorMessages);
 	return (
 		<DropdownMenu>
 			<IconButton

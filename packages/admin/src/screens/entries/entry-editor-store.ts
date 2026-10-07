@@ -1,17 +1,9 @@
-import {
-	bodyExcerpt,
-	confirmedSourceState,
-	fillFromBodyFields,
-	fillFromBodyLength,
-	isCollection,
-	isItemCollection,
-	slugFieldOf,
-	slugFromValues,
-} from "@monti-cms/core/client";
+import { bodyExcerpt, confirmedSourceState, fillFromBodyLength, type Site } from "@monti-cms/core/client";
 import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
 import type { BrowserFormat } from "../../browser-format";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore, type StateStore } from "../../hooks/store";
+import type { TranslatorFor } from "../../translator";
 import { CmsApiError, errorText } from "../admin-api";
 import type { CmsIssue } from "../api-error-message";
 import type { EntryEditorClient, EntryStatusAction, RecoveryRecord, RecoveryStore } from "./entry-editor-client";
@@ -35,7 +27,7 @@ import {
 } from "./entry-form";
 import { upgradeRecoveryRecord } from "./legacy-backup";
 import { backupKey } from "./local-backup";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 /** The browser recovery copy is kept once input has paused this long (not written on every input). */
 export const RECOVERY_IDLE_MS = 5000;
@@ -277,6 +269,8 @@ export interface EntryEditorCallbacks {
 }
 
 export interface EntryEditorConfig {
+	/** The site the editor works in: its collections, locales and admin language. */
+	site: Site;
 	adminId: string;
 	target: EntryEditorTarget;
 	client: EntryEditorClient;
@@ -306,9 +300,9 @@ export const ENTRY_EDITOR_CORE: unique symbol = Symbol("monti.entryEditorCore");
 type Failure = EditorResult<never>;
 
 /** An `EditorError` for something thrown by the client: the server's message, the network text, or `fallback`. */
-function failureOf(error: unknown, fallback: string): EditorError {
+function failureOf(site: Site, error: unknown, fallback: string): EditorError {
 	const base = toEditorError(error, fallback);
-	const message = error instanceof CmsApiError ? error.message || fallback : errorText(error, fallback);
+	const message = error instanceof CmsApiError ? error.message || fallback : errorText(site, error, fallback);
 	return { ...base, message };
 }
 
@@ -325,12 +319,12 @@ function keepTranslationGroup(current: EntryData | null, next: EntryData): Pick<
 	return { translations, source: current?.source ?? next.source };
 }
 
-const STATUS_FAILED: Record<EntryStatusAction, string> = {
+const statusFailed = (t: TranslatorFor<typeof entriesMessages>): Record<EntryStatusAction, string> => ({
 	archive: t("lifecycle.failed.archive"),
 	unarchive: t("lifecycle.failed.unarchive"),
 	trash: t("lifecycle.failed.trash"),
 	restore: t("lifecycle.failed.restore"),
-};
+});
 
 /**
  * The entry editor's engine: the state machine behind `useEntryEditor`, written without React so it can be driven by a test or another UI.
@@ -347,14 +341,15 @@ const STATUS_FAILED: Record<EntryStatusAction, string> = {
  * @internal
  */
 export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
-	const { adminId, target, client, recoveryStore } = config;
+	const { site, adminId, target, client, recoveryStore } = config;
+	const t = site.createTranslator(entriesMessages);
 	const formats = () => config.formats?.();
 	const callbacks = () => config.callbacks();
 
 	const initialCollection = target.mode === "new" ? target.collection : "";
 	const initialLoad: EntryLoadState =
 		target.mode === "new"
-			? isItemCollection(target.collection)
+			? site.isItemCollection(target.collection)
 				? { status: "redirect", reason: "item-collection", collection: target.collection }
 				: { status: "ready" }
 			: { status: "loading" };
@@ -384,7 +379,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		baseMetadata: {} as Record<string, unknown>,
 		/** A translation saves only per-language values. */
 		translation: false,
-		serverFingerprint: formFingerprint(EMPTY_FORM),
+		serverFingerprint: formFingerprint(site, EMPTY_FORM),
 		changeSeq: 0,
 		ackSeq: 0,
 		inflight: null as Promise<EditorResult<EntrySaveOutcome>> | null,
@@ -435,7 +430,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			entryId: m.entryId ?? "new",
 			baseVersion: m.version,
 			baseFingerprint: m.serverFingerprint,
-			localFingerprint: formFingerprint(snapshot),
+			localFingerprint: formFingerprint(site, snapshot),
 			snapshot,
 			changeSeq,
 			savedAt: Date.now(),
@@ -482,12 +477,12 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 
 	/** Makes the server's entry the baseline: the form, the version, the metadata to round-trip and the save status all follow it. */
 	const applyServerEntry = (loaded: EntryData) => {
-		const loadedForm = formFromEntry(loaded);
+		const loadedForm = formFromEntry(site, loaded);
 		m.entryId = loaded.id;
 		m.version = loaded.version;
 		m.baseMetadata = loaded.working.metadata ?? {};
 		m.translation = isTranslationEntry(loaded);
-		m.serverFingerprint = formFingerprint(loadedForm);
+		m.serverFingerprint = formFingerprint(site, loadedForm);
 		m.changeSeq = 0;
 		m.ackSeq = 0;
 		cancelPendingBackup();
@@ -506,7 +501,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const fetchAndApply = async (id: string, alive: () => boolean = () => true): Promise<EntryData | null> => {
 		const loaded = await client.get(id);
 		if (!alive()) return null;
-		if (isItemCollection(loaded.collection)) {
+		if (site.isItemCollection(loaded.collection)) {
 			commit({
 				load: { status: "redirect", reason: "item-collection", collection: loaded.collection, entryId: loaded.id },
 			});
@@ -522,8 +517,8 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const applyForm = (patch: EntryFormPatch) => {
 		const current = state();
 		const next = { ...current.form, ...patch };
-		const fingerprint = formFingerprint(next);
-		if (fingerprint === formFingerprint(current.form)) return;
+		const fingerprint = formFingerprint(site, next);
+		if (fingerprint === formFingerprint(site, current.form)) return;
 		m.changeSeq += 1;
 		const keepsStatus = current.saveStatus === "conflict" || current.saveStatus === "session-expired";
 		if (!m.inflight && fingerprint === m.serverFingerprint) {
@@ -539,10 +534,10 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	/** If the slug was not edited by hand, regenerates it when the value that the slug field's `from` points to changes. */
 	const withAutoSlug = (patch: EntryFormPatch): EntryFormPatch => {
 		const { collection, form, slugTouched } = state();
-		if (slugTouched || !isCollection(collection)) return patch;
-		const from = slugFieldOf(collection)?.from;
+		if (slugTouched || !site.isCollection(collection)) return patch;
+		const from = site.slugFieldOf(collection)?.from;
 		if (!from || !Object.hasOwn(patch, from)) return patch;
-		return { ...patch, slug: slugFromValues(collection, { ...form, ...patch }) };
+		return { ...patch, slug: site.slugFromValues(collection, { ...form, ...patch }) };
 	};
 
 	// ---- save
@@ -566,7 +561,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		const targetSeq = m.changeSeq;
 		const snapshot = current.form;
 		const collection = current.collection;
-		const built = metadataFromForm(snapshot, collection, m.baseMetadata, { translation: m.translation });
+		const built = metadataFromForm(site, snapshot, collection, m.baseMetadata, { translation: m.translation });
 		if ("error" in built) {
 			const error: EditorError = { code: "validation", message: built.error, retryable: false };
 			commit({ saveError: error, saveStatus: "failed" });
@@ -593,13 +588,13 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				if (isNew) m.entryId = saved.id;
 				m.version = saved.version;
 				m.baseMetadata = saved.working?.metadata ?? built.metadata;
-				m.serverFingerprint = formFingerprint(snapshot);
+				m.serverFingerprint = formFingerprint(site, snapshot);
 				m.ackSeq = targetSeq;
 				const merged: EntryData = { ...saved, ...keepTranslationGroup(state().entry, saved) };
 				commit({ entry: merged, readOnly: merged.status === "trashed", saveError: null });
 				callbacks().onSaved?.(merged, { created: isNew });
 
-				if (formFingerprint(state().form) === m.serverFingerprint) {
+				if (formFingerprint(site, state().form) === m.serverFingerprint) {
 					m.ackSeq = m.changeSeq;
 					commit({ saveStatus: "saved" });
 					await settle(discardBackup(backupKey(adminId, m.entryId, collection)));
@@ -674,7 +669,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 					return editorFailure("conflict", t("editor.conflict"));
 				}
 			} catch (caught) {
-				const error = failureOf(caught, t("save.offline"));
+				const error = failureOf(site, caught, t("save.offline"));
 				if (error.code === "session_expired") {
 					commit({ saveError: error, saveStatus: "session-expired" });
 					return failed(error);
@@ -694,9 +689,9 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		const { collection, form } = state();
 		const filled: FilledField[] = [];
 		// A field filled from the body (`fillFromBody`) that is empty is generated from the body. If there is no body to generate from, it must be entered by hand.
-		for (const { name, field } of isCollection(collection) ? fillFromBodyFields(collection) : []) {
+		for (const { name, field } of site.isCollection(collection) ? site.fillFromBodyFields(collection) : []) {
 			if (formText(state().form, name).trim()) continue;
-			const generated = bodyExcerpt(form.doc, fillFromBodyLength(field));
+			const generated = bodyExcerpt(site, form.doc, fillFromBodyLength(field));
 			if (!generated) {
 				const issue: CmsIssue = { code: "missing_field", message: field.label, path: name };
 				const error: EditorError = {
@@ -745,9 +740,9 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				}
 				if (caught instanceof CmsApiError && caught.issues.length > 0) {
 					commit({ publishIssues: caught.issues });
-					return failed(failureOf(caught, t("publishFailed")));
+					return failed(failureOf(site, caught, t("publishFailed")));
 				}
-				return failed(failureOf(caught, t("publishFailed")));
+				return failed(failureOf(site, caught, t("publishFailed")));
 			}
 		} finally {
 			commit({ busy: null });
@@ -771,7 +766,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			if (loaded) callbacks().onSaved?.(loaded, { created: false });
 			return { ok: true, value: { entry: loaded } };
 		} catch (caught) {
-			return failed(failureOf(caught, STATUS_FAILED[action]));
+			return failed(failureOf(site, caught, statusFailed(t)[action]));
 		} finally {
 			commit({ busy: null });
 		}
@@ -784,11 +779,11 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		if (!id || m.changeSeq > m.ackSeq) return editorFailure("invalid_state", t("editor.unsaved"));
 		try {
 			const copy = await client.duplicate(id, {
-				title: copyTitle(current.collection, formText(current.form, "title")),
+				title: copyTitle(site, current.collection, formText(current.form, "title")),
 			});
 			return { ok: true, value: copy };
 		} catch (caught) {
-			return failed(failureOf(caught, t("duplicateFailed")));
+			return failed(failureOf(site, caught, t("duplicateFailed")));
 		}
 	};
 
@@ -803,7 +798,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			);
 			return { ok: true, value: undefined };
 		} catch (caught) {
-			return failed(failureOf(caught, t("deleteFailed")));
+			return failed(failureOf(site, caught, t("deleteFailed")));
 		}
 	};
 
@@ -843,7 +838,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			await discardBackup(backupKey(adminId, loaded.id, loaded.collection));
 			return { ok: true, value: loaded };
 		} catch (caught) {
-			return failed(failureOf(caught, t("loadFailed")));
+			return failed(failureOf(site, caught, t("loadFailed")));
 		}
 	};
 
@@ -867,9 +862,9 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const open = async (generation: number) => {
 		const alive = () => generation === m.generation;
 		if (target.mode === "new") {
-			if (isItemCollection(target.collection)) return;
+			if (site.isItemCollection(target.collection)) return;
 			const stored = await safely(() => recoveryStore.get(backupKey(adminId, null, target.collection)), null);
-			const backup = stored && upgradeRecoveryRecord(stored, undefined, formats());
+			const backup = stored && upgradeRecoveryRecord(site, stored, undefined, formats());
 			if (alive() && backup && backup.localFingerprint !== backup.baseFingerprint) offerRecovery(backup);
 			return;
 		}
@@ -879,9 +874,9 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			if (!loaded || !alive()) return;
 			const key = backupKey(adminId, loaded.id, loaded.collection);
 			const stored = await safely(() => recoveryStore.get(key), null);
-			const backup = stored && upgradeRecoveryRecord(stored, loaded.working.doc, formats());
+			const backup = stored && upgradeRecoveryRecord(site, stored, loaded.working.doc, formats());
 			if (backup && alive()) {
-				if (backup.localFingerprint === formFingerprint(state().form)) {
+				if (backup.localFingerprint === formFingerprint(site, state().form)) {
 					await discardBackup(key);
 				} else if (backup.baseVersion === loaded.version) {
 					offerRecovery(backup);
@@ -892,7 +887,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			}
 			if (alive()) commit({ load: { status: "ready" } });
 		} catch (caught) {
-			if (alive()) commit({ load: { status: "error", error: failureOf(caught, t("loadFailed")) } });
+			if (alive()) commit({ load: { status: "error", error: failureOf(site, caught, t("loadFailed")) } });
 		}
 	};
 
@@ -920,7 +915,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		regenerateSlug: () => {
 			const { collection, form } = state();
 			commit({ slugTouched: false });
-			applyForm({ slug: isCollection(collection) ? slugFromValues(collection, form) : "" });
+			applyForm({ slug: site.isCollection(collection) ? site.slugFromValues(collection, form) : "" });
 		},
 		setBody: (doc: StoredDocument) => applyForm({ doc }),
 		setComposing,

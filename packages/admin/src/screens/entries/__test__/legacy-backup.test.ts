@@ -1,5 +1,6 @@
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import type { BrowserFormat } from "../../../browser-format";
 import type { RecoveryRecord } from "../entry-editor-client";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
@@ -31,7 +32,7 @@ const legacySnapshot = (mdx: string, changes: Record<string, unknown> = {}) => {
 describe("upgradeRecoveryRecord", () => {
 	it("restores a copy with MDX text and no document as an unparsed document holding the text exactly", () => {
 		const text = "# 제목\n\n<Callout>\n본문\n</Callout>\n";
-		const upgraded = upgradeRecoveryRecord(record(legacySnapshot(text, { title: "쓰던 글" })));
+		const upgraded = upgradeRecoveryRecord(testSite, record(legacySnapshot(text, { title: "쓰던 글" })));
 		const snapshot = upgraded.snapshot as EntryForm & { mdx?: unknown };
 		expect(snapshot.mdx).toBeUndefined();
 		expect(snapshot.title).toBe("쓰던 글");
@@ -41,24 +42,24 @@ describe("upgradeRecoveryRecord", () => {
 
 	it("gives the restored text a block id", () => {
 		const server = docOfParagraphs(paragraph("srv00001", "서버 본문"));
-		const upgraded = upgradeRecoveryRecord(record(legacySnapshot("서버 본문")), server);
+		const upgraded = upgradeRecoveryRecord(testSite, record(legacySnapshot("서버 본문")), server);
 		const block = (upgraded.snapshot as EntryForm).doc.content[0] as { id?: string };
 		expect(block.id).toBeTruthy();
 	});
 
 	it("restores an empty text as the empty body", () => {
-		const upgraded = upgradeRecoveryRecord(record(legacySnapshot("")));
+		const upgraded = upgradeRecoveryRecord(testSite, record(legacySnapshot("")));
 		expect((upgraded.snapshot as EntryForm).doc.content).toEqual([]);
 	});
 
 	it("compares a restored copy of a new entry with the empty form", () => {
-		const upgraded = upgradeRecoveryRecord(record(legacySnapshot("글"), "new"));
+		const upgraded = upgradeRecoveryRecord(testSite, record(legacySnapshot("글"), "new"));
 		expect(upgraded.baseFingerprint).not.toBe("base");
 	});
 
 	it("keeps the document of a copy that already has one", () => {
 		const doc = docOfParagraphs(paragraph("abcd1234", "이미 문서"));
-		const upgraded = upgradeRecoveryRecord(record({ ...EMPTY_FORM, doc }));
+		const upgraded = upgradeRecoveryRecord(testSite, record({ ...EMPTY_FORM, doc }));
 		expect((upgraded.snapshot as EntryForm).doc.content).toEqual(doc.content);
 		expect(upgraded.baseFingerprint).toBe("base");
 	});
@@ -83,7 +84,7 @@ describe("upgradeRecoveryRecord", () => {
 		};
 
 		it("reads the text through it, with block ids paired with the server body, so a copy equal to the server body compares equal", () => {
-			const upgraded = upgradeRecoveryRecord(record(legacySnapshot("본문\n")), server, { mdx: reads });
+			const upgraded = upgradeRecoveryRecord(testSite, record(legacySnapshot("본문\n")), server, { mdx: reads });
 			const snapshot = upgraded.snapshot as EntryForm;
 			expect(snapshot.doc.content).toHaveLength(1);
 			expect(snapshot.doc.content[0]).toMatchObject({ type: "paragraph" });
@@ -91,7 +92,7 @@ describe("upgradeRecoveryRecord", () => {
 		});
 
 		it("keeps a text the format cannot read as an unparsed document", () => {
-			const upgraded = upgradeRecoveryRecord(record(legacySnapshot("<Broken")), server, { mdx: reads });
+			const upgraded = upgradeRecoveryRecord(testSite, record(legacySnapshot("<Broken")), server, { mdx: reads });
 			expect((upgraded.snapshot as EntryForm).doc.content[0]).toMatchObject({ type: "unparsed" });
 		});
 	});

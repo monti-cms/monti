@@ -1,54 +1,42 @@
-import { createTranslator } from "@monti-cms/core/client";
-import { CODE_LINE_EFFECTS, type CodeLineEffect, type CodeRule } from "@monti-cms/core/code-block";
+import { createSite, type Site, SiteProvider } from "@monti-cms/core/client";
+import type { CodeLineEffect, CodeRule } from "@monti-cms/core/code-block";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig, testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { withoutIds } from "../../../test/stored-doc";
+import { codeAnchorRef } from "../../added-marks";
 import { buildEditorExtensions } from "../../extensions";
 import { tiptapToStored } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 import { RulesPanel } from "../rules-panel";
 
 /**
- * Site config `codeBlock.omitLineEffects` and `codeBlock.features` cannot be changed per test (the admin tests use one fixed site config),
- * so the resolved values are replaced here and switched per test. Turning a tool off must only hide it from the editor tools.
+ * Site config `codeBlock.omitLineEffects` and `codeBlock.features` are fixed per site, so each test builds its own site from the test site config
+ * with `configure` and the editor, the rules panel and the translator read that one. Turning a tool off must only hide it from the editor tools.
  */
-const mocked = vi.hoisted(() => ({
-	features: { rules: true, fold: true, tooltip: true, textStyles: true },
-	omitted: [] as string[],
-	offered: [] as unknown[],
-}));
+const FEATURES_ON = { rules: true, fold: true, tooltip: true, textStyles: true };
+let site: Site = testSite;
 
-vi.mock("@monti-cms/core/code-block", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("@monti-cms/core/code-block")>();
-	return {
-		...actual,
-		CODE_BLOCK_FEATURES: mocked.features,
-		OFFERED_LINE_EFFECTS: mocked.offered,
-		offersCharEffect: (name: string) =>
-			name === "fold"
-				? mocked.features.fold
-				: name === "Tooltip"
-					? mocked.features.tooltip
-					: mocked.features.textStyles,
-	};
-});
-
-const t = createTranslator(codeBlockMessages);
-const labelOf = (name: string) => CODE_LINE_EFFECTS.find((effect) => effect.name === name)?.label ?? "";
+const t = testSite.createTranslator(codeBlockMessages);
+const labelOf = (name: string) => testSite.CODE_LINE_EFFECTS.find((effect) => effect.name === name)?.label ?? "";
 
 /** Turns tools off the way the site config does. `omit` is `codeBlock.omitLineEffects`. */
-const configure = (options: { omit?: string[]; features?: Partial<typeof mocked.features> }) => {
-	Object.assign(mocked.features, { rules: true, fold: true, tooltip: true, textStyles: true }, options.features);
-	mocked.offered.splice(
-		0,
-		mocked.offered.length,
-		...CODE_LINE_EFFECTS.filter((effect) => !(options.omit ?? []).includes(effect.name)),
-	);
+const configure = (options: { omit?: string[]; features?: Partial<typeof FEATURES_ON> }) => {
+	site = createSite({
+		...testConfig,
+		codeBlock: {
+			...testConfig.codeBlock,
+			omitLineEffects: options.omit ?? [],
+			features: { ...FEATURES_ON, ...options.features },
+		},
+	});
 };
+
+const SiteTree = ({ children }: { children: ReactNode }) => <SiteProvider site={site}>{children}</SiteProvider>;
 
 beforeEach(() => configure({}));
 afterEach(cleanup);
@@ -66,7 +54,7 @@ beforeAll(() => {
 
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(),
+		extensions: buildEditorExtensions(site),
 		content: tiptapOf(source),
 		immediatelyRender: true,
 	});
@@ -79,12 +67,14 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 const mount = async (source: string) => {
 	let editor: Editor | null = null;
 	render(
-		<Harness
-			source={source}
-			onReady={(ready) => {
-				editor = ready;
-			}}
-		/>,
+		<SiteTree>
+			<Harness
+				source={source}
+				onReady={(ready) => {
+					editor = ready;
+				}}
+			/>
+		</SiteTree>,
 	);
 	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).not.toBeNull());
 	return editor as unknown as Editor;
@@ -164,12 +154,12 @@ describe("code block tools turned off in the site config", () => {
 
 	describe("block header", () => {
 		it("hides the line effects button and the menu when nothing is offered and the block has no effects", async () => {
-			configure({ omit: CODE_LINE_EFFECTS.map((effect) => effect.name), features: { fold: false } });
+			configure({ omit: testSite.CODE_LINE_EFFECTS.map((effect) => effect.name), features: { fold: false } });
 			await mount(CODE);
-			const { CODE_ANCHOR_REF } = await import("../../added-marks");
+			const anchorRef = codeAnchorRef(site);
 			// Linking a line to body text (when the site has such a text style) keeps the menu useful.
-			expect(!!screen.queryByRole("button", { name: t("view.lineEffects") })).toBe(!!CODE_ANCHOR_REF);
-			if (!CODE_ANCHOR_REF) {
+			expect(!!screen.queryByRole("button", { name: t("view.lineEffects") })).toBe(!!anchorRef);
+			if (!anchorRef) {
 				act(() => {
 					fireEvent.contextMenu(gutterRow(0));
 				});
@@ -178,7 +168,7 @@ describe("code block tools turned off in the site config", () => {
 		});
 
 		it("keeps the line effects button when the block already has an effect", async () => {
-			configure({ omit: CODE_LINE_EFFECTS.map((effect) => effect.name), features: { fold: false } });
+			configure({ omit: testSite.CODE_LINE_EFFECTS.map((effect) => effect.name), features: { fold: false } });
 			await mount("```ts\n// @line plus {0-0}\nconst a = 1;\n```");
 			expect(screen.getByRole("button", { name: t("view.lineEffects") })).toBeTruthy();
 		});
@@ -210,13 +200,19 @@ describe("code block tools turned off in the site config", () => {
 			const row = await screen.findByRole("listitem", { name: t("rulesPanel.rule", { pattern: "const" }) });
 			expect(within(row).getByLabelText(t("rulesPanel.pattern"))).toBeTruthy();
 			expect((block(editor).attrs.rules as CodeRule[])[0]).toMatchObject({ name: "strong", pattern: "const" });
-			expect(withoutIds(tiptapToStored(editor.getJSON()))).toEqual(withoutIds(tiptapToStored(tiptapOf(RULE_CODE))));
+			expect(withoutIds(tiptapToStored(site, editor.getJSON()))).toEqual(
+				withoutIds(tiptapToStored(site, tiptapOf(RULE_CODE))),
+			);
 		});
 	});
 
 	describe("rules panel", () => {
 		const renderPanel = (rules: CodeRule[], onChange = vi.fn()) => {
-			render(<RulesPanel rules={rules} text="const a" lineCount={1} selection={null} onChange={onChange} />);
+			render(
+				<SiteTree>
+					<RulesPanel rules={rules} text="const a" lineCount={1} selection={null} onChange={onChange} />
+				</SiteTree>,
+			);
 			return onChange;
 		};
 		const trigger = () => screen.getByRole("button", { name: t("rulesPanel.title") });
@@ -283,14 +279,14 @@ describe("code block tools turned off in the site config", () => {
 		].join("\n");
 
 		it("loads, edits and saves a body that uses turned-off tools exactly as before", async () => {
-			const before = tiptapToStored(tiptapOf(SOURCE));
+			const before = tiptapToStored(site, tiptapOf(SOURCE));
 			configure({
 				omit: ["plus"],
 				features: { rules: false, fold: false, tooltip: false, textStyles: false },
 			});
 			const editor = await mount(SOURCE);
 			expect(block(editor).attrs.rawMode).toBe(false);
-			expect(withoutIds(tiptapToStored(editor.getJSON()))).toEqual(withoutIds(before));
+			expect(withoutIds(tiptapToStored(site, editor.getJSON()))).toEqual(withoutIds(before));
 			expect((block(editor).attrs.lineEffects as CodeLineEffect[]).map((effect) => effect.name)).toEqual([
 				"plus",
 				"collapse",
@@ -301,7 +297,7 @@ describe("code block tools turned off in the site config", () => {
 			act(() => {
 				editor.commands.insertContentAt(block(editor).nodeSize - 1, "x");
 			});
-			const annotations = tiptapToStored(editor.getJSON()).content[0]?.attrs?.annotations as {
+			const annotations = tiptapToStored(site, editor.getJSON()).content[0]?.attrs?.annotations as {
 				lines?: { name: string }[];
 				rules?: { name: string; pattern: string }[];
 			};

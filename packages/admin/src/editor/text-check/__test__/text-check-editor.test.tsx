@@ -1,21 +1,23 @@
 import { CmsEditor } from "@monti-cms/admin/editor";
-import { createTranslator, defineTextChecker, type TextChecker, type TextCheckSegment } from "@monti-cms/core/client";
+import { defineTextChecker, type TextChecker, type TextCheckSegment } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import type { PluginKey } from "@tiptap/pm/state";
 import { useMemo } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { CmsAdminComponentsProvider, useEditorExtensions } from "../../../admin-components";
 import { pressOption } from "../../../test/base-ui";
 import { docOf } from "../../../test/mdx";
+import { renderWithSite } from "../../../test/site";
 import { editorMessages } from "../../messages";
 import { textCheckMessages } from "../messages";
 import { type TextCheckPluginState, textCheckIssues } from "../plugin";
 import { AUTO_CHECK_DELAY } from "../use-text-check";
 
-const t = createTranslator(textCheckMessages);
-const tEditor = createTranslator(editorMessages);
+const t = testSite.createTranslator(textCheckMessages);
+const tEditor = testSite.createTranslator(editorMessages);
 
 const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }));
 vi.mock("sonner", () => ({ toast: toastMock }));
@@ -100,7 +102,7 @@ function Harness({
 const renderEditor = async (content: string, checkers: readonly TextChecker[], locale = "ko") => {
 	let editor: Editor | null = null;
 	const onChange = vi.fn();
-	render(
+	renderWithSite(
 		<CmsAdminComponentsProvider components={{ textCheckers: checkers }}>
 			<Harness
 				content={content}
@@ -149,7 +151,7 @@ const clickIssue = (editor: Editor) => {
 describe("spellcheck button", () => {
 	it("adds one button per checker when several extensions provide checkers", async () => {
 		const other = defineTextChecker({ ...fakeChecker(), id: "other", label: "다른 검사" });
-		render(
+		renderWithSite(
 			<CmsAdminComponentsProvider components={{ textCheckers: [fakeChecker()] }}>
 				<CmsAdminComponentsProvider components={{ textCheckers: [other] }}>
 					<Harness content={"틀린말\n"} locale="ko" onChange={vi.fn()} onReady={() => {}} />

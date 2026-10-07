@@ -1,6 +1,6 @@
 "use client";
 
-import { COLLECTIONS, cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
@@ -8,8 +8,6 @@ import { cmsFetch } from "../admin-api";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { TRASH_COUNT_KEY } from "./list-cache";
 import { sharedMessages } from "./messages";
-
-const t = createTranslator(sharedMessages);
 
 interface AdminNavContextValue {
 	/** Number of trash items across all collections. null before loading. */
@@ -23,11 +21,11 @@ const AdminNavContext = createContext<AdminNavContextValue | null>(null);
 export const useAdminNav = (): AdminNavContextValue =>
 	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {} };
 
-async function countTrash(): Promise<number> {
+async function countTrash(site: Site): Promise<number> {
 	const totals = await Promise.all(
-		COLLECTIONS.map(async (collection) => {
+		site.COLLECTIONS.map(async (collection) => {
 			const query = new URLSearchParams({ collection, status: "trashed", pageSize: "25" });
-			const data = await cmsFetch<{ total: number }>(cmsApiUrl(`/v1/entries?${query.toString()}`));
+			const data = await cmsFetch<{ total: number }>(site, cmsApiUrl(`/v1/entries?${query.toString()}`));
 			return data.total;
 		}),
 	);
@@ -36,8 +34,9 @@ async function countTrash(): Promise<number> {
 
 /** Trash badge state. The screen's list logic must update this value too, so it lives outside the shell. */
 export function AdminNavProvider({ children }: { children: ReactNode }) {
+	const site = useSite();
 	const queryClient = useQueryClient();
-	const { data } = useQuery({ queryKey: TRASH_COUNT_KEY, queryFn: countTrash });
+	const { data } = useQuery({ queryKey: TRASH_COUNT_KEY, queryFn: () => countTrash(site) });
 	const refreshTrashCount = useCallback(
 		() => void queryClient.invalidateQueries({ queryKey: TRASH_COUNT_KEY }),
 		[queryClient],
@@ -64,6 +63,7 @@ export function AdminShell({
 	headerActions?: ReactNode;
 	children: ReactNode;
 }) {
+	const t = useTranslator(sharedMessages);
 	const nav = useContext(AdminNavContext);
 	if (!nav) {
 		return (

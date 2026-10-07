@@ -1,8 +1,9 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { MoveHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { TranslatorFor } from "../translator";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -12,8 +13,6 @@ import {
 } from "../ui/dropdown-menu";
 import { IconButton } from "../ui/icon-button";
 import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
 
 /**
  * Editor body width. Changes only the width shown while editing; unrelated to the saved content and the public page.
@@ -29,12 +28,12 @@ export const EDITOR_WIDTHS = {
 
 export type EditorWidth = keyof typeof EDITOR_WIDTHS;
 
-const LABELS: Record<EditorWidth, string> = {
+const LABELS = (t: TranslatorFor<typeof editorMessages>): Record<EditorWidth, string> => ({
 	narrow: t("editorWidth.narrow"),
 	normal: t("editorWidth.normal"),
 	wide: t("editorWidth.wide"),
 	full: t("editorWidth.full"),
-};
+});
 const STORAGE_KEY = "cms:editor-width";
 const isEditorWidth = (value: unknown): value is EditorWidth =>
 	typeof value === "string" && Object.hasOwn(EDITOR_WIDTHS, value);
@@ -63,6 +62,7 @@ export function useEditorWidth(): [EditorWidth, (width: EditorWidth) => void] {
 
 /** Body width menu at the right end of the toolbar. */
 export function EditorWidthMenu({ value, onChange }: { value: EditorWidth; onChange: (width: EditorWidth) => void }) {
+	const t = useTranslator(editorMessages);
 	return (
 		<DropdownMenu>
 			<IconButton
@@ -82,7 +82,7 @@ export function EditorWidthMenu({ value, onChange }: { value: EditorWidth; onCha
 				>
 					{(Object.keys(EDITOR_WIDTHS) as EditorWidth[]).map((width) => (
 						<DropdownMenuRadioItem key={width} value={width}>
-							{LABELS[width]}
+							{LABELS(t)[width]}
 						</DropdownMenuRadioItem>
 					))}
 				</DropdownMenuRadioGroup>

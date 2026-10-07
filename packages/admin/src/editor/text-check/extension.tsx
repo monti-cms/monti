@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_LOCALE, type TextChecker } from "@monti-cms/core/client";
+import { type TextChecker, useSite } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { useState } from "react";
 import type { EditorExtensionContext, EditorExtensionResult } from "../../admin-components";
@@ -16,8 +16,9 @@ export function useTextCheckEditor(
 	checkers: readonly TextChecker[],
 	context: EditorExtensionContext,
 ): EditorExtensionResult {
+	const site = useSite();
 	const [editor, setEditor] = useState<Editor | null>(null);
-	const locale = context.getEntry?.().locale ?? DEFAULT_LOCALE;
+	const locale = context.getEntry?.().locale ?? site.DEFAULT_LOCALE;
 	const controller = useTextCheck(editor, { checkers, locale });
 	return {
 		onEditor: setEditor,

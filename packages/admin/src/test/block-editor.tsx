@@ -1,5 +1,6 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
+import { type BlockDefinition, SiteProvider } from "@monti-cms/core/client";
 import type { NodeViewProps } from "@tiptap/react";
+import { testSite } from "../../../core/test/site";
 import { BlockEditorProvider, type BlockView } from "../editor/blocks/use-block-editor";
 
 /**
@@ -7,7 +8,9 @@ import { BlockEditorProvider, type BlockView } from "../editor/blocks/use-block-
  * by hand (a fake node, a fake `updateAttributes`). For tests of one view; a test of how views and the document work together mounts a real editor.
  */
 export const withBlockEditor = (View: BlockView, definition: BlockDefinition) => (props: NodeViewProps) => (
-	<BlockEditorProvider nodeView={props} definition={definition}>
-		<View />
-	</BlockEditorProvider>
+	<SiteProvider site={testSite}>
+		<BlockEditorProvider nodeView={props} definition={definition}>
+			<View />
+		</BlockEditorProvider>
+	</SiteProvider>
 );

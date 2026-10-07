@@ -1,4 +1,4 @@
-import { createTranslator } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import {
 	ANCHOR,
 	COLLAPSE,
@@ -14,10 +14,9 @@ import type { Node as PmNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { Mapping } from "@tiptap/pm/transform";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
-import { CODE_ANCHOR_REF } from "../added-marks";
+import type { TranslatorFor } from "../../translator";
+import { codeAnchorRef } from "../added-marks";
 import { codeBlockMessages } from "./messages";
-
-const t = createTranslator(codeBlockMessages);
 
 /**
  * Shows a code block's line effects, regex rules and folding in the editor.
@@ -35,7 +34,7 @@ export interface CodeEffectsState {
 	picked: LinePick | null;
 	/** While linking text to code, the side picked first (body text or a code line). Picking and confirming the other side links them. */
 	linking: LinkDraft | null;
-	/** Line name of the body link (`data-code-ref`, `CODE_ANCHOR_REF`) under the mouse. That line is highlighted and the rest are dimmed. */
+	/** Line name of the body link (`data-code-ref`, `codeAnchorRef`) under the mouse. That line is highlighted and the rest are dimmed. */
 	hoverRef: string | null;
 	version: number;
 }
@@ -227,7 +226,7 @@ const RULE_CLASS: Record<string, string> = {
 	fold: "rounded-sm outline-1 outline-cms-muted-foreground/50 outline-dashed -outline-offset-1",
 };
 
-function foldWidget(region: FoldRegion) {
+function foldWidget(t: TranslatorFor<typeof codeBlockMessages>, region: FoldRegion) {
 	return Decoration.widget(
 		region.from,
 		(view) => {
@@ -252,7 +251,12 @@ function foldWidget(region: FoldRegion) {
 	);
 }
 
-function blockDecorations(node: PmNode, pos: number, overrides: ReadonlyMap<string, boolean>): Decoration[] {
+function blockDecorations(
+	t: TranslatorFor<typeof codeBlockMessages>,
+	node: PmNode,
+	pos: number,
+	overrides: ReadonlyMap<string, boolean>,
+): Decoration[] {
 	if (node.attrs.rawMode) return [];
 	const base = pos + 1;
 	const text = node.textContent;
@@ -279,7 +283,7 @@ function blockDecorations(node: PmNode, pos: number, overrides: ReadonlyMap<stri
 
 	for (const region of visibleClosedRegions(foldRegions(node, pos, overrides))) {
 		decorations.push(Decoration.inline(region.from, region.to, { class: "hidden" }));
-		decorations.push(foldWidget(region));
+		decorations.push(foldWidget(t, region));
 	}
 	return decorations;
 }
@@ -354,7 +358,9 @@ function remapLineEffects(
 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
+export function createCodeEffectsPlugin(site: Site): Plugin<CodeEffectsState> {
+	const t = site.createTranslator(codeBlockMessages);
+	const anchor = codeAnchorRef(site);
 	return new Plugin<CodeEffectsState>({
 		key: codeEffectsKey,
 		state: {
@@ -432,16 +438,13 @@ export function createCodeEffectsPlugin(): Plugin<CodeEffectsState> {
 				const anchors = anchorIds(state.doc);
 				state.doc.descendants((node, pos) => {
 					if (node.type.name === "codeBlock") {
-						decorations.push(...blockDecorations(node, pos, overrides));
+						decorations.push(...blockDecorations(t, node, pos, overrides));
 						if (plugin?.hoverRef) decorations.push(...hoverDecorations(node, pos, plugin.hoverRef));
 						return false;
 					}
 					// A body link with no linked line is flagged with a red wavy underline.
-					const ref =
-						node.isText && CODE_ANCHOR_REF
-							? node.marks.find((mark) => mark.type.name === CODE_ANCHOR_REF?.mark)
-							: undefined;
-					if (ref && CODE_ANCHOR_REF && !anchors.has(String(ref.attrs[CODE_ANCHOR_REF.attribute])))
+					const ref = node.isText && anchor ? node.marks.find((mark) => mark.type.name === anchor.mark) : undefined;
+					if (ref && anchor && !anchors.has(String(ref.attrs[anchor.attribute])))
 						decorations.push(
 							Decoration.inline(pos, pos + node.nodeSize, {
 								class: "decoration-wavy decoration-red-500",

@@ -1,15 +1,13 @@
 "use client";
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "./input-group";
 import { uiMessages } from "./messages";
-
-const t = createTranslator(uiMessages);
 
 const Combobox = ComboboxPrimitive.Root;
 
@@ -31,6 +29,7 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
 }
 
 function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
+	const t = useTranslator(uiMessages);
 	return (
 		<ComboboxPrimitive.Clear
 			data-slot="combobox-clear"
@@ -208,6 +207,7 @@ function ComboboxChip({
 }: ComboboxPrimitive.Chip.Props & {
 	showRemove?: boolean;
 }) {
+	const t = useTranslator(uiMessages);
 	return (
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"

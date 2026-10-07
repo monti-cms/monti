@@ -2,9 +2,10 @@ import { Editor } from "@tiptap/core";
 import { CellSelection, cellAround } from "@tiptap/pm/tables";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { storedDoc, table, text, withoutIds } from "../../test/stored-doc";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
-import { CMS_SCHEMA_EXTENSIONS } from "../tiptap-schema";
+import { cmsSchemaExtensions } from "../tiptap-schema";
 
 /** The table cells a stored document holds, row by row. */
 const cellsOf = (doc: ReturnType<typeof tiptapToStored>) =>
@@ -39,7 +40,10 @@ afterEach(() => {
 
 const createTableEditor = (content: ReturnType<typeof storedToTiptap>) => {
 	editor = new Editor({
-		extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }), ...CMS_SCHEMA_EXTENSIONS],
+		extensions: [
+			StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }),
+			...cmsSchemaExtensions(testSite),
+		],
 		content,
 	});
 	return editor;
@@ -49,7 +53,7 @@ describe("editor table cell merge and split", () => {
 	it("loading a merged table preserves colspan/rowspan in the Tiptap schema", () => {
 		const source = mergedTable();
 
-		const instance = createTableEditor(storedToTiptap(source));
+		const instance = createTableEditor(storedToTiptap(testSite, source));
 		const json = instance.getJSON();
 		const table = json.content?.[0];
 		expect(table?.type).toBe("table");
@@ -62,11 +66,11 @@ describe("editor table cell merge and split", () => {
 		const cell1 = row1?.content?.[0] as typeof table;
 		expect(cell1?.attrs?.rowspan).toBe(2);
 
-		expect(withoutIds(tiptapToStored(json))).toEqual(withoutIds(source));
+		expect(withoutIds(tiptapToStored(testSite, json))).toEqual(withoutIds(source));
 	});
 
 	it("merging cells (mergeCells) in a GFM table saves a table with a merged cell", () => {
-		const instance = createTableEditor(storedToTiptap(gfmTable()));
+		const instance = createTableEditor(storedToTiptap(testSite, gfmTable()));
 
 		// set the cell selection (CellSelection)
 		const doc = instance.state.doc;
@@ -104,7 +108,7 @@ describe("editor table cell merge and split", () => {
 		const merged = instance.commands.mergeCells();
 		expect(merged).toBe(true);
 
-		const saved = tiptapToStored(instance.getJSON());
+		const saved = tiptapToStored(testSite, instance.getJSON());
 		expect(saved.content[0]?.type).toBe("table");
 		expect(
 			cellsOf(saved)
@@ -120,7 +124,7 @@ describe("editor table cell merge and split", () => {
 			}),
 		);
 
-		const instance = createTableEditor(storedToTiptap(source));
+		const instance = createTableEditor(storedToTiptap(testSite, source));
 		const doc = instance.state.doc;
 
 		// select the merged first cell with a CellSelection
@@ -146,7 +150,7 @@ describe("editor table cell merge and split", () => {
 		const split = instance.commands.splitCell();
 		expect(split).toBe(true);
 
-		const saved = tiptapToStored(instance.getJSON());
+		const saved = tiptapToStored(testSite, instance.getJSON());
 		// all merges are undone, so it returns to a GFM table: no spans and no explicit header cells
 		const cells = cellsOf(saved).flat();
 		expect(cells.some((cell) => cell.attrs?.colspan !== undefined || cell.attrs?.rowspan !== undefined)).toBe(false);
@@ -155,7 +159,7 @@ describe("editor table cell merge and split", () => {
 	});
 
 	it("mergeCells and splitCell must be unavailable when the selection is not a CellSelection", () => {
-		const instance = createTableEditor(storedToTiptap(gfmTable()));
+		const instance = createTableEditor(storedToTiptap(testSite, gfmTable()));
 		// default cursor selection (TextSelection)
 		expect(instance.state.selection instanceof CellSelection).toBe(false);
 	});
@@ -173,7 +177,7 @@ describe("editor table cell merge and split", () => {
 				],
 			]),
 		);
-		const saved = tiptapToStored(storedToTiptap(source));
+		const saved = tiptapToStored(testSite, storedToTiptap(testSite, source));
 		expect(withoutIds(saved)).toEqual(withoutIds(source));
 		expect(cellsOf(saved).map((row) => row.map((cell) => cell.attrs?.header))).toEqual([
 			[true, false],
@@ -187,18 +191,18 @@ describe("editor table cell merge and split", () => {
 				widths: [80, 160],
 			}),
 		);
-		const json = storedToTiptap(source);
+		const json = storedToTiptap(testSite, source);
 		const firstRow = json.content?.[0]?.content?.[0];
 		const secondRow = json.content?.[0]?.content?.[1];
 		expect(firstRow?.content?.[0]?.attrs?.colwidth).toEqual([80, 160]);
 		expect(secondRow?.content?.[1]?.attrs?.colwidth).toEqual([160]);
-		expect(withoutIds(tiptapToStored(json))).toEqual(withoutIds(source));
+		expect(withoutIds(tiptapToStored(testSite, json))).toEqual(withoutIds(source));
 
 		// Adjusting column widths in a GFM table without merges saves a table with widths and the header made explicit.
-		const instance = createTableEditor(storedToTiptap(gfmTable()));
+		const instance = createTableEditor(storedToTiptap(testSite, gfmTable()));
 		instance.commands.setTextSelection(3);
 		instance.commands.setCellAttribute("colwidth", [150]);
-		const saved = tiptapToStored(instance.getJSON());
+		const saved = tiptapToStored(testSite, instance.getJSON());
 		expect(saved.content[0]?.attrs?.widths).toEqual([150]);
 		expect(cellsOf(saved).map((row) => row.map((cell) => cell.attrs?.header))).toEqual([
 			[true, true],

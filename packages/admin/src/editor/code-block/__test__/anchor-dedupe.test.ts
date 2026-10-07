@@ -1,6 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import {
 	anchorIdsOf,
 	codeLink,
@@ -29,11 +30,11 @@ const SOURCE = storedDoc(
 );
 
 const mount = (doc = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+	editor = new Editor({ extensions: buildEditorExtensions(testSite), content: storedToTiptap(testSite, doc) });
 	return editor;
 };
 
-const save = (instance: Editor) => tiptapToStored(instance.getJSON());
+const save = (instance: Editor) => tiptapToStored(testSite, instance.getJSON());
 
 /** Position of the n-th code block. */
 const codeBlockAt = (instance: Editor, nth = 0) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator, FILE_ACCEPT } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
 import type { Editor, Range } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -48,8 +48,9 @@ import {
 	useSourceFormat,
 } from "../admin-components";
 import { errorText } from "../screens/admin-api";
-import { MEDIA_NOT_CONFIGURED } from "../screens/api-error-message";
+import { mediaNotConfiguredMessage } from "../screens/api-error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
+import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { IconButton } from "../ui/icon-button";
@@ -68,7 +69,7 @@ import { FILE_NODE_NAME } from "./file-node";
 import { canInsertFootnote, insertFootnote } from "./footnote-nodes";
 import { ImageInsertDialog, type ImageInsertion } from "./image-insert-dialog";
 import { InlineBubble, useMarkExtensions } from "./inline-bubble";
-import { INLINE_MARK_TOOLS } from "./inline-marks";
+import { INLINE_MARK_NAMES, inlineMarkTools } from "./inline-marks";
 import { type InternalLinkItem, insertInternalLink, parseInternalLinkTrigger } from "./internal-link";
 import { InternalLinkPopup } from "./internal-link-popup";
 import { searchLinkTargets } from "./internal-link-search";
@@ -86,8 +87,6 @@ import { boxPreviewOf, storedToTiptap, tiptapToStored } from "./tiptap-content";
 import { ToolbarButton, type ToolbarItem } from "./toolbar-button";
 import { type ToolbarEntry, ToolbarMenuGroup, ToolbarMenuItem, ToolbarMenuSection, ToolbarRow } from "./toolbar-row";
 import { uploadAttachment } from "./upload-helper";
-
-const t = createTranslator(editorMessages);
 
 interface CmsEditorProps {
 	/** The body. The editor shows it; a change that did not come from the editor itself replaces what it shows (the blocks keep the ids the document gives them). */
@@ -132,7 +131,7 @@ type Coords = { top: number; left: number };
 const chain = (editor: Editor) => editor.chain().focus();
 
 /** Block shape dropdown. The current block's shape name becomes the dropdown name. */
-const BLOCK_STYLES: ToolbarItem[] = [
+const BLOCK_STYLES = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[] => [
 	{
 		label: t("toolbar.paragraph"),
 		icon: Pilcrow,
@@ -150,13 +149,13 @@ const BLOCK_STYLES: ToolbarItem[] = [
 
 /** Superscript/subscript marks, rarely used and grouped into one dropdown. */
 const SCRIPT_MARKS = ["superscript", "subscript"];
-const INLINE_TOOLS = INLINE_MARK_TOOLS.filter((tool) => !SCRIPT_MARKS.includes(tool.mark));
-const SCRIPT_TOOLS = INLINE_MARK_TOOLS.filter((tool) => SCRIPT_MARKS.includes(tool.mark));
+const inlineTools = (site: Site) => inlineMarkTools(site).filter((tool) => !SCRIPT_MARKS.includes(tool.mark));
+const scriptTools = (site: Site) => inlineMarkTools(site).filter((tool) => SCRIPT_MARKS.includes(tool.mark));
 /** Order in which text-style buttons are hidden (largest first). Marks not listed get 5. Bold and italic are never hidden. */
 const INLINE_PRIORITY: Readonly<Record<string, number>> = { bold: 0, italic: 0, strike: 6, code: 4, underline: 5 };
 const PINNED_INLINE_MARKS = ["bold", "italic"];
 
-const ALIGN_TOOLS: ToolbarItem[] = [
+const ALIGN_TOOLS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[] => [
 	{
 		label: t("toolbar.alignLeft"),
 		title: t("toolbar.alignLeftTitle"),
@@ -187,7 +186,7 @@ const ALIGN_TOOLS: ToolbarItem[] = [
 ];
 
 /** List dropdown. The current block's list type becomes the dropdown name and icon. */
-const LIST_STYLES: ToolbarItem[] = [
+const LIST_STYLES = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[] => [
 	{
 		label: t("toolbar.bulletLabel"),
 		title: t("toolbar.bullet"),
@@ -212,7 +211,7 @@ const LIST_STYLES: ToolbarItem[] = [
 ];
 
 /** Block insert buttons and the order they are hidden (largest first). Lists are 2, components are 4. */
-const INSERT_TOOLS: { tool: ToolbarItem; priority: number }[] = [
+const INSERT_TOOLS = (t: TranslatorFor<typeof editorMessages>): { tool: ToolbarItem; priority: number }[] => [
 	{
 		priority: 6,
 		tool: {
@@ -243,20 +242,20 @@ const INSERT_TOOLS: { tool: ToolbarItem; priority: number }[] = [
 ];
 
 /** Inline footnote reference (plus its definition at the end of the page), the same action as the slash command. */
-const FOOTNOTE_TOOL: ToolbarItem = {
+const FOOTNOTE_TOOL = (t: TranslatorFor<typeof editorMessages>): ToolbarItem => ({
 	label: t("toolbar.footnote"),
 	icon: Asterisk,
 	isDisabled: (e) => !canInsertFootnote(e),
 	run: (e) => {
 		insertFootnote(e);
 	},
-};
+});
 
-const DIVIDER_TOOL: ToolbarItem = {
+const DIVIDER_TOOL = (t: TranslatorFor<typeof editorMessages>): ToolbarItem => ({
 	label: t("toolbar.divider"),
 	icon: Minus,
 	run: (e) => chain(e).setHorizontalRule().run(),
-};
+});
 
 /** Toolbar slot name for a text-style extension (`mark:<block name>`). */
 const markToolKey = (group: "format" | "link", name: string) => `mark-${group}:${name}`;
@@ -266,31 +265,31 @@ const markToolKey = (group: "format" | "link", name: string) => `mark-${group}:$
  * Document-level tools (templates, extensions, source, MDX, width) are placed on the right (`toolbarAside`) by the edit screen. Items not listed here are appended at the end in their original order.
  * `mark-format:*` and `mark-link:*` are in the order the extensions added them.
  */
-const TOOLBAR_ORDER = [
+const TOOLBAR_ORDER = (t: TranslatorFor<typeof editorMessages>) => [
 	"block-style",
 	"divider-block",
-	...INLINE_TOOLS.map((tool) => tool.mark),
+	...INLINE_MARK_NAMES.filter((mark) => !SCRIPT_MARKS.includes(mark)),
 	"mark-format:*",
 	"script",
 	"divider-inline",
 	"link",
 	"mark-link:*",
-	FOOTNOTE_TOOL.label,
+	FOOTNOTE_TOOL(t).label,
 	"divider-list",
 	"list",
 	"align",
 	"divider-insert",
-	...INSERT_TOOLS.map(({ tool }) => tool.label),
+	...INSERT_TOOLS(t).map(({ tool }) => tool.label),
 	"divider-tool",
 	"upload",
 	"custom-block",
 ];
 
-const orderToolbar = (entries: readonly ToolbarEntry[]): ToolbarEntry[] => {
+const orderToolbar = (t: TranslatorFor<typeof editorMessages>, entries: readonly ToolbarEntry[]): ToolbarEntry[] => {
 	const rank = (key: string) => {
 		const group = /^(mark-(?:format|link)):/.exec(key)?.[1];
-		const index = TOOLBAR_ORDER.indexOf(group ? `${group}:*` : key);
-		return index < 0 ? TOOLBAR_ORDER.length : index;
+		const index = TOOLBAR_ORDER(t).indexOf(group ? `${group}:*` : key);
+		return index < 0 ? TOOLBAR_ORDER(t).length : index;
 	};
 	// Keep the original order within the same slot (Array.prototype.sort is stable).
 	return [...entries].sort((a, b) => rank(a.key) - rank(b.key));
@@ -401,6 +400,8 @@ export function CmsEditor({
 	selectionActions,
 	insertActions,
 }: CmsEditorProps) {
+	const site = useSite();
+	const t = useTranslator(editorMessages);
 	const isSourceMode = sourceView != null && sourceView !== false;
 	// Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formatting tools, and slash menu items.
 	const { marks: markSpecs = {} } = useCmsAdminComponents();
@@ -411,7 +412,9 @@ export function CmsEditor({
 	// A body opened in source mode may be unparsable. The visual editor starts as an empty document and is filled when returning.
 	const sourceFormat = useSourceFormat();
 	const boxPreview = useMemo(() => boxPreviewOf(sourceFormat), [sourceFormat]);
-	const [initialContent] = useState(() => storedToTiptap(isSourceMode ? emptyStoredDocument() : doc, { boxPreview }));
+	const [initialContent] = useState(() =>
+		storedToTiptap(site, isSourceMode ? emptyStoredDocument() : doc, { boxPreview }),
+	);
 	const isInternalUpdateRef = useRef(false);
 	// Width of the element at the right end of the toolbar. Leave this much space on both sides so the tool group stays centered.
 	const asideRef = useRef<HTMLDivElement>(null);
@@ -507,14 +510,14 @@ export function CmsEditor({
 	const chooseLink = (item: InternalLinkItem) => {
 		const current = editorRef.current;
 		if (!current || !linkRangeRef.current) return;
-		insertInternalLink(current, linkRangeRef.current, item);
+		insertInternalLink(site, current, linkRangeRef.current, item);
 		setLink(null);
 	};
 
 	const editor = useEditor({
 		immediatelyRender: false,
 		editable: canEdit,
-		extensions: buildEditorExtensions(markSpecs),
+		extensions: buildEditorExtensions(site, markSpecs),
 		content: initialContent,
 		editorProps: {
 			attributes: {
@@ -563,7 +566,7 @@ export function CmsEditor({
 
 				const openSlash = slashRef.current;
 				if (openSlash) {
-					const filtered = filterCommands(openSlash.query, extraCommandsRef.current, inlineCommandsRef.current);
+					const filtered = filterCommands(site, openSlash.query, extraCommandsRef.current, inlineCommandsRef.current);
 					if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 						event.preventDefault();
 						const step = event.key === "ArrowDown" ? 1 : -1;
@@ -594,7 +597,7 @@ export function CmsEditor({
 		onUpdate: ({ editor: current }) => {
 			if (isInternalUpdateRef.current) return;
 			const json = current.getJSON();
-			onChange(tiptapToStored(json));
+			onChange(tiptapToStored(site, json));
 			syncTriggerPopup(current);
 		},
 		onSelectionUpdate: ({ editor: current }) => syncTriggerPopup(current),
@@ -610,7 +613,13 @@ export function CmsEditor({
 		selector: ({ editor: current }) => {
 			if (!current) return "";
 			const selection = current.state.selection;
-			const active = [...BLOCK_STYLES, ...INLINE_TOOLS, ...SCRIPT_TOOLS, ...ALIGN_TOOLS, ...LIST_STYLES]
+			const active = [
+				...BLOCK_STYLES(t),
+				...inlineTools(site),
+				...scriptTools(site),
+				...ALIGN_TOOLS(t),
+				...LIST_STYLES(t),
+			]
 				.map((item) => (item.isActive?.(current) ? "1" : "0"))
 				.join("");
 			const marks = ["link", ...markNames].map((mark) => (current.isActive(mark) ? "1" : "0")).join("");
@@ -619,10 +628,10 @@ export function CmsEditor({
 	});
 
 	const blockStyle = editor
-		? (BLOCK_STYLES.find((item) => item.isActive?.(editor))?.label ?? t("toolbar.paragraph"))
+		? (BLOCK_STYLES(t).find((item) => item.isActive?.(editor))?.label ?? t("toolbar.paragraph"))
 		: t("toolbar.paragraph");
-	const activeList = editor ? LIST_STYLES.find((item) => item.isActive?.(editor)) : undefined;
-	const activeAlign = editor ? ALIGN_TOOLS.find((item) => item.isActive?.(editor)) : undefined;
+	const activeList = editor ? LIST_STYLES(t).find((item) => item.isActive?.(editor)) : undefined;
+	const activeAlign = editor ? ALIGN_TOOLS(t).find((item) => item.isActive?.(editor)) : undefined;
 
 	useEffect(() => {
 		editorRef.current = editor;
@@ -632,9 +641,9 @@ export function CmsEditor({
 		queueMicrotask(() => {
 			if (cancelled || editor.isDestroyed) return;
 			// Bodies are compared by what they say (`documentKey`): comparing Tiptap JSON objects breaks due to key order, and block ids are not content.
-			if (documentKey(tiptapToStored(editor.getJSON())) === documentKey(doc)) return;
+			if (documentKey(site, tiptapToStored(site, editor.getJSON())) === documentKey(site, doc)) return;
 			// Blocks keep the ids the document gives them.
-			const next = storedToTiptap(doc, { boxPreview });
+			const next = storedToTiptap(site, doc, { boxPreview });
 			isInternalUpdateRef.current = true;
 			editor.commands.setContent(next, { emitUpdate: false });
 			isInternalUpdateRef.current = false;
@@ -642,7 +651,7 @@ export function CmsEditor({
 		return () => {
 			cancelled = true;
 		};
-	}, [doc, editor, isSourceMode, boxPreview]);
+	}, [doc, editor, isSourceMode, boxPreview, site]);
 
 	// Toolbar tools read editor.isEditable while rendering. After changing the lock, render once more to sync tool state.
 	const [, rerender] = useReducer((count: number) => count + 1, 0);
@@ -666,14 +675,14 @@ export function CmsEditor({
 		setIsLinkLoading(true);
 		setLinkError(null);
 		const timer = setTimeout(() => {
-			searchLinkTargets(linkQuery)
+			searchLinkTargets(site, linkQuery)
 				.then((items) => {
 					if (!cancelled) setLinkItems(items);
 				})
 				.catch((error) => {
 					if (cancelled) return;
 					setLinkItems([]);
-					setLinkError(errorText(error, t("internalLink.error")));
+					setLinkError(errorText(site, error, t("internalLink.error")));
 				})
 				.finally(() => {
 					if (!cancelled) setIsLinkLoading(false);
@@ -683,7 +692,7 @@ export function CmsEditor({
 			cancelled = true;
 			clearTimeout(timer);
 		};
-	}, [linkQuery]);
+	}, [linkQuery, site, t]);
 
 	useEffect(() => {
 		const open = () => setImageDialog({ file: null });
@@ -729,26 +738,26 @@ export function CmsEditor({
 	// Slash menu "파일": open the file picker. If there is no media storage, report that uploading is not possible.
 	useEffect(() => {
 		const open = () => {
-			if (!media) toast.error(MEDIA_NOT_CONFIGURED);
+			if (!media) toast.error(mediaNotConfiguredMessage(site));
 			else fileInputRef.current?.click();
 		};
 		window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
 		return () => window.removeEventListener(OPEN_FILE_PICKER_EVENT, open);
-	}, [media]);
+	}, [media, site]);
 
 	/** Upload non-image files and insert them as file cards. If `at` is given, insert there (where it was dropped). */
 	const uploadAttachments = useCallback(
 		async (files: File[], at?: number) => {
 			if (!editor) return;
 			if (!media) {
-				toast.error(MEDIA_NOT_CONFIGURED);
+				toast.error(mediaNotConfiguredMessage(site));
 				return;
 			}
 			let position = at;
 			for (const file of files) {
 				const toastId = toast.loading(t("toolbar.uploading", { name: file.name }));
 				try {
-					const { mediaId } = await uploadAttachment(file, (percent) =>
+					const { mediaId } = await uploadAttachment(site, file, (percent) =>
 						toast.loading(t("toolbar.uploadingPercent", { name: file.name, percent }), { id: toastId }),
 					);
 					const node = { type: FILE_NODE_NAME, attrs: { mediaId, label: null } };
@@ -766,7 +775,7 @@ export function CmsEditor({
 				}
 			}
 		},
-		[editor, media],
+		[editor, media, site, t],
 	);
 
 	const attachmentsFrom = (list: FileList | null): File[] =>
@@ -887,17 +896,17 @@ export function CmsEditor({
 		</>
 	);
 	// Order to hide when narrow: larger priority first. fixed is never hidden (popover tools lose their anchor inside the menu).
-	// The placement order is decided by `TOOLBAR_ORDER` below.
+	// The placement order is decided by `TOOLBAR_ORDER(t)` below.
 	const unordered: ToolbarEntry[] = [
 		{
 			key: "block-style",
 			priority: 0,
 			fixed: true,
-			render: () => <ToolbarDropdown editor={editor} label={blockStyle} items={BLOCK_STYLES} />,
+			render: () => <ToolbarDropdown editor={editor} label={blockStyle} items={BLOCK_STYLES(t)} />,
 		},
-		dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS, activeAlign?.icon ?? AlignLeft),
+		dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? AlignLeft),
 		{ key: "divider-block", divider: true },
-		...INLINE_TOOLS.map((tool) =>
+		...inlineTools(site).map((tool) =>
 			buttonSlot(tool, tool.mark, INLINE_PRIORITY[tool.mark] ?? 5, PINNED_INLINE_MARKS.includes(tool.mark)),
 		),
 		// Formatting tools of text-style extensions (block extension text color, tooltip, etc.).
@@ -915,7 +924,7 @@ export function CmsEditor({
 				},
 			];
 		}),
-		dropdownSlot("script", 8, t("toolbar.script"), SCRIPT_TOOLS, Superscript),
+		dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site), Superscript),
 		{ key: "divider-inline", divider: true },
 		{ key: "divider-list", divider: true },
 		{ key: "divider-insert", divider: true },
@@ -923,11 +932,11 @@ export function CmsEditor({
 			"list",
 			2,
 			activeList?.title ?? t("toolbar.list"),
-			LIST_STYLES,
+			LIST_STYLES(t),
 			activeList?.icon ?? List,
 			t("toolbar.list"),
 		),
-		...INSERT_TOOLS.map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),
+		...INSERT_TOOLS(t).map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),
 		{
 			key: "custom-block",
 			priority: 4,
@@ -996,10 +1005,10 @@ export function CmsEditor({
 				</Popover>
 			),
 		},
-		buttonSlot(FOOTNOTE_TOOL, FOOTNOTE_TOOL.label, 5),
-		buttonSlot(DIVIDER_TOOL, "divider-tool", 8),
+		buttonSlot(FOOTNOTE_TOOL(t), FOOTNOTE_TOOL(t).label, 5),
+		buttonSlot(DIVIDER_TOOL(t), "divider-tool", 8),
 	];
-	const toolbarEntries = orderToolbar(unordered);
+	const toolbarEntries = orderToolbar(t, unordered);
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: editor shell tracks IME and block hover state
@@ -1057,7 +1066,7 @@ export function CmsEditor({
 				ref={fileInputRef}
 				type="file"
 				multiple
-				accept={FILE_ACCEPT}
+				accept={site.api.FILE_ACCEPT}
 				hidden
 				aria-hidden
 				tabIndex={-1}
@@ -1127,7 +1136,7 @@ export function CmsEditor({
 
 			{slash && !isSourceMode && (
 				<SlashMenuPopup
-					items={filterCommands(slash.query, extraCommands, inlineCommands)}
+					items={filterCommands(site, slash.query, extraCommands, inlineCommands)}
 					coords={slash.coords}
 					selectedIndex={slash.index}
 					onSelect={(command) => {

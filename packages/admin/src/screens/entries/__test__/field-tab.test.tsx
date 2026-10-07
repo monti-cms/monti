@@ -1,12 +1,16 @@
-import { COLLECTIONS, type Collection, isCollection, schemaOf } from "@monti-cms/core/client";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { Collection } from "@monti-cms/core/client";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { CmsAdminComponentsProvider, type FieldViewProps } from "../../../admin-components";
 import { TooltipProvider } from "../../../ui/tooltip";
+import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { InspectorPanel } from "../inspector-panel";
-import { t } from "../translate";
+import { entriesMessages } from "../messages";
 import { EntryFormProvider } from "../use-field";
+
+const t = testSite.createTranslator(entriesMessages);
 
 /**
  * Field `tab` and view fields (regression guard, independent of config). Collection, field and tab names are found in the current config
@@ -26,15 +30,15 @@ afterEach(() => {
 
 /** The first collection with a text field that has a field `tab`, and that field (an unregistered `input` renders as the default input). */
 const found = (() => {
-	for (const collection of COLLECTIONS) {
-		for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
+	for (const collection of testSite.COLLECTIONS) {
+		for (const [name, field] of Object.entries(testSite.schemaOf(collection).fields)) {
 			if (field.tab && field.kind === "text") return { collection, name, field };
 		}
 	}
 	return undefined;
 })();
 const viewField = found
-	? Object.entries(schemaOf(found.collection).fields).find(([, field]) => field.kind === "view" && field.tab)
+	? Object.entries(testSite.schemaOf(found.collection).fields).find(([, field]) => field.kind === "view" && field.tab)
 	: undefined;
 
 function renderPanel(collection: Collection, form: EntryForm, children?: (panel: React.ReactNode) => React.ReactNode) {
@@ -59,7 +63,7 @@ describe("properties panel: field `tab`", () => {
 	});
 
 	it("a field with a field `tab` renders in that tab, and not in the default tab, even without a layout entry", async () => {
-		if (!found || !isCollection(found.collection)) return;
+		if (!found || !testSite.isCollection(found.collection)) return;
 		renderPanel(found.collection, { ...EMPTY_FORM, title: "Title", [found.name]: "Tab value" });
 		expect(screen.queryByLabelText(found.field.label)).toBeNull();
 		fireEvent.click(screen.getByRole("tab", { name: found.field.tab }));
@@ -84,10 +88,10 @@ describe("properties panel: field `tab`", () => {
 	});
 
 	it("a collection without `tab` has only the default tab", () => {
-		const plain = COLLECTIONS.find((collection) =>
-			Object.values(schemaOf(collection).fields).every((field) => !field.tab),
+		const plain = testSite.COLLECTIONS.find((collection) =>
+			Object.values(testSite.schemaOf(collection).fields).every((field) => !field.tab),
 		);
-		if (!plain || (schemaOf(plain).layout ?? []).some((group) => group.tab)) return;
+		if (!plain || (testSite.schemaOf(plain).layout ?? []).some((group) => group.tab)) return;
 		renderPanel(plain, { ...EMPTY_FORM, title: "Plain" });
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([t("tab.default")]);
 	});

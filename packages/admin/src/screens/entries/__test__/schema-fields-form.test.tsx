@@ -1,6 +1,8 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
+import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { cmsIssueMessage } from "../../api-error-message";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { SchemaFields } from "../schema-fields";
@@ -27,7 +29,7 @@ describe("SchemaFields on the form provider", () => {
 		const input = screen.getByLabelText(/제목/) as HTMLInputElement;
 		expect(input.getAttribute("aria-invalid")).toBe("true");
 		expect(input.getAttribute("aria-describedby")).toBe("cms-title-error");
-		expect(document.getElementById("cms-title-error")?.textContent).toBe(cmsIssueMessage(issue));
+		expect(document.getElementById("cms-title-error")?.textContent).toBe(cmsIssueMessage(testSite, issue));
 	});
 
 	it("a change reaches the owner as a patch of that field only", () => {

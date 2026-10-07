@@ -1,21 +1,15 @@
 import {
-	isCollection,
-	isOrphanedMetadataKey,
-	localizedFieldNames,
-	PREFIXED_LOCALES,
 	parseTranslationState,
 	RECORD_TRANSLATIONS_KEY,
-	recordLocalizedFields,
 	type SchemaCollection,
+	type Site,
 	type StoredDocument,
 	type StoredField,
-	storedField,
-	storedFields,
 	type TranslationState,
 } from "@monti-cms/core/client";
 import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { documentKey } from "../../editor/document-key";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 /**
  * The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays.
@@ -38,11 +32,12 @@ export const EMPTY_FORM: EntryForm = { title: "", slug: "", doc: emptyStoredDocu
  * Title of a duplicate (by library convention the title field is named `title`). Appends a "copy" suffix to the source title and trims the source part
  * if it would exceed the title field's `max`.
  */
-export function copyTitle(collection: string, title: string | null | undefined): string {
+export function copyTitle(site: Site, collection: string, title: string | null | undefined): string {
+	const t = site.createTranslator(entriesMessages);
 	// The suffix added to a duplicate's title and the name for an untitled source are screen text, so the admin screen decides them, not the repository.
 	const copySuffix = t("copy.suffix");
 	const base = title?.trim() ? title : t("untitled");
-	const field = isCollection(collection) ? storedField(collection, "title")?.field : undefined;
+	const field = site.isCollection(collection) ? site.storedField(collection, "title")?.field : undefined;
 	const max = field?.kind === "text" ? field.max : undefined;
 	const room = max === undefined ? Number.POSITIVE_INFINITY : max - Array.from(copySuffix).length;
 	const chars = Array.from(base);
@@ -127,11 +122,11 @@ export function translationSourceOf(entry: EntryData | null): TranslationSource 
 }
 
 /** Stored fields the form handles. For a translation, only fields that are `localized` in the definition (shared values belong to the original). */
-const fieldsOf = (collection: string, translation = false): readonly StoredField[] => {
-	if (!isCollection(collection)) return [];
-	const fields = storedFields(collection as SchemaCollection);
+const fieldsOf = (site: Site, collection: string, translation = false): readonly StoredField[] => {
+	if (!site.isCollection(collection)) return [];
+	const fields = site.storedFields(collection as SchemaCollection);
 	if (!translation) return fields;
-	const { own, inherit } = localizedFieldNames(collection as SchemaCollection);
+	const { own, inherit } = site.localizedFieldNames(collection as SchemaCollection);
 	return fields.filter(({ name }) => own.includes(name) || inherit.includes(name));
 };
 
@@ -186,14 +181,14 @@ function toFormValue({ field }: StoredField, value: unknown): FormValue {
 	}
 }
 
-export function formFromEntry(entry: EntryData): EntryForm {
+export function formFromEntry(site: Site, entry: EntryData): EntryForm {
 	const metadata = entry.working.metadata ?? {};
 	const form: EntryForm = { title: text(metadata.title), slug: entry.workingSlug ?? "", doc: entry.working.doc };
-	for (const stored of fieldsOf(entry.collection, isTranslationEntry(entry))) {
+	for (const stored of fieldsOf(site, entry.collection, isTranslationEntry(entry))) {
 		if (stored.name === "title" || stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
 	}
-	Object.assign(form, recordTranslationsToForm(entry.collection, metadata));
+	Object.assign(form, recordTranslationsToForm(site, entry.collection, metadata));
 	// A translation also handles translation state as the form, so autosave, recovery and conflict comparison see it along with the body.
 	if (isTranslationEntry(entry)) {
 		// If it is not a valid state, use an empty source so "source changed" is shown. A state of an older version is read as version 4.
@@ -207,21 +202,25 @@ export function formFromEntry(entry: EntryData): EntryForm {
 /** Form key for per-language values of a record collection. E.g. `title@en`. */
 export const recordTranslationKey = (field: string, locale: string) => `${field}@${locale}`;
 
-function recordTranslationsToForm(collection: string, metadata: Record<string, unknown>): Record<string, string> {
-	if (!isCollection(collection)) return {};
+function recordTranslationsToForm(
+	site: Site,
+	collection: string,
+	metadata: Record<string, unknown>,
+): Record<string, string> {
+	if (!site.isCollection(collection)) return {};
 	const translations = (metadata[RECORD_TRANSLATIONS_KEY] ?? {}) as Record<string, Record<string, unknown>>;
 	const values: Record<string, string> = {};
-	for (const field of recordLocalizedFields(collection as SchemaCollection)) {
-		for (const locale of PREFIXED_LOCALES)
+	for (const field of site.recordLocalizedFields(collection as SchemaCollection)) {
+		for (const locale of site.PREFIXED_LOCALES)
 			values[recordTranslationKey(field, locale)] = text(translations[locale]?.[field]);
 	}
 	return values;
 }
 
 /** Converts original metadata to form values. Used when the translation's properties panel shows shared values read-only. */
-export function formFromSourceMetadata(collection: string, metadata: Record<string, unknown>): EntryForm {
+export function formFromSourceMetadata(site: Site, collection: string, metadata: Record<string, unknown>): EntryForm {
 	const form: EntryForm = { title: text(metadata.title), slug: "", doc: emptyStoredDocument() };
-	for (const stored of fieldsOf(collection)) {
+	for (const stored of fieldsOf(site, collection)) {
 		if (stored.name === "title" || stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
 	}
@@ -233,12 +232,12 @@ export function formFromSourceMetadata(collection: string, metadata: Record<stri
  * body made by the editor, the source panel or the server is the same, whatever the block ids and the order of keys (the form's own keys are sorted too, so a
  * recovery copy that was upgraded from an older shape compares like any other).
  */
-export const formFingerprint = (form: EntryForm) =>
+export const formFingerprint = (site: Site, form: EntryForm) =>
 	JSON.stringify(
 		Object.fromEntries(
 			Object.keys(form)
 				.sort()
-				.map((key) => [key, key === "doc" ? documentKey(form.doc) : form[key]]),
+				.map((key) => [key, key === "doc" ? documentKey(site, form.doc) : form[key]]),
 		),
 	);
 
@@ -252,17 +251,18 @@ export const formFingerprint = (form: EntryForm) =>
  * - Values of removed fields (keys of `base` that are not in the definition) and a select value that is no longer an option stay as stored.
  */
 export function metadataFromForm(
+	site: Site,
 	form: EntryForm,
 	collection: string,
 	base: Record<string, unknown> = {},
 	options: { translation?: boolean } = {},
 ): { metadata: Record<string, unknown> } | { error: string } {
-	const fields = fieldsOf(collection, options.translation);
+	const fields = fieldsOf(site, collection, options.translation);
 	const metadata: Record<string, unknown> = {};
 	// The form has no input for the value of a removed field, so it goes back as stored instead of being dropped.
-	if (isCollection(collection)) {
+	if (site.isCollection(collection)) {
 		for (const key of Object.keys(base)) {
-			if (isOrphanedMetadataKey(collection as SchemaCollection, key)) metadata[key] = base[key];
+			if (site.isOrphanedMetadataKey(collection as SchemaCollection, key)) metadata[key] = base[key];
 		}
 	}
 	for (const { name } of fields) {
@@ -307,10 +307,12 @@ export function metadataFromForm(
 	}
 
 	// Per-language name and description of a record collection. Empty languages are not added.
-	const localizedRecordFields = isCollection(collection) ? recordLocalizedFields(collection as SchemaCollection) : [];
+	const localizedRecordFields = site.isCollection(collection)
+		? site.recordLocalizedFields(collection as SchemaCollection)
+		: [];
 	if (localizedRecordFields.length > 0) {
 		const translations: Record<string, Record<string, string>> = {};
-		for (const locale of PREFIXED_LOCALES) {
+		for (const locale of site.PREFIXED_LOCALES) {
 			for (const field of localizedRecordFields) {
 				const value = text(values[recordTranslationKey(field, locale)]).trim();
 				if (value) translations[locale] = { ...translations[locale], [field]: value };

@@ -1,4 +1,4 @@
-import { DEFAULT_COLLECTION, isCollection, isUuid } from "@monti-cms/core/client";
+import { isUuid } from "@monti-cms/core/client";
 import type { Cms } from "@monti-cms/core/runtime";
 import type { AdminServer } from "../../../host/server";
 import { requireAdminPage } from "../../require-admin";
@@ -11,13 +11,14 @@ interface PageProps {
 }
 
 export default async function NewEntryPage({ cms, server, searchParams }: PageProps) {
+	const { site } = cms;
 	const auth = await requireAdminPage(cms, server);
 	const { collection, folder } = await searchParams;
 
 	return (
 		<EntryEditorShell
 			mode="new"
-			collection={isCollection(collection) ? collection : DEFAULT_COLLECTION}
+			collection={site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION}
 			adminId={auth.userId}
 			folderId={isUuid(folder) ? folder : null}
 		/>

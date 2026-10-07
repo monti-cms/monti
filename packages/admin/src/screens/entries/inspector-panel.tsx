@@ -1,19 +1,21 @@
 "use client";
 
 import type { LayoutGroup } from "@monti-cms/core/client";
-import { isCollection } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { SidePanelHeader } from "../shared/side-panel";
-import { DEFAULT_TAB, tabOf, tabOfGroup, tabsOf } from "./layout-groups";
+import { defaultTab, tabOf, tabOfGroup, tabsOf } from "./layout-groups";
+import { entriesMessages } from "./messages";
 import { RemovedFieldsNotice } from "./removed-fields-notice";
 import { SchemaFields } from "./schema-fields";
-import { t } from "./translate";
 import { useEntryFormSelector } from "./use-field";
 
-const tabsFor = (collection: string) => (isCollection(collection) ? tabsOf(collection) : [DEFAULT_TAB]);
-const tabFor = (collection: string, path: string) => (isCollection(collection) ? tabOf(collection, path) : DEFAULT_TAB);
+const tabsFor = (site: Site, collection: string) =>
+	site.isCollection(collection) ? tabsOf(site, collection) : [defaultTab(site)];
+const tabFor = (site: Site, collection: string, path: string) =>
+	site.isCollection(collection) ? tabOf(site, collection, path) : defaultTab(site);
 
 interface InspectorPanelProps {
 	incomingReferences: IncomingReferenceItem[];
@@ -43,18 +45,20 @@ export function InspectorPanel({
 	focusPath,
 	onFocused,
 }: InspectorPanelProps) {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const disabled = useEntryFormSelector((state) => state.disabled);
 	const publishIssues = useEntryFormSelector((state) => state.issues);
 	const entry = useEntryFormSelector((state) => state.entry);
-	const [tab, setTab] = useState(DEFAULT_TAB);
-	const tabs = useMemo(() => tabsFor(collection), [collection]);
+	const [tab, setTab] = useState(defaultTab(site));
+	const tabs = useMemo(() => tabsFor(site, collection), [collection, site]);
 	const issuesIn = (name: string) =>
-		publishIssues.filter((issue) => issue.path && tabFor(collection, issue.path) === name).length;
+		publishIssues.filter((issue) => issue.path && tabFor(site, collection, issue.path) === name).length;
 
 	useEffect(() => {
-		if (focusPath) setTab(tabFor(collection, focusPath));
-	}, [focusPath, collection]);
+		if (focusPath) setTab(tabFor(site, collection, focusPath));
+	}, [focusPath, collection, site]);
 	// Move focus after the tab changes and the input is rendered.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: tab change re-runs the lookup
 	useEffect(() => {
@@ -71,7 +75,7 @@ export function InspectorPanel({
 		[incomingReferences, isLoadingIncomingReferences, onRefreshIncomingReferences],
 	);
 	const fields = (include: (group: LayoutGroup) => boolean) =>
-		isCollection(collection) && (
+		site.isCollection(collection) && (
 			<fieldset disabled={disabled} className="min-w-0 space-y-4 disabled:opacity-70">
 				<SchemaFields
 					omit={["title"]}
@@ -107,7 +111,7 @@ export function InspectorPanel({
 				<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 				{tabs.map((name) => (
 					<TabsContent key={name} value={name}>
-						{fields((group) => tabOfGroup(group) === name)}
+						{fields((group) => tabOfGroup(site, group) === name)}
 					</TabsContent>
 				))}
 			</div>

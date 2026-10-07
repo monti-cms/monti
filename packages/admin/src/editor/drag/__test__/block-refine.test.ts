@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PARENT_ONLY_VIEW_CLASS } from "../../blocks/added/shared";
 import { findBlockDOM, refineBlock } from "../block-resolve";
 
 /** jsdom has no layout. Give each element under test a rect. */
@@ -48,8 +49,8 @@ describe("one handle per line (refineBlock)", () => {
 	it("a single column is not a target: column gaps and margins map to the paragraph at that height, and a line with no paragraph maps to the whole column split", () => {
 		const root = html(
 			'<div class="react-renderer node-cmsColumns"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react>' +
-				'<div class="react-renderer node-cmsColumn"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react><p>왼쪽</p></div></div></div></div>' +
-				'<div class="react-renderer node-cmsColumn"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react><p>오른쪽</p></div></div></div></div>' +
+				`<div class="react-renderer node-cmsColumn ${PARENT_ONLY_VIEW_CLASS}"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react><p>왼쪽</p></div></div></div></div>` +
+				`<div class="react-renderer node-cmsColumn ${PARENT_ONLY_VIEW_CLASS}"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react><p>오른쪽</p></div></div></div></div>` +
 				"</div></div></div></div>",
 		);
 		const columns = root.querySelector<HTMLElement>(".node-cmsColumns");

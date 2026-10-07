@@ -1,18 +1,10 @@
 "use client";
 
-import {
-	COLLECTION_DEFINITIONS,
-	cmsApiUrl,
-	createTranslator,
-	isCollection,
-	taxonomyFieldsOf,
-} from "@monti-cms/core/client";
+import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueries } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cmsFetch } from "../admin-api";
 import { sharedMessages } from "./messages";
-
-const t = createTranslator(sharedMessages);
 
 /** Name of the record collection. Used for relation field options and adding. */
 export type RecordCollection = string;
@@ -20,8 +12,8 @@ export type RecordCollection = string;
 /** Taxonomy field name -> options of the collection the field points to. */
 export type TaxonomyOptions = Readonly<Record<string, readonly TaxonomyOption[]>>;
 
-const labelOf = (collection: string) =>
-	isCollection(collection) ? COLLECTION_DEFINITIONS[collection].label : collection;
+const labelOf = (site: Site, collection: string) =>
+	site.isCollection(collection) ? site.COLLECTION_DEFINITIONS[collection].label : collection;
 
 export interface TaxonomyOption {
 	id: string;
@@ -32,7 +24,8 @@ export interface TaxonomyOption {
 type ListResponse = { items: { id: string; title: string | null; slug: string | null }[]; total: number };
 
 /** All active (public) records. If over 100, reads the next page too. */
-async function loadAll(collection: RecordCollection): Promise<TaxonomyOption[]> {
+async function loadAll(site: Site, collection: RecordCollection): Promise<TaxonomyOption[]> {
+	const t = site.createTranslator(sharedMessages);
 	const options: TaxonomyOption[] = [];
 	for (let page = 1; page < 50; page++) {
 		const params = new URLSearchParams({
@@ -43,7 +36,7 @@ async function loadAll(collection: RecordCollection): Promise<TaxonomyOption[]> 
 			sortDirection: "asc",
 		});
 		params.append("status", "published");
-		const data = await cmsFetch<ListResponse>(cmsApiUrl(`/v1/entries?${params.toString()}`));
+		const data = await cmsFetch<ListResponse>(site, cmsApiUrl(`/v1/entries?${params.toString()}`));
 		options.push(
 			...data.items.map((item) => ({
 				id: item.id,
@@ -61,6 +54,8 @@ async function loadAll(collection: RecordCollection): Promise<TaxonomyOption[]> 
  * New items are created in the taxonomy add slot (`useRecordCreator`), and the created item is shown right away with `remember`.
  */
 export function useTaxonomy(collection: RecordCollection, enabled = true) {
+	const site = useSite();
+	const t = useTranslator(sharedMessages);
 	const [options, setOptions] = useState<TaxonomyOption[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	// Items added on this screen. Shown by name even if not yet in the refetched list (before list cache/search reflects them).
@@ -68,16 +63,16 @@ export function useTaxonomy(collection: RecordCollection, enabled = true) {
 
 	const reload = useCallback(async () => {
 		try {
-			const loaded = await loadAll(collection);
+			const loaded = await loadAll(site, collection);
 			setOptions([
 				...loaded,
 				...rememberedRef.current.filter((option) => !loaded.some((item) => item.id === option.id)),
 			]);
 			setError(null);
 		} catch {
-			setError(t("taxonomy.loadFailed", { label: labelOf(collection) }));
+			setError(t("taxonomy.loadFailed", { label: labelOf(site, collection) }));
 		}
-	}, [collection]);
+	}, [collection, site, t]);
 
 	useEffect(() => {
 		if (enabled) void reload();
@@ -97,7 +92,8 @@ export function useTaxonomy(collection: RecordCollection, enabled = true) {
  * Fields pointing to the same collection are read only once.
  */
 export function useTaxonomyOptions(collection: string, enabled = true): TaxonomyOptions {
-	const fields = useMemo(() => taxonomyFieldsOf(collection), [collection]);
+	const site = useSite();
+	const fields = useMemo(() => site.taxonomyFieldsOf(collection), [collection, site.taxonomyFieldsOf]);
 	const targets = useMemo(() => [...new Set(fields.map((stored) => stored.to))], [fields]);
 	const combine = useCallback(
 		(results: { data?: TaxonomyOption[] }[]): TaxonomyOptions =>
@@ -108,7 +104,7 @@ export function useTaxonomyOptions(collection: string, enabled = true): Taxonomy
 		queries: targets.map((target) => ({
 			// Place it under the list cache so it is refetched together when the list is refetched.
 			queryKey: ["cms", "entries", "taxonomy", target],
-			queryFn: () => loadAll(target),
+			queryFn: () => loadAll(site, target),
 			enabled,
 		})),
 		combine,

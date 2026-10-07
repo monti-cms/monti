@@ -8,6 +8,7 @@ import {
 	type StoredDocument,
 } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
+import { testSite } from "../../../core/test/site";
 import { storedToTiptap } from "../editor/tiptap-content";
 
 /**
@@ -17,12 +18,12 @@ import { storedToTiptap } from "../editor/tiptap-content";
 
 /** A stored document of `content`, in its canonical form with block ids. */
 export const storedDoc = (...content: CmsNode[]): StoredDocument => {
-	const doc = canonicalDocument({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
+	const doc = canonicalDocument(testSite, { type: "doc", version: STORED_DOCUMENT_VERSION, content });
 	return { ...doc, content: assignBlockIds(doc.content, []) };
 };
 
 /** The editor's JSON for a document of `content`. */
-export const tiptapOfNodes = (...content: CmsNode[]): JSONContent => storedToTiptap(storedDoc(...content));
+export const tiptapOfNodes = (...content: CmsNode[]): JSONContent => storedToTiptap(testSite, storedDoc(...content));
 
 /** A text node. */
 export const text = (value: string, marks?: CmsMark[]): CmsNode => ({

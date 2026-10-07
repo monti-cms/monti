@@ -1,12 +1,14 @@
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useState } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { CmsAdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
 import { BlockFrame, type BlockView, Content, type EditorResult, useBlockEditor } from "../../../hooks/public";
+import { renderWithSite } from "../../../test/site";
 import { para, storedDoc, withoutIds } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
@@ -26,8 +28,8 @@ beforeAll(() => {
 
 function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(),
-		content: storedToTiptap(doc),
+		extensions: buildEditorExtensions(testSite),
+		content: storedToTiptap(testSite, doc),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -38,7 +40,7 @@ function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Edit
 
 const mount = async (doc: StoredDocument, ready: string, views: Record<string, BlockView> = {}) => {
 	let editor: Editor | null = null;
-	render(
+	renderWithSite(
 		<CmsAdminComponentsProvider components={{ blockViews: views }}>
 			<Harness
 				doc={doc}
@@ -73,7 +75,7 @@ const tabsNode = (): CmsNode => ({
 const TABS = storedDoc(tabsNode());
 
 /** The stored document the editor content is saved as. */
-const savedDoc = (editor: Editor) => tiptapToStored(editor.getJSON());
+const savedDoc = (editor: Editor) => tiptapToStored(testSite, editor.getJSON());
 /** The default tab the saved tabs block names. */
 const savedDefault = (editor: Editor) => savedDoc(editor).content[0]?.attrs?.defaultValue;
 
@@ -306,7 +308,7 @@ describe("useBlockEditor", () => {
 			useBlockEditor();
 			return null;
 		}
-		expect(() => render(<Outside />)).toThrow(/inside a block view/);
+		expect(() => renderWithSite(<Outside />)).toThrow(/inside a block view/);
 	});
 
 	it("gives a view its name, definition, id, selection state and an escape hatch", async () => {

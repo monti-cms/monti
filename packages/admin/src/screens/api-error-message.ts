@@ -1,9 +1,11 @@
-import { createTranslator } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import { apiErrorMessages } from "./api-error-message.messages";
 
-const t = createTranslator(apiErrorMessages);
+type ApiErrorSite = Pick<Site, "createTranslator">;
 
-export const MEDIA_NOT_CONFIGURED = t("error.media_not_configured");
+/** Text shown where the server answers that media storage is not configured. */
+export const mediaNotConfiguredMessage = (site: ApiErrorSite): string =>
+	site.createTranslator(apiErrorMessages)("error.media_not_configured");
 
 export type CmsIssue = {
 	code?: string;
@@ -16,8 +18,11 @@ export type CmsIssue = {
 	position?: { line?: number; column?: number; blockId?: string };
 };
 
+const translatorOf = (site: ApiErrorSite) => site.createTranslator(apiErrorMessages);
+
 /** Whether the code is in the dictionary (unknown codes show the server `message` as is). */
-const hasMessage = (key: string): key is Parameters<typeof t>[0] => key in apiErrorMessages.messages.en;
+const hasMessage = (key: string): key is keyof typeof apiErrorMessages.messages.en =>
+	key in apiErrorMessages.messages.en;
 
 export function cmsApiIssues(payload: unknown): CmsIssue[] {
 	if (!payload || typeof payload !== "object") return [];
@@ -46,15 +51,20 @@ const DETAILED_CODES = new Set([
 	"image_src_not_allowed",
 ]);
 
-function fieldIssueText(code: string | undefined, label: string): string | undefined {
+function fieldIssueText(
+	t: ReturnType<typeof translatorOf>,
+	code: string | undefined,
+	label: string,
+): string | undefined {
 	if (code === "missing_field") return t("field.missing", { label });
 	if (code === "field_too_long") return t("field.tooLong", { label });
 	return undefined;
 }
 
-export function cmsIssueMessage(issue: CmsIssue): string {
+export function cmsIssueMessage(site: ApiErrorSite, issue: CmsIssue): string {
+	const t = translatorOf(site);
 	// For field problems (required, length), the error code is the same regardless of field and the field label comes in `message`.
-	const field = issue.message ? fieldIssueText(issue.code, issue.message) : undefined;
+	const field = issue.message ? fieldIssueText(t, issue.code, issue.message) : undefined;
 	const known =
 		field ?? (issue.code && hasMessage(`issue.${issue.code}`) ? t(`issue.${issue.code}` as never) : undefined);
 	const detail = known && issue.code && DETAILED_CODES.has(issue.code) && issue.message ? ` — ${issue.message}` : "";
@@ -64,12 +74,13 @@ export function cmsIssueMessage(issue: CmsIssue): string {
 	return location ? `${label} (${location})` : label;
 }
 
-export function cmsApiErrorMessage(payload: unknown, fallback: string): string {
+export function cmsApiErrorMessage(site: ApiErrorSite, payload: unknown, fallback: string): string {
+	const t = translatorOf(site);
 	if (!payload || typeof payload !== "object") return fallback;
 	const body = payload as { message?: unknown; code?: unknown };
 	const issues = cmsApiIssues(payload);
 	if (issues.length > 0) {
-		const details = issues.map(cmsIssueMessage);
+		const details = issues.map((issue) => cmsIssueMessage(site, issue));
 		return `${t("validationFailedList")}\n${details.map((detail) => `• ${detail}`).join("\n")}`;
 	}
 	if (typeof body.code === "string" && hasMessage(`error.${body.code}`)) return t(`error.${body.code}` as never);

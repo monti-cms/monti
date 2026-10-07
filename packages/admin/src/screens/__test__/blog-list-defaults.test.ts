@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { columnsFor } from "../list-columns";
 
 /**
@@ -13,6 +14,6 @@ describe("reference blog list default columns", () => {
 		["tag", ["title", "slug", "locale", "status", "updatedAt"]],
 		["collection", ["title", "slug", "locale", "status", "updatedAt"]],
 	])("%s matches the previous list setting", (collection, columns) => {
-		expect(columnsFor(collection).defaults).toEqual(columns);
+		expect(columnsFor(testSite, collection).defaults).toEqual(columns);
 	});
 });

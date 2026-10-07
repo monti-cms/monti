@@ -1,13 +1,14 @@
-import { createTranslator } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { docOf } from "../../test/mdx";
+import { renderWithSite } from "../../test/site";
 import { editorMessages } from "../messages";
 import { CmsEditor } from "../tiptap-editor";
 
-const t = createTranslator(editorMessages);
+const t = testSite.createTranslator(editorMessages);
 
 // jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position after formatting is applied.
 beforeAll(() => {
@@ -27,7 +28,7 @@ afterEach(() => {
 
 const renderEditor = async () => {
 	const onChange = vi.fn();
-	render(<CmsEditor doc={docOf("안녕하세요")} onChange={onChange} />);
+	renderWithSite(<CmsEditor doc={docOf("안녕하세요")} onChange={onChange} />);
 	await screen.findByRole("toolbar", { name: t("toolbar.format") });
 	return onChange;
 };
@@ -55,7 +56,7 @@ describe("formatting toolbar group", () => {
 
 	it("the footnote button inserts a reference and a definition, and is disabled in a code block", async () => {
 		let editor: Editor | null = null;
-		render(
+		renderWithSite(
 			<CmsEditor
 				doc={docOf("안녕하세요\n\n```ts\nconst a = 1;\n```")}
 				onChange={vi.fn()}
@@ -94,7 +95,7 @@ describe("formatting toolbar group", () => {
 
 	it("the link button is pressed when the cursor is inside a link", async () => {
 		let editor: Editor | null = null;
-		render(
+		renderWithSite(
 			<CmsEditor
 				doc={docOf("[주소](https://example.com) 뒤")}
 				onChange={vi.fn()}

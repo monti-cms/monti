@@ -9,7 +9,7 @@ export { EMPTY_FORM, formList, formText, metadataFromForm } from "./screens/entr
 export { AdminShell, useAdminNav } from "./screens/shared/admin-shell";
 export { NamedIcon, useIconByName } from "./screens/shared/collection-icon";
 export type { ConfirmRequest } from "./screens/shared/confirm-dialog";
-export { ConfirmDialog, DISCARD_CONFIRM, useConfirm } from "./screens/shared/confirm-dialog";
+export { ConfirmDialog, discardConfirm, useConfirm } from "./screens/shared/confirm-dialog";
 export { useDebounced } from "./screens/shared/use-debounced";
 export * from "./ui/alert";
 export * from "./ui/alert-dialog";

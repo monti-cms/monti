@@ -1,16 +1,7 @@
 "use client";
 
 import type { CollectionPreferences, PreferencesBody } from "@monti-cms/core/client";
-import {
-	adminEntryEditHref,
-	adminHref,
-	COLLECTION_DEFINITIONS,
-	cmsApiUrl,
-	createTranslator,
-	isDocumentCollection,
-	isItemCollection,
-	withBasePath,
-} from "@monti-cms/core/client";
+import { cmsApiUrl, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -44,8 +35,6 @@ import {
 import { useFolderActions } from "./shared/use-folder-actions";
 import { type TaxonomyOptions, useTaxonomyOptions } from "./shared/use-taxonomy";
 
-const t = createTranslator(screensMessages);
-
 export type ListMode = "list" | "trash";
 
 /**
@@ -53,10 +42,15 @@ export type ListMode = "list" | "trash";
  * and saves when sort, page size or column settings change.
  */
 function useListState(mode: ListMode) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const router = useAdminRouter();
 	const searchParams = useAdminSearchParams();
-	const basePath = mode === "trash" ? adminHref("/trash") : adminHref();
-	const parsed = useMemo(() => parseListState(new URLSearchParams(searchParams.toString())), [searchParams]);
+	const basePath = mode === "trash" ? site.adminHref("/trash") : site.adminHref();
+	const parsed = useMemo(
+		() => parseListState(site, new URLSearchParams(searchParams.toString())),
+		[searchParams, site],
+	);
 	const [preferences, setPreferences] = useState<PreferencesBody | null>(null);
 
 	const collectionPrefs: CollectionPreferences = preferences?.collections?.[parsed.collection] ?? {};
@@ -84,10 +78,10 @@ function useListState(mode: ListMode) {
 	);
 
 	useEffect(() => {
-		cmsFetch<PreferencesBody>(cmsApiUrl("/v1/preferences"))
+		cmsFetch<PreferencesBody>(site, cmsApiUrl("/v1/preferences"))
 			.then(setPreferences)
 			.catch(() => setPreferences({}));
-	}, []);
+	}, [site]);
 
 	const collection = state.collection;
 	const savePreferences = (patch: CollectionPreferences) => {
@@ -95,7 +89,7 @@ function useListState(mode: ListMode) {
 			...current,
 			collections: { ...current?.collections, [collection]: { ...current?.collections?.[collection], ...patch } },
 		}));
-		void cmsFetch(cmsApiUrl("/v1/preferences"), {
+		void cmsFetch(site, cmsApiUrl("/v1/preferences"), {
 			method: "PUT",
 			json: { collections: { [collection]: patch } },
 		}).catch(() => toast.error(t("list.prefsSaveFailed")));
@@ -109,22 +103,24 @@ function useListState(mode: ListMode) {
  * (`keepPreviousData`) so a placeholder does not flicker. A placeholder shows only when there is no cache at all.
  */
 function useEntriesData(state: ListState, mode: ListMode) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const isTrash = mode === "trash";
 	const collection = state.collection;
 
 	const foldersQuery = useQuery({
 		queryKey: foldersKey(collection),
-		queryFn: ({ signal }) => cmsFetch<Folder[]>(cmsApiUrl(`/v1/folders?collection=${collection}`), { signal }),
+		queryFn: ({ signal }) => cmsFetch<Folder[]>(site, cmsApiUrl(`/v1/folders?collection=${collection}`), { signal }),
 		enabled: !isTrash,
 	});
 	const folders = useMemo(() => (isTrash ? [] : (foldersQuery.data ?? [])), [isTrash, foldersQuery.data]);
 
-	const apiQuery = listStateToApiQuery(state, { trash: isTrash }).toString();
+	const apiQuery = listStateToApiQuery(site, state, { trash: isTrash }).toString();
 	const listKey = entriesKey(apiQuery);
 	const entriesQuery = useQuery({
 		queryKey: listKey,
 		queryFn: ({ signal }) =>
-			cmsFetch<EntriesPage>(cmsApiUrl(`/v1/entries?${apiQuery}`), { signal, fallback: t("list.loadFailed") }),
+			cmsFetch<EntriesPage>(site, cmsApiUrl(`/v1/entries?${apiQuery}`), { signal, fallback: t("list.loadFailed") }),
 		// Rows from another collection have a different column layout, so they are not kept.
 		placeholderData: (previous, previousQuery) =>
 			previousQuery && new URLSearchParams(String(previousQuery.queryKey.at(-1))).get("collection") === collection
@@ -138,7 +134,8 @@ function useEntriesData(state: ListState, mode: ListMode) {
 		listKey,
 		items: entriesQuery.data?.items ?? [],
 		total: entriesQuery.data?.total ?? 0,
-		errorMessage: entriesQuery.error && !entriesQuery.data ? errorText(entriesQuery.error, t("list.loadFailed")) : null,
+		errorMessage:
+			entriesQuery.error && !entriesQuery.data ? errorText(site, entriesQuery.error, t("list.loadFailed")) : null,
 		isLoading: entriesQuery.isPending,
 		isRefreshing: entriesQuery.isPlaceholderData,
 		retry: () => void entriesQuery.refetch(),
@@ -146,7 +143,8 @@ function useEntriesData(state: ListState, mode: ListMode) {
 }
 
 /** Reports bulk results as notifications. Failures list the item name and reason. */
-function announce(label: string, results: BulkItemResult[], items: BulkSelection[]) {
+function announce(site: Site, label: string, results: BulkItemResult[], items: BulkSelection[]) {
+	const t = site.createTranslator(screensMessages);
 	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
 	const ok = results.length - failures.length;
 	if (failures.length === 0) {
@@ -157,7 +155,7 @@ function announce(label: string, results: BulkItemResult[], items: BulkSelection
 	toast.error(ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), {
 		description: failures
 			.slice(0, 3)
-			.map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(failure)}`)
+			.map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(site, failure)}`)
 			.join("\n"),
 	});
 }
@@ -177,6 +175,8 @@ function useEntryMutations({
 	options: TaxonomyOptions;
 	onResults: (results: BulkItemResult[]) => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const queryClient = useQueryClient();
 
 	/** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
@@ -214,16 +214,16 @@ function useEntryMutations({
 
 	/** Handles the action through the bulk API and reports the result. */
 	const bulk = async (
-		op: Parameters<typeof runBulk>[0],
+		op: Parameters<typeof runBulk>[1],
 		label: string,
 		targets: BulkSelection[],
 		params: BulkParams = {},
 	) => {
 		try {
-			const results = await mutateEntries(op, targets, () => runBulk(op, targets, params), params);
-			announce(label, results, targets);
+			const results = await mutateEntries(op, targets, () => runBulk(site, op, targets, params), params);
+			announce(site, label, results, targets);
 		} catch (error) {
-			toast.error(errorText(error, t("bulk.failed", { label })));
+			toast.error(errorText(site, error, t("bulk.failed", { label })));
 		}
 	};
 
@@ -233,7 +233,7 @@ function useEntryMutations({
 			const out: BulkItemResult[] = [];
 			for (const target of targets) {
 				try {
-					await cmsFetch(cmsApiUrl(`/v1/entries/${target.id}/restore`), {
+					await cmsFetch(site, cmsApiUrl(`/v1/entries/${target.id}/restore`), {
 						method: "POST",
 						json: { expectedVersion: target.expectedVersion },
 					});
@@ -245,7 +245,7 @@ function useEntryMutations({
 			}
 			return out;
 		});
-		announce(t("bulk.restore"), results, targets);
+		announce(site, t("bulk.restore"), results, targets);
 	};
 
 	return { mutateEntries, bulk, restore, invalidateEntries };
@@ -267,13 +267,15 @@ function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode
  * Shared by the sidebar folder navigation (list screen) and the body.
  */
 export function useEntryList(mode: ListMode) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const router = useAdminRouter();
 	const queryClient = useQueryClient();
 	const isTrash = mode === "trash";
 	const { state, update, columnSettings, savePreferences } = useListState(mode);
 	const collection = state.collection;
-	const isRecord = isItemCollection(collection);
-	const isContent = isDocumentCollection(collection);
+	const isRecord = site.isItemCollection(collection);
+	const isContent = site.isDocumentCollection(collection);
 	const options = useTaxonomyOptions(collection, !isTrash);
 
 	const data = useEntriesData(state, mode);
@@ -305,11 +307,11 @@ export function useEntryList(mode: ListMode) {
 	const openParam = searchParams.get(OPEN_ITEM_PARAM);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: open only when the address value changes
 	useEffect(() => {
-		if (!openParam || !isItemCollection(state.collection) || mode === "trash") return;
+		if (!openParam || !site.isItemCollection(state.collection) || mode === "trash") return;
 		showRecord({ collection: state.collection, id: openParam });
 		const next = new URLSearchParams(searchParams.toString());
 		next.delete(OPEN_ITEM_PARAM);
-		router.replace(adminHref(`?${next.toString()}`), { scroll: false });
+		router.replace(site.adminHref(`?${next.toString()}`), { scroll: false });
 	}, [openParam]);
 
 	const mutations = useEntryMutations({
@@ -381,15 +383,15 @@ export function useEntryList(mode: ListMode) {
 
 	const duplicate = async (item: ListEntriesItem) => {
 		try {
-			const copy = await cmsFetch<{ id: string }>(cmsApiUrl(`/v1/entries/${item.id}/duplicate`), {
+			const copy = await cmsFetch<{ id: string }>(site, cmsApiUrl(`/v1/entries/${item.id}/duplicate`), {
 				method: "POST",
-				json: { title: copyTitle(item.collection, item.title) },
+				json: { title: copyTitle(site, item.collection, item.title) },
 				fallback: t("duplicate.failed"),
 			});
 			toast.success(t("duplicate.done", { title: item.title || t("common.untitled") }));
-			router.navigate(adminEntryEditHref(copy.id));
+			router.navigate(site.adminEntryEditHref(copy.id));
 		} catch (error) {
-			toast.error(errorText(error, t("duplicate.failed")));
+			toast.error(errorText(site, error, t("duplicate.failed")));
 		}
 	};
 
@@ -398,12 +400,15 @@ export function useEntryList(mode: ListMode) {
 		isRecord
 			? void openRecord({ collection, id: null })
 			: router.navigate(
-					adminHref(`/entries/new?collection=${collection}${state.folder !== "all" ? `&folder=${state.folder}` : ""}`),
+					site.adminHref(
+						`/entries/new?collection=${collection}${state.folder !== "all" ? `&folder=${state.folder}` : ""}`,
+					),
 				);
 
-	const editHref = (item: ListEntriesItem) => adminEntryEditHref(item.id);
+	const editHref = (item: ListEntriesItem) => site.adminEntryEditHref(item.id);
 	const rowMenu = (item: ListEntriesItem): MenuAction[] =>
 		rowMenuActions(
+			site,
 			actionTargets(item, items, selectedIds),
 			{ mode, isRecord, isContent, folders, collection, options },
 			{
@@ -430,7 +435,7 @@ export function useEntryList(mode: ListMode) {
 		mode,
 		state,
 		update,
-		label: COLLECTION_DEFINITIONS[collection].label,
+		label: site.COLLECTION_DEFINITIONS[collection].label,
 		options,
 		columnSettings,
 		savePreferences,

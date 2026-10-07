@@ -1,4 +1,4 @@
-import { createTranslator, SITE_NAME } from "@monti-cms/core/client";
+import { SiteProvider } from "@monti-cms/core/client";
 import type { Cms } from "@monti-cms/core/runtime";
 import type { ReactNode } from "react";
 import { loadAdminPlugins } from "../plugins";
@@ -9,16 +9,18 @@ import { TooltipProvider } from "../ui/tooltip";
 import { AdminThemeProvider } from "./admin-theme-provider";
 import { layoutMessages } from "./messages";
 
-const t = createTranslator(layoutMessages);
-
 /**
- * Metadata of the admin pages (title, no indexing), in the shape the framework's metadata export expects (Next's `Metadata` accepts it as is).
- * A host package re-exports it as the admin layout's metadata.
+ * Metadata of the admin pages of an instance (title, no indexing), in the shape the framework's metadata export expects (Next's `Metadata` accepts it as is).
+ * The title follows the site name and the admin language of the instance's site. A host package calls it from the admin layout's `generateMetadata`.
  */
-export const adminMetadata = {
-	title: SITE_NAME ? t("titleWithSite", { site: SITE_NAME }) : t("title"),
-	robots: { index: false, follow: false },
-} as const;
+export function adminMetadata(cms: Pick<Cms, "site">) {
+	const { site } = cms;
+	const t = site.createTranslator(layoutMessages);
+	return {
+		title: site.SITE_NAME ? t("titleWithSite", { site: site.SITE_NAME }) : t("title"),
+		robots: { index: false, follow: false },
+	} as const;
+}
 
 export type AdminLayoutProps = {
 	/** The CMS instance: the `cms` exported by the app's server file. */
@@ -53,7 +55,7 @@ export async function AdminLayout({
 	themeStorageKey,
 	toaster = true,
 }: AdminLayoutProps) {
-	const plugins = await loadAdminPlugins();
+	const plugins = await loadAdminPlugins(cms.site);
 	// Plugin providers wrap from the outside in registration order, inside the server data cache.
 	const content = plugins.reduceRight<ReactNode>(
 		(inner, { name, Provider }) => (Provider ? <Provider key={name}>{inner}</Provider> : inner),
@@ -62,10 +64,13 @@ export async function AdminLayout({
 			{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
 		</TooltipProvider>,
 	);
+	// The browser gets the site as data (collections, locales, blocks, addresses, admin language), never a config file.
 	const app = (
-		<AdminQueryProvider>
-			<AdminFeaturesProvider features={{ media: cms.isMediaConfigured }}>{content}</AdminFeaturesProvider>
-		</AdminQueryProvider>
+		<SiteProvider config={cms.site.snapshot()}>
+			<AdminQueryProvider>
+				<AdminFeaturesProvider features={{ media: cms.isMediaConfigured }}>{content}</AdminFeaturesProvider>
+			</AdminQueryProvider>
+		</SiteProvider>
 	);
 	return themeProvider ? <AdminThemeProvider storageKey={themeStorageKey}>{app}</AdminThemeProvider> : app;
 }

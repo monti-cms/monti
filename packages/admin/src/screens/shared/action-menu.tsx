@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { type LucideIcon, MoreHorizontal } from "lucide-react";
 import { cloneElement, type ReactElement } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated";
@@ -32,8 +32,6 @@ import {
 } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
 import { sharedMessages } from "./messages";
-
-const t = createTranslator(sharedMessages);
 
 /**
  * Menu definition shared by the right-click menu and the `⋯` button. Rendering the same list in two places
@@ -67,6 +65,7 @@ function tidy(actions: MenuAction[]): MenuAction[] {
 }
 
 function ContextItems({ actions }: { actions: MenuAction[] }) {
+	const t = useTranslator(sharedMessages);
 	return tidy(actions).map((action, index) => {
 		const key = `${action.kind}-${"label" in action ? action.label : index}-${index}`;
 		switch (action.kind) {
@@ -114,6 +113,7 @@ function ContextItems({ actions }: { actions: MenuAction[] }) {
 }
 
 function DropdownItems({ actions }: { actions: MenuAction[] }) {
+	const t = useTranslator(sharedMessages);
 	return tidy(actions).map((action, index) => {
 		const key = `${action.kind}-${"label" in action ? action.label : index}-${index}`;
 		switch (action.kind) {

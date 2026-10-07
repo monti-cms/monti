@@ -1,5 +1,4 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
-import { ADDED_BLOCKS } from "@monti-cms/core/client";
+import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/client";
 
 /**
  * Editor representation of added blocks (block extension plugins and the site config's `blocks`). Blocks with `editor.view: "node"` are edited as
@@ -10,24 +9,36 @@ import { ADDED_BLOCKS } from "@monti-cms/core/client";
 export const blockNodeName = (block: Pick<BlockDefinition, "name">) =>
 	`cms${block.name.replace(/(^|-)([a-z0-9])/g, (_, _dash: string, char: string) => char.toUpperCase())}`;
 
+/**
+ * ProseMirror node groups that tell the drag and block commands what an added block node is, without a site: a container (it holds blocks), a body container (it
+ * holds general body content, so an emptied one gets a paragraph back). A node is in the group through its `group` spec, so the commands read it from the node type.
+ */
+export const CONTAINER_GROUP = "cmsContainer";
+export const BODY_CONTAINER_GROUP = "cmsBodyContainer";
+
+/** Class on the node view of a block used only inside a parent block (a single tab or column), so the pointer logic can tell such a frame from the DOM. */
+export const PARENT_ONLY_VIEW_CLASS = "cms-parent-only-block";
+
 /** Names the editor already uses. An added block's node name must not collide with them. */
 const TAKEN_NODE_NAMES = new Set(["cmsOpaqueBlock", "cmsMath", "cmsBlockKeymap", "cmsBlockDrag", "cmsUntranslated"]);
 
-/** Added blocks edited as editor nodes. */
-export const ADDED_NODE_BLOCKS: readonly BlockDefinition[] = ADDED_BLOCKS.filter(
-	(block) => block.editor.view === "node",
-);
-
-for (const block of ADDED_NODE_BLOCKS) {
-	if (TAKEN_NODE_NAMES.has(blockNodeName(block))) {
-		throw new Error(`cms block "${block.name}": editor node name ${blockNodeName(block)} is already used`);
+const tablesOf = perSite((site: Pick<Site, "ADDED_BLOCKS">) => {
+	const nodeBlocks: readonly BlockDefinition[] = site.ADDED_BLOCKS.filter((block) => block.editor.view === "node");
+	for (const block of nodeBlocks) {
+		if (TAKEN_NODE_NAMES.has(blockNodeName(block))) {
+			throw new Error(`cms block "${block.name}": editor node name ${blockNodeName(block)} is already used`);
+		}
 	}
-}
+	return { nodeBlocks, byNodeName: new Map(nodeBlocks.map((block) => [blockNodeName(block), block])) };
+});
 
-const BY_NODE_NAME = new Map(ADDED_NODE_BLOCKS.map((block) => [blockNodeName(block), block]));
+/** Added blocks edited as editor nodes. */
+export const addedNodeBlocks = (site: Pick<Site, "ADDED_BLOCKS">): readonly BlockDefinition[] =>
+	tablesOf(site).nodeBlocks;
 
 /** Tiptap node name → added block definition. */
-export const addedBlockOfNode = (nodeName: string): BlockDefinition | undefined => BY_NODE_NAME.get(nodeName);
+export const addedBlockOfNode = (site: Pick<Site, "ADDED_BLOCKS">, nodeName: string): BlockDefinition | undefined =>
+	tablesOf(site).byNodeName.get(nodeName);
 
 /** Default attribute values of a block definition. */
 export const defaultValues = (block: BlockDefinition): Record<string, string | boolean> =>
@@ -47,20 +58,5 @@ export const isFence = (block: BlockDefinition) => block.syntax.kind === "fence"
 export const isBodyContainer = (block: BlockDefinition) => isContainer(block) && !block.children?.blocks?.length;
 
 /** Child block definition. */
-export const childBlocksOf = (block: BlockDefinition, all: readonly BlockDefinition[] = ADDED_NODE_BLOCKS) =>
+export const childBlocksOf = (block: BlockDefinition, all: readonly BlockDefinition[]) =>
 	(block.children?.blocks ?? []).flatMap((name) => all.find((candidate) => candidate.name === name) ?? []);
-
-/** Container block node names. Child blocks can be moved one at a time with the handle. */
-export const CONTAINER_NODE_NAMES: ReadonlySet<string> = new Set(
-	ADDED_NODE_BLOCKS.filter(isContainer).map(blockNodeName),
-);
-
-/** Container node names that require at least one body block (e.g. a callout or a single tab). */
-export const BODY_CONTAINER_NODE_NAMES: ReadonlySet<string> = new Set(
-	ADDED_NODE_BLOCKS.filter(isBodyContainer).map(blockNodeName),
-);
-
-/** Frame inside a parent block (e.g. a single tab or column). Not moved on its own. */
-export const PARENT_ONLY_NODE_NAMES: ReadonlySet<string> = new Set(
-	ADDED_NODE_BLOCKS.filter((block) => block.parent).map(blockNodeName),
-);

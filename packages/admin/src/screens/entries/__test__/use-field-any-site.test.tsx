@@ -1,8 +1,9 @@
-import { DEFAULT_COLLECTION } from "@monti-cms/core/client";
-import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, renderHook, screen } from "@testing-library/react";
 import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { EntryFormProvider, type EntryFormValue, useField } from "../../../hooks/public";
+import { renderWithSite as render, SiteWrapper } from "../../__test__/site-wrapper";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 
 /**
@@ -13,7 +14,7 @@ import { EMPTY_FORM, type EntryForm } from "../entry-form";
 afterEach(cleanup);
 
 const value = (overrides: Partial<EntryFormValue> = {}): EntryFormValue => ({
-	collection: DEFAULT_COLLECTION,
+	collection: testSite.DEFAULT_COLLECTION,
 	form: { ...EMPTY_FORM },
 	setForm: vi.fn(),
 	...overrides,
@@ -21,7 +22,11 @@ const value = (overrides: Partial<EntryFormValue> = {}): EntryFormValue => ({
 
 const wrapper =
 	(provided: EntryFormValue) =>
-	({ children }: { children: ReactNode }) => <EntryFormProvider value={provided}>{children}</EntryFormProvider>;
+	({ children }: { children: ReactNode }) => (
+		<SiteWrapper>
+			<EntryFormProvider value={provided}>{children}</EntryFormProvider>
+		</SiteWrapper>
+	);
 
 describe("useField on any site", () => {
 	it("gives the value, a patch-only change, the error and the ids of the title field", () => {

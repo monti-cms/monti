@@ -1,5 +1,6 @@
 "use client";
 
+import { useSite } from "@monti-cms/core/client";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { useCmsAdminComponents } from "../../admin-components";
 import { FileBlockView } from "../file-node-view";
@@ -25,7 +26,8 @@ export const DEFAULT_BLOCK_VIEWS: Readonly<Record<string, BlockView>> = {
  * attribute-and-body box for any other added block) and renders it inside the block's `useBlockEditor` context.
  */
 export function BlockNodeView(props: NodeViewProps) {
-	const definition = blockOfNode(props.node.type.name);
+	const site = useSite();
+	const definition = blockOfNode(site, props.node.type.name);
 	const { blockViews } = useCmsAdminComponents();
 	if (!definition) return <NodeViewWrapper />;
 	const View =

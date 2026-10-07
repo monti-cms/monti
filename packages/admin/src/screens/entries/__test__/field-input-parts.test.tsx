@@ -1,12 +1,15 @@
-import { COLLECTIONS, storedFields } from "@monti-cms/core/client";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { CmsAdminComponentsProvider, type FieldInputParts } from "../../../admin-components";
 import { TooltipProvider } from "../../../ui/tooltip";
+import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
+import { entriesMessages } from "../messages";
 import { SchemaFields } from "../schema-fields";
-import { t } from "../translate";
 import { EntryFormProvider } from "../use-field";
+
+const t = testSite.createTranslator(entriesMessages);
 
 /**
  * Input parts registered by extensions (`FieldInputParts`) and the media field's default input. Regardless of config, it finds in the current config
@@ -19,10 +22,10 @@ afterEach(() => {
 });
 
 const find = (kind: string, withInput: boolean) => {
-	for (const collection of COLLECTIONS) {
-		const stored = storedFields(collection).find(
-			({ field, when }) => !when && field.kind === kind && Boolean(field.input) === withInput,
-		);
+	for (const collection of testSite.COLLECTIONS) {
+		const stored = testSite
+			.storedFields(collection)
+			.find(({ field, when }) => !when && field.kind === kind && Boolean(field.input) === withInput);
 		if (stored) return { collection, ...stored };
 	}
 	return undefined;
@@ -32,7 +35,7 @@ const select = find("select", true);
 const media = find("media", false);
 
 function renderFields(
-	target: { collection: (typeof COLLECTIONS)[number]; name: string },
+	target: { collection: (typeof testSite.COLLECTIONS)[number]; name: string },
 	form: EntryForm,
 	fieldInputs: Readonly<Record<string, FieldInputParts>> = {},
 	onChange = vi.fn(),

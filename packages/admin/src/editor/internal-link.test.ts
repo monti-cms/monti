@@ -1,12 +1,13 @@
-import { contentPath, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { storedDoc, text } from "../test/stored-doc";
 import { buildEditorExtensions } from "./extensions";
 import { type InternalLinkItem, insertInternalLink, internalLinkHref, parseInternalLinkTrigger } from "./internal-link";
 import { storedToTiptap, tiptapToStored } from "./tiptap-content";
 
 const ID = "123e4567-e89b-42d3-a456-426614174000";
+const { LINKABLE_COLLECTIONS, contentPath } = testSite;
 const collection = LINKABLE_COLLECTIONS[0] as string;
 
 const item = (overrides: Partial<InternalLinkItem> = {}): InternalLinkItem => ({
@@ -35,7 +36,7 @@ describe("internal links in the editor", () => {
 	afterEach(() => editor?.destroy());
 
 	const typed = (text: string) => {
-		editor = new Editor({ extensions: buildEditorExtensions(), content: `<p>${text}</p>` });
+		editor = new Editor({ extensions: buildEditorExtensions(testSite), content: `<p>${text}</p>` });
 		return editor;
 	};
 
@@ -47,19 +48,19 @@ describe("internal links in the editor", () => {
 	it("inserts a link to the entry, showing the address of its path", () => {
 		const current = typed("See [[next");
 
-		insertInternalLink(current, { from: 5, to: 11 }, item());
+		insertInternalLink(testSite, current, { from: 5, to: 11 }, item());
 
 		expect(linkMarks(current.getJSON())).toEqual([
-			{ type: "link", attrs: expect.objectContaining({ entryId: ID, href: internalLinkHref(item()) }) },
+			{ type: "link", attrs: expect.objectContaining({ entryId: ID, href: internalLinkHref(testSite, item()) }) },
 		]);
 		expect(current.getText()).toContain("Next.js 완전 정복");
 	});
 
 	it("saves the id alone: the address shown in the editor is not stored", () => {
 		const current = typed("See [[next");
-		insertInternalLink(current, { from: 5, to: 11 }, item());
+		insertInternalLink(testSite, current, { from: 5, to: 11 }, item());
 
-		const stored = tiptapToStored(current.getJSON());
+		const stored = tiptapToStored(testSite, current.getJSON());
 
 		const marks = JSON.stringify(stored);
 		expect(marks).toContain(`"entryId":"${ID}"`);
@@ -69,16 +70,16 @@ describe("internal links in the editor", () => {
 
 	it("saves the id as the link, and the saved document opens as the same link", () => {
 		const current = typed("See [[next");
-		insertInternalLink(current, { from: 5, to: 11 }, item());
+		insertInternalLink(testSite, current, { from: 5, to: 11 }, item());
 
-		const stored = tiptapToStored(current.getJSON());
+		const stored = tiptapToStored(testSite, current.getJSON());
 
 		expect(stored.content[0]?.content).toContainEqual(
 			text("Next.js 완전 정복", [{ type: "link", attrs: { entryId: ID } }]),
 		);
-		const reopened = storedToTiptap(stored);
+		const reopened = storedToTiptap(testSite, stored);
 		expect(linkMarks(reopened)[0]?.attrs).toMatchObject({ entryId: ID });
-		expect(tiptapToStored(reopened)).toEqual(stored);
+		expect(tiptapToStored(testSite, reopened)).toEqual(stored);
 	});
 
 	it("opens a stored document with a link by id and saves it back unchanged", () => {
@@ -93,7 +94,7 @@ describe("internal links in the editor", () => {
 			],
 		});
 
-		const again = tiptapToStored(storedToTiptap(stored));
+		const again = tiptapToStored(testSite, storedToTiptap(testSite, stored));
 
 		expect(JSON.stringify(again)).toBe(JSON.stringify(stored));
 		expect(JSON.stringify(stored)).toContain(`"entryId":"${ID}"`);
@@ -103,7 +104,7 @@ describe("internal links in the editor", () => {
 	it("inserts only the title for a collection that has no public path", () => {
 		const current = typed("See [[x");
 
-		insertInternalLink(current, { from: 5, to: 8 }, item({ collection: "no-such-collection" }));
+		insertInternalLink(testSite, current, { from: 5, to: 8 }, item({ collection: "no-such-collection" }));
 
 		expect(linkMarks(current.getJSON())).toEqual([]);
 		expect(current.getText()).toContain("Next.js 완전 정복");

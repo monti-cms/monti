@@ -1,5 +1,6 @@
 import { Editor } from "@tiptap/core";
 import { describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { buildEditorExtensions } from "../../extensions";
 import { startBlockDrag } from "../drag-plugin";
 
@@ -16,7 +17,7 @@ describe("drop position indicator", () => {
 		document.body.appendChild(host);
 		const editor = new Editor({
 			element: host,
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: "<p>가</p><p>나</p><p>다</p>",
 		});
 		const later = vi.fn();

@@ -2,11 +2,11 @@
 
 import {
 	cmsApiUrl,
-	createTranslator,
 	type FileKind,
 	fileKindOf,
 	fileTypeLabel,
 	formatFileSize,
+	useTranslator,
 } from "@monti-cms/core/client";
 import { FileArchive, FileText, FileType } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -14,14 +14,13 @@ import { cn } from "../lib/utils/cn";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { editorMessages } from "./messages";
 
-const t = createTranslator(editorMessages);
-
 const ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
 
 type MediaInfo = { filename: string; byteSize: number | null; mimeType: string | null; status?: string };
 
 /** Edit view of the core file block (`blockViews.file`): the attached file card. Same look as the public view card, and the name can be edited directly. */
 export function FileBlockView() {
+	const t = useTranslator(editorMessages);
 	const block = useBlockEditor();
 	const mediaId = typeof block.values.mediaId === "string" ? block.values.mediaId : "";
 	const label = typeof block.values.label === "string" ? block.values.label : "";

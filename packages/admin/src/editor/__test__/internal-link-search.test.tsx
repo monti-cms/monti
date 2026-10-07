@@ -1,12 +1,14 @@
-import { createTranslator, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { CmsApiError } from "../../screens/admin-api";
+import { renderWithSite } from "../../test/site";
 import { InternalLinkPopup } from "../internal-link-popup";
 import { searchLinkTargets } from "../internal-link-search";
 import { editorMessages } from "../messages";
 
-const t = createTranslator(editorMessages);
+const { LINKABLE_COLLECTIONS } = testSite;
+const t = testSite.createTranslator(editorMessages);
 
 afterEach(() => {
 	cleanup();
@@ -25,7 +27,7 @@ describe("searchLinkTargets", () => {
 			});
 		});
 		vi.stubGlobal("fetch", fetchMock);
-		const items = await searchLinkTargets("a");
+		const items = await searchLinkTargets(testSite, "a");
 		expect(fetchMock).toHaveBeenCalledTimes(LINKABLE_COLLECTIONS.length);
 		expect(items.map((item) => item.collection).sort()).toEqual([...LINKABLE_COLLECTIONS].sort());
 		// An untitled entry still gets a label.
@@ -42,7 +44,7 @@ describe("searchLinkTargets", () => {
 			}),
 		);
 
-		await searchLinkTargets("a");
+		await searchLinkTargets(testSite, "a");
 
 		expect(urls.length).toBeGreaterThan(0);
 		for (const url of urls) expect(url.searchParams.get("group")).toBe("translation");
@@ -53,7 +55,7 @@ describe("searchLinkTargets", () => {
 			"fetch",
 			vi.fn(async () => jsonResponse(500, { code: "internal", message: "Boom" })),
 		);
-		const error = await searchLinkTargets("a").catch((caught) => caught);
+		const error = await searchLinkTargets(testSite, "a").catch((caught) => caught);
 		expect(error).toBeInstanceOf(CmsApiError);
 		expect(error.status).toBe(500);
 	});
@@ -65,7 +67,7 @@ describe("searchLinkTargets", () => {
 				throw new TypeError("Failed to fetch");
 			}),
 		);
-		await expect(searchLinkTargets("a")).rejects.toBeInstanceOf(TypeError);
+		await expect(searchLinkTargets(testSite, "a")).rejects.toBeInstanceOf(TypeError);
 	});
 });
 
@@ -80,13 +82,13 @@ describe("InternalLinkPopup", () => {
 	};
 
 	it("shows the error message instead of the empty-result text", async () => {
-		render(<InternalLinkPopup {...props} error="Boom" />);
+		renderWithSite(<InternalLinkPopup {...props} error="Boom" />);
 		expect((await screen.findByRole("alert")).textContent).toBe("Boom");
 		expect(screen.queryByText(t("internalLink.empty"))).toBeNull();
 	});
 
 	it("shows the empty-result text when there is no error", async () => {
-		render(<InternalLinkPopup {...props} error={null} />);
+		renderWithSite(<InternalLinkPopup {...props} error={null} />);
 		expect(await screen.findByText(t("internalLink.empty"))).toBeTruthy();
 		expect(screen.queryByRole("alert")).toBeNull();
 	});

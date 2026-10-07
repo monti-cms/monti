@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { Unlink } from "lucide-react";
@@ -9,8 +9,6 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { LinkTargetSummary } from "./link-target-view";
 import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
 
 export function normalizeLinkHref(value: string): string | null {
 	const href = value.trim();
@@ -88,6 +86,7 @@ export function PopoverFormFooter({
 	onRemove?: () => void;
 	onCancel: () => void;
 }) {
+	const t = useTranslator(editorMessages);
 	return (
 		<div className="flex items-center gap-2">
 			{onRemove && (
@@ -131,6 +130,7 @@ interface LinkFormProps {
 
 /** Link address input form. Shared by the top formatting toolbar's popover and the inline bubble. */
 export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
+	const t = useTranslator(editorMessages);
 	const id = useId();
 	const [href, setHref] = useState(draft.href);
 	const [text, setText] = useState(() =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { adminUrl, cmsApiUrl } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/document";
 import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
@@ -14,7 +14,7 @@ import {
 import { IconButton } from "../../ui/icon-button";
 import { cmsFetch } from "../admin-api";
 import { useConfirm } from "../shared/confirm-dialog";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 type Template = { id: string; name: string; doc: StoredDocument };
 
@@ -33,6 +33,8 @@ export function TemplateMenu({
 	disabled: boolean;
 	onApply: (doc: StoredDocument) => void;
 }) {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
 	const [open, setOpen] = useState(false);
 	const [templates, setTemplates] = useState<Template[] | null>(null);
 	const [loadFailed, setLoadFailed] = useState(false);
@@ -41,7 +43,7 @@ export function TemplateMenu({
 	const load = async () => {
 		setLoadFailed(false);
 		try {
-			const data = await cmsFetch<{ items: Template[] }>(cmsApiUrl("/v1/templates"));
+			const data = await cmsFetch<{ items: Template[] }>(site, cmsApiUrl("/v1/templates"));
 			setTemplates(data.items);
 		} catch {
 			setLoadFailed(true);
@@ -101,7 +103,7 @@ export function TemplateMenu({
 						))
 					)}
 					<DropdownMenuSeparator />
-					<DropdownMenuItem onClick={() => window.open(adminUrl("/templates"), "_blank", "noopener")}>
+					<DropdownMenuItem onClick={() => window.open(site.adminUrl("/templates"), "_blank", "noopener")}>
 						<Settings aria-hidden />
 						{t("template.manage")}
 					</DropdownMenuItem>

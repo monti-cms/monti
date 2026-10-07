@@ -1,4 +1,4 @@
-import { contentPath, DEFAULT_LOCALE, localizePath } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import type { Editor, Range } from "@tiptap/core";
 import { rememberLinkTarget } from "./link-targets";
 
@@ -18,9 +18,9 @@ export interface InternalLinkItem {
  * The address an internal link shows in the editor, built from the collection's `path` and the slug. It is display only: the link is stored as the id of
  * the entry, so a later rename of the slug changes nothing in the body. `null` for a collection without a path, which cannot be linked to.
  */
-export function internalLinkHref(item: InternalLinkItem): string | null {
-	const path = contentPath(item.collection, item.slug);
-	return path ? localizePath(item.locale ?? DEFAULT_LOCALE, path) : null;
+export function internalLinkHref(site: Site, item: InternalLinkItem): string | null {
+	const path = site.contentPath(item.collection, item.slug);
+	return path ? site.localizePath(item.locale ?? site.DEFAULT_LOCALE, path) : null;
 }
 
 /**
@@ -29,15 +29,15 @@ export function internalLinkHref(item: InternalLinkItem): string | null {
  * group), so the link follows the reader's language.
  * A collection without a public path cannot be linked to; the title is inserted as plain text.
  */
-export function insertInternalLink(editor: Editor, range: Range, item: InternalLinkItem): void {
-	const href = internalLinkHref(item);
+export function insertInternalLink(site: Site, editor: Editor, range: Range, item: InternalLinkItem): void {
+	const href = internalLinkHref(site, item);
 	const chain = editor.chain().focus().deleteRange(range);
 	if (!href) {
 		chain.insertContent(item.title).run();
 		return;
 	}
 	// The link bubble shows where the link goes; the entry is known now, so it does not have to be looked up.
-	rememberLinkTarget(item);
+	rememberLinkTarget(site, item);
 	chain
 		.insertContent([
 			{ type: "text", text: item.title, marks: [{ type: "link", attrs: { entryId: item.id, href } }] },

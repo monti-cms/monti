@@ -1,17 +1,18 @@
 "use client";
 
-import type { Collection } from "@monti-cms/core/client";
+import { type Collection, useTranslator } from "@monti-cms/core/client";
 import { useCallback, useRef, useState } from "react";
+import type { TranslatorFor } from "../../translator";
 import { Sheet, SheetContent, SheetTitle } from "../../ui/sheet";
 import { RecordPanel } from "../record-panel";
 import { useConfirm } from "../shared/confirm-dialog";
 import type { EntryData, EntryFormPatch } from "./entry-form";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 type Request = { collection: Collection; initial: EntryFormPatch };
 
 /** The saved item in the shape of a relation option. */
-export const optionOf = (saved: EntryData) => ({
+export const optionOf = (t: TranslatorFor<typeof entriesMessages>, saved: EntryData) => ({
 	id: saved.id,
 	title: String(saved.working?.metadata.title ?? "") || saved.workingSlug || t("untitled"),
 	slug: saved.publishedSlug ?? saved.workingSlug ?? null,
@@ -23,6 +24,7 @@ export const optionOf = (saved: EntryData) => ({
  * Render `sheet` once on the screen.
  */
 export function useRecordCreator() {
+	const t = useTranslator(entriesMessages);
 	const [request, setRequest] = useState<Request | null>(null);
 	const resolveRef = useRef<((saved: EntryData | null) => void) | null>(null);
 	const dirtyRef = useRef(false);

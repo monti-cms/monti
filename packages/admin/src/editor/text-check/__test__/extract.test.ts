@@ -2,6 +2,7 @@ import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import type { StoredDocument } from "@monti-cms/core/document";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { codeNode, para, storedDoc, table, text } from "../../../test/stored-doc";
 import { storedToTiptap } from "../../tiptap-content";
@@ -15,8 +16,8 @@ afterEach(() => {
 
 const open = (source: string | StoredDocument) => {
 	editor = new Editor({
-		extensions: buildEditorExtensions(),
-		content: typeof source === "string" ? tiptapOf(source) : storedToTiptap(source),
+		extensions: buildEditorExtensions(testSite),
+		content: typeof source === "string" ? tiptapOf(source) : storedToTiptap(testSite, source),
 	});
 	return editor;
 };

@@ -1,5 +1,4 @@
-import type { BulkOp } from "@monti-cms/core/client";
-import { createTranslator, taxonomyFieldsOf } from "@monti-cms/core/client";
+import type { BulkOp, Site } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
 import {
 	Archive,
@@ -21,9 +20,7 @@ import { screensMessages } from "./messages";
 import type { MenuAction } from "./shared/action-menu";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 
-const t = createTranslator(screensMessages);
-
-export type BulkParams = NonNullable<Parameters<typeof runBulk>[2]>;
+export type BulkParams = NonNullable<Parameters<typeof runBulk>[3]>;
 
 export const toSelection = (item: ListEntriesItem): BulkSelection => ({
 	id: item.id,
@@ -70,10 +67,12 @@ export interface RowMenuHandlers {
 
 /** Row menu. One row gets open and duplicate; several rows get the item count at the top. Trash has only restore and permanent delete. */
 export function rowMenuActions(
+	site: Site,
 	group: readonly ListEntriesItem[],
 	context: RowMenuContext,
 	handlers: RowMenuHandlers,
 ): MenuAction[] {
+	const t = site.createTranslator(screensMessages);
 	const targets = group.map(toSelection);
 	const single = group.length === 1 ? group[0] : undefined;
 	const header: MenuAction[] = single ? [] : [{ kind: "label", label: t("menu.items", { count: group.length }) }];
@@ -109,7 +108,7 @@ export function rowMenuActions(
 					{ kind: "item", label: t("menu.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
 				];
 	const allArchived = group.every((row) => row.status === "archived");
-	const addActions: MenuAction[] = taxonomyFieldsOf(context.collection).flatMap((stored): MenuAction[] => {
+	const addActions: MenuAction[] = site.taxonomyFieldsOf(context.collection).flatMap((stored): MenuAction[] => {
 		if (stored.field.kind !== "relation" || !stored.field.many) return [];
 		const label = stored.field.label;
 		return [

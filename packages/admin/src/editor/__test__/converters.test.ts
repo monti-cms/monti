@@ -1,14 +1,17 @@
 import type { CmsNode } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { docOf, tiptapOf } from "../../test/mdx";
-import { storedDoc, table, text, withoutRowIds } from "../../test/stored-doc";
-import { BLOCK_CONVERTERS, converterForCms, converterForTiptap } from "../converters";
+import { storedDoc, table, text } from "../../test/stored-doc";
+import { blockConvertersOf, converterForCms, converterForTiptap } from "../converters";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 describe("block converter registry", () => {
 	it("no two default converters handle the same node type (matches branches allowed)", () => {
-		const defaultCms = BLOCK_CONVERTERS.filter((c) => !c.matches).flatMap((c) => c.cmsTypes);
-		const tiptap = BLOCK_CONVERTERS.flatMap((c) => c.tiptapTypes);
+		const defaultCms = blockConvertersOf(testSite)
+			.filter((c) => !c.matches)
+			.flatMap((c) => c.cmsTypes);
+		const tiptap = blockConvertersOf(testSite).flatMap((c) => c.tiptapTypes);
 		expect(new Set(defaultCms).size).toBe(defaultCms.length);
 		expect(new Set(tiptap).size).toBe(tiptap.length);
 	});
@@ -32,14 +35,14 @@ describe("block converter registry", () => {
 			"cmsOpaqueBlock",
 			"text",
 		];
-		const claimed = BLOCK_CONVERTERS.flatMap((c) => [...c.cmsTypes, ...c.tiptapTypes]);
+		const claimed = blockConvertersOf(testSite).flatMap((c) => [...c.cmsTypes, ...c.tiptapTypes]);
 		expect(claimed.filter((type) => reserved.includes(type))).toEqual([]);
 	});
 
 	it("finds a converter by type", () => {
-		expect(converterForCms("image")?.name).toBe("image");
-		expect(converterForTiptap("codeBlock")?.name).toBe("codeBlock");
-		expect(converterForCms("paragraph")).toBeUndefined();
+		expect(converterForCms(testSite, "image")?.name).toBe("image");
+		expect(converterForTiptap(testSite, "codeBlock")?.name).toBe("codeBlock");
+		expect(converterForCms(testSite, "paragraph")).toBeUndefined();
 	});
 
 	it("prefers a converter with matches and falls back to the default converter", () => {
@@ -47,14 +50,14 @@ describe("block converter registry", () => {
 		const chartNode = { type: "codeBlock", attrs: { language: "chart", value: "pie" } };
 		const tsNode = { type: "codeBlock", attrs: { language: "typescript", value: "const x = 1;" } };
 
-		expect(converterForCms("codeBlock", mermaidNode)?.name).toBe("mermaid");
-		expect(converterForCms("codeBlock", chartNode)?.name).toBe("chart");
-		expect(converterForCms("codeBlock", tsNode)?.name).toBe("codeBlock");
-		expect(converterForCms("codeBlock")?.name).toBe("codeBlock");
-		expect(converterForCms("math")?.name).toBe("math");
-		expect(converterForTiptap("cmsMermaid")?.name).toBe("mermaid");
-		expect(converterForTiptap("cmsChart")?.name).toBe("chart");
-		expect(converterForTiptap("cmsMath")?.name).toBe("math");
+		expect(converterForCms(testSite, "codeBlock", mermaidNode)?.name).toBe("mermaid");
+		expect(converterForCms(testSite, "codeBlock", chartNode)?.name).toBe("chart");
+		expect(converterForCms(testSite, "codeBlock", tsNode)?.name).toBe("codeBlock");
+		expect(converterForCms(testSite, "codeBlock")?.name).toBe("codeBlock");
+		expect(converterForCms(testSite, "math")?.name).toBe("math");
+		expect(converterForTiptap(testSite, "cmsMermaid")?.name).toBe("mermaid");
+		expect(converterForTiptap(testSite, "cmsChart")?.name).toBe("chart");
+		expect(converterForTiptap(testSite, "cmsMath")?.name).toBe("math");
 	});
 
 	it.each<[string, () => ReturnType<typeof storedDoc>]>([
@@ -87,7 +90,7 @@ describe("block converter registry", () => {
 		["math", () => storedDoc({ type: "math", attrs: { value: "x^2 + y^2 = z^2" } })],
 	])("round-trips %s through the editor", (_, build) => {
 		const doc = build();
-		expect(tiptapToStored(storedToTiptap(doc))).toEqual(doc);
+		expect(tiptapToStored(testSite, storedToTiptap(testSite, doc))).toEqual(doc);
 	});
 
 	it("saves a preview block with its new value after it changes", () => {
@@ -98,7 +101,7 @@ describe("block converter registry", () => {
 		const mermaidBlock = mermaidDoc.content?.find((b) => b.type === "cmsMermaid");
 		expect(mermaidBlock?.attrs?.value).toBe("graph TD;\n    A-->B;");
 		if (mermaidBlock?.attrs) mermaidBlock.attrs.value = "graph LR;\n    C-->D;";
-		expect(firstBlock(tiptapToStored(mermaidDoc))).toMatchObject({
+		expect(firstBlock(tiptapToStored(testSite, mermaidDoc))).toMatchObject({
 			type: "codeBlock",
 			attrs: { language: "mermaid", code: "graph LR;\n    C-->D;" },
 		});
@@ -108,7 +111,7 @@ describe("block converter registry", () => {
 		const chartBlock = chartDoc.content?.find((b) => b.type === "cmsChart");
 		expect(chartBlock?.attrs?.value).toBe('pie\n  "A": 10');
 		if (chartBlock?.attrs) chartBlock.attrs.value = 'pie\n  "B": 20';
-		expect(firstBlock(tiptapToStored(chartDoc))).toMatchObject({
+		expect(firstBlock(tiptapToStored(testSite, chartDoc))).toMatchObject({
 			type: "codeBlock",
 			attrs: { language: "chart", code: 'pie\n  "B": 20' },
 		});
@@ -118,8 +121,8 @@ describe("block converter registry", () => {
 		const mathBlock = mathDoc.content?.find((b) => b.type === "cmsMath");
 		expect(mathBlock?.attrs?.value).toBe("x^2");
 		if (mathBlock?.attrs) mathBlock.attrs.value = "y^2";
-		expect(firstBlock(tiptapToStored(mathDoc))).toMatchObject({ type: "math", attrs: { value: "y^2" } });
+		expect(firstBlock(tiptapToStored(testSite, mathDoc))).toMatchObject({ type: "math", attrs: { value: "y^2" } });
 	});
 });
 
-const tiptapOfMath = (value: string) => storedToTiptap(storedDoc({ type: "math", attrs: { value } }));
+const tiptapOfMath = (value: string) => storedToTiptap(testSite, storedDoc({ type: "math", attrs: { value } }));

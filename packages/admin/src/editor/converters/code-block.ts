@@ -1,6 +1,6 @@
+import type { Site } from "@monti-cms/core/client";
 import type { AnnotationAttr, CodeBlockDocument, InlineAnnotation, LineAnnotation } from "@monti-cms/core/code-block";
 import {
-	annotationConfig,
 	type CodeLineEffect,
 	type CodeRule,
 	type CodeSpan,
@@ -10,7 +10,6 @@ import {
 	clampLineEffects,
 	fromCodeBlockDocumentToCodeFence,
 	fromCodeFenceToCodeBlockDocument,
-	isLineEffectName,
 	lineStarts,
 	modelFingerprint,
 } from "@monti-cms/core/code-block";
@@ -18,17 +17,18 @@ import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
 import { storedCodeBlockAttrs, storedCodeBlockFence } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
 import { asString } from "./shared";
-import type { BlockConverter } from "./types";
+import type { BlockConverter, ConverterContext } from "./types";
 
 /** The fence text of a stored code block: its code with the annotations written as Monti annotation comments. This is the model the code editor works on. */
-export const codeFenceOf = (node: CmsNode): string => storedCodeBlockFence(node.attrs ?? {});
+export const codeFenceOf = (site: Site, node: CmsNode): string => storedCodeBlockFence(site, node.attrs ?? {});
 
 /** The stored attributes of a code block from the editor's fence text (`language`, `meta`, and the value with its annotation comments). */
 export const storedCodeAttrs = (
+	site: Site,
 	language: string | null,
 	meta: string | null,
 	value: string,
-): Record<string, CmsJsonValue> => storedCodeBlockAttrs({ language: language ?? "", meta: meta ?? "", value });
+): Record<string, CmsJsonValue> => storedCodeBlockAttrs(site, { language: language ?? "", meta: meta ?? "", value });
 
 const attrsFrom = (attributes: AnnotationAttr[] | undefined): Record<string, unknown> =>
 	Object.fromEntries((attributes ?? []).map((attr) => [attr.name, attr.value]));
@@ -131,12 +131,17 @@ export interface ParsedCodeFence {
  * Reads a code fence value (including comment lines) into the editor model.
  * null if there are comments the editor cannot represent (unknown line effects, the same effect overlapping with different attributes) - opens in raw editing.
  */
-export function parseCodeFence(value: string, language: string | null, meta: string | null): ParsedCodeFence | null {
+export function parseCodeFence(
+	site: Site,
+	value: string,
+	language: string | null,
+	meta: string | null,
+): ParsedCodeFence | null {
 	let document: CodeBlockDocument;
 	try {
 		document = fromCodeFenceToCodeBlockDocument(
 			{ type: "code", lang: language ?? undefined, meta: meta ?? undefined, value },
-			annotationConfig,
+			site.annotationConfig,
 		);
 	} catch {
 		return null;
@@ -160,7 +165,7 @@ export function parseCodeFence(value: string, language: string | null, meta: str
 	// IDs are assigned by order. The same source always becomes the same editor document (so load and re-save comparisons stay stable).
 	const lineEffects: CodeLineEffect[] = [];
 	for (const annotation of document.annotations) {
-		if (!isLineEffectName(annotation.name)) return null;
+		if (!site.isLineEffectName(annotation.name)) return null;
 		lineEffects.push({
 			id: `l${lineEffects.length}`,
 			name: annotation.name,
@@ -194,7 +199,7 @@ export function parseCodeFence(value: string, language: string | null, meta: str
 }
 
 /** Writes the editor model as a code fence value (including comment lines). */
-export function serializeCodeFence(model: ParsedCodeFence, language: string | null): string {
+export function serializeCodeFence(site: Site, model: ParsedCodeFence, language: string | null): string {
 	const lines = model.text.split("\n");
 	const starts = lineStarts(model.text);
 	const inline: InlineAnnotation[][] = lines.map(() => []);
@@ -244,7 +249,7 @@ export function serializeCodeFence(model: ParsedCodeFence, language: string | nu
 				attributes: attributesFrom(rule.attrs),
 			})),
 	};
-	return fromCodeBlockDocumentToCodeFence(document, annotationConfig).value;
+	return fromCodeBlockDocumentToCodeFence(document, site.annotationConfig).value;
 }
 
 const fingerprintOf = (
@@ -263,11 +268,11 @@ export const codeBlockConverter: BlockConverter = {
 	tiptapTypes: ["codeBlock"],
 	isMappable: () => true,
 
-	toTiptap(node: CmsNode) {
+	toTiptap(node: CmsNode, { site }: ConverterContext) {
 		const language = asString(node.attrs?.language) ?? null;
 		const meta = asString(node.attrs?.meta) ?? null;
-		const source = codeFenceOf(node);
-		const parsed = parseCodeFence(source, language, meta);
+		const source = codeFenceOf(site, node);
+		const parsed = parseCodeFence(site, source, language, meta);
 
 		if (!parsed) {
 			// If there are comments that cannot be represented, edit as raw text including the comment lines (no data is lost).
@@ -293,22 +298,23 @@ export const codeBlockConverter: BlockConverter = {
 		};
 	},
 
-	toCms(node: JSONContent) {
+	toCms(node: JSONContent, { site }: ConverterContext) {
 		const content = node.content ?? [];
 		const text = content.map((child) => (child?.type === "text" ? (child.text ?? "") : "")).join("");
 		const language = asString(node.attrs?.language) ?? null;
 		const meta = asString(node.attrs?.meta) ?? null;
 
-		if (node.attrs?.rawMode === true) return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, text) }];
+		if (node.attrs?.rawMode === true)
+			return [{ type: "codeBlock", attrs: storedCodeAttrs(site, language, meta, text) }];
 
 		const lineEffects = Array.isArray(node.attrs?.lineEffects) ? (node.attrs.lineEffects as CodeLineEffect[]) : [];
 		const rules = Array.isArray(node.attrs?.rules) ? (node.attrs.rules as CodeRule[]) : [];
 		const source = asString(node.attrs?.source);
 		// If nothing changed since loading, save the original text as is (byte-identical, including comment line positions and style).
 		if (source != null && fingerprintOf(language, content, lineEffects, rules) === node.attrs?.sourceKey)
-			return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, source) }];
+			return [{ type: "codeBlock", attrs: storedCodeAttrs(site, language, meta, source) }];
 
-		const value = serializeCodeFence({ text, spans: spansFromContent(content), lineEffects, rules }, language);
-		return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, value) }];
+		const value = serializeCodeFence(site, { text, spans: spansFromContent(content), lineEffects, rules }, language);
+		return [{ type: "codeBlock", attrs: storedCodeAttrs(site, language, meta, value) }];
 	},
 };

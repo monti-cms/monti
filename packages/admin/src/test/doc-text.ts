@@ -6,6 +6,7 @@ import {
 	STORED_DOCUMENT_VERSION,
 	type StoredDocument,
 } from "@monti-cms/core/document";
+import { testSite } from "../../../core/test/site";
 
 /**
  * A tiny reader that turns plain text into a stored document, so core tests can describe a body in one line without a text format package (core parses no
@@ -137,6 +138,10 @@ const blocks = (lines: string[]): CmsNode[] => {
 
 /** The stored document of `source`, with block ids paired with those of `previous`. */
 export const docOfText = (source: string, previous?: StoredDocument | null): StoredDocument => {
-	const doc = canonicalDocument({ type: "doc", version: STORED_DOCUMENT_VERSION, content: blocks(source.split("\n")) });
+	const doc = canonicalDocument(testSite, {
+		type: "doc",
+		version: STORED_DOCUMENT_VERSION,
+		content: blocks(source.split("\n")),
+	});
 	return { ...doc, content: assignBlockIds(doc.content, [previous?.content]) };
 };

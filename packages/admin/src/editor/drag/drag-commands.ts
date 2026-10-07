@@ -1,7 +1,7 @@
 import { Fragment, type Node as PmNode, Slice } from "@tiptap/pm/model";
 import { type EditorState, NodeSelection, Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { canJoin, dropPoint } from "@tiptap/pm/transform";
-import { BODY_CONTAINER_NODE_NAMES } from "../blocks/added/shared";
+import { BODY_CONTAINER_GROUP } from "../blocks/added/shared";
 
 /**
  * Pure block drag-and-drop command functions.
@@ -14,7 +14,6 @@ export const MOVED_BLOCKS_META = "cmsMovedBlocks";
 /** Lists that must not be empty. Moving the only item removes the whole empty list. */
 const LIST_NODES = new Set(["bulletList", "orderedList", "taskList"]);
 /** CMS containers that must keep at least one body block (built from block definitions). Moving the only block leaves an empty paragraph. */
-const CONTAINER_BODY_NODES = BODY_CONTAINER_NODE_NAMES;
 
 /** Range to delete when taking blocks out. If `fill` is set, that spot is filled with it. null if they cannot be taken out. */
 export interface SourceRange {
@@ -62,7 +61,7 @@ export function sourceRangeOf(doc: PmNode, fromPos: number, toPos?: number): Sou
 	}
 
 	const paragraph = doc.type.schema.nodes.paragraph;
-	if (CONTAINER_BODY_NODES.has(parent.type.name) && paragraph) {
+	if (parent.type.isInGroup(BODY_CONTAINER_GROUP) && paragraph) {
 		const fill = paragraph.create();
 		if (parent.canReplaceWith(start, end, fill.type)) return { from: range.from, to: range.to, fill };
 	}

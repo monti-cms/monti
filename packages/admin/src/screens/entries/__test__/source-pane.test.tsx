@@ -1,6 +1,7 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { docOf } from "../../../test/mdx";
+import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { DocPreview, SourcePane } from "../source-pane";
 
 afterEach(cleanup);

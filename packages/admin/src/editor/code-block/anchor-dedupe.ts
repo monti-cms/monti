@@ -1,8 +1,9 @@
+import type { Site } from "@monti-cms/core/client";
 import { ANCHOR, type CodeLineEffect } from "@monti-cms/core/code-block";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import { Mapping, type StepMap } from "@tiptap/pm/transform";
-import { CODE_ANCHOR_REF } from "../added-marks";
+import { codeAnchorRef } from "../added-marks";
 import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { lineEffectsOf } from "./effects-plugin";
 import { nextAnchorId } from "./link-commands";
@@ -55,7 +56,8 @@ function ownersBefore(doc: PmNode): Map<string, unknown> {
  * The copy's label is renamed together with the body links that came in with the same change (a pasted section of text and code stays
  * linked to its own code), or removed when none did: the existing links keep pointing to the original lines.
  */
-export function createAnchorDedupePlugin(): Plugin {
+export function createAnchorDedupePlugin(site: Site): Plugin {
+	const anchor = codeAnchorRef(site);
 	return new Plugin({
 		key: anchorDedupeKey,
 		appendTransaction(transactions, oldState, state) {
@@ -77,7 +79,7 @@ export function createAnchorDedupePlugin(): Plugin {
 			if (duplicated.length === 0) return null;
 
 			const owners = ownersBefore(oldState.doc);
-			const markType = CODE_ANCHOR_REF ? state.schema.marks[CODE_ANCHOR_REF.mark] : undefined;
+			const markType = anchor ? state.schema.marks[anchor.mark] : undefined;
 			const tr = state.tr;
 			/** Effects per block position, as changed so far (a block can hold several duplicated labels). */
 			const effectsAt = new Map<number, CodeLineEffect[]>();
@@ -95,12 +97,12 @@ export function createAnchorDedupePlugin(): Plugin {
 						list.findIndex((holder) => !holder.inserted),
 					].find((index) => index >= 0) ?? 0,
 				);
-				let pastedLinks = markType && CODE_ANCHOR_REF ? insertedLinks(tr.doc, id, isInserted) : [];
+				let pastedLinks = markType && anchor ? insertedLinks(site, tr.doc, id, isInserted) : [];
 				list.forEach((holder, index) => {
 					if (index === ownerIndex) return;
 					const effects = effectsOf(holder);
-					if (holder.inserted && pastedLinks.length > 0 && markType && CODE_ANCHOR_REF) {
-						const renamed = nextAnchorId(tr.doc);
+					if (holder.inserted && pastedLinks.length > 0 && markType && anchor) {
+						const renamed = nextAnchorId(site, tr.doc);
 						effectsAt.set(
 							holder.pos,
 							effects.map((effect) =>
@@ -111,7 +113,7 @@ export function createAnchorDedupePlugin(): Plugin {
 						);
 						tr.setNodeMarkup(holder.pos, undefined, { ...holder.node.attrs, lineEffects: effectsAt.get(holder.pos) });
 						for (const link of pastedLinks) {
-							tr.addMark(link.from, link.to, markType.create({ ...link.attrs, [CODE_ANCHOR_REF.attribute]: renamed }));
+							tr.addMark(link.from, link.to, markType.create({ ...link.attrs, [anchor.attribute]: renamed }));
 						}
 						// The links that came in are now this copy's; another copy has none left.
 						pastedLinks = [];
@@ -132,13 +134,15 @@ export function createAnchorDedupePlugin(): Plugin {
 
 /** Body links to `id` inside the ranges the change inserted. */
 function insertedLinks(
+	site: Site,
 	doc: PmNode,
 	id: string,
 	isInserted: (from: number, to: number) => boolean,
 ): { from: number; to: number; attrs: Record<string, unknown> }[] {
 	const links: { from: number; to: number; attrs: Record<string, unknown> }[] = [];
-	if (!CODE_ANCHOR_REF) return links;
-	const { mark: markName, attribute } = CODE_ANCHOR_REF;
+	const anchor = codeAnchorRef(site);
+	if (!anchor) return links;
+	const { mark: markName, attribute } = anchor;
 	doc.descendants((node, pos) => {
 		if (!node.isText) return true;
 		const mark = node.marks.find((item) => item.type.name === markName && item.attrs[attribute] === id);

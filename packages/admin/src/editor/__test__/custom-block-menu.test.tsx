@@ -1,7 +1,9 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
+import { renderWithSite } from "../../test/site";
 import { CustomBlockMenu } from "../custom-block-menu";
 import { buildEditorExtensions } from "../extensions";
 
@@ -21,12 +23,12 @@ vi.mock("../../ui/tooltip", () => ({
 afterEach(cleanup);
 
 const createEditor = (editable = true) =>
-	new Editor({ extensions: buildEditorExtensions(), content: "<p>안녕하세요</p>", editable });
+	new Editor({ extensions: buildEditorExtensions(testSite), content: "<p>안녕하세요</p>", editable });
 
 describe("CustomBlockMenu", () => {
 	it("lists the custom components when the menu is opened", async () => {
 		const editor = createEditor();
-		render(<CustomBlockMenu editor={editor} />);
+		renderWithSite(<CustomBlockMenu editor={editor} />);
 
 		fireEvent.click(screen.getByRole("button", { name: "컴포넌트 넣기" }));
 
@@ -38,7 +40,7 @@ describe("CustomBlockMenu", () => {
 	it("choosing a callout inserts a cmsCallout node into the document", async () => {
 		const editor = createEditor();
 		editor.commands.setTextSelection(3);
-		render(<CustomBlockMenu editor={editor} />);
+		renderWithSite(<CustomBlockMenu editor={editor} />);
 
 		fireEvent.click(screen.getByRole("button", { name: "컴포넌트 넣기" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: /^콜아웃/ }));
@@ -56,7 +58,7 @@ describe("CustomBlockMenu", () => {
 
 	it("the button is disabled when not editable", () => {
 		const editor = createEditor(false);
-		render(<CustomBlockMenu editor={editor} />);
+		renderWithSite(<CustomBlockMenu editor={editor} />);
 
 		const button = screen.getByRole("button", { name: "컴포넌트 넣기" }) as HTMLButtonElement;
 		expect(button.disabled).toBe(true);

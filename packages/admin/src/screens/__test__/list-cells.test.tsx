@@ -1,3 +1,5 @@
+import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { createSite } from "@monti-cms/core/client";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { cleanup, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
@@ -9,43 +11,32 @@ import {
 	useCmsAdminComponents,
 } from "../../admin-components";
 import { renderInRouter as render } from "../../test/router";
+import { AdminEntriesTable } from "../admin-entries-table";
+import { columnConfig, columnsFor, fieldColumnOf } from "../list-columns";
+import { parseListState } from "../list-state";
+import { withSite } from "./site-wrapper";
 
 // A site where select, text, media and relation fields are written in the list columns (runs regardless of config).
-vi.mock("@monti-cms/core/client", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("@monti-cms/core/client")>();
-	const article = {
-		label: "Article",
-		kind: "document",
-		body: true,
-		fields: {
-			title: { kind: "text", label: "Title" },
-			slug: { kind: "slug", label: "Slug", from: "title" },
-			format: {
-				kind: "select",
-				label: "Format",
-				options: { news: "News", guide: "Guide" },
-				defaultValue: "news",
-			},
-			subtitle: { kind: "text", label: "Subtitle" },
-			accent: { kind: "text", label: "Accent", input: "color" },
-			hero: { kind: "media", label: "Hero" },
-			related: { kind: "relation", label: "Related", to: "article", many: true },
-			lead: { kind: "relation", label: "Lead", to: "article" },
-			preview: { kind: "view", view: "preview" },
-		},
-		list: { columns: ["title", "format", "subtitle", "accent", "hero", "related", "lead", "status"] },
-	};
-	return {
-		...actual,
-		isCollection: (name: string) => name === "article" || actual.isCollection(name),
-		schemaOf: (name: string) => (name === "article" ? article : actual.schemaOf(name as never)),
-		taxonomyFieldsOf: (name: string) => (name === "article" ? [] : actual.taxonomyFieldsOf(name as never)),
-	};
+const article = defineCollection({
+	label: "Article",
+	kind: "document",
+	path: "/:slug",
+	fields: {
+		title: fields.text({ label: "Title" }),
+		slug: fields.slug({ label: "Slug", from: "title" }),
+		format: fields.select({ label: "Format", options: { news: "News", guide: "Guide" }, defaultValue: "news" }),
+		subtitle: fields.text({ label: "Subtitle" }),
+		accent: fields.text({ label: "Accent", input: "color" }),
+		hero: fields.media({ label: "Hero" }),
+		related: fields.relation({ label: "Related", to: "article", many: true }),
+		lead: fields.relation({ label: "Lead", to: "article" }),
+		preview: fields.view({ view: "preview" }),
+	},
+	list: { columns: ["title", "format", "subtitle", "accent", "hero", "related", "lead", "status"] },
 });
-
-const { AdminEntriesTable } = await import("../admin-entries-table");
-const { columnConfig, columnsFor, fieldColumnOf } = await import("../list-columns");
-const { parseListState } = await import("../list-state");
+const site = createSite(
+	defineConfig({ collections: { article }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
+);
 
 afterEach(cleanup);
 
@@ -75,7 +66,7 @@ function renderTable(items: ListEntriesItem[], components: CmsAdminComponents = 
 		items,
 		folders: [],
 		explorer: null,
-		state: parseListState(new URLSearchParams("collection=article")),
+		state: parseListState(site, new URLSearchParams("collection=article")),
 		options: {},
 		onStateChange: vi.fn(),
 		onColumnSettingsChange: vi.fn(),
@@ -92,9 +83,12 @@ function renderTable(items: ListEntriesItem[], components: CmsAdminComponents = 
 		onRetry: vi.fn(),
 	};
 	render(
-		<CmsAdminComponentsProvider components={components}>
-			<AdminEntriesTable {...props} />
-		</CmsAdminComponentsProvider>,
+		withSite(
+			<CmsAdminComponentsProvider components={components}>
+				<AdminEntriesTable {...props} />
+			</CmsAdminComponentsProvider>,
+			site,
+		),
 	);
 }
 
@@ -102,7 +96,7 @@ const rowOf = (name: RegExp) => screen.getByRole("row", { name });
 
 describe("list columns from fields", () => {
 	it("offers the listed fields as columns and shows them by default", () => {
-		const { available, defaults } = columnsFor("article");
+		const { available, defaults } = columnsFor(site, "article");
 		expect(defaults[0]).toBe("title");
 		for (const column of ["format", "subtitle", "accent", "hero", "related", "lead"]) {
 			expect(defaults).toContain(column);
@@ -113,11 +107,15 @@ describe("list columns from fields", () => {
 	});
 
 	it("labels field columns by the field label and never filters them", () => {
-		expect(columnConfig("article", "format")).toEqual({ label: "Format", filter: { kind: "none" } });
-		expect(columnConfig("article", "related")).toEqual({ label: "Related", filter: { kind: "none" }, many: true });
-		expect(fieldColumnOf("article", "format")?.field.kind).toBe("select");
-		expect(fieldColumnOf("article", "status")).toBeUndefined();
-		expect(fieldColumnOf("article", "preview")).toBeUndefined();
+		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format", filter: { kind: "none" } });
+		expect(columnConfig(site, "article", "related")).toEqual({
+			label: "Related",
+			filter: { kind: "none" },
+			many: true,
+		});
+		expect(fieldColumnOf(site, "article", "format")?.field.kind).toBe("select");
+		expect(fieldColumnOf(site, "article", "status")).toBeUndefined();
+		expect(fieldColumnOf(site, "article", "preview")).toBeUndefined();
 	});
 });
 

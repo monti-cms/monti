@@ -1,11 +1,12 @@
 "use client";
 
-import type { BulkOp } from "@monti-cms/core/client";
-import { cmsApiUrl, createTranslator, isItemCollection, taxonomyFieldsOf } from "@monti-cms/core/client";
+import type { BulkOp, Site } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "../../lib/utils/cn";
+import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command";
@@ -17,8 +18,6 @@ import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
 
-const t = createTranslator(bulkBarMessages);
-
 export type BulkUsage = { entryId: string; title: string | null; collection: string; state: string };
 
 export type BulkItemResult =
@@ -26,6 +25,8 @@ export type BulkItemResult =
 	| { id: string; ok: false; error: string; issues?: CmsIssue[]; usages?: BulkUsage[] };
 
 export type BulkSelection = { id: string; expectedVersion: number; title?: string | null };
+
+type RunBulkArgs = Parameters<typeof runBulk> extends [unknown, ...infer Rest] ? Rest : never;
 
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
 
@@ -53,12 +54,15 @@ type ActionDef = {
  * Actions per category field (tags, categories, etc.) of the collection. Fields that hold many get add/remove; a field that holds only one gets replace.
  * Multi-value field actions come first.
  */
-export function taxonomyActions(collection: string): ActionDef[] {
-	const fields = taxonomyFieldsOf(collection).flatMap((stored) =>
-		stored.field.kind === "relation"
-			? [{ name: stored.name, label: stored.field.label, many: stored.field.many === true }]
-			: [],
-	);
+export function taxonomyActions(site: Site, collection: string): ActionDef[] {
+	const t = site.createTranslator(bulkBarMessages);
+	const fields = site
+		.taxonomyFieldsOf(collection)
+		.flatMap((stored) =>
+			stored.field.kind === "relation"
+				? [{ name: stored.name, label: stored.field.label, many: stored.field.many === true }]
+				: [],
+		);
 	const action = (op: RelationOp, field: (typeof fields)[number], ask: ActionDef["ask"]): ActionDef => ({
 		value: `${op}:${field.name}`,
 		label: t(op, { label: field.label }),
@@ -88,7 +92,7 @@ export function taxonomyActions(collection: string): ActionDef[] {
 	];
 }
 
-const LIST_ACTIONS: ActionDef[] = [
+const listActions = (t: TranslatorFor<typeof bulkBarMessages>): ActionDef[] => [
 	{
 		value: "folder.move",
 		label: t("folder.move"),
@@ -101,7 +105,7 @@ const LIST_ACTIONS: ActionDef[] = [
 	{ value: "trash", label: t("trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
 ];
 
-const TRASH_ACTIONS: ActionDef[] = [
+const trashActions = (t: TranslatorFor<typeof bulkBarMessages>): ActionDef[] => [
 	{
 		value: "permanentDelete",
 		label: t("permanentDelete"),
@@ -123,7 +127,8 @@ const FAILURE_CODES = new Set([
 ]);
 
 /** Reason for a single failure. If a usage blocked permanent deletion, names it as `In use: <name>`. */
-export function describeBulkFailure(failure: Extract<BulkItemResult, { ok: false }>): string {
+export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult, { ok: false }>): string {
+	const t = site.createTranslator(bulkBarMessages);
 	if (failure.error === "in_use" && failure.usages?.length) {
 		const names = [...new Set(failure.usages.map((usage) => usage.title || t("untitled")))];
 		const shown = names.slice(0, 3).join(", ");
@@ -132,18 +137,24 @@ export function describeBulkFailure(failure: Extract<BulkItemResult, { ok: false
 		});
 	}
 	const base = FAILURE_CODES.has(failure.error) ? t(`failure.${failure.error}` as "failure.conflict") : failure.error;
-	return failure.issues?.length ? `${base} ${failure.issues.slice(0, 3).map(cmsIssueMessage).join(" ")}` : base;
+	return failure.issues?.length
+		? `${base} ${failure.issues
+				.slice(0, 3)
+				.map((issue) => cmsIssueMessage(site, issue))
+				.join(" ")}`
+		: base;
 }
 
 export async function runBulk(
+	site: Site,
 	op: BulkOp,
 	items: BulkSelection[],
 	params: { field?: string; ids?: string[]; id?: string | null; folderId?: string | null } = {},
 ): Promise<BulkItemResult[]> {
-	const data = await cmsFetch<{ results: BulkItemResult[] }>(cmsApiUrl("/v1/bulk"), {
+	const data = await cmsFetch<{ results: BulkItemResult[] }>(site, cmsApiUrl("/v1/bulk"), {
 		method: "POST",
 		json: { op, items: items.map(({ id, expectedVersion }) => ({ id, expectedVersion })), ...params },
-		fallback: t("requestFailed"),
+		fallback: site.createTranslator(bulkBarMessages)("requestFailed"),
 	});
 	return data.results;
 }
@@ -163,6 +174,7 @@ function ManyPicker({
 	value: string[];
 	onValueChange: (value: string[]) => void;
 }) {
+	const t = useTranslator(bulkBarMessages);
 	const names = value.map((id) => options.find((option) => option.id === id)?.title ?? id);
 	const summary =
 		names.length === 0
@@ -226,7 +238,7 @@ export function BulkBar({
 	folders,
 	mode = "list",
 	onClearSelection,
-	onRun = runBulk,
+	onRun,
 	onDone,
 }: {
 	collection: string;
@@ -235,16 +247,18 @@ export function BulkBar({
 	mode?: "list" | "trash";
 	onClearSelection: () => void;
 	/** Action request. The list screen passes a request that updates the list first (optimistic update). */
-	onRun?: typeof runBulk;
+	onRun?: (...args: RunBulkArgs) => ReturnType<typeof runBulk>;
 	onDone?: (failedIds: string[]) => void;
 }) {
-	const isRecord = isItemCollection(collection);
+	const site = useSite();
+	const t = useTranslator(bulkBarMessages);
+	const isRecord = site.isItemCollection(collection);
 	const actions = useMemo(
 		() =>
 			mode === "trash"
-				? TRASH_ACTIONS
-				: [...taxonomyActions(collection), ...LIST_ACTIONS.filter((action) => !action.content || !isRecord)],
-		[isRecord, collection, mode],
+				? trashActions(t)
+				: [...taxonomyActions(site, collection), ...listActions(t).filter((action) => !action.content || !isRecord)],
+		[isRecord, collection, mode, site, t],
 	);
 	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");
 	const [checked, setChecked] = useState<string[]>([]);
@@ -287,12 +301,16 @@ export function BulkBar({
 					: action === "folder.move"
 						? { folderId: single === "__unfiled__" ? null : single }
 						: {};
-			const out = await onRun(relation?.op ?? (action as BulkOp), items, params);
+			const out = await (onRun ?? ((...args: RunBulkArgs) => runBulk(site, ...args)))(
+				relation?.op ?? (action as BulkOp),
+				items,
+				params,
+			);
 			setResults(out);
 			setRanItems(items);
 			onDone?.(out.filter((result) => !result.ok).map((result) => result.id));
 		} catch (err) {
-			setError(errorText(err, t("failed")));
+			setError(errorText(site, err, t("failed")));
 		} finally {
 			setIsRunning(false);
 		}
@@ -427,7 +445,7 @@ export function BulkBar({
 				<ul className="flex flex-col gap-1 pt-2 text-cms-destructive text-xs">
 					{failures.map((failure) => (
 						<li key={failure.id}>
-							<span className="font-medium">{titleOf(failure.id)}</span> — {describeBulkFailure(failure)}
+							<span className="font-medium">{titleOf(failure.id)}</span> — {describeBulkFailure(site, failure)}
 						</li>
 					))}
 				</ul>

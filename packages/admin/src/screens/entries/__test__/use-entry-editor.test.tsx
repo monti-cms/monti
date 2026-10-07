@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { memo, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -10,6 +10,7 @@ import {
 	useEntryEditorContext,
 	useField,
 } from "../../../hooks/public";
+import { renderWithSite as render, renderHookWithSite as renderHook } from "../../__test__/site-wrapper";
 import {
 	ENTRY,
 	fakeClient,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslator } from "@monti-cms/core/client";
+
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -16,7 +18,7 @@ import {
 	ComboboxValue,
 	useComboboxAnchor,
 } from "../../ui/combobox";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 export interface RelationOption {
 	value: string;
@@ -62,6 +64,7 @@ export function RelationCombobox({
 	disabled,
 	showChips = true,
 }: RelationComboboxProps) {
+	const t = useTranslator(entriesMessages);
 	const anchor = useComboboxAnchor();
 	const [query, setQuery] = useState("");
 	const [isCreating, setIsCreating] = useState(false);

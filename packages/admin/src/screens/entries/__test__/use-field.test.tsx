@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -11,6 +11,7 @@ import {
 } from "../../../hooks/public";
 import { SlotRegistryProvider } from "../../../slots/registry";
 import { docOf } from "../../../test/mdx";
+import { renderWithSite as render, renderHookWithSite as renderHook } from "../../__test__/site-wrapper";
 import { EMPTY_FORM, type EntryForm, type EntryFormPatch } from "../entry-form";
 
 afterEach(cleanup);

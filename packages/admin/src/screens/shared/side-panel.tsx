@@ -1,13 +1,11 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { sharedMessages } from "./messages";
-
-const t = createTranslator(sharedMessages);
 
 /** Width of the right slot (taxonomy edit, media detail, post properties). All right slots share the same width. */
 export const SIDE_PANEL_WIDTH = "w-[22rem]";
@@ -35,6 +33,7 @@ export function SidePanelHeader({
 	/** Content to put instead of (or next to) the title (tabs etc.). */
 	children?: ReactNode;
 }) {
+	const t = useTranslator(sharedMessages);
 	return (
 		<div className={cn("flex h-11 shrink-0 items-center gap-1 border-b pr-2 pl-4", className)}>
 			{title !== undefined && <h2 className="min-w-0 flex-1 truncate font-medium text-sm">{title}</h2>}

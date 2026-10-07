@@ -10,13 +10,7 @@ import type {
 	ValueField,
 	ViewField,
 } from "@monti-cms/core/client";
-import {
-	isItemCollection,
-	type Locale,
-	recordLocalizedFields,
-	type SchemaCollection,
-	schemaOf,
-} from "@monti-cms/core/client";
+import { type Locale, type SchemaCollection, useSite, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {
@@ -49,9 +43,9 @@ import {
 import { FieldView } from "./field-views";
 import { layoutGroupsOf } from "./layout-groups";
 import { MediaInput } from "./media-image-input";
+import { entriesMessages } from "./messages";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
-import { t } from "./translate";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
 
 /** Usages of the entry the caller already loaded. A backlink input shows them without fetching again. */
@@ -94,6 +88,7 @@ interface FieldRowProps {
  * All inputs in the properties panel use this row.
  */
 export function FieldRow({ id, label, required, issue, help, slot, aside, children }: FieldRowProps) {
+	const site = useSite();
 	if (slot) {
 		return (
 			<SlotFieldRow id={id} label={label} required={required} issue={issue} help={help} slot={slot} aside={aside}>
@@ -117,7 +112,7 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 				labelNode
 			)}
 			{children}
-			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(issue)}</FieldError>}
+			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(site, issue)}</FieldError>}
 			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 		</UiField>
 	);
@@ -133,6 +128,7 @@ function SlotFieldRow({
 	aside,
 	children,
 }: FieldRowProps & { slot: SlotRequest }) {
+	const site = useSite();
 	const { trigger, panel } = useSlot(slot);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">
@@ -149,7 +145,7 @@ function SlotFieldRow({
 			</div>
 			{children}
 			{panel}
-			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(issue)}</FieldError>}
+			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(site, issue)}</FieldError>}
 			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 		</UiField>
 	);
@@ -157,6 +153,7 @@ function SlotFieldRow({
 
 /** Relation to a record target (category, tag, collection). Search and pick; with `createInline`, a missing name can be created right from the list. */
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
+	const t = useTranslator(entriesMessages);
 	const relation = field as RelationField;
 	const records = useTaxonomy(relation.to as RecordCollection);
 	const creator = useRecordCreator();
@@ -183,7 +180,7 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 						? async (title) => {
 								const saved = await creator.create(relation.to as Collection, { title });
 								if (!saved) return null;
-								records.remember(optionOf(saved));
+								records.remember(optionOf(t, saved));
 								void records.reload();
 								return saved.id;
 							}
@@ -202,6 +199,8 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 
 /** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
 function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
 	const { fieldInputs } = useCmsAdminComponents();
 	const registered = field.input ? fieldInputs?.[field.input] : undefined;
@@ -266,7 +265,7 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 			);
 		}
 		case "relation":
-			if (isItemCollection(field.to)) return <RecordRelationInput {...props} />;
+			if (site.isItemCollection(field.to)) return <RecordRelationInput {...props} />;
 			return field.many ? <OrderedEntryList {...props} /> : <EntryPicker {...props} />;
 		case "media":
 			return <MediaInput {...props} />;
@@ -371,6 +370,8 @@ const SlugRow = memo(function SlugRow({
 	onRegenerateSlug?: () => void;
 	placeholder?: string;
 }) {
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
 	const field = useField<string>(name);
 	const collection = useEntryFormSelector((state) => state.collection);
 	const definition = field.definition as SlugField;
@@ -380,7 +381,9 @@ const SlugRow = memo(function SlugRow({
 		() => (request ? { ...request, apply: (next: string) => changeSlug(next) } : undefined),
 		[request, changeSlug],
 	);
-	const fromLabel = definition.from ? (schemaOf(collection).fields[definition.from]?.label ?? definition.from) : "";
+	const fromLabel = definition.from
+		? (site.schemaOf(collection).fields[definition.from]?.label ?? definition.from)
+		: "";
 	const regenerateLabel = t("relation.regenerate", { label: fromLabel });
 	return (
 		<FieldRow
@@ -428,9 +431,10 @@ const SlugRow = memo(function SlugRow({
 
 /** A conditional field: its choice, then the fields that belong to the chosen option. */
 const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: RowProps) {
+	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const choice = useField<string>(name);
-	const field = schemaOf(collection).fields[name] as ConditionalField;
+	const field = site.schemaOf(collection).fields[name] as ConditionalField;
 	const selected = typeof choice.value === "string" ? choice.value : field.discriminant.defaultValue;
 	const nested = field.values[selected] ?? {};
 	return (
@@ -444,10 +448,11 @@ const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: 
 });
 
 const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
+	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const form = useEntryFormSelector((state) => state.form);
 	const entry = useEntryFormSelector((state) => state.entry);
-	const field = schemaOf(collection).fields[name] as ViewField;
+	const field = site.schemaOf(collection).fields[name] as ViewField;
 	if (field.hidden) return null;
 	const view = <FieldView view={field.view} collection={collection} form={form} entry={entry} />;
 	return field.label ? (
@@ -464,12 +469,13 @@ const BacklinkRow = memo(function BacklinkRow({
 	showDescriptions,
 	references,
 }: RowProps & { references?: SchemaFieldsReferences }) {
+	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const locked = useEntryFormSelector((state) => state.locked);
 	const disabled = useEntryFormSelector((state) => state.disabled);
 	const entryId = useEntryFormSelector((state) => state.entryId);
 	const groupId = useEntryFormSelector((state) => state.entry?.translationGroupId);
-	const field = schemaOf(collection).fields[name] as BacklinkField;
+	const field = site.schemaOf(collection).fields[name] as BacklinkField;
 	// On a translation, the original's value is only shown (relations point to the original).
 	const readOnly = Boolean(locked);
 	const targetId = groupId ?? entryId;
@@ -508,9 +514,10 @@ export function SchemaFields({
 	sections = "collapsible",
 	references,
 }: SchemaFieldsProps) {
+	const site = useSite();
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
-	const schema = schemaOf(collection);
+	const schema = site.schemaOf(collection);
 
 	const renderField = (name: string) => {
 		if (omit.includes(name)) return null;
@@ -539,7 +546,7 @@ export function SchemaFields({
 		}
 	};
 
-	const groups = layoutGroupsOf(collection).filter((group) => !include || include(group));
+	const groups = layoutGroupsOf(site, collection).filter((group) => !include || include(group));
 
 	return (
 		<>
@@ -640,9 +647,10 @@ function LayoutSection({
  * If left empty, that language's page also uses the default language value. Reads the form from the nearest `EntryFormProvider`.
  */
 export function RecordLocaleFields({ collection, locale }: { collection: SchemaCollection; locale: Locale }) {
+	const site = useSite();
 	return (
 		<div className="space-y-4">
-			{recordLocalizedFields(collection).map((name) => (
+			{site.recordLocalizedFields(collection).map((name) => (
 				<RecordLocaleField key={name} collection={collection} name={name} locale={locale} />
 			))}
 		</div>
@@ -658,8 +666,9 @@ function RecordLocaleField({
 	name: string;
 	locale: Locale;
 }) {
+	const site = useSite();
 	const field = useField<string | null>(recordTranslationKey(name, locale));
-	const definition = schemaOf(collection).fields[name];
+	const definition = site.schemaOf(collection).fields[name];
 	// The language tab of the category sheet is already visible, so the label is the base field's.
 	const label = definition?.label ?? name;
 	const multiline = definition?.kind === "text" && definition.multiline;

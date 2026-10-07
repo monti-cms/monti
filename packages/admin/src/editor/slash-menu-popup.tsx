@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -8,8 +8,6 @@ import { cn } from "../lib/utils/cn";
 import { useIconByName } from "../screens/shared/collection-icon";
 import { editorMessages } from "./messages";
 import type { SlashCommandItem } from "./slash-command";
-
-const t = createTranslator(editorMessages);
 
 interface SlashMenuPopupProps {
 	items: SlashCommandItem[];
@@ -31,6 +29,7 @@ function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
  * this only draws the highlighted item (`selectedIndex`) and scrolls it into view.
  */
 export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose }: SlashMenuPopupProps) {
+	const t = useTranslator(editorMessages);
 	const [mounted, setMounted] = useState(false);
 	const listRef = useRef<HTMLDivElement>(null);
 

@@ -1,9 +1,6 @@
-import type { BrowserFormat } from "../../browser-format";
-
-("use client");
-
-import { isCollection } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { BrowserFormat } from "../../browser-format";
 import { useStoreSelector } from "../../hooks/store";
 import { cmsEntryClient, type EntryEditorClient, localRecoveryStore, type RecoveryStore } from "./entry-editor-client";
 import {
@@ -64,15 +61,17 @@ export interface UseEntryEditorOptions {
  * @experimental
  */
 export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
+	const site = useSite();
 	const callbacksRef = useRef<EntryEditorCallbacks>({});
 	const formatsRef = useRef(options.formats);
 	formatsRef.current = options.formats;
 	callbacksRef.current = { onSaved: options.onSaved };
 	const [core] = useState(() =>
 		createEntryEditor({
+			site,
 			adminId: options.adminId,
 			target: options.target,
-			client: options.client ?? cmsEntryClient,
+			client: options.client ?? cmsEntryClient(site),
 			recoveryStore: options.recoveryStore ?? localRecoveryStore,
 			callbacks: () => callbacksRef.current,
 			formats: () => formatsRef.current,
@@ -141,18 +140,19 @@ export function EntryEditorProvider({
 	lockedNote?: ReactNode;
 	children: ReactNode;
 }) {
+	const site = useSite();
 	const core = coreOf(editor);
 	const { collection, entry } = editor;
 	const locked = useMemo(
 		() =>
-			entry?.source && isCollection(collection)
-				? { values: formFromSourceMetadata(collection, entry.source.metadata), note: lockedNote }
+			entry?.source && site.isCollection(collection)
+				? { values: formFromSourceMetadata(site, collection, entry.source.metadata), note: lockedNote }
 				: undefined,
-		[entry?.source, collection, lockedNote],
+		[entry?.source, collection, lockedNote, site],
 	);
 	return (
 		<EntryEditorContext.Provider value={core}>
-			{isCollection(collection) ? (
+			{site.isCollection(collection) ? (
 				<EntryFormProvider
 					value={{
 						collection,

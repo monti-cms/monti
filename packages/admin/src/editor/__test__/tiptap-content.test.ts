@@ -3,13 +3,14 @@ import type { JSONContent } from "@tiptap/core";
 import { getSchema } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { docOf, tiptapOf } from "../../test/mdx";
-import { ADDED_MARKS, addedMarkName, createAddedMark } from "../added-marks";
+import { addedMarkName, addedMarksOf, createAddedMark } from "../added-marks";
 import { BLOCK_NODES } from "../block-views";
-import { ADDED_BLOCK_NODES } from "../blocks/added";
+import { addedBlockNodes } from "../blocks/added";
 import { CmsLinkEntryId } from "../link-entry-id";
 import { boxPreviewOf, OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "../tiptap-content";
-import { CMS_SCHEMA_EXTENSIONS } from "../tiptap-schema";
+import { cmsSchemaExtensions } from "../tiptap-schema";
 
 /**
  * Same composition as the extensions array in `tiptap-editor.tsx`. Update this too when that changes.
@@ -17,11 +18,11 @@ import { CMS_SCHEMA_EXTENSIONS } from "../tiptap-schema";
  */
 const schema = getSchema([
 	StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }),
-	...CMS_SCHEMA_EXTENSIONS,
+	...cmsSchemaExtensions(testSite),
 	CmsLinkEntryId,
 	...Object.values(BLOCK_NODES),
-	...ADDED_BLOCK_NODES,
-	...[...ADDED_MARKS.values()].map((block) => createAddedMark(block)),
+	...addedBlockNodes(testSite),
+	...[...addedMarksOf(testSite).values()].map((block) => createAddedMark(block)),
 ]);
 
 /** Checks that it passes the Tiptap schema. If not, the real editor silently drops it. */
@@ -31,7 +32,8 @@ const throughSchema = (json: JSONContent): JSONContent => schema.nodeFromJSON(js
 const contentOf = (doc: StoredDocument) => withoutBlockIds(doc.content);
 
 /** A body through the editor and back: the stored document, then Tiptap JSON that passes the schema, then the stored document again. */
-const throughEditor = (doc: StoredDocument): StoredDocument => tiptapToStored(throughSchema(storedToTiptap(doc)));
+const throughEditor = (doc: StoredDocument): StoredDocument =>
+	tiptapToStored(testSite, throughSchema(storedToTiptap(testSite, doc)));
 
 /** A stored document of hand-built blocks. */
 const docOfBlocks = (...content: CmsNode[]): StoredDocument => ({
@@ -55,7 +57,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		const editorDoc = throughSchema(tiptapOf("가<br />나"));
 		expect(editorDoc.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
 
-		const saved = tiptapToStored(editorDoc);
+		const saved = tiptapToStored(testSite, editorDoc);
 		expect(saved.content[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
 	});
 
@@ -68,7 +70,7 @@ describe("stored document <-> Tiptap round trip", () => {
 				{ type: "tableRow", content: [cell(text("x"), { type: "hardBreak" }, text("y")), cell(text("z"))] },
 			],
 		});
-		expect(storedToTiptap(first).content?.[0]?.type).toBe("table");
+		expect(storedToTiptap(testSite, first).content?.[0]?.type).toBe("table");
 		expect(contentOf(throughEditor(first))).toEqual(contentOf(first));
 		expect(JSON.stringify(first)).toContain('"hardBreak"');
 	});
@@ -83,12 +85,12 @@ describe("stored document <-> Tiptap round trip", () => {
 		it.each([1, 2, 3, 6])("keep %i empty paragraphs between blocks through save, reload and save", (count) => {
 			const typed = editorDoc(paragraph("앞"), ...Array.from({ length: count }, () => paragraph()), paragraph("뒤"));
 
-			const saved = tiptapToStored(typed);
-			const reloaded = throughSchema(storedToTiptap(saved));
+			const saved = tiptapToStored(testSite, typed);
+			const reloaded = throughSchema(storedToTiptap(testSite, saved));
 
 			expect(emptyParagraphs(reloaded)).toBe(count);
 			expect(reloaded.content?.map((block) => block.type)).toEqual(typed.content?.map((block) => block.type));
-			expect(contentOf(tiptapToStored(reloaded))).toEqual(contentOf(saved));
+			expect(contentOf(tiptapToStored(testSite, reloaded))).toEqual(contentOf(saved));
 		});
 
 		it("keep empty paragraphs before a block and between other kinds of blocks", () => {
@@ -100,18 +102,18 @@ describe("stored document <-> Tiptap round trip", () => {
 				{ type: "horizontalRule" },
 				paragraph("끝"),
 			);
-			const saved = tiptapToStored(typed);
-			const reloaded = throughSchema(storedToTiptap(saved));
+			const saved = tiptapToStored(testSite, typed);
+			const reloaded = throughSchema(storedToTiptap(testSite, saved));
 			expect(reloaded.content?.map((block) => block.type)).toEqual(typed.content?.map((block) => block.type));
-			expect(contentOf(tiptapToStored(reloaded))).toEqual(contentOf(saved));
+			expect(contentOf(tiptapToStored(testSite, reloaded))).toEqual(contentOf(saved));
 		});
 
 		it("do not store the empty paragraph the editor keeps at the end, nor make an empty body not empty", () => {
-			expect(tiptapToStored(editorDoc(paragraph())).content).toEqual([]);
-			expect(tiptapToStored(editorDoc(paragraph("끝"), paragraph(), paragraph())).content).toHaveLength(1);
+			expect(tiptapToStored(testSite, editorDoc(paragraph())).content).toEqual([]);
+			expect(tiptapToStored(testSite, editorDoc(paragraph("끝"), paragraph(), paragraph())).content).toHaveLength(1);
 			const fence = { type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text: "a();" }] };
-			expect(contentOf(tiptapToStored(editorDoc(fence, paragraph())))).toEqual(
-				contentOf(tiptapToStored(editorDoc(fence))),
+			expect(contentOf(tiptapToStored(testSite, editorDoc(fence, paragraph())))).toEqual(
+				contentOf(tiptapToStored(testSite, editorDoc(fence))),
 			);
 		});
 
@@ -123,7 +125,7 @@ describe("stored document <-> Tiptap round trip", () => {
 					{ type: "listItem", content: [paragraph()] },
 				],
 			});
-			const saved = tiptapToStored(typed);
+			const saved = tiptapToStored(testSite, typed);
 			expect(JSON.stringify(saved)).not.toContain("hardBreak");
 			expect(contentOf(throughEditor(saved))).toEqual(contentOf(saved));
 		});
@@ -136,14 +138,14 @@ describe("stored document <-> Tiptap round trip", () => {
 			attrs: { align: "center" },
 			content: [{ type: "heading", id: "head0001", attrs: { level: 2 }, content: [text("가운데")] }],
 		});
-		const json = storedToTiptap(first);
+		const json = storedToTiptap(testSite, first);
 
 		expect(json.content?.[0]).toMatchObject({
 			type: "heading",
 			attrs: expect.objectContaining({ textAlign: "center" }),
 		});
 
-		const second = tiptapToStored(throughSchema(json));
+		const second = tiptapToStored(testSite, throughSchema(json));
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(second.content[0]?.type).toBe("text-align");
 	});
@@ -156,44 +158,44 @@ describe("stored document <-> Tiptap round trip", () => {
 			type: "horizontalRule",
 			id: "rule0001",
 		});
-		const json = storedToTiptap(first);
+		const json = storedToTiptap(testSite, first);
 
 		const names = (json.content ?? []).map((block) => block?.type);
 		expect(names).toEqual(["paragraph", OPAQUE_BLOCK_NAME, "horizontalRule"]);
 
-		expect(contentOf(tiptapToStored(throughSchema(json)))).toEqual(contentOf(first));
+		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
 	it("keeps a box exactly as it was, nested ids and all, and gives it the id the editor holds", () => {
 		const first = docOfBlocks(unknownBlock("mist0001"), { type: "paragraph", id: "para0001", content: [text("뒤")] });
-		const json = throughSchema(storedToTiptap(first));
+		const json = throughSchema(storedToTiptap(testSite, first));
 		const box = json.content?.[0];
 		expect(box?.type).toBe(OPAQUE_BLOCK_NAME);
 
-		const second = tiptapToStored(json);
+		const second = tiptapToStored(testSite, json);
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(second.content[0]).toEqual(first.content[0]);
 
 		// A copy of the box gets a new id from the editor, and the saved node follows it.
 		const copied = { ...json, content: [{ ...box, attrs: { ...box?.attrs, blockId: "zzzzzzzz" } }] } as JSONContent;
-		expect(tiptapToStored(copied).content[0]?.id).toBe("zzzzzzzz");
+		expect(tiptapToStored(testSite, copied).content[0]?.id).toBe("zzzzzzzz");
 	});
 
 	it("shows a box's node written in the registered format, and as JSON when there is none", () => {
 		const doc = docOfBlocks(unknownBlock("mist0001"));
-		const plain = storedToTiptap(doc).content?.[0];
+		const plain = storedToTiptap(testSite, doc).content?.[0];
 		expect(plain?.type).toBe(OPAQUE_BLOCK_NAME);
 		expect(plain?.attrs?.preview).toBe("");
 
 		// A format of its own: it writes each block as its type name.
 		const format = { export: (written: StoredDocument) => `<${written.content[0]?.type}>\n` };
-		const written = storedToTiptap(doc, { boxPreview: boxPreviewOf(format) }).content?.[0];
+		const written = storedToTiptap(testSite, doc, { boxPreview: boxPreviewOf(format) }).content?.[0];
 		expect(written?.attrs?.preview).toBe("<mystery-block>");
 		// What is shown is not what is saved: the box still holds the stored node.
-		expect(tiptapToStored({ type: "doc", content: [written as JSONContent] }).content).toEqual(doc.content);
-		expect(throughSchema(storedToTiptap(doc, { boxPreview: boxPreviewOf(format) })).content?.[0]?.attrs?.preview).toBe(
-			"<mystery-block>",
-		);
+		expect(tiptapToStored(testSite, { type: "doc", content: [written as JSONContent] }).content).toEqual(doc.content);
+		expect(
+			throughSchema(storedToTiptap(testSite, doc, { boxPreview: boxPreviewOf(format) })).content?.[0]?.attrs?.preview,
+		).toBe("<mystery-block>");
 	});
 
 	it("keeps a body that could not be read as a box holding its text", () => {
@@ -202,10 +204,10 @@ describe("stored document <-> Tiptap round trip", () => {
 			version: STORED_DOCUMENT_VERSION,
 			content: [{ type: "unparsed", id: "abcd1234", attrs: { format: "mdx", source: "# Hello\n\n<Component>" } }],
 		};
-		const json = throughSchema(storedToTiptap(unparsed));
+		const json = throughSchema(storedToTiptap(testSite, unparsed));
 		expect(json.content).toHaveLength(1);
 		expect(json.content?.[0]?.type).toBe(OPAQUE_BLOCK_NAME);
-		expect(tiptapToStored(json).content).toEqual(unparsed.content);
+		expect(tiptapToStored(testSite, json).content).toEqual(unparsed.content);
 	});
 
 	it("converts tables and task lists to editable nodes and restores them", () => {
@@ -229,9 +231,9 @@ describe("stored document <-> Tiptap round trip", () => {
 				],
 			},
 		);
-		const json = storedToTiptap(first);
+		const json = storedToTiptap(testSite, first);
 		expect((json.content ?? []).map((block) => block?.type)).toEqual(["table", "taskList"]);
-		expect(contentOf(tiptapToStored(throughSchema(json)))).toEqual(contentOf(first));
+		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
 	const imageBlock = (attrs: NonNullable<CmsNode["attrs"]>): CmsNode => ({ type: "image", id: "imag0001", attrs });
@@ -241,11 +243,11 @@ describe("stored document <-> Tiptap round trip", () => {
 			imageBlock({ mediaId: "uuid-1", alt: "설명", width: "60%", align: "left", caption: "캡션" }),
 			imageBlock({ src: "https://example.com/a.png", alt: "그냥" }),
 		);
-		const json = storedToTiptap(first);
+		const json = storedToTiptap(testSite, first);
 
 		expect(json.content?.[0]).toMatchObject({ type: "image", attrs: expect.objectContaining({ mediaId: "uuid-1" }) });
 
-		expect(contentOf(tiptapToStored(throughSchema(json)))).toEqual(contentOf(first));
+		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
 	it("an explicit value equal to the Tiptap default is normalized once on save and converges", () => {
@@ -257,14 +259,14 @@ describe("stored document <-> Tiptap round trip", () => {
 
 	it("does not lose decorative images", () => {
 		const first = docOfBlocks(imageBlock({ src: "/images/a.png", alt: "", decorative: true }));
-		const json = storedToTiptap(first);
+		const json = storedToTiptap(testSite, first);
 
 		expect(json.content?.[0]).toMatchObject({
 			type: "image",
 			attrs: expect.objectContaining({ decorative: true }),
 		});
 
-		const second = tiptapToStored(throughSchema(json));
+		const second = tiptapToStored(testSite, throughSchema(json));
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(JSON.stringify(second)).toContain("decorative");
 	});
@@ -301,13 +303,13 @@ describe("stored document <-> Tiptap round trip", () => {
 				text(" and site."),
 			],
 		});
-		const json = throughSchema(storedToTiptap(first));
+		const json = throughSchema(storedToTiptap(testSite, first));
 		const marks = (json.content?.[0]?.content ?? []).flatMap((node) => node.marks ?? []);
 		expect(marks.find((mark) => mark.attrs?.entryId === id)?.attrs?.href ?? null).toBeNull();
 
 		// The editor shows an address while the link is open; it is never saved.
 		const shown = JSON.parse(JSON.stringify(json).replace('"href":null', '"href":"/posts/x"')) as JSONContent;
-		const second = tiptapToStored(shown);
+		const second = tiptapToStored(testSite, shown);
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(JSON.stringify(second)).not.toContain("/posts/x");
 	});
@@ -331,7 +333,7 @@ describe("stored document <-> Tiptap round trip", () => {
 				},
 			],
 		};
-		const stored = tiptapToStored(typed);
+		const stored = tiptapToStored(testSite, typed);
 		expect(stored.content[0]?.content).toEqual([
 			{ text: "ab", type: "text" },
 			{ marks: [{ type: "bold" }], text: "c", type: "text" },

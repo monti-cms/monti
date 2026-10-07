@@ -60,11 +60,11 @@ export default defineConfig(({ mode }) => ({
 			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
 			...loadEnv(mode, __dirname, ""),
 			TZ: "UTC",
+			MONTI_TEST_SITE: "other-site",
 		},
 	},
 	resolve: {
 		alias: {
-			"@cms-config": path.resolve(__dirname, "../core/test/other-site.config.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

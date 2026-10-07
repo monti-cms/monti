@@ -1,14 +1,17 @@
-import { createTranslator, defineBlock } from "@monti-cms/core/client";
+import { defineBlock } from "@monti-cms/core/client";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { storedDoc, text } from "../../test/stored-doc";
-import { BLOCK_INSERT_ACTIONS, type BlockInsertAction } from "../block-inserts";
+import { type BlockInsertAction, blockInsertActions } from "../block-inserts";
 import { buildEditorExtensions } from "../extensions";
 import { editorMessages } from "../messages";
-import { buildBlockSlashCommands, filterCommands, OPEN_FILE_PICKER_EVENT, SLASH_COMMANDS } from "../slash-command";
+import { buildBlockSlashCommands, filterCommands, OPEN_FILE_PICKER_EVENT, slashCommands } from "../slash-command";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
-const t = createTranslator(editorMessages);
+const t = testSite.createTranslator(editorMessages);
+const BLOCK_INSERT_ACTIONS = blockInsertActions(testSite);
+const SLASH_COMMANDS = slashCommands(testSite);
 
 /** A stored node as one string, to look for the text inside it. */
 const textOf = (node: unknown): string => JSON.stringify(node);
@@ -16,7 +19,7 @@ const tooltip = (content: string) => [{ type: "tooltip", attrs: { content } }];
 
 describe("slash menu insertion driven by block definitions", () => {
 	it("builds slash commands for BLOCKS entries with insertable=true and view='node'", () => {
-		const commands = buildBlockSlashCommands();
+		const commands = buildBlockSlashCommands(testSite);
 
 		// mermaid, chart and math must be included.
 		const titles = commands.map((c) => c.title);
@@ -71,7 +74,7 @@ describe("slash menu insertion driven by block definitions", () => {
 			callout: mockAction,
 		};
 
-		const commands = buildBlockSlashCommands([mockCallout], actions);
+		const commands = buildBlockSlashCommands(testSite, [mockCallout], actions);
 		expect(commands).toHaveLength(1);
 		expect(commands[0]?.title).toBe(mockCallout.label);
 		expect(commands[0]?.description).toBe(mockCallout.description);
@@ -109,7 +112,7 @@ describe("slash menu insertion driven by block definitions", () => {
 		);
 		const open = vi.fn();
 		window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
-		const editor = new Editor({ extensions: buildEditorExtensions(), content: "<p>/파일</p>" });
+		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: "<p>/파일</p>" });
 		SLASH_COMMANDS.find((c) => c.title === t("slash.file.title"))?.action(editor, { from: 1, to: 4 });
 		window.removeEventListener(OPEN_FILE_PICKER_EVENT, open);
 		expect(open).toHaveBeenCalledOnce();
@@ -118,17 +121,17 @@ describe("slash menu insertion driven by block definitions", () => {
 	});
 
 	it("filterCommands searches block commands by Korean and English keywords", () => {
-		expect(filterCommands("mermaid").some((c) => c.title === "다이어그램")).toBe(true);
-		expect(filterCommands("다이어그램").some((c) => c.title === "다이어그램")).toBe(true);
-		expect(filterCommands("chart").some((c) => c.title === "차트")).toBe(true);
-		expect(filterCommands("그래프").some((c) => c.title === "차트")).toBe(true);
-		expect(filterCommands("math").some((c) => c.title === "수식")).toBe(true);
-		expect(filterCommands("katex").some((c) => c.title === "수식")).toBe(true);
+		expect(filterCommands(testSite, "mermaid").some((c) => c.title === "다이어그램")).toBe(true);
+		expect(filterCommands(testSite, "다이어그램").some((c) => c.title === "다이어그램")).toBe(true);
+		expect(filterCommands(testSite, "chart").some((c) => c.title === "차트")).toBe(true);
+		expect(filterCommands(testSite, "그래프").some((c) => c.title === "차트")).toBe(true);
+		expect(filterCommands(testSite, "math").some((c) => c.title === "수식")).toBe(true);
+		expect(filterCommands(testSite, "katex").some((c) => c.title === "수식")).toBe(true);
 		// Tooltip is a text decoration from the blocks extension, so it is not in the core menu; extension-provided entries (`inline`) come after the text formatting entries and before the block entries.
-		expect(filterCommands("tooltip").some((c) => c.title === "툴팁")).toBe(false);
+		expect(filterCommands(testSite, "tooltip").some((c) => c.title === "툴팁")).toBe(false);
 		const inline = [{ title: "툴팁", description: "글자에 설명 달기", keywords: ["tooltip"], action: () => {} }];
-		expect(filterCommands("tooltip", [], inline).map((c) => c.title)).toEqual(["툴팁"]);
-		const titles = filterCommands("", [], inline).map((c) => c.title);
+		expect(filterCommands(testSite, "tooltip", [], inline).map((c) => c.title)).toEqual(["툴팁"]);
+		const titles = filterCommands(testSite, "", [], inline).map((c) => c.title);
 		expect(titles.indexOf("툴팁")).toBeGreaterThan(titles.indexOf("내부 글 링크"));
 		expect(titles.indexOf("툴팁")).toBeLessThan(titles.indexOf("다이어그램"));
 	});
@@ -137,7 +140,7 @@ describe("slash menu insertion driven by block definitions", () => {
 describe("stored document after block insert actions", () => {
 	const createEditor = () =>
 		new Editor({
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: "<p></p>",
 		});
 
@@ -147,7 +150,7 @@ describe("stored document after block insert actions", () => {
 
 		BLOCK_INSERT_ACTIONS.mermaid(editor, range);
 
-		const block = tiptapToStored(editor.getJSON()).content[0];
+		const block = tiptapToStored(testSite, editor.getJSON()).content[0];
 		expect(block).toMatchObject({ type: "codeBlock", attrs: { language: "mermaid" } });
 		expect(textOf(block)).toContain("graph TD");
 		expect(textOf(block)).toContain("A --> B");
@@ -160,7 +163,7 @@ describe("stored document after block insert actions", () => {
 
 		BLOCK_INSERT_ACTIONS.chart(editor, range);
 
-		const block = tiptapToStored(editor.getJSON()).content[0];
+		const block = tiptapToStored(testSite, editor.getJSON()).content[0];
 		expect(block).toMatchObject({ type: "codeBlock", attrs: { language: "chart" } });
 		expect(textOf(block)).toContain("chart bar");
 		expect(textOf(block)).toContain("x month");
@@ -174,7 +177,7 @@ describe("stored document after block insert actions", () => {
 
 		BLOCK_INSERT_ACTIONS.math(editor, range);
 
-		const block = tiptapToStored(editor.getJSON()).content[0];
+		const block = tiptapToStored(testSite, editor.getJSON()).content[0];
 		expect(block).toMatchObject({ type: "math" });
 		expect(textOf(block)).toContain("E = mc^2");
 		editor.destroy();
@@ -184,16 +187,16 @@ describe("stored document after block insert actions", () => {
 describe("setting, editing and removing a tooltip, and stored round trip", () => {
 	const createEditor = (html = "<p>안녕하세요 세상입니다</p>") =>
 		new Editor({
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: html,
 		});
 
 	it("round-trips a tooltip label containing a closing bracket unescaped", () => {
 		const editor = createEditor("<p>a]b</p>");
 		editor.chain().focus().setTextSelection({ from: 1, to: 4 }).setMark("cmsTooltip", { content: "설명" }).run();
-		const stored = tiptapToStored(editor.getJSON());
+		const stored = tiptapToStored(testSite, editor.getJSON());
 		expect(stored.content[0]?.content).toEqual([text("a]b", tooltip("설명"))]);
-		expect(tiptapToStored(storedToTiptap(stored))).toEqual(stored);
+		expect(tiptapToStored(testSite, storedToTiptap(testSite, stored))).toEqual(stored);
 		editor.destroy();
 	});
 
@@ -208,7 +211,7 @@ describe("setting, editing and removing a tooltip, and stored round trip", () =>
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("우리가 사는 지구");
 
-		const stored = tiptapToStored(editor.getJSON());
+		const stored = tiptapToStored(testSite, editor.getJSON());
 		expect(stored.content[0]?.content).toContainEqual(text("세상", tooltip("우리가 사는 지구")));
 		editor.destroy();
 	});
@@ -227,7 +230,7 @@ describe("setting, editing and removing a tooltip, and stored round trip", () =>
 		editor.chain().focus().extendMarkRange("cmsTooltip").setMark("cmsTooltip", { content: "업데이트된 설명" }).run();
 
 		expect(editor.getAttributes("cmsTooltip").content).toBe("업데이트된 설명");
-		const stored = tiptapToStored(editor.getJSON());
+		const stored = tiptapToStored(testSite, editor.getJSON());
 		expect(stored.content[0]?.content).toContainEqual(text("세상", tooltip("업데이트된 설명")));
 		editor.destroy();
 	});
@@ -240,7 +243,7 @@ describe("setting, editing and removing a tooltip, and stored round trip", () =>
 		editor.chain().focus().setTextSelection(8).extendMarkRange("cmsTooltip").unsetMark("cmsTooltip").run();
 
 		expect(editor.isActive("cmsTooltip")).toBe(false);
-		const written = JSON.stringify(tiptapToStored(editor.getJSON()));
+		const written = JSON.stringify(tiptapToStored(testSite, editor.getJSON()));
 		expect(written).not.toContain("tooltip");
 		expect(written).toContain("세상");
 		editor.destroy();
@@ -251,10 +254,10 @@ describe("setting, editing and removing a tooltip, and stored round trip", () =>
 			type: "paragraph",
 			content: [text("본문 속 "), text("단어", tooltip("상세 설명")), text(" 확인하기")],
 		});
-		const json = storedToTiptap(initial);
+		const json = storedToTiptap(testSite, initial);
 
 		const editor = new Editor({
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: json,
 		});
 
@@ -264,7 +267,7 @@ describe("setting, editing and removing a tooltip, and stored round trip", () =>
 		expect(editor.isActive("cmsTooltip")).toBe(true);
 		expect(editor.getAttributes("cmsTooltip").content).toBe("상세 설명");
 
-		expect(tiptapToStored(editor.getJSON())).toEqual(initial);
+		expect(tiptapToStored(testSite, editor.getJSON())).toEqual(initial);
 		editor.destroy();
 	});
 });

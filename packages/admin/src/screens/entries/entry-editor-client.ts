@@ -1,11 +1,11 @@
-import { cmsApiUrl } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import { cmsFetch } from "../admin-api";
 import type { CmsIssue } from "../api-error-message";
 import type { EntryData, EntryForm } from "./entry-form";
 import { deleteLocalBackup, getLocalBackup, type LocalBackupRecord, saveLocalBackup } from "./local-backup";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 /** A status change of an entry. */
 export type EntryStatusAction = "archive" | "unarchive" | "trash" | "restore";
@@ -46,28 +46,37 @@ export interface EntryEditorClient {
  *
  * @experimental
  */
-export const cmsEntryClient: EntryEditorClient = {
-	get: (id) => cmsFetch<EntryData>(cmsApiUrl(`/v1/entries/${id}`), { fallback: t("loadFailed") }),
-	create: (input) =>
-		cmsFetch<EntryData>(cmsApiUrl("/v1/entries"), { method: "POST", json: input, fallback: t("saveFailed") }),
-	update: (id, input) =>
-		cmsFetch<EntryData>(cmsApiUrl(`/v1/entries/${id}`), { method: "PATCH", json: input, fallback: t("saveFailed") }),
-	publish: (id, input) =>
-		cmsFetch<EntryData & { warnings?: CmsIssue[] }>(cmsApiUrl(`/v1/entries/${id}/publish`), {
-			method: "POST",
-			json: input,
-			fallback: t("publishFailed"),
-		}),
-	changeStatus: async (id, action, input) => {
-		await cmsFetch(cmsApiUrl(`/v1/entries/${id}/${action}`), { method: "POST", json: input });
-	},
-	duplicate: (id, input) =>
-		cmsFetch<EntryData>(cmsApiUrl(`/v1/entries/${id}/duplicate`), { method: "POST", json: input }),
-	remove: async (id, input) => {
-		await cmsFetch(cmsApiUrl(`/v1/entries/${id}?expectedVersion=${input.expectedVersion}`), { method: "DELETE" });
-	},
-	relations: (id) =>
-		cmsFetch<{ incomingReferences: IncomingReferenceItem[] }>(cmsApiUrl(`/v1/entries/${id}/relations`)),
+export const cmsEntryClient = (site: Site): EntryEditorClient => {
+	const t = site.createTranslator(entriesMessages);
+	return {
+		get: (id) => cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}`), { fallback: t("loadFailed") }),
+		create: (input) =>
+			cmsFetch<EntryData>(site, cmsApiUrl("/v1/entries"), { method: "POST", json: input, fallback: t("saveFailed") }),
+		update: (id, input) =>
+			cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}`), {
+				method: "PATCH",
+				json: input,
+				fallback: t("saveFailed"),
+			}),
+		publish: (id, input) =>
+			cmsFetch<EntryData & { warnings?: CmsIssue[] }>(site, cmsApiUrl(`/v1/entries/${id}/publish`), {
+				method: "POST",
+				json: input,
+				fallback: t("publishFailed"),
+			}),
+		changeStatus: async (id, action, input) => {
+			await cmsFetch(site, cmsApiUrl(`/v1/entries/${id}/${action}`), { method: "POST", json: input });
+		},
+		duplicate: (id, input) =>
+			cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}/duplicate`), { method: "POST", json: input }),
+		remove: async (id, input) => {
+			await cmsFetch(site, cmsApiUrl(`/v1/entries/${id}?expectedVersion=${input.expectedVersion}`), {
+				method: "DELETE",
+			});
+		},
+		relations: (id) =>
+			cmsFetch<{ incomingReferences: IncomingReferenceItem[] }>(site, cmsApiUrl(`/v1/entries/${id}/relations`)),
+	};
 };
 
 /** What the browser keeps of an unsaved edit: one record per entry (or per new entry of a collection). */

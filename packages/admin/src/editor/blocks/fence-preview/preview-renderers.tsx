@@ -1,12 +1,10 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
 import { useCmsAdminComponents } from "../../../admin-components";
 import { cn } from "../../../lib/utils/cn";
 import { blocksMessages } from "../messages";
-
-const t = createTranslator(blocksMessages);
 
 interface ErrorBoundaryProps {
 	children: ReactNode;
@@ -66,6 +64,7 @@ export function LazyFencePreview({
 	className?: string;
 	emptyText: string;
 }) {
+	const t = useTranslator(blocksMessages);
 	const load = useCmsAdminComponents().fencePreviews?.[lang];
 	const [Renderer, setRenderer] = useState<ComponentType<{ source: string; className?: string }> | null>(null);
 	const [loadError, setLoadError] = useState<string | null>(null);
@@ -121,6 +120,7 @@ export function LazyFencePreview({
 }
 
 export function MathPreview({ value, className }: { value: string; className?: string }) {
+	const t = useTranslator(blocksMessages);
 	const trimmed = value.trim();
 	const [html, setHtml] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);

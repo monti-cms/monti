@@ -1,16 +1,10 @@
-import {
-	CODE_BLOCK_THEMES,
-	type CodeBlockThemes,
-	DEFAULT_CODE_BLOCK_THEMES,
-	EXTRA_CODE_LANGUAGES,
-} from "@monti-cms/core/code-block";
+import { perSite, type Site } from "@monti-cms/core/client";
+import { type CodeBlockThemes, DEFAULT_CODE_BLOCK_THEMES } from "@monti-cms/core/code-block";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import type { BundledTheme, Highlighter } from "shiki";
 
 export const codeBlockHighlightPluginKey = new PluginKey<{ version: number }>("cmsCodeBlockHighlight");
-
-let highlighterPromise: Promise<Highlighter> | null = null;
 
 /** Languages loaded when the highlighter is created. Others load on demand when a block uses them. */
 const BASE_LANGUAGES = [
@@ -42,18 +36,41 @@ const BASE_LANGUAGES = [
 ];
 
 /** Options to create the highlighter with the site's themes (`codeBlock.themes`). */
-export const highlighterOptions = (themes: CodeBlockThemes = CODE_BLOCK_THEMES) => ({
+export const highlighterOptions = (themes: CodeBlockThemes) => ({
 	themes: [...new Set([themes.light, themes.dark])],
 	langs: BASE_LANGUAGES,
 });
 
-/** Themes the highlighter was created with: the site's, or the defaults when the site's names are not Shiki themes. */
-let activeThemes: CodeBlockThemes = CODE_BLOCK_THEMES;
+// Interface of one cached highlight: relative offsets and the style of a token.
+interface CachedToken {
+	from: number;
+	to: number;
+	style: string;
+}
+
+/** What the highlighter of a site keeps: the highlighter itself, the themes it was created with, and the tokens worked out so far. */
+interface HighlightState {
+	highlighterPromise: Promise<Highlighter> | null;
+	/** Themes the highlighter was created with: the site's, or the defaults when the site's names are not Shiki themes. */
+	activeThemes: CodeBlockThemes;
+	/** Highlight token cache (lang:::code -> tokens with relative offsets). */
+	cache: Map<string, CachedToken[]>;
+	pending: Set<string>;
+}
+
+const stateOf = perSite(
+	(site: Pick<Site, "CODE_BLOCK_THEMES">): HighlightState => ({
+		highlighterPromise: null,
+		activeThemes: site.CODE_BLOCK_THEMES,
+		cache: new Map(),
+		pending: new Set(),
+	}),
+);
 
 /** Loads the site's extra languages (`codeBlock.languages`). A name Shiki does not know is skipped (that code shows as plain text), never an error. */
 export async function loadExtraLanguages(
 	highlighter: Pick<Highlighter, "loadLanguage">,
-	names: readonly string[] = EXTRA_CODE_LANGUAGES,
+	names: readonly string[],
 ): Promise<string[]> {
 	const loaded = await Promise.all(
 		names.map((name) =>
@@ -66,23 +83,26 @@ export async function loadExtraLanguages(
 	return loaded.filter((name): name is string => name !== null);
 }
 
-export async function getShikiHighlighter(): Promise<Highlighter> {
-	if (!highlighterPromise) {
-		highlighterPromise = import("shiki").then(async ({ createHighlighter }) => {
+export async function getShikiHighlighter(
+	site: Pick<Site, "CODE_BLOCK_THEMES" | "EXTRA_CODE_LANGUAGES">,
+): Promise<Highlighter> {
+	const state = stateOf(site);
+	if (!state.highlighterPromise) {
+		state.highlighterPromise = import("shiki").then(async ({ createHighlighter }) => {
 			let highlighter: Highlighter;
 			try {
-				highlighter = await createHighlighter(highlighterOptions(CODE_BLOCK_THEMES));
-				activeThemes = CODE_BLOCK_THEMES;
+				highlighter = await createHighlighter(highlighterOptions(site.CODE_BLOCK_THEMES));
+				state.activeThemes = site.CODE_BLOCK_THEMES;
 			} catch {
 				// A theme name Shiki does not bundle must not break the editor: use the default themes.
 				highlighter = await createHighlighter(highlighterOptions(DEFAULT_CODE_BLOCK_THEMES));
-				activeThemes = DEFAULT_CODE_BLOCK_THEMES;
+				state.activeThemes = DEFAULT_CODE_BLOCK_THEMES;
 			}
-			await loadExtraLanguages(highlighter);
+			await loadExtraLanguages(highlighter, site.EXTRA_CODE_LANGUAGES);
 			return highlighter;
 		});
 	}
-	return highlighterPromise;
+	return state.highlighterPromise;
 }
 
 /** Tokens of `code` with the light and dark theme colors (the same pair the public page uses). */
@@ -90,7 +110,7 @@ export function tokensWithThemes(
 	highlighter: Pick<Highlighter, "codeToTokensWithThemes">,
 	lang: string,
 	code: string,
-	themes: CodeBlockThemes = activeThemes,
+	themes: CodeBlockThemes,
 ) {
 	return highlighter.codeToTokensWithThemes(code, {
 		lang: lang as Parameters<Highlighter["codeToTokensWithThemes"]>[1]["lang"],
@@ -115,31 +135,29 @@ function normalizeLang(lang: string | null | undefined): string {
 	return LANG_MAP[lower] ?? lower;
 }
 
-// Highlight token cache (lang:::code -> decoration factory based on relative offsets)
-interface CachedToken {
-	from: number;
-	to: number;
-	style: string;
-}
-
-const highlightCache = new Map<string, CachedToken[]>();
 const MAX_HIGHLIGHT_CACHE_ENTRIES = 50;
-const cacheHighlight = (key: string, tokens: CachedToken[]) => {
-	highlightCache.delete(key);
-	highlightCache.set(key, tokens);
-	if (highlightCache.size > MAX_HIGHLIGHT_CACHE_ENTRIES) {
-		const oldest = highlightCache.keys().next().value;
-		if (oldest !== undefined) highlightCache.delete(oldest);
+const cacheHighlight = (cache: Map<string, CachedToken[]>, key: string, tokens: CachedToken[]) => {
+	cache.delete(key);
+	cache.set(key, tokens);
+	if (cache.size > MAX_HIGHLIGHT_CACHE_ENTRIES) {
+		const oldest = cache.keys().next().value;
+		if (oldest !== undefined) cache.delete(oldest);
 	}
 };
-const pendingRequests = new Set<string>();
 
-async function requestHighlight(view: EditorView, lang: string, code: string, cacheKey: string) {
+async function requestHighlight(
+	site: Pick<Site, "CODE_BLOCK_THEMES" | "EXTRA_CODE_LANGUAGES">,
+	view: EditorView,
+	lang: string,
+	code: string,
+	cacheKey: string,
+) {
+	const { cache: highlightCache, pending: pendingRequests } = stateOf(site);
 	if (pendingRequests.has(cacheKey) || highlightCache.has(cacheKey)) return;
 	pendingRequests.add(cacheKey);
 
 	try {
-		const highlighter = await getShikiHighlighter();
+		const highlighter = await getShikiHighlighter(site);
 		const normalized = normalizeLang(lang);
 
 		if (normalized !== "text" && !highlighter.getLoadedLanguages().includes(normalized)) {
@@ -153,12 +171,12 @@ async function requestHighlight(view: EditorView, lang: string, code: string, ca
 		const resolvedLang = highlighter.getLoadedLanguages().includes(normalized) ? normalized : "text";
 
 		if (resolvedLang === "text") {
-			cacheHighlight(cacheKey, []);
+			cacheHighlight(highlightCache, cacheKey, []);
 			pendingRequests.delete(cacheKey);
 			return;
 		}
 
-		const tokensByLine = tokensWithThemes(highlighter, resolvedLang, code);
+		const tokensByLine = tokensWithThemes(highlighter, resolvedLang, code, stateOf(site).activeThemes);
 
 		const tokens: CachedToken[] = [];
 
@@ -182,9 +200,9 @@ async function requestHighlight(view: EditorView, lang: string, code: string, ca
 			}
 		}
 
-		cacheHighlight(cacheKey, tokens);
+		cacheHighlight(highlightCache, cacheKey, tokens);
 	} catch {
-		cacheHighlight(cacheKey, []);
+		cacheHighlight(highlightCache, cacheKey, []);
 	} finally {
 		pendingRequests.delete(cacheKey);
 		// If the view is still alive, trigger an update via transaction meta
@@ -198,7 +216,8 @@ async function requestHighlight(view: EditorView, lang: string, code: string, ca
 	}
 }
 
-export function createCodeBlockHighlightPlugin(): Plugin {
+export function createCodeBlockHighlightPlugin(site: Pick<Site, "CODE_BLOCK_THEMES" | "EXTRA_CODE_LANGUAGES">): Plugin {
+	const { cache: highlightCache } = stateOf(site);
 	return new Plugin({
 		key: codeBlockHighlightPluginKey,
 		state: {
@@ -256,7 +275,7 @@ export function createCodeBlockHighlightPlugin(): Plugin {
 						const lang = (node.attrs.language as string) || "text";
 						const cacheKey = `${lang}:::${node.textContent}`;
 						if (!highlightCache.has(cacheKey)) {
-							requestHighlight(editorView, lang, node.textContent, cacheKey);
+							requestHighlight(site, editorView, lang, node.textContent, cacheKey);
 						}
 					}
 				});

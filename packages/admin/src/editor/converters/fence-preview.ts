@@ -15,16 +15,16 @@ export function fenceBlockConverter(block: BlockDefinition, nodeName: string): B
 		tiptapTypes: [nodeName],
 		matches: (node) => asString(node.attrs?.language)?.toLowerCase() === lang,
 		isMappable: () => true,
-		toTiptap(node) {
+		toTiptap(node, { site }) {
 			const language = asString(node.attrs?.language) ?? lang;
 			const meta = asString(node.attrs?.meta) ?? "";
-			return { type: nodeName, attrs: { value: codeFenceOf(node), language, ...(meta ? { meta } : {}) } };
+			return { type: nodeName, attrs: { value: codeFenceOf(site, node), language, ...(meta ? { meta } : {}) } };
 		},
-		toCms(node) {
+		toCms(node, { site }) {
 			const value = asString(node.attrs?.value) ?? "";
 			const language = asString(node.attrs?.language) || lang;
 			const meta = asString(node.attrs?.meta) ?? null;
-			return [{ type: "codeBlock", attrs: storedCodeAttrs(language, meta, value) }];
+			return [{ type: "codeBlock", attrs: storedCodeAttrs(site, language, meta, value) }];
 		},
 	};
 }
