@@ -3,7 +3,7 @@
 English | [한국어](README.ko.md)
 
 A personal tech blog on `@monti-cms/core`, modelled on the maintainer's own blog: collections Post, Memo, Category, Tag and Series (the `collection` collection), in Korean (the default) and English. It attaches everything
-the blog uses: every body block (`@monti-cms/blocks`: callout, collapsible, tabs, columns, Mermaid, chart, tooltip, code link, text color, code explorer), the SEO fields (`@monti-cms/seo`, through `seoFields`), the AI plugin (`@monti-cms/ai`),
+the blog uses: every body block (`@monti-cms/blocks`: callout, collapsible, tabs, columns, Mermaid, chart, tooltip, code link, text color, code explorer), the SEO fields (`@monti-cms/seo`), the AI plugin (`@monti-cms/ai`),
 the Bareun spell checker (`@monti-cms/bareun`) and MDX written in the directive notation (`mdx({ syntax: [directiveSyntax()] })` of `@monti-cms/mdx` and `@monti-cms/syntax-directive`, write mode on, so a post body reads `:::callout{…}`).
 Packages are installed from **built bundles** (`vendor/*.tgz`), not from the repository sources.
 
@@ -28,7 +28,9 @@ The shape is what `monti init --admin-path /studio` generates, plus this site's 
 
 | File | Contents |
 | --- | --- |
-| `cms.config.ts` | Collections (`post`, `memo`, `category`, `tag`, `collection`), the record fields, the SEO fields, the seed templates and the plugins (`mdx` with the directive notation, `blocks()`, `seo()`, `aiPlugin()`, `bareun()`). Admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/ko/posts/…`, `/en/posts/…`), and the preview language comes from the path (`previewLocaleParam: false`) |
+| `monti.schema.json` | The site's data, in the schema file format of the core README ("The schema file"): collections (`post`, `memo`, `category`, `tag`, `collection`), the record fields, the SEO fields (as plain fields), the layouts, the locales, the time zone, the seed templates, admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/ko/posts/…`, `/en/posts/…`), and the preview language from the path (`previewLocaleParam: false`). Editors autocomplete it through its `$schema` link |
+| `monti-env.d.ts` | The types of the schema file, written by `monti schema:types` (`next dev` rewrites it when the schema changes, and `pnpm example:check` fails if it is out of date). With it `cms.read` and the theme know the collection names and the metadata of each, with no type written by hand. Not edited by hand |
+| `cms.config.ts` | What needs code: it loads the schema (`defineConfig({ schema, … })`) and adds the plugins (`mdx` with the directive notation, `blocks()`, `seo()`, `aiPlugin()`, `bareun()`) and `site.url`, which is read from `HOST_URL` |
 | `cms.server.ts` | The CMS instance: `createCms` over the DB and GitHub login server config (as `monti init` generates; `githubAuth` comes from `@monti-cms/nextjs/auth`). The admin, the API route and the site pages (`cms.read.*`) all import `cms` from it |
 | `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`, using `@monti-cms/nextjs/admin`; the layout imports the prebuilt `@monti-cms/admin/styles.css` and `@monti-cms/blocks/styles.css`) and an example spell-check extension (`admin-components.tsx`) |
 | `components/monti/blog-theme/` and `app/(site)/[locale]/posts/` | The post list and post pages, installed as source with `pnpm exec monti add blog-theme --registry ../../registry/r` (from this folder). The command writes the route files to `app/(site)/blog/`; here they were moved to `app/(site)/[locale]/posts/` (the site uses `/ko/...` URLs), and the pages read `params.locale` from there. `components/monti/blog-theme/theme.config.ts` is the one file edited after the install: the collection (`post`), `routeBase` (`/posts`), the tag relation (`tagIds`) and the summary field (`summary`). The blocks need no `components`: the plugins bring their public components. Running the command again would write the route files to `app/(site)/blog/` once more, so delete that copy |
@@ -42,10 +44,10 @@ To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/
 
 ## What differs from the maintainer's blog
 
-The config keeps the collections, field kinds, layouts, SEO fields, plugins and seed templates of the maintainer's blog, with English labels (config labels are site content, and this repo has no dictionary for them). Left out:
+The schema file and the config keep the collections, field kinds, layouts, SEO fields, plugins and seed templates of the maintainer's blog, with English labels (schema labels are site content, and this repo has no dictionary for them). The schema file was made from the blog's TypeScript config by `monti schema:extract --locale en` (the SEO fields became plain fields in the file; the plugins and `site.url` stayed in `cms.config.ts`). Left out:
 
 - the blog's own plugin `legacyListColumns()` and `admin.legacyBackupNames`, which only migrate that site's old saved admin settings and old browser recovery copies;
-- the locale list and names come from the config itself instead of the blog's `i18n` module, and `site.url` is read from `HOST_URL` as the blog does;
+- the locale list and names are written in the schema file instead of coming from the blog's `i18n` module, and `site.url` is read from `HOST_URL` as the blog does;
 - the AI style guide is written in English, since this repo keeps config text in English.
 
 ## Trying it inside the repo

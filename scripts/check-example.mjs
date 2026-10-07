@@ -90,6 +90,9 @@ writeFileSync(
 
 run("pnpm", ["install", "--no-frozen-lockfile"], app);
 
+// The types of the schema file (`monti-env.d.ts`) are committed, like `next-env.d.ts`: they must be in step with `monti.schema.json`, and the schema must be valid.
+run("pnpm", ["exec", "monti", "schema:types", "--check"], app);
+
 const check = (label) => {
 	console.log(`\n=== ${label} ===`);
 	run("pnpm", ["exec", "tsc", "--noEmit", "-p", "."], app);

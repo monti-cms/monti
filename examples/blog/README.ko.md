@@ -3,7 +3,7 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core` 위에 만든 개인 기술 블로그로, 운영자의 실제 블로그를 본떴다. 컬렉션은 Post·Memo·Category·Tag·Series(`collection` 컬렉션)이고 언어는 한국어(기본)와 영어다. 블로그가 쓰는 것을 모두 붙였다:
-모든 본문 블록(`@monti-cms/blocks`: 콜아웃·접기·탭·단·Mermaid·차트·툴팁·코드 연결·글자색·코드 탐색기), SEO 필드(`@monti-cms/seo`의 `seoFields`), AI 플러그인(`@monti-cms/ai`),
+모든 본문 블록(`@monti-cms/blocks`: 콜아웃·접기·탭·단·Mermaid·차트·툴팁·코드 연결·글자색·코드 탐색기), SEO 필드(`@monti-cms/seo`), AI 플러그인(`@monti-cms/ai`),
 바른 맞춤법 검사(`@monti-cms/bareun`), 그리고 지시문 표기로 쓰는 MDX(`@monti-cms/mdx`의 `mdx({ syntax: [directiveSyntax()] })`와 `@monti-cms/syntax-directive`, 쓰기 모드 켬이라 글 본문이 `:::callout{…}`로 저장된다).
 패키지는 저장소의 소스가 아니라 **빌드한 묶음**(`vendor/*.tgz`)으로 설치한다.
 
@@ -28,7 +28,9 @@ pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈�
 
 | 파일 | 내용 |
 | --- | --- |
-| `cms.config.ts` | 컬렉션(`post`·`memo`·`category`·`tag`·`collection`), 작업 기록 필드, SEO 필드, 시드 템플릿, 플러그인(지시문 표기의 `mdx`·`blocks()`·`seo()`·`aiPlugin()`·`bareun()`). 관리자 경로 `admin.path: "/studio"`, 주소 규칙 `site.localePrefix: "always"`(`/ko/posts/…`, `/en/posts/…`), 미리보기 언어는 경로(`previewLocaleParam: false`) |
+| `monti.schema.json` | 사이트의 데이터. 코어 README의 스키마 파일 형식("스키마 파일")을 따른다: 컬렉션(`post`·`memo`·`category`·`tag`·`collection`), 작업 기록 필드, SEO 필드(평범한 필드로), 레이아웃, 언어, 시간대, 시드 템플릿, 관리자 경로 `admin.path: "/studio"`, 주소 규칙 `site.localePrefix: "always"`(`/ko/posts/…`, `/en/posts/…`), 미리보기 언어는 경로(`previewLocaleParam: false`). `$schema` 링크로 에디터가 자동 완성한다 |
+| `monti-env.d.ts` | 스키마 파일의 타입. `monti schema:types`가 쓴다(`next dev`가 스키마가 바뀔 때 다시 쓰고, 오래됐으면 `pnpm example:check`가 실패한다). 이것이 있어 `cms.read`와 테마가 컬렉션 이름과 컬렉션별 메타데이터를 알며 손으로 쓴 타입은 없다. 손으로 고치지 않는다 |
+| `cms.config.ts` | 코드가 필요한 것: 스키마를 불러오고(`defineConfig({ schema, … })`) 플러그인(지시문 표기의 `mdx`·`blocks()`·`seo()`·`aiPlugin()`·`bareun()`)과 `HOST_URL`에서 읽는 `site.url`을 더한다 |
 | `cms.server.ts` | CMS 인스턴스: DB·GitHub 로그인 서버 설정 위의 `createCms`(`monti init` 그대로, `githubAuth`는 `@monti-cms/nextjs/auth`에서 온다). 관리자·API 라우트·사이트 페이지(`cms.read.*`)가 모두 여기서 `cms`를 불러온다 |
 | `app/(admin)/studio/` | 관리자 화면(`[[...path]]/page.tsx`·`layout.tsx`, `@monti-cms/nextjs/admin` 사용. 레이아웃이 미리 만든 `@monti-cms/admin/styles.css`와 `@monti-cms/blocks/styles.css`를 불러온다)과 맞춤법 검사 확장 예시(`admin-components.tsx`) |
 | `components/monti/blog-theme/`와 `app/(site)/[locale]/posts/` | 글 목록과 글 페이지. 이 폴더에서 `pnpm exec monti add blog-theme --registry ../../registry/r`로 소스를 설치했습니다. 명령은 라우트 파일을 `app/(site)/blog/`에 쓰지만, 이 사이트는 `/ko/...` 주소를 쓰므로 `app/(site)/[locale]/posts/`로 옮겼고 페이지는 거기서 `params.locale`을 읽습니다. 설치 뒤에 고친 파일은 `components/monti/blog-theme/theme.config.ts` 하나로, 컬렉션(`post`), `routeBase`(`/posts`), 태그 관계(`tagIds`), 요약 필드(`summary`)입니다. 블록에는 `components`가 필요 없습니다. 플러그인이 공개 컴포넌트를 가져옵니다. 명령을 다시 실행하면 라우트 파일이 `app/(site)/blog/`에 또 써지니 그 사본은 지우세요 |
@@ -42,10 +44,10 @@ GitHub 로그인을 쓰려면 OAuth 앱의 콜백 주소를 `http://localhost:30
 
 ## 운영자의 블로그와 다른 점
 
-설정은 운영자 블로그의 컬렉션·필드 종류·레이아웃·SEO 필드·플러그인·시드 템플릿을 그대로 두고 라벨만 영어로 썼다(설정 라벨은 사이트 콘텐츠이고, 이 저장소에는 라벨용 사전이 없다). 뺀 것:
+스키마 파일과 설정은 운영자 블로그의 컬렉션·필드 종류·레이아웃·SEO 필드·플러그인·시드 템플릿을 그대로 두고 라벨만 영어로 썼다(스키마 라벨은 사이트 콘텐츠이고, 이 저장소에는 라벨용 사전이 없다). 스키마 파일은 블로그의 TypeScript 설정에서 `monti schema:extract --locale en`으로 만들었다(SEO 필드는 파일 안의 평범한 필드가 되었고, 플러그인과 `site.url`은 `cms.config.ts`에 남았다). 뺀 것:
 
 - 그 블로그만의 플러그인 `legacyListColumns()`와 `admin.legacyBackupNames`: 그 사이트의 예전 관리자 저장 설정과 예전 브라우저 복구본을 옮기는 용도다.
-- 언어 목록과 이름은 블로그의 `i18n` 모듈 대신 설정에 직접 적었고, `site.url`은 블로그처럼 `HOST_URL`에서 읽는다.
+- 언어 목록과 이름은 블로그의 `i18n` 모듈에서 오지 않고 스키마 파일에 직접 적었고, `site.url`은 블로그처럼 `HOST_URL`에서 읽는다.
 - AI 문체 가이드는 이 저장소가 설정 문구를 영어로 두므로 영어로 썼다.
 
 ## 저장소 안에서 확인하기
