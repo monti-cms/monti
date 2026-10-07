@@ -17,14 +17,13 @@ DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키�
 
 ## 빈 Next 앱에 설치
 
-Next 16(App Router)·React 19·Tailwind CSS 4 앱 기준이다. 저장소는 Postgres만 지원한다. 순서는 `monti init` → 컬렉션 고치기 → `monti migrate`다.
+Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필요 없다. 스타일이 미리 만들어져 있어서 앱은 어떤 CSS 구성이든 쓸 수 있다. 저장소는 Postgres만 지원한다. 순서는 `monti init` → 컬렉션 고치기 → `monti migrate`다.
 
 ### 1. 패키지
 
 ```sh
 pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
   @tiptap/core @tiptap/pm @tiptap/react lucide-react
-pnpm add -D tw-animate-css @tailwindcss/typography
 ```
 
 관리자 패키지와 AI 플러그인은 React Query·sonner·Tiptap·lucide 아이콘을 앱과 같은 하나로 써야 해서 앱이 설치한다(peer).
@@ -53,14 +52,13 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # 사이트 기본 언�
 | --- | --- |
 | 사이트 설정(컬렉션 하나짜리 시작점, 영어 이름표) | `cms.config.ts` |
 | CMS 인스턴스와 서버 설정(DB·GitHub 로그인, 비밀 값은 환경 변수) | `cms.server.ts` |
-| 관리자 화면 | `app/(admin)/admin/[[...path]]/page.tsx`·`layout.tsx` |
+| 관리자 화면(레이아웃이 미리 만든 관리자 스타일시트를 불러온다) | `app/(admin)/admin/[[...path]]/page.tsx`·`layout.tsx` |
 | 관리자 API와 로그인(`/api/cms/v1/*`·`/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
 | 설정 별칭 `@cms-config` | `tsconfig.json` `paths`에 더한다 |
-| 관리자 스타일 줄 | 전역 CSS(`app/globals.css` 등)의 마지막 `@import` 다음에 더한다 |
 | 설정 잇기(`withCms`) | `next.config.ts`(`export default nextConfig;` 한 줄인 기본 모양일 때), 없으면 만든다 |
 
 `src/app`을 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. 안전하게 고칠 수 없는 파일(주석이 있는
-`tsconfig.json`, 기본 모양이 아닌 next 설정, Tailwind 4가 없는 CSS)은 그대로 두고 넣을 내용을 "할 일"로 보인다.
+`tsconfig.json`, 기본 모양이 아닌 next 설정)은 그대로 두고 넣을 내용을 "할 일"로 보인다.
 끝에 설치할 패키지·환경 변수·GitHub 콜백 주소를 알려 준다.
 
 `--admin-path`를 주면 라우트 폴더가 그 경로(`app/(admin)/studio/…`)가 되고 사이트 설정에 `admin: { path: "/studio" }`가
@@ -181,14 +179,13 @@ CMS 패키지의 선택 의존성(예: 블록 확장의 `mermaid`·`recharts`)�
 `monti init`이 하는 일을 손으로 하려면: 사이트 설정과 서버 파일(인스턴스)을 만들고, `next.config.ts`를
 `withCms(nextConfig, { config: "./cms.config.ts" })`(`import { withCms } from "@monti-cms/nextjs/config"`)로 감싸고, `tsconfig.json` `paths`에
 `"@cms-config": ["./cms.config.ts"]`를 더하고(테스트(Vitest)를 쓰면 `resolve.alias`에도),
-위 표의 라우트 파일 셋을 두고(각 파일이 서버 파일에서 `cms`를 불러온다), 전역 CSS에 아래 줄을 넣는다.
+위 표의 라우트 파일 셋을 두고(각 파일이 서버 파일에서 `cms`를 불러온다), 관리자 레이아웃(`app/(admin)/admin/layout.tsx`)에서 미리 만든 관리자 스타일시트를 불러온다.
 
-```css
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "@monti-cms/admin/styles.css"; /* `cms-*` 색과 `cms-dark`·`cms-horizontal`·`cms-vertical` 변형을 정한다(앱의 이름과 겹치지 않는다). Tailwind 4가 필요하다 */
-@plugin "@tailwindcss/typography";
+```ts
+import "@monti-cms/admin/styles.css"; // 미리 만들어져 있다. 앱에 Tailwind·typography·tw-animate가 필요 없다
 ```
+
+이 스타일시트는 관리자가 들어 있는 문서에만 영향을 주므로 앱 자체 페이지의 모습은 그대로다(`@monti-cms/admin` README의 "스타일" 참고).
 
 ### MDX 확장 (선택)
 
@@ -206,8 +203,8 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/mdx/styles.css"; /* 관리자 패키지 스타일 뒤에 */
+```ts
+import "@monti-cms/mdx/styles.css"; // 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 뒤에
 ```
 
 코어는 문서를 저장하며 글 형식을 따로 갖지 않는다. 형식 플러그인이 없는 사이트는 문서(`doc`)만 받고, 글로 쓰면 `unknown_format`으로 실패한다. `format: "mdx"`와 `?format=mdx`는 이 패키지가 있어야 한다. 자세한 것은 `@monti-cms/mdx`의 README.
@@ -228,8 +225,8 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/blocks/styles.css"; /* 관리자 패키지 스타일 다음 */
+```ts
+import "@monti-cms/blocks/styles.css"; // 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 뒤에(공개 페이지 스타일은 `@monti-cms/blocks/render.css`)
 ```
 
 자세한 것은 `@monti-cms/blocks`의 README.
@@ -251,8 +248,8 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/ai/styles.css"; /* 관리자 패키지 스타일 다음 */
+```ts
+import "@monti-cms/ai/styles.css"; // 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 뒤에
 ```
 
 자세한 것은 `@monti-cms/ai`의 README.
@@ -276,6 +273,10 @@ export default defineConfig({
 	// …
 	plugins: [seo()],
 });
+```
+
+```ts
+import "@monti-cms/seo/styles.css"; // 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 뒤에
 ```
 
 자세한 것은 `@monti-cms/seo`의 README.
@@ -368,7 +369,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 1. `@monti-cms/mdx`를 설치한다.
 2. `plugins`에 `mdx()`를 넣고 `mdx.syntax`를 그 안으로 **옮긴다**. `defineConfig({ mdx: { syntax: [directiveSyntax()] } })`는 `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`가 된다. 옵션은 그대로 둔다(지시자로 쓰던 사이트는 쓰기 모드가 켜진 `directiveSyntax()`). `mdx` 설정 키는 없어졌다.
-3. 앱 CSS에 `@import "@monti-cms/mdx/styles.css";`를 관리자 스타일 뒤에 넣는다.
+3. 관리자 레이아웃에서 `@monti-cms/mdx/styles.css`를 `@monti-cms/admin/styles.css` 뒤에 불러온다.
 4. `@monti-cms/core/render`의 `renderMdx` import를 `@monti-cms/mdx/render`로 바꾸거나(또는 `CmsContent`로 문서를 그린다), `cms.read.imageResolver(...)`를 `entry.refs`로 바꾼다(`renderMdx(source, { refs: entry.refs })`). `renderMdx`는 `{ content, toc, unknown }`을 돌려주며 MDX를 컴파일하거나 실행하지 않는다.
 5. 없어진 `@monti-cms/core/mdx`·`@monti-cms/core/syntax`·`@monti-cms/core/format/mdx` import를 바꾼다. 문법 확장 인터페이스(`SyntaxExtension`·`SerializeContext`·`RAW_SOURCE_PARAGRAPH`, 표·코드 주석 문법 도우미)는 `@monti-cms/mdx`에서, 해석기와 직렬화기(`analyze`·`serialize`·`toDocument`·`bodyFromMdx`·`mdxFormat` 등)는 `@monti-cms/mdx/format`에서 가져온다. 문법 확장 패키지는 이제 `@monti-cms/mdx`를 피어로 둔다.
 6. 직접 만든 블록 확장은 `render` 모듈의 기본 내보내기를 지우고 `documentComponents`만 둔다(`CmsPlugin.render`는 `{ documentComponents }`를 돌려준다).

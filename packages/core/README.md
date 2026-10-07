@@ -17,14 +17,13 @@ Another host (Astro, Remix, ...) would be a new adapter package, not a change to
 
 ## Install in an empty Next app
 
-This assumes a Next 16 (App Router), React 19 and Tailwind CSS 4 app. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate`.
+This assumes a Next 16 (App Router) and React 19 app. The admin needs no Tailwind: its styles are prebuilt, so the app may use any CSS setup. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate`.
 
 ### 1. Packages
 
 ```sh
 pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
   @tiptap/core @tiptap/pm @tiptap/react lucide-react
-pnpm add -D tw-animate-css @tailwindcss/typography
 ```
 
 The admin package and the AI plugin must share one copy of React Query, sonner, Tiptap and the lucide icons with the app, so the app installs them (peers).
@@ -53,14 +52,13 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # to set the site's def
 | --- | --- |
 | Site config (a one-collection starting point, English labels) | `cms.config.ts` |
 | The CMS instance and its server config (DB, GitHub login; secrets come from environment variables) | `cms.server.ts` |
-| Admin UI | `app/(admin)/admin/[[...path]]/page.tsx`, `layout.tsx` |
+| Admin UI (the layout imports the prebuilt admin stylesheet) | `app/(admin)/admin/[[...path]]/page.tsx`, `layout.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
 | Config alias `@cms-config` | added to `paths` in `tsconfig.json` |
-| Admin style line | added after the last `@import` in the global CSS (`app/globals.css`, etc.) |
 | Config wiring (`withCms`) | `next.config.ts` (when it has the default shape with a single `export default nextConfig;` line); created if missing |
 
 For apps that use `src/app`, the config files go in `src/` and the routes under `src/app/`. Files that cannot be edited safely (a `tsconfig.json`
-with comments, a next config that does not have the default shape, CSS without Tailwind 4) are left as they are, and what to add is shown as a "to do".
+with comments, a next config that does not have the default shape) are left as they are, and what to add is shown as a "to do".
 At the end it lists the packages to install, the environment variables and the GitHub callback URL.
 
 With `--admin-path`, the route folder becomes that path (`app/(admin)/studio/…`) and `admin: { path: "/studio" }` is added to the site config.
@@ -181,14 +179,13 @@ After installing, restart the dev server.
 To do by hand what `monti init` does: create the site config and the server file (the instance), wrap `next.config.ts` in
 `withCms(nextConfig, { config: "./cms.config.ts" })` (`import { withCms } from "@monti-cms/nextjs/config"`), add
 `"@cms-config": ["./cms.config.ts"]` to `tsconfig.json` `paths` (and to `resolve.alias` if you use tests (Vitest)),
-add the set of route files from the table above (each imports `cms` from the server file), and put the following lines in the global CSS.
+add the set of route files from the table above (each imports `cms` from the server file), and import the prebuilt admin stylesheet in the admin layout (`app/(admin)/admin/layout.tsx`).
 
-```css
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "@monti-cms/admin/styles.css"; /* defines the `cms-*` colors and the `cms-dark`, `cms-horizontal` and `cms-vertical` variants (names do not collide with the app's). Requires Tailwind 4 */
-@plugin "@tailwindcss/typography";
+```ts
+import "@monti-cms/admin/styles.css"; // prebuilt: needs no Tailwind, typography or tw-animate in the app
 ```
+
+The stylesheet only affects a document that contains the admin, so the app's own pages keep their look (see "Styles" in the README of `@monti-cms/admin`).
 
 ### MDX extension (optional)
 
@@ -206,8 +203,8 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/mdx/styles.css"; /* after the admin package styles */
+```ts
+import "@monti-cms/mdx/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css"
 ```
 
 Core stores documents and has no text format of its own: a site without a format plugin accepts documents (`doc`) only, and a text write fails with `unknown_format`. `format: "mdx"` and `?format=mdx` need this package. See the README of `@monti-cms/mdx` for details.
@@ -228,8 +225,8 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/blocks/styles.css"; /* after the admin package styles */
+```ts
+import "@monti-cms/blocks/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css" (the public page styles are `@monti-cms/blocks/render.css`)
 ```
 
 See the README of `@monti-cms/blocks` for details.
@@ -251,8 +248,8 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/ai/styles.css"; /* after the admin package styles */
+```ts
+import "@monti-cms/ai/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css"
 ```
 
 See the README of `@monti-cms/ai` for details.
@@ -276,6 +273,10 @@ export default defineConfig({
 	// …
 	plugins: [seo()],
 });
+```
+
+```ts
+import "@monti-cms/seo/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css"
 ```
 
 See the README of `@monti-cms/seo` for details.
@@ -367,7 +368,7 @@ MDX moved out of core into the package `@monti-cms/mdx`. Core has no MDX depende
 
 1. Install `@monti-cms/mdx`.
 2. Add `mdx()` to `plugins` and **move** `mdx.syntax` into it: `defineConfig({ mdx: { syntax: [directiveSyntax()] } })` becomes `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`. Keep the same options (for a site that wrote directives, `directiveSyntax()` with write mode on). The `mdx` config key is gone.
-3. Add `@import "@monti-cms/mdx/styles.css";` to the app CSS, after the admin styles.
+3. Import `@monti-cms/mdx/styles.css` in the admin layout, after `@monti-cms/admin/styles.css`.
 4. Replace `renderMdx` imports from `@monti-cms/core/render` with `@monti-cms/mdx/render` (or render documents with `CmsContent`), and `cms.read.imageResolver(...)` with `entry.refs` (`renderMdx(source, { refs: entry.refs })`). `renderMdx` returns `{ content, toc, unknown }` and compiles or executes no MDX.
 5. Replace imports of `@monti-cms/core/mdx`, `@monti-cms/core/syntax` and `@monti-cms/core/format/mdx`, which are removed: the syntax extension interface (`SyntaxExtension`, `SerializeContext`, `RAW_SOURCE_PARAGRAPH`, the table and comment syntax helpers) comes from `@monti-cms/mdx`, and the parser and writer (`analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `mdxFormat`, ...) from `@monti-cms/mdx/format`. Syntax extension packages peer on `@monti-cms/mdx` now.
 6. Block extensions you wrote: drop the default export of your `render` modules and keep `documentComponents` (`CmsPlugin.render` returns `{ documentComponents }`).

@@ -6,7 +6,6 @@ import {
 	adminLayoutTemplate,
 	adminPageTemplate,
 	apiRouteTemplate,
-	CSS_LINES,
 	configTemplate,
 	DEFAULT_INIT_LOCALE,
 	DEFAULT_INIT_TIME_ZONE,
@@ -32,7 +31,7 @@ export interface InitReport {
 	readonly created: string[];
 	/** Files that already existed and were left as they are. Never overwritten. */
 	readonly skipped: string[];
-	/** Modified files (tsconfig `paths`, global CSS, next config). */
+	/** Modified files (tsconfig `paths`, next config). */
 	readonly updated: string[];
 	/** Manual steps (what could not be fixed automatically, installation, environment variables, next steps). */
 	readonly todo: string[];
@@ -52,13 +51,12 @@ function isTimeZone(timeZone: string): boolean {
 const posix = (file: string) => file.split(path.sep).join("/");
 const dotted = (file: string) => (file.startsWith(".") ? file : `./${file}`);
 
-const CSS_CANDIDATES = ["app/globals.css", "src/app/globals.css", "styles/globals.css", "src/styles/globals.css"];
 const NEXT_CONFIGS = ["next.config.ts", "next.config.mjs", "next.config.js"];
 
 /**
  * `monti init`: creates the files that attach the CMS to a Next app. **Existing files are not overwritten**; they are reported as skipped.
- * Creates: site config, the server file (the CMS instance), admin routes (page and layout), admin API route (including login).
- * Modifies (only when safe): tsconfig `paths`, the style line in global CSS, a next config of the default shape. If it cannot, it reports a manual step.
+ * Creates: site config, the server file (the CMS instance), admin routes (page and layout; the layout imports the prebuilt admin stylesheet), admin API route (including login).
+ * Modifies (only when safe): tsconfig `paths`, a next config of the default shape. If it cannot, it reports a manual step.
  */
 export function initProject(options: InitOptions): InitReport {
 	const { cwd } = options;
@@ -121,7 +119,6 @@ export function initProject(options: InitOptions): InitReport {
 	create(routeFile, apiRouteTemplate(serverImport(routeFile)));
 
 	addTsconfigPaths(cwd, { [CONFIG_ALIAS]: configFile }, report);
-	addCssLines(cwd, report);
 	addWithCms(cwd, dotted(configFile), report);
 
 	report.todo.push(
@@ -174,34 +171,6 @@ function addTsconfigPaths(cwd: string, aliases: Readonly<Record<string, string>>
 	const out = JSON.stringify(json, null, indent).replace(/\[\s*("(?:[^"\\]|\\.)*")\s*\]/g, "[$1]");
 	writeFileSync(file, `${out}\n`);
 	report.updated.push("tsconfig.json");
-}
-
-/** Adds the admin style line to global CSS (the Tailwind entry). Inserts it after the last `@import` and skips lines that already exist. */
-function addCssLines(cwd: string, report: InitReport): void {
-	const file = CSS_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
-	const manual = `Add these lines to the global CSS (the Tailwind input) after @import "tailwindcss";: ${CSS_LINES.join(" ")}`;
-	if (!file) {
-		report.todo.push(manual);
-		return;
-	}
-	const text = readFileSync(path.join(cwd, file), "utf8");
-	if (!/@import\s+["']tailwindcss["']/.test(text)) {
-		report.todo.push(`${file} has no Tailwind CSS 4 (@import "tailwindcss";). Install Tailwind 4, then: ${manual}`);
-		return;
-	}
-	const missing = CSS_LINES.filter((line) => !text.includes(line.replace(/;$/, "")));
-	if (missing.length === 0) {
-		report.skipped.push(file);
-		return;
-	}
-	const lines = text.split("\n");
-	let last = -1;
-	lines.forEach((line, index) => {
-		if (/^@import\s/.test(line.trim())) last = index;
-	});
-	lines.splice(last + 1, 0, "/* @monti-cms/core admin screen */", ...missing);
-	writeFileSync(path.join(cwd, file), lines.join("\n"));
-	report.updated.push(file);
 }
 
 /** Wraps the next config with `withCms`. Only edits the default shape (a single `export default nextConfig;` line), and creates one if missing. */
