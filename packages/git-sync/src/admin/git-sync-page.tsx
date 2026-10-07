@@ -40,6 +40,20 @@ interface PullSummaryView {
 	errors: { path: string; message: string }[];
 }
 
+/** An open draft pull request (`GET /v1/git-sync/drafts`). */
+export interface DraftPullRequestView {
+	target: string;
+	entryId: string;
+	collection: string;
+	locale: string;
+	slug: string;
+	title: string;
+	branch: string;
+	number: number;
+	url: string;
+	publishing: boolean;
+}
+
 interface TargetView {
 	id: string;
 	repo: string;
@@ -50,6 +64,8 @@ interface TargetView {
 	mode: "commit" | "pr";
 	prBranch: string;
 	collections: string[];
+	drafts?: boolean;
+	draftPullRequests?: DraftPullRequestView[];
 	synced: number;
 	queued: number;
 	conflicts: number;
@@ -69,6 +85,7 @@ interface StatusView {
 
 interface ConflictView {
 	id: string;
+	scope?: "draft";
 	target: string;
 	repo: string;
 	entryId: string;
@@ -347,6 +364,26 @@ function SyncTab({
 							<Badge variant="destructive">{t("target.conflicts", { count: target.conflicts })}</Badge>
 						)}
 					</div>
+					{target.drafts && (
+						<div className="space-y-1 text-xs">
+							<h3 className="font-medium">{t("drafts.title")}</h3>
+							{target.draftPullRequests && target.draftPullRequests.length > 0 ? (
+								<ul className="space-y-0.5">
+									{target.draftPullRequests.map((item) => (
+										<li key={item.entryId} className="flex flex-wrap items-center gap-2">
+											<a className="underline" href={item.url} target="_blank" rel="noreferrer">
+												#{item.number} {item.title}
+											</a>
+											<span className="font-mono text-cms-muted-foreground">{item.branch}</span>
+											{item.publishing && <Badge variant="outline">{t("drafts.publishing")}</Badge>}
+										</li>
+									))}
+								</ul>
+							) : (
+								<p className="text-cms-muted-foreground">{t("drafts.empty")}</p>
+							)}
+						</div>
+					)}
 					{target.lastPull && target.lastPull.errors.length > 0 && (
 						<div className="space-y-1 text-xs">
 							<h3 className="font-medium">{t("summary.errors")}</h3>
@@ -449,18 +486,27 @@ function ConflictsTab({
 					entryId: params.conflict.entryId,
 					resolution: params.resolution,
 					gitSha: params.conflict.gitSha,
+					...(params.conflict.scope ? { scope: params.conflict.scope } : {}),
 				},
 				fallback: t("conflicts.resolve.failed"),
 			}),
-		onSuccess: (_result, params) => toast.success(t(`conflicts.resolved.${params.resolution}`)),
+		onSuccess: (_result, params) =>
+			toast.success(
+				t(
+					params.conflict.scope === "draft"
+						? (`conflicts.resolved.draft.${params.resolution}` as const)
+						: (`conflicts.resolved.${params.resolution}` as const),
+				),
+			),
 		onError: (err) => toast.error(errorText(site, err, t("conflicts.resolve.failed"))),
 		onSettled: onChanged,
 	});
 
 	const decide = async (conflict: ConflictView, resolution: "git" | "server") => {
+		const key = conflict.scope === "draft" ? (`draft.${resolution}` as const) : resolution;
 		const ok = await confirm({
-			title: t(`conflicts.${resolution}.title`),
-			description: t(`conflicts.${resolution}.ask`, { label: conflict.label, path: conflict.path }),
+			title: t(`conflicts.${key}.title`),
+			description: t(`conflicts.${key}.ask`, { label: conflict.label, path: conflict.path }),
 			confirmLabel: t(resolution === "git" ? "conflicts.useGit" : "conflicts.useServer"),
 			destructive: true,
 		});
@@ -493,6 +539,11 @@ function ConflictsTab({
 						<h2 className="font-medium text-sm">{conflict.label}</h2>
 						<p className="text-cms-muted-foreground text-xs">
 							<span className="font-mono">{conflict.path}</span> · {conflict.repo}
+							{conflict.scope === "draft" && (
+								<Badge variant="outline" className="ml-2">
+									{t("conflicts.draft")}
+								</Badge>
+							)}
 						</p>
 						<p className="text-xs">{t(`conflicts.reason.${conflict.reason}`)}</p>
 					</div>

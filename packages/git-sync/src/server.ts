@@ -1,6 +1,6 @@
 import type { CmsServerPlugin } from "@monti-cms/core";
 import { commands } from "./commands";
-import { onContentEvent } from "./outbound";
+import { onContentEvent } from "./events";
 import * as routes from "./routes";
 import { settingsView } from "./settings";
 import { syncContextFor } from "./sync";
@@ -12,6 +12,7 @@ const gitSyncServer: CmsServerPlugin = {
 		{ pattern: "v1/git-sync/settings", module: routes.settings },
 		{ pattern: "v1/git-sync/pull", module: routes.pull },
 		{ pattern: "v1/git-sync/flush", module: routes.flush },
+		{ pattern: "v1/git-sync/drafts", module: routes.drafts },
 		{ pattern: "v1/git-sync/conflicts", module: routes.conflicts },
 		{ pattern: "v1/git-sync/conflicts/resolve", module: routes.resolve },
 		// GitHub calls this without a login; the route checks the webhook signature itself.

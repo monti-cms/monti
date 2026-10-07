@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { type Cms, type Entry, exportBodyText } from "@monti-cms/core/plugin/server";
+import { type Cms, type Entry, type EntryBody, exportBodyText } from "@monti-cms/core/plugin/server";
 import { composeFile, parseFile } from "./front-matter";
 import { blobSha } from "./github/blob-sha";
 import { RESERVED_FRONT_MATTER_KEYS, type ResolvedTarget } from "./options";
@@ -43,6 +43,21 @@ export const isSyncable = (
 	typeof entry.publishedSlug === "string" &&
 	entry.publishedSlug !== "" &&
 	target.collections.includes(entry.collection);
+
+/**
+ * Whether an entry has a draft that is a file of its own: it is not live (a draft, never published or unpublished) or it is published with changes that are not
+ * published yet (another content or another address). A published entry whose draft equals its published version has nothing to put on a draft branch.
+ */
+export const hasDraftFile = (entry: Entry | null, target: ResolvedTarget): entry is Entry & { workingSlug: string } =>
+	entry !== null &&
+	target.collections.includes(entry.collection) &&
+	typeof entry.workingSlug === "string" &&
+	entry.workingSlug !== "" &&
+	(entry.status === "draft" ||
+		(entry.status === "published" &&
+			(entry.published === undefined ||
+				entry.working.contentHash !== entry.published.contentHash ||
+				entry.workingSlug !== entry.publishedSlug)));
 
 const iso = (value: unknown): string | undefined => {
 	if (value === undefined || value === null) return undefined;
@@ -89,9 +104,10 @@ async function slugsOfTargets(cms: Cms, ids: readonly string[], locale: string):
 /** The front matter of an entry. Fields come in the order the collection declares them; relations are slugs with the exact ids under `monti.refs`. */
 export async function frontMatterOf(
 	cms: Cms,
-	entry: Entry & { published: NonNullable<Entry["published"]>; publishedSlug: string },
+	entry: Entry,
+	version: { readonly body: EntryBody; readonly slug: string },
 ): Promise<Record<string, unknown>> {
-	const metadata = entry.published.metadata as Record<string, unknown>;
+	const metadata = version.body.metadata as Record<string, unknown>;
 	const declared = cms.site.isCollection(entry.collection)
 		? cms.site.storedFields(entry.collection).map((stored) => stored.name)
 		: [];
@@ -113,10 +129,10 @@ export async function frontMatterOf(
 		const written = ids.map((id) => slugs.get(id) ?? id);
 		data[name] = many ? written : written[0];
 	}
-	data.slug = entry.publishedSlug;
+	data.slug = version.slug;
 	const date = iso(entry.publishedAt);
 	if (date) data.date = date;
-	const lastmod = iso(entry.published.updatedAt);
+	const lastmod = iso(version.body.updatedAt);
 	if (lastmod) data.lastmod = lastmod;
 	data.monti = {
 		id: entry.id,
@@ -135,24 +151,48 @@ export async function exportEntry(
 	pattern: PathPattern,
 	entry: Entry & { published: NonNullable<Entry["published"]>; publishedSlug: string },
 ): Promise<ExportedEntry> {
+	return exportVersion(cms, target, pattern, entry, "published", {
+		body: entry.published,
+		slug: entry.publishedSlug,
+	});
+}
+
+/** Writes the file of an entry's draft (what is on its draft branch). Links to entries that are not published are written as their path too. */
+export async function exportDraft(
+	cms: Cms,
+	target: ResolvedTarget,
+	pattern: PathPattern,
+	entry: Entry & { workingSlug: string },
+): Promise<ExportedEntry> {
+	return exportVersion(cms, target, pattern, entry, "working", { body: entry.working, slug: entry.workingSlug });
+}
+
+async function exportVersion(
+	cms: Cms,
+	target: ResolvedTarget,
+	pattern: PathPattern,
+	entry: Entry,
+	scope: "published" | "working",
+	version: { readonly body: EntryBody; readonly slug: string },
+): Promise<ExportedEntry> {
 	const { text: body } = await exportBodyText(cms, {
 		format: target.format,
-		doc: entry.published.doc,
+		doc: version.body.doc,
 		locale: entry.locale,
-		scope: "published",
+		scope,
 	});
-	const text = composeFile(await frontMatterOf(cms, entry), body);
+	const text = composeFile(await frontMatterOf(cms, entry, version), body);
 	return {
 		path: pattern.render({
 			collection: entry.collection,
-			slug: entry.publishedSlug,
+			slug: version.slug,
 			locale: entry.locale,
 			id: entry.id,
 		}),
 		text,
 		blobSha: blobSha(text),
-		slug: entry.publishedSlug,
-		contentHash: entry.published.contentHash,
+		slug: version.slug,
+		contentHash: version.body.contentHash,
 	};
 }
 

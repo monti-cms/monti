@@ -5,6 +5,7 @@ import type { GitHubClient, GitHubClientFactory } from "./github/client";
 import { githubClientFactory } from "./github/rest";
 import {
 	DEFAULT_DEBOUNCE_MS,
+	DEFAULT_DRAFT_DEBOUNCE_MS,
 	GIT_SYNC_PLUGIN_NAME,
 	type GitSyncOptions,
 	type ResolvedTarget,
@@ -56,6 +57,8 @@ export interface SyncContext {
 	readonly targets: readonly ResolvedTarget[];
 	readonly state: SyncState;
 	readonly debounceMs: number;
+	/** How long an entry has to be quiet before its draft goes to the draft branch. */
+	readonly draftDebounceMs: number;
 	/** Targets this process is writing files into right now (an import in progress). A publish it causes is queued but not committed until the import ends. */
 	readonly importing: Set<string>;
 	now(): number;
@@ -93,6 +96,7 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 		targets,
 		state,
 		debounceMs: options.debounceMs ?? DEFAULT_DEBOUNCE_MS,
+		draftDebounceMs: options.draftDebounceMs ?? DEFAULT_DRAFT_DEBOUNCE_MS,
 		importing: new Set(),
 		now,
 		sleep,

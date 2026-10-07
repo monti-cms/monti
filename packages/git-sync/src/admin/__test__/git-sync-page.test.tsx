@@ -144,6 +144,52 @@ describe("Git sync screen: sync tab", () => {
 		expect(within(section).getByText(/removed in git/)).toBeTruthy();
 	});
 
+	it("lists the open draft pull requests of a target that syncs drafts, with links", async () => {
+		status = {
+			...status,
+			targets: [
+				{
+					...target,
+					drafts: true,
+					draftPullRequests: [
+						{
+							target: "site",
+							entryId: "e1",
+							collection: "memo",
+							locale: "en",
+							slug: "hello",
+							title: "Draft: Hello",
+							branch: "monti/draft/hello",
+							number: 7,
+							url: "https://github.com/acme/site/pull/7",
+							publishing: false,
+						},
+					],
+				},
+			],
+		};
+		renderPage();
+		const section = await screen.findByRole("region", { name: "site" });
+		expect(within(section).getByText(t("drafts.title"))).toBeTruthy();
+		expect(
+			within(section)
+				.getByRole("link", { name: /#7 Draft: Hello/ })
+				.getAttribute("href"),
+		).toBe("https://github.com/acme/site/pull/7");
+		expect(within(section).getByText("monti/draft/hello")).toBeTruthy();
+	});
+
+	it("says so when a target that syncs drafts has no open draft pull request, and shows nothing for a target that does not", async () => {
+		status = { ...status, targets: [{ ...target, drafts: true, draftPullRequests: [] }] };
+		renderPage();
+		expect(await screen.findByText(t("drafts.empty"))).toBeTruthy();
+		cleanup();
+		status = { ...status, targets: [{ ...target, drafts: false, draftPullRequests: [] }] };
+		renderPage();
+		await screen.findByRole("region", { name: "site" });
+		expect(screen.queryByText(t("drafts.title"))).toBeNull();
+	});
+
 	it('"Pull now" pulls the target and reports the result', async () => {
 		renderPage();
 		fireEvent.click(await screen.findByRole("button", { name: t("pull.now") }));
@@ -224,6 +270,24 @@ describe("Git sync screen: conflicts tab", () => {
 				expect.objectContaining({ resolution: "server" }),
 			]),
 		);
+	});
+
+	it("marks a conflict about a draft branch and sends its scope with the decision", async () => {
+		conflicts = [{ ...conflict, scope: "draft" }];
+		await openConflicts();
+		const section = await screen.findByRole("region", { name: "Hello" });
+		expect(within(section).getByText(t("conflicts.draft"))).toBeTruthy();
+		fireEvent.click(within(section).getByRole("button", { name: t("conflicts.useGit") }));
+		const dialog = await screen.findByRole("alertdialog");
+		expect(within(dialog).getByText(t("conflicts.draft.git.title"))).toBeTruthy();
+		fireEvent.click(within(dialog).getByRole("button", { name: t("conflicts.useGit") }));
+		await waitFor(() =>
+			expect(requests("POST")).toContainEqual([
+				"/api/cms/v1/git-sync/conflicts/resolve",
+				{ target: "site", entryId: "e1", resolution: "git", gitSha: "a".repeat(40), scope: "draft" },
+			]),
+		);
+		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("conflicts.resolved.draft.git")));
 	});
 
 	it("says so when there are none", async () => {

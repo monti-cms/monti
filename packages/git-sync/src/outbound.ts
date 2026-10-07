@@ -1,4 +1,4 @@
-import { CmsError, type ContentEvent, type DeferredDelivery, type Entry } from "@monti-cms/core/plugin/server";
+import { CmsError, type ContentEvent, type Entry } from "@monti-cms/core/plugin/server";
 import { exportEntry, isSyncable } from "./entry-file";
 import type { BranchHead, FileChange, GitHubClient } from "./github/client";
 import type { ResolvedTarget } from "./options";
@@ -43,7 +43,8 @@ export interface FlushResult {
 	readonly failed: readonly { readonly entryId: string; readonly message: string }[];
 }
 
-const errorText = (error: unknown): string => (error instanceof Error ? error.message || error.name : String(error));
+export const errorText = (error: unknown): string =>
+	error instanceof Error ? error.message || error.name : String(error);
 
 /** The entry as it is now, or `null` when it does not exist (any more). */
 async function readEntry(ctx: SyncContext, entryId: string): Promise<Entry | null> {
@@ -358,7 +359,11 @@ export async function flushTarget(
 			client,
 			remote: await client.listFiles(head, target.folder),
 			records: await ctx.state.records.list(target.id),
-			conflicts: new Map((await ctx.state.conflicts.list(target.id)).map((conflict) => [conflict.entryId, conflict])),
+			conflicts: new Map(
+				(await ctx.state.conflicts.list(target.id))
+					.filter((conflict) => conflict.scope !== "draft")
+					.map((conflict) => [conflict.entryId, conflict]),
+			),
 			forced: new Set(options.force ?? []),
 			prOpen:
 				target.mode === "pr" &&
@@ -483,17 +488,28 @@ async function settle(
 	return undefined;
 }
 
+/** What handling one event did for each target: failures to throw, and the moments to be called again at. */
+export interface EventOutcome {
+	readonly failures: unknown[];
+	readonly deferred: Date[];
+}
+
 /**
- * The `afterCommit` subscriber. For each target that syncs the entry's collection it queues the entry and commits the queue. The event only says that
- * something happened; what goes to the repo is the entry as it is now (its published version, or none).
+ * The part of the `afterCommit` subscriber for published files. For each target that syncs the entry's collection it queues the entry and commits the queue.
+ * The event only says that something happened; what goes to the repo is the entry as it is now (its published version, or none). `skip` names the targets whose
+ * draft pull request took this publish (merged it, or holds it).
  */
-export async function onContentEvent(ctx: SyncContext, event: ContentEvent): Promise<DeferredDelivery | undefined> {
-	if (!FILE_KINDS.has(event.kind)) return undefined;
-	const targets = ctx.targets.filter((target) => target.collections.includes(event.collection));
-	if (targets.length === 0) return undefined;
-	const entry = event.kind === "deleted" ? null : await event.read();
+export async function onPublishedEvent(
+	ctx: SyncContext,
+	event: ContentEvent,
+	skip: ReadonlySet<string> = new Set(),
+): Promise<EventOutcome> {
 	const failures: unknown[] = [];
 	const deferred: Date[] = [];
+	if (!FILE_KINDS.has(event.kind)) return { failures, deferred };
+	const targets = ctx.targets.filter((target) => target.collections.includes(event.collection) && !skip.has(target.id));
+	if (targets.length === 0) return { failures, deferred };
+	const entry = event.kind === "deleted" ? null : await event.read();
 	for (const target of targets) {
 		try {
 			if (isSyncable(entry, target)) {
@@ -528,10 +544,7 @@ export async function onContentEvent(ctx: SyncContext, event: ContentEvent): Pro
 			else failures.push(error);
 		}
 	}
-	// The first failure of a target does not hide the others (they were all tried). Deferring is not a failure: the outbox calls again when the window ends.
-	if (failures[0] !== undefined) throw failures[0];
-	if (deferred.length > 0) return { retryAt: new Date(Math.max(...deferred.map((date) => date.getTime()))) };
-	return undefined;
+	return { failures, deferred };
 }
 
 /**

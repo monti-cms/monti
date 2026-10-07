@@ -14,6 +14,7 @@ export const COLLECTIONS = {
 	status: "status",
 	locks: "locks",
 	applying: "applying",
+	drafts: "drafts",
 } as const;
 
 /** The saved settings (one item, `default`). The values are encrypted with the plugin's key (`cms.secrets("git-sync")`). */
@@ -48,6 +49,33 @@ export interface SyncRecord {
 	readonly syncedAt: string;
 }
 
+/**
+ * The branch and pull request of one entry's draft (targets with `drafts: true`). `blobSha` is the blob last pushed to (or read from) the branch and `contentHash` the
+ * content hash of the entry's draft as of then: a side changed since the last sync exactly when its current value differs, as for {@link SyncRecord}.
+ */
+export interface DraftRecord {
+	readonly target: string;
+	readonly entryId: string;
+	readonly collection: string;
+	readonly locale: string;
+	/** The draft's address when it was last synced. A different one now renames the draft: a new branch and pull request, and the old ones are closed. */
+	readonly slug: string;
+	readonly branch: string;
+	/** Repo-relative path of the file on the branch. */
+	readonly path: string;
+	readonly prNumber: number;
+	readonly prUrl: string;
+	/** The pull request title as it was last set. */
+	readonly title: string;
+	readonly blobSha: string;
+	readonly contentHash: string;
+	/** The CMS published the entry but the merge has to wait (a check, or `"pr"` mode): the pull request carries the published version and auto-merge is on. */
+	readonly publishing?: boolean;
+	/** The pull request was closed on GitHub without merging. The draft in the CMS is untouched; the next change of it opens a new pull request. */
+	readonly prClosed?: boolean;
+	readonly syncedAt: string;
+}
+
 /** A publish (or removal) waiting for its commit. One per entry per target: a newer event of the same entry replaces it. */
 export interface QueueItem {
 	readonly target: string;
@@ -72,6 +100,8 @@ export type ConflictReason =
 /** A decision waiting for a person: nothing is merged until it is made. */
 export interface ConflictRecord {
 	readonly id: string;
+	/** `"draft"`: the conflict is about the draft branch of the entry (the file at `path` on `monti/draft/...`), not the published file. */
+	readonly scope?: "draft";
 	readonly target: string;
 	readonly entryId: string;
 	readonly collection: string;
@@ -148,6 +178,9 @@ async function removeItem<T>(collection: PluginCollection<T>, key: string): Prom
 }
 
 export const entryKey = (target: string, entryId: string) => `${target}:${entryId}`;
+/** The key of a conflict: a draft conflict does not replace the published one of the same entry. */
+export const conflictKey = (target: string, entryId: string, scope?: "draft") =>
+	entryKey(target, scope === "draft" ? `draft:${entryId}` : entryId);
 const prefixOf = (target: string) => `${target}:`;
 
 /** Typed access to the plugin's storage. */
@@ -159,6 +192,7 @@ export function createState(storage: PluginStorage) {
 	const status = storage.collection<TargetStatus>(COLLECTIONS.status);
 	const locks = storage.collection<LockValue>(COLLECTIONS.locks);
 	const applying = storage.collection<ApplyingValue>(COLLECTIONS.applying);
+	const drafts = storage.collection<DraftRecord>(COLLECTIONS.drafts);
 
 	return {
 		settings: {
@@ -196,9 +230,21 @@ export function createState(storage: PluginStorage) {
 		conflicts: {
 			list: async (target?: string) =>
 				(await conflicts.list(target ? { prefix: prefixOf(target) } : undefined)).map((item) => item.value),
-			get: async (target: string, entryId: string) => (await conflicts.get(entryKey(target, entryId)))?.value ?? null,
+			get: async (target: string, entryId: string, scope?: "draft") =>
+				(await conflicts.get(conflictKey(target, entryId, scope)))?.value ?? null,
 			put: (conflict: ConflictRecord) => upsert(conflicts, conflict.id, conflict),
-			remove: (target: string, entryId: string) => removeItem(conflicts, entryKey(target, entryId)),
+			remove: (target: string, entryId: string, scope?: "draft") =>
+				removeItem(conflicts, conflictKey(target, entryId, scope)),
+		},
+		drafts: {
+			get: async (target: string, entryId: string) => (await drafts.get(entryKey(target, entryId)))?.value ?? null,
+			/** Every draft record of a target, by entry id. */
+			list: async (target: string) =>
+				new Map(
+					(await drafts.list({ prefix: prefixOf(target) })).map((item) => [item.value.entryId, item.value] as const),
+				),
+			put: (record: DraftRecord) => upsert(drafts, entryKey(record.target, record.entryId), record),
+			remove: (target: string, entryId: string) => removeItem(drafts, entryKey(target, entryId)),
 		},
 		status: {
 			get: async (target: string): Promise<TargetStatus> => (await status.get(target))?.value ?? {},
