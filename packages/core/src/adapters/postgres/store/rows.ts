@@ -1,4 +1,4 @@
-import type { PoolClient } from "pg";
+import { sql } from "kysely";
 import { documentText, SEARCH_TEXT } from "../../../core/body-text";
 import { CmsError } from "../../../core/store/errors";
 import type {
@@ -19,7 +19,7 @@ import {
 	unparsedDocument,
 } from "../../../doc/stored-document";
 import type { Site } from "../../../site";
-import type { Queryable } from "./context";
+import type { Db } from "../db/kysely";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
 
@@ -219,67 +219,57 @@ export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 
 /** Inserts a reference index row. Picks the FK target column by kind (same rule as the CHECK constraint). */
 export async function insertReferences(
-	client: PoolClient,
-	qSchema: string,
+	db: Db,
 	entryId: string,
 	state: "working" | "published",
 	references: readonly Reference[],
 ): Promise<void> {
 	for (const ref of references) {
-		const targetEntryId = ref.kind === "media" ? null : ref.targetId;
-		const targetMediaId = ref.kind === "media" ? ref.targetId : null;
-		await client.query(
-			`INSERT INTO "${qSchema}".entry_references
-			 (entry_id, state, kind, target_id, target_entry_id, target_media_id, is_stale, occurrences)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			[
-				entryId,
+		await db
+			.insertInto("entry_references")
+			.values({
+				entry_id: entryId,
 				state,
-				ref.kind,
-				ref.targetId,
-				targetEntryId,
-				targetMediaId,
-				ref.isStale,
-				JSON.stringify(ref.occurrences),
-			],
-		);
+				kind: ref.kind,
+				target_id: ref.targetId,
+				target_entry_id: ref.kind === "media" ? null : ref.targetId,
+				target_media_id: ref.kind === "media" ? ref.targetId : null,
+				is_stale: ref.isStale,
+				occurrences: JSON.stringify(ref.occurrences),
+			})
+			.execute();
 	}
 }
 
-export async function readReferences(
-	client: Queryable,
-	qSchema: string,
-	entryId: string,
-	state: "working" | "published",
-): Promise<Reference[]> {
-	const res = await client.query<ReferenceRow>(
-		`SELECT kind, target_id, is_stale, occurrences FROM "${qSchema}".entry_references
-		 WHERE entry_id = $1 AND state = $2 ORDER BY kind ASC, target_id ASC`,
-		[entryId, state],
-	);
-	return res.rows.map(mapReferenceRow);
+export async function readReferences(db: Db, entryId: string, state: "working" | "published"): Promise<Reference[]> {
+	const rows = await db
+		.selectFrom("entry_references")
+		.select(["kind", "target_id", "is_stale", "occurrences"])
+		.where("entry_id", "=", entryId)
+		.where("state", "=", state)
+		.orderBy("kind", "asc")
+		.orderBy("target_id", "asc")
+		.execute();
+	return rows.map(mapReferenceRow);
 }
 
-export async function readBody(
-	client: Queryable,
-	qSchema: string,
-	entryId: string,
-	state: "working" | "published",
-): Promise<BodyRow | undefined> {
-	const res = await client.query<Omit<BodyRow, "doc"> & { doc: unknown }>(
-		`SELECT metadata, mdx, doc, schema_version, content_hash, updated_at, translation FROM "${qSchema}".entry_bodies
-		 WHERE entry_id = $1 AND state = $2`,
-		[entryId, state],
-	);
-	const row = res.rows[0];
+export async function readBody(db: Db, entryId: string, state: "working" | "published"): Promise<BodyRow | undefined> {
+	const row = await db
+		.selectFrom("entry_bodies")
+		.select(["metadata", "mdx", "doc", "schema_version", "content_hash", "updated_at", "translation"])
+		.where("entry_id", "=", entryId)
+		.where("state", "=", state)
+		.executeTakeFirst();
 	return row && { ...row, doc: readBodyDoc(row.doc, row.mdx), translation: readTranslation(row.translation) };
 }
+
+/** The value a conflicting insert of `entry_bodies` proposed (`EXCLUDED.<column>`), for the `DO UPDATE` of `writeBody`. */
+const proposed = <T>(column: string) => sql.ref<T>(`excluded.${column}`);
 
 /** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is not written: `doc` is the only source of a body. */
 export async function writeBody(
 	site: Site,
-	client: PoolClient,
-	qSchema: string,
+	db: Db,
 	entryId: string,
 	state: "working" | "published",
 	body: {
@@ -292,72 +282,75 @@ export async function writeBody(
 		translation: TranslationState | null;
 	},
 ): Promise<void> {
-	await client.query(
-		`INSERT INTO "${qSchema}".entry_bodies (entry_id, state, metadata, doc, schema_version, content_hash, updated_at, search_text, translation)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		 ON CONFLICT (entry_id, state) DO UPDATE SET
-		   metadata = EXCLUDED.metadata, doc = EXCLUDED.doc, schema_version = EXCLUDED.schema_version,
-		   content_hash = EXCLUDED.content_hash, updated_at = EXCLUDED.updated_at, search_text = EXCLUDED.search_text,
-		   translation = EXCLUDED.translation`,
-		[
-			entryId,
+	await db
+		.insertInto("entry_bodies")
+		.values({
+			entry_id: entryId,
 			state,
-			JSON.stringify(body.metadata),
-			JSON.stringify(body.doc),
-			body.schemaVersion,
-			body.contentHash,
-			body.updatedAt,
-			extractVisibleText(site, body.doc),
-			body.translation === null ? null : JSON.stringify(body.translation),
-		],
-	);
+			metadata: JSON.stringify(body.metadata),
+			doc: JSON.stringify(body.doc),
+			schema_version: body.schemaVersion,
+			content_hash: body.contentHash,
+			updated_at: body.updatedAt,
+			search_text: extractVisibleText(site, body.doc),
+			translation: body.translation === null ? null : JSON.stringify(body.translation),
+		})
+		.onConflict((conflict) =>
+			conflict.columns(["entry_id", "state"]).doUpdateSet({
+				metadata: proposed<string>("metadata"),
+				doc: proposed<string>("doc"),
+				schema_version: proposed<number>("schema_version"),
+				content_hash: proposed<string>("content_hash"),
+				updated_at: proposed<Date>("updated_at"),
+				search_text: proposed<string>("search_text"),
+				translation: proposed<string | null>("translation"),
+			}),
+		)
+		.execute();
 }
 
-interface EntryRow {
-	id: string;
-	collection: string;
-	locale: string;
-	translation_group_id: string;
-	status: Entry["status"];
-	version: number;
-	folder_id: string | null;
-	created_at: Date;
-	entry_updated_at: Date;
-	changed_by: string | null;
-	changed_at: Date | null;
-	published_at: Date | null;
-	trashed_at: Date | null;
-	working_slug: string | null;
-	current_slug: string | null;
-	state: "working" | "published" | null;
-	metadata: EntryMetadata | null;
-	mdx: string | null;
-	doc: unknown;
-	schema_version: number | null;
-	content_hash: string | null;
-	body_updated_at: Date | null;
-	translation: TranslationState | null;
-}
-
-export async function loadEntry(client: Queryable, id: string, qSchema: string): Promise<Entry> {
-	const res = await client.query<EntryRow>(
-		`SELECT
-			e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
-			e.status, e.version, e.folder_id, e.created_at, e.updated_at as entry_updated_at,
-			e.changed_by, e.changed_at, e.published_at, e.trashed_at, e.working_slug,
-			(SELECT slug FROM "${qSchema}".content_addresses WHERE entry_id = e.id AND type = 'current') as current_slug,
-			b.state, b.metadata, b.mdx, b.doc, b.schema_version, b.content_hash, b.updated_at as body_updated_at, b.translation
-		 FROM "${qSchema}".entries e
-		 LEFT JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id
-		 WHERE e.id = $1`,
-		[id],
-	);
-	const first = res.rows[0];
+export async function loadEntry(db: Db, id: string): Promise<Entry> {
+	const rows = await db
+		.selectFrom("entries as e")
+		.leftJoin("entry_bodies as b", "e.id", "b.entry_id")
+		.select((eb) => [
+			"e.id",
+			"e.collection",
+			"e.locale",
+			sql<string>`coalesce(e.translation_group_id, e.id)`.as("translation_group_id"),
+			"e.status",
+			"e.version",
+			"e.folder_id",
+			"e.created_at",
+			"e.updated_at as entry_updated_at",
+			"e.changed_by",
+			"e.changed_at",
+			"e.published_at",
+			"e.trashed_at",
+			"e.working_slug",
+			eb
+				.selectFrom("content_addresses")
+				.select("slug")
+				.whereRef("entry_id", "=", "e.id")
+				.where("type", "=", "current")
+				.as("current_slug"),
+			"b.state",
+			"b.metadata",
+			"b.mdx",
+			"b.doc",
+			"b.schema_version",
+			"b.content_hash",
+			"b.updated_at as body_updated_at",
+			"b.translation",
+		])
+		.where("e.id", "=", id)
+		.execute();
+	const first = rows[0];
 	if (!first) throw new CmsError("Entry not found", "not_found");
 
 	let working: EntryBody | undefined;
 	let published: EntryBody | undefined;
-	for (const row of res.rows) {
+	for (const row of rows) {
 		if (row.state === null || row.metadata === null) continue;
 		if (row.schema_version === null || row.content_hash === null || row.body_updated_at === null) continue;
 		const body: EntryBody = {
@@ -406,19 +399,21 @@ export interface LockedEntryRow {
 }
 
 /** Locks the entry row with a version check. 404 if missing, 409 if the version differs. */
-export async function lockEntryForUpdate(
-	client: PoolClient,
-	qSchema: string,
-	id: string,
-	expectedVersion?: number,
-): Promise<LockedEntryRow> {
-	const res = await client.query<LockedEntryRow>(
-		`SELECT version, collection, locale, COALESCE(translation_group_id, id) AS translation_group_id,
-		        status, updated_at, working_slug
-		 FROM "${qSchema}".entries WHERE id = $1 FOR UPDATE`,
-		[id],
-	);
-	const row = res.rows[0];
+export async function lockEntryForUpdate(db: Db, id: string, expectedVersion?: number): Promise<LockedEntryRow> {
+	const row = await db
+		.selectFrom("entries")
+		.select([
+			"version",
+			"collection",
+			"locale",
+			sql<string>`coalesce(translation_group_id, id)`.as("translation_group_id"),
+			"status",
+			"updated_at",
+			"working_slug",
+		])
+		.where("id", "=", id)
+		.forUpdate()
+		.executeTakeFirst();
 	if (!row) throw new CmsError("Entry not found", "not_found");
 	if (expectedVersion !== undefined && row.version !== expectedVersion) {
 		throw new CmsError("Conflict", "conflict", row.version);
