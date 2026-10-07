@@ -706,13 +706,12 @@ A block added from a block view (`useBlockEditor().addChild`) follows the same l
 
 **Paste.** A pasted block that is not allowed is not inserted, but its text is: a text block (a heading of another level, a code block) becomes a paragraph, a container (a table, a quote, a callout) gives the paragraphs inside it, and a block with no text is dropped (a formula says its source, an image its description, a file its name). A mark that is not allowed is dropped from the text. The content is kept, only its form changes. Moving blocks inside the editor is not a paste and keeps them as they are.
 
-**Content that is already there.** The list only limits what a writer can add. A body that holds a block or mark that is no longer allowed opens, shows it, and saves it unchanged: nothing is stripped, and the writer can edit inside it, move it, duplicate it and delete it (the same rule as turning code block tools off). Only adding a type the body does not hold yet is refused.
+**Content that is already there.** The list only limits what a writer can add. A body that holds a block or mark that is no longer allowed opens, shows it, and saves it unchanged: nothing is stripped, and the writer can edit inside it, move it, duplicate it and delete it (the same rule as turning code block tools off). Nothing is refused or stripped by the server either.
 
 **Validation.**
 
-- Stored content that the list does not allow is a **publish warning**, never a blocker: `disallowed_block` (the block name, `heading 4` for a heading level) and `disallowed_mark`, each with the id of the block it is in (`position.blockId`).
-- A write that **introduces** a block or mark the list does not allow is rejected with `422` and code `disallowed_content`; its `issues` name each one with its block id. This covers every write path (the admin, the REST API, an MDX text, a template, a hook that adds a block).
-- **What is new.** The write is compared with the body it replaces (the stored draft), the way the values of removed fields are (keep what is stored, reject what is new). A disallowed type (a block name, a mark name, a heading level) is new when the stored draft holds none of that type, and it is kept, in any number, when it holds at least one. So a body written before the list changed can be edited, duplicated and saved, while a type the draft does not hold cannot be added. A new entry has no draft, so every disallowed item in it is new. A translation is compared with its source, which its skeleton copies.
+- Stored content that the list does not allow is a **warning on every save and on publish**, never a blocker: `disallowed_block` (the block name, `heading 4` for a heading level) and `disallowed_mark`, each with the id of the block it is in (`position.blockId`).
+- A write is **never rejected** for content the list does not allow, so the writer's other edits are always saved. Every save (the admin, the REST API, AI, bulk changes, a template) returns the same warnings, and the admin shows them like other save warnings. The editor (menus, input rules, paste conversion) is what keeps new content inside the list.
 
 ### Text color list
 

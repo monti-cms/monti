@@ -3,7 +3,7 @@ import { ALL_BLOCKS } from "../../../../blocks/src/definitions";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { defineCollection, defineConfig, fields } from "../../index";
-import { bodyVocabulary, disallowedInDocument, newlyDisallowed } from "../../schema/allowed";
+import { bodyVocabulary, disallowedInDocument } from "../../schema/allowed";
 import { createContentService } from "../../services/content-service";
 import { createSite } from "../../site";
 import { checkDocument } from "../body-check";
@@ -145,56 +145,39 @@ describe("what validation reports", () => {
 	});
 });
 
-describe("what a write may add", () => {
-	const allowed = site.schemaOf("memo").allowed;
+describe("what a save does with content the list does not allow", () => {
 	const held = doc(tabs, paragraph("p0000008", text("m", "italic")));
+	const disallowed = (snapshot: { warnings?: readonly { code: string }[] }) =>
+		(snapshot.warnings ?? []).map((issue) => issue.code).filter((code) => code.startsWith("disallowed_"));
 
-	it("keeps a type the stored draft holds, in any number, and rejects a type it does not hold", () => {
-		const more = doc(
-			tabs,
-			{ ...tabs, id: "tabsblk2" },
-			paragraph("p0000008", text("m", "italic"), text("n", "italic")),
-		);
-		expect(newlyDisallowed(site, allowed, more, held)).toEqual([]);
-		const added = doc(tabs, columns, paragraph("p0000008", text("m", "italic", "tooltip")));
-		expect(newlyDisallowed(site, allowed, added, held).map((item) => item.name)).toEqual(["columns", "tooltip"]);
+	it("never rejects a write that adds a disallowed block, and warns about it with the block id", async () => {
+		const snapshot = await prepareSnapshot(site, input(doc(columns)), { previousDoc: doc(callout) });
+		expect(snapshot.doc.content.map((node) => node.type)).toEqual(["columns"]);
+		expect(snapshot.warnings?.filter((issue) => issue.code === "disallowed_block")).toMatchObject([
+			{ message: "columns", position: { blockId: "columns1" } },
+		]);
 	});
 
-	it("treats every disallowed item of a new body as new", () => {
-		expect(newlyDisallowed(site, allowed, held, null)).toHaveLength(2);
-	});
-
-	it("rejects a write that adds a disallowed block, naming it and its block id", async () => {
-		const error = await prepareSnapshot(site, input(doc(columns)), { previousDoc: doc(callout) }).catch((e) => e);
-		expect(error).toMatchObject({
-			code: "disallowed_content",
-			issues: [{ code: "disallowed_block", message: "columns", position: { blockId: "columns1" } }],
-		});
-	});
-
-	it("accepts a write that keeps what the draft holds, and keeps it as written with a warning", async () => {
-		const snapshot = await prepareSnapshot(site, input(held), { previousDoc: held });
+	it("never rejects a new body, and keeps what it holds as written with warnings", async () => {
+		const snapshot = await prepareSnapshot(site, input(held));
 		expect(snapshot.doc.content.map((node) => node.type)).toEqual(["tabs", "paragraph"]);
 		expect(snapshot.doc.content[0]?.content?.[0]?.type).toBe("tab");
-		expect(
-			(snapshot.warnings ?? []).map((issue) => issue.code).filter((code) => code.startsWith("disallowed_")),
-		).toEqual(["disallowed_block", "disallowed_mark"]);
+		expect(disallowed(snapshot)).toEqual(["disallowed_block", "disallowed_mark"]);
+	});
+
+	it("gives the same warnings for a write that keeps what the draft holds", async () => {
+		const snapshot = await prepareSnapshot(site, input(held), { previousDoc: held });
+		expect(disallowed(snapshot)).toEqual(["disallowed_block", "disallowed_mark"]);
 	});
 
 	it("does not limit a collection without a list", async () => {
 		const snapshot = await prepareSnapshot(site, input(doc(tabs, columns), "post"));
-		expect((snapshot.warnings ?? []).filter((issue) => issue.code.startsWith("disallowed_"))).toEqual([]);
-	});
-
-	it("holds a translation of a body to the source's blocks, not to an empty draft", async () => {
-		const withSource = await prepareSnapshot(site, input(held), { allowedBaseline: held });
-		expect(withSource.doc.content).toHaveLength(2);
-		await expect(prepareSnapshot(site, input(held))).rejects.toMatchObject({ code: "disallowed_content" });
+		expect(disallowed(snapshot)).toEqual([]);
 	});
 });
 
 describe("the content service", () => {
-	it("creates a translation of an entry whose body holds a block that is no longer allowed", async () => {
+	it("creates a translation of an entry whose body holds a block that is not allowed", async () => {
 		const created: string[] = [];
 		const service = createContentService(
 			{

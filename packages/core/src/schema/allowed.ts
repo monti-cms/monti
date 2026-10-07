@@ -7,8 +7,8 @@ import type { CmsNode } from "../doc/types";
  * rules, paste) and by validation, so they cannot disagree. A body field without a list allows everything.
  *
  * The list only limits what a writer can **add**. A body that already holds a block or mark that is not allowed keeps it: the editor opens it, shows it
- * and saves it unchanged, and validation reports it as a warning that does not block publishing. Only a write that introduces a type the stored draft does
- * not hold is rejected (see {@link newlyDisallowed}).
+ * and saves it unchanged. Validation reports what the list does not allow as a warning on every save and publish, and never rejects a write: the editor
+ * (menus, input rules, paste) is what keeps new content inside the list.
  */
 
 /** The heading levels a body can hold. */
@@ -158,10 +158,6 @@ export interface DisallowedItem {
 	readonly blockId?: string;
 }
 
-/** The key two items of the same kind of content share (`block:callout`, `mark:bold`, `block:heading:4`). */
-export const disallowedKey = (item: DisallowedItem): string =>
-	item.level === undefined ? `${item.kind}:${item.name}` : `${item.kind}:${item.name}:${item.level}`;
-
 const isTaskList = (node: CmsNode): boolean =>
 	node.type === "bulletList" &&
 	(node.content ?? []).length > 0 &&
@@ -251,22 +247,4 @@ export function disallowedInDocument(
 	};
 	for (const node of content) visit(node, undefined);
 	return found;
-}
-
-/**
- * The disallowed items of `next` that are new: their type (a block name, a mark name, a heading level) is not held by `previous`, the body the write
- * replaces. A type the stored draft already holds is kept, in any number, so a body that was written before the list changed can still be edited, duplicated
- * and saved; a type it does not hold cannot be added. This is the rule the values of removed fields follow (#94): keep what is stored, reject what is new.
- * A new body (no `previous`) holds nothing, so every disallowed item in it is new.
- */
-export function newlyDisallowed(
-	site: Pick<BodyRulesSite, "BLOCK_BY_NAME" | "BLOCKS">,
-	allowed: BodyAllowed | undefined,
-	next: StoredDocument,
-	previous: StoredDocument | null | undefined,
-): DisallowedItem[] {
-	const found = disallowedInDocument(site, allowed, next);
-	if (found.length === 0) return found;
-	const held = new Set((previous ? disallowedInDocument(site, allowed, previous) : []).map(disallowedKey));
-	return found.filter((item) => !held.has(disallowedKey(item)));
 }

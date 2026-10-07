@@ -160,8 +160,6 @@ export const createContentService = <T = unknown>(
 					doc: withTranslationHints(site, source.doc),
 					translation: confirmedSourceState(source.doc),
 				} as ServiceInput,
-				// The skeleton carries the source's blocks, so a block the body no longer allows is kept in the translation when the source holds it.
-				prepare: { allowedBaseline: source.doc },
 			});
 			const entry = await storePort.createEntryWithReferences({
 				snapshot,

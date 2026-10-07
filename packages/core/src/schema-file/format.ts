@@ -187,7 +187,7 @@ const bodyAllowed = z
 			.describe("Allowed heading levels (1 to 6). The editor offers levels 2 to 4. Left out: all levels."),
 	})
 	.describe(
-		"What the body allows. The editor offers only these, and publishing warns about stored content that is not listed (it is kept as it is). A write that adds a type the draft does not hold is rejected.",
+		"What the body allows. The editor offers only these, and every save and publish warns about stored content that is not listed (it is kept as it is and never rejected).",
 	);
 
 const collection = z.strictObject({

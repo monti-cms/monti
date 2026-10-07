@@ -41,8 +41,6 @@ const SERVICE_ERROR_STATUS: Record<string, number> = {
 	slug_reserved: 409,
 	body_too_large: 413,
 	metadata_too_large: 413,
-	// The body adds a block or mark its collection does not allow: the request is understood, but the content is refused (`issues` name each one).
-	disallowed_content: 422,
 	// The `format` option names a format no plugin provides, or one that can only write text.
 	unknown_format: 400,
 	format_not_importable: 400,
