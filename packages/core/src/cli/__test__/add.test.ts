@@ -204,6 +204,46 @@ describe("monti add", () => {
 		);
 	});
 
+	describe("{app} in a target", () => {
+		const reg = () =>
+			registry({
+				page: {
+					name: "page",
+					files: [
+						{ path: "items/page/page.tsx", target: "~/{app}/(site)/blog/page.tsx", content: "export default 1;\n" },
+					],
+				},
+				typo: { name: "typo", files: [{ path: "items/typo/x.ts", target: "~/{apps}/x.ts", content: "" }] },
+			});
+		const install = (host: string, name = "page") =>
+			addComponents({ cwd: host, names: [name], registry: reg(), install: () => {} });
+
+		it("is `app` in an app without src/", async () => {
+			const host = temp("host", HOST_FILES);
+			await install(host);
+			expect(read(host, "app/(site)/blog/page.tsx")).toBe("export default 1;\n");
+		});
+
+		it("is `src/app` when the app has src/app, or src/ and no app/", async () => {
+			const withSrcApp = temp("host", { ...HOST_FILES, "src/app/layout.tsx": "" });
+			await install(withSrcApp);
+			expect(read(withSrcApp, "src/app/(site)/blog/page.tsx")).toBe("export default 1;\n");
+			const withSrc = temp("host", { ...HOST_FILES, "src/lib/x.ts": "" });
+			await install(withSrc);
+			expect(read(withSrc, "src/app/(site)/blog/page.tsx")).toBe("export default 1;\n");
+		});
+
+		it("is `app` when both app/ and src/ exist", async () => {
+			const host = temp("host", { ...HOST_FILES, "app/layout.tsx": "", "src/lib/x.ts": "" });
+			await install(host);
+			expect(read(host, "app/(site)/blog/page.tsx")).toBe("export default 1;\n");
+		});
+
+		it("rejects an unknown placeholder instead of writing a folder named after it", async () => {
+			await expect(install(temp("host", HOST_FILES), "typo")).rejects.toThrow(/Unknown placeholder \{apps\}/);
+		});
+	});
+
 	describe("overwrite guard", () => {
 		it("refuses to replace a file the user changed, writes nothing at all, and says which files", async () => {
 			const host = temp("host", HOST_FILES);
@@ -435,6 +475,7 @@ describe("the registry of this repo", () => {
 					"@monti-cms/admin/hooks",
 					"@monti-cms/core/render",
 					"@monti-cms/core/client",
+					"@monti-cms/core/read",
 					"@monti-cms/nextjs",
 				]).toContain(specifier);
 		}
@@ -444,5 +485,53 @@ describe("the registry of this repo", () => {
 		// Every package the components import is declared, so `monti add` installs it.
 		const declared = commands.flatMap((c) => c.args);
 		for (const pkg of ["@monti-cms/admin", "@monti-cms/core", "react"]) expect(declared).toContain(pkg);
+	});
+
+	describe("blog-theme", () => {
+		const item = JSON.parse(readFileSync(path.join(registryDir, "blog-theme.json"), "utf8")) as {
+			registryDependencies?: string[];
+			dependencies?: string[];
+			files: { path: string; target?: string; content: string }[];
+		};
+
+		it("needs article-body and puts its pages under app/(site)/blog through {app}", () => {
+			expect(item.registryDependencies).toContain("article-body");
+			const targets = item.files.flatMap((file) => (file.target ? [file.target] : []));
+			expect(targets.sort()).toEqual(["~/{app}/(site)/blog/[slug]/page.tsx", "~/{app}/(site)/blog/page.tsx"]);
+		});
+
+		it("never imports the admin packages or any stylesheet: it draws with the host's own Tailwind", () => {
+			const imports = item.files.flatMap((file) =>
+				[...file.content.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map((match) => match[1] ?? ""),
+			);
+			expect(imports.length).toBeGreaterThan(0);
+			for (const specifier of imports) {
+				expect(specifier).not.toMatch(/^@monti-cms\/admin/);
+				expect(specifier).not.toMatch(/\.css$/);
+				expect(specifier).not.toMatch(/styles/);
+			}
+			expect(item.dependencies?.some((name) => name.startsWith("@monti-cms/admin"))).toBe(false);
+		});
+
+		it("installs a working set of pages into a Next app: theme.config.ts, the parts, and the two route files", async () => {
+			const host = temp("host", {
+				"package.json": json({ name: "site" }),
+				"tsconfig.json": HOST_FILES["tsconfig.json"],
+			});
+			const report = await addComponents({
+				cwd: host,
+				names: ["blog-theme"],
+				registry: registryDir,
+				install: () => {},
+			});
+			expect(report.items).toEqual(["article-body", "blog-theme"]);
+			expect(report.created).toContain("app/(site)/blog/page.tsx");
+			expect(report.created).toContain("app/(site)/blog/[slug]/page.tsx");
+			expect(report.created).toContain("src/components/monti/blog-theme/theme.config.ts");
+			expect(read(host, "app/(site)/blog/[slug]/page.tsx")).toContain(`from "@/components/monti/blog-theme/blog-post"`);
+			expect(read(host, "src/components/monti/blog-theme/blog-post.tsx")).toContain(
+				`from "@/components/monti/article-body/article-body"`,
+			);
+		});
 	});
 });

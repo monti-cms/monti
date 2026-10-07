@@ -14,8 +14,9 @@
 		"types": ["node"],
 		"paths": {
 			"@cms-config": ["../packages/core/test/cms.config.ts"],
-			"@/registry/monti/*": ["./items/*"]
+			"@/registry/monti/*": ["./items/*"],
+			"@/cms.server": ["./typecheck/cms.server.ts"]
 		}
 	},
-	"include": ["items"]
+	"include": ["items", "typecheck"]
 }
