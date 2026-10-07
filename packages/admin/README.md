@@ -65,6 +65,7 @@ involved in loading it into the editor or saving it from there.
   replaces what it shows (the same words with other block ids or key order leave it alone). `storedToTiptap(doc)` and `tiptapToStored(json)` in `@monti-cms/admin/editor`
   convert directly. A node the editor has no edit view for, and a body that could not be read as a document (one `unparsed` node), is kept whole in a read-only box
   (`cmsOpaqueBlock`), so nothing is lost.
+- `CmsEditor` takes `allowed` (the object form of a collection's `body`: `blocks`, `marks`, `headings`; the edit screen passes the collection's). It then offers and accepts only those (toolbar, slash and component menus, the text bubble, input rules, shortcuts, paste), while a body that already holds something else still opens and saves unchanged. See "Allowed blocks and marks per body" in the `@monti-cms/core` README.
 - The edit screen's form holds the body as `form.doc` (the draft, the browser recovery copy and the conflict comparison all see the document, compared by what it says:
   block ids and key order do not count). Recovery copies saved before that, with the body as MDX text in `form.mdx`, still restore: they are kept as an `unparsed` document, and the source panel of the `mdx()` plugin (`@monti-cms/mdx`) reads them again when it is open.
 - `DocPreview` (`@monti-cms/admin/editor`) is the read-only view of a document the translation screen shows the source in, and AI shows results in.

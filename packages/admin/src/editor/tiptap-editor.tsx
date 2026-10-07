@@ -1,6 +1,6 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type BodyAllowed, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
 import type { Editor, Range } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -57,10 +57,12 @@ import { IconButton } from "../ui/icon-button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { type EditorAllowance, editorAllowance, OPEN_ALLOWANCE } from "./allowed";
+import { ALLOWED_BYPASS_META } from "./allowed-extension";
 import { deleteBlock, duplicateBlock, moveBlock } from "./block-commands";
 import { BlockHandleOverlay } from "./block-handle-overlay";
 import { CodeLinkBar } from "./code-block/code-link-bar";
-import { CustomBlockMenu, CustomBlockMenuItems } from "./custom-block-menu";
+import { CustomBlockMenu, CustomBlockMenuItems, offeredBlocks } from "./custom-block-menu";
 import { documentKey } from "./document-key";
 import { endBlockDrag, findBlockDOM, refineBlock, resolveTargetBlock, startBlockDrag, startMarquee } from "./drag";
 import { EDITOR_WIDTHS, EditorWidthMenu, useEditorWidth } from "./editor-width";
@@ -113,6 +115,11 @@ interface CmsEditorProps {
 	selectionActions?: readonly EditorSelectionAction[];
 	/** Insert actions to add to the slash menu (plugins). */
 	insertActions?: readonly EditorInsertAction[];
+	/**
+	 * The blocks, marks and heading levels the body allows (`body` of the collection in the schema). The editor offers and accepts only these (toolbar, menus,
+	 * input rules, paste); a body that already holds something else still opens and saves unchanged. Without it, everything is allowed.
+	 */
+	allowed?: BodyAllowed;
 }
 
 /** Action beside the block handle. `pos` is the position of the block the handle points to. */
@@ -131,26 +138,33 @@ type Coords = { top: number; left: number };
 const chain = (editor: Editor) => editor.chain().focus();
 
 /** Block shape dropdown. The current block's shape name becomes the dropdown name. */
-const BLOCK_STYLES = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[] => [
+const BLOCK_STYLES = (
+	t: TranslatorFor<typeof editorMessages>,
+	allowance: EditorAllowance = OPEN_ALLOWANCE,
+): ToolbarItem[] => [
 	{
 		label: t("toolbar.paragraph"),
 		icon: Pilcrow,
 		isActive: (e) => e.isActive("paragraph"),
 		run: (e) => chain(e).setParagraph().run(),
 	},
-	...([2, 3, 4] as const).map((level) => ({
-		label: `H${level}`,
-		title: t("toolbar.heading", { level }),
-		icon: { 2: Heading2, 3: Heading3, 4: Heading4 }[level],
-		isActive: (e: Editor) => e.isActive("heading", { level }),
-		run: (e: Editor) => chain(e).setHeading({ level }).run(),
-	})),
+	...([2, 3, 4] as const)
+		.filter((level) => allowance.allowsHeading(level))
+		.map((level) => ({
+			label: `H${level}`,
+			title: t("toolbar.heading", { level }),
+			icon: { 2: Heading2, 3: Heading3, 4: Heading4 }[level],
+			isActive: (e: Editor) => e.isActive("heading", { level }),
+			run: (e: Editor) => chain(e).setHeading({ level }).run(),
+		})),
 ];
 
 /** Superscript/subscript marks, rarely used and grouped into one dropdown. */
 const SCRIPT_MARKS = ["superscript", "subscript"];
-const inlineTools = (site: Site) => inlineMarkTools(site).filter((tool) => !SCRIPT_MARKS.includes(tool.mark));
-const scriptTools = (site: Site) => inlineMarkTools(site).filter((tool) => SCRIPT_MARKS.includes(tool.mark));
+const inlineTools = (site: Site, allowance: EditorAllowance = OPEN_ALLOWANCE) =>
+	inlineMarkTools(site).filter((tool) => !SCRIPT_MARKS.includes(tool.mark) && allowance.allowsMark(tool.mark));
+const scriptTools = (site: Site, allowance: EditorAllowance = OPEN_ALLOWANCE) =>
+	inlineMarkTools(site).filter((tool) => SCRIPT_MARKS.includes(tool.mark) && allowance.allowsMark(tool.mark));
 /** Order in which text-style buttons are hidden (largest first). Marks not listed get 5. Bold and italic are never hidden. */
 const INLINE_PRIORITY: Readonly<Record<string, number>> = { bold: 0, italic: 0, strike: 6, code: 4, underline: 5 };
 const PINNED_INLINE_MARKS = ["bold", "italic"];
@@ -186,7 +200,10 @@ const ALIGN_TOOLS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[] => 
 ];
 
 /** List dropdown. The current block's list type becomes the dropdown name and icon. */
-const LIST_STYLES = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[] => [
+const LIST_STYLES = (
+	t: TranslatorFor<typeof editorMessages>,
+	allowance: EditorAllowance = OPEN_ALLOWANCE,
+): ToolbarItem[] => [
 	{
 		label: t("toolbar.bulletLabel"),
 		title: t("toolbar.bullet"),
@@ -201,45 +218,58 @@ const LIST_STYLES = (t: TranslatorFor<typeof editorMessages>): ToolbarItem[] => 
 		isActive: (e) => e.isActive("orderedList"),
 		run: (e) => chain(e).toggleOrderedList().run(),
 	},
-	{
-		label: t("toolbar.todoLabel"),
-		title: t("toolbar.todo"),
-		icon: ListTodo,
-		isActive: (e) => e.isActive("taskList"),
-		run: (e) => chain(e).toggleTaskList().run(),
-	},
+	...(allowance.allowsBlock("taskList")
+		? [
+				{
+					label: t("toolbar.todoLabel"),
+					title: t("toolbar.todo"),
+					icon: ListTodo,
+					isActive: (e: Editor) => e.isActive("taskList"),
+					run: (e: Editor) => chain(e).toggleTaskList().run(),
+				},
+			]
+		: []),
 ];
 
 /** Block insert buttons and the order they are hidden (largest first). Lists are 2, components are 4. */
-const INSERT_TOOLS = (t: TranslatorFor<typeof editorMessages>): { tool: ToolbarItem; priority: number }[] => [
-	{
-		priority: 6,
-		tool: {
-			label: t("toolbar.quoteLabel"),
-			title: t("toolbar.quote"),
-			icon: Quote,
-			isActive: (e) => e.isActive("blockquote"),
-			run: (e) => chain(e).toggleBlockquote().run(),
+const INSERT_TOOLS = (
+	t: TranslatorFor<typeof editorMessages>,
+	allowance: EditorAllowance = OPEN_ALLOWANCE,
+): { tool: ToolbarItem; priority: number }[] => {
+	const tools: { block: string; tool: ToolbarItem; priority: number }[] = [
+		{
+			block: "blockquote",
+			priority: 6,
+			tool: {
+				label: t("toolbar.quoteLabel"),
+				title: t("toolbar.quote"),
+				icon: Quote,
+				isActive: (e) => e.isActive("blockquote"),
+				run: (e) => chain(e).toggleBlockquote().run(),
+			},
 		},
-	},
-	{
-		priority: 3,
-		tool: {
-			label: t("toolbar.codeBlock"),
-			icon: SquareCode,
-			isActive: (e) => e.isActive("codeBlock"),
-			run: (e) => chain(e).toggleCodeBlock().run(),
+		{
+			block: "codeBlock",
+			priority: 3,
+			tool: {
+				label: t("toolbar.codeBlock"),
+				icon: SquareCode,
+				isActive: (e) => e.isActive("codeBlock"),
+				run: (e) => chain(e).toggleCodeBlock().run(),
+			},
 		},
-	},
-	{
-		priority: 7,
-		tool: {
-			label: t("toolbar.table"),
-			icon: Table2,
-			run: (e) => chain(e).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+		{
+			block: "table",
+			priority: 7,
+			tool: {
+				label: t("toolbar.table"),
+				icon: Table2,
+				run: (e) => chain(e).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+			},
 		},
-	},
-];
+	];
+	return tools.filter((item) => allowance.allowsBlock(item.block));
+};
 
 /** Inline footnote reference (plus its definition at the end of the page), the same action as the slash command. */
 const FOOTNOTE_TOOL = (t: TranslatorFor<typeof editorMessages>): ToolbarItem => ({
@@ -399,13 +429,16 @@ export function CmsEditor({
 	onEditor,
 	selectionActions,
 	insertActions,
+	allowed,
 }: CmsEditorProps) {
 	const site = useSite();
 	const t = useTranslator(editorMessages);
+	// What the body's allowed list lets a writer add. A body that already holds more still opens and saves as it is.
+	const allowance = useMemo(() => editorAllowance(site, allowed), [site, allowed]);
 	const isSourceMode = sourceView != null && sourceView !== false;
 	// Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formatting tools, and slash menu items.
 	const { marks: markSpecs = {} } = useCmsAdminComponents();
-	const allMarkExtensions = useMarkExtensions();
+	const allMarkExtensions = useMarkExtensions().filter(({ name }) => allowance.allowsEditorMark(name));
 	// While source is being edited, the visual editor is paused. Toolbar tools are locked too.
 	const canEdit = editable && !isSourceMode;
 	const { media } = useAdminFeatures();
@@ -517,7 +550,7 @@ export function CmsEditor({
 	const editor = useEditor({
 		immediatelyRender: false,
 		editable: canEdit,
-		extensions: buildEditorExtensions(site, markSpecs),
+		extensions: buildEditorExtensions(site, markSpecs, allowance),
 		content: initialContent,
 		editorProps: {
 			attributes: {
@@ -566,7 +599,13 @@ export function CmsEditor({
 
 				const openSlash = slashRef.current;
 				if (openSlash) {
-					const filtered = filterCommands(site, openSlash.query, extraCommandsRef.current, inlineCommandsRef.current);
+					const filtered = filterCommands(
+						site,
+						openSlash.query,
+						extraCommandsRef.current,
+						inlineCommandsRef.current,
+						allowance,
+					);
 					if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 						event.preventDefault();
 						const step = event.key === "ArrowDown" ? 1 : -1;
@@ -627,6 +666,7 @@ export function CmsEditor({
 		},
 	});
 
+	// The names of the current block and list come from every kind, also the ones the list no longer offers: a body keeps what it holds.
 	const blockStyle = editor
 		? (BLOCK_STYLES(t).find((item) => item.isActive?.(editor))?.label ?? t("toolbar.paragraph"))
 		: t("toolbar.paragraph");
@@ -645,7 +685,8 @@ export function CmsEditor({
 			// Blocks keep the ids the document gives them.
 			const next = storedToTiptap(site, doc, { boxPreview });
 			isInternalUpdateRef.current = true;
-			editor.commands.setContent(next, { emitUpdate: false });
+			// What is stored is shown as it is: the allowed list limits what a writer adds, never what a body already holds.
+			editor.chain().setMeta(ALLOWED_BYPASS_META, true).setContent(next, { emitUpdate: false }).run();
 			isInternalUpdateRef.current = false;
 		});
 		return () => {
@@ -885,14 +926,18 @@ export function CmsEditor({
 	});
 	const UploadMenuItems = () => (
 		<>
-			<DropdownMenuItem disabled={!canEdit} onClick={() => setImageDialog({ file: null })}>
-				<ImageIcon aria-hidden className="size-4" />
-				<span className="flex-1">{t("toolbar.image")}</span>
-			</DropdownMenuItem>
-			<DropdownMenuItem disabled={!canEdit} onClick={() => fileInputRef.current?.click()}>
-				<Paperclip aria-hidden className="size-4" />
-				<span className="flex-1">{t("toolbar.file")}</span>
-			</DropdownMenuItem>
+			{allowance.allowsBlock("image") && (
+				<DropdownMenuItem disabled={!canEdit} onClick={() => setImageDialog({ file: null })}>
+					<ImageIcon aria-hidden className="size-4" />
+					<span className="flex-1">{t("toolbar.image")}</span>
+				</DropdownMenuItem>
+			)}
+			{allowance.allowsBlock("file") && (
+				<DropdownMenuItem disabled={!canEdit} onClick={() => fileInputRef.current?.click()}>
+					<Paperclip aria-hidden className="size-4" />
+					<span className="flex-1">{t("toolbar.file")}</span>
+				</DropdownMenuItem>
+			)}
 		</>
 	);
 	// Order to hide when narrow: larger priority first. fixed is never hidden (popover tools lose their anchor inside the menu).
@@ -902,11 +947,13 @@ export function CmsEditor({
 			key: "block-style",
 			priority: 0,
 			fixed: true,
-			render: () => <ToolbarDropdown editor={editor} label={blockStyle} items={BLOCK_STYLES(t)} />,
+			render: () => <ToolbarDropdown editor={editor} label={blockStyle} items={BLOCK_STYLES(t, allowance)} />,
 		},
-		dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? AlignLeft),
+		...(allowance.allowsBlock("text-align")
+			? [dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? AlignLeft)]
+			: []),
 		{ key: "divider-block", divider: true },
-		...inlineTools(site).map((tool) =>
+		...inlineTools(site, allowance).map((tool) =>
 			buttonSlot(tool, tool.mark, INLINE_PRIORITY[tool.mark] ?? 5, PINNED_INLINE_MARKS.includes(tool.mark)),
 		),
 		// Formatting tools of text-style extensions (block extension text color, tooltip, etc.).
@@ -924,7 +971,9 @@ export function CmsEditor({
 				},
 			];
 		}),
-		dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site), Superscript),
+		...(scriptTools(site, allowance).length > 0
+			? [dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site, allowance), Superscript)]
+			: []),
 		{ key: "divider-inline", divider: true },
 		{ key: "divider-list", divider: true },
 		{ key: "divider-insert", divider: true },
@@ -932,81 +981,93 @@ export function CmsEditor({
 			"list",
 			2,
 			activeList?.title ?? t("toolbar.list"),
-			LIST_STYLES(t),
+			LIST_STYLES(t, allowance),
 			activeList?.icon ?? List,
 			t("toolbar.list"),
 		),
-		...INSERT_TOOLS(t).map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),
-		{
-			key: "custom-block",
-			priority: 4,
-			render: () => <CustomBlockMenu editor={editor} />,
-			menu: () => (
-				<ToolbarMenuSection label={t("toolbar.components")}>
-					<CustomBlockMenuItems editor={editor} />
-				</ToolbarMenuSection>
-			),
-		},
-		{
-			key: "upload",
-			// Hide later than underline (5). With the same priority, right-hand tools hide first.
-			priority: 4,
-			render: () => (
-				<DropdownMenu>
-					<IconButton
-						label={t("toolbar.upload")}
-						side="bottom"
-						disabled={!canEdit}
-						onMouseDown={(event) => event.preventDefault()}
-						trigger={(button) => <DropdownMenuTrigger render={button} />}
-					>
-						<Upload className="size-4" aria-hidden />
-					</IconButton>
-					<DropdownMenuContent align="start" className="w-40">
-						<UploadMenuItems />
-					</DropdownMenuContent>
-				</DropdownMenu>
-			),
-			menu: () => <UploadMenuItems />,
-		},
-		{
-			key: "link",
-			priority: 0,
-			fixed: true,
-			render: () => (
-				<Popover
-					open={linkDraft !== null}
-					onOpenChange={(open) => setLinkDraft(open ? linkDraftFromSelection(editor) : null)}
-				>
-					<Tooltip>
-						<TooltipTrigger
-							render={
-								<PopoverTrigger
-									render={
-										<Toggle
-											size="sm"
-											pressed={editor.isActive("link")}
-											disabled={!canEdit}
-											aria-label={t("toolbar.link")}
-											onMouseDown={(event) => event.preventDefault()}
-											className="size-8 p-0"
-										/>
-									}
+		...INSERT_TOOLS(t, allowance).map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),
+		...(offeredBlocks(site, editor).length > 0
+			? [
+					{
+						key: "custom-block",
+						priority: 4,
+						render: () => <CustomBlockMenu editor={editor} />,
+						menu: () => (
+							<ToolbarMenuSection label={t("toolbar.components")}>
+								<CustomBlockMenuItems editor={editor} />
+							</ToolbarMenuSection>
+						),
+					},
+				]
+			: []),
+		...(allowance.allowsBlock("image") || allowance.allowsBlock("file")
+			? [
+					{
+						key: "upload",
+						// Hide later than underline (5). With the same priority, right-hand tools hide first.
+						priority: 4,
+						render: () => (
+							<DropdownMenu>
+								<IconButton
+									label={t("toolbar.upload")}
+									side="bottom"
+									disabled={!canEdit}
+									onMouseDown={(event) => event.preventDefault()}
+									trigger={(button) => <DropdownMenuTrigger render={button} />}
 								>
-									<Link2 aria-hidden className="size-4" />
-								</PopoverTrigger>
-							}
-						/>
-						<TooltipContent side="bottom">{t("toolbar.link")}</TooltipContent>
-					</Tooltip>
-					<PopoverContent align="start" className="w-80">
-						{linkDraft && <LinkForm editor={editor} draft={linkDraft} onDone={() => setLinkDraft(null)} />}
-					</PopoverContent>
-				</Popover>
-			),
-		},
-		buttonSlot(FOOTNOTE_TOOL(t), FOOTNOTE_TOOL(t).label, 5),
-		buttonSlot(DIVIDER_TOOL(t), "divider-tool", 8),
+									<Upload className="size-4" aria-hidden />
+								</IconButton>
+								<DropdownMenuContent align="start" className="w-40">
+									<UploadMenuItems />
+								</DropdownMenuContent>
+							</DropdownMenu>
+						),
+						menu: () => <UploadMenuItems />,
+					},
+				]
+			: []),
+		...(allowance.allowsMark("link")
+			? [
+					{
+						key: "link",
+						priority: 0,
+						fixed: true,
+						render: () => (
+							<Popover
+								open={linkDraft !== null}
+								onOpenChange={(open) => setLinkDraft(open ? linkDraftFromSelection(editor) : null)}
+							>
+								<Tooltip>
+									<TooltipTrigger
+										render={
+											<PopoverTrigger
+												render={
+													<Toggle
+														size="sm"
+														pressed={editor.isActive("link")}
+														disabled={!canEdit}
+														aria-label={t("toolbar.link")}
+														onMouseDown={(event) => event.preventDefault()}
+														className="size-8 p-0"
+													/>
+												}
+											>
+												<Link2 aria-hidden className="size-4" />
+											</PopoverTrigger>
+										}
+									/>
+									<TooltipContent side="bottom">{t("toolbar.link")}</TooltipContent>
+								</Tooltip>
+								<PopoverContent align="start" className="w-80">
+									{linkDraft && <LinkForm editor={editor} draft={linkDraft} onDone={() => setLinkDraft(null)} />}
+								</PopoverContent>
+							</Popover>
+						),
+					},
+				]
+			: []),
+		...(allowance.allowsBlock("footnotes") ? [buttonSlot(FOOTNOTE_TOOL(t), FOOTNOTE_TOOL(t).label, 5)] : []),
+		...(allowance.allowsBlock("horizontalRule") ? [buttonSlot(DIVIDER_TOOL(t), "divider-tool", 8)] : []),
 	];
 	const toolbarEntries = orderToolbar(t, unordered);
 
@@ -1105,7 +1166,7 @@ export function CmsEditor({
 				}}
 				onPaste={(event) => {
 					const file = imageFileFrom(event.clipboardData.items);
-					if (file && canEdit) {
+					if (file && canEdit && allowance.allowsBlock("image")) {
 						event.preventDefault();
 						setImageDialog({ file });
 					}
@@ -1113,14 +1174,14 @@ export function CmsEditor({
 				onDrop={(event) => {
 					if (!canEdit) return;
 					const file = imageFileFrom(event.dataTransfer.files);
-					if (file) {
+					if (file && allowance.allowsBlock("image")) {
 						event.preventDefault();
 						setImageDialog({ file });
 						return;
 					}
 					// Non-image files are inserted as file cards where they are dropped.
 					const attachments = attachmentsFrom(event.dataTransfer.files);
-					if (attachments.length > 0) {
+					if (attachments.length > 0 && allowance.allowsBlock("file")) {
 						event.preventDefault();
 						const at = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
 						void uploadAttachments(attachments, at);
@@ -1136,7 +1197,7 @@ export function CmsEditor({
 
 			{slash && !isSourceMode && (
 				<SlashMenuPopup
-					items={filterCommands(site, slash.query, extraCommands, inlineCommands)}
+					items={filterCommands(site, slash.query, extraCommands, inlineCommands, allowance)}
 					coords={slash.coords}
 					selectedIndex={slash.index}
 					onSelect={(command) => {

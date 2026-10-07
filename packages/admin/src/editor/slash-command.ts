@@ -19,6 +19,7 @@ import {
 	Table2,
 } from "lucide-react";
 import type { TranslatorFor } from "../translator";
+import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
 import {
 	type BlockInsertAction,
 	blockInsertActions,
@@ -47,13 +48,23 @@ export interface SlashCommandItem {
 	title: string;
 	description: string;
 	keywords: string[];
+	/** The block this item inserts, by its name in the body's allowed list (`table`, `callout`, ...). The item is left out where the list does not allow it. */
+	block?: string;
+	/** The heading level this item sets. The item is left out where the list does not allow that level. */
+	heading?: number;
 	action: (editor: Editor, range: Range) => void;
 }
+
+/** Whether the allowed list of the body lets this item be offered. */
+export const isOffered = (item: SlashCommandItem, allowance: EditorAllowance): boolean =>
+	(item.block === undefined || allowance.allowsBlock(item.block)) &&
+	(item.heading === undefined || allowance.allowsHeading(item.heading));
 
 const HEADING_ICONS = { 2: Heading2, 3: Heading3, 4: Heading4 } as const;
 
 const heading = (t: TranslatorFor<typeof editorMessages>, level: 2 | 3 | 4): SlashCommandItem => ({
 	title: t(`slash.h${level}.title`),
+	heading: level,
 	icon: HEADING_ICONS[level],
 	description: t(`slash.h${level}.description`),
 	keywords: [
@@ -103,6 +114,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.todo.title"),
+		block: "taskList",
 		description: t("slash.todo.description"),
 		icon: ListTodo,
 		keywords: keywordList(t, "slash.todo.keywords"),
@@ -112,6 +124,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.quote.title"),
+		block: "blockquote",
 		description: t("slash.quote.description"),
 		icon: Quote,
 		keywords: keywordList(t, "slash.quote.keywords"),
@@ -121,6 +134,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.code.title"),
+		block: "codeBlock",
 		description: t("slash.code.description"),
 		icon: SquareCode,
 		keywords: keywordList(t, "slash.code.keywords"),
@@ -130,6 +144,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.table.title"),
+		block: "table",
 		description: t("slash.table.description"),
 		icon: Table2,
 		keywords: keywordList(t, "slash.table.keywords"),
@@ -139,6 +154,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.divider.title"),
+		block: "horizontalRule",
 		description: t("slash.divider.description"),
 		icon: Minus,
 		keywords: keywordList(t, "slash.divider.keywords"),
@@ -148,6 +164,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.image.title"),
+		block: "image",
 		description: t("slash.image.description"),
 		icon: Image,
 		keywords: keywordList(t, "slash.image.keywords"),
@@ -158,6 +175,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.file.title"),
+		block: "file",
 		description: t("slash.file.description"),
 		icon: Paperclip,
 		keywords: keywordList(t, "slash.file.keywords"),
@@ -177,6 +195,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.footnote.title"),
+		block: "footnotes",
 		description: t("slash.footnote.description"),
 		icon: Superscript,
 		keywords: keywordList(t, "slash.footnote.keywords"),
@@ -214,6 +233,7 @@ export function buildBlockSlashCommands(
 
 		items.push({
 			id: nodeView,
+			block: block.name,
 			title: block.label,
 			description: block.description ?? t("slash.blockDescription", { label: block.label }),
 			keywords: block.editor.keywords ? [...block.editor.keywords] : [block.label, block.name],
@@ -243,16 +263,19 @@ export const slashCommands = (site: Site): SlashCommandItem[] => slashTablesOf(s
 
 /**
  * Slash menu items. `extra` are items added by edit view extensions (plugins) (appended after), and `inline` are items added by text decoration extensions
- * (after the basic text formatting items, before block items).
+ * (after the basic text formatting items, before block items). `allowance` is what the body's allowed list lets a writer add.
  */
 export function filterCommands(
 	site: Site,
 	query: string,
 	extra: readonly SlashCommandItem[] = [],
 	inline: readonly SlashCommandItem[] = [],
+	allowance: EditorAllowance = OPEN_ALLOWANCE,
 ): SlashCommandItem[] {
 	const { base, blocks, all } = slashTablesOf(site);
-	const commands = extra.length > 0 || inline.length > 0 ? [...base, ...inline, ...blocks, ...extra] : all;
+	const listed = extra.length > 0 || inline.length > 0 ? [...base, ...inline, ...blocks, ...extra] : all;
+	// Only what the body's allowed list lets a writer add.
+	const commands = allowance.limited ? listed.filter((item) => isOffered(item, allowance)) : listed;
 	if (!query) return commands;
 	const clean = query.trim().toLowerCase();
 	return commands.filter((cmd) => {

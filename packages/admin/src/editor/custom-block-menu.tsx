@@ -1,20 +1,27 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { Puzzle } from "lucide-react";
 import { useMemo } from "react";
 import { useIconByName } from "../screens/shared/collection-icon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { IconButton } from "../ui/icon-button";
+import { allowanceOfState } from "./allowed-extension";
 import { editorMessages } from "./messages";
-import { buildBlockSlashCommands } from "./slash-command";
+import { buildBlockSlashCommands, isOffered } from "./slash-command";
+
+/** The components the body's allowed list lets a writer insert (all of them when it has no list). */
+export const offeredBlocks = (site: Site, editor: Editor) => {
+	const allowance = allowanceOfState(editor.state);
+	return buildBlockSlashCommands(site).filter((item) => isOffered(item, allowance));
+};
 
 /** Custom component list. Shared by the component menu and the toolbar "More" menu. Like the slash menu, it shows a description under each name. */
 export function CustomBlockMenuItems({ editor }: { editor: Editor }) {
 	const site = useSite();
 	const iconByName = useIconByName();
-	const customBlocks = useMemo(() => buildBlockSlashCommands(site), [site]);
+	const customBlocks = useMemo(() => offeredBlocks(site, editor), [site, editor]);
 	return customBlocks.map((block) => {
 		// The block definition's icon (`editor.icon`). Falls back to a puzzle icon.
 		const Icon = (typeof block.icon === "string" ? iconByName(block.icon) : block.icon) ?? Puzzle;

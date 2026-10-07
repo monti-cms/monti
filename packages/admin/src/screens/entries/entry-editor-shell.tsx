@@ -987,6 +987,7 @@ export function EntryEditorShell({
 					>
 						<CmsEditor
 							doc={form.doc}
+							allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
 							titleField={
 								<>
 									{languageTabs}

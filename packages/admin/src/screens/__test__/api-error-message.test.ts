@@ -85,3 +85,14 @@ describe("warnings about removed fields and options", () => {
 		expect(option).not.toContain("unknown_select_value");
 	});
 });
+
+describe("warnings about blocks and marks a body does not allow", () => {
+	it("name the block or mark, and the place it is in", () => {
+		const block = cmsIssueMessage(testSite, { code: "disallowed_block", message: "tabs", path: "body" });
+		expect(block).toContain("tabs");
+		expect(block).not.toContain("disallowed_block");
+		const mark = cmsIssueMessage(testSite, { code: "disallowed_mark", message: "italic", path: "body" });
+		expect(mark).toContain("italic");
+		expect(mark).not.toContain("disallowed_mark");
+	});
+});

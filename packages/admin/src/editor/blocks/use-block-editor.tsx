@@ -21,6 +21,7 @@ import {
 } from "react";
 import { type EditorError, type EditorResult, editorFailure } from "../../hooks/result";
 import { cn } from "../../lib/utils/cn";
+import { allowanceOfState } from "../allowed-extension";
 import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { blockNodeName } from "./added/shared";
 import { type ContainerValues, childPos, SELECTED_RING, useEditorEditable, valuesOf, withValue } from "./block-model";
@@ -336,6 +337,12 @@ function createTransaction(binding: Binding, tr: Transaction, pos: number): Bloc
 			if (maxChildren !== undefined && parent.childCount >= maxChildren)
 				throw abort("limit", t("block.childMax", { label: definition.label, count: maxChildren }));
 			const type = childType(init.name);
+			// A child that is body content (a code block) is a block of the body's allowed list too; a child block (a tab) goes with its parent.
+			if (binding.editor?.state && !allowanceOfState(binding.editor.state).allowsNode(type.name))
+				throw abort(
+					"invalid_state",
+					t("block.childNotAllowed", { label: definition.label, name: init.name ?? type.name }),
+				);
 			const index =
 				typeof init.at === "number" ? Math.min(Math.max(Math.trunc(init.at), 0), parent.childCount) : parent.childCount;
 			if (!parent.canReplaceWith(index, index, type))

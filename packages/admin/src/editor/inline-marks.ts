@@ -5,6 +5,7 @@ import type { Mark, ResolvedPos } from "@tiptap/pm/model";
 import { type EditorState, TextSelection } from "@tiptap/pm/state";
 import { Bold, CodeXml, Italic, Strikethrough, Subscript, Superscript, Underline } from "lucide-react";
 import type { TranslatorFor } from "../translator";
+import { allowanceOfState } from "./allowed-extension";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark";
 import { codeEffectsKey, rulesOf } from "./code-block/effects-plugin";
 import { selectedBlocks } from "./drag";
@@ -81,10 +82,12 @@ const markOnSelection = (state: EditorState, mark: string) => {
 };
 
 /**
- * Whether the editor offers the tool for this mark at the selection. Only the code block tools that the site turned off (`codeBlock.features`) are hidden,
- * and only inside code: outside it nothing changes. A mark already on the selection stays offered so it can be removed.
+ * Whether the editor offers the tool for this mark at the selection. The marks the body's allowed list does not allow are hidden, and so are the code block
+ * tools that the site turned off (`codeBlock.features`), only inside code. A mark already on the selection stays offered so it can be removed.
  */
 export const offersMarkTool = (site: Site, state: EditorState, mark: string) => {
+	// The body's allowed list: a mark it does not allow is not offered, unless it is already on the selection (so it can be removed).
+	if (!allowanceOfState(state).allowsEditorMark(mark) && !markOnSelection(state, mark)) return false;
 	if (!state.selection.$from.parent.type.spec.code) return true;
 	return codeMarkFeatures(site)[mark]?.() !== false || markOnSelection(state, mark);
 };

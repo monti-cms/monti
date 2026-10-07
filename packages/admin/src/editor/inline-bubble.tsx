@@ -31,6 +31,7 @@ import type { TranslatorFor } from "../translator";
 import { IconButton } from "../ui/icon-button";
 import { Separator } from "../ui/separator";
 import { addedMarkName } from "./added-marks";
+import { allowanceOfState } from "./allowed-extension";
 import { BLOCK_TOOLBAR } from "./blocks/shared";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark";
 import { codeEffectsKey, expandRule, removeRule, setFoldOpen } from "./code-block/effects-plugin";
@@ -139,6 +140,7 @@ export function InlineBubble({
 }) {
 	const site = useSite();
 	const t = useTranslator(editorMessages);
+	const allowance = allowanceOfState(editor.state);
 	const markExtensions = useMarkExtensions(editor);
 	const detailed = markExtensions.flatMap(({ name, extension }) => (extension.detail ? [name] : []));
 	const ranged = [...RANGED_MARKS, ...detailed];
@@ -468,8 +470,10 @@ export function InlineBubble({
 	};
 
 	// In a code block, only the effects it accepts (bold, italic, strikethrough, underline, tooltip) and text folding are shown. Extension buttons hide themselves.
+	// A text style the body's allowed list does not allow gets no button, but one already in the text still shows its details above.
 	const bubbleTools = (group: "format" | "link") =>
 		markExtensions
+			.filter(({ name }) => allowance.allowsEditorMark(name))
 			.flatMap(({ name, extension }) => (extension.bubble?.group === group ? [{ name, bubble: extension.bubble }] : []))
 			.sort((a, b) => (a.bubble.order ?? 1) - (b.bubble.order ?? 1));
 	const renderTool = ({ name, bubble }: ReturnType<typeof bubbleTools>[number]) => (
@@ -506,7 +510,7 @@ export function InlineBubble({
 					</BubbleButton>
 				)}
 			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool)}
-			{allowsMark(editor.state, "link") && !inCode && (
+			{allowsMark(editor.state, "link") && !inCode && allowance.allowsMark("link") && (
 				<BubbleButton
 					label={editor.isActive("link") ? t("link.edit") : t("link.add")}
 					onClick={() => openLink(linkDraftFromSelection(editor))}

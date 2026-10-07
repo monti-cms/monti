@@ -22,6 +22,7 @@ export const blocksMessages = defineMessages("cms-admin.editor-blocks", {
 		"block.childMax": "{label} allows at most {count}.",
 		"block.childRange": "{label} has no child at position {index}.",
 		"block.unknownChild": "{label} can't hold a child named {name}.",
+		"block.childNotAllowed": "{name} is not allowed in this body, so {label} can't add it.",
 		"block.childFailed": "The child block could not be created.",
 	},
 	ko: {
@@ -44,6 +45,7 @@ export const blocksMessages = defineMessages("cms-admin.editor-blocks", {
 		"block.childMax": "{label}에는 최대 {count}개까지 둘 수 있습니다.",
 		"block.childRange": "{label}에 {index}번째 하위 블록이 없습니다.",
 		"block.unknownChild": "{label}에는 {name} 하위 블록을 둘 수 없습니다.",
+		"block.childNotAllowed": "이 본문에서는 {name}을(를) 쓸 수 없어 {label}에 추가할 수 없습니다.",
 		"block.childFailed": "하위 블록을 만들지 못했습니다.",
 	},
 });
