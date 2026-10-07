@@ -1,8 +1,9 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { loadApp } from "../app";
+import { createClackPrompter } from "../init-prompts";
 import { MAPPING_FILE } from "./mapping";
-import { type Prompter, terminalPrompter } from "./prompt";
+import type { Prompter } from "./prompt";
 import { formatReport } from "./report";
 import { ImportError, runImport } from "./run";
 
@@ -61,7 +62,7 @@ export async function runImportCommand(argv: readonly string[], io: ImportComman
 	const json = values.json === true;
 	const interactive =
 		!values.yes && !json && (io.prompter !== undefined || (process.stdin.isTTY && process.stdout.isTTY));
-	const prompter = interactive ? (io.prompter ?? terminalPrompter()) : undefined;
+	const prompter = interactive ? (io.prompter ?? (await createClackPrompter())) : undefined;
 	const cms = await loadApp({
 		cwd: io.cwd,
 		envFiles: values["no-env-file"] ? [] : values["env-file"],
@@ -85,7 +86,6 @@ export async function runImportCommand(argv: readonly string[], io: ImportComman
 		io.log(json ? JSON.stringify(report, null, 2) : formatReport(report));
 		return report.counts.failed > 0 && !report.dryRun ? 1 : 0;
 	} finally {
-		prompter?.close?.();
 		await cms.close();
 	}
 }

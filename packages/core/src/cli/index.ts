@@ -2,9 +2,9 @@ import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
 import { eventsRetry } from "./events";
 import { IMPORT_HELP, runImportCommand } from "./import/command";
-import type { Prompter } from "./import/prompt";
 import { findBoundaryViolations, formatBoundaryViolations } from "./import-boundary";
 import { runInitCommand } from "./init-command";
+import type { Prompter } from "./init-prompts";
 import { migrate } from "./migrate";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command";
 import { schemaApply, schemaDiff } from "./schema-apply";
@@ -49,7 +49,6 @@ export {
 	type ImportOptions,
 	type ImportReport,
 	MAPPING_FILE,
-	type Prompter,
 	runImport,
 	runImportCommand,
 	scriptedPrompter,

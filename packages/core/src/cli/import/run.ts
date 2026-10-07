@@ -147,10 +147,7 @@ export async function runImport(options: ImportOptions): Promise<ImportReport> {
 	}
 	const changed = JSON.stringify(mapping) !== JSON.stringify(existingMapping);
 	if (options.prompter && (asked > 0 || !existingMapping)) {
-		options.prompter.say("");
-		options.prompter.say("This is the mapping I will use:");
-		for (const line of describeMapping(mapping, scanned)) options.prompter.say(`  ${line}`);
-		options.prompter.say("");
+		options.prompter.note(describeMapping(mapping, scanned).join("\n"), "The mapping I will use");
 		if (!(await confirm(options.prompter, dryRun ? "Looks right?" : "Use it and save it for the next run?", true))) {
 			throw new ImportError(
 				`stopped: nothing was written. Edit ${path.basename(options.mappingFile)} (or run again) and try once more`,
