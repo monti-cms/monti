@@ -1,14 +1,21 @@
 // @vitest-environment node
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import postcss from "postcss";
+import { beforeAll, describe, expect, it } from "vitest";
 
 /**
- * CSS confinement. The admin CSS (`styles.css`) and the admin/extension screen classes only use names carrying the `cms` prefix.
- * They neither define nor use the app's own names (shadcn's `bg-background`, `dark:`, etc.).
+ * CSS confinement. The admin and plugin stylesheets ship prebuilt (`scripts/build-styles.mjs`), so the host needs no Tailwind and imports them as they are.
+ * The sources only use names carrying the `cms` prefix, and the built files must not restyle the host: every selector sits under a document that
+ * contains the admin, and every custom property, keyframes name and layer is `cms`-prefixed.
  */
 const packagesDir = path.resolve(__dirname, "../../..");
-const adminCss = readFileSync(path.resolve(__dirname, "../../styles.css"), "utf8");
+const buildScript = path.resolve(packagesDir, "../scripts/build-styles.mjs");
+const themeCss = readFileSync(path.resolve(__dirname, "../../styles/theme.css"), "utf8");
+const adminCss = readFileSync(path.resolve(__dirname, "../../styles/admin.css"), "utf8");
+/** Packages with an admin stylesheet (`styles/index.css`). */
+const STYLE_PACKAGES = ["admin", "ai", "blocks", "mdx", "seo"];
 
 const TOKENS = [
 	"sidebar-primary-foreground",
@@ -51,27 +58,120 @@ function sourceFiles(dir: string): string[] {
 	});
 }
 
+/** Selectors of every rule (keyframe steps excluded), split at top-level commas. */
+function selectorsOf(root: postcss.Root): string[] {
+	const out: string[] = [];
+	root.walkRules((rule) => {
+		const parent = rule.parent;
+		if (parent?.type === "atrule" && /keyframes$/.test((parent as postcss.AtRule).name)) return;
+		out.push(...rule.selectors);
+	});
+	return out;
+}
+/** Whether a selector sits under a document that contains the admin. */
+const scoped = (selector: string) => /^(?::where\()?html\b.*?:has\(\.cms-admin\)/.test(selector.trim());
+
 describe("admin CSS confinement", () => {
-	it("styles.css does not define the app's color names or variants", () => {
-		const themeNames = [...adminCss.matchAll(/^\s*(--(?:color|radius|shadow|font|spacing)-[\w-]+)\s*:/gm)].map(
-			(m) => m[1],
-		);
-		const colors = themeNames.filter((name) => name.startsWith("--color-"));
-		expect(colors.length).toBeGreaterThan(0);
-		// `@theme` holds only `--color-cms-*` (radius and shadow names are not defined in the theme).
-		const theme = adminCss.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
-		for (const name of theme.matchAll(/(--[\w-]+)\s*:/g)) expect(name[1]).toMatch(/^--color-cms-/);
+	it("the theme defines only cms-prefixed names", () => {
+		// `@theme` holds `--color-cms-*` and the radius names (inlined into the bundle, computed from `--cms-radius`).
+		const theme = themeCss.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
+		const names = [...theme.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]);
+		expect(names.filter((name) => name.startsWith("--color-cms-")).length).toBeGreaterThan(0);
+		for (const name of names) expect(name).toMatch(/^--(?:color-cms-|radius-(?:sm|md|lg|xl)$)/);
+		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--cms-radius");
 		// Variant names also start with `cms-`.
-		for (const variant of adminCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^cms-/);
+		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^cms-/);
 		// The dark theme follows both `.dark` and `[data-theme="dark"]`.
-		expect(adminCss).toMatch(/@custom-variant cms-dark[^;]*\.dark[^;]*\[data-theme="dark"\]/);
+		expect(themeCss).toMatch(/@custom-variant cms-dark[^;]*\.dark[^;]*\[data-theme="dark"\]/);
 		expect(adminCss).toMatch(/html:is\(\.dark, \[data-theme="dark"\]\):has\(\.cms-admin\)/);
+		// Tailwind's `--radius*` is not defined by the hand-written rules.
+		expect(adminCss).not.toMatch(/^\s*--radius/m);
 	});
 
 	it("color variables only define --cms-* names", () => {
 		const definitions = [...adminCss.matchAll(/^\t(--[\w-]+)\s*:/gm)].map((m) => m[1]);
 		const colorVars = definitions.filter((name) => new RegExp(`^--(${TOKENS})$`).test(name));
 		expect(colorVars).toEqual([]);
+		expect(definitions.filter((name) => !name.startsWith("--cms-"))).toEqual([]);
+	});
+
+	describe("prebuilt stylesheets", () => {
+		const built = new Map<string, string>();
+		beforeAll(() => {
+			for (const pkg of STYLE_PACKAGES) {
+				const cwd = path.join(packagesDir, pkg);
+				const css = execFileSync("node", [buildScript, "--stdout"], {
+					cwd,
+					encoding: "utf8",
+					maxBuffer: 64 * 1024 * 1024,
+				});
+				built.set(pkg, css);
+			}
+		}, 120_000);
+
+		for (const pkg of STYLE_PACKAGES) {
+			it(`${pkg}: no unscoped selector, no global custom property, no foreign layer or keyframes`, () => {
+				const css = built.get(pkg) ?? "";
+				expect(css.length).toBeGreaterThan(0);
+				const root = postcss.parse(css);
+				// Every selector sits under a document that contains the admin.
+				expect(selectorsOf(root).filter((selector) => !scoped(selector))).toEqual([]);
+				// Every custom property the file declares (and registers) is `--cms-*`.
+				const declared = new Set<string>();
+				root.walkDecls((decl) => {
+					if (decl.prop.startsWith("--")) declared.add(decl.prop);
+				});
+				root.walkAtRules("property", (rule) => {
+					declared.add(rule.params.trim());
+				});
+				expect([...declared].filter((name) => !name.startsWith("--cms-"))).toEqual([]);
+				// No Tailwind, theme or import directive is left in the output, and the host's names are not used as layers or keyframes.
+				const directives: string[] = [];
+				const layers: string[] = [];
+				const keyframes: string[] = [];
+				const forbidden = [
+					"import",
+					"source",
+					"theme",
+					"plugin",
+					"utility",
+					"custom-variant",
+					"tailwind",
+					"apply",
+					"config",
+				];
+				root.walkAtRules((rule) => {
+					if (forbidden.includes(rule.name)) directives.push(`@${rule.name}`);
+					if (rule.name === "layer") {
+						layers.push(
+							...rule.params
+								.split(",")
+								.map((name) => name.trim())
+								.filter(Boolean),
+						);
+					}
+					if (/keyframes$/.test(rule.name)) keyframes.push(rule.params);
+				});
+				expect(directives).toEqual([]);
+				expect(layers.filter((name) => !name.startsWith("cms."))).toEqual([]);
+				expect(keyframes.filter((name) => !name.startsWith("cms-"))).toEqual([]);
+			});
+		}
+
+		it("admin: the reset is scoped, the tokens and color-scheme stay, KaTeX is included, and no radius name leaks", () => {
+			const css = built.get("admin") ?? "";
+			const selectors = selectorsOf(postcss.parse(css));
+			// Tailwind's preflight is there, but only under the scope (the check above rejects a bare `*`, `body` or `button`).
+			expect(selectors).toContain(":where(html:has(.cms-admin)) button");
+			expect(css).toContain("html:has(.cms-admin){--cms-background:");
+			expect(css).toMatch(/html:is\(\.dark,\[data-theme=dark\]\):has\(\.cms-admin\)\{[^}]*color-scheme:dark/);
+			expect(css).toContain(".katex");
+			expect(css).toContain("KaTeX_Main");
+			// The host's Tailwind names are not redefined: no `--radius*`, `--color-*`, `--spacing`, `--font-*` declaration.
+			expect(css).not.toMatch(/(?:^|[;{])--(?:radius|color|spacing|font|text|shadow|ease|animate)(?:-[\w-]+)?:/);
+			// Radius utilities are computed from the admin's own base radius.
+			expect(css).toMatch(/border-radius:calc\(var\(--cms-radius\)/);
+		});
 	});
 
 	it("admin and extension screen sources use no app-named color classes or dark: variants", () => {
@@ -80,7 +180,7 @@ describe("admin CSS confinement", () => {
 		const variable = new RegExp(`\\(\\s*--(?:color-)?(?:${TOKENS})(?![\\w-])`, "g");
 		const dark = /(?<=[\s"'`:!([])dark:(?=[^\s,])/g;
 		const orientation = /(?<![\w-])(?:group-|peer-|in-|has-)*data-(?:horizontal|vertical)(?![\w-[])/g;
-		for (const pkg of ["core", "admin", "blocks", "seo", "ai", "bareun"]) {
+		for (const pkg of ["core", "admin", "blocks", "mdx", "seo", "ai", "bareun"]) {
 			const root = path.join(packagesDir, pkg, "src");
 			for (const file of sourceFiles(root)) {
 				const text = readFileSync(file, "utf8");

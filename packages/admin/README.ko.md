@@ -291,7 +291,7 @@ export default defineAdminPlugin({
 | `/media` | 미디어 고르기·미리보기 |
 | `/api` | 관리자 API 부르기(`cmsFetch`) |
 | `/kit` | 확장용 부품·도우미 묶음 |
-| `/styles.css` | 관리자 스타일 |
+| `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |
 
 ### 라우터 어댑터
 
@@ -349,19 +349,39 @@ Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않�
 
 ## 스타일
 
-관리자 화면의 CSS는 **Tailwind 4**를 선택 피어 요건으로 한다(`package.json`에 피어로 적지는 않는다). 관리자 화면을 쓰는 앱만 Tailwind 4가 필요하고,
-`@monti-cms/core` 본체와 읽기·공개 렌더만 쓰는 앱에는 필요 없다. 미리 만든(prebuilt) CSS는 주지 않는다. 앱의 Tailwind가 관리자 화면 클래스를 직접 만들므로
-앱에 `tailwindcss`·`@tailwindcss/postcss`(Tailwind 4), `tw-animate-css`, `@tailwindcss/typography`가 있어야 한다.
+관리자 화면의 CSS는 **미리 만들어져(prebuilt)** 나온다. `@monti-cms/admin/styles.css`는 패키지를 빌드할 때 Tailwind 4로 컴파일하므로 앱에는 Tailwind·`@tailwindcss/typography`·
+`tw-animate-css` 설정이 필요 없고, `@source`·`@theme`·`@custom-variant` 줄도 필요 없다. 관리자 레이아웃에서 불러오거나(그러면 관리자 페이지만 이 CSS를 받는다) 아무 전역 CSS 파일에서 불러온다.
 
-`@monti-cms/admin/styles.css`가 주는 것(모두 `cms` 이름표가 붙어 앱의 이름과 겹치지 않는다):
+```tsx
+// app/(admin)/admin/layout.tsx
+import "@monti-cms/admin/styles.css";
+```
+
+공개 페이지에 Tailwind 4를 쓰는 앱은 그대로 쓰면 된다. 둘은 서로 영향을 주지 않는다.
+
+묶음을 만드는 방식과 가두는 방식(`scripts/build-styles.mjs`, `pnpm build`가 돌린다. 원본은 `styles/`):
+
+- **범위.** 모든 선택자가 `:where(html:has(.cms-admin))`, 곧 관리자 화면이 들어 있는 문서 안으로 한정된다(명시도 0이라 클래스 힘은 Tailwind에서와 같다). 팝업이
+  `body`로 옮겨 그려지므로 범위는 `.cms-admin` 요소가 아니라 문서다. `.cms-admin`이 없는 앱의 공개 페이지에는 영향이 없다.
+- **리셋.** Tailwind의 preflight가 묶음에 들어 있지만 그 범위 안에서만 걸리므로 앱의 페이지를 다시 꾸미지 않는다.
+- **이름.** 묶음이 선언하는 사용자 정의 속성은 모두 `--cms-`로 시작하고(Tailwind의 `--tw-*`는 `--cms-tw-*`가 되고 테마는 값으로 풀어 넣는다), 키프레임은 `cms-*`이며,
+  레이어는 `cms` 레이어 아래(`cms.theme`·`cms.base` …)에 모여 앱의 Tailwind 레이어와 합쳐지지 않는다. 앱의 `--radius*`와 테마 변수는 정의하지도 바꾸지도 않는다.
+- **수식.** 편집기 수식 미리보기용 KaTeX 스타일과 글꼴이 들어 있다(글꼴은 `dist/fonts`로 복사해 상대 경로로 잇는다). 사이트가 관리자용으로 KaTeX CSS를 따로 불러올 필요가 없다.
+- **글꼴.** Tailwind preflight처럼 관리자 문서의 `html`에는 시스템 산세리프 글꼴이 기본으로 깔린다. 앱이 `body`에 정한 글꼴이 우선한다.
+
+묶음이 주는 것(모두 `cms` 이름표가 붙어 앱의 이름과 겹치지 않는다):
 
 - **색 이름.** `bg-cms-background`·`text-cms-muted-foreground`·`border-cms-border` 같은 `cms-*` 색(값은 `--cms-*` 변수). 앱의 shadcn
   이름(`bg-background` 등)과 변수(`--background` 등)는 건드리지 않는다. `--cms-*`는 관리자 화면이 있는 문서에만 걸린다.
 - **변형.** `cms-dark:`는 `html`(또는 상위 요소)의 `.dark` 또는 `[data-theme="dark"]`일 때, `cms-horizontal:`·`cms-vertical:`은 Base UI의
   `data-orientation`일 때다. 앱의 `dark`·`data-horizontal` 정의와 따로 논다. 앱이 어떤 테마 방식(클래스·`data-theme`)을 쓰든 관리자 화면의
   어두운 테마가 따라간다.
-- **그 밖에.** 배포 묶음의 Tailwind 클래스 찾기(`@source`), 테두리·포커스 윤곽 기본색, 관리자 문서의 둥글기(`--radius*`) 값(Tailwind 기본
-  이름이라 관리자가 있는 문서에서만 바뀐다).
+- **그 밖에.** 테두리·포커스 윤곽 기본색, `color-scheme`, 얇은 스크롤바, 관리자의 모서리 둥글기(`--cms-radius`, 묶음의 `rounded-*`는 이 값으로 계산된다).
+
+관리자 화면을 더하는 플러그인(`@monti-cms/blocks`·`@monti-cms/mdx`·`@monti-cms/seo`·`@monti-cms/ai`)은 같은 스크립트와 같은 테마(이 패키지의 `styles/theme.css`)로 만든
+자기 `styles.css`를 따로 내고, 앱은 이 파일 뒤에 불러온다. 관리자가 플러그인 클래스를 같이 컴파일할 수 없는 까닭은 앱이 어떤 플러그인을 설치하는지 관리자가 모르고,
+앱은 쓰는 플러그인의 CSS만 받아야 하기 때문이다. 둘 다 쓰는 유틸리티는 그냥 되풀이되며 규칙은 같다. 관리자 화면이 있는 플러그인을 직접 만들면 다른 플러그인처럼
+`styles/index.css`를 두면 된다(`packages/seo/styles/index.css` 참고).
 
 `CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `cms.server.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
 

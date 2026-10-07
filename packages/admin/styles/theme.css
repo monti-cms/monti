@@ -1,0 +1,56 @@
+/*
+ * The admin theme, shared by every prebuilt admin stylesheet (this package and the plugins' `styles/index.css`).
+ * It is read at package build time only: the host never sees it and needs no Tailwind.
+ *
+ * Every name carries the `cms` prefix:
+ *   - Color names: `bg-cms-background`, `text-cms-muted-foreground`, `border-cms-border` ... (values come from `--cms-*` variables)
+ *   - Variants: `cms-dark:` (`.dark` or `[data-theme="dark"]` on `html` or an ancestor), `cms-horizontal:` and `cms-vertical:` (Base UI orientation)
+ * Tailwind's own theme is inlined (`theme(inline)`), so the bundle declares no `--spacing`, `--color-*`, `--font-*` and so on.
+ */
+@import "tailwindcss/theme.css" layer(theme) theme(inline);
+
+@import "tw-animate-css";
+
+@plugin "@tailwindcss/typography";
+
+/* The dark theme follows both `.dark` and `[data-theme="dark"]` that the host's theme provider puts on `html`. */
+@custom-variant cms-dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+@custom-variant cms-horizontal (&[data-orientation="horizontal"]);
+@custom-variant cms-vertical (&[data-orientation="vertical"]);
+
+/* Color names used by the admin UI (`cms-*`). Values are set by the admin tokens in `admin.css`. */
+@theme inline {
+	--color-cms-background: var(--cms-background);
+	--color-cms-foreground: var(--cms-foreground);
+	--color-cms-card: var(--cms-card);
+	--color-cms-card-foreground: var(--cms-card-foreground);
+	--color-cms-popover: var(--cms-popover);
+	--color-cms-popover-foreground: var(--cms-popover-foreground);
+	--color-cms-primary: var(--cms-primary);
+	--color-cms-primary-foreground: var(--cms-primary-foreground);
+	--color-cms-secondary: var(--cms-secondary);
+	--color-cms-secondary-foreground: var(--cms-secondary-foreground);
+	--color-cms-muted: var(--cms-muted);
+	--color-cms-muted-foreground: var(--cms-muted-foreground);
+	--color-cms-accent: var(--cms-accent);
+	--color-cms-accent-foreground: var(--cms-accent-foreground);
+	--color-cms-destructive: var(--cms-destructive);
+	--color-cms-warning: var(--cms-warning);
+	--color-cms-border: var(--cms-border);
+	--color-cms-input: var(--cms-input);
+	--color-cms-ring: var(--cms-ring);
+	--color-cms-sidebar: var(--cms-sidebar);
+	--color-cms-sidebar-foreground: var(--cms-sidebar-foreground);
+	--color-cms-sidebar-primary: var(--cms-sidebar-primary);
+	--color-cms-sidebar-primary-foreground: var(--cms-sidebar-primary-foreground);
+	--color-cms-sidebar-accent: var(--cms-sidebar-accent);
+	--color-cms-sidebar-accent-foreground: var(--cms-sidebar-accent-foreground);
+	--color-cms-sidebar-border: var(--cms-sidebar-border);
+	--color-cms-sidebar-ring: var(--cms-sidebar-ring);
+
+	/* Corner radius. Tailwind's `rounded-*` names are computed from `--cms-radius` inside the admin bundles only; the host's `--radius*` is never defined or changed. */
+	--radius-sm: calc(var(--cms-radius) - 4px);
+	--radius-md: calc(var(--cms-radius) - 2px);
+	--radius-lg: var(--cms-radius);
+	--radius-xl: calc(var(--cms-radius) + 4px);
+}

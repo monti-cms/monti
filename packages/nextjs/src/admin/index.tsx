@@ -39,7 +39,7 @@ export const cmsAdminMetadata: Metadata = adminMetadata;
 export type CmsAdminLayoutProps = AdminLayoutProps;
 
 /**
- * Admin UI layout. Rendered by the app's `app/(admin)/admin/layout.tsx`. Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
+ * Admin UI layout. Rendered by the app's `app/(admin)/admin/layout.tsx`. Styles: the app imports the prebuilt `@monti-cms/admin/styles.css` (and the plugins' `styles.css`) in this layout; no Tailwind is needed.
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
  * If the site already has them, turn them off with `<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>`.
  */
