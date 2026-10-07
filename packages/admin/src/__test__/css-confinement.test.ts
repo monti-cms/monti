@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 /**
  * CSS confinement. The admin and plugin stylesheets ship prebuilt (`scripts/build-styles.mjs`), so the host needs no Tailwind and imports them as they are.
  * The sources only use names carrying the `cms` prefix, and the built files must not restyle the host: every selector sits under a document that
- * contains the admin, and every custom property, keyframes name and layer is `cms`-prefixed.
+ * contains the admin, and every custom property, keyframes name is `cms`-prefixed, and no layer is left.
  */
 const packagesDir = path.resolve(__dirname, "../../..");
 const buildScript = path.resolve(packagesDir, "../scripts/build-styles.mjs");
@@ -110,7 +110,7 @@ describe("admin CSS confinement", () => {
 		}, 120_000);
 
 		for (const pkg of STYLE_PACKAGES) {
-			it(`${pkg}: no unscoped selector, no global custom property, no foreign layer or keyframes`, () => {
+			it(`${pkg}: no unscoped selector, no global custom property, no layer, no foreign keyframes`, () => {
 				const css = built.get(pkg) ?? "";
 				expect(css.length).toBeGreaterThan(0);
 				const root = postcss.parse(css);
@@ -125,7 +125,7 @@ describe("admin CSS confinement", () => {
 					declared.add(rule.params.trim());
 				});
 				expect([...declared].filter((name) => !name.startsWith("--cms-"))).toEqual([]);
-				// No Tailwind, theme or import directive is left in the output, and the host's names are not used as layers or keyframes.
+				// No Tailwind, theme or import directive is left in the output, and the host's names are not used as keyframes.
 				const directives: string[] = [];
 				const layers: string[] = [];
 				const keyframes: string[] = [];
@@ -153,8 +153,22 @@ describe("admin CSS confinement", () => {
 					if (/keyframes$/.test(rule.name)) keyframes.push(rule.params);
 				});
 				expect(directives).toEqual([]);
-				expect(layers.filter((name) => !name.startsWith("cms."))).toEqual([]);
+				// Layers are flattened: a layered rule would rank against the host's layers by load order and could lose to its `.hidden` or `.prose`.
+				expect(layers).toEqual([]);
 				expect(keyframes.filter((name) => !name.startsWith("cms-"))).toEqual([]);
+			});
+		}
+
+		for (const pkg of STYLE_PACKAGES) {
+			it(`${pkg}: every utility its sources use is in the built CSS`, () => {
+				const cwd = path.join(packagesDir, pkg);
+				const out = execFileSync("node", [buildScript, "--missing"], {
+					cwd,
+					encoding: "utf8",
+					maxBuffer: 64 * 1024 * 1024,
+				});
+				// Tailwind decides what is a utility; one it knows in a source file but the bundle lacks means the scan missed that file.
+				expect(JSON.parse(out) as string[]).toEqual([]);
 			});
 		}
 

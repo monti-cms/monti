@@ -379,8 +379,7 @@ How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm b
 - **Scoped.** Every selector sits under `:where(html:has(.cms-admin))`, a document that contains the admin UI (zero specificity, so a class keeps the strength it has in Tailwind). Popups are
   portaled to `body`, so the scope is the document, not the `.cms-admin` element. Public pages of the app, which never contain `.cms-admin`, are not affected.
 - **Reset.** Tailwind's preflight is part of the bundle, but only under that scope, so it does not restyle the app's pages.
-- **Names.** Every custom property the bundle declares starts with `--cms-` (Tailwind's own `--tw-*` became `--cms-tw-*`, and its theme is inlined), keyframes are `cms-*`, and the layers
-  live under one `cms` layer (`cms.theme`, `cms.base`, ...), so they never merge with the app's Tailwind layers. The app's `--radius*` and theme variables are not defined or changed.
+- **Names.** Every custom property the bundle declares starts with `--cms-` (Tailwind's own `--tw-*` became `--cms-tw-*`, and its theme is inlined), keyframes are `cms-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
 - **Math.** The KaTeX styles and fonts for the math preview are included (the fonts are copied to `dist/fonts` and linked relatively), so sites do not import KaTeX CSS for the admin.
 - **Font.** Like Tailwind's preflight, the bundle falls back to the system sans-serif stack on `html` of an admin document. A font the app sets on `body` wins.
 

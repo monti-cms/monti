@@ -80,10 +80,10 @@ html:has(.cms-admin) body {
 
 /*
  * Default color for borders and focus outlines. Makes places that use only `border` use the admin color instead of the app's global rule (shadcn's `* { @apply border-border }`) or `currentColor`.
- * Applied to the whole document because popups are portaled to body; it is in `@layer base`, so utility classes win.
+ * Applied to the whole document because popups are portaled to body; its selector has zero specificity, so utility classes win.
  */
 @layer base {
-	html:has(.cms-admin) * {
+	:where(html:has(.cms-admin)) * {
 		border-color: var(--cms-border);
 		outline-color: color-mix(in oklab, var(--cms-ring) 50%, transparent);
 	}
