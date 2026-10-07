@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, watch, writeFileSync } from "node:fs";
 import path from "node:path";
+import { problemError } from "../core/problem";
 import { parseSchemaFile } from "../schema-file/format";
 import type { SchemaFile } from "../schema-file/types";
 
@@ -81,10 +82,20 @@ const posix = (file: string) => file.split(path.sep).join("/");
 export function findSchemaFile(cwd: string, chosen?: string): string {
 	const found = chosen ?? SCHEMA_FILE_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
 	if (!found || !existsSync(path.resolve(cwd, found))) {
-		throw new Error(
+		throw problemError(
 			found
-				? `schema file not found: ${found}`
-				: `cannot find ${SCHEMA_FILE_CANDIDATES[0]}; pass --schema <path> (\`monti init\` creates one, \`monti schema:extract\` makes one from cms.config.ts)`,
+				? {
+						what: `The schema file ${found} does not exist`,
+						where: "the --schema option",
+						fix: `correct the path (it is relative to ${cwd}) or leave the option out so \`monti\` looks for ${SCHEMA_FILE_CANDIDATES.join(" or ")}`,
+					}
+				: {
+						what: `Cannot find ${SCHEMA_FILE_CANDIDATES[0]} (looked in ${cwd}, also under src/)`,
+						where: "the folder you ran `monti` in",
+						fix: "run `monti` from the folder of your app, or pass --schema <path>; `monti init` creates a schema file, and `monti schema:extract` makes one from collections written in code",
+					},
+			undefined,
+			"schema_missing",
 		);
 	}
 	return found;
@@ -97,7 +108,15 @@ export function readSchema(cwd: string, schema: string): SchemaFile {
 	try {
 		json = JSON.parse(text);
 	} catch (error) {
-		throw new Error(`${schema} is not valid JSON: ${(error as Error).message}`);
+		throw problemError(
+			{
+				what: `${schema} is not valid JSON: ${(error as Error).message}`,
+				where: schema,
+				fix: "correct the syntax at the position it names (a trailing comma, a missing quote or bracket, or a comment are the usual causes: JSON allows none of them); an editor with JSON support underlines it",
+			},
+			error,
+			"schema_invalid",
+		);
 	}
 	return parseSchemaFile(json, schema);
 }

@@ -1,6 +1,7 @@
 import type { BlockDefinition } from "../blocks/define";
 import { type Cms, createCms } from "../cms";
 import { type CmsConfig, type CollectionsConfig, defineSite, type SchemaCmsConfig } from "../config/define";
+import { problemText } from "../core/problem";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { CmsPlugin } from "../plugin/define";
 import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types";
@@ -107,18 +108,29 @@ export function defineConfig<
 export function defineConfig(input: MontiServerOptions): Cms {
 	if (typeof window !== "undefined") {
 		throw new Error(
-			"monti.config.ts was loaded in the browser. It holds the database and login settings and is server-only: import it from server code (route files, server components, " +
-				"scripts), never from a file with 'use client' or a file such a file imports. The admin gets the site as data from its layout.",
+			problemText({
+				what: "monti.config.ts was loaded in the browser, but it holds the database and login settings and is server-only",
+				where: "the import chain from a file with 'use client' to monti.config.ts (`monti doctor` prints it)",
+				fix: "import the config only from server code (route files, server components, scripts); a client component gets data as props or through the API route. The admin gets the site as data from its layout",
+			}),
 		);
 	}
 	if (!input.database) {
 		throw new Error(
-			"monti: defineConfig needs a `database`, for example `database: postgres()` (postgres is exported by @monti-cms/core/server).",
+			problemText({
+				what: "defineConfig has no `database`, so there is nowhere to keep the content",
+				where: "defineConfig({ ... }) in monti.config.ts",
+				fix: "add `database: postgres()` (postgres is exported by @monti-cms/core/server); it reads DATABASE_URL",
+			}),
 		);
 	}
 	if (!input.auth) {
 		throw new Error(
-			"monti: defineConfig needs `auth`, for example `auth: auth({ providers: [github()] })` (auth is exported by @monti-cms/auth).",
+			problemText({
+				what: "defineConfig has no `auth`, so there is no way to log in to the admin",
+				where: "defineConfig({ ... }) in monti.config.ts",
+				fix: "add `auth: auth({ providers: [github()] })` (auth is exported by @monti-cms/auth, github by @monti-cms/auth/github)",
+			}),
 		);
 	}
 	const site: Record<string, unknown> = {};

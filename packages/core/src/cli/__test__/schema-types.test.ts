@@ -103,8 +103,10 @@ describe("monti schema:types", () => {
 	});
 
 	it("says how to get a schema file when there is none", () => {
-		expect(() => generateSchemaTypes({ cwd: tempDir() })).toThrow(/cannot find monti\.schema\.json; pass --schema/);
-		expect(() => generateSchemaTypes({ cwd: tempDir(), schema: "x.json" })).toThrow(/schema file not found: x\.json/);
+		expect(() => generateSchemaTypes({ cwd: tempDir() })).toThrow(
+			/Cannot find monti\.schema\.json.*--schema.*monti init/s,
+		);
+		expect(() => generateSchemaTypes({ cwd: tempDir(), schema: "x.json" })).toThrow(/x\.json.*does not exist.*Fix:/);
 	});
 
 	it("is a command, and `--check` fails (exit 1) while the types are out of date", async () => {

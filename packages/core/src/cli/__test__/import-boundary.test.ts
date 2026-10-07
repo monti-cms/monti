@@ -125,16 +125,18 @@ describe("import boundary: the config file stays out of client bundles", () => {
 		).toEqual(["a", "mixed", "side-effect", "re-export", "lazy"]);
 	});
 
-	it("is the `monti check:boundary` command: exit 0 when clean, 1 with the chains when not", async () => {
+	it("is the config/boundary check of `monti doctor`: exit 0 when clean, 1 with the chains when not", async () => {
 		const out: string[] = [];
 		const io = (cwd: string) => ({ cwd, log: (m: string) => out.push(m), error: (m: string) => out.push(`E:${m}`) });
-		expect(await runCli(["check:boundary"], io(app({ "app/page.tsx": "export default () => null;\n" })))).toBe(0);
+		const only = ["doctor", "--only", "config/boundary"];
+		expect(await runCli(only, io(app({ "app/page.tsx": "export default () => null;\n" })))).toBe(0);
 		const bad = app({
 			"components/a.tsx": '"use client";\nimport { cms } from "../monti.config";\nexport const A = cms;\n',
 		});
-		expect(await runCli(["check:boundary"], io(bad))).toBe(1);
-		expect(out.at(-1)).toContain("E:A client component imports server-only code");
+		expect(await runCli(only, io(bad))).toBe(1);
+		expect(out.at(-1)).toContain("FAIL");
 		expect(out.at(-1)).toContain("components/a.tsx -> monti.config.ts");
+		expect(out.at(-1)).toContain("fix:");
 	});
 
 	it("holds for the blog example: no client component reaches monti.config.ts, and it does import the config from its server files", () => {

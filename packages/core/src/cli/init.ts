@@ -797,6 +797,9 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			);
 		}
 	}
+	todo.push(
+		`Check the setup whenever something does not work: ${exec(manager, "doctor")} lists every check as ok, warn or fail, and for each problem says what is wrong, where, and how to fix it.`,
+	);
 	todo.push(`Start the app: ${script(manager, "dev")}, then open ${siteUrl}${answers.adminPath}`);
 	const folder = app.contentFolders[0];
 	if (folder) {

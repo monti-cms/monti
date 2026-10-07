@@ -2,6 +2,7 @@ import {
 	CopyObjectCommand,
 	DeleteObjectCommand,
 	GetObjectCommand,
+	HeadBucketCommand,
 	HeadObjectCommand,
 	PutObjectCommand,
 	S3Client,
@@ -217,4 +218,87 @@ export function createS3MediaStore(config: MediaStoreConfig): MediaStore {
 			return `${cleanBase}/${cleanKey}`;
 		},
 	};
+}
+
+/** Why the keys cannot use the bucket, and what to change. */
+export interface BucketProblem {
+	readonly message: string;
+	readonly where: string;
+	readonly fix: string;
+}
+
+interface S3ErrorShape {
+	readonly name?: string;
+	readonly code?: string;
+	readonly message?: string;
+	readonly $metadata?: { readonly httpStatusCode?: number };
+}
+
+/**
+ * Asks the store whether the keys can reach the bucket (`HEAD` on the bucket: no object is read or written). Returns `undefined` when they can, else what is
+ * wrong in plain words. A network call; `monti doctor --online` is the one caller.
+ */
+export async function checkBucketAccess(config: MediaStoreConfig): Promise<BucketProblem | undefined> {
+	const s3 = new S3Client({
+		region: config.region ?? "auto",
+		endpoint: config.endpoint,
+		...(config.forcePathStyle ? { forcePathStyle: true } : {}),
+		credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+		maxAttempts: 1,
+		requestHandler: { requestTimeout: 10_000, connectionTimeout: 8_000 },
+	});
+	try {
+		await s3.send(new HeadBucketCommand({ Bucket: config.bucket }));
+		return undefined;
+	} catch (error) {
+		const failure = error as S3ErrorShape;
+		const status = failure.$metadata?.httpStatusCode;
+		const name = failure.name ?? failure.code ?? "";
+		const host = new URL(config.endpoint).host;
+		if (status === 404 || name === "NotFound" || name === "NoSuchBucket") {
+			return {
+				message: `the bucket "${config.bucket}" does not exist at ${host}`,
+				where: "S3_BUCKET and S3_ENDPOINT",
+				fix: "create the bucket in your storage provider, or correct S3_BUCKET; check that S3_ENDPOINT (and S3_REGION) is the one of the account that owns it",
+			};
+		}
+		if (status === 301 || name === "PermanentRedirect") {
+			return {
+				message: `the bucket "${config.bucket}" is in another region than "${config.region ?? "(none)"}"`,
+				where: "S3_REGION",
+				fix: "set S3_REGION to the region the bucket was created in",
+			};
+		}
+		if (
+			status === 403 ||
+			name === "Forbidden" ||
+			name === "AccessDenied" ||
+			name === "InvalidAccessKeyId" ||
+			name === "SignatureDoesNotMatch"
+		) {
+			return {
+				message: `the storage at ${host} refused the keys for bucket "${config.bucket}"`,
+				where: "S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY",
+				fix: "copy the access key id and secret again (no spaces around them), and give the key read and write access to this bucket; on R2 create an API token with Object Read & Write for the bucket",
+			};
+		}
+		if (
+			/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|ECONNRESET|timed out|getaddrinfo/i.test(
+				`${failure.code ?? ""} ${failure.message ?? ""} ${name}`,
+			)
+		) {
+			return {
+				message: `the storage at ${host} cannot be reached`,
+				where: "S3_ENDPOINT",
+				fix: "check the address for a typo and that the store is running (MinIO: `docker compose up -d`), and that this machine can reach it",
+			};
+		}
+		return {
+			message: `the storage at ${host} answered with an error: ${failure.message ?? name ?? "unknown"}`,
+			where: "S3_ENDPOINT, S3_BUCKET and the keys",
+			fix: "check the S3_* values against your storage provider's dashboard",
+		};
+	} finally {
+		s3.destroy();
+	}
 }

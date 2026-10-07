@@ -214,8 +214,9 @@ export class ServiceError extends Error {
 	constructor(
 		public readonly code: string,
 		public readonly issues?: readonly Issue[],
+		message?: string,
 	) {
-		super(code);
+		super(message ?? code);
 		this.name = "ServiceError";
 	}
 }

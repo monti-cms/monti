@@ -97,12 +97,8 @@ export async function createHarness(options: HarnessOptions = {}) {
 		github,
 		repo,
 		errors,
-		/** The first target. */
-		target:
-			ctx.targets[0] ??
-			(() => {
-				throw new Error("no target");
-			})(),
+		/** The first target (`undefined` for a harness made with no target). */
+		target: ctx.targets[0] as SyncContext["targets"][number],
 		service: cms.contentService(),
 		store: cms.store(),
 		async close() {

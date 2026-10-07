@@ -1,4 +1,5 @@
 import type { CmsServerPlugin } from "@monti-cms/core";
+import { aiChecks } from "./doctor-checks";
 import { migrateAi } from "./migrate";
 import * as resetAction from "./routes/actions/[key]/reset/route";
 import * as action from "./routes/actions/[key]/route";
@@ -28,6 +29,8 @@ const aiServer: CmsServerPlugin = {
 		{ pattern: "v1/ai/shared", module: shared },
 	],
 	migrate: migrateAi,
+	// What `monti doctor` checks: is a connection saved and usable.
+	checks: aiChecks,
 	// `features.ai.ready` of the admin meta API: is at least one connection ready?
 	features: async (cms) => ({
 		ready: await getAiSettingsView(cms.site, aiStoreFor(cms)).then(

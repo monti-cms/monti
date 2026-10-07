@@ -8,7 +8,8 @@ import { CONFIG_CANDIDATES, parseJsonc } from "./config-paths";
  * reports each import chain from such a file to the config file, or to a package that is server-only (`@monti-cms/core/server`, `@monti-cms/auth`, ...).
  * Type-only imports are erased by the compiler and do not count.
  *
- * It reads source text (no build), so it runs in a second: `monti check:boundary`, and once per dev server start from `withCms`.
+ * It reads source text (no build), so it runs in a second: as the `config/boundary` check of `monti doctor` (`monti doctor --only config/boundary` in CI), and once per
+ * dev server start from `withCms`.
  */
 
 /** Packages that hold server code. A client file importing one drags the server into the browser bundle. */
@@ -36,7 +37,7 @@ const RESOLVE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cj
 const posix = (file: string) => file.split(path.sep).join("/");
 
 /** Every source file under `dir`, skipping dependency, build and vendored folders. */
-function sourceFiles(dir: string, out: string[] = []): string[] {
+export function sourceFiles(dir: string, out: string[] = []): string[] {
 	for (const entry of readdirSync(dir)) {
 		if (SKIP_DIRS.has(entry) || entry.startsWith(".")) continue;
 		const full = path.join(dir, entry);
@@ -48,7 +49,7 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 }
 
 /** Blank out comments, so an import written in a comment does not count. Keeps string contents (the `"use client"` directive and module names). */
-function stripComments(text: string): string {
+export function stripComments(text: string): string {
 	let out = "";
 	for (let index = 0; index < text.length; index++) {
 		const char = text[index];
@@ -195,8 +196,8 @@ export function findBoundaryViolations(cwd: string): BoundaryViolation[] {
 export function formatBoundaryViolations(violations: readonly BoundaryViolation[]): string {
 	if (violations.length === 0) return "";
 	return [
-		"A client component imports server-only code. monti.config.ts holds the database and login settings and must stay on the server:",
+		"A client component imports server-only code, but monti.config.ts holds the database and login settings and must stay on the server:",
 		...violations.map((violation) => `  ${violation.chain.join(" -> ")}`),
-		"Import it from a server file instead (a server component, a route file, a script). A client component gets data as props, or through the API route.",
+		'Where: the import chains above, each starting in a file with "use client". Fix: import it from a server file instead (a server component, a route file, a script); a client component gets data as props, or through the API route. `monti doctor` checks this too.',
 	].join("\n");
 }

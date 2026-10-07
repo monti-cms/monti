@@ -30,6 +30,7 @@ import {
 import type { Cms } from "@monti-cms/core/runtime";
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
+import { assertCms } from "../assert-cms";
 import { nextHost } from "../auth/host";
 import { NextAdminRouter } from "./router";
 
@@ -37,6 +38,7 @@ export { NextAdminRouter };
 
 /** Admin UI metadata of an instance. Use it in the app's admin layout: `export const generateMetadata = () => cmsAdminMetadata(cms);`. */
 export const cmsAdminMetadata = (cms: Pick<Cms, "site"> & Partial<Pick<Cms, "attachHost">>): Metadata => {
+	assertCms(cms, "cmsAdminMetadata(cms)");
 	cms.attachHost?.(nextHost);
 	return adminMetadata(cms);
 };
@@ -49,6 +51,7 @@ export type CmsAdminLayoutProps = AdminLayoutProps;
  * If the site already has them, turn them off with `<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>`.
  */
 export function CmsAdminLayout(props: CmsAdminLayoutProps) {
+	assertCms(props.cms, "<CmsAdminLayout cms={cms}>");
 	// The login reads the headers of the request through Next, so the site's config needs no `host`.
 	props.cms.attachHost?.(nextHost);
 	return (
@@ -69,6 +72,7 @@ export type CmsAdminPageProps = Pick<AdminPageProps, "params" | "searchParams">;
  * - `/admin/<path>` plugin screens (e.g. the AI plugin's `/admin/ai`)
  */
 export function CmsAdminPage({ cms, ...props }: CmsAdminPageProps & { cms: Cms }) {
+	assertCms(cms, "<CmsAdminPage cms={cms}>");
 	cms.attachHost?.(nextHost);
 	return <AdminPage {...props} cms={cms} server={{ redirect: (href) => redirect(href as Route), notFound }} />;
 }

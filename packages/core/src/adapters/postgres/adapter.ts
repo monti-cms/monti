@@ -1,6 +1,9 @@
 import { Pool } from "pg";
+import { problemError } from "../../core/problem";
 import type { ContentStore } from "../../core/store";
 import type { DatabaseAdapter } from "../../server/define";
+import { postgresChecks } from "./checks";
+import { DATABASE_URL_WHERE, explainDatabaseError } from "./explain";
 import { createPluginStorage } from "./plugin-storage";
 
 /** The environment variable `postgres()` reads the connection string from when `connectionString` is not given. */
@@ -25,12 +28,12 @@ const loadStoreModule = () => import("./content-store");
  * A proxy store that creates the real store on first call. Every store function is async, so callers cannot tell the
  * difference (it does not spread or enumerate the function list).
  */
-function lazyStore(create: () => Promise<ContentStore>): ContentStore {
+function lazyStore(create: () => Promise<ContentStore>, explain: (error: unknown) => Error | undefined): ContentStore {
 	let store: Promise<ContentStore> | undefined;
 	const load = () => {
 		store ??= create().catch((error) => {
 			store = undefined;
-			throw error;
+			throw explain(error) ?? error;
 		});
 		return store;
 	};
@@ -41,7 +44,12 @@ function lazyStore(create: () => Promise<ContentStore>): ContentStore {
 				const real = (await load()) as unknown as Record<PropertyKey, (...input: unknown[]) => unknown>;
 				const method = real[name];
 				if (typeof method !== "function") throw new Error(`cms: content store has no method ${String(name)}`);
-				return method.apply(real, args);
+				try {
+					return await method.apply(real, args);
+				} catch (error) {
+					// A database that is down or not migrated says so, with the fix, instead of the driver's message.
+					throw explain(error) ?? error;
+				}
 			};
 		},
 	});
@@ -57,8 +65,14 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 	const getPool = () => {
 		const connectionString = options.connectionString || process.env[DATABASE_URL_ENV];
 		if (!connectionString) {
-			throw new Error(
-				`\`${DATABASE_URL_ENV}\` is empty; set it (for example in .env.local), or pass \`postgres({ connectionString })\``,
+			throw problemError(
+				{
+					what: `${DATABASE_URL_ENV} is not set, so there is no database to connect to`,
+					where: DATABASE_URL_WHERE,
+					fix: `put your Postgres URL in ${DATABASE_URL_ENV}, for example ${DATABASE_URL_ENV}=postgres://user:password@localhost:5432/monti, then run \`monti doctor\``,
+				},
+				undefined,
+				"database_url_missing",
 			);
 		}
 		pool ??= new Pool({ connectionString });
@@ -69,18 +83,31 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 		const schema = options.schema || process.env[DATABASE_SCHEMA_ENV];
 		return schema ? { schema } : undefined;
 	};
+	const explain = (error: unknown) =>
+		explainDatabaseError(error, {
+			connectionString: options.connectionString || process.env[DATABASE_URL_ENV],
+			schema: schemaOptions()?.schema,
+		});
 	return {
 		name: "postgres",
+		checks: postgresChecks({ connectionString: options.connectionString, schema: options.schema }),
 		createStore: (storeOptions) =>
-			lazyStore(async () =>
-				(await loadStoreModule()).createContentStore(getPool(), { ...schemaOptions(), ...storeOptions }),
+			lazyStore(
+				async () => (await loadStoreModule()).createContentStore(getPool(), { ...schemaOptions(), ...storeOptions }),
+				explain,
 			),
-		migrate: async (migrateOptions) =>
-			(await loadStoreModule()).migrateContentStore(getPool(), {
-				...schemaOptions(),
-				site: migrateOptions.site,
-				formats: migrateOptions.formats,
-			}),
+		migrate: async (migrateOptions) => {
+			try {
+				const store = await loadStoreModule();
+				await store.migrateContentStore(getPool(), {
+					...schemaOptions(),
+					site: migrateOptions.site,
+					formats: migrateOptions.formats,
+				});
+			} catch (error) {
+				throw explain(error) ?? error;
+			}
+		},
 		pluginStorage: (plugin) => createPluginStorage(getPool(), schemaOptions()?.schema, plugin),
 		close: async () => {
 			await pool?.end();

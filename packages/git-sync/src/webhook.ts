@@ -67,7 +67,11 @@ export async function handleWebhook(
 	if (!secret) {
 		return {
 			status: 503,
-			body: { code: "webhook_not_configured", message: "No webhook secret is saved on the Git sync screen" },
+			body: {
+				code: "webhook_not_configured",
+				message:
+					"No webhook secret is saved on the Git sync screen; save one there and use the same value in the repo's webhook",
+			},
 		};
 	}
 	if (!verifySignature(secret, delivery.rawBody, delivery.signature)) {

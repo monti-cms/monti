@@ -94,7 +94,7 @@ const CHECKED = Symbol.for("monti.import-boundary.checked");
 /**
  * Warns, once per dev server start, when a client component (`"use client"`) imports `monti.config.ts` or another server-only module, directly or through other
  * files. The config file holds the database and login settings and is server-only. Does nothing outside development, and never stops the server: the check
- * reads source text, so `monti check:boundary` is the one to fail a CI job. Returns the warning, or `undefined` when there is nothing to say.
+ * reads source text, so `monti doctor` (the `config/boundary` check) is the one to fail a CI job. Returns the warning, or `undefined` when there is nothing to say.
  */
 export function checkImportBoundaryInDev(
 	cwd: string,

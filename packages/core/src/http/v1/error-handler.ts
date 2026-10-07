@@ -1,4 +1,5 @@
 import { AuthError } from "../../adapters/auth";
+import { SetupError } from "../../core/problem";
 import { CmsError } from "../../core/store";
 import { ServiceError } from "../../services/types";
 
@@ -76,6 +77,15 @@ export function handleApiError(error: unknown): Response {
 				...error.extra,
 			},
 			{ status: error.status },
+		);
+	}
+
+	// A setup mistake (a database that is down or not migrated, a missing setting): the server log has the fix; the response does not repeat host names.
+	if (error instanceof SetupError) {
+		console.error(`Monti is not set up correctly: ${error.message}`);
+		return Response.json(
+			{ code: error.kind, message: "The server is not set up correctly. The server log says how to fix it." },
+			{ status: 503 },
 		);
 	}
 

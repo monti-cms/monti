@@ -192,7 +192,7 @@ describe("who is an admin", () => {
 	});
 
 	it("refuses an empty or duplicated provider list", () => {
-		expect(() => auth({ providers: [] })).toThrow(/at least one provider/);
+		expect(() => auth({ providers: [] })).toThrow(/no provider.*Where:.*providers.*Fix:/s);
 		expect(() => auth({ providers: [github(), github()] })).toThrow(/Two providers/);
 	});
 });

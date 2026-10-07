@@ -268,7 +268,7 @@ export function configTemplate(answers: InitAnswers): string {
 		"",
 		"/**",
 		" * The one config of the site, and the CMS instance it makes. The admin API route, the admin screens, your pages (cms.read.getEntry(...)) and the `monti` command all use it.",
-		" * It is server-only (it holds the database and login settings): never import it from a client component. `monti check:boundary` checks that.",
+		" * It is server-only (it holds the database and login settings): never import it from a client component. `monti doctor` checks that.",
 		" *",
 		" * The data (collections, fields, locales, time zone, admin path) is in monti.schema.json: edit it there. This file keeps what needs code. Values come from the",
 		" * environment (.env.local); .env.example lists them.",

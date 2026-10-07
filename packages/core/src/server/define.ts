@@ -2,6 +2,7 @@ import type { ContentStore } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { MediaStore } from "../media/store";
+import type { DoctorCheck } from "../plugin/doctor";
 import type { PluginStorage } from "../plugin/storage";
 import type { PluginSecrets } from "../secrets";
 import type { EventDeliveryOptions } from "../services/events";
@@ -33,12 +34,16 @@ export interface DatabaseAdapter {
 	pluginStorage(plugin: string): PluginStorage;
 	/** Closes the connection (when the command-line tool finishes). */
 	close?(): Promise<void>;
+	/** Checks `monti doctor` runs for the database, listed under `database/`: the connection setting, reachability, the schema and the migrations. */
+	readonly checks?: readonly DoctorCheck[];
 }
 
 /** Media (image and attachment) store connection. */
 export interface MediaAdapter {
 	readonly name: string;
 	createStore(): MediaStore;
+	/** Checks `monti doctor` runs for the media storage, listed under `storage/`: the settings it needs, and (with `--online`) access to the bucket. */
+	readonly checks?: readonly DoctorCheck[];
 }
 
 /** Result of the admin login check. */
@@ -147,6 +152,8 @@ export interface AuthCreateContext {
 export interface AuthAdapter {
 	readonly name: string;
 	create(context: AuthCreateContext): CmsAuth;
+	/** Checks `monti doctor` runs for the login, listed under `auth/`: the providers' settings, the admins, the callback URL and host trust. */
+	readonly checks?: readonly DoctorCheck[];
 }
 
 export interface CmsServerConfig {

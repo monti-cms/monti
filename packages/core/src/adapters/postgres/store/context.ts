@@ -1,4 +1,5 @@
 import type { Pool, PoolClient } from "pg";
+import { problemError } from "../../../core/problem";
 import type { Entry } from "../../../core/store/types";
 import type { Site } from "../../../site";
 import { type Db, dbOn } from "../db/kysely";
@@ -24,7 +25,11 @@ export interface StoreContext {
 export function validateSchemaName(schema?: string): string {
 	const s = schema ?? "public";
 	if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(s)) {
-		throw new Error("Invalid schema name");
+		throw problemError({
+			what: `The database schema name "${s}" is not valid`,
+			where: "DATABASE_SCHEMA in .env.local, or `postgres({ schema })` in monti.config.ts",
+			fix: "use letters, digits and underscores only, starting with a letter or underscore (for example monti_preview)",
+		});
 	}
 	return s;
 }

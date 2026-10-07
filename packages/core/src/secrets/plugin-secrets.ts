@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
+import { problemText } from "../core/problem";
 import { CmsError } from "../core/store";
 
 /**
@@ -50,7 +51,14 @@ export interface PluginSecrets {
 }
 
 const unavailable = () =>
-	new CmsError("The server config has no `secret`, so values cannot be encrypted", "secret_not_configured");
+	new CmsError(
+		problemText({
+			what: "MONTI_SECRET is not set, so values (AI keys, tokens) cannot be encrypted",
+			where: ".env.local (and the environment settings of your host), or `secret` in defineConfig",
+			fix: "set it to a long random value (`openssl rand -base64 32`) and restart the server; `monti doctor` checks it",
+		}),
+		"secret_not_configured",
+	);
 
 const hkdf = (key: string | Buffer, info: string): Buffer =>
 	Buffer.from(hkdfSync("sha256", key, SALT, info, KEY_BYTES));

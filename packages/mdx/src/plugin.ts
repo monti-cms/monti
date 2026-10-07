@@ -42,5 +42,7 @@ export const mdx = (options: MdxPluginOptions = {}) => {
 			return { default: createServerMdxFormat(options) };
 		},
 		admin: () => import("@monti-cms/mdx/admin"),
+		// Only the `monti doctor` checks live here; the format itself comes from `formats`.
+		server: () => import("@monti-cms/mdx/server"),
 	});
 };

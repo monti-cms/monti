@@ -1,7 +1,9 @@
 import { Auth, type AuthConfig, skipCSRFCheck } from "@auth/core";
-import { defineMessages, type MessageBundle } from "@monti-cms/core";
+import { defineMessages, type MessageBundle, problemText } from "@monti-cms/core";
 import { assertDevBypassSafe, isDevAuthBypassEnabled, withBasePath } from "@monti-cms/core/adapters/auth";
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "@monti-cms/core/server";
+import { collectAdmins, ignoredAdminText } from "./admins";
+import { authChecks } from "./checks";
 import { type LoginProvider, qualifyAccountId, splitAccountId } from "./provider";
 
 /**
@@ -74,43 +76,6 @@ const messagesOf = (providers: readonly LoginProvider[]): MessageBundle => {
 	return defineMessages("cms.auth", locales as { en: Record<string, string> } & Record<string, Record<string, string>>);
 };
 
-/** The admin ids of every provider, as canonical ids inside each provider. */
-function adminSets(options: AuthOptions): Map<string, Set<string>> {
-	const sets = new Map<string, Set<string>>(options.providers.map((provider) => [provider.id, new Set()]));
-	const add = (provider: LoginProvider, entry: string | undefined) => {
-		const raw = entry?.trim();
-		if (!raw) return;
-		const normalized = (provider.normalizeId ?? ((id: string) => id.trim() || null))(raw);
-		if (normalized === null) {
-			console.warn(`[cms-auth] Ignored the admin "${raw}": it is not an account id of ${provider.name}.`);
-			return;
-		}
-		sets.get(provider.id)?.add(normalized);
-	};
-	for (const provider of options.providers) {
-		for (const entry of provider.admins ?? []) {
-			const prefixed = entry ? splitAccountId(entry.trim(), options.providers) : null;
-			if (prefixed && prefixed.providerId !== provider.id) {
-				throw new Error(
-					`[cms-auth] The admin "${entry}" is listed on the ${provider.id} provider but belongs to ${prefixed.providerId}.`,
-				);
-			}
-			add(provider, prefixed ? prefixed.id : entry);
-		}
-	}
-	for (const entry of options.admins ?? []) {
-		if (!entry?.trim()) continue;
-		const split = splitAccountId(entry.trim(), options.providers);
-		if (!split) {
-			const known = options.providers.map((provider) => `${provider.id}:<id>`).join(", ");
-			throw new Error(`[cms-auth] The admin "${entry}" must be a qualified account id (${known}).`);
-		}
-		const provider = options.providers.find((candidate) => candidate.id === split.providerId);
-		if (provider) add(provider, split.id);
-	}
-	return sets;
-}
-
 /**
  * Admin login on standard `Request` and `Response`, over Auth.js core (`@auth/core`). The ways to log in are providers (`github()` from
  * `@monti-cms/auth/github`); the session is a signed cookie (a JWT), so nothing is stored for it. Used as `auth` in `defineConfig` (`monti.config.ts`).
@@ -124,12 +89,35 @@ function adminSets(options: AuthOptions): Map<string, Set<string>> {
  */
 export function auth(options: AuthOptions): AuthAdapter {
 	const { providers } = options;
-	if (providers.length === 0) throw new Error("[cms-auth] auth() needs at least one provider.");
+	if (providers.length === 0) {
+		throw new Error(
+			`[cms-auth] ${problemText({
+				what: "auth() has no provider, so there is no way to log in",
+				where: "`providers` of auth() in monti.config.ts",
+				fix: "list one, for example `auth({ providers: [github()] })` (github is exported by @monti-cms/auth/github)",
+			})}`,
+		);
+	}
 	const ids = new Set<string>();
 	for (const provider of providers) {
-		if (!/^[a-z][a-z0-9-]*$/.test(provider.id))
-			throw new Error(`[cms-auth] "${provider.id}" is not a valid provider id.`);
-		if (ids.has(provider.id)) throw new Error(`[cms-auth] Two providers have the id "${provider.id}".`);
+		if (!/^[a-z][a-z0-9-]*$/.test(provider.id)) {
+			throw new Error(
+				`[cms-auth] ${problemText({
+					what: `"${provider.id}" is not a valid provider id`,
+					where: "`providers` of auth() in monti.config.ts",
+					fix: "use lowercase letters, digits and `-`, starting with a letter",
+				})}`,
+			);
+		}
+		if (ids.has(provider.id)) {
+			throw new Error(
+				`[cms-auth] ${problemText({
+					what: `Two providers have the id "${provider.id}"`,
+					where: "`providers` of auth() in monti.config.ts",
+					fix: "list each login method once",
+				})}`,
+			);
+		}
 		ids.add(provider.id);
 	}
 	const requireConfigured = () => {
@@ -138,13 +126,18 @@ export function auth(options: AuthOptions): AuthAdapter {
 
 	return {
 		name: "auth",
+		checks: authChecks(options),
 		create: ({ site, loginPath, trustHost, secrets, storage, host: attachedHost }): CmsAuth => {
 			// An explicit host wins; else the one the framework integration attaches to the instance.
 			const host: AuthHost = options.host ?? attachedHost;
 			assertDevBypassSafe(options.devBypass);
 			if (!secrets.available) {
 				throw new Error(
-					"[cms-auth] `MONTI_SECRET` is empty, so login sessions cannot be signed; set it (any long random value, for example `openssl rand -base64 32`) in .env.local, or pass `defineConfig({ secret })`",
+					`[cms-auth] ${problemText({
+						what: "MONTI_SECRET is not set, so login sessions cannot be signed",
+						where: ".env.local (and the environment settings of your host), or `secret` in defineConfig",
+						fix: "set it to a long random value, for example the output of `openssl rand -base64 32`, then run `monti doctor`",
+					})}`,
 				);
 			}
 			// A server that requires login fails here, naming what is missing; one on the development bypass fails only when a sign-in is attempted.
@@ -152,15 +145,23 @@ export function auth(options: AuthOptions): AuthAdapter {
 			const t = site.createTranslator(messagesOf(providers));
 			if (!trustHost && process.env.NODE_ENV === "production" && !pinnedUrl()) {
 				console.warn(
-					"[cms-auth] The host is not trusted, so login will fail with an UntrustedHost error. Behind a proxy or on a platform such as Vercel, " +
-						"set `trustHost: true` in the config or AUTH_TRUST_HOST=true; or set AUTH_URL to the site's public URL.",
+					`[cms-auth] ${problemText({
+						what: "The host is not trusted, so login will fail with an UntrustedHost error",
+						where: "AUTH_TRUST_HOST, AUTH_URL, or `trustHost` in monti.config.ts",
+						fix: "behind a proxy you run yourself that overwrites X-Forwarded-Host, set AUTH_TRUST_HOST=true (Vercel, Netlify and Cloudflare Pages are detected); otherwise set AUTH_URL to the site's public URL",
+					})}`,
 				);
 			}
 			const basePath = (options.basePath ?? CMS_AUTH_BASE_PATH).replace(/\/$/, "");
-			const admins = adminSets(options);
+			const { sets: admins, ignored } = collectAdmins(options);
+			for (const item of ignored) console.warn(`[cms-auth] ${ignoredAdminText(item)}`);
 			if (![...admins.values()].some((ids) => ids.size > 0) && !isDevAuthBypassEnabled(options.devBypass)) {
 				console.warn(
-					"[cms-auth] No admin is set, so nobody can log in. Set MONTI_ADMIN_GITHUB_ID (your numeric GitHub id) or pass `admins` to the provider or to auth().",
+					`[cms-auth] ${problemText({
+						what: "No admin is set, so nobody can log in",
+						where: "MONTI_ADMIN_GITHUB_ID in .env.local, or `admins` of the provider or of auth()",
+						fix: 'put your numeric GitHub id in MONTI_ADMIN_GITHUB_ID (open https://api.github.com/users/<your-login> and copy the number after "id"), then run `monti doctor`',
+					})}`,
 				);
 			}
 			const providerOf = (id: string | undefined) => providers.find((provider) => provider.id === id);
@@ -171,6 +172,17 @@ export function auth(options: AuthOptions): AuthAdapter {
 					return [provider.id, authjsProviders[index]?.type === "credentials"] as const;
 				}),
 			);
+
+			/** Tells once per address where GitHub (or another provider) will send the browser back, the thing a wrong OAuth app setting breaks. */
+			const announced = new Set<string>();
+			const announceCallback = (requestUrl: string, providerId: string) => {
+				const callbackUrl = `${new URL(requestUrl).origin}${withBasePath(basePath)}/callback/${providerId}`;
+				if (announced.has(callbackUrl) || !providerOf(providerId)?.usesCallbackUrl) return;
+				announced.add(callbackUrl);
+				console.info(
+					`[cms-auth] Signing in with ${providerOf(providerId)?.name}: it will send the browser back to ${callbackUrl}. If it says the redirect URL does not match, register exactly that URL in the OAuth app (\`monti doctor\` prints it), or set SITE_URL / AUTH_URL to the address you open the site at.`,
+				);
+			};
 
 			const config: AuthConfig = {
 				// Auth.js matches the path of the request the browser sent, which includes the Next `basePath` (`CmsAuth.basePath` is the in-app path).
@@ -256,7 +268,16 @@ export function auth(options: AuthOptions): AuthAdapter {
 						{ method: "POST", body: new URLSearchParams({ callbackUrl: redirectTo ?? "/" }) },
 						request?.url,
 					);
-				if (!internal) throw new Error("[cms-auth] Signing in or out needs the request it is for.");
+				if (!internal) {
+					throw new Error(
+						`[cms-auth] ${problemText({
+							what: "Signing in or out needs the request it is for, and none is available",
+							where: "where signIn() or signOut() is called",
+							fix: "call it from a route or a server component, or pass the `request` option; outside `@monti-cms/nextjs` pass a `host` to auth()",
+						})}`,
+					);
+				}
+				if (path.startsWith("/signin/")) announceCallback(internal.url, path.slice("/signin/".length));
 				return Auth(internal, internalConfig);
 			};
 
@@ -287,11 +308,23 @@ export function auth(options: AuthOptions): AuthAdapter {
 					...(provider.icon ? { icon: provider.icon } : {}),
 				})),
 				signIn: async (providerId = defaultProvider, signInOptions) => {
-					if (!providerOf(providerId)) throw new Error(`[cms-auth] Unknown sign-in method "${providerId}".`);
+					if (!providerOf(providerId)) {
+						throw new Error(
+							`[cms-auth] ${problemText({
+								what: `Unknown sign-in method "${providerId}"`,
+								where: "`providers` of auth() in monti.config.ts",
+								fix: `use one of: ${providers.map((provider) => provider.id).join(", ")}`,
+							})}`,
+						);
+					}
 					requireConfigured();
 					if (isCredentials.get(providerId)) {
 						throw new Error(
-							`[cms-auth] "${providerId}" is a credentials provider, which needs a form on the login page. Not supported yet.`,
+							`[cms-auth] ${problemText({
+								what: `"${providerId}" is a credentials provider, which needs a form on the login page, and that is not supported yet`,
+								where: "`providers` of auth() in monti.config.ts",
+								fix: "use an OAuth provider such as github() for now",
+							})}`,
 						);
 					}
 					return flow(`/signin/${providerId}`, signInOptions?.request, signInOptions?.redirectTo);

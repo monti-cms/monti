@@ -149,7 +149,7 @@ function findContentFolders(cwd: string): ContentFolder[] {
 }
 
 /** Whether a `.gitignore` line list covers `.env.local`. */
-function ignoresEnvLocal(gitignore: string): boolean {
+export function ignoresEnvLocal(gitignore: string): boolean {
 	return gitignore
 		.split(/\r?\n/)
 		.map((line) => line.trim())

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Example app bundle check. Builds and packs the repo packages (`packages/*`), copies the example app (`examples/blog`) to a temp folder outside the repo,
- * installs it from those bundles, then runs a type check (`skipLibCheck: false`) and `next build`. The example config attaches every extension. It also runs the import-boundary check (`monti check:boundary`).
+ * installs it from those bundles, then runs a type check (`skipLibCheck: false`) and `next build`. The example config attaches every extension. It also runs the config checks of `monti doctor` (the config loads, and no client component imports it).
  * Inside the repo the sources are used directly, so this catches what breaks only in the bundles (`dist`, `exports`, dependency declarations).
  *
  *   node scripts/check-example.mjs            # build first
@@ -94,7 +94,7 @@ run("pnpm", ["install", "--no-frozen-lockfile"], app);
 run("pnpm", ["exec", "monti", "schema:types", "--check"], app);
 
 // `monti.config.ts` holds the database and login settings and is server-only: no client component may import it (directly or through other files).
-run("pnpm", ["exec", "monti", "check:boundary"], app);
+run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);
 
 const check = (label) => {
 	console.log(`\n=== ${label} ===`);

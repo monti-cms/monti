@@ -1,3 +1,4 @@
+import { problemText } from "../../core/problem";
 import type { AuthContext, CmsAuth } from "../../server/define";
 import { isLoopbackRequest, productionLikeEnvironment } from "./dev-bypass";
 
@@ -65,14 +66,19 @@ export function assertDevBypassSafe(
 	const reason = productionLikeEnvironment(env);
 	if (reason) {
 		throw new Error(
-			`[cms-auth] Refusing to start with devBypass: NODE_ENV is "development" but this looks like a deployed server (${reason}). ` +
-				"The bypass opens the CMS to everyone as an admin. Turn devBypass off (devBypass: false) on this server, or run it with NODE_ENV=production.",
+			`[cms-auth] ${problemText({
+				what: `Refusing to start with devBypass: NODE_ENV is "development" but this looks like a deployed server (${reason}). The bypass would open the CMS to everyone as an admin`,
+				where: "`devBypass: true` in auth() of monti.config.ts, and NODE_ENV of this server",
+				fix: "remove `devBypass: true` (under `next dev` the bypass is on by itself, on this machine only), or run the server with NODE_ENV=production",
+			})}`,
 		);
 	}
 }
 
 let devBypassWarned = false;
 let devBypassSkippedWarned = false;
+/** The accounts that were refused as non-admins and logged about once. */
+const refusedWarned = new Set<string>();
 
 /** Authentication for the admin API and UI. The login method is set by `auth` in `monti.config.ts`. */
 export class CmsAuthGateway implements AuthGateway {
@@ -116,6 +122,17 @@ export class CmsAuthGateway implements AuthGateway {
 
 		const accountId = String(session.user.accountId);
 		if (!cmsAuth.isAdmin(accountId)) {
+			if (!refusedWarned.has(accountId)) {
+				refusedWarned.add(accountId);
+				console.warn(
+					`[cms-auth] ${problemText({
+						what: `${accountId} signed in but is not an admin, so it was refused`,
+						where:
+							"MONTI_ADMIN_GITHUB_ID in .env.local (or the environment of the host), or `admins` of auth() in monti.config.ts",
+						fix: `add ${accountId.includes(":") ? accountId.slice(accountId.indexOf(":") + 1) : accountId} to the admins and restart the server; \`monti doctor\` checks the list`,
+					})}`,
+				);
+			}
 			throw new AuthError("forbidden", "Forbidden: not an authorized admin");
 		}
 

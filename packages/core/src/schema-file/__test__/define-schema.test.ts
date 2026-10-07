@@ -137,7 +137,7 @@ describe("defineSite with a schema file", () => {
 		writeFileSync(file, JSON.stringify(blogSchema));
 		const config = defineSite({ schema: file });
 		expect(Object.keys(config.collections)).toContain("post");
-		expect(() => defineSite({ schema: path.join(dir, "missing.json") })).toThrow(/cannot read schema file .*not found/);
+		expect(() => defineSite({ schema: path.join(dir, "missing.json") })).toThrow(/missing\.json.*does not exist.*Fix:/);
 		const malformed = path.join(dir, "bad.json");
 		writeFileSync(malformed, "{ not json");
 		expect(() => defineSite({ schema: malformed })).toThrow(/bad\.json is not valid JSON/);
