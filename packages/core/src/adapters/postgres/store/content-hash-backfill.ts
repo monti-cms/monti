@@ -43,7 +43,7 @@ export async function recomputeContentHashes(
 			[
 				res.rows.map((row) => row.entry_id),
 				res.rows.map((row) => row.state),
-				res.rows.map((row) => mdxContentHash(options.bodies, row.metadata, row.mdx, row.schema_version)),
+				res.rows.map((row) => mdxContentHash(options.bodies, row.metadata, row.mdx)),
 			],
 		);
 		last = res.rows[res.rows.length - 1];

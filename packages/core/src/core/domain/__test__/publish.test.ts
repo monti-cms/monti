@@ -87,7 +87,6 @@ describe("references a publish checks", () => {
 describe("when saving or publishing changes nothing", () => {
 	const body = {
 		contentHash: "h",
-		schemaVersion: 1,
 		slug: "s",
 		metadata: { title: "t", tags: ["a"] },
 		translation: null,
@@ -101,12 +100,17 @@ describe("when saving or publishing changes nothing", () => {
 		expect(isSameWorkingBody(null, body)).toBe(false);
 	});
 
-	it("any difference in hash, schema version, slug, metadata or translation status is a change", () => {
+	it("any difference in hash, slug, metadata or translation status is a change", () => {
 		expect(isSameWorkingBody(body, { ...body, contentHash: "other" })).toBe(false);
-		expect(isSameWorkingBody(body, { ...body, schemaVersion: 2 })).toBe(false);
 		expect(isSameWorkingBody(body, { ...body, slug: null })).toBe(false);
 		expect(isSameWorkingBody(body, { ...body, metadata: { title: "t", tags: ["b"] } })).toBe(false);
 		expect(isSameWorkingBody(body, { ...body, translation: { state: "stale" } })).toBe(false);
+	});
+
+	it("the schema version an entry is stored under is not a difference: the same content saved under a newer schema is not an edit", () => {
+		expect(isSameWorkingBody({ ...body, schemaVersion: 1 } as never, { ...body, schemaVersion: 2 } as never)).toBe(
+			true,
+		);
 	});
 
 	it("an unset translation status equals a stored null", () => {
@@ -115,7 +119,6 @@ describe("when saving or publishing changes nothing", () => {
 
 	const state = {
 		contentHash: "h",
-		schemaVersion: 1,
 		updatedAt: new Date("2026-01-01T00:00:00Z"),
 		metadata: { title: "t" },
 		translation: null,

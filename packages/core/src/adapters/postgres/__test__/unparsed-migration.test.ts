@@ -143,9 +143,7 @@ describe("0017_unparsed_bodies", () => {
 		expect(doc.content[0]?.id).toMatch(/^[0-9a-z]{8}$/);
 		expect(after?.mdx).toBe(text);
 		// A document is hashed as a document; text that is not one under its own tag, as it always was.
-		expect(after?.content_hash).toBe(
-			computeContentHash(after?.metadata as never, unparsedDocument(text), after?.schema_version),
-		);
+		expect(after?.content_hash).toBe(computeContentHash(after?.metadata as never, unparsedDocument(text)));
 		// Nothing but the document and the hash changed.
 		expect(after?.updated_at.getTime()).toBe(before?.updated_at.getTime());
 		expect(after?.search_text).toBe(before?.search_text);

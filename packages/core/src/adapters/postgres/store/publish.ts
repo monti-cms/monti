@@ -183,7 +183,6 @@ export function createPublishing(ctx: StoreContext) {
 
 		const bodyState = (body: NonNullable<typeof working>) => ({
 			contentHash: body.content_hash,
-			schemaVersion: body.schema_version,
 			updatedAt: body.updated_at,
 			metadata: body.metadata,
 			translation: body.translation,

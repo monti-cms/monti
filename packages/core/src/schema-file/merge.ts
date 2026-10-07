@@ -27,7 +27,7 @@ export function loadSchemaOption(schema: unknown): SchemaFile {
  * and may override its environment-specific settings, but never silently replaces its data:
  *
  * - `collections`: the file's collections and the code's, side by side. The same name in both is an error.
- * - `locales` and `defaultLocale`: only in the file (setting them in code too is an error).
+ * - `locales`, `defaultLocale` and `schemaVersion`: only in the file (setting them in code too is an error).
  * - `site` and `admin`: key by key, the code's value wins. A key set to `undefined` in code leaves the file's value.
  * - `timeZone`: the code's value wins.
  * - `seed.templates`: the file's templates, then the code's.
@@ -38,10 +38,10 @@ export function resolveSchemaConfig(config: CodeConfig): Record<string, unknown>
 	const file = loadSchemaOption(option);
 	const source = typeof option === "string" ? option : "monti.schema.json";
 
-	for (const key of ["locales", "defaultLocale"] as const) {
+	for (const key of ["locales", "defaultLocale", "schemaVersion"] as const) {
 		if (code[key] !== undefined) {
 			throw new Error(
-				`cms.config: \`${key}\` is set in the config and in ${source}; keep it in the schema file (a site's locales and default locale have one place)`,
+				`cms.config: \`${key}\` is set in the config and in ${source}; keep it in the schema file (a site's locales, default locale and schema version have one place)`,
 			);
 		}
 	}
@@ -65,6 +65,7 @@ export function resolveSchemaConfig(config: CodeConfig): Record<string, unknown>
 		locales: file.locales,
 		defaultLocale: file.defaultLocale,
 	};
+	if (file.schemaVersion !== undefined) merged.schemaVersion = file.schemaVersion;
 	const timeZone = code.timeZone ?? file.timeZone;
 	if (timeZone !== undefined) merged.timeZone = timeZone;
 	const site = overlay(file.site, code.site);

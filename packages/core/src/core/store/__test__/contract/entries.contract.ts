@@ -234,7 +234,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 		});
 
 		describe("a syntax-only change (same content hash, different MDX string)", () => {
-			it("still counts as a change when the slug, metadata, schema version or translation differ", async () => {
+			it("still counts as a change when the slug, metadata or translation differ, but not a different schema version", async () => {
 				const entry = await seedEntry(store, {
 					collection: contentCollection,
 					slug: "syntax-only-other-change",
@@ -252,6 +252,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				});
 				expect(slugChanged.version).toBe(entry.version + 1);
 
+				// The schema version an entry is stored under says which schema it was written under, not what it says: the same content is not an edit.
 				const schemaChanged = await seedSave(store, entry.id, {
 					expectedVersion: slugChanged.version,
 					metadata: { title: "Syntax" },
@@ -259,7 +260,8 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					schemaVersion: 2,
 					contentHash: "hash-syntax-other",
 				});
-				expect(schemaChanged.version).toBe(slugChanged.version + 1);
+				expect(schemaChanged.version).toBe(slugChanged.version);
+				expect(schemaChanged.working.schemaVersion).toBe(1);
 			});
 
 			it("is a republish when published: the published snapshot is not replaced", async () => {

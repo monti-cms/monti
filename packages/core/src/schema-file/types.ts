@@ -21,12 +21,55 @@ export interface SchemaAdmin {
 	readonly messages?: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
+/**
+ * A data transform recorded in the schema file (`migrations`): what `monti schema:apply` does to stored entries when the schema changed in a way the data does not follow by
+ * itself. `id` names it for good: it is recorded in `cms_migrations` when it ran, so it runs once and an applied one stays in the list as history. Collection, field and option
+ * names are the ones of the schema **after** the change (a dropped field is the one the schema no longer has).
+ */
+export type SchemaMigration = { readonly id: string; readonly note?: string } & (
+	| {
+			/** The value of `from` moves to `to` (the field was renamed). An entry that holds a value under `to` already keeps both (nothing is overwritten). */
+			readonly op: "renameField";
+			readonly collection: string;
+			readonly from: string;
+			readonly to: string;
+	  }
+	| {
+			/** A select value that is no longer an option (`from`) becomes another option (`to`) of the field. */
+			readonly op: "mapOption";
+			readonly collection: string;
+			readonly field: string;
+			readonly from: string;
+			readonly to: string;
+	  }
+	| {
+			/** The stored values of a field the schema no longer has are deleted. The only transform that deletes data. */
+			readonly op: "dropField";
+			readonly collection: string;
+			readonly field: string;
+	  }
+	| {
+			/** An entry with no value for a text or select field (one that became required, say) gets `value`. */
+			readonly op: "setDefault";
+			readonly collection: string;
+			readonly field: string;
+			readonly value: string;
+	  }
+);
+
 /** The parsed schema file. */
 export interface SchemaFile {
 	/** Link to the JSON Schema, for editor autocomplete and validation (`./node_modules/@monti-cms/core/schema.json`). Not read by the CMS. */
 	readonly $schema?: string;
+	/**
+	 * The version of the schema, a whole number from 1 (1 if left out). `monti schema:apply` raises it when the schema changes; entries record the version they
+	 * were written or transformed under.
+	 */
+	readonly schemaVersion?: number;
 	/** Collection name -> definition. The name is a stored value, so do not change it in production. */
 	readonly collections: Readonly<Record<string, SchemaCollection>>;
+	/** Data transforms `monti schema:apply` runs once each, in this order. Applied ones stay as history. */
+	readonly migrations?: readonly SchemaMigration[];
 	/** Content locales, in the order the admin shows them. */
 	readonly locales: readonly LocaleConfig[];
 	/** Default locale. Public URLs get no locale prefix for it. */
@@ -54,6 +97,8 @@ export interface SchemaTypes {
  */
 export interface SchemaInput {
 	readonly $schema?: string;
+	readonly schemaVersion?: number;
+	readonly migrations?: readonly unknown[];
 	readonly collections: Readonly<Record<string, unknown>>;
 	readonly locales: readonly { readonly code: string }[];
 	readonly defaultLocale: string;

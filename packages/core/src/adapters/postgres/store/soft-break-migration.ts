@@ -73,7 +73,7 @@ export async function migrateSoftBreaks(
 				typeof base === "string" ? rewritten(bodies, base, `${where} (translation base source)`, log) : undefined;
 			return {
 				mdx,
-				contentHash: mdxContentHash(bodies, row.metadata, mdx, row.schema_version),
+				contentHash: mdxContentHash(bodies, row.metadata, mdx),
 				searchText: mdxSearchText(site, bodies, mdx),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,

@@ -35,8 +35,8 @@ export const legacyBodiesOf = (formats: FormatRegistry, site: Site): LegacyBodie
  * Hash and search text of a body given as text, for the store migrations that predate stored documents: they work from the text a row holds. The document of the
  * text is whatever the format reads it as, and text that does not read is hashed as it is. New code works from documents and never calls these.
  */
-export const mdxContentHash = (bodies: LegacyBodies, metadata: JsonValue, mdx: string, schemaVersion = 1): string =>
-	computeContentHash(metadata, bodies.documentOf(mdx), schemaVersion);
+export const mdxContentHash = (bodies: LegacyBodies, metadata: JsonValue, mdx: string): string =>
+	computeContentHash(metadata, bodies.documentOf(mdx));
 
 export const mdxSearchText = (site: Site, bodies: LegacyBodies, mdx: string): string =>
 	documentText(site, bodies.documentOf(mdx), SEARCH_TEXT);

@@ -201,7 +201,7 @@ export async function migrateLinkEntryIds(
 				}
 			}
 
-			const contentHash = computeContentHash(row.metadata, result.doc, row.schema_version);
+			const contentHash = computeContentHash(row.metadata, result.doc);
 			const docChanged = !isDeepStrictEqual(JSON.parse(JSON.stringify(result.doc)), row.doc);
 			if (docChanged || contentHash !== row.content_hash || translation !== null) {
 				changed.push({

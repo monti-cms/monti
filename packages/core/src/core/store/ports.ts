@@ -1,5 +1,12 @@
 import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types";
 import type {
+	AppliedSchemaChange,
+	ApplySchemaChangeParams,
+	BodyCursor,
+	ScannedBody,
+	SchemaState,
+} from "./schema-change";
+import type {
 	BodyTemplate,
 	CompleteMediaAssetInput,
 	CreateMediaAssetInput,
@@ -208,6 +215,33 @@ export interface TransferStore {
 	readExportSnapshot(): Promise<ExportSnapshot>;
 }
 
+/**
+ * Schema changes (`schema-change/`): what the store knows about the schema it was last applied under, a read-only look at the stored bodies for the impact
+ * check, and the transactional apply of the data transforms.
+ */
+export interface SchemaChangeStore {
+	/** The schema last applied (`applySchemaChange`), or `null` when none was yet. */
+	readSchemaState(): Promise<SchemaState | null>;
+	/** Which of these transform ids already ran (are recorded). Read-only. */
+	appliedSchemaTransforms(ids: readonly string[]): Promise<string[]>;
+	/**
+	 * A page of the stored bodies (working and published) of the collections, ordered by entry and then state, so the bodies of one entry are next to each other.
+	 * Without `collections`, all of them. Pass the `next` of the last page as `after` for the following one; `next` is `null` on the last. Read-only.
+	 * (`scanAllBodies` in `schema-change/` walks the pages.)
+	 */
+	scanBodies(params?: {
+		collections?: readonly string[];
+		after?: BodyCursor;
+		limit?: number;
+	}): Promise<{ bodies: readonly ScannedBody[]; next: BodyCursor | null }>;
+	/**
+	 * Runs the transforms that are not recorded yet over the bodies of `collections`, records them, and records the schema and its version, in one transaction under the
+	 * lock the migrations use, so a second run (or a concurrent one) runs nothing again. `version` and `updated_at` of entries and bodies stay as they are, and
+	 * working and published bodies are rewritten the same way, so "unpublished changes" stays true or false as it was.
+	 */
+	applySchemaChange(params: ApplySchemaChangeParams): Promise<AppliedSchemaChange>;
+}
+
 /** Everything the content store offers. */
 export interface ContentStore
 	extends EntryStore,
@@ -218,4 +252,5 @@ export interface ContentStore
 		MediaMetadataStore,
 		TemplateStore,
 		PreferenceStore,
-		TransferStore {}
+		TransferStore,
+		SchemaChangeStore {}

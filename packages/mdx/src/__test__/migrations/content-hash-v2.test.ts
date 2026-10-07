@@ -199,7 +199,7 @@ describe("content hash v2", () => {
 			}>(`SELECT entry_id, state, metadata, mdx, schema_version, content_hash FROM "${schemaName}".entry_bodies`);
 			expect(rows.rows.length).toBeGreaterThan(0);
 			return rows.rows
-				.filter((row) => row.content_hash !== mdxContentHash(bodies, row.metadata, row.mdx, row.schema_version))
+				.filter((row) => row.content_hash !== mdxContentHash(bodies, row.metadata, row.mdx))
 				.map((row) => `${row.entry_id}/${row.state}`);
 		};
 

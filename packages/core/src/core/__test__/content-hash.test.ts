@@ -7,8 +7,8 @@ import { canonicalBodyForHash, computeContentHash } from "../content-hash";
 
 const metadata = { title: "A" };
 /** The hash of a body written as plain text (see `test/doc-text.ts`). */
-const hashOf = (text: string, meta: Record<string, unknown> = metadata, schemaVersion = 1) =>
-	computeContentHash(meta as never, docOf(text), schemaVersion);
+const hashOf = (text: string, meta: Record<string, unknown> = metadata) =>
+	computeContentHash(meta as never, docOf(text));
 
 const documentOf = (...content: CmsNode[]): StoredDocument => ({
 	type: "doc",
@@ -78,9 +78,16 @@ describe("content hash v2", () => {
 			expect(hashOf("```ts\nconst a = 1\n```")).not.toBe(hashOf("```ts\nconst a = 2\n```"));
 		});
 
-		it("metadata and schema version", () => {
+		it("metadata", () => {
 			expect(hashOf("Hello", { title: "B" })).not.toBe(hashOf("Hello"));
-			expect(hashOf("Hello", metadata, 2)).not.toBe(hashOf("Hello", metadata, 1));
+		});
+
+		it("keeps the value every stored entry has: the hash is defined over schema version 1, whatever version an entry is stored under", () => {
+			const doc = docOf("Hello");
+			const expected = createHash("sha256")
+				.update(JSON.stringify(["cms-snapshot-v3", 1, metadata, canonicalBodyForHash(doc)]))
+				.digest("hex");
+			expect(computeContentHash(metadata, doc)).toBe(expected);
 		});
 	});
 

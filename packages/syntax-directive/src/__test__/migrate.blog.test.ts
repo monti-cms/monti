@@ -9,9 +9,9 @@ import { directiveSyntax } from "..";
 const readOnly = [directiveSyntax({ write: false })];
 const { write } = mdxWith(testSite, readOnly);
 const metadata = { title: "A" };
-const hashBefore = (mdx: string) => hashOf(testSite, metadata, mdx, 1, readOnly);
+const hashBefore = (mdx: string) => hashOf(testSite, metadata, mdx, readOnly);
 /** The written body is read with no extension at all: it is standard MDX. */
-const hashAfter = (mdx: string) => hashOf(testSite, metadata, mdx, 1);
+const hashAfter = (mdx: string) => hashOf(testSite, metadata, mdx);
 
 describe("migrating real posts to standard MDX", () => {
 	it("real posts keep their content hash", () => {

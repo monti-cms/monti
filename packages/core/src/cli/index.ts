@@ -2,6 +2,7 @@ import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
 import { formatInitReport, initProject } from "./init";
 import { migrate } from "./migrate";
+import { schemaApply, schemaDiff } from "./schema-apply";
 import { extractSchema, formatExtractReport } from "./schema-extract";
 import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
 
@@ -13,6 +14,8 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--server <file>]`: creates the DB tables.
  * - `monti schema:types [--schema <file>] [--out <file>] [--watch] [--check]`: writes the types of `monti.schema.json`.
  * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of `cms.config.ts` to `monti.schema.json`.
+ * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
+ * - `monti schema:apply [--schema <file>] [--dry-run] [env options]`: runs the data transforms of the schema file (`migrations`) once each and records the schema and its version.
  */
 
 export {
@@ -30,6 +33,16 @@ export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { formatInitReport, type InitOptions, type InitReport, initProject } from "./init";
 export { type MigrateOptions, migrate } from "./migrate";
 export { DEFAULT_REGISTRY_URL, type RegistryItem, readItem, resolveItems } from "./registry";
+export {
+	formatApplyResult,
+	formatSchemaPlan,
+	type SchemaApplyOutcome,
+	type SchemaCommandOptions,
+	type SchemaDiffResult,
+	schemaApply,
+	schemaDiff,
+	withSchemaVersion,
+} from "./schema-apply";
 export {
 	CONFIG_FILE_CANDIDATES,
 	type ExtractedSchema,
@@ -81,6 +94,14 @@ Commands:
               --overwrite           Replace the schema file if it exists
               --locale <code>       Language for labels plugins provide (default: the admin language)
               --no-types            Do not write the declaration file
+  schema:diff     Compare the schema with the one last applied to the database and list the stored entries each change touches (read-only)
+              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
+              --check               Exit 1 when there is anything to apply
+              --env-file <file>, --no-env-file, --server <file>   As for migrate
+  schema:apply    Run the data transforms of the schema file (migrations) once each, record the schema, and raise schemaVersion in the file when the schema changed
+              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
+              --dry-run             Run everything in a transaction that is rolled back, and write nothing
+              --env-file <file>, --no-env-file, --server <file>   As for migrate
 `;
 
 export interface CliIo {
@@ -197,6 +218,34 @@ export async function runCli(
 			});
 			io.log(formatExtractReport(report));
 			return 0;
+		}
+		if (command === "schema:diff" || command === "schema:apply") {
+			const { values } = parseArgs({
+				args: [...rest],
+				options: {
+					schema: { type: "string" },
+					"env-file": { type: "string", multiple: true },
+					"no-env-file": { type: "boolean" },
+					server: { type: "string" },
+					check: { type: "boolean" },
+					"dry-run": { type: "boolean" },
+				},
+			});
+			const options = {
+				cwd: io.cwd,
+				schema: values.schema,
+				envFiles: values["no-env-file"] ? [] : values["env-file"],
+				server: values.server,
+				log: io.log,
+			};
+			if (command === "schema:diff") {
+				const result = await schemaDiff({ ...options, check: values.check });
+				io.log(result.text);
+				return result.exitCode;
+			}
+			const outcome = await schemaApply({ ...options, dryRun: values["dry-run"] });
+			io.log(outcome.text);
+			return outcome.ok ? 0 : 1;
 		}
 		if (command === undefined || command === "help" || command === "--help" || command === "-h") {
 			io.log(HELP);

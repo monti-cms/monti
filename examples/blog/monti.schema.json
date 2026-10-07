@@ -1,5 +1,6 @@
 {
 	"$schema": "./node_modules/@monti-cms/core/schema.json",
+	"schemaVersion": 1,
 	"collections": {
 		"post": {
 			"label": "Post",

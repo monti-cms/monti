@@ -7,10 +7,12 @@ import type { Reference } from "../types";
  * Publish rules: who may be published, which references a publish has to check, and when saving or publishing changes nothing.
  */
 
-/** A stored body (working or published) as far as these rules look at it. */
+/**
+ * A stored body (working or published) as far as these rules look at it. The schema version a body is stored under is not compared here: it says which schema
+ * the body was written under, not what it says, so a body saved again under a newer schema version is the same body.
+ */
 export interface BodyState {
 	readonly contentHash: string;
-	readonly schemaVersion: number;
 	readonly updatedAt: Date;
 	readonly metadata: unknown;
 	readonly translation: unknown;
@@ -19,7 +21,6 @@ export interface BodyState {
 /** What a save compares: the draft's body, its slug and its translation status. */
 export interface WorkingBodyState {
 	readonly contentHash: string;
-	readonly schemaVersion: number;
 	readonly slug: string | null;
 	readonly metadata: unknown;
 	readonly translation: unknown;
@@ -77,7 +78,6 @@ export function isSameWorkingBody(stored: WorkingBodyState | null, next: Working
 	return Boolean(
 		stored &&
 			stored.contentHash === next.contentHash &&
-			stored.schemaVersion === next.schemaVersion &&
 			stored.slug === next.slug &&
 			isDeepStrictEqual(stored.metadata, next.metadata) &&
 			isDeepStrictEqual(stored.translation ?? null, next.translation ?? null),
@@ -85,7 +85,7 @@ export function isSameWorkingBody(stored: WorkingBodyState | null, next: Working
 }
 
 /**
- * Whether publishing writes nothing new: the published body is already the draft (same hash, schema, modified date, metadata and translation status)
+ * Whether publishing writes nothing new: the published body is already the draft (same hash, modified date, metadata and translation status)
  * and the public slug is already the draft's.
  */
 export function isRepublish(
@@ -96,7 +96,6 @@ export function isRepublish(
 	return Boolean(
 		published &&
 			published.contentHash === working.contentHash &&
-			published.schemaVersion === working.schemaVersion &&
 			published.updatedAt.getTime() === working.updatedAt.getTime() &&
 			slugs.current === slugs.target &&
 			isDeepStrictEqual(published.metadata, working.metadata) &&

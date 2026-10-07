@@ -293,9 +293,7 @@ describe("0015_code_annotations", () => {
 
 		for (const state of ["working", "published"] as const) {
 			const stored = await row(published.id, state);
-			expect(stored?.content_hash).toBe(
-				mdxContentHash(bodies, stored?.metadata ?? {}, WRITTEN, stored?.schema_version ?? 1),
-			);
+			expect(stored?.content_hash).toBe(mdxContentHash(bodies, stored?.metadata ?? {}, WRITTEN));
 			expect(stored?.content_hash).toBe(published[state === "working" ? "working" : "published"]?.contentHash);
 			expect(stored?.search_text).toBe(mdxSearchText(testSite, bodies, WRITTEN));
 			expect(stored?.search_text).toContain("const needle = 1;");
@@ -402,9 +400,7 @@ describe("0015_code_annotations", () => {
 		const stored = await row(draft.id, "working");
 		expect(stored?.doc).toEqual(unreadable);
 		expect(stored?.mdx).toBe(LEGACY);
-		expect(stored?.content_hash).toBe(
-			mdxContentHash(bodies, stored?.metadata ?? {}, LEGACY, stored?.schema_version ?? 1),
-		);
+		expect(stored?.content_hash).toBe(mdxContentHash(bodies, stored?.metadata ?? {}, LEGACY));
 		expect(messages.filter((message) => message.includes(`${draft.id}/working`))).toHaveLength(1);
 		expect((await row(fine.id, "working"))?.mdx).toBe(WRITTEN);
 		expect(messages.some((message) => message.includes(fine.id))).toBe(false);
@@ -429,9 +425,7 @@ describe("0015_code_annotations", () => {
 			const stored = await row(entry.id, "working");
 			expect(stored?.mdx).toBe(mdx);
 			expect(stored?.doc).toBeNull();
-			expect(stored?.content_hash).toBe(
-				mdxContentHash(bodies, stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1),
-			);
+			expect(stored?.content_hash).toBe(mdxContentHash(bodies, stored?.metadata ?? {}, mdx));
 			expect(stored?.search_text).toBe(mdxSearchText(testSite, bodies, mdx));
 		}
 		// A body that never had a document was logged by the step that gave documents.
