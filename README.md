@@ -10,7 +10,7 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 
 | Package | What it does |
 | --- | --- |
-| [`@monti-cms/core`](packages/core) | The core. Config, entry storage and publishing, the document model, admin API, command line (`monti`) |
+| [`@monti-cms/core`](packages/core) | The core. One config (`monti.config.ts`), entry storage and publishing, the document model, admin API, command line (`monti`) |
 | [`@monti-cms/mdx`](packages/mdx) | MDX extension. The `mdx` format, the admin source panel, `renderMdx` and the syntax extension API |
 | [`@monti-cms/admin`](packages/admin) | The admin UI. Editor, entry list, media, templates. Framework-neutral: it reaches the router through an adapter |
 | [`@monti-cms/auth`](packages/auth) | Admin login on `Request` and `Response` (Auth.js core), with pluggable providers. GitHub ships with it |
@@ -44,7 +44,7 @@ Not on npm yet. Until the public release, install the release bundle from the `r
 
 For the other packages, change only `path:/<folder name>` and use the same tag.
 
-`@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/blog`](examples/blog).
+`@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/blog`](examples/blog); its one config file is `monti.config.ts`, which exports the ready `cms` instance.
 
 ## Development
 

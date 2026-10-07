@@ -74,7 +74,7 @@ export function assertDevBypassSafe(
 let devBypassWarned = false;
 let devBypassSkippedWarned = false;
 
-/** Authentication for the admin API and UI. The login method is set by `auth` in the server config. */
+/** Authentication for the admin API and UI. The login method is set by `auth` in `monti.config.ts`. */
 export class CmsAuthGateway implements AuthGateway {
 	constructor(
 		private readonly getAuth: () => CmsAuth,

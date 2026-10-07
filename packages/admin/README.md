@@ -12,7 +12,7 @@ The screens only call the core's admin API (`/api/cms/v1/*`). You can also skip 
 For installation, routes and styles, follow "Install in an empty Next app" in the `@monti-cms/core` README (`monti init` generates the admin route and style lines). The admin route files use `CmsAdminLayout` and `CmsAdminPage` of `@monti-cms/nextjs/admin`.
 
 - **Admin path.** Defaults to `/admin`; change it with the site config's `admin.path` (e.g. `/studio`). The app's admin route folder
-  (`app/(admin)/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
+  (`app/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
   plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/core/client`).
   The admin API (`/api/cms/v1`) does not change.
 - **View site.** `View site` below the sidebar opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
@@ -22,9 +22,25 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
 ## Adding site components
 
 Field inputs, block edit screens and code fence previews are added by extensions, and the site can add to or override them (e.g. the block extension's Mermaid and chart provide a default
-preview). Add them from a client component. If the site's provider sits inside the admin layout, the site's entry wins on the same name.
+preview). The site adds its own through a plugin of its own: the plugin names an admin side, and the admin loads it (there is no separate file in `app/`). The Provider of that admin side is a client component that wraps the admin and uses `CmsAdminComponentsProvider`. If the site's entry has the same name as an extension's, the site's wins.
+
+```ts
+// plugins/site-admin/index.ts
+import { definePlugin } from "@monti-cms/core";
+
+export const siteAdmin = () => definePlugin({ name: "site-admin", options: {}, admin: () => import("./admin") });
+
+// plugins/site-admin/admin.ts: the default export is the admin side
+import { defineAdminPlugin } from "@monti-cms/admin/plugins";
+import { SiteAdminComponents } from "./provider";
+
+export default defineAdminPlugin({ Provider: SiteAdminComponents });
+```
+
+Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugins/word-list` is a complete example. The provider:
 
 ```tsx
+// plugins/site-admin/provider.tsx
 "use client";
 import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 
@@ -206,7 +222,7 @@ const components = { marks: { note } };
 The core has no checkers; it only renders the buttons, underlines and results window. When a site or extension builds a checker (a paid API, an npm package that runs in the browser,
 etc.) and puts it in the extension point `textCheckers`, every checker that checks the text's language gets a toolbar button (name `label`, icon `icon`),
 and results appear as wavy underlines, a results window and a list. If several extensions add checkers, all are collected. With no checkers, nothing is shown.
-The Bareun checker is `@monti-cms/bareun`.
+The Bareun checker is `@monti-cms/bareun`, a plugin you list in `plugins` of `monti.config.ts`. Your own checkers are registered through a plugin's admin side (see "Adding site components").
 
 ```tsx
 "use client";
@@ -244,13 +260,13 @@ API keys are not kept in the browser. The browser sends `{ segments }` to a site
 and returns `{ issues }`. `textCheckRoute` checks the admin login and same origin and limits the request size (default 100 paragraphs, 20,000 characters).
 
 ```ts
-// Admin component (browser)
+// Admin side of a plugin (browser)
 import { remoteTextChecker } from "@monti-cms/core/client";
 const checker = remoteTextChecker({ id: "bareun", label: "Bareun", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts (server)
 import { textCheckRoute } from "@monti-cms/core/plugin/server";
-import { cms } from "../../../cms.server";
+import { cms } from "@/monti.config";
 export const POST = textCheckRoute({
 	cms, // a route file of the app names its instance for the admin check
 	limits: { maxChars: 20_000 },
@@ -270,7 +286,7 @@ export const POST = textCheckRoute({
   They do not check spacing or grammar.
 - For checkers that return only the misspelled word without a position, find the word in the paragraph text to determine the position (in order if the same word appears several times).
 
-`app/(admin)/studio/admin-components.tsx` in `examples/blog` is an example of a small banned-word checker that runs in the browser.
+`plugins/word-list` in `examples/blog` is an example of a small banned-word checker that runs in the browser, registered as a plugin (`index.ts`, `admin.ts`, `provider.tsx`).
 
 The underline styles are included in `@monti-cms/admin/styles.css`.
 
@@ -380,7 +396,7 @@ The admin UI's CSS is **prebuilt**: `@monti-cms/admin/styles.css` is compiled wi
 or `tw-animate-css` setup, and no `@source`, `@theme` or `@custom-variant` lines. Import it in the admin layout (only the admin pages then load it) or in any global CSS file:
 
 ```tsx
-// app/(admin)/admin/layout.tsx
+// app/admin/layout.tsx
 import "@monti-cms/admin/styles.css";
 ```
 
@@ -410,7 +426,7 @@ so the shared utilities, `prose`, the theme and the reset are defined in **one**
 A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `cms-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
 The cost is that the admin file carries the classes of first-party plugins an app does not install (a few KB).
 
-`CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `cms.server.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
+`CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `monti.config.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
 
 ```tsx
 <CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>

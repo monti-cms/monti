@@ -110,7 +110,7 @@ function adminSets(options: AuthOptions): Map<string, Set<string>> {
 
 /**
  * Admin login on standard `Request` and `Response`, over Auth.js core (`@auth/core`). The ways to log in are providers (`github()` from
- * `@monti-cms/auth/github`); the session is a signed cookie (a JWT), so nothing is stored for it. Used as `auth` in the server config.
+ * `@monti-cms/auth/github`); the session is a signed cookie (a JWT), so nothing is stored for it. Used as `auth` in `defineConfig` (`monti.config.ts`).
  *
  * ```ts
  * auth: auth({ providers: [github()] })

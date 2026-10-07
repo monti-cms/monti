@@ -29,12 +29,12 @@
 사이트 설정의 `plugins`에 `mdx()`를 적고, 스타일은 관리자 스타일 뒤에 가져온다.
 
 ```ts
-// cms.config.ts
-import { defineConfig } from "@monti-cms/core";
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [mdx({ syntax: [directiveSyntax()] })], // 표준 MDX면 `mdx()`만
 });
@@ -55,7 +55,7 @@ import "@monti-cms/admin/styles.css";
 
 | 진입점 | 쓰는 곳 | 내용 |
 | --- | --- | --- |
-| `@monti-cms/mdx` | `cms.config.ts`, 문법 확장 패키지 | 플러그인 `mdx({ syntax })`와 문법 확장 API: 타입(`SyntaxExtension`·`SyntaxContext`·`SerializeContext` 등), `RAW_SOURCE_PARAGRAPH`, 표 도우미, 코드 주석 문법 도우미. 설정이 불러오므로 가볍게 둔다(remark를 가져오지 않는다) |
+| `@monti-cms/mdx` | `monti.config.ts`, 문법 확장 패키지 | 플러그인 `mdx({ syntax })`와 문법 확장 API: 타입(`SyntaxExtension`·`SyntaxContext`·`SerializeContext` 등), `RAW_SOURCE_PARAGRAPH`, 표 도우미, 코드 주석 문법 도우미. 설정이 불러오므로 가볍게 둔다(remark를 가져오지 않는다) |
 | `@monti-cms/mdx/format` | 서버 코드, 테스트 | `mdxFormat`, `createMdxFormat({ syntax })`, 그리고 해석·쓰기 API: `analyze`·`serialize`·`toDocument`·`bodyFromMdx`·`bodyFromDocument`·`bodyDocument`·`documentToMdx`·`toStoredDocument`·`fromStoredDocument`·`parseMdxAst`·`insertSoftBreaks`·`readableMdx`·`compareMdxStructure`·`configuredSyntax`·`remarkFenceBlocksToMdx` 등 |
 | `@monti-cms/mdx/render` | 공개 화면(서버 컴포넌트) | `renderMdx(source, options)` |
 | `@monti-cms/mdx/admin` | 관리자(플러그인이 불러온다) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, 그리고 이를 등록하는 관리자 공급자 |

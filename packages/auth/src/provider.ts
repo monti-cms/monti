@@ -33,7 +33,7 @@ export interface SignedInProviderAccount {
 export interface LoginProviderContext {
 	/** Storage of a plugin (`cms.storage(plugin)`). A provider that keeps its own users, like a password login, keeps them here. */
 	readonly storage: (plugin: string) => PluginStorage;
-	/** Whether the request host may be trusted (the server config `trustHost`). */
+	/** Whether the request host may be trusted (the config's `trustHost`, `AUTH_TRUST_HOST`, or a detected proxy platform). */
 	readonly trustHost: boolean;
 }
 

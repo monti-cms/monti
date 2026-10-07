@@ -12,7 +12,7 @@
 설치·라우트·스타일은 `@monti-cms/core` README의 "빈 Next 앱에 설치"를 따른다(`monti init`이 관리자 라우트·스타일 줄을 만든다). 관리자 라우트 파일은 `@monti-cms/nextjs/admin`의 `CmsAdminLayout`·`CmsAdminPage`를 쓴다.
 
 - **관리자 경로.** 기본 `/admin`이고 사이트 설정 `admin.path`로 바꾼다(예: `/studio`). 앱의 관리자 라우트 폴더
-  (`app/(admin)/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
+  (`app/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
   플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `useSite()`(`@monti-cms/core/client`)로 받은 사이트의 `site.adminHref("/media")`·`site.adminEntryEditHref(id)`로
   주소를 만든다. 관리자 API(`/api/cms/v1`)는 바뀌지 않는다.
 - **사이트 보기.** 사이드바 아래 `사이트 보기`는 `site.home`(기본 `/`)을 연다. 관리자 화면이 다른 호스트에 있으면 전체 주소를 적는다.
@@ -22,9 +22,25 @@
 ## 사이트 컴포넌트 넣기
 
 필드 입력·블록 편집 화면·코드 펜스 미리보기는 확장이 넣고 사이트가 더하거나 바꾼다(예: 블록 확장의 Mermaid·차트는 기본
-미리보기를 준다). 클라이언트 컴포넌트에서 넣는다. 사이트의 공급자를 관리자 레이아웃 안쪽에 두면 같은 이름은 사이트 것이 이긴다.
+미리보기를 준다). 사이트는 자기 플러그인으로 넣는다. 플러그인이 관리자 쪽을 지정하면 관리자가 그것을 불러온다(`app/`에 따로 둘 파일은 없다). 그 관리자 쪽의 Provider는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓰는 클라이언트 컴포넌트다. 같은 이름이면 확장의 것보다 사이트의 것이 이긴다.
+
+```ts
+// plugins/site-admin/index.ts
+import { definePlugin } from "@monti-cms/core";
+
+export const siteAdmin = () => definePlugin({ name: "site-admin", options: {}, admin: () => import("./admin") });
+
+// plugins/site-admin/admin.ts: 기본 내보내기가 관리자 쪽이다
+import { defineAdminPlugin } from "@monti-cms/admin/plugins";
+import { SiteAdminComponents } from "./provider";
+
+export default defineAdminPlugin({ Provider: SiteAdminComponents });
+```
+
+그런 다음 `monti.config.ts`의 `plugins`에 `siteAdmin()`을 넣는다. `examples/blog/plugins/word-list`가 완성된 예시다. Provider는 다음과 같다.
 
 ```tsx
+// plugins/site-admin/provider.tsx
 "use client";
 import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 
@@ -204,7 +220,7 @@ const components = { marks: { note } };
 본체는 검사기를 하나도 갖지 않고 버튼·밑줄·결과 창만 그린다. 사이트·확장이 검사기(유료 API, 브라우저에서 도는 npm 패키지
 등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 도구 모음 버튼(이름 `label`, 아이콘 `icon`)이
 생기고 결과는 물결 밑줄·결과 창·목록으로 보인다. 여러 확장이 검사기를 넣으면 모두 모인다. 검사기가 없으면 아무것도 보이지 않는다.
-바른 검사기는 `@monti-cms/bareun`이다.
+바른 검사기는 `@monti-cms/bareun`이며, `monti.config.ts`의 `plugins`에 넣는 플러그인이다. 직접 만든 검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고).
 
 ```tsx
 "use client";
@@ -242,13 +258,13 @@ API 키는 브라우저에 두지 않는다. 브라우저는 `remoteTextChecker`
 불러 `{ issues }`를 돌려준다. `textCheckRoute`는 관리자 로그인·같은 출처를 확인하고 요청 크기(기본 100문단·20,000자)를 막는다.
 
 ```ts
-// 관리자 컴포넌트(브라우저)
+// 플러그인의 관리자 쪽(브라우저)
 import { remoteTextChecker } from "@monti-cms/core/client";
 const checker = remoteTextChecker({ id: "bareun", label: "바른", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts(서버)
 import { textCheckRoute } from "@monti-cms/core/plugin/server";
-import { cms } from "../../../cms.server";
+import { cms } from "@/monti.config";
 export const POST = textCheckRoute({
 	cms, // 앱의 라우트 파일은 관리자 확인에 쓸 인스턴스를 적는다
 	limits: { maxChars: 20_000 },
@@ -268,7 +284,7 @@ export const POST = textCheckRoute({
   센다. 띄어쓰기·문법은 보지 못한다.
 - 위치 없이 틀린 낱말만 주는 검사기는 문단 글자에서 낱말을 찾아 위치를 정한다(같은 낱말이 여럿이면 차례대로).
 
-`examples/blog`의 `app/(admin)/studio/admin-components.tsx`가 브라우저에서 도는 작은 금지어 검사기 예시다.
+`examples/blog`의 `plugins/word-list`가 브라우저에서 도는 작은 금지어 검사기 예시이며, 플러그인(`index.ts`·`admin.ts`·`provider.tsx`)으로 등록한다.
 
 밑줄 스타일은 `@monti-cms/admin/styles.css`에 들어 있다.
 
@@ -365,7 +381,7 @@ Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않�
 `tw-animate-css` 설정이 필요 없고, `@source`·`@theme`·`@custom-variant` 줄도 필요 없다. 관리자 레이아웃에서 불러오거나(그러면 관리자 페이지만 이 CSS를 받는다) 아무 전역 CSS 파일에서 불러온다.
 
 ```tsx
-// app/(admin)/admin/layout.tsx
+// app/admin/layout.tsx
 import "@monti-cms/admin/styles.css";
 ```
 
@@ -395,7 +411,7 @@ import "@monti-cms/admin/styles.css";
 서드파티 플러그인은 자기 클래스(`cms-` 접두 이름)만 담은 미리 만든 CSS를 내고 공유 유틸리티나 `prose`는 다시 정의하지 않는다. 같은 선택자가 두 묶음에 정의되면 한계 검사 테스트가 실패한다.
 대신 관리자 파일에는 앱이 설치하지 않은 자체 제공 플러그인의 클래스도 들어 있다(몇 KB).
 
-`CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `cms.server.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
+`CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `monti.config.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
 
 ```tsx
 <CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>

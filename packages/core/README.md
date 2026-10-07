@@ -52,17 +52,18 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # to set the site's def
 | What it does | File |
 | --- | --- |
 | The schema file: the site's data (a one-collection starting point, English labels), with a `$schema` link for editors | `monti.schema.json` |
-| Site config: loads the schema file and adds what needs code (plugins) | `cms.config.ts` |
+| The one config: loads the schema file, lists the plugins, the database and the login, and exports the ready CMS instance as `cms` (values come from environment variables) | `monti.config.ts` |
 | The types of the schema file, written from it (not edited by hand) | `monti-env.d.ts` |
-| The CMS instance and its server config (DB, GitHub login; secrets come from environment variables) | `cms.server.ts` |
-| Admin UI (the layout imports the prebuilt admin stylesheet) | `app/(admin)/admin/[[...path]]/page.tsx`, `layout.tsx` |
+| Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/admin/layout.tsx`, `app/admin/[[...path]]/page.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
 | Config wiring (`withCms`) | `next.config.ts` (when it has the default shape with a single `export default nextConfig;` line); created if missing |
+
+A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
 
 For apps that use `src/app`, the config files go in `src/` and the routes under `src/app/`. Files that cannot be edited safely (a next config that does not have the default shape) are left as they are, and what to add is shown as a "to do".
 At the end it lists the packages to install, the environment variables and the GitHub callback URL.
 
-With `--admin-path`, the route folder becomes that path (`app/(admin)/studio/…`) and `admin: { path: "/studio" }` is added to the schema file.
+With `--admin-path`, the route folder becomes that path (`app/studio/…`) and `admin: { path: "/studio" }` is added to the schema file.
 **The admin path must be the same in `admin.path` (the schema file, or the site config) and in the route folder.** When you change it later, change both together.
 The admin API path (`/api/cms/v1`) does not change.
 
@@ -70,11 +71,11 @@ The admin API path (`/api/cms/v1`) does not change.
 date and number formatting follow it, and can be chosen separately with `admin.locale` in the config. `--time-zone <zone>` is the time zone in which dates and times are entered and
 shown (an IANA name, default `UTC`). The generated config files and the command-line help and output are read by developers, so they are in English.
 
-An app that already has a `cms.config.ts` keeps it: `monti init` creates no schema file next to a config it did not write, and tells you to run `monti schema:extract` ("The schema file"). `cms.config.ts` imports the JSON, so `tsconfig.json` needs `"resolveJsonModule": true` (`create-next-app` sets it; `monti init` says so when it is missing).
+An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file"). `monti.config.ts` imports the JSON, so `tsconfig.json` needs `"resolveJsonModule": true` (`create-next-app` sets it; `monti init` says so when it is missing).
 
 ### 3. Edit the collections
 
-The site's data lives in `monti.schema.json`; `cms.config.ts` loads it and adds what needs code ("The schema file"). `cms.server.ts` imports the config and hands it to `createCms`, and the admin UI gets it from that instance as data, so do not put secrets in either. The generated starting point is this.
+The site's data lives in `monti.schema.json`; `monti.config.ts` loads it and adds what needs code ("The schema file"). The admin UI gets the site from the instance as a JSON snapshot, so the schema file holds no secrets; `monti.config.ts` itself is server-only. The generated starting point is this.
 
 ```json
 {
@@ -100,27 +101,35 @@ The site's data lives in `monti.schema.json`; `cms.config.ts` loads it and adds 
 ```
 
 ```ts
-// cms.config.ts
-import { defineConfig } from "@monti-cms/core";
+// monti.config.ts
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { defineConfig, postgres } from "@monti-cms/core/server";
+import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
-export default defineConfig({
-	schema,
-	// plugins: [...blocks(), seo()],
+export const cms = defineConfig({
+	schema, // the data stays in monti.schema.json
+	plugins: [], // one line per feature, each works with no arguments: mdx(), seo(), callout(), ...
+	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
+	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	// storage: <adapter from any package>, // media uploads; without it the admin hides the media menu
 });
 ```
+
+`defineConfig` here is the one from `@monti-cms/core/server`: it takes the site options (`schema`, `plugins`, `blocks`, `site`, `admin`, `codeBlock`, `media`, `seed`, ...) and the server options (`database`, `auth`, `storage`, `secret`, ...) in one object, and returns the CMS instance (see "The CMS instance"). Every plugin and adapter works with no arguments and reads the conventional environment variables (see below); an explicit option always wins.
 
 The collection name (`post`) is stored in the DB, so do not change it in production. `kind` is `document` (a body, drafts and publishing) or `item` (a small entry such as a tag); `path` is the public URL, used for internal links in the body and for preview URLs; the title field is the one with `role: "title"` (or, without one, the field named `title`).
 Without `layout` and `list`, fields are drawn in field order with the default list columns ("Collections"). Run `pnpm exec monti schema:types` (or keep `next dev` running, which does it for you) after editing the file. See "The schema file" and "Config" below for the rules.
 
-`cms.server.ts` creates the CMS instance (`createCms({ config, server })`, see "The CMS instance"). Its server config holds the store, media and login connections and the secrets, and is only read on the server.
-Connections are created on first use, so the environment variables may be empty during the build. To use image uploads, install `@monti-cms/storage-s3` and add its store to `media` (only for sites that use media; the AWS SDK comes with it):
+`monti.config.ts` creates the CMS instance and is only read on the server. The server options hold the store, media and login connections and the secret.
+Connections are created on first use and the environment is read when a value is first needed, so the environment variables may be empty during the build. To use image uploads, install `@monti-cms/storage-s3` and pass its store as `storage` (only for sites that use media; the AWS SDK comes with it):
 
 ```ts
 import { r2Storage, s3Storage } from "@monti-cms/storage-s3";
 
-media: r2Storage(), // Cloudflare R2, reads the R2_* variables
-media: s3Storage(), // AWS S3, MinIO and other S3 API stores, reads the S3_* variables
+storage: r2Storage(), // Cloudflare R2, reads the R2_* variables
+storage: s3Storage(), // AWS S3, MinIO and other S3 API stores, reads the S3_* variables
 ```
 
 The variable names and options are in the package README (`packages/storage-s3`).
@@ -133,14 +142,14 @@ Put them in `.env.local`.
 
 | Name | Meaning |
 | --- | --- |
-| `CMS_DATABASE_URL` | Postgres connection URL |
-| `CMS_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing |
-| `AUTH_SECRET` | A random long value. Signs login sessions (`auth({ secret })`) |
-| `CMS_SECRET` | A random long value (different from `AUTH_SECRET`). The master secret that plugins' stored values (AI service keys) are encrypted under (server config `secret`). To change it, keep the old value in `previousSecrets` ("Plugin secrets") |
-| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app. The callback URL is `<site URL>/api/cms/auth/callback/github` |
-| `CMS_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID |
-| `CMS_DEV_AUTH_BYPASS` | Optional. If `1`, requests from your own machine open the admin without login under `next dev` (see "Login bypass for development") |
-| `AUTH_TRUST_HOST` | Optional. `true` when the server runs behind a proxy or on a platform that sets `Host` and `X-Forwarded-Host` (Vercel, nginx, a load balancer); see "Host trust" |
+| `DATABASE_URL` | Postgres connection URL (read by `postgres()`) |
+| `DATABASE_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing |
+| `MONTI_SECRET` | A random long value, for example from `openssl rand -base64 32`. The one secret: login sessions are signed with a key derived from it, and plugins' stored values (AI service keys, git-sync tokens) are encrypted under keys derived from it (`defineConfig({ secret })` takes the same value). To change it, keep the old value in `previousSecrets` ("Secrets") |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app (read by `github()`). The callback URL is `<site URL>/api/cms/auth/callback/github`. Not needed in `next dev` |
+| `MONTI_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID, or several separated by commas (read by `github()`). Not needed in `next dev` |
+| `AUTH_TRUST_HOST` | Optional. `true` only when the server runs behind a proxy you run yourself (nginx, a load balancer) that overwrites `X-Forwarded-Host`; Vercel, Netlify, Cloudflare Pages and the like are detected. See "Host trust" |
+
+Explicit option values always win over these variables, and nothing is guessed from other names. A missing required value is an error that names the variable (the environment is read when a value is first used, so building without it does not fail). There is no variable for the development login: under `next dev` it is on by itself ("Login bypass for development").
 
 ```sh
 pnpm exec monti migrate
@@ -153,8 +162,9 @@ against the same schema, they run one at a time. A plugin hands over once-only w
 
 - Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
   Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
-- File: the server file, the module that exports the instance as `cms`, is `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`/`./src/cms.server.ts`. It imports the site config itself, so there is no config option.
-- In a script of your own, import the instance and call it: `import { cms } from "./cms.server"; await cms.migrate(); await cms.close();`
+- File: the config file, the module that exports the instance as `cms` (`export const cms = …` or a default export), is `--config <file>` → `MONTI_CONFIG_PATH` → `./monti.config.ts`/`./src/monti.config.ts`.
+- `monti check:boundary` fails when a `"use client"` file reaches the config (or another server-only module) through its imports; see "Server-only config".
+- In a script of your own, import the instance and call it: `import { cms } from "./monti.config"; await cms.migrate(); await cms.close();`
   (run it with `tsx --env-file=.env.local script.ts`; the instance holds the site config, so nothing else has to be linked).
 
 ### 5. Run
@@ -167,11 +177,11 @@ By default the login API is served by the admin API route as well (`/api/cms/aut
 Apps that still use `/api/auth/*` as before (apps that do not want to change an already registered OAuth callback URL) pick the path and add a route file.
 
 ```ts
-// cms.server.ts
+// monti.config.ts
 auth: auth({ providers: [/* … */], host: nextHost, basePath: "/api/auth" }),
 
 // app/api/auth/[...auth]/route.ts
-import { cms } from "../../../../cms.server";
+import { cms } from "../../../../monti.config";
 export const { GET, POST } = cms.authHandlers;
 ```
 
@@ -185,9 +195,9 @@ After installing, restart the dev server.
 
 ### Manual wiring (without `monti init`)
 
-To do by hand what `monti init` does: create the site config and the server file (the instance, `createCms({ config, server })`), wrap `next.config.ts` in
+To do by hand what `monti init` does: create `monti.config.ts` (`export const cms = defineConfig({ … })`), wrap `next.config.ts` in
 `withCms(nextConfig)` (`import { withCms } from "@monti-cms/nextjs/config"`; there is no alias or `tsconfig.json` `paths` entry to add, and none for tests (Vitest) either),
-add the set of route files from the table above (each imports `cms` from the server file), and import the prebuilt admin stylesheet in the admin layout (`app/(admin)/admin/layout.tsx`).
+add the three Next files (the admin layout and page, and the API route; each imports `cms` from `monti.config.ts`), and import the prebuilt admin stylesheet in the admin layout (`app/admin/layout.tsx`).
 
 ```ts
 import "@monti-cms/admin/styles.css"; // prebuilt: needs no Tailwind, typography or tw-animate in the app
@@ -202,10 +212,10 @@ pnpm add @monti-cms/mdx
 ```
 
 ```ts
-// cms.config.ts
+// monti.config.ts
 import { mdx } from "@monti-cms/mdx";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [mdx()], // the `mdx` format and the admin source panel; syntax extensions go in mdx({ syntax: [...] })
 });
@@ -221,18 +231,20 @@ pnpm add @monti-cms/blocks
 ```
 
 ```ts
-// cms.config.ts
-import { blocks } from "@monti-cms/blocks";
+// monti.config.ts
+import { callout, tabs, tooltip } from "@monti-cms/blocks";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
-	plugins: [...blocks()], // all of them. To pick: blocks({ only: ["callout", "tooltip"] }); one at a time: callout(), tabs()…
+	plugins: [callout(), tabs(), tooltip()], // one line per block: delete a line and the block is gone
 });
 ```
 
 ```ts
 import "@monti-cms/blocks/styles.css"; // in the admin layout, after "@monti-cms/admin/styles.css" (callout look and block variables; the public page styles are `@monti-cms/blocks/render.css`)
 ```
+
+Each block is its own plugin function and works with no arguments: `callout()`, `collapsible()`, `tabs()`, `columns()`, `codeExplorer()`, `mermaid()`, `chart()`, `tooltip()`, `codeRef()` and `color(options?)`. There is no `blocks()` that adds all of them. The order of the inline marks `tooltip()`, `codeRef()` and `color()` in `plugins` is the order overlapping marks are stored in.
 
 See the README of `@monti-cms/blocks` for details.
 
@@ -243,10 +255,10 @@ pnpm add @monti-cms/ai
 ```
 
 ```ts
-// cms.config.ts
+// monti.config.ts
 import { aiPlugin } from "@monti-cms/ai";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	// The default features (URL, summary and tag suggestions, etc.) attach automatically based on field kind, role and relation target. List only what you change or turn off in `actions`.
 	plugins: [aiPlugin({ siteDescription: "a developer blog" })],
@@ -263,7 +275,7 @@ pnpm add @monti-cms/seo
 ```
 
 ```ts
-// cms.config.ts
+// monti.config.ts
 import { seo, seoFields } from "@monti-cms/seo";
 
 const article = defineCollection({
@@ -271,7 +283,7 @@ const article = defineCollection({
 	fields: { title, slug, ...seoFields() }, // search title, description, share image, hide, canonical URL + preview, all in the SEO tab
 });
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [seo()],
 });
@@ -282,29 +294,35 @@ See the README of `@monti-cms/seo` for details.
 
 ## The CMS instance
 
-`createCms({ config, server })` (from `@monti-cms/core/server`) turns the site config and the server config into the instance everything on the server uses. The instance owns the site (the resolved
-site config, `cms.site`), the content store, services, media store, login connection, plugin server modules, write hooks and the secret. Nothing is global: two instances with different configs and server configs live
+`defineConfig({ … })` (from `@monti-cms/core/server`) turns the site options and the server options into the instance everything on the server uses. The instance owns the site (the resolved
+site config, `cms.site`), the content store, services, media store, login connection, plugin server modules, write hooks and the secret. Nothing is global: two instances with different configs live
 side by side in one process (tests, scripts, several sites and databases).
 Connections are created on first use, so creating the instance at import or build time connects to nothing.
 
 ```ts
-// cms.server.ts
-import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
+// monti.config.ts
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
+import { defineConfig, postgres } from "@monti-cms/core/server";
 import { nextHost } from "@monti-cms/nextjs/auth";
-import config from "./cms.config";
+import { mdx } from "@monti-cms/mdx";
+import { callout } from "@monti-cms/blocks";
+import schema from "./monti.schema.json";
 
-export const cms = createCms({
-	config,
-	server: defineServerConfig({
-		database: postgres({ /* … */ }),
-		auth: auth({ providers: [github({ /* … */ })], host: nextHost }),
-	}),
+export const cms = defineConfig({
+	schema,                                   // data stays in monti.schema.json
+	plugins: [mdx(), callout()],              // one line per feature, each works with no arguments
+	database: postgres(),                     // DATABASE_URL, DATABASE_SCHEMA
+	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	// storage: <adapter from any package>,   // media uploads; without it the admin hides the media menu
 });
 ```
 
-Everything else imports `cms` from this file.
+Everything else imports `cms` from this file. `defineConfig` takes the site options (`schema`, or `collections` and `locales`, plus `plugins`, `blocks`, `site`, `admin`, `codeBlock`, `media`, `seed`, ...) and the server options ("Server options"): `database` and `auth` are required, the rest is optional.
+
+`defineConfig` of `@monti-cms/core` (the root entry) is the site-config-only part: it returns the config object and has no database or login. Tests and tools use it with the low-level `createCms({ config, server })` of `@monti-cms/core/server` (where `server` is a `CmsServerConfig`); apps use `defineConfig` of `@monti-cms/core/server`. `defineServerConfig` is removed.
+
+When moving from `cms.config.ts` + `cms.server.ts`, see "Upgrading from `cms.config.ts` + `cms.server.ts`".
 
 | Where | Code |
 | --- | --- |
@@ -326,14 +344,14 @@ The core imports nothing from Next.js. What a host supplies reaches it through t
 
 The reading API hangs off the instance (`cms.read.getEntry(…)`, not `getEntry(cms, …)`): site code imports one thing, and its types (`MetadataFor` and so on) stay in `@monti-cms/core/read`.
 
-**Development reload.** `next dev` evaluates `cms.server.ts` again after an edit, which calls `createCms` again, and a new database adapter would open a second connection pool without closing the first.
+**Development reload.** `next dev` evaluates `monti.config.ts` again after an edit, which creates the instance again, and a new database adapter would open a second connection pool without closing the first.
 So, in development only (`NODE_ENV=development`), an instance reuses the database adapter (and the media store) of the first instance created with the same `id` (default `"default"`),
 kept under one `Symbol.for("monti.cms.dev-connections")` entry on `globalThis`. Everything else (store, services, login connection, plugins, hooks, secret) is rebuilt from the new server config, so edits to hooks and options take effect.
-Changing the database connection itself needs a restart. In production and in tests there is no such cache: an instance owns its connections alone. If one development process creates more than one instance, give each its own `id`: `createCms({ id: "reports", server })`.
+Changing the database connection itself needs a restart. In production and in tests there is no such cache: an instance owns its connections alone. If one development process creates more than one instance, give each its own `id`: `createCms({ id: "reports", config, server })`.
 
 ### The site config belongs to the instance
 
-`createCms({ config })` takes the site config as a value and holds it. There is no config alias and no module-level constant derived from the config, so nothing assumes the config is known when a module is imported, and one process can hold
+The instance takes the site config as a value (`defineConfig` builds it from the site options, `createCms({ config })` takes one you made) and holds it. There is no config alias and no module-level constant derived from the config, so nothing assumes the config is known when a module is imported, and one process can hold
 several sites. `createSite(config)` (`@monti-cms/core/client`) resolves a config into a `Site`: `LOCALES`, `DEFAULT_LOCALE`, `COLLECTIONS`, `schemaOf(name)`, `storedFields(name)`, `contentPath(…)`, `parseInternalLink(…)`, `adminHref(…)`, `BLOCKS`,
 `CODE_LINE_EFFECTS`, `getPluginOptions(name)`, `createTranslator(messages)` and the rest of what used to be exported as constants and functions that read the config. The instance carries its `Site` as `cms.site`
 (`cms.site.config` is the config object itself), and everything that needed the config receives it from the instance:
@@ -348,14 +366,23 @@ several sites. `createSite(config)` (`@monti-cms/core/client`) resolves a config
 **What reaches the browser.** `site.snapshot()` is the config as plain data: the collections, locales, `site`, `admin`, `timeZone`, `media` and `codeBlock` settings, every block (the blocks of plugins included) and, for each plugin, `name`, `nav`, `options` and `contributes` as JSON. A function inside a plugin's `options`
 or `contributes`, a text override of `admin.messages` that is a function (strings stay), and a plugin's `server`, `admin`, `render`, `formats` and `validate` do not reach it: the admin layout loads the plugins' admin modules on the server and renders their providers itself. Keep what the browser needs from `options` to JSON values.
 
-**Typing.** The types follow the config you pass, with no registration step. `createCms({ config })` returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
+**Typing.** The types follow the config you pass, with no registration step. `defineConfig({ … })` (and `createCms({ config })`) returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
 and a collection that is not in the config is a type error. Where a library type cannot see an instance, give it the config type: `DocumentComponentsFor<typeof config>` or `DocumentComponentsOf<typeof cms>` types the `components` of `<CmsContent>` (block names and the attribute props of each block), and the AI plugin's action names take the config type the same way.
 A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently. A site that keeps its data in a schema file gets the same types from the declaration file `monti schema:types` writes ("The schema file").
 
+### Server-only config
+
+`monti.config.ts` holds the database and login settings, so only the server may import it. The admin does not: its layout (`<CmsAdminLayout cms={cms}>`, a server component) hands the browser a JSON snapshot of the site (`cms.site.snapshot()`), and the admin's client components read it with `useSite()`.
+
+- `defineConfig` throws if it runs where `window` exists, so a mistake fails on the first load instead of shipping settings to the browser.
+- `monti check:boundary` reads the source (no build) and fails when a `"use client"` file reaches `monti.config.ts` through its imports, or imports `@monti-cms/core/server`, `@monti-cms/core/runtime`, `@monti-cms/core/plugin/server`, `@monti-cms/auth` or `@monti-cms/nextjs/auth`. Type-only imports do not count. Run it in CI.
+- `withCms` (`next.config.ts`) runs the same check once per `next dev` start and warns.
+- A client component that needs a value from the site uses `useSite()`; one that needs a type imports it with `import type`.
+
 ### Upgrading from the `@cms-config` alias
 
-- `cms.server.ts`: `import config from "./cms.config"` and `createCms({ config, server: … })`.
-- Remove `"@cms-config"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`; `withCms(nextConfig)` takes no options. `monti migrate` has no `--config` option and ignores `CMS_CONFIG_PATH`; it loads the server file, which imports the config. `@monti-cms/core/register` is gone: run scripts with plain `tsx`.
+- Create the instance in the config file (today `monti.config.ts`: `export const cms = defineConfig({ … })`; this note was written for `createCms({ config, server })`).
+- Remove `"@cms-config"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`; `withCms(nextConfig)` takes no options. `monti migrate` has no `--config` option and ignores `CMS_CONFIG_PATH`; it loads the config file, which is the instance. `@monti-cms/core/register` is gone: run scripts with plain `tsx`.
 - Admin layout: `export const generateMetadata = () => cmsAdminMetadata(cms);` instead of `export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin"` (the title follows the site name and admin language of the instance).
 - Rendering: `<CmsContent cms={cms} entry={entry} />` and `renderDocument(doc, { site: cms.site, … })`; `renderMdx(doc, { site })` the same way. Type the `components` table with `DocumentComponentsOf<typeof cms>` (or `DocumentComponentsFor<typeof config>`) instead of the old `DocumentComponents`, which is now the untyped table.
 - Config-derived values and helpers that were exported by `@monti-cms/core/client` (`LOCALES`, `DEFAULT_LOCALE`, `isLocale`, `localizePath`, `COLLECTIONS`, `schemaOf`, `contentPath`, `parseInternalLink`, `adminHref`, `SITE_NAME`, `BLOCKS`, `CODE_LINE_EFFECTS`, `getPluginOptions`, ...) are members of the site: `cms.site.LOCALES` on the server, `useSite().LOCALES` in client components.
@@ -370,7 +397,7 @@ All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` int
 
 - Install `@monti-cms/nextjs` (`next` is its peer; core and admin no longer ask for it).
 - `next.config.ts`: `import { withCms } from "@monti-cms/core/next"` becomes `from "@monti-cms/nextjs/config"`.
-- `cms.server.ts`: `githubAuth` is replaced by `@monti-cms/auth`; see "Upgrading to `@monti-cms/auth`".
+- `githubAuth` is replaced by `@monti-cms/auth`; see "Upgrading to `@monti-cms/auth`".
 - `app/api/cms/[...path]/route.ts`: `cms.routeHandler()` becomes `createRouteHandler(cms)` from `@monti-cms/nextjs`. The `CmsRouteHandler` type is exported from there too.
 - Admin layout and page: `@monti-cms/admin/next` becomes `@monti-cms/nextjs/admin` (`CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata`; same props). The layout renders the App Router adapter for the admin.
 - Admin messages: the page title keys moved from the `cms-admin.next` dictionary to `cms-admin.layout` (only matters if you override `admin.messages["cms-admin.next"]`).
@@ -382,15 +409,15 @@ All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` int
 GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to the framework-neutral package `@monti-cms/auth`, which is built on Auth.js core and takes the ways to log in as providers.
 
 - Install `@monti-cms/auth`. `githubAuth` of `@monti-cms/nextjs/auth` is removed; replace it with the shape below.
-- The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })`, with `auth` from `@monti-cms/auth`, `github` from `@monti-cms/auth/github` and `nextHost` from `@monti-cms/nextjs/auth`. `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
-- Everyone signs in once more: sessions made by NextAuth are not read. Environment variables (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`) and the OAuth callback URL (`/api/cms/auth/callback/github`) are unchanged. `next-auth` can be removed from `package.json`.
+- The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })` (with the conventional environment variables `github()` and `auth()` need no options now, see "Environment variables and `monti migrate`"), with `auth` from `@monti-cms/auth`, `github` from `@monti-cms/auth/github` and `nextHost` from `@monti-cms/nextjs/auth`. `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
+- Everyone signs in once more: sessions made by NextAuth are not read. The OAuth callback URL (`/api/cms/auth/callback/github`), `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` were unchanged by that move (the session secret is `MONTI_SECRET` now, see "Upgrading from `cms.config.ts` + `cms.server.ts`"). `next-auth` can be removed from `package.json`.
 - Account ids are qualified with the provider (`github:12345678`): `AuthContext.accountId`, `CmsAuth.devUserId`, and the author recorded for a change when the login gives no name. `isAdmin(userId)` of your own `CmsAuth` receives that value.
 - `CmsAuth` changes (for your own `AuthAdapter`): `session(request?)` may be given the request, `signIn` and `signOut` may resolve with a `Response` that the route returns as it is (a redirect that carries cookies), `AuthProvider` has an optional `icon`, and `AuthCreateContext` has `storage(plugin)` (`cms.storage`).
 - The `next-auth` module augmentation (`session.user.githubId`) is gone with NextAuth.
 
 ### Upgrading from the `@cms-server` alias
 
-- `cms.server.ts` no longer default-exports the server config. Wrap it: `export const cms = createCms({ server: defineServerConfig({ … }) })` (`createCms` is in `@monti-cms/core/server`).
+- The server file no longer default-exports the server config; the instance is a named export `cms` (today: `export const cms = defineConfig({ … })` of `@monti-cms/core/server`).
 - Remove `"@cms-server"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`. `withCms(nextConfig, { config })` takes no `server` option any more.
 - Plugin routes and custom admin routes get a standard `Request` instead of `NextRequest`: replace `request.nextUrl` with `new URL(request.url)` and `NextResponse.json` with `Response.json`.
 - The admin API route is `createRouteHandler(cms)` of `@monti-cms/nextjs` (see "Upgrading to `@monti-cms/nextjs`").
@@ -400,7 +427,7 @@ GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to th
   `cms.store()`, `cms.mediaStore()`, `cms.secrets(pluginName)`, `cms.storage(pluginName)`, `cms.plugins()`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`.
   Nothing hands out the raw master secret any more (`cms.secret` and `cms.server.secret` are gone too); see "Plugin secrets".
   A plugin's route gets `cms` in its handler input, `CmsServerPlugin.features(cms)` and `migrate(storage, cms)` get it as an argument, and hooks read it from a closure over your own `cms`.
-- `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` now imports the server file and need it to export `cms`.
+- `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` now imports the config file and needs it to export `cms`.
 - Signing in and out are plain form posts to `/api/cms/v1/session/*`, not server actions (a server action cannot carry the instance). Nothing to change in apps.
 
 ### Upgrading plugins that used `cms.database()`
@@ -434,6 +461,122 @@ What else changed:
 - **AI.** `@monti-cms/ai` peers on `@monti-cms/mdx`: its model reads and writes MDX through the `mdx` format.
 - `@monti-cms/core/notation` is a new light entry (comment syntax and table helpers for notations).
 
+## Upgrading from `cms.config.ts` + `cms.server.ts`
+
+The site was set up in two files, `cms.config.ts` (the site config, `export default defineConfig({ … })`) and `cms.server.ts` (`createCms({ config, server: defineServerConfig({ … }) })`). It is one file now, `monti.config.ts`, that exports the ready instance as `cms`. `defineServerConfig` is removed (there is no shim). The `monti` command finds `monti.config.ts` (or `src/monti.config.ts`), and `monti schema:extract` is unchanged for code-first configs. This is the blog example, trimmed:
+
+```diff
+-// cms.config.ts
+-import { aiPlugin } from "@monti-cms/ai";
+-import { bareun } from "@monti-cms/bareun";
+-import { blocks } from "@monti-cms/blocks";
+-import { defineConfig } from "@monti-cms/core";
+-import { gitSync } from "@monti-cms/git-sync";
+-import { mdx } from "@monti-cms/mdx";
+-import { seo } from "@monti-cms/seo";
+-import { directiveSyntax } from "@monti-cms/syntax-directive";
+-import schema from "./monti.schema.json";
+-
+-export default defineConfig({
+-	schema,
+-	site: { url: process.env.HOST_URL || undefined },
+-	plugins: [
+-		mdx({ syntax: [directiveSyntax()] }),
+-		...blocks(),
+-		seo(),
+-		aiPlugin({ siteDescription: "A personal tech blog", shared: { /* ... */ } }),
+-		bareun(),
+-		gitSync({ enabled: false, targets: [/* ... */] }),
+-	],
+-});
+-
+-// cms.server.ts
+-import { auth } from "@monti-cms/auth";
+-import { github } from "@monti-cms/auth/github";
+-import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
+-import { nextHost } from "@monti-cms/nextjs/auth";
+-import config from "./cms.config";
+-
+-export const cms = createCms({
+-	config,
+-	server: defineServerConfig({
+-		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
+-		auth: auth({
+-			providers: [
+-				github({
+-					clientId: process.env.AUTH_GITHUB_ID,
+-					clientSecret: process.env.AUTH_GITHUB_SECRET,
+-					admins: [process.env.CMS_ADMIN_GITHUB_ID],
+-				}),
+-			],
+-			host: nextHost,
+-			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1",
+-			secret: process.env.AUTH_SECRET,
+-		}),
+-		secret: process.env.CMS_SECRET,
+-	}),
+-});
++// monti.config.ts
++import { aiPlugin } from "@monti-cms/ai";
++import { auth } from "@monti-cms/auth";
++import { github } from "@monti-cms/auth/github";
++import { callout, chart, codeExplorer, codeRef, collapsible, color, columns, mermaid, tabs, tooltip } from "@monti-cms/blocks";
++import { defineConfig, postgres } from "@monti-cms/core/server";
++import { gitSync } from "@monti-cms/git-sync";
++import { mdx } from "@monti-cms/mdx";
++import { nextHost } from "@monti-cms/nextjs/auth";
++import { seo } from "@monti-cms/seo";
++import { directiveSyntax } from "@monti-cms/syntax-directive";
++import schema from "./monti.schema.json";
++import { wordList } from "./plugins/word-list";
++
++export const cms = defineConfig({
++	schema,
++	site: { url: process.env.HOST_URL || undefined },
++	plugins: [
++		mdx({ syntax: [directiveSyntax()] }),
++		callout(),
++		collapsible(),
++		tabs(),
++		columns(),
++		codeExplorer(),
++		mermaid(),
++		chart(),
++		tooltip(),
++		codeRef(),
++		color(),
++		seo(),
++		aiPlugin({ siteDescription: "A personal tech blog", shared: { /* ... */ } }),
++		wordList(), // replaces admin-components.tsx
++		gitSync({ enabled: false, targets: [/* ... */] }),
++	],
++	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
++	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
++	// MONTI_SECRET signs the login session and encrypts stored values
++});
+```
+
+Do these steps in order:
+
+1. **Merge the two files into `monti.config.ts`.** Put the site options and the server options in one `export const cms = defineConfig({ … })` (from `@monti-cms/core/server`), then delete `cms.config.ts` and `cms.server.ts`. Change every import of `@/cms.server` or `../cms.server` (the route file, the admin layout and page, your site's pages, scripts) to the new file.
+2. **Replace `...blocks()` with one line per block.** `blocks()` and `blocks({ only, omit })` are gone: `callout()`, `collapsible()`, `tabs()`, `columns()`, `codeExplorer()`, `mermaid()`, `chart()`, `tooltip()`, `codeRef()` and `color(options?)`, each imported from `@monti-cms/blocks`. List only the ones you use. Keep `tooltip()`, `codeRef()` and `color()` in the order you want overlapping marks stored in.
+3. **Rename the environment variables.** Then delete the `process.env.X` arguments of `postgres()` and `github()`, which read the conventional names themselves.
+
+   | Before | After |
+   | --- | --- |
+   | `CMS_DATABASE_URL` | `DATABASE_URL` |
+   | `CMS_SCHEMA` | `DATABASE_SCHEMA` |
+   | `CMS_ADMIN_GITHUB_ID` | `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas) |
+   | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | unchanged |
+   | `CMS_DEV_AUTH_BYPASS` | delete: the development login is on by itself under `next dev` ("Login bypass for development") |
+   | `AUTH_TRUST_HOST` | only needed behind a proxy you run yourself; Vercel, Netlify and Cloudflare Pages are detected ("Host trust") |
+   | `CMS_SECRET`, `AUTH_SECRET` | `MONTI_SECRET`, see the next step |
+
+4. **The secret.** Set `MONTI_SECRET` to the **old `CMS_SECRET` value**: every value encrypted before (AI service keys, git-sync tokens) keeps decrypting. Or set a new `MONTI_SECRET` and keep the old one readable with `previousSecrets: [process.env.CMS_SECRET]` in `defineConfig`; values are re-encrypted with the new secret when they are saved again, and you drop the old one only after that. `AUTH_SECRET` is not read any more and can be deleted: the login session key now comes from `MONTI_SECRET`, so everyone is signed out once (sessions reset, nothing else is lost).
+5. **The Next files.** Move `app/(admin)/studio/*` to `app/studio/*` (route groups are optional now), so there are three Monti files: `app/<admin path>/layout.tsx`, `app/<admin path>/[[...path]]/page.tsx` and `app/api/cms/[...path]/route.ts` (the layout cannot be folded into the page, see "`monti init`"). Delete `admin-components.tsx` and register its components as a plugin: `definePlugin({ name, options: {}, admin: () => import("./admin") })`, whose admin module's default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`) with a `Provider` that wraps the admin and uses `CmsAdminComponentsProvider` (`examples/blog/plugins/word-list/`). Update the imports of the three files to `monti.config.ts`.
+6. **Remove `bareun()`** if you do not want it. It is still a package, and the blog example dropped it.
+7. **Check and migrate.** Run `monti check:boundary` (no `"use client"` file may reach the config), then `monti migrate`.
+
 ## Components as source
 
 `monti add <name...>` copies ready-made components from the Monti registry into your app as source you own: a public `article-body` (the stored document and a table of contents), a `blog-theme` (a paged post list and a post page for a collection, with the `article-body` it needs),
@@ -454,18 +597,19 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 
 | Entry point | Used in | Contents |
 | --- | --- | --- |
-| `@monti-cms/core` | `cms.config.ts` | `defineConfig` (with `schema`)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, the `SchemaFile` types |
+| `@monti-cms/core` | tests, tools, schema code | `defineConfig` (the site-config-only part, with `schema`; apps use the one of `/server`)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, the `SchemaFile` types |
 | `@monti-cms/core/schema.json` | editors, `$schema` | The JSON Schema of `monti.schema.json` ("The schema file") |
 | `@monti-cms/core/schema-types` | dev tooling (`withCms`) | `generateSchemaTypes`, `watchSchemaTypes`: write `monti-env.d.ts` from the schema file |
 | `@monti-cms/core/schema-change` | settings screen, command line | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange` ("Changing the schema") |
 | `@monti-cms/core/schema-edit` | settings screen (server side) | `schemaEditAccess` (who may write the schema file), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `formatSchemaText` ("Editing the schema in the admin") |
-| `@monti-cms/core/server` | `cms.server.ts` | `createCms`, `defineServerConfig`, `postgres`, store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
+| `@monti-cms/core/server` | `monti.config.ts` | `defineConfig` (site and server options in one, returns the instance), `postgres`, `createCms` (the low-level API), store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost` (pass as `host` to `auth()`) |
-| `@monti-cms/auth` | `cms.server.ts` | `auth({ providers, admins?, secret?, devBypass?, basePath?, host? })`, the `LoginProvider` type |
-| `@monti-cms/auth/github` | `cms.server.ts` | `github({ clientId, clientSecret, admins })` |
+| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` (pass as `host` to `auth()`) |
+| `@monti-cms/auth` | `monti.config.ts` | `auth({ providers, devBypass?, basePath?, host? })`, the `LoginProvider` type |
+| `@monti-cms/auth/github` | `monti.config.ts` | `github({ clientId?, clientSecret?, admins? })` (reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` when not given) |
+| `@monti-cms/admin/plugins` | the admin module of a plugin | `defineAdminPlugin({ Provider })` ("Plugins") |
 | `@monti-cms/core/render` | public pages (server components) | `CmsContent` (`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>` and `DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (plain `tsx`) |
@@ -475,7 +619,7 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti add` (install components as source), `monti migrate` (create tables), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti check:boundary` (fail when a client component reaches the server-only config), `monti add` (install components as source), `monti migrate` (create tables), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
@@ -597,9 +741,9 @@ Callout, fold, tabs, columns, Mermaid, charts and text decorations (tooltip, cod
 only what you need as plugins.
 
 ```ts
-import { blocks } from "@monti-cms/blocks";
+import { callout, mermaid, tooltip } from "@monti-cms/blocks";
 
-plugins: [...blocks({ only: ["callout", "mermaid", "tooltip"] })],
+plugins: [callout(), mermaid(), tooltip()], // one line per block
 ```
 
 Blocks the site creates itself go into `blocks` in the config. The blocks extension adds blocks with the same definition (`definePlugin({ blocks })`).
@@ -789,7 +933,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
   `FootnoteRefProps`/`FootnotesProps`, `HardBreakProps`), one per core mark (`link`, `bold`, `italic`, ...), plus `codeTags` for the elements inside code blocks (`fold`, `collapse`, `Tooltip`).
   Every component also gets `ctx` (`locale` and the fixed `labels`; plain JSON, so it can cross to a client component), and a block component gets `blockId`, `node` and `items`.
 - **Blocks are registered by block name with the attributes as flat props**, and the prop types come from the site config: `blocks: { callout: ({ variant, title, children }) => … }`,
-  `marks: { tooltip: ({ content, children }) => … }`. The type of `components` (`DocumentComponentsOf<typeof cms>`, or `DocumentComponentsFor<typeof config>`) is built from the `blocks` of `cms.config.ts` and of its plugins
+  `marks: { tooltip: ({ content, children }) => … }`. The type of `components` (`DocumentComponentsOf<typeof cms>`, or `DocumentComponentsFor<typeof config>`) is built from the `blocks` of `monti.config.ts` and of its plugins
   (`defineBlock` keeps the attributes as literals, so `variant` is `"note" | "tip" | …`). A boolean attribute is always a boolean, a value with a default or a required string is always there,
   and a choice that is not one of the options is replaced by the default. A code fence block (`mermaid`, `chart`) gets the code as `source`.
 - **One renderer.** Heading anchors follow `github-slugger`, footnotes number by first reference, the same Shiki pipeline draws code (line effects, text effects, line labels),
@@ -797,7 +941,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
 
 ## Plugins
 
-List it once in `plugins` of the site config (e.g. `aiPlugin()` of the AI plugin `@monti-cms/ai`).
+List it once in `plugins` of `monti.config.ts` (e.g. `aiPlugin()` of the AI plugin `@monti-cms/ai`). Every plugin is a function that works with no arguments (`mdx()`, `seo()`, `aiPlugin()`, each block of `@monti-cms/blocks` such as `callout()`, `gitSync()`); `gitSync()` with no `targets` registers the plugin and syncs nothing until `targets` lists a repo. The order in `plugins` is kept where it matters (hooks run in that order, and the inline marks `tooltip()`, `codeRef()` and `color()` are stored in that order when they overlap).
 
 ```ts
 import { definePlugin } from "@monti-cms/core";
@@ -826,17 +970,31 @@ export const myPlugin = () =>
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
 - The server-side `hooks` (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract".
 - `afterCommit(event, cms)` of the server side (next to `hooks`) is the same notification as `hooks.afterCommit` (delivered from the outbox, retried, at least once, "Event delivery") but also gets the instance, so a subscriber that needs its storage, the store or the formats keeps no state of its own. A plugin that has both is one subscriber, `plugin:<name>`, that runs `hooks.afterCommit` first.
-- `commands` of the server side adds command line commands: `monti <plugin name>:<command> [options]` loads the app like `monti migrate` (`--env-file`, `--no-env-file`, `--server`), runs `command.run({ cms, args, log, error })` and exits with the code it returns. The command declares its `options` (`{ name: { type: "string" | "boolean", description } }`); `--help` lists them. `monti git-sync:pull` is one.
+- `commands` of the server side adds command line commands: `monti <plugin name>:<command> [options]` loads the app like `monti migrate` (`--env-file`, `--no-env-file`, `--config`), runs `command.run({ cms, args, log, error })` and exits with the code it returns. The command declares its `options` (`{ name: { type: "string" | "boolean", description } }`); `--help` lists them. `monti git-sync:pull` is one.
+- Custom admin components are a plugin too. Give it an `admin` module whose default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`); the `Provider` (a `"use client"` component) wraps the admin and registers the components with `CmsAdminComponentsProvider`. There is no `admin-components.tsx` file any more. `examples/blog/plugins/word-list/` is an example:
+
+  ```ts
+  export const wordList = () => definePlugin({ name: "word-list", options: {}, admin: () => import("./admin") });
+  // ./admin.ts: export default defineAdminPlugin({ Provider })
+  ```
+
 - `exportBodyText(cms, { format, doc, locale, scope? })` of `@monti-cms/core/plugin/server` writes a stored document as text in a format of the instance for importing again (`purpose: "sync"`, links as the real path of their target), as the admin export does. For a plugin that keeps bodies somewhere else.
 - A plugin's route gets the instance that serves it, so plugin code reads its storage (`cms.storage("<plugin name>")`), stores (`cms.store()`, `cms.mediaStore()`) and its secrets (`cms.secrets("<plugin name>")`) from it, and keeps no global state for them. `adminRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(storage, cms)` receive the instance too.
 
-### Plugin secrets
+### Secrets
 
-A plugin never receives the master secret (`secret` in the server config). The instance derives one key per plugin from it with HKDF-SHA256, using the info string `monti:plugin:<plugin name>:v1`, and hands the plugin an API that only works with that key:
+There is one secret, `MONTI_SECRET` (or `defineConfig({ secret })`; it replaces `AUTH_SECRET` and `CMS_SECRET`, which are not read any more). Nothing receives the secret itself, only keys derived from it with HKDF-SHA256:
+
+- The login session signing key: `cms.secrets("auth").deriveKey("session")`, made for the login connection (`AuthCreateContext.secrets`). If `MONTI_SECRET` is missing, the login fails with an error that names `MONTI_SECRET`.
+- The encryption key of each plugin: `cms.secrets(<plugin name>)`, below.
+
+#### Plugin secrets
+
+A plugin never receives the master secret. The instance derives one key per plugin from it with HKDF-SHA256, using the info string `monti:plugin:<plugin name>:v1`, and hands the plugin an API that only works with that key:
 
 ```ts
 const secrets = cms.secrets("my-plugin");   // inside a route, `features(cms)` or `migrate(storage, cms)`
-secrets.available;                          // false when the server config has no `secret`
+secrets.available;                          // false when there is no secret (MONTI_SECRET or `secret`)
 const stored = secrets.encrypt("sk-live-1234");   // "mk1:<key id>:<iv>:<tag>:<body>", AES-256-GCM, safe to keep in a text column
 secrets.decrypt(stored);                    // "sk-live-1234", or null if it is not this plugin's value, from an unknown secret, or corrupted
 secrets.isCurrent(stored);                  // false if it was made with a previous secret: decrypt it and encrypt it again
@@ -845,9 +1003,10 @@ secrets.deriveKey("signing");               // a 32-byte key for another purpose
 
 - Two plugins get unrelated keys, so a plugin cannot decrypt another plugin's values, and a value read from one plugin's table says nothing about the master secret or another plugin's data. Plugin code still runs in your server process, so this separates what plugins store; it is not a sandbox.
 - Each value carries the id of the key it was made with (the `mk1:<key id>` prefix), so `decrypt` picks the right secret without trying them all.
-- Rotation: put the new value in `secret` and the old ones in `previousSecrets` (`previousSecrets: process.env.CMS_PREVIOUS_SECRET ? [process.env.CMS_PREVIOUS_SECRET] : []`). `decrypt` tries the current secret and then the previous ones, and `encrypt` always uses the current one. A plugin re-encrypts values with `isCurrent` false when it saves them again. Drop a secret from `previousSecrets` only after everything stored under it was re-encrypted (the AI plugin does this on `monti migrate`).
+- Rotation: put the new value in `MONTI_SECRET` (or `secret`) and the old ones in `previousSecrets` (`previousSecrets: [process.env.OLD_MONTI_SECRET]`; an entry may be an unset variable, it is ignored). `decrypt` tries the current secret and then the previous ones, and `encrypt` always uses the current one. A plugin re-encrypts values with `isCurrent` false when it saves them again. Drop a secret from `previousSecrets` only after everything stored under it was re-encrypted (the AI plugin does this on `monti migrate`).
 - A plugin that stored values in its own format before this API can declare it: `cms.secrets("my-plugin", { legacy: { prefix: "v1", domain: "my-key:" } })` makes `decrypt` also read `v1:<iv>:<tag>:<body>` values encrypted under `sha256("my-key:" + secret)`. The legacy format is read-only; `encrypt` never uses it.
 - `cms.server` is the server config without `secret` and `previousSecrets`.
+- Changing `MONTI_SECRET` also changes the login session key, so everyone signs in again once. `previousSecrets` only keeps stored values readable; it does not keep old login sessions.
 
 ### Plugin storage
 
@@ -869,50 +1028,53 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 - The Postgres adapter keeps the documents in the core table `plugin_documents` (created by the core migrations). A storage of another adapter behaves the same: `src/plugin/__test__/storage-contract.ts` is the contract, run against Postgres and against `createMemoryPluginStorage()` from `@monti-cms/core/testing`, which `fakeCms` uses by default (`fakeCms({ storage })` replaces it).
 - The plugin API has no database driver types: `PluginDatabase`, `cms.database()` and `withTransaction` are gone, and neither `@monti-cms/core` nor `@monti-cms/core/plugin/server` exports anything from `pg`.
 
-## Server config
+## Server options
+
+The server options are part of the one `defineConfig({ … })` call, next to the site options ("The CMS instance"). They are read on the server only. Each adapter reads its conventional environment variables when an option is not given, and an explicit option always wins.
 
 | Item | Meaning |
 |---|---|
-| `database` | Content store. `postgres({ connectionString, schema })` |
-| `media` | Store for images and attachments. `r2Storage()` or `s3Storage()` from `@monti-cms/storage-s3`, or a `MediaAdapter` implementing the `MediaStore` contract. Without it, media features are unavailable. |
-| `auth` | Admin login, from `@monti-cms/auth`: `auth({ providers: [github({ clientId, clientSecret, admins })], host?, devBypass?, basePath?, secret? })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, the `AUTH_SECRET` environment variable). In a Next.js app, `host` is `nextHost` of `@monti-cms/nextjs/auth` |
-| `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else off in production and on in development |
-| `secret` | Master secret for values plugins keep encrypted in the DB (AI service keys). Plugins never see it: each gets a key derived from it and the plugin name ("Plugin secrets"). Keep it separate from the login signing value. |
-| `previousSecrets` | Optional. Secrets `secret` replaced. Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
+| `database` | Required. Content store. `postgres()` reads `DATABASE_URL` and `DATABASE_SCHEMA`; `postgres({ connectionString, schema })` sets them in code |
+| `auth` | Required. Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). In a Next.js app, `host` is `nextHost` of `@monti-cms/nextjs/auth`. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
+| `storage` | Optional. Store for images and attachments: an adapter from any package, for example `r2Storage` or `s3Storage` from `@monti-cms/storage-s3`, or a connection implementing the `MediaStore` contract (`MediaAdapter`). Without it, media features are unavailable and the admin hides the media menu. |
+| `secret` | Optional. The one secret. If unset, the `MONTI_SECRET` environment variable. Login sessions and plugins' encrypted values (AI service keys, git-sync tokens) get keys derived from it; nothing receives the secret itself ("Secrets"). |
+| `previousSecrets` | Optional. Secrets `secret` replaced (entries may be undefined environment values). Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
+| `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else on when a known proxy platform is detected or in development, else off |
 | `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
 | `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed: cache revalidation, webhooks, search indexing; retried when it fails, so it must be idempotent). See "Hook contract" and "Event delivery". Plugins can set `hooks` too |
 | `events` | Optional. How `afterCommit` deliveries are retried and kept: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. See "Event delivery" |
 
-To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` or `AuthAdapter`.
+To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` (as `storage`) or `AuthAdapter`. The low-level `createCms({ config, server })` takes the same options as a `CmsServerConfig` (`media` instead of `storage`), with the site config as a separate value.
 
 ### Host trust
 
 A client can send `Host` and `X-Forwarded-Host` itself, so the server does not trust them by default in production. Trusting them means two things: login callback URLs are built from the request host, and the same-origin check accepts the first value of `X-Forwarded-Host`.
 
-- Behind a proxy or on a platform that sets those headers (Vercel, nginx, a load balancer), turn it on with `trustHost: true` in the server config, or `AUTH_TRUST_HOST=true`. The option wins over the variable.
+Order: the `trustHost` option wins; then the `AUTH_TRUST_HOST` variable (`true`/`1` or `false`/`0`); then it is **on automatically** when a known proxy platform is detected (the environment variable `VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME` or `K_SERVICE` is set) or in development and tests (the host is `localhost` there); otherwise it is off in production. Without it, login on a production server fails with an `UntrustedHost` error (and a warning that names these options).
+
+- Security note: with it on, a client could choose the host the login callback is built from, unless the proxy overwrites `X-Forwarded-Host`. The platforms above do.
+- A proxy you run yourself (nginx, a load balancer) is not detected: set `trustHost: true` or `AUTH_TRUST_HOST=true`, and only if it overwrites `X-Forwarded-Host`.
 - Otherwise set `AUTH_URL` to the site's public URL. It fixes the origin login uses, so login works without trusting the host. For the same-origin check, set `site.url` so the public host is accepted.
-- Default: the `AUTH_TRUST_HOST` variable, else off in production and on in development and tests (the host is `localhost` there). Without it, login on a production server fails with an `UntrustedHost` error (and a warning that names these options).
-- Vercel is no longer trusted automatically: add `AUTH_TRUST_HOST=true` to the project's environment variables.
 
 ### Login bypass for development
 
-`auth({ devBypass: true })` (`CMS_DEV_AUTH_BYPASS=1` in the generated config) treats the visitor as the first admin without login. It is limited so a staging server cannot be opened by accident:
+Under `next dev` (`NODE_ENV=development`) the visitor is treated as the first admin without login, **by default**: there is no variable to set (`CMS_DEV_AUTH_BYPASS` is gone). `auth({ devBypass: false })` turns it off. It is limited so a staging server cannot be opened by accident:
 
-- `NODE_ENV` must be `development`. In any other mode the flag is ignored and a warning is logged.
-- The process must not look deployed: it is refused if a hosting platform variable (`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`) is set or `AUTH_URL` points to a public address. In that case the server refuses to start (the login connection throws on first use) with a message that names the reason.
+- `NODE_ENV` must be `development`. It is never on in production; `devBypass: true` in any other mode is ignored and a warning is logged.
+- The process must not look deployed: it is refused if a hosting platform variable (`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`) is set or `AUTH_URL` points to a public address. In that case the server refuses to start (the login connection throws on first use) with a message that names the reason. With `devBypass` left unset the bypass just stays off there; `devBypass: true` set explicitly on a process that looks deployed refuses to start.
 - Each request must come from this machine: `Host` is `localhost`, `*.localhost`, `127.0.0.0/8` or `::1`, and `X-Forwarded-Host` and `X-Forwarded-For` (when present) are loopback too. Other requests have to sign in normally, and a warning is logged once. `cms.authGateway.isDevBypassActive()` applies the same check (async).
 
 ## Hook contract
 
 Every content write goes through one pipeline in the core services: creating, saving, publishing (one entry or in bulk), duplicating, creating a translation, and a bulk change of metadata or folder.
-Hooks are registered in the server config (`createCms({ server: defineServerConfig({ hooks }) })`) or in a plugin's server side (`CmsServerPlugin.hooks`), with the same shape.
+Hooks are registered in the server options (`defineConfig({ hooks, … })`) or in a plugin's server side (`CmsServerPlugin.hooks`), with the same shape.
 The types (`WriteHooks`, `WriteHookContext`, `WriteData`, `ValidationHookContext`, `ValidationResult`, `WriteOperation`) are exported from `@monti-cms/core/server` and `@monti-cms/core/plugin/server`.
 
 ```ts
-import { createCms, defineServerConfig } from "@monti-cms/core/server";
+import { defineConfig } from "@monti-cms/core/server";
 
-const server = defineServerConfig({
-	// database, auth, ...
+export const cms = defineConfig({
+	// schema, plugins, database, auth, ...
 	hooks: {
 		// Runs before core preparation. Return the data to prepare (or nothing to keep it as it is).
 		transform: ({ operation, collection, entryId, locale, metadata, doc }) => ({
@@ -929,14 +1091,12 @@ const server = defineServerConfig({
 		afterCommit: (event) => revalidate(event.collection, event.publishedSlug),
 	},
 });
-
-export const cms = createCms({ server });
 ```
 
 | Stage | What runs |
 |---|---|
 | 1 | Build the input: from the request, or from the stored draft (publish, bulk) |
-| 2 | `transform` hooks, in registration order (server config first, then the plugins in config order). Each gets the previous one's result |
+| 2 | `transform` hooks, in registration order (the config's own hooks first, then the plugins in config order). Each gets the previous one's result |
 | 3 | Core preparation: normalization, reference collection, core validation. **Always runs, on the transformed data** |
 | 4 | The `validate` of each block (warnings only), then the `validate` hooks: extra failures and warnings |
 | 5 | Publish (and restoring a record, which publishes it again): `validatePublish` hooks: extra failures and warnings |
@@ -965,7 +1125,7 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 `afterCommit` is delivered from an outbox, so it survives a failing subscriber and a stopped process.
 
 - **The outbox.** In the same transaction as a change, the store inserts a row into `cms_events` (migration `0022_events`): `id`, `kind` (`created`, `saved`, `published`, `archived`, `unarchived`, `trashed`, `restored`, `deleted`), `entry_id`, `collection`, `locale`, `content_hash`, `version`, `occurred_at` and a `payload` with the status and slugs. A change that rolls back leaves no event; a change that commits always has one. A create or save that publishes at once writes two events (`created`/`saved`, then `published`). There is no foreign key to `entries`, so the event of a deletion outlives the entry. A change to a source's translations is reported once, for the entry it was made on (`translationGroupId` names the group).
-- **Subscribers.** The server config's `hooks.afterCommit` is the subscriber `server`; each plugin's `hooks.afterCommit` is `plugin:<plugin name>`. The name is stable and keys the delivery state in `cms_event_deliveries` (one row per event and subscriber: `state`, `attempts`, `last_error`, `next_attempt_at`), so do not rename a plugin that has one. A subscriber added later gets the events committed after it appears, not the history.
+- **Subscribers.** The config's `hooks.afterCommit` is the subscriber `server`; each plugin's `hooks.afterCommit` is `plugin:<plugin name>`. The name is stable and keys the delivery state in `cms_event_deliveries` (one row per event and subscriber: `state`, `attempts`, `last_error`, `next_attempt_at`), so do not rename a plugin that has one. A subscriber added later gets the events committed after it appears, not the history.
 - **Delivery.** After the commit, the process that made the change tries each subscriber right away, in the same call, so latency is what it was before. A failure is recorded and retried later with a growing delay (15 seconds, doubling, at most an hour; `events.backoffMs` changes it) and the delivery is dead-lettered (`dead`) after `events.maxAttempts` tries (default 8). The write is never undone, and the other subscribers are not held back.
 - **At least once, in order per entry.** An event can be delivered more than once (a subscriber that did its work and then failed, a try that never finished), so **a subscriber must be idempotent**: it receives `event.eventId`, the same on every try, to remember what it handled. Events of one entry are delivered in commit order: an event waits while an earlier event of the same entry is pending, in flight or failing and not dead. A dead or dismissed delivery no longer holds the order, so a manual retry of a dead one can arrive after later events; a subscriber that exports the entry reads its current state and compares `version`. Events of different entries are independent.
 - **Reading the committed entry.** `event.read()` returns the entry as it is now (`Entry`, with the working and published documents) or `null` when it was deleted. `event.version` and `event.contentHash` say which change this event is: when `read().version` is higher, a later event for the entry follows. A subscriber that exports an entry through a format (git-sync) reads it, runs the format and skips the event if the version it wrote is already newer.
@@ -995,11 +1155,11 @@ Nothing runs in the background, because the site may run on serverless functions
 
 - **The next write in the same process.** After its own events, a write runs up to 5 due retries, at most once every 10 seconds per process.
 - **`cms.events.retry({ all?, limit? })`.** Delivers what is due (with `all`, also failed deliveries that are not due yet; dead ones only by hand). It also delivers events that have no delivery rows because the process stopped between the commit and the delivery. It returns `{ delivered, failed, dead }`. `cms.events.list()`, `counts()`, `retryDelivery({ eventId, subscriber })` and `dismiss({ eventId, subscriber })` are what the admin uses.
-- **`monti events:retry [--all] [--limit <n>]`.** Loads the server file like `monti migrate` and calls `cms.events.retry()`; run it from a cron job or a CI schedule.
-- **`POST /api/cms/v1/events/retry[?all=1&limit=100]`.** For a scheduler that can only call a URL (a Vercel cron, say). It takes an admin session, or `Authorization: Bearer <retrySecret>` when the server config sets `events.retrySecret` (keep it in an environment variable; it is not part of `cms.server`).
+- **`monti events:retry [--all] [--limit <n>]`.** Loads the config file like `monti migrate` and calls `cms.events.retry()`; run it from a cron job or a CI schedule.
+- **`POST /api/cms/v1/events/retry[?all=1&limit=100]`.** For a scheduler that can only call a URL (a Vercel cron, say). It takes an admin session, or `Authorization: Bearer <retrySecret>` when the config sets `events.retrySecret` (keep it in an environment variable; it is not part of `cms.server`).
 
 ```ts
-defineServerConfig({
+defineConfig({
 	// ...
 	events: { retrySecret: process.env.CMS_EVENTS_SECRET, maxAttempts: 8 },
 });
@@ -1050,21 +1210,26 @@ It is a repo file, not code the bundler runs, so a tool can read and write it, a
 `$schema` points to `@monti-cms/core/schema.json`, a JSON Schema generated from the same definition the runtime check uses, so editors autocomplete keys and flag a wrong `kind` or a misspelt option as you type (rules between collections, such as a relation to a collection that exists, are checked when the config loads).
 **There are no retired aliases:** `workflow` and `required: "publish"` are errors (use `kind` and `required: true`).
 
-**Loading.** `cms.config.ts` passes the parsed file to `defineConfig`. An `import` is what the bundler ships with the build, so the file is read-only in production (needs `"resolveJsonModule": true`, which `create-next-app` sets). A path string (`schema: "./monti.schema.json"`) is read at run time, relative to the working directory, and works in Node only (scripts, tests):
+**Loading.** `monti.config.ts` passes the parsed file to `defineConfig`. An `import` is what the bundler ships with the build, so the file is read-only in production (needs `"resolveJsonModule": true`, which `create-next-app` sets). A path string (`schema: "./monti.schema.json"`) is read at run time, relative to the working directory, and works in Node only (scripts, tests):
 
 ```ts
-import { defineConfig } from "@monti-cms/core";
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { defineConfig, postgres } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
+import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
-export default defineConfig({
+export const cms = defineConfig({
 	schema,
 	site: { url: process.env.HOST_URL || undefined }, // differs per environment
 	plugins: [mdx()],
+	database: postgres(),
+	auth: auth({ providers: [github()], host: nextHost }),
 });
 ```
 
-`createCms`, `createSite` and everything else take that config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its JSON path:
+The site part alone is `defineConfig` of `@monti-cms/core` (no database or login; for tests and tools). `createCms`, `createSite` and everything else take a site config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its JSON path:
 
 ```text
 monti.schema.json is not a valid schema file:
@@ -1084,7 +1249,7 @@ monti.schema.json is not a valid schema file:
 | `seed.templates` | The file's templates, then the code's |
 | `plugins`, `blocks`, `codeBlock`, `media` | Code only |
 
-**What stays in code.** Anything that needs code: plugins (so syntax extensions, formats, AI actions), block definitions with their components, hooks and the server config (storage, login, secrets), `codeBlock` (line effects hold labels and functions), `media`, and any option that is a function. `site.url` stays in code because it differs per environment.
+**What stays in code.** Anything that needs code: plugins (so syntax extensions, formats, AI actions), block definitions with their components, hooks and the server options (database, storage, login, secrets), `codeBlock` (line effects hold labels and functions), `media`, and any option that is a function. `site.url` stays in code because it differs per environment.
 
 **Plugins that add fields.** `seoFields()` and the like return plain field objects, so their fields already have a JSON form: they are written into the file as ordinary fields (`monti schema:extract` does it), and the plugin (`seo()`) stays in `plugins` and checks them by role as before.
 There is no separate "plugin field" in the format. A collection written in code can still spread `seoFields()`. Labels in the file are one language's text (`monti schema:extract --locale` picks it).
@@ -1101,19 +1266,19 @@ and `createCms`, `cms.read`, `MetadataFor`, `CollectionName` and `DocumentCompon
 
 ### Moving a TypeScript config: `monti schema:extract`
 
-`monti schema:extract` loads `cms.config.ts` (`--config <file>`), writes its data part to `monti.schema.json` (`--out <file>`, `--overwrite` to replace an existing one, `--locale <code>` for the language of plugin-provided labels) and `monti-env.d.ts` (`--no-types` skips it), and prints what stays in code.
-It never edits `cms.config.ts`; it prints the slim config to put there:
+`monti schema:extract` loads `monti.config.ts` (the `cms` it exports) or the default export of an old-style `cms.config.ts` (`--config <file>`; code-first configs work as before), writes its data part to `monti.schema.json` (`--out <file>`, `--overwrite` to replace an existing one, `--locale <code>` for the language of plugin-provided labels) and `monti-env.d.ts` (`--no-types` skips it), and prints what stays in code.
+It never edits the config file; it prints the slim config to put there:
 
 ```text
 Wrote monti.schema.json (5 collections, 2 locales, 3 seed templates).
 Wrote monti-env.d.ts (the types of the schema; run `monti schema:types --watch` while you edit it).
 
-Stays in code (cms.config.ts):
+Stays in code (monti.config.ts):
   - site.url: differs per environment, so it is read from the environment in code (`site: { url: process.env.HOST_URL }`)
-  - plugins: mdx, callout, ..., seo, ai, text-check-bareun (code; the fields they add to collections are in the schema)
+  - plugins: mdx, callout, ..., seo, ai (code; the fields they add to collections are in the schema)
 ```
 
-Then replace the collections, locales, `defaultLocale`, `timeZone`, `seed` and the data part of `site` and `admin` in `cms.config.ts` with `schema`, keeping `plugins` and the rest. Loading the result back gives the same site (a test extracts and reloads the reference configs and compares them).
+Then replace the collections, locales, `defaultLocale`, `timeZone`, `seed` and the data part of `site` and `admin` in the config file with `schema`, keeping `plugins` and the rest (merged into `monti.config.ts`, "Upgrading from `cms.config.ts` + `cms.server.ts`"). Loading the result back gives the same site (a test extracts and reloads the reference configs and compares them).
 
 ### Changing the schema: `monti schema:diff` and `monti schema:apply`
 
@@ -1206,7 +1371,7 @@ The admin has a **Schema** screen (`<admin path>/schema`, in the sidebar under "
 
 **How the running instance picks up the schema.** An instance made from `defineConfig({ schema })` remembers how to rebuild its config with another schema, and the schema file's path (`cms.schemaFile()`, found as `monti.schema.json` or `src/monti.schema.json` in the working directory, or given as `schemaFile` to `createCms`). In development it swaps its site, store, services, read API and handlers **in place** (the same `cms` object, the database connections shared) when the settings screen saved, and also on its own when it finds the file changed on disk (a hand edit, or a save from another process; it looks at most every 250 ms). A file that does not read or check is reported once and the instance keeps the last good schema. So the admin shows a saved change without restarting `next dev`; the types are kept by the watcher of `withCms` and by the save itself. In production `cms.reloadSchema()` does nothing: a production server runs the schema it was built with. `cms.forSchema(schema)` builds another instance over a schema without installing it; the settings screen uses it to check an edit.
 
-The screen edits collections (label, icon, kind, public address, body and the allowed blocks, marks and heading levels), every kind of field with its options (add, remove, rename, reorder, required and languages, select options, conditional branches), layout groups, list columns, the locales and the time zone. It does not edit what is plain data but rarely changes (`site`, `admin`, `seed`, recorded `migrations`): they are shown, and edited in the file. A collection written in code (`cms.config.ts`) is not in the file, so the screen lists it as not editable.
+The screen edits collections (label, icon, kind, public address, body and the allowed blocks, marks and heading levels), every kind of field with its options (add, remove, rename, reorder, required and languages, select options, conditional branches), layout groups, list columns, the locales and the time zone. It does not edit what is plain data but rarely changes (`site`, `admin`, `seed`, recorded `migrations`): they are shown, and edited in the file. A collection written in code (in `monti.config.ts`) is not in the file, so the screen lists it as not editable.
 
 ## Config
 

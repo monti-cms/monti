@@ -7,7 +7,8 @@ The Next.js adapter of Monti. It holds everything Next-specific, so `@monti-cms/
 - the route handler of the admin API (`createRouteHandler`),
 - the `next.config.ts` wiring (`withCms`),
 - the admin page and layout, with the App Router adapter the admin needs (`CmsAdminLayout`, `CmsAdminPage`, `NextAdminRouter`),
-- `nextHost`, the Next.js side of the admin login (`@monti-cms/auth`).
+- `nextHost`, the Next.js side of the admin login (`@monti-cms/auth`),
+- a development warning when a client component imports the server-only config (`checkImportBoundaryInDev`, run by `withCms`).
 
 Next.js (App Router) is the only supported host for now; see "Supported frameworks" in the `@monti-cms/core` README. Another framework would be another package like this one.
 
@@ -26,14 +27,14 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, the `CmsRouteHandler` type |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost` |
+| `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` |
 
 ### Route handler
 
 ```ts
 // app/api/cms/[...path]/route.ts
 import { createRouteHandler } from "@monti-cms/nextjs";
-import { cms } from "../../../../cms.server";
+import { cms } from "@/monti.config";
 
 export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
 ```
@@ -51,15 +52,15 @@ const nextConfig: NextConfig = {};
 export default withCms(nextConfig);
 ```
 
-It links no config file (the site config goes to `createCms` in `cms.server.ts`, and the admin gets it from that instance). It builds the core package with the app, passes Next's `basePath` to the server and browser bundles, and links an empty module for optional dependencies of the CMS packages that are not installed (see "Optional dependencies" in the core README).
+It links no config file (the one config is `monti.config.ts`, which exports the `cms` instance, and the admin gets the site from that instance). It builds the core package with the app, passes Next's `basePath` to the server and browser bundles, and links an empty module for optional dependencies of the CMS packages that are not installed (see "Optional dependencies" in the core README). Under `next dev` it also warns once per server start when a `"use client"` file imports the server-only config (see "Files").
 
 ### Admin page and layout
 
 ```tsx
-// app/(admin)/admin/layout.tsx
+// app/admin/layout.tsx
 import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
-import { cms } from "../../../cms.server";
+import { cms } from "@/monti.config";
 
 export const generateMetadata = () => cmsAdminMetadata(cms);
 
@@ -67,9 +68,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;
 }
 
-// app/(admin)/admin/[[...path]]/page.tsx
+// app/admin/[[...path]]/page.tsx
 import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/nextjs/admin";
-import { cms } from "../../../../cms.server";
+import { cms } from "@/monti.config";
 
 export default function AdminPage(props: CmsAdminPageProps) {
 	return <CmsAdminPage cms={cms} {...props} />;
@@ -83,31 +84,37 @@ export default function AdminPage(props: CmsAdminPageProps) {
 ### Login
 
 ```ts
-// cms.server.ts
-import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
+// monti.config.ts
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
+import { defineConfig, postgres } from "@monti-cms/core/server";
 import { nextHost } from "@monti-cms/nextjs/auth";
+import schema from "./monti.schema.json";
 
-export const cms = createCms({
-	server: defineServerConfig({
-		database: postgres({ connectionString: process.env.CMS_DATABASE_URL }),
-		auth: auth({
-			providers: [
-				github({
-					clientId: process.env.AUTH_GITHUB_ID,
-					clientSecret: process.env.AUTH_GITHUB_SECRET,
-					admins: [process.env.CMS_ADMIN_GITHUB_ID],
-				}),
-			],
-			host: nextHost,
-			secret: process.env.AUTH_SECRET,
-		}),
-	}),
+export const cms = defineConfig({
+	schema,
+	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
+	auth: auth({ providers: [github()], host: nextHost }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
 });
 ```
 
-The options, the login path, host trust and the development bypass are described in the core README ("Server config", "Login path", "Host trust", "Login bypass for development"). The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers; see its README), and it imports nothing from Next. This package supplies the one thing the core asks of a Next host: `nextHost`, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). Nothing has to reach Next as a thrown redirect any more, so there is no `rethrow`.
+The environment variables, the one secret (`MONTI_SECRET`), host trust and the development bypass (on under `next dev`) are described in the `@monti-cms/auth` README. The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers), and it imports nothing from Next. This package supplies the one thing the login asks of a Next host: `nextHost`, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). Nothing has to reach Next as a thrown redirect any more, so there is no `rethrow`. Without `host: nextHost` the login cannot see the request, and the development bypass never applies.
+
+## Files
+
+The admin needs three files in the app (`monti init` writes them), whatever the admin path:
+
+| File | Contents |
+| --- | --- |
+| `app/<admin path>/layout.tsx` | `CmsAdminLayout` and `generateMetadata` (`cmsAdminMetadata`); the admin's stylesheet imports |
+| `app/<admin path>/[[...path]]/page.tsx` | `CmsAdminPage` |
+| `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`: the admin API, the login and the plugin routes |
+
+There is no route group and no other admin file: custom admin components are a plugin with an admin side (see "Adding site components" in the `@monti-cms/admin` README). All three import `cms` from `monti.config.ts`.
+
+**Why the layout is not folded into the page.** Next remounts the subtree of a dynamic segment (`[[...path]]`) when its value changes. A layout written inside the page would remount the whole admin (navigation, query cache, theme provider) on every screen change, so the layout stays one level above, where it keeps its state while you move between screens.
+
+**Server only.** `monti.config.ts` holds the database and login settings, so it must never reach the browser: loading it there throws. `monti check:boundary` reports every `"use client"` file whose import chain reaches it, and `withCms` warns about the same once per `next dev` start (`checkImportBoundaryInDev`). The admin gets a JSON snapshot of the site from its layout, so it never needs the config in the browser.
 
 ## Upgrading
 

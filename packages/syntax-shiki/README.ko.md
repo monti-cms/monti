@@ -28,12 +28,12 @@ core README의 "코드 블록 줄 효과")으로 바꾼다.
 사이트 설정 `plugins`의 `@monti-cms/mdx`가 주는 `mdx({ syntax })`에 확장을 나열한다.
 
 ```ts
-// cms.config.ts
-import { defineConfig } from "@monti-cms/core";
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
 import { shikiNotation } from "@monti-cms/syntax-shiki";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [mdx({ syntax: [shikiNotation()] })],
 });

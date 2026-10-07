@@ -10,7 +10,7 @@
 
 ## 등록
 
-사이트 설정의 `plugins`에 `aiPlugin()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
+`monti.config.ts`의 `plugins`에 `aiPlugin()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
 더한 기능도 저절로 붙는다. 바꾸거나 끌 것만 `actions`에 기능 이름(key)으로 적는다.
 
 ```ts
@@ -123,16 +123,16 @@ const unusedAddress = defineValidator({
 
 ## 저장된 서비스 키
 
-AI 화면에서 넣은 서비스 키는 플러그인 저장소의 `settings` 컬렉션에 암호화해서 둔다. 플러그인은 서버 설정의 `secret`을 보지 못한다. CMS 인스턴스가 이 값과 플러그인 이름에서
+AI 화면에서 넣은 서비스 키는 플러그인 저장소의 `settings` 컬렉션에 암호화해서 둔다. 플러그인은 앱의 비밀 값 하나(`MONTI_SECRET`)를 보지 못한다. CMS 인스턴스가 이 값과 플러그인 이름에서
 플러그인 전용 키를 만들어(`cms.secrets("ai")`, HKDF-SHA256, `monti:plugin:ai:v1`) 건네므로, 이 키로는 다른 플러그인의 데이터를 풀 수 없고
 다른 플러그인도 이 서비스 키를 읽을 수 없다. core README의 "플러그인 비밀 값"을 본다. 저장된 값은 `mk1:<키 id>:<iv>:<tag>:<body>` 모양이다.
 
 - **플러그인별 키가 생기기 전 값의 이전**: 이전 버전이 저장한 키(`v1:<iv>:<tag>:<body>`, `sha256("cms-ai-key:" + secret)`으로 암호화)는 따로 할 일 없이
-  그대로 동작하고 `CMS_SECRET`도 그대로 둔다. 플러그인이 옛 방식으로 풀어 읽고 새 형식으로 다시 암호화하는 시점은 두 번이다. AI 연결을 다음에 저장할 때(저장된 모든 키를
+  그대로 동작한다. `MONTI_SECRET`을 옛 `CMS_SECRET` 값으로 두거나 그 값을 `previousSecrets`에 넣는다. 플러그인이 옛 방식으로 풀어 읽고 새 형식으로 다시 암호화하는 시점은 두 번이다. AI 연결을 다음에 저장할 때(저장된 모든 키를
   함께 다시 암호화)와 `monti migrate`를 돌릴 때(남은 것을 한 번에 이전하고, 다시 돌려도 달라지는 것이 없다). 키를 다시 넣을 필요는 없다.
-- **`secret` 바꾸기**: 서버 설정에서 새 값을 `secret`에 두고 옛 값을 `previousSecrets`에 남긴다. 저장된 키(새 형식이든 옛 형식이든)는 옛 secret으로 계속 풀리고,
-  `monti migrate`나 다음 저장 때 새 secret으로 다시 암호화된다. 그 뒤에 `previousSecrets`에서 옛 값을 뺀다.
-  `previousSecrets` 없이 바꾸면 옛 secret으로 만든 키는 읽을 수 없으므로 다시 넣어야 한다.
+- **비밀 값 바꾸기**: 새 값을 `MONTI_SECRET`(또는 `defineConfig`의 `secret`)에 두고 옛 값을 `monti.config.ts`의 `previousSecrets`에 남긴다. 저장된 키(새 형식이든 옛 형식이든)는 옛 비밀 값으로 계속 풀리고,
+  `monti migrate`나 다음 저장 때 새 비밀 값으로 다시 암호화된다. 그 뒤에 `previousSecrets`에서 옛 값을 뺀다.
+  `previousSecrets` 없이 바꾸면 옛 비밀 값으로 만든 키는 읽을 수 없으므로 다시 넣어야 한다.
 
 ## 플러그인 저장소로 옮겨진 데이터
 

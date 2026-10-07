@@ -36,7 +36,7 @@ pnpm exec monti add blog-theme
 # app/(site)/blog/[slug]/page.tsx   the post:   /blog/<slug>
 ```
 
-- **Edit `theme.config.ts`.** It is the one place for what differs per site: the `cms` import (`@/cms.server`), the `collection` name (default `post`), `routeBase` (`/blog`), `pageSize`, the relation
+- **Edit `theme.config.ts`.** It is the one place for what differs per site: the `cms` import (`@/monti.config`), the `collection` name (default `post`), `routeBase` (`/blog`), `pageSize`, the relation
   fields for the author and topics, the summary field, `blogTitle`, `components` (the public components of your blocks, as for `CmsContent`) and `neighborWindow` (how many of the newest posts are searched for the
   newer and older post; `0` turns those links off).
 - **The route.** The route files are thin: they re-export the page and `generateMetadata` from `blog-list.tsx` and `blog-post.tsx` and set `dynamic = "force-dynamic"`. To serve the blog under another path, move
@@ -45,8 +45,8 @@ pnpm exec monti add blog-theme
 - **Not found and redirects.** An unknown, unpublished or draft address is a 404, and an old address of a renamed post is a permanent redirect to the new one.
 - **Metadata.** The post page sets the title, the description (the summary field), a canonical path and Open Graph article fields.
 
-`notice-block-view` draws a block your config defines: add a `notice` block with a container syntax and a `level` attribute (`info` or `warning`) to `cms.config.ts`,
-then register the view in your admin components:
+`notice-block-view` draws a block your config defines: add a `notice` block with a container syntax and a `level` attribute (`info` or `warning`) to the schema or blocks of `monti.config.ts`,
+then register the view through the `CmsAdminComponentsProvider` of your own admin plugin (`definePlugin({ ..., admin: () => import("./admin") })` with `defineAdminPlugin({ Provider })`):
 
 ```tsx
 import { noticeBlockViews } from "@/components/monti/notice-block-view/notice-block-view";

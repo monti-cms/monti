@@ -22,21 +22,30 @@ Stored as standard MDX (JSX elements). Sites that use the directive notation (`:
 ## Installation
 
 ```ts
-// cms.config.ts
-import { blocks } from "@monti-cms/blocks";
+// monti.config.ts
+import { callout, chart, codeExplorer, codeRef, collapsible, color, columns, mermaid, tabs, tooltip } from "@monti-cms/blocks";
+import { defineConfig } from "@monti-cms/core/server";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [
-		...blocks(), // all of them (callout, collapsible, tabs, columns, code explorer, Mermaid, chart, tooltip, code link, text color)
-		// ...blocks({ only: ["callout", "tooltip"] })   only the chosen ones
-		// ...blocks({ omit: ["chart"], codeRef: false }) leave some out (`false` also leaves one out)
-		// ...blocks({ color: { palette: [...] } })       per-extension options
+		// One line per block: list the ones you want, delete a line and the block is gone. Each works with no arguments.
+		callout(),
+		collapsible(),
+		tabs(),
+		columns(),
+		codeExplorer(),
+		mermaid(),
+		chart(),
+		// The inline marks are stored in this order when they overlap.
+		tooltip(),
+		codeRef(),
+		color(), // color({ palette: [...] }) sets the picker colors
 	],
 });
 ```
 
-You can also add them one by one (`plugins: [callout(), columns(), color({ palette })]`). Adding the same extension twice is a config error.
+There is no function that adds them all: each block is its own plugin, and the list in the config is the list of blocks the site has. Adding the same plugin twice is a config error.
 
 Two stylesheets, neither needing Tailwind in the app:
 

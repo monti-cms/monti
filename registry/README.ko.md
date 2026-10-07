@@ -36,7 +36,7 @@ pnpm exec monti add blog-theme
 # app/(site)/blog/[slug]/page.tsx   글:    /blog/<slug>
 ```
 
-- **`theme.config.ts`를 고칩니다.** 사이트마다 다른 것을 한곳에 모았습니다. `cms` import(`@/cms.server`), `collection` 이름(기본 `post`), `routeBase`(`/blog`), `pageSize`, 작성자와 주제의 관계 필드,
+- **`theme.config.ts`를 고칩니다.** 사이트마다 다른 것을 한곳에 모았습니다. `cms` import(`@/monti.config`), `collection` 이름(기본 `post`), `routeBase`(`/blog`), `pageSize`, 작성자와 주제의 관계 필드,
   요약 필드, `blogTitle`, `components`(`CmsContent`에 주는 것과 같은, 블록의 공개 컴포넌트), `neighborWindow`(새 글과 이전 글을 찾을 때 훑는 최신 글의 수. `0`이면 그 링크를 끕니다)입니다.
 - **라우트.** 라우트 파일은 얇습니다. `blog-list.tsx`와 `blog-post.tsx`의 페이지와 `generateMetadata`를 다시 내보내고 `dynamic = "force-dynamic"`을 설정할 뿐입니다. 블로그를 다른 경로에 두려면
   두 폴더를 옮기고 `routeBase`를 맞추세요. `[locale]` 폴더(`app/(site)/[locale]/blog/`) 아래에서는 페이지가 `params.locale`을 읽고 모르는 언어에는 404를 보여 주며, 없으면 기본 언어를 읽습니다.
@@ -44,8 +44,8 @@ pnpm exec monti add blog-theme
 - **찾을 수 없음과 리다이렉트.** 없는 주소, 발행하지 않은 글, 초안의 주소는 404이고, 이름을 바꾼 글의 옛 주소는 새 주소로 영구 리다이렉트합니다.
 - **메타데이터.** 글 페이지는 제목, 설명(요약 필드), canonical 경로, Open Graph article 필드를 설정합니다.
 
-`notice-block-view`는 설정에서 정의한 블록을 그립니다. `cms.config.ts`에 컨테이너 문법과 `level` 속성(`info` 또는 `warning`)을 가진 `notice` 블록을 추가하고,
-어드민 컴포넌트에 화면을 등록하세요.
+`notice-block-view`는 설정에서 정의한 블록을 그립니다. `monti.config.ts`의 스키마나 블록에 컨테이너 문법과 `level` 속성(`info` 또는 `warning`)을 가진 `notice` 블록을 추가하고,
+직접 만든 어드민 플러그인(`definePlugin({ ..., admin: () => import("./admin") })`와 `defineAdminPlugin({ Provider })`)의 `CmsAdminComponentsProvider`로 화면을 등록하세요.
 
 ```tsx
 import { noticeBlockViews } from "@/components/monti/notice-block-view/notice-block-view";

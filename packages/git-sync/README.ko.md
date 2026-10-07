@@ -7,14 +7,15 @@
 - GitHub API와 토큰, 웹훅으로 통신하므로 서버리스에서도 돈다. 체크아웃도 `git` 실행 파일도 필요 없다.
 - 코어의 이벤트 아웃박스(`afterCommit`)로 전달하므로, push가 실패해도 잃지 않고 재시도한다.
 - 파일 본문은 형식 플러그인(기본 `mdx`)이 `purpose: "sync"`로 쓰므로, 쓴 것을 다시 읽을 수 있다.
-- GitHub 토큰과 웹훅 비밀 값은 플러그인의 관리자 화면에서 저장하고, 서버 설정의 `secret`으로 암호화한다(`cms.secrets("git-sync")`). 설정 파일에는 두지 않는다.
+- GitHub 토큰과 웹훅 비밀 값은 플러그인의 관리자 화면에서 저장하고, `MONTI_SECRET`에서 만든 키로 암호화한다(`cms.secrets("git-sync")`). 설정 파일에는 두지 않는다.
 
 ```ts
-// cms.config.ts
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [
 		mdx(),
@@ -33,6 +34,8 @@ export default defineConfig({
 	],
 });
 ```
+
+`targets` 없이 `gitSync()`만 적으면 플러그인만 등록되고, `targets`에 저장소를 적을 때까지 아무것도 동기화하지 않는다.
 
 그다음 `monti migrate`를 돌려(플러그인 저장소가 만들어진다) `/<관리자 경로>/git-sync`를 열고, 아래 "설정하기"를 따른다.
 
@@ -68,7 +71,7 @@ export default defineConfig({
 
 ## 설정하기
 
-1. **토큰.** GitHub에서 저장소의 *Contents*와 *Pull requests*에 **읽기·쓰기** 권한이 있는 세분화된 개인 액세스 토큰을 만든다(`repo` 범위의 클래식 토큰도 된다). Git 동기화 화면의 설정 탭에서 저장한다. 암호화해 저장하며 끝 네 글자만 보여 준다. 서버 설정에 `secret`(`CMS_SECRET`)이 있어야 하고, 없으면 아무것도 저장할 수 없다.
+1. **토큰.** GitHub에서 저장소의 *Contents*와 *Pull requests*에 **읽기·쓰기** 권한이 있는 세분화된 개인 액세스 토큰을 만든다(`repo` 범위의 클래식 토큰도 된다). Git 동기화 화면의 설정 탭에서 저장한다. 암호화해 저장하며 끝 네 글자만 보여 준다. 앱에 `MONTI_SECRET`이 있어야 하고, 없으면 아무것도 저장할 수 없다.
 2. **웹훅**(변경을 돌려받으려면). 저장소의 Settings, Webhooks, Add webhook에서 Payload URL은 설정 탭이 보여 주는 주소(`https://<사이트>/api/cms/v1/git-sync/webhook`), 콘텐츠 형식은 `application/json`, 이벤트는 **push**(`drafts: true`인 대상이면 **Pull requests**도), 비밀 값은 설정 탭의 "만들기"로 만들어 저장한 뒤 같은 값을 GitHub에 붙여 넣는다. 라우트는 `X-Hub-Signature-256`을 그 비밀 값으로 검증하고, 맞지 않으면 거절한다. GitHub에서 사이트에 닿을 수 있어야 한다.
 3. **첫 동기화.** `monti git-sync:push --all`이 발행한 글을 모두 저장소에 쓴다(아래).
 
@@ -206,7 +209,7 @@ monti git-sync:push --all [--target <id>]
 
 ## 명령
 
-모두 `monti migrate`처럼 앱을 불러온다(`--env-file`, `--no-env-file`, `--server`).
+모두 `monti migrate`처럼 앱을 불러온다(`--env-file`, `--no-env-file`, `--config`).
 
 | 명령 | 하는 일 |
 | --- | --- |
