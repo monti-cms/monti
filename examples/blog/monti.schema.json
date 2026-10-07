@@ -1,0 +1,668 @@
+{
+	"$schema": "./node_modules/@monti-cms/core/schema.json",
+	"collections": {
+		"post": {
+			"label": "Post",
+			"kind": "document",
+			"fields": {
+				"title": {
+					"kind": "text",
+					"label": "Title",
+					"required": true,
+					"localized": true,
+					"max": 200,
+					"placeholder": "Untitled post"
+				},
+				"slug": {
+					"kind": "slug",
+					"label": "Address",
+					"description": "Changing the address of a published entry sends the old address to the new one with a 308 redirect.",
+					"required": true,
+					"localized": "inherit",
+					"from": "title",
+					"placeholder": "url-friendly-slug"
+				},
+				"summary": {
+					"kind": "text",
+					"label": "Summary",
+					"localized": true,
+					"role": "summary",
+					"fillFromBody": true,
+					"multiline": true,
+					"rows": 3,
+					"placeholder": "Intro shown in lists and search results"
+				},
+				"categoryId": {
+					"kind": "relation",
+					"label": "Category",
+					"required": true,
+					"to": "category",
+					"createInline": true
+				},
+				"tagIds": {
+					"kind": "relation",
+					"label": "Tags",
+					"description": "Keeps the order you pick them in.",
+					"to": "tag",
+					"many": true,
+					"createInline": true
+				},
+				"series": {
+					"kind": "backlink",
+					"label": "Series",
+					"description": "Saved to the series at once, apart from the draft and publish state of the post. A new post goes to the end of the series.",
+					"from": "collection",
+					"via": "itemIds",
+					"createInline": true,
+					"placeholder": "Add to a series"
+				},
+				"policy": {
+					"kind": "conditional",
+					"label": "Policy",
+					"description": "A deprecated post points readers to its replacement.",
+					"discriminant": {
+						"kind": "select",
+						"label": "Policy",
+						"description": "A deprecated post points readers to its replacement.",
+						"options": {
+							"normal": "Normal",
+							"evergreen": "Always current",
+							"deprecated": "Deprecated"
+						},
+						"defaultValue": "normal"
+					},
+					"values": {
+						"deprecated": {
+							"replacementPostId": {
+								"kind": "relation",
+								"label": "Replacement post",
+								"to": "post",
+								"publishedOnly": true,
+								"placeholder": "Pick a published post"
+							}
+						}
+					}
+				},
+				"recordStatus": {
+					"kind": "select",
+					"label": "Work status",
+					"description": "Set by hand, apart from whether the entry is published.",
+					"options": {
+						"unspecified": "Not specified",
+						"experimental": "Experimenting",
+						"verified": "Verified",
+						"maintained": "Maintained",
+						"stale": "Needs review"
+					},
+					"defaultValue": "unspecified"
+				},
+				"recordObservation": {
+					"kind": "text",
+					"label": "Observation / question",
+					"localized": true,
+					"multiline": true,
+					"rows": 3
+				},
+				"recordExperiment": {
+					"kind": "text",
+					"label": "Attempt / experiment",
+					"localized": true,
+					"multiline": true,
+					"rows": 3
+				},
+				"recordResult": {
+					"kind": "text",
+					"label": "Result / open question",
+					"localized": true,
+					"multiline": true,
+					"rows": 3
+				},
+				"relatedPostIds": {
+					"kind": "relation",
+					"label": "Follow-up posts",
+					"to": "post",
+					"many": true,
+					"publishedOnly": true
+				},
+				"relatedMemoIds": {
+					"kind": "relation",
+					"label": "Follow-up memos",
+					"to": "memo",
+					"many": true,
+					"publishedOnly": true
+				},
+				"searchPreview": {
+					"kind": "view",
+					"view": "search",
+					"tab": "SEO"
+				},
+				"seoTitle": {
+					"kind": "text",
+					"label": "Search title",
+					"localized": true,
+					"input": "seo-title",
+					"inputOptions": {
+						"limit": 60
+					},
+					"role": "seoTitle",
+					"tab": "SEO"
+				},
+				"seoDescription": {
+					"kind": "text",
+					"label": "Search description",
+					"localized": true,
+					"input": "seo-description",
+					"inputOptions": {
+						"limit": 155
+					},
+					"role": "seoDescription",
+					"tab": "SEO",
+					"multiline": true
+				},
+				"ogImageId": {
+					"kind": "media",
+					"label": "Share image",
+					"localized": true,
+					"role": "ogImage",
+					"tab": "SEO",
+					"accept": "image"
+				},
+				"seoRobots": {
+					"kind": "select",
+					"label": "Hide from search engines",
+					"input": "seo-noindex",
+					"role": "noindex",
+					"tab": "SEO",
+					"options": {
+						"index": "Show",
+						"noindex": "Hide"
+					},
+					"defaultValue": "index"
+				},
+				"canonicalUrl": {
+					"kind": "text",
+					"label": "Original URL",
+					"localized": true,
+					"role": "canonical",
+					"tab": "SEO",
+					"placeholder": "https://"
+				}
+			},
+			"path": "/posts/:slug",
+			"icon": "file-text",
+			"layout": [
+				{
+					"fields": ["title", "slug", "summary"]
+				},
+				{
+					"group": "Classification",
+					"fields": ["categoryId", "tagIds", "series"]
+				},
+				{
+					"group": "Policy",
+					"fields": ["policy"]
+				},
+				{
+					"group": "Work log",
+					"fields": [
+						"recordStatus",
+						"recordObservation",
+						"recordExperiment",
+						"recordResult",
+						"relatedPostIds",
+						"relatedMemoIds"
+					]
+				}
+			]
+		},
+		"memo": {
+			"label": "Memo",
+			"kind": "document",
+			"fields": {
+				"title": {
+					"kind": "text",
+					"label": "Title",
+					"required": true,
+					"localized": true,
+					"max": 200,
+					"placeholder": "Untitled post"
+				},
+				"slug": {
+					"kind": "slug",
+					"label": "Address",
+					"description": "Changing the address of a published entry sends the old address to the new one with a 308 redirect.",
+					"required": true,
+					"localized": "inherit",
+					"from": "title",
+					"placeholder": "url-friendly-slug"
+				},
+				"tagIds": {
+					"kind": "relation",
+					"label": "Tags",
+					"description": "Keeps the order you pick them in.",
+					"to": "tag",
+					"many": true,
+					"createInline": true
+				},
+				"series": {
+					"kind": "backlink",
+					"label": "Series",
+					"description": "Saved to the series at once, apart from the draft and publish state of the memo. Only series that hold memos can be picked, and a new memo goes to the end.",
+					"from": "collection",
+					"via": "memoIds",
+					"createInline": true,
+					"placeholder": "Add to a series"
+				},
+				"recordStatus": {
+					"kind": "select",
+					"label": "Work status",
+					"description": "Set by hand, apart from whether the entry is published.",
+					"options": {
+						"unspecified": "Not specified",
+						"experimental": "Experimenting",
+						"verified": "Verified",
+						"maintained": "Maintained",
+						"stale": "Needs review"
+					},
+					"defaultValue": "unspecified"
+				},
+				"recordObservation": {
+					"kind": "text",
+					"label": "Observation / question",
+					"localized": true,
+					"multiline": true,
+					"rows": 3
+				},
+				"recordExperiment": {
+					"kind": "text",
+					"label": "Attempt / experiment",
+					"localized": true,
+					"multiline": true,
+					"rows": 3
+				},
+				"recordResult": {
+					"kind": "text",
+					"label": "Result / open question",
+					"localized": true,
+					"multiline": true,
+					"rows": 3
+				},
+				"relatedPostIds": {
+					"kind": "relation",
+					"label": "Follow-up posts",
+					"to": "post",
+					"many": true,
+					"publishedOnly": true
+				},
+				"relatedMemoIds": {
+					"kind": "relation",
+					"label": "Follow-up memos",
+					"to": "memo",
+					"many": true,
+					"publishedOnly": true
+				},
+				"searchPreview": {
+					"kind": "view",
+					"view": "search",
+					"tab": "SEO"
+				},
+				"seoTitle": {
+					"kind": "text",
+					"label": "Search title",
+					"localized": true,
+					"input": "seo-title",
+					"inputOptions": {
+						"limit": 60
+					},
+					"role": "seoTitle",
+					"tab": "SEO"
+				},
+				"seoDescription": {
+					"kind": "text",
+					"label": "Search description",
+					"localized": true,
+					"input": "seo-description",
+					"inputOptions": {
+						"limit": 155
+					},
+					"role": "seoDescription",
+					"tab": "SEO",
+					"multiline": true
+				},
+				"ogImageId": {
+					"kind": "media",
+					"label": "Share image",
+					"localized": true,
+					"role": "ogImage",
+					"tab": "SEO",
+					"accept": "image"
+				},
+				"seoRobots": {
+					"kind": "select",
+					"label": "Hide from search engines",
+					"input": "seo-noindex",
+					"role": "noindex",
+					"tab": "SEO",
+					"options": {
+						"index": "Show",
+						"noindex": "Hide"
+					},
+					"defaultValue": "index"
+				},
+				"canonicalUrl": {
+					"kind": "text",
+					"label": "Original URL",
+					"localized": true,
+					"role": "canonical",
+					"tab": "SEO",
+					"placeholder": "https://"
+				}
+			},
+			"path": "/memos/:slug",
+			"icon": "notebook-pen",
+			"layout": [
+				{
+					"fields": ["title", "slug"]
+				},
+				{
+					"group": "Classification",
+					"fields": ["tagIds", "series"]
+				},
+				{
+					"group": "Work log",
+					"fields": [
+						"recordStatus",
+						"recordObservation",
+						"recordExperiment",
+						"recordResult",
+						"relatedPostIds",
+						"relatedMemoIds"
+					]
+				}
+			]
+		},
+		"category": {
+			"label": "Category",
+			"kind": "item",
+			"fields": {
+				"title": {
+					"kind": "text",
+					"label": "Name",
+					"required": true,
+					"localized": true,
+					"max": 200
+				},
+				"slug": {
+					"kind": "slug",
+					"label": "Address",
+					"required": true,
+					"from": "title"
+				}
+			},
+			"icon": "shapes"
+		},
+		"tag": {
+			"label": "Tag",
+			"kind": "item",
+			"fields": {
+				"title": {
+					"kind": "text",
+					"label": "Name",
+					"required": true,
+					"localized": true,
+					"max": 200
+				},
+				"slug": {
+					"kind": "slug",
+					"label": "Address",
+					"required": true,
+					"from": "title"
+				}
+			},
+			"icon": "tag"
+		},
+		"collection": {
+			"label": "Series",
+			"kind": "item",
+			"fields": {
+				"title": {
+					"kind": "text",
+					"label": "Name",
+					"required": true,
+					"localized": true,
+					"max": 200
+				},
+				"slug": {
+					"kind": "slug",
+					"label": "Address",
+					"required": true,
+					"from": "title"
+				},
+				"summary": {
+					"kind": "text",
+					"label": "Description",
+					"localized": true,
+					"role": "summary",
+					"multiline": true
+				},
+				"itemKind": {
+					"kind": "conditional",
+					"label": "Holds",
+					"description": "Saving with another kind empties the list of the other kind.",
+					"discriminant": {
+						"kind": "select",
+						"label": "Holds",
+						"description": "Saving with another kind empties the list of the other kind.",
+						"options": {
+							"post": "Posts",
+							"memo": "Memos"
+						},
+						"defaultValue": "post"
+					},
+					"values": {
+						"post": {
+							"itemIds": {
+								"kind": "relation",
+								"label": "Posts",
+								"description": "Unpublished posts can be added too; they only stay out of the public list.",
+								"to": "post",
+								"many": true,
+								"allowUnpublished": true,
+								"ordered": true,
+								"placeholder": "Add or remove posts"
+							}
+						},
+						"memo": {
+							"memoIds": {
+								"kind": "relation",
+								"label": "Memos",
+								"description": "Unpublished memos can be added too; they only stay out of the public list.",
+								"to": "memo",
+								"many": true,
+								"allowUnpublished": true,
+								"ordered": true,
+								"placeholder": "Add or remove memos"
+							}
+						}
+					}
+				}
+			},
+			"icon": "layers"
+		}
+	},
+	"locales": [
+		{
+			"code": "ko",
+			"name": "한국어",
+			"label": "Korean"
+		},
+		{
+			"code": "en",
+			"name": "English",
+			"label": "English"
+		}
+	],
+	"defaultLocale": "ko",
+	"timeZone": "Asia/Seoul",
+	"site": {
+		"name": "Example blog",
+		"previewPath": "/preview",
+		"previewLocaleParam": false,
+		"localePrefix": "always"
+	},
+	"admin": {
+		"path": "/studio"
+	},
+	"seed": {
+		"templates": [
+			{
+				"id": "00000000-0000-4000-8000-000000000001",
+				"name": "Algorithm solution",
+				"doc": {
+					"type": "doc",
+					"version": 3,
+					"content": [
+						{
+							"type": "heading",
+							"attrs": {
+								"level": 2
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "Problem"
+								}
+							]
+						},
+						{
+							"type": "heading",
+							"attrs": {
+								"level": 2
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "Solution"
+								}
+							]
+						},
+						{
+							"type": "codeBlock",
+							"attrs": {
+								"language": "ts",
+								"meta": "",
+								"code": ""
+							}
+						}
+					]
+				}
+			},
+			{
+				"id": "00000000-0000-4000-8000-000000000002",
+				"name": "Type Challenge solution",
+				"doc": {
+					"type": "doc",
+					"version": 3,
+					"content": [
+						{
+							"type": "heading",
+							"attrs": {
+								"level": 3
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "Question"
+								}
+							]
+						},
+						{
+							"type": "codeBlock",
+							"attrs": {
+								"language": "ts",
+								"meta": "",
+								"code": ""
+							}
+						},
+						{
+							"type": "heading",
+							"attrs": {
+								"level": 3
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "Solution"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"id": "00000000-0000-4000-8000-000000000003",
+				"name": "General post",
+				"doc": {
+					"type": "doc",
+					"version": 3,
+					"content": [
+						{
+							"type": "heading",
+							"attrs": {
+								"level": 2
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "Overview"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"content": [
+								{
+									"type": "text",
+									"text": "Introduce the core of the post."
+								}
+							]
+						},
+						{
+							"type": "heading",
+							"attrs": {
+								"level": 2
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "Body"
+								}
+							]
+						},
+						{
+							"type": "heading",
+							"attrs": {
+								"level": 2
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "Summary"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"content": [
+								{
+									"type": "text",
+									"text": "Write the closing thoughts."
+								}
+							]
+						}
+					]
+				}
+			}
+		]
+	}
+}

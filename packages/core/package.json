@@ -22,6 +22,8 @@
 		"./adapters/auth": "./src/adapters/auth/index.ts",
 		"./testing": "./src/testing.ts",
 		"./cli": "./src/cli/index.ts",
+		"./schema-types": "./src/cli/schema-types.ts",
+		"./schema.json": "./schema.json",
 		"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 		"./render.css": "./render.css"
 	},
@@ -33,7 +35,8 @@
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"typecheck": "tsc --noEmit -p .",
-		"build": "node ../../scripts/build-package.mjs"
+		"build": "node ../../scripts/build-package.mjs",
+		"schema:build": "tsx scripts/write-json-schema.ts"
 	},
 	"dependencies": {
 		"@shikijs/langs": "^3.21.0",
@@ -71,6 +74,7 @@
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
+		"ajv": "^8.20.0",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
 		"typescript": "^7.0.2",
@@ -82,7 +86,8 @@
 		"dist",
 		"stubs",
 		"README.md",
-		"render.css"
+		"render.css",
+		"schema.json"
 	],
 	"publishConfig": {
 		"exports": {
@@ -150,6 +155,11 @@
 				"types": "./dist/cli/index.d.ts",
 				"default": "./dist/cli/index.js"
 			},
+			"./schema-types": {
+				"types": "./dist/cli/schema-types.d.ts",
+				"default": "./dist/cli/schema-types.js"
+			},
+			"./schema.json": "./schema.json",
 			"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 			"./render.css": "./render.css"
 		}

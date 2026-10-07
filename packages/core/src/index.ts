@@ -29,6 +29,7 @@ export {
 	defineConfig,
 	type LocaleConfig,
 	type LocalePrefixMode,
+	type SchemaCmsConfig,
 	type SeedConfig,
 	type SeedTemplate,
 	type SiteConfig,
@@ -92,6 +93,15 @@ export {
 	type ViewField,
 } from "./schema/fields";
 export { fieldWithRole, type StoredField, valueFieldsOf, valueWithRole } from "./schema/walk";
+export { parseSchemaFile, SchemaFileError, type SchemaIssue } from "./schema-file/format";
+export type {
+	MontiRegister,
+	SchemaAdmin,
+	SchemaCollection,
+	SchemaFile,
+	SchemaInput,
+	SchemaTypes,
+} from "./schema-file/types";
 // Entry validator contract (also used by extensions the config file reads, so it must not read the site config).
 export * from "./text-check/normalize";
 export * from "./text-check/remote";

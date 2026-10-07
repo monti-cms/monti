@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { defineConfig } from "../../config/define";
+import { parseSchemaFile } from "../../schema-file/format";
 import { formatInitReport, initProject } from "../init";
 
 const DEFAULT_NEXT_CONFIG = `import type { NextConfig } from "next";
@@ -47,6 +49,8 @@ describe("monti init", () => {
 		expect(report.created).toEqual(
 			expect.arrayContaining([
 				"cms.config.ts",
+				"monti.schema.json",
+				"monti-env.d.ts",
 				"cms.server.ts",
 				"app/(admin)/admin/[[...path]]/page.tsx",
 				"app/(admin)/admin/layout.tsx",
@@ -56,17 +60,24 @@ describe("monti init", () => {
 		expect(report.updated).toEqual(["next.config.ts"]);
 		expect(report.skipped).toEqual([]);
 
+		// The config loads the schema file and adds what needs code; the data is in the schema file.
 		const config = read(dir, "cms.config.ts");
-		expect(config).toContain('kind: "document"');
-		expect(config).toContain("required: true");
-		expect(config).toContain("// ...seoFields()");
+		expect(config).toContain('import schema from "./monti.schema.json";');
+		expect(config).toContain("defineConfig({\n\tschema,");
 		expect(config).toContain("// plugins: [...blocks(), seo()]");
-		expect(config).not.toContain("admin: {"); // the default path is not written
+		expect(config).not.toContain("defineCollection");
+		const schema = JSON.parse(read(dir, "monti.schema.json"));
+		expect(schema.$schema).toBe("./node_modules/@monti-cms/core/schema.json");
+		expect(schema.collections.post).toMatchObject({ kind: "document", path: "/posts/:slug" });
+		expect(schema.collections.post.fields.title).toMatchObject({ kind: "text", required: true });
+		expect(schema).not.toHaveProperty("admin"); // the default path is not written
 		// Defaults to English and UTC (the file is developer-facing, so it only has English text).
-		expect(config).toContain('locales: [{ code: "en", name: "English" }]');
-		expect(config).toContain('defaultLocale: "en"');
-		expect(config).toContain('timeZone: "UTC"');
-		expect(config).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated file has no Korean
+		expect(schema.locales).toEqual([{ code: "en", name: "English" }]);
+		expect(schema.defaultLocale).toBe("en");
+		expect(schema.timeZone).toBe("UTC");
+		expect(config + read(dir, "monti.schema.json")).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
+		// The types of the schema are written next to it.
+		expect(read(dir, "monti-env.d.ts")).toContain('readonly defaultLocale: "en";');
 		expect(read(dir, "cms.server.ts")).toContain("githubAuth({");
 		expect(read(dir, "cms.server.ts")).toContain('import { githubAuth } from "@monti-cms/nextjs/auth";');
 		// The server file exports the instance; every generated file imports it from there by a relative path.
@@ -124,18 +135,53 @@ describe("monti init", () => {
 			"app/api/cms/[...path]/route.ts",
 			"next.config.ts",
 		]);
+		// The site's own config is not given a schema file it does not load; the existing one is pointed out.
+		expect(report.todo.join("\n")).toContain("monti.schema.json exists: load it from cms.config.ts");
 		expect(read(dir, "cms.config.ts")).toBe("// 사이트가 고친 설정\n");
 		expect(["tsconfig.json", "app/globals.css", "next.config.ts"].map((file) => read(dir, file))).toEqual(before);
 		expect(formatInitReport(report)).toContain("Skipped (already exist, not overwritten):\n  - cms.config.ts");
 	});
 
+	it("writes a schema file that is valid, that the config loads, and that has types", () => {
+		const dir = fakeApp({
+			"tsconfig.json": '{ "compilerOptions": { "resolveJsonModule": true } }\n',
+		});
+		const report = initProject({ cwd: dir, adminPath: "/studio", locale: "ko", timeZone: "Asia/Seoul" });
+		const file = JSON.parse(read(dir, "monti.schema.json"));
+		expect(() => parseSchemaFile(file)).not.toThrow();
+		const config = defineConfig({ schema: file });
+		expect(Object.keys(config.collections)).toEqual(["post"]);
+		expect(config.admin?.path).toBe("/studio");
+		expect(config.timeZone).toBe("Asia/Seoul");
+		expect(read(dir, "monti-env.d.ts")).toContain('readonly path: "/posts/:slug";');
+		// With resolveJsonModule on, nothing about tsconfig is asked.
+		expect(report.todo.join("\n")).not.toContain("resolveJsonModule");
+	});
+
+	it("asks for resolveJsonModule when the tsconfig lacks it, and leaves the tsconfig alone", () => {
+		const dir = fakeApp();
+		const before = read(dir, "tsconfig.json");
+		const report = initProject({ cwd: dir });
+		expect(report.todo.join("\n")).toContain('Set "resolveJsonModule": true in tsconfig.json');
+		expect(read(dir, "tsconfig.json")).toBe(before);
+	});
+
+	it("does not give an existing config a schema file, and says how to move its data", () => {
+		const dir = fakeApp({ "cms.config.ts": "export default {};\n" });
+		const report = initProject({ cwd: dir });
+		expect(report.created).not.toContain("monti.schema.json");
+		expect(report.created).not.toContain("monti-env.d.ts");
+		expect(report.todo.join("\n")).toContain("with `monti schema:extract`");
+		expect(() => read(dir, "monti.schema.json")).toThrow();
+	});
+
 	it("--locale and --time-zone are written as the site default locale and time zone", () => {
 		const dir = fakeApp();
 		initProject({ cwd: dir, locale: "ko", timeZone: "Asia/Seoul" });
-		const config = read(dir, "cms.config.ts");
-		expect(config).toContain('locales: [{ code: "ko", name: "한국어" }]');
-		expect(config).toContain('defaultLocale: "ko"');
-		expect(config).toContain('timeZone: "Asia/Seoul"');
+		const schema = JSON.parse(read(dir, "monti.schema.json"));
+		expect(schema.locales).toEqual([{ code: "ko", name: "한국어" }]);
+		expect(schema.defaultLocale).toBe("ko");
+		expect(schema.timeZone).toBe("Asia/Seoul");
 
 		expect(() => initProject({ cwd: fakeApp(), locale: "Korean" })).toThrow(/--locale/);
 		expect(() => initProject({ cwd: fakeApp(), timeZone: "Mars/Base" })).toThrow(/--time-zone/);
@@ -146,12 +192,12 @@ describe("monti init", () => {
 		const report = initProject({ cwd: dir, adminPath: "/cms/studio" });
 		expect(report.created).toContain("app/(admin)/cms/studio/[[...path]]/page.tsx");
 		expect(report.created).toContain("app/(admin)/cms/studio/layout.tsx");
-		expect(read(dir, "cms.config.ts")).toContain('admin: { path: "/cms/studio" }');
+		expect(JSON.parse(read(dir, "monti.schema.json")).admin).toEqual({ path: "/cms/studio" });
 		expect(report.todo.at(-1)).toContain("/cms/studio");
 
 		// If the config file already exists, it is not overwritten and the lines to add are reported.
 		const other = fakeApp({ "cms.config.ts": "export default {};\n" });
-		expect(initProject({ cwd: other, adminPath: "/studio" }).todo[0]).toContain('admin: { path: "/studio" }');
+		expect(initProject({ cwd: other, adminPath: "/studio" }).todo.join("\n")).toContain('admin: { path: "/studio" }');
 
 		expect(() => initProject({ cwd: dir, adminPath: "/" })).toThrow(/admin-path/);
 		expect(() => initProject({ cwd: dir, adminPath: "/api/admin" })).toThrow(/admin-path/);
@@ -165,8 +211,10 @@ describe("monti init", () => {
 		});
 		rmSync(path.join(dir, "app"), { recursive: true });
 		const report = initProject({ cwd: dir });
-		expect(report.created.slice(0, 3)).toEqual([
+		expect(report.created.slice(0, 5)).toEqual([
 			"src/cms.config.ts",
+			"src/monti.schema.json",
+			"src/monti-env.d.ts",
 			"src/cms.server.ts",
 			"src/app/(admin)/admin/[[...path]]/page.tsx",
 		]);

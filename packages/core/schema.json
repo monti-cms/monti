@@ -1,0 +1,1373 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"type": "object",
+	"properties": {
+		"$schema": {
+			"description": "Link to this schema, for editor autocomplete.",
+			"type": "string"
+		},
+		"collections": {
+			"type": "object",
+			"propertyNames": {
+				"type": "string"
+			},
+			"additionalProperties": {
+				"type": "object",
+				"properties": {
+					"label": {
+						"type": "string"
+					},
+					"kind": {
+						"type": "string",
+						"enum": [
+							"document",
+							"item"
+						]
+					},
+					"body": {
+						"description": "Whether entries have a body. Default: documents do, items do not.",
+						"type": "boolean"
+					},
+					"fields": {
+						"type": "object",
+						"propertyNames": {
+							"type": "string"
+						},
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "text"
+										},
+										"label": {
+											"type": "string",
+											"description": "Name shown next to the input."
+										},
+										"description": {
+											"description": "Help text below the input.",
+											"type": "string"
+										},
+										"required": {
+											"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+											"type": "boolean",
+											"const": true
+										},
+										"localized": {
+											"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string",
+													"const": "inherit"
+												}
+											]
+										},
+										"input": {
+											"description": "Name of a registered input to use instead of the default one.",
+											"type": "string"
+										},
+										"inputOptions": {
+											"description": "Settings for the input.",
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": [
+													"string",
+													"number",
+													"boolean"
+												]
+											}
+										},
+										"hidden": {
+											"description": "Stored and validated, but no input is drawn.",
+											"type": "boolean"
+										},
+										"role": {
+											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"type": "string"
+										},
+										"tab": {
+											"description": "Tab of the edit screen the field is drawn in.",
+											"type": "string"
+										},
+										"fillFromBody": {
+											"description": "Filled from the start of the body when empty at publish. `true` is 160 characters.",
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "object",
+													"properties": {
+														"maxLength": {
+															"type": "integer",
+															"minimum": 1,
+															"maximum": 9007199254740991
+														}
+													},
+													"additionalProperties": false
+												}
+											]
+										},
+										"multiline": {
+											"type": "boolean"
+										},
+										"rows": {
+											"description": "Initial rows of a multiline input.",
+											"type": "integer",
+											"minimum": 1,
+											"maximum": 9007199254740991
+										},
+										"max": {
+											"description": "Maximum number of characters.",
+											"type": "integer",
+											"minimum": 1,
+											"maximum": 9007199254740991
+										},
+										"placeholder": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"kind",
+										"label"
+									],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "slug"
+										},
+										"label": {
+											"type": "string",
+											"description": "Name shown next to the input."
+										},
+										"description": {
+											"description": "Help text below the input.",
+											"type": "string"
+										},
+										"required": {
+											"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+											"type": "boolean",
+											"const": true
+										},
+										"localized": {
+											"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string",
+													"const": "inherit"
+												}
+											]
+										},
+										"input": {
+											"description": "Name of a registered input to use instead of the default one.",
+											"type": "string"
+										},
+										"inputOptions": {
+											"description": "Settings for the input.",
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": [
+													"string",
+													"number",
+													"boolean"
+												]
+											}
+										},
+										"hidden": {
+											"description": "Stored and validated, but no input is drawn.",
+											"type": "boolean"
+										},
+										"role": {
+											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"type": "string"
+										},
+										"tab": {
+											"description": "Tab of the edit screen the field is drawn in.",
+											"type": "string"
+										},
+										"from": {
+											"description": "The text field the address is made from (usually `title`).",
+											"type": "string"
+										},
+										"placeholder": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"kind",
+										"label"
+									],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "relation"
+										},
+										"label": {
+											"type": "string",
+											"description": "Name shown next to the input."
+										},
+										"description": {
+											"description": "Help text below the input.",
+											"type": "string"
+										},
+										"required": {
+											"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+											"type": "boolean",
+											"const": true
+										},
+										"localized": {
+											"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string",
+													"const": "inherit"
+												}
+											]
+										},
+										"input": {
+											"description": "Name of a registered input to use instead of the default one.",
+											"type": "string"
+										},
+										"inputOptions": {
+											"description": "Settings for the input.",
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": [
+													"string",
+													"number",
+													"boolean"
+												]
+											}
+										},
+										"hidden": {
+											"description": "Stored and validated, but no input is drawn.",
+											"type": "boolean"
+										},
+										"role": {
+											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"type": "string"
+										},
+										"tab": {
+											"description": "Tab of the edit screen the field is drawn in.",
+											"type": "string"
+										},
+										"to": {
+											"type": "string",
+											"description": "The collection the relation points to."
+										},
+										"many": {
+											"type": "boolean"
+										},
+										"createInline": {
+											"description": "Create a missing target next to the input.",
+											"type": "boolean"
+										},
+										"publishedOnly": {
+											"description": "Only published targets can be picked.",
+											"type": "boolean"
+										},
+										"allowUnpublished": {
+											"description": "Unpublished targets do not block publishing.",
+											"type": "boolean"
+										},
+										"ordered": {
+											"description": "The user decides the order of several targets.",
+											"type": "boolean"
+										},
+										"placeholder": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"kind",
+										"label",
+										"to"
+									],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "select"
+										},
+										"label": {
+											"type": "string",
+											"description": "Name shown next to the input."
+										},
+										"description": {
+											"description": "Help text below the input.",
+											"type": "string"
+										},
+										"required": {
+											"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+											"type": "boolean",
+											"const": true
+										},
+										"localized": {
+											"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string",
+													"const": "inherit"
+												}
+											]
+										},
+										"input": {
+											"description": "Name of a registered input to use instead of the default one.",
+											"type": "string"
+										},
+										"inputOptions": {
+											"description": "Settings for the input.",
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": [
+													"string",
+													"number",
+													"boolean"
+												]
+											}
+										},
+										"hidden": {
+											"description": "Stored and validated, but no input is drawn.",
+											"type": "boolean"
+										},
+										"role": {
+											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"type": "string"
+										},
+										"tab": {
+											"description": "Tab of the edit screen the field is drawn in.",
+											"type": "string"
+										},
+										"options": {
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": "string"
+											},
+											"description": "Value -> label, in display order."
+										},
+										"defaultValue": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"kind",
+										"label",
+										"options",
+										"defaultValue"
+									],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "media"
+										},
+										"label": {
+											"type": "string",
+											"description": "Name shown next to the input."
+										},
+										"description": {
+											"description": "Help text below the input.",
+											"type": "string"
+										},
+										"required": {
+											"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+											"type": "boolean",
+											"const": true
+										},
+										"localized": {
+											"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string",
+													"const": "inherit"
+												}
+											]
+										},
+										"input": {
+											"description": "Name of a registered input to use instead of the default one.",
+											"type": "string"
+										},
+										"inputOptions": {
+											"description": "Settings for the input.",
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": [
+													"string",
+													"number",
+													"boolean"
+												]
+											}
+										},
+										"hidden": {
+											"description": "Stored and validated, but no input is drawn.",
+											"type": "boolean"
+										},
+										"role": {
+											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"type": "string"
+										},
+										"tab": {
+											"description": "Tab of the edit screen the field is drawn in.",
+											"type": "string"
+										},
+										"accept": {
+											"description": "`image` (default) or any `file`.",
+											"type": "string",
+											"enum": [
+												"image",
+												"file"
+											]
+										},
+										"placeholder": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"kind",
+										"label"
+									],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "conditional"
+										},
+										"label": {
+											"type": "string"
+										},
+										"description": {
+											"type": "string"
+										},
+										"localized": {
+											"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string",
+													"const": "inherit"
+												}
+											]
+										},
+										"input": {
+											"description": "Name of a registered input to use instead of the default one.",
+											"type": "string"
+										},
+										"inputOptions": {
+											"description": "Settings for the input.",
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": [
+													"string",
+													"number",
+													"boolean"
+												]
+											}
+										},
+										"hidden": {
+											"description": "Stored and validated, but no input is drawn.",
+											"type": "boolean"
+										},
+										"role": {
+											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"type": "string"
+										},
+										"tab": {
+											"description": "Tab of the edit screen the field is drawn in.",
+											"type": "string"
+										},
+										"discriminant": {
+											"type": "object",
+											"properties": {
+												"kind": {
+													"type": "string",
+													"const": "select"
+												},
+												"label": {
+													"type": "string",
+													"description": "Name shown next to the input."
+												},
+												"description": {
+													"description": "Help text below the input.",
+													"type": "string"
+												},
+												"required": {
+													"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+													"type": "boolean",
+													"const": true
+												},
+												"localized": {
+													"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+													"anyOf": [
+														{
+															"type": "boolean"
+														},
+														{
+															"type": "string",
+															"const": "inherit"
+														}
+													]
+												},
+												"input": {
+													"description": "Name of a registered input to use instead of the default one.",
+													"type": "string"
+												},
+												"inputOptions": {
+													"description": "Settings for the input.",
+													"type": "object",
+													"propertyNames": {
+														"type": "string"
+													},
+													"additionalProperties": {
+														"type": [
+															"string",
+															"number",
+															"boolean"
+														]
+													}
+												},
+												"hidden": {
+													"description": "Stored and validated, but no input is drawn.",
+													"type": "boolean"
+												},
+												"role": {
+													"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+													"type": "string"
+												},
+												"tab": {
+													"description": "Tab of the edit screen the field is drawn in.",
+													"type": "string"
+												},
+												"options": {
+													"type": "object",
+													"propertyNames": {
+														"type": "string"
+													},
+													"additionalProperties": {
+														"type": "string"
+													},
+													"description": "Value -> label, in display order."
+												},
+												"defaultValue": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"kind",
+												"label",
+												"options",
+												"defaultValue"
+											],
+											"additionalProperties": false,
+											"description": "The select that decides which fields show."
+										},
+										"values": {
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": "object",
+												"propertyNames": {
+													"type": "string"
+												},
+												"additionalProperties": {
+													"oneOf": [
+														{
+															"type": "object",
+															"properties": {
+																"kind": {
+																	"type": "string",
+																	"const": "text"
+																},
+																"label": {
+																	"type": "string",
+																	"description": "Name shown next to the input."
+																},
+																"description": {
+																	"description": "Help text below the input.",
+																	"type": "string"
+																},
+																"required": {
+																	"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+																	"type": "boolean",
+																	"const": true
+																},
+																"localized": {
+																	"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+																	"anyOf": [
+																		{
+																			"type": "boolean"
+																		},
+																		{
+																			"type": "string",
+																			"const": "inherit"
+																		}
+																	]
+																},
+																"input": {
+																	"description": "Name of a registered input to use instead of the default one.",
+																	"type": "string"
+																},
+																"inputOptions": {
+																	"description": "Settings for the input.",
+																	"type": "object",
+																	"propertyNames": {
+																		"type": "string"
+																	},
+																	"additionalProperties": {
+																		"type": [
+																			"string",
+																			"number",
+																			"boolean"
+																		]
+																	}
+																},
+																"hidden": {
+																	"description": "Stored and validated, but no input is drawn.",
+																	"type": "boolean"
+																},
+																"role": {
+																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"type": "string"
+																},
+																"tab": {
+																	"description": "Tab of the edit screen the field is drawn in.",
+																	"type": "string"
+																},
+																"fillFromBody": {
+																	"description": "Filled from the start of the body when empty at publish. `true` is 160 characters.",
+																	"anyOf": [
+																		{
+																			"type": "boolean"
+																		},
+																		{
+																			"type": "object",
+																			"properties": {
+																				"maxLength": {
+																					"type": "integer",
+																					"minimum": 1,
+																					"maximum": 9007199254740991
+																				}
+																			},
+																			"additionalProperties": false
+																		}
+																	]
+																},
+																"multiline": {
+																	"type": "boolean"
+																},
+																"rows": {
+																	"description": "Initial rows of a multiline input.",
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 9007199254740991
+																},
+																"max": {
+																	"description": "Maximum number of characters.",
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 9007199254740991
+																},
+																"placeholder": {
+																	"type": "string"
+																}
+															},
+															"required": [
+																"kind",
+																"label"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"kind": {
+																	"type": "string",
+																	"const": "relation"
+																},
+																"label": {
+																	"type": "string",
+																	"description": "Name shown next to the input."
+																},
+																"description": {
+																	"description": "Help text below the input.",
+																	"type": "string"
+																},
+																"required": {
+																	"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+																	"type": "boolean",
+																	"const": true
+																},
+																"localized": {
+																	"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+																	"anyOf": [
+																		{
+																			"type": "boolean"
+																		},
+																		{
+																			"type": "string",
+																			"const": "inherit"
+																		}
+																	]
+																},
+																"input": {
+																	"description": "Name of a registered input to use instead of the default one.",
+																	"type": "string"
+																},
+																"inputOptions": {
+																	"description": "Settings for the input.",
+																	"type": "object",
+																	"propertyNames": {
+																		"type": "string"
+																	},
+																	"additionalProperties": {
+																		"type": [
+																			"string",
+																			"number",
+																			"boolean"
+																		]
+																	}
+																},
+																"hidden": {
+																	"description": "Stored and validated, but no input is drawn.",
+																	"type": "boolean"
+																},
+																"role": {
+																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"type": "string"
+																},
+																"tab": {
+																	"description": "Tab of the edit screen the field is drawn in.",
+																	"type": "string"
+																},
+																"to": {
+																	"type": "string",
+																	"description": "The collection the relation points to."
+																},
+																"many": {
+																	"type": "boolean"
+																},
+																"createInline": {
+																	"description": "Create a missing target next to the input.",
+																	"type": "boolean"
+																},
+																"publishedOnly": {
+																	"description": "Only published targets can be picked.",
+																	"type": "boolean"
+																},
+																"allowUnpublished": {
+																	"description": "Unpublished targets do not block publishing.",
+																	"type": "boolean"
+																},
+																"ordered": {
+																	"description": "The user decides the order of several targets.",
+																	"type": "boolean"
+																},
+																"placeholder": {
+																	"type": "string"
+																}
+															},
+															"required": [
+																"kind",
+																"label",
+																"to"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"kind": {
+																	"type": "string",
+																	"const": "select"
+																},
+																"label": {
+																	"type": "string",
+																	"description": "Name shown next to the input."
+																},
+																"description": {
+																	"description": "Help text below the input.",
+																	"type": "string"
+																},
+																"required": {
+																	"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+																	"type": "boolean",
+																	"const": true
+																},
+																"localized": {
+																	"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+																	"anyOf": [
+																		{
+																			"type": "boolean"
+																		},
+																		{
+																			"type": "string",
+																			"const": "inherit"
+																		}
+																	]
+																},
+																"input": {
+																	"description": "Name of a registered input to use instead of the default one.",
+																	"type": "string"
+																},
+																"inputOptions": {
+																	"description": "Settings for the input.",
+																	"type": "object",
+																	"propertyNames": {
+																		"type": "string"
+																	},
+																	"additionalProperties": {
+																		"type": [
+																			"string",
+																			"number",
+																			"boolean"
+																		]
+																	}
+																},
+																"hidden": {
+																	"description": "Stored and validated, but no input is drawn.",
+																	"type": "boolean"
+																},
+																"role": {
+																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"type": "string"
+																},
+																"tab": {
+																	"description": "Tab of the edit screen the field is drawn in.",
+																	"type": "string"
+																},
+																"options": {
+																	"type": "object",
+																	"propertyNames": {
+																		"type": "string"
+																	},
+																	"additionalProperties": {
+																		"type": "string"
+																	},
+																	"description": "Value -> label, in display order."
+																},
+																"defaultValue": {
+																	"type": "string"
+																}
+															},
+															"required": [
+																"kind",
+																"label",
+																"options",
+																"defaultValue"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"kind": {
+																	"type": "string",
+																	"const": "media"
+																},
+																"label": {
+																	"type": "string",
+																	"description": "Name shown next to the input."
+																},
+																"description": {
+																	"description": "Help text below the input.",
+																	"type": "string"
+																},
+																"required": {
+																	"description": "The field must not be empty. Documents check it when publishing, items when saving.",
+																	"type": "boolean",
+																	"const": true
+																},
+																"localized": {
+																	"description": "`true`: each language has its own value. `inherit`: starts as the source language's value. Unset: shared.",
+																	"anyOf": [
+																		{
+																			"type": "boolean"
+																		},
+																		{
+																			"type": "string",
+																			"const": "inherit"
+																		}
+																	]
+																},
+																"input": {
+																	"description": "Name of a registered input to use instead of the default one.",
+																	"type": "string"
+																},
+																"inputOptions": {
+																	"description": "Settings for the input.",
+																	"type": "object",
+																	"propertyNames": {
+																		"type": "string"
+																	},
+																	"additionalProperties": {
+																		"type": [
+																			"string",
+																			"number",
+																			"boolean"
+																		]
+																	}
+																},
+																"hidden": {
+																	"description": "Stored and validated, but no input is drawn.",
+																	"type": "boolean"
+																},
+																"role": {
+																	"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+																	"type": "string"
+																},
+																"tab": {
+																	"description": "Tab of the edit screen the field is drawn in.",
+																	"type": "string"
+																},
+																"accept": {
+																	"description": "`image` (default) or any `file`.",
+																	"type": "string",
+																	"enum": [
+																		"image",
+																		"file"
+																	]
+																},
+																"placeholder": {
+																	"type": "string"
+																}
+															},
+															"required": [
+																"kind",
+																"label"
+															],
+															"additionalProperties": false
+														}
+													]
+												}
+											},
+											"description": "Option value -> the fields shown for it."
+										}
+									},
+									"required": [
+										"kind",
+										"label",
+										"discriminant",
+										"values"
+									],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "backlink"
+										},
+										"label": {
+											"type": "string"
+										},
+										"description": {
+											"type": "string"
+										},
+										"input": {
+											"description": "Name of a registered input to use instead of the default one.",
+											"type": "string"
+										},
+										"inputOptions": {
+											"description": "Settings for the input.",
+											"type": "object",
+											"propertyNames": {
+												"type": "string"
+											},
+											"additionalProperties": {
+												"type": [
+													"string",
+													"number",
+													"boolean"
+												]
+											}
+										},
+										"hidden": {
+											"description": "Stored and validated, but no input is drawn.",
+											"type": "boolean"
+										},
+										"role": {
+											"description": "The meaning of the field (`summary`, or a role a plugin reads). Unique per collection.",
+											"type": "string"
+										},
+										"tab": {
+											"description": "Tab of the edit screen the field is drawn in.",
+											"type": "string"
+										},
+										"from": {
+											"type": "string",
+											"description": "The other collection that has the relation field."
+										},
+										"via": {
+											"type": "string",
+											"description": "The many relation field of that collection that points here."
+										},
+										"createInline": {
+											"type": "boolean"
+										},
+										"placeholder": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"kind",
+										"label",
+										"from",
+										"via"
+									],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"kind": {
+											"type": "string",
+											"const": "view"
+										},
+										"view": {
+											"type": "string",
+											"description": "Name of a view registered by an admin plugin (kebab-case)."
+										},
+										"label": {
+											"type": "string"
+										},
+										"description": {
+											"type": "string"
+										},
+										"hidden": {
+											"type": "boolean"
+										},
+										"tab": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"kind",
+										"view"
+									],
+									"additionalProperties": false
+								}
+							]
+						},
+						"description": "Field name -> definition. A `title` text field is required."
+					},
+					"path": {
+						"description": "Public address shape with `:slug` once, e.g. `/posts/:slug`.",
+						"type": "string"
+					},
+					"icon": {
+						"description": "Admin sidebar icon name (lucide).",
+						"type": "string"
+					},
+					"layout": {
+						"description": "Layout of the properties panel.",
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"group": {
+									"description": "Group title. Without it the fields are drawn continuously.",
+									"type": "string"
+								},
+								"fields": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								},
+								"collapsed": {
+									"type": "boolean"
+								},
+								"tab": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"fields"
+							],
+							"additionalProperties": false
+						}
+					},
+					"list": {
+						"description": "Columns of the admin list.",
+						"type": "object",
+						"properties": {
+							"columns": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							}
+						},
+						"required": [
+							"columns"
+						],
+						"additionalProperties": false
+					}
+				},
+				"required": [
+					"label",
+					"kind",
+					"fields"
+				],
+				"additionalProperties": false
+			},
+			"description": "Collection name -> definition. The name is a stored value, so do not change it in production."
+		},
+		"locales": {
+			"minItems": 1,
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string",
+						"pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+					},
+					"name": {
+						"type": "string",
+						"description": "The language's name written in that language."
+					},
+					"label": {
+						"description": "Name shown in the admin. Falls back to `name`.",
+						"type": "string"
+					}
+				},
+				"required": [
+					"code",
+					"name"
+				],
+				"additionalProperties": false
+			},
+			"description": "Content locales, in the order the admin shows them."
+		},
+		"defaultLocale": {
+			"type": "string",
+			"description": "Default locale. Public URLs get no prefix for it."
+		},
+		"timeZone": {
+			"description": "IANA time zone for dates and times. UTC if unset.",
+			"type": "string"
+		},
+		"site": {
+			"type": "object",
+			"properties": {
+				"url": {
+					"description": "Public site URL. It differs per environment, so it is usually set in code.",
+					"type": "string"
+				},
+				"aliases": {
+					"description": "Other host names of the same site.",
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"name": {
+					"type": "string"
+				},
+				"previewPath": {
+					"description": "Start of the draft preview URL.",
+					"type": "string"
+				},
+				"previewLocaleParam": {
+					"anyOf": [
+						{
+							"type": "string",
+							"pattern": "^[A-Za-z][\\w-]*$"
+						},
+						{
+							"type": "boolean",
+							"const": false
+						}
+					]
+				},
+				"localePrefix": {
+					"type": "string",
+					"enum": [
+						"except-default",
+						"always",
+						"never"
+					]
+				},
+				"home": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false
+		},
+		"admin": {
+			"type": "object",
+			"properties": {
+				"path": {
+					"type": "string"
+				},
+				"locale": {
+					"type": "string"
+				},
+				"messages": {
+					"description": "Admin text overrides: namespace -> key -> text.",
+					"type": "object",
+					"propertyNames": {
+						"type": "string"
+					},
+					"additionalProperties": {
+						"type": "object",
+						"propertyNames": {
+							"type": "string"
+						},
+						"additionalProperties": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"additionalProperties": false
+		},
+		"seed": {
+			"description": "Data to seed a new store with.",
+			"type": "object",
+			"properties": {
+				"templates": {
+					"type": "array",
+					"items": {
+						"anyOf": [
+							{
+								"type": "object",
+								"properties": {
+									"id": {
+										"type": "string",
+										"pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+									},
+									"name": {
+										"type": "string"
+									},
+									"doc": {
+										"type": "object",
+										"properties": {
+											"type": {
+												"type": "string",
+												"const": "doc"
+											},
+											"version": {
+												"type": "number"
+											},
+											"content": {
+												"type": "array",
+												"items": {}
+											}
+										},
+										"required": [
+											"type",
+											"version",
+											"content"
+										],
+										"additionalProperties": {}
+									}
+								},
+								"required": [
+									"id",
+									"name",
+									"doc"
+								],
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": {
+									"id": {
+										"type": "string",
+										"pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+									},
+									"name": {
+										"type": "string"
+									},
+									"body": {
+										"type": "string"
+									},
+									"format": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"id",
+									"name",
+									"body",
+									"format"
+								],
+								"additionalProperties": false
+							}
+						]
+					}
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"required": [
+		"collections",
+		"locales",
+		"defaultLocale"
+	],
+	"additionalProperties": false,
+	"title": "Monti schema file",
+	"description": "The plain-data part of a Monti site config: collections, fields, layouts, locales, time zone, site and admin settings and seed templates. Plugins, blocks and hooks stay in cms.config.ts."
+}

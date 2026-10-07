@@ -60,8 +60,11 @@ describe("monti command helpers", () => {
 		expect(out.at(-1)).toContain("Usage: monti <command>");
 		expect(out.at(-1)).toContain("--locale <code>");
 		expect(out.at(-1)).toContain("--time-zone <tz>");
-		// The site config is imported by the server file, so no command takes it.
-		expect(out.at(-1)).not.toContain("--config");
+		// The site config is imported by the server file, so `migrate` does not take it (only `schema:extract` reads the config file).
+		const migrateHelp = out.at(-1)?.split("  migrate")[1]?.split("  schema:types")[0];
+		expect(migrateHelp).toContain("--server <file>");
+		expect(migrateHelp).not.toContain("--config");
+		expect(out.at(-1)).toContain("schema:extract");
 		// The removed command is not advertised.
 		expect(out.at(-1)).not.toContain("content:rewrite");
 		expect(await runCli(["deploy"], io)).toBe(1);
