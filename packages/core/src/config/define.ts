@@ -12,6 +12,7 @@ import { type CollectionSchema, normalizeCollection, validateListColumns } from 
 import { RESERVED_METADATA_KEYS, SUMMARY_ROLE } from "../schema/fields";
 import { valueFieldsOf } from "../schema/walk";
 import { resolveSchemaConfig } from "../schema-file/merge";
+import { SCHEMA_SOURCE } from "../schema-file/source";
 import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types";
 import {
 	DEFAULT_ADMIN_PATH,
@@ -481,5 +482,15 @@ export function defineConfig(
 	);
 	const normalized = { ...config, collections };
 	validate(normalized);
+	if ("schema" in input && input.schema !== undefined) {
+		const schemaInput = input as SchemaCmsConfig & { readonly schema: unknown };
+		// Hidden: lets an instance rebuild the config with another schema (see `schema-file/source.ts`).
+		Object.defineProperty(normalized, SCHEMA_SOURCE, {
+			value: {
+				...(typeof schemaInput.schema === "string" ? { file: schemaInput.schema } : {}),
+				rebuild: (schema: unknown) => defineConfig({ ...schemaInput, schema } as never),
+			},
+		});
+	}
 	return normalized;
 }

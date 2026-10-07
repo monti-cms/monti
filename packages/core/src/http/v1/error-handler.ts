@@ -12,6 +12,8 @@ export class HttpError extends Error {
 		readonly code: string,
 		message: string,
 		readonly issues?: unknown,
+		/** More members of the response body (a machine-readable `reason`, say). */
+		readonly extra?: Readonly<Record<string, unknown>>,
 	) {
 		super(message);
 		this.name = "HttpError";
@@ -67,7 +69,12 @@ const isUnavailable = (error: unknown) => {
 export function handleApiError(error: unknown): Response {
 	if (error instanceof HttpError) {
 		return Response.json(
-			{ code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) },
+			{
+				code: error.code,
+				message: error.message,
+				...(error.issues ? { issues: error.issues } : {}),
+				...error.extra,
+			},
 			{ status: error.status },
 		);
 	}

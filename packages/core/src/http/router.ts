@@ -26,6 +26,8 @@ import * as r29 from "./v1/meta/route";
 import * as r30 from "./v1/preferences/route";
 import * as rPublicEntry from "./v1/public/entries/[collection]/[slug]/route";
 import * as rPublicEntries from "./v1/public/entries/route";
+import * as rSchemaPreview from "./v1/schema/preview/route";
+import * as rSchema from "./v1/schema/route";
 import { validateSameOrigin } from "./v1/security";
 import * as rSignIn from "./v1/session/sign-in/[provider]/route";
 import * as rSignOut from "./v1/session/sign-out/route";
@@ -70,6 +72,9 @@ const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule }> = [
 	{ pattern: "v1/media/[id]/complete", module: r28 },
 	{ pattern: "v1/meta", module: r29 },
 	{ pattern: "v1/preferences", module: r30 },
+	// The schema settings screen: reading works everywhere, the write routes answer 403 outside development.
+	{ pattern: "v1/schema", module: rSchema },
+	{ pattern: "v1/schema/preview", module: rSchemaPreview },
 	// Sign in and out of the admin (browser form posts from the login screen). They check the same origin themselves and need no login.
 	{ pattern: "v1/session/sign-in/[provider]", module: rSignIn },
 	{ pattern: "v1/session/sign-out", module: rSignOut },
