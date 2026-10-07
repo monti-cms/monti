@@ -1,10 +1,10 @@
 import { isDeepStrictEqual } from "node:util";
-import { isCollection } from "../core/collections";
 import { type ImportNormalizers, type MediaUrlResolver, normalizeImportedDoc } from "../core/import-normalize";
 import { type LinkResolver, linkAddressKey } from "../core/link-ids";
 import { documentInputBody, prepareSnapshot, readInputBody } from "../core/snapshot";
 import { readStoredDocument } from "../doc/stored-document";
 import { type FormatRegistry, NO_FORMATS } from "../format/registry";
+import type { Site } from "../site";
 import type { HookProvider, HookSource, ValidationResult, WriteData, WriteHookContext, WriteOperation } from "./hooks";
 import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, type StorePort } from "./types";
 
@@ -16,7 +16,7 @@ import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, typ
  * `validatePublish` hooks. The store commit and `afterCommit` come after, in the caller and the store.
  */
 
-type PrepareOptions = Omit<NonNullable<Parameters<typeof prepareSnapshot>[1]>, "import" | "imported">;
+type PrepareOptions = Omit<NonNullable<Parameters<typeof prepareSnapshot>[2]>, "import" | "imported">;
 
 const defaultFormats = async (): Promise<FormatRegistry> => NO_FORMATS;
 
@@ -47,6 +47,8 @@ export interface WriteResult {
 }
 
 export interface WritePipelineOptions {
+	/** The site the writes are for: its collections, blocks and links decide how a body and its metadata are checked. */
+	readonly site: Site;
 	readonly hooks?: HookProvider;
 	/** The formats a body given as text can be in. Without it, only the built-in ones. */
 	readonly formats?: () => Promise<FormatRegistry>;
@@ -59,11 +61,14 @@ export interface WritePipelineOptions {
 const NO_HOOKS: HookProvider = () => [];
 
 /** The link resolver of a store, when it can look up addresses. */
-export const linkResolverOf = (store: Pick<StorePort, "resolveLinkTargets">): LinkResolver | undefined =>
+export const linkResolverOf = (site: Site, store: Pick<StorePort, "resolveLinkTargets">): LinkResolver | undefined =>
 	store.resolveLinkTargets
 		? async (addresses) =>
 				new Map(
-					(await store.resolveLinkTargets?.({ addresses }))?.map((found) => [linkAddressKey(found), found.entryId]),
+					(await store.resolveLinkTargets?.({ addresses }))?.map((found) => [
+						linkAddressKey(site, found),
+						found.entryId,
+					]),
 				)
 		: undefined;
 
@@ -116,7 +121,8 @@ const readValidation = (source: HookSource, hook: string, result: unknown): Requ
 	return { issues: readIssues(source, hook, result.issues), warnings: readIssues(source, hook, result.warnings) };
 };
 
-export function createWritePipeline(options: WritePipelineOptions = {}) {
+export function createWritePipeline(options: WritePipelineOptions) {
+	const { site } = options;
 	const provider = options.hooks ?? NO_HOOKS;
 
 	/**
@@ -128,11 +134,11 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 		request: WriteRequest,
 	): Promise<{ input: ServiceInput; imported: { issues: Issue[]; warnings: Issue[] } | undefined }> => {
 		const { input } = request;
-		if (!isRecord(input) || !isRecord(input.metadata) || !isCollection(input.collection))
+		if (!isRecord(input) || !isRecord(input.metadata) || !site.isCollection(input.collection))
 			return { input, imported: undefined };
 		if (input.doc === undefined && typeof input.body !== "string") return { input, imported: undefined };
 		const formats = await (options.formats ?? defaultFormats)();
-		const body = await readInputBody(input, request.prepare?.previousDoc, {
+		const body = await readInputBody(site, input, request.prepare?.previousDoc, {
 			formats,
 			locale: request.locale,
 			entryId: request.entryId,
@@ -161,12 +167,12 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 		const unchanged = { input: given, transformed: false };
 		const hooks = sources.filter((source) => source.hooks.transform);
 		const input = given;
-		if (hooks.length === 0 || !isRecord(input) || !isRecord(input.metadata) || !isCollection(input.collection))
+		if (hooks.length === 0 || !isRecord(input) || !isRecord(input.metadata) || !site.isCollection(input.collection))
 			return unchanged;
 		if (input.doc === undefined) return unchanged;
 		let body: ReturnType<typeof documentInputBody>;
 		try {
-			body = documentInputBody(input, request.prepare?.previousDoc);
+			body = documentInputBody(site, input, request.prepare?.previousDoc);
 		} catch (error) {
 			if (error instanceof ServiceError) return unchanged;
 			throw error;
@@ -192,7 +198,7 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 			let doc = data.doc;
 			if (result.doc !== undefined) {
 				// What a hook returns as the body must be a stored document.
-				const read = readStoredDocument(result.doc);
+				const read = readStoredDocument(result.doc, site);
 				if (!read) throw hookFailed(source, "transform");
 				doc = read;
 			}
@@ -220,16 +226,16 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 	const normalize = async (request: WriteRequest, input: ServiceInput): Promise<ServiceInput> => {
 		const normalizers: ImportNormalizers = { links: options.links, media: options.media };
 		if (!normalizers.links && !normalizers.media) return input;
-		if (!isRecord(input) || !isCollection(input.collection) || input.doc === undefined) return input;
+		if (!isRecord(input) || !site.isCollection(input.collection) || input.doc === undefined) return input;
 		let body: ReturnType<typeof documentInputBody>;
 		try {
-			body = documentInputBody(input, request.prepare?.previousDoc);
+			body = documentInputBody(site, input, request.prepare?.previousDoc);
 		} catch (error) {
 			// Core preparation rejects it with the same error.
 			if (error instanceof ServiceError) return input;
 			throw error;
 		}
-		const doc = await normalizeImportedDoc(body.doc, normalizers);
+		const doc = await normalizeImportedDoc(site, body.doc, normalizers);
 		if (doc === body.doc) return input;
 		return { ...input, doc } as ServiceInput;
 	};
@@ -276,7 +282,7 @@ export function createWritePipeline(options: WritePipelineOptions = {}) {
 			const { input, transformed } = request.skipTransform
 				? { input: read.input, transformed: false }
 				: await transform(sources, request, read.input);
-			const snapshot = await prepareSnapshot(await normalize(request, input), {
+			const snapshot = await prepareSnapshot(site, await normalize(request, input), {
 				...request.prepare,
 				...(read.imported ? { imported: read.imported } : {}),
 			});

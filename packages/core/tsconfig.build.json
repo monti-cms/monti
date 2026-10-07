@@ -5,12 +5,9 @@
 		"outDir": "dist",
 		"rootDir": "src",
 		"declaration": true,
-		"types": ["node"],
-		"paths": {
-			"@cms-config": ["./build/cms-config.d.ts"]
-		}
+		"types": ["node"]
 	},
-	"include": ["src", "build"],
+	"include": ["src"],
 	"exclude": [
 		"src/**/*.test.ts",
 		"src/**/*.test.tsx",

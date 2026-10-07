@@ -18,6 +18,7 @@ import {
 	type StoredDocument,
 	unparsedDocument,
 } from "../../../doc/stored-document";
+import type { Site } from "../../../site";
 import type { Queryable } from "./context";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
@@ -26,8 +27,8 @@ import type { Queryable } from "./context";
  * Plain text for body search, taken from the stored document: the text of paragraphs, headings, lists, tables and block bodies,
  * the text attributes of blocks (a callout title, an image's alt text and caption), code and math as written, and the text of translation notes. Links keep their label, not their address.
  */
-export function extractVisibleText(doc: StoredDocument): string {
-	return documentText(doc, SEARCH_TEXT);
+export function extractVisibleText(site: Site, doc: StoredDocument): string {
+	return documentText(site, doc, SEARCH_TEXT);
 }
 
 /** A stored document read from a `jsonb` column. A value that is not a stored document of a known version reads as `null`. */
@@ -258,6 +259,7 @@ export async function readBody(
 
 /** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is not written: `doc` is the only source of a body. */
 export async function writeBody(
+	site: Site,
 	client: PoolClient,
 	qSchema: string,
 	entryId: string,
@@ -287,7 +289,7 @@ export async function writeBody(
 			body.schemaVersion,
 			body.contentHash,
 			body.updatedAt,
-			extractVisibleText(body.doc),
+			extractVisibleText(site, body.doc),
 			body.translation === null ? null : JSON.stringify(body.translation),
 		],
 	);

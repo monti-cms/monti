@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DEFAULT_ADMIN_PATH, isAdminPath } from "../config/define";
-import { CONFIG_ALIAS, parseJsonc } from "./config-paths";
 import {
 	adminLayoutTemplate,
 	adminPageTemplate,
@@ -31,7 +30,7 @@ export interface InitReport {
 	readonly created: string[];
 	/** Files that already existed and were left as they are. Never overwritten. */
 	readonly skipped: string[];
-	/** Modified files (tsconfig `paths`, next config). */
+	/** Modified files (the next config). */
 	readonly updated: string[];
 	/** Manual steps (what could not be fixed automatically, installation, environment variables, next steps). */
 	readonly todo: string[];
@@ -56,7 +55,7 @@ const NEXT_CONFIGS = ["next.config.ts", "next.config.mjs", "next.config.js"];
 /**
  * `monti init`: creates the files that attach the CMS to a Next app. **Existing files are not overwritten**; they are reported as skipped.
  * Creates: site config, the server file (the CMS instance), admin routes (page and layout; the layout imports the prebuilt admin stylesheet), admin API route (including login).
- * Modifies (only when safe): tsconfig `paths`, a next config of the default shape. If it cannot, it reports a manual step.
+ * Modifies (only when safe): a next config of the default shape. If it cannot, it reports a manual step.
  */
 export function initProject(options: InitOptions): InitReport {
 	const { cwd } = options;
@@ -118,8 +117,7 @@ export function initProject(options: InitOptions): InitReport {
 	create(layoutFile, adminLayoutTemplate(serverImport(layoutFile)));
 	create(routeFile, apiRouteTemplate(serverImport(routeFile)));
 
-	addTsconfigPaths(cwd, { [CONFIG_ALIAS]: configFile }, report);
-	addWithCms(cwd, dotted(configFile), report);
+	addWithCms(cwd, report);
 
 	report.todo.push(
 		`Install packages: ${INSTALL_COMMANDS.join(" && ")}`,
@@ -130,54 +128,11 @@ export function initProject(options: InitOptions): InitReport {
 	return report;
 }
 
-/** Adds the site config alias to tsconfig `paths`. Only edits JSON without comments, and leaves existing aliases as they are. */
-function addTsconfigPaths(cwd: string, aliases: Readonly<Record<string, string>>, report: InitReport): void {
-	const file = path.join(cwd, "tsconfig.json");
-	const manual = () =>
-		`Add ${Object.entries(aliases)
-			.map(([alias, target]) => `"${alias}": ["${dotted(target)}"]`)
-			.join(", ")} to compilerOptions.paths in tsconfig.json.`;
-	if (!existsSync(file)) {
-		report.todo.push(manual());
-		return;
-	}
-	const text = readFileSync(file, "utf8");
-	let json: { compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> } };
-	try {
-		json = JSON.parse(text);
-	} catch {
-		// With comments or trailing commas, rewriting would drop them, so leave the file alone.
-		const parsed = parseJsonc(text) as typeof json | undefined;
-		const paths = parsed?.compilerOptions?.paths ?? {};
-		if (Object.keys(aliases).every((alias) => paths[alias])) report.skipped.push("tsconfig.json");
-		else report.todo.push(manual());
-		return;
-	}
-	json.compilerOptions ??= {};
-	json.compilerOptions.paths ??= {};
-	const base = path.resolve(cwd, json.compilerOptions.baseUrl ?? ".");
-	let changed = false;
-	for (const [alias, target] of Object.entries(aliases)) {
-		if (json.compilerOptions.paths[alias]) continue;
-		json.compilerOptions.paths[alias] = [dotted(posix(path.relative(base, path.join(cwd, target))))];
-		changed = true;
-	}
-	if (!changed) {
-		report.skipped.push("tsconfig.json");
-		return;
-	}
-	const indent = /^\{\r?\n(\s+)/.exec(text)?.[1] ?? "\t";
-	// Keep single-value arrays (`["./x"]`) on one line (the shape of a tsconfig created by Next).
-	const out = JSON.stringify(json, null, indent).replace(/\[\s*("(?:[^"\\]|\\.)*")\s*\]/g, "[$1]");
-	writeFileSync(file, `${out}\n`);
-	report.updated.push("tsconfig.json");
-}
-
 /** Wraps the next config with `withCms`. Only edits the default shape (a single `export default nextConfig;` line), and creates one if missing. */
-function addWithCms(cwd: string, config: string, report: InitReport): void {
+function addWithCms(cwd: string, report: InitReport): void {
 	const file = NEXT_CONFIGS.find((candidate) => existsSync(path.join(cwd, candidate)));
 	if (!file) {
-		writeFileSync(path.join(cwd, "next.config.ts"), nextConfigTemplate(config));
+		writeFileSync(path.join(cwd, "next.config.ts"), nextConfigTemplate());
 		report.created.push("next.config.ts");
 		return;
 	}
@@ -190,12 +145,12 @@ function addWithCms(cwd: string, config: string, report: InitReport): void {
 	const exports = text.match(new RegExp(exportLine.source, "gm")) ?? [];
 	if (exports.length !== 1) {
 		report.todo.push(
-			`Wrap the config in ${file}: import { withCms } from "@monti-cms/nextjs/config"; export default withCms(nextConfig, { config: "${config}" });`,
+			`Wrap the config in ${file}: import { withCms } from "@monti-cms/nextjs/config"; export default withCms(nextConfig);`,
 		);
 		return;
 	}
 	const importLine = 'import { withCms } from "@monti-cms/nextjs/config";\n';
-	const replaced = text.replace(exportLine, `export default withCms(nextConfig, { config: "${config}" });`);
+	const replaced = text.replace(exportLine, "export default withCms(nextConfig);");
 	writeFileSync(path.join(cwd, file), `${importLine}${replaced}`);
 	report.updated.push(file);
 }

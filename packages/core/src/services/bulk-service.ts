@@ -1,5 +1,3 @@
-import { DEFAULT_LOCALE } from "../core/locales";
-import { storedField } from "../schema/derive";
 import { type ContentServiceOptions, createContentService } from "./content-service";
 import type { Issue, ServiceInput, StorePort, WorkingCopy } from "./types";
 import { ServiceError } from "./types";
@@ -66,16 +64,18 @@ const toServiceInput = (working: WorkingCopy, metadata: { [key: string]: unknown
  * Bulk operations. Every item runs the same write pipeline as a single write (hooks included): a publish is the single publish, a relation or folder
  * change is a save. Results and errors are per item.
  */
-export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, options: ContentServiceOptions = {}) => {
+export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, options: ContentServiceOptions) => {
+	const { site } = options;
 	const pipeline =
 		options.pipeline ??
 		createWritePipeline({
 			hooks: options.hooks,
 			formats: options.formats,
 			media: options.media,
-			links: linkResolverOf(storePort),
+			site,
+			links: linkResolverOf(site, storePort),
 		});
-	const content = createContentService(storePort, { pipeline });
+	const content = createContentService(storePort, { site, pipeline });
 	return {
 		run: async (request: BulkRequest): Promise<{ results: BulkItemResult[] }> => {
 			if (!request || typeof request !== "object" || !BULK_OPS.includes(request.op)) {
@@ -139,7 +139,7 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, opti
 					if (request.op.startsWith("relation.")) {
 						const field = request.field ?? "";
 						// Changes only this collection's relation fields. Add and remove are for multi-value relations, set is for single-value ones.
-						const relation = storedField(working.collection, field)?.field;
+						const relation = site.storedField(working.collection, field)?.field;
 						const many = request.op !== "relation.set";
 						if (relation?.kind !== "relation" || (relation.many === true) !== many) {
 							throw new ServiceError("invalid_input");
@@ -168,7 +168,7 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, opti
 					const { snapshot } = await pipeline.run({
 						operation: "save",
 						entryId: item.id,
-						locale: working.locale ?? DEFAULT_LOCALE,
+						locale: working.locale ?? site.DEFAULT_LOCALE,
 						input: toServiceInput(working, metadata),
 						prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
 					});

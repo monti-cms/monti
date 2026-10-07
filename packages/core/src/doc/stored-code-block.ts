@@ -1,7 +1,7 @@
-import { annotationConfig } from "../annotation/code-block/active";
 import { fromCodeFenceToCodeBlockDocument } from "../annotation/code-block/code-fence-to-document";
 import { fromCodeBlockDocumentToCodeFence } from "../annotation/code-block/document-to-code-fence";
 import type { AnnotationAttr, CodeBlockDocument, CodeBlockRule } from "../annotation/code-block/types";
+import type { Site } from "../site";
 import type { CmsJsonValue } from "./types";
 
 /**
@@ -35,10 +35,13 @@ const attributesOf = (attrs: CmsJsonValue | undefined): AnnotationAttr[] =>
 const withAttrs = <T extends Record<string, CmsJsonValue>>(item: T, attrs: Record<string, CmsJsonValue> | undefined) =>
 	attrs ? { ...item, attrs } : item;
 
-const parseFence = (language: string, meta: string, value: string): CodeBlockDocument =>
+/** What the code block functions need of a site: its code fence comment config (the line effects it uses). */
+export type CodeBlockSite = Pick<Site, "annotationConfig">;
+
+const parseFence = (site: CodeBlockSite, language: string, meta: string, value: string): CodeBlockDocument =>
 	fromCodeFenceToCodeBlockDocument(
 		{ type: "code", lang: language || undefined, meta: meta || undefined, value },
-		annotationConfig,
+		site.annotationConfig,
 	);
 
 const asString = (value: CmsJsonValue | undefined) => (typeof value === "string" ? value : "");
@@ -51,7 +54,7 @@ const asRecords = (value: CmsJsonValue | undefined): Record<string, CmsJsonValue
 		: [];
 
 /** Names of the line annotations of a working code block whose range reaches past its last code line. Stored, they are cut or dropped. */
-export const outOfRangeAnnotationNames = (attrs: Record<string, CmsJsonValue>): string[] => {
+export const outOfRangeAnnotationNames = (site: CodeBlockSite, attrs: Record<string, CmsJsonValue>): string[] => {
 	const names: string[] = [];
 	fromCodeFenceToCodeBlockDocument(
 		{
@@ -60,17 +63,20 @@ export const outOfRangeAnnotationNames = (attrs: Record<string, CmsJsonValue>): 
 			meta: asString(attrs.meta) || undefined,
 			value: asString(attrs.value),
 		},
-		annotationConfig,
+		site.annotationConfig,
 		{ onOutOfRange: (annotation) => names.push(annotation.name) },
 	);
 	return names;
 };
 
 /** The stored attributes of a code block from its working attributes (`language`, `meta`, and `value` with the annotation comments). */
-export const storedCodeBlockAttrs = (attrs: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> => {
+export const storedCodeBlockAttrs = (
+	site: CodeBlockSite,
+	attrs: Record<string, CmsJsonValue>,
+): Record<string, CmsJsonValue> => {
 	const language = asString(attrs.language);
 	const meta = asString(attrs.meta);
-	const parsed = parseFence(language, meta, asString(attrs.value));
+	const parsed = parseFence(site, language, meta, asString(attrs.value));
 
 	// Stored in the order they are written back (by first line, then as written), so reading the written text gives the same list.
 	const lines = [...parsed.annotations]
@@ -125,7 +131,7 @@ export const storedCodeBlockAttrs = (attrs: Record<string, CmsJsonValue>): Recor
 };
 
 /** The fence text of a stored code block: its code with the annotations written back as Monti annotation comments. */
-export const storedCodeBlockFence = (attrs: Record<string, CmsJsonValue>): string => {
+export const storedCodeBlockFence = (site: CodeBlockSite, attrs: Record<string, CmsJsonValue>): string => {
 	const code = asString(attrs.code);
 	const annotations =
 		attrs.annotations && typeof attrs.annotations === "object" && !Array.isArray(attrs.annotations)
@@ -179,12 +185,12 @@ export const storedCodeBlockFence = (attrs: Record<string, CmsJsonValue>): strin
 			source: "mdast",
 		});
 	});
-	return fromCodeBlockDocumentToCodeFence(document, annotationConfig).value;
+	return fromCodeBlockDocumentToCodeFence(document, site.annotationConfig).value;
 };
 
 /** The annotation document of a stored code block (the one `workingCodeBlockAttrs` keeps as `codeDocument`), for a renderer that needs only that. */
-export const codeBlockDocumentOf = (attrs: Record<string, CmsJsonValue>): CodeBlockDocument =>
-	parseFence(asString(attrs.language), asString(attrs.meta), storedCodeBlockFence(attrs));
+export const codeBlockDocumentOf = (site: CodeBlockSite, attrs: Record<string, CmsJsonValue>): CodeBlockDocument =>
+	parseFence(site, asString(attrs.language), asString(attrs.meta), storedCodeBlockFence(site, attrs));
 
 /** Fields the code block node owns. A fence meta key with the same name (`value="x"`) must not overwrite them. */
 const OWN_FIELDS = new Set(["language", "meta", "value", "codeDocument"]);
@@ -193,11 +199,14 @@ const OWN_FIELDS = new Set(["language", "meta", "value", "codeDocument"]);
  * The working attributes of a stored code block (what `toDocument` makes from a fence): `language`, `meta`, `value` with the annotation
  * comments, the parsed annotation document, and the fence's meta keys as attributes.
  */
-export const workingCodeBlockAttrs = (attrs: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> => {
+export const workingCodeBlockAttrs = (
+	site: CodeBlockSite,
+	attrs: Record<string, CmsJsonValue>,
+): Record<string, CmsJsonValue> => {
 	const language = asString(attrs.language);
 	const meta = asString(attrs.meta);
-	const value = storedCodeBlockFence(attrs);
-	const codeDocument = parseFence(language, meta, value);
+	const value = storedCodeBlockFence(site, attrs);
+	const codeDocument = parseFence(site, language, meta, value);
 	const out: Record<string, CmsJsonValue> = {
 		language,
 		meta,

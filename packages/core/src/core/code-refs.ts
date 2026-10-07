@@ -1,5 +1,5 @@
 import { ANCHOR } from "../annotation/code-block/model";
-import { BLOCK_BY_NAME } from "../blocks/derive";
+import type { BlockDefinition } from "../blocks/define";
 import type { CmsJsonValue } from "../doc/types";
 import type { BodyPosition, Issue } from "./types";
 
@@ -14,6 +14,12 @@ import type { BodyPosition, Issue } from "./types";
 export class CodeRefCollector {
 	private readonly anchors: { id: string; position: BodyPosition }[] = [];
 	private readonly refs: { id: string; position: BodyPosition }[] = [];
+	private readonly anchorAttributes: ReadonlyMap<string, string>;
+
+	/** `blocks` is the site's block table (`site.BLOCK_BY_NAME`). */
+	constructor(blocks: ReadonlyMap<string, BlockDefinition>) {
+		this.anchorAttributes = codeAnchorAttributes(blocks);
+	}
 
 	/** Collects the labels of a stored code block (its `annotations.lines` hold the line effects as data). */
 	addCode(attrs: Readonly<Record<string, CmsJsonValue>> | undefined, position: BodyPosition) {
@@ -31,7 +37,7 @@ export class CodeRefCollector {
 
 	/** Collects the link of a block or text mark (by its block name) when its definition says it links code lines. */
 	addBlock(name: string, attrs: Readonly<Record<string, CmsJsonValue>> | undefined, position: BodyPosition) {
-		const attribute = CODE_ANCHOR_ATTRIBUTE_BY_BLOCK.get(name);
+		const attribute = this.anchorAttributes.get(name);
 		if (!attribute) return;
 		const id = attrs?.[attribute];
 		// An empty or missing value is already a `missing_block_attribute` issue.
@@ -70,9 +76,10 @@ export class CodeRefCollector {
 }
 
 /** Block name → the attribute holding the line label, for the blocks that link code lines. */
-const CODE_ANCHOR_ATTRIBUTE_BY_BLOCK: ReadonlyMap<string, string> = new Map(
-	[...BLOCK_BY_NAME].flatMap(([name, block]) => {
-		const attribute = Object.entries(block.attributes).find(([, item]) => item.codeAnchor)?.[0];
-		return attribute ? [[name, attribute] as const] : [];
-	}),
-);
+const codeAnchorAttributes = (blocks: ReadonlyMap<string, BlockDefinition>): ReadonlyMap<string, string> =>
+	new Map(
+		[...blocks].flatMap(([name, block]) => {
+			const attribute = Object.entries(block.attributes).find(([, item]) => item.codeAnchor)?.[0];
+			return attribute ? [[name, attribute] as const] : [];
+		}),
+	);

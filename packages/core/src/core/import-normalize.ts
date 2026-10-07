@@ -1,5 +1,6 @@
 import type { StoredDocument } from "../doc/stored-document";
 import type { CmsNode } from "../doc/types";
+import type { Site } from "../site";
 import { internalLinkAddresses, type LinkResolver, withEntryLinks } from "./link-ids";
 
 /**
@@ -63,13 +64,14 @@ const withMediaIds = (nodes: readonly CmsNode[], mediaIds: ReadonlyMap<string, s
 
 /** The document with its internal links and registered media turned into ids. It is the same document when nothing changed. */
 export async function normalizeImportedDoc(
+	site: Site,
 	doc: StoredDocument,
 	normalizers: ImportNormalizers,
 ): Promise<StoredDocument> {
 	let next = doc;
 	if (normalizers.links) {
-		const addresses = internalLinkAddresses(next.content);
-		if (addresses.length > 0) next = withEntryLinks(next, await normalizers.links(addresses));
+		const addresses = internalLinkAddresses(site, next.content);
+		if (addresses.length > 0) next = withEntryLinks(site, next, await normalizers.links(addresses));
 	}
 	if (normalizers.media) {
 		const sources = unregisteredImageSources(next.content);

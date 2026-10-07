@@ -1,12 +1,15 @@
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
 import type { LegacyBodies } from "../../../format/types";
+import type { Site } from "../../../site";
 import { mdxContentHash, mdxSearchText } from "./mdx-body";
 import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
 
 export interface StoredDocumentMigrationOptions {
+	/** The site the store is migrated for (its blocks decide the search text of a body). */
+	readonly site: Site;
 	/** Reads and writes the MDX text of these bodies (supplied by the `mdx` format). */
 	readonly bodies: LegacyBodies;
 	readonly batchSize?: number;
@@ -40,7 +43,7 @@ export async function migrateStoredDocuments(
 	options: StoredDocumentMigrationOptions,
 ): Promise<void> {
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
-	const { bodies } = options;
+	const { bodies, site } = options;
 	const log = options.log ?? ((message: string) => console.warn(message));
 
 	const withoutDocument = (where: string) =>
@@ -68,7 +71,7 @@ export async function migrateStoredDocuments(
 				mdx: body.text,
 				doc: body.doc === null ? null : JSON.stringify(body.doc),
 				contentHash: mdxContentHash(bodies, row.metadata, body.text, row.schema_version),
-				searchText: mdxSearchText(bodies, body.text),
+				searchText: mdxSearchText(site, bodies, body.text),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,
 			};

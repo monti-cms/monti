@@ -1,8 +1,8 @@
-import type { ResolvedConfig } from "../config/resolved";
 import type { StoredDocument } from "../doc/stored-document";
 import type { CmsImageSource } from "../doc/types";
 import type { MetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
+import type { AnyCmsConfig } from "../site/create-site";
 import type { Collection } from "./collections";
 import type { TranslationState } from "./translation/state";
 
@@ -91,11 +91,24 @@ export type MetadataValue =
 
 export type JsonValue = string | number | boolean | null | readonly JsonValue[] | { readonly [key: string]: JsonValue };
 
-type SCHEMAS = ResolvedConfig["collections"];
+/**
+ * The collection names of a site config: the keys of its `collections`, as the literal names when the config is typed (`defineConfig(...)`) and `string` for the
+ * loose config.
+ */
+export type CollectionName<Config extends AnyCmsConfig = AnyCmsConfig> = keyof Config["collections"] & string;
+
 /** An item collection keeps per-locale names in `translations`. */
 type WithRecordTranslations<S, M> = S extends { readonly kind: "item" } ? M & { translations?: RecordTranslations } : M;
-/** Collection metadata. Built from the definitions in the site config (`cms.config.ts`). */
-export type MetadataFor<C extends Collection> = WithRecordTranslations<SCHEMAS[C], MetadataOf<SCHEMAS[C]>>;
+/**
+ * Collection metadata, built from the definitions in the site config's type: `MetadataFor<"post", typeof config>`. Without a config it is the loose metadata of any
+ * collection.
+ */
+export type MetadataFor<
+	C extends string = string,
+	Config extends AnyCmsConfig = AnyCmsConfig,
+> = C extends keyof Config["collections"]
+	? WithRecordTranslations<Config["collections"][C], MetadataOf<Config["collections"][C]>>
+	: never;
 
 /**
  * A body is given either as a stored document (`StoredDocument` JSON) or as text in a format (`body` and the `format` that reads it), never both. The
@@ -105,7 +118,7 @@ type BodyInput =
 	| { doc: unknown; body?: undefined; format?: undefined }
 	| { body: string; format: string; doc?: undefined };
 
-type InputFor<C extends Collection, M> = BodyInput & {
+type InputFor<C extends string, M> = BodyInput & {
 	collection: C;
 	slug: string | null;
 	metadata: M;
@@ -114,9 +127,13 @@ type InputFor<C extends Collection, M> = BodyInput & {
 	translation?: TranslationState | null;
 };
 
-export type ServiceInput = { [C in Collection]: InputFor<C, MetadataFor<C>> }[Collection];
+export type ServiceInput<Config extends AnyCmsConfig = AnyCmsConfig> = {
+	[C in CollectionName<Config>]: InputFor<C, MetadataFor<C, Config>>;
+}[CollectionName<Config>];
 
-export type SaveDraftInput = ServiceInput & { expectedVersion: number };
+export type SaveDraftInput<Config extends AnyCmsConfig = AnyCmsConfig> = ServiceInput<Config> & {
+	expectedVersion: number;
+};
 
 export type InternalLinkSource = {
 	/** The collection a link points to (a collection with `path`). */

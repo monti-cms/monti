@@ -1,14 +1,14 @@
 import type { BlockDefinition } from "../blocks/define";
-import { BLOCK_BY_NAME, invalidOptionAttributes } from "../blocks/derive";
+import { invalidOptionAttributes } from "../blocks/derive";
 import { entryIdOfMark } from "../doc/entry-links";
 import type { StoredDocument } from "../doc/stored-document";
 import { MAX_TABLE_COLUMNS } from "../doc/table-layout";
 import type { CmsImageSource, CmsJsonValue, CmsMark, CmsNode } from "../doc/types";
-import { createTranslator } from "../i18n";
+import type { Translator } from "../i18n";
+import type { Site } from "../site";
 import { CodeRefCollector } from "./code-refs";
 import { isUuid } from "./ids";
-import { parseInternalLink } from "./links";
-import { coreMessages } from "./messages";
+import { type CoreMessageKey, coreMessages } from "./messages";
 import type { BodyPosition, InternalLinkSource, Issue } from "./types";
 
 /**
@@ -39,20 +39,10 @@ export interface DocumentCheck {
 	readonly incomplete: boolean;
 }
 
-const tCore = createTranslator(coreMessages);
-
 const position = (blockId: string | undefined): BodyPosition => (blockId === undefined ? {} : { blockId });
 
 /** Maximum rows/columns one merged cell can span. Same as the column limit of tables in the editor and the public render. */
 const MAX_TABLE_SPAN = MAX_TABLE_COLUMNS;
-
-/** The block definition a node or mark type is stored as (a table row and a cell are stored as `tableRow` and `tableCell`). */
-const BLOCK_OF_TYPE: ReadonlyMap<string, BlockDefinition | undefined> = new Map([
-	["tableRow", BLOCK_BY_NAME.get("row")],
-	["tableCell", BLOCK_BY_NAME.get("cell")],
-]);
-const blockOfType = (type: string): BlockDefinition | undefined =>
-	BLOCK_OF_TYPE.has(type) ? BLOCK_OF_TYPE.get(type) : BLOCK_BY_NAME.get(type);
 
 /** Blocks written as elements (containers, leaves and text blocks) have attribute rules; code fences and math do not. */
 const hasAttributeRules = (block: BlockDefinition) =>
@@ -77,7 +67,7 @@ type TableSpanReason =
 	| "ragged_rows";
 
 /** Checks table cell merges (colspan/rowspan) and grid structure, and warns about invalid spans. */
-function checkTableSpans(table: CmsNode, at: BodyPosition, warnings: Issue[]) {
+function checkTableSpans(tCore: Translator<CoreMessageKey>, table: CmsNode, at: BodyPosition, warnings: Issue[]) {
 	const rows = (table.content ?? []).filter((child) => child.type === "tableRow");
 	const totalRows = rows.length;
 	if (totalRows === 0) return;
@@ -165,14 +155,23 @@ const markKey = (mark: CmsMark) => `${mark.type}|${JSON.stringify(mark.attrs ?? 
 /**
  * Checks a stored document. Block attribute rules and the like only block publishing; a draft save is never blocked by them.
  */
-export function checkDocument(doc: StoredDocument): DocumentCheck {
+export function checkDocument(site: Site, doc: StoredDocument): DocumentCheck {
+	const tCore = site.createTranslator(coreMessages);
+	const { BLOCK_BY_NAME } = site;
+	/** The block definition a node or mark type is stored as (a table row and a cell are stored as `tableRow` and `tableCell`). */
+	const blockOfType = (type: string): BlockDefinition | undefined =>
+		type === "tableRow"
+			? BLOCK_BY_NAME.get("row")
+			: type === "tableCell"
+				? BLOCK_BY_NAME.get("cell")
+				: BLOCK_BY_NAME.get(type);
 	const issues: Issue[] = [];
 	const warnings: Issue[] = [];
 	const mediaReferences: DocumentCheck["mediaReferences"] = [];
 	const imageSources: CmsImageSource[] = [];
 	const internalLinks: InternalLinkSource[] = [];
 	const entryLinks: DocumentCheck["entryLinks"] = [];
-	const codeRefs = new CodeRefCollector();
+	const codeRefs = new CodeRefCollector(BLOCK_BY_NAME);
 	let unparsed = false;
 	let incomplete = false;
 
@@ -300,7 +299,7 @@ export function checkDocument(doc: StoredDocument): DocumentCheck {
 				return;
 			}
 			const href = mark.attrs?.href;
-			const parsed = typeof href === "string" ? parseInternalLink(href) : null;
+			const parsed = typeof href === "string" ? site.parseInternalLink(href) : null;
 			if (parsed) internalLinks.push({ ...parsed, position: at });
 			return;
 		}
@@ -358,7 +357,7 @@ export function checkDocument(doc: StoredDocument): DocumentCheck {
 				footnoteDefinitions.push({ identifier: footnoteIdentifier(labelOf(node)), label: labelOf(node), at });
 				break;
 			case "table":
-				checkTableSpans(node, at, warnings);
+				checkTableSpans(tCore, node, at, warnings);
 				break;
 			default:
 		}

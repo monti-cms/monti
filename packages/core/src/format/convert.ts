@@ -2,6 +2,7 @@ import { MAX_TEXT_BYTES } from "../core/limits";
 import { type Issue, ServiceError } from "../core/types";
 import { assignBlockIds, withoutBlockIds } from "../doc/block-ids";
 import { canonicalDocument, readStoredDocument, type StoredDocument, unparsedDocument } from "../doc/stored-document";
+import type { Site } from "../site";
 import { siteFormatContext } from "./context";
 import type { FormatRegistry } from "./registry";
 import type {
@@ -54,6 +55,7 @@ export interface ImportOptions {
  * format's findings as `issues`. A format that is unknown or one-way, or that throws, fails the write.
  */
 export async function importText(
+	site: Site,
 	registry: FormatRegistry,
 	name: string,
 	text: string,
@@ -69,7 +71,7 @@ export async function importText(
 	}
 	if (Buffer.byteLength(text, "utf8") > MAX_TEXT_BYTES) throw new ServiceError("body_too_large");
 	const context: FormatImportContext = {
-		...siteFormatContext(options.locale),
+		...siteFormatContext(site, options.locale),
 		...(options.entryId ? { entryId: options.entryId } : {}),
 	};
 	let result: Awaited<ReturnType<NonNullable<typeof format.import>>>;
@@ -86,14 +88,14 @@ export async function importText(
 		return { doc: unparsedDocument(text, options.previous, name), issues: result.issues.map(issueOf), warnings: [] };
 	}
 	// What a plugin returns is checked like a document from the API: its shape, its version, and the canonical form every body is stored in.
-	const read = readStoredDocument(result.doc);
+	const read = readStoredDocument(result.doc, site);
 	if (!read) {
 		console.error(`[cms] format "${name}" returned something that is not a stored document`);
 		throw new ServiceError("format_import_failed", [
 			{ code: "format_import_failed", message: name, params: { format: name } },
 		]);
 	}
-	const canonical = canonicalDocument(read);
+	const canonical = canonicalDocument(site, read);
 	const content = assignBlockIds(withoutBlockIds(canonical.content), [options.previous?.content]);
 	const warnings: Issue[] = (result.warnings ?? []).map((warning) => {
 		const blockId = warning.blockIndex === undefined ? undefined : content[warning.blockIndex]?.id;
@@ -124,6 +126,7 @@ export interface ExportOptions {
 
 /** Writes a document as text in a format. The warnings are what the format reported (an unresolved link or media). */
 export async function exportText(
+	site: Site,
 	registry: FormatRegistry,
 	name: string,
 	doc: StoredDocument,
@@ -134,7 +137,7 @@ export async function exportText(
 		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: name, params: { format: name } }]);
 	const warnings: Issue[] = [];
 	const context: FormatExportContext = {
-		...siteFormatContext(options.locale),
+		...siteFormatContext(site, options.locale),
 		purpose: options.purpose,
 		link: (entryId) => lookup(options.refs.links, entryId),
 		media: (mediaId) => lookup(options.refs.media, mediaId),

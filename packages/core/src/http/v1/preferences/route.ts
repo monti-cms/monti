@@ -1,28 +1,28 @@
-import { type PreferencesBody, preferencesBodySchema } from "../../../core/api";
-import { COLLECTIONS } from "../../../core/collections";
+import type { PreferencesBody } from "../../../core/api";
 import type { JsonObject } from "../../../core/store";
+import type { Site } from "../../../site";
 import { adminRoute, json, parseWith, readJsonBody } from "../handler";
 
 /** Normalizes stored preferences to the per-collection shape. Unknown or corrupt values (including the removed global page size and sort) are dropped. */
-function normalize(stored: PreferencesBody | null): PreferencesBody {
+function normalize(site: Site, stored: PreferencesBody | null): PreferencesBody {
 	const collections: Record<string, unknown> = {};
-	for (const collection of COLLECTIONS) {
+	for (const collection of site.COLLECTIONS) {
 		collections[collection] = { ...(stored?.collections?.[collection] ?? {}) };
 	}
-	const parsed = preferencesBodySchema.safeParse({ collections, editor: stored?.editor });
+	const parsed = site.api.preferencesBodySchema.safeParse({ collections, editor: stored?.editor });
 	return parsed.success ? parsed.data : {};
 }
 
 export const GET = adminRoute(async ({ auth, cms }) => {
 	const stored = await cms.store().getPreferences({ userId: auth.userId });
-	return json(normalize(stored as PreferencesBody | null));
+	return json(normalize(cms.site, stored as PreferencesBody | null));
 });
 
 /** Merges and saves per collection. Collections and keys not sent are kept. */
 export const PUT = adminRoute(async ({ request, auth, cms }) => {
-	const body = parseWith(preferencesBodySchema, await readJsonBody(request), "Invalid preferences body");
+	const body = parseWith(cms.site.api.preferencesBodySchema, await readJsonBody(request), "Invalid preferences body");
 	const store = cms.store();
-	const current = normalize((await store.getPreferences({ userId: auth.userId })) as PreferencesBody | null);
+	const current = normalize(cms.site, (await store.getPreferences({ userId: auth.userId })) as PreferencesBody | null);
 	const collections = { ...current.collections };
 	for (const [collection, value] of Object.entries(body.collections ?? {})) {
 		const key = collection as keyof NonNullable<PreferencesBody["collections"]>;

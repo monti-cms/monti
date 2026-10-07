@@ -1,6 +1,5 @@
 import type { Cms } from "../../../cms";
 import { normalizeImportedDoc } from "../../../core/import-normalize";
-import { DEFAULT_LOCALE } from "../../../core/locales";
 import { readStoredDocument, type StoredDocument } from "../../../doc/stored-document";
 import { exportText, importText } from "../../../format/convert";
 import { createExportRefs } from "../../../read";
@@ -8,8 +7,8 @@ import { mediaUrlResolver } from "../../../services/media-urls";
 import { linkResolverOf } from "../../../services/write-pipeline";
 
 const normalize = (cms: Cms, doc: StoredDocument): Promise<StoredDocument> =>
-	normalizeImportedDoc(doc, {
-		links: linkResolverOf(cms.store()),
+	normalizeImportedDoc(cms.site, doc, {
+		links: linkResolverOf(cms.site, cms.store()),
 		...(cms.isMediaConfigured ? { media: mediaUrlResolver(cms.store, cms.mediaStore) } : {}),
 	});
 
@@ -25,12 +24,12 @@ export async function templateBodyOf(
 ): Promise<unknown> {
 	if (input.body === undefined || input.format === undefined) {
 		if (input.doc === undefined) return undefined;
-		const read = readStoredDocument(input.doc);
+		const read = readStoredDocument(input.doc, cms.site);
 		// What is not a stored document is rejected by the store (`invalid_input`).
 		return read ? normalize(cms, read) : input.doc;
 	}
-	const imported = await importText(await cms.formats(), input.format, input.body, {
-		locale: DEFAULT_LOCALE,
+	const imported = await importText(cms.site, await cms.formats(), input.format, input.body, {
+		locale: cms.site.DEFAULT_LOCALE,
 		previous,
 		strict: true,
 	});
@@ -48,13 +47,13 @@ export async function templatesJson<T extends { readonly doc: StoredDocument }>(
 ): Promise<(T & { body?: string })[]> {
 	if (format === undefined) return [...templates];
 	const formats = await cms.formats();
-	const refsOf = createExportRefs({ store: cms.store, mediaStore: cms.mediaStore }, "working");
+	const refsOf = createExportRefs({ site: cms.site, store: cms.store, mediaStore: cms.mediaStore }, "working");
 	return Promise.all(
 		templates.map(async (template) => {
-			const { text } = await exportText(formats, format, template.doc, {
-				locale: DEFAULT_LOCALE,
+			const { text } = await exportText(cms.site, formats, format, template.doc, {
+				locale: cms.site.DEFAULT_LOCALE,
 				purpose: "sync",
-				refs: await refsOf(template.doc, DEFAULT_LOCALE),
+				refs: await refsOf(template.doc, cms.site.DEFAULT_LOCALE),
 			});
 			return { ...template, body: text };
 		}),

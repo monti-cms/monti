@@ -1,7 +1,6 @@
 import { ENTRY_STATUSES, LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api";
-import { COLLECTIONS, type Collection, isItemCollection } from "../../../core/collections";
+import type { Collection } from "../../../core/collections";
 import { isUuid } from "../../../core/ids";
-import { DEFAULT_LOCALE, isLocale, LOCALES } from "../../../core/locales";
 import { CmsError } from "../../../core/store/errors";
 import type {
 	DateRange,
@@ -11,8 +10,9 @@ import type {
 	ListEntriesResult,
 	ListTranslationMember,
 } from "../../../core/store/types";
-import { RECORD_TRANSLATIONS_KEY, recordLocalizedFields, storedFields } from "../../../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive";
 import type { StoredField } from "../../../schema/walk";
+import type { Site } from "../../../site";
 import type { StoreContext } from "./context";
 import { likeContainsPattern } from "./sql";
 
@@ -20,24 +20,26 @@ import { likeContainsPattern } from "./sql";
  * Languages that have a value in the entry. A language exists if any per-language text field (`localized: true`) has a value. The default language is the field itself,
  * other languages are `translations[locale][field]`.
  */
-function namedLocales(collection: Collection, metadata: Record<string, unknown>): string[] {
-	const fields = recordLocalizedFields(collection);
+function namedLocales(site: Site, collection: Collection, metadata: Record<string, unknown>): string[] {
+	const fields = site.recordLocalizedFields(collection);
 	const translations = (metadata[RECORD_TRANSLATIONS_KEY] ?? {}) as Record<string, Record<string, unknown> | undefined>;
 	const hasValue = (value: unknown) => typeof value === "string" && value.trim() !== "";
-	return LOCALES.filter((locale) =>
-		fields.some((field) => hasValue(locale === DEFAULT_LOCALE ? metadata[field] : translations[locale]?.[field])),
+	return site.LOCALES.filter((locale) =>
+		fields.some((field) => hasValue(locale === site.DEFAULT_LOCALE ? metadata[field] : translations[locale]?.[field])),
 	);
 }
 
 const isDate = (value: unknown): value is Date => value instanceof Date && Number.isFinite(value.getTime());
 
 /** Relation fields of a collection. Used by list filters and the row's `relations`. */
-const relationFieldsOf = (collection: string): StoredField[] =>
-	storedFields(collection as Collection).filter((stored) => stored.field.kind === "relation");
+const relationFieldsOf = (site: Site, collection: string): StoredField[] =>
+	site.storedFields(collection as Collection).filter((stored) => stored.field.kind === "relation");
 
 /** Fields shown as text in list cells (relations are carried separately in `relations`). */
-const valueColumnFieldsOf = (collection: string): StoredField[] =>
-	storedFields(collection as Collection).filter((stored) => ["text", "select", "media"].includes(stored.field.kind));
+const valueColumnFieldsOf = (site: Site, collection: string): StoredField[] =>
+	site
+		.storedFields(collection as Collection)
+		.filter((stored) => ["text", "select", "media"].includes(stored.field.kind));
 
 /** Draft to read relation values from. A non-per-language value is shared across the translation group, so it is read from the source draft (`sw`). */
 const relationSource = (stored: StoredField): "w" | "sw" => (stored.field.localized ? "w" : "sw");
@@ -45,11 +47,11 @@ const relationSource = (stored: StoredField): "w" | "sw" => (stored.field.locali
 const relationIds = (value: unknown): string[] =>
 	typeof value === "string" ? [value] : Array.isArray(value) ? value.filter((id) => typeof id === "string") : [];
 
-function assertParams(params: ListEntriesParams) {
+function assertParams(site: Site, params: ListEntriesParams) {
 	if (typeof params !== "object" || params === null || Array.isArray(params)) {
 		throw new CmsError("Invalid parameters", "invalid_input");
 	}
-	if (!(COLLECTIONS as readonly string[]).includes(params.collection)) {
+	if (!(site.COLLECTIONS as readonly string[]).includes(params.collection)) {
 		throw new CmsError("Invalid collection", "invalid_input");
 	}
 	for (const key of ["search", "titleContains", "slugContains"] as const) {
@@ -65,14 +67,17 @@ function assertParams(params: ListEntriesParams) {
 			throw new CmsError("Invalid status", "invalid_input");
 		}
 	}
-	if (params.locales !== undefined && (!Array.isArray(params.locales) || params.locales.some((l) => !isLocale(l)))) {
+	if (
+		params.locales !== undefined &&
+		(!Array.isArray(params.locales) || params.locales.some((l) => !site.isLocale(l)))
+	) {
 		throw new CmsError("Invalid locale", "invalid_input");
 	}
 	if (params.relations !== undefined) {
 		if (typeof params.relations !== "object" || params.relations === null || Array.isArray(params.relations)) {
 			throw new CmsError("Invalid relations", "invalid_input");
 		}
-		const fields = new Set(relationFieldsOf(params.collection).map((stored) => stored.name));
+		const fields = new Set(relationFieldsOf(site, params.collection).map((stored) => stored.name));
 		for (const [field, ids] of Object.entries(params.relations)) {
 			if (!fields.has(field)) throw new CmsError(`Unknown relation field: ${field}`, "invalid_input");
 			if (!Array.isArray(ids) || ids.some((id) => !isUuid(id))) {
@@ -105,11 +110,11 @@ function assertParams(params: ListEntriesParams) {
 
 /** Admin list. Search, filtering, sorting, and paging are handled on the server. */
 export function createListOps(ctx: StoreContext) {
-	const { pool, qSchema } = ctx;
+	const { pool, qSchema, site } = ctx;
 
 	return {
 		listEntries: async (params: ListEntriesParams): Promise<ListEntriesResult> => {
-			assertParams(params);
+			assertParams(site, params);
 			const page = params.page ?? 1;
 			const pageSize = params.pageSize ?? 25;
 
@@ -178,7 +183,7 @@ export function createListOps(ctx: StoreContext) {
 				conditions.push(grouped ? anyMember(`m.locale = ANY(${locales})`) : `e.locale = ANY(${locales})`);
 			}
 			// Shared relation values are filtered by the source draft's values even for translations. For a source, `sw` is its own draft.
-			const relationFields = relationFieldsOf(params.collection);
+			const relationFields = relationFieldsOf(site, params.collection);
 			for (const [field, ids] of Object.entries(params.relations ?? {})) {
 				const stored = relationFields.find((candidate) => candidate.name === field);
 				if (!stored || ids.length === 0) continue;
@@ -261,7 +266,7 @@ export function createListOps(ctx: StoreContext) {
 					]),
 				);
 				const values = Object.fromEntries(
-					valueColumnFieldsOf(row.collection).flatMap((stored) => {
+					valueColumnFieldsOf(site, row.collection).flatMap((stored) => {
 						const { localized } = stored.field;
 						const value = localized
 							? (meta[stored.name] ?? (localized === "inherit" ? common[stored.name] : undefined))
@@ -286,8 +291,8 @@ export function createListOps(ctx: StoreContext) {
 					createdAt: row.created_at,
 					updatedAt: row.updated_at,
 					trashedAt: row.trashed_at,
-					...(isItemCollection(row.collection)
-						? { recordLocales: namedLocales(row.collection as Collection, meta) }
+					...(site.isItemCollection(row.collection)
+						? { recordLocales: namedLocales(site, row.collection as Collection, meta) }
 						: {}),
 				};
 			});
@@ -352,8 +357,8 @@ export function createListOps(ctx: StoreContext) {
 				membersByGroup.set(row.group_id, members);
 			}
 			const localeOrder = (locale: string) => {
-				const index = (LOCALES as readonly string[]).indexOf(locale);
-				return index === -1 ? LOCALES.length : index;
+				const index = (site.LOCALES as readonly string[]).indexOf(locale);
+				return index === -1 ? site.LOCALES.length : index;
 			};
 			return {
 				items: items.map((item) => ({

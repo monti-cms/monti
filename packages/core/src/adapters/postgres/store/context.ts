@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from "pg";
 import type { Entry } from "../../../core/store/types";
+import type { Site } from "../../../site";
 
 export type ContentStoreHooks = {
 	beforePublishCommit?: (entry: Entry, txClient: PoolClient) => Promise<void>;
@@ -8,6 +9,8 @@ export type ContentStoreHooks = {
 /** Connection and schema shared by the store modules. SQL schema names use only validated identifiers. */
 export interface StoreContext {
 	readonly pool: Pool;
+	/** The site the store works for: its collections, locales, blocks and links. */
+	readonly site: Site;
 	readonly qSchema: string;
 	readonly hooks: ContentStoreHooks;
 }

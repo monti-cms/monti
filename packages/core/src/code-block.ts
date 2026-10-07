@@ -1,16 +1,6 @@
 /** Model for code block annotations (highlight and fold rules). Shared by the editor and the public renderer. */
 
-export {
-	annotationConfig,
-	CODE_BLOCK_FEATURES,
-	CODE_BLOCK_THEMES,
-	CODE_LINE_EFFECTS,
-	EXTRA_CODE_LANGUAGES,
-	isLineEffectName,
-	lineEffectDefinition,
-	OFFERED_LINE_EFFECTS,
-	offersCharEffect,
-} from "./annotation/code-block/active";
+export type { SiteCodeBlock } from "./annotation/code-block/active";
 export { fromCodeFenceToCodeBlockDocument, parseCodeFenceMeta } from "./annotation/code-block/code-fence-to-document";
 export {
 	type CommentSyntax,

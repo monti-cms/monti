@@ -1,4 +1,4 @@
-import { createEntryBodySchema, LIST_ARRAY_QUERY_KEYS, listEntriesQuerySchema } from "../../../core/api";
+import { LIST_ARRAY_QUERY_KEYS } from "../../../core/api";
 import { emptyStoredDocument } from "../../../doc/stored-document";
 import type { ServiceInput } from "../../../services/types";
 import { adminRoute, json, parseWith, readJsonBody, readQuery } from "../handler";
@@ -6,7 +6,7 @@ import { adminRoute, json, parseWith, readJsonBody, readQuery } from "../handler
 /** Per-collection list, search, filter, sort, and paging. */
 export const GET = adminRoute(async ({ request, cms }) => {
 	const query = parseWith(
-		listEntriesQuerySchema,
+		cms.site.api.listEntriesQuerySchema,
 		readQuery(request, LIST_ARRAY_QUERY_KEYS),
 		"Invalid query parameters",
 	);
@@ -36,7 +36,7 @@ export const GET = adminRoute(async ({ request, cms }) => {
 
 /** Create. The body is `doc`, or `body` with its `format`. For record collections (tags, categories, series) the service applies the public values together with creation. */
 export const POST = adminRoute(async ({ request, cms }) => {
-	const body = parseWith(createEntryBodySchema, await readJsonBody(request));
+	const body = parseWith(cms.site.api.createEntryBodySchema, await readJsonBody(request));
 	const input = {
 		collection: body.collection,
 		slug: body.slug ?? null,

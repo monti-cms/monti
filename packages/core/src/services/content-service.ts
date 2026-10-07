@@ -1,11 +1,9 @@
-import { isCollection, isItemCollection } from "../core/collections";
 import type { MediaUrlResolver } from "../core/import-normalize";
-import { DEFAULT_LOCALE, isLocale } from "../core/locales";
 import { serviceInputKeys, validateExactRecord } from "../core/snapshot";
 import { withTranslationHints } from "../core/translation/hints";
 import { confirmedSourceState } from "../core/translation/state";
 import type { FormatRegistry } from "../format/registry";
-import { slugFromValues } from "../schema/derive";
+import type { Site } from "../site";
 import type { HookProvider } from "./hooks";
 import {
 	type Issue,
@@ -31,13 +29,15 @@ const assertInputKeys = (input: unknown, baseKeys: readonly string[]) => {
  * A record collection must be creatable by entering only a name. If the slug is empty, it is built from the value the address field's `from`
  * points to (not built if there is no `from`). An explicit save is itself a public update, so a record without a slug cannot exist.
  */
-const withRecordSlug = (input: ServiceInput): ServiceInput => {
-	if (!isItemCollection(input.collection) || input.slug?.trim()) return input;
-	const slug = slugFromValues(input.collection, input.metadata ?? {});
+const withRecordSlug = (site: Site, input: ServiceInput): ServiceInput => {
+	if (!site.isItemCollection(input.collection) || input.slug?.trim()) return input;
+	const slug = site.slugFromValues(input.collection, input.metadata ?? {});
 	return slug ? { ...input, slug } : input;
 };
 
 export interface ContentServiceOptions {
+	/** The site the writes are for. */
+	readonly site: Site;
 	/** Hooks of the server config and the plugins. Without it, writes run core preparation only. */
 	readonly hooks?: HookProvider;
 	/** The formats a body given as text can be in. Without it, only the built-in ones. */
@@ -60,15 +60,17 @@ const withWarnings = <T>(entry: T, warnings: readonly Issue[]): WithWarnings<T> 
  */
 export const createContentService = <T = unknown>(
 	storePort: StorePort<T> & Partial<RestorePort<NoInfer<T>>>,
-	options: ContentServiceOptions = {},
+	options: ContentServiceOptions,
 ) => {
+	const { site } = options;
 	const pipeline =
 		options.pipeline ??
 		createWritePipeline({
 			hooks: options.hooks,
 			formats: options.formats,
 			media: options.media,
-			links: linkResolverOf(storePort),
+			site,
+			links: linkResolverOf(site, storePort),
 		});
 
 	return {
@@ -77,17 +79,17 @@ export const createContentService = <T = unknown>(
 		 */
 		createDraft: async (input: ServiceInput, options?: { publishImmediately?: boolean }): Promise<WithWarnings<T>> => {
 			assertInputKeys(input, serviceInputKeys(input));
-			const { folderId, ...rest } = withRecordSlug(input);
+			const { folderId, ...rest } = withRecordSlug(site, input);
 			const { snapshot, warnings } = await pipeline.run({
 				operation: "create",
-				locale: DEFAULT_LOCALE,
+				locale: site.DEFAULT_LOCALE,
 				input: rest as ServiceInput,
 			});
 			const entry = await storePort.createEntryWithReferences({
 				snapshot,
 				references: snapshot.references,
 				folderId,
-				publishImmediately: options?.publishImmediately ?? isItemCollection(input.collection),
+				publishImmediately: options?.publishImmediately ?? site.isItemCollection(input.collection),
 			});
 			return withWarnings(entry, warnings);
 		},
@@ -117,7 +119,7 @@ export const createContentService = <T = unknown>(
 			const { snapshot, warnings } = await pipeline.run({
 				operation: "save",
 				entryId,
-				locale: locale ?? DEFAULT_LOCALE,
+				locale: locale ?? site.DEFAULT_LOCALE,
 				input: rest as ServiceInput,
 				prepare: { previousReferences, previousDoc, previousMetadata },
 			});
@@ -127,7 +129,7 @@ export const createContentService = <T = unknown>(
 				snapshot,
 				references: snapshot.references,
 				folderId,
-				publishImmediately: options?.publishImmediately ?? isItemCollection(input.collection),
+				publishImmediately: options?.publishImmediately ?? site.isItemCollection(input.collection),
 			});
 			return withWarnings(entry, warnings);
 		},
@@ -138,11 +140,11 @@ export const createContentService = <T = unknown>(
 		 * If called on a translation, it is created from that group's source.
 		 */
 		createTranslation: async (params: { sourceId: string; locale: string }): Promise<WithWarnings<T>> => {
-			if (!isLocale(params.locale)) throw new ServiceError("invalid_input");
+			if (!site.isLocale(params.locale)) throw new ServiceError("invalid_input");
 			const picked = await storePort.getWorking({ entryId: params.sourceId });
 			const sourceId = picked.translationGroupId ?? params.sourceId;
 			const source = sourceId === params.sourceId ? picked : await storePort.getWorking({ entryId: sourceId });
-			if (!isCollection(source.collection) || isItemCollection(source.collection)) {
+			if (!site.isCollection(source.collection) || site.isItemCollection(source.collection)) {
 				throw new ServiceError("invalid_input");
 			}
 			// A translation starts from the source skeleton. Structure (headings, paragraphs, boxes, lists, tables), code and images are kept, and text
@@ -155,7 +157,7 @@ export const createContentService = <T = unknown>(
 					collection: source.collection,
 					slug: source.slug,
 					metadata: {},
-					doc: withTranslationHints(source.doc),
+					doc: withTranslationHints(site, source.doc),
 					translation: confirmedSourceState(source.doc),
 				} as ServiceInput,
 			});
@@ -177,14 +179,14 @@ export const createContentService = <T = unknown>(
 		 */
 		duplicate: async (params: { id: string; title?: string }): Promise<WithWarnings<T>> => {
 			const source = await storePort.getWorking({ entryId: params.id });
-			if (isItemCollection(source.collection)) throw new ServiceError("invalid_input");
+			if (site.isItemCollection(source.collection)) throw new ServiceError("invalid_input");
 			if (source.translationGroupId !== undefined && source.translationGroupId !== params.id) {
 				throw new ServiceError("invalid_input");
 			}
 			const metadata = params.title === undefined ? source.metadata : { ...source.metadata, title: params.title };
 			const { snapshot, warnings } = await pipeline.run({
 				operation: "duplicate",
-				locale: source.locale ?? DEFAULT_LOCALE,
+				locale: source.locale ?? site.DEFAULT_LOCALE,
 				input: { collection: source.collection, slug: null, metadata, doc: source.doc } as ServiceInput,
 				// The copy is a new entry, but the values of fields the schema no longer has go with it, as they do in the original.
 				prepare: { previousDoc: source.doc, previousMetadata: source.metadata },
@@ -213,7 +215,7 @@ export const createContentService = <T = unknown>(
 			const { snapshot, warnings, transformed } = await pipeline.run({
 				operation: "publish",
 				entryId: params.id,
-				locale: working.locale ?? DEFAULT_LOCALE,
+				locale: working.locale ?? site.DEFAULT_LOCALE,
 				input: {
 					collection: working.collection,
 					slug: working.slug,
@@ -254,14 +256,14 @@ export const createContentService = <T = unknown>(
 		restore: async (params: { id: string; expectedVersion: number }): Promise<T> => {
 			if (!storePort.restoreEntry) throw new Error("content service: the store cannot restore entries");
 			const working = await storePort.getWorking({ entryId: params.id });
-			if (!isItemCollection(working.collection)) {
+			if (!site.isItemCollection(working.collection)) {
 				return storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion });
 			}
 			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
 			const { snapshot } = await pipeline.run({
 				operation: "restore",
 				entryId: params.id,
-				locale: working.locale ?? DEFAULT_LOCALE,
+				locale: working.locale ?? site.DEFAULT_LOCALE,
 				input: {
 					collection: working.collection,
 					slug: working.slug,

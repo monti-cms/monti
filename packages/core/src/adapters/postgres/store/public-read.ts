@@ -1,22 +1,16 @@
-import { isCollection } from "../../../core/collections";
-import { DEFAULT_LOCALE } from "../../../core/locales";
 import { CmsError } from "../../../core/store/errors";
 import type { EntryMetadata, PublishedEntryLookup, PublishedEntryRecord } from "../../../core/store/types";
-import {
-	mergeTranslationMetadata,
-	RECORD_TRANSLATIONS_KEY,
-	recordLocalizedFields,
-	storedField,
-} from "../../../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive";
+import type { Site } from "../../../site";
 import type { StoreContext } from "./context";
 import { mapPublishedEntryRow } from "./rows";
 
-function assertPublicCollections(collections: readonly string[]): void {
+function assertPublicCollections(site: Site, collections: readonly string[]): void {
 	if (!Array.isArray(collections) || collections.length === 0) {
 		throw new CmsError("Invalid collections", "invalid_input");
 	}
 	for (const collection of collections) {
-		if (typeof collection !== "string" || !isCollection(collection)) {
+		if (typeof collection !== "string" || !site.isCollection(collection)) {
 			throw new CmsError("Invalid collection", "invalid_input");
 		}
 	}
@@ -52,11 +46,11 @@ const PUBLISHED_COLUMNS = (withBody: boolean, address = "a") =>
 	 src.published_at, b.updated_at AS body_updated_at`;
 
 /** Translation metadata = the source's shared values + the translation's per-language values. */
-function mapPublishedRow(row: PublishedRow): PublishedEntryRecord {
+function mapPublishedRow(site: Site, row: PublishedRow): PublishedEntryRecord {
 	const isTranslation = row.translation_group_id !== row.id;
 	const metadata =
-		isTranslation && isCollection(row.collection)
-			? (mergeTranslationMetadata(row.collection, row.source_metadata, row.metadata) as EntryMetadata)
+		isTranslation && site.isCollection(row.collection)
+			? (site.mergeTranslationMetadata(row.collection, row.source_metadata, row.metadata) as EntryMetadata)
 			: row.metadata;
 	return mapPublishedEntryRow({ ...row, metadata });
 }
@@ -95,7 +89,7 @@ const SORT_COLUMNS: Record<PublishedSort, string> = {
  * It requires both a published body and published status, so drafts, archived, and trashed entries are never returned by any path.
  */
 export function createPublicReadOps(ctx: StoreContext) {
-	const { pool, qSchema } = ctx;
+	const { pool, qSchema, site } = ctx;
 	return {
 		listPublishedEntries: async (params: {
 			collections: readonly string[];
@@ -106,7 +100,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 			if (typeof params !== "object" || params === null || Array.isArray(params)) {
 				throw new CmsError("Invalid parameters", "invalid_input");
 			}
-			assertPublicCollections(params.collections);
+			assertPublicCollections(site, params.collections);
 			if (params.includeBody !== undefined && typeof params.includeBody !== "boolean") {
 				throw new CmsError("Invalid includeBody", "invalid_input");
 			}
@@ -128,7 +122,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 				[params.collections, params.locale ?? null],
 			);
 
-			return res.rows.map(mapPublishedRow);
+			return res.rows.map((row) => mapPublishedRow(site, row));
 		},
 
 		// If the requested slug is a former address (alias), return the entry that owns the canonical current slug.
@@ -144,7 +138,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 			if (typeof params !== "object" || params === null || Array.isArray(params)) {
 				throw new CmsError("Invalid parameters", "invalid_input");
 			}
-			if (typeof params.collection !== "string" || !isCollection(params.collection)) {
+			if (typeof params.collection !== "string" || !site.isCollection(params.collection)) {
 				throw new CmsError("Invalid collection", "invalid_input");
 			}
 			if (typeof params.slug !== "string" || params.slug.length === 0) {
@@ -168,7 +162,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 				 WHERE e.status = 'published' AND e.collection = $1
 				 ORDER BY (matched.type = 'current') DESC
 				 LIMIT 1`,
-				[params.collection, params.slug, params.locale ?? DEFAULT_LOCALE],
+				[params.collection, params.slug, params.locale ?? site.DEFAULT_LOCALE],
 			);
 
 			const row = res.rows[0];
@@ -176,7 +170,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 
 			return {
 				status: row.is_alias ? "alias" : "current",
-				entry: mapPublishedRow(row),
+				entry: mapPublishedRow(site, row),
 			};
 		},
 
@@ -187,7 +181,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 		listPublishedPage: async (
 			params: PublishedPageParams,
 		): Promise<{ items: PublishedEntryRecord[]; total: number; page: number; pageSize: number }> => {
-			if (typeof params?.collection !== "string" || !isCollection(params.collection)) {
+			if (typeof params?.collection !== "string" || !site.isCollection(params.collection)) {
 				throw new CmsError("Invalid collection", "invalid_input");
 			}
 			const page = params.page ?? 1;
@@ -200,14 +194,14 @@ export function createPublicReadOps(ctx: StoreContext) {
 			if (!(sort in SORT_COLUMNS)) throw new CmsError("Invalid sort", "invalid_input");
 			const order = params.order === "asc" ? "ASC" : "DESC";
 
-			const values: unknown[] = [params.collection, params.locale ?? DEFAULT_LOCALE];
+			const values: unknown[] = [params.collection, params.locale ?? site.DEFAULT_LOCALE];
 			const bind = (value: unknown) => {
 				values.push(value);
 				return `$${values.length}`;
 			};
 			const conditions = ["e.status = 'published'", "e.collection = $1", "e.locale = $2"];
 			for (const [field, raw] of Object.entries(params.where ?? {})) {
-				const stored = isCollection(params.collection) ? storedField(params.collection, field) : undefined;
+				const stored = site.isCollection(params.collection) ? site.storedField(params.collection, field) : undefined;
 				if (stored?.field.kind !== "relation") throw new CmsError(`Invalid where field ${field}`, "invalid_input");
 				const ids = (typeof raw === "string" ? [raw] : [...raw]).filter((id) => typeof id === "string");
 				if (ids.length === 0) continue;
@@ -234,10 +228,10 @@ export function createPublicReadOps(ctx: StoreContext) {
 			let orderBy = SORT_COLUMNS[sort];
 			if (
 				sort === "title" &&
-				isCollection(params.collection) &&
-				recordLocalizedFields(params.collection).includes("title")
+				site.isCollection(params.collection) &&
+				site.recordLocalizedFields(params.collection).includes("title")
 			) {
-				rowValues.push(params.titleLocale ?? params.locale ?? DEFAULT_LOCALE);
+				rowValues.push(params.titleLocale ?? params.locale ?? site.DEFAULT_LOCALE);
 				orderBy = `COALESCE(NULLIF(btrim(b.metadata->'${RECORD_TRANSLATIONS_KEY}'->$${rowValues.length}::text->>'title'), ''), b.metadata->>'title')`;
 			}
 			const rows = await pool.query<PublishedRow>(
@@ -246,7 +240,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 				 LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
 				rowValues,
 			);
-			return { items: rows.rows.map(mapPublishedRow), total, page, pageSize };
+			return { items: rows.rows.map((row) => mapPublishedRow(site, row)), total, page, pageSize };
 		},
 
 		/** Published languages of a translation group (including the source). Empty if the source is not published. */
@@ -286,7 +280,7 @@ export function createPublicReadOps(ctx: StoreContext) {
 				 WHERE e.status = 'published' AND COALESCE(e.translation_group_id, e.id) = ANY($1::uuid[])`,
 				[ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id))],
 			);
-			return res.rows.map(mapPublishedRow);
+			return res.rows.map((row) => mapPublishedRow(site, row));
 		},
 	};
 }

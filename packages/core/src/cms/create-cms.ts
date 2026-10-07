@@ -1,11 +1,9 @@
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { resolveTrustHost } from "../adapters/auth/trust-host";
 import type { MediaStore } from "../adapters/r2/types";
-import { cmsConfig } from "../config/resolved";
-import { adminUrl } from "../core/admin-paths";
 import { CmsError, type ContentChange, type ContentStore, type Entry } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
-import type { CmsPlugin, OwnedPluginRoute } from "../plugin/define";
+import type { OwnedPluginRoute } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
 import { type CmsRead, createRead } from "../read";
@@ -15,6 +13,7 @@ import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
+import { type AnyCmsConfig, createSite, type Site } from "../site";
 
 export type ContentService = ReturnType<typeof createContentService<Entry>>;
 export type BulkService = ReturnType<typeof createBulkService<Entry>>;
@@ -31,7 +30,13 @@ export interface HandleOptions {
 /** The server config as plugins see it: everything but the master secrets. */
 export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecrets">;
 
-export interface CreateCmsOptions {
+export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
+	/**
+	 * The site config (`cms.config.ts`, `defineConfig(...)`): collections, locales, blocks, plugins, admin and site settings. The instance holds it, and the store, the
+	 * services, the read API, the HTTP handler, the plugins, the admin and the renderer all get it from the instance. Its type is kept, so `cms.read` knows the
+	 * site's collection names and the shape of their metadata.
+	 */
+	readonly config: Config;
 	/** The server config (`defineServerConfig(...)`): database, auth, media, secret, hooks, public API. */
 	readonly server: CmsServerConfig;
 	/**
@@ -48,7 +53,15 @@ export interface CreateCmsOptions {
  *
  * Connections are created on first use, so creating the instance (at import or build time) connects to nothing.
  */
-export interface Cms {
+export interface Cms<
+	// biome-ignore lint/suspicious/noExplicitAny: `Cms` alone is an instance of any site config
+	Config extends AnyCmsConfig = any,
+> {
+	/**
+	 * The site of this instance, resolved from its config: collections and their rules, locales, URLs, blocks, code block settings, admin addresses and language.
+	 * Everything that used to be a module-level constant derived from the config is here. `cms.site.config` is the config the instance was created from.
+	 */
+	readonly site: Site<Config>;
 	/** The server config this instance was created from, without the master secrets (`secret`, `previousSecrets`): plugins reach those only through `secrets()`. */
 	readonly server: PublicServerConfig;
 	/** The content store. Created on first use. */
@@ -105,7 +118,7 @@ export interface Cms {
 	 */
 	handle(request: Request, options?: HandleOptions): Promise<Response>;
 	/** Reads published content for the site's pages, and resolves public media. */
-	readonly read: CmsRead;
+	readonly read: CmsRead<Config>;
 	/**
 	 * Creates the tables in the store, or brings them up to date (core tables, then plugin tables). Running it repeatedly gives the same result.
 	 * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
@@ -154,27 +167,28 @@ export function lazyHandle(cms: () => Cms): Cms["handle"] {
 	};
 }
 
-/** Plugins of the site config. A config without plugins has an empty tuple type, so it is widened for reading. */
-const sitePlugins = (): readonly CmsPlugin[] => cmsConfig.plugins ?? [];
-
 /**
  * Creates the CMS instance. Export it from a module of your app (conventionally `cms.server.ts`) and import it where you need it:
  *
  * ```ts
- * export const cms = createCms({ server: defineServerConfig({ database: postgres({ ... }), auth: githubAuth({ ... }) }) });
+ * import config from "./cms.config";
+ * export const cms = createCms({ config, server: defineServerConfig({ database: postgres({ ... }), auth: githubAuth({ ... }) }) });
  * ```
  *
- * The site config (`cms.config.ts`) is still linked through the `@cms-config` alias.
+ * Any number of instances live in one process, each with its own config and server config: nothing is read from a module or the environment except the
+ * connections of the server config.
  */
-export function createCms(options: CreateCmsOptions): Cms {
+export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsOptions<Config>): Cms<Config> {
 	const { server, id = "default" } = options;
+	const site = createSite(options.config);
 	const { secret, previousSecrets, ...publicServer } = server;
 	const vault = createSecretsVault({ secret, previousSecrets });
 	const connections = connectionsFor(id, server);
 	const plugins = createServerPlugins(
-		sitePlugins(),
+		site.plugins,
 		() => server,
-		() => cms,
+		// The plugins and the handler take the instance as the loose `Cms`, whatever the type of its config.
+		() => cms as unknown as Cms,
 	);
 
 	let store: ContentStore | undefined;
@@ -184,11 +198,11 @@ export function createCms(options: CreateCmsOptions): Cms {
 
 	const isHostTrusted = () => resolveTrustHost(server.trustHost);
 	const getAuth = (): CmsAuth => {
-		auth ??= server.auth.create({ loginPath: adminUrl("/login"), trustHost: isHostTrusted() });
+		auth ??= server.auth.create({ loginPath: site.adminUrl("/login"), trustHost: isHostTrusted() });
 		return auth;
 	};
 	const getStore = (): ContentStore => {
-		store ??= connections.database.createStore({ afterCommit: plugins.notifyAfterCommit });
+		store ??= connections.database.createStore({ site, afterCommit: plugins.notifyAfterCommit });
 		return store;
 	};
 	const getMediaStore = (): MediaStore => {
@@ -198,11 +212,13 @@ export function createCms(options: CreateCmsOptions): Cms {
 	};
 	const authGateway = new CmsAuthGateway(getAuth);
 
-	const cms: Cms = {
+	const cms: Cms<Config> = {
+		site,
 		server: publicServer,
 		store: getStore,
 		contentService: () => {
 			service ??= createContentService<Entry>(getStore(), {
+				site,
 				hooks: plugins.writeHooks,
 				formats: plugins.formats,
 				...(server.media ? { media: mediaUrlResolver(getStore, getMediaStore) } : {}),
@@ -211,6 +227,7 @@ export function createCms(options: CreateCmsOptions): Cms {
 		},
 		bulkService: () => {
 			bulk ??= createBulkService<Entry>(getStore(), {
+				site,
 				hooks: plugins.writeHooks,
 				formats: plugins.formats,
 				...(server.media ? { media: mediaUrlResolver(getStore, getMediaStore) } : {}),
@@ -234,8 +251,9 @@ export function createCms(options: CreateCmsOptions): Cms {
 		writeHooks: plugins.writeHooks,
 		formats: plugins.formats,
 		notifyAfterCommit: plugins.notifyAfterCommit,
-		handle: lazyHandle(() => cms),
+		handle: lazyHandle(() => cms as unknown as Cms),
 		read: createRead({
+			site,
 			store: getStore,
 			mediaStore: getMediaStore,
 			formats: plugins.formats,
@@ -243,7 +261,7 @@ export function createCms(options: CreateCmsOptions): Cms {
 		}),
 		migrate: async ({ log = console.log } = {}) => {
 			log(`Starting CMS database migration (${connections.database.name})...`);
-			await connections.database.migrate({ formats: await plugins.formats() });
+			await connections.database.migrate({ site, formats: await plugins.formats() });
 			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
 			log("CMS database migration completed successfully!");
 		},

@@ -3,7 +3,7 @@ import { type AppOptions, loadApp } from "./app";
 export type MigrateOptions = AppOptions;
 
 /**
- * `monti migrate`: reads env files, points the site config alias (`@cms-config`) at the app's file, loads the app's CMS instance and creates the tables in the store.
+ * `monti migrate`: reads env files, loads the app's CMS instance (the server file, which imports the site config) and creates the tables in the store.
  * TypeScript files are read by tsx, which the command (`bin/monti.mjs`) registers first. Returns `true` on success.
  */
 export async function migrate(options: MigrateOptions): Promise<boolean> {

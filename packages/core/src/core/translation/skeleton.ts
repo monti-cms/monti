@@ -1,8 +1,8 @@
-import { BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
 import { type StoredDocument, UNPARSED_NODE } from "../../doc/stored-document";
 import type { CmsJsonValue, CmsNode } from "../../doc/types";
-import { createTranslator } from "../../i18n";
+import type { Site } from "../../site";
+import { perSite } from "../../site/per-site";
 import { translationMessages } from "./messages";
 
 /**
@@ -55,12 +55,10 @@ export function readableAttributesByType(blocks: readonly BlockDefinition[]): Ma
 	return map;
 }
 
-let readableByType: Map<string, ReadonlySet<string>> | undefined;
+const readableTypesOf = perSite((site: Pick<Site, "BLOCKS">) => readableAttributesByType(site.BLOCKS));
 const NONE: ReadonlySet<string> = new Set();
-const readableOf = (type: string): ReadonlySet<string> => {
-	readableByType ??= readableAttributesByType(BLOCKS);
-	return readableByType.get(type) ?? NONE;
-};
+const readableOf = (site: Pick<Site, "BLOCKS">, type: string): ReadonlySet<string> =>
+	readableTypesOf(site).get(type) ?? NONE;
 
 type Skeleton = {
 	type: string;
@@ -73,10 +71,11 @@ type Skeleton = {
 };
 
 const withoutReadable = (
+	site: Pick<Site, "BLOCKS">,
 	type: string,
 	attrs: Record<string, CmsJsonValue> | undefined,
 ): Record<string, CmsJsonValue> => {
-	const readable = readableOf(type);
+	const readable = readableOf(site, type);
 	const kept: Record<string, CmsJsonValue> = {};
 	for (const [key, value] of Object.entries(attrs ?? {})) {
 		if (!readable.has(key)) kept[key] = value;
@@ -84,23 +83,23 @@ const withoutReadable = (
 	return kept;
 };
 
-function skeletonOf(node: CmsNode): Skeleton {
+function skeletonOf(site: Pick<Site, "BLOCKS">, node: CmsNode): Skeleton {
 	const marks = new Set<string>();
 	const codes: string[] = [];
 	const children: Skeleton[] = [];
 	for (const child of node.content ?? []) {
 		if (child.type !== "text") {
-			children.push(skeletonOf(child));
+			children.push(skeletonOf(site, child));
 			continue;
 		}
 		for (const mark of child.marks ?? []) {
 			if (mark.type === "code") codes.push(child.text ?? "");
-			else marks.add(JSON.stringify([mark.type, withoutReadable(mark.type, mark.attrs)]));
+			else marks.add(JSON.stringify([mark.type, withoutReadable(site, mark.type, mark.attrs)]));
 		}
 	}
 	return {
 		type: node.type,
-		attrs: withoutReadable(node.type, node.attrs),
+		attrs: withoutReadable(site, node.type, node.attrs),
 		marks: [...marks].sort(),
 		codes: codes.sort(),
 		children,
@@ -118,23 +117,32 @@ export type StructureCheck =
 			reason: string;
 	  };
 
-const tTranslation = createTranslator(translationMessages);
-
 /** The failure of a translated body that is not a document (`message`: why it could not be read, in the site's display language). */
-export const unreadableFailure = (message: string | undefined): StructureCheck => ({
-	ok: false,
-	code: "mdx_error",
-	reason: tTranslation("mdx_error", { message: message ?? tTranslation("unreadable") }),
-});
+export const unreadableFailure = (
+	site: Pick<Site, "createTranslator">,
+	message: string | undefined,
+): StructureCheck => {
+	const tTranslation = site.createTranslator(translationMessages);
+	return {
+		ok: false,
+		code: "mdx_error",
+		reason: tTranslation("mdx_error", { message: message ?? tTranslation("unreadable") }),
+	};
+};
 
 const isUnparsed = (doc: StoredDocument) => doc.content.some((node) => node.type === UNPARSED_NODE);
 
 /** Whether the translated document has the same skeleton as the source document. Failure if either is not a document (an `unparsed` body). */
-export function compareStructure(source: StoredDocument, translated: StoredDocument): StructureCheck {
-	if (isUnparsed(translated)) return unreadableFailure(undefined);
+export function compareStructure(
+	site: Pick<Site, "BLOCKS" | "createTranslator">,
+	source: StoredDocument,
+	translated: StoredDocument,
+): StructureCheck {
+	const tTranslation = site.createTranslator(translationMessages);
+	if (isUnparsed(translated)) return unreadableFailure(site, undefined);
 	if (isUnparsed(source)) return { ok: false, code: "source_unreadable", reason: tTranslation("source_unreadable") };
-	const a = skeletonOf({ type: "doc", content: [...source.content] });
-	const b = skeletonOf({ type: "doc", content: [...translated.content] });
+	const a = skeletonOf(site, { type: "doc", content: [...source.content] });
+	const b = skeletonOf(site, { type: "doc", content: [...translated.content] });
 	return JSON.stringify(a) === JSON.stringify(b)
 		? { ok: true }
 		: { ok: false, code: "structure_changed", reason: tTranslation("structure_changed") };

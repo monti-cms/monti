@@ -4,6 +4,7 @@ import type { FormatRegistry } from "../format/registry";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { PluginStorage } from "../plugin/storage";
 import type { WriteHooks } from "../services/hooks";
+import type { Site } from "../site";
 
 /**
  * Server config (`cms.server.ts`) schema. Holds the store, media and login connections and secrets. Read on the server only.
@@ -15,10 +16,13 @@ import type { WriteHooks } from "../services/hooks";
 /** Content store connection. */
 export interface DatabaseAdapter {
 	readonly name: string;
-	/** Creates the store. `afterCommit` is passed in by the core (after-save notifications from the server config and plugins). */
-	createStore(options?: { readonly afterCommit?: AfterCommit }): ContentStore;
+	/**
+	 * Creates the store. `site` is the instance's site (its collections, locales, blocks, links); `afterCommit` is passed in by the core (after-save
+	 * notifications from the server config and plugins).
+	 */
+	createStore(options: { readonly site: Site; readonly afterCommit?: AfterCommit }): ContentStore;
 	/** Creates the tables or brings them to the latest shape (`monti migrate`). Running it repeatedly gives the same result. */
-	migrate(options?: { readonly formats?: FormatRegistry }): Promise<void>;
+	migrate(options: { readonly site: Site; readonly formats?: FormatRegistry }): Promise<void>;
 	/**
 	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
 	 * An adapter implements it over its own database; plugins never see the database.

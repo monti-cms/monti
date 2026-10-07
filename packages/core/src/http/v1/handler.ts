@@ -39,7 +39,7 @@ export function adminRoute<P extends Params = Params>(
 					"admin route called without a CMS instance: serve it through `cms.handle()` or pass `{ cms }` when wrapping it",
 				);
 			}
-			validateSameOrigin(request, { trustHost: cms.isHostTrusted() });
+			validateSameOrigin(cms, request);
 			const auth = await cms.authGateway.verifyAdmin();
 			const params = (await context?.params) ?? ({} as P);
 			return await handler({ request, params, auth, cms });

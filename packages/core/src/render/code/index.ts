@@ -3,15 +3,14 @@
 export { fromCodeBlockDocumentToShikiAnnotationPayload, type ShikiAnnotationPayload } from "./annotation-payload";
 export {
 	type AnnotationPayload,
-	CODE_BLOCK_THEME_DARK,
-	CODE_BLOCK_THEME_LIGHT,
 	type CodeHighlighter,
 	type CodeHighlighterOptions,
 	type CodeHighlightOptions,
 	createCodeHighlighter,
 	type HighlightFn,
-	highlight,
+	type HighlightSite,
 	langAlias,
+	siteHighlight,
 } from "./code-highlighter";
 export { DEFAULT_CODE_LANG_ALIAS, DEFAULT_CODE_LANGS, DEFAULT_CODE_THEMES } from "./default-code-options";
 export { createAllowedRenderTagsFromConfig, isSafeRenderTag } from "./render-policy";

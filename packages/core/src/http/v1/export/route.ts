@@ -1,6 +1,5 @@
 import type { Cms } from "../../../cms";
 import { exportScopeSchema } from "../../../core/api";
-import { DEFAULT_LOCALE } from "../../../core/locales";
 import type { ExportSnapshot } from "../../../core/store";
 import { ServiceError } from "../../../core/types";
 import { exportText } from "../../../format/convert";
@@ -31,12 +30,16 @@ async function exportTexts(
 	}
 	const purpose = scope === "public" ? "read" : "sync";
 	const refsOf = createExportRefs(
-		{ store: cms.store, mediaStore: cms.mediaStore },
+		{ site: cms.site, store: cms.store, mediaStore: cms.mediaStore },
 		scope === "public" ? "published" : "working",
 	);
 	const bodies = new Map<string, string>();
 	const write = async (key: string, doc: Parameters<typeof refsOf>[0], locale: string) => {
-		const { text } = await exportText(registry, format, doc, { locale, purpose, refs: await refsOf(doc, locale) });
+		const { text } = await exportText(cms.site, registry, format, doc, {
+			locale,
+			purpose,
+			refs: await refsOf(doc, locale),
+		});
 		bodies.set(key, text);
 	};
 	for (const entry of snapshot.entries) {
@@ -51,7 +54,7 @@ async function exportTexts(
 	}
 	if (scope === "admin") {
 		for (const template of snapshot.templates) {
-			await write(exportTextKey(template.id, "template"), template.doc, DEFAULT_LOCALE);
+			await write(exportTextKey(template.id, "template"), template.doc, cms.site.DEFAULT_LOCALE);
 		}
 	}
 	return { format: { name: found.name, extension: found.extension }, bodies };
@@ -61,7 +64,7 @@ const buildResponse = async (cms: Cms, scope: ExportScope, format: string | unde
 	const snapshot = await cms.store().readExportSnapshot();
 	const exportedAt = new Date();
 	const texts = format === undefined ? undefined : await exportTexts(cms, snapshot, scope, format);
-	const archive = buildExportArchive(snapshot, { scope, exportedAt, ...(texts ? { texts } : {}) });
+	const archive = buildExportArchive(snapshot, { site: cms.site, scope, exportedAt, ...(texts ? { texts } : {}) });
 
 	return new Response(archive.zip as unknown as BodyInit, {
 		status: 200,

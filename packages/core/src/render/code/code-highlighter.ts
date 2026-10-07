@@ -8,8 +8,9 @@ import {
 import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import { bundledLanguages } from "shiki/langs";
 import { bundledThemes } from "shiki/themes";
-import { CODE_BLOCK_THEMES, EXTRA_CODE_LANGUAGES } from "../../annotation/code-block/active";
 import type { CodeBlockThemes } from "../../annotation/code-block/line-effects";
+import type { Site } from "../../site";
+import { perSite } from "../../site/per-site";
 import { DEFAULT_CODE_LANG_ALIAS, DEFAULT_CODE_LANGS, DEFAULT_CODE_THEMES } from "./default-code-options";
 import {
 	addLineDecorations,
@@ -23,10 +24,6 @@ import {
 	numberCodeNotes,
 	showsLineNumbers,
 } from "./transformers";
-
-/** Shiki theme names the site's code uses (`codeBlock.themes`, else one-light and one-dark-pro). */
-export const CODE_BLOCK_THEME_DARK = CODE_BLOCK_THEMES.dark;
-export const CODE_BLOCK_THEME_LIGHT = CODE_BLOCK_THEMES.light;
 
 export type AnnotationPayload = {
 	decorations?: DecorationItem[];
@@ -120,16 +117,23 @@ const loadLanguage = async (name: string): Promise<LanguageInput> => {
 	return (await load()).default;
 };
 
-/** Highlighter options of the site config (`codeBlock.themes`, `codeBlock.languages` on top of the default list). */
-export const siteCodeHighlighterOptions = async (): Promise<CodeHighlighterOptions> => ({
+/** The parts of a site the highlighter is built from: its themes and extra languages (`codeBlock.themes`, `codeBlock.languages`). */
+export type HighlightSite = Pick<Site, "CODE_BLOCK_THEMES" | "EXTRA_CODE_LANGUAGES">;
+
+/** Highlighter options of a site (`codeBlock.themes`, `codeBlock.languages` on top of the default list). */
+export const siteCodeHighlighterOptions = async (site: HighlightSite): Promise<CodeHighlighterOptions> => ({
 	themes: {
-		light: await loadTheme("light", CODE_BLOCK_THEMES.light),
-		dark: await loadTheme("dark", CODE_BLOCK_THEMES.dark),
+		light: await loadTheme("light", site.CODE_BLOCK_THEMES.light),
+		dark: await loadTheme("dark", site.CODE_BLOCK_THEMES.dark),
 	},
-	langs: [...DEFAULT_CODE_LANGS, ...(await Promise.all(EXTRA_CODE_LANGUAGES.map(loadLanguage)))],
+	langs: [...DEFAULT_CODE_LANGS, ...(await Promise.all(site.EXTRA_CODE_LANGUAGES.map(loadLanguage)))],
 });
 
-const defaultHighlighter = await createCodeHighlighter(await siteCodeHighlighterOptions());
-
-/** Highlighter with the site's options (themes and languages of `codeBlock`, else the reference defaults). */
-export const highlight = defaultHighlighter.highlight;
+/**
+ * The highlighter of a site: its themes and languages (`codeBlock`, else the reference defaults), created on first use and kept for that site. Two sites with
+ * different themes in one process each get their own (they share Shiki's loaded themes and languages, not their settings).
+ */
+export const siteHighlight = perSite(
+	async (site: HighlightSite): Promise<HighlightFn> =>
+		(await createCodeHighlighter(await siteCodeHighlighterOptions(site))).highlight,
+);

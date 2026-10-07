@@ -4,24 +4,11 @@ import { canonicalDocument, readStoredDocument, type StoredDocument } from "../d
 import type { CmsImageSource } from "../doc/types";
 import { importText } from "../format/convert";
 import { type FormatRegistry, NO_FORMATS } from "../format/registry";
-import {
-	fieldValueError,
-	metadataReferences,
-	missingRequiredIssues,
-	normalizeRecordTranslations,
-	orphanedMetadataKeys,
-	RECORD_TRANSLATIONS_KEY,
-	relationRule,
-	schemaOf,
-	storedField,
-	unknownSelectValues,
-} from "../schema/derive";
+import { fieldValueError, RECORD_TRANSLATIONS_KEY } from "../schema/derive";
+import type { Site } from "../site";
 import { checkDocument, isEmptyDocument } from "./body-check";
-import { COLLECTION_DEFINITIONS, isCollection } from "./collections";
 import { computeContentHash, sortKeys } from "./content-hash";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "./limits";
-import { LINKABLE_COLLECTIONS } from "./links";
-import { DEFAULT_LOCALE, PREFIXED_LOCALES } from "./locales";
 import { normalizeSlugInput } from "./slug";
 import { parseTranslationState } from "./translation/state";
 import {
@@ -63,11 +50,12 @@ class ReferenceCollector {
 
 /** Collects metadata relation fields as references, in collection-definition order. Preserves order and duplicates. */
 function addMetadataReferences(
+	site: Site,
 	collector: ReferenceCollector,
 	collection: Collection,
 	metadata: PreparedSnapshot["metadata"],
 ) {
-	for (const ref of metadataReferences(collection, metadata)) {
+	for (const ref of site.metadataReferences(collection, metadata)) {
 		collector.add(ref.kind, ref.targetId, {
 			type: "metadata",
 			path: ref.path,
@@ -127,7 +115,11 @@ export interface InputBody {
  * The body of a service input given as a stored document: taken as given (checked in shape, put in its canonical form). Blocks inherit their ids from
  * `previous`, the body being replaced, where the input has none.
  */
-export const documentInputBody = (input: ServiceInput, previous: StoredDocument | null | undefined): InputBody => {
+export const documentInputBody = (
+	site: Site,
+	input: ServiceInput,
+	previous: StoredDocument | null | undefined,
+): InputBody => {
 	let size: number;
 	try {
 		size = Buffer.byteLength(JSON.stringify(input.doc) ?? "", "utf8");
@@ -135,9 +127,9 @@ export const documentInputBody = (input: ServiceInput, previous: StoredDocument 
 		throw new ServiceError("invalid_input");
 	}
 	if (size > MAX_DOC_BYTES) throw new ServiceError("body_too_large");
-	const read = readStoredDocument(input.doc);
+	const read = readStoredDocument(input.doc, site);
 	if (!read) throw new ServiceError("invalid_input");
-	const doc = canonicalDocument(read);
+	const doc = canonicalDocument(site, read);
 	return {
 		doc: { ...doc, content: assignBlockIds(doc.content, [previous?.content]) },
 		importIssues: [],
@@ -156,14 +148,15 @@ export interface TextImport {
  * `unparsed` node that keeps it (with the reasons as `importIssues`): a draft can hold it, and `unparsed_body` blocks publishing it.
  */
 export const readInputBody = async (
+	site: Site,
 	input: ServiceInput,
 	previous: StoredDocument | null | undefined,
 	options: TextImport = {},
 ): Promise<InputBody> => {
-	if (input.doc !== undefined) return documentInputBody(input, previous);
+	if (input.doc !== undefined) return documentInputBody(site, input, previous);
 	if (typeof input.body !== "string" || typeof input.format !== "string") throw new ServiceError("invalid_input");
-	const imported = await importText(options.formats ?? NO_FORMATS, input.format, input.body, {
-		locale: options.locale ?? DEFAULT_LOCALE,
+	const imported = await importText(site, options.formats ?? NO_FORMATS, input.format, input.body, {
+		locale: options.locale ?? site.DEFAULT_LOCALE,
 		entryId: options.entryId,
 		previous,
 	});
@@ -201,16 +194,21 @@ function readStoredValue(v: unknown, type?: string): MetadataValue {
  * Non-blocking warnings about values the schema no longer describes: the value of a removed field (`orphaned_metadata_key`) and a select value that is
  * no longer an option (`unknown_select_value`, with the value in `message`). Both are kept in the stored metadata; the path is the field key.
  */
-function metadataWarnings(collection: Collection, metadata: Record<string, MetadataValue>): Issue[] {
+function metadataWarnings(site: Site, collection: Collection, metadata: Record<string, MetadataValue>): Issue[] {
 	return [
-		...orphanedMetadataKeys(collection, metadata).map((key): Issue => ({ code: "orphaned_metadata_key", path: key })),
-		...unknownSelectValues(collection, metadata).flatMap(({ path, values }) =>
-			values.map((value): Issue => ({ code: "unknown_select_value", path, message: value, params: { value } })),
-		),
+		...site
+			.orphanedMetadataKeys(collection, metadata)
+			.map((key): Issue => ({ code: "orphaned_metadata_key", path: key })),
+		...site
+			.unknownSelectValues(collection, metadata)
+			.flatMap(({ path, values }) =>
+				values.map((value): Issue => ({ code: "unknown_select_value", path, message: value, params: { value } })),
+			),
 	];
 }
 
 function validateMetadata(
+	site: Site,
 	collection: Collection,
 	raw: unknown,
 	previous: { readonly [key: string]: unknown } = {},
@@ -231,12 +229,12 @@ function validateMetadata(
 	const input = raw as Record<string, unknown>;
 
 	// Allowed keys, storage format and value rules come from the collection definition.
-	const rules = COLLECTION_DEFINITIONS[collection].fields;
+	const rules = site.COLLECTION_DEFINITIONS[collection]?.fields ?? {};
 	const metadata: Record<string, MetadataValue> = {};
 	for (const [k, v] of Object.entries(input)) {
 		if (k === RECORD_TRANSLATIONS_KEY) {
 			// Per-locale names of a record collection. The default-locale value lives in the field itself.
-			const normalized = normalizeRecordTranslations(collection, v, PREFIXED_LOCALES);
+			const normalized = site.normalizeRecordTranslations(collection, v, site.PREFIXED_LOCALES);
 			if ("error" in normalized) {
 				const { error, path, label } = normalized;
 				throw path ? fieldValueServiceError(error, path, label) : new ServiceError(error);
@@ -244,7 +242,7 @@ function validateMetadata(
 			if (Object.keys(normalized.value).length > 0) metadata[k] = normalized.value;
 			continue;
 		}
-		const stored = storedField(collection, k);
+		const stored = site.storedField(collection, k);
 		if (!stored || !Object.hasOwn(rules, k)) {
 			// The value of a field the site has removed: kept as stored, with only its storage shape checked.
 			// A key the entry does not already hold is new, so it is not a removed field but a mistake.
@@ -268,6 +266,7 @@ function validateMetadata(
 }
 
 export async function prepareSnapshot(
+	site: Site,
 	input: ServiceInput,
 	options?: {
 		schemaVersion?: number;
@@ -298,7 +297,7 @@ export async function prepareSnapshot(
 
 	const rawCollection: unknown = input.collection;
 	if (typeof rawCollection !== "string") throw new ServiceError("invalid_input");
-	if (!isCollection(rawCollection)) throw new ServiceError("unknown_collection");
+	if (!site.isCollection(rawCollection)) throw new ServiceError("unknown_collection");
 
 	if (input.slug !== undefined && input.slug !== null && typeof input.slug !== "string") {
 		throw new ServiceError("invalid_input");
@@ -307,17 +306,17 @@ export async function prepareSnapshot(
 	if ("error" in normalizedSlug) throw new ServiceError(normalizedSlug.error);
 	const slug = normalizedSlug.slug;
 
-	const metadata = validateMetadata(rawCollection, input.metadata, options?.previousMetadata);
+	const metadata = validateMetadata(site, rawCollection, input.metadata, options?.previousMetadata);
 
 	const collector = new ReferenceCollector();
-	addMetadataReferences(collector, rawCollection, metadata);
+	addMetadataReferences(site, collector, rawCollection, metadata);
 
 	// The body is a document: given as one, or read from text (a text that could not be read is one `unparsed` node).
-	const body = await readInputBody(input, options?.previousDoc, options?.import);
+	const body = await readInputBody(site, input, options?.previousDoc, options?.import);
 	const { doc } = body;
-	const check = checkDocument(doc);
+	const check = checkDocument(site, doc);
 	const warnings: Issue[] = [
-		...metadataWarnings(rawCollection, metadata),
+		...metadataWarnings(site, rawCollection, metadata),
 		...(options?.imported?.warnings ?? []),
 		...(body.importWarnings ?? []),
 		...check.warnings,
@@ -448,6 +447,7 @@ export async function imageWarningsForSnapshot(
 }
 
 export function validateForPublish(
+	site: Site,
 	snapshot: PreparedSnapshot,
 	resolved: ResolvedTargets,
 ): { ready: boolean; issues: Issue[]; warnings: Issue[] } {
@@ -468,20 +468,20 @@ export function validateForPublish(
 	});
 
 	issues.push(
-		...missingRequiredIssues(snapshot.collection, snapshot, { localizedOnly: Boolean(resolved.translation) }),
+		...site.missingRequiredIssues(snapshot.collection, snapshot, { localizedOnly: Boolean(resolved.translation) }),
 	);
 	if (resolved.translation && !resolved.translation.sourcePublished) {
 		// The public screen's category, tags and publish date come from the source.
 		issues.push({ code: "source_not_published", path: "translationGroupId" });
 	}
 	// Only collections that use a body (`body`) reject an empty body.
-	if (schemaOf(snapshot.collection).body && isEmptyDocument(snapshot.doc)) {
+	if (site.schemaOf(snapshot.collection).body && isEmptyDocument(snapshot.doc)) {
 		issues.push({ code: "empty_body", path: "body" });
 	}
 
 	// Metadata relations are always checked regardless of the snapshot's reference list (so nothing leaks even if the caller sends empty references).
 	const metadataRefs = new ReferenceCollector();
-	addMetadataReferences(metadataRefs, snapshot.collection, snapshot.metadata);
+	addMetadataReferences(site, metadataRefs, snapshot.collection, snapshot.metadata);
 	const occurrenceKey = (kind: string, target: string, o: ReferenceOccurrence) =>
 		`${kind}|${target}|${JSON.stringify(o)}`;
 	const seen = new Set(
@@ -511,7 +511,7 @@ export function validateForPublish(
 		const bodyOccurrences = occurrences.filter((occurrence) => occurrence?.type === "body");
 		if (bodyOccurrences.length > 0) {
 			const reachable =
-				target && target.isSource !== false && LINKABLE_COLLECTIONS.includes(target.collection as Collection);
+				target && target.isSource !== false && site.LINKABLE_COLLECTIONS.includes(target.collection as Collection);
 			for (const occurrence of bodyOccurrences) {
 				if (!reachable) issues.push(occurrenceIssue("unresolved_internal_link", occurrence, ref.targetId));
 				else if (!target.isPublished)
@@ -525,7 +525,7 @@ export function validateForPublish(
 		}
 		// The expected target collection and whether unpublished targets are allowed come from the relation field definition. References not attached to a field are not checked against a collection.
 		const rule = ref.occurrences
-			.map((o) => (o.type === "metadata" ? relationRule(snapshot.collection, o.path) : undefined))
+			.map((o) => (o.type === "metadata" ? site.relationRule(snapshot.collection, o.path) : undefined))
 			.find((found) => found !== undefined);
 		if (rule && target.collection !== rule.to) {
 			addForAll("invalid_reference_collection");
