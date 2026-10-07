@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * The title field is named by its role (`role: "title"`), so no code may read it by the key `title`. A query builds the SQL with `titleSql`, and JS code
+ * The title field is named by its role (`role: "title"`), so no code may read it by the key `title`. A query builds the SQL with `titleExpr`, and JS code
  * reads it with `titleFieldOf`, `titleValue` or `site.titleField` / `site.titleOfValues`. This scans the packages' sources for the ways a hard-coded key shows up:
  * `metadata->>'title'`, `metadata.title`, `metadata["title"]`, `storedField(collection, "title")`, `stored.name === "title"` and `form.title`.
  * (A text that is only called "title", such as a link title or a block attribute, does not match these shapes.)

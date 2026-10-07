@@ -21,8 +21,6 @@ export interface StoreContext {
 	readonly hooks: ContentStoreHooks;
 }
 
-export type Queryable = Pool | PoolClient;
-
 export function validateSchemaName(schema?: string): string {
 	const s = schema ?? "public";
 	if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(s)) {

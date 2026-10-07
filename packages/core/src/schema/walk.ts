@@ -56,7 +56,7 @@ export type TitleField = StoredField & { readonly field: TextField };
 /**
  * The title field of a collection: the field with the `title` role, or, when none has it, the field named `title`. `undefined` if there is none
  * (`defineConfig` rejects such a collection, so a checked config always has one). This is the only place that knows the default name:
- * everything that reads or writes the title (SQL included, see `titleSql`) goes through it.
+ * everything that reads or writes the title (SQL included, see `titleExpr`) goes through it.
  */
 export function findTitleField(schema: Pick<CollectionSchema, "fields">): TitleField | undefined {
 	const stored = valueFieldsOf(schema);

@@ -1,4 +1,4 @@
-import { sql } from "kysely";
+import { type Selectable, sql } from "kysely";
 import { documentText, SEARCH_TEXT } from "../../../core/body-text";
 import { CmsError } from "../../../core/store/errors";
 import type {
@@ -19,6 +19,7 @@ import {
 	unparsedDocument,
 } from "../../../doc/stored-document";
 import type { Site } from "../../../site";
+import type { BodyTemplatesTable, ContentAddressesTable, FoldersTable, MediaAssetsTable } from "../db/database";
 import type { Db } from "../db/kysely";
 
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
@@ -64,22 +65,13 @@ export interface ReferenceRow {
 	occurrences: unknown;
 }
 
-export interface AddressRow {
-	collection: string;
-	locale: string;
-	slug: string;
-	type: "current" | "alias" | "reservation" | "deleted";
-	entry_id: string | null;
-}
+/** The columns of `content_addresses` the publish check reads. */
+export type AddressRow = Pick<
+	Selectable<ContentAddressesTable>,
+	"collection" | "locale" | "slug" | "type" | "entry_id"
+>;
 
-export interface FolderRow {
-	id: string;
-	collection: string;
-	parent_id: string | null;
-	name: string;
-	position: number;
-	version: number;
-}
+export type FolderRow = Selectable<FoldersTable>;
 
 export const mapFolderRow = (row: FolderRow): Folder => ({
 	id: row.id,
@@ -145,28 +137,8 @@ export const MEDIA_COLUMN_NAMES = [
 	"ready_at",
 ] as const;
 
-export interface MediaRow {
-	id: string;
-	status: MediaAssetRecord["status"];
-	filename: string;
-	mime_type: string | null;
-	byte_size: string | number | null;
-	width: number | null;
-	height: number | null;
-	staging_key: string | null;
-	storage_key: string | null;
-	original_storage_key: string | null;
-	original_staging_key: string | null;
-	original_mime_type: string | null;
-	original_byte_size: string | number | null;
-	original_width: number | null;
-	original_height: number | null;
-	default_alt: string | null;
-	default_caption: string | null;
-	created_at: Date;
-	updated_at: Date;
-	ready_at: Date | null;
-}
+/** A row of `media_assets` as `MEDIA_COLUMN_NAMES` selects it. */
+export type MediaRow = Pick<Selectable<MediaAssetsTable>, (typeof MEDIA_COLUMN_NAMES)[number]>;
 
 const toNumberOrNull = (value: string | number | null) => (value === null ? null : Number(value));
 
@@ -198,14 +170,11 @@ export const mapMediaRow = (row: MediaRow): MediaAssetRecord => ({
 	readyAt: row.ready_at,
 });
 
-export interface TemplateRow {
-	id: string;
-	name: string;
-	doc: unknown;
-	version: number;
-	created_at: Date;
-	updated_at: Date;
-}
+/** The columns of `body_templates` that make a `BodyTemplate` (the `mdx` column is no longer read). */
+export type TemplateRow = Pick<
+	Selectable<BodyTemplatesTable>,
+	"id" | "name" | "doc" | "version" | "created_at" | "updated_at"
+>;
 
 export const mapTemplateRow = (row: TemplateRow): BodyTemplate => ({
 	id: row.id,
