@@ -38,8 +38,9 @@ pnpm exec monti add blog-theme
 
 - **`theme.config.ts`를 고칩니다.** 사이트마다 다른 것을 한곳에 모았습니다. `cms` import(`@/monti.config`), `collection` 이름(기본 `post`), `routeBase`(`/blog`), `pageSize`, 작성자와 주제의 관계 필드,
   요약 필드, `blogTitle`, `components`(`CmsContent`에 주는 것과 같은, 블록의 공개 컴포넌트), `neighborWindow`(새 글과 이전 글을 찾을 때 훑는 최신 글의 수. `0`이면 그 링크를 끕니다)입니다.
-- **라우트.** 라우트 파일은 얇습니다. `blog-list.tsx`와 `blog-post.tsx`의 페이지와 `generateMetadata`를 다시 내보내고 `dynamic = "force-dynamic"`을 설정할 뿐입니다. 블로그를 다른 경로에 두려면
+- **라우트.** 라우트 파일은 얇습니다. `blog-list.tsx`와 `blog-post.tsx`의 페이지와 `generateMetadata`를 다시 내보낼 뿐입니다. 페이지는 요청마다 데이터베이스를 읽으므로, `cacheComponents`에서 Next가 거부하는 `dynamic = "force-dynamic"` 대신 `Suspense` 경계 안에서 요청을 기다립니다(`next/server`의 `connection()`). 이 옵션이 있든 없든 똑같이 동작합니다(없는 글은 여전히 `notFound()`로 끝나지만, 스트리밍 중인 페이지는 HTTP 상태를 바꾸지 못할 때가 있습니다). 블로그를 다른 경로에 두려면
   두 폴더를 옮기고 `routeBase`를 맞추세요. `[locale]` 폴더(`app/(site)/[locale]/blog/`) 아래에서는 페이지가 `params.locale`을 읽고 모르는 언어에는 404를 보여 주며, 없으면 기본 언어를 읽습니다.
+  테마는 글을 `prose` 클래스와 패키지의 공개 스타일로 꾸미므로, `monti add blog-theme`는 전역 CSS도 확인합니다. `@tailwindcss/typography`(`@plugin "@tailwindcss/typography";`), `@import "@monti-cms/core/render.css";`, 블록을 쓰면 `@import "@monti-cms/blocks/render.css";`가 필요합니다. 바꿀 내용을 diff로 보여 주고 파일을 고치기 전에 묻습니다(`--yes`는 묻지 않음). 거절했거나 고칠 수 없는 스타일시트(Tailwind 3)면 추가할 줄을 그대로 출력합니다.
   `monti add blog-theme`를 다시 실행하면 라우트 파일이 `app/(site)/blog/`에 한 번 더 써지니, 옮겨 두었다면 새로 생긴 사본을 지우세요.
 - **찾을 수 없음과 리다이렉트.** 없는 주소, 발행하지 않은 글, 초안의 주소는 404이고, 이름을 바꾼 글의 옛 주소는 새 주소로 영구 리다이렉트합니다.
 - **메타데이터.** 글 페이지는 제목, 설명(요약 필드), canonical 경로, Open Graph article 필드를 설정합니다.

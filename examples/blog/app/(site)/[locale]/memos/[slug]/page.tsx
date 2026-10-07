@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { ArticleBody } from "@/components/monti/article-body/article-body";
 import { PostMeta } from "@/components/monti/blog-theme/post-meta";
 import { cms } from "@/monti.config";
-
-// The memos are read from the database on each request.
-export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
@@ -20,7 +19,17 @@ async function readMemo({ params }: Props) {
 	return result.entry;
 }
 
-export default async function MemoPage(props: Props) {
+/** The memo is read on each request: `connection()` inside a `Suspense` boundary, which works with and without `cacheComponents`. */
+export default function MemoPage(props: Props) {
+	return (
+		<Suspense fallback={<main aria-busy="true" className="mx-auto max-w-2xl px-4 py-12" />}>
+			<Memo {...props} />
+		</Suspense>
+	);
+}
+
+async function Memo(props: Props) {
+	await connection();
 	const entry = await readMemo(props);
 	return (
 		<main className="mx-auto max-w-2xl px-4 py-12">
@@ -40,6 +49,7 @@ export default async function MemoPage(props: Props) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+	await connection();
 	const { locale, slug } = await params;
 	if (!cms.site.isLocale(locale)) return {};
 	const result = await cms.read.getEntry({ collection: "memo", slug: decodeURIComponent(slug), locale });

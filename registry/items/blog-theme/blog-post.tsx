@@ -3,6 +3,8 @@ import { previewEntry } from "@monti-cms/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { ArticleBody } from "@/registry/monti/article-body/article-body";
 import { metadataText, PostMeta } from "./post-meta";
 import { blogTheme } from "./theme.config";
@@ -63,8 +65,24 @@ function Neighbor({ entry, label, align }: { entry: ReadEntry; label: string; al
 	);
 }
 
-/** The detail page: title, byline (date, author, topics), a table of contents and the body (`ArticleBody`), and the newer and older post. */
-export async function BlogPostPage(props: BlogPostProps, source: PostSource = "published") {
+/**
+ * The detail page: title, byline (date, author, topics), a table of contents and the body (`ArticleBody`), and the newer and older post.
+ *
+ * The post is read on each request, so the content sits behind a `Suspense` boundary and opts out of prerendering with `connection()`. That is what
+ * Next's Cache Components (`cacheComponents: true`) asks of a page that reads live data, and it behaves the same without that option. Route segment
+ * settings such as `export const dynamic` are not used: Cache Components rejects them. An unknown address still ends in `notFound()`, but the page
+ * streams from inside the boundary, so the 404 shows in the page and its `noindex`, not always in the HTTP status.
+ */
+export function BlogPostPage(props: BlogPostProps, source: PostSource = "published") {
+	return (
+		<Suspense fallback={<main aria-busy="true" className="mx-auto max-w-2xl px-4 py-12" />}>
+			<BlogPostContent props={props} source={source} />
+		</Suspense>
+	);
+}
+
+async function BlogPostContent({ props, source }: { props: BlogPostProps; source: PostSource }) {
+	await connection();
 	const entry = await readPost(props, source);
 	const { newer, older } = await neighborsOf(entry);
 	return (
@@ -105,6 +123,7 @@ export const generateBlogPostPreviewMetadata = async (): Promise<Metadata> => ({
 
 /** Title, description (the excerpt) and Open Graph of the post. An unknown address gets no metadata: the page itself answers 404 or redirects. */
 export async function generateBlogPostMetadata({ params }: BlogPostProps): Promise<Metadata> {
+	await connection();
 	const { locale, slug } = await params;
 	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) return {};
 	const result = await blogTheme.cms.read.getEntry({
