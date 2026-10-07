@@ -83,6 +83,10 @@ Stored MDX is **CommonMark + GFM + standard MDX JSX**. What is written by defaul
 One meaning has one written notation: other notations are still accepted when text is read, and the document is what is stored. A code block is written with Monti annotation comments (`// @line plus {0-0}`), so other tools that read the MDX still see them.
 An internal link is written as the real path of its target (`[x](/en/posts/slug)`) for a text readers see, and as `entry:<id>` for a text to be imported again (`purpose: "sync"`).
 
+## `monti doctor`
+
+`mdx()` adds two checks to `monti doctor`: `mdx/format` (the `mdx` format is registered) and `mdx/syntax` (every extension of `mdx({ syntax })` builds its remark plugins and reads a small text). A failure names the extension and the option to change.
+
 ## Rendering
 
 ```tsx

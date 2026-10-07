@@ -113,7 +113,7 @@ export const cms = defineConfig({
 
 **레이아웃을 페이지에 합치지 않는 이유.** Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀌면 그 아래 서브트리를 다시 마운트한다. 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자 전체(내비게이션, 쿼리 캐시, 테마 공급자)가 다시 마운트된다. 그래서 레이아웃은 한 단계 위에 두어, 화면을 옮겨도 상태가 유지되게 한다.
 
-**서버 전용.** `monti.config.ts`에는 DB와 로그인 설정이 있으므로 브라우저에 닿으면 안 된다. 브라우저에서 불러오면 오류가 난다. `monti check:boundary`는 import 연쇄가 이 파일에 닿는 `"use client"` 파일을 모두 알려 주고, `withCms`는 같은 경우를 `next dev`를 시작할 때마다 한 번 경고한다(`checkImportBoundaryInDev`). 관리자는 레이아웃에서 사이트의 JSON 스냅샷을 받으므로 브라우저에 설정이 필요하지 않다.
+**서버 전용.** `monti.config.ts`에는 DB와 로그인 설정이 있으므로 브라우저에 닿으면 안 된다. 브라우저에서 불러오면 오류가 난다. `monti doctor`는 import 연쇄가 이 파일에 닿는 `"use client"` 파일을 모두 알려 주고(CI에서는 `monti doctor --only config/boundary`로 이것만 돌린다), `withCms`는 같은 경우를 `next dev`를 시작할 때마다 한 번 경고한다(`checkImportBoundaryInDev`). 인스턴스를 받지 못한 Next 파일(`cms`를 잘못 import한 경우)은 어느 파일인지와 어떻게 import하는지를 알려 주는 메시지로 실패하고, `monti doctor`는 관리자 경로에 Next 파일 셋이 있는지와 `next.config`가 `withCms`를 쓰는지도 본다. 관리자는 레이아웃에서 사이트의 JSON 스냅샷을 받으므로 브라우저에 설정이 필요하지 않다.
 
 ## 미리보기 페이지
 
