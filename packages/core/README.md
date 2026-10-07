@@ -11,7 +11,8 @@ Next.js (App Router) is the only supported host for now. The code is layered so 
 
 - `@monti-cms/core` speaks the standard `Request` and `Response` (`cms.handle(request)`) and imports nothing from Next.js. What a host has to supply (the headers of the current request, a redirect after login) comes in through the login connection (`CmsAuth.requestHeaders` and `CmsAuth.rethrow`).
 - `@monti-cms/admin` (the screens and `@monti-cms/admin/hooks`) imports nothing from Next.js either. It reaches the router only through an adapter it is given, `{ Link, navigate, replace, usePathname, useSearchParams }` (`AdminRouterProvider` of `@monti-cms/admin/router`), and the two things its server screens need, a redirect and a 404, through `AdminServer` (`@monti-cms/admin/host`).
-- `@monti-cms/nextjs` holds all the Next glue: the route handler, `withCms` for `next.config.ts`, the admin page and layout with the App Router adapter, and the NextAuth login (`githubAuth`).
+- `@monti-cms/nextjs` holds all the Next glue: the route handler, `withCms` for `next.config.ts`, the admin page and layout with the App Router adapter, and `nextHost`, the Next side of the login.
+- `@monti-cms/auth` is the admin login, and it is framework-neutral too: it implements `CmsAuth` on `Request` and `Response` over Auth.js core, with the ways to log in as pluggable providers (GitHub ships with it).
 
 Another host (Astro, Remix, ...) would be a new adapter package, not a change to the core or the admin. Tests keep the boundary: no source file of the core or the admin may import `next/*`.
 
@@ -22,12 +23,12 @@ This assumes a Next 16 (App Router) and React 19 app. The admin needs no Tailwin
 ### 1. Packages
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
+pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next-themes @tanstack/react-query sonner \
   @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
 The admin package and the AI plugin must share one copy of React Query, sonner, Tiptap and the lucide icons with the app, so the app installs them (peers).
-`next-auth` is only needed when you use GitHub login (`githubAuth` of `@monti-cms/nextjs/auth`).
+Login is `@monti-cms/auth` (Auth.js core, no Next.js in it); GitHub login needs no extra package. See its README for providers.
 The `monti` command line ships inside `@monti-cms/core` (TypeScript config files are read by tsx, which is installed with it).
 
 pnpm 12 fails the install if there are install scripts that have not been allowed (10 only warns). Allow the install script of esbuild, which tsx uses.
@@ -137,7 +138,7 @@ Put them in `.env.local`.
 | --- | --- |
 | `CMS_DATABASE_URL` | Postgres connection URL |
 | `CMS_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing |
-| `AUTH_SECRET` | A random long value. Signs login sessions (`githubAuth({ secret })`) |
+| `AUTH_SECRET` | A random long value. Signs login sessions (`auth({ secret })`) |
 | `CMS_SECRET` | A random long value (different from `AUTH_SECRET`). The master secret that plugins' stored values (AI service keys) are encrypted under (server config `secret`). To change it, keep the old value in `previousSecrets` ("Plugin secrets") |
 | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app. The callback URL is `<site URL>/api/cms/auth/callback/github` |
 | `CMS_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID |
@@ -165,14 +166,14 @@ Start it with `next dev` and open the admin path (default `/admin`).
 
 ### Login path
 
-By default the GitHub login API is served by the admin API route as well (`/api/cms/auth/*`), so there is no separate login route file.
+By default the login API is served by the admin API route as well (`/api/cms/auth/*`), so there is no separate login route file.
 Apps that still use `/api/auth/*` as before (apps that do not want to change an already registered OAuth callback URL) pick the path and add a route file.
 
 ```ts
 // cms.server.ts
-auth: githubAuth({ /* … */, basePath: "/api/auth" }),
+auth: auth({ providers: [/* … */], host: nextHost, basePath: "/api/auth" }),
 
-// app/api/auth/[...nextauth]/route.ts
+// app/api/auth/[...auth]/route.ts
 import { cms } from "../../../../cms.server";
 export const { GET, POST } = cms.authHandlers;
 ```
@@ -292,12 +293,17 @@ Connections are created on first use, so creating the instance at import or buil
 ```ts
 // cms.server.ts
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { githubAuth } from "@monti-cms/nextjs/auth";
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { nextHost } from "@monti-cms/nextjs/auth";
 import config from "./cms.config";
 
 export const cms = createCms({
 	config,
-	server: defineServerConfig({ database: postgres({ /* … */ }), auth: githubAuth({ /* … */ }) }),
+	server: defineServerConfig({
+		database: postgres({ /* … */ }),
+		auth: auth({ providers: [github({ /* … */ })], host: nextHost }),
+	}),
 });
 ```
 
@@ -319,7 +325,7 @@ Everything else imports `cms` from this file.
 **HTTP layer.** The admin API, the login connection, the public API and the plugin routes work on the standard web `Request` and `Response`; no `NextRequest`, `NextResponse` or `request.nextUrl` is used.
 `cms.handle(request)` serves one request (the path after `/api/cms/` is read from the URL), and `createRouteHandler(cms)` of `@monti-cms/nextjs` is the thin Next adapter built on it.
 Plugin routes (`adminRoute`) receive a standard `Request`: read the query with `new URL(request.url).searchParams` and answer with `Response.json(…)`.
-The core imports nothing from Next.js. What a host supplies reaches it through the login connection: `CmsAuth.requestHeaders()` (the headers of the request being handled, which the development login bypass reads) and `CmsAuth.rethrow(error)` (lets a redirect that the login library throws pass through to the host). `githubAuth` of `@monti-cms/nextjs/auth` provides both with Next's own functions; an `AuthAdapter` for another host provides its own.
+The core imports nothing from Next.js. What a host supplies reaches it through the login connection: `CmsAuth.requestHeaders()` (the headers of the request being handled, which the development login bypass and `session()` read) and `CmsAuth.rethrow(error)` (lets a redirect that a login library throws pass through to the host; `@monti-cms/auth` answers with a `Response` and does not need it). `nextHost` of `@monti-cms/nextjs/auth` provides `requestHeaders` with Next's own function, and is passed to `auth({ host })`; a host for another framework provides its own.
 
 The reading API hangs off the instance (`cms.read.getEntry(…)`, not `getEntry(cms, …)`): site code imports one thing, and its types (`MetadataFor` and so on) stay in `@monti-cms/core/read`.
 
@@ -365,14 +371,25 @@ A plain `Cms` or `Site` is an instance of any config, with `string` names. Two i
 
 All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` into the new package `@monti-cms/nextjs`. There are no aliases left at the old places.
 
-- Install `@monti-cms/nextjs` (`next` and, for GitHub login, `next-auth` are its peers; core and admin no longer ask for them).
+- Install `@monti-cms/nextjs` (`next` is its peer; core and admin no longer ask for it).
 - `next.config.ts`: `import { withCms } from "@monti-cms/core/next"` becomes `from "@monti-cms/nextjs/config"`.
-- `cms.server.ts`: `githubAuth` moves from `@monti-cms/core/server` to `@monti-cms/nextjs/auth`.
+- `cms.server.ts`: `githubAuth` moves from `@monti-cms/core/server` to `@monti-cms/nextjs/auth` (and is replaced by `@monti-cms/auth`; see "Upgrading to `@monti-cms/auth`").
 - `app/api/cms/[...path]/route.ts`: `cms.routeHandler()` becomes `createRouteHandler(cms)` from `@monti-cms/nextjs`. The `CmsRouteHandler` type is exported from there too.
 - Admin layout and page: `@monti-cms/admin/next` becomes `@monti-cms/nextjs/admin` (`CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata`; same props). The layout renders the App Router adapter for the admin.
 - Admin messages: the page title keys moved from the `cms-admin.next` dictionary to `cms-admin.layout` (only matters if you override `admin.messages["cms-admin.next"]`).
 - Your own `AuthAdapter`: `CmsAuth` has two optional members, `requestHeaders()` and `rethrow(error)`. Without `requestHeaders`, the development login bypass never applies.
 - Mounting the admin screens some other way than `CmsAdminLayout`: wrap them in `NextAdminRouter` (`@monti-cms/nextjs/admin`), or in `AdminRouterProvider` with your own adapter.
+
+### Upgrading to `@monti-cms/auth`
+
+GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to the framework-neutral package `@monti-cms/auth`, which is built on Auth.js core and takes the ways to log in as providers.
+
+- Install `@monti-cms/auth`. `githubAuth` of `@monti-cms/nextjs/auth` keeps working with the same options (it calls the new package), so an existing `cms.server.ts` runs unchanged; it is deprecated.
+- The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })`, with `auth` from `@monti-cms/auth`, `github` from `@monti-cms/auth/github` and `nextHost` from `@monti-cms/nextjs/auth`. `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
+- Everyone signs in once more: sessions made by NextAuth are not read. Environment variables (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`) and the OAuth callback URL (`/api/cms/auth/callback/github`) are unchanged. `next-auth` can be removed from `package.json`.
+- Account ids are qualified with the provider (`github:12345678`): `AuthContext.accountId`, `CmsAuth.devUserId`, and the author recorded for a change when the login gives no name. `isAdmin(userId)` of your own `CmsAuth` receives that value.
+- `CmsAuth` changes (for your own `AuthAdapter`): `session(request?)` may be given the request, `signIn` and `signOut` may resolve with a `Response` that the route returns as it is (a redirect that carries cookies), `AuthProvider` has an optional `icon`, and `AuthCreateContext` has `storage(plugin)` (`cms.storage`).
+- The `next-auth` module augmentation (`session.user.githubId`) is gone with NextAuth.
 
 ### Upgrading from the `@cms-server` alias
 
@@ -450,7 +467,9 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth` |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost` (pass as `host` to `auth()`), `githubAuth` (deprecated) |
+| `@monti-cms/auth` | `cms.server.ts` | `auth({ providers, admins?, secret?, devBypass?, basePath?, host? })`, the `LoginProvider` type |
+| `@monti-cms/auth/github` | `cms.server.ts` | `github({ clientId, clientSecret, admins })` |
 | `@monti-cms/core/render` | public pages (server components) | `CmsContent` (`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>` and `DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (plain `tsx`) |
@@ -860,7 +879,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 |---|---|
 | `database` | Content store. `postgres({ connectionString, schema })` |
 | `media` | Store for images and attachments. `r2Storage` or `s3Storage` from `@monti-cms/core/s3` (`region`, `forcePathStyle`), or a connection implementing the `MediaStore` contract. Without it, media features are unavailable. |
-| `auth` | Admin login, from `@monti-cms/nextjs/auth`: `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, NextAuth reads `AUTH_SECRET`) |
+| `auth` | Admin login, from `@monti-cms/auth`: `auth({ providers: [github({ clientId, clientSecret, admins })], host?, devBypass?, basePath?, secret? })`. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"), and `secret` is the value that signs login sessions (if unset, the `AUTH_SECRET` environment variable). In a Next.js app, `host` is `nextHost` of `@monti-cms/nextjs/auth` |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else off in production and on in development |
 | `secret` | Master secret for values plugins keep encrypted in the DB (AI service keys). Plugins never see it: each gets a key derived from it and the plugin name ("Plugin secrets"). Keep it separate from the login signing value. |
 | `previousSecrets` | Optional. Secrets `secret` replaced. Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
@@ -881,7 +900,7 @@ A client can send `Host` and `X-Forwarded-Host` itself, so the server does not t
 
 ### Login bypass for development
 
-`githubAuth({ devBypass: true })` (`CMS_DEV_AUTH_BYPASS=1` in the generated config) treats the visitor as the first admin without login. It is limited so a staging server cannot be opened by accident:
+`auth({ devBypass: true })` (`CMS_DEV_AUTH_BYPASS=1` in the generated config) treats the visitor as the first admin without login. It is limited so a staging server cannot be opened by accident:
 
 - `NODE_ENV` must be `development`. In any other mode the flag is ignored and a warning is logged.
 - The process must not look deployed: it is refused if a hosting platform variable (`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`) is set or `AUTH_URL` points to a public address. In that case the server refuses to start (the login connection throws on first use) with a message that names the reason.

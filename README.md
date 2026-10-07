@@ -13,7 +13,8 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 | [`@monti-cms/core`](packages/core) | The core. Config, entry storage and publishing, the document model, admin API, command line (`monti`) |
 | [`@monti-cms/mdx`](packages/mdx) | MDX extension. The `mdx` format, the admin source panel, `renderMdx` and the syntax extension API |
 | [`@monti-cms/admin`](packages/admin) | The admin UI. Editor, entry list, media, templates. Framework-neutral: it reaches the router through an adapter |
-| [`@monti-cms/nextjs`](packages/nextjs) | The Next.js adapter. Route handler, `next.config.ts` wiring, admin page and layout with the App Router adapter, GitHub login (NextAuth) |
+| [`@monti-cms/auth`](packages/auth) | Admin login on `Request` and `Response` (Auth.js core), with pluggable providers. GitHub ships with it |
+| [`@monti-cms/nextjs`](packages/nextjs) | The Next.js adapter. Route handler, `next.config.ts` wiring, admin page and layout with the App Router adapter, the Next side of the login |
 | [`@monti-cms/blocks`](packages/blocks) | Block extension. Callout, toggle, tabs, columns, code explorer, Mermaid, chart |
 | [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |
 | [`@monti-cms/seo`](packages/seo) | SEO extension. Search and sharing fields with a preview |

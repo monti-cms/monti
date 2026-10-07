@@ -7,17 +7,17 @@ Monti의 Next.js 어댑터. Next에 묶인 것을 모두 갖고 있어서 `@mont
 - 관리자 API의 라우트 핸들러(`createRouteHandler`),
 - `next.config.ts` 연결(`withCms`),
 - 관리자가 필요로 하는 App Router 어댑터를 얹은 관리자 페이지·레이아웃(`CmsAdminLayout`·`CmsAdminPage`·`NextAdminRouter`),
-- NextAuth 관리자 로그인(`githubAuth`).
+- 관리자 로그인(`@monti-cms/auth`)의 Next.js 쪽인 `nextHost`.
 
 지금 지원하는 호스트는 Next.js(App Router)뿐이다. `@monti-cms/core` README의 "지원하는 프레임워크"를 본다. 다른 프레임워크는 이 패키지 같은 다른 패키지가 된다.
 
 ## 설치
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32
+pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 ```
 
-아래 파일들은 `monti init`(`@monti-cms/core`)이 만들어 준다. `next`와 `react`는 peer이고, `next-auth`는 GitHub 로그인에만 필요하다.
+아래 파일들은 `monti init`(`@monti-cms/core`)이 만들어 준다. `next`와 `react`는 peer다.
 
 ## 진입점
 
@@ -26,7 +26,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, `CmsRouteHandler` 타입 |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth(options)` |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost`, `githubAuth(options)`(더 쓰지 않음) |
 
 ### 라우트 핸들러
 
@@ -80,28 +80,39 @@ export default function AdminPage(props: CmsAdminPageProps) {
 
 `NextAdminRouter`는 관리자용 App Router 어댑터다. `next/link`와 `next/navigation` 위에 만든 `Link`·`navigate`·`replace`·`usePathname`·`useSearchParams`를 `@monti-cms/admin`에 주는 클라이언트 컴포넌트다. `CmsAdminPage`는 관리자의 서버 화면에 Next의 `redirect`와 `notFound`를 준다. 관리자 자체는 Next에서 아무것도 가져오지 않는다.
 
-### GitHub 로그인
+### 로그인
 
 ```ts
 // cms.server.ts
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { githubAuth } from "@monti-cms/nextjs/auth";
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { nextHost } from "@monti-cms/nextjs/auth";
 
 export const cms = createCms({
 	server: defineServerConfig({
 		database: postgres({ connectionString: process.env.CMS_DATABASE_URL }),
-		auth: githubAuth({
-			clientId: process.env.AUTH_GITHUB_ID,
-			clientSecret: process.env.AUTH_GITHUB_SECRET,
-			adminIds: [process.env.CMS_ADMIN_GITHUB_ID],
+		auth: auth({
+			providers: [
+				github({
+					clientId: process.env.AUTH_GITHUB_ID,
+					clientSecret: process.env.AUTH_GITHUB_SECRET,
+					admins: [process.env.CMS_ADMIN_GITHUB_ID],
+				}),
+			],
+			host: nextHost,
 			secret: process.env.AUTH_SECRET,
 		}),
 	}),
 });
 ```
 
-옵션·로그인 경로·호스트 신뢰·개발용 우회는 코어 README("서버 설정", "로그인 경로", "호스트 신뢰", "개발용 로그인 우회")에 있다. NextAuth(`next-auth`)는 로그인을 처음 쓸 때 불러오므로, 콘텐츠만 읽는 코드와 명령줄 도구는 불러오지 않는다. 이 연결은 코어가 호스트에 요구하는 두 가지를 채운다. 지금 요청의 헤더(`next/headers`)와, NextAuth의 리다이렉트를 Next까지 보내는 방법이다.
+옵션·로그인 경로·호스트 신뢰·개발용 우회는 코어 README("서버 설정", "로그인 경로", "호스트 신뢰", "개발용 로그인 우회")에 있다. 로그인 자체는 `@monti-cms/auth`(`Request`·`Response` 위의 Auth.js core. 로그인 방법을 프로바이더로 받는다. 그 README를 본다)이고 Next에서 아무것도 가져오지 않는다. 이 패키지는 코어가 Next 호스트에 요구하는 한 가지를 채운다. 지금 요청의 헤더인 `nextHost`다(요청할 때 `next/headers`에서 읽으므로 콘텐츠만 읽는 코드와 명령줄 도구는 불러오지 않는다). 던진 리다이렉트를 Next까지 보낼 일이 더는 없어서 `rethrow`도 없다.
+
+`githubAuth(options)`는 전에 쓰던 GitHub 로그인 한 줄이다(`clientId`, `clientSecret`, `adminIds`, `devBypass`, `basePath`, `secret`). 지금도 동작하며 `auth({ providers: [github(...)], host: nextHost })`를 부르지만 더 쓰지 않기로 했다.
 
 ## 올리기
+
+NextAuth에서 `@monti-cms/auth`로 옮기는 것(주인이 고칠 것은 없고, 모두 한 번 다시 로그인한다)은 `@monti-cms/core` README의 "`@monti-cms/auth`로 올리기"를 본다.
 
 `@monti-cms/core/next`·`@monti-cms/core/server`·`@monti-cms/admin/next`에서 바뀐 import는 `@monti-cms/core` README의 "`@monti-cms/nextjs`로 올리기"를 본다.

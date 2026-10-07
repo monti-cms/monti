@@ -78,8 +78,12 @@ describe("monti init", () => {
 		expect(config + read(dir, "monti.schema.json")).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
 		// The types of the schema are written next to it.
 		expect(read(dir, "monti-env.d.ts")).toContain('readonly defaultLocale: "en";');
-		expect(read(dir, "cms.server.ts")).toContain("githubAuth({");
-		expect(read(dir, "cms.server.ts")).toContain('import { githubAuth } from "@monti-cms/nextjs/auth";');
+		expect(read(dir, "cms.server.ts")).toContain("auth({\n\t\t\t// Ways to sign in.");
+		expect(read(dir, "cms.server.ts")).toContain("github({");
+		expect(read(dir, "cms.server.ts")).toContain('import { auth } from "@monti-cms/auth";');
+		expect(read(dir, "cms.server.ts")).toContain('import { github } from "@monti-cms/auth/github";');
+		expect(read(dir, "cms.server.ts")).toContain('import { nextHost } from "@monti-cms/nextjs/auth";');
+		expect(read(dir, "cms.server.ts")).not.toContain("next-auth");
 		// The server file exports the instance; every generated file imports it from there by a relative path.
 		expect(read(dir, "cms.server.ts")).toContain("export const cms = createCms({");
 		// The server file imports the site config by a relative path and hands it to the instance: there is no alias for it.

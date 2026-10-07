@@ -11,7 +11,8 @@ DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키�
 
 - `@monti-cms/core`는 표준 `Request`·`Response`로 말하고(`cms.handle(request)`) Next.js에서 아무것도 가져오지 않는다. 호스트가 대 줘야 하는 것(지금 요청의 헤더, 로그인 뒤 리다이렉트)은 로그인 연결(`CmsAuth.requestHeaders`·`CmsAuth.rethrow`)로 들어온다.
 - `@monti-cms/admin`(화면과 `@monti-cms/admin/hooks`)도 Next.js에서 아무것도 가져오지 않는다. 라우터는 받은 어댑터 `{ Link, navigate, replace, usePathname, useSearchParams }`로만 닿고(`@monti-cms/admin/router`의 `AdminRouterProvider`), 서버 화면이 필요로 하는 리다이렉트와 404는 `AdminServer`(`@monti-cms/admin/host`)로 받는다.
-- `@monti-cms/nextjs`가 Next에 묶인 것을 모두 갖는다. 라우트 핸들러, `next.config.ts`용 `withCms`, App Router 어댑터를 얹은 관리자 페이지·레이아웃, NextAuth 로그인(`githubAuth`)이다.
+- `@monti-cms/nextjs`가 Next에 묶인 것을 모두 갖는다. 라우트 핸들러, `next.config.ts`용 `withCms`, App Router 어댑터를 얹은 관리자 페이지·레이아웃, `nextHost`(로그인의 Next 쪽)다.
+- `@monti-cms/auth`가 관리자 로그인이고, 이것도 프레임워크에 묶이지 않는다. Auth.js core 위에서 `CmsAuth`를 `Request`·`Response`로 구현하며, 로그인 방법은 갈아 끼우는 프로바이더다(GitHub가 들어 있다).
 
 다른 호스트(Astro, Remix 등)는 코어나 관리자를 고치지 않고 어댑터 패키지를 새로 만들어 붙인다. 테스트가 경계를 지킨다. 코어와 관리자의 소스 파일은 `next/*`를 가져올 수 없다.
 
@@ -22,12 +23,12 @@ Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필�
 ### 1. 패키지
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner \
+pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next-themes @tanstack/react-query sonner \
   @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
 관리자 패키지와 AI 플러그인은 React Query·sonner·Tiptap·lucide 아이콘을 앱과 같은 하나로 써야 해서 앱이 설치한다(peer).
-`next-auth`는 GitHub 로그인(`@monti-cms/nextjs/auth`의 `githubAuth`)을 쓸 때만 필요하다.
+로그인은 `@monti-cms/auth`(Auth.js core, Next.js 없음)다. GitHub 로그인에 다른 패키지는 필요 없다. 프로바이더는 그 README를 본다.
 명령줄 `monti`는 `@monti-cms/core`에 들어 있다(TypeScript 설정 파일은 함께 설치되는 tsx가 읽는다).
 
 pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패로 끝낸다(10은 경고만 한다). tsx가 쓰는 esbuild의 설치 스크립트를 허락한다.
@@ -137,7 +138,7 @@ media: s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true, buck
 | --- | --- |
 | `CMS_DATABASE_URL` | Postgres 연결 주소 |
 | `CMS_SCHEMA` | 선택. 스키마 이름(없으면 `public`). 이미 앱 표가 있는 DB에 붙일 때는 따로 두는 편이 안전하다. `monti migrate`가 없으면 만든다 |
-| `AUTH_SECRET` | 임의의 긴 값. 로그인 세션 서명(`githubAuth({ secret })`) |
+| `AUTH_SECRET` | 임의의 긴 값. 로그인 세션 서명(`auth({ secret })`) |
 | `CMS_SECRET` | 임의의 긴 값(`AUTH_SECRET`과 다르게). 플러그인이 저장하는 값(AI 서비스 키)을 암호화할 때 바탕이 되는 마스터 비밀 값(서버 설정 `secret`). 바꿀 때는 옛 값을 `previousSecrets`에 남긴다("플러그인 비밀 값") |
 | `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | GitHub OAuth 앱. 콜백 주소는 `<사이트 주소>/api/cms/auth/callback/github` |
 | `CMS_ADMIN_GITHUB_ID` | 관리자 GitHub 숫자 ID |
@@ -165,14 +166,14 @@ pnpm exec monti migrate
 
 ### 로그인 경로
 
-GitHub 로그인 API는 기본으로 관리자 API 라우트가 함께 받는다(`/api/cms/auth/*`). 그래서 로그인 라우트 파일이 따로 없다.
+로그인 API는 기본으로 관리자 API 라우트가 함께 받는다(`/api/cms/auth/*`). 그래서 로그인 라우트 파일이 따로 없다.
 예전처럼 `/api/auth/*`를 쓰는 앱(이미 등록한 OAuth 콜백 주소를 바꾸지 않으려는 앱)은 경로를 고르고 라우트 파일을 둔다.
 
 ```ts
 // cms.server.ts
-auth: githubAuth({ /* … */, basePath: "/api/auth" }),
+auth: auth({ providers: [/* … */], host: nextHost, basePath: "/api/auth" }),
 
-// app/api/auth/[...nextauth]/route.ts
+// app/api/auth/[...auth]/route.ts
 import { cms } from "../../../../cms.server";
 export const { GET, POST } = cms.authHandlers;
 ```
@@ -291,12 +292,17 @@ export default defineConfig({
 ```ts
 // cms.server.ts
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { githubAuth } from "@monti-cms/nextjs/auth";
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { nextHost } from "@monti-cms/nextjs/auth";
 import config from "./cms.config";
 
 export const cms = createCms({
 	config,
-	server: defineServerConfig({ database: postgres({ /* … */ }), auth: githubAuth({ /* … */ }) }),
+	server: defineServerConfig({
+		database: postgres({ /* … */ }),
+		auth: auth({ providers: [github({ /* … */ })], host: nextHost }),
+	}),
 });
 ```
 
@@ -319,7 +325,7 @@ HTTP 계층은 표준 웹 `Request`와 `Response`로 동작한다.
 관리자 API, 로그인 연결, 공개 API, 플러그인 라우트에는 `NextRequest`, `NextResponse`, `request.nextUrl`을 쓰지 않는다.
 `cms.handle(request)`가 요청 하나를 처리하고(`/api/cms/` 뒤의 경로는 URL에서 읽는다), `@monti-cms/nextjs`의 `createRouteHandler(cms)`는 그 위에 얹은 얇은 Next 어댑터다.
 플러그인 라우트(`adminRoute`)는 표준 `Request`를 받는다. 쿼리는 `new URL(request.url).searchParams`로 읽고, 응답은 `Response.json(…)`으로 만든다.
-코어는 Next.js에서 아무것도 가져오지 않는다. 호스트가 대 주는 것은 로그인 연결로 들어온다. `CmsAuth.requestHeaders()`(처리 중인 요청의 헤더, 개발용 로그인 우회가 읽는다)와 `CmsAuth.rethrow(error)`(로그인 라이브러리가 던지는 리다이렉트를 호스트까지 보낸다)다. `@monti-cms/nextjs/auth`의 `githubAuth`는 둘 다 Next의 함수로 채우고, 다른 호스트의 `AuthAdapter`는 제 것을 채운다.
+코어는 Next.js에서 아무것도 가져오지 않는다. 호스트가 대 주는 것은 로그인 연결로 들어온다. `CmsAuth.requestHeaders()`(처리 중인 요청의 헤더, 개발용 로그인 우회와 `session()`이 읽는다)와 `CmsAuth.rethrow(error)`(로그인 라이브러리가 던지는 리다이렉트를 호스트까지 보낸다. `@monti-cms/auth`는 `Response`로 답하므로 필요 없다)다. `@monti-cms/nextjs/auth`의 `nextHost`가 `requestHeaders`를 Next의 함수로 채우며 `auth({ host })`에 넘기고, 다른 프레임워크의 호스트는 제 것을 채운다.
 
 읽기 API는 인스턴스에 달려 있다(`getEntry(cms, …)`가 아니라 `cms.read.getEntry(…)`). 사이트 코드가 하나만 불러오면 되고, 타입(`MetadataFor` 등)은 `@monti-cms/core/read`에 남는다.
 
@@ -365,14 +371,25 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 
 Next에 묶인 코드는 모두 `@monti-cms/core`와 `@monti-cms/admin`에서 새 패키지 `@monti-cms/nextjs`로 옮겼다. 옛 자리에는 별칭이 남아 있지 않다.
 
-- `@monti-cms/nextjs`를 설치한다(`next`와, GitHub 로그인용 `next-auth`는 이 패키지의 peer다. 코어와 관리자는 더 이상 요구하지 않는다).
+- `@monti-cms/nextjs`를 설치한다(`next`는 이 패키지의 peer다. 코어와 관리자는 더 이상 요구하지 않는다).
 - `next.config.ts`: `import { withCms } from "@monti-cms/core/next"`는 `from "@monti-cms/nextjs/config"`가 된다.
-- `cms.server.ts`: `githubAuth`가 `@monti-cms/core/server`에서 `@monti-cms/nextjs/auth`로 옮겼다.
+- `cms.server.ts`: `githubAuth`가 `@monti-cms/core/server`에서 `@monti-cms/nextjs/auth`로 옮겼다(그리고 `@monti-cms/auth`로 대체됐다. "`@monti-cms/auth`로 올리기"를 본다).
 - `app/api/cms/[...path]/route.ts`: `cms.routeHandler()`는 `@monti-cms/nextjs`의 `createRouteHandler(cms)`가 된다. `CmsRouteHandler` 타입도 거기서 내보낸다.
 - 관리자 레이아웃·페이지: `@monti-cms/admin/next`는 `@monti-cms/nextjs/admin`이 된다(`CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata`, props는 같다). 레이아웃이 관리자용 App Router 어댑터를 그린다.
 - 관리자 메시지: 페이지 제목 키가 `cms-admin.next` 사전에서 `cms-admin.layout`으로 옮겼다(`admin.messages["cms-admin.next"]`를 덮어쓴 경우에만 해당한다).
 - 직접 만든 `AuthAdapter`: `CmsAuth`에 선택 항목 `requestHeaders()`와 `rethrow(error)`가 생겼다. `requestHeaders`가 없으면 개발용 로그인 우회는 적용되지 않는다.
 - `CmsAdminLayout`이 아닌 다른 방법으로 관리자 화면을 붙인다면: `NextAdminRouter`(`@monti-cms/nextjs/admin`)로, 또는 직접 만든 어댑터를 준 `AdminRouterProvider`로 감싼다.
+
+### `@monti-cms/auth`로 올리기
+
+GitHub 로그인이 NextAuth(`next-auth`, `@monti-cms/nextjs` 안)에서 프레임워크에 묶이지 않는 패키지 `@monti-cms/auth`로 옮겼다. Auth.js core 위에 만들었고 로그인 방법을 프로바이더로 받는다.
+
+- `@monti-cms/auth`를 설치한다. `@monti-cms/nextjs/auth`의 `githubAuth`는 같은 옵션으로 계속 동작하므로(새 패키지를 부른다) 기존 `cms.server.ts`는 그대로 돈다. 다만 더 쓰지 않기로 했다.
+- 새 모양은 `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })`다. `auth`는 `@monti-cms/auth`, `github`는 `@monti-cms/auth/github`, `nextHost`는 `@monti-cms/nextjs/auth`에서 온다. `adminIds`는 프로바이더의 `admins`가 되고 여전히 GitHub 숫자 ID를 받는다(로그인 이름은 처음부터 비교하지 않았다).
+- 모두 한 번 다시 로그인한다. NextAuth가 만든 세션은 읽지 않는다. 환경 변수(`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`)와 OAuth 콜백 URL(`/api/cms/auth/callback/github`)은 그대로다. `package.json`에서 `next-auth`는 빼도 된다.
+- 계정 ID에 프로바이더가 붙는다(`github:12345678`). `AuthContext.accountId`, `CmsAuth.devUserId`, 이름이 없을 때 변경 기록에 남는 작성자가 그렇다. 직접 만든 `CmsAuth`의 `isAdmin(userId)`는 이 값을 받는다.
+- `CmsAuth`가 바뀐 곳(직접 만든 `AuthAdapter`용): `session(request?)`가 요청을 받을 수 있고, `signIn`·`signOut`이 라우트가 그대로 돌려줄 `Response`(쿠키를 실은 리다이렉트)로 끝날 수 있으며, `AuthProvider`에 선택 항목 `icon`이, `AuthCreateContext`에 `storage(plugin)`(`cms.storage`)이 생겼다.
+- NextAuth와 함께 `next-auth` 모듈 확장(`session.user.githubId`)도 없어졌다.
 
 ### `@cms-server` 별칭에서 올리기
 
@@ -450,7 +467,9 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth` |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost`(`auth()`의 `host`로 넘긴다), `githubAuth`(더 쓰지 않음) |
+| `@monti-cms/auth` | `cms.server.ts` | `auth({ providers, admins?, secret?, devBypass?, basePath?, host? })`, `LoginProvider` 타입 |
+| `@monti-cms/auth/github` | `cms.server.ts` | `github({ clientId, clientSecret, admins })` |
 | `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`(`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>`·`DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"). MDX 글은 `@monti-cms/mdx/render`의 `renderMdx`가 그린다. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | 공개 화면(타입) | `ReadEntry`·`MetadataFor` 등 `cms.read`의 타입. `cms.read`가 공개본을 읽는다(`getEntry`·`listEntries`·`getTranslations`·`getPreview`: 관계·주소·옛 주소 이동·원문 대체) |
 | `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(그냥 `tsx`) |
@@ -860,7 +879,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 |---|---|
 | `database` | 콘텐츠 저장소. `postgres({ connectionString, schema })` |
 | `media` | 이미지·첨부 파일 저장소. `@monti-cms/core/s3`의 `r2Storage`·`s3Storage`(`region`·`forcePathStyle`) 또는 `MediaStore` 계약을 구현한 연결. 없으면 미디어 기능을 못 쓴다. |
-| `auth` | 관리자 로그인. `@monti-cms/nextjs/auth`의 `githubAuth({ clientId, clientSecret, adminIds, devBypass, basePath?, secret })`. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로"), `secret`은 로그인 세션 서명 값(없으면 NextAuth가 `AUTH_SECRET`을 읽는다) |
+| `auth` | 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github({ clientId, clientSecret, admins })], host?, devBypass?, basePath?, secret? })`. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로"), `secret`은 로그인 세션 서명 값(없으면 `AUTH_SECRET` 환경 변수)이다. Next.js 앱에서 `host`는 `@monti-cms/nextjs/auth`의 `nextHost`다 |
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 운영에서는 끔·개발에서는 켬 |
 | `secret` | 플러그인이 DB에 암호화해 두는 값(AI 서비스 키)의 마스터 비밀 값. 플러그인은 이 값을 보지 못하고, 이 값과 플러그인 이름에서 만든 키만 받는다("플러그인 비밀 값"). 로그인 서명 값과 따로 둔다. |
 | `previousSecrets` | 선택. `secret`이 바뀌기 전의 값들. 이 값으로 암호화한 저장 값도 계속 읽히고, 다시 저장할 때 `secret`으로 새로 암호화된다. 그래서 `secret`을 바꿔도 저장된 키를 다시 넣지 않아도 된다. |
@@ -881,7 +900,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 
 ### 개발용 로그인 우회
 
-`githubAuth({ devBypass: true })`(생성된 설정에서는 `CMS_DEV_AUTH_BYPASS=1`)는 방문자를 로그인 없이 첫 번째 관리자로 본다. 스테이징 서버가 실수로 열리지 않도록 다음처럼 제한한다.
+`auth({ devBypass: true })`(생성된 설정에서는 `CMS_DEV_AUTH_BYPASS=1`)는 방문자를 로그인 없이 첫 번째 관리자로 본다. 스테이징 서버가 실수로 열리지 않도록 다음처럼 제한한다.
 
 - `NODE_ENV`가 `development`여야 한다. 다른 모드에서는 이 값을 무시하고 경고를 남긴다.
 - 배포된 서버처럼 보이면 안 된다. 호스팅 플랫폼 변수(`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `RAILWAY_ENVIRONMENT`, `FLY_APP_NAME`, `K_SERVICE`, `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `KUBERNETES_SERVICE_HOST`, `DYNO`)가 있거나 `AUTH_URL`이 공개 주소를 가리키면 거부한다. 이때 서버는 시작을 거부하고(로그인 연결을 처음 쓸 때 오류를 던진다) 이유를 알려 준다.

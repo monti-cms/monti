@@ -7,17 +7,17 @@ The Next.js adapter of Monti. It holds everything Next-specific, so `@monti-cms/
 - the route handler of the admin API (`createRouteHandler`),
 - the `next.config.ts` wiring (`withCms`),
 - the admin page and layout, with the App Router adapter the admin needs (`CmsAdminLayout`, `CmsAdminPage`, `NextAdminRouter`),
-- the NextAuth admin login (`githubAuth`).
+- `nextHost`, the Next.js side of the admin login (`@monti-cms/auth`).
 
 Next.js (App Router) is the only supported host for now; see "Supported frameworks" in the `@monti-cms/core` README. Another framework would be another package like this one.
 
 ## Install
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32
+pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 ```
 
-`monti init` (in `@monti-cms/core`) writes the files below for you. `next` and `react` are peers; `next-auth` is only needed for GitHub login.
+`monti init` (in `@monti-cms/core`) writes the files below for you. `next` and `react` are peers.
 
 ## Entry points
 
@@ -26,7 +26,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, the `CmsRouteHandler` type |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth(options)` |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost`, `githubAuth(options)` (deprecated) |
 
 ### Route handler
 
@@ -80,28 +80,39 @@ export default function AdminPage(props: CmsAdminPageProps) {
 
 `NextAdminRouter` is the App Router adapter of the admin: a client component that gives `@monti-cms/admin` a `Link`, `navigate`, `replace`, `usePathname` and `useSearchParams` built on `next/link` and `next/navigation`. `CmsAdminPage` gives the admin's server screens Next's `redirect` and `notFound`. The admin itself imports nothing from Next.
 
-### GitHub login
+### Login
 
 ```ts
 // cms.server.ts
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { githubAuth } from "@monti-cms/nextjs/auth";
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { nextHost } from "@monti-cms/nextjs/auth";
 
 export const cms = createCms({
 	server: defineServerConfig({
 		database: postgres({ connectionString: process.env.CMS_DATABASE_URL }),
-		auth: githubAuth({
-			clientId: process.env.AUTH_GITHUB_ID,
-			clientSecret: process.env.AUTH_GITHUB_SECRET,
-			adminIds: [process.env.CMS_ADMIN_GITHUB_ID],
+		auth: auth({
+			providers: [
+				github({
+					clientId: process.env.AUTH_GITHUB_ID,
+					clientSecret: process.env.AUTH_GITHUB_SECRET,
+					admins: [process.env.CMS_ADMIN_GITHUB_ID],
+				}),
+			],
+			host: nextHost,
 			secret: process.env.AUTH_SECRET,
 		}),
 	}),
 });
 ```
 
-The options, the login path, host trust and the development bypass are described in the core README ("Server config", "Login path", "Host trust", "Login bypass for development"). NextAuth (`next-auth`) is loaded the first time login is used, so code that only reads content, and command-line tools, never load it. The connection supplies the two things the core asks of a host: the headers of the current request (from `next/headers`) and a way to let NextAuth's redirects reach Next.
+The options, the login path, host trust and the development bypass are described in the core README ("Server config", "Login path", "Host trust", "Login bypass for development"). The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers; see its README), and it imports nothing from Next. This package supplies the one thing the core asks of a Next host: `nextHost`, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). Nothing has to reach Next as a thrown redirect any more, so there is no `rethrow`.
+
+`githubAuth(options)` is the previous one-call GitHub login (`clientId`, `clientSecret`, `adminIds`, `devBypass`, `basePath`, `secret`). It still works and calls `auth({ providers: [github(...)], host: nextHost })`, but is deprecated.
 
 ## Upgrading
+
+For the move from NextAuth to `@monti-cms/auth` (what changes for the owner: nothing to edit, everyone signs in once more), see "Upgrading to `@monti-cms/auth`" in the `@monti-cms/core` README.
 
 See "Upgrading to `@monti-cms/nextjs`" in the `@monti-cms/core` README for the import changes from `@monti-cms/core/next`, `@monti-cms/core/server` and `@monti-cms/admin/next`.
