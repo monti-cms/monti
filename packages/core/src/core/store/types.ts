@@ -276,6 +276,38 @@ export interface ListEntriesParams {
 	pageSize?: 25 | 50 | 100;
 }
 
+/** Largest number of hits one search returns. */
+export const MAX_ENTRY_SEARCH_LIMIT = 50;
+/** Number of hits a search returns when `limit` is not given. */
+export const DEFAULT_ENTRY_SEARCH_LIMIT = 20;
+
+/** Search of the entries of one collection, for a picker (a relation field). Not a list: it has no paging, folders or filters beyond these. */
+export interface SearchEntriesParams {
+	collection: string;
+	/** Text to find in the title (or slug). Empty or absent returns the first entries by title. */
+	query?: string;
+	/** Only entries of this content language. All languages if unset. */
+	locale?: string;
+	/** Only published entries. Otherwise every entry outside the trash. */
+	publishedOnly?: boolean;
+	/** At most this many hits (1 to {@link MAX_ENTRY_SEARCH_LIMIT}, default {@link DEFAULT_ENTRY_SEARCH_LIMIT}). */
+	limit?: number;
+	/**
+	 * Entries to look up by id instead of searching (the values a picker already holds, so they show their titles whatever the search finds).
+	 * With it, `query`, `locale`, `publishedOnly` and `limit` are not applied; entries of another collection and trashed ones are not found.
+	 */
+	ids?: readonly string[];
+}
+
+/** One entry found by {@link SearchEntriesParams}. */
+export interface EntrySearchHit {
+	id: string;
+	/** The title of the draft, or the slug when the draft has no title. `null` when it has neither. */
+	title: string | null;
+	slug: string | null;
+	status: EntryStatus;
+}
+
 export interface ListEntriesResult {
 	items: ListEntriesItem[];
 	total: number;

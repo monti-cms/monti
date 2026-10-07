@@ -500,6 +500,7 @@ Bodies that do not parse, have front matter or would not read back the same are 
 Nothing fails because of such a body, published ones and templates included, since the data of an existing store always migrates. The published bodies and templates among them are logged by id (`[monti] N published bodies have no document …`): they read as unparsed (a page renders it as nothing) until you fix them in the editor.
 **Reference occurrences.** A body occurrence of a stored reference used to be `{ "type": "mdx", "line", "column", "blockId"? }`. Reads accept both shapes, and the next save of the entry writes the new one (`{ "type": "body", "blockId" }`); there is no SQL migration for them.
 
+- **Entry search for pickers.** `GET /api/cms/v1/entries/search?collection=…&query=…&locale=…&publishedOnly=true&limit=20` finds entries of one collection by title for a picker (the relation field of the admin searches this way instead of loading the whole list). It answers `{ items: [{ id, title, slug, status }] }`, best title matches first (an equal title, then a title that starts with the query, a word that starts with it, a title that contains it, a slug that contains it), at most `limit` (default 20, at most 50), never the trash. Repeating `id` looks those entries up by id instead. The store port is `searchEntries` (`ListStore`).
 - **Admin entry API.** `POST /api/cms/v1/entries` and `PATCH /api/cms/v1/entries/:id` take the body as `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) or as `body` (a text) with the `format` that reads it ("Formats"); `mdx` is gone. Sending a document and a text together, a text without its format, or a document that is not a valid stored document is `400 invalid_input`. With none of them, a new entry has an empty body and a patch keeps the current one.
   Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/entries/:id?format=<name>` adds `body` (a string) to `working` and `published` (and to the source of a translation): the document as text in that format, written to be imported again. `GET /api/cms/v1/meta` reports the size limits as `limits.textBytes` (a text, in any format) and `limits.docBytes`, and the formats of the instance as `formats` (`{ name, label, mimeType, extension, canImport }`). The admin editor always sends `doc`.
 - **Template API and templates.** A body template is a document like an entry body: `body_templates.doc` is its only source and nothing writes `body_templates.mdx` any more (the column stays, optional). `POST /api/cms/v1/templates` and `PATCH /api/cms/v1/templates/:id` take `{ name, doc }` or `{ name, body, format }` (with neither, a template is empty; a patch keeps the body), and answer with `doc` and no `mdx`; `?format=<name>` on a `GET` adds `body` to each template. A text the format rejects is `422 format_import_failed` with the format's findings, because a template, unlike an entry draft, has no place to keep text that is not a document.
@@ -628,6 +629,31 @@ blocks: [
   makes its value the code block line label (the `anchor` line effect), and the editor's body–code linking uses this decoration (only one per site).
 - Choice values, required values and child values (`childValue`, e.g. the tab to open first is one of the tab names) of attributes, and the number of children (`children.min`, `max`) are
   validated before publishing.
+- A block can check its own syntax with `validate(node, ctx)`. Core calls it for every node of the block (a code fence of its language, an element, or a text decoration) in the write pipeline, after core preparation, on every create, save, publish and bulk, API or AI write.
+  `node` has `name`, `id` (the block's id in the stored document), `attributes` and, for a fence block, `source` (the code without its annotation comments); `ctx` has `site` (`site.createTranslator(messages)` gives text in the admin language), `locale` and `operation`.
+  It returns `{ code, message?, params? }[]` (or a promise of one). The findings are **warnings**, never blockers: each carries the block's id in `position.blockId` and its name in `params.block`, comes back as `warnings` in the save and publish responses, and the editor shows it under that block. A check that throws becomes a `block_validate_failed` warning and the write goes on.
+  `validate` is a function, so it runs on the server and is not part of the block data the browser receives.
+  `@monti-cms/blocks` checks a chart with its own parser (`parseChartDsl`) and a Mermaid diagram with `mermaid.parse` (only when `mermaid` is installed).
+
+```ts
+defineBlock({
+	name: "map",
+	label: "Map",
+	syntax: { kind: "fence", lang: "map" },
+	component: "Map",
+	attributes: {},
+	editor: { view: "node", insertable: true },
+	validate: (node) =>
+		(node.source ?? "")
+			.split("\n")
+			.flatMap((line, index) =>
+				/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(line.trim())
+					? []
+					: [{ code: "map_line", message: `Line ${index + 1} is not "lat,lng".`, params: { line: index + 1 } }],
+			),
+});
+```
+
 - Removing a block that was in use drops it from the stored syntax. Bodies that already used that block turn into plain text when saved again, so do not remove blocks that are in use.
 - A container that holds body content starts with an empty paragraph when inserted from the slash menu. `editor.insert.codeBlocks` (`[{ language, title?, code? }]`) starts it with those code blocks instead, `title` being the code fence's `title` meta (the code explorer uses it to start with one `src/index.ts` file).
 - The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockViews` (the whole view of any block,
@@ -897,7 +923,7 @@ export const cms = createCms({ server });
 | 1 | Build the input: from the request, or from the stored draft (publish, bulk) |
 | 2 | `transform` hooks, in registration order (server config first, then the plugins in config order). Each gets the previous one's result |
 | 3 | Core preparation: normalization, reference collection, core validation. **Always runs, on the transformed data** |
-| 4 | `validate` hooks: extra failures and warnings |
+| 4 | The `validate` of each block (warnings only), then the `validate` hooks: extra failures and warnings |
 | 5 | Publish (and restoring a record, which publishes it again): `validatePublish` hooks: extra failures and warnings |
 | 6 | Store commit, one transaction per entry (a bulk change commits item by item) |
 | 7 | `afterCommit` hooks |

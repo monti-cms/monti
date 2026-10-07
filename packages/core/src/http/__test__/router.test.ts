@@ -14,6 +14,8 @@ describe("admin API route table", () => {
 	it("named segments match before [name] segments, and params are extracted", () => {
 		expect(matchRoute(["v1", "entries"])?.params).toEqual({});
 		expect(matchRoute(["v1", "entries", "abc"])?.params).toEqual({ id: "abc" });
+		// `search` is its own route, not an entry id.
+		expect(matchRoute(["v1", "entries", "search"])?.params).toEqual({});
 		expect(matchRoute(["v1", "entries", "abc", "publish"])?.params).toEqual({ id: "abc" });
 		expect(matchRoute(["v1", "media", "uploads"])?.params).toEqual({});
 		expect(matchRoute(["v1", "media", "m1", "complete"])?.params).toEqual({ id: "m1" });

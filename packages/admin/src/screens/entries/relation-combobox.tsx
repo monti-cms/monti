@@ -29,7 +29,19 @@ export interface RelationOption {
 type Item = RelationOption & { create?: true };
 
 interface RelationComboboxProps {
+	/** The choices. With `onSearch` these are what the server found for the typed text, shown as they are (not filtered again here). */
 	options: readonly RelationOption[];
+	/**
+	 * Names of values that may not be among `options` (the picked ones, when the options are a search result). Used to label picked values.
+	 */
+	known?: readonly RelationOption[];
+	/**
+	 * Called with the typed text (and with the empty text when the list closes), so the options can come from a server search.
+	 * Turns off the filtering done here: the options are already the matches.
+	 */
+	onSearch?: (query: string) => void;
+	/** The options for the latest text are on their way. Shown in place of "No matches". */
+	loading?: boolean;
 	multiple: boolean;
 	/** Picked IDs. For a single-pick relation, empty or one. */
 	value: readonly string[];
@@ -52,6 +64,9 @@ interface RelationComboboxProps {
  */
 export function RelationCombobox({
 	options,
+	known,
+	onSearch,
+	loading = false,
 	multiple,
 	value,
 	onValueChange,
@@ -70,7 +85,10 @@ export function RelationCombobox({
 	const [isCreating, setIsCreating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const byValue = useMemo(() => new Map(options.map((option) => [option.value, option])), [options]);
+	const byValue = useMemo(
+		() => new Map([...(known ?? []), ...options].map((option) => [option.value, option])),
+		[options, known],
+	);
 	// A selected value not yet in the list (e.g. just created) is shown by a short ID instead of a name. Base UI resets
 	// the input text to the picked name when the value object changes, so pass the same object for the same selection.
 	const valueKey = value.join("\u0000");
@@ -87,6 +105,26 @@ export function RelationCombobox({
 		trimmed !== "" &&
 		// Do not create if the picked item's name is shown in the input (single-pick relation) or the name already exists.
 		![...options, ...selected].some((option) => option.label.toLocaleLowerCase() === trimmed.toLocaleLowerCase());
+	/** Typing asks the server again; so does clearing the text. Picking an item only puts its name in the input, which is not a new search. */
+	const searchProps = onSearch
+		? {
+				filter: null,
+				onInputValueChange: (text: string, details: { reason: string }) => {
+					setQuery(text);
+					if (
+						details.reason === "input-change" ||
+						details.reason === "input-clear" ||
+						details.reason === "clear-press"
+					) {
+						onSearch(text);
+					}
+				},
+				// A closed list starts the next search from the first entries again.
+				onOpenChange: (open: boolean) => {
+					if (!open) onSearch("");
+				},
+			}
+		: { onInputValueChange: setQuery };
 	const items: Item[] = canCreate
 		? [...options, { value: `__create__:${trimmed}`, label: trimmed, create: true }]
 		: [...options];
@@ -109,7 +147,7 @@ export function RelationCombobox({
 
 	const list = (
 		<ComboboxContent anchor={multiple ? anchor : undefined}>
-			<ComboboxEmpty>{t("relation.empty")}</ComboboxEmpty>
+			<ComboboxEmpty>{loading ? t("loading") : t("relation.empty")}</ComboboxEmpty>
 			<ComboboxList>
 				{(item: Item) => (
 					<ComboboxItem key={item.value} value={item} className={cn(item.create && "text-cms-primary")}>
@@ -148,7 +186,7 @@ export function RelationCombobox({
 						if (created) void create(created.label, keep);
 						else onValueChange(keep);
 					}}
-					onInputValueChange={setQuery}
+					{...searchProps}
 					itemToStringLabel={(item: Item) => item.label}
 					isItemEqualToValue={(a: Item, b: Item) => a.value === b.value}
 				>
@@ -187,7 +225,7 @@ export function RelationCombobox({
 					if (next?.create) void create(next.label, []);
 					else onValueChange(next ? [next.value] : []);
 				}}
-				onInputValueChange={setQuery}
+				{...searchProps}
 				itemToStringLabel={(item: Item) => item.label}
 				isItemEqualToValue={(a: Item, b: Item) => a.value === b.value}
 			>

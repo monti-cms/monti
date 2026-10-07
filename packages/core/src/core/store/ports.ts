@@ -12,6 +12,7 @@ import type {
 	CompleteMediaAssetInput,
 	CreateMediaAssetInput,
 	Entry,
+	EntrySearchHit,
 	ExportSnapshot,
 	Folder,
 	IncomingReferenceItem,
@@ -24,6 +25,7 @@ import type {
 	PublishedEntryLookup,
 	PublishedEntryRecord,
 	PublishedPageParams,
+	SearchEntriesParams,
 	TranslationGroup,
 } from "./types";
 
@@ -119,6 +121,12 @@ export interface LifecycleStore {
 /** The admin list: search, filters, sorting and paging done by the store. */
 export interface ListStore {
 	listEntries(params: ListEntriesParams): Promise<ListEntriesResult>;
+	/**
+	 * Finds entries of one collection by title for a picker, so it loads only what it shows. The best matches come first: a title equal to the
+	 * query, then one that starts with it, one with a word that starts with it, one that contains it, and last a slug that contains it; equal
+	 * matches are ordered by title. Matching ignores case. Trashed entries are never found.
+	 */
+	searchEntries(params: SearchEntriesParams): Promise<EntrySearchHit[]>;
 }
 
 /** Per-collection virtual folders. */

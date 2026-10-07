@@ -548,5 +548,131 @@ export const listContract: ContractSuite = (factory) => {
 			},
 			30_000,
 		);
+
+		// -----------------------------------------------------------------------
+		// searchEntries: the picker search
+		// -----------------------------------------------------------------------
+
+		describe("searchEntries", () => {
+			const titles = (hits: readonly { title: string | null }[]) => hits.map((hit) => hit.title);
+
+			it("ranks a title equal to the query, then a prefix, a word start, a contains, and a slug match, ignoring case", async () => {
+				await seed(content, "s-contains", "The Roadmap");
+				await seed(content, "s-word", "My road trip");
+				await seed(content, "s-prefix", "Roadside");
+				await seed(content, "s-exact", "road");
+				await seed(content, "road-slug", "Something else");
+				await seed(content, "s-none", "Unrelated");
+				const hits = await store.searchEntries({ collection: content, query: "ROAD" });
+				expect(titles(hits)).toEqual(["road", "Roadside", "My road trip", "The Roadmap", "Something else"]);
+			});
+
+			it("answers title, slug and status, and the slug as the title of an entry without one", async () => {
+				const published = await seed(content, "found-it", "Found it", { status: "published" });
+				await seed(content, "untitled-one", null);
+				const hits = await store.searchEntries({ collection: content });
+				expect(hits).toContainEqual({ id: published.id, title: "Found it", slug: "found-it", status: "published" });
+				expect(hits).toContainEqual(
+					expect.objectContaining({ title: "untitled-one", slug: "untitled-one", status: "draft" }),
+				);
+			});
+
+			it("returns the first entries by title when there is no query, up to the limit", async () => {
+				for (const name of ["Charlie", "alpha", "Bravo", "delta"]) await seed(content, `l-${name}`, name);
+				expect(titles(await store.searchEntries({ collection: content }))).toEqual([
+					"alpha",
+					"Bravo",
+					"Charlie",
+					"delta",
+				]);
+				expect(titles(await store.searchEntries({ collection: content, query: "  ", limit: 2 }))).toEqual([
+					"alpha",
+					"Bravo",
+				]);
+			});
+
+			it("orders equal matches by title and caps the hits at the limit", async () => {
+				for (const name of ["pick b", "pick a", "pick c"]) await seed(content, name.replace(" ", "-"), name);
+				const hits = await store.searchEntries({ collection: content, query: "pick", limit: 2 });
+				expect(titles(hits)).toEqual(["pick a", "pick b"]);
+			});
+
+			it("matches % and _ in the query as text", async () => {
+				await seed(content, "pct-a", "100% done");
+				await seed(content, "pct-b", "1000 done");
+				expect(titles(await store.searchEntries({ collection: content, query: "100%" }))).toEqual(["100% done"]);
+				expect(titles(await store.searchEntries({ collection: content, query: "_" }))).toEqual([]);
+			});
+
+			it("searches one collection only, and never finds the trash", async () => {
+				const kept = await seed(content, "shared-kept", "Shared title");
+				const trashed = await seed(content, "shared-trashed", "Shared title trashed");
+				await store.trashEntry({ id: trashed.id, expectedVersion: trashed.version });
+				if (isolatedCollection) await seed(isolatedCollection, "shared-other", "Shared title elsewhere");
+				const hits = await store.searchEntries({ collection: content, query: "shared" });
+				expect(hits.map((hit) => hit.id)).toEqual([kept.id]);
+			});
+
+			it("finds only published entries with publishedOnly", async () => {
+				await seed(content, "p-draft", "Pub draft");
+				const live = await seed(content, "p-live", "Pub live", { status: "published" });
+				const hits = await store.searchEntries({ collection: content, query: "pub", publishedOnly: true });
+				expect(hits.map((hit) => hit.id)).toEqual([live.id]);
+				expect(titles(await store.searchEntries({ collection: content, query: "pub" }))).toEqual([
+					"Pub draft",
+					"Pub live",
+				]);
+			});
+
+			it.skipIf(!secondLocale)("finds only the entries of the locale", async () => {
+				await seed(content, "loc-default", "Locale default");
+				const other = await seedEntry(store, {
+					collection: content,
+					slug: "loc-other",
+					metadata: await metadataFor(content, "Locale other"),
+					text: "",
+					schemaVersion: 1,
+					contentHash: uniqueHash(),
+					locale: secondLocale,
+				});
+				const hits = await store.searchEntries({
+					collection: content,
+					query: "locale",
+					locale: secondLocale as string,
+				});
+				expect(hits.map((hit) => hit.id)).toEqual([other.id]);
+				expect(await store.searchEntries({ collection: content, query: "locale" })).toHaveLength(2);
+			});
+
+			it("looks entries up by id whatever the other filters say, in the collection only", async () => {
+				const draft = await seed(content, "id-draft", "By id");
+				const trashed = await seed(content, "id-trashed", "Trashed by id");
+				await store.trashEntry({ id: trashed.id, expectedVersion: trashed.version });
+				const other = isolatedCollection ? await seed(isolatedCollection, "id-other", "Other by id") : undefined;
+				const hits = await store.searchEntries({
+					collection: content,
+					ids: [draft.id, trashed.id, ...(other ? [other.id] : [])],
+					query: "nothing like it",
+					publishedOnly: true,
+				});
+				expect(hits.map((hit) => hit.id)).toEqual([draft.id]);
+				expect(await store.searchEntries({ collection: content, ids: [] })).toEqual([]);
+			});
+
+			it("rejects parameters it cannot search with", async () => {
+				for (const params of [
+					{ collection: "no-such-collection" },
+					{ collection: content, limit: 0 },
+					{ collection: content, limit: 51 },
+					{ collection: content, limit: 1.5 },
+					{ collection: content, locale: "xx-nope" },
+					{ collection: content, ids: ["not-an-id"] },
+					{ collection: content, query: 5 },
+					{ collection: content, publishedOnly: "yes" },
+				]) {
+					await expect(store.searchEntries(params as never)).rejects.toMatchObject({ code: "invalid_input" });
+				}
+			});
+		});
 	});
 };

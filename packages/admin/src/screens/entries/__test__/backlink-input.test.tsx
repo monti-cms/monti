@@ -51,13 +51,12 @@ function stubApi(patchStatus: number) {
 		"fetch",
 		vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
-			if (url.startsWith("/api/cms/v1/entries?")) {
+			if (url.startsWith("/api/cms/v1/entries/search?")) {
 				return json({
 					items: [
 						{ id: "c1", title: "시리즈 A", slug: "a" },
 						{ id: "c2", title: "시리즈 B", slug: "b" },
 					],
-					total: 2,
 				});
 			}
 			// Reads the kind each collection holds (default is post).
@@ -130,10 +129,9 @@ describe("adding a memo to a collection", () => {
 	beforeEach(() => {
 		fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
-			if (url.startsWith("/api/cms/v1/entries?"))
+			if (url.startsWith("/api/cms/v1/entries/search?"))
 				return json({
 					items: Object.entries(records).map(([id, record]) => ({ id, title: record.title, slug: id })),
-					total: 3,
 				});
 			const id = url.match(/^\/api\/cms\/v1\/entries\/(c\d)$/)?.[1];
 			if (id && !init?.method) {

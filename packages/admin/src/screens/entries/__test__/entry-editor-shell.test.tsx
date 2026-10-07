@@ -141,6 +141,7 @@ function serve(handler: Handler, current: unknown = entry) {
 		const handled = await handler(input, init);
 		if (handled !== undefined) return handled;
 		if (input.startsWith("/api/cms/v1/entries?")) return json({ items: [], total: 0 });
+		if (input.startsWith("/api/cms/v1/entries/search?")) return json({ items: [] });
 		if (input.endsWith("/relations")) return json({ incomingReferences: [] });
 		if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(current);
 		throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${input}`);

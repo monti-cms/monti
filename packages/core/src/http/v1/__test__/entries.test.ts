@@ -6,12 +6,14 @@ import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
 import { PATCH as patchEntry } from "../entries/[id]/route";
 import { POST as postEntries } from "../entries/route";
+import { GET as searchEntries } from "../entries/search/route";
 import { GET as getMeta } from "../meta/route";
 
 const mockVerifyAdmin = vi.fn();
 
 const mockStore = {
 	listEntries: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 }),
+	searchEntries: vi.fn().mockResolvedValue([{ id: "e1", title: "Hello", slug: "hello", status: "published" }]),
 	getEntry: vi.fn().mockImplementation((id: string) => {
 		if (id === "non-existent") {
 			throw new CmsError("Not found", "not_found");
@@ -163,5 +165,44 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const data = await res.json();
 		expect(data.code).toBe("conflict");
 		expect(data.serverVersion).toBe(2);
+	});
+
+	describe("GET /entries/search", () => {
+		const search = (query: string) =>
+			searchEntries(new Request(`http://localhost/api/cms/v1/entries/search?${query}`), { cms });
+
+		it("passes the query, locale, publishedOnly and limit to the store and answers the hits", async () => {
+			mockStore.searchEntries.mockClear();
+			const res = await search(
+				`collection=${contentCollection}&query=hel&locale=${cms.site.DEFAULT_LOCALE}&publishedOnly=true&limit=5`,
+			);
+			expect(res.status).toBe(200);
+			expect(await res.json()).toEqual({ items: [{ id: "e1", title: "Hello", slug: "hello", status: "published" }] });
+			expect(mockStore.searchEntries).toHaveBeenCalledWith({
+				collection: contentCollection,
+				query: "hel",
+				locale: cms.site.DEFAULT_LOCALE,
+				publishedOnly: true,
+				limit: 5,
+			});
+		});
+
+		it("looks entries up by repeated id", async () => {
+			mockStore.searchEntries.mockClear();
+			const ids = ["8a5fe1b2-6d7c-4a3b-9c1e-2f4d6b8a0c11", "1b2c3d4e-5f60-4718-9a2b-3c4d5e6f7a8b"];
+			await search(`collection=${contentCollection}&id=${ids[0]}&id=${ids[1]}`);
+			expect(mockStore.searchEntries).toHaveBeenCalledWith({ collection: contentCollection, ids });
+		});
+
+		it("rejects an unknown collection, a limit that is too large and an id that is not an id", async () => {
+			for (const query of [
+				"collection=nope",
+				`collection=${contentCollection}&limit=51`,
+				`collection=${contentCollection}&limit=0`,
+				`collection=${contentCollection}&id=abc`,
+			]) {
+				expect((await search(query)).status).toBe(400);
+			}
+		});
 	});
 });
