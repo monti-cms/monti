@@ -593,6 +593,17 @@ describe("the registry of this repo", () => {
 				);
 			});
 
+			it("feeds the root proxy the same collection and route base as the pages, through theme.config.ts", async () => {
+				const { host, added } = addTheme({ "monti.schema.json": schema({ path: "/notes/:slug", fields }) });
+				const report = await added;
+				expect(report.created).toContain("proxy.ts");
+				// The proxy looks posts up with blogTheme.collection and blogTheme.routeBase, the values written for the pages.
+				expect(read(host, "src/components/monti/blog-theme/blog-proxy.ts")).toContain('from "./theme.config"');
+				expect(read(host, "src/components/monti/blog-theme/blog-proxy.ts")).toContain("blogTheme.routeBase");
+				expect(read(host, "src/components/monti/blog-theme/theme.config.ts")).toContain('routeBase: "/notes",');
+				expect(report.created).toContain("app/(site)/notes/[slug]/page.tsx");
+			});
+
 			it("turns off the fields the schema does not have, instead of pointing at fields that are not there", async () => {
 				const { host, added } = addTheme({
 					"monti.schema.json": schema({ path: "/blog/:slug", fields: { title: fields.title, slug: fields.slug } }),
