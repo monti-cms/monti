@@ -1,14 +1,9 @@
+import { renderMdx } from "@monti-cms/mdx/render";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { renderSite as site } from "../test/render-config";
 
-// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
-vi.mock("../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../test/render-config")).default,
-}));
-
-const { renderMdx } = await import("@monti-cms/mdx/render");
-
-const html = async (source: string) => renderToStaticMarkup((await renderMdx(source)).content);
+const html = async (source: string) => renderToStaticMarkup((await renderMdx(source, { site })).content);
 
 describe("text color public page", () => {
 	// Stored format: `<Color fg fgDark bg bgDark>text</Color>` (hex values, light/dark theme pair).

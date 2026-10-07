@@ -1,19 +1,14 @@
+import { renderMdx } from "@monti-cms/mdx/render";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
-// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
-vi.mock("../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../test/render-config")).default,
-}));
-
-const { renderMdx } = await import("@monti-cms/mdx/render");
+import { describe, expect, it } from "vitest";
+import { renderSite as site } from "../test/render-config";
 
 /** The directive notation is opt-in (`mdx.syntax`), so these tests pass the extension explicitly. */
 const syntax = [directiveSyntax()];
 
 const renderPublic = async (source: string): Promise<string> =>
-	renderToStaticMarkup((await renderMdx(source, { syntax })).content);
+	renderToStaticMarkup((await renderMdx(source, { site, syntax })).content);
 
 describe("directive render equivalence — directive notation vs. standard notation", () => {
 	it("directives render the same as the standard MDX notation of the same content", async () => {
@@ -42,7 +37,7 @@ describe("directive render equivalence — directive notation vs. standard notat
 		];
 
 		for (const [directive, standard] of pairs) {
-			const fromStandard = renderToStaticMarkup((await renderMdx(standard)).content);
+			const fromStandard = renderToStaticMarkup((await renderMdx(standard, { site })).content);
 			expect(fromStandard, standard).not.toBe("");
 			expect(await renderPublic(directive), directive).toBe(fromStandard);
 		}

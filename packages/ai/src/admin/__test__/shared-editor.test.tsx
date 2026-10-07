@@ -1,18 +1,19 @@
 // @vitest-environment jsdom
 
 import { useConfirm } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { SiteProvider } from "@monti-cms/core/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sharedMessages as adminSharedMessages } from "../../../../admin/src/screens/shared/messages";
+import { testSite } from "../../../test/site";
 import type { AiSharedView } from "../../shared";
 import { SharedManager } from "../shared-editor";
 import { sharedMessages } from "../shared-editor.messages";
 
-const t = createTranslator(sharedMessages);
-const adminText = createTranslator(adminSharedMessages);
+const t = testSite.createTranslator(sharedMessages);
+const adminText = testSite.createTranslator(adminSharedMessages);
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
@@ -85,9 +86,11 @@ function Harness() {
 
 const renderManager = () =>
 	render(
-		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-			<Harness />
-		</QueryClientProvider>,
+		<SiteProvider site={testSite}>
+			<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+				<Harness />
+			</QueryClientProvider>
+		</SiteProvider>,
 	);
 const list = () => screen.getByRole("list", { name: t("list.label") });
 const row = (name: string) => within(list()).getByRole("button", { name: new RegExp(name) });

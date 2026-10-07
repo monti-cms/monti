@@ -58,7 +58,7 @@ A site without `mdx()` accepts documents (`doc`) only: a text write fails with `
 | `@monti-cms/mdx` | `cms.config.ts`, syntax extension packages | The plugin `mdx({ syntax })` and the syntax extension API: the types (`SyntaxExtension`, `SyntaxContext`, `SerializeContext`, ...), `RAW_SOURCE_PARAGRAPH`, the table helpers and the code comment syntax helpers. It stays light (no remark imports) because the config imports it |
 | `@monti-cms/mdx/format` | server code, tests | `mdxFormat`, `createMdxFormat({ syntax })`, and the parse and write API: `analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `bodyFromDocument`, `bodyDocument`, `documentToMdx`, `toStoredDocument`, `fromStoredDocument`, `parseMdxAst`, `insertSoftBreaks`, `readableMdx`, `compareMdxStructure`, `configuredSyntax`, `remarkFenceBlocksToMdx`, ... |
 | `@monti-cms/mdx/render` | public pages (server components) | `renderMdx(source, options)` |
-| `@monti-cms/mdx/admin` | the admin (loaded by the plugin) | `MdxSourcePanel`, `EditorToggle`, `mdxBrowserFormat`, `createMdxBrowserFormat`, and the admin provider that registers them |
+| `@monti-cms/mdx/admin` | the admin (loaded by the plugin) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, and the admin provider that registers them |
 | `@monti-cms/mdx/server` | the plugin, migrations | `createServerMdxFormat`, `legacyBodies`: what the old store migrations use ("Old databases") |
 | `@monti-cms/mdx/testing` | tests | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)` and re-exports of the pipeline functions |
 
@@ -89,11 +89,11 @@ An internal link is written as the real path of its target (`[x](/en/posts/slug)
 import { renderMdx } from "@monti-cms/mdx/render";
 
 const entry = (await cms.read.getEntry({ collection: "post", slug, locale })).entry;
-const { content, toc, unknown } = await renderMdx(source, { locale, refs: entry.refs, components });
+const { content, toc, unknown } = await renderMdx(source, { site: cms.site, locale, refs: entry.refs, components });
 ```
 
-`renderMdx(source, options)` is `mdxFormat.import(source)` followed by core's `renderDocument(doc, options)`, so it takes the same options (`components`, `refs`, `locale`, `strict`, ...) and returns `{ content, toc, unknown }`. Nothing is compiled or executed. A text the format cannot read throws, since nothing of it can be trusted.
-The `syntax` option defaults to the site's `mdx({ syntax })`. Pass `refs: entry.refs` to draw registered images, files and internal links. A site that stores documents does not need this function: `CmsContent` and `renderDocument` of `@monti-cms/core/render` draw the document directly ("Rendering a stored document" in the core README).
+`renderMdx(source, options)` is `mdxFormat.import(source)` followed by core's `renderDocument(doc, options)`, so it takes the same options (`site`, `components`, `refs`, `locale`, `strict`, ...) and returns `{ content, toc, unknown }`. Nothing is compiled or executed. A text the format cannot read throws, since nothing of it can be trusted.
+The site (`cms.site`) decides which blocks the text may use, and the `syntax` option defaults to its `mdx({ syntax })`. Pass `refs: entry.refs` to draw registered images, files and internal links. A site that stores documents does not need this function: `CmsContent` and `renderDocument` of `@monti-cms/core/render` draw the document directly ("Rendering a stored document" in the core README).
 
 ## The source panel
 

@@ -7,10 +7,11 @@ import {
 } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { computeContentHash } from "../../../core/src/core/content-hash";
+import { testSite } from "../../../core/test/site";
 import { bodyFromDocument, bodyFromMdx } from "../body";
 
 const docOf = (mdx: string, previous?: StoredDocument | null): StoredDocument => {
-	const { doc } = bodyFromMdx(mdx, undefined, { previous });
+	const { doc } = bodyFromMdx(testSite, mdx, undefined, { previous });
 	if (!doc) throw new Error("no document");
 	return doc;
 };
@@ -63,9 +64,9 @@ describe("block ids and MDX", () => {
 	});
 
 	it("are not written to MDX and do not change the content hash", () => {
-		const body = bodyFromMdx(SAMPLE);
+		const body = bodyFromMdx(testSite, SAMPLE);
 		for (const { id } of blocks(body.doc as StoredDocument)) expect(body.mdx).not.toContain(id);
-		const again = bodyFromMdx(SAMPLE);
+		const again = bodyFromMdx(testSite, SAMPLE);
 		expect(again.doc).not.toEqual(body.doc);
 		expect(computeContentHash({}, again.doc as StoredDocument)).toBe(
 			computeContentHash({}, body.doc as StoredDocument),
@@ -95,17 +96,17 @@ describe("block ids and MDX", () => {
 
 	it("are kept from a stored document, and inherited when it has none", () => {
 		const first = docOf(SAMPLE);
-		expect(bodyFromDocument(first).doc).toEqual(first);
+		expect(bodyFromDocument(testSite, first).doc).toEqual(first);
 		const bare = { ...first, content: withoutBlockIds(first.content) };
-		expect(bodyFromDocument(bare, undefined, { previous: first }).doc).toEqual(first);
-		const fresh = bodyFromDocument(bare).doc as StoredDocument;
+		expect(bodyFromDocument(testSite, bare, undefined, { previous: first }).doc).toEqual(first);
+		const fresh = bodyFromDocument(testSite, bare).doc as StoredDocument;
 		expect(blocks(fresh).every((block) => BLOCK_ID_PATTERN.test(block.id))).toBe(true);
 	});
 
 	it("replace an id that is not a valid block id", () => {
 		const first = docOf("One.\n");
 		const odd = { ...first, content: [{ ...(first.content[0] as CmsNode), id: "NOT-AN-ID" }] };
-		const id = (bodyFromDocument(odd).doc as StoredDocument).content[0]?.id;
+		const id = (bodyFromDocument(testSite, odd).doc as StoredDocument).content[0]?.id;
 		expect(id).toMatch(BLOCK_ID_PATTERN);
 	});
 });

@@ -1,9 +1,9 @@
 import type { BlockAttribute, BlockDefinition } from "@monti-cms/core";
-import { ADDED_BLOCKS, ADDED_MARK_BLOCKS } from "@monti-cms/core/client";
 import { analyze } from "@monti-cms/mdx/format";
+import { mdxWith } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";
 import { hashOf } from "../../test/hash";
-import { mdxWith } from "../../test/mdx-syntax";
+import { testSite } from "../../test/site";
 import { directiveSyntax } from "..";
 
 /**
@@ -12,12 +12,12 @@ import { directiveSyntax } from "..";
  */
 
 const readOnly = [directiveSyntax({ write: false })];
-const { write, writeTwice } = mdxWith(readOnly);
+const { write, writeTwice } = mdxWith(testSite, readOnly);
 
 const metadata = { title: "A" };
-const hashBefore = (mdx: string) => hashOf(metadata, mdx, 1, readOnly);
+const hashBefore = (mdx: string) => hashOf(testSite, metadata, mdx, 1, readOnly);
 /** The written body is read with no extension at all: it is standard MDX. */
-const hashAfter = (mdx: string) => hashOf(metadata, mdx, 1);
+const hashAfter = (mdx: string) => hashOf(testSite, metadata, mdx, 1);
 
 const DIRECTIVE_NOTATION = /^:{2,}[a-z]|[^\\]:[a-z-]+\[/m;
 
@@ -35,9 +35,11 @@ const braces = (block: BlockDefinition) => {
 /** Directive spelling of blocks the config adds (a container, a leaf and a text mark, when it has them). */
 const addedBlocks = (): string[] => {
 	const lines: string[] = [];
-	const container = ADDED_BLOCKS.find((block) => block.syntax.kind === "container" && !block.children && !block.parent);
-	const leaf = ADDED_BLOCKS.find((block) => block.syntax.kind === "leaf" && !block.parent);
-	const mark = ADDED_MARK_BLOCKS.find((block) => !block.children);
+	const container = testSite.ADDED_BLOCKS.find(
+		(block) => block.syntax.kind === "container" && !block.children && !block.parent,
+	);
+	const leaf = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "leaf" && !block.parent);
+	const mark = testSite.ADDED_MARK_BLOCKS.find((block) => !block.children);
 	if (container && container.syntax.kind === "container") {
 		lines.push(`:::${container.syntax.directive}${braces(container)}\n안쪽 :u[밑줄]\n:::`);
 	}
@@ -83,7 +85,7 @@ const BODY = [
 describe("migrating directive content to standard MDX", () => {
 	it("a body of directive syntax is written as standard MDX with the same content hash", () => {
 		const written = write(BODY);
-		expect(analyze(written).errors).toEqual([]);
+		expect(analyze(testSite, written).errors).toEqual([]);
 		expect(DIRECTIVE_NOTATION.test(written)).toBe(false);
 		expect(hashAfter(written)).toBe(hashBefore(BODY));
 	});

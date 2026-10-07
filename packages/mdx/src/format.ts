@@ -9,6 +9,7 @@ import {
 	type CmsFormat,
 	defineFormat,
 	type FormatExportContext,
+	type FormatImportContext,
 	type FormatImportResult,
 	type FormatIssue,
 } from "@monti-cms/core/format";
@@ -20,8 +21,8 @@ import { NO_SYNTAX } from "./syntax-config";
  * The `mdx` format: the stored document written as MDX (CommonMark + GFM + standard MDX JSX, and the syntax extensions it is given) and read back. It is
  * the format a site picks with `format: "mdx"`, the notation of the source panel in the admin and the text the AI plugin's model reads and writes.
  *
- * Both directions are pure functions of their arguments (the site's blocks are the only thing they read, from the site config), so the format runs on the
- * server and in the browser alike.
+ * Both directions are pure functions of their arguments (the site's blocks and rules are the only things they read, from the site in the context core gives
+ * them), so the format runs on the server and in the browser alike.
  */
 
 /**
@@ -104,10 +105,10 @@ export const createMdxFormat = (options: MdxFormatOptions = {}): CmsFormat<"mdx"
 	const syntax = options.syntax ?? NO_SYNTAX;
 
 	const exportDocument = (doc: StoredDocument, ctx: FormatExportContext): string =>
-		documentToMdx({ ...doc, content: resolveNodes(doc.content, ctx) }, syntax);
+		documentToMdx(ctx.site, { ...doc, content: resolveNodes(doc.content, ctx) }, syntax);
 
-	const importText = (text: string): FormatImportResult => {
-		const body = bodyFromMdx(text, syntax);
+	const importText = (text: string, ctx: FormatImportContext): FormatImportResult => {
+		const body = bodyFromMdx(ctx.site, text, syntax);
 		if (body.doc) {
 			const { doc } = body;
 			const warnings: FormatIssue[] = (body.outOfRange ?? []).map((item) => {
@@ -143,7 +144,7 @@ export const createMdxFormat = (options: MdxFormatOptions = {}): CmsFormat<"mdx"
 	});
 };
 
-/** The `mdx` format with no syntax extension (standard MDX). A site with extensions gets its own from `mdx({ syntax })`. */
+/** The `mdx` format with no syntax extension (standard MDX). It holds nothing of a site: it reads the site from the context of each call. A site with extensions gets its own from `mdx({ syntax })`. */
 export const mdxFormat: CmsFormat<"mdx"> = createMdxFormat();
 
 export { analyze } from "./analyze";
@@ -161,7 +162,7 @@ export {
 export * from "./directives";
 export { mdxMessages } from "./messages";
 export { parseMdxAst } from "./parse";
-export { BLOCK_JSX_NAMES, INLINE_JSX_MARKS, REGISTERED_JSX_NAMES, RETIRED_JSX_NAMES } from "./registry";
+export { type JsxRegistry, jsxRegistryOf, RETIRED_JSX_NAMES } from "./registry";
 export { remarkFenceBlocksToMdx } from "./remark-fence-blocks";
 export { serialize } from "./serialize";
 export { insertSoftBreaks, type SoftBreakResult } from "./soft-breaks";

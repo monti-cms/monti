@@ -1,16 +1,11 @@
+import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
+import { type RenderDocumentOptions, renderDocument } from "@monti-cms/core/render";
+import { bodyFromMdx } from "@monti-cms/mdx/format";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
-// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
-vi.mock("../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../test/render-config")).default,
-}));
-
-const { renderDocument } = await import("@monti-cms/core/render");
-const { STORED_DOCUMENT_VERSION } = await import("@monti-cms/core/document");
-const { bodyFromMdx } = await import("@monti-cms/mdx/format");
+import { describe, expect, it } from "vitest";
+import { renderSite as site } from "../test/render-config";
 
 type Doc = Parameters<typeof renderDocument>[0];
 type Node = Doc["content"][number];
@@ -23,14 +18,14 @@ const text = (value: string, marks?: Node["marks"]): Node => ({
 });
 const paragraph = (...content: Node[]): Node => ({ type: "paragraph", content });
 
-const html = async (stored: Doc, options: Parameters<typeof renderDocument>[1] = {}) => {
-	const rendered = await renderDocument(stored, options);
+const html = async (stored: Doc, options: Omit<RenderDocumentOptions, "site"> = {}) => {
+	const rendered = await renderDocument(stored, { site, ...options });
 	expect(rendered.unknown).toEqual([]);
 	return renderToStaticMarkup(rendered.content as ReactNode);
 };
 
 const fromMdx = (source: string): Doc => {
-	const body = bodyFromMdx(source, [directiveSyntax()]);
+	const body = bodyFromMdx(site, source, [directiveSyntax()]);
 	if (!body.doc) throw new Error("not a document");
 	return body.doc;
 };
@@ -221,6 +216,6 @@ describe("block extension components of the JSON renderer", () => {
 			"```chart\nchart bar\nx a\nseries v | v | chart-1\n\ndata\na | v\n1 | 2\n```",
 			':tooltip[t]{content="c"} :code-ref[r]{to="c1"} :color[x]{fg="#dc2626"}',
 		].join("\n\n");
-		await expect(renderDocument(fromMdx(source), { strict: true })).resolves.toBeDefined();
+		await expect(renderDocument(fromMdx(source), { site, strict: true })).resolves.toBeDefined();
 	});
 });

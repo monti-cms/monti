@@ -1,27 +1,24 @@
 // @vitest-environment jsdom
 import { CmsAdminComponentsProvider, useCmsAdminComponents, useFormat } from "@monti-cms/admin";
 import { CmsApiError } from "@monti-cms/admin/api";
-import {
-	contentPath,
-	createTranslator,
-	DEFAULT_LOCALE,
-	LINKABLE_COLLECTIONS,
-	localizePath,
-} from "@monti-cms/core/client";
+import { defineConfig } from "@monti-cms/core";
+import { createSite, SiteProvider } from "@monti-cms/core/client";
 import { isBlockId, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
-import { cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, renderHook, render as renderWithoutSite, screen, waitFor } from "@testing-library/react";
 import type { Root } from "mdast";
-import { useState } from "react";
+import { type ReactElement, type ReactNode, useState } from "react";
 import { visit } from "unist-util-visit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig, testSite } from "../../../core/test/site";
+import { mdx } from "../plugin";
 import type { SyntaxExtension } from "../syntax";
 import { docOfMdx as docOf } from "../testing";
-import { mdxBrowserFormat } from "./format";
+import { createMdxBrowserFormat } from "./format";
 import { mdxSourceMessages } from "./messages";
 import { MdxAdminProvider } from "./provider";
 import { lineOfBlock, MdxSourcePanel } from "./source-panel";
 
-const mocks = vi.hoisted(() => ({ cmsFetch: vi.fn(), syntax: [] as readonly unknown[] }));
+const mocks = vi.hoisted(() => ({ cmsFetch: vi.fn() }));
 
 // The lookups of the entries a link points to go through the admin API; the panel reads the answers the test gives.
 vi.mock("@monti-cms/admin/api", async (importOriginal) => ({
@@ -29,15 +26,14 @@ vi.mock("@monti-cms/admin/api", async (importOriginal) => ({
 	cmsFetch: mocks.cmsFetch,
 }));
 
-// The syntax extensions the site gave to `mdx({ syntax })`.
-vi.mock("../syntax-config", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../syntax-config")>()),
-	configuredSyntax: () => mocks.syntax,
-}));
-
+const mdxBrowserFormat = createMdxBrowserFormat(testSite);
 const mdxOfDoc = (doc: StoredDocument): string => mdxBrowserFormat.export(doc);
 
-const t = createTranslator(mdxSourceMessages);
+const t = testSite.createTranslator(mdxSourceMessages);
+
+/** The tree under test runs inside the site it reads its blocks, marks and addresses from. */
+const SiteWrapper = ({ children }: { children: ReactNode }) => <SiteProvider site={testSite}>{children}</SiteProvider>;
+const render = (ui: ReactElement) => renderWithoutSite(ui, { wrapper: SiteWrapper });
 
 afterEach(cleanup);
 
@@ -45,7 +41,7 @@ const textarea = () => screen.getByRole("textbox", { name: t("body") }) as HTMLT
 const type = (value: string) => fireEvent.change(textarea(), { target: { value } });
 
 describe("the MDX source panel", () => {
-	const body = docOf("첫째 문단\n\n둘째 문단\n");
+	const body = docOf(testSite, "첫째 문단\n\n둘째 문단\n");
 
 	it("shows the document as MDX text", () => {
 		render(<MdxSourcePanel doc={body} onChange={() => {}} />);
@@ -98,7 +94,7 @@ describe("the MDX source panel", () => {
 
 	it("shows another document when the body changes from outside (a template, the visual editor)", () => {
 		const { rerender } = render(<MdxSourcePanel doc={body} onChange={() => {}} />);
-		rerender(<MdxSourcePanel doc={docOf("## 회고\n")} onChange={() => {}} />);
+		rerender(<MdxSourcePanel doc={docOf(testSite, "## 회고\n")} onChange={() => {}} />);
 		expect(textarea().value).toBe("## 회고\n");
 	});
 
@@ -132,10 +128,10 @@ describe("the MDX source panel", () => {
 
 	describe("lineOfBlock", () => {
 		it("is the line of the text a top-level block starts on, and for a block inside another, the line of the one that holds it", () => {
-			const doc = docOf("# 제목\n\n> 인용\n> 둘째 줄\n\n마지막\n");
+			const doc = docOf(testSite, "# 제목\n\n> 인용\n> 둘째 줄\n\n마지막\n");
 			const lines = mdxOfDoc(doc).split("\n");
 			for (const block of doc.content) {
-				const line = lineOfBlock(doc, block.id as string) as number;
+				const line = lineOfBlock(doc, block.id as string, mdxBrowserFormat) as number;
 				expect(line).toBeGreaterThan(0);
 				const first = JSON.stringify(block).includes("제목")
 					? "# 제목"
@@ -145,29 +141,31 @@ describe("the MDX source panel", () => {
 				expect(lines[line - 1]).toBe(first);
 			}
 			const inner = doc.content[1]?.content?.[0]?.id as string;
-			expect(lineOfBlock(doc, inner)).toBe(lineOfBlock(doc, doc.content[1]?.id as string));
+			expect(lineOfBlock(doc, inner, mdxBrowserFormat)).toBe(
+				lineOfBlock(doc, doc.content[1]?.id as string, mdxBrowserFormat),
+			);
 		});
 
 		it("is null for a block the document does not have, and the first line for a body that could not be read", () => {
-			expect(lineOfBlock(docOf("문단"), "zzzzzzzz")).toBeNull();
-			expect(lineOfBlock(unparsedDocument("<A>", null, "mdx"), "zzzzzzzz")).toBe(1);
+			expect(lineOfBlock(docOf(testSite, "문단"), "zzzzzzzz", mdxBrowserFormat)).toBeNull();
+			expect(lineOfBlock(unparsedDocument("<A>", null, "mdx"), "zzzzzzzz", mdxBrowserFormat)).toBe(1);
 		});
 	});
 });
 
 describe("internal links in the source text", () => {
-	const COLLECTION = LINKABLE_COLLECTIONS[0] as string;
-	const PATH = localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "details") as string);
+	const COLLECTION = testSite.LINKABLE_COLLECTIONS[0] as string;
+	const PATH = testSite.localizePath(testSite.DEFAULT_LOCALE, testSite.contentPath(COLLECTION, "details") as string);
 	// Every test links to an entry of its own: the editor remembers what it looked up, so a shared id would carry an answer from one test to the next.
 	let counter = 0;
 	let ID = "";
-	const linked = () => docOf(`앞 [상세 글](entry:${ID}) 뒤\n`);
+	const linked = () => docOf(testSite, `앞 [상세 글](entry:${ID}) 뒤\n`);
 	const answerFound = () =>
 		mocks.cmsFetch.mockResolvedValue({
 			id: ID,
 			collection: COLLECTION,
 			status: "published",
-			locale: DEFAULT_LOCALE,
+			locale: testSite.DEFAULT_LOCALE,
 			workingSlug: "details",
 			publishedSlug: "details",
 			working: { metadata: { title: "상세" } },
@@ -227,48 +225,53 @@ describe("registering the source panel and the format", () => {
 		],
 	};
 
+	const MdxWrapper = ({ children }: { children: ReactNode }) => (
+		<SiteWrapper>
+			<MdxAdminProvider>{children}</MdxAdminProvider>
+		</SiteWrapper>
+	);
+
 	it("MdxAdminProvider registers one source panel for mdx, which is MdxSourcePanel", () => {
-		const { result } = renderHook(() => useCmsAdminComponents(), { wrapper: MdxAdminProvider });
+		const { result } = renderHook(() => useCmsAdminComponents(), { wrapper: MdxWrapper });
 		const panels = result.current.sourcePanels?.filter((panel) => panel.format === "mdx") ?? [];
 		expect(panels).toHaveLength(1);
 		expect(panels[0]?.Panel).toBe(MdxSourcePanel);
 	});
 
 	it("MdxAdminProvider registers the mdx format, found by name and absent without the provider", () => {
-		expect(renderHook(() => useFormat("mdx")).result.current).toBeUndefined();
-		const { result } = renderHook(() => useFormat("mdx"), { wrapper: MdxAdminProvider });
+		expect(renderHook(() => useFormat("mdx"), { wrapper: SiteWrapper }).result.current).toBeUndefined();
+		const { result } = renderHook(() => useFormat("mdx"), { wrapper: MdxWrapper });
 		expect(result.current?.name).toBe("mdx");
-		expect(renderHook(() => useFormat("markdown"), { wrapper: MdxAdminProvider }).result.current).toBeUndefined();
+		expect(renderHook(() => useFormat("markdown"), { wrapper: MdxWrapper }).result.current).toBeUndefined();
 	});
 
-	it("the registered format reads with the syntax extensions of mdx({ syntax })", async () => {
-		// The provider keeps what it registered for the page, so the syntax is set before the module is read again.
-		vi.resetModules();
-		mocks.syntax = [atNotation];
-		try {
-			const { MdxAdminProvider: Fresh } = await import("./provider");
-			// The modules are read again, so the hook comes from the same copy of the admin package as the provider.
-			const { useFormat: useFreshFormat } = await import("@monti-cms/admin");
-			const { result } = renderHook(() => useFreshFormat("mdx"), { wrapper: Fresh });
-			const read = result.current?.import("앞 @@word@@ 뒤");
-			expect(read?.ok).toBe(true);
-			expect(JSON.stringify(read && "doc" in read ? read.doc : null)).toContain("underline");
-			// Without the extension the notation is ordinary text.
-			const plain = mdxBrowserFormat.import("앞 @@word@@ 뒤");
-			expect(JSON.stringify(plain.ok ? plain.doc : null)).toContain("@@word@@");
-		} finally {
-			mocks.syntax = [];
-			vi.resetModules();
-		}
+	it("the registered format reads with the syntax extensions of mdx({ syntax })", () => {
+		const syntaxSite = createSite(defineConfig({ ...testConfig, plugins: [mdx({ syntax: [atNotation] })] } as never));
+		const Wrapper = ({ children }: { children: ReactNode }) => (
+			<SiteProvider site={syntaxSite}>
+				<MdxAdminProvider>{children}</MdxAdminProvider>
+			</SiteProvider>
+		);
+		const { result } = renderHook(() => useFormat("mdx"), { wrapper: Wrapper });
+		const read = result.current?.import("앞 @@word@@ 뒤");
+		expect(read?.ok).toBe(true);
+		expect(JSON.stringify(read && "doc" in read ? read.doc : null)).toContain("underline");
+		// Without the extension the notation is ordinary text.
+		const plain = mdxBrowserFormat.import("앞 @@word@@ 뒤");
+		expect(JSON.stringify(plain.ok ? plain.doc : null)).toContain("@@word@@");
 	});
 
 	it("adds its panel to the ones other providers registered", () => {
 		const Other = () => null;
 		const { result } = renderHook(() => useCmsAdminComponents(), {
 			wrapper: ({ children }) => (
-				<CmsAdminComponentsProvider components={{ sourcePanels: [{ format: "other", label: "Other", Panel: Other }] }}>
-					<MdxAdminProvider>{children}</MdxAdminProvider>
-				</CmsAdminComponentsProvider>
+				<SiteWrapper>
+					<CmsAdminComponentsProvider
+						components={{ sourcePanels: [{ format: "other", label: "Other", Panel: Other }] }}
+					>
+						<MdxAdminProvider>{children}</MdxAdminProvider>
+					</CmsAdminComponentsProvider>
+				</SiteWrapper>
 			),
 		});
 		const formats = result.current.sourcePanels?.map((panel) => panel.format) ?? [];

@@ -1,9 +1,0 @@
-{
-	"extends": "./tsconfig.json",
-	"compilerOptions": {
-		"paths": {
-			"@cms-config": ["./test/other-site.config.ts"]
-		}
-	},
-	"exclude": ["src/**/__test__", "src/test"]
-}

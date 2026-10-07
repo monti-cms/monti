@@ -3,6 +3,7 @@ import type { Root } from "mdast";
 import { renderToStaticMarkup } from "react-dom/server";
 import { visit } from "unist-util-visit";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { renderMdx } from "../render";
 import type { SyntaxExtension } from "../syntax";
 import { mdxWith } from "../testing";
@@ -23,7 +24,7 @@ describe("syntax extensions: writing", () => {
 			name: "braces",
 			fromMark: { underline: (_mark, inner) => `{u ${inner}}` },
 		};
-		const { serialize } = mdxWith([braces]);
+		const { serialize } = mdxWith(testSite, [braces]);
 		expect(serialize(doc(paragraph(text("밑줄", [{ type: "underline" }]))))).toBe("{u 밑줄}\n");
 	});
 
@@ -34,8 +35,8 @@ describe("syntax extensions: writing", () => {
 			fromDocument: { "*": () => undefined },
 		};
 		const content = doc(paragraph(text("a", [{ type: "underline" }]), text("b", [{ type: "bold" }])));
-		expect(mdxWith([defers]).serialize(content)).toBe(mdxWith([]).serialize(content));
-		expect(mdxWith([]).serialize(content)).toBe("<u>a</u>**b**\n");
+		expect(mdxWith(testSite, [defers]).serialize(content)).toBe(mdxWith(testSite, []).serialize(content));
+		expect(mdxWith(testSite, []).serialize(content)).toBe("<u>a</u>**b**\n");
 	});
 
 	it("the first extension that does not defer wins, in list order", () => {
@@ -44,9 +45,9 @@ describe("syntax extensions: writing", () => {
 			fromDocument: { horizontalRule: () => answer },
 		});
 		const rule = doc({ type: "horizontalRule" });
-		expect(mdxWith([writer("a", "AAA"), writer("b", "BBB")]).serialize(rule)).toBe("AAA\n");
-		expect(mdxWith([writer("a", undefined), writer("b", "BBB")]).serialize(rule)).toBe("BBB\n");
-		expect(mdxWith([writer("a", undefined), writer("b", undefined)]).serialize(rule)).toBe("---\n");
+		expect(mdxWith(testSite, [writer("a", "AAA"), writer("b", "BBB")]).serialize(rule)).toBe("AAA\n");
+		expect(mdxWith(testSite, [writer("a", undefined), writer("b", "BBB")]).serialize(rule)).toBe("BBB\n");
+		expect(mdxWith(testSite, [writer("a", undefined), writer("b", undefined)]).serialize(rule)).toBe("---\n");
 	});
 
 	it("a specific node type is tried before the wildcard of the same extension", () => {
@@ -57,7 +58,7 @@ describe("syntax extensions: writing", () => {
 				"*": (node) => (node.type === "horizontalRule" ? "wild" : undefined),
 			},
 		};
-		expect(mdxWith([extension]).serialize(doc({ type: "horizontalRule" }))).toBe("specific\n");
+		expect(mdxWith(testSite, [extension]).serialize(doc({ type: "horizontalRule" }))).toBe("specific\n");
 	});
 
 	it("never offers a line break to an extension", () => {
@@ -65,13 +66,15 @@ describe("syntax extensions: writing", () => {
 			name: "greedy",
 			fromDocument: { hardBreak: () => "<<br>>", "*": (node) => (node.type === "paragraph" ? undefined : "<<any>>") },
 		};
-		const written = mdxWith([greedy]).serialize(doc(paragraph(text("가"), { type: "hardBreak" }, text("나"))));
+		const written = mdxWith(testSite, [greedy]).serialize(
+			doc(paragraph(text("가"), { type: "hardBreak" }, text("나"))),
+		);
 		expect(written).toBe("가<br />\n나\n");
 	});
 
 	it("body text is escaped by every extension, but code text is not", () => {
 		const at: SyntaxExtension = { name: "at", escapeText: (value) => value.replace(/@/g, "\\@") };
-		const { serialize } = mdxWith([at]);
+		const { serialize } = mdxWith(testSite, [at]);
 		expect(serialize(doc(paragraph(text("a@b"))))).toBe("a\\@b\n");
 		expect(serialize(doc(paragraph(text("a@b", [{ type: "code" }]))))).toBe("`a@b`\n");
 	});
@@ -85,7 +88,7 @@ describe("syntax extensions: writing", () => {
 				return value;
 			},
 		};
-		mdxWith([spy]).serialize(
+		mdxWith(testSite, [spy]).serialize(
 			doc(
 				paragraph(text("plain"), text("linked", [{ type: "link", attrs: { href: "/a" } }])),
 				paragraph({ type: "image", attrs: { src: "/a.png", alt: "대체" } }),
@@ -111,7 +114,7 @@ describe("syntax extensions: writing", () => {
 			},
 		};
 		const align: CmsNode = { type: "TextAlign", attrs: { align: "center" }, content: [paragraph(text("안"))] };
-		const written = mdxWith([box]).serialize(
+		const written = mdxWith(testSite, [box]).serialize(
 			doc({ type: "bulletList", content: [{ type: "listItem", content: [paragraph(text("항목")), align] }] }),
 		);
 		expect(written).toBe("- 항목\n\n  [[ 안 ]]\n");
@@ -129,7 +132,7 @@ describe("syntax extensions: writing", () => {
 			},
 		};
 		const align: CmsNode = { type: "TextAlign", attrs: { align: "center" }, content: [paragraph(text("안"))] };
-		expect(mdxWith([probe]).serialize(doc(align))).toBe('probe align="center"\n');
+		expect(mdxWith(testSite, [probe]).serialize(doc(align))).toBe('probe align="center"\n');
 	});
 });
 
@@ -158,7 +161,7 @@ describe("syntax extensions: reading", () => {
 
 	it("an extension's plugins read its notation, and receive the site's blocks", () => {
 		const names: string[] = [];
-		const { write } = mdxWith([atNotation(names)]);
+		const { write } = mdxWith(testSite, [atNotation(names)]);
 		expect(write("앞 @@word@@ 뒤").trimEnd()).toBe("<u>word</u>");
 		expect(names).toContain("image");
 	});
@@ -172,18 +175,20 @@ describe("syntax extensions: reading", () => {
 				return [];
 			},
 		};
-		mdxWith([spy]).write("text");
+		mdxWith(testSite, [spy]).write("text");
 		expect([...effects]).toEqual(expect.arrayContaining(["highlight", "plus", "minus", "warning", "error"]));
 	});
 
 	it("without the extension the notation is ordinary text", () => {
-		expect(mdxWith([]).write("앞 @@word@@ 뒤").trimEnd()).toBe("앞 @@word@@ 뒤");
+		expect(mdxWith(testSite, []).write("앞 @@word@@ 뒤").trimEnd()).toBe("앞 @@word@@ 뒤");
 	});
 
 	it("the public render chain reads the notation too", async () => {
 		const names: string[] = [];
-		const markup = renderToStaticMarkup((await renderMdx("앞 @@word@@ 뒤", { syntax: [atNotation(names)] })).content);
+		const markup = renderToStaticMarkup(
+			(await renderMdx("앞 @@word@@ 뒤", { site: testSite, syntax: [atNotation(names)] })).content,
+		);
 		expect(markup).toContain("<u>word</u>");
-		expect(renderToStaticMarkup((await renderMdx("앞 @@word@@ 뒤")).content)).toContain("@@word@@");
+		expect(renderToStaticMarkup((await renderMdx("앞 @@word@@ 뒤", { site: testSite })).content)).toContain("@@word@@");
 	});
 });

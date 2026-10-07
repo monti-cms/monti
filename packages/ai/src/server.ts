@@ -30,7 +30,7 @@ const aiServer: CmsServerPlugin = {
 	migrate: migrateAi,
 	// `features.ai.ready` of the admin meta API: is at least one connection ready?
 	features: async (cms) => ({
-		ready: await getAiSettingsView(aiStoreFor(cms)).then(
+		ready: await getAiSettingsView(cms.site, aiStoreFor(cms)).then(
 			(view) => view.fake || view.providers.some((item) => item.ready),
 			() => false,
 		),

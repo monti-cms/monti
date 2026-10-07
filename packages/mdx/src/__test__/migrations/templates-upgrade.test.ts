@@ -9,6 +9,7 @@ import {
 	migrateContentStore,
 } from "@monti-cms/core/testing";
 import { afterAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { contentOf, docOf } from "../../../../core/test/stored-content";
 import { createServerMdxFormat } from "../../server";
 
@@ -22,7 +23,7 @@ describe("templates upgraded from a store at 0012", () => {
 	it("ends with every template a document", async () => {
 		const upgrade = await createIsolatedTestPool();
 		try {
-			const run = () => migrateContentStore(upgrade.pool, { schema: upgrade.schemaName, formats });
+			const run = () => migrateContentStore(upgrade.pool, { site: testSite, schema: upgrade.schemaName, formats });
 			await run();
 			// Put the store back to 0012: the later steps forgotten, no document columns, text required, templates as that version wrote them.
 			const q = (sql: string, values: unknown[] = []) => upgrade.pool.query(sql, values);
@@ -49,7 +50,7 @@ describe("templates upgraded from a store at 0012", () => {
 
 			await run();
 
-			const store = createContentStore(upgrade.pool, { schema: s });
+			const store = createContentStore(upgrade.pool, { site: testSite, schema: s });
 			const byId = new Map((await store.listTemplates()).map((template) => [template.id, template]));
 			expect(contentOf(byId.get(good)?.doc)).toEqual(contentOf(docOf("## Review\n\nWhat I learned\n")));
 			expect(byId.get(soft)?.doc.content[0]).toMatchObject({ type: "paragraph" });

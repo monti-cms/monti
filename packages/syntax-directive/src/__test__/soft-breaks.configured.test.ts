@@ -10,6 +10,7 @@ import {
 import { configuredSyntax } from "@monti-cms/mdx/format";
 import { createServerMdxFormat } from "@monti-cms/mdx/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 
 /**
  * Runs with the directive extension switched on in the site config (`vitest.configured.config.ts`): the store migration that writes `<br />` at each soft line
@@ -32,7 +33,7 @@ const BODY = [
 	"",
 ].join("\n");
 
-const formats = createFormatRegistry([createServerMdxFormat({ syntax: configuredSyntax() })]);
+const formats = createFormatRegistry([createServerMdxFormat({ syntax: configuredSyntax(testSite) })]);
 
 describe("soft line endings migration with directive syntax in the site config", () => {
 	let pool: Awaited<ReturnType<typeof createIsolatedTestPool>>["pool"];
@@ -42,7 +43,7 @@ describe("soft line endings migration with directive syntax in the site config",
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName, formats });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 	});
 
 	afterAll(async () => {
@@ -51,7 +52,7 @@ describe("soft line endings migration with directive syntax in the site config",
 	});
 
 	it("inserts <br /> at the line endings and keeps every other byte of the directive text", async () => {
-		const store = createContentStore(pool, { schema: schemaName });
+		const store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const entry = await seedEntry(store, {
 			collection: "x",
 			slug: "directive-post",
@@ -62,7 +63,7 @@ describe("soft line endings migration with directive syntax in the site config",
 		await pool.query(`UPDATE "${schemaName}".entry_bodies SET mdx = $1 WHERE entry_id = $2`, [BODY, entry.id]);
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = $1`, [STEP]);
 
-		await migrateContentStore(pool, { schema: schemaName, formats });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 
 		const after = await store.getEntry(entry.id);
 		const { rows } = await pool.query<{ mdx: string }>(

@@ -5,11 +5,10 @@
  * Custom-picked colors are stored in the same shape.
  */
 
-import { createActiveTranslator } from "@monti-cms/core";
-import { colorMessages } from "./messages";
-
-// Default color names are resolved in the UI language when the text is read (the language is not yet known when the config file imports this module).
-const t = createActiveTranslator(colorMessages);
+/** Picks the text of a default color name (`site.createTranslator(colorMessages)` in the admin, `translate(colorMessages, language, key)` elsewhere). */
+export type PaletteText = (
+	key: `palette.${"gray" | "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink"}`,
+) => string;
 
 export interface ColorPair {
 	readonly light: string;
@@ -25,69 +24,53 @@ export interface PaletteColor {
 	readonly bg: ColorPair;
 }
 
-/** Default picker list. Change it with the extension option `color({ palette })`. */
-export const DEFAULT_TEXT_PALETTE: readonly PaletteColor[] = [
+/** Default picker list, with the color names in the language `t` picks. Change it with the extension option `color({ palette })`. */
+export const defaultTextPalette = (t: PaletteText): readonly PaletteColor[] => [
 	{
 		id: "gray",
-		get name() {
-			return t("palette.gray");
-		},
+		name: t("palette.gray"),
 		fg: { light: "#6b7280", dark: "#9ca3af" },
 		bg: { light: "#f1f2f4", dark: "#2f3237" },
 	},
 	{
 		id: "red",
-		get name() {
-			return t("palette.red");
-		},
+		name: t("palette.red"),
 		fg: { light: "#dc2626", dark: "#f87171" },
 		bg: { light: "#fee2e2", dark: "#4a1f1f" },
 	},
 	{
 		id: "orange",
-		get name() {
-			return t("palette.orange");
-		},
+		name: t("palette.orange"),
 		fg: { light: "#ea580c", dark: "#fb923c" },
 		bg: { light: "#ffedd5", dark: "#4a2a14" },
 	},
 	{
 		id: "yellow",
-		get name() {
-			return t("palette.yellow");
-		},
+		name: t("palette.yellow"),
 		fg: { light: "#b45309", dark: "#facc15" },
 		bg: { light: "#fef3c7", dark: "#453a12" },
 	},
 	{
 		id: "green",
-		get name() {
-			return t("palette.green");
-		},
+		name: t("palette.green"),
 		fg: { light: "#16a34a", dark: "#4ade80" },
 		bg: { light: "#dcfce7", dark: "#173d2a" },
 	},
 	{
 		id: "blue",
-		get name() {
-			return t("palette.blue");
-		},
+		name: t("palette.blue"),
 		fg: { light: "#2563eb", dark: "#60a5fa" },
 		bg: { light: "#dbeafe", dark: "#172f4d" },
 	},
 	{
 		id: "purple",
-		get name() {
-			return t("palette.purple");
-		},
+		name: t("palette.purple"),
 		fg: { light: "#9333ea", dark: "#c084fc" },
 		bg: { light: "#f3e8ff", dark: "#33224d" },
 	},
 	{
 		id: "pink",
-		get name() {
-			return t("palette.pink");
-		},
+		name: t("palette.pink"),
 		fg: { light: "#db2777", dark: "#f472b6" },
 		bg: { light: "#fce7f3", dark: "#4a1d38" },
 	},
@@ -147,7 +130,7 @@ export function textColorProps(attrs: TextColorAttrs): {
 export function paletteOf(
 	kind: "fg" | "bg",
 	attrs: TextColorAttrs,
-	palette: readonly PaletteColor[] = DEFAULT_TEXT_PALETTE,
+	palette: readonly PaletteColor[],
 ): PaletteColor | undefined {
 	const light = attrs[kind];
 	if (!light) return undefined;

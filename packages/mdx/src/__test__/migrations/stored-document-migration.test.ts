@@ -18,6 +18,7 @@ import {
 import type { Pool, PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../core/test/any-site";
+import { testSite } from "../../../../core/test/site";
 import { contentOf } from "../../../../core/test/stored-content";
 import { bodyFromMdx } from "../../body";
 import { createServerMdxFormat, legacyBodies } from "../../server";
@@ -25,7 +26,7 @@ import { docOfMdx as docOf } from "../../testing";
 
 /** The `mdx` format as a server registers it: it also reads the text of old bodies, which the step under test needs. */
 const formats = createFormatRegistry([createServerMdxFormat()]);
-const bodies = legacyBodies();
+const bodies = legacyBodies(testSite);
 
 /** The `mdx` column of a body template, `null` when it has no text. */
 const templateMdx = async (pool: Pool, schemaName: string, id: string): Promise<string | null> =>
@@ -56,9 +57,9 @@ describe("0013_stored_documents", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName, formats });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store, { formats: async () => formats });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, { site: testSite, formats: async () => formats });
 	});
 
 	afterAll(async () => {
@@ -80,7 +81,7 @@ describe("0013_stored_documents", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -96,7 +97,7 @@ describe("0013_stored_documents", () => {
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
-		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	/** What a body looked like before the step: the text as given, no document, and a hash and search text that are not the current ones. */
@@ -181,7 +182,7 @@ describe("0013_stored_documents", () => {
 
 	const run = async (options: { dropColumns?: boolean } = {}) => {
 		await rewind(options);
-		await migrateContentStore(pool, { schema: schemaName, formats });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 	};
 
 	const hasUnpublishedChanges = async (entryId: string) => {
@@ -226,7 +227,7 @@ describe("0013_stored_documents", () => {
 			{ table_name: "body_templates", data_type: "jsonb", is_nullable: "YES" },
 			{ table_name: "entry_bodies", data_type: "jsonb", is_nullable: "YES" },
 		]);
-		expect(contentOf((await row(published.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
+		expect(contentOf((await row(published.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(testSite, LEGACY).doc));
 	});
 
 	it("gives every body its document, writes its MDX from it, and recomputes the hash and search text", async () => {
@@ -242,14 +243,14 @@ describe("0013_stored_documents", () => {
 			[draft.id, "working", "Only a draft\nwith two paragraphs"],
 		] as const) {
 			const stored = await row(entryId, state);
-			const expected = bodyFromMdx(legacy);
+			const expected = bodyFromMdx(testSite, legacy);
 			expect(expected.doc).not.toBeNull();
 			expect(stored?.mdx).toBe(expected.mdx);
 			expect(contentOf(stored?.doc)).toEqual(contentOf(expected.doc));
 			expect(stored?.content_hash).toBe(
 				mdxContentHash(bodies, stored?.metadata ?? {}, expected.mdx, stored?.schema_version ?? 1),
 			);
-			expect(stored?.search_text).toBe(mdxSearchText(bodies, expected.mdx));
+			expect(stored?.search_text).toBe(mdxSearchText(testSite, bodies, expected.mdx));
 		}
 		expect((await row(published.id, "working"))?.mdx).toBe(WRITTEN);
 		expect((await row(published.id, "working"))?.search_text).toContain("emphasis");
@@ -280,8 +281,8 @@ describe("0013_stored_documents", () => {
 		expect(after.updatedAt.getTime()).toBe(published.updatedAt.getTime());
 		expect((await row(published.id, "working"))?.updated_at.getTime()).toBe(workingBefore?.updated_at.getTime());
 		expect((await row(published.id, "published"))?.updated_at.getTime()).toBe(publishedBefore?.updated_at.getTime());
-		expect(contentOf(after.working.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
-		expect(contentOf(after.published?.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
+		expect(contentOf(after.working.doc)).toEqual(contentOf(bodyFromMdx(testSite, LEGACY).doc));
+		expect(contentOf(after.published?.doc)).toEqual(contentOf(bodyFromMdx(testSite, LEGACY).doc));
 	});
 
 	it("replaces a document that is already there with the one the MDX reads as", async () => {
@@ -294,7 +295,7 @@ describe("0013_stored_documents", () => {
 
 		await run();
 
-		expect(contentOf((await row(draft.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(WRITTEN).doc));
+		expect(contentOf((await row(draft.id, "working"))?.doc)).toEqual(contentOf(bodyFromMdx(testSite, WRITTEN).doc));
 	});
 
 	it("writes the source a translation was confirmed against the same way, so the translation screen sees no change", async () => {
@@ -333,7 +334,7 @@ describe("0013_stored_documents", () => {
 		const messages: string[] = [];
 
 		await withMigrationClient((client) =>
-			migrateStoredDocuments(client, schemaName, { bodies, log: (message) => messages.push(message) }),
+			migrateStoredDocuments(client, schemaName, { site: testSite, bodies, log: (message) => messages.push(message) }),
 		);
 
 		for (const [entry, mdx] of [
@@ -347,7 +348,7 @@ describe("0013_stored_documents", () => {
 			expect(stored?.content_hash).toBe(
 				mdxContentHash(bodies, stored?.metadata ?? {}, mdx, stored?.schema_version ?? 1),
 			);
-			expect(stored?.search_text).toBe(mdxSearchText(bodies, mdx));
+			expect(stored?.search_text).toBe(mdxSearchText(testSite, bodies, mdx));
 			expect(messages.filter((message) => message.includes(`${entry.id}/working`))).toHaveLength(1);
 		}
 		expect((await row(good.id, "working"))?.mdx).toBe(WRITTEN);
@@ -374,7 +375,7 @@ describe("0013_stored_documents", () => {
 		await legacyPublished(LEGACY);
 		const broken = await createDraft("가\n<Unclosed");
 		await setLegacy(broken.id, "가\n<Unclosed");
-		const template = await store.createTemplate({ name: unique("again"), doc: docOf(LEGACY) });
+		const template = await store.createTemplate({ name: unique("again"), doc: docOf(testSite, LEGACY) });
 		await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
 			LEGACY,
 			template.id,
@@ -391,7 +392,7 @@ describe("0013_stored_documents", () => {
 
 	describe("body templates", () => {
 		const legacyTemplate = async (mdx: string) => {
-			const template = await store.createTemplate({ name: unique("template"), doc: docOf(mdx) });
+			const template = await store.createTemplate({ name: unique("template"), doc: docOf(testSite, mdx) });
 			await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
 				mdx,
 				template.id,
@@ -406,7 +407,7 @@ describe("0013_stored_documents", () => {
 
 			const after = await store.getTemplate(template.id);
 			expect(await templateMdx(pool, schemaName, template.id)).toBe(WRITTEN);
-			expect(contentOf(after.doc)).toEqual(contentOf(bodyFromMdx(LEGACY).doc));
+			expect(contentOf(after.doc)).toEqual(contentOf(bodyFromMdx(testSite, LEGACY).doc));
 			expect(after.version).toBe(template.version);
 			expect(after.updatedAt.getTime()).toBe(template.updatedAt.getTime());
 		});
@@ -416,7 +417,11 @@ describe("0013_stored_documents", () => {
 			const messages: string[] = [];
 
 			await withMigrationClient((client) =>
-				migrateStoredDocuments(client, schemaName, { bodies, log: (message) => messages.push(message) }),
+				migrateStoredDocuments(client, schemaName, {
+					site: testSite,
+					bodies,
+					log: (message) => messages.push(message),
+				}),
 			);
 
 			expect(await templateMdx(pool, schemaName, broken.id)).toBe("Words\n\n<Unclosed");
@@ -437,7 +442,10 @@ describe("0013_stored_documents", () => {
 			}
 			const templates = [];
 			for (let index = 0; index < 5; index += 1) {
-				const template = await store.createTemplate({ name: unique("batch"), doc: docOf(`Heading ${index}\n=====\n`) });
+				const template = await store.createTemplate({
+					name: unique("batch"),
+					doc: docOf(testSite, `Heading ${index}\n=====\n`),
+				});
 				await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = $1, doc = NULL WHERE id = $2`, [
 					`Heading ${index}\n=====\n`,
 					template.id,
@@ -453,16 +461,18 @@ describe("0013_stored_documents", () => {
 					templates.map((template) => template.id),
 				]);
 
-				await withMigrationClient((client) => migrateStoredDocuments(client, schemaName, { bodies, batchSize }));
+				await withMigrationClient((client) =>
+					migrateStoredDocuments(client, schemaName, { site: testSite, bodies, batchSize }),
+				);
 
 				for (const [index, entry] of entries.entries()) {
 					const stored = await row(entry.id, "working");
 					expect(stored?.mdx).toBe(`# Title ${index}\n`);
-					expect(contentOf(stored?.doc)).toEqual(contentOf(bodyFromMdx(`Title ${index}\n=====\n`).doc));
+					expect(contentOf(stored?.doc)).toEqual(contentOf(bodyFromMdx(testSite, `Title ${index}\n=====\n`).doc));
 				}
 				for (const [index, template] of templates.entries()) {
 					expect(contentOf((await store.getTemplate(template.id)).doc)).toEqual(
-						contentOf(bodyFromMdx(`Heading ${index}\n=====\n`).doc),
+						contentOf(bodyFromMdx(testSite, `Heading ${index}\n=====\n`).doc),
 					);
 				}
 				// Put the legacy text back for the next batch size.

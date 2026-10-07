@@ -1,12 +1,12 @@
-// The format module loads the site config before the document model reads its blocks.
-import "../format";
 import { isUnparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { bodyFromDocument, bodyFromMdx } from "../body";
 import { createMdxFormat } from "../format";
 import { createServerMdxFormat, legacyBodies } from "../server";
 import { insertSoftBreaks } from "../soft-breaks";
 import type { SyntaxExtension } from "../syntax";
+import { siteCodeLineEffects, siteSyntaxBlocks } from "../syntax-config";
 import { docOfMdx } from "../testing";
 
 /** A made-up notation for a mark: `{u text}` is underlined text. It is written and read only while the extension is listed. */
@@ -24,12 +24,12 @@ const SOURCES = [
 ];
 
 describe("legacyBodies", () => {
-	const bodies = legacyBodies();
+	const bodies = legacyBodies(testSite);
 
 	describe("read", () => {
 		it("returns the text and the document of bodyFromMdx", () => {
 			for (const source of SOURCES) {
-				const expected = bodyFromMdx(source);
+				const expected = bodyFromMdx(testSite, source);
 				const read = bodies.read(source);
 				expect(read.text, source).toBe(expected.mdx);
 				expect(read.doc === null, source).toBe(expected.doc === null);
@@ -46,20 +46,20 @@ describe("legacyBodies", () => {
 		});
 
 		it("lets blocks inherit the ids of the previous document", () => {
-			const previous = docOfMdx("First\n\nSecond\n");
+			const previous = docOfMdx(testSite, "First\n\nSecond\n");
 			const read = bodies.read("First\n\nSecond\n", { previous });
 			expect(read.doc?.content.map((block) => block.id)).toEqual(previous.content.map((block) => block.id));
 		});
 
 		it("writes with the syntax extensions it was given", () => {
-			const withBraces = legacyBodies({ syntax: [braces] });
-			const doc = docOfMdx("A word", [braces]);
+			const withBraces = legacyBodies(testSite, { syntax: [braces] });
+			const doc = docOfMdx(testSite, "A word", [braces]);
 			const marked = {
 				...doc,
 				content: [{ type: "paragraph", content: [{ type: "text", text: "word", marks: [{ type: "underline" }] }] }],
 			};
 			const written = withBraces.write(marked);
-			expect(written.text).toBe(bodyFromDocument(marked, [braces]).mdx);
+			expect(written.text).toBe(bodyFromDocument(testSite, marked, [braces]).mdx);
 			expect(written.text).toContain("{u word}");
 			expect(bodies.write(marked).text).not.toContain("{u word}");
 		});
@@ -68,8 +68,8 @@ describe("legacyBodies", () => {
 	describe("write", () => {
 		it("returns the text and the document of bodyFromDocument", () => {
 			for (const source of SOURCES.filter((entry) => !entry.includes("<Unclosed"))) {
-				const doc = docOfMdx(source);
-				const expected = bodyFromDocument(doc);
+				const doc = docOfMdx(testSite, source);
+				const expected = bodyFromDocument(testSite, doc);
 				const written = bodies.write(doc);
 				expect(written.text, source).toBe(expected.mdx);
 				expect(written.doc?.content, source).toEqual(expected.doc?.content);
@@ -77,13 +77,13 @@ describe("legacyBodies", () => {
 		});
 
 		it("keeps the block ids of the document it is given", () => {
-			const doc = docOfMdx("First\n\nSecond\n");
+			const doc = docOfMdx(testSite, "First\n\nSecond\n");
 			const written = bodies.write(doc);
 			expect(written.doc?.content.map((block) => block.id)).toEqual(doc.content.map((block) => block.id));
 		});
 
 		it("gives the same result as reading the text it wrote", () => {
-			const doc = docOfMdx("# Title\n\nA *word*.\n");
+			const doc = docOfMdx(testSite, "# Title\n\nA *word*.\n");
 			const written = bodies.write(doc);
 			const reread = bodies.read(written.text, { previous: doc });
 			expect(reread.text).toBe(written.text);
@@ -94,7 +94,7 @@ describe("legacyBodies", () => {
 	describe("insertSoftBreaks", () => {
 		it("maps a change to the new text", () => {
 			const source = "A line\nand its soft ending\n";
-			const expected = insertSoftBreaks(source);
+			const expected = insertSoftBreaks(testSite, source);
 			expect(expected.status).toBe("changed");
 			expect(bodies.insertSoftBreaks(source)).toEqual({
 				status: "changed",
@@ -108,7 +108,7 @@ describe("legacyBodies", () => {
 
 		it("maps a text it cannot edit to skipped, with the reason", () => {
 			const source = "A line\n<Unclosed";
-			const expected = insertSoftBreaks(source);
+			const expected = insertSoftBreaks(testSite, source);
 			expect(expected.status).toBe("skipped");
 			const result = bodies.insertSoftBreaks(source);
 			expect(result.status).toBe("skipped");
@@ -157,16 +157,17 @@ describe("createServerMdxFormat", () => {
 		});
 		expect(plain.legacyBodies).toBeUndefined();
 		expect(server.legacyBodies).toBeDefined();
-		expect(typeof server.legacyBodies?.read).toBe("function");
+		expect(typeof server.legacyBodies?.(testSite).read).toBe("function");
 	});
 
 	it("reads and writes like the plain format", async () => {
 		const server = createServerMdxFormat();
-		const doc = docOfMdx("# Title\n\nSome *words*\n");
+		const doc = docOfMdx(testSite, "# Title\n\nSome *words*\n");
 		const ctx = {
 			locale: "ko",
-			blocks: (await import("../syntax-config")).siteSyntaxBlocks,
-			codeLineEffects: (await import("../syntax-config")).siteCodeLineEffects,
+			blocks: siteSyntaxBlocks(testSite),
+			site: testSite,
+			codeLineEffects: siteCodeLineEffects(testSite),
 		};
 		const exportContext = {
 			...ctx,
@@ -183,13 +184,13 @@ describe("createServerMdxFormat", () => {
 	it("passes its syntax extensions to the format and to the old-body reader", async () => {
 		const server = createServerMdxFormat({ syntax: [braces] });
 		const doc = {
-			...docOfMdx("x"),
+			...docOfMdx(testSite, "x"),
 			content: [{ type: "paragraph", content: [{ type: "text", text: "word", marks: [{ type: "underline" }] }] }],
 		};
-		const syntaxCtx = (await import("../syntax-config")).siteSyntaxBlocks;
 		const text = await server.export(doc, {
 			locale: "ko",
-			blocks: syntaxCtx,
+			blocks: siteSyntaxBlocks(testSite),
+			site: testSite,
 			codeLineEffects: new Set(),
 			purpose: "read",
 			link: () => null,
@@ -197,6 +198,6 @@ describe("createServerMdxFormat", () => {
 			report: () => {},
 		});
 		expect(text).toContain("{u word}");
-		expect(server.legacyBodies?.write(doc).text).toContain("{u word}");
+		expect(server.legacyBodies?.(testSite).write(doc).text).toContain("{u word}");
 	});
 });

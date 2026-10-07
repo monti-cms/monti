@@ -1,5 +1,6 @@
 import type { CmsNode } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 
 const linkDoc = (href: string, title?: string, text = "label"): CmsNode => ({
@@ -23,7 +24,7 @@ const imageDoc = (src: string, alt: string, title?: string): CmsNode => ({
 	content: [{ type: "image", attrs: { src, alt, ...(title === undefined ? {} : { title }) } }],
 });
 
-const reparse = (doc: CmsNode) => toDocument(analyze(serialize(doc)));
+const reparse = (doc: CmsNode) => toDocument(testSite, analyze(testSite, serialize(testSite, doc)));
 
 const linkAttrs = (doc: CmsNode) => doc.content?.[0]?.content?.[0]?.marks?.[0]?.attrs;
 
@@ -57,7 +58,9 @@ describe("link and image serialization escapes", () => {
 	});
 
 	it("writes plain destinations unchanged", () => {
-		expect(serialize(linkDoc("https://example.com/a(b)c", "T")).trim()).toBe('[label](https://example.com/a(b)c "T")');
+		expect(serialize(testSite, linkDoc("https://example.com/a(b)c", "T")).trim()).toBe(
+			'[label](https://example.com/a(b)c "T")',
+		);
 	});
 
 	it.each([
@@ -99,7 +102,7 @@ describe("link and image serialization escapes", () => {
 	});
 
 	it("keeps link text with a bracket idempotent", () => {
-		const once = serialize(linkDoc("/x", undefined, "a]b"));
-		expect(serialize(toDocument(analyze(once)))).toBe(once);
+		const once = serialize(testSite, linkDoc("/x", undefined, "a]b"));
+		expect(serialize(testSite, toDocument(testSite, analyze(testSite, once)))).toBe(once);
 	});
 });

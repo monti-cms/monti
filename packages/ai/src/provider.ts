@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { createTranslator, slugify } from "@monti-cms/core/client";
+import { type Site, slugify } from "@monti-cms/core/client";
 import { APICallError, generateText, NoObjectGeneratedError, Output, RetryError, streamText } from "ai";
 import { z } from "zod";
 import type { AiInputKind } from "./action";
@@ -8,7 +8,8 @@ import type { AiResult } from "./definition";
 import { AiError } from "./errors";
 import { providerMessages } from "./provider.messages";
 
-const t = createTranslator(providerMessages);
+/** The sites a message is written for: anything that has a translator for the admin language. */
+type ProviderSite = Pick<Site, "createTranslator">;
 
 /**
  * AI service port. Built from a connection (URL, key) and one model. The connection comes from the AI screen settings (`settings.ts`).
@@ -90,7 +91,8 @@ function serviceMessage(detail: string): string {
 }
 
 /** Turns a service error into an AI error to show on screen. Appends the service's explanation and also logs it. */
-function providerError(status: number | undefined, detail: string): AiError {
+function providerError(site: ProviderSite, status: number | undefined, detail: string): AiError {
+	const t = site.createTranslator(providerMessages);
 	const message = serviceMessage(detail);
 	console.error("AI provider error:", status, message);
 	const withDetail = (text: string) => (message ? `${text} — ${message}` : text);
@@ -148,7 +150,11 @@ function extractJson(text: string): unknown {
 	return JSON.parse(text.slice(start, end + 1));
 }
 
-export function createGenerator(config: { baseUrl: string; apiKey: string; model: string }): AiProvider {
+export function createGenerator(
+	site: ProviderSite,
+	config: { baseUrl: string; apiKey: string; model: string },
+): AiProvider {
+	const t = site.createTranslator(providerMessages);
 	const create = (supportsStructuredOutputs: boolean) =>
 		createOpenAICompatible({
 			name: "cms-ai",
@@ -214,7 +220,7 @@ export function createGenerator(config: { baseUrl: string; apiKey: string; model
 					if (isAbort(error)) throw error;
 					console.warn(`[@monti-cms/ai] ${config.model} stream failed: ${failureNote(error)}`);
 					if (APICallError.isInstance(error)) {
-						throw providerError(error.statusCode, error.responseBody ?? error.message);
+						throw providerError(site, error.statusCode, error.responseBody ?? error.message);
 					}
 					throw new AiError("ai_failed", t("streamCut"));
 				} else if (part.type === "finish" && part.finishReason === "length") {
@@ -236,7 +242,7 @@ export function createGenerator(config: { baseUrl: string; apiKey: string; model
 				}
 			}
 			if (APICallError.isInstance(lastError)) {
-				throw providerError(lastError.statusCode, lastError.responseBody ?? lastError.message);
+				throw providerError(site, lastError.statusCode, lastError.responseBody ?? lastError.message);
 			}
 			if (isTruncated(lastError)) {
 				throw new AiError("ai_failed", t("tooLongModel"));
@@ -251,7 +257,8 @@ const decisionAnswerSchema = z.union([
 	z.object({ type: z.literal("choice"), choice: z.string(), probabilities: z.record(z.string(), z.number()) }),
 ]);
 
-export function createDecider(config: { url: string; apiKey: string; model: string }): AiDecider {
+export function createDecider(site: ProviderSite, config: { url: string; apiKey: string; model: string }): AiDecider {
+	const t = site.createTranslator(providerMessages);
 	return {
 		name: "decisions",
 		model: config.model,
@@ -269,7 +276,7 @@ export function createDecider(config: { url: string; apiKey: string; model: stri
 				throw new AiError("ai_failed", t("deciderUnreachable"));
 			}
 			const text = await response.text();
-			if (!response.ok) throw providerError(response.status, text);
+			if (!response.ok) throw providerError(site, response.status, text);
 			const parsed = z.object({ answers: z.record(z.string(), decisionAnswerSchema) }).safeParse(
 				(() => {
 					try {
@@ -289,7 +296,13 @@ export function createDecider(config: { url: string; apiKey: string; model: stri
 }
 
 /** Model list of an OpenAI-style URL (`GET {baseUrl}/models`). Empty array for services that do not provide a list. */
-export async function listModels(baseUrl: string, apiKey: string | null, signal?: AbortSignal): Promise<AiModelInfo[]> {
+export async function listModels(
+	site: ProviderSite,
+	baseUrl: string,
+	apiKey: string | null,
+	signal?: AbortSignal,
+): Promise<AiModelInfo[]> {
+	const t = site.createTranslator(providerMessages);
 	let response: Response;
 	try {
 		response = await fetch(`${baseUrl.replace(/\/+$/, "")}/models`, {
@@ -301,7 +314,7 @@ export async function listModels(baseUrl: string, apiKey: string | null, signal?
 		throw new AiError("ai_failed", t("unreachable"));
 	}
 	if (response.status === 404) return [];
-	if (!response.ok) throw providerError(response.status, await response.text());
+	if (!response.ok) throw providerError(site, response.status, await response.text());
 	const body = (await response.json().catch(() => null)) as { data?: unknown } | null;
 	const items = Array.isArray(body?.data) ? body.data : [];
 	return items

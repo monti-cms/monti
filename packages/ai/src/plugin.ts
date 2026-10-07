@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { createActiveTranslator, definePlugin } from "@monti-cms/core";
 import { type AiConfig, validateAiConfig } from "./action";
 import { AI_PLUGIN_NAME } from "./plugin-name";
 import { resolveAiConfig } from "./resolve";
@@ -21,7 +21,12 @@ export function aiPlugin<const Config extends AiConfig>(config: Config = {} as C
 		nav: [{ path: "ai", label: "AI", icon: "sparkles" }],
 		validate: ({ collections, blocks, blockDefinitions, locales, plugins }) =>
 			validateAiConfig(
-				resolveAiConfig(config, { collections, blocks: blockDefinitions, locales }, plugins),
+				resolveAiConfig(
+					config,
+					// No site exists while the config is being defined: the labels the factories write are not read here, so the active (English) translator is enough.
+					{ collections, blocks: blockDefinitions, locales, createTranslator: createActiveTranslator },
+					plugins,
+				),
 				collections,
 				blocks,
 			),

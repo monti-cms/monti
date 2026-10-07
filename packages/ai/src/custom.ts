@@ -1,12 +1,10 @@
-import { ADDED_BLOCKS, COLLECTIONS, createTranslator, schemaOf, storedField } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import { z } from "zod";
-import { type AiActionDefinition, type AiChoices, type AiInputs, aiActionOverrideSchema, aiInput } from "./action";
+import { type AiActionDefinition, type AiChoices, type AiInputs, aiActionOverrideSchemaOf, aiInput } from "./action";
 import { actionsMessages } from "./actions.messages";
+import { coreMessages } from "./core.messages";
 import type { AiEngine, AiResult } from "./definition";
 import { presetMessages } from "./presets.messages";
-
-const t = createTranslator(actionsMessages);
-const presetText = createTranslator(presetMessages);
 
 /**
  * UI actions. Actions created in the admin AI screen. They use the same runner as code actions and attach to generic slots (next to a field, selection
@@ -39,14 +37,13 @@ export const customSurfaceSchema = z.discriminatedUnion("slot", [
 export type CustomSurface = z.output<typeof customSurfaceSchema>;
 
 /** The field a field slot points to (from the first collection found). Relation/select fields are looked up among stored fields. */
-export function surfaceField(surface: CustomSurface) {
+export function surfaceField(site: Site, surface: CustomSurface) {
 	if (surface.slot !== "field") return undefined;
-	const collections = surface.collections?.length ? surface.collections : COLLECTIONS;
+	const collections = surface.collections?.length ? surface.collections : site.COLLECTIONS;
 	for (const collection of collections) {
-		if (!(COLLECTIONS as readonly string[]).includes(collection)) continue;
-		const name = collection as (typeof COLLECTIONS)[number];
+		if (!site.isCollection(collection)) continue;
 		// Look at stored fields first (including the selected value of conditional fields), then find fields stored separately, like URLs, in the schema.
-		const field = storedField(name, surface.field)?.field ?? schemaOf(name).fields[surface.field];
+		const field = site.storedField(collection, surface.field)?.field ?? site.schemaOf(collection).fields[surface.field];
 		if (field) return { collection, field };
 	}
 	return undefined;
@@ -56,8 +53,8 @@ export function surfaceField(surface: CustomSurface) {
  * Options of a field whose values are fixed. For relation fields (tags, categories, collections), the published items of the target collection; for select fields, their options.
  * A field with options only produces candidates, and it is checked that the value actually exists.
  */
-export function surfaceChoices(surface: CustomSurface): { choices: AiChoices; many: boolean } | undefined {
-	const found = surfaceField(surface);
+export function surfaceChoices(site: Site, surface: CustomSurface): { choices: AiChoices; many: boolean } | undefined {
+	const found = surfaceField(site, surface);
 	if (!found || surface.slot !== "field") return undefined;
 	const { collection, field } = found;
 	if (field.kind === "relation") return { choices: { from: "collection", collection: field.to }, many: !!field.many };
@@ -76,37 +73,47 @@ export const CUSTOM_RESULTS: Readonly<Record<CustomSurface["slot"], readonly AiR
 };
 
 /** Result shapes selectable in a slot. A field with options gets candidates only. */
-export const customResults = (surface: CustomSurface): readonly AiResult[] =>
-	surfaceChoices(surface) ? ["candidates"] : CUSTOM_RESULTS[surface.slot];
+export const customResults = (site: Site, surface: CustomSurface): readonly AiResult[] =>
+	surfaceChoices(site, surface) ? ["candidates"] : CUSTOM_RESULTS[surface.slot];
 
 /** Modes selectable in a slot. Decision mode (System One) is used only on fields with options. */
-export const customEngines = (surface: CustomSurface): readonly AiEngine[] =>
-	surfaceChoices(surface) ? ["decide", "generate"] : ["generate"];
+export const customEngines = (site: Site, surface: CustomSurface): readonly AiEngine[] =>
+	surfaceChoices(site, surface) ? ["decide", "generate"] : ["generate"];
 
-export const customBaseSchema = z
-	.object({
-		label: z.string().trim().min(1).max(40),
-		surface: customSurfaceSchema,
-		result: z.enum(["candidates", "text", "mdx", "note"]),
-		/** Mode. If absent, it is generation mode (actions created earlier). */
-		engine: z.enum(["generate", "decide"]).optional(),
-	})
-	.refine((base) => customResults(base.surface).includes(base.result), {
-		error: () => t("surface.resultNotAllowed"),
-		path: ["result"],
-	})
-	.refine((base) => customEngines(base.surface).includes(base.engine ?? "generate"), {
-		error: () => t("surface.decideChoicesOnly"),
-		path: ["engine"],
+/** Basic info of a screen action, checked against the site (whether the result shape and the mode fit where it attaches). */
+export const customBaseSchemaOf = (site: Site) => {
+	const t = site.createTranslator(actionsMessages);
+	return z
+		.object({
+			label: z.string().trim().min(1).max(40),
+			surface: customSurfaceSchema,
+			result: z.enum(["candidates", "text", "mdx", "note"]),
+			/** Mode. If absent, it is generation mode (actions created earlier). */
+			engine: z.enum(["generate", "decide"]).optional(),
+		})
+		.refine((base) => customResults(site, base.surface).includes(base.result), {
+			error: () => t("surface.resultNotAllowed"),
+			path: ["result"],
+		})
+		.refine((base) => customEngines(site, base.surface).includes(base.engine ?? "generate"), {
+			error: () => t("surface.decideChoicesOnly"),
+			path: ["engine"],
+		});
+};
+export type CustomBase = z.output<ReturnType<typeof customBaseSchemaOf>>;
+
+/** A stored screen action: its basic info and its edited values. */
+export const customValueSchemaOf = (site: Site) =>
+	z.object({
+		base: customBaseSchemaOf(site),
+		override: aiActionOverrideSchemaOf(site.createTranslator(coreMessages)),
 	});
-export type CustomBase = z.output<typeof customBaseSchema>;
-
-export const customValueSchema = z.object({ base: customBaseSchema, override: aiActionOverrideSchema });
-export type CustomValue = z.output<typeof customValueSchema>;
+export type CustomValue = z.output<ReturnType<typeof customValueSchemaOf>>;
 
 /** Material (inputs) a slot provides. Required inputs are only those always present in that slot. Names are chosen in the UI language. */
-const surfaceInputs = (slot: CustomSurface["slot"]): AiInputs => {
-	const text = presetText;
+const surfaceInputs = (site: Site, slot: CustomSurface["slot"]): AiInputs => {
+	const t = site.createTranslator(actionsMessages);
+	const text = site.createTranslator(presetMessages);
 	const fieldInputs = {
 		title: aiInput.text({ label: text("input.title") }),
 		summary: aiInput.text({ label: text("input.summary") }),
@@ -159,13 +166,13 @@ export const CUSTOM_PICK_DEFAULTS = {
 } as const;
 
 /** Action definition built from the stored base info. Instructions, inputs to send, etc. are decided by the edited values (`override`). */
-export function customDefinition(base: CustomBase): AiActionDefinition {
-	const picked = surfaceChoices(base.surface);
+export function customDefinition(site: Site, base: CustomBase): AiActionDefinition {
+	const picked = surfaceChoices(site, base.surface);
 	if (picked) {
 		// Relation/select field: pick among the options. Fields accepting several values (tags) add; fields accepting one replace.
 		return {
 			label: base.label,
-			input: surfaceInputs("field"),
+			input: surfaceInputs(site, "field"),
 			send: ["title", "summary", "body"],
 			prompt: CUSTOM_DEFAULT_PROMPT,
 			engine: base.engine ?? "generate",
@@ -181,7 +188,7 @@ export function customDefinition(base: CustomBase): AiActionDefinition {
 	const writes = base.surface.slot === "selection" || base.surface.slot === "insert" || base.surface.slot === "block";
 	return {
 		label: base.label,
-		input: surfaceInputs(base.surface.slot),
+		input: surfaceInputs(site, base.surface.slot),
 		prompt: CUSTOM_DEFAULT_PROMPT,
 		result: base.result,
 		...(base.result === "note" ? { apply: "none" as const } : {}),
@@ -191,24 +198,25 @@ export function customDefinition(base: CustomBase): AiActionDefinition {
 }
 
 /** Blocks a UI action can attach to: blocks added by block extensions or the site config that are edited as editor nodes (excluding child-only blocks). */
-export const CUSTOM_BLOCKS = ADDED_BLOCKS.filter((block) => block.editor.view === "node" && !block.parent);
+export const customBlocksOf = (site: Pick<Site, "ADDED_BLOCKS">) =>
+	site.ADDED_BLOCKS.filter((block) => block.editor.view === "node" && !block.parent);
 
 /** Whether the field/block a slot points to exists in the site config. If not, the reason. */
-export function surfaceProblem(surface: CustomSurface): string | null {
+export function surfaceProblem(site: Site, surface: CustomSurface): string | null {
+	const t = site.createTranslator(actionsMessages);
 	if (surface.slot === "block") {
-		return CUSTOM_BLOCKS.some((block) => block.name === surface.block)
+		return customBlocksOf(site).some((block) => block.name === surface.block)
 			? null
 			: t("surface.noBlock", { block: surface.block });
 	}
 	if (surface.slot !== "field") return null;
-	const collections = surface.collections?.length ? surface.collections : COLLECTIONS;
+	const collections = surface.collections?.length ? surface.collections : site.COLLECTIONS;
 	for (const collection of collections) {
-		if (!(COLLECTIONS as readonly string[]).includes(collection)) return t("surface.noCollection", { collection });
+		if (!site.isCollection(collection)) return t("surface.noCollection", { collection });
 	}
-	const has = (collection: string) => {
-		const name = collection as (typeof COLLECTIONS)[number];
-		return Boolean(schemaOf(name).fields[surface.field] ?? storedField(name, surface.field));
-	};
+	const has = (collection: string) =>
+		site.isCollection(collection) &&
+		Boolean(site.schemaOf(collection).fields[surface.field] ?? site.storedField(collection, surface.field));
 	return collections.some(has) ? null : t("surface.noField", { field: surface.field });
 }
 

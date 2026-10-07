@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createTranslator } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import type { PluginSecrets } from "@monti-cms/core/plugin/server";
 import { z } from "zod";
 import type { ResolvedAiAction } from "./action";
@@ -16,8 +16,6 @@ import {
 } from "./provider";
 import { decryptSecret, encryptSecret, keyHint, refreshSecret } from "./secret";
 import { settingsMessages } from "./settings.messages";
-
-const t = createTranslator(settingsMessages);
 
 /** Settings store (part of the content store). Tests pass an in-memory implementation. */
 export interface AiSettingsStore {
@@ -49,7 +47,8 @@ const legacySchema = z.object({
 	decide: z.object({ url: z.string(), apiKey: z.string().nullable(), shareKey: z.boolean(), model: z.string() }),
 });
 
-function readStored(value: unknown): StoredProvider[] {
+function readStored(site: Site, value: unknown): StoredProvider[] {
+	const t = site.createTranslator(settingsMessages);
 	const legacy = legacySchema.safeParse(value);
 	if (legacy.success) {
 		const { generate, decide } = legacy.data;
@@ -80,9 +79,9 @@ interface ResolvedProvider extends StoredProvider {
 	key: string | null;
 }
 
-async function load(store: AiSettingsStore): Promise<{ version: number; providers: ResolvedProvider[] }> {
+async function load(site: Site, store: AiSettingsStore): Promise<{ version: number; providers: ResolvedProvider[] }> {
 	const row = await store.getAiSettings();
-	const providers = readStored(row?.value).map((provider) => ({
+	const providers = readStored(site, row?.value).map((provider) => ({
 		...provider,
 		key: provider.apiKey ? decryptSecret(provider.apiKey, store.secrets()) : null,
 	}));
@@ -101,8 +100,8 @@ const viewOf = (provider: ResolvedProvider): AiProviderView => ({
 	ready: isReady(provider),
 });
 
-export async function getAiSettingsView(store: AiSettingsStore): Promise<AiSettingsView> {
-	const { version, providers } = await load(store);
+export async function getAiSettingsView(site: Site, store: AiSettingsStore): Promise<AiSettingsView> {
+	const { version, providers } = await load(site, store);
 	return { version, providers: providers.map(viewOf), fake: isFakeAi() };
 }
 
@@ -124,12 +123,13 @@ function storedValue(providers: StoredProvider[], secrets: PluginSecrets) {
 }
 
 async function writeProviders(
+	site: Site,
 	store: AiSettingsStore,
 	expectedVersion: number,
 	providers: StoredProvider[],
 ): Promise<AiSettingsView> {
 	await store.saveAiSettings({ expectedVersion, value: storedValue(providers, store.secrets()) });
-	return getAiSettingsView(store);
+	return getAiSettingsView(site, store);
 }
 
 /**
@@ -138,12 +138,12 @@ async function writeProviders(
  * A save of the connections that races with it wins (it also upgrades), so a version conflict is not an error.
  * @returns how many keys were upgraded
  */
-export async function upgradeStoredKeys(store: AiSettingsStore): Promise<number> {
+export async function upgradeStoredKeys(site: Site, store: AiSettingsStore): Promise<number> {
 	const secrets = store.secrets();
 	if (!secrets.available) return 0;
 	const row = await store.getAiSettings();
 	if (!row) return 0;
-	const providers = readStored(row.value);
+	const providers = readStored(site, row.value);
 	const stale = providers.filter(
 		(provider) => provider.apiKey !== null && refreshSecret(provider.apiKey, secrets) !== provider.apiKey,
 	);
@@ -158,6 +158,7 @@ export async function upgradeStoredKeys(store: AiSettingsStore): Promise<number>
 }
 
 const toStored = (
+	site: Site,
 	id: string,
 	input: AiProviderInput,
 	storedKey: string | null,
@@ -167,45 +168,54 @@ const toStored = (
 	name: input.name,
 	kind: input.kind,
 	url: input.url.replace(/\/+$/, ""),
-	apiKey: input.apiKey === undefined ? storedKey : input.apiKey === null ? null : encryptSecret(input.apiKey, secrets),
+	apiKey:
+		input.apiKey === undefined ? storedKey : input.apiKey === null ? null : encryptSecret(site, input.apiKey, secrets),
 	defaultModel: input.defaultModel,
 });
 
 export async function addAiProvider(
+	site: Site,
 	store: AiSettingsStore,
 	expectedVersion: number,
 	input: AiProviderInput,
 ): Promise<AiSettingsView> {
-	const { providers } = await load(store);
-	return writeProviders(store, expectedVersion, [...providers, toStored(randomUUID(), input, null, store.secrets())]);
+	const { providers } = await load(site, store);
+	return writeProviders(site, store, expectedVersion, [
+		...providers,
+		toStored(site, randomUUID(), input, null, store.secrets()),
+	]);
 }
 
 /** Edits a connection. If the key is omitted, the stored key stays; `null` deletes it; a string is encrypted and replaces it. */
 export async function updateAiProvider(
+	site: Site,
 	store: AiSettingsStore,
 	expectedVersion: number,
 	id: string,
 	input: AiProviderInput,
 ): Promise<AiSettingsView> {
-	const { providers } = await load(store);
+	const { providers } = await load(site, store);
 	const current = providers.find((provider) => provider.id === id);
-	if (!current) throw new AiError("ai_failed", t("unknownConnection"));
+	if (!current) throw new AiError("ai_failed", site.createTranslator(settingsMessages)("unknownConnection"));
 	// If the URL changes without a new key, delete the old key so it is not sent to a different URL.
 	const keepKey = input.apiKey === undefined && input.url.replace(/\/+$/, "") !== current.url ? null : current.apiKey;
 	return writeProviders(
+		site,
 		store,
 		expectedVersion,
-		providers.map((provider) => (provider.id === id ? toStored(id, input, keepKey, store.secrets()) : provider)),
+		providers.map((provider) => (provider.id === id ? toStored(site, id, input, keepKey, store.secrets()) : provider)),
 	);
 }
 
 export async function removeAiProvider(
+	site: Site,
 	store: AiSettingsStore,
 	expectedVersion: number,
 	id: string,
 ): Promise<AiSettingsView> {
-	const { providers } = await load(store);
+	const { providers } = await load(site, store);
 	return writeProviders(
+		site,
 		store,
 		expectedVersion,
 		providers.filter((provider) => provider.id !== id),
@@ -214,10 +224,11 @@ export async function removeAiProvider(
 
 /** URL and key of a stored connection (when fetching the model list). */
 export async function savedProvider(
+	site: Site,
 	store: AiSettingsStore,
 	id: string,
 ): Promise<{ kind: AiProviderKind; url: string; apiKey: string | null } | null> {
-	const provider = (await load(store)).providers.find((item) => item.id === id);
+	const provider = (await load(site, store)).providers.find((item) => item.id === id);
 	return provider ? { kind: provider.kind, url: provider.url, apiKey: provider.key } : null;
 }
 
@@ -249,24 +260,25 @@ export interface AiRuntime {
 }
 
 /** Generation/decision models to run one action. Fills only the side matching the action's mode. */
-export async function loadAiRuntime(store: AiSettingsStore, spec: ActionConnection): Promise<AiRuntime> {
+export async function loadAiRuntime(site: Site, store: AiSettingsStore, spec: ActionConnection): Promise<AiRuntime> {
 	if (isFakeAi()) return { generator: createFakeGenerator(), decider: createFakeDecider() };
-	const picked = pickConnection((await load(store)).providers, spec);
+	const picked = pickConnection((await load(site, store)).providers, spec);
 	if (!picked || !picked.provider.key) return { generator: null, decider: null };
 	const { provider, model } = picked;
 	const key = picked.provider.key;
 	return spec.engine === "decide"
-		? { generator: null, decider: createDecider({ url: provider.url, apiKey: key, model }) }
-		: { generator: createGenerator({ baseUrl: provider.url, apiKey: key, model }), decider: null };
+		? { generator: null, decider: createDecider(site, { url: provider.url, apiKey: key, model }) }
+		: { generator: createGenerator(site, { baseUrl: provider.url, apiKey: key, model }), decider: null };
 }
 
 /** Whether each action is usable now (whether to attach a button in the slot). Returns the names of usable actions. */
 export async function usableActionKeys(
+	site: Site,
 	store: AiSettingsStore,
 	actions: ReadonlyArray<ActionConnection & { key: string }>,
 ): Promise<string[]> {
 	if (isFakeAi()) return actions.map((action) => action.key);
-	const { providers } = await load(store);
+	const { providers } = await load(site, store);
 	return actions.filter((action) => pickConnection(providers, action) !== null).map((action) => action.key);
 }
 
@@ -275,20 +287,22 @@ export async function usableActionKeys(
  * If no new key was entered, uses the key of a connection stored with the same URL (a key stored for a different URL is not sent).
  */
 export async function connectionForCheck(
+	site: Site,
 	store: AiSettingsStore,
 	params: { providerId?: string; kind: AiProviderKind; url: string; apiKey?: string | null; model: string },
 ): Promise<{ model: string; generator?: AiProvider; decider?: AiDecider }> {
 	const url = params.url.replace(/\/+$/, "");
 	const saved = params.providerId
-		? (await load(store)).providers.find((item) => item.id === params.providerId)
+		? (await load(site, store)).providers.find((item) => item.id === params.providerId)
 		: undefined;
 	const apiKey = params.apiKey ?? (params.apiKey === undefined && saved?.url === url ? saved.key : null);
+	const t = site.createTranslator(settingsMessages);
 	if (!url || !params.model) throw new AiError("ai_unavailable", t("urlAndModel"));
 	if (!apiKey) {
 		throw new AiError("ai_unavailable", saved?.apiKey && !saved.key ? t("keyAgain") : t("key"));
 	}
 	const config = { apiKey, model: params.model };
 	return params.kind === "chat"
-		? { model: params.model, generator: createGenerator({ baseUrl: url, ...config }) }
-		: { model: params.model, decider: createDecider({ url, ...config }) };
+		? { model: params.model, generator: createGenerator(site, { baseUrl: url, ...config }) }
+		: { model: params.model, decider: createDecider(site, { url, ...config }) };
 }

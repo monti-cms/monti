@@ -1,6 +1,7 @@
 import { withoutBlockIds } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { docOfText } from "../../../core/src/doc/__test__/doc-text";
+import { testSite } from "../../../core/test/site";
 import { docOfMdx } from "../testing";
 
 /**
@@ -27,7 +28,7 @@ const SAMPLES = [
 describe("the plain-text reader of core tests", () => {
 	for (const sample of SAMPLES) {
 		it(`reads ${JSON.stringify(sample)} like the mdx format`, () => {
-			expect(withoutBlockIds(docOfText(sample).content)).toEqual(withoutBlockIds(docOfMdx(sample).content));
+			expect(withoutBlockIds(docOfText(sample).content)).toEqual(withoutBlockIds(docOfMdx(testSite, sample).content));
 		});
 	}
 });

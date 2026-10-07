@@ -8,6 +8,7 @@ import {
 	migrateContentStore,
 } from "@monti-cms/core/testing";
 import { afterAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { contentOf } from "../../../../core/test/stored-content";
 import { bodyFromMdx } from "../../body";
 import { createServerMdxFormat } from "../../server";
@@ -51,8 +52,8 @@ describe("body templates of a store that kept them as MDX text", () => {
 				[memoId, postId],
 			);
 
-			await migrateContentStore(legacy.pool, { schema: legacy.schemaName, formats });
-			const mergedStore = createContentStore(legacy.pool, { schema: legacy.schemaName });
+			await migrateContentStore(legacy.pool, { site: testSite, schema: legacy.schemaName, formats });
+			const mergedStore = createContentStore(legacy.pool, { site: testSite, schema: legacy.schemaName });
 			const merged = await mergedStore.listTemplates();
 			// The bodies are stored written from their documents (with a closing line break), and keep their versions.
 			const memo = merged.find((template) => template.id === memoId);
@@ -62,12 +63,12 @@ describe("body templates of a store that kept them as MDX text", () => {
 			// Migration 0013 wrote their text from the documents it gave them; 0019 leaves the column as it is.
 			expect(await textOf(memoId)).toBe("메모 본문\n");
 			expect(await textOf(postId)).toBe("포스트 본문\n");
-			expect(contentOf(memo?.doc)).toEqual(contentOf(bodyFromMdx("메모 본문").doc));
-			expect(contentOf(post?.doc)).toEqual(contentOf(bodyFromMdx("포스트 본문").doc));
+			expect(contentOf(memo?.doc)).toEqual(contentOf(bodyFromMdx(testSite, "메모 본문").doc));
+			expect(contentOf(post?.doc)).toEqual(contentOf(bodyFromMdx(testSite, "포스트 본문").doc));
 			expect(merged.find((template) => template.id === postId)?.name).not.toBe("공통 이름");
 			expect(new Set(merged.map((template) => template.name.toLowerCase())).size).toBe(merged.length);
 
-			await migrateContentStore(legacy.pool, { schema: legacy.schemaName, formats });
+			await migrateContentStore(legacy.pool, { site: testSite, schema: legacy.schemaName, formats });
 			expect(await mergedStore.listTemplates()).toEqual(merged);
 			const column = await legacy.pool.query(
 				`SELECT 1 FROM information_schema.columns

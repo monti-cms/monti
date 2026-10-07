@@ -2,7 +2,7 @@
 
 import type { FieldInputParts, FieldInputProps } from "@monti-cms/admin";
 import { cn, Switch } from "@monti-cms/admin/kit";
-import { isCollection, roleValue, SUMMARY_ROLE } from "@monti-cms/core/client";
+import { type Site, SUMMARY_ROLE, useSite } from "@monti-cms/core/client";
 import { SEO_DEFAULT_LIMITS } from "../fields";
 
 /** Recommended length: field `max` → `inputOptions.limit` → default. */
@@ -29,19 +29,27 @@ function Counter({ length, limit }: { length: number; limit: number }) {
 }
 
 /** Input piece that shows a hint and character count using the value the public page falls back to when empty. */
-const withFallback = (fallback: (props: FieldInputProps) => string, defaultLimit: number): FieldInputParts => ({
-	placeholder: (props) => fallback(props) || undefined,
-	Aside: (props) => (
-		<Counter length={(current(props) || fallback(props)).length} limit={limitOf(props.field, defaultLimit)} />
-	),
+const withFallback = (
+	fallback: (site: Site, props: FieldInputProps) => string,
+	defaultLimit: number,
+): FieldInputParts => ({
+	// The admin calls `placeholder` while it renders the input, and a registration always has one, so the hook runs in the same order on every render.
+	placeholder: (props) => fallback(useSite(), props) || undefined,
+	Aside: function FallbackCounter(props) {
+		const site = useSite();
+		return (
+			<Counter length={(current(props) || fallback(site, props)).length} limit={limitOf(props.field, defaultLimit)} />
+		);
+	},
 });
 
 /** Search title: falls back to the title when empty. */
-export const seoTitleInput = withFallback((props) => props.form.title, SEO_DEFAULT_LIMITS.title);
+export const seoTitleInput = withFallback((_site, props) => props.form.title, SEO_DEFAULT_LIMITS.title);
 
 /** Search description: falls back to the summary role value when empty. */
 export const seoDescriptionInput = withFallback(
-	(props) => (isCollection(props.collection) ? roleValue(props.collection, SUMMARY_ROLE, props.form) : ""),
+	(site, props) =>
+		site.isCollection(props.collection) ? site.roleValue(props.collection, SUMMARY_ROLE, props.form) : "",
 	SEO_DEFAULT_LIMITS.description,
 );
 

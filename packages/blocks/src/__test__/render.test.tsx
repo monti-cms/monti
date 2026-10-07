@@ -1,15 +1,10 @@
+import { renderMdx } from "@monti-cms/mdx/render";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
-// The core example config adds blocks as definitions only. Public components come from the plugin, so this test swaps in a config that uses `blocks()`.
-vi.mock("../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../test/render-config")).default,
-}));
-
-const { renderMdx } = await import("@monti-cms/mdx/render");
+import { describe, expect, it } from "vitest";
+import { renderSite as site } from "../test/render-config";
 
 const html = async (source: string, locale?: string) =>
-	renderToStaticMarkup((await renderMdx(source, { locale })).content);
+	renderToStaticMarkup((await renderMdx(source, { site, locale })).content);
 
 describe("block extension public components", () => {
 	it("callout renders variant, title and body, and uses the variant name when there is no title", async () => {
@@ -156,6 +151,7 @@ describe("block extension public components", () => {
 
 	it("a component the site passes under the same name wins", async () => {
 		const { content } = await renderMdx("<Callout>\n\n내용\n\n</Callout>", {
+			site,
 			components: {
 				blocks: { callout: ({ children }: { children?: React.ReactNode }) => <aside id="mine">{children}</aside> },
 			},

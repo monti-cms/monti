@@ -1,17 +1,18 @@
 import { EMPTY_FORM, type EntryForm, TooltipProvider } from "@monti-cms/admin/kit";
 import { type SlotAction, SlotRegistryProvider } from "@monti-cms/admin/slots";
-import { COLLECTIONS, type Collection, createTranslator, roleField, SITE_NAME, schemaOf } from "@monti-cms/core/client";
+import { type Collection, SiteProvider } from "@monti-cms/core/client";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // The properties panel is read from the admin package source, not the public entry point (tests only).
 import { InspectorPanel } from "../../../admin/src/screens/entries/inspector-panel";
 import { EntryFormProvider } from "../../../admin/src/screens/entries/use-field";
+import { testSite } from "../../test/site";
 import { SEO_ROLES } from "..";
 import { SeoAdminProvider } from "../admin/provider";
 import { seoMessages } from "../messages";
 
 // UI text follows the admin language from the config, so the same wording is picked from the dictionary.
-const t = createTranslator(seoMessages);
+const t = testSite.createTranslator(seoMessages);
 
 /**
  * Admin UI of the SEO extension (works regardless of config; regression guard). Collections, fields and tabs are found by role in the current config
@@ -29,33 +30,37 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-const collection = COLLECTIONS.find((name) => roleField(name, SEO_ROLES.title)) as Collection;
+const collection = testSite.COLLECTIONS.find((name) => testSite.roleField(name, SEO_ROLES.title)) as Collection;
 const field = (role: string) => {
-	const stored = roleField(collection, role);
+	const stored = testSite.roleField(collection, role);
 	if (!stored) throw new Error(`no ${role} field`);
 	return stored;
 };
-const summaryField = roleField(collection, "summary");
+const summaryField = testSite.roleField(collection, "summary");
 const tab = field(SEO_ROLES.title).field.tab ?? "";
 
 function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] = []) {
 	render(
-		<TooltipProvider>
-			<SeoAdminProvider>
-				<SlotRegistryProvider sources={[(request) => (request.target === field(SEO_ROLES.title).name ? sources : [])]}>
-					<EntryFormProvider value={{ collection, form, setForm: onChange }}>
-						<InspectorPanel
-							incomingReferences={[]}
-							isLoadingIncomingReferences={false}
-							onRefreshIncomingReferences={vi.fn()}
-							onSlugChange={vi.fn()}
-							onRegenerateSlug={vi.fn()}
-							onClose={vi.fn()}
-						/>
-					</EntryFormProvider>
-				</SlotRegistryProvider>
-			</SeoAdminProvider>
-		</TooltipProvider>,
+		<SiteProvider site={testSite}>
+			<TooltipProvider>
+				<SeoAdminProvider>
+					<SlotRegistryProvider
+						sources={[(request) => (request.target === field(SEO_ROLES.title).name ? sources : [])]}
+					>
+						<EntryFormProvider value={{ collection, form, setForm: onChange }}>
+							<InspectorPanel
+								incomingReferences={[]}
+								isLoadingIncomingReferences={false}
+								onRefreshIncomingReferences={vi.fn()}
+								onSlugChange={vi.fn()}
+								onRegenerateSlug={vi.fn()}
+								onClose={vi.fn()}
+							/>
+						</EntryFormProvider>
+					</SlotRegistryProvider>
+				</SeoAdminProvider>
+			</TooltipProvider>
+		</SiteProvider>,
 	);
 	fireEvent.click(screen.getByRole("tab", { name: tab }));
 	return onChange;
@@ -81,7 +86,7 @@ describe("SEO extension admin UI", () => {
 		const search = await screen.findByRole("region", { name: t("preview.search") });
 		expect(within(search).getByText("Entry title")).toBeTruthy();
 		if (summaryField) expect(within(search).getByText("Lead")).toBeTruthy();
-		expect(within(search).getByText(new RegExp(`${SITE_NAME}.*hello`))).toBeTruthy();
+		expect(within(search).getByText(new RegExp(`${testSite.SITE_NAME}.*hello`))).toBeTruthy();
 		expect(screen.getByRole("region", { name: t("preview.share") })).toBeTruthy();
 	});
 
@@ -115,23 +120,27 @@ describe("SEO extension admin UI", () => {
 	});
 
 	it("a collection without an SEO tab has a single default tab", () => {
-		const plain = COLLECTIONS.find((name) => Object.values(schemaOf(name).fields).every((item) => !item.tab));
+		const plain = testSite.COLLECTIONS.find((name) =>
+			Object.values(testSite.schemaOf(name).fields).every((item) => !item.tab),
+		);
 		if (!plain) return;
 		render(
-			<TooltipProvider>
-				<SeoAdminProvider>
-					<EntryFormProvider value={{ collection: plain, form: { ...EMPTY_FORM, title: "Plain" }, setForm: vi.fn() }}>
-						<InspectorPanel
-							incomingReferences={[]}
-							isLoadingIncomingReferences={false}
-							onRefreshIncomingReferences={vi.fn()}
-							onSlugChange={vi.fn()}
-							onRegenerateSlug={vi.fn()}
-							onClose={vi.fn()}
-						/>
-					</EntryFormProvider>
-				</SeoAdminProvider>
-			</TooltipProvider>,
+			<SiteProvider site={testSite}>
+				<TooltipProvider>
+					<SeoAdminProvider>
+						<EntryFormProvider value={{ collection: plain, form: { ...EMPTY_FORM, title: "Plain" }, setForm: vi.fn() }}>
+							<InspectorPanel
+								incomingReferences={[]}
+								isLoadingIncomingReferences={false}
+								onRefreshIncomingReferences={vi.fn()}
+								onSlugChange={vi.fn()}
+								onRegenerateSlug={vi.fn()}
+								onClose={vi.fn()}
+							/>
+						</EntryFormProvider>
+					</SeoAdminProvider>
+				</TooltipProvider>
+			</SiteProvider>,
 		);
 		expect(screen.getAllByRole("tab")).toHaveLength(1);
 	});

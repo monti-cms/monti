@@ -1,12 +1,14 @@
-import { ADDED_BLOCKS } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import type { RenderMdxOptions } from "../render";
-import { insertSoftBreaks, renderFixture } from "../testing";
+import { insertSoftBreaks, renderFixture as renderFixtureOf } from "../testing";
 
-const html = async (source: string, options?: RenderMdxOptions) => (await renderFixture(source, options)).html;
+const renderFixture = (source: string, options: Partial<RenderMdxOptions> = {}) =>
+	renderFixtureOf(source, { site: testSite, ...options });
+const html = async (source: string, options?: Partial<RenderMdxOptions>) => (await renderFixture(source, options)).html;
 
 /** The first code fence block in the config (chart, diagram etc.). */
-const fenceBlock = ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
+const fenceBlock = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
 
 /** Rendering of MDX text (`renderMdx`): the text is read by the mdx format and drawn by core's document renderer. */
 describe("renderMdx", () => {
@@ -27,7 +29,7 @@ describe("renderMdx", () => {
 
 	it("looks the same after the soft-break migration as the old chain did: a break where there was a newline", async () => {
 		const source = "첫 줄\n둘째 줄\n셋째 줄\n\n- 항목\n  이어서";
-		const result = insertSoftBreaks(source);
+		const result = insertSoftBreaks(testSite, source);
 		if (result.status !== "changed") throw new Error("expected a change");
 		const markup = await html(result.mdx);
 		// Two breaks in the paragraph and one in the list item; the line endings after the breaks add no more.

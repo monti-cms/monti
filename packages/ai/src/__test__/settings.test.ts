@@ -2,10 +2,11 @@ import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { testSite } from "../../test/site";
 import { resolveAction } from "../action";
 import type { AiProviderInput } from "../connection";
 import { createDecider, createGenerator } from "../provider";
-import { AI_ACTIONS } from "../registry";
+import { aiRegistryOf } from "../registry";
 import { aiSecrets, decryptSecret } from "../secret";
 import {
 	type AiSettingsStore,
@@ -63,7 +64,7 @@ const decisions = (patch: Partial<AiProviderInput> = {}): AiProviderInput => ({
 });
 
 const spec = (key: string, patch: { providerId?: string; modelName?: string } = {}) => {
-	const definition = AI_ACTIONS[key];
+	const definition = aiRegistryOf(testSite).actions[key];
 	if (!definition) throw new Error(`Missing action: ${key}`);
 	return resolveAction(key, definition, patch);
 };
@@ -81,7 +82,7 @@ describe("AI connection settings", () => {
 
 	it("encrypts the key for storage and gives the screen only its last four characters", async () => {
 		const store = memoryStore();
-		const view = await addAiProvider(store, 0, chat());
+		const view = await addAiProvider(testSite, store, 0, chat());
 		const stored = store.value as { providers: Array<{ apiKey: string; url: string }> };
 		expect(stored.providers[0]?.apiKey).not.toContain("sk-chat");
 		expect(decryptSecret(stored.providers[0]?.apiKey ?? "", secretsFor("test-secret"))).toBe("sk-chat-1234");
@@ -92,54 +93,65 @@ describe("AI connection settings", () => {
 
 	it("keeps several connections, keeps the key when none is sent, clears it on null, and clears the old key when the URL changes", async () => {
 		const store = memoryStore();
-		await addAiProvider(store, 0, chat());
-		const added = await addAiProvider(store, 1, chat({ name: "OpenCode Go", url: "https://go.example.test/v1" }));
+		await addAiProvider(testSite, store, 0, chat());
+		const added = await addAiProvider(
+			testSite,
+			store,
+			1,
+			chat({ name: "OpenCode Go", url: "https://go.example.test/v1" }),
+		);
 		expect(added.providers.map((provider) => provider.name)).toEqual(["OpenRouter", "OpenCode Go"]);
 		const id = added.providers[0]?.id ?? "";
 
-		const kept = await updateAiProvider(store, 2, id, chat({ apiKey: undefined, defaultModel: "other" }));
+		const kept = await updateAiProvider(testSite, store, 2, id, chat({ apiKey: undefined, defaultModel: "other" }));
 		expect(kept.providers[0]).toMatchObject({ keyHint: "…1234", defaultModel: "other" });
 
-		const moved = await updateAiProvider(store, 3, id, chat({ apiKey: undefined, url: "https://elsewhere.test/v1" }));
+		const moved = await updateAiProvider(
+			testSite,
+			store,
+			3,
+			id,
+			chat({ apiKey: undefined, url: "https://elsewhere.test/v1" }),
+		);
 		expect(moved.providers[0]?.keyHint).toBeNull();
 
-		const removed = await removeAiProvider(store, 4, id);
+		const removed = await removeAiProvider(testSite, store, 4, id);
 		expect(removed.providers.map((provider) => provider.name)).toEqual(["OpenCode Go"]);
-		await expect(addAiProvider(store, 0, chat())).rejects.toMatchObject({ code: "conflict" });
+		await expect(addAiProvider(testSite, store, 0, chat())).rejects.toMatchObject({ code: "conflict" });
 	});
 
 	it("an action uses its chosen connection and model, and falls back to the first connection of the matching kind and its default model when empty", async () => {
 		const fetchMock = vi.fn(async (_url: string) => Response.json({ answers: {} }));
 		vi.stubGlobal("fetch", fetchMock);
 		const store = memoryStore();
-		await addAiProvider(store, 0, chat());
-		const view = await addAiProvider(store, 1, decisions());
+		await addAiProvider(testSite, store, 0, chat());
+		const view = await addAiProvider(testSite, store, 1, decisions());
 		const chatId = view.providers[0]?.id ?? "";
 
-		const auto = await loadAiRuntime(store, spec("slug"));
+		const auto = await loadAiRuntime(testSite, store, spec("slug"));
 		expect(auto.generator?.model).toBe("m-default");
 		expect(auto.decider).toBeNull();
 
-		const picked = await loadAiRuntime(store, spec("slug", { providerId: chatId, modelName: "m-other" }));
+		const picked = await loadAiRuntime(testSite, store, spec("slug", { providerId: chatId, modelName: "m-other" }));
 		expect(picked.generator?.model).toBe("m-other");
 
-		const decide = await loadAiRuntime(store, spec("tags"));
+		const decide = await loadAiRuntime(testSite, store, spec("tags"));
 		expect(decide.decider?.model).toBe("jev-latest");
 		await decide.decider?.decide({ state: { t: "x" }, questions: {} });
 		expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.example.test/v1/systemone");
 
 		// A decide action with a generate connection chosen does not use it.
-		expect((await loadAiRuntime(store, spec("tags", { providerId: chatId }))).decider).toBeNull();
+		expect((await loadAiRuntime(testSite, store, spec("tags", { providerId: chatId }))).decider).toBeNull();
 	});
 
 	it("reports only usable actions (dropped when there is no connection or the key cannot be decrypted)", async () => {
 		const store = memoryStore();
-		await addAiProvider(store, 0, chat());
+		await addAiProvider(testSite, store, 0, chat());
 		const features = [spec("slug"), spec("tags")];
-		expect(await usableActionKeys(store, features)).toEqual(["slug"]);
+		expect(await usableActionKeys(testSite, store, features)).toEqual(["slug"]);
 		secret.current = "rotated";
-		expect(await usableActionKeys(store, features)).toEqual([]);
-		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBeNull();
+		expect(await usableActionKeys(testSite, store, features)).toEqual([]);
+		expect((await getAiSettingsView(testSite, store)).providers[0]?.keyHint).toBeNull();
 	});
 
 	it("settings saved in the old shape (one generate and one decide pair) are read as two connections", async () => {
@@ -151,7 +163,7 @@ describe("AI connection settings", () => {
 				decide: { url: "https://example.test/decisions", apiKey: null, shareKey: true, model: "jev" },
 			},
 		});
-		const view = await getAiSettingsView(store);
+		const view = await getAiSettingsView(testSite, store);
 		expect(view.providers.map((provider) => [provider.kind, provider.defaultModel])).toEqual([
 			["chat", "m"],
 			["decisions", "jev"],
@@ -160,20 +172,26 @@ describe("AI connection settings", () => {
 
 	it("the pre-save connection check uses the input values, and uses the stored key only for the same URL when no new key is given", async () => {
 		const store = memoryStore();
-		const view = await addAiProvider(store, 0, chat());
+		const view = await addAiProvider(testSite, store, 0, chat());
 		const providerId = view.providers[0]?.id;
 		const base = { providerId, kind: "chat" as const, url: "https://example.test/v1", model: "m-new" };
 
-		const same = await connectionForCheck(store, base);
+		const same = await connectionForCheck(testSite, store, base);
 		expect(same.model).toBe("m-new");
 		expect(same.generator?.model).toBe("m-new");
 
-		await expect(connectionForCheck(store, { ...base, url: "https://elsewhere.test/v1" })).rejects.toMatchObject({
+		await expect(
+			connectionForCheck(testSite, store, { ...base, url: "https://elsewhere.test/v1" }),
+		).rejects.toMatchObject({
 			message: "키를 넣으세요.",
 		});
-		const typed = await connectionForCheck(store, { ...base, url: "https://elsewhere.test/v1", apiKey: "new-key" });
+		const typed = await connectionForCheck(testSite, store, {
+			...base,
+			url: "https://elsewhere.test/v1",
+			apiKey: "new-key",
+		});
 		expect(typed.generator).toBeDefined();
-		await expect(connectionForCheck(store, { ...base, apiKey: null })).rejects.toMatchObject({
+		await expect(connectionForCheck(testSite, store, { ...base, apiKey: null })).rejects.toMatchObject({
 			code: "ai_unavailable",
 		});
 	});
@@ -181,8 +199,8 @@ describe("AI connection settings", () => {
 	it("with the development fake connection every action is usable without a connection", async () => {
 		vi.stubEnv("CMS_AI_FAKE", "1");
 		const store = memoryStore();
-		expect(await usableActionKeys(store, [spec("tags")])).toEqual(["tags"]);
-		const runtime = await loadAiRuntime(store, spec("tags"));
+		expect(await usableActionKeys(testSite, store, [spec("tags")])).toEqual(["tags"]);
+		const runtime = await loadAiRuntime(testSite, store, spec("tags"));
 		expect(runtime.decider?.name).toBe("fake");
 	});
 });
@@ -229,7 +247,7 @@ describe("AI service keys stored before per-plugin keys", () => {
 
 	it("still decrypt, so the connection stays ready without entering the key again", async () => {
 		const store = await storeWithLegacyKey("test-secret");
-		const view = await getAiSettingsView(store);
+		const view = await getAiSettingsView(testSite, store);
 		expect(view.providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
 	});
 
@@ -239,29 +257,29 @@ describe("AI service keys stored before per-plugin keys", () => {
 		expect(before.startsWith("v1:")).toBe(true);
 
 		// Saving another connection upgrades the key of the untouched one too.
-		await addAiProvider(store, 1, decisions());
+		await addAiProvider(testSite, store, 1, decisions());
 		const after = storedKey(store);
 		expect(after.startsWith("mk1:")).toBe(true);
 		expect(secretsFor("test-secret").decrypt(after)).toBe("sk-chat-1234");
-		expect((await getAiSettingsView(store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
+		expect((await getAiSettingsView(testSite, store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
 	});
 
 	it("are upgraded by the migration step without any edit, and the step can be repeated", async () => {
 		const store = await storeWithLegacyKey("test-secret");
-		expect(await upgradeStoredKeys(store)).toBe(1);
+		expect(await upgradeStoredKeys(testSite, store)).toBe(1);
 		expect(storedKey(store).startsWith("mk1:")).toBe(true);
 		const upgraded = storedKey(store);
-		expect(await upgradeStoredKeys(store)).toBe(0);
+		expect(await upgradeStoredKeys(testSite, store)).toBe(0);
 		expect(storedKey(store)).toBe(upgraded);
-		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBe("…1234");
+		expect((await getAiSettingsView(testSite, store)).providers[0]?.keyHint).toBe("…1234");
 	});
 
 	it("do nothing without a secret, and are left alone when they cannot be decrypted", async () => {
 		const store = await storeWithLegacyKey("other-secret");
 		const before = storedKey(store);
-		expect(await upgradeStoredKeys(store)).toBe(0);
+		expect(await upgradeStoredKeys(testSite, store)).toBe(0);
 		expect(storedKey(store)).toBe(before);
-		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBeNull();
+		expect((await getAiSettingsView(testSite, store)).providers[0]?.keyHint).toBeNull();
 	});
 });
 
@@ -275,32 +293,32 @@ describe("AI service keys when the secret is rotated", () => {
 
 	it("stay readable through previousSecrets, and are encrypted with the new secret on the next save", async () => {
 		const store = memoryStore();
-		await addAiProvider(store, 0, chat());
+		await addAiProvider(testSite, store, 0, chat());
 		secret.current = "rotated";
-		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBeNull();
+		expect((await getAiSettingsView(testSite, store)).providers[0]?.keyHint).toBeNull();
 
 		secret.previous = ["test-secret"];
-		expect((await getAiSettingsView(store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
-		expect(await upgradeStoredKeys(store)).toBe(1);
+		expect((await getAiSettingsView(testSite, store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
+		expect(await upgradeStoredKeys(testSite, store)).toBe(1);
 
 		// Once upgraded, the old secret can be dropped from the list.
 		secret.previous = [];
-		expect((await getAiSettingsView(store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
+		expect((await getAiSettingsView(testSite, store)).providers[0]).toMatchObject({ keyHint: "…1234", ready: true });
 	});
 
 	it("upgrade legacy keys written under a previous secret in one step", async () => {
 		const store = await storeWithLegacyKey("test-secret");
 		secret.current = "rotated";
 		secret.previous = ["test-secret"];
-		expect(await upgradeStoredKeys(store)).toBe(1);
+		expect(await upgradeStoredKeys(testSite, store)).toBe(1);
 		secret.previous = [];
-		expect((await getAiSettingsView(store)).providers[0]?.keyHint).toBe("…1234");
+		expect((await getAiSettingsView(testSite, store)).providers[0]?.keyHint).toBe("…1234");
 	});
 
 	it("refuses to store a key when the instance has no secret", async () => {
 		const store = memoryStore();
 		store.secrets = () => aiSecrets(fakeCms());
-		await expect(addAiProvider(store, 0, chat())).rejects.toMatchObject({ code: "ai_unavailable" });
+		await expect(addAiProvider(testSite, store, 0, chat())).rejects.toMatchObject({ code: "ai_unavailable" });
 	});
 });
 
@@ -312,7 +330,11 @@ describe("decide model call", () => {
 			Response.json({ answers: { o0: { type: "noul", noul: 0.8 } }, usage: { input_tokens: 10 } }),
 		);
 		vi.stubGlobal("fetch", fetchMock);
-		const decider = createDecider({ url: "https://example.test/decisions", apiKey: "key", model: "typesafe/jev-1.13" });
+		const decider = createDecider(testSite, {
+			url: "https://example.test/decisions",
+			apiKey: "key",
+			model: "typesafe/jev-1.13",
+		});
 		const answers = await decider.decide({
 			state: { title: "t" },
 			questions: { o0: { type: "noul", instructions: "i", criteria: { true: "y", false: "n" } } },
@@ -325,7 +347,7 @@ describe("decide model call", () => {
 	});
 
 	it("turns key errors, insufficient credit and malformed answers into understandable errors", async () => {
-		const decider = createDecider({ url: "https://example.test/decisions", apiKey: "key", model: "m" });
+		const decider = createDecider(testSite, { url: "https://example.test/decisions", apiKey: "key", model: "m" });
 		const request = { state: { t: "x" }, questions: {} };
 		vi.stubGlobal(
 			"fetch",
@@ -370,7 +392,7 @@ describe("generation model call", () => {
 	it("requests a fixed JSON shape and reads the answer", async () => {
 		const fetchMock = vi.fn(async () => completion('{"candidates":["a","b"]}'));
 		vi.stubGlobal("fetch", fetchMock);
-		const generator = createGenerator({
+		const generator = createGenerator(testSite, {
 			baseUrl: "https://example.test/v1",
 			apiKey: "key",
 			model: "m-small",
@@ -389,7 +411,7 @@ describe("generation model call", () => {
 			.mockResolvedValueOnce(Response.json({ error: { message: "response_format not supported" } }, { status: 400 }))
 			.mockResolvedValueOnce(completion('{"candidates":["a"]}'));
 		vi.stubGlobal("fetch", fetchMock);
-		const generator = createGenerator({
+		const generator = createGenerator(testSite, {
 			baseUrl: "https://example.test/v1",
 			apiKey: "key",
 			model: "m-small",
@@ -411,7 +433,7 @@ describe("generation model call", () => {
 			.mockResolvedValueOnce(notFound())
 			.mockResolvedValueOnce(completion('후보입니다.\n```json\n{"candidates":["a"]}\n```'));
 		vi.stubGlobal("fetch", fetchMock);
-		const generator = createGenerator({ baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
+		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
 		expect(await generator.generate(request)).toEqual({ candidates: ["a"] });
 		const bodies = fetchMock.mock.calls.map((call) =>
 			JSON.parse(String((call as unknown as [string, RequestInit])[1].body)),
@@ -426,7 +448,7 @@ describe("generation model call", () => {
 				Response.json({ error: { message: "No endpoints found matching your data policy" } }, { status: 404 }),
 			),
 		);
-		const generator = createGenerator({ baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
+		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
 		await expect(generator.generate(request)).rejects.toMatchObject({
 			message: "AI 서비스 주소나 모델 이름을 확인하세요. — No endpoints found matching your data policy",
 		});
@@ -437,7 +459,7 @@ describe("generation model call", () => {
 			Response.json({ error: { message: "Provider returned error" } }, { status: 502 }),
 		);
 		vi.stubGlobal("fetch", fetchMock);
-		const generator = createGenerator({ baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
+		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
 		await expect(generator.generate(request)).rejects.toMatchObject({
 			message: "AI 서비스에 문제가 있습니다. — Provider returned error",
 		});
@@ -454,7 +476,7 @@ describe("generation model call", () => {
 		});
 		const fetchMock = vi.fn(async () => truncated.clone());
 		vi.stubGlobal("fetch", fetchMock);
-		const generator = createGenerator({ baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
+		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
 		await expect(generator.generate(request)).rejects.toMatchObject({
 			message: expect.stringContaining("끝까지 받지 못했습니다"),
 		});
@@ -464,7 +486,7 @@ describe("generation model call", () => {
 	it("when the key is wrong, reports it without retrying", async () => {
 		const fetchMock = vi.fn(async () => Response.json({ error: { message: "bad key" } }, { status: 401 }));
 		vi.stubGlobal("fetch", fetchMock);
-		const generator = createGenerator({
+		const generator = createGenerator(testSite, {
 			baseUrl: "https://example.test/v1",
 			apiKey: "key",
 			model: "m-small",

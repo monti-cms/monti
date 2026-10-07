@@ -3,18 +3,17 @@
 import { AttributeInput, BlockSettings, ContainerToolbar } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn, Switch } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { collapsibleMessages } from "./messages";
-
-const t = createTranslator(collapsibleMessages);
 
 /**
  * Collapsible editing view (theme colors). The initial state follows `defaultOpen`, and the arrow next to the title toggles it while editing.
  * It expands automatically when the cursor enters it (arrow keys, undo, find).
  */
 export function CollapsibleNodeView() {
+	const t = useTranslator(collapsibleMessages);
 	const block = useBlockEditor();
 	const { values, editable, setValue } = block;
 	const defaultOpen = values.defaultOpen === true;

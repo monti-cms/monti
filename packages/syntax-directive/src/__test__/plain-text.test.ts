@@ -1,7 +1,8 @@
-import { ADDED_BLOCKS, toPlainText } from "@monti-cms/core/client";
+import { toPlainText } from "@monti-cms/core/client";
 import { documentText, SEARCH_TEXT } from "@monti-cms/core/testing";
 import { docOfMdx } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 import { directiveSyntax } from "..";
 
 /**
@@ -11,7 +12,7 @@ import { directiveSyntax } from "..";
 const syntax = [directiveSyntax()];
 
 const titled = (() => {
-	for (const block of ADDED_BLOCKS) {
+	for (const block of testSite.ADDED_BLOCKS) {
 		if (block.syntax.kind !== "container" || block.children || block.parent) continue;
 		const attribute = Object.entries(block.attributes).find(([, candidate]) => candidate.translatable);
 		if (attribute) return { block, attribute: attribute[0] };
@@ -65,8 +66,8 @@ const bodies = (): { directive: string; standard: string } => {
 describe("directive syntax: plain text from the parsed body", () => {
 	it("gives the same summary text as the body in standard MDX, with no directive syntax left in it", () => {
 		const { directive, standard } = bodies();
-		const text = toPlainText(docOfMdx(directive, syntax));
-		expect(text).toBe(toPlainText(docOfMdx(standard)));
+		const text = toPlainText(testSite, docOfMdx(testSite, directive, syntax));
+		expect(text).toBe(toPlainText(testSite, docOfMdx(testSite, standard)));
 		expect(text).not.toMatch(/:{1,3}[a-z]|[{}[\]]/);
 		expect(text).toContain("개요 굵은 문장과 링크, 밑줄 표현");
 		expect(text).toContain("할 일");
@@ -76,14 +77,14 @@ describe("directive syntax: plain text from the parsed body", () => {
 
 	it("gives the same search text, with code and the alt text kept", () => {
 		const { directive, standard } = bodies();
-		const text = documentText(docOfMdx(directive, syntax), SEARCH_TEXT);
-		expect(text).toBe(documentText(docOfMdx(standard), SEARCH_TEXT));
+		const text = documentText(testSite, docOfMdx(testSite, directive, syntax), SEARCH_TEXT);
+		expect(text).toBe(documentText(testSite, docOfMdx(testSite, standard), SEARCH_TEXT));
 		expect(text).toContain("const hidden = 1;");
 		expect(text).toContain("설명");
 		expect(text).not.toContain("mediaId");
 	});
 
 	it("does not read a directive-looking text as markup when the extension is off", () => {
-		expect(toPlainText(docOfMdx(":u[밑줄]"))).toBe(":u[밑줄]");
+		expect(toPlainText(testSite, docOfMdx(testSite, ":u[밑줄]"))).toBe(":u[밑줄]");
 	});
 });

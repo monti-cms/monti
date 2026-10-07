@@ -58,7 +58,7 @@ import "@monti-cms/admin/styles.css";
 | `@monti-cms/mdx` | `cms.config.ts`, 문법 확장 패키지 | 플러그인 `mdx({ syntax })`와 문법 확장 API: 타입(`SyntaxExtension`·`SyntaxContext`·`SerializeContext` 등), `RAW_SOURCE_PARAGRAPH`, 표 도우미, 코드 주석 문법 도우미. 설정이 불러오므로 가볍게 둔다(remark를 가져오지 않는다) |
 | `@monti-cms/mdx/format` | 서버 코드, 테스트 | `mdxFormat`, `createMdxFormat({ syntax })`, 그리고 해석·쓰기 API: `analyze`·`serialize`·`toDocument`·`bodyFromMdx`·`bodyFromDocument`·`bodyDocument`·`documentToMdx`·`toStoredDocument`·`fromStoredDocument`·`parseMdxAst`·`insertSoftBreaks`·`readableMdx`·`compareMdxStructure`·`configuredSyntax`·`remarkFenceBlocksToMdx` 등 |
 | `@monti-cms/mdx/render` | 공개 화면(서버 컴포넌트) | `renderMdx(source, options)` |
-| `@monti-cms/mdx/admin` | 관리자(플러그인이 불러온다) | `MdxSourcePanel`, `EditorToggle`, `mdxBrowserFormat`, `createMdxBrowserFormat`, 그리고 이를 등록하는 관리자 공급자 |
+| `@monti-cms/mdx/admin` | 관리자(플러그인이 불러온다) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, 그리고 이를 등록하는 관리자 공급자 |
 | `@monti-cms/mdx/server` | 플러그인, 마이그레이션 | `createServerMdxFormat`, `legacyBodies`: 옛 저장소 마이그레이션이 쓰는 것("옛 데이터베이스") |
 | `@monti-cms/mdx/testing` | 테스트 | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)`, 파이프라인 함수의 재내보내기 |
 
@@ -89,11 +89,11 @@ import "@monti-cms/admin/styles.css";
 import { renderMdx } from "@monti-cms/mdx/render";
 
 const entry = (await cms.read.getEntry({ collection: "post", slug, locale })).entry;
-const { content, toc, unknown } = await renderMdx(source, { locale, refs: entry.refs, components });
+const { content, toc, unknown } = await renderMdx(source, { site: cms.site, locale, refs: entry.refs, components });
 ```
 
-`renderMdx(source, options)`는 `mdxFormat.import(source)` 다음에 코어의 `renderDocument(doc, options)`를 부르는 것이다. 그래서 같은 옵션(`components`·`refs`·`locale`·`strict` 등)을 받고 `{ content, toc, unknown }`을 돌려준다. 컴파일하거나 실행하는 것은 없다. 형식이 읽지 못하는 글은 믿을 수 있는 부분이 없으므로 던진다.
-`syntax` 옵션의 기본값은 사이트의 `mdx({ syntax })`다. 등록된 이미지·파일·내부 링크를 그리려면 `refs: entry.refs`를 넘긴다. 문서를 저장하는 사이트는 이 함수가 필요 없다. `@monti-cms/core/render`의 `CmsContent`와 `renderDocument`가 문서를 바로 그린다(코어 README의 "저장된 문서 그리기").
+`renderMdx(source, options)`는 `mdxFormat.import(source)` 다음에 코어의 `renderDocument(doc, options)`를 부르는 것이다. 그래서 같은 옵션(`site`·`components`·`refs`·`locale`·`strict` 등)을 받고 `{ content, toc, unknown }`을 돌려준다. 컴파일하거나 실행하는 것은 없다. 형식이 읽지 못하는 글은 믿을 수 있는 부분이 없으므로 던진다.
+사이트(`cms.site`)가 글에서 쓸 수 있는 블록을 정하고, `syntax` 옵션의 기본값은 그 사이트의 `mdx({ syntax })`다. 등록된 이미지·파일·내부 링크를 그리려면 `refs: entry.refs`를 넘긴다. 문서를 저장하는 사이트는 이 함수가 필요 없다. `@monti-cms/core/render`의 `CmsContent`와 `renderDocument`가 문서를 바로 그린다(코어 README의 "저장된 문서 그리기").
 
 ## 원문 패널
 

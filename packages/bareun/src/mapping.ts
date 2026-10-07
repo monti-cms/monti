@@ -1,10 +1,5 @@
-import {
-	createActiveTranslator,
-	PLACEHOLDER,
-	type TextIssue,
-	type TextIssueCategory,
-	type TextIssueSeverity,
-} from "@monti-cms/core";
+import { PLACEHOLDER, type TextIssue, type TextIssueCategory, type TextIssueSeverity } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 import { bareunMessages } from "./messages";
 
 /**
@@ -56,9 +51,6 @@ export const SEGMENT_SEPARATOR = "\n";
 export const joinSegments = (segments: readonly BareunIssueSegment[]) =>
 	segments.map((segment) => segment.text).join(SEGMENT_SEPARATOR);
 
-// This is bundled into the module read by the site config file (`index.ts`), so the display language is chosen on every call.
-const t = createActiveTranslator(bareunMessages);
-
 /** Bareun category code. The name is `category.<code>` in the message dictionary. */
 const KINDS = new Set([
 	"TYPO",
@@ -73,8 +65,6 @@ const KINDS = new Set([
 	"THINKING",
 	"UNKNOWN",
 ]);
-
-const labelOf = (kind: string) => t(KINDS.has(kind) ? (`category.${kind}` as "category.UNKNOWN") : "category.CONFIRM");
 
 const CATEGORIES: Readonly<Record<string, TextIssueCategory>> = {
 	SPACING: "spacing",
@@ -113,7 +103,15 @@ function leafBlocks(blocks: readonly BareunRevisedBlock[] | undefined): BareunRe
  * Converts a Bareun response into per-paragraph check results. `segments` must be in the same order they were joined in the request.
  * Results that cross a paragraph boundary, touch the hidden placeholder (`￼`), or whose position does not match the original text are dropped.
  */
-export function bareunIssues(segments: readonly BareunIssueSegment[], response: BareunResponse): TextIssue[] {
+export function bareunIssues(
+	site: Pick<Site, "createTranslator">,
+	segments: readonly BareunIssueSegment[],
+	response: BareunResponse,
+): TextIssue[] {
+	// Category names and the message follow the site's admin language.
+	const t = site.createTranslator(bareunMessages);
+	const labelOf = (kind: string) =>
+		t(KINDS.has(kind) ? (`category.${kind}` as "category.UNKNOWN") : "category.CONFIRM");
 	const content = joinSegments(segments);
 	const starts: number[] = [];
 	let offset = 0;

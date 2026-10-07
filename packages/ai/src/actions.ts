@@ -1,8 +1,9 @@
-import { createTranslator } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import {
 	type AiActionDefinition,
 	type AiActionOverride,
 	aiActionOverrideSchema,
+	aiActionOverrideSchemaOf,
 	EDITABLE_KEYS,
 	overrideFrom,
 	type ResolvedAiAction,
@@ -11,22 +12,21 @@ import {
 } from "./action";
 import { type AiActionView, readOverride, viewOf } from "./action-view";
 import { actionsMessages } from "./actions.messages";
+import { coreMessages } from "./core.messages";
 import {
 	type CustomBase,
 	type CustomValue,
-	customBaseSchema,
+	customBaseSchemaOf,
 	customDefinition,
-	customValueSchema,
+	customValueSchemaOf,
 	isCustomKey,
 	newCustomKey,
 	surfaceProblem,
 } from "./custom";
 import { migrateLegacyCheck } from "./definition";
 import { AiError } from "./errors";
-import { AI_ACTIONS, AI_SHARED_KEYS, actionDefinition } from "./registry";
+import { aiRegistryOf } from "./registry";
 import { type AiSharedStore, loadSharedKeys } from "./shared";
-
-const t = createTranslator(actionsMessages);
 
 /**
  * Handles action definitions (config) and edited values (DB) together. Used by the admin AI screen and the run API.
@@ -47,46 +47,46 @@ export interface AiActionsStore extends Pick<AiSharedStore, "getAiSettings"> {
 }
 
 /** One stored custom action row. `null` if its shape does not fit (when the definition changed and no longer matches). */
-const readCustom = (value: unknown): CustomValue | null => {
-	const parsed = customValueSchema.safeParse(value);
+const readCustom = (site: Site, value: unknown): CustomValue | null => {
+	const parsed = customValueSchemaOf(site).safeParse(value);
 	return parsed.success ? parsed.data : null;
 };
 
-async function customRow(store: AiActionsStore, key: string): Promise<{ row: Row; value: CustomValue }> {
+async function customRow(site: Site, store: AiActionsStore, key: string): Promise<{ row: Row; value: CustomValue }> {
 	const row = (await store.listAiCustomActions()).find((item) => item.key === key);
-	const value = row ? readCustom(row.value) : null;
-	if (!row || !value) throw new AiError("ai_unknown_action", t("unknownAction"));
+	const value = row ? readCustom(site, row.value) : null;
+	if (!row || !value) throw new AiError("ai_unknown_action", site.createTranslator(actionsMessages)("unknownAction"));
 	return { row, value };
 }
 
-const definitionOf = (key: string): AiActionDefinition => {
-	const definition = actionDefinition(key);
-	if (!definition) throw new AiError("ai_unknown_action", t("unknownAction"));
+const definitionOf = (site: Site, key: string): AiActionDefinition => {
+	const definition = aiRegistryOf(site).actionDefinition(key);
+	if (!definition) throw new AiError("ai_unknown_action", site.createTranslator(actionsMessages)("unknownAction"));
 	return definition;
 };
 
 /** One action (with edited values applied). Custom actions have the same shape. */
-export async function getAction(store: AiActionsStore, key: string): Promise<ResolvedAiAction> {
+export async function getAction(site: Site, store: AiActionsStore, key: string): Promise<ResolvedAiAction> {
 	if (isCustomKey(key)) {
-		const { value } = await customRow(store, key);
-		return resolveAction(key, customDefinition(value.base), value.override);
+		const { value } = await customRow(site, store, key);
+		return resolveAction(key, customDefinition(site, value.base), value.override);
 	}
-	const definition = definitionOf(key);
+	const definition = definitionOf(site, key);
 	const row = (await store.listAiActionOverrides()).find((item) => item.key === key);
 	return resolveAction(key, definition, readOverride(row?.value));
 }
 
 /** All coded actions in config order, then custom actions in creation order. */
-export async function listActions(store: AiActionsStore): Promise<AiActionView[]> {
+export async function listActions(site: Site, store: AiActionsStore): Promise<AiActionView[]> {
 	const rows = new Map((await store.listAiActionOverrides()).map((row) => [row.key, row]));
-	const code = Object.entries(AI_ACTIONS).map(([key, definition]) => {
+	const code = Object.entries(aiRegistryOf(site).actions).map(([key, definition]) => {
 		const row = rows.get(key);
-		return viewOf(resolveAction(key, definition, readOverride(row?.value)), row);
+		return viewOf(site, resolveAction(key, definition, readOverride(row?.value)), row, undefined, definition);
 	});
 	const custom = (await store.listAiCustomActions()).flatMap((row) => {
-		const value = readCustom(row.value);
+		const value = readCustom(site, row.value);
 		if (!value) return [];
-		return [viewOf(resolveAction(row.key, customDefinition(value.base), value.override), row, value)];
+		return [viewOf(site, resolveAction(row.key, customDefinition(site, value.base), value.override), row, value)];
 	});
 	return [...code, ...custom];
 }
@@ -96,12 +96,14 @@ export async function listActions(store: AiActionsStore): Promise<AiActionView[]
  * those added in the admin UI). Values that cannot be edited (name, result shape, etc.) are ignored if sent.
  */
 export function actionWithEdits(
+	site: Site,
 	key: string,
 	edited: unknown,
-	definition: AiActionDefinition = definitionOf(key),
-	sharedKeys: readonly string[] = AI_SHARED_KEYS,
+	definition: AiActionDefinition = definitionOf(site, key),
+	sharedKeys: readonly string[] = aiRegistryOf(site).sharedKeys,
 ): ResolvedAiAction {
-	const parsed = aiActionOverrideSchema.safeParse(
+	const t = site.createTranslator(actionsMessages);
+	const parsed = aiActionOverrideSchemaOf(site.createTranslator(coreMessages)).safeParse(
 		edited && typeof edited === "object"
 			? Object.fromEntries(
 					EDITABLE_KEYS.filter((name) => name in edited).map((name) => [
@@ -128,49 +130,61 @@ export function actionWithEdits(
  * unsaved action), otherwise from the saved base info.
  */
 export async function actionWithDraft(
+	site: Site,
 	store: AiActionsStore,
 	key: string,
 	edited: unknown,
 	baseInput?: unknown,
 ): Promise<ResolvedAiAction> {
-	const sharedKeys = await loadSharedKeys(store);
-	if (!isCustomKey(key)) return actionWithEdits(key, edited, definitionOf(key), sharedKeys);
+	const sharedKeys = await loadSharedKeys(site, store);
+	if (!isCustomKey(key)) return actionWithEdits(site, key, edited, definitionOf(site, key), sharedKeys);
 	if (baseInput !== undefined) {
-		return actionWithEdits(key, edited, customDefinition(readBase(baseInput)), sharedKeys);
+		return actionWithEdits(site, key, edited, customDefinition(site, readBase(site, baseInput)), sharedKeys);
 	}
-	const { value } = await customRow(store, key);
-	return actionWithEdits(key, edited, customDefinition(value.base), sharedKeys);
+	const { value } = await customRow(site, store, key);
+	return actionWithEdits(site, key, edited, customDefinition(site, value.base), sharedKeys);
 }
 
 /** Validates the base info of a custom action. */
-function readBase(input: unknown): CustomBase {
-	const parsed = customBaseSchema.safeParse(input);
+function readBase(site: Site, input: unknown): CustomBase {
+	const parsed = customBaseSchemaOf(site).safeParse(input);
 	if (!parsed.success) {
-		throw new AiError("ai_invalid_input", parsed.error.issues[0]?.message ?? t("invalidBase"));
+		throw new AiError(
+			"ai_invalid_input",
+			parsed.error.issues[0]?.message ?? site.createTranslator(actionsMessages)("invalidBase"),
+		);
 	}
-	const problem = surfaceProblem(parsed.data.surface);
+	const problem = surfaceProblem(site, parsed.data.surface);
 	if (problem) throw new AiError("ai_invalid_input", problem);
 	return parsed.data;
 }
 
 /** Creates a custom action. Takes the base info and the edited values (connection, model, prompt, checks, etc.) at once. */
 export async function createCustomAction(
+	site: Site,
 	store: AiActionsStore,
 	baseInput: unknown,
 	edited: unknown = {},
 ): Promise<AiActionView> {
-	const base = readBase(baseInput);
+	const base = readBase(site, baseInput);
 	const key = newCustomKey();
-	const definition = customDefinition(base);
-	const action = actionWithEdits(key, edited, definition, await loadSharedKeys(store));
+	const definition = customDefinition(site, base);
+	const action = actionWithEdits(site, key, edited, definition, await loadSharedKeys(site, store));
 	const value: CustomValue = { base, override: overrideFrom(definition, action) };
 	const row = await store.saveAiCustomAction({ key, expectedVersion: 0, value });
-	return viewOf(resolveAction(key, definition, value.override), row, value);
+	return viewOf(site, resolveAction(key, definition, value.override), row, value);
 }
 
 /** Deletes a custom action. */
-export async function deleteCustomAction(store: AiActionsStore, key: string, expectedVersion: number): Promise<void> {
-	if (!isCustomKey(key)) throw new AiError("ai_invalid_input", t("cannotDeleteCoded"));
+export async function deleteCustomAction(
+	site: Site,
+	store: AiActionsStore,
+	key: string,
+	expectedVersion: number,
+): Promise<void> {
+	if (!isCustomKey(key)) {
+		throw new AiError("ai_invalid_input", site.createTranslator(actionsMessages)("cannotDeleteCoded"));
+	}
 	await store.deleteAiCustomAction({ key, expectedVersion });
 }
 
@@ -179,6 +193,7 @@ export async function deleteCustomAction(store: AiActionsStore, key: string, exp
  * For a custom action, the base info (`base`: name, attach point, result shape) can be edited too.
  */
 export async function updateAction(
+	site: Site,
 	store: AiActionsStore,
 	key: string,
 	expectedVersion: number,
@@ -186,29 +201,36 @@ export async function updateAction(
 	baseInput?: unknown,
 ): Promise<AiActionView> {
 	if (isCustomKey(key)) {
-		const { value: current } = await customRow(store, key);
-		const base = baseInput === undefined ? current.base : readBase(baseInput);
-		const definition = customDefinition(base);
-		const action = actionWithEdits(key, edited, definition, await loadSharedKeys(store));
+		const { value: current } = await customRow(site, store, key);
+		const base = baseInput === undefined ? current.base : readBase(site, baseInput);
+		const definition = customDefinition(site, base);
+		const action = actionWithEdits(site, key, edited, definition, await loadSharedKeys(site, store));
 		const value: CustomValue = { base, override: overrideFrom(definition, action) };
 		const row = await store.saveAiCustomAction({ key, expectedVersion, value });
-		return viewOf(resolveAction(key, definition, value.override), row, value);
+		return viewOf(site, resolveAction(key, definition, value.override), row, value);
 	}
-	const definition = definitionOf(key);
-	const action = actionWithEdits(key, edited, definition, await loadSharedKeys(store));
+	const definition = definitionOf(site, key);
+	const action = actionWithEdits(site, key, edited, definition, await loadSharedKeys(site, store));
 	const value = overrideFrom(definition, action);
 	const row = await store.saveAiActionOverride({ key, expectedVersion, value });
-	return viewOf(action, row);
+	return viewOf(site, action, row, undefined, definition);
 }
 
 /** Resets to defaults. The enabled state keeps its current value. A custom action has no default to reset to. */
-export async function resetAction(store: AiActionsStore, key: string, expectedVersion: number): Promise<AiActionView> {
-	if (isCustomKey(key)) throw new AiError("ai_invalid_input", t("noDefaultForCustom"));
-	const current = await getAction(store, key);
-	const definition = definitionOf(key);
+export async function resetAction(
+	site: Site,
+	store: AiActionsStore,
+	key: string,
+	expectedVersion: number,
+): Promise<AiActionView> {
+	if (isCustomKey(key)) {
+		throw new AiError("ai_invalid_input", site.createTranslator(actionsMessages)("noDefaultForCustom"));
+	}
+	const current = await getAction(site, store, key);
+	const definition = definitionOf(site, key);
 	const value = overrideFrom(definition, { enabled: current.enabled });
 	const row = await store.saveAiActionOverride({ key, expectedVersion, value });
-	return viewOf(resolveAction(key, definition, value), row);
+	return viewOf(site, resolveAction(key, definition, value), row, undefined, definition);
 }
 
 /**
@@ -216,8 +238,8 @@ export async function resetAction(store: AiActionsStore, key: string, expectedVe
  * Names missing from the definition (actions removed from the config, a previously deleted `mediaAlt`, etc.) give `null`.
  * The legacy `send` content list (`inputs`) becomes `send`, and inputs missing from the definition (e.g. `tags`) are dropped.
  */
-export function legacyFeatureOverride(key: string, spec: unknown): AiActionOverride | null {
-	const definition = actionDefinition(key);
+export function legacyFeatureOverride(site: Site, key: string, spec: unknown): AiActionOverride | null {
+	const definition = aiRegistryOf(site).actionDefinition(key);
 	if (!definition || !spec || typeof spec !== "object") return null;
 	const raw = migrateLegacyCheck(spec) as Record<string, unknown>;
 	const edited: Record<string, unknown> = {};

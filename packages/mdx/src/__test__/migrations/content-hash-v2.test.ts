@@ -18,11 +18,12 @@ import {
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../core/test/any-site";
+import { testSite } from "../../../../core/test/site";
 import { createServerMdxFormat, legacyBodies } from "../../server";
 
 /** The `mdx` format as a server registers it: it also reads the text of old bodies, which the migration steps under test need. */
 const formats = createFormatRegistry([createServerMdxFormat()]);
-const bodies = legacyBodies();
+const bodies = legacyBodies(testSite);
 
 /** The content hash as it was before the parsed-body hash: it covered the MDX string itself. */
 const hashV1 = (metadata: JsonValue, mdx: string, schemaVersion: number): string => {
@@ -58,9 +59,9 @@ describe("content hash v2", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName, formats });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store, { formats: async () => formats });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, { site: testSite, formats: async () => formats });
 	});
 
 	afterAll(async () => {
@@ -82,7 +83,7 @@ describe("content hash v2", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -102,7 +103,7 @@ describe("content hash v2", () => {
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
-		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	const saveMdx = (entry: Entry, mdx: string) =>
@@ -149,7 +150,7 @@ describe("content hash v2", () => {
 			const published = await publishedWith(STAR);
 			const resaved = await saveMdx(published, UNDERSCORE);
 
-			const republished = await publishDraft(store, { id: published.id, expectedVersion: resaved.version });
+			const republished = await publishDraft(testSite, store, { id: published.id, expectedVersion: resaved.version });
 
 			expect(republished.version).toBe(published.version);
 			expect(republished.published).toEqual(published.published);
@@ -246,7 +247,7 @@ describe("content hash v2", () => {
 			};
 			expect(before).toEqual({ same: false, syntaxOnly: true, edited: true });
 
-			await migrateContentStore(pool, { schema: schemaName, formats });
+			await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 
 			expect(await staleHashes()).toEqual([]);
 			expect(await hasUnpublishedChanges(same.id)).toBe(false);
@@ -281,7 +282,7 @@ describe("content hash v2", () => {
 			const published = await publishedWith(STAR);
 			await downgradeToV1();
 
-			await migrateContentStore(pool, { schema: schemaName, formats });
+			await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 
 			const after = await store.getEntry(published.id);
 			expect(after.version).toBe(published.version);

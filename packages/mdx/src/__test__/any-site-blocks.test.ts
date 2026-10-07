@@ -1,5 +1,6 @@
-import { ADDED_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 
 /**
@@ -32,7 +33,7 @@ function sampleOf(block: BlockDefinition): string | undefined {
 	}
 }
 
-const samples = ADDED_BLOCKS.flatMap((block) => {
+const samples = testSite.ADDED_BLOCKS.flatMap((block) => {
 	const mdx = sampleOf(block);
 	return mdx ? [[block.name, mdx] as const] : [];
 });
@@ -43,13 +44,13 @@ describe("any site: added blocks round-trip", () => {
 	});
 
 	it.each(samples)("%s keeps its content through analyze → document → serialize", (_name, mdx) => {
-		const first = analyze(mdx);
+		const first = analyze(testSite, mdx);
 		expect(first.errors).toEqual([]);
-		const serialized = serialize(toDocument(first));
+		const serialized = serialize(testSite, toDocument(testSite, first));
 		// The standard notation is JSX, so the written block is the block that was read.
 		expect(serialized).toBe(mdx);
-		const second = analyze(serialized);
+		const second = analyze(testSite, serialized);
 		expect(second.errors).toEqual([]);
-		expect(toDocument(second)).toEqual(toDocument(first));
+		expect(toDocument(testSite, second)).toEqual(toDocument(testSite, first));
 	});
 });

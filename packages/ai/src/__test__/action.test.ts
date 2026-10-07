@@ -1,6 +1,6 @@
-import { BLOCKS, cmsConfig } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { seoAi } from "../../../seo/src/ai";
+import { testSite } from "../../test/site";
 import {
 	type AiActionDefinition,
 	type AiActionFactory,
@@ -18,18 +18,18 @@ import {
 } from "../action";
 import { legacyFeatureOverride } from "../actions";
 import type { AiCandidate } from "../definition";
-import { lazyTranslator } from "../i18n";
 import { aiPresets, KEBAB_PATTERN } from "../presets";
 import { presetMessages } from "../presets.messages";
-import { AI_ACTIONS, AI_SHARED, attachedTo } from "../registry";
+import { aiRegistryOf, aiSiteViewOf, attachedTo } from "../registry";
 
-const presetText = lazyTranslator(presetMessages);
+const presetText = testSite.createTranslator(presetMessages);
+const { actions: AI_ACTIONS, shared: AI_SHARED } = aiRegistryOf(testSite);
 
 /** Whether the two types are the same (for type checking). */
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 
 /** Builds a preset (factory function) from the example config. The test fails if there is nowhere to attach it. */
-const site = { collections: cmsConfig.collections, blocks: BLOCKS, locales: cmsConfig.locales, sharedKeys: [] };
+const site = { ...aiSiteViewOf(testSite), sharedKeys: [] };
 type Def<F> = F extends (...args: never[]) => infer D ? NonNullable<D> : never;
 function build<F extends AiActionFactory>(factory: F): Def<F> {
 	const definition = factory(site);
@@ -166,7 +166,7 @@ describe("AI action definition", () => {
 
 	it("config validation: reports options, attach points, and checks that do not match the definition", () => {
 		const ok = (actions: Record<string, unknown>) => () =>
-			validateAiConfig({ actions } as Parameters<typeof validateAiConfig>[0], cmsConfig.collections);
+			validateAiConfig({ actions } as Parameters<typeof validateAiConfig>[0], testSite.config.collections);
 		const tags = build(aiPresets.tags());
 		const slug = build(aiPresets.slug());
 		const summary = build(aiPresets.summary());
@@ -182,7 +182,7 @@ describe("AI action definition", () => {
 		expect(ok({ x: { ...summary, prompt: "{{title}}" } })).toThrow(/locale inputs/);
 		expect(ok({ x: { ...summary, engine: "decide" } })).toThrow(/choices/);
 		expect(ok({ x: { ...summary, checks: [{ kind: "exists" }] } })).toThrow(/choices/);
-		expect(ok({ x: { ...aiPresets.codeFold(), attach: [{ slot: "field", field: "title" }] } })).not.toThrow();
+		expect(ok({ x: { ...build(aiPresets.codeFold()), attach: [{ slot: "field", field: "title" }] } })).not.toThrow();
 		expect(ok({ x: { ...build(aiPresets.translate()), attach: [{ slot: "field", field: "title" }] } })).toThrow(
 			/cannot fill/,
 		);
@@ -201,7 +201,7 @@ describe("AI action definition", () => {
 		expect(() =>
 			validateAiConfig(
 				{ actions: AI_ACTIONS, shared: AI_SHARED } as Parameters<typeof validateAiConfig>[0],
-				cmsConfig.collections,
+				testSite.config.collections,
 			),
 		).not.toThrow();
 	});
@@ -259,7 +259,7 @@ describe("AI action definition", () => {
 
 	it("moves stored values from the legacy action table into edited values (including legacy check shapes, missing inputs, and missing actions)", () => {
 		expect(
-			legacyFeatureOverride("summary", {
+			legacyFeatureOverride(testSite, "summary", {
 				enabled: false,
 				prompt: "운영자가 고친 지시문",
 				inputs: ["title", "tags", "body"],
@@ -272,10 +272,14 @@ describe("AI action definition", () => {
 			prompt: "운영자가 고친 지시문",
 			checks: [{ kind: "maxLength", max: 120, enabled: true }],
 		});
-		expect(legacyFeatureOverride("summary", { ...resolveAction("summary", AI_ACTIONS.summary as never) })).toEqual({});
-		expect(legacyFeatureOverride("mediaAlt", { prompt: "x" })).toBeNull();
-		expect(legacyFeatureOverride("translate", { inputs: [], prompt: AI_ACTIONS.translate?.prompt })).toEqual({});
-		expect(legacyFeatureOverride("slug", { checks: [{ kind: "pattern", pattern: "(" }] })).toEqual({});
+		expect(
+			legacyFeatureOverride(testSite, "summary", { ...resolveAction("summary", AI_ACTIONS.summary as never) }),
+		).toEqual({});
+		expect(legacyFeatureOverride(testSite, "mediaAlt", { prompt: "x" })).toBeNull();
+		expect(legacyFeatureOverride(testSite, "translate", { inputs: [], prompt: AI_ACTIONS.translate?.prompt })).toEqual(
+			{},
+		);
+		expect(legacyFeatureOverride(testSite, "slug", { checks: [{ kind: "pattern", pattern: "(" }] })).toEqual({});
 	});
 
 	it("types: instruction placeholders, attach points, inputs, and results are checked from the definition", () => {

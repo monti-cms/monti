@@ -1,16 +1,18 @@
-import "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { diffSources, type SourceChange, type TranslationUnit } from "../../../core/src/core/translation/source-diff";
+import { testSite } from "../../../core/test/site";
 import { documentToMdx } from "../format";
-import { docOfMdx as docOf } from "../testing";
+import { docOfMdx } from "../testing";
+
+const docOf = (mdx: string) => docOfMdx(testSite, mdx);
 
 /** Footnote definitions are blocks of the document only a notation with footnotes can say, so these cases are written as MDX. */
 const text = (unit: TranslationUnit) =>
 	unit.kind === "header"
 		? unit.source
-		: documentToMdx({ type: "doc", version: 2, content: [unit.node] } as never).trimEnd();
+		: documentToMdx(testSite, { type: "doc", version: 2, content: [unit.node] } as never).trimEnd();
 
-const diffText = (before: string, after: string) => diffSources(docOf(before), docOf(after));
+const diffText = (before: string, after: string) => diffSources(testSite, docOf(before), docOf(after));
 
 const summary = (changes: SourceChange[] | null) =>
 	changes?.map((change) =>

@@ -6,5 +6,5 @@ import { aiStoreFor } from "../../store";
 /** Adds a connection. 409 if the version of the whole config differs. */
 export const POST = adminRoute(async ({ request, cms }) => {
 	const { expectedVersion, provider } = parseWith(aiProviderRequestSchema, await readJsonBody(request));
-	return json(await addAiProvider(aiStoreFor(cms), expectedVersion, provider), { status: 201 });
+	return json(await addAiProvider(cms.site, aiStoreFor(cms), expectedVersion, provider), { status: 201 });
 });

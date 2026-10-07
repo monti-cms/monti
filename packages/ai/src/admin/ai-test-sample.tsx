@@ -1,21 +1,12 @@
 "use client";
 
 import { cn, Input, Textarea } from "@monti-cms/admin/kit";
-import {
-	createTranslator,
-	DEFAULT_LOCALE,
-	isUuid,
-	LOCALES,
-	localeLabel,
-	PREFIXED_LOCALES,
-} from "@monti-cms/core/client";
+import { isUuid, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { AiInputKind } from "../action";
 import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";
 import type { AiRunEnv } from "./ai-slot-provider";
 import { OptionSelect } from "./custom-editor";
-
-const t = createTranslator(aiCommonMessages);
 
 /**
  * Sample input for the AI screen's Test. Shows one field of the matching kind for each input in the action definition (input names are not shown).
@@ -41,12 +32,15 @@ export function sampleFields(feature: SampleFeature, send: readonly string[]): S
 }
 
 /** Initial value of a field. The first language input is the default language; the next language input is the first non-default language (source -> target). */
-export function sampleDefaults(feature: Pick<AiActionView, "input">): Record<string, string> {
+export function sampleDefaults(
+	site: Pick<Site, "DEFAULT_LOCALE" | "PREFIXED_LOCALES">,
+	feature: Pick<AiActionView, "input">,
+): Record<string, string> {
 	const defaults: Record<string, string> = {};
 	let locales = 0;
 	for (const [name, input] of Object.entries(feature.input)) {
 		if (input.kind !== "locale") continue;
-		defaults[name] = locales++ === 0 ? DEFAULT_LOCALE : (PREFIXED_LOCALES[0] ?? DEFAULT_LOCALE);
+		defaults[name] = locales++ === 0 ? site.DEFAULT_LOCALE : (site.PREFIXED_LOCALES[0] ?? site.DEFAULT_LOCALE);
 	}
 	return defaults;
 }
@@ -95,8 +89,6 @@ export function sampleRun(
 	return { input, env };
 }
 
-const LOCALE_OPTIONS = LOCALES.map((locale) => ({ value: locale, label: localeLabel(locale) }));
-
 /** Test fields. A field's name (aria-label, placeholder) is the input's label. */
 export function SampleInputs({
 	fields,
@@ -109,6 +101,9 @@ export function SampleInputs({
 	defaults: Readonly<Record<string, string>>;
 	onChange: (name: string, value: string) => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(aiCommonMessages);
+	const localeOptions = site.LOCALES.map((locale) => ({ value: locale, label: site.localeLabel(locale) }));
 	return fields.map((field) => {
 		const value = sampleValue(values, defaults, field.name);
 		const common = {
@@ -123,7 +118,7 @@ export function SampleInputs({
 						key={field.name}
 						aria-label={field.label}
 						value={value}
-						options={LOCALE_OPTIONS}
+						options={localeOptions}
 						onChange={(next) => onChange(field.name, next)}
 						className="w-auto self-start bg-cms-background"
 					/>

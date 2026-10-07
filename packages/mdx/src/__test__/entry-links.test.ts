@@ -9,6 +9,7 @@ import {
 } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { collectRefs } from "../../../core/src/doc/document-refs";
+import { testSite } from "../../../core/test/site";
 import { bodyFromMdx, fromStoredDocument } from "../body";
 import { serialize } from "../serialize";
 
@@ -27,7 +28,7 @@ const linkMarks = (doc: StoredDocument) => {
 };
 
 const docOf = (mdx: string): StoredDocument => {
-	const { doc } = bodyFromMdx(mdx);
+	const { doc } = bodyFromMdx(testSite, mdx);
 	if (!doc) throw new Error("not a document");
 	return doc;
 };
@@ -45,11 +46,13 @@ describe("links of a stored document in MDX", () => {
 	});
 
 	it("an entry link is written to MDX with the id, and reads back as the same document", () => {
-		const body = bodyFromMdx(`See [the post](${entryLinkHref(ID)}).`);
+		const body = bodyFromMdx(testSite, `See [the post](${entryLinkHref(ID)}).`);
 
 		expect(body.mdx).toContain(`(entry:${ID})`);
 		expect(body.doc).not.toBeNull();
-		expect(withoutBlockIds(bodyFromMdx(body.mdx).doc?.content ?? [])).toEqual(withoutBlockIds(body.doc?.content ?? []));
+		expect(withoutBlockIds(bodyFromMdx(testSite, body.mdx).doc?.content ?? [])).toEqual(
+			withoutBlockIds(body.doc?.content ?? []),
+		);
 	});
 
 	it("only the form entry:<uuid> names an entry; anything else stays an address", () => {
@@ -60,12 +63,12 @@ describe("links of a stored document in MDX", () => {
 
 	it("the editor can give an entry link an address to show in the source, and the id is still what is stored", () => {
 		const doc = docOf(`[x](${entryLinkHref(ID)})`);
-		const working = fromStoredDocument(doc);
+		const working = fromStoredDocument(testSite, doc);
 		for (const node of working.content?.[0]?.content ?? []) {
 			for (const mark of node.marks ?? []) if (mark.type === "link") mark.attrs = { entryId: ID, href: "/posts/a" };
 		}
 
-		expect(serialize(working)).toContain("[x](/posts/a)");
+		expect(serialize(testSite, working)).toContain("[x](/posts/a)");
 		// Core's canonical form drops the address an entry link carries.
 		const given: StoredDocument = {
 			type: "doc",
@@ -83,7 +86,7 @@ describe("links of a stored document in MDX", () => {
 				},
 			],
 		};
-		expect(linkMarks(canonicalDocument(given)).map((mark) => mark.attrs)).toEqual([{ entryId: ID }]);
+		expect(linkMarks(canonicalDocument(testSite, given)).map((mark) => mark.attrs)).toEqual([{ entryId: ID }]);
 	});
 
 	it("collectRefs lists the entries a document read from MDX links to, each once, in order, wherever the link sits", () => {

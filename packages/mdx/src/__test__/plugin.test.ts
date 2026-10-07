@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import "../format";
 import { MDX_PLUGIN_NAME, mdx, validateMdxOptions } from "../plugin";
 import type { SyntaxExtension } from "../syntax";
@@ -71,20 +72,21 @@ describe("mdx()", () => {
 			expect(format.name).toBe("mdx");
 			expect(format.extension).toBe("mdx");
 			expect(format.legacyBodies).toBeDefined();
-			expect(typeof format.legacyBodies?.read).toBe("function");
+			expect(typeof format.legacyBodies?.(testSite).read).toBe("function");
 			expect(typeof format.import).toBe("function");
 		});
 
 		it("writes and reads with the syntax it was given, for the format and for the old bodies", async () => {
 			const doc = {
-				...docOfMdx("x"),
+				...docOfMdx(testSite, "x"),
 				content: [{ type: "paragraph", content: [{ type: "text", text: "word", marks: [{ type: "underline" }] }] }],
 			};
 			const { siteSyntaxBlocks, siteCodeLineEffects } = await import("../syntax-config");
 			const exportContext = {
 				locale: "ko",
-				blocks: siteSyntaxBlocks,
-				codeLineEffects: siteCodeLineEffects,
+				blocks: siteSyntaxBlocks(testSite),
+				site: testSite,
+				codeLineEffects: siteCodeLineEffects(testSite),
 				purpose: "read" as const,
 				link: () => null,
 				media: () => null,
@@ -94,8 +96,8 @@ describe("mdx()", () => {
 			const extended = await formatOf({ syntax: [braces] });
 			expect(await extended.export(doc, exportContext)).toContain("{u word}");
 			expect(await plain.export(doc, exportContext)).not.toContain("{u word}");
-			expect(extended.legacyBodies?.write(doc).text).toContain("{u word}");
-			expect(plain.legacyBodies?.write(doc).text).not.toContain("{u word}");
+			expect(extended.legacyBodies?.(testSite).write(doc).text).toContain("{u word}");
+			expect(plain.legacyBodies?.(testSite).write(doc).text).not.toContain("{u word}");
 		});
 	});
 });

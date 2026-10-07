@@ -31,25 +31,15 @@ import {
 	useConfirm,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
-import {
-	ADMIN_LOCALE,
-	BLOCK_BY_NAME,
-	CMS_TIME_ZONE,
-	COLLECTIONS,
-	cmsApiUrl,
-	createTranslator,
-	schemaOf,
-} from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { toast } from "sonner";
-import { resolveAction } from "../action";
-import { draftCustomView, viewOf } from "../action-view";
+import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
 import type { CustomBase } from "../custom";
 import { ADDABLE_CHECKS, type AddableCheckKind, type AiCheck, type AiRunResult, checkKey } from "../definition";
-import { actionDefinition } from "../registry";
 import { aiManagerMessages } from "./ai-manager.messages";
 import { AI_ACTIONS_KEY, type AiActionsResponse, runAiAction, useAiActions } from "./ai-slot-provider";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "./ai-test-sample";
@@ -63,34 +53,37 @@ import {
 	useAiSettings,
 } from "./connection-editor";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor";
-import { checkLabel, engineLabel, slotLabel, slotTargetLabel } from "./labels.messages";
+import { useLabels } from "./labels.messages";
 import { ModelCombobox, useModelList } from "./model-combobox";
 import { PROMPT_ROWS, PROMPT_TEXTAREA, SharedManager, useAiShared } from "./shared-editor";
 
-const t = createTranslator(aiManagerMessages);
-
 /** Visible name of the attach target. For a field, it is the name in the collection definition. */
-function placeLabel(action: Pick<AiActionView, "attach">): string {
-	const attach = action.attach[0];
-	if (!attach) return t("place.direct");
-	switch (attach.slot) {
-		case "field": {
-			for (const collection of COLLECTIONS) {
-				const field = schemaOf(collection).fields[attach.field];
-				if (field) return `${slotLabel("field")} · ${field.label}`;
+function usePlaceLabel() {
+	const site = useSite();
+	const t = useTranslator(aiManagerMessages);
+	const { slotLabel, slotTargetLabel } = useLabels();
+	return (action: Pick<AiActionView, "attach">): string => {
+		const attach = action.attach[0];
+		if (!attach) return t("place.direct");
+		switch (attach.slot) {
+			case "field": {
+				for (const collection of site.COLLECTIONS) {
+					const field = site.schemaOf(collection).fields[attach.field];
+					if (field) return `${slotLabel("field")} · ${field.label}`;
+				}
+				return `${slotLabel("field")} · ${attach.field}`;
 			}
-			return `${slotLabel("field")} · ${attach.field}`;
+			case "translation":
+			case "selection":
+			case "insert":
+				return slotLabel(attach.slot);
+			case "block":
+				return `${slotLabel("block")} · ${site.BLOCK_BY_NAME.get(attach.block)?.label ?? attach.block}`;
+			default: {
+				return `${slotLabel(attach.slot)} · ${slotTargetLabel(attach.slot, attach.target)}`;
+			}
 		}
-		case "translation":
-		case "selection":
-		case "insert":
-			return slotLabel(attach.slot);
-		case "block":
-			return `${slotLabel("block")} · ${BLOCK_BY_NAME.get(attach.block)?.label ?? attach.block}`;
-		default: {
-			return `${slotLabel(attach.slot)} · ${slotTargetLabel(attach.slot, attach.target)}`;
-		}
-	}
+	};
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -121,13 +114,6 @@ const editableOf = (action: AiActionView): Editable => ({
 	checks: action.checks,
 });
 
-/** Defaults of a code action (the values built from the definition alone, without edits). Screen actions have no defaults to revert to. */
-function defaultSpecOf(feature: AiActionView): Editable | null {
-	if (feature.custom) return null;
-	const definition = actionDefinition(feature.key);
-	return definition ? editableOf(viewOf(resolveAction(feature.key, definition), undefined)) : null;
-}
-
 /** Comparison key of the edited values. If it differs from the values at open time, there is unsaved content. */
 const snapshotOf = (spec: Editable, base: CustomBase | undefined) => JSON.stringify({ spec, base });
 
@@ -144,6 +130,10 @@ type AiTab = "features" | "connections" | "shared";
  * Opening another item or tab with unsaved content asks whether to discard it.
  */
 export function AiManager() {
+	const site = useSite();
+	const t = useTranslator(aiManagerMessages);
+	const { engineLabel } = useLabels();
+	const placeLabel = usePlaceLabel();
 	const queryClient = useQueryClient();
 	const featuresQuery = useAiActions();
 	const settingsQuery = useAiSettings();
@@ -198,8 +188,8 @@ export function AiManager() {
 	/** Opens a new screen action on the right. Saving after editing basic info, connection, instructions, etc. creates it. */
 	const startNew = async () => {
 		if (!(await confirmDiscard(featureDirty))) return;
-		const base = NEW_CUSTOM_BASE();
-		const feature = draftCustomView(base);
+		const base = NEW_CUSTOM_BASE(site);
+		const feature = draftCustomView(site, base);
 		const spec = editableOf(feature);
 		setEditing({ feature, spec, base, isNew: true, initial: snapshotOf(spec, base) });
 		setFormError(null);
@@ -233,7 +223,7 @@ export function AiManager() {
 			setEditing({ ...editing, base });
 			return;
 		}
-		const draft = draftCustomView(base);
+		const draft = draftCustomView(site, base);
 		const feature: AiActionView = editing.isNew
 			? draft
 			: { ...draft, key: editing.feature.key, version: editing.feature.version, updatedAt: editing.feature.updatedAt };
@@ -265,7 +255,7 @@ export function AiManager() {
 		setDeleting(true);
 		setFormError(null);
 		try {
-			await cmsFetch(cmsApiUrl(`/v1/ai/actions/${feature.key}?expectedVersion=${feature.version}`), {
+			await cmsFetch(site, cmsApiUrl(`/v1/ai/actions/${feature.key}?expectedVersion=${feature.version}`), {
 				method: "DELETE",
 				fallback: t("remove.failed"),
 			});
@@ -275,7 +265,7 @@ export function AiManager() {
 			setEditing(null);
 			toast.success(t("remove.done"));
 		} catch (error) {
-			setFormError(errorText(error, t("remove.failed")));
+			setFormError(errorText(site, error, t("remove.failed")));
 		} finally {
 			setDeleting(false);
 		}
@@ -287,7 +277,7 @@ export function AiManager() {
 		setFormError(null);
 		try {
 			if (editing.isNew && editing.base) {
-				const created = await cmsFetch<AiActionView>(cmsApiUrl("/v1/ai/actions"), {
+				const created = await cmsFetch<AiActionView>(site, cmsApiUrl("/v1/ai/actions"), {
 					method: "POST",
 					json: { base: { ...editing.base, label: editing.base.label.trim() }, value: editing.spec },
 					fallback: t("save.failed"),
@@ -297,7 +287,7 @@ export function AiManager() {
 				);
 				open(created);
 			} else {
-				const saved = await cmsFetch<AiActionView>(cmsApiUrl(`/v1/ai/actions/${editing.feature.key}`), {
+				const saved = await cmsFetch<AiActionView>(site, cmsApiUrl(`/v1/ai/actions/${editing.feature.key}`), {
 					method: "PATCH",
 					json: {
 						expectedVersion: editing.feature.version,
@@ -312,7 +302,7 @@ export function AiManager() {
 			toast.success(t("save.done"));
 			void queryClient.invalidateQueries({ queryKey: AI_ACTIONS_KEY });
 		} catch (error) {
-			setFormError(errorText(error, t("save.failed")));
+			setFormError(errorText(site, error, t("save.failed")));
 		} finally {
 			setSaving(false);
 		}
@@ -369,7 +359,7 @@ export function AiManager() {
 				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
 					{featuresQuery.error && !featuresQuery.data && (
 						<LoadError
-							message={errorText(featuresQuery.error, t("list.loadFailed"))}
+							message={errorText(site, featuresQuery.error, t("list.loadFailed"))}
 							onRetry={() => void featuresQuery.refetch()}
 						/>
 					)}
@@ -491,6 +481,7 @@ function OneOfInput({
 	disabled: boolean;
 	onChange: (items: string[]) => void;
 }) {
+	const t = useTranslator(aiManagerMessages);
 	const [text, setText] = useState(items.join("\n"));
 	return (
 		<Textarea
@@ -523,6 +514,7 @@ function CheckRow({
 	onChange: (check: AiCheck) => void;
 	onRemove?: () => void;
 }) {
+	const t = useTranslator(aiManagerMessages);
 	const id = useId();
 	return (
 		<li className={cn("flex min-h-8 gap-2", check.kind === "oneOf" ? "items-start [&>label]:pt-1.5" : "items-center")}>
@@ -607,6 +599,10 @@ function FeatureEditor({
 		isNew: boolean;
 	};
 }) {
+	const site = useSite();
+	const t = useTranslator(aiManagerMessages);
+	const { checkLabel, engineLabel } = useLabels();
+	const placeLabel = usePlaceLabel();
 	const ids = { provider: useId(), prompt: useId(), threshold: useId(), sendTitle: useId(), checksTitle: useId() };
 	const deciding = feature.engine === "decide";
 	const settings = useAiSettings().data;
@@ -625,7 +621,7 @@ function FeatureEditor({
 	>(null);
 	const set = (patch: Partial<Editable>) => onChange({ ...spec, ...patch });
 	// Defaults of a code action. Reset to default only reverts the input fields (enabled stays as is); saving is a separate click.
-	const defaults = custom ? null : defaultSpecOf(feature);
+	const defaults = custom ? null : feature.defaults;
 	const atDefaults =
 		defaults !== null && JSON.stringify({ ...defaults, enabled: spec.enabled }) === JSON.stringify(spec);
 	// Checks that can be added: those among format, length and one-of that are not present yet. An MDX result (body fragment) gets no character checks.
@@ -646,7 +642,7 @@ function FeatureEditor({
 	];
 
 	const sampleInputs = sampleFields(feature, spec.send);
-	const sampleStart = sampleDefaults(feature);
+	const sampleStart = sampleDefaults(site, feature);
 	const testRunning = test?.status === "running";
 	const testDisabled = !canRun || testRunning || missingRequired(sampleInputs, sample.values, sampleStart);
 	const runTest = async () => {
@@ -660,9 +656,9 @@ function FeatureEditor({
 				...(custom ? { draftBase: { ...custom.base, label: custom.base.label.trim() || t("title.new") } } : {}),
 			};
 			const { input, env } = sampleRun(feature, sampleInputs, sample.values, sampleStart);
-			setTest({ status: "done", result: await runAiAction(feature.key, input, { ...options, env }) });
+			setTest({ status: "done", result: await runAiAction(site, feature.key, input, { ...options, env }) });
 		} catch (runError) {
-			setTest({ status: "error", message: errorText(runError, t("test.failed")) });
+			setTest({ status: "error", message: errorText(site, runError, t("test.failed")) });
 		}
 	};
 
@@ -868,7 +864,7 @@ function FeatureEditor({
 					<span className="ml-auto text-cms-muted-foreground text-xs">
 						{feature.updatedAt
 							? t("meta.edited", {
-									time: new Date(feature.updatedAt).toLocaleString(ADMIN_LOCALE, { timeZone: CMS_TIME_ZONE }),
+									time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
 								})
 							: t("meta.default")}
 					</span>

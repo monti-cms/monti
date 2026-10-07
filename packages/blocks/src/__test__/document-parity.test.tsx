@@ -1,21 +1,20 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { bodyFromMdx } from "@monti-cms/mdx/format";
+import { readSamples, renderFixture } from "@monti-cms/mdx/testing";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
-import { describe, expect, it, vi } from "vitest";
-
-// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
-vi.mock("../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../test/render-config")).default,
-}));
-
-const { readSamples, renderFixture } = await import("@monti-cms/mdx/testing");
+import { describe, expect, it } from "vitest";
+import { renderSite as site } from "../test/render-config";
 
 /** MDX text is read into a stored document and drawn with the real block components: nothing is left to the fallback. */
 const syntax = [directiveSyntax()];
 
-const expectRenders = async (source: string, label: string, options: Parameters<typeof renderFixture>[1] = {}) => {
-	const rendered = await renderFixture(source, { syntax, ...options });
+const expectRenders = async (
+	source: string,
+	label: string,
+	options: Omit<Parameters<typeof renderFixture>[1], "site"> = {},
+) => {
+	const rendered = await renderFixture(source, { site, syntax, ...options });
 	expect(rendered.unknown, label).toEqual([]);
 	return rendered;
 };
@@ -25,7 +24,7 @@ describe("rendering of block extensions", () => {
 		const samples = readSamples();
 		expect(samples.length).toBeGreaterThan(0);
 		for (const { name, mdx } of samples) {
-			expect(bodyFromMdx(mdx, syntax).doc, name).not.toBeNull();
+			expect(bodyFromMdx(site, mdx, syntax).doc, name).not.toBeNull();
 			await expectRenders(mdx, name);
 		}
 	});
@@ -113,7 +112,7 @@ describe("rendering of block extensions", () => {
 
 	for (const [name, source] of Object.entries(cases)) {
 		it(`renders ${name}`, async () => {
-			expect(bodyFromMdx(source, syntax).doc, name).not.toBeNull();
+			expect(bodyFromMdx(site, source, syntax).doc, name).not.toBeNull();
 			await expectRenders(source, name);
 		});
 	}

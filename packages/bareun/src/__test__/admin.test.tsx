@@ -1,6 +1,8 @@
 import { useCmsAdminComponents } from "@monti-cms/admin";
+import { SiteProvider } from "@monti-cms/core/client";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 import bareunAdmin from "../admin";
 import { bareun } from "../index";
 
@@ -17,9 +19,11 @@ describe("Bareun checker admin side", () => {
 		expect(Provider).toBeDefined();
 		if (!Provider) return;
 		render(
-			<Provider>
-				<Checkers />
-			</Provider>,
+			<SiteProvider site={testSite}>
+				<Provider>
+					<Checkers />
+				</Provider>
+			</SiteProvider>,
 		);
 		expect(screen.getByText("bareun")).toBeTruthy();
 	});

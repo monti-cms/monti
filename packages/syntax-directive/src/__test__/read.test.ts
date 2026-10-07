@@ -1,5 +1,4 @@
-import { ADDED_BLOCKS } from "@monti-cms/core/client";
-import { readSamples, syntaxRemarkPlugins } from "@monti-cms/mdx/testing";
+import { mdxWith, readSamples, syntaxRemarkPlugins } from "@monti-cms/mdx/testing";
 import type { Root } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkMdx from "remark-mdx";
@@ -8,18 +7,18 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../test/mdx-syntax";
+import { testSite } from "../../test/site";
 import { directiveSyntax } from "..";
 
 const directives = [directiveSyntax()];
-const { parse: parseMdxAst } = mdxWith(directives);
+const { parse: parseMdxAst } = mdxWith(testSite, directives);
 /** A sample post body by file name (front matter removed). */
 const readSample = (name: string): string => readSamples().find((sample) => sample.name === name)?.mdx ?? "";
 
 const DIRECTIVE_TYPES = ["containerDirective", "leafDirective", "textDirective"];
 
 /** A container block added by the site (looked up from the config, e.g. a callout) and its text attribute (the text to translate first). */
-const siteContainer = ADDED_BLOCKS.find((block) => block.syntax.kind === "container" && !block.parent);
+const siteContainer = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "container" && !block.parent);
 const siteAttribute = siteContainer
 	? (Object.entries(siteContainer.attributes).find(([, attribute]) => attribute.translatable) ??
 			Object.entries(siteContainer.attributes).find(([, attribute]) => attribute.type === "string"))?.[0]
@@ -31,7 +30,11 @@ const siteAttribute = siteContainer
  * `directive-render.test.tsx`.
  */
 const renderTree = (body: string): Root => {
-	const processor = unified().use(remarkParse).use(remarkMdx).use(remarkGfm).use(syntaxRemarkPlugins(directives));
+	const processor = unified()
+		.use(remarkParse)
+		.use(remarkMdx)
+		.use(remarkGfm)
+		.use(syntaxRemarkPlugins(testSite, directives));
 
 	const file = new VFile({ value: body });
 	const tree = processor.parse(file);

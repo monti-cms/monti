@@ -1,17 +1,20 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 import {
-	CUSTOM_BLOCKS,
-	customBaseSchema,
+	customBaseSchemaOf,
+	customBlocksOf,
 	customDefinition,
 	customEngines,
 	customResults,
 	surfaceProblem,
 } from "../custom";
 
+const customBaseSchema = customBaseSchemaOf(testSite);
+
 // The example config (`ai/test/cms.config.ts`) uses the blocks of the block extension and the user blocks `notice` and `embed`.
 describe("block slot of screen actions", () => {
 	it("selectable blocks are added blocks edited as editor nodes (excluding child-only and raw-source boxes)", () => {
-		const names = CUSTOM_BLOCKS.map((block) => block.name);
+		const names = customBlocksOf(testSite).map((block) => block.name);
 		expect(names).toEqual(expect.arrayContaining(["callout", "tabs", "mermaid", "chart", "notice"]));
 		expect(names).not.toContain("tab");
 		expect(names).not.toContain("embed");
@@ -23,12 +26,16 @@ describe("block slot of screen actions", () => {
 			customBaseSchema.safeParse({ label: "고치기", surface: { slot: "block", block }, result });
 		expect(base("mdx").success).toBe(true);
 		expect(base("text").success).toBe(false);
-		expect(surfaceProblem({ slot: "block", block: "mermaid" })).toBeNull();
-		expect(surfaceProblem({ slot: "block", block: "nope" })).toContain("nope");
+		expect(surfaceProblem(testSite, { slot: "block", block: "mermaid" })).toBeNull();
+		expect(surfaceProblem(testSite, { slot: "block", block: "nope" })).toContain("nope");
 	});
 
 	it("a block slot action takes the block source and streams the result", () => {
-		const definition = customDefinition({ label: "고치기", surface: { slot: "block", block: "chart" }, result: "mdx" });
+		const definition = customDefinition(testSite, {
+			label: "고치기",
+			surface: { slot: "block", block: "chart" },
+			result: "mdx",
+		});
 		expect(Object.keys(definition.input)).toEqual(["block", "title"]);
 		expect(definition.input.block).toMatchObject({ kind: "mdx", required: true });
 		expect(definition.stream).toBe(true);
@@ -41,10 +48,10 @@ describe("relation and select fields of screen actions", () => {
 	const field = (name: string) => ({ slot: "field" as const, field: name, collections: ["post"] });
 
 	it("relation and select fields allow candidates only, with a choice of decide or generate mode; text fields allow generate mode only", () => {
-		expect(customResults(field("tagIds"))).toEqual(["candidates"]);
-		expect(customEngines(field("tagIds"))).toEqual(["decide", "generate"]);
-		expect(customEngines(field("policy"))).toEqual(["decide", "generate"]);
-		expect(customEngines(field("title"))).toEqual(["generate"]);
+		expect(customResults(testSite, field("tagIds"))).toEqual(["candidates"]);
+		expect(customEngines(testSite, field("tagIds"))).toEqual(["decide", "generate"]);
+		expect(customEngines(testSite, field("policy"))).toEqual(["decide", "generate"]);
+		expect(customEngines(testSite, field("title"))).toEqual(["generate"]);
 		const base = (patch: object) => customBaseSchema.safeParse({ label: "태그", result: "candidates", ...patch });
 		expect(base({ surface: field("tagIds"), engine: "decide" }).success).toBe(true);
 		expect(base({ surface: field("tagIds"), result: "text" }).success).toBe(false);
@@ -52,7 +59,12 @@ describe("relation and select fields of screen actions", () => {
 	});
 
 	it("relation field actions pick from the target collection, and multi-value fields append", () => {
-		const tags = customDefinition({ label: "태그", surface: field("tagIds"), result: "candidates", engine: "decide" });
+		const tags = customDefinition(testSite, {
+			label: "태그",
+			surface: field("tagIds"),
+			result: "candidates",
+			engine: "decide",
+		});
 		expect(tags).toMatchObject({
 			engine: "decide",
 			choices: { from: "collection", collection: "tag" },
@@ -61,20 +73,24 @@ describe("relation and select fields of screen actions", () => {
 			result: "candidates",
 			checks: [{ kind: "exists" }],
 		});
-		const category = customDefinition({ label: "카테고리", surface: field("categoryId"), result: "candidates" });
+		const category = customDefinition(testSite, {
+			label: "카테고리",
+			surface: field("categoryId"),
+			result: "candidates",
+		});
 		expect(category).toMatchObject({
 			engine: "generate",
 			choices: { from: "collection", collection: "category" },
 			pick: "one",
 		});
 		expect(category.apply).toBeUndefined();
-		const policy = customDefinition({
+		const policy = customDefinition(testSite, {
 			label: "정책",
 			surface: field("policy"),
 			result: "candidates",
 			engine: "decide",
 		});
 		expect(policy.choices).toEqual({ from: "select", collection: "post", field: "policy" });
-		expect(surfaceProblem(field("tagIds"))).toBeNull();
+		expect(surfaceProblem(testSite, field("tagIds"))).toBeNull();
 	});
 });

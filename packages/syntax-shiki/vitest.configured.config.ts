@@ -19,11 +19,11 @@ export default defineConfig(({ mode }) => ({
 			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
 			...loadEnv(mode, __dirname, ""),
 			TZ: "UTC",
+			MONTI_TEST_SITE: "configured",
 		},
 	},
 	resolve: {
 		alias: {
-			"@cms-config": path.resolve(__dirname, "./test/shiki.config.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

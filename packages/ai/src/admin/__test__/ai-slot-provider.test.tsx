@@ -4,12 +4,13 @@ import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 import { TooltipProvider } from "@monti-cms/admin/kit";
 import { type AdminRouter, AdminRouterProvider } from "@monti-cms/admin/router";
 import { useSlot } from "@monti-cms/admin/slots";
-import { adminHref, createTranslator } from "@monti-cms/core/client";
+import { SiteProvider } from "@monti-cms/core/client";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
-import { mdxBrowserFormat } from "@monti-cms/mdx/admin";
+import { createMdxBrowserFormat } from "@monti-cms/mdx/admin";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../test/site";
 import { aiCommonMessages } from "../ai-common.messages";
 import { AiSlotProvider } from "../ai-slot-provider";
 
@@ -21,9 +22,10 @@ const routerAt = (pathname: string): AdminRouter => ({
 	usePathname: () => pathname,
 	useSearchParams: () => new URLSearchParams(),
 });
-const hostRouter = routerAt(adminHref());
+const hostRouter = routerAt(testSite.adminHref());
 
-const t = createTranslator(aiCommonMessages);
+const t = testSite.createTranslator(aiCommonMessages);
+const mdxBrowserFormat = createMdxBrowserFormat(testSite);
 
 /** Checks only how a screen slot receives the AI action. The list response is fake. */
 const view = (key: string, label: string) => ({
@@ -61,15 +63,17 @@ function Place() {
 
 function renderPlace(router: AdminRouter = hostRouter) {
 	render(
-		<AdminRouterProvider router={router}>
-			<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-				<TooltipProvider>
-					<AiSlotProvider>
-						<Place />
-					</AiSlotProvider>
-				</TooltipProvider>
-			</QueryClientProvider>
-		</AdminRouterProvider>,
+		<SiteProvider site={testSite}>
+			<AdminRouterProvider router={router}>
+				<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+					<TooltipProvider>
+						<AiSlotProvider>
+							<Place />
+						</AiSlotProvider>
+					</TooltipProvider>
+				</QueryClientProvider>
+			</AdminRouterProvider>
+		</SiteProvider>,
 	);
 }
 
@@ -80,7 +84,7 @@ describe("AI slot source", () => {
 	});
 
 	it("asks for no actions on the login screen, which the host router reports", async () => {
-		renderPlace(routerAt(adminHref("/login")));
+		renderPlace(routerAt(testSite.adminHref("/login")));
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		expect(fetch).not.toHaveBeenCalled();
 		expect(screen.queryByRole("button", { name: "Suggest titles" })).toBeNull();
@@ -117,17 +121,19 @@ describe("the body an action reads", () => {
 
 	function renderBody(withFormat: boolean) {
 		render(
-			<AdminRouterProvider router={hostRouter}>
-				<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-					<TooltipProvider>
-						<CmsAdminComponentsProvider components={withFormat ? { formats: { mdx: mdxBrowserFormat } } : {}}>
-							<AiSlotProvider>
-								<Body />
-							</AiSlotProvider>
-						</CmsAdminComponentsProvider>
-					</TooltipProvider>
-				</QueryClientProvider>
-			</AdminRouterProvider>,
+			<SiteProvider site={testSite}>
+				<AdminRouterProvider router={hostRouter}>
+					<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+						<TooltipProvider>
+							<CmsAdminComponentsProvider components={withFormat ? { formats: { mdx: mdxBrowserFormat } } : {}}>
+								<AiSlotProvider>
+									<Body />
+								</AiSlotProvider>
+							</CmsAdminComponentsProvider>
+						</TooltipProvider>
+					</QueryClientProvider>
+				</AdminRouterProvider>
+			</SiteProvider>,
 		);
 	}
 

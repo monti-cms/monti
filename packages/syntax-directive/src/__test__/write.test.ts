@@ -1,7 +1,7 @@
 import type { BlockAttribute, BlockDefinition } from "@monti-cms/core";
-import { ADDED_BLOCKS, ADDED_MARK_BLOCKS, BLOCKS } from "@monti-cms/core/client";
+import { mdxWith } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../test/mdx-syntax";
+import { testSite } from "../../test/site";
 import { directiveSyntax } from "..";
 
 /**
@@ -15,12 +15,12 @@ const optionValue = (attribute: BlockAttribute, fallback: string) =>
 	attribute.options ? (Object.keys(attribute.options)[0] ?? fallback) : fallback;
 
 /** A site block that holds body content (a container with no child rules or parent, e.g. a callout) and its text attribute. */
-const bodyBlock = ADDED_BLOCKS.find(
+const bodyBlock = testSite.ADDED_BLOCKS.find(
 	(block) => block.syntax.kind === "container" && !block.children?.blocks && !block.parent && stringAttribute(block),
 );
 const bodyAttribute = stringAttribute(bodyBlock);
 /** A container block with a boolean attribute (e.g. a collapsible). */
-const booleanBlock = ADDED_BLOCKS.find(
+const booleanBlock = testSite.ADDED_BLOCKS.find(
 	(block) =>
 		block.syntax.kind === "container" &&
 		Object.values(block.attributes).some((attribute) => attribute.type === "boolean"),
@@ -29,11 +29,11 @@ const booleanAttribute = booleanBlock
 	? Object.entries(booleanBlock.attributes).find(([, attribute]) => attribute.type === "boolean")?.[0]
 	: undefined;
 /** A text decoration block with a text attribute (e.g. a tooltip). */
-const markBlock = ADDED_MARK_BLOCKS.find((block) => stringAttribute(block));
+const markBlock = testSite.ADDED_MARK_BLOCKS.find((block) => stringAttribute(block));
 const markAttribute = stringAttribute(markBlock);
 /** A group block that holds only specified child blocks, and its child (e.g. a tabs group and a tab, a column layout and a column). */
-const groups = ADDED_BLOCKS.flatMap((block) => {
-	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
+const groups = testSite.ADDED_BLOCKS.flatMap((block) => {
+	const child = testSite.BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	return block.syntax.kind === "container" && child?.syntax.kind === "container" ? [{ block, child }] : [];
 });
 /** JSX attributes of the child block (fill in only the required text attributes, e.g. the tab name). */
@@ -45,7 +45,7 @@ const childProps = (child: BlockDefinition, value: string) =>
 const directiveName = (block: BlockDefinition) => ("directive" in block.syntax ? block.syntax.directive : block.name);
 
 /** Write path with the directive extension: `MDX → analyze → toDocument → serialize`. */
-const { write, writeTwice } = mdxWith([directiveSyntax()]);
+const { write, writeTwice } = mdxWith(testSite, [directiveSyntax()]);
 
 describe("directive syntax: writing", () => {
 	it("normalizes read-compatible JSX and inline HTML to directives", () => {

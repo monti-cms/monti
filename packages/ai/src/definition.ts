@@ -1,8 +1,13 @@
+import { type MessageBundle, translate } from "@monti-cms/core";
+import type { Translator } from "@monti-cms/core/client";
 import { z } from "zod";
 import { coreMessages } from "./core.messages";
-import { lazyTranslator } from "./i18n";
 
-const t = lazyTranslator(coreMessages);
+/** Translator of the validation messages (`coreMessages`) the schemas report. */
+export type CoreText = Translator<typeof coreMessages extends MessageBundle<infer K> ? K : never>;
+
+/** The validation messages in English, for checks of developer-written definitions (config errors, not shown to the operator). */
+export const englishCoreText: CoreText = (key, vars) => translate(coreMessages, "en", key, vars);
 
 /**
  * AI common definitions. The choices and result shapes shared by the action definition (`action.ts`), the runner and the admin UI.
@@ -66,32 +71,37 @@ export type AiCheckKind = (typeof AI_CHECK_KINDS)[number];
 /** Code check name (lowercase, digits, hyphen). */
 export const CODE_CHECK_NAME = /^[a-z][a-z0-9-]*$/;
 
-const patternSchema = z
-	.string()
-	.trim()
-	.min(1)
-	.max(500)
-	.refine(
-		(pattern) => {
-			try {
-				new RegExp(pattern, "u");
-				return true;
-			} catch {
-				return false;
-			}
-		},
-		{ error: () => t("check.invalidRegex") },
-	);
+const patternSchemaOf = (t: CoreText) =>
+	z
+		.string()
+		.trim()
+		.min(1)
+		.max(500)
+		.refine(
+			(pattern) => {
+				try {
+					new RegExp(pattern, "u");
+					return true;
+				} catch {
+					return false;
+				}
+			},
+			{ error: () => t("check.invalidRegex") },
+		);
 
 /** One check. Fixed checks are toggled per action, and format and length edit a value. */
 const enabled = z.boolean().default(true);
-export const aiCheckSchema = z.discriminatedUnion("kind", [
-	z.object({ kind: z.literal("pattern"), enabled, pattern: patternSchema }),
-	z.object({ kind: z.literal("maxLength"), enabled, max: z.number().int().min(1).max(5000) }),
-	z.object({ kind: z.literal("exists"), enabled }),
-	z.object({ kind: z.literal("oneOf"), enabled, items: z.array(z.string().trim().min(1).max(200)).min(1).max(100) }),
-	z.object({ kind: z.literal("code"), enabled, name: z.string().max(60).regex(CODE_CHECK_NAME) }),
-]);
+export const aiCheckSchemaOf = (t: CoreText) =>
+	z.discriminatedUnion("kind", [
+		z.object({ kind: z.literal("pattern"), enabled, pattern: patternSchemaOf(t) }),
+		z.object({ kind: z.literal("maxLength"), enabled, max: z.number().int().min(1).max(5000) }),
+		z.object({ kind: z.literal("exists"), enabled }),
+		z.object({ kind: z.literal("oneOf"), enabled, items: z.array(z.string().trim().min(1).max(200)).min(1).max(100) }),
+		z.object({ kind: z.literal("code"), enabled, name: z.string().max(60).regex(CODE_CHECK_NAME) }),
+	]);
+
+/** The check schema with English messages: reads definitions and stored values where no message is shown. */
+export const aiCheckSchema = aiCheckSchemaOf(englishCoreText);
 export type AiCheck = z.output<typeof aiCheckSchema>;
 export type AiCheckInput = z.input<typeof aiCheckSchema>;
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 
-const codeBlockOf = (mdx: string) => toDocument(analyze(mdx)).content?.find((node) => node.type === "codeBlock");
+const codeBlockOf = (mdx: string) =>
+	toDocument(testSite, analyze(testSite, mdx)).content?.find((node) => node.type === "codeBlock");
 
 describe("code fence meta", () => {
 	it("keeps legitimate meta keys on the code block", () => {
@@ -21,6 +23,6 @@ describe("code fence meta", () => {
 		expect(block?.attrs?.language).toBe("ts");
 		expect(block?.attrs?.meta).toBe(`${key}="x"`);
 		expect(typeof block?.attrs?.codeDocument).toBe("object");
-		expect(serialize(toDocument(analyze(mdx))).trim()).toBe(mdx.trim());
+		expect(serialize(testSite, toDocument(testSite, analyze(testSite, mdx))).trim()).toBe(mdx.trim());
 	});
 });

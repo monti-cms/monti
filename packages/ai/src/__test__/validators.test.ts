@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import { testSite } from "../../test/site";
 import type { AiValidatorContext } from "../action";
-import { lazyTranslator } from "../i18n";
 import { regexRuns, sameStructure, uniqueSlug } from "../validators";
 import { validatorMessages } from "../validators.messages";
 
-const validatorText = lazyTranslator(validatorMessages);
+const validatorText = testSite.createTranslator(validatorMessages);
 
 const context = (
 	input: Record<string, unknown>,
@@ -14,6 +14,7 @@ const context = (
 	input,
 	locale: "ko",
 	content: { slugsInUse: async ({ slugs }) => new Set(slugs.filter((slug) => taken.includes(slug))) },
+	site: testSite,
 	...extra,
 });
 
@@ -35,6 +36,7 @@ describe("default code checks", () => {
 			locale: "en",
 			entryId: "e1",
 			content: { slugsInUse },
+			site: testSite,
 		});
 		expect(slugsInUse).toHaveBeenCalledWith({ collection: "post", locale: "en", slugs: ["a"], excludeEntryId: "e1" });
 	});

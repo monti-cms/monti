@@ -1,7 +1,8 @@
 import { insertSoftBreaks } from "@monti-cms/mdx/format";
+import { mdxWith } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";
 import { hashOf } from "../../test/hash";
-import { mdxWith } from "../../test/mdx-syntax";
+import { testSite } from "../../test/site";
 import { directiveSyntax } from "..";
 
 /**
@@ -9,9 +10,9 @@ import { directiveSyntax } from "..";
  * node and the written body says `<br />`.
  */
 const syntax = [directiveSyntax()];
-const { analyze: read, toDocument, write, writeTwice } = mdxWith(syntax);
+const { analyze: read, toDocument, write, writeTwice } = mdxWith(testSite, syntax);
 
-const hash = (source: string) => hashOf({ title: "t" }, source, 1, syntax);
+const hash = (source: string) => hashOf(testSite, { title: "t" }, source, 1, syntax);
 
 describe("directive syntax: line breaks", () => {
 	it("reads every spelling of a break into the same document", () => {
@@ -71,7 +72,7 @@ describe("directive syntax: line breaks", () => {
 
 	describe("soft line endings made explicit", () => {
 		const migrate = (source: string): string => {
-			const result = insertSoftBreaks(source, syntax);
+			const result = insertSoftBreaks(testSite, source, syntax);
 			if (result.status !== "changed") throw new Error(`expected a change, got ${result.status}`);
 			return result.mdx;
 		};
@@ -119,7 +120,7 @@ describe("directive syntax: line breaks", () => {
 
 		it("is a no-op the second time and gives the same hash as the explicit body", () => {
 			const once = migrate(BODY);
-			expect(insertSoftBreaks(once, syntax)).toEqual({ status: "unchanged" });
+			expect(insertSoftBreaks(testSite, once, syntax)).toEqual({ status: "unchanged" });
 			expect(hash(once)).toBe(hash(write(once)));
 		});
 
@@ -130,12 +131,12 @@ describe("directive syntax: line breaks", () => {
 
 		it("leaves the whole body as it is when a line ending cannot be paired with the source", () => {
 			const source = ":not-a-block[여러\n줄] 본문\n둘째 줄";
-			expect(insertSoftBreaks(source, syntax)).toMatchObject({ status: "skipped", reason: "unsafe" });
+			expect(insertSoftBreaks(testSite, source, syntax)).toMatchObject({ status: "skipped", reason: "unsafe" });
 		});
 
 		it("leaves a leaf directive's attributes alone", () => {
 			const source = '::image{mediaId="abc" alt="여러\n줄 설명"}\n';
-			expect(insertSoftBreaks(source, syntax).status).not.toBe("changed");
+			expect(insertSoftBreaks(testSite, source, syntax).status).not.toBe("changed");
 		});
 	});
 });

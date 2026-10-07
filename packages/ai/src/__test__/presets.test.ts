@@ -8,16 +8,15 @@ import {
 	SUMMARY_ROLE,
 	valueFieldsOf,
 } from "@monti-cms/core";
-import { BLOCKS, cmsConfig } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { chart, mermaid } from "../../../blocks/src";
 import { seo } from "../../../seo/src";
+import { testSite } from "../../test/site";
 import type { AiActionDefinition, AiAttach } from "../action";
-import { lazyTranslator } from "../i18n";
 import { aiPlugin } from "../plugin";
 import { aiPresets } from "../presets";
 import { presetMessages } from "../presets.messages";
-import { AI_ACTIONS } from "../registry";
+import { aiRegistryOf, aiSiteViewOf } from "../registry";
 import { resolveAiActions } from "../resolve";
 
 /**
@@ -25,7 +24,10 @@ import { resolveAiActions } from "../resolve";
  * checks them; the second group checks with a small config built inside the test.
  */
 
-const presetText = lazyTranslator(presetMessages);
+const presetText = testSite.createTranslator(presetMessages);
+const { createTranslator } = testSite;
+const AI_ACTIONS = aiRegistryOf(testSite).actions;
+const BLOCKS = testSite.BLOCKS;
 
 type FieldAttach = Extract<AiAttach, { slot: "field" }>;
 const fieldAttaches = (definition: AiActionDefinition | undefined): FieldAttach[] =>
@@ -36,7 +38,7 @@ const pairs = (definition: AiActionDefinition | undefined) =>
 		.flatMap((attach) => (attach.collections ?? []).map((collection) => `${collection}.${attach.field}`))
 		.sort();
 
-const collections = cmsConfig.collections as CollectionsConfig;
+const collections = aiSiteViewOf(testSite).collections;
 const bodyCollections = Object.entries(collections).filter(([, schema]) => schema.body);
 const isRecord = (name: string) => collections[name]?.kind === "item";
 
@@ -151,6 +153,7 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 		collections: { note, label, shelf } as CollectionsConfig,
 		blocks: [...BLOCKS.filter((block) => !block.parent && block.name === "image"), callout] as BlockDefinition[],
 		locales: [{ code: "ko" }, { code: "en" }],
+		createTranslator,
 	};
 
 	it("with no actions listed, all default actions that have somewhere to attach are on", () => {
@@ -199,7 +202,7 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 	});
 
 	it("`false` turns off, a definition/preset replaces in place, and a new name is added", () => {
-		const custom = { ...aiPresets.codeFold(), label: "내 기능" };
+		const custom = { ...(aiPresets.codeFold()({ ...site, sharedKeys: [] }) as AiActionDefinition), label: "내 기능" };
 		const actions = resolveAiActions(
 			{ actions: { draft: false, summary: aiPresets.summary({ maxLength: 50 }), mine: custom } },
 			site,
@@ -243,7 +246,8 @@ describe("AI actions contributed by other plugins (`contributes.ai.actions`)", (
 	const blogSite = (plugins: readonly { blocks?: readonly BlockDefinition[] }[]) => ({
 		collections,
 		blocks: blocksOf(plugins),
-		locales: cmsConfig.locales,
+		locales: testSite.config.locales,
+		createTranslator,
 	});
 
 	it("adding a block extension attaches its block AI actions, and removing it removes them", () => {
@@ -278,8 +282,8 @@ describe("AI actions contributed by other plugins (`contributes.ai.actions`)", (
 		expect(() =>
 			plugin.validate?.({
 				collections,
-				locales: cmsConfig.locales,
-				defaultLocale: cmsConfig.defaultLocale,
+				locales: testSite.config.locales,
+				defaultLocale: testSite.config.defaultLocale,
 				blocks: BLOCKS.map((block) => block.name),
 				blockDefinitions: BLOCKS,
 				plugins: [clash, plugin],

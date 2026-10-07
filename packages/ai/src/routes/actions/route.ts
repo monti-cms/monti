@@ -6,8 +6,8 @@ import { aiStoreFor } from "../../store";
 /** The AI action list (definition + edited values) and the names of actions usable now (connection ready). Slots only attach enabled actions that are usable. */
 export const GET = adminRoute(async ({ cms }) => {
 	const store = aiStoreFor(cms);
-	const items = await listActions(store);
-	return json({ usable: await usableActionKeys(store, items), items });
+	const items = await listActions(cms.site, store);
+	return json({ usable: await usableActionKeys(cms.site, store, items), items });
 });
 
 /**
@@ -16,5 +16,5 @@ export const GET = adminRoute(async ({ cms }) => {
  */
 export const POST = adminRoute(async ({ request, cms }) => {
 	const body = (await readJsonBody(request)) as { base?: unknown; value?: unknown };
-	return json(await createCustomAction(aiStoreFor(cms), body.base, body.value), { status: 201 });
+	return json(await createCustomAction(cms.site, aiStoreFor(cms), body.base, body.value), { status: 201 });
 });

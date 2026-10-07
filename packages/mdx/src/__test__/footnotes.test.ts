@@ -1,9 +1,10 @@
 import type { CmsNode } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 
-const parse = (mdx: string) => toDocument(analyze(mdx));
-const roundTrip = (mdx: string) => serialize(parse(mdx));
+const parse = (mdx: string) => toDocument(testSite, analyze(testSite, mdx));
+const roundTrip = (mdx: string) => serialize(testSite, parse(mdx));
 
 describe("GFM footnotes in the document model", () => {
 	it("turns a reference into an inline atom and a definition into a block", () => {
@@ -63,7 +64,7 @@ describe("GFM footnotes in the document model", () => {
 		const definition = doc.content?.[1] as CmsNode;
 		expect(definition.type).toBe("footnoteDefinition");
 		expect(definition.content?.map((n) => n.type)).toEqual(["paragraph", "paragraph", "codeBlock", "bulletList"]);
-		expect(serialize(doc)).toBe(mdx);
+		expect(serialize(testSite, doc)).toBe(mdx);
 	});
 
 	it.each([
@@ -74,7 +75,7 @@ describe("GFM footnotes in the document model", () => {
 		const doc = parse(`a[^n]\n\n${definition}\n`);
 		const first = (doc.content?.[1] as CmsNode).content?.[0]?.type;
 		expect(first).not.toBe("paragraph");
-		expect(parse(serialize(doc))).toEqual(doc);
+		expect(parse(serialize(testSite, doc))).toEqual(doc);
 	});
 
 	it("indents continuation lines of a definition by four spaces", () => {
@@ -91,7 +92,7 @@ describe("GFM footnotes in the document model", () => {
 				},
 			],
 		};
-		expect(serialize(doc)).toBe("[^1]: a\n\n    b\n");
+		expect(serialize(testSite, doc)).toBe("[^1]: a\n\n    b\n");
 	});
 
 	it("keeps inline marks, links and nested references inside a definition", () => {
@@ -149,8 +150,8 @@ describe("GFM footnotes in the document model", () => {
 			"",
 		].join("\n");
 		const doc = parse(mdx);
-		expect(parse(serialize(doc))).toEqual(doc);
-		expect(serialize(parse(serialize(doc)))).toBe(serialize(doc));
+		expect(parse(serialize(testSite, doc))).toEqual(doc);
+		expect(serialize(testSite, parse(serialize(testSite, doc)))).toBe(serialize(testSite, doc));
 	});
 
 	it("keeps duplicate definitions so validation can report them", () => {
@@ -169,13 +170,13 @@ describe("GFM footnotes in the document model", () => {
 		const doc = parse("Text[^1] here.\n\n[^1]: Note.\n");
 		// As an editor delete does: drop the definition and keep the reference.
 		const orphan: CmsNode = { ...doc, content: doc.content?.filter((n) => n.type !== "footnoteDefinition") };
-		const once = serialize(orphan);
+		const once = serialize(testSite, orphan);
 		expect(once).toBe("Text[^1] here.\n");
 		const reparsed = parse(once);
 		expect(reparsed).toEqual(orphan);
-		expect(serialize(reparsed)).toBe(once);
-		expect(serialize(parse(serialize(reparsed)))).toBe(once);
-		expect(parse(serialize(parse(once)))).toEqual(orphan);
+		expect(serialize(testSite, reparsed)).toBe(once);
+		expect(serialize(testSite, parse(serialize(testSite, reparsed)))).toBe(once);
+		expect(parse(serialize(testSite, parse(once)))).toEqual(orphan);
 	});
 
 	it("keeps an orphan reference inside formatting, headings and table cells", () => {
@@ -183,8 +184,10 @@ describe("GFM footnotes in the document model", () => {
 		const doc = parse(mdx);
 		const references = JSON.stringify(doc).match(/"footnoteReference"/g) ?? [];
 		expect(references).toHaveLength(3);
-		expect(serialize(doc)).toBe("## Title[^a]\n\n**bold**[^b] and `code[^c]`\n\n| h |\n| --- |\n| cell[^d] |\n");
-		expect(serialize(parse(serialize(doc)))).toBe(serialize(doc));
+		expect(serialize(testSite, doc)).toBe(
+			"## Title[^a]\n\n**bold**[^b] and `code[^c]`\n\n| h |\n| --- |\n| cell[^d] |\n",
+		);
+		expect(serialize(testSite, parse(serialize(testSite, doc)))).toBe(serialize(testSite, doc));
 	});
 
 	it("keeps a literally escaped marker as text", () => {
@@ -197,7 +200,7 @@ describe("GFM footnotes in the document model", () => {
 	});
 
 	it("reconnects an orphan reference when its definition is added back", () => {
-		const orphan = serialize({
+		const orphan = serialize(testSite, {
 			type: "doc",
 			content: [
 				{
@@ -213,7 +216,7 @@ describe("GFM footnotes in the document model", () => {
 		const restored = parse(`${orphan}\n[^1]: Note.\n`);
 		expect(restored.content?.map((n) => n.type)).toEqual(["paragraph", "footnoteDefinition"]);
 		expect(restored.content?.[0]?.content?.[1]).toEqual({ type: "footnoteReference", attrs: { label: "1" } });
-		expect(serialize(restored)).toBe("Text[^1] here.\n\n[^1]: Note.\n");
+		expect(serialize(testSite, restored)).toBe("Text[^1] here.\n\n[^1]: Note.\n");
 	});
 
 	it("escapes unsafe characters in a label when writing", () => {
@@ -231,7 +234,7 @@ describe("GFM footnotes in the document model", () => {
 				},
 			],
 		};
-		const again = parse(serialize(doc));
+		const again = parse(serialize(testSite, doc));
 		expect(again.content?.[0]?.content?.[0]?.type).toBe("footnoteReference");
 		expect(again.content?.[1]?.type).toBe("footnoteDefinition");
 	});

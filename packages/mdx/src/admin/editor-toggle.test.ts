@@ -1,8 +1,11 @@
 import { type CmsNode, STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { EditorToggle } from "./editor-toggle";
-import { mdxBrowserFormat } from "./format";
+import { createMdxBrowserFormat } from "./format";
+
+const mdxBrowserFormat = createMdxBrowserFormat(testSite);
 
 const headingDoc = (text: string): StoredDocument => ({
 	type: "doc",
@@ -16,7 +19,7 @@ const contentOf = (doc: StoredDocument | null) => (doc?.content ?? []).map(({ id
 describe("EditorToggle", () => {
 	it("opens valid MDX in visual mode", () => {
 		const source = "# Hello\n\nWorld!";
-		const toggle = new EditorToggle(source);
+		const toggle = new EditorToggle(source, mdxBrowserFormat);
 		expect(toggle.mode).toBe("visual");
 		expect(toggle.errors).toHaveLength(0);
 		expect(toggle.document).not.toBeNull();
@@ -25,7 +28,7 @@ describe("EditorToggle", () => {
 
 	it("falls back to source mode for invalid MDX, preserving original source", () => {
 		const invalidSource = "# Hello\n\n<Component>";
-		const toggle = new EditorToggle(invalidSource);
+		const toggle = new EditorToggle(invalidSource, mdxBrowserFormat);
 		expect(toggle.mode).toBe("source");
 		expect(toggle.errors.length).toBeGreaterThan(0);
 		expect(toggle.document).toBeNull();
@@ -34,7 +37,7 @@ describe("EditorToggle", () => {
 
 	it("surfaces errors, stays in source mode, and preserves original bytes for syntactically valid but disallowed MDX", () => {
 		const disallowedSource = '<Callout onClick={() => alert("x")}>Caution</Callout>';
-		const toggle = new EditorToggle(disallowedSource);
+		const toggle = new EditorToggle(disallowedSource, mdxBrowserFormat);
 		expect(toggle.mode).toBe("source");
 		expect(toggle.errors.length).toBeGreaterThan(0);
 		expect(toggle.errors.some((error) => error.params?.reason === "event_handler_attribute")).toBe(true);
@@ -44,7 +47,7 @@ describe("EditorToggle", () => {
 
 	it("toggles to source without edits returns exact original bytes", () => {
 		const source = "# Hello\n\nWorld!";
-		const toggle = new EditorToggle(source);
+		const toggle = new EditorToggle(source, mdxBrowserFormat);
 		expect(toggle.mode).toBe("visual");
 
 		toggle.toggleToSource();
@@ -54,7 +57,7 @@ describe("EditorToggle", () => {
 
 	it("toggles to source after edits returns the written document and roundtrips semantically", () => {
 		const source = "# Hello\n\nWorld!";
-		const toggle = new EditorToggle(source);
+		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
 		const newDoc = headingDoc("Hello Changed");
 		toggle.notifyVisualChange(newDoc);
@@ -72,7 +75,7 @@ describe("EditorToggle", () => {
 
 	it("toggling from source back to visual re-reads the text", () => {
 		const source = "# Hello\n\nWorld!";
-		const toggle = new EditorToggle(source);
+		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
 		toggle.toggleToSource();
 		expect(toggle.mode).toBe("source");
@@ -87,7 +90,7 @@ describe("EditorToggle", () => {
 
 	it("does not mutate internal document or falsely write it when the document getter's return value is mutated", () => {
 		const source = "# Hello\n\nWorld!";
-		const toggle = new EditorToggle(source);
+		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
 		const doc = toggle.document;
 		expect(doc).not.toBeNull();
@@ -115,7 +118,7 @@ describe("EditorToggle", () => {
 
 	it("does not mutate internal state when the object passed to notifyVisualChange is mutated after notification", () => {
 		const source = "# Hello\n\nWorld!";
-		const toggle = new EditorToggle(source);
+		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
 		const newDoc = headingDoc("Original Update");
 		toggle.notifyVisualChange(newDoc);
@@ -142,7 +145,7 @@ describe("EditorToggle", () => {
 
 	it("does not alter subsequent errors read when returned errors value is mutated or cleared", () => {
 		const invalidSource = "# Hello\n\n<Component>";
-		const toggle = new EditorToggle(invalidSource);
+		const toggle = new EditorToggle(invalidSource, mdxBrowserFormat);
 
 		expect(toggle.errors.length).toBeGreaterThan(0);
 		const initialCount = toggle.errors.length;

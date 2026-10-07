@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, toDocument } from "../format";
 import { insertSoftBreaks } from "../soft-breaks";
 
-const document = (source: string) => toDocument(analyze(source));
+const document = (source: string) => toDocument(testSite, analyze(testSite, source));
 
 /** The new string of a body that changes (the test fails when it does not). */
 const migrated = (source: string): string => {
-	const result = insertSoftBreaks(source);
+	const result = insertSoftBreaks(testSite, source);
 	if (result.status !== "changed") throw new Error(`expected a change, got ${result.status}: ${source}`);
 	return result.mdx;
 };
@@ -29,12 +30,12 @@ describe("soft line endings made explicit", () => {
 
 	it("is a no-op the second time", () => {
 		const once = migrated("가\n나");
-		expect(insertSoftBreaks(once)).toEqual({ status: "unchanged" });
+		expect(insertSoftBreaks(testSite, once)).toEqual({ status: "unchanged" });
 	});
 
 	it("leaves a body with no soft line ending as it is", () => {
 		for (const source of ["", "한 줄", "가\n\n나", "가<br />\n나", "가\\\n나", "가  \n나", "<br />\n\n나"]) {
-			expect(insertSoftBreaks(source), source).toEqual({ status: "unchanged" });
+			expect(insertSoftBreaks(testSite, source), source).toEqual({ status: "unchanged" });
 		}
 	});
 
@@ -50,7 +51,7 @@ describe("soft line endings made explicit", () => {
 			"<Table>\n<TableRow>\n<TableCell>가\n나</TableCell>\n</TableRow>\n</Table>",
 		];
 		for (const source of sources) {
-			const result = insertSoftBreaks(source);
+			const result = insertSoftBreaks(testSite, source);
 			expect(result.status === "changed" ? result.mdx : source, source).toBe(source);
 		}
 	});
@@ -70,7 +71,7 @@ describe("soft line endings made explicit", () => {
 		];
 		for (const body of bodies) {
 			expect(onlyBreaksAdded(body), body).toBe(true);
-			expect(insertSoftBreaks(migrated(body)), body).toEqual({ status: "unchanged" });
+			expect(insertSoftBreaks(testSite, migrated(body)), body).toEqual({ status: "unchanged" });
 		}
 	});
 
@@ -91,7 +92,7 @@ describe("soft line endings made explicit", () => {
 	});
 
 	it("leaves a body that does not parse untouched and says so", () => {
-		expect(insertSoftBreaks("가\n<Unclosed")).toMatchObject({ status: "skipped", reason: "unparsed" });
+		expect(insertSoftBreaks(testSite, "가\n<Unclosed")).toMatchObject({ status: "skipped", reason: "unparsed" });
 	});
 
 	it("keeps what the public page showed: every soft ending is one break, no more", () => {

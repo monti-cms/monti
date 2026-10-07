@@ -8,7 +8,7 @@ import { aiPlugin, aiPresets } from "../src";
 /**
  * The core package's other-site config (article, topic, author; English) plus the block extension (chart), SEO extension, and AI plugin. Field actions
  * attach to this site's fields (`excerpt`, `topicIds`, `authorId`, `metaTitle`...) by kind, role, and relation target, without naming them.
- * Used by the type check (`tsconfig.other-site.json`) and the AI plugin tests' other-site suite (`vitest.othersite.config.ts`).
+ * Used by the AI plugin tests' other-site suite (`vitest.othersite.config.ts`).
  */
 export default defineConfig({
 	...base,

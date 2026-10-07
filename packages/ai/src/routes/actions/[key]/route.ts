@@ -22,11 +22,11 @@ export const PATCH = adminRoute<KeyParams>(async ({ request, params, cms }) => {
 	const body = await readJsonBody(request);
 	assertVersionPresent((body as { expectedVersion?: unknown })?.expectedVersion);
 	const { expectedVersion, value, base } = parseWith(patchSchema, body);
-	return json(await updateAction(aiStoreFor(cms), params.key, expectedVersion, value, base));
+	return json(await updateAction(cms.site, aiStoreFor(cms), params.key, expectedVersion, value, base));
 });
 
 /** Deletes a screen action (`?expectedVersion=`). Code actions cannot be deleted. */
 export const DELETE = adminRoute<KeyParams>(async ({ request, params, cms }) => {
-	await deleteCustomAction(aiStoreFor(cms), params.key, readVersionQuery(request));
+	await deleteCustomAction(cms.site, aiStoreFor(cms), params.key, readVersionQuery(request));
 	return new Response(null, { status: 204 });
 });

@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import { type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
 import type { CmsFormat, LegacyBodies } from "@monti-cms/core/format";
 import { analyze } from "./analyze";
@@ -16,12 +17,12 @@ import { toDocument } from "./to-document";
  * has a body to read. A fresh store, and a store already past those steps, never needs this module at migrate time.
  */
 
-/** Reads and writes the MDX text of old bodies with the given syntax extensions (the ones the site wrote them with). */
-export const legacyBodies = (options: MdxFormatOptions = {}): LegacyBodies => {
+/** Reads and writes the MDX text of old bodies of `site`, with the given syntax extensions (the ones the site wrote them with). */
+export const legacyBodies = (site: Site, options: MdxFormatOptions = {}): LegacyBodies => {
 	const syntax = options.syntax ?? NO_SYNTAX;
 	return {
 		insertSoftBreaks: (text) => {
-			const result = insertSoftBreaks(text, syntax);
+			const result = insertSoftBreaks(site, text, syntax);
 			return result.status === "changed"
 				? { status: "changed", text: result.mdx }
 				: result.status === "skipped"
@@ -33,18 +34,18 @@ export const legacyBodies = (options: MdxFormatOptions = {}): LegacyBodies => {
 					: { status: "unchanged" };
 		},
 		read: (text, readOptions) => {
-			const body = bodyFromMdx(text, syntax, readOptions);
+			const body = bodyFromMdx(site, text, syntax, readOptions);
 			return { text: body.mdx, doc: body.doc };
 		},
 		write: (doc, writeOptions) => {
-			const body = bodyFromDocument(doc, syntax, writeOptions);
+			const body = bodyFromDocument(site, doc, syntax, writeOptions);
 			return { text: body.mdx, doc: body.doc };
 		},
 		documentOf: (text): StoredDocument => {
-			const analysis = analyze(text, undefined, syntax);
+			const analysis = analyze(site, text, undefined, syntax);
 			if (analysis.errors.length === 0) {
 				try {
-					const stored = toStoredDocument(toDocument(analysis));
+					const stored = toStoredDocument(site, toDocument(site, analysis));
 					if (stored) return stored;
 				} catch {
 					// Not a document: kept as text below.
@@ -58,5 +59,5 @@ export const legacyBodies = (options: MdxFormatOptions = {}): LegacyBodies => {
 /** The `mdx` format for the server: the format of `@monti-cms/mdx/format`, plus the old-body reader the store migrations ask for. */
 export const createServerMdxFormat = (options: MdxFormatOptions = {}): CmsFormat<"mdx"> => ({
 	...createMdxFormat(options),
-	legacyBodies: legacyBodies(options),
+	legacyBodies: (site) => legacyBodies(site, options),
 });

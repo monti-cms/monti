@@ -3,12 +3,10 @@
 import { AttributeInput, ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { PencilLine, Plus, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages";
-
-const t = createTranslator(tabsMessages);
 
 // Look of the editor tab bar (theme colors). The public page tab look is decided by the site.
 const TAB_TRIGGER =
@@ -24,6 +22,7 @@ const labelOf = (values: Readonly<Record<string, unknown>>) => (typeof values.la
  * Tab names, the initially open tab, adding, and deleting are done from the block toolbar.
  */
 export function TabsNodeView() {
+	const t = useTranslator(tabsMessages);
 	const block = useBlockEditor<{ defaultValue: string }>();
 	const { children, editable, focusedChild } = block;
 	const labels = children.map((child) => labelOf(child.values));

@@ -1,21 +1,21 @@
-import "@monti-cms/core/client";
 import { createFormatRegistry } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
-import { DOCUMENT_COLLECTIONS } from "../../../core/src/core/collections";
 import { coreMessages } from "../../../core/src/core/messages";
 import { prepareSnapshot as prepare } from "../../../core/src/core/snapshot";
 import { MAX_TABLE_COLUMNS } from "../../../core/src/doc/table-layout";
-import { createTranslator } from "../../../core/src/i18n";
-import { mdxFormat, documentToMdx as mdxOf } from "../format";
+import { testSite } from "../../../core/test/site";
+import { documentToMdx, mdxFormat } from "../format";
 
-const contentCollection = DOCUMENT_COLLECTIONS[0] as string;
+const mdxOf = (doc: Parameters<typeof documentToMdx>[1]) => documentToMdx(testSite, doc);
+
+const contentCollection = testSite.DOCUMENT_COLLECTIONS[0] as string;
 const prepareSnapshot = (input: {
 	collection: string;
 	slug: string;
 	metadata: Record<string, unknown>;
 	format: string;
 	body: string;
-}) => prepare(input as never, { import: { formats: createFormatRegistry([mdxFormat]) } });
+}) => prepare(testSite, input as never, { import: { formats: createFormatRegistry([mdxFormat]) } });
 
 /** A merged table as standard MDX: `<Table>` of `<TableRow>` of `<TableCell>`. */
 const cell = (text: string, attrs = "") => `<TableCell${attrs ? ` ${attrs}` : ""}>${text}</TableCell>`;
@@ -43,7 +43,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "span_too_large", max: MAX_TABLE_COLUMNS });
 		// The text is built from the code with the dictionary (site display language).
 		expect(tableWarnings[0]?.message).toBe(
-			createTranslator(coreMessages)("table.span_too_large", { max: MAX_TABLE_COLUMNS }),
+			testSite.createTranslator(coreMessages)("table.span_too_large", { max: MAX_TABLE_COLUMNS }),
 		);
 	});
 

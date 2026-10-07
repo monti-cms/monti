@@ -2,17 +2,20 @@ import { OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "@monti-cms/ad
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
-import { mdxBrowserFormat } from "../admin";
+import { testSite } from "../../../core/test/site";
+import { createMdxBrowserFormat } from "../admin";
 import { docOfMdx } from "../testing";
+
+const mdxBrowserFormat = createMdxBrowserFormat(testSite);
 
 /**
  * MDX notation through the editor's JSON and back, text in and text out. The admin tests build their documents by hand and assert on the stored document;
  * what a body is written as in MDX (the notation of footnotes, tables, blocks, marks and code annotations) is checked here, where the format is.
  */
 
-const tiptapOf = (mdx: string): JSONContent => storedToTiptap(docOfMdx(mdx));
+const tiptapOf = (mdx: string): JSONContent => storedToTiptap(testSite, docOfMdx(testSite, mdx));
 const mdxOfDoc = (doc: StoredDocument): string => mdxBrowserFormat.export(doc);
-const mdxOfTiptap = (json: JSONContent): string => mdxOfDoc(tiptapToStored(json));
+const mdxOfTiptap = (json: JSONContent): string => mdxOfDoc(tiptapToStored(testSite, json));
 /** MDX through the editor and back to MDX. */
 const roundTrip = (mdx: string) => mdxOfTiptap(tiptapOf(mdx));
 
@@ -239,7 +242,7 @@ describe("container blocks", () => {
 		'<Columns widths="60,40">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>',
 		'<CodeExplorer open="a.ts">\n\n```ts title="a.ts"\nconst a = 1;\n```\n\n```text title="dir/"\n\n```\n\n</CodeExplorer>',
 	])("round-trips %s", (source) => {
-		expect(roundTrip(source).trim()).toBe(mdxOfDoc(docOfMdx(source)).trim());
+		expect(roundTrip(source).trim()).toBe(mdxOfDoc(docOfMdx(testSite, source)).trim());
 		expect(JSON.stringify(tiptapOf(source))).not.toContain(OPAQUE_BLOCK_NAME);
 	});
 
@@ -247,7 +250,7 @@ describe("container blocks", () => {
 		const source = '<Callout variant="info" title="제목만" />';
 		const json = tiptapOf(source);
 		expect(json.content?.[0]?.content).toEqual([{ type: "paragraph" }]);
-		expect(mdxOfTiptap(json).trim()).toBe(mdxOfDoc(docOfMdx(source)).trim());
+		expect(mdxOfTiptap(json).trim()).toBe(mdxOfDoc(docOfMdx(testSite, source)).trim());
 	});
 
 	it("opens an empty container, a Tab outside its parent and a Column outside its parent as a source box", () => {

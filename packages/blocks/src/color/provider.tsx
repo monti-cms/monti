@@ -9,15 +9,13 @@ import {
 	type MarkAttrs,
 } from "@monti-cms/admin/editor";
 import { DropdownMenuSeparator } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import type { ReactNode } from "react";
 import { cleanTextColor, textColorProps } from "./colors";
 import { colorBlock } from "./definition";
 import { COLOR_MARK_NAME, TextColorIcon, TextColorMenu, TextColorMenuItems, TextColorPanel } from "./menu";
 import { colorMessages } from "./messages";
-
-const t = createTranslator(colorMessages);
 
 /** Text color display in the editor. The same `.cms-color` rule (`styles.css`, the same as `render.css` for the public page) picks the color for the theme. */
 export function colorMarkAttributes(attrs: MarkAttrs): Record<string, string> {
@@ -32,6 +30,7 @@ export function colorMarkAttributes(attrs: MarkAttrs): Record<string, string> {
 }
 
 function ColorBubbleButton({ editor, inCode, openPanel, closePanel }: EditorBubbleProps) {
+	const t = useTranslator(colorMessages);
 	if (inCode || !allowsMark(editor.state, COLOR_MARK_NAME)) return null;
 	return (
 		<BubbleButton

@@ -22,8 +22,6 @@ export default defineConfig(({ mode }) => ({
 	},
 	resolve: {
 		alias: {
-			// The MDX package reads the site's blocks (callout, tabs, tooltip, …) from the core package's reference blog config.
-			"@cms-config": path.resolve(__dirname, "../core/test/cms.config.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

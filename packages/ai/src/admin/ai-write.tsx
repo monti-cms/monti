@@ -14,7 +14,7 @@ import {
 	TabsTrigger,
 	Textarea,
 } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -24,9 +24,6 @@ import { streamAiAction, useAiActions } from "./ai-slot-provider";
 import { aiWriteMessages } from "./ai-write.messages";
 import { contentOfText, documentOfText, textOfContent, useMdxFormat } from "./mdx-format";
 import { diffWords } from "./word-diff";
-
-const t = createTranslator(aiWriteMessages);
-const common = createTranslator(aiCommonMessages);
 
 /**
  * AI action that writes into the body. If the attach target is `selection` (selection menu, e.g. polish style), it polishes the chosen text,
@@ -56,17 +53,24 @@ type RunState =
 	| { status: "error"; text: string; message: string };
 
 /** MDX of the selection. A paragraph with only part selected contains only that part. */
-function selectionMdx(format: BrowserFormat, editor: Editor, from: number, to: number): string {
+function selectionMdx(site: Site, format: BrowserFormat, editor: Editor, from: number, to: number): string {
 	const slice = editor.state.doc.slice(from, to);
 	const nodes = (slice.content.toJSON() ?? []) as JSONContent[];
 	// Selecting inside one paragraph yields only a text fragment. It has to be wrapped in a paragraph to be MDX.
 	const content = slice.content.firstChild?.isInline ? [{ type: "paragraph", content: nodes }] : nodes;
-	return textOfContent(format, content);
+	return textOfContent(site, format, content);
 }
 
 /** Result MDX as editor content. If the edit was inside one paragraph and the result is one paragraph, inserts only the text (the paragraph is not split). */
-function contentFor(format: BrowserFormat, editor: Editor, from: number, to: number, mdx: string): JSONContent[] {
-	const blocks = contentOfText(format, mdx);
+function contentFor(
+	site: Site,
+	format: BrowserFormat,
+	editor: Editor,
+	from: number,
+	to: number,
+	mdx: string,
+): JSONContent[] {
+	const blocks = contentOfText(site, format, mdx);
 	const $from = editor.state.doc.resolve(from);
 	const $to = editor.state.doc.resolve(to);
 	const inline = $from.parent === $to.parent && $from.parent.isTextblock;
@@ -85,6 +89,9 @@ function WriteDialog({
 	getEntry: GetEntry;
 	onClose: () => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(aiWriteMessages);
+	const common = useTranslator(aiCommonMessages);
 	const [request, setRequest] = useState("");
 	const [state, setState] = useState<RunState>({ status: "idle" });
 	const controllerRef = useRef<AbortController | null>(null);
@@ -103,10 +110,11 @@ function WriteDialog({
 					? { block: job.source, title: entry?.title || undefined }
 					: {
 							title: entry?.title || undefined,
-							body: textOfContent(format, editor.getJSON().content ?? []) || undefined,
+							body: textOfContent(site, format, editor.getJSON().content ?? []) || undefined,
 						};
 		try {
 			const result = await streamAiAction(
+				site,
 				action.key,
 				Object.fromEntries(Object.entries(input).filter(([name, value]) => value && action.input[name])),
 				{
@@ -145,17 +153,17 @@ function WriteDialog({
 	// A block fix replaces only when the result is one block of the same kind.
 	const blockProblem = useMemo(() => {
 		if (job.mode !== "block" || state.status !== "done") return null;
-		const blocks = contentOfText(format, state.text);
+		const blocks = contentOfText(site, format, state.text);
 		return blocks.length === 1 && blocks[0]?.type === job.nodeType ? null : t("blockMismatch");
-	}, [job, state, format]);
+	}, [job, state, format, t, site]);
 
 	const apply = () => {
 		if (state.status !== "done" || !state.text || blockProblem) return;
 		// A block is replaced entirely with the result block.
 		const content =
 			job.mode === "block"
-				? contentOfText(format, state.text)
-				: contentFor(format, editor, job.from, job.to, state.text);
+				? contentOfText(site, format, state.text)
+				: contentFor(site, format, editor, job.from, job.to, state.text);
 		editor.chain().focus().insertContentAt({ from: job.from, to: job.to }, content).run();
 		onClose();
 	};
@@ -306,6 +314,7 @@ function TextPreview({ format, text, label }: { format: BrowserFormat; text: str
  * Block fix shows the current block and the changed one side by side.
  */
 function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserFormat; text: string; done: boolean }) {
+	const t = useTranslator(aiWriteMessages);
 	const after = done ? (
 		<TextPreview format={format} text={text} label={t("after")} />
 	) : (
@@ -347,6 +356,8 @@ function useIsEmpty(editor: Editor | null) {
 
 /** AI writing attached as an edit-screen extension (polish style, write a draft). */
 export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
+	const site = useSite();
+	const t = useTranslator(aiWriteMessages);
 	const { data } = useAiActions();
 	// The model reads and writes MDX, so writing works through the `mdx` format. Without it there is nothing to write with.
 	const format = useMdxFormat();
@@ -379,11 +390,11 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 						editor: current,
 						from,
 						to,
-						source: selectionMdx(format, current, from, to),
+						source: selectionMdx(site, format, current, from, to),
 					});
 				},
 			})),
-		[usable.selection, format],
+		[usable.selection, format, site],
 	);
 
 	const insertActions = useMemo<EditorInsertAction[]>(
@@ -396,7 +407,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				icon: "sparkles",
 				run: (current, range) => setJob({ mode: "insert", action, editor: current, from: range.from, to: range.to }),
 			})),
-		[usable.insert],
+		[usable.insert, t],
 	);
 
 	const blockActions = useMemo<BlockAction[]>(
@@ -414,7 +425,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 					run: (current, pos) => {
 						const node = current.state.doc.nodeAt(pos);
 						if (!node || !format) return;
-						const source = textOfContent(format, [node.toJSON() as JSONContent]);
+						const source = textOfContent(site, format, [node.toJSON() as JSONContent]);
 						setJob({
 							mode: "block",
 							action,
@@ -427,7 +438,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 					},
 				};
 			}),
-		[usable.block, format],
+		[usable.block, format, site],
 	);
 
 	const firstInsert = usable.insert[0];

@@ -1,7 +1,8 @@
-import { type CollectionsConfig, defineCollection, fields, valueFieldsOf } from "@monti-cms/core";
-import { COLLECTIONS, cmsConfig, createTranslator, roleField, schemaOf } from "@monti-cms/core/client";
+import { type CollectionsConfig, defineCollection, defineConfig, fields, valueFieldsOf } from "@monti-cms/core";
+import { createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { AI_ACTIONS } from "../../../ai/src/registry";
+import { aiRegistryOf } from "../../../ai/src/registry";
+import { testConfig, testSite } from "../../test/site";
 import { SEO_ROLES, seo, seoFields, seoOf, validateSeoFields } from "..";
 import { seoMessages } from "../messages";
 
@@ -22,8 +23,17 @@ describe("seoFields", () => {
 	});
 
 	it("default labels are chosen in the admin language at read time, not when the field is built (labels set by the site stay as is)", () => {
-		const t = createTranslator(seoMessages);
-		const bundle = seoFields({ labels: { canonical: "Canonical" } });
+		const seoBundle = seoFields({ labels: { canonical: "Canonical" } });
+		const page = defineCollection({
+			label: "Page",
+			kind: "document",
+			fields: { title: fields.text({ label: "Title" }), ...seoBundle },
+			list: { columns: [] },
+		});
+		// The labels are read when a site is created from the config, in that site's admin language.
+		const site = createSite(defineConfig({ ...testConfig, collections: { page } as CollectionsConfig }));
+		const t = site.createTranslator(seoMessages);
+		const bundle = site.schemaOf("page").fields as unknown as typeof seoBundle;
 		expect(bundle.seoTitle.label).toBe(t("field.title"));
 		expect(bundle.seoImage.label).toBe(t("field.image"));
 		expect(bundle.seoNoindex.label).toBe(t("field.noindex"));
@@ -112,14 +122,15 @@ describe("public page helper (`seoOf`)", () => {
 });
 
 describe("current config: AI features", () => {
+	const actions = aiRegistryOf(testSite).actions;
 	/** The (collection, field) pairs that have that role field. */
 	const withRole = (role: string) =>
-		COLLECTIONS.flatMap((collection) => {
-			const stored = roleField(collection, role);
+		testSite.COLLECTIONS.flatMap((collection) => {
+			const stored = testSite.roleField(collection, role);
 			return stored ? [`${collection}.${stored.name}`] : [];
 		}).sort();
 	const pairs = (key: string) =>
-		(AI_ACTIONS[key]?.attach ?? [])
+		(actions[key]?.attach ?? [])
 			.flatMap((attach) =>
 				attach.slot === "field" ? (attach.collections ?? []).map((collection) => `${collection}.${attach.field}`) : [],
 			)
@@ -132,19 +143,19 @@ describe("current config: AI features", () => {
 	});
 
 	it("suggestion length is field `max` → recommended length (`limits`) → default", () => {
-		const collection = COLLECTIONS.find((name) => roleField(name, SEO_ROLES.title));
-		const field = collection ? roleField(collection, SEO_ROLES.title)?.field : undefined;
+		const collection = testSite.COLLECTIONS.find((name) => testSite.roleField(name, SEO_ROLES.title));
+		const field = collection ? testSite.roleField(collection, SEO_ROLES.title)?.field : undefined;
 		const limit = field?.kind === "text" ? (field.max ?? field.inputOptions?.limit ?? 60) : 60;
-		expect(AI_ACTIONS.seoTitle?.checks).toEqual([{ kind: "maxLength", max: limit }]);
-		expect(AI_ACTIONS.seoTitle?.prompt).toContain(`${limit} characters`);
+		expect(actions.seoTitle?.checks).toEqual([{ kind: "maxLength", max: limit }]);
+		expect(actions.seoTitle?.prompt).toContain(`${limit} characters`);
 	});
 
 	it("all SEO fields are in their own tab", () => {
-		for (const collection of COLLECTIONS) {
-			for (const { name, field } of valueFieldsOf(schemaOf(collection))) {
+		for (const collection of testSite.COLLECTIONS) {
+			for (const { name, field } of valueFieldsOf(testSite.schemaOf(collection))) {
 				if (Object.values(SEO_ROLES).includes(field.role as never)) expect(field.tab, name).toBeTruthy();
 			}
 		}
-		expect(cmsConfig.plugins?.some((plugin) => plugin.name === "seo")).toBe(true);
+		expect(testSite.plugins?.some((plugin) => plugin.name === "seo")).toBe(true);
 	});
 });

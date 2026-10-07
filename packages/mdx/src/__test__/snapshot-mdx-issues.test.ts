@@ -1,10 +1,9 @@
-import "@monti-cms/core/client";
 import { createFormatRegistry } from "@monti-cms/core/format";
 import { describe, expect, it, vi } from "vitest";
-import { DOCUMENT_COLLECTIONS } from "../../../core/src/core/collections";
 import { createContentService } from "../../../core/src/services/content-service";
 import type { Reference, ServiceInput, StorePort } from "../../../core/src/services/index";
 import { prepareSnapshot as prepareCore, validateForPublish } from "../../../core/src/services/index";
+import { testSite } from "../../../core/test/site";
 import { mdxFormat } from "../format";
 
 /**
@@ -12,10 +11,10 @@ import { mdxFormat } from "../format";
  * so they are tested with it (the core tests use a plain test format).
  */
 
-const content = DOCUMENT_COLLECTIONS[0] as string;
+const content = testSite.DOCUMENT_COLLECTIONS[0] as string;
 const formats = async () => createFormatRegistry([mdxFormat]);
-const prepareSnapshot = (value: unknown, options: Parameters<typeof prepareCore>[1] = {}) =>
-	prepareCore(value as ServiceInput, { ...options, import: { formats: createFormatRegistry([mdxFormat]) } });
+const prepareSnapshot = (value: unknown, options: Parameters<typeof prepareCore>[2] = {}) =>
+	prepareCore(testSite, value as ServiceInput, { ...options, import: { formats: createFormatRegistry([mdxFormat]) } });
 const mdxInput = (body: string) => ({ collection: content, slug: "a", metadata: {}, format: "mdx", body });
 
 describe("MDX that cannot become a document", () => {
@@ -93,7 +92,7 @@ describe("MDX with front matter", () => {
 			createEntryWithReferences: vi.fn().mockResolvedValue(undefined),
 			saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
 		};
-		const service = createContentService(storePort, { formats });
+		const service = createContentService(storePort, { site: testSite, formats });
 
 		await service.createDraft(mdxInput(mdx) as unknown as ServiceInput);
 
@@ -103,7 +102,7 @@ describe("MDX with front matter", () => {
 		]);
 		expect(callArg.snapshot.issues).toContainEqual(expect.objectContaining({ code: "frontmatter_present" }));
 
-		const validation = validateForPublish(callArg.snapshot, { targets: [], media: [] });
+		const validation = validateForPublish(testSite, callArg.snapshot, { targets: [], media: [] });
 		expect(validation.ready).toBe(false);
 		expect(validation.issues).toContainEqual(expect.objectContaining({ code: "frontmatter_present" }));
 	});

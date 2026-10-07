@@ -10,18 +10,21 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
-import { calloutBlock } from "./definition";
+import { useTranslator } from "@monti-cms/core/client";
 import { calloutMessages } from "./messages";
 import { CALLOUT_BOX_CLASS, CALLOUT_ICON_BY_VARIANT, type CalloutVariant, getDefaultCalloutTitle } from "./style";
 
-const t = createTranslator(calloutMessages);
-
-const VARIANT_OPTIONS = calloutBlock.attributes.variant.options as Record<CalloutVariant, string>;
-const isVariant = (value: unknown): value is CalloutVariant => typeof value === "string" && value in VARIANT_OPTIONS;
+const VARIANTS: readonly CalloutVariant[] = ["note", "tip", "info", "warning", "danger"];
+const isVariant = (value: unknown): value is CalloutVariant =>
+	typeof value === "string" && (VARIANTS as readonly string[]).includes(value);
 
 /** Callout editing view. The title is edited in place, the variant from the block toolbar menu. Colors derive from the theme colors (`styles.css`). */
 export function CalloutNodeView() {
+	const t = useTranslator(calloutMessages);
+	const VARIANT_OPTIONS = Object.fromEntries(VARIANTS.map((key) => [key, t(`option.${key}`)])) as Record<
+		CalloutVariant,
+		string
+	>;
 	const block = useBlockEditor();
 	const { values, editable } = block;
 	const setValue = block.setValue;
