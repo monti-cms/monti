@@ -52,18 +52,27 @@ describe("publishes that arrive close together are one commit", () => {
 	});
 
 	it("flushes the batch by itself when the window ends in a process that keeps running", async () => {
-		const h = await make({ debounceMs: 300 });
-		await publish(h, "alpha");
-		await publish(h, "beta");
-		await publish(h, "gamma");
+		// The window is long and only the timer is fake, so how fast the database answers cannot change which publishes are inside the window.
+		const h = await make({ debounceMs: 60_000 });
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		try {
+			await publish(h, "alpha");
+			await publish(h, "beta");
+			await publish(h, "gamma");
+			expect(h.repo.files("main").has("content/memo/beta.en.mdx")).toBe(false);
+			// The window ends: the timer the plugin set flushes the queue.
+			await vi.advanceTimersByTimeAsync(61_000);
+		} finally {
+			vi.useRealTimers();
+		}
 		await vi.waitFor(
 			() => {
 				expect(h.repo.files("main").has("content/memo/beta.en.mdx")).toBe(true);
 				expect(h.repo.files("main").has("content/memo/gamma.en.mdx")).toBe(true);
 			},
-			{ timeout: 5000 },
+			{ timeout: 10_000 },
 		);
-		expect(commits(h)).toBeLessThan(3);
+		expect(commits(h)).toBe(2);
 	});
 
 	it("commits publishes handled at the same moment together", async () => {

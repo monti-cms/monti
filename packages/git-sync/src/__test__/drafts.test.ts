@@ -1,4 +1,4 @@
-import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { listConflicts, resolveConflict } from "../conflicts";
 import { parseFile } from "../front-matter";
 import { blobSha } from "../github/blob-sha";
@@ -188,15 +188,21 @@ describe("saves are debounced per entry", () => {
 	});
 
 	it("writes the branch by itself when the quiet period ends in a process that keeps running", async () => {
-		const h = await make({ draftDebounceMs: 300 });
-		const entry = await draft(h, "burst", "Burst", "1");
-		await save(h, entry.id, { slug: "burst", body: "2" });
-		await save(h, entry.id, { slug: "burst", body: "3" });
-		expect(call(h, "createCommit")).toBe(0);
-		await (await import("vitest")).vi.waitFor(
-			() => expect(bodyOf(h.repo.files(branchOf("burst")).get(pathOf("burst")))).toBe("3"),
-			{ timeout: 5000 },
-		);
+		// Only the timer is fake, so how fast the database answers cannot change which saves are inside the quiet period.
+		const h = await make({ draftDebounceMs: 60_000 });
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		try {
+			const entry = await draft(h, "burst", "Burst", "1");
+			await save(h, entry.id, { slug: "burst", body: "2" });
+			await save(h, entry.id, { slug: "burst", body: "3" });
+			expect(call(h, "createCommit")).toBe(0);
+			await vi.advanceTimersByTimeAsync(61_000);
+		} finally {
+			vi.useRealTimers();
+		}
+		await vi.waitFor(() => expect(bodyOf(h.repo.files(branchOf("burst")).get(pathOf("burst")))).toBe("3"), {
+			timeout: 10_000,
+		});
 		expect(call(h, "createCommit")).toBe(1);
 	});
 });
