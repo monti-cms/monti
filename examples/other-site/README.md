@@ -30,11 +30,11 @@ The shape is what `monti init --admin-path /studio` generates, plus this site's 
 | `cms.config.ts` | Collections, blocks and extensions (`mdx()`, the chart block and `seo()` in `plugins`). Unlike the blog: admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/en` for every language), and the preview language comes from the path (`previewLocaleParam: false`) |
 | `cms.server.ts` | The CMS instance: `createCms` over the DB and GitHub login server config (as `monti init` generates; `githubAuth` comes from `@monti-cms/nextjs/auth`). The admin, the API route and the site pages (`cms.read.*`) all import `cms` from it |
 | `app/components/site-blocks.tsx` | Public components of the site blocks (`quote-card`, `map`), typed from the block definitions through `DocumentComponents` and passed to `<CmsContent components={...} />` |
-| `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`, using `@monti-cms/nextjs/admin`) and an example spell-check extension (`admin-components.tsx`) |
+| `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`, using `@monti-cms/nextjs/admin`; the layout imports the prebuilt `@monti-cms/admin/styles.css` and `@monti-cms/blocks/styles.css`) and an example spell-check extension (`admin-components.tsx`) |
 | `components/monti/article-body/` | The article body, installed as source with `pnpm exec monti add article-body --registry ../../registry/r` (from this folder) and used by the article page. Edit it freely; `monti add` refuses to overwrite a changed file without `--overwrite` ("Components as source" in the core README). `tsconfig.json` has the `@/*` alias it is imported through |
 | `showcase/` | The "CMS elements" sample articles (`*.mdx`) and `seed.ts`, which `pnpm preview:example` runs to put them into the preview database |
 | `app/api/cms/[...path]/route.ts` | Admin API and login (`/api/cms/auth/*`), served by `createRouteHandler(cms)` of `@monti-cms/nextjs`. There is no separate login route file |
-| `app/globals.css` | Only the Tailwind and package style imports (including `@monti-cms/mdx/styles.css`, after the admin styles). Admin colors and variants (`cms-*`, `cms-dark`, and so on) are defined by the admin package styles and do not collide with the app's names |
+| `app/globals.css` | The public site's own styles: Tailwind with typography, and the public page styles of the packages (`@monti-cms/core/render.css`, `@monti-cms/blocks/render.css`). It has no admin lines: the admin styles are prebuilt and scoped to the admin, so the site needs no Tailwind setup for them |
 
 To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/cms/auth/callback/github`.
 

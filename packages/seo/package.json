@@ -8,8 +8,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./admin": "./src/admin.ts",
-		"./styles.css": "./styles.css"
+		"./admin": "./src/admin.ts"
 	},
 	"scripts": {
 		"test": "vitest",
@@ -55,7 +54,6 @@
 	},
 	"files": [
 		"dist",
-		"styles.css",
 		"README.md"
 	],
 	"publishConfig": {
@@ -67,8 +65,7 @@
 			"./admin": {
 				"types": "./dist/admin.d.ts",
 				"default": "./dist/admin.js"
-			},
-			"./styles.css": "./styles.css"
+			}
 		}
 	}
 }

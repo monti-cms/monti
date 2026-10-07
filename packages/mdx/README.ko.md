@@ -40,9 +40,9 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/admin/styles.css";
-@import "@monti-cms/mdx/styles.css"; /* 관리자 패키지 스타일 뒤에 */
+```tsx
+// 관리자 레이아웃: 미리 만든 관리자 스타일이 원문 패널까지 담고 있다(앱에 Tailwind가 필요 없고 따로 불러올 것도 없다)
+import "@monti-cms/admin/styles.css";
 ```
 
 | 옵션 | 뜻 |
@@ -61,7 +61,6 @@ export default defineConfig({
 | `@monti-cms/mdx/admin` | 관리자(플러그인이 불러온다) | `MdxSourcePanel`, `EditorToggle`, `mdxBrowserFormat`, `createMdxBrowserFormat`, 그리고 이를 등록하는 관리자 공급자 |
 | `@monti-cms/mdx/server` | 플러그인, 마이그레이션 | `createServerMdxFormat`, `legacyBodies`: 옛 저장소 마이그레이션이 쓰는 것("옛 데이터베이스") |
 | `@monti-cms/mdx/testing` | 테스트 | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)`, 파이프라인 함수의 재내보내기 |
-| `@monti-cms/mdx/styles.css` | 앱 CSS | 원문 패널 스타일 |
 
 ## `mdx` 형식
 
@@ -148,7 +147,7 @@ MDX는 코어에 들어 있었고 `defineConfig({ mdx: { syntax } })`로 설정�
 
 1. `@monti-cms/mdx`를 설치한다.
 2. `plugins`에 `mdx()`를 넣고 `mdx.syntax`를 그 안으로 **옮긴다**: `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`(owner 스타일 블로그라면 쓰기 모드를 켠 `directiveSyntax()`. 옵션은 그대로 둔다).
-3. 앱 CSS에 `@import "@monti-cms/mdx/styles.css";`를 관리자 스타일 뒤에 넣는다.
+3. 관리자 스타일을 위해 따로 불러올 것은 없다. `@monti-cms/admin/styles.css`가 원문 패널을 담고 있다.
 4. `@monti-cms/core/render`의 `renderMdx` import를 `@monti-cms/mdx/render`로 바꾸거나(또는 `CmsContent`로 문서를 그린다), `cms.read.imageResolver(...)`를 `entry.refs`로 바꾼다.
 5. `@monti-cms/core/mdx`·`@monti-cms/core/syntax`·`@monti-cms/core/format/mdx` import를 바꾼다. 문법 확장 인터페이스는 `@monti-cms/mdx`에서, 해석기와 직렬화기는 `@monti-cms/mdx/format`에서 가져온다.
 6. 직접 만든 블록 확장은 render 모듈의 기본 내보내기를 지우고 `documentComponents`만 둔다.

@@ -53,7 +53,7 @@ describe("monti init", () => {
 				"app/api/cms/[...path]/route.ts",
 			]),
 		);
-		expect(report.updated).toEqual(expect.arrayContaining(["tsconfig.json", "app/globals.css", "next.config.ts"]));
+		expect(report.updated).toEqual(["tsconfig.json", "next.config.ts"]);
 		expect(report.skipped).toEqual([]);
 
 		const config = read(dir, "cms.config.ts");
@@ -77,6 +77,8 @@ describe("monti init", () => {
 		expect(page).toContain('import { cms } from "../../../../cms.server";');
 		const layout = read(dir, "app/(admin)/admin/layout.tsx");
 		expect(layout).toContain("<CmsAdminLayout cms={cms}>");
+		// The prebuilt admin stylesheet is imported by the admin layout only; the app's global CSS is not touched and needs no Tailwind.
+		expect(layout.startsWith('import "@monti-cms/admin/styles.css";\n')).toBe(true);
 		expect(layout).toContain('from "@monti-cms/nextjs/admin"');
 		expect(layout).toContain('import { cms } from "../../../cms.server";');
 		const route = read(dir, "app/api/cms/[...path]/route.ts");
@@ -93,10 +95,7 @@ describe("monti init", () => {
 		expect(tsconfig).toContain('\n  "compilerOptions"');
 		expect(tsconfig).toContain('"@cms-config": ["./cms.config.ts"]');
 
-		// The admin styles are imported after the existing @import.
-		const css = read(dir, "app/globals.css");
-		expect(css).toContain('@import "@monti-cms/admin/styles.css";');
-		expect(css.indexOf('@import "tailwindcss";')).toBeLessThan(css.indexOf('@import "@monti-cms/admin/styles.css";'));
+		expect(read(dir, "app/globals.css")).toBe('@import "tailwindcss";\n\n:root {\n  --background: #fff;\n}\n');
 
 		const nextConfig = read(dir, "next.config.ts");
 		expect(nextConfig.startsWith('import { withCms } from "@monti-cms/nextjs/config";\n')).toBe(true);
@@ -104,6 +103,8 @@ describe("monti init", () => {
 		expect(nextConfig).not.toContain("export default nextConfig");
 		expect(report.todo.join("\n")).toContain("/api/cms/auth/callback/github");
 		expect(report.todo.join("\n")).toContain("CMS_DATABASE_URL");
+		// Nothing asks for Tailwind, typography or tw-animate.
+		expect(report.todo.join("\n")).not.toMatch(/tailwind|tw-animate|typography/i);
 	});
 
 	it("running again overwrites nothing and reports files as skipped", () => {
@@ -122,7 +123,6 @@ describe("monti init", () => {
 			"app/(admin)/admin/layout.tsx",
 			"app/api/cms/[...path]/route.ts",
 			"tsconfig.json",
-			"app/globals.css",
 			"next.config.ts",
 		]);
 		expect(read(dir, "cms.config.ts")).toBe("// 사이트가 고친 설정\n");
@@ -162,7 +162,7 @@ describe("monti init", () => {
 		const dir = fakeApp({
 			"tsconfig.json": '{\n\t"compilerOptions": {\n\t\t"baseUrl": "./src"\n\t}\n}\n',
 			"app/globals.css": "",
-			"src/app/globals.css": '@import "tailwindcss";\n@import "tw-animate-css";\n',
+			"src/app/globals.css": '@import "tailwindcss";\n',
 		});
 		rmSync(path.join(dir, "app"), { recursive: true });
 		const report = initProject({ cwd: dir });
@@ -174,10 +174,7 @@ describe("monti init", () => {
 		const tsconfig = read(dir, "tsconfig.json");
 		expect(JSON.parse(tsconfig).compilerOptions.paths).toEqual({ "@cms-config": ["./cms.config.ts"] });
 		expect(tsconfig).toContain('\n\t"compilerOptions"');
-		// An existing line (tw-animate-css) is not added again.
-		const css = read(dir, "src/app/globals.css");
-		expect(css.match(/tw-animate-css/g)).toHaveLength(1);
-		expect(css).toContain('@import "@monti-cms/admin/styles.css";');
+		expect(read(dir, "src/app/globals.css")).toBe('@import "tailwindcss";\n');
 		expect(read(dir, "next.config.ts")).toContain('config: "./src/cms.config.ts" }');
 		// Files under `src/app` import the server file from `src/`.
 		expect(read(dir, "src/app/api/cms/[...path]/route.ts")).toContain('import { cms } from "../../../../cms.server";');
@@ -199,7 +196,7 @@ describe("monti init", () => {
 		const todo = report.todo.join("\n");
 		expect(todo).toContain('"@cms-config": ["./cms.config.ts"]');
 		expect(todo).toContain("withCms(nextConfig");
-		expect(todo).toContain('@import "@monti-cms/admin/styles.css";');
+		expect(todo).not.toMatch(/tailwind/i);
 	});
 
 	it("creates the next config if missing. Stops if there is no package.json", () => {

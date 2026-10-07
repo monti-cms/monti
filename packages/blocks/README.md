@@ -38,9 +38,17 @@ export default defineConfig({
 
 You can also add them one by one (`plugins: [callout(), columns(), color({ palette })]`). Adding the same extension twice is a config error.
 
+Two stylesheets, neither needing Tailwind in the app:
+
+```tsx
+// the admin layout: the edit screens of the blocks (prebuilt, scoped to the admin; built like the admin's, see "Styles" in the `@monti-cms/admin` README)
+import "@monti-cms/admin/styles.css";
+import "@monti-cms/blocks/styles.css";
+```
+
 ```css
-@import "@monti-cms/admin/styles.css";
-@import "@monti-cms/blocks/styles.css";
+/* the site's global CSS: the default public components (`cms-block-*`), the text color rule and the default callout and chart colors */
+@import "@monti-cms/blocks/render.css";
 ```
 
 - Code explorer: a file tree with the code of the picked file, for posts that show several files of a project. It holds plain code fences and each fence's `title` is its path,
@@ -53,7 +61,7 @@ You can also add them one by one (`plugins: [callout(), columns(), color({ palet
 - Editor: callout, collapsible, tabs, columns and the code explorer come with their edit screens (admin theme colors, `styles.css`). Mermaid and chart are
   edited with a code input and a preview. The preview is drawn by this extension (the app installs the optional dependencies `mermaid` and `recharts`, which are loaded only when a preview opens),
   and if the site registers the same name through `fencePreviews` (`@monti-cms/admin`), that one wins. Chart colors are the CSS variables `--chart-1` to `--chart-5`,
-  and if the app does not set them, the defaults in `styles.css` apply.
+  and if the app does not set them, the defaults in `render.css` apply (the editor preview takes the app's `--chart-N` too, with the same defaults, as `--cms-chart-N`).
 - Inline marks: the tooltip is offered in the formatting toolbar (after link), the text bubble and the slash menu; text color in the formatting toolbar (after inline marks) and the text bubble; and the code link in the text bubble
   (when the document has a code block) plus description, relink and unlink for the link at the cursor (see "Text marks" in the `@monti-cms/admin` README).
   Code line labels, the "Link to body" item in the code block line menu, the linking hint line and the highlight of the hovered line are core code block features, and they use this mark through this extension's
@@ -63,16 +71,16 @@ You can also add them one by one (`plugins: [callout(), columns(), color({ palet
   The first text that points to a label adds a back-link button (`↩`) at the end of the first linked line, which scrolls back to that text and highlights it briefly (`data-focused`).
 - The text color picker list is `color({ palette })` (the default 8 colors `DEFAULT_TEXT_PALETTE` if omitted). The body stores hex values, so changing the list leaves
   already written text as it is. Public pages render with `cleanTextColor` and `textColorProps` from `@monti-cms/blocks/color`, and the color is
-  chosen to match the theme by `.cms-color` in `styles.css`.
+  chosen to match the theme by `.cms-color` in `render.css` (the editor has the same rule in `styles.css`).
 - Public pages: each extension provides default public components (the plugin `render`, which returns `{ documentComponents }`; `renderDocument` and `CmsContent` of `@monti-cms/core/render` use it automatically).
   Only the parts that run in the browser (tab switching, tooltip, code link, Mermaid, chart) are split into `"use client"` files. Mermaid and chart render only when the app installs the optional dependencies
   `mermaid` and `recharts` (on the server and before loading, the source text is shown), and the callout default title, collapsible
-  default title and chart error messages follow the site language (`locale`). The look is the `cms-block-*` classes in `styles.css` (no Tailwind needed). Code fence blocks (`mermaid`, `chart`) get their code as `source`. Column widths are read with `parseColumnWidths` and `columnsGridTemplate` from `@monti-cms/blocks/columns`,
+  default title and chart error messages follow the site language (`locale`). The look is the `cms-block-*` classes in `render.css` (no Tailwind needed). Code fence blocks (`mermaid`, `chart`) get their code as `source`. Column widths are read with `parseColumnWidths` and `columnsGridTemplate` from `@monti-cms/blocks/columns`,
   and chart syntax and size with `parseChartDsl`, `normalizeChartDsl` and `resolvePieGeometry` from `@monti-cms/blocks/chart`.
 - Each extension's render module exports only `documentComponents(context)` (the MDX-shaped default export and the MDX component tables are gone), the table `renderDocument` merges in (`blocks` by block name with the attributes as
   flat props, `marks` for `tooltip`, `code-ref` and `color`, and the `Tooltip` code tag). Tabs and the code explorer read their children from the stored nodes (`items`), not from the props of child elements.
   A site overrides one with `renderDocument(doc, { components: { blocks: { callout: … } } })` (or the same `components` option of `CmsContent` and `renderMdx`); the props are typed from the block definitions of the site config.
-- Changing the editor look: the app sets the variables in `styles.css` (`--cms-callout-note`, `-tip`, `-info`, `-warning`, `-danger`, `--chart-1` to `5`).
+- Changing the look: the app sets the variables on `:root` (`--cms-callout-note`, `-tip`, `-info`, `-warning`, `-danger`, `--chart-1` to `5`); the defaults in `render.css` and `styles.css` are wrapped in `:where()`, so the app's values win.
 - If you remove the plugin of a block that is already used, that block drops out of the stored syntax and turns into plain text the next time it is saved.
 
 To use only the definitions without plugins (for example in tests), put the definitions from `@monti-cms/blocks/definitions` into the config's `blocks`.

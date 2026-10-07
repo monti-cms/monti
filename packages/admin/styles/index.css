@@ -1,0 +1,29 @@
+/*
+ * @monti-cms/admin styles: the source of the prebuilt `dist/styles.css` (built by `scripts/build-styles.mjs`).
+ * The host imports the built file, so it needs no Tailwind, typography or tw-animate setup.
+ */
+@layer theme, base, components, utilities;
+
+@import "./theme.css";
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/* KaTeX styles and fonts for the math preview in the editor. Sites do not import KaTeX CSS themselves. */
+@import "katex/dist/katex.min.css";
+
+@import "./admin.css";
+
+/*
+ * The classes of this package's sources and of the first-party plugins that add admin UI. They are compiled here, once, so the shared utilities,
+ * `prose`, the theme and the reset are defined in one file only (a plugin file loaded later that defined `.prose` again would reset
+ * the admin's dark variant). A third-party plugin ships its own CSS with only classes of its own.
+ */
+@source "../src";
+@source not "../src/**/__test__";
+@source not "../src/test";
+@source "../../ai/src";
+@source "../../blocks/src";
+@source "../../mdx/src";
+@source "../../seo/src";
+@source not "../../*/src/**/__test__";
+@source not "../../*/src/test";

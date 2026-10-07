@@ -102,13 +102,14 @@ export default function AdminPage(props: CmsAdminPageProps) {
 }
 `;
 
-export const adminLayoutTemplate = (serverImport: string) => `import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
+export const adminLayoutTemplate = (serverImport: string) => `import "@monti-cms/admin/styles.css";
+import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
 import { cms } from ${JSON.stringify(serverImport)};
 
 export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin";
 
-/** Admin screen (@monti-cms/admin). Pass site components with CmsAdminComponentsProvider (see the admin README). */
+/** Admin screen (@monti-cms/admin). The stylesheet is prebuilt, so the app needs no Tailwind for it. Pass site components with CmsAdminComponentsProvider (see the admin README). */
 export default function AdminLayout({ children }: { children: ReactNode }) {
 	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;
 }
@@ -131,17 +132,9 @@ export default withCms(nextConfig, { config: "${config}" });
 `;
 }
 
-/** Style lines the admin screen needs. Put them in the app's Tailwind input CSS after `@import "tailwindcss";`. */
-export const CSS_LINES = [
-	'@import "tw-animate-css";',
-	'@import "@monti-cms/admin/styles.css";',
-	'@plugin "@tailwindcss/typography";',
-] as const;
-
 /** Packages the app installs (including those the admin package must share with the app). */
 export const INSTALL_COMMANDS = [
 	"pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react",
-	"pnpm add -D tw-animate-css @tailwindcss/typography",
 ] as const;
 
 /** Values for `.env.local`. */

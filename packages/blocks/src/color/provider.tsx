@@ -19,7 +19,7 @@ import { colorMessages } from "./messages";
 
 const t = createTranslator(colorMessages);
 
-/** Text color display in the editor. The same `.cms-color` rule (`styles.css`) as the public page picks the color for the theme. */
+/** Text color display in the editor. The same `.cms-color` rule (`styles.css`, the same as `render.css` for the public page) picks the color for the theme. */
 export function colorMarkAttributes(attrs: MarkAttrs): Record<string, string> {
 	const { className, style, ...data } = textColorProps(cleanTextColor(attrs));
 	return {

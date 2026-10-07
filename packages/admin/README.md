@@ -293,7 +293,7 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | `/media` | Media picker and preview |
 | `/api` | Calling the admin API (`cmsFetch`) |
 | `/kit` | Parts and helpers for extensions |
-| `/styles.css` | Admin styles |
+| `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |
 
 ### Router adapter
 
@@ -364,19 +364,39 @@ return (
 
 ## Styles
 
-The admin UI's CSS has **Tailwind 4** as an optional peer requirement (it is not listed as a peer in `package.json`). Only apps that use the admin UI need Tailwind 4;
-apps that use only the `@monti-cms/core` core and reading or public rendering do not. No prebuilt CSS is provided. The app's Tailwind generates the admin UI classes itself, so
-the app must have `tailwindcss` and `@tailwindcss/postcss` (Tailwind 4), `tw-animate-css` and `@tailwindcss/typography`.
+The admin UI's CSS is **prebuilt**: `@monti-cms/admin/styles.css` is compiled with Tailwind 4 when the package is built, so the app needs no Tailwind, `@tailwindcss/typography`
+or `tw-animate-css` setup, and no `@source`, `@theme` or `@custom-variant` lines. Import it in the admin layout (only the admin pages then load it) or in any global CSS file:
 
-What `@monti-cms/admin/styles.css` provides (everything carries the `cms` prefix, so nothing collides with the app's names):
+```tsx
+// app/(admin)/admin/layout.tsx
+import "@monti-cms/admin/styles.css";
+```
+
+An app that uses Tailwind 4 for its own public pages keeps doing so; the two do not interact.
+
+How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm build`; the sources are in `styles/`):
+
+- **Scoped.** Every selector sits under `:where(html:has(.cms-admin))`, a document that contains the admin UI (zero specificity, so a class keeps the strength it has in Tailwind). Popups are
+  portaled to `body`, so the scope is the document, not the `.cms-admin` element. Public pages of the app, which never contain `.cms-admin`, are not affected.
+- **Reset.** Tailwind's preflight is part of the bundle, but only under that scope, so it does not restyle the app's pages.
+- **Names.** Every custom property the bundle declares starts with `--cms-` (Tailwind's own `--tw-*` became `--cms-tw-*`, and its theme is inlined), keyframes are `cms-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
+- **Math.** The KaTeX styles and fonts for the math preview are included (the fonts are copied to `dist/fonts` and linked relatively), so sites do not import KaTeX CSS for the admin.
+- **Font.** Like Tailwind's preflight, the bundle falls back to the system sans-serif stack on `html` of an admin document. A font the app sets on `body` wins.
+
+What the bundle provides (everything carries the `cms` prefix, so nothing collides with the app's names):
 
 - **Color names.** `cms-*` colors such as `bg-cms-background`, `text-cms-muted-foreground` and `border-cms-border` (values come from `--cms-*` variables). The app's shadcn
   names (`bg-background`, etc.) and variables (`--background`, etc.) are left untouched. `--cms-*` apply only to documents that contain the admin UI.
 - **Variants.** `cms-dark:` applies when `html` (or an ancestor) has `.dark` or `[data-theme="dark"]`; `cms-horizontal:` and `cms-vertical:` apply for Base UI's
   `data-orientation`. They are independent of the app's `dark` and `data-horizontal` definitions. Whatever theme mechanism the app uses (class or `data-theme`), the admin UI's
   dark theme follows it.
-- **Everything else.** Tailwind class discovery for the published bundle (`@source`), default border and focus outline colors, and the admin document's radius (`--radius*`) values (these use Tailwind's default
-  names, so they change only in documents that contain the admin UI).
+- **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the admin's corner radius (`--cms-radius`; the `rounded-*` utilities of the bundle are computed from it).
+
+Plugins that add admin UI: the admin bundle also compiles the sources of the first-party plugins (`@monti-cms/ai`, `@monti-cms/blocks`, `@monti-cms/mdx`, `@monti-cms/seo`; see the `@source` lines of `styles/index.css`),
+so the shared utilities, `prose`, the theme and the reset are defined in **one** file. That is the point: a second file that defined `.prose` again would load later and reset what the admin's dark variant had set.
+`ai`, `mdx` and `seo` therefore ship no CSS. `@monti-cms/blocks/styles.css` holds only what utilities cannot say (the callout look, the text color rule, default variables) and is imported after the admin file.
+A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `cms-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
+The cost is that the admin file carries the classes of first-party plugins an app does not install (a few KB).
 
 `CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `cms.server.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
 

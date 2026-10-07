@@ -17,14 +17,14 @@
 		"./slots": "./src/slots/slots.tsx",
 		"./api": "./src/screens/admin-api.ts",
 		"./kit": "./src/kit.ts",
-		"./styles.css": "./styles.css"
+		"./styles.css": "./dist/styles.css"
 	},
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
-		"build": "node ../../scripts/build-package.mjs"
+		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.8.0",
@@ -85,8 +85,7 @@
 	},
 	"files": [
 		"dist",
-		"README.md",
-		"styles.css"
+		"README.md"
 	],
 	"publishConfig": {
 		"exports": {
@@ -134,7 +133,7 @@
 				"types": "./dist/kit.d.ts",
 				"default": "./dist/kit.js"
 			},
-			"./styles.css": "./styles.css"
+			"./styles.css": "./dist/styles.css"
 		}
 	}
 }

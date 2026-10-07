@@ -1,62 +1,7 @@
-/*
- * @monti-cms/admin styles. Import it in the app's Tailwind 4 input CSS after `@import "tailwindcss";`.
- *
- * The app needs: Tailwind 4 (`tailwindcss`, `@tailwindcss/postcss`), `tw-animate-css`, `@tailwindcss/typography`.
- * No prebuilt CSS is provided. The app's Tailwind generates the admin UI classes itself.
- *
- * Every name this file defines carries the `cms` prefix, so none collides with the app's names (shadcn's `bg-background`, `dark:`, etc.).
- *   - Color names: `bg-cms-background`, `text-cms-muted-foreground`, `border-cms-border` ... (values come from `--cms-*` variables)
- *   - Variants: `cms-dark:` (`.dark` or `[data-theme="dark"]` on `html` or an ancestor), `cms-horizontal:` and `cms-vertical:` (Base UI orientation)
- * Color variables (`--cms-*`) apply only to documents that contain the admin UI. Radius (`--radius*`) also changes only in that document.
- */
-
-/* KaTeX styles and fonts for the math preview in the editor. Sites do not import KaTeX CSS themselves. */
-@import "katex/dist/katex.min.css";
-
-/* Finds Tailwind classes in the components of the published bundle (inside the workspace the app reads the sources directly). */
-@source "./dist";
+/* Hand-written admin rules, compiled into the prebuilt bundle (`index.css`). Every selector here is scoped to a document that contains `.cms-admin`. */
 
 /*
- * Variants for the admin UI only. They do not collide with the app's `dark`, `data-horizontal`, etc.
- * The dark theme follows both `.dark` and `[data-theme="dark"]` that the app's theme provider puts on `html`.
- */
-@custom-variant cms-dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
-@custom-variant cms-horizontal (&[data-orientation="horizontal"]);
-@custom-variant cms-vertical (&[data-orientation="vertical"]);
-
-/* Color names used by the admin UI (`cms-*`). Values are set by the admin tokens below. */
-@theme inline {
-	--color-cms-background: var(--cms-background);
-	--color-cms-foreground: var(--cms-foreground);
-	--color-cms-card: var(--cms-card);
-	--color-cms-card-foreground: var(--cms-card-foreground);
-	--color-cms-popover: var(--cms-popover);
-	--color-cms-popover-foreground: var(--cms-popover-foreground);
-	--color-cms-primary: var(--cms-primary);
-	--color-cms-primary-foreground: var(--cms-primary-foreground);
-	--color-cms-secondary: var(--cms-secondary);
-	--color-cms-secondary-foreground: var(--cms-secondary-foreground);
-	--color-cms-muted: var(--cms-muted);
-	--color-cms-muted-foreground: var(--cms-muted-foreground);
-	--color-cms-accent: var(--cms-accent);
-	--color-cms-accent-foreground: var(--cms-accent-foreground);
-	--color-cms-destructive: var(--cms-destructive);
-	--color-cms-warning: var(--cms-warning);
-	--color-cms-border: var(--cms-border);
-	--color-cms-input: var(--cms-input);
-	--color-cms-ring: var(--cms-ring);
-	--color-cms-sidebar: var(--cms-sidebar);
-	--color-cms-sidebar-foreground: var(--cms-sidebar-foreground);
-	--color-cms-sidebar-primary: var(--cms-sidebar-primary);
-	--color-cms-sidebar-primary-foreground: var(--cms-sidebar-primary-foreground);
-	--color-cms-sidebar-accent: var(--cms-sidebar-accent);
-	--color-cms-sidebar-accent-foreground: var(--cms-sidebar-accent-foreground);
-	--color-cms-sidebar-border: var(--cms-sidebar-border);
-	--color-cms-sidebar-ring: var(--cms-sidebar-ring);
-}
-
-/*
- * CMS admin UI tokens. The reference blog's tokens are left untouched.
+ * CMS admin UI tokens. The host's own tokens are left untouched.
  * Popups and menus are portaled to body, so these apply to the whole document (html) that contains the admin container.
  */
 html:has(.cms-admin) {
@@ -87,12 +32,8 @@ html:has(.cms-admin) {
 	--cms-sidebar-accent-foreground: #18181b;
 	--cms-sidebar-border: #e7e7ea;
 	--cms-sidebar-ring: #6366f1;
-	/* Radius uses Tailwind's default names (`rounded-md`, etc.), so only in this document they are set to the admin values. */
-	--radius: 0.5rem;
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	/* Base corner radius. The `rounded-*` utilities of the admin bundle are computed from it (see `theme.css`); the host's `--radius*` is not touched. */
+	--cms-radius: 0.5rem;
 }
 
 html:is(.dark, [data-theme="dark"]):has(.cms-admin) {
@@ -139,10 +80,10 @@ html:has(.cms-admin) body {
 
 /*
  * Default color for borders and focus outlines. Makes places that use only `border` use the admin color instead of the app's global rule (shadcn's `* { @apply border-border }`) or `currentColor`.
- * Applied to the whole document because popups are portaled to body; it is in `@layer base`, so utility classes win.
+ * Applied to the whole document because popups are portaled to body; its selector has zero specificity, so utility classes win.
  */
 @layer base {
-	html:has(.cms-admin) * {
+	:where(html:has(.cms-admin)) * {
 		border-color: var(--cms-border);
 		outline-color: color-mix(in oklab, var(--cms-ring) 50%, transparent);
 	}

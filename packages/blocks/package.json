@@ -41,13 +41,14 @@
 		"./color": "./src/color/index.ts",
 		"./color/admin": "./src/color/admin.ts",
 		"./color/render": "./src/color/render.tsx",
-		"./styles.css": "./styles.css"
+		"./styles.css": "./dist/styles.css",
+		"./render.css": "./render.css"
 	},
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run",
 		"typecheck": "tsc --noEmit -p .",
-		"build": "node ../../scripts/build-package.mjs"
+		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"peerDependencies": {
 		"@monti-cms/core": "workspace:^",
@@ -106,7 +107,7 @@
 	"files": [
 		"dist",
 		"README.md",
-		"styles.css"
+		"render.css"
 	],
 	"publishConfig": {
 		"exports": {
@@ -246,7 +247,8 @@
 				"types": "./dist/color/render.d.ts",
 				"default": "./dist/color/render.js"
 			},
-			"./styles.css": "./styles.css"
+			"./styles.css": "./dist/styles.css",
+			"./render.css": "./render.css"
 		}
 	}
 }

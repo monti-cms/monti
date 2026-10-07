@@ -30,9 +30,7 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/seo/styles.css"; /* after the admin package styles (finds classes in the published bundle) */
-```
+The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` already covers it (no Tailwind needed in the app).
 
 ## Field set `seoFields(options?)`
 
