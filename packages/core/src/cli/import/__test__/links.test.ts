@@ -12,8 +12,8 @@ const mapping = parseMapping(
 		version: 1,
 		locale: { from: ["filename", "folder"] },
 		folders: {
-			posts: { collection: "post", fields: { title: "title", slug: "@slug" } },
-			notes: { collection: "note", fields: { title: "title" } },
+			"content/posts": { collection: "post", fields: { title: "title", slug: "@slug" } },
+			"content/notes": { collection: "note", fields: { title: "title" } },
 		},
 	},
 	"m",

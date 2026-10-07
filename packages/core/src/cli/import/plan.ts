@@ -16,7 +16,7 @@ import {
 	TARGET_SKIP,
 	TARGET_SLUG,
 } from "./mapping";
-import { derivePath, localeCode, type ParsedSource, type PathInfo, type SourceExtension } from "./source";
+import { derivePath, folderKeyOf, localeCode, type ParsedSource, type PathInfo, type SourceExtension } from "./source";
 
 /**
  * The plan of an import: for every file, the collection, language, address, field values and publish state its path, front matter and the mapping say, and the
@@ -169,14 +169,15 @@ export function planFiles(sources: readonly ParsedSource[], options: PlanOptions
 function planFile(source: ParsedSource, options: PlanOptions): FilePlan {
 	const { site, mapping } = options;
 	const path = derivePath(source.rel, site.LOCALES);
-	const folder = mapping.folders[path.folder];
+	const folderKey = folderKeyOf(source, site.LOCALES);
+	const folder = mapping.folders[folderKey];
 	const format = formatForExtension(options.formats, source.ext, mapping, options.format);
 	const errors: Notice[] = [];
 	const warnings: Notice[] = [];
 	const plan: FilePlan = {
 		source,
 		path,
-		folder: path.folder,
+		folder: folderKey,
 		collection: folder?.collection ?? undefined,
 		format: format?.name,
 		locale: site.DEFAULT_LOCALE,
