@@ -213,7 +213,7 @@ export function lazyHandle(cms: () => Cms): Cms["handle"] {
  *
  * ```ts
  * import config from "./cms.config";
- * export const cms = createCms({ config, server: defineServerConfig({ database: postgres({ ... }), auth: githubAuth({ ... }) }) });
+ * export const cms = createCms({ config, server: defineServerConfig({ database: postgres({ ... }), auth: auth({ providers: [github({ ... })] }) }) });
  * ```
  *
  * Any number of instances live in one process, each with its own config and server config: nothing is read from a module or the environment except the
@@ -242,7 +242,12 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		let auth: CmsAuth | undefined;
 
 		const getAuth = (): CmsAuth => {
-			auth ??= server.auth.create({ site, loginPath: site.adminUrl("/login"), trustHost: isHostTrusted() });
+			auth ??= server.auth.create({
+				site,
+				loginPath: site.adminUrl("/login"),
+				trustHost: isHostTrusted(),
+				storage: (plugin) => connections.database.pluginStorage(plugin),
+			});
 			return auth;
 		};
 		let rawStore: ContentStore | undefined;

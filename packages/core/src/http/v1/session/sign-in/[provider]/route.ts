@@ -17,8 +17,8 @@ export const POST = async (request: Request, context: RouteContext<{ provider: s
 		if (!auth.providers.some((method) => method.id === provider)) {
 			throw new HttpError(404, "not_found", "Unknown sign-in method");
 		}
-		await auth.signIn(provider, { redirectTo: cms.site.adminUrl() });
-		return new Response(null, { status: 204 });
+		const result = await auth.signIn(provider, { redirectTo: cms.site.adminUrl(), request });
+		return result instanceof Response ? result : new Response(null, { status: 204 });
 	} catch (error) {
 		// The login connection may redirect by throwing (Next.js does); that signal must reach the host framework.
 		context.cms.auth().rethrow?.(error);

@@ -77,7 +77,9 @@ export default defineConfig({
 `;
 
 export const SERVER_TEMPLATE = `import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { githubAuth } from "@monti-cms/nextjs/auth";
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { nextHost } from "@monti-cms/nextjs/auth";
 import config from "./cms.config";
 
 /**
@@ -90,10 +92,16 @@ export const cms = createCms({
 	config,
 	server: defineServerConfig({
 		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
-		auth: githubAuth({
-			clientId: process.env.AUTH_GITHUB_ID,
-			clientSecret: process.env.AUTH_GITHUB_SECRET,
-			adminIds: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin
+		auth: auth({
+			// Ways to sign in. Another provider (GitLab, Google, ...) goes in this list; admins are matched per provider as "<provider>:<id>".
+			providers: [
+				github({
+					clientId: process.env.AUTH_GITHUB_ID,
+					clientSecret: process.env.AUTH_GITHUB_SECRET,
+					admins: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin
+				}),
+			],
+			host: nextHost, // lets the sign-in read the headers of the request Next.js is handling
 			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev, only for requests from this machine: treat the visitor as admin without signing in
 			secret: process.env.AUTH_SECRET, // signs the sign-in session
 		}),
@@ -148,7 +156,7 @@ export default withCms(nextConfig);
 
 /** Packages the app installs (including those the admin package must share with the app). */
 export const INSTALL_COMMANDS = [
-	"pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react",
+	"pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react",
 ] as const;
 
 /** Values for `.env.local`. */

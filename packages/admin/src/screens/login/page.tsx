@@ -60,6 +60,9 @@ export default async function AdminLoginPage({ cms, server }: { cms: Cms; server
 									action={cmsApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
 								>
 									<Button type="submit" className="w-full">
+										{authProvider.icon ? (
+											<img src={authProvider.icon} alt="" aria-hidden="true" className="size-4" />
+										) : null}
 										{t("signIn", { provider: authProvider.name })}
 									</Button>
 								</form>

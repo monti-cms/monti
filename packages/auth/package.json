@@ -1,0 +1,47 @@
+{
+	"name": "@monti-cms/auth",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Framework-neutral admin login for @monti-cms/core on standard Request/Response (Auth.js core), with pluggable providers: GitHub today, OAuth and password providers by adding a package",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./github": "./src/github.ts"
+	},
+	"scripts": {
+		"test": "vitest",
+		"test:run": "vitest run",
+		"typecheck": "tsc --noEmit -p .",
+		"build": "node ../../scripts/build-package.mjs"
+	},
+	"dependencies": {
+		"@auth/core": "0.41.3"
+	},
+	"peerDependencies": {
+		"@monti-cms/core": "workspace:^"
+	},
+	"devDependencies": {
+		"@monti-cms/core": "workspace:*",
+		"@types/node": "^20",
+		"typescript": "^7.0.2",
+		"vitest": "^4.0.18"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./github": {
+				"types": "./dist/github.d.ts",
+				"default": "./dist/github.js"
+			}
+		}
+	}
+}

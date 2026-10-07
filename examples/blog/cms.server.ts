@@ -1,5 +1,7 @@
+import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { githubAuth } from "@monti-cms/nextjs/auth";
+import { nextHost } from "@monti-cms/nextjs/auth";
 import config from "./cms.config";
 
 /**
@@ -12,10 +14,15 @@ export const cms = createCms({
 	config,
 	server: defineServerConfig({
 		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
-		auth: githubAuth({
-			clientId: process.env.AUTH_GITHUB_ID,
-			clientSecret: process.env.AUTH_GITHUB_SECRET,
-			adminIds: [process.env.CMS_ADMIN_GITHUB_ID],
+		auth: auth({
+			providers: [
+				github({
+					clientId: process.env.AUTH_GITHUB_ID,
+					clientSecret: process.env.AUTH_GITHUB_SECRET,
+					admins: [process.env.CMS_ADMIN_GITHUB_ID],
+				}),
+			],
+			host: nextHost,
 			// Only in local development (`next dev`), treat the visitor as admin without logging in.
 			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1",
 			secret: process.env.AUTH_SECRET,

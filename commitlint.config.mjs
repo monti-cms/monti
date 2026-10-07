@@ -23,6 +23,7 @@ export default {
 			"always",
 			[
 				"core",
+				"auth",
 				"admin",
 				"nextjs",
 				"ai",
