@@ -65,7 +65,6 @@ describe("createCms: an instance owns its server resources", () => {
 	it("connects to nothing until a resource is used", () => {
 		const { server, database } = serverFor("a");
 		const cms = createCms({ server });
-		cms.routeHandler();
 		expect(database.createStore).not.toHaveBeenCalled();
 		expect(database.pluginStorage).not.toHaveBeenCalled();
 		cms.store();

@@ -221,11 +221,11 @@ function addWithCms(cwd: string, config: string, report: InitReport): void {
 	const exports = text.match(new RegExp(exportLine.source, "gm")) ?? [];
 	if (exports.length !== 1) {
 		report.todo.push(
-			`Wrap the config in ${file}: import { withCms } from "@monti-cms/core/next"; export default withCms(nextConfig, { config: "${config}" });`,
+			`Wrap the config in ${file}: import { withCms } from "@monti-cms/nextjs/config"; export default withCms(nextConfig, { config: "${config}" });`,
 		);
 		return;
 	}
-	const importLine = 'import { withCms } from "@monti-cms/core/next";\n';
+	const importLine = 'import { withCms } from "@monti-cms/nextjs/config";\n';
 	const replaced = text.replace(exportLine, `export default withCms(nextConfig, { config: "${config}" });`);
 	writeFileSync(path.join(cwd, file), `${importLine}${replaced}`);
 	report.updated.push(file);

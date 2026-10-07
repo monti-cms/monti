@@ -51,18 +51,6 @@ describe("admin API route table", () => {
 		expect(handlers.GET).toHaveBeenCalledTimes(1);
 	});
 
-	it("`cms.routeHandler()` is the Next adapter of `handle`: it serves the path segments Next split", async () => {
-		const handler = cms.routeHandler();
-		const response = await handler.GET(new Request("http://localhost/api/cms/v1/preferences"), {
-			params: Promise.resolve({ path: ["v1", "preferences"] }),
-		});
-		expect(response.status).toBe(200);
-		const unknown = await handler.GET(new Request("http://localhost/api/cms/v1/nope"), {
-			params: Promise.resolve({ path: ["v1", "nope"] }),
-		});
-		expect(unknown.status).toBe(404);
-	});
-
 	it("`handle` reads the path from the request URL, with no framework in between", async () => {
 		const response = await cms.handle(new Request("http://localhost/api/cms/v1/preferences"));
 		expect(response).toBeInstanceOf(Response);

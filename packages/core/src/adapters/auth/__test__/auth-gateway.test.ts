@@ -8,7 +8,6 @@ import {
 	isDevAuthBypassEnabled,
 	type RequestHeaders,
 } from "../auth-gateway";
-import { githubAuth } from "../github";
 
 const ADMIN_ID = "12345678";
 
@@ -102,30 +101,6 @@ describe("AuthGateway Contract", () => {
 		expect(() => assertDevBypassSafe(true, { NODE_ENV: "production" })).not.toThrow();
 		expect(warn).toHaveBeenCalledOnce();
 		warn.mockRestore();
-	});
-
-	it("githubAuth applies the dev bypass only in development", () => {
-		vi.stubEnv("NODE_ENV", "development");
-		const auth = githubAuth({ clientId: "id", clientSecret: "secret", adminIds: [ADMIN_ID], devBypass: true }).create({
-			loginPath: "/admin/login",
-			trustHost: false,
-		});
-		expect(auth.devBypass).toBe(true);
-		expect(auth.devUserId).toBe(ADMIN_ID);
-		vi.stubEnv("NODE_ENV", "production");
-		expect(auth.devBypass).toBe(false);
-		expect(auth.isAdmin(ADMIN_ID)).toBe(true);
-		expect(auth.isAdmin("1")).toBe(false);
-	});
-
-	it("githubAuth refuses to build the login connection with devBypass on a deployed-looking development server", () => {
-		vi.stubEnv("NODE_ENV", "development");
-		vi.stubEnv("VERCEL", "1");
-		const adapter = githubAuth({ clientId: "id", clientSecret: "secret", adminIds: [ADMIN_ID], devBypass: true });
-		expect(() => adapter.create({ loginPath: "/admin/login", trustHost: false })).toThrow(/Refusing to start/);
-		// Without the flag the same server starts normally.
-		const withoutBypass = githubAuth({ clientId: "id", clientSecret: "secret", adminIds: [ADMIN_ID] });
-		expect(() => withoutBypass.create({ loginPath: "/admin/login", trustHost: false })).not.toThrow();
 	});
 
 	it("verifyAdmin bypasses session check for a localhost request when dev bypass is enabled", async () => {

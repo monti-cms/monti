@@ -24,6 +24,7 @@ export default {
 			[
 				"core",
 				"admin",
+				"nextjs",
 				"ai",
 				"blocks",
 				"mdx",

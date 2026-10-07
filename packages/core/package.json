@@ -9,7 +9,6 @@
 		".": "./src/index.ts",
 		"./server": "./src/server/index.ts",
 		"./s3": "./src/storage/s3.ts",
-		"./next": "./src/next/index.ts",
 		"./client": "./src/client.ts",
 		"./runtime": "./src/runtime.ts",
 		"./read": "./src/read/index.ts",
@@ -58,8 +57,6 @@
 	"peerDependencies": {
 		"@aws-sdk/client-s3": "^3.1136.0",
 		"@aws-sdk/s3-request-presigner": "^3.1136.0",
-		"next": ">=16",
-		"next-auth": "^5.0.0-beta.32",
 		"react": ">=19"
 	},
 	"peerDependenciesMeta": {
@@ -67,9 +64,6 @@
 			"optional": true
 		},
 		"@aws-sdk/s3-request-presigner": {
-			"optional": true
-		},
-		"next-auth": {
 			"optional": true
 		}
 	},
@@ -79,8 +73,6 @@
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
-		"next": "16.3.8",
-		"next-auth": "5.0.0-beta.32",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
 		"typescript": "^7.0.2",
@@ -107,10 +99,6 @@
 			"./s3": {
 				"types": "./dist/storage/s3.d.ts",
 				"default": "./dist/storage/s3.js"
-			},
-			"./next": {
-				"types": "./dist/next/index.d.ts",
-				"default": "./dist/next/index.js"
 			},
 			"./client": {
 				"types": "./dist/client.d.ts",

@@ -3,7 +3,6 @@ import type { MediaStore } from "../adapters/r2/types";
 import type { ContentStore } from "../core/store";
 import { createFormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
-import { nextRouteHandler } from "../next/route-handler";
 import { createMemoryPluginStorage } from "../plugin/memory-storage";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
@@ -98,7 +97,6 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		secrets: cms.secrets,
 		authGateway,
 		handle: lazyHandle(() => fake),
-		routeHandler: () => nextRouteHandler(fake),
 		read: createRead({
 			store: cms.store,
 			mediaStore: cms.mediaStore,

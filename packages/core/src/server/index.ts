@@ -1,9 +1,9 @@
 /**
- * Server entry point imported by the app's server file (`cms.server.ts`): the server config authoring API (`defineServerConfig`, `postgres`, `githubAuth`)
- * and `createCms`, which turns the server config into the CMS instance the rest of the app uses.
+ * Server entry point imported by the app's server file (`cms.server.ts`): the server config authoring API (`defineServerConfig`, `postgres`)
+ * and `createCms`, which turns the server config into the CMS instance the rest of the app uses. The login method (`githubAuth`) comes from
+ * the framework package (`@monti-cms/nextjs/auth`).
  */
 
-export { type GithubAuthOptions, githubAuth } from "../adapters/auth/github";
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
 export type {
 	AllowedMediaMime,
@@ -16,7 +16,6 @@ export type {
 export {
 	type BulkService,
 	type Cms,
-	type CmsRouteHandler,
 	type ContentService,
 	type CreateCmsOptions,
 	createCms,

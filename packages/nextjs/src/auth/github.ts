@@ -1,8 +1,12 @@
-import { withBasePath } from "../../core/base-path";
-import { createActiveTranslator } from "../../i18n/active";
-import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "../../server/define";
+import { createActiveTranslator } from "@monti-cms/core";
+import {
+	assertDevBypassSafe,
+	isAllowedAdminId,
+	isDevAuthBypassEnabled,
+	withBasePath,
+} from "@monti-cms/core/adapters/auth";
+import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "@monti-cms/core/server";
 import type { createGithubNextAuth } from "./auth-config";
-import { assertDevBypassSafe, isAllowedAdminId, isDevAuthBypassEnabled } from "./auth-gateway";
 import { authMessages } from "./messages";
 
 /** The UI locale is picked when text is read. Used instead of `i18n`, which reads the site config, so that `cms.server.ts` does not pull in the config. */
@@ -22,7 +26,7 @@ export interface GithubAuthOptions {
 	/**
 	 * Login API path. Default `/api/cms/auth`, which the admin API route handles too, so no login route file is needed.
 	 * The callback URL of the GitHub OAuth app is `<site>/<basePath>/callback/github`. To keep using `/api/auth` as before,
-	 * set `basePath: "/api/auth"` and export `handlers` from `@monti-cms/core/runtime` in `app/api/auth/[...nextauth]/route.ts`.
+	 * set `basePath: "/api/auth"` and export `GET` and `POST` from `cms.authHandlers` in `app/api/auth/[...nextauth]/route.ts`.
 	 */
 	readonly basePath?: string;
 	/**
@@ -33,6 +37,19 @@ export interface GithubAuthOptions {
 }
 
 type NextAuthResult = ReturnType<typeof createGithubNextAuth>;
+
+/**
+ * Headers of the request being handled, or `null` outside a request (a command-line tool, or a module loaded at build time).
+ * Read from `next/headers` when asked, so the module is not loaded by code that never handles a request.
+ */
+const requestHeaders = async (): Promise<Pick<Headers, "get"> | null> => {
+	try {
+		const { headers } = await import("next/headers");
+		return await headers();
+	} catch {
+		return null;
+	}
+};
 
 /**
  * GitHub OAuth (NextAuth) admin login. NextAuth is loaded the first time login is used
@@ -51,16 +68,19 @@ export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 			}
 			const basePath = (options.basePath ?? CMS_AUTH_BASE_PATH).replace(/\/$/, "");
 			let nextAuth: Promise<NextAuthResult> | undefined;
+			/** `unstable_rethrow` of `next/navigation`, once login has been used (a redirect can only be thrown after that). */
+			let rethrowNextSignal: ((error: unknown) => void) | undefined;
 			const load = () => {
-				nextAuth ??= import("./auth-config").then((module) =>
-					module.createGithubNextAuth({
+				nextAuth ??= Promise.all([import("./auth-config"), import("next/navigation")]).then(([module, navigation]) => {
+					rethrowNextSignal = navigation.unstable_rethrow;
+					return module.createGithubNextAuth({
 						...options,
 						// NextAuth matches paths against the request URL the browser sees, so it includes the Next `basePath` (`CmsAuth.basePath` is the in-app path).
 						basePath: withBasePath(basePath),
 						signInPage: loginPath,
 						trustHost,
-					}),
-				);
+					});
+				});
 				return nextAuth;
 			};
 			return {
@@ -92,6 +112,9 @@ export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 					return isDevAuthBypassEnabled(options.devBypass);
 				},
 				devUserId: options.adminIds.find((id) => id?.trim())?.trim() || "local-dev",
+				requestHeaders,
+				// NextAuth sends the browser away (to the provider, back to the admin) by throwing a Next redirect; it must reach Next.
+				rethrow: (error) => rethrowNextSignal?.(error),
 			};
 		},
 	};

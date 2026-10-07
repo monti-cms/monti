@@ -1,4 +1,4 @@
-import { defineMessages } from "../../i18n/define";
+import { defineMessages } from "@monti-cms/core";
 
 /** Button text for login methods. A site overrides it with `admin.messages["cms.auth"]` in its config. */
 export const authMessages = defineMessages("cms.auth", {

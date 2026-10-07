@@ -68,16 +68,20 @@ describe("monti init", () => {
 		expect(config).toContain('timeZone: "UTC"');
 		expect(config).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated file has no Korean
 		expect(read(dir, "cms.server.ts")).toContain("githubAuth({");
+		expect(read(dir, "cms.server.ts")).toContain('import { githubAuth } from "@monti-cms/nextjs/auth";');
 		// The server file exports the instance; every generated file imports it from there by a relative path.
 		expect(read(dir, "cms.server.ts")).toContain("export const cms = createCms({");
 		const page = read(dir, "app/(admin)/admin/[[...path]]/page.tsx");
 		expect(page).toContain("<CmsAdminPage cms={cms} {...props} />");
+		expect(page).toContain('from "@monti-cms/nextjs/admin"');
 		expect(page).toContain('import { cms } from "../../../../cms.server";');
 		const layout = read(dir, "app/(admin)/admin/layout.tsx");
 		expect(layout).toContain("<CmsAdminLayout cms={cms}>");
+		expect(layout).toContain('from "@monti-cms/nextjs/admin"');
 		expect(layout).toContain('import { cms } from "../../../cms.server";');
 		const route = read(dir, "app/api/cms/[...path]/route.ts");
-		expect(route).toContain("cms.routeHandler()");
+		expect(route).toContain("createRouteHandler(cms)");
+		expect(route).toContain('import { createRouteHandler } from "@monti-cms/nextjs";');
 		expect(route).toContain('import { cms } from "../../../../cms.server";');
 
 		// Existing aliases and indentation stay as they are. Only the site config is an alias: the server file is imported.
@@ -95,7 +99,7 @@ describe("monti init", () => {
 		expect(css.indexOf('@import "tailwindcss";')).toBeLessThan(css.indexOf('@import "@monti-cms/admin/styles.css";'));
 
 		const nextConfig = read(dir, "next.config.ts");
-		expect(nextConfig.startsWith('import { withCms } from "@monti-cms/core/next";\n')).toBe(true);
+		expect(nextConfig.startsWith('import { withCms } from "@monti-cms/nextjs/config";\n')).toBe(true);
 		expect(nextConfig).toContain('export default withCms(nextConfig, { config: "./cms.config.ts" });');
 		expect(nextConfig).not.toContain("export default nextConfig");
 		expect(report.todo.join("\n")).toContain("/api/cms/auth/callback/github");

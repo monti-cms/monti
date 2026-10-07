@@ -39,11 +39,9 @@ describe("Public JSON API", () => {
 
 	const get = async (path: string) => {
 		const [pathname, query = ""] = path.split("?");
-		const response = await fakeCms({ store, server: { publicApi }, formats: [paragraphsFormat] })
-			.routeHandler()
-			.GET(new Request(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`), {
-				params: Promise.resolve({ path: (pathname ?? "").split("/") }),
-			});
+		const response = await fakeCms({ store, server: { publicApi }, formats: [paragraphsFormat] }).handle(
+			new Request(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`),
+		);
 		return { status: response.status, cache: response.headers.get("cache-control"), body: await response.json() };
 	};
 

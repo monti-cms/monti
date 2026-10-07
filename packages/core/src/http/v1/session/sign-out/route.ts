@@ -1,4 +1,3 @@
-import { unstable_rethrow } from "next/navigation";
 import { adminUrl } from "../../../../core/admin-paths";
 import { handleApiError } from "../../error-handler";
 import type { RouteContext } from "../../handler";
@@ -12,7 +11,7 @@ export const POST = async (request: Request, context: RouteContext) => {
 		await cms.auth().signOut({ redirectTo: adminUrl("/login") });
 		return new Response(null, { status: 204 });
 	} catch (error) {
-		unstable_rethrow(error);
+		context.cms.auth().rethrow?.(error);
 		return handleApiError(error);
 	}
 };

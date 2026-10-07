@@ -64,7 +64,8 @@ ${admin}	// plugins: [...blocks(), seo()],
 `;
 }
 
-export const SERVER_TEMPLATE = `import { createCms, defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
+export const SERVER_TEMPLATE = `import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
+import { githubAuth } from "@monti-cms/nextjs/auth";
 
 /**
  * The CMS instance. It owns the database, sign-in and media connections and the secrets, which are read from environment variables (.env.local).
@@ -93,7 +94,7 @@ export const cms = createCms({
 /** The generated files import the CMS instance from the server file. \`serverImport\` is its import path from the generated file, without an extension. */
 export const adminPageTemplate = (
 	serverImport: string,
-) => `import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/admin/next";
+) => `import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/nextjs/admin";
 import { cms } from ${JSON.stringify(serverImport)};
 
 export default function AdminPage(props: CmsAdminPageProps) {
@@ -101,11 +102,11 @@ export default function AdminPage(props: CmsAdminPageProps) {
 }
 `;
 
-export const adminLayoutTemplate = (serverImport: string) => `import { CmsAdminLayout } from "@monti-cms/admin/next";
+export const adminLayoutTemplate = (serverImport: string) => `import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
 import { cms } from ${JSON.stringify(serverImport)};
 
-export { cmsAdminMetadata as metadata } from "@monti-cms/admin/next";
+export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin";
 
 /** Admin screen (@monti-cms/admin). Pass site components with CmsAdminComponentsProvider (see the admin README). */
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -113,14 +114,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 }
 `;
 
-export const apiRouteTemplate = (serverImport: string) => `import { cms } from ${JSON.stringify(serverImport)};
+export const apiRouteTemplate = (serverImport: string) => `import { createRouteHandler } from "@monti-cms/nextjs";
+import { cms } from ${JSON.stringify(serverImport)};
 
 /** Admin API (/api/cms/v1/*) and sign-in (/api/cms/auth/*). */
-export const { GET, POST, PATCH, PUT, DELETE } = cms.routeHandler();
+export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
 `;
 
 export function nextConfigTemplate(config: string): string {
-	return `import { withCms } from "@monti-cms/core/next";
+	return `import { withCms } from "@monti-cms/nextjs/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {};
@@ -138,7 +140,7 @@ export const CSS_LINES = [
 
 /** Packages the app installs (including those the admin package must share with the app). */
 export const INSTALL_COMMANDS = [
-	"pnpm add @monti-cms/core @monti-cms/admin next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react",
+	"pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react",
 	"pnpm add -D tw-animate-css @tailwindcss/typography",
 ] as const;
 

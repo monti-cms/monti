@@ -1,4 +1,4 @@
-import type { Cms } from "../cms";
+import type { Cms } from "@monti-cms/core/runtime";
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -12,8 +12,12 @@ export type CmsRouteHandler = (request: Request, context: { params: Promise<{ pa
 /**
  * The Next adapter of `cms.handle()`: one handler per HTTP method for `app/api/cms/[...path]/route.ts`.
  * It only passes the request and the path segments Next already split on to the core handler.
+ *
+ * ```ts
+ * export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
+ * ```
  */
-export function nextRouteHandler(cms: Pick<Cms, "handle">): Record<Method, CmsRouteHandler> {
+export function createRouteHandler(cms: Pick<Cms, "handle">): Record<Method, CmsRouteHandler> {
 	const handler: CmsRouteHandler = async (request, context) =>
 		cms.handle(request, { path: (await context.params).path });
 	return { GET: handler, POST: handler, PATCH: handler, PUT: handler, DELETE: handler };

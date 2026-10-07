@@ -9,7 +9,7 @@ export interface WithCmsOptions {
 
 const PACKAGES = ["@monti-cms/core"];
 /** Core-side packages. Only the optional peer dependencies of these and of CMS plugin packages are checked. */
-const CORE_PACKAGES = ["@monti-cms/core", "@monti-cms/admin"];
+const CORE_PACKAGES = ["@monti-cms/core", "@monti-cms/admin", "@monti-cms/nextjs"];
 /** Marker a CMS plugin package puts in `package.json` (`"cmsPlugin": true`). The name does not matter. */
 export const PLUGIN_MARKER = "cmsPlugin";
 /** Module substituted for an optional dependency that is not installed (importing it raises an error telling you to install it). */

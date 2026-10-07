@@ -1,4 +1,4 @@
-import { withCms } from "@monti-cms/core/next";
+import { withCms } from "@monti-cms/nextjs/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

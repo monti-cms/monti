@@ -1,4 +1,5 @@
-import { createCms, defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
+import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
+import { githubAuth } from "@monti-cms/nextjs/auth";
 
 /**
  * The CMS instance (the shape `monti init` generates). The store and admin login are read from environment variables (`.env.local`). No media storage is set up.

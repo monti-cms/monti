@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { missingOptionalPeers, withCms } from "../with-cms";
+import { missingOptionalPeers, withCms } from "../config";
 
 let dirs: string[] = [];
 afterEach(() => {
