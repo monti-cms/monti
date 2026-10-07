@@ -757,7 +757,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 
 레지스트리는 shadcn 레지스트리 스키마를 따르며 저장소의 `registry/`에 있습니다(`registry/r`로 빌드해 커밋). 컴포넌트는 호스트의 Tailwind와 공개 진입점
 (`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`)만 씁니다. `examples/blog`가 이 방법으로 `blog-theme`을 설치해 블로그 목록과 글 페이지에서 씁니다.
-`article-body`와 `blog-theme`은 전역 CSS에 `@tailwindcss/typography`와 `@monti-cms/core/render.css` import(블록을 쓰면 `@monti-cms/blocks/render.css`도)가 있는지 확인하고, 바꿀 내용을 diff로 보여 주며 묻고, 거절하면 추가할 줄을 그대로 출력합니다. `monti init`도 블로그 테마를 고르면 같게 하고, 루트 레이아웃의 `<html>` 태그에 `suppressHydrationWarning`도 추가합니다(diff와 질문 포함). 어드민 테마가 React가 하이드레이션하기 전에 `<html>`에 클래스를 달기 때문에, 없으면 첫 어드민 화면에서 하이드레이션 불일치가 기록됩니다. `monti init`이 쓰는 어드민 라우트 파일은 Next의 `cacheComponents`가 있든 없든 동작하며, `next.config`에 `cacheComponents: true`가 있으면 페이지에 `export const instant = false`도 넣습니다(세그먼트 설정은 패키지에서 다시 내보낼 수 없고, 옵션이 꺼져 있으면 Next가 거부합니다).
+`article-body`와 `blog-theme`은 전역 CSS에 `@tailwindcss/typography`와 `@monti-cms/core/render.css` import(블록을 쓰면 `@monti-cms/blocks/render.css`도)가 있는지 확인하고, 바꿀 내용을 diff로 보여 주며 묻고, 거절하면 추가할 줄을 그대로 출력합니다. `monti init`도 블로그 테마를 고르면 같게 하고, 루트 레이아웃의 `<html>` 태그에 `suppressHydrationWarning`도 추가합니다(diff와 질문 포함). 어드민 테마가 React가 하이드레이션하기 전에 `<html>`에 클래스를 달기 때문에, 없으면 첫 어드민 화면에서 하이드레이션 불일치가 기록됩니다. `monti init`이 쓰는 어드민 라우트 파일은 Next의 `cacheComponents`가 있든 없든 동작하며, `next.config`에 `cacheComponents: true`가 있으면 페이지에 `export const instant = false`도 넣습니다(세그먼트 설정은 패키지에서 다시 내보낼 수 없고, 옵션이 꺼져 있으면 Next가 거부합니다). 둘 중 하나라도 빠졌으면 `monti doctor`가 경고합니다(`next/hydration`, `next/theme-styles`).
 전체 설명, 컴포넌트 목록, 추가하는 법은 [`registry/README.ko.md`](../../registry/README.ko.md)에 있습니다.
 
 ## 진입점

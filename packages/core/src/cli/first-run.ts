@@ -181,6 +181,7 @@ export async function setupThemeStyles(options: ThemeStylesOptions): Promise<The
 			missing: missingLines,
 			updated: editable ? cssFile : undefined,
 			diff,
+			installDevDependency: hasTypographyPackage ? undefined : TYPOGRAPHY_PACKAGE,
 			manual: editable ? [] : manualFor(missingLines, !hasTypographyPackage),
 		};
 	}
