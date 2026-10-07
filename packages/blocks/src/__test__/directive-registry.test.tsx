@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { blocks } from "../index";
+import { allBlocks } from "../test/all-blocks";
 
 /**
  * Name consistency. If a block is missing from its extension's render module, the public page draws the fallback instead. Each extension's `render` module exports
  * `documentComponents`, and the components it returns are keyed by block name (`marks` for text blocks, `blocks` for the rest).
  */
 describe("block extensions vs. their public components", () => {
-	const plugins = blocks();
+	const plugins = allBlocks();
 
 	it("every extension has a render module that exports documentComponents", async () => {
 		expect(plugins.length).toBeGreaterThan(0);

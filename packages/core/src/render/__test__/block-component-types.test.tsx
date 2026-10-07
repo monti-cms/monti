@@ -1,5 +1,4 @@
 import { describe, expectTypeOf, it } from "vitest";
-import type { blocks } from "../../../../blocks/src";
 import {
 	type calloutBlock,
 	type collapsibleBlock,
@@ -8,6 +7,7 @@ import {
 	tabsBlock,
 	tooltipBlock,
 } from "../../../../blocks/src/definitions";
+import type { allBlocks } from "../../../../blocks/src/test/all-blocks";
 import type blogConfig from "../../../test/cms.config";
 import type { BlockDefinition } from "../../blocks/define";
 import { defineBlock } from "../../blocks/define";
@@ -106,8 +106,8 @@ describe("block component types", () => {
 		void wrongProp;
 	});
 
-	it("reads the blocks of a plugin from its literal type (the `blocks()` helper of the extension package)", () => {
-		type Plugins = ReturnType<typeof blocks>;
+	it("reads the blocks of a plugin from its literal type (the per-block functions of the extension package)", () => {
+		type Plugins = ReturnType<typeof allBlocks>;
 		type FromHelper = DocumentComponentsFor<CmsConfig<CollectionsConfig, "en", Plugins>>;
 		type HelperBlocks = NonNullable<FromHelper["blocks"]>;
 		expectTypeOf<"callout" extends keyof HelperBlocks ? true : false>().toEqualTypeOf<true>();

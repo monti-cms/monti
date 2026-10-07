@@ -1,10 +1,11 @@
-import type { CmsConfig, CollectionsConfig } from "@monti-cms/core";
+import type { CmsConfig, CmsPlugin, CollectionsConfig } from "@monti-cms/core";
 import type { DocumentComponentsFor } from "@monti-cms/core/render";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { blocks } from "../blocks";
+import { callout, chart, codeRef, collapsible, color, tooltip } from "../index";
+import { allBlocks } from "../test/all-blocks";
 
 /** The names of the blocks and marks a config with these plugins types components for. */
-type Names<Plugins extends ReturnType<typeof blocks>> = {
+type NamesOf<Plugins extends readonly CmsPlugin[]> = {
 	blocks: keyof NonNullable<DocumentComponentsFor<CmsConfig<CollectionsConfig, "en", Plugins>>["blocks"]>;
 	marks: Exclude<
 		keyof NonNullable<DocumentComponentsFor<CmsConfig<CollectionsConfig, "en", Plugins>>["marks"]>,
@@ -12,27 +13,26 @@ type Names<Plugins extends ReturnType<typeof blocks>> = {
 	>;
 };
 
-describe("blocks() keeps the blocks it installs in its type", () => {
-	it("types only the extensions that `only` picks", () => {
-		const some = blocks({ only: ["chart", "tooltip"] });
-		expectTypeOf<Names<typeof some>["blocks"]>().toEqualTypeOf<"chart">();
-		expectTypeOf<Names<typeof some>["marks"]>().toEqualTypeOf<"tooltip">();
+describe("each block function keeps the blocks it installs in its type", () => {
+	it("types only the blocks that are listed", () => {
+		const some = [chart(), tooltip()] as const;
+		expectTypeOf<NamesOf<typeof some>["blocks"]>().toEqualTypeOf<"chart">();
+		expectTypeOf<NamesOf<typeof some>["marks"]>().toEqualTypeOf<"tooltip">();
 		expect(some.map((plugin) => plugin.name)).toEqual(["chart", "tooltip"]);
 	});
 
-	it("leaves out what `omit` and a `false` option remove", () => {
-		const rest = blocks({ omit: ["tabs", "columns", "codeExplorer", "mermaid", "chart"], color: false });
-		expectTypeOf<Names<typeof rest>["blocks"]>().toEqualTypeOf<"callout" | "collapsible">();
-		expectTypeOf<Names<typeof rest>["marks"]>().toEqualTypeOf<"tooltip" | "code-ref">();
-		expect(rest.map((plugin) => plugin.name)).toEqual(["callout", "collapsible", "tooltip", "code-ref"]);
+	it("types the blocks and marks of the ones listed, whatever the others are", () => {
+		const rest = [callout(), collapsible(), tooltip(), codeRef()] as const;
+		expectTypeOf<NamesOf<typeof rest>["blocks"]>().toEqualTypeOf<"callout" | "collapsible">();
+		expectTypeOf<NamesOf<typeof rest>["marks"]>().toEqualTypeOf<"tooltip" | "code-ref">();
 	});
 
-	it("types every extension without options, and a color palette keeps the color mark", () => {
-		const all = blocks();
-		expectTypeOf<Names<typeof all>["blocks"]>().toEqualTypeOf<
+	it("types every block when all are listed, and a color palette keeps the color mark", () => {
+		const all = allBlocks();
+		expectTypeOf<NamesOf<typeof all>["blocks"]>().toEqualTypeOf<
 			"callout" | "collapsible" | "tabs" | "tab" | "columns" | "column" | "code-explorer" | "mermaid" | "chart"
 		>();
-		const colored = blocks({ only: ["color"], color: { palette: [] } });
-		expectTypeOf<Names<typeof colored>["marks"]>().toEqualTypeOf<"color">();
+		const colored = [color({ palette: [] })] as const;
+		expectTypeOf<NamesOf<typeof colored>["marks"]>().toEqualTypeOf<"color">();
 	});
 });
