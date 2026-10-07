@@ -41,7 +41,7 @@ Not on npm yet. Until the public release, install the release bundle from the `r
 
 For the other packages, change only `path:/<folder name>` and use the same tag.
 
-`@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/other-site`](examples/other-site).
+`@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/blog`](examples/blog).
 
 ## Development
 

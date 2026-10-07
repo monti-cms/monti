@@ -3,7 +3,7 @@
 English | [한국어](README.ko.md)
 
 The core of a DB (Postgres)-backed blog CMS. It handles the site config, collection schemas, content saving and publishing, the document model, the admin API and plugin wiring.
-The admin UI is `@monti-cms/admin`, everything specific to Next.js is `@monti-cms/nextjs`, MDX (the `mdx` format, the source panel and the syntax extensions) is the plugin `@monti-cms/mdx`, and the AI features are the plugin `@monti-cms/ai`. `examples/other-site` is an example with everything wired together.
+The admin UI is `@monti-cms/admin`, everything specific to Next.js is `@monti-cms/nextjs`, MDX (the `mdx` format, the source panel and the syntax extensions) is the plugin `@monti-cms/mdx`, and the AI features are the plugin `@monti-cms/ai`. `examples/blog` is an example with everything wired together.
 
 ## Supported frameworks
 
@@ -419,7 +419,7 @@ pnpm exec monti add article-body --registry ./registry/r   # another registry (f
 ```
 
 The registry follows the shadcn registry schema and lives in `registry/` of the repository (built into `registry/r`, committed). The components use the host's Tailwind and only public entry points
-(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`). `examples/other-site` installs `blog-theme` this way and uses it for its blog list and article pages.
+(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`). `examples/blog` installs `blog-theme` this way and uses it for its blog list and article pages.
 Full reference, the list of components and how to add one: [`registry/README.md`](../../registry/README.md).
 
 ## Entry points
@@ -449,7 +449,7 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 ## Building the packages
 
 Inside the repository the sources (`src`) are used directly. For the distributable bundle, `pnpm build:packages` produces `dist` and `pnpm pack` packages it using
-`publishConfig.exports` (dist). `pnpm example:pack` puts the bundle into `examples/other-site/vendor`.
+`publishConfig.exports` (dist). `pnpm example:pack` puts the bundle into `examples/blog/vendor`.
 
 ## Body syntax
 

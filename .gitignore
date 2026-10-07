@@ -15,7 +15,7 @@ next-env.d.ts
 coverage
 
 # Bundle files installed by the example app (`pnpm example:pack`)
-examples/other-site/vendor
+examples/blog/vendor
 
 # misc
 .DS_Store

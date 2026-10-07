@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Example app bundle check. Builds and packs the repo packages (`packages/*`), copies the example app (`examples/other-site`) to a temp folder outside the repo,
- * installs it from those bundles, then runs a type check (`skipLibCheck: false`) and `next build`. Runs once more with a config that includes every extension.
+ * Example app bundle check. Builds and packs the repo packages (`packages/*`), copies the example app (`examples/blog`) to a temp folder outside the repo,
+ * installs it from those bundles, then runs a type check (`skipLibCheck: false`) and `next build`. The example config attaches every extension.
  * Inside the repo the sources are used directly, so this catches what breaks only in the bundles (`dist`, `exports`, dependency declarations).
  *
  *   node scripts/check-example.mjs            # build first
@@ -54,19 +54,19 @@ const tarballs = Object.fromEntries(
 // 3. The example's own `package.json` (what `pnpm example:pack` + `pnpm install` in its README use) must name the tarballs
 // `example:pack` writes; below it is rewritten to these bundles, so a wrong name would not fail anywhere else.
 const packedNames = new Map(examplePackages().map((pkg) => [pkg.name, `file:vendor/${pkg.tarball}`]));
-const exampleDeps = JSON.parse(readFileSync(path.join(root, "examples/other-site/package.json"), "utf8")).dependencies;
+const exampleDeps = JSON.parse(readFileSync(path.join(root, "examples/blog/package.json"), "utf8")).dependencies;
 for (const [name, spec] of Object.entries(exampleDeps)) {
 	if (!name.startsWith("@monti-cms/")) continue;
 	if (packedNames.get(name) !== spec) {
 		throw new Error(
-			`check-example: examples/other-site/package.json ${name} is "${spec}", expected "${packedNames.get(name)}"`,
+			`check-example: examples/blog/package.json ${name} is "${spec}", expected "${packedNames.get(name)}"`,
 		);
 	}
 }
 
 // 4. Copy the example app outside the repo and link every package through its bundle.
 const app = path.join(work, "app");
-const source = path.join(root, "examples/other-site");
+const source = path.join(root, "examples/blog");
 const skip = new Set(["node_modules", ".next", "vendor", "pnpm-lock.yaml", "next-env.d.ts", "tsconfig.tsbuildinfo"]);
 cpSync(source, app, { recursive: true, filter: (from) => !skip.has(path.basename(from)) || from === source });
 const pkgJsonPath = path.join(app, "package.json");
@@ -90,19 +90,6 @@ writeFileSync(
 
 run("pnpm", ["install", "--no-frozen-lockfile"], app);
 
-// 5. The example config as-is → the config with every extension.
-const configPath = path.join(app, "cms.config.ts");
-const exampleConfig = readFileSync(configPath, "utf8");
-const allExtensions = exampleConfig
-	.replace(
-		'import { blocks } from "@monti-cms/blocks";',
-		'import { aiPlugin } from "@monti-cms/ai";\nimport { blocks } from "@monti-cms/blocks";\nimport { bareun } from "@monti-cms/bareun";',
-	)
-	.replace(/plugins: \[[^\n]*\],/, "plugins: [mdx(), ...blocks(), seo(), aiPlugin(), bareun()],");
-if (allExtensions === exampleConfig || !allExtensions.includes("aiPlugin()")) {
-	throw new Error("check-example: could not rewrite cms.config.ts plugins for the all-extensions run");
-}
-
 const check = (label) => {
 	console.log(`\n=== ${label} ===`);
 	run("pnpm", ["exec", "tsc", "--noEmit", "-p", "."], app);
@@ -112,8 +99,6 @@ const check = (label) => {
 
 try {
 	check("example config");
-	writeFileSync(configPath, allExtensions);
-	check("all extensions");
 	console.log("\ncheck-example: ok");
 } finally {
 	if (args.has("--keep")) console.log(`kept: ${work}`);

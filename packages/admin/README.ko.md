@@ -256,7 +256,7 @@ export const POST = textCheckRoute({
   센다. 띄어쓰기·문법은 보지 못한다.
 - 위치 없이 틀린 낱말만 주는 검사기는 문단 글자에서 낱말을 찾아 위치를 정한다(같은 낱말이 여럿이면 차례대로).
 
-`examples/other-site`의 `app/(admin)/studio/admin-components.tsx`가 브라우저에서 도는 작은 금지어 검사기 예시다.
+`examples/blog`의 `app/(admin)/studio/admin-components.tsx`가 브라우저에서 도는 작은 금지어 검사기 예시다.
 
 밑줄 스타일은 `@monti-cms/admin/styles.css`에 들어 있다.
 

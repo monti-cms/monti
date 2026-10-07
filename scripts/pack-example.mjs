@@ -34,7 +34,7 @@ if (isMain) {
 	const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: "inherit" });
 	if (!process.argv.includes("--no-build")) run("pnpm", ["--filter", "./packages/*", "-r", "run", "build"], root);
 
-	const vendor = path.join(root, "examples/other-site/vendor");
+	const vendor = path.join(root, "examples/blog/vendor");
 	rmSync(vendor, { recursive: true, force: true });
 	mkdirSync(vendor, { recursive: true });
 	for (const pkg of examplePackages()) {
