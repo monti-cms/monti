@@ -3,7 +3,8 @@ import { problemError } from "../../core/problem";
 import type { ContentStore } from "../../core/store";
 import type { DatabaseAdapter } from "../../server/define";
 import { postgresChecks } from "./checks";
-import { DATABASE_URL_WHERE, explainDatabaseError } from "./explain";
+import { normalizeConnectionString } from "./connection";
+import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "./explain";
 import { createPluginStorage } from "./plugin-storage";
 
 /** The environment variable `postgres()` reads the connection string from when `connectionString` is not given. */
@@ -75,7 +76,7 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 				"database_url_missing",
 			);
 		}
-		pool ??= new Pool({ connectionString });
+		pool ??= new Pool({ connectionString: normalizeConnectionString(connectionString) });
 		return pool;
 	};
 	/** Read when used (like the connection string), so the environment of the running process decides. */
@@ -99,7 +100,7 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 		migrate: async (migrateOptions) => {
 			try {
 				const store = await loadStoreModule();
-				await store.migrateContentStore(getPool(), {
+				return await store.migrateContentStore(getPool(), {
 					...schemaOptions(),
 					site: migrateOptions.site,
 					formats: migrateOptions.formats,
@@ -107,6 +108,10 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 			} catch (error) {
 				throw explain(error) ?? error;
 			}
+		},
+		describeTarget: () => {
+			const where = describeConnection(options.connectionString || process.env[DATABASE_URL_ENV]);
+			return where ? `${where}, schema "${schemaOptions()?.schema ?? "public"}"` : undefined;
 		},
 		pluginStorage: (plugin) => createPluginStorage(getPool(), schemaOptions()?.schema, plugin),
 		close: async () => {

@@ -538,21 +538,24 @@ export async function prepare(client: PoolClient, qSchema: string): Promise<void
 export async function migrateContentStore(
 	pool: Pool,
 	options: { site: Site; schema?: string; formats?: FormatRegistry },
-): Promise<void> {
+): Promise<{ applied: number; upToDate: number }> {
 	const qSchema = validateSchemaName(options.schema);
 	const context: MigrationContext = { site: options.site, formats: options.formats ?? NO_FORMATS };
-	await withTransaction(pool, async (client) => {
+	return withTransaction(pool, async (client) => {
 		await prepare(client, qSchema);
 		const applied = new Set(
 			(await client.query<{ name: string }>(`SELECT name FROM "${qSchema}".cms_migrations`)).rows.map(
 				(row) => row.name,
 			),
 		);
+		let ran = 0;
 		for (const step of STEPS) {
 			if (applied.has(step.name)) continue;
 			await step.run(client, qSchema, context);
 			await client.query(`INSERT INTO "${qSchema}".cms_migrations (name) VALUES ($1)`, [step.name]);
+			ran++;
 		}
+		return { applied: ran, upToDate: STEPS.length - ran };
 	});
 }
 
