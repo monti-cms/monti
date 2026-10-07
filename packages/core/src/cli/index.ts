@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
 import { eventsRetry } from "./events";
+import { findBoundaryViolations, formatBoundaryViolations } from "./import-boundary";
 import { formatInitReport, initProject } from "./init";
 import { migrate } from "./migrate";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command";
@@ -11,13 +12,14 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
 /**
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
- * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: creates config and route files in a Next app and wires up tsconfig, CSS and the next config.
+ * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: creates `monti.config.ts`, its schema file and the Next files (admin layout and page, API route) and wires up the next config.
  * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
- * - `monti migrate [--env-file .env.local] [--no-env-file] [--server <file>]`: creates the DB tables.
- * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--server <file>]`: delivers the `afterCommit` events that are due (for a cron job).
+ * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
+ * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
+ * - `monti check:boundary`: fails when a client component (`"use client"`) imports `monti.config.ts` or another server-only module, directly or through other files.
  * - `monti schema:types [--schema <file>] [--out <file>] [--watch] [--check]`: writes the types of `monti.schema.json`.
- * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of `cms.config.ts` to `monti.schema.json`.
+ * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of the config file to `monti.schema.json`.
  * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
  * - `monti schema:apply [--schema <file>] [--dry-run] [env options]`: runs the data transforms of the schema file (`migrations`) once each and records the schema and its version.
  */
@@ -32,9 +34,15 @@ export {
 	type InstallCommand,
 	rewriteRegistryImports,
 } from "./add";
-export { parseJsonc, resolveServerPath } from "./config-paths";
+export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { type EventsRetryOptions, eventsRetry } from "./events";
+export {
+	type BoundaryViolation,
+	findBoundaryViolations,
+	formatBoundaryViolations,
+	SERVER_ONLY_MODULES,
+} from "./import-boundary";
 export { formatInitReport, type InitOptions, type InitReport, initProject } from "./init";
 export { type MigrateOptions, migrate } from "./migrate";
 export { isPluginCommandName, type PluginCommandRun, runPluginCommand } from "./plugin-command";
@@ -85,22 +93,23 @@ Commands:
               --registry <url|path> Registry folder or URL with registry.json (default: the registry of this repo)
               --overwrite           Replace files that differ from the registry (default: stop and write nothing)
               --dry-run             Show what would be written and installed
-  migrate   Create or update the tables in the database of the server config
+  migrate   Create or update the tables in the database of monti.config.ts
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
-              --server <file>       The server file that exports the CMS instance (default: ./cms.server.ts, ./src/cms.server.ts)
+              --config <file>       The config file that exports the CMS instance (default: ./monti.config.ts, ./src/monti.config.ts)
   events:retry    Deliver the afterCommit events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)
               --all                 Also try the failed deliveries that are not due yet
               --limit <n>           Most deliveries to try (default 100)
-              --env-file <file>, --no-env-file, --server <file>   As for migrate
+              --env-file <file>, --no-env-file, --config <file>   As for migrate
   <plugin>:<command>    Run a command a plugin adds, with the app loaded as for migrate (for example git-sync:pull). Add --help for its options
+  check:boundary  Fail when a client component ("use client") imports monti.config.ts or another server-only module, directly or through other files
   schema:types    Write the types of the schema file (monti-env.d.ts), so collections and locales are typed without writing types
               --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
               --out <file>          Declaration file (default: monti-env.d.ts next to the schema file)
               --watch               Keep running and rewrite the types when the schema file changes
               --check               Write nothing; exit 1 if the declaration file is out of date
-  schema:extract  Write the data part of cms.config.ts to monti.schema.json and list what stays in code
-              --config <file>       Config file (default: ./cms.config.ts, ./src/cms.config.ts)
+  schema:extract  Write the data part of the config file to monti.schema.json and list what stays in code
+              --config <file>       Config file (default: ./monti.config.ts, then ./cms.config.ts; each also under ./src)
               --out <file>          Schema file to write (default: monti.schema.json next to the config file)
               --overwrite           Replace the schema file if it exists
               --locale <code>       Language for labels plugins provide (default: the admin language)
@@ -108,11 +117,11 @@ Commands:
   schema:diff     Compare the schema with the one last applied to the database and list the stored entries each change touches (read-only)
               --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
               --check               Exit 1 when there is anything to apply
-              --env-file <file>, --no-env-file, --server <file>   As for migrate
+              --env-file <file>, --no-env-file, --config <file>   As for migrate
   schema:apply    Run the data transforms of the schema file (migrations) once each, record the schema, and raise schemaVersion in the file when the schema changed
               --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
               --dry-run             Run everything in a transaction that is rolled back, and write nothing
-              --env-file <file>, --no-env-file, --server <file>   As for migrate
+              --env-file <file>, --no-env-file, --config <file>   As for migrate
 `;
 
 export interface CliIo {
@@ -167,13 +176,13 @@ export async function runCli(
 				options: {
 					"env-file": { type: "string", multiple: true },
 					"no-env-file": { type: "boolean" },
-					server: { type: "string" },
+					config: { type: "string" },
 				},
 			});
 			const ok = await migrate({
 				cwd: io.cwd,
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
-				server: values.server,
+				config: values.config,
 				log: io.log,
 			});
 			return ok ? 0 : 1;
@@ -184,7 +193,7 @@ export async function runCli(
 				options: {
 					"env-file": { type: "string", multiple: true },
 					"no-env-file": { type: "boolean" },
-					server: { type: "string" },
+					config: { type: "string" },
 					all: { type: "boolean" },
 					limit: { type: "string" },
 				},
@@ -197,12 +206,21 @@ export async function runCli(
 			const ok = await eventsRetry({
 				cwd: io.cwd,
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
-				server: values.server,
+				config: values.config,
 				log: io.log,
 				all: values.all,
 				limit,
 			});
 			return ok ? 0 : 1;
+		}
+		if (command === "check:boundary") {
+			const violations = findBoundaryViolations(io.cwd);
+			if (violations.length > 0) {
+				io.error(formatBoundaryViolations(violations));
+				return 1;
+			}
+			io.log("check:boundary: no client component imports server-only code");
+			return 0;
 		}
 		if (command === "schema:types") {
 			const { values } = parseArgs({
@@ -263,7 +281,7 @@ export async function runCli(
 					schema: { type: "string" },
 					"env-file": { type: "string", multiple: true },
 					"no-env-file": { type: "boolean" },
-					server: { type: "string" },
+					config: { type: "string" },
 					check: { type: "boolean" },
 					"dry-run": { type: "boolean" },
 				},
@@ -272,7 +290,7 @@ export async function runCli(
 				cwd: io.cwd,
 				schema: values.schema,
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
-				server: values.server,
+				config: values.config,
 				log: io.log,
 			};
 			if (command === "schema:diff") {

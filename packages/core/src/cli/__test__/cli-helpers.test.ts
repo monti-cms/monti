@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseJsonc, resolveServerPath } from "../config-paths";
+import { parseJsonc, resolveConfigPath } from "../config-paths";
 import { loadEnvFiles } from "../env";
 import { migrate, runCli } from "../index";
 
@@ -37,20 +37,24 @@ describe("monti command helpers", () => {
 		expect(parseJsonc("{ nope")).toBeUndefined();
 	});
 
-	it("finds the server file from `--server`, `CMS_SERVER_PATH`, else common locations", () => {
-		const root = tempDir({ "cms.server.ts": "", "src/cms.server.ts": "", "custom/server.ts": "" });
+	it("finds monti.config.ts from `--config`, `MONTI_CONFIG_PATH`, else common locations", () => {
+		const root = tempDir({ "monti.config.ts": "", "src/monti.config.ts": "", "custom/config.ts": "" });
 		// The root file wins over the one in `src`.
-		expect(resolveServerPath(root, undefined, {})).toBe("cms.server.ts");
-		const inSrc = tempDir({ "src/cms.server.ts": "" });
-		expect(resolveServerPath(inSrc, undefined, {})).toBe("src/cms.server.ts");
+		expect(resolveConfigPath(root, undefined, {})).toBe("monti.config.ts");
+		const inSrc = tempDir({ "src/monti.config.ts": "" });
+		expect(resolveConfigPath(inSrc, undefined, {})).toBe("src/monti.config.ts");
 		// The chosen value beats the environment variable, which beats the common locations.
-		expect(resolveServerPath(root, "custom/server.ts", { CMS_SERVER_PATH: "src/cms.server.ts" })).toBe(
-			"custom/server.ts",
+		expect(resolveConfigPath(root, "custom/config.ts", { MONTI_CONFIG_PATH: "src/monti.config.ts" })).toBe(
+			"custom/config.ts",
 		);
-		expect(resolveServerPath(root, undefined, { CMS_SERVER_PATH: "src/cms.server.ts" })).toBe("src/cms.server.ts");
-		expect(() => resolveServerPath(tempDir({}), undefined, {})).toThrow(/monti init/);
-		expect(() => resolveServerPath(root, "nope.ts", {})).toThrow(/not found: nope.ts/);
-		expect(() => resolveServerPath(root, undefined, { CMS_SERVER_PATH: "nope.ts" })).toThrow(/not found: nope.ts/);
+		expect(resolveConfigPath(root, undefined, { MONTI_CONFIG_PATH: "src/monti.config.ts" })).toBe(
+			"src/monti.config.ts",
+		);
+		expect(() => resolveConfigPath(tempDir({}), undefined, {})).toThrow(/monti init/);
+		expect(() => resolveConfigPath(root, "nope.ts", {})).toThrow(/not found: nope.ts/);
+		expect(() => resolveConfigPath(root, undefined, { MONTI_CONFIG_PATH: "nope.ts" })).toThrow(/not found: nope.ts/);
+		// The old server file is not looked for any more.
+		expect(() => resolveConfigPath(tempDir({ "cms.server.ts": "" }), undefined, {})).toThrow(/monti init/);
 	});
 
 	it("help and unknown commands", async () => {
@@ -60,10 +64,10 @@ describe("monti command helpers", () => {
 		expect(out.at(-1)).toContain("Usage: monti <command>");
 		expect(out.at(-1)).toContain("--locale <code>");
 		expect(out.at(-1)).toContain("--time-zone <tz>");
-		// The site config is imported by the server file, so `migrate` does not take it (only `schema:extract` reads the config file).
+		// One config file: the commands that load the app take `--config`, and there is no separate server file any more.
 		const migrateHelp = out.at(-1)?.split("  migrate")[1]?.split("  schema:types")[0];
-		expect(migrateHelp).toContain("--server <file>");
-		expect(migrateHelp).not.toContain("--config");
+		expect(migrateHelp).toContain("--config <file>");
+		expect(migrateHelp).not.toContain("--server");
 		expect(out.at(-1)).toContain("schema:extract");
 		// The removed command is not advertised.
 		expect(out.at(-1)).not.toContain("content:rewrite");
@@ -74,18 +78,18 @@ describe("monti command helpers", () => {
 	});
 });
 
-/** A server file that exports a stand-in for the CMS instance and records what the command did to it. */
+/** A config file that exports a stand-in for the CMS instance and records what the command did to it. */
 const appWith = (body: string) => {
 	const dir = tempDir({
-		"cms.server.mjs": `export const calls = [];\n${body}\n`,
+		"monti.config.mjs": `export const calls = [];\n${body}\n`,
 	});
 	return {
 		dir,
-		options: { cwd: dir, envFiles: [], server: "cms.server.mjs", log: () => undefined },
+		options: { cwd: dir, envFiles: [], config: "monti.config.mjs", log: () => undefined },
 	};
 };
 
-describe("monti commands run against the instance the server file exports", () => {
+describe("monti commands run against the instance the config file exports", () => {
 	it("`migrate` migrates through the instance, then closes it", async () => {
 		const { dir, options } = appWith(
 			`export const cms = {
@@ -95,7 +99,7 @@ describe("monti commands run against the instance the server file exports", () =
 		);
 		const logs: string[] = [];
 		expect(await migrate({ ...options, log: (message) => logs.push(message) })).toBe(true);
-		const { calls } = await import(pathToFileURL(path.join(dir, "cms.server.mjs")).href);
+		const { calls } = await import(pathToFileURL(path.join(dir, "monti.config.mjs")).href);
 		expect(calls).toEqual(["migrate", "close"]);
 		expect(logs).toContain("migrating");
 	});
@@ -109,14 +113,14 @@ describe("monti commands run against the instance the server file exports", () =
 			};`,
 		);
 		expect(await migrate(options)).toBe(false);
-		const { calls } = await import(pathToFileURL(path.join(dir, "cms.server.mjs")).href);
+		const { calls } = await import(pathToFileURL(path.join(dir, "monti.config.mjs")).href);
 		expect(calls).toEqual(["close"]);
 		expect(error).toHaveBeenCalledWith("Migration failed:", expect.any(Error));
 		error.mockRestore();
 	});
 
-	it("a server file that does not export an instance is refused with the shape to use", async () => {
+	it("a config file that does not export an instance is refused with the shape to use", async () => {
 		const { options } = appWith("export default { database: {}, auth: {} };");
-		await expect(migrate(options)).rejects.toThrow(/must export the CMS instance.*createCms/);
+		await expect(migrate(options)).rejects.toThrow(/must export the CMS instance.*defineConfig/);
 	});
 });

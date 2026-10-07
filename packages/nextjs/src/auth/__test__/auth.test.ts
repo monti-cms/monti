@@ -1,6 +1,7 @@
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { createSite } from "@monti-cms/core/client";
+import { createSecretsVault } from "@monti-cms/core/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../core/test/site";
 import { nextHost } from "../index";
@@ -10,6 +11,7 @@ const context = {
 	site: createSite(testConfig),
 	loginPath: "/studio/login",
 	trustHost: false,
+	secrets: createSecretsVault({ secret: "test-secret" }).forPlugin("auth"),
 	storage: () => {
 		throw new Error("not used");
 	},
@@ -26,7 +28,10 @@ describe("Next.js side of the login", () => {
 	});
 
 	it("passes the host's request headers to the login connection, and needs no rethrow", () => {
-		const connection = auth({ providers: [github({ admins: [ADMIN_ID] })], host: nextHost }).create(context);
+		const connection = auth({
+			providers: [github({ clientId: "id", clientSecret: "secret", admins: [ADMIN_ID] })],
+			host: nextHost,
+		}).create(context);
 		expect(connection.requestHeaders).toBe(nextHost.requestHeaders);
 		expect(connection.rethrow).toBeUndefined();
 	});

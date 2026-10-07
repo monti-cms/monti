@@ -275,7 +275,7 @@ describe("monti schema:extract", () => {
 		const report = await extractSchema({ cwd: dir, load, types: false });
 		expect(report.types).toBeUndefined();
 		const empty = tempDir();
-		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/cannot find cms\.config\.ts; pass --config/);
+		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/cannot find monti\.config\.ts; pass --config/);
 		await expect(extractSchema({ cwd: dir, load, config: "nope.ts", overwrite: true })).rejects.toThrow(
 			/config file not found: nope\.ts/,
 		);

@@ -80,15 +80,18 @@ describe("AuthGateway Contract", () => {
 		expect(unnamed).not.toHaveProperty("name");
 	});
 
-	it("isDevAuthBypassEnabled is true only in development with the option on", () => {
+	it("isDevAuthBypassEnabled is on by default in development, and can be turned off", () => {
 		const development = { NODE_ENV: "development" };
+		expect(isDevAuthBypassEnabled(undefined, development)).toBe(true);
 		expect(isDevAuthBypassEnabled(true, development)).toBe(true);
 		expect(isDevAuthBypassEnabled(false, development)).toBe(false);
-		expect(isDevAuthBypassEnabled(undefined, development)).toBe(false);
+	});
 
-		// Ignored in production even if switched on (fail-closed)
-		expect(isDevAuthBypassEnabled(true, { NODE_ENV: "production" })).toBe(false);
-		expect(isDevAuthBypassEnabled(true, {})).toBe(false);
+	it("isDevAuthBypassEnabled is never on outside development, whatever is asked (fail-closed)", () => {
+		for (const env of [{ NODE_ENV: "production" }, { NODE_ENV: "test" }, {}]) {
+			expect(isDevAuthBypassEnabled(undefined, env)).toBe(false);
+			expect(isDevAuthBypassEnabled(true, env)).toBe(false);
+		}
 	});
 
 	it("isDevAuthBypassEnabled is off in a development-mode process that looks deployed", () => {
@@ -97,6 +100,7 @@ describe("AuthGateway Contract", () => {
 		expect(isDevAuthBypassEnabled(true, { NODE_ENV: "development", AUTH_URL: "https://staging.example.com" })).toBe(
 			false,
 		);
+		expect(isDevAuthBypassEnabled(undefined, { NODE_ENV: "development", VERCEL: "1" })).toBe(false);
 		// A local AUTH_URL is what a developer sets.
 		expect(isDevAuthBypassEnabled(true, { NODE_ENV: "development", AUTH_URL: "http://localhost:3000" })).toBe(true);
 	});
@@ -106,6 +110,8 @@ describe("AuthGateway Contract", () => {
 		expect(() => assertDevBypassSafe(true, { NODE_ENV: "development", VERCEL: "1" })).toThrow(/Refusing to start/);
 		expect(() => assertDevBypassSafe(true, { NODE_ENV: "development" })).not.toThrow();
 		expect(() => assertDevBypassSafe(false, { NODE_ENV: "development", VERCEL: "1" })).not.toThrow();
+		// The default (nothing said) is simply off on a deployed-looking process; it does not stop the server from starting.
+		expect(() => assertDevBypassSafe(undefined, { NODE_ENV: "development", VERCEL: "1" })).not.toThrow();
 		// Production ignores the flag instead of failing, and says so.
 		expect(() => assertDevBypassSafe(true, { NODE_ENV: "production" })).not.toThrow();
 		expect(warn).toHaveBeenCalledOnce();

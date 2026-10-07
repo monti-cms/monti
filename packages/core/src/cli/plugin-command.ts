@@ -17,13 +17,13 @@ export interface PluginCommandRun extends AppOptions {
 const APP_OPTIONS = {
 	"env-file": { type: "string", multiple: true },
 	"no-env-file": { type: "boolean" },
-	server: { type: "string" },
+	config: { type: "string" },
 	help: { type: "boolean" },
 } as const;
 
 /**
  * `monti <plugin>:<command> [options]`: loads the app's CMS instance, finds the command in the server side of the named plugin and runs it with the instance.
- * The options of the command are the ones it declares plus the app options (`--env-file`, `--no-env-file`, `--server`). Returns the exit code.
+ * The options of the command are the ones it declares plus the app options (`--env-file`, `--no-env-file`, `--config`). Returns the exit code.
  */
 export async function runPluginCommand(run: PluginCommandRun): Promise<number> {
 	const log = run.log ?? console.log;
@@ -34,8 +34,8 @@ export async function runPluginCommand(run: PluginCommandRun): Promise<number> {
 	// The app options come first: loading the app is what tells which options the command has.
 	const first = parseArgs({ args: [...run.argv], options: APP_OPTIONS, strict: false, allowPositionals: true });
 	const envFiles = first.values["no-env-file"] === true ? [] : (first.values["env-file"] as string[] | undefined);
-	const server = typeof first.values.server === "string" ? first.values.server : run.server;
-	const cms = await loadApp({ cwd: run.cwd, envFiles: envFiles ?? run.envFiles, server, log });
+	const config = typeof first.values.config === "string" ? first.values.config : run.config;
+	const cms = await loadApp({ cwd: run.cwd, envFiles: envFiles ?? run.envFiles, config, log });
 	try {
 		const plugins = await cms.plugins();
 		const plugin = plugins.find((item) => item.name === pluginName);
@@ -62,7 +62,7 @@ export async function runPluginCommand(run: PluginCommandRun): Promise<number> {
 					...Object.entries(command.options ?? {}).map(([name, option]) =>
 						`  --${name}${option.type === "string" ? " <value>" : ""}  ${option.description ?? ""}`.trimEnd(),
 					),
-					"  --env-file <file>, --no-env-file, --server <file>   As for migrate",
+					"  --env-file <file>, --no-env-file, --config <file>   As for migrate",
 				].join("\n"),
 			);
 			return 0;

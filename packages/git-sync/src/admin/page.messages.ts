@@ -71,7 +71,7 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"drafts.publishing": "Published, waiting for the merge",
 		"draftPr.link": "Draft PR",
 		"draftPr.title": "Open the draft pull request on GitHub",
-		"settings.secretMissing": "The server has no CMS secret (CMS_SECRET), so nothing can be saved here.",
+		"settings.secretMissing": "The server has no secret (MONTI_SECRET), so nothing can be saved here.",
 		"settings.token": "GitHub token",
 		"settings.token.help":
 			"A fine-grained token with read and write access to Contents and Pull requests on the repo. It is stored encrypted and never shown again.",
@@ -162,7 +162,7 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"drafts.publishing": "발행됨, 병합을 기다리는 중",
 		"draftPr.link": "초안 PR",
 		"draftPr.title": "GitHub에서 초안 풀 리퀘스트 열기",
-		"settings.secretMissing": "서버에 CMS 비밀 값(CMS_SECRET)이 없어 여기서는 아무것도 저장할 수 없습니다.",
+		"settings.secretMissing": "서버에 비밀 값(MONTI_SECRET)이 없어 여기서는 아무것도 저장할 수 없습니다.",
 		"settings.token": "GitHub 토큰",
 		"settings.token.help":
 			"저장소의 Contents와 Pull requests에 읽기·쓰기 권한이 있는 세분화된 토큰입니다. 암호화해 저장하며 다시 보여 주지 않습니다.",

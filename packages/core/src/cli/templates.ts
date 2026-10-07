@@ -57,88 +57,77 @@ export function schemaTemplate(adminPath: string, options: ConfigTemplateOptions
 	return `${JSON.stringify(schema, null, "\t")}\n`;
 }
 
-/** The site config `monti init` creates: it loads the schema file and adds what needs code. */
-export const configTemplate = (): string => `import { defineConfig } from "@monti-cms/core";
-// Optional: block extensions (callouts, tabs, Mermaid, charts, ...) and the SEO extension. Install the package, then uncomment.
-// import { blocks } from "@monti-cms/blocks";
-// import { seo } from "@monti-cms/seo";
+/** The config file `monti init` creates: the one place the site is set up. It loads the schema file and lists the database, login and plugins, one line each. */
+export const MONTI_CONFIG_TEMPLATE = `import { auth } from "@monti-cms/auth";
+import { github } from "@monti-cms/auth/github";
+import { defineConfig, postgres } from "@monti-cms/core/server";
+import { nextHost } from "@monti-cms/nextjs/auth";
 import schema from "./monti.schema.json";
 
 /**
- * Site config. The collections, fields, locales, time zone and admin path are data and live in monti.schema.json (edit them there: editors autocomplete it, and
- * \`monti schema:types\` writes the types, so \`cms.read\` and the admin know your collections without you writing types). This file adds what needs code.
- * The CMS instance (cms.server.ts) holds the config and the admin screen gets it from there, so keep secrets out (they go in cms.server.ts).
+ * The one config of the site, and the CMS instance it makes. Everything on the server uses it: the admin API route, the admin screens, the monti command,
+ * and your site's pages (cms.read.getEntry(...)). Only the server imports this file: it is never part of a client bundle (the admin gets the site as data).
+ *
+ * The data (collections, fields, locales, time zone, admin path) is in monti.schema.json: edit it there (editors autocomplete it, and \`monti schema:types\` writes
+ * the types, so \`cms.read\` and the admin know your collections without you writing types). This file has what needs code. Values come from the environment
+ * (.env.local) unless you pass them here: see .env.example.
  */
-export default defineConfig({
+export const cms = defineConfig({
 	schema,
 	// Site settings that differ per environment override the file's: site: { url: process.env.HOST_URL },
-	// plugins: [...blocks(), seo()],
+
+	// One line per feature, each works with no arguments. Install the package, import it above, add it here, for example:
+	//   mdx()      from @monti-cms/mdx      MDX bodies
+	//   seo()      from @monti-cms/seo      SEO fields
+	//   callout()  from @monti-cms/blocks   a body block (one function per block: tabs(), columns(), mermaid(), ...)
+	plugins: [],
+
+	// The content database. Reads DATABASE_URL (and DATABASE_SCHEMA when the database is shared).
+	database: postgres(),
+
+	// Who can log in. github() reads AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (the OAuth app) and MONTI_ADMIN_GITHUB_ID (the admin's numeric GitHub id). Another provider
+	// (GitLab, Google, ...) goes in the same list. host: nextHost lets the login read the headers of the request Next.js is handling.
+	// In next dev you are signed in as the admin automatically (only from this machine); production never does that.
+	auth: auth({ providers: [github()], host: nextHost }),
+
+	// Image and file uploads: an adapter from a storage package. pnpm add @monti-cms/storage-s3, import { r2Storage } (or s3Storage) from it, and it reads its settings
+	// from the environment (R2_* in .env.local). Without one, the admin hides the media menu.
+	// storage: r2Storage(),
+
+	// The one secret (MONTI_SECRET) signs the login session and encrypts stored values (AI service keys, tokens): each use gets its own key derived from it.
+	// To change it without losing stored values: previousSecrets: [oldSecret].
 });
 `;
 
-export const SERVER_TEMPLATE = `import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
-import { auth } from "@monti-cms/auth";
-import { github } from "@monti-cms/auth/github";
-import { nextHost } from "@monti-cms/nextjs/auth";
-import config from "./cms.config";
-
-/**
- * The CMS instance. It holds the site config (cms.config.ts) and owns the database, sign-in and media connections and the secrets, which are read from environment variables (.env.local).
- * Everything on the server uses it: the admin API route, the admin screens, and your site's pages (cms.read.getEntry(...)).
- * Only the server imports this file. The admin API route also serves the sign-in API (/api/cms/auth/*). The callback URL of the
- * GitHub OAuth app is <site URL>/api/cms/auth/callback/github.
- */
-export const cms = createCms({
-	config,
-	server: defineServerConfig({
-		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
-		auth: auth({
-			// Ways to sign in. Another provider (GitLab, Google, ...) goes in this list; admins are matched per provider as "<provider>:<id>".
-			providers: [
-				github({
-					clientId: process.env.AUTH_GITHUB_ID,
-					clientSecret: process.env.AUTH_GITHUB_SECRET,
-					admins: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin
-				}),
-			],
-			host: nextHost, // lets the sign-in read the headers of the request Next.js is handling
-			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev, only for requests from this machine: treat the visitor as admin without signing in
-			secret: process.env.AUTH_SECRET, // signs the sign-in session
-		}),
-		// Master secret for stored values (AI service keys). Plugins get keys derived from it, never the secret itself. Keep it separate from the sign-in secret.
-		// To change it, move the old value to "previousSecrets: [oldSecret]" so stored values stay readable.
-		secret: process.env.CMS_SECRET,
-		// media: r2Storage(), // image and file uploads (S3-compatible storage): pnpm add @monti-cms/storage-s3, then import { r2Storage } from it. Reads R2_* from .env.local
-	}),
-});
-`;
-
-/** The generated files import the CMS instance from the server file. \`serverImport\` is its import path from the generated file, without an extension. */
+/** The generated files import the CMS instance from the config file. \`configImport\` is its import path from the generated file, without an extension. */
 export const adminPageTemplate = (
-	serverImport: string,
+	configImport: string,
 ) => `import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/nextjs/admin";
-import { cms } from ${JSON.stringify(serverImport)};
+import { cms } from ${JSON.stringify(configImport)};
 
 export default function AdminPage(props: CmsAdminPageProps) {
 	return <CmsAdminPage cms={cms} {...props} />;
 }
 `;
 
-export const adminLayoutTemplate = (serverImport: string) => `import "@monti-cms/admin/styles.css";
+export const adminLayoutTemplate = (configImport: string) => `import "@monti-cms/admin/styles.css";
 import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
-import { cms } from ${JSON.stringify(serverImport)};
+import { cms } from ${JSON.stringify(configImport)};
 
 export const generateMetadata = () => cmsAdminMetadata(cms);
 
-/** Admin screen (@monti-cms/admin). The stylesheet is prebuilt, so the app needs no Tailwind for it. Pass site components with CmsAdminComponentsProvider (see the admin README). */
+/**
+ * Admin screen (@monti-cms/admin). The stylesheet is prebuilt, so the app needs no Tailwind for it. This layout stays apart from the page on purpose: it keeps the
+ * admin (navigation, data, theme) mounted while you move between screens. Your own admin components are a plugin (see "Admin extensions" in the admin README).
+ */
 export default function AdminLayout({ children }: { children: ReactNode }) {
 	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;
 }
 `;
 
-export const apiRouteTemplate = (serverImport: string) => `import { createRouteHandler } from "@monti-cms/nextjs";
-import { cms } from ${JSON.stringify(serverImport)};
+export const apiRouteTemplate = (configImport: string) => `import { createRouteHandler } from "@monti-cms/nextjs";
+import { cms } from ${JSON.stringify(configImport)};
 
 /** Admin API (/api/cms/v1/*) and sign-in (/api/cms/auth/*). */
 export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
@@ -159,24 +148,33 @@ export const INSTALL_COMMANDS = [
 	"pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react",
 ] as const;
 
-/** Values for `.env.local`. */
-export const ENV_VARS: readonly { readonly name: string; readonly note: string }[] = [
-	{ name: "CMS_DATABASE_URL", note: "Postgres connection URL" },
-	{ name: "CMS_SCHEMA", note: "Optional. Schema name when sharing the database (public if empty)" },
-	{ name: "AUTH_SECRET", note: "A long random value. Signs the sign-in session" },
+/** The environment variables of `.env.example`, in order. `required` ones are needed to run; the others have a default or only matter in some setups. */
+export const ENV_VARS: readonly { readonly name: string; readonly note: string; readonly required: boolean }[] = [
+	{ name: "DATABASE_URL", note: "Postgres connection URL", required: true },
 	{
-		name: "CMS_SECRET",
-		note: "A long random value (different from AUTH_SECRET). Encrypts stored values (AI service keys)",
+		name: "DATABASE_SCHEMA",
+		note: "Schema name when the database is shared (public if empty)",
+		required: false,
 	},
-	{ name: "AUTH_GITHUB_ID", note: "Client ID of the GitHub OAuth app" },
-	{ name: "AUTH_GITHUB_SECRET", note: "Client secret of the GitHub OAuth app" },
-	{ name: "CMS_ADMIN_GITHUB_ID", note: "Numeric GitHub ID of the admin" },
 	{
-		name: "CMS_DEV_AUTH_BYPASS",
-		note: "Optional. 1 treats requests from this machine as admin in next dev without signing in",
+		name: "MONTI_SECRET",
+		note: "A long random value, for example from `openssl rand -base64 32`. Signs the login session and encrypts stored values (AI service keys, tokens)",
+		required: true,
 	},
+	{
+		name: "AUTH_GITHUB_ID",
+		note: "Client ID of the GitHub OAuth app (callback URL: <site URL>/api/cms/auth/callback/github). Not needed in next dev",
+		required: false,
+	},
+	{
+		name: "AUTH_GITHUB_SECRET",
+		note: "Client secret of the GitHub OAuth app. Not needed in next dev",
+		required: false,
+	},
+	{ name: "MONTI_ADMIN_GITHUB_ID", note: "Numeric GitHub id of the admin. Not needed in next dev", required: false },
 	{
 		name: "AUTH_TRUST_HOST",
-		note: "Optional. true behind a proxy or on a platform such as Vercel that sets Host and X-Forwarded-Host (needed for login in production)",
+		note: "Only behind a proxy you run yourself (nginx, a load balancer): true. Vercel, Netlify and Cloudflare Pages are detected",
+		required: false,
 	},
 ];

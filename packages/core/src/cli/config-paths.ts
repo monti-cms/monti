@@ -35,26 +35,26 @@ export function parseJsonc(text: string): unknown {
 	}
 }
 
-/** Candidate locations of the server file, the module that exports the CMS instance as `cms`. */
-const SERVER_CANDIDATES = ["cms.server.ts", "src/cms.server.ts"] as const;
+/** Candidate locations of the config file, the module that exports the CMS instance as `cms`. */
+export const CONFIG_CANDIDATES = ["monti.config.ts", "src/monti.config.ts"] as const;
 
 /**
- * Location of the server file (the module that exports the CMS instance, which imports the site config itself). Looked up in this order: the chosen value
- * (`--server`) -> the `CMS_SERVER_PATH` environment variable -> common locations (`./cms.server.ts`, `./src/cms.server.ts`). Relative to `cwd`.
+ * Location of the config file (`monti.config.ts`, the module that exports the CMS instance as `cms`). Looked up in this order: the chosen value
+ * (`--config`) -> the `MONTI_CONFIG_PATH` environment variable -> common locations (`./monti.config.ts`, `./src/monti.config.ts`). Relative to `cwd`.
  * It is an error if the file is missing.
  */
-export function resolveServerPath(
+export function resolveConfigPath(
 	cwd: string,
 	chosen: string | undefined = undefined,
 	env: Record<string, string | undefined> = process.env,
 ): string {
 	const found =
-		chosen ?? env.CMS_SERVER_PATH ?? SERVER_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
+		chosen ?? env.MONTI_CONFIG_PATH ?? CONFIG_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
 	if (!found || !existsSync(path.resolve(cwd, found))) {
 		throw new Error(
 			found
-				? `server file not found: ${found}`
-				: `cannot find ${SERVER_CANDIDATES[0]}; pass --server <path> or set CMS_SERVER_PATH (run \`monti init\` to create one)`,
+				? `config file not found: ${found}`
+				: `cannot find ${CONFIG_CANDIDATES[0]}; pass --config <path> or set MONTI_CONFIG_PATH (run \`monti init\` to create one)`,
 		);
 	}
 	return found;

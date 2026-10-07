@@ -9,8 +9,7 @@ import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-d
 import type { CmsNode } from "../../doc/types";
 import { defineMessages } from "../../i18n/define";
 import { type DocumentComponentsFor, type DocumentComponentsOf, renderDocument } from "../../render";
-import type { CmsAuth, DatabaseAdapter } from "../../server/define";
-import { defineServerConfig } from "../../server/define";
+import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../../server/define";
 import { createSite, type Site } from "../../site";
 import { type Cms, createCms } from "../create-cms";
 import { fakeCms } from "../fake-cms";
@@ -93,11 +92,11 @@ function stubServer(tag: string) {
 		}),
 		pluginStorage: vi.fn(() => ({}) as never),
 	} satisfies DatabaseAdapter;
-	const server = defineServerConfig({
+	const server = {
 		database,
 		auth: { name: tag, create: () => fakeAuth() },
 		secret: `secret-${tag}`,
-	});
+	} satisfies CmsServerConfig;
 	return { server, database, sites };
 }
 

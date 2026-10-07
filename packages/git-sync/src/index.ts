@@ -12,7 +12,8 @@ import { GIT_SYNC_PLUGIN_NAME, type GitSyncOptions, validateGitSyncConfig } from
  * - Optionally (`drafts: true` on a target) drafts sync too: a branch `monti/draft/<slug>` and a pull request per entry with unpublished changes. Publishing in the CMS
  *   merges the pull request, and merging it on GitHub publishes the entry.
  *
- * The GitHub token and the webhook secret are saved on the plugin's admin screen (encrypted with the server config's `secret`), never in config.
+ * The GitHub token and the webhook secret are saved on the plugin's admin screen (encrypted with a key derived from `MONTI_SECRET`), never in config.
+ * It works with no arguments (`gitSync()`): no target is listed, so nothing syncs until `targets` names a repo.
  *
  * ```ts
  * plugins: [
@@ -23,7 +24,7 @@ import { GIT_SYNC_PLUGIN_NAME, type GitSyncOptions, validateGitSyncConfig } from
  * ]
  * ```
  */
-export const gitSync = (options: GitSyncOptions) =>
+export const gitSync = (options: GitSyncOptions = {}) =>
 	definePlugin({
 		name: GIT_SYNC_PLUGIN_NAME,
 		options,

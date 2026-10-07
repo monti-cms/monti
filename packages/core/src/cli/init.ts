@@ -7,13 +7,12 @@ import {
 	adminLayoutTemplate,
 	adminPageTemplate,
 	apiRouteTemplate,
-	configTemplate,
 	DEFAULT_INIT_LOCALE,
 	DEFAULT_INIT_TIME_ZONE,
 	ENV_VARS,
 	INSTALL_COMMANDS,
+	MONTI_CONFIG_TEMPLATE,
 	nextConfigTemplate,
-	SERVER_TEMPLATE,
 	schemaTemplate,
 } from "./templates";
 
@@ -60,7 +59,8 @@ const NEXT_CONFIGS = ["next.config.ts", "next.config.mjs", "next.config.js"];
 
 /**
  * `monti init`: creates the files that attach the CMS to a Next app. **Existing files are not overwritten**; they are reported as skipped.
- * Creates: site config, the server file (the CMS instance), admin routes (page and layout; the layout imports the prebuilt admin stylesheet), admin API route (including login).
+ * Creates: `monti.config.ts` (the one config, which makes the CMS instance), its schema file, the admin screens (a layout and a catch-all page; the layout imports
+ * the prebuilt admin stylesheet) and the admin API route (including login): three Next files.
  * Modifies (only when safe): a next config of the default shape. If it cannot, it reports a manual step.
  */
 export function initProject(options: InitOptions): InitReport {
@@ -96,27 +96,36 @@ export function initProject(options: InitOptions): InitReport {
 		}
 	};
 
-	// Apps that use `src/app` keep the config files in `src/` too.
+	// Apps that use `src/app` keep the config file in `src/` too.
 	const useSrc = exists("src/app");
 	const appDir = useSrc ? "src/app" : "app";
-	const configFile = useSrc ? "src/cms.config.ts" : "cms.config.ts";
-	const serverFile = useSrc ? "src/cms.server.ts" : "cms.server.ts";
+	const configFile = useSrc ? "src/monti.config.ts" : "monti.config.ts";
 	if (!exists(appDir))
 		report.todo.push(
 			`The App Router folder (${appDir}) did not exist, so it was created. Check that this is a Next App Router app.`,
 		);
 
 	const hadConfig = exists(configFile);
-	create(configFile, configTemplate());
+	// The two files of the earlier setup (the site config and the server file) are the one config file now.
+	const legacy = ["cms.config.ts", "cms.server.ts"].map((file) => (useSrc ? `src/${file}` : file)).filter(exists);
+	if (legacy.length > 0 && !hadConfig) {
+		report.todo.push(
+			`${legacy.join(" and ")} from the earlier setup ${legacy.length > 1 ? "are" : "is"} replaced by ${configFile}: no ${configFile} was created, so move them into it (see "Upgrading" in the core README), then run \`monti schema:extract\` if the collections are written in code.`,
+		);
+	} else {
+		create(configFile, MONTI_CONFIG_TEMPLATE);
+	}
 	const schemaFile = posix(path.join(path.dirname(configFile), "monti.schema.json"));
 	const typesFile = posix(path.join(path.dirname(configFile), SCHEMA_TYPES_FILE));
-	if (hadConfig) {
+	if (hadConfig || legacy.length > 0) {
 		// An existing config is the site's own: it is not given a schema file it does not load.
-		report.todo.push(
-			exists(schemaFile)
-				? `${schemaFile} exists: load it from ${configFile} (defineConfig({ schema, ... })) and run \`monti schema:types\``
-				: `Move the data in ${configFile} (collections, locales, ...) to ${schemaFile} with \`monti schema:extract\`.`,
-		);
+		if (hadConfig) {
+			report.todo.push(
+				exists(schemaFile)
+					? `${schemaFile} exists: load it from ${configFile} (defineConfig({ schema, ... })) and run \`monti schema:types\``
+					: `Move the data in ${configFile} (collections, locales, ...) to ${schemaFile} with \`monti schema:extract\`.`,
+			);
+		}
 		if (adminPath !== DEFAULT_ADMIN_PATH && !read(configFile).includes(adminPath)) {
 			report.todo.push(
 				`Add admin: { path: "${adminPath}" } to ${exists(schemaFile) ? schemaFile : configFile} (it must match the admin route folder).`,
@@ -136,24 +145,25 @@ export function initProject(options: InitOptions): InitReport {
 			report.todo.push(`Set "resolveJsonModule": true in tsconfig.json (${configFile} imports ${schemaFile}).`);
 		}
 	}
-	create(serverFile, SERVER_TEMPLATE);
-	// The generated files import the CMS instance from the server file, by a path relative to themselves.
-	const serverImport = (from: string) =>
-		dotted(posix(path.relative(path.dirname(from), serverFile.replace(/\.ts$/, ""))));
-	const adminDir = posix(path.join(appDir, "(admin)", ...adminPath.split("/").filter(Boolean)));
+	// The generated files import the CMS instance from the config file, by a path relative to themselves.
+	const configImport = (from: string) =>
+		dotted(posix(path.relative(path.dirname(from), configFile.replace(/\.ts$/, ""))));
+	const adminDir = posix(path.join(appDir, ...adminPath.split("/").filter(Boolean)));
 	const pageFile = `${adminDir}/[[...path]]/page.tsx`;
 	const layoutFile = `${adminDir}/layout.tsx`;
 	const routeFile = `${appDir}/api/cms/[...path]/route.ts`;
-	create(pageFile, adminPageTemplate(serverImport(pageFile)));
-	create(layoutFile, adminLayoutTemplate(serverImport(layoutFile)));
-	create(routeFile, apiRouteTemplate(serverImport(routeFile)));
+	create(pageFile, adminPageTemplate(configImport(pageFile)));
+	create(layoutFile, adminLayoutTemplate(configImport(layoutFile)));
+	create(routeFile, apiRouteTemplate(configImport(routeFile)));
 
 	addWithCms(cwd, report);
 
 	report.todo.push(
 		`Install packages: ${INSTALL_COMMANDS.join(" && ")}`,
-		["Values for .env.local:", ...ENV_VARS.map((env) => `  ${env.name.padEnd(20)} ${env.note}`)].join("\n"),
-		"GitHub OAuth app callback URL: <site URL>/api/cms/auth/callback/github",
+		[
+			"Values for .env.local (next dev signs you in on its own, so the GitHub ones are for production):",
+			...ENV_VARS.map((env) => `  ${env.name.padEnd(22)} ${env.required ? "" : "(optional) "}${env.note}`),
+		].join("\n"),
 		`Edit the collections in ${hadConfig ? configFile : schemaFile}, run \`monti migrate\` to create the database tables, then open ${adminPath} in next dev.`,
 	);
 	return report;

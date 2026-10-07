@@ -38,12 +38,12 @@ export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecre
 
 export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 	/**
-	 * The site config (`cms.config.ts`, `defineConfig(...)`): collections, locales, blocks, plugins, admin and site settings. The instance holds it, and the store, the
+	 * The site config (`defineConfig(...)` of `@monti-cms/core`, the data and plugins part of `monti.config.ts`): collections, locales, blocks, plugins, admin and site settings. The instance holds it, and the store, the
 	 * services, the read API, the HTTP handler, the plugins, the admin and the renderer all get it from the instance. Its type is kept, so `cms.read` knows the
 	 * site's collection names and the shape of their metadata.
 	 */
 	readonly config: Config;
-	/** The server config (`defineServerConfig(...)`): database, auth, media, secret, hooks, public API. */
+	/** The server config: database, auth, media, secret, hooks, public API. */
 	readonly server: CmsServerConfig;
 	/**
 	 * Name of this instance, only used to find it again when a development server reloads modules (see {@link createCms}). Default `"default"`.
@@ -114,7 +114,7 @@ export interface Cms<
 	readonly authHandlers: CmsAuth["handlers"];
 	/** Admin check for requests and screens. Uses `auth()`. */
 	readonly authGateway: AuthGateway;
-	/** Whether `Host` and `X-Forwarded-Host` can be trusted (`trustHost` in the server config, `AUTH_TRUST_HOST`, else off in production). */
+	/** Whether `Host` and `X-Forwarded-Host` can be trusted (`trustHost` in the config, `AUTH_TRUST_HOST`, a known proxy platform, else off in production). */
 	isHostTrusted(): boolean;
 	/** The server side of the site config's plugins. Loaded on first use. */
 	plugins(): Promise<readonly LoadedServerPlugin[]>;
@@ -170,7 +170,7 @@ export interface Cms<
 }
 
 /**
- * Connections that must survive a development server reloading modules. Next's dev server evaluates `cms.server.ts` again after an edit, which calls
+ * Connections that must survive a development server reloading modules. Next's dev server evaluates `monti.config.ts` again after an edit, which calls
  * `createCms` again. A new database adapter would open a second connection pool and leave the first one open, so in development the first adapter
  * (and the media store, which keeps its own client) of an instance is reused by the instances created later with the same `id`.
  * Everything else (store, services, login connection, plugins, hooks) is rebuilt by the new instance from its own server config, so edits to
@@ -209,11 +209,12 @@ export function lazyHandle(cms: () => Cms): Cms["handle"] {
 }
 
 /**
- * Creates the CMS instance. Export it from a module of your app (conventionally `cms.server.ts`) and import it where you need it:
+ * Creates the CMS instance from a site config and a server config. An app does not call this: `defineConfig` of `@monti-cms/core/server` (what `monti.config.ts`
+ * uses) takes the site options and the server options together and calls it. It stays for code that builds the two parts itself (tests, tools):
  *
  * ```ts
- * import config from "./cms.config";
- * export const cms = createCms({ config, server: defineServerConfig({ database: postgres({ ... }), auth: auth({ providers: [github({ ... })] }) }) });
+ * import { defineConfig } from "@monti-cms/core"; // the site config only
+ * export const cms = createCms({ config: defineConfig({ schema, plugins }), server: { database: postgres(), auth: auth({ ... }) } });
  * ```
  *
  * Any number of instances live in one process, each with its own config and server config: nothing is read from a module or the environment except the
@@ -246,6 +247,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				site,
 				loginPath: site.adminUrl("/login"),
 				trustHost: isHostTrusted(),
+				secrets: vault.forPlugin("auth"),
 				storage: (plugin) => connections.database.pluginStorage(plugin),
 			});
 			return auth;

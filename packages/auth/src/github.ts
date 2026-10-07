@@ -2,6 +2,13 @@ import GitHub from "@auth/core/providers/github";
 import { githubLabel } from "./messages";
 import type { LoginProvider } from "./provider";
 
+/** The environment variables `github()` reads when an option is not given. Nothing else is looked at. */
+export const GITHUB_ENV = {
+	clientId: "AUTH_GITHUB_ID",
+	clientSecret: "AUTH_GITHUB_SECRET",
+	admin: "MONTI_ADMIN_GITHUB_ID",
+} as const;
+
 export interface GithubOptions {
 	/** Client id of the GitHub OAuth app. If unset, the `AUTH_GITHUB_ID` environment variable. */
 	readonly clientId?: string | undefined;
@@ -9,10 +16,21 @@ export interface GithubOptions {
 	readonly clientSecret?: string | undefined;
 	/**
 	 * Admins by numeric GitHub id (`"12345678"`, or `"github:12345678"`). Logins are not accepted: a login can be renamed and then taken by someone else.
-	 * Unset entries (an unset environment variable) are skipped. With none, nobody is an admin.
+	 * If unset, the `MONTI_ADMIN_GITHUB_ID` environment variable (one id, or several separated by commas). Unset entries are skipped. With none, nobody is an admin.
 	 */
 	readonly admins?: readonly (string | undefined)[];
 }
+
+const fromEnv = (name: string): string | undefined => process.env[name]?.trim() || undefined;
+
+/** The admins of the option, else of `MONTI_ADMIN_GITHUB_ID` (comma separated). */
+const adminsOf = (options: GithubOptions): readonly (string | undefined)[] =>
+	options.admins ??
+	(fromEnv(GITHUB_ENV.admin)
+		?.split(",")
+		.map((id) => id.trim())
+		.filter(Boolean) ||
+		[]);
 
 /** The GitHub mark in a mid grey that reads on light and dark backgrounds (an `<img>` cannot follow the text color). */
 const GITHUB_ICON = `data:image/svg+xml,${encodeURIComponent(
@@ -20,20 +38,37 @@ const GITHUB_ICON = `data:image/svg+xml,${encodeURIComponent(
 )}`;
 
 /**
- * Log in with GitHub. The account id is the numeric GitHub id, so `github:12345678` is the same person after a rename.
- * The callback URL of the OAuth app is `<site>/api/cms/auth/callback/github`.
+ * Log in with GitHub. It works with no arguments: the OAuth app comes from `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET`, the admin from `MONTI_ADMIN_GITHUB_ID`,
+ * and a value passed here wins. A missing id or secret is an error that names the variable. The account id is the numeric GitHub id, so `github:12345678`
+ * is the same person after a rename. The callback URL of the OAuth app is `<site>/api/cms/auth/callback/github`.
  */
 export function github(options: GithubOptions = {}): LoginProvider {
+	const clientId = () => options.clientId || fromEnv(GITHUB_ENV.clientId);
+	const clientSecret = () => options.clientSecret || fromEnv(GITHUB_ENV.clientSecret);
 	return {
 		id: "github",
 		name: "GitHub",
 		label: githubLabel,
 		icon: GITHUB_ICON,
-		...(options.admins ? { admins: options.admins } : {}),
+		get admins() {
+			return adminsOf(options);
+		},
+		requireConfigured: () => {
+			if (!clientId()) {
+				throw new Error(
+					`[cms-auth] The GitHub client id is not set. Set ${GITHUB_ENV.clientId} (the OAuth app's client id, for example in .env.local) or pass github({ clientId }).`,
+				);
+			}
+			if (!clientSecret()) {
+				throw new Error(
+					`[cms-auth] The GitHub client secret is not set. Set ${GITHUB_ENV.clientSecret} (the OAuth app's client secret, for example in .env.local) or pass github({ clientSecret }).`,
+				);
+			}
+		},
 		setup: () =>
 			GitHub({
-				clientId: options.clientId ?? process.env.AUTH_GITHUB_ID,
-				clientSecret: options.clientSecret ?? process.env.AUTH_GITHUB_SECRET,
+				clientId: clientId(),
+				clientSecret: clientSecret(),
 				profile: (profile) => ({
 					id: String(profile.id),
 					name: profile.name ?? profile.login,

@@ -43,28 +43,37 @@ function fakeApp(files: Record<string, string> = {}): string {
 const read = (dir: string, file: string) => readFileSync(path.join(dir, file), "utf8");
 
 describe("monti init", () => {
-	it("creates config and route files in an empty Next app and wires up the next config, leaving tsconfig and CSS alone", () => {
+	it("creates one config file, the schema and three Next files in an empty Next app and wires up the next config, leaving tsconfig and CSS alone", () => {
 		const dir = fakeApp();
 		const report = initProject({ cwd: dir });
-		expect(report.created).toEqual(
-			expect.arrayContaining([
-				"cms.config.ts",
-				"monti.schema.json",
-				"monti-env.d.ts",
-				"cms.server.ts",
-				"app/(admin)/admin/[[...path]]/page.tsx",
-				"app/(admin)/admin/layout.tsx",
-				"app/api/cms/[...path]/route.ts",
-			]),
-		);
+		expect(report.created).toEqual([
+			"monti.config.ts",
+			"monti.schema.json",
+			"monti-env.d.ts",
+			"app/admin/[[...path]]/page.tsx",
+			"app/admin/layout.tsx",
+			"app/api/cms/[...path]/route.ts",
+		]);
 		expect(report.updated).toEqual(["next.config.ts"]);
 		expect(report.skipped).toEqual([]);
 
-		// The config loads the schema file and adds what needs code; the data is in the schema file.
-		const config = read(dir, "cms.config.ts");
+		// The config is the one file: it loads the schema file, and names the database, the login and the plugins; the data is in the schema file.
+		const config = read(dir, "monti.config.ts");
 		expect(config).toContain('import schema from "./monti.schema.json";');
-		expect(config).toContain("defineConfig({\n\tschema,");
-		expect(config).toContain("// plugins: [...blocks(), seo()]");
+		expect(config).toContain('import { defineConfig, postgres } from "@monti-cms/core/server";');
+		expect(config).toContain("export const cms = defineConfig({\n\tschema,");
+		expect(config).toContain("database: postgres(),");
+		expect(config).toContain("auth: auth({ providers: [github()], host: nextHost }),");
+		expect(config).toContain("plugins: [],");
+		expect(config).toContain('import { auth } from "@monti-cms/auth";');
+		expect(config).toContain('import { github } from "@monti-cms/auth/github";');
+		expect(config).toContain('import { nextHost } from "@monti-cms/nextjs/auth";');
+		// No separate server file, no defineServerConfig, no secret or other value read from process.env here, and nothing of the old names.
+		expect(() => read(dir, "cms.server.ts")).toThrow();
+		expect(() => read(dir, "cms.config.ts")).toThrow();
+		expect(config).not.toMatch(
+			/defineServerConfig|createCms|process\.env\.(?!HOST_URL)|CMS_|AUTH_SECRET|next-auth|\.\.\.blocks/,
+		);
 		expect(config).not.toContain("defineCollection");
 		const schema = JSON.parse(read(dir, "monti.schema.json"));
 		expect(schema.$schema).toBe("./node_modules/@monti-cms/core/schema.json");
@@ -78,33 +87,23 @@ describe("monti init", () => {
 		expect(config + read(dir, "monti.schema.json")).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
 		// The types of the schema are written next to it.
 		expect(read(dir, "monti-env.d.ts")).toContain('readonly defaultLocale: "en";');
-		expect(read(dir, "cms.server.ts")).toContain("auth({\n\t\t\t// Ways to sign in.");
-		expect(read(dir, "cms.server.ts")).toContain("github({");
-		expect(read(dir, "cms.server.ts")).toContain('import { auth } from "@monti-cms/auth";');
-		expect(read(dir, "cms.server.ts")).toContain('import { github } from "@monti-cms/auth/github";');
-		expect(read(dir, "cms.server.ts")).toContain('import { nextHost } from "@monti-cms/nextjs/auth";');
-		expect(read(dir, "cms.server.ts")).not.toContain("next-auth");
-		// The server file exports the instance; every generated file imports it from there by a relative path.
-		expect(read(dir, "cms.server.ts")).toContain("export const cms = createCms({");
-		// The server file imports the site config by a relative path and hands it to the instance: there is no alias for it.
-		expect(read(dir, "cms.server.ts")).toContain('import config from "./cms.config";');
-		expect(read(dir, "cms.server.ts")).toMatch(/createCms\(\{\s+config,/);
-		const page = read(dir, "app/(admin)/admin/[[...path]]/page.tsx");
+		// Every generated file imports the CMS instance from the config file by a relative path: there is no alias for it.
+		const page = read(dir, "app/admin/[[...path]]/page.tsx");
 		expect(page).toContain("<CmsAdminPage cms={cms} {...props} />");
 		expect(page).toContain('from "@monti-cms/nextjs/admin"');
-		expect(page).toContain('import { cms } from "../../../../cms.server";');
-		const layout = read(dir, "app/(admin)/admin/layout.tsx");
+		expect(page).toContain('import { cms } from "../../../monti.config";');
+		const layout = read(dir, "app/admin/layout.tsx");
 		expect(layout).toContain("<CmsAdminLayout cms={cms}>");
 		// The prebuilt admin stylesheet is imported by the admin layout only; the app's global CSS is not touched and needs no Tailwind.
 		expect(layout.startsWith('import "@monti-cms/admin/styles.css";\n')).toBe(true);
 		expect(layout).toContain('from "@monti-cms/nextjs/admin"');
-		expect(layout).toContain('import { cms } from "../../../cms.server";');
+		expect(layout).toContain('import { cms } from "../../monti.config";');
 		const route = read(dir, "app/api/cms/[...path]/route.ts");
 		expect(route).toContain("createRouteHandler(cms)");
 		expect(route).toContain('import { createRouteHandler } from "@monti-cms/nextjs";');
-		expect(route).toContain('import { cms } from "../../../../cms.server";');
+		expect(route).toContain('import { cms } from "../../../../monti.config";');
 
-		// tsconfig is not edited: no alias is needed, the site config is imported by a relative path.
+		// tsconfig is not edited: no alias is needed, the config is imported by a relative path.
 		expect(read(dir, "tsconfig.json")).toBe(
 			'{\n  "compilerOptions": {\n    "strict": true,\n    "paths": {\n      "@/*": ["./*"]\n    }\n  }\n}\n',
 		);
@@ -116,34 +115,44 @@ describe("monti init", () => {
 		expect(nextConfig.startsWith('import { withCms } from "@monti-cms/nextjs/config";\n')).toBe(true);
 		expect(nextConfig).toContain("export default withCms(nextConfig);");
 		expect(nextConfig).not.toContain("export default nextConfig");
-		expect(report.todo.join("\n")).toContain("/api/cms/auth/callback/github");
-		expect(report.todo.join("\n")).toContain("CMS_DATABASE_URL");
+		// The environment variables it tells about are the conventional ones.
+		const todo = report.todo.join("\n");
+		for (const name of [
+			"DATABASE_URL",
+			"MONTI_SECRET",
+			"AUTH_GITHUB_ID",
+			"AUTH_GITHUB_SECRET",
+			"MONTI_ADMIN_GITHUB_ID",
+		]) {
+			expect(todo).toContain(name);
+		}
+		expect(todo).toContain("/api/cms/auth/callback/github");
+		expect(todo).not.toMatch(/CMS_|AUTH_SECRET|CMS_DEV_AUTH_BYPASS/);
 		// Nothing asks for Tailwind, typography or tw-animate.
-		expect(report.todo.join("\n")).not.toMatch(/tailwind|tw-animate|typography/i);
+		expect(todo).not.toMatch(/tailwind|tw-animate|typography/i);
 	});
 
 	it("running again overwrites nothing and reports files as skipped", () => {
 		const dir = fakeApp();
 		initProject({ cwd: dir });
-		writeFileSync(path.join(dir, "cms.config.ts"), "// 사이트가 고친 설정\n");
+		writeFileSync(path.join(dir, "monti.config.ts"), "// 사이트가 고친 설정\n");
 		const before = ["tsconfig.json", "app/globals.css", "next.config.ts"].map((file) => read(dir, file));
 
 		const report = initProject({ cwd: dir });
 		expect(report.created).toEqual([]);
 		expect(report.updated).toEqual([]);
 		expect(report.skipped).toEqual([
-			"cms.config.ts",
-			"cms.server.ts",
-			"app/(admin)/admin/[[...path]]/page.tsx",
-			"app/(admin)/admin/layout.tsx",
+			"monti.config.ts",
+			"app/admin/[[...path]]/page.tsx",
+			"app/admin/layout.tsx",
 			"app/api/cms/[...path]/route.ts",
 			"next.config.ts",
 		]);
 		// The site's own config is not given a schema file it does not load; the existing one is pointed out.
-		expect(report.todo.join("\n")).toContain("monti.schema.json exists: load it from cms.config.ts");
-		expect(read(dir, "cms.config.ts")).toBe("// 사이트가 고친 설정\n");
+		expect(report.todo.join("\n")).toContain("monti.schema.json exists: load it from monti.config.ts");
+		expect(read(dir, "monti.config.ts")).toBe("// 사이트가 고친 설정\n");
 		expect(["tsconfig.json", "app/globals.css", "next.config.ts"].map((file) => read(dir, file))).toEqual(before);
-		expect(formatInitReport(report)).toContain("Skipped (already exist, not overwritten):\n  - cms.config.ts");
+		expect(formatInitReport(report)).toContain("Skipped (already exist, not overwritten):\n  - monti.config.ts");
 	});
 
 	it("writes a schema file that is valid, that the config loads, and that has types", () => {
@@ -171,7 +180,7 @@ describe("monti init", () => {
 	});
 
 	it("does not give an existing config a schema file, and says how to move its data", () => {
-		const dir = fakeApp({ "cms.config.ts": "export default {};\n" });
+		const dir = fakeApp({ "monti.config.ts": "export const cms = {};\n" });
 		const report = initProject({ cwd: dir });
 		expect(report.created).not.toContain("monti.schema.json");
 		expect(report.created).not.toContain("monti-env.d.ts");
@@ -191,23 +200,38 @@ describe("monti init", () => {
 		expect(() => initProject({ cwd: fakeApp(), timeZone: "Mars/Base" })).toThrow(/--time-zone/);
 	});
 
+	it("leaves the files of the earlier setup alone: it creates no second config, and says they are now monti.config.ts", () => {
+		const dir = fakeApp({ "cms.config.ts": "export default {};\n", "cms.server.ts": "export const cms = {};\n" });
+		const report = initProject({ cwd: dir });
+		expect(report.created).not.toContain("monti.config.ts");
+		expect(report.created).not.toContain("monti.schema.json");
+		expect(() => read(dir, "monti.config.ts")).toThrow();
+		expect(read(dir, "cms.config.ts")).toBe("export default {};\n");
+		expect(read(dir, "cms.server.ts")).toBe("export const cms = {};\n");
+		expect(report.todo.join("\n")).toContain(
+			"cms.config.ts and cms.server.ts from the earlier setup are replaced by monti.config.ts",
+		);
+		// The route files still point at the one config file, which is what the earlier files turn into.
+		expect(report.created).toContain("app/admin/layout.tsx");
+	});
+
 	it("choosing an admin path makes the route folder and site config follow it", () => {
 		const dir = fakeApp();
 		const report = initProject({ cwd: dir, adminPath: "/cms/studio" });
-		expect(report.created).toContain("app/(admin)/cms/studio/[[...path]]/page.tsx");
-		expect(report.created).toContain("app/(admin)/cms/studio/layout.tsx");
+		expect(report.created).toContain("app/cms/studio/[[...path]]/page.tsx");
+		expect(report.created).toContain("app/cms/studio/layout.tsx");
 		expect(JSON.parse(read(dir, "monti.schema.json")).admin).toEqual({ path: "/cms/studio" });
 		expect(report.todo.at(-1)).toContain("/cms/studio");
 
 		// If the config file already exists, it is not overwritten and the lines to add are reported.
-		const other = fakeApp({ "cms.config.ts": "export default {};\n" });
+		const other = fakeApp({ "monti.config.ts": "export const cms = {};\n" });
 		expect(initProject({ cwd: other, adminPath: "/studio" }).todo.join("\n")).toContain('admin: { path: "/studio" }');
 
 		expect(() => initProject({ cwd: dir, adminPath: "/" })).toThrow(/admin-path/);
 		expect(() => initProject({ cwd: dir, adminPath: "/api/admin" })).toThrow(/admin-path/);
 	});
 
-	it("a `src/app` app keeps config files in src, and imports them by relative paths whatever the baseUrl", () => {
+	it("a `src/app` app keeps the config file in src, and imports it by relative paths whatever the baseUrl", () => {
 		const dir = fakeApp({
 			"tsconfig.json": '{\n\t"compilerOptions": {\n\t\t"baseUrl": "./src"\n\t}\n}\n',
 			"app/globals.css": "",
@@ -215,19 +239,20 @@ describe("monti init", () => {
 		});
 		rmSync(path.join(dir, "app"), { recursive: true });
 		const report = initProject({ cwd: dir });
-		expect(report.created.slice(0, 5)).toEqual([
-			"src/cms.config.ts",
+		expect(report.created.slice(0, 4)).toEqual([
+			"src/monti.config.ts",
 			"src/monti.schema.json",
 			"src/monti-env.d.ts",
-			"src/cms.server.ts",
-			"src/app/(admin)/admin/[[...path]]/page.tsx",
+			"src/app/admin/[[...path]]/page.tsx",
 		]);
 		expect(read(dir, "tsconfig.json")).toBe('{\n\t"compilerOptions": {\n\t\t"baseUrl": "./src"\n\t}\n}\n');
-		expect(read(dir, "src/cms.server.ts")).toContain('import config from "./cms.config";');
+		expect(read(dir, "src/monti.config.ts")).toContain('import schema from "./monti.schema.json";');
 		expect(read(dir, "src/app/globals.css")).toBe('@import "tailwindcss";\n');
 		expect(read(dir, "next.config.ts")).toContain("export default withCms(nextConfig);");
-		// Files under `src/app` import the server file from `src/`.
-		expect(read(dir, "src/app/api/cms/[...path]/route.ts")).toContain('import { cms } from "../../../../cms.server";');
+		// Files under `src/app` import the config file from `src/`.
+		expect(read(dir, "src/app/api/cms/[...path]/route.ts")).toContain(
+			'import { cms } from "../../../../monti.config";',
+		);
 	});
 
 	it("when it cannot fix safely, it leaves the file as is and reports a manual step", () => {

@@ -7,10 +7,18 @@ import type { SchemaFile } from "../schema-file/types";
 import { createSite } from "../site";
 import { generateSchemaTypes, SCHEMA_FILE_CANDIDATES, SCHEMA_LINK } from "./schema-types";
 
-/** Where a site keeps its config, in the order `monti schema:extract` looks for it. */
-export const CONFIG_FILE_CANDIDATES = ["cms.config.ts", "src/cms.config.ts"] as const;
+/**
+ * Where a site keeps its config, in the order `monti schema:extract` looks for it: `monti.config.ts` (a config whose data is still written in code), then the
+ * site config file of the earlier setup (`cms.config.ts`, a default export of `defineConfig` from `@monti-cms/core`).
+ */
+export const CONFIG_FILE_CANDIDATES = [
+	"monti.config.ts",
+	"src/monti.config.ts",
+	"cms.config.ts",
+	"src/cms.config.ts",
+] as const;
 
-/** What stays in `cms.config.ts`, because it needs code (or differs per environment). */
+/** What stays in the config file, because it needs code (or differs per environment). */
 export interface StaysInCode {
 	/** The part of the config (`plugins`, `blocks`, `site.url`, ...). */
 	readonly what: string;
@@ -127,7 +135,7 @@ export const schemaFileText = (schema: SchemaFile, link = SCHEMA_LINK): string =
 
 export interface ExtractOptions {
 	readonly cwd: string;
-	/** Config file to read (relative to `cwd`). Default: `cms.config.ts`, then `src/cms.config.ts`. */
+	/** Config file to read (relative to `cwd`). Default: `monti.config.ts`, then `cms.config.ts` (each also under `src/`). */
 	readonly config?: string;
 	/** Schema file to write (relative to `cwd`). Default: `monti.schema.json` next to the config file. */
 	readonly out?: string;
@@ -138,7 +146,9 @@ export interface ExtractOptions {
 	/** Language the labels that plugins provide in the admin language (the SEO fields) are written in. Default: the admin language of the site. */
 	readonly locale?: string;
 	/** Loads the config module (absolute path). Default: `import()`, which runs TypeScript through tsx when the `monti` command registered it. Tests pass their own. */
-	readonly load?: (file: string) => Promise<{ readonly default?: unknown; readonly config?: unknown }>;
+	readonly load?: (
+		file: string,
+	) => Promise<{ readonly default?: unknown; readonly config?: unknown; readonly cms?: unknown }>;
 }
 
 export interface ExtractReport {
@@ -154,8 +164,9 @@ export interface ExtractReport {
 }
 
 /**
- * `monti schema:extract`: loads the site's `cms.config.ts` (TypeScript is read by tsx, which `bin/monti.mjs` registers), writes its data part to `monti.schema.json`
- * and the types of that file, and reports what stays in code. It never changes `cms.config.ts`; the report shows how to load the schema from it.
+ * `monti schema:extract`: loads the site's config file (TypeScript is read by tsx, which `bin/monti.mjs` registers), writes its data part to `monti.schema.json`
+ * and the types of that file, and reports what stays in code. It reads the site config as the default export (`defineConfig` of `@monti-cms/core`) or, for
+ * `monti.config.ts`, from the `cms` it exports. It never changes the config file; the report shows how to load the schema from it.
  */
 export async function extractSchema(options: ExtractOptions): Promise<ExtractReport> {
 	const { cwd } = options;
@@ -175,9 +186,12 @@ export async function extractSchema(options: ExtractOptions): Promise<ExtractRep
 
 	const file = path.resolve(cwd, configFile);
 	const loaded = await (options.load ?? ((target) => import(pathToFileURL(target).href)))(file);
-	const config = (loaded.default ?? loaded.config) as CmsConfig | undefined;
+	const cms = loaded.cms as { readonly site?: { readonly config?: unknown } } | undefined;
+	const config = (cms?.site?.config ?? loaded.default ?? loaded.config) as CmsConfig | undefined;
 	if (!config || !isRecord(config.collections) || !Array.isArray(config.locales)) {
-		throw new Error(`${configFile} must export the site config: \`export default defineConfig({ ... })\``);
+		throw new Error(
+			`${configFile} must export the site config (\`export default defineConfig({ ... })\`) or the CMS instance (\`export const cms = defineConfig({ ... })\`)`,
+		);
 	}
 	const { schema, stays } = extractSchemaData(config, { locale: options.locale });
 
@@ -197,7 +211,7 @@ export async function extractSchema(options: ExtractOptions): Promise<ExtractRep
 	};
 }
 
-/** Turns the report into human-readable text, ending with the slim config to put in `cms.config.ts`. */
+/** Turns the report into human-readable text, ending with the slim config to put in the config file. */
 export function formatExtractReport(report: ExtractReport): string {
 	const relative = path.posix.relative(path.posix.dirname(report.config), report.schema);
 	const schemaImport = relative.startsWith(".") ? relative : `./${relative}`;
@@ -214,7 +228,9 @@ export function formatExtractReport(report: ExtractReport): string {
 		`${report.config} is unchanged. To use the schema, replace its collections, locales, default locale, time zone, seed and admin path with the file:`,
 		"",
 		`  import schema from "${schemaImport}";`,
-		"  export default defineConfig({",
+		report.config.endsWith("monti.config.ts")
+			? "  export const cms = defineConfig({"
+			: "  export default defineConfig({",
 		"    schema,",
 		...(plugins ? ["    plugins: [/* the plugins above */],"] : []),
 		...report.stays.flatMap((item) => {
@@ -223,6 +239,7 @@ export function formatExtractReport(report: ExtractReport): string {
 				? [`    ${item.what}: /* as before */,`]
 				: [];
 		}),
+		...(report.config.endsWith("monti.config.ts") ? ["    /* database, auth and the rest as before */"] : []),
 		"  });",
 	];
 	return lines.join("\n");

@@ -77,6 +77,11 @@ export interface LoginProvider {
 	readonly icon?: string;
 	/** Admins of this provider: ids inside the provider (`"123"`) or qualified (`"github:123"`). Unset entries (an unset environment variable) are skipped. */
 	readonly admins?: readonly (string | undefined)[];
+	/**
+	 * Throws a clear error that names the missing setting (an unset `AUTH_GITHUB_ID`). Called when the login connection is created in a server that
+	 * requires login, and before any sign-in is attempted, so a development server running on the dev bypass does not need the provider set up.
+	 */
+	requireConfigured?(): void;
 	/** The Auth.js provider config. Called once when the login connection is created. */
 	setup(context: LoginProviderContext): AuthJsProvider;
 	/** Turns the account of a finished sign-in into the Monti account. Returning `null` refuses the sign-in. */

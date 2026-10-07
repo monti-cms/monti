@@ -200,7 +200,8 @@ describe("who is an admin", () => {
 describe("development bypass", () => {
 	const loopback = new Headers({ host: "localhost:3000", "x-forwarded-for": "::1" });
 	const remote = new Headers({ host: "cms.example.com", "x-forwarded-for": "203.0.113.9" });
-	const gatewayFor = (headers: Headers, devBypass = true) => {
+	/** `devBypass` is left unset by default: the default is what is under test. */
+	const gatewayFor = (headers: Headers, devBypass?: boolean) => {
 		const cmsAuth = connect({
 			providers: [github({ admins: [ADMIN_ID] })],
 			devBypass,
@@ -209,7 +210,7 @@ describe("development bypass", () => {
 		return new CmsAuthGateway(() => cmsAuth);
 	};
 
-	it("treats a request from this machine as the first admin, in development", async () => {
+	it("is on by default in development, for a request from this machine: the first admin, with no devBypass option", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		expect(await gatewayFor(loopback).verifyAdmin()).toMatchObject({ accountId: `github:${ADMIN_ID}`, isAdmin: true });
@@ -223,18 +224,26 @@ describe("development bypass", () => {
 		await expect(gatewayFor(forwarded).verifyAdmin()).rejects.toBeInstanceOf(AuthError);
 	});
 
-	it("is off outside development and when not asked for", async () => {
+	it("never applies in production, whatever is asked, and in development it can be turned off", async () => {
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		vi.stubEnv("NODE_ENV", "production");
 		await expect(gatewayFor(loopback).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
+		await expect(gatewayFor(loopback, true).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
 		vi.stubEnv("NODE_ENV", "development");
 		await expect(gatewayFor(loopback, false).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
 	});
 
-	it("refuses to start in development mode on something that looks deployed", () => {
+	it("refuses to start when asked for in development mode on something that looks deployed", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.stubEnv("VERCEL", "1");
-		expect(() => gatewayFor(loopback)).toThrow(/Refusing to start with devBypass/);
+		expect(() => gatewayFor(loopback, true)).toThrow(/Refusing to start with devBypass/);
+	});
+
+	it("by default stays off, without stopping the server, on something that looks deployed", async () => {
+		vi.stubEnv("NODE_ENV", "development");
+		vi.stubEnv("VERCEL", "1");
+		vi.spyOn(console, "warn").mockImplementation(() => {});
+		await expect(gatewayFor(loopback).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
 	});
 
 	it("without the host's request headers it never applies", async () => {

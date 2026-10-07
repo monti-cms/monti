@@ -40,9 +40,9 @@ describe("monti <plugin>:<command>", () => {
 		const close = appWith({
 			go: { description: "Goes", options: { all: { type: "boolean" }, name: { type: "string" } }, run: run as never },
 		});
-		expect(await runCli(["demo:go", "--all", "--name", "x", "--no-env-file", "--server", "s.ts"], io)).toBe(0);
+		expect(await runCli(["demo:go", "--all", "--name", "x", "--no-env-file", "--config", "s.ts"], io)).toBe(0);
 		expect(lines).toContain('ran {"all":true,"name":"x"}');
-		expect(state.loaded[0]).toMatchObject({ cwd: "/app", envFiles: [], server: "s.ts" });
+		expect(state.loaded[0]).toMatchObject({ cwd: "/app", envFiles: [], config: "s.ts" });
 		expect(run).toHaveBeenCalledOnce();
 		expect(close).toHaveBeenCalledOnce();
 	});

@@ -73,6 +73,16 @@ describe("a target's defaults", () => {
 	});
 });
 
+describe("gitSync() with no arguments", () => {
+	it("registers the plugin with no targets: it is valid and syncs nothing until a repo is listed", () => {
+		const plugin = gitSync();
+		expect(plugin.name).toBe("git-sync");
+		expect(resolveTargets(plugin.options)).toEqual([]);
+		expect(() => validateGitSyncConfig(plugin.options, view())).not.toThrow();
+		expect(plugin.admin).toBeTypeOf("function");
+	});
+});
+
 describe("a target that cannot work is refused when the config is read", () => {
 	it.each([
 		[{ repo: "not-a-repo" }, /"owner\/name"/],

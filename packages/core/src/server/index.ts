@@ -1,7 +1,7 @@
 /**
- * Server entry point imported by the app's server file (`cms.server.ts`): the server config authoring API (`defineServerConfig`, `postgres`)
- * and `createCms`, which turns the server config into the CMS instance the rest of the app uses. The login method (`auth`) comes from
- * `@monti-cms/auth`.
+ * Server entry point imported by the app's config file (`monti.config.ts`): `defineConfig`, which takes the site options and the server options (database,
+ * login, storage, secret) together and makes the CMS instance the rest of the app uses, and the `postgres` adapter. `createCms` stays for code that builds
+ * the site config and the server config itself. The login method (`auth`) comes from `@monti-cms/auth`.
  */
 
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
@@ -53,6 +53,7 @@ export type {
 	WriteHooks,
 	WriteOperation,
 } from "../services/hooks";
+export { defineConfig, type MontiServerOptions, SECRET_ENV } from "./config";
 export {
 	type AuthAdapter,
 	type AuthContext,
@@ -62,6 +63,5 @@ export {
 	type CmsAuth,
 	type CmsServerConfig,
 	type DatabaseAdapter,
-	defineServerConfig,
 	type MediaAdapter,
 } from "./define";

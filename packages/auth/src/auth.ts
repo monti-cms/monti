@@ -24,9 +24,9 @@ export interface AuthOptions {
 	 */
 	readonly admins?: readonly (string | undefined)[];
 	/**
-	 * Treats requests from this machine as admin without login, in local development. Only takes effect when `NODE_ENV=development`,
-	 * the environment does not look like a deployed server (hosting platform variables, a public `AUTH_URL`) and the request's host is localhost.
-	 * With `NODE_ENV=development` on something that looks deployed, it refuses to start instead.
+	 * Treats requests from this machine as admin without login, in local development. On by default under `next dev` (`NODE_ENV=development`), and `false` turns it
+	 * off there. It never takes effect in production, and only when the environment does not look like a deployed server (hosting platform variables,
+	 * a public `AUTH_URL`) and the request's host is localhost. Asking for it with `true` on something that looks deployed refuses to start instead.
 	 */
 	readonly devBypass?: boolean;
 	/**
@@ -34,11 +34,6 @@ export interface AuthOptions {
 	 * The callback URL of an OAuth app is `<site>/<basePath>/callback/<provider id>`.
 	 */
 	readonly basePath?: string;
-	/**
-	 * Login session signing value. Kept separate from the stored-value encryption key (server config `secret`): changing this only signs users out,
-	 * while changing the encryption key means re-entering the stored AI service keys. If unset, the `AUTH_SECRET` environment variable.
-	 */
-	readonly secret?: string;
 	/** What the host framework supplies. See {@link AuthHost}. */
 	readonly host?: AuthHost;
 }
@@ -118,8 +113,11 @@ function adminSets(options: AuthOptions): Map<string, Set<string>> {
  * `@monti-cms/auth/github`); the session is a signed cookie (a JWT), so nothing is stored for it. Used as `auth` in the server config.
  *
  * ```ts
- * auth: auth({ providers: [github({ clientId, clientSecret, admins: [process.env.CMS_ADMIN_GITHUB_ID] })], secret })
+ * auth: auth({ providers: [github()] })
  * ```
+ *
+ * The session-signing key is derived from the config's one secret (`MONTI_SECRET`), so there is no separate secret to set. Changing the secret signs everyone out;
+ * the values stored encrypted keep working through `previousSecrets`.
  */
 export function auth(options: AuthOptions): AuthAdapter {
 	const { providers } = options;
@@ -132,20 +130,35 @@ export function auth(options: AuthOptions): AuthAdapter {
 		ids.add(provider.id);
 	}
 	const host: AuthHost = options.host ?? {};
+	const requireConfigured = () => {
+		for (const provider of providers) provider.requireConfigured?.();
+	};
 
 	return {
 		name: "auth",
-		create: ({ site, loginPath, trustHost, storage }): CmsAuth => {
+		create: ({ site, loginPath, trustHost, secrets, storage }): CmsAuth => {
 			assertDevBypassSafe(options.devBypass);
+			if (!secrets.available) {
+				throw new Error(
+					"[cms-auth] MONTI_SECRET is not set, so login sessions cannot be signed. Set MONTI_SECRET (any long random value, for example `openssl rand -base64 32`) in .env.local, or pass `secret` to defineConfig.",
+				);
+			}
+			// A server that requires login fails here, naming what is missing; one on the development bypass fails only when a sign-in is attempted.
+			if (!isDevAuthBypassEnabled(options.devBypass)) requireConfigured();
 			const t = site.createTranslator(messagesOf(providers));
 			if (!trustHost && process.env.NODE_ENV === "production" && !pinnedUrl()) {
 				console.warn(
 					"[cms-auth] The host is not trusted, so login will fail with an UntrustedHost error. Behind a proxy or on a platform such as Vercel, " +
-						"set `trustHost: true` in the server config or AUTH_TRUST_HOST=true; or set AUTH_URL to the site's public URL.",
+						"set `trustHost: true` in the config or AUTH_TRUST_HOST=true; or set AUTH_URL to the site's public URL.",
 				);
 			}
 			const basePath = (options.basePath ?? CMS_AUTH_BASE_PATH).replace(/\/$/, "");
 			const admins = adminSets(options);
+			if (![...admins.values()].some((ids) => ids.size > 0) && !isDevAuthBypassEnabled(options.devBypass)) {
+				console.warn(
+					"[cms-auth] No admin is set, so nobody can log in. Set MONTI_ADMIN_GITHUB_ID (your numeric GitHub id) or pass `admins` to the provider or to auth().",
+				);
+			}
 			const providerOf = (id: string | undefined) => providers.find((provider) => provider.id === id);
 			const authjsProviders = providers.map((provider) => provider.setup({ storage, trustHost }));
 			const authjsConfigProviders = authjsProviders as unknown as AuthConfig["providers"];
@@ -158,7 +171,8 @@ export function auth(options: AuthOptions): AuthAdapter {
 			const config: AuthConfig = {
 				// Auth.js matches the path of the request the browser sent, which includes the Next `basePath` (`CmsAuth.basePath` is the in-app path).
 				basePath: withBasePath(basePath),
-				secret: options.secret || process.env.AUTH_SECRET || undefined,
+				// Derived from the one secret (HKDF, purpose "session"), so it differs from every key the plugins encrypt with.
+				secret: secrets.deriveKey("session").toString("base64url"),
 				providers: authjsConfigProviders,
 				session: { strategy: "jwt", maxAge: SESSION_MAX_AGE },
 				trustHost: trustHost || Boolean(pinnedUrl()),
@@ -205,7 +219,10 @@ export function auth(options: AuthOptions): AuthAdapter {
 				if (url.origin === origin) return request;
 				return new Request(new URL(`${url.pathname}${url.search}`, origin), request);
 			};
-			const handle = (request: Request) => Auth(normalize(request), config);
+			const handle = (request: Request) => {
+				requireConfigured();
+				return Auth(normalize(request), config);
+			};
 
 			const headersOf = async (request: Request | undefined) =>
 				request?.headers ?? (await host.requestHeaders?.()) ?? null;
@@ -267,6 +284,7 @@ export function auth(options: AuthOptions): AuthAdapter {
 				})),
 				signIn: async (providerId = defaultProvider, signInOptions) => {
 					if (!providerOf(providerId)) throw new Error(`[cms-auth] Unknown sign-in method "${providerId}".`);
+					requireConfigured();
 					if (isCredentials.get(providerId)) {
 						throw new Error(
 							`[cms-auth] "${providerId}" is a credentials provider, which needs a form on the login page. Not supported yet.`,
