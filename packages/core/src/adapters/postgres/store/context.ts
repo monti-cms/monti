@@ -1,6 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import type { Entry } from "../../../core/store/types";
 import type { Site } from "../../../site";
+import { type Db, dbOn } from "../db/kysely";
 
 export type ContentStoreHooks = {
 	beforePublishCommit?: (entry: Entry, txClient: PoolClient) => Promise<void>;
@@ -12,6 +13,11 @@ export interface StoreContext {
 	/** The site the store works for: its collections, locales, blocks and links. */
 	readonly site: Site;
 	readonly qSchema: string;
+	/**
+	 * Kysely on this store's schema. Without `tx` its queries borrow a connection from the pool; given the `PoolClient` of a `withTransaction` it runs on that
+	 * client, so Kysely and `client.query` share the connection and the transaction (see `db/kysely.ts`).
+	 */
+	readonly db: (tx?: PoolClient) => Db;
 	readonly hooks: ContentStoreHooks;
 }
 
@@ -50,4 +56,16 @@ export async function withTransaction<T>(
 	} finally {
 		client.release();
 	}
+}
+
+/**
+ * `withTransaction` for code that uses Kysely: `fn` gets `trx`, a `Db` on the transaction's own client, and the `client` itself for the code that still writes
+ * plain SQL, so both can be used in one transaction and roll back together.
+ */
+export function withTrx<T>(
+	ctx: Pick<StoreContext, "pool" | "qSchema">,
+	fn: (trx: Db, client: PoolClient) => Promise<T>,
+	options?: { begin?: string; mapError?: (err: unknown) => unknown },
+): Promise<T> {
+	return withTransaction(ctx.pool, (client) => fn(dbOn(client, ctx.qSchema), client), options);
 }
