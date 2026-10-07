@@ -9,7 +9,7 @@
 		"lint:fix": "pnpm exec biome check . --write",
 		"check:korean": "node scripts/check-korean.mjs",
 		"typecheck": "pnpm --filter \"./packages/*\" -r typecheck && pnpm --filter @monti-cms/registry typecheck",
-		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/mdx build && pnpm --filter @monti-cms/syntax-directive build && pnpm --filter @monti-cms/syntax-shiki build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/nextjs build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/blocks build && pnpm --filter @monti-cms/bareun build && pnpm --filter @monti-cms/seo build",
+		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/mdx build && pnpm --filter @monti-cms/syntax-directive build && pnpm --filter @monti-cms/syntax-shiki build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/nextjs build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/blocks build && pnpm --filter @monti-cms/bareun build && pnpm --filter @monti-cms/seo build && pnpm --filter @monti-cms/git-sync build",
 		"registry:build": "node scripts/build-registry.mjs",
 		"registry:check": "node scripts/build-registry.mjs --check",
 		"example:check": "node scripts/check-example.mjs",

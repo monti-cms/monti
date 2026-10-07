@@ -22,6 +22,7 @@
 		"@monti-cms/seo": "file:vendor/monti-cms-seo.tgz",
 		"@monti-cms/syntax-directive": "file:vendor/monti-cms-syntax-directive.tgz",
 		"@monti-cms/bareun": "file:vendor/monti-cms-bareun.tgz",
+		"@monti-cms/git-sync": "file:vendor/monti-cms-git-sync.tgz",
 		"@tanstack/react-query": "^5.104.0",
 		"@tiptap/core": "^3.31.3",
 		"@tiptap/pm": "^3.31.3",

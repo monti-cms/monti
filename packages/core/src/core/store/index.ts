@@ -6,11 +6,12 @@ export type {
 	ContentChange,
 	ContentChangeKind,
 	ContentEvent,
+	DeferredDelivery,
 	EventDelivery,
 	EventDeliveryCounts,
 	EventDeliveryState,
 } from "./events";
-export { CONTENT_CHANGE_KINDS, eventRowOf } from "./events";
+export { CONTENT_CHANGE_KINDS, DeferDelivery, eventRowOf, isDeferred } from "./events";
 export type {
 	ContentStore,
 	EntryStore,

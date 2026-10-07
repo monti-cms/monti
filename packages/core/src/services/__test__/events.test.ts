@@ -2,7 +2,14 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
-import { type ContentEvent, type ContentStore, type Entry, withEventDispatch } from "../../core/store";
+import {
+	type AfterCommit,
+	type ContentEvent,
+	type ContentStore,
+	DeferDelivery,
+	type Entry,
+	withEventDispatch,
+} from "../../core/store";
 import { seedEntry, seedSave } from "../../core/store/__test__/seed";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
@@ -49,7 +56,7 @@ describe("afterCommit delivery", () => {
 		await closeGlobalPool();
 	});
 
-	type Handler = (event: ContentEvent) => void | Promise<void>;
+	type Handler = (event: ContentEvent) => ReturnType<AfterCommit>;
 
 	/** A dispatcher over the shared store with named subscribers. Backoff is a minute on the test clock, so a test moves the clock to make a retry due. */
 	const setup = (handlers: Record<string, Handler>, options: EventDeliveryOptions = {}) => {
@@ -155,6 +162,77 @@ describe("afterCommit delivery", () => {
 			lastError: "down on try 1",
 		});
 		expect(failed?.nextAttemptAt).toBeInstanceOf(Date);
+	});
+
+	it.each([
+		["returns a retryAt", (retryAt: Date) => ({ retryAt })],
+		[
+			"throws a DeferDelivery",
+			(retryAt: Date) => {
+				throw new DeferDelivery(retryAt);
+			},
+		],
+	])("a subscriber that %s is rescheduled, not failed: no attempt used, not listed, no dead letter", async (_name, defer) => {
+		const tries: number[] = [];
+		const { store, events, name } = setup(
+			{
+				a: (event) => {
+					tries.push(event.attempt);
+					// Defers more often than the default allowed attempts (8), then delivers.
+					if (tries.length <= 10) return defer(new Date(clock().getTime() + 60_000));
+				},
+			},
+			{ maxAttempts: 2 },
+		);
+		const entry = await create(store, `delivery-defer-${++counter}`);
+		expect(tries).toEqual([1]);
+
+		// Rescheduled: nothing failed, nothing dead, the delivery is pending and due at the time it asked for.
+		expect((await events.list()).items.filter((item) => item.change.entryId === entry.id)).toEqual([]);
+		const pending = await events.list({ states: ["pending"] });
+		expect(pending.items.find((item) => item.change.entryId === entry.id)).toMatchObject({
+			subscriber: name("a"),
+			state: "pending",
+			attempts: 0,
+			lastError: null,
+		});
+
+		// Not due before the time it asked for.
+		expect(await events.retry()).toMatchObject({ delivered: 0, deferred: 0 });
+		expect(tries).toHaveLength(1);
+
+		// Due again: deferred again, still not a failure, and the attempt number stays 1 however often it is deferred.
+		for (let round = 0; round < 9; round += 1) {
+			advance(61_000);
+			expect(await events.retry()).toMatchObject({ failed: 0, dead: 0 });
+		}
+		expect(tries.slice(0, 10).every((attempt) => attempt === 1)).toBe(true);
+		expect((await events.list({ states: ["dead"] })).items.filter((item) => item.change.entryId === entry.id)).toEqual(
+			[],
+		);
+
+		advance(61_000);
+		expect(await events.retry()).toMatchObject({ delivered: 1 });
+		expect((await events.list()).items.filter((item) => item.change.entryId === entry.id)).toEqual([]);
+	});
+
+	it("keeps the order of an entry while one of its events is deferred", async () => {
+		const seen = recorder();
+		let defer = true;
+		const { store, events } = setup({
+			a: (event) => {
+				if (event.kind === "created" && defer) return { retryAt: new Date(clock().getTime() + 60_000) };
+				seen.handler(event);
+			},
+		});
+		const entry = await create(store, "delivery-defer-order");
+		await save(store, entry, "later");
+		// The save waits for the deferred creation.
+		expect(seen.of(entry.id)).toEqual([]);
+		defer = false;
+		advance(61_000);
+		await events.retry();
+		expect(seen.of(entry.id).map((item) => item.kind)).toEqual(["created", "saved"]);
 	});
 
 	it("retries a failed delivery with the same event id once its backoff passed, and not before", async () => {
@@ -372,7 +450,7 @@ describe("afterCommit delivery", () => {
 		it("writes events and delivers nothing, and a retry has nothing to do", async () => {
 			const { store, events } = setup({});
 			const entry = await create(store, "no-subscribers");
-			expect(await events.retry()).toEqual({ delivered: 0, failed: 0, dead: 0 });
+			expect(await events.retry()).toEqual({ delivered: 0, failed: 0, dead: 0, deferred: 0 });
 			expect((await store.getEntry(entry.id)).id).toBe(entry.id);
 		});
 	});

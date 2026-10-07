@@ -2,6 +2,7 @@ import { aiPlugin } from "@monti-cms/ai";
 import { bareun } from "@monti-cms/bareun";
 import { blocks } from "@monti-cms/blocks";
 import { defineConfig } from "@monti-cms/core";
+import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";
 import { seo } from "@monti-cms/seo";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
@@ -45,5 +46,20 @@ export default defineConfig({
 		}),
 		// Spell and sentence check (Bareun). The key is the server variable `BAREUN_API_KEY`; the button shows without it and the check answers "unavailable".
 		bareun(),
+		// Two-way sync of published entries with files in a GitHub repo (`@monti-cms/git-sync`). It is switched off here, so the example runs with no token and no repo.
+		// To try it: set `enabled` to `true`, put your own repo in `targets`, run `pnpm db:migrate`, open /studio/git-sync, save a GitHub token (and a webhook secret) there,
+		// and run `pnpm exec monti git-sync:push --all` once. The token is saved on that screen (encrypted with CMS_SECRET), never in this file. See the package README.
+		gitSync({
+			enabled: false,
+			targets: [
+				{
+					repo: "your-name/your-content-repo",
+					branch: "main",
+					folder: "content",
+					collections: ["post", "memo"],
+					mode: "commit",
+				},
+			],
+		}),
 	],
 });

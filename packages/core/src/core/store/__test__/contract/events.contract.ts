@@ -175,6 +175,59 @@ export const eventsContract: ContractSuite = (factory) => {
 			expect((await claim(subscriber, first.id, later(31_000))).map((item) => item.change.kind)).toEqual(["saved"]);
 		});
 
+		it("defers a delivery: pending at the asked time, no attempt used, not failed, never dead, and it still holds the order", async () => {
+			const entry = await create("event-defer");
+			await seedSave(store, entry.id, { expectedVersion: entry.version, metadata: { title: "y" }, text: "둘" });
+			const subscriber = subscriberName();
+			await enqueue(subscriber, entry.id);
+			const [first] = await claim(subscriber, entry.id);
+			const eventId = (first as ClaimedDelivery).change.eventId;
+			expect(first?.attempts).toBe(1);
+
+			// Deferring twice in a row (with maxAttempts 1 a failure would have dead-lettered at once) leaves the attempts where they were.
+			for (const round of [1, 2]) {
+				expect(await store.deferDelivery({ eventId, subscriber, retryAt: later(round * 60_000) })).toBe(true);
+				const pending = await store.listEventDeliveries({ states: ["pending"], limit: 200 });
+				expect(
+					pending.items.find((item) => item.change.eventId === eventId && item.subscriber === subscriber),
+				).toMatchObject({
+					state: "pending",
+					attempts: 0,
+					lastError: null,
+					nextAttemptAt: later(round * 60_000),
+				});
+				// Not listed as failed or dead, and not due before the time it asked for.
+				const failing = await store.listEventDeliveries({ states: ["failed", "dead"], limit: 200 });
+				expect(failing.items.find((item) => item.subscriber === subscriber)).toBeUndefined();
+				expect(await claim(subscriber, entry.id, later(round * 60_000 - 1))).toEqual([]);
+				const [again] = await claim(subscriber, entry.id, later(round * 60_000));
+				expect(again?.attempts).toBe(1);
+				expect(again?.change.eventId).toBe(eventId);
+			}
+			// While deferred, the later event of the entry waits; once delivered it goes on.
+			await store.deferDelivery({ eventId, subscriber, retryAt: later(10 * 60_000) });
+			expect(await claim(subscriber, entry.id, later(5 * 60_000))).toEqual([]);
+			const [due] = await claim(subscriber, entry.id, later(10 * 60_000));
+			await store.completeDelivery({
+				eventId: (due as ClaimedDelivery).change.eventId,
+				subscriber,
+				now: later(10 * 60_000),
+			});
+			expect((await claim(subscriber, entry.id, later(10 * 60_000))).map((item) => item.change.kind)).toEqual([
+				"saved",
+			]);
+		});
+
+		it("does not defer a delivery that is not in flight", async () => {
+			const entry = await create("event-defer-idle");
+			const subscriber = subscriberName();
+			await enqueue(subscriber, entry.id);
+			const [claimed] = await claim(subscriber, entry.id);
+			const eventId = (claimed as ClaimedDelivery).change.eventId;
+			await store.completeDelivery({ eventId, subscriber, now: base });
+			expect(await store.deferDelivery({ eventId, subscriber, retryAt: later(1000) })).toBe(false);
+		});
+
 		it("dead-letters a delivery after the allowed tries, and a dead delivery no longer holds the order", async () => {
 			const entry = await create("event-dead");
 			await seedSave(store, entry.id, { expectedVersion: entry.version, metadata: { title: "y" }, text: "둘" });

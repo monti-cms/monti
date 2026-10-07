@@ -3,6 +3,7 @@ import { addComponents, formatAddReport } from "./add";
 import { eventsRetry } from "./events";
 import { formatInitReport, initProject } from "./init";
 import { migrate } from "./migrate";
+import { isPluginCommandName, runPluginCommand } from "./plugin-command";
 import { schemaApply, schemaDiff } from "./schema-apply";
 import { extractSchema, formatExtractReport } from "./schema-extract";
 import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
@@ -14,6 +15,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--server <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--server <file>]`: delivers the `afterCommit` events that are due (for a cron job).
+ * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
  * - `monti schema:types [--schema <file>] [--out <file>] [--watch] [--check]`: writes the types of `monti.schema.json`.
  * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of `cms.config.ts` to `monti.schema.json`.
  * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
@@ -35,6 +37,7 @@ export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { type EventsRetryOptions, eventsRetry } from "./events";
 export { formatInitReport, type InitOptions, type InitReport, initProject } from "./init";
 export { type MigrateOptions, migrate } from "./migrate";
+export { isPluginCommandName, type PluginCommandRun, runPluginCommand } from "./plugin-command";
 export { DEFAULT_REGISTRY_URL, type RegistryItem, readItem, resolveItems } from "./registry";
 export {
 	formatApplyResult,
@@ -90,6 +93,7 @@ Commands:
               --all                 Also try the failed deliveries that are not due yet
               --limit <n>           Most deliveries to try (default 100)
               --env-file <file>, --no-env-file, --server <file>   As for migrate
+  <plugin>:<command>    Run a command a plugin adds, with the app loaded as for migrate (for example git-sync:pull). Add --help for its options
   schema:types    Write the types of the schema file (monti-env.d.ts), so collections and locales are typed without writing types
               --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
               --out <file>          Declaration file (default: monti-env.d.ts next to the schema file)
@@ -279,6 +283,9 @@ export async function runCli(
 			const outcome = await schemaApply({ ...options, dryRun: values["dry-run"] });
 			io.log(outcome.text);
 			return outcome.ok ? 0 : 1;
+		}
+		if (command !== undefined && isPluginCommandName(command)) {
+			return await runPluginCommand({ cwd: io.cwd, command, argv: rest, log: io.log, error: io.error });
 		}
 		if (command === undefined || command === "help" || command === "--help" || command === "-h") {
 			io.log(HELP);

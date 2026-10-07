@@ -27,10 +27,12 @@ export type {
 	ContentChange,
 	ContentChangeKind,
 	ContentEvent,
+	DeferredDelivery,
 	EventDelivery,
 	EventDeliveryCounts,
 	EventDeliveryState,
 } from "../core/store";
+export { DeferDelivery } from "../core/store";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
 export type {
 	CmsEvents,

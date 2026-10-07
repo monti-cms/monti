@@ -15,7 +15,7 @@ const buildScript = path.resolve(packagesDir, "../scripts/build-styles.mjs");
 const themeCss = readFileSync(path.resolve(__dirname, "../../styles/theme.css"), "utf8");
 const adminCss = readFileSync(path.resolve(__dirname, "../../styles/admin.css"), "utf8");
 /** Packages with an admin stylesheet (`styles/index.css`). */
-/** (ai, mdx and seo ship none: their utilities are compiled into the admin's file, which scans their sources.) */
+/** (ai, mdx, seo and git-sync ship none: their utilities are compiled into the admin's file, which scans their sources.) */
 const STYLE_PACKAGES = ["admin", "blocks"];
 
 const TOKENS = [
@@ -221,7 +221,7 @@ describe("admin CSS confinement", () => {
 		const variable = new RegExp(`\\(\\s*--(?:color-)?(?:${TOKENS})(?![\\w-])`, "g");
 		const dark = /(?<=[\s"'`:!([])dark:(?=[^\s,])/g;
 		const orientation = /(?<![\w-])(?:group-|peer-|in-|has-)*data-(?:horizontal|vertical)(?![\w-[])/g;
-		for (const pkg of ["core", "admin", "blocks", "mdx", "seo", "ai", "bareun"]) {
+		for (const pkg of ["core", "admin", "blocks", "mdx", "seo", "ai", "bareun", "git-sync"]) {
 			const root = path.join(packagesDir, pkg, "src");
 			for (const file of sourceFiles(root)) {
 				const text = readFileSync(file, "utf8");

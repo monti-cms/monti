@@ -99,7 +99,7 @@ describe("POST /v1/events/retry", () => {
 		const store = storeOf();
 		const response = await retryAll(post("events/retry", { body: {} }), { cms: subscribed(store) });
 		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ delivered: 0, failed: 0, dead: 0, counts });
+		expect(await response.json()).toEqual({ delivered: 0, failed: 0, dead: 0, deferred: 0, counts });
 		expect(store.claimDeliveries).toHaveBeenCalledWith(
 			expect.objectContaining({ subscribers: ["plugin:sync"], ignoreBackoff: undefined }),
 		);
