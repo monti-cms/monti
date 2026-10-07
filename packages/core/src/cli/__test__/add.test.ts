@@ -497,7 +497,12 @@ describe("the registry of this repo", () => {
 		it("needs article-body and puts its pages under app/(site)/blog through {app}", () => {
 			expect(item.registryDependencies).toContain("article-body");
 			const targets = item.files.flatMap((file) => (file.target ? [file.target] : []));
-			expect(targets.sort()).toEqual(["~/{app}/(site)/blog/[slug]/page.tsx", "~/{app}/(site)/blog/page.tsx"]);
+			// Every page goes through {app} into app/(site)/..., and the set has the post list, the post page and the draft preview page.
+			expect(targets.length).toBeGreaterThan(0);
+			expect(targets.every((target) => target.startsWith("~/{app}/(site)/"))).toBe(true);
+			expect(targets).toContain("~/{app}/(site)/blog/page.tsx");
+			expect(targets).toContain("~/{app}/(site)/blog/[slug]/page.tsx");
+			expect(targets.some((target) => /\(site\)\/preview\/.+\/\[slug\]\/page\.tsx$/.test(target))).toBe(true);
 		});
 
 		it("never imports the admin packages or any stylesheet: it draws with the host's own Tailwind", () => {
@@ -513,7 +518,7 @@ describe("the registry of this repo", () => {
 			expect(item.dependencies?.some((name) => name.startsWith("@monti-cms/admin"))).toBe(false);
 		});
 
-		it("installs a working set of pages into a Next app: theme.config.ts, the parts, and the two route files", async () => {
+		it("installs a working set of pages into a Next app: theme.config.ts, the parts, and the route files (list, post and preview)", async () => {
 			const host = temp("host", {
 				"package.json": json({ name: "site" }),
 				"tsconfig.json": HOST_FILES["tsconfig.json"],
@@ -527,6 +532,7 @@ describe("the registry of this repo", () => {
 			expect(report.items).toEqual(["article-body", "blog-theme"]);
 			expect(report.created).toContain("app/(site)/blog/page.tsx");
 			expect(report.created).toContain("app/(site)/blog/[slug]/page.tsx");
+			expect(report.created).toContain("app/(site)/preview/blog/[slug]/page.tsx");
 			expect(report.created).toContain("src/components/monti/blog-theme/theme.config.ts");
 			expect(read(host, "app/(site)/blog/[slug]/page.tsx")).toContain(`from "@/components/monti/blog-theme/blog-post"`);
 			expect(read(host, "src/components/monti/blog-theme/blog-post.tsx")).toContain(
