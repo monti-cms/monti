@@ -29,7 +29,7 @@ pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈�
 | --- | --- |
 | `cms.config.ts` | 컬렉션·블록·확장(`plugins`의 `mdx()`·차트 블록·`seo()`). 블로그와 다르게 관리자 경로 `admin.path: "/studio"`, 주소 규칙 `site.localePrefix: "always"`(모든 언어에 `/en`), 미리보기 언어는 경로(`previewLocaleParam: false`) |
 | `cms.server.ts` | CMS 인스턴스: DB·GitHub 로그인 서버 설정 위의 `createCms`(`monti init` 그대로, `githubAuth`는 `@monti-cms/nextjs/auth`에서 온다). 관리자·API 라우트·사이트 페이지(`cms.read.*`)가 모두 여기서 `cms`를 불러온다 |
-| `app/components/site-blocks.tsx` | 사이트 블록(`quote-card`, `map`)의 공개 컴포넌트. 블록 정의에서 타입이 정해지는 `DocumentComponents`로 쓰고 `<CmsContent components={...} />`에 넘긴다 |
+| `app/components/site-blocks.tsx` | 사이트 블록(`quote-card`, `map`)의 공개 컴포넌트. 블록 정의에서 타입이 정해지는 `DocumentComponentsOf<typeof cms>`로 쓰고 `<CmsContent cms={cms} components={...} />`에 넘긴다 |
 | `app/(admin)/studio/` | 관리자 화면(`[[...path]]/page.tsx`·`layout.tsx`, `@monti-cms/nextjs/admin` 사용. 레이아웃이 미리 만든 `@monti-cms/admin/styles.css`와 `@monti-cms/blocks/styles.css`를 불러온다)과 맞춤법 검사 확장 예시(`admin-components.tsx`) |
 | `components/monti/blog-theme/`와 `app/(site)/[locale]/blog/` | 블로그 목록과 글 페이지. 이 폴더에서 `pnpm exec monti add blog-theme --registry ../../registry/r`로 소스를 설치했습니다. 명령은 라우트 파일을 `app/(site)/blog/`에 쓰지만, 이 사이트는 `/en/...` 주소를 쓰므로 `[locale]` 아래로 옮겼고 페이지는 거기서 `params.locale`을 읽습니다. 설치 뒤에 고친 파일은 `components/monti/blog-theme/theme.config.ts` 하나로, 컬렉션(`article`), 주제 관계(`topicIds`), `components: siteComponents`입니다. 명령을 다시 실행하면 라우트 파일이 `app/(site)/blog/`에 또 써지니 그 사본은 지우세요 |
 | `components/monti/article-body/` | 글 본문. 이 폴더에서 `pnpm exec monti add article-body --registry ../../registry/r`로 소스를 설치해 글 페이지가 씁니다(`blog-theme`도 함께 가져옵니다). 자유롭게 고쳐도 되며, 고친 파일은 `--overwrite` 없이는 `monti add`가 덮어쓰지 않습니다(코어 README의 "소스로 쓰는 컴포넌트"). 가져올 때 쓰는 `@/*` 별칭이 `tsconfig.json`에 있습니다 |

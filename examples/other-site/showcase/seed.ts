@@ -2,7 +2,7 @@
  * Seeds the showcase articles into the database the example app points at (`CMS_DATABASE_URL`, `CMS_SCHEMA`), through the app's own write path
  * (`cms.contentService()`: create, save, publish). It is run by `pnpm preview:example` (`scripts/preview-example.mjs`) from this app's folder:
  *
- *   pnpm exec tsx --env-file=.env.local --import @monti-cms/core/register showcase/seed.ts <port>
+ *   pnpm exec tsx --env-file=.env.local showcase/seed.ts <port>
  *
  * It writes an author, a topic, two published articles (`cms-elements` and `cms-elements-details`) and one unpublished draft, then prints
  * the public and the admin URLs. Publishing runs the same checks as the admin, so a body that has issues stops the seed.

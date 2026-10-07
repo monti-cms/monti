@@ -7,4 +7,4 @@ const nextConfig: NextConfig = {
 	turbopack: { root: import.meta.dirname },
 };
 
-export default withCms(nextConfig, { config: "./cms.config.ts" });
+export default withCms(nextConfig);

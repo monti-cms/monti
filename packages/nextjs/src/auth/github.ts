@@ -1,4 +1,3 @@
-import { createActiveTranslator } from "@monti-cms/core";
 import {
 	assertDevBypassSafe,
 	isAllowedAdminId,
@@ -8,9 +7,6 @@ import {
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "@monti-cms/core/server";
 import type { createGithubNextAuth } from "./auth-config";
 import { authMessages } from "./messages";
-
-/** The UI locale is picked when text is read. Used instead of `i18n`, which reads the site config, so that `cms.server.ts` does not pull in the config. */
-const t = createActiveTranslator(authMessages);
 
 export interface GithubAuthOptions {
 	readonly clientId: string | undefined;
@@ -58,8 +54,10 @@ const requestHeaders = async (): Promise<Pick<Headers, "get"> | null> => {
 export function githubAuth(options: GithubAuthOptions): AuthAdapter {
 	return {
 		name: "github",
-		create: ({ loginPath, trustHost }): CmsAuth => {
+		create: ({ site, loginPath, trustHost }): CmsAuth => {
 			assertDevBypassSafe(options.devBypass);
+			// The login texts follow the admin language of the instance's site.
+			const t = site.createTranslator(authMessages);
 			if (!trustHost && process.env.NODE_ENV === "production" && !(process.env.AUTH_URL ?? process.env.NEXTAUTH_URL)) {
 				console.warn(
 					"[cms-auth] The host is not trusted, so login will fail with an UntrustedHost error. Behind a proxy or on a platform such as Vercel, " +

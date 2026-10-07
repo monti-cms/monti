@@ -24,8 +24,8 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta
 | Entry point | Used in | Contents |
 | --- | --- | --- |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, the `CmsRouteHandler` type |
-| `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig, { config })` |
-| `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata`, `NextAdminRouter` |
+| `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
+| `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth(options)` |
 
 ### Route handler
@@ -48,20 +48,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {};
 
-export default withCms(nextConfig, { config: "./cms.config.ts" });
+export default withCms(nextConfig);
 ```
 
-It points the `@cms-config` alias at the site config, builds the core package with the app, passes Next's `basePath` to the server and browser bundles, and links an empty module for optional dependencies of the CMS packages that are not installed (see "Optional dependencies" in the core README).
+It links no config file (the site config goes to `createCms` in `cms.server.ts`, and the admin gets it from that instance). It builds the core package with the app, passes Next's `basePath` to the server and browser bundles, and links an empty module for optional dependencies of the CMS packages that are not installed (see "Optional dependencies" in the core README).
 
 ### Admin page and layout
 
 ```tsx
 // app/(admin)/admin/layout.tsx
-import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
+import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
 import { cms } from "../../../cms.server";
 
-export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin";
+export const generateMetadata = () => cmsAdminMetadata(cms);
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
 	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;

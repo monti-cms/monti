@@ -85,12 +85,7 @@ console.log("wrote examples/other-site/.env.local");
 
 // 5. Tables and content.
 run("pnpm", ["exec", "monti", "migrate", "--no-env-file"], app, env);
-run(
-	"pnpm",
-	["exec", "tsx", "--env-file=.env.local", "--import", "@monti-cms/core/register", "showcase/seed.ts", PORT],
-	app,
-	env,
-);
+run("pnpm", ["exec", "tsx", "--env-file=.env.local", "showcase/seed.ts", PORT], app, env);
 
 console.log(
 	`\nStart the preview (Ctrl+C stops it), then open the URLs above:\n  cd examples/other-site && pnpm exec next dev -p ${PORT}`,

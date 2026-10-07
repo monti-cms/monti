@@ -1,12 +1,15 @@
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
 import { githubAuth } from "@monti-cms/nextjs/auth";
+import config from "./cms.config";
 
 /**
- * The CMS instance (the shape `monti init` generates). The store and admin login are read from environment variables (`.env.local`). No media storage is set up.
+ * The CMS instance (the shape `monti init` generates). It holds the site config (`cms.config.ts`); the store and admin login are read from environment variables
+ * (`.env.local`). No media storage is set up.
  * The admin API route, the admin screens and the site's pages all use this one `cms`. The admin API route also handles the login API
  * (`/api/cms/auth/*`, no separate login route file). The GitHub OAuth app's callback URL is `<site URL>/api/cms/auth/callback/github`.
  */
 export const cms = createCms({
+	config,
 	server: defineServerConfig({
 		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
 		auth: githubAuth({

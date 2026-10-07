@@ -4,8 +4,8 @@
  *
  * ```tsx
  * // app/(admin)/admin/layout.tsx
- * import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
- * export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin";
+ * import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
+ * export const generateMetadata = () => cmsAdminMetadata(cms);
  * export default function AdminLayout({ children }: { children: React.ReactNode }) {
  *   return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;
  * }
@@ -17,7 +17,8 @@
  * }
  * ```
  *
- * `cms` is the instance the app's server file exports. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
+ * `cms` is the instance the app's server file exports. The layout hands its site to the admin UI as data (collections, locales, blocks, addresses and admin language;
+ * see `Site.snapshot()`), so the browser never loads the config file. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  */
 import {
 	AdminLayout,
@@ -33,8 +34,8 @@ import { NextAdminRouter } from "./router";
 
 export { NextAdminRouter };
 
-/** Admin UI metadata. Use it in the app's admin layout as `export const metadata = cmsAdminMetadata;`. */
-export const cmsAdminMetadata: Metadata = adminMetadata;
+/** Admin UI metadata of an instance. Use it in the app's admin layout: `export const generateMetadata = () => cmsAdminMetadata(cms);`. */
+export const cmsAdminMetadata = (cms: Pick<Cms, "site">): Metadata => adminMetadata(cms);
 
 export type CmsAdminLayoutProps = AdminLayoutProps;
 
