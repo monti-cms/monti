@@ -1,7 +1,0 @@
-/*
- * @monti-cms/mdx styles. Import it after `@monti-cms/admin/styles.css` in the app's Tailwind input CSS.
- * Colors and tokens come from the admin package styles.
- */
-
-/* Finds Tailwind classes in the source panel of the published bundle (inside the workspace the app reads the source directly). */
-@source "./dist";
