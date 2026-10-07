@@ -7,6 +7,7 @@ import {
 	SUPPORTED_FILE_MIME_TYPES,
 	SUPPORTED_IMAGE_MIME_TYPES,
 } from "./media-types";
+import { MAX_ENTRY_SEARCH_LIMIT } from "./store/types";
 
 export * from "./media-types";
 
@@ -42,6 +43,9 @@ const dateQuery = z.iso
 
 /** List query keys that may appear multiple times. The route reads only these keys with `getAll`. */
 export const LIST_ARRAY_QUERY_KEYS = ["status", "relation", "locale"] as const;
+
+/** Search query keys that may appear multiple times (`id`: entries to look up by id). */
+export const SEARCH_ARRAY_QUERY_KEYS = ["id"] as const;
 
 /** Field/column names. Accepts only the same shape as metadata keys. */
 const FIELD_NAME = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
@@ -333,6 +337,17 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 		pageSize: pageSizeSchema.default(25),
 	});
 
+	/** The entry search of a picker (`/v1/entries/search`): `query`, and at most `limit` hits (1 to 50, default 20). */
+	const searchEntriesQuerySchema = z.object({
+		collection: collectionSchema,
+		query: z.string().max(200).optional(),
+		locale: oneOf(LOCALES).optional(),
+		publishedOnly: booleanQuery,
+		limit: z.coerce.number().int().min(1).max(MAX_ENTRY_SEARCH_LIMIT).optional(),
+		/** Entries to look up by id (repeat `id`) instead of searching. */
+		id: z.array(z.uuid()).max(500).optional(),
+	});
+
 	const createEntryBodySchema = z
 		.object({
 			collection: collectionSchema,
@@ -403,6 +418,7 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 	return {
 		collectionSchema,
 		listEntriesQuerySchema,
+		searchEntriesQuerySchema,
 		createEntryBodySchema,
 		createFolderBodySchema,
 		preferencesBodySchema,

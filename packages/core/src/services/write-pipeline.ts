@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { validateBlocks } from "../core/block-validate";
 import { type ImportNormalizers, type MediaUrlResolver, normalizeImportedDoc } from "../core/import-normalize";
 import { type LinkResolver, linkAddressKey } from "../core/link-ids";
 import { documentInputBody, prepareSnapshot, readInputBody } from "../core/snapshot";
@@ -12,7 +13,8 @@ import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, typ
  * The one place content is prepared for a write. Create, save, publish (single and bulk), duplicate, translation and bulk metadata or folder
  * changes all build their input and call `run`, so a rule or hook added here applies to every one of them. The store never prepares content.
  *
- * Stages: `transform` hooks, core preparation (`prepareSnapshot`, always on the transformed data), `validate` hooks, and for a publish
+ * Stages: `transform` hooks, core preparation (`prepareSnapshot`, always on the transformed data), the `validate` of each block
+ * (warnings only), `validate` hooks, and for a publish
  * `validatePublish` hooks. The store commit and `afterCommit` come after, in the caller and the store.
  */
 
@@ -40,7 +42,7 @@ export interface WriteRequest {
 export interface WriteResult {
 	/** Core preparation of the (transformed) input. */
 	readonly snapshot: PreparedSnapshot;
-	/** Warnings added by `validate` and `validatePublish` hooks. */
+	/** Warnings of the blocks' own `validate`, and of the `validate` and `validatePublish` hooks. */
 	readonly warnings: readonly Issue[];
 	/** Whether a `transform` hook changed the data. */
 	readonly transformed: boolean;
@@ -286,9 +288,13 @@ export function createWritePipeline(options: WritePipelineOptions) {
 				...request.prepare,
 				...(read.imported ? { imported: read.imported } : {}),
 			});
-			if (sources.length === 0) return { snapshot, warnings: [], transformed };
+			// The blocks check their own syntax (`validate` of a block definition). Findings are warnings, never blockers.
+			const warnings: Issue[] = await validateBlocks(site, snapshot.doc, {
+				locale: request.locale,
+				operation: request.operation,
+			});
+			if (sources.length === 0) return { snapshot, warnings, transformed };
 
-			const warnings: Issue[] = [];
 			const added = await validate(sources, "validate", request, snapshot);
 			if (added.issues.length > 0) throw new ServiceError("validation_failed", added.issues);
 			warnings.push(...added.warnings);

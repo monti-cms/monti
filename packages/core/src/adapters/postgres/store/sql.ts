@@ -4,5 +4,8 @@ const escapeLikeText = (value: string): string => value.replace(/[%_\\]/g, "\\$&
 /** "Contains this text" pattern. Always pass the value as a bind parameter. */
 export const likeContainsPattern = (value: string): string => `%${escapeLikeText(value)}%`;
 
+/** "Has a word that starts with this text" pattern (a space before it). Always pass the value as a bind parameter. */
+export const likeWordPattern = (value: string): string => `% ${escapeLikeText(value)}%`;
+
 /** "Starts with this text" pattern. Always pass the value as a bind parameter. */
 export const likePrefixPattern = (value: string): string => `${escapeLikeText(value)}%`;

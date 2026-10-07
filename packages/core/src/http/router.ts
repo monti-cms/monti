@@ -13,6 +13,7 @@ import * as r18 from "./v1/entries/[id]/translations/route";
 import * as r19 from "./v1/entries/[id]/trash/route";
 import * as r20 from "./v1/entries/[id]/unarchive/route";
 import * as r10 from "./v1/entries/route";
+import * as rEntrySearch from "./v1/entries/search/route";
 import { HttpError, handleApiError } from "./v1/error-handler";
 import * as rEventDismiss from "./v1/events/[id]/dismiss/route";
 import * as rEventRetry from "./v1/events/[id]/retry/route";
@@ -57,6 +58,8 @@ type RouteModule = Partial<Record<Method, unknown>>;
 const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule }> = [
 	{ pattern: "v1/bulk", module: r9 },
 	{ pattern: "v1/entries", module: r10 },
+	// Named before `[id]`, so `search` is not read as an entry id.
+	{ pattern: "v1/entries/search", module: rEntrySearch },
 	{ pattern: "v1/entries/[id]", module: r11 },
 	{ pattern: "v1/entries/[id]/archive", module: r12 },
 	{ pattern: "v1/entries/[id]/duplicate", module: r13 },

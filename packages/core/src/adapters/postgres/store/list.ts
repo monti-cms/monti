@@ -2,19 +2,23 @@ import { ENTRY_STATUSES, LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api"
 import type { Collection } from "../../../core/collections";
 import { isUuid } from "../../../core/ids";
 import { CmsError } from "../../../core/store/errors";
-import type {
-	DateRange,
-	EntryStatus,
-	ListEntriesItem,
-	ListEntriesParams,
-	ListEntriesResult,
-	ListTranslationMember,
+import {
+	type DateRange,
+	DEFAULT_ENTRY_SEARCH_LIMIT,
+	type EntrySearchHit,
+	type EntryStatus,
+	type ListEntriesItem,
+	type ListEntriesParams,
+	type ListEntriesResult,
+	type ListTranslationMember,
+	MAX_ENTRY_SEARCH_LIMIT,
+	type SearchEntriesParams,
 } from "../../../core/store/types";
 import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive";
 import type { StoredField } from "../../../schema/walk";
 import type { Site } from "../../../site";
 import type { StoreContext } from "./context";
-import { likeContainsPattern } from "./sql";
+import { likeContainsPattern, likePrefixPattern, likeWordPattern } from "./sql";
 
 /**
  * Languages that have a value in the entry. A language exists if any per-language text field (`localized: true`) has a value. The default language is the field itself,
@@ -108,11 +112,92 @@ function assertParams(site: Site, params: ListEntriesParams) {
 	}
 }
 
+function assertSearchParams(site: Site, params: SearchEntriesParams) {
+	if (typeof params !== "object" || params === null || Array.isArray(params)) {
+		throw new CmsError("Invalid parameters", "invalid_input");
+	}
+	if (!(site.COLLECTIONS as readonly string[]).includes(params.collection)) {
+		throw new CmsError("Invalid collection", "invalid_input");
+	}
+	if (params.query !== undefined && typeof params.query !== "string")
+		throw new CmsError("Invalid query", "invalid_input");
+	if (params.publishedOnly !== undefined && typeof params.publishedOnly !== "boolean") {
+		throw new CmsError("Invalid publishedOnly", "invalid_input");
+	}
+	if (params.locale !== undefined && !site.isLocale(params.locale))
+		throw new CmsError("Invalid locale", "invalid_input");
+	if (
+		params.limit !== undefined &&
+		(!Number.isInteger(params.limit) || params.limit < 1 || params.limit > MAX_ENTRY_SEARCH_LIMIT)
+	) {
+		throw new CmsError("Invalid limit", "invalid_input");
+	}
+	if (params.ids !== undefined && (!Array.isArray(params.ids) || params.ids.some((id) => !isUuid(id)))) {
+		throw new CmsError("Invalid ids", "invalid_input");
+	}
+}
+
 /** Admin list. Search, filtering, sorting, and paging are handled on the server. */
 export function createListOps(ctx: StoreContext) {
 	const { pool, qSchema, site } = ctx;
 
 	return {
+		searchEntries: async (params: SearchEntriesParams): Promise<EntrySearchHit[]> => {
+			assertSearchParams(site, params);
+			const values: unknown[] = [];
+			const bind = (value: unknown) => {
+				values.push(value);
+				return `$${values.length}`;
+			};
+			const conditions = [`e.collection = ${bind(params.collection)}`, "e.status <> 'trashed'"];
+			let rank = "0";
+			let limit = DEFAULT_ENTRY_SEARCH_LIMIT;
+			if (params.ids !== undefined) {
+				if (params.ids.length === 0) return [];
+				conditions.push(`e.id = ANY(${bind(params.ids)}::uuid[])`);
+				limit = params.ids.length;
+			} else {
+				limit = params.limit ?? DEFAULT_ENTRY_SEARCH_LIMIT;
+				if (params.publishedOnly) conditions.push("e.status = 'published'");
+				if (params.locale !== undefined) conditions.push(`e.locale = ${bind(params.locale)}`);
+				const query = params.query?.trim();
+				if (query) {
+					const exact = bind(query);
+					const prefix = bind(likePrefixPattern(query));
+					const word = bind(likeWordPattern(query));
+					const contains = bind(likeContainsPattern(query));
+					rank = `CASE
+						WHEN lower(title) = lower(${exact}) THEN 0
+						WHEN title ILIKE ${prefix} THEN 1
+						WHEN title ILIKE ${word} THEN 2
+						WHEN title ILIKE ${contains} THEN 3
+						WHEN working_slug ILIKE ${contains} THEN 4
+					END`;
+				}
+			}
+			const res = await pool.query<{
+				id: string;
+				title: string | null;
+				working_slug: string | null;
+				status: EntryStatus;
+			}>(
+				`SELECT id, title, working_slug, status
+				 FROM (
+					SELECT e.id, e.working_slug, e.status,
+					       COALESCE(NULLIF(w.metadata->>'title', ''), NULLIF(e.working_slug, '')) AS title
+					FROM "${qSchema}".entries e
+					JOIN "${qSchema}".entry_bodies w ON w.entry_id = e.id AND w.state = 'working'
+					WHERE ${conditions.join(" AND ")}
+				 ) found
+				 CROSS JOIN LATERAL (SELECT ${rank} AS rank) ranked
+				 WHERE rank IS NOT NULL
+				 ORDER BY rank, lower(title) ASC NULLS LAST, id ASC
+				 LIMIT ${limit}`,
+				values,
+			);
+			return res.rows.map((row) => ({ id: row.id, title: row.title, slug: row.working_slug, status: row.status }));
+		},
+
 		listEntries: async (params: ListEntriesParams): Promise<ListEntriesResult> => {
 			assertParams(site, params);
 			const page = params.page ?? 1;

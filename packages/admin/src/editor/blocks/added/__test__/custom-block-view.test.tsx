@@ -1,5 +1,5 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
@@ -11,6 +11,7 @@ import { renderWithSite } from "../../../../test/site";
 import { para, storedDoc } from "../../../../test/stored-doc";
 import { buildEditorExtensions } from "../../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../../tiptap-content";
+import { BlockIssuesProvider } from "../../block-issues-context";
 import { BlockFrame, Content, useBlockEditor } from "../../use-block-editor";
 
 afterEach(cleanup);
@@ -91,5 +92,30 @@ describe("custom block NodeView", () => {
 		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
 		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ type: "notice", attrs: { level: "warn" } }));
 		expect(JSON.stringify(savedNotice(editor))).toContain("본문");
+	});
+
+	it("shows the warnings of a block next to that block only", async () => {
+		const id = NOTICE.content[0]?.id as string;
+		await mount(NOTICE, (node) => (
+			<BlockIssuesProvider
+				issues={
+					new Map([
+						[id, ["1줄: 문법 오류"]],
+						["another-block", ["다른 블록의 경고"]],
+					])
+				}
+			>
+				{node}
+			</BlockIssuesProvider>
+		));
+		const frame = document.querySelector("[data-cms-custom-block]") as HTMLElement;
+		const list = await within(frame).findByRole("list", { name: "이 블록의 경고" });
+		expect(list.textContent).toBe("1줄: 문법 오류");
+		expect(screen.queryByText("다른 블록의 경고")).toBeNull();
+	});
+
+	it("shows no warning list for a block without warnings", async () => {
+		await mount(NOTICE);
+		expect(screen.queryByRole("list", { name: "이 블록의 경고" })).toBeNull();
 	});
 });

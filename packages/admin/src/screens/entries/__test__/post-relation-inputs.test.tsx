@@ -21,14 +21,26 @@ const POSTS = [
 	{ id: "self", title: "지금 글", status: "published" },
 ];
 
+/** The search requests the pickers sent (the server search is `GET /v1/entries/search`). */
+let searches: URL[] = [];
+
 beforeEach(() => {
+	searches = [];
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async (input: RequestInfo | URL) => {
 			const url = new URL(String(input), "http://localhost");
-			if (url.pathname === "/api/cms/v1/entries") return json({ items: POSTS, total: POSTS.length });
-			const one = POSTS.find((post) => url.pathname === `/api/cms/v1/entries/${post.id}`);
-			if (one) return json({ status: one.status, working: { metadata: { title: one.title } } });
+			if (url.pathname === "/api/cms/v1/entries/search") {
+				searches.push(url);
+				const ids = url.searchParams.getAll("id");
+				const query = (url.searchParams.get("query") ?? "").toLowerCase();
+				const items = POSTS.filter((post) =>
+					ids.length > 0 ? ids.includes(post.id) : post.title.toLowerCase().includes(query),
+				)
+					.filter((post) => url.searchParams.get("publishedOnly") !== "true" || post.status === "published")
+					.map((post) => ({ ...post, slug: post.id }));
+				return json({ items });
+			}
 			throw new Error(`Unexpected fetch ${url}`);
 		}),
 	);
@@ -61,7 +73,7 @@ const optionNames = async () => (await screen.findAllByRole("option")).map((opti
 describe("replacement post (single relation)", () => {
 	const field: RelationField = { kind: "relation", label: "최신 글", to: "post" };
 
-	it("pressing opens the full post list minus itself, and picking switches to that ID", async () => {
+	it("pressing opens the first posts minus itself, and picking switches to that ID", async () => {
 		const onChange = vi.fn();
 		render(<EntryPicker {...props(field, null, onChange)} />);
 		await openList("최신 글");
@@ -77,6 +89,68 @@ describe("replacement post (single relation)", () => {
 		render(<EntryPicker {...props(field, "p1")} />);
 		await waitFor(() =>
 			expect((screen.getByRole("combobox", { name: "최신 글" }) as HTMLInputElement).value).toBe("첫 글"),
+		);
+	});
+});
+
+describe("relation picker search on the server", () => {
+	const field: RelationField = { kind: "relation", label: "최신 글", to: "post" };
+
+	it("asks the server for the typed text after a pause, instead of loading the whole list", async () => {
+		render(<EntryPicker {...props(field, null)} />);
+		const input = await openList("최신 글");
+		await waitFor(() => expect(searches.length).toBeGreaterThan(0));
+		// The first request is the first posts of the collection: no text, no paging through everything.
+		expect(searches[0]?.searchParams.get("collection")).toBe("post");
+		expect(searches[0]?.searchParams.has("query")).toBe(false);
+
+		fireEvent.input(input, { target: { value: "둘째" }, inputType: "insertText" });
+		await waitFor(() => expect(searches.at(-1)?.searchParams.get("query")).toBe("둘째"));
+		await waitFor(async () => expect(await optionNames()).toEqual([`둘째 글${t("entry.unpublished")}`]));
+	});
+
+	it("sends one request for a burst of typing", async () => {
+		render(<EntryPicker {...props(field, null)} />);
+		const input = await openList("최신 글");
+		await waitFor(() => expect(searches.length).toBeGreaterThan(0));
+		const before = searches.length;
+		for (const text of ["첫", "첫 ", "첫 글"])
+			fireEvent.input(input, { target: { value: text }, inputType: "insertText" });
+		await waitFor(() => expect(searches.at(-1)?.searchParams.get("query")).toBe("첫 글"));
+		expect(searches.length - before).toBe(1);
+	});
+
+	it("only asks for published posts when the field says so", async () => {
+		render(<EntryPicker {...props({ ...field, publishedOnly: true }, null)} />);
+		await openList("최신 글");
+		await waitFor(async () => expect(await optionNames()).toEqual(["첫 글", "셋째 글"]));
+		expect(searches.every((url) => url.searchParams.get("publishedOnly") === "true")).toBe(true);
+	});
+
+	it("keeps the picked post visible when the search does not return it", async () => {
+		render(<EntryPicker {...props(field, "p2")} />);
+		const input = (await screen.findByRole("combobox", { name: "최신 글" })) as HTMLInputElement;
+		await waitFor(() => expect(input.value).toBe(`둘째 글${t("entry.unpublished")}`));
+		// It was looked up by id, once, whatever the text says.
+		expect(searches.some((url) => url.searchParams.getAll("id").join() === "p2")).toBe(true);
+		fireEvent.mouseDown(input);
+		fireEvent.input(input, { target: { value: "셋째" }, inputType: "insertText" });
+		await waitFor(async () => expect(await optionNames()).toEqual(["셋째 글"]));
+	});
+
+	it("names the picked posts of an ordered list by looking them up by id", async () => {
+		const many: RelationField = { kind: "relation", label: "게시글", to: "post", many: true, ordered: true };
+		render(<OrderedEntryList {...props(many, ["p3", "gone"])} />);
+		const list = await screen.findByRole("list", { name: t("entry.listAria", { target: TARGET }) });
+		await waitFor(() =>
+			expect(
+				within(list)
+					.getAllByRole("listitem")
+					.map((item) => item.textContent),
+			).toEqual([
+				expect.stringContaining("1. 셋째 글"),
+				expect.stringContaining(`2. ${t("entry.missing", { target: TARGET })}`),
+			]),
 		);
 	});
 });

@@ -1,7 +1,9 @@
 import { useSite } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { BrowserFormat } from "../../browser-format";
+import { BlockIssuesProvider, type BlockIssueTexts } from "../../editor/blocks/block-issues-context";
 import { useStoreSelector } from "../../hooks/store";
+import { cmsIssueMessage } from "../api-error-message";
 import {
 	cmsEntryClient,
 	type EntryEditorClient,
@@ -155,27 +157,40 @@ export function EntryEditorProvider({
 				: undefined,
 		[entry?.source, collection, lockedNote, site],
 	);
+	// The warnings of the latest save or publish that point to a block are shown next to that block (`BlockFrame`).
+	const blockIssues = useMemo<BlockIssueTexts>(() => {
+		const byBlock = new Map<string, string[]>();
+		for (const issue of editor.bodyWarnings) {
+			const blockId = issue.position?.blockId;
+			if (!blockId) continue;
+			// Without the field path (`body`), which the block already says by where it is shown.
+			byBlock.set(blockId, [...(byBlock.get(blockId) ?? []), cmsIssueMessage(site, { ...issue, path: undefined })]);
+		}
+		return byBlock;
+	}, [editor.bodyWarnings, site]);
 	return (
 		<EntryEditorContext.Provider value={core}>
-			{site.isCollection(collection) ? (
-				<EntryFormProvider
-					value={{
-						collection,
-						form: editor.form,
-						setForm: editor.setForm,
-						issues: editor.publishIssues,
-						disabled: editor.readOnly,
-						entryId: entry?.id,
-						locale: entry?.locale,
-						entry,
-						locked,
-					}}
-				>
-					{children}
-				</EntryFormProvider>
-			) : (
-				children
-			)}
+			<BlockIssuesProvider issues={blockIssues}>
+				{site.isCollection(collection) ? (
+					<EntryFormProvider
+						value={{
+							collection,
+							form: editor.form,
+							setForm: editor.setForm,
+							issues: editor.publishIssues,
+							disabled: editor.readOnly,
+							entryId: entry?.id,
+							locale: entry?.locale,
+							entry,
+							locked,
+						}}
+					>
+						{children}
+					</EntryFormProvider>
+				) : (
+					children
+				)}
+			</BlockIssuesProvider>
 		</EntryEditorContext.Provider>
 	);
 }

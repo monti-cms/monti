@@ -500,6 +500,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 이런 본문 때문에 실패하는 일은 없다. 발행본과 템플릿도 마찬가지인데, 기존 저장소의 데이터는 언제나 옮겨져야 하기 때문이다. 그중 발행본과 템플릿은 id로 로그에 남는다(`[monti] N published bodies have no document …`). 편집기에서 고치기 전까지는 `unparsed`로 읽힌다(페이지는 아무것도 그리지 않는다).
 **참조 위치.** 저장된 참조의 본문 위치는 전에 `{ "type": "mdx", "line", "column", "blockId"? }`였다. 읽을 때는 두 모양을 모두 받고, 그 항목을 다음에 저장하면 새 모양(`{ "type": "body", "blockId" }`)으로 쓴다. SQL 마이그레이션은 없다.
 
+- **선택 칸용 항목 검색.** `GET /api/cms/v1/entries/search?collection=…&query=…&locale=…&publishedOnly=true&limit=20`은 선택 칸이 쓰도록 한 컬렉션의 항목을 제목으로 찾는다(관리자의 관계 필드는 전체 목록을 불러오지 않고 이렇게 검색한다). `{ items: [{ id, title, slug, status }] }`를 돌려주며 제목이 잘 맞는 순서다(제목이 같은 것, 질의로 시작하는 제목, 질의로 시작하는 낱말이 있는 제목, 질의를 포함한 제목, 질의를 포함한 슬러그). 최대 `limit`개(기본 20, 최대 50)이고 휴지통은 찾지 않는다. `id`를 되풀이하면 검색 대신 그 항목들을 id로 찾는다. 저장소 포트는 `searchEntries`(`ListStore`)다.
 - **관리자 항목 API.** `POST /api/cms/v1/entries`와 `PATCH /api/cms/v1/entries/:id`는 본문을 `doc`(항목의 `working.doc`·`published.doc`로 읽은 문서 JSON) 또는 `body`(글)와 그것을 읽는 `format`으로 받는다("형식" 절). `mdx`는 없다. 문서와 글을 함께 보내거나, 형식 없이 글만 보내거나, 올바른 저장 문서가 아닌 값을 보내면 `400 invalid_input`이다. 아무것도 없으면 새 항목은 빈 본문이고, 패치는 지금 본문을 그대로 둔다.
   읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/entries/:id?format=<이름>`은 `working`과 `published`(번역이면 원문도)에 `body`(문자열)를 더한다. 그 형식으로 쓴 글이며, 다시 가져올 수 있게 쓴다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.textBytes`(어떤 형식이든 글)와 `limits.docBytes`로, 인스턴스의 형식을 `formats`(`{ name, label, mimeType, extension, canImport }`)로 알려 준다. 관리자 편집기는 늘 `doc`을 보낸다.
 - **템플릿 API와 템플릿.** 본문 템플릿은 항목 본문처럼 문서다. `body_templates.doc`이 유일한 원본이고 `body_templates.mdx`는 이제 아무도 쓰지 않는다(열은 남고 선택 사항이다). `POST /api/cms/v1/templates`와 `PATCH /api/cms/v1/templates/:id`는 `{ name, doc }` 또는 `{ name, body, format }`을 받고(둘 다 없으면 빈 템플릿이고, 패치는 본문을 그대로 둔다) `doc`을 돌려주며 `mdx`는 주지 않는다. `GET`의 `?format=<이름>`은 템플릿마다 `body`를 더한다. 형식이 거절한 글은 형식의 발견 사항과 함께 `422 format_import_failed`다. 템플릿에는 항목 초안과 달리 문서가 아닌 글을 담아 둘 자리가 없기 때문이다.
@@ -628,6 +629,31 @@ blocks: [
   달면 그 값이 코드 블록 줄 이름표(`anchor` 줄 효과)이고, 편집기의 본문–코드 잇기가 이 꾸밈을 쓴다(사이트에 하나만).
 - 속성의 선택 값·필수 값·자식 값(`childValue`, 예: 처음 열 탭은 탭 이름 중 하나)과 자식 개수(`children.min`·`max`)는
   발행 전에 검사한다.
+- 블록은 `validate(node, ctx)`로 자기 문법을 직접 검사할 수 있다. 코어는 쓰기 파이프라인에서 본체 준비 다음에, 만들기·저장·발행과 일괄·API·AI 쓰기마다 그 블록의 모든 노드(그 언어의 코드 펜스, 요소, 글자 꾸밈)에 이것을 부른다.
+  `node`에는 `name`, `id`(저장된 문서에서 그 블록의 id), `attributes`, 코드 펜스 블록이면 `source`(주석을 뺀 코드)가 있고, `ctx`에는 `site`(`site.createTranslator(메시지)`로 관리자 언어의 글을 얻는다), `locale`, `operation`이 있다.
+  `{ code, message?, params? }[]`(또는 그것의 프로미스)를 돌려준다. 결과는 **경고**이며 막지 않는다. 각 경고는 `position.blockId`에 그 블록의 id를, `params.block`에 블록 이름을 담고, 저장·발행 응답의 `warnings`로 돌아오며, 편집기는 그 블록 아래에 보여 준다. 검사가 예외를 던지면 `block_validate_failed` 경고가 되고 쓰기는 계속된다.
+  `validate`는 함수이므로 서버에서 돌고, 브라우저가 받는 블록 데이터에는 들어 있지 않다.
+  `@monti-cms/blocks`는 차트를 자체 파서(`parseChartDsl`)로, Mermaid 다이어그램을 `mermaid.parse`로 검사한다(`mermaid`가 설치되어 있을 때만).
+
+```ts
+defineBlock({
+	name: "map",
+	label: "지도",
+	syntax: { kind: "fence", lang: "map" },
+	component: "Map",
+	attributes: {},
+	editor: { view: "node", insertable: true },
+	validate: (node) =>
+		(node.source ?? "")
+			.split("\n")
+			.flatMap((line, index) =>
+				/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(line.trim())
+					? []
+					: [{ code: "map_line", message: `${index + 1}줄이 "위도,경도" 형식이 아닙니다.`, params: { line: index + 1 } }],
+			),
+});
+```
+
 - 쓰던 블록을 빼면 저장 문법에서 빠진다. 이미 그 블록을 쓴 본문은 다시 저장할 때 일반 글로 바뀌므로 쓰던 블록은 빼지 않는다.
 - 본문을 담는 컨테이너는 슬래시 메뉴로 넣으면 빈 문단으로 시작한다. `editor.insert.codeBlocks`(`[{ language, title?, code? }]`)를 주면 그 코드 블록들로 시작하며, `title`은 코드 펜스의 `title` 메타다(코드 탐색기가 `src/index.ts` 파일 하나로 시작하는 데 쓴다).
 - 편집기 노드는 관리자 패키지가 정의에서 만든다. 편집 모양은 관리자 패키지의 `blockViews`(모든 블록의 화면 전체,
@@ -897,7 +923,7 @@ export const cms = createCms({ server });
 | 1 | 입력 만들기: 요청에서, 또는 저장된 초안에서(발행·일괄) |
 | 2 | `transform` 훅. 등록 순서대로(서버 설정이 먼저, 그다음 플러그인을 설정 순서대로). 각 훅은 앞 훅의 결과를 받는다 |
 | 3 | 본체 준비: 정규화·참조 수집·본체 검증. **항상, 변환된 데이터에 대해 돈다** |
-| 4 | `validate` 훅: 실패와 경고를 더한다 |
+| 4 | 블록마다 `validate`(경고만), 이어서 `validate` 훅: 실패와 경고를 더한다 |
 | 5 | 발행(그리고 다시 발행되는 항목 복원)에서 `validatePublish` 훅: 실패와 경고를 더한다 |
 | 6 | 저장소 커밋. 글 하나에 트랜잭션 하나(일괄은 항목마다 커밋) |
 | 7 | `afterCommit` 훅 |

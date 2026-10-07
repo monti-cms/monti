@@ -25,11 +25,11 @@ import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";
 import { IconButton } from "../../ui/icon-button";
 import { CmsApiError, cmsFetch, errorText } from "../admin-api";
-import { type RecordCollection, useTaxonomy } from "../shared/use-taxonomy";
 import type { EntryForm, FormValue } from "./entry-form";
 import { entriesMessages } from "./messages";
-import { useRecordCreator } from "./record-create-sheet";
+import { optionOf, useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
+import { type RelationEntry, useRelationSearch } from "./use-relation-search";
 
 /** Values an input needs from outside the field. The edit screen fills them. */
 export interface FieldContext {
@@ -71,50 +71,7 @@ export function multilineProps(field: { readonly rows?: number }): { rows: numbe
 	return { rows, style: { minHeight: `${rows + 1}rem` } };
 }
 
-type EntryOption = { id: string; title: string; status: string };
-
-/** Maximum count received per list API call. If there are more posts, they are fetched in several batches. */
-const ENTRY_OPTIONS_PAGE_SIZE = 100;
-
-/**
- * Full list of relation targets (entries of the target collection). Fetched all at once up front so it can be shown right away without search when picking.
- * The list API excludes trashed posts, and with `publishedOnly` only published posts are received.
- */
-function useEntryOptions(field: RelationField) {
-	const t = useTranslator(entriesMessages);
-	const site = useSite();
-	const [options, setOptions] = useState<EntryOption[] | null>(null);
-	useEffect(() => {
-		let cancelled = false;
-		const load = async () => {
-			const all: EntryOption[] = [];
-			for (let page = 1; ; page += 1) {
-				const params = new URLSearchParams({
-					collection: field.to,
-					pageSize: String(ENTRY_OPTIONS_PAGE_SIZE),
-					page: String(page),
-				});
-				if (field.publishedOnly) params.set("status", "published");
-				const data = await cmsFetch<{ items: { id: string; title: string | null; status: string }[]; total: number }>(
-					site,
-					cmsApiUrl(`/v1/entries?${params}`),
-				);
-				all.push(
-					...data.items.map((item) => ({ id: item.id, title: item.title || t("untitled"), status: item.status })),
-				);
-				if (data.items.length === 0 || all.length >= data.total) break;
-			}
-			return all;
-		};
-		load()
-			.then((loaded) => !cancelled && setOptions(loaded))
-			.catch(() => !cancelled && setOptions([]));
-		return () => {
-			cancelled = true;
-		};
-	}, [field.to, field.publishedOnly, site, t]);
-	return options;
-}
+type EntryOption = RelationEntry;
 
 /** Label of the relation target collection (e.g. `Posts`). Used in input hint text. */
 const targetLabel = (site: Site, relation: RelationField) =>
@@ -124,32 +81,57 @@ const targetLabel = (site: Site, relation: RelationField) =>
 const entryLabel = (t: TranslatorFor<typeof entriesMessages>, option: EntryOption) =>
 	option.status === "published" ? option.title : `${option.title}${t("entry.unpublished")}`;
 
-/** Single relation. Pressing it opens the full list of target entries to pick from. */
+/** The picker's options and the names of its picked values, from a server search (`useRelationSearch`). Leaves out the entry being edited. */
+function relationOptions(
+	t: TranslatorFor<typeof entriesMessages>,
+	search: ReturnType<typeof useRelationSearch>,
+	selfId: string | undefined,
+) {
+	const option = (entry: EntryOption) => ({ value: entry.id, label: entryLabel(t, entry) });
+	return {
+		options: (search.options ?? []).filter((entry) => entry.id !== selfId).map(option),
+		known: search.known.map(option),
+	};
+}
+
+/** The failure of a search, under the input like the other relation inputs. */
+function SearchError({ failed }: { failed: boolean }) {
+	const t = useTranslator(entriesMessages);
+	return failed ? (
+		<p role="alert" className="text-cms-destructive text-xs">
+			{t("entry.loadFailed")}
+		</p>
+	) : null;
+}
+
+/** Single relation. Typing searches the target entries on the server (best title matches first); pressing shows the first ones. */
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const relation = field as RelationField;
-	const options = useEntryOptions(relation);
 	const selected = typeof value === "string" && value ? [value] : [];
+	const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected });
+	const waiting = search.options === null && !search.error;
 	return (
-		<RelationCombobox
-			id={id}
-			aria-label={field.label}
-			placeholder={
-				options === null
-					? t("loading")
-					: (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) }))
-			}
-			invalid={invalid}
-			describedBy={describedBy}
-			disabled={context.disabled || options === null}
-			multiple={false}
-			options={(options ?? [])
-				.filter((option) => option.id !== context.entryId)
-				.map((option) => ({ value: option.id, label: entryLabel(t, option) }))}
-			value={selected}
-			onValueChange={(next) => onChange(next[0] ?? null)}
-		/>
+		<>
+			<RelationCombobox
+				id={id}
+				aria-label={field.label}
+				placeholder={
+					waiting ? t("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) }))
+				}
+				invalid={invalid}
+				describedBy={describedBy}
+				disabled={context.disabled || waiting}
+				multiple={false}
+				{...relationOptions(t, search, context.entryId)}
+				onSearch={search.search}
+				loading={search.loading}
+				value={selected}
+				onValueChange={(next) => onChange(next[0] ?? null)}
+			/>
+			<SearchError failed={search.error} />
+		</>
 	);
 }
 
@@ -235,9 +217,9 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const relation = field as RelationField;
-	const options = useEntryOptions(relation);
 	const ids = Array.isArray(value) ? value : [];
-	const byId = useMemo(() => new Map((options ?? []).map((option) => [option.id, option])), [options]);
+	const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected: ids });
+	const waiting = search.options === null && !search.error;
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
 		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -261,24 +243,29 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 		onChange([...kept, ...selected.filter((itemId) => !ids.includes(itemId))]);
 	};
 	const target = targetLabel(site, relation);
-	const missing = (itemId: string): EntryOption | undefined =>
-		options === null ? undefined : { id: itemId, title: t("entry.missing", { target }), status: "missing" };
+	/** The row of a post that was looked up and is not there (deleted, trashed). Before the lookup answers, the row says it is loading. */
+	const rowOf = (itemId: string): EntryOption | undefined =>
+		search.entryOf(itemId) ??
+		(search.isMissing(itemId)
+			? { id: itemId, title: t("entry.missing", { target }), slug: null, status: "missing" }
+			: undefined);
 
 	return (
 		<div className="space-y-2">
 			<RelationCombobox
 				id={id}
 				aria-label={t("entry.editList", { target })}
-				placeholder={options === null ? t("loading") : (relation.placeholder ?? t("entry.editList", { target }))}
-				disabled={context.disabled || options === null}
+				placeholder={waiting ? t("loading") : (relation.placeholder ?? t("entry.editList", { target }))}
+				disabled={context.disabled || waiting}
 				multiple
 				showChips={false}
-				options={(options ?? [])
-					.filter((option) => option.id !== context.entryId)
-					.map((option) => ({ value: option.id, label: entryLabel(t, option) }))}
+				{...relationOptions(t, search, context.entryId)}
+				onSearch={search.search}
+				loading={search.loading}
 				value={ids}
 				onValueChange={applySelection}
 			/>
+			<SearchError failed={search.error} />
 			{ids.length === 0 ? (
 				<p className="text-cms-muted-foreground text-xs">{t("entry.empty", { target })}</p>
 			) : (
@@ -291,7 +278,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 									sortableId={sortableIds[index] as string}
 									index={index}
 									count={ids.length}
-									option={byId.get(itemId) ?? missing(itemId)}
+									option={rowOf(itemId)}
 									disabled={context.disabled}
 									onMove={(direction) => move(index, direction)}
 									onRemove={() => onChange(ids.filter((_, i) => i !== index))}
@@ -385,9 +372,17 @@ export function BacklinkInput({
 }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
-	const records = useTaxonomy(field.from as RecordCollection, Boolean(targetId));
+	// The records come from a server search (published ones, like the old list). A conditional list keeps only the records of one kind, which is
+	// known per record, so it asks for more hits to leave enough after that filter.
+	const conditional = Boolean(site.storedField(field.from as SchemaCollection, field.via)?.when);
+	const records = useRelationSearch({
+		collection: field.from,
+		publishedOnly: true,
+		limit: conditional ? 50 : undefined,
+		enabled: Boolean(targetId),
+	});
 	const creator = useRecordCreator();
-	const kind = useRecordKind(field, records.options);
+	const kind = useRecordKind(field, records.options ?? []);
 	const [fetched, setFetched] = useState<{ id: string; title: string }[] | null>(null);
 	/** Load/save failure. Shown right below the input like other relation inputs. */
 	const [error, setError] = useState<string | null>(null);
@@ -503,14 +498,13 @@ export function BacklinkInput({
 	}
 
 	const shown = optimistic ?? serverIds;
-	const options = [
-		...records.options
-			.filter((option) => kind.accepts(option.id))
-			.map((option) => ({ value: option.id, label: option.title })),
-		// A collection not yet in the public list (e.g. just created) is also shown by name.
-		...(members ?? [])
-			.filter((member) => !records.options.some((option) => option.id === member.id))
-			.map((member) => ({ value: member.id, label: member.title })),
+	const options = (records.options ?? [])
+		.filter((option) => kind.accepts(option.id))
+		.map((option) => ({ value: option.id, label: option.title }));
+	// Names of the picked values, which a search may not return (a collection just created is not in the public list yet).
+	const known = [
+		...records.known.map((entry) => ({ value: entry.id, label: entry.title })),
+		...(members ?? []).map((member) => ({ value: member.id, label: member.title })),
 	];
 
 	const change = (next: string[]) => {
@@ -539,10 +533,13 @@ export function BacklinkInput({
 			<RelationCombobox
 				multiple
 				aria-label={field.label}
-				placeholder={members === null || !kind.ready ? t("loading") : t("relation.searchOrAdd")}
+				placeholder={members === null || records.options === null ? t("loading") : t("relation.searchOrAdd")}
 				options={options}
+				known={known}
+				onSearch={records.search}
+				loading={records.loading || !kind.ready}
 				value={shown}
-				disabled={disabled || members === null || !kind.ready}
+				disabled={disabled || members === null || (records.options === null && !records.error)}
 				onValueChange={change}
 				onCreate={
 					field.createInline
@@ -555,7 +552,7 @@ export function BacklinkInput({
 								});
 								if (!saved) return null;
 								createdRef.current.add(saved.id);
-								void records.reload();
+								records.remember({ ...optionOf(t, saved), status: saved.status });
 								awaitingServerRef.current = true;
 								void load();
 								return saved.id;
@@ -568,6 +565,7 @@ export function BacklinkInput({
 					{error}
 				</p>
 			)}
+			<SearchError failed={records.error} />
 			{creator.sheet}
 		</>
 	);

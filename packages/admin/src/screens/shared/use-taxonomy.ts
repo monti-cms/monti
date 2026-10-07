@@ -1,8 +1,8 @@
 "use client";
 
-import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site, useSite } from "@monti-cms/core/client";
 import { useQueries } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { cmsFetch } from "../admin-api";
 import { sharedMessages } from "./messages";
 
@@ -11,9 +11,6 @@ export type RecordCollection = string;
 
 /** Taxonomy field name -> options of the collection the field points to. */
 export type TaxonomyOptions = Readonly<Record<string, readonly TaxonomyOption[]>>;
-
-const labelOf = (site: Site, collection: string) =>
-	site.isCollection(collection) ? site.COLLECTION_DEFINITIONS[collection].label : collection;
 
 export interface TaxonomyOption {
 	id: string;
@@ -47,44 +44,6 @@ async function loadAll(site: Site, collection: RecordCollection): Promise<Taxono
 		if (options.length >= data.total || data.items.length === 0) break;
 	}
 	return options;
-}
-
-/**
- * Record options like tags and categories shared by the edit screen, bulk actions and list filters.
- * New items are created in the taxonomy add slot (`useRecordCreator`), and the created item is shown right away with `remember`.
- */
-export function useTaxonomy(collection: RecordCollection, enabled = true) {
-	const site = useSite();
-	const t = useTranslator(sharedMessages);
-	const [options, setOptions] = useState<TaxonomyOption[]>([]);
-	const [error, setError] = useState<string | null>(null);
-	// Items added on this screen. Shown by name even if not yet in the refetched list (before list cache/search reflects them).
-	const rememberedRef = useRef<TaxonomyOption[]>([]);
-
-	const reload = useCallback(async () => {
-		try {
-			const loaded = await loadAll(site, collection);
-			setOptions([
-				...loaded,
-				...rememberedRef.current.filter((option) => !loaded.some((item) => item.id === option.id)),
-			]);
-			setError(null);
-		} catch {
-			setError(t("taxonomy.loadFailed", { label: labelOf(site, collection) }));
-		}
-	}, [collection, site, t]);
-
-	useEffect(() => {
-		if (enabled) void reload();
-	}, [enabled, reload]);
-
-	/** Puts the just-added item into the options so it shows by name even before a refetch. */
-	const remember = useCallback((option: TaxonomyOption) => {
-		rememberedRef.current = [...rememberedRef.current, option];
-		setOptions((current) => (current.some((item) => item.id === option.id) ? current : [...current, option]));
-	}, []);
-
-	return { options, error, reload, remember };
 }
 
 /**

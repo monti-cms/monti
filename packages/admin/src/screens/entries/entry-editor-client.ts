@@ -29,8 +29,14 @@ export type EntrySaveInput = {
  */
 export interface EntryEditorClient {
 	get(id: string): Promise<EntryData>;
-	create(input: EntrySaveInput & { collection: string; folderId?: string }): Promise<EntryData>;
-	update(id: string, input: EntrySaveInput & { expectedVersion: number }): Promise<EntryData>;
+	/** A save answers the entry, with the warnings the server found in it (a block's syntax check, for one). They never block. */
+	create(
+		input: EntrySaveInput & { collection: string; folderId?: string },
+	): Promise<EntryData & { warnings?: CmsIssue[] }>;
+	update(
+		id: string,
+		input: EntrySaveInput & { expectedVersion: number },
+	): Promise<EntryData & { warnings?: CmsIssue[] }>;
 	publish(
 		id: string,
 		input: { expectedVersion: number; resetPublishedAt?: boolean },
@@ -51,9 +57,13 @@ export const cmsEntryClient = (site: Site): EntryEditorClient => {
 	return {
 		get: (id) => cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}`), { fallback: t("loadFailed") }),
 		create: (input) =>
-			cmsFetch<EntryData>(site, cmsApiUrl("/v1/entries"), { method: "POST", json: input, fallback: t("saveFailed") }),
+			cmsFetch<EntryData & { warnings?: CmsIssue[] }>(site, cmsApiUrl("/v1/entries"), {
+				method: "POST",
+				json: input,
+				fallback: t("saveFailed"),
+			}),
 		update: (id, input) =>
-			cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}`), {
+			cmsFetch<EntryData & { warnings?: CmsIssue[] }>(site, cmsApiUrl(`/v1/entries/${id}`), {
 				method: "PATCH",
 				json: input,
 				fallback: t("saveFailed"),

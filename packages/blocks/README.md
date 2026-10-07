@@ -58,6 +58,7 @@ import "@monti-cms/blocks/styles.css";
   Editor: the block shows its files as a list (click a path to move the cursor into that file; the file with the cursor is marked) above the code blocks, which are edited in place
   (the path is the code block's own title field). The block toolbar adds a file (`src/new-file.ts`, numbered if taken) or a folder, picks the file shown first, and deletes the block.
   The slash menu inserts the block with one `src/index.ts` code block.
+- Checks: the chart block checks its syntax with its own parser and the Mermaid block with `mermaid.parse` (only when `mermaid` is installed; it runs on the server in the write pipeline) through the block `validate` slot ("Blocks" in the `@monti-cms/core` README). A broken one is a warning on save and publish, never a blocker, and the editor shows it under the block.
 - Editor: callout, collapsible, tabs, columns and the code explorer come with their edit screens (admin theme colors, `styles.css`). Mermaid and chart are
   edited with a code input and a preview. The preview is drawn by this extension (the app installs the optional dependencies `mermaid` and `recharts`, which are loaded only when a preview opens),
   and if the site registers the same name through `fencePreviews` (`@monti-cms/admin`), that one wins. Chart colors are the CSS variables `--chart-1` to `--chart-5`,

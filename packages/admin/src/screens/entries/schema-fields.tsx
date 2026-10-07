@@ -29,7 +29,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../../ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
-import { type RecordCollection, useTaxonomy } from "../shared/use-taxonomy";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
 import {
 	BacklinkInput,
@@ -47,6 +46,7 @@ import { entriesMessages } from "./messages";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
+import { useRelationSearch } from "./use-relation-search";
 
 /** Usages of the entry the caller already loaded. A backlink input shows them without fetching again. */
 export interface SchemaFieldsReferences {
@@ -155,12 +155,17 @@ function SlotFieldRow({
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const t = useTranslator(entriesMessages);
 	const relation = field as RelationField;
-	const records = useTaxonomy(relation.to as RecordCollection);
-	const creator = useRecordCreator();
 	const selected = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
+	// Published records, searched on the server as the user types; the picked ones are looked up by id so they keep their names.
+	const records = useRelationSearch({ collection: relation.to, publishedOnly: true, selected });
+	const creator = useRecordCreator();
 	const options = useMemo(
-		() => records.options.map((option) => ({ value: option.id, label: option.title })),
+		() => (records.options ?? []).map((option) => ({ value: option.id, label: option.title })),
 		[records.options],
+	);
+	const known = useMemo(
+		() => records.known.map((option) => ({ value: option.id, label: option.title })),
+		[records.known],
 	);
 	return (
 		<>
@@ -170,6 +175,9 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 				aria-label={relation.label}
 				placeholder={relation.placeholder ?? (relation.createInline ? t("relation.searchOrAdd") : t("relation.search"))}
 				options={options}
+				known={known}
+				onSearch={records.search}
+				loading={records.loading}
 				value={selected}
 				invalid={invalid}
 				describedBy={describedBy}
@@ -180,8 +188,7 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 						? async (title) => {
 								const saved = await creator.create(relation.to as Collection, { title });
 								if (!saved) return null;
-								records.remember(optionOf(t, saved));
-								void records.reload();
+								records.remember({ ...optionOf(t, saved), status: saved.status });
 								return saved.id;
 							}
 						: undefined
@@ -189,7 +196,7 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 			/>
 			{records.error && (
 				<p role="alert" className="text-cms-destructive text-xs">
-					{records.error}
+					{t("entry.loadFailed")}
 				</p>
 			)}
 			{creator.sheet}

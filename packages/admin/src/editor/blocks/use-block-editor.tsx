@@ -24,6 +24,7 @@ import { cn } from "../../lib/utils/cn";
 import { allowanceOfState } from "../allowed-extension";
 import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { blockNodeName } from "./added/shared";
+import { BlockIssueNotice } from "./block-issues";
 import { type ContainerValues, childPos, SELECTED_RING, useEditorEditable, valuesOf, withValue } from "./block-model";
 import { blocksMessages } from "./messages";
 import { blockOfNode } from "./node-block";
@@ -685,6 +686,7 @@ export function BlockFrame({
 			className={cn(framed && "group/container relative", selectedRing && block.selected && SELECTED_RING, className)}
 		>
 			{children}
+			<BlockIssueNotice blockId={block.id} />
 		</NodeViewWrapper>
 	);
 }

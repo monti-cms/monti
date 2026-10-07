@@ -168,6 +168,7 @@ export interface EntryEditorState {
 	recoveryCopyAvailable: boolean;
 	busy: null | "publish" | "status";
 	publishIssues: readonly CmsIssue[];
+	bodyWarnings: readonly CmsIssue[];
 	recovery: RecoveryOffer | null;
 	conflict: ConflictInfo | null;
 	slugTouched: boolean;
@@ -215,6 +216,11 @@ export interface EntryEditor {
 	readonly busy: null | "publish" | "status";
 	/** Problems the server (or the fill-from-body check) reported on publish. A field shows those whose `path` is its name. */
 	readonly publishIssues: readonly CmsIssue[];
+	/**
+	 * Warnings the server gave for the body in the latest save or publish (a block's own syntax check, for one). They never block. Those with a
+	 * `position.blockId` are shown next to that block in the editor. Replaced by every save and publish.
+	 */
+	readonly bodyWarnings: readonly CmsIssue[];
 	/** A recovery copy found on open that is not on the server. Answer with `restoreRecovery()` or `discardRecovery()`. */
 	readonly recovery: RecoveryOffer | null;
 	/** Someone saved first. Answer with `overwriteWithMine()` or `reload()`. A save or retry meanwhile fails with `conflict`. */
@@ -367,6 +373,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		recoveryCopyAvailable: true,
 		busy: null,
 		publishIssues: [],
+		bodyWarnings: [],
 		recovery: null,
 		conflict: null,
 		slugTouched: target.mode === "edit",
@@ -593,7 +600,12 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				m.serverFingerprint = formFingerprint(site, snapshot);
 				m.ackSeq = targetSeq;
 				const merged: EntryData = { ...saved, ...keepTranslationGroup(state().entry, saved) };
-				commit({ entry: merged, readOnly: merged.status === "trashed", saveError: null });
+				commit({
+					entry: merged,
+					readOnly: merged.status === "trashed",
+					saveError: null,
+					bodyWarnings: saved.warnings ?? [],
+				});
 				callbacks().onSaved?.(merged, { created: isNew });
 
 				if (formFingerprint(site, state().form) === m.serverFingerprint) {
@@ -731,7 +743,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				});
 				m.version = published.version;
 				const merged: EntryData = { ...published, ...keepTranslationGroup(state().entry, published) };
-				commit({ entry: merged, readOnly: merged.status === "trashed" });
+				commit({ entry: merged, readOnly: merged.status === "trashed", bodyWarnings: published.warnings ?? [] });
 				callbacks().onSaved?.(merged, { created: false });
 				return { ok: true, value: { entry: merged, warnings: published.warnings ?? [], filled: filled.value } };
 			} catch (caught) {
