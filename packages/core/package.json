@@ -14,6 +14,7 @@
 		"./document": "./src/document.ts",
 		"./notation": "./src/notation.ts",
 		"./format": "./src/format/index.ts",
+		"./front-matter": "./src/front-matter.ts",
 		"./code-block": "./src/code-block.ts",
 		"./render/code": "./src/render/code/index.ts",
 		"./render": "./src/render/index.tsx",
@@ -57,6 +58,7 @@
 		"shiki": "^3.21.0",
 		"tsx": "^4.21.0",
 		"unist-util-visit": "^5.0.0",
+		"yaml": "^2.9.1",
 		"zod": "^4.2.1"
 	},
 	"peerDependencies": {
@@ -114,6 +116,10 @@
 			"./format": {
 				"types": "./dist/format/index.d.ts",
 				"default": "./dist/format/index.js"
+			},
+			"./front-matter": {
+				"types": "./dist/front-matter.d.ts",
+				"default": "./dist/front-matter.js"
 			},
 			"./code-block": {
 				"types": "./dist/code-block.d.ts",
