@@ -115,6 +115,10 @@ There is no route group and no other admin file: custom admin components are a p
 
 **Server only.** `monti.config.ts` holds the database and login settings, so it must never reach the browser: loading it there throws. `monti check:boundary` reports every `"use client"` file whose import chain reaches it, and `withCms` warns about the same once per `next dev` start (`checkImportBoundaryInDev`). The admin gets a JSON snapshot of the site from its layout, so it never needs the config in the browser.
 
+## Preview pages
+
+A site page that shows drafts (`site.previewPath`, for example `/preview/ko/posts/<slug>`) reads them with `previewEntry(cms, { collection, slug, locale })` from `@monti-cms/nextjs`, not with `cms.read.getPreview` directly. It attaches the request headers to the instance first, so the admin session (or the dev bypass under `next dev`) is read even when the preview is the first request after a cold start, or the only thing a serverless instance has served. It returns `null` for anyone who is not the admin, so the page answers 404. `examples/blog` and the `blog-theme` registry item have such a page.
+
 ## Upgrading
 
 For the move from NextAuth to `@monti-cms/auth` (`githubAuth` is gone; everyone signs in once more), see "Upgrading to `@monti-cms/auth`" in the `@monti-cms/core` README.

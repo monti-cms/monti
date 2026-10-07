@@ -992,6 +992,9 @@ importers:
       '@monti-cms/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@monti-cms/nextjs':
+        specifier: workspace:*
+        version: link:../packages/nextjs
       '@types/node':
         specifier: ^20
         version: 20.19.43

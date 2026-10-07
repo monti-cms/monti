@@ -115,6 +115,10 @@ export const cms = defineConfig({
 
 **서버 전용.** `monti.config.ts`에는 DB와 로그인 설정이 있으므로 브라우저에 닿으면 안 된다. 브라우저에서 불러오면 오류가 난다. `monti check:boundary`는 import 연쇄가 이 파일에 닿는 `"use client"` 파일을 모두 알려 주고, `withCms`는 같은 경우를 `next dev`를 시작할 때마다 한 번 경고한다(`checkImportBoundaryInDev`). 관리자는 레이아웃에서 사이트의 JSON 스냅샷을 받으므로 브라우저에 설정이 필요하지 않다.
 
+## 미리보기 페이지
+
+초안을 보여 주는 사이트 페이지(`site.previewPath`, 예: `/preview/ko/posts/<slug>`)는 `cms.read.getPreview`를 직접 부르지 말고 `@monti-cms/nextjs`의 `previewEntry(cms, { collection, slug, locale })`로 읽는다. 읽기 전에 요청 헤더를 인스턴스에 붙이므로, 콜드 스타트 뒤 첫 요청이 미리보기이거나 서버리스 인스턴스가 사이트 페이지만 처리했더라도 관리자 세션(`next dev`에서는 개발용 우회)을 읽을 수 있다. 관리자가 아니면 `null`이라 페이지는 404를 낸다. `examples/blog`와 레지스트리의 `blog-theme`에 이 페이지가 있다.
+
 ## 올리기
 
 NextAuth에서 `@monti-cms/auth`로 옮기는 것(`githubAuth`는 없어졌고, 모두 한 번 다시 로그인한다)은 `@monti-cms/core` README의 "`@monti-cms/auth`로 올리기"를 본다.
