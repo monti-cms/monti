@@ -1,9 +1,20 @@
-export type { AfterCommit, ContentChange, ContentChangeKind } from "./after-commit";
-export { withAfterCommit } from "./after-commit";
+export { withEventDispatch } from "./after-commit";
 export { CmsError } from "./errors";
+export type {
+	AfterCommit,
+	ClaimedDelivery,
+	ContentChange,
+	ContentChangeKind,
+	ContentEvent,
+	EventDelivery,
+	EventDeliveryCounts,
+	EventDeliveryState,
+} from "./events";
+export { CONTENT_CHANGE_KINDS, eventRowOf } from "./events";
 export type {
 	ContentStore,
 	EntryStore,
+	EventStore,
 	FolderStore,
 	LifecycleStore,
 	ListStore,

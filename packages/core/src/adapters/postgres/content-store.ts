@@ -1,9 +1,9 @@
 import type { Pool } from "pg";
-import { type AfterCommit, withAfterCommit } from "../../core/store/after-commit";
 import type { ContentStore } from "../../core/store/ports";
 import type { Site } from "../../site";
 import { type ContentStoreHooks, type StoreContext, validateSchemaName } from "./store/context";
 import { createEntryOps } from "./store/entries";
+import { createEventOps } from "./store/events";
 import { createFolderOps } from "./store/folders";
 import { createLifecycleOps } from "./store/lifecycle";
 import { createListOps } from "./store/list";
@@ -17,7 +17,7 @@ import { createTransferOps } from "./store/transfer";
 
 /**
  * PostgreSQL implementation of the core `ContentStore` port (`core/store/ports.ts`). Reads and atomic changes for content, folders, relations, media metadata,
- * and settings. The driver and SQL live only in the modules under `store/`; the rules (slug addresses, translations, publish and lifecycle transitions) come from `core/domain/`.
+ * settings, and the event outbox. The driver and SQL live only in the modules under `store/`; the rules (slug addresses, translations, publish and lifecycle transitions) come from `core/domain/`.
  */
 
 export type { ContentStoreHooks } from "./store/context";
@@ -25,7 +25,7 @@ export { migrateContentStore } from "./store/schema";
 
 export function createContentStore(
 	pool: Pool,
-	options: { site: Site; schema?: string; afterCommit?: AfterCommit } & ContentStoreHooks,
+	options: { site: Site; schema?: string } & ContentStoreHooks,
 ): ContentStore {
 	const ctx: StoreContext = {
 		pool,
@@ -46,6 +46,7 @@ export function createContentStore(
 		...createMediaOps(ctx),
 		...createTemplateOps(ctx),
 		...createSchemaChangeOps(ctx),
+		...createEventOps(ctx),
 	};
-	return options?.afterCommit ? withAfterCommit(store, options.afterCommit) : store;
+	return store;
 }

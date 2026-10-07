@@ -357,7 +357,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 - 렌더링: `<CmsContent cms={cms} entry={entry} />`와 `renderDocument(doc, { site: cms.site, … })`, `renderMdx(doc, { site })`도 같다. `components` 표의 타입은 전의 `DocumentComponents`(이제 타입이 없는 표다) 대신 `DocumentComponentsOf<typeof cms>`(또는 `DocumentComponentsFor<typeof config>`)로 적는다.
 - `@monti-cms/core/client`가 내보내던 설정 파생 값과 도우미(`LOCALES`·`DEFAULT_LOCALE`·`isLocale`·`localizePath`·`COLLECTIONS`·`schemaOf`·`contentPath`·`parseInternalLink`·`adminHref`·`SITE_NAME`·`BLOCKS`·`CODE_LINE_EFFECTS`·`getPluginOptions` …)는 사이트의 멤버다: 서버에서는 `cms.site.LOCALES`, 클라이언트 컴포넌트에서는 `useSite().LOCALES`.
   모듈 수준의 `createTranslator(messages)`는 `site.createTranslator(messages)`가 되고, 컴포넌트 안에서는 `useTranslator(messages)`다. `formatDateTimeInput`·`parseDateTimeInput`은 시간대를 받는다(또는 사이트의 것을 쓴다: `site.formatDateTimeInput(value)`).
-- 플러그인과 어댑터: `CmsServerPlugin`과 라우트는 그대로다(받는 인스턴스에 `cms.site`가 있다). `DatabaseAdapter`는 사이트를 받고(`createStore({ site, afterCommit })`, `migrate({ site, formats })`), `AuthAdapter`는 `create({ site, loginPath, trustHost })`로 받는다.
+- 플러그인과 어댑터: `CmsServerPlugin`과 라우트는 그대로다(받는 인스턴스에 `cms.site`가 있다). `DatabaseAdapter`는 사이트를 받고(`createStore({ site })`, `migrate({ site, formats })`), `AuthAdapter`는 `create({ site, loginPath, trustHost })`로 받는다.
   블록과 줄 효과 정의가 `createActiveTranslator`로 고르는 글은 사이트를 만들 때 그 사이트의 관리자 언어로 한 번 읽는다. 그 밖에 실행 중에 번역하는 것은 `site.createTranslator`를 쓴다.
 - 테스트: 설정 모듈을 모킹할 필요가 없다. 테스트에 필요한 사이트나 인스턴스를 만들고(`createSite(config)`·`fakeCms({ config })`·`createCms({ config, server })`), React 트리는 `<SiteProvider site={site}>`로 감싼다.
 
@@ -460,7 +460,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
 | `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
+| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
 | `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`addComponents`·`migrate`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
 | `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
@@ -836,7 +836,8 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | `secret` | 플러그인이 DB에 암호화해 두는 값(AI 서비스 키)의 마스터 비밀 값. 플러그인은 이 값을 보지 못하고, 이 값과 플러그인 이름에서 만든 키만 받는다("플러그인 비밀 값"). 로그인 서명 값과 따로 둔다. |
 | `previousSecrets` | 선택. `secret`이 바뀌기 전의 값들. 이 값으로 암호화한 저장 값도 계속 읽히고, 다시 저장할 때 `secret`으로 새로 암호화된다. 그래서 `secret`을 바꿔도 저장된 키를 다시 넣지 않아도 된다. |
 | `publicApi` | 선택. 공개 JSON API(`/api/cms/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
-| `hooks` | 선택. 모든 콘텐츠 쓰기에 거는 훅: `transform`·`validate`·`validatePublish`·`afterCommit`(변경이 커밋된 뒤 알림: 캐시 갱신·웹훅·검색 색인). "훅 계약"을 본다. 플러그인도 `hooks`를 둘 수 있다 |
+| `hooks` | 선택. 모든 콘텐츠 쓰기에 거는 훅: `transform`·`validate`·`validatePublish`·`afterCommit`(변경이 커밋된 뒤 알림: 캐시 갱신·웹훅·검색 색인. 실패하면 다시 시도하므로 멱등이어야 한다). "훅 계약"과 "이벤트 전달"을 본다. 플러그인도 `hooks`를 둘 수 있다 |
+| `events` | 선택. `afterCommit` 전달을 다시 시도하고 보관하는 방식: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. "이벤트 전달"을 본다 |
 
 다른 저장소·로그인을 쓰려면 `DatabaseAdapter`·`MediaAdapter`·`AuthAdapter`를 직접 만들어 넣는다.
 
@@ -881,7 +882,7 @@ const server = defineServerConfig({
 		// 같은 방식, 발행에서만.
 		validatePublish: ({ metadata }) => ({ warnings: metadata.summary ? [] : [{ code: "no_summary", path: "summary" }] }),
 		// 변경이 커밋된 뒤.
-		afterCommit: (change) => revalidate(change.collection, change.publishedSlug),
+		afterCommit: (event) => revalidate(event.collection, event.publishedSlug),
 	},
 });
 
@@ -905,15 +906,61 @@ export const cms = createCms({ server });
 - 훅은 DB 트랜잭션 밖에서 돌고 DB 클라이언트를 받지 않는다. 비동기여도 된다. 저장소 내부 옵션 `beforePublishCommit`(트랜잭션 클라이언트를 받는다)은 이 계약에 들지 않고 그대로다.
 - 발행하는 중에 `transform`이 초안을 바꾸면 그 변경은 발행과 함께 한 트랜잭션으로 저장된다(`afterCommit`에는 그 글의 `saved` 변경 다음에 `published` 변경이 온다. 바뀐 것이 없는 발행은 `published`만 온다). 만들거나 저장하면서 바로 발행하는 경우(항목)도 같게 `created` 또는 `saved`, 그다음 `published`로 알린다.
 - 훅이 예외를 던지거나 계약에 맞지 않는 값을 돌려주면 쓰기는 `hook_failed`(HTTP 500)로 실패한다. 오류의 `issues[].params`에 훅 이름과 소유자(`server` 또는 `plugin:<이름>`)가 들어가고, 아무것도 저장되지 않는다. `validate` 실패는 `validation_failed`, `validatePublish` 실패는 `publish_validation_failed`(HTTP 422)이며, 더한 이슈가 초안 자체의 이슈 옆에 붙는다.
-- `afterCommit`은 id·상태·주소만 받고 본문은 받지 않는다. 커밋된 글은 `cms.store().getEntry(change.entryId)`로 읽는다. 전달은 프로세스 안에서 최대 한 번이며, 다시 시도하지 않고 아직 아웃박스도 없다.
+- `afterCommit`은 이벤트를 받는다. id·상태·주소·`version`·`contentHash`·`eventId`, 그리고 커밋된 글을 읽는 `read()`다(본문 자체는 아니다). 전달은 아웃박스에서 하며 최소 한 번, 글마다 순서대로, 실패하면 다시 시도한다. "이벤트 전달"을 본다.
 
 계약(각각 `src/services/__test__/write-hooks.test.ts`와 `write-pipeline.test.ts`에 시험이 있다):
 
 1. **변환된 데이터도 본체를 거친다.** 정규화·참조 수집·검증이 `transform`의 결과에 대해 돌아서, 변환으로 본체 검사를 피할 수 없다.
 2. **추가 검증은 실패를 더할 수만 있다.** `validate`와 `validatePublish`가 돌려준 이슈와 경고는 본체의 것에 더해진다. 훅은 스냅샷의 복사본을 받으므로 본체 이슈를 지우거나 낮출 수 없고, 발행의 본체 무결성 검사(참조·미디어·링크·필수 값)는 항상 돈다.
 3. **커밋 전의 실패는 쓰기를 막는다.** 본체 준비 실패, 훅이 더한 실패, 훅의 예외는 아무것도 저장하지 않고 `afterCommit`도 부르지 않는다.
-4. **`afterCommit`의 실패는 끝난 쓰기를 되돌리지 않는다.** 기록만 남기고, 다른 `afterCommit` 훅은 그대로 돈다.
+4. **`afterCommit`의 실패는 끝난 쓰기를 되돌리지 않는다.** 기록하고 다시 시도하며, 다른 `afterCommit` 훅은 그대로 돈다. 이벤트는 쓰기의 트랜잭션에서 쓰이므로 롤백된 쓰기는 이벤트를 남기지 않는다.
 5. **일괄은 모든 항목에 같은 훅을 적용한다.** 항목마다 파이프라인 전체를 돌고, 결과나 오류(`hook_failed`·`validation_failed` 등)는 항목별로 돌아간다.
+
+## 이벤트 전달(`afterCommit`)
+
+`afterCommit`은 아웃박스에서 전달되므로, 구독자가 실패하거나 프로세스가 멈춰도 사라지지 않는다.
+
+- **아웃박스.** 변경과 같은 트랜잭션에서 저장소가 `cms_events`(마이그레이션 `0022_events`)에 행을 넣는다. 열은 `id`, `kind`(`created`·`saved`·`published`·`archived`·`unarchived`·`trashed`·`restored`·`deleted`), `entry_id`, `collection`, `locale`, `content_hash`, `version`, `occurred_at`, 그리고 상태와 주소를 담은 `payload`다. 롤백된 변경은 이벤트를 남기지 않고, 커밋된 변경에는 항상 이벤트가 있다. 만들거나 저장하면서 바로 발행하면 이벤트가 둘 생긴다(`created`/`saved`, 그다음 `published`). `entries`로 가는 외래 키가 없어서 삭제의 이벤트는 글보다 오래 남는다. 원본의 번역본에 미치는 변경은 변경을 가한 글 하나로 한 번만 알린다(`translationGroupId`가 묶음을 가리킨다).
+- **구독자.** 서버 설정의 `hooks.afterCommit`은 구독자 `server`, 각 플러그인의 `hooks.afterCommit`은 `plugin:<플러그인 이름>`이다. 이름은 바뀌지 않는 값이고 `cms_event_deliveries`의 전달 상태(이벤트와 구독자마다 한 행: `state`, `attempts`, `last_error`, `next_attempt_at`)의 키가 되므로, 구독자가 있는 플러그인의 이름은 바꾸지 않는다. 나중에 생긴 구독자는 생긴 뒤에 커밋된 이벤트부터 받고, 그 전의 기록은 받지 않는다.
+- **전달.** 커밋 뒤에 변경을 만든 프로세스가 같은 호출 안에서 바로 각 구독자에게 보내므로 지연은 이전과 같다. 실패는 기록하고 점점 길어지는 간격(15초에서 시작해 두 배씩, 최대 1시간. `events.backoffMs`로 바꾼다)으로 나중에 다시 시도하며, `events.maxAttempts`번(기본 8) 시도하고도 실패하면 전달이 데드레터(`dead`)가 된다. 쓰기는 되돌리지 않고, 다른 구독자도 막지 않는다.
+- **최소 한 번, 글마다 순서대로.** 이벤트는 두 번 이상 전달될 수 있다(일을 하고 나서 실패한 구독자, 끝나지 못한 시도). 그래서 **구독자는 멱등이어야 한다.** 구독자는 시도마다 같은 `event.eventId`를 받아 처리한 이벤트를 기억한다. 한 글의 이벤트는 커밋 순서로 전달된다. 같은 글의 앞선 이벤트가 대기 중이거나 전달 중이거나 실패해 아직 죽지 않았다면 뒤의 이벤트는 기다린다. 죽었거나 닫은 전달은 순서를 붙들지 않으므로, 죽은 것을 손으로 다시 보내면 뒤의 이벤트보다 늦게 도착할 수 있다. 글을 내보내는 구독자는 글의 현재 상태를 읽고 `version`을 비교한다. 다른 글의 이벤트는 서로 상관없다.
+- **커밋된 글 읽기.** `event.read()`는 글의 현재 상태(본문 문서와 발행 문서가 든 `Entry`)를, 삭제됐다면 `null`을 돌려준다. `event.version`과 `event.contentHash`가 이 이벤트가 어떤 변경인지 알려 준다. `read().version`이 더 크면 그 글의 뒤 이벤트가 이어서 온다. 형식(format)으로 글을 내보내는 구독자(git-sync)는 글을 읽어 형식을 거치고, 이미 더 새 버전을 썼다면 이벤트를 건너뛴다.
+
+```ts
+// git-sync/server.ts, 플러그인의 `server` 모듈(`definePlugin({ name: "git-sync", server: () => import("./server") })`)
+import type { CmsServerPlugin } from "@monti-cms/core";
+
+const plugin: CmsServerPlugin = {
+	hooks: {
+		// 최소 한 번 전달된다. 이미 처리한 이벤트는 `event.eventId`로 건너뛴다.
+		afterCommit: async (event) => {
+			if (await alreadyHandled(event.eventId)) return;
+			const entry = await event.read(); // 커밋된 글, 삭제됐다면 null
+			await pushToGit(event, entry);
+			await markHandled(event.eventId);
+		},
+	},
+};
+export default plugin;
+```
+
+### 워커 없이 다시 시도하기
+
+사이트가 서버리스 함수에서 돌 수 있으므로 백그라운드에서 도는 것은 없다. 다시 시도는 다음에서 시작한다.
+
+- **같은 프로세스의 다음 쓰기.** 쓰기는 자기 이벤트를 보낸 뒤 때가 된 재시도를 최대 5건, 프로세스마다 10초에 한 번까지 함께 돌린다.
+- **`cms.events.retry({ all?, limit? })`.** 때가 된 전달을 보낸다(`all`이면 아직 때가 안 된 실패도, 죽은 것은 손으로만). 커밋과 전달 사이에 프로세스가 멈춰 전달 행이 없는 이벤트도 보낸다. `{ delivered, failed, dead }`를 돌려준다. `cms.events.list()`·`counts()`·`retryDelivery({ eventId, subscriber })`·`dismiss({ eventId, subscriber })`는 관리자 화면이 쓴다.
+- **`monti events:retry [--all] [--limit <n>]`.** `monti migrate`처럼 서버 파일을 불러와 `cms.events.retry()`를 부른다. 크론 작업이나 CI 일정에서 돌린다.
+- **`POST /api/cms/v1/events/retry[?all=1&limit=100]`.** URL만 부를 수 있는 스케줄러(예: Vercel 크론)를 위한 길이다. 관리자 세션을 받고, 서버 설정에 `events.retrySecret`이 있으면 `Authorization: Bearer <retrySecret>`도 받는다(환경 변수에 두고, `cms.server`에는 들어가지 않는다).
+
+```ts
+defineServerConfig({
+	// ...
+	events: { retrySecret: process.env.CMS_EVENTS_SECRET, maxAttempts: 8 },
+});
+```
+
+끝난 이벤트는 `events.retentionDays`일(기본 30) 뒤에 같은 쓰기 쪽 정리에서 지워진다. 관리자의 **이벤트** 화면(`/admin/events`)은 실패한 전달과 죽은 전달을 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 사이드바가 그 수를 보여 준다.
 
 ## 스키마 파일
 

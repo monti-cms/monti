@@ -1,8 +1,8 @@
 import type { Cms } from "../cms";
-import type { ContentChange } from "../core/store";
 import { createFormatRegistry, type FormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
+import type { EventSubscriber } from "../services/events";
 import type { HookSource } from "../services/hooks";
 import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute } from "./define";
 import type { PluginStorage } from "./storage";
@@ -39,8 +39,11 @@ export interface ServerPlugins {
 	 * (`server`, `plugin:<name>`), which a failing hook is reported with.
 	 */
 	writeHooks(): Promise<readonly HookSource[]>;
-	/** Calls the server config's and the plugins' after-save notifications in turn (the rest are still called if one fails). */
-	notifyAfterCommit(change: ContentChange): Promise<void>;
+	/**
+	 * The subscribers of the committed changes, in the order they are delivered to: the server config's `hooks.afterCommit`, then each plugin's. The name
+	 * is the hook's owner (`server`, `plugin:<name>`) and keys the delivery state of the outbox.
+	 */
+	eventSubscribers(): Promise<readonly EventSubscriber[]>;
 }
 
 /** `cms` is the instance that owns these plugins. It is passed to the plugin's `migrate` and `features`. */
@@ -114,15 +117,9 @@ export function createServerPlugins(
 				await plugin.migrate(storageOf(plugin.name), cms());
 			}
 		},
-		notifyAfterCommit: async (change) => {
-			for (const { owner, hooks } of await writeHooks()) {
-				if (!hooks.afterCommit) continue;
-				try {
-					await hooks.afterCommit(change);
-				} catch (error) {
-					console.error(`[cms] afterCommit of ${owner} failed`, change.kind, change.entryId, error);
-				}
-			}
-		},
+		eventSubscribers: async () =>
+			(await writeHooks()).flatMap(({ owner, hooks }) =>
+				hooks.afterCommit ? [{ name: owner, handler: hooks.afterCommit }] : [],
+			),
 	};
 }

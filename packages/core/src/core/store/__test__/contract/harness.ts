@@ -1,4 +1,3 @@
-import type { AfterCommit } from "../../after-commit";
 import type { ContentStore } from "../../ports";
 
 /**
@@ -10,7 +9,7 @@ export interface StoreFactory {
 	/** Adapter name, shown in the test titles. */
 	readonly name: string;
 	/** Creates a new empty store, ready to use, in its own isolated space (a schema, a database, a directory). */
-	create(options?: { readonly afterCommit?: AfterCommit }): Promise<StoreSession>;
+	create(): Promise<StoreSession>;
 	/** Called once after the whole contract ran (closes what the factory shares between sessions). */
 	dispose?(): Promise<void>;
 }

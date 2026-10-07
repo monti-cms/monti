@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
+import { eventsRetry } from "./events";
 import { formatInitReport, initProject } from "./init";
 import { migrate } from "./migrate";
 import { schemaApply, schemaDiff } from "./schema-apply";
@@ -12,6 +13,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: creates config and route files in a Next app and wires up tsconfig, CSS and the next config.
  * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--server <file>]`: creates the DB tables.
+ * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--server <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti schema:types [--schema <file>] [--out <file>] [--watch] [--check]`: writes the types of `monti.schema.json`.
  * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of `cms.config.ts` to `monti.schema.json`.
  * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
@@ -30,6 +32,7 @@ export {
 } from "./add";
 export { parseJsonc, resolveServerPath } from "./config-paths";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
+export { type EventsRetryOptions, eventsRetry } from "./events";
 export { formatInitReport, type InitOptions, type InitReport, initProject } from "./init";
 export { type MigrateOptions, migrate } from "./migrate";
 export { DEFAULT_REGISTRY_URL, type RegistryItem, readItem, resolveItems } from "./registry";
@@ -83,6 +86,10 @@ Commands:
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
               --server <file>       The server file that exports the CMS instance (default: ./cms.server.ts, ./src/cms.server.ts)
+  events:retry    Deliver the afterCommit events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)
+              --all                 Also try the failed deliveries that are not due yet
+              --limit <n>           Most deliveries to try (default 100)
+              --env-file <file>, --no-env-file, --server <file>   As for migrate
   schema:types    Write the types of the schema file (monti-env.d.ts), so collections and locales are typed without writing types
               --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
               --out <file>          Declaration file (default: monti-env.d.ts next to the schema file)
@@ -164,6 +171,32 @@ export async function runCli(
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
 				server: values.server,
 				log: io.log,
+			});
+			return ok ? 0 : 1;
+		}
+		if (command === "events:retry") {
+			const { values } = parseArgs({
+				args: [...rest],
+				options: {
+					"env-file": { type: "string", multiple: true },
+					"no-env-file": { type: "boolean" },
+					server: { type: "string" },
+					all: { type: "boolean" },
+					limit: { type: "string" },
+				},
+			});
+			const limit = values.limit === undefined ? undefined : Number(values.limit);
+			if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+				io.error("--limit must be a positive whole number");
+				return 1;
+			}
+			const ok = await eventsRetry({
+				cwd: io.cwd,
+				envFiles: values["no-env-file"] ? [] : values["env-file"],
+				server: values.server,
+				log: io.log,
+				all: values.all,
+				limit,
 			});
 			return ok ? 0 : 1;
 		}

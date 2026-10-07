@@ -11,6 +11,7 @@ import { createRead } from "../read";
 import { defineCollection } from "../schema/collection";
 import { fields } from "../schema/fields";
 import type { CmsAuth, CmsServerConfig } from "../server/define";
+import { createEventDispatcher } from "../services/events";
 import type { AnyCmsConfig } from "../site";
 import { type BulkService, type Cms, type ContentService, createCms, lazyHandle } from "./create-cms";
 
@@ -119,8 +120,14 @@ export function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFI
 		pluginRoutes: plugins.routes,
 		pluginFeatures: plugins.features,
 		writeHooks: plugins.writeHooks,
+		// Delivers to the plugins of this fake (and the server config's hook), over the store the test provided.
+		events: createEventDispatcher({
+			...server.events,
+			store: () =>
+				server.database.createStore({ site: cms.site }) as ContentStore & { getEntry: ContentStore["getEntry"] },
+			subscribers: plugins.eventSubscribers,
+		}).events,
 		formats: async () => createFormatRegistry(parts.formats ?? []),
-		notifyAfterCommit: plugins.notifyAfterCommit,
 		secrets: cms.secrets,
 		authGateway,
 		handle: lazyHandle(() => fake as unknown as Cms),

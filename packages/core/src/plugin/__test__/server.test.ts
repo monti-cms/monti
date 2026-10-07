@@ -118,34 +118,27 @@ describe("writeHooks", () => {
 	});
 });
 
-describe("notifyAfterCommit", () => {
-	const change = { kind: "saved", entryId: "e1" } as never;
-
-	it("calls the server config's afterCommit and then each plugin's, in order", async () => {
-		const calls: string[] = [];
+describe("eventSubscribers", () => {
+	it("lists the server config's afterCommit and then each plugin's, named by owner, skipping hooks without one", async () => {
+		const afterCommit = (name: string) => () => void name;
+		const handlers = { server: afterCommit("server"), a: afterCommit("a"), b: afterCommit("b") };
 		const plugins = serverPlugins(
 			[
-				{ name: "a", server: async () => ({ default: { hooks: { afterCommit: () => void calls.push("a") } } }) },
-				{ name: "b", server: async () => ({ default: { hooks: { afterCommit: () => void calls.push("b") } } }) },
+				{ name: "a", server: async () => ({ default: { hooks: { afterCommit: handlers.a } } }) },
+				{ name: "no-after-commit", server: async () => ({ default: { hooks: { validate: () => undefined } } }) },
+				{ name: "b", server: async () => ({ default: { hooks: { afterCommit: handlers.b } } }) },
 			],
-			{ afterCommit: () => void calls.push("server") },
+			{ afterCommit: handlers.server },
 		);
-		await plugins.notifyAfterCommit(change);
-		expect(calls).toEqual(["server", "a", "b"]);
+		expect(await plugins.eventSubscribers()).toEqual([
+			{ name: "server", handler: handlers.server },
+			{ name: "plugin:a", handler: handlers.a },
+			{ name: "plugin:b", handler: handlers.b },
+		]);
 	});
 
-	it("keeps calling the rest when one afterCommit fails, and never throws", async () => {
-		const calls: string[] = [];
-		const plugins = serverPlugins(
-			[{ name: "a", server: async () => ({ default: { hooks: { afterCommit: () => void calls.push("a") } } }) }],
-			{
-				afterCommit: async () => {
-					throw new Error("down");
-				},
-			},
-		);
-		await expect(plugins.notifyAfterCommit(change)).resolves.toBeUndefined();
-		expect(calls).toEqual(["a"]);
+	it("is empty when nothing registers afterCommit", async () => {
+		expect(await serverPlugins([{ name: "plain" }]).eventSubscribers()).toEqual([]);
 	});
 });
 

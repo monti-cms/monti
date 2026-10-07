@@ -1,4 +1,5 @@
 import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types";
+import type { ClaimedDelivery, EventDelivery, EventDeliveryCounts, EventDeliveryState } from "./events";
 import type {
 	AppliedSchemaChange,
 	ApplySchemaChangeParams,
@@ -242,6 +243,57 @@ export interface SchemaChangeStore {
 	applySchemaChange(params: ApplySchemaChangeParams): Promise<AppliedSchemaChange>;
 }
 
+/**
+ * The event outbox (`events.ts`). The store writes an event for every committed change in the same transaction as the change (so the two stand or fall
+ * together); this port is what the dispatcher (`services/events.ts`) and the admin use to deliver them. Delivery rows are made by `enqueueEvents`, one per
+ * subscriber, so a subscriber added later does not get the history before it.
+ * Times are passed in (`now`) so the caller owns the clock.
+ */
+export interface EventStore {
+	/**
+	 * Makes the delivery rows (one per subscriber, `pending`, due now) of the events that have none: those of one entry, or the recent ones of any entry
+	 * (committed since `since`). It is idempotent, and returns the number of rows made.
+	 */
+	enqueueEvents(params: { subscribers: readonly string[]; entryId?: string; since?: Date; now: Date }): Promise<number>;
+	/**
+	 * Claims the deliveries that are due: `pending`, `failed` with `nextAttemptAt` reached (any `failed` with `ignoreBackoff`), and `delivering` whose lease ran out.
+	 * A delivery is claimed only when no earlier event of the same entry is waiting for the same subscriber (`pending`, `delivering` or `failed`), which is the
+	 * delivery order per entry; dead and dismissed deliveries do not hold the order. The claim counts the try (`attempts`) and holds the delivery for `leaseMs`.
+	 * Oldest events first. Two callers never claim the same delivery.
+	 */
+	claimDeliveries(params: {
+		subscribers: readonly string[];
+		now: Date;
+		leaseMs: number;
+		limit: number;
+		entryIds?: readonly string[];
+		ignoreBackoff?: boolean;
+	}): Promise<ClaimedDelivery[]>;
+	completeDelivery(params: { eventId: string; subscriber: string; now: Date }): Promise<void>;
+	/** Records a failed try: `failed` and due at `retryAt`, or `dead` when the try was the `maxAttempts`th. Returns the new state. */
+	failDelivery(params: {
+		eventId: string;
+		subscriber: string;
+		error: string;
+		now: Date;
+		retryAt: Date;
+		maxAttempts: number;
+	}): Promise<"failed" | "dead">;
+	/** Deliveries in the states (default `failed` and `dead`), newest event first. */
+	listEventDeliveries(params?: {
+		states?: readonly EventDeliveryState[];
+		limit?: number;
+		offset?: number;
+	}): Promise<{ items: EventDelivery[]; total: number }>;
+	countEventDeliveries(): Promise<EventDeliveryCounts>;
+	/** A failed or dead delivery becomes `pending` and due now, with its attempts counted from zero. `false` when it is in another state. */
+	retryDelivery(params: { eventId: string; subscriber: string; now: Date }): Promise<boolean>;
+	/** A failed or dead delivery becomes `dismissed`: it is no longer retried or listed. `false` when it is in another state. */
+	dismissDelivery(params: { eventId: string; subscriber: string }): Promise<boolean>;
+	/** Removes events committed before `before` whose deliveries are all finished (delivered or dismissed), or that have none. Returns the number removed. */
+	pruneEvents(params: { before: Date }): Promise<number>;
+}
+
 /** Everything the content store offers. */
 export interface ContentStore
 	extends EntryStore,
@@ -253,4 +305,5 @@ export interface ContentStore
 		TemplateStore,
 		PreferenceStore,
 		TransferStore,
-		SchemaChangeStore {}
+		SchemaChangeStore,
+		EventStore {}

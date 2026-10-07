@@ -3,6 +3,7 @@
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import {
+	BellRing,
 	ChevronRight,
 	FileImage,
 	Folder as FolderIcon,
@@ -48,7 +49,7 @@ import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/ent
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 
 /** Value that points to the current screen in the sidebar. For a plugin screen, that screen's address (`nav.path`, e.g. `ai`). */
-export type AdminNavId = Collection | "media" | "templates" | "schema" | "trash" | (string & {});
+export type AdminNavId = Collection | "media" | "templates" | "events" | "schema" | "trash" | (string & {});
 
 /** Folder navigation used only on the list screen. */
 export interface FolderNavigation {
@@ -69,6 +70,8 @@ export interface AdminSidebarProps {
 	activeNav: AdminNavId;
 	folderNav?: FolderNavigation;
 	trashCount?: number | null;
+	/** Failed and dead event deliveries. */
+	eventsCount?: number | null;
 }
 
 /** Like a file explorer: F2 opens rename, Delete opens delete (confirm dialog). */
@@ -279,7 +282,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 }
 
 /** Left navigation area: collections, media/templates/trash, virtual folder tree. */
-export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarProps) {
+export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: AdminSidebarProps) {
 	const site = useSite();
 	// Sidebar items added by a plugin (`plugins[].nav` in site settings).
 	const pluginNav = useMemo(() => site.plugins.flatMap((plugin) => plugin.nav ?? []), [site]);
@@ -361,6 +364,17 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 							{navLink(site.adminHref("/schema"), "schema", t("sidebar.schema"), <Settings2 />)}
 							{pluginNav.map((item) =>
 								navLink(site.adminHref(`/${item.path}`), item.path, item.label, <NamedIcon name={item.icon} />),
+							)}
+							{navLink(
+								site.adminHref("/events"),
+								"events",
+								t("sidebar.events"),
+								<BellRing />,
+								eventsCount ? (
+									<SidebarMenuBadge aria-label={t("sidebar.eventsBadge", { count: eventsCount })}>
+										{eventsCount}
+									</SidebarMenuBadge>
+								) : null,
 							)}
 							{navLink(
 								site.adminHref("/trash"),

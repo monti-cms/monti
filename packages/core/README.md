@@ -357,7 +357,7 @@ A plain `Cms` or `Site` is an instance of any config, with `string` names. Two i
 - Rendering: `<CmsContent cms={cms} entry={entry} />` and `renderDocument(doc, { site: cms.site, … })`; `renderMdx(doc, { site })` the same way. Type the `components` table with `DocumentComponentsOf<typeof cms>` (or `DocumentComponentsFor<typeof config>`) instead of the old `DocumentComponents`, which is now the untyped table.
 - Config-derived values and helpers that were exported by `@monti-cms/core/client` (`LOCALES`, `DEFAULT_LOCALE`, `isLocale`, `localizePath`, `COLLECTIONS`, `schemaOf`, `contentPath`, `parseInternalLink`, `adminHref`, `SITE_NAME`, `BLOCKS`, `CODE_LINE_EFFECTS`, `getPluginOptions`, ...) are members of the site: `cms.site.LOCALES` on the server, `useSite().LOCALES` in client components.
   `createTranslator(messages)` at module level becomes `site.createTranslator(messages)` or, in a component, `useTranslator(messages)`. `formatDateTimeInput` and `parseDateTimeInput` need a time zone (or use the site's: `site.formatDateTimeInput(value)`).
-- Plugins and adapters: `CmsServerPlugin` and routes are unchanged (`cms.site` is on the instance they get). A `DatabaseAdapter` receives the site (`createStore({ site, afterCommit })`, `migrate({ site, formats })`), and an `AuthAdapter` gets it in `create({ site, loginPath, trustHost })`.
+- Plugins and adapters: `CmsServerPlugin` and routes are unchanged (`cms.site` is on the instance they get). A `DatabaseAdapter` receives the site (`createStore({ site })`, `migrate({ site, formats })`), and an `AuthAdapter` gets it in `create({ site, loginPath, trustHost })`.
   Text that block and line-effect definitions pick with `createActiveTranslator` is read once when the site is created, in the admin language of that site. Anything else that translates at run time uses `site.createTranslator`.
 - Tests: no test needs to mock a config module. Create the site or the instance the test needs (`createSite(config)`, `fakeCms({ config })`, `createCms({ config, server })`), and wrap React trees in `<SiteProvider site={site}>`.
 
@@ -460,7 +460,7 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti add` (install components as source), `monti migrate` (create tables), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti add` (install components as source), `monti migrate` (create tables), `monti events:retry` (deliver `afterCommit` events that are due), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
@@ -836,7 +836,8 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | `secret` | Master secret for values plugins keep encrypted in the DB (AI service keys). Plugins never see it: each gets a key derived from it and the plugin name ("Plugin secrets"). Keep it separate from the login signing value. |
 | `previousSecrets` | Optional. Secrets `secret` replaced. Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
 | `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
-| `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed: cache revalidation, webhooks, search indexing). See "Hook contract". Plugins can set `hooks` too |
+| `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed: cache revalidation, webhooks, search indexing; retried when it fails, so it must be idempotent). See "Hook contract" and "Event delivery". Plugins can set `hooks` too |
+| `events` | Optional. How `afterCommit` deliveries are retried and kept: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. See "Event delivery" |
 
 To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` or `AuthAdapter`.
 
@@ -881,7 +882,7 @@ const server = defineServerConfig({
 		// The same, for a publish only.
 		validatePublish: ({ metadata }) => ({ warnings: metadata.summary ? [] : [{ code: "no_summary", path: "summary" }] }),
 		// After the change is committed.
-		afterCommit: (change) => revalidate(change.collection, change.publishedSlug),
+		afterCommit: (event) => revalidate(event.collection, event.publishedSlug),
 	},
 });
 
@@ -905,15 +906,61 @@ export const cms = createCms({ server });
 - Hooks run outside the database transaction and get no database client. They may be async. The internal store option `beforePublishCommit` (which does get the transaction's client) is not part of this contract and is unchanged.
 - A `transform` that changes the draft while publishing has the change saved together with the publish, in one transaction (`afterCommit` then gets a `saved` change followed by a `published` one for the entry; a publish that changes nothing gets only `published`). A create or save that publishes at once (records) is reported the same way: `created` or `saved`, then `published`.
 - A hook that throws, or returns something that is not its contract, fails the write with `hook_failed` (HTTP 500). The error names the hook and its owner (`server` or `plugin:<name>`) in `issues[].params`; nothing is stored. `validate` failures give `validation_failed` and `validatePublish` failures give `publish_validation_failed` (HTTP 422), with the added issues next to the draft's own.
-- `afterCommit` gets ids, status and slugs only, never the body. Read the committed entry with `cms.store().getEntry(change.entryId)`. Delivery is in-process and at most once: it is not retried, and there is no outbox yet.
+- `afterCommit` gets the event: ids, status, slugs, `version`, `contentHash`, `eventId`, and `read()` for the committed entry (never the body itself). Delivery is from an outbox: at least once, in order per entry, retried when it fails. See "Event delivery".
 
 Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `write-pipeline.test.ts`):
 
 1. **Transformed data still goes through core.** Normalization, reference collection and validation run on what a `transform` returns, so a transform cannot get a value past a core check.
 2. **Extra validation can only add failures.** `validate` and `validatePublish` return issues and warnings that are added to the core ones. They get a copy of the snapshot, so they cannot remove or downgrade a core issue, and the core integrity checks of a publish (references, media, links, required values) always run.
 3. **A failure before the commit blocks the write.** A failing core preparation, a failure a hook adds, or a hook that throws stores nothing and does not call `afterCommit`.
-4. **An `afterCommit` failure never undoes a completed write.** It is logged, and the other `afterCommit` hooks still run.
+4. **An `afterCommit` failure never undoes a completed write.** It is recorded and retried, and the other `afterCommit` hooks still run. The event is written in the transaction of the write, so a write that rolls back leaves none.
 5. **Bulk applies the same hooks to every item.** Each item runs the full pipeline, and its result or error (`hook_failed`, `validation_failed`, ...) is reported per item.
+
+## Event delivery (`afterCommit`)
+
+`afterCommit` is delivered from an outbox, so it survives a failing subscriber and a stopped process.
+
+- **The outbox.** In the same transaction as a change, the store inserts a row into `cms_events` (migration `0022_events`): `id`, `kind` (`created`, `saved`, `published`, `archived`, `unarchived`, `trashed`, `restored`, `deleted`), `entry_id`, `collection`, `locale`, `content_hash`, `version`, `occurred_at` and a `payload` with the status and slugs. A change that rolls back leaves no event; a change that commits always has one. A create or save that publishes at once writes two events (`created`/`saved`, then `published`). There is no foreign key to `entries`, so the event of a deletion outlives the entry. A change to a source's translations is reported once, for the entry it was made on (`translationGroupId` names the group).
+- **Subscribers.** The server config's `hooks.afterCommit` is the subscriber `server`; each plugin's `hooks.afterCommit` is `plugin:<plugin name>`. The name is stable and keys the delivery state in `cms_event_deliveries` (one row per event and subscriber: `state`, `attempts`, `last_error`, `next_attempt_at`), so do not rename a plugin that has one. A subscriber added later gets the events committed after it appears, not the history.
+- **Delivery.** After the commit, the process that made the change tries each subscriber right away, in the same call, so latency is what it was before. A failure is recorded and retried later with a growing delay (15 seconds, doubling, at most an hour; `events.backoffMs` changes it) and the delivery is dead-lettered (`dead`) after `events.maxAttempts` tries (default 8). The write is never undone, and the other subscribers are not held back.
+- **At least once, in order per entry.** An event can be delivered more than once (a subscriber that did its work and then failed, a try that never finished), so **a subscriber must be idempotent**: it receives `event.eventId`, the same on every try, to remember what it handled. Events of one entry are delivered in commit order: an event waits while an earlier event of the same entry is pending, in flight or failing and not dead. A dead or dismissed delivery no longer holds the order, so a manual retry of a dead one can arrive after later events; a subscriber that exports the entry reads its current state and compares `version`. Events of different entries are independent.
+- **Reading the committed entry.** `event.read()` returns the entry as it is now (`Entry`, with the working and published documents) or `null` when it was deleted. `event.version` and `event.contentHash` say which change this event is: when `read().version` is higher, a later event for the entry follows. A subscriber that exports an entry through a format (git-sync) reads it, runs the format and skips the event if the version it wrote is already newer.
+
+```ts
+// git-sync/server.ts, the `server` module of the plugin (`definePlugin({ name: "git-sync", server: () => import("./server") })`)
+import type { CmsServerPlugin } from "@monti-cms/core";
+
+const plugin: CmsServerPlugin = {
+	hooks: {
+		// Delivered at least once: use `event.eventId` to skip an event this subscriber already handled.
+		afterCommit: async (event) => {
+			if (await alreadyHandled(event.eventId)) return;
+			const entry = await event.read(); // the committed entry, or null if it was deleted
+			await pushToGit(event, entry);
+			await markHandled(event.eventId);
+		},
+	},
+};
+export default plugin;
+```
+
+### Retries without a worker
+
+Nothing runs in the background, because the site may run on serverless functions. A retry starts from:
+
+- **The next write in the same process.** After its own events, a write runs up to 5 due retries, at most once every 10 seconds per process.
+- **`cms.events.retry({ all?, limit? })`.** Delivers what is due (with `all`, also failed deliveries that are not due yet; dead ones only by hand). It also delivers events that have no delivery rows because the process stopped between the commit and the delivery. It returns `{ delivered, failed, dead }`. `cms.events.list()`, `counts()`, `retryDelivery({ eventId, subscriber })` and `dismiss({ eventId, subscriber })` are what the admin uses.
+- **`monti events:retry [--all] [--limit <n>]`.** Loads the server file like `monti migrate` and calls `cms.events.retry()`; run it from a cron job or a CI schedule.
+- **`POST /api/cms/v1/events/retry[?all=1&limit=100]`.** For a scheduler that can only call a URL (a Vercel cron, say). It takes an admin session, or `Authorization: Bearer <retrySecret>` when the server config sets `events.retrySecret` (keep it in an environment variable; it is not part of `cms.server`).
+
+```ts
+defineServerConfig({
+	// ...
+	events: { retrySecret: process.env.CMS_EVENTS_SECRET, maxAttempts: 8 },
+});
+```
+
+Finished events are removed after `events.retentionDays` days (default 30), by the same write-driven pass. The admin's **Events** screen (`/admin/events`) lists the failed and dead deliveries with their last error, and retries or dismisses each; the sidebar shows how many there are.
 
 ## The schema file
 

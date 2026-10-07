@@ -6,6 +6,7 @@ import { createContext, type ReactNode, useCallback, useContext, useMemo } from 
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
 import { cmsFetch } from "../admin-api";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
+import { countFailedEvents, EVENTS_COUNT_KEY } from "../events/events-api";
 import { TRASH_COUNT_KEY } from "./list-cache";
 import { sharedMessages } from "./messages";
 
@@ -13,13 +14,15 @@ interface AdminNavContextValue {
 	/** Number of trash items across all collections. null before loading. */
 	trashCount: number | null;
 	refreshTrashCount: () => void;
+	/** Number of failed and dead event deliveries. null before loading or when unavailable. */
+	eventsCount: number | null;
 }
 
 const AdminNavContext = createContext<AdminNavContextValue | null>(null);
 
 /** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
 export const useAdminNav = (): AdminNavContextValue =>
-	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {} };
+	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {}, eventsCount: null };
 
 async function countTrash(site: Site): Promise<number> {
 	const totals = await Promise.all(
@@ -37,11 +40,20 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
 	const queryClient = useQueryClient();
 	const { data } = useQuery({ queryKey: TRASH_COUNT_KEY, queryFn: () => countTrash(site) });
+	// A light background fetch. Errors (for example no access) are ignored so the sidebar never breaks.
+	const { data: eventsCount } = useQuery({
+		queryKey: EVENTS_COUNT_KEY,
+		queryFn: () => countFailedEvents(site),
+		retry: false,
+	});
 	const refreshTrashCount = useCallback(
 		() => void queryClient.invalidateQueries({ queryKey: TRASH_COUNT_KEY }),
 		[queryClient],
 	);
-	const nav = useMemo(() => ({ trashCount: data ?? null, refreshTrashCount }), [data, refreshTrashCount]);
+	const nav = useMemo(
+		() => ({ trashCount: data ?? null, refreshTrashCount, eventsCount: eventsCount ?? null }),
+		[data, refreshTrashCount, eventsCount],
+	);
 	return <AdminNavContext.Provider value={nav}>{children}</AdminNavContext.Provider>;
 }
 
@@ -77,7 +89,7 @@ export function AdminShell({
 
 	return (
 		<SidebarProvider className="h-svh overflow-hidden">
-			<AdminSidebar {...sidebar} trashCount={nav.trashCount} />
+			<AdminSidebar {...sidebar} trashCount={nav.trashCount} eventsCount={nav.eventsCount} />
 			<SidebarInset className="min-w-0 overflow-hidden">
 				<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-5">
 					<SidebarTrigger aria-label={t("shell.openSidebar")} className="-ml-1 text-cms-muted-foreground md:hidden" />

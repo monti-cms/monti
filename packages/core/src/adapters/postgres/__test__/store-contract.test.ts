@@ -6,11 +6,11 @@ import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from ".
 /** The Postgres adapter against the store contract: every session is a new schema in the test database. */
 runStoreContract({
 	name: "postgres",
-	create: async (options) => {
+	create: async () => {
 		const { pool, schemaName } = await createIsolatedTestPool();
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		return {
-			store: createContentStore(pool, { site: testSite, schema: schemaName, afterCommit: options?.afterCommit }),
+			store: createContentStore(pool, { site: testSite, schema: schemaName }),
 			close: () => dropIsolatedTestPool(pool, schemaName),
 		};
 	},
