@@ -34,6 +34,10 @@ describe("publishes that arrive close together are one commit", () => {
 		expect(h.repo.files("main").has("content/memo/second.en.mdx")).toBe(false);
 		expect(await h.ctx.state.queue.list("site")).toHaveLength(2);
 		expect(commits(h)).toBe(1);
+		// Waiting for the batch is not a failure: nothing is listed as failed, nothing counts toward the badge or dead-lettering.
+		expect(await h.cms.events.counts()).toMatchObject({ failed: 0, dead: 0, pending: 2 });
+		expect((await h.cms.events.list()).items).toEqual([]);
+		expect(h.errors).not.toHaveBeenCalled();
 
 		// The window ends (the last commit is now older than the window): the outbox retries the two deliveries. The first takes both entries in one
 		// commit, the second finds nothing left to do.

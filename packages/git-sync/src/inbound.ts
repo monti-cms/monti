@@ -1,5 +1,13 @@
 import { CmsError, type Entry, type Issue, ServiceError } from "@monti-cms/core/plugin/server";
-import { exportEntry, isSyncable, type ParsedEntryFile, parseEntryFile, sameContent } from "./entry-file";
+import {
+	exportEntry,
+	isSyncable,
+	type ParsedEntryFile,
+	parseEntryFile,
+	RelationImportError,
+	resolveRelations,
+	sameContent,
+} from "./entry-file";
 import type { ResolvedTarget } from "./options";
 import { enqueue, flushTarget, isKnownBlob } from "./outbound";
 import type { ConflictReason, ConflictRecord, PullSummary, SyncRecord } from "./state";
@@ -24,6 +32,7 @@ export function describeError(error: unknown): string {
 			.filter(Boolean);
 		return found.length > 0 ? `${error.code}: ${found.slice(0, 5).join("; ")}` : error.code;
 	}
+	if (error instanceof RelationImportError) return `relations: ${error.message}`;
 	return error instanceof Error ? error.message || error.name : String(error);
 }
 
@@ -69,10 +78,12 @@ export async function applyFile(
 ): Promise<Applied> {
 	const { cms } = ctx;
 	const service = cms.contentService();
+	// Relations are written as slugs in a file; the pipeline takes ids.
+	const metadata = await resolveRelations(cms, input.file, { collection: input.collection, locale: input.locale });
 	const body = {
 		collection: input.collection,
 		slug: input.slug,
-		metadata: input.file.metadata,
+		metadata,
 		body: input.file.body,
 		format: target.format,
 	};

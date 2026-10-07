@@ -363,9 +363,10 @@ describe("round trip", () => {
 		expect(parsed.ok && parsed.data).toMatchObject({
 			title: "Round trip: a title with colon & 'quotes'",
 			summary: "Line one\nLine two",
-			tagIds: [tag.id],
+			// What a site's templates use: the slug of the tag. The exact id is under `monti.refs`.
+			tagIds: ["rt-tag"],
 			slug: "rt-post",
-			monti: { id: entry.id, collection: "post", locale: "en" },
+			monti: { id: entry.id, collection: "post", locale: "en", refs: { tagIds: [tag.id] } },
 		});
 		expect(parsed.ok && parsed.body).toContain("(/memos/rt-target)");
 
@@ -378,6 +379,105 @@ describe("round trip", () => {
 		expect(after.published?.metadata).toEqual(before.published?.metadata);
 		expect(after.published?.doc).toEqual(before.published?.doc);
 		expect(target.id).toBeDefined();
+	});
+
+	describe("relations are slugs in the file, ids in the entry", () => {
+		const tagOf = (slug: string, title = slug) =>
+			h.service.createDraft(
+				{ collection: "tag", slug, metadata: { title }, body: "", format: "mdx" },
+				{ publishImmediately: true },
+			);
+		const postWith = (slug: string, tagIds: string[]) =>
+			h.service.createDraft(
+				{ collection: "post", slug, metadata: { title: slug, tagIds }, body: "body", format: "mdx" },
+				{ publishImmediately: true },
+			);
+		const path = (slug: string) => `content/post/${slug}.en.mdx`;
+
+		it("writes the slugs a site needs and the exact ids under monti.refs, for a list and for a single relation", async () => {
+			const one = await tagOf("rel-one");
+			const two = await tagOf("rel-two");
+			const post = await postWith("rel-list", [one.id, two.id]);
+			const parsed = parseFile(h.repo.files("main").get(path("rel-list")) ?? "");
+			expect(parsed.ok && parsed.data).toMatchObject({
+				tagIds: ["rel-one", "rel-two"],
+				monti: { id: post.id, refs: { tagIds: [one.id, two.id] } },
+			});
+		});
+
+		it("uses monti.refs when the slugs are still what they were, so a body edit keeps the exact ids and the same hash", async () => {
+			const one = await tagOf("ref-one");
+			const post = await postWith("ref-post", [one.id]);
+			const before = await h.store.getEntry(post.id);
+			editInGit(path("ref-post"), (text) => text.replace("body", "a longer body"));
+			expect((await pullTarget(h.ctx, h.target)).errors).toEqual([]);
+			const after = await h.store.getEntry(post.id);
+			expect(after.published?.metadata).toMatchObject({ tagIds: [one.id] });
+			expect(after.published?.contentHash).not.toBe(before.published?.contentHash);
+			// Only the body changed.
+			expect(after.published?.metadata).toEqual(before.published?.metadata);
+		});
+
+		it("still finds a target that was renamed after the file was written, by its exact id", async () => {
+			const tag = await tagOf("before-rename", "Tag");
+			const post = await postWith("renamed-target", [tag.id]);
+			const current = await h.store.getEntry(tag.id);
+			await h.service.saveDraft(
+				tag.id,
+				{
+					collection: "tag",
+					slug: "after-rename",
+					metadata: { title: "Tag" },
+					body: "",
+					format: "mdx",
+					expectedVersion: current.version,
+				},
+				{ publishImmediately: true },
+			);
+			// The post's file still says the old slug; its refs say which entry it is.
+			expect(parseFile(h.repo.files("main").get(path("renamed-target")) ?? "")).toMatchObject({
+				data: { tagIds: ["before-rename"] },
+			});
+			editInGit(path("renamed-target"), (text) => text.replace("body", "edited body"));
+			expect((await pullTarget(h.ctx, h.target)).errors).toEqual([]);
+			expect((await h.store.getEntry(post.id)).published?.metadata).toMatchObject({ tagIds: [tag.id] });
+		});
+
+		it("resolves slugs written by hand, when the file has no monti.refs or the slugs were edited", async () => {
+			const red = await tagOf("hand-red");
+			const blue = await tagOf("hand-blue");
+			const post = await postWith("hand-post", [red.id]);
+			// Slugs edited in git: refs no longer match, the slugs win.
+			editInGit(path("hand-post"), (text) => text.replace("- hand-red", "- hand-blue"));
+			expect((await pullTarget(h.ctx, h.target)).errors).toEqual([]);
+			expect((await h.store.getEntry(post.id)).published?.metadata).toMatchObject({ tagIds: [blue.id] });
+
+			// A new file with no monti block at all.
+			h.repo.commit("main", [
+				{
+					path: path("by-hand"),
+					text: composeFile({ title: "By hand", slug: "by-hand", tagIds: ["hand-red", "hand-blue"] }, "text\n"),
+				},
+			]);
+			expect((await pullTarget(h.ctx, h.target)).errors).toEqual([]);
+			const created = await publishedOf("post", "by-hand");
+			expect(created?.published?.metadata).toMatchObject({ tagIds: [red.id, blue.id] });
+		});
+
+		it("reports a slug no entry has, naming the field and the slug, and writes nothing", async () => {
+			h.repo.commit("main", [
+				{
+					path: path("bad-slug"),
+					text: composeFile({ title: "Bad slug", slug: "bad-slug", tagIds: ["nope-tag"] }, "text\n"),
+				},
+			]);
+			const summary = await pullTarget(h.ctx, h.target);
+			expect(summary.errors).toEqual([
+				{ path: path("bad-slug"), message: 'relations: field tagIds: no tag has the slug "nope-tag"' },
+			]);
+			expect(await publishedOf("post", "bad-slug")).toBeNull();
+			h.repo.commit("main", [{ path: path("bad-slug"), delete: true }]);
+		});
 	});
 
 	it("round trips the per-language names of an item collection", async () => {

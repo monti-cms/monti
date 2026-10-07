@@ -83,7 +83,8 @@ summary: |-
   A short introduction
   on two lines.
 tagIds:
-  - 1f0c6a52-8d1e-4c7a-9f0b-2a3b4c5d6e7f
+  - typescript
+  - testing
 slug: hello-world
 date: 2026-10-07T09:00:00.000Z
 lastmod: 2026-10-08T10:30:00.000Z
@@ -91,6 +92,10 @@ monti:
   id: 8a3b5c1e-0d2f-4e6a-b7c8-9d0e1f2a3b4c
   collection: post
   locale: en
+  refs:
+    tagIds:
+      - 1f0c6a52-8d1e-4c7a-9f0b-2a3b4c5d6e7f
+      - 9d2e4b70-3c1a-4f58-8e6b-7a0c5d1e2f34
 ---
 
 ## Heading
@@ -98,12 +103,13 @@ monti:
 A paragraph with **bold** and a [link to another post](/posts/another-post).
 ```
 
-- **Fields** of the collection (`title`, `summary`, tags, ...) are top-level keys, as they are stored. A **relation holds the ids** of the entries it points to (a list for a many-relation). An id never goes stale when the target is renamed and it round-trips exactly, where a slug would not; to see what an id is, open the file of the target (its `monti.id`). The per-language names of a record collection (category, tag) are the nested `translations` mapping.
+- **Fields** of the collection (`title`, `summary`, tags, ...) are top-level keys, as they are stored. A **relation is written as the slug** of the entry it points to (a list of slugs for a many-relation), which is what an Astro or Hugo template needs; the target is the published entry in the file's language, else the source's (a target that is not published is written as its id). The **exact ids are under `monti.refs`**, so the file imports back to the same entries. The per-language names of a record collection (category, tag) are the nested `translations` mapping.
 - `slug`, `date` (published) and `lastmod` (modified) are the keys a static site generator reads. `date` and `lastmod` are written for the site and **ignored on import**.
-- `monti` names the entry: `id`, `collection`, `locale`, and for a translation `translationOf` (the id of its source). It pairs a file with its entry when the file is moved.
+- `monti` names the entry: `id`, `collection`, `locale`, for a translation `translationOf` (the id of its source), and the relation `refs` (`{ tagIds: [uuid, ...], categoryId: uuid }`). It pairs a file with its entry when the file is moved.
+- **Relations on import.** A field takes its ids from `monti.refs` when they still match the slugs written in the field (a target renamed since is still found by its id). When the slugs were edited, or the file was written by hand and has no `refs`, each slug is looked up in the field's target collection (published first, then drafts; a former slug works too). A slug no entry has is an import error naming the field and the slug (the file is listed in the pull's errors and nothing is written). Slugs of the targets are written when the entry is published, so a target renamed later shows its old slug in the file until the entry is published again; the ids keep it correct.
 - **The body** is the stored document written by the format with `purpose: "sync"`: internal links are the real path of their target (an unresolved one keeps its id), so importing the text gives the same document back. Core does the same for the admin export.
 
-An entry written to a file and imported again gives the same content hash: the tests check it with fields, relations, a code block, a list and an internal link.
+An entry written to a file and imported again gives the same content hash: the tests check it with fields, relations (slugs and ids), a code block, a list and an internal link.
 
 The path follows the slug (it is what `path` says). To rename an entry in git, change its `slug` in the front matter; the file is renamed to match. A file moved with `git mv` is paired with its entry by `monti.id` and put back where the entry's address says.
 
@@ -118,7 +124,7 @@ An `afterCommit` event of a synced collection puts the entry in a queue (saved i
 | unpublished, archived, trashed, deleted | the file is deleted |
 | saved (a draft) | nothing: the file holds the published version |
 
-- **Batching.** The first publish after a quiet period (`debounceMs`) is committed at once. Publishes that follow inside the window are queued and go out in one commit when the window ends. Nothing runs in the background on serverless hosting, so the window ends when the outbox retries them (the next write, `monti events:retry`, a cron, or a process that keeps running flushes by itself). The commit message lists what is in it.
+- **Batching.** The first publish after a quiet period (`debounceMs`) is committed at once. Publishes that follow inside the window are queued and go out in one commit when the window ends. The event of a queued entry is **deferred** (the subscriber returns `{ retryAt }`, see "Event delivery" in the core README): it is rescheduled for the end of the window, and it is not a failure, so it is not listed on the Events screen, does not count in its badge, uses no attempt and cannot dead-letter. Nothing runs in the background on serverless hosting, so the deferred events are delivered when the outbox is next run (the next write, `monti events:retry`, a cron); a process that keeps running flushes by itself when the window ends. The commit message lists what is in it.
 - **`"pr"` mode.** The commit goes to `prBranch`. If a pull request from it is open, it is added to; otherwise the branch starts again from the head of `branch` and a new pull request opens. Auto-merge is enabled when the repo allows it (otherwise the screen says the pull request waits for a merge).
 - **Records.** For each entry the plugin keeps the file path, the git blob sha it last wrote and the content hash of the published entry, in plugin storage. They are what tell a hash mismatch from "nothing to do".
 - **Failures throw**, so the outbox retries them (delay 15 s, doubling, 8 tries by default, then a dead letter on the Events screen). The queue keeps the entry meanwhile, and "Commit the queue now" (or the next publish) sends it.
@@ -206,7 +212,7 @@ github.failNext("createCommit"); // GitHub failing, to test the retry
 ## Choices worth knowing
 
 - Only **published** entries sync. Drafts are not synced (a draft-branch workflow is a separate step).
-- The file holds the **published** version; relations are ids; the path is derived from the slug.
+- The file holds the **published** version; relations are slugs with the ids under `monti.refs`; the path is derived from the slug.
 - The pull compares blobs (what git has) with records (what git-sync last wrote), not commits, so it does not matter how many pushes a webhook delivery covers, and a missed webhook is made up by the next pull.
 - One flush or pull runs per target at a time, across processes (a lock in plugin storage, with an expiry).
 - A pull request that is closed without merging leaves the branch with the old file; the next flush that includes the entry (a publish of it, the retry of its event, `monti git-sync:push --all`) puts the version in a new pull request.

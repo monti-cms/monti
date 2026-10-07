@@ -1,4 +1,4 @@
-import { CmsError, type ContentEvent, type Entry } from "@monti-cms/core/plugin/server";
+import { CmsError, type ContentEvent, type DeferredDelivery, type Entry } from "@monti-cms/core/plugin/server";
 import { exportEntry, isSyncable } from "./entry-file";
 import type { BranchHead, FileChange, GitHubClient } from "./github/client";
 import type { ResolvedTarget } from "./options";
@@ -18,16 +18,6 @@ import { APPLYING_WINDOW_MS, GitSyncError, type SyncContext } from "./sync";
 
 /** The event kinds that can change a file. A save of a published entry's draft does not: the file holds the published version. */
 const FILE_KINDS: ReadonlySet<string> = new Set(["published", "restored", "trashed", "archived", "deleted"]);
-
-/** Waiting for the batching window. The event is tried again later. */
-export class GitSyncDeferred extends GitSyncError {
-	constructor(waitMs: number) {
-		super(
-			`Queued for the next commit (the batch window is open for another ${Math.max(1, Math.round(waitMs / 100) / 10)} s)`,
-		);
-		this.name = "GitSyncDeferred";
-	}
-}
 
 /** Blobs created at the same time. */
 const BLOB_BATCH = 4;
@@ -462,13 +452,19 @@ function scheduleTrailingFlush(ctx: SyncContext, target: ResolvedTarget, delayMs
 }
 
 /** Flushes now, or, inside the batching window, waits for the window to end. Throws until the entry is committed. */
-async function settle(ctx: SyncContext, target: ResolvedTarget, entryId: string, queuedAt: number): Promise<void> {
+async function settle(
+	ctx: SyncContext,
+	target: ResolvedTarget,
+	entryId: string,
+	queuedAt: number,
+): Promise<Date | undefined> {
 	const { lastFlushAt } = await ctx.state.status.get(target.id);
 	const sinceLast = ctx.now() - (lastFlushAt ?? 0);
 	if (ctx.debounceMs > 0 && sinceLast < ctx.debounceMs) {
 		const wait = ctx.debounceMs - sinceLast;
 		scheduleTrailingFlush(ctx, target, wait);
-		throw new GitSyncDeferred(wait);
+		// Not a failure: the outbox calls the subscriber again when the window ends.
+		return new Date(ctx.now() + wait);
 	}
 	await flushTarget(ctx, target);
 	// Still queued although nothing failed: another process holds it (or a newer event queued the entry again and will flush it itself).
@@ -476,18 +472,20 @@ async function settle(ctx: SyncContext, target: ResolvedTarget, entryId: string,
 	if (left && left.value.queuedAt <= queuedAt) {
 		throw new GitSyncError("The entry is queued but was not committed yet; it is retried");
 	}
+	return undefined;
 }
 
 /**
  * The `afterCommit` subscriber. For each target that syncs the entry's collection it queues the entry and commits the queue. The event only says that
  * something happened; what goes to the repo is the entry as it is now (its published version, or none).
  */
-export async function onContentEvent(ctx: SyncContext, event: ContentEvent): Promise<void> {
-	if (!FILE_KINDS.has(event.kind)) return;
+export async function onContentEvent(ctx: SyncContext, event: ContentEvent): Promise<DeferredDelivery | undefined> {
+	if (!FILE_KINDS.has(event.kind)) return undefined;
 	const targets = ctx.targets.filter((target) => target.collections.includes(event.collection));
-	if (targets.length === 0) return;
+	if (targets.length === 0) return undefined;
 	const entry = event.kind === "deleted" ? null : await event.read();
 	const failures: unknown[] = [];
+	const deferred: Date[] = [];
 	for (const target of targets) {
 		try {
 			if (isSyncable(entry, target)) {
@@ -500,23 +498,30 @@ export async function onContentEvent(ctx: SyncContext, event: ContentEvent): Pro
 					id: entry.id,
 				});
 				if (await ctx.state.applying.isMarked(target.id, path, ctx.now(), APPLYING_WINDOW_MS)) continue;
-				// A retry of an event whose entry went out in the meantime (the batch window ended and a flush took it) has nothing left to do.
-				if (event.attempt > 1) {
-					const record = await ctx.state.records.get(target.id, entry.id);
-					if (record?.blobSha && record.contentHash === entry.published.contentHash && record.path === path) continue;
+				// A later call for an event whose entry went out in the meantime (the batch window ended and a flush, which came after the event, took it)
+				// has nothing left to do.
+				const record = await ctx.state.records.get(target.id, entry.id);
+				if (record?.blobSha && record.contentHash === entry.published.contentHash && record.path === path) {
+					const { lastFlushAt } = await ctx.state.status.get(target.id);
+					if (lastFlushAt !== undefined && lastFlushAt >= event.occurredAt.getTime()) continue;
 				}
 			}
 			const queuedAt = await enqueue(ctx, target, event.entryId);
 			// Writing files into the CMS holds the target's lock in this process: the commit waits until that is over.
-			if (ctx.importing.has(target.id)) throw new GitSyncDeferred(1000);
-			await settle(ctx, target, event.entryId, queuedAt);
+			if (ctx.importing.has(target.id)) {
+				deferred.push(new Date(ctx.now() + 1000));
+				continue;
+			}
+			const retryAt = await settle(ctx, target, event.entryId, queuedAt);
+			if (retryAt) deferred.push(retryAt);
 		} catch (error) {
 			failures.push(error);
 		}
 	}
-	// A deferral is not worse than a failure, and the first failure of a target does not hide the others (they were all tried).
-	const first = failures.find((error) => !(error instanceof GitSyncDeferred)) ?? failures[0];
-	if (first) throw first;
+	// The first failure of a target does not hide the others (they were all tried). Deferring is not a failure: the outbox calls again when the window ends.
+	if (failures[0] !== undefined) throw failures[0];
+	if (deferred.length > 0) return { retryAt: new Date(Math.max(...deferred.map((date) => date.getTime()))) };
+	return undefined;
 }
 
 /** Queues every published entry of a target (the first sync) and commits them in one go. Entries already in git as they are cost nothing. */
