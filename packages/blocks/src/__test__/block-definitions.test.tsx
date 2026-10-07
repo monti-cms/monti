@@ -9,8 +9,10 @@ import { renderSite as site } from "../test/render-config";
 const { DIRECTIVES } = directivesOf(site);
 
 describe("block definitions", () => {
-	it("survives a JSON round trip unchanged — no functions or components", () => {
-		expect(JSON.parse(JSON.stringify(site.BLOCKS))).toEqual(site.BLOCKS);
+	it("survives a JSON round trip unchanged — no functions or components, except the server-only `validate`", () => {
+		// `validate` is a function the browser never receives; everything else in a definition is data.
+		const data = site.BLOCKS.map(({ validate: _validate, ...block }) => block);
+		expect(JSON.parse(JSON.stringify(site.BLOCKS))).toEqual(data);
 	});
 
 	it("has no duplicate names and child/parent blocks actually exist", () => {
