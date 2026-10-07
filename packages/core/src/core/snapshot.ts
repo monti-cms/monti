@@ -12,9 +12,10 @@ import { type FormatRegistry, NO_FORMATS } from "../format/registry";
 import { fieldValueError, RECORD_TRANSLATIONS_KEY } from "../schema/derive";
 import type { Site } from "../site";
 import { checkDocument, isEmptyDocument } from "./body-check";
-import { computeContentHash, sortKeys } from "./content-hash";
+import { computeContentHash } from "./content-hash";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "./limits";
 import { normalizeSlugInput } from "./slug";
+import { sortKeys } from "./sort-keys";
 import { parseTranslationState } from "./translation/state";
 import {
 	type Collection,

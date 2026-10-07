@@ -152,6 +152,65 @@ describe("block ids", () => {
 		expect(idOf(moved, "Three.")).toBe(idOf(first, "Three."));
 	});
 
+	it("follow a code block moved from the middle to the front, as a paragraph does", () => {
+		const first = docOf("One.\n\nTwo.\n\n```ts\nconst a = 1;\n```\n\nThree.\n");
+		const moved = docOf("```ts\nconst a = 1;\n```\n\nOne.\n\nTwo.\n\nThree.\n", first);
+		expect(idOf(moved, "const a = 1;", "codeBlock")).toBe(idOf(first, "const a = 1;", "codeBlock"));
+		for (const paragraphText of ["One.", "Two.", "Three."]) {
+			expect(idOf(moved, paragraphText)).toBe(idOf(first, paragraphText));
+		}
+	});
+
+	/**
+	 * Blocks as a reader makes them: `type` before `attrs`, and attributes in the reader's order. The stored previous version has its keys
+	 * sorted, so a block reads the same only if its key order does not matter.
+	 */
+	const kinds: Record<string, (label: string) => CmsNode> = {
+		paragraph: (label) => paragraph(label),
+		heading: (label) => ({ type: "heading", attrs: { level: 2 }, content: [text(label)] }),
+		codeBlock: (label) => ({ type: "codeBlock", attrs: { meta: "", language: "ts", code: label } }),
+		table: (label) => ({
+			type: "table",
+			attrs: { layout: "auto" },
+			content: [{ type: "tableRow", content: [{ type: "tableCell", content: [text(label)] }] }],
+		}),
+		callout: (label) => ({ type: "callout", attrs: { variant: "note", title: label }, content: [paragraph(label)] }),
+	};
+
+	/** The top-level blocks in order, by label, each with its id, from `labels` of blocks of `kind` among plain paragraphs. */
+	const read = (kind: string, labels: string[], previous?: CmsNode[]): CmsNode[] =>
+		assignBlockIds(
+			labels.map((label) =>
+				label.startsWith("B") ? (kinds[kind] as (label: string) => CmsNode)(label) : paragraph(label),
+			),
+			[previous],
+		);
+
+	describe.each(Object.keys(kinds))("of a %s", (kind) => {
+		const reorders: [string, string[], string[]][] = [
+			["moved from the middle to the front", ["P1", "P2", "B1", "P3"], ["B1", "P1", "P2", "P3"]],
+			["moved from the front to the end", ["B1", "P1", "P2"], ["P1", "P2", "B1"]],
+			["swapped with another of its kind", ["B1", "P1", "B2", "P2"], ["B2", "P1", "B1", "P2"]],
+			["reversed with others of its kind", ["B1", "B2", "B3"], ["B3", "B2", "B1"]],
+		];
+
+		it.each(reorders)("follow the block when it is %s", (_name, before, after) => {
+			const first = read(kind, before);
+			const moved = read(kind, after, first);
+			const idByLabel = (nodes: CmsNode[], labels: string[]) =>
+				Object.fromEntries(labels.map((label, index) => [label, nodes[index]?.id]));
+			expect(idByLabel(moved, after)).toEqual(idByLabel(first, before));
+		});
+
+		it("give a new block a new id, and keep the others", () => {
+			const first = read(kind, ["P1", "B1", "P2"]);
+			const added = read(kind, ["B2", "P1", "B1", "P2"], first);
+			expect(added.slice(1).map((node) => node.id)).toEqual(first.map((node) => node.id));
+			expect(first.map((node) => node.id)).not.toContain(added[0]?.id);
+			expect(added[0]?.id).toMatch(BLOCK_ID_PATTERN);
+		});
+	});
+
 	it("give a copy of a block a new id: the first block with an id keeps it", () => {
 		const first = docOf("One.\n\nTwo.\n");
 		const [one] = first.content as CmsNode[];

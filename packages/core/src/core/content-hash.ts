@@ -1,23 +1,8 @@
 import { createHash } from "node:crypto";
 import { withoutBlockIds } from "../doc/block-ids";
 import { type StoredDocument, UNPARSED_NODE } from "../doc/stored-document";
+import { sortKeys } from "./sort-keys";
 import type { JsonValue } from "./types";
-
-const isJsonArray = (value: unknown): value is readonly JsonValue[] => Array.isArray(value);
-
-/** Copies a JSON value with object keys sorted at every depth (`undefined` members are dropped). */
-export function sortKeys(value: JsonValue): JsonValue {
-	if (value === null || typeof value !== "object") return value;
-	if (isJsonArray(value)) return value.map(sortKeys);
-	const record = value;
-	return Object.keys(record)
-		.sort()
-		.reduce<Record<string, JsonValue>>((acc, key) => {
-			const member = record[key];
-			if (member !== undefined) acc[key] = sortKeys(member);
-			return acc;
-		}, {});
-}
 
 /** The text of a document that holds one `unparsed` node and nothing else (a body that could not become a document), otherwise `undefined`. */
 const unparsedSource = (doc: StoredDocument): string | undefined => {
