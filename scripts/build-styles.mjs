@@ -12,7 +12,7 @@
 // - No `@layer` is left (Tailwind's layers are flattened after it has sorted its output): unlayered rules beat the host's layered ones, whatever order
 //   the stylesheets load in, so a host's `.hidden`, `.prose` or reset in its own `utilities` or `base` layer cannot override the admin.
 // - KaTeX fonts are copied next to the CSS and linked relatively.
-// - The admin bundle also compiles the sources of the first-party plugins (ai, blocks, mdx, seo), so the shared utilities, `prose`, theme and reset
+// - The admin bundle also compiles the sources of the first-party plugins (ai, blocks, mdx, seo, git-sync), so the shared utilities, `prose`, theme and reset
 //   exist once. A later file that redefined `.prose` would reset what the admin's dark variant set.
 import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -174,7 +174,9 @@ function sourceTokens(packageDir) {
 	};
 	// The admin bundle also compiles the first-party plugins' sources (see `packages/admin/styles/index.css`).
 	const packages =
-		path.basename(packageDir) === "admin" ? ["admin", "ai", "blocks", "mdx", "seo"] : [path.basename(packageDir)];
+		path.basename(packageDir) === "admin"
+			? ["admin", "ai", "blocks", "mdx", "seo", "git-sync"]
+			: [path.basename(packageDir)];
 	for (const name of packages) walk(path.join(packageDir, "..", name, "src"));
 	return [...tokens];
 }
