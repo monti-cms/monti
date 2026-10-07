@@ -280,8 +280,15 @@ export const foldersContract: ContractSuite = (factory) => {
 			expect(moved.version).toBe(published.version + 1);
 			expect(moved.folderId).toBe(f4.id);
 
-			// Compare every Entry field except version
-			expect({ ...postMoveEntry, version: 0, folderId: null }).toEqual({ ...preMoveEntry, version: 0, folderId: null });
+			// Compare every Entry field except version, the folder and the time of the change (a move is a change that raises the version, so it moves `changedAt`
+			// while the content modified date `updatedAt` stays).
+			expect(postMoveEntry.changedAt?.getTime()).toBeGreaterThanOrEqual(preMoveEntry.changedAt?.getTime() ?? 0);
+			expect({ ...postMoveEntry, version: 0, folderId: null, changedAt: undefined }).toEqual({
+				...preMoveEntry,
+				version: 0,
+				folderId: null,
+				changedAt: undefined,
+			});
 			expect(postMoveAddress).toEqual(preMoveAddress);
 
 			// Wrong expectedVersion → conflict with serverVersion
@@ -307,11 +314,12 @@ export const foldersContract: ContractSuite = (factory) => {
 			expect(unfiled.version).toBe(moved.version + 1);
 			expect(unfiled.folderId).toBeNull();
 
-			// Compare every Entry field except version
-			expect({ ...postUnfiledEntry, version: 0, folderId: null }).toEqual({
+			// Compare every Entry field except version, the folder and the time of the change
+			expect({ ...postUnfiledEntry, version: 0, folderId: null, changedAt: undefined }).toEqual({
 				...postMoveEntry,
 				version: 0,
 				folderId: null,
+				changedAt: undefined,
 			});
 			expect(postUnfiledAddress).toEqual(postMoveAddress);
 
