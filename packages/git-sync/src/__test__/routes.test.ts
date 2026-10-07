@@ -1,5 +1,5 @@
+import { composeFile } from "@monti-cms/core/front-matter";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { composeFile } from "../front-matter";
 import { closeGlobalPool, createHarness, type Harness, TOKEN, WEBHOOK_SECRET } from "./harness";
 
 let h: Harness;

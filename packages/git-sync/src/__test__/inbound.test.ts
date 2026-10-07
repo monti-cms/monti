@@ -1,5 +1,5 @@
+import { composeFile, parseFile } from "@monti-cms/core/front-matter";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { composeFile, parseFile } from "../front-matter";
 import { pullTarget } from "../inbound";
 import { pushPayload, webhookSignature } from "../testing";
 import { closeGlobalPool, createHarness, type Harness, WEBHOOK_SECRET } from "./harness";

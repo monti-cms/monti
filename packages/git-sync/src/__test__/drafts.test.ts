@@ -1,6 +1,6 @@
+import { parseFile } from "@monti-cms/core/front-matter";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { listConflicts, resolveConflict } from "../conflicts";
-import { parseFile } from "../front-matter";
 import { blobSha } from "../github/blob-sha";
 import { pullTarget } from "../inbound";
 import { type FakePullRequest, pullRequestPayload, pushPayload, webhookSignature } from "../testing";

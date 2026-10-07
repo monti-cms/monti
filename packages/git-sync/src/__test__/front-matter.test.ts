@@ -1,5 +1,5 @@
+import { composeFile, parseFile } from "@monti-cms/core/front-matter";
 import { describe, expect, it } from "vitest";
-import { composeFile, parseFile } from "../front-matter";
 
 describe("front matter", () => {
 	it("writes YAML between --- lines, a blank line, and the body", () => {

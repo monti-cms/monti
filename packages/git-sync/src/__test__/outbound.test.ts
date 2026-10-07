@@ -1,5 +1,5 @@
+import { parseFile } from "@monti-cms/core/front-matter";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { parseFile } from "../front-matter";
 import { flushTarget } from "../outbound";
 import { closeGlobalPool, createHarness, DEFAULT_TARGET, type Harness } from "./harness";
 
