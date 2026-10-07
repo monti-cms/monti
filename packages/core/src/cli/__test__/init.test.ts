@@ -20,6 +20,20 @@ import {
 /** What every run needs so it touches nothing outside the fixture: a fake host, no install, and an empty environment. */
 const quiet = () => ({ host: fakeHost(), env: {}, install: false });
 
+/** Flags for every question of the prompts, so a scripted prompter only has to answer the confirmations. */
+const ANSWERED = {
+	database: "skip",
+	adminGithubId: "12345",
+	siteUrl: "http://localhost:3000",
+	locales: "en",
+	timeZone: "UTC",
+	storage: "none",
+	extras: "none",
+	blocks: "none",
+	adminPath: "/studio",
+	blogTheme: false,
+} as const;
+
 describe("monti init in a fresh create-next-app", () => {
 	it("writes explicit files with the defaults and tells what is left", async () => {
 		const dir = fixtureApp();
@@ -396,8 +410,70 @@ describe("monti init choices", () => {
 		expect(JSON.parse(read(dir, "monti.schema.json")).site.previewPath).toBe("/preview");
 		const next = report.next.join("\n");
 		expect(next).toContain('set excerptField to "summary"');
-		// Tailwind is there, the typography plugin is not.
+		// Tailwind is there, the typography plugin is not: with no prompts the plugin is installed and the global CSS gets the lines.
+		expect(host.install.mock.calls.map(([command]) => command.args.join(" "))).toContain(
+			"add -D @tailwindcss/typography",
+		);
+		const css = read(dir, "app/globals.css");
+		expect(css).toContain('@import "@monti-cms/core/render.css";');
+		expect(css).toContain('@import "@monti-cms/blocks/render.css";');
+		expect(css).toContain('@plugin "@tailwindcss/typography";');
+		expect(report.updated).toContain("app/globals.css");
+		expect(next).not.toContain("typography");
+	});
+
+	it("asks before changing the global CSS for the theme, and prints the exact lines when declined", async () => {
+		const dir = fixtureApp();
+		const host = fakeHost();
+		const prompter = scriptedPrompter({
+			"Add these to app/globals.css": false,
+			"Add withCms": true,
+			"Add .env.local": true,
+		});
+		const report = await initProject({
+			cwd: dir,
+			host,
+			env: {},
+			prompter,
+			...ANSWERED,
+			blogTheme: true,
+		});
+		expect(read(dir, "app/globals.css")).toBe('@import "tailwindcss";\n');
+		expect(host.install.mock.calls.map(([command]) => command.args.join(" "))).not.toContain(
+			"add -D @tailwindcss/typography",
+		);
+		const next = report.next.join("\n");
 		expect(next).toContain("pnpm add -D @tailwindcss/typography");
+		expect(next).toContain('@import "@monti-cms/core/render.css";');
+		expect(next).toContain('@plugin "@tailwindcss/typography";');
+		expect(next).not.toContain("blocks/render.css");
+		expect(prompter.notes.some((note) => note.title === "Change to app/globals.css")).toBe(true);
+	});
+
+	it("adds suppressHydrationWarning to the <html> tag of the root layout (the admin theme sets a class on it)", async () => {
+		const layout = `export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+`;
+		const dir = fixtureApp({ "app/layout.tsx": layout });
+		const report = await initProject({ cwd: dir, ...quiet() });
+		expect(read(dir, "app/layout.tsx")).toContain('<html lang="en" suppressHydrationWarning>');
+		expect(report.updated).toContain("app/layout.tsx");
+
+		// Declined: nothing changes and the exact edit is printed.
+		const declined = fixtureApp({ "app/layout.tsx": layout });
+		const prompter = scriptedPrompter({
+			"Add suppressHydrationWarning": false,
+			"Add withCms": true,
+			"Add .env.local": true,
+		});
+		const kept = await initProject({ cwd: declined, ...quiet(), ...ANSWERED, prompter });
+		expect(read(declined, "app/layout.tsx")).toBe(layout);
+		expect(kept.next.join("\n")).toContain('<html lang="en" suppressHydrationWarning>');
 	});
 });
 

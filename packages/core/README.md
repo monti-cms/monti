@@ -754,11 +754,13 @@ need are installed with your package manager, and a file you changed is never ov
 ```sh
 pnpm exec monti add article-body              # -> components/monti/article-body/article-body.tsx
 pnpm exec monti add entry-editor --dry-run    # show the plan, change nothing
+pnpm exec monti add blog-theme --yes          # also add the typography plugin and the render.css imports to your global CSS without asking
 pnpm exec monti add article-body --registry ./registry/r   # another registry (folder or URL)
 ```
 
 The registry follows the shadcn registry schema and lives in `registry/` of the repository (built into `registry/r`, committed). The components use the host's Tailwind and only public entry points
 (`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`). `examples/blog` installs `blog-theme` this way and uses it for its blog list and article pages.
+For `article-body` and `blog-theme` the command also checks your global CSS for `@tailwindcss/typography` and the `@monti-cms/core/render.css` import (and `@monti-cms/blocks/render.css` when blocks are used), shows the change as a diff and asks before making it, and prints the exact lines when you decline. `monti init` does the same when the blog theme is chosen, and also adds `suppressHydrationWarning` to the `<html>` tag of your root layout (with a diff and a question): the admin theme sets a class on `<html>` before React hydrates, which would otherwise log a hydration mismatch on the first admin screen. The admin route files `monti init` writes work with and without Next's `cacheComponents`; the page sets `export const instant = false`, because a segment setting cannot be re-exported from a package.
 Full reference, the list of components and how to add one: [`registry/README.md`](../../registry/README.md).
 
 ## Entry points

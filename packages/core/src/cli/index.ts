@@ -4,7 +4,7 @@ import { DOCTOR_HELP, runDoctorCommand } from "./doctor";
 import { eventsRetry } from "./events";
 import { IMPORT_HELP, runImportCommand } from "./import/command";
 import { runInitCommand } from "./init-command";
-import type { Prompter } from "./init-prompts";
+import { createClackPrompter, type Prompter } from "./init-prompts";
 import { migrate } from "./migrate";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command";
 import { schemaApply, schemaDiff } from "./schema-apply";
@@ -146,6 +146,7 @@ Commands:
               --registry <url|path> Registry folder or URL with registry.json (default: the registry of this repo)
               --overwrite           Replace files that differ from the registry (default: stop and write nothing)
               --dry-run             Show what would be written and installed
+              --yes, -y             Also add the typography plugin and the render.css imports the theme needs to your global CSS without asking (default: ask, or print the lines)
 ${IMPORT_HELP}  migrate   Create or update the tables in the database of monti.config.ts
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
@@ -202,9 +203,18 @@ export async function runCli(
 			const { values, positionals } = parseArgs({
 				args: [...rest],
 				allowPositionals: true,
-				options: { registry: { type: "string" }, overwrite: { type: "boolean" }, "dry-run": { type: "boolean" } },
+				options: {
+					registry: { type: "string" },
+					overwrite: { type: "boolean" },
+					"dry-run": { type: "boolean" },
+					yes: { type: "boolean", short: "y" },
+				},
 			});
+			// The theme components need lines in the global CSS: ask when a person is at the terminal, change it with --yes, else print the lines.
+			const interactive = !values.yes && !values["dry-run"] && Boolean(process.stdin.isTTY && process.stdout.isTTY);
 			const report = await addComponents({
+				prompter: io.prompter ?? (interactive ? await createClackPrompter() : undefined),
+				yes: values.yes,
 				cwd: io.cwd,
 				names: positionals,
 				registry: values.registry,

@@ -6,6 +6,8 @@ import path from "node:path";
 import { parseEnv } from "node:util";
 import { parseSchemaFile } from "../schema-file/format";
 import { addComponents, type InstallCommand } from "./add";
+import { unifiedDiff } from "./diff";
+import { addSuppressHydrationWarning, findRootLayout, hasSuppressHydrationWarning } from "./first-run";
 import { detectApp, type PackageManager } from "./init-detect";
 import { addEnvToGitignore, addResolveJsonModule } from "./init-edits";
 import { collectAnswers, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
@@ -173,51 +175,6 @@ export class ProjectWriter {
 		writeFileSync(target, content);
 		this.written.push(posix(file));
 	}
-}
-
-/** A unified diff of two texts, with 2 lines of context. Files are small, so a plain LCS is enough. */
-export function unifiedDiff(file: string, before: string, after: string): string {
-	const a = before.split("\n");
-	const b = after.split("\n");
-	const width = b.length + 1;
-	// lcs[i * width + j]: length of the longest common run of a[i..] and b[j..]
-	const lcs = new Array<number>((a.length + 1) * width).fill(0);
-	const at = (i: number, j: number) => lcs[i * width + j] ?? 0;
-	for (let i = a.length - 1; i >= 0; i--) {
-		for (let j = b.length - 1; j >= 0; j--) {
-			lcs[i * width + j] = a[i] === b[j] ? at(i + 1, j + 1) + 1 : Math.max(at(i + 1, j), at(i, j + 1));
-		}
-	}
-	const ops: { op: " " | "-" | "+"; line: string }[] = [];
-	let i = 0;
-	let j = 0;
-	while (i < a.length || j < b.length) {
-		if (i < a.length && j < b.length && a[i] === b[j]) {
-			ops.push({ op: " ", line: a[i] ?? "" });
-			i++;
-			j++;
-		} else if (i < a.length && (j >= b.length || at(i + 1, j) >= at(i, j + 1))) {
-			ops.push({ op: "-", line: a[i] ?? "" });
-			i++;
-		} else {
-			ops.push({ op: "+", line: b[j] ?? "" });
-			j++;
-		}
-	}
-	const CONTEXT = 2;
-	const lines = [`--- a/${file}`, `+++ b/${file}`];
-	let gap = false;
-	for (const [index, entry] of ops.entries()) {
-		const near = ops.slice(Math.max(0, index - CONTEXT), index + CONTEXT + 1).some((other) => other.op !== " ");
-		if (!near) {
-			gap = true;
-			continue;
-		}
-		if (gap && lines.length > 2) lines.push("...");
-		gap = false;
-		lines.push(`${entry.op}${entry.line}`);
-	}
-	return lines.join("\n");
 }
 
 /** The real host: spawns the package manager and Docker, probes the database port. */
@@ -572,6 +529,27 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		gitignoreManual = !(await propose(".gitignore", before, after, "Add .env.local to .gitignore?", !exists));
 	}
 
+	// The admin's theme provider puts its theme class on `<html>` before React hydrates, so the root layout must tell React to expect it.
+	let hydrationManual: string | undefined;
+	const rootLayout = findRootLayout(cwd);
+	if (rootLayout) {
+		const before = writer.read(rootLayout);
+		if (hasSuppressHydrationWarning(before) === false) {
+			const after = addSuppressHydrationWarning(before);
+			if (
+				after === undefined ||
+				!(await propose(
+					rootLayout,
+					before,
+					after,
+					`Add suppressHydrationWarning to the <html> tag of ${rootLayout}? (the admin theme sets a class on it)`,
+				))
+			) {
+				hydrationManual = rootLayout;
+			}
+		}
+	}
+
 	// What gets installed.
 	const missing = packagesFor(answers).filter((name) => !app.dependencies.has(name));
 	const installing = options.install !== false;
@@ -702,8 +680,17 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		else if (!installing) report.steps.push({ name: "Add the blog theme", status: "skipped", detail: "--no-install" });
 		else {
 			try {
-				const added = await addComponents({ cwd, names: ["blog-theme"], install: (command) => host.install(command) });
+				const added = await addComponents({
+					cwd,
+					names: ["blog-theme"],
+					install: (command) => host.install(command),
+					prompter,
+					yes: prompter === undefined,
+					blocks: answers.blocks.length > 0,
+				});
 				report.created.push(...added.created);
+				if (added.styles?.updated) report.updated.push(added.styles.updated);
+				if (added.styles?.diff) report.diffs.push(added.styles.diff);
 				report.skipped.push(...added.unchanged);
 				report.next.push(...added.manual);
 				report.steps.push({
@@ -741,6 +728,11 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		todo.push(
 			"Add TypeScript (monti.config.ts and the Next files are .ts/.tsx): " +
 				commandText(addCommand(manager, ["typescript", "@types/react", "@types/node"], cwd, true)),
+		);
+	}
+	if (hydrationManual) {
+		todo.push(
+			`Add suppressHydrationWarning to the <html> tag in ${hydrationManual} (<html lang="en" suppressHydrationWarning>). The admin's theme provider sets a class on <html> before React hydrates, and without it the first admin screen logs a hydration mismatch.`,
 		);
 	}
 	if (gitignoreManual) todo.push("Add .env.local to .gitignore: it holds MONTI_SECRET (and your database URL).");
@@ -791,11 +783,6 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		todo.push(
 			`Point the theme at your fields: in the theme.config.ts that was added under components/monti/blog-theme (the @/components alias), set excerptField to "summary" and authorField/topicsField to undefined (the starter collection has neither).`,
 		);
-		if (!app.tailwind.typography) {
-			todo.push(
-				`The theme styles the body with the prose classes: ${commandText(addCommand(manager, ["@tailwindcss/typography"], cwd, true))}, then add @plugin "@tailwindcss/typography"; to your global CSS.`,
-			);
-		}
 	}
 	todo.push(
 		`Check the setup whenever something does not work: ${exec(manager, "doctor")} lists every check as ok, warn or fail, and for each problem says what is wrong, where, and how to fix it.`,
@@ -850,4 +837,4 @@ export function formatInitReport(report: InitReport): string {
 	return out.join("\n").trimEnd();
 }
 
-export { InitCancelled };
+export { InitCancelled, unifiedDiff };
