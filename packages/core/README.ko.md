@@ -50,7 +50,9 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # 사이트 기본 언�
 
 | 하는 일 | 파일 |
 | --- | --- |
-| 사이트 설정(컬렉션 하나짜리 시작점, 영어 이름표) | `cms.config.ts` |
+| 스키마 파일: 사이트의 데이터(컬렉션 하나짜리 시작점, 영어 이름표), 에디터용 `$schema` 링크가 있다 | `monti.schema.json` |
+| 사이트 설정: 스키마 파일을 불러오고 코드가 필요한 것(플러그인)을 더한다 | `cms.config.ts` |
+| 스키마 파일에서 쓴 타입(손으로 고치지 않는다) | `monti-env.d.ts` |
 | CMS 인스턴스와 서버 설정(DB·GitHub 로그인, 비밀 값은 환경 변수) | `cms.server.ts` |
 | 관리자 화면(레이아웃이 미리 만든 관리자 스타일시트를 불러온다) | `app/(admin)/admin/[[...path]]/page.tsx`·`layout.tsx` |
 | 관리자 API와 로그인(`/api/cms/v1/*`·`/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
@@ -59,44 +61,56 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # 사이트 기본 언�
 `src/app`을 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. 안전하게 고칠 수 없는 파일(기본 모양이 아닌 next 설정)은 그대로 두고 넣을 내용을 "할 일"로 보인다.
 끝에 설치할 패키지·환경 변수·GitHub 콜백 주소를 알려 준다.
 
-`--admin-path`를 주면 라우트 폴더가 그 경로(`app/(admin)/studio/…`)가 되고 사이트 설정에 `admin: { path: "/studio" }`가
-들어간다. **관리자 경로는 사이트 설정 `admin.path`와 라우트 폴더가 같아야 한다.** 나중에 바꿀 때도 둘을 함께 바꾼다.
+`--admin-path`를 주면 라우트 폴더가 그 경로(`app/(admin)/studio/…`)가 되고 스키마 파일에 `admin: { path: "/studio" }`가
+들어간다. **관리자 경로는 `admin.path`(스키마 파일 또는 사이트 설정)와 라우트 폴더가 같아야 한다.** 나중에 바꿀 때도 둘을 함께 바꾼다.
 관리자 API 경로(`/api/cms/v1`)는 바뀌지 않는다.
 
 `--locale <코드>`는 사이트 기본 언어(`defaultLocale`)이고 기본값은 `en`이다(`ko`처럼 소문자 언어 코드). 관리자 화면의 언어와
 날짜·숫자 표기가 이 언어를 따르고, 설정의 `admin.locale`로 따로 고를 수 있다. `--time-zone <시간대>`는 날짜·시각을 입력하고
 보이는 시간대(IANA 이름, 기본 `UTC`)다. 만든 설정 파일과 명령줄 도움말·결과는 개발자가 읽으므로 영어다.
 
+이미 `cms.config.ts`가 있는 앱은 그대로 둔다. `monti init`은 자기가 만들지 않은 설정 옆에는 스키마 파일을 만들지 않고 `monti schema:extract`를 돌리라고 알린다("스키마 파일"). `cms.config.ts`가 JSON을 가져오므로 `tsconfig.json`에 `"resolveJsonModule": true`가 필요하다(`create-next-app`이 켜 두고, 없으면 `monti init`이 알린다).
+
 ### 3. 컬렉션 고치기
 
-`cms.config.ts`는 서버와 관리자 화면이 함께 읽는다. 비밀 값은 넣지 않는다. 만들어진 시작점은 이렇다.
+사이트의 데이터는 `monti.schema.json`에 있고, `cms.config.ts`가 그것을 불러와 코드가 필요한 것을 더한다("스키마 파일"). `cms.server.ts`가 설정을 가져와 `createCms`에 넘기고 관리자 화면은 그 인스턴스에서 데이터로 받으므로, 둘 다 비밀 값은 넣지 않는다. 만들어진 시작점은 이렇다.
+
+```json
+{
+	"$schema": "./node_modules/@monti-cms/core/schema.json",
+	"collections": {
+		"post": {
+			"label": "Post",
+			"kind": "document",
+			"path": "/posts/:slug",
+			"icon": "file-text",
+			"fields": {
+				"title": { "kind": "text", "label": "Title", "required": true, "max": 200 },
+				"slug": { "kind": "slug", "label": "Slug", "from": "title", "required": true },
+				"summary": { "kind": "text", "label": "Summary", "role": "summary", "multiline": true, "fillFromBody": true }
+			}
+		}
+	},
+	"locales": [{ "code": "en", "name": "English" }],
+	"defaultLocale": "en",
+	"timeZone": "UTC",
+	"site": { "name": "My site" }
+}
+```
 
 ```ts
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
-
-const post = defineCollection({
-	label: "Post",
-	kind: "document", // 본문·초안·발행. 태그 같은 작은 항목은 "item"
-	path: "/posts/:slug", // 공개 주소. 본문 내부 링크·미리보기 주소에 쓴다
-	icon: "file-text", // 관리자 사이드바 아이콘(lucide 이름)
-	fields: {
-		title: fields.text({ label: "Title", required: true, max: 200 }), // 제목 필드 이름은 `title`
-		slug: fields.slug({ label: "Slug", from: "title", required: true }),
-		summary: fields.text({ label: "Summary", role: "summary", multiline: true, fillFromBody: true }),
-	},
-	// layout·list를 적지 않으면 필드 순서대로 그리고 기본 목록 컬럼을 쓴다("컬렉션").
-});
+// cms.config.ts
+import { defineConfig } from "@monti-cms/core";
+import schema from "./monti.schema.json";
 
 export default defineConfig({
-	collections: { post },
-	locales: [{ code: "en", name: "English" }],
-	defaultLocale: "en",
-	site: { name: "My site" },
-	timeZone: "UTC",
+	schema,
+	// plugins: [...blocks(), seo()],
 });
 ```
 
-컬렉션 이름(`post`)은 DB에 저장되므로 운영 중에 바꾸지 않는다. 필드 규칙은 아래 "설정"을 본다.
+컬렉션 이름(`post`)은 DB에 저장되므로 운영 중에 바꾸지 않는다. `kind`는 `document`(본문·초안·발행) 또는 `item`(태그 같은 작은 항목), `path`는 공개 주소로 본문 내부 링크와 미리보기 주소에 쓰고, 제목 필드 이름은 `title`이다.
+`layout`·`list`를 적지 않으면 필드 순서대로 그리고 기본 목록 컬럼을 쓴다("컬렉션"). 파일을 고친 뒤에는 `pnpm exec monti schema:types`를 돌린다(`next dev`가 떠 있으면 저절로 돌아간다). 규칙은 아래 "스키마 파일"과 "설정"을 본다.
 
 `cms.server.ts`는 CMS 인스턴스를 만든다(`createCms({ config, server })`, "CMS 인스턴스" 절). 그 서버 설정은 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다.
 연결은 처음 쓸 때 만들어 빌드 중에는 환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/core/s3`의 저장소를 `media`에 더하고 AWS SDK를 설치한다
@@ -333,7 +347,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 
 **타입.** 타입은 넘긴 설정을 따라가며 등록 단계가 없다. `createCms({ config })`는 `Cms<typeof config>`를 돌려주므로 `cms.read.listEntries({ collection: "post" })`는 컬렉션 이름과 각 컬렉션의 메타데이터를 알고(`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
 설정에 없는 컬렉션은 타입 오류다. 라이브러리 타입이 인스턴스를 볼 수 없는 곳에서는 설정 타입을 준다: `DocumentComponentsFor<typeof config>`나 `DocumentComponentsOf<typeof cms>`가 `<CmsContent>`의 `components`(블록 이름과 블록마다의 속성 props)를 타입으로 정하고, AI 플러그인의 동작 이름도 같은 식으로 설정 타입을 받는다.
-그냥 `Cms`나 `Site`는 어떤 설정의 인스턴스든 가리키고 이름은 `string`이다. 설정이 다른 인스턴스 둘은 따로 타입이 정해진다.
+그냥 `Cms`나 `Site`는 어떤 설정의 인스턴스든 가리키고 이름은 `string`이다. 설정이 다른 인스턴스 둘은 따로 타입이 정해진다. 데이터를 스키마 파일에 두는 사이트는 `monti schema:types`가 쓰는 선언 파일에서 같은 타입을 얻는다("스키마 파일").
 
 ### `@cms-config` 별칭에서 올리기
 
@@ -426,7 +440,9 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 
 | 진입점 | 쓰는 곳 | 내용 |
 | --- | --- | --- |
-| `@monti-cms/core` | `cms.config.ts` | `defineConfig`·`defineCollection`·`fields`·`defineBlock`·`definePlugin` |
+| `@monti-cms/core` | `cms.config.ts` | `defineConfig`(`schema`와 함께)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, `SchemaFile` 타입 |
+| `@monti-cms/core/schema.json` | 에디터, `$schema` | `monti.schema.json`의 JSON Schema("스키마 파일") |
+| `@monti-cms/core/schema-types` | 개발 도구(`withCms`) | `generateSchemaTypes`, `watchSchemaTypes`: 스키마 파일에서 `monti-env.d.ts`를 쓴다 |
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`·`defineServerConfig`·`postgres`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
@@ -442,8 +458,8 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
 | `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`addComponents`·`migrate`(명령 `monti`의 코드) |
+| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기) |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`addComponents`·`migrate`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
 | `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드
@@ -859,7 +875,117 @@ export const cms = createCms({ server });
 4. **`afterCommit`의 실패는 끝난 쓰기를 되돌리지 않는다.** 기록만 남기고, 다른 `afterCommit` 훅은 그대로 돈다.
 5. **일괄은 모든 항목에 같은 훅을 적용한다.** 항목마다 파이프라인 전체를 돌고, 결과나 오류(`hook_failed`·`validation_failed` 등)는 항목별로 돌아간다.
 
+## 스키마 파일
+
+사이트 루트의 `monti.schema.json`은 사이트 설정 중 순수 데이터인 부분을 담는다. 컬렉션과 필드·레이아웃, 언어와 기본 언어, 시간대, 데이터로 쓸 수 있는 `site` 설정, `admin`(경로·언어·문자열 문구 바꾸기), 시드 템플릿(저장된 문서, 또는 글과 그 형식)이다.
+번들러가 실행하는 코드가 아니라 저장소의 파일이라 도구가 읽고 쓸 수 있고, 여기서 타입을 만든다.
+
+```json
+{
+	"$schema": "./node_modules/@monti-cms/core/schema.json",
+	"collections": {
+		"post": {
+			"label": "Post",
+			"kind": "document",
+			"path": "/posts/:slug",
+			"fields": {
+				"title": { "kind": "text", "label": "Title", "required": true, "max": 200 },
+				"slug": { "kind": "slug", "label": "Address", "from": "title", "required": true },
+				"categoryId": { "kind": "relation", "label": "Category", "to": "category", "required": true },
+				"stage": { "kind": "select", "label": "Stage", "options": { "idea": "Idea", "done": "Done" }, "defaultValue": "idea" }
+			},
+			"layout": [{ "fields": ["title", "slug"] }, { "group": "Classification", "fields": ["categoryId", "stage"] }]
+		},
+		"category": {
+			"label": "Category",
+			"kind": "item",
+			"fields": {
+				"title": { "kind": "text", "label": "Name", "required": true },
+				"slug": { "kind": "slug", "label": "Address", "from": "title" }
+			}
+		}
+	},
+	"locales": [{ "code": "en", "name": "English" }, { "code": "fr", "name": "Français" }],
+	"defaultLocale": "en",
+	"timeZone": "Europe/Paris",
+	"site": { "name": "My blog", "localePrefix": "always" },
+	"admin": { "path": "/studio" }
+}
+```
+
+**형식.** 각 부분은 같은 이름 빌더의 옵션 객체에 `kind`를 붙인 모양이다. 컬렉션은 `defineCollection`이 받는 값(`label`, `kind`, `body`, `fields`, `path`, `icon`, `layout`, `list`)이고, 필드는 `fields.<kind>`가 받는 값에 `"kind"`를 더한 것이다. 필드 종류는 `text`, `slug`, `relation`(`many`, `ordered`, `createInline`, `publishedOnly`, `allowUnpublished`),
+`select`(`options`와 `defaultValue`), `media`(`accept: "image" | "file"`, 이미지 필드), `conditional`(`discriminant` 선택 필드와 선택값마다 보이는 `values`), `backlink`, `view`로, `fields.*`가 가진 종류를 모두 쓸 수 있다. 지금 `fields.*`에는 날짜·불리언·숫자 종류가 없어 파일에도 없다. 날짜는 텍스트 필드에 둔다.
+`$schema`는 `@monti-cms/core/schema.json`을 가리킨다. 런타임 검사와 같은 정의에서 만든 JSON Schema라서 에디터가 키를 자동 완성하고 틀린 `kind`나 잘못 쓴 옵션을 입력하는 즉시 알려 준다(존재하는 컬렉션을 가리키는 관계처럼 컬렉션 사이의 규칙은 설정을 읽을 때 검사한다).
+**없앤 옛 이름은 받지 않는다.** `workflow`와 `required: "publish"`는 오류다(`kind`와 `required: true`를 쓴다).
+
+**읽기.** `cms.config.ts`가 읽어 들인 파일을 `defineConfig`에 넘긴다. `import`는 번들러가 빌드에 담아 주므로 운영에서는 읽기 전용이다(`"resolveJsonModule": true`가 필요하고 `create-next-app`이 켜 둔다). 경로 문자열(`schema: "./monti.schema.json"`)은 실행할 때 작업 폴더 기준으로 읽으며 Node에서만 된다(스크립트·테스트):
+
+```ts
+import { defineConfig } from "@monti-cms/core";
+import { mdx } from "@monti-cms/mdx";
+import schema from "./monti.schema.json";
+
+export default defineConfig({
+	schema,
+	site: { url: process.env.HOST_URL || undefined }, // 환경마다 다르다
+	plugins: [mdx()],
+});
+```
+
+`createCms`·`createSite`와 나머지는 이 설정을 다른 설정과 똑같이 받으므로, 제 파일을 가진 여러 사이트가 한 프로세스에 함께 있을 수 있다. 올바르지 않은 파일은 시작할 때 모든 문제를 JSON 경로와 함께 알리고 멈춘다:
+
+```text
+monti.schema.json is not a valid schema file:
+  collections.post.fields.title.kind: a field needs a "kind" of text, slug, relation, select, media, conditional, backlink or view
+  collections.post.workflow: is not part of the schema format
+  locales[1].code: must look like "en", "pt-BR" or "zh-Hant"
+```
+
+**파일과 코드 설정을 합치는 법.** 코드는 파일에 더하고 환경마다 다른 값을 덮어쓸 수 있지만, 파일의 데이터를 조용히 바꾸지는 않는다.
+
+| 부분 | 규칙 |
+| --- | --- |
+| `collections` | 파일의 컬렉션 뒤에 코드로 쓴 것(`defineCollection`)을 더한다. 같은 이름이 둘 다 있으면 오류 |
+| `locales`, `defaultLocale` | 파일에만 둔다. 코드에도 쓰면 오류 |
+| `site`, `admin` | 키마다 코드 값이 이긴다. `undefined`로 둔 키(비어 있는 환경 변수)는 파일 값을 그대로 둔다. `site.url`은 보통 코드에 둔다 |
+| `timeZone` | 코드 값이 이긴다 |
+| `seed.templates` | 파일의 템플릿 뒤에 코드의 템플릿 |
+| `plugins`, `blocks`, `codeBlock`, `media` | 코드에만 있다 |
+
+**코드에 남는 것.** 코드가 필요한 모든 것: 플러그인(문법 확장·형식·AI 동작 포함), 컴포넌트가 딸린 블록 정의, 훅과 서버 설정(저장소·로그인·비밀 값), `codeBlock`(줄 효과에 이름표와 함수가 있다), `media`, 함수인 옵션. `site.url`은 환경마다 달라서 코드에 남는다.
+
+**필드를 더하는 플러그인.** `seoFields()` 같은 것은 평범한 필드 객체를 돌려주므로 그 필드는 이미 JSON으로 쓸 수 있다. 파일에는 보통 필드로 적히고(`monti schema:extract`가 해 준다), 플러그인(`seo()`)은 `plugins`에 남아 전처럼 역할로 필드를 확인한다.
+형식에 따로 "플러그인 필드"는 없다. 코드로 쓴 컬렉션은 계속 `seoFields()`를 펼칠 수 있다. 파일의 이름표는 한 언어의 글이다(`monti schema:extract --locale`로 고른다).
+
+### 타입: `monti schema:types`
+
+`monti schema:types`는 파일을 읽어 그 옆에 `monti-env.d.ts`를 쓴다(`--schema <파일>`, `--out <파일>`). `@monti-cms/core`의 `MontiRegister` 인터페이스에 컬렉션·필드·언어를 등록하는 선언이다. 이것이 있으면 `defineConfig({ schema })`가 TypeScript 설정과 같은 타입을 돌려주고,
+`createCms`·`cms.read`·`MetadataFor`·`CollectionName`·`DocumentComponentsFor<typeof config>`가 컬렉션 이름, 컬렉션별 메타데이터(선택 필드의 선택지, 여러 개 관계는 `readonly string[]`, 조건 필드의 하위 필드), 언어 코드를 안다. 사이트가 타입을 쓸 일은 없다. 이 파일은 타입만 담고(실행할 때 가져오지 않는다) 손으로 고치지 않으며 `next-env.d.ts`처럼 커밋한다.
+
+- `monti schema:types --watch`는 계속 돌면서 스키마가 바뀌면 파일을 다시 쓴다(쓰다 만 파일은 알리고 마지막 정상 타입을 둔다).
+- `withCms`(`@monti-cms/nextjs/config`)가 `next dev` 안에서 이 일을 해 주므로 따로 명령 없이 타입이 파일을 따라간다. 운영 빌드는 건드리지 않는다.
+- `monti schema:types --check`는 아무것도 쓰지 않고 파일이 오래됐으면 1로 끝난다(CI용).
+- 생성한 파일이 없으면 이름은 그냥 `string`이다. 앱에는 등록된 스키마가 하나이고, 같은 앱의 두 번째 스키마는 내용을 리터럴 타입으로 넘겨야 타입이 붙는다(`defineConfig({ schema: { ... } as const })`).
+
+### TypeScript 설정 옮기기: `monti schema:extract`
+
+`monti schema:extract`는 `cms.config.ts`를 읽어(`--config <파일>`) 데이터 부분을 `monti.schema.json`(`--out <파일>`, 있는 파일을 바꾸려면 `--overwrite`, 플러그인이 주는 이름표의 언어는 `--locale <코드>`)과 `monti-env.d.ts`(`--no-types`로 건너뜀)에 쓰고, 코드에 남는 것을 알려 준다.
+`cms.config.ts`는 고치지 않고, 거기에 넣을 얇은 설정을 보여 준다:
+
+```text
+Wrote monti.schema.json (5 collections, 2 locales, 3 seed templates).
+Wrote monti-env.d.ts (the types of the schema; run `monti schema:types --watch` while you edit it).
+
+Stays in code (cms.config.ts):
+  - site.url: differs per environment, so it is read from the environment in code (`site: { url: process.env.HOST_URL }`)
+  - plugins: mdx, callout, ..., seo, ai, text-check-bareun (code; the fields they add to collections are in the schema)
+```
+
+그다음 `cms.config.ts`의 컬렉션·언어·`defaultLocale`·`timeZone`·`seed`와 `site`·`admin`의 데이터 부분을 `schema`로 바꾸고 `plugins`와 나머지는 둔다. 결과를 다시 읽으면 같은 사이트가 된다(테스트가 기준 설정을 꺼냈다가 다시 읽어 견준다).
+
 ## 설정
+
+`codeBlock`과 `media`를 뺀 이 표의 항목은 스키마 파일에 대신 적을 수 있고("스키마 파일"), `plugins`와 `blocks`는 언제나 코드다. 아래 규칙은 어느 쪽이든 같다.
 
 | 항목 | 뜻 |
 |---|---|
