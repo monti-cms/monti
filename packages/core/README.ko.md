@@ -379,7 +379,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 ## 소스로 쓰는 컴포넌트
 
-`monti add <이름...>`은 Monti 레지스트리의 컴포넌트를 앱에 소스로 복사해, 앱이 직접 소유하는 코드로 만듭니다. 공개 페이지용 `article-body`(저장된 문서와 목차), `useEntryEditor`와 `useField`로 만든
+`monti add <이름...>`은 Monti 레지스트리의 컴포넌트를 앱에 소스로 복사해, 앱이 직접 소유하는 코드로 만듭니다. 공개 페이지용 `article-body`(저장된 문서와 목차), 컬렉션의 글 목록(페이지 나눔)과 글 페이지를 주는 `blog-theme`(필요한 `article-body` 포함), `useEntryEditor`와 `useField`로 만든
 어드민 `entry-editor` 화면, `blockViews`에 넣는 블록 편집 화면이 있습니다. import는 앱의 별칭(`components.json` 또는 `@/components`)으로 바뀌고, 필요한 npm 패키지는
 앱의 패키지 매니저로 설치하며, 고친 파일은 `--overwrite`를 주지 않는 한 덮어쓰지 않습니다.
 
@@ -390,7 +390,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 ```
 
 레지스트리는 shadcn 레지스트리 스키마를 따르며 저장소의 `registry/`에 있습니다(`registry/r`로 빌드해 커밋). 컴포넌트는 호스트의 Tailwind와 공개 진입점
-(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/nextjs`)만 씁니다. `examples/other-site`가 이 방법으로 `article-body`를 설치해 글 페이지에서 씁니다.
+(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`)만 씁니다. `examples/other-site`가 이 방법으로 `blog-theme`을 설치해 블로그 목록과 글 페이지에서 씁니다.
 전체 설명, 컴포넌트 목록, 추가하는 법은 [`registry/README.ko.md`](../../registry/README.ko.md)에 있습니다.
 
 ## 진입점

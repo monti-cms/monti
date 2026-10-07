@@ -378,7 +378,7 @@ What else changed:
 
 ## Components as source
 
-`monti add <name...>` copies ready-made components from the Monti registry into your app as source you own: a public `article-body` (the stored document and a table of contents),
+`monti add <name...>` copies ready-made components from the Monti registry into your app as source you own: a public `article-body` (the stored document and a table of contents), a `blog-theme` (a paged post list and a post page for a collection, with the `article-body` it needs),
 an admin `entry-editor` screen built on `useEntryEditor` and `useField`, a block edit view for `blockViews`. Imports are rewritten to your alias (`components.json` or `@/components`), the npm packages they
 need are installed with your package manager, and a file you changed is never overwritten unless you pass `--overwrite`.
 
@@ -389,7 +389,7 @@ pnpm exec monti add article-body --registry ./registry/r   # another registry (f
 ```
 
 The registry follows the shadcn registry schema and lives in `registry/` of the repository (built into `registry/r`, committed). The components use the host's Tailwind and only public entry points
-(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/nextjs`). `examples/other-site` installs `article-body` this way and uses it on its article page.
+(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`). `examples/other-site` installs `blog-theme` this way and uses it for its blog list and article pages.
 Full reference, the list of components and how to add one: [`registry/README.md`](../../registry/README.md).
 
 ## Entry points
