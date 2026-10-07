@@ -166,6 +166,19 @@ describe("a hash mismatch on both sides is a conflict, not a merge", () => {
 		expect((await h.store.getEntry(entry.id)).published?.metadata).toMatchObject({ title: "Git v3" });
 	});
 
+	it("settles itself when the edit in git is undone: the server's change goes out", async () => {
+		const entry = await bothChanged("undone");
+		await pullTarget(h.ctx, h.target);
+		expect(await conflictOf(entry.id)).toBeDefined();
+		// The person reverts the file to what it was when it was last synced.
+		editInGit("undone", "title: Git v2", "title: Server v1");
+		await pullTarget(h.ctx, h.target);
+		expect(await conflictOf(entry.id)).toBeUndefined();
+		expect(gitText("undone")).toContain("title: Server v2");
+		expect((await h.store.getEntry(entry.id)).published?.metadata).toMatchObject({ title: "Server v2" });
+		expect(await h.ctx.state.queue.list("site")).toEqual([]);
+	});
+
 	it("is a conflict when the entry has unpublished changes that the import would replace", async () => {
 		const entry = await publishMemo("unpublished", "Published title", "published text");
 		await change(entry.id, { title: "Draft only", body: "draft text" }, false);

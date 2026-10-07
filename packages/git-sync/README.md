@@ -150,7 +150,7 @@ The **Conflicts** tab lists them with a line diff of the **server text** against
 - **Use git version**: the git text is written to the entry through the pipeline and published, replacing what the server has (a draft with unpublished changes included). A trashed or archived entry comes back.
 - **Use server version**: the entry as the server has it is pushed (a commit, or the pull request) over the file in git, or the file is deleted when the entry is no longer published.
 
-A decision is made on the file the person looked at (its blob sha is sent back); if the file changed again, the decision is refused and the screen shows the new text.
+A decision is made on the file the person looked at (its blob sha is sent back); if the file changed again, the decision is refused and the screen shows the new text. A conflict also settles itself when the file is edited back to what was last synced: there is nothing left to decide, and what the server changed goes out with the next flush.
 
 ## Initial sync
 

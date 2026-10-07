@@ -1,7 +1,7 @@
 import { CmsError, type Entry, type Issue, ServiceError } from "@monti-cms/core/plugin/server";
 import { exportEntry, isSyncable, type ParsedEntryFile, parseEntryFile, sameContent } from "./entry-file";
 import type { ResolvedTarget } from "./options";
-import { flushTarget, isKnownBlob } from "./outbound";
+import { enqueue, flushTarget, isKnownBlob } from "./outbound";
 import type { ConflictReason, ConflictRecord, PullSummary, SyncRecord } from "./state";
 import { entryKey } from "./state";
 import { GitSyncError, type SyncContext } from "./sync";
@@ -187,6 +187,12 @@ export async function pullTarget(ctx: SyncContext, target: ResolvedTarget): Prom
 				const known = byPath.get(path);
 				if (known && isKnownBlob(known, sha)) {
 					if (sha === known.blobSha && known.baseSha !== sha) await ctx.state.records.put({ ...known, baseSha: sha });
+					if (open.has(known.entryId)) {
+						// The file is back to what was last synced (the edit in git was undone): there is nothing to decide any more, and what the server
+						// changed in the meantime goes out with the next flush.
+						await ctx.state.conflicts.remove(target.id, known.entryId);
+						await enqueue(ctx, target, known.entryId);
+					}
 					unchanged += 1;
 					continue;
 				}
