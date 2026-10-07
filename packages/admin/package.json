@@ -2,12 +2,13 @@
 	"name": "@monti-cms/admin",
 	"version": "0.1.0",
 	"private": true,
-	"description": "Admin UI (Next.js) for @monti-cms/core: editor, lists, media, templates, and plugin extension points",
+	"description": "Admin UI for @monti-cms/core: editor, lists, media, templates, and plugin extension points. Framework-neutral: a host package (@monti-cms/nextjs) supplies the router",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./next": "./src/next/index.tsx",
+		"./host": "./src/host/index.tsx",
+		"./router": "./src/router/index.tsx",
 		"./editor": "./src/editor/public.ts",
 		"./blocks": "./src/editor/blocks/public.ts",
 		"./hooks": "./src/hooks/public.ts",
@@ -55,7 +56,6 @@
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
 		"lucide-react": ">=0.562.0",
-		"next": ">=16",
 		"next-themes": ">=0.4",
 		"react": ">=19",
 		"react-dom": ">=19",
@@ -75,8 +75,6 @@
 		"@types/react-dom": "^19",
 		"jsdom": "^27.4.0",
 		"lucide-react": "^0.562.0",
-		"next": "16.3.8",
-		"next-auth": "5.0.0-beta.32",
 		"next-themes": "^0.4.6",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
@@ -96,9 +94,13 @@
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
 			},
-			"./next": {
-				"types": "./dist/next/index.d.ts",
-				"default": "./dist/next/index.js"
+			"./host": {
+				"types": "./dist/host/index.d.ts",
+				"default": "./dist/host/index.js"
+			},
+			"./router": {
+				"types": "./dist/router/index.d.ts",
+				"default": "./dist/router/index.js"
 			},
 			"./editor": {
 				"types": "./dist/editor/public.d.ts",

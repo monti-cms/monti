@@ -12,10 +12,10 @@ import {
 } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { useSyncExternalStore } from "react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { docOf } from "../../test/mdx";
+import { createTestRouter } from "../../test/router";
 import { AdminClientDashboard } from "../admin-dashboard";
 import { EntryEditorShell } from "../entries/entry-editor-shell";
 import { entryEditorShellMessages } from "../entries/entry-editor-shell.messages";
@@ -39,37 +39,8 @@ const content: Collection = DEFAULT_COLLECTION;
 const record = COLLECTIONS.find((name) => isItemCollection(name)) as Collection;
 const titleLabel = (collection: Collection) => storedField(collection, "title")?.field.label ?? "";
 
-const nav = vi.hoisted(() => {
-	const listeners = new Set<() => void>();
-	const state = {
-		search: new URLSearchParams(),
-		push: vi.fn(),
-		replace: vi.fn(),
-		listeners,
-		set(query: string) {
-			state.search = new URLSearchParams(query);
-			for (const listener of listeners) listener();
-		},
-	};
-	return state;
-});
-vi.mock("next/navigation", () => ({
-	useRouter: () => ({
-		replace: (url: string) => {
-			nav.replace(url);
-			nav.set(url.split("?")[1] ?? "");
-		},
-		push: nav.push,
-	}),
-	useSearchParams: () =>
-		useSyncExternalStore(
-			(listener) => {
-				nav.listeners.add(listener);
-				return () => nav.listeners.delete(listener);
-			},
-			() => nav.search,
-		),
-}));
+const nav = createTestRouter();
+const { render } = nav;
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 const backup = vi.hoisted(() => ({ get: vi.fn(), remove: vi.fn(), save: vi.fn() }));
@@ -154,7 +125,7 @@ afterEach(() => {
 
 describe("any site: list screen", () => {
 	it("shows the collection's rows under its configured list columns", async () => {
-		nav.set(`collection=${content}`);
+		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha"), item("e2", "Beta")];
 		render(
 			<AdminQueryProvider>
@@ -180,7 +151,7 @@ describe("any site: list screen", () => {
 	it.skipIf(!listedSelect)("draws a listed select field column with the option label", async () => {
 		const { column, field } = listedSelect as NonNullable<typeof listedSelect>;
 		const [value, label] = Object.entries(field.options)[1] ?? Object.entries(field.options)[0] ?? ["", ""];
-		nav.set(`collection=${content}`);
+		nav.setSearch(`collection=${content}`);
 		listed = [{ ...item("e1", "Alpha"), values: { [column]: value } }, item("e2", "Beta")];
 		render(
 			<AdminQueryProvider>
@@ -197,7 +168,7 @@ describe("any site: list screen", () => {
 	});
 
 	it("duplicates a row with a copy title made by the admin", async () => {
-		nav.set(`collection=${content}`);
+		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha")];
 		handle = (url, init) =>
 			url.pathname === "/api/cms/v1/entries/e1/duplicate" && init?.method === "POST"
@@ -217,7 +188,7 @@ describe("any site: list screen", () => {
 		expect(bodyOf(calls("POST", "/api/cms/v1/entries/e1/duplicate")[0])).toEqual({
 			title: copyTitle(content, "Alpha"),
 		});
-		await waitFor(() => expect(nav.push).toHaveBeenCalledWith(adminEntryEditHref("copy-1")));
+		await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith(adminEntryEditHref("copy-1")));
 	});
 });
 

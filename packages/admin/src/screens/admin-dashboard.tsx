@@ -3,11 +3,10 @@
 import type { AdminColumnSettings } from "@monti-cms/core/client";
 import { adminHref, COLLECTION_DEFINITIONS, COLLECTIONS, createTranslator } from "@monti-cms/core/client";
 import { FolderPlus, Plus } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "../lib/utils/cn";
+import { AdminLink as Link } from "../router";
 import { Button, buttonVariants } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { AdminEntriesTable } from "./admin-entries-table";
@@ -215,7 +214,7 @@ function TrashPage() {
 						{COLLECTIONS.map((item) => (
 							<Link
 								key={item}
-								href={adminHref(`/trash?collection=${item}`) as Route}
+								href={adminHref(`/trash?collection=${item}`)}
 								aria-current={state.collection === item ? "page" : undefined}
 								className={cn(
 									buttonVariants({ variant: "ghost", size: "xs" }),

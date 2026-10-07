@@ -1,5 +1,5 @@
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -8,6 +8,7 @@ import {
 	type ListCellProps,
 	useCmsAdminComponents,
 } from "../../admin-components";
+import { renderInRouter as render } from "../../test/router";
 
 // A site where select, text, media and relation fields are written in the list columns (runs regardless of config).
 vi.mock("@monti-cms/core/client", async (importOriginal) => {
