@@ -450,6 +450,26 @@ describe("monti init choices", () => {
 		expect(prompter.notes.some((note) => note.title === "Change to app/globals.css")).toBe(true);
 	});
 
+	it("opts the admin page out of the instant validation only when next.config turns on cacheComponents", async () => {
+		const plain = fixtureApp();
+		await initProject({ cwd: plain, ...quiet() });
+		expect(read(plain, "app/studio/[[...path]]/page.tsx")).not.toContain("instant");
+
+		const cached = fixtureApp({
+			"next.config.ts": `import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  cacheComponents: true,
+  partialPrefetching: true,
+};
+
+export default nextConfig;
+`,
+		});
+		await initProject({ cwd: cached, ...quiet() });
+		expect(read(cached, "app/studio/[[...path]]/page.tsx")).toContain("export const instant = false;");
+	});
+
 	it("adds suppressHydrationWarning to the <html> tag of the root layout (the admin theme sets a class on it)", async () => {
 		const layout = `export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

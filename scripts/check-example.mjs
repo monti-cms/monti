@@ -133,6 +133,9 @@ if (withoutCacheComponents === nextConfigText || /cacheComponents/.test(withoutC
 try {
 	check("example config, cacheComponents on (the default of a new Next app)");
 	writeFileSync(nextConfigPath, withoutCacheComponents);
+	// `export const instant = false` (the studio page's opt-out of the instant validation) is only valid with cacheComponents, so an app without it has no such line.
+	const studioPage = path.join(app, "app/studio/[[...path]]/page.tsx");
+	writeFileSync(studioPage, readFileSync(studioPage, "utf8").replace(/^export const instant = false;\n\n?/m, ""));
 	check("example config, cacheComponents off");
 	console.log("\ncheck-example: ok");
 } finally {

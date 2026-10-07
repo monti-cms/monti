@@ -295,17 +295,26 @@ export function configTemplate(answers: InitAnswers): string {
 	].join("\n")}\n`;
 }
 
-/** The generated files import the CMS instance from the config file. `configImport` is its import path from the generated file, without an extension. */
+/**
+ * The generated files import the CMS instance from the config file. `configImport` is its import path from the generated file, without an extension.
+ * `instant`: the app turns on Next's `cacheComponents`, so the page opts out of the development-only instant navigation validation. The export is only valid with that
+ * option (Next fails the build on it otherwise), which is why the template writes it only then.
+ */
 export const adminPageTemplate = (
 	configImport: string,
+	options: { readonly instant?: boolean } = {},
 ) => `import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/nextjs/admin";
 import { cms } from ${JSON.stringify(configImport)};
 
-// The admin is a per-request app (the session, the database, the current time), never an instant navigation: this keeps Next's instant validation
+${
+	options.instant
+		? `// The admin is a per-request app (the session, the database, the current time), never an instant navigation: this keeps Next's instant validation
 // (Cache Components, development) from checking it. A segment setting has to be written here; it cannot be re-exported from a package.
 export const instant = false;
 
-export default function StudioPage(props: CmsAdminPageProps) {
+`
+		: ""
+}export default function StudioPage(props: CmsAdminPageProps) {
 	return <CmsAdminPage cms={cms} {...props} />;
 }
 `;

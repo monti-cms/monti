@@ -381,6 +381,10 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		next: [],
 	};
 
+	// Next's `cacheComponents` (on by default in the apps `create-next-app` 16.4 makes) validates every page for instant navigation in development; the admin opts out.
+	const usesCacheComponents =
+		app.nextConfig !== undefined && /\bcacheComponents\s*:\s*true\b/.test(writer.read(app.nextConfig));
+
 	// Files to write when they do not exist yet.
 	const planned: { file: string; content: string }[] = [];
 	const keepConfig = app.existingConfig !== undefined || app.legacyConfig.length > 0;
@@ -419,7 +423,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		);
 	}
 	planned.push(
-		{ file: pageFile, content: adminPageTemplate(configImport(pageFile)) },
+		{ file: pageFile, content: adminPageTemplate(configImport(pageFile), { instant: usesCacheComponents }) },
 		{ file: layoutFile, content: adminLayoutTemplate(configImport(layoutFile), { blocks: answers.blocks.length > 0 }) },
 		{ file: routeFile, content: apiRouteTemplate(configImport(routeFile)) },
 		{ file: ".env.example", content: envExampleTemplate(answers) },
