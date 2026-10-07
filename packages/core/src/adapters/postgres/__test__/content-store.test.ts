@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { publishDraft, seedEntry, seedSave } from "../../../core/store/__test__/seed";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -16,8 +17,8 @@ describe("ContentStore (Postgres)", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		// Required-for-publish values (such as the reference blog's category) are looked up in the config and filled in.
 		fillRequiredMetadata(store);
 	});
@@ -71,7 +72,7 @@ describe("ContentStore (Postgres)", () => {
 			contentHash: "hash-rollback-1",
 		});
 
-		const firstPublish = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
+		const firstPublish = await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
 		const update = await seedSave(store, entry.id, {
 			expectedVersion: firstPublish.version,
@@ -85,6 +86,7 @@ describe("ContentStore (Postgres)", () => {
 
 		let hookReached = false;
 		const failingStore = createContentStore(pool, {
+			site: testSite,
 			schema: schemaName,
 			beforePublishCommit: async () => {
 				hookReached = true;
@@ -92,7 +94,9 @@ describe("ContentStore (Postgres)", () => {
 			},
 		});
 
-		await expect(publishDraft(failingStore, { id: entry.id, expectedVersion: update.version })).rejects.toThrow();
+		await expect(
+			publishDraft(testSite, failingStore, { id: entry.id, expectedVersion: update.version }),
+		).rejects.toThrow();
 
 		expect(hookReached).toBe(true);
 

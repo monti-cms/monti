@@ -1,20 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cmsConfig } from "../../config/resolved";
+import { testConfig, testSite } from "../../../test/site";
 import {
-	ADMIN_PATH,
-	adminEntryEditHref,
-	adminHref,
 	adminHrefWith,
-	adminUrl,
 	cmsApiUrl,
 	cmsBasePath,
 	DEFAULT_ADMIN_PATH,
 	normalizeBasePath,
-	SITE_HOME,
 	withBasePath,
 } from "../admin-paths";
 import { previewHrefWith } from "../links";
-import { DEFAULT_LOCALE, LOCALES, localePrefix, localePrefixFor, localizePath, localizePathWith } from "../locales";
+import { localePrefixFor, localizePathWith } from "../locales";
 
 describe("admin addresses (admin.path)", () => {
 	it("builds addresses under the configured admin path", () => {
@@ -26,11 +21,11 @@ describe("admin addresses (admin.path)", () => {
 	});
 
 	it("follows the site config (/admin if absent, view site is /)", () => {
-		expect(ADMIN_PATH).toBe(cmsConfig.admin?.path ?? DEFAULT_ADMIN_PATH);
-		expect(adminHref()).toBe(ADMIN_PATH);
-		expect(adminHref("/login")).toBe(`${ADMIN_PATH}/login`);
-		expect(adminEntryEditHref("e1")).toBe(`${ADMIN_PATH}/entries/e1/edit`);
-		expect(SITE_HOME).toBe(cmsConfig.site?.home ?? "/");
+		expect(testSite.ADMIN_PATH).toBe(testConfig.admin?.path ?? DEFAULT_ADMIN_PATH);
+		expect(testSite.adminHref()).toBe(testSite.ADMIN_PATH);
+		expect(testSite.adminHref("/login")).toBe(`${testSite.ADMIN_PATH}/login`);
+		expect(testSite.adminEntryEditHref("e1")).toBe(`${testSite.ADMIN_PATH}/entries/e1/edit`);
+		expect(testSite.SITE_HOME).toBe(testConfig.site?.home ?? "/");
 	});
 });
 
@@ -42,16 +37,16 @@ describe("sub-path (Next basePath)", () => {
 		expect(cmsBasePath()).toBe("");
 		expect(cmsApiUrl("/v1/entries?page=2")).toBe("/api/cms/v1/entries?page=2");
 		expect(withBasePath("/x")).toBe("/x");
-		expect(adminUrl("/login")).toBe(adminHref("/login"));
+		expect(testSite.adminUrl("/login")).toBe(testSite.adminHref("/login"));
 	});
 
-	it("basePath prefixes API and browser addresses, while adminHref for Link is unchanged", () => {
+	it("basePath prefixes API and browser addresses, while testSite.adminHref for Link is unchanged", () => {
 		vi.stubEnv("NEXT_PUBLIC_CMS_BASE_PATH", "/blog");
 		expect(cmsApiUrl("/v1/entries/e1")).toBe("/blog/api/cms/v1/entries/e1");
 		expect(withBasePath("/preview/post/a")).toBe("/blog/preview/post/a");
-		expect(adminUrl()).toBe(`/blog${ADMIN_PATH}`);
-		expect(adminUrl("/login")).toBe(`/blog${ADMIN_PATH}/login`);
-		expect(adminHref("/login")).toBe(`${ADMIN_PATH}/login`);
+		expect(testSite.adminUrl()).toBe(`/blog${testSite.ADMIN_PATH}`);
+		expect(testSite.adminUrl("/login")).toBe(`/blog${testSite.ADMIN_PATH}/login`);
+		expect(testSite.adminHref("/login")).toBe(`${testSite.ADMIN_PATH}/login`);
 	});
 
 	it("normalizes leading and trailing slashes of the basePath value", () => {
@@ -79,12 +74,12 @@ describe("locale addresses (site.localePrefix)", () => {
 	});
 
 	it("follows the site config and adds no prefix to unknown locales", () => {
-		const mode = cmsConfig.site?.localePrefix ?? "except-default";
-		for (const locale of LOCALES) {
-			expect(localePrefix(locale)).toBe(localePrefixFor(locale, mode, DEFAULT_LOCALE));
-			expect(localizePath(locale, "/a")).toBe(`${localePrefixFor(locale, mode, DEFAULT_LOCALE)}/a`);
+		const mode = testConfig.site?.localePrefix ?? "except-default";
+		for (const locale of testSite.LOCALES) {
+			expect(testSite.localePrefix(locale)).toBe(localePrefixFor(locale, mode, testSite.DEFAULT_LOCALE));
+			expect(testSite.localizePath(locale, "/a")).toBe(`${localePrefixFor(locale, mode, testSite.DEFAULT_LOCALE)}/a`);
 		}
-		expect(localePrefix("xx-unknown")).toBe("");
+		expect(testSite.localePrefix("xx-unknown")).toBe("");
 	});
 });
 

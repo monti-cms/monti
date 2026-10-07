@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, defaultLocale } from "../../../test/any-site";
+import { testConfig } from "../../../test/site";
 import type { AfterCommit, ContentStore } from "../../core/store";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../../server/define";
 import { createCms } from "../create-cms";
@@ -64,7 +65,7 @@ afterEach(() => {
 describe("createCms: an instance owns its server resources", () => {
 	it("connects to nothing until a resource is used", () => {
 		const { server, database } = serverFor("a");
-		const cms = createCms({ server });
+		const cms = createCms({ config: testConfig, server });
 		expect(database.createStore).not.toHaveBeenCalled();
 		expect(database.pluginStorage).not.toHaveBeenCalled();
 		cms.store();
@@ -72,7 +73,7 @@ describe("createCms: an instance owns its server resources", () => {
 	});
 
 	it("creates each resource once per instance and reuses it", () => {
-		const cms = createCms({ server: serverFor("a").server });
+		const cms = createCms({ config: testConfig, server: serverFor("a").server });
 		expect(cms.store()).toBe(cms.store());
 		expect(cms.contentService()).toBe(cms.contentService());
 		expect(cms.bulkService()).toBe(cms.bulkService());
@@ -85,8 +86,8 @@ describe("createCms: an instance owns its server resources", () => {
 			trustHost: false,
 			media: { name: "media-b", createStore: () => ({ tag: "b" }) as never },
 		});
-		const cmsA = createCms({ server: a.server });
-		const cmsB = createCms({ server: b.server });
+		const cmsA = createCms({ config: testConfig, server: a.server });
+		const cmsB = createCms({ config: testConfig, server: b.server });
 
 		// Each reads its own database, secret, trust setting and media storage.
 		expect((cmsA.store() as unknown as { tag: string }).tag).toBe("a");
@@ -122,8 +123,8 @@ describe("createCms: an instance owns its server resources", () => {
 	it("runs only its own server config's hooks, also for the store's after-commit notifications", async () => {
 		const a = serverFor("a");
 		const b = serverFor("b");
-		const cmsA = createCms({ server: a.server });
-		const cmsB = createCms({ server: b.server });
+		const cmsA = createCms({ config: testConfig, server: a.server });
+		const cmsB = createCms({ config: testConfig, server: b.server });
 		expect((await cmsA.writeHooks()).map((source) => source.owner)).toEqual(["server"]);
 
 		const change = { kind: "saved", entryId: "e1" } as never;
@@ -140,8 +141,8 @@ describe("createCms: an instance owns its server resources", () => {
 		const a = serverFor("a");
 		const b = serverFor("b");
 		const logs: string[] = [];
-		const cmsA = createCms({ server: a.server });
-		createCms({ server: b.server });
+		const cmsA = createCms({ config: testConfig, server: a.server });
+		createCms({ config: testConfig, server: b.server });
 		await cmsA.migrate({ log: (message) => logs.push(message) });
 		await cmsA.close();
 		expect(a.database.migrate).toHaveBeenCalledTimes(1);
@@ -153,7 +154,7 @@ describe("createCms: an instance owns its server resources", () => {
 	});
 
 	it("keeps no global state: nothing is left on the global object", async () => {
-		const cms = createCms({ server: serverFor("a").server });
+		const cms = createCms({ config: testConfig, server: serverFor("a").server });
 		cms.store();
 		cms.contentService();
 		cms.auth();
@@ -168,8 +169,8 @@ describe("createCms: a development reload does not leak connections", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const first = serverFor("first");
 		const reloaded = serverFor("reloaded");
-		createCms({ server: first.server }).store();
-		const after = createCms({ server: reloaded.server });
+		createCms({ config: testConfig, server: first.server }).store();
+		const after = createCms({ config: testConfig, server: reloaded.server });
 		const store = after.store() as unknown as { tag: string };
 		// The new instance builds its store from the adapter that already owns the pool, and never opens a second one.
 		expect(store.tag).toBe("first");
@@ -182,9 +183,9 @@ describe("createCms: a development reload does not leak connections", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const first = serverFor("first");
 		const reloaded = serverFor("reloaded");
-		createCms({ server: first.server });
-		const after = createCms({ server: reloaded.server });
-		const sealed = createCms({ server: reloaded.server }).secrets("ai").encrypt("x");
+		createCms({ config: testConfig, server: first.server });
+		const after = createCms({ config: testConfig, server: reloaded.server });
+		const sealed = createCms({ config: testConfig, server: reloaded.server }).secrets("ai").encrypt("x");
 		expect(after.secrets("ai").decrypt(sealed)).toBe("x");
 		await (after.store() as unknown as { afterCommit: AfterCommit }).afterCommit({
 			kind: "saved",
@@ -198,8 +199,8 @@ describe("createCms: a development reload does not leak connections", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const create = vi.fn(() => ({}) as never);
 		const media = { name: "media", createStore: create };
-		const first = createCms({ server: serverFor("a", { media }).server });
-		const second = createCms({ server: serverFor("a", { media }).server });
+		const first = createCms({ config: testConfig, server: serverFor("a", { media }).server });
+		const second = createCms({ config: testConfig, server: serverFor("a", { media }).server });
 		expect(second.mediaStore()).toBe(first.mediaStore());
 		expect(create).toHaveBeenCalledTimes(1);
 	});
@@ -208,8 +209,8 @@ describe("createCms: a development reload does not leak connections", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const one = serverFor("one");
 		const two = serverFor("two");
-		const cmsOne = createCms({ id: "one", server: one.server });
-		const cmsTwo = createCms({ id: "two", server: two.server });
+		const cmsOne = createCms({ config: testConfig, id: "one", server: one.server });
+		const cmsTwo = createCms({ config: testConfig, id: "two", server: two.server });
 		expect((cmsOne.store() as unknown as { tag: string }).tag).toBe("one");
 		expect((cmsTwo.store() as unknown as { tag: string }).tag).toBe("two");
 	});
@@ -218,8 +219,8 @@ describe("createCms: a development reload does not leak connections", () => {
 		vi.stubEnv("NODE_ENV", "production");
 		const first = serverFor("first");
 		const second = serverFor("second");
-		createCms({ server: first.server }).store();
-		const store = createCms({ server: second.server }).store() as unknown as { tag: string };
+		createCms({ config: testConfig, server: first.server }).store();
+		const store = createCms({ config: testConfig, server: second.server }).store() as unknown as { tag: string };
 		expect(store.tag).toBe("second");
 		expect(first.database.createStore).toHaveBeenCalledTimes(1);
 	});

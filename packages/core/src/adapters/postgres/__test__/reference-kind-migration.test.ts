@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
@@ -14,7 +15,7 @@ describe("entry_references kind migration", () => {
 
 	beforeAll(async () => {
 		({ pool, schemaName } = await createIsolatedTestPool());
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 	});
 
 	afterAll(async () => {
@@ -96,13 +97,13 @@ describe("entry_references kind migration", () => {
 		await insertReference(source, "published", "tag", twoLegacy, [metadata("tagIds", 1)]);
 
 		// Even before the migration, reads treat them as entry (the new code may be deployed first).
-		const store = createContentStore(pool, { schema: schemaName });
+		const store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const before = await store.getWorkingReferences({ entryId: source });
 		expect(before.every((reference) => reference.kind === "entry")).toBe(true);
 
 		// A legacy store has no step record (this step has not run yet).
 		await forgetSteps();
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const read = async () =>
 			(
 				await pool.query<{ state: string; kind: string; target_id: string; is_stale: boolean; occurrences: unknown }>(
@@ -141,9 +142,9 @@ describe("entry_references kind migration", () => {
 		);
 
 		// Running it repeatedly gives the same result (even when it runs again because there is no step record).
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		await forgetSteps();
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		expect(await read()).toEqual(after);
 		expect(await constraintDefs()).toEqual(defs);
 	});

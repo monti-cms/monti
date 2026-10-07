@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
+import { testConfig, testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { type Cms, fakeCms } from "../../../cms";
 import type { Collection } from "../../../core/collections";
@@ -47,10 +48,13 @@ describe("entry API with a stored document", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
-		cms = fakeCms({ store, contentService: service, formats: [paragraphsFormat] });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, {
+			site: testSite,
+			formats: async () => createFormatRegistry([paragraphsFormat]),
+		});
+		cms = fakeCms({ config: testConfig, store, contentService: service, formats: [paragraphsFormat] });
 	});
 
 	afterAll(async () => {
@@ -71,7 +75,7 @@ describe("entry API with a stored document", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};

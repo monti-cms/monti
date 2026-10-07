@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { seedEntry } from "../../../core/store/__test__/seed";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -35,12 +36,12 @@ describe("migrations", () => {
 
 	it("runs one at a time even when started twice concurrently, and records every step once", async () => {
 		await Promise.all([
-			migrateContentStore(pool, { schema: schemaName }),
-			migrateContentStore(pool, { schema: schemaName }),
+			migrateContentStore(pool, { site: testSite, schema: schemaName }),
+			migrateContentStore(pool, { site: testSite, schema: schemaName }),
 		]);
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 		// Running again does nothing.
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 	});
 
@@ -52,7 +53,7 @@ describe("migrations", () => {
 	});
 
 	it("leaves the MDX text columns of bodies and templates optional, and a normal write does not fill them", async () => {
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const nullable = await pool.query<{ table_name: string; is_nullable: string }>(
 			`SELECT table_name, is_nullable FROM information_schema.columns
 			 WHERE table_schema = $1 AND column_name = 'mdx' AND table_name IN ('entry_bodies', 'body_templates')`,
@@ -61,7 +62,7 @@ describe("migrations", () => {
 		expect(nullable.rows.map((row) => row.table_name).sort()).toEqual(["body_templates", "entry_bodies"]);
 		for (const row of nullable.rows) expect(row.is_nullable, row.table_name).toBe("YES");
 
-		const store = createContentStore(pool, { schema: schemaName });
+		const store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const entry = await seedEntry(store, {
 			collection: "x",
 			slug: "no-text",
@@ -87,7 +88,7 @@ describe("migrations", () => {
 	it("creates the schema if missing (only set `schema` and run monti migrate)", async () => {
 		const schema = `cms_test_new_${randomBytes(3).toString("hex")}`;
 		extraSchemas.push(schema);
-		await migrateContentStore(pool, { schema });
+		await migrateContentStore(pool, { site: testSite, schema });
 		const tables = await pool.query(
 			`SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = 'entries'`,
 			[schema],
@@ -96,7 +97,7 @@ describe("migrations", () => {
 	});
 
 	it("leaves data intact and records every step even for a legacy store with no step record", async () => {
-		const store = createContentStore(pool, { schema: schemaName });
+		const store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const entry = await seedEntry(store, {
 			collection: "x",
 			slug: "kept",
@@ -111,7 +112,7 @@ describe("migrations", () => {
 		// Its old steps read the text with the old-body reader of the MDX format (a test double stands for it here).
 		const { formats } = fakeMdxRegistry();
 
-		await migrateContentStore(pool, { schema: schemaName, formats });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 
 		expect(await applied(schemaName)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 		// The steps of that time give the text its document, with the content it had.

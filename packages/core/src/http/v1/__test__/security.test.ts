@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cmsConfig } from "../../../config/resolved";
+import { testConfig } from "../../../../test/site";
+import { fakeCms } from "../../../cms/fake-cms";
 import { validateSameOrigin } from "../security";
+
+/** An instance whose `trustHost` is set (or left to `AUTH_TRUST_HOST` and the environment when `undefined`). */
+const cmsWith = (trustHost?: boolean) => fakeCms({ config: testConfig, server: { trustHost } });
+const cms = cmsWith();
 
 const post = (url: string, headers: Record<string, string>) =>
 	new Request(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: "{}" });
@@ -12,11 +17,11 @@ describe("same-origin check", () => {
 
 	it("accepts only the same origin as Host", () => {
 		expect(() =>
-			validateSameOrigin(post("http://cms.local/api/cms/v1/x", { origin: "http://cms.local" })),
+			validateSameOrigin(cms, post("http://cms.local/api/cms/v1/x", { origin: "http://cms.local" })),
 		).not.toThrow();
-		expect(() => validateSameOrigin(post("http://cms.local/api/cms/v1/x", { origin: "https://evil.example" }))).toThrow(
-			/Cross-origin/,
-		);
+		expect(() =>
+			validateSameOrigin(cms, post("http://cms.local/api/cms/v1/x", { origin: "https://evil.example" })),
+		).toThrow(/Cross-origin/);
 	});
 
 	it("behind a trusted proxy that rewrites Host, matches X-Forwarded-Host (first value)", () => {
@@ -25,7 +30,7 @@ describe("same-origin check", () => {
 			"x-forwarded-host": "www.example.com, edge.internal",
 			origin: "https://www.example.com",
 		});
-		expect(() => validateSameOrigin(behindProxy, { trustHost: true })).not.toThrow();
+		expect(() => validateSameOrigin(cmsWith(true), behindProxy)).not.toThrow();
 	});
 
 	it("ignores a client-supplied X-Forwarded-Host unless the host is trusted", () => {
@@ -35,12 +40,12 @@ describe("same-origin check", () => {
 				"x-forwarded-host": "evil.example",
 				origin: "https://evil.example",
 			});
-		expect(() => validateSameOrigin(forged(), { trustHost: false })).toThrow(/Cross-origin/);
+		expect(() => validateSameOrigin(cmsWith(false), forged())).toThrow(/Cross-origin/);
 		// The same request passes only when a trusted proxy is configured to set that header.
-		expect(() => validateSameOrigin(forged(), { trustHost: true })).not.toThrow();
+		expect(() => validateSameOrigin(cmsWith(true), forged())).not.toThrow();
 		// A request without it is unaffected either way.
 		const direct = post("http://cms.local/api/cms/v1/x", { origin: "http://cms.local" });
-		expect(() => validateSameOrigin(direct, { trustHost: false })).not.toThrow();
+		expect(() => validateSameOrigin(cmsWith(false), direct)).not.toThrow();
 	});
 
 	it("trusts the forwarded host by the server config and AUTH_TRUST_HOST when no option is passed", () => {
@@ -51,19 +56,19 @@ describe("same-origin check", () => {
 				origin: "https://www.example.com",
 			});
 		vi.stubEnv("AUTH_TRUST_HOST", "false");
-		expect(() => validateSameOrigin(behindProxy())).toThrow(/Cross-origin/);
+		expect(() => validateSameOrigin(cms, behindProxy())).toThrow(/Cross-origin/);
 		vi.stubEnv("AUTH_TRUST_HOST", "true");
-		expect(() => validateSameOrigin(behindProxy())).not.toThrow();
+		expect(() => validateSameOrigin(cms, behindProxy())).not.toThrow();
 	});
 
-	it.skipIf(!cmsConfig.site?.url)("also accepts the host of the site URL (site.url)", () => {
-		const siteHost = new URL(cmsConfig.site?.url ?? "").host;
+	it.skipIf(!testConfig.site?.url)("also accepts the host of the site URL (site.url)", () => {
+		const siteHost = new URL(testConfig.site?.url ?? "").host;
 		const request = post("http://internal:3000/api/cms/v1/x", { host: "internal:3000", origin: `https://${siteHost}` });
-		expect(() => validateSameOrigin(request)).not.toThrow();
+		expect(() => validateSameOrigin(cms, request)).not.toThrow();
 	});
 
 	it("rejects when there is no origin signal, and does not check read requests", () => {
-		expect(() => validateSameOrigin(post("http://cms.local/api/cms/v1/x", {}))).toThrow(/Missing origin/);
-		expect(() => validateSameOrigin(new Request("http://cms.local/api/cms/v1/x"))).not.toThrow();
+		expect(() => validateSameOrigin(cms, post("http://cms.local/api/cms/v1/x", {}))).toThrow(/Missing origin/);
+		expect(() => validateSameOrigin(cms, new Request("http://cms.local/api/cms/v1/x"))).not.toThrow();
 	});
 });

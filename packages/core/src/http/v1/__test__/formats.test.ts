@@ -1,11 +1,10 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { testConfig, testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { type Cms, fakeCms } from "../../../cms";
 import type { Collection } from "../../../core/collections";
-import { contentPath } from "../../../core/links";
-import { localizePath } from "../../../core/locales";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import { entryLinkIds } from "../../../doc/entry-links";
@@ -56,7 +55,7 @@ const crashing = defineFormat({
 
 const FORMATS = [paragraphsFormat, oneWay, crashing];
 
-const linkable = contentPath(contentCollection, "probe") !== null;
+const linkable = testSite.contentPath(contentCollection, "probe") !== null;
 
 /**
  * The format option on the admin API, against a real store: a text in any format is read by its plugin, normalised and validated by core, and stored as a
@@ -76,11 +75,11 @@ describe("the format option of the admin API", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const registry = createFormatRegistry(FORMATS);
-		service = createContentService<Entry>(store, { formats: async () => registry });
-		cms = fakeCms({ store, contentService: service, formats: FORMATS });
+		service = createContentService<Entry>(store, { site: testSite, formats: async () => registry });
+		cms = fakeCms({ config: testConfig, store, contentService: service, formats: FORMATS });
 	});
 
 	afterAll(async () => {
@@ -101,7 +100,7 @@ describe("the format option of the admin API", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -146,7 +145,7 @@ describe("the format option of the admin API", () => {
 			format: "paragraphs",
 			body: "Target body",
 		});
-		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	describe("writing", () => {
@@ -180,7 +179,7 @@ describe("the format option of the admin API", () => {
 			"an internal link written as the path of its target is stored as the id of that target, whatever the format",
 			async () => {
 				const target = await publishedPost(unique("link-target"));
-				const path = contentPath(contentCollection, target.workingSlug) as string;
+				const path = testSite.contentPath(contentCollection, target.workingSlug) as string;
 
 				const entry = await created({ format: "paragraphs", body: `See [the target](${path}) for more.` });
 
@@ -245,8 +244,12 @@ describe("the format option of the admin API", () => {
 
 		it("with no format installed a text write is a 400 unknown_format, and a document write still works", async () => {
 			const bare = fakeCms({
+				config: testConfig,
 				store,
-				contentService: createContentService<Entry>(store, { formats: async () => createFormatRegistry([]) }),
+				contentService: createContentService<Entry>(store, {
+					site: testSite,
+					formats: async () => createFormatRegistry([]),
+				}),
 				formats: [],
 			});
 			const write = async (body: Record<string, unknown>) =>
@@ -313,7 +316,7 @@ describe("the format option of the admin API", () => {
 
 		it("the published body is written too, and a one-way format can be read as text", async () => {
 			const draft = await created({ format: "paragraphs", body: "Live text" });
-			const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+			const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 
 			const { body } = await read(published.id, "?format=one-way");
 
@@ -342,7 +345,7 @@ describe("the format option of the admin API", () => {
 				});
 				const before = (await read(entry.id, "?format=paragraphs")).body.working.body as string;
 				expect(before).toBe(
-					`[the target](${localizePath(target.locale, contentPath(contentCollection, slug) as string)})`,
+					`[the target](${testSite.localizePath(target.locale, testSite.contentPath(contentCollection, slug) as string)})`,
 				);
 
 				// The target gets a new address: the document is untouched, and the text follows.
@@ -358,7 +361,7 @@ describe("the format option of the admin API", () => {
 
 				const after = (await read(entry.id, "?format=paragraphs")).body.working.body as string;
 				expect(after).toBe(
-					`[the target](${localizePath(target.locale, contentPath(contentCollection, renamed) as string)})`,
+					`[the target](${testSite.localizePath(target.locale, testSite.contentPath(contentCollection, renamed) as string)})`,
 				);
 				expect(entryLinkIds((await read(entry.id)).body.working.doc.content)).toEqual([target.id]);
 			},

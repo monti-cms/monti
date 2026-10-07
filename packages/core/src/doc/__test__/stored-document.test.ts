@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import {
 	canonicalDocument,
@@ -42,7 +43,7 @@ describe("stored document", () => {
 		const reread = readStoredDocument(reorderKeys(JSON.parse(JSON.stringify(doc))));
 
 		expect(reread).toEqual(doc);
-		expect(canonicalDocument(reread as StoredDocument)).toEqual(doc);
+		expect(canonicalDocument(testSite, reread as StoredDocument)).toEqual(doc);
 	});
 
 	it("keeps a text no format could read as an unparsed document, and knows it", () => {

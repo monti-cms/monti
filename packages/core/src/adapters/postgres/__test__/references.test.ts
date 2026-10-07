@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, recordRelationField } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
-import { type Collection, isItemCollection } from "../../../core/collections";
+import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { seedEntry } from "../../../core/store/__test__/seed";
-import { storedFields } from "../../../schema/derive";
 import type { PreparedSnapshot, Reference, StorePort } from "../../../services";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -18,8 +18,8 @@ type ExtendedStore = ReturnType<typeof createContentStore> & StorePort<Entry>;
  * Collection and field names are looked up in the current config (`test/any-site.ts`).
  */
 const relation = (() => {
-	for (const { name, field, when } of storedFields(contentCollection)) {
-		if (!when && field.kind === "relation" && field.many && isItemCollection(field.to)) {
+	for (const { name, field, when } of testSite.storedFields(contentCollection)) {
+		if (!when && field.kind === "relation" && field.many && testSite.isItemCollection(field.to)) {
 			return { name, to: field.to as Collection, many: true };
 		}
 	}
@@ -67,8 +67,8 @@ describe("ContentStore References", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName }) as unknown as ExtendedStore;
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName }) as unknown as ExtendedStore;
 	});
 
 	afterAll(async () => {

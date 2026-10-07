@@ -137,6 +137,10 @@ const blocks = (lines: string[]): CmsNode[] => {
 
 /** The stored document of `source`, with block ids paired with those of `previous`. */
 export const docOfText = (source: string, previous?: StoredDocument | null): StoredDocument => {
-	const doc = canonicalDocument({ type: "doc", version: STORED_DOCUMENT_VERSION, content: blocks(source.split("\n")) });
+	// The text this reads has no marks, so no site is needed to put the marks in order.
+	const doc = canonicalDocument(
+		{ sortMarks: (marks) => [...marks] },
+		{ type: "doc", version: STORED_DOCUMENT_VERSION, content: blocks(source.split("\n")) },
+	);
 	return { ...doc, content: assignBlockIds(doc.content, [previous?.content]) };
 };

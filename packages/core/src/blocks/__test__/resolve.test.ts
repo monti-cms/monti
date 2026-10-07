@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
-import { ADDED_BLOCKS } from "../active";
 import { type BlockDefinition, defineBlock } from "../define";
 import { BUILTIN_BLOCKS } from "../definitions";
 import { resolveBlocks } from "../resolve";
@@ -123,7 +123,7 @@ describe("custom block publish check", () => {
 	// Blocks are looked up from the current config (the reference blog setup has callout kinds and the custom `embed` block address). Skipped for configs without such blocks.
 	const attributeOf = (block: BlockDefinition, pick: (attribute: BlockDefinition["attributes"][string]) => boolean) =>
 		Object.entries(block.attributes).find(([, attribute]) => attribute.type === "string" && pick(attribute));
-	const nonText = ADDED_BLOCKS.filter(
+	const nonText = testSite.ADDED_BLOCKS.filter(
 		(block) => (block.syntax.kind === "leaf" || block.syntax.kind === "container") && !block.parent,
 	);
 	/** A block with a choice-value attribute. */
@@ -150,7 +150,7 @@ describe("custom block publish check", () => {
 
 	const issuesOf = async (doc: StoredDocument) => {
 		const { prepareSnapshot } = await import("../../core/snapshot");
-		const snapshot = await prepareSnapshot({
+		const snapshot = await prepareSnapshot(testSite, {
 			collection: contentCollection,
 			slug: "custom-blocks",
 			// Fill in the publish-required metadata so only the block check is tested (a relation is an ID with only the right format).

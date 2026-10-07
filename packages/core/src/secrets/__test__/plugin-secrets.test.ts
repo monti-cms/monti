@@ -1,5 +1,6 @@
 import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { testConfig } from "../../../test/site";
 import { createCms } from "../../cms";
 import type { CmsServerConfig } from "../../server/define";
 import { createSecretsVault, type LegacySecretFormat } from "../plugin-secrets";
@@ -140,7 +141,7 @@ describe("the CMS instance does not hand out the master secret", () => {
 	} as unknown as CmsServerConfig;
 
 	it("has no raw secret on the instance or in its server config view", () => {
-		const cms = createCms({ server });
+		const cms = createCms({ config: testConfig, server });
 		expect("secret" in cms).toBe(false);
 		expect(JSON.stringify(Object.keys(cms.server))).not.toMatch(/secret/i);
 		expect(Object.values(cms.server)).not.toContain("master-secret");
@@ -148,8 +149,11 @@ describe("the CMS instance does not hand out the master secret", () => {
 	});
 
 	it("gives each plugin its own key and honors previousSecrets", () => {
-		const before = createCms({ server: { ...server, secret: "older-secret", previousSecrets: undefined } });
-		const after = createCms({ server });
+		const before = createCms({
+			config: testConfig,
+			server: { ...server, secret: "older-secret", previousSecrets: undefined },
+		});
+		const after = createCms({ config: testConfig, server });
 		const stored = before.secrets("ai").encrypt("x");
 		expect(after.secrets("ai").decrypt(stored)).toBe("x");
 		expect(after.secrets("seo").decrypt(stored)).toBeNull();

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata, secondLocale } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import type { Collection } from "../../core/collections";
 import type { ContentChange, ContentStore, Entry } from "../../core/store";
 import { seedEntry } from "../../core/store/__test__/seed";
@@ -42,8 +43,9 @@ describe("write hook contract", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, {
+			site: testSite,
 			schema: schemaName,
 			afterCommit: (change) => {
 				if (afterCommitFails) throw new Error("afterCommit is down");
@@ -52,8 +54,8 @@ describe("write hook contract", () => {
 		});
 		const hooks = () => sources;
 		const formats = async () => createFormatRegistry([paragraphsFormat]);
-		service = createContentService<Entry>(store, { hooks, formats });
-		bulk = createBulkService<Entry>(store, { hooks, formats });
+		service = createContentService<Entry>(store, { site: testSite, hooks, formats });
+		bulk = createBulkService<Entry>(store, { site: testSite, hooks, formats });
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
 	});
 

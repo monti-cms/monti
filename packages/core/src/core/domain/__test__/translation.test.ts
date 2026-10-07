@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, secondLocale } from "../../../../test/any-site";
-import { commonFieldKeys, storedFields } from "../../../schema/derive";
-import { DEFAULT_LOCALE } from "../../locales";
+import { testSite } from "../../../../test/site";
 import { CmsError } from "../../store/errors";
 import {
 	assertKnownLocale,
@@ -23,7 +22,7 @@ const codeOf = (run: () => unknown) => {
 const source = (patch: Partial<TranslationSource> = {}): TranslationSource => ({
 	collection: contentCollection,
 	status: "published",
-	locale: DEFAULT_LOCALE,
+	locale: testSite.DEFAULT_LOCALE,
 	translationGroupId: null,
 	...patch,
 });
@@ -31,61 +30,66 @@ const target = { collection: contentCollection, locale: secondLocale ?? "xx" };
 
 describe("translation source", () => {
 	it("accepts the source of its group, in the same content collection, in another language", () => {
-		expect(codeOf(() => assertTranslationSource(source(), target))).toBeNull();
-		expect(codeOf(() => assertTranslationSource(source({ status: "draft" }), target))).toBeNull();
-		expect(codeOf(() => assertTranslationSource(source({ status: "archived" }), target))).toBeNull();
+		expect(codeOf(() => assertTranslationSource(testSite, source(), target))).toBeNull();
+		expect(codeOf(() => assertTranslationSource(testSite, source({ status: "draft" }), target))).toBeNull();
+		expect(codeOf(() => assertTranslationSource(testSite, source({ status: "archived" }), target))).toBeNull();
 	});
 
 	it("rejects a source that does not exist", () => {
-		expect(codeOf(() => assertTranslationSource(undefined, target))).toBe("not_found");
+		expect(codeOf(() => assertTranslationSource(testSite, undefined, target))).toBe("not_found");
 	});
 
 	it("rejects a translation of a translation", () => {
-		expect(codeOf(() => assertTranslationSource(source({ translationGroupId: "some-source" }), target))).toBe(
+		expect(codeOf(() => assertTranslationSource(testSite, source({ translationGroupId: "some-source" }), target))).toBe(
 			"invalid_input",
 		);
 	});
 
 	it("rejects a source in the trash", () => {
-		expect(codeOf(() => assertTranslationSource(source({ status: "trashed" }), target))).toBe("invalid_status");
-	});
-
-	it("rejects a translation in the language of the source", () => {
-		expect(codeOf(() => assertTranslationSource(source(), { ...target, locale: DEFAULT_LOCALE }))).toBe(
-			"translation_exists",
+		expect(codeOf(() => assertTranslationSource(testSite, source({ status: "trashed" }), target))).toBe(
+			"invalid_status",
 		);
 	});
 
+	it("rejects a translation in the language of the source", () => {
+		expect(
+			codeOf(() => assertTranslationSource(testSite, source(), { ...target, locale: testSite.DEFAULT_LOCALE })),
+		).toBe("translation_exists");
+	});
+
 	it("rejects a collection other than the source's, and record collections, which have no translations", () => {
-		expect(codeOf(() => assertTranslationSource(source({ collection: recordCollection }), target))).toBe(
+		expect(codeOf(() => assertTranslationSource(testSite, source({ collection: recordCollection }), target))).toBe(
 			"invalid_input",
 		);
 		expect(
 			codeOf(() =>
-				assertTranslationSource(source({ collection: recordCollection }), { ...target, collection: recordCollection }),
+				assertTranslationSource(testSite, source({ collection: recordCollection }), {
+					...target,
+					collection: recordCollection,
+				}),
 			),
 		).toBe("invalid_input");
 	});
 });
 
 describe("translation metadata", () => {
-	const everyField = Object.fromEntries(storedFields(contentCollection).map(({ name }) => [name, "x"]));
+	const everyField = Object.fromEntries(testSite.storedFields(contentCollection).map(({ name }) => [name, "x"]));
 	/** Fields the config shares between a source and its translations, and the ones each language has of its own. */
-	const common = commonFieldKeys(contentCollection, everyField);
+	const common = testSite.commonFieldKeys(contentCollection, everyField);
 	const perLanguage = Object.fromEntries(Object.entries(everyField).filter(([name]) => !common.includes(name)));
 
 	it("lets a source carry any field", () => {
-		expect(codeOf(() => assertTranslationMetadata(contentCollection, false, everyField))).toBeNull();
+		expect(codeOf(() => assertTranslationMetadata(testSite, contentCollection, false, everyField))).toBeNull();
 	});
 
 	it("lets a translation carry its per-language values", () => {
-		expect(codeOf(() => assertTranslationMetadata(contentCollection, true, perLanguage))).toBeNull();
+		expect(codeOf(() => assertTranslationMetadata(testSite, contentCollection, true, perLanguage))).toBeNull();
 	});
 
 	it.skipIf(common.length === 0)("rejects a translation that carries a field shared with the source, naming it", () => {
 		const key = common[0] as string;
 		try {
-			assertTranslationMetadata(contentCollection, true, { ...perLanguage, [key]: "x" });
+			assertTranslationMetadata(testSite, contentCollection, true, { ...perLanguage, [key]: "x" });
 			expect.unreachable();
 		} catch (error) {
 			expect(error).toBeInstanceOf(CmsError);
@@ -103,7 +107,7 @@ describe("translation state and language", () => {
 	});
 
 	it("knows only the site's languages", () => {
-		expect(codeOf(() => assertKnownLocale(DEFAULT_LOCALE))).toBeNull();
-		expect(codeOf(() => assertKnownLocale("xx-unknown"))).toBe("invalid_input");
+		expect(codeOf(() => assertKnownLocale(testSite, testSite.DEFAULT_LOCALE))).toBeNull();
+		expect(codeOf(() => assertKnownLocale(testSite, "xx-unknown"))).toBe("invalid_input");
 	});
 });

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../../test/any-site";
+import { testConfig } from "../../../../test/site";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
@@ -59,7 +60,12 @@ const mockService = {
 	}),
 };
 
-const cms = fakeCms({ store: mockStore, contentService: mockService, verifyAdmin: () => mockVerifyAdmin() });
+const cms = fakeCms({
+	config: testConfig,
+	store: mockStore,
+	contentService: mockService,
+	verifyAdmin: () => mockVerifyAdmin(),
+});
 
 describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 	beforeEach(() => {

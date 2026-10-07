@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, secondLocale } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import type { ContentStore, Entry } from "../../../core/store";
 import { second, translationHelpers } from "../../../core/store/__test__/contract/translation-fixtures";
@@ -20,8 +21,8 @@ describe("translation groups (postgres storage)", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		({ service, createPost } = translationHelpers(store));
 	});
 
@@ -30,7 +31,7 @@ describe("translation groups (postgres storage)", () => {
 	});
 
 	it("gives the same result when migrated again (columns and primary key)", async () => {
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const pk = await pool.query<{ column_name: string }>(
 			`SELECT column_name FROM information_schema.key_column_usage
 			 WHERE table_schema = $1 AND constraint_name = 'content_addresses_pkey' ORDER BY ordinal_position`,

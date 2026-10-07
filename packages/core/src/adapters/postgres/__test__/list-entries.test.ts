@@ -2,12 +2,12 @@ import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
-import { type Collection, isItemCollection } from "../../../core/collections";
+import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { CmsError } from "../../../core/store";
 import { moveToFolder, publishDraft, seedEntry } from "../../../core/store/__test__/seed";
-import { storedFields } from "../../../schema/derive";
 import { createContentStore, migrateContentStore } from "../content-store";
 
 // What stays here changes the stored dates directly (`created_at`, `updated_at`, `published_at`) or reads the schema, which only Postgres has.
@@ -81,11 +81,13 @@ const content = contentCollection;
 
 type RelationInfo = { name: string; to: Collection; many: boolean };
 /** A non-conditional relation field that points at an item collection. */
-const itemRelations: RelationInfo[] = storedFields(content).flatMap(({ name, field, when }) =>
-	!when && field.kind === "relation" && isItemCollection(field.to)
-		? [{ name, to: field.to as Collection, many: Boolean(field.many) }]
-		: [],
-);
+const itemRelations: RelationInfo[] = testSite
+	.storedFields(content)
+	.flatMap(({ name, field, when }) =>
+		!when && field.kind === "relation" && testSite.isItemCollection(field.to)
+			? [{ name, to: field.to as Collection, many: Boolean(field.many) }]
+			: [],
+	);
 /** A single-select relation (the reference blog's category) and a multi-select relation (the reference blog's tags). */
 const singleRelation = itemRelations.find((relation) => !relation.many);
 const manyRelation = itemRelations.find((relation) => relation.many);
@@ -124,7 +126,7 @@ describe("listEntries in Postgres", () => {
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
-			return (await publishDraft(store, { id: draft.id, expectedVersion: draft.version })).id;
+			return (await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).id;
 		})();
 		relationTargets.set(to, created);
 		return created;
@@ -147,8 +149,8 @@ describe("listEntries in Postgres", () => {
 		ctx.schema = schemaName;
 		await pool.query(`CREATE SCHEMA "${schemaName}"`);
 		ctx.schemaCreated = true;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName }) as unknown as typeof store;
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName }) as unknown as typeof store;
 	});
 
 	afterAll(async () => {
@@ -210,7 +212,7 @@ describe("listEntries in Postgres", () => {
 			if (slug === null) {
 				throw new Error("Cannot publish an entry with null slug in fixture");
 			}
-			current = await publishDraft(store, { id: entry.id, expectedVersion: current.version });
+			current = await publishDraft(testSite, store, { id: entry.id, expectedVersion: current.version });
 		}
 
 		if (opts.folderId) {
@@ -507,7 +509,7 @@ describe("listEntries in Postgres", () => {
 			});
 			// If the publish date is set beforehand, like a migrated entry, it stays as is after publishing.
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [histE.id, histDate]);
-			await publishDraft(store, { id: histE.id, expectedVersion: histE.version });
+			await publishDraft(testSite, store, { id: histE.id, expectedVersion: histE.version });
 
 			const noMetaE = await seedEntry(store, {
 				collection: content,
@@ -517,7 +519,7 @@ describe("listEntries in Postgres", () => {
 				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
-			const pubNoMetaE = await publishDraft(store, { id: noMetaE.id, expectedVersion: noMetaE.version });
+			const pubNoMetaE = await publishDraft(testSite, store, { id: noMetaE.id, expectedVersion: noMetaE.version });
 
 			const list = await store.listEntries({ collection: content });
 
@@ -579,7 +581,7 @@ describe("listEntries in Postgres", () => {
 		await entry("d-2024", "2024-03-15T00:00:00.000+09:00");
 		await entry("d-none");
 		const published = await entry("p-now");
-		await publishDraft(store, { id: published.id, expectedVersion: published.version });
+		await publishDraft(testSite, store, { id: published.id, expectedVersion: published.version });
 
 		const order = async (direction: "asc" | "desc") =>
 			(await store.listEntries({ collection: content, sort: { field: "publishedAt", direction } as never })).items.map(

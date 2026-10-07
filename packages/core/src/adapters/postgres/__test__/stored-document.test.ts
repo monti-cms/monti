@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { documentText, SEARCH_TEXT } from "../../../core/body-text";
 import type { Collection } from "../../../core/collections";
@@ -37,9 +38,12 @@ describe("stored documents", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, {
+			site: testSite,
+			formats: async () => createFormatRegistry([paragraphsFormat]),
+		});
 	});
 
 	afterAll(async () => {
@@ -60,7 +64,7 @@ describe("stored documents", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -84,7 +88,7 @@ describe("stored documents", () => {
 			expectedVersion: entry.version,
 		} as never);
 
-	const publish = (entry: Entry) => publishDraft(store, { id: entry.id, expectedVersion: entry.version });
+	const publish = (entry: Entry) => publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
 	interface Stored {
 		metadata: JsonValue;
@@ -111,13 +115,13 @@ describe("stored documents", () => {
 	/** The rule every row follows. */
 	const expectConsistent = async (entryId: string, state: "working" | "published") => {
 		const row = await stored(entryId, state);
-		const doc = readStoredDocument(row.doc);
+		const doc = readStoredDocument(row.doc, testSite);
 		expect(doc).not.toBeNull();
 		// The text of a body is not stored: the document is the only source.
 		expect(row.mdx).toBeNull();
 		// The hash and the search text are the document's.
 		expect(row.content_hash).toBe(computeContentHash(row.metadata, doc as never, row.schema_version));
-		expect(row.search_text).toBe(documentText(doc as never, SEARCH_TEXT));
+		expect(row.search_text).toBe(documentText(testSite, doc as never, SEARCH_TEXT));
 		return { ...row, doc: doc as NonNullable<typeof doc> };
 	};
 
@@ -219,7 +223,7 @@ describe("stored documents", () => {
 		it("copies the document, and the copy has its own hash", async () => {
 			const original = await createDraft({ doc: docOf(BODY) });
 
-			const copy = await duplicateDraft(store, { id: original.id });
+			const copy = await duplicateDraft(testSite, store, { id: original.id });
 
 			const row = await expectConsistent(copy.id, "working");
 			const source = await stored(original.id, "working");
@@ -230,7 +234,7 @@ describe("stored documents", () => {
 		it("copies an unparsed body as it is", async () => {
 			const original = await createDraft({ text: OPEN });
 
-			const copy = await duplicateDraft(store, { id: original.id });
+			const copy = await duplicateDraft(testSite, store, { id: original.id });
 
 			const row = await expectConsistent(copy.id, "working");
 			expect(row.doc).toMatchObject({ content: [{ type: "unparsed", attrs: { source: OPEN } }] });
@@ -279,7 +283,7 @@ describe("stored documents", () => {
 			});
 			if (lookup.status !== "current") throw new Error("expected the published entry");
 			// The document that was stored, not one parsed again from the text.
-			expect(lookup.entry.doc).toEqual(readStoredDocument(row.doc));
+			expect(lookup.entry.doc).toEqual(readStoredDocument(row.doc, testSite));
 			expect(lookup.entry.doc).not.toBeNull();
 
 			const withBody = await store.listPublishedEntries({ collections: [contentCollection], includeBody: true });
@@ -299,7 +303,7 @@ describe("stored documents", () => {
 			const row = await expectConsistent(translation.id, "working");
 			expect(row.doc).not.toBeNull();
 			expect(translation.working.translation?.baseDoc).toEqual(
-				readStoredDocument((await stored(source.id, "working")).doc),
+				readStoredDocument((await stored(source.id, "working")).doc, testSite),
 			);
 		});
 	});

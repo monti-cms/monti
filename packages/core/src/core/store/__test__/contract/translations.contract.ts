@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, defaultLocale, requiredMetadata, secondLocale } from "../../../../../test/any-site";
+import { testSite } from "../../../../../test/site";
 import { contentOf, docOf } from "../../../../../test/stored-content";
 import { readStoredDocument, type StoredDocument } from "../../../../doc/stored-document";
-import { commonFieldKeys, recordLocalizedFields, storedFields } from "../../../../schema/derive";
 import { withTranslationHints } from "../../../translation/hints";
 import type { ContentStore, Entry } from "../..";
 import { duplicateDraft, publishDraft, restoreDraft, seedEntry } from "../seed";
@@ -38,7 +38,7 @@ export const translationsContract: ContractSuite = (factory) => {
 			await session.close();
 		});
 
-		const publish = (entry: Entry) => publishDraft(store, { id: entry.id, expectedVersion: entry.version });
+		const publish = (entry: Entry) => publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
 		describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
 			it("shares the source slug, and the body starts from a frame that wraps the source text in a translation notice", async () => {
@@ -52,7 +52,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(translation.status).toBe("draft");
 				expect(translation.workingSlug).toBe("copy-source");
 				expect(contentOf(translation.working.doc)).toEqual(
-					contentOf(withTranslationHints(readStoredDocument(source.working.doc) as StoredDocument)),
+					contentOf(withTranslationHints(testSite, readStoredDocument(source.working.doc, testSite) as StoredDocument)),
 				);
 				expect(JSON.stringify(contentOf(translation.working.doc))).toContain("한국어 본문");
 				expect(translation.working.metadata).toEqual({});
@@ -94,7 +94,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				});
 				expect(original.locale).toBe(second);
 
-				const copy = await duplicateDraft(store, { id: original.id });
+				const copy = await duplicateDraft(testSite, store, { id: original.id });
 				expect(copy.locale).toBe(second);
 				expect(copy.translationGroupId).toBe(copy.id);
 				expect(contentOf(copy.working.doc)).toEqual(contentOf(original.working.doc));
@@ -104,7 +104,9 @@ export const translationsContract: ContractSuite = (factory) => {
 			it("refuses to duplicate a translation", async () => {
 				const source = await createPost("duplicate-translation-source");
 				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
-				await expect(duplicateDraft(store, { id: translation.id })).rejects.toMatchObject({ code: "invalid_input" });
+				await expect(duplicateDraft(testSite, store, { id: translation.id })).rejects.toMatchObject({
+					code: "invalid_input",
+				});
 			});
 
 			it.skipIf(!thirdLocale)("creates a translation of a translation from the source", async () => {
@@ -116,7 +118,7 @@ export const translationsContract: ContractSuite = (factory) => {
 
 			it.skipIf(!relation && !commonSelect)("rejects saving a shared field on a translation", async () => {
 				const source = await createPost("common-source");
-				const [commonKey] = commonFieldKeys(contentCollection, source.working.metadata);
+				const [commonKey] = testSite.commonFieldKeys(contentCollection, source.working.metadata);
 				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
 				await expect(
 					service.saveDraft(translation.id, {
@@ -154,7 +156,7 @@ export const translationsContract: ContractSuite = (factory) => {
 
 				const sourceMetadata = source.working.metadata as Record<string, unknown>;
 				const common = Object.fromEntries(
-					commonFieldKeys(contentCollection, sourceMetadata).map((key) => [key, sourceMetadata[key]]),
+					testSite.commonFieldKeys(contentCollection, sourceMetadata).map((key) => [key, sourceMetadata[key]]),
 				);
 				const listed = await store.listPublishedEntries({ collections: [contentCollection], locale: second });
 				const row = listed.find((entry) => entry.id === translation.id);
@@ -273,16 +275,16 @@ export const translationsContract: ContractSuite = (factory) => {
 					expect(await versionOf(together.id)).toBe(together.version + 1);
 
 					await expect(
-						restoreDraft(store, { id: together.id, expectedVersion: await versionOf(together.id) }),
+						restoreDraft(testSite, store, { id: together.id, expectedVersion: await versionOf(together.id) }),
 					).rejects.toMatchObject({ code: "source_trashed" });
 
-					await restoreDraft(store, { id: source.id, expectedVersion: trashed.version });
+					await restoreDraft(testSite, store, { id: source.id, expectedVersion: trashed.version });
 					expect(await statusOf(source.id)).toBe("draft");
 					expect(await statusOf(together.id)).toBe("draft");
 					expect(await statusOf(apart.id)).toBe("trashed");
 
 					// While the source is alive, a translation trashed separately can also be restored.
-					await restoreDraft(store, { id: apart.id, expectedVersion: await versionOf(apart.id) });
+					await restoreDraft(testSite, store, { id: apart.id, expectedVersion: await versionOf(apart.id) });
 					expect(await statusOf(apart.id)).toBe("draft");
 				},
 			);
@@ -384,9 +386,10 @@ export const translationsContract: ContractSuite = (factory) => {
 				"keeps per-language names inside a single record for a record collection",
 				async () => {
 					if (!localizedRecord) return;
-					const names = recordLocalizedFields(localizedRecord);
+					const names = testSite.recordLocalizedFields(localizedRecord);
 					const field = names.includes("title") ? "title" : (names[0] as string);
-					const commonField = storedFields(localizedRecord).find(({ name }) => !names.includes(name))?.name ?? "slug";
+					const commonField =
+						testSite.storedFields(localizedRecord).find(({ name }) => !names.includes(name))?.name ?? "slug";
 					const metadata = await requiredMetadata(localizedRecord, "에세이", relationTarget);
 					const record = await service.createDraft({
 						collection: localizedRecord,

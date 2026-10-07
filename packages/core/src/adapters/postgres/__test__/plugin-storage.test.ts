@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { runPluginStorageContract } from "../../../plugin/__test__/storage-contract";
 import { migrateContentStore } from "../content-store";
 import { createPluginStorage } from "../plugin-storage";
@@ -9,7 +10,7 @@ runPluginStorageContract({
 	name: "postgres",
 	create: async () => {
 		const { pool, schemaName } = await createIsolatedTestPool();
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		return {
 			storage: (plugin) => createPluginStorage(pool, schemaName, plugin),
 			seedLegacyTable: async (table, rows) => {
@@ -39,7 +40,7 @@ describe("postgres plugin storage specifics", () => {
 
 	beforeAll(async () => {
 		({ pool, schemaName } = await createIsolatedTestPool());
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 	});
 
 	afterAll(async () => {

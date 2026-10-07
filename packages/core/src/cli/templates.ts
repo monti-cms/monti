@@ -105,11 +105,11 @@ export default function AdminPage(props: CmsAdminPageProps) {
 `;
 
 export const adminLayoutTemplate = (serverImport: string) => `import "@monti-cms/admin/styles.css";
-import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
+import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
 import { cms } from ${JSON.stringify(serverImport)};
 
-export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin";
+export const generateMetadata = () => cmsAdminMetadata(cms);
 
 /** Admin screen (@monti-cms/admin). The stylesheet is prebuilt, so the app needs no Tailwind for it. Pass site components with CmsAdminComponentsProvider (see the admin README). */
 export default function AdminLayout({ children }: { children: ReactNode }) {

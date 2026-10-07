@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { contentOf, docOf } from "../../../test/stored-content";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
@@ -28,7 +29,8 @@ const request = (overrides: Partial<WriteRequest> = {}): WriteRequest => ({
 	...overrides,
 });
 
-const pipelineWith = (...sources: HookSource[]) => createWritePipeline({ hooks: () => sources, formats });
+const pipelineWith = (...sources: HookSource[]) =>
+	createWritePipeline({ site: testSite, hooks: () => sources, formats });
 
 const rejection = async (run: Promise<unknown>) => {
 	try {
@@ -97,7 +99,9 @@ describe("write pipeline", () => {
 
 	it("keeps the body as it came in when a transform leaves it alone", async () => {
 		const text = "Body";
-		const plain = await createWritePipeline({ formats }).run(request({ input: input({ title: "Title" }, text) }));
+		const plain = await createWritePipeline({ site: testSite, formats }).run(
+			request({ input: input({ title: "Title" }, text) }),
+		);
 		const withHook = await pipelineWith({
 			owner: "server",
 			hooks: { transform: ({ metadata, doc }) => ({ metadata: { ...metadata, title: "Changed" }, doc }) },
@@ -260,7 +264,7 @@ describe("write pipeline", () => {
 
 	it("reads the hooks on every write, so a plugin that loads late is used", async () => {
 		let sources: HookSource[] = [];
-		const pipeline = createWritePipeline({ hooks: () => sources, formats });
+		const pipeline = createWritePipeline({ site: testSite, hooks: () => sources, formats });
 		await expect(pipeline.run(request())).resolves.toBeDefined();
 		sources = [{ owner: "server", hooks: { validate: () => ({ issues: [{ code: "late" }] }) } }];
 		await expect(pipeline.run(request())).rejects.toMatchObject({ code: "validation_failed" });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { createBulkService } from "../bulk-service";
 import type { Reference } from "../index";
@@ -85,7 +86,7 @@ const newFakeLifecycleStore = (seed: Record<string, EntryState>) => {
 describe("Bulk lifecycle ops contract", () => {
 	it("archive bumps version per item", async () => {
 		const store = newFakeLifecycleStore({ e1: { version: 2, status: "draft" } });
-		const bulk = createBulkService(store);
+		const bulk = createBulkService(store, { site: testSite });
 		const out = await bulk.run({ op: "archive", items: [{ id: "e1", expectedVersion: 2 }] });
 		expect(out).toEqual({ results: [{ id: "e1", ok: true, version: 3 }] });
 		expect(store.entries.get("e1")?.status).toBe("archived");
@@ -96,7 +97,7 @@ describe("Bulk lifecycle ops contract", () => {
 			e1: { version: 1, status: "archived" },
 			e2: { version: 4, status: "draft" },
 		});
-		const bulk = createBulkService(store);
+		const bulk = createBulkService(store, { site: testSite });
 		await expect(bulk.run({ op: "unarchive", items: [{ id: "e1", expectedVersion: 1 }] })).resolves.toEqual({
 			results: [{ id: "e1", ok: true, version: 2 }],
 		});
@@ -109,7 +110,7 @@ describe("Bulk lifecycle ops contract", () => {
 
 	it("conflict and missing entries are per-item errors", async () => {
 		const store = newFakeLifecycleStore({ e1: { version: 2, status: "draft" } });
-		const bulk = createBulkService(store);
+		const bulk = createBulkService(store, { site: testSite });
 		const out = await bulk.run({
 			op: "archive",
 			items: [
@@ -132,7 +133,7 @@ describe("Bulk lifecycle ops contract", () => {
 			e1: { version: 2, status: "draft" },
 			e2: { version: 2, status: "draft", brokenRef: true },
 		});
-		const bulk = createBulkService(store);
+		const bulk = createBulkService(store, { site: testSite });
 		const out = await bulk.run({
 			op: "publish",
 			items: [
@@ -157,7 +158,7 @@ describe("bulk permanentDelete", () => {
 			used: { version: 1, status: "trashed", usedBy: [usage] },
 			live: { version: 2, status: "draft" },
 		});
-		const bulk = createBulkService(store);
+		const bulk = createBulkService(store, { site: testSite });
 		const out = await bulk.run({
 			op: "permanentDelete",
 			items: [
@@ -178,7 +179,7 @@ describe("bulk permanentDelete", () => {
 
 	it("reports a stale version as a per-item conflict", async () => {
 		const store = newFakeLifecycleStore({ t1: { version: 5, status: "trashed" } });
-		const out = await createBulkService(store).run({
+		const out = await createBulkService(store, { site: testSite }).run({
 			op: "permanentDelete",
 			items: [{ id: "t1", expectedVersion: 4 }],
 		});
@@ -188,7 +189,7 @@ describe("bulk permanentDelete", () => {
 
 	it("treats an item already removed earlier in the same request as deleted (source took its translations)", async () => {
 		const store = newFakeLifecycleStore({ source: { version: 2, status: "trashed" } });
-		const out = await createBulkService(store).run({
+		const out = await createBulkService(store, { site: testSite }).run({
 			op: "permanentDelete",
 			items: [
 				{ id: "source", expectedVersion: 2 },

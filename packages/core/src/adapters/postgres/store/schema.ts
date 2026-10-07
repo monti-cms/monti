@@ -305,7 +305,7 @@ const STEPS: readonly MigrationStep[] = [
 		name: "0010_content_hash_v2",
 		/** Content hashes now cover the parsed body instead of the MDX string (`cms-snapshot-v2`). Recomputes every stored hash. */
 		run: (client, qSchema, context) =>
-			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
+			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats, context.site) }),
 	},
 	{
 		name: "0011_line_break_hashes",
@@ -314,7 +314,7 @@ const STEPS: readonly MigrationStep[] = [
 		 * body of some stored bodies changed. Recomputes every stored hash so that "unpublished changes" keeps meaning what it meant.
 		 */
 		run: (client, qSchema, context) =>
-			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
+			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats, context.site) }),
 	},
 	{
 		name: "0012_soft_line_endings",
@@ -324,7 +324,7 @@ const STEPS: readonly MigrationStep[] = [
 		 * `content_hash` and `search_text` of every body. A body that does not parse is left as it is and logged.
 		 */
 		run: (client, qSchema, context) =>
-			migrateSoftBreaks(client, qSchema, { site: context.site, bodies: legacyBodiesOf(context.formats) }),
+			migrateSoftBreaks(client, qSchema, { site: context.site, bodies: legacyBodiesOf(context.formats, context.site) }),
 	},
 	{
 		name: "0013_stored_documents",
@@ -338,7 +338,10 @@ const STEPS: readonly MigrationStep[] = [
 				ALTER TABLE "${qSchema}".entry_bodies ADD COLUMN IF NOT EXISTS doc JSONB;
 				ALTER TABLE "${qSchema}".body_templates ADD COLUMN IF NOT EXISTS doc JSONB;
 			`);
-			await migrateStoredDocuments(client, qSchema, { site: context.site, bodies: legacyBodiesOf(context.formats) });
+			await migrateStoredDocuments(client, qSchema, {
+				site: context.site,
+				bodies: legacyBodiesOf(context.formats, context.site),
+			});
 		},
 	},
 	{
@@ -359,7 +362,10 @@ const STEPS: readonly MigrationStep[] = [
 		 * `updated_at` are kept. A body whose document cannot be read is left as it is and logged.
 		 */
 		run: (client, qSchema, context) =>
-			migrateCodeAnnotations(client, qSchema, { site: context.site, bodies: legacyBodiesOf(context.formats) }),
+			migrateCodeAnnotations(client, qSchema, {
+				site: context.site,
+				bodies: legacyBodiesOf(context.formats, context.site),
+			}),
 	},
 	{
 		name: "0016_plugin_documents",

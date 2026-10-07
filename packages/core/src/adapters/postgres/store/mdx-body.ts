@@ -17,11 +17,11 @@ export const MDX_REQUIRED_MESSAGE =
 	"This database still holds bodies stored as MDX text, and upgrading it needs the MDX format: install @monti-cms/mdx and add mdx() to the plugins of the site config to upgrade this database.";
 
 /** The old-body reader of the site's `mdx` format. It throws `MDX_REQUIRED_MESSAGE` when it is first used and there is no such format. */
-export const legacyBodiesOf = (formats: FormatRegistry): LegacyBodies => {
+export const legacyBodiesOf = (formats: FormatRegistry, site: Site): LegacyBodies => {
 	const provided = (): LegacyBodies => {
 		const bodies = formats.get("mdx")?.legacyBodies;
 		if (!bodies) throw new Error(MDX_REQUIRED_MESSAGE);
-		return bodies;
+		return bodies(site);
 	};
 	return {
 		insertSoftBreaks: (text) => provided().insertSoftBreaks(text),

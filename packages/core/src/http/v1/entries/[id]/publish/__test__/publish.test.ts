@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../../../../test/site";
 import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
 import { CmsError } from "../../../../../../core/store";
@@ -13,6 +14,7 @@ const { verifyAdmin, publish, imageWarningsForSnapshot, getMediaAsset } = vi.hoi
 }));
 
 const cms = fakeCms({
+	config: testConfig,
 	contentService: { publish },
 	store: { getMediaAsset },
 	mediaStore: { headFile: vi.fn() },

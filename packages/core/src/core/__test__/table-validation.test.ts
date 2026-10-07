@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { MAX_TABLE_COLUMNS } from "../../doc/table-layout";
 import type { CmsNode } from "../../doc/types";
 import { prepareSnapshot } from "../snapshot";
@@ -25,7 +26,7 @@ describe("table cell merge pre-publish validation of a document", () => {
 			],
 		});
 		const reasons = async (cells: Record<string, unknown>[][]) => {
-			const snap = await prepareSnapshot({
+			const snap = await prepareSnapshot(testSite, {
 				collection: contentCollection,
 				slug: "direct-table",
 				metadata: { title: "표 테스트" },
@@ -46,7 +47,7 @@ describe("table cell merge pre-publish validation of a document", () => {
 		});
 
 		it("names the table by its block id", async () => {
-			const snap = await prepareSnapshot({
+			const snap = await prepareSnapshot(testSite, {
 				collection: contentCollection,
 				slug: "direct-table",
 				metadata: { title: "표 테스트" },

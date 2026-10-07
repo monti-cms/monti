@@ -37,7 +37,11 @@ export interface ReadRelation {
 	readonly path: string | null;
 }
 
-export interface ReadEntry<C extends string = string, Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface ReadEntry<
+	C extends string = string,
+	// biome-ignore lint/suspicious/noExplicitAny: `ReadEntry` alone is an entry of any site config
+	Config extends AnyCmsConfig = any,
+> {
 	readonly id: string;
 	readonly collection: C;
 	/** Locale of the body shown. If it fell back to the source text, the source locale. */
@@ -80,7 +84,11 @@ export interface ReadBody {
 	readonly text: string;
 }
 
-export type ReadEntryResult<C extends string = string, Config extends AnyCmsConfig = AnyCmsConfig> =
+export type ReadEntryResult<
+	C extends string = string,
+	// biome-ignore lint/suspicious/noExplicitAny: `ReadEntryResult` alone is a result of any site config
+	Config extends AnyCmsConfig = any,
+> =
 	| { readonly status: "found"; readonly entry: ReadEntry<C, Config> }
 	/** Arrived through an old URL. Permanently redirect (308) to `path` (or `slug` if absent). */
 	| {

@@ -1,22 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../test/site";
 
-// Reading the site config fails. `postgres()` and creating the store alone must not read it.
-vi.mock("../../../config/resolved", () => {
-	throw new Error("site config was loaded");
+// Loading the store module (SQL, MDX parsing, the rules that read the site) fails. `postgres()` and creating the store alone must not load it.
+vi.mock("../content-store", () => {
+	throw new Error("store module was loaded");
 });
 
 describe("postgres() lazy loading", () => {
-	it("does not load the store module or site config when creating the adapter and getting the store", async () => {
+	it("does not load the store module when creating the adapter and getting the store", async () => {
 		const { postgres } = await import("../adapter");
 		const adapter = postgres({ connectionString: "postgres://localhost/none" });
-		const store = adapter.createStore();
+		const store = adapter.createStore({ site: testSite });
 		expect(typeof store.getEntry).toBe("function");
-		// The store module loads the moment a function is called (here config is blocked, so it fails).
-		await expect(store.getEntry("x")).rejects.toThrow(/site config was loaded|error when mocking/);
+		// The store module loads the moment a function is called (here it is blocked, so it fails).
+		await expect(store.getEntry("x")).rejects.toThrow(/store module was loaded|error when mocking/);
 		await adapter.close?.();
 	});
 
-	it("does not load the site config for the file storage adapter used by the server config either", async () => {
+	it("does not load the store module for the file storage adapter used by the server config either", async () => {
 		const { r2Storage } = await import("../../../storage/s3");
 		expect(() =>
 			r2Storage({

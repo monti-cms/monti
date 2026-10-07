@@ -1,6 +1,9 @@
 import type { Element } from "hast";
 import { describe, expect, it } from "vitest";
-import { highlight } from "../code-highlighter";
+import { testSite } from "../../../../test/site";
+import { siteHighlight } from "../code-highlighter";
+
+const highlight = await siteHighlight(testSite);
 
 const findCode = (pre: Element) =>
 	pre.children.find((child) => child.type === "element" && child.tagName === "code") as Element | undefined;

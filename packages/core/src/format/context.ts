@@ -3,7 +3,7 @@ import { perSite } from "../site/per-site";
 import type { BlockCatalog, FormatContext } from "./types";
 
 /**
- * What core gives every format to work with, from the site: its blocks and code line effects. Only the code that calls a format (`convert.ts`) imports it;
+ * What core gives every format to work with, from the site: its blocks, its code line effects and the site itself. Only the code that calls a format (`convert.ts`) imports it;
  * `@monti-cms/core/format` stays free of it.
  */
 
@@ -24,8 +24,9 @@ export const siteCodeLineEffects = perSite(
 	(site: FormatSite): ReadonlySet<string> => new Set(site.CODE_LINE_EFFECTS.map((effect) => effect.name)),
 );
 
-export const siteFormatContext = (site: FormatSite, locale: string): FormatContext => ({
+export const siteFormatContext = (site: Site, locale: string): FormatContext => ({
 	locale,
 	blocks: siteBlocks(site),
 	codeLineEffects: siteCodeLineEffects(site),
+	site,
 });

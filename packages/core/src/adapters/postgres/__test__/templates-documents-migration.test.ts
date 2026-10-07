@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { readStoredDocument, STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../doc/stored-document";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -27,8 +28,8 @@ describe(STEP, () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 	});
 
 	afterAll(async () => {
@@ -98,11 +99,11 @@ describe(STEP, () => {
 		const result = await run();
 
 		expect(result.unparsed).toEqual(expect.arrayContaining([future, nonsense]));
-		expect(readStoredDocument(await rawDoc(future))?.content[0]).toMatchObject({
+		expect(readStoredDocument(await rawDoc(future), testSite)?.content[0]).toMatchObject({
 			type: "unparsed",
 			attrs: { source: "Future\n" },
 		});
-		expect(readStoredDocument(await rawDoc(nonsense))?.content[0]).toMatchObject({
+		expect(readStoredDocument(await rawDoc(nonsense), testSite)?.content[0]).toMatchObject({
 			type: "unparsed",
 			attrs: { source: "Nonsense\n" },
 		});
@@ -170,7 +171,7 @@ describe(STEP, () => {
 				client.release();
 			}
 			for (const [index, id] of ids.entries()) {
-				expect(readStoredDocument(await rawDoc(id))?.content[0]).toMatchObject({
+				expect(readStoredDocument(await rawDoc(id), testSite)?.content[0]).toMatchObject({
 					type: "unparsed",
 					attrs: { source: `Batch ${index}\n` },
 				});
@@ -185,14 +186,14 @@ describe(STEP, () => {
 		await pool.query(`ALTER TABLE "${schemaName}".body_templates ALTER COLUMN mdx SET NOT NULL`);
 		const id = await legacyTemplate("Before\n\n<Open", null);
 
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 
 		const { rows } = await pool.query<{ id: string; doc: unknown }>(
 			`SELECT id, doc FROM "${schemaName}".body_templates`,
 		);
 		expect(rows.length).toBeGreaterThan(0);
-		for (const row of rows) expect(readStoredDocument(row.doc), row.id).toBeDefined();
-		expect(readStoredDocument(await rawDoc(id))?.content).toEqual([
+		for (const row of rows) expect(readStoredDocument(row.doc, testSite), row.id).toBeDefined();
+		expect(readStoredDocument(await rawDoc(id), testSite)?.content).toEqual([
 			expect.objectContaining({ ...unparsedDocument("Before\n\n<Open").content[0], id: expect.any(String) }),
 		]);
 		await expect(store.createTemplate({ name: unique("after"), doc: docOf("After\n") })).resolves.toBeDefined();

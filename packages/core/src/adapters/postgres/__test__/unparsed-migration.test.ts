@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
@@ -34,9 +35,9 @@ describe("0017_unparsed_bodies", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, { site: testSite });
 	});
 
 	afterAll(async () => {
@@ -57,7 +58,7 @@ describe("0017_unparsed_bodies", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -133,7 +134,7 @@ describe("0017_unparsed_bodies", () => {
 		const before = await row(draft.id, "working");
 
 		await forgetStep();
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 
 		const after = await row(draft.id, "working");
 		const doc = after?.doc as { content: { type: string; attrs: { format: string; source: string }; id: string }[] };
@@ -153,7 +154,7 @@ describe("0017_unparsed_bodies", () => {
 
 	it("does not fail for a published body or a template that has no document: it keeps them, and logs their ids", async () => {
 		const draft = await createDraft("Body");
-		const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		await withoutDocument(published.id, "<Unclosed");
 		const template = await store.createTemplate({ name: unique("template"), doc: docOf("Template") });
 		await pool.query(`UPDATE "${schemaName}".body_templates SET mdx = '<Open', doc = NULL WHERE id = $1`, [

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../../test/any-site";
+import { testSite } from "../../../../../test/site";
 import { CmsError, type ContentStore } from "../..";
 import { moveToFolder, publishDraft, seedEntry } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
@@ -260,7 +261,7 @@ export const foldersContract: ContractSuite = (factory) => {
 			});
 
 			// Publish first so we can verify published address stability
-			const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
+			const published = await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
 			const preMoveEntry = await store.getEntry(entry.id);
 			const preMoveAddress = await publicAddress("fc4-slug");
@@ -359,7 +360,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
-			const e5pub = await publishDraft(store, { id: e5.id, expectedVersion: e5.version });
+			const e5pub = await publishDraft(testSite, store, { id: e5.id, expectedVersion: e5.version });
 			const _e5moved = await moveToFolder(store, {
 				entryId: e5.id,
 				folderId: mid.id,
@@ -426,7 +427,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
-			const e6pub = await publishDraft(store, { id: e6.id, expectedVersion: e6.version });
+			const e6pub = await publishDraft(testSite, store, { id: e6.id, expectedVersion: e6.version });
 			const e6moved = await moveToFolder(store, {
 				entryId: e6.id,
 				folderId: parent.id,

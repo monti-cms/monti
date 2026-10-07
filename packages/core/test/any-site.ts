@@ -1,60 +1,60 @@
-import { COLLECTIONS, type Collection, DOCUMENT_COLLECTIONS, isItemCollection } from "../src/core/collections";
-import { DEFAULT_LOCALE, LOCALES } from "../src/core/locales";
+import type { Collection } from "../src/core/collections";
 import type { ContentStore } from "../src/core/store";
 import { publishDraft } from "../src/core/store/__test__/seed";
-import type { PreparedSnapshot } from "../src/core/types";
-import { type StoredField, schemaOf, storedField, storedFields } from "../src/schema/derive";
+import type { MetadataFor, PreparedSnapshot } from "../src/core/types";
+import type { StoredField } from "../src/schema/derive";
 import { isRequiredField } from "../src/schema/fields";
+import { testSite } from "./site";
 import { docOf } from "./stored-content";
 
 /**
  * Helpers for config-agnostic tests (regression guard). Instead of writing collection and field names in tests, they are looked up from the current config
- * (`@cms-config`). The same test runs with both the reference blog config (`cms.config.ts`) and the other site config
+ * (`testSite`, see `site.ts`). The same test runs with both the reference blog config (`cms.config.ts`) and the other site config
  * (`other-site.config.ts`). Only the title field `title`, a library convention, is used by name.
  */
 
 /** First document collection that has a body. */
 export const contentCollection: Collection = (() => {
-	const found = DOCUMENT_COLLECTIONS.find((name) => schemaOf(name).body);
+	const found = testSite.DOCUMENT_COLLECTIONS.find((name) => testSite.schemaOf(name).body);
 	if (!found) throw new Error("any-site: the config has no document collection with a body");
 	return found;
 })();
 
 /** First item collection (`kind: "item"`). */
 export const recordCollection: Collection = (() => {
-	const found = COLLECTIONS.find((name) => isItemCollection(name));
+	const found = testSite.COLLECTIONS.find((name) => testSite.isItemCollection(name));
 	if (!found) throw new Error("any-site: the config has no item collection");
 	return found;
 })();
 
-export const defaultLocale = DEFAULT_LOCALE;
+export const defaultLocale = testSite.DEFAULT_LOCALE;
 
 /**
  * First locale other than the default (for testing translations). Absent if the config has only one locale.
  * Tests that need a translation wrap themselves in `describe.skipIf(!secondLocale)`.
  */
-export const secondLocale: string | undefined = LOCALES.find((code) => code !== DEFAULT_LOCALE);
+export const secondLocale: string | undefined = testSite.LOCALES.find((code) => code !== testSite.DEFAULT_LOCALE);
 
 /** Second document collection that has a body (if any). Used to test rules across collections (e.g. URL overlap with another collection). */
-export const otherContentCollection: Collection | undefined = DOCUMENT_COLLECTIONS.filter(
-	(name) => schemaOf(name).body,
+export const otherContentCollection: Collection | undefined = testSite.DOCUMENT_COLLECTIONS.filter(
+	(name) => testSite.schemaOf(name).body,
 ).find((name) => name !== contentCollection);
 
 /** Title field (by library convention its name is `title`). */
 export function titleFieldOf(collection: Collection) {
-	const field = storedField(collection, "title")?.field;
+	const field = testSite.storedField(collection, "title")?.field;
 	if (field?.kind !== "text") throw new Error(`any-site: ${collection} has no title text field`);
 	return field;
 }
 
 /** Stored fields required for publishing (excluding conditional fields). */
 export function requiredFields(collection: Collection): StoredField[] {
-	return storedFields(collection).filter(({ field, when }) => !when && isRequiredField(field));
+	return testSite.storedFields(collection).filter(({ field, when }) => !when && isRequiredField(field));
 }
 
 /** First relation field (if any). */
 export function firstRelationField(collection: Collection): (StoredField & { to: Collection }) | undefined {
-	for (const stored of storedFields(collection)) {
+	for (const stored of testSite.storedFields(collection)) {
 		if (stored.field.kind === "relation") return { ...stored, to: stored.field.to as Collection };
 	}
 	return undefined;
@@ -62,13 +62,13 @@ export function firstRelationField(collection: Collection): (StoredField & { to:
 
 /** First media field (if any, `fields.media`). */
 export function firstMediaField(collection: Collection): StoredField | undefined {
-	return storedFields(collection).find((stored) => stored.field.kind === "media");
+	return testSite.storedFields(collection).find((stored) => stored.field.kind === "media");
 }
 
 /** First collection with a media field (collections with a body first). */
 export const mediaFieldCollection: Collection | undefined = [
-	...DOCUMENT_COLLECTIONS.filter((name) => schemaOf(name).body),
-	...COLLECTIONS,
+	...testSite.DOCUMENT_COLLECTIONS.filter((name) => testSite.schemaOf(name).body),
+	...testSite.COLLECTIONS,
 ].find((name) => firstMediaField(name));
 
 /**
@@ -79,7 +79,7 @@ export async function requiredMetadata(
 	collection: Collection,
 	title: string,
 	relationTarget: (to: Collection) => Promise<string>,
-): Promise<Record<string, string | string[]>> {
+): Promise<MetadataFor> {
 	const metadata: Record<string, string | string[]> = { title };
 	for (const { name, field } of requiredFields(collection)) {
 		if (name === "title") continue;
@@ -90,16 +90,17 @@ export async function requiredMetadata(
 			metadata[name] = field.many ? [id] : id;
 		}
 	}
-	return metadata;
+	// The loose metadata type of a service input has no index signature that admits a list value; the values are the ones the schema asks for.
+	return metadata as MetadataFor;
 }
 
 /** First relation field pointing to an item collection (`kind: "item"`), if any. If `many`, several can be chosen. */
 export function recordRelationField(
 	collection: Collection,
 ): (StoredField & { to: Collection; many: boolean }) | undefined {
-	for (const stored of storedFields(collection)) {
+	for (const stored of testSite.storedFields(collection)) {
 		const { field } = stored;
-		if (field.kind === "relation" && isItemCollection(field.to)) {
+		if (field.kind === "relation" && testSite.isItemCollection(field.to)) {
 			return { ...stored, to: field.to as Collection, many: Boolean(field.many) };
 		}
 	}
@@ -140,10 +141,10 @@ export function fillRequiredMetadata(store: ContentStore) {
 			const entry = await raw.createEntryWithReferences({
 				snapshot,
 				references: [],
-				publishImmediately: isItemCollection(to),
+				publishImmediately: testSite.isItemCollection(to),
 			});
 			if (entry.status === "published") return entry.id;
-			return (await publishDraft(store, { id: entry.id, expectedVersion: entry.version })).id;
+			return (await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version })).id;
 		})();
 		targets.set(to, created);
 		return created;
@@ -151,7 +152,7 @@ export function fillRequiredMetadata(store: ContentStore) {
 
 	const fill = async <T extends { snapshot: PreparedSnapshot }>(params: T): Promise<T> => {
 		const collection = params.snapshot.collection as Collection;
-		if (!COLLECTIONS.includes(collection)) return params;
+		if (!testSite.COLLECTIONS.includes(collection)) return params;
 		const metadata = { ...(params.snapshot.metadata as Record<string, unknown>) };
 		const title = typeof metadata.title === "string" ? metadata.title : "fixture";
 		const required = await requiredMetadata(collection, title, relationTarget);

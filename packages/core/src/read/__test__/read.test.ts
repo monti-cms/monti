@@ -7,15 +7,13 @@ import {
 	recordRelationField,
 	secondLocale,
 } from "../../../test/any-site";
+import { testConfig, testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { type Cms, fakeCms } from "../../cms";
-import { COLLECTIONS, type Collection, isItemCollection } from "../../core/collections";
-import { contentPath } from "../../core/links";
-import { localizePath } from "../../core/locales";
+import type { Collection } from "../../core/collections";
 import type { ContentStore } from "../../core/store";
 import { publishDraft, seedEntry, seedSave } from "../../core/store/__test__/seed";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
-import { recordLocalizedFields } from "../../schema/derive";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -48,12 +46,13 @@ describe("public site reading (cms.read)", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const filled = fillRequiredMetadata(store);
 		relationTarget = filled.relationTarget as (to: string) => Promise<string>;
 		rawCreate = filled.raw.createEntryWithReferences;
 		cms = fakeCms({
+			config: testConfig,
 			store,
 			formats: [paragraphsFormat],
 			verifyAdmin: async () => {
@@ -90,7 +89,7 @@ describe("public site reading (cms.read)", () => {
 			locale,
 			translationOf,
 		});
-		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	it("paginates and sorts the list in the DB, leaves out drafts, and filters by relation", async () => {
@@ -132,8 +131,8 @@ describe("public site reading (cms.read)", () => {
 	});
 
 	/** Item collection with per-locale names (topics, categories, etc.). */
-	const localizedItemCollection = COLLECTIONS.find(
-		(name) => isItemCollection(name) && recordLocalizedFields(name).includes("title"),
+	const localizedItemCollection = testSite.COLLECTIONS.find(
+		(name) => testSite.isItemCollection(name) && testSite.recordLocalizedFields(name).includes("title"),
 	);
 
 	it.skipIf(!localizedItemCollection || !secondLocale)(
@@ -156,7 +155,7 @@ describe("public site reading (cms.read)", () => {
 					} as never,
 					references: [],
 				});
-				return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 			};
 			const first = await item("sort-item-a", "AAA sort", "ZZZ sort");
 			const second = await item("sort-item-b", "BBB sort", "YYY sort");
@@ -184,7 +183,7 @@ describe("public site reading (cms.read)", () => {
 			title: "Title read-detail",
 			body: { format: "paragraphs", text: "Body read-detail" },
 			fallback: false,
-			path: localizePath(defaultLocale, contentPath(contentCollection, "read-detail") ?? ""),
+			path: testSite.localizePath(defaultLocale, testSite.contentPath(contentCollection, "read-detail") ?? ""),
 		});
 		if (relation && target) {
 			expect(found.entry.relations[relation.name]).toEqual([
@@ -198,7 +197,7 @@ describe("public site reading (cms.read)", () => {
 			metadata: published.working.metadata,
 			doc: published.working.doc,
 		});
-		await publishDraft(store, { id: published.id, expectedVersion: renamed.version });
+		await publishDraft(testSite, store, { id: published.id, expectedVersion: renamed.version });
 		const old = await getEntry({ collection: contentCollection, slug: "read-detail" });
 		expect(old).toMatchObject({ status: "redirect", slug: "read-detail-renamed" });
 		expect(await getEntry({ collection: contentCollection, slug: "no-such-entry" })).toEqual({ status: "not_found" });
@@ -212,7 +211,9 @@ describe("public site reading (cms.read)", () => {
 			const translated = await publish("read-translated", {}, locale, source.id);
 			const members = await getTranslations({ translationGroupId: source.id });
 			expect(members.map((member) => member.locale)).toEqual([defaultLocale, locale]);
-			expect(members[1]?.path).toBe(localizePath(locale, contentPath(contentCollection, "read-translated") ?? ""));
+			expect(members[1]?.path).toBe(
+				testSite.localizePath(locale, testSite.contentPath(contentCollection, "read-translated") ?? ""),
+			);
 
 			const inLocale = await getEntry({ collection: contentCollection, slug: "read-translated", locale });
 			expect(inLocale).toMatchObject({ status: "found", entry: { id: translated.id, locale, fallback: false } });

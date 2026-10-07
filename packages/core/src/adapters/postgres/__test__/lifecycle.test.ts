@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import { publishDraft, seedEntry } from "../../../core/store/__test__/seed";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -21,8 +22,8 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		// Values needed to publish an entry (such as the reference blog's category) are irrelevant to this file's scenarios, so the store fills them in.
 		fillRequiredMetadata(store);
 	});
@@ -44,7 +45,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
-			const tag = await publishDraft(store, { id: tagDraft.id, expectedVersion: tagDraft.version });
+			const tag = await publishDraft(testSite, store, { id: tagDraft.id, expectedVersion: tagDraft.version });
 			const post = await seedEntry(store, {
 				collection: content,
 				slug: `post-tag-race-${randomUUID()}`,
@@ -98,12 +99,16 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				contentHash: "ts-hash-reset",
 			});
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [post.id, original]);
-			const pub1 = await publishDraft(store, { id: post.id, expectedVersion: post.version });
+			const pub1 = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
 			expect(pub1.publishedAt).toEqual(original);
 
 			// Even a re-publish with no changes updates only the publish date and bumps the version.
 			const before = Date.now();
-			const pub2 = await publishDraft(store, { id: post.id, expectedVersion: pub1.version, resetPublishedAt: true });
+			const pub2 = await publishDraft(testSite, store, {
+				id: post.id,
+				expectedVersion: pub1.version,
+				resetPublishedAt: true,
+			});
 			expect(pub2.version).toBe(pub1.version + 1);
 			expect(pub2.publishedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
 
@@ -123,7 +128,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				references: [],
 			});
 			await new Promise((r) => setTimeout(r, 20));
-			const pub3 = await publishDraft(store, {
+			const pub3 = await publishDraft(testSite, store, {
 				id: post.id,
 				expectedVersion: pub2.version + 1,
 				resetPublishedAt: true,
@@ -143,7 +148,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 			const original = new Date("2023-07-16T15:00:00Z");
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [post.id, original]);
 
-			const published = await publishDraft(store, { id: post.id, expectedVersion: post.version });
+			const published = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
 			expect(published.publishedAt).toEqual(original);
 		});
 	});

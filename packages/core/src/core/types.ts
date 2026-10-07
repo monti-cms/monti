@@ -106,9 +106,11 @@ type WithRecordTranslations<S, M> = S extends { readonly kind: "item" } ? M & { 
 export type MetadataFor<
 	C extends string = string,
 	Config extends AnyCmsConfig = AnyCmsConfig,
-> = C extends keyof Config["collections"]
-	? WithRecordTranslations<Config["collections"][C], MetadataOf<Config["collections"][C]>>
-	: never;
+> = string extends keyof Config["collections"]
+	? { [field: string]: unknown }
+	: C extends keyof Config["collections"]
+		? WithRecordTranslations<Config["collections"][C], MetadataOf<Config["collections"][C]>>
+		: never;
 
 /**
  * A body is given either as a stored document (`StoredDocument` JSON) or as text in a format (`body` and the `format` that reads it), never both. The

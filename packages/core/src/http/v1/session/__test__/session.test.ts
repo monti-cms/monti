@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { testConfig, testSite } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
-import { adminUrl } from "../../../../core/admin-paths";
 import { POST as signIn } from "../sign-in/[provider]/route";
 import { POST as signOut } from "../sign-out/route";
 
@@ -16,6 +16,7 @@ type Auth = NonNullable<NonNullable<Parameters<typeof fakeCms>[0]>["auth"]>;
 
 const instance = (auth: { signIn?: Auth["signIn"]; signOut?: Auth["signOut"] } = {}) =>
 	fakeCms({
+		config: testConfig,
 		auth: {
 			providers: [{ id: "github", name: "GitHub", label: "Sign in with GitHub" }],
 			signIn: auth.signIn ?? vi.fn(async () => undefined),
@@ -35,7 +36,7 @@ describe("sign in and out of the admin through the instance's login connection",
 			cms,
 		});
 		expect(response.status).toBe(204);
-		expect(signInFn).toHaveBeenCalledWith("github", { redirectTo: adminUrl() });
+		expect(signInFn).toHaveBeenCalledWith("github", { redirectTo: testSite.adminUrl() });
 	});
 
 	it("a login method the instance does not offer is 404 and nothing is started", async () => {
@@ -80,7 +81,7 @@ describe("sign in and out of the admin through the instance's login connection",
 		const signOutFn = vi.fn(async () => undefined);
 		const response = await signOut(post("v1/session/sign-out"), { cms: instance({ signOut: signOutFn }) });
 		expect(response.status).toBe(204);
-		expect(signOutFn).toHaveBeenCalledWith({ redirectTo: adminUrl("/login") });
+		expect(signOutFn).toHaveBeenCalledWith({ redirectTo: testSite.adminUrl("/login") });
 	});
 
 	it("a post from another site is refused before anything happens", async () => {

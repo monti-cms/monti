@@ -54,11 +54,9 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # 사이트 기본 언�
 | CMS 인스턴스와 서버 설정(DB·GitHub 로그인, 비밀 값은 환경 변수) | `cms.server.ts` |
 | 관리자 화면(레이아웃이 미리 만든 관리자 스타일시트를 불러온다) | `app/(admin)/admin/[[...path]]/page.tsx`·`layout.tsx` |
 | 관리자 API와 로그인(`/api/cms/v1/*`·`/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| 설정 별칭 `@cms-config` | `tsconfig.json` `paths`에 더한다 |
 | 설정 잇기(`withCms`) | `next.config.ts`(`export default nextConfig;` 한 줄인 기본 모양일 때), 없으면 만든다 |
 
-`src/app`을 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. 안전하게 고칠 수 없는 파일(주석이 있는
-`tsconfig.json`, 기본 모양이 아닌 next 설정)은 그대로 두고 넣을 내용을 "할 일"로 보인다.
+`src/app`을 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. 안전하게 고칠 수 없는 파일(기본 모양이 아닌 next 설정)은 그대로 두고 넣을 내용을 "할 일"로 보인다.
 끝에 설치할 패키지·환경 변수·GitHub 콜백 주소를 알려 준다.
 
 `--admin-path`를 주면 라우트 폴더가 그 경로(`app/(admin)/studio/…`)가 되고 사이트 설정에 `admin: { path: "/studio" }`가
@@ -100,7 +98,7 @@ export default defineConfig({
 
 컬렉션 이름(`post`)은 DB에 저장되므로 운영 중에 바꾸지 않는다. 필드 규칙은 아래 "설정"을 본다.
 
-`cms.server.ts`는 CMS 인스턴스를 만든다(`createCms({ server })`, "CMS 인스턴스" 절). 그 서버 설정은 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다.
+`cms.server.ts`는 CMS 인스턴스를 만든다(`createCms({ config, server })`, "CMS 인스턴스" 절). 그 서버 설정은 저장소·미디어·로그인 연결과 비밀 값이고 서버에서만 읽힌다.
 연결은 처음 쓸 때 만들어 빌드 중에는 환경 변수가 비어 있어도 된다. 이미지 올리기를 쓰려면 `@monti-cms/core/s3`의 저장소를 `media`에 더하고 AWS SDK를 설치한다
 (`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, 미디어를 쓰는 사이트만):
 
@@ -143,10 +141,9 @@ pnpm exec monti migrate
 
 - 환경 파일: 기본으로 `.env.local`·`.env`(있는 것만)를 읽는다. 셸에서 준 값이 이기고 앞 파일이 뒤 파일을 이긴다.
   `--env-file <파일>`(여러 번)로 고르고 `--no-env-file`이면 읽지 않는다.
-- 파일: 사이트 설정은 `--config` → `CMS_CONFIG_PATH` → `tsconfig.json` `paths`의 `@cms-config` 별칭 → `./cms.config.ts`·`./src/cms.config.ts` 순서로 찾는다.
-  서버 파일(인스턴스를 `cms`로 내보내는 모듈)은 `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`·`./src/cms.server.ts` 순서다.
+- 파일: 서버 파일(인스턴스를 `cms`로 내보내는 모듈)은 `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`·`./src/cms.server.ts` 순서로 찾는다. 사이트 설정은 서버 파일이 직접 불러오므로 설정 파일 옵션은 없다.
 - 직접 만든 스크립트에서는 인스턴스를 불러와 부른다: `import { cms } from "./cms.server"; await cms.migrate(); await cms.close();`
-  (`tsx --env-file=.env.local --import @monti-cms/core/register script.ts`로 돌린다. `@cms-config` 별칭을 이어 준다).
+  (`tsx --env-file=.env.local script.ts`로 돌린다. 인스턴스가 사이트 설정을 가지고 있어서 따로 이을 것이 없다).
 
 ### 5. 실행
 
@@ -176,9 +173,8 @@ CMS 패키지의 선택 의존성(예: 블록 확장의 `mermaid`·`recharts`)�
 
 ### 직접 잇기 (`monti init` 없이)
 
-`monti init`이 하는 일을 손으로 하려면: 사이트 설정과 서버 파일(인스턴스)을 만들고, `next.config.ts`를
-`withCms(nextConfig, { config: "./cms.config.ts" })`(`import { withCms } from "@monti-cms/nextjs/config"`)로 감싸고, `tsconfig.json` `paths`에
-`"@cms-config": ["./cms.config.ts"]`를 더하고(테스트(Vitest)를 쓰면 `resolve.alias`에도),
+`monti init`이 하는 일을 손으로 하려면: 사이트 설정과 서버 파일(인스턴스, `createCms({ config, server })`)을 만들고, `next.config.ts`를
+`withCms(nextConfig)`(`import { withCms } from "@monti-cms/nextjs/config"`)로 감싸고(더할 별칭도 `tsconfig.json` `paths` 항목도, 테스트(Vitest) 쪽 별칭도 없다),
 위 표의 라우트 파일 셋을 두고(각 파일이 서버 파일에서 `cms`를 불러온다), 관리자 레이아웃(`app/(admin)/admin/layout.tsx`)에서 미리 만든 관리자 스타일시트를 불러온다.
 
 ```ts
@@ -274,16 +270,18 @@ export default defineConfig({
 
 ## CMS 인스턴스
 
-`createCms({ server })`(`@monti-cms/core/server`)는 서버 설정을 서버의 모든 곳이 쓰는 인스턴스로 만든다. 인스턴스가 콘텐츠 저장소·서비스·미디어 저장소·로그인 연결·
-플러그인 서버 모듈·쓰기 훅·비밀 값을 가진다. 전역 상태는 없어서, 서버 설정이 다른 인스턴스 둘이 한 프로세스에 나란히 있을 수 있다(테스트·스크립트·DB 여러 개).
+`createCms({ config, server })`(`@monti-cms/core/server`)는 사이트 설정과 서버 설정을 서버의 모든 곳이 쓰는 인스턴스로 만든다. 인스턴스가 사이트(풀어 놓은 사이트 설정, `cms.site`)·콘텐츠 저장소·서비스·미디어 저장소·로그인 연결·
+플러그인 서버 모듈·쓰기 훅·비밀 값을 가진다. 전역 상태는 없어서, 설정과 서버 설정이 다른 인스턴스 둘이 한 프로세스에 나란히 있을 수 있다(테스트·스크립트·사이트와 DB 여러 개).
 연결은 처음 쓸 때 만들므로 import나 빌드 때 인스턴스를 만들어도 어디에도 연결하지 않는다.
 
 ```ts
 // cms.server.ts
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
 import { githubAuth } from "@monti-cms/nextjs/auth";
+import config from "./cms.config";
 
 export const cms = createCms({
+	config,
 	server: defineServerConfig({ database: postgres({ /* … */ }), auth: githubAuth({ /* … */ }) }),
 });
 ```
@@ -294,13 +292,14 @@ export const cms = createCms({
 | --- | --- |
 | 관리자 API 라우트(`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);` (`@monti-cms/nextjs`의 `createRouteHandler`, `cms.handle(request)`의 Next 어댑터) |
 | 다른 호스트의 관리자 API | `cms.handle(request)`: 표준 `Request`를 받아 `Response`를 돌려준다 |
-| 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />`(`@monti-cms/nextjs/admin`) |
+| 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />`, 레이아웃 파일의 `export const generateMetadata = () => cmsAdminMetadata(cms);`(`@monti-cms/nextjs/admin`) |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)`(`format: "mdx"`를 넘기면 본문을 그 형식의 글로도 받는다. `entry.body`, "형식" 절) |
-| 공개 미디어와 링크 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL과 내부 링크의 주소. `<CmsContent entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)` |
+| 공개 미디어와 링크 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL과 내부 링크의 주소. `<CmsContent cms={cms} entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)` |
 | 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
 | 스크립트·명령줄 | `cms.migrate()`·`cms.close()` |
 | 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
-| 테스트 | `@monti-cms/core/testing`의 `fakeCms({ store, verifyAdmin, … })`: 테스트가 준 부품 위에 만든 진짜 인스턴스 |
+| 사이트 | `cms.site`: 컬렉션과 그 규칙·언어·URL·블록·코드 블록 설정·관리자 주소와 언어("사이트 설정은 인스턴스에 속한다") |
+| 테스트 | `@monti-cms/core/testing`의 `fakeCms({ config, store, verifyAdmin, … })`: 테스트가 준 부품 위에 만든 진짜 인스턴스(`config`를 주지 않으면 영어 사이트 하나짜리 최소 설정) |
 
 HTTP 계층은 표준 웹 `Request`와 `Response`로 동작한다.
 관리자 API, 로그인 연결, 공개 API, 플러그인 라우트에는 `NextRequest`, `NextResponse`, `request.nextUrl`을 쓰지 않는다.
@@ -315,7 +314,38 @@ HTTP 계층은 표준 웹 `Request`와 `Response`로 동작한다.
 `globalThis`의 `Symbol.for("monti.cms.dev-connections")` 항목 하나에 둔다. 나머지(저장소·서비스·로그인 연결·플러그인·훅·비밀 값)는 새 서버 설정으로 다시 만들어서 훅과 옵션을 고치면 바로 반영된다.
 DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테스트에는 이런 캐시가 없고 인스턴스가 자기 연결만 가진다. 개발 프로세스 하나에서 인스턴스를 둘 이상 만들면 각각 `id`를 준다: `createCms({ id: "reports", server })`.
 
-**사이트 설정은 아직 `@cms-config` 별칭으로 읽는다.** 사이트 설정(컬렉션·언어·플러그인·블록)은 당분간 `@cms-config` 별칭으로 이어서, 한 프로세스에 사이트 설정은 하나다. `createCms`는 서버 쪽만 받는다.
+### 사이트 설정은 인스턴스에 속한다
+
+`createCms({ config })`는 사이트 설정을 값으로 받아 가진다. 설정 별칭도, 설정에서 뽑아 만든 모듈 수준 상수도 없으므로 모듈을 불러올 때 설정을 알고 있다고 가정하는 곳이 없고, 한 프로세스가
+사이트를 여럿 가질 수 있다. `createSite(config)`(`@monti-cms/core/client`)는 설정을 `Site`로 푼다: `LOCALES`·`DEFAULT_LOCALE`·`COLLECTIONS`·`schemaOf(이름)`·`storedFields(이름)`·`contentPath(…)`·`parseInternalLink(…)`·`adminHref(…)`·`BLOCKS`·
+`CODE_LINE_EFFECTS`·`getPluginOptions(이름)`·`createTranslator(messages)`와, 전에는 설정을 읽어 상수와 함수로 내보내던 나머지다. 인스턴스는 `Site`를 `cms.site`로 가진다
+(`cms.site.config`는 설정 객체 그대로다). 설정이 필요하던 모든 곳은 인스턴스에서 받는다:
+
+| 곳 | 사이트를 받는 데 |
+| --- | --- |
+| 저장소·서비스·읽기 API·HTTP 핸들러·플러그인·로그인 연결·`monti migrate` | 인스턴스: `createCms`가 `cms.site`를 넘긴다(`createStore({ site })`·`createContentService(store, { site })`·`createRead({ site })`·`AuthCreateContext.site` …) |
+| 관리자 화면 | `<CmsAdminLayout cms={cms}>`가 화면을 `<SiteProvider config={cms.site.snapshot()}>`로 감싸고, 클라이언트 컴포넌트는 `useSite()`·`useTranslator(messages)`(`@monti-cms/core/client`)로 읽는다. 브라우저는 설정 파일을 불러오지 않는다 |
+| 공개 렌더러 | `<CmsContent cms={cms} entry={entry} />`와 `renderDocument(doc, { site: cms.site })`: 사이트가 어떤 블록·마크·코드 펜스가 있는지, 줄 효과와 하이라이트 테마, 더해지는 플러그인 컴포넌트를 정한다 |
+| 직접 짠 코드 | 서버에서는 `cms.site`, 클라이언트 컴포넌트에서는 `useSite()`. 사이트가 필요한 도우미는 매개변수로 받는다 |
+
+**브라우저로 가는 것.** `site.snapshot()`은 설정을 일반 데이터로 만든 것이다. 컬렉션·언어·`site`·`admin`·`timeZone`·`media`·`codeBlock` 설정, 모든 블록(플러그인 블록 포함), 플러그인마다 `name`·`nav`·`options`·`contributes`를 JSON으로 담는다. 플러그인의 `options`나
+`contributes` 안의 함수, 함수인 `admin.messages` 문구(문자열은 간다), 플러그인의 `server`·`admin`·`render`·`formats`·`validate`는 가지 않는다. 관리자 레이아웃이 플러그인의 관리자 모듈을 서버에서 불러 그 프로바이더를 직접 그린다. 브라우저에 필요한 `options` 값은 JSON으로 둔다.
+
+**타입.** 타입은 넘긴 설정을 따라가며 등록 단계가 없다. `createCms({ config })`는 `Cms<typeof config>`를 돌려주므로 `cms.read.listEntries({ collection: "post" })`는 컬렉션 이름과 각 컬렉션의 메타데이터를 알고(`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
+설정에 없는 컬렉션은 타입 오류다. 라이브러리 타입이 인스턴스를 볼 수 없는 곳에서는 설정 타입을 준다: `DocumentComponentsFor<typeof config>`나 `DocumentComponentsOf<typeof cms>`가 `<CmsContent>`의 `components`(블록 이름과 블록마다의 속성 props)를 타입으로 정하고, AI 플러그인의 동작 이름도 같은 식으로 설정 타입을 받는다.
+그냥 `Cms`나 `Site`는 어떤 설정의 인스턴스든 가리키고 이름은 `string`이다. 설정이 다른 인스턴스 둘은 따로 타입이 정해진다.
+
+### `@cms-config` 별칭에서 올리기
+
+- `cms.server.ts`: `import config from "./cms.config"`를 하고 `createCms({ config, server: … })`로 만든다.
+- `tsconfig.json` `paths`와 Vitest `resolve.alias`에서 `"@cms-config"`를 지운다. `withCms(nextConfig)`는 옵션을 받지 않는다. `monti migrate`에는 `--config` 옵션이 없고 `CMS_CONFIG_PATH`도 읽지 않는다. 설정을 불러오는 서버 파일을 불러온다. `@monti-cms/core/register`는 없어졌다: 스크립트는 그냥 `tsx`로 돌린다.
+- 관리자 레이아웃: `export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin"` 대신 `export const generateMetadata = () => cmsAdminMetadata(cms);`(제목이 인스턴스의 사이트 이름과 관리자 언어를 따른다).
+- 렌더링: `<CmsContent cms={cms} entry={entry} />`와 `renderDocument(doc, { site: cms.site, … })`, `renderMdx(doc, { site })`도 같다. `components` 표의 타입은 전의 `DocumentComponents`(이제 타입이 없는 표다) 대신 `DocumentComponentsOf<typeof cms>`(또는 `DocumentComponentsFor<typeof config>`)로 적는다.
+- `@monti-cms/core/client`가 내보내던 설정 파생 값과 도우미(`LOCALES`·`DEFAULT_LOCALE`·`isLocale`·`localizePath`·`COLLECTIONS`·`schemaOf`·`contentPath`·`parseInternalLink`·`adminHref`·`SITE_NAME`·`BLOCKS`·`CODE_LINE_EFFECTS`·`getPluginOptions` …)는 사이트의 멤버다: 서버에서는 `cms.site.LOCALES`, 클라이언트 컴포넌트에서는 `useSite().LOCALES`.
+  모듈 수준의 `createTranslator(messages)`는 `site.createTranslator(messages)`가 되고, 컴포넌트 안에서는 `useTranslator(messages)`다. `formatDateTimeInput`·`parseDateTimeInput`은 시간대를 받는다(또는 사이트의 것을 쓴다: `site.formatDateTimeInput(value)`).
+- 플러그인과 어댑터: `CmsServerPlugin`과 라우트는 그대로다(받는 인스턴스에 `cms.site`가 있다). `DatabaseAdapter`는 사이트를 받고(`createStore({ site, afterCommit })`, `migrate({ site, formats })`), `AuthAdapter`는 `create({ site, loginPath, trustHost })`로 받는다.
+  블록과 줄 효과 정의가 `createActiveTranslator`로 고르는 글은 사이트를 만들 때 그 사이트의 관리자 언어로 한 번 읽는다. 그 밖에 실행 중에 번역하는 것은 `site.createTranslator`를 쓴다.
+- 테스트: 설정 모듈을 모킹할 필요가 없다. 테스트에 필요한 사이트나 인스턴스를 만들고(`createSite(config)`·`fakeCms({ config })`·`createCms({ config, server })`), React 트리는 `<SiteProvider site={site}>`로 감싼다.
 
 ### `@monti-cms/nextjs`로 올리기
 
@@ -343,7 +373,6 @@ Next에 묶인 코드는 모두 `@monti-cms/core`와 `@monti-cms/admin`에서 �
   마스터 비밀 값 자체를 내주는 길은 이제 없다(`cms.secret`과 `cms.server.secret`도 없어졌다). "플러그인 비밀 값"을 본다.
   플러그인 라우트는 핸들러 입력으로 `cms`를 받고, `CmsServerPlugin.features(cms)`와 `migrate(storage, cms)`는 인자로 받고, 훅은 직접 만든 `cms`를 클로저로 쓴다.
 - `@monti-cms/core/migrate`는 없어졌다: `monti migrate`를 돌리거나 스크립트에서 `await cms.migrate()`를 쓴다. `monti migrate`는 이제 서버 파일을 불러오므로 그 파일이 `cms`를 내보내야 한다.
-  `@monti-cms/core/register`는 `@cms-config` 별칭만 잇는다.
 - 로그인·로그아웃은 서버 액션이 아니라 `/api/cms/v1/session/*`로 보내는 일반 폼 전송이다(서버 액션은 인스턴스를 실을 수 없다). 앱에서 바꿀 것은 없다.
 
 ### `cms.database()`를 쓰던 플러그인 올리기
@@ -402,12 +431,12 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
-| `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata`·`NextAdminRouter` |
+| `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth` |
-| `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"). MDX 글은 `@monti-cms/mdx/render`의 `renderMdx`가 그린다. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`(`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>`·`DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"). MDX 글은 `@monti-cms/mdx/render`의 `renderMdx`가 그린다. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | 공개 화면(타입) | `ReadEntry`·`MetadataFor` 등 `cms.read`의 타입. `cms.read`가 공개본을 읽는다(`getEntry`·`listEntries`·`getTranslations`·`getPreview`: 관계·주소·옛 주소 이동·원문 대체) |
-| `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(`tsx --import @monti-cms/core/register`) |
-| `@monti-cms/core/client` | 화면 코드 | API 모양·컬렉션·언어·주소·블록·스키마 도우미 |
+| `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(그냥 `tsx`) |
+| `@monti-cms/core/client` | 화면 코드 | `createSite`·`Site`·`SiteProvider`·`useSite`·`useTranslator`, API 모양과 설정이 필요 없는 컬렉션·언어·주소·블록·스키마 도우미(설정에 기대는 것은 `Site`의 멤버다) |
 | `@monti-cms/core/code-block` | 공개 렌더러·편집기 | 코드 블록 주석 모델 |
 | `@monti-cms/core/document` | 본문을 고치거나 살피는 화면·플러그인 | `StoredDocument` 타입과, 표기법을 모르고 문서만으로 일하는 도우미: 블록 ID(`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, 링크·이미지·표 도우미, 저장 코드 블록 모델. 글 표기를 읽거나 쓰는 것은 없다. 관리자 편집기와 AI가 여기서 불러온다 |
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
@@ -415,7 +444,6 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기) |
 | `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`addComponents`·`migrate`(명령 `monti`의 코드) |
-| `@monti-cms/core/register` | 직접 만든 스크립트 | `tsx --import`로 돌리는 스크립트에서 `@cms-config` 별칭 잇기 |
 | `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드
@@ -642,15 +670,16 @@ codeBlock: {
 코어는 문서만 그린다. 글은 먼저 문서로 읽어서 그린다(MDX는 `@monti-cms/mdx/render`의 `renderMdx`가 그렇게 한다).
 
 ```tsx
-import { CmsContent, renderDocument, tableOfContents, type DocumentComponents } from "@monti-cms/core/render";
+import { CmsContent, type DocumentComponentsOf, renderDocument, tableOfContents } from "@monti-cms/core/render";
 
 const entry = (await cms.read.getEntry({ collection: "post", slug, locale })).entry; // 문서와 refs
-// 서버 컴포넌트에서는: 이미지와 파일은 entry.refs에서, 언어는 entry.locale에서 가져온다
-<CmsContent entry={entry} components={components} />;
+// 서버 컴포넌트에서는: 이미지와 파일은 entry.refs에서, 언어는 entry.locale에서,
+// 블록·코드 설정·플러그인 컴포넌트는 `cms`의 사이트에서 가져온다
+<CmsContent cms={cms} entry={entry} components={components} />;
 tableOfContents(entry.doc); // 2·3단계 제목, 같은 앵커, React 없음
 // 문서 하나만 있을 때:
-const { content, toc, unknown } = await renderDocument(doc, { locale, refs, components });
-<CmsContent doc={doc} refs={refs} locale={locale} components={components} />;
+const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, locale, refs, components });
+<CmsContent cms={cms} doc={doc} refs={refs} locale={locale} components={components} />;
 ```
 
 - **두 단계.** 비동기 선처리가 문서를 한 번 훑고(제목 앵커와 목차, 각주 번호, 모든 코드 블록의 Shiki 강조, 모든 수식의 KaTeX 출력), 그다음 동기 순수 렌더가 노드를 요소로 바꾼다.
@@ -663,7 +692,7 @@ const { content, toc, unknown } = await renderDocument(doc, { locale, refs, comp
   `FootnoteRefProps`·`FootnotesProps`, `HardBreakProps`), 코어 마크(`link`, `bold`, `italic` …)마다 하나, 코드 블록 안 요소용 `codeTags`(`fold`, `collapse`, `Tooltip`)가 있다.
   모든 컴포넌트는 `ctx`(`locale`과 고정 문구 `labels`; 순수 JSON이라 클라이언트 컴포넌트로 넘길 수 있다)도 받고, 블록 컴포넌트는 `blockId`, `node`, `items`도 받는다.
 - **블록은 블록 이름으로 등록하고 속성은 평평한 props로 받는다.** props 타입은 사이트 설정에서 나온다: `blocks: { callout: ({ variant, title, children }) => … }`,
-  `marks: { tooltip: ({ content, children }) => … }`. `components`의 타입(`DocumentComponents`)은 `cms.config.ts`의 `blocks`와 플러그인의 `blocks`로 만들어진다
+  `marks: { tooltip: ({ content, children }) => … }`. `components`의 타입(`DocumentComponentsOf<typeof cms>`, 또는 `DocumentComponentsFor<typeof config>`)은 `cms.config.ts`의 `blocks`와 플러그인의 `blocks`로 만들어진다
   (`defineBlock`이 속성을 리터럴로 보존하므로 `variant`는 `"note" | "tip" | …`이다). 불리언 속성은 늘 불리언이고, 기본값이 있는 값과 필수 문자열은 늘 있으며,
   선택지에 없는 값은 기본값으로 바뀐다. 코드 펜스 블록(`mermaid`, `chart`)은 코드를 `source`로 받는다.
 - **렌더러는 하나.** 제목 앵커는 `github-slugger`를 따르고, 각주는 처음 참조한 순서로 번호가 붙고, 같은 Shiki 흐름이 코드(줄 효과, 글자 효과, 줄 이름표)를 그리며,
@@ -930,11 +959,11 @@ pnpm --filter @monti-cms/core test:run
 pnpm --filter @monti-cms/core typecheck
 ```
 
-패키지 자체 테스트는 예시 사이트 설정 `test/cms.config.ts`로 돈다. 인스턴스가 필요한 테스트는 `fakeCms`(또는 가짜 어댑터 위의 `createCms`)로 만들고, 그것 때문에 모듈을 모킹하는 테스트는 없다.
+패키지 자체 테스트는 예시 사이트 `testSite`(`test/site.ts`, 예시 사이트 설정 `test/cms.config.ts`로 만든다)를 상대로 돈다. 인스턴스가 필요한 테스트는 `fakeCms`(또는 가짜 어댑터 위의 `createCms`)로 만들고, 자기 설정이 필요한 테스트는 그 설정으로 사이트나 인스턴스를 만든다. 그것 때문에 모듈을 모킹하는 테스트는 없다.
 
 **다른 사이트 설정으로도 돈다(재발 방지).** `test/other-site.config.ts`는 블로그와 일부러 다른 설정이다(컬렉션 article·topic·author,
 `title`·`slug` 말고는 다른 필드 이름, 영어만, 차트 + 사이트 블록, 글자 꾸밈 없음). 본체·관리자·AI 패키지마다 `vitest.othersite.config.ts`가 같은
-테스트를 이 설정으로 다시 돌린다(묶음 이름 `core (other-site)`·`admin (other-site)`·`ai (other-site)`, 저장소 루트
+테스트를 이 설정으로 다시 돌린다(`MONTI_TEST_SITE=other-site`를 주고 `test/site.ts`가 읽는다. 묶음 이름 `core (other-site)`·`admin (other-site)`·`ai (other-site)`, 저장소 루트
 `pnpm test:run`이 함께 돈다. 패키지에서는 `pnpm test:other-site`). 새 테스트는 저절로 두 설정으로 돈다. 컬렉션·필드 이름은
 테스트에 적지 말고 설정에서 찾는다(`test/any-site.ts`: 컬렉션·관계 필드·두 번째 언어, 발행 필수값을 채우는 `fillRequiredMetadata`).
 설정에 없는 기능(두 번째 언어, 묶음 블록 등)이 필요한 경우는 `skipIf`로 감싼다. 본체 패키지에서 블로그 예시 데이터를 그대로 확인하는

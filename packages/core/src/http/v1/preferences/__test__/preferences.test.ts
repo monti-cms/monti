@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, otherContentCollection, recordCollection } from "../../../../../test/any-site";
+import { testConfig } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
 import { GET as getPreferences, PUT as putPreferences } from "../route";
 
@@ -10,6 +11,7 @@ const SECOND = otherContentCollection ?? recordCollection;
 const state = { stored: null as unknown };
 
 const cms = fakeCms({
+	config: testConfig,
 	store: {
 		getPreferences: vi.fn().mockImplementation(() => Promise.resolve(state.stored)),
 		savePreferences: vi.fn().mockImplementation((params: { preferences: unknown }) => {

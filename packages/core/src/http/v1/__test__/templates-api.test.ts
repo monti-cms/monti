@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
 import { DELETE as deleteTemplate, GET as getTemplate, PATCH as patchTemplate } from "../templates/[id]/route";
@@ -24,6 +25,7 @@ const mockTemplates = [
 ];
 
 const cms = fakeCms({
+	config: testConfig,
 	store: {
 		listTemplates: vi.fn().mockResolvedValue(mockTemplates),
 		getTemplate: vi.fn().mockImplementation((id: string) => {

@@ -198,7 +198,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 
 	const isHostTrusted = () => resolveTrustHost(server.trustHost);
 	const getAuth = (): CmsAuth => {
-		auth ??= server.auth.create({ loginPath: site.adminUrl("/login"), trustHost: isHostTrusted() });
+		auth ??= server.auth.create({ site, loginPath: site.adminUrl("/login"), trustHost: isHostTrusted() });
 		return auth;
 	};
 	const getStore = (): ContentStore => {

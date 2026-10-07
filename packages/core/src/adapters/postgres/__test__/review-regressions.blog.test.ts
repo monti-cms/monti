@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
+import blog from "../../../../test/cms.config";
 import { prepareSnapshot, validateForPublish } from "../../../core/snapshot";
 import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
 import type { CmsNode } from "../../../doc/types";
+import { createSite } from "../../../site";
+
+const site = createSite(blog);
 
 /**
  * Code review (2026-09-26) regression tests that use the reference blog config's blocks (tabs, tooltip, alignment).
@@ -32,13 +36,13 @@ describe("review regressions (blog blocks)", () => {
 			],
 		];
 		for (const [name, block, code] of cases) {
-			const snapshot = await prepareSnapshot({
+			const snapshot = await prepareSnapshot(site, {
 				collection: "memo",
 				slug: "m",
 				metadata: { title: "m" },
 				doc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [block] },
 			});
-			const result = validateForPublish(snapshot, { targets: [], media: [] });
+			const result = validateForPublish(site, snapshot, { targets: [], media: [] });
 			expect(result.ready, name).toBe(false);
 			expect(
 				result.issues.map((issue) => issue.code),
@@ -58,8 +62,8 @@ describe("review regressions (blog blocks)", () => {
 				},
 			],
 		};
-		const snapshot = await prepareSnapshot({ collection: "memo", slug: "m", metadata: { title: "m" }, doc });
-		const missing = validateForPublish(snapshot, { targets: [], media: [] }).issues.find(
+		const snapshot = await prepareSnapshot(site, { collection: "memo", slug: "m", metadata: { title: "m" }, doc });
+		const missing = validateForPublish(site, snapshot, { targets: [], media: [] }).issues.find(
 			(issue) => issue.code === "missing_block_attribute",
 		);
 		expect(missing).toMatchObject({ message: "tooltip.content", position: { blockId: snapshot.doc.content[0]?.id } });

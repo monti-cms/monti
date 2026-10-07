@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { EMPTY_REFS, type ReadRefs } from "../../doc/document-refs";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import type { CmsMark, CmsNode } from "../../doc/types";
@@ -17,8 +18,13 @@ const link = (label: string, attrs: CmsMark["attrs"]): CmsNode => ({
 const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
 const refs: ReadRefs = { ...EMPTY_REFS, links: { [ID]: { path: "/posts/renamed", title: "Renamed", locale: "ko" } } };
-const render = async (props: Parameters<typeof CmsContent>[0]) =>
-	renderToStaticMarkup((await CmsContent(props)) as ReactNode);
+type ContentProps = Parameters<typeof CmsContent>[0];
+type WithoutCms<T> = T extends unknown ? Omit<T, "cms"> : never;
+
+const cms = { site: testSite };
+
+const render = async (props: WithoutCms<ContentProps>) =>
+	renderToStaticMarkup((await CmsContent({ cms, ...props } as ContentProps)) as ReactNode);
 
 describe("rendering links by entry id", () => {
 	const body = doc({

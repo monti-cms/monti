@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../test/site";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
@@ -16,6 +17,7 @@ const mockVerifyAdmin = vi.fn();
 const mockReadExportSnapshot = vi.fn();
 
 const cms = fakeCms({
+	config: testConfig,
 	store: { readExportSnapshot: () => mockReadExportSnapshot() },
 	verifyAdmin: () => mockVerifyAdmin(),
 	formats: [paragraphsFormat],

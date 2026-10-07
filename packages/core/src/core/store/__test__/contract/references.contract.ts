@@ -6,9 +6,9 @@ import {
 	recordCollection,
 	recordRelationField,
 } from "../../../../../test/any-site";
+import { testSite } from "../../../../../test/site";
 import { contentOf, docOf } from "../../../../../test/stored-content";
-import { storedFields } from "../../../../schema/derive";
-import { type Collection, isItemCollection } from "../../../collections";
+import type { Collection } from "../../../collections";
 import type { PreparedSnapshot, Reference } from "../../../types";
 import type { ContentStore } from "../..";
 import { CmsError } from "../..";
@@ -22,8 +22,8 @@ import type { ContractSuite, StoreSession } from "./harness";
  * Collection and field names are looked up in the current config (`test/any-site.ts`).
  */
 const relation = (() => {
-	for (const { name, field, when } of storedFields(contentCollection)) {
-		if (!when && field.kind === "relation" && field.many && isItemCollection(field.to)) {
+	for (const { name, field, when } of testSite.storedFields(contentCollection)) {
+		if (!when && field.kind === "relation" && field.many && testSite.isItemCollection(field.to)) {
 			return { name, to: field.to as Collection, many: true };
 		}
 	}
@@ -87,7 +87,8 @@ export const referencesContract: ContractSuite = (factory) => {
 				schemaVersion: 1,
 				contentHash: `tag-${randomUUID()}`,
 			});
-			if (target.status !== "published") await publishDraft(store, { id: target.id, expectedVersion: target.version });
+			if (target.status !== "published")
+				await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
 
 			const occurrence = relation.many
 				? { type: "metadata" as const, path: relation.name, ordinal: 0 }
@@ -102,7 +103,7 @@ export const referencesContract: ContractSuite = (factory) => {
 				}),
 				references: [reference],
 			});
-			const published = await publishDraft(store, { id: source.id, expectedVersion: source.version });
+			const published = await publishDraft(testSite, store, { id: source.id, expectedVersion: source.version });
 			const draftSlug = `incoming-draft-${randomUUID()}`;
 			await store.saveWorkingWithReferences({
 				entryId: source.id,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
-import { BLOCKS } from "../../../blocks/active";
 import type { BlockDefinition } from "../../../blocks/define";
 import { assignBlockIds, withoutBlockIds } from "../../../doc/block-ids";
 import { STORED_DOCUMENT_VERSION, type StoredDocument, unparsedDocument } from "../../../doc/stored-document";
@@ -14,7 +14,7 @@ import { diffSources, type SourceChange, type TranslationUnit } from "../source-
 const translatableOf = (block: BlockDefinition | undefined) =>
 	block && Object.entries(block.attributes).find(([, attribute]) => attribute.translatable)?.[0];
 /** A titled box compared by expanding it (e.g. callout). Alignment is a core block, so any config has it. */
-const titledBox = BLOCKS.find(
+const titledBox = testSite.BLOCKS.find(
 	(block) =>
 		block.syntax.kind === "container" &&
 		block.translateInside &&
@@ -44,8 +44,8 @@ const titled = (title: string, body: string, previous?: StoredDocument | null): 
 		previous,
 	);
 /** An expandable group that gathers children's translatable attributes (e.g. tab names) into one header line (e.g. tab group). */
-const labeledGroup = BLOCKS.flatMap((block) => {
-	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
+const labeledGroup = testSite.BLOCKS.flatMap((block) => {
+	const child = testSite.BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	const label = translatableOf(child);
 	return block.translateInside && child && label ? [{ block, child, label }] : [];
 })[0];
@@ -76,7 +76,7 @@ const alignBox = (align: string, ...inner: string[]): CmsNode => ({
 });
 
 /** The blocks of two bodies written as text compared (each read as a document of its own, so only kind and content pair the blocks). */
-const diffText = (before: string, after: string) => diffSources(docOf(before), docOf(after));
+const diffText = (before: string, after: string) => diffSources(testSite, docOf(before), docOf(after));
 
 const summary = (changes: SourceChange[] | null) =>
 	changes?.map((change) =>
@@ -106,12 +106,12 @@ describe("comparing two source versions", () => {
 	it("blocks inside a box are compared separately", () => {
 		const before = documentOf([alignBox("center", "안쪽", "그대로")]);
 		const after = documentOf([alignBox("center", "안쪽 고침", "그대로")]);
-		expect(summary(diffSources(before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
+		expect(summary(diffSources(testSite, before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
 	});
 
 	it.skipIf(!titledBox || !titleAttribute)("blocks and the title inside a box are compared separately", () => {
 		if (!titledBox || !titleAttribute) return;
-		expect(summary(diffSources(titled("알림", "안쪽"), titled("주의", "안쪽 고침")))).toEqual([
+		expect(summary(diffSources(testSite, titled("알림", "안쪽"), titled("주의", "안쪽 고침")))).toEqual([
 			["changed", JSON.stringify({ title: "알림" }), JSON.stringify({ title: "주의" })],
 			["changed", "안쪽", "안쪽 고침"],
 		]);
@@ -130,14 +130,14 @@ describe("comparing two source versions", () => {
 					],
 				},
 			]);
-		expect(summary(diffSources(tabs("둘"), tabs("둘 고침")))).toEqual([
+		expect(summary(diffSources(testSite, tabs("둘"), tabs("둘 고침")))).toEqual([
 			["changed", JSON.stringify({ labels: ["하나", "둘"] }), JSON.stringify({ labels: ["하나", "둘 고침"] })],
 		]);
 	});
 
 	it("null when either body is unparsed", () => {
-		expect(diffSources(unparsedDocument("본문 <TextAlign>닫히지 않음"), docOf("하나"))).toBeNull();
-		expect(diffSources(docOf("하나"), unparsedDocument("본문 <TextAlign>닫히지 않음"))).toBeNull();
+		expect(diffSources(testSite, unparsedDocument("본문 <TextAlign>닫히지 않음"), docOf("하나"))).toBeNull();
+		expect(diffSources(testSite, docOf("하나"), unparsedDocument("본문 <TextAlign>닫히지 않음"))).toBeNull();
 	});
 });
 
@@ -158,7 +158,7 @@ const versionOf = (content: CmsNode[], previous?: StoredDocument | null) => {
 
 type Version = ReturnType<typeof version>;
 
-const compare = (before: Version, after: Version) => diffSources(before.doc, after.doc);
+const compare = (before: Version, after: Version) => diffSources(testSite, before.doc, after.doc);
 
 /** The same version with its blocks in another order (ids move with them) and optionally edited text. */
 const reorder = (from: Version, order: number[], edits: Record<number, string> = {}): Version => {

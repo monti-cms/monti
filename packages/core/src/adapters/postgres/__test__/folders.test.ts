@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { CmsError } from "../../../core/store";
 import { createContentStore, migrateContentStore } from "../content-store";
 
@@ -29,8 +30,8 @@ describe("Folders in Postgres", () => {
 		ctx.schema = schemaName;
 		await pool.query(`CREATE SCHEMA "${schemaName}"`);
 		ctx.schemaCreated = true;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 	});
 
 	afterAll(async () => {
@@ -64,7 +65,7 @@ describe("Folders in Postgres", () => {
 			max: 2,
 			application_name: appName,
 		});
-		const customStore = createContentStore(customPool, { schema: schemaName });
+		const customStore = createContentStore(customPool, { site: testSite, schema: schemaName });
 		const gateClient = await pool.connect();
 
 		let lockHeld = false;

@@ -100,6 +100,8 @@ export interface CmsAuth {
 
 /** Values the core passes when creating the login connection. */
 export interface AuthCreateContext {
+	/** The instance's site: the login connection takes the language of its texts (`site.createTranslator`) from it. */
+	readonly site: Site;
 	/** Whether the `Host` header may be trusted to build login callback URLs (see `trustHost` in the server config). */
 	readonly trustHost: boolean;
 	/** Admin login page URL (admin path + `/login`, e.g. `/admin/login`). Includes the Next `basePath` if set, so it is the browser-facing URL. */

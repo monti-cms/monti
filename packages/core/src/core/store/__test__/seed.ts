@@ -1,6 +1,7 @@
 import { docOfText } from "../../../doc/__test__/doc-text";
 import type { StoredDocument } from "../../../doc/stored-document";
 import { createContentService } from "../../../services/content-service";
+import type { Site } from "../../../site";
 import type { PreparedSnapshot } from "../../types";
 import type { ContentStore, Entry } from "..";
 
@@ -94,18 +95,27 @@ export async function moveToFolder(
  * The store does not prepare content, so a store test that publishes goes through here.
  */
 export async function publishDraft(
+	site: Site,
 	store: ContentStore,
 	params: { id: string; expectedVersion: number; resetPublishedAt?: boolean },
 ): Promise<Entry> {
-	return (await createContentService<Entry>(store).publish(params)).entry;
+	return (await createContentService<Entry>(store, { site }).publish(params)).entry;
 }
 
 /** Restores a trashed entry the way production does (a record is prepared by the pipeline first). */
-export function restoreDraft(store: ContentStore, params: { id: string; expectedVersion: number }): Promise<Entry> {
-	return createContentService<Entry>(store).restore(params);
+export function restoreDraft(
+	site: Site,
+	store: ContentStore,
+	params: { id: string; expectedVersion: number },
+): Promise<Entry> {
+	return createContentService<Entry>(store, { site }).restore(params);
 }
 
 /** Duplicates a draft the way production does (through the write pipeline). */
-export function duplicateDraft(store: ContentStore, params: { id: string; title?: string }): Promise<Entry> {
-	return createContentService<Entry>(store).duplicate(params);
+export function duplicateDraft(
+	site: Site,
+	store: ContentStore,
+	params: { id: string; title?: string },
+): Promise<Entry> {
+	return createContentService<Entry>(store, { site }).duplicate(params);
 }

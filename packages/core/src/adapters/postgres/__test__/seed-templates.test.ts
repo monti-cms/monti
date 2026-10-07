@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { contentOf } from "../../../../test/stored-content";
 import type { SeedTemplate } from "../../../config/define";
 import { forEachBlock, isBlockId } from "../../../doc/block-ids";
@@ -13,7 +14,7 @@ describe("seed templates", () => {
 		const given = docWith({ type: "paragraph", content: [{ type: "text", text: "Seeded" }] });
 		const template: SeedTemplate = { id: ID, name: "Doc", doc: given };
 
-		const seeded = await seedTemplateDocument(template, NO_FORMATS);
+		const seeded = await seedTemplateDocument(testSite, template, NO_FORMATS);
 
 		expect(contentOf(seeded)).toEqual(contentOf(given));
 		let blocks = 0;
@@ -27,7 +28,7 @@ describe("seed templates", () => {
 	it("rejects a document that is not a stored document, naming the template", async () => {
 		const template = { id: ID, name: "Broken", doc: { type: "doc", content: "nope" } } as unknown as SeedTemplate;
 
-		await expect(seedTemplateDocument(template, NO_FORMATS)).rejects.toThrow(
+		await expect(seedTemplateDocument(testSite, template, NO_FORMATS)).rejects.toThrow(
 			/seed template "Broken" is not a stored document/,
 		);
 	});
@@ -35,6 +36,7 @@ describe("seed templates", () => {
 	it("reads a template written as text with its format", async () => {
 		const registry = createFormatRegistry([paragraphsFormat]);
 		const custom = await seedTemplateDocument(
+			testSite,
 			{ id: ID, name: "Custom", format: "paragraphs", body: "One\n\nTwo" },
 			registry,
 		);
@@ -43,21 +45,21 @@ describe("seed templates", () => {
 	});
 
 	it("stops the migration with a message that names the missing plugin when no installed plugin provides the format", async () => {
-		await expect(seedTemplateDocument({ id: ID, name: "Text", format: "hugo", body: "x" }, NO_FORMATS)).rejects.toThrow(
-			/seed template "Text" is written in the format "hugo", which no installed plugin provides/,
-		);
+		await expect(
+			seedTemplateDocument(testSite, { id: ID, name: "Text", format: "hugo", body: "x" }, NO_FORMATS),
+		).rejects.toThrow(/seed template "Text" is written in the format "hugo", which no installed plugin provides/);
 
 		// A site that never installed the MDX package is told which package it is missing.
 		const withoutMdx = createFormatRegistry([paragraphsFormat]);
-		await expect(seedTemplateDocument({ id: ID, name: "Text", format: "mdx", body: "x" }, withoutMdx)).rejects.toThrow(
-			/install @monti-cms\/mdx/,
-		);
+		await expect(
+			seedTemplateDocument(testSite, { id: ID, name: "Text", format: "mdx", body: "x" }, withoutMdx),
+		).rejects.toThrow(/install @monti-cms\/mdx/);
 	});
 
 	it("stops the migration for a seed text the format cannot read: a mistake in the config is not stored data", async () => {
 		const registry = createFormatRegistry([paragraphsFormat]);
 		await expect(
-			seedTemplateDocument({ id: ID, name: "Open", format: "paragraphs", body: "Words <<< open" }, registry),
+			seedTemplateDocument(testSite, { id: ID, name: "Open", format: "paragraphs", body: "Words <<< open" }, registry),
 		).rejects.toThrow(/seed template "Open" could not be read as "paragraphs"/);
 	});
 });

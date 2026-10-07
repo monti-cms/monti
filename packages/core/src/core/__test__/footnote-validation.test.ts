@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { STORED_DOCUMENT_VERSION } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { prepareSnapshot } from "../snapshot";
@@ -24,7 +25,7 @@ const definition = (label: string, text: string): CmsNode => ({
 });
 
 const footnoteWarnings = async (...content: CmsNode[]) => {
-	const snapshot = await prepareSnapshot({
+	const snapshot = await prepareSnapshot(testSite, {
 		collection: contentCollection,
 		slug: "footnotes",
 		metadata: { title: "Footnotes" },

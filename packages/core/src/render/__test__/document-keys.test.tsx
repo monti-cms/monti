@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../test/site";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { renderDocument } from "../index";
@@ -68,7 +69,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("keys of rendered children", () => {
 	it("renders every child list with keys, so React logs no key warning", async () => {
 		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-		const { content } = await renderDocument(showcase);
+		const { content } = await renderDocument(showcase, { site: testSite });
 		renderToStaticMarkup(content);
 		const warned = error.mock.calls.filter((call) => String(call[0]).includes('unique "key"'));
 		expect(warned).toEqual([]);

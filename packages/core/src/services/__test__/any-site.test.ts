@@ -9,6 +9,7 @@ import {
 	requiredMetadata,
 	titleFieldOf,
 } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import type { Collection } from "../../core/collections";
 import type { ContentStore, Entry } from "../../core/store";
 import { duplicateDraft, publishDraft } from "../../core/store/__test__/seed";
@@ -51,7 +52,7 @@ describe("any site: core content flow", () => {
 		const entry =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, entry.id);
 		return entry.id;
 	};
@@ -69,9 +70,12 @@ describe("any site: core content flow", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, {
+			site: testSite,
+			formats: async () => createFormatRegistry([paragraphsFormat]),
+		});
 	});
 
 	afterAll(async () => {
@@ -93,7 +97,7 @@ describe("any site: core content flow", () => {
 
 	it("publishes a content entry built from the schema's required fields", async () => {
 		const draft = await createContent("Published from schema");
-		const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		expect(published.status).toBe("published");
 		expect(published.published?.metadata.title).toBe("Published from schema");
 	});
@@ -106,12 +110,14 @@ describe("any site: core content flow", () => {
 			format: "paragraphs",
 			body: "Body text",
 		});
-		await expect(publishDraft(store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
-			code: "publish_validation_failed",
-			issues: expect.arrayContaining([
-				{ code: "missing_field", path: "title", message: titleFieldOf(contentCollection).label },
-			]),
-		});
+		await expect(publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject(
+			{
+				code: "publish_validation_failed",
+				issues: expect.arrayContaining([
+					{ code: "missing_field", path: "title", message: titleFieldOf(contentCollection).label },
+				]),
+			},
+		);
 	});
 
 	it("limits the title by the title field's own max", async () => {
@@ -145,10 +151,10 @@ describe("any site: core content flow", () => {
 
 	it("duplicates with the title the caller gives and keeps it otherwise", async () => {
 		const draft = await createContent("Original");
-		const copy = await duplicateDraft(store, { id: draft.id, title: "Original (copy)" });
+		const copy = await duplicateDraft(testSite, store, { id: draft.id, title: "Original (copy)" });
 		expect(copy.working.metadata.title).toBe("Original (copy)");
 		expect(copy.workingSlug).toBeNull();
-		const same = await duplicateDraft(store, { id: draft.id });
+		const same = await duplicateDraft(testSite, store, { id: draft.id });
 		expect(same.working.metadata.title).toBe("Original");
 	});
 
@@ -208,7 +214,7 @@ describe("any site: core content flow", () => {
 			});
 			expect((await store.getMediaAsset(used.id))?.status).toBe("ready");
 			// The published copy also has the same references.
-			const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+			const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 			expect(published.published?.metadata[media.name]).toBe(used.id);
 			const after = (await store.listMediaAssets({ pageSize: 100 })).items.find((item) => item.id === used.id);
 			expect(after?.references.map((reference) => reference.state).sort()).toEqual(["published", "working"]);

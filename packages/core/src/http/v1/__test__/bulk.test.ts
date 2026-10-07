@@ -1,10 +1,9 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { testConfig, testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import { fakeCms } from "../../../cms";
-import { isItemCollection } from "../../../core/collections";
 import { CmsError } from "../../../core/store";
-import { storedFields } from "../../../schema/derive";
 import { createBulkService } from "../../../services/bulk-service";
 import { POST as postBulk } from "../bulk/route";
 
@@ -16,9 +15,9 @@ const STALE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const MISSING = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 /** A multi-valued relation pointing at an entry collection (`tagIds` tags in the reference blog setup). Collection and field names are looked up from the config. */
-const MANY_FIELD = storedFields(contentCollection).find(
-	({ field }) => field.kind === "relation" && field.many && isItemCollection(field.to),
-)?.name;
+const MANY_FIELD = testSite
+	.storedFields(contentCollection)
+	.find(({ field }) => field.kind === "relation" && field.many && testSite.isItemCollection(field.to))?.name;
 if (!MANY_FIELD) throw new Error("bulk test: the content collection has no many relation to an item collection");
 
 /** Working-copy metadata with the publish-required values filled in (the relation is `CAT_1`, categories in the reference blog setup). */
@@ -59,7 +58,7 @@ const store = {
 	}),
 };
 
-const cms = fakeCms({ store, bulkService: createBulkService(store as never) });
+const cms = fakeCms({ config: testConfig, store, bulkService: createBulkService(store as never, { site: testSite }) });
 
 const postReq = (body: unknown) =>
 	new Request("http://localhost/api/cms/v1/bulk", {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
 import { POST as postDuplicate } from "../entries/[id]/duplicate/route";
@@ -20,7 +21,7 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 	});
 });
 
-const cms = fakeCms({ contentService: { duplicate: duplicateEntry as never } });
+const cms = fakeCms({ config: testConfig, contentService: { duplicate: duplicateEntry as never } });
 
 const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
 	new Request(url, {

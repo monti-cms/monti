@@ -1,10 +1,5 @@
 import { transformerRenderIndentGuides } from "@shikijs/transformers";
-import {
-	type DecorationItem,
-	getSingletonHighlighterCore,
-	type LanguageInput,
-	type ThemeRegistrationAny,
-} from "shiki/core";
+import { createHighlighterCore, type DecorationItem, type LanguageInput, type ThemeRegistrationAny } from "shiki/core";
 import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import { bundledLanguages } from "shiki/langs";
 import { bundledThemes } from "shiki/themes";
@@ -58,7 +53,7 @@ const themeName = (theme: ThemeRegistrationAny) => (theme.name ?? "") as string;
 export const createCodeHighlighter = async (options: CodeHighlighterOptions = {}) => {
 	const themes = options.themes ?? DEFAULT_CODE_THEMES;
 
-	const highlighter = await getSingletonHighlighterCore({
+	const highlighter = await createHighlighterCore({
 		themes: [themes.light, themes.dark],
 		langs: options.langs ?? DEFAULT_CODE_LANGS,
 		langAlias: options.langAlias ?? DEFAULT_CODE_LANG_ALIAS,
