@@ -8,7 +8,6 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./server": "./src/server/index.ts",
-		"./s3": "./src/storage/s3.ts",
 		"./client": "./src/client.ts",
 		"./runtime": "./src/runtime.ts",
 		"./read": "./src/read/index.ts",
@@ -59,21 +58,9 @@
 		"zod": "^4.2.1"
 	},
 	"peerDependencies": {
-		"@aws-sdk/client-s3": "^3.1136.0",
-		"@aws-sdk/s3-request-presigner": "^3.1136.0",
 		"react": ">=19"
 	},
-	"peerDependenciesMeta": {
-		"@aws-sdk/client-s3": {
-			"optional": true
-		},
-		"@aws-sdk/s3-request-presigner": {
-			"optional": true
-		}
-	},
 	"devDependencies": {
-		"@aws-sdk/client-s3": "^3.1136.0",
-		"@aws-sdk/s3-request-presigner": "^3.1136.0",
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
@@ -101,10 +88,6 @@
 			"./server": {
 				"types": "./dist/server/index.d.ts",
 				"default": "./dist/server/index.js"
-			},
-			"./s3": {
-				"types": "./dist/storage/s3.d.ts",
-				"default": "./dist/storage/s3.js"
 			},
 			"./client": {
 				"types": "./dist/client.d.ts",

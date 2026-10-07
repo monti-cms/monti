@@ -495,12 +495,6 @@ importers:
         specifier: ^4.2.1
         version: 4.6.5
     devDependencies:
-      '@aws-sdk/client-s3':
-        specifier: ^3.1136.0
-        version: 3.1146.0
-      '@aws-sdk/s3-request-presigner':
-        specifier: ^3.1136.0
-        version: 3.1146.0
       '@types/node':
         specifier: ^20
         version: 20.19.43
@@ -848,6 +842,28 @@ importers:
       vite:
         specifier: ^8.3.0
         version: 8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+      vitest:
+        specifier: ^4.0.18
+        version: 4.1.11(@types/node@20.19.43)(jsdom@27.4.0)(vite@8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/storage-s3:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1136.0
+        version: 3.1146.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1136.0
+        version: 3.1146.0
+    devDependencies:
+      '@monti-cms/core':
+        specifier: workspace:*
+        version: link:../core
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
       vitest:
         specifier: ^4.0.18
         version: 4.1.11(@types/node@20.19.43)(jsdom@27.4.0)(vite@8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))

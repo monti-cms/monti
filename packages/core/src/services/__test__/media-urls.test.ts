@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { MediaStore } from "../../adapters/r2/types";
+import type { MediaStore } from "../../media/store";
 import { mediaUrlResolver } from "../media-urls";
 
 const MEDIA_ID = "223e4567-e89b-42d3-a456-426614174000";

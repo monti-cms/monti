@@ -16,17 +16,4 @@ describe("postgres() lazy loading", () => {
 		await expect(store.getEntry("x")).rejects.toThrow(/store module was loaded|error when mocking/);
 		await adapter.close?.();
 	});
-
-	it("does not load the store module for the file storage adapter used by the server config either", async () => {
-		const { r2Storage } = await import("../../../storage/s3");
-		expect(() =>
-			r2Storage({
-				accessKeyId: "a",
-				secretAccessKey: "b",
-				bucket: "c",
-				endpoint: "https://example.com",
-				publicBaseUrl: "https://cdn.example.com",
-			}),
-		).not.toThrow();
-	});
 });

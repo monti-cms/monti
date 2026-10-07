@@ -1,5 +1,5 @@
-import type { MediaStore } from "../adapters/r2/types";
 import type { ContentStore } from "../core/store";
+import type { MediaStore } from "../media/store";
 import type { ImageResolveResult } from "./image-src";
 
 /** The stores the public media helpers read. They are looked up when used, so nothing connects until then. */

@@ -11,7 +11,6 @@
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
-import type { MediaStore } from "../adapters/r2/types";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
 import { type CollectionName, type MetadataFor, ServiceError } from "../core/types";
 import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../doc/document-refs";
@@ -20,6 +19,7 @@ import type { StoredDocument } from "../doc/stored-document";
 import { type ExportRefs, exportText } from "../format/convert";
 import type { FormatRegistry } from "../format/registry";
 import type { FormatLink, FormatMedia } from "../format/types";
+import type { MediaStore } from "../media/store";
 import { RECORD_TRANSLATIONS_KEY } from "../schema/derive";
 import type { AnyCmsConfig, Site } from "../site";
 

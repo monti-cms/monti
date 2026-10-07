@@ -1,4 +1,4 @@
-import type { AllowedImageMime } from "../adapters/r2/types";
+import type { AllowedImageMime } from "../media/store";
 
 /**
  * Reads the format and size from the start of an image file (PNG, GIF, JPEG, WebP, AVIF). Used to check uploaded files regardless of store type.

@@ -24,6 +24,7 @@ export default {
 			[
 				"core",
 				"auth",
+				"storage-s3",
 				"admin",
 				"nextjs",
 				"ai",
