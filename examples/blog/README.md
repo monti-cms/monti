@@ -30,7 +30,7 @@ The shape is what `monti init --admin-path /studio` generates, plus this site's 
 | --- | --- |
 | `monti.schema.json` | The site's data, in the schema file format of the core README ("The schema file"): collections (`post`, `memo`, `category`, `tag`, `collection`), the record fields, the SEO fields (as plain fields), the layouts, the locales, the time zone, the seed templates, admin path `admin.path: "/studio"`, URL rule `site.localePrefix: "always"` (`/ko/posts/…`, `/en/posts/…`), and the preview language from the path (`previewLocaleParam: false`). Editors autocomplete it through its `$schema` link |
 | `monti-env.d.ts` | The types of the schema file, written by `monti schema:types` (`next dev` rewrites it when the schema changes, and `pnpm example:check` fails if it is out of date). With it `cms.read` and the theme know the collection names and the metadata of each, with no type written by hand. Not edited by hand |
-| `cms.config.ts` | What needs code: it loads the schema (`defineConfig({ schema, … })`) and adds the plugins (`mdx` with the directive notation, `blocks()`, `seo()`, `aiPlugin()`, `bareun()`) and `site.url`, which is read from `HOST_URL` |
+| `cms.config.ts` | What needs code: it loads the schema (`defineConfig({ schema, … })`) and adds the plugins (`mdx` with the directive notation, `blocks()`, `seo()`, `aiPlugin()`, `bareun()`, `gitSync()` switched off) and `site.url`, which is read from `HOST_URL` |
 | `cms.server.ts` | The CMS instance: `createCms` over the DB and GitHub login server config (as `monti init` generates; `githubAuth` comes from `@monti-cms/nextjs/auth`). The admin, the API route and the site pages (`cms.read.*`) all import `cms` from it |
 | `app/(admin)/studio/` | The admin screen (`[[...path]]/page.tsx` and `layout.tsx`, using `@monti-cms/nextjs/admin`; the layout imports the prebuilt `@monti-cms/admin/styles.css` and `@monti-cms/blocks/styles.css`) and an example spell-check extension (`admin-components.tsx`) |
 | `components/monti/blog-theme/` and `app/(site)/[locale]/posts/` | The post list and post pages, installed as source with `pnpm exec monti add blog-theme --registry ../../registry/r` (from this folder). The command writes the route files to `app/(site)/blog/`; here they were moved to `app/(site)/[locale]/posts/` (the site uses `/ko/...` URLs), and the pages read `params.locale` from there. `components/monti/blog-theme/theme.config.ts` is the one file edited after the install: the collection (`post`), `routeBase` (`/posts`), the tag relation (`tagIds`) and the summary field (`summary`). The blocks need no `components`: the plugins bring their public components. Running the command again would write the route files to `app/(site)/blog/` once more, so delete that copy |
@@ -41,6 +41,17 @@ The shape is what `monti init --admin-path /studio` generates, plus this site's 
 | `app/globals.css` | The public site's own styles: Tailwind with typography, and the public page styles of the packages (`@monti-cms/core/render.css`, `@monti-cms/blocks/render.css`). It has no admin lines: the admin styles are prebuilt and scoped to the admin, so the site needs no Tailwind setup for them |
 
 To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/cms/auth/callback/github`.
+
+## Git sync (off by default)
+
+`cms.config.ts` lists `gitSync({ enabled: false, targets: [...] })` (`@monti-cms/git-sync`), which syncs the published posts and memos two ways with files in a GitHub repo. It is switched off, so the example needs no token and no repo, and its admin has no "Git sync" screen. To try it:
+
+1. In `cms.config.ts`, set `enabled: true` and put your own `repo` (and `folder`, `branch`, `mode`) in `targets`. The default file path is `{collection}/{slug}.{locale}.{ext}` under the folder, for example `content/post/hello.ko.mdx`.
+2. Run `pnpm db:migrate`, make sure `CMS_SECRET` is set (the token is saved encrypted with it), and start the app.
+3. Open `/studio/git-sync`, Settings tab: save a GitHub token (a fine-grained token with read and write access to Contents and Pull requests on that repo). To receive pushes, add a webhook in the repo (Settings, Webhooks) with the payload URL shown there, content type `application/json`, the secret you saved, and the push event. The site must be reachable from GitHub for that (a tunnel works for local development).
+4. Run `pnpm exec monti git-sync:push --all` once to write every published entry to the repo. From then on a publish commits its file, and a change pushed to the repo (or "Pull now", or `pnpm exec monti git-sync:pull`) comes back to the site.
+
+The package README has the file format, the conflict screen and the pull request mode.
 
 ## What differs from the maintainer's blog
 
