@@ -443,6 +443,8 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core` | `cms.config.ts` | `defineConfig`(`schema`와 함께)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, `SchemaFile` 타입 |
 | `@monti-cms/core/schema.json` | 에디터, `$schema` | `monti.schema.json`의 JSON Schema("스키마 파일") |
 | `@monti-cms/core/schema-types` | 개발 도구(`withCms`) | `generateSchemaTypes`, `watchSchemaTypes`: 스키마 파일에서 `monti-env.d.ts`를 쓴다 |
+| `@monti-cms/core/schema-change` | 설정 화면, 명령줄 | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange`("스키마 바꾸기") |
+| `@monti-cms/core/schema-edit` | 설정 화면(서버 쪽) | `schemaEditAccess`(누가 스키마 파일을 쓸 수 있나), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `formatSchemaText`("관리자에서 스키마 편집하기") |
 | `@monti-cms/core/server` | `cms.server.ts` | `createCms`·`defineServerConfig`·`postgres`, 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`·`s3Storage`(S3 API 미디어 저장소, AWS SDK 선택 의존성) |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
@@ -1084,6 +1086,35 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `applyTransforms`, `checkTransforms` | 순수한 조각. 글 하나의 메타데이터를 변환에 통과시키는 것, 변환을 스키마에 견주어 확인하는 것 |
 
 저장소 쪽은 `SchemaChangeStore` 포트(`readSchemaState`, `appliedSchemaTransforms`, `scanBodies`, `applySchemaChange`)이고 `ContentStore`의 일부다.
+
+### 관리자에서 스키마 편집하기 (개발 서버 전용)
+
+관리자에는 `monti.schema.json`을 편집하는 **스키마** 화면(`<관리자 경로>/schema`, 사이드바 "관리" 아래)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
+
+**누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고 쓸 수 있을 때만이다. 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/cms/v1/schema`와 `POST /api/cms/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/cms/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
+
+**경로** (`/api/cms/v1/schema`, `cms.handle()`이 처리한다):
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `GET` | 파일의 내용과 `hash`, 쓸 수 있는지(`access`), 파일이 맞지 않을 때의 `issues`(JSON 경로 포함), 적용된 버전, 설정이 코드로 더한 컬렉션, 본문 목록에 쓸 수 있는 블록과 서식 이름 |
+| `POST /preview` | 본문 `{ schema, transforms?, renames? }`. 편집을 점검하고 아무것도 쓰지 않는다. `valid`와 `issues`(JSON 경로와 메시지), 변경마다의 `impacts`(영향받는 글 수, id와 제목 표본, 결과), `decisions`(저장된 값을 여러 방법으로 다룰 수 있는 변경과 `suggestTransforms`의 선택지, 적용 중인 선택), 기록될 `transforms`와 그 `problems`, `nextVersion` |
+| `PUT` | 본문 `{ schema, transforms?, renames?, baseHash }`. 편집을 저장한다(아래). `baseHash` 뒤로 파일이 바뀌었으면 `409 schema_conflict`, `issues`와 함께 `400 invalid_schema`, `422 invalid_transforms`, `500 schema_apply_failed`(파일은 썼고 데이터베이스는 바뀌지 않았다) |
+
+`transforms`는 작성자의 선택이고 id가 없다(서버가 `v<버전>-<op>-<컬렉션>-<필드>`로 이름 붙인다). 빼면 서버가 결정마다 고른다. 화면이 `renames`로 알려 준 이름 바꾸기(작성자가 이름을 바꾼 필드나 선택지)는 이름 바꾸기, 매핑이나 삭제는 그 값을 가진 **저장된 글이 없을 때만**(값을 지우게 되는 삭제는 작성자 대신 고르지 않는다), 기본값은 값이 있을 때만이다. 선택이 없으면 값은 전처럼 고아로 남는다.
+
+**저장이 하는 일, 순서대로** (처음 실패에서 멈춘다):
+
+1. 편집한 내용에 파일 형식과 `defineConfig`의 규칙을, 변환에는 그 스키마와의 맞음을 확인한다. 편집을 시작한 뒤 디스크의 파일이 바뀌었으면 저장을 거절한다.
+2. 변환을 개발 데이터베이스에서 시험 실행한다. 다시 쓸 수 없는 글이 있으면 파일을 건드리기 전에 저장이 멈춘다.
+3. 고른 변환을 `migrations`에 붙이고 `schemaVersion`을 올려 `monti.schema.json`을 쓴다. 바뀌지 않은 곳은 옛 텍스트를 그대로 두고(손으로 맞춘 배열, 띄어쓰기, 키 순서, 마지막 줄바꿈) 새 부분은 파일 자신의 들여쓰기로 쓰므로, 변경은 작은 diff가 된다(`formatSchemaText`).
+4. 생성된 타입(`monti-env.d.ts`)을 `monti schema:types`처럼 쓴다.
+5. 개발 데이터베이스에 `applySchemaChange`를 돌린다(표가 없으면 먼저 만든다). 스키마를 적용된 것으로 기록하는 것도 이때다.
+6. 돌고 있는 인스턴스를 다시 읽는다(`cms.reloadSchema()`). 그다음 화면이 관리자 페이지를 다시 불러온다.
+
+**돌고 있는 인스턴스가 스키마를 받는 방법.** `defineConfig({ schema })`로 만든 인스턴스는 다른 스키마로 설정을 다시 만드는 방법과 스키마 파일의 경로를 기억한다(`cms.schemaFile()`. 작업 폴더의 `monti.schema.json` 또는 `src/monti.schema.json`을 찾거나, `createCms`에 `schemaFile`로 준다). 개발 모드에서는 설정 화면이 저장했을 때, 그리고 파일이 디스크에서 바뀐 것을 스스로 알아챘을 때(손으로 고쳤거나 다른 프로세스가 저장한 경우. 250ms에 한 번 넘게 보지 않는다) 사이트, 저장소, 서비스, 읽기 API, 핸들러를 **그 자리에서** 바꾼다(같은 `cms` 객체이고 데이터베이스 연결은 공유한다). 읽거나 확인하지 못하는 파일은 한 번 알리고, 인스턴스는 마지막으로 좋았던 스키마를 쓴다. 그래서 `next dev`를 다시 켜지 않아도 관리자가 저장한 변경을 보여 준다. 타입은 `withCms`의 감시자와 저장 자체가 맞춰 준다. 운영에서 `cms.reloadSchema()`는 아무것도 하지 않는다. 운영 서버는 빌드할 때의 스키마로 돈다. `cms.forSchema(schema)`는 어떤 스키마에 대한 다른 인스턴스를 설치하지 않고 만든다. 설정 화면이 편집을 점검하는 데 쓴다.
+
+화면은 컬렉션(이름표, 아이콘, 종류, 공개 주소, 본문과 허용 블록·서식·제목 단계), 모든 종류의 필드와 그 옵션(추가, 삭제, 이름 바꾸기, 순서 바꾸기, 필수와 언어, 선택지, 조건부 분기), 배치 묶음, 목록 열, 언어와 시간대를 편집한다. 일반 데이터지만 거의 바뀌지 않는 것(`site`, `admin`, `seed`, 기록된 `migrations`)은 편집하지 않고 보여 주기만 하며, 파일에서 고친다. 코드(`cms.config.ts`)에 적은 컬렉션은 파일에 없으므로 화면이 편집할 수 없다고 알려 준다.
 
 ## 설정
 

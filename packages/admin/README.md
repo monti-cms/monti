@@ -125,6 +125,17 @@ label (e.g. "Choose a post"). An entry of an item collection (`kind: "item"`) op
 collections, such as media usage, open that entry's cell with `<admin path>?collection=<collection>&open=<ID>`, and opening `<admin path>/entries/<ID>/edit` also
 redirects there. Saved list column names that are no longer columns are dropped (old names are not guessed and remapped).
 
+## Schema screen
+
+`<admin path>/schema` (sidebar: Manage > Schema) edits `monti.schema.json` on the development server and shows it read-only everywhere else. It is the screen of the `GET/PUT /api/cms/v1/schema` and `POST /api/cms/v1/schema/preview` routes of the core (see "Editing the schema in the admin" in the `@monti-cms/core` README for who may write, the order of a save and how the running instance reloads).
+
+- **Collections**: label, icon, kind, public address, body, and the allowed blocks, marks and heading levels (a switch per list: off allows everything, on shows a checkbox per name the site knows). Fields of every kind open in place: name, kind, label, help text, required, languages, the options of the kind (text length and rows, a slug's source, a relation's target, media kind, a back link's relation, a view's name), the options of a select with their labels, default and order, and the dependent fields of each choice of a conditional field. Fields move up and down and can be removed; a field renamed here keeps the layout, list columns and slug source that name it. Layout groups (title, tab, collapsed, fields in order) and list columns are edited as ordered lists.
+- **Locales**: the content locales (a saved locale's code is a stored value, so only new locales get a code), the default locale and the time zone.
+- **File**: the parts of the file the screen does not edit (site, admin and seed settings, and the recorded `migrations`).
+- **Review changes** opens a dialog before anything is written. It lists every change with the entries it touches and a sample of them as links to the entries, the problems of the edit with their JSON path, and, for each change that has more than one way to treat the stored values (a removed or renamed field, a removed option, a field that became required), the choices: keep the values, move them to the renamed field, delete them, change the removed option to another, fill empty entries. The default is the server's (a rename the writer made is offered as a rename; a delete is never picked when entries hold the value). **Save and apply** then writes the file, the types and the dev database, and reloads the page so the sidebar, forms and lists are drawn from the new schema.
+
+A production server (or one whose schema file is not writable) answers 403 to the write routes, so the screen only shows the schema and says why it cannot be edited. The screen is usable at about 750 px wide: the collection list becomes a row above the editor, and forms use one column. Its text is in the `cms-admin.schema` message dictionary (`en`, `ko`) and can be overridden like any other.
+
 ## Block edit screens
 
 For a block added by the config's `blocks` or a block extension plugin (`editor.view: "node"`), the admin UI builds the editor node (`cms` + Pascal-case
