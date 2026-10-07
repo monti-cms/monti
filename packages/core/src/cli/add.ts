@@ -122,11 +122,23 @@ export const rewriteRegistryImports = (source: string, installAlias: string): st
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]sx?)$/;
 
-/** Where a file goes: its `target` (relative to the app folder, `~/` allowed), else under the install folder in the components alias. */
+/**
+ * Fills the placeholders of a `target`. `{app}` is the folder of the Next App Router: `src/app` when the app has one (or has `src/` and no `app/`), else `app`.
+ * Any other `{name}` is an error, so a typo does not create a folder called `{name}`.
+ */
+export function resolveTargetPlaceholders(cwd: string, target: string): string {
+	return target.replace(/\{([^{}/]*)\}/g, (_, name: string) => {
+		if (name !== "app") throw new Error(`Unknown placeholder {${name}} in the target "${target}". Known: {app}.`);
+		if (existsSync(path.join(cwd, "src/app"))) return "src/app";
+		return existsSync(path.join(cwd, "src")) && !existsSync(path.join(cwd, "app")) ? "src/app" : "app";
+	});
+}
+
+/** Where a file goes: its `target` (relative to the app folder, `~/` and `{app}` allowed), else under the install folder in the components alias. */
 function destinationOf(cwd: string, componentsDir: string, item: RegistryItem, file: RegistryFile): string {
 	let relative: string;
 	if (file.target) {
-		relative = file.target.replace(/^~\//, "");
+		relative = resolveTargetPlaceholders(cwd, file.target).replace(/^~\//, "");
 	} else {
 		const own = `items/${item.name}/`;
 		const inside = file.path.replace(/^\.\//, "");

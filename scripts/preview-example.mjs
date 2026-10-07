@@ -11,11 +11,12 @@
  * it prints the command at the end.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
+import { writeRegularFile } from "./write-regular-file.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const app = path.join(root, "examples/other-site");
@@ -69,12 +70,17 @@ const env = {
 	CMS_DEV_AUTH_BYPASS: "1",
 	AUTH_SECRET: "local-only",
 };
-writeFileSync(
+// Never write through a symlink (a linked `.env.local` would overwrite the file it points to): replace the link with a regular file.
+const replacedLink = writeRegularFile(
 	path.join(app, ".env.local"),
 	`${Object.entries(env)
 		.map(([key, value]) => `${key}=${value}`)
 		.join("\n")}\n`,
 );
+if (replacedLink)
+	console.log(
+		"examples/other-site/.env.local was a symlink: replaced it with a regular file (its target is untouched)",
+	);
 console.log("wrote examples/other-site/.env.local");
 
 // 5. Tables and content.
