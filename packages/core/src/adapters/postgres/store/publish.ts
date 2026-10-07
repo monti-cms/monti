@@ -26,6 +26,8 @@ export interface PublishOptions {
 	snapshot: PreparedSnapshot;
 	/** On re-publish, reset the publish date to now. Otherwise keep the first publish time. */
 	resetPublishedAt?: boolean;
+	/** Sets the publish date to this time (a re-publish with no change included). The import of content that was published elsewhere first uses it. */
+	publishedAt?: Date;
 	/**
 	 * Called with the notices the checks against locked rows found (a link to an entry that is not published): they never block, and the caller
 	 * returns them with the publish result.
@@ -204,7 +206,8 @@ export function createPublishing(ctx: StoreContext) {
 				.set({
 					version: locked.version + 1,
 					status: "published",
-					published_at: options.resetPublishedAt ? now : sql<Date>`coalesce(published_at, ${now})`,
+					published_at:
+						options.publishedAt ?? (options.resetPublishedAt ? now : sql<Date>`coalesce(published_at, ${now})`),
 					changed_by: currentActor(),
 					changed_at: now,
 				})
@@ -255,13 +258,13 @@ export function createPublishing(ctx: StoreContext) {
 					.executeTakeFirst();
 				assertPromotedToCurrent(id, check ? holderOf(check) : null);
 			}
-		} else if (options.resetPublishedAt) {
+		} else if (options.resetPublishedAt || options.publishedAt) {
 			await trx
 				.updateTable("entries")
 				.set({
 					version: locked.version + 1,
 					status: "published",
-					published_at: now,
+					published_at: options.publishedAt ?? now,
 					changed_by: currentActor(),
 					changed_at: now,
 				})

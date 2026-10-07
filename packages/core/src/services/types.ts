@@ -22,6 +22,7 @@ export interface StorePort<T = unknown> {
 		expectedVersion: number;
 		snapshot: PreparedSnapshot;
 		resetPublishedAt?: boolean;
+		publishedAt?: Date;
 		/** Receives the notices the checks against locked rows found (a link to an entry that is not published). They never block. */
 		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<{ version: number }>;
@@ -42,6 +43,7 @@ export interface StorePort<T = unknown> {
 		folderId?: string | null;
 		publishImmediately?: boolean;
 		resetPublishedAt?: boolean;
+		publishedAt?: Date;
 		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<T>;
 }

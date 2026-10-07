@@ -181,6 +181,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			publishImmediately?: boolean;
 			/** With `publishImmediately`: reset the publish date to now. */
 			resetPublishedAt?: boolean;
+			/** Sets the publish date (instead of now or the kept first-publish time), for content that was published before it came here. */
+			publishedAt?: Date;
 			/** With `publishImmediately`: receives the notices of the publish checks. */
 			onWarnings?: (warnings: readonly Issue[]) => void;
 		}): Promise<Entry> =>
@@ -295,6 +297,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 								expectedVersion: version,
 								snapshot: params.snapshot,
 								resetPublishedAt: params.resetPublishedAt,
+								publishedAt: params.publishedAt,
 								onWarnings: params.onWarnings,
 							})
 						: await loadEntry(trx, params.entryId);
@@ -407,6 +410,8 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			expectedVersion: number;
 			snapshot: PreparedSnapshot;
 			resetPublishedAt?: boolean;
+			/** Sets the publish date (instead of now or the kept first-publish time), for content that was published before it came here. */
+			publishedAt?: Date;
 			onWarnings?: (warnings: readonly Issue[]) => void;
 		}): Promise<Entry> =>
 			withTrx(
