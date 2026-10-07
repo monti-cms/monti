@@ -18,7 +18,7 @@ Another host (Astro, Remix, ...) would be a new adapter package, not a change to
 
 ## Install in an empty Next app
 
-This assumes a Next 16 (App Router) and React 19 app. The admin needs no Tailwind: its styles are prebuilt, so the app may use any CSS setup. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate`.
+The quick way is `npx monti init` (step 2 below): it does steps 1 and 2 for you, and asks about step 3's database. The rest of this section is what it does, for reading it or doing it by hand. This assumes a Next 16 (App Router) and React 19 app. The admin needs no Tailwind: its styles are prebuilt, so the app may use any CSS setup. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate`.
 
 ### 1. Packages
 
@@ -41,35 +41,74 @@ allowBuilds:
 
 ### 2. `monti init`
 
-Run it in the app folder (where `package.json` is). **It never overwrites existing files**; it reports them as "skipped files". It is safe to run again.
+Run it in the app folder (where `package.json` is): `npx monti init` (or `pnpm exec monti init` once `@monti-cms/core` is installed). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes explicit files, installs the packages, and ends with a plain list of what is left. **It never overwrites a file without asking**, and it is safe to run again.
+
+**What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, an existing Tailwind and typography setup, the dev port (from the `dev` script), a `.gitignore` that misses `.env.local`, and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection, and the run ends by suggesting `monti import <folder>`. An app with only a `pages/` folder is refused with a message.
+
+**The questions** (each has a flag, see below):
+
+| Question | Choices | Default |
+| --- | --- | --- |
+| Database | paste a Postgres URL, a local Postgres in Docker (writes `docker-compose.yml` on the first free port from 5432 and starts it when Docker is available), or skip | skip |
+| Admin login | GitHub. It shows the OAuth app steps with the exact callback URL (`<site URL>/api/cms/auth/callback/github`) and asks for your numeric GitHub id (optional) | |
+| Locales | language codes, the default first | `en` |
+| Image storage | S3-compatible (S3, R2, MinIO; settings come from `S3_*`), or none | none |
+| Extras | AI writing, git sync (Bareun is not offered) | none |
+| Blocks | all, or a list picked from `callout`, `collapsible`, `tabs`, `columns`, `code-explorer`, `mermaid`, `chart`, `tooltip`, `code-ref`, `color` | all |
+| Admin path | a path like `/studio` | `/studio` |
+| Blog theme | install the blog theme pages through the registry (`monti add blog-theme`) | no |
+
+**What it writes** (existing files are kept, or replaced only on a yes or `--overwrite`):
+
+| What | File |
+| --- | --- |
+| The one config: one line per feature you chose, each with a short comment, then the database, the login and storage. Nothing is hidden behind a preset: deleting a line removes the feature | `monti.config.ts` |
+| The schema file: a starter `post` collection (from your front matter if content was found), the locales, time zone, admin path, with a `$schema` link for editors | `monti.schema.json` |
+| The types of the schema file, written from it (not edited by hand) | `monti-env.d.ts` |
+| Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
+| Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
+| Config wiring (`withCms`): merged in when the file has the default shape, shown as a diff; otherwise the exact change is printed | `next.config.ts` |
+| Every variable the chosen features read, with no values | `.env.example` |
+| Only values you typed or that were generated: `MONTI_SECRET` (generated), `DATABASE_URL`, `MONTI_ADMIN_GITHUB_ID`. An existing file only gets the names it lacks | `.env.local` |
+| A local Postgres (only when you chose Docker; an existing compose file is left alone and the service is printed) | `docker-compose.yml` |
+
+For apps that use `src/`, the config files go in `src/` and the routes under `src/app/`. A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
+
+**After the files** it installs the packages the choices need with the detected package manager, starts the Docker database, waits for it and runs `monti migrate` when the database is reachable. A step that fails (no network, no Docker) does not undo the files: it is shown as failed and the command to run by hand is in the list. The summary lists what was done, then what is left as numbered steps with exact values: the GitHub OAuth app, its callback URL and the env names to put the ID and secret in, `pnpm dev`, and the `/studio` address.
+
+**Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `updated`, `skipped`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
 
 ```sh
-pnpm exec monti init                       # admin at /admin, English (en), time zone UTC
-pnpm exec monti init --admin-path /studio  # to change the admin path
-pnpm exec monti init --locale ko --time-zone Asia/Seoul  # to set the site's default language and time zone
+npx monti init                       # interactive
+npx monti init --yes                 # all defaults: no database yet, all blocks, /studio
+npx monti init --yes --json --database docker --locales ko,en --storage s3 --extras ai,git-sync --blocks callout,tabs,mermaid
+npx monti init --dry-run --yes       # show what would be written and run
 ```
 
-| What it does | File |
-| --- | --- |
-| The schema file: the site's data (a one-collection starting point, English labels), with a `$schema` link for editors | `monti.schema.json` |
-| The one config: loads the schema file, lists the plugins, the database and the login, and exports the ready CMS instance as `cms` (values come from environment variables) | `monti.config.ts` |
-| The types of the schema file, written from it (not edited by hand) | `monti-env.d.ts` |
-| Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/admin/layout.tsx`, `app/admin/[[...path]]/page.tsx` |
-| Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| Config wiring (`withCms`) | `next.config.ts` (when it has the default shape with a single `export default nextConfig;` line); created if missing |
+| Flag | Meaning | Default |
+| --- | --- | --- |
+| `--yes`, `-y` | no prompts; unanswered questions take their default | |
+| `--json` | print the result as JSON (implies `--yes`) | |
+| `--dry-run` | write and run nothing; show the plan | |
+| `--database <v>` | a `postgres://` URL, `docker`, or `skip` | `skip` |
+| `--admin-github-id <n>` | numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`) | none |
+| `--site-url <url>` | public site URL, used for the OAuth callback URL | `http://localhost:<dev port>` |
+| `--locales <list>` | language codes, the default first (`--locale <code>` is the same for one) | `en` |
+| `--time-zone <tz>` | IANA time zone | `UTC` |
+| `--storage <s3\|none>` | image storage | `none` |
+| `--extras <list>` | `ai`, `git-sync`, or `none` | `none` |
+| `--blocks <list>` | `all`, `none`, or block names | `all` |
+| `--admin-path <path>` | admin path (letters, digits, `-`, `_`; not `/` and not under `/api`) | `/studio` |
+| `--blog-theme` / `--no-blog-theme` | add the blog theme pages | no |
+| `--overwrite` | replace existing files that differ | keep them |
+| `--no-install` | do not install packages (and so do not migrate or add the theme) | |
+| `--no-migrate` | do not run `monti migrate` | |
+| `--no-docker-start` | write `docker-compose.yml` but do not start it | |
+| `--package-manager <m>` | `npm`, `pnpm`, `yarn` or `bun` | detected |
 
-A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
+**The admin path must be the same in `admin.path` (the schema file, or the site config) and in the route folder.** `monti init` keeps them together; when you change it later, change both. The admin API path (`/api/cms/v1`) does not change.
 
-For apps that use `src/app`, the config files go in `src/` and the routes under `src/app/`. Files that cannot be edited safely (a next config that does not have the default shape) are left as they are, and what to add is shown as a "to do".
-At the end it lists the packages to install, the environment variables and the GitHub callback URL.
-
-With `--admin-path`, the route folder becomes that path (`app/studio/…`) and `admin: { path: "/studio" }` is added to the schema file.
-**The admin path must be the same in `admin.path` (the schema file, or the site config) and in the route folder.** When you change it later, change both together.
-The admin API path (`/api/cms/v1`) does not change.
-
-`--locale <code>` is the site's default language (`defaultLocale`) and defaults to `en` (a lowercase language code such as `ko`). The admin UI's language and
-date and number formatting follow it, and can be chosen separately with `admin.locale` in the config. `--time-zone <zone>` is the time zone in which dates and times are entered and
-shown (an IANA name, default `UTC`). The generated config files and the command-line help and output are read by developers, so they are in English.
+**Safety.** Every write goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
 
 An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file"). `monti.config.ts` imports the JSON, so `tsconfig.json` needs `"resolveJsonModule": true` (`create-next-app` sets it; `monti init` says so when it is missing).
 
@@ -196,7 +235,7 @@ After installing, restart the dev server.
 
 To do by hand what `monti init` does: create `monti.config.ts` (`export const cms = defineConfig({ … })`), wrap `next.config.ts` in
 `withCms(nextConfig)` (`import { withCms } from "@monti-cms/nextjs/config"`; there is no alias or `tsconfig.json` `paths` entry to add, and none for tests (Vitest) either),
-add the three Next files (the admin layout and page, and the API route; each imports `cms` from `monti.config.ts`), and import the prebuilt admin stylesheet in the admin layout (`app/admin/layout.tsx`).
+add the three Next files (the admin layout and page, and the API route; each imports `cms` from `monti.config.ts`), and import the prebuilt admin stylesheet in the admin layout (`app/studio/layout.tsx`, or the layout at your admin path).
 
 ```ts
 import "@monti-cms/admin/styles.css"; // prebuilt: needs no Tailwind, typography or tw-animate in the app

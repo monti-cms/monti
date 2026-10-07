@@ -24,7 +24,7 @@ pnpm 12 stops the install unless the esbuild install script is allowed. Copy thi
 
 ## Files
 
-The shape is what `monti init --admin-path /studio` generates, plus this site's collections and extensions.
+The shape is what `monti init` generates, plus this site's collections and extensions.
 
 | File | Contents |
 | --- | --- |

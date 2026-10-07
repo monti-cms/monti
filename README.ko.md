@@ -6,6 +6,23 @@
 
 이름은 몽테뉴(Montaigne)를 줄인 것이다. 이탈리아어로 "산들"이라는 뜻이기도 하다.
 
+## 빠른 시작: 기존 Next 앱에 Monti 더하기
+
+Next.js(App Router) 앱 폴더에서 실행한다.
+
+```sh
+npx monti init
+```
+
+앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, Tailwind, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, 읽고 고칠 수 있는 파일을 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.json`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example`, `.env.local`(만든 `MONTI_SECRET`과 직접 입력한 값만)이다. 패키지를 설치하고, `next.config.ts`를 `withCms`로 감싸고(바뀐 내용을 diff로 보여 준다), DB에 닿으면 `monti migrate`를 돌린 뒤, 남은 일을 정확한 값과 함께 쉬운 말로 적어 준다.
+
+- **질문:** 데이터베이스(URL, 로컬 Docker Postgres, 나중에), GitHub 로그인, 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`), 블로그 테마 페이지 설치 여부.
+- **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓴다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
+- **안전:** 묻지 않고 파일을 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다.
+- **기존 글:** Markdown·MDX 폴더가 있으면 끝에서 `npx monti import <폴더>`를 권한다.
+
+공개 릴리스 전에는 `@monti-cms/core`를 먼저 릴리스 번들로 설치하고("설치" 참고), 나머지는 `npx monti init`이 설치한다.
+
 ## 패키지
 
 | 패키지 | 하는 일 |
