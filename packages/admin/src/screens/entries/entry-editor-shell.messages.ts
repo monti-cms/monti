@@ -1,5 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
+import { enNoun, koNoun, koObject } from "../shared/noun";
 
 /** The action the user was attempting, used in the "blocked" notice. English: "before ○○ing"; Korean: "○○하세요". */
 const PURPOSE_KO: Record<string, string> = {
@@ -39,11 +40,11 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		published: "Published.",
 		publishBlocked: "Can't publish. Fix the problems below.",
 		permanentDelete: "Delete permanently",
-		permanentDeleteAsk:
-			"Permanently delete this post? This can't be undone. Addresses that were ever public are only recorded so other posts can't reuse them.",
+		permanentDeleteAsk: (vars) =>
+			`Permanently delete this ${enNoun(vars)}? This can't be undone. Addresses that were ever public are only recorded so other entries can't reuse them.`,
 		loadingDocument: "Loading document…",
 		backToList: "Back to list",
-		newEntry: "New post",
+		newEntry: (vars) => `New ${enNoun(vars)}`,
 		title: "Title",
 		signInNewWindow: "Sign in in a new window",
 		save: "Save",
@@ -59,7 +60,7 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		duplicate: "Duplicate",
 		toggleTheme: "Toggle theme",
 		trash: "Trash",
-		trashNotice: "This post is in the trash. Restore it before editing.",
+		trashNotice: (vars) => `This ${enNoun(vars)} is in the trash. Restore it before editing.`,
 		visualUnavailable:
 			"Part of the body can't be parsed, so you can only edit in source mode. You can save, but publishing is blocked —",
 		publishProblems: "Publish check problems",
@@ -85,11 +86,11 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		published: "발행되었습니다.",
 		publishBlocked: "발행할 수 없습니다. 아래 문제를 수정하세요.",
 		permanentDelete: "영구 삭제",
-		permanentDeleteAsk:
-			"이 글을 영구 삭제할까요? 되돌릴 수 없습니다. 공개된 적 있는 주소는 다른 글이 다시 쓸 수 없도록 기록만 남습니다.",
+		permanentDeleteAsk: (vars) =>
+			`이 ${koObject(vars)} 영구 삭제할까요? 되돌릴 수 없습니다. 공개된 적 있는 주소는 다른 항목이 다시 쓸 수 없도록 기록만 남습니다.`,
 		loadingDocument: "문서를 불러오는 중…",
 		backToList: "목록으로",
-		newEntry: "새 글",
+		newEntry: (vars) => `새 ${koNoun(vars)}`,
 		title: "제목",
 		signInNewWindow: "새 창에서 로그인",
 		save: "저장",
@@ -105,7 +106,7 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		duplicate: "복제",
 		toggleTheme: "테마 전환",
 		trash: "휴지통",
-		trashNotice: "휴지통에 있는 글입니다. 복원하기 전에는 편집할 수 없습니다.",
+		trashNotice: (vars) => `휴지통에 있는 ${koNoun(vars)}입니다. 복원하기 전에는 편집할 수 없습니다.`,
 		visualUnavailable: "해석할 수 없는 본문이 있어 원문 모드로만 편집합니다. 저장은 되지만 발행은 막힙니다 —",
 		publishProblems: "발행 검증 문제",
 		sourceChanged: "원문이 바뀌었습니다",

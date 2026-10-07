@@ -51,6 +51,7 @@ import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
+import { nounVars } from "../shared/noun";
 import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -562,14 +563,17 @@ export function EntryEditorShell({
 
 	/** Only transitions that take a published post down (archive, move to trash) ask. Unarchive and restore happen right away. */
 	const confirmLifecycle = (action: ConfirmedLifecycleAction) => {
-		setConfirm({ ...lifecycleConfirm(site, action, entry, incoming.items), onConfirm: () => runLifecycle(action) });
+		setConfirm({
+			...lifecycleConfirm(site, action, entry, incoming.items, collection),
+			onConfirm: () => runLifecycle(action),
+		});
 	};
 
 	const confirmPermanentDelete = () => {
 		if (!entry) return;
 		setConfirm({
 			title: t("permanentDelete"),
-			description: t("permanentDeleteAsk"),
+			description: t("permanentDeleteAsk", nounVars(site, collection)),
 			confirmLabel: t("permanentDelete"),
 			destructive: true,
 			onConfirm: async () => {
@@ -638,7 +642,7 @@ export function EntryEditorShell({
 		);
 	}
 
-	const statusLabel = entry ? describeEntryStatus(site, entry) : t("newEntry");
+	const statusLabel = entry ? describeEntryStatus(site, entry) : t("newEntry", nounVars(site, collection));
 	const canRetry = ["failed", "local-only", "session-expired"].includes(saveStatus);
 	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
 	const titleIssue = publishIssues.find((issue) => issue.path === "title");
@@ -919,7 +923,7 @@ export function EntryEditorShell({
 						aria-label={t("trash")}
 						className="flex flex-wrap items-center gap-2 border-b bg-cms-muted px-4 py-2 text-sm"
 					>
-						<span>{t("trashNotice")}</span>
+						<span>{t("trashNotice", nounVars(site, collection))}</span>
 					</section>
 				)}
 				{!canUseVisual && sourcePanel && (

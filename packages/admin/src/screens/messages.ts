@@ -1,5 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
+import { enSelected, koSelected } from "./shared/noun";
 
 /** English: noun matching the count ("1 item" / "3 items"). */
 const items = (count: unknown) => `${count} ${Number(count) === 1 ? "item" : "items"}`;
@@ -127,7 +128,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
 		"trash.askMany": "Move the {count} selected items to the trash? They will no longer be public.",
 		"archive.title": "Archive",
 		"archive.askOne": "Archive {title}? It will no longer be public.",
-		"archive.askMany": "Archive the {count} selected posts? They will no longer be public.",
+		"archive.askMany": (vars) => `Archive the ${enSelected(vars)}? They will no longer be public.`,
 		"delete.title": "Delete permanently",
 		"delete.askOne": "Permanently delete {title}? This can't be undone.",
 		"delete.askMany":
@@ -265,7 +266,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
 		"trash.askMany": "선택한 항목 {count}개를 휴지통으로 옮길까요? 공개가 종료됩니다.",
 		"archive.title": "보관",
 		"archive.askOne": "{title}을(를) 보관할까요? 공개가 종료됩니다.",
-		"archive.askMany": "선택한 글 {count}개를 보관할까요? 공개가 종료됩니다.",
+		"archive.askMany": (vars) => `${koSelected(vars)}를 보관할까요? 공개가 종료됩니다.`,
 		"delete.title": "영구 삭제",
 		"delete.askOne": "{title}을(를) 영구 삭제할까요? 되돌릴 수 없습니다.",
 		"delete.askMany":
