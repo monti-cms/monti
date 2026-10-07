@@ -25,6 +25,23 @@ describe("parseSchemaFile", () => {
 		expect(parsed.collections).not.toBe(blogSchema.collections);
 	});
 
+	it("accepts the object form of `body` with allowed blocks, marks and heading levels", () => {
+		const schema = cloneSchema();
+		schema.collections.post.body = { blocks: ["callout", "table"], marks: ["bold"], headings: [2, 3] };
+		expect(parseSchemaFile(schema).collections.post?.body).toEqual(schema.collections.post.body);
+	});
+
+	it("names the JSON path of a problem in the allowed list of a body", () => {
+		const keys = problems((schema) => {
+			schema.collections.post.body = { block: ["callout"] };
+		});
+		expect(keys).toEqual([{ path: "collections.post.body.block", message: "is not part of the schema format" }]);
+		const level = problems((schema) => {
+			schema.collections.post.body = { headings: [2, 7] };
+		});
+		expect(level[0]?.path).toMatch(/^collections\.post\.body/);
+	});
+
 	it("names the JSON path of a field with an unknown kind", () => {
 		const [issue] = problems((schema) => {
 			schema.collections.post.fields.title.kind = "date";

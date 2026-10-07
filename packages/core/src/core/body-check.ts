@@ -5,6 +5,7 @@ import type { StoredDocument } from "../doc/stored-document";
 import { MAX_TABLE_COLUMNS } from "../doc/table-layout";
 import type { CmsImageSource, CmsJsonValue, CmsMark, CmsNode } from "../doc/types";
 import type { Translator } from "../i18n";
+import { type BodyAllowed, type DisallowedItem, disallowedInDocument } from "../schema/allowed";
 import type { Site } from "../site";
 import { CodeRefCollector } from "./code-refs";
 import { isUuid } from "./ids";
@@ -153,9 +154,22 @@ const labelOf = (node: CmsNode) => (typeof node.attrs?.label === "string" ? node
 const markKey = (mark: CmsMark) => `${mark.type}|${JSON.stringify(mark.attrs ?? null)}`;
 
 /**
- * Checks a stored document. Block attribute rules and the like only block publishing; a draft save is never blocked by them.
+ * The notice for a block or mark the body's allowed list does not list (`disallowed_block`, `disallowed_mark`). It names the block or mark, the heading
+ * level for a heading, and the block it is in.
  */
-export function checkDocument(site: Site, doc: StoredDocument): DocumentCheck {
+export const disallowedIssue = (item: DisallowedItem): Issue => ({
+	code: item.kind === "block" ? "disallowed_block" : "disallowed_mark",
+	message: item.level === undefined ? item.name : `${item.name} ${item.level}`,
+	params: item.level === undefined ? { name: item.name } : { name: item.name, level: item.level },
+	path: "body",
+	position: position(item.blockId),
+});
+
+/**
+ * Checks a stored document. Block attribute rules and the like only block publishing; a draft save is never blocked by them.
+ * `allowed` is the allowed list of the collection's body: a block or mark it does not list is reported as a warning (the content is kept as it is).
+ */
+export function checkDocument(site: Site, doc: StoredDocument, allowed?: BodyAllowed): DocumentCheck {
 	const tCore = site.createTranslator(coreMessages);
 	const { BLOCK_BY_NAME } = site;
 	/** The block definition a node or mark type is stored as (a table row and a cell are stored as `tableRow` and `tableCell`). */
@@ -371,6 +385,9 @@ export function checkDocument(site: Site, doc: StoredDocument): DocumentCheck {
 		for (const child of children) visit(child, blockId);
 	};
 	for (const node of doc.content) visit(node, undefined);
+
+	// Blocks and marks the body does not allow stay in the draft; they are reported, never blocking.
+	for (const item of disallowedInDocument(site, allowed, doc)) warnings.push(disallowedIssue(item));
 
 	// Footnote problems never block publishing, but they leave a dangling marker or a stray note on the public page.
 	const referenced = new Set(footnoteReferences.map((reference) => footnoteIdentifier(reference.label)));

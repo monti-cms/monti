@@ -4,9 +4,10 @@ import { canonicalDocument, readStoredDocument, type StoredDocument } from "../d
 import type { CmsImageSource } from "../doc/types";
 import { importText } from "../format/convert";
 import { type FormatRegistry, NO_FORMATS } from "../format/registry";
+import { newlyDisallowed } from "../schema/allowed";
 import { fieldValueError, RECORD_TRANSLATIONS_KEY } from "../schema/derive";
 import type { Site } from "../site";
-import { checkDocument, isEmptyDocument } from "./body-check";
+import { checkDocument, disallowedIssue, isEmptyDocument } from "./body-check";
 import { computeContentHash, sortKeys } from "./content-hash";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "./limits";
 import { normalizeSlugInput } from "./slug";
@@ -274,6 +275,11 @@ export async function prepareSnapshot(
 		/** The stored document this body replaces (the current draft). Its block ids carry over to the blocks that pair with them. */
 		previousDoc?: StoredDocument | null;
 		/**
+		 * The body that decides which blocks and marks the write adds: a type the body's allowed list does not allow is kept if this body holds it, and rejected
+		 * if not (`disallowed_content`). Default: `previousDoc`. A translation starts from its source, so it passes the source's body.
+		 */
+		allowedBaseline?: StoredDocument | null;
+		/**
 		 * The metadata stored for this entry (the current draft). A key the schema no longer has is kept only if it is stored here
 		 * (a schema change orphaned it); a new unknown key is rejected. A new entry has none.
 		 */
@@ -314,7 +320,10 @@ export async function prepareSnapshot(
 	// The body is a document: given as one, or read from text (a text that could not be read is one `unparsed` node).
 	const body = await readInputBody(site, input, options?.previousDoc, options?.import);
 	const { doc } = body;
-	const check = checkDocument(site, doc);
+	const allowed = site.schemaOf(rawCollection).allowed;
+	const added = newlyDisallowed(site, allowed, doc, options?.allowedBaseline ?? options?.previousDoc);
+	if (added.length > 0) throw new ServiceError("disallowed_content", added.map(disallowedIssue));
+	const check = checkDocument(site, doc, allowed);
 	const warnings: Issue[] = [
 		...metadataWarnings(site, rawCollection, metadata),
 		...(options?.imported?.warnings ?? []),

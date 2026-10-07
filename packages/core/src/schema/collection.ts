@@ -1,3 +1,4 @@
+import type { BodyAllowed } from "./allowed";
 import type { BacklinkField, Field, SlugField, ValueField, ValueOf } from "./fields";
 import { valueFieldsOf } from "./walk";
 
@@ -73,6 +74,11 @@ export interface CollectionSchema<
 	/** Whether it has a body (MDX). If absent, only `document` collections have a body. */
 	readonly body: boolean;
 	/**
+	 * The blocks, marks and heading levels the body allows (the object form of `body`: `body: { blocks: [...], marks: [...], headings: [...] }`).
+	 * Absent: everything is allowed. A body that already holds something not listed keeps it (see `schema/allowed.ts`).
+	 */
+	readonly allowed?: BodyAllowed;
+	/**
 	 * Field name → definition. A `title` text field (`fields.text`) is required (`defineConfig` checks it). The list, search,
 	 * relation picker, body links and the edit screen's title box use this field.
 	 */
@@ -108,10 +114,11 @@ export interface CollectionSchema<
 /** Value `defineCollection` accepts (without the kind). Types check that names in layout and list columns are real fields. */
 type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<
 	CollectionSchema<Fields>,
-	"kind" | "body" | "layout" | "list" | "path"
+	"kind" | "body" | "allowed" | "layout" | "list" | "path"
 > & {
 	path?: `/${string}:slug${string}`;
-	body?: boolean;
+	/** `true`/`false`, or the object form that limits the blocks, marks and heading levels the body allows. */
+	body?: boolean | BodyAllowed;
 	layout?: readonly LayoutGroup<Extract<keyof Fields, string>>[];
 	list?: { columns: readonly (Extract<keyof Fields, string> | SystemListColumn)[] };
 };
@@ -133,9 +140,10 @@ export function defineCollection(
  * The retired `workflow` option (`"publish"` / `"record"`) is rejected with the `kind` to use instead.
  */
 export function normalizeCollection(
-	schema: Omit<CollectionSchema, "kind" | "body"> & {
+	schema: Omit<CollectionSchema, "kind" | "body" | "allowed"> & {
 		readonly kind?: CollectionKind;
-		readonly body?: boolean;
+		readonly body?: boolean | BodyAllowed;
+		readonly allowed?: BodyAllowed;
 	},
 ): CollectionSchema {
 	const { kind } = schema;
@@ -149,7 +157,15 @@ export function normalizeCollection(
 	if (kind !== "document" && kind !== "item") {
 		throw new Error(`cms.config: collection "${schema.label}" needs kind "document" or "item"`);
 	}
-	return { ...schema, kind, body: schema.body ?? kind === "document" };
+	const { body, ...rest } = schema;
+	if (body !== null && typeof body === "object") {
+		if (Array.isArray(body)) {
+			throw new Error(`cms.config: collection "${schema.label}" needs \`body\` to be true, false or an object`);
+		}
+		// The object form means the collection has a body, and limits it.
+		return { ...rest, kind, body: true, allowed: body };
+	}
+	return { ...rest, kind, body: body ?? kind === "document" };
 }
 
 type Stored<Fields> = {
