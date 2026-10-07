@@ -13,13 +13,13 @@
 		"./admin": "./src/admin/index.ts",
 		"./server": "./src/server.ts",
 		"./testing": "./src/testing.ts",
-		"./styles.css": "./styles.css"
+		"./styles.css": "./dist/styles.css"
 	},
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run",
 		"typecheck": "tsc --noEmit -p .",
-		"build": "node ../../scripts/build-package.mjs __test__/fixtures/samples"
+		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"dependencies": {
 		"@types/mdast": "^4.0.4",
@@ -71,7 +71,6 @@
 	},
 	"files": [
 		"dist",
-		"styles.css",
 		"README.md"
 	],
 	"publishConfig": {
@@ -100,7 +99,7 @@
 				"types": "./dist/testing.d.ts",
 				"default": "./dist/testing.js"
 			},
-			"./styles.css": "./styles.css"
+			"./styles.css": "./dist/styles.css"
 		}
 	}
 }

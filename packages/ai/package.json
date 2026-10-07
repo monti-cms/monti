@@ -13,14 +13,14 @@
 			"default": "./src/server.ts"
 		},
 		"./admin": "./src/admin/index.ts",
-		"./styles.css": "./styles.css"
+		"./styles.css": "./dist/styles.css"
 	},
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
-		"build": "node ../../scripts/build-package.mjs"
+		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "^3.0.61",
@@ -67,8 +67,7 @@
 	},
 	"files": [
 		"dist",
-		"README.md",
-		"styles.css"
+		"README.md"
 	],
 	"publishConfig": {
 		"exports": {
@@ -85,7 +84,7 @@
 				"types": "./dist/admin/index.d.ts",
 				"default": "./dist/admin/index.js"
 			},
-			"./styles.css": "./styles.css"
+			"./styles.css": "./dist/styles.css"
 		}
 	}
 }

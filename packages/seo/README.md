@@ -30,8 +30,9 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/seo/styles.css"; /* after the admin package styles (finds classes in the published bundle) */
+```tsx
+// the admin layout, after "@monti-cms/admin/styles.css" (prebuilt, scoped to the admin; no Tailwind needed in the app)
+import "@monti-cms/seo/styles.css";
 ```
 
 ## Field set `seoFields(options?)`

@@ -40,9 +40,10 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/admin/styles.css";
-@import "@monti-cms/mdx/styles.css"; /* after the admin package styles */
+```tsx
+// the admin layout (prebuilt styles, no Tailwind needed in the app)
+import "@monti-cms/admin/styles.css";
+import "@monti-cms/mdx/styles.css"; // after the admin styles
 ```
 
 | Option | Meaning |
@@ -61,7 +62,7 @@ A site without `mdx()` accepts documents (`doc`) only: a text write fails with `
 | `@monti-cms/mdx/admin` | the admin (loaded by the plugin) | `MdxSourcePanel`, `EditorToggle`, `mdxBrowserFormat`, `createMdxBrowserFormat`, and the admin provider that registers them |
 | `@monti-cms/mdx/server` | the plugin, migrations | `createServerMdxFormat`, `legacyBodies`: what the old store migrations use ("Old databases") |
 | `@monti-cms/mdx/testing` | tests | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)` and re-exports of the pipeline functions |
-| `@monti-cms/mdx/styles.css` | the app CSS | the source panel styles |
+| `@monti-cms/mdx/styles.css` | the admin layout | the source panel styles (prebuilt, scoped to the admin) |
 
 ## The `mdx` format
 
@@ -148,7 +149,7 @@ MDX used to be built into core, configured with `defineConfig({ mdx: { syntax } 
 
 1. Install `@monti-cms/mdx`.
 2. Add `mdx()` to `plugins` and **move** `mdx.syntax` into it: `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]` (for the owner-style blog, `directiveSyntax()` with write mode on; keep the same options).
-3. Add `@import "@monti-cms/mdx/styles.css";` to the app CSS, after the admin styles.
+3. Import `@monti-cms/mdx/styles.css` in the admin layout, after the admin styles.
 4. Replace `renderMdx` imports from `@monti-cms/core/render` with `@monti-cms/mdx/render` (or render documents with `CmsContent`), and `cms.read.imageResolver(...)` with `entry.refs`.
 5. Replace imports of `@monti-cms/core/mdx`, `@monti-cms/core/syntax` and `@monti-cms/core/format/mdx`: the syntax extension interface comes from `@monti-cms/mdx`, the parser and writer from `@monti-cms/mdx/format`.
 6. Block extensions you wrote: drop the default export of your render modules and keep `documentComponents`.

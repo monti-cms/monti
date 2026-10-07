@@ -9,13 +9,13 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./admin": "./src/admin.ts",
-		"./styles.css": "./styles.css"
+		"./styles.css": "./dist/styles.css"
 	},
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
-		"build": "node ../../scripts/build-package.mjs"
+		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"peerDependencies": {
 		"@monti-cms/core": "workspace:^",
@@ -55,7 +55,6 @@
 	},
 	"files": [
 		"dist",
-		"styles.css",
 		"README.md"
 	],
 	"publishConfig": {
@@ -68,7 +67,7 @@
 				"types": "./dist/admin.d.ts",
 				"default": "./dist/admin.js"
 			},
-			"./styles.css": "./styles.css"
+			"./styles.css": "./dist/styles.css"
 		}
 	}
 }

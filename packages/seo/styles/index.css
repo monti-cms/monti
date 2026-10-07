@@ -1,0 +1,13 @@
+/*
+ * @monti-cms/seo admin styles: the source of the prebuilt `dist/styles.css` (built by `scripts/build-styles.mjs`), for the SEO panel and its fields.
+ * The host imports the built file after `@monti-cms/admin/styles.css` and needs no Tailwind. Colors and tokens come from the admin package styles.
+ */
+@layer theme, base, components, utilities;
+
+@import "../../admin/styles/theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/* The classes of this package's sources. */
+@source "../src";
+@source not "../src/**/__test__";
+@source not "../src/test";

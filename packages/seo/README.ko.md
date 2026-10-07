@@ -30,8 +30,9 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/seo/styles.css"; /* 관리자 패키지 스타일 다음(배포 묶음에서 클래스를 찾는다) */
+```tsx
+// 관리자 레이아웃에서 "@monti-cms/admin/styles.css" 다음(미리 만든 것, 관리자 안으로 한정된다. 앱에 Tailwind가 필요 없다)
+import "@monti-cms/seo/styles.css";
 ```
 
 ## 필드 묶음 `seoFields(options?)`
