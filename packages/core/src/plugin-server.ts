@@ -5,8 +5,18 @@
  */
 
 export { AuthError } from "./adapters/auth/auth-gateway";
-export type { Cms } from "./cms";
-export type { AfterCommit, ContentChange, ContentChangeKind, ContentEvent } from "./core/store";
+export type { BulkService, Cms, ContentService } from "./cms";
+export type {
+	AfterCommit,
+	ContentChange,
+	ContentChangeKind,
+	ContentEvent,
+	ContentStore,
+	Entry,
+	EntryBody,
+	EntryStatus,
+	PublishedEntryRecord,
+} from "./core/store";
 export { CmsError } from "./core/store";
 export { type Issue, ServiceError } from "./core/types";
 export { type ExportBodyParams, exportBodyText } from "./format/export-body";

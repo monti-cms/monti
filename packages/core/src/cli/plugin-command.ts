@@ -67,8 +67,9 @@ export async function runPluginCommand(run: PluginCommandRun): Promise<number> {
 			);
 			return 0;
 		}
+		const given: Readonly<Record<string, unknown>> = values;
 		const args = Object.fromEntries(
-			Object.keys(command.options ?? {}).map((name) => [name, values[name] as string | boolean | undefined]),
+			Object.keys(command.options ?? {}).map((name) => [name, given[name] as string | boolean | undefined]),
 		);
 		const code = await command.run({ cms, args, log, error });
 		return typeof code === "number" ? code : 0;

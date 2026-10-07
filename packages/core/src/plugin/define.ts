@@ -141,7 +141,8 @@ export interface PluginCommand {
 	/** The options it accepts, besides the ones every app command takes (`--env-file`, `--no-env-file`, `--server`). */
 	readonly options?: Readonly<Record<string, PluginCommandOption>>;
 	/** Runs the command. Returns the exit code (0 or nothing: success). Throwing prints the message and exits with 1. */
-	readonly run: (context: PluginCommandContext) => Promise<number | undefined | void>;
+	// biome-ignore lint/suspicious/noConfusingVoidType: an async function that returns nothing is `Promise<void>`, and a command may be written that way
+	readonly run: (context: PluginCommandContext) => Promise<number | void>;
 }
 
 /**
