@@ -9,9 +9,16 @@ import type { CmsPlugin } from "../plugin/define";
 import { type CollectionSchema, normalizeCollection, validateListColumns } from "../schema/collection";
 import { RESERVED_METADATA_KEYS, SUMMARY_ROLE } from "../schema/fields";
 import { valueFieldsOf } from "../schema/walk";
-
-/** Shape of a locale code (the language and region/script parts of BCP 47). */
-const LOCALE_CODE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
+import { resolveSchemaConfig } from "../schema-file/merge";
+import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types";
+import {
+	DEFAULT_ADMIN_PATH,
+	isAdminPath,
+	isHomeHref,
+	LOCALE_CODE,
+	LOCALE_PREFIX_MODES,
+	type LocalePrefixMode,
+} from "./rules";
 
 /**
  * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineConfig`, and exports the result as the default export.
@@ -65,9 +72,7 @@ export interface SiteConfig {
 	readonly home?: string;
 }
 
-/** How public URLs get a locale prefix (`site.localePrefix`). */
-export type LocalePrefixMode = "except-default" | "always" | "never";
-export const LOCALE_PREFIX_MODES: readonly LocalePrefixMode[] = ["except-default", "always", "never"];
+export { LOCALE_PREFIX_MODES, type LocalePrefixMode };
 
 export interface AdminConfig {
 	/**
@@ -233,22 +238,7 @@ function validateFieldMeanings(collection: string, schema: CollectionSchema): vo
 	}
 }
 
-/** Default admin UI path (when `admin.path` is unset). */
-export const DEFAULT_ADMIN_PATH = "/admin";
-
-/** Admin path shape: a path of one or more segments starting with `/` (no trailing `/`), and not under `/api`. */
-export const isAdminPath = (path: string): boolean =>
-	/^(\/[A-Za-z0-9._~-]+)+$/.test(path) && !/^\/api(\/|$)/.test(path);
-
-const isHomeHref = (href: string): boolean => {
-	if (href.startsWith("/")) return !href.startsWith("//");
-	try {
-		const url = new URL(href);
-		return url.protocol === "http:" || url.protocol === "https:";
-	} catch {
-		return false;
-	}
-};
+export { DEFAULT_ADMIN_PATH, isAdminPath };
 
 /** Checks that the config is consistent. Reports an error right away when the app starts if it is not. */
 function validate(
@@ -413,17 +403,63 @@ function validate(
 	}
 }
 
-/** Defines the site config. Preserves collection and locale names as types and reports inconsistent config right away. */
+/**
+ * The config of a site that keeps its plain data in a schema file (`monti.schema.json`): the same options as {@link CmsConfig}, plus `schema`, and without the
+ * collections' and locales' own place (they come from the file; `collections` here adds collections written in code).
+ */
+export interface SchemaCmsConfig<
+	Schema extends SchemaInput = SchemaInput,
+	Collections extends CollectionsConfig = CollectionsConfig,
+	Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[],
+	Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
+> extends Omit<CmsConfig<Collections, string, Plugins, Blocks>, "collections" | "locales" | "defaultLocale"> {
+	/**
+	 * The schema file: its parsed content (`import schema from "./monti.schema.json"`), or its path (read at run time, relative to the working directory).
+	 * Collections, fields, layouts, locales, the default locale, the time zone, site and admin settings and seed templates come from it. The code config adds
+	 * what needs code (`plugins`, `blocks`, `codeBlock`, `media`) and may override the environment-specific `site`, `admin` and `timeZone` values.
+	 */
+	readonly schema: Schema | string;
+	/** Collections written in code, next to the file's. A name the file also has is an error. */
+	readonly collections?: Collections;
+	/** Set in the schema file only. */
+	readonly locales?: never;
+	/** Set in the schema file only. */
+	readonly defaultLocale?: never;
+}
+
+/**
+ * Defines the site config. Preserves collection and locale names as types and reports inconsistent config right away.
+ *
+ * With a `schema` (the plain-data part of the config in `monti.schema.json`), the config is the file merged with what is written here; see {@link SchemaCmsConfig}.
+ * The collection and locale names and the metadata types come from the generated types of the file (`monti schema:types`), or from the file's content when
+ * it is written in code with literal types.
+ */
+export function defineConfig<
+	const Schema extends SchemaInput,
+	const Collections extends CollectionsConfig = Record<never, never>,
+	const Plugins extends readonly CmsPlugin[] = readonly [],
+	const Blocks extends readonly BlockDefinition[] = readonly [],
+>(
+	config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks>,
+): CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>;
 export function defineConfig<
 	const Collections extends CollectionsConfig,
 	const Locale extends string,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
->(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks> {
+>(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks>;
+export function defineConfig(
+	input:
+		| CmsConfig<CollectionsConfig, string, readonly CmsPlugin[], readonly BlockDefinition[]>
+		| (SchemaCmsConfig & { readonly schema: unknown }),
+): CmsConfig {
+	const config = (
+		"schema" in input && input.schema !== undefined ? resolveSchemaConfig(input as { readonly schema: unknown }) : input
+	) as CmsConfig;
 	// Also accepts definitions written without `defineCollection`. The core only reads the normalized `kind`.
 	const collections = Object.fromEntries(
 		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema)]),
-	) as unknown as Collections;
+	);
 	const normalized = { ...config, collections };
 	validate(normalized);
 	return normalized;

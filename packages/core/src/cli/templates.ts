@@ -1,4 +1,5 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define";
+import { SCHEMA_LINK } from "./schema-types";
 
 /** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
 
@@ -22,47 +23,58 @@ function languageName(code: string): string {
 	}
 }
 
-export function configTemplate(adminPath: string, options: ConfigTemplateOptions = {}): string {
+/**
+ * The schema file `monti init` creates (`monti.schema.json`): one `post` collection, the default locale and time zone, and the admin path when it is not the default.
+ * It holds the plain data of the site; `cms.config.ts` loads it. `link` is the path of the JSON Schema from the schema file (editors use it for autocomplete).
+ */
+export function schemaTemplate(adminPath: string, options: ConfigTemplateOptions = {}, link = SCHEMA_LINK): string {
 	const locale = options.locale ?? DEFAULT_INIT_LOCALE;
 	const timeZone = options.timeZone ?? DEFAULT_INIT_TIME_ZONE;
-	const admin =
-		adminPath === DEFAULT_ADMIN_PATH
-			? ""
-			: `\t// Admin screen path. Must match the admin route folder ((admin)${adminPath}/).\n\tadmin: { path: "${adminPath}" },\n`;
-	return `import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+	const schema = {
+		$schema: link,
+		collections: {
+			post: {
+				label: "Post",
+				// body, draft and publish. Use "item" for small entries like tags
+				kind: "document",
+				// public URL shape (a sample; use your own). Used for internal links in the body and preview URLs
+				path: "/posts/:slug",
+				icon: "file-text",
+				fields: {
+					// the title field is named `title` (the label is up to you)
+					title: { kind: "text", label: "Title", required: true, max: 200 },
+					slug: { kind: "slug", label: "Slug", from: "title", required: true },
+					summary: { kind: "text", label: "Summary", role: "summary", multiline: true, fillFromBody: true },
+				},
+			},
+		},
+		locales: [{ code: locale, name: languageName(locale) }],
+		defaultLocale: locale,
+		timeZone,
+		site: { name: "My site" },
+		...(adminPath === DEFAULT_ADMIN_PATH ? {} : { admin: { path: adminPath } }),
+	};
+	return `${JSON.stringify(schema, null, "\t")}\n`;
+}
+
+/** The site config `monti init` creates: it loads the schema file and adds what needs code. */
+export const configTemplate = (): string => `import { defineConfig } from "@monti-cms/core";
 // Optional: block extensions (callouts, tabs, Mermaid, charts, ...) and the SEO extension. Install the package, then uncomment.
 // import { blocks } from "@monti-cms/blocks";
-// import { seo, seoFields } from "@monti-cms/seo";
+// import { seo } from "@monti-cms/seo";
+import schema from "./monti.schema.json";
 
 /**
- * Site config. The CMS instance (cms.server.ts) holds it and the admin screen gets it from there, so keep secrets out (they go in cms.server.ts).
- * The collection name (\`post\` below) is stored in the database, so don't rename it in production. Add and edit fields freely.
+ * Site config. The collections, fields, locales, time zone and admin path are data and live in monti.schema.json (edit them there: editors autocomplete it, and
+ * \`monti schema:types\` writes the types, so \`cms.read\` and the admin know your collections without you writing types). This file adds what needs code.
+ * The CMS instance (cms.server.ts) holds the config and the admin screen gets it from there, so keep secrets out (they go in cms.server.ts).
  */
-const post = defineCollection({
-	label: "Post",
-	kind: "document", // body, draft and publish. Use "item" for small entries like tags
-	path: "/posts/:slug", // public URL shape (a sample; use your own). Used for internal links in the body and preview URLs
-	icon: "file-text",
-	fields: {
-		// The title field is named \`title\` (the label is up to you).
-		title: fields.text({ label: "Title", required: true, max: 200 }),
-		slug: fields.slug({ label: "Slug", from: "title", required: true }),
-		summary: fields.text({ label: "Summary", role: "summary", multiline: true, fillFromBody: true }),
-		// ...seoFields(), // SEO tab: search title and description, share image, hide from search
-	},
-});
-
 export default defineConfig({
-	collections: { post },
-	// The admin screen language and date format follow the default locale (override with admin.locale).
-	locales: [{ code: ${JSON.stringify(locale)}, name: ${JSON.stringify(languageName(locale))} }],
-	defaultLocale: ${JSON.stringify(locale)},
-	site: { name: "My site" },
-	timeZone: ${JSON.stringify(timeZone)},
-${admin}	// plugins: [...blocks(), seo()],
+	schema,
+	// Site settings that differ per environment override the file's: site: { url: process.env.HOST_URL },
+	// plugins: [...blocks(), seo()],
 });
 `;
-}
 
 export const SERVER_TEMPLATE = `import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
 import { githubAuth } from "@monti-cms/nextjs/auth";

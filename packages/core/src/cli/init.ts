@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DEFAULT_ADMIN_PATH, isAdminPath } from "../config/define";
+import { parseJsonc } from "./config-paths";
+import { generateSchemaTypes, SCHEMA_TYPES_FILE } from "./schema-types";
 import {
 	adminLayoutTemplate,
 	adminPageTemplate,
@@ -12,6 +14,7 @@ import {
 	INSTALL_COMMANDS,
 	nextConfigTemplate,
 	SERVER_TEMPLATE,
+	schemaTemplate,
 } from "./templates";
 
 export interface InitOptions {
@@ -49,6 +52,9 @@ function isTimeZone(timeZone: string): boolean {
 /** Joins paths with `/` (reports and config values are the same regardless of the operating system). */
 const posix = (file: string) => file.split(path.sep).join("/");
 const dotted = (file: string) => (file.startsWith(".") ? file : `./${file}`);
+/** The JSON Schema of the core package, as a path from the schema file (a schema file in `src/` reaches `node_modules` one folder up). */
+const linkFrom = (schemaFile: string) =>
+	dotted(posix(path.join(path.relative(path.dirname(schemaFile), "."), "node_modules/@monti-cms/core/schema.json")));
 
 const NEXT_CONFIGS = ["next.config.ts", "next.config.mjs", "next.config.js"];
 
@@ -101,9 +107,34 @@ export function initProject(options: InitOptions): InitReport {
 		);
 
 	const hadConfig = exists(configFile);
-	create(configFile, configTemplate(adminPath, { locale, timeZone }));
-	if (hadConfig && adminPath !== DEFAULT_ADMIN_PATH && !read(configFile).includes(adminPath)) {
-		report.todo.push(`Add admin: { path: "${adminPath}" } to ${configFile} (it must match the admin route folder).`);
+	create(configFile, configTemplate());
+	const schemaFile = posix(path.join(path.dirname(configFile), "monti.schema.json"));
+	const typesFile = posix(path.join(path.dirname(configFile), SCHEMA_TYPES_FILE));
+	if (hadConfig) {
+		// An existing config is the site's own: it is not given a schema file it does not load.
+		report.todo.push(
+			exists(schemaFile)
+				? `${schemaFile} exists: load it from ${configFile} (defineConfig({ schema, ... })) and run \`monti schema:types\``
+				: `Move the data in ${configFile} (collections, locales, ...) to ${schemaFile} with \`monti schema:extract\`.`,
+		);
+		if (adminPath !== DEFAULT_ADMIN_PATH && !read(configFile).includes(adminPath)) {
+			report.todo.push(
+				`Add admin: { path: "${adminPath}" } to ${exists(schemaFile) ? schemaFile : configFile} (it must match the admin route folder).`,
+			);
+		}
+	} else {
+		create(schemaFile, schemaTemplate(adminPath, { locale, timeZone }, linkFrom(schemaFile)));
+		// The types are written from the schema, so `cms.read` and the admin know the collections from the first run.
+		if (exists(typesFile)) report.skipped.push(typesFile);
+		else {
+			generateSchemaTypes({ cwd, schema: schemaFile });
+			report.created.push(typesFile);
+		}
+		const tsconfig = exists("tsconfig.json") ? parseJsonc(read("tsconfig.json")) : undefined;
+		const options = (tsconfig as { compilerOptions?: { resolveJsonModule?: boolean } } | undefined)?.compilerOptions;
+		if (tsconfig !== undefined && options?.resolveJsonModule !== true) {
+			report.todo.push(`Set "resolveJsonModule": true in tsconfig.json (${configFile} imports ${schemaFile}).`);
+		}
 	}
 	create(serverFile, SERVER_TEMPLATE);
 	// The generated files import the CMS instance from the server file, by a path relative to themselves.
@@ -123,7 +154,7 @@ export function initProject(options: InitOptions): InitReport {
 		`Install packages: ${INSTALL_COMMANDS.join(" && ")}`,
 		["Values for .env.local:", ...ENV_VARS.map((env) => `  ${env.name.padEnd(20)} ${env.note}`)].join("\n"),
 		"GitHub OAuth app callback URL: <site URL>/api/cms/auth/callback/github",
-		`Edit the collections in ${configFile}, run \`monti migrate\` to create the database tables, then open ${adminPath} in next dev.`,
+		`Edit the collections in ${hadConfig ? configFile : schemaFile}, run \`monti migrate\` to create the database tables, then open ${adminPath} in next dev.`,
 	);
 	return report;
 }
