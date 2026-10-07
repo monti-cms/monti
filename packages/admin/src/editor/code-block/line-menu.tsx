@@ -1,15 +1,12 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import {
-	CODE_BLOCK_FEATURES,
-	CODE_LINE_EFFECTS,
 	COLLAPSE,
 	type CodeLineEffect,
 	canAddCollapse,
 	hasLineEffect,
 	newEffectId,
-	OFFERED_LINE_EFFECTS,
 	setLineEffect,
 } from "@monti-cms/core/code-block";
 import { Check, ChevronsDownUp, ChevronsUpDown, Code2, Eye, Highlighter } from "lucide-react";
@@ -17,8 +14,6 @@ import { type CSSProperties, useEffect, useRef } from "react";
 import { cn } from "../../lib/utils/cn";
 import { useIconByName } from "../../screens/shared/collection-icon";
 import { codeBlockMessages } from "./messages";
-
-const t = createTranslator(codeBlockMessages);
 
 interface LineMenuProps {
 	/** The picked lines [start, end). */
@@ -75,19 +70,20 @@ function CheckItem({ checked, onSelect, children }: ItemProps & { checked: boole
 }
 
 /**
- * Line effects the menu lists for the picked lines [start, end): the offered ones (`OFFERED_LINE_EFFECTS`) plus any omitted one
+ * Line effects the menu lists for the picked lines [start, end): the offered ones (`site.OFFERED_LINE_EFFECTS`) plus any omitted one
  * that is already on those lines, so it stays visible and can be turned off. Definition order.
  */
-export function lineEffectsToList(lineEffects: readonly CodeLineEffect[], start: number, end: number) {
-	return CODE_LINE_EFFECTS.filter(
+export function lineEffectsToList(site: Site, lineEffects: readonly CodeLineEffect[], start: number, end: number) {
+	return site.CODE_LINE_EFFECTS.filter(
 		(effect) =>
-			OFFERED_LINE_EFFECTS.some((offered) => offered.name === effect.name) ||
+			site.OFFERED_LINE_EFFECTS.some((offered) => offered.name === effect.name) ||
 			lineEffects.some((item) => item.name === effect.name && item.start < end && item.end > start),
 	);
 }
 
 /** Whether the line menu has anything to show for the picked lines (an offered effect, folding, linking to body text, or an existing effect to turn off). */
 export function lineMenuAvailable(
+	site: Site,
 	lineEffects: readonly CodeLineEffect[],
 	start: number,
 	end: number,
@@ -95,14 +91,16 @@ export function lineMenuAvailable(
 ) {
 	return (
 		canLink ||
-		CODE_BLOCK_FEATURES.fold ||
-		lineEffectsToList(lineEffects, start, end).length > 0 ||
+		site.CODE_BLOCK_FEATURES.fold ||
+		lineEffectsToList(site, lineEffects, start, end).length > 0 ||
 		lineEffects.some((effect) => effect.name === COLLAPSE && effect.start < end && effect.end > start)
 	);
 }
 
 /** Menu that turns line effects (the effects and folds from the definition list) on and off for the lines picked in the line number gutter. Names and icons come from the effect definitions. */
 export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkText, style }: LineMenuProps) {
+	const site = useSite();
+	const t = useTranslator(codeBlockMessages);
 	const ref = useRef<HTMLDivElement>(null);
 	const iconByName = useIconByName();
 	// A fold equal to the picked range, or, when only one line is picked, a fold starting at that line (the first line with the › marker) (outermost first).
@@ -112,8 +110,8 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 	const collapse =
 		startingHere.find((effect) => effect.end === end) ?? (end - start === 1 ? startingHere[0] : undefined);
 	const collapseProblem = collapse ? null : canAddCollapse(lineEffects, start, end);
-	const listed = lineEffectsToList(lineEffects, start, end);
-	const showFold = !!collapse || CODE_BLOCK_FEATURES.fold;
+	const listed = lineEffectsToList(site, lineEffects, start, end);
+	const showFold = !!collapse || site.CODE_BLOCK_FEATURES.fold;
 
 	useEffect(() => {
 		const onDown = (event: MouseEvent) => {
@@ -183,7 +181,7 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 						{t("lineMenu.openFromStart")}
 					</CheckItem>
 				</>
-			) : CODE_BLOCK_FEATURES.fold ? (
+			) : site.CODE_BLOCK_FEATURES.fold ? (
 				<MenuItem
 					disabled={!!collapseProblem}
 					title={collapseProblem ?? undefined}

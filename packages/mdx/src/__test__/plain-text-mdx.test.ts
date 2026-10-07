@@ -1,16 +1,17 @@
-import "@monti-cms/core/client";
-import { ADDED_BLOCKS } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { documentText, SEARCH_TEXT } from "../../../core/src/core/body-text";
 import { toPlainText } from "../../../core/src/core/plain-text";
-import { docOfMdx as docOf } from "../testing";
+import { testSite } from "../../../core/test/site";
+import { docOfMdx } from "../testing";
+
+const docOf = (mdx: string) => docOfMdx(testSite, mdx);
 
 /** The text of a body written as MDX: of the document a write stores for it (an `unparsed` body when it cannot be read). */
-const plain = (mdx: string) => toPlainText(docOf(mdx));
+const plain = (mdx: string) => toPlainText(testSite, docOf(mdx));
 
 /** A container block with a translatable text attribute (a callout's title) and a value for that attribute; the site's blocks are looked up, not named. */
 const titled = (() => {
-	for (const block of ADDED_BLOCKS) {
+	for (const block of testSite.ADDED_BLOCKS) {
 		if (block.syntax.kind !== "container" || block.children || block.parent) continue;
 		const attribute = Object.entries(block.attributes).find(([, candidate]) => candidate.translatable);
 		if (attribute) return { component: block.component, attribute: attribute[0] };
@@ -18,7 +19,7 @@ const titled = (() => {
 	return undefined;
 })();
 
-const search = (mdx: string) => documentText(docOf(mdx), SEARCH_TEXT);
+const search = (mdx: string) => documentText(testSite, docOf(mdx), SEARCH_TEXT);
 
 describe("body plain text and search text of MDX", () => {
 	it("keeps readable text and drops code, math, images and the syntax around them", () => {
@@ -95,7 +96,7 @@ describe("body plain text and search text of MDX", () => {
 			const { component, attribute } = titled;
 			expect(search(`<${component} ${attribute}="상자 제목">\n\n안\n\n</${component}>`)).toContain("상자 제목");
 		}
-		const decoration = ADDED_BLOCKS.find(
+		const decoration = testSite.ADDED_BLOCKS.find(
 			(block) =>
 				block.syntax.kind === "text" && Object.values(block.attributes).some((attribute) => attribute.translatable),
 		);

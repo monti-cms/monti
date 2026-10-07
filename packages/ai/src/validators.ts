@@ -1,9 +1,6 @@
 import type { CodeRule } from "@monti-cms/core/code-block";
 import { defineValidator } from "./action";
-import { lazyTranslator } from "./i18n";
 import { validatorMessages } from "./validators.messages";
-
-const t = lazyTranslator(validatorMessages);
 
 /**
  * Code checks used by the default actions. They can also be put in site actions as they are.
@@ -18,9 +15,7 @@ const t = lazyTranslator(validatorMessages);
 /** Drops addresses (slugs) already used by other items of the same collection and language. Not checked if the run does not know the collection. */
 export const uniqueSlug = defineValidator({
 	name: "unique-slug",
-	get label() {
-		return t("uniqueSlug.label");
-	},
+	label: (site) => site.createTranslator(validatorMessages)("uniqueSlug.label"),
 	run: async (value, context) => {
 		if (!context.collection) return true;
 		const slug = value.trim();
@@ -47,9 +42,7 @@ export interface RegexRunsRule {
 export const regexRuns = (input = "code", rule: RegexRunsRule = {}) =>
 	defineValidator({
 		name: "regex-runs",
-		get label() {
-			return t("regexRuns.label");
-		},
+		label: (site) => site.createTranslator(validatorMessages)("regexRuns.label"),
 		run: async (value, context) => {
 			const { checkPattern, ruleMatches } = await import("@monti-cms/core/code-block");
 			if (checkPattern(value, "g")) return false;
@@ -65,7 +58,9 @@ export const regexRuns = (input = "code", rule: RegexRunsRule = {}) =>
 				},
 				typeof code === "string" ? code : "",
 			).length;
-			return count > 0 ? { detail: t("regexRuns.detail", { count }) } : false;
+			return count > 0
+				? { detail: context.site.createTranslator(validatorMessages)("regexRuns.detail", { count }) }
+				: false;
 		},
 	});
 
@@ -73,14 +68,12 @@ export const regexRuns = (input = "code", rule: RegexRunsRule = {}) =>
 export const sameStructure = (input: string) =>
 	defineValidator({
 		name: "same-structure",
-		get label() {
-			return t("sameStructure.label");
-		},
+		label: (site) => site.createTranslator(validatorMessages)("sameStructure.label"),
 		run: async (value, context) => {
 			const source = context.input[input];
 			if (typeof source !== "string") return true;
 			const { compareMdxStructure, configuredSyntax } = await import("@monti-cms/mdx/format");
-			const verdict = compareMdxStructure(source, value, configuredSyntax());
+			const verdict = compareMdxStructure(context.site, source, value, configuredSyntax(context.site));
 			return verdict.ok ? true : verdict.reason;
 		},
 	});

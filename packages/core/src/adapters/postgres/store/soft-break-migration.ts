@@ -1,11 +1,14 @@
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
 import type { LegacyBodies } from "../../../format/types";
+import type { Site } from "../../../site";
 import { mdxContentHash, mdxSearchText } from "./mdx-body";
 
 const DEFAULT_BATCH_SIZE = 200;
 
 export interface SoftBreakMigrationOptions {
+	/** The site the store is migrated for (its blocks decide the search text of a body). */
+	readonly site: Site;
 	/** Reads and writes the MDX text of these bodies (supplied by the `mdx` format). */
 	readonly bodies: LegacyBodies;
 	readonly batchSize?: number;
@@ -49,7 +52,7 @@ export async function migrateSoftBreaks(
 	options: SoftBreakMigrationOptions,
 ): Promise<void> {
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
-	const { bodies } = options;
+	const { bodies, site } = options;
 	const log = options.log ?? ((message: string) => console.warn(message));
 
 	let last: { entry_id: string; state: string } | undefined;
@@ -71,7 +74,7 @@ export async function migrateSoftBreaks(
 			return {
 				mdx,
 				contentHash: mdxContentHash(bodies, row.metadata, mdx, row.schema_version),
-				searchText: mdxSearchText(bodies, mdx),
+				searchText: mdxSearchText(site, bodies, mdx),
 				translation:
 					baseSource !== undefined && baseSource !== base ? JSON.stringify({ ...row.translation, baseSource }) : null,
 			};

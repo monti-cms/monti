@@ -1,6 +1,6 @@
-import { BLOCK_BY_NAME } from "../blocks/derive";
 import type { StoredDocument } from "../doc/stored-document";
 import type { CmsNode } from "../doc/types";
+import type { Site } from "../site";
 
 /**
  * Readable text of a stored document. The document says what is text and what is a block, so a block is understood from its definition (its
@@ -48,7 +48,7 @@ const looseText = (source: string) =>
 		.replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1")
 		.replace(/<[a-zA-Z0-9_/][^>"\x27]*(?:"[^"]*"|\x27[^\x27]*\x27|[^>"\x27]*)*>/g, " ");
 
-const textOf = (node: CmsNode, options: BodyTextOptions): string => {
+const textOf = (site: Site, node: CmsNode, options: BodyTextOptions): string => {
 	if (node.type === "text") {
 		const marks = node.marks ?? [];
 		if (!options.code && marks.some((mark) => mark.type === "code")) return "";
@@ -56,7 +56,9 @@ const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 		const own = node.text ?? "";
 		if (!options.hidden) return own;
 		// The hover text of a text decoration is attached to its text.
-		const hover = marks.flatMap((mark) => translatableValues(BLOCK_BY_NAME.get(mark.type)?.attributes, mark.attrs));
+		const hover = marks.flatMap((mark) =>
+			translatableValues(site.BLOCK_BY_NAME.get(mark.type)?.attributes, mark.attrs),
+		);
 		return [own, ...hover].join(" ");
 	}
 	if (node.type === "hardBreak") return " ";
@@ -73,11 +75,11 @@ const textOf = (node: CmsNode, options: BodyTextOptions): string => {
 		return "";
 	}
 
-	const own = translatableValues(BLOCK_BY_NAME.get(node.type)?.attributes, node.attrs);
+	const own = translatableValues(site.BLOCK_BY_NAME.get(node.type)?.attributes, node.attrs);
 	const parts: string[] = [];
 	let previous: CmsNode | undefined;
 	for (const child of node.content ?? []) {
-		const text = textOf(child, options);
+		const text = textOf(site, child, options);
 		if (previous && !(INLINE_TYPES.has(previous.type) && INLINE_TYPES.has(child.type))) parts.push(" ");
 		parts.push(text);
 		previous = child;
@@ -91,6 +93,6 @@ const collapse = (text: string) => text.replace(/\s+/g, " ").trim();
  * The text of a document, as one line (runs of whitespace are one space). Block elements are set apart by a space and inline
  * runs stay together, so a word split by emphasis is still one word.
  */
-export function documentText(doc: StoredDocument, options: BodyTextOptions): string {
-	return collapse(doc.content.map((node) => textOf(node, options)).join(" "));
+export function documentText(site: Site, doc: StoredDocument, options: BodyTextOptions): string {
+	return collapse(doc.content.map((node) => textOf(site, node, options)).join(" "));
 }

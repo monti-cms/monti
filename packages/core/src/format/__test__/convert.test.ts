@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { linkAddressKey } from "../../core/link-ids";
-import { contentPath } from "../../core/links";
 import type { CmsNode } from "../../doc/types";
 import { createWritePipeline } from "../../services/write-pipeline";
 import { exportText, importText } from "../convert";
@@ -23,7 +23,7 @@ const options = { locale: "ko" };
 
 describe("importText", () => {
 	it("reads a text with the format that is named, and gives every block an id", async () => {
-		const imported = await importText(registry, "paragraphs", "One\n\nTwo", options);
+		const imported = await importText(testSite, registry, "paragraphs", "One\n\nTwo", options);
 
 		expect(imported.issues).toEqual([]);
 		expect(imported.doc.content).toHaveLength(2);
@@ -31,8 +31,8 @@ describe("importText", () => {
 	});
 
 	it("pairs the blocks with the body it replaces, so they keep their ids", async () => {
-		const first = await importText(registry, "paragraphs", "One\n\nTwo\n\nThree", options);
-		const second = await importText(registry, "paragraphs", "One\n\nTwo, edited\n\nThree", {
+		const first = await importText(testSite, registry, "paragraphs", "One\n\nTwo\n\nThree", options);
+		const second = await importText(testSite, registry, "paragraphs", "One\n\nTwo, edited\n\nThree", {
 			...options,
 			previous: first.doc,
 		});
@@ -51,9 +51,9 @@ describe("importText", () => {
 				import: () => ({ ok: true, doc: doc(paragraph("a", "abcdefgh"), paragraph("b", "abcdefgh")) }),
 			}),
 		]);
-		const previous = (await importText(registry, "paragraphs", "Other", options)).doc;
+		const previous = (await importText(testSite, registry, "paragraphs", "Other", options)).doc;
 
-		const imported = await importText(greedy, "greedy", "x", { ...options, previous });
+		const imported = await importText(testSite, greedy, "greedy", "x", { ...options, previous });
 
 		const ids = imported.doc.content.map((block) => block.id);
 		expect(ids).not.toContain("abcdefgh");
@@ -61,7 +61,7 @@ describe("importText", () => {
 	});
 
 	it("fails with unknown_format for a format nobody provides", async () => {
-		await expect(importText(registry, "hugo", "x", options)).rejects.toMatchObject({
+		await expect(importText(testSite, registry, "hugo", "x", options)).rejects.toMatchObject({
 			code: "unknown_format",
 			issues: [expect.objectContaining({ params: { format: "hugo" } })],
 		});
@@ -72,11 +72,13 @@ describe("importText", () => {
 			defineFormat({ name: "oneway", label: "One way", mimeType: "text/plain", extension: "txt", export: () => "x" }),
 		]);
 
-		await expect(importText(oneWay, "oneway", "x", options)).rejects.toMatchObject({ code: "format_not_importable" });
+		await expect(importText(testSite, oneWay, "oneway", "x", options)).rejects.toMatchObject({
+			code: "format_not_importable",
+		});
 	});
 
 	it("keeps a text the format rejects as an unparsed document, with the format's findings", async () => {
-		const imported = await importText(registry, "paragraphs", "Bad <<< text", options);
+		const imported = await importText(testSite, registry, "paragraphs", "Bad <<< text", options);
 
 		expect(imported.issues).toEqual([
 			expect.objectContaining({ code: "bad_marker", position: { line: 1, column: 1 } }),
@@ -88,7 +90,7 @@ describe("importText", () => {
 
 	it("throws the findings instead when the place cannot hold such a text", async () => {
 		await expect(
-			importText(registry, "paragraphs", "Bad <<< text", { ...options, strict: true }),
+			importText(testSite, registry, "paragraphs", "Bad <<< text", { ...options, strict: true }),
 		).rejects.toMatchObject({
 			code: "format_import_failed",
 			issues: [expect.objectContaining({ code: "bad_marker" })],
@@ -110,7 +112,7 @@ describe("importText", () => {
 			}),
 		]);
 
-		const error = await importText(broken, "broken", "x", options).catch((caught) => caught);
+		const error = await importText(testSite, broken, "broken", "x", options).catch((caught) => caught);
 
 		expect(error).toMatchObject({ code: "format_import_failed" });
 		expect(JSON.stringify(error.issues)).not.toContain("secret detail");
@@ -130,12 +132,16 @@ describe("importText", () => {
 			}),
 		]);
 
-		await expect(importText(wrong, "wrong", "x", options)).rejects.toMatchObject({ code: "format_import_failed" });
+		await expect(importText(testSite, wrong, "wrong", "x", options)).rejects.toMatchObject({
+			code: "format_import_failed",
+		});
 		quiet.mockRestore();
 	});
 
 	it("rejects a text over the size limit, whatever the format", async () => {
-		await expect(importText(registry, "paragraphs", "a".repeat(2 * 1024 * 1024 + 1), options)).rejects.toMatchObject({
+		await expect(
+			importText(testSite, registry, "paragraphs", "a".repeat(2 * 1024 * 1024 + 1), options),
+		).rejects.toMatchObject({
 			code: "body_too_large",
 		});
 	});
@@ -164,7 +170,7 @@ describe("importText", () => {
 			}),
 		]);
 
-		const imported = await importText(uneven, "uneven", "x", options);
+		const imported = await importText(testSite, uneven, "uneven", "x", options);
 
 		expect(imported.doc.content).toHaveLength(1);
 		expect(imported.doc.content[0]?.content).toEqual([{ type: "text", text: "Hello" }]);
@@ -181,7 +187,7 @@ describe("exportText", () => {
 			{ type: "image", attrs: { mediaId: MEDIA_ID, alt: "pic" } },
 		);
 
-		const { text, warnings } = await exportText(registry, "paragraphs", source, {
+		const { text, warnings } = await exportText(testSite, registry, "paragraphs", source, {
 			locale: "ko",
 			purpose: "read",
 			refs: {
@@ -202,7 +208,7 @@ describe("exportText", () => {
 			content: [{ type: "text", text: "x", marks: [{ type: "link", attrs: { entryId: ENTRY_ID } }] }],
 		});
 
-		const { text } = await exportText(registry, "paragraphs", source, {
+		const { text } = await exportText(testSite, registry, "paragraphs", source, {
 			locale: "ko",
 			purpose: "read",
 			refs: { links: { [ENTRY_ID]: { url: "/posts/x", title: null, locale: "ko" } }, media: {} },
@@ -227,7 +233,7 @@ describe("exportText", () => {
 			}),
 		]);
 
-		const { warnings } = await exportText(reporting, "reporting", doc(), {
+		const { warnings } = await exportText(testSite, reporting, "reporting", doc(), {
 			locale: "en",
 			purpose: "sync",
 			refs: { links: new Map(), media: new Map() },
@@ -240,7 +246,9 @@ describe("exportText", () => {
 	it("fails with unknown_format, and with format_export_failed when the format throws", async () => {
 		const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const refs = { links: new Map(), media: new Map() };
-		await expect(exportText(registry, "hugo", doc(), { locale: "ko", purpose: "read", refs })).rejects.toMatchObject({
+		await expect(
+			exportText(testSite, registry, "hugo", doc(), { locale: "ko", purpose: "read", refs }),
+		).rejects.toMatchObject({
 			code: "unknown_format",
 		});
 		const broken = createFormatRegistry([
@@ -254,7 +262,7 @@ describe("exportText", () => {
 				},
 			}),
 		]);
-		const error = await exportText(broken, "broken", doc(), { locale: "ko", purpose: "read", refs }).catch(
+		const error = await exportText(testSite, broken, "broken", doc(), { locale: "ko", purpose: "read", refs }).catch(
 			(caught) => caught,
 		);
 		expect(error).toMatchObject({ code: "format_export_failed" });
@@ -264,14 +272,15 @@ describe("exportText", () => {
 });
 
 describe("a format a third party wrote, used through the write pipeline", () => {
-	const pathOf = (slug: string) => contentPath(contentCollection, slug) as string;
+	const pathOf = (slug: string) => testSite.contentPath(contentCollection, slug) as string;
 	const input = (body: string, format = "paragraphs") =>
 		({ collection: contentCollection, slug: "post", metadata: { title: "Post" }, body, format }) as never;
 
 	it("is read, normalised by core (a path becomes an id, a media URL becomes a media id) and prepared like any body", async () => {
 		const pipeline = createWritePipeline({
+			site: testSite,
 			formats: async () => registry,
-			links: async (addresses) => new Map(addresses.map((address) => [linkAddressKey(address), ENTRY_ID])),
+			links: async (addresses) => new Map(addresses.map((address) => [linkAddressKey(testSite, address), ENTRY_ID])),
 			media: async (urls) =>
 				new Map(urls.filter((url) => url.startsWith("https://cdn.test/")).map((url) => [url, MEDIA_ID])),
 		});
@@ -300,7 +309,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 	});
 
 	it("cannot get anything past core: a text it rejects is kept as an unparsed draft that cannot be published", async () => {
-		const pipeline = createWritePipeline({ formats: async () => registry });
+		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 
 		const { snapshot } = await pipeline.run({ operation: "create", locale: "ko", input: input("Bad <<< text") });
 
@@ -309,7 +318,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 	});
 
 	it("fails the write when the format is not installed", async () => {
-		const pipeline = createWritePipeline({ formats: async () => registry });
+		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 
 		await expect(pipeline.run({ operation: "create", locale: "ko", input: input("x", "hugo") })).rejects.toMatchObject({
 			code: "unknown_format",
@@ -331,7 +340,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 				},
 			}),
 		]);
-		const pipeline = createWritePipeline({ formats: async () => spying });
+		const pipeline = createWritePipeline({ site: testSite, formats: async () => spying });
 
 		await pipeline.run({ operation: "save", entryId: ENTRY_ID, locale: "en", input: input("x", "spying") });
 
@@ -339,7 +348,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 	});
 
 	it("keeps block ids across saves: the text replaces the draft's body and its blocks pair up", async () => {
-		const pipeline = createWritePipeline({ formats: async () => registry });
+		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 		const first = await pipeline.run({ operation: "create", locale: "ko", input: input("One\n\nTwo") });
 
 		const second = await pipeline.run({
@@ -370,7 +379,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 				}),
 			}),
 		]);
-		const pipeline = createWritePipeline({ formats: async () => warning });
+		const pipeline = createWritePipeline({ site: testSite, formats: async () => warning });
 
 		const { snapshot } = await pipeline.run({ operation: "create", locale: "ko", input: input("x", "warning") });
 

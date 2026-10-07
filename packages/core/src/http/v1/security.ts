@@ -1,6 +1,5 @@
 import { AuthError } from "../../adapters/auth";
-import { resolveTrustHost } from "../../adapters/auth/trust-host";
-import { cmsConfig } from "../../config/resolved";
+import type { Cms } from "../../cms";
 import { HttpError } from "./error-handler";
 
 /**
@@ -12,10 +11,10 @@ import { HttpError } from "./error-handler";
  * that header itself. Behind a proxy that rewrites `Host` without that option, set `site.url` so the public host is still accepted.
  */
 export function validateSameOrigin(
+	/** The instance serving the request: whether `X-Forwarded-Host` can be trusted (`cms.isHostTrusted()`), and the site URL (`site.url`) of its config. */
+	cms: Pick<Cms, "isHostTrusted" | "site">,
 	request: Request,
 	options: {
-		/** Whether `X-Forwarded-Host` can be trusted (`cms.isHostTrusted()`). Default: the `AUTH_TRUST_HOST` environment variable, else off in production. */
-		readonly trustHost?: boolean;
 		/** Also accept a browser form post (`application/x-www-form-urlencoded`), for the sign-in and sign-out forms. */
 		readonly form?: boolean;
 	} = {},
@@ -23,7 +22,7 @@ export function validateSameOrigin(
 	const method = request.method.toUpperCase();
 	if (["GET", "HEAD", "OPTIONS"].includes(method)) return;
 
-	const hosts = allowedHosts(request, options.trustHost ?? resolveTrustHost(undefined));
+	const hosts = allowedHosts(request, cms.isHostTrusted(), cms.site.config.site?.url);
 	const origin = request.headers.get("origin");
 	const secFetchSite = request.headers.get("sec-fetch-site");
 	const referer = request.headers.get("referer");
@@ -61,19 +60,19 @@ export function validateSameOrigin(
 }
 
 /** Host of the site URL (if configured). */
-const SITE_HOST = (() => {
+const siteHostOf = (siteUrl: string | undefined): string | undefined => {
 	try {
-		return cmsConfig.site?.url ? new URL(cmsConfig.site.url).host.toLowerCase() : undefined;
+		return siteUrl ? new URL(siteUrl).host.toLowerCase() : undefined;
 	} catch {
 		return undefined;
 	}
-})();
+};
 
 /** Hosts this request is received on. `X-Forwarded-Host` may be comma-separated, so use the first value (received by the outermost proxy). Used only when the host is trusted. */
-function allowedHosts(request: Request, trustHost: boolean): Set<string> {
+function allowedHosts(request: Request, trustHost: boolean, siteUrl: string | undefined): Set<string> {
 	const hosts = new Set<string>();
 	const forwarded = trustHost ? request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() : undefined;
-	for (const host of [forwarded, request.headers.get("host"), new URL(request.url).host, SITE_HOST]) {
+	for (const host of [forwarded, request.headers.get("host"), new URL(request.url).host, siteHostOf(siteUrl)]) {
 		if (host) hosts.add(host.toLowerCase());
 	}
 	return hosts;

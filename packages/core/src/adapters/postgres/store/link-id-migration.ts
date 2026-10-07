@@ -3,10 +3,10 @@ import type { PoolClient } from "pg";
 import { checkDocument } from "../../../core/body-check";
 import { computeContentHash } from "../../../core/content-hash";
 import { linkAddressKey, withEntryLinks } from "../../../core/link-ids";
-import { parseInternalLink } from "../../../core/links";
 import type { JsonValue } from "../../../core/types";
 import { mapLinkAttrs } from "../../../doc/entry-links";
 import type { StoredDocument } from "../../../doc/stored-document";
+import type { Site } from "../../../site";
 import { readDoc } from "./rows";
 
 const DEFAULT_BATCH_SIZE = 200;
@@ -51,19 +51,20 @@ const isBodyOccurrence = (occurrence: unknown): boolean => {
  * how many looked internal but resolve to nothing. The document comes back at the current version.
  */
 const converted = (
+	site: Site,
 	doc: StoredDocument,
 	addresses: ReadonlyMap<string, string>,
 ): { readonly doc: StoredDocument; readonly converted: number; readonly unresolved: number } => {
 	let count = 0;
 	let unresolved = 0;
 	mapLinkAttrs(doc.content, (attrs) => {
-		const target = typeof attrs.href === "string" ? parseInternalLink(attrs.href) : null;
+		const target = typeof attrs.href === "string" ? site.parseInternalLink(attrs.href) : null;
 		if (!target) return undefined;
-		if (addresses.has(linkAddressKey(target))) count += 1;
+		if (addresses.has(linkAddressKey(site, target))) count += 1;
 		else unresolved += 1;
 		return undefined;
 	});
-	return { doc: withEntryLinks(doc, addresses), converted: count, unresolved };
+	return { doc: withEntryLinks(site, doc, addresses), converted: count, unresolved };
 };
 
 /**
@@ -80,6 +81,7 @@ const converted = (
  * Rows are read in key order, `batchSize` at a time, so memory stays flat on a large store. Runs inside the caller's transaction.
  */
 export async function migrateLinkEntryIds(
+	site: Site,
 	client: PoolClient,
 	qSchema: string,
 	options: LinkEntryIdMigrationOptions = {},
@@ -93,13 +95,13 @@ export async function migrateLinkEntryIds(
 		 JOIN "${qSchema}".entries e ON e.id = a.entry_id
 		 WHERE a.type IN ('current', 'alias', 'reservation')`,
 	);
-	const addresses = new Map(addressRows.rows.map((row) => [linkAddressKey(row), row.entry_id]));
+	const addresses = new Map(addressRows.rows.map((row) => [linkAddressKey(site, row), row.entry_id]));
 	let totalConverted = 0;
 	let totalUnresolved = 0;
 
 	/** The references of the body links of a document, rebuilt for one stored body. A body that cannot be trusted keeps what it has. */
 	const rebuildReferences = async (entryId: string, state: BodyRow["state"], doc: StoredDocument) => {
-		const check = checkDocument(doc);
+		const check = checkDocument(site, doc);
 		if (check.incomplete) return;
 		const targets = [...new Set(check.entryLinks.map((link) => link.entryId))];
 		const existingTargets = targets.length
@@ -180,7 +182,7 @@ export async function migrateLinkEntryIds(
 				log(`[monti] links left as they are in ${where}: its stored document cannot be read`);
 				continue;
 			}
-			const result = converted(doc, addresses);
+			const result = converted(site, doc, addresses);
 			totalConverted += result.converted;
 			totalUnresolved += result.unresolved;
 			if (result.unresolved > 0) {
@@ -192,7 +194,7 @@ export async function migrateLinkEntryIds(
 			let translation: string | null = null;
 			const baseDoc = readDoc(row.translation?.baseDoc);
 			if (row.translation && baseDoc) {
-				const base = converted(baseDoc, addresses);
+				const base = converted(site, baseDoc, addresses);
 				totalConverted += base.converted;
 				if (!isDeepStrictEqual(base.doc, row.translation.baseDoc)) {
 					translation = JSON.stringify({ ...row.translation, baseDoc: base.doc });
@@ -246,7 +248,7 @@ export async function migrateLinkEntryIds(
 				log(`[monti] links left as they are in body_templates ${row.id}: its stored document cannot be read`);
 				continue;
 			}
-			const result = converted(doc, addresses);
+			const result = converted(site, doc, addresses);
 			totalConverted += result.converted;
 			totalUnresolved += result.unresolved;
 			if (result.unresolved > 0) {

@@ -8,13 +8,16 @@ import {
 } from "@monti-cms/core/document";
 import type { FormatExportContext, FormatIssue, FormatLink, FormatMedia } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
-import { createMdxFormat, mdxFormat } from "../format";
-import { siteSyntaxBlocks as syntaxBlocks, siteCodeLineEffects as syntaxCodeLineEffects } from "../syntax-config";
-import { docOfMdx as docOf } from "../testing";
+import { testSite } from "../../../core/test/site";
+import { mdxFormat } from "../format";
+import { siteCodeLineEffects, siteSyntaxBlocks } from "../syntax-config";
+import { docOfMdx } from "../testing";
+
+const docOf = (mdx: string) => docOfMdx(testSite, mdx);
 
 /** The blocks of a stored document without their ids, for comparing what a body says. */
 const contentOf = (doc: unknown) => {
-	const read = readStoredDocument(doc);
+	const read = readStoredDocument(doc, testSite);
 	return read ? withoutBlockIds(read.content) : null;
 };
 
@@ -37,8 +40,9 @@ const exportContext = (
 	const reported: FormatIssue[] = [];
 	const ctx: FormatExportContext = {
 		locale: "ko",
-		blocks: syntaxBlocks,
-		codeLineEffects: syntaxCodeLineEffects,
+		blocks: siteSyntaxBlocks(testSite),
+		codeLineEffects: siteCodeLineEffects(testSite),
+		site: testSite,
 		purpose: options.purpose ?? "read",
 		link: (id) => options.links?.[id] ?? null,
 		media: (id) => options.media?.[id] ?? null,
@@ -159,7 +163,12 @@ describe("the mdx format", () => {
 	});
 
 	describe("import", () => {
-		const importContext = { locale: "ko", blocks: syntaxBlocks, codeLineEffects: syntaxCodeLineEffects };
+		const importContext = {
+			locale: "ko",
+			blocks: siteSyntaxBlocks(testSite),
+			codeLineEffects: siteCodeLineEffects(testSite),
+			site: testSite,
+		};
 
 		it("reads a text into a stored document, without block ids (core gives them)", async () => {
 			const result = await mdxFormat.import?.("# Title\n\nSome *words*\n", importContext);
@@ -227,8 +236,9 @@ describe("the mdx format", () => {
 		const text = await mdxFormat.export(doc, exportContext().ctx);
 		const back = await mdxFormat.import?.(text, {
 			locale: "ko",
-			blocks: syntaxBlocks,
-			codeLineEffects: syntaxCodeLineEffects,
+			blocks: siteSyntaxBlocks(testSite),
+			site: testSite,
+			codeLineEffects: siteCodeLineEffects(testSite),
 		});
 
 		expect(back?.ok).toBe(true);
@@ -241,8 +251,9 @@ describe("the mdx format", () => {
 		const text = await mdxFormat.export(doc, exportContext({ links: { [ENTRY_ID]: link("/en/posts/x") } }).ctx);
 		const back = await mdxFormat.import?.(text, {
 			locale: "ko",
-			blocks: syntaxBlocks,
-			codeLineEffects: syntaxCodeLineEffects,
+			blocks: siteSyntaxBlocks(testSite),
+			site: testSite,
+			codeLineEffects: siteCodeLineEffects(testSite),
 		});
 
 		expect(back?.ok).toBe(true);

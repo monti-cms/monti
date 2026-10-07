@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -10,8 +10,6 @@ import { BLOCK_TOOLBAR } from "./block-model";
 import { blocksMessages } from "./messages";
 
 export { BLOCK_TOOLBAR, SELECTED_RING, useEditorEditable } from "./block-model";
-
-const t = createTranslator(blocksMessages);
 
 /**
  * Input field for attributes (title, tab name). During Korean composition it does not write to the document, and writes when composition ends.
@@ -146,7 +144,7 @@ export function ToolbarButton(props: ComponentProps<typeof IconButton>) {
  * Align the fields inside with `BlockSettingsField`.
  */
 export function BlockSettings({
-	label = t("settings.label"),
+	label: labelProp,
 	open,
 	onOpenChange,
 	children,
@@ -156,6 +154,8 @@ export function BlockSettings({
 	onOpenChange?: (open: boolean) => void;
 	children: ReactNode;
 }) {
+	const t = useTranslator(blocksMessages);
+	const label = labelProp ?? t("settings.label");
 	return (
 		<Popover open={open} onOpenChange={onOpenChange}>
 			<ToolbarButton label={label} trigger={(button) => <PopoverTrigger render={button} />}>

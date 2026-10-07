@@ -2,10 +2,9 @@ import type { Pool } from "pg";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredMetadata } from "../../../test/any-site";
+import { testConfig, testSite } from "../../../test/site";
 import { type Cms, fakeCms } from "../../cms";
 import type { Collection } from "../../core/collections";
-import { contentPath } from "../../core/links";
-import { localizePath } from "../../core/locales";
 import type { ContentStore, Entry } from "../../core/store";
 import { publishDraft, seedEntry } from "../../core/store/__test__/seed";
 import { collectRefs, imageResolverFromRefs } from "../../doc/document-refs";
@@ -62,13 +61,15 @@ describe("cms.read returns the document", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		relationTarget = fillRequiredMetadata(store).relationTarget as typeof relationTarget;
 		service = createContentService<Entry>(store, {
+			site: testSite,
 			formats: async () => createFormatRegistry([paragraphsFormat, labelsFormat]),
 		});
 		cms = fakeCms({
+			config: testConfig,
 			store,
 			contentService: service,
 			formats: [paragraphsFormat, labelsFormat],
@@ -122,7 +123,7 @@ describe("cms.read returns the document", () => {
 
 	const publish = async (slug: string, body: string | StoredDocument) => {
 		const created = await draft(slug, body);
-		return publishDraft(store, { id: created.id, expectedVersion: created.version });
+		return publishDraft(testSite, store, { id: created.id, expectedVersion: created.version });
 	};
 
 	/** A body with the blocks a text format of the test cannot write: registered images and files. */
@@ -184,7 +185,7 @@ describe("cms.read returns the document", () => {
 		const found = await cms.read.getEntry({ collection: contentCollection, slug: "doc-render", format: "paragraphs" });
 		if (found.status !== "found") throw new Error("not found");
 
-		const markup = renderToStaticMarkup(await CmsContent({ entry: found.entry }));
+		const markup = renderToStaticMarkup(await CmsContent({ cms, entry: found.entry }));
 
 		expect(markup).toContain("Heading");
 		expect(markup).toContain(publicUrl("media/photo.png"));
@@ -262,7 +263,7 @@ describe("cms.read returns the document", () => {
 	});
 
 	describe("with a format", () => {
-		const pathOf = (slug: string) => contentPath(contentCollection, slug) as string;
+		const pathOf = (slug: string) => testSite.contentPath(contentCollection, slug) as string;
 
 		it("also writes the body as text: a link to a published entry is the real path of its target, an image is its public URL", async () => {
 			const target = await publish("fmt-target", "Target body");
@@ -292,7 +293,7 @@ describe("cms.read returns the document", () => {
 			if (found.status !== "found") throw new Error("not found");
 			const { entry } = found;
 
-			const path = localizePath(target.locale, pathOf("fmt-target"));
+			const path = testSite.localizePath(target.locale, pathOf("fmt-target"));
 			expect(entry.body?.format).toBe("paragraphs");
 			expect(entry.body?.text).toContain(`[the target](${path})`);
 			expect(entry.body?.text).toContain(publicUrl("media/photo.png"));
@@ -316,7 +317,7 @@ describe("cms.read returns the document", () => {
 				format: "paragraphs",
 			});
 			if (before.status !== "found") throw new Error("not found");
-			expect(before.entry.body?.text).toContain(`(${localizePath(target.locale, pathOf("fmt-moving"))})`);
+			expect(before.entry.body?.text).toContain(`(${testSite.localizePath(target.locale, pathOf("fmt-moving"))})`);
 
 			const current = await store.getEntry(target.id);
 			await service.saveDraft(target.id, {
@@ -335,7 +336,7 @@ describe("cms.read returns the document", () => {
 				format: "paragraphs",
 			});
 			if (after.status !== "found") throw new Error("not found");
-			expect(after.entry.body?.text).toContain(`(${localizePath(target.locale, pathOf("fmt-moved"))})`);
+			expect(after.entry.body?.text).toContain(`(${testSite.localizePath(target.locale, pathOf("fmt-moved"))})`);
 			expect(after.entry.body?.text).not.toContain("fmt-moving");
 			expect((await store.getEntry(source.id)).published?.doc).toEqual(before.entry.doc);
 		});

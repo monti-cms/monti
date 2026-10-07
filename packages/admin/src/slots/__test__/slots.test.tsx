@@ -1,11 +1,12 @@
-import { createTranslator } from "@monti-cms/core/client";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
+import { renderWithSite } from "../../test/site";
 import { TooltipProvider } from "../../ui/tooltip";
 import { slotsMessages } from "../messages";
 import { type SlotAction, SlotRegistryProvider, type SlotRequest, type SlotSource, useSlot } from "../slots";
 
-const t = createTranslator(slotsMessages);
+const t = testSite.createTranslator(slotsMessages);
 
 afterEach(cleanup);
 
@@ -30,7 +31,7 @@ const action = (overrides: Partial<SlotAction> = {}): SlotAction => ({
 function renderSlot(sources: SlotSource[], request: Partial<SlotRequest> = {}) {
 	const apply = vi.fn();
 	const getContext = vi.fn(() => ({ title: "제목" }));
-	render(
+	renderWithSite(
 		<TooltipProvider>
 			<SlotRegistryProvider sources={sources}>
 				<Host request={{ slot: "field", target: "slug", collection: "post", getContext, apply, ...request }} />
@@ -178,7 +179,7 @@ describe("screen slots", () => {
 				<SlotRegistryProvider sources={sources}>{shown && <Host request={request} />}</SlotRegistryProvider>
 			</TooltipProvider>
 		);
-		const { rerender } = render(view(true));
+		const { rerender } = renderWithSite(view(true));
 		fireEvent.click(screen.getByRole("button", { name: "주소 추천" }));
 		rerender(view(false));
 		expect(run.mock.calls[0]?.[1].aborted).toBe(false);
@@ -193,7 +194,7 @@ describe("screen slots", () => {
 		const host = (scope: string) => (
 			<Host request={{ slot: "image", target: "alt", scope, getContext: () => ({}), apply: vi.fn() }} />
 		);
-		render(
+		renderWithSite(
 			<TooltipProvider>
 				<SlotRegistryProvider sources={sources}>
 					<div data-testid="a">{host("a")}</div>

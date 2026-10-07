@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { AlertOctagon } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -39,9 +39,8 @@ import {
  * renderer under the same name. Colors are the series' theme variables (`--chart-1` to `--chart-5`).
  */
 
-const t = createTranslator(chartMessages);
-
 function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
+	const t = useTranslator(chartMessages);
 	return (
 		<div className="not-prose my-6">
 			<Alert variant="danger">

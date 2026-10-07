@@ -1,5 +1,6 @@
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
+import { testSite } from "../../../core/test/site";
 import { storedToTiptap } from "../editor/tiptap-content";
 import { docOfText } from "./doc-text";
 
@@ -15,4 +16,4 @@ export const docOf = (text: string, previous?: StoredDocument | null): StoredDoc
 
 /** The editor's JSON for a fixture. */
 export const tiptapOf = (text: string, previous?: StoredDocument | null): JSONContent =>
-	storedToTiptap(docOf(text, previous));
+	storedToTiptap(testSite, docOf(text, previous));

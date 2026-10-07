@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
@@ -16,8 +16,6 @@ import {
 import { IconButton } from "../ui/icon-button";
 import { Spinner } from "../ui/spinner";
 import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
 
 interface BlockHandleOverlayProps {
 	coords: { top: number; left: number };
@@ -42,6 +40,7 @@ export function BlockHandleOverlay({
 	onDragEnd,
 	actions = [],
 }: BlockHandleOverlayProps) {
+	const t = useTranslator(editorMessages);
 	const [open, setOpen] = useState(false);
 	if (typeof window === "undefined") return null;
 

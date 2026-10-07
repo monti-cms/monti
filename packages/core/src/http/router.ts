@@ -189,7 +189,7 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 		}
 		if (matched.guarded) {
 			try {
-				validateSameOrigin(request, { trustHost: cms.isHostTrusted() });
+				validateSameOrigin(cms, request);
 				await cms.authGateway.verifyAdmin();
 			} catch (error) {
 				return handleApiError(error);

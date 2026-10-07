@@ -1,7 +1,8 @@
+import { createAnnotationConfig } from "../annotation/code-block/constants";
+import type { Site } from "../site";
 import { assignBlockIds, forEachBlock } from "./block-ids";
 import { normalizedLinkMark } from "./entry-links";
-import { sortMarks } from "./marks";
-import { storedCodeBlockAttrs } from "./stored-code-block";
+import { type CodeBlockSite, storedCodeBlockAttrs } from "./stored-code-block";
 import type { CmsJsonValue, CmsMark, CmsNode } from "./types";
 
 /**
@@ -105,12 +106,14 @@ const mapNodes = (nodes: readonly CmsNode[], change: (node: CmsNode) => CmsNode)
 	nodes.map((item) => change(item.content ? { ...item, content: mapNodes(item.content, change) } : item));
 
 /** Steps that lift a stored document from version `n` to `n + 1`, by `n`. */
-const STORED_DOCUMENT_MIGRATIONS: Readonly<Record<number, (doc: StoredDocument) => StoredDocument>> = {
+const STORED_DOCUMENT_MIGRATIONS: Readonly<
+	Record<number, (doc: StoredDocument, site: CodeBlockSite) => StoredDocument>
+> = {
 	/** 1 → 2: a code block holds its code and annotations as data instead of the fence text with annotation comments. */
-	1: (doc) => ({
+	1: (doc, site) => ({
 		content: mapNodes(doc.content, (item) =>
 			item.type === "codeBlock"
-				? { ...item, attrs: sortJson(storedCodeBlockAttrs(item.attrs ?? {})) as Record<string, CmsJsonValue> }
+				? { ...item, attrs: sortJson(storedCodeBlockAttrs(site, item.attrs ?? {})) as Record<string, CmsJsonValue> }
 				: item,
 		),
 		type: "doc",
@@ -151,11 +154,14 @@ const isNode = (value: unknown): value is CmsNode =>
 	(value.text === undefined || typeof value.text === "string") &&
 	(value.id === undefined || typeof value.id === "string");
 
+/** What lifting a version 1 document uses when the caller gives no site: the core's default line effects. */
+const DEFAULT_CODE_SITE: CodeBlockSite = { annotationConfig: createAnnotationConfig() };
+
 /**
  * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and lifts an
  * older version to the current one. Returns `undefined` for anything that is not a stored document of a known version.
  */
-export const readStoredDocument = (value: unknown): StoredDocument | undefined => {
+export const readStoredDocument = (value: unknown, site?: CodeBlockSite): StoredDocument | undefined => {
 	if (!isRecord(value) || value.type !== "doc") return undefined;
 	if (Object.keys(value).some((key) => key !== "type" && key !== "version" && key !== "content")) return undefined;
 	const version = value.version;
@@ -172,21 +178,21 @@ export const readStoredDocument = (value: unknown): StoredDocument | undefined =
 	while (doc.version < STORED_DOCUMENT_VERSION) {
 		const step = STORED_DOCUMENT_MIGRATIONS[doc.version];
 		if (!step) return undefined;
-		doc = step(doc);
+		doc = step(doc, site ?? DEFAULT_CODE_SITE);
 	}
 	return doc;
 };
 
 /** Text runs of one parent as a reader of the text would see them: empty text dropped, neighbours with the same marks joined, marks in their stored order. */
-const canonicalInline = (content: readonly CmsNode[]): CmsNode[] => {
+const canonicalInline = (site: Pick<Site, "sortMarks">, content: readonly CmsNode[]): CmsNode[] => {
 	const out: CmsNode[] = [];
 	for (const item of content) {
 		if (item.text === undefined) {
-			out.push(canonicalNode(item));
+			out.push(canonicalNode(site, item));
 			continue;
 		}
 		if (item.text.length === 0) continue;
-		const marks = item.marks && item.marks.length > 0 ? sortMarks(item.marks.map(normalizedLinkMark)) : undefined;
+		const marks = item.marks && item.marks.length > 0 ? site.sortMarks(item.marks.map(normalizedLinkMark)) : undefined;
 		const previous = out.at(-1);
 		if (previous?.text !== undefined && JSON.stringify(previous.marks ?? null) === JSON.stringify(marks ?? null)) {
 			out[out.length - 1] = { ...previous, text: previous.text + item.text };
@@ -197,15 +203,15 @@ const canonicalInline = (content: readonly CmsNode[]): CmsNode[] => {
 	return out;
 };
 
-const canonicalNode = (item: CmsNode): CmsNode =>
-	item.content ? { ...item, content: canonicalInline(item.content) } : item;
+const canonicalNode = (site: Pick<Site, "sortMarks">, item: CmsNode): CmsNode =>
+	item.content ? { ...item, content: canonicalInline(site, item.content) } : item;
 
 /**
  * The form a document is stored in whichever way it was made (a client, an API request, a hook, a format): trailing blank paragraphs dropped, text runs
  * normalised (see `canonicalInline`). A document read from a format is already in it, so the same body hashes the same from either source.
  */
-export const canonicalDocument = (doc: StoredDocument): StoredDocument => {
-	const content = canonicalInline(doc.content);
+export const canonicalDocument = (site: Pick<Site, "sortMarks">, doc: StoredDocument): StoredDocument => {
+	const content = canonicalInline(site, doc.content);
 	while (content.length > 0 && isBlankParagraph(content[content.length - 1] as CmsNode)) content.pop();
 	return { content, type: "doc", version: doc.version };
 };

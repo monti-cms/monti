@@ -1,6 +1,6 @@
 /**
- * UI message dictionaries. The core, admin and extensions use messages by name (key), with one dictionary per locale. It does not read the site config (`cms.config.ts`),
- * so it can be used from the config file and the authoring API too (locale picking is done by `./index`).
+ * UI message dictionaries. The core, admin and extensions use messages by name (key), with one dictionary per locale. It reads no site config,
+ * so it can be used from the config file and the authoring API too (the language is picked by `./index`, from a site).
  *
  * - A value is a string or a function that fills `{name}` placeholders. Words that change by the preceding word, like Korean particles, are written as functions (`josa`).
  * - English (`en`) has every key. Keys missing in other locales show in English.

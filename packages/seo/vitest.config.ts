@@ -21,8 +21,6 @@ export default defineConfig(({ mode }) => ({
 	},
 	resolve: {
 		alias: {
-			// Runs with the core package's example blog config plus the SEO and AI plugins.
-			"@cms-config": path.resolve(__dirname, "./test/cms.config.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

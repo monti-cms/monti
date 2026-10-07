@@ -10,13 +10,11 @@ import {
 } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { File, FilePlus, Folder, FolderPlus, FolderTree, Trash2 } from "lucide-react";
 import { useId } from "react";
 import { filesOf, uniquePath } from "./editor-files";
 import { codeExplorerMessages } from "./messages";
-
-const t = createTranslator(codeExplorerMessages);
 
 /** Placeholder paths of new entries. They are made unique against the paths already in the explorer. */
 const NEW_FILE = { stem: "src/new-file", suffix: ".ts", language: "ts" } as const;
@@ -28,6 +26,7 @@ const NEW_FOLDER = { stem: "src/new-folder", suffix: "/", language: "text" } as 
  * The toolbar adds files and folders, picks the file shown first, and deletes the block.
  */
 export function CodeExplorerNodeView() {
+	const t = useTranslator(codeExplorerMessages);
 	const block = useBlockEditor<{ open: string }>();
 	// `editable` follows lock changes (trash, source mode).
 	const { editable, focusedChild: selectedIndex } = block;

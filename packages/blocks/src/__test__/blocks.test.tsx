@@ -1,10 +1,11 @@
 import { CmsAdminComponentsProvider, useCmsAdminComponents } from "@monti-cms/admin";
-import { defineCollection, defineConfig, fields } from "@monti-cms/core";
+import { defineCollection, defineConfig, fields, translate } from "@monti-cms/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
-import { blocks, callout, color, DEFAULT_TEXT_PALETTE } from "..";
+import { blocks, callout, color, defaultTextPalette } from "..";
 import { ChartProvider } from "../chart/provider";
+import { colorMessages } from "../color/messages";
 import { MermaidProvider } from "../mermaid/provider";
 
 const names = (plugins: readonly { name: string }[]) => plugins.map((plugin) => plugin.name);
@@ -38,7 +39,9 @@ describe("blocks()", () => {
 		for (const omitted of ["chart", "mermaid", "code-ref"]) expect(remaining).not.toContain(omitted);
 		for (const kept of ["callout", "collapsible", "tabs", "columns", "code-explorer", "tooltip", "color"])
 			expect(remaining).toContain(kept);
-		const palette = [DEFAULT_TEXT_PALETTE[0]].filter((item) => item !== undefined);
+		const palette = [defaultTextPalette((key) => translate(colorMessages, "en", key))[0]].filter(
+			(item) => item !== undefined,
+		);
 		const [colorPlugin] = blocks({ only: ["color"], color: { palette } });
 		expect(colorPlugin?.options).toEqual({ palette });
 		expect(colorPlugin?.options).toEqual(color({ palette }).options);

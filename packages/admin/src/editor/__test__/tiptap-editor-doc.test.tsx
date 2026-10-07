@@ -1,8 +1,9 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { docOf } from "../../test/mdx";
+import { renderWithSite } from "../../test/site";
 import { CmsEditor } from "../tiptap-editor";
 
 // jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position.
@@ -32,7 +33,7 @@ const open = async (props: { doc: StoredDocument; onChange?: (doc: StoredDocumen
 			}}
 		/>
 	);
-	const view = render(element(props.doc, props.sourceView));
+	const view = renderWithSite(element(props.doc, props.sourceView));
 	await waitFor(() => expect(editor).not.toBeNull());
 	// Let the first comparison of the effect that follows `doc` run.
 	await act(async () => {

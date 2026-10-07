@@ -1,6 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { CellSelection, columnResizingPluginKey } from "@tiptap/pm/tables";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { buildEditorExtensions } from "../extensions";
 
 const cellPositions = (editor: Editor) => {
@@ -15,7 +16,7 @@ const cellPositions = (editor: Editor) => {
 describe("blocking cell selection while resizing table columns", () => {
 	it("drops selection-only transactions while dragging and accepts them again after release", () => {
 		const editor = new Editor({
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: "<table><tr><td><p>a</p></td><td><p>b</p></td></tr><tr><td><p>c</p></td><td><p>d</p></td></tr></table>",
 		});
 		const [first, , third] = cellPositions(editor);
@@ -38,7 +39,7 @@ describe("blocking cell selection while resizing table columns", () => {
 
 	it("does not revert the dragged width (DOM) to the stored width when the table redraws during a drag", () => {
 		const editor = new Editor({
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: '<table><tr><td colwidth="100"><p>a</p></td><td colwidth="100"><p>b</p></td></tr></table><p>뒤</p>',
 		});
 		const [first] = cellPositions(editor);
@@ -75,7 +76,7 @@ describe("blocking cell selection while resizing table columns", () => {
 
 	it("clearing the column width (fill width) also clears the old width on screen", () => {
 		const editor = new Editor({
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: '<table><tr><td colwidth="160"><p>a</p></td><td colwidth="140"><p>b</p></td></tr></table>',
 		});
 		const tr = editor.state.tr;

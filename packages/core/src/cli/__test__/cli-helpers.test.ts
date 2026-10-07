@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseJsonc, resolveConfigPaths } from "../config-paths";
+import { parseJsonc, resolveServerPath } from "../config-paths";
 import { loadEnvFiles } from "../env";
 import { migrate, runCli } from "../index";
 
@@ -32,22 +32,25 @@ describe("monti command helpers", () => {
 		expect(() => loadEnvFiles(dir, [".env.missing"], {})).toThrow(/not found/);
 	});
 
-	it("finds the site config from tsconfig `paths` (with comments and trailing commas), else checks common locations", () => {
+	it("reads tsconfig with comments and trailing commas", () => {
 		expect(parseJsonc('{ // a\n "a": "x//y", /* b */ "c": [1,], }')).toEqual({ a: "x//y", c: [1] });
-		const withPaths = tempDir({
-			"tsconfig.json": '{ "compilerOptions": { "paths": { "@cms-config": ["./src/site.ts"] }, }, }',
-			"src/site.ts": "",
-			"cms.server.ts": "",
-		});
-		// The server file is a plain module that exports the instance, so it is never looked up through an alias.
-		expect(resolveConfigPaths(withPaths, {}, {})).toEqual({ config: "src/site.ts", server: "cms.server.ts" });
-		const plain = tempDir({ "src/cms.config.ts": "", "src/cms.server.ts": "" });
-		expect(resolveConfigPaths(plain, {}, {})).toEqual({ config: "src/cms.config.ts", server: "src/cms.server.ts" });
-		expect(
-			resolveConfigPaths(plain, { config: "src/cms.config.ts" }, { CMS_SERVER_PATH: "src/cms.server.ts" }),
-		).toEqual({ config: "src/cms.config.ts", server: "src/cms.server.ts" });
-		expect(() => resolveConfigPaths(tempDir({}), {}, {})).toThrow(/monti init/);
-		expect(() => resolveConfigPaths(plain, { config: "nope.ts" }, {})).toThrow(/not found: nope.ts/);
+		expect(parseJsonc("{ nope")).toBeUndefined();
+	});
+
+	it("finds the server file from `--server`, `CMS_SERVER_PATH`, else common locations", () => {
+		const root = tempDir({ "cms.server.ts": "", "src/cms.server.ts": "", "custom/server.ts": "" });
+		// The root file wins over the one in `src`.
+		expect(resolveServerPath(root, undefined, {})).toBe("cms.server.ts");
+		const inSrc = tempDir({ "src/cms.server.ts": "" });
+		expect(resolveServerPath(inSrc, undefined, {})).toBe("src/cms.server.ts");
+		// The chosen value beats the environment variable, which beats the common locations.
+		expect(resolveServerPath(root, "custom/server.ts", { CMS_SERVER_PATH: "src/cms.server.ts" })).toBe(
+			"custom/server.ts",
+		);
+		expect(resolveServerPath(root, undefined, { CMS_SERVER_PATH: "src/cms.server.ts" })).toBe("src/cms.server.ts");
+		expect(() => resolveServerPath(tempDir({}), undefined, {})).toThrow(/monti init/);
+		expect(() => resolveServerPath(root, "nope.ts", {})).toThrow(/not found: nope.ts/);
+		expect(() => resolveServerPath(root, undefined, { CMS_SERVER_PATH: "nope.ts" })).toThrow(/not found: nope.ts/);
 	});
 
 	it("help and unknown commands", async () => {
@@ -57,6 +60,8 @@ describe("monti command helpers", () => {
 		expect(out.at(-1)).toContain("Usage: monti <command>");
 		expect(out.at(-1)).toContain("--locale <code>");
 		expect(out.at(-1)).toContain("--time-zone <tz>");
+		// The site config is imported by the server file, so no command takes it.
+		expect(out.at(-1)).not.toContain("--config");
 		// The removed command is not advertised.
 		expect(out.at(-1)).not.toContain("content:rewrite");
 		expect(await runCli(["deploy"], io)).toBe(1);
@@ -69,12 +74,11 @@ describe("monti command helpers", () => {
 /** A server file that exports a stand-in for the CMS instance and records what the command did to it. */
 const appWith = (body: string) => {
 	const dir = tempDir({
-		"cms.config.mjs": "export default {};\n",
 		"cms.server.mjs": `export const calls = [];\n${body}\n`,
 	});
 	return {
 		dir,
-		options: { cwd: dir, envFiles: [], config: "cms.config.mjs", server: "cms.server.mjs", log: () => undefined },
+		options: { cwd: dir, envFiles: [], server: "cms.server.mjs", log: () => undefined },
 	};
 };
 

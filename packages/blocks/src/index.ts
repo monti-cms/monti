@@ -17,8 +17,9 @@ export {
 	type ColorPair,
 	color,
 	colorBlock,
-	DEFAULT_TEXT_PALETTE,
+	defaultTextPalette,
 	type PaletteColor,
+	type PaletteText,
 } from "./color";
 export { columnBlock, columns, columnsBlock } from "./columns";
 export { ALL_BLOCKS } from "./definitions";

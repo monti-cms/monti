@@ -3,6 +3,7 @@ import { computeContentHash } from "../../../core/content-hash";
 import type { JsonValue } from "../../../core/types";
 import type { FormatRegistry } from "../../../format/registry";
 import type { LegacyBodies } from "../../../format/types";
+import type { Site } from "../../../site";
 
 /**
  * The bodies of old stores are MDX text (the `mdx` column), and the store migrations that predate stored documents (`0010` to `0015`) work from that text.
@@ -16,11 +17,11 @@ export const MDX_REQUIRED_MESSAGE =
 	"This database still holds bodies stored as MDX text, and upgrading it needs the MDX format: install @monti-cms/mdx and add mdx() to the plugins of the site config to upgrade this database.";
 
 /** The old-body reader of the site's `mdx` format. It throws `MDX_REQUIRED_MESSAGE` when it is first used and there is no such format. */
-export const legacyBodiesOf = (formats: FormatRegistry): LegacyBodies => {
+export const legacyBodiesOf = (formats: FormatRegistry, site: Site): LegacyBodies => {
 	const provided = (): LegacyBodies => {
 		const bodies = formats.get("mdx")?.legacyBodies;
 		if (!bodies) throw new Error(MDX_REQUIRED_MESSAGE);
-		return bodies;
+		return bodies(site);
 	};
 	return {
 		insertSoftBreaks: (text) => provided().insertSoftBreaks(text),
@@ -37,5 +38,5 @@ export const legacyBodiesOf = (formats: FormatRegistry): LegacyBodies => {
 export const mdxContentHash = (bodies: LegacyBodies, metadata: JsonValue, mdx: string, schemaVersion = 1): string =>
 	computeContentHash(metadata, bodies.documentOf(mdx), schemaVersion);
 
-export const mdxSearchText = (bodies: LegacyBodies, mdx: string): string =>
-	documentText(bodies.documentOf(mdx), SEARCH_TEXT);
+export const mdxSearchText = (site: Site, bodies: LegacyBodies, mdx: string): string =>
+	documentText(site, bodies.documentOf(mdx), SEARCH_TEXT);

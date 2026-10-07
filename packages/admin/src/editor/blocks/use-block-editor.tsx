@@ -1,6 +1,7 @@
 "use client";
 
-import { type BlockDefinition, createTranslator } from "@monti-cms/core/client";
+import type { BlockDefinition, Site } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { Fragment, type NodeType, type Node as PmNode } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
@@ -25,8 +26,6 @@ import { blockNodeName } from "./added/shared";
 import { type ContainerValues, childPos, SELECTED_RING, useEditorEditable, valuesOf, withValue } from "./block-model";
 import { blocksMessages } from "./messages";
 import { blockOfNode } from "./node-block";
-
-const t = createTranslator(blocksMessages);
 
 /** The attribute values of a block (directive attributes of an added block, node attributes of image and file). Only strings and booleans. */
 export type BlockValues = Readonly<Record<string, string | boolean>>;
@@ -203,6 +202,7 @@ export type NodeViewBinding = Pick<NodeViewProps, "editor" | "node" | "getPos" |
 
 interface Binding extends NodeViewBinding {
 	readonly definition: BlockDefinition;
+	readonly site: Site;
 }
 
 /** A failure that stops a transaction and becomes the result of the command. */
@@ -239,17 +239,17 @@ const readId = (node: PmNode): string | null => {
 	return typeof id === "string" && id ? id : null;
 };
 
-const describeChild = (child: PmNode, index: number): BlockChild => ({
+const describeChild = (site: Site, child: PmNode, index: number): BlockChild => ({
 	index,
 	id: readId(child),
-	name: blockOfNode(child.type.name)?.name ?? child.type.name,
+	name: blockOfNode(site, child.type.name)?.name ?? child.type.name,
 	values: readValues(child),
 });
 
-const childrenOf = (node: PmNode): readonly BlockChild[] => {
+const childrenOf = (site: Site, node: PmNode): readonly BlockChild[] => {
 	const children: BlockChild[] = [];
 	node.forEach((child, _offset, index) => {
-		children.push(describeChild(child, index));
+		children.push(describeChild(site, child, index));
 	});
 	return children;
 };
@@ -266,8 +266,10 @@ const patchedAttributes = (node: PmNode, patch: Readonly<Record<string, BlockVal
 
 const isEditable = (binding: Binding) => binding.editor?.isEditable ?? true;
 
-const readOnly = () => editorFailure("read_only", t("block.readOnly"));
-const detached = () => editorFailure("invalid_state", t("block.detached"));
+const readOnly = (binding: Binding) =>
+	editorFailure("read_only", binding.site.createTranslator(blocksMessages)("block.readOnly"));
+const detached = (binding: Binding) =>
+	editorFailure("invalid_state", binding.site.createTranslator(blocksMessages)("block.detached"));
 
 /** The block's node in the live document. Falls back to the rendered node when there is no editor state to read (a preview, a test). */
 const locate = (binding: Binding): { readonly node: PmNode; readonly pos: number } | null => {
@@ -280,7 +282,8 @@ const locate = (binding: Binding): { readonly node: PmNode; readonly pos: number
 };
 
 function createTransaction(binding: Binding, tr: Transaction, pos: number): BlockTransaction {
-	const { definition } = binding;
+	const { definition, site } = binding;
+	const t = site.createTranslator(blocksMessages);
 	const current = (): PmNode => {
 		const node = tr.doc.nodeAt(pos);
 		if (!node) throw abort("invalid_state", t("block.detached"));
@@ -315,7 +318,7 @@ function createTransaction(binding: Binding, tr: Transaction, pos: number): Bloc
 		setValue: (name, value) => setValues({ [name]: value }),
 		setValues,
 		get children() {
-			return childrenOf(current());
+			return childrenOf(site, current());
 		},
 		child: (index) => ({
 			get values() {
@@ -390,9 +393,9 @@ function createTransaction(binding: Binding, tr: Transaction, pos: number): Bloc
 
 /** Runs `run` against one transaction and dispatches it once. Fails without writing when the editor is locked or the block is gone. */
 function runTransaction<T>(binding: Binding, run: (tx: BlockTransaction) => T): EditorResult<T> {
-	if (!isEditable(binding)) return readOnly();
+	if (!isEditable(binding)) return readOnly(binding);
 	const located = locate(binding);
-	if (!located) return detached();
+	if (!located) return detached(binding);
 	const { editor } = binding;
 	const tr = editor.state.tr;
 	try {
@@ -407,12 +410,12 @@ function runTransaction<T>(binding: Binding, run: (tx: BlockTransaction) => T): 
 
 /** Writes node attributes through the node view. Used for flat attributes (image, file, math, code fences) and the source text. */
 function writeAttributes(binding: Binding, attributes: Record<string, unknown>): EditorResult {
-	if (!isEditable(binding)) return readOnly();
+	if (!isEditable(binding)) return readOnly(binding);
 	try {
 		binding.updateAttributes(attributes);
 	} catch {
 		// The node left the document (an edit still pending while the view unmounts), so there is nowhere to write.
-		return detached();
+		return detached(binding);
 	}
 	return { ok: true, value: undefined };
 }
@@ -468,9 +471,9 @@ function createCommands(latest: { readonly current: Binding }) {
 		focus: (target?: { readonly child?: number; readonly at?: "start" | "end" }) => focusInside(latest.current, target),
 		remove(): EditorResult {
 			const binding = latest.current;
-			if (!isEditable(binding)) return readOnly();
+			if (!isEditable(binding)) return readOnly(binding);
 			const located = locate(binding);
-			if (!located) return detached();
+			if (!located) return detached(binding);
 			binding.editor
 				.chain()
 				.focus()
@@ -543,8 +546,9 @@ export function BlockEditorProvider({
 	readonly children: ReactNode;
 }) {
 	const { editor, node, getPos, updateAttributes, selected } = nodeView;
-	const latest = useRef<Binding>({ editor, node, getPos, updateAttributes, selected, definition });
-	latest.current = { editor, node, getPos, updateAttributes, selected, definition };
+	const site = useSite();
+	const latest = useRef<Binding>({ editor, node, getPos, updateAttributes, selected, definition, site });
+	latest.current = { editor, node, getPos, updateAttributes, selected, definition, site };
 	const commands = useMemo(() => createCommands(latest), []);
 	const editable = useEditorEditable(editor);
 	const focusedChild = useFocusedChild(editor, getPos);
@@ -566,7 +570,7 @@ export function BlockEditorProvider({
 			selected: Boolean(selected),
 			focusedChild,
 			get children() {
-				cachedChildren ??= childrenOf(node);
+				cachedChildren ??= childrenOf(site, node);
 				return cachedChildren;
 			},
 			canAddChild: editable && !isLeaf && (max === undefined || count < max),
@@ -575,7 +579,7 @@ export function BlockEditorProvider({
 			raw: { editor, node, getPos: getPos as () => number | undefined },
 			...commands,
 		};
-	}, [node, selected, definition, editable, focusedChild, commands, editor, getPos]);
+	}, [node, selected, definition, editable, focusedChild, commands, editor, getPos, site]);
 
 	return <BlockEditorContext.Provider value={block}>{children}</BlockEditorContext.Provider>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../lib/utils/cn";
@@ -27,8 +27,6 @@ export {
 	type SlotSource,
 } from "./registry";
 
-const t = createTranslator(slotsMessages);
-
 /**
  * Screen slots (default UI). The registry, the types and the run state live in `registry.tsx` and `use-slot-actions.ts`;
  * this file draws the button and the result panel on top of `useSlotActions`.
@@ -45,6 +43,7 @@ export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-full
  * Both are `null` when no action is attached.
  */
 export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: ReactNode } {
+	const t = useTranslator(slotsMessages);
 	const { actions, disabled, state, instruction, setInstruction, start, run, rerun, cancel, apply } =
 		useSlotActions(request);
 
@@ -170,6 +169,7 @@ function SlotResult({
 	state: Extract<SlotRunState, { status: "done" }>;
 	onApply: (value: string) => void;
 }) {
+	const t = useTranslator(slotsMessages);
 	const { result, action } = state;
 	if (result.kind === "candidates") {
 		if (result.items.length === 0) return <p className="text-cms-muted-foreground">{t("noResults")}</p>;

@@ -1,7 +1,10 @@
-import { defineMessages } from "@monti-cms/core";
-import { createTranslator } from "@monti-cms/core/client";
+import { defineMessages, type MessageBundle } from "@monti-cms/core";
+import { type Translator, useTranslator } from "@monti-cms/core/client";
+import { useMemo } from "react";
 import type { AiProviderKind } from "../connection";
 import type { AiCheckKind, AiEngine, AiResult, AiSlot } from "../definition";
+
+type LabelKey = typeof labelMessages extends MessageBundle<infer K> ? K : never;
 
 /** Option names shared by the admin AI screen (slot, result shape, mode, check, connection kind). */
 export const labelMessages = defineMessages("cms-ai.admin.labels", {
@@ -63,16 +66,23 @@ export const labelMessages = defineMessages("cms-ai.admin.labels", {
 	},
 });
 
-const t = createTranslator(labelMessages);
+/** The option name functions of one translator. */
+export const labelsOf = (t: Translator<LabelKey>) => ({
+	/** Slot names (Field, Body image, ...). */
+	slotLabel: (slot: AiSlot) => t(`slot.${slot}`),
+	/** Target name of a slot outside fields. An unknown target is returned as is. */
+	slotTargetLabel: (slot: "image" | "codeRules" | "media", target: string) => {
+		const key = `target.${slot}.${target}`;
+		return key in labelMessages.messages.en ? t(key as LabelKey) : target;
+	},
+	resultLabel: (result: AiResult) => t(`result.${result}`),
+	checkLabel: (kind: AiCheckKind) => t(`check.${kind as "pattern" | "maxLength" | "exists" | "oneOf"}`),
+	engineLabel: (engine: AiEngine) => t(`engine.${engine}`),
+	providerKindLabel: (kind: AiProviderKind) => t(`provider.${kind}`),
+});
 
-/** Slot names (Field, Body image, ...). */
-export const slotLabel = (slot: AiSlot) => t(`slot.${slot}`);
-/** Target name of a slot outside fields. An unknown target is returned as is. */
-export const slotTargetLabel = (slot: "image" | "codeRules" | "media", target: string) => {
-	const key = `target.${slot}.${target}`;
-	return key in labelMessages.messages.en ? t(key as Parameters<typeof t>[0]) : target;
-};
-export const resultLabel = (result: AiResult) => t(`result.${result}`);
-export const checkLabel = (kind: AiCheckKind) => t(`check.${kind as "pattern" | "maxLength" | "exists" | "oneOf"}`);
-export const engineLabel = (engine: AiEngine) => t(`engine.${engine}`);
-export const providerKindLabel = (kind: AiProviderKind) => t(`provider.${kind}`);
+/** The option name functions in the admin language of the site. */
+export function useLabels() {
+	const t = useTranslator(labelMessages);
+	return useMemo(() => labelsOf(t), [t]);
+}

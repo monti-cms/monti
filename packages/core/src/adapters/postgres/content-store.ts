@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { type AfterCommit, withAfterCommit } from "../../core/store/after-commit";
 import type { ContentStore } from "../../core/store/ports";
+import type { Site } from "../../site";
 import { type ContentStoreHooks, type StoreContext, validateSchemaName } from "./store/context";
 import { createEntryOps } from "./store/entries";
 import { createFolderOps } from "./store/folders";
@@ -23,10 +24,11 @@ export { migrateContentStore } from "./store/schema";
 
 export function createContentStore(
 	pool: Pool,
-	options?: { schema?: string; afterCommit?: AfterCommit } & ContentStoreHooks,
+	options: { site: Site; schema?: string; afterCommit?: AfterCommit } & ContentStoreHooks,
 ): ContentStore {
 	const ctx: StoreContext = {
 		pool,
+		site: options.site,
 		qSchema: validateSchemaName(options?.schema),
 		hooks: { beforePublishCommit: options?.beforePublishCommit },
 	};

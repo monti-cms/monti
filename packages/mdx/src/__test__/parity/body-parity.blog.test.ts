@@ -1,9 +1,9 @@
-import "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/client";
 import { createFormatRegistry } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
 import { documentText, EXCERPT_TEXT, SEARCH_TEXT } from "../../../../core/src/core/body-text";
-import { type Collection, DOCUMENT_COLLECTIONS } from "../../../../core/src/core/collections";
 import { prepareSnapshot as prepareCoreSnapshot, validateForPublish } from "../../../../core/src/core/snapshot";
+import blog from "../../../../core/test/cms.config";
 import { mdxFormat } from "../../format";
 import { parityCorpus } from "./corpus";
 import golden from "./golden.json";
@@ -44,10 +44,11 @@ const unique = (items: readonly { code: string }[] | undefined) =>
 	[...new Set((items ?? []).map((i) => i.code))].sort();
 const goldenOf = (name: string) => (golden as Record<string, Golden>)[name] as Golden;
 
-const contentCollection = DOCUMENT_COLLECTIONS[0] as Collection;
+const site = createSite(blog);
+const contentCollection = site.DOCUMENT_COLLECTIONS[0] as string;
 
-const prepareSnapshot = (input: Parameters<typeof prepareCoreSnapshot>[0]) =>
-	prepareCoreSnapshot(input, { import: { formats: createFormatRegistry([mdxFormat]) } });
+const prepareSnapshot = (input: Parameters<typeof prepareCoreSnapshot>[1]) =>
+	prepareCoreSnapshot(site, input, { import: { formats: createFormatRegistry([mdxFormat]) } });
 
 const prepare = async (mdx: string) => {
 	const snap = await prepareSnapshot({
@@ -57,7 +58,7 @@ const prepare = async (mdx: string) => {
 		format: "mdx",
 		body: mdx,
 	});
-	const publish = validateForPublish(snap, {
+	const publish = validateForPublish(site, snap, {
 		targets: [],
 		media: [],
 		internalLinks: (snap.internalLinks ?? []).map((l) => ({
@@ -94,8 +95,8 @@ describe("stored-document checks keep the results of the checks over MDX text", 
 					[...new Set(before.internalLinks)].sort(),
 				);
 				expect(snap.imageSources.map((s) => s.mediaId ?? s.src)).toEqual(before.imageSources);
-				expect(documentText(snap.doc, SEARCH_TEXT)).toBe(before.searchText);
-				expect(documentText(snap.doc, EXCERPT_TEXT)).toBe(before.excerptText);
+				expect(documentText(site, snap.doc, SEARCH_TEXT)).toBe(before.searchText);
+				expect(documentText(site, snap.doc, EXCERPT_TEXT)).toBe(before.excerptText);
 			});
 			continue;
 		}

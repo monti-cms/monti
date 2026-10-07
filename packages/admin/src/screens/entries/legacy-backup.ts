@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
 	emptyStoredDocument,
@@ -37,14 +38,18 @@ const documentOfLegacy = (
  * so the copy compares with the form the way the editor makes it.
  */
 export function upgradeRecoveryRecord(
+	site: Site,
 	record: RecoveryRecord,
 	server?: StoredDocument,
 	formats?: Readonly<Record<string, BrowserFormat>>,
 ): RecoveryRecord {
 	const snapshot = record.snapshot as Record<string, unknown>;
 	if (snapshot.doc !== undefined && typeof snapshot.mdx !== "string") {
-		const next = { ...record.snapshot, doc: readStoredDocument(snapshot.doc) ?? emptyStoredDocument() } as EntryForm;
-		return { ...record, snapshot: next, localFingerprint: formFingerprint(next) };
+		const next = {
+			...record.snapshot,
+			doc: readStoredDocument(snapshot.doc, site) ?? emptyStoredDocument(),
+		} as EntryForm;
+		return { ...record, snapshot: next, localFingerprint: formFingerprint(site, next) };
 	}
 	const { mdx, ...rest } = snapshot;
 	const doc = typeof mdx === "string" ? documentOfLegacy(mdx, server, formats) : emptyStoredDocument();
@@ -52,8 +57,8 @@ export function upgradeRecoveryRecord(
 	return {
 		...record,
 		snapshot: next,
-		localFingerprint: formFingerprint(next),
+		localFingerprint: formFingerprint(site, next),
 		// A copy of a new entry is compared with the empty form to see whether anything was typed.
-		baseFingerprint: record.entryId === "new" ? formFingerprint(EMPTY_FORM) : record.baseFingerprint,
+		baseFingerprint: record.entryId === "new" ? formFingerprint(site, EMPTY_FORM) : record.baseFingerprint,
 	};
 }

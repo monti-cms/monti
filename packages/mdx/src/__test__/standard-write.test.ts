@@ -1,7 +1,8 @@
-import { ADDED_BLOCKS, ADDED_MARK_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core/client";
 import type { CmsNode } from "@monti-cms/core/document";
 import { computeContentHash } from "@monti-cms/core/runtime";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 import { docOfMdx as docOf } from "../testing";
 
@@ -11,10 +12,10 @@ import { docOfMdx as docOf } from "../testing";
  */
 
 /** Write path: `MDX → analyze → toDocument → serialize`. */
-const write = (source: string): string => serialize(toDocument(analyze(source)));
+const write = (source: string): string => serialize(testSite, toDocument(testSite, analyze(testSite, source)));
 
 /** The document a body means. A line break is one node whichever way it was spelled, so no normalising is needed here. */
-const meaning = (source: string) => JSON.stringify(toDocument(analyze(source)));
+const meaning = (source: string) => JSON.stringify(toDocument(testSite, analyze(testSite, source)));
 
 const DIRECTIVE_NOTATION = /^:{2,}[a-z]|[^\\]:[a-z-]+\[/m;
 
@@ -30,13 +31,13 @@ describe("standard MDX output", () => {
 
 		it("are one node in the document whichever way they were spelled", () => {
 			const spellings = ["가<br />나", "가<br/>나", "가\\\n나", "가  \n나", "가<br />\n나"];
-			const documents = spellings.map((source) => toDocument(analyze(source)));
+			const documents = spellings.map((source) => toDocument(testSite, analyze(testSite, source)));
 			for (const document of documents) expect(document).toEqual(documents[0]);
 			expect(documents[0]?.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
 		});
 
 		it("have the same content hash whichever way they were spelled", () => {
-			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(source));
+			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(testSite, source));
 			expect(hash("가<br />나")).toBe(hash("가\\\n나"));
 			expect(hash("**가<br />나**")).toBe(hash("**가\\\n나**"));
 			// The serializer closes marks before a break, so a re-save must not change the hash either.
@@ -84,24 +85,24 @@ describe("standard MDX output", () => {
 			const written = write('앞<br className="x" />뒤');
 			expect(written).toContain('className="x"');
 			expect(write(written)).toBe(written);
-			expect(toDocument(analyze('앞<br className="x" />뒤')).content?.[0]?.content?.map((node) => node.type)).toEqual([
-				"text",
-				"mdxJsx",
-				"text",
-			]);
+			expect(
+				toDocument(testSite, analyze(testSite, '앞<br className="x" />뒤')).content?.[0]?.content?.map(
+					(node) => node.type,
+				),
+			).toEqual(["text", "mdxJsx", "text"]);
 		});
 	});
 
 	describe("blank lines", () => {
 		/** The paragraphs of the first container of a document, as text (`""` for an empty paragraph). */
 		const lines = (source: string) =>
-			(toDocument(analyze(source)).content ?? []).map((node) =>
+			(toDocument(testSite, analyze(testSite, source)).content ?? []).map((node) =>
 				(node.content ?? []).map((child) => child.text ?? child.type).join(""),
 			);
 		const withBlankLines = (count: number) => `앞\n\n${"<br />\n\n".repeat(count)}뒤\n`;
 
 		it("are empty paragraphs in the document: a line of only <br /> is one", () => {
-			expect(toDocument(analyze("앞\n\n<br />\n\n뒤")).content).toEqual([
+			expect(toDocument(testSite, analyze(testSite, "앞\n\n<br />\n\n뒤")).content).toEqual([
 				{ type: "paragraph", content: [{ type: "text", text: "앞" }] },
 				{ type: "paragraph", content: [] },
 				{ type: "paragraph", content: [{ type: "text", text: "뒤" }] },
@@ -121,12 +122,12 @@ describe("standard MDX output", () => {
 				content: text ? [{ type: "text", text }] : [],
 			});
 			const doc: CmsNode = { type: "doc", content: [paragraph("앞"), paragraph(), paragraph(), paragraph("뒤")] };
-			expect(serialize(doc)).toBe(withBlankLines(2));
-			expect(toDocument(analyze(serialize(doc)))).toEqual(doc);
+			expect(serialize(testSite, doc)).toBe(withBlankLines(2));
+			expect(toDocument(testSite, analyze(testSite, serialize(testSite, doc)))).toEqual(doc);
 		});
 
 		it("do not change the content hash when a body is re-saved", () => {
-			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(source));
+			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(testSite, source));
 			const written = withBlankLines(3);
 			expect(hash(write(written))).toBe(hash(written));
 			// A different number of blank lines is different content.
@@ -142,20 +143,20 @@ describe("standard MDX output", () => {
 					{ type: "paragraph", content: [{ type: "text", text: "뒤" }] },
 				],
 			};
-			expect(serialize(doc)).toBe(withBlankLines(1));
+			expect(serialize(testSite, doc)).toBe(withBlankLines(1));
 		});
 
 		it("are not written at the end of a document, where the editor keeps one after a last block that is not a paragraph", () => {
 			const empty = { type: "paragraph", content: [] } satisfies CmsNode;
 			const text = { type: "paragraph", content: [{ type: "text", text: "끝" }] } satisfies CmsNode;
-			expect(serialize({ type: "doc", content: [text, empty, empty] })).toBe("끝\n");
-			expect(serialize({ type: "doc", content: [empty] })).toBe("");
-			expect(serialize({ type: "doc", content: [empty, text] })).toBe("<br />\n\n끝\n");
+			expect(serialize(testSite, { type: "doc", content: [text, empty, empty] })).toBe("끝\n");
+			expect(serialize(testSite, { type: "doc", content: [empty] })).toBe("");
+			expect(serialize(testSite, { type: "doc", content: [empty, text] })).toBe("<br />\n\n끝\n");
 			expect(write("끝\n\n<br />\n")).toBe("끝\n");
 		});
 
 		it("keep blank lines inside lists, quotes and containers", () => {
-			const container = ADDED_BLOCKS.find(
+			const container = testSite.ADDED_BLOCKS.find(
 				(block) => block.syntax.kind === "container" && !block.children && !block.parent,
 			);
 			const bodies = [
@@ -167,20 +168,22 @@ describe("standard MDX output", () => {
 			];
 			for (const body of bodies) {
 				expect(write(body), body).toBe(body);
-				expect(JSON.stringify(toDocument(analyze(body))), body).toContain('{"type":"paragraph","content":[]}');
+				expect(JSON.stringify(toDocument(testSite, analyze(testSite, body))), body).toContain(
+					'{"type":"paragraph","content":[]}',
+				);
 			}
 		});
 
 		it("do not turn the empty placeholder of an empty container into a blank line", () => {
-			const container = ADDED_BLOCKS.find(
+			const container = testSite.ADDED_BLOCKS.find(
 				(block) => block.syntax.kind === "container" && !block.children && !block.parent,
 			);
 			if (!container) return;
 			const empty = { type: "paragraph", content: [] } satisfies CmsNode;
-			const written = serialize({ type: "doc", content: [{ type: container.name, content: [empty] }] });
+			const written = serialize(testSite, { type: "doc", content: [{ type: container.name, content: [empty] }] });
 			expect(written).not.toContain("<br />");
 			expect(
-				serialize({
+				serialize(testSite, {
 					type: "doc",
 					content: [{ type: "bulletList", content: [{ type: "listItem", content: [empty] }] }],
 				}),
@@ -255,26 +258,26 @@ describe("standard MDX output", () => {
 		const open = (block: BlockDefinition) =>
 			`${block.component}${attributeText(block) ? ` ${attributeText(block)}` : ""}`;
 
-		const container = ADDED_BLOCKS.find(
+		const container = testSite.ADDED_BLOCKS.find(
 			(block) => block.syntax.kind === "container" && !block.children && !block.parent,
 		);
-		const mark = ADDED_MARK_BLOCKS.find((block) => !block.children);
-		const group = ADDED_BLOCKS.flatMap((block) => {
-			const child = ADDED_BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
+		const mark = testSite.ADDED_MARK_BLOCKS.find((block) => !block.children);
+		const group = testSite.ADDED_BLOCKS.flatMap((block) => {
+			const child = testSite.ADDED_BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 			return child && block.syntax.kind === "container" ? [{ block, child }] : [];
 		})[0];
 
 		it.skipIf(!container)("writes a container block as an element holding its body", () => {
 			if (!container) return;
 			const body = `<${open(container)}>\n\n본문 <u>밑줄</u>\n\n</${container.component}>\n`;
-			expect(analyze(body).errors).toEqual([]);
+			expect(analyze(testSite, body).errors).toEqual([]);
 			expect(write(body)).toBe(body);
 		});
 
 		it.skipIf(!mark)("writes a text block as an element around the text", () => {
 			if (!mark) return;
 			const body = `앞 <${open(mark)}>라벨</${mark.component}> 뒤\n`;
-			expect(analyze(body).errors).toEqual([]);
+			expect(analyze(testSite, body).errors).toEqual([]);
 			expect(write(body)).toBe(body);
 		});
 
@@ -303,7 +306,7 @@ describe("standard MDX output", () => {
 				`</${block.component}>`,
 				"",
 			].join("\n");
-			expect(analyze(body).errors).toEqual([]);
+			expect(analyze(testSite, body).errors).toEqual([]);
 			expect(write(body)).toBe(body);
 		});
 
@@ -320,7 +323,7 @@ describe("standard MDX output", () => {
 		});
 
 		it("omits a false boolean attribute and writes a true one bare", () => {
-			const boolean = ADDED_BLOCKS.find(
+			const boolean = testSite.ADDED_BLOCKS.find(
 				(block) =>
 					block.syntax.kind === "container" &&
 					!block.children &&

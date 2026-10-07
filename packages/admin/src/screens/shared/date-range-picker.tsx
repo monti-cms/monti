@@ -1,13 +1,11 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { CalendarRange } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Calendar } from "../../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { dateRangeMessages } from "./date-range.messages";
-
-const t = createTranslator(dateRangeMessages);
 
 /** `YYYY-MM-DD` ↔ calendar date. The admin filter takes dates in the configured time zone and sends them to the server as day boundaries. */
 export const dayToDate = (value: string) => {
@@ -54,6 +52,7 @@ export function DateRangePicker({
 	to: string;
 	onChange: (from: string, to: string) => void;
 }) {
+	const t = useTranslator(dateRangeMessages);
 	const summary = from || to ? `${from || t("start")} ~ ${to || t("end")}` : t("all");
 	return (
 		<Popover>

@@ -1,6 +1,6 @@
 "use client";
 
-import { COLLECTION_DEFINITIONS, createTranslator, isCollection } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../lib/utils/cn";
@@ -8,8 +8,6 @@ import { CollectionIcon } from "../screens/shared/collection-icon";
 import { Spinner } from "../ui/spinner";
 import { type InternalLinkItem, internalLinkHref } from "./internal-link";
 import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
 
 interface InternalLinkPopupProps {
 	items: InternalLinkItem[];
@@ -23,8 +21,11 @@ interface InternalLinkPopupProps {
 }
 
 /** Line under the entry: collection name · address · draft status. */
-function itemMeta(item: InternalLinkItem): string {
-	const collection = isCollection(item.collection) ? COLLECTION_DEFINITIONS[item.collection].label : item.collection;
+function itemMeta(site: Site, item: InternalLinkItem): string {
+	const t = site.createTranslator(editorMessages);
+	const collection = site.isCollection(item.collection)
+		? site.COLLECTION_DEFINITIONS[item.collection].label
+		: item.collection;
 	// Links to draft targets are allowed while editing but flagged. The target must be public to publish.
 	const status =
 		item.status && item.status !== "published"
@@ -33,7 +34,7 @@ function itemMeta(item: InternalLinkItem): string {
 				: item.status
 			: null;
 	// Show the public path (collection `path`) the link will actually point to.
-	return [collection, internalLinkHref(item), status].filter(Boolean).join(" · ");
+	return [collection, internalLinkHref(site, item), status].filter(Boolean).join(" · ");
 }
 
 /**
@@ -49,6 +50,8 @@ export function InternalLinkPopup({
 	onSelect,
 	onClose,
 }: InternalLinkPopupProps) {
+	const site = useSite();
+	const t = useTranslator(editorMessages);
 	const [mounted, setMounted] = useState(false);
 	const listRef = useRef<HTMLDivElement>(null);
 
@@ -105,7 +108,7 @@ export function InternalLinkPopup({
 					</span>
 					<span className="min-w-0">
 						<span className="block truncate font-medium text-sm">{item.title}</span>
-						<span className="block truncate text-cms-muted-foreground text-xs">{itemMeta(item)}</span>
+						<span className="block truncate text-cms-muted-foreground text-xs">{itemMeta(site, item)}</span>
 					</span>
 				</div>
 			))}

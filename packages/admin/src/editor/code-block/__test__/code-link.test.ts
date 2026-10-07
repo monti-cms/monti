@@ -1,6 +1,7 @@
 import { Editor } from "@tiptap/core";
 import type { DecorationSet } from "@tiptap/pm/view";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import {
 	anchorIdsOf,
 	codeLink,
@@ -25,7 +26,7 @@ const CODE = "function add(a, b) {\n  return a + b;\n}";
 const SOURCE = storedDoc({ type: "paragraph", content: [text("이 함수가 값을 돌려준다.")] }, codeNode(CODE));
 
 const mount = (doc = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+	editor = new Editor({ extensions: buildEditorExtensions(testSite), content: storedToTiptap(testSite, doc) });
 	return editor;
 };
 
@@ -35,7 +36,7 @@ const wordRange = (instance: Editor, word = "함수가") => {
 	return { from, to: from + word.length };
 };
 const codePos = (instance: Editor) => instance.state.doc.child(0).nodeSize;
-const save = (instance: Editor) => tiptapToStored(instance.getJSON());
+const save = (instance: Editor) => tiptapToStored(testSite, instance.getJSON());
 
 describe("linking body text to code (editor)", () => {
 	it("pick body text first, then a line by its number, then link: the body link and line label are created together", () => {
@@ -45,7 +46,7 @@ describe("linking body text to code (editor)", () => {
 		expect(codeEffectsKey.getState(instance.state)?.linking).toEqual({ kind: "text", from, to });
 
 		pickLines(instance.view, codePos(instance), 0, 2);
-		expect(commitLink(instance.view)).toBe(true);
+		expect(commitLink(testSite, instance.view)).toBe(true);
 
 		expect(codeEffectsKey.getState(instance.state)?.linking).toBeNull();
 		expect(withoutIds(save(instance))).toEqual(
@@ -63,11 +64,11 @@ describe("linking body text to code (editor)", () => {
 		startLinkFromLines(instance.view, codePos(instance), 1, 2);
 		const first = wordRange(instance, "함수가");
 		instance.commands.setTextSelection(first);
-		expect(commitLink(instance.view)).toBe(true);
+		expect(commitLink(testSite, instance.view)).toBe(true);
 
 		startLinkFromLines(instance.view, codePos(instance), 1, 2);
 		instance.commands.setTextSelection(wordRange(instance, "값을"));
-		commitLink(instance.view);
+		commitLink(testSite, instance.view);
 
 		const output = save(instance);
 		const linked = (output.content[0]?.content ?? []).filter((node) => node.marks?.length).map((node) => node.text);
@@ -79,7 +80,7 @@ describe("linking body text to code (editor)", () => {
 	it("does not link if there is no body text or no line is picked, and Esc or cancel backs out", () => {
 		const instance = mount();
 		startLinkFromText(instance.view, ...(Object.values(wordRange(instance)) as [number, number]));
-		expect(commitLink(instance.view)).toBe(false);
+		expect(commitLink(testSite, instance.view)).toBe(false);
 		cancelLink(instance.view);
 		expect(codeEffectsKey.getState(instance.state)?.linking).toBeNull();
 
@@ -95,10 +96,10 @@ describe("linking body text to code (editor)", () => {
 		const range = wordRange(instance);
 		startLinkFromText(instance.view, range.from, range.to);
 		pickLines(instance.view, codePos(instance), 0, 1);
-		commitLink(instance.view);
+		commitLink(testSite, instance.view);
 		expect(findAnchor(instance.state.doc, "c1")).toMatchObject({ start: 0, end: 1 });
 
-		unlinkRef(instance.view, range.from, range.to);
+		unlinkRef(testSite, instance.view, range.from, range.to);
 		expect(findAnchor(instance.state.doc, "c1")).toBeNull();
 		expect(withoutIds(save(instance))).toEqual(withoutIds(SOURCE));
 	});

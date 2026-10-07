@@ -1,4 +1,4 @@
-import { ADDED_MARK_BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
+import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/client";
 import type { CmsJsonValue } from "@monti-cms/core/document";
 import { Mark, mergeAttributes } from "@tiptap/core";
 
@@ -32,14 +32,16 @@ export const addedMarkName = (blockName: string) => `cms${pascal(blockName)}`;
 /** HTML attribute name for one attribute. */
 const dataAttribute = (name: string) => `data-mark-${kebab(name)}`;
 
-/** Added text styles (block name → definition). */
-export const ADDED_MARKS: ReadonlyMap<string, BlockDefinition> = new Map(
-	ADDED_MARK_BLOCKS.map((block) => [block.name, block]),
+/** Added text styles of a site (block name → definition). */
+export const addedMarksOf = perSite(
+	(site: Pick<Site, "ADDED_MARK_BLOCKS">): ReadonlyMap<string, BlockDefinition> =>
+		new Map(site.ADDED_MARK_BLOCKS.map((block) => [block.name, block])),
 );
 
 /** Editor mark name → added text style definition. */
-export const ADDED_MARK_BY_EDITOR_NAME: ReadonlyMap<string, BlockDefinition> = new Map(
-	ADDED_MARK_BLOCKS.map((block) => [addedMarkName(block.name), block]),
+export const addedMarkByEditorName = perSite(
+	(site: Pick<Site, "ADDED_MARK_BLOCKS">): ReadonlyMap<string, BlockDefinition> =>
+		new Map(site.ADDED_MARK_BLOCKS.map((block) => [addedMarkName(block.name), block])),
 );
 
 /**
@@ -115,10 +117,12 @@ export function createAddedMark(block: BlockDefinition, spec: EditorMarkSpec = {
 }
 
 /** A style linking body text and a code line (blocks with `codeAnchor` in their attributes). If none, the code block's link tool is hidden. */
-export const CODE_ANCHOR_REF: { readonly mark: string; readonly attribute: string } | null = (() => {
-	for (const block of ADDED_MARK_BLOCKS) {
-		const attribute = anchorAttribute(block);
-		if (attribute) return { mark: addedMarkName(block.name), attribute };
-	}
-	return null;
-})();
+export const codeAnchorRef = perSite(
+	(site: Pick<Site, "ADDED_MARK_BLOCKS">): { readonly mark: string; readonly attribute: string } | null => {
+		for (const block of site.ADDED_MARK_BLOCKS) {
+			const attribute = anchorAttribute(block);
+			if (attribute) return { mark: addedMarkName(block.name), attribute };
+		}
+		return null;
+	},
+);

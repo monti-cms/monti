@@ -1,12 +1,13 @@
 "use client";
 
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useTranslator } from "@monti-cms/core/client";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "../lib/utils/cn";
 import { type SlotRequest, useSlot } from "../slots/slots";
+import type { TranslatorFor } from "../translator";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";
 import { Skeleton } from "../ui/skeleton";
@@ -15,10 +16,8 @@ import { Textarea } from "../ui/textarea";
 import { BlockSettings, BlockSettingsField, ContainerToolbar, ToolbarButton } from "./blocks/shared";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { ImageCropDialog } from "./image-crop-dialog";
-import { ALT_REQUIRED_MESSAGE } from "./image-insert-dialog";
+import { altRequiredMessage } from "./image-insert-dialog";
 import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
 
 /** Width input: 1 to 100%, or a positive integer px of at most 4096. Empty means fit to the body. */
 export const isValidImageWidth = (value: string) => {
@@ -41,14 +40,16 @@ const AROUND_CHARS = 1500;
 /** A string value, or `fallback` when the attribute is unset. */
 const text = (value: string | boolean | undefined, fallback = "") => (typeof value === "string" ? value : fallback);
 
-const ALIGN_TOOLS = [
-	{ value: "left", label: t("toolbar.alignLeftTitle"), icon: AlignLeft },
-	{ value: "center", label: t("toolbar.alignCenterTitle"), icon: AlignCenter },
-	{ value: "right", label: t("toolbar.alignRightTitle"), icon: AlignRight },
-] as const;
+const ALIGN_TOOLS = (t: TranslatorFor<typeof editorMessages>) =>
+	[
+		{ value: "left", label: t("toolbar.alignLeftTitle"), icon: AlignLeft },
+		{ value: "center", label: t("toolbar.alignCenterTitle"), icon: AlignCenter },
+		{ value: "right", label: t("toolbar.alignRightTitle"), icon: AlignRight },
+	] as const;
 
 /** Edit view of the core image block (`blockViews.image`). */
 export function ImageBlockView() {
+	const t = useTranslator(editorMessages);
 	const block = useBlockEditor();
 	const widthInputId = useId();
 	const altInputId = useId();
@@ -256,7 +257,7 @@ export function ImageBlockView() {
 			{/* Block toolbar row: alignment, settings, crop. Deleting is in the block handle menu. */}
 			{isEditable && (
 				<ContainerToolbar label={t("imageNode.toolbar")}>
-					{ALIGN_TOOLS.map((tool) => (
+					{ALIGN_TOOLS(t).map((tool) => (
 						<ToolbarButton
 							key={tool.value}
 							label={tool.label}
@@ -306,7 +307,7 @@ export function ImageBlockView() {
 							/>
 							{altMissing && (
 								<p id={altErrorId} role="alert" className="text-cms-destructive">
-									{ALT_REQUIRED_MESSAGE}
+									{altRequiredMessage(t)}
 								</p>
 							)}
 							{altSlot.panel}

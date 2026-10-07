@@ -1,5 +1,6 @@
 import { fakeCms } from "@monti-cms/core/testing";
 import { describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../test/site";
 import aiServer from "../server";
 
 /** A store holding the screen action rows (including version check). */
@@ -38,7 +39,7 @@ describe("AI plugin registration", () => {
 	});
 
 	it("the core API handler looks up paths missing from core routes in the plugin route table", async () => {
-		const cms = fakeCms({ plugins: [{ name: "ai", ...aiServer }] });
+		const cms = fakeCms({ config: testConfig, plugins: [{ name: "ai", ...aiServer }] });
 		const call = (path: string) =>
 			cms.handle(new Request(`http://localhost/api/cms/${path}`, { headers: { origin: "http://localhost" } }));
 		const actions = await call("v1/ai/actions");
@@ -48,7 +49,7 @@ describe("AI plugin registration", () => {
 	});
 
 	it("creates (`POST /v1/ai/actions`) and deletes (`DELETE …?expectedVersion=`) screen actions through the API", async () => {
-		const cms = fakeCms({ plugins: [{ name: "ai", ...aiServer }] });
+		const cms = fakeCms({ config: testConfig, plugins: [{ name: "ai", ...aiServer }] });
 		const request = (method: "POST" | "DELETE", path: string, body?: unknown) =>
 			cms.handle(
 				new Request(`http://localhost/api/cms/${path}`, {

@@ -1,5 +1,6 @@
 import { type BrowserFormat, useFormat } from "@monti-cms/admin";
 import { storedToTiptap, tiptapToStored } from "@monti-cms/admin/editor";
+import type { Site } from "@monti-cms/core/client";
 import { unparsedDocument } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
 
@@ -15,14 +16,14 @@ export const MDX_FORMAT = "mdx";
 export const useMdxFormat = (): BrowserFormat | undefined => useFormat(MDX_FORMAT);
 
 /** The text of a piece of the editor's content (blocks as Tiptap JSON), written in the format. */
-export const textOfContent = (format: BrowserFormat, content: readonly JSONContent[]): string =>
-	format.export(tiptapToStored({ type: "doc", content: [...content] })).trim();
+export const textOfContent = (site: Site, format: BrowserFormat, content: readonly JSONContent[]): string =>
+	format.export(tiptapToStored(site, { type: "doc", content: [...content] })).trim();
 
 /** The editor's content for a text the model wrote. A text the format cannot read is kept as it is, in a box, rather than dropped or half read. */
-export function contentOfText(format: BrowserFormat, text: string): JSONContent[] {
+export function contentOfText(site: Site, format: BrowserFormat, text: string): JSONContent[] {
 	const read = format.import(text);
 	const doc = read.ok ? read.doc : unparsedDocument(text, null, format.name);
-	return storedToTiptap(doc).content ?? [];
+	return storedToTiptap(site, doc).content ?? [];
 }
 
 /** The document a text reads as, or `null` when the format cannot read it. For showing a preview of what the model wrote. */

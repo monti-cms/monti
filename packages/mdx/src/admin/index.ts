@@ -6,8 +6,8 @@ import { defineAdminPlugin } from "@monti-cms/admin/plugins";
 import { MdxAdminProvider } from "./provider";
 
 export { type EditorMode, EditorToggle } from "./editor-toggle";
-export { createMdxBrowserFormat, mdxBrowserFormat } from "./format";
+export { createMdxBrowserFormat } from "./format";
 export { MdxAdminProvider } from "./provider";
-export { lineOfBlock, MDX_SOURCE_LABEL, MdxSourcePanel, SOURCE_ERROR_ID } from "./source-panel";
+export { lineOfBlock, MdxSourcePanel, mdxSourceLabel, SOURCE_ERROR_ID } from "./source-panel";
 
 export default defineAdminPlugin({ Provider: MdxAdminProvider });

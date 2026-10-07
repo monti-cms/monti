@@ -1,12 +1,11 @@
-import {
-	ADDED_BLOCKS,
-	ADDED_MARK_BLOCKS,
-	BLOCKS,
-	type BlockAttribute,
-	type BlockDefinition,
-} from "@monti-cms/core/client";
+import type { BlockAttribute, BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { compareMdxStructure as compareStructure, readableMdx } from "../format";
+import { testSite } from "../../../core/test/site";
+import { compareMdxStructure, readableMdx as readableMdxOf } from "../format";
+
+const { ADDED_BLOCKS, ADDED_MARK_BLOCKS, BLOCKS } = testSite;
+const compareStructure = (a: string, b: string) => compareMdxStructure(testSite, a, b);
+const readableMdx = (mdx: string) => readableMdxOf(testSite, mdx);
 
 /**
  * Site block names are looked up in the current config (runs with both the reference blog config and other site configs). If the config has no such block,
@@ -172,9 +171,8 @@ describe("translation structure check", () => {
 
 describe("structure check failure reasons", () => {
 	it("returns both the reason code and the reason text built from the dictionary", async () => {
-		const { createTranslator } = await import("../../../core/src/i18n");
 		const { translationMessages } = await import("../../../core/src/core/translation/messages");
-		const t = createTranslator(translationMessages);
+		const t = testSite.createTranslator(translationMessages);
 		expect(compareStructure("a\n\n`x`", "a\n\n`y`")).toEqual({
 			ok: false,
 			code: "structure_changed",

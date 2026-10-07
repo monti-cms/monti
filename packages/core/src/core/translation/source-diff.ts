@@ -1,7 +1,8 @@
-import { BLOCK_BY_NAME, FENCE_BLOCKS } from "../../blocks/derive";
 import { withoutBlockIds } from "../../doc/block-ids";
 import { type StoredDocument, UNPARSED_NODE } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
+import type { Site } from "../../site";
+import { perSite } from "../../site/per-site";
 
 /**
  * Block comparison of two source versions (translation screen).
@@ -14,28 +15,37 @@ import type { CmsNode } from "../../doc/types";
  * blocks without an id are paired by kind and content.
  */
 
-/** Names of expandable boxes: the box itself is a skeleton and each inner block is a unit. */
-const EXPANDED = new Set([...BLOCK_BY_NAME.values()].filter((block) => block.translateInside).map((b) => b.name));
+/** What the comparison reads from the blocks of a site. */
+type DiffSite = Pick<Site, "BLOCK_BY_NAME" | "FENCE_BLOCKS">;
 
-const translatableOf = (name: string): string | undefined => {
-	const block = BLOCK_BY_NAME.get(name);
-	return Object.entries(block?.attributes ?? {}).find(([, attribute]) => attribute.translatable)?.[0];
-};
+const tablesOf = perSite((site: DiffSite) => {
+	const { BLOCK_BY_NAME, FENCE_BLOCKS } = site;
 
-/** Boxes that gather the child blocks' translatable attributes (e.g. tab names) into one header line. Block name → [child block name, attribute]. */
-const CHILD_HEADERS = new Map(
-	[...BLOCK_BY_NAME.values()].flatMap((block) => {
-		const child = BLOCK_BY_NAME.get(block.children?.blocks?.[0] ?? "");
-		const attribute = child && translatableOf(child.name);
-		return child && attribute ? [[block.name, [child.name, attribute] as const] as const] : [];
-	}),
-);
+	/** Names of expandable boxes: the box itself is a skeleton and each inner block is a unit. */
+	const EXPANDED = new Set([...BLOCK_BY_NAME.values()].filter((block) => block.translateInside).map((b) => b.name));
+
+	const translatableOf = (name: string): string | undefined => {
+		const block = BLOCK_BY_NAME.get(name);
+		return Object.entries(block?.attributes ?? {}).find(([, attribute]) => attribute.translatable)?.[0];
+	};
+
+	/** Boxes that gather the child blocks' translatable attributes (e.g. tab names) into one header line. Block name → [child block name, attribute]. */
+	const CHILD_HEADERS = new Map(
+		[...BLOCK_BY_NAME.values()].flatMap((block) => {
+			const child = BLOCK_BY_NAME.get(block.children?.blocks?.[0] ?? "");
+			const attribute = child && translatableOf(child.name);
+			return child && attribute ? [[block.name, [child.name, attribute] as const] as const] : [];
+		}),
+	);
+
+	/** Blocks a human must check even without text (comments and labels may be inside). Code blocks (fence blocks such as a diagram are code blocks too). */
+	const ALWAYS_MANUAL = new Set(["codeBlock", "math", ...[...FENCE_BLOCKS.values()].map((block) => block.name)]);
+
+	return { BLOCK_BY_NAME, EXPANDED, translatableOf, CHILD_HEADERS, ALWAYS_MANUAL };
+});
 
 /** Blocks with no text to translate, so the source is used as is. */
 const STRUCTURAL = new Set(["horizontalRule", "html", "mdxEsm", "mdxExpression"]);
-
-/** Blocks a human must check even without text (comments and labels may be inside). Code blocks (fence blocks such as a diagram are code blocks too). */
-const ALWAYS_MANUAL = new Set(["codeBlock", "math", ...[...FENCE_BLOCKS.values()].map((block) => block.name)]);
 
 export type UnitKind = "block" | "header";
 
@@ -66,9 +76,9 @@ const attrText = (node: CmsNode): string => {
 	return [node.attrs?.alt, node.attrs?.title].filter((value) => typeof value === "string").join("");
 };
 
-const isAuto = (node: CmsNode): boolean => {
+const isAuto = (site: DiffSite, node: CmsNode): boolean => {
 	if (STRUCTURAL.has(node.type)) return true;
-	if (ALWAYS_MANUAL.has(node.type)) {
+	if (tablesOf(site).ALWAYS_MANUAL.has(node.type)) {
 		const value = node.attrs?.code ?? node.attrs?.value;
 		return typeof value === "string" ? value.trim().length === 0 : false;
 	}
@@ -82,7 +92,8 @@ const stringAttr = (node: CmsNode, name: string) => {
 	return typeof value === "string" ? value : "";
 };
 
-const headerValue = (node: CmsNode): HeaderValue | null => {
+const headerValue = (site: DiffSite, node: CmsNode): HeaderValue | null => {
+	const { BLOCK_BY_NAME, CHILD_HEADERS, translatableOf } = tablesOf(site);
 	const fromChildren = CHILD_HEADERS.get(node.type);
 	if (fromChildren) {
 		const [childType, attribute] = fromChildren;
@@ -100,12 +111,13 @@ const headerValue = (node: CmsNode): HeaderValue | null => {
 };
 
 /** Splits a source document into translation units (document order). */
-export function flattenUnits(doc: Pick<StoredDocument, "content">): TranslationUnit[] {
+export function flattenUnits(site: DiffSite, doc: Pick<StoredDocument, "content">): TranslationUnit[] {
+	const { EXPANDED } = tablesOf(site);
 	const units: TranslationUnit[] = [];
 	const walk = (nodes: readonly CmsNode[], scope: string, parentId?: string) => {
 		for (const node of nodes) {
 			if (EXPANDED.has(node.type)) {
-				const header = headerValue(node);
+				const header = headerValue(site, node);
 				if (header) {
 					units.push({
 						key: `${scope}|header|${node.type}`,
@@ -127,7 +139,7 @@ export function flattenUnits(doc: Pick<StoredDocument, "content">): TranslationU
 				node,
 				source: blockSource(node),
 				parentId,
-				auto: isAuto(node),
+				auto: isAuto(site, node),
 			});
 		}
 	};
@@ -343,8 +355,8 @@ const diffById = (before: readonly TranslationUnit[], after: readonly Translatio
  * Compares two source versions block by block. Equal blocks are omitted; a block whose content alone changed is `changed`, a new block is `added`, and a removed
  * block is `removed`. Blocks are paired by block id, which also finds `moved` blocks (see `diffById`). `null` if either is not a document (an `unparsed` body).
  */
-export function diffSources(before: StoredDocument, after: StoredDocument): SourceChange[] | null {
+export function diffSources(site: DiffSite, before: StoredDocument, after: StoredDocument): SourceChange[] | null {
 	const unparsed = (doc: StoredDocument) => doc.content.some((node) => node.type === UNPARSED_NODE);
 	if (unparsed(before) || unparsed(after)) return null;
-	return diffById(flattenUnits(before), flattenUnits(after));
+	return diffById(flattenUnits(site, before), flattenUnits(site, after));
 }

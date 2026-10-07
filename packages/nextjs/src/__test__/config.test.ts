@@ -74,15 +74,13 @@ describe("withCms: optional dependencies that are not installed", () => {
 });
 
 describe("withCms: basePath", () => {
-	const options = { config: "./cms.config.ts", server: "./cms.server.ts" };
-
 	it("passes Next basePath to the server and browser bundles as an environment variable", () => {
-		expect(withCms({ basePath: "/blog" }, options).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
-		expect(withCms({ basePath: "/blog/" }, options).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
+		expect(withCms({ basePath: "/blog" }).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
+		expect(withCms({ basePath: "/blog/" }).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
 	});
 
 	it("empty value without basePath, and the app's other env is left alone", () => {
-		const config = withCms({ env: { KEEP: "1" } }, options);
+		const config = withCms({ env: { KEEP: "1" } });
 		expect(config.env).toEqual({ KEEP: "1", NEXT_PUBLIC_CMS_BASE_PATH: "" });
 	});
 });

@@ -1,10 +1,13 @@
-import { createTranslator } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import type { Cms, LegacySecretFormat, PluginSecrets } from "@monti-cms/core/plugin/server";
 import { AiError } from "./errors";
 import { AI_PLUGIN_NAME } from "./plugin-name";
 import { providerMessages } from "./provider.messages";
 
-const t = createTranslator(providerMessages);
+/** The sites a message is written for: anything that has a translator for the admin language. */
+type SecretSite = Pick<Site, "createTranslator">;
+
+const noSecretMessage = (site: SecretSite) => site.createTranslator(providerMessages)("noSecret");
 
 /**
  * Encryption of AI service keys. The CMS instance derives this plugin's own key from the server config's `secret` and the plugin name
@@ -20,20 +23,20 @@ export const LEGACY_KEY_FORMAT: LegacySecretFormat = { prefix: "v1", domain: "cm
 export const aiSecrets = (cms: Cms): PluginSecrets => cms.secrets(AI_PLUGIN_NAME, { legacy: LEGACY_KEY_FORMAT });
 
 /** Stand-in for an instance without secrets (a store built without `secrets`): nothing can be stored or read. */
-export const NO_SECRETS: PluginSecrets = {
+export const noSecretsOf = (site: SecretSite): PluginSecrets => ({
 	available: false,
 	encrypt: () => {
-		throw new AiError("ai_unavailable", t("noSecret"));
+		throw new AiError("ai_unavailable", noSecretMessage(site));
 	},
 	decrypt: () => null,
 	isCurrent: () => false,
 	deriveKey: () => {
-		throw new AiError("ai_unavailable", t("noSecret"));
+		throw new AiError("ai_unavailable", noSecretMessage(site));
 	},
-};
+});
 
-export function encryptSecret(plain: string, secrets: PluginSecrets): string {
-	if (!secrets.available) throw new AiError("ai_unavailable", t("noSecret"));
+export function encryptSecret(site: SecretSite, plain: string, secrets: PluginSecrets): string {
+	if (!secrets.available) throw new AiError("ai_unavailable", noSecretMessage(site));
 	return secrets.encrypt(plain);
 }
 

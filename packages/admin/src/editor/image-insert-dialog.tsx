@@ -1,10 +1,11 @@
 "use client";
 
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { cn } from "../lib/utils/cn";
-import { MEDIA_NOT_CONFIGURED } from "../screens/api-error-message";
+import { mediaNotConfiguredMessage } from "../screens/api-error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
+import type { TranslatorFor } from "../translator";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -19,10 +20,8 @@ import { submitOnEnter } from "./link-form";
 import { editorMessages } from "./messages";
 import { formatBytes, type PreparedUpload, prepareUpload, uploadImageFile } from "./upload-helper";
 
-const t = createTranslator(editorMessages);
-
 /** Notice for when an image that needs a description has no alt text. Shared by the insert dialog and image settings. */
-export const ALT_REQUIRED_MESSAGE = t("imageDialog.altRequired");
+export const altRequiredMessage = (t: TranslatorFor<typeof editorMessages>) => t("imageDialog.altRequired");
 
 export interface ImageInsertion {
 	mediaId: string;
@@ -64,8 +63,11 @@ export function ImageInsertDialog({
 	onClose,
 	onInsert,
 	mode = "insert",
-	title = t("imageDialog.title"),
+	title: titleProp,
 }: ImageInsertDialogProps) {
+	const site = useSite();
+	const t = useTranslator(editorMessages);
+	const title = titleProp ?? t("imageDialog.title");
 	const picking = mode === "pick";
 	const { media } = useAdminFeatures();
 	const altId = useId();
@@ -113,13 +115,13 @@ export function ImageInsertDialog({
 			setPrepared(null);
 			return;
 		}
-		prepareUpload(file, { optimize }).then((result) => {
+		prepareUpload(site, file, { optimize }).then((result) => {
 			if (!cancelled) setPrepared(result);
 		});
 		return () => {
 			cancelled = true;
 		};
-	}, [file, optimize]);
+	}, [file, optimize, site]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: libraryAttempt is re-read on retry
 	useEffect(() => {
@@ -184,7 +186,7 @@ export function ImageInsertDialog({
 		if (!prepared) return;
 		setProgress(0);
 		try {
-			const uploaded = await uploadImageFile(prepared, setProgress);
+			const uploaded = await uploadImageFile(site, prepared, setProgress);
 			onInsert({
 				mediaId: uploaded.mediaId,
 				alt: decorative ? "" : alt.trim(),
@@ -205,7 +207,7 @@ export function ImageInsertDialog({
 				<DialogContent className="max-w-lg">
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
-						<DialogDescription>{MEDIA_NOT_CONFIGURED}</DialogDescription>
+						<DialogDescription>{mediaNotConfiguredMessage(site)}</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
 						<Button type="button" variant="outline" onClick={onClose}>
@@ -346,7 +348,7 @@ export function ImageInsertDialog({
 						/>
 						{showAltError && (
 							<p id={altErrorId} role="alert" className="text-cms-destructive text-xs">
-								{ALT_REQUIRED_MESSAGE}
+								{altRequiredMessage(t)}
 							</p>
 						)}
 						<Label htmlFor={decorativeId} className="font-normal">

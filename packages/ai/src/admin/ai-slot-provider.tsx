@@ -3,7 +3,7 @@
 import { CmsApiError, cmsFetch } from "@monti-cms/admin/api";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
-import { adminHref, cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
@@ -13,7 +13,8 @@ import { attachedTo } from "../registry";
 import { aiCommonMessages } from "./ai-common.messages";
 import { useMdxFormat } from "./mdx-format";
 
-const t = createTranslator(aiCommonMessages);
+/** What the request functions need of a site: its admin language for the failure text. */
+type RequestSite = Pick<Site, "createTranslator">;
 
 export const AI_ACTIONS_KEY = ["cms", "ai", "actions"] as const;
 
@@ -24,10 +25,12 @@ export interface AiActionsResponse {
 }
 
 export function useAiActions(enabled = true) {
+	const site = useSite();
+	const t = useTranslator(aiCommonMessages);
 	return useQuery({
 		queryKey: AI_ACTIONS_KEY,
 		queryFn: ({ signal }) =>
-			cmsFetch<AiActionsResponse>(cmsApiUrl("/v1/ai/actions"), {
+			cmsFetch<AiActionsResponse>(site, cmsApiUrl("/v1/ai/actions"), {
 				signal,
 				fallback: t("listFailed"),
 			}),
@@ -65,11 +68,13 @@ const requestBody = (action: string, options: AiRunOptions) => ({
 
 /** Runs an action by name. */
 export async function runAiAction(
+	site: RequestSite,
 	action: string,
 	input: Readonly<Record<string, unknown>>,
 	options: AiRunOptions = {},
 ): Promise<AiRunResult> {
-	const response = await cmsFetch<{ result: AiRunResult }>(cmsApiUrl("/v1/ai/run"), {
+	const t = site.createTranslator(aiCommonMessages);
+	const response = await cmsFetch<{ result: AiRunResult }>(site, cmsApiUrl("/v1/ai/run"), {
 		method: "POST",
 		json: { ...requestBody(action, options), input },
 		signal: options.signal,
@@ -83,10 +88,12 @@ export async function runAiAction(
  * and when done returns the result that passed the checks.
  */
 export async function streamAiAction(
+	site: RequestSite,
 	action: string,
 	input: Readonly<Record<string, unknown>>,
 	options: AiRunOptions & { onText: (text: string) => void },
 ): Promise<AiRunResult> {
+	const t = site.createTranslator(aiCommonMessages);
 	const fallback = t("runFailed");
 	const response = await fetch(cmsApiUrl("/v1/ai/run"), {
 		method: "POST",
@@ -126,11 +133,14 @@ export async function streamAiAction(
 
 /** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */
 export async function runAiActionMany(
+	site: RequestSite,
 	action: string,
 	inputs: ReadonlyArray<Readonly<Record<string, unknown>>>,
 	options: AiRunOptions = {},
 ): Promise<Array<{ result: AiRunResult } | { error: string }>> {
+	const t = site.createTranslator(aiCommonMessages);
 	const response = await cmsFetch<{ results: Array<{ result: AiRunResult } | { error: string }> }>(
+		site,
 		cmsApiUrl("/v1/ai/run"),
 		{
 			method: "POST",
@@ -178,16 +188,18 @@ export function inputFromContext(
 }
 
 /** Whether this is the admin login screen (`login` under the admin path `admin.path`). Before login, the action list is not requested. */
-const isLoginScreen = (pathname: string | null) =>
-	pathname !== null && pathname.replace(/\/$/, "") === adminHref("/login");
+const isLoginScreen = (site: Pick<Site, "adminHref">, pathname: string | null) =>
+	pathname !== null && pathname.replace(/\/$/, "") === site.adminHref("/login");
 
 /**
  * Attaches AI actions to screen slots. Among enabled actions, those whose attach target (`attach`) is this slot are attached as buttons.
  * An action is not attached if the connection it uses is not ready.
  */
 export function AiSlotProvider({ children }: { children: ReactNode }) {
+	const site = useSite();
+	const t = useTranslator(aiCommonMessages);
 	const pathname = useAdminPathname();
-	const { data } = useAiActions(!isLoginScreen(pathname));
+	const { data } = useAiActions(!isLoginScreen(site, pathname));
 	// The model reads the body as MDX: the document of the entry is written with the `mdx` format when an action runs.
 	const format = useMdxFormat();
 
@@ -211,11 +223,11 @@ export function AiSlotProvider({ children }: { children: ReactNode }) {
 							...rest,
 							...(body && format ? { body: format.export(body).trim() } : {}),
 						});
-						return runAiAction(action.key, input, { env, request: context.request, signal });
+						return runAiAction(site, action.key, input, { env, request: context.request, signal });
 					},
 				}));
 		return [source];
-	}, [data, format]);
+	}, [data, format, site, t]);
 
 	return <SlotRegistryProvider sources={sources}>{children}</SlotRegistryProvider>;
 }

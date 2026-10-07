@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../test/site";
 import type { AiValidatorContext } from "../action";
 import { sameStructure } from "../validators";
 
@@ -20,6 +21,7 @@ const context = (input: Record<string, unknown>): AiValidatorContext => ({
 	input,
 	locale: "ko",
 	content: { slugsInUse: async () => new Set() },
+	site: testSite,
 });
 
 describe("same-structure check with the configured syntax", () => {
@@ -29,7 +31,7 @@ describe("same-structure check with the configured syntax", () => {
 		compareMdxStructure.mockReturnValue({ ok: true });
 		const result = await sameStructure("body").run("## B", context({ body: "## A" }));
 		expect(result).toBe(true);
-		expect(compareMdxStructure).toHaveBeenCalledWith("## A", "## B", CONFIGURED);
+		expect(compareMdxStructure).toHaveBeenCalledWith(testSite, "## A", "## B", CONFIGURED);
 	});
 
 	it("gives back the reason of the comparison when the structure differs", async () => {

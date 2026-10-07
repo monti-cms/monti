@@ -1,4 +1,3 @@
-import { EXTRA_CODE_LANGUAGES } from "@monti-cms/core/code-block";
 import type { CodeLanguageOption } from "./types";
 
 export const CODE_LANGUAGE_OPTIONS: CodeLanguageOption[] = [
@@ -31,12 +30,9 @@ export const CODE_LANGUAGE_OPTIONS: CodeLanguageOption[] = [
 ];
 
 /** The default language list followed by the site's extra languages (`codeBlock.languages`) that are not in it yet. The label of an extra language is its name. */
-export const codeLanguageChoices = (extra: readonly string[] = EXTRA_CODE_LANGUAGES): CodeLanguageOption[] => [
+export const codeLanguageChoices = (extra: readonly string[]): CodeLanguageOption[] => [
 	...CODE_LANGUAGE_OPTIONS,
 	...[...new Set(extra)]
 		.filter((name) => !CODE_LANGUAGE_OPTIONS.some((option) => option.value === name))
 		.map((name) => ({ label: name, value: name })),
 ];
-
-/** Language dropdown of the editor. */
-export const CODE_LANGUAGE_CHOICES = codeLanguageChoices();

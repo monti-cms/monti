@@ -1,6 +1,6 @@
 import type { Node as PmNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
-import { CONTAINER_NODE_NAMES, PARENT_ONLY_NODE_NAMES } from "../blocks/added/shared";
+import { CONTAINER_GROUP, PARENT_ONLY_VIEW_CLASS } from "../blocks/added/shared";
 
 /**
  * Block element resolution rules and DOM traversal.
@@ -11,7 +11,7 @@ import { CONTAINER_NODE_NAMES, PARENT_ONLY_NODE_NAMES } from "../blocks/added/sh
  * Names of container nodes whose child blocks can be moved one at a time: blockquote plus added container blocks (callout, fold, tabs, columns, etc.).
  * Children of parents not in this list (table cells, etc.) are not moved separately; the parent block moves as a unit.
  */
-export const DRAG_CONTAINER_NODES = new Set<string>(["blockquote", ...CONTAINER_NODE_NAMES]);
+const isDragContainer = (node: PmNode) => node.type.name === "blockquote" || node.type.isInGroup(CONTAINER_GROUP);
 
 const isContentHole = (element: HTMLElement | null) =>
 	!!element &&
@@ -32,8 +32,7 @@ const isListItemElement = (element: HTMLElement) =>
 const LEAF_VIEW_SELECTOR = ".node-codeBlock";
 
 /** Frames whose child blocks cannot be moved separately (a single column, a single tab). Never a handle target. */
-const STRUCTURAL_VIEWS = [...PARENT_ONLY_NODE_NAMES].map((name) => `node-${name}`);
-const isStructural = (element: HTMLElement) => STRUCTURAL_VIEWS.some((name) => element.classList.contains(name));
+const isStructural = (element: HTMLElement) => element.classList.contains(PARENT_ONLY_VIEW_CLASS);
 
 /** The contentDOM of a NodeView (container). Skips those of inner containers. */
 const contentHoleOf = (view: HTMLElement): HTMLElement | null =>
@@ -225,7 +224,7 @@ export function targetBlockAt(doc: PmNode, pos: number): TargetBlock | null {
 	for (let d = $pos.depth; d >= 1; d--) {
 		const n = $pos.node(d);
 		const parent = $pos.node(d - 1);
-		if (n.isBlock && parent && DRAG_CONTAINER_NODES.has(parent.type.name)) {
+		if (n.isBlock && parent && isDragContainer(parent)) {
 			const start = $pos.before(d);
 			return {
 				node: n,

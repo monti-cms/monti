@@ -4,6 +4,9 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderSite as site } from "../../test/render-config";
+import { WithSite } from "../../test/site";
+import { tooltipMessages } from "../messages";
 import { OPEN_TOOLTIP_EVENT, tooltipMarkExtension } from "../provider";
 
 // Replaces the tooltip part file inside the admin editor (the extension's `kit` bundle and the core format tool use the same file).
@@ -28,20 +31,23 @@ vi.mock("../../../../admin/src/ui/tooltip", () => ({
 afterEach(cleanup);
 
 /** Format tool button of the tooltip extension (core `MarkTextPopover`). */
-const TooltipButton = tooltipMarkExtension.toolbar?.Button ?? (() => null);
+const tooltipExtension = tooltipMarkExtension(site.createTranslator(tooltipMessages));
+const TooltipButton = tooltipExtension.toolbar?.Button ?? (() => null);
 
 describe("tooltip extension format tool popover", () => {
 	const createEditor = (html = "<p>안녕하세요 세상입니다</p>") =>
 		new Editor({
-			extensions: buildEditorExtensions({ tooltip: tooltipMarkExtension }),
+			extensions: buildEditorExtensions(site, { tooltip: tooltipExtension }),
 			content: html,
 		});
 
 	const renderComponent = (editor: Editor) =>
 		render(
-			<TooltipProvider delay={0}>
-				<TooltipButton editor={editor} />
-			</TooltipProvider>,
+			<WithSite>
+				<TooltipProvider delay={0}>
+					<TooltipButton editor={editor} />
+				</TooltipProvider>
+			</WithSite>,
 		);
 
 	it("disables the button when the selection is empty and not inside a tooltip", () => {

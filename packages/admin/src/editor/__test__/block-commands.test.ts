@@ -1,13 +1,13 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { deleteBlock, duplicateBlock, moveBlock, topLevelBlockAt } from "../block-commands";
 import { isValidImageWidth } from "../image-node-view";
 import { editorMessages } from "../messages";
 import { prepareUpload } from "../upload-helper";
 
-const t = createTranslator(editorMessages);
+const t = testSite.createTranslator(editorMessages);
 
 let editor: Editor | null = null;
 afterEach(() => {
@@ -75,8 +75,8 @@ describe("image width and upload optimization", () => {
 
 	it("keeps the original for GIF and when optimisation is off", async () => {
 		const gif = new File([new Uint8Array([71, 73, 70])], "a.gif", { type: "image/gif" });
-		expect(await prepareUpload(gif, { optimize: false })).toEqual({ file: gif, optimized: false });
-		expect(await prepareUpload(gif, { optimize: true })).toMatchObject({
+		expect(await prepareUpload(testSite, gif, { optimize: false })).toEqual({ file: gif, optimized: false });
+		expect(await prepareUpload(testSite, gif, { optimize: true })).toMatchObject({
 			file: gif,
 			optimized: false,
 			skippedReason: expect.any(String),
@@ -87,7 +87,7 @@ describe("image width and upload optimization", () => {
 		const bytes = new Uint8Array(64);
 		bytes.set([0x41, 0x4e, 0x49, 0x4d], 30);
 		const webp = new File([bytes], "a.webp", { type: "image/webp" });
-		expect(await prepareUpload(webp, { optimize: true })).toMatchObject({
+		expect(await prepareUpload(testSite, webp, { optimize: true })).toMatchObject({
 			optimized: false,
 			skippedReason: t("upload.keepAnimated"),
 		});

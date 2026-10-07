@@ -3,7 +3,7 @@
 import { ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";
 import { type CSSProperties, type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -15,8 +15,6 @@ import {
 } from "./layout";
 import { columnsMessages } from "./messages";
 
-const t = createTranslator(columnsMessages);
-
 type Boundary = { index: number; left: number };
 
 /**
@@ -25,6 +23,7 @@ type Boundary = { index: number; left: number };
  * Dragging the boundary between columns changes the width ratios, and the toolbar resets them to an equal split.
  */
 export function ColumnsNodeView() {
+	const t = useTranslator(columnsMessages);
 	const block = useBlockEditor();
 	const { values, editable } = block;
 	const count = block.children.length;

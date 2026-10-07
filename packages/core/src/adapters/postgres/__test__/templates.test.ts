@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
-import { cmsConfig } from "../../../config/resolved";
 import type { ContentStore } from "../../../core/store";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** The site config's initial body templates (`seed.templates`). For a config without any, the seeding tests are skipped. */
-const SEEDED = cmsConfig.seed?.templates ?? [];
+const SEEDED = testSite.config.seed?.templates ?? [];
 
 describe("Body templates: seeding and migration in Postgres", () => {
 	let pool: Pool;
@@ -21,8 +21,8 @@ describe("Body templates: seeding and migration in Postgres", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 	});
 
 	afterAll(async () => {
@@ -56,7 +56,7 @@ describe("Body templates: seeding and migration in Postgres", () => {
 			await store.deleteTemplate({ id: first.id, expectedVersion: first.version });
 
 			// Re-run migration
-			await migrateContentStore(pool, { schema: schemaName });
+			await migrateContentStore(pool, { site: testSite, schema: schemaName });
 
 			// Verify deleted template did NOT resurrect (one-time seed guarantee)
 			const remaining = await store.listTemplates();
@@ -79,7 +79,7 @@ describe("Body templates: seeding and migration in Postgres", () => {
 		]);
 		// Even if the seed marker is cleared so seeding runs again, a user template with the same name is not overwritten.
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = 'seed_initial_body_templates'`);
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 
 		const preserved = (await store.listTemplates()).filter((template) => template.name === name);
 		expect(preserved).toHaveLength(1);
@@ -87,7 +87,7 @@ describe("Body templates: seeding and migration in Postgres", () => {
 		expect(contentOf(preserved[0]?.doc)).toEqual(contentOf(docOf("사용자가 수정한 본문")));
 
 		await store.deleteTemplate({ id: userId, expectedVersion: preserved[0].version });
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		expect((await store.listTemplates()).some((template) => template.name === name)).toBe(false);
 	});
 });

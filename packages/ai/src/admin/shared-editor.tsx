@@ -17,7 +17,7 @@ import {
 	Textarea,
 	useConfirm,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, type Translator, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Plus, Quote, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -25,8 +25,6 @@ import { toast } from "sonner";
 import type { AiSharedItem, AiSharedView } from "../shared";
 import { DETAIL_PANE, InlineError, ListRow, ListSkeleton, LoadError } from "./connection-editor";
 import { sharedMessages } from "./shared-editor.messages";
-
-const t = createTranslator(sharedMessages);
 
 export const AI_SHARED_KEY = ["cms", "ai", "shared"] as const;
 
@@ -37,16 +35,18 @@ export const PROMPT_TEXTAREA = "min-h-40 text-xs md:text-xs";
 const SHARED_API = cmsApiUrl("/v1/ai/shared");
 
 export function useAiShared() {
+	const site = useSite();
+	const t = useTranslator(sharedMessages);
 	return useQuery({
 		queryKey: AI_SHARED_KEY,
-		queryFn: ({ signal }) => cmsFetch<AiSharedView>(SHARED_API, { signal, fallback: t("error.load") }),
+		queryFn: ({ signal }) => cmsFetch<AiSharedView>(site, SHARED_API, { signal, fallback: t("error.load") }),
 	});
 }
 
 /** Shape to put into instructions. */
 const placeholderOf = (key: string) => `{{shared.${key}}}`;
 
-const detailOf = (item: AiSharedItem) =>
+const detailOf = (t: Translator<"detail.added">, item: AiSharedItem) =>
 	`${placeholderOf(item.key)}${item.source === "added" ? ` · ${t("detail.added")}` : ""}`;
 
 /**
@@ -68,6 +68,8 @@ export function SharedManager({
 	onSelectedChange: (key: string | null) => void;
 	onDirtyChange: (dirty: boolean) => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(sharedMessages);
 	const queryClient = useQueryClient();
 	const query = useAiShared();
 	const view = query.data;
@@ -77,7 +79,7 @@ export function SharedManager({
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			{query.error && !view && (
-				<LoadError message={errorText(query.error, t("error.load"))} onRetry={() => void query.refetch()} />
+				<LoadError message={errorText(site, query.error, t("error.load"))} onRetry={() => void query.refetch()} />
 			)}
 			<div className="flex min-h-0 flex-1 overflow-hidden">
 				<div className="flex w-72 shrink-0 flex-col border-r">
@@ -91,7 +93,7 @@ export function SharedManager({
 								<ListRow
 									key={item.key}
 									title={item.label}
-									detail={detailOf(item)}
+									detail={detailOf(t, item)}
 									current={selected === item.key}
 									onClick={() => onOpen(item.key)}
 								/>
@@ -154,6 +156,7 @@ const sameDraft = (a: Draft, b: Draft) => a.key === b.key && a.label === b.label
 
 /** Shows the shape to put into instructions and copies it. */
 function PlaceholderChip({ shareKey }: { shareKey: string }) {
+	const t = useTranslator(sharedMessages);
 	const [copied, setCopied] = useState(false);
 	const text = placeholderOf(shareKey);
 	const copy = async () => {
@@ -193,6 +196,8 @@ function SharedEditor({
 	onConflict: () => void;
 	onDirtyChange: (dirty: boolean) => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(sharedMessages);
 	const initial: Draft = item ? { key: item.key, label: item.label, text: item.text } : NEW_DRAFT;
 	const [draft, setDraft] = useState<Draft>(initial);
 	const [saving, setSaving] = useState(false);
@@ -214,7 +219,7 @@ function SharedEditor({
 		try {
 			const key = item?.key ?? draft.key.trim();
 			const saved = item
-				? await cmsFetch<AiSharedView>(SHARED_API, {
+				? await cmsFetch<AiSharedView>(site, SHARED_API, {
 						method: "PATCH",
 						json: {
 							expectedVersion: version,
@@ -224,7 +229,7 @@ function SharedEditor({
 						},
 						fallback: t("error.save"),
 					})
-				: await cmsFetch<AiSharedView>(SHARED_API, {
+				: await cmsFetch<AiSharedView>(site, SHARED_API, {
 						method: "POST",
 						json: { expectedVersion: version, key, label: draft.label.trim(), text: draft.text },
 						fallback: t("error.save"),
@@ -232,7 +237,7 @@ function SharedEditor({
 			onSaved(saved, key);
 			toast.success(t("toast.saved"));
 		} catch (saveError) {
-			setError(errorText(saveError, t("error.save")));
+			setError(errorText(site, saveError, t("error.save")));
 			onConflict();
 		} finally {
 			setSaving(false);
@@ -252,14 +257,18 @@ function SharedEditor({
 		setError(null);
 		try {
 			onDeleted(
-				await cmsFetch<AiSharedView>(`${SHARED_API}?key=${encodeURIComponent(item.key)}&expectedVersion=${version}`, {
-					method: "DELETE",
-					fallback: t("error.delete"),
-				}),
+				await cmsFetch<AiSharedView>(
+					site,
+					`${SHARED_API}?key=${encodeURIComponent(item.key)}&expectedVersion=${version}`,
+					{
+						method: "DELETE",
+						fallback: t("error.delete"),
+					},
+				),
 			);
 			toast.success(t("toast.deleted"));
 		} catch (deleteError) {
-			setError(errorText(deleteError, t("error.delete")));
+			setError(errorText(site, deleteError, t("error.delete")));
 			onConflict();
 		} finally {
 			setDeleting(false);
@@ -274,7 +283,7 @@ function SharedEditor({
 				<h2 className="truncate font-medium text-base">{(item ? item.label : draft.label.trim()) || t("new.title")}</h2>
 				{(shownKey || item?.source === "added") && (
 					<p className="truncate text-cms-muted-foreground text-xs">
-						{item ? detailOf(item) : `${placeholderOf(shownKey)} · ${t("detail.added")}`}
+						{item ? detailOf(t, item) : `${placeholderOf(shownKey)} · ${t("detail.added")}`}
 					</p>
 				)}
 			</div>

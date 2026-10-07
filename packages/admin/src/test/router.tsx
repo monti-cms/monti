@@ -1,6 +1,8 @@
+import { SiteProvider } from "@monti-cms/core/client";
 import { type RenderOptions, render as renderInto } from "@testing-library/react";
 import { type ReactElement, type ReactNode, useSyncExternalStore } from "react";
 import { vi } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { type AdminLinkProps, type AdminRouter, AdminRouterProvider } from "../router";
 
 /**
@@ -45,7 +47,9 @@ export function createTestRouter({ pathname = "/admin", search = "" }: { pathnam
 	};
 
 	const Wrapper = ({ children }: { children: ReactNode }) => (
-		<AdminRouterProvider router={router}>{children}</AdminRouterProvider>
+		<SiteProvider site={testSite}>
+			<AdminRouterProvider router={router}>{children}</AdminRouterProvider>
+		</SiteProvider>
 	);
 
 	return {

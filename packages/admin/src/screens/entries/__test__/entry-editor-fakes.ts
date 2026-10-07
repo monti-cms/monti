@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";
 import { CmsApiError } from "../../admin-api";
 import type { CmsIssue } from "../../api-error-message";
@@ -104,14 +105,14 @@ export function recoveryCopy(
 	changes: EntryFormPatch,
 	{ adminId = "u1", baseVersion = server.version }: { adminId?: string; baseVersion?: number } = {},
 ): RecoveryRecord {
-	const base = formFromEntry(server);
+	const base = formFromEntry(testSite, server);
 	const snapshot = { ...base, ...changes } as EntryForm;
 	return {
 		key: `${adminId}:${server.id}`,
 		entryId: server.id,
 		baseVersion,
-		baseFingerprint: formFingerprint(base),
-		localFingerprint: formFingerprint(snapshot),
+		baseFingerprint: formFingerprint(testSite, base),
+		localFingerprint: formFingerprint(testSite, snapshot),
 		snapshot,
 		changeSeq: 1,
 		savedAt: 1_700_000_000_000,

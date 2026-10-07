@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../../test/site";
 import { AuthError } from "../../../../adapters/auth";
 import { fakeCms } from "../../../../cms";
 import { CmsError } from "../../../../core/store";
@@ -25,6 +26,7 @@ const mockDeleteFile = vi.fn();
 const mockGetPublicUrl = vi.fn();
 
 const cms = fakeCms({
+	config: testConfig,
 	store: {
 		createMediaAsset: mockCreateMediaAsset,
 		getMediaAsset: mockGetMediaAsset,

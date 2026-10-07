@@ -6,9 +6,8 @@
 // - `tsc` runs per file, so "use client" directives are preserved.
 // - Other workspace packages (@monti-cms/*) resolve to that package's `dist` type declarations (build it first).
 // - Sources import without extensions, so `.js` and `/index.js` are appended to relative paths in the output.
-// - `@cms-config` is left as-is. The app links it to its own site config file via `withCms` and tsconfig `paths`. The server config is not an alias: the app passes it to `createCms`.
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
@@ -49,20 +48,7 @@ const rel = (file) => {
 	const relative = path.relative(root, file);
 	return relative.startsWith("./") || relative.startsWith("../") ? relative : `./${relative}`;
 };
-// Types for the app's site config slot (`@cms-config`). The core sees its own source; other packages see the core's release types.
-const stubs = path.join(root, ".build-stubs");
-rmSync(stubs, { recursive: true, force: true });
-if (pkg.name !== "@monti-cms/core") {
-	mkdirSync(stubs, { recursive: true });
-	writeFileSync(
-		path.join(stubs, "cms-config.d.ts"),
-		'import type { CmsConfig } from "@monti-cms/core";\ndeclare const config: CmsConfig;\nexport default config;\n',
-	);
-}
-const stubDir = pkg.name === "@monti-cms/core" ? path.join(root, "build") : stubs;
-const paths = {
-	"@cms-config": [rel(path.join(stubDir, "cms-config.d.ts"))],
-};
+const paths = {};
 const deps = { ...pkg.dependencies, ...pkg.peerDependencies, ...pkg.devDependencies };
 for (const name of Object.keys(deps).filter((dep) => dep.startsWith("@monti-cms/"))) {
 	const dir = path.join(root, "..", name.slice("@monti-cms/".length));
@@ -84,7 +70,6 @@ try {
 	execFileSync("pnpm", ["exec", "tsc", "-p", generated], { stdio: "inherit" });
 } finally {
 	rmSync(generated, { force: true });
-	rmSync(stubs, { recursive: true, force: true });
 }
 
 const files = [];

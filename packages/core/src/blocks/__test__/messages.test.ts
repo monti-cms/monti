@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { createTranslator, translate } from "../../i18n";
 import type { BlockAttribute, BlockDefinition } from "../define";
 import { BUILTIN_BLOCKS } from "../definitions";
 import { blockMessages } from "../messages";
 
-const t = createTranslator(blockMessages);
+const t = createTranslator(blockMessages, "en");
+const siteT = testSite.createTranslator(blockMessages);
 
 describe("core block label dictionary", () => {
 	it("every Korean key exists in English, and English has every key", () => {
@@ -35,6 +37,14 @@ describe("core block label dictionary", () => {
 		expect(image.label).toBe(t("image.label"));
 		expect(image.attributes.alt.label).toBe(t("image.alt.label"));
 		expect(image.attributes.align.options.left).toBe(t("option.left"));
+		expect(image.editor.keywords).toContain("image");
+	});
+
+	it("the blocks of a site carry the labels in its admin language", () => {
+		const image = JSON.parse(JSON.stringify(testSite.BLOCKS.find((block) => block.name === "image")));
+		expect(image.label).toBe(siteT("image.label"));
+		expect(image.attributes.alt.label).toBe(siteT("image.alt.label"));
+		expect(image.attributes.align.options.left).toBe(siteT("option.left"));
 		expect(image.editor.keywords).toContain("image");
 	});
 

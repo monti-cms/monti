@@ -1,13 +1,14 @@
 import type { BlockDefinition } from "../blocks/define";
 import type { StoredDocument } from "../doc/stored-document";
+import type { Site } from "../site";
 
 /**
  * Formats. A format is a notation a stored document can be written as (and, when it can, read from): MDX, Markdown with Hugo front matter,
  * plain text. The stored document is the only source of a body; a format only converts. Core owns identity and storage: it resolves the entries and
  * media a document points to before `export`, and it validates, normalises and stores what `import` returns, so a format cannot bypass a core rule.
  *
- * Both directions are pure functions of their arguments: they never read the database, the network or the site config, so a format can run on the
- * server and in the browser alike.
+ * Both directions are pure functions of their arguments: they never read the database, the network or a global config (the site comes with the context),
+ * so a format can run on the server and in the browser alike.
  *
  * Plugins add formats through `CmsPlugin.formats`; a site picks one with the `format` option of the read and write APIs.
  */
@@ -41,6 +42,11 @@ export interface FormatContext {
 	readonly blocks: BlockCatalog;
 	/** Names of the code block line effects the site uses. */
 	readonly codeLineEffects: ReadonlySet<string>;
+	/**
+	 * The site the text belongs to, for what the blocks and the line effect names do not say (the mark order, the code fence annotation rules, the child rules of
+	 * blocks). A format reads the site's rules from it, never its data: it stays a pure function of its arguments and the site's rules.
+	 */
+	readonly site: Site;
 }
 
 /** Where an internal link points: the address of the target as the reader of this document sees it. */
@@ -142,8 +148,11 @@ export interface CmsFormat<Name extends string = string> {
 	export(doc: StoredDocument, ctx: FormatExportContext): string | Promise<string>;
 	/** Text → document. Absent: the format is one-way (it can only be written, never read back). */
 	import?(text: string, ctx: FormatImportContext): FormatImportResult | Promise<FormatImportResult>;
-	/** Reads and writes the text that old stores kept bodies in. Only the `mdx` format has it; see {@link LegacyBodies}. */
-	readonly legacyBodies?: LegacyBodies;
+	/**
+	 * Reads and writes the text that old stores kept bodies in, for the site the store is migrated for (its blocks decide how a text reads). Only the `mdx`
+	 * format has it; see {@link LegacyBodies}.
+	 */
+	readonly legacyBodies?: (site: Site) => LegacyBodies;
 }
 
 const FORMAT_NAME = /^[a-z][a-z0-9-]*$/;

@@ -1,5 +1,6 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
 import type { MediaStore } from "../adapters/r2/types";
+import { defineConfig } from "../config/define";
 import type { ContentStore } from "../core/store";
 import { createFormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
@@ -7,11 +8,19 @@ import { createMemoryPluginStorage } from "../plugin/memory-storage";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
 import { createRead } from "../read";
+import { defineCollection } from "../schema/collection";
+import { fields } from "../schema/fields";
 import type { CmsAuth, CmsServerConfig } from "../server/define";
+import type { AnyCmsConfig } from "../site";
 import { type BulkService, type Cms, type ContentService, createCms, lazyHandle } from "./create-cms";
 
 /** What a test supplies to {@link fakeCms}. Whatever it leaves out fails loudly when the code under test touches it. */
-export interface FakeCmsParts {
+export interface FakeCmsParts<Config extends AnyCmsConfig = AnyCmsConfig> {
+	/**
+	 * The site config the instance is created with. Default: a minimal one (an English site with one `page` collection), enough for code that only
+	 * needs some site. Pass the config the code under test is written against.
+	 */
+	readonly config?: Config;
 	/** The content store (`cms.store()`). Only the methods the code under test calls are needed. */
 	readonly store?: Partial<ContentStore>;
 	readonly contentService?: Partial<ContentService>;
@@ -31,6 +40,22 @@ export interface FakeCmsParts {
 	readonly formats?: readonly CmsFormat[];
 }
 
+const DEFAULT_CONFIG = defineConfig({
+	collections: {
+		page: defineCollection({
+			label: "Page",
+			kind: "document",
+			path: "/:slug",
+			fields: {
+				title: fields.text({ label: "Title", required: true }),
+				slug: fields.slug({ label: "Slug", from: "title", required: true }),
+			},
+		}),
+	},
+	locales: [{ code: "en", name: "English" }],
+	defaultLocale: "en",
+});
+
 const ADMIN: AuthContext = { userId: "u", accountId: "g", isAdmin: true };
 
 const missing = (what: string) => () => {
@@ -42,7 +67,9 @@ const missing = (what: string) => () => {
  * whose database, media store and login are the parts the test provides, so the code under test goes through `cms` exactly as in the app.
  * Several fake instances can live in one test file, each with its own parts.
  */
-export function fakeCms(parts: FakeCmsParts = {}): Cms {
+export function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFIG>(
+	parts: FakeCmsParts<Config> = {},
+): Cms<Config> {
 	const memory = createMemoryPluginStorage();
 	const storageOf = parts.storage ?? memory.storage;
 	const server: CmsServerConfig = {
@@ -72,7 +99,7 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		...(parts.mediaStore ? { media: { name: "fake", createStore: () => parts.mediaStore as MediaStore } } : {}),
 		...parts.server,
 	};
-	const cms = createCms({ server });
+	const cms = createCms<Config>({ config: parts.config ?? (DEFAULT_CONFIG as unknown as Config), server });
 	const authGateway: AuthGateway = {
 		verifyAdmin: parts.verifyAdmin ?? (async () => ADMIN),
 		isDevBypassActive: async () => false,
@@ -84,9 +111,9 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 			server: async () => ({ default: serverSide }),
 		})),
 		() => server,
-		() => fake,
+		() => fake as unknown as Cms,
 	);
-	const fake: Cms = {
+	const fake: Cms<Config> = {
 		...cms,
 		plugins: plugins.load,
 		pluginRoutes: plugins.routes,
@@ -96,8 +123,9 @@ export function fakeCms(parts: FakeCmsParts = {}): Cms {
 		notifyAfterCommit: plugins.notifyAfterCommit,
 		secrets: cms.secrets,
 		authGateway,
-		handle: lazyHandle(() => fake),
-		read: createRead({
+		handle: lazyHandle(() => fake as unknown as Cms),
+		read: createRead<Config>({
+			site: cms.site,
 			store: cms.store,
 			mediaStore: cms.mediaStore,
 			formats: async () => createFormatRegistry(parts.formats ?? []),

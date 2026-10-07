@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import type { Root } from "mdast";
 import { splitFrontmatter } from "./frontmatter";
 import { parseMdxAst } from "./parse";
@@ -119,19 +120,19 @@ export type SoftBreakResult =
 	| { readonly status: "skipped"; readonly reason: "unparsed" | "unsafe"; readonly detail?: string };
 
 /**
- * Writes `<br />` at each soft line ending inside paragraph text of `mdx`. `syntax` is the syntax extensions to read with (none: standard MDX).
+ * Writes `<br />` at each soft line ending inside paragraph text of `mdx` (read with the blocks of `site`). `syntax` is the syntax extensions to read with (none: standard MDX).
  *
  * - `unchanged`: there is no soft line ending (running it again on its own result gives this).
  * - `changed`: the new string. The change was checked: it parses, and the parsed tree differs from the old one only by the added breaks.
  * - `skipped`: the body is left as it is. `unparsed` for a body that does not parse, `unsafe` when the edit could not be made without
  *   touching something else (a line ending that cannot be paired with the source, or a result that does not read the same).
  */
-export const insertSoftBreaks = (mdx: string, syntax?: readonly SyntaxExtension[]): SoftBreakResult => {
+export const insertSoftBreaks = (site: Site, mdx: string, syntax?: readonly SyntaxExtension[]): SoftBreakResult => {
 	const { body } = splitFrontmatter(mdx);
 	const prefix = mdx.slice(0, mdx.length - body.length);
 	let before: Root;
 	try {
-		before = parseMdxAst(body, syntax);
+		before = parseMdxAst(site, body, syntax);
 	} catch (error) {
 		return { status: "skipped", reason: "unparsed", detail: error instanceof Error ? error.message : String(error) };
 	}
@@ -154,7 +155,7 @@ export const insertSoftBreaks = (mdx: string, syntax?: readonly SyntaxExtension[
 
 	let after: Root;
 	try {
-		after = parseMdxAst(edited, syntax);
+		after = parseMdxAst(site, edited, syntax);
 	} catch (error) {
 		return { status: "skipped", reason: "unsafe", detail: error instanceof Error ? error.message : String(error) };
 	}

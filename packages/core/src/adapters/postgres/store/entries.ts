@@ -17,7 +17,6 @@ import {
 	assertTranslationSource,
 	assertTranslationStateAllowed,
 } from "../../../core/domain/translation";
-import { DEFAULT_LOCALE } from "../../../core/locales";
 import { CmsError } from "../../../core/store/errors";
 import type { Entry, IncomingReferenceItem, TranslationGroup } from "../../../core/store/types";
 import type { Issue } from "../../../core/types";
@@ -43,7 +42,7 @@ import {
 } from "./rows";
 
 export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
-	const { pool, qSchema } = ctx;
+	const { pool, qSchema, site } = ctx;
 	const { publishWithinTransaction, lockDraftReferenceTargets } = publishing;
 
 	const assertFolder = async (client: PoolClient, folderId: string | null | undefined, collection: string) => {
@@ -96,6 +95,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		);
 		const row = res.rows[0];
 		assertTranslationSource(
+			site,
 			row && { collection: row.collection, status: row.status, locale: row.locale, translationGroupId: row.group_id },
 			{ collection, locale },
 		);
@@ -120,11 +120,11 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					await assertFolder(client, params.folderId, params.snapshot.collection);
 					const id = randomUUID();
 					const now = new Date();
-					const locale = params.locale ?? DEFAULT_LOCALE;
-					assertKnownLocale(locale);
+					const locale = params.locale ?? site.DEFAULT_LOCALE;
+					assertKnownLocale(site, locale);
 					if (params.translationOf) {
 						await checkTranslationSource(client, params.translationOf, params.snapshot.collection, locale);
-						assertTranslationMetadata(params.snapshot.collection, true, params.snapshot.metadata);
+						assertTranslationMetadata(site, params.snapshot.collection, true, params.snapshot.metadata);
 					}
 
 					await client.query(
@@ -142,7 +142,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					);
 					const translation = params.snapshot.translation ?? null;
 					assertTranslationStateAllowed(translation, Boolean(params.translationOf));
-					await writeBody(client, qSchema, id, "working", {
+					await writeBody(site, client, qSchema, id, "working", {
 						metadata,
 						doc: params.snapshot.doc,
 						schemaVersion: params.snapshot.schemaVersion,
@@ -186,6 +186,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					assertExpectedVersion(locked.version, params.expectedVersion);
 					assertEditableStatus(locked.status);
 					assertTranslationMetadata(
+						site,
 						locked.collection,
 						locked.translation_group_id !== params.entryId,
 						params.snapshot.metadata,
@@ -248,7 +249,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 							],
 						);
 						if (!bodyIdentical) {
-							await writeBody(client, qSchema, params.entryId, "working", {
+							await writeBody(site, client, qSchema, params.entryId, "working", {
 								metadata,
 								doc: params.snapshot.doc,
 								schemaVersion: params.snapshot.schemaVersion,
@@ -272,7 +273,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					// Same content written differently (other block ids, say): keep the new document (and the search text), but it is not a content
 					// change, so the content modified date stays.
 					if (body && bodyIdentical && !isDeepStrictEqual(body.doc, params.snapshot.doc)) {
-						await writeBody(client, qSchema, params.entryId, "working", {
+						await writeBody(site, client, qSchema, params.entryId, "working", {
 							metadata,
 							doc: params.snapshot.doc,
 							schemaVersion: body.schema_version,
@@ -385,7 +386,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			const res = await pool.query<{ id: string }>(
 				// A translation may share the source's slug, so disambiguate by language.
 				`SELECT id FROM "${qSchema}".entries WHERE collection = $1 AND working_slug = $2 AND locale = $3 LIMIT 1`,
-				[params.collection, params.slug, params.locale ?? DEFAULT_LOCALE],
+				[params.collection, params.slug, params.locale ?? site.DEFAULT_LOCALE],
 			);
 			return res.rows[0] ? loadEntry(pool, res.rows[0].id, qSchema) : null;
 		},
@@ -432,7 +433,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				   AND (a.collection, a.locale, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[], $3::text[]))`,
 				[
 					params.addresses.map((a) => a.collection),
-					params.addresses.map((a) => a.locale ?? DEFAULT_LOCALE),
+					params.addresses.map((a) => a.locale ?? site.DEFAULT_LOCALE),
 					params.addresses.map((a) => a.slug),
 				],
 			);

@@ -24,3 +24,6 @@ export const coreMessages = defineMessages("cms.core", {
 		untranslatedCount: "{count}곳",
 	},
 });
+
+/** The keys of the core dictionary. */
+export type CoreMessageKey = keyof (typeof coreMessages)["messages"]["en"];

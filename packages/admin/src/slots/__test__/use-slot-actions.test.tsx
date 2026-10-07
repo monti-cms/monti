@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, renderHook, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -9,6 +9,7 @@ import {
 	type SlotSource,
 	useSlotActions,
 } from "../../hooks/public";
+import { renderWithSite, SiteWrapper } from "../../test/site";
 import { SlotRegistryProvider } from "../registry";
 
 afterEach(cleanup);
@@ -37,7 +38,11 @@ const options = (overrides: Partial<SlotActionsOptions> = {}): SlotActionsOption
 
 const wrap =
 	(sources: SlotSource[]) =>
-	({ children }: { children: ReactNode }) => <SlotRegistryProvider sources={sources}>{children}</SlotRegistryProvider>;
+	({ children }: { children: ReactNode }) => (
+		<SiteWrapper>
+			<SlotRegistryProvider sources={sources}>{children}</SlotRegistryProvider>
+		</SiteWrapper>
+	);
 
 /** A control deferred by the test: resolves or rejects the run, and records the signal the run received. */
 function deferred() {
@@ -302,7 +307,7 @@ describe("useSlotActions", () => {
 		const view = (shown: boolean) => (
 			<SlotRegistryProvider sources={sources}>{shown && <Panel />}</SlotRegistryProvider>
 		);
-		const { rerender } = render(view(true));
+		const { rerender } = renderWithSite(view(true));
 		fireEvent.click(screen.getByRole("button", { name: "idle" }));
 		await screen.findByRole("button", { name: "running" });
 		rerender(view(false));
@@ -355,7 +360,7 @@ describe("useSlotActions", () => {
 				</div>
 			);
 		}
-		render(
+		renderWithSite(
 			<SlotRegistryProvider sources={[() => [action({ run: pending.run })]]}>
 				<CustomSlot />
 			</SlotRegistryProvider>,

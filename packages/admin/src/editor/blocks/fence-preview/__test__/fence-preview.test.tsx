@@ -1,8 +1,9 @@
 import { math } from "@monti-cms/core/client";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderWithSite } from "../../../../test/site";
 import { BlockEditorProvider } from "../../use-block-editor";
 import { type FenceEditorMeta, FencePreviewBlockView } from "../fence-preview-node-view";
 import { LazyFencePreview, MathPreview, PreviewErrorBoundary } from "../preview-renderers";
@@ -67,7 +68,7 @@ const View = (props: NodeViewProps) => (
 describe("FencePreviewBlockView", () => {
 	it("shows only the preview, without a textarea, when not selected", () => {
 		const props = createNodeViewProps("cmsMermaid", "graph TD;\n  A-->B;", false);
-		const { container } = render(<View {...props} />);
+		const { container } = renderWithSite(<View {...props} />);
 
 		expect(container.querySelector("textarea")).toBeNull();
 		expect(container.querySelector('[data-fence-preview="mermaid"]')).toBeDefined();
@@ -75,7 +76,7 @@ describe("FencePreviewBlockView", () => {
 
 	it("shows both the textarea and the preview when selected (selected=true)", () => {
 		const props = createNodeViewProps("cmsChart", 'pie\n  "A": 10', true);
-		const { container } = render(<View {...props} />);
+		const { container } = renderWithSite(<View {...props} />);
 
 		const textarea = container.querySelector("textarea");
 		expect(textarea).not.toBeNull();
@@ -84,7 +85,7 @@ describe("FencePreviewBlockView", () => {
 
 	it("clicking the preview switches to edit mode and shows the textarea", async () => {
 		const props = createNodeViewProps("cmsMath", "E = mc^2", false);
-		const { container } = render(<View {...props} />);
+		const { container } = renderWithSite(<View {...props} />);
 
 		expect(container.querySelector("textarea")).toBeNull();
 
@@ -100,7 +101,7 @@ describe("FencePreviewBlockView", () => {
 		vi.useFakeTimers();
 		const updateAttributes = vi.fn();
 		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
-		const { container } = render(<View {...props} />);
+		const { container } = renderWithSite(<View {...props} />);
 
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
 		expect(textarea).not.toBeNull();
@@ -119,7 +120,7 @@ describe("FencePreviewBlockView", () => {
 	it("pending changes are committed immediately on blur", () => {
 		const updateAttributes = vi.fn();
 		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
-		const { container } = render(<View {...props} />);
+		const { container } = renderWithSite(<View {...props} />);
 
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
 		fireEvent.change(textarea, { target: { value: "x = immediate" } });
@@ -133,7 +134,7 @@ describe("FencePreviewBlockView", () => {
 		vi.useFakeTimers();
 		const updateAttributes = vi.fn();
 		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
-		const { container } = render(<View {...props} />);
+		const { container } = renderWithSite(<View {...props} />);
 
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
 		expect(textarea).not.toBeNull();
@@ -156,7 +157,7 @@ describe("FencePreviewBlockView", () => {
 	it("does not lose the value being typed if unmounted during IME composition", () => {
 		const updateAttributes = vi.fn();
 		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
-		const { container, unmount } = render(<View {...props} />);
+		const { container, unmount } = renderWithSite(<View {...props} />);
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
 		fireEvent.compositionStart(textarea);
 		fireEvent.change(textarea, { target: { value: "x = 한" } });
@@ -166,7 +167,7 @@ describe("FencePreviewBlockView", () => {
 
 	it("keeps cursor keys and Mod combos in the input, and only save (Mod-s) commits pending input and passes through", () => {
 		const props = createNodeViewProps("cmsMermaid", "graph TD", true);
-		const { container } = render(<View {...props} />);
+		const { container } = renderWithSite(<View {...props} />);
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
 
 		for (const init of [
@@ -194,7 +195,7 @@ describe("FencePreviewBlockView", () => {
 
 	it("commits pending input when it disappears", () => {
 		const props = createNodeViewProps("cmsMermaid", "graph TD", true);
-		const { container, unmount } = render(<View {...props} />);
+		const { container, unmount } = renderWithSite(<View {...props} />);
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
 		fireEvent.change(textarea, { target: { value: "graph BT" } });
 		unmount();
@@ -204,7 +205,7 @@ describe("FencePreviewBlockView", () => {
 
 describe("MathPreview math renderer error handling", () => {
 	it("shows an error message in destructive token style for invalid math input and leaves the source untouched", async () => {
-		const { container } = render(<MathPreview value="\\invalidMacro{" />);
+		const { container } = renderWithSite(<MathPreview value="\\invalidMacro{" />);
 
 		await waitFor(() => {
 			const errorBox = container.querySelector(".text-cms-destructive");
@@ -214,7 +215,7 @@ describe("MathPreview math renderer error handling", () => {
 	});
 
 	it("renders valid math as KaTeX output", async () => {
-		const { container } = render(<MathPreview value="a^2 + b^2 = c^2" />);
+		const { container } = renderWithSite(<MathPreview value="a^2 + b^2 = c^2" />);
 
 		await waitFor(() => {
 			expect(container.querySelector(".katex")).not.toBeNull();
@@ -230,7 +231,7 @@ describe("PreviewErrorBoundary resetKey", () => {
 			return <div>정상 렌더링</div>;
 		};
 
-		const { container, rerender } = render(
+		const { container, rerender } = renderWithSite(
 			<PreviewErrorBoundary resetKey="error-key">
 				<Bomb shouldThrow={true} />
 			</PreviewErrorBoundary>,

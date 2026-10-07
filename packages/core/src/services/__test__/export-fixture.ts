@@ -1,9 +1,8 @@
 import { contentCollection, defaultLocale, otherContentCollection, recordRelationField } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
-import { isItemCollection } from "../../core/collections";
 import type { ExportSnapshot } from "../../core/store";
 import type { StoredDocument } from "../../doc/stored-document";
-import { roleField, storedFields } from "../../schema/derive";
 
 /**
  * The collection, language and field names the fixture uses are looked up from the current config. In the reference blog setup, the public post is a post (`post`),
@@ -15,8 +14,8 @@ export const FIXTURE_LOCALE = defaultLocale;
 
 /** Category relation the public post's working copy points to (multi-value relations pointing to item collections first). The reference `kind` is the target collection. */
 const fixtureRelation = (() => {
-	for (const { name, field } of storedFields(contentCollection)) {
-		if (field.kind === "relation" && field.many && isItemCollection(field.to)) return { name, to: field.to };
+	for (const { name, field } of testSite.storedFields(contentCollection)) {
+		if (field.kind === "relation" && field.many && testSite.isItemCollection(field.to)) return { name, to: field.to };
 	}
 	const found = recordRelationField(contentCollection);
 	return found ? { name: found.name, to: found.to as string } : { name: "relationIds", to: "relation" };
@@ -36,7 +35,7 @@ export const FIXTURE_SEO_METADATA: Readonly<Record<string, string>> = Object.fro
 			["ogImage", "44444444-4444-4444-8444-444444444444"],
 		] as const
 	).flatMap(([role, value]) => {
-		const name = roleField(contentCollection, role)?.name;
+		const name = testSite.roleField(contentCollection, role)?.name;
 		return name ? [[name, value]] : [];
 	}),
 );

@@ -1,9 +1,11 @@
-import { COLLECTIONS, type Collection, isCollection, schemaOf, storedField } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { testSite as site } from "../../test/site";
 import { type AiAttach, resolveAction } from "../action";
 import type { AiProvider } from "../provider";
-import { AI_ACTIONS, attachedTo } from "../registry";
+import { aiRegistryOf, attachedTo } from "../registry";
 import { type AiRunDeps, runAiAction } from "../run";
+
+const { actions } = aiRegistryOf(site);
 
 /**
  * Config-independent check of AI field actions (regression guard). Names of actions, collections and fields are not hardcoded; they are read from the AI plugin of the current config.
@@ -12,21 +14,21 @@ import { type AiRunDeps, runAiAction } from "../run";
 
 type FieldAttach = Extract<AiAttach, { slot: "field" }>;
 
-const fieldActions = Object.entries(AI_ACTIONS).flatMap(([key, definition]) =>
+const fieldActions = Object.entries(actions).flatMap(([key, definition]) =>
 	(definition.attach ?? [])
 		.filter((attach): attach is FieldAttach => attach.slot === "field")
 		.map((attach) => ({ key, definition, attach })),
 );
 
 /** Collections an action attaches to. If none, all collections that have that field. */
-const collectionsOf = (attach: FieldAttach): Collection[] =>
-	(attach.collections ?? COLLECTIONS).filter(
-		(name): name is Collection => isCollection(name) && Object.hasOwn(schemaOf(name).fields, attach.field),
+const collectionsOf = (attach: FieldAttach): string[] =>
+	(attach.collections ?? site.COLLECTIONS).filter(
+		(name) => site.isCollection(name) && Object.hasOwn(site.schemaOf(name).fields, attach.field),
 	);
 
 /** Field definition (the slug field is not a stored field, so it is read directly from the schema). */
-const fieldOf = (collection: Collection, name: string) =>
-	storedField(collection, name)?.field ?? schemaOf(collection).fields[name];
+const fieldOf = (collection: string, name: string) =>
+	site.storedField(collection, name)?.field ?? site.schemaOf(collection).fields[name];
 
 describe("any site: AI field actions", () => {
 	it("the active config attaches at least one AI action to a field", () => {
@@ -61,7 +63,7 @@ describe("any site: AI field actions", () => {
 	it.each(
 		generated.map(({ key, attach }) => [key, attach] as const),
 	)("%s runs with the slot inputs for its first collection", async (key, attach) => {
-		const definition = AI_ACTIONS[key];
+		const definition = actions[key];
 		if (!definition) throw new Error(key);
 		const action = resolveAction(key, definition);
 		const provider: AiProvider = {
@@ -73,6 +75,7 @@ describe("any site: AI field actions", () => {
 			},
 		};
 		const deps: AiRunDeps = {
+			site,
 			generator: provider,
 			decider: null,
 			loadRecords: async () => [],

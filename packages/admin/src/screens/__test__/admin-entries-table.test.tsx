@@ -2,10 +2,12 @@ import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { renderInRouter as render } from "../../test/router";
 import { AdminEntriesTable, columnsFor } from "../admin-entries-table";
 import { parseListState } from "../list-state";
 import { filterChips } from "../list-toolbar";
+import { withSite } from "./site-wrapper";
 
 afterEach(cleanup);
 
@@ -37,7 +39,7 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 		items: [item("published", { status: "published", hasUnpublishedChanges: true }), item("draft")],
 		folders: [],
 		explorer: null,
-		state: parseListState(new URLSearchParams("collection=post")),
+		state: parseListState(testSite, new URLSearchParams("collection=post")),
 		options,
 		onStateChange: vi.fn(),
 		onColumnSettingsChange: vi.fn(),
@@ -54,23 +56,23 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 		onRetry: vi.fn(),
 		...overrides,
 	};
-	render(<AdminEntriesTable {...props} />);
+	render(withSite(<AdminEntriesTable {...props} />));
 	return props;
 }
 
 describe("admin entry list", () => {
 	it("uses the default columns per collection", () => {
 		for (const collection of ["post", "memo", "tag"] as const) {
-			const { defaults, available } = columnsFor(collection);
+			const { defaults, available } = columnsFor(testSite, collection);
 			expect(defaults[0]).toBe("title");
 			expect(defaults).toContain("status");
 			expect(defaults).toContain("updatedAt");
 			for (const column of defaults) expect(available).toContain(column);
 		}
 		// Taxonomy items have no per-locale documents but show the locales that have a name.
-		expect(columnsFor("tag").defaults).toContain("locale");
-		expect(columnsFor("memo").available).not.toContain("categoryId");
-		expect(columnsFor("tag").available).not.toContain("tagIds");
+		expect(columnsFor(testSite, "tag").defaults).toContain("locale");
+		expect(columnsFor(testSite, "memo").available).not.toContain("categoryId");
+		expect(columnsFor(testSite, "tag").available).not.toContain("tagIds");
 	});
 
 	it("states status in text, including unpublished changes", () => {
@@ -87,7 +89,7 @@ describe("admin entry list", () => {
 	});
 
 	it("filters status like a spreadsheet header and marks the filtered header without relying on color", async () => {
-		const props = renderTable({ state: parseListState(new URLSearchParams("collection=post&changes=1")) });
+		const props = renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&changes=1")) });
 		const header = screen.getByRole("button", { name: /^상태, 필터 적용됨/ });
 		fireEvent.click(header);
 		fireEvent.click(await screen.findByRole("checkbox", { name: "초안" }));
@@ -98,9 +100,10 @@ describe("admin entry list", () => {
 
 	it("keeps filters on hidden columns visible as chips", () => {
 		const state = parseListState(
+			testSite,
 			new URLSearchParams("collection=post&slug=react&relation=tagIds:t1&status=draft&changes=1"),
 		);
-		const labels = filterChips(state, options).map((chip) => chip.label);
+		const labels = filterChips(testSite, state, options).map((chip) => chip.label);
 		// The slug column stays as a chip even when hidden by default.
 		expect(labels).toEqual(["상태: 초안, 수정 중", "태그: React", '주소: "react"']);
 	});
@@ -198,7 +201,7 @@ describe("admin entry list", () => {
 		const props = renderTable({
 			collection: "tag",
 			items: [tag],
-			state: parseListState(new URLSearchParams("collection=tag")),
+			state: parseListState(testSite, new URLSearchParams("collection=tag")),
 		});
 		fireEvent.click(screen.getByRole("button", { name: "TypeScript" }));
 		expect(props.onOpenRecord).toHaveBeenCalledWith(tag);
@@ -228,7 +231,7 @@ describe("admin entry list", () => {
 		renderTable({
 			collection: "tag",
 			items: [tag],
-			state: parseListState(new URLSearchParams("collection=tag")),
+			state: parseListState(testSite, new URLSearchParams("collection=tag")),
 		});
 		const row = screen.getByRole("row", { name: /리액트/ });
 		expect(within(row).getByText("한국어 있음")).toBeTruthy();

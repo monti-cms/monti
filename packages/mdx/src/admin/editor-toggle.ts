@@ -1,7 +1,6 @@
 import type { BrowserFormat } from "@monti-cms/admin";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
-import { mdxBrowserFormat } from "./format";
 
 export type EditorMode = "visual" | "source";
 
@@ -19,7 +18,7 @@ export class EditorToggle {
 
 	constructor(
 		initialSource: string,
-		private readonly format: BrowserFormat = mdxBrowserFormat,
+		private readonly format: BrowserFormat,
 	) {
 		this.sourceText = initialSource;
 		this.currentMode = "source";

@@ -2,11 +2,10 @@ import type { Pool } from "pg";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredMetadata, secondLocale } from "../../../test/any-site";
+import { testConfig, testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { type Cms, fakeCms } from "../../cms";
 import type { Collection } from "../../core/collections";
-import { contentPath } from "../../core/links";
-import { DEFAULT_LOCALE, localizePath } from "../../core/locales";
 import type { ContentStore, Entry } from "../../core/store";
 import { publishDraft } from "../../core/store/__test__/seed";
 import { ServiceError } from "../../core/types";
@@ -38,13 +37,17 @@ describe("links by entry id", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const filled = fillRequiredMetadata(store);
 		relationTarget = filled.relationTarget as typeof relationTarget;
 		rawCreate = filled.raw.createEntryWithReferences;
-		service = createContentService<Entry>(store, { formats: async () => createFormatRegistry([paragraphsFormat]) });
+		service = createContentService<Entry>(store, {
+			site: testSite,
+			formats: async () => createFormatRegistry([paragraphsFormat]),
+		});
 		cms = fakeCms({
+			config: testConfig,
 			store,
 			contentService: service,
 			formats: [paragraphsFormat],
@@ -58,9 +61,10 @@ describe("links by entry id", () => {
 	});
 
 	/** The address a body is written with: the default-language path, no locale prefix. */
-	const pathOf = (slug: string) => contentPath(contentCollection, slug) as string;
+	const pathOf = (slug: string) => testSite.contentPath(contentCollection, slug) as string;
 	/** The public address a read gives: the same path with the prefix of the language of the version (the config may set one for every language). */
-	const publicPath = (slug: string, locale: string = DEFAULT_LOCALE) => localizePath(locale, pathOf(slug));
+	const publicPath = (slug: string, locale: string = testSite.DEFAULT_LOCALE) =>
+		testSite.localizePath(locale, pathOf(slug));
 
 	const draft = async (slug: string, body: string | StoredDocument) =>
 		service.createDraft({
@@ -87,7 +91,7 @@ describe("links by entry id", () => {
 
 	const publish = async (slug: string, body: string | StoredDocument = `Body ${slug}`) => {
 		const created = await draft(slug, body);
-		return publishDraft(store, { id: created.id, expectedVersion: created.version });
+		return publishDraft(testSite, store, { id: created.id, expectedVersion: created.version });
 	};
 
 	/** A published translation. Its body is given as text or as a document; the common values stay with the source. */
@@ -108,7 +112,7 @@ describe("links by entry id", () => {
 			locale,
 			translationOf: sourceId,
 		});
-		return publishDraft(store, { id: created.id, expectedVersion: created.version });
+		return publishDraft(testSite, store, { id: created.id, expectedVersion: created.version });
 	};
 
 	const publishError = async (id: string, version: number) => {
@@ -194,12 +198,12 @@ describe("links by entry id", () => {
 			expectedVersion: second.version,
 		});
 
-		const publishedOne = await publishDraft(store, { id: one.id, expectedVersion: one.version });
+		const publishedOne = await publishDraft(testSite, store, { id: one.id, expectedVersion: one.version });
 		// The target is not published yet: the page draws the link as plain text.
 		const early = await cms.read.getEntry({ collection: contentCollection, slug: "links-series-1" });
 		if (early.status !== "found") throw new Error("not found");
 		expect(early.entry.refs.links).toEqual({});
-		await publishDraft(store, { id: two.id, expectedVersion: two.version });
+		await publishDraft(testSite, store, { id: two.id, expectedVersion: two.version });
 		const later = await cms.read.getEntry({ collection: contentCollection, slug: "links-series-1" });
 		if (later.status !== "found") throw new Error("not found");
 		expect(Object.keys(later.entry.refs.links)).toEqual([two.translationGroupId]);
@@ -219,7 +223,7 @@ describe("links by entry id", () => {
 			expect.objectContaining({ position: { blockId: expect.stringMatching(/^[0-9a-z]{8}$/) } }),
 		]);
 		// Once the target is published, publishing again has nothing to warn about.
-		await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
 		const again = await service.publish({ id: source.id, expectedVersion: entry.version });
 		expect(again.warnings.filter((warning) => warning.code === "unpublished_internal_link")).toEqual([]);
 	});
@@ -245,7 +249,7 @@ describe("links by entry id", () => {
 
 		expect(removal).toMatchObject({ code: "in_use" });
 		// The draft that links to a trashed post can still be saved, and published: a link to a trashed post is a warning, like an unpublished one.
-		const published = await publishDraft(store, { id: source.id, expectedVersion: source.version });
+		const published = await publishDraft(testSite, store, { id: source.id, expectedVersion: source.version });
 		expect(published.status).toBe("published");
 	});
 
@@ -260,11 +264,11 @@ describe("links by entry id", () => {
 			[target.translationGroupId]: {
 				path: publicPath("links-read-target"),
 				title: "Title links-read-target",
-				locale: DEFAULT_LOCALE,
+				locale: testSite.DEFAULT_LOCALE,
 			},
 		});
 		// Only the links of this document are listed, and a link is drawn from them.
-		const markup = renderToStaticMarkup(await CmsContent({ entry: found.entry }));
+		const markup = renderToStaticMarkup(await CmsContent({ cms, entry: found.entry }));
 		expect(markup).toContain(`href="${publicPath("links-read-target")}"`);
 		expect(markup).toContain(">it</a>");
 	});
@@ -277,7 +281,7 @@ describe("links by entry id", () => {
 		const preview = await cms.read.getPreview({ collection: contentCollection, slug: "links-hidden-source" });
 
 		expect(preview?.refs.links).toEqual({});
-		const markup = renderToStaticMarkup(await CmsContent({ entry: preview as never }));
+		const markup = renderToStaticMarkup(await CmsContent({ cms, entry: preview as never }));
 		expect(markup).toContain("A hidden page.");
 		expect(markup).not.toContain("<a");
 	});
@@ -308,7 +312,11 @@ describe("links by entry id", () => {
 					locale,
 				},
 				// No translation of this one: the source's address, in the source's language.
-				[plain.id]: { path: publicPath("links-lang-plain"), title: "Title links-lang-plain", locale: DEFAULT_LOCALE },
+				[plain.id]: {
+					path: publicPath("links-lang-plain"),
+					title: "Title links-lang-plain",
+					locale: testSite.DEFAULT_LOCALE,
+				},
 			});
 			void translatedEn;
 			// The same document read in the source language points at the source pages.

@@ -1,4 +1,4 @@
-import { isItemCollection } from "../collections";
+import type { Site } from "../../site";
 import { CmsError } from "../store/errors";
 import type { EntryStatus } from "../store/types";
 
@@ -32,17 +32,17 @@ export function assertTransitionAllowed(action: LifecycleAction, status: EntrySt
 }
 
 /** Record collections (tags, categories, ...) have no archive. */
-export function assertArchivable(collection: string, version: number): void {
-	if (isItemCollection(collection)) {
+export function assertArchivable(site: Site, collection: string, version: number): void {
+	if (site.isItemCollection(collection)) {
 		throw new CmsError("Record collections cannot be archived", "invalid_status", version);
 	}
 }
 
 /** A record in use must have its references released before it goes to the trash. */
-export const trashRequiresNoReferences = (collection: string): boolean => isItemCollection(collection);
+export const trashRequiresNoReferences = (site: Site, collection: string): boolean => site.isItemCollection(collection);
 
 /** A record collection is published again on restore (with its prepared draft); a content collection returns to draft. */
-export const restorePublishesAgain = (collection: string): boolean => isItemCollection(collection);
+export const restorePublishesAgain = (site: Site, collection: string): boolean => site.isItemCollection(collection);
 
 /** Restoring a translation while its source is in the trash would leave it out of the list (one row per source) without shared values. */
 export function assertSourceNotTrashed(sourceStatus: EntryStatus | undefined, version: number): void {

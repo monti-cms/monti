@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator, supportsLocale, type TextChecker } from "@monti-cms/core/client";
+import { supportsLocale, type TextChecker, useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { PluginKey, type Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -10,8 +10,6 @@ import { type DocSegment, docRangeToSegment, extractSegments } from "./extract";
 import { textCheckMessages } from "./messages";
 import { createTextCheckPlugin, type TextCheckMeta, type TextCheckPluginState, textCheckIssues } from "./plugin";
 import { checkSegments, type DocTextIssue, ignoreKey, placeIssues, TextCheckCache } from "./run";
-
-const t = createTranslator(textCheckMessages);
 
 /** Auto check (`auto: true`) runs once input pauses for this long. */
 export const AUTO_CHECK_DELAY = 1500;
@@ -52,6 +50,7 @@ export function useTextCheck(
 	editor: Editor | null,
 	{ checkers: registered, locale }: { checkers: readonly TextChecker[]; locale: string },
 ): TextCheckController | null {
+	const t = useTranslator(textCheckMessages);
 	const checkers = useMemo(() => registered.filter((checker) => supportsLocale(checker, locale)), [registered, locale]);
 	const active = !!editor && checkers.length > 0;
 	const [cache] = useState(() => new TextCheckCache());
@@ -172,7 +171,7 @@ export function useTextCheck(
 				}
 			}
 		},
-		[editor, active, locale, checkers, checkAll, place],
+		[editor, active, locale, checkers, checkAll, place, t],
 	);
 
 	// Auto check: only checkers with `auto: true`, and only paragraphs that differ from when opened (changed paragraphs).
@@ -228,7 +227,7 @@ export function useTextCheck(
 			clearTimeout(timer);
 			autoRef.current?.abort();
 		};
-	}, [editor, active, checkers, locale, checkAll, place]);
+	}, [editor, active, checkers, locale, checkAll, place, t]);
 
 	const close = useCallback(() => setOpen(null), []);
 

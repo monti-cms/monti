@@ -26,7 +26,7 @@ interface DocumentRow {
 	updated_at: Date;
 }
 
-/** The migration code reads the site config, so it is loaded when a step runs, not when the adapter is created. */
+/** The migration code is loaded when a step runs, not when the adapter is created. */
 const loadSchemaModule = () => import("./store/schema");
 
 const COLUMNS = "key, value, version, created_at, updated_at";

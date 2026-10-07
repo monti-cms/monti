@@ -1,8 +1,9 @@
 "use client";
 
-import { createTranslator, isDocumentCollection, localeLabel } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
@@ -12,10 +13,8 @@ import { clearPatchFor } from "./column-header";
 import { type ColumnFilter, columnLabel, columnsFor, filterFor, isColumnFiltered } from "./list-columns";
 import { clearFilters, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
-import { STATUS_LABELS } from "./shared/entry-status";
+import { statusLabels } from "./shared/entry-status";
 import type { TaxonomyOption, TaxonomyOptions } from "./shared/use-taxonomy";
-
-const t = createTranslator(screensMessages);
 
 export interface FilterChip {
 	key: string;
@@ -23,22 +22,23 @@ export interface FilterChip {
 	clear: Partial<ListState>;
 }
 
-const nameOf = (options: readonly TaxonomyOption[], id: string) =>
+const nameOf = (t: TranslatorFor<typeof screensMessages>, options: readonly TaxonomyOption[], id: string) =>
 	options.find((option) => option.id === id)?.title ?? t("toolbar.unknown");
 
-function describe(filter: ColumnFilter, state: ListState, options: TaxonomyOptions) {
+function describe(site: Site, filter: ColumnFilter, state: ListState, options: TaxonomyOptions) {
+	const t = site.createTranslator(screensMessages);
 	switch (filter.kind) {
 		case "text":
 			return `"${state[filter.key].trim()}"`;
 		case "status":
 			return [
-				...state.statuses.map((status) => STATUS_LABELS[status]),
+				...state.statuses.map((status) => statusLabels(site)[status]),
 				...(state.hasChanges ? [t("filter.editing")] : []),
 			].join(", ");
 		case "relation":
-			return (state.relations[filter.field] ?? []).map((id) => nameOf(options[filter.field] ?? [], id)).join(", ");
+			return (state.relations[filter.field] ?? []).map((id) => nameOf(t, options[filter.field] ?? [], id)).join(", ");
 		case "locale":
-			return state.locales.map((locale) => localeLabel(locale)).join(", ");
+			return state.locales.map((locale) => site.localeLabel(locale)).join(", ");
 		case "date":
 			return `${state[filter.from] || t("filter.rangeStart")} ~ ${state[filter.to] || t("filter.rangeEnd")}`;
 		case "none":
@@ -50,7 +50,8 @@ function describe(filter: ColumnFilter, state: ListState, options: TaxonomyOptio
  * Applied filter chips. Even when a column is hidden, filters on it keep showing as chips
  * to prevent "why can't I see my posts?".
  */
-export function filterChips(state: ListState, options: TaxonomyOptions): FilterChip[] {
+export function filterChips(site: Site, state: ListState, options: TaxonomyOptions): FilterChip[] {
+	const t = site.createTranslator(screensMessages);
 	const chips: FilterChip[] = [];
 	if (state.search.trim()) {
 		chips.push({
@@ -59,12 +60,12 @@ export function filterChips(state: ListState, options: TaxonomyOptions): FilterC
 			clear: { search: "", includeBody: false },
 		});
 	}
-	for (const column of columnsFor(state.collection).available) {
-		const filter = filterFor(state.collection, column);
+	for (const column of columnsFor(site, state.collection).available) {
+		const filter = filterFor(site, state.collection, column);
 		if (!isColumnFiltered(state, filter)) continue;
 		chips.push({
 			key: column,
-			label: `${columnLabel(state.collection, column)}: ${describe(filter, state, options)}`,
+			label: `${columnLabel(site, state.collection, column)}: ${describe(site, filter, state, options)}`,
 			clear: clearPatchFor(filter, state),
 		});
 	}
@@ -81,6 +82,8 @@ export function ListSearch({
 	onChange: (patch: Partial<ListState>) => void;
 	allowBody?: boolean;
 }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const [search, setSearch] = useState(state.search);
 	useEffect(() => setSearch(state.search), [state.search]);
 	useEffect(() => {
@@ -89,7 +92,7 @@ export function ListSearch({
 		return () => clearTimeout(timer);
 	}, [search, state.search, onChange]);
 
-	const isContent = isDocumentCollection(state.collection);
+	const isContent = site.isDocumentCollection(state.collection);
 	return (
 		<div className="flex items-center gap-3">
 			<InputGroup className="h-8 w-64">
@@ -128,7 +131,9 @@ export function FilterChipBar({
 	options: TaxonomyOptions;
 	onChange: (patch: Partial<ListState>) => void;
 }) {
-	const chips = filterChips(state, options);
+	const site = useSite();
+	const t = useTranslator(screensMessages);
+	const chips = filterChips(site, state, options);
 	if (chips.length === 0) return null;
 	return (
 		<ul aria-label={t("toolbar.chips")} className="flex min-h-11 flex-wrap items-center gap-1.5 border-b px-5 py-2">

@@ -1,15 +1,4 @@
-import { BLOCKS } from "../../../blocks/active";
-import { cmsConfig } from "../../../config/resolved";
-import {
-	ALLOWED_FILE_MIME_TYPES,
-	ALLOWED_IMAGE_MIME_TYPES,
-	LIST_SORT_FIELDS,
-	MAX_FILE_BYTES,
-	MAX_MEDIA_BYTES,
-	MAX_MEDIA_PIXELS,
-	PAGE_SIZES,
-} from "../../../core/api";
-import { COLLECTION_DEFINITIONS, COLLECTIONS } from "../../../core/collections";
+import { LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import { MAX_SLUG_LENGTH } from "../../../core/slug";
 import { adminRoute, json } from "../handler";
@@ -23,10 +12,10 @@ export const GET = adminRoute(async ({ cms }) => {
 	const plugins = await cms.pluginFeatures();
 	return json({
 		version: "v1",
-		collections: COLLECTIONS,
-		definitions: COLLECTION_DEFINITIONS,
-		schemas: cmsConfig.collections,
-		blocks: BLOCKS,
+		collections: cms.site.COLLECTIONS,
+		definitions: cms.site.COLLECTION_DEFINITIONS,
+		schemas: cms.site.config.collections,
+		blocks: cms.site.BLOCKS,
 		// The formats a body can be read and written in (the `format` option): the built-in ones and those plugins add.
 		formats: (await cms.formats()).info(),
 		features: {
@@ -42,11 +31,11 @@ export const GET = adminRoute(async ({ cms }) => {
 			docBytes: MAX_DOC_BYTES,
 			metadataBytes: MAX_METADATA_BYTES,
 			slugLength: MAX_SLUG_LENGTH,
-			mediaBytes: MAX_MEDIA_BYTES,
-			mediaPixels: MAX_MEDIA_PIXELS,
-			mediaTypes: ALLOWED_IMAGE_MIME_TYPES,
-			fileBytes: MAX_FILE_BYTES,
-			fileTypes: ALLOWED_FILE_MIME_TYPES,
+			mediaBytes: cms.site.api.MAX_MEDIA_BYTES,
+			mediaPixels: cms.site.api.MAX_MEDIA_PIXELS,
+			mediaTypes: cms.site.api.ALLOWED_IMAGE_MIME_TYPES,
+			fileBytes: cms.site.api.MAX_FILE_BYTES,
+			fileTypes: cms.site.api.ALLOWED_FILE_MIME_TYPES,
 			pageSizes: PAGE_SIZES,
 			sortFields: LIST_SORT_FIELDS,
 		},

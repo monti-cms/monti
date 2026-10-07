@@ -1,10 +1,10 @@
-import "@monti-cms/core/client";
-import { createFormatRegistry } from "@monti-cms/core/format";
 import { describe, expect, it } from "vitest";
-import { DOCUMENT_COLLECTIONS } from "../../../core/src/core/collections";
-import { prepareSnapshot } from "../../../core/src/core/snapshot";
-import { documentToMdx, mdxFormat } from "../format";
-import { docOfMdx as docOf } from "../testing";
+import { testSite } from "../../../core/test/site";
+import { documentToMdx } from "../format";
+import { docOfMdx } from "../testing";
+import { contentCollection, prepareSnapshot } from "./snapshot-helpers";
+
+const docOf = (mdx: string) => docOfMdx(testSite, mdx);
 
 const CODE = ["const a = 1;", "const b = 2;", "const c = 3;", "const d = 4;", "const e = 5;"];
 const fence = (lines: string[]) => `\`\`\`ts\n${lines.join("\n")}\n\`\`\`\n`;
@@ -29,12 +29,8 @@ const perLine = fence([
 // Ranges that reach past the last code line: the lines they cover are the ones the code has.
 const pastTheEnd = fence(["// @line plus {3-9}", "// @line minus {7-9}", "// @line warning {0-1}", ...CODE]);
 
-const contentCollection = DOCUMENT_COLLECTIONS[0] as string;
-
 const prepare = (input: { body: string; format: string } | { doc: unknown }) =>
-	prepareSnapshot({ collection: contentCollection, slug: "code", metadata: { title: "Code" }, ...input } as never, {
-		import: { formats: createFormatRegistry([mdxFormat]) },
-	});
+	prepareSnapshot({ collection: contentCollection, slug: "code", metadata: { title: "Code" }, ...input } as never);
 
 describe.each([
 	["stacked ranged annotations", stacked],
@@ -63,11 +59,11 @@ describe.each([
 	it("has the same content hash when the document is sent back, and when the text it was written as is saved again", async () => {
 		const first = await prepare({ body: mdx, format: "mdx" });
 		const fromDocument = await prepare({ doc: first.doc });
-		const written = documentToMdx(first.doc);
+		const written = documentToMdx(testSite, first.doc);
 		const fromWritten = await prepare({ format: "mdx", body: written });
 		expect(fromDocument.contentHash).toBe(first.contentHash);
 		expect(fromWritten.contentHash).toBe(first.contentHash);
-		expect(documentToMdx(fromWritten.doc)).toBe(written);
+		expect(documentToMdx(testSite, fromWritten.doc)).toBe(written);
 	});
 
 	it("is stored as a document with the annotations", () => {

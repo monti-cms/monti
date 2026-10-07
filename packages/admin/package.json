@@ -23,7 +23,7 @@
 		"test": "vitest",
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
-		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
+		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"dependencies": {

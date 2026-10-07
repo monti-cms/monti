@@ -10,11 +10,11 @@ import { aiStoreFor } from "../../store";
  */
 export const POST = adminRoute(async ({ request, cms }) => {
 	const query = parseWith(aiModelsQuerySchema, await readJsonBody(request));
-	const saved = query.providerId ? await savedProvider(aiStoreFor(cms), query.providerId) : null;
+	const saved = query.providerId ? await savedProvider(cms.site, aiStoreFor(cms), query.providerId) : null;
 	if (saved && saved.kind !== "chat") return json({ items: [] });
 	const url = query.url || saved?.url;
 	if (!url) return json({ items: isFakeAi() ? [{ id: "fake-generator" }] : [] });
 	// If the address changed but no new key was entered, the stored key is not sent to a different address.
 	const apiKey = query.apiKey ?? (saved && saved.url === url ? saved.apiKey : null);
-	return json({ items: await listModels(url, apiKey, request.signal) });
+	return json({ items: await listModels(cms.site, url, apiKey, request.signal) });
 });

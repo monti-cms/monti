@@ -9,7 +9,7 @@ export type {
 	EditorMarkExtension,
 } from "../admin-components";
 export { DocPreview } from "../screens/entries/source-pane";
-export { addedMarkName, CODE_ANCHOR_REF, type EditorMarkSpec, type MarkAttrs, markAttrsOf } from "./added-marks";
+export { addedMarkName, codeAnchorRef, type EditorMarkSpec, type MarkAttrs, markAttrsOf } from "./added-marks";
 export { BLOCK_ID_ATTRIBUTE, findBlock } from "./block-ids";
 export { BLOCK_NODES } from "./block-views";
 export { blockNodeName } from "./blocks/added";

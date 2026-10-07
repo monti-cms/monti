@@ -1,4 +1,5 @@
 import type { TextCheckSegment, TextIssue } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 import { type BareunResponse, bareunIssues, joinSegments } from "./mapping";
 import type { ResolvedBareunOptions } from "./options";
 
@@ -39,11 +40,12 @@ const isKorean = (locale: string) => locale.toLowerCase().split(/[-_]/)[0] === "
 
 /** Joins paragraphs, checks them in one request, and splits the result per paragraph. Non-Korean paragraphs and empty text are not sent. */
 export async function checkWithBareun(
+	site: Pick<Site, "createTranslator">,
 	segments: readonly TextCheckSegment[],
 	options: BareunRequestOptions,
 ): Promise<TextIssue[]> {
 	const korean = segments.filter((segment) => isKorean(segment.locale));
 	const content = joinSegments(korean);
 	if (content.trim() === "") return [];
-	return bareunIssues(korean, await requestBareun(content, options));
+	return bareunIssues(site, korean, await requestBareun(content, options));
 }

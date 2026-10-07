@@ -1,11 +1,11 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 import { checkCandidates, checkText } from "../checks";
 import type { AiCheck } from "../definition";
 import { KEBAB_PATTERN } from "../presets";
 import { runMessages } from "../run.messages";
 
-const t = createTranslator(runMessages);
+const t = testSite.createTranslator(runMessages);
 
 const on = <T extends Omit<AiCheck, "enabled">>(check: T) => ({ ...check, enabled: true }) as AiCheck;
 
@@ -44,8 +44,10 @@ describe("AI result checks", () => {
 	});
 
 	it("long text is checked for format and length only", () => {
-		expect(checkText([on({ kind: "maxLength", max: 5 })], "여섯 글자다")).toBe(t("check.maxLength", { max: 5 }));
-		expect(checkText([on({ kind: "pattern", pattern: "^요약" })], "요약입니다")).toBeNull();
-		expect(checkText([], "  ")).toBeTruthy();
+		expect(checkText(testSite, [on({ kind: "maxLength", max: 5 })], "여섯 글자다")).toBe(
+			t("check.maxLength", { max: 5 }),
+		);
+		expect(checkText(testSite, [on({ kind: "pattern", pattern: "^요약" })], "요약입니다")).toBeNull();
+		expect(checkText(testSite, [], "  ")).toBeTruthy();
 	});
 });

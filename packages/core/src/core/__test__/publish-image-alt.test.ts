@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { STORED_DOCUMENT_VERSION } from "../../doc/stored-document";
 import { prepareSnapshot, validateForPublish } from "../snapshot";
 
@@ -11,13 +12,13 @@ describe("publish validation of images", () => {
 			version: STORED_DOCUMENT_VERSION,
 			content: [{ type: "image", attrs: { mediaId: "11111111-1111-4111-8111-111111111111" } }],
 		};
-		const snapshot = await prepareSnapshot({
+		const snapshot = await prepareSnapshot(testSite, {
 			collection: contentCollection,
 			slug: "m",
 			metadata: { title: "m" },
 			doc,
 		} as never);
-		const result = validateForPublish(snapshot, {
+		const result = validateForPublish(testSite, snapshot, {
 			targets: [],
 			media: [{ id: "11111111-1111-4111-8111-111111111111" }],
 		});

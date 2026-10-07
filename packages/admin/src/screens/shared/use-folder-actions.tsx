@@ -1,6 +1,6 @@
 "use client";
 
-import { COLLECTION_DEFINITIONS, cmsApiUrl, createTranslator, isCollection } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -22,8 +22,6 @@ import { Skeleton } from "../../ui/skeleton";
 import { cmsFetch, errorText } from "../admin-api";
 import type { MenuAction } from "./action-menu";
 import { sharedMessages } from "./messages";
-
-const t = createTranslator(sharedMessages);
 
 type NameDialog = { mode: "create"; parentId: string | null } | { mode: "rename"; folder: Folder };
 
@@ -52,7 +50,8 @@ export function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[] {
  * Right-click / `⋯` menu of a folder. The sidebar tree and the list's folder rows use the same menu.
  * Move targets are folders excluding itself and its descendants.
  */
-export function folderMenuActions(folder: Folder, folders: Folder[], actions: FolderActions): MenuAction[] {
+export function folderMenuActions(site: Site, folder: Folder, folders: Folder[], actions: FolderActions): MenuAction[] {
+	const t = site.createTranslator(sharedMessages);
 	const targets = moveTargetsFor(folder, folders);
 	return [
 		{ kind: "item", label: t("folder.addChild"), icon: FolderPlus, onSelect: () => actions.requestCreate(folder.id) },
@@ -112,6 +111,8 @@ export function useFolderActions({
 	folders: Folder[];
 	onChanged: (deletedId?: string) => Promise<void> | void;
 }) {
+	const site = useSite();
+	const t = useTranslator(sharedMessages);
 	const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
 	const [name, setName] = useState("");
 	const [deleteDialog, setDeleteDialog] = useState<DeleteDialog | null>(null);
@@ -128,7 +129,9 @@ export function useFolderActions({
 		return target?.isConnected ? target : true;
 	};
 
-	const itemLabel = isCollection(collection) ? COLLECTION_DEFINITIONS[collection].label : t("folder.defaultItemLabel");
+	const itemLabel = site.isCollection(collection)
+		? site.COLLECTION_DEFINITIONS[collection].label
+		: t("folder.defaultItemLabel");
 	const folderName = (id: string | null) =>
 		id
 			? `'${folders.find((f) => f.id === id)?.name ?? t("folder.parentFallback")}'`
@@ -155,17 +158,17 @@ export function useFolderActions({
 		setError(null);
 		setDeleteDialog({ folder, contents: null });
 		try {
-			const contents = await cmsFetch<DeleteDialog["contents"]>(cmsApiUrl(`/v1/folders/${folder.id}`));
+			const contents = await cmsFetch<DeleteDialog["contents"]>(site, cmsApiUrl(`/v1/folders/${folder.id}`));
 			setDeleteDialog({ folder, contents });
 		} catch (err) {
-			setError(errorText(err, t("folder.loadFailed")));
+			setError(errorText(site, err, t("folder.loadFailed")));
 		}
 	};
 
 	/** Moves a folder to another parent (or the top level). If the same name exists, the server rejects and explains. */
 	const moveFolder = async (folder: Folder, parentId: string | null) => {
 		try {
-			await cmsFetch(cmsApiUrl(`/v1/folders/${folder.id}`), {
+			await cmsFetch(site, cmsApiUrl(`/v1/folders/${folder.id}`), {
 				method: "PATCH",
 				json: { parentId, expectedVersion: folder.version },
 				fallback: t("folder.moveFailed"),
@@ -173,7 +176,7 @@ export function useFolderActions({
 			toast.success(t("folder.moved", { name: folder.name, destination: toFolder(parentId) }));
 			await onChanged();
 		} catch (err) {
-			toast.error(errorText(err, t("folder.moveFailed")));
+			toast.error(errorText(site, err, t("folder.moveFailed")));
 		}
 	};
 
@@ -183,14 +186,14 @@ export function useFolderActions({
 		setError(null);
 		try {
 			if (nameDialog.mode === "create") {
-				await cmsFetch(cmsApiUrl("/v1/folders"), {
+				await cmsFetch(site, cmsApiUrl("/v1/folders"), {
 					method: "POST",
 					json: { collection, name: name.trim(), parentId: nameDialog.parentId },
 					fallback: t("folder.addFailed"),
 				});
 				toast.success(t("folder.added", { name: name.trim() }));
 			} else {
-				await cmsFetch(cmsApiUrl(`/v1/folders/${nameDialog.folder.id}`), {
+				await cmsFetch(site, cmsApiUrl(`/v1/folders/${nameDialog.folder.id}`), {
 					method: "PATCH",
 					json: { name: name.trim(), expectedVersion: nameDialog.folder.version },
 					fallback: t("folder.renameFailed"),
@@ -200,7 +203,7 @@ export function useFolderActions({
 			setNameDialog(null);
 			await onChanged();
 		} catch (err) {
-			setError(errorText(err, t("folder.saveFailed")));
+			setError(errorText(site, err, t("folder.saveFailed")));
 		} finally {
 			setIsBusy(false);
 		}
@@ -212,6 +215,7 @@ export function useFolderActions({
 		setError(null);
 		try {
 			await cmsFetch(
+				site,
 				cmsApiUrl(`/v1/folders/${deleteDialog.folder.id}?expectedVersion=${deleteDialog.folder.version}`),
 				{
 					method: "DELETE",
@@ -232,7 +236,7 @@ export function useFolderActions({
 			await onChanged(deletedId);
 		} catch (err) {
 			// If a child folder name collides in the parent, guide the user to rename first.
-			setError(errorText(err, t("folder.deleteFailed")));
+			setError(errorText(site, err, t("folder.deleteFailed")));
 		} finally {
 			setIsBusy(false);
 		}

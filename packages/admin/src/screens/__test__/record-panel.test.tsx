@@ -2,6 +2,7 @@ import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordPanel } from "../record-panel";
+import { withSite } from "./site-wrapper";
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
@@ -38,7 +39,7 @@ afterEach(() => {
 const renderPanel = (target: { collection: "tag" | "category" | "collection"; id: string | null }) => {
 	const onClose = vi.fn();
 	const onSaved = vi.fn();
-	render(<RecordPanel target={target} onClose={onClose} onSaved={onSaved} />);
+	render(withSite(<RecordPanel target={target} onClose={onClose} onSaved={onSaved} />));
 	return { onClose, onSaved };
 };
 const panel = () => screen.getByRole("complementary", { name: /태그/ });

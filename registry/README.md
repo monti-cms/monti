@@ -17,7 +17,7 @@ pnpm exec monti add article-body --dry-run       # show what would be written an
 
 | Name | Type | What it is | Needs |
 | --- | --- | --- | --- |
-| `article-body` | public page | `<ArticleBody entry={entry} components={...} />`: the stored document drawn by `CmsContent`, with a table of contents from `tableOfContents` above it. A server component | `@monti-cms/core` |
+| `article-body` | public page | `<ArticleBody cms={cms} entry={entry} components={...} />`: the stored document drawn by `CmsContent`, with a table of contents from `tableOfContents` above it. A server component | `@monti-cms/core` |
 | `blog-theme` | public pages | A post list (paged) and a post page (title, date, author, table of contents, body, newer and older post) for one collection, with `generateMetadata`, 404 and redirects. Route files go to `app/(site)/blog/` | `@monti-cms/core`, `next`, `article-body` |
 | `entry-editor` | admin | `<EntryEditorScreen adminId target fields />`: a minimal custom editor screen on `useEntryEditor` (load, save, publish, recovery copy, conflict) and `useField` | `@monti-cms/admin`, `field-row` |
 | `field-row` | admin | `<FieldRow name="title" />`: one form field on `useField` (label, control, description, error) | `@monti-cms/admin` |

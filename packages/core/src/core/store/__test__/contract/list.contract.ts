@@ -8,11 +8,10 @@ import {
 	requiredMetadata,
 	secondLocale,
 } from "../../../../../test/any-site";
+import { testSite } from "../../../../../test/site";
 import { docOf } from "../../../../../test/stored-content";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../../doc/stored-document";
-import { recordLocalizedFields, storedField, storedFields } from "../../../../schema/derive";
-import { COLLECTIONS, type Collection, isItemCollection } from "../../../collections";
-import { LOCALES } from "../../../locales";
+import type { Collection } from "../../../collections";
 import { CmsError, type ContentStore, type Entry } from "../..";
 import { moveToFolder, publishDraft, seedEntry } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
@@ -33,11 +32,13 @@ const content = contentCollection;
 
 type RelationInfo = { name: string; to: Collection; many: boolean };
 /** A non-conditional relation field that points at an item collection. */
-const itemRelations: RelationInfo[] = storedFields(content).flatMap(({ name, field, when }) =>
-	!when && field.kind === "relation" && isItemCollection(field.to)
-		? [{ name, to: field.to as Collection, many: Boolean(field.many) }]
-		: [],
-);
+const itemRelations: RelationInfo[] = testSite
+	.storedFields(content)
+	.flatMap(({ name, field, when }) =>
+		!when && field.kind === "relation" && testSite.isItemCollection(field.to)
+			? [{ name, to: field.to as Collection, many: Boolean(field.many) }]
+			: [],
+	);
 /** A multi-select relation (the reference blog's tags). */
 const manyRelation = itemRelations.find((relation) => relation.many);
 /** A relation required for publish, so the fixture always fills it (the reference blog's category). */
@@ -50,17 +51,17 @@ const fixtureTargets = new Set(
 );
 /** For checking collection isolation: another collection for which the fixture creates no items (the reference blog's memos). */
 const isolatedCollection =
-	otherContentCollection ?? COLLECTIONS.find((name) => name !== content && !fixtureTargets.has(name));
+	otherContentCollection ?? testSite.COLLECTIONS.find((name) => name !== content && !fixtureTargets.has(name));
 /** Another collection without the required relation field (the reference blog's memos have no category). */
 const collectionWithoutFilledRelation = filledRelation
-	? COLLECTIONS.find((name) => name !== content && !storedField(name, filledRelation.name))
+	? testSite.COLLECTIONS.find((name) => name !== content && !testSite.storedField(name, filledRelation.name))
 	: undefined;
 /** Item collection whose name (`title`) is a per-language value (the reference blog's tags). */
-const localizedRecordCollection = COLLECTIONS.find(
-	(name) => isItemCollection(name) && recordLocalizedFields(name).includes("title"),
+const localizedRecordCollection = testSite.COLLECTIONS.find(
+	(name) => testSite.isItemCollection(name) && testSite.recordLocalizedFields(name).includes("title"),
 );
 /** A language that is neither the default nor the second one (if any). An empty name is not included in the language list. */
-const thirdLocale = LOCALES.find((code) => code !== defaultLocale && code !== secondLocale);
+const thirdLocale = testSite.LOCALES.find((code) => code !== defaultLocale && code !== secondLocale);
 const relationTargetTitle = (to: Collection) => `List test ${to}`;
 
 // ---------------------------------------------------------------------------
@@ -93,7 +94,7 @@ export const listContract: ContractSuite = (factory) => {
 					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
-				return (await publishDraft(store, { id: draft.id, expectedVersion: draft.version })).id;
+				return (await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).id;
 			})();
 			relationTargets.set(to, created);
 			return created;
@@ -152,7 +153,7 @@ export const listContract: ContractSuite = (factory) => {
 				if (slug === null) {
 					throw new Error("Cannot publish an entry with null slug in fixture");
 				}
-				current = await publishDraft(store, { id: entry.id, expectedVersion: current.version });
+				current = await publishDraft(testSite, store, { id: entry.id, expectedVersion: current.version });
 			}
 
 			if (opts.folderId) {
@@ -177,7 +178,7 @@ export const listContract: ContractSuite = (factory) => {
 			const res = await store.listEntries({ collection: content });
 			// Every relation field has a value, and only the required relation filled by the fixture comes with its target title.
 			const expectedRelations: Record<string, { id: string; title: string }[]> = {};
-			for (const { name, field } of storedFields(content)) {
+			for (const { name, field } of testSite.storedFields(content)) {
 				if (field.kind !== "relation") continue;
 				const filled = requiredFields(content).some((required) => required.name === name);
 				const to = field.to as Collection;
@@ -478,9 +479,9 @@ export const listContract: ContractSuite = (factory) => {
 		);
 
 		/** Text and select fields (other than the title). These supply the values of list cells. */
-		const plainField = storedFields(content).find(
-			({ name, field, when }) => !when && name !== "title" && (field.kind === "select" || field.kind === "text"),
-		);
+		const plainField = testSite
+			.storedFields(content)
+			.find(({ name, field, when }) => !when && name !== "title" && (field.kind === "select" || field.kind === "text"));
 
 		it.skipIf(!plainField)(
 			"lists the stored text of text and select fields as `values` (empty values are left out)",
@@ -537,7 +538,9 @@ export const listContract: ContractSuite = (factory) => {
 				const { items } = await store.listEntries({ collection: records });
 				const localesOf = (id: string) =>
 					(items.find((item) => item.id === id) as { recordLocales?: string[] })?.recordLocales;
-				expect(localesOf(named.id)).toEqual(LOCALES.filter((code) => code === defaultLocale || code === secondLocale));
+				expect(localesOf(named.id)).toEqual(
+					testSite.LOCALES.filter((code) => code === defaultLocale || code === secondLocale),
+				);
 				expect(localesOf(plain.id)).toEqual([defaultLocale]);
 
 				const posts = await store.listEntries({ collection: content });

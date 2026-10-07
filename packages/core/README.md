@@ -54,11 +54,9 @@ pnpm exec monti init --locale ko --time-zone Asia/Seoul  # to set the site's def
 | The CMS instance and its server config (DB, GitHub login; secrets come from environment variables) | `cms.server.ts` |
 | Admin UI (the layout imports the prebuilt admin stylesheet) | `app/(admin)/admin/[[...path]]/page.tsx`, `layout.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| Config alias `@cms-config` | added to `paths` in `tsconfig.json` |
 | Config wiring (`withCms`) | `next.config.ts` (when it has the default shape with a single `export default nextConfig;` line); created if missing |
 
-For apps that use `src/app`, the config files go in `src/` and the routes under `src/app/`. Files that cannot be edited safely (a `tsconfig.json`
-with comments, a next config that does not have the default shape) are left as they are, and what to add is shown as a "to do".
+For apps that use `src/app`, the config files go in `src/` and the routes under `src/app/`. Files that cannot be edited safely (a next config that does not have the default shape) are left as they are, and what to add is shown as a "to do".
 At the end it lists the packages to install, the environment variables and the GitHub callback URL.
 
 With `--admin-path`, the route folder becomes that path (`app/(admin)/studio/…`) and `admin: { path: "/studio" }` is added to the site config.
@@ -71,7 +69,7 @@ shown (an IANA name, default `UTC`). The generated config files and the command-
 
 ### 3. Edit the collections
 
-`cms.config.ts` is read by both the server and the admin UI. Do not put secrets in it. The generated starting point looks like this.
+`cms.config.ts` is the site config. `cms.server.ts` imports it and hands it to `createCms`, and the admin UI gets it from that instance as data, so do not put secrets in it. The generated starting point looks like this.
 
 ```ts
 import { defineCollection, defineConfig, fields } from "@monti-cms/core";
@@ -100,7 +98,7 @@ export default defineConfig({
 
 The collection name (`post`) is stored in the DB, so do not change it in production. See "Config" below for the field rules.
 
-`cms.server.ts` creates the CMS instance (`createCms({ server })`, see "The CMS instance"). Its server config holds the store, media and login connections and the secrets, and is only read on the server.
+`cms.server.ts` creates the CMS instance (`createCms({ config, server })`, see "The CMS instance"). Its server config holds the store, media and login connections and the secrets, and is only read on the server.
 Connections are created on first use, so the environment variables may be empty during the build. To use image uploads, add a store from `@monti-cms/core/s3` to `media` and install the AWS SDK
 (`pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`, only for sites that use media):
 
@@ -143,10 +141,9 @@ against the same schema, they run one at a time. A plugin hands over once-only w
 
 - Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
   Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
-- Files: the site config is looked up in this order: `--config` → `CMS_CONFIG_PATH` → the `@cms-config` alias in `tsconfig.json` `paths` → `./cms.config.ts`/`./src/cms.config.ts`.
-  The server file, the module that exports the instance as `cms`, is `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`/`./src/cms.server.ts`.
+- File: the server file, the module that exports the instance as `cms`, is `--server` → `CMS_SERVER_PATH` → `./cms.server.ts`/`./src/cms.server.ts`. It imports the site config itself, so there is no config option.
 - In a script of your own, import the instance and call it: `import { cms } from "./cms.server"; await cms.migrate(); await cms.close();`
-  (run it with `tsx --env-file=.env.local --import @monti-cms/core/register script.ts`, which links the `@cms-config` alias).
+  (run it with `tsx --env-file=.env.local script.ts`; the instance holds the site config, so nothing else has to be linked).
 
 ### 5. Run
 
@@ -176,9 +173,8 @@ After installing, restart the dev server.
 
 ### Manual wiring (without `monti init`)
 
-To do by hand what `monti init` does: create the site config and the server file (the instance), wrap `next.config.ts` in
-`withCms(nextConfig, { config: "./cms.config.ts" })` (`import { withCms } from "@monti-cms/nextjs/config"`), add
-`"@cms-config": ["./cms.config.ts"]` to `tsconfig.json` `paths` (and to `resolve.alias` if you use tests (Vitest)),
+To do by hand what `monti init` does: create the site config and the server file (the instance, `createCms({ config, server })`), wrap `next.config.ts` in
+`withCms(nextConfig)` (`import { withCms } from "@monti-cms/nextjs/config"`; there is no alias or `tsconfig.json` `paths` entry to add, and none for tests (Vitest) either),
 add the set of route files from the table above (each imports `cms` from the server file), and import the prebuilt admin stylesheet in the admin layout (`app/(admin)/admin/layout.tsx`).
 
 ```ts
@@ -274,16 +270,19 @@ See the README of `@monti-cms/seo` for details.
 
 ## The CMS instance
 
-`createCms({ server })` (from `@monti-cms/core/server`) turns the server config into the instance everything on the server uses. The instance owns the content store, services, media store,
-login connection, plugin server modules, write hooks and the secret. Nothing is global: two instances with different server configs live side by side in one process (tests, scripts, several databases).
+`createCms({ config, server })` (from `@monti-cms/core/server`) turns the site config and the server config into the instance everything on the server uses. The instance owns the site (the resolved
+site config, `cms.site`), the content store, services, media store, login connection, plugin server modules, write hooks and the secret. Nothing is global: two instances with different configs and server configs live
+side by side in one process (tests, scripts, several sites and databases).
 Connections are created on first use, so creating the instance at import or build time connects to nothing.
 
 ```ts
 // cms.server.ts
 import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
 import { githubAuth } from "@monti-cms/nextjs/auth";
+import config from "./cms.config";
 
 export const cms = createCms({
+	config,
 	server: defineServerConfig({ database: postgres({ /* … */ }), auth: githubAuth({ /* … */ }) }),
 });
 ```
@@ -294,13 +293,14 @@ Everything else imports `cms` from this file.
 | --- | --- |
 | Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);` (`createRouteHandler` of `@monti-cms/nextjs`, the Next adapter of `cms.handle(request)`) |
 | Admin API in another host | `cms.handle(request)`: a standard `Request` in, a `Response` out |
-| Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />` (from `@monti-cms/nextjs/admin`) |
+| Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />`, and `export const generateMetadata = () => cmsAdminMetadata(cms);` in the layout file (from `@monti-cms/nextjs/admin`) |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` (pass a `format`, for example `"mdx"` with `@monti-cms/mdx`, to also get the body as text in `entry.body`, "Formats") |
-| Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent entry={entry} />`), `cms.read.mediaUrl(mediaId)` |
+| Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent cms={cms} entry={entry} />`), `cms.read.mediaUrl(mediaId)` |
 | Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
 | Scripts and the command line | `cms.migrate()`, `cms.close()` |
 | Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
-| Tests | `fakeCms({ store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides |
+| The site | `cms.site`: collections and their rules, locales, URLs, blocks, code block settings, admin addresses and language ("The site config belongs to the instance") |
+| Tests | `fakeCms({ config, store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides (a minimal English site if it passes no `config`) |
 
 **HTTP layer.** The admin API, the login connection, the public API and the plugin routes work on the standard web `Request` and `Response`; no `NextRequest`, `NextResponse` or `request.nextUrl` is used.
 `cms.handle(request)` serves one request (the path after `/api/cms/` is read from the URL), and `createRouteHandler(cms)` of `@monti-cms/nextjs` is the thin Next adapter built on it.
@@ -314,7 +314,38 @@ So, in development only (`NODE_ENV=development`), an instance reuses the databas
 kept under one `Symbol.for("monti.cms.dev-connections")` entry on `globalThis`. Everything else (store, services, login connection, plugins, hooks, secret) is rebuilt from the new server config, so edits to hooks and options take effect.
 Changing the database connection itself needs a restart. In production and in tests there is no such cache: an instance owns its connections alone. If one development process creates more than one instance, give each its own `id`: `createCms({ id: "reports", server })`.
 
-**Still read through the `@cms-config` alias.** The site config (collections, locales, plugins, blocks) is still linked by the `@cms-config` alias for now, so one process has one site config. `createCms` takes only the server side.
+### The site config belongs to the instance
+
+`createCms({ config })` takes the site config as a value and holds it. There is no config alias and no module-level constant derived from the config, so nothing assumes the config is known when a module is imported, and one process can hold
+several sites. `createSite(config)` (`@monti-cms/core/client`) resolves a config into a `Site`: `LOCALES`, `DEFAULT_LOCALE`, `COLLECTIONS`, `schemaOf(name)`, `storedFields(name)`, `contentPath(…)`, `parseInternalLink(…)`, `adminHref(…)`, `BLOCKS`,
+`CODE_LINE_EFFECTS`, `getPluginOptions(name)`, `createTranslator(messages)` and the rest of what used to be exported as constants and functions that read the config. The instance carries its `Site` as `cms.site`
+(`cms.site.config` is the config object itself), and everything that needed the config receives it from the instance:
+
+| Part | Gets the site from |
+| --- | --- |
+| Store, services, read API, HTTP handler, plugins, the login connection, `monti migrate` | the instance: `createCms` passes `cms.site` on (`createStore({ site })`, `createContentService(store, { site })`, `createRead({ site })`, `AuthCreateContext.site`, ...) |
+| Admin UI | `<CmsAdminLayout cms={cms}>` renders `<SiteProvider config={cms.site.snapshot()}>` around the screens, and client components read it with `useSite()` and `useTranslator(messages)` (`@monti-cms/core/client`). The browser never loads a config file |
+| Public renderer | `<CmsContent cms={cms} entry={entry} />` and `renderDocument(doc, { site: cms.site })`: the site decides which blocks, marks and code fences exist, the line effects and the highlighting themes, and which plugin components are added |
+| Code of your own | `cms.site` on the server, `useSite()` in client components. A helper that needs a site takes it as a parameter |
+
+**What reaches the browser.** `site.snapshot()` is the config as plain data: the collections, locales, `site`, `admin`, `timeZone`, `media` and `codeBlock` settings, every block (the blocks of plugins included) and, for each plugin, `name`, `nav`, `options` and `contributes` as JSON. A function inside a plugin's `options`
+or `contributes`, a text override of `admin.messages` that is a function (strings stay), and a plugin's `server`, `admin`, `render`, `formats` and `validate` do not reach it: the admin layout loads the plugins' admin modules on the server and renders their providers itself. Keep what the browser needs from `options` to JSON values.
+
+**Typing.** The types follow the config you pass, with no registration step. `createCms({ config })` returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
+and a collection that is not in the config is a type error. Where a library type cannot see an instance, give it the config type: `DocumentComponentsFor<typeof config>` or `DocumentComponentsOf<typeof cms>` types the `components` of `<CmsContent>` (block names and the attribute props of each block), and the AI plugin's action names take the config type the same way.
+A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently.
+
+### Upgrading from the `@cms-config` alias
+
+- `cms.server.ts`: `import config from "./cms.config"` and `createCms({ config, server: … })`.
+- Remove `"@cms-config"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`; `withCms(nextConfig)` takes no options. `monti migrate` has no `--config` option and ignores `CMS_CONFIG_PATH`; it loads the server file, which imports the config. `@monti-cms/core/register` is gone: run scripts with plain `tsx`.
+- Admin layout: `export const generateMetadata = () => cmsAdminMetadata(cms);` instead of `export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin"` (the title follows the site name and admin language of the instance).
+- Rendering: `<CmsContent cms={cms} entry={entry} />` and `renderDocument(doc, { site: cms.site, … })`; `renderMdx(doc, { site })` the same way. Type the `components` table with `DocumentComponentsOf<typeof cms>` (or `DocumentComponentsFor<typeof config>`) instead of the old `DocumentComponents`, which is now the untyped table.
+- Config-derived values and helpers that were exported by `@monti-cms/core/client` (`LOCALES`, `DEFAULT_LOCALE`, `isLocale`, `localizePath`, `COLLECTIONS`, `schemaOf`, `contentPath`, `parseInternalLink`, `adminHref`, `SITE_NAME`, `BLOCKS`, `CODE_LINE_EFFECTS`, `getPluginOptions`, ...) are members of the site: `cms.site.LOCALES` on the server, `useSite().LOCALES` in client components.
+  `createTranslator(messages)` at module level becomes `site.createTranslator(messages)` or, in a component, `useTranslator(messages)`. `formatDateTimeInput` and `parseDateTimeInput` need a time zone (or use the site's: `site.formatDateTimeInput(value)`).
+- Plugins and adapters: `CmsServerPlugin` and routes are unchanged (`cms.site` is on the instance they get). A `DatabaseAdapter` receives the site (`createStore({ site, afterCommit })`, `migrate({ site, formats })`), and an `AuthAdapter` gets it in `create({ site, loginPath, trustHost })`.
+  Text that block and line-effect definitions pick with `createActiveTranslator` is read once when the site is created, in the admin language of that site. Anything else that translates at run time uses `site.createTranslator`.
+- Tests: no test needs to mock a config module. Create the site or the instance the test needs (`createSite(config)`, `fakeCms({ config })`, `createCms({ config, server })`), and wrap React trees in `<SiteProvider site={site}>`.
 
 ### Upgrading to `@monti-cms/nextjs`
 
@@ -342,7 +373,6 @@ All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` int
   Nothing hands out the raw master secret any more (`cms.secret` and `cms.server.secret` are gone too); see "Plugin secrets".
   A plugin's route gets `cms` in its handler input, `CmsServerPlugin.features(cms)` and `migrate(storage, cms)` get it as an argument, and hooks read it from a closure over your own `cms`.
 - `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` now imports the server file and need it to export `cms`.
-  `@monti-cms/core/register` links only the `@cms-config` alias.
 - Signing in and out are plain form posts to `/api/cms/v1/session/*`, not server actions (a server action cannot carry the instance). Nothing to change in apps.
 
 ### Upgrading plugins that used `cms.database()`
@@ -401,12 +431,12 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/s3` | `cms.server.ts` | `r2Storage`, `s3Storage` (S3 API media stores; the AWS SDK is an optional dependency) |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
-| `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata`, `NextAdminRouter` |
+| `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth` |
-| `@monti-cms/core/render` | public pages (server components) | `CmsContent`, `renderDocument(doc, options)` → `{ content, toc, unknown }`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
+| `@monti-cms/core/render` | public pages (server components) | `CmsContent` (`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>` and `DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
-| `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (`tsx --import @monti-cms/core/register`) |
-| `@monti-cms/core/client` | UI code | API shapes, collection, locale, URL, block and schema helpers |
+| `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (plain `tsx`) |
+| `@monti-cms/core/client` | UI code | `createSite`, `Site`, `SiteProvider`, `useSite`, `useTranslator`, API shapes and the pure collection, locale, URL, block and schema helpers (the ones that depend on a config are members of the `Site`) |
 | `@monti-cms/core/code-block` | public renderer, editor | The code block annotation model |
 | `@monti-cms/core/document` | screens and plugins that edit or inspect a body | The `StoredDocument` type and the helpers that work on a document without knowing its notation: block ids (`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, link, image and table helpers, the stored code block model. Nothing in it parses or writes a text notation. The admin editor and AI import from here |
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
@@ -414,7 +444,6 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti add` (install components as source), `monti migrate` (create tables) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate` (the code behind the `monti` command) |
-| `@monti-cms/core/register` | custom scripts | links the `@cms-config` alias for a script run with `tsx --import` |
 | `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages
@@ -641,15 +670,16 @@ Text colors come from the blocks extension (`color({ palette })` of `@monti-cms/
 on the public path. Core renders documents only; text is drawn by reading it into a document first (`renderMdx` of `@monti-cms/mdx/render` does that for MDX).
 
 ```tsx
-import { CmsContent, renderDocument, tableOfContents, type DocumentComponents } from "@monti-cms/core/render";
+import { CmsContent, type DocumentComponentsOf, renderDocument, tableOfContents } from "@monti-cms/core/render";
 
 const entry = (await cms.read.getEntry({ collection: "post", slug, locale })).entry; // the document and its refs
-// in a server component: the images and files come from entry.refs, the language from entry.locale
-<CmsContent entry={entry} components={components} />;
+// in a server component: the images and files come from entry.refs, the language from entry.locale,
+// the blocks, code settings and plugin components from the site of `cms`
+<CmsContent cms={cms} entry={entry} components={components} />;
 tableOfContents(entry.doc); // the headings of levels 2 and 3, the same anchors, no React
 // a document on its own:
-const { content, toc, unknown } = await renderDocument(doc, { locale, refs, components });
-<CmsContent doc={doc} refs={refs} locale={locale} components={components} />;
+const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, locale, refs, components });
+<CmsContent cms={cms} doc={doc} refs={refs} locale={locale} components={components} />;
 ```
 
 - **Two phases.** An async pre-pass reads the whole document once (heading anchors and the table of contents, footnote numbers, Shiki highlighting of every code block, KaTeX output
@@ -662,7 +692,7 @@ const { content, toc, unknown } = await renderDocument(doc, { locale, refs, comp
   `FootnoteRefProps`/`FootnotesProps`, `HardBreakProps`), one per core mark (`link`, `bold`, `italic`, ...), plus `codeTags` for the elements inside code blocks (`fold`, `collapse`, `Tooltip`).
   Every component also gets `ctx` (`locale` and the fixed `labels`; plain JSON, so it can cross to a client component), and a block component gets `blockId`, `node` and `items`.
 - **Blocks are registered by block name with the attributes as flat props**, and the prop types come from the site config: `blocks: { callout: ({ variant, title, children }) => … }`,
-  `marks: { tooltip: ({ content, children }) => … }`. The type of `components` (`DocumentComponents`) is built from the `blocks` of `cms.config.ts` and of its plugins
+  `marks: { tooltip: ({ content, children }) => … }`. The type of `components` (`DocumentComponentsOf<typeof cms>`, or `DocumentComponentsFor<typeof config>`) is built from the `blocks` of `cms.config.ts` and of its plugins
   (`defineBlock` keeps the attributes as literals, so `variant` is `"note" | "tip" | …`). A boolean attribute is always a boolean, a value with a default or a required string is always there,
   and a choice that is not one of the options is replaced by the default. A code fence block (`mermaid`, `chart`) gets the code as `source`.
 - **One renderer.** Heading anchors follow `github-slugger`, footnotes number by first reference, the same Shiki pipeline draws code (line effects, text effects, line labels),
@@ -929,11 +959,11 @@ pnpm --filter @monti-cms/core test:run
 pnpm --filter @monti-cms/core typecheck
 ```
 
-The package's own tests run with the sample site config `test/cms.config.ts`. A test that needs an instance builds one with `fakeCms` (or `createCms` over fake adapters); no test mocks a module for it.
+The package's own tests run against the sample site `testSite` (`test/site.ts`, made from the sample site config `test/cms.config.ts`). A test that needs an instance builds one with `fakeCms` (or `createCms` over fake adapters), and one that needs its own config builds a site or an instance from it; no test mocks a module for it.
 
 **Tests also run with another site config (regression guard).** `test/other-site.config.ts` is a config deliberately different from the blog's (collections article, topic and author,
 field names other than `title` and `slug`, English only, chart + site blocks, no text decorations). In each of the core, admin and AI packages, `vitest.othersite.config.ts` reruns the same
-tests with this config (suite names `core (other-site)`, `admin (other-site)` and `ai (other-site)`; the repo-root
+tests with this config (it sets `MONTI_TEST_SITE=other-site`, which `test/site.ts` reads) (suite names `core (other-site)`, `admin (other-site)` and `ai (other-site)`; the repo-root
 `pnpm test:run` runs them together, and in a package use `pnpm test:other-site`). New tests run with both configs automatically. Do not write collection and field names in
 tests; look them up from the config (`test/any-site.ts`: collections, relation fields, the second language, and `fillRequiredMetadata`, which fills in publish-required values).
 Wrap tests that need something the config lacks (a second language, a bundled block, etc.) in `skipIf`. In the core package, the parts that assert the blog sample data as is

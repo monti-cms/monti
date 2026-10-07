@@ -9,6 +9,9 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CodeRefProvider, codeRefMarkExtension } from "../code-ref/provider";
 import { ColorProvider, colorMarkExtension } from "../color/provider";
 import { docOfMdx, mdxToTiptap, tiptapToMdx } from "../test/editor-text";
+import { renderSite as site } from "../test/render-config";
+import { WithSite } from "../test/site";
+import { tooltipMessages } from "../tooltip/messages";
 import { TooltipProvider, tooltipMarkExtension } from "../tooltip/provider";
 
 /**
@@ -31,15 +34,18 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-const MARKS = { tooltip: tooltipMarkExtension, "code-ref": codeRefMarkExtension, color: colorMarkExtension };
+const tooltipExtension = tooltipMarkExtension(site.createTranslator(tooltipMessages));
+const MARKS = { tooltip: tooltipExtension, "code-ref": codeRefMarkExtension, color: colorMarkExtension };
 
 /** Admin UI with all three mark extensions added, like the reference blog setup. */
 const WithMarks = ({ children }: { children: ReactNode }) => (
-	<TooltipProvider>
-		<CodeRefProvider>
-			<ColorProvider>{children}</ColorProvider>
-		</CodeRefProvider>
-	</TooltipProvider>
+	<WithSite>
+		<TooltipProvider>
+			<CodeRefProvider>
+				<ColorProvider>{children}</ColorProvider>
+			</CodeRefProvider>
+		</TooltipProvider>
+	</WithSite>
 );
 
 const roundTrip = (mdx: string) => tiptapToMdx(mdxToTiptap(mdx));
@@ -56,14 +62,15 @@ describe("inline mark saved text", () => {
 		'<Tooltip content="닫는 괄호">a]b</Tooltip>',
 	])("body → editor → body is unchanged: %s", (body) => {
 		const mdx = `${body}\n`;
-		expect(serialize(toDocument(analyze(mdx)))).toBe(mdx);
+		expect(serialize(site, toDocument(site, analyze(site, mdx)))).toBe(mdx);
 		expect(roundTrip(mdx)).toBe(mdx);
 	});
 
 	it("sample posts (the blog post set) are unchanged after passing through the editor", () => {
 		// The samples are stored with directives, so they are read with the extension and written back as standard MDX first.
 		const syntax = [directiveSyntax()];
-		const standardOf = (mdx: string, name: string) => serialize(toDocument(analyze(mdx, name, syntax)));
+		const standardOf = (mdx: string, name: string) =>
+			serialize(site, toDocument(site, analyze(site, mdx, name, syntax)));
 		const samples = readSamples().filter(({ mdx }) => /:(tooltip|code-ref|color)\[/.test(mdx));
 		expect(samples.length).toBeGreaterThan(0);
 		for (const { name, mdx } of samples) {
@@ -78,7 +85,7 @@ describe("inline mark saved text", () => {
 
 	it("editor marks render with the shape the extension provides", () => {
 		const editor = new Editor({
-			extensions: buildEditorExtensions(MARKS),
+			extensions: buildEditorExtensions(site, MARKS),
 			content: mdxToTiptap(
 				'<Tooltip content="설명">가</Tooltip> <CodeRef to="c1">나</CodeRef> <Color fg="#dc2626" fgDark="#f87171">다</Color>\n',
 			),
@@ -153,8 +160,8 @@ describe("formatting toolbar", () => {
 		await screen.findByRole("toolbar", { name: "서식 도구" });
 		const opened = vi.fn();
 		window.addEventListener("cms:open-tooltip", opened);
-		const run = tooltipMarkExtension.insertActions?.[0]?.run;
-		const editor = new Editor({ extensions: buildEditorExtensions(MARKS), content: "<p>/</p>" });
+		const run = tooltipExtension.insertActions?.[0]?.run;
+		const editor = new Editor({ extensions: buildEditorExtensions(site, MARKS), content: "<p>/</p>" });
 		act(() => run?.(editor, { from: 1, to: 2 }));
 		expect(editor.state.doc.textContent).toBe("툴팁 텍스트");
 		expect(editor.state.selection.empty).toBe(false);

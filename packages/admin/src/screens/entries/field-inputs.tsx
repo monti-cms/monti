@@ -18,17 +18,18 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { BacklinkField, Collection, RelationField, ValueField } from "@monti-cms/core/client";
-import { cmsApiUrl, isCollection, type SchemaCollection, schemaOf, storedField } from "@monti-cms/core/client";
+import { cmsApiUrl, type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
+import type { TranslatorFor } from "../../translator";
 import { IconButton } from "../../ui/icon-button";
 import { CmsApiError, cmsFetch, errorText } from "../admin-api";
 import { type RecordCollection, useTaxonomy } from "../shared/use-taxonomy";
 import type { EntryForm, FormValue } from "./entry-form";
+import { entriesMessages } from "./messages";
 import { useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
-import { t } from "./translate";
 
 /** Values an input needs from outside the field. The edit screen fills them. */
 export interface FieldContext {
@@ -80,6 +81,8 @@ const ENTRY_OPTIONS_PAGE_SIZE = 100;
  * The list API excludes trashed posts, and with `publishedOnly` only published posts are received.
  */
 function useEntryOptions(field: RelationField) {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
 	const [options, setOptions] = useState<EntryOption[] | null>(null);
 	useEffect(() => {
 		let cancelled = false;
@@ -93,6 +96,7 @@ function useEntryOptions(field: RelationField) {
 				});
 				if (field.publishedOnly) params.set("status", "published");
 				const data = await cmsFetch<{ items: { id: string; title: string | null; status: string }[]; total: number }>(
+					site,
 					cmsApiUrl(`/v1/entries?${params}`),
 				);
 				all.push(
@@ -108,20 +112,22 @@ function useEntryOptions(field: RelationField) {
 		return () => {
 			cancelled = true;
 		};
-	}, [field.to, field.publishedOnly]);
+	}, [field.to, field.publishedOnly, site, t]);
 	return options;
 }
 
 /** Label of the relation target collection (e.g. `Posts`). Used in input hint text. */
-const targetLabel = (relation: RelationField) =>
-	isCollection(relation.to) ? schemaOf(relation.to).label : relation.to;
+const targetLabel = (site: Site, relation: RelationField) =>
+	site.isCollection(relation.to) ? site.schemaOf(relation.to).label : relation.to;
 
 /** Posts that are not published get a marker after the name, because they are missing from the public list of collections and replacement posts. */
-const entryLabel = (option: EntryOption) =>
+const entryLabel = (t: TranslatorFor<typeof entriesMessages>, option: EntryOption) =>
 	option.status === "published" ? option.title : `${option.title}${t("entry.unpublished")}`;
 
 /** Single relation. Pressing it opens the full list of target entries to pick from. */
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
 	const relation = field as RelationField;
 	const options = useEntryOptions(relation);
 	const selected = typeof value === "string" && value ? [value] : [];
@@ -130,7 +136,9 @@ export function EntryPicker({ field, id, value, invalid, describedBy, context, o
 			id={id}
 			aria-label={field.label}
 			placeholder={
-				options === null ? t("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(relation) }))
+				options === null
+					? t("loading")
+					: (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) }))
 			}
 			invalid={invalid}
 			describedBy={describedBy}
@@ -138,7 +146,7 @@ export function EntryPicker({ field, id, value, invalid, describedBy, context, o
 			multiple={false}
 			options={(options ?? [])
 				.filter((option) => option.id !== context.entryId)
-				.map((option) => ({ value: option.id, label: entryLabel(option) }))}
+				.map((option) => ({ value: option.id, label: entryLabel(t, option) }))}
 			value={selected}
 			onValueChange={(next) => onChange(next[0] ?? null)}
 		/>
@@ -163,6 +171,7 @@ function SortableEntryRow({
 	onMove: (direction: -1 | 1) => void;
 	onRemove: () => void;
 }) {
+	const t = useTranslator(entriesMessages);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
 		id: sortableId,
 		disabled,
@@ -223,6 +232,8 @@ function SortableEntryRow({
  * Check posts in the `Add/remove posts` list above to add or remove them (added ones go to the end), and drag in the list below to reorder.
  */
 export function OrderedEntryList({ field, id, value, context, onChange }: FieldInputProps) {
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
 	const relation = field as RelationField;
 	const options = useEntryOptions(relation);
 	const ids = Array.isArray(value) ? value : [];
@@ -249,7 +260,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 		const kept = ids.filter((itemId) => chosen.has(itemId));
 		onChange([...kept, ...selected.filter((itemId) => !ids.includes(itemId))]);
 	};
-	const target = targetLabel(relation);
+	const target = targetLabel(site, relation);
 	const missing = (itemId: string): EntryOption | undefined =>
 		options === null ? undefined : { id: itemId, title: t("entry.missing", { target }), status: "missing" };
 
@@ -264,7 +275,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 				showChips={false}
 				options={(options ?? [])
 					.filter((option) => option.id !== context.entryId)
-					.map((option) => ({ value: option.id, label: entryLabel(option) }))}
+					.map((option) => ({ value: option.id, label: entryLabel(t, option) }))}
 				value={ids}
 				onValueChange={applySelection}
 			/>
@@ -314,8 +325,11 @@ export type IncomingReference = {
  * Relations without a condition are not filtered.
  */
 function useRecordKind(field: BacklinkField, options: readonly { id: string }[]) {
-	const requirement = storedField(field.from as SchemaCollection, field.via)?.when;
-	const discriminant = requirement ? storedField(field.from as SchemaCollection, requirement.field)?.field : undefined;
+	const site = useSite();
+	const requirement = site.storedField(field.from as SchemaCollection, field.via)?.when;
+	const discriminant = requirement
+		? site.storedField(field.from as SchemaCollection, requirement.field)?.field
+		: undefined;
 	const defaultValue = discriminant?.kind === "select" ? discriminant.defaultValue : undefined;
 	const [kinds, setKinds] = useState<ReadonlyMap<string, string>>(new Map());
 	const idsKey = options.map((option) => option.id).join(",");
@@ -328,7 +342,7 @@ function useRecordKind(field: BacklinkField, options: readonly { id: string }[])
 		let cancelled = false;
 		void Promise.all(
 			missing.map((option) =>
-				cmsFetch<RecordEntry>(cmsApiUrl(`/v1/entries/${option.id}`))
+				cmsFetch<RecordEntry>(site, cmsApiUrl(`/v1/entries/${option.id}`))
 					.then((record) => {
 						const value = record.working.metadata[requirement.field];
 						return [option.id, typeof value === "string" ? value : (defaultValue ?? "")] as const;
@@ -369,6 +383,8 @@ export function BacklinkInput({
 	/** Usages of the same post loaded by the properties panel. If present, use them; after saving, reload with `refresh`. */
 	shared?: { references: readonly IncomingReference[]; loading: boolean; refresh: () => void };
 }) {
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
 	const records = useTaxonomy(field.from as RecordCollection, Boolean(targetId));
 	const creator = useRecordCreator();
 	const kind = useRecordKind(field, records.options);
@@ -387,7 +403,7 @@ export function BacklinkInput({
 			}
 			return [...found].map(([id, title]) => ({ id, title }));
 		},
-		[field.from, field.via],
+		[field.from, field.via, t],
 	);
 
 	const refreshShared = shared?.refresh;
@@ -399,13 +415,14 @@ export function BacklinkInput({
 		}
 		try {
 			const data = await cmsFetch<{ incomingReferences: IncomingReference[] }>(
+				site,
 				cmsApiUrl(`/v1/entries/${targetId}/relations`),
 			);
 			setFetched(membersOf(data.incomingReferences));
 		} catch (loadError) {
-			setError(errorText(loadError, t("entry.loadFailed")));
+			setError(errorText(site, loadError, t("entry.loadFailed")));
 		}
-	}, [targetId, refreshShared, membersOf]);
+	}, [targetId, refreshShared, membersOf, site, t]);
 
 	// If the properties panel already loaded this post's usages, do not fetch separately.
 	const usesShared = Boolean(shared);
@@ -422,11 +439,11 @@ export function BacklinkInput({
 	/** Changes the other record's relation list and saves immediately. For a record collection, saving is publishing. */
 	const update = async (recordId: string, change: (ids: string[]) => string[]) => {
 		for (let attempt = 0; attempt < 2; attempt++) {
-			const record = await cmsFetch<RecordEntry>(cmsApiUrl(`/v1/entries/${recordId}`));
+			const record = await cmsFetch<RecordEntry>(site, cmsApiUrl(`/v1/entries/${recordId}`));
 			const current = record.working.metadata[field.via];
 			const ids = Array.isArray(current) ? current.filter((id): id is string => typeof id === "string") : [];
 			try {
-				await cmsFetch(cmsApiUrl(`/v1/entries/${recordId}`), {
+				await cmsFetch(site, cmsApiUrl(`/v1/entries/${recordId}`), {
 					method: "PATCH",
 					json: {
 						expectedVersion: record.version,
@@ -469,7 +486,7 @@ export function BacklinkInput({
 			try {
 				await task();
 			} catch (taskError) {
-				setError(errorText(taskError, failure));
+				setError(errorText(site, taskError, failure));
 				setOptimistic((current) => revert(current ?? serverIdsRef.current));
 			} finally {
 				pendingRef.current -= 1;

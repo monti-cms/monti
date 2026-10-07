@@ -1,6 +1,7 @@
 import { readdirSync } from "node:fs";
-import { ADDED_BLOCKS, BLOCKS, type BlockDefinition } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 import { readSample, SAMPLES_DIR } from "./fixtures/samples";
 
@@ -11,17 +12,17 @@ import { readSample, SAMPLES_DIR } from "./fixtures/samples";
 const stringAttributes = (block: BlockDefinition) =>
 	Object.entries(block.attributes).filter(([, attribute]) => attribute.type === "string");
 /** A site block that holds body content (a container with no child rules or parent, e.g. a callout). */
-const bodyBlock = ADDED_BLOCKS.find(
+const bodyBlock = testSite.ADDED_BLOCKS.find(
 	(block) => block.syntax.kind === "container" && !block.children?.blocks && !block.parent,
 );
 /** A group block that holds only specified child blocks, its child, and the child count range (e.g. a tabs group and 2 to 8 tabs, a column layout and 2 to 4 columns). */
-const groups = ADDED_BLOCKS.flatMap((block) => {
-	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
+const groups = testSite.ADDED_BLOCKS.flatMap((block) => {
+	const child = testSite.BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	const { min, max } = block.children ?? {};
 	return block.syntax.kind === "container" && child && min && max !== undefined ? [{ block, child, min, max }] : [];
 });
 /** A container block with a boolean attribute (e.g. a collapsible) and that attribute's name. */
-const booleanBlock = ADDED_BLOCKS.find(
+const booleanBlock = testSite.ADDED_BLOCKS.find(
 	(block) =>
 		block.syntax.kind === "container" &&
 		Object.values(block.attributes).some((attribute) => attribute.type === "boolean"),
@@ -53,11 +54,11 @@ const openChild = (child: BlockDefinition, value: string) => {
 };
 
 function fullRoundtrip(mdx: string): { firstDoc: unknown; secondDoc: unknown } {
-	const first = analyze(mdx);
-	const firstDoc = toDocument(first);
-	const serialized = serialize(firstDoc);
-	const second = analyze(serialized);
-	const secondDoc = toDocument(second);
+	const first = analyze(testSite, mdx);
+	const firstDoc = toDocument(testSite, first);
+	const serialized = serialize(testSite, firstDoc);
+	const second = analyze(testSite, serialized);
+	const secondDoc = toDocument(testSite, second);
 	expect(second.errors ?? []).toEqual(first.errors ?? []);
 	return { firstDoc, secondDoc };
 }
@@ -217,8 +218,8 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 
 					fullRoundtrip(groupOf(min));
 					fullRoundtrip(groupOf(max));
-					expect(analyze(groupOf(min - 1), `too-few-${block.name}`).errors ?? []).not.toEqual([]);
-					expect(analyze(groupOf(max + 1), `too-many-${block.name}`).errors ?? []).not.toEqual([]);
+					expect(analyze(testSite, groupOf(min - 1), `too-few-${block.name}`).errors ?? []).not.toEqual([]);
+					expect(analyze(testSite, groupOf(max + 1), `too-many-${block.name}`).errors ?? []).not.toEqual([]);
 				}
 			},
 		);
@@ -276,14 +277,14 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 		it("toggling view only does not call serialize and the raw source bytes are kept", () => {
 			for (const name of readdirSync(SAMPLES_DIR)) {
 				const source = readSample(name);
-				const analysis = analyze(source);
+				const analysis = analyze(testSite, source);
 				expect(analysis.source).toBe(source);
 			}
 		});
 
 		it("analyze.source of arbitrary raw source also equals the original string", () => {
 			const mdx = "## 주제\n\n문단이다.\n";
-			expect(analyze(mdx, "toggle").source).toBe(mdx);
+			expect(analyze(testSite, mdx, "toggle").source).toBe(mdx);
 		});
 	});
 
@@ -291,7 +292,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 		it("a spread attribute shows the error position and does not delete the source", () => {
 			const box = bodyBlock?.component ?? "TextAlign";
 			const mdx = ["# 미지원", "", `<${box} {...props}>내용</${box}>`].join("\n");
-			const analysis = analyze(mdx, "spread-props");
+			const analysis = analyze(testSite, mdx, "spread-props");
 			expect(analysis.errors ?? []).not.toEqual([]);
 			const hasPosition = (analysis.errors ?? []).some(
 				(error: { position: { line: number } }) => (error.position?.line ?? 0) >= 1,
@@ -311,15 +312,15 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 						close(group.block),
 					].join("\n")
 				: `<${bodyBlock?.component ?? "TextAlign"} onChange={handle}>x</${bodyBlock?.component ?? "TextAlign"}>`;
-			const analysis = analyze(mdx, "fn-prop");
+			const analysis = analyze(testSite, mdx, "fn-prop");
 			expect(analysis.errors ?? []).not.toEqual([]);
 			expect(analysis.source).toContain("onChange={handle}");
 		});
 
 		it("a document with unsupported syntax is not lost in the visual conversion", () => {
 			const mdx = "<TemplateImport value={{a: 1}}>x</TemplateImport>";
-			const analysis = analyze(mdx, "unsupported-doc");
-			const firstDoc = toDocument(analysis);
+			const analysis = analyze(testSite, mdx, "unsupported-doc");
+			const firstDoc = toDocument(testSite, analysis);
 			expect(analysis.source).toContain("<TemplateImport");
 			expect(JSON.stringify(firstDoc)).toContain("x");
 		});

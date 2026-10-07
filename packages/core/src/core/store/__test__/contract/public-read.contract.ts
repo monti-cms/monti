@@ -8,10 +8,10 @@ import {
 	recordRelationField,
 	requiredMetadata,
 } from "../../../../../test/any-site";
+import { testSite } from "../../../../../test/site";
 import { contentOf, docOf } from "../../../../../test/stored-content";
-import { storedFields } from "../../../../schema/derive";
 import { SUMMARY_ROLE } from "../../../../schema/fields";
-import { COLLECTIONS, type Collection, isItemCollection } from "../../../collections";
+import type { Collection } from "../../../collections";
 import type { ContentStore } from "../..";
 import { publishDraft, seedEntry, seedSave } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
@@ -28,17 +28,17 @@ const content = contentCollection;
 /** Document collection for trash tests (the same collection if there is no second one). */
 const trashContent = otherContentCollection ?? contentCollection;
 /** Two kinds of classification records (two items of the same collection if there is only one item collection). */
-const itemCollections = COLLECTIONS.filter((name) => isItemCollection(name));
+const itemCollections = testSite.COLLECTIONS.filter((name) => testSite.isItemCollection(name));
 const otherRecordCollection = itemCollections.find((name) => name !== recordCollection) ?? recordCollection;
 /** Name of the text field serving as the summary (if any). */
-const summaryField = storedFields(content).find(
-	({ field }) => field.kind === "text" && field.role === SUMMARY_ROLE,
-)?.name;
+const summaryField = testSite
+	.storedFields(content)
+	.find(({ field }) => field.kind === "text" && field.role === SUMMARY_ROLE)?.name;
 const summaryOf = (value: string): Record<string, string> => (summaryField ? { [summaryField]: value } : {});
 /** Relation field that points at items. A multi-select field is preferred (the reference blog's tags). */
 const tagLikeRelation = (() => {
-	for (const { name, field, when } of storedFields(content)) {
-		if (!when && field.kind === "relation" && field.many && isItemCollection(field.to)) {
+	for (const { name, field, when } of testSite.storedFields(content)) {
+		if (!when && field.kind === "relation" && field.many && testSite.isItemCollection(field.to)) {
 			return { name, to: field.to as Collection, many: true };
 		}
 	}
@@ -93,7 +93,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 		}) {
 			const entry = await createEntry(params);
 
-			return publishDraft(store, { id: entry.id, expectedVersion: entry.version });
+			return publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 		}
 
 		async function publishedSlugs(collections: readonly string[]): Promise<string[]> {
@@ -196,7 +196,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				contentHash: "hash-renamed",
 			});
 
-			await publishDraft(store, { id: saved.id, expectedVersion: saved.version });
+			await publishDraft(testSite, store, { id: saved.id, expectedVersion: saved.version });
 
 			expect(await slugInUse(content, "before-rename")).toBe(true);
 			expect(await slugInUse(content, "after-rename")).toBe(true);
@@ -272,7 +272,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 					status: "not_found",
 				});
 
-				const republished = await publishDraft(store, { id: working.id, expectedVersion: working.version });
+				const republished = await publishDraft(testSite, store, { id: working.id, expectedVersion: working.version });
 				expect(
 					await store.getPublishedEntryBySlug({ collection: content, slug: "f10-published-snapshot" }),
 				).toMatchObject({
@@ -305,7 +305,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				schemaVersion: 1,
 				contentHash: "hash-alias-archive",
 			});
-			const republished = await publishDraft(store, { id: saved.id, expectedVersion: saved.version });
+			const republished = await publishDraft(testSite, store, { id: saved.id, expectedVersion: saved.version });
 
 			await store.archiveEntry({ id: republished.id, expectedVersion: republished.version });
 
@@ -348,7 +348,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 		it("reads several collections at once without mixing in unpublished items", async () => {
 			await createEntry({ collection: recordCollection, slug: "draft-tag", metadata: { title: "초안 태그" } });
 
-			const rows = await store.listPublishedEntries({ collections: COLLECTIONS });
+			const rows = await store.listPublishedEntries({ collections: testSite.COLLECTIONS });
 
 			expect(rows.every((row) => row.collection !== "secret")).toBe(true);
 			expect(rows.map((row) => row.slug)).not.toContain("draft-tag");

@@ -1,6 +1,7 @@
 import {
 	CmsContent,
 	type CmsContentEntry,
+	type CmsContentSource,
 	type DocumentComponents,
 	type DocumentTocItem,
 	type TocRange,
@@ -9,6 +10,8 @@ import {
 import type { ReactNode } from "react";
 
 export interface ArticleBodyProps {
+	/** The CMS instance the entry was read from (your `cms`): its site decides the blocks and the code settings the body is drawn with. */
+	cms: CmsContentSource;
 	/** An entry of the read API (`cms.read.getEntry`). Its `doc` is drawn, its `refs` give the images and files, its `locale` the language. */
 	entry: CmsContentEntry;
 	/** Public components of the site's blocks (see `DocumentComponents`). */
@@ -32,6 +35,7 @@ const defaultTocItem = (item: DocumentTocItem) => <a href={item.href}>{item.valu
  * component, so the page ships no editor code. It is source you own: change the markup and the classes freely.
  */
 export async function ArticleBody({
+	cms,
 	entry,
 	components,
 	toc = "top",
@@ -55,7 +59,7 @@ export async function ArticleBody({
 				</nav>
 			) : null}
 			<article className={className}>
-				<CmsContent entry={entry} components={components} />
+				<CmsContent cms={cms} entry={entry} components={components} />
 			</article>
 		</>
 	);

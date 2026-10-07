@@ -41,7 +41,7 @@ function fakeApp(files: Record<string, string> = {}): string {
 const read = (dir: string, file: string) => readFileSync(path.join(dir, file), "utf8");
 
 describe("monti init", () => {
-	it("creates config and route files in an empty Next app and wires up tsconfig, CSS and the next config", () => {
+	it("creates config and route files in an empty Next app and wires up the next config, leaving tsconfig and CSS alone", () => {
 		const dir = fakeApp();
 		const report = initProject({ cwd: dir });
 		expect(report.created).toEqual(
@@ -53,7 +53,7 @@ describe("monti init", () => {
 				"app/api/cms/[...path]/route.ts",
 			]),
 		);
-		expect(report.updated).toEqual(["tsconfig.json", "next.config.ts"]);
+		expect(report.updated).toEqual(["next.config.ts"]);
 		expect(report.skipped).toEqual([]);
 
 		const config = read(dir, "cms.config.ts");
@@ -71,6 +71,9 @@ describe("monti init", () => {
 		expect(read(dir, "cms.server.ts")).toContain('import { githubAuth } from "@monti-cms/nextjs/auth";');
 		// The server file exports the instance; every generated file imports it from there by a relative path.
 		expect(read(dir, "cms.server.ts")).toContain("export const cms = createCms({");
+		// The server file imports the site config by a relative path and hands it to the instance: there is no alias for it.
+		expect(read(dir, "cms.server.ts")).toContain('import config from "./cms.config";');
+		expect(read(dir, "cms.server.ts")).toMatch(/createCms\(\{\s+config,/);
 		const page = read(dir, "app/(admin)/admin/[[...path]]/page.tsx");
 		expect(page).toContain("<CmsAdminPage cms={cms} {...props} />");
 		expect(page).toContain('from "@monti-cms/nextjs/admin"');
@@ -86,20 +89,17 @@ describe("monti init", () => {
 		expect(route).toContain('import { createRouteHandler } from "@monti-cms/nextjs";');
 		expect(route).toContain('import { cms } from "../../../../cms.server";');
 
-		// Existing aliases and indentation stay as they are. Only the site config is an alias: the server file is imported.
-		const tsconfig = read(dir, "tsconfig.json");
-		expect(JSON.parse(tsconfig).compilerOptions.paths).toEqual({
-			"@/*": ["./*"],
-			"@cms-config": ["./cms.config.ts"],
-		});
-		expect(tsconfig).toContain('\n  "compilerOptions"');
-		expect(tsconfig).toContain('"@cms-config": ["./cms.config.ts"]');
+		// tsconfig is not edited: no alias is needed, the site config is imported by a relative path.
+		expect(read(dir, "tsconfig.json")).toBe(
+			'{\n  "compilerOptions": {\n    "strict": true,\n    "paths": {\n      "@/*": ["./*"]\n    }\n  }\n}\n',
+		);
+		expect(read(dir, "tsconfig.json")).not.toContain("cms-config");
 
 		expect(read(dir, "app/globals.css")).toBe('@import "tailwindcss";\n\n:root {\n  --background: #fff;\n}\n');
 
 		const nextConfig = read(dir, "next.config.ts");
 		expect(nextConfig.startsWith('import { withCms } from "@monti-cms/nextjs/config";\n')).toBe(true);
-		expect(nextConfig).toContain('export default withCms(nextConfig, { config: "./cms.config.ts" });');
+		expect(nextConfig).toContain("export default withCms(nextConfig);");
 		expect(nextConfig).not.toContain("export default nextConfig");
 		expect(report.todo.join("\n")).toContain("/api/cms/auth/callback/github");
 		expect(report.todo.join("\n")).toContain("CMS_DATABASE_URL");
@@ -122,7 +122,6 @@ describe("monti init", () => {
 			"app/(admin)/admin/[[...path]]/page.tsx",
 			"app/(admin)/admin/layout.tsx",
 			"app/api/cms/[...path]/route.ts",
-			"tsconfig.json",
 			"next.config.ts",
 		]);
 		expect(read(dir, "cms.config.ts")).toBe("// 사이트가 고친 설정\n");
@@ -158,7 +157,7 @@ describe("monti init", () => {
 		expect(() => initProject({ cwd: dir, adminPath: "/api/admin" })).toThrow(/admin-path/);
 	});
 
-	it("a `src/app` app keeps config files in src, and writes paths relative to baseUrl if present", () => {
+	it("a `src/app` app keeps config files in src, and imports them by relative paths whatever the baseUrl", () => {
 		const dir = fakeApp({
 			"tsconfig.json": '{\n\t"compilerOptions": {\n\t\t"baseUrl": "./src"\n\t}\n}\n',
 			"app/globals.css": "",
@@ -171,11 +170,10 @@ describe("monti init", () => {
 			"src/cms.server.ts",
 			"src/app/(admin)/admin/[[...path]]/page.tsx",
 		]);
-		const tsconfig = read(dir, "tsconfig.json");
-		expect(JSON.parse(tsconfig).compilerOptions.paths).toEqual({ "@cms-config": ["./cms.config.ts"] });
-		expect(tsconfig).toContain('\n\t"compilerOptions"');
+		expect(read(dir, "tsconfig.json")).toBe('{\n\t"compilerOptions": {\n\t\t"baseUrl": "./src"\n\t}\n}\n');
+		expect(read(dir, "src/cms.server.ts")).toContain('import config from "./cms.config";');
 		expect(read(dir, "src/app/globals.css")).toBe('@import "tailwindcss";\n');
-		expect(read(dir, "next.config.ts")).toContain('config: "./src/cms.config.ts" }');
+		expect(read(dir, "next.config.ts")).toContain("export default withCms(nextConfig);");
 		// Files under `src/app` import the server file from `src/`.
 		expect(read(dir, "src/app/api/cms/[...path]/route.ts")).toContain('import { cms } from "../../../../cms.server";');
 	});
@@ -190,12 +188,13 @@ describe("monti init", () => {
 		});
 		const report = initProject({ cwd: dir });
 		expect(report.updated).toEqual([]);
+		expect(report.skipped).not.toContain("tsconfig.json");
 		expect(read(dir, "tsconfig.json")).toBe(commented);
 		expect(read(dir, "next.config.ts")).toBe(custom);
 		expect(read(dir, "app/globals.css")).toBe("body { margin: 0; }\n");
 		const todo = report.todo.join("\n");
-		expect(todo).toContain('"@cms-config": ["./cms.config.ts"]');
-		expect(todo).toContain("withCms(nextConfig");
+		expect(todo).not.toContain("cms-config");
+		expect(todo).toContain("withCms(nextConfig);");
 		expect(todo).not.toMatch(/tailwind/i);
 	});
 

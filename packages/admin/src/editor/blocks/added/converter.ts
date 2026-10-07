@@ -1,16 +1,21 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
+import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/client";
 import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
 import { BLOCK_ID_ATTRIBUTE } from "../../block-ids";
 import { fenceBlockConverter } from "../../converters/fence-preview";
 import type { BlockConverter } from "../../converters/types";
-import { ADDED_NODE_BLOCKS, blockNodeName, childBlocksOf, isContainer, isFence } from "./shared";
+import { addedNodeBlocks, blockNodeName, childBlocksOf, isContainer, isFence } from "./shared";
 
 const isEmptyParagraph = (node: { type?: string; content?: unknown[] }) =>
 	node.type === "paragraph" && !node.content?.length;
 
 /** Stored node type of a block used only inside a parent block (e.g. `tab`). Outside the parent it is kept as a box holding the node. */
-export const PARENT_ONLY_TYPES: ReadonlySet<string> = new Set(
-	ADDED_NODE_BLOCKS.filter((block) => block.parent).map((block) => block.name),
+export const parentOnlyTypes = perSite(
+	(site: Pick<Site, "ADDED_BLOCKS">): ReadonlySet<string> =>
+		new Set(
+			addedNodeBlocks(site)
+				.filter((block) => block.parent)
+				.map((block) => block.name),
+		),
 );
 
 /**
@@ -46,7 +51,7 @@ function blockConverter(
 			}
 			return (
 				(content.length > 0 || min === 0) &&
-				content.every((child) => !PARENT_ONLY_TYPES.has(child.type) && ctx.isMappableBlock(child))
+				content.every((child) => !parentOnlyTypes(ctx.site).has(child.type) && ctx.isMappableBlock(child))
 			);
 		},
 		toTiptap(node, ctx) {
@@ -101,4 +106,7 @@ export function addedBlockConverters(all: readonly BlockDefinition[]): BlockConv
 	return converters;
 }
 
-export const ADDED_BLOCK_CONVERTERS: readonly BlockConverter[] = addedBlockConverters(ADDED_NODE_BLOCKS);
+/** The converters of the added blocks of a site. The same list for the same site. */
+export const addedBlockConvertersOf = perSite((site: Pick<Site, "ADDED_BLOCKS">): readonly BlockConverter[] =>
+	addedBlockConverters(addedNodeBlocks(site)),
+);

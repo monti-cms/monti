@@ -1,7 +1,7 @@
 "use client";
 
 import type { TextChecker, TextIssueSeverity } from "@monti-cms/core/client";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { posToDOMRect } from "@tiptap/core";
 import { CircleAlert, EyeOff, Info, Loader2, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";
@@ -16,8 +16,6 @@ import { textCheckIssues } from "./plugin";
 import type { DocTextIssue } from "./run";
 import type { TextCheckController } from "./use-text-check";
 
-const t = createTranslator(textCheckMessages);
-
 const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: LucideIcon; className: string }>> = {
 	error: { icon: CircleAlert, className: "text-cms-destructive" },
 	warning: { icon: TriangleAlert, className: "text-cms-warning" },
@@ -31,6 +29,7 @@ function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
 
 /** One checker button. Its name and icon come from the checker definition (`label`, `icon`). */
 function CheckerButton({ checker, controller }: { checker: TextChecker; controller: TextCheckController }) {
+	const t = useTranslator(textCheckMessages);
 	const iconByName = useIconByName();
 	const Icon = (typeof checker.icon === "string" ? iconByName(checker.icon) : checker.icon) ?? SpellCheck;
 	const running = controller.running === checker.id;
@@ -50,6 +49,7 @@ function CheckerButton({ checker, controller }: { checker: TextChecker; controll
 
 /** Checker buttons of the toolbar (one per checker) and the result count (click for the result list). */
 export function TextCheckToolbar({ controller }: { controller: TextCheckController }) {
+	const t = useTranslator(textCheckMessages);
 	const { issues } = controller;
 	const count = issues.length;
 	return (
@@ -90,6 +90,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 
 /** Result popup that appears at the spot when an underline is clicked or picked from the list: explanation, replacement candidates, ignore. */
 export function TextIssuePopover({ controller }: { controller: TextCheckController }) {
+	const t = useTranslator(textCheckMessages);
 	const { editor, open, issues, pluginKey } = controller;
 	const issue = open ? issues.find((item) => item.key === open.key) : undefined;
 	const key = issue?.key;
@@ -137,6 +138,7 @@ export function TextIssuePopover({ controller }: { controller: TextCheckControll
 }
 
 function IssueCard({ controller, issue }: { controller: TextCheckController; issue: DocTextIssue }) {
+	const t = useTranslator(textCheckMessages);
 	const checker = controller.checkers.find((item) => item.id === issue.checkerId);
 	const editable = controller.editor.isEditable;
 	return (

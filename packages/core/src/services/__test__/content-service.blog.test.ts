@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
-import { prepareSnapshot } from "../index";
+import { prepareSnapshot, type ServiceInput } from "../index";
 
 /**
  * The part of `content-service.test.ts` that checks values of the reference blog setup (`cms.config.ts`) as they are.
@@ -11,6 +12,7 @@ import { prepareSnapshot } from "../index";
 describe("ContentService Contract (blog config)", () => {
 	it("computes exact known SHA-256 vector", async () => {
 		const snap = await prepareSnapshot(
+			testSite,
 			{
 				collection: "post",
 				slug: "a",
@@ -20,7 +22,7 @@ describe("ContentService Contract (blog config)", () => {
 				},
 				format: "paragraphs",
 				body: "Hello",
-			},
+			} as unknown as ServiceInput,
 			{ schemaVersion: 1, import: { formats: createFormatRegistry([paragraphsFormat]) } },
 		);
 		// Pins the hash format. The value changed from the v1 vector ("ce4f8728…", which hashed the MDX string) on purpose when the
@@ -31,7 +33,7 @@ describe("ContentService Contract (blog config)", () => {
 	});
 
 	it("extracts only supported prose links and keeps the block of each", async () => {
-		const snapshot = await prepareSnapshot({
+		const snapshot = await prepareSnapshot(testSite, {
 			collection: "memo",
 			slug: "memo",
 			metadata: { title: "Memo" },

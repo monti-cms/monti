@@ -1,7 +1,8 @@
+import type { Site } from "@monti-cms/core/client";
 import type { Cms, PluginCollection, PluginSecrets, PluginStorage } from "@monti-cms/core/plugin/server";
 import { AI_COLLECTIONS } from "./collections";
 import { AI_PLUGIN_NAME } from "./plugin-name";
-import { aiSecrets, NO_SECRETS } from "./secret";
+import { aiSecrets, noSecretsOf } from "./secret";
 
 /** Row name in the AI settings (collection `settings`). */
 export type AiSettingsId = "default" | "shared";
@@ -25,14 +26,17 @@ const toRow = (item: { key: string; value: unknown; version: number; updatedAt: 
 /** Edited AI action values, connection settings and UI actions, kept in the AI plugin's storage. */
 export function createAiStore(
 	storage: PluginStorage,
-	/** `secrets`: the AI plugin's secrets API for the stored service keys (`aiSecrets(cms)`). Without it, keys cannot be stored or read. */
-	options: { readonly secrets?: () => PluginSecrets } = {},
+	/**
+	 * `site`: the site the store works for (the language of its errors). `secrets`: the AI plugin's secrets API for the stored service keys (`aiSecrets(cms)`). Without it,
+	 * keys cannot be stored or read.
+	 */
+	options: { readonly site: Pick<Site, "createTranslator">; readonly secrets?: () => PluginSecrets },
 ) {
 	const overrides: PluginCollection = storage.collection(AI_COLLECTIONS.actionOverrides);
 	const custom: PluginCollection = storage.collection(AI_COLLECTIONS.customActions);
 	const settings: PluginCollection = storage.collection(AI_COLLECTIONS.settings);
 	return {
-		secrets: (): PluginSecrets => options.secrets?.() ?? NO_SECRETS,
+		secrets: (): PluginSecrets => options.secrets?.() ?? noSecretsOf(options.site),
 		/** All edited values, by action name. Actions never edited have none. */
 		listAiActionOverrides: async (): Promise<AiActionOverrideRow[]> => (await overrides.list()).map(toRow),
 
@@ -87,7 +91,7 @@ const stores = new WeakMap<Cms, AiStore>();
 export function aiStoreFor(cms: Cms): AiStore {
 	let store = stores.get(cms);
 	if (!store) {
-		store = createAiStore(cms.storage(AI_PLUGIN_NAME), { secrets: () => aiSecrets(cms) });
+		store = createAiStore(cms.storage(AI_PLUGIN_NAME), { site: cms.site, secrets: () => aiSecrets(cms) });
 		stores.set(cms, store);
 	}
 	return store;

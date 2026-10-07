@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../../../../test/site";
 import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
 import { CmsError } from "../../../../../../core/store";
@@ -27,7 +28,7 @@ const mockStore = {
 	]),
 };
 
-const cms = fakeCms({ store: mockStore, verifyAdmin: () => verifyAdmin() });
+const cms = fakeCms({ config: testConfig, store: mockStore, verifyAdmin: () => verifyAdmin() });
 
 describe("Relations API Contract", () => {
 	beforeEach(() => {

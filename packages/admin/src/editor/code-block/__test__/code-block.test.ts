@@ -4,6 +4,7 @@ import { Editor, type JSONContent } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import type { DecorationSet } from "@tiptap/pm/view";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { codeBlockConverter } from "../../converters/code-block";
 import type { ConverterContext } from "../../converters/types";
 import { buildEditorExtensions } from "../../extensions";
@@ -14,6 +15,7 @@ import { handleEnterKey, handleModAKey, handlePaste, handleTabKey, isComposing }
 let editor: Editor | null = null;
 
 const dummyCtx: ConverterContext = {
+	site: testSite,
 	blockToTiptap: () => ({}),
 	tiptapBlockToCms: () => [],
 	isMappableBlock: () => true,
@@ -29,7 +31,7 @@ afterEach(() => {
 
 const createTestEditor = (code = "const a = 1;", attrs = {}) => {
 	editor = new Editor({
-		extensions: buildEditorExtensions(),
+		extensions: buildEditorExtensions(testSite),
 		content: {
 			type: "doc",
 			content: [
@@ -47,15 +49,16 @@ const createTestEditor = (code = "const a = 1;", attrs = {}) => {
 /** Code text with annotation comments -> the stored code block -> editor -> stored code block -> code text with annotation comments. */
 const load = (value: string, language = "ts") =>
 	codeBlockConverter.toTiptap(
-		{ type: "codeBlock", attrs: storedCodeBlockAttrs({ language, meta: "", value }) },
+		{ type: "codeBlock", attrs: storedCodeBlockAttrs(testSite, { language, meta: "", value }) },
 		dummyCtx,
 	);
-const save = (node: JSONContent) => storedCodeBlockFence(codeBlockConverter.toCms(node, dummyCtx)[0]?.attrs ?? {});
+const save = (node: JSONContent) =>
+	storedCodeBlockFence(testSite, codeBlockConverter.toCms(node, dummyCtx)[0]?.attrs ?? {});
 
 /** Loads a stored value into a real editor (goes through the schema and getJSON). */
 const mountValue = (value: string, language = "ts") => {
 	editor = new Editor({
-		extensions: buildEditorExtensions(),
+		extensions: buildEditorExtensions(testSite),
 		content: { type: "doc", content: [load(value, language)] },
 	});
 	return editor;
@@ -128,7 +131,7 @@ describe("code block: keyboard handling and IME exclusion", () => {
 
 	it("Mod-a: selects everything inside the code block without including the document outside it", () => {
 		editor = new Editor({
-			extensions: buildEditorExtensions(),
+			extensions: buildEditorExtensions(testSite),
 			content: {
 				type: "doc",
 				content: [
@@ -210,7 +213,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		]);
 		// Unchanged, the code block comes back as the stored code block it was loaded from, annotations and all.
 		expect(codeBlockConverter.toCms(blockJson(instance), dummyCtx)[0]?.attrs).toEqual(
-			storedCodeBlockAttrs({ language: "ts", meta: "", value: raw }),
+			storedCodeBlockAttrs(testSite, { language: "ts", meta: "", value: raw }),
 		);
 	});
 
@@ -403,7 +406,7 @@ describe("collapse: shown collapsed in the editor too, and expands when the curs
 
 describe("code block syntax highlighting", () => {
 	it("lazy-loaded shiki syntax highlighting produces dual theme decorations without changing the text", async () => {
-		const highlighter = await getShikiHighlighter();
+		const highlighter = await getShikiHighlighter(testSite);
 		expect(highlighter).toBeDefined();
 
 		const code = "const message: string = 'hello';";

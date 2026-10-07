@@ -12,31 +12,18 @@
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
 import type { MediaStore } from "../adapters/r2/types";
-import type { ResolvedConfig } from "../config/resolved";
-import { type Collection, isCollection, isItemCollection } from "../core/collections";
-import { contentPath } from "../core/links";
-import { DEFAULT_LOCALE, isLocale, localizePath } from "../core/locales";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
-import { ServiceError } from "../core/types";
+import { type CollectionName, type MetadataFor, ServiceError } from "../core/types";
 import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../doc/document-refs";
 import { type PublicMediaDeps, resolvePublicMedia, resolvePublicMediaUrl } from "../doc/public-media";
 import type { StoredDocument } from "../doc/stored-document";
 import { type ExportRefs, exportText } from "../format/convert";
 import type { FormatRegistry } from "../format/registry";
 import type { FormatLink, FormatMedia } from "../format/types";
-import type { MetadataOf } from "../schema/collection";
-import {
-	mergeTranslationMetadata,
-	RECORD_TRANSLATIONS_KEY,
-	recordLocalizedFields,
-	schemaMetadata,
-	storedFields,
-} from "../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../schema/derive";
+import type { AnyCmsConfig, Site } from "../site";
 
-/** Collection metadata type extracted from the site config. */
-export type MetadataFor<C extends Collection> = C extends keyof ResolvedConfig["collections"]
-	? MetadataOf<ResolvedConfig["collections"][C]>
-	: EntryMetadata;
+export type { CollectionName, MetadataFor } from "../core/types";
 
 /** A published item a relation field points to. */
 export interface ReadRelation {
@@ -50,7 +37,11 @@ export interface ReadRelation {
 	readonly path: string | null;
 }
 
-export interface ReadEntry<C extends Collection = Collection> {
+export interface ReadEntry<
+	C extends string = string,
+	// biome-ignore lint/suspicious/noExplicitAny: `ReadEntry` alone is an entry of any site config
+	Config extends AnyCmsConfig = any,
+> {
 	readonly id: string;
 	readonly collection: C;
 	/** Locale of the body shown. If it fell back to the source text, the source locale. */
@@ -60,7 +51,7 @@ export interface ReadEntry<C extends Collection = Collection> {
 	/** Public URL (if the collection has `path`, including the locale prefix). */
 	readonly path: string | null;
 	readonly title: string | null;
-	readonly metadata: MetadataFor<C>;
+	readonly metadata: MetadataFor<C, Config>;
 	/** Relation field name -> published targets (in declared/picked order). Unpublished targets are omitted. */
 	readonly relations: Readonly<Record<string, readonly ReadRelation[]>>;
 	/** Publish date (of the source text). */
@@ -93,21 +84,30 @@ export interface ReadBody {
 	readonly text: string;
 }
 
-export type ReadEntryResult<C extends Collection = Collection> =
-	| { readonly status: "found"; readonly entry: ReadEntry<C> }
+export type ReadEntryResult<
+	C extends string = string,
+	// biome-ignore lint/suspicious/noExplicitAny: `ReadEntryResult` alone is a result of any site config
+	Config extends AnyCmsConfig = any,
+> =
+	| { readonly status: "found"; readonly entry: ReadEntry<C, Config> }
 	/** Arrived through an old URL. Permanently redirect (308) to `path` (or `slug` if absent). */
-	| { readonly status: "redirect"; readonly slug: string; readonly path: string | null; readonly entry: ReadEntry<C> }
+	| {
+			readonly status: "redirect";
+			readonly slug: string;
+			readonly path: string | null;
+			readonly entry: ReadEntry<C, Config>;
+	  }
 	| { readonly status: "not_found" };
 
-const relationFieldsOf = (collection: Collection) =>
-	storedFields(collection).filter((stored) => stored.field.kind === "relation");
+const relationFieldsOf = (site: Site, collection: string) =>
+	site.storedFields(collection).filter((stored) => stored.field.kind === "relation");
 
 const idsOf = (value: unknown): string[] =>
 	typeof value === "string" ? [value] : Array.isArray(value) ? value.filter((id) => typeof id === "string") : [];
 
-const titleOf = (record: PublishedEntryRecord, locale: string): string | null => {
+const titleOf = (site: Site, record: PublishedEntryRecord, locale: string): string | null => {
 	const metadata = record.metadata as Record<string, unknown>;
-	if (isCollection(record.collection) && recordLocalizedFields(record.collection).includes("title")) {
+	if (site.isCollection(record.collection) && site.recordLocalizedFields(record.collection).includes("title")) {
 		const translations = metadata[RECORD_TRANSLATIONS_KEY] as Record<string, Record<string, unknown>> | undefined;
 		const localized = translations?.[locale]?.title;
 		if (typeof localized === "string" && localized.trim()) return localized;
@@ -115,9 +115,9 @@ const titleOf = (record: PublishedEntryRecord, locale: string): string | null =>
 	return typeof metadata.title === "string" ? metadata.title : null;
 };
 
-const pathOf = (collection: string, slug: string, locale: string): string | null => {
-	const path = contentPath(collection, slug);
-	return path ? localizePath(locale, path) : null;
+const pathOf = (site: Site, collection: string, slug: string, locale: string): string | null => {
+	const path = site.contentPath(collection, slug);
+	return path ? site.localizePath(locale, path) : null;
 };
 
 /**
@@ -145,15 +145,16 @@ async function publishedPicker(
 	};
 }
 
-const relationIdsOfRecord = (record: PublishedEntryRecord): string[] =>
-	isCollection(record.collection)
-		? relationFieldsOf(record.collection).flatMap(({ name }) =>
+const relationIdsOfRecord = (site: Site, record: PublishedEntryRecord): string[] =>
+	site.isCollection(record.collection)
+		? relationFieldsOf(site, record.collection).flatMap(({ name }) =>
 				idsOf((record.metadata as Record<string, unknown>)[name]),
 			)
 		: [];
 
 /** Relation targets of each record: the published version of each, this locale -> source text. */
 function resolveRelations(
+	site: Site,
 	records: readonly PublishedEntryRecord[],
 	locale: string,
 	pick: (groupId: string) => PublishedEntryRecord | undefined,
@@ -166,15 +167,15 @@ function resolveRelations(
 			collection: chosen.collection,
 			locale: chosen.locale,
 			slug: chosen.slug,
-			title: titleOf(chosen, locale),
-			path: pathOf(chosen.collection, chosen.slug, chosen.locale),
+			title: titleOf(site, chosen, locale),
+			path: pathOf(site, chosen.collection, chosen.slug, chosen.locale),
 		};
 	};
 	const result = new Map<string, Record<string, ReadRelation[]>>();
 	for (const record of records) {
 		const relations: Record<string, ReadRelation[]> = {};
-		if (isCollection(record.collection)) {
-			for (const { name } of relationFieldsOf(record.collection)) {
+		if (site.isCollection(record.collection)) {
+			for (const { name } of relationFieldsOf(site, record.collection)) {
 				relations[name] = idsOf((record.metadata as Record<string, unknown>)[name])
 					.map(relationOf)
 					.filter((relation): relation is ReadRelation => relation !== null);
@@ -191,7 +192,7 @@ function resolveRelations(
  * language, else the source's; one that is not published, or has no public path, is left out (the renderer draws that link as plain text).
  */
 async function resolveRefs(
-	deps: PublicMediaDeps,
+	deps: PublicMediaDeps & { readonly site: Site },
 	records: readonly PublishedEntryRecord[],
 	locale: string,
 	pick: (groupId: string) => PublishedEntryRecord | undefined,
@@ -200,8 +201,8 @@ async function resolveRefs(
 	const resolved = await resolvePublicMedia(deps, [...new Set([...idsByRecord.values()].flatMap((ids) => ids.media))]);
 	const linkOf = (groupId: string): ReadLink | undefined => {
 		const chosen = pick(groupId);
-		const path = chosen && pathOf(chosen.collection, chosen.slug, chosen.locale);
-		return chosen && path ? { path, title: titleOf(chosen, locale), locale: chosen.locale } : undefined;
+		const path = chosen && pathOf(deps.site, chosen.collection, chosen.slug, chosen.locale);
+		return chosen && path ? { path, title: titleOf(deps.site, chosen, locale), locale: chosen.locale } : undefined;
 	};
 	return new Map(
 		records.map((record) => {
@@ -254,13 +255,14 @@ const exportRefsOf = (refs: ReadRefs): ExportRefs => ({
 	),
 });
 
-async function toReadEntries<C extends Collection>(
-	deps: ReadDeps,
+async function toReadEntries<C extends string, Config extends AnyCmsConfig>(
+	deps: ReadDeps<Config>,
 	records: readonly PublishedEntryRecord[],
 	locale: string,
 	fallback = false,
 	format?: string,
-): Promise<ReadEntry<C>[]> {
+): Promise<ReadEntry<C, Config>[]> {
+	const { site } = deps;
 	const formats = format === undefined ? undefined : await deps.formats();
 	if (formats && format !== undefined && !formats.get(format)) {
 		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: format, params: { format } }]);
@@ -268,16 +270,16 @@ async function toReadEntries<C extends Collection>(
 	// Relation targets and link targets are the same kind of thing (a published entry by translation group id), so they are looked up together.
 	const pick = await publishedPicker(
 		deps.store(),
-		records.flatMap((record) => [...relationIdsOfRecord(record), ...collectRefs(record.doc).links]),
+		records.flatMap((record) => [...relationIdsOfRecord(site, record), ...collectRefs(record.doc).links]),
 		locale,
 	);
-	const relations = resolveRelations(records, locale, pick);
+	const relations = resolveRelations(site, records, locale, pick);
 	const refs = await resolveRefs(deps, records, locale, pick);
 	const bodies = new Map<string, ReadBody>();
 	if (formats && format !== undefined) {
 		for (const record of records) {
 			if (!record.doc) continue;
-			const { text } = await exportText(formats, format, record.doc, {
+			const { text } = await exportText(site, formats, format, record.doc, {
 				locale: record.locale,
 				purpose: "read",
 				refs: exportRefsOf(refs.get(record.id) ?? EMPTY_REFS),
@@ -291,12 +293,12 @@ async function toReadEntries<C extends Collection>(
 		locale: record.locale,
 		translationGroupId: record.translationGroupId,
 		slug: record.slug,
-		path: pathOf(record.collection, record.slug, record.locale),
-		title: titleOf(record, locale),
+		path: pathOf(site, record.collection, record.slug, record.locale),
+		title: titleOf(site, record, locale),
 		// Values of fields the site has removed stay stored but are not public: the site code sees the shape its config types.
-		metadata: (isCollection(record.collection)
-			? schemaMetadata(record.collection, record.metadata)
-			: record.metadata) as MetadataFor<C>,
+		metadata: (site.isCollection(record.collection)
+			? site.schemaMetadata(record.collection, record.metadata)
+			: record.metadata) as MetadataFor<C, Config>,
 		relations: relations.get(record.id) ?? {},
 		publishedAt: record.publishedAt,
 		updatedAt: record.updatedAt,
@@ -307,17 +309,23 @@ async function toReadEntries<C extends Collection>(
 	}));
 }
 
-const assertCollection = (collection: string): Collection => {
-	if (!isCollection(collection)) throw new Error(`cms/read: unknown collection "${collection}"`);
+const assertCollection = (site: Site, collection: string): string => {
+	if (!site.isCollection(collection)) throw new Error(`cms/read: unknown collection "${collection}"`);
 	return collection;
 };
 
 /** An item collection has only the default locale (the name is picked from the per-locale values). */
-const storageLocale = (collection: Collection, locale: string | undefined) =>
-	isItemCollection(collection) ? DEFAULT_LOCALE : locale && isLocale(locale) ? locale : DEFAULT_LOCALE;
+const storageLocale = (site: Site, collection: string, locale: string | undefined) =>
+	site.isItemCollection(collection)
+		? site.DEFAULT_LOCALE
+		: locale && site.isLocale(locale)
+			? locale
+			: site.DEFAULT_LOCALE;
 
 /** What the read API needs from a CMS instance. */
-export interface ReadDeps {
+export interface ReadDeps<Config extends AnyCmsConfig = AnyCmsConfig> {
+	/** The site of the instance: the collections, locales and URLs the reads follow. */
+	readonly site: Site<Config>;
 	readonly store: () => ContentStore;
 	readonly mediaStore: () => MediaStore;
 	/** The formats of the instance (`cms.formats()`), for the `format` option. */
@@ -330,21 +338,24 @@ export interface ReadDeps {
  * The read API of one CMS instance (`cms.read`). Published content is read through the instance's store, so several instances in one process
  * read their own databases.
  */
-export interface CmsRead {
+export interface CmsRead<
+	// biome-ignore lint/suspicious/noExplicitAny: `CmsRead` alone reads any site config
+	Config extends AnyCmsConfig = any,
+> {
 	/**
 	 * One entry. The URL (`slug`) is that locale's URL. For an old URL it returns `redirect`.
 	 * With `fallback: true`, if this locale has no translation, it returns the source text (default locale) at the same URL with `fallback: true`.
 	 */
-	getEntry<C extends Collection>(params: {
+	getEntry<C extends CollectionName<Config>>(params: {
 		readonly collection: C;
 		readonly slug: string;
 		readonly locale?: string;
 		readonly fallback?: boolean;
 		/** Also return the body as text in this format (`entry.body`). An unknown format throws a `ServiceError` coded `unknown_format`. */
 		readonly format?: string;
-	}): Promise<ReadEntryResult<C>>;
+	}): Promise<ReadEntryResult<C, Config>>;
 	/** One page of a list. Relation filters (`where`), sorting and pagination are done in the DB. The body is read only when `body: true`. */
-	listEntries<C extends Collection>(params: {
+	listEntries<C extends CollectionName<Config>>(params: {
 		readonly collection: C;
 		readonly locale?: string;
 		/** Relation field name -> item IDs (OR if several). Different fields are ANDed. */
@@ -356,7 +367,7 @@ export interface CmsRead {
 		readonly body?: boolean;
 		/** With `body: true`, also return each body as text in this format (`entry.body`). */
 		readonly format?: string;
-	}): Promise<{ items: ReadEntry<C>[]; total: number; page: number; pageSize: number }>;
+	}): Promise<{ items: ReadEntry<C, Config>[]; total: number; page: number; pageSize: number }>;
 	/** The published locales of the same entry (source first) and their URLs. Used for hreflang and the locale switcher. */
 	getTranslations(params: {
 		readonly translationGroupId: string;
@@ -365,45 +376,57 @@ export interface CmsRead {
 	 * Preview (admins only). Returns the latest draft in the same shape as the published version. A translation is merged with the common values of the source draft.
 	 * `null` if not logged in or not an admin. Only published relation targets are resolved.
 	 */
-	getPreview<C extends Collection>(params: {
+	getPreview<C extends CollectionName<Config>>(params: {
 		readonly collection: C;
 		readonly slug: string;
 		readonly locale?: string;
 		/** Also return the draft as text in this format (`entry.body`). */
 		readonly format?: string;
-	}): Promise<ReadEntry<C> | null>;
+	}): Promise<ReadEntry<C, Config> | null>;
 	/** Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage. */
 	mediaUrl(mediaId: string): ReturnType<typeof resolvePublicMediaUrl>;
 }
 
-export function createRead(deps: ReadDeps): CmsRead {
+export function createRead<Config extends AnyCmsConfig = AnyCmsConfig>(deps: ReadDeps<Config>): CmsRead<Config> {
+	const { site } = deps;
 	return {
-		async getEntry<C extends Collection>(params: {
+		async getEntry<C extends CollectionName<Config>>(params: {
 			readonly collection: C;
 			readonly slug: string;
 			readonly locale?: string;
 			readonly fallback?: boolean;
 			readonly format?: string;
-		}): Promise<ReadEntryResult<C>> {
-			const collection = assertCollection(params.collection);
-			const locale = storageLocale(collection, params.locale);
+		}): Promise<ReadEntryResult<C, Config>> {
+			const collection = assertCollection(site, params.collection);
+			const locale = storageLocale(site, collection, params.locale);
 			const slug = params.slug.normalize("NFC").trim();
 			if (!slug) return { status: "not_found" };
 			const store = deps.store();
 			let lookup = await store.getPublishedEntryBySlug({ collection, slug, locale, includeBody: true });
 			let fellBack = false;
-			if (lookup.status === "not_found" && params.fallback && locale !== DEFAULT_LOCALE) {
-				lookup = await store.getPublishedEntryBySlug({ collection, slug, locale: DEFAULT_LOCALE, includeBody: true });
+			if (lookup.status === "not_found" && params.fallback && locale !== site.DEFAULT_LOCALE) {
+				lookup = await store.getPublishedEntryBySlug({
+					collection,
+					slug,
+					locale: site.DEFAULT_LOCALE,
+					includeBody: true,
+				});
 				fellBack = lookup.status !== "not_found";
 			}
 			if (lookup.status === "not_found") return { status: "not_found" };
-			const [entry] = await toReadEntries<C>(deps, [lookup.entry], params.locale ?? locale, fellBack, params.format);
+			const [entry] = await toReadEntries<C, Config>(
+				deps,
+				[lookup.entry],
+				params.locale ?? locale,
+				fellBack,
+				params.format,
+			);
 			if (!entry) return { status: "not_found" };
 			if (lookup.status === "alias") return { status: "redirect", slug: entry.slug, path: entry.path, entry };
 			return { status: "found", entry };
 		},
 
-		async listEntries<C extends Collection>(params: {
+		async listEntries<C extends CollectionName<Config>>(params: {
 			readonly collection: C;
 			readonly locale?: string;
 			readonly where?: Readonly<Record<string, string | readonly string[]>>;
@@ -413,9 +436,9 @@ export function createRead(deps: ReadDeps): CmsRead {
 			readonly pageSize?: number;
 			readonly body?: boolean;
 			readonly format?: string;
-		}): Promise<{ items: ReadEntry<C>[]; total: number; page: number; pageSize: number }> {
-			const collection = assertCollection(params.collection);
-			const locale = storageLocale(collection, params.locale);
+		}): Promise<{ items: ReadEntry<C, Config>[]; total: number; page: number; pageSize: number }> {
+			const collection = assertCollection(site, params.collection);
+			const locale = storageLocale(site, collection, params.locale);
 			const store = deps.store();
 			const result = await store.listPublishedPage({
 				collection,
@@ -431,7 +454,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 			});
 			return {
 				...result,
-				items: await toReadEntries<C>(deps, result.items, params.locale ?? locale, false, params.format),
+				items: await toReadEntries<C, Config>(deps, result.items, params.locale ?? locale, false, params.format),
 			};
 		},
 
@@ -440,30 +463,31 @@ export function createRead(deps: ReadDeps): CmsRead {
 			return members.map((member) => ({
 				locale: member.locale,
 				slug: member.slug,
-				path: pathOf(member.collection, member.slug, member.locale),
+				path: pathOf(site, member.collection, member.slug, member.locale),
 			}));
 		},
 
-		async getPreview<C extends Collection>(params: {
+		async getPreview<C extends CollectionName<Config>>(params: {
 			readonly collection: C;
 			readonly slug: string;
 			readonly locale?: string;
 			readonly format?: string;
-		}): Promise<ReadEntry<C> | null> {
+		}): Promise<ReadEntry<C, Config> | null> {
 			try {
 				await deps.verifyAdmin();
 			} catch {
 				return null;
 			}
-			const collection = assertCollection(params.collection);
-			const locale = storageLocale(collection, params.locale);
+			const collection = assertCollection(site, params.collection);
+			const locale = storageLocale(site, collection, params.locale);
 			const store = deps.store();
 			const draft = await store.getWorkingEntryBySlug({ collection, slug: params.slug, locale });
 			if (!draft || draft.status === "trashed") return null;
 			let metadata = draft.working.metadata;
 			if (draft.translationGroupId !== draft.id) {
 				const source = await store.getEntry(draft.translationGroupId).catch(() => null);
-				if (source) metadata = mergeTranslationMetadata(collection, source.working.metadata, metadata) as EntryMetadata;
+				if (source)
+					metadata = site.mergeTranslationMetadata(collection, source.working.metadata, metadata) as EntryMetadata;
 			}
 			const record: PublishedEntryRecord = {
 				id: draft.id,
@@ -476,7 +500,7 @@ export function createRead(deps: ReadDeps): CmsRead {
 				publishedAt: draft.publishedAt ?? null,
 				updatedAt: draft.updatedAt,
 			};
-			const [entry] = await toReadEntries<C>(deps, [record], locale, false, params.format);
+			const [entry] = await toReadEntries<C, Config>(deps, [record], locale, false, params.format);
 			return entry ?? null;
 		},
 
@@ -491,7 +515,7 @@ export function createRead(deps: ReadDeps): CmsRead {
  * Media is the ready file either way. Lookups are remembered, so exporting many documents asks for each target once.
  */
 export function createExportRefs(
-	deps: PublicMediaDeps,
+	deps: PublicMediaDeps & { readonly site: Site },
 	scope: "published" | "working",
 ): (doc: StoredDocument, locale: string) => Promise<ExportRefs> {
 	const links = new Map<string, FormatLink | null>();
@@ -506,7 +530,7 @@ export function createExportRefs(
 			const member =
 				group.members.find((item) => item.locale === locale) ?? group.members.find((item) => item.isSource);
 			if (!member?.workingSlug) return null;
-			const path = pathOf(entry.collection, member.workingSlug, member.locale);
+			const path = pathOf(deps.site, entry.collection, member.workingSlug, member.locale);
 			return path ? { url: path, title: member.title, locale: member.locale } : null;
 		} catch {
 			return null;
@@ -520,10 +544,10 @@ export function createExportRefs(
 			const pick = await publishedPicker(store(), missingLinks, locale);
 			for (const id of missingLinks) {
 				const chosen = pick(id);
-				const path = chosen && pathOf(chosen.collection, chosen.slug, chosen.locale);
+				const path = chosen && pathOf(deps.site, chosen.collection, chosen.slug, chosen.locale);
 				links.set(
 					`${locale}:${id}`,
-					chosen && path ? { url: path, title: titleOf(chosen, locale), locale: chosen.locale } : null,
+					chosen && path ? { url: path, title: titleOf(deps.site, chosen, locale), locale: chosen.locale } : null,
 				);
 			}
 		} else {

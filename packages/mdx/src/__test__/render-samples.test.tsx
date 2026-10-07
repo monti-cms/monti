@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { bodyFromMdx, readSamples, renderFixture } from "../testing";
 
 /** The sample posts are written with the reference blog's blocks, so this runs with the reference blog config only. */
 describe("renderMdx: sample posts", () => {
-	const samples = readSamples().filter(({ mdx }) => bodyFromMdx(mdx).doc);
+	const samples = readSamples().filter(({ mdx }) => bodyFromMdx(testSite, mdx).doc);
 
 	it("has posts that are stored as documents", () => {
 		expect(samples.length).toBeGreaterThan(0);
@@ -11,7 +12,7 @@ describe("renderMdx: sample posts", () => {
 
 	for (const { name, mdx } of samples) {
 		it(`${name} renders, and its table of contents links to its headings`, async () => {
-			const rendered = await renderFixture(mdx);
+			const rendered = await renderFixture(mdx, { site: testSite });
 			// A block the site draws with its own component (a diagram) has no component here and is reported as unknown; nothing else may be.
 			for (const node of rendered.unknown) expect(node.type).toBe("codeBlock");
 			expect(rendered.html.length).toBeGreaterThan(0);

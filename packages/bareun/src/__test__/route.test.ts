@@ -1,24 +1,32 @@
 // @vitest-environment node
+
+import { defineConfig } from "@monti-cms/core";
 import { AuthError } from "@monti-cms/core/adapters/auth";
-import { createTranslator } from "@monti-cms/core/client";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig, testSite } from "../../test/site";
+import { bareun } from "../index";
 import { bareunMessages } from "../messages";
-import { resolveBareunOptions } from "../options";
+import type { BareunOptions } from "../options";
 import { bareunRoute } from "../route";
 import bareunServer from "../server";
 import sample from "./fixtures/bareun-sample.json";
 
 const mockVerifyAdmin = vi.fn();
 
-const cms = fakeCms({ verifyAdmin: () => mockVerifyAdmin() });
-
 const KEY_ENV = "TEST_BAREUN_KEY";
 const FAKE_KEY = "test-key-123";
 const segments = sample.request.split("\n").map((text, index) => ({ id: `p-${index}`, text, locale: "ko" }));
 
-const post = (body: unknown, options = resolveBareunOptions({ apiKeyEnv: KEY_ENV })) =>
-	bareunRoute(options).POST(
+// The route reads its settings from the Bareun plugin of the instance that serves the request.
+const cmsWith = (options: BareunOptions) =>
+	fakeCms({
+		config: defineConfig({ ...testConfig, plugins: [bareun(options)] }),
+		verifyAdmin: () => mockVerifyAdmin(),
+	});
+
+const post = (body: unknown, cms = cmsWith({ apiKeyEnv: KEY_ENV })) =>
+	bareunRoute().POST(
 		new Request("http://localhost/api/cms/v1/text-check/bareun", {
 			method: "POST",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
@@ -49,7 +57,7 @@ describe("Bareun check route", () => {
 
 		const res = await post(
 			{ segments: [...segments, { id: "en", text: "Hello", locale: "en" }] },
-			resolveBareunOptions({ apiKeyEnv: KEY_ENV, baseUrl: "https://bareun.example/", customDictNames: ["blog"] }),
+			cmsWith({ apiKeyEnv: KEY_ENV, baseUrl: "https://bareun.example/", customDictNames: ["blog"] }),
 		);
 		expect(res.status).toBe(200);
 		const { issues } = (await res.json()) as { issues: { segmentId: string; start: number; end: number }[] };
@@ -85,7 +93,7 @@ describe("Bareun check route", () => {
 		expect(res.status).toBe(503);
 		expect(await res.json()).toEqual({
 			code: "text_check_unavailable",
-			message: createTranslator(bareunMessages)("error.keyMissing"),
+			message: testSite.createTranslator(bareunMessages)("error.keyMissing"),
 		});
 		expect(fetchMock).not.toHaveBeenCalled();
 	});

@@ -4,8 +4,10 @@ import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { BLOCK_INSERT_ACTIONS } from "../../../../admin/src/editor/block-inserts";
+import { blockInsertActions } from "../../../../admin/src/editor/block-inserts";
 import { mdxToTiptap, tiptapToMdx } from "../../test/editor-text";
+import { renderSite as site } from "../../test/render-config";
+import { WithSite } from "../../test/site";
 import { filesOf, uniquePath } from "../editor-files";
 import { CodeExplorerProvider } from "../provider";
 
@@ -42,7 +44,7 @@ const SOURCE = [
 
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(),
+		extensions: buildEditorExtensions(site),
 		content: mdxToTiptap(source),
 		immediatelyRender: true,
 	});
@@ -55,14 +57,16 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 const mount = async (source: string, expectBlock = true) => {
 	let editor: Editor | null = null;
 	render(
-		<CodeExplorerProvider>
-			<Harness
-				source={source}
-				onReady={(ready) => {
-					editor = ready;
-				}}
-			/>
-		</CodeExplorerProvider>,
+		<WithSite>
+			<CodeExplorerProvider>
+				<Harness
+					source={source}
+					onReady={(ready) => {
+						editor = ready;
+					}}
+				/>
+			</CodeExplorerProvider>
+		</WithSite>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	// Wait until the NodeView (React portal) has rendered.
@@ -221,14 +225,16 @@ describe("code explorer editing view", () => {
 	it("has no toolbar when the editor is read-only", async () => {
 		let editor: Editor | null = null;
 		render(
-			<CodeExplorerProvider>
-				<Harness
-					source={SOURCE}
-					onReady={(ready) => {
-						editor = ready;
-					}}
-				/>
-			</CodeExplorerProvider>,
+			<WithSite>
+				<CodeExplorerProvider>
+					<Harness
+						source={SOURCE}
+						onReady={(ready) => {
+							editor = ready;
+						}}
+					/>
+				</CodeExplorerProvider>
+			</WithSite>,
 		);
 		await waitFor(() => expect(editor).not.toBeNull());
 		await screen.findByRole("toolbar", { name: "코드 탐색기 도구" });
@@ -238,7 +244,7 @@ describe("code explorer editing view", () => {
 
 	it("the slash menu inserts the block with one code block `src/index.ts`, not an empty paragraph", async () => {
 		const editor = await mount("첫 문단", false);
-		const action = BLOCK_INSERT_ACTIONS["code-explorer"];
+		const action = blockInsertActions(site)["code-explorer"];
 		expect(action).toBeDefined();
 		act(() => {
 			editor.commands.setTextSelection(editor.state.doc.content.size - 1);

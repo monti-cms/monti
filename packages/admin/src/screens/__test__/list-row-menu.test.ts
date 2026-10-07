@@ -1,5 +1,6 @@
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { actionTargets, type RowMenuContext, type RowMenuHandlers, rowMenuActions } from "../list-row-menu";
 import type { MenuAction } from "../shared/action-menu";
 
@@ -53,7 +54,7 @@ describe("row menu target", () => {
 
 describe("row menu items", () => {
 	it("a single post row offers open and duplicate plus folder, tag, archive and trash", () => {
-		const list = labels(rowMenuActions([item("a")], context, handlers()));
+		const list = labels(rowMenuActions(testSite, [item("a")], context, handlers()));
 		for (const label of ["열기", "복제", "폴더로 이동", "태그 추가", "보관", "휴지통으로 이동"]) {
 			expect(list).toContain(label);
 		}
@@ -62,7 +63,7 @@ describe("row menu items", () => {
 	});
 
 	it("multiple rows show the item count first and have no open or duplicate", () => {
-		const list = labels(rowMenuActions([item("a"), item("b")], context, handlers()));
+		const list = labels(rowMenuActions(testSite, [item("a"), item("b")], context, handlers()));
 		expect(list[0]).toBe("2개 항목");
 		expect(list).not.toContain("열기");
 		expect(list).not.toContain("복제");
@@ -70,20 +71,20 @@ describe("row menu items", () => {
 
 	it("rows that are all archived offer unarchive", () => {
 		const on = handlers();
-		select(rowMenuActions([item("a", "archived")], context, on), "보관 해제");
+		select(rowMenuActions(testSite, [item("a", "archived")], context, on), "보관 해제");
 		expect(on.bulk).toHaveBeenCalledWith("unarchive", "보관 해제", [{ id: "a", expectedVersion: 2, title: "a" }]);
 	});
 
 	it("archive asks for confirmation instead of acting right away", () => {
 		const on = handlers();
-		select(rowMenuActions([item("a")], context, on), "보관");
+		select(rowMenuActions(testSite, [item("a")], context, on), "보관");
 		expect(on.confirmArchive).toHaveBeenCalledWith([{ id: "a", expectedVersion: 2, title: "a" }]);
 		expect(on.bulk).not.toHaveBeenCalled();
 	});
 
 	it("a taxonomy item opens as a small form and has no tag or archive", () => {
 		const on = handlers();
-		const actions = rowMenuActions([item("a")], { ...context, isRecord: true, isContent: false }, on);
+		const actions = rowMenuActions(testSite, [item("a")], { ...context, isRecord: true, isContent: false }, on);
 		const list = labels(actions);
 		expect(list).toContain("열기");
 		expect(list).not.toContain("태그 추가");
@@ -94,7 +95,7 @@ describe("row menu items", () => {
 
 	it("folder and tag submenus call the bulk action with the chosen targets and value", () => {
 		const on = handlers();
-		const actions = rowMenuActions([item("a"), item("b")], context, on);
+		const actions = rowMenuActions(testSite, [item("a"), item("b")], context, on);
 		const targets = [
 			{ id: "a", expectedVersion: 2, title: "a" },
 			{ id: "b", expectedVersion: 2, title: "b" },
@@ -112,7 +113,7 @@ describe("row menu items", () => {
 
 	it("trash has only restore and permanent delete", () => {
 		const on = handlers();
-		const actions = rowMenuActions([item("a", "trashed")], { ...context, mode: "trash" }, on);
+		const actions = rowMenuActions(testSite, [item("a", "trashed")], { ...context, mode: "trash" }, on);
 		const list = labels(actions);
 		expect(list).toContain("복원");
 		expect(list).toContain("영구 삭제");

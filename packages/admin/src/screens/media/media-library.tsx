@@ -1,21 +1,13 @@
 "use client";
 
-import {
-	ALLOWED_IMAGE_MIME_TYPES,
-	cmsApiUrl,
-	createTranslator,
-	FILE_ACCEPT,
-	fileTypeFor,
-	isImageMime,
-	parseDateTimeInput,
-	withBasePath,
-} from "@monti-cms/core/client";
+import { cmsApiUrl, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
 import { cn } from "../../lib/utils/cn";
+import type { TranslatorFor } from "../../translator";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Empty, EmptyHeader, EmptyTitle } from "../../ui/empty";
@@ -39,16 +31,14 @@ import { type MediaItem, mediaUsages, usageNoteLabel } from "./media-item";
 import { MediaGrid, MediaTable } from "./media-views";
 import { mediaMessages } from "./messages";
 
-const t = createTranslator(mediaMessages);
-
 const PAGE_SIZE = 30;
-const KIND_OPTIONS = [
+const kindOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 	{ value: "all", label: t("library.kind.all") },
 	{ value: "image", label: t("library.kind.image") },
 	{ value: "file", label: t("library.kind.file") },
 ];
 
-const UPLOAD_ACCEPT = `${ALLOWED_IMAGE_MIME_TYPES.join(",")},${FILE_ACCEPT}`;
+const uploadAccept = (site: Site) => `${site.api.ALLOWED_IMAGE_MIME_TYPES.join(",")},${site.api.FILE_ACCEPT}`;
 
 const MEDIA_KEY = ["cms", "media"] as const;
 
@@ -57,9 +47,9 @@ interface MediaPage {
 	total: number;
 }
 
-const isImageFile = (file: File) => isImageMime(file.type);
+const isImageFile = (site: Site, file: File) => site.api.isImageMime(file.type);
 
-const USED_OPTIONS = [
+const usedOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 	{ value: "all", label: t("library.used.all") },
 	{ value: "used", label: t("library.used.used") },
 	{ value: "unused", label: t("library.used.unused") },
@@ -94,6 +84,8 @@ function useMediaView(): [MediaView, (view: MediaView) => void] {
  * Picking an item opens the detail on the right.
  */
 export function MediaLibrary() {
+	const site = useSite();
+	const t = useTranslator(mediaMessages);
 	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
 	const [search, setSearch] = useState("");
@@ -115,23 +107,23 @@ export function MediaLibrary() {
 		const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE), used });
 		if (search.trim()) params.set("search", search.trim());
 		if (kind !== "all") params.set("kind", kind);
-		const from = uploadedFrom && parseDateTimeInput(`${uploadedFrom}T00:00`);
-		const to = uploadedTo && parseDateTimeInput(`${uploadedTo}T23:59`);
+		const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
+		const to = uploadedTo && site.parseDateTimeInput(`${uploadedTo}T23:59`);
 		if (from) params.set("uploadedFrom", from);
 		if (to) params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
 		return params.toString();
-	}, [page, used, search, kind, uploadedFrom, uploadedTo]);
+	}, [page, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
 	const debouncedQuery = useDebounced(query, 200);
 	const mediaQuery = useQuery({
 		queryKey: [...MEDIA_KEY, debouncedQuery],
-		queryFn: ({ signal }) => cmsFetch<MediaPage>(cmsApiUrl(`/v1/media?${debouncedQuery}`), { signal }),
+		queryFn: ({ signal }) => cmsFetch<MediaPage>(site, cmsApiUrl(`/v1/media?${debouncedQuery}`), { signal }),
 		placeholderData: keepPreviousData,
 	});
 	const items = mediaQuery.data?.items ?? [];
 	const total = mediaQuery.data?.total ?? 0;
 	const selected = items.find((item) => item.id === selectedId) ?? null;
 
-	const loadError = mediaQuery.error ? errorText(mediaQuery.error, t("library.loadFailed")) : null;
+	const loadError = mediaQuery.error ? errorText(site, mediaQuery.error, t("library.loadFailed")) : null;
 
 	/** Opens in the detail panel (null to close). If there is an unsaved default description, asks first whether to discard it. */
 	const openDetail = async (id: string | null) => {
@@ -148,7 +140,7 @@ export function MediaLibrary() {
 		if (!files?.length) return;
 		const list: File[] = [];
 		for (const file of Array.from(files)) {
-			if (isImageFile(file) || fileTypeFor(file.name)) list.push(file);
+			if (isImageFile(site, file) || site.api.fileTypeFor(file.name)) list.push(file);
 			else toast.error(t("library.unsupportedType", { name: file.name }));
 		}
 		if (list.length === 0) {
@@ -159,11 +151,11 @@ export function MediaLibrary() {
 			for (const [index, file] of list.entries()) {
 				const onProgress = (percent: number) => setUpload({ current: index + 1, total: list.length, percent });
 				setUpload({ current: index + 1, total: list.length, percent: 0 });
-				if (isImageFile(file)) {
-					const prepared = await prepareUpload(file, { optimize });
-					await uploadImageFile(prepared, onProgress);
+				if (isImageFile(site, file)) {
+					const prepared = await prepareUpload(site, file, { optimize });
+					await uploadImageFile(site, prepared, onProgress);
 				} else {
-					await uploadAttachment(file, onProgress);
+					await uploadAttachment(site, file, onProgress);
 				}
 			}
 			toast.success(t("library.uploaded", { count: list.length }));
@@ -171,7 +163,7 @@ export function MediaLibrary() {
 			await invalidateMedia();
 		} catch (error) {
 			// A failed upload does not become available. It can be retried with the same file.
-			toast.error(t("library.uploadFailed", { error: errorText(error, t("library.unknownError")) }));
+			toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) }));
 		} finally {
 			setUpload(null);
 			if (fileInputRef.current) fileInputRef.current.value = "";
@@ -194,11 +186,14 @@ export function MediaLibrary() {
 			return null;
 		});
 		try {
-			await cmsFetch(cmsApiUrl(`/v1/media/${media.id}`), { method: "DELETE", fallback: t("library.deleteFailed") });
+			await cmsFetch(site, cmsApiUrl(`/v1/media/${media.id}`), {
+				method: "DELETE",
+				fallback: t("library.deleteFailed"),
+			});
 			toast.success(t("library.deleted", { name: media.filename }));
 		} catch (error) {
 			for (const [key, data] of snapshots) queryClient.setQueryData(key, data);
-			toast.error(errorText(error, t("library.deleteFailed")));
+			toast.error(errorText(site, error, t("library.deleteFailed")));
 		} finally {
 			void invalidateMedia();
 		}
@@ -206,7 +201,7 @@ export function MediaLibrary() {
 
 	/** Saves the default description. Failure is thrown as is so it shows inside the detail panel. */
 	const saveDefaults = async (media: MediaItem, defaults: { alt: string; caption: string }) => {
-		await cmsFetch(cmsApiUrl(`/v1/media/${media.id}`), {
+		await cmsFetch(site, cmsApiUrl(`/v1/media/${media.id}`), {
 			method: "PATCH",
 			json: { defaultAlt: defaults.alt, defaultCaption: defaults.caption },
 			fallback: t("library.saveFailed"),
@@ -217,17 +212,17 @@ export function MediaLibrary() {
 
 	const rename = async (media: MediaItem, filename: string) => {
 		try {
-			await cmsFetch(cmsApiUrl(`/v1/media/${media.id}`), { method: "PATCH", json: { filename } });
+			await cmsFetch(site, cmsApiUrl(`/v1/media/${media.id}`), { method: "PATCH", json: { filename } });
 			toast.success(t("library.renamed", { name: filename }));
 			await invalidateMedia();
 		} catch (error) {
-			toast.error(errorText(error, t("library.renameFailed")));
+			toast.error(errorText(site, error, t("library.renameFailed")));
 		}
 	};
 
 	const cleanup = async () => {
 		try {
-			const result = await cmsFetch<{ removed: number; failed: string[] }>(cmsApiUrl("/v1/media/cleanup"), {
+			const result = await cmsFetch<{ removed: number; failed: string[] }>(site, cmsApiUrl("/v1/media/cleanup"), {
 				method: "POST",
 				json: {},
 			});
@@ -238,7 +233,7 @@ export function MediaLibrary() {
 			else toast.success(text);
 			void invalidateMedia();
 		} catch (error) {
-			toast.error(errorText(error, t("library.cleanup.failed")));
+			toast.error(errorText(site, error, t("library.cleanup.failed")));
 		}
 	};
 
@@ -267,9 +262,9 @@ export function MediaLibrary() {
 			emptyLabel: t("library.menu.usageEmpty"),
 			items: mediaUsages(media).map((usage) => ({
 				kind: "item" as const,
-				label: `${usage.title || t("common.untitled")}${usage.note ? ` · ${usageNoteLabel(usage.note)}` : ""}`,
+				label: `${usage.title || t("common.untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
 				icon: FileText,
-				onSelect: () => window.location.assign(withBasePath(entryHref(usage.collection, usage.entryId))),
+				onSelect: () => window.location.assign(withBasePath(entryHref(site, usage.collection, usage.entryId))),
 			})),
 		},
 		{ kind: "separator" },
@@ -314,7 +309,7 @@ export function MediaLibrary() {
 						type="file"
 						multiple
 						hidden
-						accept={UPLOAD_ACCEPT}
+						accept={uploadAccept(site)}
 						onChange={(event) => void handleFiles(event.target.files)}
 					/>
 					<Button type="button" size="sm" disabled={upload !== null} onClick={() => fileInputRef.current?.click()}>
@@ -343,14 +338,14 @@ export function MediaLibrary() {
 				/>
 				<Select
 					value={kind}
-					items={KIND_OPTIONS}
+					items={kindOptions(t)}
 					onValueChange={(value) => value && setFilter(() => setKind(value as typeof kind))}
 				>
 					<SelectTrigger size="sm" aria-label={t("library.kindLabel")}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						{KIND_OPTIONS.map((option) => (
+						{kindOptions(t).map((option) => (
 							<SelectItem key={option.value} value={option.value}>
 								{option.label}
 							</SelectItem>
@@ -359,14 +354,14 @@ export function MediaLibrary() {
 				</Select>
 				<Select
 					value={used}
-					items={USED_OPTIONS}
+					items={usedOptions(t)}
 					onValueChange={(value) => value && setFilter(() => setUsed(value as typeof used))}
 				>
 					<SelectTrigger size="sm" aria-label={t("library.usedLabel")}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						{USED_OPTIONS.map((option) => (
+						{usedOptions(t).map((option) => (
 							<SelectItem key={option.value} value={option.value}>
 								{option.label}
 							</SelectItem>

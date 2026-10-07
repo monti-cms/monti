@@ -2,13 +2,11 @@
 
 import {
 	type AdminColumnSettings,
-	adminEntryEditHref,
-	createTranslator,
-	isItemCollection,
-	LOCALES,
-	localeLabel,
 	PAGE_SIZES,
 	type PageSize,
+	type Site,
+	useSite,
+	useTranslator,
 } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/runtime";
 import {
@@ -58,13 +56,11 @@ import type { ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { writeDraggedEntries } from "./shared/entry-drag";
-import { describeEntryStatus, STATUS_LABELS } from "./shared/entry-status";
+import { describeEntryStatus, statusLabels } from "./shared/entry-status";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
 import { OPEN_ITEM } from "./shared/side-panel";
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
-
-const t = createTranslator(screensMessages);
 
 export { columnsFor };
 
@@ -96,11 +92,11 @@ const SINGLE_RELATION_SIZE = 112;
 const SELECT_SIZE = 132;
 const TEXT_SIZE = 200;
 
-function defaultColumnSize(collection: string, column: AdminListColumn): number {
+function defaultColumnSize(site: Site, collection: string, column: AdminListColumn): number {
 	const size = DEFAULT_COLUMN_SIZE[column];
 	if (size !== undefined) return size;
-	const config = columnConfig(collection, column);
-	const kind = fieldColumnOf(collection, column)?.field.kind;
+	const config = columnConfig(site, collection, column);
+	const kind = fieldColumnOf(site, collection, column)?.field.kind;
 	if (kind === "relation") return config.many ? MANY_RELATION_SIZE : SINGLE_RELATION_SIZE;
 	if (kind === "select") return SELECT_SIZE;
 	if (kind === "text" || kind === "media") return TEXT_SIZE;
@@ -111,12 +107,12 @@ const MAX_COLUMN_SIZE = 960;
 const helper = createColumnHelper<typeof features, ListEntriesItem>();
 
 /** List date: this year as `9월 27일 14:05`, otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
-const formatDate = (value: Date | string | null) => {
+const formatDate = (site: Site, value: Date | string | null) => {
 	if (!value) return "—";
-	const sameYear = zonedYear(value) === zonedYear(Date.now());
+	const sameYear = zonedYear(site, value) === zonedYear(site, Date.now());
 	return sameYear
-		? formatDateTime(value, { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
-		: formatDateOnly(value);
+		? formatDateTime(site, value, { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+		: formatDateOnly(site, value);
 };
 
 /**
@@ -124,9 +120,9 @@ const formatDate = (value: Date | string | null) => {
  * Many-relation taxonomy field columns (tags etc.) are hidden last. Title, status, single taxonomy fields (category etc.) and updated date are never hidden.
  */
 const HIDE_ORDER_WHEN_NARROW = ["folder", "slug", "createdAt", "publishedAt", "locale"] as const;
-const hideOrderWhenNarrow = (collection: string, available: readonly AdminListColumn[]) => [
+const hideOrderWhenNarrow = (site: Site, collection: string, available: readonly AdminListColumn[]) => [
 	...HIDE_ORDER_WHEN_NARROW,
-	...available.filter((column) => columnConfig(collection, column).many),
+	...available.filter((column) => columnConfig(site, collection, column).many),
 ];
 const TITLE_MIN_WIDTH = 240;
 
@@ -148,6 +144,7 @@ function ColumnResizeHandle({
 	onNudge: (delta: number) => void;
 	onReset: () => void;
 }) {
+	const t = useTranslator(screensMessages);
 	return (
 		// biome-ignore lint/a11y/useSemanticElements: column width resizing is an operable separator, not an hr
 		<div
@@ -192,10 +189,12 @@ const BADGE_TONE: Record<"published" | "changed" | "draft" | "archived", string>
 
 /** Per-locale status of a translation group. Existing locales link to their edit screen; missing ones show only as dashed. Status is also readable as text, not just color. */
 function LocaleBadges({ translations }: { translations: readonly ListTranslationMember[] }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	return (
 		<span className="flex items-center gap-1">
-			{LOCALES.map((locale) => {
-				const name = localeLabel(locale);
+			{site.LOCALES.map((locale) => {
+				const name = site.localeLabel(locale);
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
@@ -216,12 +215,12 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 				return (
 					<Link
 						key={locale}
-						href={adminEntryEditHref(member.id)}
+						href={site.adminEntryEditHref(member.id)}
 						className={cn(BADGE_CLASS, BADGE_TONE[tone], "cms-dark:hover:brightness-125 hover:brightness-95")}
 					>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<span className="sr-only">
-							{name} · {STATUS_LABELS[member.status]}
+							{name} · {statusLabels(site)[member.status]}
 						</span>
 					</Link>
 				);
@@ -232,9 +231,11 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 
 /** Locales of a taxonomy item (category, tag, series). Locales with a name are filled badges, others are dashed badges. */
 function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	return (
 		<span className="flex items-center gap-1">
-			{LOCALES.map((locale) => {
+			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
 					<span
@@ -242,7 +243,9 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 						className={cn(BADGE_CLASS, named ? BADGE_TONE.published : "border-dashed text-cms-muted-foreground/70")}
 					>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<span className="sr-only">{t(named ? "locale.has" : "locale.hasNot", { name: localeLabel(locale) })}</span>
+						<span className="sr-only">
+							{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}
+						</span>
 					</span>
 				);
 			})}
@@ -252,7 +255,9 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 
 /** Shows status with both icon shape and text (not conveyed by color alone). */
 function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: boolean }) {
-	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(item);
+	const site = useSite();
+	const t = useTranslator(screensMessages);
+	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
 	const tone =
 		item.status === "published"
 			? item.hasUnpublishedChanges
@@ -365,10 +370,12 @@ export function AdminEntriesTable({
 	onPageSizeChange,
 	onRetry,
 }: TableProps) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const isTrash = mode === "trash";
-	const isRecord = isItemCollection(collection);
+	const isRecord = site.isItemCollection(collection);
 	const { listCells } = useCmsAdminComponents();
-	const { available, defaults } = columnsFor(collection);
+	const { available, defaults } = columnsFor(site, collection);
 	// Drop saved-setting columns that no longer exist (deleted fields etc.).
 	const savedOrder = (columnSettings?.order ?? []).filter((column) => available.includes(column));
 	const savedVisibility = knownColumnRecord(columnSettings?.visibility, available);
@@ -413,7 +420,7 @@ export function AdminEntriesTable({
 					) : (
 						<span className="flex min-w-0 items-center gap-2">
 							<Link
-								href={adminEntryEditHref(item.id)}
+								href={site.adminEntryEditHref(item.id)}
 								className="truncate font-medium text-cms-foreground hover:text-cms-primary"
 							>
 								{title}
@@ -439,7 +446,7 @@ export function AdminEntriesTable({
 					// Also mark that a translation is not the original.
 					return (
 						<span className="text-cms-muted-foreground text-xs">
-							<abbr title={localeLabel(item.locale)} className="font-medium no-underline">
+							<abbr title={site.localeLabel(item.locale)} className="font-medium no-underline">
 								{item.locale.toUpperCase()}
 							</abbr>
 							{item.translationGroupId !== item.id && <span className="ml-1">{t("list.translation")}</span>}
@@ -450,7 +457,7 @@ export function AdminEntriesTable({
 				case "publishedAt":
 					return (
 						<span className="tabular whitespace-nowrap text-cms-muted-foreground text-xs">
-							{formatDate(item[column])}
+							{formatDate(site, item[column])}
 						</span>
 					);
 				case "slug":
@@ -464,9 +471,9 @@ export function AdminEntriesTable({
 		};
 		// Cells registered by admin extensions (`listCells`) take precedence over default cells.
 		const cellOf = (item: ListEntriesItem, column: AdminListColumn) => {
-			const Custom = customListCell(listCells, collection, column);
+			const Custom = customListCell(site, listCells, collection, column);
 			if (!Custom) return cell(item, column);
-			const stored = fieldColumnOf(collection, column);
+			const stored = fieldColumnOf(site, collection, column);
 			return (
 				<Custom
 					collection={collection}
@@ -503,13 +510,13 @@ export function AdminEntriesTable({
 				helper.display({
 					id: column,
 					enableHiding: column !== "title",
-					size: defaultColumnSize(collection, column),
+					size: defaultColumnSize(site, collection, column),
 					minSize: MIN_COLUMN_SIZE,
 					maxSize: MAX_COLUMN_SIZE,
 					header: () => (
 						<ColumnHeader
 							column={column}
-							filter={filterFor(collection, column, mode)}
+							filter={filterFor(site, collection, column, mode)}
 							state={state}
 							options={options}
 							onChange={onStateChange}
@@ -613,7 +620,7 @@ export function AdminEntriesTable({
 	// Columns to hide when narrow are decided only by default widths and the title's minimum width. User-widened widths do not trigger hiding and become horizontal scroll
 	// (so handles don't jump when another column disappears mid-drag).
 	const defaultSizeOf = (id: string) =>
-		id === "select" ? 44 : id === "actions" ? 52 : defaultColumnSize(collection, id);
+		id === "select" ? 44 : id === "actions" ? 52 : defaultColumnSize(site, collection, id);
 	const visibleIds = columnOrder.filter((id) => visibility[id] !== false);
 	const autoHidden = new Set<string>();
 	const naturalWidth = () =>
@@ -621,7 +628,7 @@ export function AdminEntriesTable({
 			.filter((id) => !autoHidden.has(id))
 			.reduce((sum, id) => sum + (id === "title" ? TITLE_MIN_WIDTH : defaultSizeOf(id)), 0);
 	if (containerWidth > 0) {
-		for (const id of hideOrderWhenNarrow(collection, available)) {
+		for (const id of hideOrderWhenNarrow(site, collection, available)) {
 			if (naturalWidth() <= containerWidth) break;
 			if (visibleIds.includes(id)) autoHidden.add(id);
 		}
@@ -708,7 +715,7 @@ export function AdminEntriesTable({
 			? [
 					{ kind: "item", label: t("list.folderOpen"), icon: FolderOpen, onSelect: () => onSelectFolder(folder.id) },
 					{ kind: "separator" },
-					...folderMenuActions(folder, folders, folderActions),
+					...folderMenuActions(site, folder, folders, folderActions),
 				]
 			: [];
 
@@ -737,7 +744,7 @@ export function AdminEntriesTable({
 								{group.headers
 									.filter((header) => isShown(header.column.id))
 									.map((header) => {
-										const sortField = columnConfig(collection, header.column.id).sortField;
+										const sortField = columnConfig(site, collection, header.column.id).sortField;
 										const active = sortField !== undefined && sortField === state.sortField;
 										return (
 											<Fragment key={header.id}>
@@ -753,7 +760,7 @@ export function AdminEntriesTable({
 													{header.isPlaceholder ? null : <table.FlexRender header={header} />}
 													{header.column.getCanResize() && (
 														<ColumnResizeHandle
-															label={columnLabel(collection, header.column.id)}
+															label={columnLabel(site, collection, header.column.id)}
 															width={header.getSize()}
 															resizing={header.column.getIsResizing()}
 															onStart={(event) => {
@@ -935,13 +942,13 @@ export function AdminEntriesTable({
 												disabled={column === "title"}
 												onCheckedChange={(checked) => table.getColumn(column)?.toggleVisibility(checked === true)}
 											/>
-											{columnLabel(collection, column)}
+											{columnLabel(site, collection, column)}
 										</Label>
 										<span className="flex gap-1">
 											<IconButton
 												size="icon-xs"
 												variant="outline"
-												label={t("list.columnUp", { label: columnLabel(collection, column) })}
+												label={t("list.columnUp", { label: columnLabel(site, collection, column) })}
 												disabled={index === 0}
 												onClick={() => moveColumn(column, -1)}
 											>
@@ -950,7 +957,7 @@ export function AdminEntriesTable({
 											<IconButton
 												size="icon-xs"
 												variant="outline"
-												label={t("list.columnDown", { label: columnLabel(collection, column) })}
+												label={t("list.columnDown", { label: columnLabel(site, collection, column) })}
 												disabled={index === order.length - 1}
 												onClick={() => moveColumn(column, 1)}
 											>

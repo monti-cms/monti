@@ -1,8 +1,18 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
+import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/client";
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { BlockNodeView } from "../block-node-view";
-import { ADDED_NODE_BLOCKS, blockNodeName, childBlocksOf, isContainer, isFence } from "./shared";
+import {
+	addedNodeBlocks,
+	BODY_CONTAINER_GROUP,
+	blockNodeName,
+	CONTAINER_GROUP,
+	childBlocksOf,
+	isBodyContainer,
+	isContainer,
+	isFence,
+	PARENT_ONLY_VIEW_CLASS,
+} from "./shared";
 
 const parseJson = (value: string | null, fallback: unknown) => {
 	try {
@@ -52,10 +62,15 @@ function createFenceNode(block: BlockDefinition & { syntax: { kind: "fence"; lan
 export function createAddedBlockNode(block: BlockDefinition, all: readonly BlockDefinition[]): Node {
 	if (isFence(block)) return createFenceNode(block as BlockDefinition & { syntax: { kind: "fence"; lang: string } });
 	const content = isContainer(block) ? childContent(block, all) : undefined;
+	const groups = [
+		...(block.parent ? [] : ["block"]),
+		...(content ? [CONTAINER_GROUP] : []),
+		...(content && isBodyContainer(block) ? [BODY_CONTAINER_GROUP] : []),
+	].join(" ");
 	return Node.create({
 		name: blockNodeName(block),
-		// Parent-only blocks are placed only inside their parent.
-		...(block.parent ? {} : { group: "block" }),
+		// Parent-only blocks are placed only inside their parent. The container groups tell the drag and block commands what the node is (see `CONTAINER_GROUP`).
+		...(groups ? { group: groups } : {}),
 		...(content ? { content, isolating: true } : { atom: true }),
 		selectable: true,
 		// Dragged via the handle overlay. It does not compete with body selection.
@@ -78,12 +93,12 @@ export function createAddedBlockNode(block: BlockDefinition, all: readonly Block
 				: ["div", mergeAttributes(HTMLAttributes, { "data-cms-block": block.name })];
 		},
 		addNodeView() {
-			return ReactNodeViewRenderer(BlockNodeView);
+			return ReactNodeViewRenderer(BlockNodeView, block.parent ? { className: PARENT_ONLY_VIEW_CLASS } : undefined);
 		},
 	});
 }
 
-/** All added block nodes. */
-export const ADDED_BLOCK_NODES: readonly Node[] = ADDED_NODE_BLOCKS.map((block) =>
-	createAddedBlockNode(block, ADDED_NODE_BLOCKS),
+/** All added block nodes of a site. The same list for the same site, so an editor rebuilt for it keeps its extensions. */
+export const addedBlockNodes = perSite((site: Pick<Site, "ADDED_BLOCKS">): readonly Node[] =>
+	addedNodeBlocks(site).map((block) => createAddedBlockNode(block, addedNodeBlocks(site))),
 );

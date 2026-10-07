@@ -21,8 +21,6 @@ export default defineConfig(({ mode }) => ({
 	},
 	resolve: {
 		alias: {
-			// The package's own tests run with the core package's example config.
-			"@cms-config": path.resolve(import.meta.dirname, "../core/test/cms.config.ts"),
 			"server-only": path.resolve(import.meta.dirname, "../core/test/server-only.ts"),
 		},
 	},

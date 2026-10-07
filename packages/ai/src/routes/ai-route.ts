@@ -1,4 +1,4 @@
-import { createTranslator, isCollection, localeName, schemaOf, storedField } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import { type Cms, createContentLookup } from "@monti-cms/core/plugin/server";
 import { AiError } from "../errors";
 import type { AiOption, AiRunDeps } from "../run";
@@ -6,15 +6,13 @@ import { runMessages } from "../run.messages";
 import type { AiRuntime } from "../settings";
 import { siteImageUrl } from "../site-image";
 
-const t = createTranslator(runMessages);
-
 /** Image formats and sizes that multimodal models commonly accept. */
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /** All published items of other collections (tags, categories, collections, posts). */
 async function loadRecords(cms: Cms, collection: string): Promise<AiOption[]> {
-	if (!isCollection(collection)) return [];
+	if (!cms.site.isCollection(collection)) return [];
 	const store = cms.store();
 	const options: AiOption[] = [];
 	for (let page = 1; page <= 20; page++) {
@@ -32,9 +30,9 @@ async function loadRecords(cms: Cms, collection: string): Promise<AiOption[]> {
 }
 
 /** Choice lists of a collection's fields (`select` fields, the picker of conditional fields, and dependent select fields). */
-function fieldOptions(collection: string, field: string): AiOption[] {
-	if (!isCollection(collection)) return [];
-	const definition = schemaOf(collection).fields[field] ?? storedField(collection, field)?.field;
+function fieldOptions(site: Site, collection: string, field: string): AiOption[] {
+	if (!site.isCollection(collection)) return [];
+	const definition = site.schemaOf(collection).fields[field] ?? site.storedField(collection, field)?.field;
 	// Conditional fields (policies etc.) use the list of the picker (discriminant).
 	const select = definition?.kind === "conditional" ? definition.discriminant : definition;
 	return select?.kind === "select"
@@ -44,7 +42,8 @@ function fieldOptions(collection: string, field: string): AiOption[] {
 
 type LoadedImage = Awaited<ReturnType<AiRunDeps["loadImage"]>>;
 
-async function fetchSiteImage(url: URL, signal?: AbortSignal): Promise<LoadedImage> {
+async function fetchSiteImage(site: Site, url: URL, signal?: AbortSignal): Promise<LoadedImage> {
+	const t = site.createTranslator(runMessages);
 	const response = await fetch(url, { signal, redirect: "error", cache: "no-store" }).catch(() => null);
 	if (!response?.ok) return null;
 	const mimeType = response.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
@@ -66,17 +65,20 @@ async function fetchSiteImage(url: URL, signal?: AbortSignal): Promise<LoadedIma
  */
 export function aiRunDeps(cms: Cms, runtime: AiRuntime, signal?: AbortSignal, origin?: string): AiRunDeps {
 	const store = cms.store();
+	const { site } = cms;
+	const t = site.createTranslator(runMessages);
 	return {
 		...runtime,
+		site,
 		signal,
 		loadRecords: (collection) => loadRecords(cms, collection),
-		fieldOptions,
-		languageName: localeName,
+		fieldOptions: (collection, field) => fieldOptions(site, collection, field),
+		languageName: site.localeName,
 		loadImage: async ({ mediaId, src }) => {
 			if (!mediaId) {
 				const url = src && origin ? siteImageUrl(src, origin) : null;
 				if (!url) throw new AiError("ai_failed", t("siteImageOnly"));
-				return fetchSiteImage(url, signal);
+				return fetchSiteImage(site, url, signal);
 			}
 			const media = await store.getMediaAsset(mediaId);
 			if (!media || media.status !== "ready" || !media.storageKey) return null;

@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 
-const roundTrip = (mdx: string) => serialize(toDocument(analyze(mdx))).trim();
+const roundTrip = (mdx: string) => serialize(testSite, toDocument(testSite, analyze(testSite, mdx))).trim();
 
 describe("reference-style links and images", () => {
 	it("turns a full reference link into an inline link and drops the definition", () => {
 		const mdx = '[Shiki][1]\n\n[1]: https://shiki.style "T"\n';
-		const doc = toDocument(analyze(mdx));
+		const doc = toDocument(testSite, analyze(testSite, mdx));
 		const paragraph = doc.content?.[0];
 		expect(doc.content).toHaveLength(1);
 		expect(paragraph?.content?.[0]).toMatchObject({
@@ -14,7 +15,7 @@ describe("reference-style links and images", () => {
 			text: "Shiki",
 			marks: [{ type: "link", attrs: { href: "https://shiki.style", title: "T" } }],
 		});
-		expect(serialize(doc).trim()).toBe('[Shiki](https://shiki.style "T")');
+		expect(serialize(testSite, doc).trim()).toBe('[Shiki](https://shiki.style "T")');
 	});
 
 	it("resolves collapsed and shortcut references", () => {
@@ -37,7 +38,7 @@ describe("reference-style links and images", () => {
 
 	it("turns a full, collapsed and shortcut image reference into an image", () => {
 		const mdx = '![Alt][i]\n\n![i][]\n\n![i]\n\n[i]: https://example.com/p.png "Pic"\n';
-		const doc = toDocument(analyze(mdx));
+		const doc = toDocument(testSite, analyze(testSite, mdx));
 		expect(doc.content).toHaveLength(3);
 		expect(doc.content?.[0]).toMatchObject({
 			type: "image",
@@ -45,7 +46,7 @@ describe("reference-style links and images", () => {
 		});
 		expect(doc.content?.[1]?.attrs?.alt).toBe("i");
 		expect(doc.content?.[2]?.attrs?.alt).toBe("i");
-		expect(serialize(doc).split("\n\n")[0]).toBe('![Alt](https://example.com/p.png "Pic")');
+		expect(serialize(testSite, doc).split("\n\n")[0]).toBe('![Alt](https://example.com/p.png "Pic")');
 	});
 
 	it("resolves an image reference inside a paragraph", () => {

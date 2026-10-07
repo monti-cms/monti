@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import {
 	type CropBox,
 	formatCrop,
@@ -19,8 +19,6 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { editorMessages } from "./messages";
 
-const t = createTranslator(editorMessages);
-
 export interface ImageCropDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -34,6 +32,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const clamp = (val: number, min: number, max: number) => Math.min(max, Math.max(min, val));
 
 export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply }: ImageCropDialogProps) {
+	const t = useTranslator(editorMessages);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const imgRef = useRef<HTMLImageElement>(null);
 	const activeDragCleanupRef = useRef<(() => void) | null>(null);

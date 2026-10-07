@@ -1,14 +1,14 @@
-import { adminEntryEditHref, createTranslator } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { renderInRouter as render } from "../../../test/router";
 import { sharedMessages } from "../../shared/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
 import { mediaMessages } from "../messages";
 
-const t = createTranslator(mediaMessages);
-const tShared = createTranslator(sharedMessages);
+const t = testSite.createTranslator(mediaMessages);
+const tShared = testSite.createTranslator(sharedMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
@@ -112,7 +112,7 @@ describe("media library", () => {
 			within(detail)
 				.getByRole("link", { name: /고양이 글/ })
 				.getAttribute("href"),
-		).toBe(adminEntryEditHref("e1"));
+		).toBe(testSite.adminEntryEditHref("e1"));
 		// A file in use cannot be deleted.
 		expect((within(detail).getByRole("button", { name: t("common.delete") }) as HTMLButtonElement).disabled).toBe(true);
 	});

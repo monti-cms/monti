@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
+import { testSite } from "../../test/site";
 import { aiAction, aiInput, defineValidator, type ResolvedAiAction, resolveAction } from "../action";
 import { AiError } from "../errors";
 import type { AiDecider, AiProvider, AiRequest, DecisionAnswer, DecisionRequest } from "../provider";
-import { AI_ACTIONS } from "../registry";
+import { aiRegistryOf } from "../registry";
 import { type AiCall, type AiRunDeps, MAX_AI_BODY_CHARS, runAiAction, streamAiAction, unfence } from "../run";
 
 /** An action from the example config (`test/cms.config.ts`). */
 const preset = (key: string): ResolvedAiAction => {
-	const definition = AI_ACTIONS[key];
+	const definition = aiRegistryOf(testSite).actions[key];
 	if (!definition) throw new Error(`Missing action: ${key}`);
 	return resolveAction(key, definition);
 };
@@ -50,6 +51,7 @@ function stubDecider(answer: (request: DecisionRequest) => Record<string, Decisi
 
 function deps(provider: AiProvider | null, overrides: Partial<AiRunDeps> = {}): AiRunDeps {
 	return {
+		site: testSite,
 		generator: provider,
 		decider: null,
 		loadRecords: async (collection) =>

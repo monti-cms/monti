@@ -19,7 +19,7 @@ import {
 	useConfirm,
 	useDebounced,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plug, PlugZap, Plus, Save, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
@@ -35,18 +35,18 @@ import {
 import { AI_ACTIONS_KEY } from "./ai-slot-provider";
 import { connectionMessages } from "./connection-editor.messages";
 import { OptionSelect } from "./custom-editor";
-import { providerKindLabel } from "./labels.messages";
+import { useLabels } from "./labels.messages";
 import { ModelCombobox, type ModelSource, useModelList } from "./model-combobox";
-
-const t = createTranslator(connectionMessages);
 
 export const AI_SETTINGS_KEY = ["cms", "ai", "settings"] as const;
 
 export function useAiSettings() {
+	const site = useSite();
+	const t = useTranslator(connectionMessages);
 	return useQuery({
 		queryKey: AI_SETTINGS_KEY,
 		queryFn: ({ signal }) =>
-			cmsFetch<AiSettingsView>(cmsApiUrl("/v1/ai/settings"), { signal, fallback: t("error.loadList") }),
+			cmsFetch<AiSettingsView>(site, cmsApiUrl("/v1/ai/settings"), { signal, fallback: t("error.loadList") }),
 		// Not re-fetched every time an action is opened. Saving a connection updates the cache from the response.
 		staleTime: 60_000,
 	});
@@ -60,6 +60,7 @@ export const DETAIL_PANE = "mx-auto flex w-full max-w-3xl flex-col gap-5 p-6 tex
 
 /** Load failure. Reports it in place and allows fetching again. */
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
+	const t = useTranslator(connectionMessages);
 	return (
 		<Alert variant="danger" className="m-3 flex w-auto items-center justify-between gap-3">
 			<AlertDescription className="col-start-auto">{message}</AlertDescription>
@@ -168,6 +169,9 @@ export function ConnectionManager({
 	onSelectedChange: (id: string | null) => void;
 	onDirtyChange: (dirty: boolean) => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(connectionMessages);
+	const { providerKindLabel } = useLabels();
 	const queryClient = useQueryClient();
 	const settingsQuery = useAiSettings();
 	const settings = settingsQuery.data;
@@ -183,7 +187,7 @@ export function ConnectionManager({
 		<div className="flex min-h-0 flex-1 flex-col">
 			{settingsQuery.error && !settings && (
 				<LoadError
-					message={errorText(settingsQuery.error, t("error.loadList"))}
+					message={errorText(site, settingsQuery.error, t("error.loadList"))}
 					onRetry={() => void settingsQuery.refetch()}
 				/>
 			)}
@@ -269,6 +273,9 @@ function ProviderEditor({
 	onConflict: () => void;
 	onDirtyChange: (dirty: boolean) => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(connectionMessages);
+	const { providerKindLabel } = useLabels();
 	const initial = provider ? draftOf(provider) : NEW_DRAFT;
 	const [draft, setDraft] = useState<Draft>(initial);
 	const [saving, setSaving] = useState(false);
@@ -308,12 +315,12 @@ function ProviderEditor({
 		try {
 			const json = { expectedVersion: version, provider: draft };
 			const saved = provider
-				? await cmsFetch<AiSettingsView>(cmsApiUrl(`/v1/ai/providers/${provider.id}`), {
+				? await cmsFetch<AiSettingsView>(site, cmsApiUrl(`/v1/ai/providers/${provider.id}`), {
 						method: "PATCH",
 						json,
 						fallback: t("error.save"),
 					})
-				: await cmsFetch<AiSettingsView>(cmsApiUrl("/v1/ai/providers"), {
+				: await cmsFetch<AiSettingsView>(site, cmsApiUrl("/v1/ai/providers"), {
 						method: "POST",
 						json,
 						fallback: t("error.save"),
@@ -323,7 +330,7 @@ function ProviderEditor({
 			onSaved(saved, id);
 			toast.success(t("toast.saved"));
 		} catch (saveError) {
-			setError(errorText(saveError, t("error.save")));
+			setError(errorText(site, saveError, t("error.save")));
 			onConflict();
 		} finally {
 			setSaving(false);
@@ -343,14 +350,14 @@ function ProviderEditor({
 		setError(null);
 		try {
 			onDeleted(
-				await cmsFetch<AiSettingsView>(cmsApiUrl(`/v1/ai/providers/${provider.id}?expectedVersion=${version}`), {
+				await cmsFetch<AiSettingsView>(site, cmsApiUrl(`/v1/ai/providers/${provider.id}?expectedVersion=${version}`), {
 					method: "DELETE",
 					fallback: t("error.delete"),
 				}),
 			);
 			toast.success(t("toast.deleted"));
 		} catch (deleteError) {
-			setError(errorText(deleteError, t("error.delete")));
+			setError(errorText(site, deleteError, t("error.delete")));
 			onConflict();
 		} finally {
 			setDeleting(false);
@@ -362,14 +369,14 @@ function ProviderEditor({
 		setChecking(true);
 		try {
 			setCheck(
-				await cmsFetch<AiCheckResult>(cmsApiUrl("/v1/ai/providers/check"), {
+				await cmsFetch<AiCheckResult>(site, cmsApiUrl("/v1/ai/providers/check"), {
 					method: "POST",
 					json: { providerId: provider?.id, provider: draft },
 					fallback: t("error.check"),
 				}),
 			);
 		} catch (checkError) {
-			setCheck({ ok: false, message: errorText(checkError, t("error.check")) });
+			setCheck({ ok: false, message: errorText(site, checkError, t("error.check")) });
 		} finally {
 			setChecking(false);
 		}

@@ -1,19 +1,21 @@
 // @vitest-environment jsdom
+import { SiteProvider } from "@monti-cms/core/client";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../test/site";
 import { resolveAction } from "../../action";
 import { viewOf } from "../../action-view";
 import type { AiActionView } from "../../actions";
-import { AI_ACTIONS } from "../../registry";
+import { aiRegistryOf } from "../../registry";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "../ai-test-sample";
 
 afterEach(cleanup);
 
 /** Turns an action of the example config (`test/cms.config.ts`) into the admin screen shape. */
 const view = (key: string): AiActionView => {
-	const definition = AI_ACTIONS[key];
+	const definition = aiRegistryOf(testSite).actions[key];
 	if (!definition) throw new Error(`Missing action: ${key}`);
-	return viewOf(resolveAction(key, definition), undefined);
+	return viewOf(testSite, resolveAction(key, definition), undefined, undefined, definition);
 };
 
 const kinds = (feature: AiActionView) =>
@@ -28,7 +30,7 @@ describe("AI screen test fields", () => {
 			["from", "locale", true],
 			["to", "locale", true],
 		]);
-		expect(sampleDefaults(translate)).toEqual({ from: "ko", to: "en" });
+		expect(sampleDefaults(testSite, translate)).toEqual({ from: "ko", to: "en" });
 		// Required inputs of selection and block actions also have fields.
 		expect(kinds(view("polish"))).toEqual([
 			["selection", "mdx", true],
@@ -49,7 +51,7 @@ describe("AI screen test fields", () => {
 	it("does not run when a required field is empty, and builds the run input and common context from the values", () => {
 		const translate = view("translate");
 		const fields = sampleFields(translate, translate.send);
-		const defaults = sampleDefaults(translate);
+		const defaults = sampleDefaults(testSite, translate);
 		expect(missingRequired(fields, {}, defaults)).toBe(true);
 		expect(missingRequired(fields, { block: "안녕" }, defaults)).toBe(false);
 		expect(sampleRun(translate, fields, { block: "안녕", to: "ja" }, defaults)).toEqual({
@@ -76,7 +78,11 @@ describe("AI screen test fields", () => {
 	it("field names are input labels, and edited values are reported by input name", () => {
 		const polish = view("polish");
 		const onChange = vi.fn();
-		render(<SampleInputs fields={sampleFields(polish, polish.send)} values={{}} defaults={{}} onChange={onChange} />);
+		render(
+			<SiteProvider site={testSite}>
+				<SampleInputs fields={sampleFields(polish, polish.send)} values={{}} defaults={{}} onChange={onChange} />
+			</SiteProvider>,
+		);
 		fireEvent.change(screen.getByLabelText("고칠 글"), { target: { value: "다듬을 글" } });
 		expect(onChange).toHaveBeenCalledWith("selection", "다듬을 글");
 		expect(screen.getByLabelText("제목").tagName).toBe("TEXTAREA");
@@ -84,12 +90,14 @@ describe("AI screen test fields", () => {
 		cleanup();
 		const translate = view("translate");
 		render(
-			<SampleInputs
-				fields={sampleFields(translate, translate.send)}
-				values={{}}
-				defaults={sampleDefaults(translate)}
-				onChange={onChange}
-			/>,
+			<SiteProvider site={testSite}>
+				<SampleInputs
+					fields={sampleFields(translate, translate.send)}
+					values={{}}
+					defaults={sampleDefaults(testSite, translate)}
+					onChange={onChange}
+				/>
+			</SiteProvider>,
 		);
 		expect(screen.getByLabelText("원문")).toBeTruthy();
 		expect(screen.getByRole("combobox", { name: "원문 언어" })).toBeTruthy();

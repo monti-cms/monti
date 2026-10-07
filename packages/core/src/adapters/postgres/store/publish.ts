@@ -7,7 +7,6 @@ import {
 } from "../../../core/domain/publish";
 import { assertPromotedToCurrent, linkTargetChanged, planPublishAddress } from "../../../core/domain/slug-address";
 import { isUuid } from "../../../core/ids";
-import { DEFAULT_LOCALE } from "../../../core/locales";
 import { validateForPublish } from "../../../core/snapshot";
 import { CmsError } from "../../../core/store/errors";
 import type { Entry, EntryStatus } from "../../../core/store/types";
@@ -37,7 +36,7 @@ export interface PublishOptions {
 const holderOf = (row: Pick<AddressRow, "entry_id" | "type">) => ({ entryId: row.entry_id, type: row.type });
 
 export function createPublishing(ctx: StoreContext) {
-	const { qSchema, hooks } = ctx;
+	const { qSchema, hooks, site } = ctx;
 
 	/** Checks the prepared snapshot of the draft inside the transaction. Locks reference targets and internal link slugs. */
 	const validatePreparedForPublish = async (client: PoolClient, entryId: string, snapshot: PreparedSnapshot) => {
@@ -80,14 +79,14 @@ export function createPublishing(ctx: StoreContext) {
 				 ORDER BY a.collection, a.locale, a.slug${lock ? " FOR SHARE" : ""}`,
 				[
 					links.map((link) => link.collection),
-					links.map((link) => link.locale ?? DEFAULT_LOCALE),
+					links.map((link) => link.locale ?? site.DEFAULT_LOCALE),
 					links.map((link) => link.slug),
 				],
 			);
 			return result.rows;
 		};
 		const addressKey = (collection: string, locale: string | undefined, slug: string) =>
-			`${collection}:${locale ?? DEFAULT_LOCALE}:${slug}`;
+			`${collection}:${locale ?? site.DEFAULT_LOCALE}:${slug}`;
 		const firstAddresses = new Map(
 			(await findAddresses(false)).map((a) => [addressKey(a.collection, a.locale, a.slug), a]),
 		);
@@ -134,7 +133,7 @@ export function createPublishing(ctx: StoreContext) {
 				).rows
 			: [];
 
-		const validation = validateForPublish(publishSnapshot, {
+		const validation = validateForPublish(site, publishSnapshot, {
 			targets: targetRows.map((target) => ({
 				id: target.id,
 				collection: target.collection,
@@ -201,7 +200,7 @@ export function createPublishing(ctx: StoreContext) {
 				 published_at = CASE WHEN $4 THEN $2 ELSE COALESCE(published_at, $2) END WHERE id = $3`,
 				[locked.version + 1, now, id, Boolean(options.resetPublishedAt)],
 			);
-			await writeBody(client, qSchema, id, "published", {
+			await writeBody(site, client, qSchema, id, "published", {
 				metadata: working.metadata,
 				doc: working.doc,
 				schemaVersion: working.schema_version,

@@ -2,6 +2,7 @@ import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBloc
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import {
 	CmsAdminComponentsProvider,
 	type SourcePanelProps,
@@ -9,6 +10,7 @@ import {
 } from "../../../admin-components";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
+import { withSite } from "../../__test__/site-wrapper";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
@@ -30,6 +32,7 @@ vi.mock("../local-backup", async (importOriginal) => ({
 vi.mock("../../../editor/tiptap-editor", async () => {
 	const React = await import("react");
 	const { Editor } = await import("@tiptap/core");
+	const { testSite: site } = await import("../../../../../core/test/site");
 	const { buildEditorExtensions } =
 		await vi.importActual<typeof import("../../../editor/extensions")>("../../../editor/extensions");
 	const { storedToTiptap } = await vi.importActual<typeof import("../../../editor/tiptap-content")>(
@@ -42,7 +45,7 @@ vi.mock("../../../editor/tiptap-editor", async () => {
 	) => {
 		React.useEffect(() => {
 			if (!doc || !onEditor) return;
-			const editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+			const editor = new Editor({ extensions: buildEditorExtensions(site), content: storedToTiptap(site, doc) });
 			mockEditor.current = editor;
 			onEditor(editor);
 			return () => {
@@ -162,7 +165,7 @@ const TEXT_PANEL: SourcePanelRegistration = { format: "text", label: SOURCE_LABE
 
 /** The edit screen as the admin layout renders it, with a fake source panel registered (the admin knows no text notation). */
 const renderShell = (ui: React.ReactElement, sourcePanels: SourcePanelRegistration[] = [TEXT_PANEL]) =>
-	render(<CmsAdminComponentsProvider components={{ sourcePanels }}>{ui}</CmsAdminComponentsProvider>);
+	render(withSite(<CmsAdminComponentsProvider components={{ sourcePanels }}>{ui}</CmsAdminComponentsProvider>));
 const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 const editorTitle = () => screen.findByRole("textbox", { name: "제목" });
 
@@ -378,13 +381,13 @@ describe("entry editor shell", () => {
 	});
 
 	it("offers a same-version browser backup and deletes it when the server copy is kept", async () => {
-		const server = formFromEntry(entry as never);
+		const server = formFromEntry(testSite, entry as never);
 		getLocalBackup.mockResolvedValue({
 			key: `${ADMIN}:entry-1`,
 			entryId: "entry-1",
 			baseVersion: 4,
-			baseFingerprint: formFingerprint(server),
-			localFingerprint: formFingerprint({ ...server, title: "수정" }),
+			baseFingerprint: formFingerprint(testSite, server),
+			localFingerprint: formFingerprint(testSite, { ...server, title: "수정" }),
 			snapshot: { ...server, title: "수정" },
 			changeSeq: 1,
 			savedAt: Date.now(),
@@ -397,13 +400,13 @@ describe("entry editor shell", () => {
 	});
 
 	it("warns that loading a backup made before the server changed overwrites it", async () => {
-		const server = formFromEntry(entry as never);
+		const server = formFromEntry(testSite, entry as never);
 		getLocalBackup.mockResolvedValue({
 			key: `${ADMIN}:entry-1`,
 			entryId: "entry-1",
 			baseVersion: 3,
 			baseFingerprint: "old",
-			localFingerprint: formFingerprint({ ...server, doc: docOf("브라우저 본문") }),
+			localFingerprint: formFingerprint(testSite, { ...server, doc: docOf("브라우저 본문") }),
 			snapshot: { ...server, doc: docOf("브라우저 본문") },
 			changeSeq: 1,
 			savedAt: Date.now(),

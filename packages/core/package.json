@@ -21,7 +21,6 @@
 		"./plugin/server": "./src/plugin-server.ts",
 		"./adapters/auth": "./src/adapters/auth/index.ts",
 		"./testing": "./src/testing.ts",
-		"./register": "./src/register.ts",
 		"./cli": "./src/cli/index.ts",
 		"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 		"./render.css": "./render.css"
@@ -33,8 +32,7 @@
 		"test": "vitest",
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
-		"typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
-		"typecheck:other-site": "tsc --noEmit -p tsconfig.other-site.json",
+		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {
@@ -147,10 +145,6 @@
 			"./testing": {
 				"types": "./dist/testing.d.ts",
 				"default": "./dist/testing.js"
-			},
-			"./register": {
-				"types": "./dist/register.d.ts",
-				"default": "./dist/register.js"
 			},
 			"./cli": {
 				"types": "./dist/cli/index.d.ts",

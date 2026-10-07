@@ -1,8 +1,6 @@
-import { createTranslator } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./api-error-message";
 import { screensMessages } from "./messages";
-
-const t = createTranslator(screensMessages);
 
 /** Admin API error. The screen shows `message` as is and branches on `status` and `code`. */
 export class CmsApiError extends Error {
@@ -23,10 +21,11 @@ export class CmsApiError extends Error {
  * A network error rethrows the original `TypeError` so callers can tell it apart from being offline.
  */
 export async function cmsFetch<T = unknown>(
+	site: Pick<Site, "createTranslator">,
 	url: string,
 	init: Omit<RequestInit, "body"> & { json?: unknown; fallback?: string } = {},
 ): Promise<T> {
-	const { json, fallback = t("api.fallback"), headers, ...rest } = init;
+	const { json, fallback = site.createTranslator(screensMessages)("api.fallback"), headers, ...rest } = init;
 	const response = await fetch(url, {
 		...rest,
 		headers: json === undefined ? headers : { "Content-Type": "application/json", ...headers },
@@ -38,7 +37,7 @@ export async function cmsFetch<T = unknown>(
 		throw new CmsApiError(
 			response.status,
 			typeof body.code === "string" ? body.code : undefined,
-			cmsApiErrorMessage(body, fallback),
+			cmsApiErrorMessage(site, body, fallback),
 			cmsApiIssues(body),
 			body,
 		);
@@ -46,5 +45,9 @@ export async function cmsFetch<T = unknown>(
 	return body as T;
 }
 
-export const errorText = (error: unknown, fallback: string) =>
-	error instanceof CmsApiError ? error.message : error instanceof TypeError ? t("api.network") : fallback;
+export const errorText = (site: Pick<Site, "createTranslator">, error: unknown, fallback: string) =>
+	error instanceof CmsApiError
+		? error.message
+		: error instanceof TypeError
+			? site.createTranslator(screensMessages)("api.network")
+			: fallback;

@@ -1,6 +1,4 @@
-import { commonFieldKeys } from "../../schema/derive";
-import { isCollection, isItemCollection } from "../collections";
-import { isLocale } from "../locales";
+import type { Site } from "../../site";
 import { CmsError } from "../store/errors";
 import type { EntryStatus } from "../store/types";
 
@@ -18,8 +16,8 @@ export interface TranslationSource {
 	readonly translationGroupId: string | null;
 }
 
-export function assertKnownLocale(locale: string): void {
-	if (!isLocale(locale)) throw new CmsError("Unknown locale", "invalid_input");
+export function assertKnownLocale(site: Site, locale: string): void {
+	if (!site.isLocale(locale)) throw new CmsError("Unknown locale", "invalid_input");
 }
 
 /**
@@ -28,11 +26,12 @@ export function assertKnownLocale(locale: string): void {
  * (the store's unique index blocks a second translation in the same language).
  */
 export function assertTranslationSource(
+	site: Site,
 	source: TranslationSource | undefined,
 	translation: { readonly collection: string; readonly locale: string },
 ): void {
 	if (!source) throw new CmsError("Source entry not found", "not_found");
-	if (source.collection !== translation.collection || isItemCollection(translation.collection)) {
+	if (source.collection !== translation.collection || site.isItemCollection(translation.collection)) {
 		throw new CmsError("Only content collections have translations", "invalid_input");
 	}
 	if (source.translationGroupId !== null) {
@@ -46,12 +45,13 @@ export function assertTranslationSource(
 
 /** A translation stores only per-language values. Shared fields belong to the source. */
 export function assertTranslationMetadata(
+	site: Site,
 	collection: string,
 	isTranslation: boolean,
 	metadata: Record<string, unknown>,
 ): void {
-	if (!isTranslation || !isCollection(collection)) return;
-	const common = commonFieldKeys(collection, metadata);
+	if (!isTranslation || !site.isCollection(collection)) return;
+	const common = site.commonFieldKeys(collection, metadata);
 	if (common.length > 0) {
 		throw new CmsError(`Common fields belong to the source: ${common.join(", ")}`, "invalid_input");
 	}

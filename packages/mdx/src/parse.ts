@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import type { Root } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -5,6 +6,7 @@ import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { VFile } from "vfile";
+import { perSite } from "./per-site";
 import { remarkBreakNewline } from "./remark-break-newline";
 import type { SyntaxExtension } from "./syntax/types";
 import { NO_SYNTAX, syntaxRemarkPlugins } from "./syntax-config";
@@ -21,22 +23,24 @@ import { NO_SYNTAX, syntaxRemarkPlugins } from "./syntax-config";
  * validating the child count of `Tabs` and `Columns`, and validating event handler and expression attributes do not
  * need separate code per notation (splitting into two shapes leads to fixing only one of them).
  */
-const processorFor = (syntax: readonly SyntaxExtension[]) =>
+const processorFor = (site: Site, syntax: readonly SyntaxExtension[]) =>
 	unified()
 		.use(remarkParse)
 		.use(remarkMdx)
 		.use(remarkGfm)
 		.use(remarkMath, { singleDollarTextMath: false })
-		.use(syntaxRemarkPlugins(syntax))
+		.use(syntaxRemarkPlugins(site, syntax))
 		.use(remarkBreakNewline);
 
-const processors = new WeakMap<readonly SyntaxExtension[], ReturnType<typeof processorFor>>();
+/** The parsers of a site, one for each list of syntax extensions it is asked to read with. */
+const processorsOf = perSite(() => new WeakMap<readonly SyntaxExtension[], ReturnType<typeof processorFor>>());
 
-/** `syntax` is the syntax extensions to read with (none: standard MDX). The site's are `configuredSyntax()`. */
-export const parseMdxAst = (body: string, syntax: readonly SyntaxExtension[] = NO_SYNTAX): Root => {
+/** `syntax` is the syntax extensions to read with (none: standard MDX). The site's are `configuredSyntax(site)`. */
+export const parseMdxAst = (site: Site, body: string, syntax: readonly SyntaxExtension[] = NO_SYNTAX): Root => {
+	const processors = processorsOf(site);
 	let processor = processors.get(syntax);
 	if (!processor) {
-		processor = processorFor(syntax);
+		processor = processorFor(site, syntax);
 		processors.set(syntax, processor);
 	}
 	// Single `$` inline math is turned off. Symbols like jQuery `$` are common in body text; if mistaken for math,

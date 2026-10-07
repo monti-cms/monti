@@ -1,11 +1,11 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 import { type BareunResponse, bareunIssues, joinSegments } from "../mapping";
 import { bareunMessages } from "../messages";
 import sample from "./fixtures/bareun-sample.json";
 
 // Category names follow the admin language from the config, so the same wording is picked from the dictionary (descriptions are the Korean text Bareun returns, as is).
-const t = createTranslator(bareunMessages);
+const t = testSite.createTranslator(bareunMessages);
 
 // A real Bareun response (the request text is three paragraphs joined with `\n`; the third paragraph starts with the hidden placeholder `￼`).
 const segments = sample.request.split("\n").map((text, index) => ({ id: `p-${index}`, text, locale: "ko" }));
@@ -19,7 +19,7 @@ describe("bareunIssues", () => {
 	});
 
 	it("splits a real response into in-paragraph positions and expands merged blocks into individual fixes", () => {
-		const issues = bareunIssues(segments, response);
+		const issues = bareunIssues(testSite, segments, response);
 		expect(issues.map(({ segmentId, start, end }) => [segmentId, start, end])).toEqual([
 			["p-0", 12, 17],
 			["p-1", 0, 6],
@@ -41,7 +41,7 @@ describe("bareunIssues", () => {
 	});
 
 	it("fills in category, severity, description and source", () => {
-		const [standard, spacing] = bareunIssues(segments, response);
+		const [standard, spacing] = bareunIssues(testSite, segments, response);
 		expect(standard).toEqual({
 			segmentId: "p-0",
 			start: 12,
@@ -67,7 +67,7 @@ describe("bareunIssues", () => {
 			revised: "x",
 			revisions: [{ revised: "x", category: "TYPO", helpId: "t" }],
 		});
-		const issues = bareunIssues(segments, {
+		const issues = bareunIssues(testSite, segments, {
 			revisedBlocks: [
 				block(34, 4, "￼ 다음"), // hidden placeholder
 				block(15, 4, "다.\n띄"), // paragraph boundary
@@ -84,7 +84,7 @@ describe("bareunIssues", () => {
 			origin: { content: one[0]?.text.slice(beginOffset, beginOffset + 1), beginOffset, length: 1 },
 			revisions: revised.map((text) => ({ revised: text, category, helpId: category })),
 		});
-		const issues = bareunIssues(one, {
+		const issues = bareunIssues(testSite, one, {
 			revisedBlocks: [
 				// proto3 JSON omits positions that are 0.
 				{ origin: { content: "가", length: 1 }, revisions: [{ revised: "까", category: "TYPO" }] },
@@ -121,6 +121,6 @@ describe("bareunIssues", () => {
 	});
 
 	it("returns an empty array when there are no results", () => {
-		expect(bareunIssues(segments, {})).toEqual([]);
+		expect(bareunIssues(testSite, segments, {})).toEqual([]);
 	});
 });

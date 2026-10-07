@@ -1,11 +1,13 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../../../core/test/site";
 import { CmsAdminComponentsProvider } from "../../../../admin-components";
 import { chooseSelectOption } from "../../../../test/base-ui";
+import { renderWithSite } from "../../../../test/site";
 import { para, storedDoc } from "../../../../test/stored-doc";
 import { buildEditorExtensions } from "../../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../../tiptap-content";
@@ -15,8 +17,8 @@ afterEach(cleanup);
 
 function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(),
-		content: storedToTiptap(doc),
+		extensions: buildEditorExtensions(testSite),
+		content: storedToTiptap(testSite, doc),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -27,15 +29,17 @@ function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Edit
 
 const mount = async (doc: StoredDocument, wrap: (node: React.ReactNode) => React.ReactNode = (node) => node) => {
 	let editor: Editor | null = null;
-	render(
-		wrap(
-			<Harness
-				doc={doc}
-				onReady={(ready) => {
-					editor = ready;
-				}}
-			/>,
-		),
+	renderWithSite(
+		<>
+			{wrap(
+				<Harness
+					doc={doc}
+					onReady={(ready) => {
+						editor = ready;
+					}}
+				/>,
+			)}
+		</>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	await waitFor(() => expect(document.querySelector("[data-cms-custom-block]")).not.toBeNull());
@@ -45,7 +49,7 @@ const mount = async (doc: StoredDocument, wrap: (node: React.ReactNode) => React
 const NOTICE = storedDoc({ type: "notice", attrs: { level: "info" }, content: [para("본문")] });
 
 /** The attributes of the saved notice block. */
-const savedNotice = (editor: Editor) => tiptapToStored(editor.getJSON()).content[0];
+const savedNotice = (editor: Editor) => tiptapToStored(testSite, editor.getJSON()).content[0];
 
 /** Edit view registered by the site (example): turns the level into a button. */
 function NoticeView() {

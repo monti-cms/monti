@@ -1,8 +1,8 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
-import { ADDED_BLOCKS } from "../../blocks/active";
 import { storedCodeBlockAttrs } from "../../doc/stored-code-block";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
@@ -39,8 +39,9 @@ const heading = (level: number, value: string): CmsNode => ({
 	attrs: { level },
 	content: [text(value)],
 });
-const html = async (stored: StoredDocument, options: Parameters<typeof renderDocument>[1] = {}) =>
-	renderToStaticMarkup((await renderDocument(stored, options)).content as ReactNode);
+type RenderOptions = Omit<Parameters<typeof renderDocument>[1], "site">;
+const html = async (stored: StoredDocument, options: RenderOptions = {}) =>
+	renderToStaticMarkup((await renderDocument(stored, { site: testSite, ...options })).content as ReactNode);
 
 /** Components for any config: the table is loosely typed here, as the test sites have different blocks. */
 const loose = (components: LooseDocumentComponents) => components as unknown as DocumentComponents;
@@ -48,7 +49,7 @@ const loose = (components: LooseDocumentComponents) => components as unknown as 
 /** A code block as the stored document keeps it: the fence text (with the annotation comments) read into the code and its annotations. */
 const codeBlock = (language: string, meta: string, value: string): CmsNode => ({
 	type: "codeBlock",
-	attrs: storedCodeBlockAttrs({ language, meta, value }),
+	attrs: storedCodeBlockAttrs(testSite, { language, meta, value }),
 });
 const footnoteDoc = (): StoredDocument =>
 	doc(heading(2, "제목"), paragraph(text("본문"), { type: "footnoteReference", attrs: { label: "1" } }), {
@@ -59,7 +60,7 @@ const footnoteDoc = (): StoredDocument =>
 
 describe("renderDocument: the result", () => {
 	it("returns the content, the table of contents and the unknown nodes", async () => {
-		const rendered = await renderDocument(doc(heading(2, "제목"), paragraph(text("본문"))));
+		const rendered = await renderDocument(doc(heading(2, "제목"), paragraph(text("본문"))), { site: testSite });
 		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain('<h2 id="제목">');
 		expect(rendered.toc).toEqual([{ value: "제목", id: "제목", href: "#제목", level: 2, depth: 0 }]);
 		expect(rendered.unknown).toEqual([]);
@@ -67,7 +68,7 @@ describe("renderDocument: the result", () => {
 
 	it("renders a server component with CmsContent", async () => {
 		const stored = doc(paragraph(text("안녕")));
-		const element = await CmsContent({ doc: stored });
+		const element = await CmsContent({ cms: { site: testSite }, doc: stored });
 		expect(renderToStaticMarkup(element as ReactNode)).toBe("<p>안녕</p>");
 	});
 
@@ -80,7 +81,7 @@ describe("renderDocument: the result", () => {
 				{ type: "doc", version: 99, content: [] },
 				{ type: "doc", version: 2, content: [1] },
 			]) {
-				const rendered = await renderDocument(value as never);
+				const rendered = await renderDocument(value as never, { site: testSite });
 				expect(rendered).toEqual({ content: null, toc: [], unknown: [] });
 			}
 			expect(error).toHaveBeenCalled();
@@ -129,7 +130,7 @@ describe("heading anchors and the table of contents", () => {
 	});
 
 	it("lists levels 2 and 3 by default, counted from the first level", async () => {
-		const { toc } = await renderDocument(stored);
+		const { toc } = await renderDocument(stored, { site: testSite });
 		expect(toc.map(({ value, id, level, depth }) => [value, id, level, depth])).toEqual([
 			["개요", "개요", 2, 0],
 			["개요", "개요-1", 3, 1],
@@ -647,10 +648,10 @@ describe("footnotes", () => {
 });
 
 describe("blocks", () => {
-	const container = ADDED_BLOCKS.find(
+	const container = testSite.ADDED_BLOCKS.find(
 		(block) => block.syntax.kind === "container" && !block.parent && !block.children?.blocks,
 	);
-	const text_ = ADDED_BLOCKS.find((block) => block.syntax.kind === "text");
+	const text_ = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "text");
 
 	it.skipIf(!container)(
 		"passes the attributes of a block as flat props with its children, items and node",
@@ -727,7 +728,7 @@ describe("blocks", () => {
 	});
 
 	it("routes a code fence of a block to the block with the code as source", async () => {
-		const fence = ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
+		const fence = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
 		if (!fence || fence.syntax.kind !== "fence") return;
 		const seen: Record<string, unknown>[] = [];
 		await html(doc({ type: "codeBlock", attrs: { language: fence.syntax.lang, meta: "", code: "A -> B" } }), {
@@ -767,7 +768,7 @@ describe("unknown content: a fallback, never an error", () => {
 			return <span data-fallback={props.reason}>{props.children}</span>;
 		};
 		const stored = doc(paragraph(text("앞")), node, paragraph(text("뒤")));
-		const rendered = await renderDocument(stored, { components: loose({ fallback: Fallback }) });
+		const rendered = await renderDocument(stored, { site: testSite, components: loose({ fallback: Fallback }) });
 		const markup = renderToStaticMarkup(rendered.content as ReactNode);
 		expect(markup).toContain("앞");
 		expect(markup).toContain("뒤");
@@ -796,7 +797,7 @@ describe("unknown content: a fallback, never an error", () => {
 
 	it("renders an unknown mark as plain text", async () => {
 		const stored = doc(paragraph(text("글", [{ type: "mystery-mark" }, { type: "bold" }])));
-		const rendered = await renderDocument(stored);
+		const rendered = await renderDocument(stored, { site: testSite });
 		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("글");
 		expect(rendered.unknown.map((node) => node.type)).toEqual(["text"]);
 	});
@@ -807,24 +808,24 @@ describe("unknown content: a fallback, never an error", () => {
 			{ type: "mystery" },
 			paragraph(text("a", [{ type: "mystery-mark" }]), text("b", [{ type: "mystery-mark" }])),
 		);
-		const rendered = await renderDocument(stored, { onUnknown });
+		const rendered = await renderDocument(stored, { site: testSite, onUnknown });
 		// The unknown node, and the text the unknown mark is on (two neighbours in one mark are one run, so one report).
 		expect(onUnknown).toHaveBeenCalledTimes(2);
 		expect(rendered.unknown).toHaveLength(2);
-		await expect(renderDocument(stored, { strict: true })).rejects.toThrow(/Unknown content/);
+		await expect(renderDocument(stored, { site: testSite, strict: true })).rejects.toThrow(/Unknown content/);
 	});
 
 	it("falls back for a block of the config that has no component, and still shows its content", async () => {
-		const block = ADDED_BLOCKS.find((candidate) => candidate.syntax.kind === "container" && !candidate.parent);
+		const block = testSite.ADDED_BLOCKS.find((candidate) => candidate.syntax.kind === "container" && !candidate.parent);
 		if (!block) return;
 		const stored = doc({ type: block.name, content: [paragraph(text("안에"))] });
-		const rendered = await renderDocument(stored);
+		const rendered = await renderDocument(stored, { site: testSite });
 		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("안에");
 		expect(rendered.unknown.map((node) => node.type)).toEqual([block.name]);
 	});
 
 	describe("missing component warning", () => {
-		const block = ADDED_BLOCKS.find((candidate) => candidate.syntax.kind === "container" && !candidate.parent);
+		const block = testSite.ADDED_BLOCKS.find((candidate) => candidate.syntax.kind === "container" && !candidate.parent);
 		const stored = block ? doc({ type: block.name, content: [paragraph(text("x"))] }) : doc();
 
 		afterEach(() => {
@@ -836,8 +837,8 @@ describe("unknown content: a fallback, never an error", () => {
 			vi.stubEnv("NODE_ENV", "development");
 			resetMissingComponentWarnings();
 			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-			await renderDocument(stored);
-			await renderDocument(stored);
+			await renderDocument(stored, { site: testSite });
+			await renderDocument(stored, { site: testSite });
 			expect(warn).toHaveBeenCalledTimes(1);
 			expect(String(warn.mock.calls[0]?.[0])).toContain(`"${block?.name}"`);
 		});
@@ -846,14 +847,14 @@ describe("unknown content: a fallback, never an error", () => {
 			vi.stubEnv("NODE_ENV", "production");
 			resetMissingComponentWarnings();
 			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-			const rendered = await renderDocument(stored);
+			const rendered = await renderDocument(stored, { site: testSite });
 			expect(warn).not.toHaveBeenCalled();
 			expect(rendered.unknown).toHaveLength(1);
 		});
 	});
 
 	it("falls back for a block with an attribute of the wrong kind", async () => {
-		const block = ADDED_BLOCKS.find(
+		const block = testSite.ADDED_BLOCKS.find(
 			(candidate) =>
 				candidate.syntax.kind === "container" && !candidate.parent && Object.keys(candidate.attributes).length > 0,
 		);
@@ -865,7 +866,10 @@ describe("unknown content: a fallback, never an error", () => {
 			attrs: { [name as string]: { nested: "object" } },
 			content: [paragraph(text("안에"))],
 		});
-		const rendered = await renderDocument(stored, { components: loose({ blocks: { [block.name]: component } }) });
+		const rendered = await renderDocument(stored, {
+			site: testSite,
+			components: loose({ blocks: { [block.name]: component } }),
+		});
 		expect(component).not.toHaveBeenCalled();
 		expect(rendered.unknown.map((node) => node.type)).toEqual([block.name]);
 		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("안에");
@@ -903,7 +907,7 @@ describe("unknown content: a fallback, never an error", () => {
 			{ type: "footnoteDefinition", attrs: { label: "x" } },
 		];
 		for (const node of weird) {
-			await expect(renderDocument(doc(paragraph(text("앞")), node), {})).resolves.toBeDefined();
+			await expect(renderDocument(doc(paragraph(text("앞")), node), { site: testSite })).resolves.toBeDefined();
 		}
 	});
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { X } from "lucide-react";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from "react";
@@ -10,8 +10,6 @@ import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { collapseToEnd, PopoverFormError, PopoverFormFooter, submitOnEnter } from "./link-form";
 import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
 
 /**
  * Input form and popover to add, edit and remove a text decoration that carries one text property (body tooltip `content`, in-code tooltip, etc.).
@@ -45,6 +43,7 @@ export interface MarkTextFormProps {
 
 /** Decoration text input form. Shared by the formatting tool popover and the inline bubble. */
 export function MarkTextForm({ editor, mark, attribute, labels, active, initial, range, onDone }: MarkTextFormProps) {
+	const t = useTranslator(editorMessages);
 	const id = useId();
 	const [value, setValue] = useState(initial);
 	const [error, setError] = useState<string | null>(null);

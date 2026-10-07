@@ -67,8 +67,8 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
 - 관리자 AI 화면에서는 켜기·요청 받기·연결·모델·보낼 입력·지시문·기준값·검사 값만 고친다. 고친 값만 DB(플러그인 저장소의 `action-overrides` 컬렉션)에 둔다.
   "기본값으로"는 입력 칸만 기본값으로 되돌리고, 저장은 따로 누른다.
 - 실행: `POST /api/cms/v1/ai/run { action, input | inputs, env }`. 관리자 화면에서는 `useAiAction("summary").run({ title, body })`나
-  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />`(`@monti-cms/ai/admin`)처럼 이름으로 부르고,
-  이름·입력·결과 타입은 설정에서 나온다.
+  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />`(`@monti-cms/ai/admin`)처럼 이름으로 부른다. 그대로 쓰면 어떤 이름이든 받고,
+  `const { useAiAction, AiButton } = aiClient<typeof config>()`로 얻은 둘은 사이트 설정의 이름·입력·결과 타입을 따른다(모르는 이름은 타입 오류).
 - 판단 방식(`engine: "decide"`, System One)은 선택지(`choices`)마다 확률을 받아 기준 이상만 후보로 낸다.
 
 ### 모델은 MDX를 읽고 쓴다
@@ -212,7 +212,7 @@ aiPlugin({
 | --- | --- |
 | `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, 기여 타입(`AiContribution`·`AiActionFactory`·`AiSiteView`) (사이트 설정용, 서버·브라우저 공용) |
 | `@monti-cms/ai/server` | 서버 쪽(API 경로·데이터 이전). 본체가 불러 쓴다. 브라우저 묶음에서는 빈 진입점이다 |
-| `@monti-cms/ai/admin` | 관리자 쪽(AI 화면·공급자), `useAiAction`, `AiButton` |
+| `@monti-cms/ai/admin` | 관리자 쪽(AI 화면·공급자), `useAiAction`, `AiButton`, `aiClient` |
 
 ## 개발
 

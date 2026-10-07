@@ -1,17 +1,16 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { Code2 } from "lucide-react";
+import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
 import { codeEffectsKey } from "./effects-plugin";
 import { cancelLink, commitLink, linkLines, linkTextRange } from "./link-commands";
 import { codeBlockMessages } from "./messages";
 
-const t = createTranslator(codeBlockMessages);
-
-const lineLabel = (lines: { start: number; end: number }) =>
+const lineLabel = (t: TranslatorFor<typeof codeBlockMessages>, lines: { start: number; end: number }) =>
 	lines.end - lines.start === 1
 		? t("linkBar.line", { line: lines.start + 1 })
 		: t("linkBar.lineRange", { start: lines.start + 1, end: lines.end });
@@ -21,6 +20,8 @@ const lineLabel = (lines: { start: number; end: number }) =>
  * Ends with Esc or "Cancel".
  */
 export function CodeLinkBar({ editor }: { editor: Editor }) {
+	const site = useSite();
+	const t = useTranslator(codeBlockMessages);
 	const status = useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -54,12 +55,12 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 						{t("linkBar.pickLinesBefore")}
 						<b>{quoted}</b>
 						{t("linkBar.pickLinesAfter")}
-						{status.lines && <b className="ml-1 text-cms-primary">· {lineLabel(status.lines)}</b>}
+						{status.lines && <b className="ml-1 text-cms-primary">· {lineLabel(t, status.lines)}</b>}
 					</>
 				) : (
 					<>
 						{t("linkBar.pickTextBefore")}
-						<b>{t("linkBar.codeLines", { lines: status.lines ? lineLabel(status.lines) : "" })}</b>
+						<b>{t("linkBar.codeLines", { lines: status.lines ? lineLabel(t, status.lines) : "" })}</b>
 						{t("linkBar.pickTextAfter")}
 						{status.text && <b className="ml-1 text-cms-primary">· {quoted}</b>}
 					</>
@@ -71,7 +72,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 					size="xs"
 					disabled={!ready}
 					onMouseDown={(event) => event.preventDefault()}
-					onClick={() => commitLink(editor.view)}
+					onClick={() => commitLink(site, editor.view)}
 				>
 					{t("linkBar.link")}
 				</Button>

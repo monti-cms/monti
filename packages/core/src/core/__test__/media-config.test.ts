@@ -1,26 +1,35 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { defineCollection, defineConfig, fields } from "../..";
+import { createSite } from "../../site";
 import { validateMediaConfig } from "../media-types";
 
-vi.mock("../../config/resolved", async (importOriginal) => {
-	const original = await importOriginal<typeof import("../../config/resolved")>();
-	return {
-		...original,
-		cmsConfig: {
-			...original.cmsConfig,
-			media: {
-				maxImageBytes: 2048,
-				maxPixels: 100,
-				maxFileBytes: 4096,
-				imageTypes: ["image/png"],
-				fileTypes: ["application/pdf"],
-			},
+const site = createSite(
+	defineConfig({
+		collections: {
+			page: defineCollection({
+				label: "Page",
+				kind: "document",
+				fields: {
+					title: fields.text({ label: "Title", required: true }),
+					slug: fields.slug({ label: "Slug", from: "title", required: true }),
+				},
+			}),
 		},
-	};
-});
+		locales: [{ code: "en", name: "English" }],
+		defaultLocale: "en",
+		media: {
+			maxImageBytes: 2048,
+			maxPixels: 100,
+			maxFileBytes: 4096,
+			imageTypes: ["image/png"],
+			fileTypes: ["application/pdf"],
+		},
+	}),
+);
+const api = site.api;
 
 describe("media settings", () => {
-	it("reads limits and formats from the site config", async () => {
-		const api = await import("../api");
+	it("reads limits and formats from the site config", () => {
 		expect(api.MAX_MEDIA_BYTES).toBe(2048);
 		expect(api.MAX_MEDIA_PIXELS).toBe(100);
 		expect(api.MAX_FILE_BYTES).toBe(4096);
@@ -31,8 +40,8 @@ describe("media settings", () => {
 		expect(api.fileTypeFor("a.zip")).toBeNull();
 	});
 
-	it("rejects formats excluded in the config in upload requests", async () => {
-		const { mediaUploadBodySchema } = await import("../api");
+	it("rejects formats excluded in the config in upload requests", () => {
+		const { mediaUploadBodySchema } = api;
 		const base = { filename: "a", byteSize: 10 };
 		expect(mediaUploadBodySchema.safeParse({ ...base, mimeType: "image/png" }).success).toBe(true);
 		expect(mediaUploadBodySchema.safeParse({ ...base, mimeType: "image/jpeg" }).success).toBe(false);

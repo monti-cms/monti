@@ -1,12 +1,14 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { CmsAdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
 import { BlockFrame, type BlockView, useBlockEditor } from "../../../hooks/public";
+import { renderWithSite } from "../../../test/site";
 import { storedDoc } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
@@ -15,8 +17,8 @@ afterEach(cleanup);
 
 function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(),
-		content: storedToTiptap(doc),
+		extensions: buildEditorExtensions(testSite),
+		content: storedToTiptap(testSite, doc),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -27,7 +29,7 @@ function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Edit
 
 const mount = async (doc: StoredDocument, ready: string, views: Record<string, BlockView> = {}) => {
 	let editor: Editor | null = null;
-	render(
+	renderWithSite(
 		<CmsAdminComponentsProvider components={{ blockViews: views }}>
 			<Harness
 				doc={doc}
@@ -86,7 +88,10 @@ describe("image, file and math on the blockViews contract", () => {
 		expect(document.querySelector("[data-image-block]")).toBeNull();
 		click("set-alt");
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs).toMatchObject({ alt: "바뀐 설명", width: "50%" }));
-		expect(tiptapToStored(editor.getJSON()).content[0]).toMatchObject({ type: "image", attrs: { alt: "바뀐 설명" } });
+		expect(tiptapToStored(testSite, editor.getJSON()).content[0]).toMatchObject({
+			type: "image",
+			attrs: { alt: "바뀐 설명" },
+		});
 		await waitFor(() => expect(screen.getByTestId("alt").textContent).toBe("바뀐 설명"));
 	});
 
@@ -105,7 +110,10 @@ describe("image, file and math on the blockViews contract", () => {
 		expect(screen.getByTestId("source").textContent).toBe("x^2");
 		click("set-source");
 		await waitFor(() =>
-			expect(tiptapToStored(editor.getJSON()).content[0]).toMatchObject({ type: "math", attrs: { value: "y^2" } }),
+			expect(tiptapToStored(testSite, editor.getJSON()).content[0]).toMatchObject({
+				type: "math",
+				attrs: { value: "y^2" },
+			}),
 		);
 	});
 

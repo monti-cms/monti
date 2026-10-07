@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../../../test/any-site";
+import { testConfig } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
 import { CmsError } from "../../../../core/store";
 import { PATCH as patchFolder } from "../[id]/route";
@@ -22,7 +23,7 @@ const mockStore = {
 	}),
 };
 
-const cms = fakeCms({ store: mockStore });
+const cms = fakeCms({ config: testConfig, store: mockStore });
 
 describe("Folders HTTP API Contract", () => {
 	it("GET /folders returns list", async () => {

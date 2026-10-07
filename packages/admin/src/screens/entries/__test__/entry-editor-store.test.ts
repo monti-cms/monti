@@ -1,5 +1,6 @@
 import { STORED_DOCUMENT_VERSION, type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";
 import {
 	COMPOSITION_WAIT_MS,
@@ -43,6 +44,7 @@ function setup({
 	const recovery = fakeRecoveryStore(records);
 	const onSaved = vi.fn();
 	const core = createEntryEditor({
+		site: testSite,
 		adminId: ADMIN,
 		target: target ?? { mode: "edit", entryId: server.id },
 		client: fake.client,
@@ -71,7 +73,7 @@ describe("load", () => {
 		expect(client.get).toHaveBeenCalledWith("entry-1");
 		expect(editor().load).toEqual({ status: "ready" });
 		expect(editor().collection).toBe("post");
-		expect(editor().form).toEqual(formFromEntry(ENTRY));
+		expect(editor().form).toEqual(formFromEntry(testSite, ENTRY));
 		expect(editor().saveStatus).toBe("saved");
 		expect(editor().hasUnsavedChanges).toBe(false);
 		expect(editor().getSnapshot()).toMatchObject({ entryId: "entry-1", version: 4, saveStatus: "saved" });
@@ -830,14 +832,14 @@ describe("recovery on open", () => {
 	});
 
 	it("a new entry offers the copy of its collection when it differs from its base", async () => {
-		const base = formFromEntry({ ...ENTRY, working: { metadata: {}, doc: docOf("") }, workingSlug: null });
+		const base = formFromEntry(testSite, { ...ENTRY, working: { metadata: {}, doc: docOf("") }, workingSlug: null });
 		const snapshot = { ...base, title: "쓰던 글" };
 		const record = {
 			key: `${ADMIN}:new:post`,
 			entryId: "new",
 			baseVersion: 0,
-			baseFingerprint: formFingerprint(base),
-			localFingerprint: formFingerprint(snapshot),
+			baseFingerprint: formFingerprint(testSite, base),
+			localFingerprint: formFingerprint(testSite, snapshot),
 			snapshot,
 			changeSeq: 1,
 			savedAt: 5,
@@ -863,7 +865,7 @@ describe("recovery on open", () => {
 describe("recovery copies saved before the form held the body as a document", () => {
 	/** What the browser stored then: the body as MDX text in `snapshot.mdx`, and the fingerprint of that form. */
 	const legacyCopy = (server: EntryData, changes: { title?: string; mdx: string }, baseVersion = server.version) => {
-		const { doc: _doc, ...current } = formFromEntry(server);
+		const { doc: _doc, ...current } = formFromEntry(testSite, server);
 		const base = { ...current, mdx: "첫째 줄\n둘째 줄" };
 		const snapshot = { ...base, ...changes };
 		return {

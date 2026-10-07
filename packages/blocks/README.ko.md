@@ -69,7 +69,7 @@ import "@monti-cms/blocks/styles.css";
 - 공개 화면의 코드 연결: 이름표는 문서에서 하나뿐이고, 연결은 코드 블록 하나(그 이름표가 있는 첫 블록)로만 이어진다. 글자에 마우스를 올리거나 포커스를 두면 연결된 줄이 강조되고,
   그 줄이 화면 밖이면 글자 옆에 작은 미리보기(최대 8줄과 코드 블록 제목)도 뜬다(`role="tooltip"`, 벗어나거나 포커스를 잃거나 Esc면 사라진다). 누르면 그 줄로 스크롤한다.
   이름표를 가리키는 첫 글자가 연결된 첫 줄 끝에 되돌아가기 버튼(`↩`)을 붙이고, 누르면 그 글자로 스크롤해 잠시 강조한다(`data-focused`).
-- 글자색 고르기 목록은 `color({ palette })`(없으면 기본 8색 `DEFAULT_TEXT_PALETTE`). 본문에는 헥스 값이 저장되므로 목록을 바꿔도
+- 글자색 고르기 목록은 `color({ palette })`(없으면 기본 8색 `defaultTextPalette(t)`). 본문에는 헥스 값이 저장되므로 목록을 바꿔도
   이미 쓴 글은 그대로다. 공개 화면은 `@monti-cms/blocks/color`의 `cleanTextColor`·`textColorProps`로 그리고, 색은
   `render.css`의 `.cms-color`가 테마에 맞춰 고른다(편집기는 `styles.css`에 같은 규칙이 있다).
 - 공개 화면: 각 확장이 기본 공개 컴포넌트를 준다(플러그인 `render`가 `{ documentComponents }`를 돌려주며, `@monti-cms/core/render`의 `renderDocument`와 `CmsContent`가 자동으로 쓴다).

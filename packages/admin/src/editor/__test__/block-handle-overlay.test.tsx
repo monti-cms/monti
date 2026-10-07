@@ -1,17 +1,18 @@
-import { createTranslator } from "@monti-cms/core/client";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
+import { renderWithSite } from "../../test/site";
 import { BlockHandleOverlay } from "../block-handle-overlay";
 import { editorMessages } from "../messages";
 
-const t = createTranslator(editorMessages);
+const t = testSite.createTranslator(editorMessages);
 
 describe("BlockHandleOverlay DropdownMenu and drag behavior", () => {
 	it("the handle button is draggable and forwards dragstart/dragend events", () => {
 		const onDragStart = vi.fn();
 		const onDragEnd = vi.fn();
 
-		render(
+		renderWithSite(
 			<BlockHandleOverlay
 				coords={{ top: 100, left: 50 }}
 				onMoveUp={vi.fn()}
@@ -44,7 +45,7 @@ describe("BlockHandleOverlay DropdownMenu and drag behavior", () => {
 		const onDuplicate = vi.fn();
 		const onDelete = vi.fn();
 
-		const { unmount } = render(
+		const { unmount } = renderWithSite(
 			<BlockHandleOverlay
 				coords={{ top: 100, left: 50 }}
 				onMoveUp={onMoveUp}

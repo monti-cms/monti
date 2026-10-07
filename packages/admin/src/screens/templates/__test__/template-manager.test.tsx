@@ -1,13 +1,14 @@
-import { createTranslator } from "@monti-cms/core/client";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
+import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { sharedMessages } from "../../shared/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateManager } from "../template-manager";
 
-const t = createTranslator(templatesMessages);
-const tShared = createTranslator(sharedMessages);
+const t = testSite.createTranslator(templatesMessages);
+const tShared = testSite.createTranslator(sharedMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));

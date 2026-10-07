@@ -1,7 +1,6 @@
 import type { Pool, PoolClient } from "pg";
-import { cmsConfig } from "../../../config/resolved";
-import { DEFAULT_LOCALE } from "../../../core/locales";
 import { type FormatRegistry, NO_FORMATS } from "../../../format/registry";
+import type { Site } from "../../../site";
 import { migrateBlockIds } from "./block-id-migration";
 import { migrateCodeAnnotations } from "./code-annotation-migration";
 import { recomputeContentHashes } from "./content-hash-backfill";
@@ -16,6 +15,8 @@ import { migrateUnparsedBodies } from "./unparsed-migration";
 
 /** What a step may need besides the database. */
 interface MigrationContext {
+	/** The site the store is migrated for: its default locale and seed templates. */
+	readonly site: Site;
 	/**
 	 * The formats of the instance. Seed templates written as text are read with them, and the steps that predate stored documents (`0010` to `0015`) read the
 	 * MDX text of old bodies with the `mdx` format (`@monti-cms/mdx`), only when there is a body to read.
@@ -278,15 +279,15 @@ const STEPS: readonly MigrationStep[] = [
 	},
 	{
 		name: "0009_locales",
-		/** Multilingual: per-language documents, translation groups, per-language slugs */
-		run: (client, qSchema) =>
+		/** Multilingual: per-language documents, translation groups, per-language slugs. The column default is the site's default locale (the value of the rows that existed before locales). */
+		run: (client, qSchema, { site }) =>
 			client.query(`
 			-- Multilingual: one document per language + translation group. The group ID is the source's ID; the source itself is NULL.
-			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${DEFAULT_LOCALE}';
+			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${site.DEFAULT_LOCALE}';
 			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS translation_group_id UUID REFERENCES "${qSchema}".entries(id) ON DELETE NO ACTION;
 			CREATE UNIQUE INDEX IF NOT EXISTS entries_translation_locale_key
 			ON "${qSchema}".entries ((COALESCE(translation_group_id, id)), locale);
-			ALTER TABLE "${qSchema}".content_addresses ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${DEFAULT_LOCALE}';
+			ALTER TABLE "${qSchema}".content_addresses ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${site.DEFAULT_LOCALE}';
 			DO $$
 			BEGIN
 				IF NOT EXISTS (
@@ -304,7 +305,7 @@ const STEPS: readonly MigrationStep[] = [
 		name: "0010_content_hash_v2",
 		/** Content hashes now cover the parsed body instead of the MDX string (`cms-snapshot-v2`). Recomputes every stored hash. */
 		run: (client, qSchema, context) =>
-			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
+			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats, context.site) }),
 	},
 	{
 		name: "0011_line_break_hashes",
@@ -313,7 +314,7 @@ const STEPS: readonly MigrationStep[] = [
 		 * body of some stored bodies changed. Recomputes every stored hash so that "unpublished changes" keeps meaning what it meant.
 		 */
 		run: (client, qSchema, context) =>
-			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
+			recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats, context.site) }),
 	},
 	{
 		name: "0012_soft_line_endings",
@@ -322,7 +323,8 @@ const STEPS: readonly MigrationStep[] = [
 		 * look by getting a `<br />` at each such line ending (working and published bodies, translation base sources, templates). Also recomputes
 		 * `content_hash` and `search_text` of every body. A body that does not parse is left as it is and logged.
 		 */
-		run: (client, qSchema, context) => migrateSoftBreaks(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
+		run: (client, qSchema, context) =>
+			migrateSoftBreaks(client, qSchema, { site: context.site, bodies: legacyBodiesOf(context.formats, context.site) }),
 	},
 	{
 		name: "0013_stored_documents",
@@ -336,7 +338,10 @@ const STEPS: readonly MigrationStep[] = [
 				ALTER TABLE "${qSchema}".entry_bodies ADD COLUMN IF NOT EXISTS doc JSONB;
 				ALTER TABLE "${qSchema}".body_templates ADD COLUMN IF NOT EXISTS doc JSONB;
 			`);
-			await migrateStoredDocuments(client, qSchema, { bodies: legacyBodiesOf(context.formats) });
+			await migrateStoredDocuments(client, qSchema, {
+				site: context.site,
+				bodies: legacyBodiesOf(context.formats, context.site),
+			});
 		},
 	},
 	{
@@ -357,7 +362,10 @@ const STEPS: readonly MigrationStep[] = [
 		 * `updated_at` are kept. A body whose document cannot be read is left as it is and logged.
 		 */
 		run: (client, qSchema, context) =>
-			migrateCodeAnnotations(client, qSchema, { bodies: legacyBodiesOf(context.formats) }),
+			migrateCodeAnnotations(client, qSchema, {
+				site: context.site,
+				bodies: legacyBodiesOf(context.formats, context.site),
+			}),
 	},
 	{
 		name: "0016_plugin_documents",
@@ -394,8 +402,8 @@ const STEPS: readonly MigrationStep[] = [
 		 * templates through the slug addresses, recomputes `content_hash`, writes `mdx` from the new documents and rebuilds the body references (`kind: 'entry'`).
 		 * A link that resolves to nothing stays as it is and is logged. `version`, `updated_at` and block ids are kept.
 		 */
-		run: async (client, qSchema) => {
-			await migrateLinkEntryIds(client, qSchema);
+		run: async (client, qSchema, context) => {
+			await migrateLinkEntryIds(context.site, client, qSchema);
 		},
 	},
 	{
@@ -423,9 +431,9 @@ const STEPS: readonly MigrationStep[] = [
 		name: "seed_initial_body_templates",
 		/** Seeds the site config's initial body templates into a new store, once. */
 		run: async (client, qSchema, context) => {
-			for (const t of cmsConfig.seed?.templates ?? []) {
+			for (const t of context.site.config.seed?.templates ?? []) {
 				// Seeded as it is stored: its document. A template written as text is read by its format.
-				const doc = await seedTemplateDocument(t, context.formats);
+				const doc = await seedTemplateDocument(context.site, t, context.formats);
 				await client.query(
 					`INSERT INTO "${qSchema}".body_templates (id, name, doc, version, created_at, updated_at)
 					 VALUES ($1, $2, $3, 1, NOW(), NOW())
@@ -462,10 +470,10 @@ async function prepare(client: PoolClient, qSchema: string): Promise<void> {
  */
 export async function migrateContentStore(
 	pool: Pool,
-	options?: { schema?: string; formats?: FormatRegistry },
+	options: { site: Site; schema?: string; formats?: FormatRegistry },
 ): Promise<void> {
-	const qSchema = validateSchemaName(options?.schema);
-	const context: MigrationContext = { formats: options?.formats ?? NO_FORMATS };
+	const qSchema = validateSchemaName(options.schema);
+	const context: MigrationContext = { site: options.site, formats: options.formats ?? NO_FORMATS };
 	await withTransaction(pool, async (client) => {
 		await prepare(client, qSchema);
 		const applied = new Set(

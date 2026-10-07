@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
@@ -21,6 +22,7 @@ describe("checks of a stored document", () => {
 	it("does not end a stretch of marked text at a line break or a footnote reference", () => {
 		const note = { type: "untranslated" };
 		const result = checkDocument(
+			testSite,
 			doc(
 				paragraph(
 					"aaaaaaaa",
@@ -38,6 +40,7 @@ describe("checks of a stored document", () => {
 
 	it("takes the block of a node without an id from the block around it", () => {
 		const result = checkDocument(
+			testSite,
 			doc({
 				id: "cccccccc",
 				type: "paragraph",
@@ -50,7 +53,10 @@ describe("checks of a stored document", () => {
 	});
 
 	it("holds no references of a body it could not read, and says so", () => {
-		const result = checkDocument(doc({ id: "dddddddd", type: "unparsed", attrs: { format: "mdx", source: "<Open" } }));
+		const result = checkDocument(
+			testSite,
+			doc({ id: "dddddddd", type: "unparsed", attrs: { format: "mdx", source: "<Open" } }),
+		);
 		expect(result.unparsed).toBe(true);
 		expect(result.incomplete).toBe(true);
 		expect(result.issues).toEqual([
@@ -70,9 +76,13 @@ describe("checks of a stored document", () => {
 
 describe("a document and its text are one body", () => {
 	const prepare = (input: { body: string; format: string } | { doc: unknown }) =>
-		prepareSnapshot({ collection: contentCollection, slug: "same", metadata: { title: "Same" }, ...input } as never, {
-			import: { formats: createFormatRegistry([paragraphsFormat]) },
-		});
+		prepareSnapshot(
+			testSite,
+			{ collection: contentCollection, slug: "same", metadata: { title: "Same" }, ...input } as never,
+			{
+				import: { formats: createFormatRegistry([paragraphsFormat]) },
+			},
+		);
 
 	it("has the content hash of the text it was read from, whichever way it is sent", async () => {
 		const written = "A bold and it with code and a [link](https://example.com).\n\nHeading";
@@ -114,6 +124,7 @@ describe("a document and its text are one body", () => {
 			],
 		};
 		const next = await prepareSnapshot(
+			testSite,
 			{ collection: contentCollection, slug: "same", metadata: { title: "Same" }, doc: sent },
 			{ previousDoc: first.doc },
 		);

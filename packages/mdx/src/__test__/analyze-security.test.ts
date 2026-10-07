@@ -1,14 +1,16 @@
-import { ADDED_BLOCKS, BLOCKS } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze } from "../analyze";
 
 /** Public component name of a block that holds body content. Uses the site's added container block if there is one, otherwise the core block. */
-const container = [...ADDED_BLOCKS, ...BLOCKS].find((block) => block.syntax.kind === "container" && !block.parent);
+const container = [...testSite.ADDED_BLOCKS, ...testSite.BLOCKS].find(
+	(block) => block.syntax.kind === "container" && !block.parent,
+);
 if (!container) throw new Error("analyze-security test: no container block");
 const Box = container.component;
 
 const errorCodes = (source: string) =>
-	analyze(source)
+	analyze(testSite, source)
 		.errors.map((error) => error.code)
 		.join(" | ");
 

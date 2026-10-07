@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { docOf as docOfText } from "../../../test/stored-content";
 import { computeContentHash } from "../../core/content-hash";
 import { assignBlockIds, BLOCK_ID_PATTERN, forEachBlock, regenerateBlockIds, withoutBlockIds } from "../block-ids";
@@ -10,7 +11,7 @@ const paragraph = (value: string): CmsNode => ({ type: "paragraph", content: [te
 
 /** A document of the given blocks, with ids that pair with the blocks of `previous` where they match (as every write gives them). */
 const docWith = (content: CmsNode[], previous?: StoredDocument | null): StoredDocument => {
-	const doc = canonicalDocument({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
+	const doc = canonicalDocument(testSite, { type: "doc", version: STORED_DOCUMENT_VERSION, content });
 	return { ...doc, content: assignBlockIds(doc.content, [previous?.content]) };
 };
 

@@ -1,6 +1,5 @@
 import { type CollectionSchema, type StoredField, SUMMARY_ROLE, valueFieldsOf } from "@monti-cms/core";
 import { type AiAttach, type AiSiteView, aiAction, aiInput } from "./action";
-import { lazyTranslator } from "./i18n";
 import { presetMessages } from "./presets.messages";
 import { regexRuns, sameStructure, uniqueSlug } from "./validators";
 
@@ -16,21 +15,22 @@ import { regexRuns, sameStructure, uniqueSlug } from "./validators";
  * that have a body. The prompt can be edited in the admin AI screen, and the preset option `prompt` can change its initial value.
  */
 
-const t = lazyTranslator(presetMessages);
+/** Translator of the preset labels in the site's admin language. */
+const textOf = (site: Pick<AiSiteView, "createTranslator">) => site.createTranslator(presetMessages);
 
 /** The material a beside-a-field slot provides. A field action can receive all these inputs, and `send` chooses what to send. */
-const fieldInput = () => ({
-	title: aiInput.text({ label: t("input.title") }),
-	summary: aiInput.text({ label: t("input.summary") }),
-	body: aiInput.mdx({ label: t("input.body") }),
-	current: aiInput.value({ label: t("input.current") }),
+const fieldInput = (site: AiSiteView) => ({
+	title: aiInput.text({ label: textOf(site)("input.title") }),
+	summary: aiInput.text({ label: textOf(site)("input.summary") }),
+	body: aiInput.mdx({ label: textOf(site)("input.body") }),
+	current: aiInput.value({ label: textOf(site)("input.current") }),
 });
 
 /** The material received by the image actions (alt text, caption). */
-const imageInput = () => ({
-	image: aiInput.image({ label: t("input.image") }),
-	around: aiInput.text({ label: t("input.around") }),
-	current: aiInput.value({ label: t("input.current") }),
+const imageInput = (site: AiSiteView) => ({
+	image: aiInput.image({ label: textOf(site)("input.image") }),
+	around: aiInput.text({ label: textOf(site)("input.around") }),
+	current: aiInput.value({ label: textOf(site)("input.current") }),
 });
 
 type FieldOptions = {
@@ -150,8 +150,8 @@ export const aiPresets = {
 			});
 			if (targets.length === 0) return undefined;
 			return aiAction({
-				label: t("label.slug"),
-				input: fieldInput(),
+				label: textOf(site)("label.slug"),
+				input: fieldInput(site),
 				// Send the current slug too so each press produces a different slug.
 				send: ["title", "body", "current"],
 				result: "candidates",
@@ -182,8 +182,8 @@ export const aiPresets = {
 			if (targets.length === 0) return undefined;
 			const max = options.maxLength ?? smallestMax(targets) ?? 160;
 			return aiAction({
-				label: t("label.summary"),
-				input: fieldInput(),
+				label: textOf(site)("label.summary"),
+				input: fieldInput(site),
 				send: ["title", "body"],
 				result: "text",
 				askInstruction: true,
@@ -216,8 +216,8 @@ export const aiPresets = {
 			const targets = fieldTargets(site, options, recordRelation(site, true, first));
 			if (targets.length === 0) return undefined;
 			return aiAction({
-				label: t("label.suggest", { name: targets[0]?.label ?? t("field.tags") }),
-				input: fieldInput(),
+				label: textOf(site)("label.suggest", { name: targets[0]?.label ?? textOf(site)("field.tags") }),
+				input: fieldInput(site),
 				send: ["title", "summary", "body"],
 				engine: "decide",
 				choices: { from: "collection", collection: first },
@@ -247,10 +247,10 @@ export const aiPresets = {
 			if (!first) return undefined;
 			const targets = fieldTargets(site, options, recordRelation(site, false, first));
 			if (targets.length === 0) return undefined;
-			const label = targets[0]?.label ?? t("field.category");
+			const label = targets[0]?.label ?? textOf(site)("field.category");
 			return aiAction({
-				label: t("label.suggest", { name: label }),
-				input: fieldInput(),
+				label: textOf(site)("label.suggest", { name: label }),
+				input: fieldInput(site),
 				send: ["title", "summary", "body"],
 				engine: "decide",
 				choices: { from: "collection", collection: first },
@@ -269,8 +269,8 @@ export const aiPresets = {
 	imageAlt: (options: { readonly prompt?: string; readonly styleGuide?: string } = {}) => {
 		return (site: AiSiteView) =>
 			aiAction({
-				label: t("label.imageAlt"),
-				input: imageInput(),
+				label: textOf(site)("label.imageAlt"),
+				input: imageInput(site),
 				send: ["image", "around"],
 				result: "candidates",
 				askInstruction: true,
@@ -297,8 +297,8 @@ export const aiPresets = {
 	imageCaption: (options: { readonly prompt?: string; readonly styleGuide?: string } = {}) => {
 		return (site: AiSiteView) =>
 			aiAction({
-				label: t("label.imageCaption"),
-				input: imageInput(),
+				label: textOf(site)("label.imageCaption"),
+				input: imageInput(site),
 				send: ["image", "around"],
 				result: "candidates",
 				askInstruction: true,
@@ -324,11 +324,11 @@ export const aiPresets = {
 	mediaFilename: (options: { readonly prompt?: string; readonly styleGuide?: string } = {}) => {
 		return (site: AiSiteView) =>
 			aiAction({
-				label: t("label.mediaFilename"),
+				label: textOf(site)("label.mediaFilename"),
 				input: {
-					image: aiInput.image({ label: t("input.image") }),
-					filename: aiInput.text({ label: t("input.filename") }),
-					current: aiInput.value({ label: t("input.current") }),
+					image: aiInput.image({ label: textOf(site)("input.image") }),
+					filename: aiInput.text({ label: textOf(site)("input.filename") }),
+					current: aiInput.value({ label: textOf(site)("input.current") }),
 				},
 				send: ["image", "filename"],
 				result: "candidates",
@@ -359,11 +359,11 @@ export const aiPresets = {
 			if (site.locales.length < 2) return undefined;
 			const attributes = translatableAttributes(site);
 			return aiAction({
-				label: t("label.translate"),
+				label: textOf(site)("label.translate"),
 				input: {
-					block: aiInput.mdx({ label: t("input.source"), required: true }),
-					from: aiInput.locale({ label: t("input.fromLocale"), required: true }),
-					to: aiInput.locale({ label: t("input.toLocale"), required: true }),
+					block: aiInput.mdx({ label: textOf(site)("input.source"), required: true }),
+					from: aiInput.locale({ label: textOf(site)("input.fromLocale"), required: true }),
+					to: aiInput.locale({ label: textOf(site)("input.toLocale"), required: true }),
 				},
 				result: "mdx",
 				askInstruction: true,
@@ -393,10 +393,10 @@ export const aiPresets = {
 		return (site: AiSiteView) => {
 			if (!hasBody(site)) return undefined;
 			return aiAction({
-				label: t("label.polish"),
+				label: textOf(site)("label.polish"),
 				input: {
-					selection: aiInput.mdx({ label: t("input.selection"), required: true }),
-					title: aiInput.text({ label: t("input.title") }),
+					selection: aiInput.mdx({ label: textOf(site)("input.selection"), required: true }),
+					title: aiInput.text({ label: textOf(site)("input.title") }),
 				},
 				result: "mdx",
 				stream: true,
@@ -424,10 +424,10 @@ export const aiPresets = {
 		return (site: AiSiteView) => {
 			if (!hasBody(site)) return undefined;
 			return aiAction({
-				label: t("label.draft"),
+				label: textOf(site)("label.draft"),
 				input: {
-					title: aiInput.text({ label: t("input.title") }),
-					body: aiInput.mdx({ label: t("input.currentBody") }),
+					title: aiInput.text({ label: textOf(site)("input.title") }),
+					body: aiInput.mdx({ label: textOf(site)("input.currentBody") }),
 				},
 				result: "mdx",
 				stream: true,
@@ -449,25 +449,27 @@ export const aiPresets = {
 	},
 
 	/** Regex candidates for finding parts of a code block to fold. */
-	codeFold: (options: { readonly prompt?: string } = {}) =>
-		aiAction({
-			label: t("label.codeFold"),
-			input: { code: aiInput.code({ label: t("input.code") }) },
-			result: "candidates",
-			apply: "append",
-			askInstruction: true,
-			checks: [regexRuns("code")],
-			prompt:
-				options.prompt ??
-				lines(
-					"Write 3 JavaScript regular expression candidates that find parts of the code a reader can safely fold away.",
-					"- For example: names in a long import list, long strings, repeated config values, arguments that are not important to the explanation",
-					"- Write only the body of the regular expression, without the surrounding slashes and flags",
-					"- Match within a single line",
-					"- Do not fold the core flow of the code",
-				),
-			attach: [{ slot: "codeRules", target: "fold" }],
-		}),
+	codeFold:
+		(options: { readonly prompt?: string } = {}) =>
+		(site: AiSiteView) =>
+			aiAction({
+				label: textOf(site)("label.codeFold"),
+				input: { code: aiInput.code({ label: textOf(site)("input.code") }) },
+				result: "candidates",
+				apply: "append",
+				askInstruction: true,
+				checks: [regexRuns("code")],
+				prompt:
+					options.prompt ??
+					lines(
+						"Write 3 JavaScript regular expression candidates that find parts of the code a reader can safely fold away.",
+						"- For example: names in a long import list, long strings, repeated config values, arguments that are not important to the explanation",
+						"- Write only the body of the regular expression, without the surrounding slashes and flags",
+						"- Match within a single line",
+						"- Do not fold the core flow of the code",
+					),
+				attach: [{ slot: "codeRules", target: "fold" }],
+			}),
 };
 
 /** The target collection of the first record relation field found (among the collections the field action looks at, in declaration order). */

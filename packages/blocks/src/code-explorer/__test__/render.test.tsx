@@ -1,16 +1,11 @@
+import { renderMdx } from "@monti-cms/mdx/render";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { renderSite as site } from "../../test/render-config";
 
-// Public components come from the plugin (`blocks()`), so this test swaps in a config that uses it.
-vi.mock("../../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../../test/render-config")).default,
-}));
-
-const { renderMdx } = await import("@monti-cms/mdx/render");
-
-const html = async (source: string, locale?: string, syntax?: Parameters<typeof renderMdx>[1]) =>
-	renderToStaticMarkup((await renderMdx(source, { locale, ...syntax })).content);
+const html = async (source: string, locale?: string, syntax?: Omit<Parameters<typeof renderMdx>[1], "site">) =>
+	renderToStaticMarkup((await renderMdx(source, { site, locale, ...syntax })).content);
 
 const fence = (title: string, code = "") => `\`\`\`ts title="${title}"\n${code}${code ? "\n" : ""}\`\`\``;
 const explorer = (blocks: readonly string[], open?: string) =>

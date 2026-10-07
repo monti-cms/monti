@@ -44,7 +44,7 @@ export const fakeMdxRegistry = () => {
 		mimeType: "text/mdx",
 		extension: "mdx",
 		export: textOf,
-		legacyBodies: bodies,
+		legacyBodies: () => bodies,
 	});
 	return { formats: createFormatRegistry([format]), bodies };
 };

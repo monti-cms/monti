@@ -10,13 +10,11 @@ import {
 	ComboboxList,
 	cn,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import type { AiModelInfo } from "../connection";
 import { aiCommonMessages } from "./ai-common.messages";
-
-const t = createTranslator(aiCommonMessages);
 
 /** Where to fetch the model list from. A saved connection by id; before saving, by URL and key. */
 export type ModelSource = { providerId: string } | { url: string; apiKey?: string };
@@ -26,11 +24,13 @@ export type ModelSource = { providerId: string } | { url: string; apiKey?: strin
  * If there is no `source`, it is not fetched.
  */
 export function useModelList(source: ModelSource | null) {
+	const site = useSite();
+	const t = useTranslator(aiCommonMessages);
 	const query = useQuery({
 		queryKey: ["cms", "ai", "models", source],
 		queryFn: async ({ signal }) =>
 			(
-				await cmsFetch<{ items: AiModelInfo[] }>(cmsApiUrl("/v1/ai/models"), {
+				await cmsFetch<{ items: AiModelInfo[] }>(site, cmsApiUrl("/v1/ai/models"), {
 					method: "POST",
 					json: source,
 					signal,
@@ -44,7 +44,7 @@ export function useModelList(source: ModelSource | null) {
 	return {
 		models: query.data ?? null,
 		loading: query.isFetching,
-		error: query.error ? errorText(query.error, t("modelsFailed")) : null,
+		error: query.error ? errorText(site, query.error, t("modelsFailed")) : null,
 	};
 }
 
@@ -73,6 +73,7 @@ export function ModelCombobox({
 	placeholder?: string;
 	"aria-label"?: string;
 }) {
+	const t = useTranslator(aiCommonMessages);
 	const [query, setQuery] = useState("");
 	const options = useMemo<Item[]>(
 		() => (models ?? []).map((model) => ({ value: model.id, label: model.id })),

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { AdminSidebar } from "../../screens/admin-sidebar";
 import { type FolderActions, useFolderActions } from "../../screens/shared/use-folder-actions";
 import { withBlockEditor } from "../../test/block-editor";
@@ -12,7 +13,7 @@ import { SidebarProvider } from "../../ui/sidebar";
 import { BlockHandleOverlay } from "../block-handle-overlay";
 import { ImageBlockView } from "../image-node-view";
 import { InternalLinkPopup } from "../internal-link-popup";
-import { SLASH_COMMANDS } from "../slash-command";
+import { slashCommands } from "../slash-command";
 import { SlashMenuPopup } from "../slash-menu-popup";
 
 vi.mock("@tiptap/react", async (importOriginal) => {
@@ -218,7 +219,7 @@ describe("editor accessibility", () => {
 		const onCloseSlash = vi.fn();
 		render(
 			<SlashMenuPopup
-				items={[SLASH_COMMANDS[0]]}
+				items={[slashCommands(testSite)[0]]}
 				coords={{ top: 0, left: 0 }}
 				selectedIndex={0}
 				onSelect={onSelectSlash}

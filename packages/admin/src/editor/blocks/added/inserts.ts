@@ -1,7 +1,7 @@
-import type { BlockDefinition, BlockInsert } from "@monti-cms/core/client";
+import type { BlockDefinition, BlockInsert, Site } from "@monti-cms/core/client";
 import type { Editor, JSONContent, Range } from "@tiptap/core";
 import { formatMeta } from "../../code-block/meta";
-import { ADDED_NODE_BLOCKS, blockNodeName, childBlocksOf, defaultValues, isContainer, isFence } from "./shared";
+import { addedNodeBlocks, blockNodeName, childBlocksOf, defaultValues, isContainer, isFence } from "./shared";
 
 const paragraph = (text?: string): JSONContent =>
 	text ? { type: "paragraph", content: [{ type: "text", text }] } : { type: "paragraph" };
@@ -32,10 +32,8 @@ const directiveContent = (
  * exist, uses the children of the initial value; if absent, inserts as many first child blocks as the minimum count (one if there is no minimum).
  * A body container starts with the initial value's code blocks (`codeBlocks`) if it has any, otherwise with one paragraph.
  */
-export function insertContentOf(
-	block: BlockDefinition,
-	all: readonly BlockDefinition[] = ADDED_NODE_BLOCKS,
-): JSONContent {
+export function insertContentOf(site: Pick<Site, "ADDED_BLOCKS">, block: BlockDefinition): JSONContent {
+	const all = addedNodeBlocks(site);
 	const insert = block.editor.insert;
 	if (isFence(block) && block.syntax.kind === "fence") {
 		return { type: blockNodeName(block), attrs: { value: insert?.code ?? "", language: block.syntax.lang } };
@@ -50,11 +48,15 @@ export function insertContentOf(
 }
 
 /** Insert actions of added blocks (slash menu). The key is the block name. */
-export const ADDED_BLOCK_INSERT_ACTIONS: Readonly<Record<string, (editor: Editor, range: Range) => void>> =
+export const addedBlockInsertActions = (
+	site: Pick<Site, "ADDED_BLOCKS">,
+): Readonly<Record<string, (editor: Editor, range: Range) => void>> =>
 	Object.fromEntries(
-		ADDED_NODE_BLOCKS.filter((block) => !block.parent).map((block) => [
-			block.name,
-			(editor: Editor, range: Range) =>
-				editor.chain().focus().deleteRange(range).insertContent(insertContentOf(block)).run(),
-		]),
+		addedNodeBlocks(site)
+			.filter((block) => !block.parent)
+			.map((block) => [
+				block.name,
+				(editor: Editor, range: Range) =>
+					editor.chain().focus().deleteRange(range).insertContent(insertContentOf(site, block)).run(),
+			]),
 	);

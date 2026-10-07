@@ -2,18 +2,19 @@ import type { Element, Root } from "hast";
 import { toJsxRuntime } from "hast-util-to-jsx-runtime";
 import { type ComponentType, Fragment, type ReactNode } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
-import { annotationConfig } from "../../annotation/code-block/active";
 import { parseCodeFenceMeta } from "../../annotation/code-block/code-fence-to-document";
 import { codeBlockDocumentOf } from "../../doc/stored-code-block";
 import type { CmsJsonValue, CmsNode } from "../../doc/types";
+import type { Site } from "../../site";
 import {
 	type CodeHighlightOptions,
 	createAllowedRenderTagsFromConfig,
 	createCodeHighlighter,
 	fromCodeBlockDocumentToShikiAnnotationPayload,
 	type HighlightFn,
+	type HighlightSite,
 	showsLineNumbers,
-	highlight as siteHighlight,
+	siteHighlight,
 } from "../code";
 import type { StoredCodeAnnotations } from "./types";
 
@@ -39,10 +40,13 @@ const hasHighlighterOptions = (options: CodeHighlightOptions) =>
 const customHighlighters = new WeakMap<object, Promise<HighlightFn>>();
 
 /** The function that highlights for the given code options: theirs, one built from their languages and themes, or the site's. */
-export const highlighterFor = (options: CodeHighlightOptions | undefined): Promise<HighlightFn> | HighlightFn => {
-	if (!options) return siteHighlight;
+export const highlighterFor = (
+	site: HighlightSite,
+	options: CodeHighlightOptions | undefined,
+): Promise<HighlightFn> | HighlightFn => {
+	if (!options) return siteHighlight(site);
 	if (options.highlight) return options.highlight;
-	if (!hasHighlighterOptions(options)) return siteHighlight;
+	if (!hasHighlighterOptions(options)) return siteHighlight(site);
 	let created = customHighlighters.get(options);
 	if (!created) {
 		created = createCodeHighlighter(options).then((highlighter) => highlighter.highlight);
@@ -93,6 +97,7 @@ export const readCodeBlock = (node: CmsNode) => {
 
 /** Highlights one stored code block. It never throws: code that cannot be annotated or highlighted is shown as plain text. */
 export const highlightCodeBlock = (
+	site: Pick<Site, "annotationConfig">,
 	node: CmsNode,
 	highlight: HighlightFn,
 	options: CodeHighlightOptions | undefined,
@@ -100,8 +105,8 @@ export const highlightCodeBlock = (
 	const { language, code } = readCodeBlock(node);
 	const lang = language || "text";
 	try {
-		const document = codeBlockDocumentOf(node.attrs ?? {});
-		const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, annotationConfig);
+		const document = codeBlockDocumentOf(site, node.attrs ?? {});
+		const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, site.annotationConfig);
 		const title = typeof payload.meta.title === "string" ? payload.meta.title : undefined;
 		const numbered = showsLineNumbers(payload.meta);
 		const base = { code: payload.code, language: lang, showLineNumbers: numbered, ...(title ? { title } : {}) };
@@ -112,7 +117,7 @@ export const highlightCodeBlock = (
 			decorations: payload.decorations,
 			lineDecorations: payload.lineDecorations,
 			rowWrappers: payload.rowWrappers,
-			allowedRenderTags: createAllowedRenderTagsFromConfig(annotationConfig),
+			allowedRenderTags: createAllowedRenderTagsFromConfig(site.annotationConfig),
 		});
 		const found = root.children.find((child): child is Element => child.type === "element");
 		if (!found) return { ...base, pre: plainPre(payload.code), notes: [] } satisfies HighlightedCode;
@@ -143,8 +148,8 @@ export type CodeTags = Readonly<Record<string, ComponentType<{ readonly children
 const PassThrough = ({ children }: { readonly children?: ReactNode }) => children;
 
 /** The highlighted `<pre>` as React elements. A render tag without a component shows its text. */
-export const codePreElement = (pre: Element, tags: CodeTags): ReactNode => {
-	const allowed = createAllowedRenderTagsFromConfig(annotationConfig);
+export const codePreElement = (site: Pick<Site, "annotationConfig">, pre: Element, tags: CodeTags): ReactNode => {
+	const allowed = createAllowedRenderTagsFromConfig(site.annotationConfig);
 	const components: Record<string, ComponentType<{ readonly children?: ReactNode }>> = {};
 	// Only components (`Tooltip`) can be missing: the lowercase tags are HTML elements, or `fold` and `collapse`, which the core defaults draw.
 	for (const tag of allowed) if (/^[A-Z]/.test(tag)) components[tag] = PassThrough;

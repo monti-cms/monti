@@ -1,15 +1,15 @@
-import { createTranslator } from "@monti-cms/core/client";
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { para, storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
 import { footnoteNumbers, nextFootnoteLabel } from "../footnote-nodes";
 import { editorMessages } from "../messages";
-import { filterCommands, SLASH_COMMANDS } from "../slash-command";
+import { filterCommands, slashCommands } from "../slash-command";
 import { OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "../tiptap-content";
 
-const t = createTranslator(editorMessages);
+const t = testSite.createTranslator(editorMessages);
 
 const ref = (label: string): CmsNode => ({ type: "footnoteReference", attrs: { label } });
 const def = (label: string, ...content: CmsNode[]): CmsNode => ({
@@ -20,11 +20,11 @@ const def = (label: string, ...content: CmsNode[]): CmsNode => ({
 const code = (source: string): CmsNode => ({ type: "codeBlock", attrs: { language: "ts", meta: "", code: source } });
 const line = (...content: CmsNode[]): CmsNode => ({ type: "paragraph", content });
 
-const tiptapOf = (doc: StoredDocument) => storedToTiptap(doc);
+const tiptapOf = (doc: StoredDocument) => storedToTiptap(testSite, doc);
 const createEditor = (doc: StoredDocument) =>
-	new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(doc) });
+	new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOf(doc) });
 /** The stored document the editor content is saved as. */
-const saved = (json: JSONContent) => tiptapToStored(json);
+const saved = (json: JSONContent) => tiptapToStored(testSite, json);
 
 const SOURCE = storedDoc(
 	line(text("First"), ref("a"), text(" and second"), ref("b"), text(" and first again"), ref("a"), text(".")),
@@ -186,14 +186,16 @@ describe("footnote numbering", () => {
 });
 
 describe("Footnote slash command", () => {
-	const item = () => SLASH_COMMANDS.find((command) => command.title === t("slash.footnote.title"));
+	const item = () => slashCommands(testSite).find((command) => command.title === t("slash.footnote.title"));
 
 	it("is in the menu and found by its keywords", () => {
 		expect(item()).toBeDefined();
 		for (const keyword of t("slash.footnote.keywords").split(",")) {
-			expect(filterCommands(keyword.trim()).map((command) => command.title)).toContain(t("slash.footnote.title"));
+			expect(filterCommands(testSite, keyword.trim()).map((command) => command.title)).toContain(
+				t("slash.footnote.title"),
+			);
 		}
-		expect(filterCommands("footnote").map((command) => command.title)).toContain(t("slash.footnote.title"));
+		expect(filterCommands(testSite, "footnote").map((command) => command.title)).toContain(t("slash.footnote.title"));
 	});
 
 	it("inserts a reference at the cursor and appends an empty definition with the next numeric label", () => {

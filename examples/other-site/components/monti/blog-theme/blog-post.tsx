@@ -1,4 +1,3 @@
-import { isLocale, localizePath } from "@monti-cms/core/client";
 import type { ReadEntry } from "@monti-cms/core/read";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,7 +14,7 @@ export interface BlogPostProps {
 /** The post of the request: a 404 for an unknown, unpublished or foreign-locale address, and a permanent redirect from an old address. */
 async function readPost({ params }: BlogPostProps): Promise<ReadEntry> {
 	const { locale, slug } = await params;
-	if (locale !== undefined && !isLocale(locale)) notFound();
+	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) notFound();
 	const result = await blogTheme.cms.read.getEntry({
 		collection: blogTheme.collection,
 		slug: decodeURIComponent(slug),
@@ -57,7 +56,7 @@ export async function BlogPostPage(props: BlogPostProps) {
 	return (
 		<main className="mx-auto max-w-2xl px-4 py-12">
 			<Link
-				href={localizePath(entry.locale, blogTheme.routeBase)}
+				href={blogTheme.cms.site.localizePath(entry.locale, blogTheme.routeBase)}
 				className="text-neutral-600 text-sm hover:underline dark:text-neutral-400"
 			>
 				← {blogTheme.blogTitle}
@@ -66,7 +65,7 @@ export async function BlogPostPage(props: BlogPostProps) {
 			<div className="mb-8">
 				<PostMeta entry={entry} />
 			</div>
-			<ArticleBody entry={entry} components={blogTheme.components} />
+			<ArticleBody cms={blogTheme.cms} entry={entry} components={blogTheme.components} />
 			{newer || older ? (
 				<nav aria-label="More posts" className="mt-12 grid gap-4 sm:grid-cols-2">
 					{older ? <Neighbor entry={older} label="Older post" align="left" /> : <span />}
@@ -80,7 +79,7 @@ export async function BlogPostPage(props: BlogPostProps) {
 /** Title, description (the excerpt) and Open Graph of the post. An unknown address gets no metadata: the page itself answers 404 or redirects. */
 export async function generateBlogPostMetadata({ params }: BlogPostProps): Promise<Metadata> {
 	const { locale, slug } = await params;
-	if (locale !== undefined && !isLocale(locale)) return {};
+	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) return {};
 	const result = await blogTheme.cms.read.getEntry({
 		collection: blogTheme.collection,
 		slug: decodeURIComponent(slug),

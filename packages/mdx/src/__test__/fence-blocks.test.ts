@@ -1,9 +1,9 @@
-import { ADDED_BLOCKS, BLOCKS } from "@monti-cms/core/client";
 import type { Root } from "mdast";
 import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { analyze } from "../analyze";
 import { remarkFenceBlocksToMdx } from "../remark-fence-blocks";
 
@@ -11,17 +11,17 @@ import { remarkFenceBlocksToMdx } from "../remark-fence-blocks";
  * Block names are looked up from the current config (the reference blog setup has `mermaid` and `chart`; another site's config has `chart` and `map`).
  * If the config has no group block with a fixed child count (e.g. a tabs group), that case is skipped.
  */
-const fenceBlock = ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
+const fenceBlock = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
 if (fenceBlock?.syntax.kind !== "fence") throw new Error("fence-blocks test: the config has no fence block");
 const fenceLang = fenceBlock.syntax.lang;
 /** A group block with minimum/maximum child counts and its child (e.g. a tabs group and a tab). */
-const group = ADDED_BLOCKS.flatMap((block) => {
-	const child = BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
+const group = testSite.ADDED_BLOCKS.flatMap((block) => {
+	const child = testSite.BLOCKS.find((candidate) => candidate.name === block.children?.blocks?.[0]);
 	const { min, max } = block.children ?? {};
 	return child && min && max !== undefined ? [{ block, child, min, max }] : [];
 })[0];
 const run = (body: string): Root => {
-	const processor = unified().use(remarkParse).use(remarkMdx).use(remarkFenceBlocksToMdx);
+	const processor = unified().use(remarkParse).use(remarkMdx).use(remarkFenceBlocksToMdx, { site: testSite });
 	return processor.runSync(processor.parse(body)) as Root;
 };
 
@@ -44,8 +44,8 @@ describe("public render of code fence blocks", () => {
 	});
 
 	it("also accepts the renderer name of an added block as body JSX", () => {
-		expect(analyze(`<${fenceBlock.component} source="chart bar" />\n`).errors).toEqual([]);
-		expect(analyze("<Unknown />\n").errors.map(({ code, params }) => ({ code, params }))).toEqual([
+		expect(analyze(testSite, `<${fenceBlock.component} source="chart bar" />\n`).errors).toEqual([]);
+		expect(analyze(testSite, "<Unknown />\n").errors.map(({ code, params }) => ({ code, params }))).toEqual([
 			{ code: "disallowed_jsx_element", params: { name: "Unknown" } },
 		]);
 	});
@@ -71,9 +71,9 @@ describe("child count of added blocks", () => {
 				`</${block.component}>`,
 				"",
 			].join("\n");
-		expect(analyze(groupOf(min - 1)).errors.map((error) => error.message)).toEqual([
+		expect(analyze(testSite, groupOf(min - 1)).errors.map((error) => error.message)).toEqual([
 			`${block.component}는 ${min}~${max}개의 ${child.component}만 허용합니다.`,
 		]);
-		expect(analyze(groupOf(min)).errors).toEqual([]);
+		expect(analyze(testSite, groupOf(min)).errors).toEqual([]);
 	});
 });

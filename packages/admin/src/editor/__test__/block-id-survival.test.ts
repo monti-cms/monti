@@ -1,8 +1,8 @@
-import { BLOCKS } from "@monti-cms/core/client";
 import type { CmsNode } from "@monti-cms/core/document";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { buildEditorExtensions } from "../extensions";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
@@ -66,7 +66,7 @@ const tabsDoc: StoredDocument = {
 const idsOf = (nodes: readonly CmsNode[] | undefined): string[] =>
 	(nodes ?? []).flatMap((node) => [...(node.id ? [node.id] : []), ...idsOf(node.content)]);
 
-const roundTrip = (doc: StoredDocument) => tiptapToStored(storedToTiptap(doc));
+const roundTrip = (doc: StoredDocument) => tiptapToStored(testSite, storedToTiptap(testSite, doc));
 
 describe("block ids through the editor", () => {
 	it.each([
@@ -77,10 +77,13 @@ describe("block ids through the editor", () => {
 	});
 
 	it("keeps the ids of a table after its text is edited and a cell is typed into", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(tableDoc) });
+		const editor = new Editor({
+			extensions: buildEditorExtensions(testSite),
+			content: storedToTiptap(testSite, tableDoc),
+		});
 		editor.commands.setTextSelection(4);
 		editor.commands.insertContent("x");
-		const saved = tiptapToStored(editor.getJSON());
+		const saved = tiptapToStored(testSite, editor.getJSON());
 		expect(idsOf(saved.content)).toEqual(
 			expect.arrayContaining(idsOf(tableDoc.content).filter((id) => !id.startsWith("par"))),
 		);
@@ -89,13 +92,16 @@ describe("block ids through the editor", () => {
 	});
 
 	// The reference blog config has tabs and columns; another site config may not install them.
-	it.skipIf(!BLOCKS.some((block) => block.name === "tabs"))(
+	it.skipIf(!testSite.BLOCKS.some((block) => block.name === "tabs"))(
 		"keeps the ids of tabs and columns after an edit inside them",
 		() => {
-			const editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(tabsDoc) });
+			const editor = new Editor({
+				extensions: buildEditorExtensions(testSite),
+				content: storedToTiptap(testSite, tabsDoc),
+			});
 			editor.commands.setTextSelection(editor.state.doc.content.size - 3);
 			editor.commands.insertContent("!");
-			const saved = tiptapToStored(editor.getJSON());
+			const saved = tiptapToStored(testSite, editor.getJSON());
 			expect(idsOf(saved.content)).toEqual(
 				expect.arrayContaining(["tab00001", "tbi00001", "tbi00002", "col00001", "cli00001", "cli00002"]),
 			);

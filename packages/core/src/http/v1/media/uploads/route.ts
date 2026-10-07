@@ -1,13 +1,4 @@
 import { randomUUID } from "node:crypto";
-import {
-	ALLOWED_FILE_MIME_TYPES,
-	ALLOWED_IMAGE_MIME_TYPES,
-	fileTypeFor,
-	isImageMime,
-	MAX_FILE_BYTES,
-	MAX_MEDIA_BYTES,
-	mediaUploadBodySchema,
-} from "../../../../core/api";
 import { HttpError } from "../../error-handler";
 import { adminRoute, json, parseWith, readJsonBody } from "../../handler";
 import { extensionFor, UPLOAD_URL_TTL_SECONDS } from "../media-files";
@@ -19,22 +10,32 @@ import { extensionFor, UPLOAD_URL_TTL_SECONDS } from "../media-files";
 export const POST = adminRoute(async ({ request, cms }) => {
 	const raw = (await readJsonBody(request)) as { mimeType?: unknown; original?: { mimeType?: unknown } };
 	// §10.1: a disallowed file type is 415 (distinct from the 400 format error).
-	const allowed = [...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_FILE_MIME_TYPES] as readonly unknown[];
+	const allowed = [
+		...cms.site.api.ALLOWED_IMAGE_MIME_TYPES,
+		...cms.site.api.ALLOWED_FILE_MIME_TYPES,
+	] as readonly unknown[];
 	if (raw?.mimeType !== undefined && !allowed.includes(raw.mimeType)) {
 		throw new HttpError(415, "unsupported_media_type", `Allowed types: ${allowed.join(", ")}`);
 	}
 	const originalMime = raw?.original?.mimeType;
-	if (originalMime !== undefined && !(ALLOWED_IMAGE_MIME_TYPES as readonly unknown[]).includes(originalMime)) {
-		throw new HttpError(415, "unsupported_media_type", `Allowed image types: ${ALLOWED_IMAGE_MIME_TYPES.join(", ")}`);
+	if (
+		originalMime !== undefined &&
+		!(cms.site.api.ALLOWED_IMAGE_MIME_TYPES as readonly unknown[]).includes(originalMime)
+	) {
+		throw new HttpError(
+			415,
+			"unsupported_media_type",
+			`Allowed image types: ${cms.site.api.ALLOWED_IMAGE_MIME_TYPES.join(", ")}`,
+		);
 	}
-	const body = parseWith(mediaUploadBodySchema, raw);
-	const isFile = !isImageMime(body.mimeType);
+	const body = parseWith(cms.site.api.mediaUploadBodySchema, raw);
+	const isFile = !cms.site.api.isImageMime(body.mimeType);
 	// An attachment's type must match its filename extension. This stops type swaps such as sending a code file as text.
-	if (isFile && fileTypeFor(body.filename) !== body.mimeType) {
+	if (isFile && cms.site.api.fileTypeFor(body.filename) !== body.mimeType) {
 		throw new HttpError(415, "unsupported_media_type", `File extension does not match ${body.mimeType}`);
 	}
 	const originalFile = "original" in body ? body.original : undefined;
-	const limit = isFile ? MAX_FILE_BYTES : MAX_MEDIA_BYTES;
+	const limit = isFile ? cms.site.api.MAX_FILE_BYTES : cms.site.api.MAX_MEDIA_BYTES;
 	for (const file of [body, originalFile]) {
 		if (file && file.byteSize > limit) {
 			throw new HttpError(

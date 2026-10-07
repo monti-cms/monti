@@ -77,8 +77,9 @@ and `seoDescription` attach this way.
   separate click.
 - Running: `POST /api/cms/v1/ai/run { action, input | inputs, env }`. In the admin UI, call by name, as in
   `useAiAction("summary").run({ title, body })` or
-  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />` (`@monti-cms/ai/admin`). The name, input, and result
-  types come from the config.
+  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />` (`@monti-cms/ai/admin`). Called as they are, any name is
+  accepted; `const { useAiAction, AiButton } = aiClient<typeof config>()` gives both with the name, input, and result types of the site config (an unknown name is a type
+  error).
 - The decide engine (`engine: "decide"`, System One) gets a probability for each choice (`choices`) and returns only those at or above
   the threshold as candidates.
 
@@ -237,7 +238,7 @@ block's source, are left as is.
 | --- | --- |
 | `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
 | `@monti-cms/ai/server` | Server side (API routes, data migration). Loaded by the core. It is an empty entry point in browser bundles |
-| `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton` |
+| `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton`, `aiClient` |
 
 ## Development
 

@@ -1,13 +1,14 @@
-import { createTranslator } from "@monti-cms/core/client";
+"use client";
+
+import { useTranslator } from "@monti-cms/core/client";
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { uiMessages } from "./messages";
 
-const t = createTranslator(uiMessages);
-
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+	const t = useTranslator(uiMessages);
 	return (
 		<nav
 			role="navigation"
@@ -48,9 +49,11 @@ function PaginationLink({ className, isActive, size = "icon", ...props }: Pagina
 
 function PaginationPrevious({
 	className,
-	text = t("pagination.previous"),
+	text,
 	...props
 }: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
+	const t = useTranslator(uiMessages);
+	text ??= t("pagination.previous");
 	return (
 		<PaginationLink
 			aria-label={t("pagination.previousPage")}
@@ -66,9 +69,11 @@ function PaginationPrevious({
 
 function PaginationNext({
 	className,
-	text = t("pagination.next"),
+	text,
 	...props
 }: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
+	const t = useTranslator(uiMessages);
+	text ??= t("pagination.next");
 	return (
 		<PaginationLink aria-label={t("pagination.nextPage")} size="default" className={cn("pr-2!", className)} {...props}>
 			<span className="hidden sm:block">{text}</span>
@@ -78,6 +83,7 @@ function PaginationNext({
 }
 
 function PaginationEllipsis({ className, ...props }: React.ComponentProps<"span">) {
+	const t = useTranslator(uiMessages);
 	return (
 		<span
 			aria-hidden

@@ -1,5 +1,5 @@
-import { assertPluginPagesFree, type CmsPlugin } from "@monti-cms/core";
-import { cmsConfig } from "@monti-cms/core/client";
+import { assertPluginPagesFree } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 import type { ComponentType, ReactNode } from "react";
 
 /**
@@ -22,18 +22,20 @@ export interface CmsAdminPlugin {
 /** Creates an admin plugin (only type-checks). */
 export const defineAdminPlugin = (plugin: CmsAdminPlugin): CmsAdminPlugin => plugin;
 
-/** The site config's plugins. A config without plugins has an empty tuple type, so it is widened when read. */
-const PLUGINS: readonly CmsPlugin[] = cmsConfig.plugins ?? [];
+type LoadedAdminPlugins = Promise<readonly (CmsAdminPlugin & { readonly name: string })[]>;
 
-let loaded: Promise<readonly (CmsAdminPlugin & { readonly name: string })[]> | undefined;
+const loadedBySite = new WeakMap<object, LoadedAdminPlugins>();
 
 /**
- * Loads the admin side of the site config's plugins. On success it is read once and reused.
- * If loading fails or a screen path collides with the core or another plugin, nothing is remembered so the next call retries, and the error is thrown as is.
+ * Loads the admin side of a site's plugins (`site.plugins`, the instance's real site, not the browser's snapshot: the loaders are server code). On success it is
+ * read once per site and reused. If loading fails or a screen path collides with the core or another plugin, nothing is remembered so the next call retries,
+ * and the error is thrown as is.
  */
-export function loadAdminPlugins(): Promise<readonly (CmsAdminPlugin & { readonly name: string })[]> {
-	loaded ??= Promise.all(
-		PLUGINS.map(async (plugin) => ({
+export function loadAdminPlugins(site: Pick<Site, "plugins">): LoadedAdminPlugins {
+	const known = loadedBySite.get(site);
+	if (known) return known;
+	const loaded: LoadedAdminPlugins = Promise.all(
+		site.plugins.map(async (plugin) => ({
 			name: plugin.name,
 			...((await plugin.admin?.())?.default as CmsAdminPlugin | undefined),
 		})),
@@ -45,9 +47,10 @@ export function loadAdminPlugins(): Promise<readonly (CmsAdminPlugin & { readonl
 			return plugins;
 		})
 		.catch((error) => {
-			loaded = undefined;
+			loadedBySite.delete(site);
 			console.error("[@monti-cms/admin] failed to load admin plugins", error);
 			throw error;
 		});
+	loadedBySite.set(site, loaded);
 	return loaded;
 }

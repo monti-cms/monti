@@ -2,11 +2,6 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import type { NextConfig } from "next";
 
-export interface WithCmsOptions {
-	/** Site config file path (shared by server and browser). Relative to the project root (e.g. `./src/cms.config.ts`). */
-	readonly config: string;
-}
-
 const PACKAGES = ["@monti-cms/core"];
 /** Core-side packages. Only the optional peer dependencies of these and of CMS plugin packages are checked. */
 const CORE_PACKAGES = ["@monti-cms/core", "@monti-cms/admin", "@monti-cms/nextjs"];
@@ -60,14 +55,14 @@ export function missingOptionalPeers(root: string, boundary?: string): string[] 
 }
 
 /**
- * Adds the CMS wiring to the Next config. Builds package sources (TypeScript) together with the app and points the `@cms-config` alias that CMS code reads
- * at the site config file. The alias for type checking goes separately in the app's `tsconfig.json` `paths`. The server config is not linked: it is passed to
- * `createCms` in the app's own server file.
- * Optional dependencies of CMS packages that are not installed (e.g. the block extension's `mermaid`) are pointed at an empty module (using that feature raises an error telling you to install it).
+ * Adds the CMS wiring to the Next config. Builds package sources (TypeScript) together with the app, tells the server and browser bundles Next's `basePath`, and
+ * points optional dependencies of CMS packages that are not installed (e.g. the block extension's `mermaid`) at an empty module (using that feature raises
+ * an error telling you to install it).
+ *
+ * It links no config file: the site config and the server config are passed to `createCms` in the app's own server file, and the admin gets the site
+ * from that instance.
  */
-export function withCms(nextConfig: NextConfig, options: WithCmsOptions): NextConfig {
-	const relative = (file: string) => (file.startsWith(".") ? file : `./${file}`);
-	const aliases = { "@cms-config": options.config };
+export function withCms(nextConfig: NextConfig): NextConfig {
 	const turbopackRoot = nextConfig.turbopack?.root;
 	const missing = missingOptionalPeers(
 		process.cwd(),
@@ -85,7 +80,6 @@ export function withCms(nextConfig: NextConfig, options: WithCmsOptions): NextCo
 			resolveAlias: {
 				...Object.fromEntries(missing.map((name) => [name, MISSING_OPTIONAL_MODULE])),
 				...nextConfig.turbopack?.resolveAlias,
-				...Object.fromEntries(Object.entries(aliases).map(([alias, file]) => [alias, relative(file)])),
 			},
 		},
 		webpack: (config, context) => {
@@ -95,9 +89,6 @@ export function withCms(nextConfig: NextConfig, options: WithCmsOptions): NextCo
 			config.resolve.alias = {
 				...Object.fromEntries(missing.map((name) => [name, stub])),
 				...config.resolve.alias,
-				...Object.fromEntries(
-					Object.entries(aliases).map(([alias, file]) => [alias, path.resolve(process.cwd(), file)]),
-				),
 			};
 			return userWebpack ? userWebpack(config, context) : config;
 		},

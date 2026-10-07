@@ -1,10 +1,8 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { useLayoutEffect, useRef, useState } from "react";
 import { sharedMessages } from "./messages";
-
-const t = createTranslator(sharedMessages);
 
 const GAP = 4;
 const CHIP = "shrink-0 rounded bg-cms-muted px-1.5 py-0.5 text-cms-muted-foreground text-xs";
@@ -14,6 +12,7 @@ const CHIP = "shrink-0 rounded bg-cms-muted px-1.5 py-0.5 text-cms-muted-foregro
  * Draws all tags and the longest `+N` in an invisible measuring row and measures the width. If none fit, the first tag is truncated with an ellipsis.
  */
 export function FittingTags({ tags }: { tags: readonly { id: string; title: string }[] }) {
+	const t = useTranslator(sharedMessages);
 	const boxRef = useRef<HTMLSpanElement | null>(null);
 	const measureRef = useRef<HTMLSpanElement | null>(null);
 	const [shown, setShown] = useState(tags.length);

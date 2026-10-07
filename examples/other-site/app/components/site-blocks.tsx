@@ -1,7 +1,8 @@
-import type { DocumentComponents } from "@monti-cms/core/render";
+import type { DocumentComponentsOf } from "@monti-cms/core/render";
+import type { cms } from "@/cms.server";
 
 /**
- * Public components of the site blocks in `cms.config.ts`. `DocumentComponents` is typed from that config, so each component's props come from its
+ * Public components of the site blocks in `cms.config.ts`. `DocumentComponentsOf<typeof cms>` is typed from that instance's config, so each component's props come from its
  * block definition: `quote-card` gets `author` and `children`, and the `map` fence gets its text as `source`.
  */
 export const siteComponents = {
@@ -24,4 +25,4 @@ export const siteComponents = {
 			);
 		},
 	},
-} satisfies DocumentComponents;
+} satisfies DocumentComponentsOf<typeof cms>;

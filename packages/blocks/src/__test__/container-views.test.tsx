@@ -10,6 +10,8 @@ import { CollapsibleProvider } from "../collapsible/provider";
 import { ColumnsProvider } from "../columns/provider";
 import { TabsProvider } from "../tabs/provider";
 import { mdxToTiptap, tiptapToMdx } from "../test/editor-text";
+import { renderSite as site } from "../test/render-config";
+import { WithSite } from "../test/site";
 
 afterEach(cleanup);
 
@@ -26,7 +28,7 @@ beforeAll(() => {
 
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(),
+		extensions: buildEditorExtensions(site),
 		content: mdxToTiptap(source),
 		immediatelyRender: true,
 	});
@@ -38,15 +40,17 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 
 /** Registers the editing views of the five block extensions, like the admin UI does. */
 const BlockViews = ({ children }: { children: ReactNode }) => (
-	<CalloutProvider>
-		<CollapsibleProvider>
-			<TabsProvider>
-				<ColumnsProvider>
-					<CodeExplorerProvider>{children}</CodeExplorerProvider>
-				</ColumnsProvider>
-			</TabsProvider>
-		</CollapsibleProvider>
-	</CalloutProvider>
+	<WithSite>
+		<CalloutProvider>
+			<CollapsibleProvider>
+				<TabsProvider>
+					<ColumnsProvider>
+						<CodeExplorerProvider>{children}</CodeExplorerProvider>
+					</ColumnsProvider>
+				</TabsProvider>
+			</CollapsibleProvider>
+		</CalloutProvider>
+	</WithSite>
 );
 
 const mount = async (source: string) => {

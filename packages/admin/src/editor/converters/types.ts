@@ -1,8 +1,11 @@
+import type { Site } from "@monti-cms/core/client";
 import type { CmsNode } from "@monti-cms/core/document";
 import type { JSONContent } from "@tiptap/core";
 
 /** Functions the converter uses for recursive and inline conversion. Passed in by `tiptap-content.ts`. */
 export interface ConverterContext {
+	/** The site the document belongs to: its blocks and code block settings decide what the editor can represent. */
+	readonly site: Site;
 	blockToTiptap(node: CmsNode): JSONContent;
 	tiptapBlockToCms(node: JSONContent): CmsNode[];
 	isMappableBlock(node: CmsNode): boolean;

@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { isImageMime } from "../../../../../core/api";
 import { HttpError } from "../../../error-handler";
 import { adminRoute, json } from "../../../handler";
 import { attachmentDisposition, extensionFor, inspectUploadedFile } from "../../media-files";
@@ -34,8 +33,9 @@ export const POST = adminRoute<{ id: string }>(async ({ params, cms }) => {
 	let file: Awaited<ReturnType<typeof inspectUploadedFile>>;
 	let original: Awaited<ReturnType<typeof inspectUploadedFile>> | null = null;
 	try {
-		file = await inspectUploadedFile(mediaStore, media.stagingKey, media.mimeType);
-		if (media.original?.stagingKey) original = await inspectUploadedFile(mediaStore, media.original.stagingKey);
+		file = await inspectUploadedFile(cms.site, mediaStore, media.stagingKey, media.mimeType);
+		if (media.original?.stagingKey)
+			original = await inspectUploadedFile(cms.site, mediaStore, media.original.stagingKey);
 	} catch (error) {
 		// If the file is not there yet, leave it as is so it can be retried. A file that fails inspection cannot be used.
 		if (!(error instanceof HttpError) || error.code !== "upload_incomplete") await store.failMediaAsset(params.id);
@@ -49,7 +49,9 @@ export const POST = adminRoute<{ id: string }>(async ({ params, cms }) => {
 		expectedEtag: file.head.etag,
 		contentType: file.detected.mimeType,
 		// Attachments download under their original name. Images display directly in the browser.
-		...(isImageMime(file.detected.mimeType) ? {} : { contentDisposition: attachmentDisposition(media.filename) }),
+		...(cms.site.api.isImageMime(file.detected.mimeType)
+			? {}
+			: { contentDisposition: attachmentDisposition(media.filename) }),
 	});
 	let originalKey: string | null = null;
 	if (original && media.original?.stagingKey) {

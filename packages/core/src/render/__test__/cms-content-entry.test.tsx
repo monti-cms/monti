@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { collectRefs, type ReadRefs } from "../../doc/document-refs";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
@@ -34,8 +35,13 @@ const refs: ReadRefs = {
 	links: {},
 };
 
-const render = async (props: Parameters<typeof CmsContent>[0]) =>
-	renderToStaticMarkup((await CmsContent(props)) as ReactNode);
+type ContentProps = Parameters<typeof CmsContent>[0];
+type WithoutCms<T> = T extends unknown ? Omit<T, "cms"> : never;
+
+const cms = { site: testSite };
+
+const render = async (props: WithoutCms<ContentProps>) =>
+	renderToStaticMarkup((await CmsContent({ cms, ...props } as ContentProps)) as ReactNode);
 
 /** `<CmsContent entry={entry} />`: an entry of the read API is drawn with the images and files of its own refs. */
 describe("CmsContent with an entry", () => {
@@ -113,12 +119,12 @@ describe("CmsContent with an entry", () => {
 	});
 
 	it("renders an entry without a document as nothing", async () => {
-		expect(await CmsContent({ entry: { doc: null } })).toBeNull();
-		expect(await CmsContent({ doc: null })).toBeNull();
+		expect(await CmsContent({ cms, entry: { doc: null } })).toBeNull();
+		expect(await CmsContent({ cms, doc: null })).toBeNull();
 	});
 
 	it("renders the same as renderDocument for the same document and refs", async () => {
-		const direct = renderToStaticMarkup((await renderDocument(doc, { refs })).content as ReactNode);
+		const direct = renderToStaticMarkup((await renderDocument(doc, { site: testSite, refs })).content as ReactNode);
 
 		expect(await render({ entry: { doc, refs } })).toBe(direct);
 		expect(await render({ doc, refs })).toBe(direct);

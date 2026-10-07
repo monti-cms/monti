@@ -13,14 +13,12 @@ import {
 	unlinkRef,
 } from "@monti-cms/admin/editor";
 import { cn } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { Code2, Unlink } from "lucide-react";
 import type { ReactNode } from "react";
 import { codeRefBlock } from "./definition";
 import { codeRefMessages } from "./messages";
-
-const t = createTranslator(codeRefMessages);
 
 /** Editor mark name (`cmsCodeRef`). */
 export const CODE_REF_MARK = addedMarkName(codeRefBlock.name);
@@ -36,6 +34,7 @@ const hasCodeBlock = (editor: Editor) => {
 };
 
 function CodeRefBubbleButton({ editor, inCode }: EditorBubbleProps) {
+	const t = useTranslator(codeRefMessages);
 	if (inCode || !allowsMark(editor.state, CODE_REF_MARK) || !hasCodeBlock(editor)) return null;
 	return (
 		<BubbleButton
@@ -51,6 +50,8 @@ function CodeRefBubbleButton({ editor, inCode }: EditorBubbleProps) {
 }
 
 function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
+	const t = useTranslator(codeRefMessages);
+	const site = useSite();
 	const anchor = findAnchor(editor.state.doc, String(mark.attrs.to ?? ""));
 	const where = anchor
 		? `${anchor.title ? `${anchor.title} ` : ""}${
@@ -74,7 +75,7 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 			>
 				{t("relink.text")}
 			</BubbleButton>
-			<BubbleButton label={t("unlink")} onClick={act(() => unlinkRef(editor.view, mark.from, mark.to))}>
+			<BubbleButton label={t("unlink")} onClick={act(() => unlinkRef(site, editor.view, mark.from, mark.to))}>
 				<Unlink aria-hidden className="size-4" />
 			</BubbleButton>
 		</>

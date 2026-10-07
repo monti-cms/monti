@@ -1,17 +1,10 @@
-import {
-	adminUrl,
-	contentPath,
-	createTranslator,
-	DEFAULT_LOCALE,
-	LINKABLE_COLLECTIONS,
-	localizePath,
-	PREFIXED_LOCALES,
-} from "@monti-cms/core/client";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { docOf } from "../../test/mdx";
+import { renderWithSite } from "../../test/site";
 import { storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
 import { InlineBubble } from "../inline-bubble";
@@ -20,7 +13,8 @@ import { requestLinkTarget, resetLinkTargets } from "../link-targets";
 import { editorMessages } from "../messages";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
-const t = createTranslator(editorMessages);
+const { LINKABLE_COLLECTIONS, DEFAULT_LOCALE, PREFIXED_LOCALES, adminUrl, contentPath, localizePath } = testSite;
+const t = testSite.createTranslator(editorMessages);
 
 vi.mock("../../ui/tooltip", () => ({
 	Tooltip: ({ children }: { children: React.ReactNode }) => children,
@@ -68,7 +62,7 @@ beforeAll(() => {
 
 const editors: Editor[] = [];
 beforeEach(() => {
-	resetLinkTargets();
+	resetLinkTargets(testSite);
 	fetchMock = vi.fn(async () => respond(entryRow()));
 	vi.stubGlobal("fetch", fetchMock);
 });
@@ -90,14 +84,18 @@ const openOnDocument = () => {
 	});
 	const element = document.createElement("div");
 	document.body.append(element);
-	const editor = new Editor({ element, extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+	const editor = new Editor({
+		element,
+		extensions: buildEditorExtensions(testSite),
+		content: storedToTiptap(testSite, doc),
+	});
 	editors.push(editor);
 	editor.commands.setTextSelection(5);
 	editor.view.focus();
 	return editor;
 };
 
-const renderBubble = (editor: Editor) => render(<InlineBubble editor={editor} />);
+const renderBubble = (editor: Editor) => renderWithSite(<InlineBubble editor={editor} />);
 
 describe("where an internal link goes, shown in the editor", () => {
 	it("resolves the id to the entry's title and address, and opens its page on the site when it is published", async () => {
@@ -142,7 +140,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(await screen.findByText(t("link.targetMissing"))).toBeTruthy();
 		unmount();
 
-		resetLinkTargets();
+		resetLinkTargets(testSite);
 		fetchMock.mockImplementation(async () => {
 			throw new TypeError("Failed to fetch");
 		});
@@ -151,17 +149,18 @@ describe("where an internal link goes, shown in the editor", () => {
 	});
 
 	it("looks an entry up once however many places show it, and not again for a link just inserted", async () => {
-		requestLinkTarget(TARGET);
-		requestLinkTarget(TARGET);
+		requestLinkTarget(testSite, TARGET);
+		requestLinkTarget(testSite, TARGET);
 		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
-		resetLinkTargets();
+		resetLinkTargets(testSite);
 		fetchMock.mockClear();
 		const element = document.createElement("div");
 		document.body.append(element);
-		const editor = new Editor({ element, extensions: buildEditorExtensions(), content: "<p>[[</p>" });
+		const editor = new Editor({ element, extensions: buildEditorExtensions(testSite), content: "<p>[[</p>" });
 		editors.push(editor);
 		insertInternalLink(
+			testSite,
 			editor,
 			{ from: 1, to: 3 },
 			{ id: TARGET, collection: COLLECTION, title: "방금 고른 글", slug: "picked", status: "published" },
@@ -186,7 +185,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("popoverForm.apply") })));
 
 		expect(screen.queryByText(t("link.invalid"))).toBeNull();
-		const saved = tiptapToStored(editor.getJSON());
+		const saved = tiptapToStored(testSite, editor.getJSON());
 		expect(JSON.stringify(saved)).toContain(TARGET);
 	});
 
@@ -199,7 +198,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		act(() => fireEvent.change(screen.getByLabelText(t("link.href")), { target: { value: "https://example.com" } }));
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("popoverForm.apply") })));
 
-		const saved = JSON.stringify(tiptapToStored(editor.getJSON()));
+		const saved = JSON.stringify(tiptapToStored(testSite, editor.getJSON()));
 		expect(saved).not.toContain(TARGET);
 		expect(saved).toContain("https://example.com");
 	});
@@ -209,8 +208,8 @@ describe("where an internal link goes, shown in the editor", () => {
 		document.body.append(element);
 		const editor = new Editor({
 			element,
-			extensions: buildEditorExtensions(),
-			content: storedToTiptap(docOf("앞 [외부](https://example.com) 뒤")),
+			extensions: buildEditorExtensions(testSite),
+			content: storedToTiptap(testSite, docOf("앞 [외부](https://example.com) 뒤")),
 		});
 		editors.push(editor);
 		editor.commands.setTextSelection(5);

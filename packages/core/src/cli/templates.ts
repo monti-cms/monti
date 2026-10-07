@@ -35,7 +35,7 @@ export function configTemplate(adminPath: string, options: ConfigTemplateOptions
 // import { seo, seoFields } from "@monti-cms/seo";
 
 /**
- * Site config. The server and the admin screen both read it, so keep secrets out (they go in cms.server.ts).
+ * Site config. The CMS instance (cms.server.ts) holds it and the admin screen gets it from there, so keep secrets out (they go in cms.server.ts).
  * The collection name (\`post\` below) is stored in the database, so don't rename it in production. Add and edit fields freely.
  */
 const post = defineCollection({
@@ -66,14 +66,16 @@ ${admin}	// plugins: [...blocks(), seo()],
 
 export const SERVER_TEMPLATE = `import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
 import { githubAuth } from "@monti-cms/nextjs/auth";
+import config from "./cms.config";
 
 /**
- * The CMS instance. It owns the database, sign-in and media connections and the secrets, which are read from environment variables (.env.local).
+ * The CMS instance. It holds the site config (cms.config.ts) and owns the database, sign-in and media connections and the secrets, which are read from environment variables (.env.local).
  * Everything on the server uses it: the admin API route, the admin screens, and your site's pages (cms.read.getEntry(...)).
  * Only the server imports this file. The admin API route also serves the sign-in API (/api/cms/auth/*). The callback URL of the
  * GitHub OAuth app is <site URL>/api/cms/auth/callback/github.
  */
 export const cms = createCms({
+	config,
 	server: defineServerConfig({
 		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
 		auth: githubAuth({
@@ -103,11 +105,11 @@ export default function AdminPage(props: CmsAdminPageProps) {
 `;
 
 export const adminLayoutTemplate = (serverImport: string) => `import "@monti-cms/admin/styles.css";
-import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
+import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
 import { cms } from ${JSON.stringify(serverImport)};
 
-export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin";
+export const generateMetadata = () => cmsAdminMetadata(cms);
 
 /** Admin screen (@monti-cms/admin). The stylesheet is prebuilt, so the app needs no Tailwind for it. Pass site components with CmsAdminComponentsProvider (see the admin README). */
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -122,13 +124,13 @@ import { cms } from ${JSON.stringify(serverImport)};
 export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
 `;
 
-export function nextConfigTemplate(config: string): string {
+export function nextConfigTemplate(): string {
 	return `import { withCms } from "@monti-cms/nextjs/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {};
 
-export default withCms(nextConfig, { config: "${config}" });
+export default withCms(nextConfig);
 `;
 }
 

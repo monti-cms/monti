@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { createTranslator } from "../../../i18n";
-import {
-	annotationConfig,
-	CODE_BLOCK_FEATURES,
-	CODE_BLOCK_THEMES,
-	CODE_LINE_EFFECTS,
-	isLineEffectName,
-	OFFERED_LINE_EFFECTS,
-	offersCharEffect,
-} from "../active";
 import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
 import { createAnnotationConfig } from "../constants";
 import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
@@ -52,18 +44,21 @@ const byName = (items: readonly AnnotationConfigItem[] | undefined) =>
 describe("code line effect definitions", () => {
 	it("the default definitions produce the same names and classes as the old annotation config", () => {
 		expect(byName(createAnnotationConfig().annotations)).toEqual(byName(BEFORE));
-		// A config without line effects (the example site) stays at the defaults.
-		expect(CODE_LINE_EFFECTS).toEqual(DEFAULT_CODE_LINE_EFFECTS);
-		expect(byName(annotationConfig.annotations)).toEqual(byName(BEFORE));
+		// A config without line effects (the example site) stays at the defaults. The site's labels are in its admin language, the defaults' in English.
+		const t = testSite.createTranslator(codeBlockMessages);
+		const tEn = createTranslator(codeBlockMessages, "en");
+		expect(testSite.CODE_LINE_EFFECTS).toEqual(
+			DEFAULT_CODE_LINE_EFFECTS.map((effect) => ({ ...effect, label: t(`lineEffect.${effect.name}` as never) })),
+		);
+		expect(byName(testSite.annotationConfig.annotations)).toEqual(byName(BEFORE));
 		// Menu labels are short, without parentheses.
-		const t = createTranslator(codeBlockMessages);
 		expect(DEFAULT_CODE_LINE_EFFECTS.map((effect) => effect.label)).toEqual([
-			t("lineEffect.highlight"),
-			t("lineEffect.focus"),
-			t("lineEffect.plus"),
-			t("lineEffect.minus"),
-			t("lineEffect.warning"),
-			t("lineEffect.error"),
+			tEn("lineEffect.highlight"),
+			tEn("lineEffect.focus"),
+			tEn("lineEffect.plus"),
+			tEn("lineEffect.minus"),
+			tEn("lineEffect.warning"),
+			tEn("lineEffect.error"),
 		]);
 	});
 
@@ -91,11 +86,11 @@ describe("code line effect definitions", () => {
 	});
 
 	it("the editor recognizes only defined line effects plus folding and the label", () => {
-		expect(isLineEffectName("plus")).toBe(true);
-		expect(isLineEffectName("collapse")).toBe(true);
-		expect(isLineEffectName("anchor")).toBe(true);
-		expect(isLineEffectName("focus")).toBe(true);
-		expect(isLineEffectName("info")).toBe(false);
+		expect(testSite.isLineEffectName("plus")).toBe(true);
+		expect(testSite.isLineEffectName("collapse")).toBe(true);
+		expect(testSite.isLineEffectName("anchor")).toBe(true);
+		expect(testSite.isLineEffectName("focus")).toBe(true);
+		expect(testSite.isLineEffectName("info")).toBe(false);
 	});
 
 	it("an invalid config is reported immediately", () => {
@@ -122,10 +117,10 @@ describe("code line effect definitions", () => {
 
 describe("code block options of the site config", () => {
 	it("are all on by default, with the default themes and every line effect offered", () => {
-		expect(CODE_BLOCK_FEATURES).toEqual({ rules: true, fold: true, tooltip: true, textStyles: true });
-		expect(OFFERED_LINE_EFFECTS).toEqual(CODE_LINE_EFFECTS);
-		expect(["strong", "em", "del", "u", "Tooltip", "fold"].every(offersCharEffect)).toBe(true);
-		expect(CODE_BLOCK_THEMES).toEqual({ light: "one-light", dark: "one-dark-pro" });
+		expect(testSite.CODE_BLOCK_FEATURES).toEqual({ rules: true, fold: true, tooltip: true, textStyles: true });
+		expect(testSite.OFFERED_LINE_EFFECTS).toEqual(testSite.CODE_LINE_EFFECTS);
+		expect(["strong", "em", "del", "u", "Tooltip", "fold"].every(testSite.offersCharEffect)).toBe(true);
+		expect(testSite.CODE_BLOCK_THEMES).toEqual({ light: "one-light", dark: "one-dark-pro" });
 	});
 
 	it("accept switches, omitted line effects, themes and languages", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { type BlockDefinition, createTranslator } from "@monti-cms/core/client";
+import { type BlockDefinition, useTranslator } from "@monti-cms/core/client";
 import { cn } from "../../../lib/utils/cn";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select";
 import { Switch } from "../../../ui/switch";
@@ -9,8 +9,6 @@ import { blocksMessages } from "../messages";
 import { AttributeInput, BlockSettings, BlockSettingsField, ContainerToolbar } from "../shared";
 import { BlockFrame, type BlockValues, Content, useBlockEditor } from "../use-block-editor";
 import { isContainer } from "./shared";
-
-const t = createTranslator(blocksMessages);
 
 /** Default input for one attribute (inside the settings popover). A select if it has choices, a switch for booleans, a text input otherwise. */
 function AttributeField({
@@ -94,6 +92,7 @@ function AttributeField({
  * Attributes are edited in the toolbar's settings popover.
  */
 export function DefaultBlockView() {
+	const t = useTranslator(blocksMessages);
 	const block = useBlockEditor();
 	const { definition, values, editable } = block;
 	const names = Object.keys(definition.attributes);
@@ -133,6 +132,7 @@ export function DefaultBlockView() {
 
 /** Default view of a code fence block: a code input and the preview supplied by the site (`fencePreviews[language]`). */
 export function FenceBlockView() {
+	const t = useTranslator(blocksMessages);
 	const { definition } = useBlockEditor();
 	const lang = definition.syntax.kind === "fence" ? definition.syntax.lang : definition.name;
 	const meta: FenceEditorMeta = {

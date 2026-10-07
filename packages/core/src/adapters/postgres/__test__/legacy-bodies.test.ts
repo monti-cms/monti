@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { seedEntry } from "../../../core/store/__test__/seed";
 import { createFormatRegistry, NO_FORMATS } from "../../../format/registry";
@@ -57,28 +58,28 @@ describe("migrating without the MDX package (legacy bodies)", () => {
 	/** An up-to-date store with one body (and the text the store of that time kept next to it), or none. */
 	const storeWith = async (options: { body: boolean }) => {
 		const schema = newSchema();
-		await migrateContentStore(pool, { schema, formats: NO_FORMATS });
+		await migrateContentStore(pool, { site: testSite, schema, formats: NO_FORMATS });
 		if (options.body) {
-			const store = createContentStore(pool, { schema });
+			const store = createContentStore(pool, { site: testSite, schema });
 			const entry = await seedEntry(store, { collection: "x", slug: "old", metadata: { title: "Old" }, text: "Hello" });
 			await pool.query(`UPDATE "${schema}".entry_bodies SET mdx = 'Hello' WHERE entry_id = $1`, [entry.id]);
 			return { schema, store, entry };
 		}
 		await pool.query(`DELETE FROM "${schema}".entry_bodies`);
 		await pool.query(`DELETE FROM "${schema}".body_templates`);
-		return { schema, store: createContentStore(pool, { schema }), entry: undefined };
+		return { schema, store: createContentStore(pool, { site: testSite, schema }), entry: undefined };
 	};
 
 	it("migrates a fresh store with no format registered, and never asks for the package", async () => {
 		const { formats, bodies } = fakeMdxRegistry();
 		const schema = newSchema();
 
-		await migrateContentStore(pool, { schema, formats: createFormatRegistry([]) });
+		await migrateContentStore(pool, { site: testSite, schema, formats: createFormatRegistry([]) });
 		expect(await recorded(schema)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 
 		// The same with a format that has the reader: a fresh store has no body to read, so the reader is never used.
 		const withFormat = newSchema();
-		await migrateContentStore(pool, { schema: withFormat, formats });
+		await migrateContentStore(pool, { site: testSite, schema: withFormat, formats });
 		expect(await recorded(withFormat)).toEqual([...CONTENT_STORE_MIGRATIONS].sort());
 		expect(bodies.calls.count).toBe(0);
 	});
@@ -93,7 +94,7 @@ describe("migrating without the MDX package (legacy bodies)", () => {
 		const forgotten = await forgetStepsFrom(schema, after);
 		expect(await recorded(schema)).not.toContain(after);
 
-		await migrateContentStore(pool, { schema, formats: NO_FORMATS });
+		await migrateContentStore(pool, { site: testSite, schema, formats: NO_FORMATS });
 
 		for (const name of forgotten) expect(await recorded(schema)).toContain(name);
 		expect(contentOf((await store.getEntry(entry.id)).working.doc)).toEqual(contentOf(docOf("Hello")));
@@ -106,7 +107,7 @@ describe("migrating without the MDX package (legacy bodies)", () => {
 		const before = await recorded(schema);
 		expect(forgotten.length).toBeGreaterThan(1);
 
-		const failure = await migrateContentStore(pool, { schema, formats: NO_FORMATS }).then(
+		const failure = await migrateContentStore(pool, { site: testSite, schema, formats: NO_FORMATS }).then(
 			() => undefined,
 			(error: unknown) => error,
 		);
@@ -119,7 +120,7 @@ describe("migrating without the MDX package (legacy bodies)", () => {
 		for (const name of forgotten) expect(await recorded(schema)).not.toContain(name);
 		// A format registered under another name does not stand in for it.
 		await expect(
-			migrateContentStore(pool, { schema, formats: createFormatRegistry([fakeFormatNamed("other")]) }),
+			migrateContentStore(pool, { site: testSite, schema, formats: createFormatRegistry([fakeFormatNamed("other")]) }),
 		).rejects.toThrow(/@monti-cms\/mdx/);
 	});
 
@@ -132,7 +133,7 @@ describe("migrating without the MDX package (legacy bodies)", () => {
 		const forgotten = await forgetStepsFrom(schema, TEXT_STEPS_FROM);
 		const { formats, bodies } = fakeMdxRegistry();
 
-		await migrateContentStore(pool, { schema, formats });
+		await migrateContentStore(pool, { site: testSite, schema, formats });
 
 		expect(bodies.calls.count).toBeGreaterThan(0);
 		for (const name of forgotten) expect(await recorded(schema)).toContain(name);
@@ -145,7 +146,7 @@ describe("migrating without the MDX package (legacy bodies)", () => {
 		const forgotten = await forgetStepsFrom(schema, TEXT_STEPS_FROM);
 		expect(forgotten).toContain(TEXT_STEPS_FROM);
 
-		await migrateContentStore(pool, { schema, formats: NO_FORMATS });
+		await migrateContentStore(pool, { site: testSite, schema, formats: NO_FORMATS });
 
 		for (const name of forgotten) expect(await recorded(schema)).toContain(name);
 	});

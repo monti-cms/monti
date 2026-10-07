@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
 	type CmsNode,
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { documentKey } from "../../editor/document-key";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
+import type { TranslatorFor } from "../../translator";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
@@ -29,8 +30,6 @@ import { formatDateOnly } from "../shared/format-date";
 import { OPEN_ITEM } from "../shared/side-panel";
 import { templatesMessages } from "./messages";
 
-const t = createTranslator(templatesMessages);
-
 const TEMPLATES_KEY = ["cms", "templates"] as const;
 
 const textNode = (text: string): CmsNode => ({ type: "text", text });
@@ -39,7 +38,7 @@ const paragraph = (text: string): CmsNode => ({ type: "paragraph", content: [tex
 const item = (text: string): CmsNode => ({ type: "listItem", content: [paragraph(text)] });
 
 /** Initial body of a new template: an outline with three sections. */
-const newTemplateDoc = (): StoredDocument => ({
+const newTemplateDoc = (t: TranslatorFor<typeof templatesMessages>): StoredDocument => ({
 	type: "doc",
 	version: STORED_DOCUMENT_VERSION,
 	content: assignBlockIds([
@@ -53,13 +52,15 @@ const newTemplateDoc = (): StoredDocument => ({
 });
 
 export function TemplateManager() {
+	const site = useSite();
+	const t = useTranslator(templatesMessages);
 	const queryClient = useQueryClient();
 	// If there is a cache, render it right away and refetch in the background. Placeholders show only when there is no cache.
 	const templatesQuery = useQuery({
 		queryKey: TEMPLATES_KEY,
 		queryFn: async ({ signal }) =>
 			(
-				await cmsFetch<{ items?: BodyTemplate[] }>(cmsApiUrl("/v1/templates"), {
+				await cmsFetch<{ items?: BodyTemplate[] }>(site, cmsApiUrl("/v1/templates"), {
 					signal,
 					fallback: t("list.loadFailed"),
 				})
@@ -67,7 +68,7 @@ export function TemplateManager() {
 	});
 	const templates = templatesQuery.data ?? [];
 	const error =
-		templatesQuery.error && !templatesQuery.data ? errorText(templatesQuery.error, t("list.loadFailed")) : null;
+		templatesQuery.error && !templatesQuery.data ? errorText(site, templatesQuery.error, t("list.loadFailed")) : null;
 
 	// The template open in the edit panel (a new template has no id) and the values being edited.
 	const [activeTemplate, setActiveTemplate] = useState<Partial<BodyTemplate> | null>(null);
@@ -81,7 +82,7 @@ export function TemplateManager() {
 	const isDirty =
 		activeTemplate !== null &&
 		(editName !== (activeTemplate.name ?? "") ||
-			documentKey(editBody) !== documentKey(activeTemplate.doc ?? emptyStoredDocument()));
+			documentKey(site, editBody) !== documentKey(site, activeTemplate.doc ?? emptyStoredDocument()));
 
 	/** Refetches the list in the background. Rows currently visible stay as they are. */
 	const invalidateTemplates = () => queryClient.invalidateQueries({ queryKey: TEMPLATES_KEY });
@@ -100,7 +101,7 @@ export function TemplateManager() {
 	};
 
 	const openNew = async () => {
-		if (await confirmDiscard(isDirty)) show({ name: "", doc: newTemplateDoc() });
+		if (await confirmDiscard(isDirty)) show({ name: "", doc: newTemplateDoc(t) });
 	};
 
 	const closeEditor = async () => {
@@ -119,7 +120,7 @@ export function TemplateManager() {
 
 		try {
 			if (activeTemplate.id) {
-				const updated = await cmsFetch<BodyTemplate>(cmsApiUrl(`/v1/templates/${activeTemplate.id}`), {
+				const updated = await cmsFetch<BodyTemplate>(site, cmsApiUrl(`/v1/templates/${activeTemplate.id}`), {
 					method: "PATCH",
 					json: { name: editName.trim(), doc: editBody, expectedVersion: activeTemplate.version },
 					fallback: t("common.saveFailed"),
@@ -129,7 +130,7 @@ export function TemplateManager() {
 					current?.map((item) => (item.id === updated.id ? updated : item)),
 				);
 			} else {
-				const created = await cmsFetch<BodyTemplate>(cmsApiUrl("/v1/templates"), {
+				const created = await cmsFetch<BodyTemplate>(site, cmsApiUrl("/v1/templates"), {
 					method: "POST",
 					json: { name: editName.trim(), doc: editBody },
 					fallback: t("common.saveFailed"),
@@ -143,7 +144,7 @@ export function TemplateManager() {
 			toast.success(t("common.saved"));
 			void invalidateTemplates();
 		} catch (err) {
-			setSaveError(errorText(err, t("common.saveFailed")));
+			setSaveError(errorText(site, err, t("common.saveFailed")));
 		} finally {
 			setIsSaving(false);
 		}
@@ -174,14 +175,14 @@ export function TemplateManager() {
 		);
 		if (activeTemplate?.id === template.id) show(null);
 		try {
-			await cmsFetch(cmsApiUrl(`/v1/templates/${template.id}?expectedVersion=${template.version}`), {
+			await cmsFetch(site, cmsApiUrl(`/v1/templates/${template.id}?expectedVersion=${template.version}`), {
 				method: "DELETE",
 				fallback: t("delete.failed"),
 			});
 			toast.success(t("delete.done", { name: template.name }));
 		} catch (err) {
 			if (previous) queryClient.setQueryData(TEMPLATES_KEY, previous);
-			toast.error(errorText(err, t("delete.failed")));
+			toast.error(errorText(site, err, t("delete.failed")));
 		} finally {
 			void invalidateTemplates();
 		}
@@ -272,7 +273,9 @@ export function TemplateManager() {
 													className="h-auto min-w-0 flex-1 flex-col items-start gap-1.5 px-1 py-1 text-left font-normal hover:bg-transparent"
 												>
 													<span className="truncate font-medium text-sm">{row.name}</span>
-													<span className="text-[11px] text-cms-muted-foreground">{formatDateOnly(row.updatedAt)}</span>
+													<span className="text-[11px] text-cms-muted-foreground">
+														{formatDateOnly(site, row.updatedAt)}
+													</span>
 												</Button>
 												<MoreActionsButton
 													actions={templateMenu(row)}

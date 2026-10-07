@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
-import {
-	commonFieldKeys,
-	isOrphanedMetadataKey,
-	orphanedMetadataKeys,
-	RECORD_TRANSLATIONS_KEY,
-	schemaMetadata,
-	storedFields,
-	unknownSelectValues,
-} from "../../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../../schema/derive";
 import type { ServiceInput } from "../../services/types";
 import type { Collection } from "../collections";
 import { prepareSnapshot, validateForPublish } from "../snapshot";
@@ -17,7 +10,7 @@ import { prepareSnapshot, validateForPublish } from "../snapshot";
 /** A key no config has a field for (what a removed field leaves behind), and an option no select lists (what a removed option leaves behind). */
 const ORPHAN = "removedField";
 const UNKNOWN_OPTION = "removed-option";
-const select = storedFields(contentCollection).find(({ field, when }) => !when && field.kind === "select");
+const select = testSite.storedFields(contentCollection).find(({ field, when }) => !when && field.kind === "select");
 
 const targets: { id: string; isPublished: boolean; collection: Collection }[] = [];
 const relationTarget = async (to: Collection) => {
@@ -38,24 +31,26 @@ const draft = async (extra: Record<string, unknown> = {}) =>
 
 /** Prepares an input for an entry that already holds exactly these keys: a save of stored metadata. */
 const prepareHeld = (input: ServiceInput) =>
-	prepareSnapshot(input, { previousMetadata: input.metadata as Record<string, unknown> });
+	prepareSnapshot(testSite, input, { previousMetadata: input.metadata as Record<string, unknown> });
 
 describe("values of removed fields", () => {
 	it("rejects a new unknown key, as a typo, on create and on save", async () => {
-		await expect(prepareSnapshot(await draft({ titel: "typo" }))).rejects.toMatchObject({
+		await expect(prepareSnapshot(testSite, await draft({ titel: "typo" }))).rejects.toMatchObject({
 			code: "invalid_metadata_key",
 		});
 		await expect(
-			prepareSnapshot(await draft({ titel: "typo" }), { previousMetadata: { title: "T" } }),
+			prepareSnapshot(testSite, await draft({ titel: "typo" }), { previousMetadata: { title: "T" } }),
 		).rejects.toMatchObject({ code: "invalid_metadata_key" });
 	});
 
 	it("keeps an unknown key only when the entry already holds it, and rejects the other new ones beside it", async () => {
 		const input = await draft({ [ORPHAN]: "left" });
-		const kept = await prepareSnapshot(input, { previousMetadata: { [ORPHAN]: "older value" } });
+		const kept = await prepareSnapshot(testSite, input, { previousMetadata: { [ORPHAN]: "older value" } });
 		expect(kept.metadata[ORPHAN]).toBe("left");
 		await expect(
-			prepareSnapshot(await draft({ [ORPHAN]: "left", titel: "typo" }), { previousMetadata: { [ORPHAN]: "x" } }),
+			prepareSnapshot(testSite, await draft({ [ORPHAN]: "left", titel: "typo" }), {
+				previousMetadata: { [ORPHAN]: "x" },
+			}),
 		).rejects.toMatchObject({ code: "invalid_metadata_key" });
 	});
 
@@ -101,7 +96,7 @@ describe("values of removed fields", () => {
 
 	it("does not block publishing and warns once per removed field, with the field key as the path", async () => {
 		const snapshot = await prepareHeld(await draft({ [ORPHAN]: "left", other: ["x"] }));
-		const validation = validateForPublish(snapshot, { targets, media: [] });
+		const validation = validateForPublish(testSite, snapshot, { targets, media: [] });
 		expect(validation.ready).toBe(true);
 		expect(validation.issues).toEqual([]);
 		const orphans = validation.warnings.filter((warning) => warning.code === "orphaned_metadata_key");
@@ -114,18 +109,18 @@ describe("values of removed fields", () => {
 	});
 
 	it("does not take the per-language names of an item collection for a removed field", () => {
-		expect(isOrphanedMetadataKey(recordCollection, RECORD_TRANSLATIONS_KEY)).toBe(false);
+		expect(testSite.isOrphanedMetadataKey(recordCollection, RECORD_TRANSLATIONS_KEY)).toBe(false);
 		expect(
-			orphanedMetadataKeys(recordCollection, { title: "T", [RECORD_TRANSLATIONS_KEY]: {}, [ORPHAN]: "x" }),
+			testSite.orphanedMetadataKeys(recordCollection, { title: "T", [RECORD_TRANSLATIONS_KEY]: {}, [ORPHAN]: "x" }),
 		).toEqual([ORPHAN]);
 	});
 
 	it("is not a shared field of a translation", () => {
-		expect(commonFieldKeys(contentCollection, { [ORPHAN]: "x" })).toEqual([]);
+		expect(testSite.commonFieldKeys(contentCollection, { [ORPHAN]: "x" })).toEqual([]);
 	});
 
 	it("is left out of the metadata as the current schema types it", () => {
-		expect(schemaMetadata(contentCollection, { title: "T", [ORPHAN]: "x" })).toEqual({ title: "T" });
+		expect(testSite.schemaMetadata(contentCollection, { title: "T", [ORPHAN]: "x" })).toEqual({ title: "T" });
 	});
 });
 
@@ -140,7 +135,7 @@ describe.skipIf(!select)("a select value that is no longer an option", () => {
 
 	it("does not block publishing and warns with the field key as the path and the value as the message", async () => {
 		const snapshot = await prepareHeld(await draft({ [name]: UNKNOWN_OPTION }));
-		const validation = validateForPublish(snapshot, { targets, media: [] });
+		const validation = validateForPublish(testSite, snapshot, { targets, media: [] });
 		expect(validation.ready).toBe(true);
 		expect(validation.warnings).toContainEqual(
 			expect.objectContaining({ code: "unknown_select_value", path: name, message: UNKNOWN_OPTION }),
@@ -151,8 +146,8 @@ describe.skipIf(!select)("a select value that is no longer an option", () => {
 		const field = select?.field;
 		if (field?.kind !== "select") throw new Error("not a select");
 		const [option] = Object.keys(field.options);
-		expect(unknownSelectValues(contentCollection, { [name]: option })).toEqual([]);
-		expect(unknownSelectValues(contentCollection, { [name]: UNKNOWN_OPTION })).toEqual([
+		expect(testSite.unknownSelectValues(contentCollection, { [name]: option })).toEqual([]);
+		expect(testSite.unknownSelectValues(contentCollection, { [name]: UNKNOWN_OPTION })).toEqual([
 			{ path: name, values: [UNKNOWN_OPTION] },
 		]);
 	});

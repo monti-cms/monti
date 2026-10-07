@@ -1,8 +1,6 @@
-import { createTranslator } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 import type { AiCandidate, AiCheck } from "./definition";
 import { runMessages } from "./run.messages";
-
-const t = createTranslator(runMessages);
 
 /**
  * Fixed result checks (pure functions). Applies the enabled checks from the action's check list in order, and discards candidates that fail.
@@ -54,7 +52,12 @@ export function checkCandidates(checks: readonly AiCheck[], raw: readonly string
 }
 
 /** Check for long-text results. Returns the reason if it fails. */
-export function checkText(checks: readonly AiCheck[], text: string): string | null {
+export function checkText(
+	site: Pick<Site, "createTranslator">,
+	checks: readonly AiCheck[],
+	text: string,
+): string | null {
+	const t = site.createTranslator(runMessages);
 	if (!text.trim()) return t("emptyResult");
 	for (const check of checks) {
 		if (!check.enabled) continue;

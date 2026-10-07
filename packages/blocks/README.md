@@ -69,7 +69,7 @@ import "@monti-cms/blocks/styles.css";
 - Code link on public pages: a label is unique per document and a link resolves to exactly one code block (the first one with that label). Hovering or focusing the text highlights the linked lines;
   while they are off screen it also shows a small preview of them (up to 8 lines and the code block title) next to the text (`role="tooltip"`, hidden on leave, blur or Esc), and pressing scrolls to them.
   The first text that points to a label adds a back-link button (`↩`) at the end of the first linked line, which scrolls back to that text and highlights it briefly (`data-focused`).
-- The text color picker list is `color({ palette })` (the default 8 colors `DEFAULT_TEXT_PALETTE` if omitted). The body stores hex values, so changing the list leaves
+- The text color picker list is `color({ palette })` (the default 8 colors `defaultTextPalette(t)` if omitted). The body stores hex values, so changing the list leaves
   already written text as it is. Public pages render with `cleanTextColor` and `textColorProps` from `@monti-cms/blocks/color`, and the color is
   chosen to match the theme by `.cms-color` in `render.css` (the editor has the same rule in `styles.css`).
 - Public pages: each extension provides default public components (the plugin `render`, which returns `{ documentComponents }`; `renderDocument` and `CmsContent` of `@monti-cms/core/render` use it automatically).

@@ -1,13 +1,11 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { cn } from "../../../lib/utils/cn";
 import { SELECTED_RING } from "../block-model";
 import { blocksMessages } from "../messages";
 import { BlockFrame, useBlockEditor } from "../use-block-editor";
-
-const t = createTranslator(blocksMessages);
 
 /** Name and input hint of blocks written as code and viewed as a preview (math and code fence blocks). */
 export interface FenceEditorMeta {
@@ -39,6 +37,7 @@ const PROSEMIRROR_CURSOR_KEYS = new Set([
  * Input is written to the document after a short pause or when leaving the field (not during Korean composition).
  */
 export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta }) {
+	const t = useTranslator(blocksMessages);
 	const block = useBlockEditor();
 	const { kind } = meta;
 	const value = block.source ?? "";

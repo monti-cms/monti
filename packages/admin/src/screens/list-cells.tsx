@@ -1,5 +1,8 @@
 "use client";
 
+import type { Site } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/client";
+
 import type { ComponentType } from "react";
 import type { CmsAdminComponents, ListCellProps } from "../admin-components";
 import { fieldColumnOf } from "./list-columns";
@@ -12,13 +15,14 @@ const EMPTY = <span className="text-cms-muted-foreground">—</span>;
  * `undefined` if none (the default cell is drawn).
  */
 export function customListCell(
+	site: Site,
 	listCells: CmsAdminComponents["listCells"],
 	collection: string,
 	column: string,
 ): ComponentType<ListCellProps> | undefined {
 	if (!listCells) return undefined;
 	if (Object.hasOwn(listCells, column)) return listCells[column];
-	const input = fieldColumnOf(collection, column)?.field.input;
+	const input = fieldColumnOf(site, collection, column)?.field.input;
 	return input !== undefined && Object.hasOwn(listCells, input) ? listCells[input] : undefined;
 }
 
@@ -27,7 +31,8 @@ export function customListCell(
  * `—` when there is no value. Dates are drawn separately by the system columns (updated, created, published).
  */
 export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
-	const stored = fieldColumnOf(collection, column);
+	const site = useSite();
+	const stored = fieldColumnOf(site, collection, column);
 	if (!stored) return EMPTY;
 	const { field } = stored;
 	if (field.kind === "relation") {

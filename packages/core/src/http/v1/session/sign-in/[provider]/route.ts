@@ -1,4 +1,3 @@
-import { adminUrl } from "../../../../../core/admin-paths";
 import { HttpError, handleApiError } from "../../../error-handler";
 import type { RouteContext } from "../../../handler";
 import { validateSameOrigin } from "../../../security";
@@ -12,13 +11,13 @@ import { validateSameOrigin } from "../../../security";
 export const POST = async (request: Request, context: RouteContext<{ provider: string }>) => {
 	try {
 		const { cms } = context;
-		validateSameOrigin(request, { trustHost: cms.isHostTrusted(), form: true });
+		validateSameOrigin(cms, request, { form: true });
 		const { provider = "" } = (await context.params) ?? {};
 		const auth = cms.auth();
 		if (!auth.providers.some((method) => method.id === provider)) {
 			throw new HttpError(404, "not_found", "Unknown sign-in method");
 		}
-		await auth.signIn(provider, { redirectTo: adminUrl() });
+		await auth.signIn(provider, { redirectTo: cms.site.adminUrl() });
 		return new Response(null, { status: 204 });
 	} catch (error) {
 		// The login connection may redirect by throwing (Next.js does); that signal must reach the host framework.

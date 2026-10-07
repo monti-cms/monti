@@ -11,10 +11,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"jsx": "react-jsx",
-		"types": ["node", "next", "vitest/globals"],
-		"paths": {
-			"@cms-config": ["./test/cms.config.ts"]
-		}
+		"types": ["node", "next", "vitest/globals"]
 	},
 	"include": ["src", "test", "vitest.config.ts", "vitest.othersite.config.ts", "vitest.configured.config.ts"]
 }

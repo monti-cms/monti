@@ -1,13 +1,13 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredFields } from "../../../../../test/any-site";
+import { testConfig, testSite } from "../../../../../test/site";
 import { docOf } from "../../../../../test/stored-content";
 import { fakeCms } from "../../../../cms";
-import { type Collection, isItemCollection } from "../../../../core/collections";
+import type { Collection } from "../../../../core/collections";
 import type { ContentStore } from "../../../../core/store";
 import { publishDraft, seedSave } from "../../../../core/store/__test__/seed";
 import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format";
-import { storedFields } from "../../../../schema/derive";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -20,8 +20,8 @@ import type { PublicApiOptions } from "../options";
 /** An optional relation pointing at an entry collection (a field the required-value filler does not put on every entry). */
 const relation = (() => {
 	const required = new Set(requiredFields(contentCollection).map(({ name }) => name));
-	for (const { name, field } of storedFields(contentCollection)) {
-		if (field.kind === "relation" && isItemCollection(field.to) && !required.has(name)) {
+	for (const { name, field } of testSite.storedFields(contentCollection)) {
+		if (field.kind === "relation" && testSite.isItemCollection(field.to) && !required.has(name)) {
 			return { name, to: field.to as Collection, many: Boolean(field.many) };
 		}
 	}
@@ -39,9 +39,12 @@ describe("Public JSON API", () => {
 
 	const get = async (path: string) => {
 		const [pathname, query = ""] = path.split("?");
-		const response = await fakeCms({ store, server: { publicApi }, formats: [paragraphsFormat] }).handle(
-			new Request(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`),
-		);
+		const response = await fakeCms({
+			config: testConfig,
+			store,
+			server: { publicApi },
+			formats: [paragraphsFormat],
+		}).handle(new Request(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`));
 		return { status: response.status, cache: response.headers.get("cache-control"), body: await response.json() };
 	};
 
@@ -60,15 +63,15 @@ describe("Public JSON API", () => {
 			} as never,
 			references: [],
 		});
-		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	beforeAll(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const { relationTarget } = fillRequiredMetadata(store);
 		if (relation) {
 			targetId = await relationTarget(relation.to);
@@ -131,7 +134,7 @@ describe("Public JSON API", () => {
 			metadata: entry.working.metadata,
 			doc: entry.working.doc,
 		});
-		await publishDraft(store, { id: entry.id, expectedVersion: saved.version });
+		await publishDraft(testSite, store, { id: entry.id, expectedVersion: saved.version });
 		const alias = await get(`v1/public/entries/${contentCollection}/public-1`);
 		expect(alias.body.address).toEqual({ slug: "public-1-renamed", isAlias: true });
 		expect((await get(`v1/public/entries/${contentCollection}/missing`)).status).toBe(404);

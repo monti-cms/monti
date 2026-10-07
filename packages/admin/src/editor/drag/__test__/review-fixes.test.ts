@@ -1,12 +1,13 @@
 import { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { deleteBlock } from "../../block-commands";
 import { buildEditorExtensions } from "../../extensions";
 import { targetBlockAt } from "../block-resolve";
 import { canDropBlockNode } from "../drag-commands";
 
-const create = (content: string) => new Editor({ extensions: buildEditorExtensions(), content });
+const create = (content: string) => new Editor({ extensions: buildEditorExtensions(testSite), content });
 const OPAQUE = '<div data-cms-opaque="true" data-raw-source=":::callout\n내용\n:::" data-line-start="1"></div>';
 const texts = (editor: Editor) => editor.state.doc.content.content.map((n) => `${n.type.name}:${n.textContent}`);
 

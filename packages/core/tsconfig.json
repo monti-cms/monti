@@ -11,10 +11,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"jsx": "react-jsx",
-		"types": ["node"],
-		"paths": {
-			"@cms-config": ["./test/cms.config.ts"]
-		}
+		"types": ["node"]
 	},
 	"include": ["src", "test", "vitest.config.ts", "vitest.othersite.config.ts"]
 }

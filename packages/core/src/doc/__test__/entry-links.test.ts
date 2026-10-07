@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { collectRefs } from "../document-refs";
 import { entryIdOfHref, entryLinkIds } from "../entry-links";
 import {
@@ -39,12 +40,13 @@ describe("links in a stored document", () => {
 		for (const href of ["entry:abc", `entry:${ID}/x`, `/entry:${ID}`, `xentry:${ID}`, ""]) {
 			expect(entryIdOfHref(href)).toBeUndefined();
 		}
-		const stored = canonicalDocument(doc(paragraph(link("x", { href: "entry:not-an-id" }))));
+		const stored = canonicalDocument(testSite, doc(paragraph(link("x", { href: "entry:not-an-id" }))));
 		expect(linkMarks(stored).map((mark) => mark.attrs)).toEqual([{ href: "entry:not-an-id" }]);
 	});
 
 	it("an internal link is { entryId } and an external one { href, title? }: the address of an entry link is dropped", () => {
 		const stored = canonicalDocument(
+			testSite,
 			doc(
 				paragraph(
 					link("in", { entryId: ID, href: "/posts/a", title: "t" }),

@@ -1,7 +1,7 @@
 // The AI plugin is an optional dependency, so only types are imported (the block extension never loads AI plugin code).
 
 import type { AiActionDefinition, AiContribution } from "@monti-cms/ai";
-import { createActiveTranslator } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 import { mermaidMessages } from "./messages";
 
 /**
@@ -11,10 +11,14 @@ import { mermaidMessages } from "./messages";
  * ```ts
  * aiPlugin({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), diagramEdit: false } })
  * ```
+ *
+ * The actions are factories (`AiActionFactory`): the AI plugin calls them with the site, so the text is in that site's admin language.
  */
 
-// This module is read by the site config file, so the UI language is resolved when the text is read.
-const t = createActiveTranslator(mermaidMessages);
+/** What the actions read from the site: its admin-language translator (the actions are created per site). */
+export type AiTextSite = Pick<Site, "createTranslator">;
+
+const textOf = (site: AiTextSite) => site.createTranslator(mermaidMessages);
 
 /**
  * Code validation (same shape as `AiValidator` and `defineValidator` of `@monti-cms/ai`). The shape is written out here so the published type declarations do not
@@ -26,9 +30,7 @@ export interface CodeCheck {
 	readonly label: string;
 	readonly run: (value: string) => string | undefined;
 }
-/** `label` is a getter resolved when the text is read, so merge the property definitions instead of copying values. */
-const codeCheck = (check: Omit<CodeCheck, "kind">): CodeCheck =>
-	Object.defineProperties({ kind: "code" as const }, Object.getOwnPropertyDescriptors(check)) as CodeCheck;
+const codeCheck = (check: Omit<CodeCheck, "kind">): CodeCheck => ({ kind: "code", ...check });
 
 /** Diagram types Mermaid knows (the first word of the first line). */
 const DIAGRAM_TYPES = new Set([
@@ -64,7 +66,8 @@ const DIAGRAM_TYPES = new Set([
  * Code validation: is the answer a single ```mermaid code fence whose first line is a diagram type Mermaid knows?
  * Actually rendering the diagram is checked by the browser (the preview).
  */
-export function validateMermaid(value: string): string | undefined {
+export function validateMermaid(site: AiTextSite, value: string): string | undefined {
+	const t = textOf(site);
 	const match = value.trim().match(/^```mermaid[^\n]*\n([\s\S]*?)\n?```$/);
 	if (!match) return t("ai.error.notFence");
 	const first = (match[1] ?? "")
@@ -77,85 +80,65 @@ export function validateMermaid(value: string): string | undefined {
 }
 
 /** Result syntax validation (code validation). It can also be added to other features through `checks`. */
-export const mermaidSyntax = codeCheck({
-	name: "mermaid-syntax",
-	get label() {
-		return t("ai.check.label");
-	},
-	run: validateMermaid,
-});
+export const mermaidSyntax = (site: AiTextSite): CodeCheck =>
+	codeCheck({
+		name: "mermaid-syntax",
+		label: textOf(site)("ai.check.label"),
+		run: (value) => validateMermaid(site, value),
+	});
 
 /** Answer of the fake connection (development only): a diagram that passes syntax validation. If there is a diagram to fix, one node line is added. */
-function fakeMermaid(input: Readonly<Record<string, string>>): string {
-	const fence = input.block?.trim().match(/^(```mermaid[^\n]*\n[\s\S]*?)\n?(```)$/);
-	if (fence) return `${fence[1]}\n  fake["(fake)"]\n${fence[2]}`;
-	const title = (input.title?.trim() || t("ai.fake.title")).replaceAll('"', "'");
-	return `\`\`\`mermaid\ngraph TD\n  fake["(fake) ${title}"]\n\`\`\``;
-}
+const fakeMermaid =
+	(site: AiTextSite) =>
+	(input: Readonly<Record<string, string>>): string => {
+		const fence = input.block?.trim().match(/^(```mermaid[^\n]*\n[\s\S]*?)\n?(```)$/);
+		if (fence) return `${fence[1]}\n  fake["(fake)"]\n${fence[2]}`;
+		const title = (input.title?.trim() || textOf(site)("ai.fake.title")).replaceAll('"', "'");
+		return `\`\`\`mermaid\ngraph TD\n  fake["(fake) ${title}"]\n\`\`\``;
+	};
 
 export const mermaidAi = {
 	/** Create a diagram. Takes a request from the slash menu and inserts a Mermaid block at the cursor. */
-	draft: (options: { readonly prompt?: string } = {}) =>
-		({
-			get label() {
-				return t("ai.draft.label");
-			},
-			input: {
-				title: {
-					kind: "text",
-					get label() {
-						return t("ai.input.title");
-					},
+	draft:
+		(options: { readonly prompt?: string } = {}) =>
+		(site: AiTextSite) => {
+			const t = textOf(site);
+			return {
+				label: t("ai.draft.label"),
+				input: {
+					title: { kind: "text", label: t("ai.input.title") },
+					body: { kind: "mdx", label: t("ai.input.body") },
 				},
-				body: {
-					kind: "mdx",
-					get label() {
-						return t("ai.input.body");
-					},
-				},
-			},
-			result: "mdx",
-			stream: true,
-			askInstruction: true,
-			get prompt() {
-				return options.prompt ?? t("ai.draft.prompt");
-			},
-			checks: [mermaidSyntax],
-			fake: fakeMermaid,
-			attach: [{ slot: "insert" }],
-		}) as const satisfies AiActionDefinition,
+				result: "mdx",
+				stream: true,
+				askInstruction: true,
+				prompt: options.prompt ?? t("ai.draft.prompt"),
+				checks: [mermaidSyntax(site)],
+				fake: fakeMermaid(site),
+				attach: [{ slot: "insert" }],
+			} as const satisfies AiActionDefinition;
+		},
 
 	/** Edit a diagram. Edits as requested from next to the block handle, shows what changed, and then replaces the block. */
-	edit: (options: { readonly prompt?: string } = {}) =>
-		({
-			get label() {
-				return t("ai.edit.label");
-			},
-			input: {
-				block: {
-					kind: "mdx",
-					get label() {
-						return t("ai.input.block");
-					},
-					required: true,
+	edit:
+		(options: { readonly prompt?: string } = {}) =>
+		(site: AiTextSite) => {
+			const t = textOf(site);
+			return {
+				label: t("ai.edit.label"),
+				input: {
+					block: { kind: "mdx", label: t("ai.input.block"), required: true },
+					title: { kind: "text", label: t("ai.input.title") },
 				},
-				title: {
-					kind: "text",
-					get label() {
-						return t("ai.input.title");
-					},
-				},
-			},
-			result: "mdx",
-			stream: true,
-			askInstruction: true,
-			get prompt() {
-				return options.prompt ?? t("ai.edit.prompt");
-			},
-			checks: [mermaidSyntax],
-			fake: fakeMermaid,
-			attach: [{ slot: "block", block: "mermaid" }],
-		}) as const satisfies AiActionDefinition,
+				result: "mdx",
+				stream: true,
+				askInstruction: true,
+				prompt: options.prompt ?? t("ai.edit.prompt"),
+				checks: [mermaidSyntax(site)],
+				fake: fakeMermaid(site),
+				attach: [{ slot: "block", block: "mermaid" }],
+			} as const satisfies AiActionDefinition;
+		},
 };
 
 /** What `mermaid()` adds to the AI plugin. The feature names are the keys of the values edited in the admin AI screen. */

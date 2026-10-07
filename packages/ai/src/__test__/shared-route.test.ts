@@ -1,5 +1,6 @@
 import { fakeCms } from "@monti-cms/core/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../test/site";
 import { DELETE, GET, PATCH, POST, PUT } from "../routes/shared/route";
 
 /** A store holding the shared text rows and action overrides. A version mismatch gives 409. */
@@ -25,7 +26,7 @@ vi.mock("../store", async () => {
 	};
 });
 
-const cms = fakeCms();
+const cms = fakeCms({ config: testConfig });
 
 const call = (
 	handler: (request: Request, context: { cms: typeof cms }) => Promise<Response>,

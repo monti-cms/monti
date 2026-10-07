@@ -1,3 +1,4 @@
+import { perSite, type Site } from "@monti-cms/core/client";
 import { CODE_BLOCK_MARKS } from "@monti-cms/core/code-block";
 import { CodeBlock } from "@tiptap/extension-code-block";
 import { ReactNodeViewRenderer } from "@tiptap/react";
@@ -14,36 +15,38 @@ const hidden = (value: unknown) => ({ default: value, rendered: false });
  * `source`/`sourceKey` are the loaded source and the model fingerprint at that time. If unchanged, the source is saved as is.
  * With `rawMode`, the code has annotations the editor cannot display, so even annotation lines are edited as source.
  */
-export const CmsCodeBlock = CodeBlock.extend({
-	name: "codeBlock",
-	marks: CODE_BLOCK_MARKS,
+export const cmsCodeBlock = perSite((site: Site) =>
+	CodeBlock.extend({
+		name: "codeBlock",
+		marks: CODE_BLOCK_MARKS,
 
-	addAttributes() {
-		return {
-			...this.parent?.(),
-			meta: hidden(null),
-			lineEffects: hidden([]),
-			rules: hidden([]),
-			source: hidden(null),
-			sourceKey: hidden(null),
-			rawMode: hidden(false),
-		};
-	},
+		addAttributes() {
+			return {
+				...this.parent?.(),
+				meta: hidden(null),
+				lineEffects: hidden([]),
+				rules: hidden([]),
+				source: hidden(null),
+				sourceKey: hidden(null),
+				rawMode: hidden(false),
+			};
+		},
 
-	addNodeView() {
-		return ReactNodeViewRenderer(CodeBlockView, {
-			// Presses and drags on the header tools, line number column, and line menu are not handled by the editor (selection, block selection).
-			stopEvent: ({ event }) => event.target instanceof Element && event.target.closest("[data-code-ui]") !== null,
-		});
-	},
+		addNodeView() {
+			return ReactNodeViewRenderer(CodeBlockView, {
+				// Presses and drags on the header tools, line number column, and line menu are not handled by the editor (selection, block selection).
+				stopEvent: ({ event }) => event.target instanceof Element && event.target.closest("[data-code-ui]") !== null,
+			});
+		},
 
-	addProseMirrorPlugins() {
-		return [
-			...(this.parent?.() ?? []),
-			createCodeBlockKeysPlugin(),
-			createCodeBlockHighlightPlugin(),
-			createCodeEffectsPlugin(),
-			createAnchorDedupePlugin(),
-		];
-	},
-});
+		addProseMirrorPlugins() {
+			return [
+				...(this.parent?.() ?? []),
+				createCodeBlockKeysPlugin(),
+				createCodeBlockHighlightPlugin(site),
+				createCodeEffectsPlugin(site),
+				createAnchorDedupePlugin(site),
+			];
+		},
+	}),
+);

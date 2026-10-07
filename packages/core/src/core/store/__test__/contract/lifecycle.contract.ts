@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../../test/any-site";
+import { testSite } from "../../../../../test/site";
 import { contentOf, docOf } from "../../../../../test/stored-content";
 import { unparsedDocument } from "../../../../doc/stored-document";
 import type { ContentStore } from "../../ports";
@@ -44,7 +45,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 
 				// The publish date is the time of first publish.
 				const before = Date.now();
-				const published = await publishDraft(store, { id: entry.id, expectedVersion: entry.version });
+				const published = await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
 				expect(published.status).toBe("published");
 				expect(published.publishedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
@@ -61,7 +62,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					contentHash: "hash-arch",
 				});
 
-				const pub = await publishDraft(store, {
+				const pub = await publishDraft(testSite, store, {
 					id: entry.id,
 					expectedVersion: entry.version,
 				});
@@ -85,7 +86,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					contentHash: "hash-unarch",
 				});
 
-				const pub = await publishDraft(store, {
+				const pub = await publishDraft(testSite, store, {
 					id: entry.id,
 					expectedVersion: entry.version,
 				});
@@ -136,7 +137,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					expectedVersion: entry.version,
 				});
 
-				const restored = await restoreDraft(store, {
+				const restored = await restoreDraft(testSite, store, {
 					id: entry.id,
 					expectedVersion: trashed.version,
 				});
@@ -154,7 +155,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					contentHash: "hash-perm",
 				});
 
-				const pub = await publishDraft(store, {
+				const pub = await publishDraft(testSite, store, {
 					id: entry.id,
 					expectedVersion: entry.version,
 				});
@@ -197,7 +198,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 
 				// tag must be published or active
-				await publishDraft(store, { id: tag.id, expectedVersion: tag.version });
+				await publishDraft(testSite, store, { id: tag.id, expectedVersion: tag.version });
 
 				const post = await seedEntry(store, {
 					collection: content,
@@ -234,7 +235,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 
 				// Now publish post - should succeed and copy reference to state='published'
-				const pubPost = await publishDraft(store, {
+				const pubPost = await publishDraft(testSite, store, {
 					id: post.id,
 					expectedVersion: post.version + 1,
 				});
@@ -257,7 +258,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
-				const publishedTag = await publishDraft(store, { id: tag.id, expectedVersion: tag.version });
+				const publishedTag = await publishDraft(testSite, store, { id: tag.id, expectedVersion: tag.version });
 				const post = await seedEntry(store, {
 					collection: content,
 					slug: `post-uses-tag-${randomUUID()}`,
@@ -282,7 +283,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					},
 					references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
 				});
-				const publishedPost = await publishDraft(store, { id: post.id, expectedVersion: saved.version });
+				const publishedPost = await publishDraft(testSite, store, { id: post.id, expectedVersion: saved.version });
 
 				await expect(store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version })).rejects.toMatchObject({
 					code: "in_use",
@@ -315,7 +316,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				await expect(store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version })).rejects.toMatchObject({
 					code: "in_use",
 				});
-				await publishDraft(store, { id: publishedPost.id, expectedVersion: editedWithoutTag.version });
+				await publishDraft(testSite, store, { id: publishedPost.id, expectedVersion: editedWithoutTag.version });
 				const trashedTag = await store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version });
 				expect(trashedTag.status).toBe("trashed");
 			});
@@ -330,7 +331,9 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					contentHash: randomUUID(),
 				});
 				const trashed = await store.trashEntry({ id: draft.id, expectedVersion: draft.version });
-				await expect(publishDraft(store, { id: trashed.id, expectedVersion: trashed.version })).rejects.toMatchObject({
+				await expect(
+					publishDraft(testSite, store, { id: trashed.id, expectedVersion: trashed.version }),
+				).rejects.toMatchObject({
 					code: "invalid_status",
 				});
 			});
@@ -344,7 +347,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
-				const tag = await publishDraft(store, { id: tagDraft.id, expectedVersion: tagDraft.version });
+				const tag = await publishDraft(testSite, store, { id: tagDraft.id, expectedVersion: tagDraft.version });
 				const post = await seedEntry(store, {
 					collection: content,
 					slug: `draft-uses-tag-${randomUUID()}`,
@@ -401,7 +404,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					});
 
 					// 1st publish (clean, no refs)
-					const firstPub = await publishDraft(store, { id: post.id, expectedVersion: post.version });
+					const firstPub = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
 
 					// Save draft on post referencing the unpublished tag
 					await store.saveWorkingWithReferences({
@@ -430,7 +433,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 
 					// Attempt 2nd publish - MUST FAIL because the referenced tag is not published
 					await expect(
-						publishDraft(store, {
+						publishDraft(testSite, store, {
 							id: post.id,
 							expectedVersion: firstPub.version + 1,
 						}),
@@ -454,7 +457,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					schemaVersion: 1,
 					contentHash: "ts-hash-1",
 				});
-				const pub1 = await publishDraft(store, { id: post.id, expectedVersion: post.version });
+				const pub1 = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
 				const firstPublishedAt = pub1.publishedAt;
 				expect(firstPublishedAt).toBeInstanceOf(Date);
 
@@ -475,12 +478,12 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					references: [],
 				});
 				await new Promise((r) => setTimeout(r, 50));
-				const pub2 = await publishDraft(store, { id: post.id, expectedVersion: pub1.version + 1 });
+				const pub2 = await publishDraft(testSite, store, { id: post.id, expectedVersion: pub1.version + 1 });
 				expect(pub2.publishedAt).toEqual(firstPublishedAt);
 
 				const archived = await store.archiveEntry({ id: post.id, expectedVersion: pub2.version });
 				const draft = await store.unarchiveEntry({ id: post.id, expectedVersion: archived.version });
-				const pub3 = await publishDraft(store, { id: post.id, expectedVersion: draft.version });
+				const pub3 = await publishDraft(testSite, store, { id: post.id, expectedVersion: draft.version });
 				expect(pub3.publishedAt).toEqual(firstPublishedAt);
 			});
 		});
@@ -496,7 +499,9 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					contentHash: "broken-hash",
 				});
 
-				await expect(publishDraft(store, { id: post.id, expectedVersion: post.version })).rejects.toMatchObject({
+				await expect(
+					publishDraft(testSite, store, { id: post.id, expectedVersion: post.version }),
+				).rejects.toMatchObject({
 					code: "publish_validation_failed",
 				});
 

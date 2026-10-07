@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, recordCollection } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { CmsError } from "../../store/errors";
 import type { EntryStatus } from "../../store/types";
 import {
@@ -59,15 +60,18 @@ describe("lifecycle transitions", () => {
 	});
 
 	it("archives content collections, but not record collections", () => {
-		expect(codeOf(() => assertArchivable(contentCollection, 3))).toBeNull();
-		expect(codeOf(() => assertArchivable(recordCollection, 3))).toEqual({ code: "invalid_status", serverVersion: 3 });
+		expect(codeOf(() => assertArchivable(testSite, contentCollection, 3))).toBeNull();
+		expect(codeOf(() => assertArchivable(testSite, recordCollection, 3))).toEqual({
+			code: "invalid_status",
+			serverVersion: 3,
+		});
 	});
 
 	it("requires a record to be unreferenced before trashing and publishes it again on restore; a content collection does neither", () => {
-		expect(trashRequiresNoReferences(recordCollection)).toBe(true);
-		expect(restorePublishesAgain(recordCollection)).toBe(true);
-		expect(trashRequiresNoReferences(contentCollection)).toBe(false);
-		expect(restorePublishesAgain(contentCollection)).toBe(false);
+		expect(trashRequiresNoReferences(testSite, recordCollection)).toBe(true);
+		expect(restorePublishesAgain(testSite, recordCollection)).toBe(true);
+		expect(trashRequiresNoReferences(testSite, contentCollection)).toBe(false);
+		expect(restorePublishesAgain(testSite, contentCollection)).toBe(false);
 	});
 
 	it("restoring a translation needs its source out of the trash", () => {

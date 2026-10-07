@@ -17,12 +17,13 @@ import {
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../core/test/any-site";
+import { testSite } from "../../../../core/test/site";
 import { docOf } from "../../../../core/test/stored-content";
 import { createServerMdxFormat, legacyBodies } from "../../server";
 
 /** The `mdx` format as a server registers it: it also reads the text of old bodies, which the steps under test need. */
 const formats = createFormatRegistry([createServerMdxFormat()]);
-const bodies = legacyBodies();
+const bodies = legacyBodies(testSite);
 
 /** The `mdx` column of a body template, `null` when it has no text. */
 const templateMdx = async (pool: Pool, schemaName: string, id: string): Promise<string | null> =>
@@ -46,9 +47,9 @@ describe("document shape migrations", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName, formats });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store, { formats: async () => formats });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, { site: testSite, formats: async () => formats });
 	});
 
 	afterAll(async () => {
@@ -70,7 +71,7 @@ describe("document shape migrations", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -86,7 +87,7 @@ describe("document shape migrations", () => {
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
-		return publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
 	const setWorkingBody = (entryId: string, mdx: string) =>
@@ -162,7 +163,7 @@ describe("document shape migrations", () => {
 			await setWorkingBody(edited.id, "첫 줄<br />\n다른 줄");
 
 			await rewindTo(STEP);
-			await migrateContentStore(pool, { schema: schemaName, formats });
+			await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 
 			expect(await staleHashes()).toEqual([]);
 			expect(await hasUnpublishedChanges(same.id)).toBe(false);
@@ -174,7 +175,7 @@ describe("document shape migrations", () => {
 			const published = await publishedWith("첫 줄<br />\n둘째 줄");
 			await rewindTo(STEP);
 
-			await migrateContentStore(pool, { schema: schemaName, formats });
+			await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 
 			const after = await store.getEntry(published.id);
 			expect(after.version).toBe(published.version);
@@ -205,7 +206,7 @@ describe("document shape migrations", () => {
 
 		const run = async () => {
 			await rewindTo(STEP);
-			await migrateContentStore(pool, { schema: schemaName, formats });
+			await migrateContentStore(pool, { site: testSite, schema: schemaName, formats });
 		};
 
 		it("is a recorded migration step that runs after the hash step and before the template seed", () => {
@@ -300,7 +301,11 @@ describe("document shape migrations", () => {
 			const messages: string[] = [];
 			const client = await pool.connect();
 			try {
-				await migrateSoftBreaks(client, schemaName, { bodies, log: (message) => messages.push(message) });
+				await migrateSoftBreaks(client, schemaName, {
+					site: testSite,
+					bodies,
+					log: (message) => messages.push(message),
+				});
 			} finally {
 				client.release();
 			}
@@ -320,7 +325,7 @@ describe("document shape migrations", () => {
 			await giveLegacyText();
 			const client = await pool.connect();
 			try {
-				await migrateSoftBreaks(client, schemaName, { bodies, batchSize: 2 });
+				await migrateSoftBreaks(client, schemaName, { site: testSite, bodies, batchSize: 2 });
 			} finally {
 				client.release();
 			}

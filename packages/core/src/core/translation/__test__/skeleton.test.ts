@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import { defineBlock } from "../../../blocks/define";
 import { unparsedDocument } from "../../../doc/stored-document";
@@ -47,23 +48,25 @@ describe("translation structure check", () => {
 
 describe("structure check of documents", () => {
 	it("compares the stored documents of the source and the translation", () => {
-		expect(compareDocumentStructure(docOf("첫 문단\n\n## 제목"), docOf("First\n\n## Title"))).toEqual({ ok: true });
-		expect(compareDocumentStructure(docOf("첫 문단"), docOf("First\n\nSecond")).ok).toBe(false);
+		expect(compareDocumentStructure(testSite, docOf("첫 문단\n\n## 제목"), docOf("First\n\n## Title"))).toEqual({
+			ok: true,
+		});
+		expect(compareDocumentStructure(testSite, docOf("첫 문단"), docOf("First\n\nSecond")).ok).toBe(false);
 	});
 
 	it("ignores block ids", () => {
 		const source = docOf("가\n\n나");
 		const translated = docOf("a\n\nb");
 		expect(source.content[0]?.id).not.toBe(translated.content[0]?.id);
-		expect(compareDocumentStructure(source, translated)).toEqual({ ok: true });
+		expect(compareDocumentStructure(testSite, source, translated)).toEqual({ ok: true });
 	});
 
 	it("fails for a translation or a source that is an unparsed body", () => {
-		expect(compareDocumentStructure(docOf("a"), unparsedDocument("<Box"))).toMatchObject({
+		expect(compareDocumentStructure(testSite, docOf("a"), unparsedDocument("<Box"))).toMatchObject({
 			ok: false,
 			code: "mdx_error",
 		});
-		expect(compareDocumentStructure(unparsedDocument("<Box"), docOf("a"))).toMatchObject({
+		expect(compareDocumentStructure(testSite, unparsedDocument("<Box"), docOf("a"))).toMatchObject({
 			ok: false,
 			code: "source_unreadable",
 		});

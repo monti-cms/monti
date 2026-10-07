@@ -1,6 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { para, tiptapOfNodes } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
 import { selectedBlocks, setBlockSelection } from "../block-selection";
@@ -8,7 +9,7 @@ import { calculateDropPosition, canDropBlockNode, moveBlockNode, moveBlockSet, s
 
 const createTestEditor = (content: string) => {
 	return new Editor({
-		extensions: buildEditorExtensions(),
+		extensions: buildEditorExtensions(testSite),
 		content,
 	});
 };

@@ -17,7 +17,7 @@ pnpm exec monti add article-body --dry-run       # 쓸 파일과 설치할 패�
 
 | 이름 | 종류 | 내용 | 필요한 것 |
 | --- | --- | --- | --- |
-| `article-body` | 공개 페이지 | `<ArticleBody entry={entry} components={...} />`: 저장된 문서를 `CmsContent`로 그리고, 위에 `tableOfContents`로 만든 목차를 둡니다. 서버 컴포넌트 | `@monti-cms/core` |
+| `article-body` | 공개 페이지 | `<ArticleBody cms={cms} entry={entry} components={...} />`: 저장된 문서를 `CmsContent`로 그리고, 위에 `tableOfContents`로 만든 목차를 둡니다. 서버 컴포넌트 | `@monti-cms/core` |
 | `blog-theme` | 공개 페이지 | 컬렉션 하나의 글 목록(페이지 나눔)과 글 페이지(제목, 날짜, 작성자, 목차, 본문, 새 글과 이전 글). `generateMetadata`, 404, 리다이렉트를 갖춥니다. 라우트 파일은 `app/(site)/blog/`에 놓입니다 | `@monti-cms/core`, `next`, `article-body` |
 | `entry-editor` | 어드민 | `<EntryEditorScreen adminId target fields />`: `useEntryEditor`(불러오기, 저장, 발행, 복구 사본, 충돌)와 `useField`로 만든 최소한의 맞춤 편집 화면 | `@monti-cms/admin`, `field-row` |
 | `field-row` | 어드민 | `<FieldRow name="title" />`: `useField`로 그린 폼 필드 하나(라벨, 입력, 설명, 오류) | `@monti-cms/admin` |

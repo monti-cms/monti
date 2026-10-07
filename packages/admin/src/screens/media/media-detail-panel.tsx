@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator, fileTypeLabel, formatFileSize, isImageMime, withBasePath } from "@monti-cms/core/client";
+import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { formatBytes } from "../../editor/upload-helper";
@@ -16,8 +16,6 @@ import { SidePanelHeader } from "../shared/side-panel";
 import { copyText, type MediaItem, mediaUsages, usageCount, usageNoteLabel, withExtension } from "./media-item";
 import { MediaThumb } from "./media-views";
 import { mediaMessages } from "./messages";
-
-const t = createTranslator(mediaMessages);
 
 /** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -63,6 +61,8 @@ export function MediaDetailPanel({
 	onRequestDelete: () => void;
 	onDirtyChange?: (dirty: boolean) => void;
 }) {
+	const site = useSite();
+	const t = useTranslator(mediaMessages);
 	const altId = useId();
 	const captionId = useId();
 	// The last saved (initially loaded) value. If the edited value differs, there are unsaved changes.
@@ -70,7 +70,7 @@ export function MediaDetailPanel({
 	const [draft, setDraft] = useState(saved);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
-	const isImage = isImageMime(media.mimeType);
+	const isImage = site.api.isImageMime(media.mimeType);
 	const isDirty = draft.alt !== saved.alt || draft.caption !== saved.caption;
 	useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
 
@@ -81,7 +81,7 @@ export function MediaDetailPanel({
 			await onSaveDefaults(draft);
 			setSaved(draft);
 		} catch (error) {
-			setSaveError(errorText(error, t("library.saveFailed")));
+			setSaveError(errorText(site, error, t("library.saveFailed")));
 		} finally {
 			setIsSaving(false);
 		}
@@ -128,7 +128,7 @@ export function MediaDetailPanel({
 									type="button"
 									variant="outline"
 									size="xs"
-									onClick={() => void copyText(media.publicUrl as string, t("detail.copiedUrl"))}
+									onClick={() => void copyText(t, media.publicUrl as string, t("detail.copiedUrl"))}
 								>
 									<Copy aria-hidden />
 									{t("detail.copyUrl")}
@@ -149,7 +149,7 @@ export function MediaDetailPanel({
 							variant="outline"
 							size="xs"
 							aria-label={t("detail.copyIdLabel")}
-							onClick={() => void copyText(media.id, t("detail.copiedId"))}
+							onClick={() => void copyText(t, media.id, t("detail.copiedId"))}
 						>
 							<Copy aria-hidden />
 							{t("detail.copyId")}
@@ -191,7 +191,7 @@ export function MediaDetailPanel({
 								{media.original.mimeType}
 							</Row>
 						)}
-						<Row label={t("detail.row.uploadedAt")}>{formatDateTime(media.createdAt)}</Row>
+						<Row label={t("detail.row.uploadedAt")}>{formatDateTime(site, media.createdAt)}</Row>
 						<Row label={t("detail.row.id")}>
 							<code className="text-[11px]">{media.id}</code>
 						</Row>
@@ -274,12 +274,14 @@ export function MediaDetailPanel({
 							{mediaUsages(media).map((usage) => (
 								<li key={usage.entryId}>
 									<a
-										href={withBasePath(entryHref(usage.collection, usage.entryId))}
+										href={withBasePath(entryHref(site, usage.collection, usage.entryId))}
 										className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-cms-accent"
 									>
 										<span className="min-w-0 flex-1 truncate">{usage.title || t("common.untitled")}</span>
 										{usage.note && (
-											<span className="shrink-0 text-cms-muted-foreground text-xs">{usageNoteLabel(usage.note)}</span>
+											<span className="shrink-0 text-cms-muted-foreground text-xs">
+												{usageNoteLabel(t, usage.note)}
+											</span>
 										)}
 									</a>
 								</li>

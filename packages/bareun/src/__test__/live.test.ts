@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 import { checkWithBareun } from "../api";
 import { resolveBareunOptions } from "../options";
 
@@ -12,7 +13,7 @@ describe.runIf(live)("Bareun live call", () => {
 		expect(apiKey, "BAREUN_API_KEY is not set").toBeTruthy();
 		const options = resolveBareunOptions();
 		const text = "학교에 갔읍니다.";
-		const issues = await checkWithBareun([{ id: "a", text, locale: "ko" }], {
+		const issues = await checkWithBareun(testSite, [{ id: "a", text, locale: "ko" }], {
 			apiKey: apiKey ?? "",
 			baseUrl: options.baseUrl,
 			customDictNames: [],

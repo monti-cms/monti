@@ -24,8 +24,8 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/nextjs next-auth@5.0.0-beta
 | 진입점 | 쓰는 곳 | 내용 |
 | --- | --- | --- |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, `CmsRouteHandler` 타입 |
-| `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig, { config })` |
-| `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata`·`NextAdminRouter` |
+| `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
+| `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | `cms.server.ts` | `githubAuth(options)` |
 
 ### 라우트 핸들러
@@ -48,20 +48,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {};
 
-export default withCms(nextConfig, { config: "./cms.config.ts" });
+export default withCms(nextConfig);
 ```
 
-`@cms-config` 별칭을 사이트 설정에 잇고, 코어 패키지를 앱과 함께 빌드하고, Next의 `basePath`를 서버·브라우저 번들에 알리고, 설치하지 않은 CMS 패키지의 선택 의존성은 빈 모듈로 잇는다(코어 README의 "선택 의존성").
+설정 파일은 잇지 않는다(사이트 설정은 `cms.server.ts`의 `createCms`에 넘기고, 관리자는 그 인스턴스에서 받는다). 코어 패키지를 앱과 함께 빌드하고, Next의 `basePath`를 서버·브라우저 번들에 알리고, 설치하지 않은 CMS 패키지의 선택 의존성은 빈 모듈로 잇는다(코어 README의 "선택 의존성").
 
 ### 관리자 페이지·레이아웃
 
 ```tsx
 // app/(admin)/admin/layout.tsx
-import { CmsAdminLayout } from "@monti-cms/nextjs/admin";
+import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
 import { cms } from "../../../cms.server";
 
-export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin";
+export const generateMetadata = () => cmsAdminMetadata(cms);
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
 	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;

@@ -1,36 +1,41 @@
+import { definePlugin } from "@monti-cms/core";
+import { createSite } from "@monti-cms/core/client";
+import { renderDocument } from "@monti-cms/core/render";
 import type { Root } from "mdast";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { visit } from "unist-util-visit";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { testConfig } from "../../../core/test/site";
+import { mdxFormat } from "../format";
+import { type RenderMdxOptions, renderMdx as renderMdxOf } from "../render";
+import type { SyntaxExtension } from "../syntax";
+import { siteCodeLineEffects, siteSyntaxBlocks } from "../syntax-config";
+import { renderFixture as renderFixtureOf } from "../testing";
 
 // A plugin of the site config gives the public component of a block (`render` of `definePlugin`), the way a block extension does.
-vi.mock("../../../core/src/config/resolved", async () => {
-	const { definePlugin } = await import("@monti-cms/core");
-	const base = (await import("../../../core/test/cms.config")).default;
-	const fake = definePlugin({
-		name: "fake-callout-render",
-		options: {},
-		render: async () => ({
-			documentComponents: () => ({
-				blocks: {
-					callout: ({ title, children }: { title?: string; children?: ReactNode }) => (
-						<aside data-from-plugin="yes">
-							<strong>{title}</strong>
-							{children}
-						</aside>
-					),
-				},
-			}),
+const fake = definePlugin({
+	name: "fake-callout-render",
+	options: {},
+	render: async () => ({
+		documentComponents: () => ({
+			blocks: {
+				callout: ({ title, children }: { title?: string; children?: ReactNode }) => (
+					<aside data-from-plugin="yes">
+						<strong>{title}</strong>
+						{children}
+					</aside>
+				),
+			},
 		}),
-	});
-	return { cmsConfig: { ...base, plugins: [...(base.plugins ?? []), fake] } };
+	}),
 });
+const site = createSite({ ...testConfig, plugins: [...(testConfig.plugins ?? []), fake] });
 
-const { renderMdx } = await import("../render");
-const { renderFixture } = await import("../testing");
-
-type SyntaxExtension = import("../syntax").SyntaxExtension;
+const renderMdx = (source: string, options: Partial<RenderMdxOptions> = {}) =>
+	renderMdxOf(source, { site, ...options });
+const renderFixture = (source: string, options: Partial<RenderMdxOptions> = {}) =>
+	renderFixtureOf(source, { site, ...options });
 
 /** A made-up notation: `@@word@@` is an underlined word. */
 const atNotation: SyntaxExtension = {
@@ -135,16 +140,15 @@ describe("renderMdx", () => {
 	});
 
 	it("draws what the document renderer draws for the same text", async () => {
-		const { mdxFormat } = await import("../format");
-		const { renderDocument } = await import("@monti-cms/core/render");
 		const source = "# Title\n\nSome *words* and a [link](https://example.com).\n";
 		const read = await mdxFormat.import?.(source, {
 			locale: "ko",
-			blocks: (await import("../syntax-config")).siteSyntaxBlocks,
-			codeLineEffects: (await import("../syntax-config")).siteCodeLineEffects,
+			blocks: siteSyntaxBlocks(site),
+			codeLineEffects: siteCodeLineEffects(site),
+			site,
 		});
 		if (!read?.ok) throw new Error("not read");
-		const direct = renderToStaticMarkup((await renderDocument(read.doc)).content as ReactNode);
+		const direct = renderToStaticMarkup((await renderDocument(read.doc, { site })).content as ReactNode);
 		expect((await renderFixture(source)).html).toBe(direct);
 	});
 });

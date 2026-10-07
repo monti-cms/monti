@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsApiUrl, FILE_ACCEPT } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ImageInsertDialog } from "../../editor/image-insert-dialog";
@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
 import { cmsFetch } from "../admin-api";
 import type { FieldInputProps } from "./field-inputs";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 /** Media ID -> public URL. Shared by the input and the extension's preview. `null` if it cannot be loaded. */
 const urls = new Map<string, string | null>();
@@ -29,6 +29,7 @@ export function rememberMediaUrl(mediaId: string, url: string | null) {
 
 /** Public URL of a media ID. `null` if empty, not yet known, or failed to load. */
 export function useMediaUrl(mediaId: string): string | null {
+	const site = useSite();
 	const url = useSyncExternalStore(
 		subscribe,
 		() => (mediaId ? urls.get(mediaId) : undefined),
@@ -37,11 +38,11 @@ export function useMediaUrl(mediaId: string): string | null {
 	useEffect(() => {
 		if (!mediaId || urls.has(mediaId) || loading.has(mediaId)) return;
 		loading.add(mediaId);
-		cmsFetch<{ publicUrl: string | null }>(cmsApiUrl(`/v1/media/${mediaId}`))
+		cmsFetch<{ publicUrl: string | null }>(site, cmsApiUrl(`/v1/media/${mediaId}`))
 			.then((media) => rememberMediaUrl(mediaId, media.publicUrl))
 			.catch(() => rememberMediaUrl(mediaId, null))
 			.finally(() => loading.delete(mediaId));
-	}, [mediaId]);
+	}, [mediaId, site]);
 	return mediaId ? (url ?? null) : null;
 }
 
@@ -69,6 +70,7 @@ export function MediaInput(props: FieldInputProps) {
 
 /** Picks an image from the media library and shows the picked image small. */
 export function MediaImageInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
+	const t = useTranslator(entriesMessages);
 	const [picking, setPicking] = useState(false);
 	const mediaId = typeof value === "string" ? value : "";
 	return (
@@ -119,6 +121,8 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 
 /** Uploads and picks one file. The picked file is shown by its file name. */
 function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
 	const mediaId = typeof value === "string" ? value : "";
 	const fileInput = useRef<HTMLInputElement>(null);
 	const [filename, setFilename] = useState<string | null>(null);
@@ -128,18 +132,18 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 		setFilename(null);
 		if (!mediaId) return;
 		let cancelled = false;
-		cmsFetch<{ filename?: string }>(cmsApiUrl(`/v1/media/${mediaId}`))
+		cmsFetch<{ filename?: string }>(site, cmsApiUrl(`/v1/media/${mediaId}`))
 			.then((media) => !cancelled && setFilename(media.filename ?? null))
 			.catch(() => {});
 		return () => {
 			cancelled = true;
 		};
-	}, [mediaId]);
+	}, [mediaId, site]);
 	const upload = async (file: File) => {
 		setError(null);
 		setProgress(0);
 		try {
-			const uploaded = await uploadAttachment(file, setProgress);
+			const uploaded = await uploadAttachment(site, file, setProgress);
 			setFilename(file.name);
 			onChange(uploaded.mediaId);
 		} catch (cause) {
@@ -186,7 +190,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 			<input
 				ref={fileInput}
 				type="file"
-				accept={FILE_ACCEPT}
+				accept={site.api.FILE_ACCEPT}
 				hidden
 				aria-hidden
 				tabIndex={-1}

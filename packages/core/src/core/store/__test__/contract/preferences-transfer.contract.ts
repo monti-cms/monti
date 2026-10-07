@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../../test/any-site";
+import { testSite } from "../../../../../test/site";
 import { contentOf, docOf } from "../../../../../test/stored-content";
 import type { ContentStore } from "../..";
 import { CmsError } from "../..";
@@ -99,7 +100,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 				metadata: { title: "Export live" },
 				text: "# Live body",
 			});
-			const published = await publishDraft(store, { id: created.id, expectedVersion: created.version });
+			const published = await publishDraft(testSite, store, { id: created.id, expectedVersion: created.version });
 			await seedSave(store, published.id, {
 				expectedVersion: published.version,
 				metadata: { title: "Export live, edited" },

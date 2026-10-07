@@ -1,22 +1,54 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { defineCollection, defineConfig, definePlugin, fields } from "../..";
+import { createSite } from "../../site";
 
-vi.mock("../../config/resolved", () => ({
-	cmsConfig: {
-		plugins: [
-			{ name: "color", options: { palette: ["red"] } },
-			{ name: "seo", options: {} },
-		],
+const page = defineCollection({
+	label: "Page",
+	kind: "document",
+	fields: {
+		title: fields.text({ label: "Title", required: true }),
+		slug: fields.slug({ label: "Slug", from: "title", required: true }),
 	},
-}));
+});
 
-import { getPluginOptions } from "../options";
+const site = createSite(
+	defineConfig({
+		collections: { page },
+		locales: [{ code: "en", name: "English" }],
+		defaultLocale: "en",
+		plugins: [
+			definePlugin({ name: "color", options: { palette: ["red"] } }),
+			definePlugin({ name: "seo", options: {} }),
+		],
+	}),
+);
 
-describe("getPluginOptions", () => {
+describe("site.getPluginOptions", () => {
 	it("returns the options of the plugin with that name", () => {
-		expect(getPluginOptions<{ palette: string[] }>("color")).toEqual({ palette: ["red"] });
+		expect(site.getPluginOptions<{ palette: string[] }>("color")).toEqual({ palette: ["red"] });
 	});
 
 	it("is undefined for a plugin the site config does not list", () => {
-		expect(getPluginOptions("ai")).toBeUndefined();
+		expect(site.getPluginOptions("ai")).toBeUndefined();
+	});
+
+	it("is undefined for every name when the config lists no plugins", () => {
+		const bare = createSite(
+			defineConfig({ collections: { page }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
+		);
+		expect(bare.getPluginOptions("color")).toBeUndefined();
+	});
+
+	it("keeps the options of two sites apart", () => {
+		const other = createSite(
+			defineConfig({
+				collections: { page },
+				locales: [{ code: "en", name: "English" }],
+				defaultLocale: "en",
+				plugins: [definePlugin({ name: "color", options: { palette: ["blue"] } })],
+			}),
+		);
+		expect(other.getPluginOptions("color")).toEqual({ palette: ["blue"] });
+		expect(site.getPluginOptions("color")).toEqual({ palette: ["red"] });
 	});
 });

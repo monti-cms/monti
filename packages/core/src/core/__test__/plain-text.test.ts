@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { unparsedDocument } from "../../doc/stored-document";
 import { documentText, SEARCH_TEXT } from "../body-text";
 import { bodyExcerpt, toPlainText } from "../plain-text";
 
 /** The text of a body written as text (see `test/doc-text.ts`): of the document a write stores for it. */
-const plain = (mdx: string) => toPlainText(docOf(mdx));
-const excerpt = (mdx: string, maxLength?: number) => bodyExcerpt(docOf(mdx), maxLength);
+const plain = (mdx: string) => toPlainText(testSite, docOf(mdx));
+const excerpt = (mdx: string, maxLength?: number) => bodyExcerpt(testSite, docOf(mdx), maxLength);
 
 describe("body plain text and automatic summary", () => {
 	it("keeps a word that emphasis splits as one word, and sets apart the words of different blocks", () => {
@@ -22,12 +23,12 @@ describe("body plain text and automatic summary", () => {
 	});
 
 	it("still gives text for a body that does not parse", () => {
-		expect(toPlainText(unparsedDocument("끝나지 않은 <Box> 문장"))).toContain("문장");
+		expect(toPlainText(testSite, unparsedDocument("끝나지 않은 <Box> 문장"))).toContain("문장");
 	});
 });
 
 describe("body search text", () => {
-	const search = (mdx: string) => documentText(docOf(mdx), SEARCH_TEXT);
+	const search = (mdx: string) => documentText(testSite, docOf(mdx), SEARCH_TEXT);
 
 	it("is the plain words for plain Markdown, in one line", () => {
 		expect(search("second words")).toBe("second words");

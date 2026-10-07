@@ -1,10 +1,10 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import { computeContentHash } from "../../../core/content-hash";
-import { contentPath } from "../../../core/links";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import { entryLinkIds } from "../../../doc/entry-links";
@@ -38,9 +38,9 @@ describe("0018_link_entry_ids", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store, { pipeline: createWritePipeline() });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, { site: testSite, pipeline: createWritePipeline({ site: testSite }) });
 	});
 
 	afterAll(async () => {
@@ -61,7 +61,7 @@ describe("0018_link_entry_ids", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -75,7 +75,7 @@ describe("0018_link_entry_ids", () => {
 		});
 
 	const hrefTo = (slug: string) => {
-		const path = contentPath(contentCollection, slug);
+		const path = testSite.contentPath(contentCollection, slug);
 		if (!path) throw new Error("the content collection has no path");
 		return path;
 	};
@@ -118,7 +118,9 @@ describe("0018_link_entry_ids", () => {
 		const client = await pool.connect();
 		try {
 			await client.query("BEGIN");
-			const report = await migrateLinkEntryIds(client, schemaName, { log: (message) => logged.push(message) });
+			const report = await migrateLinkEntryIds(testSite, client, schemaName, {
+				log: (message) => logged.push(message),
+			});
 			await client.query("COMMIT");
 			return { report, logged };
 		} catch (error) {
@@ -137,22 +139,22 @@ describe("0018_link_entry_ids", () => {
 
 	it("turns the internal links of working and published bodies into links by id, and keeps version and modified date", async () => {
 		const target = await create(unique("target"), "Target");
-		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		const publishedTarget = await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
 		const targetSlug = publishedTarget.workingSlug as string;
 		const source = await create(
 			unique("source"),
 			`See [the target](${hrefTo(targetSlug)}) and [outside](https://example.com/a).`,
 		);
-		const publishedSource = await publishDraft(store, { id: source.id, expectedVersion: source.version });
+		const publishedSource = await publishDraft(testSite, store, { id: source.id, expectedVersion: source.version });
 		await asVersion2(source.id);
 		const before = await row(source.id, "working");
 
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = $1`, [STEP]);
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 
 		for (const state of ["working", "published"] as const) {
 			const after = await row(source.id, state);
-			const doc = readStoredDocument(after?.doc);
+			const doc = readStoredDocument(after?.doc, testSite);
 			expect(doc?.version).toBe(STORED_DOCUMENT_VERSION);
 			// An internal link holds only the id of the entry; an outside link is untouched.
 			expect(entryLinkIds(doc?.content)).toEqual([target.id]);
@@ -177,7 +179,7 @@ describe("0018_link_entry_ids", () => {
 
 	it("finds the entry by a former address, and leaves an address nobody holds as it is, with a log", async () => {
 		const target = await create(unique("target"), "Target");
-		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		const publishedTarget = await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
 		const oldSlug = publishedTarget.workingSlug as string;
 		// A rename: publishing the new slug turns the old one into an alias.
 		const renamedSlug = unique("renamed");
@@ -188,7 +190,7 @@ describe("0018_link_entry_ids", () => {
 			doc: docOf("Target"),
 			expectedVersion: publishedTarget.version,
 		});
-		await publishDraft(store, { id: target.id, expectedVersion: renamed.version });
+		await publishDraft(testSite, store, { id: target.id, expectedVersion: renamed.version });
 		const missing = unique("nobody-holds-this");
 		const source = await create(unique("source"), `[old](${hrefTo(oldSlug)}) [gone](${hrefTo(missing)})`);
 		await asVersion2(source.id);
@@ -197,7 +199,7 @@ describe("0018_link_entry_ids", () => {
 
 		expect(report.converted).toBeGreaterThanOrEqual(1);
 		expect(report.unresolved).toBeGreaterThanOrEqual(1);
-		const doc = readStoredDocument((await row(source.id, "working"))?.doc);
+		const doc = readStoredDocument((await row(source.id, "working"))?.doc, testSite);
 		expect(entryLinkIds(doc?.content)).toEqual([target.id]);
 		expect(JSON.stringify(doc)).toContain(hrefTo(missing));
 		expect(logged.some((message) => message.includes(source.id))).toBe(true);
@@ -205,7 +207,7 @@ describe("0018_link_entry_ids", () => {
 
 	it("rewrites the links of a template", async () => {
 		const target = await create(unique("target"), "Target");
-		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		const publishedTarget = await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
 		const href = hrefTo(publishedTarget.workingSlug as string);
 		const template = await store.createTemplate({ name: unique("template"), doc: docOf(`[x](${href})`) });
 
@@ -218,7 +220,7 @@ describe("0018_link_entry_ids", () => {
 
 	it("keeps the body references of relation fields and rebuilds the ones of links", async () => {
 		const target = await create(unique("target"), "Target");
-		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		const publishedTarget = await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
 		const source = await create(unique("source"), `[x](${hrefTo(publishedTarget.workingSlug as string)})`);
 		await asVersion2(source.id);
 		// A stale leftover from an older save: a body occurrence of a link that is no longer in the body.
@@ -236,7 +238,7 @@ describe("0018_link_entry_ids", () => {
 
 	it("changes nothing when it runs again", async () => {
 		const target = await create(unique("target"), "Target");
-		const publishedTarget = await publishDraft(store, { id: target.id, expectedVersion: target.version });
+		const publishedTarget = await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
 		const source = await create(unique("source"), `[x](${hrefTo(publishedTarget.workingSlug as string)})`);
 		await asVersion2(source.id);
 		await migrate();

@@ -2,7 +2,7 @@
 
 import { type BrowserFormat, type SourcePanelProps, useFormat } from "@monti-cms/admin";
 import { useLinkPaths } from "@monti-cms/admin/hooks";
-import { createTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
 	entryLinkIds,
@@ -13,21 +13,15 @@ import {
 	unparsedDocument,
 } from "@monti-cms/core/document";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { mdxBrowserFormat } from "./format";
+import { createMdxBrowserFormat } from "./format";
 import { MdxSourceEditor } from "./mdx-source-editor";
 import { mdxSourceMessages } from "./messages";
-
-const t = createTranslator(mdxSourceMessages);
 
 /** Id of the element a screen puts the findings about the text in. The panel's input refers to it as its description. */
 export const SOURCE_ERROR_ID = "cms-source-error";
 
 /** The 1-based line of the text where a top-level block of `doc` starts, or `null` when no block has this id (the text is that of `doc`). */
-export function lineOfBlock(
-	doc: StoredDocument,
-	blockId: string,
-	format: BrowserFormat = mdxBrowserFormat,
-): number | null {
+export function lineOfBlock(doc: StoredDocument, blockId: string, format: BrowserFormat): number | null {
 	if (isUnparsedDocument(doc)) return 1;
 	const index = doc.content.findIndex((top) => {
 		let found = false;
@@ -56,7 +50,10 @@ const offsetOfLine = (text: string, line: number): number => {
  */
 export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposing }: SourcePanelProps) {
 	// The format the admin registered (with the site's syntax extensions); without one the panel reads standard MDX.
-	const format = useFormat("mdx") ?? mdxBrowserFormat;
+	const site = useSite();
+	const t = useTranslator(mdxSourceMessages);
+	const registered = useFormat("mdx");
+	const format = useMemo(() => registered ?? createMdxBrowserFormat(site), [registered, site]);
 	// A link to an entry is written with the entry's address, so a writer sees and types real addresses. The entries are looked up (the way the link bubble does), and the
 	// text is written again when their addresses arrive, unless it was edited meanwhile. A link that cannot be resolved keeps its id (`entry:<id>`).
 	const ids = useMemo(() => entryLinkIds(doc.content), [doc]);
@@ -146,4 +143,5 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 	);
 }
 
-export const MDX_SOURCE_LABEL = t("toggle");
+/** The label of the source toggle, in the admin language of `site`. */
+export const mdxSourceLabel = (site: Site): string => site.createTranslator(mdxSourceMessages)("toggle");

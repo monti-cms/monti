@@ -1,16 +1,6 @@
 "use client";
 
-import type { CmsPlugin } from "@monti-cms/core";
-import {
-	adminHref,
-	COLLECTION_DEFINITIONS,
-	COLLECTIONS,
-	type Collection,
-	cmsConfig,
-	createTranslator,
-	SITE_HOME,
-	SITE_NAME,
-} from "@monti-cms/core/client";
+import { type Collection, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import {
 	ChevronRight,
@@ -23,7 +13,7 @@ import {
 	Plus,
 	Trash2,
 } from "lucide-react";
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
@@ -56,13 +46,8 @@ import { CollectionIcon, NamedIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 
-const t = createTranslator(screensMessages);
-
 /** Value that points to the current screen in the sidebar. For a plugin screen, that screen's address (`nav.path`, e.g. `ai`). */
 export type AdminNavId = Collection | "media" | "templates" | "trash" | (string & {});
-
-/** Sidebar item added by a plugin (`plugins[].nav` in site settings). */
-const PLUGIN_NAV = ((cmsConfig.plugins ?? []) as readonly CmsPlugin[]).flatMap((plugin) => plugin.nav ?? []);
 
 /** Folder navigation used only on the list screen. */
 export interface FolderNavigation {
@@ -107,6 +92,8 @@ const TREE_ITEM =
 	"before:-left-3 after:-left-3 before:absolute before:top-0 before:h-full before:w-px before:bg-cms-sidebar-foreground/20 after:absolute after:top-3.5 after:h-px after:w-3.5 after:bg-cms-sidebar-foreground/20 last:before:h-3.5";
 
 function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: () => void }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 	const [dropTarget, setDropTarget] = useState<string | null>(null);
 	const { folders, currentFolder } = nav;
@@ -149,7 +136,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 		const children = folders.filter((f) => f.parentId === folder.id);
 		const isExpanded = expandedIds.has(folder.id);
 		const isActive = currentFolder === folder.id;
-		const actions = folderMenuActions(folder, nav.folders, nav.folderActions);
+		const actions = folderMenuActions(site, folder, nav.folders, nav.folderActions);
 		return (
 			<Collapsible
 				key={folder.id}
@@ -224,7 +211,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 		);
 	};
 
-	const label = COLLECTION_DEFINITIONS[nav.collection].label;
+	const label = site.COLLECTION_DEFINITIONS[nav.collection].label;
 	const blankActions: MenuAction[] = [
 		{
 			kind: "item",
@@ -292,6 +279,10 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 
 /** Left navigation area: collections, media/templates/trash, virtual folder tree. */
 export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarProps) {
+	const site = useSite();
+	// Sidebar items added by a plugin (`plugins[].nav` in site settings).
+	const pluginNav = useMemo(() => site.plugins.flatMap((plugin) => plugin.nav ?? []), [site]);
+	const t = useTranslator(screensMessages);
 	const { isMobile, setOpenMobile, state } = useSidebar();
 	const features = useAdminFeatures();
 	const toggleLabel = isMobile
@@ -321,7 +312,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 		<Sidebar collapsible="icon">
 			<SidebarHeader className="flex-row items-center gap-1 px-3 pt-3.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
 				<Link
-					href={adminHref()}
+					href={site.adminHref()}
 					onClick={closeMobile}
 					className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1.5 py-1 group-data-[collapsible=icon]:hidden"
 				>
@@ -329,9 +320,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 						aria-hidden
 						className="flex size-6 items-center justify-center rounded-md bg-cms-sidebar-primary font-semibold text-cms-sidebar-primary-foreground text-xs"
 					>
-						{(SITE_NAME || "CMS").slice(0, 1)}
+						{(site.SITE_NAME || "CMS").slice(0, 1)}
 					</span>
-					<span className="font-semibold text-[13px] text-cms-sidebar-accent-foreground">{SITE_NAME || "CMS"}</span>
+					<span className="font-semibold text-[13px] text-cms-sidebar-accent-foreground">
+						{site.SITE_NAME || "CMS"}
+					</span>
 				</Link>
 				<Tooltip>
 					<TooltipTrigger
@@ -347,11 +340,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 					<SidebarGroupLabel>{t("sidebar.collections")}</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu aria-label={t("sidebar.collections")}>
-							{COLLECTIONS.map((collection) =>
+							{site.COLLECTIONS.map((collection) =>
 								navLink(
-									adminHref(`?collection=${collection}`),
+									site.adminHref(`?collection=${collection}`),
 									collection,
-									COLLECTION_DEFINITIONS[collection].label,
+									site.COLLECTION_DEFINITIONS[collection].label,
 									<CollectionIcon collection={collection} />,
 								),
 							)}
@@ -362,13 +355,13 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 					<SidebarGroupLabel>{t("sidebar.manage")}</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu aria-label={t("sidebar.manage")}>
-							{features.media && navLink(adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
-							{navLink(adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
-							{PLUGIN_NAV.map((item) =>
-								navLink(adminHref(`/${item.path}`), item.path, item.label, <NamedIcon name={item.icon} />),
+							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
+							{navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
+							{pluginNav.map((item) =>
+								navLink(site.adminHref(`/${item.path}`), item.path, item.label, <NamedIcon name={item.icon} />),
 							)}
 							{navLink(
-								adminHref("/trash"),
+								site.adminHref("/trash"),
 								"trash",
 								t("sidebar.trash"),
 								<Trash2 />,
@@ -389,7 +382,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarP
 					<TooltipTrigger
 						render={
 							<Link
-								href={SITE_HOME}
+								href={site.SITE_HOME}
 								aria-label={t("sidebar.viewSite")}
 								className="flex h-8 flex-1 items-center gap-2 rounded-md px-2 text-[13px] text-cms-muted-foreground hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
 							/>

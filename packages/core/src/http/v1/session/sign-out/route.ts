@@ -1,4 +1,3 @@
-import { adminUrl } from "../../../../core/admin-paths";
 import { handleApiError } from "../../error-handler";
 import type { RouteContext } from "../../handler";
 import { validateSameOrigin } from "../../security";
@@ -7,8 +6,8 @@ import { validateSameOrigin } from "../../security";
 export const POST = async (request: Request, context: RouteContext) => {
 	try {
 		const { cms } = context;
-		validateSameOrigin(request, { trustHost: cms.isHostTrusted(), form: true });
-		await cms.auth().signOut({ redirectTo: adminUrl("/login") });
+		validateSameOrigin(cms, request, { form: true });
+		await cms.auth().signOut({ redirectTo: cms.site.adminUrl("/login") });
 		return new Response(null, { status: 204 });
 	} catch (error) {
 		context.cms.auth().rethrow?.(error);

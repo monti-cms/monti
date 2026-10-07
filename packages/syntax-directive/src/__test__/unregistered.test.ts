@@ -1,11 +1,11 @@
-import { BLOCKS } from "@monti-cms/core/client";
+import { mdxWith } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";
-import { mdxWith } from "../../test/mdx-syntax";
+import { testSite } from "../../test/site";
 import { directiveSyntax } from "..";
 
 /** Directive names of the current config's blocks. */
 const DIRECTIVE_NAMES: ReadonlySet<string> = new Set(
-	BLOCKS.flatMap((block) => ("directive" in block.syntax ? [block.syntax.directive] : [])),
+	testSite.BLOCKS.flatMap((block) => ("directive" in block.syntax ? [block.syntax.directive] : [])),
 );
 
 /**
@@ -20,7 +20,7 @@ const outer = unregistered("tabs", "unregistered-outer");
 const inner = unregistered("tab", "unregistered-inner");
 
 /** Write path with the directive extension: `MDX → analyze → toDocument → serialize`. */
-const { write } = mdxWith([directiveSyntax()]);
+const { write } = mdxWith(testSite, [directiveSyntax()]);
 
 /** Bodies that must stay as the original source (top-level block). */
 const verbatim: [string, string][] = [
@@ -40,7 +40,7 @@ describe("unregistered directive storage round trip", () => {
 	it("the name this test uses is not in the current config", () => {
 		for (const name of [outer, inner]) {
 			expect(DIRECTIVE_NAMES.has(name)).toBe(false);
-			expect(BLOCKS.some((block) => block.name === name)).toBe(false);
+			expect(testSite.BLOCKS.some((block) => block.name === name)).toBe(false);
 		}
 	});
 

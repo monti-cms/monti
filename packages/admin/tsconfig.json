@@ -11,10 +11,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"jsx": "react-jsx",
-		"types": ["node", "vitest/globals", "@testing-library/jest-dom"],
-		"paths": {
-			"@cms-config": ["../core/test/cms.config.ts"]
-		}
+		"types": ["node", "vitest/globals", "@testing-library/jest-dom"]
 	},
 	"include": ["src", "vitest.config.ts", "vitest.othersite.config.ts"]
 }

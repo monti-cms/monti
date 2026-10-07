@@ -1,5 +1,4 @@
 import { patchEntryBodySchema } from "../../../../core/api";
-import { isItemCollection } from "../../../../core/collections";
 import type { StoredDocument } from "../../../../doc/stored-document";
 import { exportText } from "../../../../format/convert";
 import { createExportRefs } from "../../../../read";
@@ -18,20 +17,20 @@ export const GET = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	// `?format=<name>` adds `body` to `working`, `published` and the source: the document as text in that format, written to be imported again (`sync`).
 	const format = readFormatQuery(request);
 	const formats = format === undefined ? undefined : await cms.formats();
-	const refsOf = createExportRefs({ store: cms.store, mediaStore: cms.mediaStore }, "working");
+	const refsOf = createExportRefs({ site: cms.site, store: cms.store, mediaStore: cms.mediaStore }, "working");
 	const bodyOf = async <B extends { readonly doc: StoredDocument }>(
 		body: B,
 		locale: string,
 	): Promise<B & { body?: string }> => {
 		if (!formats || format === undefined) return body;
-		const { text } = await exportText(formats, format, body.doc, {
+		const { text } = await exportText(cms.site, formats, format, body.doc, {
 			locale,
 			purpose: "sync",
 			refs: await refsOf(body.doc, locale),
 		});
 		return { ...body, body: text };
 	};
-	const translations = isItemCollection(entry.collection)
+	const translations = cms.site.isItemCollection(entry.collection)
 		? null
 		: await store.getTranslationGroup({ entryId: entry.id });
 	const source =

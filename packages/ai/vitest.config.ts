@@ -22,8 +22,6 @@ export default defineConfig(({ mode }) => ({
 	},
 	resolve: {
 		alias: {
-			// AI plugin tests run with the example blog config plus the AI plugin.
-			"@cms-config": path.resolve(__dirname, "./test/cms.config.ts"),
 			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
 		},
 	},

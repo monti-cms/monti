@@ -1,8 +1,8 @@
-import "@monti-cms/core/client";
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { validateForPublish } from "../../../core/src/core/snapshot";
 import { forEachBlock } from "../../../core/src/doc/block-ids";
+import { testSite } from "../../../core/test/site";
 import { contentCollection, prepareSnapshot } from "./snapshot-helpers";
 
 const MEDIA_ID = "11111111-1111-4111-8111-111111111111";
@@ -142,7 +142,7 @@ describe("block ids of body positions", () => {
 
 	it("carries the stored block id into the issues validation makes from occurrences", async () => {
 		const snapshot = await prepare(`Intro.\n\n<Image mediaId="${MEDIA_ID}" alt="a" />\n`);
-		const result = validateForPublish(snapshot, { targets: [], media: [] });
+		const result = validateForPublish(testSite, snapshot, { targets: [], media: [] });
 		const unresolved = result.issues.find((issue) => issue.code === "unresolved_media");
 		expect(describeBlock(snapshot.doc, unresolved?.position?.blockId)).toBe("image: ");
 	});

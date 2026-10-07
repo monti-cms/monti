@@ -6,7 +6,7 @@ export * from "./colors";
 export { colorBlock } from "./definition";
 
 export interface ColorOptions {
-	/** Editor text/background color picker list. Defaults to the 8 default colors (`DEFAULT_TEXT_PALETTE`). The body stores hex values. */
+	/** Editor text/background color picker list. Defaults to the 8 default colors (`defaultTextPalette`). The body stores hex values. */
 	readonly palette?: readonly PaletteColor[];
 }
 

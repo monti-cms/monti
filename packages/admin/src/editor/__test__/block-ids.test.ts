@@ -2,6 +2,7 @@ import { type CmsNode, forEachBlock, isBlockId, type StoredDocument } from "@mon
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { docOf, tiptapOf } from "../../test/mdx";
 import { duplicateBlock } from "../block-commands";
 import { BLOCK_ID_ATTRIBUTE, findBlock } from "../block-ids";
@@ -41,7 +42,7 @@ const idOf = (doc: StoredDocument | null, text: string, type = "paragraph") =>
 
 const editors: Editor[] = [];
 const open = (doc: StoredDocument) => {
-	const editor = new Editor({ extensions: buildEditorExtensions(), content: storedToTiptap(doc) });
+	const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: storedToTiptap(testSite, doc) });
 	editors.push(editor);
 	return editor;
 };
@@ -49,7 +50,7 @@ afterEach(() => {
 	for (const editor of editors.splice(0)) editor.destroy();
 });
 
-const saved = (editor: Editor) => tiptapToStored(editor.getJSON());
+const saved = (editor: Editor) => tiptapToStored(testSite, editor.getJSON());
 
 /** Puts the cursor at the end of the paragraph with this text. */
 const cursorAtEndOf = (editor: Editor, text: string) => {
@@ -107,7 +108,7 @@ describe("block ids in the editor", () => {
 	});
 
 	it("are given to every block of a body loaded from MDX, all different", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(), content: tiptapOf(BODY) });
+		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOf(BODY) });
 		editors.push(editor);
 		editor.commands.insertContent("x");
 		const ids: unknown[] = [];
@@ -121,7 +122,7 @@ describe("block ids in the editor", () => {
 	it("are paired with the previous document when MDX comes back from source mode", () => {
 		const doc = stored(BODY);
 		const content = tiptapOf(BODY.replace("Last paragraph", "Last paragraph, rewritten in source"), doc);
-		const editor = new Editor({ extensions: buildEditorExtensions(), content });
+		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content });
 		editors.push(editor);
 		const after = saved(editor);
 		expect(idOf(after, "Last paragraph, rewritten in source")).toBe(idOf(doc, "Last paragraph"));

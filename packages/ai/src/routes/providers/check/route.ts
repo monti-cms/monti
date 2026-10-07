@@ -13,7 +13,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
 	const { providerId, provider } = parseWith(aiProviderCheckSchema, await readJsonBody(request));
 	const started = Date.now();
 	try {
-		const target = await connectionForCheck(aiStoreFor(cms), {
+		const target = await connectionForCheck(cms.site, aiStoreFor(cms), {
 			providerId,
 			kind: provider.kind,
 			url: provider.url,

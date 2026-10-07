@@ -7,14 +7,16 @@ import {
 	requiredMetadata,
 	titleFieldOf,
 } from "../../../test/any-site";
+import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
-import { COLLECTIONS, type Collection, DOCUMENT_COLLECTIONS } from "../../core/collections";
+import type { Collection } from "../../core/collections";
 import { isBlockId } from "../../doc/block-ids";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
-import { type StoredField, storedFields } from "../../schema/derive";
+import type { StoredField } from "../../schema/derive";
 import { isRequiredField } from "../../schema/fields";
+import type { ContentServiceOptions } from "../content-service";
 import type { PreparedSnapshot, Reference, ResolvedTargets, SaveDraftInput, ServiceInput, StorePort } from "../index";
 import {
 	createContentService as createCoreContentService,
@@ -27,11 +29,14 @@ import {
 /** Bodies given as text are read by the plain test format (core has no text format of its own). */
 const formats = async () => createFormatRegistry([paragraphsFormat]);
 const prepareSnapshot = (
-	value: Parameters<typeof prepareCoreSnapshot>[0],
-	options: Parameters<typeof prepareCoreSnapshot>[1] = {},
-) => prepareCoreSnapshot(value, { ...options, import: { formats: createFormatRegistry([paragraphsFormat]) } });
-const createContentService = ((port: Parameters<typeof createCoreContentService>[0], options = {}) =>
-	createCoreContentService(port, { formats, ...options })) as typeof createCoreContentService;
+	value: Parameters<typeof prepareCoreSnapshot>[1],
+	options: Parameters<typeof prepareCoreSnapshot>[2] = {},
+) =>
+	prepareCoreSnapshot(testSite, value, { ...options, import: { formats: createFormatRegistry([paragraphsFormat]) } });
+const createContentService = <T = unknown>(
+	port: Parameters<typeof createCoreContentService<T>>[0],
+	options: Partial<ContentServiceOptions> = {},
+) => createCoreContentService<T>(port, { site: testSite, formats, ...options });
 
 /*
  * Collection and field names are looked up from the current config. In the reference blog setup, the body collection is posts (`post`),
@@ -39,7 +44,8 @@ const createContentService = ((port: Parameters<typeof createCoreContentService>
  */
 const content = contentCollection;
 /** Stored fields that are not dependent on a conditional field. */
-const topLevel = (collection: Collection): StoredField[] => storedFields(collection).filter(({ when }) => !when);
+const topLevel = (collection: Collection): StoredField[] =>
+	testSite.storedFields(collection).filter(({ when }) => !when);
 const relationOf = (many: boolean) => {
 	for (const { name, field } of topLevel(content)) {
 		if (field.kind === "relation" && Boolean(field.many) === many) {
@@ -58,8 +64,8 @@ const unboundedText = topLevel(content).find(
 );
 /** A list relation that also holds not-yet-published posts in order (blog: collection `itemIds` of `collection`). */
 const orderedList = (() => {
-	for (const collection of COLLECTIONS) {
-		for (const { name, field } of storedFields(collection)) {
+	for (const collection of testSite.COLLECTIONS) {
+		for (const { name, field } of testSite.storedFields(collection)) {
 			if (field.kind === "relation" && field.many && field.allowUnpublished) {
 				return { collection, name, to: field.to as Collection };
 			}
@@ -68,7 +74,9 @@ const orderedList = (() => {
 	return undefined;
 })();
 /** A collection that a list relation cannot hold (blog: memo). */
-const notListable = [...DOCUMENT_COLLECTIONS, ...COLLECTIONS].find((name) => name !== orderedList?.to) as Collection;
+const notListable = [...testSite.DOCUMENT_COLLECTIONS, ...testSite.COLLECTIONS].find(
+	(name) => name !== orderedList?.to,
+) as Collection;
 
 /** Builds inputs whose type differs per collection, using names found in the config. */
 const input = (value: {
@@ -82,7 +90,7 @@ const input = (value: {
 /** Metadata with every stored field of the collection filled. A select field uses the first option, and the conditional fields dependent on that value are filled too. */
 const canonicalMetadata = (collection: Collection): Record<string, unknown> => {
 	const metadata: Record<string, unknown> = {};
-	for (const { name, field, when } of storedFields(collection)) {
+	for (const { name, field, when } of testSite.storedFields(collection)) {
 		if (when && metadata[when.field] !== when.value) continue;
 		if (field.kind === "text") metadata[name] = name === "title" ? "T" : "S";
 		else if (field.kind === "select") metadata[name] = Object.keys(field.options)[0];
@@ -137,7 +145,7 @@ describe("ContentService Contract", () => {
 		});
 
 		it.each(
-			COLLECTIONS.map((collection) => [
+			testSite.COLLECTIONS.map((collection) => [
 				collection,
 				input({ collection, slug: "s", metadata: canonicalMetadata(collection), format: "paragraphs", body: "" }),
 			]),
@@ -294,20 +302,22 @@ describe("ContentService Contract", () => {
 
 	describe("4. Reference Extraction", () => {
 		it("extracts ordered/deduplicated refs with occurrences from metadata relations", async () => {
-			const snap = await prepareSnapshot({
-				collection: content,
-				slug: "a",
-				metadata: {
-					[single.name]: "123e4567-e89b-12d3-a456-426614174001",
-					[many.name]: [
-						"123e4567-e89b-12d3-a456-426614174002",
-						"123e4567-e89b-12d3-a456-426614174003",
-						"123e4567-e89b-12d3-a456-426614174002",
-					],
-				},
-				format: "paragraphs",
-				body: "",
-			});
+			const snap = await prepareSnapshot(
+				input({
+					collection: content,
+					slug: "a",
+					metadata: {
+						[single.name]: "123e4567-e89b-12d3-a456-426614174001",
+						[many.name]: [
+							"123e4567-e89b-12d3-a456-426614174002",
+							"123e4567-e89b-12d3-a456-426614174003",
+							"123e4567-e89b-12d3-a456-426614174002",
+						],
+					},
+					format: "paragraphs",
+					body: "",
+				}),
+			);
 
 			expect(snap.references).toHaveLength(3);
 
@@ -631,13 +641,13 @@ describe("ContentService Contract", () => {
 		] satisfies Array<
 			[string, PreparedSnapshot, ResolvedTargets, string]
 		>)("not ready when %s", (_, snap, resolved, expectedIssueCode) => {
-			const validation = validateForPublish(snap, resolved);
+			const validation = validateForPublish(testSite, snap, resolved);
 			expect(validation.ready).toBe(false);
 			expect(validation.issues).toContainEqual(expect.objectContaining({ code: expectedIssueCode }));
 		});
 
 		it("is ready when valid and targets resolved", () => {
-			const validation = validateForPublish(validSnap, validResolvedTargets);
+			const validation = validateForPublish(testSite, validSnap, validResolvedTargets);
 			expect(validation.ready).toBe(true);
 		});
 	});
@@ -687,7 +697,7 @@ describe("ContentService Contract", () => {
 				imageSources: [],
 			} as unknown as PreparedSnapshot;
 
-			const validation = validateForPublish(snapWithItems, {
+			const validation = validateForPublish(testSite, snapWithItems, {
 				targets: [
 					{ id: "123e4567-e89b-12d3-a456-426614174001", isPublished: true, collection: list.to },
 					{ id: "123e4567-e89b-12d3-a456-426614174002", isPublished: true, collection: notListable },
@@ -735,7 +745,7 @@ describe("ContentService Contract", () => {
 				imageSources: [],
 			} as unknown as PreparedSnapshot;
 
-			const validation = validateForPublish(snapWithItems, {
+			const validation = validateForPublish(testSite, snapWithItems, {
 				targets: [
 					{ id: "123e4567-e89b-12d3-a456-426614174001", isPublished: true, collection: list.to },
 					{ id: "123e4567-e89b-12d3-a456-426614174002", isPublished: true, collection: list.to },
@@ -760,7 +770,7 @@ describe("ContentService Contract", () => {
 					body: "",
 				}),
 			);
-			const validation = validateForPublish(snapshot, {
+			const validation = validateForPublish(testSite, snapshot, {
 				targets: [{ id, isPublished: false, collection: orderedList.to }],
 				media: [],
 			});
@@ -778,7 +788,7 @@ describe("ContentService Contract", () => {
 					body: "Body",
 				}),
 			);
-			const validation = validateForPublish(snapshot, { targets: [], media: [] });
+			const validation = validateForPublish(testSite, snapshot, { targets: [], media: [] });
 			expect(validation.issues.filter((issue) => issue.code === "unresolved_reference")).toEqual([
 				expect.objectContaining({ path: many.name, ordinal: 0 }),
 				expect.objectContaining({ path: many.name, ordinal: 1 }),
@@ -1479,7 +1489,7 @@ describe("ContentService Contract", () => {
 
 		it("a disallowed src is a non-blocking warning (stays ready)", async () => {
 			const snap = await prepareSnapshot(await draft({ src: "javascript:alert(1)", alt: "a" }));
-			const validation = validateForPublish(snap, { targets: relationTargets, media: [] });
+			const validation = validateForPublish(testSite, snap, { targets: relationTargets, media: [] });
 
 			expect(validation.ready).toBe(true);
 			expect(validation.warnings).toEqual([
@@ -1491,19 +1501,22 @@ describe("ContentService Contract", () => {
 			const snap = await prepareSnapshot(await draft({ mediaId }));
 			const targets = relationTargets;
 
-			expect(validateForPublish(snap, { targets, media: [{ id: mediaId, status: "pending" }] }).warnings).toEqual([
-				expect.objectContaining({ code: "image_media_not_ready", message: "pending" }),
-			]);
 			expect(
-				validateForPublish(snap, { targets, media: [{ id: mediaId, status: "ready", storageKey: null }] }).warnings,
+				validateForPublish(testSite, snap, { targets, media: [{ id: mediaId, status: "pending" }] }).warnings,
+			).toEqual([expect.objectContaining({ code: "image_media_not_ready", message: "pending" })]);
+			expect(
+				validateForPublish(testSite, snap, { targets, media: [{ id: mediaId, status: "ready", storageKey: null }] })
+					.warnings,
 			).toEqual([expect.objectContaining({ code: "image_media_unresolved" })]);
 			expect(
-				validateForPublish(snap, { targets, media: [{ id: mediaId, status: "ready", storageKey: "k/a.png" }] })
-					.warnings,
+				validateForPublish(testSite, snap, {
+					targets,
+					media: [{ id: mediaId, status: "ready", storageKey: "k/a.png" }],
+				}).warnings,
 			).toEqual([]);
 
 			// A media row that does not exist at all is not a warning case — the reference check blocks first.
-			const missing = validateForPublish(snap, { targets, media: [] });
+			const missing = validateForPublish(testSite, snap, { targets, media: [] });
 			expect(missing.warnings).toEqual([]);
 			expect(missing.ready).toBe(false);
 			expect(missing.issues).toContainEqual(expect.objectContaining({ code: "unresolved_media" }));

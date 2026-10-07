@@ -28,7 +28,6 @@ export {
 } from "./doc/entry-links";
 export * from "./doc/image-src";
 export * from "./doc/image-transform";
-export { sortMarks } from "./doc/marks";
 export {
 	outOfRangeAnnotationNames,
 	storedCodeBlockAttrs,

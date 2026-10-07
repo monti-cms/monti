@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
+import config from "../../../test/cms.config";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
-import { checkDocument, isEmptyDocument } from "../body-check";
+import { createSite } from "../../site";
+import { checkDocument } from "../body-check";
 
 /** Checks that need the reference blog's addresses and blocks (`/posts/:slug`, `code-ref`). */
+const site = createSite(config);
+
 const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: 2, content });
 const paragraph = (id: string, ...content: CmsNode[]): CmsNode => ({ id, type: "paragraph", content });
 const text = (value: string, ...marks: CmsNode["marks"] & object): CmsNode => ({
@@ -16,6 +20,7 @@ describe("checks of a stored document (reference blog config)", () => {
 	it("counts a stretch of text that other marks split into several text nodes once", () => {
 		const link = { type: "link", attrs: { href: "/posts/a" } };
 		const result = checkDocument(
+			site,
 			doc(
 				paragraph(
 					"aaaaaaaa",
@@ -43,7 +48,7 @@ describe("checks of a stored document (reference blog config)", () => {
 			},
 		};
 		const withRef = (to: string) =>
-			checkDocument(doc(paragraph("aaaaaaaa", text("see", { type: "code-ref", attrs: { to } })), code));
+			checkDocument(site, doc(paragraph("aaaaaaaa", text("see", { type: "code-ref", attrs: { to } })), code));
 		expect(withRef("c1").issues.map((issue) => issue.code)).toEqual([]);
 		const broken = withRef("c2");
 		expect(broken.issues).toEqual([

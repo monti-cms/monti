@@ -8,7 +8,7 @@ import { migrate } from "./migrate";
  *
  * - `monti init [--admin-path /admin] [--locale en] [--time-zone UTC]`: creates config and route files in a Next app and wires up tsconfig, CSS and the next config.
  * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
- * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--server <file>]`: creates the DB tables.
+ * - `monti migrate [--env-file .env.local] [--no-env-file] [--server <file>]`: creates the DB tables.
  */
 
 export {
@@ -21,7 +21,7 @@ export {
 	type InstallCommand,
 	rewriteRegistryImports,
 } from "./add";
-export { type ConfigPaths, parseJsonc, resolveConfigPaths } from "./config-paths";
+export { parseJsonc, resolveServerPath } from "./config-paths";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { formatInitReport, type InitOptions, type InitReport, initProject } from "./init";
 export { type MigrateOptions, migrate } from "./migrate";
@@ -42,8 +42,7 @@ Commands:
   migrate   Create or update the tables in the database of the server config
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
-              --config <file>       Site config (default: @cms-config in tsconfig paths, ./cms.config.ts, ./src/cms.config.ts)
-              --server <file>       Server config (default: cms.server.ts, looked up the same way)
+              --server <file>       The server file that exports the CMS instance (default: ./cms.server.ts, ./src/cms.server.ts)
 `;
 
 export interface CliIo {
@@ -98,14 +97,12 @@ export async function runCli(
 				options: {
 					"env-file": { type: "string", multiple: true },
 					"no-env-file": { type: "boolean" },
-					config: { type: "string" },
 					server: { type: "string" },
 				},
 			});
 			const ok = await migrate({
 				cwd: io.cwd,
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
-				config: values.config,
 				server: values.server,
 				log: io.log,
 			});

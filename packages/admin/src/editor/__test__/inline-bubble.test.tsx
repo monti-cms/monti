@@ -1,18 +1,19 @@
 import { defineBlock } from "@monti-cms/core";
-import { createTranslator } from "@monti-cms/core/client";
 import { charEffectByName } from "@monti-cms/core/code-block";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { CmsAdminComponentsProvider, type EditorMarkExtension } from "../../admin-components";
+import { renderWithSite } from "../../test/site";
 import { addedMarkName, createAddedMark } from "../added-marks";
 import { buildEditorExtensions } from "../extensions";
 import { BubbleButton, InlineBubble } from "../inline-bubble";
 import { inlineBubbleTarget } from "../inline-marks";
 import { editorMessages } from "../messages";
 
-const t = createTranslator(editorMessages);
+const t = testSite.createTranslator(editorMessages);
 
 /**
  * Text decoration used for testing regardless of site config (the `:note[text]{text="…"}` an extension adds). Adds the mark to the editor directly and
@@ -56,7 +57,7 @@ const createEditor = (html: string) => {
 	document.body.append(element);
 	const editor = new Editor({
 		element,
-		extensions: [...buildEditorExtensions(), createAddedMark(noteBlock, { inclusive: true })],
+		extensions: [...buildEditorExtensions(testSite), createAddedMark(noteBlock, { inclusive: true })],
 		content: html,
 	});
 	editors.push(editor);
@@ -123,7 +124,7 @@ describe("inlineBubbleTarget", () => {
 });
 
 describe("InlineBubble", () => {
-	const renderBubble = (editor: Editor) => render(<InlineBubble editor={editor} />);
+	const renderBubble = (editor: Editor) => renderWithSite(<InlineBubble editor={editor} />);
 
 	it("shows the effect tool when text is selected and applies immediately", () => {
 		const editor = createEditor(HTML);
@@ -226,7 +227,7 @@ describe("InlineBubble", () => {
 		};
 		const editor = createEditor(HTML);
 		const renderWith = () =>
-			render(
+			renderWithSite(
 				<CmsAdminComponentsProvider components={{ marks: { [noteBlock.name]: extension } }}>
 					<InlineBubble editor={editor} />
 				</CmsAdminComponentsProvider>,

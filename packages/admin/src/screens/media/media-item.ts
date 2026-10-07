@@ -1,8 +1,6 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { toast } from "sonner";
-import { mediaMessages } from "./messages";
-
-const t = createTranslator(mediaMessages);
+import type { TranslatorFor } from "../../translator";
+import type { mediaMessages } from "./messages";
 
 /** One item of the media list API. */
 export interface MediaItem {
@@ -61,7 +59,7 @@ export function mediaUsages(media: Pick<MediaItem, "references">): MediaUsage[] 
 export const usageCount = (media: MediaItem) => mediaUsages(media).length || media.referencesCount;
 
 /** Usage state shown on lists and tiles. */
-export const usageLabel = (media: MediaItem) =>
+export const usageLabel = (t: TranslatorFor<typeof mediaMessages>, media: MediaItem) =>
 	media.status === "deleting"
 		? t("usage.deleting")
 		: media.referencesCount > 0
@@ -69,10 +67,10 @@ export const usageLabel = (media: MediaItem) =>
 			: t("usage.none");
 
 /** Text of the usage note (`note`). */
-export const usageNoteLabel = (note: NonNullable<MediaUsage["note"]>) =>
+export const usageNoteLabel = (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) =>
 	t(note === "beforePublish" ? "usage.note.beforePublish" : "usage.note.publishedOnly");
 
-export async function copyText(text: string, success: string) {
+export async function copyText(t: TranslatorFor<typeof mediaMessages>, text: string, success: string) {
 	try {
 		await navigator.clipboard.writeText(text);
 		toast.success(success);

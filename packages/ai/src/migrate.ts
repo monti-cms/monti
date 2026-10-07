@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import type { Cms, PluginMigration, PluginStorage } from "@monti-cms/core/plugin/server";
 import { legacyFeatureOverride } from "./actions";
 import { AI_COLLECTIONS } from "./collections";
@@ -39,12 +40,12 @@ async function importLegacyTables(migration: PluginMigration): Promise<void> {
  * Moves the edited values of the oldest AI actions table (`ai_features`, from when AI lived in the core) into per-action edited values, once.
  * The old table is not dropped. An edited value that is already in the storage is kept.
  */
-async function importLegacyFeatures(migration: PluginMigration): Promise<void> {
+async function importLegacyFeatures(migration: PluginMigration, site: Site): Promise<void> {
 	const overrides = await migration.readLegacyTable("ai_features");
 	for (const row of overrides ?? []) {
 		const builtin = row.builtin;
 		if (typeof builtin !== "string") continue;
-		const value = legacyFeatureOverride(builtin, row.spec);
+		const value = legacyFeatureOverride(site, builtin, row.spec);
 		if (!value || Object.keys(value).length === 0) continue;
 		await migration.importItem(AI_COLLECTIONS.actionOverrides, { key: builtin, value });
 	}
@@ -56,15 +57,15 @@ async function importLegacyFeatures(migration: PluginMigration): Promise<void> {
  * Data from before the storage API is moved once: the three tables the plugin used to create itself (`ai_action_overrides`, `ai_custom_actions`, `ai_settings`)
  * are copied into the plugin's collections with their versions and dates, and the old tables stay where they are, untouched.
  */
-export async function migrateAi(storage: PluginStorage, cms?: Cms): Promise<void> {
+export async function migrateAi(storage: PluginStorage, cms: Cms): Promise<void> {
 	await storage.once("import_legacy_tables", importLegacyTables);
 
 	// The name of this step before the storage API was `migrate_ai_features_to_actions` (recorded without the plugin's name). Where that record exists, the work is done.
-	await storage.once("ai_features_to_actions", importLegacyFeatures, {
+	await storage.once("ai_features_to_actions", (migration) => importLegacyFeatures(migration, cms.site), {
 		legacyNames: ["migrate_ai_features_to_actions"],
 	});
 
 	// Stored service keys from before per-plugin keys (or made with a previous secret) are encrypted again with the current secret.
 	// It does nothing when there is no secret or nothing to upgrade, so running it again changes nothing.
-	if (cms) await upgradeStoredKeys(createAiStore(storage, { secrets: () => aiSecrets(cms) }));
+	await upgradeStoredKeys(cms.site, createAiStore(storage, { site: cms.site, secrets: () => aiSecrets(cms) }));
 }

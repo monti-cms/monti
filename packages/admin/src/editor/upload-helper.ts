@@ -1,8 +1,6 @@
-import { cmsApiUrl, createTranslator, fileTypeFor, MAX_FILE_BYTES } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site } from "@monti-cms/core/client";
 import { cmsApiErrorMessage } from "../screens/api-error-message";
 import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
 
 /**
  * Browser image upload. Shared by the editor and the media library.
@@ -67,9 +65,11 @@ async function isAnimatedWebp(file: File): Promise<boolean> {
  * Never silently turns an animation into a still image.
  */
 export async function prepareUpload(
+	site: Site,
 	file: File,
 	options: { optimize: boolean; policy?: OptimizePolicy } = { optimize: false },
 ): Promise<PreparedUpload> {
+	const t = site.createTranslator(editorMessages);
 	if (!options.optimize) return { file, optimized: false };
 	const policy = options.policy ?? DEFAULT_OPTIMIZE_POLICY;
 	if (!policy.formats.includes(file.type)) {
@@ -119,7 +119,8 @@ interface UploadTicket {
 	requiredHeaders?: Record<string, string>;
 }
 
-function putFile(ticket: UploadTicket, file: File, onProgress?: (loaded: number) => void): Promise<void> {
+function putFile(site: Site, ticket: UploadTicket, file: File, onProgress?: (loaded: number) => void): Promise<void> {
+	const t = site.createTranslator(editorMessages);
 	return new Promise<void>((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		xhr.open("PUT", ticket.uploadUrl, true);
@@ -137,8 +138,8 @@ function putFile(ticket: UploadTicket, file: File, onProgress?: (loaded: number)
 	});
 }
 
-const errorMessage = async (response: Response, fallback: string) =>
-	cmsApiErrorMessage(await response.json().catch(() => null), fallback);
+const errorMessage = async (site: Site, response: Response, fallback: string) =>
+	cmsApiErrorMessage(site, await response.json().catch(() => null), fallback);
 
 export interface UploadedMedia {
 	mediaId: string;
@@ -150,9 +151,11 @@ export interface UploadedMedia {
 }
 
 export async function uploadImageFile(
+	site: Site,
 	input: File | PreparedUpload,
 	onProgress?: (percent: number) => void,
 ): Promise<UploadedMedia> {
+	const t = site.createTranslator(editorMessages);
 	const prepared: PreparedUpload = input instanceof File ? { file: input, optimized: false } : input;
 	const { file, original } = prepared;
 
@@ -166,7 +169,7 @@ export async function uploadImageFile(
 			...(original ? { original: { mimeType: original.type, byteSize: original.size } } : {}),
 		}),
 	});
-	if (!prepareRes.ok) throw new Error(await errorMessage(prepareRes, t("upload.prepareFailed")));
+	if (!prepareRes.ok) throw new Error(await errorMessage(site, prepareRes, t("upload.prepareFailed")));
 	const ticket = (await prepareRes.json()) as UploadTicket & { mediaId: string; original?: UploadTicket };
 
 	const total = file.size + (original?.size ?? 0);
@@ -174,12 +177,12 @@ export async function uploadImageFile(
 	let originalLoaded = 0;
 	const report = () => onProgress?.(Math.round(((publicLoaded + originalLoaded) / total) * 100));
 	await Promise.all([
-		putFile(ticket, file, (loaded) => {
+		putFile(site, ticket, file, (loaded) => {
 			publicLoaded = loaded;
 			report();
 		}),
 		original && ticket.original
-			? putFile(ticket.original, original, (loaded) => {
+			? putFile(site, ticket.original, original, (loaded) => {
 					originalLoaded = loaded;
 					report();
 				})
@@ -191,7 +194,7 @@ export async function uploadImageFile(
 		headers: { "Content-Type": "application/json" },
 		body: "{}",
 	});
-	if (!completeRes.ok) throw new Error(await errorMessage(completeRes, t("upload.completeFailed")));
+	if (!completeRes.ok) throw new Error(await errorMessage(site, completeRes, t("upload.completeFailed")));
 	const result = await completeRes.json();
 	return {
 		mediaId: result.mediaId,
@@ -211,13 +214,16 @@ export const formatBytes = (bytes: number) =>
  * Rejects before uploading if the format is not accepted or the site setting limit (`media.maxFileBytes`) is exceeded.
  */
 export async function uploadAttachment(
+	site: Site,
 	file: File,
 	onProgress?: (percent: number) => void,
 ): Promise<{ mediaId: string }> {
-	const mimeType = fileTypeFor(file.name);
+	const t = site.createTranslator(editorMessages);
+	const mimeType = site.api.fileTypeFor(file.name);
 	if (!mimeType) throw new Error(t("upload.unsupportedType"));
-	if (file.size > MAX_FILE_BYTES) throw new Error(t("upload.tooLarge", { mb: MAX_FILE_BYTES / 1024 / 1024 }));
+	if (file.size > site.api.MAX_FILE_BYTES)
+		throw new Error(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
 	const typed = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
-	const uploaded = await uploadImageFile(typed, onProgress);
+	const uploaded = await uploadImageFile(site, typed, onProgress);
 	return { mediaId: uploaded.mediaId };
 }

@@ -1,19 +1,10 @@
-import {
-	adminEntryEditHref,
-	COLLECTIONS,
-	type Collection,
-	createTranslator,
-	DEFAULT_COLLECTION,
-	DEFAULT_LOCALE,
-	isItemCollection,
-	schemaOf,
-	storedField,
-	storedFields,
-} from "@monti-cms/core/client";
+import type { Collection } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { docOf } from "../../test/mdx";
 import { createTestRouter } from "../../test/router";
 import { AdminClientDashboard } from "../admin-dashboard";
@@ -25,22 +16,23 @@ import { columnLabel, columnsFor, fieldColumnOf } from "../list-columns";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
 import { AdminQueryProvider } from "../shared/query-provider";
+import { withSite } from "./site-wrapper";
 
 /**
  * Admin screen checks that do not depend on settings (regression guard). Collection/field names and labels are not hard-coded but read from the current settings.
  * Runs against both the reference blog example config and another site's config (`vitest.othersite.config.ts`). Only the title field `title` is used by name.
  */
 
-const t = createTranslator(screensMessages);
-const tEntries = createTranslator(entriesMessages);
-const tShell = createTranslator(entryEditorShellMessages);
+const t = testSite.createTranslator(screensMessages);
+const tEntries = testSite.createTranslator(entriesMessages);
+const tShell = testSite.createTranslator(entryEditorShellMessages);
 
-const content: Collection = DEFAULT_COLLECTION;
-const record = COLLECTIONS.find((name) => isItemCollection(name)) as Collection;
-const titleLabel = (collection: Collection) => storedField(collection, "title")?.field.label ?? "";
+const content: Collection = testSite.DEFAULT_COLLECTION;
+const record = testSite.COLLECTIONS.find((name) => testSite.isItemCollection(name)) as Collection;
+const titleLabel = (collection: Collection) => testSite.storedField(collection, "title")?.field.label ?? "";
 
 const nav = createTestRouter();
-const { render } = nav;
+const render = (ui: ReactElement) => nav.render(withSite(ui));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 const backup = vi.hoisted(() => ({ get: vi.fn(), remove: vi.fn(), save: vi.fn() }));
@@ -79,7 +71,7 @@ const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as 
 const item = (id: string, title: string): ListEntriesItem => ({
 	id,
 	collection: content,
-	locale: DEFAULT_LOCALE,
+	locale: testSite.DEFAULT_LOCALE,
 	translationGroupId: id,
 	title,
 	slug: id,
@@ -138,14 +130,17 @@ describe("any site: list screen", () => {
 			.getAllByRole("columnheader")
 			.map((header) => header.textContent ?? "")
 			.join(" | ");
-		for (const column of columnsFor(content).defaults) expect(headers).toContain(columnLabel(content, column));
+		for (const column of columnsFor(testSite, content).defaults)
+			expect(headers).toContain(columnLabel(testSite, content, column));
 		// The new item button uses the collection label.
-		expect(screen.getByRole("button", { name: t("list.add", { label: schemaOf(content).label }) })).toBeTruthy();
+		expect(
+			screen.getByRole("button", { name: t("list.add", { label: testSite.schemaOf(content).label }) }),
+		).toBeTruthy();
 	});
 
 	// Select/text field written in the list columns (`format` in the other site config). Skipped if the config lacks it.
-	const listedSelect = columnsFor(content).defaults.flatMap((column) => {
-		const stored = fieldColumnOf(content, column);
+	const listedSelect = columnsFor(testSite, content).defaults.flatMap((column) => {
+		const stored = fieldColumnOf(testSite, content, column);
 		return stored?.field.kind === "select" ? [{ column, field: stored.field }] : [];
 	})[0];
 	it.skipIf(!listedSelect)("draws a listed select field column with the option label", async () => {
@@ -163,7 +158,9 @@ describe("any site: list screen", () => {
 		// A row with no value shows an empty-cell marker.
 		expect(within(screen.getByRole("row", { name: /Beta/ })).queryByText(label)).toBeNull();
 		expect(
-			screen.getAllByRole("columnheader").some((header) => header.textContent?.includes(columnLabel(content, column))),
+			screen
+				.getAllByRole("columnheader")
+				.some((header) => header.textContent?.includes(columnLabel(testSite, content, column))),
 		).toBe(true);
 	});
 
@@ -186,19 +183,19 @@ describe("any site: list screen", () => {
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("menu.duplicate") }));
 		await waitFor(() => expect(calls("POST", "/api/cms/v1/entries/e1/duplicate")).toHaveLength(1));
 		expect(bodyOf(calls("POST", "/api/cms/v1/entries/e1/duplicate")[0])).toEqual({
-			title: copyTitle(content, "Alpha"),
+			title: copyTitle(testSite, content, "Alpha"),
 		});
-		await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith(adminEntryEditHref("copy-1")));
+		await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith(testSite.adminEntryEditHref("copy-1")));
 	});
 });
 
 describe("any site: copy title", () => {
 	it("adds the copy suffix and stays within the title field's max", () => {
-		expect(copyTitle(content, "Alpha")).toBe(`Alpha${tEntries("copy.suffix")}`);
-		expect(copyTitle(content, "  ")).toBe(`${tEntries("untitled")}${tEntries("copy.suffix")}`);
-		const field = storedField(content, "title")?.field;
+		expect(copyTitle(testSite, content, "Alpha")).toBe(`Alpha${tEntries("copy.suffix")}`);
+		expect(copyTitle(testSite, content, "  ")).toBe(`${tEntries("untitled")}${tEntries("copy.suffix")}`);
+		const field = testSite.storedField(content, "title")?.field;
 		const max = field?.kind === "text" ? field.max : undefined;
-		const long = copyTitle(content, "x".repeat(500));
+		const long = copyTitle(testSite, content, "x".repeat(500));
 		if (max === undefined) expect(long).toBe(`${"x".repeat(500)}${tEntries("copy.suffix")}`);
 		else {
 			expect(Array.from(long)).toHaveLength(max);
@@ -221,7 +218,9 @@ describe("any site: record panel", () => {
 				: undefined;
 		const onSaved = vi.fn();
 		render(<RecordPanel target={{ collection: record, id: null }} onClose={vi.fn()} onSaved={onSaved} />);
-		const panel = screen.getByRole("complementary", { name: t("list.add", { label: schemaOf(record).label }) });
+		const panel = screen.getByRole("complementary", {
+			name: t("list.add", { label: testSite.schemaOf(record).label }),
+		});
 		fireEvent.change(within(panel).getByRole("textbox", { name: new RegExp(titleLabel(record)) }), {
 			target: { value: "New record" },
 		});
@@ -241,7 +240,7 @@ describe("any site: entry editor", () => {
 	const entry = {
 		id: "entry-1",
 		collection: content,
-		locale: DEFAULT_LOCALE,
+		locale: testSite.DEFAULT_LOCALE,
 		translationGroupId: "entry-1",
 		status: "draft",
 		version: 4,
@@ -269,9 +268,9 @@ describe("any site: entry editor", () => {
 		const title = (await screen.findByRole("textbox", { name: titleLabel(content) })) as HTMLInputElement;
 		await waitFor(() => expect(title.value).toBe("Any title"));
 		// The first group's fields in the properties slot show as the config's labels.
-		const first = schemaOf(content).layout?.[0]?.fields ?? [];
+		const first = testSite.schemaOf(content).layout?.[0]?.fields ?? [];
 		for (const name of first) {
-			const field = schemaOf(content).fields[name];
+			const field = testSite.schemaOf(content).fields[name];
 			if (!field || name === "title" || field.kind === "slug" || field.kind === "view") continue;
 			expect(screen.getAllByText(field.label).length, name).toBeGreaterThan(0);
 		}
@@ -281,7 +280,7 @@ describe("any site: entry editor", () => {
 		await waitFor(() => expect(calls("PATCH", "/api/cms/v1/entries/entry-1")).toHaveLength(1));
 		const body = bodyOf(calls("PATCH", "/api/cms/v1/entries/entry-1")[0]);
 		expect(body.metadata.title).toBe("Changed title");
-		const known = new Set(storedFields(content).map(({ name }) => name));
+		const known = new Set(testSite.storedFields(content).map(({ name }) => name));
 		for (const key of Object.keys(body.metadata)) expect(known.has(key), key).toBe(true);
 	});
 });

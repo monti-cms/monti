@@ -1,9 +1,10 @@
 import { getSchema } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, expect, it } from "vitest";
-import { CMS_SCHEMA_EXTENSIONS, CmsTextAlign } from "../tiptap-schema";
+import { testSite } from "../../../../core/test/site";
+import { CmsTextAlign, cmsSchemaExtensions } from "../tiptap-schema";
 
-const schema = getSchema([StarterKit, ...CMS_SCHEMA_EXTENSIONS]);
+const schema = getSchema([StarterKit, ...cmsSchemaExtensions(testSite)]);
 
 describe("paragraph and heading alignment settings", () => {
 	it("headings and paragraphs have a textAlign attribute with no default", () => {

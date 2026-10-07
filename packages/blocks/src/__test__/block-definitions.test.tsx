@@ -1,33 +1,30 @@
 import { BLOCK_NODES } from "@monti-cms/admin/editor";
-import { BLOCK_BY_NAME, BLOCKS, invalidOptionAttributes } from "@monti-cms/core/client";
-import { analyze, DIRECTIVES, serialize, toDocument } from "@monti-cms/mdx/format";
+import { invalidOptionAttributes } from "@monti-cms/core/client";
+import { analyze, directivesOf, serialize, toDocument } from "@monti-cms/mdx/format";
+import { renderFixture } from "@monti-cms/mdx/testing";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { renderSite as site } from "../test/render-config";
 
-// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
-vi.mock("../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../test/render-config")).default,
-}));
-
-const { renderFixture } = await import("@monti-cms/mdx/testing");
+const { DIRECTIVES } = directivesOf(site);
 
 describe("block definitions", () => {
 	it("survives a JSON round trip unchanged — no functions or components", () => {
-		expect(JSON.parse(JSON.stringify(BLOCKS))).toEqual(BLOCKS);
+		expect(JSON.parse(JSON.stringify(site.BLOCKS))).toEqual(site.BLOCKS);
 	});
 
 	it("has no duplicate names and child/parent blocks actually exist", () => {
-		expect(new Set(BLOCKS.map((block) => block.name)).size).toBe(BLOCKS.length);
-		for (const block of BLOCKS) {
+		expect(new Set(site.BLOCKS.map((block) => block.name)).size).toBe(site.BLOCKS.length);
+		for (const block of site.BLOCKS) {
 			for (const child of ("children" in block ? block.children?.blocks : undefined) ?? []) {
-				expect(BLOCK_BY_NAME.get(child)?.parent, `${block.name} → ${child}`).toBe(block.name);
+				expect(site.BLOCK_BY_NAME.get(child)?.parent, `${block.name} → ${child}`).toBe(block.name);
 			}
-			if ("parent" in block && block.parent) expect(BLOCK_BY_NAME.has(block.parent)).toBe(true);
+			if ("parent" in block && block.parent) expect(site.BLOCK_BY_NAME.has(block.parent)).toBe(true);
 		}
 	});
 
 	it("has implementations in the editor NodeView registry", () => {
-		for (const block of BLOCKS) {
+		for (const block of site.BLOCKS) {
 			// Core blocks use the editor node from the registry; added blocks (block extensions) use the node built from the definition.
 			if (block.editor.view === "node" && block.editor.nodeView) {
 				expect(BLOCK_NODES[block.editor.nodeView], `${block.name}.editor.nodeView`).toBeDefined();
@@ -36,14 +33,14 @@ describe("block definitions", () => {
 	});
 
 	it("keeps options and defaults consistent, and finds attributes outside the options", () => {
-		for (const block of BLOCKS) {
+		for (const block of site.BLOCKS) {
 			for (const [name, attribute] of Object.entries(block.attributes)) {
 				if (attribute.options && typeof attribute.defaultValue === "string") {
 					expect(Object.keys(attribute.options), `${block.name}.${name}`).toContain(attribute.defaultValue);
 				}
 			}
 		}
-		const callout = BLOCK_BY_NAME.get("callout");
+		const callout = site.BLOCK_BY_NAME.get("callout");
 		expect(callout && invalidOptionAttributes(callout, { variant: "caution" })).toEqual(["variant"]);
 		expect(callout && invalidOptionAttributes(callout, { variant: "tip", title: "x" })).toEqual([]);
 	});
@@ -51,7 +48,7 @@ describe("block definitions", () => {
 	it("every registered directive round-trips parse -> document -> serialize, and renders without unknown nodes", async () => {
 		// The directive notation is opt-in (`mdx.syntax`), so the extension is passed explicitly.
 		const syntax = [directiveSyntax()];
-		const blockOf = (name: string) => BLOCK_BY_NAME.get(name);
+		const blockOf = (name: string) => site.BLOCK_BY_NAME.get(name);
 		/** Required attributes plus `mediaId` (an image without media is stored as plain markdown), each with a valid value. */
 		const attributesOf = (name: string) =>
 			Object.entries(blockOf(name)?.attributes ?? {})
@@ -91,25 +88,25 @@ describe("block definitions", () => {
 		// Child blocks (tab, row, cell, column) are exercised through their parent.
 		for (const directive of DIRECTIVES.filter((candidate) => !blockOf(candidate.name)?.parent)) {
 			const source = sourceOf(directive);
-			const analysis = analyze(source, undefined, syntax);
+			const analysis = analyze(site, source, undefined, syntax);
 			expect(analysis.errors, directive.name).toEqual([]);
-			const document = toDocument(analysis);
-			const saved = serialize(document, syntax);
+			const document = toDocument(site, analysis);
+			const saved = serialize(site, document, syntax);
 			// The directive is still stored as a directive (it was not turned back into body text). The line break is always `<br />`.
 			if (directive.name !== "br") expect(saved, directive.name).toContain(`:${directive.name}`);
 			expect(saved, directive.name).toContain(directive.name);
 			// Saving is stable: parsing the saved text gives the same document and the same text again.
-			const reparsed = toDocument(analyze(saved, undefined, syntax));
+			const reparsed = toDocument(site, analyze(site, saved, undefined, syntax));
 			expect(reparsed, directive.name).toEqual(document);
-			expect(serialize(reparsed, syntax), directive.name).toBe(saved);
+			expect(serialize(site, reparsed, syntax), directive.name).toBe(saved);
 			// Without the extension the same document is stored in the standard notation, and that is stable too.
-			const standard = serialize(document);
+			const standard = serialize(site, document);
 			expect(standard, directive.name).not.toContain(`:${directive.name}`);
-			const standardDocument = toDocument(analyze(standard));
+			const standardDocument = toDocument(site, analyze(site, standard));
 			expect(standardDocument, directive.name).toEqual(document);
-			expect(serialize(standardDocument), directive.name).toBe(standard);
+			expect(serialize(site, standardDocument), directive.name).toBe(standard);
 			// The public page draws it with the block's own component, never the fallback.
-			const rendered = await renderFixture(source, { syntax });
+			const rendered = await renderFixture(source, { site, syntax });
 			expect(rendered.unknown, directive.name).toEqual([]);
 		}
 		expect([...covered].sort()).toEqual(DIRECTIVES.map((directive) => directive.name).sort());

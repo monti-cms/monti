@@ -1,6 +1,9 @@
 import type { Element } from "hast";
 import { describe, expect, it } from "vitest";
-import { highlight } from "../code-highlighter";
+import { testSite } from "../../../../test/site";
+import { siteHighlight } from "../code-highlighter";
+
+const highlight = await siteHighlight(testSite);
 
 const hasIndentClass = (node: Element) => {
 	const value = node.properties?.class ?? node.properties?.className;

@@ -13,7 +13,7 @@
 
 - **관리자 경로.** 기본 `/admin`이고 사이트 설정 `admin.path`로 바꾼다(예: `/studio`). 앱의 관리자 라우트 폴더
   (`app/(admin)/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
-  플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `@monti-cms/core/client`의 `adminHref("/media")`·`adminEntryEditHref(id)`로
+  플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `useSite()`(`@monti-cms/core/client`)로 받은 사이트의 `site.adminHref("/media")`·`site.adminEntryEditHref(id)`로
   주소를 만든다. 관리자 API(`/api/cms/v1`)는 바뀌지 않는다.
 - **사이트 보기.** 사이드바 아래 `사이트 보기`는 `site.home`(기본 `/`)을 연다. 관리자 화면이 다른 호스트에 있으면 전체 주소를 적는다.
 - **미리보기.** 편집 화면 `미리보기`는 `site.previewPath` 뒤에 공개 경로를 붙이고 언어는 `site.previewLocaleParam`(기본

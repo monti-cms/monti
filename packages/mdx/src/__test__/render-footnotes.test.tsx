@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
 import type { RenderMdxOptions } from "../render";
 import { analyze, renderFixture, serialize, toDocument } from "../testing";
 
-const render = async (source: string, options?: RenderMdxOptions) => {
-	const rendered = await renderFixture(source, options);
+const render = async (source: string, options?: Partial<RenderMdxOptions>) => {
+	const rendered = await renderFixture(source, { site: testSite, ...options });
 	return { markup: rendered.html, toc: rendered.toc };
 };
 
@@ -56,7 +57,7 @@ describe("footnote rendering", () => {
 	});
 
 	it("renders the same footnotes after a document round trip", async () => {
-		const stored = serialize(toDocument(analyze(SOURCE)));
+		const stored = serialize(testSite, toDocument(testSite, analyze(testSite, SOURCE)));
 		expect((await render(stored)).markup).toBe((await render(SOURCE)).markup);
 	});
 

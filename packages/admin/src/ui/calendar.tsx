@@ -1,5 +1,6 @@
 "use client";
 
+import { useSite } from "@monti-cms/core/client";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
 import { type DayButton, DayPicker, getDefaultClassNames, type Locale } from "react-day-picker";
@@ -13,13 +14,15 @@ function Calendar({
 	showOutsideDays = true,
 	captionLayout = "label",
 	buttonVariant = "ghost",
-	locale = adminCalendarLocale,
+	locale: localeProp,
 	formatters,
 	components,
 	...props
 }: React.ComponentProps<typeof DayPicker> & {
 	buttonVariant?: React.ComponentProps<typeof Button>["variant"];
 }) {
+	const site = useSite();
+	const locale = localeProp ?? adminCalendarLocale(site);
 	const defaultClassNames = getDefaultClassNames();
 
 	return (

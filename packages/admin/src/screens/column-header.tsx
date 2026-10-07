@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator, LOCALES, localeLabel } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "../lib/utils/cn";
@@ -15,10 +15,8 @@ import { type AdminListColumn, type ColumnFilter, columnConfig, isColumnFiltered
 import { LIST_STATUSES, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { DateRangeCalendar } from "./shared/date-range-picker";
-import { STATUS_LABELS } from "./shared/entry-status";
+import { statusLabels } from "./shared/entry-status";
 import type { TaxonomyOption, TaxonomyOptions } from "./shared/use-taxonomy";
-
-const t = createTranslator(screensMessages);
 
 function TextFilter({
 	value,
@@ -31,6 +29,7 @@ function TextFilter({
 	label: string;
 	onApply: (value: string) => void;
 }) {
+	const t = useTranslator(screensMessages);
 	const [draft, setDraft] = useState(value);
 	useEffect(() => setDraft(value), [value]);
 	return (
@@ -73,6 +72,8 @@ function CheckRow({
 }
 
 function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch: Partial<ListState>) => void }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const toggle = (status: (typeof LIST_STATUSES)[number], on: boolean) =>
 		onChange({ statuses: on ? [...state.statuses, status] : state.statuses.filter((item) => item !== status) });
 	return (
@@ -81,7 +82,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 			{LIST_STATUSES.map((status) => (
 				<CheckRow
 					key={status}
-					label={STATUS_LABELS[status]}
+					label={statusLabels(site)[status]}
 					checked={state.statuses.includes(status)}
 					onChange={(on) => toggle(status, on)}
 				/>
@@ -98,13 +99,15 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 
 /** Locale checklist. Choosing several shows items matching any of them. */
 function LocaleFilter({ state, onChange }: { state: ListState; onChange: (patch: Partial<ListState>) => void }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
 	return (
 		<fieldset className="space-y-0.5">
 			<legend className="sr-only">{t("column.locale")}</legend>
-			{LOCALES.map((locale) => (
+			{site.LOCALES.map((locale) => (
 				<CheckRow
 					key={locale}
-					label={localeLabel(locale)}
+					label={site.localeLabel(locale)}
 					checked={state.locales.includes(locale)}
 					onChange={(on) =>
 						onChange({ locales: on ? [...state.locales, locale] : state.locales.filter((item) => item !== locale) })
@@ -126,6 +129,7 @@ function TaxonomyFilter({
 	selected: readonly string[];
 	onChange: (ids: string[]) => void;
 }) {
+	const t = useTranslator(screensMessages);
 	const toggle = (id: string) =>
 		onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
 	return (
@@ -172,6 +176,7 @@ function DateFilter({
 	to: string;
 	onChange: (from: string, to: string) => void;
 }) {
+	const t = useTranslator(screensMessages);
 	return (
 		<div className="space-y-2">
 			<p className="px-1 text-cms-muted-foreground text-xs">{label}</p>
@@ -226,7 +231,9 @@ export function ColumnHeader({
 	options: TaxonomyOptions;
 	onChange: (patch: Partial<ListState>) => void;
 }) {
-	const config = columnConfig(state.collection, column);
+	const site = useSite();
+	const t = useTranslator(screensMessages);
+	const config = columnConfig(site, state.collection, column);
 	const sortField = config.sortField;
 	const filtered = isColumnFiltered(state, filter);
 	const sorted = sortField && state.sortField === sortField ? state.sortDirection : null;

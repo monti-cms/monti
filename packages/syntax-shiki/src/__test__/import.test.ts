@@ -1,5 +1,6 @@
 import { bodyFromMdx } from "@monti-cms/mdx/format";
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../test/site";
 import { shikiNotation } from "..";
 
 /** End to end with the core: a body written with Shiki notation is stored with Monti annotations, and is only ever written in Monti's notation. */
@@ -23,7 +24,7 @@ y = 2
 const extensions = [shikiNotation()];
 
 describe("importing Shiki notation", () => {
-	const body = bodyFromMdx(SHIKI, extensions);
+	const body = bodyFromMdx(testSite, SHIKI, extensions);
 
 	it("stores the body with Monti annotation comments and no Shiki notation", () => {
 		expect(body.doc).not.toBeNull();
@@ -68,34 +69,34 @@ y = 2
 
 	it("reads the written MDX back to the same document and the same text", () => {
 		// Block ids are not content: they are inherited from the previous body, as they are when a post is saved again.
-		const again = bodyFromMdx(body.mdx, extensions, { previous: body.doc });
+		const again = bodyFromMdx(testSite, body.mdx, extensions, { previous: body.doc });
 		expect(again.mdx).toBe(body.mdx);
 		expect(again.doc?.content).toEqual(body.doc?.content);
 		// Written MDX needs no extension to read: it is Monti's own notation, so the document is the same.
-		const plain = bodyFromMdx(body.mdx, [], { previous: body.doc });
+		const plain = bodyFromMdx(testSite, body.mdx, [], { previous: body.doc });
 		expect(plain.mdx).toBe(body.mdx);
 		expect(plain.doc?.content).toEqual(body.doc?.content);
 	});
 
 	it("without the extension the notation is ordinary code", () => {
-		const plain = bodyFromMdx(SHIKI, []);
+		const plain = bodyFromMdx(testSite, SHIKI, []);
 		expect(plain.mdx).toBe(SHIKI);
 		expect(plain.mdx).toContain("[!code ++]");
 	});
 
 	it("leaves a body without notation byte for byte", () => {
 		const mdx = "```ts\nconst a = 1\n```\n";
-		expect(bodyFromMdx(mdx, extensions).mdx).toBe(mdx);
+		expect(bodyFromMdx(testSite, mdx, extensions).mdx).toBe(mdx);
 	});
 
 	it("converts a word rule", () => {
-		const word = bodyFromMdx("```ts\n// [!code word:Hello]\nconst message = 'Hello'\n```\n", extensions);
+		const word = bodyFromMdx(testSite, "```ts\n// [!code word:Hello]\nconst message = 'Hello'\n```\n", extensions);
 		expect(word.mdx).toBe("```ts\n// @document strong {re:/Hello/g}\nconst message = 'Hello'\n```\n");
-		expect(bodyFromMdx(word.mdx, extensions, { previous: word.doc }).doc?.content).toEqual(word.doc?.content);
+		expect(bodyFromMdx(testSite, word.mdx, extensions, { previous: word.doc }).doc?.content).toEqual(word.doc?.content);
 	});
 
 	it("does not touch a notation inside a string", () => {
 		const mdx = '```ts\nconst s = "// [!code ++]"\n```\n';
-		expect(bodyFromMdx(mdx, extensions).mdx).toBe(mdx);
+		expect(bodyFromMdx(testSite, mdx, extensions).mdx).toBe(mdx);
 	});
 });

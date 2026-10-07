@@ -1,5 +1,6 @@
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../test/site";
 import { POST as postRun } from "../routes/run/route";
 
 const mockVerifyAdmin = vi.fn();
@@ -18,6 +19,7 @@ vi.mock("@monti-cms/core/plugin/server", async (importOriginal) => ({
 }));
 
 const cms = fakeCms({
+	config: testConfig,
 	store: {
 		listEntries: async () => ({ items: [], total: 0, page: 1, pageSize: 20 }),
 		getMediaAsset: async () => null,

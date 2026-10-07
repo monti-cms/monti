@@ -1,4 +1,5 @@
 import { useAdminPathname, useAdminRouter, useAdminSearchParams } from "@monti-cms/admin/router";
+import { defineCollection, defineConfig, fields } from "@monti-cms/core";
 import { AuthError } from "@monti-cms/core/runtime";
 import { fakeCms } from "@monti-cms/core/testing";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -97,7 +98,26 @@ describe("CmsAdminPage", () => {
 
 describe("cmsAdminMetadata", () => {
 	it("titles the admin pages and keeps them out of search results", () => {
-		expect(cmsAdminMetadata.title).toBeTruthy();
-		expect(cmsAdminMetadata.robots).toEqual({ index: false, follow: false });
+		const metadata = cmsAdminMetadata(fakeCms());
+		expect(metadata.title).toBeTruthy();
+		expect(metadata.robots).toEqual({ index: false, follow: false });
+	});
+
+	it("puts the name of the instance's site in the title", () => {
+		const cms = fakeCms({
+			config: defineConfig({
+				collections: {
+					page: defineCollection({
+						label: "Page",
+						kind: "document",
+						fields: { title: fields.text({ label: "Title", required: true }) },
+					}),
+				},
+				locales: [{ code: "en", name: "English" }],
+				defaultLocale: "en",
+				site: { name: "Acme" },
+			}),
+		});
+		expect(cmsAdminMetadata(cms).title).toContain("Acme");
 	});
 });

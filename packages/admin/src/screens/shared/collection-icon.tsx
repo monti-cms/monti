@@ -1,6 +1,7 @@
 "use client";
 
-import { isCollection, isItemCollection, schemaOf } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/client";
+
 import {
 	Bookmark,
 	BookOpen,
@@ -85,9 +86,10 @@ export function useIconByName(): (name: string | undefined) => LucideIcon | unde
 }
 
 export function CollectionIcon({ collection }: { collection: string }) {
+	const site = useSite();
 	const iconByName = useIconByName();
-	const name = isCollection(collection) ? schemaOf(collection).icon : undefined;
-	const Icon = iconByName(name) ?? (isItemCollection(collection) ? Tag : FileText);
+	const name = site.isCollection(collection) ? site.schemaOf(collection).icon : undefined;
+	const Icon = iconByName(name) ?? (site.isItemCollection(collection) ? Tag : FileText);
 	return <Icon />;
 }
 

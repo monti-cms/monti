@@ -31,7 +31,7 @@ type LifecycleParams = { id: string; expectedVersion: number };
  * this module locks the rows, applies the result and keeps the version bumps.
  */
 export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
-	const { pool, qSchema } = ctx;
+	const { pool, qSchema, site } = ctx;
 
 	const transition = (
 		params: LifecycleParams,
@@ -88,7 +88,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		/** Draft/published to archived. Ends publication. Record collections have no archive. */
 		archiveEntry: (params: LifecycleParams) =>
 			transition(params, "archive", async (client, locked) => {
-				assertArchivable(locked.collection, locked.version);
+				assertArchivable(site, locked.collection, locked.version);
 				await client.query(`UPDATE "${qSchema}".entries SET status = $1, version = $2 WHERE id = $3`, [
 					STATUS_AFTER.archive,
 					locked.version + 1,
@@ -116,7 +116,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		 */
 		trashEntry: (params: LifecycleParams) =>
 			transition(params, "trash", async (client, locked) => {
-				if (trashRequiresNoReferences(locked.collection)) {
+				if (trashRequiresNoReferences(site, locked.collection)) {
 					await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: true });
 				}
 				await client.query(
@@ -155,7 +155,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					`UPDATE "${qSchema}".entries SET status = $1, trashed_at = NULL, version = $2 WHERE id = $3`,
 					[STATUS_AFTER.restore, version, params.id],
 				);
-				if (restorePublishesAgain(locked.collection)) {
+				if (restorePublishesAgain(site, locked.collection)) {
 					// A record is published again on restore, so the service passes the prepared draft.
 					assertRestoreSnapshot(params.snapshot);
 					await publishing.publishWithinTransaction(client, params.id, {

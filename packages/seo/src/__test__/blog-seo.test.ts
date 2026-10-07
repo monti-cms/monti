@@ -1,20 +1,24 @@
-import { COLLECTION_DEFINITIONS, schemaOf } from "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { AI_ACTIONS } from "../../../ai/src/registry";
+import { aiRegistryOf } from "../../../ai/src/registry";
+import blog from "../../test/cms.config";
 import { seoOf } from "..";
+
+const site = createSite(blog);
+const AI_ACTIONS = aiRegistryOf(site).actions;
 
 /** Example blog config (`seoFields({ keys })`): stored field names and value shapes are the same as before the SEO extension. */
 describe("blog SEO fields", () => {
 	it("field names and storage format are the same as before (only the share image is a media field)", () => {
 		for (const collection of ["post", "memo"] as const) {
-			expect(COLLECTION_DEFINITIONS[collection].fields).toMatchObject({
+			expect(site.COLLECTION_DEFINITIONS[collection].fields).toMatchObject({
 				seoTitle: "string",
 				seoDescription: "string",
 				canonicalUrl: "string",
 				ogImageId: "string",
 				seoRobots: "string",
 			});
-			const fields = schemaOf(collection).fields;
+			const fields = site.schemaOf(collection).fields;
 			expect(fields.searchPreview).toMatchObject({ kind: "view", view: "search" });
 			expect(fields.ogImageId).toMatchObject({ kind: "media", localized: true });
 			expect(fields.seoRobots).toMatchObject({ defaultValue: "index" });
@@ -33,7 +37,7 @@ describe("blog SEO fields", () => {
 
 	it("the public page helper reads the blog fields by role", () => {
 		expect(
-			seoOf(schemaOf("post"), { title: "글", summary: "요약", seoRobots: "noindex", canonicalUrl: "/posts/a" }),
+			seoOf(site.schemaOf("post"), { title: "글", summary: "요약", seoRobots: "noindex", canonicalUrl: "/posts/a" }),
 		).toEqual({ title: "글", description: "요약", canonical: "/posts/a", noindex: true });
 	});
 });

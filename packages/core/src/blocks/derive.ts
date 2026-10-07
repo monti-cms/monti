@@ -1,32 +1,10 @@
-import { ADDED_BLOCKS, BLOCKS } from "./active";
 import type { BlockDefinition } from "./define";
 import { textAlign } from "./definitions";
 
 /**
- * Builds the storage syntax table, validation rules, and constants from the block definitions the site uses. Shared by the server, editor, and public renderer.
+ * Rules that read one block definition, shared by the server, editor, and public renderer. The tables built from the blocks a site uses (`BLOCK_BY_NAME`,
+ * `FENCE_BLOCKS`, `childRules`, ...) belong to its `Site` (see `active.ts`).
  */
-
-export const BLOCK_BY_NAME: ReadonlyMap<string, BlockDefinition> = new Map(BLOCKS.map((block) => [block.name, block]));
-
-/** Public renderer name (JSX name) → block definition. */
-export const BLOCK_BY_COMPONENT: ReadonlyMap<string, BlockDefinition> = new Map(
-	BLOCKS.map((block) => [block.component, block]),
-);
-
-/** Directive-syntax blocks (`:::`, `::`, `:`). Code fences and math use Markdown syntax, so they are not in the directive table. */
-export const directiveBlocks = (): BlockDefinition[] =>
-	BLOCKS.filter(
-		(block) => block.syntax.kind === "container" || block.syntax.kind === "leaf" || block.syntax.kind === "text",
-	);
-
-/** Added code fence blocks. Fence language → block definition. */
-export const FENCE_BLOCKS: ReadonlyMap<string, BlockDefinition> = new Map(
-	ADDED_BLOCKS.flatMap((block) => (block.syntax.kind === "fence" ? [[block.syntax.lang, block] as const] : [])),
-);
-
-/** The added block for a code fence language. Case-insensitive. */
-export const fenceBlockOf = (lang: unknown): BlockDefinition | undefined =>
-	typeof lang === "string" ? FENCE_BLOCKS.get(lang.toLowerCase()) : undefined;
 
 /** The attribute name when a value falls outside an attribute's allowed choices. The pre-publish check reports it as `invalid_block_attribute`. */
 export function invalidOptionAttributes(
@@ -41,15 +19,6 @@ export function invalidOptionAttributes(
 	}
 	return invalid;
 }
-
-/** Blocks with child block rules (name, count) and their children's renderer names. The storage check counts them. */
-export const childRules = (): { block: BlockDefinition; childComponents: string[] }[] =>
-	ADDED_BLOCKS.flatMap((block) => {
-		const names = block.children?.blocks ?? [];
-		if (names.length === 0) return [];
-		const childComponents = names.flatMap((name) => BLOCK_BY_NAME.get(name)?.component ?? []);
-		return [{ block, childComponents }];
-	});
 
 const optionValues = (block: BlockDefinition, attribute: string): readonly string[] =>
 	Object.keys(block.attributes[attribute]?.options ?? {});

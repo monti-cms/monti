@@ -11,13 +11,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@monti-cms/admin/kit";
-import { COLLECTION_DEFINITIONS, COLLECTIONS, createTranslator, schemaOf } from "@monti-cms/core/client";
+import { type Site, type Translator, useSite, useTranslator } from "@monti-cms/core/client";
 import { useId } from "react";
-import { CUSTOM_BLOCKS, type CustomBase, type CustomSurface, customEngines, customResults } from "../custom";
+import { type CustomBase, type CustomSurface, customBlocksOf, customEngines, customResults } from "../custom";
 import { customMessages } from "./custom-editor.messages";
-import { engineLabel, resultLabel, slotLabel, slotTargetLabel } from "./labels.messages";
-
-const t = createTranslator(customMessages);
+import { type labelsOf, useLabels } from "./labels.messages";
 
 /** Picking the basic info of a screen action: name, attach target, result shape. */
 
@@ -63,21 +61,31 @@ export function OptionSelect({
 }
 
 /** Fields that can have a button next to them (text, URL, relation, select fields). Also picks the option values of conditional fields. The value is `collection:field`. */
-const FIELD_OPTIONS = COLLECTIONS.flatMap((collection) =>
-	Object.entries(schemaOf(collection).fields).flatMap(([name, field]) => {
-		const target = field.kind === "conditional" ? field.discriminant : field;
-		return target.kind === "text" || target.kind === "slug" || target.kind === "relation" || target.kind === "select"
-			? [{ value: `${collection}:${name}`, label: `${COLLECTION_DEFINITIONS[collection].label} · ${target.label}` }]
-			: [];
-	}),
-);
+const fieldOptionsOf = (site: Site) =>
+	site.COLLECTIONS.flatMap((collection) =>
+		Object.entries(site.schemaOf(collection).fields).flatMap(([name, field]) => {
+			const target = field.kind === "conditional" ? field.discriminant : field;
+			return target.kind === "text" || target.kind === "slug" || target.kind === "relation" || target.kind === "select"
+				? [
+						{
+							value: `${collection}:${name}`,
+							label: `${site.COLLECTION_DEFINITIONS[collection]?.label} · ${target.label}`,
+						},
+					]
+				: [];
+		}),
+	);
 
 /** Attach target picker. Names are built in the language at render time. */
-const placeOptionsOf = (): ReadonlyArray<{ value: string; label: string; surface: CustomSurface | null }> => [
+const placeOptionsOf = (
+	site: Site,
+	t: Translator<"place.field" | "place.media">,
+	{ slotLabel, slotTargetLabel }: ReturnType<typeof labelsOf>,
+): ReadonlyArray<{ value: string; label: string; surface: CustomSurface | null }> => [
 	{ value: "field", label: t("place.field"), surface: null },
 	{ value: "selection", label: slotLabel("selection"), surface: { slot: "selection" } },
 	{ value: "insert", label: slotLabel("insert"), surface: { slot: "insert" } },
-	...CUSTOM_BLOCKS.map((block) => ({
+	...customBlocksOf(site).map((block) => ({
 		value: `block:${block.name}`,
 		label: `${slotLabel("block")} · ${block.label}`,
 		surface: { slot: "block", block: block.name } as const,
@@ -119,15 +127,15 @@ const placeValue = (surface: CustomSurface) =>
 				: surface.slot;
 
 /** First field slot. If there is no text or URL field, it is the selection menu. */
-const firstField = (): CustomSurface => {
-	const [collection, field] = (FIELD_OPTIONS[0]?.value ?? "").split(":");
+const firstField = (site: Site): CustomSurface => {
+	const [collection, field] = (fieldOptionsOf(site)[0]?.value ?? "").split(":");
 	return collection && field ? { slot: "field", field, collections: [collection] } : { slot: "selection" };
 };
 
 /** Result shape and mode matched to the slot. Values that cannot be used become the first value (for relation and select fields, the judge mode comes first). */
-const fitted = (base: CustomBase, surface: CustomSurface): CustomBase => {
-	const results = customResults(surface);
-	const engines = customEngines(surface);
+const fitted = (site: Site, base: CustomBase, surface: CustomSurface): CustomBase => {
+	const results = customResults(site, surface);
+	const engines = customEngines(site, surface);
 	const engine = base.engine && engines.includes(base.engine) ? base.engine : engines[0];
 	return {
 		...base,
@@ -137,15 +145,20 @@ const fitted = (base: CustomBase, surface: CustomSurface): CustomBase => {
 	};
 };
 
-export const NEW_CUSTOM_BASE = (): CustomBase =>
-	fitted({ label: "", surface: firstField(), result: "text" }, firstField());
+export const NEW_CUSTOM_BASE = (site: Site): CustomBase =>
+	fitted(site, { label: "", surface: firstField(site), result: "text" }, firstField(site));
 
 /** Basic info inputs. Changing the attach target turns result shapes and modes that cannot be used there into the first value. */
 export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChange: (base: CustomBase) => void }) {
+	const site = useSite();
+	const t = useTranslator(customMessages);
+	const labels = useLabels();
+	const { resultLabel, engineLabel } = labels;
 	const ids = { label: useId(), place: useId(), field: useId(), result: useId(), engine: useId() };
-	const setSurface = (surface: CustomSurface) => onChange(fitted(base, surface));
-	const placeOptions = placeOptionsOf();
-	const engines = customEngines(base.surface);
+	const setSurface = (surface: CustomSurface) => onChange(fitted(site, base, surface));
+	const placeOptions = placeOptionsOf(site, t, labels);
+	const fieldOptions = fieldOptionsOf(site);
+	const engines = customEngines(site, base.surface);
 	const fieldValue =
 		base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
 	return (
@@ -168,7 +181,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 					options={placeOptions}
 					onChange={(value) => {
 						const option = placeOptions.find((item) => item.value === value);
-						if (option) setSurface(option.surface ?? firstField());
+						if (option) setSurface(option.surface ?? firstField(site));
 					}}
 				/>
 			</Field>
@@ -178,7 +191,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 					<OptionSelect
 						id={ids.field}
 						value={fieldValue}
-						options={FIELD_OPTIONS}
+						options={fieldOptions}
 						onChange={(value) => {
 							const [collection, field] = value.split(":");
 							if (collection && field) setSurface({ slot: "field", field, collections: [collection] });
@@ -193,7 +206,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 				<OptionSelect
 					id={ids.result}
 					value={base.result}
-					options={customResults(base.surface).map((result) => ({ value: result, label: resultLabel(result) }))}
+					options={customResults(site, base.surface).map((result) => ({ value: result, label: resultLabel(result) }))}
 					onChange={(result) => onChange({ ...base, result: result as CustomBase["result"] })}
 				/>
 			</Field>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useSite, useTranslator } from "@monti-cms/core/client";
+
 import type { StoredDocument } from "@monti-cms/core/document";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
@@ -10,7 +12,7 @@ import { buildEditorExtensions } from "../../editor/extensions";
 import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
-import { t } from "./translate";
+import { entriesMessages } from "./messages";
 
 const PROSE =
 	"prose cms-dark:prose-invert max-w-none text-base text-cms-foreground leading-relaxed focus:outline-none " +
@@ -21,23 +23,27 @@ const PROSE =
 	"[&_.cms-source-active]:rounded-sm [&_.cms-source-active]:bg-cms-primary/8 [&_.cms-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-cms-primary)_8%,transparent)] [&_.cms-source-active]:transition-[background-color,box-shadow]";
 
 function PreviewEditor({ doc, label }: { doc: StoredDocument; label: string }) {
+	const site = useSite();
 	// Render text-decoration extensions (text color etc.) the same as in the editor.
 	const { marks } = useCmsAdminComponents();
 	const boxPreview = boxPreviewOf(useSourceFormat());
-	const [extensions] = useState(() => buildEditorExtensions(marks));
+	const [extensions] = useState(() => buildEditorExtensions(site, marks));
 	const editor = useEditor({
 		immediatelyRender: false,
 		editable: false,
 		extensions,
-		content: storedToTiptap(doc, { boxPreview }),
+		content: storedToTiptap(site, doc, { boxPreview }),
 		editorProps: { attributes: { "aria-label": label, class: PROSE } },
 	});
 	return <EditorContent editor={editor} />;
 }
 
 /** Read-only preview of a document. Rendered the same as the post. Recreates the editor when the content changes. */
-export function DocPreview({ doc, label = t("sourcePane.preview") }: { doc: StoredDocument; label?: string }) {
-	const key = useMemo(() => documentKey(doc), [doc]);
+export function DocPreview({ doc, label: labelProp }: { doc: StoredDocument; label?: string }) {
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
+	const label = labelProp ?? t("sourcePane.preview");
+	const key = useMemo(() => documentKey(site, doc), [doc, site]);
 	return <PreviewEditor key={key} doc={doc} label={label} />;
 }
 
@@ -59,6 +65,7 @@ export function SourcePane({
 	/** The scrolling element. Used to link scrolling with the editor. */
 	ref?: Ref<HTMLElement>;
 }) {
+	const t = useTranslator(entriesMessages);
 	return (
 		<aside
 			ref={ref}

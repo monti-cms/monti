@@ -1,16 +1,7 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
-import {
-	CODE_BLOCK_FEATURES,
-	CODE_LINE_EFFECTS,
-	type CodeLineEffect,
-	type CodeRule,
-	lineAt,
-	lineEffectDefinition,
-	lineRange,
-	lineStarts,
-} from "@monti-cms/core/code-block";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
 import { Check, ChevronRight, Copy, Info, ListOrdered, Rows3 } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
@@ -20,7 +11,7 @@ import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Toggle } from "../../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
-import { CODE_ANCHOR_REF } from "../added-marks";
+import { codeAnchorRef } from "../added-marks";
 import { useEditorEditable } from "../blocks/shared";
 import {
 	codeEffectsKey,
@@ -31,14 +22,12 @@ import {
 	rulesOf,
 	setFoldOpen,
 } from "./effects-plugin";
-import { CODE_LANGUAGE_CHOICES } from "./languages";
+import { codeLanguageChoices } from "./languages";
 import { LineMenu, lineMenuAvailable } from "./line-menu";
 import { startLinkFromLines } from "./link-commands";
 import { codeBlockMessages } from "./messages";
 import { formatMeta, parseMeta } from "./meta";
 import { RulesPanel } from "./rules-panel";
-
-const t = createTranslator(codeBlockMessages);
 
 /** Height of one line (px). The code (`leading-6`), the line number gutter and the line background share this height. */
 const LINE_HEIGHT = 24;
@@ -49,12 +38,13 @@ const effectsOnLine = (effects: readonly CodeLineEffect[], line: number) =>
 	effects.filter((effect) => effect.start <= line && line < effect.end);
 
 /** Editor display of line effects (line background, wavy underline, line number gutter marker). The `editor` of the effect definition. */
-const editorLookOf = (effect: CodeLineEffect) => lineEffectDefinition(effect.name)?.editor;
+const editorLookOf = (site: Site, effect: CodeLineEffect) => site.lineEffectDefinition(effect.name)?.editor;
 
 /** Line number gutter marker. When several apply to one line, the effect defined first wins. */
-const markerOf = (effects: readonly CodeLineEffect[]) =>
-	CODE_LINE_EFFECTS.find((definition) => definition.editor?.marker && effects.some((e) => e.name === definition.name))
-		?.editor?.marker;
+const markerOf = (site: Site, effects: readonly CodeLineEffect[]) =>
+	site.CODE_LINE_EFFECTS.find(
+		(definition) => definition.editor?.marker && effects.some((e) => e.name === definition.name),
+	)?.editor?.marker;
 
 /**
  * Code block editing view.
@@ -63,6 +53,8 @@ const markerOf = (effects: readonly CodeLineEffect[]) =>
  * - Code: edited in place. Text effects are applied by selecting text and using the inline bubble or the top toolbar.
  */
 export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps) {
+	const site = useSite();
+	const t = useTranslator(codeBlockMessages);
 	/** AI slot discriminator. Stays the same while the node view is alive. */
 	const slotScope = useId();
 	const [copied, setCopied] = useState(false);
@@ -210,12 +202,14 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 		return out + text.slice(at, range.to);
 	};
 
-	const languageOptions = CODE_LANGUAGE_CHOICES.some((option) => option.value === language)
-		? CODE_LANGUAGE_CHOICES
-		: [...CODE_LANGUAGE_CHOICES, { label: language, value: language }];
+	const languageChoices = codeLanguageChoices(site.EXTRA_CODE_LANGUAGES);
+	const languageOptions = languageChoices.some((option) => option.value === language)
+		? languageChoices
+		: [...languageChoices, { label: language, value: language }];
+	const codeAnchor = codeAnchorRef(site);
 	// Tools turned off in the site config are not offered, but what the block already has stays shown so it can be edited or removed.
-	const lineMenuOffered = lineMenuAvailable(lineEffects, 0, starts.length, !!CODE_ANCHOR_REF);
-	const rulesOffered = CODE_BLOCK_FEATURES.rules || rules.length > 0;
+	const lineMenuOffered = lineMenuAvailable(site, lineEffects, 0, starts.length, !!codeAnchor);
+	const rulesOffered = site.CODE_BLOCK_FEATURES.rules || rules.length > 0;
 
 	const collapseAt = (line: number): FoldRegion | undefined => collapses.find((region) => region.startLine === line);
 
@@ -241,7 +235,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 								<SelectValue placeholder={t("view.languagePlaceholder")} />
 							</SelectTrigger>
 							<SelectContent>
-								{CODE_LANGUAGE_CHOICES.map((option) => (
+								{languageChoices.map((option) => (
 									<SelectItem key={option.value} value={option.value}>
 										{option.label}
 									</SelectItem>
@@ -354,7 +348,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						const selected = !!lines && lines.start <= line && line < lines.end;
 						const whole = !!picked && picked.start <= line && line < picked.end;
 						const anchored = effects.some((effect) => effect.name === "anchor");
-						const marker = markerOf(effects);
+						const marker = markerOf(site, effects);
 						return (
 							// biome-ignore lint/a11y/noStaticElementInteractions: pressing (dragging) a line number picks lines and right-click opens the menu (keyboard users use the top "Line effects" button)
 							<div
@@ -414,7 +408,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						>
 							{rows.map((line) => {
 								const effects = effectsOnLine(lineEffects, line);
-								const wavy = effects.map((effect) => editorLookOf(effect)?.wavy).find(Boolean);
+								const wavy = effects.map((effect) => editorLookOf(site, effect)?.wavy).find(Boolean);
 								const whole = !!picked && picked.start <= line && line < picked.end;
 								// The line picked first during linking, and the line the hovered body link points to.
 								const pending = !!linkingLines && linkingLines.start <= line && line < linkingLines.end;
@@ -424,7 +418,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										key={line}
 										className={cn(
 											"h-6",
-											...effects.map((effect) => editorLookOf(effect)?.background ?? ""),
+											...effects.map((effect) => editorLookOf(site, effect)?.background ?? ""),
 											(whole || pending || hovered) && "bg-cms-primary/15",
 										)}
 									>
@@ -466,7 +460,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						onClose={closeMenu}
 						// Body-to-code linking is used only when there is a text decoration pointing at code lines (such as `codeRef` of the blocks extension).
 						onLinkText={
-							CODE_ANCHOR_REF
+							codeAnchor
 								? () => {
 										if (typeof pos === "number") startLinkFromLines(editor.view, pos, menu.start, menu.end);
 										closeMenu();

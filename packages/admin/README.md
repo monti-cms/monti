@@ -13,7 +13,7 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
 
 - **Admin path.** Defaults to `/admin`; change it with the site config's `admin.path` (e.g. `/studio`). The app's admin route folder
   (`app/(admin)/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
-  plugin screen URLs follow this path. Screen code builds URLs with `adminHref("/media")` and `adminEntryEditHref(id)` from `@monti-cms/core/client`.
+  plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/core/client`).
   The admin API (`/api/cms/v1`) does not change.
 - **View site.** `View site` below the sidebar opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
 - **Preview.** `Preview` on the edit screen appends the public path to `site.previewPath` and passes the language as `site.previewLocaleParam` (default

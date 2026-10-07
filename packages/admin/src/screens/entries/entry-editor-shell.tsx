@@ -1,17 +1,6 @@
 "use client";
 
-import {
-	adminEntryEditHref,
-	adminHref,
-	previewHref as contentPreviewHref,
-	createTranslator,
-	DEFAULT_COLLECTION,
-	isCollection,
-	isItemCollection,
-	localeLabel,
-	storedField,
-	withBasePath,
-} from "@monti-cms/core/client";
+import { useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
@@ -42,6 +31,7 @@ import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
+import type { TranslatorFor } from "../../translator";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button, buttonVariants } from "../../ui/button";
 import {
@@ -70,20 +60,18 @@ import { InspectorPanel } from "./inspector-panel";
 import { LanguageTabs } from "./language-tabs";
 import {
 	type ConfirmedLifecycleAction,
-	LIFECYCLE_LABEL,
-	LIFECYCLE_SUCCESS,
 	type LifecycleAction,
 	lifecycleConfirm,
+	lifecycleLabel,
+	lifecycleSuccess,
 } from "./lifecycle-confirm";
+import { entriesMessages } from "./messages";
 import { ConflictDialog, RecoveryDialog } from "./recovery-dialogs";
 import { SourceChangeDialog } from "./source-change-dialog";
 import { SourcePane } from "./source-pane";
 import { useSourceSync } from "./source-sync";
 import { TemplateMenu } from "./template-menu";
-import { t as tc } from "./translate";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
-
-const t = createTranslator(entryEditorShellMessages);
 
 interface EntryEditorShellProps {
 	mode: "new" | "edit";
@@ -180,13 +168,14 @@ function ToolbarToggle({
 }
 
 /** "Save first" hint. The same words are used wherever on the edit screen an action is blocked. */
-const saveFirstMessage = (purpose: Purpose) => t("saveFirst", { purpose });
+const saveFirstMessage = (t: TranslatorFor<typeof entryEditorShellMessages>, purpose: Purpose) =>
+	t("saveFirst", { purpose });
 
 /** The action that was attempted, put into the hint when blocked. */
 type Purpose = "publish" | "duplicate" | LifecycleAction;
 
 /** Name of each save status. */
-const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
+const saveStatusLabels = (tc: TranslatorFor<typeof entriesMessages>): Record<SaveStatus, string> => ({
 	new: tc("save.new"),
 	saved: tc("save.saved"),
 	dirty: tc("save.dirty"),
@@ -195,7 +184,7 @@ const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
 	failed: tc("save.failed"),
 	conflict: tc("save.conflict"),
 	"session-expired": tc("save.session-expired"),
-};
+});
 
 /** Color of the save status dot. When adding a status, its color must be chosen here. */
 const SAVE_STATUS_DOT: Record<SaveStatus, string> = {
@@ -211,7 +200,9 @@ const SAVE_STATUS_DOT: Record<SaveStatus, string> = {
 
 /** Save status in the header. On narrow screens only the dot shows, and the name is announced to screen readers. */
 function SaveStatusIndicator({ status, backupAvailable }: { status: SaveStatus; backupAvailable: boolean }) {
-	const label = `${SAVE_STATUS_LABELS[status]}${backupAvailable ? "" : t("backupUnavailable")}`;
+	const t = useTranslator(entryEditorShellMessages);
+	const tc = useTranslator(entriesMessages);
+	const label = `${saveStatusLabels(tc)[status]}${backupAvailable ? "" : t("backupUnavailable")}`;
 	return (
 		<output
 			aria-live="polite"
@@ -230,10 +221,14 @@ function SaveStatusIndicator({ status, backupAvailable }: { status: SaveStatus; 
 export function EntryEditorShell({
 	mode,
 	initialEntryId,
-	collection: propCollection = DEFAULT_COLLECTION,
+	collection: propCollectionProp,
 	adminId,
 	folderId,
 }: EntryEditorShellProps) {
+	const site = useSite();
+	const t = useTranslator(entryEditorShellMessages);
+	const tc = useTranslator(entriesMessages);
+	const propCollection = propCollectionProp ?? site.DEFAULT_COLLECTION;
 	const router = useAdminRouter();
 	const { resolvedTheme, setTheme } = useTheme();
 	const editor = useEntryEditor({
@@ -246,7 +241,7 @@ export function EntryEditorShell({
 		// Change only the URL to the edit URL after the first save of a new entry, without remounting the screen.
 		onSaved: (saved, { created }) => {
 			if (created)
-				window.history.replaceState({ ...window.history.state }, "", withBasePath(adminEntryEditHref(saved.id)));
+				window.history.replaceState({ ...window.history.state }, "", withBasePath(site.adminEntryEditHref(saved.id)));
 		},
 	});
 	const { entry, collection, form, load, busy, saveStatus, publishIssues, recovery, conflict, translation } = editor;
@@ -282,7 +277,7 @@ export function EntryEditorShell({
 	useEffect(() => {
 		if (load.status !== "redirect") return;
 		router.replace(
-			load.entryId ? entryHref(load.collection, load.entryId) : adminHref(`?collection=${load.collection}`),
+			load.entryId ? entryHref(site, load.collection, load.entryId) : site.adminHref(`?collection=${load.collection}`),
 		);
 	}, [load]);
 
@@ -369,15 +364,18 @@ export function EntryEditorShell({
 	);
 	const extensions = useEditorExtensions({ translateLocales, getEntry });
 
-	const refreshIncoming = useCallback(async (targetId: string) => {
-		setIncoming((current) => ({ ...current, loading: true, error: null }));
-		try {
-			const data = await cmsEntryClient.relations(targetId);
-			setIncoming({ items: data.incomingReferences ?? [], loading: false, error: null });
-		} catch {
-			setIncoming({ items: [], loading: false, error: t("usagesFailed") });
-		}
-	}, []);
+	const refreshIncoming = useCallback(
+		async (targetId: string) => {
+			setIncoming((current) => ({ ...current, loading: true, error: null }));
+			try {
+				const data = await cmsEntryClient(site).relations(targetId);
+				setIncoming({ items: data.incomingReferences ?? [], loading: false, error: null });
+			} catch {
+				setIncoming({ items: [], loading: false, error: t("usagesFailed") });
+			}
+		},
+		[site, t],
+	);
 	// The usages of an entry are read when it has loaded, and again when its status changes (and after a publish, below).
 	const entryId = entry?.id;
 	const entryStatus = entry?.status;
@@ -391,16 +389,16 @@ export function EntryEditorShell({
 		() =>
 			entry?.source ? (
 				<>
-					{tc("inspector.source", { locale: localeLabel(entry.source.locale) })}{" "}
+					{tc("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
 					<Link
-						href={adminEntryEditHref(entry.source.id)}
+						href={site.adminEntryEditHref(entry.source.id)}
 						className="text-cms-primary underline-offset-2 hover:underline"
 					>
 						{tc("inspector.sourceLink")}
 					</Link>
 				</>
 			) : undefined,
-		[entry?.source],
+		[entry?.source, site.adminEntryEditHref, site.localeLabel, tc],
 	);
 
 	/** Selects the start of a block in the visual editor and scrolls to it. False when the editor does not have that block. */
@@ -470,7 +468,7 @@ export function EntryEditorShell({
 		}
 		const { entryId: id, hasUnsavedChanges } = editor.getSnapshot();
 		if (!id || (!saveChanges && hasUnsavedChanges)) {
-			report(saveFirstMessage(purpose));
+			report(saveFirstMessage(t, purpose));
 			return null;
 		}
 		return id;
@@ -528,7 +526,10 @@ export function EntryEditorShell({
 			const { warnings } = published.value;
 			if (warnings.length > 0) {
 				toast.warning(t("publishedWithWarnings", { count: warnings.length }), {
-					description: warnings.slice(0, 5).map(cmsIssueMessage).join("\n"),
+					description: warnings
+						.slice(0, 5)
+						.map((issue) => cmsIssueMessage(site, issue))
+						.join("\n"),
 					duration: 10000,
 					action: warnings[0]?.position
 						? { label: t("go"), onClick: () => focusIssue(warnings[0] as CmsIssue) }
@@ -546,7 +547,7 @@ export function EntryEditorShell({
 	const runLifecycle = async (action: LifecycleAction) => {
 		if (!entry || isSubmitting) return;
 		if (action !== "restore" && editor.getSnapshot().hasUnsavedChanges) {
-			toast.error(saveFirstMessage(action));
+			toast.error(saveFirstMessage(t, action));
 			return;
 		}
 		const changed = await editor.changeStatus(action);
@@ -554,14 +555,14 @@ export function EntryEditorShell({
 			toast.error(changed.error.message);
 			return;
 		}
-		toast.success(LIFECYCLE_SUCCESS[action]);
+		toast.success(lifecycleSuccess(site)[action]);
 		// Sending a translation to the trash returns to the original's edit screen.
-		if (changed.value.openEntryId) router.navigate(adminEntryEditHref(changed.value.openEntryId));
+		if (changed.value.openEntryId) router.navigate(site.adminEntryEditHref(changed.value.openEntryId));
 	};
 
 	/** Only transitions that take a published post down (archive, move to trash) ask. Unarchive and restore happen right away. */
 	const confirmLifecycle = (action: ConfirmedLifecycleAction) => {
-		setConfirm({ ...lifecycleConfirm(action, entry, incoming.items), onConfirm: () => runLifecycle(action) });
+		setConfirm({ ...lifecycleConfirm(site, action, entry, incoming.items), onConfirm: () => runLifecycle(action) });
 	};
 
 	const confirmPermanentDelete = () => {
@@ -577,7 +578,7 @@ export function EntryEditorShell({
 					toast.error(deleted.error.message);
 					return;
 				}
-				router.navigate(adminHref(`?collection=${entry.collection}&status=trashed`));
+				router.navigate(site.adminHref(`?collection=${entry.collection}&status=trashed`));
 			},
 		});
 	};
@@ -590,11 +591,11 @@ export function EntryEditorShell({
 			toast.error(copy.error.message);
 			return;
 		}
-		router.navigate(adminEntryEditHref(copy.value.id));
+		router.navigate(site.adminEntryEditHref(copy.value.id));
 	};
 
 	// A translation can share a slug with the original, so the language is passed along.
-	const previewPath = entry ? contentPreviewHref(collection, entry.workingSlug, entry.locale) : null;
+	const previewPath = entry ? site.previewHref(collection, entry.workingSlug, entry.locale) : null;
 	// This is a URL opened in a new tab, so Next does not prepend `basePath`.
 	const previewHref = previewPath === null ? null : withBasePath(previewPath);
 
@@ -630,19 +631,19 @@ export function EntryEditorShell({
 				<Alert variant="danger">
 					<AlertDescription className="col-start-auto">{loadError}</AlertDescription>
 				</Alert>
-				<Link href={adminHref()} className={buttonVariants({ variant: "outline" })}>
+				<Link href={site.adminHref()} className={buttonVariants({ variant: "outline" })}>
 					{t("backToList")}
 				</Link>
 			</div>
 		);
 	}
 
-	const statusLabel = entry ? describeEntryStatus(entry) : t("newEntry");
+	const statusLabel = entry ? describeEntryStatus(site, entry) : t("newEntry");
 	const canRetry = ["failed", "local-only", "session-expired"].includes(saveStatus);
 	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
 	const titleIssue = publishIssues.find((issue) => issue.path === "title");
 	const languageTabs =
-		entry && !isItemCollection(collection) ? (
+		entry && !site.isItemCollection(collection) ? (
 			<LanguageTabs
 				entry={entry}
 				disabled={isReadOnly}
@@ -652,7 +653,7 @@ export function EntryEditorShell({
 		) : null;
 	// The title field is the library-convention `title` field. The label is decided by the site.
 	const titleLabel =
-		(isCollection(collection) ? storedField(collection, "title")?.field.label : undefined) ?? t("title");
+		(site.isCollection(collection) ? site.storedField(collection, "title")?.field.label : undefined) ?? t("title");
 	const titleInput = (
 		<>
 			<FieldLabel htmlFor="cms-title-canvas" className="sr-only">
@@ -670,7 +671,7 @@ export function EntryEditorShell({
 			/>
 			{titleIssue && (
 				<p id="cms-title-error" className="text-cms-destructive text-sm">
-					{cmsIssueMessage(titleIssue)}
+					{cmsIssueMessage(site, titleIssue)}
 				</p>
 			)}
 		</>
@@ -708,7 +709,7 @@ export function EntryEditorShell({
 			/>
 			{bodyIssue && (
 				<p id={SOURCE_ERROR_ID} className="mt-2 text-cms-destructive text-sm">
-					{cmsIssueMessage(bodyIssue)}
+					{cmsIssueMessage(site, bodyIssue)}
 				</p>
 			)}
 		</>
@@ -723,7 +724,7 @@ export function EntryEditorShell({
 							<TooltipTrigger
 								render={
 									<Link
-										href={adminHref(`?collection=${collection}`)}
+										href={site.adminHref(`?collection=${collection}`)}
 										aria-label={t("backToList")}
 										className={cn(
 											buttonVariants({ variant: "ghost", size: "icon-sm" }),
@@ -756,7 +757,7 @@ export function EntryEditorShell({
 						)}
 						{saveStatus === "session-expired" && (
 							<a
-								href={adminHref("/login")}
+								href={site.adminHref("/login")}
 								target="_blank"
 								rel="noreferrer"
 								className={buttonVariants({ variant: "link", size: "xs" })}
@@ -788,7 +789,7 @@ export function EntryEditorShell({
 								disabled={isSubmitting}
 								onClick={() => void runLifecycle("restore")}
 							>
-								{busy === "status" ? t("restoring") : LIFECYCLE_LABEL.restore}
+								{busy === "status" ? t("restoring") : lifecycleLabel(site).restore}
 							</Button>
 						) : entry?.status === "archived" ? (
 							<Button
@@ -798,7 +799,7 @@ export function EntryEditorShell({
 								disabled={isSubmitting}
 								onClick={() => void runLifecycle("unarchive")}
 							>
-								{busy === "status" ? t("unarchiving") : LIFECYCLE_LABEL.unarchive}
+								{busy === "status" ? t("unarchiving") : lifecycleLabel(site).unarchive}
 							</Button>
 						) : !canResetPublishedAt ? (
 							<Button
@@ -882,7 +883,7 @@ export function EntryEditorShell({
 										{(entry.status === "draft" || entry.status === "published") && (
 											<DropdownMenuItem onClick={() => confirmLifecycle("archive")}>
 												<Archive aria-hidden />
-												{LIFECYCLE_LABEL.archive}
+												{lifecycleLabel(site).archive}
 											</DropdownMenuItem>
 										)}
 									</>
@@ -898,7 +899,7 @@ export function EntryEditorShell({
 										) : (
 											<DropdownMenuItem variant="destructive" onClick={() => confirmLifecycle("trash")}>
 												<Trash2 aria-hidden />
-												{LIFECYCLE_LABEL.trash}
+												{lifecycleLabel(site).trash}
 											</DropdownMenuItem>
 										)}
 									</>
@@ -923,7 +924,7 @@ export function EntryEditorShell({
 				)}
 				{!canUseVisual && sourcePanel && (
 					<output className="border-b bg-amber-500/10 px-4 py-2 text-sm">
-						{t("visualUnavailable")} {sourceProblems[0] ? cmsIssueMessage(sourceProblems[0]) : ""}
+						{t("visualUnavailable")} {sourceProblems[0] ? cmsIssueMessage(site, sourceProblems[0]) : ""}
 					</output>
 				)}
 				{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
@@ -942,7 +943,7 @@ export function EntryEditorShell({
 									className="h-auto whitespace-normal px-0 text-left"
 									onClick={() => focusIssue(issue)}
 								>
-									{cmsIssueMessage(issue)}
+									{cmsIssueMessage(site, issue)}
 								</Button>
 							</li>
 						))}
@@ -1024,7 +1025,7 @@ export function EntryEditorShell({
 								SIDE_PANEL_WIDTH,
 							)}
 						>
-							{isCollection(collection) && (
+							{site.isCollection(collection) && (
 								<InspectorPanel
 									incomingReferences={incoming.items}
 									isLoadingIncomingReferences={incoming.loading}

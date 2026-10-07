@@ -1,11 +1,9 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { type Editor, Extension } from "@tiptap/core";
 import { Fragment, type Node as PmNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
+import type { TranslatorFor } from "../translator";
 import { type TargetBlock, targetBlockAt } from "./drag/block-resolve";
-import { editorMessages } from "./messages";
-
-const t = createTranslator(editorMessages);
+import type { editorMessages } from "./messages";
 
 /**
  * Block operations: move up/down, duplicate, delete. The block handle menu and keyboard shortcuts use the same commands.
@@ -97,8 +95,9 @@ export const CmsBlockKeymap = Extension.create({
 	},
 });
 
-export const BLOCK_SHORTCUTS = [
-	{ keys: "Alt+↑ / Alt+↓", label: t("blockShortcut.move") },
-	{ keys: "Mod+Shift+D", label: t("blockShortcut.duplicate") },
-	{ keys: "Mod+Shift+Backspace", label: t("blockShortcut.delete") },
-] as const;
+export const blockShortcuts = (t: TranslatorFor<typeof editorMessages>) =>
+	[
+		{ keys: "Alt+↑ / Alt+↓", label: t("blockShortcut.move") },
+		{ keys: "Mod+Shift+D", label: t("blockShortcut.duplicate") },
+		{ keys: "Mod+Shift+Backspace", label: t("blockShortcut.delete") },
+	] as const;

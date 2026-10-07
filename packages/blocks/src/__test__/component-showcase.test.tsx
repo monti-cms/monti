@@ -2,23 +2,18 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { withoutBlockIds } from "@monti-cms/core/document";
 import { analyze } from "@monti-cms/mdx/format";
+import { renderMdx } from "@monti-cms/mdx/render";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { docOfMdx, mdxToTiptap, tiptapToMdx } from "../test/editor-text";
-
-// Run blocks with the config supplied by the plugin (`blocks()`), so public components come from the plugin `render`.
-vi.mock("../../../core/src/config/resolved", async () => ({
-	cmsConfig: (await import("../test/render-config")).default,
-}));
-
-const { renderMdx } = await import("@monti-cms/mdx/render");
+import { renderSite as site } from "../test/render-config";
 
 const source = readFileSync(path.join(__dirname, "fixtures/component-showcase.mdx"), "utf8");
 
 /** Checks that the editor and the public page agree on the same content. The public page renders with the default components provided by the core and the block extensions. */
 describe("CMS component showcase", () => {
 	it("passes validation and keeps the same document through the editor", () => {
-		expect(analyze(source).errors).toEqual([]);
+		expect(analyze(site, source).errors).toEqual([]);
 		const editorDocument = mdxToTiptap(source);
 		expect(editorDocument.content?.length).toBeGreaterThan(30);
 		// The body is the same document after the editor. Its text is the one the format writes of it (annotation comments are written in the format's own style),
@@ -29,7 +24,7 @@ describe("CMS component showcase", () => {
 	});
 
 	it("the public page renders every section with the library default look", async () => {
-		const html = renderToStaticMarkup((await renderMdx(source)).content);
+		const html = renderToStaticMarkup((await renderMdx(source, { site })).content);
 
 		for (const text of [
 			"직접 지정한 팁 제목",

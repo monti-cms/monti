@@ -1,6 +1,6 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
@@ -27,6 +27,7 @@ import {
 	useCmsAdminComponents,
 } from "../admin-components";
 import { cn } from "../lib/utils/cn";
+import type { TranslatorFor } from "../translator";
 import { IconButton } from "../ui/icon-button";
 import { Separator } from "../ui/separator";
 import { addedMarkName } from "./added-marks";
@@ -38,9 +39,10 @@ import {
 	type ActiveInlineMark,
 	allowedMarkTools,
 	allowsMark,
-	INLINE_MARK_TOOLS,
+	INLINE_MARK_NAMES,
 	type InlineBubbleTarget,
 	inlineBubbleTarget,
+	inlineMarkTools,
 	offersMarkTool,
 	RANGED_MARKS,
 	removeInlineMark,
@@ -51,14 +53,12 @@ import { MarkTextForm, type MarkTextLabels } from "./mark-text-form";
 import { editorMessages } from "./messages";
 import { ToolbarButton } from "./toolbar-button";
 
-const t = createTranslator(editorMessages);
-
 /** Text for the tooltip form on text inside code. */
-const CODE_TOOLTIP_LABELS: MarkTextLabels = {
+const CODE_TOOLTIP_LABELS = (t: TranslatorFor<typeof editorMessages>): MarkTextLabels => ({
 	name: t("inlineBubble.tooltipName"),
 	field: t("inlineBubble.tooltipField"),
 	empty: t("inlineBubble.tooltipEmpty"),
-};
+});
 
 type Panel =
 	| { kind: "link"; draft: LinkDraft }
@@ -137,6 +137,8 @@ export function InlineBubble({
 	/** Actions to add at the end of the selection menu (plugins, e.g. polishing writing style). */
 	actions?: readonly EditorSelectionAction[];
 }) {
+	const site = useSite();
+	const t = useTranslator(editorMessages);
 	const markExtensions = useMarkExtensions(editor);
 	const detailed = markExtensions.flatMap(({ name, extension }) => (extension.detail ? [name] : []));
 	const ranged = [...RANGED_MARKS, ...detailed];
@@ -149,7 +151,7 @@ export function InlineBubble({
 			const active =
 				target?.kind === "selection"
 					? [
-							...INLINE_MARK_TOOLS.map((tool) => tool.mark),
+							...INLINE_MARK_NAMES,
 							"link",
 							CODE_TOOLTIP_MARK_NAME,
 							"codeFold",
@@ -394,7 +396,7 @@ export function InlineBubble({
 				</div>
 			);
 		}
-		const tool = INLINE_MARK_TOOLS.find((item) => item.mark === mark.name);
+		const tool = inlineMarkTools(site).find((item) => item.mark === mark.name);
 		if (!tool) return null;
 		return (
 			<BubbleButton
@@ -486,14 +488,14 @@ export function InlineBubble({
 					<Separator orientation="vertical" className="mx-0.5 h-4" />
 				</>
 			)}
-			{allowedMarkTools(editor.state).map((item) => (
+			{allowedMarkTools(site, editor.state).map((item) => (
 				<ToolbarButton key={item.mark} editor={editor} item={item} tooltipSide="top" />
 			))}
 			{bubbleTools("format").map(renderTool)}
 			<Separator orientation="vertical" className="mx-0.5 h-4" />
 			{inCode &&
 				allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
-				offersMarkTool(editor.state, CODE_TOOLTIP_MARK_NAME) && (
+				offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME) && (
 					<BubbleButton
 						label={
 							editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd")
@@ -513,7 +515,7 @@ export function InlineBubble({
 				</BubbleButton>
 			)}
 			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool)}
-			{inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(editor.state, "codeFold") && (
+			{inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(site, editor.state, "codeFold") && (
 				<BubbleButton
 					label={t("inlineBubble.fold")}
 					pressed={editor.isActive("codeFold")}
@@ -561,7 +563,7 @@ export function InlineBubble({
 						editor={editor}
 						mark={CODE_TOOLTIP_MARK_NAME}
 						attribute="content"
-						labels={CODE_TOOLTIP_LABELS}
+						labels={CODE_TOOLTIP_LABELS(t)}
 						active={panel.active}
 						initial={panel.initial}
 						range={panel.range}

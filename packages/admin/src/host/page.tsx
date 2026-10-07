@@ -45,7 +45,7 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 		}
 	}
 	if (path.length === 1 && first) {
-		const Page = (await loadAdminPlugins()).find((plugin) => plugin.pages?.[first])?.pages?.[first];
+		const Page = (await loadAdminPlugins(cms.site)).find((plugin) => plugin.pages?.[first])?.pages?.[first];
 		if (Page) {
 			await requireAdminPage(cms, server);
 			return <Page />;

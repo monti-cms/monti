@@ -1,5 +1,4 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
-import { ADDED_BLOCKS, BLOCKS, createTranslator } from "@monti-cms/core/client";
+import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/client";
 import type { Editor, Range } from "@tiptap/core";
 import {
 	Heading2,
@@ -19,18 +18,21 @@ import {
 	Superscript,
 	Table2,
 } from "lucide-react";
+import type { TranslatorFor } from "../translator";
 import {
-	BLOCK_INSERT_ACTIONS,
 	type BlockInsertAction,
+	blockInsertActions,
 	OPEN_FILE_PICKER_EVENT,
 	OPEN_IMAGE_DIALOG_EVENT,
 } from "./block-inserts";
 import { insertFootnote } from "./footnote-nodes";
 import { editorMessages } from "./messages";
 
-const t = createTranslator(editorMessages);
 /** Search term list (dictionary values joined by commas). */
-const keywordList = (key: Parameters<typeof t>[0]): string[] =>
+const keywordList = (
+	t: TranslatorFor<typeof editorMessages>,
+	key: Parameters<TranslatorFor<typeof editorMessages>>[0],
+): string[] =>
 	t(key)
 		.split(",")
 		.map((word) => word.trim());
@@ -50,15 +52,15 @@ export interface SlashCommandItem {
 
 const HEADING_ICONS = { 2: Heading2, 3: Heading3, 4: Heading4 } as const;
 
-const heading = (level: 2 | 3 | 4): SlashCommandItem => ({
+const heading = (t: TranslatorFor<typeof editorMessages>, level: 2 | 3 | 4): SlashCommandItem => ({
 	title: t(`slash.h${level}.title`),
 	icon: HEADING_ICONS[level],
 	description: t(`slash.h${level}.description`),
 	keywords: [
-		...keywordList("slash.heading.keywords"),
+		...keywordList(t, "slash.heading.keywords"),
 		`h${level}`,
 		`heading${level}`,
-		...keywordList(`slash.h${level}.keywords`),
+		...keywordList(t, `slash.h${level}.keywords`),
 	],
 	action: (editor, range) => {
 		editor.chain().focus().deleteRange(range).toggleHeading({ level }).run();
@@ -68,24 +70,24 @@ const heading = (level: 2 | 3 | 4): SlashCommandItem => ({
 /**
  * Basic formatting and inline slash commands.
  */
-export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
+export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): SlashCommandItem[] => [
 	{
 		title: t("slash.paragraph.title"),
 		description: t("slash.paragraph.description"),
 		icon: Pilcrow,
-		keywords: keywordList("slash.paragraph.keywords"),
+		keywords: keywordList(t, "slash.paragraph.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).setParagraph().run();
 		},
 	},
-	heading(2),
-	heading(3),
-	heading(4),
+	heading(t, 2),
+	heading(t, 3),
+	heading(t, 4),
 	{
 		title: t("slash.bullet.title"),
 		description: t("slash.bullet.description"),
 		icon: List,
-		keywords: keywordList("slash.bullet.keywords"),
+		keywords: keywordList(t, "slash.bullet.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleBulletList().run();
 		},
@@ -94,7 +96,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.ordered.title"),
 		description: t("slash.ordered.description"),
 		icon: ListOrdered,
-		keywords: keywordList("slash.ordered.keywords"),
+		keywords: keywordList(t, "slash.ordered.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleOrderedList().run();
 		},
@@ -103,7 +105,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.todo.title"),
 		description: t("slash.todo.description"),
 		icon: ListTodo,
-		keywords: keywordList("slash.todo.keywords"),
+		keywords: keywordList(t, "slash.todo.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleTaskList().run();
 		},
@@ -112,7 +114,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.quote.title"),
 		description: t("slash.quote.description"),
 		icon: Quote,
-		keywords: keywordList("slash.quote.keywords"),
+		keywords: keywordList(t, "slash.quote.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleBlockquote().run();
 		},
@@ -121,7 +123,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.code.title"),
 		description: t("slash.code.description"),
 		icon: SquareCode,
-		keywords: keywordList("slash.code.keywords"),
+		keywords: keywordList(t, "slash.code.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleCodeBlock().run();
 		},
@@ -130,7 +132,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.table.title"),
 		description: t("slash.table.description"),
 		icon: Table2,
-		keywords: keywordList("slash.table.keywords"),
+		keywords: keywordList(t, "slash.table.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
 		},
@@ -139,7 +141,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.divider.title"),
 		description: t("slash.divider.description"),
 		icon: Minus,
-		keywords: keywordList("slash.divider.keywords"),
+		keywords: keywordList(t, "slash.divider.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).setHorizontalRule().run();
 		},
@@ -148,7 +150,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.image.title"),
 		description: t("slash.image.description"),
 		icon: Image,
-		keywords: keywordList("slash.image.keywords"),
+		keywords: keywordList(t, "slash.image.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();
 			window.dispatchEvent(new CustomEvent(OPEN_IMAGE_DIALOG_EVENT));
@@ -158,7 +160,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.file.title"),
 		description: t("slash.file.description"),
 		icon: Paperclip,
-		keywords: keywordList("slash.file.keywords"),
+		keywords: keywordList(t, "slash.file.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();
 			window.dispatchEvent(new CustomEvent(OPEN_FILE_PICKER_EVENT));
@@ -168,7 +170,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.internalLink.title"),
 		description: t("slash.internalLink.description"),
 		icon: Link2,
-		keywords: keywordList("slash.internalLink.keywords"),
+		keywords: keywordList(t, "slash.internalLink.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).insertContent("[[").run();
 		},
@@ -177,7 +179,7 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 		title: t("slash.footnote.title"),
 		description: t("slash.footnote.description"),
 		icon: Superscript,
-		keywords: keywordList("slash.footnote.keywords"),
+		keywords: keywordList(t, "slash.footnote.keywords"),
 		action: (editor, range) => {
 			insertFootnote(editor, range);
 		},
@@ -185,19 +187,21 @@ export const BASE_SLASH_COMMANDS: SlashCommandItem[] = [
 ];
 
 /** Slash menu block order: added blocks (block extensions, site settings) first, then core blocks (math, etc.). */
-const MENU_BLOCKS: readonly BlockDefinition[] = [
-	...ADDED_BLOCKS,
-	...BLOCKS.filter((block) => !ADDED_BLOCKS.includes(block)),
+const menuBlocks = (site: Pick<Site, "ADDED_BLOCKS" | "BLOCKS">): readonly BlockDefinition[] => [
+	...site.ADDED_BLOCKS,
+	...site.BLOCKS.filter((block) => !site.ADDED_BLOCKS.includes(block)),
 ];
 
 /**
- * Among block definitions (BLOCKS) with `editor.insertable === true` and `editor.view === 'node'`,
+ * Among block definitions (site.BLOCKS) with `editor.insertable === true` and `editor.view === 'node'`,
  * generates the slash command list for blocks with a registered insert action.
  */
 export function buildBlockSlashCommands(
-	definitions: readonly BlockDefinition[] = MENU_BLOCKS,
-	actions: Record<string, BlockInsertAction> = BLOCK_INSERT_ACTIONS,
+	site: Site,
+	definitions: readonly BlockDefinition[] = menuBlocks(site),
+	actions: Record<string, BlockInsertAction> = blockInsertActions(site),
 ): SlashCommandItem[] {
+	const t = site.createTranslator(editorMessages);
 	const items: SlashCommandItem[] = [];
 	for (const block of definitions) {
 		if (block.editor.insertable !== true || block.editor.view !== "node") continue;
@@ -220,28 +224,35 @@ export function buildBlockSlashCommands(
 	return items;
 }
 
-/** Block insertion items (core blocks after added blocks). */
-const BLOCK_SLASH_COMMANDS = buildBlockSlashCommands();
+const slashTablesOf = perSite((site: Site) => {
+	const base = baseSlashCommands(site.createTranslator(editorMessages));
+	const blocks = buildBlockSlashCommands(site);
+	return {
+		base,
+		blocks,
+		/**
+		 * `/` block insertion menu. Searchable by Korean and English names.
+		 * The post title is the H1 above the body, so body headings start at H2.
+		 */
+		all: [...base, ...blocks] as SlashCommandItem[],
+	};
+});
 
-/**
- * `/` block insertion menu. Searchable by Korean and English names.
- * The post title is the H1 above the body, so body headings start at H2.
- */
-export const SLASH_COMMANDS: SlashCommandItem[] = [...BASE_SLASH_COMMANDS, ...BLOCK_SLASH_COMMANDS];
+/** The slash menu of a site: the basic formatting items, then its block insertion items (core blocks after added blocks). */
+export const slashCommands = (site: Site): SlashCommandItem[] => slashTablesOf(site).all;
 
 /**
  * Slash menu items. `extra` are items added by edit view extensions (plugins) (appended after), and `inline` are items added by text decoration extensions
  * (after the basic text formatting items, before block items).
  */
 export function filterCommands(
+	site: Site,
 	query: string,
 	extra: readonly SlashCommandItem[] = [],
 	inline: readonly SlashCommandItem[] = [],
 ): SlashCommandItem[] {
-	const commands =
-		extra.length > 0 || inline.length > 0
-			? [...BASE_SLASH_COMMANDS, ...inline, ...BLOCK_SLASH_COMMANDS, ...extra]
-			: SLASH_COMMANDS;
+	const { base, blocks, all } = slashTablesOf(site);
+	const commands = extra.length > 0 || inline.length > 0 ? [...base, ...inline, ...blocks, ...extra] : all;
 	if (!query) return commands;
 	const clean = query.trim().toLowerCase();
 	return commands.filter((cmd) => {

@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { COLLECTIONS } from "../core/collections";
 import type { ExportSnapshot, ExportSnapshotEntry, ExportSnapshotReference } from "../core/store";
-import { storedFields } from "../schema/derive";
+import type { Site } from "../site";
+import { perSite } from "../site/per-site";
 import { createZipArchive, type ZipEntry } from "./zip";
 
 export const exportScopeSchema = z.enum(["admin", "public"]);
@@ -35,12 +35,19 @@ export type PublicExportEntry = z.infer<typeof publicExportEntrySchema>;
  * admin-only keys (storageKey etc.) or values not in the definition mixed into metadata do not go out in the public archive.
  * Per-language names of record collections (`translations`) are not fields and do not go out.
  */
-export const PUBLIC_METADATA_KEYS: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
-	COLLECTIONS.map((collection) => [collection, storedFields(collection).map((stored) => stored.name)]),
+export const publicMetadataKeys = perSite(
+	(site: PublicSite): Readonly<Record<string, readonly string[]>> =>
+		Object.fromEntries(
+			site.COLLECTIONS.map((collection) => [collection, site.storedFields(collection).map((stored) => stored.name)]),
+		),
 );
 
-export function pickPublicMetadata(collection: string, metadata: Record<string, unknown>): Record<string, unknown> {
-	const allowed = PUBLIC_METADATA_KEYS[collection];
+export function pickPublicMetadata(
+	site: PublicSite,
+	collection: string,
+	metadata: Record<string, unknown>,
+): Record<string, unknown> {
+	const allowed = publicMetadataKeys(site)[collection];
 	if (!allowed) throw new Error(`No public metadata allowlist for collection: ${collection}`);
 	const picked: Record<string, unknown> = {};
 	for (const key of allowed) {
@@ -206,7 +213,7 @@ const bodyFile = (entry: ExportSnapshotEntry, state: "working" | "published"): {
 };
 
 /** The public archive includes only the published copy of items that are currently public. Drafts, archived and trashed items are excluded even if a published copy remains. */
-const publicEntry = (entry: ExportSnapshotEntry): PublicExportEntry | null => {
+const publicEntry = (site: PublicSite, entry: ExportSnapshotEntry): PublicExportEntry | null => {
 	if (entry.status !== "published") return null;
 	if (!entry.published) return null;
 	return publicExportEntrySchema.parse({
@@ -215,7 +222,7 @@ const publicEntry = (entry: ExportSnapshotEntry): PublicExportEntry | null => {
 		slug: entry.publishedSlug,
 		publishedAt: iso(entry.publishedAt),
 		updatedAt: iso(entry.published.updatedAt) ?? iso(entry.updatedAt) ?? "",
-		metadata: pickPublicMetadata(entry.collection, entry.published.metadata),
+		metadata: pickPublicMetadata(site, entry.collection, entry.published.metadata),
 		doc: entry.published.doc,
 		schemaVersion: entry.published.schemaVersion,
 		contentHash: entry.published.contentHash,
@@ -235,7 +242,12 @@ const sortEntries = (entries: readonly ExportSnapshotEntry[]): ExportSnapshotEnt
 				: 1,
 	);
 
+/** What the public archive needs of a site: the stored fields of its collections. */
+type PublicSite = Pick<Site, "COLLECTIONS" | "storedFields">;
+
 export interface BuildExportOptions {
+	/** The site the archive is built for (the public archive lists only the fields its collections define). */
+	site: PublicSite;
 	scope: ExportScope;
 	exportedAt: Date;
 	/** The bodies as text in a format. Without it the archive holds the documents only. */
@@ -245,7 +257,7 @@ export interface BuildExportOptions {
 }
 
 export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExportOptions): ExportArchive {
-	const { scope, exportedAt, texts } = options;
+	const { scope, exportedAt, texts, site } = options;
 	const textFile = (base: string, state: "working" | "published", id: string): ZipEntry | undefined => {
 		const text = texts?.bodies.get(exportTextKey(id, state));
 		return texts && text !== undefined
@@ -320,7 +332,7 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			continue;
 		}
 
-		const projected = publicEntry(entry);
+		const projected = publicEntry(site, entry);
 		if (!projected) continue;
 		files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(`${canonicalJson(projected)}\n`) });
 		entryFiles.push(`${base}/published.json`);

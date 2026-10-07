@@ -1,10 +1,8 @@
 import { type ComponentType, createElement, Fragment, type ReactNode } from "react";
-import { ADDED_BLOCKS } from "../../blocks/active";
 import type { BlockDefinition } from "../../blocks/define";
-import { BLOCK_BY_NAME, fenceBlockOf, TEXT_ALIGN_VALUES } from "../../blocks/derive";
+import { TEXT_ALIGN_VALUES } from "../../blocks/derive";
 import { entryIdOfMark } from "../../doc/entry-links";
 import { type ImageResolveResult, resolveImageUrl } from "../../doc/image-src";
-import { sortMarks } from "../../doc/marks";
 import {
 	boundedTableSpan,
 	formatTableWidths,
@@ -15,6 +13,8 @@ import {
 	tableWidths,
 } from "../../doc/table-layout";
 import type { CmsMark, CmsNode } from "../../doc/types";
+import type { Site } from "../../site";
+import { perSite } from "../../site/per-site";
 import { validImageWidth } from "../components/image";
 import type { Analysis } from "./analyze";
 import { headingLevel } from "./analyze";
@@ -37,7 +37,10 @@ import type {
  */
 
 /** The blocks the site and its plugins add (a core node such as `image` is not one: the renderer draws it itself). */
-const ADDED_BY_NAME: ReadonlyMap<string, BlockDefinition> = new Map(ADDED_BLOCKS.map((block) => [block.name, block]));
+const addedByName = perSite(
+	(site: Pick<Site, "ADDED_BLOCKS">): ReadonlyMap<string, BlockDefinition> =>
+		new Map(site.ADDED_BLOCKS.map((block) => [block.name, block])),
+);
 
 // biome-ignore lint/suspicious/noExplicitAny: the component table holds components with different props
 type AnyComponent = ComponentType<any>;
@@ -56,6 +59,8 @@ export interface RenderInput {
 	readonly components: ResolvedComponents;
 	readonly ctx: RenderContext;
 	readonly options: RenderDocumentOptions;
+	/** The site the document is rendered for: its blocks, code settings and plugins. */
+	readonly site: Site;
 }
 
 interface UnknownReport {
@@ -114,7 +119,8 @@ export const renderDocumentTree = (
 	nodes: readonly CmsNode[],
 	input: RenderInput,
 ): { content: ReactNode; unknown: StoredNode[] } => {
-	const { analysis, components, ctx, options } = input;
+	const { analysis, components, ctx, options, site } = input;
+	const ADDED_BY_NAME = addedByName(site);
 	const report: UnknownReport = { nodes: [] };
 	const reported = new Set<CmsNode>();
 
@@ -167,7 +173,7 @@ export const renderDocumentTree = (
 		}
 		// A core mark has a component of its own (`bold`, `underline`, `untranslated`), whatever blocks the site defines.
 		if (CORE_MARKS.has(type)) return createElement(components.marks[type] as AnyComponent, { children, ctx });
-		const definition = BLOCK_BY_NAME.get(type);
+		const definition = site.BLOCK_BY_NAME.get(type);
 		// A mark nobody knows is shown as plain text.
 		if (!definition || definition.syntax.kind !== "text") return fallback(node, "mark", "unknown-mark", children);
 		const component = components.marks[type];
@@ -209,7 +215,7 @@ export const renderDocumentTree = (
 			renderRun(
 				(nodes ?? []).map((node) => ({
 					node,
-					marks: node.type === "text" ? sortMarks(node.marks ?? []) : [],
+					marks: node.type === "text" ? site.sortMarks(node.marks ?? []) : [],
 				})),
 				0,
 			),
@@ -390,7 +396,7 @@ export const renderDocumentTree = (
 		options.imageResolver ? options.imageResolver({ mediaId, src }) : resolveImageUrl(src);
 
 	const renderImage = (node: CmsNode, inline: boolean): ReactNode => {
-		const definition = BLOCK_BY_NAME.get("image") as BlockDefinition;
+		const definition = site.BLOCK_BY_NAME.get("image") as BlockDefinition;
 		const { props, malformed } = readAttributes(definition, node.attrs);
 		if (malformed.length > 0) return fallback(node, inline ? "inline" : "block", "malformed");
 		const mediaId = props.mediaId as string | undefined;
@@ -432,7 +438,7 @@ export const renderDocumentTree = (
 	};
 
 	const renderFile = (node: CmsNode): ReactNode => {
-		const definition = BLOCK_BY_NAME.get("file") as BlockDefinition;
+		const definition = site.BLOCK_BY_NAME.get("file") as BlockDefinition;
 		const { props, malformed } = readAttributes(definition, node.attrs);
 		if (malformed.length > 0) return fallback(node, "block", "malformed");
 		const mediaId = (props.mediaId as string | undefined) || undefined;
@@ -454,7 +460,7 @@ export const renderDocumentTree = (
 
 	const renderCodeBlock = (node: CmsNode): ReactNode => {
 		const { language, code, annotations } = readCodeBlock(node);
-		const fence = fenceBlockOf(language);
+		const fence = site.fenceBlockOf(language);
 		if (fence) return renderDefinedBlock(node, fence, code).element;
 		const highlighted = input.highlighted.get(node);
 		if (!highlighted) return fallback(node, "block", "malformed");
@@ -467,7 +473,7 @@ export const renderDocumentTree = (
 			showLineNumbers: highlighted.showLineNumbers,
 			notes: highlighted.notes,
 			annotations,
-			children: codePreElement(highlighted.pre, tags),
+			children: codePreElement(site, highlighted.pre, tags),
 		} as never);
 	};
 

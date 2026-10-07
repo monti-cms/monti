@@ -1,4 +1,3 @@
-import { isLocale } from "@monti-cms/core/client";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,7 +14,7 @@ export interface BlogListProps {
 /** The list page: the newest published posts first, paged. The read API supplies each post's URL and its relation names. */
 export async function BlogListPage({ params, searchParams }: BlogListProps) {
 	const { locale } = await params;
-	if (locale !== undefined && !isLocale(locale)) notFound();
+	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) notFound();
 	const page = Math.max(1, Math.floor(Number((await searchParams).page ?? 1)) || 1);
 	const { items, total, pageSize } = await blogTheme.cms.read.listEntries({
 		collection: blogTheme.collection,
@@ -51,6 +50,6 @@ export async function BlogListPage({ params, searchParams }: BlogListProps) {
 /** The title of the list page. */
 export async function generateBlogListMetadata({ params }: Pick<BlogListProps, "params">): Promise<Metadata> {
 	const { locale } = await params;
-	if (locale !== undefined && !isLocale(locale)) return {};
+	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) return {};
 	return { title: blogTheme.blogTitle };
 }

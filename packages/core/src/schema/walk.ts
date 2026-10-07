@@ -2,8 +2,8 @@ import type { CollectionSchema } from "./collection";
 import type { FieldRole, ValueField } from "./fields";
 
 /**
- * Pure function that reads one collection definition. It does not read the site config (`config/resolved.ts`), so it is used by extensions the config file imports
- * (e.g. an extension's field checks and public-page helpers) and by `defineConfig`. The function that looks up by name in the config is in `derive.ts`.
+ * Pure function that reads one collection definition. It reads no site, so it is used by extensions the config file imports
+ * (e.g. an extension's field checks and public-page helpers) and by `defineConfig`. The functions that look a collection up by name are members of a `Site` (`createSchemas` in `derive.ts`).
  */
 
 /** A field stored as one value in the metadata. The choice value of a conditional field and its dependent fields are each flattened to one. */

@@ -1,6 +1,6 @@
 import type { BlockDefinition, CollectionsConfig } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 import { z } from "zod";
-import { coreMessages } from "./core.messages";
 import {
 	type AiApply,
 	type AiCandidate,
@@ -11,16 +11,16 @@ import {
 	type AiResult,
 	type AiSlot,
 	aiCheckSchema,
+	aiCheckSchemaOf,
 	CODE_CHECK_NAME,
+	type CoreText,
 	checkKey,
+	englishCoreText,
 	isAddableCheck,
 	MAX_PROMPT_LENGTH,
 	MAX_REQUEST_LENGTH,
 	migrateCheck,
 } from "./definition";
-import { lazyTranslator } from "./i18n";
-
-const t = lazyTranslator(coreMessages);
 
 /**
  * AI action definition. An action is registered under its name (key) in the site config's `ai.actions`.
@@ -172,6 +172,8 @@ export interface AiValidatorContext {
 	readonly choices?: ReadonlyMap<string, string>;
 	/** Core content lookup (server). */
 	readonly content: AiContentLookup;
+	/** The site the action runs for (its admin language for a note a check attaches to a candidate). */
+	readonly site: Site;
 }
 
 /**
@@ -188,17 +190,22 @@ export interface AiValidator {
 	readonly kind: "code";
 	/** Name unique within the action (lowercase, digits, hyphen). The edited value (enabled state) is stored under this name. */
 	readonly name: string;
-	/** Name shown in the admin UI. */
-	readonly label: string;
+	/**
+	 * Name shown in the admin UI. A function receives the site and returns the text in its admin language (the site is where the translator is), so a label written in
+	 * a module the config file reads does not depend on a language set elsewhere. Read it with `validatorLabel`.
+	 */
+	readonly label: string | ((site: Pick<Site, "createTranslator">) => string);
 	/** Enabled initially? Defaults to enabled. */
 	readonly enabled?: boolean;
 	readonly run: (value: string, context: AiValidatorContext) => AiValidatorResult | Promise<AiValidatorResult>;
 }
 
 /** Creates a code check. Put it in an action definition's `checks` together with the fixed checks. */
-// Copies the property descriptors so the `label` accessor (`get label()`, which picks the current UI language on every read) is not frozen into a value.
-export const defineValidator = (check: Omit<AiValidator, "kind">): AiValidator =>
-	Object.defineProperties({ kind: "code" }, Object.getOwnPropertyDescriptors(check)) as AiValidator;
+export const defineValidator = (check: Omit<AiValidator, "kind">): AiValidator => ({ kind: "code", ...check });
+
+/** The display name of a code check in the site's admin language. */
+export const validatorLabel = (check: Pick<AiValidator, "label">, site: Pick<Site, "createTranslator">): string =>
+	typeof check.label === "function" ? check.label(site) : check.label;
 
 const isValidator = (check: AiCheckInput | AiValidator): check is AiValidator => "run" in check;
 
@@ -257,6 +264,8 @@ export interface AiSiteView {
 	/** Body block definitions used by the site (core + extensions + site). */
 	readonly blocks: readonly BlockDefinition[];
 	readonly locales: readonly { readonly code: string }[];
+	/** Translator of one dictionary in the site's admin language (`site.createTranslator`), for the labels of the actions a function creates. */
+	readonly createTranslator: Site["createTranslator"];
 	/** Names of the AI config's shared snippets (`aiPlugin({ shared })`). */
 	readonly sharedKeys: readonly string[];
 }
@@ -356,22 +365,26 @@ export type AiActionInput<D> = D extends { readonly input: infer I }
 // ---------------------------------------------------------------------------
 
 /** Values editable in the admin UI. Only values that differ from the definition are stored in the DB. */
-export const aiActionOverrideSchema = z
-	.object({
-		enabled: z.boolean(),
-		askInstruction: z.boolean(),
-		instant: z.boolean(),
-		/** Id of the connection to use. If `null`, the first connection matching the mode. */
-		providerId: z.string().max(60).nullable(),
-		/** Model name to use. If empty, the connection's default model. */
-		modelName: z.string().trim().max(200),
-		prompt: z.string().trim().min(1).max(MAX_PROMPT_LENGTH),
-		send: z.array(z.string().max(40)).max(20),
-		threshold: z.number().min(0.01).max(0.99),
-		maxCount: z.number().int().min(1).max(20),
-		checks: z.array(z.preprocess(migrateCheck, aiCheckSchema)).max(10),
-	})
-	.partial();
+export const aiActionOverrideSchemaOf = (t: CoreText) =>
+	z
+		.object({
+			enabled: z.boolean(),
+			askInstruction: z.boolean(),
+			instant: z.boolean(),
+			/** Id of the connection to use. If `null`, the first connection matching the mode. */
+			providerId: z.string().max(60).nullable(),
+			/** Model name to use. If empty, the connection's default model. */
+			modelName: z.string().trim().max(200),
+			prompt: z.string().trim().min(1).max(MAX_PROMPT_LENGTH),
+			send: z.array(z.string().max(40)).max(20),
+			threshold: z.number().min(0.01).max(0.99),
+			maxCount: z.number().int().min(1).max(20),
+			checks: z.array(z.preprocess(migrateCheck, aiCheckSchemaOf(t))).max(10),
+		})
+		.partial();
+
+/** The edited-value schema with English messages: reads stored values and builds definitions, where no message is shown. */
+export const aiActionOverrideSchema = aiActionOverrideSchemaOf(englishCoreText);
 export type AiActionOverride = z.output<typeof aiActionOverrideSchema>;
 
 /** The action to run: the definition with edited values applied. */
@@ -552,14 +565,15 @@ export function renderPrompt(
 // Request validation
 // ---------------------------------------------------------------------------
 
-const imageValueSchema = z
-	.object({ mediaId: z.uuid().optional(), src: z.string().max(2000).optional() })
-	.refine((value) => Boolean(value.mediaId || value.src), { error: () => t("image.missing") });
+const imageValueSchemaOf = (t: CoreText) =>
+	z
+		.object({ mediaId: z.uuid().optional(), src: z.string().max(2000).optional() })
+		.refine((value) => Boolean(value.mediaId || value.src), { error: () => t("image.missing") });
 
-function inputValueSchema(spec: AiInputSpec): z.ZodType {
+function inputValueSchema(spec: AiInputSpec, t: CoreText): z.ZodType {
 	switch (spec.kind) {
 		case "image":
-			return imageValueSchema;
+			return imageValueSchemaOf(t);
 		case "value":
 			return z.union([z.string().max(10_000), z.array(z.string().max(200)).max(200)]);
 		case "locale":
@@ -570,11 +584,11 @@ function inputValueSchema(spec: AiInputSpec): z.ZodType {
 }
 
 /** Validation of action inputs. Names not in the definition are dropped. */
-export function inputSchemaFor(input: AiInputs) {
+export function inputSchemaFor(input: AiInputs, t: CoreText) {
 	return z.object(
 		Object.fromEntries(
 			Object.entries(input).map(([name, spec]) => {
-				const schema = inputValueSchema(spec);
+				const schema = inputValueSchema(spec, t);
 				return [name, spec.required ? schema : schema.optional()];
 			}),
 		),
@@ -594,27 +608,28 @@ export type AiRunEnv = z.output<typeof aiRunEnvSchema>;
 /** Number of inputs sent together in one request (e.g. the translation's `Translate all`). */
 export const MAX_BATCH_INPUTS = 8;
 
-export const aiRunBodySchema = z
-	.object({
-		action: z.string().min(1).max(60),
-		/** One input. */
-		input: z.record(z.string(), z.unknown()).optional(),
-		/** Runs the same action over several inputs. Results come back one per input in input order (failures too). */
-		inputs: z.array(z.record(z.string(), z.unknown())).min(1).max(MAX_BATCH_INPUTS).optional(),
-		env: aiRunEnvSchema.default({}),
-		/** Extra request given at run time. Appended to the prompt only if the action has `askInstruction`. */
-		request: z.string().max(MAX_REQUEST_LENGTH).optional(),
-		/** Tests with unsaved edited values (the AI screen's `Test`). */
-		draft: z.unknown().optional(),
-		/** Unsaved base info of a custom action (when testing a new action before saving). Sent together with `draft`. */
-		draftBase: z.unknown().optional(),
-		/** Streams the result (`application/x-ndjson`). Only for a single input of a streamable action. */
-		stream: z.boolean().optional(),
-	})
-	.refine((body) => (body.input === undefined) !== (body.inputs === undefined), {
-		error: () => t("run.inputOrInputs"),
-	});
-export type AiRunBody = z.output<typeof aiRunBodySchema>;
+export const aiRunBodySchemaOf = (t: CoreText) =>
+	z
+		.object({
+			action: z.string().min(1).max(60),
+			/** One input. */
+			input: z.record(z.string(), z.unknown()).optional(),
+			/** Runs the same action over several inputs. Results come back one per input in input order (failures too). */
+			inputs: z.array(z.record(z.string(), z.unknown())).min(1).max(MAX_BATCH_INPUTS).optional(),
+			env: aiRunEnvSchema.default({}),
+			/** Extra request given at run time. Appended to the prompt only if the action has `askInstruction`. */
+			request: z.string().max(MAX_REQUEST_LENGTH).optional(),
+			/** Tests with unsaved edited values (the AI screen's `Test`). */
+			draft: z.unknown().optional(),
+			/** Unsaved base info of a custom action (when testing a new action before saving). Sent together with `draft`. */
+			draftBase: z.unknown().optional(),
+			/** Streams the result (`application/x-ndjson`). Only for a single input of a streamable action. */
+			stream: z.boolean().optional(),
+		})
+		.refine((body) => (body.input === undefined) !== (body.inputs === undefined), {
+			error: () => t("run.inputOrInputs"),
+		});
+export type AiRunBody = z.output<ReturnType<typeof aiRunBodySchemaOf>>;
 
 // ---------------------------------------------------------------------------
 // Config validation

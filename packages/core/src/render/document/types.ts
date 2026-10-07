@@ -1,9 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
 import type { BlockDefinition } from "../../blocks/define";
-import type { ResolvedConfig } from "../../config/resolved";
 import type { ReadLink, ReadRefs } from "../../doc/document-refs";
 import type { ImageResolveFailure, ImageResolver } from "../../doc/image-src";
 import type { CmsJsonValue, CmsNode } from "../../doc/types";
+import type { Site } from "../../site";
 import type { CodeHighlightOptions } from "../code";
 import type { RenderLabels } from "../labels";
 import type { AttributeProps, SiteBlockDefinitions } from "./block-types";
@@ -348,8 +348,16 @@ export interface DocumentComponentsFor<Config> extends CoreDocumentComponents {
 	readonly blocks?: SiteBlockComponents<Config>;
 }
 
-/** The component table of the site (typed from the site's `cms.config.ts`, the `@cms-config` alias). */
-export type DocumentComponents = DocumentComponentsFor<ResolvedConfig>;
+/**
+ * The component table of the site an instance serves: `DocumentComponentsOf<typeof cms>`. The block names and the props of each come from the config's type
+ * (the same as `DocumentComponentsFor<typeof config>`), so a site's components are checked against the blocks it defines.
+ */
+export type DocumentComponentsOf<Cms extends { readonly site: { readonly config: unknown } }> = DocumentComponentsFor<
+	Cms["site"]["config"]
+>;
+
+/** The component table of any site: `blocks` and `marks` by name with untyped props. Use `DocumentComponentsOf` or `DocumentComponentsFor` for a typed one. */
+export type DocumentComponents = LooseDocumentComponents;
 
 /** A component table with untyped `blocks` and `marks`: what a block extension returns and what the renderer merges. */
 export interface LooseDocumentComponents extends CoreDocumentComponents {
@@ -366,6 +374,11 @@ export interface DocumentComponentsContext {
 }
 
 export interface RenderDocumentOptions {
+	/**
+	 * The site the document is rendered for (`cms.site`): its blocks decide which blocks, marks and code fences there are, its code settings the line effects and the
+	 * themes, its plugins the components they add. `<CmsContent cms={cms} />` passes it for you.
+	 */
+	readonly site: Site;
 	/**
 	 * What the document points to, resolved: `entry.refs` of a read. Images and files are drawn from it (a registered media id that is not in it is
 	 * unresolved). `<CmsContent entry={entry} />` passes it for you.

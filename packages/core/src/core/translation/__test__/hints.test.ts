@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import { forEachBlock } from "../../../doc/block-ids";
 import { unparsedDocument } from "../../../doc/stored-document";
@@ -14,7 +15,7 @@ describe("translation hints", () => {
 	const source = docOf("# 제목\n\n**굵은** 문장과 `code` 입니다.\n\n```ts\nconst a = 1;\n```\n");
 
 	it("marks every text of the source as untranslated and nothing else", () => {
-		const hinted = withTranslationHints(source);
+		const hinted = withTranslationHints(testSite, source);
 		const marked = texts(hinted.content).filter((node) => node.text?.trim());
 		expect(marked.length).toBeGreaterThan(0);
 		for (const node of marked) expect(node.marks?.map((mark) => mark.type)).toContain("untranslated");
@@ -23,8 +24,8 @@ describe("translation hints", () => {
 	});
 
 	it("keeps the structure of the source: only the notes make it differ, and it passes once they are gone", () => {
-		const hinted = withTranslationHints(source);
-		expect(compareStructure(source, hinted).ok).toBe(false);
+		const hinted = withTranslationHints(testSite, source);
+		expect(compareStructure(testSite, source, hinted).ok).toBe(false);
 		const strip = (nodes: readonly CmsNode[]): CmsNode[] =>
 			nodes.map((node) => {
 				const { marks, ...rest } = node;
@@ -35,17 +36,17 @@ describe("translation hints", () => {
 					...(node.content ? { content: strip(node.content) } : {}),
 				};
 			});
-		expect(compareStructure(source, { ...hinted, content: strip(hinted.content) })).toEqual({ ok: true });
+		expect(compareStructure(testSite, source, { ...hinted, content: strip(hinted.content) })).toEqual({ ok: true });
 	});
 
 	it("hides the notes from the excerpt and keeps them for search", () => {
-		const hinted = withTranslationHints(source);
-		expect(documentText(hinted, EXCERPT_TEXT)).toBe("");
-		expect(documentText(hinted, SEARCH_TEXT)).toContain("제목");
+		const hinted = withTranslationHints(testSite, source);
+		expect(documentText(testSite, hinted, EXCERPT_TEXT)).toBe("");
+		expect(documentText(testSite, hinted, SEARCH_TEXT)).toContain("제목");
 	});
 
 	it("gives the translation blocks of its own: no block ids", () => {
-		const hinted = withTranslationHints(source);
+		const hinted = withTranslationHints(testSite, source);
 		let ids = 0;
 		forEachBlock(hinted.content, (block) => {
 			if (block.id !== undefined) ids += 1;
@@ -60,13 +61,13 @@ describe("translation hints", () => {
 
 	it("does not change the document it is given", () => {
 		const before = JSON.stringify(source);
-		withTranslationHints(source);
+		withTranslationHints(testSite, source);
 		expect(JSON.stringify(source)).toBe(before);
 	});
 
 	it("returns a source that is not a document as it is, without ids", () => {
 		const unparsed = unparsedDocument("열리지 않은 <Box");
-		const hinted = withTranslationHints(unparsed);
+		const hinted = withTranslationHints(testSite, unparsed);
 		expect(hinted.content).toEqual([{ attrs: { format: "mdx", source: "열리지 않은 <Box" }, type: "unparsed" }]);
 	});
 });

@@ -1,9 +1,9 @@
 import katex from "katex";
 import type { ReactNode } from "react";
-import { fenceBlockOf } from "../../blocks/derive";
 import { imageResolverFromRefs, type ReadRefs } from "../../doc/document-refs";
 import { readStoredDocument, type StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
+import type { Site } from "../../site";
 import { DEFAULT_LABELS } from "../labels";
 import { renderModules } from "../plugin-render";
 import { analyzeDocument, DEFAULT_TOC_RANGE, tocOf } from "./analyze";
@@ -57,7 +57,7 @@ const resolveComponents = async (
 ): Promise<ResolvedComponents> => {
 	const context: DocumentComponentsContext = { locale: options.locale, imageResolver: options.imageResolver };
 	const fromPlugins = await Promise.all(
-		(await renderModules()).map(async (module) =>
+		(await renderModules(options.site)).map(async (module) =>
 			typeof module.documentComponents === "function"
 				? ((await module.documentComponents(context)) as LooseDocumentComponents)
 				: undefined,
@@ -86,13 +86,13 @@ const renderMath = (value: string): string => {
 	}
 };
 
-const collect = (nodes: readonly CmsNode[], into: { code: CmsNode[]; math: CmsNode[] }) => {
+const collect = (site: Site, nodes: readonly CmsNode[], into: { code: CmsNode[]; math: CmsNode[] }) => {
 	for (const node of nodes) {
 		if (node.type === "codeBlock") {
 			// A code fence of a block (`mermaid`, `chart`) goes to that block's component, not to the highlighter.
-			if (!fenceBlockOf(readCodeBlock(node).language)) into.code.push(node);
+			if (!site.fenceBlockOf(readCodeBlock(node).language)) into.code.push(node);
 		} else if (node.type === "math") into.math.push(node);
-		if (node.content) collect(node.content, into);
+		if (node.content) collect(site, node.content, into);
 	}
 };
 
@@ -102,16 +102,14 @@ const EMPTY: RenderedDocument = { content: null, toc: [], unknown: [] };
  * Renders a stored document. The result is `content` (a React tree) and `toc`, plus `unknown`: the nodes that reached the fallback (`renderMdx` of `@monti-cms/mdx/render` returns the same).
  * A value that is not a stored document of a known version renders as an empty body (and is logged), never as an error.
  */
-export async function renderDocument(
-	input: StoredDocument,
-	given: RenderDocumentOptions = {},
-): Promise<RenderedDocument> {
+export async function renderDocument(input: StoredDocument, given: RenderDocumentOptions): Promise<RenderedDocument> {
 	// Images and files are drawn from `refs` unless the site brought its own resolver.
 	const options: RenderDocumentOptions = {
 		...given,
 		imageResolver: given.imageResolver ?? (given.refs ? imageResolverFromRefs(given.refs) : undefined),
 	};
-	const doc = readStoredDocument(input);
+	const { site } = given;
+	const doc = readStoredDocument(input, site);
 	if (!doc) {
 		console.error("renderDocument: the value is not a stored document of a known version; rendering an empty body");
 		return EMPTY;
@@ -122,13 +120,13 @@ export async function renderDocument(
 
 	// Pre-pass: highlight every code block and render every formula, once.
 	const found = { code: [] as CmsNode[], math: [] as CmsNode[] };
-	collect(doc.content, found);
+	collect(site, doc.content, found);
 	const highlighted = new Map<CmsNode, HighlightedCode>();
 	if (found.code.length > 0) {
-		const highlight = await highlighterFor(options.code);
+		const highlight = await highlighterFor(site, options.code);
 		await Promise.all(
 			found.code.map(async (node) => {
-				highlighted.set(node, highlightCodeBlock(node, highlight, options.code));
+				highlighted.set(node, highlightCodeBlock(site, node, highlight, options.code));
 			}),
 		);
 	}
@@ -141,6 +139,7 @@ export async function renderDocument(
 		components,
 		ctx: { locale: options.locale, labels },
 		options,
+		site,
 	});
 	return { content, toc: tocOf(analysis), unknown };
 }
@@ -152,8 +151,15 @@ export interface CmsContentEntry {
 	readonly locale?: string;
 }
 
-export type CmsContentProps = RenderDocumentOptions &
-	(
+/** The instance that renders: only its site is read (`cms.site`), so any object that has one will do. */
+export interface CmsContentSource {
+	readonly site: Site;
+}
+
+export type CmsContentProps = Omit<RenderDocumentOptions, "site"> & {
+	/** The CMS instance the entry was read from (`cms`, or `{ site }`). Its site decides the blocks, code settings and plugin components used to render. */
+	readonly cms: CmsContentSource;
+} & (
 		| {
 				/** An entry of the read API. Its `refs` draw the images and files, and its `locale` is the language of the page. */
 				readonly entry: CmsContentEntry;
@@ -167,16 +173,17 @@ export type CmsContentProps = RenderDocumentOptions &
 	);
 
 /**
- * The body of an entry as a server component: `<CmsContent entry={entry} />` (the document, its media from `entry.refs`, the language from
- * `entry.locale`), or `<CmsContent doc={doc} />` for a document on its own. The rest are the options of `renderDocument`, which win over the entry's.
+ * The body of an entry as a server component: `<CmsContent cms={cms} entry={entry} />` (the document, its media from `entry.refs`, the language from
+ * `entry.locale`, the blocks and code settings of `cms.site`), or `<CmsContent cms={cms} doc={doc} />` for a document on its own. The rest are the options of `renderDocument`, which win over the entry's.
  * An entry without a document renders nothing. The table of contents is not available here; call `renderDocument` or `tableOfContents` for it.
  */
-export async function CmsContent({ entry, doc, ...options }: CmsContentProps): Promise<ReactNode> {
+export async function CmsContent({ cms, entry, doc, ...options }: CmsContentProps): Promise<ReactNode> {
 	const source: CmsContentEntry = entry ?? { doc };
 	if (!source.doc) return null;
 	return (
 		await renderDocument(source.doc, {
 			...options,
+			site: cms.site,
 			refs: options.refs ?? source.refs,
 			locale: options.locale ?? source.locale,
 		})
@@ -209,6 +216,7 @@ export type {
 	DocumentComponents,
 	DocumentComponentsContext,
 	DocumentComponentsFor,
+	DocumentComponentsOf,
 	DocumentTocItem,
 	FileProps,
 	FootnoteItem,

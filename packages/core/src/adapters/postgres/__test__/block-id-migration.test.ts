@@ -1,6 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { testSite } from "../../../../test/site";
 import { contentOf, docOf as docFromMdx } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
@@ -36,9 +37,9 @@ describe("0014_block_ids", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		await migrateContentStore(pool, { schema: schemaName });
-		store = createContentStore(pool, { schema: schemaName });
-		service = createContentService<Entry>(store);
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		service = createContentService<Entry>(store, { site: testSite });
 	});
 
 	afterAll(async () => {
@@ -59,7 +60,7 @@ describe("0014_block_ids", () => {
 		const published =
 			draft.status === "published"
 				? draft
-				: await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+				: await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		targets.set(to, published.id);
 		return published.id;
 	};
@@ -84,7 +85,7 @@ describe("0014_block_ids", () => {
 	/** A published entry whose working body has moved on: `workingMdx` is the draft, `publishedMdx` what was published. */
 	const publishedThenEdited = async (publishedMdx: string, workingMdx: string) => {
 		const draft = await createDraft(publishedMdx);
-		const published = await publishDraft(store, { id: draft.id, expectedVersion: draft.version });
+		const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		return workingMdx === publishedMdx ? published : edit(published, workingMdx);
 	};
 
@@ -120,7 +121,7 @@ describe("0014_block_ids", () => {
 	const withoutDoc = (rows: readonly StoredRow[]) => rows.map(({ doc: _doc, xmin: _xmin, ...rest }) => rest);
 
 	const docOf = (found: StoredRow | undefined): StoredDocument => {
-		const doc = readStoredDocument(found?.doc);
+		const doc = readStoredDocument(found?.doc, testSite);
 		if (!doc) throw new Error("expected a stored document");
 		return doc;
 	};
@@ -172,7 +173,7 @@ describe("0014_block_ids", () => {
 	const run = async () => {
 		await rewind();
 		// Only this step runs again. It reads the document of a template, never its text, so the templates the tests create (they have none) stay.
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 	};
 
 	const withMigrationClient = async <T>(work: (client: PoolClient) => Promise<T>): Promise<T> => {

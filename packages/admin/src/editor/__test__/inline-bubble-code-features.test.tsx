@@ -1,24 +1,31 @@
-import { createTranslator } from "@monti-cms/core/client";
+import { createSite, SiteProvider } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig, testSite } from "../../../../core/test/site";
 import { tiptapOf } from "../../test/mdx";
 import { buildEditorExtensions } from "../extensions";
 import { InlineBubble } from "../inline-bubble";
-import { allowedMarkTools, INLINE_MARK_TOOLS } from "../inline-marks";
+import { allowedMarkTools, inlineMarkTools } from "../inline-marks";
 import { editorMessages } from "../messages";
 
 /**
- * `codeBlock.features` cannot be changed per test (the admin tests use one fixed site config), so the resolved values are replaced here.
+ * `codeBlock.features` is a setting of the site, so each test builds a site of the active test config with the features it needs (`configure`).
  * Switching a tool off only hides it from the bubble and the toolbar inside code. Marks already on the selection stay so they can be removed.
  */
-const mocked = vi.hoisted(() => ({ features: { rules: true, fold: true, tooltip: true, textStyles: true } }));
+type Features = NonNullable<NonNullable<typeof testConfig.codeBlock>["features"]>;
+let site = testSite;
+const configure = (features: Features) => {
+	site = createSite({ ...testConfig, codeBlock: { ...testConfig.codeBlock, features } });
+};
 
-vi.mock("@monti-cms/core/code-block", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/core/code-block")>()),
-	CODE_BLOCK_FEATURES: mocked.features,
-}));
+const renderBubble = (editor: Editor) =>
+	render(
+		<SiteProvider site={site}>
+			<InlineBubble editor={editor} />
+		</SiteProvider>,
+	);
 
 vi.mock("../../ui/tooltip", () => ({
 	Tooltip: ({ children }: { children: React.ReactNode }) => children,
@@ -33,13 +40,12 @@ vi.mock("../../ui/tooltip", () => ({
 	TooltipProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-const t = createTranslator(editorMessages);
-
-const configure = (features: Partial<typeof mocked.features>) =>
-	Object.assign(mocked.features, { rules: true, fold: true, tooltip: true, textStyles: true }, features);
+const t = testSite.createTranslator(editorMessages);
 
 const editors: Editor[] = [];
-beforeEach(() => configure({}));
+beforeEach(() => {
+	site = testSite;
+});
 afterEach(() => {
 	cleanup();
 	for (const editor of editors.splice(0)) {
@@ -52,7 +58,7 @@ afterEach(() => {
 const createEditor = (source: string) => {
 	const element = document.createElement("div");
 	document.body.append(element);
-	const editor = new Editor({ element, extensions: buildEditorExtensions(), content: tiptapOf(source) });
+	const editor = new Editor({ element, extensions: buildEditorExtensions(site), content: tiptapOf(source) });
 	editors.push(editor);
 	return editor;
 };
@@ -83,7 +89,7 @@ describe("inline bubble inside code when code block tools are off", () => {
 	it("offers text styles, tooltip and fold in code when everything is on", () => {
 		const editor = createEditor(CODE_THEN_BODY);
 		focusAt(editor, CODE_RANGE);
-		render(<InlineBubble editor={editor} />);
+		renderBubble(editor);
 		expect(buttonNames()).toEqual(expect.arrayContaining([BOLD, ITALIC, STRIKE, UNDERLINE, TOOLTIP, FOLD]));
 	});
 
@@ -91,7 +97,7 @@ describe("inline bubble inside code when code block tools are off", () => {
 		configure({ textStyles: false });
 		const editor = createEditor(CODE_THEN_BODY);
 		focusAt(editor, CODE_RANGE);
-		render(<InlineBubble editor={editor} />);
+		renderBubble(editor);
 		const names = buttonNames();
 		for (const name of [BOLD, ITALIC, STRIKE, UNDERLINE]) expect(names).not.toContain(name);
 		expect(names).toEqual(expect.arrayContaining([TOOLTIP, FOLD]));
@@ -101,7 +107,7 @@ describe("inline bubble inside code when code block tools are off", () => {
 		configure({ tooltip: false, fold: false });
 		const editor = createEditor(CODE_THEN_BODY);
 		focusAt(editor, CODE_RANGE);
-		render(<InlineBubble editor={editor} />);
+		renderBubble(editor);
 		const names = buttonNames();
 		expect(names).not.toContain(TOOLTIP);
 		expect(names).not.toContain(FOLD);
@@ -112,7 +118,7 @@ describe("inline bubble inside code when code block tools are off", () => {
 		configure({ textStyles: false, tooltip: false, fold: false });
 		const editor = createEditor(CODE_THEN_BODY);
 		focusAt(editor, BODY_RANGE);
-		render(<InlineBubble editor={editor} />);
+		renderBubble(editor);
 		expect(buttonNames()).toEqual(expect.arrayContaining([BOLD, ITALIC, STRIKE, UNDERLINE, t("link.add")]));
 	});
 
@@ -121,7 +127,7 @@ describe("inline bubble inside code when code block tools are off", () => {
 		const editor = createEditor('```ts\n// @char strong {0-4}\n// @char Tooltip {6-7} content="x"\nconst a\n```');
 		expect(editor.state.doc.firstChild?.attrs.rawMode).toBe(false);
 		focusAt(editor, { from: 1, to: 5 });
-		render(<InlineBubble editor={editor} />);
+		renderBubble(editor);
 		const names = buttonNames();
 		expect(names).toContain(BOLD);
 		expect(names).not.toContain(ITALIC);
@@ -134,16 +140,18 @@ describe("inline bubble inside code when code block tools are off", () => {
 		const editor = createEditor("```ts\n// @char strong {0-4}\nconst a\n```");
 		editor.commands.setTextSelection(3);
 		editor.view.focus();
-		render(<InlineBubble editor={editor} />);
+		renderBubble(editor);
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("markText.remove", { name: BOLD }) })));
 		expect(editor.isActive("bold")).toBe(false);
 	});
 });
 
 describe("allowedMarkTools and the toolbar", () => {
-	const names = (editor: Editor) => allowedMarkTools(editor.state).map((tool) => tool.mark);
+	const names = (editor: Editor) => allowedMarkTools(site, editor.state).map((tool) => tool.mark);
 	const disabled = (editor: Editor, mark: string) =>
-		INLINE_MARK_TOOLS.find((tool) => tool.mark === mark)?.isDisabled?.(editor);
+		inlineMarkTools(site)
+			.find((tool) => tool.mark === mark)
+			?.isDisabled?.(editor);
 
 	it("drops the text styles in code only when text styles are off", () => {
 		const editor = createEditor(CODE_THEN_BODY);

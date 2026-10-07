@@ -1,8 +1,8 @@
 /**
  * Authoring API. Entry point imported by the site config file (`cms.config.ts`).
  *
- * Modules exported here must not import the site config (`config/resolved.ts`). The config file imports this entry point,
- * so that would create a cycle and the config would be read half-built.
+ * Modules exported here import no `Site`, no instance and no server code: the config file imports this entry point, and it runs before any site exists.
+ * What a config needs to know about a site (`createSite`, `SiteProvider`) is in `@monti-cms/core/client`.
  */
 
 export {

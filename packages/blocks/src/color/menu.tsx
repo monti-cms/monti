@@ -14,13 +14,13 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@monti-cms/admin/kit";
-import { createTranslator, getPluginOptions } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { Baseline, Check } from "lucide-react";
 import {
 	type ColorPair,
 	cleanTextColor,
-	DEFAULT_TEXT_PALETTE,
+	defaultTextPalette,
 	hasTextColor,
 	type PaletteColor,
 	type TextColorAttrs,
@@ -29,14 +29,15 @@ import {
 import { colorBlock } from "./definition";
 import { colorMessages } from "./messages";
 
-const t = createTranslator(colorMessages);
-
 /** Editor mark name (`cmsColor`). */
 export const COLOR_MARK_NAME = addedMarkName(colorBlock.name);
 
 /** Picker list. The extension option `color({ palette })`, or the default 8 colors if absent. */
-const PALETTE: readonly PaletteColor[] =
-	getPluginOptions<{ palette?: readonly PaletteColor[] }>("color")?.palette ?? DEFAULT_TEXT_PALETTE;
+function usePalette(): readonly PaletteColor[] {
+	const site = useSite();
+	const t = useTranslator(colorMessages);
+	return site.getPluginOptions<{ palette?: readonly PaletteColor[] }>("color")?.palette ?? defaultTextPalette(t);
+}
 
 type ColorKind = "fg" | "bg";
 
@@ -66,6 +67,7 @@ export function applyTextColor(editor: Editor, kind: ColorKind, color: ColorPair
 
 /** Sample of the letter "가". It uses the same `.cms-color` rule as the real body, so it shows in the current theme's color. */
 function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
+	const t = useTranslator(colorMessages);
 	const props = color
 		? textColorProps(kind === "fg" ? { fg: color.light, fgDark: color.dark } : { bg: color.light, bgDark: color.dark })
 		: null;
@@ -97,10 +99,12 @@ function SwatchRow({
 	variant?: "menu" | "buttons";
 	onPicked?: () => void;
 }) {
+	const t = useTranslator(colorMessages);
+	const palette = usePalette();
 	const current = currentColor(editor)[kind] ?? null;
 	const options: { name: string; color: ColorPair | null }[] = [
 		{ name: t("default"), color: null },
-		...PALETTE.map((color) => ({ name: color.name, color: color[kind] })),
+		...palette.map((color) => ({ name: color.name, color: color[kind] })),
 	];
 	return (
 		<div className="grid grid-cols-9 gap-1 px-1 pb-1">
@@ -152,6 +156,7 @@ function SwatchRow({
 
 /** Text/background color picker list. Shared by the toolbar menu and the "More" menu. */
 export function TextColorMenuItems({ editor }: { editor: Editor }) {
+	const t = useTranslator(colorMessages);
 	return (
 		<>
 			<DropdownMenuGroup>
@@ -168,6 +173,7 @@ export function TextColorMenuItems({ editor }: { editor: Editor }) {
 
 /** Text/background color picker that expands inside the format bubble. Calls `onPicked` when a color is chosen. */
 export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?: () => void }) {
+	const t = useTranslator(colorMessages);
 	return (
 		<div className="flex flex-col gap-1">
 			<p className="px-1 text-cms-muted-foreground">{t("fg.label")}</p>
@@ -191,6 +197,7 @@ export function TextColorIcon({ editor }: { editor: Editor }) {
 
 /** Text color button in the toolbar. The icon shows the current text color. */
 export function TextColorMenu({ editor }: { editor: Editor }) {
+	const t = useTranslator(colorMessages);
 	return (
 		<DropdownMenu>
 			<IconButton

@@ -2,11 +2,13 @@ import {
 	closeGlobalPool,
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
+	fakeCms,
 	migrateContentStore,
 	pluginStorageFor,
 } from "@monti-cms/core/testing";
 import type { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { testConfig, testSite } from "../../test/site";
 import { migrateAi } from "../migrate";
 import { createAiStore } from "../store";
 
@@ -17,10 +19,11 @@ import { createAiStore } from "../store";
 describe("AI data migration from the plugin's own tables to the plugin storage", () => {
 	let pool: Pool;
 	let schemaName: string;
+	const cms = fakeCms({ config: testConfig });
 
 	beforeEach(async () => {
 		({ pool, schemaName } = await createIsolatedTestPool());
-		await migrateContentStore(pool, { schema: schemaName });
+		await migrateContentStore(pool, { schema: schemaName, site: testSite });
 	});
 
 	afterEach(async () => {
@@ -74,9 +77,9 @@ describe("AI data migration from the plugin's own tables to the plugin storage",
 
 	it("finds every edited action, UI action and setting after the migration, with its value, version and dates", async () => {
 		await seedLegacyData();
-		await migrateAi(storage());
+		await migrateAi(storage(), cms);
 
-		const store = createAiStore(storage());
+		const store = createAiStore(storage(), { site: testSite });
 		expect(await store.listAiActionOverrides()).toEqual([
 			{ key: "summary", value: OVERRIDE, version: 3, updatedAt: new Date(LATER) },
 		]);
@@ -92,8 +95,8 @@ describe("AI data migration from the plugin's own tables to the plugin storage",
 
 	it("carries the versions on: a save has to expect the migrated version, and a stale editor still gets a conflict", async () => {
 		await seedLegacyData();
-		await migrateAi(storage());
-		const store = createAiStore(storage());
+		await migrateAi(storage(), cms);
+		const store = createAiStore(storage(), { site: testSite });
 
 		await expect(store.saveAiActionOverride({ key: "summary", expectedVersion: 2, value: {} })).rejects.toMatchObject({
 			code: "conflict",
@@ -112,14 +115,14 @@ describe("AI data migration from the plugin's own tables to the plugin storage",
 
 	it("leaves the old tables as they were, and moves the data once: later changes on either side are not carried over", async () => {
 		await seedLegacyData();
-		await migrateAi(storage());
-		const store = createAiStore(storage());
+		await migrateAi(storage(), cms);
+		const store = createAiStore(storage(), { site: testSite });
 		await store.saveAiActionOverride({ key: "summary", expectedVersion: 3, value: { enabled: true } });
 		await pool.query(
 			`INSERT INTO "${schemaName}".ai_action_overrides (key, value) VALUES ('slug', '{"enabled": false}')`,
 		);
 
-		await migrateAi(storage());
+		await migrateAi(storage(), cms);
 
 		expect((await store.listAiActionOverrides()).map((row) => [row.key, row.version])).toEqual([["summary", 4]]);
 		const legacy = await pool.query<{ key: string; value: unknown; version: number }>(
@@ -138,20 +141,20 @@ describe("AI data migration from the plugin's own tables to the plugin storage",
 	it("does not overwrite what the storage already has", async () => {
 		await seedLegacyData();
 		await storage().collection("action-overrides").set("summary", { prompt: "이미 있는 값" }, { expectedVersion: 0 });
-		await migrateAi(storage());
+		await migrateAi(storage(), cms);
 		expect((await storage().collection("action-overrides").get("summary"))?.value).toEqual({ prompt: "이미 있는 값" });
 		expect((await storage().collection("settings").get("default"))?.version).toBe(4);
 	});
 
 	it("migrates a new site that has none of the old tables, and a site with empty ones", async () => {
-		await migrateAi(storage());
-		const store = createAiStore(storage());
+		await migrateAi(storage(), cms);
+		const store = createAiStore(storage(), { site: testSite });
 		expect(await store.listAiActionOverrides()).toEqual([]);
 		expect(await store.getAiSettings("default")).toBeNull();
 
 		await createLegacyTables();
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name LIKE 'plugin:ai:%'`);
-		await migrateAi(storage());
+		await migrateAi(storage(), cms);
 		expect(await store.listAiCustomActions()).toEqual([]);
 	});
 
@@ -168,18 +171,20 @@ describe("AI data migration from the plugin's own tables to the plugin storage",
 		// The earlier version already moved these once (and the operator may have reset the action since).
 		await pool.query(`INSERT INTO "${schemaName}".cms_migrations (name) VALUES ('migrate_ai_features_to_actions')`);
 
-		await migrateAi(storage());
-		expect(await createAiStore(storage()).listAiActionOverrides()).toEqual([]);
+		await migrateAi(storage(), cms);
+		expect(await createAiStore(storage(), { site: testSite }).listAiActionOverrides()).toEqual([]);
 
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = 'migrate_ai_features_to_actions'`);
 		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name LIKE 'plugin:ai:%'`);
-		await migrateAi(storage());
-		expect((await createAiStore(storage()).listAiActionOverrides()).map((row) => row.key)).toEqual(["codeFold"]);
+		await migrateAi(storage(), cms);
+		expect((await createAiStore(storage(), { site: testSite }).listAiActionOverrides()).map((row) => row.key)).toEqual([
+			"codeFold",
+		]);
 	});
 
 	it("keeps the AI data in the AI plugin's own namespace", async () => {
 		await seedLegacyData();
-		await migrateAi(storage());
+		await migrateAi(storage(), cms);
 		expect(await pluginStorageFor(pool, schemaName, "other").collection("settings").list()).toEqual([]);
 		expect(await pluginStorageFor(pool, schemaName, "other").collection("action-overrides").list()).toEqual([]);
 	});

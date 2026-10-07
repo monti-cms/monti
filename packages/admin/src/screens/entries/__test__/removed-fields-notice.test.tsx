@@ -1,16 +1,19 @@
-import { COLLECTIONS, storedFields } from "@monti-cms/core/client";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
+import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { EMPTY_FORM } from "../entry-form";
+import { entriesMessages } from "../messages";
 import { RemovedFieldsNotice } from "../removed-fields-notice";
 import { SchemaFields } from "../schema-fields";
-import { t } from "../translate";
 import { EntryFormProvider } from "../use-field";
+
+const t = testSite.createTranslator(entriesMessages);
 
 afterEach(cleanup);
 
-const collection = COLLECTIONS[0] ?? "";
+const collection = testSite.COLLECTIONS[0] ?? "";
 
 describe("notice of removed fields", () => {
 	it("lists the keys of the values the schema no longer has", () => {
@@ -38,8 +41,9 @@ describe("notice of removed fields", () => {
 });
 
 describe("select value that is no longer an option", () => {
-	const found = COLLECTIONS.flatMap((name) =>
-		storedFields(name)
+	const found = testSite.COLLECTIONS.flatMap((name) =>
+		testSite
+			.storedFields(name)
 			.filter(({ field, when }) => !when && field.kind === "select" && !field.input)
 			.map((stored) => ({ collection: name, ...stored })),
 	)[0];

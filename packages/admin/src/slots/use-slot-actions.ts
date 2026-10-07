@@ -1,14 +1,12 @@
 "use client";
 
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../hooks/result";
 import { useStoreSelector } from "../hooks/store";
 import { slotsMessages } from "./messages";
 import { type SlotAction, SlotRegistryContext, type SlotRequest, type SlotResult, SlotRunsContext } from "./registry";
 import { createSlotRuns, IDLE, type RunState } from "./runs";
-
-const t = createTranslator(slotsMessages);
 
 /**
  * Options of {@link useSlotActions}: the slot, its target, the context to read on run and the function that applies a value.
@@ -102,6 +100,7 @@ const OK: EditorResult = { ok: true, value: undefined };
  * @experimental
  */
 export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
+	const t = useTranslator(slotsMessages);
 	const sources = useContext(SlotRegistryContext);
 	const { slot, target, collection } = options;
 	const actions = useMemo(
@@ -153,7 +152,7 @@ export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
 				return { ok: false, error };
 			}
 		},
-		[runs, key],
+		[runs, key, t],
 	);
 
 	/** The action to run: one attached to the slot now, or the one the panel is showing (so a run survives a source change). */
@@ -173,7 +172,7 @@ export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
 			if (!action) return Promise.resolve(editorFailure("invalid_state", t("unknownAction")));
 			return execute(action, runOptions?.instruction ?? instructionRef.current);
 		},
-		[resolve, execute],
+		[resolve, execute, t],
 	);
 
 	const start = useCallback(
@@ -193,7 +192,7 @@ export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
 		if (current.status !== "done" && current.status !== "error")
 			return Promise.resolve(editorFailure("invalid_state", t("nothingToRerun")));
 		return execute(current.action, instructionRef.current);
-	}, [runs, key, execute]);
+	}, [runs, key, execute, t]);
 
 	const cancel = useCallback(() => {
 		runs.abort(key);
@@ -209,7 +208,7 @@ export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
 			optionsRef.current.apply(value, current.action.apply);
 			return OK;
 		},
-		[runs, key],
+		[runs, key, t],
 	);
 
 	return {

@@ -1,30 +1,27 @@
-import { describe, expect, it, vi } from "vitest";
+import { createSite } from "@monti-cms/core/client";
+import { describe, expect, it } from "vitest";
+import { testConfig } from "../../../core/test/site";
+import { createMdxFormat } from "../format";
+import { mdx } from "../plugin";
+import type { SyntaxExtension } from "../syntax/types";
+import { configuredSyntax, NO_SYNTAX } from "../syntax-config";
 
-const options = vi.hoisted(() => ({ current: undefined as unknown }));
+/** A site of the test config with exactly the given plugins. */
+const siteWith = (plugins: ReturnType<typeof mdx>[]) => createSite({ ...testConfig, plugins });
 
-// The options the site gave to its `mdx()` plugin are read from the site config's plugins (`getPluginOptions`).
-vi.mock("@monti-cms/core/client", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/core/client")>()),
-	getPluginOptions: (name: string) => (name === "mdx" ? options.current : undefined),
-}));
-
-const { configuredSyntax, NO_SYNTAX } = await import("../syntax-config");
-const { createMdxFormat } = await import("../format");
-
+// The options the site gave to its `mdx()` plugin are read from the site config's plugins (`site.getPluginOptions`).
 describe("configuredSyntax", () => {
 	it("is the list the site gave to mdx({ syntax }), in the same order", () => {
-		const first = { name: "first" };
-		const second = { name: "second" };
-		options.current = { syntax: [first, second] };
-		expect(configuredSyntax()).toEqual([first, second]);
-		expect(configuredSyntax()[0]).toBe(first);
+		const first: SyntaxExtension = { name: "first" };
+		const second: SyntaxExtension = { name: "second" };
+		const site = siteWith([mdx({ syntax: [first, second] })]);
+		expect(configuredSyntax(site)).toEqual([first, second]);
+		expect(configuredSyntax(site)[0]).toBe(first);
 	});
 
 	it("is no extension when the site has no mdx() plugin, or gave it none", () => {
-		options.current = undefined;
-		expect(configuredSyntax()).toBe(NO_SYNTAX);
-		options.current = {};
-		expect(configuredSyntax()).toBe(NO_SYNTAX);
+		expect(configuredSyntax(siteWith([]))).toBe(NO_SYNTAX);
+		expect(configuredSyntax(siteWith([mdx()]))).toBe(NO_SYNTAX);
 		expect(NO_SYNTAX).toHaveLength(0);
 	});
 });

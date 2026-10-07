@@ -1,55 +1,45 @@
-import { describe, expect, it, vi } from "vitest";
-import type { SchemaCollection } from "../derive";
+import { describe, expect, it } from "vitest";
+import { defineCollection, defineConfig, fields } from "../..";
+import { createSite } from "../../site";
+import { fieldValueError } from "../derive";
 
 // A site whose field names differ from the reference blog. Checks that the library finds fields by role and `from`, not by name.
-vi.mock("../../config/resolved", async () => {
-	const { defineCollection, defineConfig, fields } = await import("../..");
-	const article = defineCollection({
-		label: "Article",
-		kind: "document",
-		fields: {
-			title: fields.text({ label: "Title", required: true }),
-			headline: fields.text({ label: "Headline" }),
-			slug: fields.slug({ label: "Slug", from: "headline", required: true }),
-			excerpt: fields.text({ label: "Excerpt", role: "summary", fillFromBody: true }),
-			topicId: fields.relation({ label: "Topic", to: "topic", required: true }),
-			hero: fields.media({ label: "Hero", role: "heroImage", tab: "Media" }),
-			robots: fields.select({
-				label: "Robots",
-				role: "noindex",
-				options: { index: "Index", noindex: "No index" },
-				defaultValue: "index",
-			}),
-		},
-		layout: [{ tab: "Search", fields: ["robots"] }],
-		list: { columns: ["title", "slug"] },
-	});
-	const topic = defineCollection({
-		label: "Topic",
-		kind: "item",
-		fields: { title: fields.text({ label: "Name" }), slug: fields.slug({ label: "Slug" }) },
-		list: { columns: [] },
-	});
-	const config = defineConfig({
-		collections: { article, topic },
-		locales: [{ code: "en", name: "English" }],
-		defaultLocale: "en",
-	});
-	return { cmsConfig: config };
+const articleCollection = defineCollection({
+	label: "Article",
+	kind: "document",
+	fields: {
+		title: fields.text({ label: "Title", required: true }),
+		headline: fields.text({ label: "Headline" }),
+		slug: fields.slug({ label: "Slug", from: "headline", required: true }),
+		excerpt: fields.text({ label: "Excerpt", role: "summary", fillFromBody: true }),
+		topicId: fields.relation({ label: "Topic", to: "topic", required: true }),
+		hero: fields.media({ label: "Hero", role: "heroImage", tab: "Media" }),
+		robots: fields.select({
+			label: "Robots",
+			role: "noindex",
+			options: { index: "Index", noindex: "No index" },
+			defaultValue: "index",
+		}),
+	},
+	layout: [{ tab: "Search", fields: ["robots"] }],
+	list: { columns: ["title", "slug"] },
+});
+const topicCollection = defineCollection({
+	label: "Topic",
+	kind: "item",
+	fields: { title: fields.text({ label: "Name" }), slug: fields.slug({ label: "Slug" }) },
+	list: { columns: [] },
+});
+const config = defineConfig({
+	collections: { article: articleCollection, topic: topicCollection },
+	locales: [{ code: "en", name: "English" }],
+	defaultLocale: "en",
 });
 
-const {
-	fieldValueError,
-	fillFromBodyFields,
-	metadataReferences,
-	missingRequiredIssues,
-	roleField,
-	roleValue,
-	slugFromValues,
-} = await import("../derive");
-// The collections in this file exist only in the config changed above (types follow the package test config).
-const article = "article" as SchemaCollection;
-const topic = "topic" as SchemaCollection;
+const site = createSite(config);
+const article = "article";
+const topic = "topic";
+const { fillFromBodyFields, metadataReferences, missingRequiredIssues, roleField, roleValue, slugFromValues } = site;
 
 describe("field roles", () => {
 	it("finds fields by role, not by name", () => {
