@@ -1,8 +1,9 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { MoveHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
+import { readPreference, writePreference } from "../lib/utils/site-storage";
 import type { TranslatorFor } from "../translator";
 import {
 	DropdownMenu,
@@ -34,28 +35,22 @@ const LABELS = (t: TranslatorFor<typeof editorMessages>): Record<EditorWidth, st
 	wide: t("editorWidth.wide"),
 	full: t("editorWidth.full"),
 });
-const STORAGE_KEY = "cms:editor-width";
+/** Name of the remembered width in the site's browser storage (`lib/utils/site-storage.ts`). */
+const STORAGE_NAME = "editor-width";
 const isEditorWidth = (value: unknown): value is EditorWidth =>
 	typeof value === "string" && Object.hasOwn(EDITOR_WIDTHS, value);
 
-/** Chosen body width. Remembered in this browser; starts at the normal width if storage is unavailable. */
+/** Chosen body width. Remembered in this browser, per site; starts at the normal width if storage is unavailable. */
 export function useEditorWidth(): [EditorWidth, (width: EditorWidth) => void] {
+	const site = useSite();
 	const [width, setWidth] = useState<EditorWidth>("normal");
 	useEffect(() => {
-		try {
-			const stored = window.localStorage.getItem(STORAGE_KEY);
-			if (isEditorWidth(stored)) setWidth(stored);
-		} catch {
-			// Use the default width if storage is unavailable.
-		}
-	}, []);
+		const stored = readPreference(site, STORAGE_NAME);
+		if (isEditorWidth(stored)) setWidth(stored);
+	}, [site]);
 	const change = (next: EditorWidth) => {
 		setWidth(next);
-		try {
-			window.localStorage.setItem(STORAGE_KEY, next);
-		} catch {
-			// The width still changes even if it cannot be remembered.
-		}
+		writePreference(site, STORAGE_NAME, next);
 	};
 	return [width, change];
 }

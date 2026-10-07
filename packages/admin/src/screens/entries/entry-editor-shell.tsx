@@ -29,6 +29,7 @@ import { useCmsAdminComponents, useEditorExtensions } from "../../admin-componen
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
+import { readPreference, writePreference } from "../../lib/utils/site-storage";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
 import type { TranslatorFor } from "../../translator";
@@ -84,7 +85,8 @@ interface EntryEditorShellProps {
 	folderId?: string | null;
 }
 
-const SOURCE_PANE_STORAGE_KEY = "cms:translation-source-pane";
+/** Name of the remembered source pane state in the site's browser storage (`lib/utils/site-storage.ts`). */
+const SOURCE_PANE_STORAGE_NAME = "translation-source-pane";
 
 function ToolbarAction({
 	label,
@@ -316,21 +318,13 @@ export function EntryEditorShell({
 		return () => media.removeEventListener?.("change", update);
 	}, []);
 
-	// Whether the source pane was left open is remembered in the browser. If storage is unavailable, it always starts open.
+	// Whether the source pane was left open is remembered in the browser, per site. If storage is unavailable, it always starts open.
 	useEffect(() => {
-		try {
-			if (window.localStorage.getItem(SOURCE_PANE_STORAGE_KEY) === "closed") setIsSourcePaneOpen(false);
-		} catch {
-			// If storage is unavailable, use the default.
-		}
-	}, []);
+		if (readPreference(site, SOURCE_PANE_STORAGE_NAME) === "closed") setIsSourcePaneOpen(false);
+	}, [site]);
 	const toggleSourcePane = (open: boolean) => {
 		setIsSourcePaneOpen(open);
-		try {
-			window.localStorage.setItem(SOURCE_PANE_STORAGE_KEY, open ? "open" : "closed");
-		} catch {
-			// The screen still changes even if it cannot be remembered.
-		}
+		writePreference(site, SOURCE_PANE_STORAGE_NAME, open ? "open" : "closed");
 	};
 
 	const translationSource = translation?.source ?? null;

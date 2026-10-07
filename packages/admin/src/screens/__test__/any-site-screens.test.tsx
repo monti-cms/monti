@@ -38,9 +38,10 @@ vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 const backup = vi.hoisted(() => ({ get: vi.fn(), remove: vi.fn(), save: vi.fn() }));
 vi.mock("../entries/local-backup", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../entries/local-backup")>()),
-	getLocalBackup: backup.get,
-	deleteLocalBackup: backup.remove,
-	saveLocalBackup: backup.save,
+	// The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
+	getLocalBackup: (key: string) => backup.get(key),
+	deleteLocalBackup: (key: string) => backup.remove(key),
+	saveLocalBackup: (record: unknown) => backup.save(record),
 }));
 // The body editor is tested separately. Here only the place for the title slot is drawn.
 vi.mock("../../editor/tiptap-editor", () => ({

@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { preferenceKey } from "../../../lib/utils/site-storage";
 import { renderInRouter as render } from "../../../test/router";
 import { sharedMessages } from "../../shared/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -255,6 +256,6 @@ describe("media library", () => {
 			</AdminQueryProvider>,
 		);
 		expect(await screen.findByRole("table", { name: t("views.table") })).toBeTruthy();
-		window.localStorage.removeItem("cms:media-view");
+		window.localStorage.removeItem(preferenceKey(testSite, "media-view"));
 	});
 });

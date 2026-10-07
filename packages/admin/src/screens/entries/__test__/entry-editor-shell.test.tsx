@@ -9,6 +9,7 @@ import {
 	type SourcePanelProps,
 	type SourcePanelRegistration,
 } from "../../../admin-components";
+import { preferenceKey } from "../../../lib/utils/site-storage";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../__test__/site-wrapper";
@@ -25,11 +26,12 @@ const { getLocalBackup, deleteLocalBackup, saveLocalBackup, success, warning, me
 	message: vi.fn(),
 	error: vi.fn(),
 }));
+// The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
 vi.mock("../local-backup", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../local-backup")>()),
-	getLocalBackup,
-	deleteLocalBackup,
-	saveLocalBackup,
+	getLocalBackup: (key: string) => getLocalBackup(key),
+	deleteLocalBackup: (key: string) => deleteLocalBackup(key),
+	saveLocalBackup: (record: unknown) => saveLocalBackup(record),
 }));
 vi.mock("../../../editor/tiptap-editor", async () => {
 	const React = await import("react");
@@ -1300,16 +1302,16 @@ describe("translation source pane", () => {
 		await waitFor(() => expect(sourcePane()).not.toBeNull());
 		fireEvent.click(within(sourcePane() as HTMLElement).getByRole("button", { name: "닫기" }));
 		expect(sourcePane()).toBeNull();
-		expect(window.localStorage.getItem("cms:translation-source-pane")).toBe("closed");
+		expect(window.localStorage.getItem(preferenceKey(testSite, "translation-source-pane"))).toBe("closed");
 		const toggle = screen.getByRole("button", { name: "원문" });
 		expect(toggle.getAttribute("aria-pressed")).toBe("false");
 		fireEvent.click(toggle);
 		expect(sourcePane()).not.toBeNull();
-		expect(window.localStorage.getItem("cms:translation-source-pane")).toBe("open");
+		expect(window.localStorage.getItem(preferenceKey(testSite, "translation-source-pane"))).toBe("open");
 	});
 
 	it("opens a previously collapsed pane collapsed", async () => {
-		window.localStorage.setItem("cms:translation-source-pane", "closed");
+		window.localStorage.setItem(preferenceKey(testSite, "translation-source-pane"), "closed");
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();

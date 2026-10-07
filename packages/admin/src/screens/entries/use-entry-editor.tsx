@@ -2,7 +2,12 @@ import { useSite } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { BrowserFormat } from "../../browser-format";
 import { useStoreSelector } from "../../hooks/store";
-import { cmsEntryClient, type EntryEditorClient, localRecoveryStore, type RecoveryStore } from "./entry-editor-client";
+import {
+	cmsEntryClient,
+	type EntryEditorClient,
+	localRecoveryStoreOf,
+	type RecoveryStore,
+} from "./entry-editor-client";
 import {
 	createEntryEditor,
 	ENTRY_EDITOR_CORE,
@@ -72,7 +77,7 @@ export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 			adminId: options.adminId,
 			target: options.target,
 			client: options.client ?? cmsEntryClient(site),
-			recoveryStore: options.recoveryStore ?? localRecoveryStore,
+			recoveryStore: options.recoveryStore ?? localRecoveryStoreOf(site),
 			callbacks: () => callbacksRef.current,
 			formats: () => formatsRef.current,
 		}),

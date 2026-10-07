@@ -29,7 +29,7 @@ export {
 	type EntryEditorClient,
 	type EntrySaveInput,
 	type EntryStatusAction,
-	localRecoveryStore,
+	localRecoveryStoreOf,
 	type RecoveryRecord,
 	type RecoveryStore,
 } from "../screens/entries/entry-editor-client";
