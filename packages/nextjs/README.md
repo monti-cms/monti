@@ -26,7 +26,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, the `CmsRouteHandler` type |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost`, `githubAuth(options)` (deprecated) |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost` |
 
 ### Route handler
 
@@ -109,10 +109,8 @@ export const cms = createCms({
 
 The options, the login path, host trust and the development bypass are described in the core README ("Server config", "Login path", "Host trust", "Login bypass for development"). The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers; see its README), and it imports nothing from Next. This package supplies the one thing the core asks of a Next host: `nextHost`, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). Nothing has to reach Next as a thrown redirect any more, so there is no `rethrow`.
 
-`githubAuth(options)` is the previous one-call GitHub login (`clientId`, `clientSecret`, `adminIds`, `devBypass`, `basePath`, `secret`). It still works and calls `auth({ providers: [github(...)], host: nextHost })`, but is deprecated.
-
 ## Upgrading
 
-For the move from NextAuth to `@monti-cms/auth` (what changes for the owner: nothing to edit, everyone signs in once more), see "Upgrading to `@monti-cms/auth`" in the `@monti-cms/core` README.
+For the move from NextAuth to `@monti-cms/auth` (`githubAuth` is gone; everyone signs in once more), see "Upgrading to `@monti-cms/auth`" in the `@monti-cms/core` README.
 
 See "Upgrading to `@monti-cms/nextjs`" in the `@monti-cms/core` README for the import changes from `@monti-cms/core/next`, `@monti-cms/core/server` and `@monti-cms/admin/next`.

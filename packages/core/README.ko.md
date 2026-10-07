@@ -373,7 +373,7 @@ Next에 묶인 코드는 모두 `@monti-cms/core`와 `@monti-cms/admin`에서 �
 
 - `@monti-cms/nextjs`를 설치한다(`next`는 이 패키지의 peer다. 코어와 관리자는 더 이상 요구하지 않는다).
 - `next.config.ts`: `import { withCms } from "@monti-cms/core/next"`는 `from "@monti-cms/nextjs/config"`가 된다.
-- `cms.server.ts`: `githubAuth`가 `@monti-cms/core/server`에서 `@monti-cms/nextjs/auth`로 옮겼다(그리고 `@monti-cms/auth`로 대체됐다. "`@monti-cms/auth`로 올리기"를 본다).
+- `cms.server.ts`: `githubAuth`는 `@monti-cms/auth`로 대체됐다("`@monti-cms/auth`로 올리기"를 본다).
 - `app/api/cms/[...path]/route.ts`: `cms.routeHandler()`는 `@monti-cms/nextjs`의 `createRouteHandler(cms)`가 된다. `CmsRouteHandler` 타입도 거기서 내보낸다.
 - 관리자 레이아웃·페이지: `@monti-cms/admin/next`는 `@monti-cms/nextjs/admin`이 된다(`CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata`, props는 같다). 레이아웃이 관리자용 App Router 어댑터를 그린다.
 - 관리자 메시지: 페이지 제목 키가 `cms-admin.next` 사전에서 `cms-admin.layout`으로 옮겼다(`admin.messages["cms-admin.next"]`를 덮어쓴 경우에만 해당한다).
@@ -384,7 +384,7 @@ Next에 묶인 코드는 모두 `@monti-cms/core`와 `@monti-cms/admin`에서 �
 
 GitHub 로그인이 NextAuth(`next-auth`, `@monti-cms/nextjs` 안)에서 프레임워크에 묶이지 않는 패키지 `@monti-cms/auth`로 옮겼다. Auth.js core 위에 만들었고 로그인 방법을 프로바이더로 받는다.
 
-- `@monti-cms/auth`를 설치한다. `@monti-cms/nextjs/auth`의 `githubAuth`는 같은 옵션으로 계속 동작하므로(새 패키지를 부른다) 기존 `cms.server.ts`는 그대로 돈다. 다만 더 쓰지 않기로 했다.
+- `@monti-cms/auth`를 설치한다. `@monti-cms/nextjs/auth`의 `githubAuth`는 없어졌다. 아래 모양으로 바꾼다.
 - 새 모양은 `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })`다. `auth`는 `@monti-cms/auth`, `github`는 `@monti-cms/auth/github`, `nextHost`는 `@monti-cms/nextjs/auth`에서 온다. `adminIds`는 프로바이더의 `admins`가 되고 여전히 GitHub 숫자 ID를 받는다(로그인 이름은 처음부터 비교하지 않았다).
 - 모두 한 번 다시 로그인한다. NextAuth가 만든 세션은 읽지 않는다. 환경 변수(`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`)와 OAuth 콜백 URL(`/api/cms/auth/callback/github`)은 그대로다. `package.json`에서 `next-auth`는 빼도 된다.
 - 계정 ID에 프로바이더가 붙는다(`github:12345678`). `AuthContext.accountId`, `CmsAuth.devUserId`, 이름이 없을 때 변경 기록에 남는 작성자가 그렇다. 직접 만든 `CmsAuth`의 `isAdmin(userId)`는 이 값을 받는다.
@@ -467,7 +467,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost`(`auth()`의 `host`로 넘긴다), `githubAuth`(더 쓰지 않음) |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost`(`auth()`의 `host`로 넘긴다) |
 | `@monti-cms/auth` | `cms.server.ts` | `auth({ providers, admins?, secret?, devBypass?, basePath?, host? })`, `LoginProvider` 타입 |
 | `@monti-cms/auth/github` | `cms.server.ts` | `github({ clientId, clientSecret, admins })` |
 | `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`(`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>`·`DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"). MDX 글은 `@monti-cms/mdx/render`의 `renderMdx`가 그린다. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |

@@ -373,7 +373,7 @@ All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` int
 
 - Install `@monti-cms/nextjs` (`next` is its peer; core and admin no longer ask for it).
 - `next.config.ts`: `import { withCms } from "@monti-cms/core/next"` becomes `from "@monti-cms/nextjs/config"`.
-- `cms.server.ts`: `githubAuth` moves from `@monti-cms/core/server` to `@monti-cms/nextjs/auth` (and is replaced by `@monti-cms/auth`; see "Upgrading to `@monti-cms/auth`").
+- `cms.server.ts`: `githubAuth` is replaced by `@monti-cms/auth`; see "Upgrading to `@monti-cms/auth`".
 - `app/api/cms/[...path]/route.ts`: `cms.routeHandler()` becomes `createRouteHandler(cms)` from `@monti-cms/nextjs`. The `CmsRouteHandler` type is exported from there too.
 - Admin layout and page: `@monti-cms/admin/next` becomes `@monti-cms/nextjs/admin` (`CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata`; same props). The layout renders the App Router adapter for the admin.
 - Admin messages: the page title keys moved from the `cms-admin.next` dictionary to `cms-admin.layout` (only matters if you override `admin.messages["cms-admin.next"]`).
@@ -384,7 +384,7 @@ All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` int
 
 GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to the framework-neutral package `@monti-cms/auth`, which is built on Auth.js core and takes the ways to log in as providers.
 
-- Install `@monti-cms/auth`. `githubAuth` of `@monti-cms/nextjs/auth` keeps working with the same options (it calls the new package), so an existing `cms.server.ts` runs unchanged; it is deprecated.
+- Install `@monti-cms/auth`. `githubAuth` of `@monti-cms/nextjs/auth` is removed; replace it with the shape below.
 - The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret })`, with `auth` from `@monti-cms/auth`, `github` from `@monti-cms/auth/github` and `nextHost` from `@monti-cms/nextjs/auth`. `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
 - Everyone signs in once more: sessions made by NextAuth are not read. Environment variables (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`) and the OAuth callback URL (`/api/cms/auth/callback/github`) are unchanged. `next-auth` can be removed from `package.json`.
 - Account ids are qualified with the provider (`github:12345678`): `AuthContext.accountId`, `CmsAuth.devUserId`, and the author recorded for a change when the login gives no name. `isAdmin(userId)` of your own `CmsAuth` receives that value.
@@ -467,7 +467,7 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost` (pass as `host` to `auth()`), `githubAuth` (deprecated) |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost` (pass as `host` to `auth()`) |
 | `@monti-cms/auth` | `cms.server.ts` | `auth({ providers, admins?, secret?, devBypass?, basePath?, host? })`, the `LoginProvider` type |
 | `@monti-cms/auth/github` | `cms.server.ts` | `github({ clientId, clientSecret, admins })` |
 | `@monti-cms/core/render` | public pages (server components) | `CmsContent` (`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>` and `DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |

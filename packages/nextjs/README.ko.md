@@ -26,7 +26,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, `CmsRouteHandler` 타입 |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
-| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost`, `githubAuth(options)`(더 쓰지 않음) |
+| `@monti-cms/nextjs/auth` | `cms.server.ts` | `nextHost` |
 
 ### 라우트 핸들러
 
@@ -109,10 +109,8 @@ export const cms = createCms({
 
 옵션·로그인 경로·호스트 신뢰·개발용 우회는 코어 README("서버 설정", "로그인 경로", "호스트 신뢰", "개발용 로그인 우회")에 있다. 로그인 자체는 `@monti-cms/auth`(`Request`·`Response` 위의 Auth.js core. 로그인 방법을 프로바이더로 받는다. 그 README를 본다)이고 Next에서 아무것도 가져오지 않는다. 이 패키지는 코어가 Next 호스트에 요구하는 한 가지를 채운다. 지금 요청의 헤더인 `nextHost`다(요청할 때 `next/headers`에서 읽으므로 콘텐츠만 읽는 코드와 명령줄 도구는 불러오지 않는다). 던진 리다이렉트를 Next까지 보낼 일이 더는 없어서 `rethrow`도 없다.
 
-`githubAuth(options)`는 전에 쓰던 GitHub 로그인 한 줄이다(`clientId`, `clientSecret`, `adminIds`, `devBypass`, `basePath`, `secret`). 지금도 동작하며 `auth({ providers: [github(...)], host: nextHost })`를 부르지만 더 쓰지 않기로 했다.
-
 ## 올리기
 
-NextAuth에서 `@monti-cms/auth`로 옮기는 것(주인이 고칠 것은 없고, 모두 한 번 다시 로그인한다)은 `@monti-cms/core` README의 "`@monti-cms/auth`로 올리기"를 본다.
+NextAuth에서 `@monti-cms/auth`로 옮기는 것(`githubAuth`는 없어졌고, 모두 한 번 다시 로그인한다)은 `@monti-cms/core` README의 "`@monti-cms/auth`로 올리기"를 본다.
 
 `@monti-cms/core/next`·`@monti-cms/core/server`·`@monti-cms/admin/next`에서 바뀐 import는 `@monti-cms/core` README의 "`@monti-cms/nextjs`로 올리기"를 본다.

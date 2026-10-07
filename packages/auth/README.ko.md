@@ -124,7 +124,7 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 
 ## `githubAuth`(NextAuth)에서 올리기
 
-`@monti-cms/nextjs/auth`의 `githubAuth`는 같은 옵션으로 계속 동작한다(이제 이 패키지를 부른다). 그래서 `@monti-cms/nextjs`와 함께 `@monti-cms/auth`를 설치하면 기존 `cms.server.ts`가 그대로 돈다. 다만 더 쓰지 않기로 했으니, 편할 때 `auth({ providers: [github(...)] })`로 옮긴다.
+`@monti-cms/nextjs/auth`의 `githubAuth`는 없어졌다. 이렇게 바꾼다.
 
 ```diff
 -import { githubAuth } from "@monti-cms/nextjs/auth";
@@ -136,7 +136,7 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 +auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret }),
 ```
 
-- **관리자.** 예전 옵션은 GitHub 숫자 ID(`CMS_ADMIN_GITHUB_ID`) 목록이었고, `admins`도 그대로 그것을 받는다. 바꿀 값은 없다. 로그인 이름은 처음부터 비교하지 않았다.
+- **관리자.** `adminIds`는 프로바이더의 `admins`가 된다. 예전 옵션은 GitHub 숫자 ID(`CMS_ADMIN_GITHUB_ID`) 목록이었고, `admins`도 그대로 그것을 받는다. 바꿀 값은 없다. 로그인 이름은 처음부터 비교하지 않았다.
 - **다시 로그인.** NextAuth가 만든 세션은 더 읽지 않는다(안의 계정 ID가 이제 `github:<id>`다). 그래서 모두 한 번 다시 로그인한다.
 - **새 환경 변수 없음.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`는 그대로 쓰고, OAuth 콜백 URL도 바뀌지 않는다. `package.json`에서 `next-auth`는 빼도 된다.
 - **기록되는 작성자.** 이름이 없어 계정 ID가 변경 기록에 남는 곳은 전에 `12345678`이었고 이제 `github:12345678`이다.

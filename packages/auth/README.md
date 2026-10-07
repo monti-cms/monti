@@ -124,7 +124,7 @@ The login screen posts a plain form to the core (`POST /api/cms/v1/session/sign-
 
 ## Upgrading from `githubAuth` (NextAuth)
 
-`githubAuth` of `@monti-cms/nextjs/auth` still works with the same options (it now calls this package), so an existing `cms.server.ts` keeps running once `@monti-cms/auth` is installed with `@monti-cms/nextjs`. It is deprecated; move to `auth({ providers: [github(...)] })` when convenient:
+`githubAuth` of `@monti-cms/nextjs/auth` is gone. Replace it:
 
 ```diff
 -import { githubAuth } from "@monti-cms/nextjs/auth";
@@ -136,7 +136,7 @@ The login screen posts a plain form to the core (`POST /api/cms/v1/session/sign-
 +auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], host: nextHost, devBypass, secret }),
 ```
 
-- **Admins.** The old option listed numeric GitHub ids (`CMS_ADMIN_GITHUB_ID`), and that is still what `admins` takes; no value changes. Logins were never matched.
+- **Admins.** `adminIds` becomes `admins` on the provider. The old option listed numeric GitHub ids (`CMS_ADMIN_GITHUB_ID`), and that is still what `admins` takes; no value changes. Logins were never matched.
 - **Sign-in again.** Sessions made by NextAuth are not read any more (the account id in them is `github:<id>` now), so everyone signs in once more.
 - **No new environment variables.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` work as before, and the OAuth callback URL does not change. `next-auth` can be removed from `package.json`.
 - **Recorded authors.** Where a change records an account id because there was no name (`12345678` before), it is now `github:12345678`.
