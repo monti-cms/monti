@@ -1,8 +1,8 @@
 import { BlogPostPage, generateBlogPostMetadata } from "@/registry/monti/blog-theme/blog-post";
 
-// Route segment settings are written here, not re-exported: the posts are read from the database on each request.
-export const dynamic = "force-dynamic";
-
 export const generateMetadata = generateBlogPostMetadata;
 
 export default BlogPostPage;
+
+// Only valid with cacheComponents: `monti add` keeps this line when next.config turns it on and drops it otherwise.
+export const instant = false; // monti:cache-components

@@ -2,6 +2,8 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
 import { type CheckOutcome, fail, ok, skip, warn } from "../../plugin/doctor";
+import { detectPackageManager } from "../add";
+import { findRootLayout, hasSuppressHydrationWarning, setupThemeStyles } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
 import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
 import { findSchemaFile, generateSchemaTypes, readSchema, SCHEMA_TYPES_FILE } from "../schema-types";
@@ -491,6 +493,55 @@ const nextWithCms: CoreCheck = {
 	},
 };
 
+const nextHydration: CoreCheck = {
+	group: "next",
+	id: "hydration",
+	title: "suppressHydrationWarning on <html>",
+	run: (state) => {
+		if (!isNextApp(state)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
+		const layout = findRootLayout(state.cwd);
+		if (!layout) return skip("not checked: there is no root layout");
+		const has = hasSuppressHydrationWarning(readFileSync(path.join(state.cwd, layout), "utf8"));
+		if (has === undefined) return skip(`not checked: ${layout} has no <html> tag`);
+		return has
+			? ok(`${layout} has suppressHydrationWarning on <html>`)
+			: warn(
+					"the admin theme sets a class on <html> before React hydrates, so the first admin screen logs a hydration mismatch",
+					{
+						where: layout,
+						fix: `add suppressHydrationWarning to the <html> tag: <html lang="en" suppressHydrationWarning>`,
+					},
+				);
+	},
+};
+
+/** The blog theme's article text is drawn by this component; without it there is nothing to style. */
+const THEME_FOLDERS = ["components/monti/article-body", "src/components/monti/article-body"];
+
+const nextThemeStyles: CoreCheck = {
+	group: "next",
+	id: "theme-styles",
+	title: "Styles of the theme pages",
+	run: async (state) => {
+		if (!isNextApp(state)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
+		if (!THEME_FOLDERS.some((folder) => exists(state, folder)))
+			return skip("not checked: the article-body component (monti add blog-theme) is not installed");
+		const manager = detectPackageManager(state.cwd);
+		const install = `${manager} ${manager === "npm" ? "install" : "add"} -D @tailwindcss/typography`;
+		const result = await setupThemeStyles({ cwd: state.cwd, installCommand: install, dryRun: true });
+		if (result.missing.length === 0 && !result.installDevDependency)
+			return ok("the global CSS loads the typography plugin and the render.css files");
+		const lines = [
+			...(result.installDevDependency ? [`install the typography plugin: ${install}`] : []),
+			...(result.missing.length > 0 ? [`add these lines to your global CSS:\n${result.missing.join("\n")}`] : []),
+		];
+		return warn("the theme pages render without prose, code and block styles", {
+			where: result.diff?.file ?? "your global CSS",
+			fix: lines.join("\n"),
+		});
+	},
+};
+
 const adminPathCheck: CoreCheck = {
 	group: "next",
 	id: "admin-path",
@@ -712,6 +763,8 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	noStorage,
 	nextFiles,
 	nextWithCms,
+	nextHydration,
+	nextThemeStyles,
 	adminPathCheck,
 	oldConfigFiles,
 	oldConfigText,

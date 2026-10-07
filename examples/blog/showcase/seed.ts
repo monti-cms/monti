@@ -136,6 +136,25 @@ for (const { entry, id, version } of saved) {
 }
 if (problems.length > 0) throw new Error(`the showcase must publish without issues:\n${problems.join("\n")}`);
 
+// A published post whose address was changed: the old address `renamed-post-old` answers a permanent redirect to `renamed-post` (`example:check` tests it).
+const renamed = await service.createDraft({
+	collection: "post",
+	slug: "renamed-post-old",
+	metadata: { title: "A renamed post", categoryId: category.id, tagIds: [tagIds[0]] },
+	format: "mdx",
+	body: "This post was published under another address.",
+});
+const published = await service.publish({ id: renamed.id, expectedVersion: renamed.version });
+const moved = await service.saveDraft(renamed.id, {
+	collection: "post",
+	slug: "renamed-post",
+	metadata: { title: "A renamed post", categoryId: category.id, tagIds: [tagIds[0]] },
+	format: "mdx",
+	body: "This post was published under another address.",
+	expectedVersion: published.entry.version,
+});
+await service.publish({ id: renamed.id, expectedVersion: moved.version });
+
 const admin = (id: string) => `${origin}/studio/entries/${id}/edit`;
 console.log("\nPublic pages");
 console.log(`  ${origin}/ko/posts (list)`);

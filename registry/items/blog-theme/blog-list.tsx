@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Pagination } from "./pagination";
 import { metadataText, PostMeta } from "./post-meta";
 import { blogTheme } from "./theme.config";
@@ -11,8 +12,15 @@ export interface BlogListProps {
 	searchParams: Promise<{ page?: string }>;
 }
 
-/** The list page: the newest published posts first, paged. The read API supplies each post's URL and its relation names. */
+/**
+ * The list page: the newest published posts first, paged. The read API supplies each post's URL and its relation names.
+ *
+ * The posts are read on each request: `connection()` opts out of prerendering and an unknown language answers a real 404 before anything is sent. Under Next's
+ * Cache Components (`cacheComponents: true`) the route file exports `instant = false` for that (`monti add` writes it when `next.config` turns the option on;
+ * Next rejects it when the option is off). Route segment settings such as `dynamic` are not used: Cache Components rejects them.
+ */
 export async function BlogListPage({ params, searchParams }: BlogListProps) {
+	await connection();
 	const { locale } = await params;
 	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) notFound();
 	const page = Math.max(1, Math.floor(Number((await searchParams).page ?? 1)) || 1);

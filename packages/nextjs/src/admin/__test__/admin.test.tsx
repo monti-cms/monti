@@ -121,3 +121,25 @@ describe("cmsAdminMetadata", () => {
 		expect(cmsAdminMetadata(cms).title).toContain("Acme");
 	});
 });
+
+describe("CmsAdminLayout under Cache Components", () => {
+	it("waits for the request inside a Suspense boundary with no fallback, then attaches the host", async () => {
+		const calls: string[] = [];
+		const connection = vi.fn(async () => void calls.push("connection"));
+		vi.doMock("next/server", () => ({ connection }));
+		vi.resetModules();
+		const { CmsAdminLayout: Layout } = await import("..");
+		const cms = fakeCms();
+		cms.attachHost = () => void calls.push("attachHost");
+		const root = Layout({ cms, children: null }) as ReactElement<{ fallback: unknown; children: ReactElement }>;
+		// The layout itself reads nothing at request time: it is only the boundary, so a prerender of the route can finish its static shell.
+		expect(root.type).toBe((await import("react")).Suspense);
+		expect(root.props.fallback).toBeNull();
+		expect(calls).toEqual([]);
+		// The shell is the async part: the request first, then everything that reads it.
+		const shell = root.props.children;
+		await (shell.type as (props: unknown) => Promise<unknown>)(shell.props);
+		expect(calls).toEqual(["connection", "attachHost"]);
+		vi.doUnmock("next/server");
+	});
+});

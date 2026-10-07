@@ -1,8 +1,8 @@
 import { BlogListPage, generateBlogListMetadata } from "@/components/monti/blog-theme/blog-list";
 
-// Route segment settings are written here, not re-exported: the posts are read from the database on each request.
-export const dynamic = "force-dynamic";
-
 export const generateMetadata = generateBlogListMetadata;
 
 export default BlogListPage;
+
+// The page waits for the request before anything is sent, so a missing post is a real 404; with cacheComponents that needs instant = false.
+export const instant = false;

@@ -72,12 +72,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/nextjs/admin";
 import { cms } from "@/monti.config";
 
+// Only with `cacheComponents: true` (Next fails the build on it otherwise). A segment setting is written here, it cannot be re-exported:
+// the admin is a per-request app, so Next's instant navigation validation skips it.
+export const instant = false;
+
 export default function AdminPage(props: CmsAdminPageProps) {
 	return <CmsAdminPage cms={cms} {...props} />;
 }
 ```
 
 `CmsAdminLayout` takes the props of the admin layout (`themeProvider`, `themeStorageKey`, `toaster`; see the `@monti-cms/admin` README) and renders it inside `NextAdminRouter`.
+
+**Cache Components.** The admin works with and without Next's `cacheComponents` (and `partialPrefetching`), which `create-next-app` turns on in new apps. `CmsAdminLayout` waits for the request (`connection()`) inside a `Suspense` boundary with no fallback, so nothing below it is prerendered: the session, the database, the current time and the URL are all request-time data. The page is a child of that boundary and needs none of its own. With `cacheComponents` on, add `export const instant = false` to the page (`monti init` does when `next.config` has `cacheComponents: true`): it keeps the development-only instant validation of Next 16.4 from checking a route that is never instant, and without it the dev overlay reports that the validation could not render the admin. Next fails the build on that export when `cacheComponents` is off, so leave it out then. The admin theme provider sets a class and `color-scheme` on `<html>` before React hydrates, so the root layout needs `suppressHydrationWarning` on its `<html>` tag (`monti init` adds it).
 
 `NextAdminRouter` is the App Router adapter of the admin: a client component that gives `@monti-cms/admin` a `Link`, `navigate`, `replace`, `usePathname` and `useSearchParams` built on `next/link` and `next/navigation`. `CmsAdminPage` gives the admin's server screens Next's `redirect` and `notFound`. The admin itself imports nothing from Next.
 

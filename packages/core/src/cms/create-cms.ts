@@ -393,7 +393,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 	// The part of the instance that changes when the schema is reloaded. `site` is read through a getter that also finds a schema file edited on disk.
 	let current = build(options.config, () => cms);
 	let stamp: string | undefined;
-	let checkedAt = 0;
+	let checkedAt = Number.NEGATIVE_INFINITY;
 	const stampOf = (file: string): string | undefined => {
 		try {
 			const stat = statSync(file);
@@ -426,7 +426,8 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 	/** In development, runs the schema file again when it changed on disk since the instance last read it (a hand edit, or a save from another process). */
 	const refresh = () => {
 		if (process.env.NODE_ENV !== "development" || !source) return;
-		const now = Date.now();
+		// A monotonic clock, not `Date.now()`: Next's Cache Components rejects the wall clock in a render (this runs on every `cms.site` read, in a layout or a page).
+		const now = performance.now();
 		if (now - checkedAt < 250) return;
 		checkedAt = now;
 		const file = schemaFile();

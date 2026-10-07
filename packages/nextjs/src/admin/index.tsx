@@ -30,6 +30,8 @@ import {
 import type { Cms } from "@monti-cms/core/runtime";
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
+import { type ReactNode, Suspense } from "react";
 import { assertCms } from "../assert-cms";
 import { nextHost } from "../auth/host";
 import { NextAdminRouter } from "./router";
@@ -49,9 +51,22 @@ export type CmsAdminLayoutProps = AdminLayoutProps;
  * Admin UI layout. Rendered by the app's `app/(admin)/admin/layout.tsx`. Styles: the app imports the prebuilt `@monti-cms/admin/styles.css` (and the plugins' `styles.css`) in this layout; no Tailwind is needed.
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
  * If the site already has them, turn them off with `<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>`.
+ *
+ * The admin is a per-request app (the session, the database, the current time and the URL are all runtime data), so it is never prerendered. The layout waits for the request
+ * (`connection()`) inside a `Suspense` boundary with no fallback, which is what Next's Cache Components (`cacheComponents: true`) asks of a route like this and changes nothing
+ * without that option. The page and every client component below it render after the request is known, so none of them needs a boundary of its own.
  */
 export function CmsAdminLayout(props: CmsAdminLayoutProps) {
 	assertCms(props.cms, "<CmsAdminLayout cms={cms}>");
+	return (
+		<Suspense fallback={null}>
+			<AdminShell {...props} />
+		</Suspense>
+	);
+}
+
+async function AdminShell(props: CmsAdminLayoutProps): Promise<ReactNode> {
+	await connection();
 	// The login reads the headers of the request through Next, so the site's config needs no `host`.
 	props.cms.attachHost?.(nextHost);
 	return (

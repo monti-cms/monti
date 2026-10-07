@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseJsonc } from "./config-paths";
+import { setupThemeStyles, type ThemeStylesResult } from "./first-run";
+import type { Prompter } from "./init-prompts";
 import {
 	defaultRegistrySource,
 	describeSource,
@@ -42,6 +44,12 @@ export interface AddOptions {
 	readonly fetch?: FetchLike;
 	/** Runs the package manager. Default: spawns it with the terminal attached. A non-zero exit is an error. */
 	readonly install?: (command: InstallCommand) => void | Promise<void>;
+	/** Confirms the change to the global CSS that the theme components need (after showing its diff). Without it, and without `yes`, the lines are printed instead. */
+	readonly prompter?: Pick<Prompter, "note" | "confirm">;
+	/** Make that change to the global CSS without asking. */
+	readonly yes?: boolean;
+	/** The blocks package is used, so its `render.css` is wanted too. Default: looked up in `package.json` and `monti.config.ts`. */
+	readonly blocks?: boolean;
 }
 
 export interface AddReport {
@@ -64,7 +72,12 @@ export interface AddReport {
 	readonly importAlias: string;
 	/** Things to do by hand. */
 	readonly manual: readonly string[];
+	/** The check of the global CSS (typography plugin, `render.css` imports), for components that draw article text. */
+	readonly styles?: ThemeStylesResult;
 }
+
+/** Components whose markup uses the `prose` classes and the code and block styles of `render.css`: the global CSS has to load them. */
+const STYLED_ITEMS = ["article-body", "blog-theme"];
 
 interface TsconfigLike {
 	readonly compilerOptions?: {
@@ -114,6 +127,26 @@ function aliasFolder(cwd: string, alias: string): { dir: string; mapped: boolean
 			`Cannot find the folder of the alias "${alias}": add it to compilerOptions.paths in tsconfig.json.`,
 		);
 	return { dir: path.join(cwd, existsSync(path.join(cwd, "src")) ? "src" : "", match[1] ?? ""), mapped: false };
+}
+
+/** Whether `next.config` turns on Next's `cacheComponents`. */
+function usesCacheComponents(cwd: string): boolean {
+	for (const name of ["next.config.ts", "next.config.mjs", "next.config.js"]) {
+		const file = path.join(cwd, name);
+		if (existsSync(file)) return /\bcacheComponents\s*:\s*true\b/.test(readFileSync(file, "utf8"));
+	}
+	return false;
+}
+
+/**
+ * A line a registry file marks with `// monti:cache-components` (an `export const instant = false;`, only valid with that option) is kept, without its marker, when
+ * the app turns `cacheComponents` on, and dropped (with the comment lines right above it) when it does not.
+ */
+export function applyCacheComponentsMarker(source: string, enabled: boolean): string {
+	const marked = /(?:^\/\/[^\n]*\n)*^([^\n]*?)[ \t]*\/\/ monti:cache-components[^\n]*\n?/gm;
+	return source.replace(marked, (whole, line: string) =>
+		enabled ? `${whole.slice(0, whole.indexOf(line))}${line}\n` : "",
+	);
 }
 
 /** Turns the registry's own import prefix into the host's alias. Only quoted specifiers (`from "..."`, `import("...")`). */
@@ -206,6 +239,7 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 	const folder = aliasFolder(cwd, alias);
 	const installAlias = `${alias}/${INSTALL_FOLDER}`;
 
+	const cacheComponents = usesCacheComponents(cwd);
 	const created: string[] = [];
 	const overwritten: string[] = [];
 	const unchanged: string[] = [];
@@ -216,7 +250,9 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 			if (file.content === undefined)
 				throw new Error(`${item.name}: ${file.path} has no content in the registry item.`);
 			const absolute = destinationOf(cwd, folder.dir, item, file);
-			const content = SOURCE_FILE.test(file.path) ? rewriteRegistryImports(file.content, installAlias) : file.content;
+			const content = SOURCE_FILE.test(file.path)
+				? applyCacheComponentsMarker(rewriteRegistryImports(file.content, installAlias), cacheComponents)
+				: file.content;
 			const relative = path.relative(cwd, absolute).split(path.sep).join("/");
 			if (!existsSync(absolute)) {
 				created.push(relative);
@@ -268,6 +304,20 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 		importAlias: installAlias,
 		manual,
 	};
+	const styled = items.some((item) => STYLED_ITEMS.includes(item.name));
+	const installStyles = (dryRun: boolean) =>
+		setupThemeStyles({
+			cwd,
+			blocks: options.blocks,
+			installCommand: commandText(installCommand(cwd, ["@tailwindcss/typography"], true)),
+			prompter: options.prompter,
+			yes: options.yes,
+			dryRun,
+		});
+	if (options.dryRun && conflicts.length === 0 && styled) {
+		const styles = await installStyles(true);
+		return { ...report, styles, manual: [...manual, ...styles.manual] };
+	}
 	if (options.dryRun || conflicts.length > 0) return report;
 
 	for (const write of writes) {
@@ -277,8 +327,13 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 	const install = options.install ?? runInstall;
 	if (dependencies.length > 0) await install(installCommand(cwd, dependencies, false));
 	if (devDependencies.length > 0) await install(installCommand(cwd, devDependencies, true));
-	return report;
+	if (!styled) return report;
+	const styles = await installStyles(false);
+	if (styles.installDevDependency) await install(installCommand(cwd, [styles.installDevDependency], true));
+	return { ...report, styles, manual: [...manual, ...styles.manual] };
 }
+
+const commandText = (command: InstallCommand) => `${command.command} ${command.args.join(" ")}`;
 
 /** The report as lines for the terminal. */
 export function formatAddReport(report: AddReport): string {
@@ -304,6 +359,12 @@ export function formatAddReport(report: AddReport): string {
 		lines.push(`${report.dryRun ? "would install (dev)" : "installed (dev)"}: ${report.devDependencies.join(", ")}`);
 	if (report.conflicts.length === 0 && report.created.length + report.overwritten.length > 0)
 		lines.push(`import from ${report.importAlias}/<component>/<file>`);
+	if (report.styles?.diff) {
+		lines.push(
+			`${report.dryRun ? "would change" : "changed"} ${report.styles.diff.file}:`,
+			...report.styles.diff.diff.split("\n").map((line) => `  ${line}`),
+		);
+	}
 	for (const note of report.manual) lines.push(`manual step: ${note}`);
 	return lines.join("\n");
 }

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { addComponents, formatAddReport, type InstallCommand } from "../add";
+import { addComponents, applyCacheComponentsMarker, formatAddReport, type InstallCommand } from "../add";
 import { runCli } from "../index";
 
 const repoRoot = fileURLToPath(new URL("../../../../../", import.meta.url));
@@ -499,7 +499,8 @@ describe("the registry of this repo", () => {
 			const targets = item.files.flatMap((file) => (file.target ? [file.target] : []));
 			// Every page goes through {app} into app/(site)/..., and the set has the post list, the post page and the draft preview page.
 			expect(targets.length).toBeGreaterThan(0);
-			expect(targets.every((target) => target.startsWith("~/{app}/(site)/"))).toBe(true);
+			// Every page goes into app/(site)/...; the one other file is the root proxy.ts, next to the app folder, that gives real 404 and 308 statuses.
+			expect(targets.filter((target) => !target.startsWith("~/{app}/(site)/"))).toEqual(["~/{app}/../proxy.ts"]);
 			expect(targets).toContain("~/{app}/(site)/blog/page.tsx");
 			expect(targets).toContain("~/{app}/(site)/blog/[slug]/page.tsx");
 			expect(targets.some((target) => /\(site\)\/preview\/.+\/\[slug\]\/page\.tsx$/.test(target))).toBe(true);
@@ -539,5 +540,32 @@ describe("the registry of this repo", () => {
 				`from "@/components/monti/article-body/article-body"`,
 			);
 		});
+	});
+});
+
+describe("applyCacheComponentsMarker", () => {
+	const page = `import x from "y";
+
+// Only valid with cacheComponents: kept or dropped.
+export const instant = false; // monti:cache-components
+
+export default x;
+`;
+
+	it("keeps the line without its marker when cacheComponents is on", () => {
+		expect(applyCacheComponentsMarker(page, true)).toBe(`import x from "y";
+
+// Only valid with cacheComponents: kept or dropped.
+export const instant = false;
+
+export default x;
+`);
+	});
+
+	it("drops the line and the comment above it when cacheComponents is off", () => {
+		const off = applyCacheComponentsMarker(page, false);
+		expect(off).not.toContain("instant");
+		expect(off).not.toContain("Only valid");
+		expect(off).toContain("export default x;");
 	});
 });

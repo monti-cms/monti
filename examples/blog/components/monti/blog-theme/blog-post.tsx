@@ -3,6 +3,7 @@ import { previewEntry } from "@monti-cms/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
+import { connection } from "next/server";
 import { ArticleBody } from "@/components/monti/article-body/article-body";
 import { metadataText, PostMeta } from "./post-meta";
 import { blogTheme } from "./theme.config";
@@ -63,8 +64,16 @@ function Neighbor({ entry, label, align }: { entry: ReadEntry; label: string; al
 	);
 }
 
-/** The detail page: title, byline (date, author, topics), a table of contents and the body (`ArticleBody`), and the newer and older post. */
+/**
+ * The detail page: title, byline (date, author, topics), a table of contents and the body (`ArticleBody`), and the newer and older post.
+ *
+ * The post is read on each request: `connection()` opts out of prerendering, and the lookup runs before anything is sent, so an unknown address answers a real
+ * 404 and an old address a real 308 (inside a `Suspense` boundary the page would already be streaming with a 200). Under Next's Cache Components
+ * (`cacheComponents: true`) a page that waits for the request like this has to say it may block: the route file exports `instant = false` (`monti add` writes it
+ * when `next.config` turns the option on; Next rejects it when the option is off). Route segment settings such as `dynamic` are not used: Cache Components rejects them.
+ */
 export async function BlogPostPage(props: BlogPostProps, source: PostSource = "published") {
+	await connection();
 	const entry = await readPost(props, source);
 	const { newer, older } = await neighborsOf(entry);
 	return (
@@ -105,6 +114,7 @@ export const generateBlogPostPreviewMetadata = async (): Promise<Metadata> => ({
 
 /** Title, description (the excerpt) and Open Graph of the post. An unknown address gets no metadata: the page itself answers 404 or redirects. */
 export async function generateBlogPostMetadata({ params }: BlogPostProps): Promise<Metadata> {
+	await connection();
 	const { locale, slug } = await params;
 	if (locale !== undefined && !blogTheme.cms.site.isLocale(locale)) return {};
 	const result = await blogTheme.cms.read.getEntry({

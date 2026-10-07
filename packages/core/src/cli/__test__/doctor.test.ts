@@ -254,6 +254,37 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
 	});
 
+	it("warns about a root layout without suppressHydrationWarning and a theme without its styles", async () => {
+		setEnv();
+		const dir = project({
+			"app/layout.tsx": '<html lang="en"><body /></html>\n',
+			"app/globals.css": '@import "tailwindcss";\n',
+			"components/monti/article-body/article-body.tsx": "export {};\n",
+		});
+		const { report } = await doctor(dir);
+		const hydration = byId(report, "next/hydration");
+		expect(hydration.status).toBe("warn");
+		expect(hydration.fix).toContain("suppressHydrationWarning");
+		const styles = byId(report, "next/theme-styles");
+		expect(styles.status).toBe("warn");
+		expect(styles.fix).toContain('@import "@monti-cms/core/render.css";');
+		expect(styles.fix).toContain('@plugin "@tailwindcss/typography";');
+
+		const fixed = project({
+			"app/layout.tsx": '<html lang="en" suppressHydrationWarning><body /></html>\n',
+			"app/globals.css":
+				'@import "tailwindcss";\n@import "@monti-cms/core/render.css";\n@plugin "@tailwindcss/typography";\n',
+			"components/monti/article-body/article-body.tsx": "export {};\n",
+			"package.json": JSON.stringify({
+				dependencies: { next: "16.4.0" },
+				devDependencies: { "@tailwindcss/typography": "^0.5.0" },
+			}),
+		});
+		const again = await doctor(fixed);
+		expect(byId(again.report, "next/hydration").status).toBe("ok");
+		expect(byId(again.report, "next/theme-styles").status).toBe("ok");
+	});
+
 	it("tells when the admin files sit at a different path than the config says", async () => {
 		setEnv();
 		const dir = project({
