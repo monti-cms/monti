@@ -3,6 +3,7 @@ import path from "node:path";
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { resolveTrustHost } from "../adapters/auth/trust-host";
 import { findSchemaFile } from "../cli/schema-types";
+import { problemText } from "../core/problem";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import type { MediaStore } from "../media/store";
@@ -280,7 +281,16 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			return store;
 		};
 		const getMediaStore = (): MediaStore => {
-			if (!server.media) throw new CmsError("Media storage is not configured", "media_not_configured");
+			if (!server.media) {
+				throw new CmsError(
+					problemText({
+						what: "Media storage is not configured, so there is nowhere to keep uploads",
+						where: "`storage` in monti.config.ts",
+						fix: "add a storage adapter, for example `storage: s3Storage()` (@monti-cms/storage-s3, which reads the S3_* values); `monti doctor` checks them",
+					}),
+					"media_not_configured",
+				);
+			}
 			connections.mediaStore ??= server.media.createStore();
 			return connections.mediaStore;
 		};

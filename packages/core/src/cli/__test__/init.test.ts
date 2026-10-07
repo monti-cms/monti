@@ -115,6 +115,9 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(next).toContain("AUTH_GITHUB_SECRET");
 		expect(next).toContain("MONTI_ADMIN_GITHUB_ID");
 		expect(report.next.at(-1)).toBe("Start the app: pnpm dev, then open http://localhost:3000/studio");
+		// The summary points to `monti doctor` for whatever does not work, just before starting the app.
+		expect(report.next.at(-2)).toContain("pnpm exec monti doctor");
+		expect(report.next.at(-2)).toContain("what is wrong, where, and how to fix it");
 		expect(next).not.toContain("monti import");
 		// Everything the generated files say is English.
 		expect(config + layout).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean

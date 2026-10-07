@@ -77,6 +77,8 @@ export const cms = defineConfig({
 
 웹훅이 없으면 화면의 "지금 가져오기"와 `monti git-sync:pull`(크론 작업용)로 변경을 가져온다.
 
+`monti doctor`가 이 모두를 점검해 빠진 것과 고치는 법을 알려 준다(`git-sync/targets`, `format`, `token`, `webhook-secret`): 대상이 없음, 어떤 플러그인도 제공하지 않는 대상 형식, 저장된 토큰이 없거나 `MONTI_SECRET`으로 더는 읽을 수 없음, 웹훅 시크릿이 없음(써야 할 웹훅 주소와 함께). `monti doctor --online`은 저장된 토큰으로 GitHub에 물어 저장소와 브랜치에 닿는지도 보고, 거절된 토큰(401)과 토큰이 볼 수 없는 저장소(404)를 구분한다.
+
 ## 파일
 
 발행한 글 하나, 언어 하나에 파일 하나. YAML front matter, 빈 줄, 대상의 형식이 쓴 본문 순서다.

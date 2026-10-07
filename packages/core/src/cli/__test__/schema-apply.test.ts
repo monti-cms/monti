@@ -206,6 +206,6 @@ describe("schema:diff and schema:apply", () => {
 			error: (message) => lines.push(message),
 		});
 		expect(code).toBe(1);
-		expect(lines.join("\n")).toContain("cannot find monti.config.ts");
+		expect(lines.join("\n")).toMatch(/Cannot find monti\.config\.ts.*monti init/s);
 	});
 });

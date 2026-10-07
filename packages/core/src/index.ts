@@ -38,6 +38,7 @@ export {
 	type SeedTemplate,
 	type SiteConfig,
 } from "./config/define";
+export { type Problem, problemError, problemText, SetupError } from "./core/problem";
 export { createActiveTranslator } from "./i18n/active";
 export {
 	defineMessages,
@@ -66,6 +67,16 @@ export {
 	type PluginNavItem,
 	type PluginRoute,
 } from "./plugin/define";
+export {
+	type CheckOutcome,
+	type CheckStatus,
+	type DoctorCheck,
+	type DoctorContext,
+	fail,
+	ok,
+	skip,
+	warn,
+} from "./plugin/doctor";
 export type {
 	ImportedItem,
 	PluginCollection,

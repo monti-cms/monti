@@ -23,7 +23,7 @@ import { wordList } from "./plugins/word-list";
 
 /**
  * The one config of the blog, and the CMS instance it makes. The admin API route, the admin screens, the site's pages and the `monti` command all use this `cms`.
- * It is server-only (it holds the database and login settings): it is never imported by a client component, and `monti check:boundary` checks that.
+ * It is server-only (it holds the database and login settings): it is never imported by a client component, and `monti doctor` checks that.
  *
  * A personal tech blog, modelled on the maintainer's own blog: posts, memos, categories, tags and series (the `collection` collection), in Korean (the default) and
  * English. The data of the site is in `monti.schema.json`: the collections and their fields and layouts (the SEO fields included), the locales, the time zone, the

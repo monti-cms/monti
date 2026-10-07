@@ -58,7 +58,13 @@ export function createGitHubClient(options: GitHubClientOptions, fetchImpl: Fetc
 		} catch {
 			// The body is not JSON: the status text stands.
 		}
-		return new GitHubApiError(`GitHub answered ${response.status}: ${detail}`, response.status);
+		const hint =
+			response.status === 401
+				? " (the token is wrong, expired or revoked: save a new one on the Git sync screen)"
+				: response.status === 403 || response.status === 404
+					? " (the repo name may be wrong, or the token cannot see the repo or lacks Contents read and write: check both)"
+					: "";
+		return new GitHubApiError(`GitHub answered ${response.status}: ${detail}${hint}`, response.status);
 	};
 
 	/** A call that must succeed. */

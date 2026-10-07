@@ -391,7 +391,7 @@ export class SchemaFileError extends Error {
 	readonly source: string;
 	constructor(source: string, issues: readonly SchemaIssue[]) {
 		super(
-			`${source} is not a valid schema file:\n${issues.map((issue) => `  ${issue.path || "(root)"}: ${issue.message}`).join("\n")}`,
+			`${source} is not a valid schema file:\n${issues.map((issue) => `  ${issue.path || "(root)"}: ${issue.message}`).join("\n")}\nFix: correct the lines above in ${source}; the "$schema" link at its top gives an editor autocomplete and shows these errors as you type. \`monti doctor\` checks the file again.`,
 		);
 		this.name = "SchemaFileError";
 		this.source = source;

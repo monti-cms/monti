@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { CmsFormat } from "@monti-cms/core/format";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import { type Cms, problemText } from "@monti-cms/core/plugin/server";
 import type { GitHubClient, GitHubClientFactory } from "./github/client";
 import { githubClientFactory } from "./github/rest";
 import {
@@ -76,7 +76,15 @@ export interface SyncContext {
 /** The options of the plugin as the site config gives them. */
 export function readOptions(cms: Cms): GitSyncOptions {
 	const options = cms.site.getPluginOptions<GitSyncOptions>(GIT_SYNC_PLUGIN_NAME);
-	if (!options) throw new GitSyncError("The git-sync plugin is not in the site config");
+	if (!options) {
+		throw new GitSyncError(
+			problemText({
+				what: "The git-sync plugin is not in the site config",
+				where: "`plugins` in monti.config.ts",
+				fix: "add `gitSync({ targets: [...] })` (from @monti-cms/git-sync) to the list",
+			}),
+		);
+	}
 	return options;
 }
 
@@ -111,8 +119,16 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			if (!token) {
 				throw new GitSyncNotConfigured(
 					stored
-						? "The saved GitHub token cannot be read (the CMS secret changed); save the token again on the Git sync screen"
-						: "No GitHub token is saved; add one on the Git sync screen",
+						? problemText({
+								what: "The saved GitHub token cannot be read, because MONTI_SECRET changed since it was saved",
+								where: `the Git sync screen (${cms.site.adminHref("/git-sync")})`,
+								fix: "save the token again there, or put the old secret back (as MONTI_SECRET, or listed in `previousSecrets` in monti.config.ts)",
+							})
+						: problemText({
+								what: "No GitHub token is saved, so nothing is pushed or pulled yet",
+								where: `the Git sync screen (${cms.site.adminHref("/git-sync")})`,
+								fix: "paste a GitHub token that can read and write the repo's contents there; `monti doctor` lists what else is missing",
+							}),
 				);
 			}
 			return factory({ token, repo: target.repo, ...(target.apiUrl ? { apiUrl: target.apiUrl } : {}) });
@@ -123,12 +139,20 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			const format = (await cms.formats()).get(target.format);
 			if (!format) {
 				throw new GitSyncError(
-					`Target "${target.id}" writes files in the format "${target.format}", which this site does not have (is its plugin in the site config?)`,
+					problemText({
+						what: `Target "${target.id}" writes files in the format "${target.format}", which this site does not have`,
+						where: "`plugins` in monti.config.ts, and `format` of the target",
+						fix: 'add the plugin that provides the format (mdx() from @monti-cms/mdx provides "mdx"; install the package first), or give the target another format',
+					}),
 				);
 			}
 			if (!format.import) {
 				throw new GitSyncError(
-					`Format "${target.format}" cannot import, so target "${target.id}" cannot sync both ways`,
+					problemText({
+						what: `Format "${target.format}" cannot import, so target "${target.id}" cannot sync both ways`,
+						where: "`format` of the target in gitSync() of monti.config.ts",
+						fix: "use a format that can read files back (mdx does)",
+					}),
 				);
 			}
 			const found = {

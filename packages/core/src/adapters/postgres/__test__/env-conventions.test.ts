@@ -70,8 +70,12 @@ describe("postgres() reads the conventional environment variables", () => {
 	it("says which variable is missing, when the connection is first used and not before", async () => {
 		const adapter = postgres();
 		expect(() => adapter.createStore({ site: testSite })).not.toThrow();
-		await expect(adapter.migrate({ site: testSite })).rejects.toThrow(
-			/`DATABASE_URL` is empty; set it.*or pass `postgres\(\{ connectionString \}\)`/,
+		const message = await adapter.migrate({ site: testSite }).then(
+			() => "",
+			(error: Error) => error.message,
 		);
+		expect(message).toContain("DATABASE_URL");
+		expect(message).toMatch(/Where:.*postgres\(\{ connectionString \}\)/);
+		expect(message).toMatch(/Fix:.*postgres:\/\//);
 	});
 });

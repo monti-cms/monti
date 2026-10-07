@@ -113,7 +113,7 @@ There is no route group and no other admin file: custom admin components are a p
 
 **Why the layout is not folded into the page.** Next remounts the subtree of a dynamic segment (`[[...path]]`) when its value changes. A layout written inside the page would remount the whole admin (navigation, query cache, theme provider) on every screen change, so the layout stays one level above, where it keeps its state while you move between screens.
 
-**Server only.** `monti.config.ts` holds the database and login settings, so it must never reach the browser: loading it there throws. `monti check:boundary` reports every `"use client"` file whose import chain reaches it, and `withCms` warns about the same once per `next dev` start (`checkImportBoundaryInDev`). The admin gets a JSON snapshot of the site from its layout, so it never needs the config in the browser.
+**Server only.** `monti.config.ts` holds the database and login settings, so it must never reach the browser: loading it there throws. `monti doctor` reports every `"use client"` file whose import chain reaches it (`monti doctor --only config/boundary` runs just that, for CI), and `withCms` warns about the same once per `next dev` start (`checkImportBoundaryInDev`). A Next file that gets no instance (a wrong import of `cms`) fails with a message that says which file and how to import it; `monti doctor` also checks that the three Next files exist at the admin path and that `next.config` uses `withCms`. The admin gets a JSON snapshot of the site from its layout, so it never needs the config in the browser.
 
 ## Preview pages
 

@@ -76,7 +76,7 @@ Run it in the app folder (where `package.json` is): `npx monti init` (or `pnpm e
 
 For apps that use `src/`, the config files go in `src/` and the routes under `src/app/`. A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
 
-**After the files** it installs the packages the choices need with the detected package manager, starts the Docker database, waits for it and runs `monti migrate` when the database is reachable. A step that fails (no network, no Docker) does not undo the files: it is shown as failed and the command to run by hand is in the list. The summary lists what was done, then what is left as numbered steps with exact values: the GitHub OAuth app, its callback URL and the env names to put the ID and secret in, `pnpm dev`, and the `/studio` address.
+**After the files** it installs the packages the choices need with the detected package manager, starts the Docker database, waits for it and runs `monti migrate` when the database is reachable. A step that fails (no network, no Docker) does not undo the files: it is shown as failed and the command to run by hand is in the list. The summary lists what was done, then what is left as numbered steps with exact values: the GitHub OAuth app, its callback URL and the env names to put the ID and secret in, `monti doctor` for whenever something does not work (it says what is wrong, where, and how to fix it), `pnpm dev`, and the `/studio` address.
 
 **Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `updated`, `skipped`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
 
@@ -203,7 +203,7 @@ against the same schema, they run one at a time. A plugin hands over once-only w
 - Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
   Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
 - File: the config file, the module that exports the instance as `cms` (`export const cms = …` or a default export), is `--config <file>` → `MONTI_CONFIG_PATH` → `./monti.config.ts`/`./src/monti.config.ts`.
-- `monti check:boundary` fails when a `"use client"` file reaches the config (or another server-only module) through its imports; see "Server-only config".
+- `monti doctor` checks the whole setup and says how to fix what is wrong, including that no `"use client"` file reaches the config; see "Troubleshooting: `monti doctor`".
 - In a script of your own, import the instance and call it: `import { cms } from "./monti.config"; await cms.migrate(); await cms.close();`
   (run it with `tsx --env-file=.env.local script.ts`; the instance holds the site config, so nothing else has to be linked).
 
@@ -331,6 +331,46 @@ export const cms = defineConfig({
 
 
 See the README of `@monti-cms/seo` for details.
+
+## Troubleshooting: `monti doctor`
+
+When something does not work, run this first (and after `monti init`, before you deploy):
+
+```sh
+pnpm exec monti doctor
+```
+
+It loads the app the way `monti migrate` does (the env files, then `monti.config.ts`), runs the checks of core, of the database, login and storage adapters and of every plugin, and prints each as `ok`, `warn` or `FAIL`. **Every warning and failure says what is wrong, where (a file, an environment variable or an option) and how to fix it**, in plain words. A check that cannot run because something before it is broken is `skip`. The exit code is 1 when a check fails (warnings do not change it). It changes nothing and never prints a secret.
+
+```text
+  FAIL  database/migrations   3 of 24 migrations are pending (0022_content_hash, 0023_events, 0024_x)
+                              where: schema "public" (table cms_migrations)
+                              fix:   run `monti migrate`; on a deployed site run it as a step of the deploy, before the new version starts
+  warn  auth/admins           no admin is listed, so nobody can sign in outside `next dev` (under `next dev` you are the admin without signing in)
+                              where: MONTI_ADMIN_GITHUB_ID
+                              fix:   put your account id in MONTI_ADMIN_GITHUB_ID (open https://api.github.com/users/<your-github-login> in a browser and copy the number after "id"); ...
+```
+
+- `--json` prints `{ ok, cwd, online, summary: { ok, warn, fail, skip }, checks: [{ id, group, title, status, message, where?, fix? }] }` for tools and CI. `id` is `<group>/<check>`.
+- `--online` also runs the checks that call out over the network (the git-sync repo with its token, the S3 bucket with its keys). Without it they are `skip`.
+- `--only <list>` runs only the groups or ids named (`config`, `database`, `database/migrations`, `git-sync`). `monti doctor --only config` is the check for CI that needs no database: the config loads, and no client component imports it.
+- `--env-file <file>`, `--no-env-file`, `--config <file>` work as for `monti migrate`.
+
+What it checks, in the order it prints:
+
+| Group | Checks |
+| --- | --- |
+| `config` | the env files, that `.env.local` is in `.gitignore`, the config file is found, it loads and exports the instance, and **no `"use client"` file imports it or another server-only module** (this replaces `monti check:boundary`) |
+| `schema` | the schema file is valid (each problem with its JSON path), and `monti-env.d.ts` is up to date |
+| `database` | `DATABASE_URL` is set and a Postgres URL, the database is reachable (wrong host, port, password and database name are told apart), `DATABASE_SCHEMA` exists, **how many migrations are pending** (`monti migrate`) |
+| `secrets` | `MONTI_SECRET` is set and strong enough; the old `CMS_SECRET` and `AUTH_SECRET` are still set but unused |
+| `auth` | the login methods, the GitHub client id and secret, an admin is listed (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
+| `storage` | with `s3Storage()`: the `S3_*` values are present and well formed, and (`--online`) the keys reach the bucket |
+| `next` | the three Next files exist at the admin path and use the right component (it points at a folder that does not match `admin.path`), `next.config` uses `withCms`, the admin address |
+| `leftovers` | what is left of the old setup, each with the exact steps: `cms.config.ts` and `cms.server.ts` and the files that import them, old options in `monti.config.ts`, old variable names (`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), an `(admin)` route folder, `admin-components.tsx` |
+| a plugin's name | the checks the plugin adds ("Checks for `monti doctor`" under "Plugins"): git-sync (targets, file format, token, webhook secret, and with `--online` the repo), the AI plugin (a connection is saved), mdx (the format and the syntax extensions load) |
+
+The same wording is used by the errors the packages throw: a missing `DATABASE_URL`, `MONTI_SECRET`, GitHub id or `S3_*` value, a database that is down or not migrated, a schema file that is not valid, a format no plugin provides, a Next file that got no instance. Each says what is wrong, where, and how to fix it (`Where:` and `Fix:` mark the parts in the one line of an error message). At run time a request that hits a database that is down or not migrated is answered `503`, and the server log has the full message.
 
 ## Import existing posts
 
@@ -503,7 +543,7 @@ A plain `Cms` or `Site` is an instance of any config, with `string` names. Two i
 `monti.config.ts` holds the database and login settings, so only the server may import it. The admin does not: its layout (`<CmsAdminLayout cms={cms}>`, a server component) hands the browser a JSON snapshot of the site (`cms.site.snapshot()`), and the admin's client components read it with `useSite()`.
 
 - `defineConfig` throws if it runs where `window` exists, so a mistake fails on the first load instead of shipping settings to the browser.
-- `monti check:boundary` reads the source (no build) and fails when a `"use client"` file reaches `monti.config.ts` through its imports, or imports `@monti-cms/core/server`, `@monti-cms/core/runtime`, `@monti-cms/core/plugin/server`, `@monti-cms/auth` or `@monti-cms/nextjs/auth`. Type-only imports do not count. Run it in CI.
+- The `config/boundary` check of `monti doctor` reads the source (no build) and fails when a `"use client"` file reaches `monti.config.ts` through its imports, or imports `@monti-cms/core/server`, `@monti-cms/core/runtime`, `@monti-cms/core/plugin/server`, `@monti-cms/auth` or `@monti-cms/nextjs/auth`. Type-only imports do not count. In CI run `monti doctor --only config/boundary` (it needs no database). `monti check:boundary` is gone.
 - `withCms` (`next.config.ts`) runs the same check once per `next dev` start and warns.
 - A client component that needs a value from the site uses `useSite()`; one that needs a type imports it with `import type`.
 
@@ -703,7 +743,7 @@ Do these steps in order:
 5. **The host.** Delete `host: nextHost` and its import: the Next integration attaches it.
 6. **The Next files.** Move `app/(admin)/studio/*` to `app/studio/*` (route groups are optional now), so there are three Monti files: `app/<admin path>/layout.tsx`, `app/<admin path>/[[...path]]/page.tsx` and `app/api/cms/[...path]/route.ts` (the layout cannot be folded into the page, see "`monti init`"). Delete `admin-components.tsx` and register its components as a plugin: `definePlugin({ name, options: {}, admin: () => import("./admin") })`, whose admin module's default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`) with a `Provider` that wraps the admin and uses `CmsAdminComponentsProvider` (`examples/blog/plugins/word-list/`). Update the imports of the three files to `monti.config.ts`.
 7. **Remove `bareun()`** if you do not want it. It is still a package, and the blog example dropped it.
-8. **Check and migrate.** Run `monti check:boundary` (no `"use client"` file may reach the config), then `monti migrate`.
+8. **Check and migrate.** Run `monti doctor`: it lists what of this guide is left (the old files, the old variable names, an `(admin)` route folder, old options in the config) with the exact steps, and fails when a `"use client"` file reaches the config. Then run `monti migrate`.
 
 ## Components as source
 
@@ -748,8 +788,8 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/front-matter` | tools that read or write Markdown files (git-sync, `monti import`) | `parseFile` (YAML front matter and body, with the line of a YAML error) and `composeFile` |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti check:boundary` (fail when a client component reaches the server-only config), `monti add` (install components as source), `monti migrate` (create tables), `monti import` (bring in existing MD/MDX posts, "Import existing posts"), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti add` (install components as source), `monti migrate` (create tables), `monti import` (bring in existing MD/MDX posts, "Import existing posts"), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages
@@ -1109,6 +1149,31 @@ export const myPlugin = () =>
 
 - `exportBodyText(cms, { format, doc, locale, scope? })` of `@monti-cms/core/plugin/server` writes a stored document as text in a format of the instance for importing again (`purpose: "sync"`, links as the real path of their target), as the admin export does. For a plugin that keeps bodies somewhere else.
 - A plugin's route gets the instance that serves it, so plugin code reads its storage (`cms.storage("<plugin name>")`), stores (`cms.store()`, `cms.mediaStore()`) and its secrets (`cms.secrets("<plugin name>")`) from it, and keeps no global state for them. `adminRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(storage, cms)` receive the instance too.
+
+### Checks for `monti doctor`
+
+A server plugin adds checks with `checks` (the database, login and media adapters have the same field). A check has an `id`, a `title`, an optional `online: true` for one that makes a network call (it runs only with `--online`) and `run(context)`, which returns what it found: `ok(message)`, `warn(message, { where, fix })`, `fail(message, { where, fix })` or `skip(message)` (helpers of `@monti-cms/core`). The context has the instance (`cms`: the plugin's storage, secrets, the site), the folder (`cwd`), the environment (`env`) and `online`. The checks are listed under the plugin's name (`git-sync/token`). A check that throws is a failure with the error's message; one that runs longer than 30 seconds is too.
+
+```ts
+import { type CmsServerPlugin, fail, ok, warn } from "@monti-cms/core";
+
+const server: CmsServerPlugin = {
+	checks: [
+		{
+			id: "token",
+			title: "Token",
+			run: async ({ cms }) =>
+				(await hasToken(cms))
+					? ok("a token is saved")
+					: warn("no token is saved", { where: "the Demo screen (/admin/demo)", fix: "paste a token there" }),
+		},
+		{ id: "reachable", title: "Service reachable", online: true, run: async () => (await ping()) ? ok("reachable") : fail("the service does not answer", { fix: "check its status page" }) },
+	],
+};
+export default server;
+```
+
+Write `where` and `fix` as you would tell a person: the file, variable or screen, and the next step with the exact value or command. The errors the plugin throws should say the same (`problemText({ what, where, fix })` of `@monti-cms/core` writes the one-line form).
 
 ### Secrets
 

@@ -1,4 +1,4 @@
-import type { Entry } from "@monti-cms/core/plugin/server";
+import { type Entry, problemText } from "@monti-cms/core/plugin/server";
 import { applyFile, describeError, type FileToApply, readEntry, recordOf } from "./apply";
 import { applyMergedDraft } from "./draft-inbound";
 import { exportEntry, isSyncable, parseEntryFile, sameContent } from "./entry-file";
@@ -48,7 +48,14 @@ export async function pullTarget(ctx: SyncContext, target: ResolvedTarget): Prom
 		const client = await ctx.client(target);
 		const { pattern } = await ctx.format(target);
 		const head = await client.getBranchHead(target.branch);
-		if (!head) throw new GitSyncError(`The branch "${target.branch}" does not exist in ${target.repo}`);
+		if (!head)
+			throw new GitSyncError(
+				problemText({
+					what: `The branch "${target.branch}" does not exist in ${target.repo}`,
+					where: "`branch` of the target in gitSync() of monti.config.ts",
+					fix: `create the branch in the repo (a new repo needs a first commit), or set \`branch\` to one that exists`,
+				}),
+			);
 		const files = await client.listFiles(head, target.folder);
 		const records = await ctx.state.records.list(target.id);
 		const drafts = target.drafts ? await ctx.state.drafts.list(target.id) : new Map();

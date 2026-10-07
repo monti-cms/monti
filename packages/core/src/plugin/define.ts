@@ -4,6 +4,7 @@ import type { CollectionsConfig } from "../config/define";
 import type { AfterCommit, ContentEvent } from "../core/store";
 import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
+import type { DoctorCheck } from "./doctor";
 import type { PluginStorage } from "./storage";
 
 /**
@@ -116,6 +117,12 @@ export interface CmsServerPlugin {
 	 * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).
 	 */
 	readonly commands?: Readonly<Record<string, PluginCommand>>;
+	/**
+	 * Checks `monti doctor` runs for this plugin, listed under its name (`git-sync/token`): is its token saved, are its settings present, does it reach its service.
+	 * A check says what it found, where, and how to fix it ({@link DoctorCheck}); one that calls out over the network sets `online: true` and runs only with
+	 * `monti doctor --online`. The checks get the app's instance, so they read the plugin's storage and secrets like a route does.
+	 */
+	readonly checks?: readonly DoctorCheck[];
 }
 
 /** One command line option of a plugin command. */

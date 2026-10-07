@@ -26,7 +26,9 @@ export const cms = defineConfig({
 });
 ```
 
-With no arguments the store reads the environment variables. Options override them, each one on its own (pass some, and the rest still come from the environment). The values are read on first use, so they may be empty while building; a missing one fails with an error that names the variable and says it can be passed explicitly (`` `S3_BUCKET` is empty; set it, or pass `s3Storage({ bucket })` ``). One function, one prefix (`S3_*`).
+With no arguments the store reads the environment variables. Options override them, each one on its own (pass some, and the rest still come from the environment). The values are read on first use, so they may be empty while building; a missing one fails with an error that names the variable, where to set it (the variable, or `s3Storage({ bucket })`) and how, with an example per service. One function, one prefix (`S3_*`).
+
+`monti doctor` checks the values (all present, the addresses well formed, R2 with `S3_REGION=auto`, MinIO with `S3_FORCE_PATH_STYLE=true`), and `monti doctor --online` asks the store whether the keys reach the bucket, telling a missing bucket, refused keys, a wrong region and an unreachable address apart. See "Troubleshooting: `monti doctor`" in the core README.
 
 ### Variables
 

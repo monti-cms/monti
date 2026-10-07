@@ -1,4 +1,4 @@
-import type { Cms, ContentEvent, Entry } from "@monti-cms/core/plugin/server";
+import { type Cms, type ContentEvent, type Entry, problemText } from "@monti-cms/core/plugin/server";
 import { readEntry } from "./apply";
 import { exportDraft, exportEntry, hasDraftFile, isSyncable } from "./entry-file";
 import { type FileChange, type GitHubClient, isMergeBlocked } from "./github/client";
@@ -180,7 +180,14 @@ export async function reconcileDraft(
 		if (current && !options.force && current.contentHash === entry.working.contentHash) return;
 
 		const main = await client.getBranchHead(target.branch);
-		if (!main) throw new GitSyncError(`The branch "${target.branch}" does not exist in ${target.repo}`);
+		if (!main)
+			throw new GitSyncError(
+				problemText({
+					what: `The branch "${target.branch}" does not exist in ${target.repo}`,
+					where: "`branch` of the target in gitSync() of monti.config.ts",
+					fix: `create the branch in the repo (a new repo needs a first commit), or set \`branch\` to one that exists`,
+				}),
+			);
 		const draft = await exportDraft(ctx.cms, target, pattern, entry);
 		const branch = current?.branch ?? (await pickBranch(ctx, target, entry));
 		const branchHead = await client.getBranchHead(branch);

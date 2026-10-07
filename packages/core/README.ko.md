@@ -76,7 +76,7 @@ allowBuilds:
 
 `src/`를 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 페이지, API 라우트. 레이아웃은 일부러 따로 둔다. Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀔 때마다 그 아래 트리 전체를 다시 마운트하므로, 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자(내비게이션·쿼리 캐시·테마 프로바이더)가 다시 마운트된다. 한 세그먼트 위에 두어야 계속 마운트된 채로 남는다.
 
-**파일을 쓴 뒤에는** 고른 기능에 필요한 패키지를 찾아낸 패키지 매니저로 설치하고, Docker 데이터베이스를 띄워 기다린 뒤, DB에 닿으면 `monti migrate`를 돌린다. 실패한 단계(네트워크 없음, Docker 없음)는 파일을 되돌리지 않는다. 실패로 표시하고 손으로 돌릴 명령을 목록에 적는다. 요약은 한 일을 먼저, 남은 일을 정확한 값이 든 번호 단계로 적는다: GitHub OAuth 앱, 그 콜백 주소와 ID·시크릿을 넣을 환경 변수 이름, `pnpm dev`, `/studio` 주소.
+**파일을 쓴 뒤에는** 고른 기능에 필요한 패키지를 찾아낸 패키지 매니저로 설치하고, Docker 데이터베이스를 띄워 기다린 뒤, DB에 닿으면 `monti migrate`를 돌린다. 실패한 단계(네트워크 없음, Docker 없음)는 파일을 되돌리지 않는다. 실패로 표시하고 손으로 돌릴 명령을 목록에 적는다. 요약은 한 일을 먼저, 남은 일을 정확한 값이 든 번호 단계로 적는다: GitHub OAuth 앱, 그 콜백 주소와 ID·시크릿을 넣을 환경 변수 이름, 동작하지 않을 때 쓸 `monti doctor`(무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 알려 준다), `pnpm dev`, `/studio` 주소.
 
 **질문 없이.** 플래그를 준 질문은 묻지 않는다. `--yes`, `--json`이거나 터미널이 없으면(CI) 아무것도 묻지 않고, 모든 질문이 플래그나 기본값을 쓴다. `--json` 출력은 JSON 문서 하나(`ok`, `created`, `updated`, `skipped`, `steps`, `notes`, `next` 등)이고, 오류는 `{ "ok": false, "error": "..." }`다. 종료 코드는 성공 0, 단계 실패나 잘못된 입력 1, 취소 130이다.
 
@@ -203,7 +203,7 @@ pnpm exec monti migrate
 - 환경 파일: 기본으로 `.env.local`·`.env`(있는 것만)를 읽는다. 셸에서 준 값이 이기고 앞 파일이 뒤 파일을 이긴다.
   `--env-file <파일>`(여러 번)로 고르고 `--no-env-file`이면 읽지 않는다.
 - 파일: 설정 파일(인스턴스를 `cms`로 내보내는 모듈, `export const cms = …` 또는 default export)은 `--config <파일>` → `MONTI_CONFIG_PATH` → `./monti.config.ts`·`./src/monti.config.ts` 순서로 찾는다.
-- `monti check:boundary`는 `"use client"` 파일이 import를 따라가다 설정(또는 다른 서버 전용 모듈)에 닿으면 실패한다("서버 전용 설정" 참고).
+- `monti doctor`는 설정 전체를 점검하고 잘못된 것을 어떻게 고치는지 알려 준다. `"use client"` 파일이 설정에 닿지 않는지도 본다("문제 해결: `monti doctor`" 참고).
 - 직접 만든 스크립트에서는 인스턴스를 불러와 부른다: `import { cms } from "./monti.config"; await cms.migrate(); await cms.close();`
   (`tsx --env-file=.env.local script.ts`로 돌린다. 인스턴스가 사이트 설정을 가지고 있어서 따로 이을 것이 없다).
 
@@ -331,6 +331,43 @@ export const cms = defineConfig({
 
 
 자세한 것은 `@monti-cms/seo`의 README.
+
+## 문제 해결: `monti doctor`
+
+동작하지 않는 것이 있으면 먼저 이것을 돌린다(`monti init` 뒤와 배포 전에도 돌려 본다).
+
+```sh
+pnpm exec monti doctor
+```
+
+`monti migrate`처럼 앱을 불러온 뒤(env 파일, 그다음 `monti.config.ts`) 본체, 데이터베이스·로그인·저장소 어댑터, 모든 플러그인의 검사를 돌려 각각을 `ok`, `warn`, `FAIL`로 보여 준다. **경고와 실패마다 무엇이 잘못됐는지, 어디(파일, 환경 변수, 옵션)인지, 어떻게 고치는지**를 쉬운 말로 적는다. 앞의 문제 때문에 돌릴 수 없는 검사는 `skip`이다. 검사가 하나라도 실패하면 종료 코드가 1이다(경고는 바꾸지 않는다). 아무것도 바꾸지 않고, 비밀 값은 찍지 않는다.
+
+```text
+  FAIL  database/migrations   3 of 24 migrations are pending (0022_content_hash, 0023_events, 0024_x)
+                              where: schema "public" (table cms_migrations)
+                              fix:   run `monti migrate`; on a deployed site run it as a step of the deploy, before the new version starts
+```
+
+- `--json`은 도구와 CI를 위해 `{ ok, cwd, online, summary: { ok, warn, fail, skip }, checks: [{ id, group, title, status, message, where?, fix? }] }`를 찍는다. `id`는 `<그룹>/<검사>`다.
+- `--online`은 네트워크를 쓰는 검사(토큰으로 git-sync 저장소에 닿는지, 키로 S3 버킷에 닿는지)도 돌린다. 없으면 `skip`이다.
+- `--only <목록>`은 이름 붙인 그룹이나 id만 돌린다(`config`, `database`, `database/migrations`, `git-sync`). `monti doctor --only config`는 데이터베이스 없이 CI에서 돌릴 수 있는 검사다: 설정이 불러와지는지, 클라이언트 컴포넌트가 설정을 import하지 않는지.
+- `--env-file <파일>`, `--no-env-file`, `--config <파일>`은 `monti migrate`와 같다.
+
+출력 순서대로 검사하는 것:
+
+| 그룹 | 검사 |
+| --- | --- |
+| `config` | env 파일, `.env.local`이 `.gitignore`에 있는지, 설정 파일을 찾았는지, 불러와지고 인스턴스를 내보내는지, **`"use client"` 파일이 설정이나 다른 서버 전용 모듈을 import하지 않는지**(`monti check:boundary`를 대신한다) |
+| `schema` | 스키마 파일이 올바른지(문제마다 JSON 경로), `monti-env.d.ts`가 최신인지 |
+| `database` | `DATABASE_URL`이 있고 Postgres URL인지, 데이터베이스에 닿는지(틀린 호스트·포트·비밀번호·데이터베이스 이름을 구분한다), `DATABASE_SCHEMA`가 있는지, **미적용 마이그레이션이 몇 개인지**(`monti migrate`) |
+| `secrets` | `MONTI_SECRET`이 있고 충분히 강한지, 옛 `CMS_SECRET`·`AUTH_SECRET`이 아직 있지만 쓰이지 않는지 |
+| `auth` | 로그인 방법, GitHub 클라이언트 id와 시크릿, 관리자가 있는지(숫자 id가 아니라 로그인 이름을 쓴 항목을 짚는다), `SITE_URL`, 호스트 신뢰 결과와 이유, OAuth 앱에 **등록할 콜백 URL**(`SITE_URL`에서 만든다) |
+| `storage` | `s3Storage()`면 `S3_*` 값이 있고 형식이 맞는지, (`--online`) 키로 버킷에 닿는지 |
+| `next` | 관리자 경로에 Next 파일 셋이 있고 알맞은 컴포넌트를 쓰는지(`admin.path`와 맞지 않는 폴더면 그 폴더를 짚는다), `next.config`가 `withCms`를 쓰는지, 관리자 주소 |
+| `leftovers` | 옛 설정에서 남은 것과 정확한 단계: `cms.config.ts`·`cms.server.ts`와 그것을 import하는 파일, `monti.config.ts`에 남은 옛 옵션, 옛 변수 이름(`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), `(admin)` 라우트 폴더, `admin-components.tsx` |
+| 플러그인 이름 | 플러그인이 더한 검사("플러그인"의 "`monti doctor` 검사"): git-sync(대상, 파일 형식, 토큰, 웹훅 시크릿, `--online`이면 저장소), AI 플러그인(연결이 저장돼 있는지), mdx(형식과 문법 확장이 불러와지는지) |
+
+패키지가 던지는 오류도 같은 말투를 쓴다: 없는 `DATABASE_URL`·`MONTI_SECRET`·GitHub id·`S3_*` 값, 꺼져 있거나 마이그레이션되지 않은 데이터베이스, 올바르지 않은 스키마 파일, 어떤 플러그인도 제공하지 않는 형식, 인스턴스를 받지 못한 Next 파일. 각각 무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 말한다(오류 메시지 한 줄 안에서 `Where:`와 `Fix:`가 각 부분을 표시한다). 실행 중에 꺼져 있거나 마이그레이션되지 않은 데이터베이스를 만난 요청은 `503`으로 답하고, 서버 로그에 전체 메시지가 남는다.
 
 ## 기존 글 가져오기
 
@@ -503,7 +540,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 `monti.config.ts`에는 데이터베이스와 로그인 설정이 있으므로 서버만 불러올 수 있다. 관리자도 불러오지 않는다. 관리자 레이아웃(`<CmsAdminLayout cms={cms}>`, 서버 컴포넌트)이 브라우저에 사이트의 JSON 스냅샷(`cms.site.snapshot()`)을 넘기고, 관리자의 클라이언트 컴포넌트는 `useSite()`로 읽는다.
 
 - `defineConfig`는 `window`가 있는 곳에서 실행되면 오류를 던진다. 실수가 설정을 브라우저로 보내기 전에 첫 로드에서 드러난다.
-- `monti check:boundary`는 빌드 없이 소스를 읽어, `"use client"` 파일이 import를 따라가 `monti.config.ts`에 닿거나 `@monti-cms/core/server`·`@monti-cms/core/runtime`·`@monti-cms/core/plugin/server`·`@monti-cms/auth`·`@monti-cms/nextjs/auth`를 불러오면 실패한다. 타입만 가져오는 import는 세지 않는다. CI에서 돌린다.
+- `monti doctor`의 `config/boundary` 검사는 빌드 없이 소스를 읽어, `"use client"` 파일이 import를 따라가 `monti.config.ts`에 닿거나 `@monti-cms/core/server`·`@monti-cms/core/runtime`·`@monti-cms/core/plugin/server`·`@monti-cms/auth`·`@monti-cms/nextjs/auth`를 불러오면 실패한다. 타입만 가져오는 import는 세지 않는다. CI에서는 `monti doctor --only config/boundary`를 돌린다(데이터베이스가 필요 없다). `monti check:boundary`는 없어졌다.
 - `withCms`(`next.config.ts`)는 `next dev`를 시작할 때 한 번 같은 검사를 하고 경고한다.
 - 사이트의 값이 필요한 클라이언트 컴포넌트는 `useSite()`를, 타입이 필요하면 `import type`을 쓴다.
 
@@ -703,7 +740,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 5. **호스트.** `host: nextHost`와 그 import를 지운다. Next 통합이 붙여 준다.
 6. **Next 파일.** `app/(admin)/studio/*`를 `app/studio/*`로 옮긴다(라우트 그룹은 이제 선택이다). Monti 파일은 셋이 된다: `app/<관리자 경로>/layout.tsx`, `app/<관리자 경로>/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`(레이아웃을 페이지에 합칠 수 없는 이유는 "`monti init`"을 본다). `admin-components.tsx`는 지우고 그 컴포넌트를 플러그인으로 등록한다. `definePlugin({ name, options: {}, admin: () => import("./admin") })`를 만들고, 그 관리자 모듈의 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 한다. `Provider`는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓴다(`examples/blog/plugins/word-list/`). 세 파일의 import는 `monti.config.ts`로 고친다.
 7. **`bareun()`을 쓰지 않으려면 뺀다.** 패키지는 그대로 남아 있고, 블로그 예시에서는 뺐다.
-8. **확인하고 마이그레이션한다.** `monti check:boundary`(`"use client"` 파일이 설정에 닿으면 안 된다)를 돌리고, `monti migrate`를 돌린다.
+8. **확인하고 마이그레이션한다.** `monti doctor`를 돌린다. 이 안내에서 남은 것(옛 파일, 옛 변수 이름, `(admin)` 라우트 폴더, 설정에 남은 옛 옵션)을 정확한 단계와 함께 보여 주고, `"use client"` 파일이 설정에 닿으면 실패한다. 그다음 `monti migrate`를 돌린다.
 
 ## 소스로 쓰는 컴포넌트
 
@@ -748,8 +785,8 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/front-matter` | 마크다운 파일을 읽고 쓰는 도구(git-sync, `monti import`) | `parseFile`(YAML 프런트매터와 본문, YAML 오류의 줄 번호 포함)과 `composeFile` |
 | `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
-| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti check:boundary`(클라이언트 컴포넌트가 서버 전용 설정에 닿으면 실패)·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti import`(기존 MD/MDX 글 가져오기, "기존 글 가져오기")·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`initProject`·`addComponents`·`migrate`·`runImport`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
+| `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti doctor`(설정을 점검하고 잘못된 것을 어떻게 고치는지 알려 줌, "문제 해결")·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti import`(기존 MD/MDX 글 가져오기, "기존 글 가져오기")·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`runDoctor`·`initProject`·`addComponents`·`migrate`·`runImport`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
 | `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드
@@ -1109,6 +1146,31 @@ export const myPlugin = () =>
 
 - `@monti-cms/core/plugin/server`의 `exportBodyText(cms, { format, doc, locale, scope? })`는 저장된 문서를 인스턴스의 형식으로 다시 가져올 수 있게(`purpose: "sync"`, 링크는 대상의 실제 경로) 텍스트로 쓴다. 관리자 내보내기와 같다. 본문을 다른 곳에 두는 플러그인을 위한 것이다.
 - 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
+
+### `monti doctor` 검사
+
+서버 플러그인은 `checks`로 검사를 더한다(데이터베이스·로그인·미디어 어댑터에도 같은 필드가 있다). 검사는 `id`, `title`, 네트워크를 쓰는 검사에 붙이는 `online: true`(`--online`일 때만 돈다), 찾은 것을 돌려주는 `run(context)`로 이루어진다. `ok(message)`, `warn(message, { where, fix })`, `fail(message, { where, fix })`, `skip(message)`(`@monti-cms/core`의 도우미)를 돌려준다. 컨텍스트에는 인스턴스(`cms`: 플러그인 저장소, 비밀 값, 사이트), 폴더(`cwd`), 환경(`env`), `online`이 있다. 검사는 플러그인 이름 아래(`git-sync/token`)에 나온다. 던지는 검사는 오류 메시지와 함께 실패이고, 30초가 넘어도 실패다.
+
+```ts
+import { type CmsServerPlugin, fail, ok, warn } from "@monti-cms/core";
+
+const server: CmsServerPlugin = {
+	checks: [
+		{
+			id: "token",
+			title: "Token",
+			run: async ({ cms }) =>
+				(await hasToken(cms))
+					? ok("a token is saved")
+					: warn("no token is saved", { where: "the Demo screen (/admin/demo)", fix: "paste a token there" }),
+		},
+		{ id: "reachable", title: "Service reachable", online: true, run: async () => (await ping()) ? ok("reachable") : fail("the service does not answer", { fix: "check its status page" }) },
+	],
+};
+export default server;
+```
+
+`where`와 `fix`는 사람에게 말하듯 쓴다: 파일·변수·화면, 그리고 정확한 값이나 명령이 든 다음 단계. 플러그인이 던지는 오류도 같게 말해야 한다(`@monti-cms/core`의 `problemText({ what, where, fix })`가 한 줄 형태로 써 준다).
 
 ### 비밀 값
 

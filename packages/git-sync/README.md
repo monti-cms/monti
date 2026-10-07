@@ -77,6 +77,8 @@ The config is checked when the site config is created: a missing collection, a p
 
 Without the webhook, "Pull now" on the screen and `monti git-sync:pull` (for a cron job) bring changes in.
 
+`monti doctor` checks all of this and says what is missing and how to fix it (`git-sync/targets`, `format`, `token`, `webhook-secret`): no target listed, a target format no plugin provides, no token saved or one that `MONTI_SECRET` can no longer read, no webhook secret (with the webhook address to use). `monti doctor --online` also asks GitHub with the saved token whether each repo and branch is reachable, and tells a rejected token (401) from a repo the token cannot see (404).
+
 ## The file
 
 One file per published entry and language. YAML front matter, a blank line, and the body written by the target's format:

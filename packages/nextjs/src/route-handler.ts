@@ -1,4 +1,5 @@
 import type { Cms } from "@monti-cms/core/runtime";
+import { assertCms } from "./assert-cms";
 import { nextHost } from "./auth/host";
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -22,6 +23,7 @@ export type CmsRouteHandler = (request: Request, context: { params: Promise<{ pa
 export function createRouteHandler(
 	cms: Pick<Cms, "handle"> & Partial<Pick<Cms, "attachHost">>,
 ): Record<Method, CmsRouteHandler> {
+	assertCms(cms, "createRouteHandler(cms)");
 	cms.attachHost?.(nextHost);
 	const handler: CmsRouteHandler = async (request, context) =>
 		cms.handle(request, { path: (await context.params).path });

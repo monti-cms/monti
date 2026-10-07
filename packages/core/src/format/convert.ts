@@ -13,6 +13,7 @@ import type {
 	FormatMedia,
 	FormatPurpose,
 } from "./types";
+import { unknownFormatError } from "./unknown";
 
 /**
  * The seam between core and the formats. Core calls a format only through these two functions: they build the context a format may rely on, check what
@@ -62,8 +63,7 @@ export async function importText(
 	options: ImportOptions,
 ): Promise<ImportedText> {
 	const format = registry.get(name);
-	if (!format)
-		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: name, params: { format: name } }]);
+	if (!format) throw unknownFormatError(name, registry);
 	if (!format.import) {
 		throw new ServiceError("format_not_importable", [
 			{ code: "format_not_importable", message: name, params: { format: name } },
@@ -133,8 +133,7 @@ export async function exportText(
 	options: ExportOptions,
 ): Promise<{ text: string; warnings: Issue[] }> {
 	const format = registry.get(name);
-	if (!format)
-		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: name, params: { format: name } }]);
+	if (!format) throw unknownFormatError(name, registry);
 	const warnings: Issue[] = [];
 	const context: FormatExportContext = {
 		...siteFormatContext(site, options.locale),

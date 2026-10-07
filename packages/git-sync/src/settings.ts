@@ -1,4 +1,4 @@
-import { CmsError } from "@monti-cms/core/plugin/server";
+import { CmsError, problemText } from "@monti-cms/core/plugin/server";
 import { GIT_SYNC_PLUGIN_NAME } from "./options";
 import type { StoredSettings } from "./state";
 import type { SyncContext } from "./sync";
@@ -52,7 +52,11 @@ export async function saveSettings(ctx: SyncContext, patch: SettingsPatch): Prom
 	const secrets = secretsOf(ctx);
 	if (!secrets.available) {
 		throw new CmsError(
-			"MONTI_SECRET is not set, so a token cannot be stored (set MONTI_SECRET in the environment, or `secret` in the config)",
+			problemText({
+				what: "MONTI_SECRET is not set, so a token cannot be stored",
+				where: ".env.local (and the environment settings of your host), or `secret` in defineConfig",
+				fix: "set it to a long random value (`openssl rand -base64 32`), restart the server, then save the token again",
+			}),
 			"secret_not_configured",
 		);
 	}

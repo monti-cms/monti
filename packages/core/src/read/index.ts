@@ -12,13 +12,14 @@
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
-import { type CollectionName, type MetadataFor, ServiceError } from "../core/types";
+import type { CollectionName, MetadataFor } from "../core/types";
 import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../doc/document-refs";
 import { type PublicMediaDeps, resolvePublicMedia, resolvePublicMediaUrl } from "../doc/public-media";
 import type { StoredDocument } from "../doc/stored-document";
 import { type ExportRefs, exportText } from "../format/convert";
 import type { FormatRegistry } from "../format/registry";
 import type { FormatLink, FormatMedia } from "../format/types";
+import { unknownFormatError } from "../format/unknown";
 import type { MediaStore } from "../media/store";
 import { RECORD_TRANSLATIONS_KEY } from "../schema/derive";
 import type { AnyCmsConfig, Site } from "../site";
@@ -266,9 +267,7 @@ async function toReadEntries<C extends string, Config extends AnyCmsConfig>(
 ): Promise<ReadEntry<C, Config>[]> {
 	const { site } = deps;
 	const formats = format === undefined ? undefined : await deps.formats();
-	if (formats && format !== undefined && !formats.get(format)) {
-		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: format, params: { format } }]);
-	}
+	if (formats && format !== undefined && !formats.get(format)) throw unknownFormatError(format, formats);
 	// Relation targets and link targets are the same kind of thing (a published entry by translation group id), so they are looked up together.
 	const pick = await publishedPicker(
 		deps.store(),

@@ -73,19 +73,25 @@ describe("environment configuration", () => {
 
 	it.each(
 		Object.keys(S3).filter((key) => key !== "S3_REGION"),
-	)("names the missing %s and says it can be passed explicitly", (key) => {
+	)("names the missing %s, where to set it and how", (key) => {
 		setEnv(S3);
 		vi.stubEnv(key, "");
-		expect(() => s3Storage().createStore()).toThrow(
-			new RegExp(`\`${key}\` is empty; set it, or pass \`s3Storage\\(\\{ \\w+ \\}\\)\``),
-		);
+		const message = (() => {
+			try {
+				s3Storage().createStore();
+			} catch (error) {
+				return (error as Error).message;
+			}
+			return "";
+		})();
+		expect(message).toContain(key);
+		expect(message).toMatch(/Where:.*s3Storage\(\{ \w+ \}\)/);
+		expect(message).toContain("Fix:");
 	});
 
 	it("needs a region or an endpoint, and names the endpoint variable", () => {
 		setEnv({ ...S3, S3_REGION: "" });
-		expect(() => s3Storage().createStore()).toThrow(
-			"`S3_ENDPOINT` is empty; set it, or pass `s3Storage({ endpoint })`",
-		);
+		expect(() => s3Storage().createStore()).toThrow(/S3_ENDPOINT.*Where:.*s3Storage\(\{ endpoint \}\).*Fix:/s);
 		expect(() => s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true }).createStore()).not.toThrow();
 	});
 });

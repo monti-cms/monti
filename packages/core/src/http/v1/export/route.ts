@@ -1,8 +1,8 @@
 import type { Cms } from "../../../cms";
 import { exportScopeSchema } from "../../../core/api";
 import type { ExportSnapshot } from "../../../core/store";
-import { ServiceError } from "../../../core/types";
 import { exportText } from "../../../format/convert";
+import { unknownFormatError } from "../../../format/unknown";
 import { createExportRefs } from "../../../read";
 import {
 	buildExportArchive,
@@ -25,9 +25,7 @@ async function exportTexts(
 ): Promise<ExportTexts> {
 	const registry = await cms.formats();
 	const found = registry.get(format);
-	if (!found) {
-		throw new ServiceError("unknown_format", [{ code: "unknown_format", message: format, params: { format } }]);
-	}
+	if (!found) throw unknownFormatError(format, registry);
 	const purpose = scope === "public" ? "read" : "sync";
 	const refsOf = createExportRefs(
 		{ site: cms.site, store: cms.store, mediaStore: cms.mediaStore },

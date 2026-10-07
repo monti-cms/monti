@@ -158,6 +158,10 @@ had a screen open before the upgrade still saves against the right version, and 
 drop them once you have checked the site. The oldest table (`ai_features`) is read in the same way where its edited values had not been moved yet.
 Replace every instance of the old version at the same time as you run `monti migrate`; an old instance keeps writing the old tables, and those writes are not copied again.
 
+## `monti doctor`
+
+`monti doctor` lists `ai/connection`: a warning when no connection is saved (with the screen to add one on and what to enter), when a saved connection lacks its address, key or default model, and a failure when `MONTI_SECRET` is not set (a key cannot be saved without it). The fake development connection counts as a connection.
+
 ## Fake connection (development only)
 
 With `CMS_AI_FAKE=1` (excluded from production builds), it returns canned answers without a key. The answer is built from the result

@@ -1,8 +1,8 @@
 import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
+import { DOCTOR_HELP, runDoctorCommand } from "./doctor";
 import { eventsRetry } from "./events";
 import { IMPORT_HELP, runImportCommand } from "./import/command";
-import { findBoundaryViolations, formatBoundaryViolations } from "./import-boundary";
 import { runInitCommand } from "./init-command";
 import type { Prompter } from "./init-prompts";
 import { migrate } from "./migrate";
@@ -20,7 +20,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
- * - `monti check:boundary`: fails when a client component (`"use client"`) imports `monti.config.ts` or another server-only module, directly or through other files.
+ * - `monti doctor [--json] [--online] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, leftovers of the old setup, and the checks plugins add) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
  * - `monti schema:types [--schema <file>] [--out <file>] [--watch] [--check]`: writes the types of `monti.schema.json`.
  * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of the config file to `monti.schema.json`.
  * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
@@ -38,6 +38,17 @@ export {
 	rewriteRegistryImports,
 } from "./add";
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths";
+export {
+	DOCTOR_HELP,
+	type DoctorCommandIo,
+	type DoctorOptions,
+	type DoctorReport,
+	type DoctorResult,
+	type DoctorSummary,
+	formatDoctorReport,
+	runDoctor,
+	runDoctorCommand,
+} from "./doctor";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { type EventsRetryOptions, eventsRetry } from "./events";
 export {
@@ -144,8 +155,7 @@ ${IMPORT_HELP}  migrate   Create or update the tables in the database of monti.c
               --limit <n>           Most deliveries to try (default 100)
               --env-file <file>, --no-env-file, --config <file>   As for migrate
   <plugin>:<command>    Run a command a plugin adds, with the app loaded as for migrate (for example git-sync:pull). Add --help for its options
-  check:boundary  Fail when a client component ("use client") imports monti.config.ts or another server-only module, directly or through other files
-  schema:types    Write the types of the schema file (monti-env.d.ts), so collections and locales are typed without writing types
+${DOCTOR_HELP}  schema:types    Write the types of the schema file (monti-env.d.ts), so collections and locales are typed without writing types
               --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
               --out <file>          Declaration file (default: monti-env.d.ts next to the schema file)
               --watch               Keep running and rewrite the types when the schema file changes
@@ -250,14 +260,8 @@ export async function runCli(
 			});
 			return ok ? 0 : 1;
 		}
-		if (command === "check:boundary") {
-			const violations = findBoundaryViolations(io.cwd);
-			if (violations.length > 0) {
-				io.error(formatBoundaryViolations(violations));
-				return 1;
-			}
-			io.log("check:boundary: no client component imports server-only code");
-			return 0;
+		if (command === "doctor") {
+			return await runDoctorCommand(rest, io);
 		}
 		if (command === "schema:types") {
 			const { values } = parseArgs({

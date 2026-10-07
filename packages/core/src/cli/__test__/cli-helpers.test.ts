@@ -29,7 +29,7 @@ describe("monti command helpers", () => {
 		expect(loadEnvFiles(dir, undefined, env)).toEqual([".env.local", ".env"]);
 		expect(env).toEqual({ A: "shell", B: "local", C: "env" });
 		expect(loadEnvFiles(dir, [], {})).toEqual([]);
-		expect(() => loadEnvFiles(dir, [".env.missing"], {})).toThrow(/not found/);
+		expect(() => loadEnvFiles(dir, [".env.missing"], {})).toThrow(/\.env\.missing.*does not exist.*Fix:/);
 	});
 
 	it("reads tsconfig with comments and trailing commas", () => {
@@ -51,8 +51,10 @@ describe("monti command helpers", () => {
 			"src/monti.config.ts",
 		);
 		expect(() => resolveConfigPath(tempDir({}), undefined, {})).toThrow(/monti init/);
-		expect(() => resolveConfigPath(root, "nope.ts", {})).toThrow(/not found: nope.ts/);
-		expect(() => resolveConfigPath(root, undefined, { MONTI_CONFIG_PATH: "nope.ts" })).toThrow(/not found: nope.ts/);
+		expect(() => resolveConfigPath(root, "nope.ts", {})).toThrow(/nope\.ts.*does not exist.*--config.*Fix:/);
+		expect(() => resolveConfigPath(root, undefined, { MONTI_CONFIG_PATH: "nope.ts" })).toThrow(
+			/nope\.ts.*does not exist.*MONTI_CONFIG_PATH.*Fix:/,
+		);
 		// The old server file is not looked for any more.
 		expect(() => resolveConfigPath(tempDir({ "cms.server.ts": "" }), undefined, {})).toThrow(/monti init/);
 	});

@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { problemError } from "../core/problem";
 
 /** Reads JSON with comments and trailing commas (tsconfig). Leaves `//` and `/*` inside strings alone. `undefined` if it cannot be read. */
 export function parseJsonc(text: string): unknown {
@@ -49,12 +50,24 @@ export function resolveConfigPath(
 	env: Record<string, string | undefined> = process.env,
 ): string {
 	const found =
-		chosen ?? env.MONTI_CONFIG_PATH ?? CONFIG_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
+		chosen ??
+		(env.MONTI_CONFIG_PATH || undefined) ??
+		CONFIG_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
 	if (!found || !existsSync(path.resolve(cwd, found))) {
-		throw new Error(
+		throw problemError(
 			found
-				? `config file not found: ${found}`
-				: `cannot find ${CONFIG_CANDIDATES[0]}; pass --config <path> or set MONTI_CONFIG_PATH (run \`monti init\` to create one)`,
+				? {
+						what: `The config file ${found} does not exist`,
+						where: chosen ? "the --config option" : "the MONTI_CONFIG_PATH environment variable",
+						fix: `correct the path (it is relative to ${cwd}), or remove the option so \`monti\` looks for ${CONFIG_CANDIDATES.join(" or ")}`,
+					}
+				: {
+						what: `Cannot find ${CONFIG_CANDIDATES[0]} (looked in ${cwd}, also under src/)`,
+						where: "the folder you ran `monti` in",
+						fix: "run `monti` from the folder of your Next app, or point at the file with --config <path> or MONTI_CONFIG_PATH; `monti init` creates one in an app that has none",
+					},
+			undefined,
+			"config_missing",
 		);
 	}
 	return found;

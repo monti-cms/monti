@@ -1,4 +1,5 @@
 import type { CmsServerPlugin } from "@monti-cms/core";
+import { gitSyncChecks } from "./checks";
 import { commands } from "./commands";
 import { onContentEvent } from "./events";
 import * as routes from "./routes";
@@ -21,6 +22,8 @@ const gitSyncServer: CmsServerPlugin = {
 	// Delivered through the event outbox: a failed push is retried, not lost.
 	afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event),
 	commands,
+	// What `monti doctor` checks: targets, file format, token, webhook secret, and (with --online) the repo.
+	checks: gitSyncChecks,
 	// `features["git-sync"].ready` of the admin meta API: is a token saved?
 	features: async (cms) => ({
 		ready: await settingsView(syncContextFor(cms)).then(

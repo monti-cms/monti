@@ -1,4 +1,4 @@
-import { CmsError, type ContentEvent, type Entry } from "@monti-cms/core/plugin/server";
+import { CmsError, type ContentEvent, type Entry, problemText } from "@monti-cms/core/plugin/server";
 import { exportEntry, isSyncable } from "./entry-file";
 import type { BranchHead, FileChange, GitHubClient } from "./github/client";
 import type { ResolvedTarget } from "./options";
@@ -351,7 +351,14 @@ export async function flushTarget(
 		const client = await ctx.client(target);
 		const { pattern } = await ctx.format(target);
 		const head = await client.getBranchHead(target.branch);
-		if (!head) throw new GitSyncError(`The branch "${target.branch}" does not exist in ${target.repo}`);
+		if (!head)
+			throw new GitSyncError(
+				problemText({
+					what: `The branch "${target.branch}" does not exist in ${target.repo}`,
+					where: "`branch` of the target in gitSync() of monti.config.ts",
+					fix: `create the branch in the repo (a new repo needs a first commit), or set \`branch\` to one that exists`,
+				}),
+			);
 		const plan: PlanContext = {
 			ctx,
 			target,

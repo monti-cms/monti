@@ -76,12 +76,12 @@ describe("github() reads the conventional environment variables", () => {
 	it("says which variable is missing", () => {
 		vi.stubEnv("AUTH_GITHUB_SECRET", "env-secret");
 		expect(() => connectWithEnv({ providers: [github()] })).toThrow(
-			/`AUTH_GITHUB_ID` is empty; set it.*or pass `github\(\{ clientId \}\)`/,
+			/AUTH_GITHUB_ID is not set.*Where:.*github\(\{ clientId \}\).*Fix:/s,
 		);
 		vi.stubEnv("AUTH_GITHUB_ID", "env-id");
 		vi.stubEnv("AUTH_GITHUB_SECRET", "");
 		expect(() => connectWithEnv({ providers: [github()] })).toThrow(
-			/`AUTH_GITHUB_SECRET` is empty; set it.*or pass `github\(\{ clientSecret \}\)`/,
+			/AUTH_GITHUB_SECRET is not set.*Where:.*github\(\{ clientSecret \}\).*Fix:/s,
 		);
 	});
 
