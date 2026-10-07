@@ -218,6 +218,22 @@
 		"memo": {
 			"label": "Memo",
 			"kind": "document",
+			"body": {
+				"blocks": [
+					"callout",
+					"collapsible",
+					"table",
+					"taskList",
+					"image",
+					"file",
+					"codeBlock",
+					"blockquote",
+					"horizontalRule",
+					"footnotes"
+				],
+				"marks": ["bold", "italic", "strike", "underline", "code", "link", "tooltip"],
+				"headings": [2, 3]
+			},
 			"fields": {
 				"title": {
 					"kind": "text",
