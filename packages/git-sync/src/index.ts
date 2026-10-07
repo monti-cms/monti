@@ -9,6 +9,8 @@ import { GIT_SYNC_PLUGIN_NAME, type GitSyncOptions, validateGitSyncConfig } from
  *   together go out in one commit. It is delivered through the event outbox, so a failed push is retried and not lost.
  * - In: GitHub's `push` webhook, "Pull now" on the admin screen and `monti git-sync:pull` write what changed in the repo to the CMS and publish it.
  * - If an entry changed on both sides since the last sync, nothing is merged: the admin screen lists the conflict with a diff and a person picks a side.
+ * - Optionally (`drafts: true` on a target) drafts sync too: a branch `monti/draft/<slug>` and a pull request per entry with unpublished changes. Publishing in the CMS
+ *   merges the pull request, and merging it on GitHub publishes the entry.
  *
  * The GitHub token and the webhook secret are saved on the plugin's admin screen (encrypted with the server config's `secret`), never in config.
  *
@@ -40,9 +42,11 @@ export const gitSync = (options: GitSyncOptions) =>
 export type { GitHubClient, GitHubClientFactory, GitHubClientOptions } from "./github/client";
 export {
 	DEFAULT_BRANCH,
+	DEFAULT_DRAFT_DEBOUNCE_MS,
 	DEFAULT_FORMAT,
 	DEFAULT_PATH_PATTERN,
 	DEFAULT_PR_BRANCH,
+	DRAFT_BRANCH_PREFIX,
 	GIT_SYNC_PLUGIN_NAME,
 	type GitSyncMode,
 	type GitSyncOptions,

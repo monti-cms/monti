@@ -14,6 +14,10 @@ export const DEFAULT_BRANCH = "main";
 /** The branch `"pr"` mode commits to and opens its pull request from. */
 export const DEFAULT_PR_BRANCH = "monti/publish";
 export const DEFAULT_DEBOUNCE_MS = 2000;
+/** The prefix of the branch of a draft (`monti/draft/<slug>`). */
+export const DRAFT_BRANCH_PREFIX = "monti/draft/";
+/** How long an entry has to be quiet (no save) before its draft goes to the draft branch. */
+export const DEFAULT_DRAFT_DEBOUNCE_MS = 30_000;
 
 /**
  * One place published entries are synced to: a branch of a GitHub repo, optionally a folder in it. A separate content repo uses the whole repo; a site repo
@@ -50,6 +54,11 @@ export interface GitSyncTarget {
 	readonly prBranch?: string;
 	/** REST API root of GitHub Enterprise Server (`https://git.example.com/api/v3`). Default: github.com. */
 	readonly apiUrl?: string;
+	/**
+	 * Also sync drafts. Each entry with unpublished changes gets a branch `monti/draft/<slug>` and a pull request into `branch`; publishing in the CMS merges
+	 * that pull request, and merging it on GitHub publishes the entry. Default `false`.
+	 */
+	readonly drafts?: boolean;
 }
 
 export interface GitSyncOptions {
@@ -61,6 +70,11 @@ export interface GitSyncOptions {
 	 * A publish after a quiet period is committed at once. `0` commits every publish at once. Default 2000.
 	 */
 	readonly debounceMs?: number;
+	/**
+	 * Draft saves are frequent (the editor autosaves), so a draft goes to its branch only once the entry has been quiet for this many milliseconds: the branch gets
+	 * one commit per pause, not one per save. Only for targets with `drafts: true`. `0` commits every save at once. Default 30000.
+	 */
+	readonly draftDebounceMs?: number;
 	/**
 	 * Makes the GitHub client (the REST client by default). For tests and for hosts that reach GitHub another way; `@monti-cms/git-sync/testing` has a fake.
 	 * It runs on the server only.
@@ -80,6 +94,7 @@ export interface ResolvedTarget {
 	readonly collections: readonly string[];
 	readonly mode: GitSyncMode;
 	readonly prBranch: string;
+	readonly drafts: boolean;
 	readonly apiUrl?: string;
 }
 
@@ -142,6 +157,14 @@ export function resolveTarget(target: GitSyncTarget, index: number): ResolvedTar
 	const branch = target.branch ?? DEFAULT_BRANCH;
 	const prBranch = target.prBranch ?? DEFAULT_PR_BRANCH;
 	if (mode === "pr" && prBranch === branch) throw new Error(`${label}: \`prBranch\` must differ from \`branch\``);
+	if (target.drafts !== undefined && typeof target.drafts !== "boolean") {
+		throw new Error(`${label}: \`drafts\` must be true or false`);
+	}
+	if (target.drafts === true && (branch.startsWith(DRAFT_BRANCH_PREFIX) || prBranch.startsWith(DRAFT_BRANCH_PREFIX))) {
+		throw new Error(
+			`${label}: \`branch\` and \`prBranch\` cannot be under "${DRAFT_BRANCH_PREFIX}", which is for drafts`,
+		);
+	}
 	return {
 		id,
 		repo: target.repo,
@@ -152,6 +175,7 @@ export function resolveTarget(target: GitSyncTarget, index: number): ResolvedTar
 		collections: target.collections,
 		mode,
 		prBranch,
+		drafts: target.drafts === true,
 		...(target.apiUrl ? { apiUrl: target.apiUrl } : {}),
 	};
 }
@@ -168,6 +192,12 @@ export function resolveTargets(options: GitSyncOptions): ResolvedTarget[] {
 	}
 	if (options.debounceMs !== undefined && (!Number.isFinite(options.debounceMs) || options.debounceMs < 0)) {
 		throw new Error("git-sync: `debounceMs` must be 0 or more");
+	}
+	if (
+		options.draftDebounceMs !== undefined &&
+		(!Number.isFinite(options.draftDebounceMs) || options.draftDebounceMs < 0)
+	) {
+		throw new Error("git-sync: `draftDebounceMs` must be 0 or more");
 	}
 	return targets;
 }

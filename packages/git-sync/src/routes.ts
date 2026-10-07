@@ -7,6 +7,7 @@ import {
 	readJsonBody,
 } from "@monti-cms/core/plugin/server";
 import { listConflicts, type Resolution, resolveConflict } from "./conflicts";
+import { listDraftPullRequests } from "./drafts";
 import { GitHubApiError } from "./github/client";
 import { pullTarget } from "./inbound";
 import { flushTarget, resumeAfterToken } from "./outbound";
@@ -96,6 +97,18 @@ export const flush = {
 	),
 };
 
+/** The open draft pull requests (`?entryId=` for one entry: the editor's "Draft PR" link). */
+export const drafts = {
+	GET: adminRoute(
+		guarded(async ({ request, cms }) => {
+			const entryId = new URL(request.url).searchParams.get("entryId") ?? undefined;
+			return json({
+				items: await listDraftPullRequests(syncContextFor(cms), entryId === undefined ? {} : { entryId }),
+			});
+		}),
+	),
+};
+
 export const conflicts = {
 	GET: adminRoute(guarded(async ({ cms }) => json({ items: await listConflicts(syncContextFor(cms)) }))),
 };
@@ -107,6 +120,10 @@ export const resolve = {
 			const target = text(body, "target");
 			const entryId = text(body, "entryId");
 			const resolution = text(body, "resolution");
+			const scope = text(body, "scope");
+			if (scope !== undefined && scope !== "draft") {
+				throw new HttpError(400, "invalid_input", "`scope` must be draft when it is given");
+			}
 			if (!target || !entryId || (resolution !== "git" && resolution !== "server")) {
 				throw new HttpError(400, "invalid_input", "`target`, `entryId` and `resolution` (git or server) are required");
 			}
@@ -116,6 +133,7 @@ export const resolve = {
 					entryId,
 					resolution: resolution as Resolution,
 					gitSha: text(body, "gitSha"),
+					...(scope === "draft" ? { scope } : {}),
 				}),
 			);
 		}),

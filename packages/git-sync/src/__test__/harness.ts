@@ -30,6 +30,8 @@ export interface HarnessOptions {
 	readonly targets?: readonly GitSyncTarget[];
 	/** Default 0: every publish is committed at once. */
 	readonly debounceMs?: number;
+	/** Default 0: every draft save goes to its branch at once. */
+	readonly draftDebounceMs?: number;
 	/** Leave the token and the webhook secret unsaved. */
 	readonly noSettings?: boolean;
 	/** The server config has no `secret`: nothing can be encrypted. Implies `noSettings`. */
@@ -46,6 +48,9 @@ export const DEFAULT_TARGET: GitSyncTarget = {
 	collections: ["post", "memo", "tag"],
 };
 
+/** The default target with drafts on. */
+export const DRAFT_TARGET: GitSyncTarget = { ...DEFAULT_TARGET, drafts: true };
+
 /**
  * A real CMS instance (Postgres in an isolated schema, the production store and content service, the `mdx` format, the plugin) against a GitHub in memory.
  * What the tests drive is what the app runs: a publish goes through the content service, the event outbox and the plugin's `afterCommit`.
@@ -60,6 +65,7 @@ export async function createHarness(options: HarnessOptions = {}) {
 			gitSync({
 				targets: options.targets ?? [DEFAULT_TARGET],
 				debounceMs: options.debounceMs ?? 0,
+				draftDebounceMs: options.draftDebounceMs ?? 0,
 				client: github.factory,
 			}),
 		],
