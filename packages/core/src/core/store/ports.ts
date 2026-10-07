@@ -279,6 +279,12 @@ export interface EventStore {
 		retryAt: Date;
 		maxAttempts: number;
 	}): Promise<"failed" | "dead">;
+	/**
+	 * Puts a claimed delivery back to `pending`, due at `retryAt`, without counting the try (`attempts` goes back by one) and without an error: the subscriber
+	 * asked to be called again later (a batch window, a rate limit it knows the end of). It is not listed as failed and never dead-letters. It still holds the
+	 * order of its entry. Returns `false` when the delivery is not in flight.
+	 */
+	deferDelivery(params: { eventId: string; subscriber: string; retryAt: Date }): Promise<boolean>;
 	/** Deliveries in the states (default `failed` and `dead`), newest event first. */
 	listEventDeliveries(params?: {
 		states?: readonly EventDeliveryState[];

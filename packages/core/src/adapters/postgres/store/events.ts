@@ -166,6 +166,16 @@ export function createEventOps(ctx: StoreContext): EventStore {
 			return res.rows[0]?.state ?? "failed";
 		},
 
+		deferDelivery: async ({ eventId, subscriber, retryAt }) => {
+			const res = await pool.query(
+				`UPDATE ${deliveries}
+				 SET state = 'pending', attempts = GREATEST(attempts - 1, 0), last_error = NULL, locked_until = NULL, next_attempt_at = $3
+				 WHERE event_id = $1 AND subscriber = $2 AND state = 'delivering'`,
+				[eventId, subscriber, retryAt],
+			);
+			return (res.rowCount ?? 0) > 0;
+		},
+
 		listEventDeliveries: async (params) => {
 			const states = params?.states ?? ["failed", "dead"];
 			const limit = Math.min(Math.max(params?.limit ?? 50, 1), 200);

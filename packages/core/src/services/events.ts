@@ -3,10 +3,12 @@ import {
 	type AfterCommit,
 	CmsError,
 	type ContentEvent,
+	DeferDelivery,
 	type EventDelivery,
 	type EventDeliveryCounts,
 	type EventDeliveryState,
 	type EventStore,
+	isDeferred,
 } from "../core/store";
 import type { Entry } from "../core/store/types";
 
@@ -59,6 +61,8 @@ export interface EventRetryResult {
 	readonly failed: number;
 	/** Deliveries that failed on their last allowed try and were dead-lettered. */
 	readonly dead: number;
+	/** Deliveries a subscriber deferred (asked to be called again later): rescheduled, not failures. */
+	readonly deferred: number;
 }
 
 export interface EventListOptions {
@@ -124,14 +128,26 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 	const deliver = async (
 		claim: { change: ContentEvent; subscriber: string; attempts: number },
 		handler: AfterCommit,
-		result: { delivered: number; failed: number; dead: number },
+		result: { delivered: number; failed: number; dead: number; deferred: number },
 	) => {
 		const { change, subscriber, attempts } = claim;
 		try {
-			await handler(change);
+			const outcome = await handler(change);
+			if (isDeferred(outcome)) throw new DeferDelivery(outcome.retryAt);
 			await store().completeDelivery({ eventId: change.eventId, subscriber, now: now() });
 			result.delivered += 1;
 		} catch (error) {
+			if (isDeferred(error)) {
+				// "Not yet": rescheduled, not a failure (nothing is logged, no attempt is used, it is not listed as failed).
+				const rescheduled = await store()
+					.deferDelivery({ eventId: change.eventId, subscriber, retryAt: error.retryAt })
+					.catch((failure) => {
+						console.error("[cms] could not defer an event delivery", change.eventId, failure);
+						return false;
+					});
+				if (rescheduled) result.deferred += 1;
+				return;
+			}
 			const at = now();
 			const state = await store()
 				.failDelivery({
@@ -157,7 +173,7 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 
 	/** Claims and delivers what is due until nothing is left or `limit` deliveries were tried. */
 	const drain = async (params: { entryIds?: readonly string[]; limit: number; ignoreBackoff?: boolean }) => {
-		const result = { delivered: 0, failed: 0, dead: 0 };
+		const result = { delivered: 0, failed: 0, dead: 0, deferred: 0 };
 		const subscribers = await options.subscribers();
 		if (subscribers.length === 0) return result;
 		const byName = new Map(subscribers.map((subscriber) => [subscriber.name, subscriber.handler]));

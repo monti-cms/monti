@@ -71,7 +71,29 @@ export interface ContentEvent extends ContentChange {
  * The change stands even if it fails, and the failure is retried. Delivery is at least once, so it must be idempotent: use `event.eventId` to skip an event
  * it already handled.
  */
-export type AfterCommit = (event: ContentEvent) => void | Promise<void>;
+export type AfterCommit = (event: ContentEvent) => void | DeferredDelivery | Promise<void | DeferredDelivery>;
+
+/**
+ * What a subscriber returns (or, as {@link DeferDelivery}, throws) to say "not yet, call me again at `retryAt`", for example while it batches events. The delivery
+ * is rescheduled: it is not a failure, so it is not listed as failed, does not count in the failed badge, does not use up an attempt and never dead-letters.
+ * It still holds the order of the entry's later events.
+ */
+export interface DeferredDelivery {
+	readonly retryAt: Date;
+}
+
+/** Throw it from a subscriber to defer the delivery (see {@link DeferredDelivery}). */
+export class DeferDelivery extends Error implements DeferredDelivery {
+	readonly retryAt: Date;
+	constructor(retryAt: Date, message = "Delivery deferred") {
+		super(message);
+		this.name = "DeferDelivery";
+		this.retryAt = retryAt;
+	}
+}
+
+export const isDeferred = (value: unknown): value is DeferredDelivery =>
+	typeof value === "object" && value !== null && (value as { retryAt?: unknown }).retryAt instanceof Date;
 
 /**
  * Delivery state of one event for one subscriber.

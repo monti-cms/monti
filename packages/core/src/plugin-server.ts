@@ -17,7 +17,7 @@ export type {
 	EntryStatus,
 	PublishedEntryRecord,
 } from "./core/store";
-export { CmsError } from "./core/store";
+export { CmsError, DeferDelivery, type DeferredDelivery } from "./core/store";
 export { type Issue, ServiceError } from "./core/types";
 export { type ExportBodyParams, exportBodyText } from "./format/export-body";
 export { HttpError, handleApiError } from "./http/v1/error-handler";

@@ -1,7 +1,7 @@
 import type { BlockDefinition } from "../blocks/define";
 import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
-import type { ContentEvent } from "../core/store";
+import type { AfterCommit, ContentEvent } from "../core/store";
 import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
 import type { PluginStorage } from "./storage";
@@ -110,7 +110,7 @@ export interface CmsServerPlugin {
 	 * instance it runs for, so a subscriber that must read its storage or the content (`cms.storage(name)`, `cms.store()`, `cms.formats()`) needs no state of its own.
 	 * A plugin that has both this and `hooks.afterCommit` is one subscriber (`plugin:<name>`) that runs `hooks.afterCommit` first.
 	 */
-	readonly afterCommit?: (event: ContentEvent, cms: Cms) => void | Promise<void>;
+	readonly afterCommit?: (event: ContentEvent, cms: Cms) => ReturnType<AfterCommit>;
 	/**
 	 * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti migrate`), runs the command with the instance and
 	 * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).

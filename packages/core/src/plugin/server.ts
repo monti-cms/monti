@@ -1,5 +1,5 @@
 import type { Cms } from "../cms";
-import type { AfterCommit } from "../core/store";
+import { type AfterCommit, isDeferred } from "../core/store";
 import { createFormatRegistry, type FormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
@@ -136,8 +136,9 @@ export function createServerPlugins(
 				subscribers.push({
 					name,
 					handler: async (event) => {
-						await hook?.(event);
-						await afterCommit?.(event, cms());
+						const early = await hook?.(event);
+						if (isDeferred(early)) return early;
+						return afterCommit?.(event, cms());
 					},
 				});
 			}
