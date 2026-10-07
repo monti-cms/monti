@@ -10,6 +10,7 @@ import { CmsAdminComponentsProvider } from "../../../admin-components";
 import { BlockFrame, type BlockView, Content, type EditorResult, useBlockEditor } from "../../../hooks/public";
 import { renderWithSite } from "../../../test/site";
 import { para, storedDoc, withoutIds } from "../../../test/stored-doc";
+import { type EditorAllowance, editorAllowance } from "../../allowed";
 import { buildEditorExtensions } from "../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 
@@ -26,9 +27,17 @@ beforeAll(() => {
 	}
 });
 
-function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Editor) => void }) {
+function Harness({
+	doc,
+	onReady,
+	allowance,
+}: {
+	doc: StoredDocument;
+	onReady: (editor: Editor) => void;
+	allowance?: EditorAllowance;
+}) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(testSite),
+		extensions: buildEditorExtensions(testSite, {}, allowance),
 		content: storedToTiptap(testSite, doc),
 		immediatelyRender: true,
 	});
@@ -38,12 +47,18 @@ function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Edit
 	return <EditorContent editor={editor} />;
 }
 
-const mount = async (doc: StoredDocument, ready: string, views: Record<string, BlockView> = {}) => {
+const mount = async (
+	doc: StoredDocument,
+	ready: string,
+	views: Record<string, BlockView> = {},
+	allowance?: EditorAllowance,
+) => {
 	let editor: Editor | null = null;
 	renderWithSite(
 		<CmsAdminComponentsProvider components={{ blockViews: views }}>
 			<Harness
 				doc={doc}
+				allowance={allowance}
 				onReady={(next) => {
 					editor = next;
 				}}
@@ -394,5 +409,53 @@ describe("useBlockEditor commands", () => {
 		});
 		expect(labelsOfAt(editor, 1)).toEqual(["둘", "하나"]);
 		expect(editor.state.selection.$from.parent.textContent).toBe("둘째");
+	});
+});
+
+/** A callout view with one button that adds a code block to the callout's body. */
+function CalloutWithCode() {
+	const block = useBlockEditor();
+	const [code, setCode] = useState("");
+	return (
+		<BlockFrame>
+			<Content />
+			<button
+				type="button"
+				onClick={() => {
+					const result = block.addChild({ name: "codeBlock" });
+					setCode(result.ok ? "added" : result.error.code);
+				}}
+			>
+				add code
+			</button>
+			<output aria-label="code-result">{code}</output>
+		</BlockFrame>
+	);
+}
+
+describe("a block view adding body content the body's allowed list does not allow", () => {
+	const callout = storedDoc({ type: "callout", content: [para("안")] });
+	const mountCallout = (allowance?: EditorAllowance) =>
+		mount(callout, "[data-cms-block-content]", { callout: CalloutWithCode }, allowance);
+	const codeBlocks = (editor: Editor) => {
+		let count = 0;
+		editor.state.doc.descendants((node) => {
+			if (node.type.name === "codeBlock") count += 1;
+		});
+		return count;
+	};
+
+	it("adds a code block when the list allows it, or when the body has no list", async () => {
+		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout", "codeBlock"] }));
+		click("add code");
+		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("added"));
+		expect(codeBlocks(editor)).toBe(1);
+	});
+
+	it("fails with invalid_state and writes nothing when the list does not allow code blocks", async () => {
+		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout"] }));
+		click("add code");
+		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("invalid_state"));
+		expect(codeBlocks(editor)).toBe(0);
 	});
 });

@@ -64,6 +64,7 @@ const components = { icons: { eye: Eye } };
 - `CmsEditor`는 `doc`을 받고, 바뀔 때마다 `onChange(doc)`를 부른다. 문서가 블록에 준 id가 그대로 담긴다. 편집기 자신이 만든 것이 아닌 `doc`이 오면 편집기가 보이는 것을 바꾼다
   (같은 내용에 id나 키 순서만 다른 문서는 그대로 둔다). `@monti-cms/admin/editor`의 `storedToTiptap(doc)`·`tiptapToStored(json)`이 바로 바꿔 준다. 편집 화면이 없는 노드나
   문서로 읽지 못한 본문(`unparsed` 노드 하나)은 읽기 전용 상자(`cmsOpaqueBlock`)에 통째로 담아 아무것도 잃지 않는다.
+- `CmsEditor`는 `allowed`(컬렉션 `body`의 객체 형태: `blocks`, `marks`, `headings`. 편집 화면은 컬렉션의 것을 넘긴다)도 받는다. 그러면 그것만 보여 주고 받아들이며(툴바, 슬래시·컴포넌트 메뉴, 글 말풍선, 입력 규칙, 단축키, 붙여넣기), 이미 다른 것이 들어 있는 본문도 그대로 열리고 저장된다. `@monti-cms/core` README의 "본문별 허용 블록·마크"를 본다.
 - 편집 화면의 폼은 본문을 `form.doc`으로 든다(초안, 브라우저 복구본, 충돌 비교가 모두 문서를 본다. 내용으로 비교하므로 블록 id와 키 순서는 따지지 않는다). 그 전에 본문을 MDX 글로 `form.mdx`에 담아
   저장한 복구본도 그대로 되살린다. 이런 복구본은 `unparsed` 문서로 보관되고, 원문 패널(`@monti-cms/mdx`의 `mdx()` 플러그인)이 열려 있으면 다시 읽는다.
 - `DocPreview`(`@monti-cms/admin/editor`)는 번역 화면이 원문을 보이고 AI가 결과를 보이는 문서 읽기 전용 보기다.

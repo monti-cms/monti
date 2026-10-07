@@ -24,6 +24,7 @@ export * from "./core/translation/state";
 export * from "./core/types";
 export type { StoredDocument } from "./doc/stored-document";
 export * from "./i18n";
+export * from "./schema/allowed";
 export * from "./schema/collection";
 export * from "./schema/derive";
 export * from "./schema/fields";

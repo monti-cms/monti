@@ -1,4 +1,5 @@
 import { type CodeBlockConfig, validateCodeBlockConfig } from "../annotation/code-block/line-effects";
+import { createBlocks } from "../blocks/active";
 import type { BlockDefinition } from "../blocks/define";
 import { resolveBlocks } from "../blocks/resolve";
 import { type MediaConfig, validateMediaConfig } from "../core/media-types";
@@ -6,6 +7,7 @@ import type { StoredDocument } from "../doc/stored-document";
 import type { MessageValue } from "../i18n/define";
 import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisions";
 import type { CmsPlugin } from "../plugin/define";
+import { validateBodyAllowed } from "../schema/allowed";
 import { type CollectionSchema, normalizeCollection, validateListColumns } from "../schema/collection";
 import { RESERVED_METADATA_KEYS, SUMMARY_ROLE } from "../schema/fields";
 import { valueFieldsOf } from "../schema/walk";
@@ -381,6 +383,11 @@ function validate(
 
 	const blockDefinitions = resolveBlocks(config);
 	const blocks = blockDefinitions.map((block) => block.name);
+	// The names in a body's allowed list must be blocks and marks of this site.
+	const bodySite = createBlocks(config);
+	for (const [collection, schema] of Object.entries(config.collections)) {
+		validateBodyAllowed(collection, schema.allowed, bodySite);
+	}
 	validateCodeBlockConfig(config.codeBlock);
 	validateMediaConfig(config.media);
 

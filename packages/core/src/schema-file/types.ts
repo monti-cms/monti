@@ -1,4 +1,5 @@
 import type { LocaleConfig, SeedConfig, SiteConfig } from "../config/define";
+import type { BodyAllowed } from "../schema/allowed";
 import type { CollectionSchema } from "../schema/collection";
 
 /**
@@ -7,8 +8,11 @@ import type { CollectionSchema } from "../schema/collection";
  * and `schema.json` (the JSON Schema editors read) is generated from it.
  */
 
-/** A collection as the file writes it: like `CollectionSchema`, and `body` is left out when it is the default (documents have a body, items do not). */
-export type SchemaCollection = Omit<CollectionSchema, "body"> & { readonly body?: boolean };
+/**
+ * A collection as the file writes it: like `CollectionSchema`, and `body` is left out when it is the default (documents have a body, items do not). The object
+ * form of `body` limits the blocks, marks and heading levels the body allows (`CollectionSchema.allowed`).
+ */
+export type SchemaCollection = Omit<CollectionSchema, "body" | "allowed"> & { readonly body?: boolean | BodyAllowed };
 
 /** Admin settings the file can hold. Text overrides are strings only (a function needs code). */
 export interface SchemaAdmin {
@@ -77,11 +81,16 @@ export type ResolvedSchema<Schema extends SchemaInput> = Schema extends SchemaTy
 		? SchemaTypes
 		: RegisteredSchema;
 
+/** A collection with the `body` flag `defineConfig` fills in: `true` or `false`, also when the file writes the object form that limits the body. */
+type WithBodyFlag<Collection> = 0 extends 1 & Collection
+	? Collection
+	: Omit<Collection, "body"> & { readonly body: boolean };
+
 /** The collections of the file, each with the `body` flag `defineConfig` fills in. */
 export type SchemaCollectionsOf<Schema extends SchemaInput> = {
-	readonly [Name in keyof ResolvedSchema<Schema>["collections"]]: ResolvedSchema<Schema>["collections"][Name] & {
-		readonly body: boolean;
-	};
+	readonly [Name in keyof ResolvedSchema<Schema>["collections"]]: WithBodyFlag<
+		ResolvedSchema<Schema>["collections"][Name]
+	>;
 };
 
 /** Union of the locale codes of the file. */

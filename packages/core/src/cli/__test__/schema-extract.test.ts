@@ -88,6 +88,26 @@ describe("extract -> load round trip", () => {
 		expect(extractSchemaData(withBody).schema.collections.note?.body).toBe(true);
 	});
 
+	it("writes the allowed list of a body as the object form of `body`, and loads it back as the same list", () => {
+		const allowed = { blocks: ["table"], marks: ["bold", "link"], headings: [2, 3] } as const;
+		const limited = defineConfig({
+			collections: {
+				memo: defineCollection({
+					label: "Memo",
+					kind: "document",
+					body: allowed,
+					fields: { title: fields.text({ label: "T" }), slug: fields.slug({ label: "S" }) },
+				}),
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		});
+		const { schema } = extractSchemaData(limited);
+		expect(schema.collections.memo?.body).toEqual(allowed);
+		const loaded = defineConfig({ schema: JSON.parse(schemaFileText(schema)) });
+		expect(loaded.collections.memo).toMatchObject({ body: true, allowed });
+	});
+
 	it("writes the labels plugins provide in the language asked for, else in the admin language of the site", () => {
 		const labelOf = (locale?: string) =>
 			extractSchemaData(blog as CmsConfig, { locale }).schema.collections.post?.fields.seoTitle?.label;

@@ -232,6 +232,33 @@ declare module "@monti-cms/core" {
 				readonly memo: {
 					readonly label: "Memo";
 					readonly kind: "document";
+					readonly body: {
+						readonly blocks: readonly [
+							"callout",
+							"collapsible",
+							"table",
+							"taskList",
+							"image",
+							"file",
+							"codeBlock",
+							"blockquote",
+							"horizontalRule",
+							"footnotes",
+						];
+						readonly marks: readonly [
+							"bold",
+							"italic",
+							"strike",
+							"underline",
+							"code",
+							"link",
+							"tooltip",
+						];
+						readonly headings: readonly [
+							2,
+							3,
+						];
+					};
 					readonly fields: {
 						readonly title: {
 							readonly kind: "text";

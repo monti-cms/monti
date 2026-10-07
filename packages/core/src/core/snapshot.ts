@@ -314,7 +314,8 @@ export async function prepareSnapshot(
 	// The body is a document: given as one, or read from text (a text that could not be read is one `unparsed` node).
 	const body = await readInputBody(site, input, options?.previousDoc, options?.import);
 	const { doc } = body;
-	const check = checkDocument(site, doc);
+	const allowed = site.schemaOf(rawCollection).allowed;
+	const check = checkDocument(site, doc, allowed);
 	const warnings: Issue[] = [
 		...metadataWarnings(site, rawCollection, metadata),
 		...(options?.imported?.warnings ?? []),

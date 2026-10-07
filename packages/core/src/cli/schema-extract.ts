@@ -49,7 +49,9 @@ export function extractSchemaData(config: CmsConfig, options: { readonly locale?
 
 	const collections = Object.fromEntries(
 		Object.entries(resolved.collections).map(([name, collection]) => {
-			const { body, ...rest } = collection;
+			const { body, allowed, ...rest } = collection;
+			// The object form of `body` carries the allowed blocks and marks (and means the collection has a body).
+			if (allowed) return [name, { ...rest, body: allowed }];
 			// The default is left out: documents have a body, items do not.
 			return [name, body === (collection.kind === "document") ? rest : { ...rest, body }];
 		}),

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isAdminPath, isHomeHref, isHttpUrl, isTimeZone, LOCALE_CODE, LOCALE_PREFIX_MODES } from "../config/rules";
+import { CORE_BODY_BLOCKS, CORE_BODY_MARKS, HEADING_LEVELS } from "../schema/allowed";
 import type { SchemaFile } from "./types";
 
 /**
@@ -166,10 +167,38 @@ const layoutGroup = z.strictObject({
 	tab: text.optional(),
 });
 
+const bodyAllowed = z
+	.strictObject({
+		blocks: z
+			.array(text)
+			.optional()
+			.describe(
+				`Allowed blocks: core blocks (${CORE_BODY_BLOCKS.join(", ")}) and blocks of block extensions or the site config by block name (callout, tabs, ...). Paragraphs and lists are always allowed. Left out: all blocks.`,
+			),
+		marks: z
+			.array(text)
+			.optional()
+			.describe(
+				`Allowed marks: ${CORE_BODY_MARKS.join(", ")}, and text styles of block extensions or the site config by block name (tooltip, color, ...). Left out: all marks.`,
+			),
+		headings: z
+			.array(z.literal([...HEADING_LEVELS]))
+			.optional()
+			.describe("Allowed heading levels (1 to 6). The editor offers levels 2 to 4. Left out: all levels."),
+	})
+	.describe(
+		"What the body allows. The editor offers only these, and every save and publish warns about stored content that is not listed (it is kept as it is and never rejected).",
+	);
+
 const collection = z.strictObject({
 	label: text,
 	kind: z.enum(["document", "item"], { error: 'a collection needs a "kind" of document or item' }),
-	body: flag.optional().describe("Whether entries have a body. Default: documents do, items do not."),
+	body: z
+		.union([flag, bodyAllowed])
+		.optional()
+		.describe(
+			"Whether entries have a body (default: documents do, items do not), or an object that limits the blocks, marks and heading levels the body allows.",
+		),
 	fields: z.record(text, field).describe("Field name -> definition. A `title` text field is required."),
 	path: text.optional().describe("Public address shape with `:slug` once, e.g. `/posts/:slug`."),
 	icon: text.optional().describe("Admin sidebar icon name (lucide)."),

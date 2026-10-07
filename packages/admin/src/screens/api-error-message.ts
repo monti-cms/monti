@@ -39,6 +39,8 @@ const DETAILED_CODES = new Set([
 	"missing_block_attribute",
 	"invalid_block_attribute",
 	"unknown_block_attribute",
+	"disallowed_block",
+	"disallowed_mark",
 	"code_annotation_out_of_range",
 	"footnote_definition_missing",
 	"footnote_definition_unused",

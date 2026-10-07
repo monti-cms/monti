@@ -1,6 +1,8 @@
 import type { Site } from "@monti-cms/core/client";
 import StarterKit from "@tiptap/starter-kit";
 import { addedMarksOf, createAddedMark, type EditorMarkSpec } from "./added-marks";
+import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
+import { cmsAllowedGuard, restrictExtensions } from "./allowed-extension";
 import { CmsBlockKeymap } from "./block-commands";
 import { CmsBlockIds } from "./block-ids";
 import { BLOCK_NODES } from "./block-views";
@@ -14,9 +16,14 @@ import { cmsSchemaExtensions } from "./tiptap-schema";
  * Editor extension assembly. Feature extensions (key handling, drag, plugins) are added to this list.
  * Schema nodes go in `tiptap-schema.ts`, core block nodes (image, file, math) in `block-views.ts`,
  * and CmsNode ↔ Tiptap conversion in `converters/`. The look of added text styles (`marks`) is provided by the admin extension (`CmsAdminComponents.marks`).
+ * `allowance` is what the body's allowed list lets a writer add (`allowed.ts`); without it everything is allowed.
  */
-export function buildEditorExtensions(site: Site, marks: Readonly<Record<string, EditorMarkSpec>> = {}) {
-	return [
+export function buildEditorExtensions(
+	site: Site,
+	marks: Readonly<Record<string, EditorMarkSpec>> = {},
+	allowance: EditorAllowance = OPEN_ALLOWANCE,
+) {
+	const extensions = [
 		StarterKit.configure({
 			// Body insertion starts at H2, but H1, H5, and H6 in older posts are shown at their original level too.
 			heading: { levels: [1, 2, 3, 4, 5, 6] },
@@ -38,4 +45,8 @@ export function buildEditorExtensions(site: Site, marks: Readonly<Record<string,
 		// Last, so its global attribute reaches every block node above.
 		CmsBlockIds,
 	];
+	if (!allowance.limited) return extensions;
+	// A body that limits its blocks and marks: every node and mark stays in the schema (a body that holds one still opens), but the ones not allowed lose
+	// their input rules, paste rules and shortcuts, and a guard refuses a change that would add one (`allowed-extension.ts`).
+	return [cmsAllowedGuard(allowance), ...restrictExtensions(extensions, allowance)];
 }

@@ -40,6 +40,10 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 			"Publish the source first. Shared values of a translation, like categories and the publish date, come from the published source.",
 		"issue.untranslated_text": "Untranslated text remains.",
 		"issue.unparsed_body": "The body could not be read as a document. Fix it in the source before publishing.",
+		"issue.disallowed_block":
+			"This block isn't allowed in this body. What is already saved is kept as it is, but new ones can't be added.",
+		"issue.disallowed_mark":
+			"This text style isn't allowed in this body. What is already saved is kept as it is, but it can't be added to more text.",
 		"error.conflict": "It was changed elsewhere first. Check the latest version and try again.",
 		"error.slug_conflict": "This address (slug) is already in use.",
 		"error.translation_exists": "A translation in this language already exists (including the trash).",
@@ -97,6 +101,10 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		"issue.source_not_published": "원문을 먼저 발행하세요. 번역본의 분류·발행일 같은 공통 값은 원문 공개본에서 옵니다.",
 		"issue.untranslated_text": "번역하지 않은 글이 남아 있습니다.",
 		"issue.unparsed_body": "본문을 문서로 읽을 수 없습니다. 발행하기 전에 소스에서 고치세요.",
+		"issue.disallowed_block":
+			"이 본문에서 허용하지 않는 블록입니다. 이미 저장된 내용은 그대로 남지만 새로 추가할 수는 없습니다.",
+		"issue.disallowed_mark":
+			"이 본문에서 허용하지 않는 텍스트 스타일입니다. 이미 저장된 내용은 그대로 남지만 더 많은 글에 적용할 수는 없습니다.",
 		"error.conflict": "다른 곳에서 먼저 바뀌었습니다. 최신 내용을 확인한 뒤 다시 시도하세요.",
 		"error.slug_conflict": "이미 쓰이고 있는 주소(slug)입니다.",
 		"error.translation_exists": "이 언어의 번역본이 이미 있습니다(휴지통 포함).",

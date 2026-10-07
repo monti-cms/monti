@@ -25,8 +25,48 @@
 						]
 					},
 					"body": {
-						"description": "Whether entries have a body. Default: documents do, items do not.",
-						"type": "boolean"
+						"description": "Whether entries have a body (default: documents do, items do not), or an object that limits the blocks, marks and heading levels the body allows.",
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "object",
+								"properties": {
+									"blocks": {
+										"description": "Allowed blocks: core blocks (table, taskList, math, image, file, codeBlock, blockquote, horizontalRule, footnotes, text-align) and blocks of block extensions or the site config by block name (callout, tabs, ...). Paragraphs and lists are always allowed. Left out: all blocks.",
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									},
+									"marks": {
+										"description": "Allowed marks: bold, italic, strike, underline, code, link, superscript, subscript, and text styles of block extensions or the site config by block name (tooltip, color, ...). Left out: all marks.",
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									},
+									"headings": {
+										"description": "Allowed heading levels (1 to 6). The editor offers levels 2 to 4. Left out: all levels.",
+										"type": "array",
+										"items": {
+											"type": "number",
+											"enum": [
+												1,
+												2,
+												3,
+												4,
+												5,
+												6
+											]
+										}
+									}
+								},
+								"additionalProperties": false,
+								"description": "What the body allows. The editor offers only these, and every save and publish warns about stored content that is not listed (it is kept as it is and never rejected)."
+							}
+						]
 					},
 					"fields": {
 						"type": "object",

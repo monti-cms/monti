@@ -676,6 +676,43 @@ codeBlock: {
 - `languages`: Shiki language names or aliases (e.g. `elixir`, `zig`) added to the default list. The editor offers them in the language dropdown, labeled by name.
   A fence whose language is not loaded (not in the default list nor in `languages`) renders as plain text.
 
+### Allowed blocks and marks per body
+
+A body can limit the blocks and marks a writer may add. Write the object form of `body` on the collection, in `monti.schema.json` or in code with `defineCollection`:
+
+```json
+"memo": {
+	"label": "Memo",
+	"kind": "document",
+	"body": {
+		"blocks": ["callout", "collapsible", "table", "codeBlock", "image"],
+		"marks": ["bold", "italic", "link", "tooltip"],
+		"headings": [2, 3]
+	},
+	"fields": { "title": { "kind": "text", "label": "Title", "required": true } }
+}
+```
+
+The object form means the collection has a body. Every key is optional, and a key that is left out allows everything of its kind (a body with no list allows all, as before). One list is read by the editor and by validation, so the two cannot disagree.
+
+- `blocks`: core blocks by name, `table`, `taskList`, `math`, `image`, `file`, `codeBlock`, `blockquote`, `horizontalRule`, `footnotes` (the reference and the definition) and `text-align`; and the blocks added by block extensions or the config's `blocks` by block name (`callout`, `tabs`, `chart`, ...).
+  The children of a block (a tab, a column, a table row or cell) go with their parent. Paragraphs, lists and line breaks are always allowed.
+- `marks`: `bold`, `italic`, `strike`, `underline`, `code`, `link`, `superscript`, `subscript`, and the text styles added by block extensions or the config by block name (`tooltip`, `color`, `code-ref`, ...). The translation note is never limited.
+- `headings`: the levels (1 to 6) a body allows. The editor offers levels 2 to 4 (the page title is the level 1 heading), so other levels are only checked in stored content.
+- A name that is not a block or mark of the site (a typo, a block that is not installed) is an error when the config loads, so a mistake never leaves a block allowed by accident.
+
+**What the editor offers.** `CmsEditor` takes the list (`allowed`; the edit screen passes the collection's) and offers only what it allows: the toolbar (the heading levels, text styles, script, alignment, lists, quote, code block, table, divider, footnote, link and upload tools), the `/` slash menu, the component menu, and the text bubble. Input rules (`> `, `# `, `- [ ] `, `---`, a code fence, `**bold**`) and shortcuts of what is not allowed are turned off, and a command that would add one is refused.
+A block added from a block view (`useBlockEditor().addChild`) follows the same list: adding a code block to a container while code blocks are not allowed fails with `invalid_state`.
+
+**Paste.** A pasted block that is not allowed is not inserted, but its text is: a text block (a heading of another level, a code block) becomes a paragraph, a container (a table, a quote, a callout) gives the paragraphs inside it, and a block with no text is dropped (a formula says its source, an image its description, a file its name). A mark that is not allowed is dropped from the text. The content is kept, only its form changes. Moving blocks inside the editor is not a paste and keeps them as they are.
+
+**Content that is already there.** The list only limits what a writer can add. A body that holds a block or mark that is no longer allowed opens, shows it, and saves it unchanged: nothing is stripped, and the writer can edit inside it, move it, duplicate it and delete it (the same rule as turning code block tools off). Nothing is refused or stripped by the server either.
+
+**Validation.**
+
+- Stored content that the list does not allow is a **warning on every save and on publish**, never a blocker: `disallowed_block` (the block name, `heading 4` for a heading level) and `disallowed_mark`, each with the id of the block it is in (`position.blockId`).
+- A write is **never rejected** for content the list does not allow, so the writer's other edits are always saved. Every save (the admin, the REST API, AI, bulk changes, a template) returns the same warnings, and the admin shows them like other save warnings. The editor (menus, input rules, paste conversion) is what keeps new content inside the list.
+
 ### Text color list
 
 Text colors come from the blocks extension (`color({ palette })` of `@monti-cms/blocks`). The old config `textColors` is gone (move it to the option).
@@ -1010,7 +1047,7 @@ Everything in this table except `codeBlock` and `media` can be written in the sc
 ### Collections
 
 - **Kind (`kind`).** A `document` has a body, separates draft from published content, and is published explicitly. An `item` is a small form whose saved values
-  are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents.
+  are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents. `body` can also be an object that limits the blocks, marks and heading levels the body allows ("Allowed blocks and marks per body").
   The old name `workflow: "publish" | "record"` was removed; a config that still has it fails with the `kind` to use (`publish` → `document`, `record` → `item`).
 - **Layout (`layout`).** If absent, it is one group in field declaration order, and fields with their own `tab` gather in that tab.
 - **List (`list.columns`).** If absent, the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation
