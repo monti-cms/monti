@@ -4,6 +4,7 @@ import { defineMessages } from "@monti-cms/core";
 export const blocksMessages = defineMessages("cms-admin.editor-blocks", {
 	en: {
 		"settings.label": "Settings",
+		"issues.label": "Warnings for this block",
 		"added.toolbar": "{label} tools",
 		"added.placeholder": "Enter {label}",
 		"fence.editing": "Editing",
@@ -27,6 +28,7 @@ export const blocksMessages = defineMessages("cms-admin.editor-blocks", {
 	},
 	ko: {
 		"settings.label": "설정",
+		"issues.label": "이 블록의 경고",
 		"added.toolbar": "{label} 도구",
 		"added.placeholder": "{label}을(를) 입력하세요",
 		"fence.editing": "편집 중",

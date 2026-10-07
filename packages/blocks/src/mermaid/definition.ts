@@ -1,6 +1,7 @@
 import { createActiveTranslator, defineBlock } from "@monti-cms/core";
 import { keywordList } from "../shared/text";
 import { mermaidMessages } from "./messages";
+import { validateMermaidBlock } from "./validate";
 
 const t = createActiveTranslator(mermaidMessages);
 
@@ -16,6 +17,7 @@ export const mermaidBlock = defineBlock({
 	syntax: { kind: "fence", lang: "mermaid" },
 	component: "Mermaid",
 	attributes: {},
+	validate: validateMermaidBlock,
 	editor: {
 		view: "node",
 		insertable: true,

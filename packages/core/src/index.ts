@@ -19,7 +19,11 @@ export type {
 	BlockDefinition,
 	BlockEditor,
 	BlockInsert,
+	BlockIssue,
+	BlockNode,
 	BlockSyntax,
+	BlockValidate,
+	BlockValidateContext,
 } from "./blocks/define";
 export { defineBlock } from "./blocks/define";
 export {

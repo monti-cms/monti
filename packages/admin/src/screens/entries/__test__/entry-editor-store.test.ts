@@ -209,6 +209,32 @@ describe("save", () => {
 		expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "entry-1", version: 5 }), { created: false });
 	});
 
+	it("keeps the warnings of the latest save and publish as state, replaced by the next one", async () => {
+		const { editor, client } = await opened();
+		expect(editor().bodyWarnings).toEqual([]);
+		const warning = { code: "chart_syntax", message: "1줄: 문법 오류", position: { blockId: "chart001" } };
+		// The fake server saves as usual; this one answer also carries a warning.
+		const save = client.update.getMockImplementation() as typeof client.update;
+		client.update.mockImplementationOnce(async (id, input) => ({ ...(await save(id, input)), warnings: [warning] }));
+		editor().setForm({ title: "수정" });
+		expect((await editor().save()).ok).toBe(true);
+		expect(editor().bodyWarnings).toEqual([warning]);
+
+		// A save that finds none clears them.
+		editor().setForm({ title: "다시 수정" });
+		expect((await editor().save()).ok).toBe(true);
+		expect(editor().bodyWarnings).toEqual([]);
+
+		const publish = client.publish.getMockImplementation() as typeof client.publish;
+		client.publish.mockImplementationOnce(async (id, input) => ({
+			...(await publish(id, input)),
+			warnings: [warning],
+		}));
+		const published = await editor().publish();
+		expect(published.ok && published.value.warnings).toEqual([warning]);
+		expect(editor().bodyWarnings).toEqual([warning]);
+	});
+
 	it("a save with nothing to save sends nothing", async () => {
 		const { editor, client } = await opened();
 		const result = await editor().save();
