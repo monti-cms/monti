@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/mdx",
-	"version": "0.2.0-next.1",
+	"version": "0.2.0-next.2",
 	"private": true,
 	"description": "MDX for @monti-cms/core: the mdx format (import and export), renderMdx, the admin source panel, syntax extensions and the migrations of stores that kept bodies as MDX",
 	"license": "MIT",
