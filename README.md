@@ -12,7 +12,7 @@ Run this in the folder of a Next.js (App Router) app:
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core"
 # 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
 ```
@@ -83,9 +83,9 @@ Not on npm yet. Until the public release, install the release bundle from the `r
 ```json
 {
 	"dependencies": {
-		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.0&path:/core",
-		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.0&path:/admin",
-		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs"
+		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.1&path:/core",
+		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.1&path:/admin",
+		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.1&path:/nextjs"
 	}
 }
 ```
@@ -122,7 +122,7 @@ git commit -am "chore(release): v0.1.0"
 git tag v0.1.0 && git push origin main v0.1.0
 ```
 
-When a `v*` tag is pushed, the release workflow (`.github/workflows/release.yml`) builds and packs the packages, commits them to the `release` branch and adds a `release/v0.2.0-next.0` tag.
+When a `v*` tag is pushed, the release workflow (`.github/workflows/release.yml`) builds and packs the packages, commits them to the `release` branch and adds a `release/v0.2.0-next.1` tag.
 
 ## License
 

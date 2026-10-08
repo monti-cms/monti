@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/bareun",
-	"version": "0.2.0-next.0",
+	"version": "0.2.0-next.1",
 	"private": true,
 	"description": "Bareun spell and sentence checker for @monti-cms/core",
 	"license": "MIT",
