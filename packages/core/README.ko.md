@@ -19,7 +19,7 @@ React 19 위의 Next.js 16(App Router) 앱이 필요하다. `@monti-cms/core`를
 
 ```sh
 # 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core"
 # 2. init을 돌린다. 나머지 Monti 패키지는 같은 릴리스에서 설치된다
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필�
 ### 1. 패키지
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.0&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.0&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.1&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.1&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.1&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 

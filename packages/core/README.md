@@ -19,7 +19,7 @@ Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core"
 # 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 ### 1. Packages
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.0&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.0&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.1&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.1&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.1&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
