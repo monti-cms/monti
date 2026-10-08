@@ -11,22 +11,10 @@
 Next.js(App Router) 앱 폴더에서 실행한다.
 
 ```sh
-# 공개 릴리스 전에는 @monti-cms/core를 먼저 릴리스 번들로 설치한다("설치" 참고)
-# pnpm
-pnpm add @monti-cms/core
+# 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core"
+# 2. init을 돌린다. 나머지 Monti 패키지는 같은 릴리스에서 설치된다
 pnpm exec monti init
-
-# npm
-npm install @monti-cms/core
-npx monti init
-
-# yarn
-yarn add @monti-cms/core
-yarn monti init
-
-# bun
-bun add @monti-cms/core
-bunx monti init
 ```
 
 앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.json`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **이미 있는 파일은 하나도 고치지 않고**(`next.config`, 루트 레이아웃, `tsconfig.json`, `.gitignore`) `.env.local`도 쓰지 않는다. 대신 남은 일을 복사할 내용 그대로 번호를 붙여 쉬운 말로 적어 준다(`next.config`의 `withCms` 변경, `<html>`의 `suppressHydrationWarning`, `cp .env.example .env.local`, 그다음 `monti migrate`, `monti doctor`, `pnpm dev`). 데이터베이스는 건드리지 않는다.
@@ -37,7 +25,12 @@ bunx monti init
 설치 → monti init → monti migrate → monti doctor → pnpm dev
 ```
 
-pnpm 12라면 설치 전에 `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다(pnpm 12는 esbuild의 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
+pnpm 12라면 1단계 전에 `pnpm-workspace.yaml`에 이렇게 적는다(core가 쓰는 `tsx`가 esbuild를 가져오고, pnpm 12는 그 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
+
+```yaml
+allowBuilds:
+  esbuild: true
+```
 
 - **질문:** 데이터베이스 스키마, GitHub id, 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`).
 - **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓰고 묻지 않고 설치한다. `--no-install`은 설치하지 않고 설치 명령을 적어 준다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
@@ -45,7 +38,7 @@ pnpm 12라면 설치 전에 `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild:
 - **언어:** `hello.ko.mdx` + `hello.en.mdx` 같은 파일 이름(또는 `ko/`, `en/` 폴더)이 사이트 언어가 된다. `--yes`에서는 그대로 쓰고, 기본 언어는 짝이 없는 파일을 가진 언어다.
 - **블록:** 기본 본문 블록은 가벼운 묶음이고, `mermaid`와 `chart`는 직접 고를 때만 들어간다(`--blocks all`). 둘은 `@monti-cms/blocks/mermaid`와 `@monti-cms/blocks/chart`에서 오고, 고른 경우에만 `mermaid`와 `recharts`가 따라오므로 고르지 않은 앱은 둘 다 불러오지도 설치하지도 않는다.
 
-공개 릴리스 전에는 `@monti-cms/core`를 먼저 릴리스 번들로 설치하고("설치" 참고), 나머지는 `monti init`이 설치한다. `monti`는 언제나 `@monti-cms/core`를 설치한 뒤에 돌린다. 설치 전의 `npx monti`는 관계없는 다른 패키지를 받는다. 모든 명령을 담은 짧은 안내는 core README의 [빠른 시작](packages/core/README.ko.md#빠른-시작-기존-next-앱)이다.
+공개 릴리스 전에는 `@monti-cms/core`를 먼저 GitHub 주소로 추가하고(위 1단계), 나머지 Monti 패키지는 `monti init`이 같은 릴리스에서(`package.json`에 적힌 ref를 그대로 써서) 설치하고, 외부 패키지는 npm에서 설치한다. `monti`는 언제나 `@monti-cms/core`를 설치한 뒤에 돌린다. 설치 전의 `npx monti`는 관계없는 다른 패키지를 받는다. 모든 명령을 담은 짧은 안내는 core README의 [빠른 시작](packages/core/README.ko.md#빠른-시작-기존-next-앱)이다.
 
 ## 조용히 하는 자동 동작은 없다
 
@@ -90,9 +83,9 @@ pnpm exec monti doctor
 ```json
 {
 	"dependencies": {
-		"@monti-cms/core": "github:monti-cms/monti#release/v0.1.0&path:/core",
-		"@monti-cms/admin": "github:monti-cms/monti#release/v0.1.0&path:/admin",
-		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.1.0&path:/nextjs"
+		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.0&path:/core",
+		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.0&path:/admin",
+		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs"
 	}
 }
 ```
@@ -129,7 +122,7 @@ git commit -am "chore(release): v0.1.0"
 git tag v0.1.0 && git push origin main v0.1.0
 ```
 
-`v*` 태그가 올라가면 배포 워크플로(`.github/workflows/release.yml`)가 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/v0.1.0` 태그를 붙인다.
+`v*` 태그가 올라가면 배포 워크플로(`.github/workflows/release.yml`)가 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/v0.2.0-next.0` 태그를 붙인다.
 
 ## 라이선스
 

@@ -18,24 +18,18 @@ install → monti init → monti migrate → monti doctor → pnpm dev
 Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti's own new files, asks before installing the other packages, and prints what is left; it edits none of your existing files and never touches the database). Copy the block for your package manager:
 
 ```sh
-# pnpm
-pnpm add @monti-cms/core
+# 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core"
+# 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
-
-# npm
-npm install @monti-cms/core
-npx monti init
-
-# yarn
-yarn add @monti-cms/core
-yarn monti init
-
-# bun
-bun add @monti-cms/core
-bunx monti init
 ```
 
-With pnpm 12, add `allowBuilds:` with `esbuild: true` to `pnpm-workspace.yaml` first (pnpm 12 stops an install until esbuild's install script is allowed; Monti does not edit that file).
+With pnpm 12, put this in `pnpm-workspace.yaml` before step 1 (core's `tsx` brings esbuild, and pnpm 12 stops an install until its install script is allowed; Monti does not edit that file):
+
+```yaml
+allowBuilds:
+  esbuild: true
+```
 
 3. **Do the steps init printed.** Init changes none of your files, so it ends with a numbered list with exact content to copy: the `next.config` change (`withCms`), `suppressHydrationWarning` on `<html>`, `"resolveJsonModule": true` in `tsconfig.json` and `.env.local` in `.gitignore` (each only when your app needs it), and `cp .env.example .env.local` (fill it in; `.env.example` says what each value is and where to get it, and `openssl rand -base64 32` makes `MONTI_SECRET`).
 4. **Create the tables and check the setup.** `pnpm exec monti migrate`, then `pnpm exec monti doctor`, which lists every check as `ok`, `warn` or `FAIL`; every warning says what is wrong, where, and how to fix it (it also tells you if one of the init steps above is missing). It also lists what Monti decided on its own, with where each value came from.
