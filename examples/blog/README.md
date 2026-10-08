@@ -42,6 +42,42 @@ The shape is what `monti init` generates, plus this site's collections and exten
 
 To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/cms/auth/callback/github`.
 
+## Using your own components
+
+A block's look is yours to replace on both sides, with what already exists. This blog draws the `callout` block with its own `components/callout.tsx` (`SiteCallout`, plain inline styles, no hooks, so server and client code can both import it).
+
+On the public page, pass it to `CmsContent` (`components/article-body.tsx`); the props are typed by the block's definition:
+
+```tsx
+import type { calloutBlock } from "@monti-cms/blocks";
+import type { BlockProps } from "@monti-cms/core/render";
+
+const PublicSiteCallout = ({ variant, title, children }: BlockProps<typeof calloutBlock>) => (
+	<SiteCallout variant={variant} title={title}>{children}</SiteCallout>
+);
+
+<CmsContent cms={cms} entry={entry} components={{ blocks: { callout: PublicSiteCallout } }} />;
+```
+
+In the admin editor, a block view draws the same component around the editable body (`plugins/site-callout/`, one `siteCallout()` line in `monti.config.ts`, registered like `plugins/word-list/`). `useBlockEditor()`, `BlockFrame` and `Content` come from `@monti-cms/admin/hooks`, `AttributeInput` and `ContainerToolbar` from `@monti-cms/admin/blocks`:
+
+```tsx
+function SiteCalloutView() {
+	const block = useBlockEditor();
+	const variant = String(block.values.variant ?? "note");
+	return (
+		<BlockFrame>
+			<SiteCallout variant={variant} title={<AttributeInput value={String(block.values.title ?? "")} onCommit={(title) => block.setValue("title", title)} />}>
+				<Content />
+			</SiteCallout>
+			<ContainerToolbar label="Callout">{/* a select that calls block.setValue("variant", …) */}</ContainerToolbar>
+		</BlockFrame>
+	);
+}
+
+// provider.tsx ("use client"): <CmsAdminComponentsProvider components={{ blockViews: { callout: SiteCalloutView } }}>
+```
+
 ## Git sync (off by default)
 
 `monti.config.ts` lists `gitSync({ enabled: false, targets: [...] })` (`@monti-cms/git-sync`), which syncs the published posts and memos two ways with files in a GitHub repo. It is switched off, so the example needs no token and no repo, and its admin has no "Git sync" screen. To try it:

@@ -8,6 +8,10 @@ import {
 	tableOfContents,
 } from "@monti-cms/core/render";
 import type { ReactNode } from "react";
+import { PublicSiteCallout } from "./callout";
+
+// The site's own component for the `callout` block, used unless the page passes its own `components`.
+const siteComponents: DocumentComponents = { blocks: { callout: PublicSiteCallout } };
 
 export interface ArticleBodyProps {
 	/** The CMS instance the entry was read from (your `cms`): its site decides the blocks and the code settings the body is drawn with. */
@@ -37,7 +41,7 @@ const defaultTocItem = (item: DocumentTocItem) => <a href={item.href}>{item.valu
 export async function ArticleBody({
 	cms,
 	entry,
-	components,
+	components = siteComponents,
 	toc = "top",
 	tocRange,
 	tocLabel = "Table of contents",
