@@ -177,13 +177,24 @@ describe("block ids", () => {
 		callout: (label) => ({ type: "callout", attrs: { variant: "note", title: label }, content: [paragraph(label)] }),
 	};
 
+	/** The same value with its keys written in the opposite order at every depth: a stored version does not order keys as the reader does. */
+	const restored = <T>(value: T): T => {
+		if (Array.isArray(value)) return value.map(restored) as T;
+		if (value === null || typeof value !== "object") return value;
+		return Object.fromEntries(
+			Object.entries(value)
+				.reverse()
+				.map(([key, member]) => [key, restored(member)]),
+		) as T;
+	};
+
 	/** The top-level blocks in order, by label, each with its id, from `labels` of blocks of `kind` among plain paragraphs. */
 	const read = (kind: string, labels: string[], previous?: CmsNode[]): CmsNode[] =>
 		assignBlockIds(
 			labels.map((label) =>
 				label.startsWith("B") ? (kinds[kind] as (label: string) => CmsNode)(label) : paragraph(label),
 			),
-			[previous],
+			[previous && restored(previous)],
 		);
 
 	describe.each(Object.keys(kinds))("of a %s", (kind) => {
