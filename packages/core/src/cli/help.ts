@@ -1,4 +1,5 @@
 import { DOCTOR_HELP } from "./doctor/command";
+import { EJECT_HELP } from "./eject/command";
 import { IMPORT_HELP } from "./import/command";
 
 /**
@@ -89,6 +90,7 @@ const SCHEMA_APPLY_HELP = `  schema:apply    Run the data transforms of the sche
 const SECTIONS: readonly (readonly [string, string])[] = [
 	["init", INIT_HELP],
 	["add", ADD_HELP],
+	["eject", EJECT_HELP],
 	["import", IMPORT_HELP],
 	["migrate", MIGRATE_HELP],
 	["events:retry", EVENTS_RETRY_HELP],

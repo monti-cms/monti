@@ -66,6 +66,11 @@
 	},
 	"files": [
 		"dist",
+		"src",
+		"!src/test",
+		"!src/**/__test__",
+		"!src/**/*.test.ts",
+		"!src/**/*.test.tsx",
 		"README.md"
 	],
 	"publishConfig": {

@@ -14,6 +14,7 @@ const help = async (...argv: string[]) => {
 const COMMANDS = [
 	"init",
 	"add",
+	"eject",
 	"import",
 	"migrate",
 	"events:retry",

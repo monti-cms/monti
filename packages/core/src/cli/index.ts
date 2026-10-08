@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { addComponents, formatAddReport } from "./add";
 import { DOCTOR_HELP, runDoctorCommand } from "./doctor";
+import { type EjectCommandIo, runEjectCommand } from "./eject";
 import { eventsRetry } from "./events";
 import { HELP, helpFor } from "./help";
 import { IMPORT_HELP, runImportCommand } from "./import/command";
@@ -18,6 +19,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
  * - `monti add <name...> [--registry <url|path>] [--overwrite] [--dry-run]`: copies components from the registry into the app as source and installs what they need.
  * - `monti import <path> [--dry-run] [--publish] [--collection <name>] [--format <name>] [--mapping <file>] [--yes] [--json] [--overwrite] [env options]`: imports existing `.md` and `.mdx` posts through the CMS.
+ * - `monti eject <package> [--dry-run] [--yes] [--no-install] [--json]` and `monti eject --diff <package> [--to <version>]`: takes the source of a UI package into the site as a workspace package, and shows what changed upstream since.
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
@@ -50,6 +52,26 @@ export {
 	runDoctor,
 	runDoctorCommand,
 } from "./doctor";
+export {
+	EJECT_HELP,
+	EJECTABLE_PACKAGES,
+	EJECTED_FILE,
+	type EjectablePackage,
+	type EjectCommandIo,
+	EjectError,
+	type EjectedPackage,
+	type EjectOptions,
+	type EjectReport,
+	ejectability,
+	ejectableNames,
+	ejectPackage,
+	formatEjectReport,
+	formatUpstreamDiff,
+	readEjected,
+	runEjectCommand,
+	type UpstreamDiff,
+	upstreamDiff,
+} from "./eject";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { type EventsRetryOptions, eventsRetry } from "./events";
 export {
@@ -125,6 +147,10 @@ export interface CliIo {
 	readonly error: (message: string) => void;
 	/** Answers the questions of `monti import` (tests). Default: the terminal, when there is one. */
 	readonly prompter?: Prompter;
+	/** Runs the package manager for `monti eject` (tests). Default: spawns it. */
+	readonly runInstall?: EjectCommandIo["runInstall"];
+	/** Downloads a package for `monti eject --diff` (tests). Default: `npm pack`. */
+	readonly fetchPackage?: EjectCommandIo["fetchPackage"];
 }
 
 /** Runs the command and returns the exit code. */
@@ -169,6 +195,9 @@ export async function runCli(
 			});
 			io.log(formatAddReport(report));
 			return report.conflicts.length > 0 && !report.dryRun ? 1 : 0;
+		}
+		if (command === "eject") {
+			return await runEjectCommand(rest, io);
 		}
 		if (command === "import") {
 			return await runImportCommand(rest, io);

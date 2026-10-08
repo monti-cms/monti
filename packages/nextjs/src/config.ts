@@ -33,6 +33,19 @@ const installedFrom = (from: string, name: string, boundary?: string): boolean =
 };
 
 /**
+ * The packages `monti eject` took into the site (`.monti/ejected.json`). Their source is TypeScript in a workspace folder, so they are built with the app like core.
+ * A missing or unreadable record is no packages.
+ */
+export function ejectedPackages(root: string): string[] {
+	const record = readJson(path.join(root, ".monti", "ejected.json"));
+	const list = Array.isArray(record?.packages) ? (record.packages as unknown[]) : [];
+	return list.flatMap((entry) => {
+		const name = (entry as { package?: unknown } | null)?.package;
+		return typeof name === "string" ? [name] : [];
+	});
+}
+
+/**
  * Optional peer dependencies of the CMS packages the app installed (core and admin packages, and plugin packages with `"cmsPlugin": true` in `package.json`)
  * (`peerDependenciesMeta.optional`) that are not installed.
  * Example: the block extension's Mermaid preview loads `mermaid` only when a preview is opened, but the bundler also tries to resolve `import("mermaid")` of extensions in use or not,
@@ -171,7 +184,9 @@ export function withCms(nextConfig: NextConfig): NextConfig {
 		...nextConfig,
 		// Tells the server and browser bundles Next `basePath` (read by `cmsApiUrl()` and `withBasePath()`). Site code has nothing to do.
 		env: { ...nextConfig.env, NEXT_PUBLIC_CMS_BASE_PATH: nextConfig.basePath?.replace(/\/+$/, "") ?? "" },
-		transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), ...PACKAGES])],
+		transpilePackages: [
+			...new Set([...(nextConfig.transpilePackages ?? []), ...PACKAGES, ...ejectedPackages(process.cwd())]),
+		],
 		turbopack: {
 			...nextConfig.turbopack,
 			resolveAlias: {

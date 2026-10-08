@@ -1,8 +1,10 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Cms } from "../../cms";
 import { type CheckOutcome, fail, ok, skip, warn } from "../../plugin/doctor";
 import { detectPackageManager } from "../add";
+import { compareVersions, readEjected } from "../eject/record";
 import { findRootLayout, hasSuppressHydrationWarning, setupThemeStyles } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
 import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
@@ -775,6 +777,67 @@ const oldAdminComponents: CoreCheck = {
 	},
 };
 
+// ---- ejected ----
+
+/** The version of the `@monti-cms/core` this command runs from (`packages/core/package.json`, three folders above this file in `src` and in `dist`). */
+function runningCoreVersion(): string | undefined {
+	try {
+		const text = readFileSync(fileURLToPath(new URL("../../../package.json", import.meta.url)), "utf8");
+		const version = (JSON.parse(text) as { version?: unknown }).version;
+		return typeof version === "string" ? version : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+const ejectedVersions: CoreCheck = {
+	group: "ejected",
+	id: "versions",
+	title: "Ejected packages",
+	run: (state) => {
+		let ejected: ReturnType<typeof readEjected>;
+		try {
+			ejected = readEjected(state.cwd);
+		} catch (error) {
+			return fail(messageOf(error), {
+				where: ".monti/ejected.json",
+				fix: "fix the JSON, or restore the file from version control",
+			});
+		}
+		if (ejected.length === 0) return ok("no ejected packages");
+		const core = runningCoreVersion();
+		const list = ejected.map((entry) => `${entry.package}@${entry.version} (${entry.directory})`).join(", ");
+		const missing = ejected.filter((entry) => !exists(state, `${entry.directory}/package.json`));
+		if (missing.length > 0) {
+			return warn(
+				`${missing.map((entry) => entry.package).join(", ")} ${missing.length === 1 ? "is" : "are"} recorded as ejected but the folder is gone`,
+				{
+					where: ".monti/ejected.json",
+					fix: `restore ${missing.map((entry) => entry.directory).join(", ")} from version control, or remove the entry from .monti/ejected.json and install the package again`,
+				},
+			);
+		}
+		const older = core ? ejected.filter((entry) => (compareVersions(entry.version, core) ?? 0) < 0) : [];
+		if (older.length === 0) {
+			return ok(
+				`ejected, kept by the site: ${list}. Their updates are your job (\`monti eject --diff <package>\` shows upstream changes)`,
+			);
+		}
+		return warn(
+			`${older.map((entry) => `${entry.package}@${entry.version}`).join(", ")} ${older.length === 1 ? "was" : "were"} ejected from a version older than the @monti-cms/core running here (${core}), so ${older.length === 1 ? "it does" : "they do"} not get that release's fixes and may not match its API`,
+			{
+				where: older.map((entry) => entry.directory).join(", "),
+				fix: older
+					.map(
+						(entry) =>
+							`monti eject --diff ${entry.package}   # what changed upstream since ${entry.version}; merge what you want into ${entry.directory}`,
+					)
+					.join("\n"),
+			},
+		);
+	},
+};
+
 /** The checks of core itself, in the order they are listed. */
 export const CORE_CHECKS: readonly CoreCheck[] = [
 	envFiles,
@@ -793,6 +856,7 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	nextHydration,
 	nextThemeStyles,
 	adminPathCheck,
+	ejectedVersions,
 	oldConfigFiles,
 	oldConfigText,
 	oldEnv,
@@ -801,4 +865,14 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 ];
 
 /** The order the groups are printed in. Groups not listed (plugins) follow. */
-export const GROUP_ORDER = ["config", "schema", "database", "secrets", "auth", "storage", "next", "leftovers"] as const;
+export const GROUP_ORDER = [
+	"config",
+	"schema",
+	"database",
+	"secrets",
+	"auth",
+	"storage",
+	"next",
+	"ejected",
+	"leftovers",
+] as const;
