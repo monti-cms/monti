@@ -18,13 +18,15 @@ beforeAll(async () => {
 		["has-summary", "A summary."],
 		["no-summary", undefined],
 	] as const) {
-		const draft = await service.createDraft({
-			collection: "post",
-			slug,
-			metadata: { title: slug, summary },
-			body: "Body.",
-			format: "mdx",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: "post",
+				slug,
+				metadata: { title: slug, summary },
+				body: "Body.",
+				format: "mdx",
+			})
+		).entry;
 		await service.publish({ id: draft.id, expectedVersion: draft.version });
 	}
 });

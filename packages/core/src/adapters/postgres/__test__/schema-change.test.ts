@@ -115,20 +115,24 @@ describe("schema changes", () => {
 		await migrateContentStore(pool, { site: siteBefore, schema: schemaName });
 		const service = serviceFor(siteBefore);
 
-		const category = await service.createDraft({
-			collection: "category",
-			slug: "news",
-			metadata: { title: "News" },
-			doc: docOf(""),
-		});
+		const category = (
+			await service.createDraft({
+				collection: "category",
+				slug: "news",
+				metadata: { title: "News" },
+				doc: docOf(""),
+			})
+		).entry;
 		ids.category = category.id;
 		const create = async (slugText: string, metadata: Record<string, string | string[]>) => {
-			const draft = await service.createDraft({
-				collection: "post",
-				slug: slugText,
-				metadata,
-				doc: docOf(`Body of ${slugText}`),
-			} as never);
+			const draft = (
+				await service.createDraft({
+					collection: "post",
+					slug: slugText,
+					metadata,
+					doc: docOf(`Body of ${slugText}`),
+				} as never)
+			).entry;
 			return (await service.publish({ id: draft.id, expectedVersion: draft.version })).entry;
 		};
 		// A: published, with every old field, working copy equal to the published copy.
@@ -145,7 +149,7 @@ describe("schema changes", () => {
 				doc: docOf("Body of b"),
 				expectedVersion: b.version,
 			} as never)
-		).id;
+		).entry.id;
 		// C: a draft that was never published.
 		ids.c = (
 			await service.createDraft({
@@ -154,7 +158,7 @@ describe("schema changes", () => {
 				metadata: { title: "C", status: "old", legacy2: "kept" },
 				doc: docOf("Body of c"),
 			} as never)
-		).id;
+		).entry.id;
 		// D: has nothing the change touches.
 		ids.d = (
 			await service.createDraft({
@@ -163,7 +167,7 @@ describe("schema changes", () => {
 				metadata: { title: "D" },
 				doc: docOf("Body of d"),
 			} as never)
-		).id;
+		).entry.id;
 	});
 
 	afterAll(async () => {
@@ -477,12 +481,14 @@ describe("schema changes", () => {
 	describe("a rename onto a field that holds a value", () => {
 		it("keeps both values and says so: nothing is overwritten", async () => {
 			const service = serviceFor(siteBefore);
-			const draft = await service.createDraft({
-				collection: "post",
-				slug: "conflict",
-				metadata: { title: "Conflict", summary: "old summary" },
-				doc: docOf("Body"),
-			} as never);
+			const draft = (
+				await service.createDraft({
+					collection: "post",
+					slug: "conflict",
+					metadata: { title: "Conflict", summary: "old summary" },
+					doc: docOf("Body"),
+				} as never)
+			).entry;
 			// A body that already holds a value under the new name (as a hand edit of the data would leave it).
 			await pool.query(
 				`UPDATE "${schemaName}".entry_bodies SET metadata = metadata || '{"excerpt":"new summary"}'::jsonb WHERE entry_id = $1`,
@@ -509,13 +515,15 @@ describe("schema changes", () => {
 			// The category was never transformed, so it is stored under schema version 1.
 			const entry = await storeFor(siteAfterV2).getEntry(ids.category);
 			expect(entry.working.schemaVersion).toBe(1);
-			const saved = await serviceFor(siteAfterV2).saveDraft(ids.category, {
-				collection: "category",
-				slug: "news",
-				metadata: { ...entry.working.metadata },
-				doc: entry.working.doc,
-				expectedVersion: entry.version,
-			} as never);
+			const saved = (
+				await serviceFor(siteAfterV2).saveDraft(ids.category, {
+					collection: "category",
+					slug: "news",
+					metadata: { ...entry.working.metadata },
+					doc: entry.working.doc,
+					expectedVersion: entry.version,
+				} as never)
+			).entry;
 			expect(saved.version).toBe(entry.version);
 			expect(saved.working.contentHash).toBe(entry.working.contentHash);
 			expect(saved.working.schemaVersion).toBe(1);
@@ -523,23 +531,27 @@ describe("schema changes", () => {
 
 		it("an edit is stored under the site's schema version, and the hash does not depend on it", async () => {
 			const entry = await storeFor(siteAfterV2).getEntry(ids.category);
-			const saved = await serviceFor(siteAfterV2).saveDraft(ids.category, {
-				collection: "category",
-				slug: "news",
-				metadata: { title: "News, renamed" },
-				doc: entry.working.doc,
-				expectedVersion: entry.version,
-			} as never);
+			const saved = (
+				await serviceFor(siteAfterV2).saveDraft(ids.category, {
+					collection: "category",
+					slug: "news",
+					metadata: { title: "News, renamed" },
+					doc: entry.working.doc,
+					expectedVersion: entry.version,
+				} as never)
+			).entry;
 			expect(saved.version).toBeGreaterThan(entry.version);
 			expect(saved.working.schemaVersion).toBe(2);
 			expect(saved.working.contentHash).toBe(computeContentHash(saved.working.metadata, saved.working.doc));
 			// The same content written under another schema version has the same hash.
-			const other = await serviceFor(siteAfter).createDraft({
-				collection: "category",
-				slug: "news-copy",
-				metadata: { ...saved.working.metadata },
-				doc: saved.working.doc,
-			} as never);
+			const other = (
+				await serviceFor(siteAfter).createDraft({
+					collection: "category",
+					slug: "news-copy",
+					metadata: { ...saved.working.metadata },
+					doc: saved.working.doc,
+				} as never)
+			).entry;
 			expect(other.working.schemaVersion).toBe(1);
 			expect(other.working.contentHash).toBe(saved.working.contentHash);
 		});

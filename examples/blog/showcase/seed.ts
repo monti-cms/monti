@@ -19,19 +19,23 @@ const read = (file: string) => readFileSync(fileURLToPath(new URL(file, import.m
 const service = cms.contentService();
 
 // Categories, tags and series are item collections: they are public as soon as they are created.
-const category = await service.createDraft({
-	collection: "category",
-	slug: "showcase",
-	metadata: { title: "Showcase" },
-	format: "mdx",
-	body: "",
-});
+const category = (
+	await service.createDraft({
+		collection: "category",
+		slug: "showcase",
+		metadata: { title: "Showcase" },
+		format: "mdx",
+		body: "",
+	})
+).entry;
 const tags = await Promise.all(
 	[
 		{ slug: "monti", title: "Monti" },
 		{ slug: "blocks", title: "Blocks" },
 	].map(({ slug, title }) =>
-		service.createDraft({ collection: "tag", slug, metadata: { title }, format: "mdx", body: "" }),
+		service
+			.createDraft({ collection: "tag", slug, metadata: { title }, format: "mdx", body: "" })
+			.then((result) => result.entry),
 	),
 );
 const tagIds = tags.map((tag) => tag.id);
@@ -80,42 +84,48 @@ const entries: Entry[] = [
 const created = await Promise.all(
 	entries.map(async (entry) => ({
 		entry,
-		draft: await service.createDraft({
-			collection: entry.collection,
-			slug: entry.slug,
-			metadata: entry.metadata,
-			format: "mdx",
-			body: "Placeholder body.",
-		}),
+		draft: (
+			await service.createDraft({
+				collection: entry.collection,
+				slug: entry.slug,
+				metadata: entry.metadata,
+				format: "mdx",
+				body: "Placeholder body.",
+			})
+		).entry,
 	})),
 );
 const saved: { entry: Entry; id: string; version: number }[] = [];
 for (const { entry, draft } of created) {
-	const result = await service.saveDraft(draft.id, {
-		collection: entry.collection,
-		slug: entry.slug,
-		metadata: entry.metadata,
-		format: "mdx",
-		body: entry.mdx,
-		expectedVersion: draft.version,
-	});
+	const result = (
+		await service.saveDraft(draft.id, {
+			collection: entry.collection,
+			slug: entry.slug,
+			metadata: entry.metadata,
+			format: "mdx",
+			body: entry.mdx,
+			expectedVersion: draft.version,
+		})
+	).entry;
 	saved.push({ entry, id: result.id, version: result.version });
 }
 const idOf = (slug: string) => saved.find((item) => item.entry.slug === slug)?.id ?? "";
 
 // The series holds both published posts, in order.
-const series = await service.createDraft({
-	collection: "collection",
-	slug: "showcase-series",
-	metadata: {
-		title: "Showcase series",
-		summary: "The two showcase posts, in reading order.",
-		itemKind: "post",
-		itemIds: [idOf("cms-elements"), idOf("cms-elements-details")],
-	},
-	format: "mdx",
-	body: "",
-});
+const series = (
+	await service.createDraft({
+		collection: "collection",
+		slug: "showcase-series",
+		metadata: {
+			title: "Showcase series",
+			summary: "The two showcase posts, in reading order.",
+			itemKind: "post",
+			itemIds: [idOf("cms-elements"), idOf("cms-elements-details")],
+		},
+		format: "mdx",
+		body: "",
+	})
+).entry;
 
 // The posts link to each other, so whichever is published first links to a page that is published a moment later. That warning names the target
 // (`message` is its id) and goes away once the target is published, so it is not counted when the target is in this seed's publish list.
@@ -137,22 +147,26 @@ for (const { entry, id, version } of saved) {
 if (problems.length > 0) throw new Error(`the showcase must publish without issues:\n${problems.join("\n")}`);
 
 // A published post whose address was changed: the old address `renamed-post-old` answers a permanent redirect to `renamed-post` (`example:check` tests it).
-const renamed = await service.createDraft({
-	collection: "post",
-	slug: "renamed-post-old",
-	metadata: { title: "A renamed post", categoryId: category.id, tagIds: [tagIds[0]] },
-	format: "mdx",
-	body: "This post was published under another address.",
-});
-const published = await service.publish({ id: renamed.id, expectedVersion: renamed.version });
-const moved = await service.saveDraft(renamed.id, {
-	collection: "post",
-	slug: "renamed-post",
-	metadata: { title: "A renamed post", categoryId: category.id, tagIds: [tagIds[0]] },
-	format: "mdx",
-	body: "This post was published under another address.",
-	expectedVersion: published.entry.version,
-});
+const renamed = (
+	await service.createDraft({
+		collection: "post",
+		slug: "renamed-post-old",
+		metadata: { title: "A renamed post", categoryId: category.id, tagIds: [tagIds[0]] },
+		format: "mdx",
+		body: "This post was published under another address.",
+	})
+).entry;
+const published = (await service.publish({ id: renamed.id, expectedVersion: renamed.version })).entry;
+const moved = (
+	await service.saveDraft(renamed.id, {
+		collection: "post",
+		slug: "renamed-post",
+		metadata: { title: "A renamed post", categoryId: category.id, tagIds: [tagIds[0]] },
+		format: "mdx",
+		body: "This post was published under another address.",
+		expectedVersion: published.version,
+	})
+).entry;
 await service.publish({ id: renamed.id, expectedVersion: moved.version });
 
 const admin = (id: string) => `${origin}/studio/entries/${id}/edit`;

@@ -46,35 +46,38 @@ const branchOf = (slug: string) => `monti/draft/${slug}`;
 
 /** A new draft (never published). */
 const draft = (h: Harness, slug: string, title = slug, body = `Body of ${title}`) =>
-	h.service.createDraft({ collection: "memo", slug, metadata: { title }, body, format: "mdx" });
+	h.service
+		.createDraft({ collection: "memo", slug, metadata: { title }, body, format: "mdx" })
+		.then((result) => result.entry);
 
 /** A new published entry. */
 const published = (h: Harness, slug: string, title = slug, body = `Body of ${title}`) =>
-	h.service.createDraft(
-		{ collection: "memo", slug, metadata: { title }, body, format: "mdx" },
-		{ publishImmediately: true },
-	);
+	h.service
+		.createDraft({ collection: "memo", slug, metadata: { title }, body, format: "mdx" }, { publishImmediately: true })
+		.then((result) => result.entry);
 
 /** Saves the draft of an entry (the entry as it is now, so the version is the current one). */
 const save = async (h: Harness, id: string, fields: { slug: string; title?: string; body: string }) => {
 	const current = await h.store.getEntry(id);
-	return h.service.saveDraft(
-		id,
-		{
-			collection: "memo",
-			slug: fields.slug,
-			metadata: { title: fields.title ?? fields.slug },
-			body: fields.body,
-			format: "mdx",
-			expectedVersion: current.version,
-		},
-		{ publishImmediately: false },
-	);
+	return h.service
+		.saveDraft(
+			id,
+			{
+				collection: "memo",
+				slug: fields.slug,
+				metadata: { title: fields.title ?? fields.slug },
+				body: fields.body,
+				format: "mdx",
+				expectedVersion: current.version,
+			},
+			{ publishImmediately: false },
+		)
+		.then((result) => result.entry);
 };
 
 const publish = async (h: Harness, id: string) => {
 	const current = await h.store.getEntry(id);
-	return h.service.publish({ id, expectedVersion: current.version });
+	return h.service.publish({ id, expectedVersion: current.version }).then((result) => result.entry);
 };
 
 const call = (h: Harness, name: string) => h.github.calls.filter((item) => item === name).length;
@@ -150,13 +153,15 @@ describe("saving a draft", () => {
 	it("keeps the branch name valid and apart when two drafts have the same address", async () => {
 		const h = await make();
 		const memo = await draft(h, "same", "A memo");
-		const post = await h.service.createDraft({
-			collection: "post",
-			slug: "same",
-			metadata: { title: "A post" },
-			body: "x",
-			format: "mdx",
-		});
+		const post = (
+			await h.service.createDraft({
+				collection: "post",
+				slug: "same",
+				metadata: { title: "A post" },
+				body: "x",
+				format: "mdx",
+			})
+		).entry;
 		expect(h.repo.branches.has(branchOf("same"))).toBe(true);
 		expect(h.repo.branches.has(`${branchOf("same")}-${post.id.slice(0, 8)}`)).toBe(true);
 		expect(memo.id).not.toBe(post.id);

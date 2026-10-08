@@ -26,8 +26,10 @@ const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as 
 beforeEach(() => {
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		if (input === "/api/cms/v1/entries/tag-1" && !init?.method) return json(tag);
-		if (input === "/api/cms/v1/entries/tag-1" && init?.method === "PATCH") return json({ ...tag, version: 4 });
-		if (input === "/api/cms/v1/entries" && init?.method === "POST") return json({ ...tag, id: "tag-2" }, 201);
+		if (input === "/api/cms/v1/entries/tag-1" && init?.method === "PATCH")
+			return json({ entry: { ...tag, version: 4 }, warnings: [] });
+		if (input === "/api/cms/v1/entries" && init?.method === "POST")
+			return json({ entry: { ...tag, id: "tag-2" }, warnings: [] }, 201);
 		if (input.startsWith("/api/cms/v1/entries?")) return json({ items: [], total: 0 });
 		throw new Error(`Unexpected fetch ${init?.method ?? "GET"} ${input}`);
 	});

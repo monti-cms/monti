@@ -12,6 +12,7 @@ export const GET = adminRoute<IdParams>(async ({ params, cms }) =>
 export const POST = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const createTranslationSchema = z.object({ locale: z.enum(cms.site.LOCALES as [string, ...string[]]) }).strict();
 	const body = parseWith(createTranslationSchema, await readJsonBody(request));
-	const entry = await cms.contentService().createTranslation({ sourceId: params.id, locale: body.locale });
-	return json(entry, { status: 201 });
+	return json(await cms.contentService().createTranslation({ sourceId: params.id, locale: body.locale }), {
+		status: 201,
+	});
 });

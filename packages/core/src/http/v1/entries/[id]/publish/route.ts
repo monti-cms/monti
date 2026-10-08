@@ -10,7 +10,7 @@ import { adminRoute, json, readVersionedBody } from "../../../handler";
 export const POST = adminRoute<{ id: string }>(async ({ request, params, cms }) => {
 	const { expectedVersion, resetPublishedAt } = await readVersionedBody(request, publishBodySchema);
 	const store = cms.store();
-	const { entry, warnings } = await cms.contentService().publish(
+	const result = await cms.contentService().publish(
 		{ id: params.id, expectedVersion, resetPublishedAt },
 		{
 			extraWarnings: (snapshot) =>
@@ -27,5 +27,5 @@ export const POST = adminRoute<{ id: string }>(async ({ request, params, cms }) 
 				}),
 		},
 	);
-	return json({ ...entry, warnings });
+	return json(result);
 });

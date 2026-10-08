@@ -43,7 +43,7 @@ describe("translation groups (postgres storage)", () => {
 	describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
 		it("reads a version 2 translation status as version 4 with a document holding the text of its source, and writes version 4", async () => {
 			const source = await createPost("legacy-state-source");
-			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 			await pool.query(`UPDATE "${schemaName}".entry_bodies SET translation = $1::jsonb WHERE entry_id = $2`, [
 				JSON.stringify({ version: 2, baseSource: "예전 기준" }),
 				translation.id,
@@ -55,14 +55,16 @@ describe("translation groups (postgres storage)", () => {
 			expect(legacy.working.translation?.baseDoc.content[0]).toMatchObject({ type: "unparsed" });
 			expect(JSON.stringify(legacy.working.translation?.baseDoc)).toContain("예전 기준");
 
-			const resent = await service.saveDraft(translation.id, {
-				collection: contentCollection,
-				slug: "legacy-state-source",
-				metadata: { title: "Only the title" },
-				doc: docOf(""),
-				translation: { version: 2, baseSource: "예전 기준" } as never,
-				expectedVersion: legacy.version,
-			});
+			const resent = (
+				await service.saveDraft(translation.id, {
+					collection: contentCollection,
+					slug: "legacy-state-source",
+					metadata: { title: "Only the title" },
+					doc: docOf(""),
+					translation: { version: 2, baseSource: "예전 기준" } as never,
+					expectedVersion: legacy.version,
+				})
+			).entry;
 			expect(resent.working.translation?.version).toBe(4);
 			const stored = await pool.query<{ translation: { version: number; baseDoc: unknown } }>(
 				`SELECT translation FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
@@ -81,7 +83,7 @@ describe("translation groups (postgres storage)", () => {
 
 		it("permanently deleting the source also deletes trashed translations, and is rejected if a translation outside the trash exists", async () => {
 			const source = await createPost("delete-source");
-			const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
 
 			// Legacy data where only the source is in the trash and the translation is alive.

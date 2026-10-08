@@ -29,14 +29,16 @@ afterAll(async () => {
 
 const publishedPost = async (slug: string, title: string) => {
 	const service = cms.contentService();
-	const draft = await service.createDraft({
-		collection: "post",
-		slug,
-		metadata: { title },
-		body: "Hello.",
-		format: "mdx",
-	});
-	return service.publish({ id: draft.id, expectedVersion: draft.version });
+	const draft = (
+		await service.createDraft({
+			collection: "post",
+			slug,
+			metadata: { title },
+			body: "Hello.",
+			format: "mdx",
+		})
+	).entry;
+	return service.publish({ id: draft.id, expectedVersion: draft.version }).then((result) => result.entry);
 };
 
 describe("slack message on publish", () => {

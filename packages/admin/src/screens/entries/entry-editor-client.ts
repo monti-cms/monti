@@ -20,6 +20,12 @@ export type EntrySaveInput = {
 	readonly translation?: unknown;
 } & EntryBodyPayload;
 
+/** What a write of the admin API answers: the entry as it is now, and the warnings the write found (never part of the entry). */
+export interface EntryWriteResult {
+	readonly entry: EntryData;
+	readonly warnings: readonly CmsIssue[];
+}
+
 /**
  * The server calls the entry editor makes. The default is {@link cmsEntryClient} (the admin API). A test or another transport passes its own to
  * `useEntryEditor({ client })`. Methods reject with `CmsApiError` for an error response and with a `TypeError` when the network is down;
@@ -29,20 +35,12 @@ export type EntrySaveInput = {
  */
 export interface EntryEditorClient {
 	get(id: string): Promise<EntryData>;
-	/** A save answers the entry, with the warnings the server found in it (a block's syntax check, for one). They never block. */
-	create(
-		input: EntrySaveInput & { collection: string; folderId?: string },
-	): Promise<EntryData & { warnings?: CmsIssue[] }>;
-	update(
-		id: string,
-		input: EntrySaveInput & { expectedVersion: number },
-	): Promise<EntryData & { warnings?: CmsIssue[] }>;
-	publish(
-		id: string,
-		input: { expectedVersion: number; resetPublishedAt?: boolean },
-	): Promise<EntryData & { warnings?: CmsIssue[] }>;
+	/** A write answers the entry and, apart from it, the warnings the server found (a block's syntax check, for one). They never block. */
+	create(input: EntrySaveInput & { collection: string; folderId?: string }): Promise<EntryWriteResult>;
+	update(id: string, input: EntrySaveInput & { expectedVersion: number }): Promise<EntryWriteResult>;
+	publish(id: string, input: { expectedVersion: number; resetPublishedAt?: boolean }): Promise<EntryWriteResult>;
 	changeStatus(id: string, action: EntryStatusAction, input: { expectedVersion: number }): Promise<void>;
-	duplicate(id: string, input: { title: string }): Promise<EntryData>;
+	duplicate(id: string, input: { title: string }): Promise<EntryWriteResult>;
 	remove(id: string, input: { expectedVersion: number }): Promise<void>;
 	relations(id: string): Promise<{ incomingReferences: IncomingReferenceItem[] }>;
 }
@@ -57,19 +55,19 @@ export const cmsEntryClient = (site: Site): EntryEditorClient => {
 	return {
 		get: (id) => cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}`), { fallback: t("loadFailed") }),
 		create: (input) =>
-			cmsFetch<EntryData & { warnings?: CmsIssue[] }>(site, cmsApiUrl("/v1/entries"), {
+			cmsFetch<EntryWriteResult>(site, cmsApiUrl("/v1/entries"), {
 				method: "POST",
 				json: input,
 				fallback: t("saveFailed"),
 			}),
 		update: (id, input) =>
-			cmsFetch<EntryData & { warnings?: CmsIssue[] }>(site, cmsApiUrl(`/v1/entries/${id}`), {
+			cmsFetch<EntryWriteResult>(site, cmsApiUrl(`/v1/entries/${id}`), {
 				method: "PATCH",
 				json: input,
 				fallback: t("saveFailed"),
 			}),
 		publish: (id, input) =>
-			cmsFetch<EntryData & { warnings?: CmsIssue[] }>(site, cmsApiUrl(`/v1/entries/${id}/publish`), {
+			cmsFetch<EntryWriteResult>(site, cmsApiUrl(`/v1/entries/${id}/publish`), {
 				method: "POST",
 				json: input,
 				fallback: t("publishFailed"),
@@ -78,7 +76,7 @@ export const cmsEntryClient = (site: Site): EntryEditorClient => {
 			await cmsFetch(site, cmsApiUrl(`/v1/entries/${id}/${action}`), { method: "POST", json: input });
 		},
 		duplicate: (id, input) =>
-			cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}/duplicate`), { method: "POST", json: input }),
+			cmsFetch<EntryWriteResult>(site, cmsApiUrl(`/v1/entries/${id}/duplicate`), { method: "POST", json: input }),
 		remove: async (id, input) => {
 			await cmsFetch(site, cmsApiUrl(`/v1/entries/${id}?expectedVersion=${input.expectedVersion}`), {
 				method: "DELETE",

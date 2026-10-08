@@ -11,6 +11,8 @@ import {
 	isDeferred,
 } from "../core/store";
 import type { Entry } from "../core/store/types";
+import { createMemoryPluginStorage } from "../plugin/memory-storage";
+import type { PluginCollection } from "../plugin/storage";
 
 /**
  * Delivery of the committed changes (the outbox, `core/store/events.ts`) to the subscribers: `hooks.afterCommit` of the server config and of the plugins.
@@ -21,8 +23,15 @@ import type { Entry } from "../core/store/types";
  *   retries happen on the next write of the same process (a few at a time, at most once per `SWEEP_EVERY_MS`), on `cms.events.retry()`, from `monti events:retry`
  *   and from the `POST /v1/events/retry` route a cron can call. That is what serverless hosting allows.
  * - Delivery is at least once and in the commit order per entry: an event is not delivered to a subscriber while an earlier event of the same entry is
- *   still waiting for it (pending, in flight, or failed and not yet dead). Subscribers must be idempotent; `event.eventId` identifies an event.
+ *   still waiting for it (pending, in flight, or failed and not yet dead). Subscribers must be idempotent: `event.once(run)` runs work once per event and
+ *   subscriber, however many times the delivery is tried (it keeps a mark per event in `marks`, and prunes the marks with the events).
  */
+
+/** Where `event.once` keeps its marks: a collection of the instance's plugin storage. */
+export type EventMarks = Pick<PluginCollection<{ at: string }>, "get" | "set" | "list" | "delete">;
+
+const memoryMarks = (): EventMarks =>
+	createMemoryPluginStorage().storage("core-events").collection<{ at: string }>("once");
 
 /** One subscriber. The name is stable: it keys the delivery state, so renaming a subscriber starts it afresh. */
 export interface EventSubscriber {
@@ -92,6 +101,8 @@ export interface EventDispatcherOptions extends EventDeliveryOptions {
 	/** The store with the outbox. Read on each call, so it may be created lazily. */
 	readonly store: () => EventStore & { getEntry(id: string): Promise<Entry> };
 	readonly subscribers: () => Promise<readonly EventSubscriber[]>;
+	/** Where `event.once` keeps its marks. Without it the marks live in the memory of the process, which only a test wants. */
+	readonly marks?: () => EventMarks;
 	readonly now?: () => Date;
 }
 
@@ -124,6 +135,23 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 	const backoffMs = options.backoffMs ?? defaultBackoffMs;
 	const retentionMs = (options.retentionDays ?? DEFAULT_RETENTION_DAYS) * DAY_MS;
 	const store = options.store;
+	const fallbackMarks = memoryMarks();
+	const marksOf = () => options.marks?.() ?? fallbackMarks;
+
+	/** `event.once` of one delivery: skips `run` when an earlier try of this event for this subscriber finished it, and marks it done after `run` returns. */
+	const onceOf = (subscriber: string, eventId: string) => async (run: () => void | Promise<void>) => {
+		const marks = marksOf();
+		const key = `${subscriber}/${eventId}`;
+		if (await marks.get(key)) return false;
+		await run();
+		try {
+			await marks.set(key, { at: now().toISOString() }, { expectedVersion: 0 });
+		} catch (error) {
+			// Another try marked it first: the work is done either way.
+			if (!(error instanceof CmsError && error.code === "conflict")) throw error;
+		}
+		return true;
+	};
 
 	const deliver = async (
 		claim: { change: ContentEvent; subscriber: string; attempts: number },
@@ -198,6 +226,7 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 					...claim.change,
 					attempt: claim.attempts,
 					read: () => readEntry(claim.change.entryId),
+					once: onceOf(claim.subscriber, claim.change.eventId),
 				};
 				await deliver({ change, subscriber: claim.subscriber, attempts: claim.attempts }, handler, result);
 			}
@@ -228,6 +257,18 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 		return drain({ limit: retryOptions.limit ?? DEFAULT_RETRY_LIMIT, ignoreBackoff: retryOptions.all });
 	};
 
+	/** Drops the marks of events old enough to be pruned. A failure leaves them for the next time. */
+	const pruneMarks = async (before: Date) => {
+		const marks = marksOf();
+		try {
+			for (const item of await marks.list()) {
+				if (item.updatedAt < before) await marks.delete(item.key, { expectedVersion: item.version });
+			}
+		} catch (error) {
+			console.error("[cms] could not prune the marks of event.once", error);
+		}
+	};
+
 	let lastSweep = 0;
 	let lastPrune = 0;
 	/** The retries a write carries along. Throttled, small, and silent about failures: the write already succeeded. */
@@ -238,7 +279,9 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 		await retry({ limit: SWEEP_LIMIT });
 		if (at - lastPrune >= PRUNE_EVERY_MS) {
 			lastPrune = at;
-			await store().pruneEvents({ before: new Date(at - retentionMs) });
+			const before = new Date(at - retentionMs);
+			await store().pruneEvents({ before });
+			await pruneMarks(before);
 		}
 	};
 

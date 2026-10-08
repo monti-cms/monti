@@ -18,27 +18,28 @@ afterEach(async () => {
 afterAll(closeGlobalPool);
 
 const publishMemo = (slug: string, title: string, body = `Body of ${title}`) =>
-	h.service.createDraft(
-		{ collection: "memo", slug, metadata: { title }, body, format: "mdx" },
-		{ publishImmediately: true },
-	);
+	h.service
+		.createDraft({ collection: "memo", slug, metadata: { title }, body, format: "mdx" }, { publishImmediately: true })
+		.then((result) => result.entry);
 
 /** Saves a new title and body of an entry as a draft; `publish` also publishes it. */
 const change = async (id: string, values: { title: string; body: string }, publish = true) => {
 	const entry = await h.store.getEntry(id);
-	const saved = await h.service.saveDraft(
-		id,
-		{
-			collection: "memo",
-			slug: entry.workingSlug,
-			metadata: { ...entry.working.metadata, title: values.title },
-			body: values.body,
-			format: "mdx",
-			expectedVersion: entry.version,
-		},
-		{ publishImmediately: false },
-	);
-	if (publish) await h.service.publish({ id, expectedVersion: saved.version });
+	const saved = (
+		await h.service.saveDraft(
+			id,
+			{
+				collection: "memo",
+				slug: entry.workingSlug,
+				metadata: { ...entry.working.metadata, title: values.title },
+				body: values.body,
+				format: "mdx",
+				expectedVersion: entry.version,
+			},
+			{ publishImmediately: false },
+		)
+	).entry;
+	if (publish) (await h.service.publish({ id, expectedVersion: saved.version })).entry;
 };
 
 const pathOf = (slug: string) => `content/memo/${slug}.en.mdx`;

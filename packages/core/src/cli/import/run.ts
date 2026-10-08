@@ -389,22 +389,29 @@ export async function runImport(options: ImportOptions): Promise<ImportReport> {
 			let saved: Entry;
 			let created = false;
 			if (entry) {
-				saved = (await service.saveDraft(entry.id, { ...input, expectedVersion: entry.version } as never, {
-					publishImmediately: false,
-				})) as Entry;
+				saved = (
+					await service.saveDraft(entry.id, { ...input, expectedVersion: entry.version } as never, {
+						publishImmediately: false,
+					})
+				).entry as Entry;
 			} else if (!source) {
-				saved = (await service.createDraft(input as never, {
-					publishImmediately: site.isItemCollection(input.collection) ? undefined : false,
-				})) as Entry;
+				saved = (
+					await service.createDraft(input as never, {
+						publishImmediately: site.isItemCollection(input.collection) ? undefined : false,
+					})
+				).entry as Entry;
 				created = true;
 			} else {
 				const sourceIds = ids.get(source.source.key) as { entryId: string; groupId: string };
-				const blank = (await service.createTranslation({ sourceId: sourceIds.groupId, locale: plan.locale })) as Entry;
+				const blank = (await service.createTranslation({ sourceId: sourceIds.groupId, locale: plan.locale }))
+					.entry as Entry;
 				// Remember the entry before filling it in, so a failure does not leave one that the next run would try to create again.
 				await state.putFile(key, recordOf(plan, blank, sourceIds.groupId, ""));
-				saved = (await service.saveDraft(blank.id, { ...input, expectedVersion: blank.version } as never, {
-					publishImmediately: false,
-				})) as Entry;
+				saved = (
+					await service.saveDraft(blank.id, { ...input, expectedVersion: blank.version } as never, {
+						publishImmediately: false,
+					})
+				).entry as Entry;
 				created = true;
 			}
 			ids.set(key, { entryId: saved.id, groupId: saved.translationGroupId });
@@ -429,17 +436,19 @@ export async function runImport(options: ImportOptions): Promise<ImportReport> {
 		try {
 			const again = rewriteLinks(item.baseDoc, item.plan, index, idOf);
 			if (again.resolved > 0) {
-				const saved = (await service.saveDraft(
-					item.entry.id,
-					{
-						collection: item.plan.collection,
-						slug: item.plan.slug,
-						metadata: (await store.getWorking({ entryId: item.entry.id })).metadata,
-						doc: again.doc,
-						expectedVersion: item.entry.version,
-					} as never,
-					{ publishImmediately: false },
-				)) as Entry;
+				const saved = (
+					await service.saveDraft(
+						item.entry.id,
+						{
+							collection: item.plan.collection,
+							slug: item.plan.slug,
+							metadata: (await store.getWorking({ entryId: item.entry.id })).metadata,
+							doc: again.doc,
+							expectedVersion: item.entry.version,
+						} as never,
+						{ publishImmediately: false },
+					)
+				).entry as Entry;
 				item.entry = saved;
 			}
 			linksResolved += again.resolved;

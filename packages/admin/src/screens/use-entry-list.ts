@@ -384,13 +384,13 @@ export function useEntryList(mode: ListMode) {
 
 	const duplicate = async (item: ListEntriesItem) => {
 		try {
-			const copy = await cmsFetch<{ id: string }>(site, cmsApiUrl(`/v1/entries/${item.id}/duplicate`), {
+			const copy = await cmsFetch<{ entry: { id: string } }>(site, cmsApiUrl(`/v1/entries/${item.id}/duplicate`), {
 				method: "POST",
 				json: { title: copyTitle(site, item.collection, item.title) },
 				fallback: t("duplicate.failed"),
 			});
 			toast.success(t("duplicate.done", { title: item.title || t("common.untitled") }));
-			router.navigate(site.adminEntryEditHref(copy.id));
+			router.navigate(site.adminEntryEditHref(copy.entry.id));
 		} catch (error) {
 			toast.error(errorText(site, error, t("duplicate.failed")));
 		}

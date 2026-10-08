@@ -1,5 +1,4 @@
 import type { Cms } from "../cms";
-import { type AfterCommit, isDeferred } from "../core/store";
 import { createFormatRegistry, type FormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
@@ -55,10 +54,20 @@ export function createServerPlugins(
 ): ServerPlugins {
 	let loaded: Promise<readonly LoadedServerPlugin[]> | undefined;
 
+	/** The server side of one plugin. Its `hooks` are the inline ones (`definePlugin({ hooks })`) or those of its `server` module, never both. */
+	const loadOne = async (plugin: CmsPlugin): Promise<LoadedServerPlugin> => {
+		const server = (await plugin.server?.())?.default;
+		if (plugin.hooks && server?.hooks) {
+			throw new Error(
+				`cms plugin "${plugin.name}": hooks are set both inline (definePlugin({ hooks })) and in its server module. Keep them in one place.`,
+			);
+		}
+		const hooks = plugin.hooks ?? server?.hooks;
+		return { name: plugin.name, ...server, ...(hooks ? { hooks } : {}) };
+	};
+
 	const load = () => {
-		loaded ??= Promise.all(
-			plugins.map(async (plugin) => ({ name: plugin.name, ...(await plugin.server?.())?.default })),
-		).catch((error) => {
+		loaded ??= Promise.all(plugins.map(loadOne)).catch((error) => {
 			loaded = undefined;
 			console.error("[cms] failed to load plugin server modules", error);
 			throw error;
@@ -119,28 +128,10 @@ export function createServerPlugins(
 			}
 		},
 		eventSubscribers: async () => {
-			const hooked = new Map((await writeHooks()).map(({ owner, hooks }) => [owner, hooks.afterCommit] as const));
-			const subscribers: { name: string; handler: AfterCommit }[] = [];
-			const server = hooked.get("server");
-			if (server) subscribers.push({ name: "server", handler: server });
-			for (const plugin of await load()) {
-				const name = `plugin:${plugin.name}`;
-				const hook = hooked.get(name);
-				const { afterCommit } = plugin;
-				if (!hook && !afterCommit) continue;
-				if (!afterCommit && hook) {
-					subscribers.push({ name, handler: hook });
-					continue;
-				}
-				// A subscriber that wants the instance: runs the plain hook first when the plugin has one too.
-				subscribers.push({
-					name,
-					handler: async (event) => {
-						const early = await hook?.(event);
-						if (isDeferred(early)) return early;
-						return afterCommit?.(event, cms());
-					},
-				});
+			const subscribers: EventSubscriber[] = [];
+			for (const { owner, hooks } of await writeHooks()) {
+				const { afterCommit } = hooks;
+				if (afterCommit) subscribers.push({ name: owner, handler: (event) => afterCommit(event, cms()) });
 			}
 			return subscribers;
 		},

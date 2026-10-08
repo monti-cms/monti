@@ -1036,13 +1036,15 @@ describe("ContentService Contract", () => {
 			saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
 		});
 		const saveWith = (storePort: StorePort, body: { format: string; body: string } | { doc: StoredDocument }) =>
-			createContentService(storePort).saveDraft(entryId, {
-				collection: content,
-				slug: "a",
-				metadata: { title: "Title" },
-				expectedVersion: 2,
-				...body,
-			} as SaveDraftInput);
+			createContentService(storePort)
+				.saveDraft(entryId, {
+					collection: content,
+					slug: "a",
+					metadata: { title: "Title" },
+					expectedVersion: 2,
+					...body,
+				} as SaveDraftInput)
+				.then((result) => result.entry);
 		const savedDoc = (storePort: StorePort) =>
 			vi.mocked(storePort.saveWorkingWithReferences).mock.calls[0]?.[0].snapshot.doc as StoredDocument;
 		const idsOf = (doc: StoredDocument) => doc.content.map((block) => block.id);

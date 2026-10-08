@@ -168,7 +168,7 @@ describe("the plugin", () => {
 
 	it("loads its server side, which has the webhook as a public route, the outbox subscriber and the commands", async () => {
 		const server = (await gitSync({ targets: [target()] }).server?.())?.default;
-		expect(server?.afterCommit).toBeTypeOf("function");
+		expect(server?.hooks?.afterCommit).toBeTypeOf("function");
 		expect(Object.keys(server?.commands ?? {}).sort()).toEqual(["flush", "pull", "push"]);
 		const routes = server?.routes ?? [];
 		expect(routes.filter((route) => route.public).map((route) => route.pattern)).toEqual(["v1/git-sync/webhook"]);

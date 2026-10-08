@@ -48,11 +48,14 @@ export interface ContentServiceOptions {
 	readonly pipeline?: WritePipeline;
 }
 
-/** What a write returns, with the warnings hooks added (only when there are any). */
-export type WithWarnings<T> = T & { readonly warnings?: readonly Issue[] };
-
-const withWarnings = <T>(entry: T, warnings: readonly Issue[]): WithWarnings<T> =>
-	(warnings.length > 0 ? { ...(entry as object), warnings } : entry) as WithWarnings<T>;
+/**
+ * What every write of the content service returns (create, save, translate, duplicate, publish, restore): the entry as it is now, and the warnings the
+ * write found (core's, the blocks' and the hooks'). The warnings never block and are never part of the entry; the list is empty when there are none.
+ */
+export interface WriteResult<T> {
+	readonly entry: T;
+	readonly warnings: readonly Issue[];
+}
 
 /**
  * Content writes. Each builds its input and sends it through the one write pipeline (`write-pipeline.ts`) before the store commits it.
@@ -77,7 +80,7 @@ export const createContentService = <T = unknown>(
 		/**
 		 * Creates new content. A record collection is published right away by default (when `publishImmediately` is omitted).
 		 */
-		createDraft: async (input: ServiceInput, options?: { publishImmediately?: boolean }): Promise<WithWarnings<T>> => {
+		createDraft: async (input: ServiceInput, options?: { publishImmediately?: boolean }): Promise<WriteResult<T>> => {
 			assertInputKeys(input, serviceInputKeys(input));
 			const { folderId, ...rest } = withRecordSlug(site, input);
 			const { snapshot, warnings } = await pipeline.run({
@@ -91,7 +94,7 @@ export const createContentService = <T = unknown>(
 				folderId,
 				publishImmediately: options?.publishImmediately ?? site.isItemCollection(input.collection),
 			});
-			return withWarnings(entry, warnings);
+			return { entry, warnings };
 		},
 
 		/**
@@ -101,7 +104,7 @@ export const createContentService = <T = unknown>(
 			entryId: string,
 			input: SaveDraftInput,
 			options?: { publishImmediately?: boolean },
-		): Promise<WithWarnings<T>> => {
+		): Promise<WriteResult<T>> => {
 			assertInputKeys(input, [
 				...serviceInputKeys(input),
 				"expectedVersion",
@@ -131,7 +134,7 @@ export const createContentService = <T = unknown>(
 				folderId,
 				publishImmediately: options?.publishImmediately ?? site.isItemCollection(input.collection),
 			});
-			return withWarnings(entry, warnings);
+			return { entry, warnings };
 		},
 
 		/**
@@ -139,7 +142,7 @@ export const createContentService = <T = unknown>(
 		 * The address reuses the source address (languages differ, so they do not collide). The folder is the same as the source.
 		 * If called on a translation, it is created from that group's source.
 		 */
-		createTranslation: async (params: { sourceId: string; locale: string }): Promise<WithWarnings<T>> => {
+		createTranslation: async (params: { sourceId: string; locale: string }): Promise<WriteResult<T>> => {
 			if (!site.isLocale(params.locale)) throw new ServiceError("invalid_input");
 			const picked = await storePort.getWorking({ entryId: params.sourceId });
 			const sourceId = picked.translationGroupId ?? params.sourceId;
@@ -169,7 +172,7 @@ export const createContentService = <T = unknown>(
 				locale: params.locale,
 				translationOf: sourceId,
 			});
-			return withWarnings(entry, warnings);
+			return { entry, warnings };
 		},
 
 		/**
@@ -177,7 +180,7 @@ export const createContentService = <T = unknown>(
 		 * published version are not copied. `title` replaces the copy's title; any suffix (such as "(copy)") is up to the caller.
 		 * A record or a translation cannot be duplicated (translate the source instead).
 		 */
-		duplicate: async (params: { id: string; title?: string }): Promise<WithWarnings<T>> => {
+		duplicate: async (params: { id: string; title?: string }): Promise<WriteResult<T>> => {
 			const source = await storePort.getWorking({ entryId: params.id });
 			if (site.isItemCollection(source.collection)) throw new ServiceError("invalid_input");
 			if (source.translationGroupId !== undefined && source.translationGroupId !== params.id) {
@@ -201,7 +204,7 @@ export const createContentService = <T = unknown>(
 				publishImmediately: false,
 				locale: source.locale,
 			});
-			return withWarnings(entry, warnings);
+			return { entry, warnings };
 		},
 
 		/**
@@ -212,7 +215,7 @@ export const createContentService = <T = unknown>(
 		publish: async (
 			params: { id: string; expectedVersion: number; resetPublishedAt?: boolean; publishedAt?: Date },
 			options?: { extraWarnings?: (snapshot: PreparedSnapshot) => Promise<readonly Issue[]> },
-		): Promise<{ entry: T; warnings: readonly Issue[] }> => {
+		): Promise<WriteResult<T>> => {
 			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
 			const working = await storePort.getWorking({ entryId: params.id });
 			const { snapshot, warnings, transformed } = await pipeline.run({
@@ -258,14 +261,15 @@ export const createContentService = <T = unknown>(
 		 * `validatePublish` hooks run (a restriction on publishing cannot be bypassed by trash and restore), `transform` hooks do not (the content
 		 * is unchanged). Other collections return to draft and are not published, so nothing runs for them.
 		 */
-		restore: async (params: { id: string; expectedVersion: number }): Promise<T> => {
+		restore: async (params: { id: string; expectedVersion: number }): Promise<WriteResult<T>> => {
 			if (!storePort.restoreEntry) throw new Error("content service: the store cannot restore entries");
 			const working = await storePort.getWorking({ entryId: params.id });
 			if (!site.isItemCollection(working.collection)) {
-				return storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion });
+				const entry = await storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion });
+				return { entry, warnings: [] };
 			}
 			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
-			const { snapshot } = await pipeline.run({
+			const { snapshot, warnings } = await pipeline.run({
 				operation: "restore",
 				entryId: params.id,
 				locale: working.locale ?? site.DEFAULT_LOCALE,
@@ -278,7 +282,8 @@ export const createContentService = <T = unknown>(
 				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
 				skipTransform: true,
 			});
-			return storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion, snapshot });
+			const entry = await storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion, snapshot });
+			return { entry, warnings };
 		},
 	};
 };

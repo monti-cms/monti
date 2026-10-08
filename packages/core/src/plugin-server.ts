@@ -44,7 +44,9 @@ export type {
 	StorageWriteOptions,
 } from "./plugin/storage";
 export type { LegacySecretFormat, PluginSecrets, PluginSecretsOptions } from "./secrets";
+export type { WriteResult } from "./services/content-service";
 export type {
+	AfterCommitHook,
 	TransformHook,
 	ValidateHook,
 	ValidatePublishHook,

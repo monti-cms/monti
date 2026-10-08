@@ -28,7 +28,8 @@ const TEXT = [
 
 const publish = async (slug: string, body: string, format: string) => {
 	const service = cms.contentService();
-	const draft = await service.createDraft({ collection: "post", slug, metadata: { title: slug }, body, format });
+	const draft = (await service.createDraft({ collection: "post", slug, metadata: { title: slug }, body, format }))
+		.entry;
 	await service.publish({ id: draft.id, expectedVersion: draft.version });
 };
 

@@ -297,6 +297,8 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			...eventOptions,
 			store: getRawStore,
 			subscribers: plugins.eventSubscribers,
+			// The marks of `event.once` live in the plugin storage, under a name no plugin can take (`CORE_FEATURE_KEYS`).
+			marks: () => connections.database.pluginStorage("core-events").collection<{ at: string }>("once"),
 		});
 		// Every write goes through the dispatcher: the store writes the events in the transaction of the change, the wrapper delivers them after the commit.
 		const getStore = (): ContentStore => {

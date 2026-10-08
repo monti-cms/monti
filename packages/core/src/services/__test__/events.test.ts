@@ -13,6 +13,7 @@ import {
 import { seedEntry, seedSave } from "../../core/store/__test__/seed";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
+import { createMemoryPluginStorage } from "../../plugin/memory-storage";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -346,6 +347,106 @@ describe("afterCommit delivery", () => {
 		expect(effects).toBe(1);
 	});
 
+	describe("once", () => {
+		const onlyFor =
+			(slug: string, handler: Handler): Handler =>
+			(event) =>
+				event.kind === "created" && event.workingSlug === slug ? handler(event) : undefined;
+
+		it("runs the work once however often the delivery is tried, also when the delivery fails after the work", async () => {
+			let effects = 0;
+			let first = true;
+			const ran: boolean[] = [];
+			const { store, events } = setup({
+				a: onlyFor("once-after-work", async (event) => {
+					ran.push(
+						await event.once(() => {
+							effects += 1;
+						}),
+					);
+					if (first) {
+						first = false;
+						throw new Error("failed after the work");
+					}
+				}),
+			});
+			await create(store, "once-after-work");
+			advance(120_000);
+			await events.retry();
+			expect(effects).toBe(1);
+			expect(ran).toEqual([true, false]);
+		});
+
+		it("does not mark work that threw, so the retry does it again", async () => {
+			let effects = 0;
+			const { store, events } = setup({
+				a: onlyFor("once-throws", (event) =>
+					event
+						.once(() => {
+							effects += 1;
+							if (effects === 1) throw new Error("not yet");
+						})
+						.then(() => undefined),
+				),
+			});
+			await create(store, "once-throws");
+			advance(120_000);
+			await events.retry();
+			expect(effects).toBe(2);
+		});
+
+		it("keeps a mark per subscriber and per event", async () => {
+			const counts = { a: 0, b: 0 };
+			const { store } = setup({
+				a: onlyFor("once-apart", async (event) => {
+					await event.once(() => {
+						counts.a += 1;
+					});
+					await event.once(() => {
+						counts.a += 1;
+					});
+				}),
+				b: onlyFor("once-apart", async (event) => {
+					await event.once(() => {
+						counts.b += 1;
+					});
+				}),
+			});
+			await create(store, "once-apart");
+			await create(store, "once-apart-2");
+			expect(counts).toEqual({ a: 1, b: 1 });
+		});
+
+		it("keeps the marks in the storage it is given, and drops the ones older than the events it keeps", async () => {
+			const marks = createMemoryPluginStorage().storage("test").collection<{ at: string }>("once");
+			const name = `m${++counter}`;
+			const subscribers: EventSubscriber[] = [
+				{
+					name,
+					handler: onlyFor(`once-${name}`, async (event) => {
+						await event.once(() => undefined);
+					}),
+				},
+			];
+			const dispatcherAt = (now: () => Date) =>
+				createEventDispatcher({
+					store: () => raw,
+					subscribers: async () => subscribers,
+					marks: () => marks,
+					retentionDays: 1,
+					now,
+				});
+			const first = dispatcherAt(() => new Date());
+			await create(withEventDispatch(raw, first.dispatchEntry), `once-${name}`);
+			expect((await marks.list()).map((item) => item.key)).toEqual([expect.stringMatching(/^m\d+\//)]);
+
+			// Three days later, the sweep that a write carries along drops the marks of events past the retention.
+			const later = dispatcherAt(() => new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
+			await create(withEventDispatch(raw, later.dispatchEntry), `once-${name}-later`);
+			expect(await marks.list()).toEqual([]);
+		});
+	});
+
 	it("keeps subscribers apart: one failing does not repeat or hold another", async () => {
 		const good = recorder();
 		const flaky = recorder((event) => event.attempt < 2);
@@ -439,7 +540,7 @@ describe("afterCommit delivery", () => {
 			const service = createContentService<Entry>(store, { site: testSite, hooks: () => [], formats });
 			const entry = await create(store, "restore-a");
 			const trashed = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });
-			const restored = await service.restore({ id: entry.id, expectedVersion: trashed.version });
+			const restored = (await service.restore({ id: entry.id, expectedVersion: trashed.version })).entry;
 			expect(restored.status).toBe("draft");
 			expect(seen.of(entry.id).map((item) => item.kind)).toEqual(["created", "trashed", "restored"]);
 			expect(seen.of(entry.id).at(-1)?.version).toBe(restored.version);

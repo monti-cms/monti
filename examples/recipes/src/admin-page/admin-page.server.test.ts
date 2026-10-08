@@ -17,14 +17,16 @@ beforeAll(async () => {
 	await cms.migrate();
 	const service = cms.contentService();
 	for (const slug of ["a", "b", "c"]) {
-		const draft = await service.createDraft({
-			collection: "post",
-			slug,
-			metadata: { title: slug },
-			body: "Body.",
-			format: "mdx",
-		});
-		if (slug !== "c") await service.publish({ id: draft.id, expectedVersion: draft.version });
+		const draft = (
+			await service.createDraft({
+				collection: "post",
+				slug,
+				metadata: { title: slug },
+				body: "Body.",
+				format: "mdx",
+			})
+		).entry;
+		if (slug !== "c") (await service.publish({ id: draft.id, expectedVersion: draft.version })).entry;
 	}
 });
 afterAll(async () => {

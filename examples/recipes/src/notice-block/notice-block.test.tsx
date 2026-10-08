@@ -16,8 +16,9 @@ afterAll(async () => {
 	await test.drop();
 });
 
-const save = (slug: string, body: string) =>
+const saveWithWarnings = (slug: string, body: string) =>
 	cms.contentService().createDraft({ collection: "post", slug, metadata: { title: slug }, body, format: "mdx" });
+const save = (slug: string, body: string) => saveWithWarnings(slug, body).then((result) => result.entry);
 
 describe("notice block", () => {
 	it("is stored as a block of the document, not as text", async () => {
@@ -27,16 +28,17 @@ describe("notice block", () => {
 	});
 
 	it("warns, without blocking, when a warning has no title", async () => {
-		const draft = await save("untitled", '<Notice level="warn">\n\nBackups first.\n\n</Notice>');
-		expect(draft.warnings).toEqual([
+		const { warnings } = await saveWithWarnings("untitled", '<Notice level="warn">\n\nBackups first.\n\n</Notice>');
+		expect(warnings).toEqual([
 			expect.objectContaining({
 				code: "notice_warning_needs_title",
 				params: expect.objectContaining({ block: "notice" }),
 			}),
 		]);
 		expect(
-			(await save("titled", '<Notice level="warn" title="Heads up">\n\nBackups first.\n\n</Notice>')).warnings,
-		).toBeUndefined();
+			(await saveWithWarnings("titled", '<Notice level="warn" title="Heads up">\n\nBackups first.\n\n</Notice>'))
+				.warnings,
+		).toEqual([]);
 	});
 
 	it("is drawn on the public page by the plugin's component", async () => {

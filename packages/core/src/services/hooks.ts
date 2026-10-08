@@ -1,4 +1,5 @@
-import type { AfterCommit } from "../core/store";
+import type { Cms } from "../cms";
+import type { AfterCommit, ContentEvent } from "../core/store";
 import type { StoredDocument } from "../doc/stored-document";
 import type { Collection, Issue, PreparedSnapshot } from "./types";
 
@@ -74,12 +75,18 @@ export type ValidateHook = (
 /** Runs after core preparation, for a publish (single and bulk) and for restoring a record, which publishes it again. */
 export type ValidatePublishHook = ValidateHook;
 
+/**
+ * The `afterCommit` hook: a notification after a change is committed, with the instance it runs for (so a hook reads its storage, the store or the site
+ * without state of its own). The server config and the plugins take the same function.
+ */
+export type AfterCommitHook = (event: ContentEvent, cms: Cms) => ReturnType<AfterCommit>;
+
 export interface WriteHooks {
 	readonly transform?: TransformHook;
 	readonly validate?: ValidateHook;
 	readonly validatePublish?: ValidatePublishHook;
 	/** After the transaction commits (create, save, publish, archive, trash, restore, delete). The change stands even if it fails. */
-	readonly afterCommit?: AfterCommit;
+	readonly afterCommit?: AfterCommitHook;
 }
 
 /** Hooks with the owner that registered them: `server` for the server config, `plugin:<name>` for a plugin. */

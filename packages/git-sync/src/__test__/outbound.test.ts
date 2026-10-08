@@ -17,10 +17,12 @@ afterEach(() => {
 });
 
 const memo = (slug: string, title: string, text = `Body of ${title}`) =>
-	h.service.createDraft(
-		{ collection: "memo", slug, metadata: { title }, body: text, format: "mdx" },
-		{ publishImmediately: true },
-	);
+	h.service
+		.createDraft(
+			{ collection: "memo", slug, metadata: { title }, body: text, format: "mdx" },
+			{ publishImmediately: true },
+		)
+		.then((result) => result.entry);
 
 describe("publishing commits the file", () => {
 	it("writes the entry as front matter and an MDX body in one commit on the branch", async () => {
@@ -83,18 +85,20 @@ describe("publishing commits the file", () => {
 
 	it("writes the published version, not a newer draft", async () => {
 		const entry = await memo("draft-after", "Published title");
-		const saved = await h.service.saveDraft(
-			entry.id,
-			{
-				collection: "memo",
-				slug: "draft-after",
-				metadata: { title: "Draft title" },
-				body: "draft text",
-				format: "mdx",
-				expectedVersion: entry.version,
-			},
-			{ publishImmediately: false },
-		);
+		const saved = (
+			await h.service.saveDraft(
+				entry.id,
+				{
+					collection: "memo",
+					slug: "draft-after",
+					metadata: { title: "Draft title" },
+					body: "draft text",
+					format: "mdx",
+					expectedVersion: entry.version,
+				},
+				{ publishImmediately: false },
+			)
+		).entry;
 		expect(saved.version).toBeGreaterThan(entry.version);
 		const text = h.repo.files("main").get("content/memo/draft-after.en.mdx") ?? "";
 		expect(text).toContain("Published title");
@@ -105,18 +109,20 @@ describe("publishing commits the file", () => {
 describe("republishing, renaming and removing", () => {
 	it("updates the file when the entry is published again with changes", async () => {
 		const entry = await memo("changing", "Changing", "first");
-		const saved = await h.service.saveDraft(
-			entry.id,
-			{
-				collection: "memo",
-				slug: "changing",
-				metadata: { title: "Changing" },
-				body: "second",
-				format: "mdx",
-				expectedVersion: entry.version,
-			},
-			{ publishImmediately: false },
-		);
+		const saved = (
+			await h.service.saveDraft(
+				entry.id,
+				{
+					collection: "memo",
+					slug: "changing",
+					metadata: { title: "Changing" },
+					body: "second",
+					format: "mdx",
+					expectedVersion: entry.version,
+				},
+				{ publishImmediately: false },
+			)
+		).entry;
 		await h.service.publish({ id: entry.id, expectedVersion: saved.version });
 		const parsed = parseFile(h.repo.files("main").get("content/memo/changing.en.mdx") ?? "");
 		expect(parsed.ok && parsed.body.trim()).toBe("second");
@@ -124,18 +130,20 @@ describe("republishing, renaming and removing", () => {
 
 	it("renames the file when the slug changes", async () => {
 		const entry = await memo("old-name", "Renamed");
-		const saved = await h.service.saveDraft(
-			entry.id,
-			{
-				collection: "memo",
-				slug: "new-name",
-				metadata: { title: "Renamed" },
-				body: "Body of Renamed",
-				format: "mdx",
-				expectedVersion: entry.version,
-			},
-			{ publishImmediately: false },
-		);
+		const saved = (
+			await h.service.saveDraft(
+				entry.id,
+				{
+					collection: "memo",
+					slug: "new-name",
+					metadata: { title: "Renamed" },
+					body: "Body of Renamed",
+					format: "mdx",
+					expectedVersion: entry.version,
+				},
+				{ publishImmediately: false },
+			)
+		).entry;
 		await h.service.publish({ id: entry.id, expectedVersion: saved.version });
 		const files = h.repo.files("main");
 		expect(files.has("content/memo/old-name.en.mdx")).toBe(false);
@@ -168,7 +176,8 @@ describe("republishing, renaming and removing", () => {
 		expect(h.repo.files("main").has("content/memo/come-back.en.mdx")).toBe(false);
 		await h.service.restore({ id: entry.id, expectedVersion: trashed.version });
 		const restored = await h.store.getEntry(entry.id);
-		if (restored.status !== "published") await h.service.publish({ id: entry.id, expectedVersion: restored.version });
+		if (restored.status !== "published")
+			(await h.service.publish({ id: entry.id, expectedVersion: restored.version })).entry;
 		expect(h.repo.files("main").has("content/memo/come-back.en.mdx")).toBe(true);
 	});
 });

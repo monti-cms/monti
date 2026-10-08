@@ -87,13 +87,15 @@ describe("write hook contract", () => {
 		const registered = sources;
 		sources = [];
 		try {
-			const draft = await service.createDraft({
-				collection: to,
-				slug: unique(to),
-				metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-				format: "paragraphs",
-				body: "Body",
-			});
+			const draft = (
+				await service.createDraft({
+					collection: to,
+					slug: unique(to),
+					metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
+					format: "paragraphs",
+					body: "Body",
+				})
+			).entry;
 			targets.set(to, draft.id);
 			return draft.id;
 		} finally {
@@ -125,7 +127,7 @@ describe("write hook contract", () => {
 		const registered = sources;
 		sources = [];
 		try {
-			const draft = await service.createDraft(await postInput(title, text));
+			const draft = (await service.createDraft(await postInput(title, text))).entry;
 			changes = [];
 			return draft;
 		} finally {
@@ -155,7 +157,7 @@ describe("write hook contract", () => {
 					doc,
 				}),
 			});
-			const created = await service.createDraft(await postInput("shouting"));
+			const created = (await service.createDraft(await postInput("shouting"))).entry;
 			expect(created.working.metadata.title).toBe("SHOUTING");
 			expect((await store.getEntry(created.id)).working.metadata.title).toBe("SHOUTING");
 		});
@@ -172,7 +174,7 @@ describe("write hook contract", () => {
 				},
 			});
 			const input = await postInput("Slug hook");
-			const created = await service.createDraft({ ...input, slug: "mixed-case" } as ServiceInput);
+			const created = (await service.createDraft({ ...input, slug: "mixed-case" } as ServiceInput)).entry;
 			// The transform saw what was sent, the validation what core prepared from what the transform returned.
 			expect(seen).toEqual(["mixed-case", "MIXED-CASE"]);
 			expect(created.workingSlug).toBe("MIXED-CASE");
@@ -199,7 +201,7 @@ describe("write hook contract", () => {
 				content: [{ type: "image", attrs: { mediaId, alt: "added by a hook" } }],
 			} as StoredDocument;
 			sources = server({ transform: ({ metadata }) => ({ metadata, doc }) });
-			const created = await service.createDraft(await postInput("With image"));
+			const created = (await service.createDraft(await postInput("With image"))).entry;
 			const references = await store.getWorkingReferences({ entryId: created.id });
 			expect(references).toContainEqual(expect.objectContaining({ kind: "media", targetId: mediaId }));
 			expect(created.working.doc).not.toBeNull();
@@ -272,7 +274,8 @@ describe("write hook contract", () => {
 			sources = server({ validate: () => ({ warnings: [{ code: "consider_this" }] }) });
 			const created = await service.createDraft(await postInput("Warned"));
 			expect(created.warnings).toEqual([{ code: "consider_this" }]);
-			const published = await service.publish({ id: created.id, expectedVersion: created.version });
+			expect(created.entry).not.toHaveProperty("warnings");
+			const published = await service.publish({ id: created.entry.id, expectedVersion: created.entry.version });
 			expect(published.warnings).toContainEqual({ code: "consider_this" });
 			expect(published.entry.status).toBe("published");
 		});
@@ -303,7 +306,7 @@ describe("write hook contract", () => {
 			});
 			expect((await store.getEntry(draft.id)).status).toBe("draft");
 			expect(changes).toEqual([]);
-			const saved = await service.saveDraft(draft.id, saveInput(draft));
+			const saved = (await service.saveDraft(draft.id, saveInput(draft))).entry;
 			expect(saved.status).toBe("draft");
 		});
 
@@ -314,7 +317,7 @@ describe("write hook contract", () => {
 					seen.push(operation);
 				},
 			});
-			const draft = await service.createDraft(await postInput("Seen"));
+			const draft = (await service.createDraft(await postInput("Seen"))).entry;
 			await service.saveDraft(draft.id, saveInput(draft));
 			expect(seen).toEqual([]);
 			await service.publish({ id: draft.id, expectedVersion: draft.version });
@@ -381,12 +384,11 @@ describe("write hook contract", () => {
 	describe("a failure after the commit never undoes the write", () => {
 		it("keeps a created, saved and published entry when afterCommit throws", async () => {
 			afterCommitFails = true;
-			const created = await service.createDraft(await postInput("Survives"));
+			const created = (await service.createDraft(await postInput("Survives"))).entry;
 			expect((await store.getEntry(created.id)).version).toBe(created.version);
-			const saved = await service.saveDraft(
-				created.id,
-				saveInput(created, { ...created.working.metadata, title: "Saved" }),
-			);
+			const saved = (
+				await service.saveDraft(created.id, saveInput(created, { ...created.working.metadata, title: "Saved" }))
+			).entry;
 			expect(saved.version).toBeGreaterThan(created.version);
 			const { entry } = await service.publish({ id: created.id, expectedVersion: saved.version });
 			expect(entry.status).toBe("published");
@@ -422,7 +424,7 @@ describe("write hook contract", () => {
 				const before = await entryCount();
 				return {
 					operation: "create",
-					run: () => service.createDraft(input),
+					run: () => service.createDraft(input).then((result) => result.entry),
 					unchanged: async () => (await entryCount()) === before,
 				};
 			},
@@ -430,7 +432,10 @@ describe("write hook contract", () => {
 				const draft = await newPost();
 				return {
 					operation: "save",
-					run: () => service.saveDraft(draft.id, saveInput(draft, { ...draft.working.metadata, title: "Saved" })),
+					run: () =>
+						service
+							.saveDraft(draft.id, saveInput(draft, { ...draft.working.metadata, title: "Saved" }))
+							.then((result) => result.entry),
 					unchanged: async () => (await store.getEntry(draft.id)).version === draft.version,
 				};
 			},
@@ -438,7 +443,7 @@ describe("write hook contract", () => {
 				const draft = await newPost();
 				return {
 					operation: "publish",
-					run: () => service.publish({ id: draft.id, expectedVersion: draft.version }),
+					run: () => service.publish({ id: draft.id, expectedVersion: draft.version }).then((result) => result.entry),
 					unchanged: async () => (await store.getEntry(draft.id)).status === "draft",
 				};
 			},
@@ -447,7 +452,7 @@ describe("write hook contract", () => {
 				const before = await entryCount();
 				return {
 					operation: "duplicate",
-					run: () => service.duplicate({ id: draft.id }),
+					run: () => service.duplicate({ id: draft.id }).then((result) => result.entry),
 					unchanged: async () => (await entryCount()) === before,
 				};
 			},
@@ -457,7 +462,10 @@ describe("write hook contract", () => {
 				return {
 					operation: "translate",
 					skip: !secondLocale,
-					run: () => service.createTranslation({ sourceId: draft.id, locale: secondLocale ?? "" }),
+					run: () =>
+						service
+							.createTranslation({ sourceId: draft.id, locale: secondLocale ?? "" })
+							.then((result) => result.entry),
 					unchanged: async () => (await entryCount()) === before,
 				};
 			},
@@ -634,13 +642,15 @@ describe("write hook contract", () => {
 			const registered = sources;
 			sources = [];
 			try {
-				const record = await service.createDraft({
-					collection: recordCollection,
-					slug: unique("record"),
-					metadata: await requiredMetadata(recordCollection, unique("record title"), relationTarget),
-					format: "paragraphs",
-					body: "",
-				});
+				const record = (
+					await service.createDraft({
+						collection: recordCollection,
+						slug: unique("record"),
+						metadata: await requiredMetadata(recordCollection, unique("record title"), relationTarget),
+						format: "paragraphs",
+						body: "",
+					})
+				).entry;
 				const trashed = await store.trashEntry({ id: record.id, expectedVersion: record.version });
 				changes = [];
 				return { id: record.id, version: trashed.version };
@@ -662,7 +672,7 @@ describe("write hook contract", () => {
 					seen.push(`validatePublish:${operation}`);
 				},
 			});
-			const restored = await service.restore({ id: record.id, expectedVersion: record.version });
+			const restored = (await service.restore({ id: record.id, expectedVersion: record.version })).entry;
 			expect(restored.status).toBe("published");
 			expect(seen).toEqual(["validate:restore", "validatePublish:restore"]);
 			expect(transform).not.toHaveBeenCalled();

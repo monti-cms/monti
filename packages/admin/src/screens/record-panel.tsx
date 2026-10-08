@@ -136,9 +136,9 @@ export function RecordPanel({
 		setIsSaving(true);
 		setError(null);
 		try {
-			const saved =
+			const { entry: saved } =
 				id && loaded
-					? await cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}`), {
+					? await cmsFetch<{ entry: EntryData }>(site, cmsApiUrl(`/v1/entries/${id}`), {
 							method: "PATCH",
 							json: {
 								expectedVersion: loaded.version,
@@ -147,7 +147,7 @@ export function RecordPanel({
 							},
 							fallback: t("record.saveFailed"),
 						})
-					: await cmsFetch<EntryData>(site, cmsApiUrl("/v1/entries"), {
+					: await cmsFetch<{ entry: EntryData }>(site, cmsApiUrl("/v1/entries"), {
 							method: "POST",
 							json: {
 								collection,

@@ -49,12 +49,14 @@ describe("0017_unparsed_bodies", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			doc: docOf("Body"),
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				doc: docOf("Body"),
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -64,12 +66,14 @@ describe("0017_unparsed_bodies", () => {
 	};
 
 	const createDraft = async (mdx: string) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug: unique("post"),
-			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			doc: docOf(mdx),
-		});
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug: unique("post"),
+				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
+				doc: docOf(mdx),
+			})
+			.then((result) => result.entry);
 
 	/** The body as a store from before stored documents held it: the text as it was, no document, a stale hash. */
 	const withoutDocument = (entryId: string, mdx: string, state?: "working" | "published") =>
@@ -184,7 +188,8 @@ describe("0017_unparsed_bodies", () => {
 
 	it("lifts the translation state to version 4, with the document of the source it was confirmed against", async () => {
 		const source = await createDraft("원문");
-		const translation = await service.createTranslation({ sourceId: source.id, locale: "en" }).catch(() => null);
+		const translation = (await service.createTranslation({ sourceId: source.id, locale: "en" }).catch(() => null))
+			?.entry;
 		const target = translation ?? (await createDraft("번역"));
 		await pool.query(
 			`UPDATE "${schemaName}".entry_bodies SET translation = $1::jsonb WHERE entry_id = $2 AND state = 'working'`,

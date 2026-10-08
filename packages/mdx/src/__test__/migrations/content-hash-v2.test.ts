@@ -73,13 +73,15 @@ describe("content hash v2", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			format: "mdx",
-			body: "Body",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				format: "mdx",
+				body: "Body",
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -93,13 +95,15 @@ describe("content hash v2", () => {
 	});
 
 	const createDraft = async (mdx: string) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug: unique("post"),
-			metadata: await metadataFor(unique("Post")),
-			format: "mdx",
-			body: mdx,
-		});
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug: unique("post"),
+				metadata: await metadataFor(unique("Post")),
+				format: "mdx",
+				body: mdx,
+			})
+			.then((result) => result.entry);
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);
@@ -107,14 +111,16 @@ describe("content hash v2", () => {
 	};
 
 	const saveMdx = (entry: Entry, mdx: string) =>
-		service.saveDraft(entry.id, {
-			collection: contentCollection,
-			slug: entry.workingSlug,
-			metadata: entry.working.metadata as never,
-			format: "mdx",
-			body: mdx,
-			expectedVersion: entry.version,
-		});
+		service
+			.saveDraft(entry.id, {
+				collection: contentCollection,
+				slug: entry.workingSlug,
+				metadata: entry.working.metadata as never,
+				format: "mdx",
+				body: mdx,
+				expectedVersion: entry.version,
+			})
+			.then((result) => result.entry);
 
 	const hasUnpublishedChanges = async (entryId: string) => {
 		const { items } = await store.listEntries({ collection: contentCollection });

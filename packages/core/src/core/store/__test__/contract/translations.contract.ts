@@ -46,7 +46,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(source.locale).toBe(defaultLocale);
 				expect(source.translationGroupId).toBe(source.id);
 
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				expect(translation.locale).toBe(second);
 				expect(translation.translationGroupId).toBe(source.id);
 				expect(translation.status).toBe("draft");
@@ -103,7 +103,7 @@ export const translationsContract: ContractSuite = (factory) => {
 
 			it("refuses to duplicate a translation", async () => {
 				const source = await createPost("duplicate-translation-source");
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				await expect(duplicateDraft(testSite, store, { id: translation.id })).rejects.toMatchObject({
 					code: "invalid_input",
 				});
@@ -111,15 +111,15 @@ export const translationsContract: ContractSuite = (factory) => {
 
 			it.skipIf(!thirdLocale)("creates a translation of a translation from the source", async () => {
 				const source = await createPost("nested-source");
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
-				const nested = await service.createTranslation({ sourceId: translation.id, locale: thirdLocale ?? "" });
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+				const nested = (await service.createTranslation({ sourceId: translation.id, locale: thirdLocale ?? "" })).entry;
 				expect(nested.translationGroupId).toBe(source.id);
 			});
 
 			it.skipIf(!relation && !commonSelect)("rejects saving a shared field on a translation", async () => {
 				const source = await createPost("common-source");
 				const [commonKey] = testSite.commonFieldKeys(contentCollection, source.working.metadata);
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				await expect(
 					service.saveDraft(translation.id, {
 						collection: contentCollection,
@@ -134,15 +134,17 @@ export const translationsContract: ContractSuite = (factory) => {
 
 			it("publishes a translation only when the source is published, and public reads merge it with the source's shared values", async () => {
 				const source = await createPost("merge-source");
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
-				const saved = await service.saveDraft(translation.id, {
-					collection: contentCollection,
-					slug: "merge-source",
-					metadata: translatedMetadata("English title", "English summary") as never,
-					format: "paragraphs",
-					body: "English body",
-					expectedVersion: translation.version,
-				});
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+				const saved = (
+					await service.saveDraft(translation.id, {
+						collection: contentCollection,
+						slug: "merge-source",
+						metadata: translatedMetadata("English title", "English summary") as never,
+						format: "paragraphs",
+						body: "English body",
+						expectedVersion: translation.version,
+					})
+				).entry;
 
 				await expect(publish(saved)).rejects.toMatchObject({
 					code: "publish_validation_failed",
@@ -214,7 +216,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					}),
 				).rejects.toMatchObject({ code: "invalid_input" });
 
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				await expect(
 					service.saveDraft(translation.id, {
 						collection: contentCollection,
@@ -227,26 +229,30 @@ export const translationsContract: ContractSuite = (factory) => {
 					}),
 				).rejects.toMatchObject({ code: "invalid_input" });
 
-				const saved = await service.saveDraft(translation.id, {
-					collection: contentCollection,
-					slug: "state-source",
-					metadata: { title: "Only the title" },
-					format: "paragraphs",
-					body: "",
-					expectedVersion: translation.version,
-				});
+				const saved = (
+					await service.saveDraft(translation.id, {
+						collection: contentCollection,
+						slug: "state-source",
+						metadata: { title: "Only the title" },
+						format: "paragraphs",
+						body: "",
+						expectedVersion: translation.version,
+					})
+				).entry;
 				expect(saved.working.translation).toEqual(translation.working.translation);
 
 				// Save even when only the translation status changes (acknowledging a source change).
-				const ignored = await service.saveDraft(translation.id, {
-					collection: contentCollection,
-					slug: "state-source",
-					metadata: { title: "Only the title" },
-					format: "paragraphs",
-					body: "",
-					translation: { version: 4, baseDoc: docOf("바뀐 기준") },
-					expectedVersion: saved.version,
-				});
+				const ignored = (
+					await service.saveDraft(translation.id, {
+						collection: contentCollection,
+						slug: "state-source",
+						metadata: { title: "Only the title" },
+						format: "paragraphs",
+						body: "",
+						translation: { version: 4, baseDoc: docOf("바뀐 기준") },
+						expectedVersion: saved.version,
+					})
+				).entry;
 				expect(ignored.version).toBe(saved.version + 1);
 				expect(ignored.working.translation).toMatchObject({ version: 4 });
 				expect(contentOf(ignored.working.translation?.baseDoc)).toEqual(contentOf(docOf("바뀐 기준")));
@@ -265,8 +271,8 @@ export const translationsContract: ContractSuite = (factory) => {
 				"trashing the source trashes its translations too, and restoring brings back only the translations trashed together",
 				async () => {
 					const source = await createPost("trash-group-source");
-					const together = await service.createTranslation({ sourceId: source.id, locale: second });
-					const apart = await service.createTranslation({ sourceId: source.id, locale: thirdLocale ?? "" });
+					const together = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+					const apart = (await service.createTranslation({ sourceId: source.id, locale: thirdLocale ?? "" })).entry;
 					await store.trashEntry({ id: apart.id, expectedVersion: apart.version });
 
 					const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
@@ -291,7 +297,7 @@ export const translationsContract: ContractSuite = (factory) => {
 
 			it("applies archiving and unarchiving the source to its translations too", async () => {
 				const source = await createPost("archive-group-source");
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				const archived = await store.archiveEntry({ id: source.id, expectedVersion: source.version });
 				expect(await statusOf(translation.id)).toBe("archived");
 				await store.unarchiveEntry({ id: source.id, expectedVersion: archived.version });
@@ -304,7 +310,7 @@ export const translationsContract: ContractSuite = (factory) => {
 
 			it("group-view lists attach per-language content to one source row, and search and language filters look at the whole group", async () => {
 				const source = await createPost("group-list-source");
-				const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				await service.saveDraft(translation.id, {
 					collection: contentCollection,
 					slug: "group-list-source",
@@ -315,7 +321,8 @@ export const translationsContract: ContractSuite = (factory) => {
 				} as never);
 				// A trashed translation counts neither toward the group row nor toward the "existing languages".
 				if (thirdLocale) {
-					const trashedTranslation = await service.createTranslation({ sourceId: source.id, locale: thirdLocale });
+					const trashedTranslation = (await service.createTranslation({ sourceId: source.id, locale: thirdLocale }))
+						.entry;
 					await store.trashEntry({ id: trashedTranslation.id, expectedVersion: trashedTranslation.version });
 				}
 				const lonely = await createPost("group-list-lonely");
@@ -366,7 +373,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				async () => {
 					if (!relation) return;
 					const source = await createPost("list-source");
-					const translation = await service.createTranslation({ sourceId: source.id, locale: second });
+					const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 					const result = await store.listEntries({ collection: contentCollection, locales: [second], pageSize: 100 });
 					const row = result.items.find((item) => item.id === translation.id);
 					const relatedIds = [source.working.metadata[relation.name]].flat() as string[];
@@ -391,19 +398,21 @@ export const translationsContract: ContractSuite = (factory) => {
 					const commonField =
 						testSite.storedFields(localizedRecord).find(({ name }) => !names.includes(name))?.name ?? "slug";
 					const metadata = await requiredMetadata(localizedRecord, "에세이", relationTarget);
-					const record = await service.createDraft({
-						collection: localizedRecord,
-						slug: "essay",
-						metadata: {
-							...metadata,
-							translations: {
-								[second]: { [field]: " Essay " },
-								...(thirdLocale ? { [thirdLocale]: { [field]: "" } } : {}),
+					const record = (
+						await service.createDraft({
+							collection: localizedRecord,
+							slug: "essay",
+							metadata: {
+								...metadata,
+								translations: {
+									[second]: { [field]: " Essay " },
+									...(thirdLocale ? { [thirdLocale]: { [field]: "" } } : {}),
+								},
 							},
-						},
-						format: "paragraphs",
-						body: "",
-					} as never);
+							format: "paragraphs",
+							body: "",
+						} as never)
+					).entry;
 					expect(record.working.metadata.translations).toEqual({ [second]: { [field]: "Essay" } });
 					await expect(
 						service.createDraft({

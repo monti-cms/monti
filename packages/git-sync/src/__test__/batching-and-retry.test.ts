@@ -14,10 +14,12 @@ afterEach(async () => {
 afterAll(closeGlobalPool);
 
 const publish = (h: Harness, slug: string, title = slug) =>
-	h.service.createDraft(
-		{ collection: "memo", slug, metadata: { title }, body: `Body ${slug}`, format: "mdx" },
-		{ publishImmediately: true },
-	);
+	h.service
+		.createDraft(
+			{ collection: "memo", slug, metadata: { title }, body: `Body ${slug}`, format: "mdx" },
+			{ publishImmediately: true },
+		)
+		.then((result) => result.entry);
 
 const commits = (h: Harness) => h.github.calls.filter((call) => call === "createCommit").length;
 
@@ -264,18 +266,20 @@ describe("pull request mode", () => {
 		const h = await make({ targets: [prTarget] });
 		const entry = await publish(h, "closed-pr", "First");
 		h.repo.merge(1);
-		const saved = await h.service.saveDraft(
-			entry.id,
-			{
-				collection: "memo",
-				slug: "closed-pr",
-				metadata: { title: "Second" },
-				body: "second",
-				format: "mdx",
-				expectedVersion: entry.version,
-			},
-			{ publishImmediately: false },
-		);
+		const saved = (
+			await h.service.saveDraft(
+				entry.id,
+				{
+					collection: "memo",
+					slug: "closed-pr",
+					metadata: { title: "Second" },
+					body: "second",
+					format: "mdx",
+					expectedVersion: entry.version,
+				},
+				{ publishImmediately: false },
+			)
+		).entry;
 		await h.service.publish({ id: entry.id, expectedVersion: saved.version });
 		expect(h.repo.pullRequests).toHaveLength(2);
 		h.repo.close(2);
@@ -292,18 +296,20 @@ describe("pull request mode", () => {
 	it("does not take a file that still has the old text on the base branch for an edit in git", async () => {
 		const h = await make({ targets: [prTarget] });
 		const entry = await publish(h, "pending", "Pending");
-		const saved = await h.service.saveDraft(
-			entry.id,
-			{
-				collection: "memo",
-				slug: "pending",
-				metadata: { title: "Pending 2" },
-				body: "second",
-				format: "mdx",
-				expectedVersion: entry.version,
-			},
-			{ publishImmediately: false },
-		);
+		const saved = (
+			await h.service.saveDraft(
+				entry.id,
+				{
+					collection: "memo",
+					slug: "pending",
+					metadata: { title: "Pending 2" },
+					body: "second",
+					format: "mdx",
+					expectedVersion: entry.version,
+				},
+				{ publishImmediately: false },
+			)
+		).entry;
 		await h.service.publish({ id: entry.id, expectedVersion: saved.version });
 		// Nothing conflicted although the base branch never had the file.
 		expect(await h.ctx.state.conflicts.list("site")).toEqual([]);
