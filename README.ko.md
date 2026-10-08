@@ -50,6 +50,58 @@ pnpm exec monti doctor
 
 설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·마이그레이션됐는지(미적용 마이그레이션이 몇 개인지, `monti migrate`), `MONTI_SECRET`, GitHub 로그인(등록할 콜백 URL, 관리자 id, `SITE_URL`), Next 파일 셋, 옛 두 파일 설정에서 남은 것(정확한 이름 바꾸기 단계와 함께), 플러그인이 더한 검사(git-sync 토큰과 웹훅, S3 값, AI 연결, MDX 문법 확장). `--online`은 git-sync 저장소와 S3 버킷도 확인하고, `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
 
+## 관리자 화면 직접 고치기
+
+대부분의 사이트는 관리자에 무언가를 더하는 방식으로 바꾼다. 필드 타입, 블록, 플러그인 화면이 그렇다([core README](packages/core/README.ko.md)의 "플러그인"). 그걸로 모자랄 때는 관리자를 직접 손에 쥐는 길이 두 가지 있다. 어느 쪽이 맞는지는 얼마나 남겨 두고 싶은지에 달렸다.
+
+두 길의 원칙은 같다. 사용자가 만지는 것(화면, 에디터, 블록)은 열고, core가 지키는 것(저장소, 마이그레이션, 쓰기 파이프라인)은 닫는다. 직접 만든 관리자도 저장은 core를 거치므로 그 부분은 계속 업그레이드를 받는다.
+
+### 길 1: 훅으로 관리자를 새로 만든다
+
+`@monti-cms/admin/hooks`(실험적)는 UI 없이 에디터를 상태와 명령으로 준다. `useEntryEditor`(불러오기, 복구 사본, 저장, 발행, 상태 변경, 충돌), `useField`(폼 필드 하나), `useBlockEditor`와 `Content`·`BlockFrame`(블록의 뷰), `blockViews`(블록 뷰 등록)가 있다. 훅은 토스트를 띄우거나 대화상자를 열거나 이동하지 않으므로 화면은 전부 직접 그린다. 기본 관리자도 같은 훅 위에 있다. `monti add`로 설치하는 레지스트리 항목(예: `entry-editor`, `article-body`)은 내 것이 되는 예제이니 출발점으로 쓸 수 있다.
+
+```tsx
+"use client";
+import { EntryEditorProvider, useEntryEditor, useField } from "@monti-cms/admin/hooks";
+
+function TitleInput() {
+	const title = useField("title");
+	return <input {...title.inputProps} value={String(title.value ?? "")} onChange={(event) => title.setValue(event.target.value)} />;
+}
+
+export function MyEntryEditor({ adminId, entryId }: { adminId: string; entryId: string }) {
+	const editor = useEntryEditor({ adminId, target: { mode: "edit", entryId } });
+	if (editor.load.status !== "ready") return null;
+	return (
+		<EntryEditorProvider editor={editor}>
+			<TitleInput />
+			<button type="button" onClick={() => void editor.save()}>
+				저장
+			</button>
+		</EntryEditorProvider>
+	);
+}
+```
+
+레이아웃이나 편집 흐름이 다른 관리자, 또는 화면 하나만 직접 만들고 싶을 때 고른다. 복사하는 것이 없으므로 나머지 관리자는 계속 업데이트된다. 자세한 설명은 [admin README](packages/admin/README.ko.md)를 본다.
+
+### 길 2: `monti eject`로 설치된 관리자를 고친다
+
+```sh
+pnpm exec monti eject @monti-cms/admin --dry-run   # 무엇을 쓰는지만 보여 주고 바꾸지 않는다
+pnpm exec monti eject @monti-cms/admin             # 먼저 묻는다. --yes면 묻지 않는다
+```
+
+`monti eject <package>`는 UI 패키지의 소스를, 설치된 버전 그대로 내 저장소에 복사하고 앱이 그 복사본을 쓰게 한다. 그 뒤로는 내 코드처럼 고치고, 고치면 다음 새로고침에 바로 보인다.
+
+- **eject할 수 있는 것:** UI 패키지인 `@monti-cms/admin`, `@monti-cms/blocks`, `@monti-cms/seo`, `@monti-cms/ai`. `seo`와 `ai`는 관리자 부분과 서버 부분이 한 패키지라서 통째로 가져온다. core, auth, mdx, nextjs, 저장소 패키지와 그 밖의 데이터 패키지는 이유와 함께 거절한다. 저장소, 마이그레이션, 쓰기 파이프라인은 계속 업그레이드를 받아야 하기 때문이다. 목록은 `packages/core/src/cli/eject/allowlist.ts` 한 파일에 있다.
+- **어디에 놓이나:** `packages/monti-admin/`(`monti-blocks`, `monti-seo`, `monti-ai`)에 워크스페이스 패키지로 놓인다. 워크스페이스 패키지는 어느 패키지 매니저든 실시간으로 연결하고 그 패키지의 의존성도 설치해 주는 유일한 형태이고, `packages/`는 사이트의 나머지와 함께 버전 관리 아래에 있다. 패키지 이름은 그대로라서 import는 바뀌지 않고, `@monti-cms/admin`이 필요한 다른 Monti 패키지도 내 복사본을 쓴다.
+- **앱에서 바뀌는 것:** `package.json`의 의존성이 `workspace:*`(npm과 yarn classic은 `*`)가 되고, 폴더가 `pnpm-workspace.yaml`이나 `workspaces` 필드에 더해지며, 패키지를 고정해 둔 override는 복사본을 가리키게 바뀐다. `.monti/ejected.json`에 `{ package, version, ejectedAt, directory }`가 기록되고(기록이 커밋되도록 `.gitignore`도 고친다), 패키지 매니저의 install이 돈다. `withCms`가 eject한 패키지를 앱과 함께 빌드한다. 스타일시트는 미리 빌드된 것을 `prebuilt/styles.css`로 복사해 두므로, eject한 소스에서 새로 쓴 Tailwind 클래스는 거기에 없다. 그 규칙은 내 CSS에 적는다.
+- **이제부터 업데이트는 내 몫이다.** `pnpm up`은 이 패키지를 더 이상 바꾸지 않는다. `monti doctor`가 eject한 패키지를 보여 주고, 지금 쓰는 `@monti-cms/core`보다 낮은 버전에서 eject했으면 경고한다. 내 버전 이후 원본이 어떻게 바뀌었는지는 `monti eject --diff @monti-cms/admin`으로 본다(최신이 아닌 것과 비교하려면 `--to <버전|폴더|tgz>`). 내가 고친 파일도 표시해 주므로 어디를 손으로 합쳐야 하는지 알 수 있다.
+- **플래그:** `--dry-run`, `--yes`, `--json`, `--no-install`. 터미널이 없고 `--yes`도 없으면 아무것도 바꾸지 않는다.
+
+관리자는 마음에 들고 일부만 바꾸고 싶을 때 이 길을 고른다. 에디터가 일하는 방식 전체를 다시 짜고 싶다면 훅이 더 가볍다. 모노레포 전체를 포크하는 일은 `monti`가 해 주지 않는다.
+
 ## 패키지
 
 | 패키지 | 하는 일 |

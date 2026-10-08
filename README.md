@@ -50,6 +50,58 @@ pnpm exec monti doctor
 
 It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every warning and failure says what is wrong, where (a file or an environment variable) and how to fix it: the config file and the schema file, `DATABASE_URL` and whether the database is reachable and migrated (how many migrations are pending, and `monti migrate`), `MONTI_SECRET`, the GitHub login (the callback URL to register, the admin id, `SITE_URL`), the three Next files, what is left of the old two-file setup (with the exact rename steps), and the checks each plugin adds (git-sync token and webhook, the S3 values, an AI connection, MDX syntax extensions). `--online` also checks the git-sync repo and the S3 bucket, `--json` prints the result for tools, and the exit code is 1 when a check fails. The errors the packages throw say the same things in the same way. See "Troubleshooting: `monti doctor`" in the [core README](packages/core/README.md).
 
+## Editing the admin itself
+
+Most sites change the admin by adding to it: a field type, a block, a plugin screen (see "Plugins" in the [core README](packages/core/README.md)). When that is not enough there are two ways to take the admin into your own hands. Which one fits depends on how much of it you want to keep.
+
+The principle is the same for both: Monti opens what you touch (the screens, the editor, the blocks) and seals what core guards (storage, migrations and the write pipeline). Your own admin still saves through core, so those keep receiving upgrades.
+
+### Path 1: build your own admin from the hooks
+
+`@monti-cms/admin/hooks` (experimental) gives you the editor as state and commands without any UI: `useEntryEditor` (load, recovery copy, save, publish, status changes, conflicts), `useField` (one form field), `useBlockEditor` with `Content` and `BlockFrame` (the view of a block) and `blockViews` (registering block views). Hooks never show a toast, open a dialog or navigate, so you draw all of it. The default admin is built on the same hooks. Registry items installed with `monti add` (for example `entry-editor` and `article-body`) are examples you own and can start from.
+
+```tsx
+"use client";
+import { EntryEditorProvider, useEntryEditor, useField } from "@monti-cms/admin/hooks";
+
+function TitleInput() {
+	const title = useField("title");
+	return <input {...title.inputProps} value={String(title.value ?? "")} onChange={(event) => title.setValue(event.target.value)} />;
+}
+
+export function MyEntryEditor({ adminId, entryId }: { adminId: string; entryId: string }) {
+	const editor = useEntryEditor({ adminId, target: { mode: "edit", entryId } });
+	if (editor.load.status !== "ready") return null;
+	return (
+		<EntryEditorProvider editor={editor}>
+			<TitleInput />
+			<button type="button" onClick={() => void editor.save()}>
+				Save
+			</button>
+		</EntryEditorProvider>
+	);
+}
+```
+
+Choose this path when you want a different admin: another layout, another editing flow, or only one screen of your own. Nothing is copied, so the rest of the admin keeps updating. The reference is the [admin README](packages/admin/README.md#editor-hooks-experimental).
+
+### Path 2: `monti eject` to edit the shipped admin
+
+```sh
+pnpm exec monti eject @monti-cms/admin --dry-run   # what would be written; nothing is changed
+pnpm exec monti eject @monti-cms/admin             # asks first; --yes skips the question
+```
+
+`monti eject <package>` copies the source of a UI package, from the version you have installed, into your repo and makes the app use the copy. You then edit it like your own code, and a change shows on the next reload.
+
+- **What can be ejected:** the UI packages `@monti-cms/admin`, `@monti-cms/blocks`, `@monti-cms/seo` and `@monti-cms/ai`. `seo` and `ai` are taken whole, because their admin and server parts are one package. Core, auth, mdx, nextjs, the storage packages and the other data packages are refused with the reason, because storage, migrations and the write pipeline must keep receiving upgrades. The list is in one file, `packages/core/src/cli/eject/allowlist.ts`.
+- **Where it goes:** `packages/monti-admin/` (`monti-blocks`, `monti-seo`, `monti-ai`), a workspace package. A workspace package is the one shape every package manager links live and installs the dependencies of, and `packages/` is under version control with the rest of your site. The package keeps its name, so no import changes, and the other Monti packages that need `@monti-cms/admin` use your copy.
+- **What changes in your app:** the dependency in `package.json` becomes `workspace:*` (`*` for npm and yarn classic), the folder is added to `pnpm-workspace.yaml` or to the `workspaces` field, an override that pins the package is pointed at the copy, `.monti/ejected.json` records `{ package, version, ejectedAt, directory }` (and `.gitignore` is changed so that the record is committed), and the package manager's install runs. `withCms` builds the ejected packages with the app. The stylesheet is the prebuilt one, copied to `prebuilt/styles.css`; a new Tailwind class you use in the ejected source is not in it, so put its rule in your own CSS.
+- **Updates are your job from now on.** `pnpm up` no longer changes the package. `monti doctor` lists the ejected packages and warns when one was ejected from a version older than the `@monti-cms/core` you run. To see what changed upstream since your version, run `monti eject --diff @monti-cms/admin` (add `--to <version|folder|tgz>` to compare with something other than the latest); it marks the files you edited as well, so you know where to merge by hand.
+- **Flags:** `--dry-run`, `--yes`, `--json`, `--no-install`. Without a terminal and without `--yes` nothing is changed.
+
+Choose this path when you like the admin and want to change a part of it. If you want to rebuild how the whole editor works, the hooks are the lighter path. Forking the whole monorepo is not something `monti` does for you.
+
 ## Packages
 
 | Package | What it does |

@@ -15,6 +15,7 @@
 		"example:check": "node scripts/check-example.mjs",
 		"recipes:docs": "node scripts/sync-recipe-docs.mjs",
 		"recipes:check": "node scripts/sync-recipe-docs.mjs --check",
+		"eject:check": "node scripts/check-eject.mjs",
 		"example:pack": "node scripts/pack-example.mjs",
 		"preview:example": "node scripts/preview-example.mjs",
 		"prepare": "husky"
