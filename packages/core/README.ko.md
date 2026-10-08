@@ -432,7 +432,7 @@ pnpm exec monti doctor
 
 | 그룹 | 검사 |
 | --- | --- |
-| `config` | env 파일, `.env.local`이 `.gitignore`에 있는지, 설정 파일을 찾았는지, 불러와지고 인스턴스를 내보내는지, **Monti가 스스로 정한 값과 그 출처**(`config/automatic`), **`"use client"` 파일이 설정이나 다른 서버 전용 모듈을 import하지 않는지**(`monti check:boundary`를 대신한다) |
+| `config` | env 파일, `.env.local`이 `.gitignore`에 있는지, 설정 파일을 찾았는지, 불러와지고 인스턴스를 내보내는지, **Monti가 스스로 정한 값과 그 출처**(`config/automatic`), **미디어 저장소를 만들 수 있는지**(`config/storage`: `S3_*` 값이 빠지면 여기서 실패한다. 공개 화면은 주소를 만들 수 없는 이미지를 아무 말 없이 "사용할 수 없음"으로 그리기 때문이다), **`"use client"` 파일이 설정이나 다른 서버 전용 모듈을 import하지 않는지**(`monti check:boundary`를 대신한다) |
 | `schema` | 스키마 파일이 올바른지(문제마다 JSON 경로), `monti-env.d.ts`가 최신인지 |
 | `database` | `DATABASE_URL`이 있고 Postgres URL인지, 데이터베이스에 닿는지(틀린 호스트·포트·비밀번호·데이터베이스 이름을 구분한다), `DATABASE_SCHEMA`가 있는지, **미적용 마이그레이션이 몇 개인지**(`monti migrate`) |
 | `secrets` | `MONTI_SECRET`이 있고 충분히 강한지, 옛 `CMS_SECRET`·`AUTH_SECRET`이 아직 있지만 쓰이지 않는지 |
@@ -724,9 +724,16 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 4. **비밀 값.** `MONTI_SECRET`을 **옛 `CMS_SECRET` 값**으로 정하면 전에 암호화한 값(AI 서비스 키, git-sync 토큰)이 모두 그대로 풀린다. 또는 새 `MONTI_SECRET`을 정하고 `defineConfig`의 `previousSecrets: [process.env.CMS_SECRET]`로 옛 값을 계속 읽게 한다. 값은 다시 저장할 때 새 비밀 값으로 다시 암호화되고, 옛 값은 그 뒤에 뺀다. `AUTH_SECRET`은 더 이상 읽지 않으므로 지워도 된다. 로그인 세션 키가 이제 `MONTI_SECRET`에서 만들어지므로 모두 한 번 로그아웃된다(세션이 초기화될 뿐 잃는 것은 없다).
 5. **호스트.** `host: nextHost`와 그 import를 지운다. Next 통합이 붙여 준다.
-6. **Next 파일.** `app/(admin)/studio/*`를 `app/studio/*`로 옮긴다(라우트 그룹은 이제 선택이다). Monti 파일은 셋이 된다: `app/<관리자 경로>/layout.tsx`, `app/<관리자 경로>/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`(레이아웃을 페이지에 합칠 수 없는 이유는 "`monti init`"을 본다). `admin-components.tsx`는 지우고 그 컴포넌트를 플러그인으로 등록한다. `definePlugin({ name, options: {}, admin: () => import("./admin") })`를 만들고, 그 관리자 모듈의 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 한다. `Provider`는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓴다(`examples/blog/plugins/word-list/`). 세 파일의 import는 `monti.config.ts`로 고친다.
+6. **Next 파일.** `app/(admin)/studio/*`를 `app/studio/*`로 옮긴다(라우트 그룹은 이제 선택이다. 관리자 경로는 스키마 파일의 `admin.path`가 따로 없으면 `/admin`이라, 화면이 `app/(admin)/admin`에 있던 사이트는 `app/admin`으로 옮겨 주소를 그대로 둔다). Monti 파일은 셋이 된다: `app/<관리자 경로>/layout.tsx`, `app/<관리자 경로>/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`(레이아웃을 페이지에 합칠 수 없는 이유는 "`monti init`"을 본다). `admin-components.tsx`는 지우고 그 컴포넌트를 플러그인으로 등록한다. `definePlugin({ name, options: {}, admin: () => import("./admin") })`를 만들고, 그 관리자 모듈의 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 한다. `Provider`는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓴다(`examples/blog/plugins/word-list/`). 세 파일의 import는 `monti.config.ts`로 고친다.
+   세 파일 밖에서 로그인한 사람을 묻는 자기 코드(미리보기 레이아웃, `/api/admin/access` 라우트 같은 것)에는 통합이 요청 헤더를 붙여 주지 않는다. `cms.authGateway.verifyAdmin()` 앞에서 `cms.attachHost(nextHost)`(`@monti-cms/nextjs/auth`의 `nextHost`)를 부르거나, 그것을 대신 해 주는 `previewEntry(cms, …)`로 초안을 읽는다. 그러지 않으면 개발용 우회에서도 "로그인하지 않음"으로 답한다(로그에 `DEV AUTH BYPASS skipped … host: unknown`).
 7. **`bareun()`을 쓰지 않으려면 뺀다.** 패키지는 그대로 남아 있고, 블로그 예시에서는 뺐다.
 8. **확인하고 마이그레이션한다.** `monti doctor`를 돌린다. 이 안내에서 남은 것(옛 파일, 옛 변수 이름, `(admin)` 라우트 폴더, 설정에 남은 옛 옵션)을 정확한 단계와 함께 보여 주고, `"use client"` 파일이 설정에 닿으면 실패한다. 그다음 `monti migrate`를 돌린다.
+
+위 단계에 나오지 않는 것 셋:
+
+- **OAuth 콜백 URL.** 옛 `githubAuth`에 `basePath`가 없던 사이트만 GitHub OAuth 콜백 URL이 그대로다. `basePath: "/api/auth"`로 NextAuth 주소를 유지하던 사이트는 이제 OAuth 앱에 `<사이트 URL>/api/cms/auth/callback/github`를 등록하고(`monti doctor`가 찍어 준다), 옛 `app/api/auth/[...nextauth]` 라우트를 지운다.
+- **`monti schema:extract`는 `monti.config.ts`를 불러온다.** 설정이 아직 옛 패키지를 쓰는 앱 코드를 import하면(항목을 읽는 `publicApi.toJson` 같은 것) 이번 실행 동안 그 옵션을 주석 처리하고 끝난 뒤 되돌린다.
+- **테스트.** `defineConfig`는 `window`가 있는 곳에서 던지므로, `monti.config.ts`를 import하는 테스트(직접이든 테스트 대상 코드를 거쳐서든)는 `jsdom` 환경에서 돌리면 안 된다. `// @vitest-environment node`를 붙이거나, `@monti-cms/core/testing`의 `fakeCms`로 테스트에 필요한 인스턴스를 만든다.
 
 ## 진입점
 
