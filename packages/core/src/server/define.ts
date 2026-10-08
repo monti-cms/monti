@@ -83,6 +83,29 @@ export interface AuthProvider {
 	readonly label: string;
 	/** Icon shown on the button: an image address (an `https:` or `data:` URL). Optional; the button shows text only without it. */
 	readonly icon?: string;
+	/** `true` when the method is an email and password form on the login screen (not a button that sends the browser to another service). */
+	readonly credentials?: boolean;
+}
+
+/** Why a change to the accounts of the built-in login was refused: `closed` an admin already exists, `email` is not an email, `password` is too short, `unknown` no account has that email. */
+export type LoginAccountRefusal = "closed" | "email" | "password" | "unknown";
+
+/** The accounts a login method keeps itself in Monti's database: the built-in email and password login (`password()` of `@monti-cms/auth`). */
+export interface LoginAccounts {
+	/** The fewest characters a password has. */
+	readonly minPasswordLength: number;
+	/** Whether at least one account exists. */
+	hasAny(): Promise<boolean>;
+	/** Creates the first admin account. Refused with `closed` once any account exists, whatever the screen showed; two requests at once cannot both succeed. */
+	createFirst(input: {
+		email: string;
+		password: string;
+	}): Promise<{ ok: true } | { ok: false; reason: LoginAccountRefusal }>;
+	/** Sets a new password for an existing account (`monti admin:reset-password`). Refused with `unknown` when no account has that email. */
+	resetPassword(input: {
+		email: string;
+		password: string;
+	}): Promise<{ ok: true } | { ok: false; reason: LoginAccountRefusal }>;
 }
 
 /**
@@ -114,7 +137,12 @@ export interface CmsAuth {
 	 * Starts signing in with one login method. Either resolves with a `Response` (a redirect that carries the login cookies), which the sign-in route
 	 * returns as it is, or sends the browser away by throwing a host framework signal (see `rethrow`).
 	 */
-	signIn(provider?: string, options?: { redirectTo?: string; request?: Request }): Promise<unknown>;
+	signIn(
+		provider?: string,
+		options?: { redirectTo?: string; request?: Request; credentials?: Readonly<Record<string, string>> },
+	): Promise<unknown>;
+	/** The accounts the login keeps in the database, when a method does (the built-in email and password login). Not set for a login that only sends people to another service. */
+	readonly accounts?: LoginAccounts;
 	/** Signs out: resolves with a `Response` that clears the session cookie and redirects, or throws a host framework signal like `signIn`. */
 	signOut(options?: { redirectTo?: string; request?: Request }): Promise<unknown>;
 	/** Whether this user is an admin. */

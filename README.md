@@ -32,7 +32,7 @@ allowBuilds:
   esbuild: true
 ```
 
-- **Questions:** languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, and the admin path (default `/studio`). It sets up no login: you add one (for example GitHub) before you deploy; `monti doctor` reminds you.
+- **Questions:** languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, and the admin path (default `/studio`). How people sign in to the admin: the built-in email and password login (default, no other service needed), or GitHub (needs an OAuth app). With email and password, right after you deploy you open the admin and create the first admin on its first-admin screen; a forgotten password is replaced with `monti admin:reset-password`.
 - **No prompts:** every question has a flag, and `--yes` takes the defaults (and installs without asking); `--no-install` prints the install command instead. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
 - **Safe:** it edits no existing file, never overwrites one without asking (a file that is already there is skipped and reported), never writes outside the project, and says what it wrote if a run stops partway. If the install fails it says so and prints the exact install command; running `monti init` again continues, and existing files are kept.
 - **Languages:** file names like `hello.ko.mdx` + `hello.en.mdx` (or `ko/` and `en/` folders) give the site languages; under `--yes` they are used, the default being the language whose files have no pair.
@@ -52,7 +52,7 @@ If something does not work, run this in the folder of the app:
 pnpm exec monti doctor
 ```
 
-It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every warning and failure says what is wrong, where (a file or an environment variable) and how to fix it: the config file and the schema file, `DATABASE_URL` and whether the database is reachable and migrated (how many migrations are pending, and `monti migrate`), `MONTI_SECRET`, the GitHub login settings (the callback URL to register, the admin id, `SITE_URL`), the three Next files, what Monti decided on its own and where each value came from, and the `upgrade/` checks (only for sites coming from the pre-overhaul setup; they will be removed after the owner's blog migration (#93)). `--json` prints the result for tools, and the exit code is 1 when a check fails. The errors the packages throw say the same things in the same way. See "Troubleshooting: `monti doctor`" in the [core README](packages/core/README.md).
+It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every warning and failure says what is wrong, where (a file or an environment variable) and how to fix it: the config file and the schema file, `DATABASE_URL` and whether the database is reachable and migrated (how many migrations are pending, and `monti migrate`), `MONTI_SECRET`, the login settings (for email and password: that an admin account exists yet; for GitHub: the callback URL to register, the admin id; and `SITE_URL`), the three Next files, what Monti decided on its own and where each value came from, and the `upgrade/` checks (only for sites coming from the pre-overhaul setup; they will be removed after the owner's blog migration (#93)). `--json` prints the result for tools, and the exit code is 1 when a check fails. The errors the packages throw say the same things in the same way. See "Troubleshooting: `monti doctor`" in the [core README](packages/core/README.md).
 
 ## Packages
 
@@ -61,7 +61,7 @@ It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every
 | [`@monti-cms/core`](packages/core) | The core. One config (`monti.config.ts`), entry storage and publishing, the document model, admin API, command line (`monti`) |
 | [`@monti-cms/mdx`](packages/mdx) | MDX extension. The `mdx` format, the admin source panel, `renderMdx` and the syntax extension API |
 | [`@monti-cms/admin`](packages/admin) | The admin UI. Editor, entry list, media, templates. Framework-neutral: it reaches the router through an adapter |
-| [`@monti-cms/auth`](packages/auth) | Admin login on `Request` and `Response` (Auth.js core), with pluggable providers. GitHub ships with it |
+| [`@monti-cms/auth`](packages/auth) | Admin login on `Request` and `Response` (Auth.js core), with pluggable providers. A built-in email and password login (`password()`) and GitHub ship with it |
 | [`@monti-cms/nextjs`](packages/nextjs) | The Next.js adapter. Route handler, `next.config.ts` wiring, admin page and layout with the App Router adapter, the Next side of the login |
 | [`@monti-cms/blocks`](packages/blocks) | Block extension. Callout, toggle, tabs, columns, code explorer, Mermaid, chart |
 | [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |

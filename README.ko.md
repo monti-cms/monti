@@ -32,7 +32,7 @@ allowBuilds:
   esbuild: true
 ```
 
-- **질문:** 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`). 로그인은 만들지 않는다. 배포하기 전에 직접 더하며(예: GitHub), `monti doctor`가 알려 준다.
+- **질문:** 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`). 관리자 로그인 방법도 묻는다: 내장 이메일·비밀번호 로그인(기본, 다른 서비스 불필요) 또는 GitHub(OAuth 앱 필요). 이메일·비밀번호면 배포한 직후 관리자를 열어 첫 관리자 화면에서 첫 관리자를 만들고, 비밀번호를 잊었을 때는 `monti admin:reset-password`로 새로 정한다.
 - **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓰고 묻지 않고 설치한다. `--no-install`은 설치하지 않고 설치 명령을 적어 준다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
 - **안전:** 이미 있는 파일은 고치지 않고(이미 있는 파일은 건너뛰고 알려 준다), 묻지 않고 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다. 설치가 실패하면 그렇게 말하고 설치 명령을 그대로 적어 준다. `monti init`을 다시 돌리면 이어서 하고, 있는 파일은 그대로 둔다.
 - **언어:** `hello.ko.mdx` + `hello.en.mdx` 같은 파일 이름(또는 `ko/`, `en/` 폴더)이 사이트 언어가 된다. `--yes`에서는 그대로 쓰고, 기본 언어는 짝이 없는 파일을 가진 언어다.
@@ -52,7 +52,7 @@ allowBuilds:
 pnpm exec monti doctor
 ```
 
-설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·마이그레이션됐는지(미적용 마이그레이션이 몇 개인지, `monti migrate`), `MONTI_SECRET`, GitHub 로그인 설정(등록할 콜백 URL, 관리자 id, `SITE_URL`), Next 파일 셋, Monti가 스스로 정한 값과 그 출처, `upgrade/` 검사(개편 전 설정에서 올리는 사이트만 해당하며 소유자의 블로그 마이그레이션(#93) 뒤에 지운다). `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
+설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·마이그레이션됐는지(미적용 마이그레이션이 몇 개인지, `monti migrate`), `MONTI_SECRET`, 로그인 설정(이메일·비밀번호면 관리자 계정이 이미 있는지, GitHub이면 등록할 콜백 URL과 관리자 id, 그리고 `SITE_URL`), Next 파일 셋, Monti가 스스로 정한 값과 그 출처, `upgrade/` 검사(개편 전 설정에서 올리는 사이트만 해당하며 소유자의 블로그 마이그레이션(#93) 뒤에 지운다). `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
 
 ## 패키지
 
@@ -61,7 +61,7 @@ pnpm exec monti doctor
 | [`@monti-cms/core`](packages/core/README.ko.md) | 본체. 설정, 글 저장·발행, 문서 모델, 관리자 API, 명령줄(`monti`) |
 | [`@monti-cms/mdx`](packages/mdx/README.ko.md) | MDX 확장. `mdx` 형식, 관리자 원문 패널, `renderMdx`, 문법 확장 API |
 | [`@monti-cms/admin`](packages/admin/README.ko.md) | 관리자 화면. 편집기, 글 목록, 미디어, 템플릿. 프레임워크에 묶이지 않고 라우터는 어댑터로 받는다 |
-| [`@monti-cms/auth`](packages/auth/README.ko.md) | `Request`·`Response` 위의 관리자 로그인(Auth.js core). 프로바이더를 갈아 끼운다. GitHub가 들어 있다 |
+| [`@monti-cms/auth`](packages/auth/README.ko.md) | `Request`·`Response` 위의 관리자 로그인(Auth.js core). 프로바이더를 갈아 끼운다. 내장 이메일·비밀번호 로그인(`password()`)과 GitHub가 들어 있다 |
 | [`@monti-cms/nextjs`](packages/nextjs/README.ko.md) | Next.js 어댑터. 라우트 핸들러, `next.config.ts` 연결, App Router 어댑터를 얹은 관리자 페이지·레이아웃, 로그인의 Next 쪽 |
 | [`@monti-cms/blocks`](packages/blocks/README.ko.md) | 블록 확장. 콜아웃, 접기, 탭, 단 나누기, 코드 탐색기, Mermaid, 차트 |
 | [`@monti-cms/ai`](packages/ai/README.ko.md) | AI 확장. 글쓰기·번역 같은 AI 기능 |

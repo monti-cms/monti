@@ -66,7 +66,7 @@ const host = {
 };
 
 describe("the project monti init writes", () => {
-	it("type checks with every feature on", async () => {
+	it.each(["password", "github"] as const)("type checks with every feature on and the %s login", async (login) => {
 		const dir = fixture();
 		const report = await initProject({
 			cwd: dir,
@@ -75,6 +75,7 @@ describe("the project monti init writes", () => {
 			storage: "s3",
 			extras: "ai,git-sync",
 			blocks: "all",
+			login,
 			install: false,
 		});
 		expect(report.created).toContain("monti.config.ts");

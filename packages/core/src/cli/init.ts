@@ -12,7 +12,7 @@ import {
 	apiRouteTemplate,
 	configTemplate,
 	envExampleTemplate,
-	githubLoginHowTo,
+	githubCallbackUrl,
 	type InitAnswers,
 	nextConfigTemplate,
 	packagesFor,
@@ -470,9 +470,25 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/git-sync to save the GitHub token.`,
 		);
 	}
-	todo.push(
-		`Before you deploy, add a login (for example GitHub): ${githubLoginHowTo(answers.siteUrl)}. Under \`next dev\` you are the admin without one.`,
-	);
+	if (answers.login === "github") {
+		todo.push(
+			[
+				"Create the GitHub OAuth app that signs people in (GitHub > Settings > Developer settings > OAuth Apps > New OAuth App):",
+				`  Homepage URL: ${answers.siteUrl}`,
+				`  Authorization callback URL: ${githubCallbackUrl(answers.siteUrl)}`,
+				"Then put its Client ID in AUTH_GITHUB_ID and a new client secret in AUTH_GITHUB_SECRET, and your numeric GitHub id in MONTI_ADMIN_GITHUB_ID (.env.example says where to find it).",
+				"Under `next dev` you are the admin without signing in; the GitHub login applies once the app is deployed.",
+			].join("\n"),
+		);
+	} else {
+		todo.push(
+			[
+				`Right after you deploy, open ${answers.siteUrl.replace(/\/+$/, "")}${answers.adminPath} and create the first admin (an email and a password). That screen closes as soon as one admin exists.`,
+				`Or create it beforehand: run the app in production mode (\`${script(manager, "build")}\` then \`${manager === "npm" || manager === "bun" ? `${manager} run start` : `${manager} start`}\`) pointed at the production database (its DATABASE_URL) and open ${answers.adminPath} on this machine. (Under \`next dev\` you are the admin without signing in, so that screen does not show.)`,
+				`A forgotten password: ${exec(manager, "admin:reset-password")}`,
+			].join("\n"),
+		);
+	}
 	report.next.unshift(...todo);
 	if (hasFailure) report.ok = false;
 	return report;

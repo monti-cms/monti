@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { type AdminPrompts, adminResetPassword } from "./admin-command";
 import { DOCTOR_HELP, runDoctorCommand } from "./doctor";
 import { eventsRetry } from "./events";
 import { HELP, helpFor } from "./help";
@@ -14,6 +15,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
  * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
+ * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
@@ -24,6 +26,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * - `monti schema:apply [--schema <file>] [--dry-run] [env options]`: runs the data transforms of the schema file (`migrations`) once each and records the schema and its version.
  */
 
+export { type AdminPrompts, adminResetPassword, type ResetPasswordOptions } from "./admin-command";
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths";
 export { unifiedDiff } from "./diff";
 export {
@@ -98,6 +101,8 @@ export interface CliIo {
 	readonly error: (message: string) => void;
 	/** Answers the questions of `monti init` (tests). Default: the terminal, when there is one. */
 	readonly prompter?: Prompter;
+	/** Answers the questions of `monti admin:reset-password` (tests). Default: the terminal, when there is one. */
+	readonly adminPrompts?: AdminPrompts;
 }
 
 /** Runs the command and returns the exit code. */
@@ -117,6 +122,26 @@ export async function runCli(
 		}
 		if (command === "init") {
 			return await runInitCommand(rest, io);
+		}
+		if (command === "admin:reset-password") {
+			const { values } = parseArgs({
+				args: [...rest],
+				options: {
+					email: { type: "string" },
+					"env-file": { type: "string", multiple: true },
+					"no-env-file": { type: "boolean" },
+					config: { type: "string" },
+				},
+			});
+			return await adminResetPassword({
+				cwd: io.cwd,
+				envFiles: values["no-env-file"] ? [] : values["env-file"],
+				config: values.config,
+				email: values.email,
+				prompts: io.adminPrompts,
+				log: io.log,
+				error: io.error,
+			});
 		}
 		if (command === "migrate") {
 			const { values } = parseArgs({

@@ -21,10 +21,19 @@ const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): a
               --blocks <list>       default, all, none, or block names: callout, collapsible, tabs, columns, code-explorer, mermaid, chart, tooltip, code-ref, color
                                     (default: the light set, callout, collapsible, tabs, code-ref and color. mermaid adds about 26 MB of packages and chart adds
                                     recharts, so both are opt-in: name them, or pass all)
+              --login <password|github>   How people sign in to the admin: the built-in email and password login (default), or GitHub (needs an OAuth app).
+                                    The first one is created on the admin screen; GitHub's values go in .env.local
               --admin-path <path>   Admin screen path (default /studio)
               --overwrite           Replace existing files that differ (default: keep them)
               --no-install          Do not install packages: the install command is printed in the list of what is left
               --package-manager <m> npm, pnpm, yarn or bun (default: detected)
+`;
+
+const ADMIN_RESET_PASSWORD_HELP = `  admin:reset-password    Set a new password for an admin of the email and password login (auth({ providers: [password()] })). It asks for the new password twice
+            and writes it straight to the database of monti.config.ts; there is no mail, so this is the way to replace a forgotten password. The first admin is
+            created on the admin's own screen, not here.
+              --email <email>       The admin's email (asked when left out)
+              --env-file <file>, --no-env-file, --config <file>   As for migrate
 `;
 
 const MIGRATE_HELP = `  migrate   Create or update the tables in the database of monti.config.ts, and say where (host, database, schema) and how many steps ran
@@ -73,6 +82,7 @@ const SCHEMA_APPLY_HELP = `  schema:apply    Run the data transforms of the sche
 const SECTIONS: readonly (readonly [string, string])[] = [
 	["init", INIT_HELP],
 	["migrate", MIGRATE_HELP],
+	["admin:reset-password", ADMIN_RESET_PASSWORD_HELP],
 	["events:retry", EVENTS_RETRY_HELP],
 	["<plugin>", PLUGIN_HELP],
 	["doctor", DOCTOR_HELP],
