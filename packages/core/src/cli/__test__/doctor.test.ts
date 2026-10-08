@@ -157,6 +157,18 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(admins.fix).toContain("api.github.com/users");
 	});
 
+	it("runs no GitHub checks for a site whose login has no GitHub provider", async () => {
+		setEnv({ MONTI_SECRET: STRONG_SECRET });
+		const other =
+			'{ id: "gitlab", name: "GitLab", label: { en: "Sign in with GitLab" }, setup: () => ({ id: "gitlab", type: "oauth" }), account: () => null }';
+		const config = configText().replace("github()", other);
+		const { report } = await doctor(project({ "monti.config.ts": config }));
+		for (const id of ["auth/github-id", "auth/github-secret", "auth/admins"]) {
+			expect(byId(report, id).status, id).toBe("skip");
+		}
+		expect(byId(report, "auth/github-id").message).toContain("no GitHub provider");
+	});
+
 	it("is stricter about the login when it runs as production", async () => {
 		setEnv({ NODE_ENV: "production" });
 		const { report } = await doctor(project());

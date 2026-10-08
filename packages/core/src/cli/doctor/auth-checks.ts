@@ -1,7 +1,7 @@
 import { detectProxyPlatform, explainTrustHost } from "../../adapters/auth/trust-host";
 import { CMS_AUTH_BASE_PATH } from "../../server/define";
 import type { CoreCheck, DoctorState } from "./core-checks";
-import { fail, ok, warn } from "./outcome";
+import { fail, ok, skip, warn } from "./outcome";
 
 /** The `auth` group of `monti doctor`: only the environment values and config values core itself knows about the GitHub login. */
 
@@ -52,6 +52,25 @@ function missingGithubValue(name: string, env: Env) {
 	const details = { where: WHERE_TO_SET, fix: OAUTH_APP_FIX };
 	return isProduction(env) ? fail(message, details) : warn(message, details);
 }
+
+/**
+ * False only when the config loaded and its login has providers but none is GitHub, so a site with another login gets no GitHub checks.
+ * When the config did not load, or the login cannot be created yet (a missing setting throws), the checks run.
+ */
+function usesGithub(state: DoctorState): boolean {
+	if (!state.cms) return true;
+	try {
+		const providers = state.cms.auth().providers;
+		return providers.length === 0 || providers.some((provider) => provider.id === "github");
+	} catch {
+		return true;
+	}
+}
+
+const githubOnly = (check: CoreCheck): CoreCheck => ({
+	...check,
+	run: (state) => (usesGithub(state) ? check.run(state) : skip("not checked: the login has no GitHub provider")),
+});
 
 const githubId: CoreCheck = {
 	group: "auth",
@@ -203,4 +222,11 @@ const callbackUrl: CoreCheck = {
 	},
 };
 
-export const AUTH_CHECKS: readonly CoreCheck[] = [githubId, githubSecret, admins, siteUrl, trustHost, callbackUrl];
+export const AUTH_CHECKS: readonly CoreCheck[] = [
+	githubOnly(githubId),
+	githubOnly(githubSecret),
+	githubOnly(admins),
+	siteUrl,
+	trustHost,
+	callbackUrl,
+];
