@@ -42,6 +42,42 @@ pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈�
 
 GitHub 로그인을 쓰려면 OAuth 앱의 콜백 주소를 `http://localhost:3000/api/cms/auth/callback/github`로 둔다.
 
+## 내 컴포넌트 사용하기
+
+블록의 모양은 이미 있는 기능만으로 양쪽 모두 바꿀 수 있다. 이 블로그는 `callout` 블록을 자체 `components/callout.tsx`(`SiteCallout`, 인라인 스타일만 쓰고 훅이 없어 서버와 클라이언트 코드가 모두 import할 수 있다)로 그린다.
+
+공개 페이지에서는 `CmsContent`에 넘긴다(`components/article-body.tsx`). props 타입은 블록 정의에서 나온다.
+
+```tsx
+import type { calloutBlock } from "@monti-cms/blocks";
+import type { BlockProps } from "@monti-cms/core/render";
+
+const PublicSiteCallout = ({ variant, title, children }: BlockProps<typeof calloutBlock>) => (
+	<SiteCallout variant={variant} title={title}>{children}</SiteCallout>
+);
+
+<CmsContent cms={cms} entry={entry} components={{ blocks: { callout: PublicSiteCallout } }} />;
+```
+
+관리자 편집기에서는 블록 뷰가 같은 컴포넌트로 편집 가능한 본문을 감싼다(`plugins/site-callout/`, `monti.config.ts`에 `siteCallout()` 한 줄, `plugins/word-list/`와 같은 방식으로 등록). `useBlockEditor()`, `BlockFrame`, `Content`는 `@monti-cms/admin/hooks`에서, `AttributeInput`과 `ContainerToolbar`는 `@monti-cms/admin/blocks`에서 가져온다.
+
+```tsx
+function SiteCalloutView() {
+	const block = useBlockEditor();
+	const variant = String(block.values.variant ?? "note");
+	return (
+		<BlockFrame>
+			<SiteCallout variant={variant} title={<AttributeInput value={String(block.values.title ?? "")} onCommit={(title) => block.setValue("title", title)} />}>
+				<Content />
+			</SiteCallout>
+			<ContainerToolbar label="Callout">{/* block.setValue("variant", …)를 부르는 select */}</ContainerToolbar>
+		</BlockFrame>
+	);
+}
+
+// provider.tsx ("use client"): <CmsAdminComponentsProvider components={{ blockViews: { callout: SiteCalloutView } }}>
+```
+
 ## Git 동기화 (기본은 꺼 둠)
 
 `monti.config.ts`에는 발행한 글과 메모를 GitHub 저장소의 파일과 양방향으로 동기화하는 `gitSync({ enabled: false, targets: [...] })`(`@monti-cms/git-sync`)가 들어 있다. 꺼 둔 상태라 예제는 토큰도 저장소도 없이 돌아가고, 관리자에 "Git 동기화" 화면도 없다. 써 보려면 다음과 같이 한다.
