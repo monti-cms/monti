@@ -14,10 +14,11 @@ const everything = {
 	[QUESTIONS.blocks]: "pick",
 	[QUESTIONS.blockList]: ["callout", "mermaid"],
 	[QUESTIONS.adminPath]: "/cms",
+	[QUESTIONS.login]: "github",
 };
 
 describe("the questions of monti init", () => {
-	it("asks in the order locales, storage, extras, blocks, admin path", async () => {
+	it("asks in the order locales, storage, extras, blocks, admin path, login", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(prompter.asked).toEqual([
@@ -27,6 +28,7 @@ describe("the questions of monti init", () => {
 			QUESTIONS.blocks,
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
+			QUESTIONS.login,
 		]);
 		expect(answers).toEqual({
 			siteUrl: "http://localhost:3000",
@@ -37,6 +39,7 @@ describe("the questions of monti init", () => {
 			gitSync: true,
 			blocks: ["callout", "mermaid"],
 			adminPath: "/cms",
+			login: "github",
 		});
 	});
 
@@ -110,12 +113,44 @@ describe("the questions of monti init", () => {
 		expect(options.find((option) => option.value === "callout")?.hint).not.toMatch(/Heavy/);
 	});
 
-	it("never asks for a login, a GitHub id or a database schema, and takes no flag for them", async () => {
+	it("asks how to sign in with the built-in email and password login first and GitHub second, and has no choice for no login", async () => {
+		let offered: readonly { value: string; label: string }[] = [];
+		let initial: string | undefined;
+		const prompter = scriptedPrompter(everything);
+		const select = prompter.select.bind(prompter);
+		prompter.select = async (question) => {
+			if (question.message === QUESTIONS.login) {
+				offered = question.options;
+				initial = question.initial;
+			}
+			return select(question);
+		};
+		await collectAnswers(app(), {}, prompter);
+		expect(QUESTIONS.login).toBe("How should people sign in to the admin?");
+		expect(offered.map((option) => [option.value, option.label])).toEqual([
+			["password", "Email and password (built in, no other service needed)"],
+			["github", "GitHub (needs a GitHub OAuth app)"],
+		]);
+		expect(initial).toBe("password");
+	});
+
+	it("never asks for a GitHub id or a database schema", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
-		expect(prompter.asked.join("\n")).not.toMatch(/github|schema|login/i);
+		expect(prompter.asked.join("\n")).not.toMatch(/github id|schema/i);
 		expect(Object.keys(answers)).not.toContain("adminGithubId");
 		expect(Object.keys(answers)).not.toContain("databaseSchema");
+	});
+
+	it("--login takes password or github, skips the question, and refuses anything else", async () => {
+		const prompter = scriptedPrompter({ [QUESTIONS.extras]: [] });
+		const flags = { locales: "en", storage: "none", blocks: "none", adminPath: "/studio" };
+		expect((await collectAnswers(app(), { ...flags, login: "github" }, prompter)).login).toBe("github");
+		expect(prompter.asked).toEqual([QUESTIONS.extras]);
+		expect((await collectAnswers(app(), { login: "password" })).login).toBe("password");
+		await expect(collectAnswers(app(), { login: "none" })).rejects.toThrow(
+			'--login "none" must be "password" or "github"',
+		);
 	});
 
 	it("a question whose flag is given is not asked", async () => {
@@ -127,6 +162,7 @@ describe("the questions of monti init", () => {
 				storage: "none",
 				blocks: "none",
 				adminPath: "/studio",
+				login: "password",
 				timeZone: "Asia/Tokyo",
 			},
 			prompter,
@@ -151,6 +187,7 @@ describe("the questions of monti init", () => {
 			// the light set: no mermaid or chart, which are heavy
 			blocks: ["callout", "collapsible", "tabs", "code-ref", "color"],
 			adminPath: "/studio",
+			login: "password",
 		});
 	});
 

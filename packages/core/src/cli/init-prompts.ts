@@ -61,6 +61,8 @@ export interface InitAnswerFlags {
 	/** `all`, `none`, `default` (the light set) or comma-separated block names. */
 	readonly blocks?: string;
 	readonly adminPath?: string;
+	/** `password` or `github`. */
+	readonly login?: string;
 }
 
 const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
@@ -110,6 +112,7 @@ const check = {
 		const bad = splitList(value).find((name) => !["all", "none", "default", ...BLOCK_IDS].includes(name));
 		return bad ? `"${bad}" is not a block; use default, all, none or any of ${BLOCK_IDS.join(", ")}` : undefined;
 	},
+	login: (value: string) => (["password", "github"].includes(value) ? undefined : 'must be "password" or "github"'),
 	adminPath: (value: string) =>
 		validAdminPath(value)
 			? undefined
@@ -139,6 +142,7 @@ export function validateFlags(flags: InitAnswerFlags): void {
 	checked("extras", flags.extras, check.extras);
 	checked("blocks", flags.blocks, check.blocks);
 	checked("admin-path", flags.adminPath, check.adminPath);
+	checked("login", flags.login, check.login);
 }
 
 /** What the questions ask, for the tests and the docs. */
@@ -149,6 +153,7 @@ export const QUESTIONS = {
 	blocks: "Which body blocks do you want?",
 	blockList: "Pick the blocks",
 	adminPath: "Where should the admin live?",
+	login: "How should people sign in to the admin?",
 } as const;
 
 /** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
@@ -269,6 +274,21 @@ export async function collectAnswers(
 				).trim()
 			: DEFAULT_INIT_ADMIN_PATH);
 
+	// Login. There is no "none" choice: a config without a login is only what a hand-written config can be.
+	const login =
+		flags.login !== undefined
+			? (flags.login as "password" | "github")
+			: prompter
+				? await prompter.select<"password" | "github">({
+						message: QUESTIONS.login,
+						options: [
+							{ value: "password", label: "Email and password (built in, no other service needed)" },
+							{ value: "github", label: "GitHub (needs a GitHub OAuth app)" },
+						],
+						initial: "password",
+					})
+				: "password";
+
 	return {
 		siteUrl,
 		locales,
@@ -278,6 +298,7 @@ export async function collectAnswers(
 		gitSync: extras.includes("git-sync"),
 		blocks: blocks.filter((id) => BLOCK_IDS.includes(id)),
 		adminPath,
+		login,
 	};
 }
 

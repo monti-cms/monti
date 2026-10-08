@@ -33,6 +33,7 @@ const options = {
 	extras: { type: "string" },
 	blocks: { type: "string" },
 	"admin-path": { type: "string" },
+	login: { type: "string" },
 	overwrite: { type: "boolean" },
 	"no-install": { type: "boolean" },
 	"package-manager": { type: "string" },
@@ -69,6 +70,7 @@ export async function runInitCommand(
 			extras: values.extras,
 			blocks: values.blocks,
 			adminPath: values["admin-path"],
+			login: values.login,
 			log: json ? undefined : io.log,
 			host: extras.host,
 		});

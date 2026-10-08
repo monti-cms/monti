@@ -152,6 +152,7 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.blocks]: "pick",
 			[QUESTIONS.blockList]: ["callout", "tabs"],
 			[QUESTIONS.adminPath]: "/studio",
+			[QUESTIONS.login]: "password",
 			"Install the": true,
 		});
 		const host = fakeHost();
@@ -165,6 +166,7 @@ describe("monti init on the command line", () => {
 			QUESTIONS.blocks,
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
+			QUESTIONS.login,
 			expect.stringContaining("Install the"),
 		]);
 		expect(prompter.notes[0]).toMatchObject({ title: "Detected" });
@@ -183,6 +185,7 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.extras]: [],
 			[QUESTIONS.blocks]: "all",
 			[QUESTIONS.adminPath]: "/studio",
+			[QUESTIONS.login]: "github",
 			"Install the": false,
 		});
 		const host = fakeHost();

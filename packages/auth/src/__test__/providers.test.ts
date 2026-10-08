@@ -101,11 +101,10 @@ describe("a second provider through the same interface", () => {
 	});
 });
 
-describe("a password provider fits the interface (compile-checked, not shipped)", () => {
+describe("a credentials provider written outside this package fits the interface", () => {
 	/**
-	 * The shape of a `@monti-cms/auth-password` package: users live in the storage of a plugin the package owns (`context.storage`),
-	 * and `authorize` is where hashing and rate limits go. Here the "storage" is a map; the login page has no form for it yet,
-	 * so signing in through it is refused for now (see the README).
+	 * The shape of another credentials package: users live in the storage of a plugin the package owns (`context.storage`),
+	 * and `authorize` is where hashing and rate limits go. Here the "storage" is a map. (`password()` is the shipped one.)
 	 */
 	const password = (): LoginProvider => {
 		const users = new Map([["ana", { id: "u-1", hash: "x", name: "Ana" }]]);
@@ -127,14 +126,12 @@ describe("a password provider fits the interface (compile-checked, not shipped)"
 		};
 	};
 
-	it("registers next to an OAuth provider, matches admins by its own ids, and is not offered a sign-in without a form", async () => {
+	it("registers next to an OAuth provider, matches admins by its own ids, and is listed as a form login", () => {
 		const cmsAuth = connect({ providers: [github(), { ...password(), admins: ["u-1"] }] });
 		expect(cmsAuth.providers.map((provider) => provider.id)).toEqual(["github", "password"]);
 		expect(cmsAuth.isAdmin("password:u-1")).toBe(true);
 		expect(cmsAuth.isAdmin("password:u-2")).toBe(false);
-		await expect(
-			cmsAuth.signIn("password", { request: new Request("http://localhost:3000/x", { method: "POST" }) }),
-		).rejects.toThrow(/credentials provider/);
+		expect(cmsAuth.providers.map((provider) => provider.credentials === true)).toEqual([false, true]);
 	});
 
 	it("receives the plugin storage the core supplies", () => {

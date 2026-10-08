@@ -1,7 +1,7 @@
 import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parseSchemaFile } from "../../schema-file/format";
 import { unifiedDiff } from "../diff";
 import { formatInitReport, InitError, initProject, ProjectWriter } from "../init";
@@ -30,6 +30,7 @@ const ANSWERED = {
 	extras: "none",
 	blocks: "none",
 	adminPath: "/studio",
+	login: "password",
 } as const;
 
 /** Every file of the project with its content, for "nothing existing was touched". */
@@ -67,12 +68,11 @@ describe("monti init in a fresh create-next-app", () => {
 			expect(config).not.toContain(line);
 		}
 		expect(config).toContain("database: postgres(),");
-		// Only what the user chose is written: no login is set up on their behalf.
-		const code = config
-			.split("\n")
-			.filter((line) => !line.trim().startsWith("//"))
-			.join("\n");
-		expect(code).not.toMatch(/\bauth\b|github|@monti-cms\/auth/);
+		// The default login is the built-in email and password one: no GitHub in the config.
+		expect(config).toContain('import { auth } from "@monti-cms/auth";');
+		expect(config).toContain('import { password } from "@monti-cms/auth/password";');
+		expect(config).toContain("\tauth: auth({ providers: [password()] }),");
+		expect(config).not.toMatch(/github/i);
 		expect(config).toContain("// storage: s3Storage(),");
 		expect(config).not.toMatch(/aiPlugin|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
 
@@ -115,7 +115,7 @@ describe("monti init in a fresh create-next-app", () => {
 			expect(example).toContain(name);
 		}
 		expect(example).toContain("openssl rand -base64 32");
-		// Nothing about a login the user did not choose.
+		// The default login (email and password) needs no setting at all.
 		expect(example).not.toMatch(/GITHUB|OAuth/i);
 		// The schema is a commented line with a reason, not a value and not a question.
 		expect(example).toMatch(/^# DATABASE_SCHEMA=/m);
@@ -126,6 +126,34 @@ describe("monti init in a fresh create-next-app", () => {
 		// Every non-comment line is a name with an empty value or a placeholder, never a real secret.
 		for (const line of example.split("\n").filter((entry) => entry && !entry.startsWith("#"))) {
 			expect(line).toMatch(/^(DATABASE_URL=postgres:\/\/user:password@localhost:5432\/monti|[A-Z0-9_]+=[a-z0-9]*)$/);
+		}
+	});
+
+	it("with --login github writes the GitHub provider, its variables with how to get them, and the OAuth app step", async () => {
+		const dir = fixtureApp();
+		const report = await initProject({ cwd: dir, ...quiet(), login: "github" });
+		const config = read(dir, "monti.config.ts");
+		expect(config).toContain('import { auth } from "@monti-cms/auth";');
+		expect(config).toContain('import { github } from "@monti-cms/auth/github";');
+		expect(config).toContain("\tauth: auth({ providers: [github()] }),");
+		expect(config).not.toContain("password");
+		const example = read(dir, ".env.example");
+		for (const name of ["AUTH_GITHUB_ID", "AUTH_GITHUB_SECRET", "MONTI_ADMIN_GITHUB_ID"]) {
+			expect(example).toMatch(new RegExp(`^${name}=$`, "m"));
+		}
+		expect(example).toContain("api.github.com/users/<your-github-login>");
+		expect(example).toContain("http://localhost:3000/api/cms/auth/callback/github");
+		const step = report.next.at(-1) ?? "";
+		expect(step).toContain("OAuth");
+		expect(step).toContain("http://localhost:3000/api/cms/auth/callback/github");
+		expect(report.next.join("\n")).not.toContain("create the first admin");
+	});
+
+	it("installs @monti-cms/auth for either login", async () => {
+		for (const login of ["password", "github"] as const) {
+			const install = vi.fn();
+			await initProject({ cwd: fixtureApp(), host: fakeHost({ install }), login });
+			expect(install.mock.calls[0]?.[0].args).toContain("@monti-cms/auth");
 		}
 	});
 
@@ -159,7 +187,7 @@ describe("monti init in a fresh create-next-app", () => {
 			"Create the tables: pnpm exec monti migrate",
 			"Check the setup: pnpm exec monti doctor",
 			"Start the app: pnpm dev, then open http://localhost:3000/studio",
-			expect.stringContaining("Before you deploy, add a login (for example GitHub)"),
+			expect.stringContaining("Right after you deploy, open http://localhost:3000/studio and create the first admin"),
 		]);
 		expect(next[0]).toContain('import { withCms } from "@monti-cms/nextjs/config";');
 		expect(next[0]).toContain("-export default nextConfig;\n+export default withCms(nextConfig);");
@@ -168,17 +196,15 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(next[2]).toContain("openssl rand -base64 32");
 		expect(next[2]).toContain("randomBytes(32).toString('base64')");
 		expect(next[4]).toContain("`monti doctor` will tell you if any of the steps above is missing");
-		expect(next[6]).toContain("@monti-cms/auth");
-		expect(next[6]).toContain("auth: auth({ providers: [github()] })");
-		for (const name of ["AUTH_GITHUB_ID", "AUTH_GITHUB_SECRET", "MONTI_ADMIN_GITHUB_ID"])
-			expect(next[6]).toContain(name);
-		expect(next[6]).toContain("http://localhost:3000/api/cms/auth/callback/github");
+		expect(next[6]).toContain("That screen closes as soon as one admin exists");
+		expect(next[6]).toContain("monti admin:reset-password");
+		expect(next[6]).not.toMatch(/GitHub|OAuth/);
 		expect(next.join("\n")).not.toContain("monti import");
 
 		const text = formatInitReport(report);
 		expect(text).toContain("What is left");
 		expect(text).toMatch(/\n {2}1\. Wrap the config/);
-		expect(text).toMatch(/\n {2}7\. Before you deploy/);
+		expect(text).toMatch(/\n {2}7\. Right after you deploy/);
 	});
 
 	it("does not touch the database or list the removed steps", async () => {
@@ -220,7 +246,7 @@ describe("monti init and the package install", () => {
 			]),
 		);
 		expect(command?.args).not.toContain("@monti-cms/ai");
-		expect(command?.args).not.toContain("@monti-cms/auth");
+		expect(command?.args).toContain("@monti-cms/auth");
 		expect(command?.args).not.toContain("mermaid");
 		expect(command?.cwd).toBe(dir);
 		expect(report.steps.map((step) => [step.name, step.status])).toEqual([["Install packages", "done"]]);
@@ -425,7 +451,7 @@ describe("monti init tailors what is left to the app", () => {
 				dependencies: { next: "16.3.8" },
 			}),
 		});
-		const report = await initProject({ cwd: dir, ...quiet() });
+		const report = await initProject({ cwd: dir, ...quiet(), login: "github" });
 		expect(report.next.join("\n")).toContain("http://localhost:4000/api/cms/auth/callback/github");
 		expect(read(dir, ".env.example")).toContain("# SITE_URL=http://localhost:4000");
 	});

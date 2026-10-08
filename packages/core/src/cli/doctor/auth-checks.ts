@@ -78,6 +78,16 @@ function usesGithub(state: DoctorState): boolean {
 	}
 }
 
+/** Whether the config loaded and its login includes the built-in email and password method. */
+function usesPassword(state: DoctorState): boolean {
+	if (!state.cms || hasNoLogin(state)) return false;
+	try {
+		return state.cms.auth().providers.some((provider) => provider.credentials === true);
+	} catch {
+		return false;
+	}
+}
+
 const githubOnly = (check: CoreCheck): CoreCheck => ({
 	...check,
 	run: (state) => (usesGithub(state) ? check.run(state) : skip("not checked: the login has no GitHub provider")),
@@ -154,6 +164,30 @@ const admins: CoreCheck = {
 		}
 		const listed = ids.map((id) => (id.includes(":") ? id : `github:${id}`));
 		return ok(`${ids.length} admin${ids.length === 1 ? "" : "s"}: ${listed.join(", ")}`, { where: GITHUB_ADMIN });
+	},
+};
+
+const adminAccounts: CoreCheck = {
+	group: "auth",
+	id: "admin-accounts",
+	title: "Admin accounts",
+	needsCms: true,
+	run: async (state) => {
+		if (!usesPassword(state)) return skip("not checked: the login is not email and password");
+		let any: boolean | undefined;
+		try {
+			any = await state.cms?.auth().accounts?.hasAny();
+		} catch (error) {
+			return skip(
+				`could not read the admin accounts (${error instanceof Error ? error.message : String(error)}); fix the database checks first`,
+			);
+		}
+		if (any) return ok("at least one admin account exists", { where: "the database (plugin storage of `auth`)" });
+		const adminUrl = `${siteOrigin(state).origin}${state.cms?.site.adminHref() ?? ""}`;
+		return warn("no admin account exists yet, so nobody can sign in", {
+			where: "the database",
+			fix: `open the admin (${adminUrl}) and create the first admin: right after you deploy, or beforehand by running the app in production mode against the production database (under \`next dev\` you are the admin without signing in, so the screen does not show). A forgotten password: \`monti admin:reset-password\``,
+		});
 	},
 };
 
@@ -256,7 +290,8 @@ export const AUTH_CHECKS: readonly CoreCheck[] = [
 	githubOnly(githubId),
 	githubOnly(githubSecret),
 	githubOnly(admins),
+	adminAccounts,
 	siteUrl,
 	withLogin(trustHost),
-	withLogin(callbackUrl),
+	githubOnly(withLogin(callbackUrl)),
 ];

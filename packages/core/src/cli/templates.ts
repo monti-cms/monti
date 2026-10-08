@@ -71,6 +71,8 @@ export interface InitAnswers {
 	/** Ids of {@link BLOCK_CHOICES}. */
 	readonly blocks: readonly string[];
 	readonly adminPath: string;
+	/** How people sign in to the admin: the built-in email and password login, or GitHub (an OAuth app). */
+	readonly login: "password" | "github";
 }
 
 /** The language's name in that language for a locale code (e.g. `ko` -> `한국어`). Falls back to the code itself. */
@@ -284,6 +286,11 @@ export const chosenBlocks = (ids: readonly string[]): readonly BlockChoice[] =>
 export function configTemplate(answers: InitAnswers): string {
 	const blocks = chosenBlocks(answers.blocks);
 	const imports: { from: string; names: string[] }[] = [
+		{ from: "@monti-cms/auth", names: ["auth"] },
+		{
+			from: answers.login === "github" ? "@monti-cms/auth/github" : "@monti-cms/auth/password",
+			names: [answers.login],
+		},
 		{ from: "@monti-cms/core/server", names: ["defineConfig", "postgres"] },
 		{ from: "@monti-cms/mdx", names: ["mdx"] },
 	];
@@ -366,8 +373,17 @@ export function configTemplate(answers: InitAnswers): string {
 		"\t// The content database: DATABASE_URL, and DATABASE_SCHEMA when the database is shared.",
 		"\tdatabase: postgres(),",
 		"",
-		"\t// No login yet: under `next dev` you are the admin without one, from this machine only; a deployed admin refuses everyone.",
-		"\t// To add GitHub login see the README of @monti-cms/auth (install it, then `auth: auth({ providers: [github()] })`).",
+		...(answers.login === "github"
+			? [
+					"\t// Sign in with GitHub: the OAuth app and the admin come from AUTH_GITHUB_ID, AUTH_GITHUB_SECRET and MONTI_ADMIN_GITHUB_ID (see .env.example).",
+					"\t// Under `next dev` you are the admin without signing in, from this machine only.",
+					"\tauth: auth({ providers: [github()] }),",
+				]
+			: [
+					"\t// Sign in with an email and a password, kept in the database above. The first admin is created on the admin screen the first time you open it.",
+					"\t// Under `next dev` you are the admin without signing in, from this machine only. A forgotten password: `monti admin:reset-password`.",
+					"\tauth: auth({ providers: [password()] }),",
+				]),
 		"",
 		...storage,
 		"",
@@ -468,7 +484,7 @@ export function envExampleTemplate(answers: InitAnswers): string {
 		"",
 		"# --- Secret ---",
 		"",
-		"# A long random value that signs login sessions (once you add a login) and encrypts stored values (AI keys, git-sync tokens).",
+		"# A long random value that signs login sessions and encrypts stored values (AI keys, git-sync tokens).",
 		"# Generate one:  openssl rand -base64 32",
 		"# or, without openssl:  node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
 		"# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",
@@ -482,6 +498,24 @@ export function envExampleTemplate(answers: InitAnswers): string {
 		"# Set to true only behind a proxy you run yourself (nginx, a load balancer). Vercel, Netlify and Cloudflare Pages are detected.",
 		"# AUTH_TRUST_HOST=true",
 	];
+	if (answers.login === "github") {
+		lines.push(
+			"",
+			"# --- Login with GitHub ---",
+			"",
+			"# A GitHub OAuth app: GitHub > Settings > Developer settings > OAuth Apps > New OAuth App.",
+			`# Homepage URL: ${site}`,
+			`# Authorization callback URL: ${githubCallbackUrl(site)}`,
+			"# Register one app per address (the local one and the deployed one), or one callback URL per app.",
+			"# Its Client ID, then a client secret you generate on the same page:",
+			"AUTH_GITHUB_ID=",
+			"AUTH_GITHUB_SECRET=",
+			"",
+			"# Who is an admin: your numeric GitHub id, not your login (a login can be renamed and then taken by someone else).",
+			'# Open https://api.github.com/users/<your-github-login> in a browser and copy the number after "id". Several ids go in one value, separated by commas.',
+			"MONTI_ADMIN_GITHUB_ID=",
+		);
+	}
 	if (answers.storage === "s3") {
 		lines.push(
 			"",
@@ -510,6 +544,7 @@ export function packagesFor(answers: InitAnswers): string[] {
 	const blocks = chosenBlocks(answers.blocks);
 	return unique([
 		"@monti-cms/core",
+		"@monti-cms/auth",
 		"@monti-cms/admin",
 		"@monti-cms/nextjs",
 		"@monti-cms/mdx",

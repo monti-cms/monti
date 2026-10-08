@@ -13,6 +13,7 @@ const help = async (...argv: string[]) => {
 
 const COMMANDS = [
 	"init",
+	"admin:reset-password",
 	"migrate",
 	"events:retry",
 	"doctor",

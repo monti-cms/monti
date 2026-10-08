@@ -98,6 +98,7 @@ describe("monti init and the languages of the content", () => {
 			extras: "none",
 			blocks: "none",
 			adminPath: "/studio",
+			login: "password",
 		});
 		expect(prompter.asked.find((question) => question.includes("Languages of the site"))).toMatch(
 			/Found ko, en in the file names of content\/posts\//,
