@@ -32,9 +32,9 @@ export interface CmsPlugin<
 	/** Validation called when the site config is created. Throws if the config is invalid. */
 	readonly validate?: (config: PluginConfigView) => void;
 	/**
-	 * Write hooks written inline, for a plugin that only needs hooks: `definePlugin({ name, hooks })` needs no `server` module. Inline code is part of the
-	 * site config, which the browser bundle imports too, so keep it small and free of server-only code, secrets and heavy imports; a plugin with those
-	 * puts its hooks in `server` (a lazy module, read only on the server). Not both: a plugin with `hooks` here and in `server` fails when it loads.
+	 * Write hooks written inline, for a plugin that only needs hooks: `definePlugin({ name, hooks })` needs no `server` module. Inline code loads with
+	 * every server start (the CLI, edge and cold starts included), so keep it light; it may use secrets through `cms.secrets` or the environment. A plugin
+	 * with heavy hooks, or with routes, migrations, commands or checks, puts its hooks in `server` (a lazy module). Not both: a plugin with `hooks` here and in `server` fails when it loads.
 	 */
 	readonly hooks?: WriteHooks;
 	/** Server side (API routes, migrations, hooks, commands, checks). The default export is a `CmsServerPlugin`. Read only on the server. */

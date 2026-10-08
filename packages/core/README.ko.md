@@ -1208,7 +1208,7 @@ export const myPlugin = () =>
   `migrate`는 `monti migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
 - **쓰기 훅**(`transform`·`validate`·`validatePublish`·`afterCommit`)은 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다. 플러그인은 훅을 두 곳 중 한 곳에만 둔다(양쪽에 두면 불러올 때 실패한다).
-  - **인라인**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. 훅만 더하는 플러그인에 쓴다. 모듈 파일이 없고 `options`도 생략할 수 있다. 플러그인 객체는 사이트 설정의 일부이고 브라우저 묶음도 이를 가져오므로, 인라인 훅은 작고 순수해야 한다. 비밀 값, Node 전용 API, 네트워크 클라이언트, 무거운 import가 없어야 한다.
+  - **인라인**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. 훅만 더하는 플러그인에 쓴다. 모듈 파일이 없고 `options`도 생략할 수 있다. 인라인 훅은 CLI, 엣지, 콜드 스타트를 포함해 서버가 시작할 때마다 불러오므로 가볍게 둔다(무거운 import 없이). `cms.secrets`나 환경 변수로 비밀 값을 쓸 수 있다. `monti.config.ts`는 서버 전용이라 브라우저에 닿지 않는다.
   - **지연 `server` 모듈**: `server: async () => ({ default: { hooks } })`. 서버만 읽으므로, 비밀 값을 쥐거나 네트워크로 호출하거나 무거운 것을 import하는 훅이 있는 곳이다. 어차피 경로, 마이그레이션, 명령, 검사가 있는 플러그인도 여기에 둔다.
 - `afterCommit(event, cms)`는 플러그인의 훅이든 서버 설정의 훅이든 인스턴스를 받는다. 그래서 자기 저장소·스토어·형식이 필요한 구독자가 따로 상태를 두지 않아도 된다. 전달은 아웃박스에서 하며(재시도, 최소 한 번, "이벤트 전달") `event.once(run)`은 이벤트마다 일을 한 번만 돌린다.
 - 서버 쪽 `commands`는 명령줄 명령을 더한다. `monti <플러그인 이름>:<명령> [옵션]`이 `monti migrate`처럼 앱을 불러오고(`--env-file`, `--no-env-file`, `--config`) `command.run({ cms, args, log, error })`를 돌려 그것이 돌려주는 코드로 끝난다. 명령은 `options`(`{ 이름: { type: "string" | "boolean", description } }`)를 선언하고, `--help`가 그것을 나열한다. `monti git-sync:pull`이 그중 하나다.

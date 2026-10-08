@@ -35,7 +35,7 @@ export const lowercaseSlugs: WriteHooks = {
 
 /**
  * The same rules as a plugin, which is how a package ships them: `plugins: [slugRulePlugin()]`. The hooks are written inline, with no `server` module,
- * because they are small and pure (no secret, no network, no server-only import), so it is fine for them to be part of the config the browser imports too.
- * A plugin whose hooks need a secret, a Node API or a heavy import puts them in a lazy `server` module instead (see the Slack recipe).
+ * because they are light (no network client, no heavy import): inline hooks load with every server start, the CLI and cold starts included.
+ * A plugin whose hooks are heavy, or that has routes, migrations, commands or checks, puts them in a lazy `server` module instead (see the Slack recipe).
  */
 export const slugRulePlugin = () => definePlugin({ name: "slug-rule", hooks: { ...lowercaseSlugs, ...slugRule } });

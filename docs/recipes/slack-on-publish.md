@@ -11,7 +11,7 @@ Code: [`examples/recipes/src/slack-on-publish`](../../examples/recipes/src/slack
 3. **`event.once(run)` is the idempotency helper.** It runs `run` one time per event and subscriber: a repeat skips it, and a `run` that throws is not marked, so the retry runs it again. No storage code of your own.
 4. **Every `afterCommit` gets the instance**: `afterCommit(event, cms)`, in the config's `hooks` and in a plugin's alike, so it can read its storage, the site and the entry.
 5. **`event.read()`** returns the committed entry now (`null` if it was deleted): the event itself carries ids, the kind and slugs, never the body.
-6. **A plugin's `hooks` can be inline or in a lazy `server` module.** This one holds a secret and calls out over the network, so it uses the lazy `server` module (see "Inline or `server`" below).
+6. **A plugin's `hooks` can be inline or in a lazy `server` module.** This one calls out over the network and has its own settings, so it uses the lazy `server` module (see "Inline or `server`" below).
 
 ## The code
 
@@ -31,8 +31,8 @@ export interface SlackOnPublishOptions {
 /**
  * Sends a message to Slack when an entry is published.
  *
- * It is a plugin with a lazy `server` module, not an inline `hooks`, because it holds a secret (the webhook URL) and calls out over the network: an inline
- * hook is part of the config the browser bundle imports, a `server` module is read on the server only. It works with no arguments: `plugins: [slackOnPublish()]`.
+ * It is a plugin with a lazy `server` module, not an inline `hooks`, because it calls out over the network and keeps its own settings: inline
+ * hooks load with every server start (the CLI and cold starts included), a `server` module loads when it is needed. It works with no arguments: `plugins: [slackOnPublish()]`.
  */
 export const slackOnPublish = (options: SlackOnPublishOptions = {}) =>
 	definePlugin({
@@ -89,8 +89,8 @@ plugins: [slackOnPublish()], // reads SLACK_WEBHOOK_URL, or slackOnPublish({ web
 
 A plugin's write hooks (`transform`, `validate`, `validatePublish`, `afterCommit`) can sit in two places:
 
-- **Inline**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. No module file. The plugin object is part of the site config, which the browser bundle imports too, so use this only when the hooks are small and pure: no secret, no Node-only API, no network client, no heavy import. The [slug rule](slug-rule.md#as-a-plugin) is the example.
-- **In the lazy `server` module**: `server: async () => ({ default: { hooks } })`. Read on the server only, and the place for a secret, a Node API, an SDK or a database client. This recipe uses it because it holds the webhook URL.
+- **Inline**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. No module file. Inline hooks load with every server start (the CLI, edge and cold starts included), so use this when they are light. They may use secrets through `cms.secrets` or the environment; `monti.config.ts` is server-only and never reaches the browser. The [slug rule](slug-rule.md#as-a-plugin) is the example.
+- **In the lazy `server` module**: `server: async () => ({ default: { hooks } })`. Loaded when it is needed, and the place for heavy code (an SDK, a database client) and for a plugin that has routes, migrations, commands or checks. This recipe uses it because it is a network client.
 
 Set the hooks in one of the two, not both: a plugin with hooks in both places fails when it loads.
 

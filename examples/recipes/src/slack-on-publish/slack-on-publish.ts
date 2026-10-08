@@ -12,8 +12,8 @@ export interface SlackOnPublishOptions {
 /**
  * Sends a message to Slack when an entry is published.
  *
- * It is a plugin with a lazy `server` module, not an inline `hooks`, because it holds a secret (the webhook URL) and calls out over the network: an inline
- * hook is part of the config the browser bundle imports, a `server` module is read on the server only. It works with no arguments: `plugins: [slackOnPublish()]`.
+ * It is a plugin with a lazy `server` module, not an inline `hooks`, because it calls out over the network and keeps its own settings: inline
+ * hooks load with every server start (the CLI and cold starts included), a `server` module loads when it is needed. It works with no arguments: `plugins: [slackOnPublish()]`.
  */
 export const slackOnPublish = (options: SlackOnPublishOptions = {}) =>
 	definePlugin({
