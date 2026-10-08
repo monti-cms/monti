@@ -8,7 +8,7 @@ export { EMPTY_FORM, formList, formText, metadataFromForm } from "./screens/entr
 export { AdminShell, useAdminNav } from "./screens/shared/admin-shell.js";
 export { NamedIcon, useIconByName } from "./screens/shared/collection-icon.js";
 export type { ConfirmRequest } from "./screens/shared/confirm-dialog.js";
-export { ConfirmDialog, DISCARD_CONFIRM, useConfirm } from "./screens/shared/confirm-dialog.js";
+export { ConfirmDialog, discardConfirm, useConfirm } from "./screens/shared/confirm-dialog.js";
 export { useDebounced } from "./screens/shared/use-debounced.js";
 export * from "./ui/alert.js";
 export * from "./ui/alert-dialog.js";

@@ -9,6 +9,6 @@ export { BAREUN_PLUGIN_NAME, type BareunOptions, type ResolvedBareunOptions } fr
  * plugins: [bareun()]
  * ```
  */
-export declare const bareun: (options?: BareunOptions) => import("@monti-cms/core").CmsPlugin<"text-check-bareun", import("./options.js").ResolvedBareunOptions> & {
+export declare const bareun: (options?: BareunOptions) => import("@monti-cms/core").CmsPlugin<"text-check-bareun", import("./options.js").ResolvedBareunOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
     readonly contributes?: Readonly<Record<string, unknown>> | undefined;
 };

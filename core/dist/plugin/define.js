@@ -5,5 +5,5 @@
 export function definePlugin(plugin) {
     if (!/^[a-z][a-z0-9-]*$/.test(plugin.name))
         throw new Error(`cms plugin: invalid name "${plugin.name}"`);
-    return plugin;
+    return { ...plugin, options: plugin.options ?? {} };
 }

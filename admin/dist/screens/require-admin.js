@@ -1,18 +1,16 @@
 import "server-only";
-import { adminHref } from "@monti-cms/core/client";
-import { AuthError, authGateway } from "@monti-cms/core/runtime";
-import { redirect } from "next/navigation";
+import { AuthError } from "@monti-cms/core/runtime";
 /**
  * Shared admin screen auth. With no session or a different account, redirects to login instead of an error screen.
  * The API answers the same gateway with 401/403.
  */
-export async function requireAdminPage() {
+export async function requireAdminPage(cms, server) {
     try {
-        return await authGateway.verifyAdmin();
+        return await cms.authGateway.verifyAdmin();
     }
     catch (error) {
         if (error instanceof AuthError)
-            redirect(adminHref("/login"));
+            server.redirect(cms.site.adminHref("/login"));
         throw error;
     }
 }

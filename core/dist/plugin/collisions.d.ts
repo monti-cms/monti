@@ -4,7 +4,10 @@
  */
 /** A single-segment path of the core admin UI (`/admin/<path>`). An empty string is the list view. Keep it identical to the admin UI's path picking. */
 export declare const CORE_ADMIN_PAGES: readonly string[];
-/** Names the core uses in the admin meta API `features`. Cannot be used as plugin names. */
+/**
+ * Names the core uses in the admin meta API `features`, and the plugin storage it keeps for itself (`core-events`: the marks of `event.once`).
+ * Cannot be used as plugin names.
+ */
 export declare const CORE_FEATURE_KEYS: readonly string[];
 /** Error if a plugin name collides with a core `features` name. */
 export declare function assertPluginNamesFree(names: readonly string[]): void;

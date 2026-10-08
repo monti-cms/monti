@@ -1,4 +1,6 @@
+import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
 import { type PropsWithChildren } from "react";
+import type { tabsBlock } from "./definition.js";
 /** One tab. `Tabs` reads its name and body, so when used on its own only the body is rendered. */
 export declare function Tab({ children }: PropsWithChildren<{
     label?: string;
@@ -10,9 +12,10 @@ export declare function Tab({ children }: PropsWithChildren<{
 export declare function Tabs({ defaultValue, children }: PropsWithChildren<{
     defaultValue?: string;
 }>): import("react").JSX.Element;
-export default _default;
-/** Public component for tabs (called by `@monti-cms/core/render`). */
-declare function _default(): {
-    Tabs: typeof Tabs;
-    Tab: typeof Tab;
-};
+/**
+ * Tab group of the JSON renderer. It reads the tabs from the block's `items` (the stored `tab` nodes and what each renders to), not from the props of
+ * child elements: the tab names are the `label` attributes and each panel is the content of its tab.
+ */
+export declare function DocumentTabs({ defaultValue, items, children }: BlockProps<typeof tabsBlock>): import("react").JSX.Element;
+/** Public components for tabs in the JSON renderer (`renderDocument`): the blocks `tabs` and `tab`. */
+export declare const documentComponents: (_context: DocumentComponentsContext) => LooseDocumentComponents;

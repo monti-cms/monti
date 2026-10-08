@@ -6,6 +6,7 @@ import { type EditorState, Selection, type Transaction } from "@tiptap/pm/state"
  */
 /** Transaction meta announcing the positions (number[]) of moved blocks after moving several blocks (block selection continues). */
 export declare const MOVED_BLOCKS_META = "cmsMovedBlocks";
+/** CMS containers that must keep at least one body block (built from block definitions). Moving the only block leaves an empty paragraph. */
 /** Range to delete when taking blocks out. If `fill` is set, that spot is filled with it. null if they cannot be taken out. */
 export interface SourceRange {
     from: number;

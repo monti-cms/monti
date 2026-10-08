@@ -1,3 +1,4 @@
+import { type Site } from "@monti-cms/core/client";
 /**
  * Browser image upload. Shared by the editor and the media library.
  *
@@ -31,7 +32,7 @@ export interface PreparedUpload {
  * Web optimization. If it cannot convert or conversion is not a gain, returns the original as is and records the reason.
  * Never silently turns an animation into a still image.
  */
-export declare function prepareUpload(file: File, options?: {
+export declare function prepareUpload(site: Site, file: File, options?: {
     optimize: boolean;
     policy?: OptimizePolicy;
 }): Promise<PreparedUpload>;
@@ -43,12 +44,12 @@ export interface UploadedMedia {
     defaultAlt: string;
     defaultCaption: string;
 }
-export declare function uploadImageFile(input: File | PreparedUpload, onProgress?: (percent: number) => void): Promise<UploadedMedia>;
+export declare function uploadImageFile(site: Site, input: File | PreparedUpload, onProgress?: (percent: number) => void): Promise<UploadedMedia>;
 export declare const formatBytes: (bytes: number) => string;
 /**
  * Uploads an attachment file. The format is decided by the file name extension (browsers give inconsistent types for code files).
  * Rejects before uploading if the format is not accepted or the site setting limit (`media.maxFileBytes`) is exceeded.
  */
-export declare function uploadAttachment(file: File, onProgress?: (percent: number) => void): Promise<{
+export declare function uploadAttachment(site: Site, file: File, onProgress?: (percent: number) => void): Promise<{
     mediaId: string;
 }>;

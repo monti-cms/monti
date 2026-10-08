@@ -4,7 +4,7 @@ import { type KeyboardEvent } from "react";
 import { type DraggedEntry } from "./shared/entry-drag.js";
 import { type FolderActions } from "./shared/use-folder-actions.js";
 /** Value that points to the current screen in the sidebar. For a plugin screen, that screen's address (`nav.path`, e.g. `ai`). */
-export type AdminNavId = Collection | "media" | "templates" | "trash" | (string & {});
+export type AdminNavId = Collection | "media" | "templates" | "events" | "schema" | "trash" | (string & {});
 /** Folder navigation used only on the list screen. */
 export interface FolderNavigation {
     collection: Collection;
@@ -23,8 +23,10 @@ export interface AdminSidebarProps {
     activeNav: AdminNavId;
     folderNav?: FolderNavigation;
     trashCount?: number | null;
+    /** Failed and dead event deliveries. */
+    eventsCount?: number | null;
 }
 /** Like a file explorer: F2 opens rename, Delete opens delete (confirm dialog). */
 export declare function folderKeyHandler(folder: Folder, actions: FolderActions): (event: KeyboardEvent) => void;
 /** Left navigation area: collections, media/templates/trash, virtual folder tree. */
-export declare function AdminSidebar({ activeNav, folderNav, trashCount }: AdminSidebarProps): import("react").JSX.Element;
+export declare function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: AdminSidebarProps): import("react").JSX.Element;

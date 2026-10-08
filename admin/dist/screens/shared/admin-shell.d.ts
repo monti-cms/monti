@@ -4,6 +4,8 @@ interface AdminNavContextValue {
     /** Number of trash items across all collections. null before loading. */
     trashCount: number | null;
     refreshTrashCount: () => void;
+    /** Number of failed and dead event deliveries. null before loading or when unavailable. */
+    eventsCount: number | null;
 }
 /** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
 export declare const useAdminNav: () => AdminNavContextValue;

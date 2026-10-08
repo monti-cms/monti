@@ -2,17 +2,18 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 관리자 화면(Next.js App Router). 목록·편집기(tiptap)·미디어·본문 템플릿·휴지통·로그인 화면을 준다.
+`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·본문 템플릿·실패한 이벤트 전달(`/admin/events`)·휴지통·로그인 화면을 준다.
+프레임워크에 묶이지 않는다. Next.js에서 아무것도 가져오지 않고, 라우터는 받은 어댑터로만 닿는다("라우터 어댑터"). 지금 지원하는 호스트는 `@monti-cms/nextjs`를 통한 Next.js(App Router)다.
 플러그인(예: `@monti-cms/ai`)이 화면·사이드바 항목·필드 옆 버튼·편집 화면 동작을 더한다.
 화면은 본체의 관리자 API(`/api/cms/v1/*`)만 부른다. 설치하지 않고 같은 API로 화면을 직접 만들어도 된다.
 
 ## 붙이기
 
-설치·라우트·스타일은 `@monti-cms/core` README의 "빈 Next 앱에 설치"를 따른다(`monti init`이 관리자 라우트·스타일 줄을 만든다).
+설치·라우트·스타일은 `@monti-cms/core` README의 "빈 Next 앱에 설치"를 따른다(`monti init`이 관리자 라우트·스타일 줄을 만든다). 관리자 라우트 파일은 `@monti-cms/nextjs/admin`의 `CmsAdminLayout`·`CmsAdminPage`를 쓴다.
 
 - **관리자 경로.** 기본 `/admin`이고 사이트 설정 `admin.path`로 바꾼다(예: `/studio`). 앱의 관리자 라우트 폴더
-  (`app/(admin)/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
-  플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `@monti-cms/core/client`의 `adminHref("/media")`·`adminEntryEditHref(id)`로
+  (`app/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
+  플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `useSite()`(`@monti-cms/core/client`)로 받은 사이트의 `site.adminHref("/media")`·`site.adminEntryEditHref(id)`로
   주소를 만든다. 관리자 API(`/api/cms/v1`)는 바뀌지 않는다.
 - **사이트 보기.** 사이드바 아래 `사이트 보기`는 `site.home`(기본 `/`)을 연다. 관리자 화면이 다른 호스트에 있으면 전체 주소를 적는다.
 - **미리보기.** 편집 화면 `미리보기`는 `site.previewPath` 뒤에 공개 경로를 붙이고 언어는 `site.previewLocaleParam`(기본
@@ -21,17 +22,32 @@
 ## 사이트 컴포넌트 넣기
 
 필드 입력·블록 편집 화면·코드 펜스 미리보기는 확장이 넣고 사이트가 더하거나 바꾼다(예: 블록 확장의 Mermaid·차트는 기본
-미리보기를 준다). 클라이언트 컴포넌트에서 넣는다. 사이트의 공급자를 관리자 레이아웃 안쪽에 두면 같은 이름은 사이트 것이 이긴다.
+미리보기를 준다). 사이트는 자기 플러그인으로 넣는다. 플러그인이 관리자 쪽을 지정하면 관리자가 그것을 불러온다(`app/`에 따로 둘 파일은 없다). 그 관리자 쪽의 Provider는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓰는 클라이언트 컴포넌트다. 같은 이름이면 확장의 것보다 사이트의 것이 이긴다.
+
+```ts
+// plugins/site-admin/index.ts
+import { definePlugin } from "@monti-cms/core";
+
+export const siteAdmin = () => definePlugin({ name: "site-admin", options: {}, admin: () => import("./admin") });
+
+// plugins/site-admin/admin.ts: 기본 내보내기가 관리자 쪽이다
+import { defineAdminPlugin } from "@monti-cms/admin/plugins";
+import { SiteAdminComponents } from "./provider";
+
+export default defineAdminPlugin({ Provider: SiteAdminComponents });
+```
+
+그런 다음 `monti.config.ts`의 `plugins`에 `siteAdmin()`을 넣는다. `examples/blog/plugins/word-list`는 스케치다. Provider는 다음과 같다.
 
 ```tsx
+// plugins/site-admin/provider.tsx
 "use client";
 import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 
 const components = {
 	fencePreviews: { chart: () => import("./chart").then((m) => m.Chart) }, // ({ source }) => ReactNode
 	fieldInputs: { color: ColorInput }, // fields.text({ input: "color" })인 필드를 이 입력으로 그린다
-	blockEditors: { notice: NoticeEditor }, // 더한 블록의 속성·본문 상자({ definition, values, setValue, content })
-	blockViews: { banner: BannerView }, // 더한 블록의 편집 화면 전체(Tiptap NodeView). blockEditors보다 먼저 쓴다
+	blockViews: { notice: NoticeView, image: SiteImageView }, // 모든 블록의 편집 화면(기본 image·file·math 포함). 화면은 props를 받지 않고 useBlockEditor()를 부른다
 };
 
 export function SiteAdminComponents({ children }) {
@@ -56,6 +72,43 @@ const components = { icons: { eye: Eye } };
 플러그인은 관리자 쪽 `Provider` 안에서 등록한다(`@monti-cms/blocks`의 각 블록, `@monti-cms/ai`가 예시). 서버 레이아웃은
 컴포넌트를 브라우저로 넘길 수 없어 플러그인 정의가 아니라 클라이언트 공급자로 등록한다.
 
+## 본문은 저장 문서
+
+편집기는 글이 아니라 저장 문서(`StoredDocument`)로 일한다. JSON 문서가 본문의 유일한 원본이다. 편집기로 불러오고 저장하는 길에는 어떤 표기법(MDX든 다른 것이든)도
+끼지 않는다.
+
+- `CmsEditor`는 `doc`을 받고, 바뀔 때마다 `onChange(doc)`를 부른다. 문서가 블록에 준 id가 그대로 담긴다. 편집기 자신이 만든 것이 아닌 `doc`이 오면 편집기가 보이는 것을 바꾼다
+  (같은 내용에 id나 키 순서만 다른 문서는 그대로 둔다). `@monti-cms/admin/editor`의 `storedToTiptap(doc)`·`tiptapToStored(json)`이 바로 바꿔 준다. 편집 화면이 없는 노드나
+  문서로 읽지 못한 본문(`unparsed` 노드 하나)은 읽기 전용 상자(`cmsOpaqueBlock`)에 통째로 담아 아무것도 잃지 않는다.
+- `CmsEditor`는 `allowed`(컬렉션 `body`의 객체 형태: `blocks`, `marks`, `headings`. 편집 화면은 컬렉션의 것을 넘긴다)도 받는다. 그러면 그것만 보여 주고 받아들이며(툴바, 슬래시·컴포넌트 메뉴, 글 말풍선, 입력 규칙, 단축키, 붙여넣기), 이미 다른 것이 들어 있는 본문도 그대로 열리고 저장된다. `@monti-cms/core` README의 "본문별 허용 블록·마크"를 본다.
+- 편집 화면의 폼은 본문을 `form.doc`으로 든다(초안, 브라우저 복구본, 충돌 비교가 모두 문서를 본다. 내용으로 비교하므로 블록 id와 키 순서는 따지지 않는다). 그 전에 본문을 MDX 글로 `form.mdx`에 담아
+  저장한 복구본도 그대로 되살린다. 이런 복구본은 `unparsed` 문서로 보관되고, 원문 패널(`@monti-cms/mdx`의 `mdx()` 플러그인)이 열려 있으면 다시 읽는다.
+- `DocPreview`(`@monti-cms/admin/editor`)는 번역 화면이 원문을 보이고 AI가 결과를 보이는 문서 읽기 전용 보기다.
+
+### 원문 패널
+
+도구 줄 끝의 원문 토글은 본문을 어떤 표기법의 글로 고친다. 표기법은 플러그인의 것이다. **원문 패널**이 등록되어 있을 때만 토글이 보이고, 등록은 다른 사이트 컴포넌트와 같은 공급자로 한다
+(`useCmsAdminComponents().sourcePanels`). 여러 개면 먼저 등록한 것을 쓴다.
+
+```tsx
+// `@monti-cms/mdx`의 `mdx()` 플러그인이 대신 등록해 주는 것:
+const components = {
+	sourcePanels: [{ format: "mdx", label: "MDX 원문", Panel: MdxPanel }],
+	formats: { mdx: mdxFormat }, // 브라우저가 읽고 쓸 수 있는 형식(`BrowserFormat`). `useFormat("mdx")`로 찾는다
+};
+```
+
+`Panel`은 `SourcePanelProps`를 받는다. `doc`(본문), `onChange(doc, issues)`(글이 바뀜: 그 글이 읽히는 문서와 글에서 찾은 것. 읽을 수 없는 글은 `unparsed` 노드 하나에 담은 문서로 돌려주고
+찾은 것은 `issues`에 담는다), `focusBlock`(캐럿을 둘 블록의 id. 발행 문제를 따라갈 때), 화면이 필요로 하는 덤으로 `readOnly`와 `onComposing(composing)`(IME 조합이 끝나야 저장한다)이다.
+패널은 브라우저에서 읽으므로 틀린 곳이 쓰는 동안 바로 보인다. `BrowserFormat`은 맥락(사이트 블록, 언어)을 묶어 둔 형식이다. `export(doc): string`과 `import(text)`(`{ ok: true, doc, warnings }` 또는
+`{ ok: false, issues }`)가 있고 둘 다 동기다. 관리자에는 자체 패널이 없다. MDX 원문 패널과 `mdx` 브라우저 형식은 `@monti-cms/mdx`(`@monti-cms/mdx/admin`)가 주고, `mdx()` 플러그인의 관리자 공급자가 등록한다. 이 플러그인이 없으면 원문 토글도 없다. 패널의 문구는 이름공간 `cms-mdx.source`에 있다.
+`SOURCE_ERROR_ID`(`@monti-cms/admin`)는 패널이 발견한 것을 보이는 요소의 id이고, `useLinkPaths`(`@monti-cms/admin/hooks`)는 패널에 글 링크의 경로를 준다. `mdxBrowserFormat`은 `@monti-cms/admin/editor`에서 더는 내보내지 않는다.
+
+### 글 링크
+
+글로 가는 링크는 그 글의 id만 들고 있으므로 편집기가 가는 곳을 찾아 보인다. 링크 버블과 링크 폼이 글의 제목과 주소를 보이고(글이 없어졌거나 찾지 못하면 그렇게 알린다), 링크를 열면 글이 발행됐을 때는 사이트의
+그 글 쪽으로, 아니면 관리자의 그 글 편집 화면으로 간다. 링크 폼에 주소를 직접 적으면 글 링크를 그 주소로 바꾼다.
+
 ## 속성 칸
 
 편집 화면 오른쪽 속성 칸은 컬렉션 정의대로 입력을 그린다. 입력은 필드 종류로 정한다: 텍스트·선택·관계, 미디어 필드
@@ -79,12 +132,23 @@ const components = {
 
 필드나 `layout` 묶음의 `tab`마다 속성 칸에 탭이 생긴다(없으면 `속성` 탭, 묶음의 `tab`이 먼저). 보기 필드
 (`fields.view({ view })`)는 그 자리에 `CmsAdminComponentsProvider`의 `fieldViews`(`{ 이름: ({ collection, form, entry }) => … }`)로
-등록한 화면을 그린다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
+등록한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `@monti-cms/core/client`의 `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. [읽는 시간 레시피](../../docs/recipes/reading-time-field.md)는 스케치다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
 `@monti-cms/admin/media`의 `MediaThumbnail`·`useMediaUrl`을 쓴다(SEO 확장 `@monti-cms/seo`의 검색 미리보기가 예시다).
 날짜·시각은 사이트 설정의 `timeZone`으로, 표기는 `admin.locale`(기본 `ko-KR`)로 보인다. 관계 입력의 안내 문구는 대상 컬렉션의
 이름표를 쓴다(예: "게시글 고르기"). 항목 컬렉션(`kind: "item"`)의 항목은 목록의 작은 폼으로 연다. 미디어 사용처처럼 여러
 컬렉션을 가리키는 곳은 `<관리자 경로>?collection=<컬렉션>&open=<ID>`로 그 항목 칸을 열고, `<관리자 경로>/entries/<ID>/edit`로 열어도
 그 주소로 보낸다. 목록 컬럼 설정에 저장된 이름 중 지금 컬럼이 아닌 것은 버린다(예전 이름을 짐작해 바꾸지 않는다).
+
+## 스키마 화면
+
+`<관리자 경로>/schema`(사이드바: 관리 > 스키마)는 개발 서버에서 `monti.schema.json`을 편집하고, 그 밖에서는 읽기 전용으로 보여 준다. 코어의 `GET/PUT /api/cms/v1/schema`와 `POST /api/cms/v1/schema/preview` 경로의 화면이다(누가 쓸 수 있는지, 저장 순서, 돌고 있는 인스턴스가 다시 읽는 방법은 `@monti-cms/core` README의 "관리자에서 스키마 편집하기"를 본다).
+
+- **컬렉션**: 이름표, 아이콘, 종류, 공개 주소, 본문, 허용하는 블록·서식·제목 단계(목록마다 스위치가 있다. 끄면 모두 허용하고, 켜면 사이트가 아는 이름마다 체크박스가 나온다). 모든 종류의 필드는 그 자리에서 펼쳐진다. 이름, 종류, 이름표, 도움말, 필수, 언어, 종류별 옵션(텍스트 길이와 줄 수, 주소의 기준, 관계의 대상, 미디어 종류, 역참조의 관계, 뷰 이름), 선택의 선택지(이름표, 기본값, 순서), 조건부 필드의 선택마다 딸린 필드를 고친다. 필드는 위아래로 옮기고 지울 수 있고, 여기서 이름을 바꾼 필드는 그 이름을 쓰던 배치, 목록 열, 주소 기준을 따라간다. 배치 묶음(제목, 탭, 접힘, 순서 있는 필드)과 목록 열은 순서 있는 목록으로 편집한다.
+- **언어**: 콘텐츠 언어(저장된 언어의 코드는 저장되는 값이라 새 언어만 코드를 정한다), 기본 언어, 시간대.
+- **파일**: 이 화면이 편집하지 않는 파일의 부분(사이트·관리자·시드 설정과 기록된 `migrations`).
+- **변경 검토**는 무엇이든 쓰기 전에 대화상자를 연다. 모든 변경과 그 변경이 건드리는 글, 글로 가는 링크인 표본, 편집의 문제와 JSON 경로, 그리고 저장된 값을 다루는 방법이 둘 이상인 변경(지우거나 이름을 바꾼 필드, 지운 선택지, 필수가 된 필드)마다 선택지(값 두기, 이름 바뀐 필드로 옮기기, 지우기, 지운 선택지를 다른 것으로 바꾸기, 비어 있는 글 채우기)를 보여 준다. 기본값은 서버가 정한다(작성자가 한 이름 바꾸기는 이름 바꾸기로 제안하고, 글이 값을 가진 삭제는 고르지 않는다). **저장하고 적용**은 파일, 타입, 개발 데이터베이스를 쓰고 페이지를 다시 불러와 사이드바, 폼, 목록이 새 스키마로 그려지게 한다.
+
+운영 서버(또는 스키마 파일에 쓸 수 없는 서버)는 쓰는 경로에 403으로 답하므로, 화면은 스키마를 보여 주고 왜 편집할 수 없는지만 알려 준다. 화면은 너비 750px 안팎에서도 쓸 수 있다. 컬렉션 목록은 편집기 위의 한 줄이 되고 폼은 한 열이다. 화면의 글은 `cms-admin.schema` 메시지 사전(`en`, `ko`)에 있고 다른 사전처럼 덮어쓸 수 있다.
 
 ## 블록 편집 화면
 
@@ -92,9 +156,31 @@ const components = {
 이름, 예: `cmsNotice`)·변환·슬래시 메뉴 삽입·끌기 규칙을 만든다. 편집 모양만 넣으면 된다.
 
 - 아무것도 넣지 않으면 지시자 블록은 속성 입력과 본문을 담은 상자, 코드 펜스 블록은 코드 입력 칸과 미리보기다.
-- `blockEditors`는 기본 틀 안의 속성·본문 모양을, `blockViews`는 틀까지 포함한 화면 전체를 바꾼다.
-- `blockViews` 화면을 만드는 도구(속성 값 읽고 쓰기·자식 위치·입력 칸·도구 줄·노드 이름)는 `@monti-cms/admin/blocks`에 있다.
-  `@monti-cms/blocks`의 콜아웃·탭 화면이 예시다.
+- `blockViews`가 블록 편집 화면을 등록하는 유일한 자리이고, 더한 블록과 기본 `image`·`file`·`math` 블록 모두 여기에 등록한다
+  (`blockViews.image`를 등록하면 이미지 화면을 다시 그린다). 등록한 화면은 틀까지 포함해 그 블록의 기본 화면을 대신한다.
+- 화면은 props를 받지 않는다. `useBlockEditor()`로 자기 블록을 읽고 쓰고, 컨테이너의 편집 가능한 중첩 본문은 `<Content />`로 그리며,
+  `<BlockFrame>`으로 감싼다. 모두 `@monti-cms/admin/hooks`에 있고 Tiptap·ProseMirror 타입이 필요 없다. 도구 줄·설정 팝오버·속성 입력 칸 같은 화면 부품은 `@monti-cms/admin/blocks`에 있다.
+  `@monti-cms/blocks`의 콜아웃·탭·단·접기·코드 탐색기 화면이 예시다.
+- `blockEditors`와 `CustomBlockEditorProps`는 없어졌다. `content`는 `<Content />`가 되고, `values`·`setValue`는 `useBlockEditor().values`·`.setValue`가 되며,
+  `editable`·`selected`도 같은 객체의 값이다. 예전 기본 틀이 해 주던 감싸기는 `<BlockFrame>`으로 직접 한다.
+  Tiptap 타입을 받던 편집 화면 도우미(`useContainerValues`·`valuesOf`·`withValue`·`childPos`·`focusInside`·`selectContainer`·`useSelectedChildIndex`·`useEditorEditable`)는
+  더 내보내지 않고 `useBlockEditor()`가 대신한다. `BLOCK_NODE_VIEWS`는 `BLOCK_NODES`로 바뀌었다(옛 이름은 없앴다).
+
+```tsx
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
+
+function NoticeView() {
+	const block = useBlockEditor<{ level: string }>();
+	return (
+		<BlockFrame>
+			<button type="button" contentEditable={false} onClick={() => block.setValue("level", "warn")}>
+				{block.values.level}
+			</button>
+			<Content />
+		</BlockFrame>
+	);
+}
+```
 
 ## 글자 꾸밈
 
@@ -125,13 +211,16 @@ const components = { marks: { note } };
   잇기 안내 줄·마우스를 올린 줄 강조(`data-code-ref`)·연결 끊김 표시가 이 꾸밈을 쓰고, 그런 꾸밈이 없으면 숨는다. 버블에서 쓰는
   잇기 명령(`findAnchor`·`startLinkFromText`·`unlinkRef`)도 같은 진입점에 있다.
 - 코드 블록 안 글자 툴팁(코드 펜스 주석 `// @char Tooltip`)은 본체 코드 블록 기능이라 본문 툴팁과 따로다(마크 `codeTooltip`).
+- 코드 블록 도구는 사이트 설정 `codeBlock`(`@monti-cms/core` README)을 따른다. `omitLineEffects`와 `features`(`rules`·`fold`·`tooltip`·`textStyles`)는 줄 효과·정규식 규칙·접기·툴팁·
+  코드 안 굵게·기울임·취소선·밑줄을 줄 메뉴·규칙 패널·버블·툴바·단축키에서 감추고, `themes`와 `languages`는 강조 테마와 언어 목록을 정한다.
+  꺼진 도구를 이미 쓰는 본문은 그대로 열리고 저장해도 바뀌지 않으며, 그 효과는 계속 보여 지울 수 있다.
 
 ## 글 검사(맞춤법 등)
 
 본체는 검사기를 하나도 갖지 않고 버튼·밑줄·결과 창만 그린다. 사이트·확장이 검사기(유료 API, 브라우저에서 도는 npm 패키지
 등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 도구 모음 버튼(이름 `label`, 아이콘 `icon`)이
 생기고 결과는 물결 밑줄·결과 창·목록으로 보인다. 여러 확장이 검사기를 넣으면 모두 모인다. 검사기가 없으면 아무것도 보이지 않는다.
-바른 검사기는 `@monti-cms/bareun`이다.
+바른 검사기는 `@monti-cms/bareun`이며, `monti.config.ts`의 `plugins`에 넣는 플러그인이다. 직접 만든 검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고).
 
 ```tsx
 "use client";
@@ -169,13 +258,15 @@ API 키는 브라우저에 두지 않는다. 브라우저는 `remoteTextChecker`
 불러 `{ issues }`를 돌려준다. `textCheckRoute`는 관리자 로그인·같은 출처를 확인하고 요청 크기(기본 100문단·20,000자)를 막는다.
 
 ```ts
-// 관리자 컴포넌트(브라우저)
+// 플러그인의 관리자 쪽(브라우저)
 import { remoteTextChecker } from "@monti-cms/core/client";
 const checker = remoteTextChecker({ id: "bareun", label: "바른", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts(서버)
 import { textCheckRoute } from "@monti-cms/core/plugin/server";
+import { cms } from "@/monti.config";
 export const POST = textCheckRoute({
+	cms, // 앱의 라우트 파일은 관리자 확인에 쓸 인스턴스를 적는다
 	limits: { maxChars: 20_000 },
 	check: async (segments, { signal }) => callProvider(segments, process.env.MY_API_KEY, signal), // TextIssue[]
 });
@@ -193,7 +284,7 @@ export const POST = textCheckRoute({
   센다. 띄어쓰기·문법은 보지 못한다.
 - 위치 없이 틀린 낱말만 주는 검사기는 문단 글자에서 낱말을 찾아 위치를 정한다(같은 낱말이 여럿이면 차례대로).
 
-`examples/other-site`의 `app/(admin)/studio/admin-components.tsx`가 브라우저에서 도는 작은 금지어 검사기 예시다.
+`examples/blog`의 `plugins/word-list`가 브라우저에서 도는 작은 금지어 검사기 예시이며, 플러그인(`index.ts`·`admin.ts`·`provider.tsx`)으로 등록한다.
 
 밑줄 스타일은 `@monti-cms/admin/styles.css`에 들어 있다.
 
@@ -208,6 +299,24 @@ export default defineAdminPlugin({
 });
 ```
 
+페이지는 클라이언트 컴포넌트다. 틀은 `AdminShell`(사이드바와 제목, `sidebar.activeNav`는 플러그인 `nav` 항목의 `path`)로 그리고, 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/client`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
+
+```tsx
+"use client";
+import { cmsFetch } from "@monti-cms/admin/api";
+import { AdminShell } from "@monti-cms/admin/kit";
+import { cmsApiUrl, useSite } from "@monti-cms/core/client";
+import { useQuery } from "@tanstack/react-query";
+
+export function StatsPage() {
+	const site = useSite();
+	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
+	return <AdminShell title="Post stats" sidebar={{ activeNav: "post-stats" }}>{stats.data?.published}</AdminShell>;
+}
+```
+
+부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다. [관리자 페이지 레시피](../../docs/recipes/admin-page.md)가 플러그인 전체 스케치이고, [커스텀 블록 레시피](../../docs/recipes/custom-block.md)는 편집기 뷰가 있는 블록이다.
+
 편집 화면 확장(`editorExtensions`)은 툴바 끝 요소·블록 손잡이 옆 동작·선택 영역 메뉴·슬래시 메뉴 동작을 더하는 훅이다. 필드 옆·본문 이미지·미디어·코드 블록
 자리에는 `SlotRegistryProvider`(`@monti-cms/admin/slots`)로 동작을 붙인다.
 
@@ -217,44 +326,122 @@ export default defineAdminPlugin({
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 사이트 컴포넌트 넣기(`CmsAdminComponentsProvider`)·속성 칸·목록 칸 타입 |
-| `/next` | 관리자 레이아웃·페이지(앱 라우트에서 내보낸다) |
-| `/editor` | 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
-| `/blocks` | 블록 편집 화면 도우미 |
+| `@monti-cms/admin` | 사이트 컴포넌트 넣기(`CmsAdminComponentsProvider`: 원문 패널·형식·`useFormat`)·속성 칸·목록 칸 타입 |
+| `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
+| `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
+| `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
+| `/blocks` | 블록 편집 화면 부품(도구 줄·설정 팝오버·속성 입력 칸) |
+| `/hooks`(실험) | 상태와 결과만 돌려주는 편집기 훅(`useSlotActions`·`useField`·`useBlockEditor`·`useEntryEditor`)·블록 화면 컴포넌트 `Content`·`BlockFrame`·`EditorResult`·`EditorError` |
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
 | `/api` | 관리자 API 부르기(`cmsFetch`) |
 | `/kit` | 확장용 부품·도우미 묶음 |
-| `/styles.css` | 관리자 스타일 |
+| `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |
+
+### 라우터 어댑터
+
+화면과 훅은 프레임워크를 가져오지 않는다. 라우터에서 필요한 것은 모두 호스트 패키지가 `AdminRouterProvider`(`@monti-cms/admin/router`)에 주는 객체 하나, `AdminRouter`에서 온다.
+
+| 항목 | 뜻 |
+|---|---|
+| `Link` | 사이트 안 주소로 가는 링크 컴포넌트(`<a>` props, 문자열 `href`). 프레임워크에 있으면 클라이언트 이동을 한다 |
+| `navigate(href, { scroll? })` | 그 주소로 가고 기록을 하나 더한다 |
+| `replace(href, { scroll? })` | 지금 기록을 그 주소로 바꾼다. 쿼리만 바꾸는 목록은 `scroll: false`를 넘긴다 |
+| `usePathname()` | 훅: 지금 주소의 경로 |
+| `useSearchParams()` | 훅: 지금 주소의 쿼리(읽기 전용 `URLSearchParams`) |
+
+관리자 안에서는 같은 진입점의 `AdminLink`·`useAdminRouter()`·`useAdminPathname()`·`useAdminSearchParams()`를 쓴다. 제공자 밖에서는 이유를 알리는 오류가 난다. 플러그인 화면도 이것을 쓴다(AI 플러그인이 이렇게 경로를 읽는다).
+
+서버 화면이 필요로 하는 리다이렉트와 404는 `AdminServer`(`{ redirect(href): never; notFound(): never }`)로 `AdminPage`(`@monti-cms/admin/host`)에 넘긴다.
+`@monti-cms/nextjs/admin`이 `next/link`·`next/navigation`과 Next의 `redirect`·`notFound`로 둘 다 만든다. 다른 프레임워크의 호스트는 제 것을 주고 `AdminLayout`을 `AdminRouterProvider` 안에 그린다.
+테스트가 경계를 지킨다. 관리자의 소스 파일은 `next/*`를 가져올 수 없다.
+
+### 편집기 훅 (실험)
+
+`@monti-cms/admin/hooks`는 실험 단계이고, 설치형 컴포넌트에서 충분히 써 보기 전까지 마이너 릴리스에서 바뀔 수 있다.
+훅은 상태와 결과만 돌려준다. 토스트를 띄우거나 확인 대화상자를 열거나 화면을 옮기지 않으므로, 사이트가 그 위에 자기 화면을 그릴 수 있다.
+기본 관리자 화면도 같은 훅 위에 만들어져 있다. 명령은 예상할 수 있는 실패에서 던지지 않고 `EditorResult`(`{ ok: true, value }` 또는 `{ ok: false, error }`)를 돌려주며,
+분기는 `EditorError.code`(`conflict`·`session_expired`·`offline`·`validation`·`invalid_state` …)로 한다.
+
+`useSlotActions(request)`는 화면 자리 하나에 붙은 동작과 실행 상태(`idle`·`asking`·`running`·`done`·`error`),
+`run`·`cancel`·`apply`를 준다. 실행 상태는 자리·대상·컬렉션·범위가 같은 훅끼리 공유하고, 컴포넌트가 사라져도 남는다.
+`useSlot`(`@monti-cms/admin/slots`)이 그 위에 만든 기본 단추와 패널이다.
+
+`useField(name)`은 폼 필드 하나의 `value`·`setValue`·`error`/`errors`·`readOnly`(`readOnlyReason`: `disabled` 또는 `locked`)와,
+라벨·입력·오류 문구를 잇는 id(`ids`·`inputProps`), `useSlotActions`에 넘길 `slotRequest`를 준다. `EntryFormProvider` 아래에서만 쓸 수 있다.
+편집 화면의 속성 패널과 레코드 패널이 하나씩 제공하고, 폼 상태를 따로 가진 화면은 직접 제공할 수 있다
+(`collection`·`form`·`setForm`·`issues`·`disabled`·`entryId`·`locale`·`entry`·`locked`). 컴포넌트는 자기 필드가 바뀔 때만 다시 그려지므로
+한 필드에 입력해도 다른 필드는 다시 그려지지 않는다. 기본 필드 화면(`SchemaFields`)도 같은 훅 위에 만들어져 있다.
+
+`useBlockEditor()`는 블록 화면(`blockViews`에 등록한 컴포넌트)에서 쓰는 훅이고, 다른 곳에서 부르면 던진다. 블록의 속성 값 `values`와
+`setValue`·`setValues`(되돌리기 한 번), 코드로 쓴 블록(수식·코드 펜스)의 `source`와 `setSource`, `editable`·`selected`·`focusedChild`(커서가 있는 자식),
+`select`·`focus({ child, at })`·`remove`·`textAround`(블록 앞뒤 글, AI 맥락용)를 준다. 컨테이너의 자식 `children`은 `addChild`·`removeChild`·`moveChild`·`setChildValue`로 다루며,
+`definition.children.min`·`max`를 지키고 범위를 벗어나면 `limit` 코드의 `EditorResult`를, 편집기가 잠겨 있으면 `read_only`를 돌려준다. `transact(tx => ...)`는 현재 문서를 읽는 여러 편집을
+문서 변경 한 번(되돌리기 한 번)으로 묶는다. 예를 들어 탭 이름을 바꾸면서 그 탭을 가리키는 기본 탭도 함께 바꿀 때 쓴다. `raw`(`{ editor, node, getPos }`)는 하나뿐인 탈출구이자
+Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않다. `<Content />`는 편집 가능한 중첩 본문을 그리고(`visibleChild`로 열린 탭처럼 자식 하나만 보인다),
+`<BlockFrame />`은 선택 테두리와 마우스 올림 범위를 가진 바깥 요소다. 자식 블록은 `[data-cms-block-content]`의 첫 요소 안에 놓인다.
+
+`useEntryEditor(options)`는 화면을 뺀 항목 편집기다. 불러오기, 브라우저 복구본, 명시적 서버 저장, 발행, 상태 변경(보관·휴지통·복원), 복구와 충돌 상태를 맡는다.
+**서버 자동 저장이 아니다.** 편집하는 동안에는 브라우저에만 복구본이 남고(IndexedDB, 입력이 멈춘 뒤 기록하며 서버로 보내지 않는다),
+서버 초안은 `save()`·`publish()`·상태 변경을 실행할 때만 바뀐다. 서버에 무엇이 있는지는 `saveStatus`(`saved`·`dirty`·`saving`·`local-only`·`conflict` …)가 말해 준다.
+상태는 `load`(`loading`·`ready`·`error`, 항목 컬렉션이면 화면이 따라가야 할 `redirect`. 훅은 화면을 옮기지 않는다), `entry`, `form`, `saveStatus`, `saveError`,
+`hasUnsavedChanges`, `publishIssues`, `recovery`(열 때 발견한 브라우저 복구본), `conflict`(다른 곳에서 먼저 저장함)다. 명령은 `setForm`, `setBody`(본문, 저장 문서), `save`, `retry`, `publish`,
+`changeStatus`, `duplicate`, `deletePermanently`, `restoreRecovery`·`discardRecovery`, 충돌을 푸는 `overwriteWithMine`·`reload`이며,
+충돌은 페이지를 새로고침하지 않고 그 자리에서 해결한다. 화면을 `EntryEditorProvider`로 감싸면(`useField`가 읽는 `EntryFormProvider`를 함께 제공한다)
+그 아래에서 `useEntryEditorContext()`로 편집기를 읽고, 값 하나만 보고 다시 그리려면 `useEntryEditorContext((editor) => editor.saveStatus)`처럼 쓴다.
+서버 호출과 복구본 저장소는 테스트를 위해 `client`·`recoveryStore` 옵션으로 바꿀 수 있다. 기본 항목 편집 화면(`EntryEditorShell`)이 이 훅 위에 만들어져 있고,
+토스트·확인 대화상자·화면 이동은 그 화면이 맡는다.
 
 ## 스타일
 
-관리자 화면의 CSS는 **Tailwind 4**를 선택 피어 요건으로 한다(`package.json`에 피어로 적지는 않는다). 관리자 화면을 쓰는 앱만 Tailwind 4가 필요하고,
-`@monti-cms/core` 본체와 읽기·공개 렌더만 쓰는 앱에는 필요 없다. 미리 만든(prebuilt) CSS는 주지 않는다. 앱의 Tailwind가 관리자 화면 클래스를 직접 만들므로
-앱에 `tailwindcss`·`@tailwindcss/postcss`(Tailwind 4), `tw-animate-css`, `@tailwindcss/typography`가 있어야 한다.
+관리자 화면의 CSS는 **미리 만들어져(prebuilt)** 나온다. `@monti-cms/admin/styles.css`는 패키지를 빌드할 때 Tailwind 4로 컴파일하므로 앱에는 Tailwind·`@tailwindcss/typography`·
+`tw-animate-css` 설정이 필요 없고, `@source`·`@theme`·`@custom-variant` 줄도 필요 없다. 관리자 레이아웃에서 불러오거나(그러면 관리자 페이지만 이 CSS를 받는다) 아무 전역 CSS 파일에서 불러온다.
 
-`@monti-cms/admin/styles.css`가 주는 것(모두 `cms` 이름표가 붙어 앱의 이름과 겹치지 않는다):
+```tsx
+// app/admin/layout.tsx
+import "@monti-cms/admin/styles.css";
+```
+
+공개 페이지에 Tailwind 4를 쓰는 앱은 그대로 쓰면 된다. 둘은 서로 영향을 주지 않는다.
+
+묶음을 만드는 방식과 가두는 방식(`scripts/build-styles.mjs`, `pnpm build`가 돌린다. 원본은 `styles/`):
+
+- **범위.** 모든 선택자가 `:where(html:has(.cms-admin))`, 곧 관리자 화면이 들어 있는 문서 안으로 한정된다(명시도 0이라 클래스 힘은 Tailwind에서와 같다). 팝업이
+  `body`로 옮겨 그려지므로 범위는 `.cms-admin` 요소가 아니라 문서다. `.cms-admin`이 없는 앱의 공개 페이지에는 영향이 없다.
+- **리셋.** Tailwind의 preflight가 묶음에 들어 있지만 그 범위 안에서만 걸리므로 앱의 페이지를 다시 꾸미지 않는다.
+- **이름.** 묶음이 선언하는 사용자 정의 속성은 모두 `--cms-`로 시작하고(Tailwind의 `--tw-*`는 `--cms-tw-*`가 되고 테마는 값으로 풀어 넣는다), 키프레임은 `cms-*`이며, 파일에는 `@layer`가 남아 있지 않다. 레이어 없는 규칙은 스타일시트가 어떤 순서로 불러와지든 앱의 레이어 규칙을 이기므로, 앱 자신의 `.hidden`·`.prose`·리셋(Tailwind `utilities`·`base` 레이어)이 관리자를 덮어쓰지 못한다. 앱의 `--radius*`와 테마 변수는 정의하지도 바꾸지도 않는다.
+- **수식.** 편집기 수식 미리보기용 KaTeX 스타일과 글꼴이 들어 있다(글꼴은 `dist/fonts`로 복사해 상대 경로로 잇는다). 사이트가 관리자용으로 KaTeX CSS를 따로 불러올 필요가 없다.
+- **글꼴.** Tailwind preflight처럼 관리자 문서의 `html`에는 시스템 산세리프 글꼴이 기본으로 깔린다. 앱이 `body`에 정한 글꼴이 우선한다.
+
+묶음이 주는 것(모두 `cms` 이름표가 붙어 앱의 이름과 겹치지 않는다):
 
 - **색 이름.** `bg-cms-background`·`text-cms-muted-foreground`·`border-cms-border` 같은 `cms-*` 색(값은 `--cms-*` 변수). 앱의 shadcn
   이름(`bg-background` 등)과 변수(`--background` 등)는 건드리지 않는다. `--cms-*`는 관리자 화면이 있는 문서에만 걸린다.
 - **변형.** `cms-dark:`는 `html`(또는 상위 요소)의 `.dark` 또는 `[data-theme="dark"]`일 때, `cms-horizontal:`·`cms-vertical:`은 Base UI의
   `data-orientation`일 때다. 앱의 `dark`·`data-horizontal` 정의와 따로 논다. 앱이 어떤 테마 방식(클래스·`data-theme`)을 쓰든 관리자 화면의
   어두운 테마가 따라간다.
-- **그 밖에.** 배포 묶음의 Tailwind 클래스 찾기(`@source`), 테두리·포커스 윤곽 기본색, 관리자 문서의 둥글기(`--radius*`) 값(Tailwind 기본
-  이름이라 관리자가 있는 문서에서만 바뀐다).
+- **그 밖에.** 테두리·포커스 윤곽 기본색, `color-scheme`, 얇은 스크롤바, 관리자의 모서리 둥글기(`--cms-radius`, 묶음의 `rounded-*`는 이 값으로 계산된다).
 
-`CmsAdminLayout`의 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
+관리자 화면을 더하는 플러그인: 관리자 묶음이 자체 제공 플러그인(`@monti-cms/ai`·`@monti-cms/blocks`·`@monti-cms/mdx`·`@monti-cms/seo`, `styles/index.css`의 `@source` 줄 참고)의 소스도 함께 컴파일한다.
+그래서 공유 유틸리티·`prose`·테마·리셋이 **한 파일**에만 정의된다. 이것이 핵심이다. `.prose`를 다시 정의하는 파일이 뒤에 불러와지면 관리자의 다크 변형이 정한 값을 되돌려 버린다.
+따라서 `ai`·`mdx`·`seo`는 CSS를 내지 않는다. `@monti-cms/blocks/styles.css`는 유틸리티로 말할 수 없는 것(콜아웃 모양, 글자색 규칙, 기본 변수)만 담으며 관리자 파일 뒤에 불러온다.
+서드파티 플러그인은 자기 클래스(`cms-` 접두 이름)만 담은 미리 만든 CSS를 내고 공유 유틸리티나 `prose`는 다시 정의하지 않는다. 같은 선택자가 두 묶음에 정의되면 한계 검사 테스트가 실패한다.
+대신 관리자 파일에는 앱이 설치하지 않은 자체 제공 플러그인의 클래스도 들어 있다(몇 KB).
+
+`CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `monti.config.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
 
 ```tsx
-<CmsAdminLayout themeProvider={false} toaster={false}>
+<CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>
 	{children}
 </CmsAdminLayout>
 ```
 
-- `themeProvider`(기본 `true`): 관리자 화면이 `next-themes` 공급자(`attribute="class"`)를 둔다. 끄면 사이트의 공급자가 `html`에 붙이는
-  `.dark`·`[data-theme="dark"]`를 따른다. 켜 둔 채 관리자를 떠나면 공급자가 `html`에 남긴 `dark` 클래스와 `color-scheme`을 지운다
-  (지우지 않으면 같은 루트 레이아웃의 공개 화면이 어둡게 남는다).
+- `themeProvider`(기본 `true`): 관리자 화면이 `next-themes` 공급자(`attribute="class"`)를 두고, 테마를 자기만의 저장 키 `monti-admin-theme`에 보관한다. 그래서 관리자에서
+  테마를 바꿔도 사이트의 테마는 바뀌지 않는다. 관리자를 떠날 때는 `html`의 `dark`·`light` 클래스와 `color-scheme`을 관리자가 뜨기 전 상태로 되돌린다
+  (사이트 자신의 테마는 건드리지 않고, 같은 루트 레이아웃의 공개 화면이 어둡게 남지도 않는다). 끄면 사이트의 공급자가 `html`에 붙이는
+  `.dark`·`[data-theme="dark"]`를 따르며, 관리자의 테마 토글은 사이트의 테마를 바꾼다.
+- `themeStorageKey`(기본 `monti-admin-theme`): 관리자 테마를 담는 `localStorage` 키. `themeProvider`를 켰을 때만 쓴다.
 - `toaster`(기본 `true`): 관리자 화면이 `sonner`의 `Toaster`를 둔다. 끄면 사이트의 `Toaster`에 관리자 알림이 뜬다(같은 `sonner`를 쓸 때).
 
 ## 개발

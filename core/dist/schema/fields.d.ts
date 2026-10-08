@@ -12,23 +12,30 @@
 export type Localized = boolean | "inherit";
 /**
  * The meaning (role) of a field. Extensions and screens look up values by role, not by field name. In one collection, each role
- * has only one field (`defineConfig` checks it). The field kinds that fit a role name are decided and checked by the extension that uses that role
+ * has only one field (`defineSite` checks it). The field kinds that fit a role name are decided and checked by the extension that uses that role
  * (plugin `validate`).
  *
- * The only role the core knows is `summary` (summary, a text field). It is passed as `summary` to actions next to a field (AI etc.) and is the default for list and search result
- * descriptions.
+ * The roles the core knows are `summary` and `title`, both on text fields. The summary is passed as `summary` to actions next to a field (AI etc.) and is the default for
+ * list and search result descriptions. The title names the field the list, search, relation picker, body links, SEO fallback and git-sync labels read as the entry's title.
  */
 export type FieldRole = string;
 export declare const SUMMARY_ROLE = "summary";
+/**
+ * The role of the title field. A collection has exactly one title field: the field with this role, or, when no field has it, the text field named {@link DEFAULT_TITLE_FIELD}.
+ * Read it with `titleFieldOf`, never by the key.
+ */
+export declare const TITLE_ROLE = "title";
+/** The name of the title field of a collection that does not give the title role to any field. */
+export declare const DEFAULT_TITLE_FIELD = "title";
 interface BaseField {
     readonly label: string;
     /** Help text below the input. */
     readonly description?: string;
     /**
      * A field that must not be empty. Document (`document`) collections check it when publishing, item (`item`) collections when saving.
-     * Saving a draft is not blocked. The legacy value `"publish"` is accepted with the same meaning.
+     * Saving a draft is not blocked.
      */
-    readonly required?: true | "publish";
+    readonly required?: true;
     readonly localized?: Localized;
     /** Name in the client input registry to use instead of the default input. */
     readonly input?: string;
@@ -74,7 +81,7 @@ export interface SlugField extends BaseField {
 }
 export interface RelationField extends BaseField {
     readonly kind: "relation";
-    /** Name of the target collection of the relation. Whether it is a real collection is checked by `defineConfig`. */
+    /** Name of the target collection of the relation. Whether it is a real collection is checked by `defineSite`. */
     readonly to: string;
     readonly many?: boolean;
     /** Creates a missing target right next to the input. */
@@ -149,13 +156,13 @@ export interface ViewField {
     readonly input?: undefined;
 }
 /**
- * Keys the core uses separately in metadata. They cannot be used as field names (`defineConfig` blocks them).
+ * Keys the core uses separately in metadata. They cannot be used as field names (`defineSite` blocks them).
  * `translations` holds the per-language values of an item collection.
  */
 export declare const RESERVED_METADATA_KEYS: readonly string[];
-/** Whether the field must not be empty (`required: true` and the legacy value `"publish"`). */
+/** Whether the field must not be empty (`required: true`). */
 export declare const isRequiredField: (field: {
-    readonly required?: true | "publish";
+    readonly required?: true;
 }) => boolean;
 /** Default character count when filling from the body. */
 export declare const FILL_FROM_BODY_MAX_LENGTH = 160;

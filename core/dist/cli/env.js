@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parseEnv } from "node:util";
+import { problemError } from "../core/problem.js";
 /** Files read when `--env-file` is not given (same order as Next: `.env.local` comes before `.env`). */
 export const DEFAULT_ENV_FILES = [".env.local", ".env"];
 /**
@@ -13,8 +14,13 @@ export function loadEnvFiles(cwd, files, env = process.env) {
     for (const file of chosen) {
         const full = path.resolve(cwd, file);
         if (!existsSync(full)) {
-            if (files)
-                throw new Error(`env file not found: ${file}`);
+            if (files) {
+                throw problemError({
+                    what: `The env file ${file} does not exist`,
+                    where: "the --env-file option",
+                    fix: `create it, correct the path (it is relative to ${cwd}), or use --no-env-file to read none`,
+                });
+            }
             continue;
         }
         const values = parseEnv(readFileSync(full, "utf8"));

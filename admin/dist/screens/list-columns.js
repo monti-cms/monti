@@ -1,6 +1,5 @@
-import { createTranslator, isCollection, isItemCollection, LOCALES, schemaOf, taxonomyFieldsOf, valueFieldsOf, } from "@monti-cms/core/client";
+import { valueFieldsOf } from "@monti-cms/core/client";
 import { screensMessages } from "./messages.js";
-const t = createTranslator(screensMessages);
 /**
  * Admin list columns: the content's own values (system columns) and taxonomy fields (relation fields pointing to a taxonomy collection, e.g. tags or categories).
  * Saved under these names in the user's column settings (order, visibility, width). A taxonomy field column is named after the field.
@@ -15,56 +14,59 @@ export const SYSTEM_COLUMNS = [
     "slug",
     "folder",
 ];
-/** Label, sort and filter of a system column. */
-const SYSTEM_CONFIG = {
-    title: {
-        label: t("column.title"),
-        sortField: "title",
-        filter: { kind: "text", key: "titleContains", placeholder: t("column.titlePlaceholder") },
-    },
-    status: { label: t("column.status"), filter: { kind: "status" } },
-    locale: { label: t("column.locale"), filter: { kind: "locale" } },
-    updatedAt: {
-        label: t("column.updatedAt"),
-        sortField: "updatedAt",
-        filter: { kind: "date", from: "updatedFrom", to: "updatedTo" },
-    },
-    publishedAt: {
-        label: t("column.publishedAt"),
-        sortField: "publishedAt",
-        filter: { kind: "date", from: "publishedFrom", to: "publishedTo" },
-    },
-    createdAt: {
-        label: t("column.createdAt"),
-        sortField: "createdAt",
-        filter: { kind: "date", from: "createdFrom", to: "createdTo" },
-    },
-    slug: {
-        label: t("column.slug"),
-        sortField: "slug",
-        filter: { kind: "text", key: "slugContains", placeholder: t("column.slugPlaceholder") },
-    },
-    // Folders are filtered through sidebar navigation.
-    folder: { label: t("column.folder"), filter: { kind: "none" } },
+/** Label, sort and filter of each system column. */
+const systemConfig = (site) => {
+    const t = site.createTranslator(screensMessages);
+    return {
+        title: {
+            label: t("column.title"),
+            sortField: "title",
+            filter: { kind: "text", key: "titleContains", placeholder: t("column.titlePlaceholder") },
+        },
+        status: { label: t("column.status"), filter: { kind: "status" } },
+        locale: { label: t("column.locale"), filter: { kind: "locale" } },
+        updatedAt: {
+            label: t("column.updatedAt"),
+            sortField: "updatedAt",
+            filter: { kind: "date", from: "updatedFrom", to: "updatedTo" },
+        },
+        publishedAt: {
+            label: t("column.publishedAt"),
+            sortField: "publishedAt",
+            filter: { kind: "date", from: "publishedFrom", to: "publishedTo" },
+        },
+        createdAt: {
+            label: t("column.createdAt"),
+            sortField: "createdAt",
+            filter: { kind: "date", from: "createdFrom", to: "createdTo" },
+        },
+        slug: {
+            label: t("column.slug"),
+            sortField: "slug",
+            filter: { kind: "text", key: "slugContains", placeholder: t("column.slugPlaceholder") },
+        },
+        // Folders are filtered through sidebar navigation.
+        folder: { label: t("column.folder"), filter: { kind: "none" } },
+    };
 };
-const isSystemColumn = (column) => Object.hasOwn(SYSTEM_CONFIG, column);
+const isSystemColumn = (column) => SYSTEM_COLUMNS.includes(column);
 /**
  * Field of a field column: a stored field whose name is not a system column (text, select, media, relation). Taxonomy fields are included.
  * `undefined` if the name does not exist or the field is not stored.
  */
-export function fieldColumnOf(collection, column) {
-    if (isSystemColumn(column) || !isCollection(collection))
+export function fieldColumnOf(site, collection, column) {
+    if (isSystemColumn(column) || !site.isCollection(collection))
         return undefined;
-    return valueFieldsOf(schemaOf(collection)).find((stored) => stored.name === column);
+    return valueFieldsOf(site.schemaOf(collection)).find((stored) => stored.name === column);
 }
 /**
  * Label, sort and filter of one column. A taxonomy field's label is the field label, and it filters by the items of the collection the field points to.
  * Other field columns also use the field label as the label and are not filterable.
  */
-export function columnConfig(collection, column) {
+export function columnConfig(site, collection, column) {
     if (isSystemColumn(column))
-        return SYSTEM_CONFIG[column];
-    const taxonomy = taxonomyFieldsOf(collection).find((stored) => stored.name === column);
+        return systemConfig(site)[column];
+    const taxonomy = site.taxonomyFieldsOf(collection).find((stored) => stored.name === column);
     if (taxonomy?.field.kind === "relation") {
         return {
             label: taxonomy.field.label,
@@ -72,7 +74,7 @@ export function columnConfig(collection, column) {
             many: taxonomy.field.many === true,
         };
     }
-    const stored = fieldColumnOf(collection, column);
+    const stored = fieldColumnOf(site, collection, column);
     if (!stored)
         return { label: column, filter: { kind: "none" } };
     return {
@@ -81,32 +83,32 @@ export function columnConfig(collection, column) {
         ...(stored.field.kind === "relation" && stored.field.many ? { many: true } : {}),
     };
 }
-export const columnLabel = (collection, column) => columnConfig(collection, column).label;
+export const columnLabel = (site, collection, column) => columnConfig(site, collection, column).label;
 /**
  * Default columns when there is no list setting (`list.columns`). Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
- * title, slug, locale, status, updated date. The locale column appears only with two or more locales, the slug column only when there is a slug field.
+ * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
  */
-export function defaultListColumns(collection) {
-    if (!isCollection(collection))
+export function defaultListColumns(site, collection) {
+    if (!site.isCollection(collection))
         return ["title", "status"];
-    const schema = schemaOf(collection);
-    const locale = LOCALES.length > 1 ? ["locale"] : [];
+    const schema = site.schemaOf(collection);
+    const locale = site.ADMIN_TRANSLATIONS ? ["locale"] : [];
     if (schema.kind === "item") {
         const slug = Object.values(schema.fields).some((field) => field.kind === "slug") ? ["slug"] : [];
         return ["title", ...slug, ...locale, "status", "updatedAt"];
     }
-    const taxonomy = taxonomyFieldsOf(collection).map((stored) => stored.name);
+    const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
     return ["title", "status", ...locale, ...taxonomy, "updatedAt", "publishedAt"];
 }
 /**
  * Columns available in a collection and their default visibility. Built from the fields of the collection definition and `list.columns` (default columns if absent).
  * Besides system columns and taxonomy fields, fields listed in `list.columns` (text, select, relation, etc.) can also be columns.
  */
-export function columnsFor(collection) {
-    if (!isCollection(collection))
+export function columnsFor(site, collection) {
+    if (!site.isCollection(collection))
         return { available: [...SYSTEM_COLUMNS], defaults: ["title", "status"] };
-    const schema = schemaOf(collection);
-    // The slug column is used whenever there is a slug field (`fields.slug`), whatever its name. `title` exists in every collection.
+    const schema = site.schemaOf(collection);
+    // The slug column is used whenever there is a slug field (`fields.slug`), whatever its name.
     const slugField = Object.entries(schema.fields).find(([, field]) => field.kind === "slug")?.[0];
     const system = SYSTEM_COLUMNS.filter((column) => {
         // Item collections have no publishing: saving is publishing. The locale column shows locales that have a name.
@@ -114,17 +116,22 @@ export function columnsFor(collection) {
             return schema.kind === "document";
         if (column === "slug")
             return slugField !== undefined;
+        // A site with one locale, or one that turned the translation UI off, has no locale column.
+        if (column === "locale")
+            return site.ADMIN_TRANSLATIONS;
         return true;
     });
-    const taxonomy = taxonomyFieldsOf(collection).map((stored) => stored.name);
-    // Other fields listed in the list setting (`defineConfig` verified they are stored fields).
+    const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
+    // Other fields listed in the list setting (`defineSite` verified they are stored fields).
+    // The title field is the system column `title` whatever its name, so its own name is not a second column.
+    const titleName = site.titleField(collection).name;
     const listed = [...new Set(schema.list?.columns ?? [])];
-    const fieldColumns = listed.filter((column) => !taxonomy.includes(column) && fieldColumnOf(collection, column));
+    const fieldColumns = listed.filter((column) => column !== titleName && !taxonomy.includes(column) && fieldColumnOf(site, collection, column));
     // Taxonomy field columns go after the locale column, and other field columns follow.
-    const at = system.indexOf("locale") + 1;
+    const at = system.indexOf(system.includes("locale") ? "locale" : "status") + 1;
     const available = [...system.slice(0, at), ...taxonomy, ...fieldColumns, ...system.slice(at)];
-    const defaults = (schema.list?.columns ?? defaultListColumns(collection))
-        .map((column) => (column === slugField ? "slug" : column))
+    const defaults = (schema.list?.columns ?? defaultListColumns(site, collection))
+        .map((column) => (column === slugField ? "slug" : column === titleName ? "title" : column))
         .filter((column) => available.includes(column));
     return { available, defaults };
 }
@@ -138,12 +145,12 @@ export function knownColumnRecord(record, available) {
  * Filters actually usable in this collection. Item collections have only active/trash,
  * and the trash screen has no status filter since every item is in trash.
  */
-export function filterFor(collection, column, mode = "list") {
-    const filter = columnConfig(collection, column).filter;
-    if (filter.kind === "status" && (isItemCollection(collection) || mode === "trash"))
+export function filterFor(site, collection, column, mode = "list") {
+    const filter = columnConfig(site, collection, column).filter;
+    if (filter.kind === "status" && (site.isItemCollection(collection) || mode === "trash"))
         return { kind: "none" };
     // A taxonomy item's locale column only shows locales that have a name, so it does not filter by locale.
-    if (filter.kind === "locale" && isItemCollection(collection))
+    if (filter.kind === "locale" && site.isItemCollection(collection))
         return { kind: "none" };
     return filter;
 }

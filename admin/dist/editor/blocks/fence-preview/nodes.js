@@ -1,6 +1,6 @@
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { MathNodeView } from "./math-node-view.js";
+import { BlockNodeView } from "../block-node-view.js";
 export const CmsMathNode = Node.create({
     name: "cmsMath",
     group: "block",
@@ -21,6 +21,6 @@ export const CmsMathNode = Node.create({
         return ["div", mergeAttributes(HTMLAttributes, { "data-cms-math": "" })];
     },
     addNodeView() {
-        return ReactNodeViewRenderer(MathNodeView);
+        return ReactNodeViewRenderer(BlockNodeView);
     },
 });

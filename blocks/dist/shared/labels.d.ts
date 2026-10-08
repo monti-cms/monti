@@ -8,6 +8,10 @@ export interface BlockLabels {
     readonly calloutDanger: string;
     /** Title of a collapsible block with no title. */
     readonly collapsibleFallback: string;
+    /** Accessible name of the code explorer's file tree. */
+    readonly codeExplorerFiles: string;
+    /** Hint of the button that opens and closes the code explorer's file list on a narrow screen. */
+    readonly codeExplorerToggle: string;
     readonly chartError: string;
     /** One chart syntax error line (`line 3: …`). The error text is built in this language from the code and values. */
     readonly chartErrorLine: (error: ChartRenderError) => string;

@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { errorText } from "@monti-cms/admin/api";
 import { Button, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Languages, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { runAiActionMany, useAiActions } from "./ai-slot-provider.js";
 import { aiTranslateMessages } from "./ai-translate.messages.js";
 import { applyTranslation, collectUnits, unitAt } from "./ai-translate-units.js";
 import { OptionSelect } from "./custom-editor.js";
-const t = createTranslator(aiTranslateMessages);
+import { useMdxFormat } from "./mdx-format.js";
 /**
  * AI translation in the translation editor. A block that still has a notice (`untranslated`) is a "not yet translated place".
  * Translation is a regular AI action. It calls, per block, the actions whose attach target is `translation` (inputs `block`, `from`, `to`; MDX result).
@@ -23,8 +23,8 @@ const BATCH_BLOCKS = 4;
 const BATCH_CHARS = 12_000;
 /** Number of concurrent requests. */
 const PARALLEL_REQUESTS = 2;
-async function requestTranslation(action, blocks, locales, request, signal) {
-    const results = await runAiActionMany(action, blocks.map((block) => ({ block: block.mdx, from: locales.sourceLocale, to: locales.targetLocale })), { request, signal, env: { locale: locales.targetLocale } });
+async function requestTranslation(site, action, blocks, locales, request, signal) {
+    const results = await runAiActionMany(site, action, blocks.map((block) => ({ block: block.mdx, from: locales.sourceLocale, to: locales.targetLocale })), { request, signal, env: { locale: locales.targetLocale } });
     return results.map((item, index) => {
         const id = blocks[index]?.id ?? "";
         return "error" in item ? { id, error: item.error } : { id, mdx: "text" in item.result ? item.result.text : "" };
@@ -53,13 +53,17 @@ function batches(blocks) {
  * and `toolbar` is Translate all in the toolbar. If there is no usable translation action, both are absent.
  */
 export function useAiTranslate(locales) {
+    const site = useSite();
+    const t = useTranslator(aiTranslateMessages);
     const { data } = useAiActions(locales !== null);
-    const features = useMemo(() => locales
+    // The model reads and writes MDX, so translation works through the `mdx` format. Without it there is nothing to translate with.
+    const format = useMdxFormat();
+    const features = useMemo(() => locales && format
         ? (data?.items ?? []).filter((item) => item.enabled &&
             item.result === "mdx" &&
             item.attach.some((attach) => attach.slot === "translation") &&
             data?.usable.includes(item.key))
-        : [], [data, locales]);
+        : [], [data, locales, format]);
     /** Action to use for Translate all. If the chosen action is gone, it is the first action. */
     const [chosenKey, setChosenKey] = useState(null);
     const feature = features.find((item) => item.key === chosenKey) ?? features[0];
@@ -84,9 +88,9 @@ export function useAiTranslate(locales) {
     // Leaving the edit screen stops translations in progress.
     useEffect(() => stop, [stop]);
     const translateOne = useCallback(async (editor, pos, action) => {
-        if (!locales)
+        if (!locales || !format)
             return;
-        const unit = unitAt(editor.state.doc, pos);
+        const unit = unitAt(site, format, editor.state.doc, pos);
         if (!unit)
             return;
         // Block translation does not use the toolbar's extra request (that request applies only to Translate all).
@@ -95,14 +99,14 @@ export function useAiTranslate(locales) {
         blockAbortRef.current.set(pos, controller);
         setBusyBlocks((current) => new Set([...current, pos]));
         try {
-            const [result] = await requestTranslation(action, [{ id: "b0", mdx: unit.mdx }], locales, "", controller.signal);
+            const [result] = await requestTranslation(site, action, [{ id: "b0", mdx: unit.mdx }], locales, "", controller.signal);
             if (!result || controller.signal.aborted)
                 return;
             if ("error" in result) {
                 toast.error(t("toast.failedOne", { reason: result.error }));
                 return;
             }
-            const applied = applyTranslation(editor, unit, result.mdx, pos);
+            const applied = applyTranslation(site, format, editor, unit, result.mdx, pos);
             if (applied === "changed")
                 toast.message(t("toast.blockChanged"));
             else if (applied === "invalid")
@@ -112,19 +116,19 @@ export function useAiTranslate(locales) {
             if (controller.signal.aborted)
                 toast.message(t("toast.stopped"));
             else
-                toast.error(errorText(error, t("runFailed")));
+                toast.error(errorText(site, error, t("runFailed")));
         }
         finally {
             if (blockAbortRef.current.get(pos) === controller)
                 blockAbortRef.current.delete(pos);
             setBusyBlocks((current) => new Set([...current].filter((item) => item !== pos)));
         }
-    }, [locales]);
+    }, [locales, format, site, t]);
     const translateAll = useCallback(async () => {
         const editor = editorRef.current;
-        if (!editor || !locales)
+        if (!editor || !locales || !format)
             return;
-        const blocks = collectUnits(editor.state.doc).map((unit, index) => ({
+        const blocks = collectUnits(site, format, editor.state.doc).map((unit, index) => ({
             ...unit,
             id: `b${index}`,
         }));
@@ -145,7 +149,7 @@ export function useAiTranslate(locales) {
             while (next < groups.length && !controller.signal.aborted && !fatal) {
                 const group = groups[next++] ?? [];
                 try {
-                    const results = await requestTranslation(actionKey, group.map(({ id, mdx }) => ({ id, mdx })), locales, request, controller.signal);
+                    const results = await requestTranslation(site, actionKey, group.map(({ id, mdx }) => ({ id, mdx })), locales, request, controller.signal);
                     for (const result of results) {
                         const block = group.find((item) => item.id === result.id);
                         if (!block)
@@ -153,7 +157,7 @@ export function useAiTranslate(locales) {
                         if ("error" in result)
                             failures.push(result.error);
                         else {
-                            const applied = applyTranslation(editor, block, result.mdx, null);
+                            const applied = applyTranslation(site, format, editor, block, result.mdx, null);
                             if (applied === "changed")
                                 skipped += 1;
                             else if (applied === "invalid")
@@ -164,7 +168,7 @@ export function useAiTranslate(locales) {
                 catch (error) {
                     if (controller.signal.aborted)
                         return;
-                    fatal = errorText(error, t("runFailed"));
+                    fatal = errorText(site, error, t("runFailed"));
                 }
                 setProgress((current) => (current ? { ...current, done: current.done + group.length } : current));
             }
@@ -181,15 +185,15 @@ export function useAiTranslate(locales) {
         }
         else
             toast.success(t("toast.all", { count: blocks.length }));
-    }, [locales, request, actionKey]);
+    }, [locales, request, actionKey, format, site, t]);
     const blockActions = useMemo(() => features.map((item) => ({
         id: `ai-translate:${item.key}`,
         label: item.label,
         icon: _jsx(Languages, { "aria-hidden": true, className: "size-3.5" }),
-        isAvailable: (editor, pos) => unitAt(editor.state.doc, pos) !== null && progress === null,
+        isAvailable: (editor, pos) => !!format && unitAt(site, format, editor.state.doc, pos) !== null && progress === null,
         isBusy: (pos) => busyBlocks.has(pos),
         run: (editor, pos) => void translateOne(editor, pos, item.key),
-    })), [features, busyBlocks, progress, translateOne]);
+    })), [features, busyBlocks, progress, translateOne, format, site]);
     const running = progress !== null || busyBlocks.size > 0;
     const toolbar = feature ? (running ? (_jsxs("span", { className: "flex items-center gap-1", children: [progress && (_jsx("span", { className: "text-cms-muted-foreground text-xs tabular-nums", children: t("progress", { done: progress.done, total: progress.total }) })), _jsxs(Button, { type: "button", size: "sm", variant: "ghost", className: "gap-1.5 text-cms-muted-foreground", onClick: stop, children: [_jsx(Square, { "aria-hidden": true, className: "size-4" }), t("stop")] })] })) : (_jsxs(Popover, { open: open, onOpenChange: setOpen, children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", size: "sm", variant: "ghost", className: "gap-1.5 text-cms-muted-foreground" }), children: [_jsx(Languages, { "aria-hidden": true, className: "size-4" }), t("all")] }), _jsx(PopoverContent, { align: "end", className: "w-72 gap-2 p-3 text-xs", children: _jsxs("form", { className: "flex flex-col gap-2", onSubmit: (event) => {
                         event.preventDefault();

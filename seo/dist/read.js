@@ -1,4 +1,4 @@
-import { SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
+import { findTitleField, SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
 import { SEO_ROLES } from "./fields.js";
 const filled = (value) => value.trim() || undefined;
 /**
@@ -11,7 +11,9 @@ const filled = (value) => value.trim() || undefined;
  */
 export function seoOf(schema, metadata) {
     const role = (name) => filled(valueWithRole(schema, name, metadata));
-    const title = role(SEO_ROLES.title) ?? (typeof metadata.title === "string" ? filled(metadata.title) : undefined);
+    const titleName = findTitleField(schema)?.name;
+    const titleValue = titleName === undefined ? undefined : metadata[titleName];
+    const title = role(SEO_ROLES.title) ?? (typeof titleValue === "string" ? filled(titleValue) : undefined);
     const description = role(SEO_ROLES.description) ?? role(SUMMARY_ROLE);
     const imageId = role(SEO_ROLES.image);
     const canonical = role(SEO_ROLES.canonical);

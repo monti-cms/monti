@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { CellSelection } from "@tiptap/pm/tables";
 import { useEditorState } from "@tiptap/react";
 import { BetweenHorizontalEnd, BetweenHorizontalStart, BetweenVerticalEnd, BetweenVerticalStart, Columns3, MoveHorizontal, Rows3, TableCellsMerge, TableCellsSplit, } from "lucide-react";
@@ -10,7 +10,6 @@ import { Separator } from "../ui/separator.js";
 import { BLOCK_TOOLBAR } from "./blocks/shared.js";
 import { editorMessages } from "./messages.js";
 import { ToolbarButton } from "./toolbar-button.js";
-const t = createTranslator(editorMessages);
 const chain = (editor) => editor.chain().focus();
 const isCellSelection = (editor) => editor.state.selection instanceof CellSelection;
 /** The table node containing the selection and its position. null when outside a table. */
@@ -51,7 +50,7 @@ const fillTableWidth = (editor) => {
     editor.commands.focus();
 };
 /** Controls floating above the table while the cursor is inside it. Deleting the table is in the block handle menu. */
-const TABLE_TOOL_GROUPS = [
+const TABLE_TOOL_GROUPS = (t) => [
     [
         {
             label: t("tableToolbar.addRowBeforeLabel"),
@@ -123,6 +122,7 @@ const TABLE_TOOL_GROUPS = [
 ];
 const TOOLBAR_GAP = 6;
 export function TableToolbar({ editor }) {
+    const t = useTranslator(editorMessages);
     // Re-render whenever the selection or document changes (cell movement, mergeability, column widths). null outside a table.
     const tableKey = useEditorState({
         editor,
@@ -176,5 +176,5 @@ export function TableToolbar({ editor }) {
     });
     if (!tableKey || typeof window === "undefined")
         return null;
-    return createPortal(_jsx("div", { ref: toolbarRef, role: "toolbar", "aria-label": t("tableToolbar.label"), style: { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 30 }, className: BLOCK_TOOLBAR, children: TABLE_TOOL_GROUPS.map((group, index) => (_jsxs("div", { className: "flex items-center gap-0.5", children: [index > 0 && _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" }), group.map((item) => (_jsx(ToolbarButton, { editor: editor, item: item }, item.label)))] }, group[0]?.label))) }), document.body);
+    return createPortal(_jsx("div", { ref: toolbarRef, role: "toolbar", "aria-label": t("tableToolbar.label"), style: { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 30 }, className: BLOCK_TOOLBAR, children: TABLE_TOOL_GROUPS(t).map((group, index) => (_jsxs("div", { className: "flex items-center gap-0.5", children: [index > 0 && _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" }), group.map((item) => (_jsx(ToolbarButton, { editor: editor, item: item }, item.label)))] }, group[0]?.label))) }), document.body);
 }

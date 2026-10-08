@@ -1,5 +1,5 @@
 "use client";
-import { createTranslator, supportsLocale } from "@monti-cms/core/client";
+import { supportsLocale, useTranslator } from "@monti-cms/core/client";
 import { PluginKey } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,7 +8,6 @@ import { docRangeToSegment, extractSegments } from "./extract.js";
 import { textCheckMessages } from "./messages.js";
 import { createTextCheckPlugin, textCheckIssues } from "./plugin.js";
 import { checkSegments, ignoreKey, placeIssues, TextCheckCache } from "./run.js";
-const t = createTranslator(textCheckMessages);
 /** Auto check (`auto: true`) runs once input pauses for this long. */
 export const AUTO_CHECK_DELAY = 1500;
 const NO_ISSUES = [];
@@ -22,6 +21,7 @@ const errorMessage = (error) => (error instanceof Error && error.message ? error
  * - A paragraph with the same text is not sent again (cache per checker, language and text). Re-checking or closing aborts in-flight requests.
  */
 export function useTextCheck(editor, { checkers: registered, locale }) {
+    const t = useTranslator(textCheckMessages);
     const checkers = useMemo(() => registered.filter((checker) => supportsLocale(checker, locale)), [registered, locale]);
     const active = !!editor && checkers.length > 0;
     const [cache] = useState(() => new TextCheckCache());
@@ -130,7 +130,7 @@ export function useTextCheck(editor, { checkers: registered, locale }) {
                 setRunning(null);
             }
         }
-    }, [editor, active, locale, checkers, checkAll, place]);
+    }, [editor, active, locale, checkers, checkAll, place, t]);
     // Auto check: only checkers with `auto: true`, and only paragraphs that differ from when opened (changed paragraphs).
     useEffect(() => {
         if (!editor || !active)
@@ -195,7 +195,7 @@ export function useTextCheck(editor, { checkers: registered, locale }) {
             clearTimeout(timer);
             autoRef.current?.abort();
         };
-    }, [editor, active, checkers, locale, checkAll, place]);
+    }, [editor, active, checkers, locale, checkAll, place, t]);
     const close = useCallback(() => setOpen(null), []);
     const jump = useCallback((issue) => {
         if (!editor)

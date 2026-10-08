@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { cva } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
@@ -15,7 +15,6 @@ import { Separator } from "./separator.js";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./sheet.js";
 import { Skeleton } from "./skeleton.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip.js";
-const t = createTranslator(uiMessages);
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
@@ -92,6 +91,7 @@ function SidebarProvider({ defaultOpen = true, open: openProp, onOpenChange: set
             }, className: cn("group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-cms-sidebar", className), ...props, children: children }) }));
 }
 function Sidebar({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, dir, ...props }) {
+    const t = useTranslator(uiMessages);
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
     if (collapsible === "none") {
         return (_jsx("div", { "data-slot": "sidebar", className: cn("flex h-full w-(--sidebar-width) flex-col bg-cms-sidebar text-cms-sidebar-foreground", className), ...props, children: children }));
@@ -110,6 +110,7 @@ function Sidebar({ side = "left", variant = "sidebar", collapsible = "offcanvas"
                     : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l", className), ...props, children: _jsx("div", { "data-sidebar": "sidebar", "data-slot": "sidebar-inner", className: "flex size-full flex-col bg-cms-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-cms-sidebar-border", children: children }) })] }));
 }
 function SidebarTrigger({ className, onClick, ...props }) {
+    const t = useTranslator(uiMessages);
     const { toggleSidebar } = useSidebar();
     return (_jsxs(Button, { "data-sidebar": "trigger", "data-slot": "sidebar-trigger", variant: "ghost", size: "icon-sm", className: cn(className), onClick: (event) => {
             onClick?.(event);
@@ -117,6 +118,7 @@ function SidebarTrigger({ className, onClick, ...props }) {
         }, ...props, children: [_jsx(PanelLeftIcon, {}), _jsx("span", { className: "sr-only", children: t("sidebar.toggle") })] }));
 }
 function SidebarRail({ className, ...props }) {
+    const t = useTranslator(uiMessages);
     const { toggleSidebar } = useSidebar();
     return (_jsx("button", { "data-sidebar": "rail", "data-slot": "sidebar-rail", "aria-label": t("sidebar.toggle"), tabIndex: -1, onClick: toggleSidebar, title: t("sidebar.toggle"), className: cn("absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] hover:after:bg-cms-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2", "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize", "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize", "group-data-[collapsible=offcanvas]:translate-x-0 hover:group-data-[collapsible=offcanvas]:bg-cms-sidebar group-data-[collapsible=offcanvas]:after:left-full", "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2", "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2", className), ...props }));
 }

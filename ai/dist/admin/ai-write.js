@@ -1,34 +1,36 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { blockNodeName, MdxPreview, mdxToTiptap, tiptapToMdx } from "@monti-cms/admin/editor";
+import { blockNodeName, DocPreview } from "@monti-cms/admin/editor";
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsList, TabsTrigger, Textarea, } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { aiCommonMessages } from "./ai-common.messages.js";
 import { streamAiAction, useAiActions } from "./ai-slot-provider.js";
 import { aiWriteMessages } from "./ai-write.messages.js";
+import { contentOfText, documentOfText, textOfContent, useMdxFormat } from "./mdx-format.js";
 import { diffWords } from "./word-diff.js";
-const t = createTranslator(aiWriteMessages);
-const common = createTranslator(aiCommonMessages);
 /** MDX of the selection. A paragraph with only part selected contains only that part. */
-function selectionMdx(editor, from, to) {
+function selectionMdx(site, format, editor, from, to) {
     const slice = editor.state.doc.slice(from, to);
     const nodes = (slice.content.toJSON() ?? []);
     // Selecting inside one paragraph yields only a text fragment. It has to be wrapped in a paragraph to be MDX.
     const content = slice.content.firstChild?.isInline ? [{ type: "paragraph", content: nodes }] : nodes;
-    return tiptapToMdx({ type: "doc", content }).trim();
+    return textOfContent(site, format, content);
 }
 /** Result MDX as editor content. If the edit was inside one paragraph and the result is one paragraph, inserts only the text (the paragraph is not split). */
-function contentFor(editor, from, to, mdx) {
-    const blocks = mdxToTiptap(mdx).content ?? [];
+function contentFor(site, format, editor, from, to, mdx) {
+    const blocks = contentOfText(site, format, mdx);
     const $from = editor.state.doc.resolve(from);
     const $to = editor.state.doc.resolve(to);
     const inline = $from.parent === $to.parent && $from.parent.isTextblock;
     const only = blocks.length === 1 ? blocks[0] : undefined;
     return inline && only?.type === "paragraph" ? (only.content ?? []) : blocks;
 }
-function WriteDialog({ job, getEntry, onClose }) {
+function WriteDialog({ job, format, getEntry, onClose, }) {
+    const site = useSite();
+    const t = useTranslator(aiWriteMessages);
+    const common = useTranslator(aiCommonMessages);
     const [request, setRequest] = useState("");
     const [state, setState] = useState({ status: "idle" });
     const controllerRef = useRef(null);
@@ -43,9 +45,12 @@ function WriteDialog({ job, getEntry, onClose }) {
             ? { selection: job.source, title: entry?.title || undefined }
             : job.mode === "block"
                 ? { block: job.source, title: entry?.title || undefined }
-                : { title: entry?.title || undefined, body: tiptapToMdx(editor.getJSON()).trim() || undefined };
+                : {
+                    title: entry?.title || undefined,
+                    body: textOfContent(site, format, editor.getJSON().content ?? []) || undefined,
+                };
         try {
-            const result = await streamAiAction(action.key, Object.fromEntries(Object.entries(input).filter(([name, value]) => value && action.input[name])), {
+            const result = await streamAiAction(site, action.key, Object.fromEntries(Object.entries(input).filter(([name, value]) => value && action.input[name])), {
                 env: {
                     ...(entry?.collection ? { collection: entry.collection } : {}),
                     ...(entry?.locale ? { locale: entry.locale } : {}),
@@ -83,14 +88,16 @@ function WriteDialog({ job, getEntry, onClose }) {
     const blockProblem = useMemo(() => {
         if (job.mode !== "block" || state.status !== "done")
             return null;
-        const blocks = mdxToTiptap(state.text).content ?? [];
+        const blocks = contentOfText(site, format, state.text);
         return blocks.length === 1 && blocks[0]?.type === job.nodeType ? null : t("blockMismatch");
-    }, [job, state]);
+    }, [job, state, format, t, site]);
     const apply = () => {
         if (state.status !== "done" || !state.text || blockProblem)
             return;
         // A block is replaced entirely with the result block.
-        const content = job.mode === "block" ? (mdxToTiptap(state.text).content ?? []) : contentFor(editor, job.from, job.to, state.text);
+        const content = job.mode === "block"
+            ? contentOfText(site, format, state.text)
+            : contentFor(site, format, editor, job.from, job.to, state.text);
         editor.chain().focus().insertContentAt({ from: job.from, to: job.to }, content).run();
         onClose();
     };
@@ -112,22 +119,28 @@ function WriteDialog({ job, getEntry, onClose }) {
                                     if (!running)
                                         void run();
                                 }
-                            }, placeholder: job.mode === "insert" ? t("askWrite") : job.mode === "block" ? t("askChange") : t("request"), className: "max-h-48 min-h-20 resize-y text-sm", autoFocus: !fixed }), _jsx("div", { className: "flex justify-end", children: _jsxs(Button, { type: "submit", size: "sm", disabled: running, children: [state.status === "idle" ? _jsx(Sparkles, { "aria-hidden": true }) : _jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")] }) })] })), showResult && (_jsxs(Tabs, { value: view, onValueChange: (value) => setView(value), className: "min-w-0 gap-2", children: [_jsxs(TabsList, { children: [_jsx(TabsTrigger, { value: "preview", children: t("preview") }), _jsx(TabsTrigger, { value: "source", children: job.mode === "insert" ? t("sourceInsert") : t("sourceChanges") })] }), _jsx("output", { "aria-live": "polite", className: "block min-w-0", children: view === "preview" ? (_jsx(ResultPreview, { job: job, text: result, done: state.status === "done" })) : (_jsx("pre", { className: "max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-cms-muted/40 p-3 font-mono text-xs leading-relaxed", children: diff ? _jsx(DiffText, { parts: diff }) : result || t("running") })) })] })), (state.status === "error" || blockProblem) && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: state.status === "error" ? state.message : blockProblem })), _jsxs(DialogFooter, { children: [!askRequest && (_jsxs(Button, { type: "button", variant: "ghost", size: "sm", className: "sm:mr-auto", disabled: running, onClick: () => void run(), children: [_jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : t("runAgain")] })), _jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onClose, children: t("cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: state.status !== "done" || !state.text || !!blockProblem, onClick: apply, children: job.mode === "insert" ? t("insert") : t("replace") })] })] }) }));
+                            }, placeholder: job.mode === "insert" ? t("askWrite") : job.mode === "block" ? t("askChange") : t("request"), className: "max-h-48 min-h-20 resize-y text-sm", autoFocus: !fixed }), _jsx("div", { className: "flex justify-end", children: _jsxs(Button, { type: "submit", size: "sm", disabled: running, children: [state.status === "idle" ? _jsx(Sparkles, { "aria-hidden": true }) : _jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")] }) })] })), showResult && (_jsxs(Tabs, { value: view, onValueChange: (value) => setView(value), className: "min-w-0 gap-2", children: [_jsxs(TabsList, { children: [_jsx(TabsTrigger, { value: "preview", children: t("preview") }), _jsx(TabsTrigger, { value: "source", children: job.mode === "insert" ? t("sourceInsert") : t("sourceChanges") })] }), _jsx("output", { "aria-live": "polite", className: "block min-w-0", children: view === "preview" ? (_jsx(ResultPreview, { job: job, format: format, text: result, done: state.status === "done" })) : (_jsx("pre", { className: "max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-cms-muted/40 p-3 font-mono text-xs leading-relaxed", children: diff ? _jsx(DiffText, { parts: diff }) : result || t("running") })) })] })), (state.status === "error" || blockProblem) && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: state.status === "error" ? state.message : blockProblem })), _jsxs(DialogFooter, { children: [!askRequest && (_jsxs(Button, { type: "button", variant: "ghost", size: "sm", className: "sm:mr-auto", disabled: running, onClick: () => void run(), children: [_jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : t("runAgain")] })), _jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onClose, children: t("cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: state.status !== "done" || !state.text || !!blockProblem, onClick: apply, children: job.mode === "insert" ? t("insert") : t("replace") })] })] }) }));
 }
 /** Text with the changes (removed and added) marked. */
 function DiffText({ parts }) {
     return parts.map((part, index) => part.type === "same" ? (_jsx("span", { children: part.text }, index)) : part.type === "del" ? (_jsx("del", { className: "bg-cms-destructive/15 text-cms-destructive line-through", children: part.text }, index)) : (_jsx("ins", { className: "bg-emerald-500/15 cms-dark:text-emerald-400 text-emerald-700 no-underline", children: part.text }, index)));
 }
 const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-cms-muted/40 p-3";
+/** A text as the rendered post. A text the format cannot read is shown as it is. */
+function TextPreview({ format, text, label }) {
+    const doc = useMemo(() => documentOfText(format, text), [format, text]);
+    return doc ? (_jsx(DocPreview, { doc: doc, label: label })) : (_jsx("pre", { className: "whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs", children: text }));
+}
 /**
  * Renders the result in its text shape (diagrams and charts as pictures). While writing, half-written code does not render, so the source is shown.
  * Block fix shows the current block and the changed one side by side.
  */
-function ResultPreview({ job, text, done }) {
-    const after = done ? (_jsx(MdxPreview, { mdx: text, label: t("after") })) : (_jsx("pre", { className: "whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs", children: text || t("running") }));
+function ResultPreview({ job, format, text, done }) {
+    const t = useTranslator(aiWriteMessages);
+    const after = done ? (_jsx(TextPreview, { format: format, text: text, label: t("after") })) : (_jsx("pre", { className: "whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs", children: text || t("running") }));
     if (job.mode === "insert")
         return _jsx("div", { className: PANEL, children: after });
-    return (_jsxs("div", { className: "grid min-w-0 gap-3 sm:grid-cols-2", children: [_jsxs("section", { className: "min-w-0 space-y-1.5", children: [_jsx("h3", { className: "font-medium text-cms-muted-foreground text-xs", children: t("now") }), _jsx("div", { className: PANEL, children: _jsx(MdxPreview, { mdx: job.source, label: t("now") }) })] }), _jsxs("section", { className: "min-w-0 space-y-1.5", children: [_jsx("h3", { className: "font-medium text-cms-muted-foreground text-xs", children: t("after") }), _jsx("div", { className: PANEL, children: after })] })] }));
+    return (_jsxs("div", { className: "grid min-w-0 gap-3 sm:grid-cols-2", children: [_jsxs("section", { className: "min-w-0 space-y-1.5", children: [_jsx("h3", { className: "font-medium text-cms-muted-foreground text-xs", children: t("now") }), _jsx("div", { className: PANEL, children: _jsx(TextPreview, { format: format, text: job.source, label: t("now") }) })] }), _jsxs("section", { className: "min-w-0 space-y-1.5", children: [_jsx("h3", { className: "font-medium text-cms-muted-foreground text-xs", children: t("after") }), _jsx("div", { className: PANEL, children: after })] })] }));
 }
 /** Whether the editor is an empty document. Re-checked on every change. */
 function useIsEmpty(editor) {
@@ -146,30 +159,41 @@ function useIsEmpty(editor) {
 }
 /** AI writing attached as an edit-screen extension (polish style, write a draft). */
 export const useAiWriteExtension = ({ getEntry }) => {
+    const site = useSite();
+    const t = useTranslator(aiWriteMessages);
     const { data } = useAiActions();
+    // The model reads and writes MDX, so writing works through the `mdx` format. Without it there is nothing to write with.
+    const format = useMdxFormat();
     const [editor, setEditor] = useState(null);
     const [job, setJob] = useState(null);
     const empty = useIsEmpty(editor);
     const usable = useMemo(() => {
         const ready = new Set(data?.usable ?? []);
-        const actions = (data?.items ?? []).filter((action) => action.enabled && ready.has(action.key));
+        const actions = format ? (data?.items ?? []).filter((action) => action.enabled && ready.has(action.key)) : [];
         return {
             selection: actions.filter((action) => action.attach.some((attach) => attach.slot === "selection")),
             insert: actions.filter((action) => action.attach.some((attach) => attach.slot === "insert")),
             block: actions.filter((action) => action.attach.some((attach) => attach.slot === "block")),
         };
-    }, [data]);
+    }, [data, format]);
     const selectionActions = useMemo(() => usable.selection.map((action) => ({
         id: `ai:${action.key}`,
         label: action.label,
         icon: _jsx(Sparkles, { "aria-hidden": true, className: "size-4" }),
         run: (current) => {
             const { from, to } = current.state.selection;
-            if (from === to)
+            if (from === to || !format)
                 return;
-            setJob({ mode: "selection", action, editor: current, from, to, source: selectionMdx(current, from, to) });
+            setJob({
+                mode: "selection",
+                action,
+                editor: current,
+                from,
+                to,
+                source: selectionMdx(site, format, current, from, to),
+            });
         },
-    })), [usable.selection]);
+    })), [usable.selection, format, site]);
     const insertActions = useMemo(() => usable.insert.map((action) => ({
         id: `ai:${action.key}`,
         title: action.label,
@@ -177,7 +201,7 @@ export const useAiWriteExtension = ({ getEntry }) => {
         keywords: ["ai", action.label],
         icon: "sparkles",
         run: (current, range) => setJob({ mode: "insert", action, editor: current, from: range.from, to: range.to }),
-    })), [usable.insert]);
+    })), [usable.insert, t]);
     const blockActions = useMemo(() => usable.block.map((action) => {
         // Editor node name of the block this action is attached to.
         const nodes = new Set(action.attach.flatMap((attach) => (attach.slot === "block" ? [blockNodeName({ name: attach.block })] : [])));
@@ -188,9 +212,9 @@ export const useAiWriteExtension = ({ getEntry }) => {
             isAvailable: (current, pos) => nodes.has(current.state.doc.nodeAt(pos)?.type.name ?? ""),
             run: (current, pos) => {
                 const node = current.state.doc.nodeAt(pos);
-                if (!node)
+                if (!node || !format)
                     return;
-                const source = tiptapToMdx({ type: "doc", content: [node.toJSON()] }).trim();
+                const source = textOfContent(site, format, [node.toJSON()]);
                 setJob({
                     mode: "block",
                     action,
@@ -202,14 +226,14 @@ export const useAiWriteExtension = ({ getEntry }) => {
                 });
             },
         };
-    }), [usable.block]);
+    }), [usable.block, format, site]);
     const firstInsert = usable.insert[0];
     return {
         toolbar: (_jsx(_Fragment, { children: empty && editor && firstInsert && (_jsxs(Button, { type: "button", variant: "ghost", size: "sm", className: "gap-1.5 text-cms-muted-foreground", onClick: () => {
                     const { from, to } = editor.state.selection;
                     setJob({ mode: "insert", action: firstInsert, editor, from, to });
                 }, children: [_jsx(Sparkles, { "aria-hidden": true, className: "size-4" }), firstInsert.label] })) })),
-        overlay: job && _jsx(WriteDialog, { job: job, getEntry: getEntry, onClose: () => setJob(null) }),
+        overlay: job && format && (_jsx(WriteDialog, { job: job, format: format, getEntry: getEntry, onClose: () => setJob(null) })),
         selectionActions,
         insertActions,
         blockActions,

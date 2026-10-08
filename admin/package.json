@@ -1,8 +1,8 @@
 {
   "name": "@monti-cms/admin",
-  "version": "0.1.0",
+  "version": "0.2.0-next.0",
   "private": true,
-  "description": "Admin UI (Next.js) for @monti-cms/core: editor, lists, media, templates, and plugin extension points",
+  "description": "Admin UI for @monti-cms/core: editor, lists, media, templates, and plugin extension points. Framework-neutral: a host package (@monti-cms/nextjs) supplies the router",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -10,9 +10,13 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./next": {
-      "types": "./dist/next/index.d.ts",
-      "default": "./dist/next/index.js"
+    "./host": {
+      "types": "./dist/host/index.d.ts",
+      "default": "./dist/host/index.js"
+    },
+    "./router": {
+      "types": "./dist/router/index.d.ts",
+      "default": "./dist/router/index.js"
     },
     "./editor": {
       "types": "./dist/editor/public.d.ts",
@@ -21,6 +25,10 @@
     "./blocks": {
       "types": "./dist/editor/blocks/public.d.ts",
       "default": "./dist/editor/blocks/public.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/public.d.ts",
+      "default": "./dist/hooks/public.js"
     },
     "./plugins": {
       "types": "./dist/plugins.d.ts",
@@ -42,7 +50,7 @@
       "types": "./dist/kit.d.ts",
       "default": "./dist/kit.js"
     },
-    "./styles.css": "./styles.css"
+    "./styles.css": "./dist/styles.css"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -64,7 +72,8 @@
     "react-day-picker": "^10.0.1",
     "server-only": "^0.0.1",
     "shiki": "^3.21.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.15"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -72,12 +81,11 @@
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "lucide-react": ">=0.562.0",
-    "next": ">=16",
     "next-themes": ">=0.4",
     "react": ">=19",
     "react-dom": ">=19",
     "sonner": "^2.0.8",
-    "@monti-cms/core": "^0.1.0"
+    "@monti-cms/core": "^0.2.0-next.0"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -92,8 +100,6 @@
     "@types/react-dom": "^19",
     "jsdom": "^27.4.0",
     "lucide-react": "^0.562.0",
-    "next": "16.3.8",
-    "next-auth": "5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -101,18 +107,17 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.1.0"
+    "@monti-cms/core": "0.2.0-next.0"
   },
   "files": [
     "dist",
-    "README.md",
-    "styles.css"
+    "README.md"
   ],
   "scripts": {
     "test": "vitest",
     "test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
     "test:other-site": "vitest run -c vitest.othersite.config.ts",
-    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
-    "build": "node ../../scripts/build-package.mjs"
+    "typecheck": "tsc --noEmit -p .",
+    "build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
   }
 }

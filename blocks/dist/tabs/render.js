@@ -16,5 +16,21 @@ export function Tabs({ defaultValue, children }) {
     const labels = tabs.map((tab) => tab.props.label);
     return (_jsx(TabsView, { labels: labels, panels: tabs.map((tab) => tab.props.children), defaultIndex: Math.max(0, labels.indexOf(defaultValue ?? "")) }));
 }
-/** Public component for tabs (called by `@monti-cms/core/render`). */
-export default () => ({ Tabs, Tab });
+/**
+ * Tab group of the JSON renderer. It reads the tabs from the block's `items` (the stored `tab` nodes and what each renders to), not from the props of
+ * child elements: the tab names are the `label` attributes and each panel is the content of its tab.
+ */
+export function DocumentTabs({ defaultValue, items, children }) {
+    const tabs = items.filter((item) => item.node.type === "tab" && typeof item.node.attrs?.label === "string");
+    if (tabs.length === 0)
+        return _jsx(_Fragment, { children: children });
+    const labels = tabs.map((tab) => String(tab.node.attrs?.label));
+    return (_jsx(TabsView, { labels: labels, panels: tabs.map((tab) => tab.children), defaultIndex: Math.max(0, labels.indexOf(defaultValue ?? "")) }));
+}
+/** Public components for tabs in the JSON renderer (`renderDocument`): the blocks `tabs` and `tab`. */
+export const documentComponents = (_context) => ({
+    blocks: {
+        tabs: DocumentTabs,
+        tab: ({ children }) => _jsx(Tab, { children: children }),
+    },
+});

@@ -1,11 +1,11 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { adminHref, COLLECTION_DEFINITIONS, COLLECTIONS, createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { FolderPlus, Plus } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "../lib/utils/cn.js";
+import { AdminLink as Link } from "../router/index.js";
 import { Button, buttonVariants } from "../ui/button.js";
 import { Skeleton } from "../ui/skeleton.js";
 import { AdminEntriesTable } from "./admin-entries-table.js";
@@ -17,19 +17,21 @@ import { RecordPanel } from "./record-panel.js";
 import { AdminNavProvider, AdminShell } from "./shared/admin-shell.js";
 import { SIDE_PANEL_DOCK } from "./shared/side-panel.js";
 import { useEntryList } from "./use-entry-list.js";
-const t = createTranslator(screensMessages);
 /** Top right above the list: search and add button (trash has no add). */
 function EntryListHeaderActions({ list }) {
+    const t = useTranslator(screensMessages);
     const isTrash = list.mode === "trash";
     return (_jsxs(_Fragment, { children: [_jsx(ListSearch, { state: list.state, onChange: list.update, allowBody: !isTrash }), !isTrash && (_jsxs(Button, { type: "button", size: "sm", onClick: list.createNew, children: [_jsx(Plus, { "aria-hidden": true }), t("list.add", { label: list.label })] }))] }));
 }
 /** List body: filter chips, bulk action row, table, taxonomy edit panel, and the dialogs list actions open. */
 function EntryListBody({ list }) {
+    const site = useSite();
+    const t = useTranslator(screensMessages);
     const { state, data, mode } = list;
     const isTrash = mode === "trash";
     const { items } = data;
     const record = list.recordTarget;
-    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex min-w-0 flex-1 flex-col overflow-hidden", children: [_jsx(FilterChipBar, { state: state, options: list.options, onChange: list.update }), _jsx(BulkBar, { collection: state.collection, mode: mode, selected: items.filter((item) => list.selectedIds.has(item.id)).map(toSelection), folders: data.folders, onClearSelection: () => list.setSelectedIds(new Set()), onRun: (op, targets, params) => list.mutations.mutateEntries(op, targets, () => runBulk(op, targets, params), params) }), _jsx(AdminEntriesTable, { collection: state.collection, items: items, folders: data.folders, explorer: list.explorer, state: state, options: list.options, onStateChange: (patch) => {
+    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex min-w-0 flex-1 flex-col overflow-hidden", children: [_jsx(FilterChipBar, { state: state, options: list.options, onChange: list.update }), _jsx(BulkBar, { collection: state.collection, mode: mode, selected: items.filter((item) => list.selectedIds.has(item.id)).map(toSelection), folders: data.folders, onClearSelection: () => list.setSelectedIds(new Set()), onRun: (op, targets, params) => list.mutations.mutateEntries(op, targets, () => runBulk(site, op, targets, params), params) }), _jsx(AdminEntriesTable, { collection: state.collection, items: items, folders: data.folders, explorer: list.explorer, state: state, options: list.options, onStateChange: (patch) => {
                                     list.update(patch);
                                     if (patch.sortField || patch.sortDirection) {
                                         list.savePreferences({
@@ -69,6 +71,7 @@ function useDashboardMounted() {
 }
 /** Placeholder before the first render. Mimics the shape of the sidebar, header and list rows. */
 function DashboardLoading() {
+    const t = useTranslator(screensMessages);
     return (_jsxs("div", { "aria-busy": "true", className: "flex h-svh overflow-hidden", children: [_jsx("span", { className: "sr-only", children: t("dashboard.loading") }), _jsxs("div", { "aria-hidden": true, className: "hidden w-64 shrink-0 space-y-2 border-r p-3 md:block", children: [_jsx(Skeleton, { className: "mb-4 h-7 w-32" }), Array.from({ length: 6 }, (_, index) => (_jsx(Skeleton, { className: "h-7 w-full" }, index)))] }), _jsxs("div", { "aria-hidden": true, className: "flex min-w-0 flex-1 flex-col", children: [_jsxs("div", { className: "flex h-13 shrink-0 items-center justify-between border-b px-4 lg:px-5", children: [_jsx(Skeleton, { className: "h-5 w-32" }), _jsx(Skeleton, { className: "h-8 w-64" })] }), _jsx("div", { className: "space-y-3 px-5 py-4", children: Array.from({ length: 8 }, (_, index) => (_jsx(Skeleton, { className: "h-7 w-full" }, index))) })] })] }));
 }
 /** List screen. Opens the collection list, with no separate stats dashboard. */
@@ -86,9 +89,11 @@ export function AdminTrashDashboard() {
     return (_jsx(AdminNavProvider, { children: _jsx(TrashPage, {}) }));
 }
 function TrashPage() {
+    const site = useSite();
+    const t = useTranslator(screensMessages);
     const list = useEntryList("trash");
     const { state } = list;
-    return (_jsx(AdminShell, { title: t("dashboard.trash"), count: list.data.total, sidebar: { activeNav: "trash" }, headerActions: _jsxs(_Fragment, { children: [_jsx(EntryListHeaderActions, { list: list }), _jsx("nav", { "aria-label": t("dashboard.trashCollections"), className: "flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]", children: COLLECTIONS.map((item) => (_jsx(Link, { href: adminHref(`/trash?collection=${item}`), "aria-current": state.collection === item ? "page" : undefined, className: cn(buttonVariants({ variant: "ghost", size: "xs" }), "text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground aria-[current=page]:shadow-sm"), children: COLLECTION_DEFINITIONS[item].label }, item))) })] }), children: _jsx(EntryListBody, { list: list }) }));
+    return (_jsx(AdminShell, { title: t("dashboard.trash"), count: list.data.total, sidebar: { activeNav: "trash" }, headerActions: _jsxs(_Fragment, { children: [_jsx(EntryListHeaderActions, { list: list }), _jsx("nav", { "aria-label": t("dashboard.trashCollections"), className: "flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]", children: site.COLLECTIONS.map((item) => (_jsx(Link, { href: site.adminHref(`/trash?collection=${item}`), "aria-current": state.collection === item ? "page" : undefined, className: cn(buttonVariants({ variant: "ghost", size: "xs" }), "text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground aria-[current=page]:shadow-sm"), children: site.COLLECTION_DEFINITIONS[item].label }, item))) })] }), children: _jsx(EntryListBody, { list: list }) }));
 }
 function ListPage() {
     const list = useEntryList("list");

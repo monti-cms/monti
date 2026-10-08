@@ -1,21 +1,9 @@
-import { getCmsAuth } from "../../container.js";
-import { CmsAuthGateway } from "./auth-gateway.js";
 /**
- * Admin login runtime API. Uses the connection built from `auth` in the server config (`cms.server.ts`).
- * The side that picks the login method (`githubAuth`) lives in `@monti-cms/core/server`.
+ * Admin login types and the pieces a login method is built from. The connection itself is built from `auth` in `monti.config.ts`
+ * and owned by the CMS instance (`cms.auth()`, `cms.authGateway`). A login method is an `AuthAdapter` (`@monti-cms/core/server`); the one that ships is
+ * `auth()` of `@monti-cms/auth` (Auth.js core, with providers such as `github()`), written with the helpers exported here.
  */
-export { AuthError } from "./auth-gateway.js";
-export const authGateway = new CmsAuthGateway(getCmsAuth);
-/** Login API route handlers. An app whose login path differs from the default (`/api/cms/auth`) exports it from the route file at that path (e.g. `app/api/auth/[...nextauth]/route.ts`). */
-export const handlers = {
-    GET: (request) => getCmsAuth().handlers.GET(request),
-    POST: (request) => getCmsAuth().handlers.POST(request),
-};
-/** Current session. `null` if none. */
-export const auth = () => getCmsAuth().session();
-export const signIn = (provider, options) => getCmsAuth().signIn(provider, options);
-export const signOut = (options) => getCmsAuth().signOut(options);
-export const isAllowedAdminId = (userId) => getCmsAuth().isAdmin(userId);
-export const isDevAuthBypassEnabled = () => getCmsAuth().devBypass;
-/** Login methods to show on the login page. */
-export const authProviders = () => getCmsAuth().providers;
+export { withBasePath } from "../../core/base-path.js";
+export { AuthError, assertDevBypassSafe, CmsAuthGateway, isAllowedAdminId, isDevAuthBypassEnabled, } from "./auth-gateway.js";
+export { productionLikeEnvironment } from "./dev-bypass.js";
+export { detectProxyPlatform, explainTrustHost, resolveTrustHost } from "./trust-host.js";

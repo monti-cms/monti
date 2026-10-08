@@ -1,4 +1,4 @@
-import type { ImageResolver } from "../../mdx/image-src.js";
+import type { ImageResolver } from "../../doc/image-src.js";
 /**
  * Attachment file card (`::file{mediaId label}`). The address is decided by the resolver passed in (same as images). If it cannot be resolved, only the name shows and
  * there is no download.

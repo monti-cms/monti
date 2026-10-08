@@ -1,13 +1,16 @@
 import { type CodeBlockConfig } from "../annotation/code-block/line-effects.js";
 import type { BlockDefinition } from "../blocks/define.js";
 import { type MediaConfig } from "../core/media-types.js";
+import type { StoredDocument } from "../doc/stored-document.js";
 import type { MessageValue } from "../i18n/define.js";
 import type { CmsPlugin } from "../plugin/define.js";
 import { type CollectionSchema } from "../schema/collection.js";
+import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types.js";
+import { DEFAULT_ADMIN_PATH, isAdminPath, LOCALE_PREFIX_MODES, type LocalePrefixMode } from "./rules.js";
 /**
- * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineConfig`, and exports the result as the default export.
+ * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
  *
- * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values**.
+ * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values** (plugins also hold functions).
  * Secrets (DB URL, API keys) do not go here; keep them in environment variables.
  */
 export interface LocaleConfig<Code extends string = string> {
@@ -52,9 +55,7 @@ export interface SiteConfig {
      */
     readonly home?: string;
 }
-/** How public URLs get a locale prefix (`site.localePrefix`). */
-export type LocalePrefixMode = "except-default" | "always" | "never";
-export declare const LOCALE_PREFIX_MODES: readonly LocalePrefixMode[];
+export { LOCALE_PREFIX_MODES, type LocalePrefixMode };
 export interface AdminConfig {
     /**
      * Admin UI path. Default `/admin`. The app's admin route folder must use the same path
@@ -72,17 +73,33 @@ export interface AdminConfig {
      */
     readonly messages?: Readonly<Record<string, Readonly<Record<string, MessageValue>>>>;
     /**
-     * Name of the legacy browser recovery DB (IndexedDB). The admin UI still reads and deletes recovery copies left under this name but never creates new ones.
-     * The current name is `cms_backup`. Only sites that used the old name need to set this.
+     * Whether the admin offers body templates: the template menu of the editor, the sidebar link and the Templates screen. Default `true`. `false` hides all three
+     * (the templates already stored stay in the database).
      */
-    readonly legacyBackupNames?: readonly string[];
+    readonly templates?: boolean;
+    /**
+     * Whether the admin shows the translation UI: the language tabs of the editor, the locale column, filter and badges of the list, and the language tabs of the
+     * item panel. Default `true`. A site with one locale never shows it, whatever this says; `false` also hides it on a site with several locales.
+     */
+    readonly translations?: boolean;
 }
-export interface SeedTemplate {
+/**
+ * A body template of the seed: its fixed `id` and `name`, and the body as a stored document (`doc`) or as text in a format (`body` and the `format` that reads it;
+ * the format must be one the instance has, so a plugin provides it). Text is read when the migration runs.
+ */
+export type SeedTemplate = {
     /** Fixed ID (UUID). Running the migration repeatedly still creates only one such template. */
     readonly id: string;
     readonly name: string;
-    readonly mdx: string;
-}
+} & ({
+    readonly doc: StoredDocument;
+    readonly body?: undefined;
+    readonly format?: undefined;
+} | {
+    readonly body: string;
+    readonly format: string;
+    readonly doc?: undefined;
+});
 export interface SeedConfig {
     /**
      * Body template inserted only once, at the first migration of a new store. Templates added later are not inserted into a store that already has them,
@@ -90,7 +107,7 @@ export interface SeedConfig {
      */
     readonly templates?: readonly SeedTemplate[];
 }
-export interface CmsConfig<Collections extends CollectionsConfig = CollectionsConfig, Locale extends string = string, Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[]> {
+export interface CmsConfig<Collections extends CollectionsConfig = CollectionsConfig, Locale extends string = string, Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[], Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> {
     /** Collection name -> definition. The name is a stored value (`entries.collection`), so do not change it in production. */
     readonly collections: Collections;
     /** Content locales. The declaration order is the order shown in the UI. */
@@ -105,13 +122,19 @@ export interface CmsConfig<Collections extends CollectionsConfig = CollectionsCo
     readonly timeZone?: string;
     /** Data to seed a new store with. */
     readonly seed?: SeedConfig;
+    /**
+     * The version of the schema (a whole number from 1, 1 if unset). Every entry written from now on records it (`entry_bodies.schema_version`), so a stored entry shows which
+     * schema it was written or transformed under. A site with a schema file keeps it there (`schemaVersion` of `monti.schema.json`), where `monti schema:apply` raises it
+     * when the schema changes. It is not part of an entry's content hash.
+     */
+    readonly schemaVersion?: number;
     /** Admin UI settings. */
     readonly admin?: AdminConfig;
     /**
      * Body blocks the site adds (`defineBlock`). Blocks such as callouts and tabs are added by putting the block extension (`@monti-cms/blocks`) in `plugins`.
      * The public site renders them by the `component` name.
      */
-    readonly blocks?: readonly BlockDefinition[];
+    readonly blocks?: Blocks;
     /** Plugins (e.g. `aiPlugin()`). Names must not collide. */
     readonly plugins?: Plugins;
     /** Code block settings. Adds line effects (`lineEffects`) or changes the core defaults (highlight, add, delete, warning, error). */
@@ -126,9 +149,33 @@ export interface CmsConfig<Collections extends CollectionsConfig = CollectionsCo
  * two slug segments can match if one prefix starts with the other and one suffix ends with the other.
  */
 export declare function pathsOverlap(a: string, b: string): boolean;
-/** Default admin UI path (when `admin.path` is unset). */
-export declare const DEFAULT_ADMIN_PATH = "/admin";
-/** Admin path shape: a path of one or more segments starting with `/` (no trailing `/`), and not under `/api`. */
-export declare const isAdminPath: (path: string) => boolean;
-/** Defines the site config. Preserves collection and locale names as types and reports inconsistent config right away. */
-export declare function defineConfig<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly CmsPlugin[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins>): CmsConfig<Collections, Locale, Plugins>;
+export { DEFAULT_ADMIN_PATH, isAdminPath };
+/**
+ * The config of a site that keeps its plain data in a schema file (`monti.schema.json`): the same options as {@link CmsConfig}, plus `schema`, and without the
+ * collections' and locales' own place (they come from the file; `collections` here adds collections written in code).
+ */
+export interface SchemaCmsConfig<Schema extends SchemaInput = SchemaInput, Collections extends CollectionsConfig = CollectionsConfig, Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[], Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> extends Omit<CmsConfig<Collections, string, Plugins, Blocks>, "collections" | "locales" | "defaultLocale"> {
+    /**
+     * The schema file: its parsed content (`import schema from "./monti.schema.json"`), or its path (read at run time, relative to the working directory).
+     * Collections, fields, layouts, locales, the default locale, the time zone, site and admin settings and seed templates come from it. The code config adds
+     * what needs code (`plugins`, `blocks`, `codeBlock`, `media`) and may override the environment-specific `site`, `admin` and `timeZone` values.
+     */
+    readonly schema: Schema | string;
+    /** Collections written in code, next to the file's. A name the file also has is an error. */
+    readonly collections?: Collections;
+    /** Set in the schema file only. */
+    readonly locales?: never;
+    /** Set in the schema file only. */
+    readonly defaultLocale?: never;
+    /** Set in the schema file only (`monti schema:apply` raises it there). */
+    readonly schemaVersion?: never;
+}
+/**
+ * Defines the site config. Preserves collection and locale names as types and reports inconsistent config right away.
+ *
+ * With a `schema` (the plain-data part of the config in `monti.schema.json`), the config is the file merged with what is written here; see {@link SchemaCmsConfig}.
+ * The collection and locale names and the metadata types come from the generated types of the file (`monti schema:types`), or from the file's content when
+ * it is written in code with literal types.
+ */
+export declare function defineSite<const Schema extends SchemaInput, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks>): CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>;
+export declare function defineSite<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks>;

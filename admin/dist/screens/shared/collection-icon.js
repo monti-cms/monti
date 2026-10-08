@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { isCollection, isItemCollection, schemaOf } from "@monti-cms/core/client";
-import { Bookmark, BookOpen, Box, Calendar, CircleX, FileText, Folder, Highlighter, Image, Layers, Link, List, MessageSquare, Minus, Newspaper, NotebookPen, Plug, Plus, Puzzle, Settings, Shapes, Sigma, Star, Tag, TriangleAlert, User, Users, Video, } from "lucide-react";
+import { useSite } from "@monti-cms/core/client";
+import { Bookmark, BookOpen, Box, Calendar, CircleX, FileText, Focus, Folder, Highlighter, Image, Layers, Link, List, MessageSquare, Minus, Newspaper, NotebookPen, Plug, Plus, Puzzle, Settings, Shapes, Sigma, Star, Tag, TriangleAlert, User, Users, Video, } from "lucide-react";
 import { useCallback } from "react";
 import { useCmsAdminComponents } from "../../admin-components.js";
 /**
@@ -16,6 +16,7 @@ const ICONS = {
     calendar: Calendar,
     "circle-x": CircleX,
     "file-text": FileText,
+    focus: Focus,
     folder: Folder,
     highlighter: Highlighter,
     image: Image,
@@ -49,9 +50,10 @@ export function useIconByName() {
     return useCallback((name) => (name ? (icons?.[name] ?? ICONS[name]) : undefined), [icons]);
 }
 export function CollectionIcon({ collection }) {
+    const site = useSite();
     const iconByName = useIconByName();
-    const name = isCollection(collection) ? schemaOf(collection).icon : undefined;
-    const Icon = iconByName(name) ?? (isItemCollection(collection) ? Tag : FileText);
+    const name = site.isCollection(collection) ? site.schemaOf(collection).icon : undefined;
+    const Icon = iconByName(name) ?? (site.isItemCollection(collection) ? Tag : FileText);
     return _jsx(Icon, {});
 }
 /** Icon picked by name. For an unknown name, the plug icon. */

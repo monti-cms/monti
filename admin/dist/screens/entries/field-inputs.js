@@ -3,73 +3,52 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { cmsApiUrl, isCollection, schemaOf, storedField } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { CmsApiError, cmsFetch, errorText } from "../admin-api.js";
-import { useTaxonomy } from "../shared/use-taxonomy.js";
-import { useRecordCreator } from "./record-create-sheet.js";
+import { entriesMessages } from "./messages.js";
+import { optionOf, useRecordCreator } from "./record-create-sheet.js";
 import { RelationCombobox } from "./relation-combobox.js";
-import { t } from "./translate.js";
+import { useRelationSearch } from "./use-relation-search.js";
 export const inputClass = "h-8 text-xs md:text-xs";
 /** Row count of a multi-line text input (`rows`, 2 if absent) and the minimum height that shows that many rows (text lines + vertical padding). */
 export function multilineProps(field) {
     const rows = field.rows !== undefined && field.rows >= 1 ? Math.floor(field.rows) : 2;
     return { rows, style: { minHeight: `${rows + 1}rem` } };
 }
-/** Maximum count received per list API call. If there are more posts, they are fetched in several batches. */
-const ENTRY_OPTIONS_PAGE_SIZE = 100;
-/**
- * Full list of relation targets (posts, memos). Fetched all at once up front so it can be shown right away without search when picking.
- * The list API excludes trashed posts, and with `publishedOnly` only published posts are received.
- */
-function useEntryOptions(field) {
-    const [options, setOptions] = useState(null);
-    useEffect(() => {
-        let cancelled = false;
-        const load = async () => {
-            const all = [];
-            for (let page = 1;; page += 1) {
-                const params = new URLSearchParams({
-                    collection: field.to,
-                    pageSize: String(ENTRY_OPTIONS_PAGE_SIZE),
-                    page: String(page),
-                });
-                if (field.publishedOnly)
-                    params.set("status", "published");
-                const data = await cmsFetch(cmsApiUrl(`/v1/entries?${params}`));
-                all.push(...data.items.map((item) => ({ id: item.id, title: item.title || t("untitled"), status: item.status })));
-                if (data.items.length === 0 || all.length >= data.total)
-                    break;
-            }
-            return all;
-        };
-        load()
-            .then((loaded) => !cancelled && setOptions(loaded))
-            .catch(() => !cancelled && setOptions([]));
-        return () => {
-            cancelled = true;
-        };
-    }, [field.to, field.publishedOnly]);
-    return options;
-}
 /** Label of the relation target collection (e.g. `Posts`). Used in input hint text. */
-const targetLabel = (relation) => isCollection(relation.to) ? schemaOf(relation.to).label : relation.to;
+const targetLabel = (site, relation) => site.isCollection(relation.to) ? site.schemaOf(relation.to).label : relation.to;
 /** Posts that are not published get a marker after the name, because they are missing from the public list of collections and replacement posts. */
-const entryLabel = (option) => option.status === "published" ? option.title : `${option.title}${t("entry.unpublished")}`;
-/** Single relation (post or memo target). Pressing it opens the full post list to pick from. Used by the replacement post. */
+const entryLabel = (t, option) => option.status === "published" ? option.title : `${option.title}${t("entry.unpublished")}`;
+/** The picker's options and the names of its picked values, from a server search (`useRelationSearch`). Leaves out the entry being edited. */
+function relationOptions(t, search, selfId) {
+    const option = (entry) => ({ value: entry.id, label: entryLabel(t, entry) });
+    return {
+        options: (search.options ?? []).filter((entry) => entry.id !== selfId).map(option),
+        known: search.known.map(option),
+    };
+}
+/** The failure of a search, under the input like the other relation inputs. */
+function SearchError({ failed }) {
+    const t = useTranslator(entriesMessages);
+    return failed ? (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: t("entry.loadFailed") })) : null;
+}
+/** Single relation. Typing searches the target entries on the server (best title matches first); pressing shows the first ones. */
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }) {
+    const site = useSite();
+    const t = useTranslator(entriesMessages);
     const relation = field;
-    const options = useEntryOptions(relation);
     const selected = typeof value === "string" && value ? [value] : [];
-    return (_jsx(RelationCombobox, { id: id, "aria-label": field.label, placeholder: options === null ? t("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(relation) })), invalid: invalid, describedBy: describedBy, disabled: context.disabled || options === null, multiple: false, options: (options ?? [])
-            .filter((option) => option.id !== context.entryId)
-            .map((option) => ({ value: option.id, label: entryLabel(option) })), value: selected, onValueChange: (next) => onChange(next[0] ?? null) }));
+    const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected });
+    const waiting = search.options === null && !search.error;
+    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { id: id, "aria-label": field.label, placeholder: waiting ? t("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) })), invalid: invalid, describedBy: describedBy, disabled: context.disabled || waiting, multiple: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: selected, onValueChange: (next) => onChange(next[0] ?? null) }), _jsx(SearchError, { failed: search.error })] }));
 }
 /** One row of an ordered list. Move it by dragging the handle or with the up/down buttons. */
 function SortableEntryRow({ sortableId, index, count, option, disabled, onMove, onRemove, }) {
+    const t = useTranslator(entriesMessages);
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
         id: sortableId,
         disabled,
@@ -82,10 +61,12 @@ function SortableEntryRow({ sortableId, index, count, option, disabled, onMove, 
  * Check posts in the `Add/remove posts` list above to add or remove them (added ones go to the end), and drag in the list below to reorder.
  */
 export function OrderedEntryList({ field, id, value, context, onChange }) {
+    const site = useSite();
+    const t = useTranslator(entriesMessages);
     const relation = field;
-    const options = useEntryOptions(relation);
     const ids = Array.isArray(value) ? value : [];
-    const byId = useMemo(() => new Map((options ?? []).map((option) => [option.id, option])), [options]);
+    const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected: ids });
+    const waiting = search.options === null && !search.error;
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
     // The same post can be added twice (legacy data), so the index is also used as the drag ID.
     const sortableIds = ids.map((itemId, index) => `${index}:${itemId}`);
@@ -106,20 +87,25 @@ export function OrderedEntryList({ field, id, value, context, onChange }) {
         const kept = ids.filter((itemId) => chosen.has(itemId));
         onChange([...kept, ...selected.filter((itemId) => !ids.includes(itemId))]);
     };
-    const target = targetLabel(relation);
-    const missing = (itemId) => options === null ? undefined : { id: itemId, title: t("entry.missing", { target }), status: "missing" };
-    return (_jsxs("div", { className: "space-y-2", children: [_jsx(RelationCombobox, { id: id, "aria-label": t("entry.editList", { target }), placeholder: options === null ? t("loading") : (relation.placeholder ?? t("entry.editList", { target })), disabled: context.disabled || options === null, multiple: true, showChips: false, options: (options ?? [])
-                    .filter((option) => option.id !== context.entryId)
-                    .map((option) => ({ value: option.id, label: entryLabel(option) })), value: ids, onValueChange: applySelection }), ids.length === 0 ? (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("entry.empty", { target }) })) : (_jsx(DndContext, { sensors: sensors, collisionDetection: closestCenter, onDragEnd: onDragEnd, children: _jsx(SortableContext, { items: sortableIds, strategy: verticalListSortingStrategy, children: _jsx("ol", { "aria-label": t("entry.listAria", { target }), className: "space-y-1", children: ids.map((itemId, index) => (_jsx(SortableEntryRow, { sortableId: sortableIds[index], index: index, count: ids.length, option: byId.get(itemId) ?? missing(itemId), disabled: context.disabled, onMove: (direction) => move(index, direction), onRemove: () => onChange(ids.filter((_, i) => i !== index)) }, sortableIds[index]))) }) }) }))] }));
+    const target = targetLabel(site, relation);
+    /** The row of a post that was looked up and is not there (deleted, trashed). Before the lookup answers, the row says it is loading. */
+    const rowOf = (itemId) => search.entryOf(itemId) ??
+        (search.isMissing(itemId)
+            ? { id: itemId, title: t("entry.missing", { target }), slug: null, status: "missing" }
+            : undefined);
+    return (_jsxs("div", { className: "space-y-2", children: [_jsx(RelationCombobox, { id: id, "aria-label": t("entry.editList", { target }), placeholder: waiting ? t("loading") : (relation.placeholder ?? t("entry.editList", { target })), disabled: context.disabled || waiting, multiple: true, showChips: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: ids, onValueChange: applySelection }), _jsx(SearchError, { failed: search.error }), ids.length === 0 ? (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("entry.empty", { target }) })) : (_jsx(DndContext, { sensors: sensors, collisionDetection: closestCenter, onDragEnd: onDragEnd, children: _jsx(SortableContext, { items: sortableIds, strategy: verticalListSortingStrategy, children: _jsx("ol", { "aria-label": t("entry.listAria", { target }), className: "space-y-1", children: ids.map((itemId, index) => (_jsx(SortableEntryRow, { sortableId: sortableIds[index], index: index, count: ids.length, option: rowOf(itemId), disabled: context.disabled, onMove: (direction) => move(index, direction), onRemove: () => onChange(ids.filter((_, i) => i !== index)) }, sortableIds[index]))) }) }) }))] }));
 }
 /**
- * If an inverse relation is a conditional list on the other record (e.g. `memoIds`, present only when a collection's `contained posts` are memos),
+ * If an inverse relation is a conditional list on the other record (a field that exists only for one value of a select field),
  * only records matching that condition can be picked. The currently chosen kind is read per record to filter.
  * Relations without a condition are not filtered.
  */
 function useRecordKind(field, options) {
-    const requirement = storedField(field.from, field.via)?.when;
-    const discriminant = requirement ? storedField(field.from, requirement.field)?.field : undefined;
+    const site = useSite();
+    const requirement = site.storedField(field.from, field.via)?.when;
+    const discriminant = requirement
+        ? site.storedField(field.from, requirement.field)?.field
+        : undefined;
     const defaultValue = discriminant?.kind === "select" ? discriminant.defaultValue : undefined;
     const [kinds, setKinds] = useState(new Map());
     const idsKey = options.map((option) => option.id).join(",");
@@ -131,7 +117,7 @@ function useRecordKind(field, options) {
         if (missing.length === 0)
             return;
         let cancelled = false;
-        void Promise.all(missing.map((option) => cmsFetch(cmsApiUrl(`/v1/entries/${option.id}`))
+        void Promise.all(missing.map((option) => cmsFetch(site, cmsApiUrl(`/v1/entries/${option.id}`))
             .then((record) => {
             const value = record.working.metadata[requirement.field];
             return [option.id, typeof value === "string" ? value : (defaultValue ?? "")];
@@ -157,9 +143,19 @@ function useRecordKind(field, options) {
  * If versions diverge (changed elsewhere first), it re-reads the latest value and tries once more.
  */
 export function BacklinkInput({ field, targetId, disabled, shared, }) {
-    const records = useTaxonomy(field.from, Boolean(targetId));
+    const site = useSite();
+    const t = useTranslator(entriesMessages);
+    // The records come from a server search (published ones, like the old list). A conditional list keeps only the records of one kind, which is
+    // known per record, so it asks for more hits to leave enough after that filter.
+    const conditional = Boolean(site.storedField(field.from, field.via)?.when);
+    const records = useRelationSearch({
+        collection: field.from,
+        publishedOnly: true,
+        limit: conditional ? 50 : undefined,
+        enabled: Boolean(targetId),
+    });
     const creator = useRecordCreator();
-    const kind = useRecordKind(field, records.options);
+    const kind = useRecordKind(field, records.options ?? []);
     const [fetched, setFetched] = useState(null);
     /** Load/save failure. Shown right below the input like other relation inputs. */
     const [error, setError] = useState(null);
@@ -172,7 +168,7 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
             }
         }
         return [...found].map(([id, title]) => ({ id, title }));
-    }, [field.from, field.via]);
+    }, [field.from, field.via, t]);
     const refreshShared = shared?.refresh;
     const load = useCallback(async () => {
         if (!targetId)
@@ -182,13 +178,13 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
             return;
         }
         try {
-            const data = await cmsFetch(cmsApiUrl(`/v1/entries/${targetId}/relations`));
+            const data = await cmsFetch(site, cmsApiUrl(`/v1/entries/${targetId}/relations`));
             setFetched(membersOf(data.incomingReferences));
         }
         catch (loadError) {
-            setError(errorText(loadError, t("entry.loadFailed")));
+            setError(errorText(site, loadError, t("entry.loadFailed")));
         }
-    }, [targetId, refreshShared, membersOf]);
+    }, [targetId, refreshShared, membersOf, site, t]);
     // If the properties panel already loaded this post's usages, do not fetch separately.
     const usesShared = Boolean(shared);
     useEffect(() => {
@@ -203,11 +199,11 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
     /** Changes the other record's relation list and saves immediately. For a record collection, saving is publishing. */
     const update = async (recordId, change) => {
         for (let attempt = 0; attempt < 2; attempt++) {
-            const record = await cmsFetch(cmsApiUrl(`/v1/entries/${recordId}`));
+            const record = await cmsFetch(site, cmsApiUrl(`/v1/entries/${recordId}`));
             const current = record.working.metadata[field.via];
             const ids = Array.isArray(current) ? current.filter((id) => typeof id === "string") : [];
             try {
-                await cmsFetch(cmsApiUrl(`/v1/entries/${recordId}`), {
+                await cmsFetch(site, cmsApiUrl(`/v1/entries/${recordId}`), {
                     method: "PATCH",
                     json: {
                         expectedVersion: record.version,
@@ -250,7 +246,7 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
                 await task();
             }
             catch (taskError) {
-                setError(errorText(taskError, failure));
+                setError(errorText(site, taskError, failure));
                 setOptimistic((current) => revert(current ?? serverIdsRef.current));
             }
             finally {
@@ -266,14 +262,13 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
         return _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("backlink.saveDraft", { label: field.label }) });
     }
     const shown = optimistic ?? serverIds;
-    const options = [
-        ...records.options
-            .filter((option) => kind.accepts(option.id))
-            .map((option) => ({ value: option.id, label: option.title })),
-        // A collection not yet in the public list (e.g. just created) is also shown by name.
-        ...(members ?? [])
-            .filter((member) => !records.options.some((option) => option.id === member.id))
-            .map((member) => ({ value: member.id, label: member.title })),
+    const options = (records.options ?? [])
+        .filter((option) => kind.accepts(option.id))
+        .map((option) => ({ value: option.id, label: option.title }));
+    // Names of the picked values, which a search may not return (a collection just created is not in the public list yet).
+    const known = [
+        ...records.known.map((entry) => ({ value: entry.id, label: entry.title })),
+        ...(members ?? []).map((member) => ({ value: member.id, label: member.title })),
     ];
     const change = (next) => {
         setError(null);
@@ -287,21 +282,20 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
             enqueue(() => update(recordId, (ids) => ids.filter((id) => id !== targetId)), t("backlink.removeFailed", { label: field.label }), (ids) => (ids.includes(recordId) ? ids : [...ids, recordId]));
         }
     };
-    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { multiple: true, "aria-label": field.label, placeholder: members === null || !kind.ready ? t("loading") : t("relation.searchOrAdd"), options: options, value: shown, disabled: disabled || members === null || !kind.ready, onValueChange: change, onCreate: field.createInline
+    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { multiple: true, "aria-label": field.label, placeholder: members === null || records.options === null ? t("loading") : t("relation.searchOrAdd"), options: options, known: known, onSearch: records.search, loading: records.loading || !kind.ready, value: shown, disabled: disabled || members === null || (records.options === null && !records.error), onValueChange: change, onCreate: field.createInline
                     ? async (title) => {
                         // Open with this post already in the add field. After saving, reload the options so it shows up in the list right away.
-                        const saved = await creator.create(field.from, {
-                            title,
+                        const saved = await creator.create(field.from, title, {
                             ...kind.createMetadata,
                             [field.via]: [targetId],
                         });
                         if (!saved)
                             return null;
                         createdRef.current.add(saved.id);
-                        void records.reload();
+                        records.remember({ ...optionOf(site, t, field.from, saved), status: saved.status });
                         awaitingServerRef.current = true;
                         void load();
                         return saved.id;
                     }
-                    : undefined }), error && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: error })), creator.sheet] }));
+                    : undefined }), error && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: error })), _jsx(SearchError, { failed: records.error }), creator.sheet] }));
 }

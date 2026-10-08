@@ -7,12 +7,19 @@
  */
 export const SUMMARY_ROLE = "summary";
 /**
- * Keys the core uses separately in metadata. They cannot be used as field names (`defineConfig` blocks them).
+ * The role of the title field. A collection has exactly one title field: the field with this role, or, when no field has it, the text field named {@link DEFAULT_TITLE_FIELD}.
+ * Read it with `titleFieldOf`, never by the key.
+ */
+export const TITLE_ROLE = "title";
+/** The name of the title field of a collection that does not give the title role to any field. */
+export const DEFAULT_TITLE_FIELD = "title";
+/**
+ * Keys the core uses separately in metadata. They cannot be used as field names (`defineSite` blocks them).
  * `translations` holds the per-language values of an item collection.
  */
 export const RESERVED_METADATA_KEYS = ["translations"];
-/** Whether the field must not be empty (`required: true` and the legacy value `"publish"`). */
-export const isRequiredField = (field) => field.required === true || field.required === "publish";
+/** Whether the field must not be empty (`required: true`). */
+export const isRequiredField = (field) => field.required === true;
 /** Default character count when filling from the body. */
 export const FILL_FROM_BODY_MAX_LENGTH = 160;
 /**

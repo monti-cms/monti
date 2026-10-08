@@ -16,8 +16,10 @@ export function Chart({ source, labels = blockLabels() }) {
         return _jsx(ChartError, { errors: normalized.errors, labels: labels });
     return _jsx(ChartClient, { source: text });
 }
-/** Public chart component (called by `@monti-cms/core/render`). The chart is drawn in the browser (optional dependency `recharts`). */
-export default ({ locale }) => {
+/** Public components for the chart in the JSON renderer (`renderDocument`): the block `chart`. The code of the fence arrives as `source`. */
+export const documentComponents = ({ locale }) => {
     const labels = blockLabels(locale);
-    return { Chart: (props) => _jsx(Chart, { ...props, labels: labels }) };
+    return {
+        blocks: { chart: ({ source }) => _jsx(Chart, { source: source, labels: labels }) },
+    };
 };

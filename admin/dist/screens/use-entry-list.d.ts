@@ -45,7 +45,7 @@ export declare function useEntryList(mode: ListMode): {
     setSelectedIds: import("react").Dispatch<import("react").SetStateAction<Set<string>>>;
     mutations: {
         mutateEntries: (op: OptimisticOp, targets: BulkSelection[], request: () => Promise<BulkItemResult[]>, params?: BulkParams) => Promise<BulkItemResult[]>;
-        bulk: (op: Parameters<typeof runBulk>[0], label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void>;
+        bulk: (op: Parameters<typeof runBulk>[1], label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void>;
         restore: (targets: BulkSelection[]) => Promise<void>;
         invalidateEntries: () => Promise<void>;
     };

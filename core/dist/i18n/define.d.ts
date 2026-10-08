@@ -1,6 +1,6 @@
 /**
- * UI message dictionaries. The core, admin and extensions use messages by name (key), with one dictionary per locale. It does not read the site config (`cms.config.ts`),
- * so it can be used from the config file and the authoring API too (locale picking is done by `./index`).
+ * UI message dictionaries. The core, admin and extensions use messages by name (key), with one dictionary per locale. It reads no site config,
+ * so it can be used from the config file and the authoring API too (the language is picked by `./index`, from a site).
  *
  * - A value is a string or a function that fills `{name}` placeholders. Words that change by the preceding word, like Korean particles, are written as functions (`josa`).
  * - English (`en`) has every key. Keys missing in other locales show in English.
@@ -21,7 +21,7 @@ export declare function defineMessages<const K extends string>(namespace: string
 } & Readonly<Record<string, Partial<MessageDict<K>>>>): MessageBundle<K>;
 /** Fills `{name}` placeholders. Unknown names are left as they are. */
 export declare const fillVars: (text: string, vars?: MessageVars) => string;
-/** Attaches a Korean particle that fits the word. `josa("태그", "을", "를")` -> `태그를`. Used by function messages in the Korean dictionary. */
+/** Attaches a Korean particle that fits the word. `josa("태그", "을", "를")` -> `태그를`. Used by function messages in the Korean dictionaries (`@monti-cms/core/client`); not exported from the main entry. */
 export declare const josa: (word: string, withFinal: string, withoutFinal: string) => string;
 /** Picks a message from the dictionary: site override -> that locale -> English -> key. */
 export declare function translate<K extends string>(bundle: MessageBundle<K>, language: string, key: K, vars?: MessageVars, overrides?: Readonly<Record<string, Readonly<Record<string, MessageValue>>>>): string;

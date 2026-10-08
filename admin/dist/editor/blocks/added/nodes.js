@@ -1,7 +1,8 @@
+import { perSite } from "@monti-cms/core/client";
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { ADDED_NODE_BLOCKS, blockNodeName, childBlocksOf, isContainer, isFence } from "./shared.js";
-import { AddedBlockNodeView } from "./view.js";
+import { BlockNodeView } from "../block-node-view.js";
+import { addedNodeBlocks, BODY_CONTAINER_GROUP, blockNodeName, CONTAINER_GROUP, childBlocksOf, isBodyContainer, isContainer, isFence, PARENT_ONLY_VIEW_CLASS, } from "./shared.js";
 const parseJson = (value, fallback) => {
     try {
         return value ? JSON.parse(value) : fallback;
@@ -38,22 +39,27 @@ function createFenceNode(block) {
             return ["div", mergeAttributes(HTMLAttributes, { "data-cms-fence": block.syntax.lang })];
         },
         addNodeView() {
-            return ReactNodeViewRenderer(AddedBlockNodeView);
+            return ReactNodeViewRenderer(BlockNodeView);
         },
     });
 }
 /**
  * Tiptap node for a single added block. A container holds body content (or fixed child blocks); single-line blocks and code fence blocks are selected
- * as a whole. The edit view is chosen by `AddedBlockNodeView`.
+ * as a whole. The edit view is chosen by `BlockNodeView`.
  */
 export function createAddedBlockNode(block, all) {
     if (isFence(block))
         return createFenceNode(block);
     const content = isContainer(block) ? childContent(block, all) : undefined;
+    const groups = [
+        ...(block.parent ? [] : ["block"]),
+        ...(content ? [CONTAINER_GROUP] : []),
+        ...(content && isBodyContainer(block) ? [BODY_CONTAINER_GROUP] : []),
+    ].join(" ");
     return Node.create({
         name: blockNodeName(block),
-        // Parent-only blocks are placed only inside their parent.
-        ...(block.parent ? {} : { group: "block" }),
+        // Parent-only blocks are placed only inside their parent. The container groups tell the drag and block commands what the node is (see `CONTAINER_GROUP`).
+        ...(groups ? { group: groups } : {}),
         ...(content ? { content, isolating: true } : { atom: true }),
         selectable: true,
         // Dragged via the handle overlay. It does not compete with body selection.
@@ -64,13 +70,6 @@ export function createAddedBlockNode(block, all) {
                     default: {},
                     parseHTML: (element) => parseJson(element.getAttribute("data-cms-values"), {}),
                     renderHTML: (attributes) => ({ "data-cms-values": JSON.stringify(attributes.values ?? {}) }),
-                },
-                originalAttributes: {
-                    default: [],
-                    parseHTML: (element) => parseJson(element.getAttribute("data-cms-original-attributes"), []),
-                    renderHTML: (attributes) => ({
-                        "data-cms-original-attributes": JSON.stringify(attributes.originalAttributes ?? []),
-                    }),
                 },
             };
         },
@@ -83,9 +82,9 @@ export function createAddedBlockNode(block, all) {
                 : ["div", mergeAttributes(HTMLAttributes, { "data-cms-block": block.name })];
         },
         addNodeView() {
-            return ReactNodeViewRenderer(AddedBlockNodeView);
+            return ReactNodeViewRenderer(BlockNodeView, block.parent ? { className: PARENT_ONLY_VIEW_CLASS } : undefined);
         },
     });
 }
-/** All added block nodes. */
-export const ADDED_BLOCK_NODES = ADDED_NODE_BLOCKS.map((block) => createAddedBlockNode(block, ADDED_NODE_BLOCKS));
+/** All added block nodes of a site. The same list for the same site, so an editor rebuilt for it keeps its extensions. */
+export const addedBlockNodes = perSite((site) => addedNodeBlocks(site).map((block) => createAddedBlockNode(block, addedNodeBlocks(site))));

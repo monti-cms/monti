@@ -1,10 +1,7 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { Extension } from "@tiptap/core";
 import { Fragment } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { targetBlockAt } from "./drag/block-resolve.js";
-import { editorMessages } from "./messages.js";
-const t = createTranslator(editorMessages);
 const isTargetBlock = (block) => "parent" in block;
 /** Top-level block containing the document position (kept for backward compatibility). */
 export function topLevelBlockAt(doc, pos) {
@@ -82,7 +79,7 @@ export const CmsBlockKeymap = Extension.create({
         };
     },
 });
-export const BLOCK_SHORTCUTS = [
+export const blockShortcuts = (t) => [
     { keys: "Alt+↑ / Alt+↓", label: t("blockShortcut.move") },
     { keys: "Mod+Shift+D", label: t("blockShortcut.duplicate") },
     { keys: "Mod+Shift+Backspace", label: t("blockShortcut.delete") },

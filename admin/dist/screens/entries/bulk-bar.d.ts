@@ -1,4 +1,4 @@
-import type { BulkOp } from "@monti-cms/core/client";
+import type { BulkOp, Site } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { type CmsIssue } from "../api-error-message.js";
 export type BulkUsage = {
@@ -23,6 +23,7 @@ export type BulkSelection = {
     expectedVersion: number;
     title?: string | null;
 };
+type RunBulkArgs = Parameters<typeof runBulk> extends [unknown, ...infer Rest] ? Rest : never;
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
 /**
  * Actions on screen. A category action pairs a relation-field bulk action with a field name, like `relation.add:tagIds`.
@@ -51,12 +52,12 @@ type ActionDef = {
  * Actions per category field (tags, categories, etc.) of the collection. Fields that hold many get add/remove; a field that holds only one gets replace.
  * Multi-value field actions come first.
  */
-export declare function taxonomyActions(collection: string): ActionDef[];
+export declare function taxonomyActions(site: Site, collection: string): ActionDef[];
 /** Reason for a single failure. If a usage blocked permanent deletion, names it as `In use: <name>`. */
-export declare function describeBulkFailure(failure: Extract<BulkItemResult, {
+export declare function describeBulkFailure(site: Site, failure: Extract<BulkItemResult, {
     ok: false;
 }>): string;
-export declare function runBulk(op: BulkOp, items: BulkSelection[], params?: {
+export declare function runBulk(site: Site, op: BulkOp, items: BulkSelection[], params?: {
     field?: string;
     ids?: string[];
     id?: string | null;
@@ -73,7 +74,7 @@ export declare function BulkBar({ collection, selected, folders, mode, onClearSe
     mode?: "list" | "trash";
     onClearSelection: () => void;
     /** Action request. The list screen passes a request that updates the list first (optimistic update). */
-    onRun?: typeof runBulk;
+    onRun?: (...args: RunBulkArgs) => ReturnType<typeof runBulk>;
     onDone?: (failedIds: string[]) => void;
 }): import("react").JSX.Element | null;
 export {};

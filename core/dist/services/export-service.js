@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { COLLECTIONS } from "../core/collections.js";
-import { storedFields } from "../schema/derive.js";
+import { perSite } from "../site/per-site.js";
 import { createZipArchive } from "./zip.js";
 export const exportScopeSchema = z.enum(["admin", "public"]);
 /**
@@ -17,7 +16,8 @@ export const publicExportEntrySchema = z
     publishedAt: z.string().nullable(),
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.unknown()),
-    mdx: z.string(),
+    /** The stored document: the body. (A text of the body in a format is a file of its own, written only when the export asks for a `format`.) */
+    doc: z.record(z.string(), z.unknown()),
     schemaVersion: z.number().int(),
     contentHash: z.string(),
 })
@@ -27,9 +27,9 @@ export const publicExportEntrySchema = z
  * admin-only keys (storageKey etc.) or values not in the definition mixed into metadata do not go out in the public archive.
  * Per-language names of record collections (`translations`) are not fields and do not go out.
  */
-export const PUBLIC_METADATA_KEYS = Object.fromEntries(COLLECTIONS.map((collection) => [collection, storedFields(collection).map((stored) => stored.name)]));
-export function pickPublicMetadata(collection, metadata) {
-    const allowed = PUBLIC_METADATA_KEYS[collection];
+export const publicMetadataKeys = perSite((site) => Object.fromEntries(site.COLLECTIONS.map((collection) => [collection, site.storedFields(collection).map((stored) => stored.name)])));
+export function pickPublicMetadata(site, collection, metadata) {
+    const allowed = publicMetadataKeys(site)[collection];
     if (!allowed)
         throw new Error(`No public metadata allowlist for collection: ${collection}`);
     const picked = {};
@@ -39,6 +39,15 @@ export function pickPublicMetadata(collection, metadata) {
     }
     return picked;
 }
+/**
+ * Format version of the archive, in the manifest and in the body JSON files. Version 2 added `working.doc.json` / `published.doc.json` and the
+ * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
+ * `published.doc.json` in the admin archive), next to the MDX text. Version 4: the document is the only body. Text files (`working.<ext>`, `published.<ext>`)
+ * and the `body` of a template are written only when the export asked for a `format` (the manifest names it), and the `mdx` of an item and a template is gone.
+ */
+export const EXPORT_FORMAT_VERSION = 4;
+/** The key of a body in `ExportTexts.bodies`: an entry's `working` or `published` body, or a template. */
+export const exportTextKey = (id, state) => `${state}:${id}`;
 const iso = (value) => value instanceof Date ? value.toISOString() : value === undefined ? null : value;
 /** Canonical JSON that does not depend on key order. Used for digests and snapshot comparison. */
 export const canonicalJson = (value) => {
@@ -53,7 +62,9 @@ export const canonicalJson = (value) => {
 };
 const sha256 = (value) => createHash("sha256").update(value, "utf8").digest("hex");
 const sha256Bytes = (value) => createHash("sha256").update(value).digest("hex");
-/** Canonical digest of one state. Includes content, slug, status, folder and references so skip/conflict decisions stay stable. */
+/**
+ * Canonical digest of one state. Includes content (the stored document), slug, status, folder and references so skip/conflict decisions stay stable.
+ */
 const stateDigest = (entry, state, references) => sha256(canonicalJson({
     collection: entry.collection,
     id: entry.id,
@@ -62,7 +73,7 @@ const stateDigest = (entry, state, references) => sha256(canonicalJson({
     folderId: entry.folderId,
     slug: state === "working" ? entry.workingSlug : entry.publishedSlug,
     metadata: state === "working" ? entry.working.metadata : entry.published?.metadata,
-    mdx: state === "working" ? entry.working.mdx : entry.published?.mdx,
+    doc: (state === "working" ? entry.working.doc : entry.published?.doc) ?? null,
     references: references
         .filter((reference) => reference.entryId === entry.id && reference.state === state)
         .map((reference) => ({ kind: reference.kind, targetId: reference.targetId, isStale: reference.isStale }))
@@ -81,7 +92,7 @@ const bodyFile = (entry, state) => {
         throw new Error(`Entry ${entry.id} has no ${state} body`);
     return {
         json: `${canonicalJson({
-            formatVersion: 1,
+            formatVersion: EXPORT_FORMAT_VERSION,
             collection: entry.collection,
             id: entry.id,
             state,
@@ -98,11 +109,11 @@ const bodyFile = (entry, state) => {
             publishedAt: iso(entry.publishedAt),
             folderId: entry.folderId,
         })}\n`,
-        mdx: body.mdx,
+        doc: `${canonicalJson(body.doc)}\n`,
     };
 };
 /** The public archive includes only the published copy of items that are currently public. Drafts, archived and trashed items are excluded even if a published copy remains. */
-const publicEntry = (entry) => {
+const publicEntry = (site, entry) => {
     if (entry.status !== "published")
         return null;
     if (!entry.published)
@@ -113,8 +124,8 @@ const publicEntry = (entry) => {
         slug: entry.publishedSlug,
         publishedAt: iso(entry.publishedAt),
         updatedAt: iso(entry.published.updatedAt) ?? iso(entry.updatedAt) ?? "",
-        metadata: pickPublicMetadata(entry.collection, entry.published.metadata),
-        mdx: entry.published.mdx,
+        metadata: pickPublicMetadata(site, entry.collection, entry.published.metadata),
+        doc: entry.published.doc,
         schemaVersion: entry.published.schemaVersion,
         contentHash: entry.published.contentHash,
     });
@@ -129,7 +140,13 @@ const sortEntries = (entries) => [...entries].sort((left, right) => left.collect
         ? -1
         : 1);
 export function buildExportArchive(snapshot, options) {
-    const { scope, exportedAt } = options;
+    const { scope, exportedAt, texts, site } = options;
+    const textFile = (base, state, id) => {
+        const text = texts?.bodies.get(exportTextKey(id, state));
+        return texts && text !== undefined
+            ? { path: `${base}/${state}.${texts.format.extension}`, data: new TextEncoder().encode(text) }
+            : undefined;
+    };
     const entries = sortEntries(snapshot.entries);
     const files = [];
     const manifestEntries = [];
@@ -139,13 +156,25 @@ export function buildExportArchive(snapshot, options) {
         if (scope === "admin") {
             const working = bodyFile(entry, "working");
             files.push({ path: `${base}/working.json`, data: new TextEncoder().encode(working.json) });
-            files.push({ path: `${base}/working.mdx`, data: new TextEncoder().encode(working.mdx) });
-            entryFiles.push(`${base}/working.json`, `${base}/working.mdx`);
+            entryFiles.push(`${base}/working.json`);
+            files.push({ path: `${base}/working.doc.json`, data: new TextEncoder().encode(working.doc) });
+            entryFiles.push(`${base}/working.doc.json`);
+            const workingText = textFile(base, "working", entry.id);
+            if (workingText) {
+                files.push(workingText);
+                entryFiles.push(workingText.path);
+            }
             if (entry.published) {
                 const published = bodyFile(entry, "published");
                 files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(published.json) });
-                files.push({ path: `${base}/published.mdx`, data: new TextEncoder().encode(published.mdx) });
-                entryFiles.push(`${base}/published.json`, `${base}/published.mdx`);
+                entryFiles.push(`${base}/published.json`);
+                files.push({ path: `${base}/published.doc.json`, data: new TextEncoder().encode(published.doc) });
+                entryFiles.push(`${base}/published.doc.json`);
+                const publishedText = textFile(base, "published", entry.id);
+                if (publishedText) {
+                    files.push(publishedText);
+                    entryFiles.push(publishedText.path);
+                }
             }
             const references = snapshot.references
                 .filter((reference) => reference.entryId === entry.id)
@@ -180,12 +209,16 @@ export function buildExportArchive(snapshot, options) {
             });
             continue;
         }
-        const projected = publicEntry(entry);
+        const projected = publicEntry(site, entry);
         if (!projected)
             continue;
         files.push({ path: `${base}/published.json`, data: new TextEncoder().encode(`${canonicalJson(projected)}\n`) });
-        files.push({ path: `${base}/published.mdx`, data: new TextEncoder().encode(projected.mdx) });
-        entryFiles.push(`${base}/published.json`, `${base}/published.mdx`);
+        entryFiles.push(`${base}/published.json`);
+        const publicText = textFile(base, "published", entry.id);
+        if (publicText) {
+            files.push(publicText);
+            entryFiles.push(publicText.path);
+        }
         manifestEntries.push({
             id: entry.id,
             collection: entry.collection,
@@ -247,7 +280,10 @@ export function buildExportArchive(snapshot, options) {
             data: jsonFile(snapshot.templates.map((template) => ({
                 id: template.id,
                 name: template.name,
-                mdx: template.mdx,
+                doc: template.doc,
+                ...(texts?.bodies.has(exportTextKey(template.id, "template"))
+                    ? { body: texts.bodies.get(exportTextKey(template.id, "template")) }
+                    : {}),
                 version: template.version,
                 createdAt: iso(template.createdAt),
                 updatedAt: iso(template.updatedAt),
@@ -268,7 +304,7 @@ export function buildExportArchive(snapshot, options) {
     // So the digest changes even when non-item data such as settings, the media list or addresses changes.
     const digest = sha256(files.map((file) => `${file.path}\u0000${sha256Bytes(file.data)}`).join("\n"));
     const manifest = {
-        formatVersion: 1,
+        formatVersion: EXPORT_FORMAT_VERSION,
         scope,
         exportedAt: exportedAt.toISOString(),
         digest,
@@ -284,6 +320,7 @@ export function buildExportArchive(snapshot, options) {
             references: scope === "admin" ? snapshot.references.length : 0,
             files: files.length + 1,
         },
+        format: texts ? texts.format : null,
         entries: manifestEntries,
         files: ["manifest.json", ...files.map((file) => file.path)],
     };

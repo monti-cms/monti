@@ -1,3 +1,4 @@
+import { type ContentServiceOptions } from "./content-service.js";
 import type { Issue, StorePort } from "./types.js";
 export declare const BULK_OPS: readonly ["relation.add", "relation.remove", "relation.set", "folder.move", "archive", "unarchive", "trash", "publish", "permanentDelete"];
 export type BulkOp = (typeof BULK_OPS)[number];
@@ -27,6 +28,8 @@ export type BulkItemResult = {
     readonly id: string;
     readonly ok: true;
     readonly version: number;
+    /** What the write pipeline warned about for this item (a publish or a metadata change). Absent when there is none. */
+    readonly warnings?: readonly Issue[];
 } | {
     readonly id: string;
     readonly ok: false;
@@ -42,7 +45,11 @@ export interface BulkStorePort<T = unknown> extends StorePort<T> {
         expectedVersion: number;
     }): Promise<void>;
 }
-export declare const createBulkService: <T = unknown>(storePort: BulkStorePort<T>) => {
+/**
+ * Bulk operations. Every item runs the same write pipeline as a single write (hooks included): a publish is the single publish, a relation or folder
+ * change is a save. Results and errors are per item.
+ */
+export declare const createBulkService: <T = unknown>(storePort: BulkStorePort<T>, options: ContentServiceOptions) => {
     run: (request: BulkRequest) => Promise<{
         results: BulkItemResult[];
     }>;

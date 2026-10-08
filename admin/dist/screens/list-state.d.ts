@@ -1,4 +1,4 @@
-import { type Collection, type ListSortField, type Locale, type PageSize } from "@monti-cms/core/client";
+import { type Collection, type ListSortField, type Locale, type PageSize, type Site } from "@monti-cms/core/client";
 import type { EntryStatus } from "./shared/entry-status.js";
 /** Statuses that can be filtered in the list. Trash is seen only in its dedicated screen. */
 export type ListStatus = Exclude<EntryStatus, "trashed">;
@@ -41,7 +41,7 @@ export interface ListState {
 }
 export declare const DEFAULT_LIST_STATE: Omit<ListState, "collection">;
 export declare const DATE_KEYS: readonly ["createdFrom", "createdTo", "updatedFrom", "updatedTo", "publishedFrom", "publishedTo"];
-export declare function parseListState(params: URLSearchParams): ListState & {
+export declare function parseListState(site: Site, params: URLSearchParams): ListState & {
     explicit: {
         pageSize: boolean;
         sort: boolean;
@@ -52,9 +52,9 @@ export declare function listStateToSearchParams(state: ListState): URLSearchPara
 /**
  * List API (`GET /entries`) query. Multiple values of the same filter are OR; different filters are AND.
  * With `trash`, requests only trashed items.
- * Publishable collections (posts, memos) are requested one row per translation group. Trash lists items individually so a single translation can be restored.
+ * Publishable collections (`kind: "document"`) are requested one row per translation group. Trash lists items individually so a single translation can be restored.
  */
-export declare function listStateToApiQuery(state: ListState, options?: {
+export declare function listStateToApiQuery(site: Site, state: ListState, options?: {
     trash?: boolean;
 }): URLSearchParams;
 /** Number of header filters, excluding search. */

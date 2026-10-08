@@ -1,7 +1,7 @@
 import { type CollectionSchema } from "@monti-cms/core";
 /** SEO values for the public page. Empty values are `undefined`. */
 export interface SeoValues {
-    /** Search title. Falls back to the title (`title`, a library convention) when empty. */
+    /** Search title. Falls back to the title (the field with the `title` role) when empty. */
     readonly title?: string;
     /** Search description. Falls back to the summary role (`summary`) value when empty. */
     readonly description?: string;

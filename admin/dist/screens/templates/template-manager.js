@@ -1,10 +1,12 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { assignBlockIds, emptyStoredDocument, STORED_DOCUMENT_VERSION, } from "@monti-cms/core/document";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { documentKey } from "../../editor/document-key.js";
 import { CmsEditor } from "../../editor/tiptap-editor.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Alert, AlertDescription } from "../../ui/alert.js";
@@ -19,37 +21,55 @@ import { useConfirm } from "../shared/confirm-dialog.js";
 import { formatDateOnly } from "../shared/format-date.js";
 import { OPEN_ITEM } from "../shared/side-panel.js";
 import { templatesMessages } from "./messages.js";
-const t = createTranslator(templatesMessages);
 const TEMPLATES_KEY = ["cms", "templates"];
-/** Initial body of a new template. */
-const NEW_TEMPLATE_MDX = t("newMdx");
+const textNode = (text) => ({ type: "text", text });
+const heading = (text) => ({ type: "heading", attrs: { level: 2 }, content: [textNode(text)] });
+const paragraph = (text) => ({ type: "paragraph", content: [textNode(text)] });
+const item = (text) => ({ type: "listItem", content: [paragraph(text)] });
+/** Initial body of a new template: an outline with three sections. */
+const newTemplateDoc = (t) => ({
+    type: "doc",
+    version: STORED_DOCUMENT_VERSION,
+    content: assignBlockIds([
+        heading(t("newBody.introduction")),
+        paragraph(t("newBody.enterContent")),
+        heading(t("newBody.body")),
+        { type: "bulletList", content: [item(t("newBody.item1")), item(t("newBody.item2"))] },
+        heading(t("newBody.conclusion")),
+        paragraph(t("newBody.summary")),
+    ]),
+});
 export function TemplateManager() {
+    const site = useSite();
+    const t = useTranslator(templatesMessages);
     const queryClient = useQueryClient();
     // If there is a cache, render it right away and refetch in the background. Placeholders show only when there is no cache.
     const templatesQuery = useQuery({
         queryKey: TEMPLATES_KEY,
-        queryFn: async ({ signal }) => (await cmsFetch(cmsApiUrl("/v1/templates"), {
+        queryFn: async ({ signal }) => (await cmsFetch(site, cmsApiUrl("/v1/templates"), {
             signal,
             fallback: t("list.loadFailed"),
         })).items ?? [],
     });
     const templates = templatesQuery.data ?? [];
-    const error = templatesQuery.error && !templatesQuery.data ? errorText(templatesQuery.error, t("list.loadFailed")) : null;
+    const error = templatesQuery.error && !templatesQuery.data ? errorText(site, templatesQuery.error, t("list.loadFailed")) : null;
     // The template open in the edit panel (a new template has no id) and the values being edited.
     const [activeTemplate, setActiveTemplate] = useState(null);
     const [editName, setEditName] = useState("");
-    const [editMdx, setEditMdx] = useState("");
+    const [editBody, setEditBody] = useState(() => emptyStoredDocument());
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const { confirm, confirmDiscard, dialog } = useConfirm();
     /** Whether the name or body of the open template was changed. */
-    const isDirty = activeTemplate !== null && (editName !== (activeTemplate.name ?? "") || editMdx !== (activeTemplate.mdx ?? ""));
+    const isDirty = activeTemplate !== null &&
+        (editName !== (activeTemplate.name ?? "") ||
+            documentKey(site, editBody) !== documentKey(site, activeTemplate.doc ?? emptyStoredDocument()));
     /** Refetches the list in the background. Rows currently visible stay as they are. */
     const invalidateTemplates = () => queryClient.invalidateQueries({ queryKey: TEMPLATES_KEY });
     const show = (template) => {
         setActiveTemplate(template);
         setEditName(template?.name ?? "");
-        setEditMdx(template?.mdx ?? "");
+        setEditBody(template?.doc ?? emptyStoredDocument());
         setSaveError(null);
     };
     /** Opens another template. If there are unsaved changes, asks first whether to discard them. */
@@ -61,7 +81,7 @@ export function TemplateManager() {
     };
     const openNew = async () => {
         if (await confirmDiscard(isDirty))
-            show({ name: "", mdx: NEW_TEMPLATE_MDX });
+            show({ name: "", doc: newTemplateDoc(t) });
     };
     const closeEditor = async () => {
         if (await confirmDiscard(isDirty))
@@ -78,18 +98,18 @@ export function TemplateManager() {
         setSaveError(null);
         try {
             if (activeTemplate.id) {
-                const updated = await cmsFetch(cmsApiUrl(`/v1/templates/${activeTemplate.id}`), {
+                const updated = await cmsFetch(site, cmsApiUrl(`/v1/templates/${activeTemplate.id}`), {
                     method: "PATCH",
-                    json: { name: editName.trim(), mdx: editMdx, expectedVersion: activeTemplate.version },
+                    json: { name: editName.trim(), doc: editBody, expectedVersion: activeTemplate.version },
                     fallback: t("common.saveFailed"),
                 });
                 show(updated);
                 queryClient.setQueryData(TEMPLATES_KEY, (current) => current?.map((item) => (item.id === updated.id ? updated : item)));
             }
             else {
-                const created = await cmsFetch(cmsApiUrl("/v1/templates"), {
+                const created = await cmsFetch(site, cmsApiUrl("/v1/templates"), {
                     method: "POST",
-                    json: { name: editName.trim(), mdx: editMdx },
+                    json: { name: editName.trim(), doc: editBody },
                     fallback: t("common.saveFailed"),
                 });
                 // Keep the created template open.
@@ -100,7 +120,7 @@ export function TemplateManager() {
             void invalidateTemplates();
         }
         catch (err) {
-            setSaveError(errorText(err, t("common.saveFailed")));
+            setSaveError(errorText(site, err, t("common.saveFailed")));
         }
         finally {
             setIsSaving(false);
@@ -132,7 +152,7 @@ export function TemplateManager() {
         if (activeTemplate?.id === template.id)
             show(null);
         try {
-            await cmsFetch(cmsApiUrl(`/v1/templates/${template.id}?expectedVersion=${template.version}`), {
+            await cmsFetch(site, cmsApiUrl(`/v1/templates/${template.id}?expectedVersion=${template.version}`), {
                 method: "DELETE",
                 fallback: t("delete.failed"),
             });
@@ -141,7 +161,7 @@ export function TemplateManager() {
         catch (err) {
             if (previous)
                 queryClient.setQueryData(TEMPLATES_KEY, previous);
-            toast.error(errorText(err, t("delete.failed")));
+            toast.error(errorText(site, err, t("delete.failed")));
         }
         finally {
             void invalidateTemplates();
@@ -181,12 +201,12 @@ export function TemplateManager() {
                                                             event.preventDefault();
                                                             void requestDelete(row);
                                                         }
-                                                    }, className: "h-auto min-w-0 flex-1 flex-col items-start gap-1.5 px-1 py-1 text-left font-normal hover:bg-transparent", children: [_jsx("span", { className: "truncate font-medium text-sm", children: row.name }), _jsx("span", { className: "text-[11px] text-cms-muted-foreground", children: formatDateOnly(row.updatedAt) })] }), _jsx(MoreActionsButton, { actions: templateMenu(row), label: t("list.itemActions", { name: row.name }) })] }, row.id));
+                                                    }, className: "h-auto min-w-0 flex-1 flex-col items-start gap-1.5 px-1 py-1 text-left font-normal hover:bg-transparent", children: [_jsx("span", { className: "truncate font-medium text-sm", children: row.name }), _jsx("span", { className: "text-[11px] text-cms-muted-foreground", children: formatDateOnly(site, row.updatedAt) })] }), _jsx(MoreActionsButton, { actions: templateMenu(row), label: t("list.itemActions", { name: row.name }) })] }, row.id));
                                     }) }) }), _jsx("div", { className: "flex flex-1 flex-col overflow-hidden", children: activeTemplate ? (_jsxs("section", { "aria-label": activeTemplate.id ? t("edit.label") : t("edit.addLabel"), className: "flex h-full flex-1 flex-col overflow-hidden", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3", children: [_jsx(Input, { type: "text", "aria-label": t("edit.nameLabel"), value: editName, onChange: (e) => setEditName(e.target.value), onKeyDown: (event) => {
                                                 // Enter during Korean IME composition ends the character. Do not save.
                                                 if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229)
                                                     return;
                                                 event.preventDefault();
                                                 void handleSave();
-                                            }, placeholder: t("edit.nameLabel"), className: "h-8 min-w-0 max-w-2xl flex-1" }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: () => void closeEditor(), children: t("common.cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: isSaving, onClick: () => void handleSave(), children: isSaving ? t("common.saving") : t("common.save") })] })] }), saveError && (_jsx("p", { role: "alert", className: "border-b bg-cms-destructive/10 px-6 py-2 text-cms-destructive text-xs", children: saveError })), _jsx("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto", children: _jsx(CmsEditor, { content: editMdx, onChange: (next) => setEditMdx(next) }) })] })) : (_jsxs(Empty, { className: "flex-1", children: [_jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(LayoutTemplate, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("edit.empty") })] }), _jsx(EmptyContent, { children: _jsxs(Button, { type: "button", size: "sm", onClick: () => void openNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("common.add")] }) })] })) })] }), dialog] }));
+                                            }, placeholder: t("edit.nameLabel"), className: "h-8 min-w-0 max-w-2xl flex-1" }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: () => void closeEditor(), children: t("common.cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: isSaving, onClick: () => void handleSave(), children: isSaving ? t("common.saving") : t("common.save") })] })] }), saveError && (_jsx("p", { role: "alert", className: "border-b bg-cms-destructive/10 px-6 py-2 text-cms-destructive text-xs", children: saveError })), _jsx("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto", children: _jsx(CmsEditor, { doc: editBody, onChange: setEditBody }) })] })) : (_jsxs(Empty, { className: "flex-1", children: [_jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(LayoutTemplate, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("edit.empty") })] }), _jsx(EmptyContent, { children: _jsxs(Button, { type: "button", size: "sm", onClick: () => void openNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("common.add")] }) })] })) })] }), dialog] }));
 }

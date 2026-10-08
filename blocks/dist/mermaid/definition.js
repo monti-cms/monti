@@ -1,6 +1,7 @@
 import { createActiveTranslator, defineBlock } from "@monti-cms/core";
 import { keywordList } from "../shared/text.js";
 import { mermaidMessages } from "./messages.js";
+import { validateMermaidBlock } from "./validate.js";
 const t = createActiveTranslator(mermaidMessages);
 /** Mermaid diagram (` ```mermaid `). The extension draws the editor preview (a site can replace it), and the site draws the public page. */
 export const mermaidBlock = defineBlock({
@@ -14,6 +15,7 @@ export const mermaidBlock = defineBlock({
     syntax: { kind: "fence", lang: "mermaid" },
     component: "Mermaid",
     attributes: {},
+    validate: validateMermaidBlock,
     editor: {
         view: "node",
         insertable: true,

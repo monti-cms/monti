@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cn, Switch } from "@monti-cms/admin/kit";
-import { isCollection, roleValue, SUMMARY_ROLE } from "@monti-cms/core/client";
+import { SUMMARY_ROLE, useSite } from "@monti-cms/core/client";
 import { SEO_DEFAULT_LIMITS } from "../fields.js";
 /** Recommended length: field `max` → `inputOptions.limit` → default. */
 const limitOf = (field, fallback) => {
@@ -17,13 +17,17 @@ function Counter({ length, limit }) {
 }
 /** Input piece that shows a hint and character count using the value the public page falls back to when empty. */
 const withFallback = (fallback, defaultLimit) => ({
-    placeholder: (props) => fallback(props) || undefined,
-    Aside: (props) => (_jsx(Counter, { length: (current(props) || fallback(props)).length, limit: limitOf(props.field, defaultLimit) })),
+    // The admin calls `placeholder` while it renders the input, and a registration always has one, so the hook runs in the same order on every render.
+    placeholder: (props) => fallback(useSite(), props) || undefined,
+    Aside: function FallbackCounter(props) {
+        const site = useSite();
+        return (_jsx(Counter, { length: (current(props) || fallback(site, props)).length, limit: limitOf(props.field, defaultLimit) }));
+    },
 });
 /** Search title: falls back to the title when empty. */
-export const seoTitleInput = withFallback((props) => props.form.title, SEO_DEFAULT_LIMITS.title);
+export const seoTitleInput = withFallback((site, props) => site.isCollection(props.collection) ? (site.titleOfValues(props.collection, props.form) ?? "") : "", SEO_DEFAULT_LIMITS.title);
 /** Search description: falls back to the summary role value when empty. */
-export const seoDescriptionInput = withFallback((props) => (isCollection(props.collection) ? roleValue(props.collection, SUMMARY_ROLE, props.form) : ""), SEO_DEFAULT_LIMITS.description);
+export const seoDescriptionInput = withFallback((site, props) => site.isCollection(props.collection) ? site.roleValue(props.collection, SUMMARY_ROLE, props.form) : "", SEO_DEFAULT_LIMITS.description);
 /** Hide from search engines: a switch in the label row. On is `noindex`, off is the default (or another option). */
 function NoindexSwitch({ field, id, value, describedBy, context, onChange }) {
     if (field.kind !== "select")

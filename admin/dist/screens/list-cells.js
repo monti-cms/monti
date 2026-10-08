@@ -1,5 +1,6 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
+import { useSite } from "@monti-cms/core/client";
 import { fieldColumnOf } from "./list-columns.js";
 import { FittingTags } from "./shared/fitting-tags.js";
 const EMPTY = _jsx("span", { className: "text-cms-muted-foreground", children: "\u2014" });
@@ -7,12 +8,12 @@ const EMPTY = _jsx("span", { className: "text-cms-muted-foreground", children: "
  * Finds a column's cell component in the admin extension (`listCells`). The column name comes first, otherwise the field's `input` name.
  * `undefined` if none (the default cell is drawn).
  */
-export function customListCell(listCells, collection, column) {
+export function customListCell(site, listCells, collection, column) {
     if (!listCells)
         return undefined;
     if (Object.hasOwn(listCells, column))
         return listCells[column];
-    const input = fieldColumnOf(collection, column)?.field.input;
+    const input = fieldColumnOf(site, collection, column)?.field.input;
     return input !== undefined && Object.hasOwn(listCells, input) ? listCells[input] : undefined;
 }
 /**
@@ -20,7 +21,8 @@ export function customListCell(listCells, collection, column) {
  * `—` when there is no value. Dates are drawn separately by the system columns (updated, created, published).
  */
 export function DefaultFieldCell({ collection, column, entry }) {
-    const stored = fieldColumnOf(collection, column);
+    const site = useSite();
+    const stored = fieldColumnOf(site, collection, column);
     if (!stored)
         return EMPTY;
     const { field } = stored;

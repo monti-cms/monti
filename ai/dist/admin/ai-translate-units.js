@@ -1,5 +1,6 @@
-import { mdxToTiptap, tiptapToMdx, UNTRANSLATED_MARK_NAME } from "@monti-cms/admin/editor";
+import { BLOCK_ID_ATTRIBUTE, findBlock as findBlockById, UNTRANSLATED_MARK_NAME } from "@monti-cms/admin/editor";
 import { Fragment } from "@tiptap/pm/model";
+import { contentOfText, textOfContent } from "./mdx-format.js";
 /**
  * Units of AI translation. A unit is the single block a block handle points to, or the blocks that Translate all collects.
  *
@@ -28,24 +29,24 @@ const withoutHints = (json) => ({
     ...(json.marks ? { marks: json.marks.filter((mark) => mark.type !== UNTRANSLATED_MARK_NAME) } : {}),
     ...(json.content ? { content: json.content.map(withoutHints) } : {}),
 });
-/** Source MDX of a block (JSON). */
-export const sourceMdxFromJson = (json) => tiptapToMdx({ type: "doc", content: [withoutHints(json)] }).trim();
+/** Source MDX of a block (JSON), written by the `mdx` format. */
+export const sourceMdxFromJson = (site, format, json) => textOfContent(site, format, [withoutHints(json)]);
 /** Translation unit of one block. `parent` is the node that contains the block. */
-export function unitOf(node, parent) {
+export function unitOf(site, format, node, parent) {
     const json = node.toJSON();
     const wrap = LIST_ITEMS.has(node.type.name) && parent && LISTS.has(parent.type.name) ? parent : null;
     const sent = wrap ? { type: wrap.type.name, attrs: wrap.attrs, content: [json] } : json;
-    return { mdx: sourceMdxFromJson(sent), original: JSON.stringify(json), wrap: wrap?.type.name ?? null };
+    return { mdx: sourceMdxFromJson(site, format, sent), original: JSON.stringify(json), wrap: wrap?.type.name ?? null };
 }
 /** Translation unit at a block handle position (`pos` is right before the block). `null` if there is no notice. */
-export function unitAt(doc, pos) {
+export function unitAt(site, format, doc, pos) {
     const node = doc.nodeAt(pos);
     if (!node || !node.isBlock || !hasHints(node))
         return null;
-    return unitOf(node, doc.resolve(pos).parent);
+    return unitOf(site, format, node, doc.resolve(pos).parent);
 }
 /** Units of Translate all. One per top-level block, and one per item for lists. */
-export function collectUnits(doc) {
+export function collectUnits(site, format, doc) {
     const units = [];
     doc.forEach((node) => {
         if (!hasHints(node))
@@ -53,16 +54,30 @@ export function collectUnits(doc) {
         if (LISTS.has(node.type.name)) {
             node.forEach((item) => {
                 if (hasHints(item))
-                    units.push(unitOf(item, node));
+                    units.push(unitOf(site, format, item, node));
             });
         }
         else
-            units.push(unitOf(node, doc));
+            units.push(unitOf(site, format, node, doc));
     });
     return units;
 }
-/** Position of the original block (the one with the same JSON). Checks the `hint` position first, then searches the document. */
+/** The block id the original block had (the editor's `blockId`), if any. */
+const blockIdOf = (original) => {
+    const id = JSON.parse(original).attrs?.[BLOCK_ID_ATTRIBUTE];
+    return typeof id === "string" ? id : undefined;
+};
+/**
+ * Position of the original block. A block with an id is found by it, and only while it is unchanged (the same JSON). Otherwise the
+ * `hint` position is checked first, then the document is searched for a block with the same JSON.
+ */
 function findBlock(doc, original, hint) {
+    const id = blockIdOf(original);
+    if (id !== undefined) {
+        const pos = findBlockById(doc, id);
+        const node = pos === undefined ? null : doc.nodeAt(pos);
+        return node && JSON.stringify(node.toJSON()) === original ? { pos: pos, size: node.nodeSize } : null;
+    }
     const at = hint !== null && hint < doc.content.size ? doc.nodeAt(hint) : null;
     if (at && JSON.stringify(at.toJSON()) === original)
         return { pos: hint, size: at.nodeSize };
@@ -82,18 +97,23 @@ function findBlock(doc, original, hint) {
  * Replaces the original block with the translation result. If the block changed in the meantime, `changed`; if the result does not fit that position,
  * `invalid`; in both cases the document is untouched.
  */
-export function applyTranslation(editor, unit, mdx, hint) {
+export function applyTranslation(site, format, editor, unit, mdx, hint) {
     const { state } = editor;
     const target = findBlock(state.doc, unit.original, hint);
     if (!target)
         return "changed";
-    let content = mdxToTiptap(mdx).content ?? [];
+    let content = contentOfText(site, format, mdx);
     if (unit.wrap) {
         const [list] = content;
         if (content.length !== 1 || list?.type !== unit.wrap || list.content?.length !== 1)
             return "invalid";
         content = list.content;
     }
+    // The translated block is the same block: it keeps the original's id (blocks it was split into get new ones).
+    const id = blockIdOf(unit.original);
+    const [first] = content;
+    if (id !== undefined && first)
+        content = [{ ...first, attrs: { ...(first.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: id } }, ...content.slice(1)];
     let nodes;
     try {
         nodes = content.map((json) => state.schema.nodeFromJSON(json));

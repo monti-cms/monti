@@ -1,5 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
+import { useMemo } from "react";
 /** Option names shared by the admin AI screen (slot, result shape, mode, check, connection kind). */
 export const labelMessages = defineMessages("cms-ai.admin.labels", {
     en: {
@@ -59,15 +60,22 @@ export const labelMessages = defineMessages("cms-ai.admin.labels", {
         "provider.decisions": "판단",
     },
 });
-const t = createTranslator(labelMessages);
-/** Slot names (Field, Body image, ...). */
-export const slotLabel = (slot) => t(`slot.${slot}`);
-/** Target name of a slot outside fields. An unknown target is returned as is. */
-export const slotTargetLabel = (slot, target) => {
-    const key = `target.${slot}.${target}`;
-    return key in labelMessages.messages.en ? t(key) : target;
-};
-export const resultLabel = (result) => t(`result.${result}`);
-export const checkLabel = (kind) => t(`check.${kind}`);
-export const engineLabel = (engine) => t(`engine.${engine}`);
-export const providerKindLabel = (kind) => t(`provider.${kind}`);
+/** The option name functions of one translator. */
+export const labelsOf = (t) => ({
+    /** Slot names (Field, Body image, ...). */
+    slotLabel: (slot) => t(`slot.${slot}`),
+    /** Target name of a slot outside fields. An unknown target is returned as is. */
+    slotTargetLabel: (slot, target) => {
+        const key = `target.${slot}.${target}`;
+        return key in labelMessages.messages.en ? t(key) : target;
+    },
+    resultLabel: (result) => t(`result.${result}`),
+    checkLabel: (kind) => t(`check.${kind}`),
+    engineLabel: (engine) => t(`engine.${engine}`),
+    providerKindLabel: (kind) => t(`provider.${kind}`),
+});
+/** The option name functions in the admin language of the site. */
+export function useLabels() {
+    const t = useTranslator(labelMessages);
+    return useMemo(() => labelsOf(t), [t]);
+}

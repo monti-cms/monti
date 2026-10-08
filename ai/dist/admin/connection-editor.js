@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
 import { Alert, AlertDescription, Button, cn, Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, Field, FieldGroup, FieldLabel, Input, Skeleton, useConfirm, useDebounced, } from "@monti-cms/admin/kit";
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plug, PlugZap, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -11,14 +11,15 @@ import { AI_PROVIDER_KINDS, PROVIDER_EXAMPLES, } from "../connection.js";
 import { AI_ACTIONS_KEY } from "./ai-slot-provider.js";
 import { connectionMessages } from "./connection-editor.messages.js";
 import { OptionSelect } from "./custom-editor.js";
-import { providerKindLabel } from "./labels.messages.js";
+import { useLabels } from "./labels.messages.js";
 import { ModelCombobox, useModelList } from "./model-combobox.js";
-const t = createTranslator(connectionMessages);
 export const AI_SETTINGS_KEY = ["cms", "ai", "settings"];
 export function useAiSettings() {
+    const site = useSite();
+    const t = useTranslator(connectionMessages);
     return useQuery({
         queryKey: AI_SETTINGS_KEY,
-        queryFn: ({ signal }) => cmsFetch(cmsApiUrl("/v1/ai/settings"), { signal, fallback: t("error.loadList") }),
+        queryFn: ({ signal }) => cmsFetch(site, cmsApiUrl("/v1/ai/settings"), { signal, fallback: t("error.loadList") }),
         // Not re-fetched every time an action is opened. Saving a connection updates the cache from the response.
         staleTime: 60_000,
     });
@@ -29,6 +30,7 @@ export const OPEN_ITEM = "bg-cms-accent text-cms-accent-foreground";
 export const DETAIL_PANE = "mx-auto flex w-full max-w-3xl flex-col gap-5 p-6 text-sm";
 /** Load failure. Reports it in place and allows fetching again. */
 export function LoadError({ message, onRetry }) {
+    const t = useTranslator(connectionMessages);
     return (_jsxs(Alert, { variant: "danger", className: "m-3 flex w-auto items-center justify-between gap-3", children: [_jsx(AlertDescription, { className: "col-start-auto", children: message }), _jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: onRetry, children: t("action.retry") })] }));
 }
 /** One list row. Status text to the right of the name, and a dim description below. */
@@ -60,6 +62,9 @@ const sameDraft = (a, b) => JSON.stringify(a) === JSON.stringify(b);
  * The AI screen holds the open connection (`selected`), because the header's Add connection and tab switching ask about unsaved content.
  */
 export function ConnectionManager({ selected, onOpen, onSelectedChange, onDirtyChange, }) {
+    const site = useSite();
+    const t = useTranslator(connectionMessages);
+    const { providerKindLabel } = useLabels();
     const queryClient = useQueryClient();
     const settingsQuery = useAiSettings();
     const settings = settingsQuery.data;
@@ -68,7 +73,7 @@ export function ConnectionManager({ selected, onOpen, onSelectedChange, onDirtyC
         void queryClient.invalidateQueries({ queryKey: AI_ACTIONS_KEY });
     };
     const current = settings?.providers.find((provider) => provider.id === selected) ?? null;
-    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", children: [settingsQuery.error && !settings && (_jsx(LoadError, { message: errorText(settingsQuery.error, t("error.loadList")), onRetry: () => void settingsQuery.refetch() })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex w-72 shrink-0 flex-col border-r", children: [settings?.fake && _jsx("p", { className: "border-b px-3 py-2 text-cms-muted-foreground text-xs", children: t("badge.fake") }), _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: settingsQuery.isPending ? (_jsx(ListSkeleton, { rows: 2 })) : settings?.providers.length === 0 ? (_jsx("li", { className: "px-3 py-6 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })) : (settings?.providers.map((provider) => (_jsx(ListRow, { title: provider.name, status: provider.ready ? null : t("status.needsSetup"), detail: `${providerKindLabel(provider.kind)} · ${provider.defaultModel || t("model.none")}`, current: selected === provider.id, onClick: () => onOpen(provider.id) }, provider.id)))) })] }), _jsx("div", { className: "flex min-w-0 flex-1 flex-col overflow-y-auto", children: settings && (selected === "new" || current) ? (_jsx(ProviderEditor, { version: settings.version, provider: current, onSaved: (saved, id) => {
+    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", children: [settingsQuery.error && !settings && (_jsx(LoadError, { message: errorText(site, settingsQuery.error, t("error.loadList")), onRetry: () => void settingsQuery.refetch() })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex w-72 shrink-0 flex-col border-r", children: [settings?.fake && _jsx("p", { className: "border-b px-3 py-2 text-cms-muted-foreground text-xs", children: t("badge.fake") }), _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: settingsQuery.isPending ? (_jsx(ListSkeleton, { rows: 2 })) : settings?.providers.length === 0 ? (_jsx("li", { className: "px-3 py-6 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })) : (settings?.providers.map((provider) => (_jsx(ListRow, { title: provider.name, status: provider.ready ? null : t("status.needsSetup"), detail: `${providerKindLabel(provider.kind)} · ${provider.defaultModel || t("model.none")}`, current: selected === provider.id, onClick: () => onOpen(provider.id) }, provider.id)))) })] }), _jsx("div", { className: "flex min-w-0 flex-1 flex-col overflow-y-auto", children: settings && (selected === "new" || current) ? (_jsx(ProviderEditor, { version: settings.version, provider: current, onSaved: (saved, id) => {
                                 applySaved(saved);
                                 onSelectedChange(id);
                             }, onDeleted: (saved) => {
@@ -77,6 +82,9 @@ export function ConnectionManager({ selected, onOpen, onSelectedChange, onDirtyC
                             }, onCancel: () => onSelectedChange(null), onConflict: () => void settingsQuery.refetch(), onDirtyChange: onDirtyChange }, selected ?? "none")) : (settings && (_jsxs(Empty, { className: "flex-1", children: [_jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(Plug, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("empty.title") })] }), _jsx(EmptyContent, { children: _jsxs(Button, { type: "button", size: "sm", onClick: () => onOpen("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("action.add")] }) })] }))) })] })] }));
 }
 function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onConflict, onDirtyChange, }) {
+    const site = useSite();
+    const t = useTranslator(connectionMessages);
+    const { providerKindLabel } = useLabels();
     const initial = provider ? draftOf(provider) : NEW_DRAFT;
     const [draft, setDraft] = useState(initial);
     const [saving, setSaving] = useState(false);
@@ -113,12 +121,12 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
         try {
             const json = { expectedVersion: version, provider: draft };
             const saved = provider
-                ? await cmsFetch(cmsApiUrl(`/v1/ai/providers/${provider.id}`), {
+                ? await cmsFetch(site, cmsApiUrl(`/v1/ai/providers/${provider.id}`), {
                     method: "PATCH",
                     json,
                     fallback: t("error.save"),
                 })
-                : await cmsFetch(cmsApiUrl("/v1/ai/providers"), {
+                : await cmsFetch(site, cmsApiUrl("/v1/ai/providers"), {
                     method: "POST",
                     json,
                     fallback: t("error.save"),
@@ -129,7 +137,7 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
             toast.success(t("toast.saved"));
         }
         catch (saveError) {
-            setError(errorText(saveError, t("error.save")));
+            setError(errorText(site, saveError, t("error.save")));
             onConflict();
         }
         finally {
@@ -150,14 +158,14 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
         setDeleting(true);
         setError(null);
         try {
-            onDeleted(await cmsFetch(cmsApiUrl(`/v1/ai/providers/${provider.id}?expectedVersion=${version}`), {
+            onDeleted(await cmsFetch(site, cmsApiUrl(`/v1/ai/providers/${provider.id}?expectedVersion=${version}`), {
                 method: "DELETE",
                 fallback: t("error.delete"),
             }));
             toast.success(t("toast.deleted"));
         }
         catch (deleteError) {
-            setError(errorText(deleteError, t("error.delete")));
+            setError(errorText(site, deleteError, t("error.delete")));
             onConflict();
         }
         finally {
@@ -168,14 +176,14 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
     const runCheck = async () => {
         setChecking(true);
         try {
-            setCheck(await cmsFetch(cmsApiUrl("/v1/ai/providers/check"), {
+            setCheck(await cmsFetch(site, cmsApiUrl("/v1/ai/providers/check"), {
                 method: "POST",
                 json: { providerId: provider?.id, provider: draft },
                 fallback: t("error.check"),
             }));
         }
         catch (checkError) {
-            setCheck({ ok: false, message: errorText(checkError, t("error.check")) });
+            setCheck({ ok: false, message: errorText(site, checkError, t("error.check")) });
         }
         finally {
             setChecking(false);

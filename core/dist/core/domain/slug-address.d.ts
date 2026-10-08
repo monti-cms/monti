@@ -1,0 +1,36 @@
+/**
+ * Slug addresses. A slug is unique per collection and language, and an address row records who holds it:
+ *
+ * - `reservation`: a draft's slug, never published. Released when the draft changes its slug or is deleted.
+ * - `current`: the public URL of a published entry. An entry has at most one.
+ * - `alias`: a former current slug. It keeps redirecting to the entry's current one and cannot be taken by another entry.
+ * - `deleted`: the slug of a deleted entry that was published once. It cannot be reused.
+ */
+export type AddressType = "current" | "alias" | "reservation" | "deleted";
+/** The row that already holds a slug, if any. */
+export interface SlugHolder {
+    readonly entryId: string | null;
+    readonly type?: AddressType;
+}
+/**
+ * What saving a draft with `slug` does to the reservation, given the row that holds the slug (`null` if nobody does).
+ * `keep`: the entry already owns the slug (a reservation, or its own current or alias slug, which a publish promotes); `reserve`: a free slug.
+ * Another entry holding it is a `slug_conflict` (409), whatever the holder's type.
+ */
+export declare function reservationFor(entryId: string, holder: SlugHolder | null): "keep" | "reserve";
+/** How publishing moves the entry's addresses. */
+export interface PublishAddressPlan {
+    /** The current slug becomes an alias (the slug changed or was cleared). */
+    readonly demoteCurrent: boolean;
+    /** The target slug becomes the current address (claimed, or promoted back from a former alias). */
+    readonly promote: boolean;
+}
+/** Address change of a publish, from the entry's current slug and the draft's slug (`null` when it has none). */
+export declare function planPublishAddress(currentSlug: string | null, targetSlug: string | null): PublishAddressPlan;
+/** After claiming the target slug, the row must be this entry's current address. Anything else is a `slug_conflict`. */
+export declare function assertPromotedToCurrent(entryId: string, holder: SlugHolder | null): void;
+/**
+ * Whether the address of an internal link target changed between two reads (the second one holds a lock). A publish validates links against the locked read,
+ * so a change in between means the validated state is stale: the publish fails with `conflict` rather than publish a dead link.
+ */
+export declare function linkTargetChanged(before: SlugHolder | undefined, after: SlugHolder | undefined): boolean;

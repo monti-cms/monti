@@ -1,26 +1,7 @@
-import { type Collection } from "./collections.js";
-/** Collections a body link can point to (collections with `path`). */
-export declare const LINKABLE_COLLECTIONS: readonly Collection[];
-/**
- * Public path of a content item (default locale). `null` if the collection has no path or there is no slug.
- * Hangul is left as is so it stays readable; only characters that break Markdown links are encoded.
- */
-export declare function contentPath(collection: string, slug: string | null | undefined): string | null;
-/** The content a path (`URL.pathname`) points to. `null` for an unknown path. */
-export declare function parseContentPath(pathname: string): {
-    collection: Collection;
-    slug: string;
-} | null;
-/** The target if a body link address points to this site's content. Only links written as a path (`/...`) or with the site address are recognized. */
-export declare function parseInternalLink(url: string): {
-    collection: Collection;
-    slug: string;
-    url: string;
-} | null;
-/** Site name shown in the admin screen (`site.name`, or the host name of `site.url` if absent). Empty string if neither exists. */
-export declare const SITE_NAME: string;
-/** Query name used to pass the locale in preview URLs (`site.previewLocaleParam`, default `locale`). If `false`, put it in the path. */
-export declare const PREVIEW_LOCALE_PARAM: string | false;
+import type { CmsConfig } from "../config/define.js";
+import type { SiteSchemas } from "../schema/derive.js";
+import type { Collection, SiteCollections } from "./collections.js";
+import { type SiteLocales } from "./locales.js";
 /**
  * Preview URL rules that do not read the config. The query style (`param` is the name) adds the locale only for non-default locales,
  * and the path style (`param: false`) puts `localePrefix` (that locale's public URL prefix) before the public path.
@@ -33,5 +14,28 @@ export declare function previewHrefWith(options: {
     readonly param: string | false;
     readonly localePrefix: string;
 }): string;
-/** Draft preview URL. `null` if there is no preview path (`site.previewPath`) or collection public path. */
-export declare function previewHref(collection: string, slug: string | null | undefined, locale?: string): string | null;
+/** The body links and URLs of one site. */
+export type SiteLinks = ReturnType<typeof createLinks>;
+/** The link rules of a site config: the public paths of its collections, the site's own addresses and its preview URLs. */
+export declare function createLinks(config: Pick<CmsConfig, "site" | "defaultLocale">, parts: {
+    readonly collections: Pick<SiteCollections, "COLLECTIONS">;
+    readonly schemas: Pick<SiteSchemas, "schemaOf">;
+    readonly locales: Pick<SiteLocales, "LOCALES" | "localePrefix">;
+}): {
+    LINKABLE_COLLECTIONS: readonly string[];
+    contentPath: (collection: string, slug: string | null | undefined) => string | null;
+    parseContentPath: (pathname: string) => {
+        collection: Collection;
+        slug: string;
+        locale?: string;
+    } | null;
+    parseInternalLink: (url: string) => {
+        collection: Collection;
+        slug: string;
+        locale?: string;
+        url: string;
+    } | null;
+    SITE_NAME: string;
+    PREVIEW_LOCALE_PARAM: string | false;
+    previewHref: (collection: string, slug: string | null | undefined, locale?: string) => string | null;
+};

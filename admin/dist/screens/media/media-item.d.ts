@@ -1,3 +1,5 @@
+import type { TranslatorFor } from "../../translator.js";
+import type { mediaMessages } from "./messages.js";
 /** One item of the media list API. */
 export interface MediaItem {
     id: string;
@@ -41,9 +43,9 @@ export declare function mediaUsages(media: Pick<MediaItem, "references">): Media
 /** Usage count. Counted once per post (the server's count when only non-post usages exist, such as templates). */
 export declare const usageCount: (media: MediaItem) => number;
 /** Usage state shown on lists and tiles. */
-export declare const usageLabel: (media: MediaItem) => string;
+export declare const usageLabel: (t: TranslatorFor<typeof mediaMessages>, media: MediaItem) => string;
 /** Text of the usage note (`note`). */
-export declare const usageNoteLabel: (note: NonNullable<MediaUsage["note"]>) => string;
-export declare function copyText(text: string, success: string): Promise<void>;
+export declare const usageNoteLabel: (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) => string;
+export declare function copyText(t: TranslatorFor<typeof mediaMessages>, text: string, success: string): Promise<void>;
 /** Appends the original file's extension to the new name (suggested names come without an extension). If it already has the same extension, leaves it as is. */
 export declare function withExtension(name: string, original: string): string;

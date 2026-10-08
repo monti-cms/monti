@@ -1,4 +1,5 @@
-import { type AiActionEditable, type AiActionOverride, type AiAttach, type AiChoices, type AiInputKind, type ResolvedAiAction } from "./action.js";
+import type { Site } from "@monti-cms/core/client";
+import { type AiActionDefinition, type AiActionEditable, type AiActionOverride, type AiAttach, type AiChoices, type AiInputKind, EDITABLE_KEYS, type ResolvedAiAction } from "./action.js";
 import { type CustomBase, type CustomValue } from "./custom.js";
 import type { AiApply, AiCheck, AiEngine, AiPick, AiResult } from "./definition.js";
 /**
@@ -27,6 +28,11 @@ export interface AiActionView extends AiActionEditable {
     validatorLabels: Record<string, string>;
     /** Does the action stream its result? */
     stream: boolean;
+    /**
+     * The editable values the definition alone gives (what Reset returns to). `null` for a screen action, which has no definition to return to. The server sends it, because
+     * the browser's site holds only the data parts of the config (a factory in the config does not reach it).
+     */
+    defaults: Pick<AiActionView, (typeof EDITABLE_KEYS)[number]> | null;
     /** For an action created in the admin screen (screen action), its basic info (name, where it attaches, result shape). Code actions have none. */
     custom?: CustomBase;
     /** Version of the edited value. 0 if never edited. */
@@ -37,12 +43,15 @@ export interface AiActionView extends AiActionEditable {
 }
 /** Reads the saved edited value. Drops values whose shape does not match (the definition changed and no longer fits). */
 export declare const readOverride: (value: unknown) => AiActionOverride;
-export declare const viewOf: (action: ResolvedAiAction, row: {
+/**
+ * `definition` is the code definition of the action (not given for a screen action): the defaults of its editable values go into the view.
+ */
+export declare const viewOf: (site: Pick<Site, "createTranslator">, action: ResolvedAiAction, row: {
     value: unknown;
     version: number;
     updatedAt: Date;
-} | undefined, custom?: CustomValue) => AiActionView;
+} | undefined, custom?: CustomValue, definition?: AiActionDefinition) => AiActionView;
 /** Name (key) of a new, unsaved screen action. The server assigns a new name when saving. */
 export declare const NEW_CUSTOM_KEY = "custom_new";
 /** The shape of a new, unsaved screen action. The admin screen rebuilds it each time the basic info is chosen. */
-export declare const draftCustomView: (base: CustomBase) => AiActionView;
+export declare const draftCustomView: (site: Site, base: CustomBase) => AiActionView;

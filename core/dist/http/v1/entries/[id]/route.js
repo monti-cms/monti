@@ -1,20 +1,36 @@
-import { getCmsContentService, getCmsContentStore } from "../../../../container.js";
 import { patchEntryBodySchema } from "../../../../core/api.js";
-import { isItemCollection } from "../../../../core/collections.js";
-import { adminRoute, json, readVersionedBody, readVersionQuery } from "../../handler.js";
+import { exportText } from "../../../../format/convert.js";
+import { createExportRefs } from "../../../../read/index.js";
+import { adminRoute, json, readFormatQuery, readVersionedBody, readVersionQuery } from "../../handler.js";
 /**
  * An entry and the translation group needed by the editor.
  * For a translation, also returns the source's latest draft metadata (`source`). The translation properties panel shows the shared values read-only.
  */
-export const GET = adminRoute(async ({ params }) => {
-    const store = getCmsContentStore();
+export const GET = adminRoute(async ({ request, params, cms }) => {
+    const store = cms.store();
     const entry = await store.getEntry(params.id);
-    const translations = isItemCollection(entry.collection)
+    // `?format=<name>` adds `body` to `working`, `published` and the source: the document as text in that format, written to be imported again (`sync`).
+    const format = readFormatQuery(request);
+    const formats = format === undefined ? undefined : await cms.formats();
+    const refsOf = createExportRefs({ site: cms.site, store: cms.store, mediaStore: cms.mediaStore }, "working");
+    const bodyOf = async (body, locale) => {
+        if (!formats || format === undefined)
+            return body;
+        const { text } = await exportText(cms.site, formats, format, body.doc, {
+            locale,
+            purpose: "sync",
+            refs: await refsOf(body.doc, locale),
+        });
+        return { ...body, body: text };
+    };
+    const translations = cms.site.isItemCollection(entry.collection)
         ? null
         : await store.getTranslationGroup({ entryId: entry.id });
     const source = entry.translationGroupId !== entry.id ? await store.getEntry(entry.translationGroupId).catch(() => null) : null;
     return json({
         ...entry,
+        working: await bodyOf(entry.working, entry.locale),
+        ...(entry.published ? { published: await bodyOf(entry.published, entry.locale) } : {}),
         translations: translations?.members ?? [],
         ...(source
             ? {
@@ -24,31 +40,37 @@ export const GET = adminRoute(async ({ params }) => {
                     status: source.status,
                     workingSlug: source.workingSlug,
                     metadata: source.working.metadata,
-                    // The translation view lines up source blocks with the translation side by side.
-                    mdx: source.working.mdx,
+                    // The stored document carries the block ids that pair this version's blocks with the confirmed one's.
+                    doc: source.working.doc,
+                    ...(formats && format !== undefined ? { body: (await bodyOf(source.working, source.locale)).body } : {}),
                 },
             }
             : {}),
     });
 });
 /** Saves the latest draft. Fields not sent keep their current draft values. */
-export const PATCH = adminRoute(async ({ request, params }) => {
+export const PATCH = adminRoute(async ({ request, params, cms }) => {
     const body = await readVersionedBody(request, patchEntryBodySchema);
-    const current = await getCmsContentStore().getEntry(params.id);
+    const current = await cms.store().getEntry(params.id);
     const input = {
         collection: current.collection,
         expectedVersion: body.expectedVersion,
         slug: body.slug !== undefined ? body.slug : current.workingSlug,
         metadata: body.metadata ?? current.working.metadata,
-        mdx: body.mdx ?? current.working.mdx,
+        // The body sent (a document, or a text with its format), or the current draft's document.
+        ...(body.doc !== undefined
+            ? { doc: body.doc }
+            : body.body !== undefined
+                ? { body: body.body, format: body.format }
+                : { doc: current.working.doc }),
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
         ...(body.translation !== undefined ? { translation: body.translation } : {}),
     };
-    return json(await getCmsContentService().saveDraft(params.id, input));
+    return json(await cms.contentService().saveDraft(params.id, input));
 });
 /** Permanently deletes a trashed entry. Moving to trash is `POST /entries/:id/trash`. */
-export const DELETE = adminRoute(async ({ request, params }) => {
+export const DELETE = adminRoute(async ({ request, params, cms }) => {
     const expectedVersion = readVersionQuery(request);
-    await getCmsContentStore().permanentDeleteEntry({ id: params.id, expectedVersion });
+    await cms.store().permanentDeleteEntry({ id: params.id, expectedVersion });
     return new Response(null, { status: 204 });
 });

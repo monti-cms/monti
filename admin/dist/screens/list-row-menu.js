@@ -1,7 +1,5 @@
-import { createTranslator, taxonomyFieldsOf } from "@monti-cms/core/client";
 import { Archive, ArchiveRestore, Copy, ExternalLink, Folder as FolderIcon, FolderInput, FolderUp, PanelRightOpen, RotateCcw, SquarePen, Tag, Tags, Trash2, } from "lucide-react";
 import { screensMessages } from "./messages.js";
-const t = createTranslator(screensMessages);
 export const toSelection = (item) => ({
     id: item.id,
     expectedVersion: item.version,
@@ -14,7 +12,8 @@ export function actionTargets(item, items, selectedIds) {
     return selectedIds.has(item.id) && selectedIds.size > 1 ? items.filter((row) => selectedIds.has(row.id)) : [item];
 }
 /** Row menu. One row gets open and duplicate; several rows get the item count at the top. Trash has only restore and permanent delete. */
-export function rowMenuActions(group, context, handlers) {
+export function rowMenuActions(site, group, context, handlers) {
+    const t = site.createTranslator(screensMessages);
     const targets = group.map(toSelection);
     const single = group.length === 1 ? group[0] : undefined;
     const header = single ? [] : [{ kind: "label", label: t("menu.items", { count: group.length }) }];
@@ -48,7 +47,7 @@ export function rowMenuActions(group, context, handlers) {
                 { kind: "item", label: t("menu.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
             ];
     const allArchived = group.every((row) => row.status === "archived");
-    const addActions = taxonomyFieldsOf(context.collection).flatMap((stored) => {
+    const addActions = site.taxonomyFieldsOf(context.collection).flatMap((stored) => {
         if (stored.field.kind !== "relation" || !stored.field.many)
             return [];
         const label = stored.field.label;

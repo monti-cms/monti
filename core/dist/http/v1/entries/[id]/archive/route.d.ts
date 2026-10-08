@@ -1,6 +1,4 @@
 /** Draft/published → archived. Ends publication. */
-export declare const POST: (request: import("next/server").NextRequest, context?: {
-    params: Promise<{
-        id: string;
-    }>;
-} | undefined) => Promise<Response>;
+export declare const POST: (request: Request, context?: Partial<import("../../../handler.js").RouteContext<{
+    id: string;
+}>> | undefined) => Promise<Response>;

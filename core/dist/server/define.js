@@ -3,5 +3,3 @@
  * login connection, so no separate login route file is needed.
  */
 export const CMS_AUTH_BASE_PATH = "/api/cms/auth";
-/** Defines the server config. */
-export const defineServerConfig = (config) => config;

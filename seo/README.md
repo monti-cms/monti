@@ -8,7 +8,8 @@ and a switch to hide the page from search engines. With `@monti-cms/ai`, search 
 ## Registration
 
 ```ts
-// cms.config.ts
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { seo, seoFields } from "@monti-cms/seo";
 
 const article = defineCollection({
@@ -24,15 +25,13 @@ const article = defineCollection({
 	list: { columns: ["title", "status"] },
 });
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [seo()],
 });
 ```
 
-```css
-@import "@monti-cms/seo/styles.css"; /* after the admin package styles (finds classes in the published bundle) */
-```
+The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` already covers it (no Tailwind needed in the app).
 
 ## Field set `seoFields(options?)`
 
@@ -75,14 +74,14 @@ The recommended length is stored in the field's `inputOptions.limit`. If you nee
 
 ```ts
 import { seoOf } from "@monti-cms/seo";
-import { post } from "@/cms.config";
+import { post } from "@/monti.config";
 
 const { title, description, imageId, canonical, noindex } = seoOf(post, entry.metadata);
 ```
 
 It reads values by role from the collection definition (the result of `defineCollection`) and the stored metadata. An empty title or description is filled from the title (`title`) or summary
 (`role: "summary"`), and empty values are `undefined`. The share image is a media ID, so the site builds the public URL
-(`resolvePublicMediaUrl` from `@monti-cms/core/runtime`).
+(`cms.read.mediaUrl(id)`, from the `cms` instance the app's `monti.config.ts` exports).
 
 ## Entry points
 

@@ -40,7 +40,7 @@ export declare function multilineProps(field: {
         minHeight: string;
     };
 };
-/** Single relation (post or memo target). Pressing it opens the full post list to pick from. Used by the replacement post. */
+/** Single relation. Typing searches the target entries on the server (best title matches first); pressing shows the first ones. */
 export declare function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps): import("react").JSX.Element;
 /**
  * Ordered multi relation (post targets). Used by collection items.

@@ -1,5 +1,5 @@
+import type { Folder } from "../../../core/store/types.js";
 import { type StoreContext } from "./context.js";
-import type { Folder } from "./types.js";
 /** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
 export declare function createFolderOps(ctx: StoreContext): {
     createFolder: (params: {

@@ -1,4 +1,4 @@
-import { DEFAULT_COLLECTION, isCollection, isLocale, LIST_SORT_FIELDS, parseDateTimeInput, schemaOf, taxonomyFieldsOf, } from "@monti-cms/core/client";
+import { LIST_SORT_FIELDS, } from "@monti-cms/core/client";
 export const LIST_STATUSES = ["draft", "published", "archived"];
 export const DEFAULT_LIST_STATE = {
     folder: "all",
@@ -32,8 +32,8 @@ export const DATE_KEYS = [
 ];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 /** Reads `relation=field:ID` (repeated) into per-taxonomy-field ID lists. Drops fields that are not taxonomy fields of this collection. */
-function readRelations(values, collection) {
-    const fields = new Set(taxonomyFieldsOf(collection).map((stored) => stored.name));
+function readRelations(site, values, collection) {
+    const fields = new Set(site.taxonomyFieldsOf(collection).map((stored) => stored.name));
     const relations = {};
     for (const value of values) {
         const at = value.indexOf(":");
@@ -51,7 +51,7 @@ function appendRelations(params, relations) {
         for (const id of ids)
             params.append("relation", `${field}:${id}`);
 }
-export function parseListState(params) {
+export function parseListState(site, params) {
     const collection = params.get("collection");
     const pageSize = Number(params.get("pageSize"));
     const page = Number(params.get("page"));
@@ -59,7 +59,7 @@ export function parseListState(params) {
     const statuses = [...new Set(params.getAll("status"))].filter((status) => LIST_STATUSES.includes(status));
     const state = {
         ...DEFAULT_LIST_STATE,
-        collection: isCollection(collection) ? collection : DEFAULT_COLLECTION,
+        collection: site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION,
         folder: !params.get("folder") || params.get("folder") === "unfiled" ? "all" : params.get("folder"),
         includeDescendants: params.get("descendants") === "1",
         search: params.get("search") ?? "",
@@ -68,8 +68,8 @@ export function parseListState(params) {
         slugContains: params.get("slug") ?? "",
         statuses,
         hasChanges: params.get("changes") === "1",
-        relations: readRelations(params.getAll("relation"), isCollection(collection) ? collection : DEFAULT_COLLECTION),
-        locales: [...new Set(params.getAll("locale"))].filter(isLocale),
+        relations: readRelations(site, params.getAll("relation"), site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION),
+        locales: [...new Set(params.getAll("locale"))].filter(site.isLocale),
         sortField: LIST_SORT_FIELDS.includes(sortField)
             ? sortField
             : DEFAULT_LIST_STATE.sortField,
@@ -119,8 +119,8 @@ export function listStateToSearchParams(state) {
     params.set("pageSize", String(state.pageSize));
     return params;
 }
-const zonedDayBoundary = (date, end) => {
-    const parsed = parseDateTimeInput(`${date}T${end ? "23:59" : "00:00"}`);
+const zonedDayBoundary = (site, date, end) => {
+    const parsed = site.parseDateTimeInput(`${date}T${end ? "23:59" : "00:00"}`);
     if (!parsed)
         return null;
     return end ? new Date(Date.parse(parsed) + 59_999).toISOString() : parsed;
@@ -128,9 +128,9 @@ const zonedDayBoundary = (date, end) => {
 /**
  * List API (`GET /entries`) query. Multiple values of the same filter are OR; different filters are AND.
  * With `trash`, requests only trashed items.
- * Publishable collections (posts, memos) are requested one row per translation group. Trash lists items individually so a single translation can be restored.
+ * Publishable collections (`kind: "document"`) are requested one row per translation group. Trash lists items individually so a single translation can be restored.
  */
-export function listStateToApiQuery(state, options = {}) {
+export function listStateToApiQuery(site, state, options = {}) {
     const query = new URLSearchParams({
         collection: state.collection,
         sortField: state.sortField,
@@ -138,7 +138,7 @@ export function listStateToApiQuery(state, options = {}) {
         page: String(state.page),
         pageSize: String(state.pageSize),
     });
-    if (!options.trash && schemaOf(state.collection).kind === "document")
+    if (!options.trash && site.schemaOf(state.collection).kind === "document")
         query.set("group", "translation");
     if (!options.trash) {
         // Browse mode shows only items directly in the current location; search, filters or "include subfolders" show everything under the current location.
@@ -174,7 +174,7 @@ export function listStateToApiQuery(state, options = {}) {
     for (const key of DATE_KEYS) {
         if (!state[key])
             continue;
-        const boundary = zonedDayBoundary(state[key], key.endsWith("To"));
+        const boundary = zonedDayBoundary(site, state[key], key.endsWith("To"));
         if (boundary)
             query.set(key, boundary);
     }

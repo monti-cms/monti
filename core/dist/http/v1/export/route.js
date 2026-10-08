@@ -1,11 +1,53 @@
-import { getCmsContentStore } from "../../../container.js";
 import { exportScopeSchema } from "../../../core/api.js";
-import { buildExportArchive } from "../../../services/export-service.js";
+import { exportText } from "../../../format/convert.js";
+import { unknownFormatError } from "../../../format/unknown.js";
+import { createExportRefs } from "../../../read/index.js";
+import { buildExportArchive, exportTextKey, } from "../../../services/export-service.js";
 import { adminRoute, parseWith, readJsonBody, readQuery } from "../handler.js";
-const buildResponse = async (scope) => {
-    const snapshot = await getCmsContentStore().readExportSnapshot();
+/**
+ * Writes the bodies of an export as text in a format. The admin archive is a backup, so its texts are written to be imported again (`sync`: links by path,
+ * an unresolved link keeps its id, media by id) and resolve links to the current address of any entry. The public archive is for readers: only published
+ * entries, links as readers see them (an unpublished target is not a link), images by public URL.
+ */
+async function exportTexts(cms, snapshot, scope, format) {
+    const registry = await cms.formats();
+    const found = registry.get(format);
+    if (!found)
+        throw unknownFormatError(format, registry);
+    const purpose = scope === "public" ? "read" : "sync";
+    const refsOf = createExportRefs({ site: cms.site, store: cms.store, mediaStore: cms.mediaStore }, scope === "public" ? "published" : "working");
+    const bodies = new Map();
+    const write = async (key, doc, locale) => {
+        const { text } = await exportText(cms.site, registry, format, doc, {
+            locale,
+            purpose,
+            refs: await refsOf(doc, locale),
+        });
+        bodies.set(key, text);
+    };
+    for (const entry of snapshot.entries) {
+        if (scope === "public") {
+            if (entry.status === "published" && entry.published) {
+                await write(exportTextKey(entry.id, "published"), entry.published.doc, entry.locale);
+            }
+            continue;
+        }
+        await write(exportTextKey(entry.id, "working"), entry.working.doc, entry.locale);
+        if (entry.published)
+            await write(exportTextKey(entry.id, "published"), entry.published.doc, entry.locale);
+    }
+    if (scope === "admin") {
+        for (const template of snapshot.templates) {
+            await write(exportTextKey(template.id, "template"), template.doc, cms.site.DEFAULT_LOCALE);
+        }
+    }
+    return { format: { name: found.name, extension: found.extension }, bodies };
+}
+const buildResponse = async (cms, scope, format) => {
+    const snapshot = await cms.store().readExportSnapshot();
     const exportedAt = new Date();
-    const archive = buildExportArchive(snapshot, { scope, exportedAt });
+    const texts = format === undefined ? undefined : await exportTexts(cms, snapshot, scope, format);
+    const archive = buildExportArchive(snapshot, { site: cms.site, scope, exportedAt, ...(texts ? { texts } : {}) });
     return new Response(archive.zip, {
         status: 200,
         headers: {
@@ -19,7 +61,16 @@ const buildResponse = async (scope) => {
         },
     });
 };
-const scopeFrom = (value) => parseWith(exportScopeSchema, value, "Invalid export scope").scope;
-/** Admin export. GET is also open so it can be downloaded via a link. */
-export const GET = adminRoute(async ({ request }) => buildResponse(scopeFrom(readQuery(request))));
-export const POST = adminRoute(async ({ request }) => buildResponse(scopeFrom(await readJsonBody(request))));
+const optionsFrom = (value) => parseWith(exportScopeSchema, value, "Invalid export options");
+/**
+ * Admin export. GET is also open so it can be downloaded via a link. The archive holds the stored documents; `format=<name>` also writes every body as a text
+ * file in that format.
+ */
+export const GET = adminRoute(async ({ request, cms }) => {
+    const { scope, format } = optionsFrom(readQuery(request));
+    return buildResponse(cms, scope, format);
+});
+export const POST = adminRoute(async ({ request, cms }) => {
+    const { scope, format } = optionsFrom(await readJsonBody(request));
+    return buildResponse(cms, scope, format);
+});

@@ -1,9 +1,15 @@
+import type { CompleteMediaAssetInput, CreateMediaAssetInput, ListMediaParams, ListMediaResult, MediaAssetRecord } from "../../../core/store/types.js";
 import { type StoreContext } from "./context.js";
-import type { CompleteMediaAssetInput, CreateMediaAssetInput, ListMediaParams, ListMediaResult, MediaAssetRecord } from "./types.js";
 /** Media metadata. The file itself is handled by `MediaStore` (R2). */
 export declare function createMediaOps(ctx: StoreContext): {
     createMediaAsset: (input: CreateMediaAssetInput) => Promise<MediaAssetRecord>;
     getMediaAsset: (id: string) => Promise<MediaAssetRecord | null>;
+    findReadyMediaByStorageKeys: (params: {
+        keys: readonly string[];
+    }) => Promise<{
+        id: string;
+        storageKey: string;
+    }[]>;
     completeMediaAsset: (input: CompleteMediaAssetInput) => Promise<MediaAssetRecord>;
     failMediaAsset: (id: string) => Promise<void>;
     /** The library's default alt and caption. They are copied only on insert, so bodies already written do not change. */

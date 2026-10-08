@@ -27,7 +27,7 @@ export const sharedMessages = defineMessages("cms-admin.shared", {
         "folder.move": "Move",
         "folder.moveEmpty": "No folders to move to",
         "folder.root": "Top level",
-        "folder.defaultItemLabel": "posts",
+        "folder.defaultItemLabel": "items",
         "folder.parentFallback": "parent folder",
         "folder.rootName": "top level of '{itemLabel}'",
         "folder.to.named": "to {name}",
@@ -78,7 +78,7 @@ export const sharedMessages = defineMessages("cms-admin.shared", {
         "folder.move": "이동",
         "folder.moveEmpty": "옮길 수 있는 폴더가 없습니다",
         "folder.root": "최상위",
-        "folder.defaultItemLabel": "글",
+        "folder.defaultItemLabel": "항목",
         "folder.parentFallback": "상위 폴더",
         "folder.rootName": "'{itemLabel}' 최상위",
         // Folder names don't reveal whether they end in a final consonant, so `(으)로` is appended.

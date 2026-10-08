@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "./define.js";
+import { type BlockDefinition } from "./define.js";
 /**
  * Decides the body blocks the site uses: core blocks, then blocks added by plugins (block extensions), then the site config's `blocks`.
  *

@@ -1,11 +1,9 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { ANCHOR, COLLAPSE, charEffectByName, lineAt, lineRange, lineStarts, ruleMatches, } from "@monti-cms/core/code-block";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { Mapping } from "@tiptap/pm/transform";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import { CODE_ANCHOR_REF } from "../added-marks.js";
+import { codeAnchorRef } from "../added-marks.js";
 import { codeBlockMessages } from "./messages.js";
-const t = createTranslator(codeBlockMessages);
 /** Transaction meta that changes the plugin state (used by the link commands). */
 export const effectsMeta = (meta) => meta;
 export const codeEffectsKey = new PluginKey("cmsCodeEffects");
@@ -148,7 +146,7 @@ const RULE_CLASS = {
     Tooltip: "underline decoration-dotted underline-offset-4",
     fold: "rounded-sm outline-1 outline-cms-muted-foreground/50 outline-dashed -outline-offset-1",
 };
-function foldWidget(region) {
+function foldWidget(t, region) {
     return Decoration.widget(region.from, (view) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -168,7 +166,7 @@ function foldWidget(region) {
         return button;
     }, { side: 1, key: `fold:${region.key}:${region.hiddenLines}`, ignoreSelection: true, stopEvent: () => true });
 }
-function blockDecorations(node, pos, overrides) {
+function blockDecorations(t, node, pos, overrides) {
     if (node.attrs.rawMode)
         return [];
     const base = pos + 1;
@@ -192,7 +190,7 @@ function blockDecorations(node, pos, overrides) {
     }
     for (const region of visibleClosedRegions(foldRegions(node, pos, overrides))) {
         decorations.push(Decoration.inline(region.from, region.to, { class: "hidden" }));
-        decorations.push(foldWidget(region));
+        decorations.push(foldWidget(t, region));
     }
     return decorations;
 }
@@ -258,7 +256,9 @@ function remapLineEffects(oldNode, oldPos, newNode, newPos, mapping) {
     return { lineEffects, rules };
 }
 const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-export function createCodeEffectsPlugin() {
+export function createCodeEffectsPlugin(site) {
+    const t = site.createTranslator(codeBlockMessages);
+    const anchor = codeAnchorRef(site);
     return new Plugin({
         key: codeEffectsKey,
         state: {
@@ -346,16 +346,14 @@ export function createCodeEffectsPlugin() {
                 const anchors = anchorIds(state.doc);
                 state.doc.descendants((node, pos) => {
                     if (node.type.name === "codeBlock") {
-                        decorations.push(...blockDecorations(node, pos, overrides));
+                        decorations.push(...blockDecorations(t, node, pos, overrides));
                         if (plugin?.hoverRef)
                             decorations.push(...hoverDecorations(node, pos, plugin.hoverRef));
                         return false;
                     }
                     // A body link with no linked line is flagged with a red wavy underline.
-                    const ref = node.isText && CODE_ANCHOR_REF
-                        ? node.marks.find((mark) => mark.type.name === CODE_ANCHOR_REF?.mark)
-                        : undefined;
-                    if (ref && CODE_ANCHOR_REF && !anchors.has(String(ref.attrs[CODE_ANCHOR_REF.attribute])))
+                    const ref = node.isText && anchor ? node.marks.find((mark) => mark.type.name === anchor.mark) : undefined;
+                    if (ref && anchor && !anchors.has(String(ref.attrs[anchor.attribute])))
                         decorations.push(Decoration.inline(pos, pos + node.nodeSize, {
                             class: "decoration-wavy decoration-red-500",
                             title: t("anchor.missing"),

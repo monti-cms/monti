@@ -1,11 +1,17 @@
-import { aiActionOverrideSchema, resolveAction, } from "./action.js";
+import { aiActionOverrideSchema, EDITABLE_KEYS, resolveAction, validatorLabel, } from "./action.js";
 import { customDefinition } from "./custom.js";
 /** Reads the saved edited value. Drops values whose shape does not match (the definition changed and no longer fits). */
 export const readOverride = (value) => {
     const parsed = aiActionOverrideSchema.safeParse(value);
     return parsed.success ? parsed.data : {};
 };
-export const viewOf = (action, row, custom) => ({
+/** The editable values of a resolved action. */
+const editableOf = (action) => Object.fromEntries(EDITABLE_KEYS.map((name) => [name, structuredClone(action[name])]));
+/**
+ * `definition` is the code definition of the action (not given for a screen action): the defaults of its editable values go into the view.
+ */
+export const viewOf = (site, action, row, custom, definition) => ({
+    defaults: definition && !custom ? editableOf(resolveAction(action.key, definition)) : null,
     ...(custom ? { custom: custom.base } : {}),
     key: action.key,
     label: action.label,
@@ -30,7 +36,7 @@ export const viewOf = (action, row, custom) => ({
     maxCount: action.maxCount,
     checks: [...action.checks],
     definedChecks: [...action.definedChecks],
-    validatorLabels: Object.fromEntries(Object.values(action.validators).map((check) => [check.name, check.label])),
+    validatorLabels: Object.fromEntries(Object.values(action.validators).map((check) => [check.name, validatorLabel(check, site)])),
     send: [...action.send],
     version: row?.version ?? 0,
     updatedAt: row ? row.updatedAt.toISOString() : null,
@@ -39,4 +45,4 @@ export const viewOf = (action, row, custom) => ({
 /** Name (key) of a new, unsaved screen action. The server assigns a new name when saving. */
 export const NEW_CUSTOM_KEY = "custom_new";
 /** The shape of a new, unsaved screen action. The admin screen rebuilds it each time the basic info is chosen. */
-export const draftCustomView = (base) => viewOf(resolveAction(NEW_CUSTOM_KEY, customDefinition(base), {}), undefined, { base, override: {} });
+export const draftCustomView = (site, base) => viewOf(site, resolveAction(NEW_CUSTOM_KEY, customDefinition(site, base), {}), undefined, { base, override: {} });

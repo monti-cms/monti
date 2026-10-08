@@ -1,10 +1,27 @@
-import "../i18n/index.js";
 import type { BlockDefinition } from "./define.js";
-/** Body blocks the site uses (core blocks plus blocks added by plugins and site config). Read by the storage syntax table, validation, the editor, and `/meta`. */
-export declare const BLOCKS: readonly BlockDefinition[];
-/** Whether this block is used (installed). */
-export declare const isBlockActive: (name: string) => boolean;
-/** Added blocks (block extension plugins and the site config's `blocks`). The editor builds nodes from these definitions. */
-export declare const ADDED_BLOCKS: readonly BlockDefinition[];
-/** Added text marks (`syntax.kind: "text"`, `editor.view: "mark"`). Add order is the order overlapping marks are stored. */
-export declare const ADDED_MARK_BLOCKS: readonly BlockDefinition[];
+import { type BlockSources } from "./resolve.js";
+/** The body blocks of one site. */
+export type SiteBlocks = ReturnType<typeof createBlocks>;
+/**
+ * The blocks a site config uses: core blocks plus the blocks added by its plugins and its own `blocks`, and the tables built from them. The definitions are plain values:
+ * the labels (getters in the modules that define them) are read once, in the language the caller has set (`createSite` does it for the admin language).
+ */
+export declare function createBlocks(sources: BlockSources | undefined): {
+    BLOCKS: readonly BlockDefinition[];
+    isBlockActive: (name: string) => boolean;
+    ADDED_BLOCKS: readonly BlockDefinition[];
+    ADDED_MARK_BLOCKS: readonly BlockDefinition[];
+    MARK_ORDER: readonly string[];
+    sortMarks: <T extends {
+        type: string;
+    }>(marks: readonly T[]) => T[];
+    BLOCK_BY_NAME: ReadonlyMap<string, BlockDefinition>;
+    BLOCK_BY_COMPONENT: ReadonlyMap<string, BlockDefinition>;
+    directiveBlocks: () => BlockDefinition[];
+    FENCE_BLOCKS: ReadonlyMap<string, BlockDefinition>;
+    fenceBlockOf: (lang: unknown) => BlockDefinition | undefined;
+    childRules: () => {
+        block: BlockDefinition;
+        childComponents: string[];
+    }[];
+};

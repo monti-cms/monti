@@ -1,4 +1,4 @@
-/** Chart (` ```chart `). The chart syntax is read by `parseChartDsl`. The editor preview comes from the extension (a site can replace it); the public page is rendered by the site. */
+/** Chart (` ```chart `). The chart syntax is read by `parseChartDsl`, and its errors are warnings on save and publish (`validate`). The editor preview comes from the extension (a site can replace it); the public page is rendered by the site. */
 export declare const chartBlock: {
     readonly name: "chart";
     readonly label: string;
@@ -9,6 +9,7 @@ export declare const chartBlock: {
     };
     readonly component: "Chart";
     readonly attributes: {};
+    readonly validate: import("@monti-cms/core").BlockValidate;
     readonly editor: {
         readonly view: "node";
         readonly insertable: true;

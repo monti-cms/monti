@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { AlertOctagon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, Pie, PieChart, XAxis, YAxis, } from "recharts";
@@ -16,8 +16,8 @@ import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartToo
  * when the chart block extension's admin provider opens a preview via `fencePreviews.chart`. A site can replace it by registering its own
  * renderer under the same name. Colors are the series' theme variables (`--chart-1` to `--chart-5`).
  */
-const t = createTranslator(chartMessages);
 function ChartErrorCard({ errors }) {
+    const t = useTranslator(chartMessages);
     return (_jsx("div", { className: "not-prose my-6", children: _jsxs(Alert, { variant: "danger", children: [_jsx(AlertOctagon, {}), _jsx(AlertTitle, { children: t("error.title") }), _jsx(AlertDescription, { children: _jsx("ul", { className: "ml-4 list-disc space-y-1", children: errors.map((error) => (_jsx("li", { children: chartErrorLine(error, t) }, `${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`))) }) })] }) }));
 }
 const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart };

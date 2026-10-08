@@ -1,39 +1,99 @@
-import { withTransaction } from "./context.js";
-import { CmsError } from "./errors.js";
-import { MEDIA_COLUMNS, mapFolderRow, mapMediaRow, mapTemplateRow, TEMPLATE_COLUMNS, } from "./rows.js";
+import { sql } from "kysely";
+import { CmsError } from "../../../core/store/errors.js";
+import { readReferenceOccurrences } from "../../../core/types.js";
+import { withTrx } from "./context.js";
+import { MEDIA_COLUMN_NAMES, mapFolderRow, mapMediaRow, mapTemplateRow, readBodyDoc, readTranslation } from "./rows.js";
 /** Admin export. */
 export function createTransferOps(ctx) {
-    const { pool, qSchema } = ctx;
     return {
         /** Read-only snapshot for export. Entry order is fixed so the same data yields the same result. */
-        readExportSnapshot: async () => withTransaction(pool, async (client) => {
-            const entriesRes = await client.query(`SELECT e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
-					        e.status, e.version, e.folder_id, e.working_slug, e.created_at, e.updated_at,
-					        e.published_at,
-					        (SELECT slug FROM "${qSchema}".content_addresses WHERE entry_id = e.id AND type = 'current') AS current_slug
-					 FROM "${qSchema}".entries e
-					 ORDER BY e.collection ASC, e.id ASC`);
-            const bodiesRes = await client.query(`SELECT entry_id, state, metadata, mdx, schema_version, content_hash, updated_at, translation
-					 FROM "${qSchema}".entry_bodies ORDER BY entry_id ASC, state ASC`);
-            const referencesRes = await client.query(`SELECT entry_id, state, kind, target_id, is_stale, occurrences
-					 FROM "${qSchema}".entry_references ORDER BY entry_id ASC, state ASC, kind ASC, target_id ASC`);
-            const foldersRes = await client.query(`SELECT id, collection, parent_id, name, position, version FROM "${qSchema}".folders ORDER BY collection ASC, id ASC`);
-            const addressesRes = await client.query(`SELECT collection, locale, slug, entry_id, type FROM "${qSchema}".content_addresses
-						 ORDER BY collection ASC, locale ASC, slug ASC`);
-            const mediaRes = await client.query(`SELECT ${MEDIA_COLUMNS} FROM "${qSchema}".media_assets ORDER BY id ASC`);
-            const templatesRes = await client.query(`SELECT ${TEMPLATE_COLUMNS}
-					 FROM "${qSchema}".body_templates ORDER BY lower(name) ASC, id ASC`);
-            const preferencesRes = await client.query(`SELECT user_id, preferences, updated_at FROM "${qSchema}".user_preferences ORDER BY user_id ASC`);
+        readExportSnapshot: async () => withTrx(ctx, async (trx) => {
+            const entriesRes = await trx
+                .selectFrom("entries as e")
+                .select((eb) => [
+                "e.id",
+                "e.collection",
+                "e.locale",
+                sql `coalesce(e.translation_group_id, e.id)`.as("translation_group_id"),
+                "e.status",
+                "e.version",
+                "e.folder_id",
+                "e.working_slug",
+                "e.created_at",
+                "e.updated_at",
+                "e.published_at",
+                eb
+                    .selectFrom("content_addresses")
+                    .select("slug")
+                    .whereRef("entry_id", "=", "e.id")
+                    .where("type", "=", "current")
+                    .as("current_slug"),
+            ])
+                .orderBy("e.collection", "asc")
+                .orderBy("e.id", "asc")
+                .execute();
+            const bodiesRes = await trx
+                .selectFrom("entry_bodies")
+                .select([
+                "entry_id",
+                "state",
+                "metadata",
+                "doc",
+                "schema_version",
+                "content_hash",
+                "updated_at",
+                "translation",
+            ])
+                .orderBy("entry_id", "asc")
+                .orderBy("state", "asc")
+                .execute();
+            const referencesRes = await trx
+                .selectFrom("entry_references")
+                .select(["entry_id", "state", "kind", "target_id", "is_stale", "occurrences"])
+                .orderBy("entry_id", "asc")
+                .orderBy("state", "asc")
+                .orderBy("kind", "asc")
+                .orderBy("target_id", "asc")
+                .execute();
+            const foldersRes = await trx
+                .selectFrom("folders")
+                .select(["id", "collection", "parent_id", "name", "position", "version"])
+                .orderBy("collection", "asc")
+                .orderBy("id", "asc")
+                .execute();
+            const addressesRes = await trx
+                .selectFrom("content_addresses")
+                .select(["collection", "locale", "slug", "entry_id", "type"])
+                .orderBy("collection", "asc")
+                .orderBy("locale", "asc")
+                .orderBy("slug", "asc")
+                .execute();
+            const mediaRes = await trx
+                .selectFrom("media_assets")
+                .select(MEDIA_COLUMN_NAMES)
+                .orderBy("id", "asc")
+                .execute();
+            const templatesRes = await trx
+                .selectFrom("body_templates")
+                .select(["id", "name", "doc", "version", "created_at", "updated_at"])
+                .orderBy((eb) => eb.fn("lower", ["name"]), "asc")
+                .orderBy("id", "asc")
+                .execute();
+            const preferencesRes = await trx
+                .selectFrom("user_preferences")
+                .select(["user_id", "preferences", "updated_at"])
+                .orderBy("user_id", "asc")
+                .execute();
             const bodiesByEntry = new Map();
             const bodiesByEntryPublished = new Map();
-            for (const row of bodiesRes.rows) {
+            for (const row of bodiesRes) {
                 const body = {
                     metadata: row.metadata,
-                    mdx: row.mdx,
+                    doc: readBodyDoc(row.doc, null),
                     schemaVersion: row.schema_version,
                     contentHash: row.content_hash,
                     updatedAt: row.updated_at,
-                    translation: row.translation ?? null,
+                    translation: readTranslation(row.translation),
                 };
                 if (row.state === "working")
                     bodiesByEntry.set(row.entry_id, body);
@@ -41,7 +101,7 @@ export function createTransferOps(ctx) {
                     bodiesByEntryPublished.set(row.entry_id, body);
             }
             const entries = [];
-            for (const row of entriesRes.rows) {
+            for (const row of entriesRes) {
                 const working = bodiesByEntry.get(row.id);
                 if (!working) {
                     throw new CmsError(`Entry ${row.id} is missing working body`, "invalid_state");
@@ -65,25 +125,25 @@ export function createTransferOps(ctx) {
             }
             return {
                 entries,
-                references: referencesRes.rows.map((row) => ({
+                references: referencesRes.map((row) => ({
                     entryId: row.entry_id,
                     state: row.state,
                     kind: row.kind,
                     targetId: row.target_id,
                     isStale: row.is_stale,
-                    occurrences: row.occurrences,
+                    occurrences: readReferenceOccurrences(row.occurrences),
                 })),
-                folders: foldersRes.rows.map(mapFolderRow),
-                addresses: addressesRes.rows.map((row) => ({
+                folders: foldersRes.map(mapFolderRow),
+                addresses: addressesRes.map((row) => ({
                     collection: row.collection,
                     locale: row.locale,
                     slug: row.slug,
                     entryId: row.entry_id,
                     type: row.type,
                 })),
-                media: mediaRes.rows.map(mapMediaRow),
-                templates: templatesRes.rows.map(mapTemplateRow),
-                preferences: preferencesRes.rows.map((row) => ({
+                media: mediaRes.map(mapMediaRow),
+                templates: templatesRes.map(mapTemplateRow),
+                preferences: preferencesRes.map((row) => ({
                     userId: row.user_id,
                     preferences: row.preferences,
                     updatedAt: row.updated_at,

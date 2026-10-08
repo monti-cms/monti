@@ -1,10 +1,9 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
 import { cn, Input, Textarea } from "@monti-cms/admin/kit";
-import { createTranslator, DEFAULT_LOCALE, isUuid, LOCALES, localeLabel, PREFIXED_LOCALES, } from "@monti-cms/core/client";
+import { isUuid, useSite, useTranslator } from "@monti-cms/core/client";
 import { aiCommonMessages } from "./ai-common.messages.js";
 import { OptionSelect } from "./custom-editor.js";
-const t = createTranslator(aiCommonMessages);
 /** Fields shown in the test: inputs to send (including required ones) and language inputs (which go into the instructions). The judge mode does not read images. */
 export function sampleFields(feature, send) {
     return Object.entries(feature.input).flatMap(([name, input]) => {
@@ -16,13 +15,13 @@ export function sampleFields(feature, send) {
     });
 }
 /** Initial value of a field. The first language input is the default language; the next language input is the first non-default language (source -> target). */
-export function sampleDefaults(feature) {
+export function sampleDefaults(site, feature) {
     const defaults = {};
     let locales = 0;
     for (const [name, input] of Object.entries(feature.input)) {
         if (input.kind !== "locale")
             continue;
-        defaults[name] = locales++ === 0 ? DEFAULT_LOCALE : (PREFIXED_LOCALES[0] ?? DEFAULT_LOCALE);
+        defaults[name] = locales++ === 0 ? site.DEFAULT_LOCALE : (site.PREFIXED_LOCALES[0] ?? site.DEFAULT_LOCALE);
     }
     return defaults;
 }
@@ -58,9 +57,11 @@ export function sampleRun(feature, fields, values, defaults = {}) {
     }
     return { input, env };
 }
-const LOCALE_OPTIONS = LOCALES.map((locale) => ({ value: locale, label: localeLabel(locale) }));
 /** Test fields. A field's name (aria-label, placeholder) is the input's label. */
 export function SampleInputs({ fields, values, defaults, onChange, }) {
+    const site = useSite();
+    const t = useTranslator(aiCommonMessages);
+    const localeOptions = site.LOCALES.map((locale) => ({ value: locale, label: site.localeLabel(locale) }));
     return fields.map((field) => {
         const value = sampleValue(values, defaults, field.name);
         const common = {
@@ -70,7 +71,7 @@ export function SampleInputs({ fields, values, defaults, onChange, }) {
         };
         switch (field.kind) {
             case "locale":
-                return (_jsx(OptionSelect, { "aria-label": field.label, value: value, options: LOCALE_OPTIONS, onChange: (next) => onChange(field.name, next), className: "w-auto self-start bg-cms-background" }, field.name));
+                return (_jsx(OptionSelect, { "aria-label": field.label, value: value, options: localeOptions, onChange: (next) => onChange(field.name, next), className: "w-auto self-start bg-cms-background" }, field.name));
             case "image":
             case "value":
                 return (_jsx(Input, { ...common, onChange: (event) => onChange(field.name, event.target.value), className: cn("h-8 bg-cms-background text-xs md:text-xs", field.kind === "image" && "font-mono") }, field.name));

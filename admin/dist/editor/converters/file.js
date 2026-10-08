@@ -1,7 +1,7 @@
-/** Attachment file card (`::file{mediaId label}`). An empty `label` is not saved. */
+/** Attachment file card (the `file` node: `mediaId` and `label`). An empty `label` is not saved. */
 export const fileConverter = {
     name: "file",
-    cmsTypes: ["File"],
+    cmsTypes: ["file"],
     tiptapTypes: ["cmsFile"],
     isMappable: (node) => typeof node.attrs?.mediaId === "string" && node.attrs.mediaId !== "",
     toTiptap(node) {
@@ -12,12 +12,11 @@ export const fileConverter = {
         };
     },
     toCms(node) {
-        const record = {};
+        const attrs = {};
         if (typeof node.attrs?.mediaId === "string")
-            record.mediaId = node.attrs.mediaId;
+            attrs.mediaId = node.attrs.mediaId;
         if (typeof node.attrs?.label === "string" && node.attrs.label.trim())
-            record.label = node.attrs.label;
-        const attributes = Object.entries(record).map(([name, value]) => ({ name, value }));
-        return [{ type: "File", attrs: { ...record, name: "File", attributes } }];
+            attrs.label = node.attrs.label;
+        return [{ type: "file", attrs }];
     },
 };

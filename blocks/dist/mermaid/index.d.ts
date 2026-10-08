@@ -10,11 +10,32 @@ export { mermaidBlock } from "./definition.js";
  * replace it with `fencePreviews.mermaid`. The public page is drawn by this extension's default `Mermaid` component, which a site can override (the code is the `source` attribute,
  * `remarkFenceBlocksToMdx`).
  */
-export declare const mermaid: () => import("@monti-cms/core").CmsPlugin<"mermaid", {}> & {
+export declare const mermaid: () => import("@monti-cms/core").CmsPlugin<"mermaid", {}, readonly [{
+    readonly name: "mermaid";
+    readonly label: string;
+    readonly description: string;
+    readonly syntax: {
+        readonly kind: "fence";
+        readonly lang: "mermaid";
+    };
+    readonly component: "Mermaid";
+    readonly attributes: {};
+    readonly validate: import("@monti-cms/core").BlockValidate;
+    readonly editor: {
+        readonly view: "node";
+        readonly insertable: true;
+        readonly keywords: string[];
+        readonly icon: "workflow";
+        readonly placeholder: string;
+        readonly insert: {
+            readonly code: "graph TD\n  A --> B";
+        };
+    };
+}]> & {
     readonly contributes?: {
         readonly ai: {
             actions: {
-                diagramDraft: {
+                diagramDraft: (site: import("./ai.js").AiTextSite) => {
                     readonly label: string;
                     readonly input: {
                         readonly title: {
@@ -36,7 +57,7 @@ export declare const mermaid: () => import("@monti-cms/core").CmsPlugin<"mermaid
                         readonly slot: "insert";
                     }];
                 };
-                diagramEdit: {
+                diagramEdit: (site: import("./ai.js").AiTextSite) => {
                     readonly label: string;
                     readonly input: {
                         readonly block: {

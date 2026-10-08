@@ -1,39 +1,46 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { createTranslator } from "@monti-cms/core/client";
-import { getCmsSecret } from "@monti-cms/core/plugin/server";
 import { AiError } from "./errors.js";
+import { AI_PLUGIN_NAME } from "./plugin-name.js";
 import { providerMessages } from "./provider.messages.js";
-const t = createTranslator(providerMessages);
+const noSecretMessage = (site) => site.createTranslator(providerMessages)("noSecret");
 /**
- * Encryption of AI service keys. Keys are encrypted with AES-256-GCM using a key derived from the server config's `secret` and stored in the DB.
- * Changing `secret` makes stored keys undecryptable, so they must be entered again on the AI screen.
+ * Encryption of AI service keys. The CMS instance derives this plugin's own key from the config's one secret (`MONTI_SECRET`) and the plugin name
+ * (`cms.secrets("ai")`), so the plugin never sees the master secret. Keys are stored as `mk1:<key id>:<iv>:<tag>:<body>`.
+ *
+ * Keys stored before per-plugin keys (`v1:<iv>:<tag>:<body>`, AES-256-GCM under `sha256("cms-ai-key:" + secret)`) still decrypt through the legacy
+ * format below, with the current secret or a previous one. They are encrypted again in the current format the next time the AI connections are
+ * saved, and on `monti migrate`, so no manual step is needed.
  */
-const PREFIX = "v1";
-function encryptionKey() {
-    const secret = getCmsSecret();
-    if (!secret)
-        throw new AiError("ai_unavailable", t("noSecret"));
-    return createHash("sha256").update(`cms-ai-key:${secret}`).digest();
+export const LEGACY_KEY_FORMAT = { prefix: "v1", domain: "cms-ai-key:" };
+/** The secrets API of the AI plugin for one CMS instance. */
+export const aiSecrets = (cms) => cms.secrets(AI_PLUGIN_NAME, { legacy: LEGACY_KEY_FORMAT });
+/** Stand-in for an instance without secrets (a store built without `secrets`): nothing can be stored or read. */
+export const noSecretsOf = (site) => ({
+    available: false,
+    encrypt: () => {
+        throw new AiError("ai_unavailable", noSecretMessage(site));
+    },
+    decrypt: () => null,
+    isCurrent: () => false,
+    deriveKey: () => {
+        throw new AiError("ai_unavailable", noSecretMessage(site));
+    },
+});
+export function encryptSecret(site, plain, secrets) {
+    if (!secrets.available)
+        throw new AiError("ai_unavailable", noSecretMessage(site));
+    return secrets.encrypt(plain);
 }
-export function encryptSecret(plain) {
-    const iv = randomBytes(12);
-    const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
-    const body = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
-    return [PREFIX, iv.toString("base64"), cipher.getAuthTag().toString("base64"), body.toString("base64")].join(":");
-}
-/** `null` if it cannot be decrypted (`secret` changed or the value is corrupted). */
-export function decryptSecret(stored) {
-    const [prefix, iv, tag, body] = stored.split(":");
-    if (prefix !== PREFIX || !iv || !tag || !body)
-        return null;
-    try {
-        const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(iv, "base64"));
-        decipher.setAuthTag(Buffer.from(tag, "base64"));
-        return Buffer.concat([decipher.update(Buffer.from(body, "base64")), decipher.final()]).toString("utf8");
-    }
-    catch {
-        return null;
-    }
+/** `null` if it cannot be decrypted (`secret` changed without listing the old one in `previousSecrets`, or the value is corrupted). */
+export const decryptSecret = (stored, secrets) => secrets.decrypt(stored);
+/**
+ * The stored key encrypted again with the current secret, if it is in the legacy format or was made with a previous secret.
+ * The value as it is when it is current already or cannot be decrypted (nothing is lost by leaving it).
+ */
+export function refreshSecret(stored, secrets) {
+    if (!secrets.available || secrets.isCurrent(stored))
+        return stored;
+    const plain = secrets.decrypt(stored);
+    return plain === null ? stored : secrets.encrypt(plain);
 }
 /** The last four characters of the key, shown on screen. */
 export const keyHint = (plain) => (plain ? `…${plain.slice(-4)}` : null);

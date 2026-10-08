@@ -1,3 +1,4 @@
+import type { BodyAllowed } from "./allowed.js";
 import type { BacklinkField, Field, SlugField, ValueField, ValueOf } from "./fields.js";
 /**
  * Collection kind.
@@ -6,22 +7,13 @@ import type { BacklinkField, Field, SlugField, ValueField, ValueOf } from "./fie
  * - `item`: saving in a small form applies straight to the current (public) value. There is no publish, archive or translation copy (e.g. tags).
  */
 export type CollectionKind = "document" | "item";
-/**
- * Legacy name (`workflow`). `publish` is `document` and `record` is `item`.
- * @deprecated Use `kind`. `defineCollection` still accepts it and converts it to `kind`.
- */
-export type CollectionWorkflow = "publish" | "record";
-/** Kind in the legacy name (`workflow`). */
-export type KindOfWorkflow<W extends CollectionWorkflow> = W extends "record" ? "item" : "document";
-/** Converts the legacy name (`workflow`) into the kind (`kind`). */
-export declare const kindOfWorkflow: (workflow: CollectionWorkflow) => CollectionKind;
 /** System columns of the list. They are values of the content itself, not fields. */
 export declare const SYSTEM_LIST_COLUMNS: readonly ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"];
 export type SystemListColumn = (typeof SYSTEM_LIST_COLUMNS)[number];
 /**
  * Checks whether a name can be used by the list columns (`list.columns`). Only system columns, stored field names (including fields dependent on a conditional field),
  * address field names, and `slug` when an address field exists are allowed. It is an error if the name is unknown, the field is not stored (view or reverse relation),
- * or the same name is written twice. Called by `defineConfig`.
+ * or the same name is written twice. Called by `defineSite`.
  */
 export declare function validateListColumns(collection: string, schema: Pick<CollectionSchema, "fields"> & {
     readonly list?: {
@@ -46,7 +38,12 @@ export interface CollectionSchema<Fields extends Readonly<Record<string, Field>>
     /** Whether it has a body (MDX). If absent, only `document` collections have a body. */
     readonly body: boolean;
     /**
-     * Field name → definition. A `title` text field (`fields.text`) is required (`defineConfig` checks it). The list, search,
+     * The blocks, marks and heading levels the body allows (the object form of `body`: `body: { blocks: [...], marks: [...], headings: [...] }`).
+     * Absent: everything is allowed. A body that already holds something not listed keeps it (see `schema/allowed.ts`).
+     */
+    readonly allowed?: BodyAllowed;
+    /**
+     * Field name → definition. A `title` text field (`fields.text`) is required (`defineSite` checks it). The list, search,
      * relation picker, body links and the edit screen's title box use this field.
      */
     readonly fields: Fields;
@@ -71,16 +68,17 @@ export interface CollectionSchema<Fields extends Readonly<Record<string, Field>>
      */
     readonly list?: {
         /**
-         * Columns the list shows and their order. Field names or system columns. Unknown names are reported as errors by `defineConfig`.
+         * Columns the list shows and their order. Field names or system columns. Unknown names are reported as errors by `defineSite`.
          * Text (`text`), select (`select`) and relation fields are drawn as default cells, and an admin extension (`listCells`) can change the cell look.
          */
         readonly columns: readonly string[];
     };
 }
 /** Value `defineCollection` accepts (without the kind). Types check that names in layout and list columns are real fields. */
-type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<CollectionSchema<Fields>, "kind" | "body" | "layout" | "list" | "path"> & {
+type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<CollectionSchema<Fields>, "kind" | "body" | "allowed" | "layout" | "list" | "path"> & {
     path?: `/${string}:slug${string}`;
-    body?: boolean;
+    /** `true`/`false`, or the object form that limits the blocks, marks and heading levels the body allows. */
+    body?: boolean | BodyAllowed;
     layout?: readonly LayoutGroup<Extract<keyof Fields, string>>[];
     list?: {
         columns: readonly (Extract<keyof Fields, string> | SystemListColumn)[];
@@ -89,21 +87,16 @@ type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<Coll
 /** Defines a collection. Types check that names in layout and list columns are real fields. */
 export declare function defineCollection<const Fields extends Readonly<Record<string, Field>>, const Kind extends CollectionKind>(schema: CollectionInput<Fields> & {
     kind: Kind;
-    workflow?: undefined;
 }): CollectionSchema<Fields, Kind>;
-/** @deprecated Use `kind` instead of `workflow` (`publish` → `document`, `record` → `item`). */
-export declare function defineCollection<const Fields extends Readonly<Record<string, Field>>, const Workflow extends CollectionWorkflow>(schema: CollectionInput<Fields> & {
-    workflow: Workflow;
-    kind?: undefined;
-}): CollectionSchema<Fields, KindOfWorkflow<Workflow>>;
 /**
- * Normalizes a collection definition: converts the legacy name (`workflow`) into the kind (`kind`) and fills the body default (only `document` has a body).
- * Called by `defineCollection` and `defineConfig` (an already normalized definition stays as is).
+ * Normalizes a collection definition: checks the kind and fills the body default (only `document` has a body).
+ * Called by `defineCollection` and `defineSite` (an already normalized definition stays as is).
+ * The retired `workflow` option (`"publish"` / `"record"`) is rejected with the `kind` to use instead.
  */
-export declare function normalizeCollection(schema: Omit<CollectionSchema, "kind" | "body"> & {
+export declare function normalizeCollection(schema: Omit<CollectionSchema, "kind" | "body" | "allowed"> & {
     readonly kind?: CollectionKind;
-    readonly workflow?: CollectionWorkflow;
-    readonly body?: boolean;
+    readonly body?: boolean | BodyAllowed;
+    readonly allowed?: BodyAllowed;
 }): CollectionSchema;
 type Stored<Fields> = {
     [K in keyof Fields as Fields[K] extends SlugField | BacklinkField ? never : K]: Fields[K];
@@ -125,6 +118,22 @@ type FieldValue<F> = F extends {
  */
 export type MetadataOf<S extends CollectionSchema> = {
     -readonly [K in keyof Stored<S["fields"]>]?: FieldValue<S["fields"][K]>;
+} & {
+    -readonly [K in keyof UnionToIntersection<Nested<S["fields"]>>]?: ValueOf<UnionToIntersection<Nested<S["fields"]>>[K]>;
+};
+type RequiredKeys<Fields> = {
+    [K in keyof Stored<Fields>]: Stored<Fields>[K] extends {
+        readonly required: true;
+    } ? K : never;
+}[keyof Stored<Fields>];
+/**
+ * Metadata type of a published entry, built from a collection definition. Publishing needs every `required` field, so those keys are not optional here
+ * (`post.metadata.title` is a `string`); the rest are optional as in {@link MetadataOf}, and so are the fields that depend on a conditional field.
+ */
+export type PublishedMetadataOf<S extends CollectionSchema> = {
+    -readonly [K in RequiredKeys<S["fields"]>]: FieldValue<S["fields"][K]>;
+} & {
+    -readonly [K in Exclude<keyof Stored<S["fields"]>, RequiredKeys<S["fields"]>>]?: FieldValue<S["fields"][K]>;
 } & {
     -readonly [K in keyof UnionToIntersection<Nested<S["fields"]>>]?: ValueOf<UnionToIntersection<Nested<S["fields"]>>[K]>;
 };

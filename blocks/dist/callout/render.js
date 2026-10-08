@@ -1,4 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Children } from "react";
 import { blockLabels } from "../shared/labels.js";
 const VARIANTS = ["note", "tip", "info", "warning", "danger"];
 const titleOf = (variant, labels) => ({
@@ -11,10 +12,14 @@ const titleOf = (variant, labels) => ({
 /** Callout. Wraps the title and body in a box with an accent color per `variant`. An unknown variant falls back to note; a missing title falls back to the variant name. */
 export function Callout({ variant, title, labels = blockLabels(), children, }) {
     const kind = VARIANTS.find((item) => item === variant) ?? "note";
-    return (_jsxs("div", { className: "cms-block-callout", "data-variant": kind, role: "note", children: [_jsx("div", { className: "cms-block-callout-title", children: title?.trim() || titleOf(kind, labels) }), children ? _jsx("div", { className: "cms-block-callout-body", children: children }) : null] }));
+    return (_jsxs("div", { className: "cms-block-callout", "data-variant": kind, role: "note", children: [_jsx("div", { className: "cms-block-callout-title", children: title?.trim() || titleOf(kind, labels) }), Children.count(children) > 0 ? _jsx("div", { className: "cms-block-callout-body", children: children }) : null] }));
 }
-/** Public component for the callout (called by `@monti-cms/core/render`). */
-export default ({ locale }) => {
+/** Public components for the callout in the JSON renderer (`renderDocument`): the block `callout`, with its attributes as props. */
+export const documentComponents = ({ locale }) => {
     const labels = blockLabels(locale);
-    return { Callout: (props) => _jsx(Callout, { ...props, labels: labels }) };
+    return {
+        blocks: {
+            callout: ({ variant, title, children }) => (_jsx(Callout, { variant: variant, title: title, labels: labels, children: children })),
+        },
+    };
 };

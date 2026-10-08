@@ -1,13 +1,13 @@
+import { type Site } from "@monti-cms/core/client";
 import { Node } from "@tiptap/core";
-import { CmsCodeBlock } from "./code-block/index.js";
 /**
- * A read-only box that preserves CMS blocks not in the Tiptap schema (math, chart, callout, tabs, mermaid, merged tables, etc.).
+ * A read-only box that preserves CMS blocks not in the Tiptap schema (a block without an edit view, a merged table with block content, a body that could
+ * not be read, etc.).
  *
- * `attrs.source` holds the stored string (MDX) of that subtree. On save, the box is parsed
- * again and spliced back in, so the content never changes (nodes are never silently deleted).
- * As an `atom`, the inside of the box is not editable; it can only be selected and deleted as a whole.
+ * `attrs.node` holds the stored node of that subtree as JSON. On save, the box is read again and spliced back in, so the content never changes
+ * (nodes are never silently deleted). As an `atom`, the inside of the box is not editable; it can only be selected and deleted as a whole.
  */
-export declare const CmsOpaqueBlock: Node<any, any>;
+export declare const cmsOpaqueBlock: (site: Pick<Site, "createTranslator">) => Node<any, any>;
 /**
  * Inline and alignment extensions for the new representation contract.
  *
@@ -21,17 +21,12 @@ export declare const CmsTextAlign: import("@tiptap/core").Extension<import("@tip
 export declare const CmsSuperscript: import("@tiptap/core").Mark<import("@tiptap/extension-superscript").SuperscriptExtensionOptions, any>;
 export declare const CmsSubscript: import("@tiptap/core").Mark<import("@tiptap/extension-subscript").SubscriptExtensionOptions, any>;
 /**
- * Carries the `meta` of the code fence info string (` ```ts title="..." `) and annotations (underline, tooltip).
- * StarterKit's code block has only `language`, so `meta` would silently disappear,
- * so this extension is used with StarterKit's turned off (`codeBlock: false`).
- */
-export { CmsCodeBlock };
-/**
  * Table (basic table with row/column add/delete, cell merging, column widths).
- * A table with adjusted column widths is stored as a `::::table{widths="..."}` directive.
+ * A table with adjusted column widths is stored as a `<Table widths="...">` element (or a table directive when the site uses the directive extension).
  * Dragging within `handleWidth` (px) on either side of a column boundary adjusts the width. The default 5px was hard to grab, so it is widened.
  */
 export declare const CmsTable: Node<import("@tiptap/extension-table").TableOptions, any>;
 /** `- [ ]` and `- [x]` checklists. */
 export declare const CmsTaskItem: Node<import("@tiptap/extension-list").TaskItemOptions, any>;
-export declare const CMS_SCHEMA_EXTENSIONS: (import("@tiptap/core").Extension<import("@tiptap/extension-text-align").TextAlignOptions, any> | import("@tiptap/core").Mark<any, any> | import("@tiptap/core").Mark<import("@tiptap/extension-subscript").SubscriptExtensionOptions, any> | Node<any, any> | Node<import("@tiptap/extension-code-block").CodeBlockOptions, any> | Node<import("@tiptap/extension-table").TableCellOptions, any> | Node<import("@tiptap/extension-table").TableOptions, any> | Node<import("@tiptap/extension-list").TaskItemOptions, any> | Node<import("@tiptap/extension-list").TaskListOptions, any>)[];
+/** The schema extensions of a site. The same list for the same site, so an editor rebuilt for it keeps its extensions. */
+export declare const cmsSchemaExtensions: (site: Site) => (import("@tiptap/core").Extension<any, any> | import("@tiptap/core").Extension<import("@tiptap/extension-text-align").TextAlignOptions, any> | import("@tiptap/core").Mark<any, any> | import("@tiptap/core").Mark<import("@tiptap/extension-subscript").SubscriptExtensionOptions, any> | Node<any, any> | Node<import("@tiptap/extension-code-block").CodeBlockOptions, any> | Node<import("@tiptap/extension-table").TableCellOptions, any> | Node<import("@tiptap/extension-table").TableOptions, any> | Node<import("@tiptap/extension-list").TaskItemOptions, any> | Node<import("@tiptap/extension-list").TaskListOptions, any>)[];

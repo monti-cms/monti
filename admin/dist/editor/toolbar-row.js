@@ -1,13 +1,12 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Check, MoreHorizontal } from "lucide-react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "../ui/dropdown-menu.js";
 import { IconButton } from "../ui/icon-button.js";
 import { editorMessages } from "./messages.js";
 import { fitSlots, layoutKeys } from "./toolbar-fit.js";
-const t = createTranslator(editorMessages);
 const isDivider = (entry) => "divider" in entry;
 /** Gap between toolbar items (gap-1) and the width of the "More" button (size-8). */
 const GAP = 4;
@@ -33,6 +32,7 @@ export function ToolbarMenuGroup({ editor, label, items }) {
     return (_jsx(ToolbarMenuSection, { label: label, children: items.map((item) => (_jsx(ToolbarMenuItem, { editor: editor, item: item }, item.label))) }));
 }
 function OverflowMenu({ editor, children }) {
+    const t = useTranslator(editorMessages);
     return (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("toolbarRow.more"), side: "bottom", className: "shrink-0", disabled: !editor.isEditable, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(MoreHorizontal, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "end", className: "min-w-44", children: children })] }));
 }
 const sameKeys = (a, b) => a.length === b.length && a.every((key, i) => key === b[i]);

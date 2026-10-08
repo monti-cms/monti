@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
 import { useState } from "react";
-import { computeImageTransform, intrinsicDisplayWidth } from "../../mdx/image-transform.js";
+import { computeImageTransform, intrinsicDisplayWidth } from "../../doc/image-transform.js";
 /**
  * Body image (browser). Crop and rotate need the original aspect ratio, so they are fitted in the browser. The slot is reserved first with the original size the server knows.
  * If it cannot be read, an empty slot and `unavailableLabel` are shown.

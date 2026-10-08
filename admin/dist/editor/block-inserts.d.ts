@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import type { Editor, Range } from "@tiptap/core";
 export declare const OPEN_IMAGE_DIALOG_EVENT = "cms:open-image-dialog";
 /** Opens the attachment picker (slash menu "File"). */
@@ -9,4 +10,4 @@ export type BlockInsertAction = (editor: Editor, range: Range) => void;
  * Among blocks with `editor.insertable === true` and `editor.view === 'node'`, those with an action registered here
  * appear in the slash menu automatically. Insertion of added blocks is built from the definition's `editor.insert`.
  */
-export declare const BLOCK_INSERT_ACTIONS: Record<string, BlockInsertAction>;
+export declare const blockInsertActions: (site: Pick<Site, "ADDED_BLOCKS">) => Record<string, BlockInsertAction>;

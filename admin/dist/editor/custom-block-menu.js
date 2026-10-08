@@ -1,18 +1,25 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Puzzle } from "lucide-react";
+import { useMemo } from "react";
 import { useIconByName } from "../screens/shared/collection-icon.js";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu.js";
 import { IconButton } from "../ui/icon-button.js";
+import { allowanceOfState } from "./allowed-extension.js";
 import { editorMessages } from "./messages.js";
-import { buildBlockSlashCommands } from "./slash-command.js";
-const t = createTranslator(editorMessages);
-const CUSTOM_BLOCKS = buildBlockSlashCommands();
+import { buildBlockSlashCommands, isOffered } from "./slash-command.js";
+/** The components the body's allowed list lets a writer insert (all of them when it has no list). */
+export const offeredBlocks = (site, editor) => {
+    const allowance = allowanceOfState(editor.state);
+    return buildBlockSlashCommands(site).filter((item) => isOffered(item, allowance));
+};
 /** Custom component list. Shared by the component menu and the toolbar "More" menu. Like the slash menu, it shows a description under each name. */
 export function CustomBlockMenuItems({ editor }) {
+    const site = useSite();
     const iconByName = useIconByName();
-    return CUSTOM_BLOCKS.map((block) => {
+    const customBlocks = useMemo(() => offeredBlocks(site, editor), [site, editor]);
+    return customBlocks.map((block) => {
         // The block definition's icon (`editor.icon`). Falls back to a puzzle icon.
         const Icon = (typeof block.icon === "string" ? iconByName(block.icon) : block.icon) ?? Puzzle;
         return (_jsxs(DropdownMenuItem, { disabled: !editor.isEditable, 
@@ -25,5 +32,6 @@ export function CustomBlockMenuItems({ editor }) {
 }
 /** Inserts a custom component (block) at the cursor from the toolbar. */
 export function CustomBlockMenu({ editor }) {
+    const t = useTranslator(editorMessages);
     return (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("customBlockMenu.label"), side: "bottom", disabled: !editor.isEditable, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(Puzzle, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "start", className: "w-64", children: _jsx(CustomBlockMenuItems, { editor: editor }) })] }));
 }

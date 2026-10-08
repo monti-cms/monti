@@ -3,12 +3,14 @@
 English | [한국어](README.ko.md)
 
 The AI plugin for `@monti-cms/core`. It adds named AI actions (generate and decide), AI buttons next to fields, AI translation in the
-translation editor, the admin AI screen (`<admin path>/ai`, `/admin/ai` by default), the AI API (`/api/cms/v1/ai/*`), and the AI tables
-(`ai_action_overrides`, `ai_settings`). If you don't register the plugin, none of these exist.
+translation editor, the admin AI screen (`<admin path>/ai`, `/admin/ai` by default), the AI API (`/api/cms/v1/ai/*`), and the AI data in the plugin storage
+(`cms.storage("ai")`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
+
+The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `aiPlugin()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
 
 ## Registration
 
-Add `aiPlugin()` to `plugins` in the site config. Built-in actions turn on by themselves when there is somewhere to attach them, and
+Add `aiPlugin()` to `plugins` in `monti.config.ts`. Built-in actions turn on by themselves when there is somewhere to attach them, and
 actions added by other plugins (block extensions, SEO extension, and so on) attach by themselves too. List an action by name (key) in
 `actions` only to change or turn it off.
 
@@ -71,14 +73,21 @@ and `seoDescription` attach this way.
 - Attach points are fixed places in the admin UI (next to a field, body image, media, code block, translation, selection menu, insert
   menu, body block). The place must be able to fill the required inputs.
 - The admin AI screen only edits enabled, request intake, connection, model, inputs to send, instruction, threshold, and check values.
-  Only the edited values are kept in the DB (`ai_action_overrides`). "Reset to default" only resets the input fields; saving is a
+  Only the edited values are kept in the DB (the `action-overrides` collection of the plugin storage). "Reset to default" only resets the input fields; saving is a
   separate click.
 - Running: `POST /api/cms/v1/ai/run { action, input | inputs, env }`. In the admin UI, call by name, as in
   `useAiAction("summary").run({ title, body })` or
-  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />` (`@monti-cms/ai/admin`). The name, input, and result
-  types come from the config.
+  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />` (`@monti-cms/ai/admin`). Called as they are, any name is
+  accepted; `const { useAiAction, AiButton } = aiClient<typeof config>()` gives both with the name, input, and result types of the site config (an unknown name is a type
+  error).
 - The decide engine (`engine: "decide"`, System One) gets a probability for each choice (`choices`) and returns only those at or above
   the threshold as candidates.
+
+### The model reads and writes MDX
+
+The model reads and writes a text format, and MDX is that format. The admin holds the body as a stored document, so the AI buttons work through the `mdx` format registered in the admin
+(`useFormat("mdx")`, `@monti-cms/admin`): the body sent to the model, the selected text and the block to fix are written with the format's `export`, and the MDX the model answers with is read with its
+`import` (a text that does not read is kept whole in a box instead of being half converted). The format comes from `mdx()` of `@monti-cms/mdx`, which registers it in the admin. Without it, the actions that work on the body are not offered.
 
 ## Result checks
 
@@ -99,7 +108,7 @@ and `seoDescription` attach this way.
   `regexRuns(input, { name?, scope? })` (runs the regex, for code block regexes; without a rule name or scope it folds the whole
   document), and `sameStructure(input)` (keeps the structure, for translation). The block extension exports `mermaidSyntax` and
   `chartSyntax` (`@monti-cms/blocks/mermaid/ai`, `/chart/ai`).
-- The site config loads check files, so core modules that read the site config (code block and MDX reading) must be loaded with
+- The site config loads check files, so core modules that read the site config (code block reading and the MDX format) must be loaded with
   `await import()` inside `run` (importing them at the top breaks the order in which the config is read).
 
 ```ts
@@ -127,6 +136,28 @@ const unusedAddress = defineValidator({
 });
 ```
 
+## Stored service keys
+
+The service keys entered on the AI screen are kept encrypted in the `settings` collection of the plugin storage. The plugin never sees the app's one secret (`MONTI_SECRET`): the CMS instance derives
+a key for the plugin from it and the plugin name (`cms.secrets("ai")`, HKDF-SHA256, `monti:plugin:ai:v1`), so the key cannot be used for another plugin's data
+and other plugins cannot read these keys. See "Plugin secrets" in the core README. Stored values look like `mk1:<key id>:<iv>:<tag>:<body>`.
+
+- **Upgrade from before per-plugin keys**: keys stored by earlier versions (`v1:<iv>:<tag>:<body>`, encrypted under `sha256("cms-ai-key:" + secret)`) keep
+  working with no step from you; set `MONTI_SECRET` to the value of the old `CMS_SECRET` (or list that value in `previousSecrets`). The plugin reads them with the old derivation and re-encrypts them in the new format in two
+  places: on the next save of any AI connection (all stored keys are re-encrypted together), and on `monti migrate` (a one-time upgrade of whatever is left;
+  running it again changes nothing). Nothing needs to be entered again.
+- **Changing the secret**: put the new value in `MONTI_SECRET` (or `secret` of `defineConfig`) and keep the old one in `previousSecrets` in `monti.config.ts`. Stored keys (new or old format) still
+  decrypt with the old secret, and `monti migrate` or the next save re-encrypts them with the new one. Drop the old value from `previousSecrets` after that.
+  Without `previousSecrets`, keys made under the old secret can no longer be read and have to be entered again.
+
+## Data moved to the plugin storage
+
+The plugin used to create its own tables (`ai_action_overrides`, `ai_custom_actions`, `ai_settings`) in the site's database. It now keeps the same data in the plugin storage
+(`cms.storage("ai")`, collections `action-overrides`, `custom-actions` and `settings`). `monti migrate` copies the rows once, with their values, versions and dates, so an editor who
+had a screen open before the upgrade still saves against the right version, and the custom actions keep their order. The old tables are only read and stay in the database as a backup:
+drop them once you have checked the site. The oldest table (`ai_features`) is read in the same way where its edited values had not been moved yet.
+Replace every instance of the old version at the same time as you run `monti migrate`; an old instance keeps writing the old tables, and those writes are not copied again.
+
 ## Fake connection (development only)
 
 With `CMS_AI_FAKE=1` (excluded from production builds), it returns canned answers without a key. The answer is built from the result
@@ -151,7 +182,7 @@ then text inputs. An action whose result must have a specific shape to pass its 
     instructions edited in the admin screen and by UI actions. It can't be deleted while an action's instruction uses it (the action
     name is shown).
 
-  Both are stored in the `shared` row of the AI settings table as `{ texts: { key: edited content }, added: [{ key, label, text }] }`
+  Both are stored in the `shared` item of the `settings` collection as `{ texts: { key: edited content }, added: [{ key, label, text }] }`
   (the old shape is still read). The API is `/ai/shared`: `GET` (list, `source: "config" | "added"`),
   `POST { expectedVersion, key, label, text }` (add), `PATCH { expectedVersion, key, label?, text }` (edit one),
   `PUT { expectedVersion, texts }` (edit many), and `DELETE ?key=&expectedVersion=` (delete). All return the updated list, and a
@@ -169,7 +200,7 @@ then text inputs. An action whose result must have a specific shape to pass its 
 - **UI actions**: "Add action" on the admin AI screen creates an action without code. In the right-hand panel you edit the name, where
   it attaches (next to a field, selection menu, insert menu, body block, body image, media), result shape, engine and connection,
   instruction, what to send, and checks together, try it before saving, then save everything at once. For relation and select fields
-  (tags, category, and so on), you can also pick the decide engine (System One). It is stored in the DB (`ai_custom_actions`). The
+  (tags, category, and so on), you can also pick the decide engine (System One). It is stored in the DB (the `custom-actions` collection). The
   initial thresholds for relation and select field actions are `CUSTOM_PICK_DEFAULTS` (multiple: 0.6, 5 items; single: 0.3, 2 items).
 
 ## Block actions
@@ -206,8 +237,8 @@ block's source, are left as is.
 | Entry point | Contents |
 | --- | --- |
 | `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
-| `@monti-cms/ai/server` | Server side (API routes, table creation). Loaded by the core. It is an empty entry point in browser bundles |
-| `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton` |
+| `@monti-cms/ai/server` | Server side (API routes, data migration). Loaded by the core. It is an empty entry point in browser bundles |
+| `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton`, `aiClient` |
 
 ## Development
 

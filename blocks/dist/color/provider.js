@@ -3,13 +3,12 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 import { allowsMark, BubbleButton, } from "@monti-cms/admin/editor";
 import { DropdownMenuSeparator } from "@monti-cms/admin/kit";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { cleanTextColor, textColorProps } from "./colors.js";
 import { colorBlock } from "./definition.js";
 import { COLOR_MARK_NAME, TextColorIcon, TextColorMenu, TextColorMenuItems, TextColorPanel } from "./menu.js";
 import { colorMessages } from "./messages.js";
-const t = createTranslator(colorMessages);
-/** Text color display in the editor. The same `.cms-color` rule (`styles.css`) as the public page picks the color for the theme. */
+/** Text color display in the editor. The same `.cms-color` rule (`styles.css`, the same as `render.css` for the public page) picks the color for the theme. */
 export function colorMarkAttributes(attrs) {
     const { className, style, ...data } = textColorProps(cleanTextColor(attrs));
     return {
@@ -21,6 +20,7 @@ export function colorMarkAttributes(attrs) {
     };
 }
 function ColorBubbleButton({ editor, inCode, openPanel, closePanel }) {
+    const t = useTranslator(colorMessages);
     if (inCode || !allowsMark(editor.state, COLOR_MARK_NAME))
         return null;
     return (_jsx(BubbleButton, { label: t("label"), onClick: () => openPanel({

@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import { type CodeLineEffect, type CodeRule } from "@monti-cms/core/code-block";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
@@ -18,7 +19,7 @@ export interface CodeEffectsState {
     picked: LinePick | null;
     /** While linking text to code, the side picked first (body text or a code line). Picking and confirming the other side links them. */
     linking: LinkDraft | null;
-    /** Line name of the body link (`data-code-ref`, `CODE_ANCHOR_REF`) under the mouse. That line is highlighted and the rest are dimmed. */
+    /** Line name of the body link (`data-code-ref`, `codeAnchorRef`) under the mouse. That line is highlighted and the rest are dimmed. */
     hoverRef: string | null;
     version: number;
 }
@@ -82,5 +83,5 @@ export declare function expandRule(view: EditorView, blockPos: number, ruleId: s
 export declare function setFoldOpen(view: EditorView, region: FoldRegion, open: boolean): void;
 /** Line labels of every code line in the document (ids of `anchor` line effects). */
 export declare function anchorIds(doc: PmNode): Set<string>;
-export declare function createCodeEffectsPlugin(): Plugin<CodeEffectsState>;
+export declare function createCodeEffectsPlugin(site: Site): Plugin<CodeEffectsState>;
 export {};

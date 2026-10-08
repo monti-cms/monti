@@ -1,37 +1,18 @@
+import { documentText, EXCERPT_TEXT } from "./body-text.js";
 /**
- * Readable plain text of an MDX body. Used for filling fields from the body (`fillFromBody`).
- * Code, math, images and directive syntax are dropped; only the labels of links and directives remain.
+ * Readable plain text of a stored document. Used for filling fields from the body (`fillFromBody`).
+ * It is taken from the document, so it works for any notation the body was written in: the text of paragraphs, headings, list items, table cells and the bodies of
+ * blocks, and the text attributes of blocks (a callout title). Code, math, images and the text a reader does not see are left out.
  */
-export function toPlainText(mdx) {
-    return (mdx
-        // code fences, block math, comments
-        .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, " ")
-        .replace(/^\$\$[\s\S]*?^\$\$/gm, " ")
-        .replace(/\{\/\*[\s\S]*?\*\/\}|<!--[\s\S]*?-->/g, " ")
-        // container directive fences and leaf directives (`::image{...}`)
-        .replace(/^:{3,}[^\n]*$/gm, " ")
-        .replace(/^::[a-z][\w-]*(\[[^\]]*\])?(\{[^}]*\})?\s*$/gm, " ")
-        // text directive `:name[label]{...}` → label
-        .replace(/:[a-z][\w-]*\[([^\]]*)\](\{[^}]*\})?/g, "$1")
-        // drop images; keep only a link's label
-        .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-        .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-        // JSX/HTML tags
-        .replace(/<\/?[A-Za-z][^>]*>/g, " ")
-        // heading, quote and list markers and emphasis symbols
-        .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+(\[[ xX]\]\s+)?/gm, "")
-        .replace(/(\*\*|__|~~|\*|_|`)/g, "")
-        .replace(/^\|?[\s:|-]+\|?$/gm, " ")
-        .replace(/\|/g, " ")
-        .replace(/\s+/g, " ")
-        .trim());
+export function toPlainText(site, doc) {
+    return documentText(site, doc, EXCERPT_TEXT);
 }
 /**
  * Leading plain text of the body (up to `maxLength` characters, with `…` appended if longer). Used when filling an empty field from the body (`fillFromBody`).
  * Empty string if there is no text to produce.
  */
-export function bodyExcerpt(mdx, maxLength = 160) {
-    const text = toPlainText(mdx);
+export function bodyExcerpt(site, doc, maxLength = 160) {
+    const text = toPlainText(site, doc);
     const chars = Array.from(text);
     if (chars.length <= maxLength)
         return text;

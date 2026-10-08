@@ -1,14 +1,13 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils/index.js";
 import { Button } from "./button.js";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "./input-group.js";
 import { uiMessages } from "./messages.js";
-const t = createTranslator(uiMessages);
 const Combobox = ComboboxPrimitive.Root;
 function ComboboxValue({ ...props }) {
     return _jsx(ComboboxPrimitive.Value, { "data-slot": "combobox-value", ...props });
@@ -17,6 +16,7 @@ function ComboboxTrigger({ className, children, ...props }) {
     return (_jsxs(ComboboxPrimitive.Trigger, { "data-slot": "combobox-trigger", className: cn("[&_svg:not([class*='size-'])]:size-4", className), ...props, children: [children, _jsx(ChevronDownIcon, { className: "pointer-events-none size-4 text-cms-muted-foreground" })] }));
 }
 function ComboboxClear({ className, ...props }) {
+    const t = useTranslator(uiMessages);
     return (_jsxs(ComboboxPrimitive.Clear, { "data-slot": "combobox-clear", render: _jsx(InputGroupButton, { variant: "ghost", size: "icon-xs" }), className: cn(className), ...props, children: [_jsx(XIcon, { className: "pointer-events-none", "aria-hidden": true }), _jsx("span", { className: "sr-only", children: t("clear") })] }));
 }
 function ComboboxInput({ className, children, disabled = false, showTrigger = true, showClear = false, ...props }) {
@@ -50,6 +50,7 @@ function ComboboxChips({ className, ...props }) {
     return (_jsx(ComboboxPrimitive.Chips, { "data-slot": "combobox-chips", className: cn("flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-cms-input bg-transparent cms-dark:bg-cms-input/30 bg-clip-padding px-2.5 py-1.5 text-sm shadow-xs transition-[color,box-shadow] focus-within:border-cms-ring focus-within:ring-3 focus-within:ring-cms-ring/50 cms-dark:has-aria-invalid:border-cms-destructive/50 has-aria-invalid:border-cms-destructive has-data-[slot=combobox-chip]:px-1.5 cms-dark:has-aria-invalid:ring-cms-destructive/40 has-aria-invalid:ring-3 has-aria-invalid:ring-cms-destructive/20", className), ...props }));
 }
 function ComboboxChip({ className, children, showRemove = true, ...props }) {
+    const t = useTranslator(uiMessages);
     return (_jsxs(ComboboxPrimitive.Chip, { "data-slot": "combobox-chip", className: cn("flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 whitespace-nowrap rounded-sm bg-cms-muted px-1.5 font-medium text-cms-foreground text-xs has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-data-[slot=combobox-chip-remove]:pr-0 has-disabled:opacity-50", className), ...props, children: [children, showRemove && (_jsxs(ComboboxPrimitive.ChipRemove, { render: _jsx(Button, { variant: "ghost", size: "icon-xs" }), className: "-ml-1 opacity-50 hover:opacity-100", "data-slot": "combobox-chip-remove", children: [_jsx(XIcon, { className: "pointer-events-none", "aria-hidden": true }), _jsx("span", { className: "sr-only", children: t("deselect") })] }))] }));
 }
 function ComboboxChipsInput({ className, ...props }) {

@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import { type AiContentLookup, type AiRunEnv, type ResolvedAiAction } from "./action.js";
 import { type AiRunResult } from "./definition.js";
 import type { AiContent, AiDecider, AiProvider } from "./provider.js";
@@ -15,6 +16,8 @@ export interface AiOption {
     label: string;
 }
 export interface AiRunDeps {
+    /** The site the action runs for: its locales, admin language and AI settings. */
+    site: Site;
     /** Generation model. `null` when not connected. */
     generator: AiProvider | null;
     /** Decision model. `null` when not connected. */

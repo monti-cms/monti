@@ -2,19 +2,20 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, cn, } from "@monti-cms/admin/kit";
-import { cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { aiCommonMessages } from "./ai-common.messages.js";
-const t = createTranslator(aiCommonMessages);
 /**
  * Model list of a generation connection. A list fetched once is not fetched again for 10 minutes, and is reused after saving or reopening.
  * If there is no `source`, it is not fetched.
  */
 export function useModelList(source) {
+    const site = useSite();
+    const t = useTranslator(aiCommonMessages);
     const query = useQuery({
         queryKey: ["cms", "ai", "models", source],
-        queryFn: async ({ signal }) => (await cmsFetch(cmsApiUrl("/v1/ai/models"), {
+        queryFn: async ({ signal }) => (await cmsFetch(site, cmsApiUrl("/v1/ai/models"), {
             method: "POST",
             json: source,
             signal,
@@ -27,7 +28,7 @@ export function useModelList(source) {
     return {
         models: query.data ?? null,
         loading: query.isFetching,
-        error: query.error ? errorText(query.error, t("modelsFailed")) : null,
+        error: query.error ? errorText(site, query.error, t("modelsFailed")) : null,
     };
 }
 /**
@@ -35,6 +36,7 @@ export function useModelList(source) {
  * Even without a list (judge model, or a URL that gives no list), you can type a name and pick it.
  */
 export function ModelCombobox({ id, value, onChange, models, loading, error, placeholder, "aria-label": ariaLabel, }) {
+    const t = useTranslator(aiCommonMessages);
     const [query, setQuery] = useState("");
     const options = useMemo(() => (models ?? []).map((model) => ({ value: model.id, label: model.id })), [models]);
     // Even if the chosen value is not in the list (a typed name), pass the same object for the same value so the typed text does not revert.

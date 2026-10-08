@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { AuthError } from "../../adapters/auth/index.js";
-import { CmsError } from "../../adapters/postgres/content-store.js";
+import { SetupError } from "../../core/problem.js";
+import { CmsError } from "../../core/store/index.js";
 import { ServiceError } from "../../services/types.js";
 /**
  * HTTP errors that routes throw directly (malformed request, missing version, etc.). Plugin errors extend this to set the status code.
@@ -10,11 +10,15 @@ export class HttpError extends Error {
     status;
     code;
     issues;
-    constructor(status, code, message, issues) {
+    extra;
+    constructor(status, code, message, issues, 
+    /** More members of the response body (a machine-readable `reason`, say). */
+    extra) {
         super(message);
         this.status = status;
         this.code = code;
         this.issues = issues;
+        this.extra = extra;
         this.name = "HttpError";
     }
 }
@@ -38,8 +42,16 @@ const SERVICE_ERROR_STATUS = {
     invalid_input: 400,
     unknown_collection: 400,
     slug_reserved: 409,
-    mdx_too_large: 413,
+    body_too_large: 413,
     metadata_too_large: 413,
+    // The `format` option names a format no plugin provides, or one that can only write text.
+    unknown_format: 400,
+    format_not_importable: 400,
+    // The format could not read the text, or a plugin's format threw.
+    format_import_failed: 422,
+    format_export_failed: 500,
+    // A hook of the server config or a plugin threw: a server-side failure, not a problem with the request.
+    hook_failed: 500,
 };
 /** A DB connection failure is a transient error (503). It is not disguised as missing content or an empty list. */
 const isUnavailable = (error) => {
@@ -53,16 +65,26 @@ const isUnavailable = (error) => {
 };
 export function handleApiError(error) {
     if (error instanceof HttpError) {
-        return NextResponse.json({ code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) }, { status: error.status });
+        return Response.json({
+            code: error.code,
+            message: error.message,
+            ...(error.issues ? { issues: error.issues } : {}),
+            ...error.extra,
+        }, { status: error.status });
+    }
+    // A setup mistake (a database that is down or not migrated, a missing setting): the server log has the fix; the response does not repeat host names.
+    if (error instanceof SetupError) {
+        console.error(`Monti is not set up correctly: ${error.message}`);
+        return Response.json({ code: error.kind, message: "The server is not set up correctly. The server log says how to fix it." }, { status: 503 });
     }
     if (error instanceof AuthError) {
-        return NextResponse.json({ code: error.code, message: error.message }, { status: error.code === "unauthorized" ? 401 : 403 });
+        return Response.json({ code: error.code, message: error.message }, { status: error.code === "unauthorized" ? 401 : 403 });
     }
     if (error instanceof CmsError) {
         const status = CMS_ERROR_STATUS[error.code] ?? 400;
         if (status === 500)
             console.error("CMS store invariant broken:", error);
-        return NextResponse.json({
+        return Response.json({
             code: error.code,
             message: status === 500 ? "Internal server error" : error.message,
             ...(error.serverVersion !== undefined ? { serverVersion: error.serverVersion } : {}),
@@ -70,17 +92,17 @@ export function handleApiError(error) {
         }, { status });
     }
     if (error instanceof ServiceError) {
-        return NextResponse.json({ code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) }, { status: SERVICE_ERROR_STATUS[error.code] ?? 422 });
+        return Response.json({ code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) }, { status: SERVICE_ERROR_STATUS[error.code] ?? 422 });
     }
     // The UI withdrew the request (e.g. reloading the model list). Nobody is waiting, so end quietly.
     if (isClientAbort(error))
-        return new NextResponse(null, { status: 499 });
+        return new Response(null, { status: 499 });
     if (isUnavailable(error)) {
         console.error("CMS storage unavailable:", error);
-        return NextResponse.json({ code: "unavailable", message: "Storage is temporarily unavailable" }, { status: 503 });
+        return Response.json({ code: "unavailable", message: "Storage is temporarily unavailable" }, { status: 503 });
     }
     console.error("Unhandled API error:", error);
-    return NextResponse.json({ code: "internal_error", message: "Internal server error" }, { status: 500 });
+    return Response.json({ code: "internal_error", message: "Internal server error" }, { status: 500 });
 }
 /** Work stopped because the browser dropped the request (body not fully read) or the request signal aborted. */
 function isClientAbort(error) {

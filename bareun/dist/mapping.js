@@ -1,10 +1,8 @@
-import { createActiveTranslator, PLACEHOLDER, } from "@monti-cms/core";
+import { PLACEHOLDER } from "@monti-cms/core";
 import { bareunMessages } from "./messages.js";
 /** Character inserted between paragraphs. Bareun treats it as a sentence boundary. */
 export const SEGMENT_SEPARATOR = "\n";
 export const joinSegments = (segments) => segments.map((segment) => segment.text).join(SEGMENT_SEPARATOR);
-// This is bundled into the module read by the site config file (`index.ts`), so the display language is chosen on every call.
-const t = createActiveTranslator(bareunMessages);
 /** Bareun category code. The name is `category.<code>` in the message dictionary. */
 const KINDS = new Set([
     "TYPO",
@@ -19,7 +17,6 @@ const KINDS = new Set([
     "THINKING",
     "UNKNOWN",
 ]);
-const labelOf = (kind) => t(KINDS.has(kind) ? `category.${kind}` : "category.CONFIRM");
 const CATEGORIES = {
     SPACING: "spacing",
     TYPO: "spelling",
@@ -51,7 +48,10 @@ function leafBlocks(blocks) {
  * Converts a Bareun response into per-paragraph check results. `segments` must be in the same order they were joined in the request.
  * Results that cross a paragraph boundary, touch the hidden placeholder (`￼`), or whose position does not match the original text are dropped.
  */
-export function bareunIssues(segments, response) {
+export function bareunIssues(site, segments, response) {
+    // Category names and the message follow the site's admin language.
+    const t = site.createTranslator(bareunMessages);
+    const labelOf = (kind) => t(KINDS.has(kind) ? `category.${kind}` : "category.CONFIRM");
     const content = joinSegments(segments);
     const starts = [];
     let offset = 0;

@@ -1,12 +1,11 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { XIcon } from "lucide-react";
 import { cn } from "../lib/utils/index.js";
 import { Button } from "./button.js";
 import { uiMessages } from "./messages.js";
-const t = createTranslator(uiMessages);
 function Dialog({ ...props }) {
     return _jsx(DialogPrimitive.Root, { "data-slot": "dialog", ...props });
 }
@@ -23,6 +22,7 @@ function DialogOverlay({ className, ...props }) {
     return (_jsx(DialogPrimitive.Backdrop, { "data-slot": "dialog-overlay", className: cn("data-open:fade-in-0 data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-100 data-closed:animate-out data-open:animate-in supports-backdrop-filter:backdrop-blur-xs", className), ...props }));
 }
 function DialogContent({ className, children, showCloseButton = true, ...props }) {
+    const t = useTranslator(uiMessages);
     return (_jsxs(DialogPortal, { children: [_jsx(DialogOverlay, {}), _jsxs(DialogPrimitive.Popup, { "data-slot": "dialog-content", className: cn("data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl bg-cms-popover p-6 text-cms-popover-foreground text-sm outline-none ring-1 ring-cms-foreground/10 duration-100 data-closed:animate-out data-open:animate-in sm:max-w-md", className), ...props, children: [children, showCloseButton && (_jsxs(DialogPrimitive.Close, { "data-slot": "dialog-close", render: _jsx(Button, { variant: "ghost", className: "absolute top-4 right-4", size: "icon-sm" }), children: [_jsx(XIcon, {}), _jsx("span", { className: "sr-only", children: t("close") })] }))] })] }));
 }
 function DialogHeader({ className, ...props }) {

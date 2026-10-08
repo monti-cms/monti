@@ -1,6 +1,7 @@
 import type { BlockDefinition, CollectionsConfig } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 import { z } from "zod";
-import { type AiApply, type AiCandidate, type AiCheck, type AiCheckInput, type AiEngine, type AiPick, type AiResult, type AiSlot } from "./definition.js";
+import { type AiApply, type AiCandidate, type AiCheck, type AiCheckInput, type AiEngine, type AiPick, type AiResult, type AiSlot, type CoreText } from "./definition.js";
 /**
  * AI action definition. An action is registered under its name (key) in the site config's `ai.actions`.
  *
@@ -8,7 +9,7 @@ import { type AiApply, type AiCandidate, type AiCheck, type AiCheckInput, type A
  *   the prompt (so the model does not follow instruction-like sentences inside the text). Only language inputs can go into `{{name}}` in the prompt.
  * - **Result**: one of several candidates, a single text, an MDX fragment, or a note, plus a list of checks.
  * - **Attach point (`attach`)**: a fixed place in the admin UI (beside a field, image, media, code block, translation). An action can attach
- *   only when the material that place provides can fill its inputs (checked by the types and `defineConfig`).
+ *   only when the material that place provides can fill its inputs (checked by the types and `defineSite`).
  *
  * The admin AI screen only edits enabled state, extra requests, connection, model, inputs to send, prompt, threshold and check values; only edited values are stored in the DB.
  * The definition is read by both server and browser. The function of a code check (`defineValidator`) is only called on the server.
@@ -188,6 +189,8 @@ export interface AiValidatorContext {
     readonly choices?: ReadonlyMap<string, string>;
     /** Core content lookup (server). */
     readonly content: AiContentLookup;
+    /** The site the action runs for (its admin language for a note a check attaches to a candidate). */
+    readonly site: Site;
 }
 /**
  * Result of a code check. `true`, `null` or `undefined` passes, `false` discards, and a string discards with that reason.
@@ -204,14 +207,19 @@ export interface AiValidator {
     readonly kind: "code";
     /** Name unique within the action (lowercase, digits, hyphen). The edited value (enabled state) is stored under this name. */
     readonly name: string;
-    /** Name shown in the admin UI. */
-    readonly label: string;
+    /**
+     * Name shown in the admin UI. A function receives the site and returns the text in its admin language (the site is where the translator is), so a label written in
+     * a module the config file reads does not depend on a language set elsewhere. Read it with `validatorLabel`.
+     */
+    readonly label: string | ((site: Pick<Site, "createTranslator">) => string);
     /** Enabled initially? Defaults to enabled. */
     readonly enabled?: boolean;
     readonly run: (value: string, context: AiValidatorContext) => AiValidatorResult | Promise<AiValidatorResult>;
 }
 /** Creates a code check. Put it in an action definition's `checks` together with the fixed checks. */
 export declare const defineValidator: (check: Omit<AiValidator, "kind">) => AiValidator;
+/** The display name of a code check in the site's admin language. */
+export declare const validatorLabel: (check: Pick<AiValidator, "label">, site: Pick<Site, "createTranslator">) => string;
 export interface AiActionDefinition<I extends AiInputs = AiInputs> {
     /** Name shown in the admin UI and on buttons. */
     readonly label: string;
@@ -269,6 +277,8 @@ export interface AiSiteView {
     readonly locales: readonly {
         readonly code: string;
     }[];
+    /** Translator of one dictionary in the site's admin language (`site.createTranslator`), for the labels of the actions a function creates. */
+    readonly createTranslator: Site["createTranslator"];
     /** Names of the AI config's shared snippets (`aiPlugin({ shared })`). */
     readonly sharedKeys: readonly string[];
 }
@@ -368,6 +378,38 @@ export type AiActionInput<D> = D extends {
     } ? never : K]?: AiInputValue<I[K]>;
 }> : never;
 /** Values editable in the admin UI. Only values that differ from the definition are stored in the DB. */
+export declare const aiActionOverrideSchemaOf: (t: CoreText) => z.ZodObject<{
+    enabled: z.ZodOptional<z.ZodBoolean>;
+    askInstruction: z.ZodOptional<z.ZodBoolean>;
+    instant: z.ZodOptional<z.ZodBoolean>;
+    providerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    modelName: z.ZodOptional<z.ZodString>;
+    prompt: z.ZodOptional<z.ZodString>;
+    send: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    threshold: z.ZodOptional<z.ZodNumber>;
+    maxCount: z.ZodOptional<z.ZodNumber>;
+    checks: z.ZodOptional<z.ZodArray<z.ZodPreprocess<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        kind: z.ZodLiteral<"pattern">;
+        enabled: z.ZodDefault<z.ZodBoolean>;
+        pattern: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        kind: z.ZodLiteral<"maxLength">;
+        enabled: z.ZodDefault<z.ZodBoolean>;
+        max: z.ZodNumber;
+    }, z.core.$strip>, z.ZodObject<{
+        kind: z.ZodLiteral<"exists">;
+        enabled: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strip>, z.ZodObject<{
+        kind: z.ZodLiteral<"oneOf">;
+        enabled: z.ZodDefault<z.ZodBoolean>;
+        items: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>, z.ZodObject<{
+        kind: z.ZodLiteral<"code">;
+        enabled: z.ZodDefault<z.ZodBoolean>;
+        name: z.ZodString;
+    }, z.core.$strip>], "kind">, unknown>>>;
+}, z.core.$strip>;
+/** The edited-value schema with English messages: reads stored values and builds definitions, where no message is shown. */
 export declare const aiActionOverrideSchema: z.ZodObject<{
     enabled: z.ZodOptional<z.ZodBoolean>;
     askInstruction: z.ZodOptional<z.ZodBoolean>;
@@ -450,7 +492,7 @@ export declare function unknownPlaceholders(prompt: string, input: AiInputs, sha
  */
 export declare function renderPrompt(action: Pick<ResolvedAiAction, "prompt" | "input" | "askInstruction">, values: Readonly<Record<string, unknown>>, languageName: (code: string) => string, request?: string, shared?: Readonly<Record<string, string>>): string;
 /** Validation of action inputs. Names not in the definition are dropped. */
-export declare function inputSchemaFor(input: AiInputs): z.ZodObject<{
+export declare function inputSchemaFor(input: AiInputs, t: CoreText): z.ZodObject<{
     [x: string]: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
 }, z.core.$strip>;
 /** Common info of a run request (outside the inputs). */
@@ -463,7 +505,7 @@ export declare const aiRunEnvSchema: z.ZodObject<{
 export type AiRunEnv = z.output<typeof aiRunEnvSchema>;
 /** Number of inputs sent together in one request (e.g. the translation's `Translate all`). */
 export declare const MAX_BATCH_INPUTS = 8;
-export declare const aiRunBodySchema: z.ZodObject<{
+export declare const aiRunBodySchemaOf: (t: CoreText) => z.ZodObject<{
     action: z.ZodString;
     input: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     inputs: z.ZodOptional<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
@@ -478,7 +520,7 @@ export declare const aiRunBodySchema: z.ZodObject<{
     draftBase: z.ZodOptional<z.ZodUnknown>;
     stream: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>;
-export type AiRunBody = z.output<typeof aiRunBodySchema>;
+export type AiRunBody = z.output<ReturnType<typeof aiRunBodySchemaOf>>;
 /** The parts of the config's collection definitions needed for validation. */
 interface CollectionsView {
     readonly [name: string]: {

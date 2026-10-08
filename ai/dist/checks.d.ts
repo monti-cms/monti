@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import type { AiCandidate, AiCheck } from "./definition.js";
 /**
  * Fixed result checks (pure functions). Applies the enabled checks from the action's check list in order, and discards candidates that fail.
@@ -11,4 +12,4 @@ export interface CheckEnv {
 }
 export declare function checkCandidates(checks: readonly AiCheck[], raw: readonly string[], env: CheckEnv): AiCandidate[];
 /** Check for long-text results. Returns the reason if it fails. */
-export declare function checkText(checks: readonly AiCheck[], text: string): string | null;
+export declare function checkText(site: Pick<Site, "createTranslator">, checks: readonly AiCheck[], text: string): string | null;

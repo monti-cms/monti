@@ -1,9 +1,13 @@
+import { type BodyAllowed } from "@monti-cms/core/client";
+import { type StoredDocument } from "@monti-cms/core/document";
 import type { Editor } from "@tiptap/core";
 import { type ReactNode } from "react";
 import { type EditorInsertAction, type EditorSelectionAction } from "../admin-components.js";
 interface CmsEditorProps {
-    content: string;
-    onChange: (newContent: string) => void;
+    /** The body. The editor shows it; a change that did not come from the editor itself replaces what it shows (the blocks keep the ids the document gives them). */
+    doc: StoredDocument;
+    /** The body as the editor holds it after every change, as a stored document with the editor's block ids. */
+    onChange: (doc: StoredDocument) => void;
     /** Title input for the document being edited. Placed below the formatting tools, above the body. */
     titleField?: ReactNode;
     /** Document action menu placed at the end of the formatting tools. */
@@ -24,6 +28,11 @@ interface CmsEditorProps {
     selectionActions?: readonly EditorSelectionAction[];
     /** Insert actions to add to the slash menu (plugins). */
     insertActions?: readonly EditorInsertAction[];
+    /**
+     * The blocks, marks and heading levels the body allows (`body` of the collection in the schema). The editor offers and accepts only these (toolbar, menus,
+     * input rules, paste); a body that already holds something else still opens and saves unchanged. Without it, everything is allowed.
+     */
+    allowed?: BodyAllowed;
 }
 /** Action beside the block handle. `pos` is the position of the block the handle points to. */
 export interface BlockAction {
@@ -35,5 +44,5 @@ export interface BlockAction {
     /** Whether the action is in progress on that block. */
     isBusy?: (pos: number) => boolean;
 }
-export declare function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAside, sourceView, onCompositionStart, onCompositionEnd, editable, blockActions, onEditor, selectionActions, insertActions, }: CmsEditorProps): import("react").JSX.Element | null;
+export declare function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside, sourceView, onCompositionStart, onCompositionEnd, editable, blockActions, onEditor, selectionActions, insertActions, allowed, }: CmsEditorProps): import("react").JSX.Element | null;
 export {};

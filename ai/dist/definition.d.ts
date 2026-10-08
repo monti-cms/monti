@@ -1,4 +1,11 @@
+import { type MessageBundle } from "@monti-cms/core";
+import type { Translator } from "@monti-cms/core/client";
 import { z } from "zod";
+import { coreMessages } from "./core.messages.js";
+/** Translator of the validation messages (`coreMessages`) the schemas report. */
+export type CoreText = Translator<typeof coreMessages extends MessageBundle<infer K> ? K : never>;
+/** The validation messages in English, for checks of developer-written definitions (config errors, not shown to the operator). */
+export declare const englishCoreText: CoreText;
 /**
  * AI common definitions. The choices and result shapes shared by the action definition (`action.ts`), the runner and the admin UI.
  * Used by both server and browser, so no secrets or SDKs go here.
@@ -44,6 +51,27 @@ export declare const AI_CHECK_KINDS: readonly ["pattern", "maxLength", "exists",
 export type AiCheckKind = (typeof AI_CHECK_KINDS)[number];
 /** Code check name (lowercase, digits, hyphen). */
 export declare const CODE_CHECK_NAME: RegExp;
+export declare const aiCheckSchemaOf: (t: CoreText) => z.ZodDiscriminatedUnion<[z.ZodObject<{
+    kind: z.ZodLiteral<"pattern">;
+    enabled: z.ZodDefault<z.ZodBoolean>;
+    pattern: z.ZodString;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodLiteral<"maxLength">;
+    enabled: z.ZodDefault<z.ZodBoolean>;
+    max: z.ZodNumber;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodLiteral<"exists">;
+    enabled: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodLiteral<"oneOf">;
+    enabled: z.ZodDefault<z.ZodBoolean>;
+    items: z.ZodArray<z.ZodString>;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodLiteral<"code">;
+    enabled: z.ZodDefault<z.ZodBoolean>;
+    name: z.ZodString;
+}, z.core.$strip>], "kind">;
+/** The check schema with English messages: reads definitions and stored values where no message is shown. */
 export declare const aiCheckSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     kind: z.ZodLiteral<"pattern">;
     enabled: z.ZodDefault<z.ZodBoolean>;

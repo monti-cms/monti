@@ -1,7 +1,5 @@
-import { authGateway } from "../adapters/auth/index.js";
-import { getCmsAuth } from "../container.js";
+import { CMS_API_PATH, cmsBasePath } from "../core/base-path.js";
 import { assertPluginRoutesFree } from "../plugin/collisions.js";
-import { pluginRoutes } from "../plugin/server.js";
 import { CMS_AUTH_BASE_PATH } from "../server/define.js";
 import * as r9 from "./v1/bulk/route.js";
 import * as r12 from "./v1/entries/[id]/archive/route.js";
@@ -14,7 +12,12 @@ import * as r18 from "./v1/entries/[id]/translations/route.js";
 import * as r19 from "./v1/entries/[id]/trash/route.js";
 import * as r20 from "./v1/entries/[id]/unarchive/route.js";
 import * as r10 from "./v1/entries/route.js";
+import * as rEntrySearch from "./v1/entries/search/route.js";
 import { HttpError, handleApiError } from "./v1/error-handler.js";
+import * as rEventDismiss from "./v1/events/[id]/dismiss/route.js";
+import * as rEventRetry from "./v1/events/[id]/retry/route.js";
+import * as rEventsRetry from "./v1/events/retry/route.js";
+import * as rEvents from "./v1/events/route.js";
 import * as r21 from "./v1/export/route.js";
 import * as r23 from "./v1/folders/[id]/route.js";
 import * as r22 from "./v1/folders/route.js";
@@ -27,12 +30,20 @@ import * as r29 from "./v1/meta/route.js";
 import * as r30 from "./v1/preferences/route.js";
 import * as rPublicEntry from "./v1/public/entries/[collection]/[slug]/route.js";
 import * as rPublicEntries from "./v1/public/entries/route.js";
+import * as rSchemaPreview from "./v1/schema/preview/route.js";
+import * as rSchema from "./v1/schema/route.js";
 import { validateSameOrigin } from "./v1/security.js";
+import * as rSignIn from "./v1/session/sign-in/[provider]/route.js";
+import * as rSignOut from "./v1/session/sign-out/route.js";
 import * as r34 from "./v1/templates/[id]/route.js";
 import * as r33 from "./v1/templates/route.js";
+const METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"];
+const isMethod = (value) => METHODS.includes(value);
 const ROUTES = [
     { pattern: "v1/bulk", module: r9 },
     { pattern: "v1/entries", module: r10 },
+    // Named before `[id]`, so `search` is not read as an entry id.
+    { pattern: "v1/entries/search", module: rEntrySearch },
     { pattern: "v1/entries/[id]", module: r11 },
     { pattern: "v1/entries/[id]/archive", module: r12 },
     { pattern: "v1/entries/[id]/duplicate", module: r13 },
@@ -42,6 +53,11 @@ const ROUTES = [
     { pattern: "v1/entries/[id]/translations", module: r18 },
     { pattern: "v1/entries/[id]/trash", module: r19 },
     { pattern: "v1/entries/[id]/unarchive", module: r20 },
+    // The event outbox: failed and dead `afterCommit` deliveries. `v1/events/retry` also takes the retry secret of the server config (for a cron job).
+    { pattern: "v1/events", module: rEvents },
+    { pattern: "v1/events/retry", module: rEventsRetry },
+    { pattern: "v1/events/[id]/retry", module: rEventRetry },
+    { pattern: "v1/events/[id]/dismiss", module: rEventDismiss },
     { pattern: "v1/export", module: r21 },
     { pattern: "v1/folders", module: r22 },
     { pattern: "v1/folders/[id]", module: r23 },
@@ -52,6 +68,12 @@ const ROUTES = [
     { pattern: "v1/media/[id]/complete", module: r28 },
     { pattern: "v1/meta", module: r29 },
     { pattern: "v1/preferences", module: r30 },
+    // The schema settings screen: reading works everywhere, the write routes answer 403 outside development.
+    { pattern: "v1/schema", module: rSchema },
+    { pattern: "v1/schema/preview", module: rSchemaPreview },
+    // Sign in and out of the admin (browser form posts from the login screen). They check the same origin themselves and need no login.
+    { pattern: "v1/session/sign-in/[provider]", module: rSignIn },
+    { pattern: "v1/session/sign-out", module: rSignOut },
     // Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.
     { pattern: "v1/public/entries", module: rPublicEntries },
     { pattern: "v1/public/entries/[collection]/[slug]", module: rPublicEntry },
@@ -65,21 +87,6 @@ const compile = (routes, guarded) => routes.map((route) => ({
 }));
 // Core routes wrap themselves with `adminRoute`.
 const COMPILED = compile(ROUTES, false);
-let pluginCompiled;
-const compiledPluginRoutes = () => {
-    // The core wraps plugin routes with the admin check (only `public: true` is skipped), so a missing auth check never becomes an open route.
-    // A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
-    pluginCompiled ??= pluginRoutes()
-        .then((routes) => {
-        assertPluginRoutesFree(ROUTES.map((route) => route.pattern), routes);
-        return compile(routes, true);
-    })
-        .catch((error) => {
-        pluginCompiled = undefined;
-        throw error;
-    });
-    return pluginCompiled;
-};
 /** The route and params matching the path segments. Named segments match before `[name]` segments (table order). */
 export function matchRoute(path, routes = COMPILED) {
     for (const { segments, module, guarded } of routes) {
@@ -102,11 +109,60 @@ export function matchRoute(path, routes = COMPILED) {
 /** Registered admin API paths (for docs and tests). */
 export const CMS_ROUTE_PATTERNS = ROUTES.map((route) => route.pattern);
 const notFound = () => handleApiError(new HttpError(404, "not_found", "Unknown CMS API path"));
-export function createCmsRouteHandler() {
-    const handle = (method) => async (request, context) => {
-        const { path = [] } = await context.params;
+/**
+ * The path segments after the API prefix (`/api/cms/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/cms/v1/entries/<id>`.
+ * The site's `basePath` is skipped when the URL has it. `null` if the URL is not under the API prefix.
+ */
+export function pathFromRequest(request) {
+    let pathname = new URL(request.url).pathname;
+    const basePath = cmsBasePath();
+    if (basePath && (pathname === basePath || pathname.startsWith(`${basePath}/`))) {
+        pathname = pathname.slice(basePath.length);
+    }
+    if (!pathname.startsWith(`${CMS_API_PATH}/`))
+        return null;
+    try {
+        return pathname
+            .slice(CMS_API_PATH.length + 1)
+            .split("/")
+            .filter((segment) => segment !== "")
+            .map(decodeURIComponent);
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * The request handler of one CMS instance (`cms.handle()` calls it): standard `Request` in, `Response` out, no framework types.
+ * `auth/*` is forwarded to the auth handler when the auth base path is the default (`/api/cms/auth`), so no separate auth route file is needed.
+ */
+export function createRequestHandler(cms) {
+    let pluginCompiled;
+    const compiledPluginRoutes = () => {
+        // The core wraps plugin routes with the admin check (only `public: true` is skipped), so a missing auth check never becomes an open route.
+        // A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
+        pluginCompiled ??= cms
+            .pluginRoutes()
+            .then((routes) => {
+            assertPluginRoutesFree(ROUTES.map((route) => route.pattern), routes);
+            return compile(routes, true);
+        })
+            .catch((error) => {
+            pluginCompiled = undefined;
+            throw error;
+        });
+        return pluginCompiled;
+    };
+    return async (request, options) => {
+        const path = options?.path ?? pathFromRequest(request);
+        if (!path)
+            return notFound();
+        const method = request.method.toUpperCase();
+        if (!isMethod(method)) {
+            return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
+        }
         if (path[0] === "auth") {
-            const auth = getCmsAuth();
+            const auth = cms.auth();
             if (auth.basePath !== CMS_AUTH_BASE_PATH)
                 return notFound();
             if (method !== "GET" && method !== "POST") {
@@ -124,20 +180,13 @@ export function createCmsRouteHandler() {
         }
         if (matched.guarded) {
             try {
-                validateSameOrigin(request);
-                await authGateway.verifyAdmin();
+                validateSameOrigin(cms, request);
+                await cms.authGateway.verifyAdmin();
             }
             catch (error) {
                 return handleApiError(error);
             }
         }
-        return handler(request, { params: Promise.resolve(matched.params) });
-    };
-    return {
-        GET: handle("GET"),
-        POST: handle("POST"),
-        PATCH: handle("PATCH"),
-        PUT: handle("PUT"),
-        DELETE: handle("DELETE"),
+        return handler(request, { params: Promise.resolve(matched.params), cms });
     };
 }

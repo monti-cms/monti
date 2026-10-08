@@ -1,6 +1,6 @@
-import type { CartesianChartSpec, NormalizedChartSpec } from "./types.js";
+import { type CartesianChartSpec, type NormalizedChartSpec } from "./types.js";
 import type { ChartConfig } from "./ui.js";
-/** Sets the name and color for each series (each slice for pie charts). Colors are theme variables (`--chart-1` to `--chart-5`). */
+/** Sets the name and color for each series (each slice for pie charts). Colors are theme variables (`--chart-1` to `--chart-5`, see `chartColor`). */
 export declare const toChartConfig: (spec: NormalizedChartSpec) => ChartConfig;
 export declare const estimateYAxisWidth: (spec: CartesianChartSpec) => number;
 /** Value shown in value labels (`show values`) and tooltips. Numbers are grouped by thousands. */

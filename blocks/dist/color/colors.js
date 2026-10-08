@@ -4,73 +4,53 @@
  * the light value is used as is. The editor's picker list is the extension option `color({ palette })`, falling back to the default presets below.
  * Custom-picked colors are stored in the same shape.
  */
-import { createActiveTranslator } from "@monti-cms/core";
-import { colorMessages } from "./messages.js";
-// Default color names are resolved in the UI language when the text is read (the language is not yet known when the config file imports this module).
-const t = createActiveTranslator(colorMessages);
-/** Default picker list. Change it with the extension option `color({ palette })`. */
-export const DEFAULT_TEXT_PALETTE = [
+/** Default picker list, with the color names in the language `t` picks. Change it with the extension option `color({ palette })`. */
+export const defaultTextPalette = (t) => [
     {
         id: "gray",
-        get name() {
-            return t("palette.gray");
-        },
+        name: t("palette.gray"),
         fg: { light: "#6b7280", dark: "#9ca3af" },
         bg: { light: "#f1f2f4", dark: "#2f3237" },
     },
     {
         id: "red",
-        get name() {
-            return t("palette.red");
-        },
+        name: t("palette.red"),
         fg: { light: "#dc2626", dark: "#f87171" },
         bg: { light: "#fee2e2", dark: "#4a1f1f" },
     },
     {
         id: "orange",
-        get name() {
-            return t("palette.orange");
-        },
+        name: t("palette.orange"),
         fg: { light: "#ea580c", dark: "#fb923c" },
         bg: { light: "#ffedd5", dark: "#4a2a14" },
     },
     {
         id: "yellow",
-        get name() {
-            return t("palette.yellow");
-        },
+        name: t("palette.yellow"),
         fg: { light: "#b45309", dark: "#facc15" },
         bg: { light: "#fef3c7", dark: "#453a12" },
     },
     {
         id: "green",
-        get name() {
-            return t("palette.green");
-        },
+        name: t("palette.green"),
         fg: { light: "#16a34a", dark: "#4ade80" },
         bg: { light: "#dcfce7", dark: "#173d2a" },
     },
     {
         id: "blue",
-        get name() {
-            return t("palette.blue");
-        },
+        name: t("palette.blue"),
         fg: { light: "#2563eb", dark: "#60a5fa" },
         bg: { light: "#dbeafe", dark: "#172f4d" },
     },
     {
         id: "purple",
-        get name() {
-            return t("palette.purple");
-        },
+        name: t("palette.purple"),
         fg: { light: "#9333ea", dark: "#c084fc" },
         bg: { light: "#f3e8ff", dark: "#33224d" },
     },
     {
         id: "pink",
-        get name() {
-            return t("palette.pink");
-        },
+        name: t("palette.pink"),
         fg: { light: "#db2777", dark: "#f472b6" },
         bg: { light: "#fce7f3", dark: "#4a1d38" },
     },
@@ -91,7 +71,7 @@ export function cleanTextColor(attrs) {
 }
 export const hasTextColor = (attrs) => Boolean(attrs.fg || attrs.bg);
 /**
- * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `styles.css`) picks the variable for the theme.
+ * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
  * Color is applied only when `data-fg` or `data-bg` is present.
  */
 export function textColorProps(attrs) {
@@ -112,7 +92,7 @@ export function textColorProps(attrs) {
     };
 }
 /** The preset if the color matches one. Used to mark the current color in the picker list. */
-export function paletteOf(kind, attrs, palette = DEFAULT_TEXT_PALETTE) {
+export function paletteOf(kind, attrs, palette) {
     const light = attrs[kind];
     if (!light)
         return undefined;

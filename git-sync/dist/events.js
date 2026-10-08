@@ -1,0 +1,15 @@
+import { onPublishedEvent } from "./outbound.js";
+/**
+ * The `afterCommit` subscriber: one delivery per change, handled by the published files (a commit, or a pull request).
+ *
+ * The first failure is thrown after everything was tried, so the outbox retries the delivery; deferring is not a failure, the outbox calls again when
+ * the latest of the moments the parts asked for has come.
+ */
+export async function onContentEvent(ctx, event) {
+    const published = await onPublishedEvent(ctx, event);
+    if (published.failures[0] !== undefined)
+        throw published.failures[0];
+    if (published.deferred.length > 0)
+        return { retryAt: new Date(Math.max(...published.deferred.map((date) => date.getTime()))) };
+    return undefined;
+}

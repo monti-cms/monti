@@ -1,12 +1,13 @@
-/** Sets the name and color for each series (each slice for pie charts). Colors are theme variables (`--chart-1` to `--chart-5`). */
+import { chartColor } from "./types.js";
+/** Sets the name and color for each series (each slice for pie charts). Colors are theme variables (`--chart-1` to `--chart-5`, see `chartColor`). */
 export const toChartConfig = (spec) => {
     if (spec.type === "pie" && spec.labelKey) {
         return Object.fromEntries(spec.data.map((row) => [
             String(row[spec.labelKey] ?? ""),
-            { label: String(row[spec.labelKey] ?? ""), color: String(row.fill ?? "var(--chart-1)") },
+            { label: String(row[spec.labelKey] ?? ""), color: String(row.fill ?? chartColor("chart-1")) },
         ]));
     }
-    return Object.fromEntries(spec.series.map((series) => [series.key, { label: series.label, color: `var(--${series.colorToken})` }]));
+    return Object.fromEntries(spec.series.map((series) => [series.key, { label: series.label, color: chartColor(series.colorToken) }]));
 };
 /** Estimates the Y-axis tick label width (px) from the data. A tick can land one step above the data maximum (e.g. 95 → 100). */
 const Y_AXIS_CHAR_WIDTH = 7;

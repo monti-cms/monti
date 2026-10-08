@@ -2,6 +2,7 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { createContext, Fragment, useCallback, useContext, useMemo, useRef, } from "react";
 import { useTextCheckEditor } from "./editor/text-check/extension.js";
+export { SOURCE_ERROR_ID } from "./source-error-id.js";
 /** Whether the registered value is input parts (a plain object, not a component). */
 export const isFieldInputParts = (entry) => typeof entry === "object" && entry !== null && !("$$typeof" in entry);
 const CmsAdminComponentsContext = createContext({});
@@ -10,7 +11,6 @@ export function CmsAdminComponentsProvider({ components, children, }) {
     const value = useMemo(() => ({
         fencePreviews: { ...parent.fencePreviews, ...components.fencePreviews },
         fieldInputs: { ...parent.fieldInputs, ...components.fieldInputs },
-        blockEditors: { ...parent.blockEditors, ...components.blockEditors },
         blockViews: { ...parent.blockViews, ...components.blockViews },
         editorExtensions: [...(parent.editorExtensions ?? []), ...(components.editorExtensions ?? [])],
         textCheckers: [...(parent.textCheckers ?? []), ...(components.textCheckers ?? [])],
@@ -18,10 +18,23 @@ export function CmsAdminComponentsProvider({ components, children, }) {
         icons: { ...parent.icons, ...components.icons },
         fieldViews: { ...parent.fieldViews, ...components.fieldViews },
         listCells: { ...parent.listCells, ...components.listCells },
+        sourcePanels: [...(parent.sourcePanels ?? []), ...(components.sourcePanels ?? [])],
+        formats: { ...parent.formats, ...components.formats },
     }), [parent, components]);
     return _jsx(CmsAdminComponentsContext.Provider, { value: value, children: children });
 }
 export const useCmsAdminComponents = () => useContext(CmsAdminComponentsContext);
+/**
+ * The browser side of a format by name (`mdx`), or `undefined` when no plugin registered it. The format is a plugin's: code that needs a notation (AI, the
+ * source panel) asks for it here instead of importing a parser.
+ */
+export const useFormat = (name) => useCmsAdminComponents().formats?.[name];
+/** The format of the registered source panel (the notation a body is shown as text in), or `undefined` when no panel is registered. */
+export function useSourceFormat() {
+    const { sourcePanels, formats } = useCmsAdminComponents();
+    const name = sourcePanels?.[0]?.format;
+    return name === undefined ? undefined : formats?.[name];
+}
 const NO_CHECKERS = [];
 /** Calls all registered edit screen extensions and text check screens and merges them into one. */
 export function useEditorExtensions(context) {

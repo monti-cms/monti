@@ -1,6 +1,4 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { runMessages } from "./run.messages.js";
-const t = createTranslator(runMessages);
 const matchesPattern = (pattern, value) => {
     try {
         return new RegExp(pattern, "u").test(value);
@@ -39,7 +37,8 @@ export function checkCandidates(checks, raw, env) {
     return items;
 }
 /** Check for long-text results. Returns the reason if it fails. */
-export function checkText(checks, text) {
+export function checkText(site, checks, text) {
+    const t = site.createTranslator(runMessages);
     if (!text.trim())
         return t("emptyResult");
     for (const check of checks) {

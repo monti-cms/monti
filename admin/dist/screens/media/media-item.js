@@ -1,7 +1,4 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { toast } from "sonner";
-import { mediaMessages } from "./messages.js";
-const t = createTranslator(mediaMessages);
 /**
  * Merges usages into one per post. A published post's draft and published version share the same image and are counted twice, but to a person it is one post.
  * If only in the draft (newly added, not yet published), it is labeled "before publishing"; if only in the published version (removed from the draft but still in the public post), "published only".
@@ -29,14 +26,14 @@ export function mediaUsages(media) {
 /** Usage count. Counted once per post (the server's count when only non-post usages exist, such as templates). */
 export const usageCount = (media) => mediaUsages(media).length || media.referencesCount;
 /** Usage state shown on lists and tiles. */
-export const usageLabel = (media) => media.status === "deleting"
+export const usageLabel = (t, media) => media.status === "deleting"
     ? t("usage.deleting")
     : media.referencesCount > 0
         ? t("usage.count", { count: usageCount(media) })
         : t("usage.none");
 /** Text of the usage note (`note`). */
-export const usageNoteLabel = (note) => t(note === "beforePublish" ? "usage.note.beforePublish" : "usage.note.publishedOnly");
-export async function copyText(text, success) {
+export const usageNoteLabel = (t, note) => t(note === "beforePublish" ? "usage.note.beforePublish" : "usage.note.publishedOnly");
+export async function copyText(t, text, success) {
     try {
         await navigator.clipboard.writeText(text);
         toast.success(success);

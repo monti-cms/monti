@@ -14,7 +14,7 @@ export const providerMessages = defineMessages("cms-ai.provider", {
         deciderUnreachable: "Couldn't connect to the decision model address.",
         deciderShape: "The decision model's answer has the wrong format.",
         unreachable: "Couldn't connect to the address.",
-        noSecret: "The server config has no secret, so the key can't be saved.",
+        noSecret: "MONTI_SECRET is not set on the server, so the key can't be saved.",
     },
     ko: {
         "service.key": "AI 서비스 키를 확인하세요.",
@@ -29,6 +29,6 @@ export const providerMessages = defineMessages("cms-ai.provider", {
         deciderUnreachable: "판단 모델 주소에 연결하지 못했습니다.",
         deciderShape: "판단 모델 답의 형식이 맞지 않습니다.",
         unreachable: "주소에 연결하지 못했습니다.",
-        noSecret: "서버 설정에 secret이 없어 키를 저장할 수 없습니다.",
+        noSecret: "서버에 MONTI_SECRET이 없어 키를 저장할 수 없습니다.",
     },
 });

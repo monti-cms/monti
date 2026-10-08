@@ -8,13 +8,16 @@ export { handleTextCheck, parseTextCheckBody, } from "./server-handler.js";
  * ```ts
  * // app/api/text-check/route.ts
  * export const POST = textCheckRoute({
+ *   cms,
  *   check: async (segments, { signal }) => callMyProvider(segments, process.env.MY_API_KEY, signal),
  * });
  * ```
+ *
+ * A route file of the app names its instance with `cms`. A route a plugin lists in its `routes` is served by `cms.handle()`, which passes the instance, so it needs no `cms`.
  */
 export function textCheckRoute(options) {
     return adminRoute(async ({ request }) => {
         const result = await handleTextCheck(await readJsonBody(request), options, request.signal);
         return json(result.body, { status: result.status });
-    });
+    }, { cms: options.cms });
 }

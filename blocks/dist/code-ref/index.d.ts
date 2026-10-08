@@ -10,6 +10,25 @@ export { codeRefBlock } from "./definition.js";
  * Line anchors (the `anchor` line effect) and the linking view are core code block features; this extension provides the body-side mark and bubble.
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const codeRef: () => import("@monti-cms/core").CmsPlugin<"code-ref", {}> & {
+export declare const codeRef: () => import("@monti-cms/core").CmsPlugin<"code-ref", {}, readonly [{
+    readonly name: "code-ref";
+    readonly label: string;
+    readonly syntax: {
+        readonly kind: "text";
+        readonly directive: "code-ref";
+    };
+    readonly component: "CodeRef";
+    readonly attributes: {
+        readonly to: {
+            readonly type: "string";
+            readonly label: string;
+            readonly required: true;
+            readonly codeAnchor: true;
+        };
+    };
+    readonly editor: {
+        readonly view: "mark";
+    };
+}]> & {
     readonly contributes?: Readonly<Record<string, unknown>> | undefined;
 };

@@ -1,7 +1,13 @@
+import { problemError } from "../../../core/problem.js";
+import { dbOn } from "../db/kysely.js";
 export function validateSchemaName(schema) {
     const s = schema ?? "public";
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(s)) {
-        throw new Error("Invalid schema name");
+        throw problemError({
+            what: `The database schema name "${s}" is not valid`,
+            where: "DATABASE_SCHEMA in .env.local, or `postgres({ schema })` in monti.config.ts",
+            fix: "use letters, digits and underscores only, starting with a letter or underscore (for example monti_preview)",
+        });
     }
     return s;
 }
@@ -29,4 +35,11 @@ export async function withTransaction(pool, fn, options) {
     finally {
         client.release();
     }
+}
+/**
+ * `withTransaction` for code that uses Kysely: `fn` gets `trx`, a `Db` on the transaction's own client, and the `client` itself for the code that still writes
+ * plain SQL, so both can be used in one transaction and roll back together.
+ */
+export function withTrx(ctx, fn, options) {
+    return withTransaction(ctx.pool, (client) => fn(dbOn(client, ctx.qSchema), client), options);
 }

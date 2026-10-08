@@ -2,6 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cn } from "@monti-cms/admin/kit";
 import { useEffect, useRef, useState } from "react";
+import { drawMermaid } from "./draw.js";
 /**
  * Default editor preview of the Mermaid block (optional dependency `mermaid`). The Mermaid block extension's admin provider registers it as `fencePreviews.mermaid`,
  * and it is loaded only when a preview is opened. A site can replace it by registering its own renderer under the same name.
@@ -34,7 +35,7 @@ export function MermaidPreview({ source, className }) {
             .then(async ({ default: mermaid }) => {
             mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
             renderCount += 1;
-            const { svg } = await mermaid.render(`cms-mermaid-${renderCount}`, source);
+            const svg = await drawMermaid(mermaid, `cms-mermaid-${renderCount}`, source);
             if (disposed || !target.current)
                 return;
             target.current.innerHTML = svg;

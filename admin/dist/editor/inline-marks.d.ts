@@ -1,14 +1,23 @@
+import type { Site } from "@monti-cms/core/client";
 import { type CodeRule } from "@monti-cms/core/code-block";
 import type { Editor } from "@tiptap/core";
 import { type EditorState } from "@tiptap/pm/state";
 import type { ToolbarItem } from "./toolbar-button.js";
+/** Names of the marks of the inline tools, in the order the tools are shown. */
+export declare const INLINE_MARK_NAMES: readonly ["bold", "italic", "underline", "strike", "code", "superscript", "subscript"];
 export interface InlineMarkTool extends ToolbarItem {
     /** Name of the mark this tool toggles. */
     mark: string;
 }
-export declare const INLINE_MARK_TOOLS: InlineMarkTool[];
-/** Inline tools available on the text block containing the selection. A code block only gets bold, italic, strikethrough and underline. */
-export declare const allowedMarkTools: (state: EditorState) => InlineMarkTool[];
+/**
+ * Whether the editor offers the tool for this mark at the selection. The marks the body's allowed list does not allow are hidden, and so are the code block
+ * tools that the site turned off (`codeBlock.features`), only inside code. A mark already on the selection stays offered so it can be removed.
+ */
+export declare const offersMarkTool: (site: Site, state: EditorState, mark: string) => boolean;
+/** The inline tools of a site (their text follows the site's admin language, and which of them work in code follows `codeBlock.features`). */
+export declare const inlineMarkTools: (site: Site) => InlineMarkTool[];
+/** Inline tools available on the text block containing the selection. A code block only gets bold, italic, strikethrough and underline (when the site offers them). */
+export declare const allowedMarkTools: (site: Site, state: EditorState) => InlineMarkTool[];
 export declare const allowsMark: (state: EditorState, mark: string) => boolean;
 /**
  * Order of marks shown in the bubble when the cursor is placed. Marks with settings (links, extension text styles, in-code tooltips and text folds) come first.

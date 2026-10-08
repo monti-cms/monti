@@ -1,1 +1,6 @@
-export default function AdminTemplatesPage(): Promise<import("react").JSX.Element>;
+import type { Cms } from "@monti-cms/core/runtime";
+import type { AdminServer } from "../../host/server.js";
+export default function AdminTemplatesPage({ cms, server }: {
+    cms: Cms;
+    server: AdminServer;
+}): Promise<import("react").JSX.Element>;

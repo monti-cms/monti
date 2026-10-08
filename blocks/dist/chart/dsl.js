@@ -1,4 +1,4 @@
-import { CHART_THEME_TOKENS, CHART_TYPES, } from "./types.js";
+import { CHART_THEME_TOKENS, CHART_TYPES, chartColor, } from "./types.js";
 const isChartType = (value) => CHART_TYPES.includes(value);
 const isChartThemeToken = (value) => CHART_THEME_TOKENS.includes(value);
 const splitTableRow = (line) => line.split("|").map((item) => item.trim());
@@ -171,7 +171,7 @@ export const normalizeChartDsl = (parsed) => {
                 return {
                     [labelKey]: String(record[labelKey] ?? ""),
                     [valueKey]: Number.NaN,
-                    fill: `var(--${CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]})`,
+                    fill: chartColor(CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]),
                 };
             }
             const numericValue = Number(record[valueKey]);
@@ -181,7 +181,7 @@ export const normalizeChartDsl = (parsed) => {
             return {
                 [labelKey]: String(record[labelKey] ?? ""),
                 [valueKey]: numericValue,
-                fill: `var(--${CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]})`,
+                fill: chartColor(CHART_THEME_TOKENS[index % CHART_THEME_TOKENS.length]),
             };
         });
         if (errors.length > 0) {

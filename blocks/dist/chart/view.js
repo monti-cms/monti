@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /*
  * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
  * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with
- * `cms-block-chart-*` classes (this package's `styles.css`) without admin UI code or Tailwind.
+ * `cms-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, } from "recharts";

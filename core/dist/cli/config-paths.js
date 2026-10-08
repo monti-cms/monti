@@ -1,8 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
-/** Config alias names. CMS code reads the two config files through these names. */
-export const CONFIG_ALIAS = "@cms-config";
-export const SERVER_ALIAS = "@cms-server";
+import { problemError } from "../core/problem.js";
 /** Reads JSON with comments and trailing commas (tsconfig). Leaves `//` and `/*` inside strings alone. `undefined` if it cannot be read. */
 export function parseJsonc(text) {
     let out = "";
@@ -45,41 +43,29 @@ export function parseJsonc(text) {
         return undefined;
     }
 }
-/** Alias file listed in tsconfig `paths` (relative to `cwd`). `undefined` if none. */
-export function tsconfigAliasPath(cwd, alias) {
-    const file = path.join(cwd, "tsconfig.json");
-    if (!existsSync(file))
-        return undefined;
-    const tsconfig = parseJsonc(readFileSync(file, "utf8"));
-    const target = tsconfig?.compilerOptions?.paths?.[alias]?.[0];
-    if (!target)
-        return undefined;
-    const base = path.resolve(cwd, tsconfig?.compilerOptions?.baseUrl ?? ".");
-    return path.relative(cwd, path.resolve(base, target)) || target;
-}
-const CANDIDATES = {
-    config: ["cms.config.ts", "src/cms.config.ts"],
-    server: ["cms.server.ts", "src/cms.server.ts"],
-};
+/** Candidate locations of the config file, the module that exports the CMS instance as `cms`. */
+export const CONFIG_CANDIDATES = ["monti.config.ts", "src/monti.config.ts"];
 /**
- * Locations of the two config files. Looked up in this order: the chosen value (`--config`, `--server`) -> environment variable (`CMS_CONFIG_PATH`, `CMS_SERVER_PATH`) -> the tsconfig `paths`
- * alias -> common locations (`./cms.config.ts`, `./src/cms.config.ts`). It is an error if the file is missing.
+ * Location of the config file (`monti.config.ts`, the module that exports the CMS instance as `cms`). Looked up in this order: the chosen value
+ * (`--config`) -> the `MONTI_CONFIG_PATH` environment variable -> common locations (`./monti.config.ts`, `./src/monti.config.ts`). Relative to `cwd`.
+ * It is an error if the file is missing.
  */
-export function resolveConfigPaths(cwd, chosen = {}, env = process.env) {
-    const find = (kind, alias, envName, flag) => {
-        const given = chosen[kind] ?? env[envName];
-        const found = given ??
-            tsconfigAliasPath(cwd, alias) ??
-            CANDIDATES[kind].find((candidate) => existsSync(path.join(cwd, candidate)));
-        if (!found || !existsSync(path.resolve(cwd, found))) {
-            throw new Error(found
-                ? `${alias} file not found: ${found}`
-                : `cannot find ${CANDIDATES[kind][0]}; pass ${flag} <path> or set ${envName} (run \`monti init\` to create one)`);
-        }
-        return found;
-    };
-    return {
-        config: find("config", CONFIG_ALIAS, "CMS_CONFIG_PATH", "--config"),
-        server: find("server", SERVER_ALIAS, "CMS_SERVER_PATH", "--server"),
-    };
+export function resolveConfigPath(cwd, chosen = undefined, env = process.env) {
+    const found = chosen ??
+        (env.MONTI_CONFIG_PATH || undefined) ??
+        CONFIG_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
+    if (!found || !existsSync(path.resolve(cwd, found))) {
+        throw problemError(found
+            ? {
+                what: `The config file ${found} does not exist`,
+                where: chosen ? "the --config option" : "the MONTI_CONFIG_PATH environment variable",
+                fix: `correct the path (it is relative to ${cwd}), or remove the option so \`monti\` looks for ${CONFIG_CANDIDATES.join(" or ")}`,
+            }
+            : {
+                what: `Cannot find ${CONFIG_CANDIDATES[0]} (looked in ${cwd}, also under src/)`,
+                where: "the folder you ran `monti` in",
+                fix: "run `monti` from the folder of your Next app, or point at the file with --config <path> or MONTI_CONFIG_PATH; `monti init` creates one in an app that has none",
+            }, undefined, "config_missing");
+    }
+    return found;
 }

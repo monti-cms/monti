@@ -1,4 +1,4 @@
-export { ADDED_BLOCK_CONVERTERS, addedBlockConverters, PARENT_ONLY_TYPES } from "./converter.js";
-export { ADDED_BLOCK_INSERT_ACTIONS, insertContentOf } from "./inserts.js";
-export { ADDED_BLOCK_NODES, createAddedBlockNode } from "./nodes.js";
-export { ADDED_NODE_BLOCKS, addedBlockOfNode, blockNodeName, isBodyContainer } from "./shared.js";
+export { addedBlockConverters, addedBlockConvertersOf, parentOnlyTypes } from "./converter.js";
+export { addedBlockInsertActions, insertContentOf } from "./inserts.js";
+export { addedBlockNodes, createAddedBlockNode } from "./nodes.js";
+export { addedBlockOfNode, addedNodeBlocks, blockNodeName, isBodyContainer } from "./shared.js";

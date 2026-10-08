@@ -1,15 +1,6 @@
 import type { Node as PmNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 /**
- * Block element resolution rules and DOM traversal.
- * Handles top-level blocks, nested blocks (list items, inside blockquotes), and NodeView containers (content hole) under common rules.
- */
-/**
- * Names of container nodes whose child blocks can be moved one at a time: blockquote plus added container blocks (callout, fold, tabs, columns, etc.).
- * Children of parents not in this list (table cells, etc.) are not moved separately; the parent block moves as a unit.
- */
-export declare const DRAG_CONTAINER_NODES: Set<string>;
-/**
  * To keep one handle per line, narrow the pointed block down to the innermost block on that line.
  * - A list (indentation, bullet area) goes to the item at that height, and for an indented list down to the inner item.
  * - The frame and margin of a container (callout, fold, tabs, columns) go down to the inner block at that height. Only for a line

@@ -1,17 +1,17 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { blocksMessages } from "../messages.js";
-import { FencePreviewNodeView } from "./fence-preview-node-view.js";
+import { FencePreviewBlockView } from "./fence-preview-node-view.js";
 import { MathPreview } from "./preview-renderers.js";
-const t = createTranslator(blocksMessages);
-const MATH_META = {
+const mathMeta = (t) => ({
     kind: "math",
     label: t("math.label"),
     placeholder: "E = mc^2",
     preview: (value) => _jsx(MathPreview, { value: value }),
-};
-/** Math block (`$$`) edit view. */
-export function MathNodeView(props) {
-    return _jsx(FencePreviewNodeView, { ...props, meta: MATH_META });
+});
+/** Edit view of the core math block (`blockViews.math`, `$$`). */
+export function MathBlockView() {
+    const t = useTranslator(blocksMessages);
+    return _jsx(FencePreviewBlockView, { meta: mathMeta(t) });
 }

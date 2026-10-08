@@ -1,33 +1,36 @@
+import { sql } from "kysely";
 import { ENTRY_STATUSES, LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api.js";
-import { COLLECTIONS, isItemCollection } from "../../../core/collections.js";
 import { isUuid } from "../../../core/ids.js";
-import { DEFAULT_LOCALE, isLocale, LOCALES } from "../../../core/locales.js";
-import { RECORD_TRANSLATIONS_KEY, recordLocalizedFields, storedFields } from "../../../schema/derive.js";
-import { CmsError } from "./errors.js";
-import { likeContainsPattern } from "./sql.js";
+import { CmsError } from "../../../core/store/errors.js";
+import { DEFAULT_ENTRY_SEARCH_LIMIT, MAX_ENTRY_SEARCH_LIMIT, } from "../../../core/store/types.js";
+import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive.js";
+import { likeContainsPattern, likePrefixPattern, likeWordPattern } from "./sql.js";
+import { ROW_COLLECTION, titleExpr } from "./title-sql.js";
 /**
  * Languages that have a value in the entry. A language exists if any per-language text field (`localized: true`) has a value. The default language is the field itself,
  * other languages are `translations[locale][field]`.
  */
-function namedLocales(collection, metadata) {
-    const fields = recordLocalizedFields(collection);
+function namedLocales(site, collection, metadata) {
+    const fields = site.recordLocalizedFields(collection);
     const translations = (metadata[RECORD_TRANSLATIONS_KEY] ?? {});
     const hasValue = (value) => typeof value === "string" && value.trim() !== "";
-    return LOCALES.filter((locale) => fields.some((field) => hasValue(locale === DEFAULT_LOCALE ? metadata[field] : translations[locale]?.[field])));
+    return site.LOCALES.filter((locale) => fields.some((field) => hasValue(locale === site.DEFAULT_LOCALE ? metadata[field] : translations[locale]?.[field])));
 }
 const isDate = (value) => value instanceof Date && Number.isFinite(value.getTime());
 /** Relation fields of a collection. Used by list filters and the row's `relations`. */
-const relationFieldsOf = (collection) => storedFields(collection).filter((stored) => stored.field.kind === "relation");
+const relationFieldsOf = (site, collection) => site.storedFields(collection).filter((stored) => stored.field.kind === "relation");
 /** Fields shown as text in list cells (relations are carried separately in `relations`). */
-const valueColumnFieldsOf = (collection) => storedFields(collection).filter((stored) => ["text", "select", "media"].includes(stored.field.kind));
+const valueColumnFieldsOf = (site, collection) => site
+    .storedFields(collection)
+    .filter((stored) => ["text", "select", "media"].includes(stored.field.kind));
 /** Draft to read relation values from. A non-per-language value is shared across the translation group, so it is read from the source draft (`sw`). */
 const relationSource = (stored) => (stored.field.localized ? "w" : "sw");
 const relationIds = (value) => typeof value === "string" ? [value] : Array.isArray(value) ? value.filter((id) => typeof id === "string") : [];
-function assertParams(params) {
+function assertParams(site, params) {
     if (typeof params !== "object" || params === null || Array.isArray(params)) {
         throw new CmsError("Invalid parameters", "invalid_input");
     }
-    if (!COLLECTIONS.includes(params.collection)) {
+    if (!site.COLLECTIONS.includes(params.collection)) {
         throw new CmsError("Invalid collection", "invalid_input");
     }
     for (const key of ["search", "titleContains", "slugContains"]) {
@@ -43,14 +46,15 @@ function assertParams(params) {
             throw new CmsError("Invalid status", "invalid_input");
         }
     }
-    if (params.locales !== undefined && (!Array.isArray(params.locales) || params.locales.some((l) => !isLocale(l)))) {
+    if (params.locales !== undefined &&
+        (!Array.isArray(params.locales) || params.locales.some((l) => !site.isLocale(l)))) {
         throw new CmsError("Invalid locale", "invalid_input");
     }
     if (params.relations !== undefined) {
         if (typeof params.relations !== "object" || params.relations === null || Array.isArray(params.relations)) {
             throw new CmsError("Invalid relations", "invalid_input");
         }
-        const fields = new Set(relationFieldsOf(params.collection).map((stored) => stored.name));
+        const fields = new Set(relationFieldsOf(site, params.collection).map((stored) => stored.name));
         for (const [field, ids] of Object.entries(params.relations)) {
             if (!fields.has(field))
                 throw new CmsError(`Unknown relation field: ${field}`, "invalid_input");
@@ -82,120 +86,212 @@ function assertParams(params) {
         throw new CmsError("Invalid pageSize", "invalid_input");
     }
 }
+function assertSearchParams(site, params) {
+    if (typeof params !== "object" || params === null || Array.isArray(params)) {
+        throw new CmsError("Invalid parameters", "invalid_input");
+    }
+    if (!site.COLLECTIONS.includes(params.collection)) {
+        throw new CmsError("Invalid collection", "invalid_input");
+    }
+    if (params.query !== undefined && typeof params.query !== "string")
+        throw new CmsError("Invalid query", "invalid_input");
+    if (params.publishedOnly !== undefined && typeof params.publishedOnly !== "boolean") {
+        throw new CmsError("Invalid publishedOnly", "invalid_input");
+    }
+    if (params.locale !== undefined && !site.isLocale(params.locale))
+        throw new CmsError("Invalid locale", "invalid_input");
+    if (params.limit !== undefined &&
+        (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > MAX_ENTRY_SEARCH_LIMIT)) {
+        throw new CmsError("Invalid limit", "invalid_input");
+    }
+    if (params.ids !== undefined && (!Array.isArray(params.ids) || params.ids.some((id) => !isUuid(id)))) {
+        throw new CmsError("Invalid ids", "invalid_input");
+    }
+}
+/** Whether the working body differs from the published one, or the working slug from the current address. `entry` is the alias of the entries table. */
+const hasChanges = (entry) => sql `(p.entry_id is not null and (p.content_hash <> w.content_hash or ${sql.ref(`${entry}.working_slug`)} is distinct from cur.slug))`;
+/** The group an entry belongs to: its source, or itself for a source. */
+const groupOf = (entry) => sql `coalesce(${sql.ref(`${entry}.translation_group_id`)}, ${sql.ref(`${entry}.id`)})`;
 /** Admin list. Search, filtering, sorting, and paging are handled on the server. */
 export function createListOps(ctx) {
-    const { pool, qSchema } = ctx;
+    const { qSchema, site } = ctx;
+    const db = ctx.db();
     return {
-        listEntries: async (params) => {
-            assertParams(params);
-            const page = params.page ?? 1;
-            const pageSize = params.pageSize ?? 25;
-            const conditions = [];
-            const values = [];
-            const bind = (value) => {
-                values.push(value);
-                return `$${values.length}`;
-            };
-            conditions.push(`e.collection = ${bind(params.collection)}`);
-            const grouped = params.groupTranslations === true;
-            // Group view keeps only the source as a row. Translations come attached in the row's `translations`.
-            if (grouped)
-                conditions.push("(e.translation_group_id IS NULL OR e.translation_group_id = e.id)");
-            /** Whether content in the same group that is outside the trash (including the source) satisfies the condition. */
-            const anyMember = (predicate) => `EXISTS (
-					SELECT 1 FROM "${qSchema}".entries m
-					JOIN "${qSchema}".entry_bodies mw ON mw.entry_id = m.id AND mw.state = 'working'
-					WHERE COALESCE(m.translation_group_id, m.id) = e.id AND m.status <> 'trashed' AND ${predicate}
-				)`;
-            if (params.statuses && params.statuses.length > 0) {
-                conditions.push(`e.status = ANY(${bind(params.statuses)}::text[])`);
+        searchEntries: async (params) => {
+            assertSearchParams(site, params);
+            let found = db
+                .selectFrom("entries as e")
+                .innerJoin("entry_bodies as w", (join) => join.onRef("w.entry_id", "=", "e.id").on("w.state", "=", "working"))
+                .select([
+                "e.id",
+                "e.working_slug",
+                "e.status",
+                sql `coalesce(nullif(${titleExpr(site, "w.metadata", { collection: params.collection })}, ''), nullif(e.working_slug, ''))`.as("title"),
+            ])
+                .where("e.collection", "=", params.collection)
+                .where("e.status", "<>", "trashed");
+            let rank = sql `0`;
+            let limit = DEFAULT_ENTRY_SEARCH_LIMIT;
+            if (params.ids !== undefined) {
+                if (params.ids.length === 0)
+                    return [];
+                found = found.where("e.id", "=", sql `any(${params.ids}::uuid[])`);
+                limit = params.ids.length;
             }
             else {
-                // The default list hides the trash.
-                conditions.push(`e.status <> 'trashed'`);
+                limit = params.limit ?? DEFAULT_ENTRY_SEARCH_LIMIT;
+                if (params.publishedOnly)
+                    found = found.where("e.status", "=", "published");
+                if (params.locale !== undefined)
+                    found = found.where("e.locale", "=", params.locale);
+                const query = params.query?.trim();
+                if (query) {
+                    const contains = likeContainsPattern(query);
+                    rank = sql `case
+						when lower(title) = lower(${query}) then 0
+						when title ilike ${likePrefixPattern(query)} then 1
+						when title ilike ${likeWordPattern(query)} then 2
+						when title ilike ${contains} then 3
+						when working_slug ilike ${contains} then 4
+					end`;
+                }
             }
-            if (params.folderId === null) {
-                conditions.push("e.folder_id IS NULL");
-            }
-            else if (params.folderId !== undefined) {
-                conditions.push(params.includeDescendants
-                    ? `e.folder_id IN (
-							WITH RECURSIVE descendants AS (
-								SELECT id FROM "${qSchema}".folders WHERE id = ${bind(params.folderId)}
-								UNION ALL
-								SELECT f.id FROM "${qSchema}".folders f JOIN descendants d ON f.parent_id = d.id
-							)
-							SELECT id FROM descendants
-						)`
-                    : `e.folder_id = ${bind(params.folderId)}`);
-            }
-            if (params.search) {
-                const token = bind(likeContainsPattern(params.search));
-                const matches = (alias, slug) => `(${slug} ILIKE ${token} OR ${alias}.metadata->>'title' ILIKE ${token}${params.includeBody ? ` OR ${alias}.search_text ILIKE ${token}` : ""})`;
-                conditions.push(grouped
-                    ? `(${matches("w", "e.working_slug")} OR ${anyMember(matches("mw", "m.working_slug"))})`
-                    : matches("w", "e.working_slug"));
-            }
-            if (params.titleContains) {
-                conditions.push(`w.metadata->>'title' ILIKE ${bind(likeContainsPattern(params.titleContains))}`);
-            }
-            if (params.slugContains) {
-                conditions.push(`e.working_slug ILIKE ${bind(likeContainsPattern(params.slugContains))}`);
-            }
-            if (params.locales && params.locales.length > 0) {
-                const locales = `${bind(params.locales)}::text[]`;
-                conditions.push(grouped ? anyMember(`m.locale = ANY(${locales})`) : `e.locale = ANY(${locales})`);
-            }
-            // Shared relation values are filtered by the source draft's values even for translations. For a source, `sw` is its own draft.
-            const relationFields = relationFieldsOf(params.collection);
-            for (const [field, ids] of Object.entries(params.relations ?? {})) {
-                const stored = relationFields.find((candidate) => candidate.name === field);
-                if (!stored || ids.length === 0)
-                    continue;
-                const value = `${relationSource(stored)}.metadata`;
-                conditions.push(stored.field.kind === "relation" && stored.field.many
-                    ? `COALESCE(${value}->${bind(field)}, '[]'::jsonb) ?| ${bind(ids)}::text[]`
-                    : `${value}->>${bind(field)} = ANY(${bind(ids)}::text[])`);
-            }
-            if (params.hasUnpublishedChanges !== undefined) {
-                const changed = "(p.entry_id IS NOT NULL AND (p.content_hash <> w.content_hash OR e.working_slug IS DISTINCT FROM cur.slug))";
-                conditions.push(params.hasUnpublishedChanges ? changed : `NOT ${changed}`);
-            }
-            const addRange = (column, range) => {
-                if (range?.from)
-                    conditions.push(`${column} >= ${bind(range.from)}`);
-                if (range?.to)
-                    conditions.push(`${column} <= ${bind(range.to)}`);
-            };
-            addRange("e.created_at", params.createdAt);
-            addRange("e.updated_at", params.updatedAt);
-            addRange("e.published_at", params.publishedAt);
+            const rows = await db
+                .selectFrom(found.as("found"))
+                .crossJoinLateral(db.selectNoFrom(rank.as("rank")).as("ranked"))
+                .select(["found.id", "found.title", "found.working_slug", "found.status"])
+                .where("ranked.rank", "is not", null)
+                .orderBy("ranked.rank")
+                .orderBy(sql `lower(found.title)`, (order) => order.asc().nullsLast())
+                .orderBy("found.id")
+                .limit(limit)
+                .execute();
+            return rows.map((row) => ({ id: row.id, title: row.title, slug: row.working_slug, status: row.status }));
+        },
+        listEntries: async (params) => {
+            assertParams(site, params);
+            const page = params.page ?? 1;
+            const pageSize = params.pageSize ?? 25;
+            const grouped = params.groupTranslations === true;
+            const titleOf = (alias) => titleExpr(site, `${alias}.metadata`, { collection: params.collection });
+            /** Whether content in the same group that is outside the trash (including the source) satisfies the condition. */
+            const anyMember = (predicate) => sql `exists (
+					select 1 from ${sql.id(qSchema, "entries")} m
+					join ${sql.id(qSchema, "entry_bodies")} mw on mw.entry_id = m.id and mw.state = 'working'
+					where ${groupOf("m")} = e.id and m.status <> 'trashed' and ${predicate}
+				)`;
+            const from = db
+                .selectFrom("entries as e")
+                .innerJoin("entry_bodies as w", (join) => join.onRef("w.entry_id", "=", "e.id").on("w.state", "=", "working"))
+                .innerJoin("entry_bodies as sw", (join) => join.on("sw.entry_id", "=", groupOf("e")).on("sw.state", "=", "working"))
+                .leftJoin("entry_bodies as p", (join) => join.onRef("p.entry_id", "=", "e.id").on("p.state", "=", "published"))
+                .leftJoin("content_addresses as cur", (join) => join.onRef("cur.entry_id", "=", "e.id").on("cur.type", "=", "current"))
+                .where((eb) => {
+                const conditions = [eb("e.collection", "=", params.collection)];
+                // Group view keeps only the source as a row. Translations come attached in the row's `translations`.
+                if (grouped) {
+                    conditions.push(eb.or([eb("e.translation_group_id", "is", null), eb("e.translation_group_id", "=", eb.ref("e.id"))]));
+                }
+                if (params.statuses && params.statuses.length > 0) {
+                    conditions.push(eb("e.status", "=", sql `any(${params.statuses}::text[])`));
+                }
+                else {
+                    // The default list hides the trash.
+                    conditions.push(eb("e.status", "<>", "trashed"));
+                }
+                if (params.folderId === null) {
+                    conditions.push(eb("e.folder_id", "is", null));
+                }
+                else if (params.folderId !== undefined) {
+                    conditions.push(params.includeDescendants
+                        ? sql `e.folder_id in (
+									with recursive descendants as (
+										select id from ${sql.id(qSchema, "folders")} where id = ${params.folderId}
+										union all
+										select f.id from ${sql.id(qSchema, "folders")} f join descendants d on f.parent_id = d.id
+									)
+									select id from descendants
+								)`
+                        : eb("e.folder_id", "=", params.folderId));
+                }
+                if (params.search) {
+                    const token = likeContainsPattern(params.search);
+                    const matches = (alias, slug) => sql `(${sql.ref(slug)} ilike ${token} or ${titleOf(alias)} ilike ${token}${params.includeBody ? sql ` or ${sql.ref(`${alias}.search_text`)} ilike ${token}` : sql ``})`;
+                    conditions.push(grouped
+                        ? sql `(${matches("w", "e.working_slug")} or ${anyMember(matches("mw", "m.working_slug"))})`
+                        : matches("w", "e.working_slug"));
+                }
+                if (params.titleContains) {
+                    conditions.push(eb(titleOf("w"), "ilike", likeContainsPattern(params.titleContains)));
+                }
+                if (params.slugContains) {
+                    conditions.push(eb("e.working_slug", "ilike", likeContainsPattern(params.slugContains)));
+                }
+                if (params.locales && params.locales.length > 0) {
+                    const locales = sql `any(${params.locales}::text[])`;
+                    conditions.push(grouped ? anyMember(sql `m.locale = ${locales}`) : eb("e.locale", "=", locales));
+                }
+                // Shared relation values are filtered by the source draft's values even for translations. For a source, `sw` is its own draft.
+                const relationFields = relationFieldsOf(site, params.collection);
+                for (const [field, ids] of Object.entries(params.relations ?? {})) {
+                    const stored = relationFields.find((candidate) => candidate.name === field);
+                    if (!stored || ids.length === 0)
+                        continue;
+                    const value = sql.ref(`${relationSource(stored)}.metadata`);
+                    conditions.push(stored.field.kind === "relation" && stored.field.many
+                        ? sql `coalesce(${value}->${field}, '[]'::jsonb) ?| ${ids}::text[]`
+                        : sql `${value}->>${field} = any(${ids}::text[])`);
+                }
+                if (params.hasUnpublishedChanges !== undefined) {
+                    conditions.push(params.hasUnpublishedChanges ? hasChanges("e") : sql `not ${hasChanges("e")}`);
+                }
+                const addRange = (column, range) => {
+                    if (range?.from)
+                        conditions.push(eb(column, ">=", range.from));
+                    if (range?.to)
+                        conditions.push(eb(column, "<=", range.to));
+                };
+                addRange("e.created_at", params.createdAt);
+                addRange("e.updated_at", params.updatedAt);
+                addRange("e.published_at", params.publishedAt);
+                return eb.and(conditions);
+            });
             const sortColumns = {
-                updatedAt: "e.updated_at",
-                createdAt: "e.created_at",
-                publishedAt: "e.published_at",
-                title: "w.metadata->>'title'",
-                slug: "e.working_slug",
+                updatedAt: sql.ref("e.updated_at"),
+                createdAt: sql.ref("e.created_at"),
+                publishedAt: sql.ref("e.published_at"),
+                title: titleOf("w"),
+                slug: sql.ref("e.working_slug"),
             };
             const sortColumn = sortColumns[params.sort?.field ?? "updatedAt"];
-            const sortDir = params.sort?.direction === "asc" ? "ASC NULLS LAST" : "DESC NULLS LAST";
-            const from = `
-				FROM "${qSchema}".entries e
-				JOIN "${qSchema}".entry_bodies w ON w.entry_id = e.id AND w.state = 'working'
-				JOIN "${qSchema}".entry_bodies sw ON sw.entry_id = COALESCE(e.translation_group_id, e.id) AND sw.state = 'working'
-				LEFT JOIN "${qSchema}".entry_bodies p ON p.entry_id = e.id AND p.state = 'published'
-				LEFT JOIN "${qSchema}".content_addresses cur ON cur.entry_id = e.id AND cur.type = 'current'
-				WHERE ${conditions.join(" AND ")}`;
-            const countRes = await pool.query(`SELECT COUNT(*)::text AS count ${from}`, values);
-            const total = Number(countRes.rows[0]?.count ?? 0);
-            const dataRes = await pool.query(`SELECT e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
-				        e.status, e.version, e.folder_id, e.created_at, e.updated_at, e.published_at,
-				        e.trashed_at, e.working_slug, w.metadata, sw.metadata AS source_metadata,
-				        (p.entry_id IS NOT NULL AND (p.content_hash <> w.content_hash OR e.working_slug IS DISTINCT FROM cur.slug)) AS has_changes
-				 ${from}
-				 ORDER BY ${sortColumn} ${sortDir}, e.id ASC
-				 LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`, values);
-            const baseItems = dataRes.rows.map((row) => {
+            const ascending = params.sort?.direction === "asc";
+            const count = await from.select((eb) => eb.fn.countAll().as("count")).executeTakeFirst();
+            const total = Number(count?.count ?? 0);
+            const dataRows = await from
+                .select([
+                "e.id",
+                "e.collection",
+                "e.locale",
+                sql `coalesce(e.translation_group_id, e.id)`.as("translation_group_id"),
+                "e.status",
+                "e.version",
+                "e.folder_id",
+                "e.created_at",
+                "e.updated_at",
+                "e.published_at",
+                "e.trashed_at",
+                "e.working_slug",
+                "w.metadata",
+                "sw.metadata as source_metadata",
+                hasChanges("e").as("has_changes"),
+            ])
+                .orderBy(sortColumn, (order) => (ascending ? order.asc() : order.desc()).nullsLast())
+                .orderBy("e.id", "asc")
+                .limit(pageSize)
+                .offset((page - 1) * pageSize)
+                .execute();
+            const relationFields = relationFieldsOf(site, params.collection);
+            const baseItems = dataRows.map((row) => {
                 const meta = row.metadata ?? {};
                 // Shared relation values are read from the source draft.
                 const common = row.source_metadata ?? meta;
@@ -203,7 +299,7 @@ export function createListOps(ctx) {
                     stored.name,
                     relationIds((relationSource(stored) === "w" ? meta : common)[stored.name]),
                 ]));
-                const values = Object.fromEntries(valueColumnFieldsOf(row.collection).flatMap((stored) => {
+                const values = Object.fromEntries(valueColumnFieldsOf(site, row.collection).flatMap((stored) => {
                     const { localized } = stored.field;
                     const value = localized
                         ? (meta[stored.name] ?? (localized === "inherit" ? common[stored.name] : undefined))
@@ -215,7 +311,7 @@ export function createListOps(ctx) {
                     collection: row.collection,
                     locale: row.locale,
                     translationGroupId: row.translation_group_id,
-                    title: typeof meta.title === "string" ? meta.title : null,
+                    title: site.titleOfValues(row.collection, meta),
                     slug: row.working_slug,
                     status: row.status,
                     version: row.version,
@@ -227,8 +323,8 @@ export function createListOps(ctx) {
                     createdAt: row.created_at,
                     updatedAt: row.updated_at,
                     trashedAt: row.trashed_at,
-                    ...(isItemCollection(row.collection)
-                        ? { recordLocales: namedLocales(row.collection, meta) }
+                    ...(site.isItemCollection(row.collection)
+                        ? { recordLocales: namedLocales(site, row.collection, meta) }
                         : {}),
                 };
             });
@@ -237,13 +333,17 @@ export function createListOps(ctx) {
             ].filter(isUuid);
             const titleById = new Map();
             if (relatedIds.length > 0) {
-                const res = await pool.query(`SELECT e.id::text AS id,
-						COALESCE(NULLIF(w.metadata->>'title', ''), NULLIF(p.metadata->>'title', ''), e.working_slug) AS title
-					 FROM "${qSchema}".entries e
-					 LEFT JOIN "${qSchema}".entry_bodies w ON w.entry_id = e.id AND w.state = 'working'
-					 LEFT JOIN "${qSchema}".entry_bodies p ON p.entry_id = e.id AND p.state = 'published'
-					 WHERE e.id::text = ANY($1::text[])`, [relatedIds]);
-                for (const row of res.rows)
+                const rows = await db
+                    .selectFrom("entries as e")
+                    .leftJoin("entry_bodies as w", (join) => join.onRef("w.entry_id", "=", "e.id").on("w.state", "=", "working"))
+                    .leftJoin("entry_bodies as p", (join) => join.onRef("p.entry_id", "=", "e.id").on("p.state", "=", "published"))
+                    .select([
+                    sql `e.id::text`.as("id"),
+                    sql `coalesce(nullif(${titleExpr(site, "w.metadata", ROW_COLLECTION)}, ''), nullif(${titleExpr(site, "p.metadata", ROW_COLLECTION)}, ''), e.working_slug)`.as("title"),
+                ])
+                    .where(sql `e.id::text = any(${relatedIds}::text[])`)
+                    .execute();
+                for (const row of rows)
                     if (row.title)
                         titleById.set(row.id, row.title);
             }
@@ -256,15 +356,24 @@ export function createListOps(ctx) {
             }));
             if (!grouped || items.length === 0)
                 return { items, total, page, pageSize };
-            const memberRes = await pool.query(`SELECT m.id, COALESCE(m.translation_group_id, m.id) AS group_id, m.locale, m.status, m.version,
-				        (p.entry_id IS NOT NULL AND (p.content_hash <> w.content_hash OR m.working_slug IS DISTINCT FROM cur.slug)) AS has_changes
-				 FROM "${qSchema}".entries m
-				 JOIN "${qSchema}".entry_bodies w ON w.entry_id = m.id AND w.state = 'working'
-				 LEFT JOIN "${qSchema}".entry_bodies p ON p.entry_id = m.id AND p.state = 'published'
-				 LEFT JOIN "${qSchema}".content_addresses cur ON cur.entry_id = m.id AND cur.type = 'current'
-				 WHERE COALESCE(m.translation_group_id, m.id) = ANY($1::uuid[]) AND m.status <> 'trashed'`, [items.map((item) => item.id)]);
+            const memberRows = await db
+                .selectFrom("entries as m")
+                .innerJoin("entry_bodies as w", (join) => join.onRef("w.entry_id", "=", "m.id").on("w.state", "=", "working"))
+                .leftJoin("entry_bodies as p", (join) => join.onRef("p.entry_id", "=", "m.id").on("p.state", "=", "published"))
+                .leftJoin("content_addresses as cur", (join) => join.onRef("cur.entry_id", "=", "m.id").on("cur.type", "=", "current"))
+                .select([
+                "m.id",
+                sql `coalesce(m.translation_group_id, m.id)`.as("group_id"),
+                "m.locale",
+                "m.status",
+                "m.version",
+                hasChanges("m").as("has_changes"),
+            ])
+                .where(groupOf("m"), "=", sql `any(${items.map((item) => item.id)}::uuid[])`)
+                .where("m.status", "<>", "trashed")
+                .execute();
             const membersByGroup = new Map();
-            for (const row of memberRes.rows) {
+            for (const row of memberRows) {
                 const members = membersByGroup.get(row.group_id) ?? [];
                 members.push({
                     id: row.id,
@@ -277,8 +386,8 @@ export function createListOps(ctx) {
                 membersByGroup.set(row.group_id, members);
             }
             const localeOrder = (locale) => {
-                const index = LOCALES.indexOf(locale);
-                return index === -1 ? LOCALES.length : index;
+                const index = site.LOCALES.indexOf(locale);
+                return index === -1 ? site.LOCALES.length : index;
             };
             return {
                 items: items.map((item) => ({

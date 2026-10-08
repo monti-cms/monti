@@ -1,9 +1,7 @@
-import { getCmsContentStore } from "../../../container.js";
 import { bulkBodySchema } from "../../../core/api.js";
-import { createBulkService } from "../../../services/bulk-service.js";
 import { adminRoute, json, parseWith, readJsonBody } from "../handler.js";
-/** Bulk operations. Processed atomically per item, returning success or failure for each item. */
-export const POST = adminRoute(async ({ request }) => {
+/** Bulk operations. Processed atomically per item, returning success or failure for each item. Every item goes through the same write pipeline as a single write. */
+export const POST = adminRoute(async ({ request, cms }) => {
     const body = parseWith(bulkBodySchema, await readJsonBody(request));
-    return json(await createBulkService(getCmsContentStore()).run(body));
+    return json(await cms.bulkService().run(body));
 });

@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { createActiveTranslator, definePlugin } from "@monti-cms/core";
 import { validateAiConfig } from "./action.js";
 import { AI_PLUGIN_NAME } from "./plugin-name.js";
 import { resolveAiConfig } from "./resolve.js";
@@ -18,7 +18,9 @@ export function aiPlugin(config = {}) {
         name: AI_PLUGIN_NAME,
         options: config,
         nav: [{ path: "ai", label: "AI", icon: "sparkles" }],
-        validate: ({ collections, blocks, blockDefinitions, locales, plugins }) => validateAiConfig(resolveAiConfig(config, { collections, blocks: blockDefinitions, locales }, plugins), collections, blocks),
+        validate: ({ collections, blocks, blockDefinitions, locales, plugins }) => validateAiConfig(resolveAiConfig(config, 
+        // No site exists while the config is being defined: the labels the factories write are not read here, so the active (English) translator is enough.
+        { collections, blocks: blockDefinitions, locales, createTranslator: createActiveTranslator }, plugins), collections, blocks),
         // In the browser bundle `./server` is replaced by an empty entry point (`server.browser.ts`) (package.json `exports`).
         server: () => import("@monti-cms/ai/server"),
         admin: () => import("@monti-cms/ai/admin"),

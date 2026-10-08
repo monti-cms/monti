@@ -1,0 +1,29 @@
+import { assignBlockIds } from "../../../doc/block-ids.js";
+import { canonicalDocument, readStoredDocument } from "../../../doc/stored-document.js";
+import { importText } from "../../../format/convert.js";
+/**
+ * The document a seed template of the site config is stored as. A template given as a document is checked like any stored document; one given as text
+ * is read by its format, which must be one of the instance's formats (a plugin provides it). A seed that cannot become a document is a mistake in the
+ * config, so it stops the migration with a message that names the template (unlike stored data, which always migrates).
+ */
+export async function seedTemplateDocument(site, template, formats) {
+    const label = `cms.config: seed template "${template.name}"`;
+    if ("doc" in template && template.doc !== undefined) {
+        const doc = readStoredDocument(template.doc, site);
+        if (!doc)
+            throw new Error(`${label} is not a stored document`);
+        const canonical = canonicalDocument(site, doc);
+        return { ...canonical, content: assignBlockIds(canonical.content, []) };
+    }
+    const { body, format } = template;
+    if (!formats.get(format)) {
+        throw new Error(`${label} is written in the format "${format}", which no installed plugin provides${format === "mdx" ? " (install @monti-cms/mdx)" : ""}`);
+    }
+    const imported = await importText(site, formats, format, body, { locale: site.DEFAULT_LOCALE }).catch((error) => {
+        throw new Error(`${label} could not be read as "${format}": ${error instanceof Error ? error.message : String(error)}`);
+    });
+    if (imported.issues.length > 0) {
+        throw new Error(`${label} could not be read as "${format}": ${imported.issues.map((issue) => issue.message ?? issue.code).join("; ")}`);
+    }
+    return imported.doc;
+}

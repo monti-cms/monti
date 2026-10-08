@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import { z } from "zod";
 import { type AiActionDefinition, type AiChoices } from "./action.js";
 import type { AiEngine, AiResult } from "./definition.js";
@@ -36,7 +37,7 @@ export declare const customSurfaceSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>], "slot">;
 export type CustomSurface = z.output<typeof customSurfaceSchema>;
 /** The field a field slot points to (from the first collection found). Relation/select fields are looked up among stored fields. */
-export declare function surfaceField(surface: CustomSurface): {
+export declare function surfaceField(site: Site, surface: CustomSurface): {
     collection: string;
     field: import("@monti-cms/core").BacklinkField | import("@monti-cms/core").ConditionalField<string> | import("@monti-cms/core").MediaField | import("@monti-cms/core").RelationField | import("@monti-cms/core").SelectField<string> | import("@monti-cms/core").SlugField | import("@monti-cms/core").TextField | import("@monti-cms/core").ViewField;
 } | undefined;
@@ -44,17 +45,18 @@ export declare function surfaceField(surface: CustomSurface): {
  * Options of a field whose values are fixed. For relation fields (tags, categories, collections), the published items of the target collection; for select fields, their options.
  * A field with options only produces candidates, and it is checked that the value actually exists.
  */
-export declare function surfaceChoices(surface: CustomSurface): {
+export declare function surfaceChoices(site: Site, surface: CustomSurface): {
     choices: AiChoices;
     many: boolean;
 } | undefined;
 /** Result shapes selectable per slot. Selection, insertion and block change or insert body fragments (MDX). */
 export declare const CUSTOM_RESULTS: Readonly<Record<CustomSurface["slot"], readonly AiResult[]>>;
 /** Result shapes selectable in a slot. A field with options gets candidates only. */
-export declare const customResults: (surface: CustomSurface) => readonly AiResult[];
+export declare const customResults: (site: Site, surface: CustomSurface) => readonly AiResult[];
 /** Modes selectable in a slot. Decision mode (System One) is used only on fields with options. */
-export declare const customEngines: (surface: CustomSurface) => readonly AiEngine[];
-export declare const customBaseSchema: z.ZodObject<{
+export declare const customEngines: (site: Site, surface: CustomSurface) => readonly AiEngine[];
+/** Basic info of a screen action, checked against the site (whether the result shape and the mode fit where it attaches). */
+export declare const customBaseSchemaOf: (site: Site) => z.ZodObject<{
     label: z.ZodString;
     surface: z.ZodDiscriminatedUnion<[z.ZodObject<{
         slot: z.ZodLiteral<"field">;
@@ -92,8 +94,9 @@ export declare const customBaseSchema: z.ZodObject<{
         generate: "generate";
     }>>;
 }, z.core.$strip>;
-export type CustomBase = z.output<typeof customBaseSchema>;
-export declare const customValueSchema: z.ZodObject<{
+export type CustomBase = z.output<ReturnType<typeof customBaseSchemaOf>>;
+/** A stored screen action: its basic info and its edited values. */
+export declare const customValueSchemaOf: (site: Site) => z.ZodObject<{
     base: z.ZodObject<{
         label: z.ZodString;
         surface: z.ZodDiscriminatedUnion<[z.ZodObject<{
@@ -164,7 +167,7 @@ export declare const customValueSchema: z.ZodObject<{
         }, z.core.$strip>], "kind">, unknown>>>;
     }, z.core.$strip>;
 }, z.core.$strip>;
-export type CustomValue = z.output<typeof customValueSchema>;
+export type CustomValue = z.output<ReturnType<typeof customValueSchemaOf>>;
 /** Initial instructions. Edited right away in the admin screen. */
 export declare const CUSTOM_DEFAULT_PROMPT = "Write what to do here.";
 /**
@@ -182,11 +185,11 @@ export declare const CUSTOM_PICK_DEFAULTS: {
     };
 };
 /** Action definition built from the stored base info. Instructions, inputs to send, etc. are decided by the edited values (`override`). */
-export declare function customDefinition(base: CustomBase): AiActionDefinition;
+export declare function customDefinition(site: Site, base: CustomBase): AiActionDefinition;
 /** Blocks a UI action can attach to: blocks added by block extensions or the site config that are edited as editor nodes (excluding child-only blocks). */
-export declare const CUSTOM_BLOCKS: import("@monti-cms/core").BlockDefinition[];
+export declare const customBlocksOf: (site: Pick<Site, "ADDED_BLOCKS">) => import("@monti-cms/core").BlockDefinition[];
 /** Whether the field/block a slot points to exists in the site config. If not, the reason. */
-export declare function surfaceProblem(surface: CustomSurface): string | null;
+export declare function surfaceProblem(site: Site, surface: CustomSurface): string | null;
 /** Name (key) of a new UI action. Prefixed with `custom_` so it does not collide with code action names. */
 export declare const newCustomKey: () => string;
 export declare const isCustomKey: (key: string) => boolean;

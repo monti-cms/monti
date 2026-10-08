@@ -1,13 +1,12 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../lib/utils/cn.js";
 import { useIconByName } from "../screens/shared/collection-icon.js";
 import { editorMessages } from "./messages.js";
-const t = createTranslator(editorMessages);
 /** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent. */
 function ItemIcon({ icon }) {
     const iconByName = useIconByName();
@@ -19,6 +18,7 @@ function ItemIcon({ icon }) {
  * this only draws the highlighted item (`selectedIndex`) and scrolls it into view.
  */
 export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose }) {
+    const t = useTranslator(editorMessages);
     const [mounted, setMounted] = useState(false);
     const listRef = useRef(null);
     useEffect(() => {

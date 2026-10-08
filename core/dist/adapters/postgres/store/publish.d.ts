@@ -1,19 +1,32 @@
 import type { PoolClient } from "pg";
-import { type Reference } from "../../../core/types.js";
+import type { Entry } from "../../../core/store/types.js";
+import { type Issue, type PreparedSnapshot, type Reference } from "../../../core/types.js";
 import type { StoreContext } from "./context.js";
-import type { Entry } from "./types.js";
 export interface PublishOptions {
     expectedVersion: number;
+    /**
+     * The prepared snapshot of the draft being published. The service builds it (hooks, normalization, reference collection) before the
+     * transaction; the store only checks it against rows it has to lock (reference targets, media, link addresses) and never prepares content itself.
+     */
+    snapshot: PreparedSnapshot;
     /** On re-publish, reset the publish date to now. Otherwise keep the first publish time. */
     resetPublishedAt?: boolean;
+    /** Sets the publish date to this time (a re-publish with no change included). The import of content that was published elsewhere first uses it. */
+    publishedAt?: Date;
+    /**
+     * Called with the notices the checks against locked rows found (a link to an entry that is not published): they never block, and the caller
+     * returns them with the publish result.
+     */
+    onWarnings?: (warnings: readonly Issue[]) => void;
 }
-/**
- * Shared rules for publish transactions. Publishing and record restore use the same validation.
- */
+/** The transaction's `client` is what the hook (`beforePublishCommit`) receives; the queries run on the Kysely handle of the same client (`ctx.db(client)`). */
 export declare function createPublishing(ctx: StoreContext): {
-    validateStoredWorkingForPublish: (client: PoolClient, entryId: string) => Promise<import("../../../client.js").PreparedSnapshot>;
+    validatePreparedForPublish: (client: PoolClient, entryId: string, snapshot: PreparedSnapshot) => Promise<{
+        snapshot: PreparedSnapshot;
+        warnings: Issue[];
+    }>;
     publishWithinTransaction: (client: PoolClient, id: string, options: PublishOptions) => Promise<Entry>;
-    lockDraftReferenceTargets: (client: PoolClient, references: readonly Reference[]) => Promise<void>;
+    lockDraftReferenceTargets: (client: PoolClient, references: readonly Reference[]) => Promise<readonly Reference[]>;
     assertNotReferenced: (client: PoolClient, id: string, options: {
         ignoreTrashedSources: boolean;
     }) => Promise<void>;

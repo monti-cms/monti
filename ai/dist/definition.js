@@ -1,7 +1,8 @@
+import { translate } from "@monti-cms/core";
 import { z } from "zod";
 import { coreMessages } from "./core.messages.js";
-import { lazyTranslator } from "./i18n.js";
-const t = lazyTranslator(coreMessages);
+/** The validation messages in English, for checks of developer-written definitions (config errors, not shown to the operator). */
+export const englishCoreText = (key, vars) => translate(coreMessages, "en", key, vars);
 /**
  * AI common definitions. The choices and result shapes shared by the action definition (`action.ts`), the runner and the admin UI.
  * Used by both server and browser, so no secrets or SDKs go here.
@@ -50,7 +51,7 @@ export const AI_APPLIES = ["replace", "append", "none"];
 export const AI_CHECK_KINDS = ["pattern", "maxLength", "exists", "oneOf"];
 /** Code check name (lowercase, digits, hyphen). */
 export const CODE_CHECK_NAME = /^[a-z][a-z0-9-]*$/;
-const patternSchema = z
+const patternSchemaOf = (t) => z
     .string()
     .trim()
     .min(1)
@@ -66,13 +67,15 @@ const patternSchema = z
 }, { error: () => t("check.invalidRegex") });
 /** One check. Fixed checks are toggled per action, and format and length edit a value. */
 const enabled = z.boolean().default(true);
-export const aiCheckSchema = z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("pattern"), enabled, pattern: patternSchema }),
+export const aiCheckSchemaOf = (t) => z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("pattern"), enabled, pattern: patternSchemaOf(t) }),
     z.object({ kind: z.literal("maxLength"), enabled, max: z.number().int().min(1).max(5000) }),
     z.object({ kind: z.literal("exists"), enabled }),
     z.object({ kind: z.literal("oneOf"), enabled, items: z.array(z.string().trim().min(1).max(200)).min(1).max(100) }),
     z.object({ kind: z.literal("code"), enabled, name: z.string().max(60).regex(CODE_CHECK_NAME) }),
 ]);
+/** The check schema with English messages: reads definitions and stored values where no message is shown. */
+export const aiCheckSchema = aiCheckSchemaOf(englishCoreText);
 /** The name that points to one check in the check list. One per name for code checks, one per kind for the others. */
 export const checkKey = (check) => check.kind === "code" ? `code:${check.name}` : check.kind;
 /** Fixed checks that moved to code checks (moved when reading stored edited values). */

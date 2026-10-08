@@ -1,6 +1,7 @@
 /** Block definitions (data) only. For putting directly into the site config's `blocks` without plugins. */
 export { calloutBlock } from "./callout/definition.js";
 export { chartBlock } from "./chart/definition.js";
+export { codeExplorerBlock } from "./code-explorer/definition.js";
 export { codeRefBlock } from "./code-ref/definition.js";
 export { collapsibleBlock } from "./collapsible/definition.js";
 export { colorBlock } from "./color/definition.js";
@@ -9,7 +10,7 @@ export { mermaidBlock } from "./mermaid/definition.js";
 export { tabBlock, tabsBlock } from "./tabs/definition.js";
 export { tooltipBlock } from "./tooltip/definition.js";
 /**
- * All block definitions of this package (callout, collapsible, tabs, columns, Mermaid, chart, then the inline marks tooltip, code-ref, color, in that order).
+ * All block definitions of this package (callout, collapsible, tabs, columns, code explorer, Mermaid, chart, then the inline marks tooltip, code-ref, color, in that order).
  * The order of the inline marks is the order in which overlapping marks are stored.
  */
 export declare const ALL_BLOCKS: readonly [{
@@ -196,6 +197,36 @@ export declare const ALL_BLOCKS: readonly [{
         readonly view: "node";
     };
 }, {
+    readonly name: "code-explorer";
+    readonly label: string;
+    readonly description: string;
+    readonly syntax: {
+        readonly kind: "container";
+        readonly directive: "code-explorer";
+    };
+    readonly component: "CodeExplorer";
+    readonly attributes: {
+        readonly open: {
+            readonly type: "string";
+            readonly label: string;
+        };
+    };
+    readonly children: {
+        readonly min: 0;
+    };
+    readonly editor: {
+        readonly view: "node";
+        readonly insertable: true;
+        readonly keywords: string[];
+        readonly icon: "folder-tree";
+        readonly insert: {
+            readonly codeBlocks: readonly [{
+                readonly language: "ts";
+                readonly title: "src/index.ts";
+            }];
+        };
+    };
+}, {
     readonly name: "mermaid";
     readonly label: string;
     readonly description: string;
@@ -205,6 +236,7 @@ export declare const ALL_BLOCKS: readonly [{
     };
     readonly component: "Mermaid";
     readonly attributes: {};
+    readonly validate: import("@monti-cms/core").BlockValidate;
     readonly editor: {
         readonly view: "node";
         readonly insertable: true;
@@ -225,6 +257,7 @@ export declare const ALL_BLOCKS: readonly [{
     };
     readonly component: "Chart";
     readonly attributes: {};
+    readonly validate: import("@monti-cms/core").BlockValidate;
     readonly editor: {
         readonly view: "node";
         readonly insertable: true;

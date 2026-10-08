@@ -1,15 +1,16 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { ruleMatches } from "@monti-cms/core/code-block";
 import { TextSelection } from "@tiptap/pm/state";
 import { Bold, CodeXml, Italic, Strikethrough, Subscript, Superscript, Underline } from "lucide-react";
+import { allowanceOfState } from "./allowed-extension.js";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark.js";
 import { codeEffectsKey, rulesOf } from "./code-block/effects-plugin.js";
 import { selectedBlocks } from "./drag/index.js";
 import { editorMessages } from "./messages.js";
-const t = createTranslator(editorMessages);
+/** Names of the marks of the inline tools, in the order the tools are shown. */
+export const INLINE_MARK_NAMES = ["bold", "italic", "underline", "strike", "code", "superscript", "subscript"];
 const chain = (editor) => editor.chain().focus();
 /** Inline effects that only toggle on and off. Shared by the top formatting tools and the inline bubble. */
-const MARK_TOOLS = [
+const markTools = (t) => [
     { mark: "bold", label: "B", title: t("inlineMarks.bold"), icon: Bold, run: (e) => chain(e).toggleBold().run() },
     {
         mark: "italic",
@@ -48,18 +49,48 @@ const MARK_TOOLS = [
         run: (e) => chain(e).toggleSubscript().run(),
     },
 ];
-export const INLINE_MARK_TOOLS = MARK_TOOLS.map((item) => ({
+/** Marks inside code that the site's `codeBlock.features` switches off as a group or one by one (`textStyles`, `tooltip`, `fold`). */
+const codeMarkFeatures = (site) => ({
+    bold: () => site.CODE_BLOCK_FEATURES.textStyles,
+    italic: () => site.CODE_BLOCK_FEATURES.textStyles,
+    strike: () => site.CODE_BLOCK_FEATURES.textStyles,
+    underline: () => site.CODE_BLOCK_FEATURES.textStyles,
+    [CODE_TOOLTIP_MARK_NAME]: () => site.CODE_BLOCK_FEATURES.tooltip,
+    codeFold: () => site.CODE_BLOCK_FEATURES.fold,
+});
+/** Whether the mark is on the selection (all of a range, or at the cursor). */
+const markOnSelection = (state, mark) => {
+    const type = state.schema.marks[mark];
+    if (!type)
+        return false;
+    const { empty, $from, from, to } = state.selection;
+    return empty ? !!type.isInSet(state.storedMarks ?? $from.marks()) : state.doc.rangeHasMark(from, to, type);
+};
+/**
+ * Whether the editor offers the tool for this mark at the selection. The marks the body's allowed list does not allow are hidden, and so are the code block
+ * tools that the site turned off (`codeBlock.features`), only inside code. A mark already on the selection stays offered so it can be removed.
+ */
+export const offersMarkTool = (site, state, mark) => {
+    // The body's allowed list: a mark it does not allow is not offered, unless it is already on the selection (so it can be removed).
+    if (!allowanceOfState(state).allowsEditorMark(mark) && !markOnSelection(state, mark))
+        return false;
+    if (!state.selection.$from.parent.type.spec.code)
+        return true;
+    return codeMarkFeatures(site)[mark]?.() !== false || markOnSelection(state, mark);
+};
+/** The inline tools of a site (their text follows the site's admin language, and which of them work in code follows `codeBlock.features`). */
+export const inlineMarkTools = (site) => markTools(site.createTranslator(editorMessages)).map((item) => ({
     ...item,
     isActive: (e) => e.isActive(item.mark),
-    // Turned off where the mark cannot be placed, such as in a code block.
-    isDisabled: (e) => !e.can().toggleMark(item.mark),
+    // Turned off where the mark cannot be placed, such as in a code block (and where the site turned the tool off).
+    isDisabled: (e) => !e.can().toggleMark(item.mark) || !offersMarkTool(site, e.state, item.mark),
 }));
-/** Inline tools available on the text block containing the selection. A code block only gets bold, italic, strikethrough and underline. */
-export const allowedMarkTools = (state) => {
+/** Inline tools available on the text block containing the selection. A code block only gets bold, italic, strikethrough and underline (when the site offers them). */
+export const allowedMarkTools = (site, state) => {
     const parent = state.selection.$from.parent;
-    return INLINE_MARK_TOOLS.filter((tool) => {
+    return inlineMarkTools(site).filter((tool) => {
         const type = state.schema.marks[tool.mark];
-        return !!type && parent.type.allowsMarkType(type);
+        return !!type && parent.type.allowsMarkType(type) && offersMarkTool(site, state, tool.mark);
     });
 };
 export const allowsMark = (state, mark) => {
@@ -75,7 +106,7 @@ export const bubbleMarkOrder = (detailed = []) => [
     ...detailed,
     CODE_TOOLTIP_MARK_NAME,
     "codeFold",
-    ...INLINE_MARK_TOOLS.map((tool) => tool.mark),
+    ...INLINE_MARK_NAMES,
 ];
 /** Marks with settings that attach the bubble to a range (links, in-code tooltips). Content of extension text styles is the same. */
 export const RANGED_MARKS = ["link", CODE_TOOLTIP_MARK_NAME];

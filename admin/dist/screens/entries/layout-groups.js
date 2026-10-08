@@ -1,16 +1,15 @@
-import { schemaOf } from "@monti-cms/core/client";
-import { t } from "./translate.js";
+import { entriesMessages } from "./messages.js";
 /** Default tab (groups and fields without a `tab`). */
-export const DEFAULT_TAB = t("tab.default");
-export const tabOfGroup = (group) => group.tab ?? DEFAULT_TAB;
+export const defaultTab = (site) => site.createTranslator(entriesMessages)("tab.default");
+export const tabOfGroup = (site, group) => group.tab ?? defaultTab(site);
 /**
  * Groups to render in the properties panel. Layout (`layout`) groups come in order, and fields not in the layout go after the last group in declaration order.
  *
  * A layout group's `tab` takes priority; if the group has no `tab`, the field's `tab` is used. Fields with their own `tab` (e.g. field groups supplied by an extension) are
  * gathered into one group per tab and placed last. The group's name is the tab name (shown as the group title on screens without tabs).
  */
-export function layoutGroupsOf(collection) {
-    const schema = schemaOf(collection);
+export function layoutGroupsOf(site, collection) {
+    const schema = site.schemaOf(collection);
     const groups = [];
     const byTab = new Map();
     const moveToTab = (name, tab) => byTab.set(tab, [...(byTab.get(tab) ?? []), name]);
@@ -44,15 +43,15 @@ export function layoutGroupsOf(collection) {
     return groups;
 }
 /** Tab names (default tab first, the rest in order of first appearance in groups). */
-export function tabsOf(collection) {
-    return [...new Set([DEFAULT_TAB, ...layoutGroupsOf(collection).map(tabOfGroup)])];
+export function tabsOf(site, collection) {
+    return [...new Set([defaultTab(site), ...layoutGroupsOf(site, collection).map((group) => tabOfGroup(site, group))])];
 }
 /** Tab that holds the field. A field attached to a conditional field uses that field's tab. When jumping to a publish problem, that tab is opened first. */
-export function tabOf(collection, path) {
-    const schema = schemaOf(collection);
-    const top = Object.hasOwn(schema.fields, path) || path === "title"
+export function tabOf(site, collection, path) {
+    const schema = site.schemaOf(collection);
+    const top = Object.hasOwn(schema.fields, path)
         ? path
         : Object.entries(schema.fields).find(([, field]) => field.kind === "conditional" && Object.values(field.values).some((group) => group && path in group))?.[0];
-    const group = top === undefined ? undefined : layoutGroupsOf(collection).find((item) => item.fields.includes(top));
-    return group ? tabOfGroup(group) : DEFAULT_TAB;
+    const group = top === undefined ? undefined : layoutGroupsOf(site, collection).find((item) => item.fields.includes(top));
+    return group ? tabOfGroup(site, group) : defaultTab(site);
 }

@@ -1,7 +1,7 @@
 import { Fragment, Slice } from "@tiptap/pm/model";
 import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
 import { canJoin, dropPoint } from "@tiptap/pm/transform";
-import { BODY_CONTAINER_NODE_NAMES } from "../blocks/added/shared.js";
+import { BODY_CONTAINER_GROUP } from "../blocks/added/shared.js";
 /**
  * Pure block drag-and-drop command functions.
  * ProseMirror transactions and schema validation can run in jsdom/unit tests without DOM dependencies.
@@ -10,8 +10,6 @@ import { BODY_CONTAINER_NODE_NAMES } from "../blocks/added/shared.js";
 export const MOVED_BLOCKS_META = "cmsMovedBlocks";
 /** Lists that must not be empty. Moving the only item removes the whole empty list. */
 const LIST_NODES = new Set(["bulletList", "orderedList", "taskList"]);
-/** CMS containers that must keep at least one body block (built from block definitions). Moving the only block leaves an empty paragraph. */
-const CONTAINER_BODY_NODES = BODY_CONTAINER_NODE_NAMES;
 /**
  * Group of blocks to move: adjacent blocks in the same parent (before `from` to after `to`). Omit `to` for a single block.
  * null if they are not block boundaries of the same parent.
@@ -55,7 +53,7 @@ export function sourceRangeOf(doc, fromPos, toPos) {
             return { from: $from.before(depth), to: $from.after(depth) };
     }
     const paragraph = doc.type.schema.nodes.paragraph;
-    if (CONTAINER_BODY_NODES.has(parent.type.name) && paragraph) {
+    if (parent.type.isInGroup(BODY_CONTAINER_GROUP) && paragraph) {
         const fill = paragraph.create();
         if (parent.canReplaceWith(start, end, fill.type))
             return { from: range.from, to: range.to, fill };

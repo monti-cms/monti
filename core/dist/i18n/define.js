@@ -1,6 +1,6 @@
 /**
- * UI message dictionaries. The core, admin and extensions use messages by name (key), with one dictionary per locale. It does not read the site config (`cms.config.ts`),
- * so it can be used from the config file and the authoring API too (locale picking is done by `./index`).
+ * UI message dictionaries. The core, admin and extensions use messages by name (key), with one dictionary per locale. It reads no site config,
+ * so it can be used from the config file and the authoring API too (the language is picked by `./index`, from a site).
  *
  * - A value is a string or a function that fills `{name}` placeholders. Words that change by the preceding word, like Korean particles, are written as functions (`josa`).
  * - English (`en`) has every key. Keys missing in other locales show in English.
@@ -17,7 +17,7 @@ function hasFinalConsonant(word) {
     const code = trimmed.charCodeAt(trimmed.length - 1) - 0xac00;
     return code >= 0 && code <= 11171 && code % 28 !== 0;
 }
-/** Attaches a Korean particle that fits the word. `josa("태그", "을", "를")` -> `태그를`. Used by function messages in the Korean dictionary. */
+/** Attaches a Korean particle that fits the word. `josa("태그", "을", "를")` -> `태그를`. Used by function messages in the Korean dictionaries (`@monti-cms/core/client`); not exported from the main entry. */
 export const josa = (word, withFinal, withoutFinal) => `${word}${hasFinalConsonant(word) ? withFinal : withoutFinal}`;
 /** Picks a message from the dictionary: site override -> that locale -> English -> key. */
 export function translate(bundle, language, key, vars, overrides) {

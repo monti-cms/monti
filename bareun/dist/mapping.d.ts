@@ -1,4 +1,5 @@
 import { type TextIssue } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 /**
  * Converts a Bareun response (`CorrectError`) into check results (`TextIssue`). Paragraphs are joined with `\n` and sent in one request (`joinSegments`),
  * and the returned positions (UTF-16 offsets over the whole text) are split back into in-paragraph positions.
@@ -47,4 +48,4 @@ export declare const joinSegments: (segments: readonly BareunIssueSegment[]) => 
  * Converts a Bareun response into per-paragraph check results. `segments` must be in the same order they were joined in the request.
  * Results that cross a paragraph boundary, touch the hidden placeholder (`￼`), or whose position does not match the original text are dropped.
  */
-export declare function bareunIssues(segments: readonly BareunIssueSegment[], response: BareunResponse): TextIssue[];
+export declare function bareunIssues(site: Pick<Site, "createTranslator">, segments: readonly BareunIssueSegment[], response: BareunResponse): TextIssue[];

@@ -1,4 +1,3 @@
-import { type NodeViewProps } from "@tiptap/react";
 import { type ReactNode } from "react";
 /** Name and input hint of blocks written as code and viewed as a preview (math and code fence blocks). */
 export interface FenceEditorMeta {
@@ -10,9 +9,9 @@ export interface FenceEditorMeta {
     readonly preview: (value: string) => ReactNode;
 }
 /**
- * Edit view showing the code input field and the preview together. Selecting or clicking opens the input field; otherwise only the preview shows.
+ * Edit view of a block written as code (`useBlockEditor().source`), showing the code input field and the preview together. Selecting or clicking opens the input field; otherwise only the preview shows.
  * Input is written to the document after a short pause or when leaving the field (not during Korean composition).
  */
-export declare function FencePreviewNodeView({ node, updateAttributes, selected, editor, meta, }: NodeViewProps & {
+export declare function FencePreviewBlockView({ meta }: {
     readonly meta: FenceEditorMeta;
 }): import("react").JSX.Element;

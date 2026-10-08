@@ -5,8 +5,8 @@ import { Button } from "./button.js";
  * gave the elements after it automatic IDs (useId) different from the browser's (hydration mismatch). So until hydration
  * finishes it renders a same-size placeholder, and afterwards the real button.
  */
-export declare function ThemeToggle({ className, labels, ...props }: Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
-    /** Button name. The public blog passes a message in its display language. */
+export declare function ThemeToggle({ labels, ...props }: Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
+    /** Button name. A public site passes a message in its own display language (it then needs no site). */
     labels?: {
         toLight: string;
         toDark: string;

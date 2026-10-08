@@ -1,0 +1,253 @@
+import { isDeepStrictEqual } from "node:util";
+import { validateBlocks } from "../core/block-validate.js";
+import { normalizeImportedDoc } from "../core/import-normalize.js";
+import { linkAddressKey } from "../core/link-ids.js";
+import { documentInputBody, prepareSnapshot, readInputBody } from "../core/snapshot.js";
+import { readStoredDocument } from "../doc/stored-document.js";
+import { NO_FORMATS } from "../format/registry.js";
+import { ServiceError } from "./types.js";
+const defaultFormats = async () => NO_FORMATS;
+const NO_HOOKS = () => [];
+/** The link resolver of a store, when it can look up addresses. */
+export const linkResolverOf = (site, store) => store.resolveLinkTargets
+    ? async (addresses) => new Map((await store.resolveLinkTargets?.({ addresses }))?.map((found) => [
+        linkAddressKey(site, found),
+        found.entryId,
+    ]))
+    : undefined;
+/** A hook that throws (or returns something that is not its contract) fails the write. The error names the owner and the hook, never the hook's own message. */
+const hookFailed = (source, hook, error) => {
+    if (error !== undefined)
+        console.error(`[cms] ${hook} hook of ${source.owner} failed`, error);
+    return new ServiceError("hook_failed", [
+        {
+            code: "hook_failed",
+            message: `${hook} hook of ${source.owner} failed`,
+            params: { hook, owner: source.owner },
+        },
+    ]);
+};
+const callHook = async (source, hook, run) => {
+    try {
+        return await run();
+    }
+    catch (error) {
+        throw hookFailed(source, hook, error);
+    }
+};
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Hooks get copies, so changing what they received cannot change the write. `undefined` when the value cannot be copied. */
+const copyOf = (value) => {
+    try {
+        return structuredClone(value);
+    }
+    catch {
+        return undefined;
+    }
+};
+const readIssues = (source, hook, value) => {
+    if (value === undefined)
+        return [];
+    if (!Array.isArray(value) ||
+        value.some((issue) => !isRecord(issue) || typeof issue.code !== "string" || !issue.code)) {
+        throw hookFailed(source, hook);
+    }
+    return value;
+};
+const readValidation = (source, hook, result) => {
+    if (result === undefined || result === null)
+        return { issues: [], warnings: [] };
+    if (!isRecord(result))
+        throw hookFailed(source, hook);
+    return { issues: readIssues(source, hook, result.issues), warnings: readIssues(source, hook, result.warnings) };
+};
+export function createWritePipeline(options) {
+    const { site } = options;
+    const provider = options.hooks ?? NO_HOOKS;
+    /**
+     * Reads the body of the input into a document, once: a text is read by its format, a document is checked. The input that goes on has the document
+     * in place of the text, so transforms, normalisation and preparation all see a document. What reading the text found (a text the format could not read,
+     * warnings about what was not kept) goes to preparation as it is. Input that preparation will reject is left alone for it to reject.
+     */
+    const readBody = async (request) => {
+        const { input } = request;
+        if (!isRecord(input) || !isRecord(input.metadata) || !site.isCollection(input.collection))
+            return { input, imported: undefined };
+        if (input.doc === undefined && typeof input.body !== "string")
+            return { input, imported: undefined };
+        const formats = await (options.formats ?? defaultFormats)();
+        const body = await readInputBody(site, input, request.prepare?.previousDoc, {
+            formats,
+            locale: request.locale,
+            entryId: request.entryId,
+        });
+        const { body: _body, format: _format, doc: _doc, ...rest } = input;
+        return {
+            input: { ...rest, doc: body.doc },
+            imported: { issues: body.importIssues, warnings: body.importWarnings ?? [] },
+        };
+    };
+    /**
+     * Runs the transforms in order, each on the previous one's result. The input is kept when nothing changed, and only what a hook changed is replaced.
+     * Input that core preparation will reject is left alone for it to reject.
+     */
+    const transform = async (sources, request, given) => {
+        const unchanged = { input: given, transformed: false };
+        const hooks = sources.filter((source) => source.hooks.transform);
+        const input = given;
+        if (hooks.length === 0 || !isRecord(input) || !isRecord(input.metadata) || !site.isCollection(input.collection))
+            return unchanged;
+        if (input.doc === undefined)
+            return unchanged;
+        let body;
+        try {
+            body = documentInputBody(site, input, request.prepare?.previousDoc);
+        }
+        catch (error) {
+            if (error instanceof ServiceError)
+                return unchanged;
+            throw error;
+        }
+        const original = copyOf({ metadata: input.metadata, doc: body.doc, slug: input.slug ?? null });
+        if (!original)
+            return unchanged;
+        let data = original;
+        for (const source of hooks) {
+            const hook = source.hooks.transform;
+            const context = copyOf({
+                operation: request.operation,
+                collection: input.collection,
+                ...(request.entryId === undefined ? {} : { entryId: request.entryId }),
+                locale: request.locale,
+                slug: data.slug ?? null,
+                metadata: data.metadata,
+                doc: data.doc,
+            });
+            if (!hook || !context)
+                continue;
+            const result = await callHook(source, "transform", () => hook(context));
+            if (result === undefined || result === null)
+                continue;
+            if (!isRecord(result) || !isRecord(result.metadata))
+                throw hookFailed(source, "transform");
+            let doc = data.doc;
+            if (result.doc !== undefined) {
+                // What a hook returns as the body must be a stored document.
+                const read = readStoredDocument(result.doc, site);
+                if (!read)
+                    throw hookFailed(source, "transform");
+                doc = read;
+            }
+            if (result.slug !== undefined && result.slug !== null && typeof result.slug !== "string")
+                throw hookFailed(source, "transform");
+            data = { metadata: result.metadata, doc, slug: result.slug === undefined ? data.slug : result.slug };
+        }
+        const metadataChanged = !isDeepStrictEqual(data.metadata, original.metadata);
+        const docChanged = !isDeepStrictEqual(data.doc, original.doc);
+        const slugChanged = data.slug !== original.slug;
+        if (!metadataChanged && !docChanged && !slugChanged)
+            return unchanged;
+        return {
+            input: {
+                ...input,
+                metadata: metadataChanged ? data.metadata : input.metadata,
+                ...(docChanged ? { doc: data.doc } : {}),
+                ...(slugChanged ? { slug: data.slug ?? null } : {}),
+            },
+            transformed: true,
+        };
+    };
+    /**
+     * Core's normalisation of an imported body, whatever format or API it came from: a link written as the address of this site's content
+     * (`/posts/slug`) becomes a link by entry id, and an image written with the public URL of a registered media file becomes a registered image.
+     * What nobody holds stays as written. The input is returned as it is when nothing changes.
+     */
+    const normalize = async (request, input) => {
+        const normalizers = { links: options.links, media: options.media };
+        if (!normalizers.links && !normalizers.media)
+            return input;
+        if (!isRecord(input) || !site.isCollection(input.collection) || input.doc === undefined)
+            return input;
+        let body;
+        try {
+            body = documentInputBody(site, input, request.prepare?.previousDoc);
+        }
+        catch (error) {
+            // Core preparation rejects it with the same error.
+            if (error instanceof ServiceError)
+                return input;
+            throw error;
+        }
+        const doc = await normalizeImportedDoc(site, body.doc, normalizers);
+        if (doc === body.doc)
+            return input;
+        return { ...input, doc };
+    };
+    const validate = async (sources, hook, request, snapshot) => {
+        const issues = [];
+        const warnings = [];
+        for (const source of sources) {
+            const run = source.hooks[hook];
+            if (!run)
+                continue;
+            const copy = copyOf(snapshot);
+            if (!copy)
+                throw hookFailed(source, hook);
+            const result = await callHook(source, hook, () => run({
+                operation: request.operation,
+                collection: copy.collection,
+                ...(request.entryId === undefined ? {} : { entryId: request.entryId }),
+                locale: request.locale,
+                slug: copy.slug,
+                metadata: copy.metadata,
+                doc: copy.doc,
+                snapshot: copy,
+            }));
+            const read = readValidation(source, hook, result);
+            issues.push(...read.issues);
+            warnings.push(...read.warnings);
+        }
+        return { issues, warnings };
+    };
+    return {
+        /**
+         * Prepares a write. Throws a `ServiceError` when core preparation rejects the input, when a hook fails (`hook_failed`) or when a
+         * hook's validation adds failures (`validation_failed`, `publish_validation_failed`). Nothing is stored here.
+         */
+        run: async (request) => {
+            const sources = await provider();
+            const read = await readBody(request);
+            const { input, transformed } = request.skipTransform
+                ? { input: read.input, transformed: false }
+                : await transform(sources, request, read.input);
+            const snapshot = await prepareSnapshot(site, await normalize(request, input), {
+                ...request.prepare,
+                ...(read.imported ? { imported: read.imported } : {}),
+            });
+            // The blocks check their own syntax (`validate` of a block definition). Findings are warnings, never blockers.
+            // A text body the format could not read is still saved (as an `unparsed` body); the write says why, so it is not found out later.
+            const warnings = [
+                ...(read.imported?.issues ?? []).map((issue) => ({ ...issue, path: "body" })),
+                ...(await validateBlocks(site, snapshot.doc, {
+                    locale: request.locale,
+                    operation: request.operation,
+                })),
+            ];
+            if (sources.length === 0)
+                return { snapshot, warnings, transformed };
+            const added = await validate(sources, "validate", request, snapshot);
+            if (added.issues.length > 0)
+                throw new ServiceError("validation_failed", added.issues);
+            warnings.push(...added.warnings);
+            if (request.operation === "publish" || request.operation === "restore") {
+                const publish = await validate(sources, "validatePublish", request, snapshot);
+                // The issues core preparation found are blockers of a publish too, and are shown with the added ones.
+                if (publish.issues.length > 0) {
+                    throw new ServiceError("publish_validation_failed", [...snapshot.issues, ...publish.issues]);
+                }
+                warnings.push(...publish.warnings);
+            }
+            return { snapshot, warnings, transformed };
+        },
+    };
+}

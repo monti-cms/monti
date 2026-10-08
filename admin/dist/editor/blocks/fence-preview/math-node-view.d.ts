@@ -1,3 +1,2 @@
-import type { NodeViewProps } from "@tiptap/react";
-/** Math block (`$$`) edit view. */
-export declare function MathNodeView(props: NodeViewProps): import("react").JSX.Element;
+/** Edit view of the core math block (`blockViews.math`, `$$`). */
+export declare function MathBlockView(): import("react").JSX.Element;

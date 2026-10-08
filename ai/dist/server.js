@@ -10,7 +10,7 @@ import * as run from "./routes/run/route.js";
 import * as settings from "./routes/settings/route.js";
 import * as shared from "./routes/shared/route.js";
 import { getAiSettingsView } from "./settings.js";
-import { getAiStore } from "./store.js";
+import { aiStoreFor } from "./store.js";
 /** Server side of the AI plugin. Loaded by the core API handler and `monti migrate`. Not included in the browser bundle. */
 const aiServer = {
     routes: [
@@ -27,8 +27,8 @@ const aiServer = {
     ],
     migrate: migrateAi,
     // `features.ai.ready` of the admin meta API: is at least one connection ready?
-    features: async () => ({
-        ready: await getAiSettingsView(getAiStore()).then((view) => view.fake || view.providers.some((item) => item.ready), () => false),
+    features: async (cms) => ({
+        ready: await getAiSettingsView(cms.site, aiStoreFor(cms)).then((view) => view.fake || view.providers.some((item) => item.ready), () => false),
     }),
 };
 export default aiServer;

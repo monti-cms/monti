@@ -1,57 +1,26 @@
-import { isDeepStrictEqual } from "node:util";
-import { normalizeReferenceKind } from "../../../core/types.js";
-import { CmsError } from "./errors.js";
+import { sql } from "kysely";
+import { documentText, SEARCH_TEXT } from "../../../core/body-text.js";
+import { CmsError } from "../../../core/store/errors.js";
+import { parseTranslationState } from "../../../core/translation/state.js";
+import { normalizeReferenceKind, readReferenceOccurrences } from "../../../core/types.js";
+import { emptyStoredDocument, readStoredDocument, unparsedDocument, } from "../../../doc/stored-document.js";
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
-function normalizeJsonValue(val) {
-    if (val === null)
-        return null;
-    if (typeof val === "string" || typeof val === "boolean")
-        return val;
-    if (typeof val === "number") {
-        if (!Number.isFinite(val))
-            throw new CmsError("Non-finite number", "invalid_input");
-        return val;
-    }
-    if (Array.isArray(val))
-        return val.map((v) => normalizeJsonValue(v));
-    if (typeof val === "object") {
-        if (Object.getPrototypeOf(val) !== Object.prototype && Object.getPrototypeOf(val) !== null) {
-            throw new CmsError("Invalid object type", "invalid_input");
-        }
-        const obj = {};
-        for (const key of Object.keys(val).sort()) {
-            Object.defineProperty(obj, key, {
-                value: normalizeJsonValue(val[key]),
-                enumerable: true,
-                writable: true,
-                configurable: true,
-            });
-        }
-        return obj;
-    }
-    throw new CmsError(`Invalid JSON type: ${typeof val}`, "invalid_input");
+/**
+ * Plain text for body search, taken from the stored document: the text of paragraphs, headings, lists, tables and block bodies,
+ * the text attributes of blocks (a callout title, an image's alt text and caption), code and math as written, and the text of translation notes. Links keep their label, not their address.
+ */
+export function extractVisibleText(site, doc) {
+    return documentText(site, doc, SEARCH_TEXT);
 }
-export function normalizeMetadata(input) {
-    if (typeof input !== "object" || input === null || Array.isArray(input)) {
-        throw new CmsError("Metadata must be a JSON object", "invalid_input");
-    }
-    if (Object.getPrototypeOf(input) !== Object.prototype && Object.getPrototypeOf(input) !== null) {
-        throw new CmsError("Metadata must be a plain object", "invalid_input");
-    }
-    return normalizeJsonValue(input);
-}
-/** Plain text for body search. Strips comments, import/export, and tags, and keeps only the label of links. */
-export function extractVisibleText(mdx) {
-    if (!mdx)
-        return "";
-    let t = mdx;
-    t = t.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ");
-    t = t.replace(/<!--[\s\S]*?-->/g, " ");
-    t = t.replace(/^\s*(?:export|import)\b[\s\S]*?;(?:\r?\n|$)/gm, " ");
-    t = t.replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1");
-    t = t.replace(/<[a-zA-Z0-9_/][^>"\x27]*(?:"[^"]*"|\x27[^\x27]*\x27|[^>"\x27]*)*>/g, " ");
-    return t;
-}
+/** A stored document read from a `jsonb` column. A value that is not a stored document of a known version reads as `null`. */
+export const readDoc = (value) => readStoredDocument(value) ?? null;
+/**
+ * The document of a stored body. A body whose `doc` column is empty or unreadable (a row older than stored documents) reads as the document
+ * of one `unparsed` node holding its `mdx` column when there is one, so every body a store hands out is a document.
+ */
+export const readBodyDoc = (value, mdx) => readDoc(value) ?? unparsedDocument(mdx ?? "");
+/** A translation state read from a `jsonb` column. A version 2 state (no document) is lifted to version 3. */
+export const readTranslation = (value) => value === null || value === undefined ? null : (parseTranslationState(value) ?? value);
 export const mapFolderRow = (row) => ({
     id: row.id,
     collection: row.collection,
@@ -64,7 +33,7 @@ export const mapReferenceRow = (row) => ({
     kind: normalizeReferenceKind(row.kind),
     targetId: row.target_id,
     isStale: row.is_stale,
-    occurrences: row.occurrences,
+    occurrences: readReferenceOccurrences(row.occurrences),
 });
 export function mapPublishedEntryRow(row) {
     return {
@@ -74,14 +43,34 @@ export function mapPublishedEntryRow(row) {
         translationGroupId: row.translation_group_id,
         slug: row.slug,
         metadata: row.metadata,
-        mdx: row.mdx,
+        doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc, null),
         publishedAt: row.published_at,
         updatedAt: row.body_updated_at,
     };
 }
-export const MEDIA_COLUMNS = `id, status, filename, mime_type, byte_size, width, height, staging_key, storage_key,
-	original_storage_key, original_staging_key, original_mime_type, original_byte_size, original_width, original_height,
-	default_alt, default_caption, created_at, updated_at, ready_at`;
+/** The columns of `media_assets` that make a `MediaAssetRecord`, in the order the queries select them. */
+export const MEDIA_COLUMN_NAMES = [
+    "id",
+    "status",
+    "filename",
+    "mime_type",
+    "byte_size",
+    "width",
+    "height",
+    "staging_key",
+    "storage_key",
+    "original_storage_key",
+    "original_staging_key",
+    "original_mime_type",
+    "original_byte_size",
+    "original_width",
+    "original_height",
+    "default_alt",
+    "default_caption",
+    "created_at",
+    "updated_at",
+    "ready_at",
+];
 const toNumberOrNull = (value) => (value === null ? null : Number(value));
 export const mapMediaRow = (row) => ({
     id: row.id,
@@ -109,109 +98,134 @@ export const mapMediaRow = (row) => ({
     updatedAt: row.updated_at,
     readyAt: row.ready_at,
 });
-export const TEMPLATE_COLUMNS = "id, name, mdx, version, created_at, updated_at";
 export const mapTemplateRow = (row) => ({
     id: row.id,
     name: row.name,
-    mdx: row.mdx,
+    // Migration 0019 gave every template a document; one that still has none (a row written by hand) reads as empty.
+    doc: readDoc(row.doc) ?? emptyStoredDocument(),
     version: row.version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
 });
-export function isReferencesEqual(a, b) {
-    if (a.length !== b.length)
-        return false;
-    const key = (r) => `${r.kind}:${r.targetId.toLowerCase()}`;
-    const mapA = new Map(a.map((r) => [key(r), r]));
-    const mapB = new Map(b.map((r) => [key(r), r]));
-    if (mapA.size !== mapB.size)
-        return false;
-    for (const [k, refA] of mapA.entries()) {
-        const refB = mapB.get(k);
-        if (!refB)
-            return false;
-        if (refA.isStale !== refB.isStale)
-            return false;
-        if (!isDeepStrictEqual(refA.occurrences, refB.occurrences))
-            return false;
-    }
-    return true;
-}
 /** Inserts a reference index row. Picks the FK target column by kind (same rule as the CHECK constraint). */
-export async function insertReferences(client, qSchema, entryId, state, references) {
+export async function insertReferences(db, entryId, state, references) {
     for (const ref of references) {
-        const targetEntryId = ref.kind === "media" ? null : ref.targetId;
-        const targetMediaId = ref.kind === "media" ? ref.targetId : null;
-        await client.query(`INSERT INTO "${qSchema}".entry_references
-			 (entry_id, state, kind, target_id, target_entry_id, target_media_id, is_stale, occurrences)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [
-            entryId,
+        await db
+            .insertInto("entry_references")
+            .values({
+            entry_id: entryId,
             state,
-            ref.kind,
-            ref.targetId,
-            targetEntryId,
-            targetMediaId,
-            ref.isStale,
-            JSON.stringify(ref.occurrences),
-        ]);
+            kind: ref.kind,
+            target_id: ref.targetId,
+            target_entry_id: ref.kind === "media" ? null : ref.targetId,
+            target_media_id: ref.kind === "media" ? ref.targetId : null,
+            is_stale: ref.isStale,
+            occurrences: JSON.stringify(ref.occurrences),
+        })
+            .execute();
     }
 }
-export async function readReferences(client, qSchema, entryId, state) {
-    const res = await client.query(`SELECT kind, target_id, is_stale, occurrences FROM "${qSchema}".entry_references
-		 WHERE entry_id = $1 AND state = $2 ORDER BY kind ASC, target_id ASC`, [entryId, state]);
-    return res.rows.map(mapReferenceRow);
+export async function readReferences(db, entryId, state) {
+    const rows = await db
+        .selectFrom("entry_references")
+        .select(["kind", "target_id", "is_stale", "occurrences"])
+        .where("entry_id", "=", entryId)
+        .where("state", "=", state)
+        .orderBy("kind", "asc")
+        .orderBy("target_id", "asc")
+        .execute();
+    return rows.map(mapReferenceRow);
 }
-export async function readBody(client, qSchema, entryId, state) {
-    const res = await client.query(`SELECT metadata, mdx, schema_version, content_hash, updated_at, translation FROM "${qSchema}".entry_bodies
-		 WHERE entry_id = $1 AND state = $2`, [entryId, state]);
-    return res.rows[0];
+export async function readBody(db, entryId, state) {
+    const row = await db
+        .selectFrom("entry_bodies")
+        .select(["metadata", "mdx", "doc", "schema_version", "content_hash", "updated_at", "translation"])
+        .where("entry_id", "=", entryId)
+        .where("state", "=", state)
+        .executeTakeFirst();
+    return row && { ...row, doc: readBodyDoc(row.doc, row.mdx), translation: readTranslation(row.translation) };
 }
-/** Writes the working/published body. Also updates the plain text used for search. */
-export async function writeBody(client, qSchema, entryId, state, body) {
-    await client.query(`INSERT INTO "${qSchema}".entry_bodies (entry_id, state, metadata, mdx, schema_version, content_hash, updated_at, search_text, translation)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		 ON CONFLICT (entry_id, state) DO UPDATE SET
-		   metadata = EXCLUDED.metadata, mdx = EXCLUDED.mdx, schema_version = EXCLUDED.schema_version,
-		   content_hash = EXCLUDED.content_hash, updated_at = EXCLUDED.updated_at, search_text = EXCLUDED.search_text,
-		   translation = EXCLUDED.translation`, [
-        entryId,
+/** The value a conflicting insert of `entry_bodies` proposed (`EXCLUDED.<column>`), for the `DO UPDATE` of `writeBody`. */
+const proposed = (column) => sql.ref(`excluded.${column}`);
+/** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is not written: `doc` is the only source of a body. */
+export async function writeBody(site, db, entryId, state, body) {
+    await db
+        .insertInto("entry_bodies")
+        .values({
+        entry_id: entryId,
         state,
-        JSON.stringify(body.metadata),
-        body.mdx,
-        body.schemaVersion,
-        body.contentHash,
-        body.updatedAt,
-        extractVisibleText(body.mdx),
-        body.translation === null ? null : JSON.stringify(body.translation),
-    ]);
+        metadata: JSON.stringify(body.metadata),
+        doc: JSON.stringify(body.doc),
+        schema_version: body.schemaVersion,
+        content_hash: body.contentHash,
+        updated_at: body.updatedAt,
+        search_text: extractVisibleText(site, body.doc),
+        translation: body.translation === null ? null : JSON.stringify(body.translation),
+    })
+        .onConflict((conflict) => conflict.columns(["entry_id", "state"]).doUpdateSet({
+        metadata: proposed("metadata"),
+        doc: proposed("doc"),
+        schema_version: proposed("schema_version"),
+        content_hash: proposed("content_hash"),
+        updated_at: proposed("updated_at"),
+        search_text: proposed("search_text"),
+        translation: proposed("translation"),
+    }))
+        .execute();
 }
-export async function loadEntry(client, id, qSchema) {
-    const res = await client.query(`SELECT
-			e.id, e.collection, e.locale, COALESCE(e.translation_group_id, e.id) AS translation_group_id,
-			e.status, e.version, e.folder_id, e.created_at, e.updated_at as entry_updated_at,
-			e.published_at, e.trashed_at, e.working_slug,
-			(SELECT slug FROM "${qSchema}".content_addresses WHERE entry_id = e.id AND type = 'current') as current_slug,
-			b.state, b.metadata, b.mdx, b.schema_version, b.content_hash, b.updated_at as body_updated_at, b.translation
-		 FROM "${qSchema}".entries e
-		 LEFT JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id
-		 WHERE e.id = $1`, [id]);
-    const first = res.rows[0];
+export async function loadEntry(db, id) {
+    const rows = await db
+        .selectFrom("entries as e")
+        .leftJoin("entry_bodies as b", "e.id", "b.entry_id")
+        .select((eb) => [
+        "e.id",
+        "e.collection",
+        "e.locale",
+        sql `coalesce(e.translation_group_id, e.id)`.as("translation_group_id"),
+        "e.status",
+        "e.version",
+        "e.folder_id",
+        "e.created_at",
+        "e.updated_at as entry_updated_at",
+        "e.changed_by",
+        "e.changed_at",
+        "e.published_at",
+        "e.trashed_at",
+        "e.working_slug",
+        eb
+            .selectFrom("content_addresses")
+            .select("slug")
+            .whereRef("entry_id", "=", "e.id")
+            .where("type", "=", "current")
+            .as("current_slug"),
+        "b.state",
+        "b.metadata",
+        "b.mdx",
+        "b.doc",
+        "b.schema_version",
+        "b.content_hash",
+        "b.updated_at as body_updated_at",
+        "b.translation",
+    ])
+        .where("e.id", "=", id)
+        .execute();
+    const first = rows[0];
     if (!first)
         throw new CmsError("Entry not found", "not_found");
     let working;
     let published;
-    for (const row of res.rows) {
-        if (row.state === null || row.metadata === null || row.mdx === null)
+    for (const row of rows) {
+        if (row.state === null || row.metadata === null)
             continue;
         if (row.schema_version === null || row.content_hash === null || row.body_updated_at === null)
             continue;
         const body = {
             metadata: row.metadata,
-            mdx: row.mdx,
+            doc: readBodyDoc(row.doc, row.mdx),
             schemaVersion: row.schema_version,
             contentHash: row.content_hash,
             updatedAt: row.body_updated_at,
-            translation: row.translation ?? null,
+            translation: readTranslation(row.translation),
         };
         if (row.state === "working")
             working = body;
@@ -230,6 +244,8 @@ export async function loadEntry(client, id, qSchema) {
         folderId: first.folder_id,
         createdAt: first.created_at,
         updatedAt: first.entry_updated_at,
+        changedAt: first.changed_at ?? first.entry_updated_at,
+        ...(first.changed_by ? { changedBy: first.changed_by } : {}),
         publishedAt: first.published_at ?? undefined,
         trashedAt: first.trashed_at ?? undefined,
         workingSlug: first.working_slug,
@@ -239,11 +255,21 @@ export async function loadEntry(client, id, qSchema) {
     };
 }
 /** Locks the entry row with a version check. 404 if missing, 409 if the version differs. */
-export async function lockEntryForUpdate(client, qSchema, id, expectedVersion) {
-    const res = await client.query(`SELECT version, collection, locale, COALESCE(translation_group_id, id) AS translation_group_id,
-		        status, updated_at, working_slug
-		 FROM "${qSchema}".entries WHERE id = $1 FOR UPDATE`, [id]);
-    const row = res.rows[0];
+export async function lockEntryForUpdate(db, id, expectedVersion) {
+    const row = await db
+        .selectFrom("entries")
+        .select([
+        "version",
+        "collection",
+        "locale",
+        sql `coalesce(translation_group_id, id)`.as("translation_group_id"),
+        "status",
+        "updated_at",
+        "working_slug",
+    ])
+        .where("id", "=", id)
+        .forUpdate()
+        .executeTakeFirst();
     if (!row)
         throw new CmsError("Entry not found", "not_found");
     if (expectedVersion !== undefined && row.version !== expectedVersion) {

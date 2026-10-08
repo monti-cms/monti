@@ -1,29 +1,9 @@
-import { type AuthGateway } from "./auth-gateway.js";
 /**
- * Admin login runtime API. Uses the connection built from `auth` in the server config (`cms.server.ts`).
- * The side that picks the login method (`githubAuth`) lives in `@monti-cms/core/server`.
+ * Admin login types and the pieces a login method is built from. The connection itself is built from `auth` in `monti.config.ts`
+ * and owned by the CMS instance (`cms.auth()`, `cms.authGateway`). A login method is an `AuthAdapter` (`@monti-cms/core/server`); the one that ships is
+ * `auth()` of `@monti-cms/auth` (Auth.js core, with providers such as `github()`), written with the helpers exported here.
  */
-export { type AuthContext, AuthError, type AuthGateway } from "./auth-gateway.js";
-export declare const authGateway: AuthGateway;
-/** Login API route handlers. An app whose login path differs from the default (`/api/cms/auth`) exports it from the route file at that path (e.g. `app/api/auth/[...nextauth]/route.ts`). */
-export declare const handlers: {
-    GET: (request: Request) => Promise<Response>;
-    POST: (request: Request) => Promise<Response>;
-};
-/** Current session. `null` if none. */
-export declare const auth: () => Promise<{
-    user?: {
-        id?: string;
-        accountId?: string;
-    };
-} | null>;
-export declare const signIn: (provider?: string, options?: {
-    redirectTo?: string;
-}) => Promise<unknown>;
-export declare const signOut: (options?: {
-    redirectTo?: string;
-}) => Promise<unknown>;
-export declare const isAllowedAdminId: (userId: string | null | undefined) => boolean;
-export declare const isDevAuthBypassEnabled: () => boolean;
-/** Login methods to show on the login page. */
-export declare const authProviders: () => readonly import("../../server/index.js").AuthProvider[];
+export { withBasePath } from "../../core/base-path.js";
+export { type AuthContext, AuthError, type AuthGateway, assertDevBypassSafe, CmsAuthGateway, isAllowedAdminId, isDevAuthBypassEnabled, } from "./auth-gateway.js";
+export { productionLikeEnvironment } from "./dev-bypass.js";
+export { detectProxyPlatform, explainTrustHost, resolveTrustHost } from "./trust-host.js";

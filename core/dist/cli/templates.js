@@ -1,8 +1,43 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define.js";
+import { CMS_STATE_KEYS, DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "./front-matter-keys.js";
+import { SCHEMA_LINK } from "./schema-types.js";
 /** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
-/** Defaults `monti init` writes into a new config. Sign-in and UI text follow the site default locale. */
+/** Defaults `monti init` writes into a new config. */
 export const DEFAULT_INIT_LOCALE = "en";
 export const DEFAULT_INIT_TIME_ZONE = "UTC";
+/** The admin path `monti init` asks for and writes by default. */
+export const DEFAULT_INIT_ADMIN_PATH = "/studio";
+export const DEFAULT_SITE_URL = "http://localhost:3000";
+/** Every block of `@monti-cms/blocks`, in the order the plugins are listed (the inline marks last: overlapping marks are stored in this order). */
+export const BLOCK_CHOICES = [
+    { id: "callout", fn: "callout", description: "note, tip and warning boxes" },
+    { id: "collapsible", fn: "collapsible", description: "a section that opens and closes" },
+    { id: "tabs", fn: "tabs", description: "content split into tabs" },
+    { id: "columns", fn: "columns", description: "side-by-side columns" },
+    { id: "code-explorer", fn: "codeExplorer", description: "code with a file tree and several files" },
+    {
+        id: "mermaid",
+        fn: "mermaid",
+        description: "diagrams written in Mermaid",
+        needs: "mermaid",
+        heavy: "the mermaid package alone is about 26 MB in node_modules and loads a large script in the browser",
+    },
+    {
+        id: "chart",
+        fn: "chart",
+        description: "bar, line and pie charts",
+        needs: "recharts",
+        heavy: "it adds recharts and its dependencies (d3), which is a large script for the pages that show a chart",
+    },
+    { id: "tooltip", fn: "tooltip", description: "inline text with a hover explanation" },
+    { id: "code-ref", fn: "codeRef", description: "inline link from a phrase to a line of code" },
+    { id: "color", fn: "color", description: "inline text color" },
+];
+/**
+ * The blocks `monti init` turns on when nobody chose: the light ones. The heavy ones (`mermaid`, `chart`) are opt-in (`--blocks all` or a list that names them),
+ * because each adds a large package to the app. `columns`, `code-explorer` and `tooltip` are also left out: they are small, but a first blog rarely needs them.
+ */
+export const DEFAULT_BLOCK_IDS = ["callout", "collapsible", "tabs", "code-ref", "color"];
 /** The language's name in that language for a locale code (e.g. `ko` -> `한국어`). Falls back to the code itself. */
 function languageName(code) {
     try {
@@ -12,115 +47,391 @@ function languageName(code) {
         return code;
     }
 }
-export function configTemplate(adminPath, options = {}) {
-    const locale = options.locale ?? DEFAULT_INIT_LOCALE;
-    const timeZone = options.timeZone ?? DEFAULT_INIT_TIME_ZONE;
-    const admin = adminPath === DEFAULT_ADMIN_PATH
-        ? ""
-        : `\t// Admin screen path. Must match the admin route folder ((admin)${adminPath}/).\n\tadmin: { path: "${adminPath}" },\n`;
-    return `import { defineCollection, defineConfig, fields } from "@monti-cms/core";
-// Optional: block extensions (callouts, tabs, Mermaid, charts, ...) and the SEO extension. Install the package, then uncomment.
-// import { blocks } from "@monti-cms/blocks";
-// import { seo, seoFields } from "@monti-cms/seo";
-
-/**
- * Site config. The server and the admin screen both read it, so keep secrets out (they go in cms.server.ts).
- * The collection name (\`post\` below) is stored in the database, so don't rename it in production. Add and edit fields freely.
- */
-const post = defineCollection({
-	label: "Post",
-	kind: "document", // body, draft and publish. Use "item" for small entries like tags
-	path: "/posts/:slug", // public URL shape. Used for internal links in the body and preview URLs
-	icon: "file-text",
-	fields: {
-		// The title field is named \`title\` (the label is up to you).
-		title: fields.text({ label: "Title", required: true, max: 200 }),
-		slug: fields.slug({ label: "Slug", from: "title", required: true }),
-		summary: fields.text({ label: "Summary", role: "summary", multiline: true, fillFromBody: true }),
-		// ...seoFields(), // SEO tab: search title and description, share image, hide from search
-	},
-});
-
-export default defineConfig({
-	collections: { post },
-	// The admin screen language and date format follow the default locale (override with admin.locale).
-	locales: [{ code: ${JSON.stringify(locale)}, name: ${JSON.stringify(languageName(locale))} }],
-	defaultLocale: ${JSON.stringify(locale)},
-	site: { name: "My site" },
-	timeZone: ${JSON.stringify(timeZone)},
-${admin}	// plugins: [...blocks(), seo()],
-});
-`;
+const sentenceCase = (key) => {
+    const words = key
+        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/[-_]+/g, " ")
+        .trim()
+        .toLowerCase();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+};
+/** The field names the starter collection always has. */
+const STARTER_FIELDS = new Set(["title", "slug"]);
+const IMAGE_KEYS = ["image", "cover", "coverimage", "thumbnail", "heroimage", "ogimage", "banner", "featuredimage"];
+/** A key from front matter as a field name: kept as it is when it is one word of letters and digits, else camel-cased. `undefined` if nothing usable is left. */
+export function fieldNameOf(key) {
+    if (/^[A-Za-z][A-Za-z0-9]*$/.test(key))
+        return key;
+    const words = key.split(/[^A-Za-z0-9]+/).filter(Boolean);
+    if (words.length === 0 || !/^[A-Za-z]/.test(words[0] ?? ""))
+        return undefined;
+    return words.map((word, index) => (index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))).join("");
 }
-export const SERVER_TEMPLATE = `import { defineServerConfig, githubAuth, postgres } from "@monti-cms/core/server";
-
-/**
- * Server config. The database and sign-in connections and the secrets are read from environment variables (.env.local).
- * Only the server reads it. The admin API route also serves the sign-in API (/api/cms/auth/*). The callback URL of the
- * GitHub OAuth app is <site URL>/api/cms/auth/callback/github.
- */
-export default defineServerConfig({
-	database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
-	auth: githubAuth({
-		clientId: process.env.AUTH_GITHUB_ID,
-		clientSecret: process.env.AUTH_GITHUB_SECRET,
-		adminIds: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin
-		devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1", // only in next dev: treat everyone as admin without signing in
-		secret: process.env.AUTH_SECRET, // signs the sign-in session
-	}),
-	// Encryption key for stored values (AI service keys). If you change it, enter the stored keys again. Keep it separate from the sign-in secret.
-	secret: process.env.CMS_SECRET,
-	// media: r2Storage({ ... }), // image and file uploads (S3-compatible storage), imported from @monti-cms/core/s3
+const itemCollection = (label, icon, multiLocale) => ({
+    label,
+    // small entries that posts point to (see "item" in the collection docs)
+    kind: "item",
+    icon,
+    fields: {
+        title: { kind: "text", label: "Name", required: true, ...(multiLocale ? { localized: true } : {}), max: 200 },
+        slug: { kind: "slug", label: "Address", required: true, from: "title" },
+    },
 });
+/**
+ * The collections of the starter schema: `post` with the fields every blog has, then (when a content folder was found) one field per front matter key, read by the
+ * table in `front-matter-keys.ts`:
+ *
+ * - `date` and the other publish date keys get no field: the entry has its own publish date.
+ * - `description`, `summary`, `excerpt` and the like become the field with the `summary` role.
+ * - `tags` (also `keywords`, `topics`) become the collection `tag` and a relation `tagIds`. `category` becomes `category` and `categoryId`, and `categories` (a list)
+ *   `categoryIds`.
+ * - `draft`, `published` and the language keys are the CMS's own and get no field.
+ */
+export function starterCollections(keys, multiLocale) {
+    const localized = multiLocale ? { localized: true } : {};
+    const fields = {
+        // the title field is named `title` (the label is up to you)
+        title: { kind: "text", label: "Title", required: true, ...localized, max: 200 },
+        slug: {
+            kind: "slug",
+            label: "Slug",
+            required: true,
+            ...(multiLocale ? { localized: "inherit" } : {}),
+            from: "title",
+        },
+    };
+    const notes = [];
+    const relationKeys = new Map();
+    let summaryName;
+    const extra = {};
+    for (const key of keys.slice(0, 16)) {
+        const name = fieldNameOf(key.name);
+        const lower = key.name.toLowerCase();
+        if (!name || STARTER_FIELDS.has(name) || STARTER_FIELDS.has(lower) || CMS_STATE_KEYS.has(lower) || name in extra)
+            continue;
+        if (DATE_KEYS.has(lower)) {
+            notes.push(`"${key.name}" is the publish date of an entry, so it has no field of its own (import fills the date).`);
+            continue;
+        }
+        if (LOCALE_KEYS.has(lower))
+            continue;
+        const target = RELATION_KEYS[lower];
+        if (target === "tag" || target === "category") {
+            if (relationKeys.has(target)) {
+                notes.push(`"${key.name}" also means ${target}, which "${relationKeys.get(target)}" already fills, so import skips it.`);
+                continue;
+            }
+            const many = target === "tag" || key.type === "list";
+            relationKeys.set(target, key.name);
+            extra[`${target}${many ? "Ids" : "Id"}`] = {
+                kind: "relation",
+                label: target === "tag" ? "Tags" : many ? "Categories" : "Category",
+                to: target,
+                ...(many ? { many: true } : {}),
+                createInline: true,
+            };
+            continue;
+        }
+        if (summaryName === undefined && SUMMARY_KEYS.has(lower)) {
+            summaryName = name;
+            extra[name] = {
+                kind: "text",
+                label: sentenceCase(key.name),
+                role: "summary",
+                multiline: true,
+                fillFromBody: true,
+                ...localized,
+            };
+        }
+        else if (IMAGE_KEYS.includes(lower) && key.type === "string") {
+            extra[name] = { kind: "media", label: sentenceCase(key.name), accept: "image" };
+        }
+        else {
+            const note = key.type === "list"
+                ? "A list in your front matter; kept as text (one value per line) until you model it"
+                : key.type === "date"
+                    ? "A date in your front matter; kept as text (YYYY-MM-DD)"
+                    : undefined;
+            extra[name] = { kind: "text", label: sentenceCase(key.name), ...(note ? { description: note } : {}) };
+        }
+    }
+    if (summaryName === undefined) {
+        fields.summary = {
+            kind: "text",
+            label: "Summary",
+            role: "summary",
+            multiline: true,
+            fillFromBody: true,
+            ...localized,
+        };
+    }
+    const collections = { post: { fields: { ...fields, ...extra } } };
+    if (relationKeys.has("tag"))
+        collections.tag = itemCollection("Tag", "tag", multiLocale);
+    if (relationKeys.has("category"))
+        collections.category = itemCollection("Category", "shapes", multiLocale);
+    for (const [target, key] of relationKeys) {
+        notes.push(`"${key}" becomes the ${target} collection and a relation field on post.`);
+    }
+    return { collections, notes };
+}
+/** The public address shape for a content folder: its last folder name (`content/blog` -> `/blog/:slug`), else `/posts/:slug`. */
+export function pathFor(folder) {
+    const last = folder?.dir.split("/").at(-1) ?? "";
+    return /^[A-Za-z][\w-]*$/.test(last) && !["content", "data", "src", "_posts"].includes(last)
+        ? `/${last}/:slug`
+        : "/posts/:slug";
+}
+/**
+ * The schema file `monti init` creates (`monti.schema.json`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
+ * time zone, the site name and the admin path when it is not the default. It holds the plain data of the site;
+ * `monti.config.ts` loads it. `link` is the path of the JSON Schema from the schema file (editors use it for autocomplete). With `folder` (a content folder the app
+ * already has) the fields follow its front matter, and `path` follows its name.
+ */
+export function schemaTemplate(answers, options = {}) {
+    const [defaultLocale = DEFAULT_INIT_LOCALE] = answers.locales;
+    const { collections } = starterCollections(options.folder?.keys ?? [], answers.locales.length > 1);
+    const { post, ...related } = collections;
+    const schema = {
+        $schema: options.link ?? SCHEMA_LINK,
+        collections: {
+            post: {
+                label: "Post",
+                // body, draft and publish. Use "item" for small entries like tags
+                kind: "document",
+                // public URL shape (a sample; use your own). Used for internal links in the body and preview URLs
+                path: pathFor(options.folder),
+                icon: "file-text",
+                fields: post?.fields,
+            },
+            ...related,
+        },
+        locales: answers.locales.map((code) => ({ code, name: languageName(code) })),
+        defaultLocale,
+        timeZone: answers.timeZone,
+        site: { name: options.siteName || "My site" },
+        ...(answers.adminPath === DEFAULT_ADMIN_PATH ? {} : { admin: { path: answers.adminPath } }),
+    };
+    return `${JSON.stringify(schema, null, "\t")}\n`;
+}
+/** The module a block's function is imported from. */
+export const blockEntry = (block) => block.needs ? `@monti-cms/blocks/${block.id}` : "@monti-cms/blocks";
+const unique = (values) => [...new Set(values)];
+/** The block choices for the ids, in the order of {@link BLOCK_CHOICES}. */
+export const chosenBlocks = (ids) => BLOCK_CHOICES.filter((block) => ids.includes(block.id));
+/**
+ * The config file `monti init` creates: the one place the site is set up. It loads the schema file and lists the plugins, the database and the login, one line each
+ * with a short comment. Nothing here is a preset: every line is a feature that is on, and deleting the line turns it off.
+ */
+export function configTemplate(answers) {
+    const blocks = chosenBlocks(answers.blocks);
+    const imports = [
+        { from: "@monti-cms/auth", names: ["auth"] },
+        { from: "@monti-cms/auth/github", names: ["github"] },
+        { from: "@monti-cms/core/server", names: ["defineConfig", "postgres"] },
+        { from: "@monti-cms/mdx", names: ["mdx"] },
+    ];
+    if (answers.ai)
+        imports.push({ from: "@monti-cms/ai", names: ["aiPlugin"] });
+    if (answers.gitSync)
+        imports.push({ from: "@monti-cms/git-sync", names: ["gitSync"] });
+    if (answers.storage === "s3")
+        imports.push({ from: "@monti-cms/storage-s3", names: ["s3Storage"] });
+    const light = blocks.filter((block) => !block.needs);
+    if (light.length > 0) {
+        imports.push({
+            from: "@monti-cms/blocks",
+            names: light.map((block) => block.fn).sort((a, b) => a.localeCompare(b)),
+        });
+    }
+    // A block that needs a library of its own has its own entry point, so the app that does not choose it never loads that library.
+    for (const block of blocks.filter((block) => block.needs))
+        imports.push({ from: blockEntry(block), names: [block.fn] });
+    imports.sort((a, b) => a.from.localeCompare(b.from));
+    const importLines = [
+        ...imports.map(({ from, names }) => {
+            const line = `import { ${names.join(", ")} } from "${from}";`;
+            return line.length <= 100 ? line : `import {\n${names.map((name) => `\t${name},`).join("\n")}\n} from "${from}";`;
+        }),
+        'import schema from "./monti.schema.json";',
+    ];
+    const plugins = [
+        "// Bodies as MDX (and Markdown) text: read, write and export. Also the source panel in the editor.",
+        "mdx(),",
+    ];
+    if (blocks.length > 0) {
+        plugins.push("// The body blocks, one line each: delete a line and the block is gone. The inline marks (tooltip, code-ref, color) are stored in this order when they overlap.");
+        for (const block of blocks)
+            plugins.push(`${block.fn}(), // ${block.description}`);
+    }
+    if (answers.ai) {
+        plugins.push("// AI writing: polish, draft and translate buttons, and the AI screen. It renders without a key; a connection is saved on the admin AI screen.", "aiPlugin(),");
+    }
+    if (answers.gitSync) {
+        plugins.push("// Two-way sync of published entries with files in a GitHub repo. It syncs nothing until `targets` names a repo:", '//   gitSync({ targets: [{ repo: "you/content", branch: "main", folder: "content", collections: ["post"], mode: "commit" }] })', "gitSync(),");
+    }
+    const pluginLines = plugins.map((line) => `\t\t${line}`);
+    const storage = answers.storage === "s3"
+        ? [
+            "\t// Image and file uploads on the S3 API (AWS S3, Cloudflare R2, MinIO). It reads the S3_* values from the environment: see .env.example.",
+            "\tstorage: s3Storage(),",
+        ]
+        : [
+            "\t// Image and file uploads: none yet, so the admin hides the media menu. pnpm add @monti-cms/storage-s3, import { s3Storage } from it, then:",
+            "\t// storage: s3Storage(),",
+        ];
+    return `${[
+        ...importLines,
+        "",
+        "/**",
+        " * The one config of the site, and the CMS instance it makes. The admin API route, the admin screens, your pages (cms.read.getEntry(...)) and the `monti` command all use it.",
+        " * It is server-only (it holds the database and login settings): never import it from a client component. `monti doctor` checks that.",
+        " *",
+        " * The data (collections, fields, locales, time zone, admin path) is in monti.schema.json: edit it there. This file keeps what needs code. Values come from the",
+        " * environment (.env.local); .env.example lists them.",
+        " */",
+        "export const cms = defineConfig({",
+        "\tschema,",
+        "\t// The public site URL is read from SITE_URL.",
+        "",
+        "\tplugins: [",
+        ...pluginLines,
+        "\t],",
+        "",
+        "\t// The content database: DATABASE_URL, and DATABASE_SCHEMA when the database is shared.",
+        "\tdatabase: postgres(),",
+        "",
+        "\t// The admin login: AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (your GitHub OAuth app) and MONTI_ADMIN_GITHUB_ID (the admin's numeric GitHub id).",
+        "\t// Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.",
+        "\tauth: auth({ providers: [github()] }),",
+        "",
+        ...storage,
+        "",
+        "\t// The one secret, MONTI_SECRET, signs the login session and encrypts stored values (AI keys, git-sync tokens).",
+        "});",
+    ].join("\n")}\n`;
+}
+/**
+ * The generated files import the CMS instance from the config file. `configImport` is its import path from the generated file, without an extension.
+ * `instant`: the app turns on Next's `cacheComponents`, so the page opts out of the development-only instant navigation validation. The export is only valid with that
+ * option (Next fails the build on it otherwise), which is why the template writes it only then.
+ */
+export const adminPageTemplate = (configImport, options = {}) => `import { CmsAdminPage, type CmsAdminPageProps } from "@monti-cms/nextjs/admin";
+import { cms } from ${JSON.stringify(configImport)};
+
+${options.instant
+    ? `// The admin is a per-request app (the session, the database, the current time), never an instant navigation: this keeps Next's instant validation
+// (Cache Components, development) from checking it. A segment setting has to be written here; it cannot be re-exported from a package.
+export const instant = false;
+
+`
+    : ""}export default function StudioPage(props: CmsAdminPageProps) {
+	return <CmsAdminPage cms={cms} {...props} />;
+}
 `;
-export const ADMIN_PAGE_TEMPLATE = `export { CmsAdminPage as default } from "@monti-cms/admin/next";
-`;
-export const ADMIN_LAYOUT_TEMPLATE = `import { CmsAdminLayout } from "@monti-cms/admin/next";
+export const adminLayoutTemplate = (configImport, options = {}) => `// The admin stylesheets are prebuilt, so the app needs no Tailwind for them, and only the admin pages load them.
+import "@monti-cms/admin/styles.css";
+${options.blocks ? 'import "@monti-cms/blocks/styles.css";\n' : ""}import { CmsAdminLayout, cmsAdminMetadata } from "@monti-cms/nextjs/admin";
 import type { ReactNode } from "react";
+import { cms } from ${JSON.stringify(configImport)};
 
-export { cmsAdminMetadata as metadata } from "@monti-cms/admin/next";
+export const generateMetadata = () => cmsAdminMetadata(cms);
 
-/** Admin screen (@monti-cms/admin). Pass site components with CmsAdminComponentsProvider (see the admin README). */
-export default function AdminLayout({ children }: { children: ReactNode }) {
-	return <CmsAdminLayout>{children}</CmsAdminLayout>;
+// The layout stays apart from the page on purpose: it keeps the admin (navigation, data, theme) mounted while you move between screens.
+export default function StudioLayout({ children }: { children: ReactNode }) {
+	return <CmsAdminLayout cms={cms}>{children}</CmsAdminLayout>;
 }
 `;
-export const API_ROUTE_TEMPLATE = `import { createCmsRouteHandler } from "@monti-cms/core/next/route-handler";
+export const apiRouteTemplate = (configImport) => `import { createRouteHandler } from "@monti-cms/nextjs";
+import { cms } from ${JSON.stringify(configImport)};
 
-/** Admin API (/api/cms/v1/*) and sign-in (/api/cms/auth/*). */
-export const { GET, POST, PATCH, PUT, DELETE } = createCmsRouteHandler();
+// The admin API (/api/cms/v1/*) and the sign-in routes (/api/cms/auth/*).
+export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
 `;
-export function nextConfigTemplate(config, server) {
-    return `import { withCms } from "@monti-cms/core/next";
+export function nextConfigTemplate() {
+    return `import { withCms } from "@monti-cms/nextjs/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {};
 
-export default withCms(nextConfig, { config: "${config}", server: "${server}" });
+export default withCms(nextConfig);
 `;
 }
-/** Style lines the admin screen needs. Put them in the app's Tailwind input CSS after `@import "tailwindcss";`. */
-export const CSS_LINES = [
-    '@import "tw-animate-css";',
-    '@import "@monti-cms/admin/styles.css";',
-    '@plugin "@tailwindcss/typography";',
-];
-/** Packages the app installs (including those the admin package must share with the app). */
-export const INSTALL_COMMANDS = [
-    "pnpm add @monti-cms/core @monti-cms/admin next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react",
-    "pnpm add -D tw-animate-css @tailwindcss/typography",
-];
-/** Values for `.env.local`. */
-export const ENV_VARS = [
-    { name: "CMS_DATABASE_URL", note: "Postgres connection URL" },
-    { name: "CMS_SCHEMA", note: "Optional. Schema name when sharing the database (public if empty)" },
-    { name: "AUTH_SECRET", note: "A long random value. Signs the sign-in session" },
-    {
-        name: "CMS_SECRET",
-        note: "A long random value (different from AUTH_SECRET). Encrypts stored values (AI service keys)",
-    },
-    { name: "AUTH_GITHUB_ID", note: "Client ID of the GitHub OAuth app" },
-    { name: "AUTH_GITHUB_SECRET", note: "Client secret of the GitHub OAuth app" },
-    { name: "CMS_ADMIN_GITHUB_ID", note: "Numeric GitHub ID of the admin" },
-    { name: "CMS_DEV_AUTH_BYPASS", note: "Optional. 1 treats everyone as admin in next dev without signing in" },
-];
+/** The OAuth callback URL of the GitHub login for a site URL. */
+export const githubCallbackUrl = (siteUrl) => `${siteUrl.replace(/\/+$/, "")}/api/cms/auth/callback/github`;
+/**
+ * `.env.example`: every variable the chosen features read, in order, each with what it is and where to get it. Committed to git, so it holds placeholders only,
+ * never a secret. The person copies it to `.env.local` (`cp .env.example .env.local`) and fills it in.
+ */
+export function envExampleTemplate(answers) {
+    const site = answers.siteUrl.replace(/\/+$/, "");
+    const lines = [
+        "# Copy this file to .env.local and fill it in:  cp .env.example .env.local",
+        "# .env.local is for this machine only: keep it out of git. This example file is safe to commit, so never put a real secret in it.",
+        "",
+        "# --- Database ---",
+        "",
+        "# Postgres connection URL. Get it from your database host's dashboard (Neon, Supabase, Vercel Postgres, RDS, ...),",
+        "# or use a local Postgres: postgres://postgres:postgres@localhost:5432/monti (create the database first: createdb monti).",
+        "DATABASE_URL=postgres://user:password@localhost:5432/monti",
+        "",
+        "# Postgres schema for the tables. Optional: empty means public. Use one when the database is shared with other apps.",
+        answers.databaseSchema ? `DATABASE_SCHEMA=${answers.databaseSchema}` : "# DATABASE_SCHEMA=monti",
+        "",
+        "# --- Secret ---",
+        "",
+        "# A long random value that signs login sessions and encrypts stored values (AI keys, git-sync tokens).",
+        "# Generate one:  openssl rand -base64 32",
+        "# or, without openssl:  node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
+        "# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",
+        "MONTI_SECRET=",
+        "",
+        "# --- Admin login (GitHub) ---",
+        "",
+        "# Under `next dev` you are signed in as the admin without these, from this machine only. A deployed site needs them.",
+        "# Create a GitHub OAuth app:  GitHub > Settings > Developer settings > OAuth Apps > New OAuth App",
+        `#   Homepage URL:               ${site}`,
+        `#   Authorization callback URL: ${githubCallbackUrl(site)}`,
+        "# For the deployed site make a second OAuth app (or add its URL the same way), e.g. https://your-domain.com/api/cms/auth/callback/github",
+        "# Then copy the app's Client ID here, and generate a new client secret and copy it to AUTH_GITHUB_SECRET.",
+        "AUTH_GITHUB_ID=",
+        "AUTH_GITHUB_SECRET=",
+        "",
+        '# Your numeric GitHub id: the only account that may sign in as admin. Open https://api.github.com/users/<your-login> and copy the "id" field.',
+        `MONTI_ADMIN_GITHUB_ID=${answers.adminGithubId ?? ""}`,
+        "",
+        "# --- Site ---",
+        "",
+        "# Public URL of the site. Links in bodies written as full URLs to it count as internal links.",
+        `# SITE_URL=${site}`,
+        "",
+        "# Set to true only behind a proxy you run yourself (nginx, a load balancer). Vercel, Netlify and Cloudflare Pages are detected.",
+        "# AUTH_TRUST_HOST=true",
+    ];
+    if (answers.storage === "s3") {
+        lines.push("", "# --- Image storage (S3, Cloudflare R2, MinIO) ---", "", "# Where the S3 API lives. AWS S3: leave empty. Cloudflare R2: https://<account-id>.r2.cloudflarestorage.com (R2 dashboard > bucket > Settings). MinIO: http://localhost:9000.", "S3_ENDPOINT=", "# The bucket's region (AWS: e.g. us-east-1). Cloudflare R2: auto.", "S3_REGION=", "# The bucket name; create the bucket in your storage dashboard first.", "S3_BUCKET=", "# An access key with read and write on that bucket. AWS: IAM > Users > Security credentials. R2: R2 > Manage API tokens. MinIO: the console's Access Keys.", "S3_ACCESS_KEY_ID=", "S3_SECRET_ACCESS_KEY=", "# The start of the public address of uploaded files: a CDN in front of the bucket, or the bucket's public URL (R2: Settings > Public access).", "S3_PUBLIC_URL=", "# MinIO and some other S3-compatible stores need path-style addresses: true.", "# S3_FORCE_PATH_STYLE=true");
+    }
+    return `${lines.join("\n")}\n`;
+}
+/** The npm packages the answers need, besides what the app already lists. */
+export function packagesFor(answers) {
+    const blocks = chosenBlocks(answers.blocks);
+    return unique([
+        "@monti-cms/core",
+        "@monti-cms/admin",
+        "@monti-cms/auth",
+        "@monti-cms/nextjs",
+        "@monti-cms/mdx",
+        "next-themes",
+        "@tanstack/react-query",
+        "sonner",
+        "@tiptap/core",
+        "@tiptap/pm",
+        "@tiptap/react",
+        ...(blocks.length > 0 ? ["@monti-cms/blocks", "lucide-react"] : []),
+        ...blocks.flatMap((block) => (block.needs ? [block.needs] : [])),
+        ...(answers.ai ? ["@monti-cms/ai"] : []),
+        ...(answers.gitSync ? ["@monti-cms/git-sync"] : []),
+        ...(answers.storage === "s3" ? ["@monti-cms/storage-s3"] : []),
+    ]);
+}

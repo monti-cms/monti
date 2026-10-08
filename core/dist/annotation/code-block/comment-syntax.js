@@ -1,19 +1,42 @@
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const HASH_COMMENT_LANGS = new Set(["python", "yaml", "toml", "bash"]);
-const SQL_COMMENT_LANGS = new Set(["sql"]);
-const BLOCK_COMMENT_LANGS = new Set(["postcss"]);
-export const resolveCommentSyntax = (lang) => {
-    const normalized = lang.trim().toLowerCase();
-    if (HASH_COMMENT_LANGS.has(normalized)) {
-        return { prefix: "#", postfix: "" };
-    }
-    if (SQL_COMMENT_LANGS.has(normalized)) {
-        return { prefix: "--", postfix: "" };
-    }
-    if (BLOCK_COMMENT_LANGS.has(normalized)) {
-        return { prefix: "/*", postfix: "*/" };
-    }
-    return { prefix: "//", postfix: "" };
+const LINE_COMMENT = { prefix: "//", postfix: "" };
+/**
+ * Comment syntax per language, with the aliases of each language listed beside it.
+ * A language that is not listed (js/ts/java/c/go/rust/php/scss/json5/text, ...) uses `//`.
+ * `astro` is left out on purpose: a leading `<!-- -->` line would sit before its frontmatter fence.
+ */
+const COMMENT_SYNTAX_GROUPS = [
+    {
+        syntax: { prefix: "#", postfix: "" },
+        langs: [
+            ...["python", "py", "yaml", "yml", "toml", "bash", "sh", "shell", "zsh", "fish"],
+            ...["dockerfile", "docker", "ruby", "rb", "perl", "r", "makefile", "make", "nginx"],
+            ...["dotenv", "env", "powershell", "ps1", "graphql", "gql", "ini", "conf"],
+            ...["elixir", "julia", "nim", "coffee", "tcl"],
+        ],
+    },
+    { syntax: { prefix: "--", postfix: "" }, langs: ["sql", "lua", "haskell", "hs", "elm", "ada"] },
+    {
+        syntax: { prefix: "<!--", postfix: "-->" },
+        langs: ["html", "xml", "svg", "vue", "svelte", "markdown", "md", "handlebars"],
+    },
+    // MDX 2 does not read HTML comments; its comment is a JS comment in an expression.
+    { syntax: { prefix: "{/*", postfix: "*/}" }, langs: ["mdx"] },
+    { syntax: { prefix: "/*", postfix: "*/" }, langs: ["css", "postcss"] },
+    { syntax: { prefix: ";", postfix: "" }, langs: ["lisp", "clojure", "clj", "scheme", "elisp", "asm", "nasm"] },
+    { syntax: { prefix: "%", postfix: "" }, langs: ["latex", "tex", "erlang", "matlab"] },
+    { syntax: { prefix: "%%", postfix: "" }, langs: ["mermaid"] },
+];
+const COMMENT_SYNTAX_BY_LANG = new Map(COMMENT_SYNTAX_GROUPS.flatMap(({ syntax, langs }) => langs.map((lang) => [lang, syntax])));
+/** The comment syntax the writer uses for `lang`. */
+export const resolveCommentSyntax = (lang) => COMMENT_SYNTAX_BY_LANG.get(lang.trim().toLowerCase()) ?? LINE_COMMENT;
+/**
+ * The comment syntaxes the parser accepts for `lang`: the language's own syntax first, then `//`.
+ * Bodies stored before the table above was corrected hold `// @line ...` in every language.
+ */
+export const resolveParseCommentSyntaxes = (lang) => {
+    const own = resolveCommentSyntax(lang);
+    return own === LINE_COMMENT ? [own] : [own, LINE_COMMENT];
 };
 export const formatAnnotationComment = (commentSyntax, body) => {
     const prefix = commentSyntax.prefix.trim();

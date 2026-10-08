@@ -2,14 +2,14 @@ import { adminRoute, json, parseWith, readJsonBody } from "@monti-cms/core/plugi
 import { aiModelsQuerySchema } from "../../connection.js";
 import { isFakeAi, listModels } from "../../provider.js";
 import { savedProvider } from "../../settings.js";
-import { getAiStore } from "../../store.js";
+import { aiStoreFor } from "../../store.js";
 /**
  * Model list of a generation connection's address (`GET {address}/models`). A saved connection is called by `providerId`; before saving, by address and key.
  * The key is never returned to the browser. If the address gives no list, the list is empty and the screen has the user type the name.
  */
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
     const query = parseWith(aiModelsQuerySchema, await readJsonBody(request));
-    const saved = query.providerId ? await savedProvider(getAiStore(), query.providerId) : null;
+    const saved = query.providerId ? await savedProvider(cms.site, aiStoreFor(cms), query.providerId) : null;
     if (saved && saved.kind !== "chat")
         return json({ items: [] });
     const url = query.url || saved?.url;
@@ -17,5 +17,5 @@ export const POST = adminRoute(async ({ request }) => {
         return json({ items: isFakeAi() ? [{ id: "fake-generator" }] : [] });
     // If the address changed but no new key was entered, the stored key is not sent to a different address.
     const apiKey = query.apiKey ?? (saved && saved.url === url ? saved.apiKey : null);
-    return json({ items: await listModels(url, apiKey, request.signal) });
+    return json({ items: await listModels(cms.site, url, apiKey, request.signal) });
 });

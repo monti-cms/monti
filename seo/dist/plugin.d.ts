@@ -14,7 +14,7 @@ export interface SeoPluginOptions {
  * plugins: [seo(), aiPlugin()]
  * ```
  */
-export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/core").CmsPlugin<"seo", SeoPluginOptions> & {
+export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/core").CmsPlugin<"seo", SeoPluginOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
     readonly contributes?: {
         readonly ai: {
             actions: {

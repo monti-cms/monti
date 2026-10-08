@@ -1,6 +1,9 @@
+import { type Site } from "@monti-cms/core/client";
 import { type ReactNode } from "react";
 import type { AiActionView } from "../actions.js";
 import type { AiRunContext, AiRunResult } from "../definition.js";
+/** What the request functions need of a site: its admin language for the failure text. */
+type RequestSite = Pick<Site, "createTranslator">;
 export declare const AI_ACTIONS_KEY: readonly ["cms", "ai", "actions"];
 export interface AiActionsResponse {
     /** Names of actions that are ready to use now because their connection is ready. */
@@ -26,16 +29,16 @@ export interface AiRunOptions {
     signal?: AbortSignal;
 }
 /** Runs an action by name. */
-export declare function runAiAction(action: string, input: Readonly<Record<string, unknown>>, options?: AiRunOptions): Promise<AiRunResult>;
+export declare function runAiAction(site: RequestSite, action: string, input: Readonly<Record<string, unknown>>, options?: AiRunOptions): Promise<AiRunResult>;
 /**
  * Runs an action as a stream. Each time more text arrives, calls `onText` with all text received so far,
  * and when done returns the result that passed the checks.
  */
-export declare function streamAiAction(action: string, input: Readonly<Record<string, unknown>>, options: AiRunOptions & {
+export declare function streamAiAction(site: RequestSite, action: string, input: Readonly<Record<string, unknown>>, options: AiRunOptions & {
     onText: (text: string) => void;
 }): Promise<AiRunResult>;
 /** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */
-export declare function runAiActionMany(action: string, inputs: ReadonlyArray<Readonly<Record<string, unknown>>>, options?: AiRunOptions): Promise<Array<{
+export declare function runAiActionMany(site: RequestSite, action: string, inputs: ReadonlyArray<Readonly<Record<string, unknown>>>, options?: AiRunOptions): Promise<Array<{
     result: AiRunResult;
 } | {
     error: string;
@@ -52,3 +55,4 @@ export declare function inputFromContext(action: Pick<AiActionView, "input">, co
 export declare function AiSlotProvider({ children }: {
     children: ReactNode;
 }): import("react").JSX.Element;
+export {};

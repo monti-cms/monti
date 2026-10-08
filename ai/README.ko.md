@@ -3,12 +3,14 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core`의 AI 플러그인. 이름으로 부르는 AI 기능(생성·판단), 필드 옆 AI 버튼, 번역본 편집기의 AI 번역,
-관리자 AI 화면(`<관리자 경로>/ai`, 기본 `/admin/ai`)과 AI API(`/api/cms/v1/ai/*`), AI 표(`ai_action_overrides`·`ai_settings`)를 더한다.
+관리자 AI 화면(`<관리자 경로>/ai`, 기본 `/admin/ai`)과 AI API(`/api/cms/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
+
+이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `aiPlugin()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
 
 ## 등록
 
-사이트 설정의 `plugins`에 `aiPlugin()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
+`monti.config.ts`의 `plugins`에 `aiPlugin()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
 더한 기능도 저절로 붙는다. 바꾸거나 끌 것만 `actions`에 기능 이름(key)으로 적는다.
 
 ```ts
@@ -62,12 +64,18 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
 - `value` 종류 입력(필드의 현재 값)에 든 값은 후보와 선택지에서 뺀다. 입력 이름은 상관없다.
 - 붙을 곳은 관리자 화면의 정해진 자리다(필드 옆·본문 이미지·미디어·코드 블록·번역·선택 영역 메뉴·넣기 메뉴·본문 블록).
   자리가 필수 입력을 채울 수 있어야 한다.
-- 관리자 AI 화면에서는 켜기·요청 받기·연결·모델·보낼 입력·지시문·기준값·검사 값만 고친다. 고친 값만 DB(`ai_action_overrides`)에 둔다.
+- 관리자 AI 화면에서는 켜기·요청 받기·연결·모델·보낼 입력·지시문·기준값·검사 값만 고친다. 고친 값만 DB(플러그인 저장소의 `action-overrides` 컬렉션)에 둔다.
   "기본값으로"는 입력 칸만 기본값으로 되돌리고, 저장은 따로 누른다.
 - 실행: `POST /api/cms/v1/ai/run { action, input | inputs, env }`. 관리자 화면에서는 `useAiAction("summary").run({ title, body })`나
-  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />`(`@monti-cms/ai/admin`)처럼 이름으로 부르고,
-  이름·입력·결과 타입은 설정에서 나온다.
+  `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />`(`@monti-cms/ai/admin`)처럼 이름으로 부른다. 그대로 쓰면 어떤 이름이든 받고,
+  `const { useAiAction, AiButton } = aiClient<typeof config>()`로 얻은 둘은 사이트 설정의 이름·입력·결과 타입을 따른다(모르는 이름은 타입 오류).
 - 판단 방식(`engine: "decide"`, System One)은 선택지(`choices`)마다 확률을 받아 기준 이상만 후보로 낸다.
+
+### 모델은 MDX를 읽고 쓴다
+
+모델은 글 형식을 읽고 쓰는데, 그 형식이 MDX다. 관리자는 본문을 저장 문서로 들고 있으므로 AI 버튼은 관리자에 등록된 `mdx` 형식(`useFormat("mdx")`, `@monti-cms/admin`)으로 일한다. 모델에 보내는
+본문·선택한 글·고칠 블록은 그 형식의 `export`로 쓰고, 모델이 답한 MDX는 `import`로 읽는다(읽을 수 없는 글은 반쯤만 바꾸지 않고 상자에 통째로 담는다). 이 형식은 `@monti-cms/mdx`의 `mdx()`가 관리자에 등록한다. 없으면 본문에 일하는
+기능은 나타나지 않는다.
 
 ## 결과 검사
 
@@ -85,7 +93,7 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
 - 기본 코드 검사: `uniqueSlug`(중복 없음, 주소 추천. `content.slugsInUse`로 묻는다), `regexRuns(입력, { name?, scope? })`
   (정규식 실행, 코드 블록 정규식. 규칙 이름·범위는 없으면 문서 전체 접기), `sameStructure(입력)`(구조 유지, 번역).
   블록 확장은 `mermaidSyntax`·`chartSyntax`(`@monti-cms/blocks/mermaid/ai`·`/chart/ai`)를 낸다.
-- 검사 파일은 사이트 설정이 불러오므로, 사이트 설정을 읽는 본체 모듈(코드 블록·MDX 읽기)은 `run` 안에서 `await import()`로
+- 검사 파일은 사이트 설정이 불러오므로, 사이트 설정을 읽는 본체 모듈(코드 블록 읽기와 MDX 형식)은 `run` 안에서 `await import()`로
   불러온다(맨 위에서 불러오면 설정을 읽는 순서가 꼬인다).
 
 ```ts
@@ -112,6 +120,27 @@ const unusedAddress = defineValidator({
 		!(await content.slugsInUse({ collection, locale, slugs: [value], excludeEntryId: entryId })).has(value),
 });
 ```
+
+## 저장된 서비스 키
+
+AI 화면에서 넣은 서비스 키는 플러그인 저장소의 `settings` 컬렉션에 암호화해서 둔다. 플러그인은 앱의 비밀 값 하나(`MONTI_SECRET`)를 보지 못한다. CMS 인스턴스가 이 값과 플러그인 이름에서
+플러그인 전용 키를 만들어(`cms.secrets("ai")`, HKDF-SHA256, `monti:plugin:ai:v1`) 건네므로, 이 키로는 다른 플러그인의 데이터를 풀 수 없고
+다른 플러그인도 이 서비스 키를 읽을 수 없다. core README의 "플러그인 비밀 값"을 본다. 저장된 값은 `mk1:<키 id>:<iv>:<tag>:<body>` 모양이다.
+
+- **플러그인별 키가 생기기 전 값의 이전**: 이전 버전이 저장한 키(`v1:<iv>:<tag>:<body>`, `sha256("cms-ai-key:" + secret)`으로 암호화)는 따로 할 일 없이
+  그대로 동작한다. `MONTI_SECRET`을 옛 `CMS_SECRET` 값으로 두거나 그 값을 `previousSecrets`에 넣는다. 플러그인이 옛 방식으로 풀어 읽고 새 형식으로 다시 암호화하는 시점은 두 번이다. AI 연결을 다음에 저장할 때(저장된 모든 키를
+  함께 다시 암호화)와 `monti migrate`를 돌릴 때(남은 것을 한 번에 이전하고, 다시 돌려도 달라지는 것이 없다). 키를 다시 넣을 필요는 없다.
+- **비밀 값 바꾸기**: 새 값을 `MONTI_SECRET`(또는 `defineConfig`의 `secret`)에 두고 옛 값을 `monti.config.ts`의 `previousSecrets`에 남긴다. 저장된 키(새 형식이든 옛 형식이든)는 옛 비밀 값으로 계속 풀리고,
+  `monti migrate`나 다음 저장 때 새 비밀 값으로 다시 암호화된다. 그 뒤에 `previousSecrets`에서 옛 값을 뺀다.
+  `previousSecrets` 없이 바꾸면 옛 비밀 값으로 만든 키는 읽을 수 없으므로 다시 넣어야 한다.
+
+## 플러그인 저장소로 옮겨진 데이터
+
+플러그인은 예전에 사이트 데이터베이스에 자기 표(`ai_action_overrides`·`ai_custom_actions`·`ai_settings`)를 만들었다. 지금은 같은 데이터를 플러그인 저장소
+(`cms.storage("ai")`, 컬렉션 `action-overrides`·`custom-actions`·`settings`)에 둔다. `monti migrate`가 행을 값·버전·날짜 그대로 한 번 복사하므로, 올리기 전에 화면을 열어 둔
+편집자도 맞는 버전으로 저장하고 직접 만든 동작의 순서도 그대로다. 옛 표는 읽기만 하고 백업으로 데이터베이스에 남는다. 사이트를 확인한 뒤 지워도 된다.
+가장 오래된 표(`ai_features`)는 고친 값이 아직 옮겨지지 않았을 때만 같은 방식으로 읽는다.
+`monti migrate`를 돌리는 때에 옛 버전 인스턴스를 모두 함께 바꾼다. 옛 인스턴스는 계속 옛 표에 쓰고, 그 쓰기는 다시 복사되지 않는다.
 
 ## 가짜 연결(개발 전용)
 
@@ -147,7 +176,7 @@ MDX 결과는 MDX 입력을 그대로(흘려받기는 글로 시작하는 문단
   `모두 번역`에서 쓸 기능을 고른다.
 - **화면 기능**: 관리자 AI 화면의 "기능 추가"로 코드 없이 기능을 만든다. 오른쪽 칸에서 이름·붙을 곳(필드 옆·선택 영역
   메뉴·넣기 메뉴·본문 블록·본문 이미지·미디어)·결과 모양·방식과 연결·지시문·보낼 내용·검사를 함께 고치고, 저장 전에
-  시험한 뒤 한 번에 저장한다. 관계·선택 필드(태그·카테고리 등)는 판단 방식(System One)도 고른다. DB(`ai_custom_actions`)에 둔다.
+  시험한 뒤 한 번에 저장한다. 관계·선택 필드(태그·카테고리 등)는 판단 방식(System One)도 고른다. DB(`custom-actions` 컬렉션)에 둔다.
   관계·선택 필드 기능의 처음 기준값은 `CUSTOM_PICK_DEFAULTS`(여러 개: 0.6·5개, 하나: 0.3·2개)다.
 
 ## 블록에 붙는 기능
@@ -182,8 +211,8 @@ aiPlugin({
 | 진입점 | 내용 |
 | --- | --- |
 | `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, 기여 타입(`AiContribution`·`AiActionFactory`·`AiSiteView`) (사이트 설정용, 서버·브라우저 공용) |
-| `@monti-cms/ai/server` | 서버 쪽(API 경로·표 만들기). 본체가 불러 쓴다. 브라우저 묶음에서는 빈 진입점이다 |
-| `@monti-cms/ai/admin` | 관리자 쪽(AI 화면·공급자), `useAiAction`, `AiButton` |
+| `@monti-cms/ai/server` | 서버 쪽(API 경로·데이터 이전). 본체가 불러 쓴다. 브라우저 묶음에서는 빈 진입점이다 |
+| `@monti-cms/ai/admin` | 관리자 쪽(AI 화면·공급자), `useAiAction`, `AiButton`, `aiClient` |
 
 ## 개발
 

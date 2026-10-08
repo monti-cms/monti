@@ -1,12 +1,10 @@
 import { valueFieldsOf } from "./walk.js";
-/** Converts the legacy name (`workflow`) into the kind (`kind`). */
-export const kindOfWorkflow = (workflow) => workflow === "record" ? "item" : "document";
 /** System columns of the list. They are values of the content itself, not fields. */
 export const SYSTEM_LIST_COLUMNS = ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"];
 /**
  * Checks whether a name can be used by the list columns (`list.columns`). Only system columns, stored field names (including fields dependent on a conditional field),
  * address field names, and `slug` when an address field exists are allowed. It is an error if the name is unknown, the field is not stored (view or reverse relation),
- * or the same name is written twice. Called by `defineConfig`.
+ * or the same name is written twice. Called by `defineSite`.
  */
 export function validateListColumns(collection, schema) {
     const columns = schema.list?.columns;
@@ -41,17 +39,27 @@ export function defineCollection(schema) {
     return normalizeCollection(schema);
 }
 /**
- * Normalizes a collection definition: converts the legacy name (`workflow`) into the kind (`kind`) and fills the body default (only `document` has a body).
- * Called by `defineCollection` and `defineConfig` (an already normalized definition stays as is).
+ * Normalizes a collection definition: checks the kind and fills the body default (only `document` has a body).
+ * Called by `defineCollection` and `defineSite` (an already normalized definition stays as is).
+ * The retired `workflow` option (`"publish"` / `"record"`) is rejected with the `kind` to use instead.
  */
 export function normalizeCollection(schema) {
-    const { workflow, ...rest } = schema;
-    const kind = schema.kind ?? (workflow ? kindOfWorkflow(workflow) : undefined);
+    const { kind } = schema;
+    if ("workflow" in schema) {
+        const workflow = schema.workflow;
+        const replacement = workflow === "record" ? "item" : workflow === "publish" ? "document" : undefined;
+        throw new Error(`cms.config: collection "${schema.label}" uses \`workflow\`, which was removed; use \`kind\`${replacement ? ` (kind: "${replacement}" instead of workflow: "${workflow}")` : ' ("document" or "item")'}`);
+    }
     if (kind !== "document" && kind !== "item") {
         throw new Error(`cms.config: collection "${schema.label}" needs kind "document" or "item"`);
     }
-    if (schema.kind !== undefined && workflow !== undefined && kindOfWorkflow(workflow) !== schema.kind) {
-        throw new Error(`cms.config: collection "${schema.label}" has kind "${schema.kind}" and workflow "${workflow}"`);
+    const { body, ...rest } = schema;
+    if (body !== null && typeof body === "object") {
+        if (Array.isArray(body)) {
+            throw new Error(`cms.config: collection "${schema.label}" needs \`body\` to be true, false or an object`);
+        }
+        // The object form means the collection has a body, and limits it.
+        return { ...rest, kind, body: true, allowed: body };
     }
-    return { ...rest, kind, body: schema.body ?? kind === "document" };
+    return { ...rest, kind, body: body ?? kind === "document" };
 }

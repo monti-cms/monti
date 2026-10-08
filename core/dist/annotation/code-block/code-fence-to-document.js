@@ -1,4 +1,4 @@
-import { resolveCommentSyntax } from "./comment-syntax.js";
+import { resolveParseCommentSyntaxes } from "./comment-syntax.js";
 import { createAnnotationRegistry, supportsAnnotationScope } from "./libs.js";
 const DEFAULT_CODE_LANG = "text";
 const ATTR_RE = /([A-Za-z_][\w-]*)(?:\s*=\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^\s]+)))?/g;
@@ -196,7 +196,7 @@ const findSelectorEnd = (tail) => {
         index += 1;
     return tail[index] === "}" ? index : -1;
 };
-const parseScopeComment = (line, commentSyntax) => {
+const parseScopeCommentWith = (line, commentSyntax) => {
     const body = extractCommentBody(line, commentSyntax);
     if (!body?.startsWith("@"))
         return;
@@ -230,6 +230,17 @@ const parseScopeComment = (line, commentSyntax) => {
         selector,
         attributes: parseAnnotationAttrs(tail),
     };
+};
+/**
+ * Tries each syntax in order, so the language's own syntax wins over the `//` fallback.
+ * Only a whole line that is a `@line`/`@char`/`@document` comment counts, so a code line that merely contains `//` is not consumed.
+ */
+const parseScopeComment = (line, commentSyntaxes) => {
+    for (const commentSyntax of commentSyntaxes) {
+        const parsed = parseScopeCommentWith(line, commentSyntax);
+        if (parsed)
+            return parsed;
+    }
 };
 const toHalfOpenRangeFromClosed = (range) => ({
     start: range.start,
@@ -337,8 +348,8 @@ const pushInlineDirectiveMatchesForLine = ({ directive, lineText, lineIndex, sta
         });
     }
 };
-const tryConsumeScopeComment = ({ lineText, commentSyntax, parseLineAnnotations, registry, linesLength, pendingScopeInlineDirectives, pendingScopeLineMarkers, pendingScopeDocumentDirectives, annotations, rules, nextOrder, }) => {
-    const parsed = parseScopeComment(lineText, commentSyntax);
+const tryConsumeScopeComment = ({ lineText, commentSyntaxes, parseLineAnnotations, registry, linesLength, pendingScopeInlineDirectives, pendingScopeLineMarkers, pendingScopeDocumentDirectives, annotations, rules, nextOrder, }) => {
+    const parsed = parseScopeComment(lineText, commentSyntaxes);
     if (!parsed)
         return false;
     const hasEndAttr = parsed.attributes.some((attr) => attr.name === "end" && attr.value === true);
@@ -455,7 +466,7 @@ const commitCodeLine = ({ lines, pendingScopeInlineDirectives, stagedInline, rul
     }
     pendingScopeInlineDirectives.length = 0;
 };
-const parseCodeLines = ({ codeValue, parseLineAnnotations, commentSyntax, registry, }) => {
+const parseCodeLines = ({ codeValue, parseLineAnnotations, commentSyntaxes, registry, }) => {
     const lines = [];
     const annotations = [];
     const pendingScopeInlineDirectives = [];
@@ -467,7 +478,7 @@ const parseCodeLines = ({ codeValue, parseLineAnnotations, commentSyntax, regist
     for (const lineText of codeValue.split("\n")) {
         const consumed = tryConsumeScopeComment({
             lineText,
-            commentSyntax,
+            commentSyntaxes,
             parseLineAnnotations,
             registry,
             linesLength: lines.length,
@@ -572,12 +583,12 @@ export const fromCodeFenceToCodeBlockDocument = (codeNode, annotationConfig, opt
     const registry = createAnnotationRegistry(annotationConfig);
     const lang = codeNode.lang?.trim() || DEFAULT_CODE_LANG;
     const meta = parseCodeFenceMeta(codeNode.meta ?? "");
-    const commentSyntax = resolveCommentSyntax(lang);
+    const commentSyntaxes = resolveParseCommentSyntaxes(lang);
     const parseLineAnnotations = options?.parseLineAnnotations ?? true;
     const parsed = parseCodeLines({
         codeValue: codeNode.value,
         parseLineAnnotations,
-        commentSyntax,
+        commentSyntaxes,
         registry,
     });
     applyAbsoluteInlineRanges(parsed.lines, parsed.stagedInline);
@@ -597,11 +608,24 @@ export const fromCodeFenceToCodeBlockDocument = (codeNode, annotationConfig, opt
         for (const annotation of line.annotations)
             if (annotation.rule !== undefined)
                 annotation.rule = renumbered.get(annotation.rule);
+    // A ranged line annotation (`{3-9}`) covers the lines it reaches. Past the last line it covers nothing (the public view draws
+    // nothing for it) and the written text has no line to put its comment above, so the part past the code is cut and an annotation
+    // that starts past the code is dropped. Without this the same code would read back as a different document.
+    const lineCount = parsed.lines.length;
+    const annotations = [];
+    for (const annotation of parsed.annotations) {
+        if (annotation.range.end > lineCount) {
+            options?.onOutOfRange?.({ name: annotation.name, start: annotation.range.start, end: annotation.range.end });
+        }
+        if (annotation.range.start >= lineCount)
+            continue;
+        annotations.push(annotation.range.end > lineCount ? { ...annotation, range: { ...annotation.range, end: lineCount } } : annotation);
+    }
     return {
         lang,
         meta,
         lines: parsed.lines,
-        annotations: parsed.annotations,
+        annotations,
         ...(rules.length ? { rules } : {}),
     };
 };

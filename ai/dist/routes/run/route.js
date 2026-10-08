@@ -1,24 +1,24 @@
-import { createTranslator } from "@monti-cms/core/client";
 import { adminRoute, HttpError, json, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
-import { aiRunBodySchema, inputSchemaFor } from "../../action.js";
+import { aiRunBodySchemaOf, inputSchemaFor } from "../../action.js";
 import { actionWithDraft, getAction } from "../../actions.js";
+import { coreMessages } from "../../core.messages.js";
 import { AiError } from "../../errors.js";
 import { runAiAction, streamAiAction } from "../../run.js";
 import { runMessages } from "../../run.messages.js";
 import { loadAiRuntime } from "../../settings.js";
 import { loadSharedTexts } from "../../shared.js";
-import { getAiStore } from "../../store.js";
+import { aiStoreFor } from "../../store.js";
 import { aiRunDeps } from "../ai-route.js";
-const t = createTranslator(runMessages);
 /** Number of concurrent calls in a batch run. */
 const CONCURRENCY = 3;
 /** Runs one action on one input. An input that does not match the action definition gives 400. */
 async function runOne(action, body, input, deps) {
-    const parsed = parseWith(inputSchemaFor(action.input), input, "Invalid AI input");
+    const parsed = parseWith(inputSchemaFor(action.input, deps.site.createTranslator(coreMessages)), input, "Invalid AI input");
     const call = { input: parsed, env: body.env, request: body.request };
     return runAiAction(action, call, deps);
 }
-function streamResponse(run) {
+function streamResponse(site, run) {
+    const t = site.createTranslator(runMessages);
     const encoder = new TextEncoder();
     const body = new ReadableStream({
         async start(controller) {
@@ -61,18 +61,20 @@ function streamResponse(run) {
  * problems, stop the whole request. The AI screen's Test sends `draft`, the edited value that is not saved yet.
  * With `stream`, the result is streamed bit by bit (only one input of a streaming action).
  */
-export const POST = adminRoute(async ({ request }) => {
-    const store = getAiStore();
-    const body = parseWith(aiRunBodySchema, await readJsonBody(request));
+export const POST = adminRoute(async ({ request, cms }) => {
+    const { site } = cms;
+    const t = site.createTranslator(runMessages);
+    const store = aiStoreFor(cms);
+    const body = parseWith(aiRunBodySchemaOf(site.createTranslator(coreMessages)), await readJsonBody(request));
     const action = body.draft === undefined
-        ? await getAction(store, body.action)
-        : await actionWithDraft(store, body.action, body.draft, body.draftBase);
+        ? await getAction(site, store, body.action)
+        : await actionWithDraft(site, store, body.action, body.draft, body.draftBase);
     if (body.draft === undefined && !action.enabled)
         throw new AiError("ai_unavailable", t("disabled"));
-    const runtime = await loadAiRuntime(store, action);
+    const runtime = await loadAiRuntime(site, store, action);
     const deps = {
-        ...aiRunDeps(runtime, request.signal, new URL(request.url).origin),
-        shared: await loadSharedTexts(store),
+        ...aiRunDeps(cms, runtime, request.signal, new URL(request.url).origin),
+        shared: await loadSharedTexts(site, store),
     };
     const model = action.engine === "decide" ? runtime.decider?.model : runtime.generator?.model;
     const started = Date.now();
@@ -81,9 +83,9 @@ export const POST = adminRoute(async ({ request }) => {
             throw new AiError("ai_invalid_input", t("streamOneInput"));
         if (!deps.generator)
             throw new AiError("ai_unavailable", t("noGenerator"));
-        const parsed = parseWith(inputSchemaFor(action.input), body.input, "Invalid AI input");
+        const parsed = parseWith(inputSchemaFor(action.input, site.createTranslator(coreMessages)), body.input, "Invalid AI input");
         const call = { input: parsed, env: body.env, request: body.request };
-        return streamResponse(async (send) => {
+        return streamResponse(site, async (send) => {
             const result = await streamAiAction(action, call, deps, (text) => send({ type: "delta", text }));
             console.info(`[@monti-cms/ai] ${action.key} model=${model} stream ${Date.now() - started}ms`);
             send({ type: "done", result });

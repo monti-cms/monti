@@ -1,10 +1,9 @@
 import type { CollectionKind } from "../schema/collection.js";
-import { type SchemaCollection, type StoredField } from "../schema/derive.js";
+import type { SchemaCollection, SiteSchemas, StoredField } from "../schema/derive.js";
 import type { StorageType } from "../schema/fields.js";
-/** Collection names (keys of `collections` in `cms.config.ts`). Follows declaration order. */
+/** A collection name (a key of `collections` in the site config). */
 export type Collection = SchemaCollection;
-export declare const COLLECTIONS: readonly Collection[];
-export type { CollectionKind, CollectionWorkflow } from "../schema/collection.js";
+export type { CollectionKind } from "../schema/collection.js";
 export type FieldType = StorageType;
 export interface CollectionRelation {
     readonly field: string;
@@ -18,26 +17,18 @@ export interface CollectionDefinition {
     readonly fields: Readonly<Record<string, FieldType>>;
     readonly relations?: readonly CollectionRelation[];
 }
-export declare const COLLECTION_DEFINITIONS: Readonly<Record<Collection, CollectionDefinition>>;
-export declare function isCollection(val: unknown): val is Collection;
-/** Is this an item collection (`kind: "item"`, e.g. tags) where an explicit save is the public change? */
-export declare function isItemCollection(val: unknown): boolean;
-/** Is this a document collection (`kind: "document"`, e.g. posts) that separates draft and publish? */
-export declare const isDocumentCollection: (val: unknown) => val is Collection;
-/** Document collections (`kind: "document"`). */
-export declare const DOCUMENT_COLLECTIONS: string[];
-/** @deprecated `isItemCollection`. */
-export declare const isRecordCollection: typeof isItemCollection;
-/** @deprecated `DOCUMENT_COLLECTIONS`. */
-export declare const CONTENT_COLLECTIONS: string[];
-/** @deprecated `isDocumentCollection`. */
-export declare const isContentCollection: typeof isDocumentCollection;
-/** The collection opened when the URL names none. The first content collection, or the first collection if none. */
-export declare const DEFAULT_COLLECTION: Collection;
-/**
- * Classification fields: relation fields pointing to an item collection (`kind: "item"`) (e.g. tags, categories). The list columns and filters, bulk actions,
- * and row menus are built from these fields. Relations pointing to content (replacement posts, compilation post lists, etc.) are excluded.
- */
-export declare function taxonomyFieldsOf(collection: string): Array<StoredField & {
-    readonly to: Collection;
-}>;
+/** The collections of one site. */
+export type SiteCollections = ReturnType<typeof createCollections>;
+/** The collection helpers of a site config's collections (`config.collections`), on top of the rules of its schemas. */
+export declare function createCollections(collections: Readonly<Record<string, unknown>>, schemas: Pick<SiteSchemas, "schemaOf" | "relationsOf" | "storageTypes" | "storedFields">): {
+    COLLECTIONS: readonly string[];
+    COLLECTION_DEFINITIONS: Readonly<Record<string, CollectionDefinition>>;
+    isCollection: (val: unknown) => val is Collection;
+    isItemCollection: (val: unknown) => boolean;
+    isDocumentCollection: (val: unknown) => val is Collection;
+    DOCUMENT_COLLECTIONS: readonly string[];
+    DEFAULT_COLLECTION: string;
+    taxonomyFieldsOf: (collection: string) => Array<StoredField & {
+        readonly to: Collection;
+    }>;
+};

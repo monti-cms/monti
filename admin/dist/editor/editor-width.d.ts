@@ -10,7 +10,7 @@ export declare const EDITOR_WIDTHS: {
     readonly full: "none";
 };
 export type EditorWidth = keyof typeof EDITOR_WIDTHS;
-/** Chosen body width. Remembered in this browser; starts at the normal width if storage is unavailable. */
+/** Chosen body width. Remembered in this browser, per site; starts at the normal width if storage is unavailable. */
 export declare function useEditorWidth(): [EditorWidth, (width: EditorWidth) => void];
 /** Body width menu at the right end of the toolbar. */
 export declare function EditorWidthMenu({ value, onChange }: {

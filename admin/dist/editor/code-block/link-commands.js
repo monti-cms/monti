@@ -1,14 +1,17 @@
 import { ANCHOR, newEffectId } from "@monti-cms/core/code-block";
 import { TextSelection } from "@tiptap/pm/state";
-import { CODE_ANCHOR_REF } from "../added-marks.js";
+import { codeAnchorRef } from "../added-marks.js";
 import { codeEffectsKey, effectsMeta, lineEffectsOf } from "./effects-plugin.js";
 /**
- * Linking body to code. Attaches a label (`anchor` line effect, `attrs.id`) to a code block line for a decoration on body text that points to a code line (`CODE_ANCHOR_REF`, e.g. `:code-ref[text]{to}` of a block extension).
+ * Linking body to code. Attaches a label (`anchor` line effect, `attrs.id`) to a code block line for a decoration on body text that points to a code line (`codeAnchorRef`, e.g. `:code-ref[text]{to}` of a block extension).
  * Picking one side first starts linking (`linking`),
  * and picking the other side then confirming links the two. Sites without that decoration do nothing.
  */
 /** Body link mark and label attribute. */
-const anchorMark = (state) => CODE_ANCHOR_REF ? state.schema.marks[CODE_ANCHOR_REF.mark] : undefined;
+const anchorMark = (site, state) => {
+    const anchor = codeAnchorRef(site);
+    return anchor ? state.schema.marks[anchor.mark] : undefined;
+};
 /** Code lines that have a label `id`. */
 export function findAnchor(doc, id) {
     let found = null;
@@ -28,20 +31,21 @@ export function findAnchor(doc, id) {
     return found;
 }
 /** Labels that body links point to. */
-function referencedIds(doc) {
+function referencedIds(site, doc) {
+    const anchor = codeAnchorRef(site);
     const ids = new Set();
     doc.descendants((node) => {
         for (const mark of node.marks) {
-            if (CODE_ANCHOR_REF && mark.type.name === CODE_ANCHOR_REF.mark)
-                ids.add(String(mark.attrs[CODE_ANCHOR_REF.attribute]));
+            if (anchor && mark.type.name === anchor.mark)
+                ids.add(String(mark.attrs[anchor.attribute]));
         }
         return true;
     });
     return ids;
 }
 /** A name not yet used (`c1`, `c2`, ...). Avoids names used by both labels and body links. */
-function nextAnchorId(doc) {
-    const used = referencedIds(doc);
+export function nextAnchorId(site, doc) {
+    const used = referencedIds(site, doc);
     doc.descendants((node) => {
         if (node.type.name !== "codeBlock")
             return true;
@@ -56,8 +60,8 @@ function nextAnchorId(doc) {
     return `c${index}`;
 }
 /** Deletes labels that no body link points to (when a link is removed or re-linked). */
-function pruneOrphanAnchors(tr) {
-    const referenced = referencedIds(tr.doc);
+function pruneOrphanAnchors(site, tr) {
+    const referenced = referencedIds(site, tr.doc);
     const updates = [];
     tr.doc.descendants((node, pos) => {
         if (node.type.name !== "codeBlock")
@@ -99,17 +103,18 @@ export function linkLines(view) {
     return state?.picked ?? null;
 }
 /** Links the picked body text to the code line. Reuses the label if the same line already has one. */
-export function commitLink(view) {
+export function commitLink(site, view) {
+    const anchor = codeAnchorRef(site);
     const text = linkTextRange(view);
     const lines = linkLines(view);
-    const markType = anchorMark(view.state);
+    const markType = anchorMark(site, view.state);
     const block = lines ? view.state.doc.nodeAt(lines.blockPos) : null;
-    if (!text || !lines || !markType || !CODE_ANCHOR_REF || !block || block.type.name !== "codeBlock")
+    if (!text || !lines || !markType || !anchor || !block || block.type.name !== "codeBlock")
         return false;
     const tr = view.state.tr;
     const effects = lineEffectsOf(block);
     const existing = effects.find((effect) => effect.name === ANCHOR && effect.start === lines.start && effect.end === lines.end);
-    const id = existing ? String(existing.attrs.id) : nextAnchorId(view.state.doc);
+    const id = existing ? String(existing.attrs.id) : nextAnchorId(site, view.state.doc);
     if (!existing)
         tr.setNodeMarkup(lines.blockPos, undefined, {
             ...block.attrs,
@@ -118,8 +123,8 @@ export function commitLink(view) {
                 { id: newEffectId(), name: ANCHOR, start: lines.start, end: lines.end, attrs: { id } },
             ],
         });
-    tr.addMark(text.from, text.to, markType.create({ [CODE_ANCHOR_REF.attribute]: id }));
-    pruneOrphanAnchors(tr);
+    tr.addMark(text.from, text.to, markType.create({ [anchor.attribute]: id }));
+    pruneOrphanAnchors(site, tr);
     tr.setSelection(TextSelection.create(tr.doc, text.to));
     tr.setMeta(codeEffectsKey, effectsMeta({ linking: null }));
     view.dispatch(tr.scrollIntoView());
@@ -127,11 +132,11 @@ export function commitLink(view) {
     return true;
 }
 /** Removes a body link (from~to). Also removes line labels no link points to anymore. */
-export function unlinkRef(view, from, to) {
-    const markType = anchorMark(view.state);
+export function unlinkRef(site, view, from, to) {
+    const markType = anchorMark(site, view.state);
     if (!markType)
         return;
     const tr = view.state.tr.removeMark(from, to, markType);
-    pruneOrphanAnchors(tr);
+    pruneOrphanAnchors(site, tr);
     view.dispatch(tr);
 }

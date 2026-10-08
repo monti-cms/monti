@@ -1,4 +1,4 @@
-import { ADDED_MARK_BLOCKS } from "@monti-cms/core/client";
+import { perSite } from "@monti-cms/core/client";
 import { Mark, mergeAttributes } from "@tiptap/core";
 const pascal = (name) => name.replace(/(^|-)([a-z0-9])/g, (_, _dash, char) => char.toUpperCase());
 const kebab = (name) => name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
@@ -6,10 +6,10 @@ const kebab = (name) => name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}
 export const addedMarkName = (blockName) => `cms${pascal(blockName)}`;
 /** HTML attribute name for one attribute. */
 const dataAttribute = (name) => `data-mark-${kebab(name)}`;
-/** Added text styles (block name → definition). */
-export const ADDED_MARKS = new Map(ADDED_MARK_BLOCKS.map((block) => [block.name, block]));
+/** Added text styles of a site (block name → definition). */
+export const addedMarksOf = perSite((site) => new Map(site.ADDED_MARK_BLOCKS.map((block) => [block.name, block])));
 /** Editor mark name → added text style definition. */
-export const ADDED_MARK_BY_EDITOR_NAME = new Map(ADDED_MARK_BLOCKS.map((block) => [addedMarkName(block.name), block]));
+export const addedMarkByEditorName = perSite((site) => new Map(site.ADDED_MARK_BLOCKS.map((block) => [addedMarkName(block.name), block])));
 /**
  * Style attributes keeping only the definition's attributes. Strings are kept when they have a value, required attributes (`required`) are kept even when empty (`""`). Booleans only when true.
  * Used in both directions, stored document (CmsNode) ↔ editor mark (serialization uses the same rule, so a round trip keeps the text the same).
@@ -74,11 +74,11 @@ export function createAddedMark(block, spec = {}) {
     });
 }
 /** A style linking body text and a code line (blocks with `codeAnchor` in their attributes). If none, the code block's link tool is hidden. */
-export const CODE_ANCHOR_REF = (() => {
-    for (const block of ADDED_MARK_BLOCKS) {
+export const codeAnchorRef = perSite((site) => {
+    for (const block of site.ADDED_MARK_BLOCKS) {
         const attribute = anchorAttribute(block);
         if (attribute)
             return { mark: addedMarkName(block.name), attribute };
     }
     return null;
-})();
+});

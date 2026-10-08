@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 import type { ComponentType, ReactNode } from "react";
 /**
  * The admin UI side of a plugin. Loads the module that the plugin definition's (`definePlugin`) `admin` provides as its default export.
@@ -19,10 +20,13 @@ export interface CmsAdminPlugin {
 }
 /** Creates an admin plugin (only type-checks). */
 export declare const defineAdminPlugin: (plugin: CmsAdminPlugin) => CmsAdminPlugin;
-/**
- * Loads the admin side of the site config's plugins. On success it is read once and reused.
- * If loading fails or a screen path collides with the core or another plugin, nothing is remembered so the next call retries, and the error is thrown as is.
- */
-export declare function loadAdminPlugins(): Promise<readonly (CmsAdminPlugin & {
+type LoadedAdminPlugins = Promise<readonly (CmsAdminPlugin & {
     readonly name: string;
 })[]>;
+/**
+ * Loads the admin side of a site's plugins (`site.plugins`, the instance's real site, not the browser's snapshot: the loaders are server code). On success it is
+ * read once per site and reused. If loading fails or a screen path collides with the core or another plugin, nothing is remembered so the next call retries,
+ * and the error is thrown as is.
+ */
+export declare function loadAdminPlugins(site: Pick<Site, "plugins">): LoadedAdminPlugins;
+export {};

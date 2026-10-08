@@ -1,5 +1,7 @@
+import type { TranslatorFor } from "../translator.js";
+import { editorMessages } from "./messages.js";
 /** Notice for when an image that needs a description has no alt text. Shared by the insert dialog and image settings. */
-export declare const ALT_REQUIRED_MESSAGE: string;
+export declare const altRequiredMessage: (t: TranslatorFor<typeof editorMessages>) => string;
 export interface ImageInsertion {
     mediaId: string;
     alt: string;
@@ -22,5 +24,5 @@ interface ImageInsertDialogProps {
  * Image insertion. Upload a new file (original kept by default, web optimization optional) or reuse from the library.
  * The library's default alt and caption are copied on insertion. An image that needs a description must have alt.
  */
-export declare function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode, title, }: ImageInsertDialogProps): import("react").JSX.Element;
+export declare function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode, title: titleProp, }: ImageInsertDialogProps): import("react").JSX.Element;
 export {};

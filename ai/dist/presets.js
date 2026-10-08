@@ -1,6 +1,5 @@
 import { SUMMARY_ROLE, valueFieldsOf } from "@monti-cms/core";
 import { aiAction, aiInput } from "./action.js";
-import { lazyTranslator } from "./i18n.js";
 import { presetMessages } from "./presets.messages.js";
 import { regexRuns, sameStructure, uniqueSlug } from "./validators.js";
 /**
@@ -14,19 +13,20 @@ import { regexRuns, sameStructure, uniqueSlug } from "./validators.js";
  * Field actions find the field to attach to by field kind, role and relation target, not by field name. They read the body, so they attach only to collections
  * that have a body. The prompt can be edited in the admin AI screen, and the preset option `prompt` can change its initial value.
  */
-const t = lazyTranslator(presetMessages);
+/** Translator of the preset labels in the site's admin language. */
+const textOf = (site) => site.createTranslator(presetMessages);
 /** The material a beside-a-field slot provides. A field action can receive all these inputs, and `send` chooses what to send. */
-const fieldInput = () => ({
-    title: aiInput.text({ label: t("input.title") }),
-    summary: aiInput.text({ label: t("input.summary") }),
-    body: aiInput.mdx({ label: t("input.body") }),
-    current: aiInput.value({ label: t("input.current") }),
+const fieldInput = (site) => ({
+    title: aiInput.text({ label: textOf(site)("input.title") }),
+    summary: aiInput.text({ label: textOf(site)("input.summary") }),
+    body: aiInput.mdx({ label: textOf(site)("input.body") }),
+    current: aiInput.value({ label: textOf(site)("input.current") }),
 });
 /** The material received by the image actions (alt text, caption). */
-const imageInput = () => ({
-    image: aiInput.image({ label: t("input.image") }),
-    around: aiInput.text({ label: t("input.around") }),
-    current: aiInput.value({ label: t("input.current") }),
+const imageInput = (site) => ({
+    image: aiInput.image({ label: textOf(site)("input.image") }),
+    around: aiInput.text({ label: textOf(site)("input.around") }),
+    current: aiInput.value({ label: textOf(site)("input.current") }),
 });
 /** The collections a field action looks at: the option's `collections`, otherwise collections with a body. */
 const candidateCollections = (site, options) => Object.entries(site.collections).filter(([name, schema]) => options.collections ? options.collections.includes(name) : schema.body);
@@ -103,8 +103,8 @@ export const aiPresets = {
             if (targets.length === 0)
                 return undefined;
             return aiAction({
-                label: t("label.slug"),
-                input: fieldInput(),
+                label: textOf(site)("label.slug"),
+                input: fieldInput(site),
                 // Send the current slug too so each press produces a different slug.
                 send: ["title", "body", "current"],
                 result: "candidates",
@@ -130,8 +130,8 @@ export const aiPresets = {
                 return undefined;
             const max = options.maxLength ?? smallestMax(targets) ?? 160;
             return aiAction({
-                label: t("label.summary"),
-                input: fieldInput(),
+                label: textOf(site)("label.summary"),
+                input: fieldInput(site),
                 send: ["title", "body"],
                 result: "text",
                 askInstruction: true,
@@ -160,8 +160,8 @@ export const aiPresets = {
             if (targets.length === 0)
                 return undefined;
             return aiAction({
-                label: t("label.suggest", { name: targets[0]?.label ?? t("field.tags") }),
-                input: fieldInput(),
+                label: textOf(site)("label.suggest", { name: targets[0]?.label ?? textOf(site)("field.tags") }),
+                input: fieldInput(site),
                 send: ["title", "summary", "body"],
                 engine: "decide",
                 choices: { from: "collection", collection: first },
@@ -189,10 +189,10 @@ export const aiPresets = {
             const targets = fieldTargets(site, options, recordRelation(site, false, first));
             if (targets.length === 0)
                 return undefined;
-            const label = targets[0]?.label ?? t("field.category");
+            const label = targets[0]?.label ?? textOf(site)("field.category");
             return aiAction({
-                label: t("label.suggest", { name: label }),
-                input: fieldInput(),
+                label: textOf(site)("label.suggest", { name: label }),
+                input: fieldInput(site),
                 send: ["title", "summary", "body"],
                 engine: "decide",
                 choices: { from: "collection", collection: first },
@@ -209,8 +209,8 @@ export const aiPresets = {
     /** Alt text of body images. The media screen's default alt text uses the same action. */
     imageAlt: (options = {}) => {
         return (site) => aiAction({
-            label: t("label.imageAlt"),
-            input: imageInput(),
+            label: textOf(site)("label.imageAlt"),
+            input: imageInput(site),
             send: ["image", "around"],
             result: "candidates",
             askInstruction: true,
@@ -232,8 +232,8 @@ export const aiPresets = {
     /** Caption of body images. The media screen's default caption uses the same action. */
     imageCaption: (options = {}) => {
         return (site) => aiAction({
-            label: t("label.imageCaption"),
-            input: imageInput(),
+            label: textOf(site)("label.imageCaption"),
+            input: imageInput(site),
             send: ["image", "around"],
             result: "candidates",
             askInstruction: true,
@@ -254,11 +254,11 @@ export const aiPresets = {
     /** Media filename candidates. */
     mediaFilename: (options = {}) => {
         return (site) => aiAction({
-            label: t("label.mediaFilename"),
+            label: textOf(site)("label.mediaFilename"),
             input: {
-                image: aiInput.image({ label: t("input.image") }),
-                filename: aiInput.text({ label: t("input.filename") }),
-                current: aiInput.value({ label: t("input.current") }),
+                image: aiInput.image({ label: textOf(site)("input.image") }),
+                filename: aiInput.text({ label: textOf(site)("input.filename") }),
+                current: aiInput.value({ label: textOf(site)("input.current") }),
             },
             send: ["image", "filename"],
             result: "candidates",
@@ -286,11 +286,11 @@ export const aiPresets = {
                 return undefined;
             const attributes = translatableAttributes(site);
             return aiAction({
-                label: t("label.translate"),
+                label: textOf(site)("label.translate"),
                 input: {
-                    block: aiInput.mdx({ label: t("input.source"), required: true }),
-                    from: aiInput.locale({ label: t("input.fromLocale"), required: true }),
-                    to: aiInput.locale({ label: t("input.toLocale"), required: true }),
+                    block: aiInput.mdx({ label: textOf(site)("input.source"), required: true }),
+                    from: aiInput.locale({ label: textOf(site)("input.fromLocale"), required: true }),
+                    to: aiInput.locale({ label: textOf(site)("input.toLocale"), required: true }),
                 },
                 result: "mdx",
                 askInstruction: true,
@@ -298,7 +298,7 @@ export const aiPresets = {
                 prompt: options.prompt ??
                     lines(...withStyleGuide(site, options.styleGuide, [
                         "Translate a part of a document (MDX) from {{from}} to {{to}}.",
-                        "- Translate only the text people read. Leave MDX syntax, JSX and directive names, code blocks and inline code, formulas, link addresses and image addresses as they are",
+                        "- Translate only the text people read. Keep all MDX syntax as written (JSX components and their attribute names, directives if present, code fences, `<br />`). Leave code, formulas, link addresses and image addresses as they are",
                         ...(attributes ? [`- Translate the values of block attributes that people read: ${attributes}`] : []),
                         "- Do not change the number or order of paragraphs, lists and tables. Do not merge or split them",
                         "- Carry the tone and style of the source over naturally into the target language",
@@ -317,10 +317,10 @@ export const aiPresets = {
             if (!hasBody(site))
                 return undefined;
             return aiAction({
-                label: t("label.polish"),
+                label: textOf(site)("label.polish"),
                 input: {
-                    selection: aiInput.mdx({ label: t("input.selection"), required: true }),
-                    title: aiInput.text({ label: t("input.title") }),
+                    selection: aiInput.mdx({ label: textOf(site)("input.selection"), required: true }),
+                    title: aiInput.text({ label: textOf(site)("input.title") }),
                 },
                 result: "mdx",
                 stream: true,
@@ -328,7 +328,7 @@ export const aiPresets = {
                 prompt: options.prompt ??
                     lines(...withStyleGuide(site, options.styleGuide, [
                         "Polish the writing of the selected part of the content (MDX).",
-                        "- Keep the meaning and facts, link addresses, code, formulas and MDX syntax as they are",
+                        "- Keep the meaning and facts, link addresses, code and formulas as they are. Keep all MDX syntax as written (JSX components and their attribute names, directives if present, code fences, `<br />`)",
                         "- Rewrite awkward or long sentences so they read naturally and easily. Do not add content that is not there",
                         "- Write in the same language and the same tone as the original",
                     ])),
@@ -345,10 +345,10 @@ export const aiPresets = {
             if (!hasBody(site))
                 return undefined;
             return aiAction({
-                label: t("label.draft"),
+                label: textOf(site)("label.draft"),
                 input: {
-                    title: aiInput.text({ label: t("input.title") }),
-                    body: aiInput.mdx({ label: t("input.currentBody") }),
+                    title: aiInput.text({ label: textOf(site)("input.title") }),
+                    body: aiInput.mdx({ label: textOf(site)("input.currentBody") }),
                 },
                 result: "mdx",
                 stream: true,
@@ -357,7 +357,7 @@ export const aiPresets = {
                     lines(...withStyleGuide(site, options.styleGuide, [
                         "From the title, the body written so far and this request, write a draft in MDX to insert at the cursor.",
                         "- Start headings in the body at ## (the content title is separate)",
-                        "- Do not repeat the current body. Continue naturally from the text before and after",
+                        "- Do not repeat the current body. Continue naturally from the text before and after, and write MDX in the same notation as the current body",
                         "- Do not invent facts you do not know. Mark places that need checking with [needs checking]",
                         "- Write in the same language as the title",
                     ])),
@@ -366,9 +366,9 @@ export const aiPresets = {
         };
     },
     /** Regex candidates for finding parts of a code block to fold. */
-    codeFold: (options = {}) => aiAction({
-        label: t("label.codeFold"),
-        input: { code: aiInput.code({ label: t("input.code") }) },
+    codeFold: (options = {}) => (site) => aiAction({
+        label: textOf(site)("label.codeFold"),
+        input: { code: aiInput.code({ label: textOf(site)("input.code") }) },
         result: "candidates",
         apply: "append",
         askInstruction: true,

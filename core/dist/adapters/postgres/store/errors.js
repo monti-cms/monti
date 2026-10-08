@@ -1,16 +1,4 @@
-/** Stable error thrown by store implementations. The HTTP layer maps `code` to a status code. */
-export class CmsError extends Error {
-    code;
-    serverVersion;
-    details;
-    constructor(message, code, serverVersion, details) {
-        super(message);
-        this.code = code;
-        this.serverVersion = serverVersion;
-        this.details = details;
-        this.name = "CmsError";
-    }
-}
+import { CmsError } from "../../../core/store/errors.js";
 const pgError = (err) => (typeof err === "object" && err !== null ? err : {});
 /** PostgreSQL unique constraint violation (23505). Judged by constraint name only; the message is not parsed. */
 export function isUniqueViolation(err, constraints) {

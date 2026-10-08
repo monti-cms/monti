@@ -1,12 +1,15 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
+import { useSite } from "@monti-cms/core/client";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
 import { DayPicker, getDefaultClassNames } from "react-day-picker";
 import { cn } from "../lib/utils/index.js";
 import { Button, buttonVariants } from "./button.js";
 import { adminCalendarLocale } from "./calendar-locale.js";
-function Calendar({ className, classNames, showOutsideDays = true, captionLayout = "label", buttonVariant = "ghost", locale = adminCalendarLocale, formatters, components, ...props }) {
+function Calendar({ className, classNames, showOutsideDays = true, captionLayout = "label", buttonVariant = "ghost", locale: localeProp, formatters, components, ...props }) {
+    const site = useSite();
+    const locale = localeProp ?? adminCalendarLocale(site);
     const defaultClassNames = getDefaultClassNames();
     return (_jsx(DayPicker, { showOutsideDays: showOutsideDays, className: cn("group/calendar bg-cms-background in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-3 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(8)]", String.raw `rtl:**:[.rdp-button\_next>svg]:rotate-180`, String.raw `rtl:**:[.rdp-button\_previous>svg]:rotate-180`, className), captionLayout: captionLayout, locale: locale, formatters: {
             formatMonthDropdown: (date) => date.toLocaleString(locale?.code, { month: "short" }),

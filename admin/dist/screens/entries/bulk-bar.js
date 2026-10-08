@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsApiUrl, createTranslator, isItemCollection, taxonomyFieldsOf } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "../../lib/utils/cn.js";
@@ -12,15 +12,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { cmsFetch, errorText } from "../admin-api.js";
 import { cmsIssueMessage } from "../api-error-message.js";
 import { ConfirmDialog } from "../shared/confirm-dialog.js";
+import { nounVars } from "../shared/noun.messages.js";
 import { useTaxonomyOptions } from "../shared/use-taxonomy.js";
 import { bulkBarMessages } from "./bulk-bar.messages.js";
-const t = createTranslator(bulkBarMessages);
 /**
  * Actions per category field (tags, categories, etc.) of the collection. Fields that hold many get add/remove; a field that holds only one gets replace.
  * Multi-value field actions come first.
  */
-export function taxonomyActions(collection) {
-    const fields = taxonomyFieldsOf(collection).flatMap((stored) => stored.field.kind === "relation"
+export function taxonomyActions(site, collection) {
+    const t = site.createTranslator(bulkBarMessages);
+    const noun = nounVars(site, collection);
+    const fields = site
+        .taxonomyFieldsOf(collection)
+        .flatMap((stored) => stored.field.kind === "relation"
         ? [{ name: stored.name, label: stored.field.label, many: stored.field.many === true }]
         : []);
     const action = (op, field, ask) => ({
@@ -33,28 +37,28 @@ export function taxonomyActions(collection) {
         ...fields
             .filter((field) => field.many)
             .flatMap((field) => [
-            action("relation.add", field, (count, target) => t("ask.relation.add", { count, label: field.label, target: target ?? "" })),
-            action("relation.remove", field, (count, target) => t("ask.relation.remove", { count, label: field.label, target: target ?? "" })),
+            action("relation.add", field, (count, target) => t("ask.relation.add", { count, ...noun, label: field.label, target: target ?? "" })),
+            action("relation.remove", field, (count, target) => t("ask.relation.remove", { count, ...noun, label: field.label, target: target ?? "" })),
         ]),
         ...fields
             .filter((field) => !field.many)
             .map((field) => action("relation.set", field, (count, target) => target === null
-            ? t("ask.relation.clear", { count, label: field.label })
-            : t("ask.relation.set", { count, label: field.label, target }))),
+            ? t("ask.relation.clear", { count, ...noun, label: field.label })
+            : t("ask.relation.set", { count, ...noun, label: field.label, target }))),
     ];
 }
-const LIST_ACTIONS = [
+const listActions = (t, noun) => [
     {
         value: "folder.move",
         label: t("folder.move"),
         ask: (count, target) => target === null ? t("ask.folder.root", { count }) : t("ask.folder.move", { count, target }),
     },
-    { value: "publish", label: t("publish"), ask: (count) => t("ask.publish", { count }), content: true },
-    { value: "archive", label: t("archive"), ask: (count) => t("ask.archive", { count }), content: true },
-    { value: "unarchive", label: t("unarchive"), ask: (count) => t("ask.unarchive", { count }), content: true },
+    { value: "publish", label: t("publish"), ask: (count) => t("ask.publish", { count, ...noun }), content: true },
+    { value: "archive", label: t("archive"), ask: (count) => t("ask.archive", { count, ...noun }), content: true },
+    { value: "unarchive", label: t("unarchive"), ask: (count) => t("ask.unarchive", { count, ...noun }), content: true },
     { value: "trash", label: t("trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
 ];
-const TRASH_ACTIONS = [
+const trashActions = (t) => [
     {
         value: "permanentDelete",
         label: t("permanentDelete"),
@@ -74,7 +78,8 @@ const FAILURE_CODES = new Set([
     "invalid_reference",
 ]);
 /** Reason for a single failure. If a usage blocked permanent deletion, names it as `In use: <name>`. */
-export function describeBulkFailure(failure) {
+export function describeBulkFailure(site, failure) {
+    const t = site.createTranslator(bulkBarMessages);
     if (failure.error === "in_use" && failure.usages?.length) {
         const names = [...new Set(failure.usages.map((usage) => usage.title || t("untitled")))];
         const shown = names.slice(0, 3).join(", ");
@@ -83,13 +88,18 @@ export function describeBulkFailure(failure) {
         });
     }
     const base = FAILURE_CODES.has(failure.error) ? t(`failure.${failure.error}`) : failure.error;
-    return failure.issues?.length ? `${base} ${failure.issues.slice(0, 3).map(cmsIssueMessage).join(" ")}` : base;
+    return failure.issues?.length
+        ? `${base} ${failure.issues
+            .slice(0, 3)
+            .map((issue) => cmsIssueMessage(site, issue))
+            .join(" ")}`
+        : base;
 }
-export async function runBulk(op, items, params = {}) {
-    const data = await cmsFetch(cmsApiUrl("/v1/bulk"), {
+export async function runBulk(site, op, items, params = {}) {
+    const data = await cmsFetch(site, cmsApiUrl("/v1/bulk"), {
         method: "POST",
         json: { op, items: items.map(({ id, expectedVersion }) => ({ id, expectedVersion })), ...params },
-        fallback: t("requestFailed"),
+        fallback: site.createTranslator(bulkBarMessages)("requestFailed"),
     });
     return data.results;
 }
@@ -98,6 +108,7 @@ export async function runBulk(op, items, params = {}) {
  * The button shows picked items shortened like `React +2`, so the row does not overflow.
  */
 function ManyPicker({ label, options, value, onValueChange, }) {
+    const t = useTranslator(bulkBarMessages);
     const names = value.map((id) => options.find((option) => option.id === id)?.title ?? id);
     const summary = names.length === 0
         ? t("picker.select", { label })
@@ -111,11 +122,16 @@ function ManyPicker({ label, options, value, onValueChange, }) {
  * Bulk actions. Apply only to items picked on the current page and show a result per item.
  * Only failed items can be rerun. The trash screen (`mode="trash"`) offers only bulk permanent delete.
  */
-export function BulkBar({ collection, selected, folders, mode = "list", onClearSelection, onRun = runBulk, onDone, }) {
-    const isRecord = isItemCollection(collection);
+export function BulkBar({ collection, selected, folders, mode = "list", onClearSelection, onRun, onDone, }) {
+    const site = useSite();
+    const t = useTranslator(bulkBarMessages);
+    const isRecord = site.isItemCollection(collection);
     const actions = useMemo(() => mode === "trash"
-        ? TRASH_ACTIONS
-        : [...taxonomyActions(collection), ...LIST_ACTIONS.filter((action) => !action.content || !isRecord)], [isRecord, collection, mode]);
+        ? trashActions(t)
+        : [
+            ...taxonomyActions(site, collection),
+            ...listActions(t, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
+        ], [isRecord, collection, mode, site, t]);
     const [action, setAction] = useState(actions[0]?.value ?? "trash");
     const [checked, setChecked] = useState([]);
     const [single, setSingle] = useState("");
@@ -153,13 +169,13 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
                     : action === "folder.move"
                         ? { folderId: single === "__unfiled__" ? null : single }
                         : {};
-            const out = await onRun(relation?.op ?? action, items, params);
+            const out = await (onRun ?? ((...args) => runBulk(site, ...args)))(relation?.op ?? action, items, params);
             setResults(out);
             setRanItems(items);
             onDone?.(out.filter((result) => !result.ok).map((result) => result.id));
         }
         catch (err) {
-            setError(errorText(err, t("failed")));
+            setError(errorText(site, err, t("failed")));
         }
         finally {
             setIsRunning(false);
@@ -202,5 +218,5 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
             { value: "__unfiled__", label: t("option.root") },
             ...folders.map((folder) => ({ value: folder.id, label: folder.name })),
         ];
-    return (_jsxs("section", { "aria-label": t("bar"), className: "border-b bg-cms-primary/5 px-5 py-2", children: [_jsxs("div", { className: "flex min-h-7 flex-wrap items-center gap-2 text-sm", children: [_jsx("span", { className: "font-medium text-cms-primary", children: t("count", { count: selected.length }) }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: onClearSelection, children: t("clear") }), actions.length > 1 ? (_jsxs(Select, { value: action, items: actions.map((candidate) => ({ value: candidate.value, label: candidate.label })), onValueChange: (value) => value && setAction(value), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("kind"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: actions.map((candidate) => (_jsx(SelectItem, { value: candidate.value, children: candidate.label }, candidate.value))) })] })) : null, needsMany && (_jsx(ManyPicker, { label: relation.label, options: relationOptions, value: checked, onValueChange: setChecked })), needsSingle && (_jsxs(Select, { value: single || null, items: singleItems, onValueChange: (value) => setSingle(typeof value === "string" ? value : ""), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": relation ? t("target.aria", { label: relation.label }) : t("folder.aria"), children: _jsx(SelectValue, { placeholder: relation ? t("picker.select", { label: relation.label }) : t("folder.select") }) }), _jsx(SelectContent, { children: singleItems.map((item) => (_jsx(SelectItem, { value: item.value, children: item.label }, item.value))) })] })), _jsx(Button, { type: "button", size: "sm", variant: activeAction?.destructive ? "destructive" : "default", disabled: !canRun, onClick: start, children: isRunning ? t("running") : (activeAction?.label ?? t("run")) }), results && (_jsx("output", { className: "text-cms-muted-foreground text-xs", children: t("result", { success: successes, failed: failures.length }) })), failures.length > 0 && (_jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id))), children: t("retry") }))] }), error && (_jsx("p", { role: "alert", className: "pt-2 text-cms-destructive text-xs", children: error })), failures.length > 0 && (_jsx("ul", { className: "flex flex-col gap-1 pt-2 text-cms-destructive text-xs", children: failures.map((failure) => (_jsxs("li", { children: [_jsx("span", { className: "font-medium", children: titleOf(failure.id) }), " \u2014 ", describeBulkFailure(failure)] }, failure.id))) })), _jsx(ConfirmDialog, { request: confirm, onClose: () => setConfirm(null) })] }));
+    return (_jsxs("section", { "aria-label": t("bar"), className: "border-b bg-cms-primary/5 px-5 py-2", children: [_jsxs("div", { className: "flex min-h-7 flex-wrap items-center gap-2 text-sm", children: [_jsx("span", { className: "font-medium text-cms-primary", children: t("count", { count: selected.length }) }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: onClearSelection, children: t("clear") }), actions.length > 1 ? (_jsxs(Select, { value: action, items: actions.map((candidate) => ({ value: candidate.value, label: candidate.label })), onValueChange: (value) => value && setAction(value), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("kind"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: actions.map((candidate) => (_jsx(SelectItem, { value: candidate.value, children: candidate.label }, candidate.value))) })] })) : null, needsMany && (_jsx(ManyPicker, { label: relation.label, options: relationOptions, value: checked, onValueChange: setChecked })), needsSingle && (_jsxs(Select, { value: single || null, items: singleItems, onValueChange: (value) => setSingle(typeof value === "string" ? value : ""), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": relation ? t("target.aria", { label: relation.label }) : t("folder.aria"), children: _jsx(SelectValue, { placeholder: relation ? t("picker.select", { label: relation.label }) : t("folder.select") }) }), _jsx(SelectContent, { children: singleItems.map((item) => (_jsx(SelectItem, { value: item.value, children: item.label }, item.value))) })] })), _jsx(Button, { type: "button", size: "sm", variant: activeAction?.destructive ? "destructive" : "default", disabled: !canRun, onClick: start, children: isRunning ? t("running") : (activeAction?.label ?? t("run")) }), results && (_jsx("output", { className: "text-cms-muted-foreground text-xs", children: t("result", { success: successes, failed: failures.length }) })), failures.length > 0 && (_jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id))), children: t("retry") }))] }), error && (_jsx("p", { role: "alert", className: "pt-2 text-cms-destructive text-xs", children: error })), failures.length > 0 && (_jsx("ul", { className: "flex flex-col gap-1 pt-2 text-cms-destructive text-xs", children: failures.map((failure) => (_jsxs("li", { children: [_jsx("span", { className: "font-medium", children: titleOf(failure.id) }), " \u2014 ", describeBulkFailure(site, failure)] }, failure.id))) })), _jsx(ConfirmDialog, { request: confirm, onClose: () => setConfirm(null) })] }));
 }

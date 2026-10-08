@@ -1,6 +1,6 @@
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { CmsImageNodeView } from "./image-node-view.js";
+import { BlockNodeView } from "./blocks/block-node-view.js";
 export const CmsImageNode = Node.create({
     name: "image",
     group: "block",
@@ -64,6 +64,6 @@ export const CmsImageNode = Node.create({
         return ["figure", mergeAttributes(HTMLAttributes, { "data-image-block": "" })];
     },
     addNodeView() {
-        return ReactNodeViewRenderer(CmsImageNodeView);
+        return ReactNodeViewRenderer(BlockNodeView);
     },
 });

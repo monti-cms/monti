@@ -1,7 +1,6 @@
-import { cmsApiUrl, createTranslator, fileTypeFor, MAX_FILE_BYTES } from "@monti-cms/core/client";
+import { cmsApiUrl } from "@monti-cms/core/client";
 import { cmsApiErrorMessage } from "../screens/api-error-message.js";
 import { editorMessages } from "./messages.js";
-const t = createTranslator(editorMessages);
 /** Default optimization policy. Can be changed in code. */
 export const DEFAULT_OPTIMIZE_POLICY = {
     formats: ["image/jpeg", "image/png", "image/webp"],
@@ -31,7 +30,8 @@ async function isAnimatedWebp(file) {
  * Web optimization. If it cannot convert or conversion is not a gain, returns the original as is and records the reason.
  * Never silently turns an animation into a still image.
  */
-export async function prepareUpload(file, options = { optimize: false }) {
+export async function prepareUpload(site, file, options = { optimize: false }) {
+    const t = site.createTranslator(editorMessages);
     if (!options.optimize)
         return { file, optimized: false };
     const policy = options.policy ?? DEFAULT_OPTIMIZE_POLICY;
@@ -75,7 +75,8 @@ export async function prepareUpload(file, options = { optimize: false }) {
         height,
     };
 }
-function putFile(ticket, file, onProgress) {
+function putFile(site, ticket, file, onProgress) {
+    const t = site.createTranslator(editorMessages);
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", ticket.uploadUrl, true);
@@ -93,8 +94,9 @@ function putFile(ticket, file, onProgress) {
         xhr.send(file);
     });
 }
-const errorMessage = async (response, fallback) => cmsApiErrorMessage(await response.json().catch(() => null), fallback);
-export async function uploadImageFile(input, onProgress) {
+const errorMessage = async (site, response, fallback) => cmsApiErrorMessage(site, await response.json().catch(() => null), fallback);
+export async function uploadImageFile(site, input, onProgress) {
+    const t = site.createTranslator(editorMessages);
     const prepared = input instanceof File ? { file: input, optimized: false } : input;
     const { file, original } = prepared;
     const prepareRes = await fetch(cmsApiUrl("/v1/media/uploads"), {
@@ -108,19 +110,19 @@ export async function uploadImageFile(input, onProgress) {
         }),
     });
     if (!prepareRes.ok)
-        throw new Error(await errorMessage(prepareRes, t("upload.prepareFailed")));
+        throw new Error(await errorMessage(site, prepareRes, t("upload.prepareFailed")));
     const ticket = (await prepareRes.json());
     const total = file.size + (original?.size ?? 0);
     let publicLoaded = 0;
     let originalLoaded = 0;
     const report = () => onProgress?.(Math.round(((publicLoaded + originalLoaded) / total) * 100));
     await Promise.all([
-        putFile(ticket, file, (loaded) => {
+        putFile(site, ticket, file, (loaded) => {
             publicLoaded = loaded;
             report();
         }),
         original && ticket.original
-            ? putFile(ticket.original, original, (loaded) => {
+            ? putFile(site, ticket.original, original, (loaded) => {
                 originalLoaded = loaded;
                 report();
             })
@@ -132,7 +134,7 @@ export async function uploadImageFile(input, onProgress) {
         body: "{}",
     });
     if (!completeRes.ok)
-        throw new Error(await errorMessage(completeRes, t("upload.completeFailed")));
+        throw new Error(await errorMessage(site, completeRes, t("upload.completeFailed")));
     const result = await completeRes.json();
     return {
         mediaId: result.mediaId,
@@ -148,13 +150,14 @@ export const formatBytes = (bytes) => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 
  * Uploads an attachment file. The format is decided by the file name extension (browsers give inconsistent types for code files).
  * Rejects before uploading if the format is not accepted or the site setting limit (`media.maxFileBytes`) is exceeded.
  */
-export async function uploadAttachment(file, onProgress) {
-    const mimeType = fileTypeFor(file.name);
+export async function uploadAttachment(site, file, onProgress) {
+    const t = site.createTranslator(editorMessages);
+    const mimeType = site.api.fileTypeFor(file.name);
     if (!mimeType)
         throw new Error(t("upload.unsupportedType"));
-    if (file.size > MAX_FILE_BYTES)
-        throw new Error(t("upload.tooLarge", { mb: MAX_FILE_BYTES / 1024 / 1024 }));
+    if (file.size > site.api.MAX_FILE_BYTES)
+        throw new Error(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
     const typed = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
-    const uploaded = await uploadImageFile(typed, onProgress);
+    const uploaded = await uploadImageFile(site, typed, onProgress);
     return { mediaId: uploaded.mediaId };
 }

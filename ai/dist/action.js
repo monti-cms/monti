@@ -1,8 +1,5 @@
 import { z } from "zod";
-import { coreMessages } from "./core.messages.js";
-import { aiCheckSchema, CODE_CHECK_NAME, checkKey, isAddableCheck, MAX_PROMPT_LENGTH, MAX_REQUEST_LENGTH, migrateCheck, } from "./definition.js";
-import { lazyTranslator } from "./i18n.js";
-const t = lazyTranslator(coreMessages);
+import { aiCheckSchema, aiCheckSchemaOf, CODE_CHECK_NAME, checkKey, englishCoreText, isAddableCheck, MAX_PROMPT_LENGTH, MAX_REQUEST_LENGTH, migrateCheck, } from "./definition.js";
 const inputOf = (kind) => (options) => ({ kind, ...options });
 export const aiInput = {
     text: inputOf("text"),
@@ -36,8 +33,9 @@ export const SLOT_INPUTS = {
     block: { block: "mdx", title: "text" },
 };
 /** Creates a code check. Put it in an action definition's `checks` together with the fixed checks. */
-// Copies the property descriptors so the `label` accessor (`get label()`, which picks the current UI language on every read) is not frozen into a value.
-export const defineValidator = (check) => Object.defineProperties({ kind: "code" }, Object.getOwnPropertyDescriptors(check));
+export const defineValidator = (check) => ({ kind: "code", ...check });
+/** The display name of a code check in the site's admin language. */
+export const validatorLabel = (check, site) => typeof check.label === "function" ? check.label(site) : check.label;
 const isValidator = (check) => "run" in check;
 /**
  * Defines an action. Types check the prompt's `{{name}}` and the attach point (whether the slot can fill all inputs).
@@ -49,7 +47,7 @@ export function aiAction(definition) {
 // Edited values and the definition to run
 // ---------------------------------------------------------------------------
 /** Values editable in the admin UI. Only values that differ from the definition are stored in the DB. */
-export const aiActionOverrideSchema = z
+export const aiActionOverrideSchemaOf = (t) => z
     .object({
     enabled: z.boolean(),
     askInstruction: z.boolean(),
@@ -62,9 +60,11 @@ export const aiActionOverrideSchema = z
     send: z.array(z.string().max(40)).max(20),
     threshold: z.number().min(0.01).max(0.99),
     maxCount: z.number().int().min(1).max(20),
-    checks: z.array(z.preprocess(migrateCheck, aiCheckSchema)).max(10),
+    checks: z.array(z.preprocess(migrateCheck, aiCheckSchemaOf(t))).max(10),
 })
     .partial();
+/** The edited-value schema with English messages: reads stored values and builds definitions, where no message is shown. */
+export const aiActionOverrideSchema = aiActionOverrideSchemaOf(englishCoreText);
 /** Names of editable values. */
 export const EDITABLE_KEYS = [
     "enabled",
@@ -185,13 +185,13 @@ export function renderPrompt(action, values, languageName, request, shared = {})
 // ---------------------------------------------------------------------------
 // Request validation
 // ---------------------------------------------------------------------------
-const imageValueSchema = z
+const imageValueSchemaOf = (t) => z
     .object({ mediaId: z.uuid().optional(), src: z.string().max(2000).optional() })
     .refine((value) => Boolean(value.mediaId || value.src), { error: () => t("image.missing") });
-function inputValueSchema(spec) {
+function inputValueSchema(spec, t) {
     switch (spec.kind) {
         case "image":
-            return imageValueSchema;
+            return imageValueSchemaOf(t);
         case "value":
             return z.union([z.string().max(10_000), z.array(z.string().max(200)).max(200)]);
         case "locale":
@@ -201,9 +201,9 @@ function inputValueSchema(spec) {
     }
 }
 /** Validation of action inputs. Names not in the definition are dropped. */
-export function inputSchemaFor(input) {
+export function inputSchemaFor(input, t) {
     return z.object(Object.fromEntries(Object.entries(input).map(([name, spec]) => {
-        const schema = inputValueSchema(spec);
+        const schema = inputValueSchema(spec, t);
         return [name, spec.required ? schema : schema.optional()];
     })));
 }
@@ -217,7 +217,7 @@ export const aiRunEnvSchema = z.object({
 });
 /** Number of inputs sent together in one request (e.g. the translation's `Translate all`). */
 export const MAX_BATCH_INPUTS = 8;
-export const aiRunBodySchema = z
+export const aiRunBodySchemaOf = (t) => z
     .object({
     action: z.string().min(1).max(60),
     /** One input. */

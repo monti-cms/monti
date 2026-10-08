@@ -1,25 +1,114 @@
+import type { ContentFolder, FrontMatterKey } from "./init-detect.js";
 /** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
-/** Defaults `monti init` writes into a new config. Sign-in and UI text follow the site default locale. */
+/** Defaults `monti init` writes into a new config. */
 export declare const DEFAULT_INIT_LOCALE = "en";
 export declare const DEFAULT_INIT_TIME_ZONE = "UTC";
-export interface ConfigTemplateOptions {
-    /** Site default locale code (e.g. `en`, `ko`). */
-    readonly locale?: string;
-    /** Date/time zone (IANA, e.g. `UTC`, `Asia/Seoul`). */
-    readonly timeZone?: string;
+/** The admin path `monti init` asks for and writes by default. */
+export declare const DEFAULT_INIT_ADMIN_PATH = "/studio";
+export declare const DEFAULT_SITE_URL = "http://localhost:3000";
+/** A body block or inline mark of `@monti-cms/blocks`, as `monti init` offers it. */
+export interface BlockChoice {
+    /** The name used in flags (`--blocks callout,tabs`). */
+    readonly id: string;
+    /** The function listed in `plugins`: exported by `@monti-cms/blocks`, or by `@monti-cms/blocks/<id>` for a block with a `needs` (the heavy ones, so the barrel never loads their library). */
+    readonly fn: string;
+    /** One line for the list and for the comment in the config. */
+    readonly description: string;
+    /** An npm package the block needs besides `@monti-cms/blocks`. */
+    readonly needs?: string;
+    /** Why the block is not in the default set: what it adds to the app. Set only for blocks that are opt-in. */
+    readonly heavy?: string;
 }
-export declare function configTemplate(adminPath: string, options?: ConfigTemplateOptions): string;
-export declare const SERVER_TEMPLATE = "import { defineServerConfig, githubAuth, postgres } from \"@monti-cms/core/server\";\n\n/**\n * Server config. The database and sign-in connections and the secrets are read from environment variables (.env.local).\n * Only the server reads it. The admin API route also serves the sign-in API (/api/cms/auth/*). The callback URL of the\n * GitHub OAuth app is <site URL>/api/cms/auth/callback/github.\n */\nexport default defineServerConfig({\n\tdatabase: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),\n\tauth: githubAuth({\n\t\tclientId: process.env.AUTH_GITHUB_ID,\n\t\tclientSecret: process.env.AUTH_GITHUB_SECRET,\n\t\tadminIds: [process.env.CMS_ADMIN_GITHUB_ID], // numeric GitHub ID of the admin\n\t\tdevBypass: process.env.CMS_DEV_AUTH_BYPASS === \"1\", // only in next dev: treat everyone as admin without signing in\n\t\tsecret: process.env.AUTH_SECRET, // signs the sign-in session\n\t}),\n\t// Encryption key for stored values (AI service keys). If you change it, enter the stored keys again. Keep it separate from the sign-in secret.\n\tsecret: process.env.CMS_SECRET,\n\t// media: r2Storage({ ... }), // image and file uploads (S3-compatible storage), imported from @monti-cms/core/s3\n});\n";
-export declare const ADMIN_PAGE_TEMPLATE = "export { CmsAdminPage as default } from \"@monti-cms/admin/next\";\n";
-export declare const ADMIN_LAYOUT_TEMPLATE = "import { CmsAdminLayout } from \"@monti-cms/admin/next\";\nimport type { ReactNode } from \"react\";\n\nexport { cmsAdminMetadata as metadata } from \"@monti-cms/admin/next\";\n\n/** Admin screen (@monti-cms/admin). Pass site components with CmsAdminComponentsProvider (see the admin README). */\nexport default function AdminLayout({ children }: { children: ReactNode }) {\n\treturn <CmsAdminLayout>{children}</CmsAdminLayout>;\n}\n";
-export declare const API_ROUTE_TEMPLATE = "import { createCmsRouteHandler } from \"@monti-cms/core/next/route-handler\";\n\n/** Admin API (/api/cms/v1/*) and sign-in (/api/cms/auth/*). */\nexport const { GET, POST, PATCH, PUT, DELETE } = createCmsRouteHandler();\n";
-export declare function nextConfigTemplate(config: string, server: string): string;
-/** Style lines the admin screen needs. Put them in the app's Tailwind input CSS after `@import "tailwindcss";`. */
-export declare const CSS_LINES: readonly ['@import "tw-animate-css";', '@import "@monti-cms/admin/styles.css";', '@plugin "@tailwindcss/typography";'];
-/** Packages the app installs (including those the admin package must share with the app). */
-export declare const INSTALL_COMMANDS: readonly ["pnpm add @monti-cms/core @monti-cms/admin next-auth@5.0.0-beta.32 next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react", "pnpm add -D tw-animate-css @tailwindcss/typography"];
-/** Values for `.env.local`. */
-export declare const ENV_VARS: readonly {
-    readonly name: string;
-    readonly note: string;
-}[];
+/** Every block of `@monti-cms/blocks`, in the order the plugins are listed (the inline marks last: overlapping marks are stored in this order). */
+export declare const BLOCK_CHOICES: readonly BlockChoice[];
+/**
+ * The blocks `monti init` turns on when nobody chose: the light ones. The heavy ones (`mermaid`, `chart`) are opt-in (`--blocks all` or a list that names them),
+ * because each adds a large package to the app. `columns`, `code-explorer` and `tooltip` are also left out: they are small, but a first blog rarely needs them.
+ */
+export declare const DEFAULT_BLOCK_IDS: readonly string[];
+/** What the questions of `monti init` decided. Every field has a flag. */
+export interface InitAnswers {
+    /** The Postgres schema for the tables (`DATABASE_SCHEMA`), if given: an example value in `.env.example`. Without it the tables go in `public`. */
+    readonly databaseSchema?: string;
+    /** Numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`), if given: filled in `.env.example` (it is public, not a secret). */
+    readonly adminGithubId?: string;
+    /** Public URL of the site, for the OAuth callback URL. */
+    readonly siteUrl: string;
+    /** Locale codes, the default first. */
+    readonly locales: readonly string[];
+    readonly timeZone: string;
+    readonly storage: "none" | "s3";
+    readonly ai: boolean;
+    readonly gitSync: boolean;
+    /** Ids of {@link BLOCK_CHOICES}. */
+    readonly blocks: readonly string[];
+    readonly adminPath: string;
+}
+/** A key from front matter as a field name: kept as it is when it is one word of letters and digits, else camel-cased. `undefined` if nothing usable is left. */
+export declare function fieldNameOf(key: string): string | undefined;
+type SchemaField = Record<string, unknown>;
+/** What the starter schema holds, and what was decided on the way (for the init report). */
+export interface StarterSchema {
+    /** `post` first, then the collections its relations point to. */
+    readonly collections: Record<string, {
+        readonly fields: Record<string, SchemaField>;
+    } & Record<string, unknown>>;
+    /** Plain-words lines about front matter keys that got a relation, or that need no field. */
+    readonly notes: string[];
+}
+/**
+ * The collections of the starter schema: `post` with the fields every blog has, then (when a content folder was found) one field per front matter key, read by the
+ * table in `front-matter-keys.ts`:
+ *
+ * - `date` and the other publish date keys get no field: the entry has its own publish date.
+ * - `description`, `summary`, `excerpt` and the like become the field with the `summary` role.
+ * - `tags` (also `keywords`, `topics`) become the collection `tag` and a relation `tagIds`. `category` becomes `category` and `categoryId`, and `categories` (a list)
+ *   `categoryIds`.
+ * - `draft`, `published` and the language keys are the CMS's own and get no field.
+ */
+export declare function starterCollections(keys: readonly FrontMatterKey[], multiLocale: boolean): StarterSchema;
+/** The public address shape for a content folder: its last folder name (`content/blog` -> `/blog/:slug`), else `/posts/:slug`. */
+export declare function pathFor(folder: ContentFolder | undefined): string;
+/**
+ * The schema file `monti init` creates (`monti.schema.json`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
+ * time zone, the site name and the admin path when it is not the default. It holds the plain data of the site;
+ * `monti.config.ts` loads it. `link` is the path of the JSON Schema from the schema file (editors use it for autocomplete). With `folder` (a content folder the app
+ * already has) the fields follow its front matter, and `path` follows its name.
+ */
+export declare function schemaTemplate(answers: Pick<InitAnswers, "adminPath" | "locales" | "timeZone">, options?: {
+    readonly siteName?: string;
+    readonly folder?: ContentFolder;
+    readonly link?: string;
+}): string;
+/** The module a block's function is imported from. */
+export declare const blockEntry: (block: BlockChoice) => string;
+/** The block choices for the ids, in the order of {@link BLOCK_CHOICES}. */
+export declare const chosenBlocks: (ids: readonly string[]) => readonly BlockChoice[];
+/**
+ * The config file `monti init` creates: the one place the site is set up. It loads the schema file and lists the plugins, the database and the login, one line each
+ * with a short comment. Nothing here is a preset: every line is a feature that is on, and deleting the line turns it off.
+ */
+export declare function configTemplate(answers: InitAnswers): string;
+/**
+ * The generated files import the CMS instance from the config file. `configImport` is its import path from the generated file, without an extension.
+ * `instant`: the app turns on Next's `cacheComponents`, so the page opts out of the development-only instant navigation validation. The export is only valid with that
+ * option (Next fails the build on it otherwise), which is why the template writes it only then.
+ */
+export declare const adminPageTemplate: (configImport: string, options?: {
+    readonly instant?: boolean;
+}) => string;
+export declare const adminLayoutTemplate: (configImport: string, options?: {
+    readonly blocks?: boolean;
+}) => string;
+export declare const apiRouteTemplate: (configImport: string) => string;
+export declare function nextConfigTemplate(): string;
+/** The OAuth callback URL of the GitHub login for a site URL. */
+export declare const githubCallbackUrl: (siteUrl: string) => string;
+/**
+ * `.env.example`: every variable the chosen features read, in order, each with what it is and where to get it. Committed to git, so it holds placeholders only,
+ * never a secret. The person copies it to `.env.local` (`cp .env.example .env.local`) and fills it in.
+ */
+export declare function envExampleTemplate(answers: InitAnswers): string;
+/** The npm packages the answers need, besides what the app already lists. */
+export declare function packagesFor(answers: InitAnswers): string[];
+export {};

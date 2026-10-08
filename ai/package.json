@@ -1,8 +1,7 @@
 {
   "name": "@monti-cms/ai",
-  "version": "0.1.0",
+  "version": "0.2.0-next.0",
   "private": true,
-  "cmsPlugin": true,
   "description": "AI plugin for @monti-cms/core: named AI actions, a decision model (System One), and the admin AI screen",
   "license": "MIT",
   "type": "module",
@@ -19,8 +18,7 @@
     "./admin": {
       "types": "./dist/admin/index.d.ts",
       "default": "./dist/admin/index.js"
-    },
-    "./styles.css": "./styles.css"
+    }
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.61",
@@ -32,12 +30,12 @@
     "@tiptap/core": "^3.31.3",
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",
-    "next": ">=16",
+    "lucide-react": ">=0.562.0",
     "react": ">=19",
     "sonner": "^2.0.8",
-    "lucide-react": ">=0.562.0",
-    "@monti-cms/core": "^0.1.0",
-    "@monti-cms/admin": "^0.1.0"
+    "@monti-cms/admin": "^0.2.0-next.0",
+    "@monti-cms/core": "^0.2.0-next.0",
+    "@monti-cms/mdx": "^0.2.0-next.0"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -53,8 +51,6 @@
     "@types/react-dom": "^19",
     "jsdom": "^27.4.0",
     "lucide-react": "^0.562.0",
-    "next": "16.3.8",
-    "next-auth": "5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "pg": "^8.23.0",
     "react": "19.2.3",
@@ -63,19 +59,19 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.1.0",
-    "@monti-cms/admin": "0.1.0"
+    "@monti-cms/admin": "0.2.0-next.0",
+    "@monti-cms/mdx": "0.2.0-next.0",
+    "@monti-cms/core": "0.2.0-next.0"
   },
   "files": [
     "dist",
-    "README.md",
-    "styles.css"
+    "README.md"
   ],
   "scripts": {
     "test": "vitest",
     "test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
     "test:other-site": "vitest run -c vitest.othersite.config.ts",
-    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.other-site.json",
+    "typecheck": "tsc --noEmit -p .",
     "build": "node ../../scripts/build-package.mjs"
   }
 }

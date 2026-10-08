@@ -28,10 +28,10 @@ export async function requestBareun(content, options) {
 }
 const isKorean = (locale) => locale.toLowerCase().split(/[-_]/)[0] === "ko";
 /** Joins paragraphs, checks them in one request, and splits the result per paragraph. Non-Korean paragraphs and empty text are not sent. */
-export async function checkWithBareun(segments, options) {
+export async function checkWithBareun(site, segments, options) {
     const korean = segments.filter((segment) => isKorean(segment.locale));
     const content = joinSegments(korean);
     if (content.trim() === "")
         return [];
-    return bareunIssues(korean, await requestBareun(content, options));
+    return bareunIssues(site, korean, await requestBareun(content, options));
 }

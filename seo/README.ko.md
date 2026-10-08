@@ -8,7 +8,8 @@
 ## 등록
 
 ```ts
-// cms.config.ts
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core/server";
 import { seo, seoFields } from "@monti-cms/seo";
 
 const article = defineCollection({
@@ -24,15 +25,13 @@ const article = defineCollection({
 	list: { columns: ["title", "status"] },
 });
 
-export default defineConfig({
+export const cms = defineConfig({
 	// …
 	plugins: [seo()],
 });
 ```
 
-```css
-@import "@monti-cms/seo/styles.css"; /* 관리자 패키지 스타일 다음(배포 묶음에서 클래스를 찾는다) */
-```
+SEO 패널은 자기 스타일시트가 필요 없다. `@monti-cms/admin/styles.css`가 이미 담고 있다(앱에 Tailwind가 필요 없다).
 
 ## 필드 묶음 `seoFields(options?)`
 
@@ -75,14 +74,14 @@ seoFields({
 
 ```ts
 import { seoOf } from "@monti-cms/seo";
-import { post } from "@/cms.config";
+import { post } from "@/monti.config";
 
 const { title, description, imageId, canonical, noindex } = seoOf(post, entry.metadata);
 ```
 
 컬렉션 정의(`defineCollection`의 결과)와 저장된 메타데이터에서 역할로 값을 읽는다. 비운 제목·설명은 제목(`title`)·요약
 (`role: "summary"`)으로 채우고, 비운 값은 없다(`undefined`). 공유 이미지는 미디어 ID라 공개 주소는 사이트가 만든다
-(`@monti-cms/core/runtime`의 `resolvePublicMediaUrl`).
+(`cms.read.mediaUrl(id)`, 앱의 `monti.config.ts`가 내보내는 `cms` 인스턴스).
 
 ## 진입점
 

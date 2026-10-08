@@ -1,61 +1,65 @@
-import { isDeepStrictEqual } from "node:util";
+import { sql } from "kysely";
+import { currentActor } from "../../../core/actor.js";
+import { assertPublishableStatus, assertSameCollection, isRepublish, mergePublishReferences, } from "../../../core/domain/publish.js";
+import { assertPromotedToCurrent, linkTargetChanged, planPublishAddress } from "../../../core/domain/slug-address.js";
 import { isUuid } from "../../../core/ids.js";
-import { DEFAULT_LOCALE } from "../../../core/locales.js";
-import { prepareSnapshot, validateForPublish } from "../../../core/snapshot.js";
+import { validateForPublish } from "../../../core/snapshot.js";
+import { CmsError } from "../../../core/store/errors.js";
 import { ServiceError } from "../../../core/types.js";
-import { CmsError } from "./errors.js";
 import { loadEntry, lockEntryForUpdate, readBody, readReferences, writeBody } from "./rows.js";
+import { ROW_COLLECTION, titleExpr } from "./title-sql.js";
 /**
  * Shared rules for publish transactions. Publishing and record restore use the same validation.
  */
+const holderOf = (row) => ({ entryId: row.entry_id, type: row.type });
+/** The transaction's `client` is what the hook (`beforePublishCommit`) receives; the queries run on the Kysely handle of the same client (`ctx.db(client)`). */
 export function createPublishing(ctx) {
-    const { qSchema, hooks } = ctx;
-    /** Re-validates the latest saved draft inside the transaction. Locks reference targets and internal link slugs. */
-    const validateStoredWorkingForPublish = async (client, entryId) => {
-        const entryRes = await client.query(`SELECT collection, working_slug, version, translation_group_id FROM "${qSchema}".entries WHERE id = $1`, [
-            entryId,
-        ]);
-        const entry = entryRes.rows[0];
+    const { hooks, site } = ctx;
+    /** Checks the prepared snapshot of the draft inside the transaction. Locks reference targets and internal link slugs. */
+    const validatePreparedForPublish = async (client, entryId, snapshot) => {
+        const trx = ctx.db(client);
+        const entry = await trx
+            .selectFrom("entries")
+            .select(["collection", "version", "translation_group_id"])
+            .where("id", "=", entryId)
+            .executeTakeFirst();
         if (!entry)
             throw new CmsError("Entry not found", "not_found");
+        assertSameCollection(entry.collection, snapshot.collection);
         // A translation locks its source and checks its published status, so the source cannot leave the public layer during publish.
         const translation = entry.translation_group_id
             ? {
-                sourcePublished: (await client.query(`SELECT status FROM "${qSchema}".entries WHERE id = $1 FOR SHARE`, [entry.translation_group_id])).rows[0]?.status === "published",
+                sourcePublished: (await trx
+                    .selectFrom("entries")
+                    .select("status")
+                    .where("id", "=", entry.translation_group_id)
+                    .forShare()
+                    .executeTakeFirst())?.status === "published",
             }
             : undefined;
-        const body = await readBody(client, qSchema, entryId, "working");
-        if (!body)
-            throw new CmsError("Working draft not found", "not_found");
-        const previousReferences = await readReferences(client, qSchema, entryId, "working");
-        const snapshot = await prepareSnapshot({ collection: entry.collection, slug: entry.working_slug, metadata: body.metadata, mdx: body.mdx }, { previousReferences });
-        // Even stale leftover references are checked before publish to confirm the target still exists.
-        const merged = new Map(snapshot.references.map((ref) => [`${ref.kind}:${ref.targetId}`, ref]));
-        for (const ref of previousReferences) {
-            const key = `${ref.kind}:${ref.targetId}`;
-            const current = merged.get(key);
-            if (!current)
-                merged.set(key, ref);
-            else {
-                const occurrences = new Map([...current.occurrences, ...ref.occurrences].map((occurrence) => [JSON.stringify(occurrence), occurrence]));
-                merged.set(key, { ...current, occurrences: [...occurrences.values()] });
-            }
-        }
-        const publishSnapshot = { ...snapshot, references: [...merged.values()] };
+        const previousReferences = await readReferences(trx, entryId, "working");
+        const publishSnapshot = {
+            ...snapshot,
+            references: mergePublishReferences(snapshot.references, previousReferences),
+        };
         const links = snapshot.internalLinks ?? [];
         const findAddresses = async (lock) => {
             if (links.length === 0)
                 return [];
-            const result = await client.query(
-            // A body link (`/posts/slug`) is the default-language URL. It is swapped to the translation's URL at render time.
-            `SELECT a.collection, a.slug, a.type, a.entry_id
-				 FROM "${qSchema}".content_addresses a
-				 WHERE a.locale = $3 AND (a.collection, a.slug) IN (SELECT * FROM unnest($1::text[], $2::text[]))
-				 ORDER BY a.collection, a.slug${lock ? " FOR SHARE" : ""}`, [links.map((link) => link.collection), links.map((link) => link.slug), DEFAULT_LOCALE]);
-            return result.rows;
+            // A body link names an address in a language: `/posts/slug` the default language, `/en/posts/slug` the one of the locale prefix.
+            // It is swapped to the reader's language at render time.
+            return trx
+                .selectFrom("content_addresses as a")
+                .select(["a.collection", "a.locale", "a.slug", "a.type", "a.entry_id"])
+                .where(sql `(a.collection, a.locale, a.slug) in (select * from unnest(${links.map((link) => link.collection)}::text[], ${links.map((link) => link.locale ?? site.DEFAULT_LOCALE)}::text[], ${links.map((link) => link.slug)}::text[]))`)
+                .orderBy("a.collection")
+                .orderBy("a.locale")
+                .orderBy("a.slug")
+                .$if(lock, (qb) => qb.forShare())
+                .execute();
         };
-        const addressKey = (collection, slug) => `${collection}:${slug}`;
-        const firstAddresses = new Map((await findAddresses(false)).map((a) => [addressKey(a.collection, a.slug), a]));
+        const addressKey = (collection, locale, slug) => `${collection}:${locale ?? site.DEFAULT_LOCALE}:${slug}`;
+        const firstAddresses = new Map((await findAddresses(false)).map((a) => [addressKey(a.collection, a.locale, a.slug), a]));
         const targetIds = new Set();
         for (const ref of publishSnapshot.references)
             if (ref.kind !== "media" && isUuid(ref.targetId))
@@ -64,35 +68,48 @@ export function createPublishing(ctx) {
             if (address.entry_id)
                 targetIds.add(address.entry_id);
         const targetRows = targetIds.size
-            ? (await client.query(`SELECT id, collection, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`, [Array.from(targetIds).sort()])).rows
+            ? await trx
+                .selectFrom("entries")
+                .select(["id", "collection", "status", "translation_group_id"])
+                .where("id", "=", sql `any(${Array.from(targetIds).sort()}::uuid[])`)
+                .orderBy("id")
+                .forShare()
+                .execute()
             : [];
         const targetMap = new Map(targetRows.map((target) => [target.id, target]));
-        const lockedAddresses = new Map((await findAddresses(true)).map((a) => [addressKey(a.collection, a.slug), a]));
+        const lockedAddresses = new Map((await findAddresses(true)).map((a) => [addressKey(a.collection, a.locale, a.slug), a]));
         for (const link of links) {
-            const before = firstAddresses.get(addressKey(link.collection, link.slug));
-            const after = lockedAddresses.get(addressKey(link.collection, link.slug));
-            if ((before?.type ?? null) !== (after?.type ?? null) ||
-                (before?.entry_id ?? null) !== (after?.entry_id ?? null)) {
+            const before = firstAddresses.get(addressKey(link.collection, link.locale, link.slug));
+            const after = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
+            if (linkTargetChanged(before && holderOf(before), after && holderOf(after))) {
                 throw new CmsError("Internal link target changed during publish", "conflict", entry.version);
             }
         }
         const mediaIds = Array.from(new Set(publishSnapshot.references.filter((ref) => ref.kind === "media").map((ref) => ref.targetId)));
         const mediaRows = mediaIds.length
-            ? (await client.query(`SELECT id, status, storage_key FROM "${qSchema}".media_assets WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`, [mediaIds])).rows
+            ? await trx
+                .selectFrom("media_assets")
+                .select(["id", "status", "storage_key"])
+                .where("id", "=", sql `any(${mediaIds}::uuid[])`)
+                .orderBy("id")
+                .forShare()
+                .execute()
             : [];
-        const validation = validateForPublish(publishSnapshot, {
+        const validation = validateForPublish(site, publishSnapshot, {
             targets: targetRows.map((target) => ({
                 id: target.id,
                 collection: target.collection,
                 isPublished: target.status === "published",
+                isSource: target.translation_group_id === null || target.translation_group_id === target.id,
             })),
             media: mediaRows.map((media) => ({ id: media.id, status: media.status, storageKey: media.storage_key })),
             internalLinks: links.map((link) => {
-                const address = lockedAddresses.get(addressKey(link.collection, link.slug));
+                const address = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
                 const target = address?.entry_id ? targetMap.get(address.entry_id) : undefined;
                 return {
                     collection: link.collection,
                     slug: link.slug,
+                    ...(link.locale ? { locale: link.locale } : {}),
                     addressType: address?.type ?? "missing",
                     isPublished: target?.collection === link.collection && target.status === "published",
                 };
@@ -101,7 +118,7 @@ export function createPublishing(ctx) {
         });
         if (!validation.ready)
             throw new ServiceError("publish_validation_failed", validation.issues);
-        return snapshot;
+        return { snapshot, warnings: validation.warnings.filter((issue) => issue.code === "unpublished_internal_link") };
     };
     /**
      * Atomically applies the latest draft as the current published version.
@@ -109,98 +126,191 @@ export function createPublishing(ctx) {
      * With `resetPublishedAt` it is set to now (even for a re-publish with no changes).
      */
     const publishWithinTransaction = async (client, id, options) => {
-        const locked = await lockEntryForUpdate(client, qSchema, id, options.expectedVersion);
-        if (locked.status === "trashed")
-            throw new CmsError("A trashed entry cannot be published", "invalid_status");
-        if (locked.status === "archived") {
-            throw new CmsError("An archived entry must be unarchived before publishing", "invalid_status");
-        }
-        await validateStoredWorkingForPublish(client, id);
-        const working = await readBody(client, qSchema, id, "working");
+        const trx = ctx.db(client);
+        const locked = await lockEntryForUpdate(trx, id, options.expectedVersion);
+        assertPublishableStatus(locked.status);
+        // Not `onWarnings?.(await ...)`: an absent callback must not skip the checks.
+        const checked = await validatePreparedForPublish(client, id, options.snapshot);
+        options.onWarnings?.(checked.warnings);
+        const working = await readBody(trx, id, "working");
         if (!working)
             throw new CmsError("Working draft not found", "not_found");
-        const published = await readBody(client, qSchema, id, "published");
-        const currentSlugRes = await client.query(`SELECT slug FROM "${qSchema}".content_addresses WHERE entry_id = $1 AND type = 'current'`, [id]);
-        const currentSlug = currentSlugRes.rows[0]?.slug ?? null;
+        const published = await readBody(trx, id, "published");
+        const currentSlugRow = await trx
+            .selectFrom("content_addresses")
+            .select("slug")
+            .where("entry_id", "=", id)
+            .where("type", "=", "current")
+            .executeTakeFirst();
+        const currentSlug = currentSlugRow?.slug ?? null;
         const targetSlug = locked.working_slug;
-        const isRepublish = Boolean(published &&
-            published.content_hash === working.content_hash &&
-            published.mdx === working.mdx &&
-            published.schema_version === working.schema_version &&
-            published.updated_at.getTime() === working.updated_at.getTime() &&
-            currentSlug === targetSlug &&
-            isDeepStrictEqual(published.metadata, working.metadata) &&
-            isDeepStrictEqual(published.translation, working.translation));
+        const bodyState = (body) => ({
+            contentHash: body.content_hash,
+            updatedAt: body.updated_at,
+            metadata: body.metadata,
+            translation: body.translation,
+        });
+        const republish = isRepublish(published ? bodyState(published) : null, bodyState(working), {
+            current: currentSlug,
+            target: targetSlug,
+        });
         const now = new Date();
-        if (!isRepublish) {
-            await client.query(`UPDATE "${qSchema}".entries SET version = $1, status = 'published',
-				 published_at = CASE WHEN $4 THEN $2 ELSE COALESCE(published_at, $2) END WHERE id = $3`, [locked.version + 1, now, id, Boolean(options.resetPublishedAt)]);
-            await writeBody(client, qSchema, id, "published", {
+        if (!republish) {
+            await trx
+                .updateTable("entries")
+                .set({
+                version: locked.version + 1,
+                status: "published",
+                published_at: options.publishedAt ?? (options.resetPublishedAt ? now : sql `coalesce(published_at, ${now})`),
+                changed_by: currentActor(),
+                changed_at: now,
+            })
+                .where("id", "=", id)
+                .execute();
+            await writeBody(site, trx, id, "published", {
                 metadata: working.metadata,
-                mdx: working.mdx,
+                doc: working.doc,
                 schemaVersion: working.schema_version,
                 contentHash: working.content_hash,
                 updatedAt: working.updated_at,
                 translation: working.translation,
             });
-            await client.query(`DELETE FROM "${qSchema}".content_addresses WHERE entry_id = $1 AND type = 'reservation'`, [
-                id,
-            ]);
-            if (currentSlug !== null && currentSlug !== targetSlug) {
-                await client.query(`UPDATE "${qSchema}".content_addresses SET type = 'alias' WHERE entry_id = $1 AND type = 'current'`, [id]);
+            await trx.deleteFrom("content_addresses").where("entry_id", "=", id).where("type", "=", "reservation").execute();
+            const address = planPublishAddress(currentSlug, targetSlug);
+            if (address.demoteCurrent) {
+                await trx
+                    .updateTable("content_addresses")
+                    .set({ type: "alias" })
+                    .where("entry_id", "=", id)
+                    .where("type", "=", "current")
+                    .execute();
             }
-            if (targetSlug !== null && targetSlug !== currentSlug) {
+            if (address.promote) {
                 // When returning to a former alias, promote that slug back to current.
-                await client.query(`INSERT INTO "${qSchema}".content_addresses (collection, locale, slug, entry_id, type) VALUES ($1, $2, $3, $4, 'current')
-					 ON CONFLICT (collection, locale, slug) DO UPDATE SET type = 'current'
-					 WHERE "${qSchema}".content_addresses.entry_id = EXCLUDED.entry_id`, [locked.collection, locked.locale, targetSlug, id]);
-                const check = await client.query(`SELECT entry_id, type FROM "${qSchema}".content_addresses WHERE collection = $1 AND locale = $2 AND slug = $3`, [locked.collection, locked.locale, targetSlug]);
-                if (check.rows[0]?.entry_id !== id || check.rows[0]?.type !== "current") {
-                    throw new CmsError("Slug conflict", "slug_conflict");
-                }
+                await trx
+                    .insertInto("content_addresses")
+                    .values({
+                    collection: locked.collection,
+                    locale: locked.locale,
+                    slug: targetSlug,
+                    entry_id: id,
+                    type: "current",
+                })
+                    .onConflict((conflict) => conflict
+                    .columns(["collection", "locale", "slug"])
+                    .doUpdateSet({ type: "current" })
+                    .where("content_addresses.entry_id", "=", sql `excluded.entry_id`))
+                    .execute();
+                const check = await trx
+                    .selectFrom("content_addresses")
+                    .select(["entry_id", "type"])
+                    .where("collection", "=", locked.collection)
+                    .where("locale", "=", locked.locale)
+                    .where("slug", "=", targetSlug)
+                    .executeTakeFirst();
+                assertPromotedToCurrent(id, check ? holderOf(check) : null);
             }
         }
-        else if (options.resetPublishedAt) {
-            await client.query(`UPDATE "${qSchema}".entries SET version = $1, status = 'published', published_at = $2 WHERE id = $3`, [locked.version + 1, now, id]);
+        else if (options.resetPublishedAt || options.publishedAt) {
+            await trx
+                .updateTable("entries")
+                .set({
+                version: locked.version + 1,
+                status: "published",
+                published_at: options.publishedAt ?? now,
+                changed_by: currentActor(),
+                changed_at: now,
+            })
+                .where("id", "=", id)
+                .execute();
         }
         else {
-            await client.query(`UPDATE "${qSchema}".entries SET status = 'published' WHERE id = $1`, [id]);
+            await trx.updateTable("entries").set({ status: "published" }).where("id", "=", id).execute();
         }
-        await client.query(`DELETE FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = 'published'`, [id]);
-        await client.query(`INSERT INTO "${qSchema}".entry_references
-			 (entry_id, state, kind, target_id, target_entry_id, target_media_id, is_stale, occurrences)
-			 SELECT entry_id, 'published', kind, target_id, target_entry_id, target_media_id, is_stale, occurrences
-			 FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = 'working'`, [id]);
-        const entry = await loadEntry(client, id, qSchema);
+        await trx.deleteFrom("entry_references").where("entry_id", "=", id).where("state", "=", "published").execute();
+        await trx
+            .insertInto("entry_references")
+            .columns([
+            "entry_id",
+            "state",
+            "kind",
+            "target_id",
+            "target_entry_id",
+            "target_media_id",
+            "is_stale",
+            "occurrences",
+        ])
+            .expression((eb) => eb
+            .selectFrom("entry_references")
+            .select([
+            "entry_id",
+            sql `'published'`.as("state"),
+            "kind",
+            "target_id",
+            "target_entry_id",
+            "target_media_id",
+            "is_stale",
+            "occurrences",
+        ])
+            .where("entry_id", "=", id)
+            .where("state", "=", "working"))
+            .execute();
+        const entry = await loadEntry(trx, id);
         if (hooks.beforePublishCommit)
             await hooks.beforePublishCommit(entry, client);
         return entry;
     };
-    /** Locks the targets the draft points at. A trashed target cannot be newly referenced. */
+    /**
+     * Locks the targets the draft points at. A trashed target cannot be newly referenced. Returns the references a draft stores: one whose target does
+     * not exist and is only a link in a body (a link to an entry that is gone) is not stored, because the index cannot point at nothing; the publish check still sees it
+     * (it works from the prepared snapshot). A relation to a missing entry is still refused by the foreign key and blocks publishing it.
+     */
     const lockDraftReferenceTargets = async (client, references) => {
         const ids = Array.from(new Set(references.filter((ref) => ref.kind !== "media" && isUuid(ref.targetId)).map((ref) => ref.targetId))).sort();
-        if (ids.length === 0)
-            return;
-        const result = await client.query(`SELECT id, status FROM "${qSchema}".entries WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE`, [ids]);
-        if (result.rows.some((row) => row.status === "trashed")) {
+        const rows = ids.length
+            ? await ctx
+                .db(client)
+                .selectFrom("entries")
+                .select(["id", "status"])
+                .where("id", "=", sql `any(${ids}::uuid[])`)
+                .orderBy("id")
+                .forShare()
+                .execute()
+            : [];
+        // A link in the body to a trashed entry is not refused (the draft can still be saved and the link removed); publishing it is, as an unpublished link.
+        const trashed = new Set(rows.filter((row) => row.status === "trashed").map((row) => row.id));
+        if (references.some((ref) => trashed.has(ref.targetId) && ref.occurrences.some((o) => o.type !== "body"))) {
             throw new CmsError("Cannot reference a trashed entry", "invalid_reference");
         }
+        const found = new Set(rows.map((row) => row.id));
+        const onlyLinks = (ref) => ref.occurrences.length > 0 && ref.occurrences.every((o) => o.type === "body");
+        return references.filter((ref) => ref.kind === "media" || !onlyLinks(ref) || found.has(ref.targetId.toLowerCase()));
     };
     /**
      * Rejects if other content references this entry (both draft and published).
      * References from a `trashed` source can be ignored only on permanent delete, so the caller chooses.
      */
     const assertNotReferenced = async (client, id, options) => {
-        const usage = await client.query(`SELECT DISTINCT r.entry_id AS source_id, b.metadata->>'title' AS title, e.collection, r.state
-			 FROM "${qSchema}".entry_references r
-			 JOIN "${qSchema}".entries e ON e.id = r.entry_id
-			 LEFT JOIN "${qSchema}".entry_bodies b ON b.entry_id = r.entry_id AND b.state = r.state
-			 WHERE r.target_entry_id = $1 AND r.entry_id <> $1
-			 ${options.ignoreTrashedSources ? "AND e.status <> 'trashed'" : ""}
-			 ORDER BY source_id`, [id]);
-        if (usage.rows.length > 0) {
+        const usage = await ctx
+            .db(client)
+            .selectFrom("entry_references as r")
+            .innerJoin("entries as e", "e.id", "r.entry_id")
+            .leftJoin("entry_bodies as b", (join) => join.onRef("b.entry_id", "=", "r.entry_id").onRef("b.state", "=", "r.state"))
+            .select([
+            "r.entry_id as source_id",
+            titleExpr(site, "b.metadata", ROW_COLLECTION).as("title"),
+            "e.collection",
+            "r.state",
+        ])
+            .distinct()
+            .where("r.target_entry_id", "=", id)
+            .where("r.entry_id", "<>", id)
+            .$if(options.ignoreTrashedSources, (qb) => qb.where("e.status", "<>", "trashed"))
+            .orderBy("source_id")
+            .execute();
+        if (usage.length > 0) {
             throw new CmsError("Other entries still reference this entry", "in_use", undefined, {
-                usages: usage.rows.map((row) => ({
+                usages: usage.map((row) => ({
                     entryId: row.source_id,
                     title: row.title,
                     collection: row.collection,
@@ -209,5 +319,5 @@ export function createPublishing(ctx) {
             });
         }
     };
-    return { validateStoredWorkingForPublish, publishWithinTransaction, lockDraftReferenceTargets, assertNotReferenced };
+    return { validatePreparedForPublish, publishWithinTransaction, lockDraftReferenceTargets, assertNotReferenced };
 }

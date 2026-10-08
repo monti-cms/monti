@@ -1,5 +1,5 @@
+import type { JsonObject } from "../../../core/store/types.js";
 import type { StoreContext } from "./context.js";
-import type { JsonObject } from "./types.js";
 /** Per-admin list and editor preferences. */
 export declare function createPreferenceOps(ctx: StoreContext): {
     getPreferences: (params: {

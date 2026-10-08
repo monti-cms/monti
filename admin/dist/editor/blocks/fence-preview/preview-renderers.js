@@ -1,11 +1,10 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Component, useEffect, useState } from "react";
 import { useCmsAdminComponents } from "../../../admin-components.js";
 import { cn } from "../../../lib/utils/cn.js";
 import { blocksMessages } from "../messages.js";
-const t = createTranslator(blocksMessages);
 export class PreviewErrorBoundary extends Component {
     state = { error: null };
     static getDerivedStateFromError(error) {
@@ -33,6 +32,7 @@ export class PreviewErrorBoundary extends Component {
  * Loads and renders the fence preview the site provided (`CmsAdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
  */
 export function LazyFencePreview({ lang, label, value, className, emptyText, }) {
+    const t = useTranslator(blocksMessages);
     const load = useCmsAdminComponents().fencePreviews?.[lang];
     const [Renderer, setRenderer] = useState(null);
     const [loadError, setLoadError] = useState(null);
@@ -69,6 +69,7 @@ export function LazyFencePreview({ lang, label, value, className, emptyText, }) 
     return (_jsx(PreviewErrorBoundary, { resetKey: trimmed, children: _jsx("div", { className: cn("w-full min-w-0 overflow-x-auto [&_[data-error=true]]:text-cms-destructive [&_[data-error=true]_span]:text-cms-destructive", className), children: _jsx(Renderer, { source: trimmed }) }) }));
 }
 export function MathPreview({ value, className }) {
+    const t = useTranslator(blocksMessages);
     const trimmed = value.trim();
     const [html, setHtml] = useState("");
     const [error, setError] = useState(null);

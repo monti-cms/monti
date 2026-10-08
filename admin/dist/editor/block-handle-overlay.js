@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -8,9 +8,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { IconButton } from "../ui/icon-button.js";
 import { Spinner } from "../ui/spinner.js";
 import { editorMessages } from "./messages.js";
-const t = createTranslator(editorMessages);
 /** The ⋮⋮ handle on the left of a block and the block menu. The menu is a shadcn DropdownMenu (Base UI render prop) so it is keyboard operable too, and dragging the handle moves the block. */
 export function BlockHandleOverlay({ coords, onMoveUp, onMoveDown, onDuplicate, onDelete, onDragStart, onDragEnd, actions = [], }) {
+    const t = useTranslator(editorMessages);
     const [open, setOpen] = useState(false);
     if (typeof window === "undefined")
         return null;

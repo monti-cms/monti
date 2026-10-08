@@ -1,4 +1,4 @@
-import { createTranslator } from "@monti-cms/core/client";
+import { perSite } from "@monti-cms/core/client";
 import { Node } from "@tiptap/core";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { Subscript } from "@tiptap/extension-subscript";
@@ -7,61 +7,80 @@ import { Table, TableCell, TableHeader, TableRow, TableView } from "@tiptap/exte
 import TextAlign from "@tiptap/extension-text-align";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { columnResizingPluginKey } from "@tiptap/pm/tables";
-import { CmsCodeBlock } from "./code-block/index.js";
+import { cmsCodeBlock } from "./code-block/index.js";
 import { CodeFoldMark } from "./code-block/code-fold-mark.js";
 import { CodeTooltipMark } from "./code-block/code-tooltip-mark.js";
+import { FOOTNOTE_EXTENSIONS } from "./footnote-nodes.js";
 import { editorMessages } from "./messages.js";
 import { CmsUntranslatedMark } from "./untranslated-mark.js";
-const t = createTranslator(editorMessages);
+/** What the box shows of the node it holds: the text of a body that could not be read, or the node as JSON. */
+const previewOf = (held) => {
+    try {
+        const node = JSON.parse(held);
+        const source = node.attrs?.source;
+        if (node.type === "unparsed" && typeof source === "string")
+            return source;
+        return JSON.stringify(node, null, 2);
+    }
+    catch {
+        return held;
+    }
+};
 /**
- * A read-only box that preserves CMS blocks not in the Tiptap schema (math, chart, callout, tabs, mermaid, merged tables, etc.).
+ * A read-only box that preserves CMS blocks not in the Tiptap schema (a block without an edit view, a merged table with block content, a body that could
+ * not be read, etc.).
  *
- * `attrs.source` holds the stored string (MDX) of that subtree. On save, the box is parsed
- * again and spliced back in, so the content never changes (nodes are never silently deleted).
- * As an `atom`, the inside of the box is not editable; it can only be selected and deleted as a whole.
+ * `attrs.node` holds the stored node of that subtree as JSON. On save, the box is read again and spliced back in, so the content never changes
+ * (nodes are never silently deleted). As an `atom`, the inside of the box is not editable; it can only be selected and deleted as a whole.
  */
-export const CmsOpaqueBlock = Node.create({
-    name: "cmsOpaqueBlock",
-    group: "block",
-    atom: true,
-    selectable: true,
-    draggable: false,
-    addAttributes() {
-        return {
-            source: { default: "" },
-            label: { default: t("opaqueBlock.label") },
-        };
-    },
-    parseHTML() {
-        return [
-            {
-                tag: "div[data-cms-opaque]",
-                getAttrs: (element) => ({
-                    source: element.getAttribute("data-source") ?? "",
-                    label: element.getAttribute("data-label") ?? t("opaqueBlock.label"),
-                }),
-            },
-        ];
-    },
-    renderHTML({ node }) {
-        const source = String(node.attrs.source ?? "");
-        const label = String(node.attrs.label ?? t("opaqueBlock.label"));
-        return [
-            "div",
-            {
-                "data-cms-opaque": "",
-                "data-source": source,
-                "data-label": label,
-                class: "my-4 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-3 cms-dark:border-neutral-700 cms-dark:bg-neutral-900",
-            },
-            [
+export const cmsOpaqueBlock = perSite((site) => {
+    const t = site.createTranslator(editorMessages);
+    return Node.create({
+        name: "cmsOpaqueBlock",
+        group: "block",
+        atom: true,
+        selectable: true,
+        draggable: false,
+        addAttributes() {
+            return {
+                node: { default: "" },
+                /** The node written in the registered source format, for showing it. Not saved. */
+                preview: { default: "" },
+                label: { default: t("opaqueBlock.label") },
+            };
+        },
+        parseHTML() {
+            return [
+                {
+                    tag: "div[data-cms-opaque]",
+                    getAttrs: (element) => ({
+                        node: element.getAttribute("data-node") ?? "",
+                        label: element.getAttribute("data-label") ?? t("opaqueBlock.label"),
+                    }),
+                },
+            ];
+        },
+        renderHTML({ node }) {
+            const held = String(node.attrs.node ?? "");
+            const written = String(node.attrs.preview ?? "");
+            const label = String(node.attrs.label ?? t("opaqueBlock.label"));
+            return [
                 "div",
-                { class: "text-xs font-medium text-neutral-500 cms-dark:text-neutral-400" },
-                t("opaqueBlock.editInSource", { label }),
-            ],
-            ["pre", { class: "mt-2 overflow-x-auto whitespace-pre-wrap text-xs" }, source],
-        ];
-    },
+                {
+                    "data-cms-opaque": "",
+                    "data-node": held,
+                    "data-label": label,
+                    class: "my-4 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-3 cms-dark:border-neutral-700 cms-dark:bg-neutral-900",
+                },
+                [
+                    "div",
+                    { class: "text-xs font-medium text-neutral-500 cms-dark:text-neutral-400" },
+                    t("opaqueBlock.editInSource", { label }),
+                ],
+                ["pre", { class: "mt-2 overflow-x-auto whitespace-pre-wrap text-xs" }, written || previewOf(held)],
+            ];
+        },
+    });
 });
 /**
  * Inline and alignment extensions for the new representation contract.
@@ -79,12 +98,6 @@ export const CmsTextAlign = TextAlign.configure({
 });
 export const CmsSuperscript = Superscript;
 export const CmsSubscript = Subscript;
-/**
- * Carries the `meta` of the code fence info string (` ```ts title="..." `) and annotations (underline, tooltip).
- * StarterKit's code block has only `language`, so `meta` would silently disappear,
- * so this extension is used with StarterKit's turned off (`codeBlock: false`).
- */
-export { CmsCodeBlock };
 /**
  * A table NodeView that does not revert to the stored width while a column width is being dragged.
  * The default TableView re-applies the stored column width on every re-render (`update`). The dragged width exists only in the DOM,
@@ -131,7 +144,7 @@ class CmsTableView extends TableView {
 }
 /**
  * Table (basic table with row/column add/delete, cell merging, column widths).
- * A table with adjusted column widths is stored as a `::::table{widths="..."}` directive.
+ * A table with adjusted column widths is stored as a `<Table widths="...">` element (or a table directive when the site uses the directive extension).
  * Dragging within `handleWidth` (px) on either side of a column boundary adjusts the width. The default 5px was hard to grab, so it is widened.
  */
 export const CmsTable = Table.extend({
@@ -157,7 +170,8 @@ export const CmsTable = Table.extend({
 }).configure({ resizable: true, allowTableNodeSelection: true, handleWidth: 10, View: CmsTableView });
 /** `- [ ]` and `- [x]` checklists. */
 export const CmsTaskItem = TaskItem.configure({ nested: true });
-export const CMS_SCHEMA_EXTENSIONS = [
+/** The schema extensions of a site. The same list for the same site, so an editor rebuilt for it keeps its extensions. */
+export const cmsSchemaExtensions = perSite((site) => [
     CmsTable,
     TableRow,
     TableHeader,
@@ -168,8 +182,11 @@ export const CMS_SCHEMA_EXTENSIONS = [
     CmsSuperscript,
     CmsSubscript,
     CmsUntranslatedMark,
-    CmsOpaqueBlock,
+    cmsOpaqueBlock(site),
+    ...FOOTNOTE_EXTENSIONS,
     CodeFoldMark,
     CodeTooltipMark,
-    CmsCodeBlock,
-];
+    // Carries the `meta` of the code fence info string (` ```ts title="..." `) and annotations (underline, tooltip). StarterKit's code block has only
+    // `language`, so `meta` would silently disappear; this extension is used with StarterKit's turned off (`codeBlock: false`).
+    cmsCodeBlock(site),
+]);

@@ -1,7 +1,7 @@
+import type { BodyTemplate } from "../../../core/store/types.js";
 import { type StoreContext } from "./context.js";
-import type { BodyTemplate } from "./types.js";
 /**
- * Body templates. Picked from `새 글`; changing one does not affect entries already created.
+ * Body templates, stored as documents. Picked from `새 글`; changing one does not affect entries already created.
  * The initial templates come from the site config (`seed.templates`), inserted once by a migration.
  */
 export declare function createTemplateOps(ctx: StoreContext): {
@@ -9,13 +9,13 @@ export declare function createTemplateOps(ctx: StoreContext): {
     getTemplate: (id: string) => Promise<BodyTemplate>;
     createTemplate: (data: {
         name: string;
-        mdx: string;
+        doc?: unknown;
     }) => Promise<BodyTemplate>;
     updateTemplate: (params: {
         id: string;
         expectedVersion: number;
         name?: string;
-        mdx?: string;
+        doc?: unknown;
     }) => Promise<BodyTemplate>;
     deleteTemplate: (params: {
         id: string;

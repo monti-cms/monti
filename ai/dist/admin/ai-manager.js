@@ -3,48 +3,50 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
 import { AdminShell, Button, Checkbox, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, Field, FieldGroup, FieldLabel, FieldTitle, IconButton, Input, Label, Switch, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, useConfirm, } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
-import { ADMIN_LOCALE, BLOCK_BY_NAME, CMS_TIME_ZONE, COLLECTIONS, cmsApiUrl, createTranslator, schemaOf, } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { toast } from "sonner";
-import { resolveAction } from "../action.js";
-import { draftCustomView, viewOf } from "../action-view.js";
+import { draftCustomView } from "../action-view.js";
 import { ADDABLE_CHECKS, checkKey } from "../definition.js";
-import { actionDefinition } from "../registry.js";
 import { aiManagerMessages } from "./ai-manager.messages.js";
 import { AI_ACTIONS_KEY, runAiAction, useAiActions } from "./ai-slot-provider.js";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "./ai-test-sample.js";
 import { ConnectionManager, DETAIL_PANE, InlineError, ListRow, ListSkeleton, LoadError, useAiSettings, } from "./connection-editor.js";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor.js";
-import { checkLabel, engineLabel, slotLabel, slotTargetLabel } from "./labels.messages.js";
+import { useLabels } from "./labels.messages.js";
 import { ModelCombobox, useModelList } from "./model-combobox.js";
 import { PROMPT_ROWS, PROMPT_TEXTAREA, SharedManager, useAiShared } from "./shared-editor.js";
-const t = createTranslator(aiManagerMessages);
 /** Visible name of the attach target. For a field, it is the name in the collection definition. */
-function placeLabel(action) {
-    const attach = action.attach[0];
-    if (!attach)
-        return t("place.direct");
-    switch (attach.slot) {
-        case "field": {
-            for (const collection of COLLECTIONS) {
-                const field = schemaOf(collection).fields[attach.field];
-                if (field)
-                    return `${slotLabel("field")} · ${field.label}`;
+function usePlaceLabel() {
+    const site = useSite();
+    const t = useTranslator(aiManagerMessages);
+    const { slotLabel, slotTargetLabel } = useLabels();
+    return (action) => {
+        const attach = action.attach[0];
+        if (!attach)
+            return t("place.direct");
+        switch (attach.slot) {
+            case "field": {
+                for (const collection of site.COLLECTIONS) {
+                    const field = site.schemaOf(collection).fields[attach.field];
+                    if (field)
+                        return `${slotLabel("field")} · ${field.label}`;
+                }
+                return `${slotLabel("field")} · ${attach.field}`;
             }
-            return `${slotLabel("field")} · ${attach.field}`;
+            case "translation":
+            case "selection":
+            case "insert":
+                return slotLabel(attach.slot);
+            case "block":
+                return `${slotLabel("block")} · ${site.BLOCK_BY_NAME.get(attach.block)?.label ?? attach.block}`;
+            default: {
+                return `${slotLabel(attach.slot)} · ${slotTargetLabel(attach.slot, attach.target)}`;
+            }
         }
-        case "translation":
-        case "selection":
-        case "insert":
-            return slotLabel(attach.slot);
-        case "block":
-            return `${slotLabel("block")} · ${BLOCK_BY_NAME.get(attach.block)?.label ?? attach.block}`;
-        default: {
-            return `${slotLabel(attach.slot)} · ${slotTargetLabel(attach.slot, attach.target)}`;
-        }
-    }
+    };
 }
 const editableOf = (action) => ({
     enabled: action.enabled,
@@ -58,13 +60,6 @@ const editableOf = (action) => ({
     maxCount: action.maxCount,
     checks: action.checks,
 });
-/** Defaults of a code action (the values built from the definition alone, without edits). Screen actions have no defaults to revert to. */
-function defaultSpecOf(feature) {
-    if (feature.custom)
-        return null;
-    const definition = actionDefinition(feature.key);
-    return definition ? editableOf(viewOf(resolveAction(feature.key, definition), undefined)) : null;
-}
 /** Comparison key of the edited values. If it differs from the values at open time, there is unsaved content. */
 const snapshotOf = (spec, base) => JSON.stringify({ spec, base });
 const EMPTY_SAMPLE = { values: {}, request: "" };
@@ -75,6 +70,10 @@ const EMPTY_SAMPLE = { values: {}, request: "" };
  * Opening another item or tab with unsaved content asks whether to discard it.
  */
 export function AiManager() {
+    const site = useSite();
+    const t = useTranslator(aiManagerMessages);
+    const { engineLabel } = useLabels();
+    const placeLabel = usePlaceLabel();
     const queryClient = useQueryClient();
     const featuresQuery = useAiActions();
     const settingsQuery = useAiSettings();
@@ -118,8 +117,8 @@ export function AiManager() {
     const startNew = async () => {
         if (!(await confirmDiscard(featureDirty)))
             return;
-        const base = NEW_CUSTOM_BASE();
-        const feature = draftCustomView(base);
+        const base = NEW_CUSTOM_BASE(site);
+        const feature = draftCustomView(site, base);
         const spec = editableOf(feature);
         setEditing({ feature, spec, base, isNew: true, initial: snapshotOf(spec, base) });
         setFormError(null);
@@ -155,7 +154,7 @@ export function AiManager() {
             setEditing({ ...editing, base });
             return;
         }
-        const draft = draftCustomView(base);
+        const draft = draftCustomView(site, base);
         const feature = editing.isNew
             ? draft
             : { ...draft, key: editing.feature.key, version: editing.feature.version, updatedAt: editing.feature.updatedAt };
@@ -187,7 +186,7 @@ export function AiManager() {
         setDeleting(true);
         setFormError(null);
         try {
-            await cmsFetch(cmsApiUrl(`/v1/ai/actions/${feature.key}?expectedVersion=${feature.version}`), {
+            await cmsFetch(site, cmsApiUrl(`/v1/ai/actions/${feature.key}?expectedVersion=${feature.version}`), {
                 method: "DELETE",
                 fallback: t("remove.failed"),
             });
@@ -196,7 +195,7 @@ export function AiManager() {
             toast.success(t("remove.done"));
         }
         catch (error) {
-            setFormError(errorText(error, t("remove.failed")));
+            setFormError(errorText(site, error, t("remove.failed")));
         }
         finally {
             setDeleting(false);
@@ -209,7 +208,7 @@ export function AiManager() {
         setFormError(null);
         try {
             if (editing.isNew && editing.base) {
-                const created = await cmsFetch(cmsApiUrl("/v1/ai/actions"), {
+                const created = await cmsFetch(site, cmsApiUrl("/v1/ai/actions"), {
                     method: "POST",
                     json: { base: { ...editing.base, label: editing.base.label.trim() }, value: editing.spec },
                     fallback: t("save.failed"),
@@ -218,7 +217,7 @@ export function AiManager() {
                 open(created);
             }
             else {
-                const saved = await cmsFetch(cmsApiUrl(`/v1/ai/actions/${editing.feature.key}`), {
+                const saved = await cmsFetch(site, cmsApiUrl(`/v1/ai/actions/${editing.feature.key}`), {
                     method: "PATCH",
                     json: {
                         expectedVersion: editing.feature.version,
@@ -234,7 +233,7 @@ export function AiManager() {
             void queryClient.invalidateQueries({ queryKey: AI_ACTIONS_KEY });
         }
         catch (error) {
-            setFormError(errorText(error, t("save.failed")));
+            setFormError(errorText(site, error, t("save.failed")));
         }
         finally {
             setSaving(false);
@@ -248,7 +247,7 @@ export function AiManager() {
         : tab === "connections"
             ? settingsQuery.data?.providers.length
             : sharedQuery.data?.items.length;
-    return (_jsxs(AdminShell, { title: "AI", count: count, headerActions: headerActions, sidebar: { activeNav: "ai" }, children: [_jsxs(Tabs, { value: tab, onValueChange: (value) => void changeTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: [_jsxs(TabsTrigger, { value: "features", className: "flex-none px-0 text-xs", children: [_jsx(Sparkles, { "aria-hidden": true }), t("tab.features")] }), _jsxs(TabsTrigger, { value: "connections", className: "flex-none px-0 text-xs", children: [_jsx(Plug, { "aria-hidden": true }), t("tab.connections")] }), _jsxs(TabsTrigger, { value: "shared", className: "flex-none px-0 text-xs", children: [_jsx(Quote, { "aria-hidden": true }), t("tab.shared")] })] }), _jsxs(TabsContent, { value: "features", className: "flex min-h-0 flex-1 flex-col", children: [featuresQuery.error && !featuresQuery.data && (_jsx(LoadError, { message: errorText(featuresQuery.error, t("list.loadFailed")), onRetry: () => void featuresQuery.refetch() })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsx("div", { className: "flex w-72 shrink-0 flex-col border-r", children: _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: featuresQuery.isPending ? (_jsx(ListSkeleton, { rows: 4 })) : (_jsxs(_Fragment, { children: [featuresQuery.data && features.length === 0 && !editing?.isNew && (_jsx("li", { className: "px-3 py-6 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })), features.map((feature) => (_jsx(ListRow, { title: feature.label, status: !feature.enabled
+    return (_jsxs(AdminShell, { title: "AI", count: count, headerActions: headerActions, sidebar: { activeNav: "ai" }, children: [_jsxs(Tabs, { value: tab, onValueChange: (value) => void changeTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: [_jsxs(TabsTrigger, { value: "features", className: "flex-none px-0 text-xs", children: [_jsx(Sparkles, { "aria-hidden": true }), t("tab.features")] }), _jsxs(TabsTrigger, { value: "connections", className: "flex-none px-0 text-xs", children: [_jsx(Plug, { "aria-hidden": true }), t("tab.connections")] }), _jsxs(TabsTrigger, { value: "shared", className: "flex-none px-0 text-xs", children: [_jsx(Quote, { "aria-hidden": true }), t("tab.shared")] })] }), _jsxs(TabsContent, { value: "features", className: "flex min-h-0 flex-1 flex-col", children: [featuresQuery.error && !featuresQuery.data && (_jsx(LoadError, { message: errorText(site, featuresQuery.error, t("list.loadFailed")), onRetry: () => void featuresQuery.refetch() })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsx("div", { className: "flex w-72 shrink-0 flex-col border-r", children: _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: featuresQuery.isPending ? (_jsx(ListSkeleton, { rows: 4 })) : (_jsxs(_Fragment, { children: [featuresQuery.data && features.length === 0 && !editing?.isNew && (_jsx("li", { className: "px-3 py-6 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })), features.map((feature) => (_jsx(ListRow, { title: feature.label, status: !feature.enabled
                                                             ? t("status.off")
                                                             : usable.has(feature.key)
                                                                 ? null
@@ -266,6 +265,7 @@ export function AiManager() {
 }
 /** List input for the one-of-values check. One value per line; blank lines are dropped. */
 function OneOfInput({ items, disabled, onChange, }) {
+    const t = useTranslator(aiManagerMessages);
     const [text, setText] = useState(items.join("\n"));
     return (_jsx(Textarea, { "aria-label": t("check.options"), rows: 3, value: text, disabled: disabled, onChange: (event) => {
             setText(event.target.value);
@@ -279,10 +279,15 @@ function OneOfInput({ items, disabled, onChange, }) {
 }
 /** One check row. Toggle it on/off; edit a regex for format, a character count for length, or a value list for one-of. Added checks can be deleted. */
 function CheckRow({ check, label, onChange, onRemove, }) {
+    const t = useTranslator(aiManagerMessages);
     const id = useId();
     return (_jsxs("li", { className: cn("flex min-h-8 gap-2", check.kind === "oneOf" ? "items-start [&>label]:pt-1.5" : "items-center"), children: [_jsx(Switch, { id: id, size: "sm", checked: check.enabled, onCheckedChange: (enabled) => onChange({ ...check, enabled }) }), _jsx(Label, { htmlFor: id, className: "w-20 shrink-0 font-normal text-xs", children: label }), check.kind === "pattern" && (_jsx(Input, { "aria-label": t("check.pattern"), value: check.pattern, disabled: !check.enabled, onChange: (event) => onChange({ ...check, pattern: event.target.value }), className: "h-8 min-w-0 flex-1 font-mono text-xs" })), check.kind === "maxLength" && (_jsxs("span", { className: "flex items-center gap-2", children: [_jsx(Input, { type: "number", "aria-label": t("check.maxChars"), min: 1, max: 5000, value: check.max, disabled: !check.enabled, onChange: (event) => onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) }), className: "h-8 w-20 text-xs" }), _jsx("span", { className: "text-cms-muted-foreground", children: t("check.charsOrLess") })] })), check.kind === "oneOf" && (_jsx(OneOfInput, { items: check.items, disabled: !check.enabled, onChange: (items) => onChange({ ...check, items }) })), onRemove && (_jsx(IconButton, { label: t("check.remove", { label }), size: "icon-xs", destructive: true, onClick: onRemove, className: "ml-auto", children: _jsx(Trash2, { "aria-hidden": true }) }))] }));
 }
 function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange, onSave, custom, }) {
+    const site = useSite();
+    const t = useTranslator(aiManagerMessages);
+    const { checkLabel, engineLabel } = useLabels();
+    const placeLabel = usePlaceLabel();
     const ids = { provider: useId(), prompt: useId(), threshold: useId(), sendTitle: useId(), checksTitle: useId() };
     const deciding = feature.engine === "decide";
     const settings = useAiSettings().data;
@@ -298,7 +303,7 @@ function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange
     const [test, setTest] = useState(null);
     const set = (patch) => onChange({ ...spec, ...patch });
     // Defaults of a code action. Reset to default only reverts the input fields (enabled stays as is); saving is a separate click.
-    const defaults = custom ? null : defaultSpecOf(feature);
+    const defaults = custom ? null : feature.defaults;
     const atDefaults = defaults !== null && JSON.stringify({ ...defaults, enabled: spec.enabled }) === JSON.stringify(spec);
     // Checks that can be added: those among format, length and one-of that are not present yet. An MDX result (body fragment) gets no character checks.
     const addableChecks = Object.keys(ADDABLE_CHECKS).filter((kind) => feature.result !== "mdx" && feature.result !== "note" && !spec.checks.some((check) => check.kind === kind));
@@ -312,7 +317,7 @@ function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange
         ...providers.map((provider) => ({ value: provider.id, label: provider.name })),
     ];
     const sampleInputs = sampleFields(feature, spec.send);
-    const sampleStart = sampleDefaults(feature);
+    const sampleStart = sampleDefaults(site, feature);
     const testRunning = test?.status === "running";
     const testDisabled = !canRun || testRunning || missingRequired(sampleInputs, sample.values, sampleStart);
     const runTest = async () => {
@@ -327,10 +332,10 @@ function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange
                 ...(custom ? { draftBase: { ...custom.base, label: custom.base.label.trim() || t("title.new") } } : {}),
             };
             const { input, env } = sampleRun(feature, sampleInputs, sample.values, sampleStart);
-            setTest({ status: "done", result: await runAiAction(feature.key, input, { ...options, env }) });
+            setTest({ status: "done", result: await runAiAction(site, feature.key, input, { ...options, env }) });
         }
         catch (runError) {
-            setTest({ status: "error", message: errorText(runError, t("test.failed")) });
+            setTest({ status: "error", message: errorText(site, runError, t("test.failed")) });
         }
     };
     return (_jsxs("div", { className: DETAIL_PANE, children: [_jsxs("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-2", children: [_jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("h2", { className: "truncate font-medium text-base", children: (custom ? custom.base.label.trim() : feature.label) || t("title.new") }), _jsxs("p", { className: "truncate text-cms-muted-foreground text-xs", children: [placeLabel(feature), " \u00B7 ", engineLabel(feature.engine)] })] }), _jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.enabled, onCheckedChange: (enabled) => set({ enabled }) }), t("toggle.on")] }), _jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.askInstruction, onCheckedChange: (askInstruction) => set({ askInstruction }) }), t("toggle.ask")] }), feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (_jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.instant, onCheckedChange: (instant) => set({ instant }) }), t("toggle.instant")] }))] }), custom && (_jsx("section", { "aria-label": t("section.basics"), className: "rounded-md border p-3", children: _jsx(CustomBaseFields, { base: custom.base, onChange: custom.onBaseChange }) })), _jsxs(FieldGroup, { className: "gap-5", children: [_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.provider, children: t("field.connection") }), _jsxs("div", { className: "flex min-w-0 items-center gap-2", children: [_jsx(OptionSelect, { id: ids.provider, value: spec.providerId ?? "", options: providerOptions, onChange: (value) => set({ providerId: value || null, modelName: "" }) }), _jsx(ModelCombobox, { "aria-label": t("field.model"), value: spec.modelName, models: modelList.models, loading: modelList.loading, error: modelList.error, placeholder: chosen?.defaultModel || t("field.defaultModel"), onChange: (modelName) => set({ modelName }) })] })] }), inputs.length > 0 && (_jsxs(Field, { role: "group", "aria-labelledby": ids.sendTitle, children: [_jsx(FieldTitle, { id: ids.sendTitle, children: t("field.send") }), _jsx("div", { className: "flex flex-wrap gap-3", children: inputs.map(([name, input]) => (_jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Checkbox, { checked: uses(name) || input.required, disabled: input.required, onCheckedChange: (checked) => set({
@@ -339,7 +344,7 @@ function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange
                                                 ? undefined
                                                 : () => set({ checks: spec.checks.filter((_, i) => i !== index) }) }, checkKey(check)))) }), addableChecks.length > 0 && (_jsxs(DropdownMenu, { children: [_jsxs(DropdownMenuTrigger, { render: _jsx(Button, { type: "button", size: "xs", variant: "ghost", className: "self-start text-cms-muted-foreground" }), children: [_jsx(Plus, { "aria-hidden": true }), t("field.addCheck")] }), _jsx(DropdownMenuContent, { align: "start", className: "min-w-32", children: addableChecks.map((kind) => (_jsxs(DropdownMenuItem, { onClick: () => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] }), children: [_jsx(Plus, { "aria-hidden": true }), checkLabel(kind)] }, kind))) })] }))] })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.prompt, children: deciding ? t("field.criteria") : t("field.prompt") }), _jsx(Textarea, { id: ids.prompt, rows: PROMPT_ROWS, value: spec.prompt, onChange: (event) => set({ prompt: event.target.value }), className: PROMPT_TEXTAREA })] })] }), error && _jsx(InlineError, { children: error }), _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Button, { type: "button", size: "sm", disabled: saving || !dirty || (custom?.isNew === true && !custom.base.label.trim()), onClick: onSave, children: [_jsx(Save, { "aria-hidden": true }), saving ? t("button.saving") : t("button.save")] }), custom?.isNew && (_jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: custom.onCancel, children: t("button.cancel") })), defaults && (_jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: atDefaults, onClick: () => onChange({ ...defaults, enabled: spec.enabled }), children: [_jsx(RotateCcw, { "aria-hidden": true }), t("button.reset")] })), !custom?.isNew && (_jsx("span", { className: "ml-auto text-cms-muted-foreground text-xs", children: feature.updatedAt
                             ? t("meta.edited", {
-                                time: new Date(feature.updatedAt).toLocaleString(ADMIN_LOCALE, { timeZone: CMS_TIME_ZONE }),
+                                time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
                             })
                             : t("meta.default") })), custom && !custom.isNew && (_jsxs(Button, { type: "button", size: "sm", variant: "ghost", className: "text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive", disabled: deleting, onClick: custom.onDelete, children: [_jsx(Trash2, { "aria-hidden": true }), deleting ? t("button.deleting") : t("button.delete")] }))] }), _jsxs("section", { className: "flex flex-col gap-2 rounded-md border bg-cms-muted/30 p-3 text-xs", "aria-label": t("test.title"), children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "font-medium", children: t("test.title") }), _jsxs(Button, { type: "button", size: "xs", variant: "outline", className: "ml-auto", disabled: testDisabled, onClick: () => void runTest(), children: [_jsx(Sparkles, { "aria-hidden": true }), testRunning ? t("test.running") : t("test.run")] })] }), spec.askInstruction && (_jsx(Textarea, { "aria-label": t("test.request"), placeholder: t("test.request"), rows: 2, value: sample.request, onChange: (event) => setSample({ ...sample, request: event.target.value }), onKeyDown: (event) => {
                             // Enter inserts a newline; Cmd/Ctrl+Enter runs.

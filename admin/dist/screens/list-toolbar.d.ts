@@ -1,3 +1,4 @@
+import { type Site } from "@monti-cms/core/client";
 import { type ListState } from "./list-state.js";
 import type { TaxonomyOptions } from "./shared/use-taxonomy.js";
 export interface FilterChip {
@@ -9,8 +10,8 @@ export interface FilterChip {
  * Applied filter chips. Even when a column is hidden, filters on it keep showing as chips
  * to prevent "why can't I see my posts?".
  */
-export declare function filterChips(state: ListState, options: TaxonomyOptions): FilterChip[];
-/** Search box in the header. Sends a server search when typing pauses. Posts and memos can turn on body search. */
+export declare function filterChips(site: Site, state: ListState, options: TaxonomyOptions): FilterChip[];
+/** Search box in the header. Sends a server search when typing pauses. Document collections can turn on body search. */
 export declare function ListSearch({ state, onChange, allowBody, }: {
     state: ListState;
     onChange: (patch: Partial<ListState>) => void;

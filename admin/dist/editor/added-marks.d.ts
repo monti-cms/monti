@@ -1,5 +1,5 @@
-import { type BlockDefinition } from "@monti-cms/core/client";
-import type { CmsJsonValue } from "@monti-cms/core/mdx";
+import { type BlockDefinition, type Site } from "@monti-cms/core/client";
+import type { CmsJsonValue } from "@monti-cms/core/document";
 import { Mark } from "@tiptap/core";
 /**
  * Editor display of added text styles (blocks from extensions or a site config's `syntax.kind: "text"` blocks). The core editor does not know style names and builds
@@ -20,10 +20,10 @@ export interface EditorMarkSpec {
 }
 /** Editor mark name of an added text style (`cms` + Pascal-case block name). */
 export declare const addedMarkName: (blockName: string) => string;
-/** Added text styles (block name → definition). */
-export declare const ADDED_MARKS: ReadonlyMap<string, BlockDefinition>;
+/** Added text styles of a site (block name → definition). */
+export declare const addedMarksOf: (site: Pick<Site, "ADDED_MARK_BLOCKS">) => ReadonlyMap<string, BlockDefinition>;
 /** Editor mark name → added text style definition. */
-export declare const ADDED_MARK_BY_EDITOR_NAME: ReadonlyMap<string, BlockDefinition>;
+export declare const addedMarkByEditorName: (site: Pick<Site, "ADDED_MARK_BLOCKS">) => ReadonlyMap<string, BlockDefinition>;
 /**
  * Style attributes keeping only the definition's attributes. Strings are kept when they have a value, required attributes (`required`) are kept even when empty (`""`). Booleans only when true.
  * Used in both directions, stored document (CmsNode) ↔ editor mark (serialization uses the same rule, so a round trip keeps the text the same).
@@ -32,7 +32,7 @@ export declare function markAttrsOf(block: BlockDefinition, attrs: MarkAttrs | n
 /** Tiptap mark for one added text style. */
 export declare function createAddedMark(block: BlockDefinition, spec?: EditorMarkSpec): Mark<any, any>;
 /** A style linking body text and a code line (blocks with `codeAnchor` in their attributes). If none, the code block's link tool is hidden. */
-export declare const CODE_ANCHOR_REF: {
+export declare const codeAnchorRef: (site: Pick<Site, "ADDED_MARK_BLOCKS">) => {
     readonly mark: string;
     readonly attribute: string;
 } | null;

@@ -1,4 +1,4 @@
-import type { ListSortField } from "@monti-cms/core/client";
+import type { ListSortField, Site } from "@monti-cms/core/client";
 import { type StoredField } from "@monti-cms/core/client";
 import type { ListState } from "./list-state.js";
 /**
@@ -40,23 +40,23 @@ export interface ColumnConfig {
  * Field of a field column: a stored field whose name is not a system column (text, select, media, relation). Taxonomy fields are included.
  * `undefined` if the name does not exist or the field is not stored.
  */
-export declare function fieldColumnOf(collection: string, column: AdminListColumn): StoredField | undefined;
+export declare function fieldColumnOf(site: Site, collection: string, column: AdminListColumn): StoredField | undefined;
 /**
  * Label, sort and filter of one column. A taxonomy field's label is the field label, and it filters by the items of the collection the field points to.
  * Other field columns also use the field label as the label and are not filterable.
  */
-export declare function columnConfig(collection: string, column: AdminListColumn): ColumnConfig;
-export declare const columnLabel: (collection: string, column: AdminListColumn) => string;
+export declare function columnConfig(site: Site, collection: string, column: AdminListColumn): ColumnConfig;
+export declare const columnLabel: (site: Site, collection: string, column: AdminListColumn) => string;
 /**
  * Default columns when there is no list setting (`list.columns`). Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
- * title, slug, locale, status, updated date. The locale column appears only with two or more locales, the slug column only when there is a slug field.
+ * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
  */
-export declare function defaultListColumns(collection: string): AdminListColumn[];
+export declare function defaultListColumns(site: Site, collection: string): AdminListColumn[];
 /**
  * Columns available in a collection and their default visibility. Built from the fields of the collection definition and `list.columns` (default columns if absent).
  * Besides system columns and taxonomy fields, fields listed in `list.columns` (text, select, relation, etc.) can also be columns.
  */
-export declare function columnsFor(collection: string): {
+export declare function columnsFor(site: Site, collection: string): {
     available: AdminListColumn[];
     defaults: AdminListColumn[];
 };
@@ -66,7 +66,7 @@ export declare function knownColumnRecord<T>(record: Readonly<Record<string, T>>
  * Filters actually usable in this collection. Item collections have only active/trash,
  * and the trash screen has no status filter since every item is in trash.
  */
-export declare function filterFor(collection: string, column: AdminListColumn, mode?: "list" | "trash"): ColumnFilter;
+export declare function filterFor(site: Site, collection: string, column: AdminListColumn, mode?: "list" | "trash"): ColumnFilter;
 /** Whether a filter is applied to this column. Shown as a chip even if the column is hidden. */
 export declare function isColumnFiltered(state: ListState, filter: ColumnFilter): boolean;
 export {};

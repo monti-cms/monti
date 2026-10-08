@@ -1,18 +1,18 @@
 import { adminRoute, json, readJsonBody } from "@monti-cms/core/plugin/server";
 import { createCustomAction, listActions } from "../../actions.js";
 import { usableActionKeys } from "../../settings.js";
-import { getAiStore } from "../../store.js";
+import { aiStoreFor } from "../../store.js";
 /** The AI action list (definition + edited values) and the names of actions usable now (connection ready). Slots only attach enabled actions that are usable. */
-export const GET = adminRoute(async () => {
-    const store = getAiStore();
-    const items = await listActions(store);
-    return json({ usable: await usableActionKeys(store, items), items });
+export const GET = adminRoute(async ({ cms }) => {
+    const store = aiStoreFor(cms);
+    const items = await listActions(cms.site, store);
+    return json({ usable: await usableActionKeys(cms.site, store, items), items });
 });
 /**
  * Creates a screen action. The body is `{ base: { label, surface, result, engine? }, value?: edited value }`.
  * If edited values (connection, model, instructions, checks, etc.) are given too, they are saved at once.
  */
-export const POST = adminRoute(async ({ request }) => {
+export const POST = adminRoute(async ({ request, cms }) => {
     const body = (await readJsonBody(request));
-    return json(await createCustomAction(getAiStore(), body.base, body.value), { status: 201 });
+    return json(await createCustomAction(cms.site, aiStoreFor(cms), body.base, body.value), { status: 201 });
 });

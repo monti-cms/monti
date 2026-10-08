@@ -1,5 +1,6 @@
-import type { PluginDatabase } from "@monti-cms/core";
-/** Row name in the AI settings table (`ai_settings`). */
+import type { Site } from "@monti-cms/core/client";
+import type { Cms, PluginSecrets, PluginStorage } from "@monti-cms/core/plugin/server";
+/** Row name in the AI settings (collection `settings`). */
 export type AiSettingsId = "default" | "shared";
 /** One row of edited values per action name. */
 export interface AiActionOverrideRow {
@@ -9,9 +10,18 @@ export interface AiActionOverrideRow {
     version: number;
     updatedAt: Date;
 }
-/** Edited AI action values (`ai_action_overrides`), connection settings (`ai_settings`) and UI actions (`ai_custom_actions`). */
-export declare function createAiStore({ pool, schema: qSchema }: PluginDatabase): {
-    /** All edited values. Actions never edited have none. */
+/** Edited AI action values, connection settings and UI actions, kept in the AI plugin's storage. */
+export declare function createAiStore(storage: PluginStorage, 
+/**
+ * `site`: the site the store works for (the language of its errors). `secrets`: the AI plugin's secrets API for the stored service keys (`aiSecrets(cms)`). Without it,
+ * keys cannot be stored or read.
+ */
+options: {
+    readonly site: Pick<Site, "createTranslator">;
+    readonly secrets?: () => PluginSecrets;
+}): {
+    secrets: () => PluginSecrets;
+    /** All edited values, by action name. Actions never edited have none. */
     listAiActionOverrides: () => Promise<AiActionOverrideRow[]>;
     /**
      * Changes the edited values. The first time, `expectedVersion` is 0; after that, a different version gives 409.
@@ -50,8 +60,5 @@ export declare function createAiStore({ pool, schema: qSchema }: PluginDatabase)
     }) => Promise<void>;
 };
 export type AiStore = ReturnType<typeof createAiStore>;
-declare global {
-    var __cmsAiStore: AiStore | undefined;
-}
-/** AI store built from the main DB connection. Only one is kept even if the dev server reloads the module. */
-export declare function getAiStore(): AiStore;
+/** The AI store of one CMS instance, built from its plugin storage on first use. Each instance has its own. */
+export declare function aiStoreFor(cms: Cms): AiStore;

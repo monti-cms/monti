@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { MoreHorizontal } from "lucide-react";
 import { cloneElement } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated.js";
@@ -8,7 +8,6 @@ import { ContextMenu, ContextMenuContent, ContextMenuGroup, ContextMenuItem, Con
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, } from "../../ui/dropdown-menu.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { sharedMessages } from "./messages.js";
-const t = createTranslator(sharedMessages);
 /** Removes leading, trailing or consecutive separators (after dropping conditional items). */
 function tidy(actions) {
     const out = [];
@@ -22,6 +21,7 @@ function tidy(actions) {
     return out;
 }
 function ContextItems({ actions }) {
+    const t = useTranslator(sharedMessages);
     return tidy(actions).map((action, index) => {
         const key = `${action.kind}-${"label" in action ? action.label : index}-${index}`;
         switch (action.kind) {
@@ -39,6 +39,7 @@ function ContextItems({ actions }) {
     });
 }
 function DropdownItems({ actions }) {
+    const t = useTranslator(sharedMessages);
     return tidy(actions).map((action, index) => {
         const key = `${action.kind}-${"label" in action ? action.label : index}-${index}`;
         switch (action.kind) {

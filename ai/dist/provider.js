@@ -1,10 +1,9 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { createTranslator, slugify } from "@monti-cms/core/client";
+import { slugify } from "@monti-cms/core/client";
 import { APICallError, generateText, NoObjectGeneratedError, Output, RetryError, streamText } from "ai";
 import { z } from "zod";
 import { AiError } from "./errors.js";
 import { providerMessages } from "./provider.messages.js";
-const t = createTranslator(providerMessages);
 export const isFakeAi = () => process.env.CMS_AI_FAKE === "1" && process.env.NODE_ENV !== "production";
 /** Explanation the service put in the error body (`{"error": {"message": …}}` etc.). Empty string if none. */
 function serviceMessage(detail) {
@@ -21,7 +20,8 @@ function serviceMessage(detail) {
     return message.replace(/\s+/g, " ").trim().slice(0, 200);
 }
 /** Turns a service error into an AI error to show on screen. Appends the service's explanation and also logs it. */
-function providerError(status, detail) {
+function providerError(site, status, detail) {
+    const t = site.createTranslator(providerMessages);
     const message = serviceMessage(detail);
     console.error("AI provider error:", status, message);
     const withDetail = (text) => (message ? `${text} — ${message}` : text);
@@ -74,7 +74,8 @@ function extractJson(text) {
         throw new Error("No JSON object in the answer");
     return JSON.parse(text.slice(start, end + 1));
 }
-export function createGenerator(config) {
+export function createGenerator(site, config) {
+    const t = site.createTranslator(providerMessages);
     const create = (supportsStructuredOutputs) => createOpenAICompatible({
         name: "cms-ai",
         baseURL: config.baseUrl,
@@ -136,7 +137,7 @@ export function createGenerator(config) {
                         throw error;
                     console.warn(`[@monti-cms/ai] ${config.model} stream failed: ${failureNote(error)}`);
                     if (APICallError.isInstance(error)) {
-                        throw providerError(error.statusCode, error.responseBody ?? error.message);
+                        throw providerError(site, error.statusCode, error.responseBody ?? error.message);
                     }
                     throw new AiError("ai_failed", t("streamCut"));
                 }
@@ -162,7 +163,7 @@ export function createGenerator(config) {
                 }
             }
             if (APICallError.isInstance(lastError)) {
-                throw providerError(lastError.statusCode, lastError.responseBody ?? lastError.message);
+                throw providerError(site, lastError.statusCode, lastError.responseBody ?? lastError.message);
             }
             if (isTruncated(lastError)) {
                 throw new AiError("ai_failed", t("tooLongModel"));
@@ -175,7 +176,8 @@ const decisionAnswerSchema = z.union([
     z.object({ type: z.literal("noul"), noul: z.number() }),
     z.object({ type: z.literal("choice"), choice: z.string(), probabilities: z.record(z.string(), z.number()) }),
 ]);
-export function createDecider(config) {
+export function createDecider(site, config) {
+    const t = site.createTranslator(providerMessages);
     return {
         name: "decisions",
         model: config.model,
@@ -196,7 +198,7 @@ export function createDecider(config) {
             }
             const text = await response.text();
             if (!response.ok)
-                throw providerError(response.status, text);
+                throw providerError(site, response.status, text);
             const parsed = z.object({ answers: z.record(z.string(), decisionAnswerSchema) }).safeParse((() => {
                 try {
                     return JSON.parse(text);
@@ -214,7 +216,8 @@ export function createDecider(config) {
     };
 }
 /** Model list of an OpenAI-style URL (`GET {baseUrl}/models`). Empty array for services that do not provide a list. */
-export async function listModels(baseUrl, apiKey, signal) {
+export async function listModels(site, baseUrl, apiKey, signal) {
+    const t = site.createTranslator(providerMessages);
     let response;
     try {
         response = await fetch(`${baseUrl.replace(/\/+$/, "")}/models`, {
@@ -230,7 +233,7 @@ export async function listModels(baseUrl, apiKey, signal) {
     if (response.status === 404)
         return [];
     if (!response.ok)
-        throw providerError(response.status, await response.text());
+        throw providerError(site, response.status, await response.text());
     const body = (await response.json().catch(() => null));
     const items = Array.isArray(body?.data) ? body.data : [];
     return items

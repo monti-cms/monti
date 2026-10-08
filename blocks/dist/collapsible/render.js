@@ -4,8 +4,12 @@ import { blockLabels } from "../shared/labels.js";
 export function Collapsible({ title, defaultOpen, labels = blockLabels(), children, }) {
     return (_jsxs("details", { className: "cms-block-collapsible", open: defaultOpen || undefined, children: [_jsx("summary", { className: "cms-block-collapsible-summary", children: title?.trim() || labels.collapsibleFallback }), _jsx("div", { className: "cms-block-collapsible-body", children: children })] }));
 }
-/** Public component for the collapsible (called by `@monti-cms/core/render`). */
-export default ({ locale }) => {
+/** Public components for the collapsible in the JSON renderer (`renderDocument`). */
+export const documentComponents = ({ locale }) => {
     const labels = blockLabels(locale);
-    return { Collapsible: (props) => _jsx(Collapsible, { ...props, labels: labels }) };
+    return {
+        blocks: {
+            collapsible: ({ title, defaultOpen, children }) => (_jsx(Collapsible, { title: title, defaultOpen: defaultOpen, labels: labels, children: children })),
+        },
+    };
 };

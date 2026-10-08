@@ -1,7 +1,5 @@
+import type { DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
 import { CodeRef } from "./render.client.js";
 export { CodeRef };
-export default _default;
-/** Public component for code-ref (called by `@monti-cms/core/render`). Code line highlighting happens in the browser (client component). */
-declare function _default(): {
-    CodeRef: typeof CodeRef;
-};
+/** Public components for code-ref in the JSON renderer (`renderDocument`): the mark `code-ref`. */
+export declare const documentComponents: ({ locale }: DocumentComponentsContext) => LooseDocumentComponents;

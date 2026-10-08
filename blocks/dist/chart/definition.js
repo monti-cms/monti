@@ -1,8 +1,9 @@
 import { createActiveTranslator, defineBlock } from "@monti-cms/core";
 import { keywordList } from "../shared/text.js";
 import { chartMessages } from "./messages.js";
+import { validateChartBlock } from "./validate.js";
 const t = createActiveTranslator(chartMessages);
-/** Chart (` ```chart `). The chart syntax is read by `parseChartDsl`. The editor preview comes from the extension (a site can replace it); the public page is rendered by the site. */
+/** Chart (` ```chart `). The chart syntax is read by `parseChartDsl`, and its errors are warnings on save and publish (`validate`). The editor preview comes from the extension (a site can replace it); the public page is rendered by the site. */
 export const chartBlock = defineBlock({
     name: "chart",
     get label() {
@@ -14,6 +15,7 @@ export const chartBlock = defineBlock({
     syntax: { kind: "fence", lang: "chart" },
     component: "Chart",
     attributes: {},
+    validate: validateChartBlock,
     editor: {
         view: "node",
         insertable: true,

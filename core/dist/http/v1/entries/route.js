@@ -1,11 +1,11 @@
-import { getCmsContentService, getCmsContentStore } from "../../../container.js";
-import { createEntryBodySchema, LIST_ARRAY_QUERY_KEYS, listEntriesQuerySchema } from "../../../core/api.js";
+import { LIST_ARRAY_QUERY_KEYS } from "../../../core/api.js";
+import { emptyStoredDocument } from "../../../doc/stored-document.js";
 import { adminRoute, json, parseWith, readJsonBody, readQuery } from "../handler.js";
 /** Per-collection list, search, filter, sort, and paging. */
-export const GET = adminRoute(async ({ request }) => {
-    const query = parseWith(listEntriesQuerySchema, readQuery(request, LIST_ARRAY_QUERY_KEYS), "Invalid query parameters");
+export const GET = adminRoute(async ({ request, cms }) => {
+    const query = parseWith(cms.site.api.listEntriesQuerySchema, readQuery(request, LIST_ARRAY_QUERY_KEYS), "Invalid query parameters");
     const range = (from, to) => (from || to ? { from, to } : undefined);
-    const result = await getCmsContentStore().listEntries({
+    const result = await cms.store().listEntries({
         collection: query.collection,
         search: query.search,
         includeBody: query.includeBody,
@@ -27,16 +27,20 @@ export const GET = adminRoute(async ({ request }) => {
     });
     return json(result);
 });
-/** Create. For record collections (tags, categories, series) the service applies the public values together with creation. */
-export const POST = adminRoute(async ({ request }) => {
-    const body = parseWith(createEntryBodySchema, await readJsonBody(request));
+/** Create. The body is `doc`, or `body` with its `format`. For record collections (tags, categories, series) the service applies the public values together with creation. */
+export const POST = adminRoute(async ({ request, cms }) => {
+    const body = parseWith(cms.site.api.createEntryBodySchema, await readJsonBody(request));
     const input = {
         collection: body.collection,
         slug: body.slug ?? null,
         metadata: body.metadata,
-        mdx: body.mdx,
+        // The body: a document, a text with its format, or none (an empty body).
+        ...(body.doc !== undefined
+            ? { doc: body.doc }
+            : body.body !== undefined
+                ? { body: body.body, format: body.format }
+                : { doc: emptyStoredDocument() }),
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
     };
-    const entry = await getCmsContentService().createDraft(input);
-    return json(entry, { status: 201 });
+    return json(await cms.contentService().createDraft(input), { status: 201 });
 });

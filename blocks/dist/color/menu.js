@@ -2,16 +2,19 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { addedMarkName } from "@monti-cms/admin/editor";
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, IconButton, Tooltip, TooltipContent, TooltipTrigger, } from "@monti-cms/admin/kit";
-import { createTranslator, getPluginOptions } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Baseline, Check } from "lucide-react";
-import { cleanTextColor, DEFAULT_TEXT_PALETTE, hasTextColor, textColorProps, } from "./colors.js";
+import { cleanTextColor, defaultTextPalette, hasTextColor, textColorProps, } from "./colors.js";
 import { colorBlock } from "./definition.js";
 import { colorMessages } from "./messages.js";
-const t = createTranslator(colorMessages);
 /** Editor mark name (`cmsColor`). */
 export const COLOR_MARK_NAME = addedMarkName(colorBlock.name);
 /** Picker list. The extension option `color({ palette })`, or the default 8 colors if absent. */
-const PALETTE = getPluginOptions("color")?.palette ?? DEFAULT_TEXT_PALETTE;
+function usePalette() {
+    const site = useSite();
+    const t = useTranslator(colorMessages);
+    return site.getPluginOptions("color")?.palette ?? defaultTextPalette(t);
+}
 const currentColor = (editor) => cleanTextColor(editor.getAttributes(COLOR_MARK_NAME));
 /** Changes only the text color or only the background color of the selected text. If both end up removed, the mark is removed. */
 export function applyTextColor(editor, kind, color) {
@@ -36,6 +39,7 @@ export function applyTextColor(editor, kind, color) {
 }
 /** Sample of the letter "가". It uses the same `.cms-color` rule as the real body, so it shows in the current theme's color. */
 function Swatch({ kind, color }) {
+    const t = useTranslator(colorMessages);
     const props = color
         ? textColorProps(kind === "fg" ? { fg: color.light, fgDark: color.dark } : { bg: color.light, bgDark: color.dark })
         : null;
@@ -44,10 +48,12 @@ function Swatch({ kind, color }) {
         kind === "bg" && "![padding:0] !rounded-md"), children: t("sample") }));
 }
 function SwatchRow({ editor, kind, variant = "menu", onPicked, }) {
+    const t = useTranslator(colorMessages);
+    const palette = usePalette();
     const current = currentColor(editor)[kind] ?? null;
     const options = [
         { name: t("default"), color: null },
-        ...PALETTE.map((color) => ({ name: color.name, color: color[kind] })),
+        ...palette.map((color) => ({ name: color.name, color: color[kind] })),
     ];
     return (_jsx("div", { className: "grid grid-cols-9 gap-1 px-1 pb-1", children: options.map(({ name, color }) => {
             const selected = (color?.light.toLowerCase() ?? null) === current;
@@ -59,10 +65,12 @@ function SwatchRow({ editor, kind, variant = "menu", onPicked, }) {
 }
 /** Text/background color picker list. Shared by the toolbar menu and the "More" menu. */
 export function TextColorMenuItems({ editor }) {
+    const t = useTranslator(colorMessages);
     return (_jsxs(_Fragment, { children: [_jsxs(DropdownMenuGroup, { children: [_jsx(DropdownMenuLabel, { children: t("fg.label") }), _jsx(SwatchRow, { editor: editor, kind: "fg" })] }), _jsxs(DropdownMenuGroup, { children: [_jsx(DropdownMenuLabel, { children: t("bg.label") }), _jsx(SwatchRow, { editor: editor, kind: "bg" })] })] }));
 }
 /** Text/background color picker that expands inside the format bubble. Calls `onPicked` when a color is chosen. */
 export function TextColorPanel({ editor, onPicked }) {
+    const t = useTranslator(colorMessages);
     return (_jsxs("div", { className: "flex flex-col gap-1", children: [_jsx("p", { className: "px-1 text-cms-muted-foreground", children: t("fg.label") }), _jsx(SwatchRow, { editor: editor, kind: "fg", variant: "buttons", onPicked: onPicked }), _jsx("p", { className: "px-1 text-cms-muted-foreground", children: t("bg.label") }), _jsx(SwatchRow, { editor: editor, kind: "bg", variant: "buttons", onPicked: onPicked })] }));
 }
 /** Text color button icon. Painted with the text and background colors of the current selection (shared by the toolbar and the format bubble). */
@@ -73,5 +81,6 @@ export function TextColorIcon({ editor }) {
 }
 /** Text color button in the toolbar. The icon shows the current text color. */
 export function TextColorMenu({ editor }) {
+    const t = useTranslator(colorMessages);
     return (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("label"), side: "bottom", disabled: !editor.isEditable, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(TextColorIcon, { editor: editor }) }), _jsx(DropdownMenuContent, { align: "start", className: "w-auto", children: _jsx(TextColorMenuItems, { editor: editor }) })] }));
 }

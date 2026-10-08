@@ -1,23 +1,26 @@
-import { cmsConfig } from "../config/resolved.js";
-import { setActiveLocale } from "./active.js";
 import { translate } from "./define.js";
 export * from "./define.js";
+/** Language used to pick the dictionary from an admin locale (leading part, e.g. `ko-KR` -> `ko`). */
+export const languageOf = (locale) => locale.split("-")[0]?.toLowerCase() ?? "en";
 /**
- * Admin UI locale (BCP 47). The site config's `admin.locale`, else the site default locale (`defaultLocale`). Date and number formatting follow it.
- */
-export const ADMIN_LANGUAGE_TAG = cmsConfig.admin?.locale ?? cmsConfig.defaultLocale;
-/** Locale used to pick the dictionary (leading part, e.g. `ko-KR` -> `ko`). */
-export const ADMIN_LANGUAGE = ADMIN_LANGUAGE_TAG.split("-")[0]?.toLowerCase() ?? "en";
-/**
- * Translator for one dictionary. Picks by the admin UI locale and prefers text the site overrides with `admin.messages`.
+ * Translator for one dictionary in one language, preferring the text the site overrides with `admin.messages`. Nothing is read from a site config: the
+ * language and the overrides are given. Code that runs with a site gets one from it (`site.createTranslator(bundle)`, `useTranslator(bundle)` in React).
  *
  * ```ts
- * const t = createTranslator(messages);
+ * const t = createTranslator(messages, "ko");
  * t("save"); t("deleted", { name });
  * ```
  */
-export function createTranslator(bundle, language = ADMIN_LANGUAGE) {
-    return (key, vars) => translate(bundle, language, key, vars, cmsConfig.admin?.messages);
+export function createTranslator(bundle, language, overrides) {
+    return (key, vars) => translate(bundle, language, key, vars, overrides);
 }
-// Labels in modules read by the config file (block and line-effect definitions) use the same locale and overridden text too.
-setActiveLocale(ADMIN_LANGUAGE, cmsConfig.admin?.messages);
+/** The language of the admin UI of a site config. */
+export function createI18n(config) {
+    const ADMIN_LANGUAGE_TAG = config.admin?.locale ?? config.defaultLocale;
+    const ADMIN_LANGUAGE = languageOf(ADMIN_LANGUAGE_TAG);
+    return {
+        ADMIN_LANGUAGE_TAG,
+        ADMIN_LANGUAGE,
+        createTranslator: (bundle) => createTranslator(bundle, ADMIN_LANGUAGE, config.admin?.messages),
+    };
+}

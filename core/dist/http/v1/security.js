@@ -1,18 +1,20 @@
 import { AuthError } from "../../adapters/auth/index.js";
-import { cmsConfig } from "../../config/resolved.js";
 import { HttpError } from "./error-handler.js";
 /**
  * Same-origin check for state-changing requests (POST, PATCH, PUT, DELETE).
  * Requires an Origin/Host match or `Sec-Fetch-Site: same-origin`, and rejects when there is no signal at all (fail-closed).
  * Requests with a body must use `Content-Type: application/json` (otherwise 415).
- * Accepted hosts are the proxy-supplied `X-Forwarded-Host`, `Host`, and the host of the site URL (`site.url`). Behind a proxy
- * that rewrites `Host`, the origin sent by the browser still matches.
+ * Accepted hosts are `Host`, the host the request URL names, and the host of the site URL (`site.url`). `X-Forwarded-Host` is accepted only when
+ * the host is trusted (`trustHost` in the server config or `AUTH_TRUST_HOST`, i.e. the server runs behind a proxy that sets it), because a client can send
+ * that header itself. Behind a proxy that rewrites `Host` without that option, set `site.url` so the public host is still accepted.
  */
-export function validateSameOrigin(request) {
+export function validateSameOrigin(
+/** The instance serving the request: whether `X-Forwarded-Host` can be trusted (`cms.isHostTrusted()`), and the site URL (`site.url`) of its config. */
+cms, request, options = {}) {
     const method = request.method.toUpperCase();
     if (["GET", "HEAD", "OPTIONS"].includes(method))
         return;
-    const hosts = allowedHosts(request);
+    const hosts = allowedHosts(request, cms.isHostTrusted(), cms.site.config.site?.url);
     const origin = request.headers.get("origin");
     const secFetchSite = request.headers.get("sec-fetch-site");
     const referer = request.headers.get("referer");
@@ -44,25 +46,26 @@ export function validateSameOrigin(request) {
     }
     if (["POST", "PATCH", "PUT"].includes(method)) {
         const contentType = request.headers.get("content-type");
-        if (!contentType?.toLowerCase().includes("application/json")) {
-            throw new HttpError(415, "unsupported_media_type", "Content-Type must be application/json");
+        const accepted = options.form ? ["application/json", "application/x-www-form-urlencoded"] : ["application/json"];
+        if (!accepted.some((type) => contentType?.toLowerCase().includes(type))) {
+            throw new HttpError(415, "unsupported_media_type", `Content-Type must be ${accepted.join(" or ")}`);
         }
     }
 }
 /** Host of the site URL (if configured). */
-const SITE_HOST = (() => {
+const siteHostOf = (siteUrl) => {
     try {
-        return cmsConfig.site?.url ? new URL(cmsConfig.site.url).host.toLowerCase() : undefined;
+        return siteUrl ? new URL(siteUrl).host.toLowerCase() : undefined;
     }
     catch {
         return undefined;
     }
-})();
-/** Hosts this request is received on. `X-Forwarded-Host` may be comma-separated, so use the first value (received by the outermost proxy). */
-function allowedHosts(request) {
+};
+/** Hosts this request is received on. `X-Forwarded-Host` may be comma-separated, so use the first value (received by the outermost proxy). Used only when the host is trusted. */
+function allowedHosts(request, trustHost, siteUrl) {
     const hosts = new Set();
-    const forwarded = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-    for (const host of [forwarded, request.headers.get("host"), request.nextUrl.host, SITE_HOST]) {
+    const forwarded = trustHost ? request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() : undefined;
+    for (const host of [forwarded, request.headers.get("host"), new URL(request.url).host, siteHostOf(siteUrl)]) {
         if (host)
             hosts.add(host.toLowerCase());
     }

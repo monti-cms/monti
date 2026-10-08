@@ -6,6 +6,7 @@ import { defineMessages } from "../../i18n/define.js";
 export const codeBlockMessages = defineMessages("cms.code-block", {
     en: {
         "lineEffect.highlight": "Highlight",
+        "lineEffect.focus": "Focus",
         "lineEffect.plus": "Added",
         "lineEffect.minus": "Removed",
         "lineEffect.warning": "Warning",
@@ -26,6 +27,7 @@ export const codeBlockMessages = defineMessages("cms.code-block", {
     },
     ko: {
         "lineEffect.highlight": "강조",
+        "lineEffect.focus": "포커스",
         "lineEffect.plus": "추가",
         "lineEffect.minus": "삭제",
         "lineEffect.warning": "경고",

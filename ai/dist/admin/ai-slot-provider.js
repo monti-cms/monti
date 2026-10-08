@@ -1,20 +1,22 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
 import { CmsApiError, cmsFetch } from "@monti-cms/admin/api";
+import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider } from "@monti-cms/admin/slots";
-import { adminHref, cmsApiUrl, createTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
-import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { attachedTo } from "../registry.js";
 import { aiCommonMessages } from "./ai-common.messages.js";
-const t = createTranslator(aiCommonMessages);
+import { useMdxFormat } from "./mdx-format.js";
 export const AI_ACTIONS_KEY = ["cms", "ai", "actions"];
 export function useAiActions(enabled = true) {
+    const site = useSite();
+    const t = useTranslator(aiCommonMessages);
     return useQuery({
         queryKey: AI_ACTIONS_KEY,
-        queryFn: ({ signal }) => cmsFetch(cmsApiUrl("/v1/ai/actions"), {
+        queryFn: ({ signal }) => cmsFetch(site, cmsApiUrl("/v1/ai/actions"), {
             signal,
             fallback: t("listFailed"),
         }),
@@ -30,8 +32,9 @@ const requestBody = (action, options) => ({
     ...(options.draftBase !== undefined ? { draftBase: options.draftBase } : {}),
 });
 /** Runs an action by name. */
-export async function runAiAction(action, input, options = {}) {
-    const response = await cmsFetch(cmsApiUrl("/v1/ai/run"), {
+export async function runAiAction(site, action, input, options = {}) {
+    const t = site.createTranslator(aiCommonMessages);
+    const response = await cmsFetch(site, cmsApiUrl("/v1/ai/run"), {
         method: "POST",
         json: { ...requestBody(action, options), input },
         signal: options.signal,
@@ -43,7 +46,8 @@ export async function runAiAction(action, input, options = {}) {
  * Runs an action as a stream. Each time more text arrives, calls `onText` with all text received so far,
  * and when done returns the result that passed the checks.
  */
-export async function streamAiAction(action, input, options) {
+export async function streamAiAction(site, action, input, options) {
+    const t = site.createTranslator(aiCommonMessages);
     const fallback = t("runFailed");
     const response = await fetch(cmsApiUrl("/v1/ai/run"), {
         method: "POST",
@@ -84,8 +88,9 @@ export async function streamAiAction(action, input, options) {
     throw new CmsApiError(502, "ai_failed", t("streamCut"), [], {});
 }
 /** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */
-export async function runAiActionMany(action, inputs, options = {}) {
-    const response = await cmsFetch(cmsApiUrl("/v1/ai/run"), {
+export async function runAiActionMany(site, action, inputs, options = {}) {
+    const t = site.createTranslator(aiCommonMessages);
+    const response = await cmsFetch(site, cmsApiUrl("/v1/ai/run"), {
         method: "POST",
         json: { ...requestBody(action, options), inputs },
         signal: options.signal,
@@ -122,14 +127,18 @@ export function inputFromContext(action, context) {
     return { input, env };
 }
 /** Whether this is the admin login screen (`login` under the admin path `admin.path`). Before login, the action list is not requested. */
-const isLoginScreen = (pathname) => pathname !== null && pathname.replace(/\/$/, "") === adminHref("/login");
+const isLoginScreen = (site, pathname) => pathname !== null && pathname.replace(/\/$/, "") === site.adminHref("/login");
 /**
  * Attaches AI actions to screen slots. Among enabled actions, those whose attach target (`attach`) is this slot are attached as buttons.
  * An action is not attached if the connection it uses is not ready.
  */
 export function AiSlotProvider({ children }) {
-    const pathname = usePathname();
-    const { data } = useAiActions(!isLoginScreen(pathname));
+    const site = useSite();
+    const t = useTranslator(aiCommonMessages);
+    const pathname = useAdminPathname();
+    const { data } = useAiActions(!isLoginScreen(site, pathname));
+    // The model reads the body as MDX: the document of the entry is written with the `mdx` format when an action runs.
+    const format = useMdxFormat();
     const sources = useMemo(() => {
         const usable = new Set(data?.usable ?? []);
         const actions = data ? data.items.filter((action) => action.enabled && usable.has(action.key)) : [];
@@ -144,11 +153,15 @@ export function AiSlotProvider({ children }) {
             askInstruction: action.askInstruction,
             instant: action.instant,
             run: (context, signal) => {
-                const { input, env } = inputFromContext(action, context);
-                return runAiAction(action.key, input, { env, request: context.request, signal });
+                const { body, ...rest } = context;
+                const { input, env } = inputFromContext(action, {
+                    ...rest,
+                    ...(body && format ? { body: format.export(body).trim() } : {}),
+                });
+                return runAiAction(site, action.key, input, { env, request: context.request, signal });
             },
         }));
         return [source];
-    }, [data]);
+    }, [data, format, site, t]);
     return _jsx(SlotRegistryProvider, { sources: sources, children: children });
 }

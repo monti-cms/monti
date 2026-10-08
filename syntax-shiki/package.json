@@ -1,0 +1,49 @@
+{
+  "name": "@monti-cms/syntax-shiki",
+  "version": "0.2.0-next.0",
+  "private": true,
+  "description": "Shiki code notation for @monti-cms/mdx: reads [!code ++], [!code highlight] and friends in code fences on import (read only)",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@types/mdast": "^4.0.4",
+    "unist-util-visit": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@monti-cms/mdx": "^0.2.0-next.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "next": "16.4.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remark-gfm": "^4.0.1",
+    "remark-mdx": "^3.1.1",
+    "remark-parse": "^11.0.0",
+    "typescript": "^7.0.2",
+    "unified": "^11.0.5",
+    "vite": "^8.3.0",
+    "vitest": "^4.0.18",
+    "@monti-cms/core": "0.2.0-next.0",
+    "@monti-cms/mdx": "0.2.0-next.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run && vitest run -c vitest.configured.config.ts",
+    "test:configured": "vitest run -c vitest.configured.config.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "build": "node ../../scripts/build-package.mjs"
+  }
+}

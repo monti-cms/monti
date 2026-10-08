@@ -1,19 +1,26 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useHydrated } from "../lib/hooks/use-hydrated.js";
 import { cn } from "../lib/utils/cn.js";
 import { Button, buttonVariants } from "./button.js";
 import { uiMessages } from "./messages.js";
-const t = createTranslator(uiMessages);
 /**
  * Toggle button for light and dark themes. On server render the current theme is unknown, and the button rendered on the server
  * gave the elements after it automatic IDs (useId) different from the browser's (hydration mismatch). So until hydration
  * finishes it renders a same-size placeholder, and afterwards the real button.
  */
-export function ThemeToggle({ className, labels = { toLight: t("theme.toLight"), toDark: t("theme.toDark") }, ...props }) {
+export function ThemeToggle({ labels, ...props }) {
+    return labels ? _jsx(ThemeToggleButton, { labels: labels, ...props }) : _jsx(AdminThemeToggle, { ...props });
+}
+/** The toggle with the admin's own button names, which follow the admin language of the site. */
+function AdminThemeToggle(props) {
+    const t = useTranslator(uiMessages);
+    return _jsx(ThemeToggleButton, { labels: { toLight: t("theme.toLight"), toDark: t("theme.toDark") }, ...props });
+}
+function ThemeToggleButton({ className, labels, ...props }) {
     const { resolvedTheme, setTheme } = useTheme();
     const hydrated = useHydrated();
     if (!hydrated) {

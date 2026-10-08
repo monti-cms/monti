@@ -1,3 +1,4 @@
+import { type Translator } from "@monti-cms/core/client";
 import { type ReactNode } from "react";
 export interface ConfirmRequest {
     title: string;
@@ -12,7 +13,7 @@ export declare function ConfirmDialog({ request, onClose }: {
     onClose: () => void;
 }): import("react").JSX.Element;
 /** The question asked when discarding unsaved content. Every edit slot with a save button uses the same wording. */
-export declare const DISCARD_CONFIRM: {
+export declare const discardConfirm: (t: Translator<"discard.title" | "discard.description" | "discard.confirm">) => {
     readonly title: string;
     readonly description: string;
     readonly confirmLabel: string;

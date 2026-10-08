@@ -1,3 +1,4 @@
+import { type Site } from "@monti-cms/core/client";
 import type { AiInputKind } from "../action.js";
 import type { AiActionView } from "../actions.js";
 import type { AiRunEnv } from "./ai-slot-provider.js";
@@ -15,7 +16,7 @@ type SampleFeature = Pick<AiActionView, "input" | "engine" | "attach">;
 /** Fields shown in the test: inputs to send (including required ones) and language inputs (which go into the instructions). The judge mode does not read images. */
 export declare function sampleFields(feature: SampleFeature, send: readonly string[]): SampleField[];
 /** Initial value of a field. The first language input is the default language; the next language input is the first non-default language (source -> target). */
-export declare function sampleDefaults(feature: Pick<AiActionView, "input">): Record<string, string>;
+export declare function sampleDefaults(site: Pick<Site, "DEFAULT_LOCALE" | "PREFIXED_LOCALES">, feature: Pick<AiActionView, "input">): Record<string, string>;
 /** Current value of a field. If never edited, it is the initial value. */
 export declare const sampleValue: (values: Readonly<Record<string, string>>, defaults: Readonly<Record<string, string>>, name: string) => string;
 /** Whether any required field is empty (if so, it does not run). */

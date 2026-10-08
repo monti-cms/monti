@@ -1,13 +1,22 @@
-import { authGateway } from "../../adapters/auth/index.js";
+import { actorOf, withActor } from "../../core/actor.js";
 import { HttpError, handleApiError } from "./error-handler.js";
 import { validateSameOrigin } from "./security.js";
-export function adminRoute(handler) {
+/**
+ * Wraps a route with the admin check. The route handler passes the instance in the context. A route file mounted on its own in the app
+ * (not served by `cms.handle()`) names the instance it belongs to with `bound.cms`.
+ */
+export function adminRoute(handler, bound = {}) {
     return async (request, context) => {
         try {
-            validateSameOrigin(request);
-            const auth = await authGateway.verifyAdmin();
+            const cms = context?.cms ?? bound.cms;
+            if (!cms) {
+                throw new Error("admin route called without a CMS instance: serve it through `cms.handle()` or pass `{ cms }` when wrapping it");
+            }
+            validateSameOrigin(cms, request);
+            const auth = await cms.authGateway.verifyAdmin();
             const params = (await context?.params) ?? {};
-            return await handler({ request, params, auth });
+            // The store records this admin as the one who made the changes the handler writes (`changedBy`).
+            return await withActor(actorOf(auth), () => handler({ request, params, auth, cms }));
         }
         catch (error) {
             return handleApiError(error);
@@ -49,7 +58,7 @@ export async function readVersionedBody(request, schema) {
 }
 /** The `expectedVersion` query param (DELETE requests). */
 export function readVersionQuery(request) {
-    const raw = request.nextUrl.searchParams.get("expectedVersion");
+    const raw = new URL(request.url).searchParams.get("expectedVersion");
     assertVersionPresent(raw ?? undefined);
     const version = Number(raw);
     if (!Number.isInteger(version) || version <= 0) {
@@ -60,10 +69,19 @@ export function readVersionQuery(request) {
 /** Converts the query to an object. Keys in `arrayKeys` may appear multiple times. */
 export function readQuery(request, arrayKeys = []) {
     const query = {};
-    const params = request.nextUrl.searchParams;
+    const params = new URL(request.url).searchParams;
     for (const key of new Set(params.keys())) {
         query[key] = arrayKeys.includes(key) ? params.getAll(key) : params.get(key);
     }
     return query;
+}
+/** The `format` query param of a read, or `undefined`. An invalid name is a 400; whether the format is installed is decided where it is used. */
+export function readFormatQuery(request) {
+    const raw = new URL(request.url).searchParams.get("format");
+    if (raw === null || raw === "")
+        return undefined;
+    if (!/^[a-z][a-z0-9-]*$/.test(raw))
+        throw new HttpError(400, "invalid_input", "Invalid format");
+    return raw;
 }
 export const json = (body, init) => Response.json(body, init);

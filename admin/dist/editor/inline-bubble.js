@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { posToDOMRect } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
@@ -12,21 +12,22 @@ import { cn } from "../lib/utils/cn.js";
 import { IconButton } from "../ui/icon-button.js";
 import { Separator } from "../ui/separator.js";
 import { addedMarkName } from "./added-marks.js";
+import { allowanceOfState } from "./allowed-extension.js";
 import { BLOCK_TOOLBAR } from "./blocks/shared.js";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark.js";
 import { codeEffectsKey, expandRule, removeRule, setFoldOpen } from "./code-block/effects-plugin.js";
-import { allowedMarkTools, allowsMark, INLINE_MARK_TOOLS, inlineBubbleTarget, RANGED_MARKS, removeInlineMark, } from "./inline-marks.js";
+import { allowedMarkTools, allowsMark, INLINE_MARK_NAMES, inlineBubbleTarget, inlineMarkTools, offersMarkTool, RANGED_MARKS, removeInlineMark, } from "./inline-marks.js";
 import { LinkForm, linkDraftFromSelection } from "./link-form.js";
+import { LinkTargetAnchor } from "./link-target-view.js";
 import { MarkTextForm } from "./mark-text-form.js";
 import { editorMessages } from "./messages.js";
 import { ToolbarButton } from "./toolbar-button.js";
-const t = createTranslator(editorMessages);
 /** Text for the tooltip form on text inside code. */
-const CODE_TOOLTIP_LABELS = {
+const CODE_TOOLTIP_LABELS = (t) => ({
     name: t("inlineBubble.tooltipName"),
     field: t("inlineBubble.tooltipField"),
     empty: t("inlineBubble.tooltipEmpty"),
-};
+});
 /**
  * Registered text-style extensions and their editor mark names. Given an `editor`, returns only the styles in that editor's schema (registrations
  * of blocks the site does not use are ignored).
@@ -66,6 +67,9 @@ function anchorRange(target, ranged) {
  * For an extension's text styles (`CmsAdminComponents.marks`), it renders the buttons and content that extension provides.
  */
 export function InlineBubble({ editor, actions = [], }) {
+    const site = useSite();
+    const t = useTranslator(editorMessages);
+    const allowance = allowanceOfState(editor.state);
     const markExtensions = useMarkExtensions(editor);
     const detailed = markExtensions.flatMap(({ name, extension }) => (extension.detail ? [name] : []));
     const ranged = [...RANGED_MARKS, ...detailed];
@@ -78,7 +82,7 @@ export function InlineBubble({ editor, actions = [], }) {
             // Also watch the applied state so the pressed indicator of selection tools stays correct after an effect is applied.
             const active = target?.kind === "selection"
                 ? [
-                    ...INLINE_MARK_TOOLS.map((tool) => tool.mark),
+                    ...INLINE_MARK_NAMES,
                     "link",
                     CODE_TOOLTIP_MARK_NAME,
                     "codeFold",
@@ -213,10 +217,12 @@ export function InlineBubble({ editor, actions = [], }) {
     };
     const renderMark = (mark) => {
         if (mark.name === "link") {
-            const href = String(mark.attrs.href ?? "");
-            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(Link2, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-cms-muted-foreground" }), _jsx("a", { href: href, target: "_blank", rel: "noreferrer noopener", title: href, 
+            // An internal link holds the id of its entry: the bubble shows the entry it goes to, not an address.
+            const entryId = typeof mark.attrs.entryId === "string" && mark.attrs.entryId ? mark.attrs.entryId : null;
+            const href = entryId ? "" : String(mark.attrs.href ?? "");
+            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(Link2, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-cms-muted-foreground" }), entryId ? (_jsx(LinkTargetAnchor, { entryId: entryId })) : (_jsx("a", { href: href, target: "_blank", rel: "noreferrer noopener", title: href, 
                         // If focus is taken from the editor on press, the bubble disappears first and the link does not open.
-                        onMouseDown: (event) => event.preventDefault(), className: "max-w-56 truncate px-1 text-cms-primary text-xs underline underline-offset-2", children: href }), _jsx(BubbleButton, { label: t("link.edit"), onClick: () => openLink({ from: mark.from, to: mark.to, existing: true, href }), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("link.remove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(Unlink, { "aria-hidden": true, className: "size-4" }) })] }, mark.name));
+                        onMouseDown: (event) => event.preventDefault(), className: "max-w-56 truncate px-1 text-cms-primary text-xs underline underline-offset-2", children: href })), _jsx(BubbleButton, { label: t("link.edit"), onClick: () => openLink({ from: mark.from, to: mark.to, existing: true, href, entryId }), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("link.remove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(Unlink, { "aria-hidden": true, className: "size-4" }) })] }, mark.name));
         }
         if (mark.name === CODE_TOOLTIP_MARK_NAME) {
             const content = String(mark.attrs.content ?? "");
@@ -251,7 +257,7 @@ export function InlineBubble({ editor, actions = [], }) {
                                 .run();
                         }), children: t("inlineBubble.openByDefault") }), _jsx(BubbleButton, { label: t("inlineBubble.foldRemove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(X, { "aria-hidden": true, className: "size-4" }) })] }, mark.name));
         }
-        const tool = INLINE_MARK_TOOLS.find((item) => item.mark === mark.name);
+        const tool = inlineMarkTools(site).find((item) => item.mark === mark.name);
         if (!tool)
             return null;
         return (_jsxs(BubbleButton, { label: t("markText.remove", { name: tool.title ?? tool.label }), onClick: act(() => removeInlineMark(editor, mark)), className: "gap-0.5", children: [_jsx(tool.icon, { "aria-hidden": true, className: "size-4" }), _jsx(X, { "aria-hidden": true, className: "size-3 text-cms-muted-foreground" })] }, mark.name));
@@ -274,12 +280,16 @@ export function InlineBubble({ editor, actions = [], }) {
         return groups.map((group, index) => (_jsxs("div", { className: "flex items-center gap-0.5", children: [index > 0 && _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" }), group] }, group.key)));
     };
     // In a code block, only the effects it accepts (bold, italic, strikethrough, underline, tooltip) and text folding are shown. Extension buttons hide themselves.
+    // A text style the body's allowed list does not allow gets no button, but one already in the text still shows its details above.
     const bubbleTools = (group) => markExtensions
+        .filter(({ name }) => allowance.allowsEditorMark(name))
         .flatMap(({ name, extension }) => (extension.bubble?.group === group ? [{ name, bubble: extension.bubble }] : []))
         .sort((a, b) => (a.bubble.order ?? 1) - (b.bubble.order ?? 1));
     const renderTool = ({ name, bubble }) => (_jsx(bubble.Button, { ...bubbleProps }, name));
     const linkTools = bubbleTools("link");
-    const renderSelectionTools = () => (_jsxs(_Fragment, { children: [!inCode && actions.length > 0 && (_jsxs(_Fragment, { children: [actions.map((action) => (_jsx(BubbleButton, { label: action.label, onClick: () => action.run(editor), children: action.icon }, action.id))), _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" })] })), allowedMarkTools(editor.state).map((item) => (_jsx(ToolbarButton, { editor: editor, item: item, tooltipSide: "top" }, item.mark))), bubbleTools("format").map(renderTool), _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" }), inCode && allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) && (_jsx(BubbleButton, { label: editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd"), onClick: () => openCodeTooltip(), children: _jsx(MessageSquareMore, { "aria-hidden": true, className: "size-4" }) })), linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool), allowsMark(editor.state, "link") && !inCode && (_jsx(BubbleButton, { label: editor.isActive("link") ? t("link.edit") : t("link.add"), onClick: () => openLink(linkDraftFromSelection(editor)), children: _jsx(Link2, { "aria-hidden": true, className: "size-4" }) })), linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool), inCode && allowsMark(editor.state, "codeFold") && (_jsx(BubbleButton, { label: t("inlineBubble.fold"), pressed: editor.isActive("codeFold"), onClick: () => editor.chain().focus().toggleMark("codeFold").run(), children: _jsx(ChevronsLeftRightEllipsis, { "aria-hidden": true, className: "size-4" }) }))] }));
+    const renderSelectionTools = () => (_jsxs(_Fragment, { children: [!inCode && actions.length > 0 && (_jsxs(_Fragment, { children: [actions.map((action) => (_jsx(BubbleButton, { label: action.label, onClick: () => action.run(editor), children: action.icon }, action.id))), _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" })] })), allowedMarkTools(site, editor.state).map((item) => (_jsx(ToolbarButton, { editor: editor, item: item, tooltipSide: "top" }, item.mark))), bubbleTools("format").map(renderTool), _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" }), inCode &&
+                allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
+                offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME) && (_jsx(BubbleButton, { label: editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd"), onClick: () => openCodeTooltip(), children: _jsx(MessageSquareMore, { "aria-hidden": true, className: "size-4" }) })), linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool), allowsMark(editor.state, "link") && !inCode && allowance.allowsMark("link") && (_jsx(BubbleButton, { label: editor.isActive("link") ? t("link.edit") : t("link.add"), onClick: () => openLink(linkDraftFromSelection(editor)), children: _jsx(Link2, { "aria-hidden": true, className: "size-4" }) })), linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool), inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(site, editor.state, "codeFold") && (_jsx(BubbleButton, { label: t("inlineBubble.fold"), pressed: editor.isActive("codeFold"), onClick: () => editor.chain().focus().toggleMark("codeFold").run(), children: _jsx(ChevronsLeftRightEllipsis, { "aria-hidden": true, className: "size-4" }) }))] }));
     const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 };
     const surface = "rounded-md border bg-cms-popover/95 text-cms-popover-foreground shadow-sm backdrop-blur";
     return createPortal(panel ? (_jsx("div", { ref: bubbleRef, role: "dialog", "aria-label": panel.kind === "link"
@@ -291,5 +301,5 @@ export function InlineBubble({ editor, actions = [], }) {
                 event.preventDefault();
                 closePanel();
             }
-        }, children: panel.kind === "link" ? (_jsx(LinkForm, { editor: editor, draft: panel.draft, onDone: closePanel })) : panel.kind === "codeTooltip" ? (_jsx(MarkTextForm, { editor: editor, mark: CODE_TOOLTIP_MARK_NAME, attribute: "content", labels: CODE_TOOLTIP_LABELS, active: panel.active, initial: panel.initial, range: panel.range, onDone: closePanel })) : (panel.panel.content) })) : (_jsx("div", { ref: bubbleRef, role: "toolbar", "aria-label": target.kind === "selection" ? t("inlineBubble.selectionLabel") : t("inlineBubble.effectLabel"), "data-cms-inline-bubble": true, style: style, className: BLOCK_TOOLBAR, children: target.kind === "selection" ? renderSelectionTools() : renderMarks(target.marks, target.rules) })), document.body);
+        }, children: panel.kind === "link" ? (_jsx(LinkForm, { editor: editor, draft: panel.draft, onDone: closePanel })) : panel.kind === "codeTooltip" ? (_jsx(MarkTextForm, { editor: editor, mark: CODE_TOOLTIP_MARK_NAME, attribute: "content", labels: CODE_TOOLTIP_LABELS(t), active: panel.active, initial: panel.initial, range: panel.range, onDone: closePanel })) : (panel.panel.content) })) : (_jsx("div", { ref: bubbleRef, role: "toolbar", "aria-label": target.kind === "selection" ? t("inlineBubble.selectionLabel") : t("inlineBubble.effectLabel"), "data-cms-inline-bubble": true, style: style, className: BLOCK_TOOLBAR, children: target.kind === "selection" ? renderSelectionTools() : renderMarks(target.marks, target.rules) })), document.body);
 }

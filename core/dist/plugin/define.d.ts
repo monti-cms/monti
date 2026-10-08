@@ -1,7 +1,9 @@
-import type { Pool, PoolClient } from "pg";
-import type { AfterCommit } from "../adapters/postgres/store/after-commit.js";
 import type { BlockDefinition } from "../blocks/define.js";
+import type { Cms } from "../cms/index.js";
 import type { CollectionsConfig } from "../config/define.js";
+import type { CmsFormat } from "../format/types.js";
+import type { WriteHooks } from "../services/hooks.js";
+import type { PluginStorage } from "./storage.js";
 /**
  * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`).
  *
@@ -9,16 +11,22 @@ import type { CollectionsConfig } from "../config/define.js";
  * - Server code (`server`) and admin UI code (`admin`) are loader functions. They are read only when used, and the plugin package provides an empty browser entry point (the `browser` condition of `exports`)
  *   so server code stays out of the browser bundle.
  */
-export interface CmsPlugin<Name extends string = string, Options = unknown> {
+export interface CmsPlugin<Name extends string = string, Options = unknown, Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> {
     readonly name: Name;
     readonly options: Options;
     /** Items to add to the "Manage" group of the admin sidebar. `path` is a single-segment path after the admin path (`admin.path`, default `/admin`), rendered by the admin plugin's `pages`. */
     readonly nav?: readonly PluginNavItem[];
     /** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
-    readonly blocks?: readonly BlockDefinition[];
+    readonly blocks?: Blocks;
     /** Validation called when the site config is created. Throws if the config is invalid. */
     readonly validate?: (config: PluginConfigView) => void;
-    /** Server side (API routes, migrations). The default export is a `CmsServerPlugin`. */
+    /**
+     * Write hooks written inline, for a plugin that only needs hooks: `definePlugin({ name, hooks })` needs no `server` module. Inline code loads with
+     * every server start (the CLI, edge and cold starts included), so keep it light; it may use secrets through `cms.secrets` or the environment. A plugin
+     * with heavy hooks, or with routes, migrations or commands, puts its hooks in `server` (a lazy module). Not both: a plugin with `hooks` here and in `server` fails when it loads.
+     */
+    readonly hooks?: WriteHooks;
+    /** Server side (API routes, migrations, hooks, commands). The default export is a `CmsServerPlugin`. Read only on the server. */
     readonly server?: () => Promise<{
         readonly default: CmsServerPlugin;
     }>;
@@ -27,11 +35,20 @@ export interface CmsPlugin<Name extends string = string, Options = unknown> {
         readonly default: unknown;
     }>;
     /**
-     * Public UI side (public components for body blocks). The default export is `(context) => component table` and `@monti-cms/core/render` calls it
-     * (`context`: site locale, image resolver). It is read on the server; the module marks client components with `"use client"`.
+     * Public UI side (public components for body blocks). The module's named export `documentComponents` is `(context) => component table` of the document renderer
+     * (`renderDocument`: `blocks` and `marks` by block name, `codeTags`). `@monti-cms/core/render` calls it (`context`: site locale, image resolver). It is read on
+     * the server; the module marks client components with `"use client"`.
      */
     readonly render?: () => Promise<{
-        readonly default: unknown;
+        readonly documentComponents?: unknown;
+    }>;
+    /**
+     * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
+     * the read and write APIs. The default export is a `CmsFormat` or a list of them. It is read on the server when the instance first needs its formats;
+     * two formats with one name (a plugin's and a built-in one included) fail there.
+     */
+    readonly formats?: () => Promise<{
+        readonly default: CmsFormat | readonly CmsFormat[];
     }>;
     /**
      * What this plugin adds to other plugins. The key is a name chosen by the receiving side (e.g. the AI plugin reads `ai: { actions }`), and the core does not read it.
@@ -75,34 +92,63 @@ export interface PluginRoute {
 export interface OwnedPluginRoute extends PluginRoute {
     readonly plugin: string;
 }
-/** DB used by plugins (Postgres only for now). `schema` is a validated schema name, so it is safe to put into SQL as is. */
-export interface PluginDatabase {
-    readonly pool: Pool;
-    readonly schema: string;
-    /**
-     * One-time work (e.g. moving legacy data). The name is recorded in the core migration log so it does not run again, and it runs only once even if called concurrently.
-     * `run` uses the `client` it receives inside a transaction (on failure it rolls back and records nothing). Prefix the name with the plugin name.
-     * @returns whether it ran this time
-     */
-    readonly once: (name: string, run: (client: PoolClient) => Promise<void>) => Promise<boolean>;
-}
 export interface CmsServerPlugin {
-    /** Looks up paths missing from the core routes in this route table. */
+    /**
+     * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context
+     * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, its storage (`cms.storage(name)`) and its secrets (`cms.secrets(name)`) from `cms` and keeps no global state for them.
+     */
     readonly routes?: readonly PluginRoute[];
-    /** Called by `monti migrate` after the core tables. Must give the same result when called repeatedly. */
-    readonly migrate?: (db: PluginDatabase) => Promise<void>;
-    /** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. */
-    readonly features?: () => Promise<Readonly<Record<string, boolean>>>;
-    /** Notification after a save (same as the server config `afterCommit`). The save stands even if it fails. */
-    readonly afterCommit?: AfterCommit;
+    /**
+     * Called by `monti migrate` after the core tables, with the plugin's own storage (`storage.once(name, step)` runs one-time work, e.g. moving data from an earlier layout).
+     * Must give the same result when called repeatedly. `cms` is the instance being migrated.
+     */
+    readonly migrate?: (storage: PluginStorage, cms: Cms) => Promise<void>;
+    /** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
+    readonly features?: (cms: Cms) => Promise<Readonly<Record<string, boolean>>>;
+    /**
+     * Hooks on every content write (same as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit` (which gets the
+     * instance as its second argument, like the config's). They run after the server config's hooks, in the order of the plugins in the site config.
+     * A plugin may set them inline (`CmsPlugin.hooks`) or here, not in both.
+     */
+    readonly hooks?: WriteHooks;
+    /**
+     * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti migrate`), runs the command with the instance and
+     * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).
+     */
+    readonly commands?: Readonly<Record<string, PluginCommand>>;
+}
+/** One command line option of a plugin command. */
+export interface PluginCommandOption {
+    readonly type: "string" | "boolean";
+    /** One line for `monti <plugin>:<command> --help`. */
+    readonly description?: string;
+}
+/** What a plugin command receives. */
+export interface PluginCommandContext {
+    readonly cms: Cms;
+    /** The values of the options the command declared (`undefined` when not given). */
+    readonly args: Readonly<Record<string, string | boolean | undefined>>;
+    readonly log: (message: string) => void;
+    readonly error: (message: string) => void;
+}
+/** A command a plugin adds to the `monti` command line. */
+export interface PluginCommand {
+    /** One line shown in `monti help` and `monti <plugin>:<command> --help`. */
+    readonly description: string;
+    /** The options it accepts, besides the ones every app command takes (`--env-file`, `--no-env-file`, `--server`). */
+    readonly options?: Readonly<Record<string, PluginCommandOption>>;
+    /** Runs the command. Returns the exit code (0 or nothing: success). Throwing prints the message and exits with 1. */
+    readonly run: (context: PluginCommandContext) => Promise<number | void>;
 }
 /**
  * Creates a plugin. A plugin package exports a function (e.g. `aiPlugin()`) that returns this value. The type of what it adds (`contributes`)
  * is preserved so the receiving plugin can read it (e.g. AI feature names).
  */
-export declare function definePlugin<const Name extends string, Options, const Contributes extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>>(plugin: CmsPlugin<Name, Options> & {
+export declare function definePlugin<const Name extends string, Options = Record<string, never>, const Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[], const Contributes extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>>(plugin: Omit<CmsPlugin<Name, Options, Blocks>, "options"> & {
+    /** Config values both sides read. Optional: a plugin without any (a hook-only plugin) has `{}`. */
+    readonly options?: Options;
     readonly contributes?: Contributes;
-}): CmsPlugin<Name, Options> & {
+}): CmsPlugin<Name, Options, Blocks> & {
     readonly contributes?: Contributes;
 };
 /** The type of a plugin picked by name from the site config's plugin list. */

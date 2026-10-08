@@ -645,7 +645,7 @@ export declare const aiPresets: {
     /** Regex candidates for finding parts of a code block to fold. */
     codeFold: (options?: {
         readonly prompt?: string;
-    }) => {
+    }) => (site: AiSiteView) => {
         readonly label: string;
         readonly input: {
             code: {
@@ -1156,7 +1156,7 @@ export declare const DEFAULT_AI_ACTIONS: {
         };
         prompt: string;
     }) | undefined;
-    codeFold: {
+    codeFold: (site: AiSiteView) => {
         readonly label: string;
         readonly input: {
             code: {

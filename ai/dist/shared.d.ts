@@ -1,3 +1,4 @@
+import type { Site } from "@monti-cms/core/client";
 /**
  * Shared texts. Fill `{{shared.key}}` in the instructions of every action. There are two kinds.
  *
@@ -45,30 +46,30 @@ export declare const MAX_ADDED_SHARED = 30;
 /** Shared text key. Same as the config's naming rule (`validateAiConfig`). */
 export declare const SHARED_KEY_PATTERN: RegExp;
 /** Shared texts to show in the admin screen. */
-export declare function getSharedView(store: AiSharedStore): Promise<AiSharedView>;
+export declare function getSharedView(site: Site, store: AiSharedStore): Promise<AiSharedView>;
 /** Shared texts to put into the instructions (key -> content). Config texts have edited values applied, and added texts are included too. */
-export declare function loadSharedTexts(store: Pick<AiSharedStore, "getAiSettings">): Promise<Record<string, string>>;
+export declare function loadSharedTexts(site: Site, store: Pick<AiSharedStore, "getAiSettings">): Promise<Record<string, string>>;
 /** Keys usable as `{{shared.key}}` in the instructions (config texts and added texts). Checked when saving instructions in the admin screen. */
-export declare function loadSharedKeys(store: Pick<AiSharedStore, "getAiSettings">): Promise<string[]>;
+export declare function loadSharedKeys(site: Site, store: Pick<AiSharedStore, "getAiSettings">): Promise<string[]>;
 /** Adds a shared text. The body is `{ key, label, text }`. The key must not collide with config texts or added texts. */
-export declare function addShared(store: AiSharedStore, expectedVersion: number, input: unknown): Promise<AiSharedView>;
+export declare function addShared(site: Site, store: AiSharedStore, expectedVersion: number, input: unknown): Promise<AiSharedView>;
 /**
  * Edits one shared text. The body is `{ key, label?, text }`. A config text edits only content (the config decides the name),
  * and an added text edits name and content. The key is not changed.
  */
-export declare function updateSharedItem(store: AiSharedStore, expectedVersion: number, input: unknown): Promise<AiSharedView>;
+export declare function updateSharedItem(site: Site, store: AiSharedStore, expectedVersion: number, input: unknown): Promise<AiSharedView>;
 /**
  * Edits the content of several shared texts at once. The body is `{ texts: { key: content } }`, and texts not listed are left alone.
  * For config texts, an edited value equal to the default is removed. Unknown keys are rejected.
  */
-export declare function updateShared(store: AiSharedStore, expectedVersion: number, input: unknown): Promise<AiSharedView>;
+export declare function updateShared(site: Site, store: AiSharedStore, expectedVersion: number, input: unknown): Promise<AiSharedView>;
 /** Whether the instructions use this text as `{{shared.key}}`. */
 export declare function usesShared(prompt: string, key: string): boolean;
 /**
  * Deletes an added text. A config text cannot be deleted. If an action uses this text in its instructions (`features`: code action instructions and
  * edited instructions, UI actions), it is blocked and the action names are reported.
  */
-export declare function deleteShared(store: AiSharedStore, expectedVersion: number, key: string, features: readonly {
+export declare function deleteShared(site: Site, store: AiSharedStore, expectedVersion: number, key: string, features: readonly {
     readonly label: string;
     readonly prompt: string;
 }[]): Promise<AiSharedView>;

@@ -1,12 +1,12 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { adminEntryEditHref, createTranslator, isItemCollection, LOCALES, localeLabel, PAGE_SIZES, } from "@monti-cms/core/client";
+import { PAGE_SIZES, useSite, useTranslator, } from "@monti-cms/core/client";
 import { columnOrderingFeature, columnResizingFeature, columnSizingFeature, columnVisibilityFeature, createColumnHelper, rowSelectionFeature, tableFeatures, useTable, } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, Columns3, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
-import Link from "next/link";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useCmsAdminComponents } from "../admin-components.js";
 import { cn } from "../lib/utils/cn.js";
+import { AdminLink as Link } from "../router/index.js";
 import { Alert, AlertDescription } from "../ui/alert.js";
 import { Button } from "../ui/button.js";
 import { Checkbox } from "../ui/checkbox.js";
@@ -25,11 +25,10 @@ import { columnConfig, columnLabel, columnsFor, fieldColumnOf, filterFor, knownC
 import { screensMessages } from "./messages.js";
 import { ActionContextMenu, MoreActionsButton } from "./shared/action-menu.js";
 import { writeDraggedEntries } from "./shared/entry-drag.js";
-import { describeEntryStatus, STATUS_LABELS } from "./shared/entry-status.js";
+import { describeEntryStatus, statusLabels } from "./shared/entry-status.js";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date.js";
 import { OPEN_ITEM } from "./shared/side-panel.js";
 import { folderMenuActions } from "./shared/use-folder-actions.js";
-const t = createTranslator(screensMessages);
 export { columnsFor };
 // Data Table: TanStack Table handles column visibility/order and row selection; the server handles search, sort, filter and paging.
 const features = tableFeatures({
@@ -57,12 +56,12 @@ const MANY_RELATION_SIZE = 200;
 const SINGLE_RELATION_SIZE = 112;
 const SELECT_SIZE = 132;
 const TEXT_SIZE = 200;
-function defaultColumnSize(collection, column) {
+function defaultColumnSize(site, collection, column) {
     const size = DEFAULT_COLUMN_SIZE[column];
     if (size !== undefined)
         return size;
-    const config = columnConfig(collection, column);
-    const kind = fieldColumnOf(collection, column)?.field.kind;
+    const config = columnConfig(site, collection, column);
+    const kind = fieldColumnOf(site, collection, column)?.field.kind;
     if (kind === "relation")
         return config.many ? MANY_RELATION_SIZE : SINGLE_RELATION_SIZE;
     if (kind === "select")
@@ -75,28 +74,34 @@ const MIN_COLUMN_SIZE = 72;
 const MAX_COLUMN_SIZE = 960;
 const helper = createColumnHelper();
 /** List date: this year as `9월 27일 14:05`, otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
-const formatDate = (value) => {
+const formatDate = (site, value) => {
     if (!value)
         return "—";
-    const sameYear = zonedYear(value) === zonedYear(Date.now());
+    const sameYear = zonedYear(site, value) === zonedYear(site, Date.now());
     return sameYear
-        ? formatDateTime(value, { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
-        : formatDateOnly(value);
+        ? formatDateTime(site, value, { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+        : formatDateOnly(site, value);
 };
 /**
  * Columns hidden first when width runs short, and their order. Even user-enabled columns are hidden in this order if the title cannot get its minimum width.
- * Many-relation taxonomy field columns (tags etc.) are hidden last. Title, status, single taxonomy fields (category etc.) and updated date are never hidden.
+ * Many-relation taxonomy field columns (tags etc.) are hidden next, and the post date last. Title, status, single taxonomy fields (category etc.) and updated date are never hidden.
  */
-const HIDE_ORDER_WHEN_NARROW = ["folder", "slug", "createdAt", "publishedAt", "locale"];
-const hideOrderWhenNarrow = (collection, available) => [
+const HIDE_ORDER_WHEN_NARROW = ["folder", "slug", "createdAt", "locale"];
+/**
+ * The post date (`publishedAt`) is the date a reader sees, so it goes last: after the locale and the many-relation columns. Hidden first, as it used to be, the list showed only
+ * "Updated", which for imported posts is the day of the import.
+ */
+export const hideOrderWhenNarrow = (site, collection, available) => [
     ...HIDE_ORDER_WHEN_NARROW,
-    ...available.filter((column) => columnConfig(collection, column).many),
+    ...available.filter((column) => columnConfig(site, collection, column).many),
+    "publishedAt",
 ];
 const TITLE_MIN_WIDTH = 240;
 /**
  * Column width resize handle. Drag the header's right edge, or focus it and press ←/→ to change by 16px. Pressing twice resets to the default width.
  */
 function ColumnResizeHandle({ label, width, resizing, onStart, onNudge, onReset, }) {
+    const t = useTranslator(screensMessages);
     return (_jsx("div", { role: "separator", "aria-orientation": "vertical", "aria-label": t("list.resizeColumn", { label }), "aria-valuenow": width, "aria-valuemin": MIN_COLUMN_SIZE, "aria-valuemax": MAX_COLUMN_SIZE, "aria-valuetext": `${width}px`, tabIndex: 0, onMouseDown: onStart, onTouchStart: onStart, onDoubleClick: onReset, onKeyDown: (event) => {
             if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
                 event.preventDefault();
@@ -113,8 +118,10 @@ const BADGE_TONE = {
 };
 /** Per-locale status of a translation group. Existing locales link to their edit screen; missing ones show only as dashed. Status is also readable as text, not just color. */
 function LocaleBadges({ translations }) {
-    return (_jsx("span", { className: "flex items-center gap-1", children: LOCALES.map((locale) => {
-            const name = localeLabel(locale);
+    const site = useSite();
+    const t = useTranslator(screensMessages);
+    return (_jsx("span", { className: "flex items-center gap-1", children: site.LOCALES.map((locale) => {
+            const name = site.localeLabel(locale);
             const member = translations.find((candidate) => candidate.locale === locale);
             if (!member) {
                 return (_jsxs("span", { className: cn(BADGE_CLASS, "border-dashed text-cms-muted-foreground/70"), children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsx("span", { className: "sr-only", children: t("locale.hasNot", { name }) })] }, locale));
@@ -126,19 +133,23 @@ function LocaleBadges({ translations }) {
                 : member.status === "draft"
                     ? "draft"
                     : "archived";
-            return (_jsxs(Link, { href: adminEntryEditHref(member.id), className: cn(BADGE_CLASS, BADGE_TONE[tone], "cms-dark:hover:brightness-125 hover:brightness-95"), children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsxs("span", { className: "sr-only", children: [name, " \u00B7 ", STATUS_LABELS[member.status]] })] }, locale));
+            return (_jsxs(Link, { href: site.adminEntryEditHref(member.id), className: cn(BADGE_CLASS, BADGE_TONE[tone], "cms-dark:hover:brightness-125 hover:brightness-95"), children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsxs("span", { className: "sr-only", children: [name, " \u00B7 ", statusLabels(site)[member.status]] })] }, locale));
         }) }));
 }
 /** Locales of a taxonomy item (category, tag, series). Locales with a name are filled badges, others are dashed badges. */
 function RecordLocaleBadges({ locales }) {
-    return (_jsx("span", { className: "flex items-center gap-1", children: LOCALES.map((locale) => {
+    const site = useSite();
+    const t = useTranslator(screensMessages);
+    return (_jsx("span", { className: "flex items-center gap-1", children: site.LOCALES.map((locale) => {
             const named = locales.includes(locale);
-            return (_jsxs("span", { className: cn(BADGE_CLASS, named ? BADGE_TONE.published : "border-dashed text-cms-muted-foreground/70"), children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsx("span", { className: "sr-only", children: t(named ? "locale.has" : "locale.hasNot", { name: localeLabel(locale) }) })] }, locale));
+            return (_jsxs("span", { className: cn(BADGE_CLASS, named ? BADGE_TONE.published : "border-dashed text-cms-muted-foreground/70"), children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsx("span", { className: "sr-only", children: t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) }) })] }, locale));
         }) }));
 }
 /** Shows status with both icon shape and text (not conveyed by color alone). */
 function StatusLabel({ item, isRecord }) {
-    const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(item);
+    const site = useSite();
+    const t = useTranslator(screensMessages);
+    const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
     const tone = item.status === "published"
         ? item.hasUnpublishedChanges
             ? "text-amber-600 cms-dark:text-amber-400"
@@ -149,10 +160,12 @@ function StatusLabel({ item, isRecord }) {
 }
 const resolve = (updater, current) => typeof updater === "function" ? updater(current) : updater;
 export function AdminEntriesTable({ collection, items, folders, explorer, state, options, onStateChange, columnSettings, onColumnSettingsChange, selectedIds, onSelectionChange, total, isLoading, isRefreshing = false, errorMessage, mode = "list", folderActions, rowMenu, blankMenu, onDeleteKey, onSelectFolder, onOpenRecord, openRecordId = null, onRestore, onPermanentDelete, onPageChange, onPageSizeChange, onRetry, }) {
+    const site = useSite();
+    const t = useTranslator(screensMessages);
     const isTrash = mode === "trash";
-    const isRecord = isItemCollection(collection);
+    const isRecord = site.isItemCollection(collection);
     const { listCells } = useCmsAdminComponents();
-    const { available, defaults } = columnsFor(collection);
+    const { available, defaults } = columnsFor(site, collection);
     // Drop saved-setting columns that no longer exist (deleted fields etc.).
     const savedOrder = (columnSettings?.order ?? []).filter((column) => available.includes(column));
     const savedVisibility = knownColumnRecord(columnSettings?.visibility, available);
@@ -182,7 +195,7 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
                     const title = item.title || _jsx("span", { className: "text-cms-muted-foreground italic", children: t("common.untitled") });
                     if (isTrash)
                         return _jsx("span", { className: "font-medium", children: title });
-                    return isRecord ? (_jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onOpenRecord(item), className: "h-auto p-0 font-medium text-cms-foreground hover:text-cms-primary", children: title })) : (_jsxs("span", { className: "flex min-w-0 items-center gap-2", children: [_jsx(Link, { href: adminEntryEditHref(item.id), className: "truncate font-medium text-cms-foreground hover:text-cms-primary", children: title }), showFolderBesideTitle && item.folderId && (_jsxs("span", { className: "flex min-w-0 shrink items-center gap-1 text-cms-muted-foreground text-xs", children: [_jsx(FolderIcon, { "aria-hidden": true, className: "size-3 shrink-0" }), _jsxs("span", { className: "truncate", children: [_jsx("span", { className: "sr-only", children: t("list.folderSr") }), folderName(item.folderId)] })] }))] }));
+                    return isRecord ? (_jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onOpenRecord(item), className: "h-auto p-0 font-medium text-cms-foreground hover:text-cms-primary", children: title })) : (_jsxs("span", { className: "flex min-w-0 items-center gap-2", children: [_jsx(Link, { href: site.adminEntryEditHref(item.id), className: "truncate font-medium text-cms-foreground hover:text-cms-primary", children: title }), showFolderBesideTitle && item.folderId && (_jsxs("span", { className: "flex min-w-0 shrink items-center gap-1 text-cms-muted-foreground text-xs", children: [_jsx(FolderIcon, { "aria-hidden": true, className: "size-3 shrink-0" }), _jsxs("span", { className: "truncate", children: [_jsx("span", { className: "sr-only", children: t("list.folderSr") }), folderName(item.folderId)] })] }))] }));
                 }
                 case "status":
                     // Do not convey status by color alone.
@@ -193,11 +206,11 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
                     if (item.translations)
                         return _jsx(LocaleBadges, { translations: item.translations });
                     // Also mark that a translation is not the original.
-                    return (_jsxs("span", { className: "text-cms-muted-foreground text-xs", children: [_jsx("abbr", { title: localeLabel(item.locale), className: "font-medium no-underline", children: item.locale.toUpperCase() }), item.translationGroupId !== item.id && _jsx("span", { className: "ml-1", children: t("list.translation") })] }));
+                    return (_jsxs("span", { className: "text-cms-muted-foreground text-xs", children: [_jsx("abbr", { title: site.localeLabel(item.locale), className: "font-medium no-underline", children: item.locale.toUpperCase() }), item.translationGroupId !== item.id && _jsx("span", { className: "ml-1", children: t("list.translation") })] }));
                 case "updatedAt":
                 case "createdAt":
                 case "publishedAt":
-                    return (_jsx("span", { className: "tabular whitespace-nowrap text-cms-muted-foreground text-xs", children: formatDate(item[column]) }));
+                    return (_jsx("span", { className: "tabular whitespace-nowrap text-cms-muted-foreground text-xs", children: formatDate(site, item[column]) }));
                 case "slug":
                     return _jsx("span", { className: "font-mono text-cms-muted-foreground text-xs", children: item.slug || "—" });
                 case "folder":
@@ -209,10 +222,10 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
         };
         // Cells registered by admin extensions (`listCells`) take precedence over default cells.
         const cellOf = (item, column) => {
-            const Custom = customListCell(listCells, collection, column);
+            const Custom = customListCell(site, listCells, collection, column);
             if (!Custom)
                 return cell(item, column);
-            const stored = fieldColumnOf(collection, column);
+            const stored = fieldColumnOf(site, collection, column);
             return (_jsx(Custom, { collection: collection, column: column, field: stored?.field, entry: item, value: stored ? item.values[column] : undefined }));
         };
         return helper.columns([
@@ -226,10 +239,10 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
             ...available.map((column) => helper.display({
                 id: column,
                 enableHiding: column !== "title",
-                size: defaultColumnSize(collection, column),
+                size: defaultColumnSize(site, collection, column),
                 minSize: MIN_COLUMN_SIZE,
                 maxSize: MAX_COLUMN_SIZE,
-                header: () => (_jsx(ColumnHeader, { column: column, filter: filterFor(collection, column, mode), state: state, options: options, onChange: onStateChange })),
+                header: () => (_jsx(ColumnHeader, { column: column, filter: filterFor(site, collection, column, mode), state: state, options: options, onChange: onStateChange })),
                 cell: ({ row }) => cellOf(row.original, column),
             })),
             helper.display({
@@ -296,14 +309,14 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
     }, []);
     // Columns to hide when narrow are decided only by default widths and the title's minimum width. User-widened widths do not trigger hiding and become horizontal scroll
     // (so handles don't jump when another column disappears mid-drag).
-    const defaultSizeOf = (id) => id === "select" ? 44 : id === "actions" ? 52 : defaultColumnSize(collection, id);
+    const defaultSizeOf = (id) => id === "select" ? 44 : id === "actions" ? 52 : defaultColumnSize(site, collection, id);
     const visibleIds = columnOrder.filter((id) => visibility[id] !== false);
     const autoHidden = new Set();
     const naturalWidth = () => visibleIds
         .filter((id) => !autoHidden.has(id))
         .reduce((sum, id) => sum + (id === "title" ? TITLE_MIN_WIDTH : defaultSizeOf(id)), 0);
     if (containerWidth > 0) {
-        for (const id of hideOrderWhenNarrow(collection, available)) {
+        for (const id of hideOrderWhenNarrow(site, collection, available)) {
             if (naturalWidth() <= containerWidth)
                 break;
             if (visibleIds.includes(id))
@@ -376,16 +389,16 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
         ? [
             { kind: "item", label: t("list.folderOpen"), icon: FolderOpen, onSelect: () => onSelectFolder(folder.id) },
             { kind: "separator" },
-            ...folderMenuActions(folder, folders, folderActions),
+            ...folderMenuActions(site, folder, folders, folderActions),
         ]
         : [];
     const pageHref = (page) => `?page=${page}`;
     return (_jsxs("section", { "aria-label": t("list.label"), className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: [errorMessage && (_jsxs(Alert, { variant: "danger", className: "mx-5 mt-3 flex w-auto items-center justify-between", children: [_jsx(AlertDescription, { className: "col-start-auto", children: errorMessage }), _jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: onRetry, children: t("common.retry") })] })), _jsxs("div", { ref: scrollRef, className: "flex min-h-0 flex-1 flex-col overflow-auto", children: [_jsxs(Table, { containerClassName: "overflow-visible", style: tableWidth ? { width: tableWidth } : undefined, className: "table-fixed [&_td:first-child]:pl-5 [&_td:last-child]:pr-4 [&_th:first-child]:pl-5 [&_th:last-child]:pr-4", children: [_jsx(TableHeader, { className: "sticky top-0 z-10 bg-cms-background [&_tr]:border-b", children: table.getHeaderGroups().map((group) => (_jsx(TableRow, { children: group.headers
                                         .filter((header) => isShown(header.column.id))
                                         .map((header) => {
-                                        const sortField = columnConfig(collection, header.column.id).sortField;
+                                        const sortField = columnConfig(site, collection, header.column.id).sortField;
                                         const active = sortField !== undefined && sortField === state.sortField;
-                                        return (_jsxs(Fragment, { children: [header.column.id === "actions" && _jsx(TableHead, { "aria-hidden": true, className: "p-0" }), _jsxs(TableHead, { style: { width: header.getSize() }, className: cn("group/th relative h-9 font-normal text-cms-muted-foreground text-xs", header.column.id === "select" && "w-10"), "aria-sort": active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined, children: [header.isPlaceholder ? null : _jsx(table.FlexRender, { header: header }), header.column.getCanResize() && (_jsx(ColumnResizeHandle, { label: columnLabel(collection, header.column.id), width: header.getSize(), resizing: header.column.getIsResizing(), onStart: (event) => {
+                                        return (_jsxs(Fragment, { children: [header.column.id === "actions" && _jsx(TableHead, { "aria-hidden": true, className: "p-0" }), _jsxs(TableHead, { style: { width: header.getSize() }, className: cn("group/th relative h-9 font-normal text-cms-muted-foreground text-xs", header.column.id === "select" && "w-10"), "aria-sort": active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined, children: [header.isPlaceholder ? null : _jsx(table.FlexRender, { header: header }), header.column.getCanResize() && (_jsx(ColumnResizeHandle, { label: columnLabel(site, collection, header.column.id), width: header.getSize(), resizing: header.column.getIsResizing(), onStart: (event) => {
                                                                 freezeTitle();
                                                                 header.getResizeHandler()(event);
                                                             }, onNudge: (delta) => updateSizing((current) => ({
@@ -412,7 +425,7 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
                             range: items.length > 0
                                 ? `${(state.page - 1) * state.pageSize + 1}–${Math.min(state.page * state.pageSize, total)}`
                                 : "0",
-                        }) }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsxs(Popover, { children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-cms-muted-foreground" }), children: [_jsx(Columns3, { "aria-hidden": true }), t("list.columnSettings")] }), _jsx(PopoverContent, { align: "end", className: "w-64 p-3", children: _jsx("ul", { className: "space-y-1", children: order.map((column, index) => (_jsxs("li", { className: "flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-cms-accent", children: [_jsxs(Label, { className: "font-normal", children: [_jsx(Checkbox, { checked: visibility[column] ?? false, disabled: column === "title", onCheckedChange: (checked) => table.getColumn(column)?.toggleVisibility(checked === true) }), columnLabel(collection, column)] }), _jsxs("span", { className: "flex gap-1", children: [_jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnUp", { label: columnLabel(collection, column) }), disabled: index === 0, onClick: () => moveColumn(column, -1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnDown", { label: columnLabel(collection, column) }), disabled: index === order.length - 1, onClick: () => moveColumn(column, 1), children: _jsx(ArrowDown, { "aria-hidden": true }) })] })] }, column))) }) })] }), _jsxs(Select, { value: String(state.pageSize), items: PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) })), onValueChange: (value) => value && onPageSizeChange(Number(value)), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("list.pageSize"), className: "h-7 border-0 text-xs shadow-none", children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: PAGE_SIZES.map((size) => (_jsx(SelectItem, { value: String(size), children: t("list.pageSizeOption", { size }) }, size))) })] }), _jsx(Pagination, { className: "mx-0 w-auto", children: _jsxs(PaginationContent, { children: [_jsx(PaginationItem, { children: _jsx(PaginationPrevious, { href: pageHref(state.page - 1), "aria-disabled": state.page <= 1, className: cn(state.page <= 1 && "pointer-events-none opacity-50"), onClick: (event) => {
+                        }) }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsxs(Popover, { children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-cms-muted-foreground" }), children: [_jsx(Columns3, { "aria-hidden": true }), t("list.columnSettings")] }), _jsx(PopoverContent, { align: "end", className: "w-64 p-3", children: _jsx("ul", { className: "space-y-1", children: order.map((column, index) => (_jsxs("li", { className: "flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-cms-accent", children: [_jsxs(Label, { className: "font-normal", children: [_jsx(Checkbox, { checked: visibility[column] ?? false, disabled: column === "title", onCheckedChange: (checked) => table.getColumn(column)?.toggleVisibility(checked === true) }), columnLabel(site, collection, column)] }), _jsxs("span", { className: "flex gap-1", children: [_jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnUp", { label: columnLabel(site, collection, column) }), disabled: index === 0, onClick: () => moveColumn(column, -1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnDown", { label: columnLabel(site, collection, column) }), disabled: index === order.length - 1, onClick: () => moveColumn(column, 1), children: _jsx(ArrowDown, { "aria-hidden": true }) })] })] }, column))) }) })] }), _jsxs(Select, { value: String(state.pageSize), items: PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) })), onValueChange: (value) => value && onPageSizeChange(Number(value)), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("list.pageSize"), className: "h-7 border-0 text-xs shadow-none", children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: PAGE_SIZES.map((size) => (_jsx(SelectItem, { value: String(size), children: t("list.pageSizeOption", { size }) }, size))) })] }), _jsx(Pagination, { className: "mx-0 w-auto", children: _jsxs(PaginationContent, { children: [_jsx(PaginationItem, { children: _jsx(PaginationPrevious, { href: pageHref(state.page - 1), "aria-disabled": state.page <= 1, className: cn(state.page <= 1 && "pointer-events-none opacity-50"), onClick: (event) => {
                                                     event.preventDefault();
                                                     if (state.page > 1)
                                                         onPageChange(state.page - 1);

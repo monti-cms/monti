@@ -1,4 +1,4 @@
-import { isValidCrop, isValidRotate } from "@monti-cms/core/mdx";
+import { isValidCrop, isValidRotate } from "@monti-cms/core/document";
 const IMAGE_ATTRS = [
     "mediaId",
     "src",

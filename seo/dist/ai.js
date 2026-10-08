@@ -1,18 +1,19 @@
-import { createActiveTranslator, valueFieldsOf } from "@monti-cms/core";
+import { valueFieldsOf } from "@monti-cms/core";
 import { SEO_DEFAULT_LIMITS, SEO_ROLES } from "./fields.js";
 import { seoMessages } from "./messages.js";
 /**
  * Features the SEO extension adds to the AI plugin (search title and description suggestions). The `seo()` plugin adds them through `contributes.ai`, so they attach only to sites
  * that use the AI plugin. To change one: `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false`.
  */
-// These features are built after the site config is seen (`(site) => …`). The language is chosen then.
-const t = createActiveTranslator(seoMessages);
-const fieldInput = () => ({
-    title: { kind: "text", label: t("ai.input.title") },
-    summary: { kind: "text", label: t("ai.input.summary") },
-    body: { kind: "mdx", label: t("ai.input.body") },
-    current: { kind: "value", label: t("ai.input.current") },
-});
+const fieldInput = (site) => {
+    const t = site.createTranslator(seoMessages);
+    return {
+        title: { kind: "text", label: t("ai.input.title") },
+        summary: { kind: "text", label: t("ai.input.summary") },
+        body: { kind: "mdx", label: t("ai.input.body") },
+        current: { kind: "value", label: t("ai.input.current") },
+    };
+};
 /** Collections and fields that have that role field. One attach target per field name; length is field `max` → recommended length → default. */
 function roleTargets(site, role, fallback) {
     const byName = new Map();
@@ -37,9 +38,10 @@ export const seoAi = {
         if (attach.length === 0)
             return undefined;
         const limit = options.maxLength ?? max;
+        const t = site.createTranslator(seoMessages);
         return {
             label: t("ai.title.label"),
-            input: fieldInput(),
+            input: fieldInput(site),
             send: ["title", "summary", "body"],
             result: "candidates",
             askInstruction: true,
@@ -54,9 +56,10 @@ export const seoAi = {
         if (attach.length === 0)
             return undefined;
         const limit = options.maxLength ?? max;
+        const t = site.createTranslator(seoMessages);
         return {
             label: t("ai.description.label"),
-            input: fieldInput(),
+            input: fieldInput(site),
             send: ["title", "summary", "body"],
             result: "text",
             askInstruction: true,

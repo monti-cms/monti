@@ -1,9 +1,9 @@
 export * from "@monti-cms/core/code-block";
-export { CmsCodeBlock } from "./code-block-extension.js";
+export { cmsCodeBlock } from "./code-block-extension.js";
 export { CodeBlockView } from "./code-block-view.js";
 export { CodeFoldMark } from "./code-fold-mark.js";
 export { codeEffectsKey, createCodeEffectsPlugin, foldRegions, setFoldOpen } from "./effects-plugin.js";
 export { codeBlockHighlightPluginKey, createCodeBlockHighlightPlugin, getShikiHighlighter } from "./highlight-plugin.js";
 export { createCodeBlockKeysPlugin, findCodeBlockDepth, handleEnterKey, handleModAKey, handlePaste, handleTabKey, isComposing, isInCodeBlock, } from "./keys.js";
-export { CODE_LANGUAGE_OPTIONS } from "./languages.js";
+export { CODE_LANGUAGE_OPTIONS, codeLanguageChoices } from "./languages.js";
 export { formatMeta, parseMeta } from "./meta.js";

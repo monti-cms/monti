@@ -1,6 +1,4 @@
 /** Where this entry is used (back references). Distinguishes draft and published usages. */
-export declare const GET: (request: import("next/server").NextRequest, context?: {
-    params: Promise<{
-        id: string;
-    }>;
-} | undefined) => Promise<Response>;
+export declare const GET: (request: Request, context?: Partial<import("../../../handler.js").RouteContext<{
+    id: string;
+}>> | undefined) => Promise<Response>;

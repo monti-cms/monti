@@ -1,3 +1,4 @@
+import { RESERVED_BLOCK_ATTRIBUTES } from "./define.js";
 import { BUILTIN_BLOCKS } from "./definitions.js";
 const NAME = /^[a-z][a-z0-9-]*$/;
 const COMPONENT = /^[A-Z][A-Za-z0-9]*$/;
@@ -52,6 +53,10 @@ export function resolveBlocks(sources) {
         }
         else if (block.editor.view !== "node" && block.editor.view !== "opaque") {
             throw new Error(`${at}: editor.view must be "node" or "opaque"`);
+        }
+        const reserved = Object.keys(block.attributes).find((name) => RESERVED_BLOCK_ATTRIBUTES.includes(name));
+        if (reserved) {
+            throw new Error(`${at}: attribute "${reserved}" is reserved (${RESERVED_BLOCK_ATTRIBUTES.join(", ")}): the public renderer passes it to the component itself`);
         }
         const anchors = Object.entries(block.attributes).filter(([, attribute]) => attribute.codeAnchor);
         if (anchors.length > 0 && (syntax.kind !== "text" || anchors.length > 1 || anchors[0]?.[1].type !== "string")) {

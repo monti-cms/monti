@@ -1,10 +1,20 @@
-import { cmsConfig } from "../../../config/resolved.js";
-import { DEFAULT_LOCALE } from "../../../core/locales.js";
+import { NO_FORMATS } from "../../../format/registry.js";
+import { migrateBlockIds } from "./block-id-migration.js";
+import { migrateCodeAnnotations } from "./code-annotation-migration.js";
+import { recomputeContentHashes } from "./content-hash-backfill.js";
 import { validateSchemaName, withTransaction } from "./context.js";
+import { migrateLinkEntryIds } from "./link-id-migration.js";
+import { legacyBodiesOf } from "./mdx-body.js";
+import { seedTemplateDocument } from "./seed-templates.js";
+import { migrateSoftBreaks } from "./soft-break-migration.js";
+import { migrateStoredDocuments } from "./stored-document-migration.js";
+import { migrateTemplatesToDocuments } from "./templates-documents-migration.js";
+import { migrateUnparsedBodies } from "./unparsed-migration.js";
 /**
  * Core migration steps (in numbered order). A store that already exists runs every step once: all steps give the same result when re-run
  * (IF NOT EXISTS; moving legacy rows does nothing when there are no rows to move), so it is safe even for stores with no step record.
- * Add new changes at the end under a new name. Do not edit existing steps (they do not run again on stores that already ran them).
+ * Add new changes at the end under a new name (before `seed_initial_body_templates`, which must stay last: it seeds a new store once, after the steps
+ * above have shaped it, and stores that already seeded skip it whatever its position). Do not edit existing steps (they do not run again on stores that already ran them).
  */
 const STEPS = [
     {
@@ -241,14 +251,14 @@ const STEPS = [
     },
     {
         name: "0009_locales",
-        /** Multilingual: per-language documents, translation groups, per-language slugs */
-        run: (client, qSchema) => client.query(`
+        /** Multilingual: per-language documents, translation groups, per-language slugs. The column default is the site's default locale (the value of the rows that existed before locales). */
+        run: (client, qSchema, { site }) => client.query(`
 			-- Multilingual: one document per language + translation group. The group ID is the source's ID; the source itself is NULL.
-			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${DEFAULT_LOCALE}';
+			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${site.DEFAULT_LOCALE}';
 			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS translation_group_id UUID REFERENCES "${qSchema}".entries(id) ON DELETE NO ACTION;
 			CREATE UNIQUE INDEX IF NOT EXISTS entries_translation_locale_key
 			ON "${qSchema}".entries ((COALESCE(translation_group_id, id)), locale);
-			ALTER TABLE "${qSchema}".content_addresses ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${DEFAULT_LOCALE}';
+			ALTER TABLE "${qSchema}".content_addresses ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT '${site.DEFAULT_LOCALE}';
 			DO $$
 			BEGIN
 				IF NOT EXISTS (
@@ -263,14 +273,199 @@ const STEPS = [
 		`),
     },
     {
+        name: "0010_content_hash_v2",
+        /** Content hashes now cover the parsed body instead of the MDX string (`cms-snapshot-v2`). Recomputes every stored hash. */
+        run: (client, qSchema, context) => recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats, context.site) }),
+    },
+    {
+        name: "0011_line_break_hashes",
+        /**
+         * A line break is one document node (`hardBreak`) whichever way it was written, and a line of only `<br />` is an empty paragraph, so the parsed
+         * body of some stored bodies changed. Recomputes every stored hash so that "unpublished changes" keeps meaning what it meant.
+         */
+        run: (client, qSchema, context) => recomputeContentHashes(client, qSchema, { bodies: legacyBodiesOf(context.formats, context.site) }),
+    },
+    {
+        name: "0012_soft_line_endings",
+        /**
+         * The public page no longer turns a single newline inside a paragraph into a line break (CommonMark: it is a space). Bodies written while it did keep their
+         * look by getting a `<br />` at each such line ending (working and published bodies, translation base sources, templates). Also recomputes
+         * `content_hash` and `search_text` of every body. A body that does not parse is left as it is and logged.
+         */
+        run: (client, qSchema, context) => migrateSoftBreaks(client, qSchema, { site: context.site, bodies: legacyBodiesOf(context.formats, context.site) }),
+    },
+    {
+        name: "0013_stored_documents",
+        /**
+         * The parsed body is now the source of a body: `doc` holds it (the stored document, see `StoredDocument`) and `mdx` is written from it. Adds the column to
+         * bodies and templates, then gives every body its document, rewrites its MDX from it and recomputes `content_hash` and `search_text`
+         * (and the base source of a translation). A body that does not parse is left as it is, without a document, and logged.
+         */
+        run: async (client, qSchema, context) => {
+            await client.query(`
+				ALTER TABLE "${qSchema}".entry_bodies ADD COLUMN IF NOT EXISTS doc JSONB;
+				ALTER TABLE "${qSchema}".body_templates ADD COLUMN IF NOT EXISTS doc JSONB;
+			`);
+            await migrateStoredDocuments(client, qSchema, {
+                site: context.site,
+                bodies: legacyBodiesOf(context.formats, context.site),
+            });
+        },
+    },
+    {
+        name: "0014_block_ids",
+        /**
+         * Every block of a stored document now has an id (unique within the document, not written to MDX, not part of the content hash). Gives the blocks of every
+         * working and published body and of every template theirs. A published body shares ids with the working body for the blocks they have in common. Only `doc`
+         * changes: not `mdx`, `content_hash`, `search_text`, `version` or `updated_at`.
+         */
+        run: (client, qSchema) => migrateBlockIds(client, qSchema),
+    },
+    {
+        name: "0015_code_annotations",
+        /**
+         * A code block of a stored document now holds its code and its annotations as data (document version 2) instead of the fence text with annotation comments.
+         * Lifts every working and published body, the stored document of a translation's base source and every template, and writes their MDX from it, so the
+         * annotation comments of a code fence are in the form Monti writes them. Also recomputes `content_hash` and `search_text`. Block ids, `version` and
+         * `updated_at` are kept. A body whose document cannot be read is left as it is and logged.
+         */
+        run: (client, qSchema, context) => migrateCodeAnnotations(client, qSchema, {
+            site: context.site,
+            bodies: legacyBodiesOf(context.formats, context.site),
+        }),
+    },
+    {
+        name: "0016_plugin_documents",
+        /** The documents of the plugin storage (`PluginStorage`): one row per plugin, collection and key. */
+        run: (client, qSchema) => client.query(`
+			CREATE TABLE IF NOT EXISTS "${qSchema}".plugin_documents (
+				plugin TEXT NOT NULL,
+				collection TEXT NOT NULL,
+				key TEXT NOT NULL,
+				value JSONB NOT NULL,
+				version INTEGER NOT NULL DEFAULT 1,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+				PRIMARY KEY (plugin, collection, key)
+			)
+		`),
+    },
+    {
+        name: "0017_unparsed_bodies",
+        /**
+         * Every stored body is a document. A body or template that had none (its MDX did not parse, had front matter, or would not read back the same) becomes
+         * the document of one `unparsed` node holding its MDX as it was; `unparsed_body` blocks publishing it. Recomputes `content_hash` of those rows, lifts the
+         * translation state to version 4 (a source document, no MDX text) and logs the published bodies and templates among them by id. Nothing here fails
+         * because of such a body: the data of an existing store always migrates.
+         */
+        run: (client, qSchema) => migrateUnparsedBodies(client, qSchema),
+    },
+    {
+        name: "0018_link_entry_ids",
+        /**
+         * An internal link of a stored document is the id of the entry it points to (`entryId`, the translation group id; document version 3), not the address it was
+         * written with. Resolves every internal `href` of the working and published bodies, of the document a translation was confirmed against and of the body
+         * templates through the slug addresses, recomputes `content_hash`, writes `mdx` from the new documents and rebuilds the body references (`kind: 'entry'`).
+         * A link that resolves to nothing stays as it is and is logged. `version`, `updated_at` and block ids are kept.
+         */
+        run: async (client, qSchema, context) => {
+            await migrateLinkEntryIds(context.site, client, qSchema);
+        },
+    },
+    {
+        name: "0019_templates_documents",
+        /**
+         * A body template is a document: `doc` is its only source and `mdx` is no longer written. A template with no readable document becomes the document of
+         * one `unparsed` node holding its MDX as it was, and `mdx` stops being required. Nothing here fails because of a template.
+         */
+        run: (client, qSchema) => migrateTemplatesToDocuments(client, qSchema),
+    },
+    {
+        name: "0020_mdx_columns_optional",
+        /**
+         * The MDX text of a body is no longer stored: `doc` is the only source of an entry body and of a body template, and nothing writes `mdx` any more. The column
+         * stays (it is not dropped, so a downgrade or an inspection still finds the text of old bodies) but a row does not need a value for it.
+         */
+        run: (client, qSchema) => client.query(`
+			ALTER TABLE "${qSchema}".entry_bodies ALTER COLUMN mdx DROP NOT NULL;
+			ALTER TABLE "${qSchema}".body_templates ALTER COLUMN mdx DROP NOT NULL;
+		`),
+    },
+    {
+        name: "0021_schema_state",
+        /**
+         * The schema last applied to the store (`monti schema:apply`): one row holding its version and its data model as JSON, which the next `schema:diff` reads as the
+         * old side. A store that never applied one has no row; the first apply records the baseline without touching any entry.
+         */
+        run: (client, qSchema) => client.query(`
+			CREATE TABLE IF NOT EXISTS "${qSchema}".schema_state (
+				id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+				schema_version INTEGER NOT NULL CHECK (schema_version >= 1),
+				schema JSONB NOT NULL,
+				applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+			)
+		`),
+    },
+    {
+        name: "0022_events",
+        /**
+         * The event outbox. `cms_events` holds one row per committed change of an entry, written in the transaction of the change (`seq` is the order; per entry it is the
+         * commit order, because the entry row is locked until commit). It has no foreign key to `entries`: the event of a deletion outlives the entry. `cms_event_deliveries`
+         * holds the delivery state of each event for each subscriber (`afterCommit` of the server config and of the plugins), made by the dispatcher after the commit.
+         */
+        run: (client, qSchema) => client.query(`
+			CREATE TABLE IF NOT EXISTS "${qSchema}".cms_events (
+				seq BIGSERIAL PRIMARY KEY,
+				id UUID NOT NULL UNIQUE,
+				kind TEXT NOT NULL,
+				entry_id UUID NOT NULL,
+				collection TEXT NOT NULL,
+				locale TEXT NOT NULL,
+				content_hash TEXT,
+				version INTEGER NOT NULL,
+				payload JSONB NOT NULL,
+				occurred_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+			);
+			CREATE INDEX IF NOT EXISTS cms_events_entry_idx ON "${qSchema}".cms_events (entry_id, seq);
+			CREATE INDEX IF NOT EXISTS cms_events_occurred_idx ON "${qSchema}".cms_events (occurred_at);
+
+			CREATE TABLE IF NOT EXISTS "${qSchema}".cms_event_deliveries (
+				event_id UUID NOT NULL REFERENCES "${qSchema}".cms_events(id) ON DELETE CASCADE,
+				subscriber TEXT NOT NULL,
+				state TEXT NOT NULL CHECK (state IN ('pending', 'delivering', 'delivered', 'failed', 'dead', 'dismissed')),
+				attempts INTEGER NOT NULL DEFAULT 0,
+				last_error TEXT,
+				last_attempt_at TIMESTAMPTZ,
+				next_attempt_at TIMESTAMPTZ,
+				locked_until TIMESTAMPTZ,
+				delivered_at TIMESTAMPTZ,
+				PRIMARY KEY (event_id, subscriber)
+			);
+			CREATE INDEX IF NOT EXISTS cms_event_deliveries_state_idx ON "${qSchema}".cms_event_deliveries (state, subscriber);
+		`),
+    },
+    {
+        name: "0023_entry_changed_by",
+        /**
+         * Who made the latest change that raised an entry's version, and when. The edit screen shows both when someone else saved first. Both stay empty for an entry
+         * no change has been recorded for (`changed_at` then reads as `updated_at`).
+         */
+        run: (client, qSchema) => client.query(`
+			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS changed_by TEXT;
+			ALTER TABLE "${qSchema}".entries ADD COLUMN IF NOT EXISTS changed_at TIMESTAMPTZ;
+		`),
+    },
+    {
         // The name matches the legacy one-off record. Stores that already seeded do not seed again, and deleted templates are not revived.
         name: "seed_initial_body_templates",
         /** Seeds the site config's initial body templates into a new store, once. */
-        run: async (client, qSchema) => {
-            for (const t of cmsConfig.seed?.templates ?? []) {
-                await client.query(`INSERT INTO "${qSchema}".body_templates (id, name, mdx, version, created_at, updated_at)
+        run: async (client, qSchema, context) => {
+            for (const t of context.site.config.seed?.templates ?? []) {
+                // Seeded as it is stored: its document. A template written as text is read by its format.
+                const doc = await seedTemplateDocument(context.site, t, context.formats);
+                await client.query(`INSERT INTO "${qSchema}".body_templates (id, name, doc, version, created_at, updated_at)
 					 VALUES ($1, $2, $3, 1, NOW(), NOW())
-					 ON CONFLICT DO NOTHING`, [t.id, t.name, t.mdx]);
+					 ON CONFLICT DO NOTHING`, [t.id, t.name, JSON.stringify(doc)]);
             }
         },
     },
@@ -280,7 +475,7 @@ export const CONTENT_STORE_MIGRATIONS = STEPS.map((step) => step.name);
 /** Takes a transaction lock so migrations on the same schema do not run concurrently. */
 const lockMigrations = (client, qSchema) => client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`cms_migrate:${qSchema}`]);
 /** Creates the schema and the step record table (after taking the lock). */
-async function prepare(client, qSchema) {
+export async function prepare(client, qSchema) {
     await lockMigrations(client, qSchema);
     await client.query(`CREATE SCHEMA IF NOT EXISTS "${qSchema}"`);
     await client.query(`
@@ -295,16 +490,20 @@ async function prepare(client, qSchema) {
  * It is one transaction, so a mid-way failure changes nothing, and concurrent runs on the same schema go one at a time.
  */
 export async function migrateContentStore(pool, options) {
-    const qSchema = validateSchemaName(options?.schema);
-    await withTransaction(pool, async (client) => {
+    const qSchema = validateSchemaName(options.schema);
+    const context = { site: options.site, formats: options.formats ?? NO_FORMATS };
+    return withTransaction(pool, async (client) => {
         await prepare(client, qSchema);
         const applied = new Set((await client.query(`SELECT name FROM "${qSchema}".cms_migrations`)).rows.map((row) => row.name));
+        let ran = 0;
         for (const step of STEPS) {
             if (applied.has(step.name))
                 continue;
-            await step.run(client, qSchema);
+            await step.run(client, qSchema, context);
             await client.query(`INSERT INTO "${qSchema}".cms_migrations (name) VALUES ($1)`, [step.name]);
+            ran++;
         }
+        return { applied: ran, upToDate: STEPS.length - ran };
     });
 }
 /**

@@ -1,6 +1,6 @@
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { CmsFileNodeView } from "./file-node-view.js";
+import { BlockNodeView } from "./blocks/block-node-view.js";
 export const FILE_NODE_NAME = "cmsFile";
 /**
  * Attachment file card (`::file{mediaId label}`). A block that is selected, moved and deleted as a whole; only the name shown in the card is editable.
@@ -33,6 +33,6 @@ export const CmsFileNode = Node.create({
         return ["div", mergeAttributes(HTMLAttributes, { "data-file-block": "" })];
     },
     addNodeView() {
-        return ReactNodeViewRenderer(CmsFileNodeView);
+        return ReactNodeViewRenderer(BlockNodeView);
     },
 });

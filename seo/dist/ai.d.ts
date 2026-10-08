@@ -1,10 +1,13 @@
 import { type CollectionsConfig } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/client";
 /**
  * The part of the site view (`AiSiteView`) passed by the AI plugin that this file reads, and the shape of the attach target (`AiAttach`). Written here so the published type declarations
  * do not reference the AI plugin (sites without the AI plugin still pass type checking). `satisfies` checks that the shape matches.
  */
 export interface SeoSiteView {
     readonly collections: CollectionsConfig;
+    /** `site.createTranslator`: the labels and prompts are written in the site's admin language. */
+    readonly createTranslator: Site["createTranslator"];
 }
 export interface FieldAttach {
     readonly slot: "field";

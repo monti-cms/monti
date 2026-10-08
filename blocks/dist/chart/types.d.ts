@@ -1,5 +1,10 @@
 export declare const CHART_TYPES: readonly ["bar", "line", "area", "pie"];
 export declare const CHART_THEME_TOKENS: readonly ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"];
+/**
+ * The CSS value of a chart color token. The admin screen defines `--cms-chart-N` (taking the host's `--chart-N` when it sets one);
+ * on a public page only `--chart-N` exists, so it is the fallback.
+ */
+export declare const chartColor: (token: ChartThemeToken) => string;
 export type ChartType = (typeof CHART_TYPES)[number];
 export type ChartThemeToken = (typeof CHART_THEME_TOKENS)[number];
 /** Kinds of chart syntax errors. The text is `error.<code>` in the message dictionary (`./messages`). */

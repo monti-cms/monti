@@ -6,7 +6,10 @@ export interface LinkDraft {
     from: number;
     to: number;
     existing: boolean;
+    /** The address typed in the form. An internal link has none: it points to an entry. */
     href: string;
+    /** The id of the entry an existing internal link points to. */
+    entryId?: string | null;
 }
 export declare function linkDraftFromSelection(editor: Editor): LinkDraft;
 /** Collapses the cursor to the end of the effect after applying it. With the cursor at the end of the effect, the inline bubble shows the applied result. */

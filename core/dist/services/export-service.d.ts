@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { ExportSnapshot } from "../adapters/postgres/content-store.js";
+import type { ExportSnapshot } from "../core/store/index.js";
+import type { Site } from "../site/index.js";
 export declare const exportScopeSchema: z.ZodEnum<{
     admin: "admin";
     public: "public";
@@ -17,7 +18,7 @@ export declare const publicExportEntrySchema: z.ZodObject<{
     publishedAt: z.ZodNullable<z.ZodString>;
     updatedAt: z.ZodString;
     metadata: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    mdx: z.ZodString;
+    doc: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     schemaVersion: z.ZodNumber;
     contentHash: z.ZodString;
 }, z.core.$strict>;
@@ -27,8 +28,26 @@ export type PublicExportEntry = z.infer<typeof publicExportEntrySchema>;
  * admin-only keys (storageKey etc.) or values not in the definition mixed into metadata do not go out in the public archive.
  * Per-language names of record collections (`translations`) are not fields and do not go out.
  */
-export declare const PUBLIC_METADATA_KEYS: Readonly<Record<string, readonly string[]>>;
-export declare function pickPublicMetadata(collection: string, metadata: Record<string, unknown>): Record<string, unknown>;
+export declare const publicMetadataKeys: (site: PublicSite) => Readonly<Record<string, readonly string[]>>;
+export declare function pickPublicMetadata(site: PublicSite, collection: string, metadata: Record<string, unknown>): Record<string, unknown>;
+/**
+ * Format version of the archive, in the manifest and in the body JSON files. Version 2 added `working.doc.json` / `published.doc.json` and the
+ * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
+ * `published.doc.json` in the admin archive), next to the MDX text. Version 4: the document is the only body. Text files (`working.<ext>`, `published.<ext>`)
+ * and the `body` of a template are written only when the export asked for a `format` (the manifest names it), and the `mdx` of an item and a template is gone.
+ */
+export declare const EXPORT_FORMAT_VERSION = 4;
+/** The bodies of an export written as text in one format, produced before the archive is built (formats are asynchronous, the archive is not). */
+export interface ExportTexts {
+    readonly format: {
+        readonly name: string;
+        readonly extension: string;
+    };
+    /** The text of each body, by `exportTextKey`. A body that has none (an entry without a published copy) is not in it. */
+    readonly bodies: ReadonlyMap<string, string>;
+}
+/** The key of a body in `ExportTexts.bodies`: an entry's `working` or `published` body, or a template. */
+export declare const exportTextKey: (id: string, state: "working" | "published" | "template") => string;
 export interface ExportManifestEntry {
     id: string;
     collection: string;
@@ -69,6 +88,8 @@ export interface ExportManifest {
         references: number;
         files: number;
     };
+    /** The format the text files of the archive are written in. `null`: the archive holds documents only. */
+    format: ExportTexts["format"] | null;
     entries: ExportManifestEntry[];
     files: string[];
 }
@@ -79,10 +100,17 @@ export interface ExportArchive {
 }
 /** Canonical JSON that does not depend on key order. Used for digests and snapshot comparison. */
 export declare const canonicalJson: (value: unknown) => string;
+/** What the public archive needs of a site: the stored fields of its collections. */
+type PublicSite = Pick<Site, "COLLECTIONS" | "storedFields">;
 export interface BuildExportOptions {
+    /** The site the archive is built for (the public archive lists only the fields its collections define). */
+    site: PublicSite;
     scope: ExportScope;
     exportedAt: Date;
+    /** The bodies as text in a format. Without it the archive holds the documents only. */
+    texts?: ExportTexts;
     /** File timestamp inside the archive. A fixed value can be used for snapshot tests. */
     archiveModifiedAt?: Date;
 }
 export declare function buildExportArchive(snapshot: ExportSnapshot, options: BuildExportOptions): ExportArchive;
+export {};

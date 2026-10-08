@@ -1,7 +1,10 @@
+import { type Site } from "@monti-cms/core/client";
 import { z } from "zod";
 import type { AiInputKind } from "./action.js";
 import type { AiModelInfo } from "./connection.js";
 import type { AiResult } from "./definition.js";
+/** The sites a message is written for: anything that has a translator for the admin language. */
+type ProviderSite = Pick<Site, "createTranslator">;
 /**
  * AI service port. Built from a connection (URL, key) and one model. The connection comes from the AI screen settings (`settings.ts`).
  *
@@ -79,19 +82,20 @@ export interface AiDecider {
     decide(request: DecisionRequest): Promise<Record<string, DecisionAnswer>>;
 }
 export declare const isFakeAi: () => boolean;
-export declare function createGenerator(config: {
+export declare function createGenerator(site: ProviderSite, config: {
     baseUrl: string;
     apiKey: string;
     model: string;
 }): AiProvider;
-export declare function createDecider(config: {
+export declare function createDecider(site: ProviderSite, config: {
     url: string;
     apiKey: string;
     model: string;
 }): AiDecider;
 /** Model list of an OpenAI-style URL (`GET {baseUrl}/models`). Empty array for services that do not provide a list. */
-export declare function listModels(baseUrl: string, apiKey: string | null, signal?: AbortSignal): Promise<AiModelInfo[]>;
+export declare function listModels(site: ProviderSite, baseUrl: string, apiKey: string | null, signal?: AbortSignal): Promise<AiModelInfo[]>;
 /** Generation model that gives a fixed answer without a key. The same input always gives the same answer. */
 export declare function createFakeGenerator(): AiProvider;
 /** Decision model that gives fixed probabilities without a key. The earlier the option, the higher the probability. */
 export declare function createFakeDecider(): AiDecider;
+export {};

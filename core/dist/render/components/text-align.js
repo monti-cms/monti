@@ -1,5 +1,5 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-import { TEXT_ALIGN_VALUES } from "../../mdx/index.js";
+import { TEXT_ALIGN_VALUES } from "../../blocks/derive.js";
 const isAlign = (value) => TEXT_ALIGN_VALUES.some((allowed) => allowed === value);
 /**
  * `:::text-align{align}` container. Only validated values are turned into fixed classes (values are not put into className or style as they are).

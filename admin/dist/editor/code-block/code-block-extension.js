@@ -1,6 +1,8 @@
+import { perSite } from "@monti-cms/core/client";
 import { CODE_BLOCK_MARKS } from "@monti-cms/core/code-block";
 import { CodeBlock } from "@tiptap/extension-code-block";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import { createAnchorDedupePlugin } from "./anchor-dedupe.js";
 import { CodeBlockView } from "./code-block-view.js";
 import { createCodeEffectsPlugin } from "./effects-plugin.js";
 import { createCodeBlockHighlightPlugin } from "./highlight-plugin.js";
@@ -11,7 +13,7 @@ const hidden = (value) => ({ default: value, rendered: false });
  * `source`/`sourceKey` are the loaded source and the model fingerprint at that time. If unchanged, the source is saved as is.
  * With `rawMode`, the code has annotations the editor cannot display, so even annotation lines are edited as source.
  */
-export const CmsCodeBlock = CodeBlock.extend({
+export const cmsCodeBlock = perSite((site) => CodeBlock.extend({
     name: "codeBlock",
     marks: CODE_BLOCK_MARKS,
     addAttributes() {
@@ -35,8 +37,9 @@ export const CmsCodeBlock = CodeBlock.extend({
         return [
             ...(this.parent?.() ?? []),
             createCodeBlockKeysPlugin(),
-            createCodeBlockHighlightPlugin(),
-            createCodeEffectsPlugin(),
+            createCodeBlockHighlightPlugin(site),
+            createCodeEffectsPlugin(site),
+            createAnchorDedupePlugin(site),
         ];
     },
-});
+}));

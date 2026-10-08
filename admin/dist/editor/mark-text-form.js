@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover.js";
@@ -9,9 +9,9 @@ import { Toggle } from "../ui/toggle.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip.js";
 import { collapseToEnd, PopoverFormError, PopoverFormFooter, submitOnEnter } from "./link-form.js";
 import { editorMessages } from "./messages.js";
-const t = createTranslator(editorMessages);
 /** Decoration text input form. Shared by the formatting tool popover and the inline bubble. */
 export function MarkTextForm({ editor, mark, attribute, labels, active, initial, range, onDone }) {
+    const t = useTranslator(editorMessages);
     const id = useId();
     const [value, setValue] = useState(initial);
     const [error, setError] = useState(null);

@@ -1,7 +1,7 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
-import { formatCrop, isFullCrop, parseCrop, parseRotate, roundCropBox, } from "@monti-cms/core/mdx";
+import { useTranslator } from "@monti-cms/core/client";
+import { formatCrop, isFullCrop, parseCrop, parseRotate, roundCropBox, } from "@monti-cms/core/document";
 import { RotateCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button.js";
@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "../ui/input.js";
 import { Label } from "../ui/label.js";
 import { editorMessages } from "./messages.js";
-const t = createTranslator(editorMessages);
 const round2 = (n) => Math.round(n * 100) / 100;
 const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
 export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply }) {
+    const t = useTranslator(editorMessages);
     const containerRef = useRef(null);
     const imgRef = useRef(null);
     const activeDragCleanupRef = useRef(null);

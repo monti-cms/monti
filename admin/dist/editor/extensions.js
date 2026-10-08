@@ -1,31 +1,47 @@
 import StarterKit from "@tiptap/starter-kit";
-import { ADDED_MARKS, createAddedMark } from "./added-marks.js";
+import { addedMarksOf, createAddedMark } from "./added-marks.js";
+import { OPEN_ALLOWANCE } from "./allowed.js";
+import { cmsAllowedGuard, restrictExtensions } from "./allowed-extension.js";
 import { CmsBlockKeymap } from "./block-commands.js";
-import { BLOCK_NODE_VIEWS } from "./block-views.js";
-import { ADDED_BLOCK_NODES } from "./blocks/added/index.js";
+import { CmsBlockIds } from "./block-ids.js";
+import { BLOCK_NODES } from "./block-views.js";
+import { addedBlockNodes } from "./blocks/added/index.js";
+import { codeTextStyleKeys } from "./code-block/text-style-keys.js";
 import { CmsBlockDrag } from "./drag/index.js";
-import { CMS_SCHEMA_EXTENSIONS } from "./tiptap-schema.js";
+import { CmsLinkEntryId } from "./link-entry-id.js";
+import { cmsSchemaExtensions } from "./tiptap-schema.js";
 /**
  * Editor extension assembly. Feature extensions (key handling, drag, plugins) are added to this list.
- * Schema nodes go in `tiptap-schema.ts`, block nodes with dedicated edit UI in `block-views.ts`,
+ * Schema nodes go in `tiptap-schema.ts`, core block nodes (image, file, math) in `block-views.ts`,
  * and CmsNode ↔ Tiptap conversion in `converters/`. The look of added text styles (`marks`) is provided by the admin extension (`CmsAdminComponents.marks`).
+ * `allowance` is what the body's allowed list lets a writer add (`allowed.ts`); without it everything is allowed.
  */
-export function buildEditorExtensions(marks = {}) {
-    return [
+export function buildEditorExtensions(site, marks = {}, allowance = OPEN_ALLOWANCE) {
+    const extensions = [
         StarterKit.configure({
             // Body insertion starts at H2, but H1, H5, and H6 in older posts are shown at their original level too.
             heading: { levels: [1, 2, 3, 4, 5, 6] },
-            // Use CmsCodeBlock, which preserves `meta` (CMS_SCHEMA_EXTENSIONS).
+            // Use CmsCodeBlock, which preserves `meta` (`cmsSchemaExtensions`).
             codeBlock: false,
             link: { openOnClick: false },
         }),
-        ...CMS_SCHEMA_EXTENSIONS,
-        ...Object.values(BLOCK_NODE_VIEWS),
+        CmsLinkEntryId,
+        ...cmsSchemaExtensions(site),
+        ...Object.values(BLOCK_NODES),
         // Blocks added by block extensions or site config (`editor.view: "node"`).
-        ...ADDED_BLOCK_NODES,
+        ...addedBlockNodes(site),
         // Text styles added by block extensions or site config. The look is provided by the extension (`marks`, block name → look).
-        ...[...ADDED_MARKS.values()].map((block) => createAddedMark(block, marks[block.name])),
+        ...[...addedMarksOf(site).values()].map((block) => createAddedMark(block, marks[block.name])),
         CmsBlockKeymap,
+        // Before the text style extensions above, so it can swallow their shortcuts inside code.
+        codeTextStyleKeys(site),
         CmsBlockDrag,
+        // Last, so its global attribute reaches every block node above.
+        CmsBlockIds,
     ];
+    if (!allowance.limited)
+        return extensions;
+    // A body that limits its blocks and marks: every node and mark stays in the schema (a body that holds one still opens), but the ones not allowed lose
+    // their input rules, paste rules and shortcuts, and a guard refuses a change that would add one (`allowed-extension.ts`).
+    return [cmsAllowedGuard(allowance), ...restrictExtensions(extensions, allowance)];
 }

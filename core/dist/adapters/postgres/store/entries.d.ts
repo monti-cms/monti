@@ -1,7 +1,8 @@
+import type { Entry, IncomingReferenceItem, TranslationGroup } from "../../../core/store/types.js";
+import type { Issue } from "../../../core/types.js";
 import { type PreparedSnapshot, type Reference, type WorkingCopy } from "../../../core/types.js";
 import { type StoreContext } from "./context.js";
 import type { Publishing } from "./publish.js";
-import type { Entry, IncomingReferenceItem, TranslationGroup } from "./types.js";
 export declare function createEntryOps(ctx: StoreContext, publishing: Publishing): {
     createEntryWithReferences: (params: {
         snapshot: PreparedSnapshot;
@@ -25,6 +26,12 @@ export declare function createEntryOps(ctx: StoreContext, publishing: Publishing
         references: readonly Reference[];
         folderId?: string | null;
         publishImmediately?: boolean;
+        /** With `publishImmediately`: reset the publish date to now. */
+        resetPublishedAt?: boolean;
+        /** Sets the publish date (instead of now or the kept first-publish time), for content that was published before it came here. */
+        publishedAt?: Date;
+        /** With `publishImmediately`: receives the notices of the publish checks. */
+        onWarnings?: (warnings: readonly Issue[]) => void;
     }) => Promise<Entry>;
     getWorkingReferences: (params: {
         entryId: string;
@@ -48,21 +55,34 @@ export declare function createEntryOps(ctx: StoreContext, publishing: Publishing
         slug: string;
         locale?: string;
     }) => Promise<Entry | null>;
+    /** Publishes the saved draft. `snapshot` is the prepared draft (see `PublishOptions.snapshot`). */
     publishEntry: (params: {
         id: string;
         expectedVersion: number;
+        snapshot: PreparedSnapshot;
         resetPublishedAt?: boolean;
+        /** Sets the publish date (instead of now or the kept first-publish time), for content that was published before it came here. */
+        publishedAt?: Date;
+        onWarnings?: (warnings: readonly Issue[]) => void;
     }) => Promise<Entry>;
-    /**
-     * Duplicate: copies the latest draft's body, fields, and relations into a new draft with a new ID.
-     * Slug, publish status, reservation, published version, publish date, and created/modified times are not copied.
-     * If `title` is given, it replaces the copy's title (`title` field). Any suffix (such as "(copy)") is up to the caller.
-     * The store saves the given value as is and only checks the title field's rules (length, etc.).
-     */
-    duplicateEntry: (params: {
-        id: string;
-        title?: string;
-    }) => Promise<Entry>;
+    slugsInUse: (params: {
+        collection: string;
+        locale: string;
+        slugs: readonly string[];
+        excludeEntryId?: string;
+    }) => Promise<Set<string>>;
+    resolveLinkTargets: (params: {
+        addresses: readonly {
+            collection: string;
+            slug: string;
+            locale?: string;
+        }[];
+    }) => Promise<{
+        collection: string;
+        slug: string;
+        locale: string;
+        entryId: string;
+    }[]>;
     /** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
     getIncomingReferences: (params: {
         targetId: string;

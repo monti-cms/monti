@@ -16,14 +16,18 @@ export interface PublicApiOptions {
     /** Maximum page size (default 100). The default page size is 25. */
     readonly maxPageSize?: number;
     /**
-     * Shape of an entry in the response. Defaults to `defaultPublicJson`. The body is included only for a single read (`body: true`).
+     * Shape of an entry in the response. Defaults to `defaultPublicJson`. The body (`doc` and `refs`) is included only for a single read (`body: true`).
      * Returning `null` hides that entry from the public API (dropped from lists, 404 for a single read). A page's `total` is the count before hiding.
      */
     readonly toJson?: (entry: ReadEntry, options: {
         readonly body: boolean;
     }) => unknown;
 }
-/** Default response shape. No admin-only values (edition, folder, status). */
+/**
+ * Default response shape. No admin-only values (edition, folder, status).
+ * A single read adds the body: `doc` (the stored document), `refs` (the public URLs of its media keyed by media id, and the address and title of its internal links keyed by entry id; only what the document uses)
+ * With `?format=<name>` it also carries `body`: the document as text in that format, as `{ format, text }`.
+ */
 export declare function defaultPublicJson(entry: ReadEntry, { body }: {
     readonly body: boolean;
 }): {
@@ -35,7 +39,11 @@ export declare function defaultPublicJson(entry: ReadEntry, { body }: {
     title: string | null;
     publishedAt: string | null;
     updatedAt: string;
-    metadata: import("../../../index.js").MetadataOf<import("../../../index.js").CollectionSchema<Readonly<Record<string, import("../../../index.js").Field>>, import("../../../client.js").CollectionKind>>;
+    metadata: {
+        [field: string]: unknown;
+    };
     relations: Readonly<Record<string, readonly import("../../../read/index.js").ReadRelation[]>>;
-    body?: string | undefined;
+    doc?: import("../../../read/index.js").StoredDocument | null | undefined;
+    refs?: import("../../../read/index.js").ReadRefs | undefined;
+    body?: import("../../../read/index.js").ReadBody | undefined;
 };

@@ -1,13 +1,15 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsApiUrl, createTranslator, FILE_ACCEPT, LINKABLE_COLLECTIONS } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { AlignCenter, AlignLeft, AlignRight, ChevronDown, Heading2, Heading3, Heading4, ImageIcon, Link2, List, ListOrdered, ListTodo, Minus, Paperclip, Pilcrow, Quote, RemoveFormatting, SquareCode, Superscript, Table2, Upload, } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Asterisk, ChevronDown, Heading2, Heading3, Heading4, ImageIcon, Link2, List, ListOrdered, ListTodo, Minus, Paperclip, Pilcrow, Quote, RemoveFormatting, SquareCode, Superscript, Table2, Upload, } from "lucide-react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, } from "react";
 import { toast } from "sonner";
-import { useCmsAdminComponents } from "../admin-components.js";
-import { MEDIA_NOT_CONFIGURED } from "../screens/api-error-message.js";
+import { useCmsAdminComponents, useSourceFormat, } from "../admin-components.js";
+import { errorText } from "../screens/admin-api.js";
+import { mediaNotConfiguredMessage } from "../screens/api-error-message.js";
 import { useAdminFeatures } from "../screens/shared/admin-features.js";
 import { Button } from "../ui/button.js";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu.js";
@@ -15,39 +17,45 @@ import { IconButton } from "../ui/icon-button.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover.js";
 import { Toggle } from "../ui/toggle.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip.js";
+import { editorAllowance, OPEN_ALLOWANCE } from "./allowed.js";
+import { ALLOWED_BYPASS_META } from "./allowed-extension.js";
 import { deleteBlock, duplicateBlock, moveBlock } from "./block-commands.js";
 import { BlockHandleOverlay } from "./block-handle-overlay.js";
 import { CodeLinkBar } from "./code-block/code-link-bar.js";
-import { CustomBlockMenu, CustomBlockMenuItems } from "./custom-block-menu.js";
+import { CustomBlockMenu, CustomBlockMenuItems, offeredBlocks } from "./custom-block-menu.js";
+import { documentKey } from "./document-key.js";
 import { endBlockDrag, findBlockDOM, refineBlock, resolveTargetBlock, startBlockDrag, startMarquee } from "./drag/index.js";
 import { EDITOR_WIDTHS, EditorWidthMenu, useEditorWidth } from "./editor-width.js";
 import { buildEditorExtensions } from "./extensions.js";
 import { FILE_NODE_NAME } from "./file-node.js";
+import { canInsertFootnote, insertFootnote } from "./footnote-nodes.js";
 import { ImageInsertDialog } from "./image-insert-dialog.js";
 import { InlineBubble, useMarkExtensions } from "./inline-bubble.js";
-import { INLINE_MARK_TOOLS } from "./inline-marks.js";
+import { INLINE_MARK_NAMES, inlineMarkTools } from "./inline-marks.js";
 import { insertInternalLink, parseInternalLinkTrigger } from "./internal-link.js";
 import { InternalLinkPopup } from "./internal-link-popup.js";
+import { searchLinkTargets } from "./internal-link-search.js";
 import { LinkForm, linkDraftFromSelection } from "./link-form.js";
 import { editorMessages } from "./messages.js";
 import { filterCommands, OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT, } from "./slash-command.js";
 import { SlashMenuPopup } from "./slash-menu-popup.js";
 import { TableToolbar } from "./table-toolbar.js";
-import { mdxToTiptap, tiptapToMdx } from "./tiptap-content.js";
+import { boxPreviewOf, storedToTiptap, tiptapToStored } from "./tiptap-content.js";
 import { ToolbarButton } from "./toolbar-button.js";
 import { ToolbarMenuGroup, ToolbarMenuItem, ToolbarMenuSection, ToolbarRow } from "./toolbar-row.js";
 import { uploadAttachment } from "./upload-helper.js";
-const t = createTranslator(editorMessages);
 const chain = (editor) => editor.chain().focus();
 /** Block shape dropdown. The current block's shape name becomes the dropdown name. */
-const BLOCK_STYLES = [
+const BLOCK_STYLES = (t, allowance = OPEN_ALLOWANCE) => [
     {
         label: t("toolbar.paragraph"),
         icon: Pilcrow,
         isActive: (e) => e.isActive("paragraph"),
         run: (e) => chain(e).setParagraph().run(),
     },
-    ...[2, 3, 4].map((level) => ({
+    ...[2, 3, 4]
+        .filter((level) => allowance.allowsHeading(level))
+        .map((level) => ({
         label: `H${level}`,
         title: t("toolbar.heading", { level }),
         icon: { 2: Heading2, 3: Heading3, 4: Heading4 }[level],
@@ -57,12 +65,12 @@ const BLOCK_STYLES = [
 ];
 /** Superscript/subscript marks, rarely used and grouped into one dropdown. */
 const SCRIPT_MARKS = ["superscript", "subscript"];
-const INLINE_TOOLS = INLINE_MARK_TOOLS.filter((tool) => !SCRIPT_MARKS.includes(tool.mark));
-const SCRIPT_TOOLS = INLINE_MARK_TOOLS.filter((tool) => SCRIPT_MARKS.includes(tool.mark));
+const inlineTools = (site, allowance = OPEN_ALLOWANCE) => inlineMarkTools(site).filter((tool) => !SCRIPT_MARKS.includes(tool.mark) && allowance.allowsMark(tool.mark));
+const scriptTools = (site, allowance = OPEN_ALLOWANCE) => inlineMarkTools(site).filter((tool) => SCRIPT_MARKS.includes(tool.mark) && allowance.allowsMark(tool.mark));
 /** Order in which text-style buttons are hidden (largest first). Marks not listed get 5. Bold and italic are never hidden. */
 const INLINE_PRIORITY = { bold: 0, italic: 0, strike: 6, code: 4, underline: 5 };
 const PINNED_INLINE_MARKS = ["bold", "italic"];
-const ALIGN_TOOLS = [
+const ALIGN_TOOLS = (t) => [
     {
         label: t("toolbar.alignLeft"),
         title: t("toolbar.alignLeftTitle"),
@@ -92,7 +100,7 @@ const ALIGN_TOOLS = [
     },
 ];
 /** List dropdown. The current block's list type becomes the dropdown name and icon. */
-const LIST_STYLES = [
+const LIST_STYLES = (t, allowance = OPEN_ALLOWANCE) => [
     {
         label: t("toolbar.bulletLabel"),
         title: t("toolbar.bullet"),
@@ -107,49 +115,68 @@ const LIST_STYLES = [
         isActive: (e) => e.isActive("orderedList"),
         run: (e) => chain(e).toggleOrderedList().run(),
     },
-    {
-        label: t("toolbar.todoLabel"),
-        title: t("toolbar.todo"),
-        icon: ListTodo,
-        isActive: (e) => e.isActive("taskList"),
-        run: (e) => chain(e).toggleTaskList().run(),
-    },
+    ...(allowance.allowsBlock("taskList")
+        ? [
+            {
+                label: t("toolbar.todoLabel"),
+                title: t("toolbar.todo"),
+                icon: ListTodo,
+                isActive: (e) => e.isActive("taskList"),
+                run: (e) => chain(e).toggleTaskList().run(),
+            },
+        ]
+        : []),
 ];
 /** Block insert buttons and the order they are hidden (largest first). Lists are 2, components are 4. */
-const INSERT_TOOLS = [
-    {
-        priority: 6,
-        tool: {
-            label: t("toolbar.quoteLabel"),
-            title: t("toolbar.quote"),
-            icon: Quote,
-            isActive: (e) => e.isActive("blockquote"),
-            run: (e) => chain(e).toggleBlockquote().run(),
+const INSERT_TOOLS = (t, allowance = OPEN_ALLOWANCE) => {
+    const tools = [
+        {
+            block: "blockquote",
+            priority: 6,
+            tool: {
+                label: t("toolbar.quoteLabel"),
+                title: t("toolbar.quote"),
+                icon: Quote,
+                isActive: (e) => e.isActive("blockquote"),
+                run: (e) => chain(e).toggleBlockquote().run(),
+            },
         },
-    },
-    {
-        priority: 3,
-        tool: {
-            label: t("toolbar.codeBlock"),
-            icon: SquareCode,
-            isActive: (e) => e.isActive("codeBlock"),
-            run: (e) => chain(e).toggleCodeBlock().run(),
+        {
+            block: "codeBlock",
+            priority: 3,
+            tool: {
+                label: t("toolbar.codeBlock"),
+                icon: SquareCode,
+                isActive: (e) => e.isActive("codeBlock"),
+                run: (e) => chain(e).toggleCodeBlock().run(),
+            },
         },
-    },
-    {
-        priority: 7,
-        tool: {
-            label: t("toolbar.table"),
-            icon: Table2,
-            run: (e) => chain(e).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+        {
+            block: "table",
+            priority: 7,
+            tool: {
+                label: t("toolbar.table"),
+                icon: Table2,
+                run: (e) => chain(e).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+            },
         },
+    ];
+    return tools.filter((item) => allowance.allowsBlock(item.block));
+};
+/** Inline footnote reference (plus its definition at the end of the page), the same action as the slash command. */
+const FOOTNOTE_TOOL = (t) => ({
+    label: t("toolbar.footnote"),
+    icon: Asterisk,
+    isDisabled: (e) => !canInsertFootnote(e),
+    run: (e) => {
+        insertFootnote(e);
     },
-];
-const DIVIDER_TOOL = {
+});
+const DIVIDER_TOOL = (t) => ({
     label: t("toolbar.divider"),
     icon: Minus,
     run: (e) => chain(e).setHorizontalRule().run(),
-};
+});
 /** Toolbar slot name for a text-style extension (`mark:<block name>`). */
 const markToolKey = (group, name) => `mark-${group}:${name}`;
 /**
@@ -157,29 +184,30 @@ const markToolKey = (group, name) => `mark-${group}:${name}`;
  * Document-level tools (templates, extensions, source, MDX, width) are placed on the right (`toolbarAside`) by the edit screen. Items not listed here are appended at the end in their original order.
  * `mark-format:*` and `mark-link:*` are in the order the extensions added them.
  */
-const TOOLBAR_ORDER = [
+const TOOLBAR_ORDER = (t) => [
     "block-style",
     "divider-block",
-    ...INLINE_TOOLS.map((tool) => tool.mark),
+    ...INLINE_MARK_NAMES.filter((mark) => !SCRIPT_MARKS.includes(mark)),
     "mark-format:*",
     "script",
     "divider-inline",
     "link",
     "mark-link:*",
+    FOOTNOTE_TOOL(t).label,
     "divider-list",
     "list",
     "align",
     "divider-insert",
-    ...INSERT_TOOLS.map(({ tool }) => tool.label),
+    ...INSERT_TOOLS(t).map(({ tool }) => tool.label),
     "divider-tool",
     "upload",
     "custom-block",
 ];
-const orderToolbar = (entries) => {
+const orderToolbar = (t, entries) => {
     const rank = (key) => {
         const group = /^(mark-(?:format|link)):/.exec(key)?.[1];
-        const index = TOOLBAR_ORDER.indexOf(group ? `${group}:*` : key);
-        return index < 0 ? TOOLBAR_ORDER.length : index;
+        const index = TOOLBAR_ORDER(t).indexOf(group ? `${group}:*` : key);
+        return index < 0 ? TOOLBAR_ORDER(t).length : index;
     };
     // Keep the original order within the same slot (Array.prototype.sort is stable).
     return [...entries].sort((a, b) => rank(a.key) - rank(b.key));
@@ -187,29 +215,6 @@ const orderToolbar = (entries) => {
 function ToolbarDropdown({ editor, label, items, icon: Icon, iconOnly = false, }) {
     const content = (_jsxs(_Fragment, { children: [Icon && _jsx(Icon, { "aria-hidden": true, className: "size-4" }), !iconOnly && label, _jsx(ChevronDown, { "aria-hidden": true, className: "size-3" })] }));
     return (_jsxs(DropdownMenu, { children: [iconOnly ? (_jsx(IconButton, { label: label, side: "bottom", size: "sm", className: "h-8 gap-1 px-1.5 text-xs", disabled: !editor.isEditable, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: content })) : (_jsx(DropdownMenuTrigger, { render: _jsx(Button, { type: "button", variant: "ghost", size: "sm", className: "h-8 gap-1 px-2 text-xs", "aria-label": label, disabled: !editor.isEditable, onMouseDown: (event) => event.preventDefault() }), children: content })), _jsx(DropdownMenuContent, { align: "start", className: "min-w-36", children: items.map((item) => (_jsx(ToolbarMenuItem, { editor: editor, item: item }, item.label))) })] }));
-}
-async function searchLinkTargets(query) {
-    const search = async (collection) => {
-        const params = new URLSearchParams({ collection, pageSize: "25" });
-        if (query)
-            params.set("search", query);
-        for (const status of ["draft", "published"])
-            params.append("status", status);
-        const res = await fetch(cmsApiUrl(`/v1/entries?${params.toString()}`));
-        if (!res.ok)
-            return [];
-        const data = (await res.json());
-        return data.items.map((item) => ({
-            id: item.id,
-            collection: item.collection,
-            title: item.title || t("toolbar.untitled"),
-            slug: item.slug ?? "",
-            status: item.status,
-        }));
-    };
-    // Find only collections that have a public path (ones a body link can point to).
-    const results = await Promise.all(LINKABLE_COLLECTIONS.map(search));
-    return results.flat().slice(0, 20);
 }
 /** Handle width (px) and gap from the block. BlockHandleOverlay places a 24px button at `left - 32`. */
 const HANDLE_OFFSET = 32;
@@ -234,16 +239,22 @@ const handleAnchor = (block, rect) => {
     return { top: rect.top, left };
 };
 const sameSpot = (a, b) => !!a && a.top === b.top && a.left === b.left && a.pos === b.pos;
-export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAside, sourceView, onCompositionStart, onCompositionEnd, editable = true, blockActions, onEditor, selectionActions, insertActions, }) {
+export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside, sourceView, onCompositionStart, onCompositionEnd, editable = true, blockActions, onEditor, selectionActions, insertActions, allowed, }) {
+    const site = useSite();
+    const t = useTranslator(editorMessages);
+    // What the body's allowed list lets a writer add. A body that already holds more still opens and saves as it is.
+    const allowance = useMemo(() => editorAllowance(site, allowed), [site, allowed]);
     const isSourceMode = sourceView != null && sourceView !== false;
     // Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formatting tools, and slash menu items.
     const { marks: markSpecs = {} } = useCmsAdminComponents();
-    const allMarkExtensions = useMarkExtensions();
+    const allMarkExtensions = useMarkExtensions().filter(({ name }) => allowance.allowsEditorMark(name));
     // While source is being edited, the visual editor is paused. Toolbar tools are locked too.
     const canEdit = editable && !isSourceMode;
     const { media } = useAdminFeatures();
     // A body opened in source mode may be unparsable. The visual editor starts as an empty document and is filled when returning.
-    const [initialContent] = useState(() => mdxToTiptap(isSourceMode ? "" : content));
+    const sourceFormat = useSourceFormat();
+    const boxPreview = useMemo(() => boxPreviewOf(sourceFormat), [sourceFormat]);
+    const [initialContent] = useState(() => storedToTiptap(site, isSourceMode ? emptyStoredDocument() : doc, { boxPreview }));
     const isInternalUpdateRef = useRef(false);
     // Width of the element at the right end of the toolbar. Leave this much space on both sides so the tool group stays centered.
     const asideRef = useRef(null);
@@ -290,6 +301,7 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
     const [link, setLink] = useState(null);
     const [linkItems, setLinkItems] = useState([]);
     const [isLinkLoading, setIsLinkLoading] = useState(false);
+    const [linkError, setLinkError] = useState(null);
     const linkRangeRef = useRef(null);
     const linkRef = useRef(link);
     linkRef.current = link;
@@ -328,13 +340,13 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
         const current = editorRef.current;
         if (!current || !linkRangeRef.current)
             return;
-        insertInternalLink(current, linkRangeRef.current, item);
+        insertInternalLink(site, current, linkRangeRef.current, item);
         setLink(null);
     };
     const editor = useEditor({
         immediatelyRender: false,
         editable: canEdit,
-        extensions: buildEditorExtensions(markSpecs),
+        extensions: buildEditorExtensions(site, markSpecs, allowance),
         content: initialContent,
         editorProps: {
             attributes: {
@@ -381,7 +393,7 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
                 }
                 const openSlash = slashRef.current;
                 if (openSlash) {
-                    const filtered = filterCommands(openSlash.query, extraCommandsRef.current, inlineCommandsRef.current);
+                    const filtered = filterCommands(site, openSlash.query, extraCommandsRef.current, inlineCommandsRef.current, allowance);
                     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                         event.preventDefault();
                         const step = event.key === "ArrowDown" ? 1 : -1;
@@ -412,7 +424,8 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
         onUpdate: ({ editor: current }) => {
             if (isInternalUpdateRef.current)
                 return;
-            onChange(tiptapToMdx(current.getJSON()));
+            const json = current.getJSON();
+            onChange(tiptapToStored(site, json));
             syncTriggerPopup(current);
         },
         onSelectionUpdate: ({ editor: current }) => syncTriggerPopup(current),
@@ -427,18 +440,25 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
             if (!current)
                 return "";
             const selection = current.state.selection;
-            const active = [...BLOCK_STYLES, ...INLINE_TOOLS, ...SCRIPT_TOOLS, ...ALIGN_TOOLS, ...LIST_STYLES]
+            const active = [
+                ...BLOCK_STYLES(t),
+                ...inlineTools(site),
+                ...scriptTools(site),
+                ...ALIGN_TOOLS(t),
+                ...LIST_STYLES(t),
+            ]
                 .map((item) => (item.isActive?.(current) ? "1" : "0"))
                 .join("");
             const marks = ["link", ...markNames].map((mark) => (current.isActive(mark) ? "1" : "0")).join("");
             return `${active}${marks}:${current.isActive("table") ? "table" : ""}:${selection.from}:${selection.to}:${selection instanceof CellSelection}`;
         },
     });
+    // The names of the current block and list come from every kind, also the ones the list no longer offers: a body keeps what it holds.
     const blockStyle = editor
-        ? (BLOCK_STYLES.find((item) => item.isActive?.(editor))?.label ?? t("toolbar.paragraph"))
+        ? (BLOCK_STYLES(t).find((item) => item.isActive?.(editor))?.label ?? t("toolbar.paragraph"))
         : t("toolbar.paragraph");
-    const activeList = editor ? LIST_STYLES.find((item) => item.isActive?.(editor)) : undefined;
-    const activeAlign = editor ? ALIGN_TOOLS.find((item) => item.isActive?.(editor)) : undefined;
+    const activeList = editor ? LIST_STYLES(t).find((item) => item.isActive?.(editor)) : undefined;
+    const activeAlign = editor ? ALIGN_TOOLS(t).find((item) => item.isActive?.(editor)) : undefined;
     useEffect(() => {
         editorRef.current = editor;
         if (!editor || isSourceMode)
@@ -448,17 +468,20 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
         queueMicrotask(() => {
             if (cancelled || editor.isDestroyed)
                 return;
-            // The comparison basis is the stored string (MDX) — comparing Tiptap JSON objects breaks due to key order.
-            if (tiptapToMdx(editor.getJSON()) === content)
+            // Bodies are compared by what they say (`documentKey`): comparing Tiptap JSON objects breaks due to key order, and block ids are not content.
+            if (documentKey(site, tiptapToStored(site, editor.getJSON())) === documentKey(site, doc))
                 return;
+            // Blocks keep the ids the document gives them.
+            const next = storedToTiptap(site, doc, { boxPreview });
             isInternalUpdateRef.current = true;
-            editor.commands.setContent(mdxToTiptap(content), { emitUpdate: false });
+            // What is stored is shown as it is: the allowed list limits what a writer adds, never what a body already holds.
+            editor.chain().setMeta(ALLOWED_BYPASS_META, true).setContent(next, { emitUpdate: false }).run();
             isInternalUpdateRef.current = false;
         });
         return () => {
             cancelled = true;
         };
-    }, [content, editor, isSourceMode]);
+    }, [doc, editor, isSourceMode, boxPreview, site]);
     // Toolbar tools read editor.isEditable while rendering. After changing the lock, render once more to sync tool state.
     const [, rerender] = useReducer((count) => count + 1, 0);
     useEffect(() => {
@@ -480,15 +503,18 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
             return;
         let cancelled = false;
         setIsLinkLoading(true);
+        setLinkError(null);
         const timer = setTimeout(() => {
-            searchLinkTargets(linkQuery)
+            searchLinkTargets(site, linkQuery)
                 .then((items) => {
                 if (!cancelled)
                     setLinkItems(items);
             })
-                .catch(() => {
-                if (!cancelled)
-                    setLinkItems([]);
+                .catch((error) => {
+                if (cancelled)
+                    return;
+                setLinkItems([]);
+                setLinkError(errorText(site, error, t("internalLink.error")));
             })
                 .finally(() => {
                 if (!cancelled)
@@ -499,7 +525,7 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [linkQuery]);
+    }, [linkQuery, site, t]);
     useEffect(() => {
         const open = () => setImageDialog({ file: null });
         window.addEventListener(OPEN_IMAGE_DIALOG_EVENT, open);
@@ -540,26 +566,26 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
     useEffect(() => {
         const open = () => {
             if (!media)
-                toast.error(MEDIA_NOT_CONFIGURED);
+                toast.error(mediaNotConfiguredMessage(site));
             else
                 fileInputRef.current?.click();
         };
         window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
         return () => window.removeEventListener(OPEN_FILE_PICKER_EVENT, open);
-    }, [media]);
+    }, [media, site]);
     /** Upload non-image files and insert them as file cards. If `at` is given, insert there (where it was dropped). */
     const uploadAttachments = useCallback(async (files, at) => {
         if (!editor)
             return;
         if (!media) {
-            toast.error(MEDIA_NOT_CONFIGURED);
+            toast.error(mediaNotConfiguredMessage(site));
             return;
         }
         let position = at;
         for (const file of files) {
             const toastId = toast.loading(t("toolbar.uploading", { name: file.name }));
             try {
-                const { mediaId } = await uploadAttachment(file, (percent) => toast.loading(t("toolbar.uploadingPercent", { name: file.name, percent }), { id: toastId }));
+                const { mediaId } = await uploadAttachment(site, file, (percent) => toast.loading(t("toolbar.uploadingPercent", { name: file.name, percent }), { id: toastId }));
                 const node = { type: FILE_NODE_NAME, attrs: { mediaId, label: null } };
                 if (position === undefined)
                     editor.chain().focus().insertContent(node).run();
@@ -576,7 +602,7 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
                 });
             }
         }
-    }, [editor, media]);
+    }, [editor, media, site, t]);
     const attachmentsFrom = (list) => Array.from(list ?? []).filter((file) => !file.type.startsWith("image/"));
     const handleMouseMove = useCallback((event) => {
         if (!editor)
@@ -669,19 +695,21 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
         render: () => _jsx(ToolbarDropdown, { editor: editor, label: label, items: items, icon: icon, iconOnly: true }),
         menu: () => _jsx(ToolbarMenuGroup, { editor: editor, label: menuLabel, items: items }),
     });
-    const UploadMenuItems = () => (_jsxs(_Fragment, { children: [_jsxs(DropdownMenuItem, { disabled: !canEdit, onClick: () => setImageDialog({ file: null }), children: [_jsx(ImageIcon, { "aria-hidden": true, className: "size-4" }), _jsx("span", { className: "flex-1", children: t("toolbar.image") })] }), _jsxs(DropdownMenuItem, { disabled: !canEdit, onClick: () => fileInputRef.current?.click(), children: [_jsx(Paperclip, { "aria-hidden": true, className: "size-4" }), _jsx("span", { className: "flex-1", children: t("toolbar.file") })] })] }));
+    const UploadMenuItems = () => (_jsxs(_Fragment, { children: [allowance.allowsBlock("image") && (_jsxs(DropdownMenuItem, { disabled: !canEdit, onClick: () => setImageDialog({ file: null }), children: [_jsx(ImageIcon, { "aria-hidden": true, className: "size-4" }), _jsx("span", { className: "flex-1", children: t("toolbar.image") })] })), allowance.allowsBlock("file") && (_jsxs(DropdownMenuItem, { disabled: !canEdit, onClick: () => fileInputRef.current?.click(), children: [_jsx(Paperclip, { "aria-hidden": true, className: "size-4" }), _jsx("span", { className: "flex-1", children: t("toolbar.file") })] }))] }));
     // Order to hide when narrow: larger priority first. fixed is never hidden (popover tools lose their anchor inside the menu).
-    // The placement order is decided by `TOOLBAR_ORDER` below.
+    // The placement order is decided by `TOOLBAR_ORDER(t)` below.
     const unordered = [
         {
             key: "block-style",
             priority: 0,
             fixed: true,
-            render: () => _jsx(ToolbarDropdown, { editor: editor, label: blockStyle, items: BLOCK_STYLES }),
+            render: () => _jsx(ToolbarDropdown, { editor: editor, label: blockStyle, items: BLOCK_STYLES(t, allowance) }),
         },
-        dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS, activeAlign?.icon ?? AlignLeft),
+        ...(allowance.allowsBlock("text-align")
+            ? [dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? AlignLeft)]
+            : []),
         { key: "divider-block", divider: true },
-        ...INLINE_TOOLS.map((tool) => buttonSlot(tool, tool.mark, INLINE_PRIORITY[tool.mark] ?? 5, PINNED_INLINE_MARKS.includes(tool.mark))),
+        ...inlineTools(site, allowance).map((tool) => buttonSlot(tool, tool.mark, INLINE_PRIORITY[tool.mark] ?? 5, PINNED_INLINE_MARKS.includes(tool.mark))),
         // Formatting tools of text-style extensions (block extension text color, tooltip, etc.).
         ...markExtensions.flatMap(({ name, extension }) => {
             const tool = extension.toolbar;
@@ -698,34 +726,49 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
                 },
             ];
         }),
-        dropdownSlot("script", 8, t("toolbar.script"), SCRIPT_TOOLS, Superscript),
+        ...(scriptTools(site, allowance).length > 0
+            ? [dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site, allowance), Superscript)]
+            : []),
         { key: "divider-inline", divider: true },
         { key: "divider-list", divider: true },
         { key: "divider-insert", divider: true },
-        dropdownSlot("list", 2, activeList?.title ?? t("toolbar.list"), LIST_STYLES, activeList?.icon ?? List, t("toolbar.list")),
-        ...INSERT_TOOLS.map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),
-        {
-            key: "custom-block",
-            priority: 4,
-            render: () => _jsx(CustomBlockMenu, { editor: editor }),
-            menu: () => (_jsx(ToolbarMenuSection, { label: t("toolbar.components"), children: _jsx(CustomBlockMenuItems, { editor: editor }) })),
-        },
-        {
-            key: "upload",
-            // Hide later than underline (5). With the same priority, right-hand tools hide first.
-            priority: 4,
-            render: () => (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("toolbar.upload"), side: "bottom", disabled: !canEdit, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(Upload, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "start", className: "w-40", children: _jsx(UploadMenuItems, {}) })] })),
-            menu: () => _jsx(UploadMenuItems, {}),
-        },
-        {
-            key: "link",
-            priority: 0,
-            fixed: true,
-            render: () => (_jsxs(Popover, { open: linkDraft !== null, onOpenChange: (open) => setLinkDraft(open ? linkDraftFromSelection(editor) : null), children: [_jsxs(Tooltip, { children: [_jsx(TooltipTrigger, { render: _jsx(PopoverTrigger, { render: _jsx(Toggle, { size: "sm", pressed: editor.isActive("link"), disabled: !canEdit, "aria-label": t("toolbar.link"), onMouseDown: (event) => event.preventDefault(), className: "size-8 p-0" }), children: _jsx(Link2, { "aria-hidden": true, className: "size-4" }) }) }), _jsx(TooltipContent, { side: "bottom", children: t("toolbar.link") })] }), _jsx(PopoverContent, { align: "start", className: "w-80", children: linkDraft && _jsx(LinkForm, { editor: editor, draft: linkDraft, onDone: () => setLinkDraft(null) }) })] })),
-        },
-        buttonSlot(DIVIDER_TOOL, "divider-tool", 8),
+        dropdownSlot("list", 2, activeList?.title ?? t("toolbar.list"), LIST_STYLES(t, allowance), activeList?.icon ?? List, t("toolbar.list")),
+        ...INSERT_TOOLS(t, allowance).map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),
+        ...(offeredBlocks(site, editor).length > 0
+            ? [
+                {
+                    key: "custom-block",
+                    priority: 4,
+                    render: () => _jsx(CustomBlockMenu, { editor: editor }),
+                    menu: () => (_jsx(ToolbarMenuSection, { label: t("toolbar.components"), children: _jsx(CustomBlockMenuItems, { editor: editor }) })),
+                },
+            ]
+            : []),
+        ...(allowance.allowsBlock("image") || allowance.allowsBlock("file")
+            ? [
+                {
+                    key: "upload",
+                    // Hide later than underline (5). With the same priority, right-hand tools hide first.
+                    priority: 4,
+                    render: () => (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("toolbar.upload"), side: "bottom", disabled: !canEdit, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(Upload, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "start", className: "w-40", children: _jsx(UploadMenuItems, {}) })] })),
+                    menu: () => _jsx(UploadMenuItems, {}),
+                },
+            ]
+            : []),
+        ...(allowance.allowsMark("link")
+            ? [
+                {
+                    key: "link",
+                    priority: 0,
+                    fixed: true,
+                    render: () => (_jsxs(Popover, { open: linkDraft !== null, onOpenChange: (open) => setLinkDraft(open ? linkDraftFromSelection(editor) : null), children: [_jsxs(Tooltip, { children: [_jsx(TooltipTrigger, { render: _jsx(PopoverTrigger, { render: _jsx(Toggle, { size: "sm", pressed: editor.isActive("link"), disabled: !canEdit, "aria-label": t("toolbar.link"), onMouseDown: (event) => event.preventDefault(), className: "size-8 p-0" }), children: _jsx(Link2, { "aria-hidden": true, className: "size-4" }) }) }), _jsx(TooltipContent, { side: "bottom", children: t("toolbar.link") })] }), _jsx(PopoverContent, { align: "start", className: "w-80", children: linkDraft && _jsx(LinkForm, { editor: editor, draft: linkDraft, onDone: () => setLinkDraft(null) }) })] })),
+                },
+            ]
+            : []),
+        ...(allowance.allowsBlock("footnotes") ? [buttonSlot(FOOTNOTE_TOOL(t), FOOTNOTE_TOOL(t).label, 5)] : []),
+        ...(allowance.allowsBlock("horizontalRule") ? [buttonSlot(DIVIDER_TOOL(t), "divider-tool", 8)] : []),
     ];
-    const toolbarEntries = orderToolbar(unordered);
+    const toolbarEntries = orderToolbar(t, unordered);
     return (_jsxs("div", { className: "relative flex min-h-full w-full flex-1 flex-col bg-cms-background", "data-cms-editor-shell": true, 
         // Title, body, and source use the same width (`--editor-width`).
         style: { "--editor-width": EDITOR_WIDTHS[width] }, onCompositionStart: (event) => {
@@ -748,7 +791,7 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
             if (target.closest('input, textarea, button, select, a, [role="toolbar"], [contenteditable="true"]'))
                 return;
             startMarquee(editor.view, event.nativeEvent);
-        }, children: [_jsxs("div", { role: "toolbar", "aria-label": t("toolbar.format"), className: "sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-cms-background/95 backdrop-blur", children: [_jsxs("div", { className: "relative flex min-h-12 items-center py-2", style: { paddingInline: asideWidth + 24 }, children: [_jsx(ToolbarRow, { editor: editor, entries: toolbarEntries, end: toolbarEnd }), _jsxs("div", { ref: asideRef, className: "absolute inset-y-0 right-4 flex items-center gap-1", children: [toolbarAside, _jsx(EditorWidthMenu, { value: width, onChange: setWidth })] })] }), !isSourceMode && _jsx(CodeLinkBar, { editor: editor })] }), titleField && (_jsx("div", { className: "mx-auto w-full max-w-(--editor-width) border-cms-border/60 border-b px-4 pt-12 pb-5", children: titleField })), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
+        }, children: [_jsxs("div", { role: "toolbar", "aria-label": t("toolbar.format"), className: "sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-cms-background/95 backdrop-blur", children: [_jsxs("div", { className: "relative flex min-h-12 items-center py-2", style: { paddingInline: asideWidth + 24 }, children: [_jsx(ToolbarRow, { editor: editor, entries: toolbarEntries, end: toolbarEnd }), _jsxs("div", { ref: asideRef, className: "absolute inset-y-0 right-4 flex items-center gap-1", children: [toolbarAside, _jsx(EditorWidthMenu, { value: width, onChange: setWidth })] })] }), !isSourceMode && _jsx(CodeLinkBar, { editor: editor })] }), titleField && (_jsx("div", { className: "mx-auto w-full max-w-(--editor-width) border-cms-border/60 border-b px-4 pt-12 pb-5", children: titleField })), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: site.api.FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
                     const files = Array.from(event.target.files ?? []);
                     event.target.value = "";
                     void uploadAttachments(files);
@@ -764,7 +807,7 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
                         editor.chain().focus("end").run();
                 }, onPaste: (event) => {
                     const file = imageFileFrom(event.clipboardData.items);
-                    if (file && canEdit) {
+                    if (file && canEdit && allowance.allowsBlock("image")) {
                         event.preventDefault();
                         setImageDialog({ file });
                     }
@@ -772,26 +815,26 @@ export function CmsEditor({ content, onChange, titleField, toolbarEnd, toolbarAs
                     if (!canEdit)
                         return;
                     const file = imageFileFrom(event.dataTransfer.files);
-                    if (file) {
+                    if (file && allowance.allowsBlock("image")) {
                         event.preventDefault();
                         setImageDialog({ file });
                         return;
                     }
                     // Non-image files are inserted as file cards where they are dropped.
                     const attachments = attachmentsFrom(event.dataTransfer.files);
-                    if (attachments.length > 0) {
+                    if (attachments.length > 0 && allowance.allowsBlock("file")) {
                         event.preventDefault();
                         const at = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
                         void uploadAttachments(attachments, at);
                     }
-                }, onDragOver: (event) => event.preventDefault(), children: _jsx(EditorContent, { editor: editor, className: "flex min-h-full flex-1 flex-col [&>.ProseMirror]:min-h-[calc(100vh-240px)] [&>.ProseMirror]:flex-1" }) }), slash && !isSourceMode && (_jsx(SlashMenuPopup, { items: filterCommands(slash.query, extraCommands, inlineCommands), coords: slash.coords, selectedIndex: slash.index, onSelect: (command) => {
+                }, onDragOver: (event) => event.preventDefault(), children: _jsx(EditorContent, { editor: editor, className: "flex min-h-full flex-1 flex-col [&>.ProseMirror]:min-h-[calc(100vh-240px)] [&>.ProseMirror]:flex-1" }) }), slash && !isSourceMode && (_jsx(SlashMenuPopup, { items: filterCommands(site, slash.query, extraCommands, inlineCommands, allowance), coords: slash.coords, selectedIndex: slash.index, onSelect: (command) => {
                     if (slashRangeRef.current)
                         command.action(editor, slashRangeRef.current);
                     setSlash(null);
                 }, onClose: () => {
                     setSlash(null);
                     editor.chain().focus().run();
-                } })), link && !isSourceMode && (_jsx(InternalLinkPopup, { items: linkItems, isLoading: isLinkLoading, coords: link.coords, selectedIndex: link.index, onSelect: chooseLink, onClose: () => {
+                } })), link && !isSourceMode && (_jsx(InternalLinkPopup, { items: linkItems, isLoading: isLinkLoading, error: linkError, coords: link.coords, selectedIndex: link.index, onSelect: chooseLink, onClose: () => {
                     setLink(null);
                     editor.chain().focus().run();
                 } })), !isSourceMode && (_jsxs(_Fragment, { children: [_jsx(TableToolbar, { editor: editor }), _jsx(InlineBubble, { editor: editor, actions: selectionActions })] })), handleSpot && canEdit && (_jsx(BlockHandleOverlay, { coords: handleSpot, onMoveUp: withBlock(handleSpot.pos, (current, pos) => moveBlock(current, pos, -1)), onMoveDown: withBlock(handleSpot.pos, (current, pos) => moveBlock(current, pos, 1)), onDuplicate: withBlock(handleSpot.pos, duplicateBlock), onDelete: () => {

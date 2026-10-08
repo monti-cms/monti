@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { DEFAULT_LOCALE } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/client";
 import { useState } from "react";
 import { TextCheckToolbar, TextIssuePopover } from "./text-check-controls.js";
 import { useTextCheck } from "./use-text-check.js";
@@ -10,8 +10,9 @@ import { useTextCheck } from "./use-text-check.js";
  * covers the text's language, it renders nothing.
  */
 export function useTextCheckEditor(checkers, context) {
+    const site = useSite();
     const [editor, setEditor] = useState(null);
-    const locale = context.getEntry?.().locale ?? DEFAULT_LOCALE;
+    const locale = context.getEntry?.().locale ?? site.DEFAULT_LOCALE;
     const controller = useTextCheck(editor, { checkers, locale });
     return {
         onEditor: setEditor,

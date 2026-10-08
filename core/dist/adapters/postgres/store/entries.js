@@ -1,210 +1,250 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { isCollection, isItemCollection } from "../../../core/collections.js";
-import { DEFAULT_LOCALE, isLocale } from "../../../core/locales.js";
-import { computeContentHash } from "../../../core/snapshot.js";
-import { normalizeReferenceKind, ServiceError, } from "../../../core/types.js";
-import { commonFieldKeys, fieldValueError, storedField } from "../../../schema/derive.js";
-import { withTransaction } from "./context.js";
-import { CmsError, mapEntryWriteError } from "./errors.js";
-import { insertReferences, isReferencesEqual, loadEntry, lockEntryForUpdate, normalizeMetadata, readBody, readReferences, writeBody, } from "./rows.js";
-/** Validates the title field value (`title` by library convention). A mismatch throws an error carrying the field path. */
-function assertTitleValue(collection, title) {
-    const stored = isCollection(collection) ? storedField(collection, "title") : undefined;
-    const error = stored ? fieldValueError(stored.field, title) : null;
-    if (error)
-        throw new ServiceError(error, [{ code: error, path: "title", message: stored?.field.label }]);
-}
+import { sql } from "kysely";
+import { currentActor } from "../../../core/actor.js";
+import { assertFolderInCollection } from "../../../core/domain/folders.js";
+import { normalizeMetadata } from "../../../core/domain/metadata.js";
+import { assertEditableStatus, assertExpectedVersion, assertSameCollection, isSameWorkingBody, } from "../../../core/domain/publish.js";
+import { isReferencesEqual } from "../../../core/domain/references.js";
+import { reservationFor } from "../../../core/domain/slug-address.js";
+import { assertKnownLocale, assertTranslationMetadata, assertTranslationSource, assertTranslationStateAllowed, } from "../../../core/domain/translation.js";
+import { CmsError } from "../../../core/store/errors.js";
+import { hasLegacyOccurrence, normalizeReferenceKind, readReferenceOccurrences, } from "../../../core/types.js";
+import { withTrx } from "./context.js";
+import { mapEntryWriteError } from "./errors.js";
+import { recordEvents } from "./events.js";
+import { insertReferences, loadEntry, lockEntryForUpdate, readBody, readBodyDoc, readReferences, writeBody, } from "./rows.js";
+import { ROW_COLLECTION, titleExpr } from "./title-sql.js";
+/** The group an entry belongs to: its source, or itself for a source. */
+const groupOf = (alias) => sql `coalesce(${sql.ref(`${alias}.translation_group_id`)}, ${sql.ref(`${alias}.id`)})`;
 export function createEntryOps(ctx, publishing) {
-    const { pool, qSchema } = ctx;
+    const { qSchema, site } = ctx;
+    const db = ctx.db();
     const { publishWithinTransaction, lockDraftReferenceTargets } = publishing;
-    const assertFolder = async (client, folderId, collection) => {
+    const assertFolder = async (trx, folderId, collection) => {
         if (!folderId)
             return;
-        const res = await client.query(`SELECT collection FROM "${qSchema}".folders WHERE id = $1`, [folderId]);
-        if (res.rows[0]?.collection !== collection)
-            throw new CmsError("Invalid folder", "invalid_input");
+        const folder = await trx.selectFrom("folders").select("collection").where("id", "=", folderId).executeTakeFirst();
+        assertFolderInCollection(folder?.collection, collection);
     };
     /**
-     * Reserves the draft's slug. Releases a previous reservation that was never published, and does not
-     * reserve anew when returning to the entry's own current or alias slug (promoted to current on publish). 409 if another entry owns the slug.
+     * Reserves the draft's slug (the rule is `reservationFor`). Releases a previous reservation that was never published.
      */
-    const reserveSlug = async (client, entryId, collection, locale, slug) => {
-        await client.query(`DELETE FROM "${qSchema}".content_addresses WHERE entry_id = $1 AND type = 'reservation'`, [
-            entryId,
-        ]);
+    const reserveSlug = async (trx, entryId, collection, locale, slug) => {
+        await trx
+            .deleteFrom("content_addresses")
+            .where("entry_id", "=", entryId)
+            .where("type", "=", "reservation")
+            .execute();
         if (slug === null)
             return;
         // Slug uniqueness is collection + language + slug. A translation may use the same slug as its source.
-        const existing = await client.query(`SELECT entry_id FROM "${qSchema}".content_addresses WHERE collection = $1 AND locale = $2 AND slug = $3`, [collection, locale, slug]);
-        if (existing.rows.length > 0) {
-            if (existing.rows[0]?.entry_id === entryId)
-                return;
-            throw new CmsError("Slug conflict", "slug_conflict");
-        }
-        await client.query(`INSERT INTO "${qSchema}".content_addresses (collection, locale, slug, entry_id, type) VALUES ($1, $2, $3, $4, 'reservation')`, [collection, locale, slug, entryId]);
-    };
-    /**
-     * Checks and locks the source to translate. It must be the source of its translation group (no translation of a translation),
-     * belong to a collection that has a body, and not be in the trash. A unique index blocks a second translation in the same language.
-     */
-    const assertTranslationSource = async (client, sourceId, collection, locale) => {
-        const res = await client.query(`SELECT collection, status, locale, translation_group_id AS group_id
-			 FROM "${qSchema}".entries WHERE id = $1 FOR SHARE`, [sourceId]);
-        const source = res.rows[0];
-        if (!source)
-            throw new CmsError("Source entry not found", "not_found");
-        if (source.collection !== collection || isItemCollection(collection)) {
-            throw new CmsError("Only content collections have translations", "invalid_input");
-        }
-        if (source.group_id !== null)
-            throw new CmsError("Translate the source entry, not a translation", "invalid_input");
-        if (source.status === "trashed")
-            throw new CmsError("A trashed entry cannot be translated", "invalid_status");
-        if (source.locale === locale) {
-            throw new CmsError("A translation for this locale already exists", "translation_exists");
-        }
-    };
-    /** A translation stores only per-language values. Shared fields belong to the source. */
-    const assertTranslationMetadata = (collection, isTranslation, metadata) => {
-        if (!isTranslation || !isCollection(collection))
+        const existing = await trx
+            .selectFrom("content_addresses")
+            .select("entry_id")
+            .where("collection", "=", collection)
+            .where("locale", "=", locale)
+            .where("slug", "=", slug)
+            .executeTakeFirst();
+        const holder = existing ? { entryId: existing.entry_id } : null;
+        if (reservationFor(entryId, holder) === "keep")
             return;
-        const common = commonFieldKeys(collection, metadata);
-        if (common.length > 0) {
-            throw new CmsError(`Common fields belong to the source: ${common.join(", ")}`, "invalid_input");
-        }
+        await trx
+            .insertInto("content_addresses")
+            .values({ collection, locale, slug, entry_id: entryId, type: "reservation" })
+            .execute();
+    };
+    /** Locks the source to translate and checks it (`assertTranslationSource`). */
+    const checkTranslationSource = async (trx, sourceId, collection, locale) => {
+        const row = await trx
+            .selectFrom("entries")
+            .select(["collection", "status", "locale", "translation_group_id as group_id"])
+            .where("id", "=", sourceId)
+            .forShare()
+            .executeTakeFirst();
+        assertTranslationSource(site, row && { collection: row.collection, status: row.status, locale: row.locale, translationGroupId: row.group_id }, { collection, locale });
     };
     return {
-        createEntryWithReferences: async (params) => withTransaction(pool, async (client) => {
+        createEntryWithReferences: async (params) => withTrx(ctx, async (trx, client) => {
             const metadata = normalizeMetadata(params.snapshot.metadata);
-            await lockDraftReferenceTargets(client, params.references);
-            await assertFolder(client, params.folderId, params.snapshot.collection);
+            const references = await lockDraftReferenceTargets(client, params.references);
+            await assertFolder(trx, params.folderId, params.snapshot.collection);
             const id = randomUUID();
             const now = new Date();
-            const locale = params.locale ?? DEFAULT_LOCALE;
-            if (!isLocale(locale))
-                throw new CmsError("Unknown locale", "invalid_input");
+            const locale = params.locale ?? site.DEFAULT_LOCALE;
+            assertKnownLocale(site, locale);
             if (params.translationOf) {
-                await assertTranslationSource(client, params.translationOf, params.snapshot.collection, locale);
-                assertTranslationMetadata(params.snapshot.collection, true, params.snapshot.metadata);
+                await checkTranslationSource(trx, params.translationOf, params.snapshot.collection, locale);
+                assertTranslationMetadata(site, params.snapshot.collection, true, params.snapshot.metadata);
             }
-            await client.query(`INSERT INTO "${qSchema}".entries (id, collection, version, created_at, updated_at, working_slug, folder_id, locale, translation_group_id)
-						 VALUES ($1, $2, 1, $3, $3, $4, $5, $6, $7)`, [
+            await trx
+                .insertInto("entries")
+                .values({
                 id,
-                params.snapshot.collection,
-                now,
-                params.snapshot.slug,
-                params.folderId ?? null,
+                collection: params.snapshot.collection,
+                version: 1,
+                created_at: now,
+                updated_at: now,
+                working_slug: params.snapshot.slug,
+                folder_id: params.folderId ?? null,
                 locale,
-                params.translationOf ?? null,
-            ]);
+                translation_group_id: params.translationOf ?? null,
+            })
+                .execute();
             const translation = params.snapshot.translation ?? null;
-            // Only translations carry a translation status.
-            if (translation !== null && !params.translationOf) {
-                throw new CmsError("Only translations have a translation state", "invalid_input");
-            }
-            await writeBody(client, qSchema, id, "working", {
+            assertTranslationStateAllowed(translation, Boolean(params.translationOf));
+            await writeBody(site, trx, id, "working", {
                 metadata,
-                mdx: params.snapshot.mdx,
+                doc: params.snapshot.doc,
                 schemaVersion: params.snapshot.schemaVersion,
                 contentHash: params.snapshot.contentHash,
                 updatedAt: now,
                 translation,
             });
-            await reserveSlug(client, id, params.snapshot.collection, locale, params.snapshot.slug);
-            await insertReferences(client, qSchema, id, "working", params.references);
-            return params.publishImmediately
-                ? publishWithinTransaction(client, id, { expectedVersion: 1 })
-                : loadEntry(client, id, qSchema);
+            await reserveSlug(trx, id, params.snapshot.collection, locale, params.snapshot.slug);
+            await insertReferences(trx, id, "working", references);
+            const entry = params.publishImmediately
+                ? await publishWithinTransaction(client, id, { expectedVersion: 1, snapshot: params.snapshot })
+                : await loadEntry(trx, id);
+            // A create that also published is reported as the create, then the publish.
+            await recordEvents(client, qSchema, entry, [
+                "created",
+                ...(params.publishImmediately && entry.status === "published" ? ["published"] : []),
+            ]);
+            return entry;
         }, { mapError: mapEntryWriteError }),
         /**
          * Saves the latest draft. An identical value leaves the version and modified date unchanged.
          * Moving only the folder bumps the version but keeps the content modified date.
          * A scheduled entry may only be moved between folders.
          */
-        saveWorkingWithReferences: async (params) => withTransaction(pool, async (client) => {
+        saveWorkingWithReferences: async (params) => withTrx(ctx, async (trx, client) => {
             const metadata = normalizeMetadata(params.snapshot.metadata);
-            const locked = await lockEntryForUpdate(client, qSchema, params.entryId);
-            if (locked.collection !== params.snapshot.collection) {
-                throw new CmsError("Collection mismatch", "invalid_input");
-            }
-            if (locked.version !== params.expectedVersion) {
-                throw new CmsError("Conflict", "conflict", locked.version);
-            }
-            if (locked.status === "trashed") {
-                throw new CmsError("A trashed entry must be restored before editing", "invalid_status");
-            }
-            assertTranslationMetadata(locked.collection, locked.translation_group_id !== params.entryId, params.snapshot.metadata);
-            await assertFolder(client, params.folderId, params.snapshot.collection);
-            const body = await readBody(client, qSchema, params.entryId, "working");
-            const currentRefs = await readReferences(client, qSchema, params.entryId, "working");
-            const refsEqual = isReferencesEqual(currentRefs, params.references);
+            const locked = await lockEntryForUpdate(trx, params.entryId);
+            assertSameCollection(locked.collection, params.snapshot.collection);
+            assertExpectedVersion(locked.version, params.expectedVersion);
+            assertEditableStatus(locked.status);
+            assertTranslationMetadata(site, locked.collection, locked.translation_group_id !== params.entryId, params.snapshot.metadata);
+            await assertFolder(trx, params.folderId, params.snapshot.collection);
+            const body = await readBody(trx, params.entryId, "working");
+            const currentRefs = await readReferences(trx, params.entryId, "working");
+            // A reference stored with a body occurrence in the old shape (`{type:"mdx"}`) is rewritten in the new one by this save.
+            const legacy = await trx
+                .selectFrom("entry_references")
+                .select("occurrences")
+                .where("entry_id", "=", params.entryId)
+                .where("state", "=", "working")
+                .execute();
             const nextSlug = params.snapshot.slug;
             // If no translation status is sent (bulk operations, etc.), keep the stored value.
             const translation = params.snapshot.translation === undefined ? (body?.translation ?? null) : params.snapshot.translation;
-            if (translation !== null && locked.translation_group_id === params.entryId) {
-                throw new CmsError("Only translations have a translation state", "invalid_input");
-            }
-            const bodyIdentical = Boolean(body &&
-                body.content_hash === params.snapshot.contentHash &&
-                body.mdx === params.snapshot.mdx &&
-                body.schema_version === params.snapshot.schemaVersion &&
-                locked.working_slug === nextSlug &&
-                isDeepStrictEqual(body.metadata, metadata) &&
-                isDeepStrictEqual(body.translation ?? null, translation));
+            assertTranslationStateAllowed(translation, locked.translation_group_id !== params.entryId);
+            const bodyIdentical = isSameWorkingBody(body
+                ? {
+                    contentHash: body.content_hash,
+                    slug: locked.working_slug,
+                    metadata: body.metadata,
+                    translation: body.translation,
+                }
+                : null, {
+                contentHash: params.snapshot.contentHash,
+                slug: nextSlug,
+                metadata,
+                translation,
+            });
             const folderChanged = params.folderId !== undefined;
-            await lockDraftReferenceTargets(client, params.references);
+            const references = await lockDraftReferenceTargets(client, params.references);
+            const refsEqual = isReferencesEqual(currentRefs, references) && !legacy.some((row) => hasLegacyOccurrence(row.occurrences));
             let version = locked.version;
             if (!bodyIdentical || !refsEqual || folderChanged) {
                 version += 1;
                 const now = new Date();
-                await client.query(`UPDATE "${qSchema}".entries SET version = $1, updated_at = $2, working_slug = $3,
-							 folder_id = CASE WHEN $4::boolean THEN $5::uuid ELSE folder_id END
-							 WHERE id = $6`, [
+                await trx
+                    .updateTable("entries")
+                    .set({
                     version,
-                    bodyIdentical && refsEqual ? locked.updated_at : now,
-                    nextSlug,
-                    folderChanged,
-                    params.folderId ?? null,
-                    params.entryId,
-                ]);
+                    updated_at: bodyIdentical && refsEqual ? locked.updated_at : now,
+                    working_slug: nextSlug,
+                    // The folder only moves when the caller sent one (`null` moves the entry to the top level).
+                    ...(folderChanged ? { folder_id: params.folderId ?? null } : {}),
+                    changed_by: currentActor(),
+                    changed_at: now,
+                })
+                    .where("id", "=", params.entryId)
+                    .execute();
                 if (!bodyIdentical) {
-                    await writeBody(client, qSchema, params.entryId, "working", {
+                    await writeBody(site, trx, params.entryId, "working", {
                         metadata,
-                        mdx: params.snapshot.mdx,
+                        doc: params.snapshot.doc,
                         schemaVersion: params.snapshot.schemaVersion,
                         contentHash: params.snapshot.contentHash,
                         updatedAt: now,
                         translation,
                     });
                     if (locked.working_slug !== nextSlug) {
-                        await reserveSlug(client, params.entryId, locked.collection, locked.locale, nextSlug);
+                        await reserveSlug(trx, params.entryId, locked.collection, locked.locale, nextSlug);
                     }
                 }
                 if (!refsEqual) {
-                    await client.query(`DELETE FROM "${qSchema}".entry_references WHERE entry_id = $1 AND state = 'working'`, [params.entryId]);
-                    await insertReferences(client, qSchema, params.entryId, "working", params.references);
+                    await trx
+                        .deleteFrom("entry_references")
+                        .where("entry_id", "=", params.entryId)
+                        .where("state", "=", "working")
+                        .execute();
+                    await insertReferences(trx, params.entryId, "working", references);
                 }
             }
-            return params.publishImmediately
-                ? publishWithinTransaction(client, params.entryId, { expectedVersion: version })
-                : loadEntry(client, params.entryId, qSchema);
+            // Same content written differently (other block ids, say): keep the new document (and the search text), but it is not a content
+            // change, so the content modified date stays.
+            if (body && bodyIdentical && !isDeepStrictEqual(body.doc, params.snapshot.doc)) {
+                await writeBody(site, trx, params.entryId, "working", {
+                    metadata,
+                    doc: params.snapshot.doc,
+                    schemaVersion: body.schema_version,
+                    contentHash: body.content_hash,
+                    updatedAt: body.updated_at,
+                    translation,
+                });
+            }
+            const entry = params.publishImmediately
+                ? await publishWithinTransaction(client, params.entryId, {
+                    expectedVersion: version,
+                    snapshot: params.snapshot,
+                    resetPublishedAt: params.resetPublishedAt,
+                    publishedAt: params.publishedAt,
+                    onWarnings: params.onWarnings,
+                })
+                : await loadEntry(trx, params.entryId);
+            await recordEvents(client, qSchema, entry, [
+                "saved",
+                ...(params.publishImmediately && entry.status === "published" ? ["published"] : []),
+            ]);
+            return entry;
         }, { mapError: mapEntryWriteError }),
-        getWorkingReferences: async (params) => readReferences(pool, qSchema, params.entryId, "working"),
+        getWorkingReferences: async (params) => readReferences(db, params.entryId, "working"),
         getWorking: async (params) => {
-            const res = await pool.query(`SELECT e.collection, e.version, e.working_slug, e.folder_id, e.locale,
-				        COALESCE(e.translation_group_id, e.id) AS translation_group_id, b.metadata, b.mdx
-				 FROM "${qSchema}".entries e
-				 JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id AND b.state = 'working'
-				 WHERE e.id = $1`, [params.entryId]);
-            const row = res.rows[0];
+            const row = await db
+                .selectFrom("entries as e")
+                .innerJoin("entry_bodies as b", (join) => join.onRef("e.id", "=", "b.entry_id").on("b.state", "=", "working"))
+                .select([
+                "e.collection",
+                "e.version",
+                "e.working_slug",
+                "e.folder_id",
+                "e.locale",
+                sql `coalesce(e.translation_group_id, e.id)`.as("translation_group_id"),
+                "b.metadata",
+                "b.doc",
+            ])
+                .where("e.id", "=", params.entryId)
+                .executeTakeFirst();
             if (!row)
                 throw new CmsError("Entry not found", "not_found");
             return {
                 collection: row.collection,
                 slug: row.working_slug,
                 metadata: row.metadata,
-                mdx: row.mdx,
+                doc: readBodyDoc(row.doc, null),
                 version: row.version,
                 folderId: row.folder_id,
                 locale: row.locale,
@@ -215,20 +255,28 @@ export function createEntryOps(ctx, publishing) {
          * Translation group. Returns the source and translations in language order. Used by the editor's language switch and `번역본 만들기`.
          */
         getTranslationGroup: async (params) => {
-            const res = await pool.query(`SELECT m.id, m.locale, m.status, (m.translation_group_id IS NULL) AS is_source,
-				        COALESCE(m.translation_group_id, m.id) AS group_id,
-				        b.metadata->>'title' AS title, m.working_slug
-				 FROM "${qSchema}".entries e
-				 JOIN "${qSchema}".entries m
-				   ON COALESCE(m.translation_group_id, m.id) = COALESCE(e.translation_group_id, e.id)
-				 JOIN "${qSchema}".entry_bodies b ON b.entry_id = m.id AND b.state = 'working'
-				 WHERE e.id = $1
-				 ORDER BY m.translation_group_id IS NOT NULL, m.locale`, [params.entryId]);
-            if (res.rows.length === 0)
+            const rows = await db
+                .selectFrom("entries as e")
+                .innerJoin("entries as m", (join) => join.on(groupOf("m"), "=", groupOf("e")))
+                .innerJoin("entry_bodies as b", (join) => join.onRef("b.entry_id", "=", "m.id").on("b.state", "=", "working"))
+                .select((eb) => [
+                "m.id",
+                "m.locale",
+                "m.status",
+                eb("m.translation_group_id", "is", null).$castTo().as("is_source"),
+                sql `coalesce(m.translation_group_id, m.id)`.as("group_id"),
+                titleExpr(site, "b.metadata", { column: "m.collection" }).as("title"),
+                "m.working_slug",
+            ])
+                .where("e.id", "=", params.entryId)
+                .orderBy((eb) => eb("m.translation_group_id", "is not", null))
+                .orderBy("m.locale")
+                .execute();
+            if (rows.length === 0)
                 throw new CmsError("Entry not found", "not_found");
             return {
-                groupId: res.rows[0]?.group_id ?? params.entryId,
-                members: res.rows.map((row) => ({
+                groupId: rows[0]?.group_id ?? params.entryId,
+                members: rows.map((row) => ({
                     id: row.id,
                     locale: row.locale,
                     status: row.status,
@@ -238,7 +286,7 @@ export function createEntryOps(ctx, publishing) {
                 })),
             };
         },
-        getEntry: async (id) => loadEntry(pool, id, qSchema),
+        getEntry: async (id) => loadEntry(db, id),
         /**
          * Admin preview lookup only. Finds an entry and its working body by working slug.
          * Unlike public reads it also finds drafts, archived, and trashed entries, so the caller must pass admin authentication first.
@@ -249,75 +297,97 @@ export function createEntryOps(ctx, publishing) {
             }
             if (params.slug.trim().length === 0)
                 throw new CmsError("Invalid slug", "invalid_input");
-            const res = await pool.query(
-            // A translation may share the source's slug, so disambiguate by language.
-            `SELECT id FROM "${qSchema}".entries WHERE collection = $1 AND working_slug = $2 AND locale = $3 LIMIT 1`, [params.collection, params.slug, params.locale ?? DEFAULT_LOCALE]);
-            return res.rows[0] ? loadEntry(pool, res.rows[0].id, qSchema) : null;
+            const row = await db
+                .selectFrom("entries")
+                .select("id")
+                .where("collection", "=", params.collection)
+                .where("working_slug", "=", params.slug)
+                // A translation may share the source's slug, so disambiguate by language.
+                .where("locale", "=", params.locale ?? site.DEFAULT_LOCALE)
+                .limit(1)
+                .executeTakeFirst();
+            return row ? loadEntry(db, row.id) : null;
         },
-        publishEntry: async (params) => withTransaction(pool, (client) => publishWithinTransaction(client, params.id, params), {
-            mapError: mapEntryWriteError,
-        }),
-        /**
-         * Duplicate: copies the latest draft's body, fields, and relations into a new draft with a new ID.
-         * Slug, publish status, reservation, published version, publish date, and created/modified times are not copied.
-         * If `title` is given, it replaces the copy's title (`title` field). Any suffix (such as "(copy)") is up to the caller.
-         * The store saves the given value as is and only checks the title field's rules (length, etc.).
-         */
-        duplicateEntry: async (params) => withTransaction(pool, async (client) => {
-            const res = await client.query(`SELECT e.collection, e.folder_id, b.metadata, b.mdx, b.schema_version
-					 FROM "${qSchema}".entries e
-					 JOIN "${qSchema}".entry_bodies b ON e.id = b.entry_id AND b.state = 'working'
-					 WHERE e.id = $1`, [params.id]);
-            const orig = res.rows[0];
-            if (!orig)
-                throw new CmsError("Entry not found", "not_found");
-            if (isItemCollection(orig.collection)) {
-                throw new CmsError("Record collections cannot be duplicated", "invalid_input");
-            }
-            const rest = orig.metadata ?? {};
-            if (params.title !== undefined)
-                assertTitleValue(orig.collection, params.title);
-            const metadata = normalizeMetadata(params.title === undefined ? rest : { ...rest, title: params.title });
-            const newId = randomUUID();
-            const now = new Date();
-            await client.query(`INSERT INTO "${qSchema}".entries (id, collection, version, created_at, updated_at, working_slug, folder_id, status)
-					 VALUES ($1, $2, 1, $3, $3, NULL, $4, 'draft')`, [newId, orig.collection, now, orig.folder_id]);
-            await writeBody(client, qSchema, newId, "working", {
-                metadata,
-                mdx: orig.mdx,
-                schemaVersion: orig.schema_version,
-                contentHash: computeContentHash(metadata, orig.mdx, orig.schema_version),
-                updatedAt: now,
-                // The copy is an independent source.
-                translation: null,
-            });
-            await client.query(`INSERT INTO "${qSchema}".entry_references (entry_id, state, kind, target_id, target_entry_id, target_media_id, is_stale, occurrences)
-					 SELECT $1, 'working', kind, target_id, target_entry_id, target_media_id, is_stale, occurrences
-					 FROM "${qSchema}".entry_references
-					 WHERE entry_id = $2 AND state = 'working'`, [newId, params.id]);
-            return loadEntry(client, newId, qSchema);
-        }),
+        /** Publishes the saved draft. `snapshot` is the prepared draft (see `PublishOptions.snapshot`). */
+        publishEntry: async (params) => withTrx(ctx, async (_trx, client) => {
+            const entry = await publishWithinTransaction(client, params.id, params);
+            await recordEvents(client, qSchema, entry, ["published"]);
+            return entry;
+        }, { mapError: mapEntryWriteError }),
+        slugsInUse: async (params) => {
+            if (params.slugs.length === 0)
+                return new Set();
+            const { excludeEntryId } = params;
+            const rows = await db
+                .selectFrom("content_addresses")
+                .select("slug")
+                .where("collection", "=", params.collection)
+                .where("locale", "=", params.locale)
+                .where("slug", "=", sql `any(${[...params.slugs]}::text[])`)
+                .$if(excludeEntryId !== undefined, (qb) => qb.where("entry_id", "is distinct from", excludeEntryId))
+                .execute();
+            return new Set(rows.map((row) => row.slug));
+        },
+        resolveLinkTargets: async (params) => {
+            if (params.addresses.length === 0)
+                return [];
+            // A body link (`/posts/slug`) is the default-language URL. Current, former and reserved addresses all name an entry; a trashed entry is not one a new
+            // link can be made to (saving a reference to it is refused), so its address is left as written.
+            const rows = await db
+                .selectFrom("content_addresses as a")
+                .innerJoin("entries as e", "e.id", "a.entry_id")
+                .select([
+                "a.collection",
+                "a.slug",
+                "a.locale",
+                sql `coalesce(e.translation_group_id, e.id)`.as("entry_id"),
+            ])
+                .where("a.type", "in", ["current", "alias", "reservation"])
+                .where("e.status", "<>", "trashed")
+                .where(sql `(a.collection, a.locale, a.slug) in (select * from unnest(${params.addresses.map((a) => a.collection)}::text[], ${params.addresses.map((a) => a.locale ?? site.DEFAULT_LOCALE)}::text[], ${params.addresses.map((a) => a.slug)}::text[]))`)
+                .execute();
+            return rows.map((row) => ({
+                collection: row.collection,
+                slug: row.slug,
+                locale: row.locale,
+                entryId: row.entry_id,
+            }));
+        },
         /** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
         getIncomingReferences: async (params) => {
-            const res = await pool.query(`SELECT
-					r.state,
-					e.id as source_id,
-					e.collection as source_collection,
-					(b.metadata->>'title') as source_title,
-					CASE WHEN r.state = 'published' THEN current_address.slug ELSE e.working_slug END as source_slug,
-					r.kind,
-					r.is_stale,
-					r.occurrences
-				FROM "${qSchema}".entry_references r
-				JOIN "${qSchema}".entries e ON e.id = r.entry_id
-				LEFT JOIN "${qSchema}".entry_bodies b ON b.entry_id = e.id AND b.state = r.state
-				LEFT JOIN "${qSchema}".content_addresses current_address
-					ON current_address.entry_id = e.id AND current_address.collection = e.collection AND current_address.type = 'current'
-				WHERE r.target_id = $1 AND r.state IN ('working', 'published')
-					AND e.status <> 'trashed'
-					AND (r.state <> 'published' OR e.status = 'published')
-				ORDER BY CASE WHEN r.state = 'working' THEN 0 ELSE 1 END, e.updated_at DESC, e.id ASC`, [params.targetId]);
-            return res.rows.map((row) => ({
+            const rows = await db
+                .selectFrom("entry_references as r")
+                .innerJoin("entries as e", "e.id", "r.entry_id")
+                .leftJoin("entry_bodies as b", (join) => join.onRef("b.entry_id", "=", "e.id").onRef("b.state", "=", "r.state"))
+                .leftJoin("content_addresses as current_address", (join) => join
+                .onRef("current_address.entry_id", "=", "e.id")
+                .onRef("current_address.collection", "=", "e.collection")
+                .on("current_address.type", "=", "current"))
+                .select((eb) => [
+                "r.state",
+                "e.id as source_id",
+                "e.collection as source_collection",
+                titleExpr(site, "b.metadata", ROW_COLLECTION).as("source_title"),
+                eb
+                    .case()
+                    .when("r.state", "=", "published")
+                    .then(eb.ref("current_address.slug"))
+                    .else(eb.ref("e.working_slug"))
+                    .end()
+                    .as("source_slug"),
+                "r.kind",
+                "r.is_stale",
+                "r.occurrences",
+            ])
+                .where("r.target_id", "=", params.targetId)
+                .where("r.state", "in", ["working", "published"])
+                .where("e.status", "<>", "trashed")
+                .where((eb) => eb.or([eb("r.state", "<>", "published"), eb("e.status", "=", "published")]))
+                .orderBy((eb) => eb.case().when("r.state", "=", "working").then(0).else(1).end())
+                .orderBy("e.updated_at", "desc")
+                .orderBy("e.id", "asc")
+                .execute();
+            return rows.map((row) => ({
                 state: row.state,
                 sourceId: row.source_id,
                 sourceCollection: row.source_collection,
@@ -325,7 +395,7 @@ export function createEntryOps(ctx, publishing) {
                 sourceSlug: row.source_slug,
                 kind: normalizeReferenceKind(row.kind),
                 isStale: row.is_stale,
-                occurrences: row.occurrences,
+                occurrences: readReferenceOccurrences(row.occurrences),
             }));
         },
     };

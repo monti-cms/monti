@@ -1,16 +1,14 @@
 "use client";
-import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator } from "@monti-cms/core/client";
-import { NodeViewContent, NodeViewWrapper } from "@tiptap/react";
-import { useCmsAdminComponents } from "../../../admin-components.js";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useTranslator } from "@monti-cms/core/client";
 import { cn } from "../../../lib/utils/cn.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select.js";
 import { Switch } from "../../../ui/switch.js";
-import { FencePreviewNodeView, LazyFencePreview } from "../fence-preview/index.js";
+import { FencePreviewBlockView, LazyFencePreview } from "../fence-preview/index.js";
 import { blocksMessages } from "../messages.js";
-import { AttributeInput, BlockSettings, BlockSettingsField, ContainerToolbar, SELECTED_RING, useContainerValues, useEditorEditable, } from "../shared.js";
-import { addedBlockOfNode, isContainer } from "./shared.js";
-const t = createTranslator(blocksMessages);
+import { AttributeInput, BlockSettings, BlockSettingsField, ContainerToolbar } from "../shared.js";
+import { BlockFrame, Content, useBlockEditor } from "../use-block-editor.js";
+import { isContainer } from "./shared.js";
 /** Default input for one attribute (inside the settings popover). A select if it has choices, a switch for booleans, a text input otherwise. */
 function AttributeField({ name, definition, values, setValue, editable, }) {
     const attribute = definition.attributes[name];
@@ -28,26 +26,22 @@ function AttributeField({ name, definition, values, setValue, editable, }) {
     }
     return (_jsxs(BlockSettingsField, { label: attribute.label, htmlFor: id, children: [_jsx(AttributeInput, { id: id, value: String(value), readOnly: !editable, onCommit: (next) => setValue(name, next), className: "h-7 w-full rounded-md border border-cms-input cms-dark:bg-cms-input/30 px-2 text-xs shadow-xs placeholder:text-cms-muted-foreground placeholder:opacity-100 focus-visible:border-cms-ring focus-visible:ring-3 focus-visible:ring-cms-ring/50" }), description] }));
 }
-/** Default look when no edit component is registered: the block name with the body below it. Attributes are edited in the toolbar's settings popover. */
-function DefaultCustomBlockEditor({ definition, values, setValue, content, editable }) {
+/**
+ * Default view of an added directive block that has no view registered in `blockViews`: the block name with the body below it.
+ * Attributes are edited in the toolbar's settings popover.
+ */
+export function DefaultBlockView() {
+    const t = useTranslator(blocksMessages);
+    const block = useBlockEditor();
+    const { definition, values, editable } = block;
     const names = Object.keys(definition.attributes);
-    return (_jsxs(_Fragment, { children: [editable && names.length > 0 && (_jsx(ContainerToolbar, { label: t("added.toolbar", { label: definition.label }), children: _jsx(BlockSettings, { children: names.map((name) => (_jsx(AttributeField, { name: name, definition: definition, values: values, setValue: setValue, editable: editable }, name))) }) })), _jsx("div", { contentEditable: false, className: cn("not-prose px-3 py-2 font-medium text-cms-muted-foreground text-xs", content && "border-b"), children: definition.label }), content && _jsx("div", { className: "px-3", children: content })] }));
+    const container = isContainer(definition);
+    return (_jsxs(BlockFrame, { "data-cms-custom-block": definition.name, className: "my-6 rounded-md border", children: [editable && names.length > 0 && (_jsx(ContainerToolbar, { label: t("added.toolbar", { label: definition.label }), children: _jsx(BlockSettings, { children: names.map((name) => (_jsx(AttributeField, { name: name, definition: definition, values: values, setValue: block.setValue, editable: editable }, name))) }) })), _jsx("div", { contentEditable: false, className: cn("not-prose px-3 py-2 font-medium text-cms-muted-foreground text-xs", container && "border-b"), children: definition.label }), container && (_jsx("div", { className: "px-3", children: _jsx(Content, {}) }))] }));
 }
-/** Default NodeView of a directive block. If an edit component (`blockEditors[block name]`) is registered, it is used to render. */
-export function CustomBlockNodeView(props) {
-    const { node, selected, editor } = props;
-    const definition = addedBlockOfNode(node.type.name);
-    const [values, setValue] = useContainerValues(props);
-    const editable = useEditorEditable(editor);
-    const { blockEditors } = useCmsAdminComponents();
-    if (!definition)
-        return _jsx(NodeViewWrapper, {});
-    const Editor = blockEditors?.[definition.name] ?? DefaultCustomBlockEditor;
-    return (_jsx(NodeViewWrapper, { "data-cms-custom-block": definition.name, "data-cms-framed": true, className: cn("group/container relative my-6 rounded-md border", selected && SELECTED_RING), children: _jsx(Editor, { definition: definition, values: values, setValue: setValue, content: isContainer(definition) ? _jsx(NodeViewContent, {}) : null, editable: editable, selected: selected }) }));
-}
-/** Default NodeView of a code fence block: a code input and the preview supplied by the site (`fencePreviews[language]`). */
-function FenceBlockNodeView(props) {
-    const { definition } = props;
+/** Default view of a code fence block: a code input and the preview supplied by the site (`fencePreviews[language]`). */
+export function FenceBlockView() {
+    const t = useTranslator(blocksMessages);
+    const { definition } = useBlockEditor();
     const lang = definition.syntax.kind === "fence" ? definition.syntax.lang : definition.name;
     const meta = {
         kind: lang,
@@ -55,21 +49,5 @@ function FenceBlockNodeView(props) {
         placeholder: definition.editor.insert?.code ?? "",
         preview: (value) => (_jsx(LazyFencePreview, { lang: lang, label: definition.label, value: value, emptyText: definition.editor.placeholder ?? t("added.placeholder", { label: definition.label }) })),
     };
-    return _jsx(FencePreviewNodeView, { ...props, meta: meta });
-}
-/**
- * NodeView of an added block. If a blocks extension or site supplies the whole edit view (`blockViews[block name]`) it is used; otherwise a code fence
- * block is drawn as a code and preview view, and a directive block as an attribute and body box.
- */
-export function AddedBlockNodeView(props) {
-    const definition = addedBlockOfNode(props.node.type.name);
-    const { blockViews } = useCmsAdminComponents();
-    if (!definition)
-        return _jsx(NodeViewWrapper, {});
-    const View = blockViews?.[definition.name];
-    if (View)
-        return _jsx(View, { ...props });
-    if (definition.syntax.kind === "fence")
-        return _jsx(FenceBlockNodeView, { ...props, definition: definition });
-    return _jsx(CustomBlockNodeView, { ...props });
+    return _jsx(FencePreviewBlockView, { meta: meta });
 }

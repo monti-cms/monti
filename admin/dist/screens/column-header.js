@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createTranslator, LOCALES, localeLabel } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "../lib/utils/cn.js";
@@ -15,9 +15,9 @@ import { columnConfig, isColumnFiltered } from "./list-columns.js";
 import { LIST_STATUSES } from "./list-state.js";
 import { screensMessages } from "./messages.js";
 import { DateRangeCalendar } from "./shared/date-range-picker.js";
-import { STATUS_LABELS } from "./shared/entry-status.js";
-const t = createTranslator(screensMessages);
+import { statusLabels } from "./shared/entry-status.js";
 function TextFilter({ value, placeholder, label, onApply, }) {
+    const t = useTranslator(screensMessages);
     const [draft, setDraft] = useState(value);
     useEffect(() => setDraft(value), [value]);
     return (_jsxs("form", { className: "flex gap-2", onSubmit: (event) => {
@@ -29,18 +29,24 @@ function CheckRow({ label, checked, onChange, }) {
     return (_jsxs(Label, { className: "flex items-center gap-2 rounded-sm px-2 py-1.5 font-normal hover:bg-cms-accent", children: [_jsx(Checkbox, { checked: checked, onCheckedChange: (next) => onChange(next === true) }), label] }));
 }
 function StatusFilter({ state, onChange }) {
+    const site = useSite();
+    const t = useTranslator(screensMessages);
     const toggle = (status, on) => onChange({ statuses: on ? [...state.statuses, status] : state.statuses.filter((item) => item !== status) });
-    return (_jsxs("fieldset", { className: "space-y-0.5", children: [_jsx("legend", { className: "sr-only", children: t("column.status") }), LIST_STATUSES.map((status) => (_jsx(CheckRow, { label: STATUS_LABELS[status], checked: state.statuses.includes(status), onChange: (on) => toggle(status, on) }, status))), _jsx(Separator, { className: "my-1" }), _jsx(CheckRow, { label: t("filter.editing"), checked: state.hasChanges, onChange: (on) => onChange({ hasChanges: on }) })] }));
+    return (_jsxs("fieldset", { className: "space-y-0.5", children: [_jsx("legend", { className: "sr-only", children: t("column.status") }), LIST_STATUSES.map((status) => (_jsx(CheckRow, { label: statusLabels(site)[status], checked: state.statuses.includes(status), onChange: (on) => toggle(status, on) }, status))), _jsx(Separator, { className: "my-1" }), _jsx(CheckRow, { label: t("filter.editing"), checked: state.hasChanges, onChange: (on) => onChange({ hasChanges: on }) })] }));
 }
 /** Locale checklist. Choosing several shows items matching any of them. */
 function LocaleFilter({ state, onChange }) {
-    return (_jsxs("fieldset", { className: "space-y-0.5", children: [_jsx("legend", { className: "sr-only", children: t("column.locale") }), LOCALES.map((locale) => (_jsx(CheckRow, { label: localeLabel(locale), checked: state.locales.includes(locale), onChange: (on) => onChange({ locales: on ? [...state.locales, locale] : state.locales.filter((item) => item !== locale) }) }, locale)))] }));
+    const site = useSite();
+    const t = useTranslator(screensMessages);
+    return (_jsxs("fieldset", { className: "space-y-0.5", children: [_jsx("legend", { className: "sr-only", children: t("column.locale") }), site.LOCALES.map((locale) => (_jsx(CheckRow, { label: site.localeLabel(locale), checked: state.locales.includes(locale), onChange: (on) => onChange({ locales: on ? [...state.locales, locale] : state.locales.filter((item) => item !== locale) }) }, locale)))] }));
 }
 function TaxonomyFilter({ label, options, selected, onChange, }) {
+    const t = useTranslator(screensMessages);
     const toggle = (id) => onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
     return (_jsxs("div", { className: "space-y-2", children: [_jsxs(Command, { className: "bg-transparent p-0", children: [_jsx(CommandInput, { placeholder: t("filter.search", { label }), "aria-label": t("filter.search", { label }) }), _jsxs(CommandList, { className: "mt-1 max-h-56", children: [_jsx(CommandEmpty, { children: t("filter.empty", { label }) }), _jsx(CommandGroup, { className: "space-y-0.5 p-0", children: options.map((option) => (_jsxs(CommandItem, { value: `${option.title} ${option.id}`, onSelect: () => toggle(option.id), children: [_jsx(Checkbox, { checked: selected.includes(option.id), tabIndex: -1, "aria-hidden": true, className: "pointer-events-none" }), option.title] }, option.id))) })] })] }), _jsxs("div", { className: "flex justify-between", children: [_jsx(Button, { type: "button", variant: "ghost", size: "sm", onClick: () => onChange(options.map((option) => option.id)), children: t("filter.selectAll") }), _jsx(Button, { type: "button", variant: "ghost", size: "sm", onClick: () => onChange([]), children: t("filter.clearAll") })] })] }));
 }
 function DateFilter({ label, from, to, onChange, }) {
+    const t = useTranslator(screensMessages);
     return (_jsxs("div", { className: "space-y-2", children: [_jsx("p", { className: "px-1 text-cms-muted-foreground text-xs", children: label }), _jsx(DateRangeCalendar, { from: from, to: to, onChange: onChange }), _jsx("p", { className: "px-1 text-xs", "aria-live": "polite", children: from || to ? `${from || t("filter.rangeStart")} ~ ${to || t("filter.rangeEnd")}` : t("filter.noRange") })] }));
 }
 /** `relations` with one taxonomy filter changed. An empty list is removed. */
@@ -71,7 +77,9 @@ export function clearPatchFor(filter, state) {
  * so state is not conveyed by color alone. Sortable columns put `aria-sort` on the header cell (done by the caller).
  */
 export function ColumnHeader({ column, filter, state, options, onChange, }) {
-    const config = columnConfig(state.collection, column);
+    const site = useSite();
+    const t = useTranslator(screensMessages);
+    const config = columnConfig(site, state.collection, column);
     const sortField = config.sortField;
     const filtered = isColumnFiltered(state, filter);
     const sorted = sortField && state.sortField === sortField ? state.sortDirection : null;

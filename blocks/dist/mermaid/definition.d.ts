@@ -9,6 +9,7 @@ export declare const mermaidBlock: {
     };
     readonly component: "Mermaid";
     readonly attributes: {};
+    readonly validate: import("@monti-cms/core").BlockValidate;
     readonly editor: {
         readonly view: "node";
         readonly insertable: true;

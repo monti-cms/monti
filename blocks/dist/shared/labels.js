@@ -16,6 +16,8 @@ export function blockLabels(locale) {
         calloutWarning: text("calloutWarning"),
         calloutDanger: text("calloutDanger"),
         collapsibleFallback: text("collapsibleFallback"),
+        codeExplorerFiles: text("codeExplorerFiles"),
+        codeExplorerToggle: text("codeExplorerToggle"),
         chartError: chart("error.title"),
         chartErrorLine: (error) => chartErrorLine(error, chart),
     };

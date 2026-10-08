@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import * as React from "react";
-import { boundedTableSpan, MAX_TABLE_COLUMNS, parseTableWidths } from "../../mdx/table-layout.js";
+import { boundedTableSpan, MAX_TABLE_COLUMNS, parseTableWidths } from "../../doc/table-layout.js";
 /**
  * Body table that supports cell merging (colspan, rowspan). Moved from the reference blog's public page.
  * Column alignment (`align="left,center,right"`) is distributed automatically to match each cell's grid position.

@@ -1,4 +1,6 @@
-import { defineMessages, josa } from "@monti-cms/core";
+import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/client";
+import { enSelected, koSelected } from "./shared/noun.messages.js";
 /** English: noun matching the count ("1 item" / "3 items"). */
 const items = (count) => `${count} ${Number(count) === 1 ? "item" : "items"}`;
 /** Text of top-level screen pieces: list, trash, taxonomy panel, sidebar, column headers, etc. */
@@ -60,6 +62,9 @@ export const screensMessages = defineMessages("cms-admin.screens", {
         "sidebar.manage": "Manage",
         "sidebar.media": "Media",
         "sidebar.templates": "Body templates",
+        "sidebar.schema": "Schema",
+        "sidebar.events": "Events",
+        "sidebar.eventsBadge": "{count} failed event deliveries",
         "sidebar.trash": "Trash",
         "sidebar.trashBadge": "{count} in trash",
         "sidebar.viewSite": "View site",
@@ -121,7 +126,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
         "trash.askMany": "Move the {count} selected items to the trash? They will no longer be public.",
         "archive.title": "Archive",
         "archive.askOne": "Archive {title}? It will no longer be public.",
-        "archive.askMany": "Archive the {count} selected posts? They will no longer be public.",
+        "archive.askMany": (vars) => `Archive the ${enSelected(vars)}? They will no longer be public.`,
         "delete.title": "Delete permanently",
         "delete.askOne": "Permanently delete {title}? This can't be undone.",
         "delete.askMany": "Permanently delete the {count} selected items? This can't be undone. Items used by other content aren't deleted; the reason is shown instead.",
@@ -193,6 +198,9 @@ export const screensMessages = defineMessages("cms-admin.screens", {
         "sidebar.manage": "관리",
         "sidebar.media": "미디어",
         "sidebar.templates": "본문 템플릿",
+        "sidebar.schema": "스키마",
+        "sidebar.events": "이벤트",
+        "sidebar.eventsBadge": "실패한 이벤트 전달 {count}건",
         "sidebar.trash": "휴지통",
         "sidebar.trashBadge": "휴지통 {count}개",
         "sidebar.viewSite": "사이트 보기",
@@ -254,7 +262,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
         "trash.askMany": "선택한 항목 {count}개를 휴지통으로 옮길까요? 공개가 종료됩니다.",
         "archive.title": "보관",
         "archive.askOne": "{title}을(를) 보관할까요? 공개가 종료됩니다.",
-        "archive.askMany": "선택한 글 {count}개를 보관할까요? 공개가 종료됩니다.",
+        "archive.askMany": (vars) => `${koSelected(vars)}를 보관할까요? 공개가 종료됩니다.`,
         "delete.title": "영구 삭제",
         "delete.askOne": "{title}을(를) 영구 삭제할까요? 되돌릴 수 없습니다.",
         "delete.askMany": "선택한 항목 {count}개를 영구 삭제할까요? 되돌릴 수 없습니다. 다른 콘텐츠가 쓰는 항목은 삭제하지 않고 사유를 보여 줍니다.",

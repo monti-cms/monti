@@ -1,4 +1,5 @@
-import { defineMessages, josa } from "@monti-cms/core";
+import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/client";
 /** Error and notice messages for AI runs (runner, result checks, run API, image reading). */
 export const runMessages = defineMessages("cms-ai.run", {
     en: {
